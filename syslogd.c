@@ -526,7 +526,6 @@ static char sccsid[] = "@(#)rsyslogd.c	0.1 (Adiscon) 11/08/2004";
 
 
 #define	MAXLINE		1024		/* maximum line length */
-#define	MAXSVLINE	240		/* maximum saved line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define DEFSPRI		(LOG_KERN|LOG_CRIT)
 #define TIMERINTVL	30		/* interval for checking flush, mark */
@@ -696,8 +695,21 @@ const char *sys_h_errlist[] = {
 
 /* rgerhards 2004-11-08: The following structure represents a
  * syslog message. 
+ *
+ * Important Note:
+ * The message object is used for multiple purposes (once it
+ * has been created). Once created, it actully is a read-only
+ * object (though we do not specifically express this). In order
+ * to avoid multiple copies of the same object, we use a
+ * reference counter. This counter is set to 1 by the constructer
+ * and increased by 1 with a call to MsgAddRef(). The destructor
+ * checks the reference count. If it is more than 1, only the counter
+ * will be decremented. If it is 1, however, the object is actually
+ * destroyed. To make this work, it is vital that MsgAddRef() is
+ * called each time a "copy" is stored somewhere.
  */
 struct msg {
+	int	iRefCount;	/* reference counter (0 = unused) */
 	short	iSyslogVers;	/* version of syslog protocol
 				 * 0 - RFC 3164
 				 * 1 - RFC draft-protocol-08
@@ -708,6 +720,7 @@ struct msg {
 				 * wire. This is important in case we
 				 * need to preserve cryptographic verifiers.
 				 */
+	int	iLenRawMsg;	/* length of raw message */
 	char	*pszMSG;	/* the MSG part itself */
 	int	iLenMSG;	/* Length of the MSG part */
 	char	*pszTimestamp;	/* timestamp in its textual from (from the msg) */
@@ -750,7 +763,6 @@ struct filed {
 		} f_forw;		/* forwarding address */
 		char	f_fname[MAXFNAME];
 	} f_un;
-	char	f_prevline[MAXSVLINE];		/* last message logged */
 	char	f_lasttime[16];			/* time of last occurrence */
 	char	f_prevhost[MAXHOSTNAMELEN+1];	/* host from which recd. */
 	int	f_prevpri;			/* pri of f_prevline */
@@ -758,9 +770,11 @@ struct filed {
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */
 	int	f_flags;			/* store some additional flags */
-	struct msg* pMsg;			/* pointer to the message (this wil
+	struct msg* f_pMsg;			/* pointer to the message (this wil
 					         * replace the other vars with msg
-						 * content later). */
+						 * content later). This is preserved after
+						 * the message has been processed - it is
+						 * also used to detect duplicates. */
 };
 
 /*
@@ -889,7 +903,7 @@ void printchopped(char *hname, char *msg, int len, int fd);
 void printline(char *hname, char *msg);
 void printsys(char *msg);
 void logmsg(int pri, struct msg*, int flags);
-void fprintlog(register struct filed *f, char *from, int flags, char *msg);
+void fprintlog(register struct filed *f, int flags);
 void endtty();
 void wallmsg(register struct filed *f, struct iovec *iov);
 void reapchild();
@@ -943,7 +957,7 @@ void syslogdPanic(char* ErrMsg)
 /* "Constructor" for a msg "object". Returns a pointer to
  * the new object or NULL if no such object could be allocated.
  * An object constructed via this function should only be destroyed
- * via "MsgDestroy()".
+ * via "MsgDestruct()".
  */
 struct msg* MsgConstruct()
 {
@@ -951,6 +965,7 @@ struct msg* MsgConstruct()
 
 	if((pM = malloc(sizeof(struct msg))) != NULL)
 	{ /* initialize members */
+		pM->iRefCount = 1;
 		pM->iSyslogVers = -1;
 		pM->iSeverity = -1;
 		pM->iFacility = -1;
@@ -961,8 +976,11 @@ struct msg* MsgConstruct()
 		pM->pszRcvFrom = NULL;
 		pM->pszMSG = NULL;
 		pM->iLenMSG = 0;
+		pM->iLenRawMsg = 0;
 		pM->iLenHOSTNAME = 0;
 	}
+
+printf("MsgConstruct\t0x%x\n", (int)pM);
 
 	return(pM);
 }
@@ -972,19 +990,70 @@ struct msg* MsgConstruct()
  */
 void MsgDestruct(struct msg * pM)
 {
-	if(pM->pszRawMsg != NULL)
-		free(pM->pszRawMsg);
-	if(pM->pszTag != NULL)
-		free(pM->pszTag);
-	if(pM->pszHOSTNAME != NULL)
-		free(pM->pszHOSTNAME);
-	if(pM->pszRcvFrom != NULL)
-		free(pM->pszRcvFrom);
-	if(pM->pszMSG != NULL)
-		free(pM->pszMSG);
-	if(pM->pszTimestamp != NULL)
-		free(pM->pszTimestamp);
-	free(pM);
+printf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
+	if(--pM->iRefCount == 0)
+	{
+printf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
+		if(pM->pszRawMsg != NULL)
+			free(pM->pszRawMsg);
+		if(pM->pszTag != NULL)
+			free(pM->pszTag);
+		if(pM->pszHOSTNAME != NULL)
+			free(pM->pszHOSTNAME);
+		if(pM->pszRcvFrom != NULL)
+			free(pM->pszRcvFrom);
+		if(pM->pszMSG != NULL)
+			free(pM->pszMSG);
+		if(pM->pszTimestamp != NULL)
+			free(pM->pszTimestamp);
+		free(pM);
+	}
+}
+
+/* Increment reference count - see description of the "msg"
+ * structure for details. As a convenience to developers,
+ * this method returns the msg pointer that is passed to it.
+ * It is recommended that it is called as follows:
+ *
+ * pSecondMsgPointer = MsgAddRef(pOrgMsgPointer);
+ */
+struct msg *MsgAddRef(struct msg *pM)
+{
+	assert(pM != NULL);
+	pM->iRefCount++;
+printf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);
+	return(pM);
+}
+
+/* Access methods - dumb & easy, not a comment for each ;)
+ */
+int getMSGLen(struct msg *pM)
+{
+	return((pM == NULL) ? 0 : pM->iLenMSG);
+}
+
+
+char *getMSG(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+	else
+		if(pM->pszMSG == NULL)
+			return "";
+		else
+			return pM->pszMSG;
+}
+
+
+char *getHOSTNAME(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+	else
+		if(pM->pszHOSTNAME == NULL)
+			return "";
+		else
+			return pM->pszHOSTNAME;
 }
 
 
@@ -1016,6 +1085,7 @@ int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
  */
 int MsgSetMSG(struct msg *pMsg, char* pszMSG)
 {
+	assert(pMsg != NULL);
 	pMsg->iLenMSG = strlen(pszMSG);
 	if((pMsg->pszMSG = malloc(pMsg->iLenMSG + 1)) == NULL) {
 		syslogdPanic("Could not allocate memory for pszMSG buffer.");
@@ -1023,6 +1093,24 @@ int MsgSetMSG(struct msg *pMsg, char* pszMSG)
 		return(-1);
 	}
 	memcpy(pMsg->pszMSG, pszMSG, pMsg->iLenMSG + 1);
+
+	return(0);
+}
+
+/* rgerhards 2004-11-11: set RawMsg in msg object
+ * returns 0 if OK, other value if not. In case of failure,
+ * logs error message and destroys msg object.
+ */
+int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
+{
+	assert(pMsg != NULL);
+	pMsg->iLenRawMsg = strlen(pszRawMsg);
+	if((pMsg->pszRawMsg = malloc(pMsg->iLenRawMsg + 1)) == NULL) {
+		syslogdPanic("Could not allocate memory for pszRawMsg buffer.");
+		MsgDestruct(pMsg);
+		return(-1);
+	}
+	memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg + 1);
 
 	return(0);
 }
@@ -1671,10 +1759,7 @@ void printchopped(hname, msg, len, fd)
 	return;
 }
 
-
-
-/*
- * Take a raw input line, decode the message, and print the message
+/* Take a raw input line, decode the message, and print the message
  * on the appropriate log files.
  * rgerhards 2004-11-08: TODO: change this function with decoder! Please note
  * that this function does only a partial decoding. At best, it splits 
@@ -1685,32 +1770,13 @@ void printchopped(hname, msg, len, fd)
  * not to be called from anywhere. So we might as well decode the full
  * message here.
  */
-
 void printline(hname, msg)
 	char *hname;
 	char *msg;
 {
-	register char *p, *q;
-	char *pEnd;
-	register unsigned char c;
+	register char *p;
 	int pri;
 	struct msg *pMsg;
-
-	/* test for special codes */
-	pri = DEFUPRI;
-	p = msg;
-dprintf("p: '%s' msg '%s'\n", p, msg);
-	if (*p == '<') {
-		pri = 0;
-		while (isdigit(*++p))
-		{
-		   pri = 10 * pri + (*p - '0');
-		}
-		if (*p == '>')
-			++p;
-	}
-	if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
-		pri = DEFUPRI;
 
 	/* Now it is time to create the message object (rgerhards)
 	*/
@@ -1722,6 +1788,25 @@ dprintf("p: '%s' msg '%s'\n", p, msg);
 		syslogdPanic("Could not construct Msg object.");
 		return;
 	}
+	if(MsgSetRawMsg(pMsg, msg) != 0) {
+		MsgDestruct(pMsg);
+		return;
+	}
+	
+	/* test for special codes */
+	pri = DEFUPRI;
+	p = msg;
+	if (*p == '<') {
+		pri = 0;
+		while (isdigit(*++p))
+		{
+		   pri = 10 * pri + (*p - '0');
+		}
+		if (*p == '>')
+			++p;
+	}
+	if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
+		pri = DEFUPRI;
 
 	/* got the buffer, now copy over the message. We use the "old" code
 	 * here, it doesn't make sense to optimize as that code will soon
@@ -1751,13 +1836,24 @@ dprintf("p: '%s' msg '%s'\n", p, msg);
 	*q = '\0';
 #endif
 
-	if(MsgSetMSG(pMsg, p) != 0)
+	if(MsgSetMSG(pMsg, p) != 0) {
+		MsgDestruct(pMsg);
 		return;
-	if(MsgSetHOSTNAME(pMsg, hname) != 0)
+	}
+	if(MsgSetHOSTNAME(pMsg, hname) != 0) {
+		MsgDestruct(pMsg);
 		return;
+	}
 
-dprintf("msg1: '%s'\n", pMsg->pszMSG);
 	logmsg(pri, pMsg, SYNC_FILE);
+
+	/* rgerhards 2004-11-11:
+	 * we are done with the message object. If it still is
+	 * stored somewhere, we can call discard anyhow. This
+	 * is handled via the reference count - see description
+	 * for struct msg for details.
+	 */
+	MsgDestruct(pMsg);
 	return;
 }
 
@@ -1939,7 +2035,9 @@ void logmsg(pri, pMsg, flags)
 
 		if (f->f_file >= 0) {
 			untty();
-			fprintlog(f, (char *)from, flags, msg);
+			f->f_pMsg = MsgAddRef(pMsg); /* is expected here... */
+			fprintlog(f, flags);
+			MsgDestruct(pMsg);
 			(void) close(f->f_file);
 			f->f_file = -1;
 		}
@@ -1971,9 +2069,9 @@ void logmsg(pri, pMsg, flags)
 		/*
 		 * suppress duplicate lines to this file
 		 */
-		if ((flags & MARK) == 0 && msglen == f->f_prevlen &&
-		    !strcmp(msg, f->f_prevline) &&
-		    !strcmp(from, f->f_prevhost)) {
+		if ((flags & MARK) == 0 && msglen == getMSGLen(f->f_pMsg) &&
+		    !strcmp(msg, getMSG(f->f_pMsg)) &&
+		    !strcmp(from, getHOSTNAME(f->f_pMsg))) {
 			(void) strncpy(f->f_lasttime, timestamp, 15);
 			f->f_prevcount++;
 			dprintf("msg repeated %d times, %ld sec of %d.\n",
@@ -1986,37 +2084,19 @@ void logmsg(pri, pMsg, flags)
 			 * in the future.
 			 */
 			if (now > REPEATTIME(f)) {
-				fprintlog(f, (char *)from, flags, (char *)NULL);
+				fprintlog(f, flags);
 				BACKOFF(f);
 			}
 		} else {
 			/* new line, save it */
-			if (f->f_prevcount) /* first check if we need to flush a prev msg */
-				fprintlog(f, (char *)from, 0, (char *)NULL);
-			f->f_prevpri = pri;
-			f->f_repeatcount = 0;
-			(void) strncpy(f->f_lasttime, timestamp, 15);
-			memcpy(f->f_prevhost, from, pMsg->iLenHOSTNAME + 1);
-			/* we now check if we can save the message or not. If the message is
-			 * too large for the save buffer, we simply do not save it. In this case
-			 * the prevline is discarded.
+			/* first check if we have a previous message stored
+			 * if so, discard that first
 			 */
-			if (msglen < MAXSVLINE) {
-				f->f_prevlen = msglen;
-				/* rgerhards 2004-11-09: we use memcpy() instead of
-				 * strcpy() because we know the message size - so this is
-				 * faster (besides, it also allows us to deal with \0 in the
-				 * message (will become important later). Please note that we
-				 * need to add 1 byte to the message length so that the
-				 * string terminator will be copied, too
-				 */
-				memcpy(f->f_prevline, msg, msglen + 1);
-				fprintlog(f, (char *)from, flags, (char *)NULL);
-			} else {
-				f->f_prevline[0] = 0;
-				f->f_prevlen = 0;
-				fprintlog(f, (char *)from, flags, msg);
-			}
+			if(f->f_pMsg != NULL)
+				MsgDestruct(f->f_pMsg);
+			f->f_pMsg = MsgAddRef(pMsg);
+			/* call the output driver */
+			fprintlog(f, flags);
 		}
 	}
 #ifndef SYSV
@@ -2026,6 +2106,80 @@ void logmsg(pri, pMsg, flags)
 #if FALSE
 } /* balance parentheses for emacs */
 #endif
+
+/* rgerhards 2004-11-11: write to a file output. This
+ * will be called for all outputs using file semantics,
+ * for example also for pipes.
+ */
+void writeFile(struct filed *f)
+{
+	struct iovec iov[6];
+	register struct iovec *v = iov;
+
+	assert(f != NULL);
+	/* f->f_file == -1 is an indicator that the we couldn't
+	   open the file at startup. */
+	if (f->f_file == -1)
+		return;	 /* TODO: eventually do this check in caller! */
+	/* Now generate the message. This can eventually be moved to
+	 * a generic subroutine (need to think about this....).
+	 * for now, this is a quick and dirty dummy. We need to have the
+	 * ability to specify the message format before we can actually 
+	 * code this part of the function. rgerhards 2004-11-11
+	 */
+
+	v->iov_base = f->f_pMsg->pszRawMsg;
+	v->iov_len = f->f_pMsg->iLenRawMsg;
+	v++;
+
+	/* almost done - just let's check how we need to terminate
+	 * the message.
+	 */
+	dprintf(" %s\n", f->f_un.f_fname);
+	if (f->f_type == F_TTY || f->f_type == F_CONSOLE) {
+		v->iov_base = "\r\n";
+		v->iov_len = 2;
+	} else {
+		v->iov_base = "\n";
+		v->iov_len = 1;
+	}
+	
+again:
+	if (writev(f->f_file, iov, v - iov + 1) < 0) {
+		int e = errno;
+
+		/* If a named pipe is full, just ignore it for now
+		   - mrn 24 May 96 */
+		if (f->f_type == F_PIPE && e == EAGAIN)
+			return;
+
+		(void) close(f->f_file);
+		/*
+		 * Check for EBADF on TTY's due to vhangup() XXX
+		 * Linux uses EIO instead (mrn 12 May 96)
+		 */
+		if ((f->f_type == F_TTY || f->f_type == F_CONSOLE)
+#ifdef linux
+			&& e == EIO) {
+#else
+			&& e == EBADF) {
+#endif
+			f->f_file = open(f->f_un.f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
+			if (f->f_file < 0) {
+				f->f_type = F_UNUSED;
+				logerror(f->f_un.f_fname);
+			} else {
+				untty();
+				goto again;
+			}
+		} else {
+			f->f_type = F_UNUSED;
+			errno = e;
+			logerror(f->f_un.f_fname);
+		}
+	} else if (f->f_flags & SYNC_FILE)
+		(void) fsync(f->f_file);
+}
 
 /* rgerhards 2004-11-09: fprintlog() is the actual driver for
  * the output channel. It receives the channel description (f) as
@@ -2040,12 +2194,11 @@ void logmsg(pri, pMsg, flags)
  * This whole function is probably about to change once we have the
  * message abstraction.
  */
-void fprintlog(f, from, flags, msg)
+void fprintlog(f, flags)
 	register struct filed *f;
-	char *from;
 	int flags;
-	char *msg;
 {
+	char *msg;
 	struct iovec iov[6];
 	register struct iovec *v = iov;
 	char repbuf[80];
@@ -2056,7 +2209,8 @@ void fprintlog(f, from, flags, msg)
 	struct hostent *hp;
 #endif
 
-	dprintf("msg: '%s', prevline: '%s'\n", msg, f->f_prevline);
+dprintf("fprintlog\n");
+	msg = f->f_pMsg->pszMSG;
 	dprintf("Called fprintlog, ");
 
 	v->iov_base = f->f_lasttime;
@@ -2071,17 +2225,22 @@ void fprintlog(f, from, flags, msg)
 	v->iov_base = " ";
 	v->iov_len = 1;
 	v++;
+	/* TODO: handle the case of message repeation. Currently, there is still
+	 * some code to do it, but that code is defunct due to our changes!
+	 */
 	if (msg) {
-		v->iov_base = msg;
+		/*v->iov_base = msg;
 		v->iov_len = strlen(msg);
+		*/v->iov_base = f->f_pMsg->pszRawMsg;
+		v->iov_len = f->f_pMsg->iLenRawMsg;
 	} else if (f->f_prevcount > 1) {
 		(void) snprintf(repbuf, sizeof(repbuf), "last message repeated %d times",
 		    f->f_prevcount);
 		v->iov_base = repbuf;
 		v->iov_len = strlen(repbuf);
 	} else {
-		v->iov_base = f->f_prevline;
-		v->iov_len = f->f_prevlen;
+		v->iov_base = f->f_pMsg->pszMSG;
+		v->iov_len = f->f_pMsg->iLenMSG;
 	}
 	v++;
 
@@ -2154,7 +2313,7 @@ void fprintlog(f, from, flags, msg)
 		 */
 	f_forw:
 		dprintf(" %s\n", f->f_un.f_forw.f_hname);
-		if ( strcmp(from, LocalHostName) && NoHops )
+		if ( strcmp(f->f_pMsg->pszHOSTNAME, LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
 		else {
 			f->f_time = now;
@@ -2192,6 +2351,8 @@ void fprintlog(f, from, flags, msg)
 	case F_TTY:
 	case F_FILE:
 	case F_PIPE:
+		writeFile(f);
+#if 0
 		f->f_time = now;
 		dprintf(" %s\n", f->f_un.f_fname);
 		if (f->f_type == F_TTY || f->f_type == F_CONSOLE) {
@@ -2241,6 +2402,7 @@ void fprintlog(f, from, flags, msg)
 			}
 		} else if (f->f_flags & SYNC_FILE)
 			(void) fsync(f->f_file);
+#endif
 		break;
 
 	case F_USERS:
@@ -2483,7 +2645,7 @@ void domark()
 			dprintf("flush %s: repeated %d times, %d sec.\n",
 			    TypeNames[f->f_type], f->f_prevcount,
 			    repeatinterval[f->f_repeatcount]);
-			fprintlog(f, LocalHostName, 0, (char *)NULL);
+			/* TODO: re-implement fprintlog(f, LocalHostName, 0, (char *)NULL); */
 			BACKOFF(f);
 		}
 	}
@@ -2538,7 +2700,11 @@ void die(sig)
 		f = &Files[lognum];
 		/* flush any pending output */
 		if (f->f_prevcount)
-			fprintlog(f, LocalHostName, 0, (char *)NULL);
+			/* rgerhards: 2004-11-09: I am now changing it, but
+			 * I am not sure it is correct as done.
+			 * TODO: verify later!
+			 */
+			fprintlog(f, 0);
 	}
 
 	Initialized = was_initialized;
@@ -2626,7 +2792,11 @@ void init()
 
 			/* flush any pending output */
 			if (f->f_prevcount)
-				fprintlog(f, LocalHostName, 0, (char *)NULL);
+				/* rgerhards: 2004-11-09: I am now changing it, but
+				 * I am not sure it is correct as done.
+				 * TODO: verify later!
+				 */
+				fprintlog(f, 0);
 
 			switch (f->f_type) {
 				case F_FILE:
