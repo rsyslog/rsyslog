@@ -29,6 +29,17 @@ MEMORY LEAK ON HUPING
    This causes a small memory leak on each HUP. Will be fixed soon and
    should not cause real trouble unless you HUP syslogd quite frequently.
 
+WALLMSG FORMAT (* selector)
+   This format is actually not 100% compatible with stock syslogd - the
+   date is missing. Will be fixed soon and can also be fixed just via
+   the proper template. Anyone up for this? ;)
+
+BUILDING WITH MYSQL
+   The MySQL code is activated by defining -DWITH_DB in the CFLAGS.
+   Depending on your system, you may need to change some library locations
+   and such. Building with MySQL is currently not as straightforward
+   as it should be ;)
+
 Updates to the bug lists (and potential fixes...) can be found at the 
 official home page at
 

@@ -81,7 +81,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  *
- * A copy of the GPL can be found in the file "GPL" in this distribution.
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
  *
  * The following copyright and license applies to the original
  * sysklogd package that was used as a basis for this release of

@@ -1,62 +1,37 @@
-On behalf of the beta-testers and other members of the Linux INTERNET
-community who have helped shape and debug this package I am pleased to
-announce version 1.3-pl3 of the sysklogd package.
+I am pleased to announce the initial beta release of the rsyslog package.
 
-This package implements two system log daemons. The syslogd daemon is
-an enhanced version of the standard Berkeley utility program. This
-daemon is responsible for providing logging of messages received from
-programs and facilities on the local host as well as from remote
-hosts. The klogd daemon listens to kernel message sources and is
-responsible for prioritizing and processing operating system
-messages. The klogd daemon can run as a client of syslogd or
-optionally as a standalone program.
+Rsyslog has been forked from the sysklogd package. It currently shares its
+base design but includes many important enhancements. Most importantly
+it supports
 
-This package is the culmination of about two years of experience and
-bug reports on the 1.2 version from both the INTERNET and our
-corporate Linux networks. The utilities in this package should provide
-VERY reliable system logging. Klogd and syslogd have both been stress
-tested in kernel development environments where literally hundreds of
-megabytes of kernel messages have been blasted through them. If either
-utility should fail I would appreciate a report and debug information
-so that the bug can be reproduced and squashed.
+- fully configurable output formats, including
+  * high precision timestamps with year ;)
+  * access to each of the message parts as well as substrings thereof
+    (include access to faciltiy and priority)
+  * access to the raw message received
+- direct logging to MySQL database servers
+- compatibility to stock linux syslogd
 
-This package includes some major improvements. Some of them are listed
-here:
+Rsyslog is GPL'ed software. Details on it can be found at
 
-	* klogd supports on-the-fly kernel address to symbol
-	translations. This requires that a valid kernel symbol map be
-	found at execution.
+   http://www.monitorware.com/rsyslog/
 
-	* klogd also supports debugging of protection faults which occur
-	in kernel loadable modules.
+This package has performed well in our test environments but it is a beta
+release. So you might experience problems of all kind when you try it. So far,
+it has been compiled under both Red Hat and Debian Linux, only (we did not 
+try some other system, so others hopefully will work, too).
 
-	* syslogd has better handling of remote logging capabilities.
+We would appreciate any feedback from early testers, including bug reports,
+additional platforms it runs on and new ideas.
 
-	* both klogd and syslogd can be controlled through commandline
-	options and signals.
+Thanks to everyone who has contributed ideas, patches and bug reports.
+Special thanks to Tina Bird for being a constant source of new ideas and also
+to Bennett Todd for his suggestions (yes, those back from 2003 also finally
+made it into rsyslog ;)).
 
-	* both daemons are now FSSTND conform.
+We hope to receive ample feedback. The more feedback we receive, the more
+enhancements will happen (and the faster they will appear). You can
+send any feedback and suggestion to me at rgerhards@adiscon.com.
 
-	* a syslog.conf(5) manpage is now available.
-
-	* Spaces are now accepted in the syslog configuration
-	file. This should be a real crowd pleaser.
-
-	* Syslogd now uses dynamic allocation of logging output
-	descriptors. There is no longer a static limit on the number
-	of log destinations that can be defined.
-
-	* Numerous bug fixes and code cleanups.
-
-The new release can be obtained from either tsx-11.mit.edu or
-sunsite.unc.edu.
-
-Thanks again to everyone who has contributed ideas, patches and bug
-reports. Linux has a superior set of logging utilities thanks to
-contributions from the entire community.
-
-
-Dr. Greg Wettstein
-Oncology Research Division Computing Facility
-Roger Maris Cancer Center
-greg@wind.enjellic.com
+Rainer Gerhards
+Adiscon

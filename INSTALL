@@ -38,3 +38,16 @@
     install-replace, everthing should work as always, but if it doesn't, you've
     probably discovered a beta bug ;) In any case, to use the new features, you 
     need to update you syslogd.conf.
+
+6) If you would like to use database logging, you need a database ;)
+   The default configuration requires a MonitorWare schema. To do this, you
+   can follow this advise:
+   How to create the database for rsyslog?
+   It is really easy. Simply run the following command in your shell. Be sure
+   that the mysql user you are using have permission to create a database.
+   mysql -u username -p < /path/to/createDB.sql 
+   Enter the password if requested. The database "Syslog" with the necessary
+   tables is created.
+   If you would like to use a different schema, you can do so ;) Just create
+   your schema and database and then create a matching template in syslog.conf.
+   See sample.conf for a description on how templates work.
