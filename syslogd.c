@@ -744,13 +744,12 @@ struct msg {
 /**/	int	iLenRawMsg;	/* length of raw message */
 /**/	char	*pszMSG;	/* the MSG part itself */
 /**/	int	iLenMSG;	/* Length of the MSG part */
-	char	*pszTimestamp;	/* timestamp in its textual from (from the msg) */
 	char	*pszTag;	/* pointer to tag value */
 /**/	char	*pszHOSTNAME;	/* HOSTNAME from syslog message */
 /**/	int	iLenHOSTNAME;	/* Length of HOSTNAME */
 	char	*pszRcvFrom;	/* System message was received from */
-	struct syslogTime tRcvdAt;/* time the message entered this program */
-	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
+/**/	struct syslogTime tRcvdAt;/* time the message entered this program */
+/**/	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 };
 
 /*
@@ -954,10 +953,240 @@ void closeMySQL(register struct filed *f);
 #endif
 
 int getSubString(char **pSrc, char *pDst, size_t DstSize, char cSep);
+void getCurrTime(struct syslogTime *t);
 
 #ifdef SYSLOG_UNIXAF
 static int create_inet_socket();
 #endif
+
+
+/*******************************************************************
+ * BEGIN CODE-LIBLOGGING                                           *
+ *******************************************************************
+ * Code in this section is borrowed from liblogging. This is an
+ * interim solution. Once liblogging is fully integrated, this is
+ * to be removed (see http://www.monitorware.com/liblogging for
+ * more details. 2004-11-16 rgerhards
+ *
+ * Please note that the orginal liblogging code is modified so that
+ * it fits into the context of the current version of syslogd.c.
+ *
+ * DO NOT PUT ANY OTHER CODE IN THIS BEGIN ... END BLOCK!!!!
+ */
+
+#define FALSE 0
+#define TRUE 1
+/**
+ * Parse a 32 bit integer number from a string.
+ *
+ * \param ppsz Pointer to the Pointer to the string being parsed. It
+ *             must be positioned at the first digit. Will be updated 
+ *             so that on return it points to the first character AFTER
+ *             the integer parsed.
+ * \retval The number parsed.
+ */
+
+int srSLMGParseInt32(unsigned char** ppsz)
+{
+	int i;
+
+	i = 0;
+	while(isdigit(**ppsz))
+	{
+		i = i * 10 + **ppsz - '0';
+		++(*ppsz);
+	}
+
+	return i;
+}
+/**
+ * Parse a TIMESTAMP-3164.
+ * Returns TRUE on parse OK, FALSE on parse error.
+ */
+static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, unsigned char* pszTS)
+{
+	assert(pTime != NULL);
+	assert(pszTS != NULL);
+
+	getCurrTime(pTime);	/* obtain the current year and UTC offsets! */
+
+	/* If we look at the month (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+	 * we may see the following character sequences occur:
+	 *
+	 * J(an/u(n/l)), Feb, Ma(r/y), A(pr/ug), Sep, Oct, Nov, Dec
+	 *
+	 * We will use this for parsing, as it probably is the
+	 * fastest way to parse it.
+	 */
+	switch(*pszTS++)
+	{
+	case 'J':
+		if(*pszTS++ == 'a')
+			if(*pszTS++ == 'n')
+				pTime->month = 1;
+			else
+				return FALSE;
+		else if(*pszTS++ == 'u')
+			if(*pszTS++ == 'n')
+				pTime->month = 6;
+			else if(*pszTS++ == 'l')
+				pTime->month = 7;
+			else
+				return FALSE;
+		else
+			return FALSE;
+		break;
+	case 'F':
+		if(*pszTS++ == 'e')
+			if(*pszTS++ == 'b')
+				pTime->month = 2;
+			else
+				return FALSE;
+		else
+			return FALSE;
+		break;
+	case 'M':
+		if(*pszTS++ == 'a')
+			if(*pszTS++ == 'r')
+				pTime->month = 3;
+			else if(*pszTS++ == 'y')
+				pTime->month = 5;
+			else
+				return FALSE;
+		else
+			return FALSE;
+		break;
+	case 'A':
+		if(*pszTS++ == 'p')
+			if(*pszTS++ == 'r')
+				pTime->month = 4;
+			else
+				return FALSE;
+		else if(*pszTS++ == 'u')
+			if(*pszTS++ == 'g')
+				pTime->month = 8;
+			else
+				return FALSE;
+		else
+			return FALSE;
+		break;
+	case 'S':
+		if(*pszTS++ == 'e')
+			if(*pszTS++ == 'p')
+				pTime->month = 9;
+			else
+				return FALSE;
+		else
+			return FALSE;
+		break;
+	case 'O':
+		if(*pszTS++ == 'c')
+			if(*pszTS++ == 't')
+				pTime->month = 10;
+			else
+				return FALSE;
+		else
+			return FALSE;
+		break;
+	case 'N':
+		if(*pszTS++ == 'o')
+			if(*pszTS++ == 'v')
+				pTime->month = 11;
+			else
+				return FALSE;
+		else
+			return FALSE;
+		break;
+	case 'D':
+		if(*pszTS++ == 'e')
+			if(*pszTS++ == 'c')
+				pTime->month = 12;
+			else
+				return FALSE;
+		else
+			return FALSE;
+		break;
+	default:
+		return FALSE;
+	}
+
+	/* done month */
+
+	if(*pszTS++ != ' ')
+		return FALSE;
+
+	/* we accept a slightly malformed timestamp when receiving. This is
+	 * we accept one-digit days
+	 */
+	if(*pszTS == ' ')
+		++pszTS;
+
+	pTime->day = srSLMGParseInt32(&pszTS);
+	if(pTime->day < 1 || pTime->day > 31)
+		return FALSE;
+
+	if(*pszTS++ != ' ')
+		return FALSE;
+	pTime->hour = srSLMGParseInt32(&pszTS);
+	if(pTime->hour < 0 || pTime->hour > 23)
+		return FALSE;
+
+	if(*pszTS++ != ':')
+		return FALSE;
+	pTime->minute = srSLMGParseInt32(&pszTS);
+	if(pTime->minute < 0 || pTime->minute > 59)
+		return FALSE;
+
+	if(*pszTS++ != ':')
+		return FALSE;
+	pTime->second = srSLMGParseInt32(&pszTS);
+	if(pTime->second < 0 || pTime->second > 60)
+		return FALSE;
+
+	/* OK, we actually have a 3164 timestamp, so let's indicate this
+	 * and fill the rest of the properties. */
+	pTime->timeType = 1;
+ 	pTime->secfracPrecision = 0;
+	pTime->secfrac = 0;
+	return TRUE;
+}
+
+/*******************************************************************
+ * END CODE-LIBLOGGING                                             *
+ *******************************************************************/
+
+/**
+ * Format a syslogTimestamp to a text format.
+ * The caller must provide the timestamp as well as a character
+ * buffer that will receive the resulting string. The function
+ * returns the size of the timestamp written in bytes (without
+ * the string termnator). If 0 is returend, an error occured.
+ */
+int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+{
+	static char* monthNames[13] = {"ERR", "Jan", "Feb", "Mar",
+	                               "Apr", "May", "Jun", "Jul",
+				       "Aug", "Sep", "Oct", "Nov", "Dec"};
+	assert(ts != NULL);
+	assert(pBuf != NULL);
+	
+	if(ts->timeType == 1) {
+		if(iLenBuf < 16)
+			return(0); /* we NEED 16 bytes */
+		return(snprintf(pBuf, iLenBuf, "%s %2d %2.2d:%2.2d:%2.2d",
+			monthNames[ts->month], ts->day, ts->hour,
+			ts->minute, ts->second
+			));
+	}
+
+	if(ts->timeType == 2) {
+		return(snprintf(pBuf, iLenBuf, "NOT YET IMPLEMENTED"));
+		/* TODO: Implement! */
+	}
+
+	return(0);
+}
+
 
 /**
  * Get the current date/time in the best resolution the operating
@@ -1037,7 +1266,6 @@ struct msg* MsgConstruct()
 		pM->iSeverity = -1;
 		pM->iFacility = -1;
 		pM->pszRawMsg = NULL;
-		pM->pszTimestamp = NULL;
 		pM->pszTag = NULL;
 		pM->pszHOSTNAME = NULL;
 		pM->pszRcvFrom = NULL;
@@ -1075,8 +1303,6 @@ printf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
 			free(pM->pszRcvFrom);
 		if(pM->pszMSG != NULL)
 			free(pM->pszMSG);
-		if(pM->pszTimestamp != NULL)
-			free(pM->pszTimestamp);
 		free(pM);
 	}
 }
@@ -2054,7 +2280,6 @@ void logmsg(pri, pMsg, flags)
 	register struct filed *f;
 	int fac, prilev, lognum;
 	int msglen;
-	char *timestamp;
 	char *msg;
 	char *from;
 
@@ -2071,22 +2296,16 @@ void logmsg(pri, pMsg, flags)
 	 * Check to see if msg looks non-standard.
 	 */
 	msglen = pMsg->iLenMSG;
-	if (msglen < 16 || msg[3] != ' ' || msg[6] != ' ' ||
-	    msg[9] != ':' || msg[12] != ':' || msg[15] != ' ')
+	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), msg) == FALSE)	
 		flags |= ADDDATE;
 
 	(void) time(&now);
-	if (flags & ADDDATE)
-		timestamp = ctime(&now) + 4;
-	else {
-		timestamp = msg;
-		/* TODO: the following line does no longer work (we now have
-		 * our dedicated MSG buffer). However, we keep it for now, because
-		 * the problem will disappear once we have the full-blown parser.
-		 * rgerhards 2004-11-09
-		msg += 16;
-		msglen -= 16;
-		*/
+	if (flags & ADDDATE) {
+		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+		/* but modify it to be an RFC 3164 time... */
+		pMsg->tTIMESTAMP.timeType = 1;
+		pMsg->tTIMESTAMP.secfracPrecision = 0;
+		pMsg->tTIMESTAMP.secfrac = 0;
 	}
 
 	/* extract facility and priority level */
@@ -2147,7 +2366,6 @@ void logmsg(pri, pMsg, flags)
 		if ((flags & MARK) == 0 && msglen == getMSGLen(f->f_pMsg) &&
 		    !strcmp(msg, getMSG(f->f_pMsg)) &&
 		    !strcmp(from, getHOSTNAME(f->f_pMsg))) {
-			(void) strncpy(f->f_lasttime, timestamp, 15);
 			f->f_prevcount++;
 			dprintf("msg repeated %d times, %ld sec of %d.\n",
 			    f->f_prevcount, now - f->f_time,
@@ -2188,8 +2406,9 @@ void logmsg(pri, pMsg, flags)
  */
 void writeFile(struct filed *f)
 {
-	struct iovec iov[6];
+	struct iovec iov[10];
 	register struct iovec *v = iov;
+	char szTIMESTAMP[40];
 
 	assert(f != NULL);
 	/* f->f_file == -1 is an indicator that the we couldn't
@@ -2202,6 +2421,17 @@ void writeFile(struct filed *f)
 	 * ability to specify the message format before we can actually 
 	 * code this part of the function. rgerhards 2004-11-11
 	 */
+
+	v->iov_base = " ";
+	v->iov_len = 1;
+	v++;
+	v->iov_len = formatTimestamp(&f->f_pMsg->tTIMESTAMP,
+		     szTIMESTAMP, sizeof(szTIMESTAMP) / sizeof(char));
+	v->iov_base = szTIMESTAMP;
+	v++;
+	v->iov_base = " ";
+	v->iov_len = 1;
+	v++;
 
 	v->iov_base = f->f_pMsg->pszRawMsg;
 	v->iov_len = f->f_pMsg->iLenRawMsg;
