@@ -1468,6 +1468,17 @@ int getMSGLen(struct msg *pM)
 }
 
 
+char *getRawMsg(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+	else
+		if(pM->pszRawMsg == NULL)
+			return "";
+		else
+			return pM->pszRawMsg;
+}
+
 char *getUxTradMsg(struct msg *pM)
 {
 	if(pM == NULL)
@@ -1629,6 +1640,18 @@ char *getHOSTNAME(struct msg *pM)
 			return "";
 		else
 			return pM->pszHOSTNAME;
+}
+
+
+char *getRcvFrom(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+	else
+		if(pM->pszRcvFrom == NULL)
+			return "";
+		else
+			return pM->pszRcvFrom;
 }
 
 
@@ -1842,6 +1865,8 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 	 * property names. These come after || in the ifs below. */
 	if(!strcmp(pName, "msg")) {
 		pRes = getMSG(pMsg);
+	} else if(!strcmp(pName, "rawmsg")) {
+		pRes = getRawMsg(pMsg);
 	} else if(!strcmp(pName, "UxTradMsg")) {
 		pRes = getUxTradMsg(pMsg);
 	} else if(!strcmp(pName, "source")
@@ -2819,6 +2844,7 @@ void logmsg(pri, pMsg, flags)
 	char *pWork;
 	sbStrBObj *pStrB;
 	int iCnt;
+	int bContParse = 1;
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
@@ -2842,11 +2868,18 @@ void logmsg(pri, pMsg, flags)
 	 * Check to see if msg contains a timestamp
 	 */
 	msglen = pMsg->iLenMSG;
-	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), msg) == TRUE)	
+	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), msg) == TRUE)
 		p2parse += 16;
-	else
+	else {
+		bContParse = 0;
 		flags |= ADDDATE;
+	}
 
+	/* here we need to check if the timestamp is valid. If it is not,
+	 * we can not continue to parse but must treat the rest as the 
+	 * MSG part of the message (as of RFC 3164).
+	 * rgerhards 2004-12-03
+	 */
 	(void) time(&now);
 	if (flags & ADDDATE) {
 		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
@@ -2858,16 +2891,23 @@ void logmsg(pri, pMsg, flags)
 
 	/* parse HOSTNAME - but only if this is network-received! */
 	if(pMsg->iMsgSource == SOURCE_INET) {
-		/* TODO: quick and dirty memory allocation */
-		if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
-			return;
-		pWork = pBuf;
-		while(*p2parse && *p2parse != ' ')
-			*pWork++ = *p2parse++;
-		if(*p2parse == ' ')
-			++p2parse;
-		*pWork = '\0';
-		MsgAssignHOSTNAME(pMsg, pBuf);
+		if(bContParse) {
+			/* TODO: quick and dirty memory allocation */
+			if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
+				return;
+			pWork = pBuf;
+			while(*p2parse && *p2parse != ' ')
+				*pWork++ = *p2parse++;
+			if(*p2parse == ' ')
+				++p2parse;
+			*pWork = '\0';
+			MsgAssignHOSTNAME(pMsg, pBuf);
+		} else {
+			/* we can not parse, so we get the system we
+			 * received the data from.
+			 */
+			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
+		}
 	}
 
 	/* now parse TAG - that should be present in message from
@@ -2885,21 +2925,27 @@ void logmsg(pri, pMsg, flags)
 	 * it going for a test, TODO: redo later. rgerhards 2004-11-16 */
 	/* TODO: quick and dirty memory allocation */
 	/* lol.. we tried to solve it, just to remind ourselfs that 32 octets
-	 * is the max size ;) we need to shuffle the code again... */
-	if((pStrB = sbStrBConstruct()) == NULL) 
-		return;
-	sbStrBSetAllocIncrement(pStrB, 33);
-	pWork = pBuf;
-	iCnt = 0;
-	while(*p2parse && *p2parse != ':' && *p2parse != ' ' && iCnt < 32) {
-		sbStrBAppendChar(pStrB, *p2parse++);
-		++iCnt;
+	 * is the max size ;) we need to shuffle the code again... Just for 
+	 * the records: the code is currently clean, but we could optimize it! */
+	if(bContParse) {
+		if((pStrB = sbStrBConstruct()) == NULL) 
+			return;
+		sbStrBSetAllocIncrement(pStrB, 33);
+		pWork = pBuf;
+		iCnt = 0;
+		while(*p2parse && *p2parse != ':' && *p2parse != ' ' && iCnt < 32) {
+			sbStrBAppendChar(pStrB, *p2parse++);
+			++iCnt;
+		}
+		if(*p2parse == ':') {
+			++p2parse; 
+			sbStrBAppendChar(pStrB, ':');
+		}
+		MsgAssignTAG(pMsg, sbStrBFinish(pStrB));
+	} else {
+		/* we have no TAG, so we ... */
+		/*DO NOTHING*/;
 	}
-	if(*p2parse == ':') {
-		++p2parse; 
-		sbStrBAppendChar(pStrB, ':');
-	}
-	MsgAssignTAG(pMsg, sbStrBFinish(pStrB));
 
 	/* The rest is the actual MSG */
 	if(MsgSetMSG(pMsg, p2parse) != 0) return;
