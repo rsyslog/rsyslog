@@ -1,4 +1,81 @@
-/*
+/**
+ * \brief This is what will become the rsyslogd daemon.
+ *
+ * Please note that as of now, most of the code in this file stems
+ * from the sysklogd project. To learn more over this project, please
+ * visit
+ *
+ * http://www.infodrom.org/projects/sysklogd/
+ *
+ * I would like to express my thanks to the developers of the sysklogd
+ * package - without it, I would have had a much harder start...
+ *
+ * Please note that I made quite some changes to the orignal package.
+ * I expect to do even more changes - up
+ * to a full rewrite - to meat my design goals, which among others
+ * contain a (at least) dual-thread design with a memory buffer for
+ * storing received bursts of data. This is also the reason why I 
+ * kind of "forked" a completely new branch of the package. My intension
+ * is to do many changes and only this initial release will look
+ * similar to sysklogd (well, one never knows...).
+ *
+ * As I have made a lot of modifications, please assume that all bugs
+ * in this package are mine and not those of the sysklogd team.
+ * 
+ * I have decided to put my code under the GPL. The sysklog package
+ * is distributed under the BSD license. As such, this package here
+ * currently comes with two licenses. Both are given below. As it is
+ * probably hard for you to see what was part of the sysklogd package
+ * and what is part of my code, I recommend that you visit the 
+ * sysklogd site on the URL above if you would like to base your
+ * development on a version that is not under the GPL.
+ *
+ * This Project was intiated and is maintened by
+ * Rainer Gerhards <rgerhards@hq.adiscon.com>. See
+ * AUTHORS to learn who helped make it become a reality.
+ *
+ * If you have questions about rsyslogd in general, please email
+ * info@adiscon.com. To learn more about rsyslogd, please visit
+ * http://www.rsyslog.com.
+ *
+ * \author Rainer Gerhards <rgerhards@adiscon.com>
+ * \date 2003-10-17
+ *       Some initial modifications on the sysklogd package to support
+ *       liblogging. These have actually not yet been merged to the
+ *       source you see currently (but they hopefully will)
+ *
+ * \date 2004-11-04
+ *       Restarted the modifications of sysklogd. This time, we
+ *       focus on a simpler approach first. The initial goal is to
+ *       provide MySQL database support (so that syslogd can log
+ *       to the database).
+ *
+ * This license applies to the new code not in sysklogd:
+ *
+ * rsyslog - An Enhanced syslogd Replacement.
+ * Copyright 2002-2003 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ *
+ * A copy of the GPL can be found in the file "GPL" in this distribution.
+ *
+ * The following copyright and license applies to the original
+ * sysklogd package that was used as a basis for this release of
+ * rsyslogd. Obviously, it applies to those parts stemming directly
+ * back to the original sysklogd package.
+ *
  * Copyright (c) 1983, 1988 Regents of the University of California.
  * All rights reserved.
  *
