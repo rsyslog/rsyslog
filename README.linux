@@ -7,15 +7,15 @@ We do NOT imply that the sysklogd package is unreliable. In fact, the
 opposite is the case and we assume that for the time being the well-
 used sysklogd package offers better program reliability than our
 brand-new modifications to it. The name "rsyslog" stems back to the
-planned support for syslog-reliable. Ironically, the initial release
-of rsyslog does NEITHER support syslog-reliable NOR tcp based syslog.
+planned support for syslog-reliable. Ironically, all releases
+of rsyslog up to now do NEITHER support syslog-reliable NOR tcp based syslog.
 Instead, it contains enhanced configurability and other enhancements
 (like database support). The reason for this is that full support for
 RFC 3195 would require even more changes and especially fundamental architectural
 changes. Also, questions asked on the loganalysis list and at other
 places indicated that RFC3195 is NOT a prime priority for users, but
 rather better control over the output format. So here we are, with
-a rsyslod that covers a lot of enhancements, but not a single one
+a rsyslogd that covers a lot of enhancements, but not a single one
 of these that made its name ;)
 
 The next enhancement scheduled is support for the new syslog-protocol
@@ -26,10 +26,6 @@ and this might delay things a little. Our immediate goal is to receive
 feedback and get the bugs out of the current release. Only after that
 we intend to advance the code and introduce new features.
 
-This file comes with version 0.8.1. Thanks to previous input, a memory
-leak could be detected and also be fixed (as could some minor things).
-So this release hopefully has a few bugs less.
-
 The database support was included so that our web-based syslog interface
 can be used. This is another open source project which can be found
 under http://www.liblogging.org . We highly recommend having a look at 
@@ -37,7 +33,7 @@ it. It might not work for you if you expect thousands of messages per
 second (because your database won't be able to provide adequate performace),
 but in many cases it is a very handy analysis and troubleshooting tool.
 
-The utility (syslogd) can be either run from init or started
+The utility (rsyslogd) can be either run from init or started
 as part of the rc.* sequence.  Caution should be used when starting
 it from init since the default configuration is for it
 is to auto-background itself.  Depending on the
@@ -56,4 +52,4 @@ on sourceforge.net.
 Best regards,
 Rainer Gerhards
 Adiscon
-2005-03-08
+2005-04-04

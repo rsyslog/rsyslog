@@ -93,8 +93,8 @@ clobber: clean
 	rm -f syslogd klogd ksym syslog_tst oops_test TAGS tsyslogd tklogd
 
 install_exec: syslogd
-	${INSTALL} -b -m 500 -s syslogd ${DESTDIR}${BINDIR}/rsyslogd
+	${INSTALL} -b -s syslogd ${DESTDIR}${BINDIR}/rsyslogd
 
 install_man:
-	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 rsyslogd.8 ${DESTDIR}${MANDIR}/man8/rsyslogd.8
-	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 rsyslog.conf.5 ${DESTDIR}${MANDIR}/man5/rsyslog.conf.5
+	${INSTALL} rsyslogd.8 ${DESTDIR}${MANDIR}/man8/rsyslogd.8
+	${INSTALL} rsyslog.conf.5 ${DESTDIR}${MANDIR}/man5/rsyslog.conf.5
