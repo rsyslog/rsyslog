@@ -1591,7 +1591,6 @@ int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
 char *MsgGetProp(struct msg *pMsg, char *pName)
 {
 	char *pRes; /* result pointer */
-	char *pBuf;
 	static char errMsg[] = "##Can't get property - memory allocation failed!##";
 
 	assert(pMsg != NULL);
@@ -1605,6 +1604,8 @@ char *MsgGetProp(struct msg *pMsg, char *pName)
 		pRes = getHOSTNAME(pMsg);
 	} else if(!strcmp(pName, "syslogtag")) {
 		pRes = getTAG(pMsg);
+	} else if(!strcmp(pName, "iut")) {
+		pRes = "1"; /* always 1 for syslog messages (a MonitorWare thing;)) */
 	} else if(!strcmp(pName, "syslogfacility")) {
 		if(pMsg->pszFacility == NULL) {
 			/* we use a 12 byte buffer - as of 
@@ -1627,9 +1628,7 @@ char *MsgGetProp(struct msg *pMsg, char *pName)
 	} else if(!strcmp(pName, "timegenerated")) {
 		if(pMsg->pszRcvdAt3164 == NULL) {
 			if((pMsg->pszRcvdAt3164 = malloc(16)) == NULL) return errMsg;
-printf("fomrat returns %d\n",			formatTimestamp3164(&pMsg->tRcvdAt, pMsg->pszRcvdAt3164, 16)
-);
-printf("Timesamp: '%s'\n", pMsg->pszRcvdAt3164);
+			formatTimestamp3164(&pMsg->tRcvdAt, pMsg->pszRcvdAt3164, 16);
 		}
 		pRes = pMsg->pszRcvdAt3164;
 	} else {
@@ -4086,10 +4085,10 @@ void writeMySQL(register struct filed *f)
 	printf("in writeMySQL()\n");
 
 	snprintf(sql_command, sizeof(sql_command), 
-		"INSERT INTO SystemEvents (Message, ReceivedAt, DeviceReportedTime, 
-			Facility, Priority, FromHost, SysLogTag) 
-		VALUES 
-			('%s', '%s', '%s', %d, %d, '%s', '%s')", 
+		"INSERT INTO SystemEvents (Message, ReceivedAt, DeviceReportedTime, "
+			"Facility, Priority, FromHost, SysLogTag) "
+		"VALUES "
+		"	('%s', '%s', '%s', %d, %d, '%s', '%s')", 
 			f->f_pMsg->pszMSG, szRcvAtTimestamp, szTimestamp, 
 			f->f_pMsg->iFacility, f->f_pMsg->iSeverity,
 			f->f_pMsg->pszHOSTNAME, f->f_pMsg->pszTAG);
