@@ -605,6 +605,8 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
 #define _DB_MAXUNAMELEN	128	/* maximum number of user name */
 #define	_DB_MAXPWDLEN	128 	/* maximum number of user's pass */
+#define _DB_DELAYTIMEONERROR	20	/* If an error occur we stop logging until
+					   a delayed time is over */
 #endif
 
 #ifndef UTMP_FILE
@@ -787,6 +789,10 @@ struct msg {
 	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 chracters) */
 };
 
+#ifdef WITH_DB
+	
+#endif
+
 /*
  * This structure represents the files that will have log
  * copies printed.
@@ -810,6 +816,10 @@ struct filed {
 	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
 	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
+	time_t	f_timeResumeOnError;		/* 0 if no error is present,	
+						   otherwise is it set to the
+						   time a retrail should be attampt */
+	int	f_iLastDBErrNo;			/* Last db error number. 0 = no error */
 #endif
 	time_t	f_time;			/* time this was last written */
 	u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
@@ -995,6 +1005,9 @@ void sighup_handler();
 void initMySQL(register struct filed *f);
 void writeMySQL(register struct filed *f);
 void closeMySQL(register struct filed *f);
+void reInitMySQL(register struct filed *f);
+int checkDBErrorState(register struct filed *f);
+void DBErrorHandler(register struct filed *f);
 #endif
 
 int getSubString(char **pSrc, char *pDst, size_t DstSize, char cSep);
@@ -4790,14 +4803,26 @@ void sighup_handler()
  */
 void initMySQL(register struct filed *f)
 {
+	int iCounter = 0;
+	assert(f != NULL);
 	printf("in initMysql() \n");
 	
 	mysql_init(&f->f_hmysql);
-	/* Connect to database */
-	if (!mysql_real_connect(&f->f_hmysql, f->f_dbsrv, f->f_dbuid, f->f_dbpwd, f->f_dbname, 0, NULL, 0)) {
-		printf("cant connect to database \n");
-		exit(0);
-	}
+	do {
+		iCounter++;
+		/* Connect to database */
+		if (!mysql_real_connect(&f->f_hmysql, f->f_dbsrv, f->f_dbuid, f->f_dbpwd, f->f_dbname, 0, NULL, 0)) {
+			/* if also the second attempt failed
+			   we call the error handler */
+			if(iCounter)
+				DBErrorHandler(f);
+		}
+		else
+		{
+			f->f_timeResumeOnError = 0; /* We have a working db connection */
+			dprintf("connect successfully to db\n");
+		}
+	} while (mysql_errno(&f->f_hmysql) && iCounter<2);
 }
 
 /*
@@ -4807,8 +4832,24 @@ void initMySQL(register struct filed *f)
  */
 void closeMySQL(register struct filed *f)
 {
+	assert(f != NULL);
 	printf("in closeMySQL\n");
 	mysql_close(&f->f_hmysql);	
+}
+
+/*
+ * Reconnect a MySQL connection.
+ * Initially added 2004-12-02
+ */
+void reInitMySQL(register struct filed *f)
+{
+	assert(f != NULL);
+
+	dprintf("reInitMySQL\n");
+	/* close the current handle */
+	closeMySQL(f);
+	/* new connection */   
+	initMySQL(f);
 }
 
 /*
@@ -4819,35 +4860,120 @@ void closeMySQL(register struct filed *f)
 void writeMySQL(register struct filed *f)
 {
 	char *psz;
-	/* char sql_command[MAXLINE+1048];
-	char szTimestamp[15];
-	char szRcvAtTimestamp[15];
-	formatTimestampToMySQL(&f->f_pMsg->tTIMESTAMP, szTimestamp, sizeof(szTimestamp)/sizeof(char));
-	formatTimestampToMySQL(&f->f_pMsg->tRcvdAt, szRcvAtTimestamp, sizeof(szTimestamp)/sizeof(char));
-	*/
-	printf("in writeMySQL()\n");
+	int iCounter=0;
+	assert(f != NULL);
+	dprintf("in writeMySQL()\n");
 	iovCreate(f);
 	psz = iovAsString(f);
-printf("psz: \"%s\"\n", psz);
-	printf("in writeMySQL()2\n");
-	/* snprintf(sql_command, sizeof(sql_command), 
-		"INSERT INTO SystemEvents (Message, ReceivedAt, DeviceReportedTime, "
-			"Facility, Priority, FromHost, SysLogTag, InfoUnitID) "
-		"VALUES "
-		"	('%s', '%s', '%s', %d, %d, '%s', '%s', 1)", 
-			f->f_pMsg->pszMSG, szRcvAtTimestamp, szTimestamp, 
-			f->f_pMsg->iFacility, f->f_pMsg->iSeverity,
-			f->f_pMsg->pszHOSTNAME, f->f_pMsg->pszTAG);
-	*/
-	/* query */
-	if(mysql_query(&f->f_hmysql, psz)) {
-		dprintf("mysql insert failed. ErrNo: %d\n", mysql_errno(&f->f_hmysql));
-		exit(0);
-	}
-	else {
-		printf("insert sucessfully\n");
-	}
+	
+	if (checkDBErrorState(f))
+		return;
+
+	/* 
+	 * Now we are trying to insert the data. 
+	 *
+	 * If the first attampt failes we simply try a second one. If also 
+	 * the second attampt failed we discard this message and enable  
+	 * the "delay" error hanlding.
+	 */
+	do {
+		iCounter++;
+		/* query */
+		if(mysql_query(&f->f_hmysql, psz)) {
+
+			/* if also the second attempt failed
+			   we call the error handler */
+			if(iCounter)
+				DBErrorHandler(f);	
+		}
+		else {
+			dprintf("db insert sucessfully\n");
+		}
+	} while (mysql_errno(&f->f_hmysql) && iCounter<2);
 }
+
+/**
+ * DBErrorHandler
+ *
+ * Call this function if an db error apears. It will initiate 
+ * the "delay" handling which stopped the db logging for some 
+ * time.  
+ */
+void DBErrorHandler(register struct filed *f)
+{
+	/* TODO:
+	 * NO DB connection -> Can not log to DB
+	 * -------------------- 
+	 * Case 1: db server unavailable
+	 * We can check after a specified time interval if the server is up.
+	 * Also a reason can be a down DNS service.
+	 * Case 2: uid, pwd or dbname are incorrect
+	 * If this is a fault in the syslog.conf we have no chance to recover. But
+	 * if it is a problem of the DB we can make a retry after some time. Possible
+	 * are that the admin has not already set up the database table. Or he has not
+	 * created the database user yet. 
+	 * Case 3: unkown error
+	 * If we get an unkowon error here, we should in any case try to recover after
+	 * a specified time interval.
+	 *
+	 * Insert failed -> Can not log to DB
+	 * -------------------- 
+	 * If the insert fails it is never a good idea to give up. Only an
+	 * invalid sql sturcture (wrong template) force us to disable db
+	 * logging. 
+	 *
+	 * Think about diffrent "delay" for diffrent errors!
+	 */
+	dprintf("db error no: %d\n", mysql_errno(&f->f_hmysql));
+	dprintf("db error: %s\n", mysql_error(&f->f_hmysql));
+	/* Enable "delay" */
+	f->f_timeResumeOnError = time(&f->f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
+	f->f_iLastDBErrNo = mysql_errno(&f->f_hmysql);
+
+}
+
+/**
+ * checkDBErrorState
+ *
+ * Check if we can go on with database logging or if we should wait
+ * a little bit longer. It also check if the DB hanlde is still valid. 
+ * If it is necessary, it takes action to reinitiate the db connection.
+ *
+ * \ret int		Returns 0 if no error dedected.
+ */ 
+int checkDBErrorState(register struct filed *f)
+{
+	assert(f != NULL);
+	dprintf("in checkDBErrorState, timeResumeOnError: %d\n", f->f_timeResumeOnError);
+
+	/* If timeResumeOnError == 0 no error occured, 
+	   we can return with 0 (no error) */
+	if (f->f_timeResumeOnError == 0)
+		return 0;
+	
+	(void) time(&now);
+	/* Now we know an error occured. We check timeResumeOnError
+	   if we can process. If we have not reach the resume time
+	   yet, we return an error status. */  
+	if (f->f_timeResumeOnError > now)
+	{
+		dprintf("Wait time is not over yet.\n");
+		return 1;
+	}
+	 	
+	/* Ok, we can try to resume the database logging. First
+	   we have to reset the status to 0 (timeResumeOnError).
+	   Then we check if we need to reinitiate the database
+	   connection. We reinitiate if we know that the database
+	   handle is invalid or if an unkown error appeared. */
+/* TODO: this is not really implemented yet */
+	f->f_timeResumeOnError = 0;
+	f->f_iLastDBErrNo = 0; 
+	reInitMySQL(f);
+	return 0;
+
+}
+
 #endif	/* #ifdef WITH_DB */
 
 /**
