@@ -5,6 +5,7 @@
  * - check if MsgGetProp() can be used for MySQL, too
  * - check template lins for extra characters and provide 
  *   a warning, if they exists
+ * - check that no exit() is used!
  *
  * \brief This is what will become the rsyslogd daemon.
  *
@@ -777,6 +778,7 @@ struct msg {
 /**/	struct syslogTime tRcvdAt;/* time the message entered this program */
 /**/	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 chracters) */
 /**/	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
+/**/	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 chracters) */
 };
 
 /*
@@ -1369,6 +1371,8 @@ void MsgDestruct(struct msg * pM)
 			free(pM->pszSeverity);
 		if(pM->pszRcvdAt3164 != NULL)
 			free(pM->pszRcvdAt3164);
+		if(pM->pszTIMESTAMP3164 != NULL)
+			free(pM->pszTIMESTAMP3164);
 		if(pM->pszPRI != NULL)
 			free(pM->pszPRI);
 		free(pM);
@@ -1438,6 +1442,66 @@ char *getPRI(struct msg *pM)
 	}
 
 	return pM->pszPRI;
+}
+
+
+char *getTimeReported(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+
+	if(pM->pszTIMESTAMP3164 == NULL) {
+		if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) return "";
+		formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
+	}
+
+	return(pM->pszTIMESTAMP3164);
+}
+
+
+char *getTimeGenerated(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+
+	if(pM->pszRcvdAt3164 == NULL) {
+		if((pM->pszRcvdAt3164 = malloc(16)) == NULL) return "";
+		formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
+	}
+
+	return(pM->pszRcvdAt3164);
+}
+
+
+char *getSeverity(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+
+	if(pM->pszSeverity == NULL) {
+		/* we use a 2 byte buffer - can only be one digit */
+		if((pM->pszSeverity = malloc(2)) == NULL) return "";
+		pM->iLenSeverity =
+		   snprintf(pM->pszSeverity, 2, "%d", pM->iSeverity);
+	}
+	return(pM->pszSeverity);
+}
+
+char *getFacility(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+
+	if(pM->pszFacility == NULL) {
+		/* we use a 12 byte buffer - as of 
+		 * syslog-protocol, facility can go
+		 * up to 2^32 -1
+		 */
+		if((pM->pszFacility = malloc(12)) == NULL) return "";
+		pM->iLenFacility =
+		   snprintf(pM->pszFacility, 12, "%d", pM->iFacility);
+	}
+	return(pM->pszFacility);
 }
 
 
@@ -1655,16 +1719,18 @@ int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
 char *MsgGetProp(struct msg *pMsg, char *pName)
 {
 	char *pRes; /* result pointer */
-	static char errMsg[] = "##Can't get property - memory allocation failed!##";
 
 	assert(pMsg != NULL);
 	assert(pName != NULL);
 
+	/* sometimes there are aliases to the original MonitoWare
+	 * property names. These come after || in the ifs below. */
 	if(!strcmp(pName, "msg")) {
 		pRes = getMSG(pMsg);
 	} else if(!strcmp(pName, "UxTradMsg")) {
 		pRes = getUxTradMsg(pMsg);
-	} else if(!strcmp(pName, "hostname")) {
+	} else if(!strcmp(pName, "source")
+		  || !strcmp(pName, "HOSTNAME")) {
 		pRes = getHOSTNAME(pMsg);
 	} else if(!strcmp(pName, "syslogtag")) {
 		pRes = getTAG(pMsg);
@@ -1673,30 +1739,14 @@ char *MsgGetProp(struct msg *pMsg, char *pName)
 	} else if(!strcmp(pName, "iut")) {
 		pRes = "1"; /* always 1 for syslog messages (a MonitorWare thing;)) */
 	} else if(!strcmp(pName, "syslogfacility")) {
-		if(pMsg->pszFacility == NULL) {
-			/* we use a 12 byte buffer - as of 
-			 * syslog-protocol, facility can go
-			 * up to 2^32 -1
-			 */
-			if((pMsg->pszFacility = malloc(12)) == NULL) return errMsg;
-			pMsg->iLenFacility =
-			   snprintf(pMsg->pszFacility, 12, "%d", pMsg->iFacility);
-		}
-		pRes = pMsg->pszFacility;
+		pRes = getFacility(pMsg);
 	} else if(!strcmp(pName, "syslogpriority")) {
-		if(pMsg->pszSeverity == NULL) {
-			/* we use a 2 byte buffer - can only be one digit */
-			if((pMsg->pszSeverity = malloc(2)) == NULL) return errMsg;
-			pMsg->iLenSeverity =
-			   snprintf(pMsg->pszSeverity, 2, "%d", pMsg->iSeverity);
-		}
-		pRes = pMsg->pszSeverity;
+		pRes = getSeverity(pMsg);
 	} else if(!strcmp(pName, "timegenerated")) {
-		if(pMsg->pszRcvdAt3164 == NULL) {
-			if((pMsg->pszRcvdAt3164 = malloc(16)) == NULL) return errMsg;
-			formatTimestamp3164(&pMsg->tRcvdAt, pMsg->pszRcvdAt3164, 16);
-		}
-		pRes = pMsg->pszRcvdAt3164;
+		pRes = getTimeGenerated(pMsg);
+	} else if(!strcmp(pName, "timereported")
+		  || !strcmp(pName, "TIMESTAMP")) {
+		pRes = getTimeReported(pMsg);
 	} else {
 		pRes = "INVALID PROPERTY NAME"; /* NULL;*/
 	}
@@ -3044,7 +3094,6 @@ void fprintlog(f, flags)
 			l = f->f_iLenpsziov;
 			if (l > MAXLINE)
 				l = MAXLINE;
-			printf("about to send '%s' (%d)\n", psz, l);
 			if (sendto(finet, psz, l, 0, \
 				   (struct sockaddr *) &f->f_un.f_forw.f_addr,
 				   sizeof(f->f_un.f_forw.f_addr)) != l) {
