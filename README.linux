@@ -26,6 +26,10 @@ and this might delay things a little. Our immediate goal is to receive
 feedback and get the bugs out of the current release. Only after that
 we intend to advance the code and introduce new features.
 
+This file comes with version 0.8.1. Thanks to previous input, a memory
+leak could be detected and also be fixed (as could some minor things).
+So this release hopefully has a few bugs less.
+
 The database support was included so that our web-based syslog interface
 can be used. This is another open source project which can be found
 under http://www.liblogging.org . We highly recommend having a look at 
@@ -52,4 +56,4 @@ on sourceforge.net.
 Best regards,
 Rainer Gerhards
 Adiscon
-2004-12-08
+2005-03-08

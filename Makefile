@@ -2,11 +2,19 @@
 
 CC= gcc
 #CFLAGS= -g -DSYSV -Wall
-LDFLAGS= -g -Wall -fno-omit-frame-pointer
-CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
-#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
+# Add the -DMTRACE macro if you would like to use mtrace()
+# to hunt for memory leaks
+# next 2 lines are debug settings
+#LDFLAGS= -g -Wall -fno-omit-frame-pointer
+#CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
+
+# the next two lines are essentially the same, but -DWITH_DB
+# enables the MySQL code. By default, that one is commented out
+# change the comment chars to activate it if you need MySQL!
+# In this case, also look down further to uncomment the libs
+CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
 #CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB
-#LDFLAGS= -s
+LDFLAGS= -s
 
 INSTALL = install
 BINDIR = /usr/sbin

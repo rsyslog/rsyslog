@@ -3,8 +3,11 @@ Version 0.8.1
 
 - fixed a nasty memory leak (probably not the last one with this release)
 - some enhancements to Makefile as suggested by Bennett Todd
+- syslogd-internal messages (like restart) were missing the hostname
+  this has been corrected
 ---------------------------------------------------------------------------
 Version 0.8.0
 
-Initial testing release.
+Initial testing release. Based on the sysklogd package. Thanks to the
+sysklogd maintainers for all their good work!
 ---------------------------------------------------------------------------

@@ -535,7 +535,9 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 
 #define CONT_LINE	1		/* Allow continuation lines */
 
+#ifdef MTRACE
 #include <mcheck.h>
+#endif
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -2057,8 +2059,10 @@ int main(argc, argv)
 	 */
 	fd_set readfds;
 
+#ifdef	MTRACE
 	mtrace(); /* this is a debug aid for leak detection - either remove
 	           * or put in conditional compilation. 2005-01-18 RGerhards */
+#endif
 
 #ifndef TESTING
 	int	fd;
@@ -2852,6 +2856,7 @@ void logmsgInternal(pri, msg, from, flags)
 
 	if(MsgSetUxTradMsg(pMsg, msg) != 0) return;
 	if(MsgSetRawMsg(pMsg, msg) != 0) return;
+	if(MsgSetHOSTNAME(pMsg, LocalHostName) != 0) return;
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->iMsgSource = SOURCE_INTERNAL;
