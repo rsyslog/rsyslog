@@ -192,6 +192,10 @@ static void doOptions(char **pp, struct templateEntry *pTpe)
 		 */
 		 if(!strcmp(Buf, "date-mysql")) {
 			pTpe->data.field.eDateFormat = tplFmtMySQLDate;
+		 } else if(!strcmp(Buf, "date-rfc3164")) {
+			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
+		 } else if(!strcmp(Buf, "date-rfc3339")) {
+			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
 		 } else if(!strcmp(Buf, "lowercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvLower;
 		 } else if(!strcmp(Buf, "uppercase")) {
@@ -448,6 +452,12 @@ void tplPrintList(void)
 					break;
 				case tplFmtMySQLDate:
 					dprintf("[Format as MySQL-Date] ");
+					break;
+				case tplFmtRFC3164Date:
+					dprintf("[Format as RFC3164-Date] ");
+					break;
+				case tplFmtRFC3339Date:
+					dprintf("[Format as RFC3339-Date] ");
 					break;
 				}
 				switch(pTpe->data.field.eCaseConv) {

@@ -729,35 +729,6 @@ struct syslogTime {
 	 */
 };
 
-
-/* The following structure represents syslog message strings.
- * The need for this structure arises from different formatting
- * templates. All of this application expects strings to be
- * present in read-only memory that is managed by the message
- * object itself. This design allows to keep memory allocation
- * extremely easy. However, the drawback is that we must
- * preserve all strings (including custom-formatted ones)
- * during the lifetime of a message. We solve this by
- * providing the message string entry linked list. Whenever
- * a custom formatted property is to be generated, we link
- * it to this list. We use the pointer to the template entry
- * as a key - because that template entry is read-only too
- * (and never moved around in memory). In the worst case, we
- * may create a duplicate string, but this is less effort than
- * keeping track of which format was already generated. This
- * design is relatively lightweight and the author hopes that
- * it is a good compromise between simplicity, speed and memory
- * used. Most importantly, we do NOT expect that there are many
- * custom-formatted properties in each message. Memory in this
- * structure is freed only when the MSG object is destroyed.
- * rgerhards 2004-11-23
- */
-struct msgCustomString {
-	struct templateEntry *pKey;
-	char *psz;	/* the string itself */
-	struct msgCustomString *pNext;
-};
-
 /* rgerhards 2004-11-08: The following structure represents a
  * syslog message. 
  *
@@ -808,12 +779,12 @@ struct msg {
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 chracters) */
+	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 chracters at most) */
 	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 chracters) */
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 chracters) */
+	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 chracters at most) */
 	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 chracters) */
-	struct msgCustomString *pCustomStringsRoot;
-	struct msgCustomString *pCustomStringsLast;
 };
 
 /*
@@ -1400,49 +1371,6 @@ void syslogdPanic(char* ErrMsg)
  * obsoleted by liblogging.
  */
 
-/* Find a custom string based on its Key. Returns a pointer
- * to the custom string object if found or NULL otherwise.
- */
-struct msgCustomString *FindCustomString(struct msg *pMsg, struct templateEntry *pKey)
-{
-	assert(pMsg != NULL);
-	struct msgCustomString *pCS;
-
-	for(pCS = pMsg->pCustomStringsRoot ; pCS != NULL ; pCS = pCS->pNext) {
-		if(pCS->pKey == pKey)
-			return pCS;	/* done! */
-	}
-	
-	return NULL; 	/* not found */
-}
-
-
-/* Create a custom string object and add it to the msg
- * object. Returns NULL if failed, pointer to object
- * otherwise. NO buffer for the string itself is allocated.
- */
-struct msgCustomString *AddCustomString(struct msg *pMsg, struct templateEntry *pKey)
-{
-	assert(pMsg != NULL);
-	struct msgCustomString *pCS;
-
-	if((pCS = calloc(1, sizeof(struct msgCustomString))) == NULL)
-		return NULL;
-
-	/* Now link it to the msg object */
-	if(pMsg->pCustomStringsLast == NULL) {
-		pMsg->pCustomStringsLast = pCS;
-		pMsg->pCustomStringsRoot = pCS;
-	} else {
-		pMsg->pCustomStringsLast->pNext = pCS;
-		pMsg->pCustomStringsLast = pCS;
-	}
-
-	pCS->pKey = pKey;
-
-	return(pCS);
-}
-
 
 /* "Constructor" for a msg "object". Returns a pointer to
  * the new object or NULL if no such object could be allocated.
@@ -1473,8 +1401,6 @@ struct msg* MsgConstruct()
  */
 void MsgDestruct(struct msg * pM)
 {
-	struct msgCustomString *pCustString;
-	struct msgCustomString *p2Free;
 	assert(pM != NULL);
 	dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
 	if(--pM->iRefCount == 0)
@@ -1496,21 +1422,18 @@ void MsgDestruct(struct msg * pM)
 			free(pM->pszSeverity);
 		if(pM->pszRcvdAt3164 != NULL)
 			free(pM->pszRcvdAt3164);
+		if(pM->pszRcvdAt3339 != NULL)
+			free(pM->pszRcvdAt3339);
 		if(pM->pszRcvdAt_MySQL != NULL)
 			free(pM->pszRcvdAt_MySQL);
 		if(pM->pszTIMESTAMP3164 != NULL)
 			free(pM->pszTIMESTAMP3164);
+		if(pM->pszTIMESTAMP3339 != NULL)
+			free(pM->pszTIMESTAMP3339);
 		if(pM->pszTIMESTAMP_MySQL != NULL)
 			free(pM->pszTIMESTAMP_MySQL);
 		if(pM->pszPRI != NULL)
 			free(pM->pszPRI);
-		/* Now free the custom string */
-		pCustString = pM->pCustomStringsRoot;
-		while(pCustString != NULL) {
-			p2Free = pCustString;
-			pCustString = pCustString->pNext;
-			free(p2Free);
-		}
 		free(pM);
 	}
 }
@@ -1599,14 +1522,28 @@ char *getTimeReported(struct msg *pM, enum tplFormatTypes eFmt)
 			formatTimestampToMySQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_MySQL, 15);
 		}
 		return(pM->pszTIMESTAMP_MySQL);
+	case tplFmtRFC3164Date:
+		if(pM->pszTIMESTAMP3164 == NULL) {
+			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) return "";
+			formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
+		}
+		return(pM->pszTIMESTAMP3164);
+	case tplFmtRFC3339Date:
+		if(pM->pszTIMESTAMP3339 == NULL) {
+			if((pM->pszTIMESTAMP3339 = malloc(33)) == NULL) return "";
+			formatTimestamp3339(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 33);
+		}
+		return(pM->pszTIMESTAMP3339);
 	}
 	return "INVALID eFmt OPTION!";
 }
+
 char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
 {
 	if(pM == NULL)
 		return "";
 
+	printf("getTimeGenerated, format %d\n", eFmt);
 	switch(eFmt) {
 	case tplFmtDefault:
 		if(pM->pszRcvdAt3164 == NULL) {
@@ -1620,6 +1557,14 @@ char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
 			formatTimestampToMySQL(&pM->tRcvdAt, pM->pszRcvdAt_MySQL, 15);
 		}
 		return(pM->pszRcvdAt_MySQL);
+	case tplFmtRFC3164Date:
+		if((pM->pszRcvdAt3164 = malloc(16)) == NULL) return "";
+		formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
+		return(pM->pszRcvdAt3164);
+	case tplFmtRFC3339Date:
+		if((pM->pszRcvdAt3339 = malloc(33)) == NULL) return "";
+		formatTimestamp3339(&pM->tRcvdAt, pM->pszRcvdAt3339, 33);
+		return(pM->pszRcvdAt3339);
 	}
 	return "INVALID eFmt OPTION!";
 }
@@ -1934,7 +1879,7 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 	 * currently, it is only a tester!!!
 	 * TODO: implement!
 	 */
-	if(pTpe->data.field.eCaseConv == tplCaseConvUpper) {
+	if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
 		/* we need to obtain a private copy */
 		int iLen = strlen(pRes);
 		char *pBufStart;
@@ -1943,7 +1888,9 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 		if(pBuf == NULL)
 			return "**OUT OF MEMORY**";
 		while(*pRes) {
-			*pBuf++ = toupper(*pRes);
+			*pBuf++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
+			          toupper(*pRes) : tolower(*pRes);
+				  /* currently only these two exist */
 			++pRes;
 		}
 		*pBuf = '\0';
@@ -3164,11 +3111,8 @@ void iovDeleteFreeableStrings(struct filed *f)
 
 	assert(f != NULL);
 
-printf("in iovDeleteFreebleString(%x), used: %d\n", f, f->f_iIovUsed);
-
 	for(i = 0 ; i < f->f_iIovUsed ; ++i) {
 		/* free to-be-freed strings in iovec */
-printf("\t i: %d, must(%x): %d\n", i,f->f_bMustBeFreed + i,*(f->f_bMustBeFreed + i) );
 		if(*(f->f_bMustBeFreed + i)) {
 			printf("DELETE freeable string '%s'\n", (char*)(f->f_iov + i)->iov_base);
 			free((f->f_iov + i)->iov_base);
@@ -3226,7 +3170,6 @@ void  iovCreate(struct filed *f)
 	}
 	
 	f->f_iIovUsed = iIOVused;
-	printf("%x used set to %d\n", f, f->f_iIovUsed);
 
 #if 0 /* debug aid */
 {
