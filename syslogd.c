@@ -2,7 +2,6 @@
  * TODO:
  * - check if syslogd really needs to be shut down totally if
  *   "syslog" service from etc/services can not be found
- * - check if MsgGetProp() can be used for MySQL, too
  * - check template lins for extra characters and provide 
  *   a warning, if they exists
  * - check that no exit() is used!
@@ -64,7 +63,7 @@
  * This license applies to the new code not in sysklogd:
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2002-2003 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2004 Rainer Gerhards and Adiscon GmbH.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -958,6 +957,13 @@ int     Initialized = 0;        /* set when we have initialized ourselves
 
 extern	int errno;
 
+/* hardcoded standard templates (used for defaults) */
+static char template_TraditionalFormat[] = "\"%timegenerated% %HOSTNAME% %syslogtag%%msg%\n\"";
+static char template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
+static char template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
+static char template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
+/* end template */
+
 /* Function prototypes. */
 int main(int argc, char **argv);
 char **crunch_list(char *list);
@@ -992,6 +998,7 @@ void closeMySQL(register struct filed *f);
 
 int getSubString(char **pSrc, char *pDst, size_t DstSize, char cSep);
 void getCurrTime(struct syslogTime *t);
+void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
 
 #ifdef SYSLOG_UNIXAF
 static int create_inet_socket();
@@ -1543,7 +1550,6 @@ char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
 	if(pM == NULL)
 		return "";
 
-	printf("getTimeGenerated, format %d\n", eFmt);
 	switch(eFmt) {
 	case tplFmtDefault:
 		if(pM->pszRcvdAt3164 == NULL) {
@@ -1950,6 +1956,7 @@ int main(argc, argv)
 	extern int optind;
 	extern char *optarg;
 	int maxfds;
+	char *pTmp;
 
 #ifndef TESTING
 	chdir ("/");
@@ -2076,8 +2083,24 @@ int main(argc, argv)
 	} /* if ( !Debug ) */
 #endif
 
+	/* initialize the default templates
+	 * we use template names with a SP in front - these 
+	 * can NOT be generated via the configuration file
+	 */
+	pTmp = template_TraditionalFormat;
+	tplAddLine(" TradFmt", &pTmp);
+	pTmp = template_WallFmt;
+	tplAddLine(" WallFmt", &pTmp);
+	pTmp = template_StdFwdFmt;
+	tplAddLine(" StdFwdFmt", &pTmp);
+	pTmp = template_StdUsrMsgFmt;
+	tplAddLine(" StdUsrMsgFmt", &pTmp);
+
+	/* prepare emergency logging system */
+
 	consfile.f_type = F_CONSOLE;
 	(void) strcpy(consfile.f_un.f_fname, ctty);
+	cflineSetTemplateAndIOV(&consfile, " TradFmt");
 	(void) gethostname(LocalHostName, sizeof(LocalHostName));
 	if ( (p = strchr(LocalHostName, '.')) ) {
 		*p++ = '\0';
@@ -2719,8 +2742,6 @@ void logmsgInternal(pri, msg, from, flags)
 	int flags;
 {
 	struct msg *pMsg;
-	char buf[16];
-	char szMsg[1024];
 
 	if((pMsg = MsgConstruct()) == NULL){
 		/* rgerhards 2004-11-09: calling panic might not be the
@@ -2733,18 +2754,12 @@ void logmsgInternal(pri, msg, from, flags)
 
 	if(MsgSetMSG(pMsg, msg) != 0) return;
 	if(MsgSetRawMsg(pMsg, msg) != 0) return;
+	if(MsgSetUxTradMsg(pMsg, msg) != 0) return;
 	if(MsgSetHOSTNAME(pMsg, from) != 0) return;
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->iMsgSource = SOURCE_INTERNAL;
 	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
-
-	/* generate traditional Unix message... */
-	formatTimestamp3164(&pMsg->tTIMESTAMP, buf, sizeof(buf) / sizeof(char));
-
-	snprintf(szMsg, sizeof(szMsg) / sizeof(char), "%s %s %s",
-	         buf, from, msg);
-	if(MsgSetUxTradMsg(pMsg, szMsg) != 0) return;
 
 	logmsg(pri, pMsg, flags);
 	MsgDestruct(pMsg);
@@ -3890,13 +3905,13 @@ void init()
 		Files = NULL;
 	}
 	
+	/* TODO: we need to free the templates! */
 
 #ifdef SYSV
 	lognum = 0;
 #else
 	f = NULL;
 #endif
-
 	/* open the configuration file */
 	if ((cf = fopen(ConfFile, "r")) == NULL) {
 		/* rgerhards: this code is executed to set defaults when the
@@ -4090,6 +4105,8 @@ void init()
  */
 void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 {
+	char errMsg[512];
+
 	assert(f != NULL);
 	assert(pTemplateName != NULL);
 
@@ -4100,7 +4117,10 @@ void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 	 * how many elements iov must have - and this can never change.
 	 */
 	if((f->f_pTpl = tplFind(pTemplateName, strlen(pTemplateName))) == NULL) {
-		dprintf("Could not find template '%s'\n", pTemplateName);
+		snprintf(errMsg, sizeof(errMsg) / sizeof(char),
+			 "rsyslogd: Could not find template '%s'\n", pTemplateName);
+		logmsgInternal(LOG_SYSLOG|LOG_ERR, errMsg, LocalHostName, ADDDATE);
+		dprintf(errMsg);
 		f->f_type = F_UNUSED;
 	} else {
 		if((f->f_iov = calloc(tplGetEntryCount(f->f_pTpl),
@@ -4120,8 +4140,11 @@ void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 	
 /* Helper to cfline() and its helpers. Parses a template name
  * from an "action" line. Must be called with the Line pointer
- * pointing to the first character after the comma.
- * Everything is stored in the filed struct.
+ * pointing to the first character after the semicolon.
+ * Everything is stored in the filed struct. If there is no
+ * template name (it is empty), than it is ensured that the
+ * returned string is "\0". So you can count on the first character
+ * to be \0 in this case.
  * rgerhards 2004-11-19
  */
 void cflineParseTemplateName(struct filed *f, char** pp,
@@ -4187,6 +4210,10 @@ void cflineParseFileName(struct filed *f, char* p)
 
 	cflineParseTemplateName(f, &p, szTemplateName,
 	                        sizeof(szTemplateName) / sizeof(char));
+
+	if(szTemplateName[0] == '\0')	/* no template? */
+		strcpy(szTemplateName, " TradFmt"); /* use default! */
+
 	cflineSetTemplateAndIOV(f, szTemplateName);
 	
 	dprintf("filename: '%s', template: '%s'\n", f->f_un.f_fname, szTemplateName);
@@ -4388,9 +4415,14 @@ void cfline(line, f)
 			 /* Now look for the template! */
 			cflineParseTemplateName(f, &p, szTemplateName,
 						sizeof(szTemplateName) / sizeof(char));
-			cflineSetTemplateAndIOV(f, szTemplateName);
+		} else
+			szTemplateName[0] = '\0';
+		if(szTemplateName[0] == '\0') {
+			/* we do not have a template, so let's use the default */
+			strcpy(szTemplateName, " StdFwdFmt");
 		}
 
+		/* first set the f->f_type */
 		if ( (hp = gethostbyname(q)) == NULL ) {
 			f->f_type = F_FORW_UNKN;
 			f->f_prevcount = INET_RETRY_MAX;
@@ -4398,6 +4430,10 @@ void cfline(line, f)
 		} else {
 			f->f_type = F_FORW;
 		}
+
+		/* then try to find the template and re-set f_type to UNUSED
+		 * if it can not be found. */
+		cflineSetTemplateAndIOV(f, szTemplateName);
 
 		(void) strcpy(f->f_un.f_forw.f_hname, q);
 		dprintf("forwarding host: '%s' template '%s'\n",
@@ -4455,10 +4491,13 @@ void cfline(line, f)
 			p += 2; /* eat "*;" */
 			cflineParseTemplateName(f, &p, szTemplateName,
 						sizeof(szTemplateName) / sizeof(char));
-			cflineSetTemplateAndIOV(f, szTemplateName);
-			dprintf(" template '%s'", szTemplateName);
 		}
-		dprintf("\n");
+		else	/* assign default format if none given! */
+			szTemplateName[0] = '\0';
+		if(szTemplateName[0] == '\0')
+			strcpy(szTemplateName, " WallFmt");
+		cflineSetTemplateAndIOV(f, szTemplateName);
+		dprintf(" template '%s'\n", szTemplateName);
 		f->f_type = F_WALL;
 		break;
 
@@ -4510,11 +4549,13 @@ void cfline(line, f)
 		else {
 			initMySQL(f);
 		}
+		/* TODO: add handling for standard template! rgerhards */
 		break;
 #endif	/* #ifdef WITH_DB */
 
 	default:
 		dprintf ("users: %s\n", p);	/* ASP */
+		f->f_type = F_USERS;
 		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
 			for (q = p; *q && *q != ',' && *q != ';'; )
 				q++;
@@ -4530,14 +4571,18 @@ void cfline(line, f)
 		/* done, now check if we have a template name
 		 * TODO: we need to handle the case where i >= MAXUNAME!
 		 */
+printf("USer, type %d\n", f->f_type);
+		szTemplateName[0] = '\0';
 		if(*p == ';') {
 			/* we have a template specifier! */
 			++p; /* eat ";" */
 			cflineParseTemplateName(f, &p, szTemplateName,
 						sizeof(szTemplateName) / sizeof(char));
-			cflineSetTemplateAndIOV(f, szTemplateName);
 		}
-		f->f_type = F_USERS;
+		if(szTemplateName[0] == '\0')
+			strcpy(szTemplateName, " StdUsrMsgFmt");
+		cflineSetTemplateAndIOV(f, szTemplateName);
+printf("OUT USer, type %d\n", f->f_type);
 		break;
 	}
 	return;
