@@ -207,6 +207,10 @@ static void doOptions(char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eCaseConv = tplCaseConvLower;
 		 } else if(!strcmp(Buf, "uppercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvUpper;
+		 } else if(!strcmp(Buf, "escape-cc")) {
+			pTpe->data.field.options.bEscapeCC = 1;
+		 } else if(!strcmp(Buf, "drop-last-lf")) {
+			pTpe->data.field.options.bDropLastLF = 1;
 		 } else {
 			dprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }
@@ -487,6 +491,12 @@ void tplPrintList(void)
 				case tplCaseConvUpper:
 					dprintf("[Converted to Upper Case] ");
 					break;
+				}
+				if(pTpe->data.field.options.bEscapeCC) {
+				  	dprintf("[escape control-characters] ");
+				}
+				if(pTpe->data.field.options.bDropLastLF) {
+				  	dprintf("[drop last LF in msg] ");
 				}
 				if(pTpe->data.field.iFromPos != 0 ||
 				   pTpe->data.field.iToPos != 0) {

@@ -37,7 +37,9 @@ struct templateEntry {
 			unsigned iToPos;	/* up to that one... */
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
-			struct {
+			struct { 		/* bit fields! */
+				unsigned bEscapeCC: 1;		/* escape control characters? */
+				unsigned bDropLastLF: 1;	/* drop last LF char in msg (PIX!) */
 			} options;		/* options as bit fields */
 		} field;
 	} data;

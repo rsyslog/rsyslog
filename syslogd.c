@@ -959,7 +959,7 @@ int     Initialized = 0;        /* set when we have initialized ourselves
 extern	int errno;
 
 /* hardcoded standard templates (used for defaults) */
-static char template_TraditionalFormat[] = "\"%timegenerated% %HOSTNAME% %syslogtag%%msg%\n\"";
+static char template_TraditionalFormat[] = "\"%timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static char template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
 static char template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
 static char template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
@@ -1924,14 +1924,12 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 		 */
 		//	++iFrom; /* nbr of chars to skip! */
 			while(*pRes && iFrom) {
-			printf("%c", *pRes);
 				--iFrom;
 				++pRes;
 			}
 		}
 		/* OK, we are at the begin - now let's copy... */
 		while(*pRes && iLen) {
-			printf("%c", *pRes);
 			*pBuf++ = *pRes;
 			++pRes;
 			--iLen;
@@ -1943,8 +1941,8 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 		*pbMustBeFreed = 1;
 	}
 
-	/* case conversations (should go last, because so we are able to
-	 * work on the smalles possible buffer).
+	/* case conversations (should go after substring, because so we are able to
+	 * work on the smallest possible buffer).
 	 */
 	if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
 		/* we need to obtain a private copy */
@@ -1969,6 +1967,32 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 			free(pRes);
 		pRes = pBufStart;
 		*pbMustBeFreed = 1;
+	}
+
+	/* Now drop last LF if present (pls note that this must not be done
+	 * if bEscapeCC was set! - once that is implemented ;)).
+	 */
+	if(pTpe->data.field.options.bDropLastLF) {
+		int iLen = strlen(pRes);
+		char *pBuf;
+		if(*(pRes + iLen - 1) == '\n') {
+			/* we have a LF! */
+			/* check if we need to obtain a private copy */
+			if(pbMustBeFreed == 0) {
+				/* ok, original copy, need a private one */
+				pBuf = malloc((iLen + 1) * sizeof(char));
+				if(pBuf == NULL) {
+					if(*pbMustBeFreed == 1)
+						free(pRes);
+					*pbMustBeFreed = 0;
+					return "**OUT OF MEMORY**";
+				}
+				memcpy(pBuf, pRes, iLen - 1);
+				pRes = pBuf;
+				*pbMustBeFreed = 1;
+			}
+			*(pRes + iLen - 1) = '\0'; /* drop LF ;) */
+		}
 	}
 
 	/*dprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
@@ -3654,7 +3678,7 @@ const char *cvthname(f)
 	}
 	hp = gethostbyaddr((char *) &f->sin_addr, sizeof(struct in_addr), \
 			   f->sin_family);
-	if (hp == 0) {
+	if (hp == NULL) {
 		dprintf("Host name for your address (%s) unknown.\n",
 			inet_ntoa(f->sin_addr));
 		return (inet_ntoa(f->sin_addr));
