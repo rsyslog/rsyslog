@@ -1,10 +1,9 @@
-.\" Copyright 1994 Dr. Greg Wettstein, Enjellic Systems Development.
+.\" Copyright 2004 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
-.\" Sun Aug 30 11:35:55 MET: Martin Schulze: Updates
 .\"
-.TH SYSKLOGD 8 "12 October 1998" "Version 1.3" "Linux System Administration"
+.TH RSYSLOGD 8 "24 November 2004" "Version 0.8" "Linux System Administration"
 .SH NAME
-sysklogd \- Linux system logging utilities.
+rsyslog \- reliable and extended syslogd 
 .SH SYNOPSIS
 .B syslogd
 .RB [ " \-a "
@@ -32,7 +31,7 @@ sysklogd \- Linux system logging utilities.
 .RB [ " \-v " ]
 .LP
 .SH DESCRIPTION
-.B Sysklogd
+.B rsyslogd
 provides two system utilities which provide support for
 system logging and kernel message trapping.  Support of both internet and
 unix domain sockets enables this utility package to support both local
@@ -40,7 +39,7 @@ and remote logging.
 
 System logging is provided by a version of 
 .BR syslogd (8)
-derived from the
+derived from the sysklogd package which in turn is derived from the
 stock BSD sources.  Support for kernel logging is provided by the
 .BR klogd (8)
 utility which allows kernel logging to be conducted in either a
@@ -50,13 +49,21 @@ standalone fashion or as a client of syslogd.
 provides a kind of logging that many modern programs use.  Every logged
 message contains at least a time and a hostname field, normally a
 program name field, too, but that depends on how trusty the logging
-program is.
+program is. The rsyslog package supports free definition of output formats
+via templates. It also supports precise timestamps and writing directly
+to MySQL databases. If the database option is used, tools like phpLogCon can
+be used to view the log data.
 
 While the
 .B syslogd
 sources have been heavily modified a couple of notes
 are in order.  First of all there has been a systematic attempt to
-insure that syslogd follows its default, standard BSD behavior.
+insure that syslogd follows its default, standard BSD behavior. Of course,
+some configuration file changes are necessary in order to support the
+template system. However, rsyslog should be able to use a standard
+syslog.conf and act like the orginal syslogd. However, an original syslogd
+will not work correctly with a rsyslog-enhanced configuration file. At
+best, it will generate funny looking file names.
 The second important concept to note is that this version of syslogd
 interacts transparently with the version of syslog found in the
 standard libraries.  If a binary linked to the standard shared
@@ -69,7 +76,8 @@ or an alternative file, given with the
 .B "\-f"
 option, is read at startup.  Any lines that begin with the hash mark
 (``#'') and empty lines are ignored.  If an error occurs during parsing
-the whole line is ignored.
+the error element is ignored. It is tried to parse the rest of the line
+and it most .
 
 .LP
 .SH OPTIONS

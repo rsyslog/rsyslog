@@ -61,7 +61,7 @@
  * This license applies to the new code not in sysklogd:
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2003-2004 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2005 Rainer Gerhards and Adiscon GmbH.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

@@ -1,0 +1,646 @@
+.\" rsyslog.conf - rsyslogd(8) configuration file
+.\" Copyright 2003-2004 Rainer Gerhards and Adiscon GmbH.
+.\" 
+.\" This file is part of the rsyslog  package, an enhanced system log daemon.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\" 
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\" 
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111, USA.
+.\"
+.TH RSYSLOG.CONF 5 "2005-03-17" "Version 0.8" "Linux System Administration"
+.SH NAME
+rsyslog.conf \- rsyslogd(8) configuration file
+.SH DESCRIPTION
+The
+.I rsyslog.conf
+file is the main configuration file for the
+.BR rsyslogd (8)
+which logs system messages on *nix systems.  This file specifies rules
+for logging.  For special features see the
+.BR rsyslogd (8)
+manpage.
+
+While rsyslogd contains enhancements over standard syslogd, efforts
+have been made to keep the configuration file as compatible as
+possible. While, for obvious reasons, enhanced features require
+a different config file syntax, rsyslogd should be able to work with
+a standard syslog.conf file. This is especially useful while you
+are migrating from syslogd to rsyslogd.
+
+Every rule consists of two fields, a 
+.I selector
+field and an
+.I action 
+field.  These two fields are separated by one or more spaces or
+tabs.  The selector field specifies a pattern of facilities and
+priorities belonging to the specified action.
+
+Lines starting with a hash mark (``#'') and empty lines are ignored.
+
+.SH TEMPLATES
+Templates are a key feature of rsyslog. They allow to specify any
+format a user might want. Every output in rsyslog uses templates - this
+holds true for files, user messages and so on. The database writer
+expects its template to be a proper SQL statement - so this is highly
+customizable too. You might ask how does all of this work when no templates
+at all are specified. Good question ;) The answer is simple, though. Templates
+compatible with the stock syslogd formats are hardcoded into rsyslog. So if
+no template is specified, we use one of these hardcoded templates. Search for
+"template_" in syslogd.c and you will find the hardcoded ones.
+
+A template consists of a template directive, a name, the actual template text
+and optional options. A sample is:
+
+$template MyTemplateName,"\\7Text %property% some more text\\n",<options>
+
+The "$template" is the template directive. It tells rsyslog that this
+line contains a template.  "MyTemplateName" is the template name.
+All other config lines refer to this name.
+
+The text within quotes is the actual template text. The backslash is 
+an escape character, much as it is in C. It does all these "cool" things. For
+example, \\7 rings the bell (this is an ASCII value), \\n is a new line.
+C programmers and perl coders have the advantage of knowing this, but the
+set in rsyslog is a bit restricted currently.
+
+All text in the template
+is used literally, except for things within percent signs. These are 
+properties and allow you access to the contents of the syslog message.
+Properties are accessed via the property replacer (nice name, huh) and
+it can do cool things, too. For example, it can pick a substring or
+do date-specific formatting. More on this is below, on some lines of the
+property replacer.
+
+The <options> part is optional. It carries options influenceing the
+template as whole. See details below. Be sure NOT to mistake template
+options with property options - the later ones are processed by the
+property replacer and apply to a SINGLE property, only (and not the
+whole template).
+
+Template options are case-insensitive. Currently defined are:
+.nf
+sql - format the string suitable for a SQL statement. This will replace
+      single quotes ("'") by two single quotes ("''") inside each
+      field. This option MUST be specified when a template is used for
+      writing to a database, otherwise SQL injection might occur.
+.fi
+
+Please note that the database writer *checks* that the sql option is
+present in the template. If it is not present, the write database action
+is disabled. This is to guard you against accidential forgetting it and
+then becoming vulnerable to SQL injection.
+The sql option can also be useful with files - especially if you want
+to import them into a database on another machine for performance reasons.
+However, do NOT
+use it if you do not have a real need for it - among others, it takes
+some toll on the processing time. Not much, but on a really busy system
+you might notice it ;)
+
+.nf
+To escape:
+% = \\%
+\\ = \\\\  --> '\\' is used to escape (as in C)
+$template TraditionalFormat,%timegenerated% %HOSTNAME% %syslogtag%%msg%\\n"
+.fi
+
+Properties can be accessed by the property replacer. They are accessed
+inside the template by putting them between percent signs. Properties
+can be modifed by the property replacer. The full syntax is as follows:
+
+%propname:fromChar:toChar:options%
+
+propname is the name of the property to access. This IS case-sensitive!
+Currently supported are:
+
+.nf
+msg             the MSG part of the message (aka "the message" ;))
+rawmsg          the message excactly as it was received from the
+                socket. Should be useful for debugging.
+UxTradMsg       will disappear soon - do NOT use!
+HOSTNAME        hostname from the message
+source          alias for HOSTNAME
+syslogtag       TAG from the message
+PRI             PRI part of the message - undecoded (single value)
+IUT             the monitorware InfoUnitType - used when talking
+                to a MonitorWare backend (also for phpLogCon)
+syslogfacility  the facility from the message - in numerical form
+syslogpriority  the priority (actully severity!) from the
+                message - in numerical form
+timegenerated   timestamp when the message was RECEIVED. Always in
+                high resolution
+timereported    timestamp from the message. Resolution depends on
+                what was provided in the message (in most cases,
+                only seconds)
+TIMESTAMP       alias for timereported
+.fi
+
+FromChar and toChar are used to build substrings. They specify the
+offset within the string that should be copied. Offset counting
+starts at 1, so if you need to obtain the first 2 characters of the
+message text, you can use this syntax: "%msg:1:2%".
+If you do not whish to specify from and to, but you want to
+specify options, you still need to include the colons. For example,
+if you would like to convert the full message text to lower case,
+use "%msg:::lowercase%".
+
+.nf
+property options are case-insensitive, currently defined are:
+uppercase      convert property to lowercase only
+lowercase      convert property text to uppercase only
+drop-last-lf   The last LF in the message (if any), is dropped. 
+               Especially useful for PIX.
+date-mysql     format as mysql date
+date-rfc3164   format as RFC 3164 date
+date-rfc3339   format as RFC 3339 date
+escape-cc      NOT yet implemented
+.fi
+
+.SH SELECTORS
+The selector field itself again consists of two parts, a
+.I facility
+and a 
+.IR priority ,
+separated by a period (``.'').
+Both parts are case insensitive and can also be specified as decimal
+numbers, but don't do that, you have been warned.  Both facilities and
+priorities are described in 
+.BR rsyslog (3).
+The names mentioned below correspond to the similar 
+.BR LOG_ -values
+in
+.IR /usr/include/rsyslog.h .
+
+The
+.I facility
+is one of the following keywords:
+.BR auth ", " authpriv ", " cron ", " daemon ", " kern ", " lpr ", "
+.BR mail ", " mark ", " news ", " security " (same as " auth "), "
+.BR rsyslog ", " user ", " uucp " and " local0 " through " local7 .
+The keyword 
+.B security
+should not be used anymore and
+.B mark
+is only for internal use and therefore should not be used in
+applications.  Anyway, you may want to specify and redirect these
+messages here.  The
+.I facility
+specifies the subsystem that produced the message, i.e. all mail
+programs log with the mail facility
+.BR "" ( LOG_MAIL )
+if they log using rsyslog.
+
+Please note that the upcoming next syslog-RFC specifies many more
+facilities. Support for them will be added in a future version of
+rsyslog, which might require changes to existing configuration files.
+
+The
+.I priority
+is one of the following keywords, in ascending order: 
+.BR debug ", " info ", " notice ", " warning ", " warn " (same as "
+.BR warning "), " err ", " error " (same as " err "), " crit ", "
+.BR alert ", " emerg ", " panic " (same as " emerg ).
+The keywords
+.BR error ", " warn " and " panic
+are deprecated and should not be used anymore.  The
+.I priority
+defines the severity of the message
+
+The behavior of the original BSD syslogd is that all messages of the
+specified priority and higher are logged according to the given
+action.  This
+.BR rsyslogd (8)
+behaves the same, but has some extensions.
+
+In addition to the above mentioned names the
+.BR rsyslogd (8)
+understands the following extensions: An asterisk (``*'') stands for
+all facilities or all priorities, depending on where it is used
+(before or after the period).  The keyword
+.B none
+stands for no priority of the given facility.
+
+You can specify multiple facilities with the same priority pattern in
+one statement using the comma (``,'') operator.  You may specify as
+much facilities as you want.  Remember that only the facility part from
+such a statement is taken, a priority part would be skipped.
+
+Multiple selectors may be specified for a single
+.I action
+using the semicolon (``;'') separator.  Remember that each selector in
+the 
+.I selector
+field is capable to overwrite the preceding ones.  Using this
+behavior you can exclude some priorities from the pattern.
+
+.BR Rsyslogd (8)
+has a syntax extension to the original BSD source, that makes its use
+more intuitively.  You may precede every priority with an equation sign
+(``='') to specify only this single priority and not any of the
+above.  You may also (both is valid, too) precede the priority with an
+exclamation mark (``!'') to ignore all that priorities, either exact
+this one or this and any higher priority.  If you use both extensions
+than the exclamation mark must occur before the equation sign, just
+use it intuitively.
+
+.SH ACTIONS
+The action field of a rule describes what to do with the message.
+In general, message content is written to a kind of "logfile". But
+also other actions might be done, like writing to a database table
+or forwarding to another host.
+
+Templates can be used with all actions. If used, the specified template
+is used to generate the message content (instead of the default
+template). To specify a template, write a semicolon after the action
+value immediately followed by the template name.
+
+.B Beware:
+templates MUST be defined BEFORE they are used. It is OK to define
+some templates, then use them in selector lines, define more templates
+and use use them in the following selector lines. But it is NOT permitted
+to use a template in a selectore line that is above its definition. If you
+do this, the selector line will be ignored.
+
+.SS Regular File
+Typically messages are logged to real files.  The file has to be
+specified with full pathname, beginning with a slash ``/''.
+
+You may prefix each entry with the minus ``-'' sign to omit syncing
+the file after every logging.  Note that you might lose information if
+the system crashes right behind a write attempt.  Nevertheless this
+might give you back some performance, especially if you run programs
+that use logging in a very verbose manner.
+
+If your system is connected to a reliable UPS and you receive lots of
+log data (e.g. firewall logs), it might be a very good idea to turn
+of syncing by specifying the "-" in front of the file name.
+
+.SS Named Pipes
+This version of
+.BR rsyslogd (8)
+has support for logging output  to
+named pipes (fifos).  A fifo or named pipe can be used as
+a destination for log messages by prepending a pipe symbol (``|'') to
+the name of the file.  This is handy for debugging.  Note that the fifo
+must be created with the  
+.BR mkfifo (1)
+command  before
+.BR rsyslogd (8)
+is started.
+
+.SS Terminal and Console
+If the file you specified is a tty, special tty-handling is done, same
+with
+.IR /dev/console .
+
+.SS Remote Machine
+.BR Rsyslogd (8)
+provides full remote logging, i.e. is able to send messages to a
+remote host running 
+.BR rsyslogd (8)
+and to receive messages from remote hosts.  The remote
+host won't forward the message again, it will just log them
+locally.  To forward messages to another host, prepend the hostname
+with the at sign (``@'').
+
+Using this feature you're able to control all rsyslog messages on one
+host, if all other machines will log remotely to that.  This tears down
+administration needs.
+
+Please note that this version of rsyslogd does NOT forward messages
+it has received from the network to another host. So it can NOT work
+as a relay. If you need this functionality, either ask 
+rgerhards@adiscon.com or wait until it is configurable in the next
+version.
+
+.SS List of Users
+Usually critical messages are also directed to ``root'' on that
+machine.  You can specify a list of users that shall get the message by
+simply writing the login.  You may specify more than one user by
+separating them with commas (``,'').  If they're logged in they
+get the message.  Don't think a mail would be sent, that might be too
+late.
+
+.SS Everyone logged on
+Emergency messages often go to all users currently online to notify
+them that something strange is happening with the system.  To specify
+this
+.IR wall (1)-feature
+use an asterisk (``*'').
+
+.SS Database Table
+This allows logging of the message to a database table. Currently, only
+MySQL databases are supported. By default, a MonitorWare-compatible schema
+is required for this to work. You can create that schema with the
+createDB.SQL file that came with the rsyslog package. You can also
+use any other schema of your liking - you just need to define a proper
+template and assign this template to the action.
+
+The database writer is called by specifying a greater-then sign (">")
+in front of the database connect information. Immediately after that
+sign the database host name must be given, a comma, the database name,
+another comma, the database user, a comma and then the user's password.
+If a specific template is to be used, a semicolong followed by the
+template name can follow the connect information. This is as follows:
+
+.nf
+    >dbhost,dbname,dbuser,dbpassword;dbtemplate
+.fi
+.SH TEMPLATE NAME
+Every ACTION can be followed by a template name. If so, that template is used
+for message formatting. If no name is given, a hardcoded default template is
+used for the action.
+There can only be one template name for each given action.
+The default template is specific to each action. For a 
+description of what a template is and what you can do with it, see
+"TEMPLATES" at the top of this document.
+
+.SH EXAMPLES
+Below are example for templates and selector lines. I hope they are
+self-explanatory. If not, please see www.monitorware.com/rsyslog/ for
+advise.
+.SS TEMPLATES
+Please note that
+the samples are split across multiple lines. A template MUST NOT actually
+be split across multiple lines.
+
+A template that resambles traditional syslogd file output:
+.br
+.nf
+$template TraditionalFormat,"%timegenerated% %HOSTNAME%
+%syslogtag%%msg:::drop-last-lf%\\n"
+.fi
+
+A template that tells you a little more about the message:
+.br
+.nf
+$template precise,"%syslogpriority%,%syslogfacility%,%timegenerated%,%HOSTNAME%,
+%syslogtag%,%msg%\\n"
+.fi
+
+A template for RFC 3164 format:
+.br
+.nf
+$template RFC3164fmt,"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"
+.fi
+
+A template for the format traditonally used for user messages:
+.br
+.nf
+$template usermsg," XXXX%syslogtag%%msg%\\n\\r"
+.fi
+
+And a template with the traditonal wall-message format:
+.br
+.nf
+$template wallmsg,"\\r\\n\\7Message from syslogd@%HOSTNAME% at %timegenerated%
+...\\r\\n %syslogtag%%msg%\\n\\r"
+.fi
+
+A template that can be used for the database write (please note the SQL template
+option)
+.br
+.nf
+$template MySQLInsert,"insert iut, message, receivedat values
+('%iut%', '%msg:::UPPERCASE%', '%timegenerated:::date-mysql%')
+into systemevents\\r\\n", SQL
+.fi
+
+The following template emulates winsyslog format (it's a Adiscon format, you 
+do not feel bad if you don't know it ;)). It's interesting to see how it
+takes different parts out of the date stamps. What happens is that the date
+stamp is split into the actual date and time and the these two are combined
+with just a comma in between them.
+
+.nf
+$template WinSyslogFmt,"%HOSTNAME%,%timegenerated:1:10:date-rfc3339%,
+%timegenerated:12:19:date-rfc3339%,%timegenerated:1:10:date-rfc3339%,
+%timegenerated:12:19:date-rfc3339%,%syslogfacility%,%syslogpriority%,
+%syslogtag%%msg%\\n"
+.fi
+
+.SS SELECTOR LINES
+.IP
+.nf
+# Store critical stuff in critical
+#
+*.=crit;kern.none            /var/adm/critical
+.fi
+.LP
+This will store all messages with the priority
+.B crit
+in the file
+.IR /var/adm/critical ,
+except for any kernel message.
+
+.IP
+.nf
+# Kernel messages are first, stored in the kernel
+# file, critical messages and higher ones also go
+# to another host and to the console. Messages to
+# the host finlandia are forwarded in RFC 3164
+# format (using the template defined above).
+#
+kern.*                       /var/adm/kernel
+kern.crit                    @finlandia;RFC3164fmt
+kern.crit                    /dev/console
+kern.info;kern.!err          /var/adm/kernel-info
+.fi
+.LP
+The first rule direct any message that has the kernel facility to the
+file
+.IR /var/adm/kernel .
+
+The second statement directs all kernel messages of the priority
+.B crit
+and higher to the remote host finlandia.  This is useful, because if
+the host crashes and the disks get irreparable errors you might not be
+able to read the stored messages.  If they're on a remote host, too,
+you still can try to find out the reason for the crash.
+
+The third rule directs these messages to the actual console, so the
+person who works on the machine will get them, too.
+
+The fourth line tells the rsyslogd to save all kernel messages that
+come with priorities from
+.BR info " up to " warning
+in the file
+.IR /var/adm/kernel-info .
+Everything from
+.I err
+and higher is excluded.
+
+.IP
+.nf
+# The tcp wrapper loggs with mail.info, we display
+# all the connections on tty12
+#
+mail.=info                   /dev/tty12
+.fi
+.LP
+This directs all messages that uses 
+.BR mail.info " (in source " LOG_MAIL " | " LOG_INFO )
+to
+.IR /dev/tty12 , 
+the 12th console.  For example the tcpwrapper
+.BR tcpd (8)
+uses this as it's default.
+
+.IP
+.nf
+# Store all mail concerning stuff in a file
+#
+mail.*;mail.!=info           /var/adm/mail
+.fi
+.LP
+This pattern matches all messages that come with the
+.B mail
+facility, except for the
+.B info
+priority.  These will be stored in the file
+.IR /var/adm/mail .
+
+.IP
+.nf
+# Log all mail.info and news.info messages to info
+#
+mail,news.=info              /var/adm/info
+.fi
+.LP
+This will extract all messages that come either with
+.BR mail.info " or with " news.info 
+and store them in the file
+.IR /var/adm/info .
+
+.IP
+.nf
+# Log info and notice messages to messages file
+#
+*.=info;*.=notice;\\
+	mail.none  /var/log/messages
+.fi
+.LP
+This lets
+.B rsyslogd
+log all messages that come with either the
+.BR info " or the " notice
+facility into the file
+.IR /var/log/messages ,
+except for all messages that use the
+.B mail
+facility.
+
+.IP
+.nf
+# Log info messages to messages file
+#
+*.=info;\\
+	mail,news.none       /var/log/messages
+.fi
+.LP
+This statement causes
+.B rsyslogd
+to log all messages that come with the
+.B info
+priority to the file
+.IR /var/log/messages .
+But any message coming either with the
+.BR mail " or the " news
+facility will not be stored.
+
+.IP
+.nf
+# Emergency messages will be displayed using wall
+#
+*.=emerg                     *
+.fi
+.LP
+This rule tells the
+.B rsyslogd
+to write all emergency messages to all currently logged in users.  This
+is the wall action.
+
+.IP
+.nf
+# Messages of the priority alert will be directed
+# to the operator
+#
+*.alert                      root,joey
+.fi
+.LP
+This rule directs all messages with a priority of
+.B alert
+or higher to the terminals of the operator, i.e. of the users ``root''
+and ``joey'' if they're logged in.
+
+.IP
+.nf
+*.*                          @finlandia
+.fi
+.LP
+This rule would redirect all messages to a remote host called
+finlandia.  This is useful especially in a cluster of machines where
+all rsyslog messages will be stored on only one machine.
+
+.IP
+.fi
+*.*            >dbhost,dbname,dbuser,dbpassword;dbtemplate
+.nf
+.LP
+This rule writes all message to the database "dbname" hosted on "dbhost".
+The login is done with user "dbuser" and password "dbpassword". The
+actual table that is updated is specified within the template (which
+contains the insert statement). The template is called "dbtemplate" 
+in this case.
+
+.SH CONFIGURATION FILE SYNTAX DIFFERENCES
+.B Rsyslogd
+uses a slightly different syntax for its configuration file than
+the original BSD sources.  Originally all messages of a specific priority
+and above were forwarded to the log file.  The modifiers ``='', ``!''
+and ``-'' were added to make
+.B rsyslogd
+more flexible and to use it in a more intuitive manner.
+
+The original BSD rsyslogd doesn't understand spaces as separators between
+the selector and the action field.
+
+When compared to syslogd from sysklogd package,
+.B rsyslogd
+offers template support. For obvious reasons, the syntax for
+template definitions is available in rsyslogd, only. The same
+applies to the write database action.
+.SH FILES
+.PD 0
+.TP
+.I /etc/rsyslog.conf
+Configuration file for
+.B rsyslogd
+
+.SH BUGS
+The effects of multiple selectors are sometimes not intuitive.  For
+example ``mail.crit,*.err'' will select ``mail'' facility messages at
+the level of ``err'' or higher, not at the level of ``crit'' or
+higher.
+
+This is an early release. So be sure to check the file BUGS that came with
+the package for all the fun it offers ;)
+.SH SEE ALSO
+.BR syslogd (8),
+.BR logger (1),
+.BR syslog (3)
+
+.SH AUTHORS
+The
+.B rsyslogd
+is taken from sysklogd sources, which have been heavily modified
+by Rainer Gerhards (rgerhards@adiscon.com) and others.

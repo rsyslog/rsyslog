@@ -57,8 +57,7 @@ all: syslogd
 
 test: syslog_tst ksym oops_test tsyslogd
 
-#install: install_man install_exec
-install: install_exec
+install: install_man install_exec
 
 syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o
 	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o stringbuf.o srUtils.o ${LIBS}
@@ -93,16 +92,9 @@ clean:
 clobber: clean
 	rm -f syslogd klogd ksym syslog_tst oops_test TAGS tsyslogd tklogd
 
-install-replace: syslogd
-	${INSTALL} -b -m 500 -s syslogd ${DESTDIR}${BINDIR}/syslogd
-
 install_exec: syslogd
-	cp ${DESTDIR}${BINDIR}/syslogd ${DESTDIR}${BINDIR}/syslogd-previous
-	${INSTALL} -b -m 500 -s syslogd ${DESTDIR}${BINDIR}/syslogd
+	${INSTALL} -b -m 500 -s syslogd ${DESTDIR}${BINDIR}/rsyslogd
 
-# man not yet supported ;)
-#install_man:
-#	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 sysklogd.8 ${MANDIR}/man8/sysklogd.8
-#	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 syslogd.8 ${MANDIR}/man8/syslogd.8
-#	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 syslog.conf.5 ${MANDIR}/man5/syslog.conf.5
-#	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 klogd.8 ${MANDIR}/man8/klogd.8
+install_man:
+	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 rsyslogd.8 ${MANDIR}/man8/rsyslogd.8
+	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 rsyslog.conf.5 ${MANDIR}/man5/rsyslog.conf.5
