@@ -9,6 +9,7 @@
  *   is specified in an action line (hint: keep action type
  *   to F_UNUSED unless a proper template could be found)
  *   ONLY TO BE DONE FOR MySQL logging, rest is fixed rgerhards 2004-12-02
+ * - implement the escape-cc property replacer option
  *
  * \brief This is what will become the rsyslogd daemon.
  *
@@ -3825,10 +3826,12 @@ void die(sig)
 			fprintlog(f, 0);
 	}
 
-	Initialized = was_initialized;
+	Initialized = was_initialized; /* we restore this so that the logmsgInternal() 
+	                                * below can work ... and keep in mind we need the
+					* filed structure still intact (initilzed) for the below! */
 	if (sig) {
 		dprintf("syslogd: exiting on signal %d\n", sig);
-		(void) snprintf(buf, sizeof(buf), "rsyslogd: exiting on signal %d", sig);
+		(void) snprintf(buf, sizeof(buf), "syslogd: exiting on signal %d", sig);
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
@@ -3839,6 +3842,8 @@ void die(sig)
 		if (f->f_type == F_MYSQL)
 			closeMySQL(f);
 	}
+	
+	/* now clean up the listener part */
 
 	/* Close the UNIX sockets. */
         for (i = 0; i < nfunix; i++)
@@ -4011,7 +4016,7 @@ void init()
 		Files = NULL;
 	}
 	
-	/* TODO: we need to free the templates! */
+	/* TODO: we need to free the templates!  TODO-URGENT */
 
 #ifdef SYSV
 	lognum = 0;
@@ -4981,6 +4986,15 @@ int checkDBErrorState(register struct filed *f)
 	   still valid, we need no reInit. 
 	   Of course, if an unkown error appeared, we should
 	   reInit. */
+	 /* rgerhards 2004-12-08: I think it is pretty unlikely
+	  * that we can re-use a connection after the error. So I guess
+	  * the connection must be closed and re-opened in all cases
+	  * (as it is done currently). When we come back to optimize
+	  * this code, we should anyhow see if there are cases where
+	  * we could keep it open. I just doubt this won't be the case.
+	  * I added this comment (and did not remove Michaels) just so
+	  * that we all know what we are looking for.
+	  */
 	f->f_timeResumeOnError = 0;
 	f->f_iLastDBErrNo = 0; 
 	reInitMySQL(f);

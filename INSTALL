@@ -26,7 +26,6 @@
     may be security concerns with running it as root.  Please repeat
     step 1 if you are unsure of why this may be the case.
 
-5.) The make file currently doe
 5.) YOU NEED TO DECIDE IF YOU WOULD LIKE TO REPLACE THE STANDARD SYSLOGD OR NOT!
     The is important as it influences the names used. If you call
     make install
