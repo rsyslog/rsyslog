@@ -2,9 +2,9 @@
 
 CC= gcc
 #CFLAGS= -g -DSYSV -Wall
-#LDFLAGS= -g
-#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
-CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB
+LDFLAGS= -g
+CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
+#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB
 LDFLAGS= -s
 
 # Look where your install program is.
@@ -13,7 +13,7 @@ BINDIR = /usr/sbin
 MANDIR = /usr/man
 
 # Uncommenting the following to use mysql.
-LIBS = -lmysqlclient #/var/lib/mysql/mysql 
+#LIBS = -lmysqlclient #/var/lib/mysql/mysql 
 
 # There is one report that under an all ELF system there may be a need to
 # explicilty link with libresolv.a.  If linking syslogd fails you may wish
@@ -63,8 +63,8 @@ test: syslog_tst ksym oops_test tsyslogd
 
 install: install_man install_exec
 
-syslogd: syslogd.o pidfile.o template.o
-	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o ${LIBS}
+syslogd: syslogd.o pidfile.o template.o stringbuf.o
+	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o stringbuf.o ${LIBS}
 
 klogd:	klogd.o syslog.o pidfile.o ksym.o ksym_mod.o
 	${CC} ${LDFLAGS} -o klogd klogd.o syslog.o pidfile.o ksym.o \
@@ -79,7 +79,10 @@ tsyslogd: syslogd.c version.h
 tklogd: klogd.c syslog.c ksym.c ksym_mod.c version.h
 	$(CC) $(CFLAGS) -g -DTESTING $(KLOGD_FLAGS) -o tklogd klogd.c syslog.c ksym.c ksym_mod.c
 
-template.o: template.c template.h
+stringbuf.o: stringbuf.c stringbuf.h liblogging-stub.h
+	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c stringbuf.c
+
+template.o: template.c template.h stringbuf.h liblogging-stub.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c template.c
 
 syslogd.o: syslogd.c version.h template.h

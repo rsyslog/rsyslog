@@ -586,6 +586,7 @@ static char sccsid[] = "@(#)rsyslogd.c	0.1 (Adiscon) 11/08/2004";
 #endif
 
 #include "template.h"
+#include "syslogd.h"
 
 #ifdef	WITH_DB
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
@@ -950,10 +951,6 @@ void doexit(int sig);
 void init();
 void cfline(char *line, register struct filed *f);
 int decode(char *name, struct code *codetab);
-#if defined(__GLIBC__)
-#define dprintf mydprintf
-#endif /* __GLIBC__ */
-static void dprintf(char *, ...);
 static void allocate_log(void);
 void sighup_handler();
 #ifdef WITH_DB
@@ -3151,6 +3148,37 @@ void doexit(sig)
 }
 #endif
 
+/* parse and interpret a template line. The line is added
+ * to the deamon's template linked list.
+ * rgerhards 2004-11-17
+ */
+void doTemplateLine(char **pp)
+{
+	char *p = *pp;
+	char szName[128];
+
+	assert(pp != NULL);
+	assert(p != NULL);
+
+	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
+		dprintf("Invalid $-configline - could not extract Templatename - line ignored\n");
+		return;
+	}
+	if(*p == ',')
+		++p; /* comma was eaten */
+	
+	/* we got the name - now we pass name & the rest of the string
+	 * to the template creator. It makes no sense to do further
+	 * parsing here, as this is in close interaction with the
+	 * template subsystem. rgerhads 2004-11-17
+	 */
+	tplAddLine(szName, &p);
+
+	*pp = p;
+	return;
+}
+
+
 /* Parse and interpret a system-directive in the config line
  * A system directive is one that starts with a "$" sign. It offers
  * extended configuration parameters.
@@ -3169,6 +3197,7 @@ void cfsysline(char *p)
 
 	/* check the command and carry out processing */
 	if(!strcmp(szCmd, "template")) { 
+		doTemplateLine(&p);
 	} else { /* invalid command! */
 		dprintf("Invalid command in $-configline: '%s' - line ignored\n", szCmd);
 		return;
@@ -3763,7 +3792,7 @@ int decode(name, codetab)
 	return (-1);
 }
 
-static void dprintf(char *fmt, ...)
+void dprintf(char *fmt, ...)
 
 {
 	va_list ap;
