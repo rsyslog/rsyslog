@@ -692,6 +692,28 @@ const char *sys_h_errlist[] = {
     "no address, look for MX record"				/* NO_ADDRESS */
  };
 
+/* rgerhards 2004-11-11: the following structure represents
+ * a time as it is used in syslog.
+ */
+struct syslogTime {
+	int timeType;	/* 0 - unitinialized , 1 - RFC 3164, 2 - syslog-protocol */
+	int year;
+	int month;
+	int day;
+	int hour; /* 24 hour clock */
+	int minute;
+	int second;
+	int secfrac;	/* fractional seconds (must be 32 bit!) */
+	int secfracPrecision;
+	char OffsetMode;	/* UTC offset + or - */
+	char OffsetHour;	/* UTC offset in hours */
+	int OffsetMinute;	/* UTC offset in minutes */
+	/* full UTC offset minutes = OffsetHours*60 + OffsetMinute. Then use
+	 * OffsetMode to know the direction.
+	 */
+};
+
+
 /* rgerhards 2004-11-08: The following structure represents a
  * syslog message. 
  *
@@ -713,20 +735,22 @@ struct msg {
 				 * 0 - RFC 3164
 				 * 1 - RFC draft-protocol-08
 				 */
-	short	iSeverity;		/* the severity 0..7 */
-	int	iFacility;	/* Facility code (up to 2^32-1) */
-	char	*pszRawMsg;	/* message as it was received on the
+/**/	short	iSeverity;		/* the severity 0..7 */
+/**/	int	iFacility;	/* Facility code (up to 2^32-1) */
+/**/	char	*pszRawMsg;	/* message as it was received on the
 				 * wire. This is important in case we
 				 * need to preserve cryptographic verifiers.
 				 */
-	int	iLenRawMsg;	/* length of raw message */
-	char	*pszMSG;	/* the MSG part itself */
-	int	iLenMSG;	/* Length of the MSG part */
+/**/	int	iLenRawMsg;	/* length of raw message */
+/**/	char	*pszMSG;	/* the MSG part itself */
+/**/	int	iLenMSG;	/* Length of the MSG part */
 	char	*pszTimestamp;	/* timestamp in its textual from (from the msg) */
 	char	*pszTag;	/* pointer to tag value */
-	char	*pszHOSTNAME;	/* HOSTNAME from syslog message */
-	int	iLenHOSTNAME;	/* Length of HOSTNAME */
+/**/	char	*pszHOSTNAME;	/* HOSTNAME from syslog message */
+/**/	int	iLenHOSTNAME;	/* Length of HOSTNAME */
 	char	*pszRcvFrom;	/* System message was received from */
+	struct syslogTime tRcvdAt;/* time the message entered this program */
+	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 };
 
 /*
@@ -935,11 +959,47 @@ int getSubString(char **pSrc, char *pDst, char cSep, int len);
 static int create_inet_socket();
 #endif
 
-/* rgerhards 2004-11-09: helper routines for handling the
- * message object. We do only the most important things. It
- * is our firm hope that this will sooner or later be
- * obsoleted by liblogging.
+/**
+ * Get the current date/time in the best resolution the operating
+ * system has to offer (well, actually at most down to the milli-
+ * second level.
+ *
+ * The date and time is returned in separate fields as this is
+ * most portable and removes the need for additional structures
+ * (but I have to admit it is somewhat "bulky";)).
+ *
+ * Obviously, all caller-provided pointers must not be NULL...
  */
+void getCurrTime(struct syslogTime *t)
+{
+	struct timeval tp;
+	struct tm *tm;
+	long lBias;
+
+	assert(t != NULL);
+	gettimeofday(&tp, NULL);
+	tm = localtime(&(tp.tv_sec));
+
+	t->year = tm->tm_year + 1900;
+	t->month = tm->tm_mon + 1;
+	t->day = tm->tm_mday;
+	t->hour = tm->tm_hour;
+	t->minute = tm->tm_min;
+	t->second = tm->tm_sec;
+	t->secfrac = tp.tv_usec;
+	t->secfracPrecision = 6;
+
+	lBias = tm->tm_gmtoff;
+	if(lBias < 0)
+	{
+		t->OffsetMode = '-';
+		lBias *= -1;
+	}
+	else
+		t->OffsetMode = '+';
+	t->OffsetHour = lBias / 3600;
+	t->OffsetMinute = lBias % 3600;
+}
 
 /* rgerhards 2004-11-09: the following function is used to 
  * log emergency message when syslogd has no way of using
@@ -954,6 +1014,12 @@ void syslogdPanic(char* ErrMsg)
 	/* TODO: provide a meaningful implementation! */
 	dprintf("syslogdPanic: '%s'\n", ErrMsg);
 }
+
+/* rgerhards 2004-11-09: helper routines for handling the
+ * message object. We do only the most important things. It
+ * is our firm hope that this will sooner or later be
+ * obsoleted by liblogging.
+ */
 
 /* "Constructor" for a msg "object". Returns a pointer to
  * the new object or NULL if no such object could be allocated.
@@ -979,12 +1045,16 @@ struct msg* MsgConstruct()
 		pM->iLenMSG = 0;
 		pM->iLenRawMsg = 0;
 		pM->iLenHOSTNAME = 0;
+		getCurrTime(&(pM->tRcvdAt));
+		/* TODO: we can set the time HERE! */
+		pM->tTIMESTAMP.timeType = 0;
 	}
 
 printf("MsgConstruct\t0x%x\n", (int)pM);
 
 	return(pM);
 }
+
 
 /* Destructor for a msg "object". Must be called to dispose
  * of a msg object.
@@ -1808,6 +1878,8 @@ void printline(hname, msg)
 	}
 	if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
 		pri = DEFUPRI;
+	pMsg->iFacility = LOG_FAC(pri);
+	pMsg->iSeverity = LOG_PRI(pri);
 
 	/* got the buffer, now copy over the message. We use the "old" code
 	 * here, it doesn't make sense to optimize as that code will soon
@@ -1957,6 +2029,8 @@ void logmsgInternal(pri, msg, from, flags)
 		return;
 	if(MsgSetHOSTNAME(pMsg, from) != 0)
 		return;
+	pMsg->iFacility = LOG_FAC(pri);
+	pMsg->iSeverity = LOG_PRI(pri);
 
 	logmsg(pri, pMsg, flags);
 	MsgDestruct(pMsg);
