@@ -859,6 +859,7 @@ struct filed {
 	int	f_flags;			/* store some additional flags */
 	struct template *f_pTpl;		/* pointer to template to use */
 	struct iovec *f_iov;			/* dyn allocated depinding on template */
+	unsigned short *f_bMustBeFreed;		/* indicator, if iov_base must be freed to destruct */
 	int	f_iIovUsed;			/* nbr of elements used in IOV */
 	char	*f_psziov;			/* iov as string */
 	int	f_iLenpsziov;			/* length of iov as string */
@@ -1881,14 +1882,22 @@ int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
  * deliberately accept this because performance is more important
  * to us ;)
  * rgerhards 2004-11-18
+ * Parameter "bMustBeFreed" is set by this function. It tells the
+ * caller whether or not the string returned must be freed by the
+ * caller itself. It is is 0, the caller MUST NOT free it. If it is
+ * 1, the caller MUST free 1. Handling this wrongly leads to either
+ * a memory leak of a program abort (do to double-frees or frees on
+ * the constant memory pool). So be careful to do it right.
+ * rgerhards 2004-11-23
  */
-char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe)
+char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *pbMustBeFreed)
 {
 	char *pName;
 	char *pRes; /* result pointer */
 
 	assert(pMsg != NULL);
 	assert(pTpe != NULL);
+	assert(pbMustBeFreed != NULL);
 
 	pName = pTpe->data.field.pPropRepl;
 
@@ -3028,9 +3037,11 @@ void doSQLEmergencyEscape(register char *p)
 /* SQL-Escape a string. Single quotes are found and
  * replaced by two of them. A new buffer is allocated
  * for the provided string and the provided buffer is
- * freed. The length is updated.
+ * freed. The length is updated. Parameter pbMustBeFreed
+ * is set to 1 if a new buffer is allocated. Otherwise,
+ * it is left untouched.
  */
-void doSQLEscape(char **pp, size_t *pLen)
+void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 {
 	char *p;
 	int iLen;
@@ -3040,6 +3051,7 @@ void doSQLEscape(char **pp, size_t *pLen)
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pLen != NULL);
+	assert(pbMustBeFreed != NULL);
 
 	p = *pp;
 	iLen = *pLen;
@@ -3073,9 +3085,13 @@ void doSQLEscape(char **pp, size_t *pLen)
 		doSQLEmergencyEscape(*pp);
 		return;
 	}
-	free(*pp);
+
+	if(*pbMustBeFreed)
+		free(*pp); /* discard previous value */
+
 	*pp = pszGenerated;
 	*pLen = iLen;
+	*pbMustBeFreed = 1;
 }
 
 
@@ -3126,8 +3142,33 @@ char *iovAsString(struct filed *f)
 }
 
 
+/* rgerhards 2004-11-24: free the to-be-freed string in
+ * iovec. Some strings point to read-only constants in the
+ * msg object, these must not be taken care of. But some
+ * are specifically created for this instance and those
+ * must be freed before the next is created. This is done
+ * here. After this method has been called, the iovec
+ * string array is invalid and must either be totally
+ * discarded or e-initialized!
+ */
+void iovDeleteFreeableStrings(struct filed *f)
+{
+	register int i;
+
+	assert(f != NULL);
+
+	for(i = 0 ; i < f->f_iIovUsed ; ++i) {
+		/* free to-be-freed strings in iovec */
+		if(*(f->f_bMustBeFreed + i)) {
+			free((f->f_iov + i)->iov_base);
+			*(f->f_bMustBeFreed) = 0;
+		}
+	}
+}
+
+
 /* rgerhards 2004-11-19: create the iovec for
- * a given template. This is called by all methods
+ * a given message. This is called by all methods
  * using iovec's for their output. Returns the number
  * of iovecs used (might be different from max if the
  * template contains an invalid entry).
@@ -3142,6 +3183,9 @@ void  iovCreate(struct filed *f)
 
 	assert(f != NULL);
 
+	/* discard previous memory buffers */
+	iovDeleteFreeableStrings(f);
+	
 	pMsg = f->f_pMsg;
 	pTpl = f->f_pTpl;
 	v = f->f_iov;
@@ -3155,14 +3199,15 @@ void  iovCreate(struct filed *f)
 			++v;
 			++iIOVused;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			v->iov_base = MsgGetProp(pMsg, pTpe);
+			v->iov_base = MsgGetProp(pMsg, pTpe, f->f_bMustBeFreed + iIOVused);
 			v->iov_len = strlen(v->iov_base);
 			/* TODO: performance optimize - can we obtain the length? */
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 */
 			if(f->f_pTpl->optFormatForSQL)
-				doSQLEscape((char**)&v->iov_base, &v->iov_len);
+				doSQLEscape((char**)&v->iov_base, &v->iov_len,
+					    f->f_bMustBeFreed + iIOVused);
 			++v;
 			++iIOVused;
 		}
@@ -3845,8 +3890,13 @@ void init()
 				fprintlog(f, 0);
 
 			/* free iovec if it was allocated */
-			if(f->f_iov != NULL)
+			if(f->f_iov != NULL) {
+				if(f->f_bMustBeFreed != NULL) {
+					iovDeleteFreeableStrings(f);
+					free(f->f_bMustBeFreed);
+				}
 				free(f->f_iov);
+			}
 
 			switch (f->f_type) {
 				case F_FILE:
@@ -4089,6 +4139,12 @@ void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 		    sizeof(struct iovec))) == NULL) {
 			/* TODO: provide better message! */
 			dprintf("Could not allocate iovec memory\n");
+			f->f_type = F_UNUSED;
+		}
+		if((f->f_bMustBeFreed= calloc(tplGetEntryCount(f->f_pTpl),
+		    sizeof(unsigned short))) == NULL) {
+			/* TODO: provide better message! */
+			dprintf("Could not allocate bMustBeFreed memory\n");
 			f->f_type = F_UNUSED;
 		}
 	}
