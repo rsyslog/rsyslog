@@ -2,6 +2,7 @@
  * TODO:
  * - check if syslogd really needs to be shut down totally if
  *   "syslog" service from etc/services can not be found
+ * - check if MsgGetProp() can be used for MySQL, too
  *
  * \brief This is what will become the rsyslogd daemon.
  *
@@ -787,6 +788,7 @@ struct filed {
 	short	f_file;			/* file descriptor */
 #ifdef	WITH_DB
 	MYSQL	f_hmysql;		/* handle to MySQL */
+	/* TODO: optimize memory layout / consumption; rgerhards 2004-11-19 */
 	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
 	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
@@ -809,6 +811,8 @@ struct filed {
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */
 	int	f_flags;			/* store some additional flags */
+	struct template *f_pTpl;		/* pointer to template to use */
+	struct iovec *f_iov;			/* dyn allocated depinding on template */
 	struct msg* f_pMsg;			/* pointer to the message (this wil
 					         * replace the other vars with msg
 						 * content later). This is preserved after
@@ -1312,29 +1316,14 @@ struct msg* MsgConstruct()
 {
 	struct msg *pM;
 
-	if((pM = malloc(sizeof(struct msg))) != NULL)
-	{ /* initialize members */
+	if((pM = calloc(1, sizeof(struct msg))) != NULL)
+	{ /* initialize members that are non-zero */
 		pM->iRefCount = 1;
-		pM->iMsgSource = 0;
 		pM->iSyslogVers = -1;
 		pM->iSeverity = -1;
 		pM->iFacility = -1;
-		pM->pszRcvdAt3164 = NULL;
-		pM->pszRawMsg = NULL;
-		pM->pszUxTradMsg = NULL;
-		pM->pszTAG = NULL;
-		pM->pszHOSTNAME = NULL;
-		pM->pszRcvFrom = NULL;
-		pM->pszMSG = NULL;
-		pM->iLenMSG = 0;
-		pM->iLenRawMsg = 0;
-		pM->iLenHOSTNAME = 0;
-		pM->iLenRcvFrom = 0;
-		pM->iLenTAG = 0;
-		pM->iLenUxTradMsg = 0;
 		getCurrTime(&(pM->tRcvdAt));
 		/* TODO: we can set the time HERE! */
-		pM->tTIMESTAMP.timeType = 0;
 	}
 
 	dprintf("MsgConstruct\t0x%x\n", (int)pM);
@@ -1635,6 +1624,7 @@ char *MsgGetProp(struct msg *pMsg, char *pName)
 		pRes = "INVALID PROPERTY NAME"; /* NULL;*/
 	}
 	
+	dprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); 
 	return(pRes);
 }
 
@@ -2427,6 +2417,8 @@ void logmsgInternal(pri, msg, from, flags)
 	int flags;
 {
 	struct msg *pMsg;
+	char buf[16];
+	char szMsg[1024];
 
 	if((pMsg = MsgConstruct()) == NULL){
 		/* rgerhards 2004-11-09: calling panic might not be the
@@ -2438,13 +2430,19 @@ void logmsgInternal(pri, msg, from, flags)
 	}
 
 	if(MsgSetMSG(pMsg, msg) != 0) return;
-	if(MsgSetUxTradMsg(pMsg, msg) != 0) return;
 	if(MsgSetRawMsg(pMsg, msg) != 0) return;
 	if(MsgSetHOSTNAME(pMsg, from) != 0) return;
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->iMsgSource = SOURCE_INTERNAL;
 	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+
+	/* generate traditional Unix message... */
+	formatTimestamp3164(&pMsg->tTIMESTAMP, buf, sizeof(buf) / sizeof(char));
+
+	snprintf(szMsg, sizeof(szMsg) / sizeof(char), "%s %s %s",
+	         buf, from, msg);
+	if(MsgSetUxTradMsg(pMsg, szMsg) != 0) return;
 
 	logmsg(pri, pMsg, flags);
 	MsgDestruct(pMsg);
@@ -2655,19 +2653,14 @@ void logmsg(pri, pMsg, flags)
  */
 void writeFile(struct filed *f)
 {
-	struct iovec *iov;
 	register struct iovec *v;
 	int iIOVused;
-	/*char szTIMESTAMP[40];*/
 	struct template *pTpl;
 	struct templateEntry *pTpe;
 	struct msg *pMsg;
 
 	assert(f != NULL);
-	/* f->f_file == -1 is an indicator that the we couldn't
-	   open the file at startup. */
-	if (f->f_file == -1)
-		return;	 /* TODO: eventually do this check in caller! */
+
 	/* Now generate the message. This can eventually be moved to
 	 * a generic subroutine (need to think about this....).
 	 * for now, this is a quick and dirty dummy. We need to have the
@@ -2675,17 +2668,9 @@ void writeFile(struct filed *f)
 	 * code this part of the function. rgerhards 2004-11-11
 	 */
 
-	 pMsg = f->f_pMsg;
-
-	/*if((pTpl = tplFind("TraditionalFormat", strlen("TraditionalFormat"))) == NULL) {*/
-	if((pTpl = tplFind("precise", strlen("precise"))) == NULL) {
-		dprintf("Could not find template '%s'\n", "precise");
-		return;
-	}
-	
-	/* TODO: allocate iov in struct filed! */
-	iov = calloc(tplGetEntryCount(pTpl), sizeof(struct iovec));
-	v = iov;
+	pMsg = f->f_pMsg;
+	pTpl = f->f_pTpl;
+	v = f->f_iov;
 	
 	iIOVused = 0;
 	pTpe = pTpl->pEntryRoot;
@@ -2696,7 +2681,7 @@ void writeFile(struct filed *f)
 			++v;
 			++iIOVused;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			v->iov_base = MsgGetProp(pMsg, pTpe->data.pPropRepl);
+			v->iov_base = MsgGetProp(pMsg, pTpe->data.field.pPropRepl);
 			v->iov_len = strlen(v->iov_base);
 			/* TODO: performance optimize - can we obtain the length? */
 			++v;
@@ -2720,7 +2705,7 @@ void writeFile(struct filed *f)
 	
 #endif
 again:
-	if (writev(f->f_file, iov, iIOVused) < 0) {
+	if (writev(f->f_file, f->f_iov, iIOVused) < 0) {
 		int e = errno;
 
 		/* If a named pipe is full, just ignore it for now
@@ -2794,7 +2779,7 @@ void fprintlog(f, flags)
 	v->iov_len = 1;
 	v++;
 	v->iov_base = f->f_prevhost;
-	v->iov_len = strlen(v->iov_base);
+	v->iov_len = f->f_prevhost == 0 ? 0 : strlen(v->iov_base);
 	v++;
 	v->iov_base = " ";
 	v->iov_len = 1;
@@ -2925,58 +2910,10 @@ void fprintlog(f, flags)
 	case F_TTY:
 	case F_FILE:
 	case F_PIPE:
-		writeFile(f);
-#if 0
-		f->f_time = now;
-		dprintf(" %s\n", f->f_un.f_fname);
-		if (f->f_type == F_TTY || f->f_type == F_CONSOLE) {
-			v->iov_base = "\r\n";
-			v->iov_len = 2;
-		} else {
-			v->iov_base = "\n";
-			v->iov_len = 1;
-		}
-	again:
 		/* f->f_file == -1 is an indicator that the we couldn't
 		   open the file at startup. */
-		if (f->f_file == -1)
-			break;
-
-		if (writev(f->f_file, iov, 6) < 0) {
-			int e = errno;
-
-			/* If a named pipe is full, just ignore it for now
-			   - mrn 24 May 96 */
-			if (f->f_type == F_PIPE && e == EAGAIN)
-				break;
-
-			(void) close(f->f_file);
-			/*
-			 * Check for EBADF on TTY's due to vhangup() XXX
-			 * Linux uses EIO instead (mrn 12 May 96)
-			 */
-			if ((f->f_type == F_TTY || f->f_type == F_CONSOLE)
-#ifdef linux
-				&& e == EIO) {
-#else
-				&& e == EBADF) {
-#endif
-				f->f_file = open(f->f_un.f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
-				if (f->f_file < 0) {
-					f->f_type = F_UNUSED;
-					logerror(f->f_un.f_fname);
-				} else {
-					untty();
-					goto again;
-				}
-			} else {
-				f->f_type = F_UNUSED;
-				errno = e;
-				logerror(f->f_un.f_fname);
-			}
-		} else if (f->f_flags & SYNC_FILE)
-			(void) fsync(f->f_file);
-#endif
+		if (f->f_file != -1)
+			writeFile(f);
 		break;
 
 	case F_USERS:
@@ -3428,6 +3365,10 @@ void init()
 				 */
 				fprintlog(f, 0);
 
+			/* free iovec if it was allocated */
+			if(f->f_iov != NULL)
+				free(f->f_iov);
+
 			switch (f->f_type) {
 				case F_FILE:
 				case F_PIPE:
@@ -3646,6 +3587,72 @@ void init()
 	}}} /* balance parentheses for emacs */
 #endif
 
+/* Helper to cfline(). Parses a file name up until the first
+ * comma and then looks for the template specifier. Tries
+ * to find that template. Everything is stored in the
+ * filed struct.
+ * rgerhards 2004-11-18
+ */
+void cflineParseFileName(struct filed *f, register char* p)
+{
+	register char *pName;
+	int i;
+	char szTemplateName[128];	/* should be more than sufficient */
+
+	if(*p == '|') {
+		f->f_type = F_PIPE;
+		++p;
+	} else {
+		f->f_type = F_FILE;
+	}
+
+	pName = f->f_un.f_fname;
+	i = 0;
+	while(*p && *p != ',' && i < MAXFNAME - 1) {
+		*pName++ = *p++;
+		++i;
+	}
+	*pName = '\0';
+
+	/* got the file name - now let's look for the template to use
+	 * Just as a general precaution, we skip whitespace.
+	 */
+	while(*p && isspace(*p))
+		++p;
+	if(*p == ',')
+		++p; /* eat it */
+	while(*p && isspace(*p))
+		++p;
+
+	pName = szTemplateName;
+	i = 0;
+	while(*p && i < sizeof(szTemplateName) / sizeof(char) - 1) {
+		*pName++ = *p++;
+		++i;
+	}
+	*pName = '\0';
+
+	/* Ok, we got everything, so it now is time to look up the
+	 * template (Hint: templates MUST be defined before they are
+	 * used!) and initialize the pointer to it PLUS the iov 
+	 * pointer. We do the later because the template tells us
+	 * how many elements iov must have - and this can never change.
+	 */
+	if((f->f_pTpl = tplFind(szTemplateName, i)) == NULL) {
+		dprintf("Could not find template '%s'\n", szTemplateName);
+		f->f_type = F_UNUSED;
+	} else {
+		if((f->f_iov = calloc(tplGetEntryCount(f->f_pTpl),
+		    sizeof(struct iovec))) == NULL) {
+			dprintf("Could not allocate iovec memory for file '%s'\n", f->f_un.f_fname);
+			f->f_type = F_UNUSED;
+		}
+	}
+	
+	dprintf("filename: '%s', template: '%s'\n", f->f_un.f_fname, szTemplateName);
+}
+
+
 /*
  * Crack a configuration file line
  * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
@@ -3654,10 +3661,9 @@ void init()
  * with "$" have been filtered out by the caller and are passed to another function.
  * Please note, however, that I needed to make changes in the line syntax to support
  * assignment of format definitions to a file. So it is not (yet) 100% transparent.
- * Eventually, we can overcome this limitation by prfexing the actual acton indicator
+ * Eventually, we can overcome this limitation by prefixing the actual action indicator
  * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
  */
-
 void cfline(line, f)
 	char *line;
 	register struct filed *f;
@@ -3854,23 +3860,25 @@ void cfline(line, f)
 
         case '|':
 	case '/':
-		(void) strcpy(f->f_un.f_fname, p);
-		dprintf ("filename: %s\n", p);	/*ASP*/
+		/* rgerhards 2004-11-17: from now, we need to have different
+		 * processing, because after the first comma, the template name
+		 * to use is specified. So we need to scan for the first coma first
+		 * and then look at the rest of the line.
+		 */
+		cflineParseFileName(f, p);
 		if (syncfile)
 			f->f_flags |= SYNC_FILE;
-		if ( *p == '|' ) {
-			f->f_file = open(++p, O_RDWR|O_NONBLOCK);
-			f->f_type = F_PIPE;
+		if (f->f_type == F_PIPE) {
+			f->f_file = open(f->f_un.f_fname, O_RDWR|O_NONBLOCK);
 	        } else {
-			f->f_file = open(p, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+			f->f_file = open(f->f_un.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 					 0644);
-			f->f_type = F_FILE;
 		}
 		        
 	  	if ( f->f_file < 0 ){
 			f->f_file = -1;
-			dprintf("Error opening log file: %s\n", p);
-			logerror(p);
+			dprintf("Error opening log file: %s\n", f->f_un.f_fname);
+			logerror(f->f_un.f_fname);
 			break;
 		}
 		if (isatty(f->f_file)) {

@@ -23,7 +23,9 @@ struct templateEntry {
 			char *pConstant;	/* pointer to constant value */
 			int iLenConstant;	/* its length */
 		} constant;
-		char *pPropRepl;	/* pointer to property replacer string */
+		struct {
+			char *pPropRepl;	/* pointer to property replacer string */
+		} field;
 	} data;
 };
 

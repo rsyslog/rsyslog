@@ -167,7 +167,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 		return 1;
 	}
 	pTpe->eEntryType = FIELD;
-	pTpe->data.pPropRepl = sbStrBFinish(pStrB);
+	pTpe->data.field.pPropRepl = sbStrBFinish(pStrB);
 
 	*pp = p;
 	return 0;
@@ -292,7 +292,7 @@ void tplPrintList(void)
 		dprintf("Template: Name='%s'\n", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {
-			dprintf("\tEntry: type %d, ", pTpe->eEntryType);
+			dprintf("\tEntry(%x): type %d, ", (unsigned) pTpe, pTpe->eEntryType);
 			switch(pTpe->eEntryType) {
 				case UNDEFINED:
 					dprintf("(UNDEFINED)\n");
@@ -302,7 +302,7 @@ void tplPrintList(void)
 					        pTpe->data.constant.pConstant);
 					break;
 				case FIELD:
-					dprintf("(FIELD), value: '%s'\n", pTpe->data.pPropRepl);
+					dprintf("(FIELD), value: '%s'\n", pTpe->data.field.pPropRepl);
 					break;
 			}
 			pTpe = pTpe->pNext;
