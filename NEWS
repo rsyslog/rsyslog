@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 0.8.1
+
+- fixed a nasty memory leak (probably not the last one with this release)
+- some enhancements to Makefile as suggested by Bennett Todd
+---------------------------------------------------------------------------
 Version 0.8.0
 
 Initial testing release.

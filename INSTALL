@@ -29,11 +29,12 @@
 5.) YOU NEED TO DECIDE IF YOU WOULD LIKE TO REPLACE THE STANDARD SYSLOGD OR NOT!
     The is important as it influences the names used. If you call
     make install
-    it will install this program under the name of rsyslogd. If you call it with
+    it will install this program under the name of syslogd, but it will save the
+    previous syslogd binary under the name of syslogd-previous. If you call it with
     make install-replace
-    it will replace the existing syslogd, but save the former one under the name
-    of syslogd-previous. If you run install-replace multiple times, your
-    syslogd-previous will be OVERWRITTEN!
+    it will just replace the existing syslogd, but NOT save the former one under
+    the name of syslogd-previous.
+    If you run install multiple times, your syslogd-previous will be OVERWRITTEN!
     In either case, the system startup files will not be touched. If you use
     install-replace, everthing should work as always, but if it doesn't, you've
     probably discovered a beta bug ;) In any case, to use the new features, you 

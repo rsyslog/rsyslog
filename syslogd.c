@@ -2,13 +2,9 @@
  * TODO:
  * - check if syslogd really needs to be shut down totally if
  *   "syslog" service from etc/services can not be found
- * - check template lins for extra characters and provide 
+ * - check template lines for extra characters and provide 
  *   a warning, if they exists
  * - check that no exit() is used!
- * - make sure that syslogd handles the case that NO template
- *   is specified in an action line (hint: keep action type
- *   to F_UNUSED unless a proper template could be found)
- *   ONLY TO BE DONE FOR MySQL logging, rest is fixed rgerhards 2004-12-02
  * - implement the escape-cc property replacer option
  *
  * \brief This is what will become the rsyslogd daemon.
@@ -1425,7 +1421,7 @@ struct msg* MsgConstruct()
 void MsgDestruct(struct msg * pM)
 {
 	assert(pM != NULL);
-	printf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
+	dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
 	if(--pM->iRefCount == 0)
 	{
 		dprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
@@ -3855,14 +3851,11 @@ void die(sig)
 	for (lognum = 0; lognum <= nlogs; lognum++) {
 		f = &Files[lognum];
 		/* free iovec if it was allocated */
-printf("free f[%d]->iov %x, max %d\n", lognum, (unsigned) f->f_iov, nlogs);
 		if(f->f_iov != NULL) {
 			if(f->f_bMustBeFreed != NULL) {
-				printf("iov strings delete\n");
 				iovDeleteFreeableStrings(f);
 				free(f->f_bMustBeFreed);
 			}
-			printf("iov delete\n");
 			free(f->f_iov);
 		}
 		/* Now delete cached messages */
@@ -4060,8 +4053,6 @@ void init()
 		Files = NULL;
 	}
 	
-	/* TODO: we need to free the templates!  TODO-URGENT */
-
 #ifdef SYSV
 	lognum = 0;
 #else
@@ -4290,7 +4281,6 @@ void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 			dprintf("Could not allocate bMustBeFreed memory\n");
 			f->f_type = F_UNUSED;
 		}
-printf("iov %x, MustBeFreed %x\n", f->f_iov, f->f_bMustBeFreed);
 	}
 }
 	

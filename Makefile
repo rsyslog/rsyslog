@@ -8,10 +8,9 @@ CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
 #CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB
 #LDFLAGS= -s
 
-# Look where your install program is.
-INSTALL = /usr/bin/install
+INSTALL = install
 BINDIR = /usr/sbin
-MANDIR = /usr/man
+MANDIR = /usr/share/man
 
 # Uncommenting the following to use mysql.
 #LIBS = -lmysqlclient #/var/lib/mysql/mysql 
@@ -87,11 +86,11 @@ clobber: clean
 	rm -f syslogd klogd ksym syslog_tst oops_test TAGS tsyslogd tklogd
 
 install-replace: syslogd
-	${INSTALL} -b -m 500 -s syslogd ${BINDIR}/syslogd
+	${INSTALL} -b -m 500 -s syslogd ${DESTDIR}${BINDIR}/syslogd
 
 install_exec: syslogd
-	cp ${BINDIR}/syslogd ${BINDIR}/syslogd-previous
-	${INSTALL} -b -m 500 -s syslogd ${BINDIR}/syslogd
+	cp ${DESTDIR}${BINDIR}/syslogd ${DESTDIR}${BINDIR}/syslogd-previous
+	${INSTALL} -b -m 500 -s syslogd ${DESTDIR}${BINDIR}/syslogd
 
 # man not yet supported ;)
 #install_man:
