@@ -622,7 +622,7 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 #endif
 
 #ifndef _PATH_LOGCONF 
-#define _PATH_LOGCONF	"/etc/syslog.conf"
+#define _PATH_LOGCONF	"/etc/rsyslog.conf"
 #endif
 
 #if defined(SYSLOGD_PIDNAME)

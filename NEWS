@@ -1,4 +1,15 @@
 ---------------------------------------------------------------------------
+Version 0.8.2
+
+- added man page for rsyslog.conf and rsyslogd
+- gave up on the concept of rsyslog being a "drop in" replacement
+  for syslogd. Now, the user installs rsyslogd and also needs to
+  adjust his system settings to this specifically. This also lead
+  to these changes:
+  * changed Makefile so that install now installs rsyslogd instead
+    of dealing with syslogd
+  * changed the default config file name to rsyslog.conf
+---------------------------------------------------------------------------
 Version 0.8.1
 
 - fixed a nasty memory leak (probably not the last one with this release)
