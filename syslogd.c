@@ -6,6 +6,9 @@
  * - check template lins for extra characters and provide 
  *   a warning, if they exists
  * - check that no exit() is used!
+ * - make sure that syslogd handles the case that NO template
+ *   is specified in an action line (hint: keep action type
+ *   to F_UNUSED unless a proper template could be found)
  *
  * \brief This is what will become the rsyslogd daemon.
  *
@@ -2811,6 +2814,82 @@ void logmsg(pri, pMsg, flags)
 #endif
 
 
+/* Helper to doSQLEscape. This is called if doSQLEscape
+ * runs out of memory allocating the escaped string.
+ * Then we are in trouble. We can
+ * NOT simply return the unmodified string because this
+ * may cause SQL injection. But we also can not simply
+ * abort the run, this would be a DoS. I think an appropriate
+ * measure is to remove the dangerous \' characters. We
+ * replace them by \", which will break the message and
+ * signatures eventually present - but this is the
+ * best thing we can do now (or does anybody 
+ * have a better idea?). rgerhards 2004-11-23
+ */
+void doSQLEmergencyEscape(register char *p)
+{
+	while(*p) {
+		if(*p == '\'')
+			*p = '"';
+		++p;
+	}
+}
+
+
+/* SQL-Escape a string. Single quotes are found and
+ * replaced by two of them. A new buffer is allocated
+ * for the provided string and the provided buffer is
+ * freed. The length is updated.
+ */
+void doSQLEscape(char **pp, size_t *pLen)
+{
+	char *p;
+	int iLen;
+	sbStrBObj *pStrB;
+	char *pszGenerated;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pLen != NULL);
+
+	p = *pp;
+	iLen = *pLen;
+	if((pStrB = sbStrBConstruct()) == NULL) {
+		/* oops - no mem ... Do emergency... */
+		doSQLEmergencyEscape(p);
+		return;
+	}
+	
+	while(*p) {
+		if(*p == '\'') {
+			if(sbStrBAppendChar(pStrB, '\'') != SR_RET_OK) {
+				doSQLEmergencyEscape(*pp);
+				if((pszGenerated = sbStrBFinish(pStrB))
+					!= NULL)
+					free(pszGenerated);
+					return;
+			iLen++;	/* reflect the extra character */
+			}
+		}
+		if(sbStrBAppendChar(pStrB, *p) != SR_RET_OK) {
+			doSQLEmergencyEscape(*pp);
+			if((pszGenerated = sbStrBFinish(pStrB))
+				!= NULL)
+				free(pszGenerated);
+				return;
+		}
+		++p;
+	}
+	if((pszGenerated = sbStrBFinish(pStrB)) == NULL) {
+		doSQLEmergencyEscape(*pp);
+		return;
+	}
+	free(*pp);
+	*pp = pszGenerated;
+	*pLen = iLen;
+}
+
+
 /* create a string from the provided iovec. This can
  * be called by all functions who need the template
  * text in a single string. The function takes an
@@ -2890,6 +2969,11 @@ void  iovCreate(struct filed *f)
 			v->iov_base = MsgGetProp(pMsg, pTpe->data.field.pPropRepl);
 			v->iov_len = strlen(v->iov_base);
 			/* TODO: performance optimize - can we obtain the length? */
+			/* we now need to check if we should use SQL option. In this case,
+			 * we must go over the generated string and escape '\'' characters.
+			 */
+			if(f->f_pTpl->optFormatForSQL)
+				doSQLEscape((char**)&v->iov_base, &v->iov_len);
 			++v;
 			++iIOVused;
 		}

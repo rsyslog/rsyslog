@@ -203,6 +203,8 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 	struct template *pTpl;
  	char *p;
 	int bDone;
+	char optBuf[128]; /* buffer for options - should be more than enough... */
+	int i;
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
@@ -237,11 +239,11 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 	}
 #endif
 
+	/* now actually parse the line */
 	p = *ppRestOfConfLine;
 	assert(p != NULL);
 
-	/* skip whitespace */
-	while(isspace(*p))
+	while(isspace(*p))/* skip whitespace */
 		++p;
 	
 	if(*p != '"') {
@@ -266,9 +268,48 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 				do_Constant(&p, pTpl);
 				break;
 		}
-		if(*p == '\"') {/* end of template string? */
+		if(*p == '"') {/* end of template string? */
 			++p;	/* eat it! */
 			bDone = 1;
+		}
+	}
+	
+	/* we now have the template - let's look at the options (if any)
+	 * we process options until we reach the end of the string or 
+	 * an error occurs - whichever is first.
+	 */
+	while(*p) {
+		while(isspace(*p))/* skip whitespace */
+			++p;
+		
+		if(*p != ',')
+			return(pTpl);
+		++p; /* eat ',' */
+
+		while(isspace(*p))/* skip whitespace */
+			++p;
+		
+		/* read option word */
+		i = 0;
+		while(i < sizeof(optBuf) / sizeof(char) - 1
+		      && *p && *p != '=' && *p !=',' && *p != '\n') {
+			optBuf[i++] = tolower(*p);
+			++p;
+		}
+		optBuf[i] = '\0';
+
+		if(*p == '\n')
+			++p;
+
+		/* as of now, the no form is nonsense... but I do include
+		 * it anyhow... ;) rgerhards 2004-11-22
+		 */
+		if(!strcmp(optBuf, "sql")) {
+			pTpl->optFormatForSQL = 1;
+		} else if(!strcmp(optBuf, "nosql")) {
+			pTpl->optFormatForSQL = 0;
+		} else {
+			dprintf("Invalid option '%s' ignored.\n", optBuf);
 		}
 	}
 
@@ -310,7 +351,10 @@ void tplPrintList(void)
 
 	pTpl = tplRoot;
 	while(pTpl != NULL) {
-		dprintf("Template: Name='%s'\n", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
+		dprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
+		if(pTpl->optFormatForSQL)
+			dprintf("[SQL-Format] ");
+		dprintf("\n");
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {
 			dprintf("\tEntry(%x): type %d, ", (unsigned) pTpe, pTpe->eEntryType);

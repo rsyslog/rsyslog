@@ -10,6 +10,11 @@ struct template {
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;
+	/* following are options. All are 0/1 defined (either on or off).
+	 * we use chars because they are faster than bit fields and smaller
+	 * than short...
+	 */
+	char optFormatForSQL;	/* in text fields, escape quotes by double quotes  */
 };
 
 enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
