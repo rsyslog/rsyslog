@@ -974,6 +974,7 @@ static char template_TraditionalFormat[] = "\"%timegenerated% %HOSTNAME% %syslog
 static char template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
 static char template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
 static char template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
+static char template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
 /* end template */
 
 /* Function prototypes. */
@@ -2200,6 +2201,8 @@ int main(argc, argv)
 	tplAddLine(" StdFwdFmt", &pTmp);
 	pTmp = template_StdUsrMsgFmt;
 	tplAddLine(" StdUsrMsgFmt", &pTmp);
+	pTmp = template_StdDBFmt;
+	tplAddLine(" StdDBFmt", &pTmp);
 
 	/* prepare emergency logging system */
 
@@ -3835,13 +3838,14 @@ void die(sig)
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
-
+#ifdef WITH_DB
 	/* Close the MySQL connection */
 	for (lognum = 0; lognum <= nlogs; lognum++) {
 		f = &Files[lognum];
 		if (f->f_type == F_MYSQL)
 			closeMySQL(f);
 	}
+#endif
 	
 	/* now clean up the listener part */
 
@@ -4641,26 +4645,38 @@ void cfline(line, f)
 			/* we have a template specifier! */
 			cflineParseTemplateName(f, &p, szTemplateName,
 						sizeof(szTemplateName) / sizeof(char));
-			cflineSetTemplateAndIOV(f, szTemplateName);
-			dprintf(" template '%s'", szTemplateName);
 		}
-		else {
-			printf("No template assigned!\n");
-			iMySQLPropErr++;
+		else	/* assign default format if none given! */
+			szTemplateName[0] = '\0';
+
+		if(szTemplateName[0] == '\0')
+			strcpy(szTemplateName, " StdDBFmt");
+
+		cflineSetTemplateAndIOV(f, szTemplateName);
+		dprintf(" template '%s'\n", szTemplateName);
+		
+		/* If db used, the template have to use the SQL option.
+		   This is for your own protection (prevent sql injection). */
+		if (f->f_pTpl->optFormatForSQL != 1)
+		{
+			f->f_type = F_UNUSED;
+			dprintf("DB logging disabled. You have to use"
+				" the SQL option in your template!\n");
+
 		}
+		
 		/* If we dedect invalid properties, we disable logging, 
 		 * because right properties are vital at this place.  
 		 * Retrials make no sens. 
 		 */
 		if (iMySQLPropErr) { 
 			f->f_type = F_UNUSED;
-			printf("Trouble with MySQL conncetion properties.\n"
+			dprintf("Trouble with MySQL conncetion properties.\n"
 				"MySQL logging disabled.\n");
 		}
 		else {
 			initMySQL(f);
 		}
-		/* TODO: add handling for standard template! rgerhards */
 		break;
 #endif	/* #ifdef WITH_DB */
 
@@ -4877,7 +4893,7 @@ void writeMySQL(register struct filed *f)
 	char *psz;
 	int iCounter=0;
 	assert(f != NULL);
-	dprintf("in writeMySQL()\n");
+	/* dprintf("in writeMySQL()\n"); */
 	iovCreate(f);
 	psz = iovAsString(f);
 	
@@ -4959,7 +4975,7 @@ void DBErrorHandler(register struct filed *f)
 int checkDBErrorState(register struct filed *f)
 {
 	assert(f != NULL);
-	dprintf("in checkDBErrorState, timeResumeOnError: %d\n", f->f_timeResumeOnError);
+	/* dprintf("in checkDBErrorState, timeResumeOnError: %d\n", f->f_timeResumeOnError); */
 
 	/* If timeResumeOnError == 0 no error occured, 
 	   we can return with 0 (no error) */
