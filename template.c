@@ -158,13 +158,60 @@ static int do_Constant(char **pp, struct template *pTpl)
 }
 
 
+/* Helper to do_Parameter(). This parses the formatting options
+ * specified in a template variable. It returns the passed-in pointer
+ * updated to the next processed character.
+ */
+static void doOptions(char **pp, struct templateEntry *pTpe)
+{
+	register char *p;
+	char Buf[64];
+	int i;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pTpe != NULL);
+
+	p = *pp;
+
+	while(*p && *p != '%') {
+		/* outer loop - until end of options */
+		i = 0;
+		while((i < sizeof(Buf) / sizeof(char)) &&
+		      *p && *p != '%' && *p != ',') {
+			/* inner loop - until end of ONE option */
+			Buf[i++] = tolower(*p);
+			++p;
+		}
+		Buf[i] = '\0'; /* terminate */
+		/* check if we need to skip oversize option */
+		while(*p && *p != '%' && *p != ',')
+			++p;	/* just skip */
+		/* OK, we got the option, so now lets look what
+		 * it tells us...
+		 */
+		 if(!strcmp(Buf, "date-mysql")) {
+			pTpe->data.field.eDateFormat = tplFmtMySQLDate;
+		 } else if(!strcmp(Buf, "lowercase")) {
+			pTpe->data.field.eCaseConv = tplCaseConvLower;
+		 } else if(!strcmp(Buf, "uppercase")) {
+			pTpe->data.field.eCaseConv = tplCaseConvUpper;
+		 } else {
+			dprintf("Invalid field option '%s' specified - ignored.\n", Buf);
+		 }
+	}
+
+	*pp = p;
+}
+
+
 /* helper to tplAddLine. Parses a parameter and generates
  * the necessary structure.
  * returns: 0 - ok, 1 - failure
  */
 static int do_Parameter(char **pp, struct template *pTpl)
 {
-	register char *p;
+	char *p;
 	sbStrBObj *pStrB;
 	struct templateEntry *pTpe;
 
@@ -176,19 +223,47 @@ static int do_Parameter(char **pp, struct template *pTpl)
 
 	if((pStrB = sbStrBConstruct()) == NULL)
 		 return 1;
-	while(*p && *p != '%') {
-		sbStrBAppendChar(pStrB, *p++);
-	}
-	if(*p) ++p; /* eat '%' */
 
-	/* now store param */
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
 		/* TODO: add handler */
 		dprintf("Could not allocate memory for template parameter!\n");
 		return 1;
 	}
 	pTpe->eEntryType = FIELD;
+
+	while(*p && *p != '%' && *p != ':') {
+		sbStrBAppendChar(pStrB, *p++);
+	}
+
+	/* got the name*/
 	pTpe->data.field.pPropRepl = sbStrBFinish(pStrB);
+
+
+	/* check frompos */
+	if(*p == ':') {
+		++p; /* eat ':' */
+		while(*p && *p != '%' && *p != ':') {
+			/* for now, just skip it */
+			++p;
+		}
+	}
+
+	/* check topos */
+	if(*p == ':') {
+		++p; /* eat ':' */
+		while(*p && *p != '%' && *p != ':') {
+			/* for now, just skip it */
+			++p;
+		}
+	}
+
+	/* check options */
+	if(*p == ':') {
+		++p; /* eat ':' */
+		doOptions(&p, pTpe);
+	}
+
+	if(*p) ++p; /* eat '%' */
 
 	*pp = p;
 	return 0;
@@ -359,17 +434,35 @@ void tplPrintList(void)
 		while(pTpe != NULL) {
 			dprintf("\tEntry(%x): type %d, ", (unsigned) pTpe, pTpe->eEntryType);
 			switch(pTpe->eEntryType) {
-				case UNDEFINED:
-					dprintf("(UNDEFINED)\n");
+			case UNDEFINED:
+				dprintf("(UNDEFINED)");
+				break;
+			case CONSTANT:
+				dprintf("(CONSTANT), value: '%s'",
+					pTpe->data.constant.pConstant);
+				break;
+			case FIELD:
+				dprintf("(FIELD), value: '%s' ", pTpe->data.field.pPropRepl);
+				switch(pTpe->data.field.eDateFormat) {
+				case tplFmtDefault:
 					break;
-				case CONSTANT:
-					dprintf("(CONSTANT), value: '%s'\n",
-					        pTpe->data.constant.pConstant);
+				case tplFmtMySQLDate:
+					dprintf("[Format as MySQL-Date] ");
 					break;
-				case FIELD:
-					dprintf("(FIELD), value: '%s'\n", pTpe->data.field.pPropRepl);
+				}
+				switch(pTpe->data.field.eCaseConv) {
+				case tplCaseConvNo:
 					break;
+				case tplCaseConvLower:
+					dprintf("[Converted to Lower Case] ");
+					break;
+				case tplCaseConvUpper:
+					dprintf("[Converted to Upper Case] ");
+					break;
+				}
+				break;
 			}
+			dprintf("\n");
 			pTpe = pTpe->pNext;
 		}
 		pTpl = pTpl->pNext; /* done, go next */

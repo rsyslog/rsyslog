@@ -18,6 +18,8 @@ struct template {
 };
 
 enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
+enum tplFormatTypes { tplFmtDefault = 0, tplFmtMySQLDate = 1 };
+enum tplFormatCaseConvTypes { tplCaseConvNo = 0, tplCaseConvUpper = 1, tplCaseConvLower = 2 };
 
 /* a specific parse entry */
 struct templateEntry {
@@ -30,6 +32,12 @@ struct templateEntry {
 		} constant;
 		struct {
 			char *pPropRepl;	/* pointer to property replacer string */
+			unsigned iFromPos;	/* for partial strings only chars from this position ... */
+			unsigned iToPos;	/* up to that one... */
+			enum tplFormatTypes eDateFormat;
+			enum tplFormatCaseConvTypes eCaseConv;
+			struct {
+			} options;		/* options as bit fields */
 		} field;
 	} data;
 };

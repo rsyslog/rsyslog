@@ -755,33 +755,35 @@ struct msg {
 #define SOURCE_STDIN 1
 #define SOURCE_UNIXAF 2
 #define SOURCE_INET 3
-/**/	short	iSeverity;	/* the severity 0..7 */
-/**/	char *pszSeverity;	/* severity as string... */
-/**/	int iLenSeverity;	/* ... and its length. */
-/**/	int	iFacility;	/* Facility code (up to 2^32-1) */
-/**/	char *pszFacility;	/* Facility as string... */
-/**/	int iLenFacility;	/* ... and its length. */
-/**/	char *pszPRI;		/* the PRI as a string */
-/**/	int iLenPRI;		/* and its length */
-/**/	char	*pszRawMsg;	/* message as it was received on the
+	short	iSeverity;	/* the severity 0..7 */
+	char *pszSeverity;	/* severity as string... */
+	int iLenSeverity;	/* ... and its length. */
+	int	iFacility;	/* Facility code (up to 2^32-1) */
+	char *pszFacility;	/* Facility as string... */
+	int iLenFacility;	/* ... and its length. */
+	char *pszPRI;		/* the PRI as a string */
+	int iLenPRI;		/* and its length */
+	char	*pszRawMsg;	/* message as it was received on the
 				 * wire. This is important in case we
 				 * need to preserve cryptographic verifiers.
 				 */
-/**/	int	iLenRawMsg;	/* length of raw message */
-/**/	char	*pszMSG;	/* the MSG part itself */
-/**/	int	iLenMSG;	/* Length of the MSG part */
-/**/	char	*pszUxTradMsg;	/* the traditional UNIX message */
-/**/	int	iLenUxTradMsg;/* Length of the traditional UNIX message */
-/**/	char	*pszTAG;	/* pointer to tag value */
-/**/	int	iLenTAG;	/* Length of the TAG part */
-/**/	char	*pszHOSTNAME;	/* HOSTNAME from syslog message */
-/**/	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-/**/	char	*pszRcvFrom;	/* System message was received from */
-/**/	int	iLenRcvFrom;	/* Length of pszRcvFrom */
-/**/	struct syslogTime tRcvdAt;/* time the message entered this program */
-/**/	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 chracters) */
-/**/	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
-/**/	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 chracters) */
+	int	iLenRawMsg;	/* length of raw message */
+	char	*pszMSG;	/* the MSG part itself */
+	int	iLenMSG;	/* Length of the MSG part */
+	char	*pszUxTradMsg;	/* the traditional UNIX message */
+	int	iLenUxTradMsg;/* Length of the traditional UNIX message */
+	char	*pszTAG;	/* pointer to tag value */
+	int	iLenTAG;	/* Length of the TAG part */
+	char	*pszHOSTNAME;	/* HOSTNAME from syslog message */
+	int	iLenHOSTNAME;	/* Length of HOSTNAME */
+	char	*pszRcvFrom;	/* System message was received from */
+	int	iLenRcvFrom;	/* Length of pszRcvFrom */
+	struct syslogTime tRcvdAt;/* time the message entered this program */
+	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 chracters) */
+	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 chracters) */
+	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
+	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 chracters) */
+	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 chracters) */
 };
 
 /*
@@ -1189,7 +1191,6 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, unsigned char* psz
  * END CODE-LIBLOGGING                                             *
  *******************************************************************/
 
-#ifdef	WITH_DB
 /**
  * Format a syslogTimestamp into format required by MySQL.
  * We are using the 14 digits format. For example 20041111122600 
@@ -1213,7 +1214,6 @@ int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst)
 		ts->year, ts->month, ts->day, ts->hour, ts->minute, ts->second));
 
 }
-#endif
 
 /**
  * Format a syslogTimestamp to a RFC3164 timestamp sring.
@@ -1374,8 +1374,12 @@ void MsgDestruct(struct msg * pM)
 			free(pM->pszSeverity);
 		if(pM->pszRcvdAt3164 != NULL)
 			free(pM->pszRcvdAt3164);
+		if(pM->pszRcvdAt_MySQL != NULL)
+			free(pM->pszRcvdAt_MySQL);
 		if(pM->pszTIMESTAMP3164 != NULL)
 			free(pM->pszTIMESTAMP3164);
+		if(pM->pszTIMESTAMP_MySQL != NULL)
+			free(pM->pszTIMESTAMP_MySQL);
 		if(pM->pszPRI != NULL)
 			free(pM->pszPRI);
 		free(pM);
@@ -1448,19 +1452,50 @@ char *getPRI(struct msg *pM)
 }
 
 
-char *getTimeReported(struct msg *pM)
+char *getTimeReported(struct msg *pM, enum tplFormatTypes eFmt)
 {
 	if(pM == NULL)
 		return "";
 
-	if(pM->pszTIMESTAMP3164 == NULL) {
-		if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) return "";
-		formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
+	switch(eFmt) {
+	case tplFmtDefault:
+		if(pM->pszTIMESTAMP3164 == NULL) {
+			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) return "";
+			formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
+		}
+		return(pM->pszTIMESTAMP3164);
+	case tplFmtMySQLDate:
+		if(pM->pszTIMESTAMP_MySQL == NULL) {
+			if((pM->pszTIMESTAMP_MySQL = malloc(15)) == NULL) return "";
+			formatTimestampToMySQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_MySQL, 15);
+		}
+		return(pM->pszTIMESTAMP_MySQL);
 	}
+	return "INVALID eFmt OPTION!";
+}
+char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
+{
+	if(pM == NULL)
+		return "";
 
-	return(pM->pszTIMESTAMP3164);
+	switch(eFmt) {
+	case tplFmtDefault:
+		if(pM->pszRcvdAt3164 == NULL) {
+			if((pM->pszRcvdAt3164 = malloc(16)) == NULL) return "";
+			formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
+		}
+		return(pM->pszRcvdAt3164);
+	case tplFmtMySQLDate:
+		if(pM->pszRcvdAt_MySQL == NULL) {
+			if((pM->pszRcvdAt_MySQL = malloc(15)) == NULL) return "";
+			formatTimestampToMySQL(&pM->tRcvdAt, pM->pszRcvdAt_MySQL, 15);
+		}
+		return(pM->pszRcvdAt_MySQL);
+	}
+	return "INVALID eFmt OPTION!";
 }
 
+#if 0
 
 char *getTimeGenerated(struct msg *pM)
 {
@@ -1474,7 +1509,7 @@ char *getTimeGenerated(struct msg *pM)
 
 	return(pM->pszRcvdAt3164);
 }
-
+#endif
 
 char *getSeverity(struct msg *pM)
 {
@@ -1719,12 +1754,15 @@ int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
  * to us ;)
  * rgerhards 2004-11-18
  */
-char *MsgGetProp(struct msg *pMsg, char *pName)
+char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe)
 {
+	char *pName;
 	char *pRes; /* result pointer */
 
 	assert(pMsg != NULL);
-	assert(pName != NULL);
+	assert(pTpe != NULL);
+
+	pName = pTpe->data.field.pPropRepl;
 
 	/* sometimes there are aliases to the original MonitoWare
 	 * property names. These come after || in the ifs below. */
@@ -1746,10 +1784,10 @@ char *MsgGetProp(struct msg *pMsg, char *pName)
 	} else if(!strcmp(pName, "syslogpriority")) {
 		pRes = getSeverity(pMsg);
 	} else if(!strcmp(pName, "timegenerated")) {
-		pRes = getTimeGenerated(pMsg);
+		pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp(pName, "timereported")
 		  || !strcmp(pName, "TIMESTAMP")) {
-		pRes = getTimeReported(pMsg);
+		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 	} else {
 		pRes = "INVALID PROPERTY NAME"; /* NULL;*/
 	}
@@ -2966,7 +3004,7 @@ void  iovCreate(struct filed *f)
 			++v;
 			++iIOVused;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			v->iov_base = MsgGetProp(pMsg, pTpe->data.field.pPropRepl);
+			v->iov_base = MsgGetProp(pMsg, pTpe);
 			v->iov_len = strlen(v->iov_base);
 			/* TODO: performance optimize - can we obtain the length? */
 			/* we now need to check if we should use SQL option. In this case,
