@@ -585,6 +585,12 @@ static char sccsid[] = "@(#)rsyslogd.c	0.1 (Adiscon) 11/08/2004";
 #include <paths.h>
 #endif
 
+#ifdef	WITH_DB
+#define	_DB_MAXDBLEN	128	/* maximum number of db */
+#define _DB_MAXUNAMELEN	128	/* maximum number of user name */
+#define	_DB_MAXPWDLEN	128 	/* maximum number of user's pass */
+#endif
+
 #ifndef UTMP_FILE
 #ifdef UTMP_FILENAME
 #define UTMP_FILE UTMP_FILENAME
@@ -724,7 +730,10 @@ struct filed {
 	short	f_file;			/* file descriptor */
 #ifdef	WITH_DB
 	MYSQL	f_hmysql;		/* handle to MySQL */
-	char	f_dbsrv;		/* IP or hostname */
+	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
+	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
+	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
+	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
 #endif
 	time_t	f_time;			/* time this was last written */
 	u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
@@ -2851,10 +2860,15 @@ void cfline(line, f)
 	case '>':	/* rger 2004-10-28: added support for MySQL
 			 * >server,dbname,userid,password
 			 */
-		dprintf ("set f_type to MySQL \n");
+		dprintf ("in init() - WITH_DB case \n");
+		dprintf("p is: %s\n", p);
 		f->f_type = F_MYSQL;
 		initMySQL(f);
 		/* TODO: Add actual code! */
+		p++;
+		while (*p == '\t' || *p == ' ')
+			p++;
+
 		break;
 #endif	/* #ifdef WITH_DB */
 
@@ -2995,7 +3009,7 @@ void sighup_handler()
  */
 void initMySQL(register struct filed *f)
 {
-	printf("in initMysql()\n");
+	printf("in initMysql() \n");
 	
 	mysql_init(&f->f_hmysql);
 	/* Connect to database */
@@ -3024,7 +3038,7 @@ void closeMySQL(register struct filed *f)
 void writeMySQL(register struct filed *f)
 {
 	char sql_command[MAXSVLINE+1048];
-	dprintf("in writeMySQL()\n");
+	printf("in writeMySQL()\n");
 
 	snprintf(sql_command, sizeof(sql_command), "INSERT INTO myTable VALUES (1,'%s')", f->f_prevline);
 
