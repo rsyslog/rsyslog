@@ -1900,6 +1900,7 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 	assert(pbMustBeFreed != NULL);
 
 	pName = pTpe->data.field.pPropRepl;
+	*pbMustBeFreed = 0;
 
 	/* sometimes there are aliases to the original MonitoWare
 	 * property names. These come after || in the ifs below. */
@@ -1936,20 +1937,18 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 	if(pTpe->data.field.eCaseConv == tplCaseConvUpper) {
 		/* we need to obtain a private copy */
 		int iLen = strlen(pRes);
-		struct msgCustomString *pCS;
-		char *pBuf = malloc((iLen + 1) * sizeof(char));
+		char *pBufStart;
+		char *pBuf;
+		pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
 		if(pBuf == NULL)
 			return "**OUT OF MEMORY**";
-		pCS = AddCustomString(pMsg, pTpe);
-		if(pCS == NULL)
-			return "**OUT OF MEMORY**";
-		pCS->psz = pBuf;
 		while(*pRes) {
 			*pBuf++ = toupper(*pRes);
 			++pRes;
 		}
 		*pBuf = '\0';
-		pRes = pCS->psz;
+		pRes = pBufStart;
+		*pbMustBeFreed = 1;
 	}
 
 	dprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); 
@@ -3053,6 +3052,14 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 	assert(pLen != NULL);
 	assert(pbMustBeFreed != NULL);
 
+	/* first check if we need to do anything at all... */
+	for(p = *pp ; *p && *p != '\'' ; ++p)
+		;
+	/* when we get out of the loop, we are either at the
+	 * string terminator or the first \'. */
+	if(*p == '\0')
+		return; /* nothing to do in this case! */
+
 	p = *pp;
 	iLen = *pLen;
 	if((pStrB = sbStrBConstruct()) == NULL) {
@@ -3157,9 +3164,13 @@ void iovDeleteFreeableStrings(struct filed *f)
 
 	assert(f != NULL);
 
+printf("in iovDeleteFreebleString(%x), used: %d\n", f, f->f_iIovUsed);
+
 	for(i = 0 ; i < f->f_iIovUsed ; ++i) {
 		/* free to-be-freed strings in iovec */
+printf("\t i: %d, must(%x): %d\n", i,f->f_bMustBeFreed + i,*(f->f_bMustBeFreed + i) );
 		if(*(f->f_bMustBeFreed + i)) {
+			printf("DELETE freeable string '%s'\n", (char*)(f->f_iov + i)->iov_base);
 			free((f->f_iov + i)->iov_base);
 			*(f->f_bMustBeFreed) = 0;
 		}
@@ -3215,7 +3226,18 @@ void  iovCreate(struct filed *f)
 	}
 	
 	f->f_iIovUsed = iIOVused;
+	printf("%x used set to %d\n", f, f->f_iIovUsed);
 
+#if 0 /* debug aid */
+{
+	int i;
+	v = f->f_iov;
+	for(i = 0 ; i < iIOVused ; ++i, ++v) {
+		printf("iovCreate(%d), string '%s', mustbeFreed %d\n", i,
+		        v->iov_base, *(f->f_bMustBeFreed + i));
+	}
+}
+#endif /* debug aid */
 #if 0
 	/* almost done - just let's check how we need to terminate
 	 * the message.
@@ -3501,6 +3523,8 @@ void wallmsg(f)
 	if (reenter++)
 		return;
 
+	iovCreate(f);	/* init the iovec */
+
 	/* open the user login file */
 	setutent();
 
@@ -3519,7 +3543,6 @@ void wallmsg(f)
 	/* TODO: find a way to limit the max size of the message. hint: this
 	 * should go into the template!
 	 */
-		iovCreate(f);
 
 		/* scan the user login file */
 		while ((uptr = getutent())) {
