@@ -2972,6 +2972,7 @@ void logmsg(pri, pMsg, flags)
  */
 void doSQLEmergencyEscape(register char *p)
 {
+printf("In doSQLEmergencyEscape '%s'\n", p);
 	while(*p) {
 		if(*p == '\'')
 			*p = '"';
@@ -2999,6 +3000,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 	assert(pLen != NULL);
 	assert(pbMustBeFreed != NULL);
 
+printf("In doSQLEscape '%s'\n", *pp);
 	/* first check if we need to do anything at all... */
 	for(p = *pp ; *p && *p != '\'' ; ++p)
 		;
@@ -4220,6 +4222,9 @@ void cfline(line, f)
 	char buf[MAXLINE];
 	char szTemplateName[128];
 	char xbuf[200];
+#ifdef WITH_DB
+	int iMySQLPropErr = 0;
+#endif
 
 	dprintf("cfline(%s)\n", line);
 
@@ -4464,22 +4469,47 @@ void cfline(line, f)
 		dprintf ("in init() - WITH_DB case \n");
 		f->f_type = F_MYSQL;
 		p++;
-		dprintf("p is: %s\n", p);
 		
-		/* TODO: We have to prove invalide input! */
+		/* Now we read the MySQL connection properties 
+		 * and verify that the properties are valid.
+		 */
 		if(getSubString(&p, f->f_dbsrv, MAXHOSTNAMELEN+1, ','))
-			exit(1);
+			iMySQLPropErr++;
+		if(*f->f_dbsrv == '\0')
+			iMySQLPropErr++;
 		if(getSubString(&p, f->f_dbname, _DB_MAXDBLEN+1, ','))
-			exit(1);
+			iMySQLPropErr++;
+		if(*f->f_dbname == '\0')
+			iMySQLPropErr++;
 		if(getSubString(&p, f->f_dbuid, _DB_MAXUNAMELEN+1, ','))
-			exit(1);
-		if(getSubString(&p, f->f_dbpwd, _DB_MAXPWDLEN+1, ','))
-			exit(1);
-		dprintf("f->f_dbsrv is: %s\n", f->f_dbsrv);
-		dprintf("f->f_dbname is: %s\n", f->f_dbname);
-		dprintf("f->f_dbuid is: %s\n", f->f_dbuid);
-		dprintf("f->f_dbpwd is: %s\n", f->f_dbpwd);
-		initMySQL(f);
+			iMySQLPropErr++;
+		if(*f->f_dbuid == '\0')
+			iMySQLPropErr++;
+		if(getSubString(&p, f->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
+			iMySQLPropErr++;
+		if(*p != '\n') { 
+			/* we have a template specifier! */
+			cflineParseTemplateName(f, &p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(char));
+			cflineSetTemplateAndIOV(f, szTemplateName);
+			dprintf(" template '%s'", szTemplateName);
+		}
+		else {
+			printf("No template assigned!\n");
+			iMySQLPropErr++;
+		}
+		/* If we dedect invalid properties, we disable logging, 
+		 * because right properties are vital at this place.  
+		 * Retrials make no sens. 
+		 */
+		if (iMySQLPropErr) { 
+			f->f_type = F_UNUSED;
+			printf("Trouble with MySQL conncetion properties.\n"
+				"MySQL logging disabled.\n");
+		}
+		else {
+			initMySQL(f);
+		}
 		break;
 #endif	/* #ifdef WITH_DB */
 
@@ -4658,23 +4688,29 @@ void closeMySQL(register struct filed *f)
  */
 void writeMySQL(register struct filed *f)
 {
-	char sql_command[MAXLINE+1048];
+	char *psz;
+	/* char sql_command[MAXLINE+1048];
 	char szTimestamp[15];
 	char szRcvAtTimestamp[15];
 	formatTimestampToMySQL(&f->f_pMsg->tTIMESTAMP, szTimestamp, sizeof(szTimestamp)/sizeof(char));
 	formatTimestampToMySQL(&f->f_pMsg->tRcvdAt, szRcvAtTimestamp, sizeof(szTimestamp)/sizeof(char));
+	*/
 	printf("in writeMySQL()\n");
-
-	snprintf(sql_command, sizeof(sql_command), 
+	iovCreate(f);
+	psz = iovAsString(f);
+printf("psz: \"%s\"\n", psz);
+	printf("in writeMySQL()2\n");
+	/* snprintf(sql_command, sizeof(sql_command), 
 		"INSERT INTO SystemEvents (Message, ReceivedAt, DeviceReportedTime, "
-			"Facility, Priority, FromHost, SysLogTag) "
+			"Facility, Priority, FromHost, SysLogTag, InfoUnitID) "
 		"VALUES "
-		"	('%s', '%s', '%s', %d, %d, '%s', '%s')", 
+		"	('%s', '%s', '%s', %d, %d, '%s', '%s', 1)", 
 			f->f_pMsg->pszMSG, szRcvAtTimestamp, szTimestamp, 
 			f->f_pMsg->iFacility, f->f_pMsg->iSeverity,
 			f->f_pMsg->pszHOSTNAME, f->f_pMsg->pszTAG);
+	*/
 	/* query */
-	if(mysql_query(&f->f_hmysql, sql_command)) {
+	if(mysql_query(&f->f_hmysql, psz)) {
 		dprintf("mysql insert failed. ErrNo: %d\n", mysql_errno(&f->f_hmysql));
 		exit(0);
 	}
@@ -4690,11 +4726,15 @@ void writeMySQL(register struct filed *f)
  * Copy a string byte by byte until the occurrence  
  * of a given separator.
  *
- * \param ppSrc		Pointer to a pointer of the source array of characters 
- * \param pDst		Pointer to the destination array of characters
- * \param DstSize	Maximum numbers of characters to store
- * \param cSep		Separator char
- * \ret int		Returns 0 if no error occured
+ * \param ppSrc		Pointer to a pointer of the source array of characters. If a
+			separator detected the Pointer points to the next char after the
+			separator. Except if the end of the string is dedected ('\n'). 
+			Then it points to the terminator char. 
+ * \param pDst		Pointer to the destination array of characters. Here the substing
+			will be stored.
+ * \param DstSize	Maximum numbers of characters to store.
+ * \param cSep		Separator char.
+ * \ret int		Returns 0 if no error occured.
  */
 int getSubString(char **ppSrc,  char *pDst, size_t DstSize, char cSep)
 {
@@ -4710,7 +4750,8 @@ int getSubString(char **ppSrc,  char *pDst, size_t DstSize, char cSep)
 		dprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
 	}	
-	*ppSrc=pSrc+1;
+	if (*pSrc != '\0')
+		*ppSrc=pSrc+1;
 	*pDst = '\0';
 	return iErr;
 }

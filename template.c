@@ -22,9 +22,10 @@ static struct template *tplLast = NULL;	/* points to the last element of the tem
  */
 struct templateEntry* tpeConstruct(struct template *pTpl)
 {
+	struct templateEntry *pTpe;
+
 	assert(pTpl != NULL);
 
-	struct templateEntry *pTpe;
 	if((pTpe = calloc(1, sizeof(struct templateEntry))) == NULL)
 		return NULL;
 	
