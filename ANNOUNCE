@@ -1,0 +1,62 @@
+On behalf of the beta-testers and other members of the Linux INTERNET
+community who have helped shape and debug this package I am pleased to
+announce version 1.3-pl3 of the sysklogd package.
+
+This package implements two system log daemons. The syslogd daemon is
+an enhanced version of the standard Berkeley utility program. This
+daemon is responsible for providing logging of messages received from
+programs and facilities on the local host as well as from remote
+hosts. The klogd daemon listens to kernel message sources and is
+responsible for prioritizing and processing operating system
+messages. The klogd daemon can run as a client of syslogd or
+optionally as a standalone program.
+
+This package is the culmination of about two years of experience and
+bug reports on the 1.2 version from both the INTERNET and our
+corporate Linux networks. The utilities in this package should provide
+VERY reliable system logging. Klogd and syslogd have both been stress
+tested in kernel development environments where literally hundreds of
+megabytes of kernel messages have been blasted through them. If either
+utility should fail I would appreciate a report and debug information
+so that the bug can be reproduced and squashed.
+
+This package includes some major improvements. Some of them are listed
+here:
+
+	* klogd supports on-the-fly kernel address to symbol
+	translations. This requires that a valid kernel symbol map be
+	found at execution.
+
+	* klogd also supports debugging of protection faults which occur
+	in kernel loadable modules.
+
+	* syslogd has better handling of remote logging capabilities.
+
+	* both klogd and syslogd can be controlled through commandline
+	options and signals.
+
+	* both daemons are now FSSTND conform.
+
+	* a syslog.conf(5) manpage is now available.
+
+	* Spaces are now accepted in the syslog configuration
+	file. This should be a real crowd pleaser.
+
+	* Syslogd now uses dynamic allocation of logging output
+	descriptors. There is no longer a static limit on the number
+	of log destinations that can be defined.
+
+	* Numerous bug fixes and code cleanups.
+
+The new release can be obtained from either tsx-11.mit.edu or
+sunsite.unc.edu.
+
+Thanks again to everyone who has contributed ideas, patches and bug
+reports. Linux has a superior set of logging utilities thanks to
+contributions from the entire community.
+
+
+Dr. Greg Wettstein
+Oncology Research Division Computing Facility
+Roger Maris Cancer Center
+greg@wind.enjellic.com

@@ -1,0 +1,65 @@
+diff -u --new-file --recursive base/modules-2.0.0/depmod/modprobe.c ./modules-2.0.0/depmod/modprobe.c
+--- base/modules-2.0.0/depmod/modprobe.c	Mon Jun 10 05:29:08 1996
++++ ./modules-2.0.0/depmod/modprobe.c	Thu Aug 29 09:58:01 1996
+@@ -233,6 +233,13 @@
+ 	verbose ("\r\t%s\n\t\t",cmd);
+ 	int ret = system(cmd);
+ #endif
++	if ( fork() == 0 )
++	{
++		/* Child process. */
++		if ( execlp("klogd", "klogd", "-i", (char *) 0)  < 0 )
++			fprintf(stderr, "Failure in signaling klogd.\n");
++		exit(0);
++	}
+ 	return ret;
+ }
+ /*
+diff -u --new-file --recursive base/modules-2.0.0/insmod/insmod.c ./modules-2.0.0/insmod/insmod.c
+--- base/modules-2.0.0/insmod/insmod.c	Mon Jun 10 06:42:25 1996
++++ ./modules-2.0.0/insmod/insmod.c	Thu Aug 29 09:56:53 1996
+@@ -253,6 +253,18 @@
+ 	++n_stringpatches;
+ }
+ 
++
++void signal_klogd() {
++	if ( fork() == 0 )
++	{
++		if ( execlp("klogd", "klogd", "-i", (char *) 0)  < 0 )
++			fprintf(stderr, "Failure in signaling klogd.\n");
++		exit(0);
++	}
++	return;
++}
++
++
+ int main(int argc, char **argv)
+ {
+ 	FILE *fp;
+@@ -983,6 +995,8 @@
+ 			symvalue(sp) + addr, symtype, symname(sp));
+ 	}
+ 
++	signal_klogd();
++
+ 	if (nksyms > 0)
+ 		free(ksymtab); /* it has done its job */
+ 
+@@ -1292,6 +1306,7 @@
+ 			--argc;
+ 			++argv;
+ 		}
++		signal_klogd();
+ 		return errors;
+ 	}
+ 	/* else recursive removal */
+@@ -1353,6 +1368,8 @@
+ 			break;
+ 		}
+ 	}
++
++	signal_klogd();
+ 
+ 	return errors;
+ }

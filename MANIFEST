@@ -1,0 +1,62 @@
+A virgin copy of these sources should include 12 files:
+
+MANIFEST:	This file.
+
+INSTALL:	Brief installation instructions.
+
+NEWS:		Important changes.
+
+Makefile:	A makefile to generate the binaries.
+
+README.linux:	Documentation which may prove useful.
+
+klogd.c:	Source code for the kernel log daemon.
+
+klogd.h:	Global definitions required for the kernel log daemon.
+
+ksym.c:		Source module for the kernel log daemon which implements
+		kernel numeric address to symbol translations.
+
+ksym_mod.c:	Source module which contains functions which allow ksym.c
+		to resolve symbols found in loadable kernel modules.	
+
+syslogd.c:	Source code for the system log daemon.
+
+syslog.c:	A slightly modified version of the syslog.c file found in
+		the standard libraries.  This special version is needed
+		so that klogd will pass messages with kernel priority to
+		the syslogd facility.
+
+pidfile.c:	Source implementing utility functions which are useful
+		for managing pid files.  Used by both syslogd and klogd.
+
+pidfile.h:	Include file containing global definitions for the
+		pid file utility functions.
+
+version.h:	An include file for setting the version and patchlevel
+		for the package.
+
+syslog.conf:	A sample configuration file.  Note that this file uses
+		extensions to the BSD syntax.  See the syslog.conf(5)
+		manpage for more details.
+
+syslog_tst.c:	A simple program to test the system log utility.
+
+sysklogd.8:	Man page documenting the general characteristics of this
+		package.
+
+klogd.8:	Man page documenting the kernel log daemon.
+
+kernel.patch:	A source code patch which modifies the linux kernel to
+		delimit addresses for symbolic translation by klogd.
+
+oops.c:		C source for a loadable kernel module which can be used
+		to generate a kernel protection fault.  This is used to
+		test the address resolution capabilities of klogd.
+
+oops_test.c:	A small driver program used in conjunction with the oops
+		module to generate a kernel protection fault.
+
+modules.patch:	A patch to the modules-2.0.0 package which provides for
+		automatic signalling of klogd whenever the kernel module
+		state changes.

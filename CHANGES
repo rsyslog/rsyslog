@@ -1,0 +1,32 @@
+Version 1.4.1
+
+ . klogd will set the console log level only if `-c' is given on the
+   commandline, not overwriting local settings in `/etc/sysctl.conf'.
+ . Bugfix: klogd will use SOCK_DGRM as well, re-enables kernel logging
+ . Bugfix: Don't make syslogd fail with broken `-a'
+ . Bugfix: klogd will skip zero bytes and not enter a busy loop anymore
+ . Thomas Roessler <roessler@does-not-exist.org>
+   - Patch to prevent LogLine() from being invoked with a negative
+     counter as an argument.
+
+Version 1.4
+
+ . Skip newline when reading in klog messages
+ . Use lseek64() instead of llseek() which is deprecated these days
+ . Close symbol file before returning with 0 when an error occurred
+   while reading it.  This will enable systems to umount that
+   partition with no open file descriptor left over.
+ . Solar Designer <solar@false.com>
+   - printline() fixes
+   - priority decoding fix
+ . Daniel Jacobowitz <dan@debian.org>
+   - printchopped() fix
+ . Keith Owens <kaos@ocs.com.au>
+   - Fixed bug that caused klogd to die if there is no sym_array available.
+   - When symbols are expanded, print the line twice.  Once with
+     addresses converted to symbols, once with the raw text.  Allows
+     external programs such as ksymoops do their own processing on the
+     original data.
+ . Olaf Kirch <okir@caldera.de>
+   - Remove Unix Domain Sockets and switch to Datagram Unix Sockets
+ . Several bugfixes and improvements, please refer to the .c files

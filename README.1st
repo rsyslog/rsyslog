@@ -1,0 +1,65 @@
+Very important information before using version 1.3
+---------------------------------------------------
+
+The included version of syslogd behaves in a slightly different manner
+to the one in former releases.  Please review the following important
+differences:
+
+* By default the syslog daemon doesn't accept any message from the
+  syslog/udp port. To enable this add "-r" to the command-line
+  arguments. You _have to_ add this on every host that should run as a
+  centralized network log server.
+
+  You also should take a look at other new command-line arguments:
+  "-l" and "-s".
+
+  The syslog daemon by default does not forward to a remote host any
+  log messages which it received from a remote host.  This is an
+  attempt to prevent syslog loops.  If you desire this behavior the
+  -h command-line switch can be used to enable this behavior.
+
+* Syslogd was designed to strip off the local domain from every
+  message that comes from any host in the same domain. Unfortunately
+  this feature didn't work in every cases. This is now corrected. So
+  you might not get the fqdn anymore.
+
+  If you use any scripts that analyze logfiles, please bare this in
+  mind.
+
+* Syslogd doesn't touch the filemode of any logfile. If it has to
+  create one, it will be world-readable. If you do not want this
+  (i.e. if auth.* is logged) you have to create the file by hand and
+  change permissions.
+
+* If you notice that some of your programs make heavy use of the
+  syslog facility and your disks get loud you might want to turn
+  fsync()ing after each line off. But note that in doing so you
+  increase the likelihood of lost information in the event of a
+  system crash.
+
+* If you're going to start klogd or syslogd by init(8), you don't have
+  to hack the code anymore. Instead add "-n" to the command-line
+  arguments.
+
+* Klogd can now be used to decode EIP addresses if it can determine a
+  System.map file (command-line argument "-k"). This is a very useful
+  feature if your system crashes, but its usability depends on an
+  actual and correct System.map file.
+
+* Both system utilities now check for and respect the existence of .pid
+  files.  If the utilities are started by configuration scripts on
+  stable systems there is the potential that the process ID numbers of
+  the utilities will be identical from one system boot to another.
+  This will cause both klogd and syslogd to terminate.
+
+  Both klogd and syslogd will attempt to remove their .pid files when
+  they receive termination signals.  The difficulty noted above
+  typically occurs when a system crash occurs or an uncatchable signal
+  (kill -9) is used to stop the daemons.
+
+  The cleanest solution to this problem is to insure that the system
+  configuration scripts (rc.*) provide a clean working environment for
+  a freshly booted system.  As part of the initialization process
+  these scripts should remove all old .pid files found in /var/run.
+  This will insure that klogd and syslogd start properly even if prior
+  executions have been terminated harshly.

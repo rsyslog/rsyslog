@@ -1,0 +1,397 @@
+.\" syslog.conf - syslogd(8) configuration file
+.\" Copyright (c) 1995  Martin Schulze <Martin.Schulze@Linux.DE>
+.\" 
+.\" This file is part of the sysklogd package, a kernel and system log daemon.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\" 
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\" 
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111, USA.
+.\"
+.TH SYSLOG.CONF 5 "1 January 1998" "Version 1.3" "Linux System Administration"
+.SH NAME
+syslog.conf \- syslogd(8) configuration file
+.SH DESCRIPTION
+The
+.I syslog.conf
+file is the main configuration file for the
+.BR syslogd (8)
+which logs system messages on *nix systems.  This file specifies rules
+for logging.  For special features see the
+.BR sysklogd (8)
+manpage.
+
+Every rule consists of two fields, a 
+.I selector
+field and an
+.I action 
+field.  These two fields are separated by one or more spaces or
+tabs.  The selector field specifies a pattern of facilities and
+priorities belonging to the specified action.
+
+Lines starting with a hash mark (``#'') and empty lines are ignored.
+
+This release of
+.B syslogd
+is able to understand an extended syntax.  One rule can be divided
+into several lines if the leading line is terminated with an backslash
+(``\\'').
+
+.SH SELECTORS
+The selector field itself again consists of two parts, a
+.I facility
+and a 
+.IR priority ,
+separated by a period (``.'').
+Both parts are case insensitive and can also be specified as decimal
+numbers, but don't do that, you have been warned.  Both facilities and
+priorities are described in 
+.BR syslog (3).
+The names mentioned below correspond to the similar 
+.BR LOG_ -values
+in
+.IR /usr/include/syslog.h .
+
+The
+.I facility
+is one of the following keywords:
+.BR auth ", " authpriv ", " cron ", " daemon ", " kern ", " lpr ", "
+.BR mail ", " mark ", " news ", " security " (same as " auth "), "
+.BR syslog ", " user ", " uucp " and " local0 " through " local7 .
+The keyword 
+.B security
+should not be used anymore and
+.B mark
+is only for internal use and therefore should not be used in
+applications.  Anyway, you may want to specify and redirect these
+messages here.  The
+.I facility
+specifies the subsystem that produced the message, i.e. all mail
+programs log with the mail facility
+.BR "" ( LOG_MAIL )
+if they log using syslog.
+
+The
+.I priority
+is one of the following keywords, in ascending order: 
+.BR debug ", " info ", " notice ", " warning ", " warn " (same as "
+.BR warning "), " err ", " error " (same as " err "), " crit ", "
+.BR alert ", " emerg ", " panic " (same as " emerg ).
+The keywords
+.BR error ", " warn " and " panic
+are deprecated and should not be used anymore.  The
+.I priority
+defines the severity of the message
+
+The behavior of the original BSD syslogd is that all messages of the
+specified priority and higher are logged according to the given
+action.  This
+.BR syslogd (8)
+behaves the same, but has some extensions.
+
+In addition to the above mentioned names the
+.BR syslogd (8)
+understands the following extensions: An asterisk (``*'') stands for
+all facilities or all priorities, depending on where it is used
+(before or after the period).  The keyword
+.B none
+stands for no priority of the given facility.
+
+You can specify multiple facilities with the same priority pattern in
+one statement using the comma (``,'') operator.  You may specify as
+much facilities as you want.  Remember that only the facility part from
+such a statement is taken, a priority part would be skipped.
+
+Multiple selectors may be specified for a single
+.I action
+using the semicolon (``;'') separator.  Remember that each selector in
+the 
+.I selector
+field is capable to overwrite the preceding ones.  Using this
+behavior you can exclude some priorities from the pattern.
+
+This 
+.BR syslogd (8)
+has a syntax extension to the original BSD source, that makes its use
+more intuitively.  You may precede every priority with an equation sign
+(``='') to specify only this single priority and not any of the
+above.  You may also (both is valid, too) precede the priority with an
+exclamation mark (``!'') to ignore all that priorities, either exact
+this one or this and any higher priority.  If you use both extensions
+than the exclamation mark must occur before the equation sign, just
+use it intuitively.
+
+.SH ACTIONS
+The action field of a rule describes the abstract term
+``logfile''.  A ``logfile'' need not to be a real file, btw.  The
+.BR syslogd (8)
+provides the following actions.
+
+.SS Regular File
+Typically messages are logged to real files.  The file has to be
+specified with full pathname, beginning with a slash ``/''.
+
+You may prefix each entry with the minus ``-'' sign to omit syncing
+the file after every logging.  Note that you might lose information if
+the system crashes right behind a write attempt.  Nevertheless this
+might give you back some performance, especially if you run programs
+that use logging in a very verbose manner.
+
+.SS Named Pipes
+This version of
+.BR syslogd (8)
+has support for logging output  to
+named pipes (fifos).  A fifo or named pipe can be used as
+a destination for log messages by prepending a pipe symbol (``|'') to
+the name of the file.  This is handy for debugging.  Note that the fifo
+must be created with the  
+.BR mkfifo (1)
+command  before
+.BR syslogd (8)
+is started.
+
+.SS Terminal and Console
+If the file you specified is a tty, special tty-handling is done, same
+with
+.IR /dev/console .
+
+.SS Remote Machine
+This 
+.BR syslogd (8)
+provides full remote logging, i.e. is able to send messages to a
+remote host running 
+.BR syslogd (8)
+and to receive messages from remote hosts.  The remote
+host won't forward the message again, it will just log them
+locally.  To forward messages to another host, prepend the hostname
+with the at sign (``@'').
+
+Using this feature you're able to control all syslog messages on one
+host, if all other machines will log remotely to that.  This tears down
+administration needs.
+
+.SS List of Users
+Usually critical messages are also directed to ``root'' on that
+machine.  You can specify a list of users that shall get the message by
+simply writing the login.  You may specify more than one user by
+separating them with commas (``,'').  If they're logged in they
+get the message.  Don't think a mail would be sent, that might be too
+late.
+
+.SS Everyone logged on
+Emergency messages often go to all users currently online to notify
+them that something strange is happening with the system.  To specify
+this
+.IR wall (1)-feature
+use an asterisk (``*'').
+
+.SH EXAMPLES
+Here are some example, partially taken from a real existing site and
+configuration.  Hopefully they rub out all questions to the
+configuration, if not, drop me (Joey) a line.
+.IP
+.nf
+# Store critical stuff in critical
+#
+*.=crit;kern.none            /var/adm/critical
+.fi
+.LP
+This will store all messages with the priority
+.B crit
+in the file
+.IR /var/adm/critical ,
+except for any kernel message.
+
+.IP
+.nf
+# Kernel messages are first, stored in the kernel
+# file, critical messages and higher ones also go
+# to another host and to the console
+#
+kern.*                       /var/adm/kernel
+kern.crit                    @finlandia
+kern.crit                    /dev/console
+kern.info;kern.!err          /var/adm/kernel-info
+.fi
+.LP
+The first rule direct any message that has the kernel facility to the
+file
+.IR /var/adm/kernel .
+
+The second statement directs all kernel messages of the priority
+.B crit
+and higher to the remote host finlandia.  This is useful, because if
+the host crashes and the disks get irreparable errors you might not be
+able to read the stored messages.  If they're on a remote host, too,
+you still can try to find out the reason for the crash.
+
+The third rule directs these messages to the actual console, so the
+person who works on the machine will get them, too.
+
+The fourth line tells the syslogd to save all kernel messages that
+come with priorities from
+.BR info " up to " warning
+in the file
+.IR /var/adm/kernel-info .
+Everything from
+.I err
+and higher is excluded.
+
+.IP
+.nf
+# The tcp wrapper loggs with mail.info, we display
+# all the connections on tty12
+#
+mail.=info                   /dev/tty12
+.fi
+.LP
+This directs all messages that uses 
+.BR mail.info " (in source " LOG_MAIL " | " LOG_INFO )
+to
+.IR /dev/tty12 , 
+the 12th console.  For example the tcpwrapper
+.BR tcpd (8)
+uses this as it's default.
+
+.IP
+.nf
+# Store all mail concerning stuff in a file
+#
+mail.*;mail.!=info           /var/adm/mail
+.fi
+.LP
+This pattern matches all messages that come with the
+.B mail
+facility, except for the
+.B info
+priority.  These will be stored in the file
+.IR /var/adm/mail .
+
+.IP
+.nf
+# Log all mail.info and news.info messages to info
+#
+mail,news.=info              /var/adm/info
+.fi
+.LP
+This will extract all messages that come either with
+.BR mail.info " or with " news.info 
+and store them in the file
+.IR /var/adm/info .
+
+.IP
+.nf
+# Log info and notice messages to messages file
+#
+*.=info;*.=notice;\\
+	mail.none  /var/log/messages
+.fi
+.LP
+This lets the
+.B syslogd
+log all messages that come with either the
+.BR info " or the " notice
+facility into the file
+.IR /var/log/messages ,
+except for all messages that use the
+.B mail
+facility.
+
+.IP
+.nf
+# Log info messages to messages file
+#
+*.=info;\\
+	mail,news.none       /var/log/messages
+.fi
+.LP
+This statement causes the
+.B syslogd
+to log all messages that come with the
+.B info
+priority to the file
+.IR /var/log/messages .
+But any message coming either with the
+.BR mail " or the " news
+facility will not be stored.
+
+.IP
+.nf
+# Emergency messages will be displayed using wall
+#
+*.=emerg                     *
+.fi
+.LP
+This rule tells the
+.B syslogd
+to write all emergency messages to all currently logged in users.  This
+is the wall action.
+
+.IP
+.nf
+# Messages of the priority alert will be directed
+# to the operator
+#
+*.alert                      root,joey
+.fi
+.LP
+This rule directs all messages with a priority of
+.B alert
+or higher to the terminals of the operator, i.e. of the users ``root''
+and ``joey'' if they're logged in.
+
+.IP
+.nf
+*.*                          @finlandia
+.fi
+.LP
+This rule would redirect all messages to a remote host called
+finlandia.  This is useful especially in a cluster of machines where
+all syslog messages will be stored on only one machine.
+
+.SH CONFIGURATION FILE SYNTAX DIFFERENCES
+.B Syslogd
+uses a slightly different syntax for its configuration file than
+the original BSD sources.  Originally all messages of a specific priority
+and above were forwarded to the log file.  The modifiers ``='', ``!''
+and ``-'' were added to make the
+.B syslogd
+more flexible and to use it in a more intuitive manner.
+
+The original BSD syslogd doesn't understand spaces as separators between
+the selector and the action field.
+.SH FILES
+.PD 0
+.TP
+.I /etc/syslog.conf
+Configuration file for
+.B syslogd
+
+.SH BUGS
+The effects of multiple selectors are sometimes not intuitive.  For
+example ``mail.crit,*.err'' will select ``mail'' facility messages at
+the level of ``err'' or higher, not at the level of ``crit'' or
+higher.
+
+.SH SEE ALSO
+.BR sysklogd (8),
+.BR klogd (8), 
+.BR logger (1),
+.BR syslog (2),
+.BR syslog (3)
+
+.SH AUTHORS
+The
+.B syslogd
+is taken from BSD sources, Greg Wettstein (greg@wind.enjellic.com)
+performed the port to Linux, Martin Schulze (joey@linux.de)
+made some bugfixes and added some new features.

@@ -1,0 +1,607 @@
+.\" Copyright 1994 Dr. Greg Wettstein, Enjellic Systems Development.
+.\" May be distributed under the GNU General Public License
+.\" Sun Aug 30 11:35:55 MET: Martin Schulze: Updates
+.\"
+.TH SYSKLOGD 8 "12 October 1998" "Version 1.3" "Linux System Administration"
+.SH NAME
+sysklogd \- Linux system logging utilities.
+.SH SYNOPSIS
+.B syslogd
+.RB [ " \-a "
+.I socket
+]
+.RB [ " \-d " ]
+.RB [ " \-f "
+.I config file
+]
+.RB [ " \-h " ] 
+.RB [ " \-l "
+.I hostlist
+]
+.RB [ " \-m "
+.I interval
+] 
+.RB [ " \-n " ]
+.RB [ " \-p"
+.IB socket 
+]
+.RB [ " \-r " ]
+.RB [ " \-s "
+.I domainlist
+]
+.RB [ " \-v " ]
+.LP
+.SH DESCRIPTION
+.B Sysklogd
+provides two system utilities which provide support for
+system logging and kernel message trapping.  Support of both internet and
+unix domain sockets enables this utility package to support both local
+and remote logging.
+
+System logging is provided by a version of 
+.BR syslogd (8)
+derived from the
+stock BSD sources.  Support for kernel logging is provided by the
+.BR klogd (8)
+utility which allows kernel logging to be conducted in either a
+standalone fashion or as a client of syslogd.
+
+.B Syslogd
+provides a kind of logging that many modern programs use.  Every logged
+message contains at least a time and a hostname field, normally a
+program name field, too, but that depends on how trusty the logging
+program is.
+
+While the
+.B syslogd
+sources have been heavily modified a couple of notes
+are in order.  First of all there has been a systematic attempt to
+insure that syslogd follows its default, standard BSD behavior.
+The second important concept to note is that this version of syslogd
+interacts transparently with the version of syslog found in the
+standard libraries.  If a binary linked to the standard shared
+libraries fails to function correctly we would like an example of the
+anomalous behavior.
+
+The main configuration file
+.I /etc/syslog.conf
+or an alternative file, given with the 
+.B "\-f"
+option, is read at startup.  Any lines that begin with the hash mark
+(``#'') and empty lines are ignored.  If an error occurs during parsing
+the whole line is ignored.
+
+.LP
+.SH OPTIONS
+.TP
+.BI "\-a " "socket"
+Using this argument you can specify additional sockets from that
+.B syslogd
+has to listen to.  This is needed if you're going to let some daemon
+run within a chroot() environment.  You can use up to 19 additional
+sockets.  If your environment needs even more, you have to increase
+the symbol
+.B MAXFUNIX
+within the syslogd.c source file.  An example for a chroot() daemon is
+described by the people from OpenBSD at
+http://www.psionic.com/papers/dns.html.
+.TP
+.B "\-d"
+Turns on debug mode.  Using this the daemon will not proceed a 
+.BR fork (2)
+to set itself in the background, but opposite to that stay in the
+foreground and write much debug information on the current tty.  See the
+DEBUGGING section for more information.
+.TP
+.BI "\-f " "config file"
+Specify an alternative configuration file instead of
+.IR /etc/syslog.conf ","
+which is the default.
+.TP
+.BI "\-h "
+By default syslogd will not forward messages it receives from remote hosts.
+Specifying this switch on the command line will cause the log daemon to
+forward any remote messages it receives to forwarding hosts which have been
+defined.
+.TP
+.BI "\-l " "hostlist"
+Specify a hostname that should be logged only with its simple hostname
+and not the fqdn.  Multiple hosts may be specified using the colon
+(``:'') separator.
+.TP
+.BI "\-m " "interval"
+The
+.B syslogd
+logs a mark timestamp regularly.  The default
+.I interval
+between two \fI-- MARK --\fR lines is 20 minutes.  This can be changed
+with this option.  Setting the
+.I interval
+to zero turns it off entirely.
+.TP
+.B "\-n"
+Avoid auto-backgrounding.  This is needed especially if the
+.B syslogd
+is started and controlled by
+.BR init (8).
+.TP
+.BI "\-p " "socket"
+You can specify an alternative unix domain socket instead of
+.IR /dev/log "."
+.TP
+.B "\-r"
+This option will enable the facility to receive message from the
+network using an internet domain socket with the syslog service (see 
+.BR services (5)).
+The default is to not receive any messages from the network.
+
+This option is introduced in version 1.3 of the sysklogd
+package.  Please note that the default behavior is the opposite of
+how older versions behave, so you might have to turn this on.
+.TP
+.BI "\-s " "domainlist"
+Specify a domainname that should be stripped off before
+logging.  Multiple domains may be specified using the colon (``:'')
+separator.
+Please be advised that no sub-domains may be specified but only entire
+domains.  For example if
+.B "\-s north.de"
+is specified and the host logging resolves to satu.infodrom.north.de
+no domain would be cut, you will have to specify two domains like:
+.BR "\-s north.de:infodrom.north.de" .
+.TP
+.B "\-v"
+Print version and exit.
+.LP
+.SH SIGNALS
+.B Syslogd
+reacts to a set of signals.  You may easily send a signal to
+.B syslogd
+using the following:
+.IP
+.nf
+kill -SIGNAL `cat /var/run/syslogd.pid`
+.fi
+.PP
+.TP
+.B SIGHUP
+This lets
+.B syslogd
+perform a re-initialization.  All open files are closed, the
+configuration file (default is 
+.IR /etc/syslog.conf ")"
+will be reread and the
+.BR syslog (3)
+facility is started again.
+.TP
+.B SIGTERM
+The
+.B syslogd
+will die.
+.TP
+.BR SIGINT ", " SIGQUIT
+If debugging is enabled these are ignored, otherwise 
+.B syslogd
+will die.
+.TP
+.B SIGUSR1
+Switch debugging on/off.  This option can only be used if
+.B syslogd
+is started with the
+.B "\-d"
+debug option.
+.TP
+.B SIGCHLD
+Wait for childs if some were born, because of wall'ing messages.
+.LP
+.SH CONFIGURATION FILE SYNTAX DIFFERENCES
+.B Syslogd
+uses a slightly different syntax for its configuration file than
+the original BSD sources.  Originally all messages of a specific priority
+and above were forwarded to the log file.
+.IP
+For example the following line caused ALL output from daemons using
+the daemon facilities (debug is the lowest priority, so every higher
+will also match) to go into 
+.IR /usr/adm/daemons :
+.IP
+.nf
+	# Sample syslog.conf
+	daemon.debug			/usr/adm/daemons
+.fi
+.PP
+Under the new scheme this behavior remains the same.  The difference
+is the addition of four new specifiers, the asterisk (\fB*\fR)
+wildcard, the equation sign (\fB=\fR), the exclamation mark
+(\fB!\fR), and the minus sign (\fB-\fR).
+
+The \fB*\fR specifies that all messages for the
+specified facility are to be directed to the destination.  Note that
+this behavior is degenerate with specifying a priority level of debug.
+Users have indicated that the asterisk notation is more intuitive.
+
+The \fB=\fR wildcard is used to restrict logging to the specified priority
+class.  This allows, for example, routing only debug messages to a
+particular logging source.
+.IP
+For example the following line in
+.I syslog.conf
+would direct debug messages from all sources to the
+.I /usr/adm/debug
+file.
+.IP
+.nf
+	# Sample syslog.conf
+	*.=debug			/usr/adm/debug
+.fi
+.PP
+.\" The \fB!\fR as the first character of a priority inverts the above
+.\" mentioned interpretation.
+The \fB!\fR is used to exclude logging of the specified
+priorities.  This affects all (!) possibilities of specifying priorities.
+.IP
+For example the following lines would log all messages of the facility
+mail except those with the priority info to the
+.I /usr/adm/mail 
+file.  And all messages from news.info (including) to news.crit
+(excluding) would be logged to the
+.I /usr/adm/news
+file.
+.IP
+.nf
+	# Sample syslog.conf
+	mail.*;mail.!=info		/usr/adm/mail
+	news.info;news.!crit	/usr/adm/news
+.fi
+.PP
+You may use it intuitively as an exception specifier.  The above
+mentioned interpretation is simply inverted.  Doing that you may use
+
+.nf
+	mail.none
+.fi
+or
+.nf
+	mail.!*
+.fi
+or
+.nf
+	mail.!debug
+.fi
+
+to skip every message that comes with a mail facility.  There is much
+room to play with it. :-)
+
+The \fB-\fR may only be used to prefix a filename if you want to omit
+sync'ing the file after every write to it.
+
+This may take some acclimatization for those individuals used to the
+pure BSD behavior but testers have indicated that this syntax is
+somewhat more flexible than the BSD behavior.  Note that these changes
+should not affect standard
+.BR syslog.conf (5)
+files.  You must specifically
+modify the configuration files to obtain the enhanced behavior.
+.LP
+.SH SUPPORT FOR REMOTE LOGGING
+These modifications provide network support to the syslogd facility.
+Network support means that messages can be forwarded from one node
+running syslogd to another node running syslogd where they will be
+actually logged to a disk file.
+
+To enable this you have to specify the
+.B "\-r"
+option on the command line.  The default behavior is that
+.B syslogd
+won't listen to the network.
+
+The strategy is to have syslogd listen on a unix domain socket for
+locally generated log messages.  This behavior will allow syslogd to
+inter-operate with the syslog found in the standard C library.  At the
+same time syslogd listens on the standard syslog port for messages
+forwarded from other hosts.  To have this work correctly the
+.BR services (5)
+files (typically found in
+.IR /etc )
+must have the following
+entry:
+.IP
+.nf
+	syslog          514/udp
+.fi
+.PP
+If this entry is missing
+.B syslogd
+neither can receive remote messages nor send them, because the UDP
+port cant be opened.  Instead 
+.B syslogd
+will die immediately, blowing out an error message.
+
+To cause messages to be forwarded to another host replace
+the normal file line in the
+.I syslog.conf
+file with the name of the host to which the messages is to be sent
+prepended with an @.
+.IP
+For example, to forward
+.B ALL
+messages to a remote host use the
+following
+.I syslog.conf
+entry:
+.IP
+.nf
+	# Sample syslogd configuration file to
+	# messages to a remote host forward all.
+	*.*			@hostname
+.fi
+
+To forward all \fBkernel\fP messages to a remote host the
+configuration file would be as follows:
+.IP
+.nf
+	# Sample configuration file to forward all kernel
+	# messages to a remote host.
+	kern.*		@hostname
+.fi
+.PP
+
+If the remote hostname cannot be resolved at startup, because the
+name-server might not be accessible (it may be started after syslogd)
+you don't have to worry.
+.B Syslogd
+will retry to resolve the name ten times and then complain.  Another
+possibility to avoid this is to place the hostname in
+.IR /etc/hosts .
+
+With normal
+.BR syslogd s
+you would get syslog-loops if you send out messages that were received
+from a remote host to the same host (or more complicated to a third
+host that sends it back to the first one, and so on).  In my domain
+(Infodrom Oldenburg) we accidently got one and our disks filled up
+with the same single message. :-(
+
+To avoid this in further times no messages that were received from a
+remote host are sent out to another (or the same) remote host
+anymore.  If there are scenarios where this doesn't make sense, please
+drop me (Joey) a line.
+
+If the remote host is located in the same domain as the host, 
+.B syslogd
+is running on, only the simple hostname will be logged instead of
+the whole fqdn.
+
+In a local network you may provide a central log server to have all
+the important information kept on one machine.  If the network consists
+of different domains you don't have to complain about logging fully
+qualified names instead of simple hostnames.  You may want to use the
+strip-domain feature
+.B \-s
+of this server.  You can tell the
+.B syslogd
+to strip off several domains other than the one the server is located
+in and only log simple hostnames.
+
+Using the
+.B \-l
+option there's also a possibility to define single hosts as local
+machines.  This, too, results in logging only their simple hostnames
+and not the fqdns.
+
+The UDP socket used to forward messages to remote hosts or to receive
+messages from them is only opened when it is needed.  In releases
+prior to 1.3-23 it was opened every time but not opened for reading or
+forwarding respectively.
+
+.SH OUTPUT TO NAMED PIPES (FIFOs)
+This version of syslogd has support for logging output to named pipes
+(fifos).  A fifo or named pipe can be used as a destination for log
+messages by prepending a pipy symbol (``|'') to the name of the
+file.  This is handy for debugging.  Note that the fifo must be created
+with the mkfifo command before syslogd is started.
+.IP
+The following configuration file routes debug messages from the
+kernel to a fifo:
+.IP
+.nf
+	# Sample configuration to route kernel debugging
+	# messages ONLY to /usr/adm/debug which is a
+	# named pipe.
+	kern.=debug			|/usr/adm/debug
+.fi
+.LP
+.SH INSTALLATION CONCERNS
+There is probably one important consideration when installing this
+version of syslogd.  This version of syslogd is dependent on proper
+formatting of messages by the syslog function.  The functioning of the
+syslog function in the shared libraries changed somewhere in the
+region of libc.so.4.[2-4].n.  The specific change was to
+null-terminate the message before transmitting it to the 
+.I /dev/log
+socket.  Proper functioning of this version of syslogd is dependent on
+null-termination of the message.
+
+This problem will typically manifest itself if old statically linked
+binaries are being used on the system.  Binaries using old versions of
+the syslog function will cause empty lines to be logged followed by
+the message with the first character in the message removed.
+Relinking these binaries to newer versions of the shared libraries
+will correct this problem.
+
+Both the
+.BR syslogd "(8) and the " klogd (8)
+can either be run from
+.BR init (8)
+or started as part of the rc.*
+sequence.  If it is started from init the option \fI\-n\fR must be set,
+otherwise you'll get tons of syslog daemons started.  This is because 
+.BR init (8)
+depends on the process ID.
+.LP
+.SH SECURITY THREATS
+There is the potential for the syslogd daemon to be
+used as a conduit for a denial of service attack.  Thanks go to John
+Morrison (jmorriso@rflab.ee.ubc.ca) for alerting me to this potential.
+A rogue program(mer) could very easily flood the syslogd daemon with
+syslog messages resulting in the log files consuming all the remaining
+space on the filesystem.  Activating logging over the inet domain
+sockets will of course expose a system to risks outside of programs or
+individuals on the local machine.
+
+There are a number of methods of protecting a machine:
+.IP 1.
+Implement kernel firewalling to limit which hosts or networks have
+access to the 514/UDP socket.
+.IP 2.
+Logging can be directed to an isolated or non-root filesystem which,
+if filled, will not impair the machine.
+.IP 3.
+The ext2 filesystem can be used which can be configured to limit a
+certain percentage of a filesystem to usage by root only.  \fBNOTE\fP
+that this will require syslogd to be run as a non-root process.
+\fBALSO NOTE\fP that this will prevent usage of remote logging since
+syslogd will be unable to bind to the 514/UDP socket.
+.IP 4.
+Disabling inet domain sockets will limit risk to the local machine.
+.IP 5.
+Use step 4 and if the problem persists and is not secondary to a rogue
+program/daemon get a 3.5 ft (approx. 1 meter) length of sucker rod*
+and have a chat with the user in question.
+
+Sucker rod def. \(em 3/4, 7/8 or 1in. hardened steel rod, male
+threaded on each end.  Primary use in the oil industry in Western
+North Dakota and other locations to pump 'suck' oil from oil wells.
+Secondary uses are for the construction of cattle feed lots and for
+dealing with the occasional recalcitrant or belligerent individual.
+.LP
+.SH DEBUGGING
+When debugging is turned on using
+.B "\-d"
+option then
+.B syslogd
+will be very verbose by writing much of what it does on stdout.  Whenever
+the configuration file is reread and re-parsed you'll see a tabular,
+corresponding to the internal data structure.  This tabular consists of
+four fields:
+.TP
+.I number
+This field contains a serial number starting by zero.  This number
+represents the position in the internal data structure (i.e. the
+array).  If one number is left out then there might be an error in the
+corresponding line in
+.IR /etc/syslog.conf .
+.TP
+.I pattern
+This field is tricky and represents the internal structure
+exactly.  Every column stands for a facility (refer to
+.BR syslog (3)).
+As you can see, there are still some facilities left free for former
+use, only the left most are used.  Every field in a column represents
+the priorities (refer to
+.BR syslog (3)).
+.TP
+.I action
+This field describes the particular action that takes place whenever a
+message is received that matches the pattern.  Refer to the
+.BR syslog.conf (5)
+manpage for all possible actions.
+.TP
+.I arguments
+This field shows additional arguments to the actions in the last
+field.  For file-logging this is the filename for the logfile; for
+user-logging this is a list of users; for remote logging this is the
+hostname of the machine to log to; for console-logging this is the
+used console; for tty-logging this is the specified tty; wall has no
+additional arguments.
+.SH FILES
+.PD 0
+.TP
+.I /etc/syslog.conf
+Configuration file for
+.BR syslogd .
+See
+.BR syslog.conf (5)
+for exact information.
+.TP
+.I /dev/log
+The Unix domain socket to from where local syslog messages are read.
+.TP
+.I /var/run/syslogd.pid
+The file containing the process id of 
+.BR syslogd .
+.PD
+.SH BUGS
+If an error occurs in one line the whole rule is ignored.
+
+.B Syslogd
+doesn't change the filemode of opened logfiles at any stage of
+process.  If a file is created it is world readable.  If you want to
+avoid this, you have to create it and change permissions on your own.
+This could be done in combination with rotating logfiles using the 
+.BR savelog (8)
+program that is shipped in the 
+.B smail
+3.x distribution.  Remember that it might be a security hole if
+everybody is able to read auth.* messages as these might contain
+passwords.
+.LP
+.SH SEE ALSO
+.BR syslog.conf (5),
+.BR klogd (8),
+.BR logger (1),
+.BR syslog (2),
+.BR syslog (3),
+.BR services (5),
+.BR savelog (8)
+.LP
+.SH COLLABORATORS
+.B Syslogd
+is taken from BSD sources, Greg Wettstein (greg@wind.enjellic.com)
+performed the port to Linux, Martin Schulze (joey@linux.de)
+fixed some bugs and added several new features.
+.B Klogd 
+was originally written by Steve Lord (lord@cray.com), Greg Wettstein
+made major improvements.
+
+.PD 0
+.TP
+Dr. Greg Wettstein
+.TP
+Enjellic Systems Development
+.TP
+Oncology Research Division Computing Facility
+.TP
+Roger Maris Cancer Center
+.TP
+Fargo, ND
+.TP
+greg@wind.enjellic.com
+
+.TP
+Stephen Tweedie
+.TP
+Department of Computer Science
+.TP
+Edinburgh University, Scotland
+.TP
+sct@dcs.ed.ac.uk
+
+.TP
+Juha Virtanen
+.TP
+jiivee@hut.fi
+
+.TP
+Shane Alderton
+.TP
+shane@ion.apana.org.au
+
+.TP
+Martin Schulze
+.TP
+Infodrom Oldenburg
+.TP
+joey@linux.de
+.PD
+.zZ

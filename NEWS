@@ -1,0 +1,170 @@
+Version 1.3 Patch Level 3
+
+General. ------------------------------------------------------------------
+Update to documentation including klogd.8 manpage to reflect new features.
+
+Included patch for modules-2.0.0 package to provide support for signalling
+klogd of changes in kernel module status.
+
+klogd ---------------------------------------------------------------------
+Provided support for signalling klogd to reload static and kernel module
+symbol information via SIGUSR1 and SIGUSR2.
+
+Implemented -p switch to cause a reload of kernel module symbol information
+whenever a protection fault is detected.
+
+Informative message is printed whenever klogd state change occurs.
+
+Added -i and -I switches to signal the currently executing klogd daemon
+to reload symbold information.
+
+
+Version 1.3 Patch Level 2
+
+General. ------------------------------------------------------------------
+Added oops.c and oops_test.c.  Oops.c implements a kernel loadable module
+which will generate a general protection fault.  The oops_test.c program
+generates a test program for exercising the loadable module.
+
+syslogd ------------------------------------------------------------------
+Fixed bug resulting in file descriptors being orphaned when syslogd was
+initialized via signal handler.
+
+klogd ---------------------------------------------------------------------
+Bug fix to prevent errors when reading symbol tables with 64 bit addresses.
+
+Added support for debugging of protection faults occuring in kernel
+loadable modules.
+
+
+Version 1.3 Patch Level 1
+
+General. ------------------------------------------------------------------
+Cleanups in the Makefile.
+
+Patches to support compilation in the ALPHA environment.  I have not
+been able to test these personally so if anyone has any feedback I
+would be interested in hearing from the Linux ALPHA community.
+
+Spelling and grammar corrections in the man pages.
+
+syslogd ------------------------------------------------------------------
+Patch to fix parsing of hostnames in syslogd.c.
+
+The return value of gethostbyname is now properly checked.  This should
+fix the problems with core dumps when name resolution failed.
+
+Bounds error fixed when setting the file descriptors for UNIX domain
+sockets.
+
+klogd ---------------------------------------------------------------------
+Error checking and reporting enhanced.  I have a couple of reports
+that klogd is experiencing errors when reading the /proc filesystem.
+Any additional information would be appreciated.
+
+The sys_syslog function has been renamed to ksyslog.  This was in a
+set patches for ALPHA support so I am assuming that this is necessary
+for that environment
+
+
+Version 1.3 
+
+Numerous changes, performance enhancements, code cleanups and bug fixes.
+Too many to individually summarize.  Have a look at the top of each
+source file for more information.
+
+** Default behavior of sysklogd is not to accept any message that
+is sent via syslog/udp.  To allow remote reception add -r to the
+command-line arguments.
+
+** Spaces are now accepted in the syslog configuration file.  This
+should be a real crowd pleaser.
+
+syslogd now uses dynamic allocation of logging output descriptors.
+There is no longer a static limit on the number of log destinations
+that can be defined.
+
+klogd supports on-the-fly kernel address to symbol translations.
+This requires that a valid kernel symbol map be found at execution.
+
+** The default level for console log messages was changed to 6.  This
+means that kernel messages with a priority less than or equal to 5
+(KERN_NOTICE) will be logged to the console.
+
+	This item has been flagged because it results in a behavior
+	change which will be different if version 1.3 replaces an
+	existing 1.2 binary.  Linus strongly suggested that this
+	behavior be changed and in the 1.3.3x kernels Linus in fact
+	made it impossible to set the console log level lower than
+	about 5.
+
+	There were good reasons from his perspective for doing so.
+	The most troublesome being that user's of packaged
+	distributions were not able to generate register dumps with
+	the kernel debugging keys, most notably altgr-SCRLCK.
+
+	If a kernels prior to 1.3.3x are being used the klogd daemon
+	invocation must be changed to something like: klogd -c 1
+	
+	This will turn off logging of kernel messages to the console.
+	If you understand the ramifications of this the 1.3.3x kernels
+	can be patched to allow the suppression of console log
+	messages.  It is important to be cognizant of the effects of
+	these changes.  None the least of which is that Linus and Alan
+	will yell at you if you complain about not being able to
+	generate kernel debugging information.. :-)
+
+---------------------------------------------------------------------------
+Version 1.2
+Fixes to both klogd and syslogd so that the package will compile without
+errors due to the vararg procedures.
+
+Modified pid files produced so that the names of the files are
+klogd.pid and syslogd.pid respectively.
+
+Fixed bug in klogd which prevented output from being directed to a file
+when the program was compiled to auto-background itself.  In the
+auto-backgrounding configuration the forked process was closing all its
+file descriptors which was causing the errant behavior.
+
+Modified signal handling in klogd so that all signal are set to ignored
+before establishing specific signal handlers.
+
+Fixed bug in syslogd which was causing a delay in opening of the /dev/log
+UNIX domain socket.  This should correct the race condition which was
+preventing klogd from properly logging kernel messages when the two
+daemons were started in rapid succession.
+
+Modified the closing/opening of file descriptors when syslogd was
+compiled with auto-backgrounding support.  Closes the potential for
+a somewhat obscure bug caused by the /dev/log socket being opened on
+fd 0.
+
+Changed the names of the man pages from an extension of 1 to 8.
+---------------------------------------------------------------------------
+Version 1.1
+Extensive changes and additional functionality added to klogd.  Please
+see sources and man-pages for documentation.
+
+Fixed bugs in both syslogd and klogd with respect to fragmented
+message re-assembly.  Bootup messages should now be display properly.
+
+Fixed bug in syslogd which prevented proper logging of messages with
+priority classes of none and emerg.
+
+Fixed bug which caused core dump when messages were logged to users.
+Also fixed bug with messages to login type of LOGIN.
+
+Fixed problem with zombies being left when messages were logged to
+multiple users.
+
+Enhanced functionality of syslog_tst program.
+
+Added man-pages.
+---------------------------------------------------------------------------
+
+---------------------------------------------------------------------------
+Version 1.0
+
+Initial release.
+---------------------------------------------------------------------------
