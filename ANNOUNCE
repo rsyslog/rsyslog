@@ -7,12 +7,12 @@ it supports
 - fully configurable output formats, including
   * high precision timestamps with year ;)
   * access to each of the message parts as well as substrings thereof
-    (include access to faciltiy and priority)
+    (includes access to facility and priority)
   * access to the raw message received
 - direct logging to MySQL database servers
 - compatibility to stock linux syslogd
 
-Rsyslog is GPL'ed software. Details on it can be found at
+Rsyslog is GPL'ed software. Details and the download on it can be found at
 
    http://www.monitorware.com/rsyslog/
 
@@ -31,7 +31,8 @@ made it into rsyslog ;)).
 
 We hope to receive ample feedback. The more feedback we receive, the more
 enhancements will happen (and the faster they will appear). You can
-send any feedback and suggestion to me at rgerhards@adiscon.com.
+send any feedback and suggestion to me at rgerhards@adiscon.com (A mailing
+list will be added soon).
 
 Rainer Gerhards
 Adiscon
