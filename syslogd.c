@@ -579,6 +579,7 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 
 #ifdef	WITH_DB
 #include "mysql/mysql.h" 
+#include "mysql/errmsg.h"
 #endif
 
 #if defined(__linux__)
@@ -1166,6 +1167,32 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, unsigned char* psz
 /*******************************************************************
  * END CODE-LIBLOGGING                                             *
  *******************************************************************/
+
+#ifdef	WITH_DB
+/**
+ * Format a syslogTimestamp into format required by MySQL.
+ * We are using the 14 digits format. For example 20041111122600 
+ * is interpreted as '2004-11-11 12:26:00'. 
+ * The caller must provide the timestamp as well as a character
+ * buffer that will receive the resulting string. The function
+ * returns the size of the timestamp written in bytes (without
+ * the string terminator). If 0 is returend, an error occured.
+ */
+int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst)
+{
+	/* TODO: currently we do not consider localtime/utc */
+	assert(ts != NULL);
+	assert(pDst != NULL);
+
+	if (iLenDst < 15) /* we need at least 14 bytes
+			     14 digits for timestamp + '\n' */
+		return(0); 
+
+	return(snprintf(pDst, iLenDst, "%4.4d%2.2d%2.2d%2.2d%2.2d%2.2d", 
+		ts->year, ts->month, ts->day, ts->hour, ts->minute, ts->second));
+
+}
+#endif
 
 /**
  * Format a syslogTimestamp to a RFC3164 timestamp sring.
@@ -4052,13 +4079,23 @@ void closeMySQL(register struct filed *f)
 void writeMySQL(register struct filed *f)
 {
 	char sql_command[MAXLINE+1048];
+	char szTimestamp[15];
+	char szRcvAtTimestamp[15];
+	formatTimestampToMySQL(&f->f_pMsg->tTIMESTAMP, szTimestamp, sizeof(szTimestamp)/sizeof(char));
+	formatTimestampToMySQL(&f->f_pMsg->tRcvdAt, szRcvAtTimestamp, sizeof(szTimestamp)/sizeof(char));
 	printf("in writeMySQL()\n");
-	/* TODO: Insert useful values */
-	snprintf(sql_command, sizeof(sql_command), "INSERT INTO myTable VALUES (1,'test')");
 
+	snprintf(sql_command, sizeof(sql_command), 
+		"INSERT INTO SystemEvents (Message, ReceivedAt, DeviceReportedTime, 
+			Facility, Priority, FromHost, SysLogTag) 
+		VALUES 
+			('%s', '%s', '%s', %d, %d, '%s', '%s')", 
+			f->f_pMsg->pszMSG, szRcvAtTimestamp, szTimestamp, 
+			f->f_pMsg->iFacility, f->f_pMsg->iSeverity,
+			f->f_pMsg->pszHOSTNAME, f->f_pMsg->pszTAG);
 	/* query */
 	if(mysql_query(&f->f_hmysql, sql_command)) {
-		printf("mysql insert failed\n");
+		dprintf("mysql insert failed. ErrNo: %d\n", mysql_errno(&f->f_hmysql));
 		exit(0);
 	}
 	else {
