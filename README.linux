@@ -1,72 +1,55 @@
-Welcome to the sysklogd package for Linux.  All the utility
-documentation has now been moved into the man pages.  Please review
-these carefully before proceeding.
+Welcome to the rsyslog package for Linux.  This package has
+been forked from the sysklogd standard package. The goal of the
+rsyslog project is to provide a more configurable and reliable
+syslog deamon. By "reliable", we mean support for reliable transmission
+modes like TCP or RFC 3195 (syslog-reliable).
+We do NOT imply that the sysklogd package is unreliable. In fact, the
+opposite is the case and we assume that for the time being the well-
+used sysklogd package offers better program reliability than our
+brand-new modifications to it. The name "rsyslog" stems back to the
+planned support for syslog-reliable. Ironically, the initial release
+of rsyslog does NEITHER support syslog-reliable NOR tcp based syslog.
+Instead, it contains enhanced configurability and other enhancements
+(like database support). The reason for this is that full support for
+RFC 3195 would require even more changes and especially fundamental architectural
+changes. Also, questions asked on the loganalysis list and at other
+places indicated that RFC3195 is NOT a prime priority for users, but
+rather better control over the output format. So here we are, with
+a rsyslod that covers a lot of enhancements, but not a single one
+of these that made its name ;)
 
-Version 1.3 of the package is the culmination of about two years of
-experience and bug reports on the 1.2 version from both the INTERNET
-and our corporate Linux networks.  The utilities in this package should
-provide VERY reliable system logging.  Klogd and syslogd have both
-been stress tested in kernel development environments where literally
-hundreds of megabytes of kernel messages have been blasted through
-them.  If either utility should fail the development team would
-appreciate debug information so that the bug can be reproduced and
-squashed.
+The next enhancement scheduled is support for the new syslog-protocol
+internet draft format, not the least to see how easy/compliated it is
+to implement. We already know that some subleties of syslog-protocol will
+require at least one considerable architectural change to the syslogd
+and this might delay things a little. Our immediate goal is to receive
+feedback and get the bugs out of the current release. Only after that
+we intend to advance the code and introduce new features.
 
-Both utilities (syslogd, klogd) can be either run from init or started
+The database support was included so that our web-based syslog interface
+can be used. This is another open source project which can be found
+under http://www.liblogging.org . We highly recommend having a look at 
+it. It might not work for you if you expect thousands of messages per
+second (because your database won't be able to provide adequate performace),
+but in many cases it is a very handy analysis and troubleshooting tool.
+
+The utility (syslogd) can be either run from init or started
 as part of the rc.* sequence.  Caution should be used when starting
-these utilities from init since the default configuration is for both of
-these utilities to auto-background themselves.  Depending on the
+it from init since the default configuration is for it
+is to auto-background itself.  Depending on the
 version of init being used this could either result in the process
 table being filled or at least 10 copies of the daemon being started.
 If auto-backgrounding is NOT desired the command line option -n should
 be used to disable the auto-fork feature.
 
-I have found work on the sysklogd package to be an interesting example
-of the powers of the INTERNET.  Stephen, Juha, Shane, Martin and
-myself have successfully collaborated on the development of this
-package without ever having met each other, in fact we could pass on
-the street without realizing it.  What I have developed is a profound
-respect for the personal capabilities of each one of these
-individuals.  Perhaps the greatest `Linux Legacy' will be that its
-development/enhancement is truly an example of the powers of
-international cooperation through the worldwide INTERNET.
-
-We would be interested in keeping track of any and all bug
-fixes/changes that are made.  At the time that work was started on the
-sysklogd package the syslog(d) sources seemed to have fallen into
-neglect.  This work started with and continues the believe that it is
-important to maintain consistent standardized system utilities
-sources.  Hopefully the Linux community will find these sources to be
-a useful addition to the software gene pool.
-
 There is a mailing list covering this package and syslog in general.
-The lists address is sysklogd@Infodrom.North.DE .  To subscribe send a
-mail to Majordomo@Infodrom.North.DE with a line "subscribe sysklogd"
-in the message body.
+The lists address is rsyslog@lists.adiscon.com .  
 
-New versions of this package will be available at Joey's ftp server.
-ftp://ftp.infodrom.north.de/pub/people/joey/sysklogd/
+New versions of this package and additional information will be available
+under www.monitorware.com/rsyslog as well as under the rsyslog project
+on sourceforge.net.
 
 Best regards,
-
-Dr. Wettstein
-Oncology Research Division Computing Facility
-Roger Maris Cancer Center
-Fargo, ND
-greg@wind.enjellic.com
-
-Stephen Tweedie
-Department of Computer Science
-Edinburgh University, Scotland
-
-Juha Virtanen
-jiivee@hut.fi
-
-Shane Alderton
-shane@ion.apana.org.au
-
-Martin Schulze
-Infodrom Oldenburg
-joey@linux.de
-
-And a host of bug reporters whose contributions cannot be underestimated.
+Rainer Gerhards
+Adiscon
+2004-11-26

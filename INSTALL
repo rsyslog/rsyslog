@@ -1,5 +1,7 @@
-1.) READ the README.linux file and the accompanying man pages.  It will
-    save you some frustration.
+1.) READ the README.linux file and the accompanying man pages (so it exists ;)).
+    It will save you some frustration. Be sure to review syslogd.conf.sample
+    it currently is the only place that contains information about the new
+    syslogd.conf format!
 
 2.) Edit the Makefile for your installation.  NOTE that if you have not
     carried out step 1 you may make choices which could render your
@@ -18,20 +20,21 @@
     influenced by the choice of conformance with the FSSTND or site
     preferences.
 
-4.) For proper functioning both of these utilities are best run as root.
-    This is probably not much of a problem since they will probably be
+4.) For proper functioning the daemon is best run as root.
+    This is probably not much of a problem since it will probably be
     started either by init or as part of the rc.* startup process.  There
-    may be security concerns with running syslogd as root.  Please repeat
+    may be security concerns with running it as root.  Please repeat
     step 1 if you are unsure of why this may be the case.
 
-5.) If kernel address to symbol translation is desired there is the
-    possibility that a new kernel will need to be compiled.  The patches
-    to delimit kernel addresses requiring translation were added to
-    kernel 1.3.43.  If this kernel or a newer kernel is used there is
-    no need to modify the kernel sources.
-
-    If a kernel earlier than this is used the kernel sources will have to
-    be patched.  The patch to delimit addresses for translation is included
-    with the sysklogd sources.  The necessary modifications are quite
-    generic and should require little modification over a wide range of
-    kernel sources.
+5.) YOU NEED TO DECIDE IF YOU WOULD LIKE TO REPLACE THE STANDARD SYSLOGD OR NOT!
+    The is important as it influences the names used. If you call
+    make install
+    it will install this program under the name of rsyslogd. If you call it with
+    make install-replace
+    it will replace the existing syslogd, but save the former one under the name
+    of syslogd-previous. If you run install-replace multiple times, your
+    syslogd-previous will be OVERWRITTEN!
+    In either case, the system startup files will not be touched. If you use
+    install-replace, everthing should work as always, but if it doesn't, you've
+    probably discovered a beta bug ;) In any case, to use the new features, you 
+    need to update you syslogd.conf.

@@ -1,4 +1,4 @@
-# Makefile for syslogd and klogd daemons.
+# Makefile for rsyslog
 
 CC= gcc
 #CFLAGS= -g -DSYSV -Wall
@@ -20,17 +20,6 @@ LIBS = -lmysqlclient #/var/lib/mysql/mysql
 # to try uncommenting the following define.
 # LIBS = /usr/lib/libresolv.a
 
-# A patch was forwarded which provided support for sysklogd under
-# the ALPHA.  This patch included a reference to a library which may be
-# specific to the ALPHA.  If you are attempting to build this package under
-# an ALPHA and linking fails with unresolved references please try
-# uncommenting the following define.
-# LIBS = ${LIBS} -linux
-
-# Define the following to impart start-up delay in klogd.  This is
-# useful if klogd is started simultaneously or in close-proximity to syslogd.
-# KLOGD_START_DELAY = -DKLOGD_DELAY=5
-
 # The following define determines whether the package adheres to the
 # file system standard.
 FSSTND = -DFSSTND
@@ -51,13 +40,12 @@ SYSLOGD_PIDNAME = -DSYSLOGD_PIDNAME=\"syslogd.pid\"
 SYSLOGD_FLAGS= -DSYSLOG_INET -DSYSLOG_UNIXAF -DNO_SCCS ${FSSTND} \
 	${SYSLOGD_PIDNAME}
 SYSLOG_FLAGS= -DALLOW_KERNEL_LOGGING
-KLOGD_FLAGS = ${FSSTND} ${KLOGD_START_DELAY}
 DEB =
 
 .c.o:
 	${CC} ${CFLAGS} -c $*.c
 
-all: syslogd klogd
+all: syslogd
 
 test: syslog_tst ksym oops_test tsyslogd
 
@@ -66,18 +54,11 @@ install: install_man install_exec
 syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o
 	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o stringbuf.o srUtils.o ${LIBS}
 
-klogd:	klogd.o syslog.o pidfile.o ksym.o ksym_mod.o
-	${CC} ${LDFLAGS} -o klogd klogd.o syslog.o pidfile.o ksym.o \
-		ksym_mod.o ${LIBS}
-
 syslog_tst: syslog_tst.o
 	${CC} ${LDFLAGS} -o syslog_tst syslog_tst.o
 
 tsyslogd: syslogd.c version.h template.o stringbuf.o srUtils.o
 	$(CC) $(CFLAGS) -g -DTESTING $(SYSLOGD_FLAGS) -o tsyslogd syslogd.c pidfile.o template.o stringbuf.o srUtils.o $(LIBS)
-
-tklogd: klogd.c syslog.c ksym.c ksym_mod.c version.h
-	$(CC) $(CFLAGS) -g -DTESTING $(KLOGD_FLAGS) -o tklogd klogd.c syslog.c ksym.c ksym_mod.c
 
 srUtils.o: srUtils.c srUtils.h liblogging-stub.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c srUtils.c
@@ -94,29 +75,8 @@ syslogd.o: syslogd.c version.h template.h
 syslog.o: syslog.c
 	${CC} ${CFLAGS} ${SYSLOG_FLAGS} -c syslog.c
 
-klogd.o: klogd.c klogd.h version.h
-	${CC} ${CFLAGS} ${KLOGD_FLAGS} $(DEB) -c klogd.c
-
-ksym.o: ksym.c klogd.h
-	${CC} ${CFLAGS} ${KLOGD_FLAGS} -c ksym.c
-
-ksym_mod.o: ksym_mod.c klogd.h
-	${CC} ${CFLAGS} ${KLOGD_FLAGS} -c ksym_mod.c
-
 syslog_tst.o: syslog_tst.c
 	${CC} ${CFLAGS} -c syslog_tst.c
-
-oops_test: oops.o
-	${CC} ${CFLAGS} -o oops_test oops_test.c
-
-oops.o: oops.c
-	${CC} ${CFLAGS} -D__KERNEL__ -DMODULE -c oops.c
-
-ksym: ksym_test.o ksym_mod.o
-	${CC} ${LDFLAGS} -o ksym ksym_test.o ksym_mod.o
-
-ksym_test.o: ksym.c
-	${CC} ${CFLAGS} -DTEST -o ksym_test.o -c ksym.c
 
 clean:
 	rm -f *.o *.log *~ *.orig
@@ -124,12 +84,12 @@ clean:
 clobber: clean
 	rm -f syslogd klogd ksym syslog_tst oops_test TAGS tsyslogd tklogd
 
-install_exec: syslogd klogd
+install_exec: syslogd
 	${INSTALL} -m 500 -s syslogd ${BINDIR}/syslogd
-	${INSTALL} -m 500 -s klogd ${BINDIR}/klogd
 
-install_man:
-	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 sysklogd.8 ${MANDIR}/man8/sysklogd.8
-	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 syslogd.8 ${MANDIR}/man8/syslogd.8
-	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 syslog.conf.5 ${MANDIR}/man5/syslog.conf.5
-	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 klogd.8 ${MANDIR}/man8/klogd.8
+# man not yet supported ;)
+#install_man:
+#	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 sysklogd.8 ${MANDIR}/man8/sysklogd.8
+#	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 syslogd.8 ${MANDIR}/man8/syslogd.8
+#	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 syslog.conf.5 ${MANDIR}/man5/syslog.conf.5
+#	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 klogd.8 ${MANDIR}/man8/klogd.8
