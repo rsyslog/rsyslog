@@ -573,6 +573,10 @@ static char sccsid[] = "@(#)syslogd.c	5.27 (Berkeley) 10/10/88";
 #endif
 #include "version.h"
 
+#ifdef	WITH_DB
+#include "mysql/mysql.h" 
+#endif
+
 #if defined(__linux__)
 #include <paths.h>
 #endif
@@ -689,6 +693,10 @@ struct filed {
 #endif
 	short	f_type;			/* entry type, see below */
 	short	f_file;			/* file descriptor */
+#ifdef	WITH_DB
+	MYSQL	f_hmysql;		/* handle to MySQL */
+	char	f_dbsrv;		/* IP or hostname 
+#endif
 	time_t	f_time;			/* time this was last written */
 	u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
 	union {
@@ -738,13 +746,14 @@ int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
 #define F_FORW_SUSP	7		/* suspended host forwarding */
 #define F_FORW_UNKN	8		/* unknown host forwarding */
 #define F_PIPE		9		/* named pipe */
+#define F_MYSQL		10		/* MySQL database */
 char	*TypeNames[] = {
 	"UNUSED",	"FILE",		"TTY",		"CONSOLE",
 	"FORW",		"USERS",	"WALL",		"FORW(SUSPENDED)",
-	"FORW(UNKNOWN)", "PIPE"
+	"FORW(UNKNOWN)", "PIPE", 	"MYSQL"
 };
 
-struct	filed *Files = (struct filed *) 0;
+struct	filed *Files = NULL;
 struct	filed consfile;
 
 struct code {
@@ -845,11 +854,13 @@ int decode(char *name, struct code *codetab);
 static void dprintf(char *, ...);
 static void allocate_log(void);
 void sighup_handler();
+#ifdef WITH_DB
+void initMySQL(register struct filed *f);
+void writeMySQL(register struct filed *f);
+void closeMySQL(register struct filed *f);
+#endif
 
 #ifdef SYSLOG_UNIXAF
-static int create_unix_socket(const char *path);
-#endif
-#ifdef SYSLOG_INET
 static int create_inet_socket();
 #endif
 
@@ -1657,6 +1668,9 @@ void logmsg(pri, msg, from, flags)
 			fprintlog(f, (char *)from, flags, msg);
 			(void) close(f->f_file);
 			f->f_file = -1;
+
+			/* TODO: Find out what happend here 
+			   and add code to close MySQL connection */ 
 		}
 #ifndef SYSV
 		(void) sigsetmask(omask);
@@ -1747,6 +1761,7 @@ void fprintlog(f, from, flags, msg)
 	struct hostent *hp;
 #endif
 
+	dprintf("msg: '%s', prevline: '%s'\n", msg, f->f_prevline);
 	dprintf("Called fprintlog, ");
 
 	v->iov_base = f->f_lasttime;
@@ -1941,6 +1956,15 @@ void fprintlog(f, from, flags, msg)
 		v->iov_len = 2;
 		wallmsg(f, iov);
 		break;
+
+#ifdef	WITH_DB
+	case F_MYSQL:
+		f->f_time = now;
+		dprintf("\n");
+		dprintf("Line: '%s'\n", msg);
+		writeMySQL(f);
+		break;
+#endif
 	} /* switch */
 	if (f->f_type != F_FORW_UNKN)
 		f->f_prevcount = 0;
@@ -2314,6 +2338,11 @@ void init()
 				case F_CONSOLE:
 					(void) close(f->f_file);
 				break;
+#ifdef	WITH_DB
+				case F_MYSQL:
+					closeMySQL(f);
+				break;
+#endif
 			}
 		}
 
@@ -2741,6 +2770,17 @@ void cfline(line, f)
 		f->f_type = F_WALL;
 		break;
 
+#ifdef	WITH_DB
+	case '>':	/* rger 2004-10-28: added support for MySQL
+			 * >server,dbname,userid,password
+			 */
+		dprintf ("set f_type to MySQL \n");
+		f->f_type = F_MYSQL;
+		initMySQL(f);
+		/* TODO: Add actual code! */
+		break;
+#endif	/* #ifdef WITH_DB */
+
 	default:
 		dprintf ("users: %s\n", p);	/* ASP */
 		for (i = 0; i < MAXUNAMES && *p; i++) {
@@ -2870,6 +2910,58 @@ void sighup_handler()
 	return;
 }
 
+#ifdef WITH_DB
+/*
+ * The following function is responsible for initiatlizing a
+ * MySQL connection.
+ * Initially added 2004-10-28
+ */
+void initMySQL(register struct filed *f)
+{
+	printf("in initMysql()\n");
+	
+	mysql_init(&f->f_hmysql);
+	/* Connect to database */
+	if (!mysql_real_connect(&f->f_hmysql, "localhost", "root", "", "testsyslog", 0, NULL, 0)) {
+		printf("cant connect to database \n");
+		exit(0);
+	}
+}
+
+/*
+ * The following function is responsible for closing a
+ * MySQL connection.
+ * Initially added 2004-10-28
+ */
+void closeMySQL(register struct filed *f)
+{
+	printf("in closeMySQL\n");
+	mysql_close(&f->f_hmysql);	
+}
+
+/*
+ * The following function writes the current log entry
+ * to an established MySQL session.
+ * Initially added 2004-10-28
+ */
+void writeMySQL(register struct filed *f)
+{
+	char sql_command[MAXSVLINE+1048];
+	dprintf("in writeMySQL()\n");
+
+	snprintf(sql_command, sizeof(sql_command), "INSERT INTO myTable VALUES (1,'%s')", f->f_prevline);
+
+	/* query */
+	if(mysql_query(&f->f_hmysql, sql_command)) {
+		printf("mysql insert failed\n");
+		exit(0);
+	}
+	else {
+		printf("insert sucessfully\n");
+	}
+}
+#endif	/* #ifdef WITH_DB */
+
 /*
  * Local variables:
  *  c-indent-level: 8
@@ -2877,4 +2969,5 @@ void sighup_handler()
  *  tab-width: 8
  * End:
  */
+
 
