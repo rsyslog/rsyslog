@@ -730,11 +730,15 @@ struct syslogTime {
  * called each time a "copy" is stored somewhere.
  */
 struct msg {
-	int	iRefCount;	/* reference counter (0 = unused) */
-	short	iSyslogVers;	/* version of syslog protocol
+/**/	int	iRefCount;	/* reference counter (0 = unused) */
+/**/	short	iSyslogVers;	/* version of syslog protocol
 				 * 0 - RFC 3164
-				 * 1 - RFC draft-protocol-08
-				 */
+				 * 1 - RFC draft-protocol-08 */
+/**/	short	iMsgSource;	/* where did the msg originate from? */
+#define SOURCE_INTERNAL 0
+#define SOURCE_STDIN 1
+#define SOURCE_UNIXAF 2
+#define SOURCE_INET 3
 /**/	short	iSeverity;		/* the severity 0..7 */
 /**/	int	iFacility;	/* Facility code (up to 2^32-1) */
 /**/	char	*pszRawMsg;	/* message as it was received on the
@@ -744,10 +748,14 @@ struct msg {
 /**/	int	iLenRawMsg;	/* length of raw message */
 /**/	char	*pszMSG;	/* the MSG part itself */
 /**/	int	iLenMSG;	/* Length of the MSG part */
-	char	*pszTag;	/* pointer to tag value */
+/**/	char	*pszUxTradMsg;	/* the traditional UNIX message */
+/**/	int	iLenUxTradMsg;/* Length of the traditional UNIX message */
+/**/	char	*pszTAG;	/* pointer to tag value */
+/**/	int	iLenTAG;	/* Length of the TAG part */
 /**/	char	*pszHOSTNAME;	/* HOSTNAME from syslog message */
 /**/	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-	char	*pszRcvFrom;	/* System message was received from */
+/**/	char	*pszRcvFrom;	/* System message was received from */
+/**/	int	iLenRcvFrom;	/* Length of pszRcvFrom */
 /**/	struct syslogTime tRcvdAt;/* time the message entered this program */
 /**/	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 };
@@ -921,8 +929,8 @@ int main(int argc, char **argv);
 char **crunch_list(char *list);
 int usage(void);
 void untty(void);
-void printchopped(char *hname, char *msg, int len, int fd);
-void printline(char *hname, char *msg);
+void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
+void printline(char *hname, char *msg, int iSource);
 void printsys(char *msg);
 void logmsg(int pri, struct msg*, int flags);
 void fprintlog(register struct filed *f, int flags);
@@ -1241,7 +1249,7 @@ void getCurrTime(struct syslogTime *t)
 void syslogdPanic(char* ErrMsg)
 {
 	/* TODO: provide a meaningful implementation! */
-	dprintf("syslogdPanic: '%s'\n", ErrMsg);
+	dprintf("rsyslogdPanic: '%s'\n", ErrMsg);
 }
 
 /* rgerhards 2004-11-09: helper routines for handling the
@@ -1262,17 +1270,22 @@ struct msg* MsgConstruct()
 	if((pM = malloc(sizeof(struct msg))) != NULL)
 	{ /* initialize members */
 		pM->iRefCount = 1;
+		pM->iMsgSource = 0;
 		pM->iSyslogVers = -1;
 		pM->iSeverity = -1;
 		pM->iFacility = -1;
 		pM->pszRawMsg = NULL;
-		pM->pszTag = NULL;
+		pM->pszUxTradMsg = NULL;
+		pM->pszTAG = NULL;
 		pM->pszHOSTNAME = NULL;
 		pM->pszRcvFrom = NULL;
 		pM->pszMSG = NULL;
 		pM->iLenMSG = 0;
 		pM->iLenRawMsg = 0;
 		pM->iLenHOSTNAME = 0;
+		pM->iLenRcvFrom = 0;
+		pM->iLenTAG = 0;
+		pM->iLenUxTradMsg = 0;
 		getCurrTime(&(pM->tRcvdAt));
 		/* TODO: we can set the time HERE! */
 		pM->tTIMESTAMP.timeType = 0;
@@ -1295,8 +1308,8 @@ printf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
 printf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
 		if(pM->pszRawMsg != NULL)
 			free(pM->pszRawMsg);
-		if(pM->pszTag != NULL)
-			free(pM->pszTag);
+		if(pM->pszTAG != NULL)
+			free(pM->pszTAG);
 		if(pM->pszHOSTNAME != NULL)
 			free(pM->pszHOSTNAME);
 		if(pM->pszRcvFrom != NULL)
@@ -1354,6 +1367,28 @@ char *getHOSTNAME(struct msg *pM)
 }
 
 
+/* rgerhards 2004-11-16: set pszRcvFrom in msg object
+ * returns 0 if OK, other value if not. In case of failure,
+ * logs error message and destroys msg object.
+ */
+int MsgSetRcvFrom(struct msg *pMsg, char* pszRcvFrom)
+{
+	assert(pMsg != NULL);
+	if(pMsg->pszRcvFrom != NULL)
+		free(pMsg->pszRcvFrom);
+
+	pMsg->iLenRcvFrom = strlen(pszRcvFrom);
+	if((pMsg->pszRcvFrom = malloc(pMsg->iLenRcvFrom + 1)) == NULL) {
+		syslogdPanic("Could not allocate memory for pszRcvFrom buffer.");
+		MsgDestruct(pMsg);
+		return(-1);
+	}
+	memcpy(pMsg->pszRcvFrom, pszRcvFrom, pMsg->iLenRcvFrom + 1);
+
+	return(0);
+}
+
+
 /* rgerhards 2004-11-09: set HOSTNAME in msg object
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
@@ -1376,6 +1411,45 @@ int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
 }
 
 
+/* rgerhards 2004-11-16: set TAG in msg object
+ * returns 0 if OK, other value if not. In case of failure,
+ * logs error message and destroys msg object.
+ */
+int MsgSetTAG(struct msg *pMsg, char* pszTAG)
+{
+	assert(pMsg != NULL);
+	pMsg->iLenTAG = strlen(pszTAG);
+	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) == NULL) {
+		syslogdPanic("Could not allocate memory for pszTAG buffer.");
+		MsgDestruct(pMsg);
+		return(-1);
+	}
+	memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
+
+	return(0);
+}
+
+
+/* rgerhards 2004-11-17: set the traditional Unix message in msg object
+ * returns 0 if OK, other value if not. In case of failure,
+ * logs error message and destroys msg object.
+ */
+int MsgSetUxTradMsg(struct msg *pMsg, char* pszUxTradMsg)
+{
+	assert(pMsg != NULL);
+	assert(pszUxTradMsg != NULL);
+	pMsg->iLenUxTradMsg = strlen(pszUxTradMsg);
+	if((pMsg->pszUxTradMsg = malloc(pMsg->iLenUxTradMsg + 1)) == NULL) {
+		syslogdPanic("Could not allocate memory for pszUxTradMsg buffer.");
+		MsgDestruct(pMsg);
+		return(-1);
+	}
+	memcpy(pMsg->pszUxTradMsg, pszUxTradMsg, pMsg->iLenUxTradMsg + 1);
+
+	return(0);
+}
+
+
 /* rgerhards 2004-11-09: set MSG in msg object
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
@@ -1383,6 +1457,7 @@ int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
 int MsgSetMSG(struct msg *pMsg, char* pszMSG)
 {
 	assert(pMsg != NULL);
+	assert(pszMSG != NULL);
 	pMsg->iLenMSG = strlen(pszMSG);
 	if((pMsg->pszMSG = malloc(pMsg->iLenMSG + 1)) == NULL) {
 		syslogdPanic("Could not allocate memory for pszMSG buffer.");
@@ -1515,7 +1590,7 @@ int main(argc, argv)
 			StripDomains = crunch_list(optarg);
 			break;
 		case 'v':
-			printf("syslogd %s.%s\n", VERSION, PATCHLEVEL);
+			printf("rsyslogd %s.%s\n", VERSION, PATCHLEVEL);
 			exit (0);
 		case '?':
 		default:
@@ -1553,7 +1628,7 @@ int main(argc, argv)
 		}
 		else
 		{
-			fputs("syslogd: Already running.\n", stderr);
+			fputs("rsyslogd: Already running.\n", stderr);
 			exit(1);
 		}
 	}
@@ -1714,7 +1789,7 @@ int main(argc, argv)
 				  (fd_set *) NULL, (struct timeval *) NULL);
 		if ( restart )
 		{
-			dprintf("\nReceived SIGHUP, reloading syslogd.\n");
+			dprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
 			init();
 			restart = 0;
 			continue;
@@ -1749,7 +1824,7 @@ int main(argc, argv)
 			dprintf("Message from UNIX socket: #%d\n", fd);
 			if (i > 0) {
 				line[i] = line[i+1] = '\0';
-				printchopped(LocalHostName, line, i + 2,  fd);
+				printchopped(LocalHostName, line, i + 2,  fd, SOURCE_UNIXAF);
 			} else if (i < 0 && errno != EINTR) {
 				dprintf("UNIX socket error: %d = %s.\n", \
 					errno, strerror(errno));
@@ -1779,8 +1854,7 @@ int main(argc, argv)
 				 * letters so we could match them against whatever.
 				 *  -Joey
 				 */
-				printchopped(from, line, \
- 					     i + 2,  finet);
+				printchopped(from, line, i + 2,  finet, SOURCE_INET);
 			} else if (i < 0 && errno != EINTR) {
 				dprintf("INET socket error: %d = %s.\n", \
 					errno, strerror(errno));
@@ -1799,7 +1873,8 @@ int main(argc, argv)
 			parts[fileno(stdin)] = (char *) 0;
 			i = read(fileno(stdin), line, MAXLINE);
 			if (i > 0) {
-				printchopped(LocalHostName, line, i+1, fileno(stdin));
+				printchopped(LocalHostName, line, i+1,
+					     fileno(stdin), SOURCE_STDIN);
 		  	} else if (i < 0) {
 		    		if (errno != EINTR) {
 		      			logerror("stdin");
@@ -1814,7 +1889,7 @@ int main(argc, argv)
 
 int usage()
 {
-	fprintf(stderr, "usage: syslogd [-drvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
+	fprintf(stderr, "usage: rsyslogd [-drvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
 		" [-s domainlist] [-f conffile]\n");
 	exit(1);
 }
@@ -1988,13 +2063,17 @@ void untty()
  * its advantages, however it typically allocates way too many table
  * entries. If we've nothing better to do, we might want to look into this.
  * rgerhards 2004-11-08
+ * I added the "iSource" parameter. This is needed to distinguish between
+ * messages that have a hostname in them (received from the internet) and
+ * those that do not have (most prominently /dev/log).  rgerhards 2004-11-16
  */
 
-void printchopped(hname, msg, len, fd)
+void printchopped(hname, msg, len, fd, iSource)
 	char *hname;
 	char *msg;
 	int len;
 	int fd;
+	int iSource;
 {
 	auto int ptlngth;
 
@@ -2014,7 +2093,7 @@ void printchopped(hname, msg, len, fd)
 		if ( (strlen(msg) + strlen(tmpline)) > MAXLINE )
 		{
 			logerror("Cannot glue message parts together");
-			printline(hname, tmpline);
+			printline(hname, tmpline, iSource);
 			start = msg;
 		}
 		else
@@ -2022,7 +2101,7 @@ void printchopped(hname, msg, len, fd)
 			dprintf("Previous: %s\n", tmpline);
 			dprintf("Next: %s\n", msg);
 			strcat(tmpline, msg);	/* length checked above */
-			printline(hname, tmpline);
+			printline(hname, tmpline, iSource);
 			if ( (strlen(msg) + 1) == len )
 				return;
 			else
@@ -2049,7 +2128,7 @@ void printchopped(hname, msg, len, fd)
 
 	do {
 		end = strchr(start + 1, '\0');
-		printline(hname, start);
+		printline(hname, start, iSource);
 		start = end + 1;
 	} while ( *start != '\0' );
 
@@ -2066,10 +2145,13 @@ void printchopped(hname, msg, len, fd)
  * real decoder in here. I now (2004-11-09) found that printsys() seems
  * not to be called from anywhere. So we might as well decode the full
  * message here.
+ * Added the iSource parameter so that we know if we have to parse
+ * HOSTNAME or not. rgerhards 2004-11-16.
  */
-void printline(hname, msg)
+void printline(hname, msg, iSource)
 	char *hname;
 	char *msg;
+	int iSource;
 {
 	register char *p;
 	int pri;
@@ -2085,11 +2167,9 @@ void printline(hname, msg)
 		syslogdPanic("Could not construct Msg object.");
 		return;
 	}
-	if(MsgSetRawMsg(pMsg, msg) != 0) {
-		MsgDestruct(pMsg);
-		return;
-	}
+	if(MsgSetRawMsg(pMsg, msg) != 0) return;
 	
+	pMsg->iMsgSource = iSource;
 	/* test for special codes */
 	pri = DEFUPRI;
 	p = msg;
@@ -2135,14 +2215,18 @@ void printline(hname, msg)
 	*q = '\0';
 #endif
 
-	if(MsgSetMSG(pMsg, p) != 0) {
-		MsgDestruct(pMsg);
-		return;
-	}
-	if(MsgSetHOSTNAME(pMsg, hname) != 0) {
-		MsgDestruct(pMsg);
-		return;
-	}
+	if(MsgSetUxTradMsg(pMsg, p) != 0) return;
+
+	/* Now we look at the HOSTNAME. That is a bit complicated...
+	 * If we have a locally received message, it does NOT
+	 * contain any hostname information in the message itself.
+	 * As such, the HOSTNAME is the same as the system that
+	 * the message was received from (that, for obvious reasons,
+	 * being the local host).  rgerhards 2004-11-16
+	 */
+	if(iSource != SOURCE_INET)
+		if(MsgSetHOSTNAME(pMsg, hname) != 0) return;
+	if(MsgSetRcvFrom(pMsg, hname) != 0) return;
 
 	logmsg(pri, pMsg, SYNC_FILE);
 
@@ -2156,56 +2240,7 @@ void printline(hname, msg)
 	return;
 }
 
-
-#if 0
-/*
- * Take a raw input line from /dev/klog, split and format similar to syslog().
- * rgerhards 2004-11-08: TODO: why is this a separate function - check later, not
- * yet important.
- * rgerhards 2004-11-09: interesting - this function seems to be no longer 
- * called from anyone. For now, I am commenting it out via an #if 0 ... #endif.
- * Let's see if we later can remove it (I am not confident enough right now).
- */
-
-void printsys(msg)
-	char *msg;
-{
-	register char *p, *q;
-	register int c;
-	char line[MAXLINE + 1];
-	int pri, flags;
-	char *lp;
-
-	(void) snprintf(line, sizeof(line), "vmunix: ");
-	lp = line + strlen(line);
-	for (p = msg; *p != '\0'; ) {
-		flags = ADDDATE;
-		pri = DEFSPRI;
-		if (*p == '<') {
-			pri = 0;
-			while (isdigit(*++p))
-				pri = 10 * pri + (*p - '0');
-			if (*p == '>')
-				++p;
-		} else {
-			/* kernel printf's come out on console */
-			flags |= IGN_CONS;
-		}
-		if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
-			pri = DEFSPRI;
-		q = lp;
-		while (*p != '\0' && (c = *p++) != '\n' &&
-		    q < &line[MAXLINE])
-			*q++ = c;
-		*q = '\0';
-		logmsg(pri, line, LocalHostName, flags);
-	}
-	return;
-}
-#endif  /* printsys() commented out rgerhards 2004-11-09 */
-
-/*
- * Decode a priority into textual information like auth.emerg.
+/* Decode a priority into textual information like auth.emerg.
  * rgerhards: This needs to be changed for syslog-protocol - severities
  * are then supported up to 2^32-1.
  */
@@ -2251,12 +2286,14 @@ void logmsgInternal(pri, msg, from, flags)
 		return;
 	}
 
-	if(MsgSetMSG(pMsg, msg) != 0)
-		return;
-	if(MsgSetHOSTNAME(pMsg, from) != 0)
-		return;
+	if(MsgSetMSG(pMsg, msg) != 0) return;
+	if(MsgSetUxTradMsg(pMsg, msg) != 0) return;
+	if(MsgSetRawMsg(pMsg, msg) != 0) return;
+	if(MsgSetHOSTNAME(pMsg, from) != 0) return;
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
+	pMsg->iMsgSource = SOURCE_INTERNAL;
+	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 
 	logmsg(pri, pMsg, flags);
 	MsgDestruct(pMsg);
@@ -2270,6 +2307,16 @@ void logmsgInternal(pri, msg, from, flags)
  *			 if not, we use emergency logging to the console and in
  *                       this case, no further decoding happens.
  * changed to no longer receive a plain message but a msg object instead.
+ * rgerhards-2994-11-16: OK, we are now up to another change... This method
+ * actually needs to PARSE the message. How exactly this needs to happen depends on
+ * a number of things. Most importantly, it depends on the source. For example,
+ * locally received messages (SOURCE_UNIXAF) do NOT have a hostname in them. So
+ * we need to treat them differntly form network-received messages which have.
+ * Well, actually not all network-received message really have a hostname. We
+ * can just hope they do, but we can not be sure. So this method tries to find
+ * whatever can be found in the message and uses that... Obviously, there is some
+ * potential for misinterpretation, which we simply can not solve under the
+ * circumstances given.
  */
 
 void logmsg(pri, pMsg, flags)
@@ -2282,9 +2329,13 @@ void logmsg(pri, pMsg, flags)
 	int msglen;
 	char *msg;
 	char *from;
+	char *p2parse;
+	char *pBuf;
+	char *pWork;
 
 	assert(pMsg != NULL);
-	msg = pMsg->pszMSG;
+	assert(pMsg->pszUxTradMsg != NULL);
+	msg = pMsg->pszUxTradMsg;
 	from = pMsg->pszHOSTNAME;
 	dprintf("logmsg: %s, flags %x, from %s, msg %s\n", textpri(pri), flags, from, msg);
 
@@ -2292,11 +2343,21 @@ void logmsg(pri, pMsg, flags)
 	omask = sigblock(sigmask(SIGHUP)|sigmask(SIGALRM));
 #endif
 
+	/* extract facility and priority level */
+	if (flags & MARK)
+		fac = LOG_NFACILITIES;
+	else
+		fac = LOG_FAC(pri);
+	prilev = LOG_PRI(pri);
+
+	p2parse = msg;	/* our "message" begins here */
 	/*
-	 * Check to see if msg looks non-standard.
+	 * Check to see if msg contains a timestamp
 	 */
 	msglen = pMsg->iLenMSG;
-	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), msg) == FALSE)	
+	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), msg) == TRUE)	
+		p2parse += 16;
+	else
 		flags |= ADDDATE;
 
 	(void) time(&now);
@@ -2308,12 +2369,49 @@ void logmsg(pri, pMsg, flags)
 		pMsg->tTIMESTAMP.secfrac = 0;
 	}
 
-	/* extract facility and priority level */
-	if (flags & MARK)
-		fac = LOG_NFACILITIES;
-	else
-		fac = LOG_FAC(pri);
-	prilev = LOG_PRI(pri);
+	/* parse HOSTNAME - but only if this is network-received! */
+	if(pMsg->iMsgSource == SOURCE_INET) {
+		/* quick and dirty memory allocation */
+		if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
+			return;
+		pWork = pBuf;
+		while(*p2parse && *p2parse != ' ')
+			*pWork++ = *p2parse++;
+		if(*p2parse == ' ')
+			++p2parse;
+		*pWork = '\0';
+		/* TODO: optimize, we can re-use the buffer! */
+		if(MsgSetHOSTNAME(pMsg, pBuf) != 0) { free(pBuf); return; }
+		free(pBuf);
+	}
+
+	/* now parse TAG - that should be present in message from
+	 * all sources. */
+	/* The following code in general is quick & dirty - I need to get
+	 * it going for a test, TODO: redo later. rgerhards 2004-11-16 */
+	/* quick and dirty memory allocation */
+	/*if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)*/
+	if((pBuf = calloc(sizeof(char)* strlen(p2parse) +1, 1)) == NULL)
+		return;
+	pWork = pBuf;
+	while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
+		*pWork++ = *p2parse++;
+	}
+	if(*p2parse == ':') {
+		++p2parse;
+		*pWork++ = ':';
+	}
+	if(*p2parse == ' ')
+		++p2parse;
+	*pWork = '\0';
+	/* TODO: optimize, we can re-use the buffer! */
+	if(MsgSetTAG(pMsg, pBuf) != 0) { free(pBuf); return; }
+
+	/* The rest is the actual MSG */
+	if(MsgSetMSG(pMsg, p2parse) != 0) return;
+	free(pBuf);
+
+	/* ---------------------- END PARSING ---------------- */
 
 	/* log the message to the particular outputs */
 	if (!Initialized) {
@@ -2433,8 +2531,10 @@ void writeFile(struct filed *f)
 	v->iov_len = 1;
 	v++;
 
-	v->iov_base = f->f_pMsg->pszRawMsg;
-	v->iov_len = f->f_pMsg->iLenRawMsg;
+	/*v->iov_base = f->f_pMsg->pszRawMsg;
+	v->iov_len = f->f_pMsg->iLenRawMsg;*/
+	v->iov_base = f->f_pMsg->pszMSG;
+	v->iov_len = f->f_pMsg->iLenMSG;
 	v++;
 
 	/* almost done - just let's check how we need to terminate
@@ -3015,7 +3115,7 @@ void die(sig)
 	Initialized = was_initialized;
 	if (sig) {
 		dprintf("syslogd: exiting on signal %d\n", sig);
-		(void) snprintf(buf, sizeof(buf), "exiting on signal %d", sig);
+		(void) snprintf(buf, sizeof(buf), "rsyslogd: exiting on signal %d", sig);
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
@@ -3292,20 +3392,20 @@ void init()
 
 	if ( AcceptRemote )
 #ifdef DEBRELEASE
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
 		       ": restart (remote reception)." , LocalHostName, \
 		       	ADDDATE);
 #else
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL \
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd " VERSION "." PATCHLEVEL \
 		       ": restart (remote reception)." , LocalHostName, \
 		       	ADDDATE);
 #endif
 	else
 #ifdef DEBRELEASE
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
 		       ": restart." , LocalHostName, ADDDATE);
 #else
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL \
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd " VERSION "." PATCHLEVEL \
 		       ": restart." , LocalHostName, ADDDATE);
 #endif
 	(void) signal(SIGHUP, sighup_handler);
@@ -3756,7 +3856,7 @@ void writeMySQL(register struct filed *f)
 }
 #endif	/* #ifdef WITH_DB */
 
-/*
+/**
  * getSubString
  *
  * Copy a string byte by byte until the occurrence  
