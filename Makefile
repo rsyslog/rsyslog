@@ -2,10 +2,11 @@
 
 CC= gcc
 #CFLAGS= -g -DSYSV -Wall
-LDFLAGS= -g
-CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
+LDFLAGS= -g -Wall -fno-omit-frame-pointer
+CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
+#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
 #CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB
-LDFLAGS= -s
+#LDFLAGS= -s
 
 # Look where your install program is.
 INSTALL = /usr/bin/install

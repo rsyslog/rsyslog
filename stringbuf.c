@@ -79,8 +79,9 @@ void sbStrBDestruct(sbStrBObj *pThis)
 	/* in this mode, a new buffer already was allocated,
 	 * so we need to free the old one.
 	 */
-		if(pThis->pBuf != NULL)
+		if(pThis->pBuf != NULL) {
 			free(pThis->pBuf);
+		}
 #	endif
 
 	SRFREEOBJ(pThis);
@@ -128,8 +129,9 @@ srRetVal sbStrBAppendChar(sbStrBObj *pThis, char c)
 			return SR_RET_OUT_OF_MEMORY;
 		memcpy(pNewBuf, pThis->pBuf, pThis->iBufSize);
 		pThis->iBufSize += pThis->iAllocIncrement;
-		if(pThis->pBuf != NULL)
+		if(pThis->pBuf != NULL) {
 			free(pThis->pBuf);
+		}
 		pThis->pBuf = pNewBuf;
 	}
 

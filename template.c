@@ -155,7 +155,7 @@ static int do_Constant(char **pp, struct template *pTpl)
 	pTpe->eEntryType = CONSTANT;
 	pTpe->data.constant.pConstant = sbStrBFinish(pStrB);
 	/* we need to call strlen() below because of the escape sequneces.
-	 * due to them p -*pp is NOT the rigt size!
+	 * due to them p -*pp is NOT the right size!
 	 */
 	pTpe->data.constant.iLenConstant = strlen(pTpe->data.constant.pConstant);
 
@@ -441,6 +441,49 @@ struct template *tplFind(char *pName, int iLenName)
 		}
 	return(pTpl);
 }
+
+/* Destroy the template structure. This is for de-initialization
+ * at program end. Everything is deleted.
+ * rgerhards 2005-02-22
+ */
+void tplDeleteAll(void)
+{
+	struct template *pTpl, *pTplDel;
+	struct templateEntry *pTpe, *pTpeDel;
+
+	pTpl = tplRoot;
+	while(pTpl != NULL) {
+		dprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
+		pTpe = pTpl->pEntryRoot;
+		while(pTpe != NULL) {
+			pTpeDel = pTpe;
+			pTpe = pTpe->pNext;
+			dprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);
+			switch(pTpeDel->eEntryType) {
+			case UNDEFINED:
+				dprintf("(UNDEFINED)");
+				break;
+			case CONSTANT:
+				dprintf("(CONSTANT), value: '%s'",
+					pTpeDel->data.constant.pConstant);
+				free(pTpeDel->data.constant.pConstant);
+				break;
+			case FIELD:
+				dprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);
+				free(pTpeDel->data.field.pPropRepl);
+				break;
+			}
+			dprintf("\n");
+			free(pTpeDel);
+		}
+		pTplDel = pTpl;
+		pTpl = pTpl->pNext;
+		if(pTplDel->pszName != NULL)
+			free(pTplDel->pszName);
+		free(pTplDel);
+	}
+}
+
 
 /* Print the template structure. This is more or less a 
  * debug or test aid, but anyhow I think it's worth it...

@@ -539,6 +539,7 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 
 #define CONT_LINE	1		/* Allow continuation lines */
 
+#include <mcheck.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -1424,10 +1425,12 @@ struct msg* MsgConstruct()
 void MsgDestruct(struct msg * pM)
 {
 	assert(pM != NULL);
-	dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
+	printf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
 	if(--pM->iRefCount == 0)
 	{
 		dprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
+		if(pM->pszUxTradMsg != NULL)
+			free(pM->pszUxTradMsg);
 		if(pM->pszRawMsg != NULL)
 			free(pM->pszRawMsg);
 		if(pM->pszTAG != NULL)
@@ -1594,8 +1597,10 @@ char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
 		formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
 		return(pM->pszRcvdAt3164);
 	case tplFmtRFC3339Date:
-		if((pM->pszRcvdAt3339 = malloc(33)) == NULL) return "";
-		formatTimestamp3339(&pM->tRcvdAt, pM->pszRcvdAt3339, 33);
+		if(pM->pszRcvdAt3339 == NULL) {
+			if((pM->pszRcvdAt3339 = malloc(33)) == NULL) return "";
+			formatTimestamp3339(&pM->tRcvdAt, pM->pszRcvdAt3339, 33);
+		}
 		return(pM->pszRcvdAt3339);
 	}
 	return "INVALID eFmt OPTION!";
@@ -1784,6 +1789,8 @@ int MsgSetUxTradMsg(struct msg *pMsg, char* pszUxTradMsg)
 	assert(pMsg != NULL);
 	assert(pszUxTradMsg != NULL);
 	pMsg->iLenUxTradMsg = strlen(pszUxTradMsg);
+	if(pMsg->pszUxTradMsg != NULL)
+		free(pMsg->pszUxTradMsg);
 	if((pMsg->pszUxTradMsg = malloc(pMsg->iLenUxTradMsg + 1)) == NULL) {
 		syslogdPanic("Could not allocate memory for pszUxTradMsg buffer.");
 		MsgDestruct(pMsg);
@@ -1803,6 +1810,10 @@ int MsgSetMSG(struct msg *pMsg, char* pszMSG)
 {
 	assert(pMsg != NULL);
 	assert(pszMSG != NULL);
+
+	if(pMsg->pszMSG != NULL) {
+		free(pMsg->pszMSG);
+	}
 	pMsg->iLenMSG = strlen(pszMSG);
 	if((pMsg->pszMSG = malloc(pMsg->iLenMSG + 1)) == NULL) {
 		syslogdPanic("Could not allocate memory for pszMSG buffer.");
@@ -1821,6 +1832,9 @@ int MsgSetMSG(struct msg *pMsg, char* pszMSG)
 int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
 {
 	assert(pMsg != NULL);
+	if(pMsg->pszRawMsg != NULL) {
+		free(pMsg->pszRawMsg);
+	}
 	pMsg->iLenRawMsg = strlen(pszRawMsg);
 	if((pMsg->pszRawMsg = malloc(pMsg->iLenRawMsg + 1)) == NULL) {
 		syslogdPanic("Could not allocate memory for pszRawMsg buffer.");
@@ -2046,6 +2060,9 @@ int main(argc, argv)
 	 * for separate book-keeping.  --okir
 	 */
 	fd_set readfds;
+
+	mtrace(); /* this is a debug aid for leak detection - either remove
+	           * or put in conditional compilation. 2005-01-18 RGerhards */
 
 #ifndef TESTING
 	int	fd;
@@ -2837,10 +2854,8 @@ void logmsgInternal(pri, msg, from, flags)
 		return;
 	}
 
-	if(MsgSetMSG(pMsg, msg) != 0) return;
-	if(MsgSetRawMsg(pMsg, msg) != 0) return;
 	if(MsgSetUxTradMsg(pMsg, msg) != 0) return;
-	if(MsgSetHOSTNAME(pMsg, from) != 0) return;
+	if(MsgSetRawMsg(pMsg, msg) != 0) return;
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->iMsgSource = SOURCE_INTERNAL;
@@ -3554,9 +3569,6 @@ void fprintlog(f, flags)
 		f->f_prevcount = 0;
 	return;		
 }
-#if FALSE
-}} /* balance parentheses for emacs */
-#endif
 
 jmp_buf ttybuf;
 
@@ -3831,21 +3843,35 @@ void die(sig)
 
 	Initialized = was_initialized; /* we restore this so that the logmsgInternal() 
 	                                * below can work ... and keep in mind we need the
-					* filed structure still intact (initilzed) for the below! */
+					* filed structure still intact (initialized) for the below! */
 	if (sig) {
 		dprintf("syslogd: exiting on signal %d\n", sig);
 		(void) snprintf(buf, sizeof(buf), "syslogd: exiting on signal %d", sig);
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
-#ifdef WITH_DB
+
 	/* Close the MySQL connection */
 	for (lognum = 0; lognum <= nlogs; lognum++) {
 		f = &Files[lognum];
+		/* free iovec if it was allocated */
+printf("free f[%d]->iov %x, max %d\n", lognum, (unsigned) f->f_iov, nlogs);
+		if(f->f_iov != NULL) {
+			if(f->f_bMustBeFreed != NULL) {
+				printf("iov strings delete\n");
+				iovDeleteFreeableStrings(f);
+				free(f->f_bMustBeFreed);
+			}
+			printf("iov delete\n");
+			free(f->f_iov);
+		}
+		/* Now delete cached messages */
+		MsgDestruct(f->f_pMsg);
+#ifdef WITH_DB
 		if (f->f_type == F_MYSQL)
 			closeMySQL(f);
-	}
 #endif
+	}
 	
 	/* now clean up the listener part */
 
@@ -3860,6 +3886,20 @@ void die(sig)
         for (i = 0; i < nfunix; i++)
 		if (funixn[i] && funix[i] != -1)
 			(void)unlink(funixn[i]);
+
+	/* rger 2005-02-22
+	 * now clean up the in-memory structures. OK, the OS
+	 * would also take care of that, but if we do it
+	 * ourselfs, this makes finding memory leaks a lot
+	 * easier.
+	 */
+	tplDeleteAll();
+	free(parts);
+	free(Files);
+	if(consfile.f_iov != NULL)
+		free(consfile.f_iov);
+	if(consfile.f_bMustBeFreed != NULL)
+		free(consfile.f_bMustBeFreed);
 
 #ifndef TESTING
 	(void) remove_pid(PidFile);
@@ -4214,7 +4254,7 @@ void init()
 	}}} /* balance parentheses for emacs */
 #endif
 
-/* helper to cfline() and its helpers. Assignd the right template
+/* helper to cfline() and its helpers. Assign the right template
  * to a filed entry and allocates memory for its iovec.
  * rgerhards 2004-11-19
  */
@@ -4244,12 +4284,13 @@ void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 			dprintf("Could not allocate iovec memory\n");
 			f->f_type = F_UNUSED;
 		}
-		if((f->f_bMustBeFreed= calloc(tplGetEntryCount(f->f_pTpl),
+		if((f->f_bMustBeFreed = calloc(tplGetEntryCount(f->f_pTpl),
 		    sizeof(unsigned short))) == NULL) {
 			/* TODO: provide better message! */
 			dprintf("Could not allocate bMustBeFreed memory\n");
 			f->f_type = F_UNUSED;
 		}
+printf("iov %x, MustBeFreed %x\n", f->f_iov, f->f_bMustBeFreed);
 	}
 }
 	
