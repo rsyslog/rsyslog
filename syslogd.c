@@ -757,6 +757,8 @@ struct msg {
 /**/	int	iFacility;	/* Facility code (up to 2^32-1) */
 /**/	char *pszFacility;	/* Facility as string... */
 /**/	int iLenFacility;	/* ... and its length. */
+/**/	char *pszPRI;		/* the PRI as a string */
+/**/	int iLenPRI;		/* and its length */
 /**/	char	*pszRawMsg;	/* message as it was received on the
 				 * wire. This is important in case we
 				 * need to preserve cryptographic verifiers.
@@ -820,6 +822,9 @@ struct filed {
 	int	f_flags;			/* store some additional flags */
 	struct template *f_pTpl;		/* pointer to template to use */
 	struct iovec *f_iov;			/* dyn allocated depinding on template */
+	int	f_iIovUsed;			/* nbr of elements used in IOV */
+	char	*f_psziov;			/* iov as string */
+	int	f_iLenpsziov;			/* length of iov as string */
 	struct msg* f_pMsg;			/* pointer to the message (this wil
 					         * replace the other vars with msg
 						 * content later). This is preserved after
@@ -1364,6 +1369,8 @@ void MsgDestruct(struct msg * pM)
 			free(pM->pszSeverity);
 		if(pM->pszRcvdAt3164 != NULL)
 			free(pM->pszRcvdAt3164);
+		if(pM->pszPRI != NULL)
+			free(pM->pszPRI);
 		free(pM);
 	}
 }
@@ -1411,6 +1418,26 @@ char *getMSG(struct msg *pM)
 			return "";
 		else
 			return pM->pszMSG;
+}
+
+
+char *getPRI(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+
+	if(pM->pszPRI == NULL) {
+		/* OK, we need to construct it... 
+		 * we use a 5 byte buffer - as of 
+		 * RFC 3164, it can't be longer. Should it
+		 * still be, snprintf will truncate...
+		 */
+		if((pM->pszPRI = malloc(5)) == NULL) return "";
+		pM->iLenPRI = snprintf(pM->pszPRI, 5, "%d",
+			LOG_MAKEPRI(pM->iFacility, pM->iSeverity));
+	}
+
+	return pM->pszPRI;
 }
 
 
@@ -1641,6 +1668,8 @@ char *MsgGetProp(struct msg *pMsg, char *pName)
 		pRes = getHOSTNAME(pMsg);
 	} else if(!strcmp(pName, "syslogtag")) {
 		pRes = getTAG(pMsg);
+	} else if(!strcmp(pName, "PRI")) {
+		pRes = getPRI(pMsg);
 	} else if(!strcmp(pName, "iut")) {
 		pRes = "1"; /* always 1 for syslog messages (a MonitorWare thing;)) */
 	} else if(!strcmp(pName, "syslogfacility")) {
@@ -2732,13 +2761,60 @@ void logmsg(pri, pMsg, flags)
 #endif
 
 
+/* create a string from the provided iovec. This can
+ * be called by all functions who need the template
+ * text in a single string. The function takes an
+ * entry of the filed structure. It uses all data
+ * from there. It returns a pointer to the generated
+ * string if it succeeded, or NULL otherwise.
+ * rgerhards 2004-11-22 
+ */
+char *iovAsString(struct filed *f)
+{
+	struct iovec *v;
+	int i;
+	sbStrBObj *pStrB;
+
+	assert(f != NULL);
+
+	if(f->f_psziov != NULL) {
+		/* for now, we always free a previous buffer.
+		 * The idea, however, is to keep a copy of the
+		 * buffer until we know we no longer can re-use it.
+		 */
+		free(f->f_psziov);
+	}
+
+	if((pStrB = sbStrBConstruct()) == NULL) {
+		/* oops - no mem, let's try to set the message we have
+		 * most probably, this will fail, too. But at least we
+		 * can try... */
+		return NULL;
+	}
+
+	i = 0;
+	f->f_iLenpsziov = 0;
+	v = f->f_iov;
+	while(i++ < f->f_iIovUsed) {
+		if(v->iov_len > 0) {
+			sbStrBAppendStr(pStrB, v->iov_base);
+			f->f_iLenpsziov += v->iov_len;
+		}
+		++v;
+	}
+
+	f->f_psziov = sbStrBFinish(pStrB);
+	return f->f_psziov;
+}
+
+
 /* rgerhards 2004-11-19: create the iovec for
  * a given template. This is called by all methods
  * using iovec's for their output. Returns the number
  * of iovecs used (might be different from max if the
  * template contains an invalid entry).
  */
-int iovCreate(struct filed *f)
+void  iovCreate(struct filed *f)
 {
 	register struct iovec *v;
 	int iIOVused;
@@ -2769,6 +2845,8 @@ int iovCreate(struct filed *f)
 		}
 		pTpe = pTpe->pNext;
 	}
+	
+	f->f_iIovUsed = iIOVused;
 
 #if 0
 	/* almost done - just let's check how we need to terminate
@@ -2784,7 +2862,7 @@ int iovCreate(struct filed *f)
 	}
 	
 #endif
-	return(iIOVused);
+	return;
 }
 
 /* rgerhards 2004-11-11: write to a file output. This
@@ -2793,8 +2871,6 @@ int iovCreate(struct filed *f)
  */
 void writeFile(struct filed *f)
 {
-	int iIOVused;
-
 	assert(f != NULL);
 
 	/* Now generate the message. This can eventually be moved to
@@ -2803,9 +2879,9 @@ void writeFile(struct filed *f)
 	 * ability to specify the message format before we can actually 
 	 * code this part of the function. rgerhards 2004-11-11
 	 */
-	iIOVused = iovCreate(f);
+	iovCreate(f);
 again:
-	if (writev(f->f_file, f->f_iov, iIOVused) < 0) {
+	if (writev(f->f_file, f->f_iov, f->f_iIovUsed) < 0) {
 		int e = errno;
 
 		/* If a named pipe is full, just ignore it for now
@@ -2861,7 +2937,6 @@ void fprintlog(f, flags)
 	char *msg;
 #ifdef SYSLOG_INET
 	register int l;
-	char line[MAXLINE + 1];
 	time_t fwd_suspend;
 	struct hostent *hp;
 #endif
@@ -2959,17 +3034,18 @@ void fprintlog(f, flags)
 		 */
 	f_forw:
 		dprintf(" %s\n", f->f_un.f_forw.f_hname);
+		iovCreate(f);
 		if ( strcmp(f->f_pMsg->pszHOSTNAME, LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
 		else {
+			char *psz;
 			f->f_time = now;
-			(void) snprintf(line, sizeof(line), "<%d>%s\n", f->f_prevpri, \
-				(char *) f->f_pMsg->pszMSG);
-				/* was: (char *) iov[4].iov_base); */
-			l = strlen(line);
+			psz = iovAsString(f);
+			l = f->f_iLenpsziov;
 			if (l > MAXLINE)
 				l = MAXLINE;
-			if (sendto(finet, line, l, 0, \
+			printf("about to send '%s' (%d)\n", psz, l);
+			if (sendto(finet, psz, l, 0, \
 				   (struct sockaddr *) &f->f_un.f_forw.f_addr,
 				   sizeof(f->f_un.f_forw.f_addr)) != l) {
 				int e = errno;
@@ -3052,7 +3128,6 @@ void wallmsg(f)
 	static int reenter = 0;
 	struct utmp ut;
 	struct utmp *uptr;
-	int iIOVused;
 
 	assert(f != NULL);
 
@@ -3077,7 +3152,7 @@ void wallmsg(f)
 	/* TODO: find a way to limit the max size of the message. hint: this
 	 * should go into the template!
 	 */
-		iIOVused = iovCreate(f);
+		iovCreate(f);
 
 		/* scan the user login file */
 		while ((uptr = getutent())) {
@@ -3118,7 +3193,7 @@ void wallmsg(f)
 
 					if (fstat(ttyf, &statb) == 0 &&
 					    (statb.st_mode & S_IWRITE))
-						(void) writev(ttyf, f->f_iov, iIOVused);
+						(void) writev(ttyf, f->f_iov, f->f_iIovUsed);
 					close(ttyf);
 					ttyf = -1;
 				}
@@ -3799,6 +3874,7 @@ void cfline(line, f)
 	struct hostent *hp;
 #endif
 	char buf[MAXLINE];
+	char szTemplateName[128];
 	char xbuf[200];
 
 	dprintf("cfline(%s)\n", line);
@@ -3952,16 +4028,31 @@ void cfline(line, f)
 	{
 	case '@':
 #ifdef SYSLOG_INET
-		(void) strcpy(f->f_un.f_forw.f_hname, ++p);
-		dprintf("forwarding host: %s\n", p);	/*ASP*/
-		if ( (hp = gethostbyname(p)) == NULL ) {
+		++p; /* eat '@' */
+		/* extract the host first (we do a trick - we 
+		 * replace the ';' with a '\0') */
+		for(q = p ; *p && *p != ';' ; ++p)
+		 	/* JUST SKIP */;
+		if(*p == ';') {
+			*p = '\0'; /* trick! */
+			++p;
+			 /* Now look for the template! */
+			cflineParseTemplateName(f, &p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(char));
+			cflineSetTemplateAndIOV(f, szTemplateName);
+		}
+
+		if ( (hp = gethostbyname(q)) == NULL ) {
 			f->f_type = F_FORW_UNKN;
 			f->f_prevcount = INET_RETRY_MAX;
-			f->f_time = time ( (time_t *)0 );
+			f->f_time = time((time_t *) NULL);
 		} else {
 			f->f_type = F_FORW;
 		}
 
+		(void) strcpy(f->f_un.f_forw.f_hname, q);
+		dprintf("forwarding host: '%s' template '%s'\n",
+		         q, szTemplateName);	/*ASP*/
 		memset((char *) &f->f_un.f_forw.f_addr, 0,
 			 sizeof(f->f_un.f_forw.f_addr));
 		f->f_un.f_forw.f_addr.sin_family = AF_INET;
@@ -4011,7 +4102,6 @@ void cfline(line, f)
 	case '*':
 		dprintf ("write-all");
 		if(*(p+1) == ';') {
-			char szTemplateName[128];
 			/* we have a template specifier! */
 			p += 2; /* eat "*;" */
 			cflineParseTemplateName(f, &p, szTemplateName,
@@ -4067,7 +4157,6 @@ void cfline(line, f)
 		 * TODO: we need to handle the case where i >= MAXUNAME!
 		 */
 		if(*p == ';') {
-			char szTemplateName[128];
 			/* we have a template specifier! */
 			++p; /* eat ";" */
 			cflineParseTemplateName(f, &p, szTemplateName,
