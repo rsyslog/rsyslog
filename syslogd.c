@@ -524,7 +524,6 @@ static char sccsid[] = "@(#)rsyslogd.c	0.1 (Adiscon) 11/08/2004";
  *	a patch.
  */
 
-
 #define	MAXLINE		1024		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define DEFSPRI		(LOG_KERN|LOG_CRIT)
@@ -929,6 +928,8 @@ void initMySQL(register struct filed *f);
 void writeMySQL(register struct filed *f);
 void closeMySQL(register struct filed *f);
 #endif
+
+int getSubString(char **pSrc, char *pDst, char cSep, int len);
 
 #ifdef SYSLOG_UNIXAF
 static int create_inet_socket();
@@ -3018,7 +3019,7 @@ void cfline(line, f)
 	char *line;
 	register struct filed *f;
 {
-	register char *p;
+	char *p;
 	register char *q;
 	register int i, i2;
 	char *bp;
@@ -3026,8 +3027,11 @@ void cfline(line, f)
 	int singlpri = 0;
 	int ignorepri = 0;
 	int syncfile;
+	int iErr;
 #ifdef SYSLOG_INET
 	struct hostent *hp;
+#endif
+#ifdef	WITH_DB
 #endif
 	char buf[MAXLINE];
 	char xbuf[200];
@@ -3250,11 +3254,29 @@ void cfline(line, f)
 		dprintf("p is: %s\n", p);
 		f->f_type = F_MYSQL;
 		initMySQL(f);
-		/* TODO: Add actual code! */
 		p++;
-		while (*p == '\t' || *p == ' ')
-			p++;
-
+		dprintf("p is: %s\n", p);
+		
+		iErr = getSubString(&p, f->f_dbsrv, ',', 1);
+		iErr = getSubString(&p, f->f_dbname, ',', 1);
+		iErr = getSubString(&p, f->f_dbuid, ',', 1);
+		iErr = getSubString(&p, f->f_dbpwd, ',', 1);
+		dprintf("f->f_dbsrv is: %s\n", f->f_dbsrv);
+		dprintf("f->f_dbname is: %s\n", f->f_dbname);
+		dprintf("f->f_dbuid is: %s\n", f->f_dbuid);
+		dprintf("f->f_dbpwd is: %s\n", f->f_dbpwd);
+		
+	/*	pLine = f->f_dbsrv;
+		while (*p != ',' || *p == '\0') {
+			*pLine = *p;
+			dprintf("pLine is: %s\n", pLine);
+			pLine++; p++;
+		}
+		pLine = '\0';
+		dprintf("p is: %s\n", p);
+		dprintf("pLine is: %s\n", pLine);
+		dprintf("f->f_dbsrv is: %s\n", f->f_dbsrv);
+	*/
 		break;
 #endif	/* #ifdef WITH_DB */
 
@@ -3423,10 +3445,10 @@ void closeMySQL(register struct filed *f)
  */
 void writeMySQL(register struct filed *f)
 {
-	char sql_command[MAXSVLINE+1048];
+	char sql_command[MAXLINE+1048];
 	printf("in writeMySQL()\n");
-
-	snprintf(sql_command, sizeof(sql_command), "INSERT INTO myTable VALUES (1,'%s')", f->f_prevline);
+	/* TODO: Insert useful values */
+	snprintf(sql_command, sizeof(sql_command), "INSERT INTO myTable VALUES (1,'test')");
 
 	/* query */
 	if(mysql_query(&f->f_hmysql, sql_command)) {
@@ -3438,6 +3460,20 @@ void writeMySQL(register struct filed *f)
 	}
 }
 #endif	/* #ifdef WITH_DB */
+
+/*
+ * getSubString
+ */
+int getSubString(char **ppSrc,  char *pDst, char cSep, int len)
+{
+	char *pSrc = *ppSrc;
+	while(*pSrc != cSep && *pSrc != '\0') {
+		*pDst++ = *(pSrc)++;
+	}
+	*ppSrc=pSrc+1;
+	*pDst = '\0';
+	return len;
+}
 
 /*
  * Local variables:
