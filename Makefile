@@ -20,7 +20,7 @@ INSTALL = install
 BINDIR = /usr/sbin
 MANDIR = /usr/share/man
 
-# Uncommenting the following to use mysql.
+# Uncomment the following to use mysql.
 #LIBS = -lmysqlclient #/var/lib/mysql/mysql 
 
 # There is one report that under an all ELF system there may be a need to
@@ -39,11 +39,11 @@ MAN_OWNER = root
 # MAN_OWNER = man
 
 # The following define establishes the name of the pid file for the
-# syslogd daemon.  The library include file (paths.h) defines the
-# name for the syslogd pid to be syslog.pid.  A number of people have
-# suggested that this should be syslogd.pid.  You may cast your
+# rsyslogd daemon.  The library include file (paths.h) defines the
+# name for the rsyslogd pid to be rsyslog.pid.  A number of people have
+# suggested that this should be rsyslogd.pid.  You may cast your
 # ballot below.
-SYSLOGD_PIDNAME = -DSYSLOGD_PIDNAME=\"syslogd.pid\"
+SYSLOGD_PIDNAME = -DSYSLOGD_PIDNAME=\"rsyslogd.pid\"
 
 SYSLOGD_FLAGS= -DSYSLOG_INET -DSYSLOG_UNIXAF -DNO_SCCS ${FSSTND} \
 	${SYSLOGD_PIDNAME}
@@ -55,7 +55,7 @@ DEB =
 
 all: syslogd
 
-test: syslog_tst ksym oops_test tsyslogd
+test: syslog_tst tsyslogd
 
 install: install_man install_exec
 
@@ -96,5 +96,5 @@ install_exec: syslogd
 	${INSTALL} -b -m 500 -s syslogd ${DESTDIR}${BINDIR}/rsyslogd
 
 install_man:
-	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 rsyslogd.8 ${MANDIR}/man8/rsyslogd.8
-	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 rsyslog.conf.5 ${MANDIR}/man5/rsyslog.conf.5
+	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 rsyslogd.8 ${DESTDIR}${MANDIR}/man8/rsyslogd.8
+	${INSTALL} -o ${MAN_OWNER} -g ${MAN_OWNER} -m 644 rsyslog.conf.5 ${DESTDIR}${MANDIR}/man5/rsyslog.conf.5
