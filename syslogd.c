@@ -585,6 +585,8 @@ static char sccsid[] = "@(#)rsyslogd.c	0.1 (Adiscon) 11/08/2004";
 #include <paths.h>
 #endif
 
+#include "template.h"
+
 #ifdef	WITH_DB
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
 #define _DB_MAXUNAMELEN	128	/* maximum number of user name */
@@ -1170,7 +1172,7 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, unsigned char* psz
  * returns the size of the timestamp written in bytes (without
  * the string termnator). If 0 is returend, an error occured.
  */
-int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 {
 	static char* monthNames[13] = {"ERR", "Jan", "Feb", "Mar",
 	                               "Apr", "May", "Jun", "Jul",
@@ -2523,7 +2525,7 @@ void writeFile(struct filed *f)
 	v->iov_base = " ";
 	v->iov_len = 1;
 	v++;
-	v->iov_len = formatTimestamp(&f->f_pMsg->tTIMESTAMP,
+	v->iov_len = formatTimestamp3164(&f->f_pMsg->tTIMESTAMP,
 		     szTIMESTAMP, sizeof(szTIMESTAMP) / sizeof(char));
 	v->iov_base = szTIMESTAMP;
 	v++;
@@ -2614,7 +2616,6 @@ void fprintlog(f, flags)
 	struct hostent *hp;
 #endif
 
-dprintf("fprintlog\n");
 	msg = f->f_pMsg->pszMSG;
 	dprintf("Called fprintlog, ");
 
@@ -3150,10 +3151,34 @@ void doexit(sig)
 }
 #endif
 
+/* Parse and interpret a system-directive in the config line
+ * A system directive is one that starts with a "$" sign. It offers
+ * extended configuration parameters.
+ * 2004-11-17 rgerhards
+ */
+void cfsysline(char *p)
+{
+	char szCmd[32];
+
+	assert(p != NULL);
+	dprintf("cfsysline --> %s", p);
+	if(getSubString(&p, szCmd, sizeof(szCmd) / sizeof(char), ' ')  != 0) {
+		dprintf("Invalid $-configline - could not extract command - line ignored\n");
+		return;
+	}
+
+	/* check the command and carry out processing */
+	if(!strcmp(szCmd, "template")) { 
+	} else { /* invalid command! */
+		dprintf("Invalid command in $-configline: '%s' - line ignored\n", szCmd);
+		return;
+	}
+}
+
+
 /*
  *  INIT -- Initialize syslogd from configuration table
  */
-
 void init()
 {
 	register int i, lognum;
@@ -3274,9 +3299,14 @@ void init()
 		 * check for end-of-section, comments, strip off trailing
 		 * spaces and newline character.
 		 */
-		for (p = cline; isspace(*p); ++p);
+		for (p = cline; isspace(*p); ++p) /*SKIP SPACES*/;
 		if (*p == '\0' || *p == '#')
 			continue;
+
+		if(*p == '$') {
+			cfsysline(++p);
+			continue;
+		}
 #if CONT_LINE
 		strcpy(cline, p);
 #endif
@@ -3417,6 +3447,14 @@ void init()
 
 /*
  * Crack a configuration file line
+ * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
+ * handle config lines in general, but only lines that reflect actual filter
+ * pairs (the original syslog message line format). Extended lines (those starting
+ * with "$" have been filtered out by the caller and are passed to another function.
+ * Please note, however, that I needed to make changes in the line syntax to support
+ * assignment of format definitions to a file. So it is not (yet) 100% transparent.
+ * Eventually, we can overcome this limitation by prfexing the actual acton indicator
+ * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
  */
 
 void cfline(line, f)
@@ -3433,8 +3471,6 @@ void cfline(line, f)
 	int syncfile;
 #ifdef SYSLOG_INET
 	struct hostent *hp;
-#endif
-#ifdef	WITH_DB
 #endif
 	char buf[MAXLINE];
 	char xbuf[200];
@@ -3866,7 +3902,7 @@ void writeMySQL(register struct filed *f)
  * \param pDst		Pointer to the destination array of characters
  * \param DstSize	Maximum numbers of characters to store
  * \param cSep		Separator char
- * \ret int		Returns 0 if no error occur
+ * \ret int		Returns 0 if no error occured
  */
 int getSubString(char **ppSrc,  char *pDst, size_t DstSize, char cSep)
 {

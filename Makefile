@@ -63,7 +63,7 @@ test: syslog_tst ksym oops_test tsyslogd
 
 install: install_man install_exec
 
-syslogd: syslogd.o pidfile.o
+syslogd: syslogd.o pidfile.o template.o
 	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o ${LIBS}
 
 klogd:	klogd.o syslog.o pidfile.o ksym.o ksym_mod.o
@@ -79,7 +79,10 @@ tsyslogd: syslogd.c version.h
 tklogd: klogd.c syslog.c ksym.c ksym_mod.c version.h
 	$(CC) $(CFLAGS) -g -DTESTING $(KLOGD_FLAGS) -o tklogd klogd.c syslog.c ksym.c ksym_mod.c
 
-syslogd.o: syslogd.c version.h
+template.o: template.c template.h
+	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c template.c
+
+syslogd.o: syslogd.c version.h template.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c syslogd.c
 
 syslog.o: syslog.c
