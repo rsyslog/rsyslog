@@ -40,10 +40,10 @@ struct templateEntry* tpeConstruct(struct template *pTpl)
 		pTpl->pEntryLast->pNext = pTpe;
 		pTpl->pEntryLast  = pTpe;
 	}
+	pTpl->tpenElements++;
 
 	return(pTpe);
 }
-
 
 
 /* Constructs a template list object. Returns pointer to it
@@ -80,6 +80,7 @@ static int do_Constant(char **pp, struct template *pTpl)
 {
 	register char *p;
 	sbStrBObj *pStrB;
+	struct templateEntry *pTpe;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -91,14 +92,45 @@ static int do_Constant(char **pp, struct template *pTpl)
 		 return 1;
 	sbStrBSetAllocIncrement(pStrB, 32);
 	/* TODO: implement escape characters! */
-	while(*p && *p != '%') {
-		if(*p == '\\')
-			if(*++p == '\0')
-				--p;	/* the best we can do - it's invalid anyhow... */
-		sbStrBAppendChar(pStrB, *p++);
+	while(*p && *p != '%' && *p != '\"') {
+		if(*p == '\\') {
+			switch(*++p) {
+				case '\0':	
+					/* the best we can do - it's invalid anyhow... */
+					sbStrBAppendChar(pStrB, *p);
+					break;
+				case 'n':
+					sbStrBAppendChar(pStrB, '\n');
+					++p;
+					break;
+				case '\\':
+					sbStrBAppendChar(pStrB, '\\');
+					++p;
+					break;
+				case '%':
+					sbStrBAppendChar(pStrB, '%');
+					++p;
+					break;
+				default:
+					sbStrBAppendChar(pStrB, *p++);
+					break;
+			}
+		}
+		else
+			sbStrBAppendChar(pStrB, *p++);
 	}
 
-	printf("Constant: '%s'\n", sbStrBFinish(pStrB));
+	if((pTpe = tpeConstruct(pTpl)) == NULL) {
+		/* TODO: add handler */
+		return 1;
+	}
+	pTpe->eEntryType = CONSTANT;
+	pTpe->data.constant.pConstant = sbStrBFinish(pStrB);
+	/* we need to call strlen() below because of the escape sequneces.
+	 * due to them p -*pp is NOT the rigt size!
+	 */
+	pTpe->data.constant.iLenConstant = strlen(pTpe->data.constant.pConstant);
+
 	*pp = p;
 
 	return 0;
@@ -113,6 +145,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 {
 	register char *p;
 	sbStrBObj *pStrB;
+	struct templateEntry *pTpe;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -126,7 +159,15 @@ static int do_Parameter(char **pp, struct template *pTpl)
 		sbStrBAppendChar(pStrB, *p++);
 	}
 	if(*p) ++p; /* eat '%' */
-	printf("Parameter: '%s'\n", sbStrBFinish(pStrB));
+
+	/* now store param */
+	if((pTpe = tpeConstruct(pTpl)) == NULL) {
+		/* TODO: add handler */
+		dprintf("Could not allocate memory for template parameter!\n");
+		return 1;
+	}
+	pTpe->eEntryType = FIELD;
+	pTpe->data.pPropRepl = sbStrBFinish(pStrB);
 
 	*pp = p;
 	return 0;
@@ -204,9 +245,11 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 				do_Constant(&p, pTpl);
 				break;
 		}
+		if(*p == '\"') {/* end of template string? */
+			++p;	/* eat it! */
+			bDone = 1;
+		}
 	}
-
-printf("tplAddLine, Name '%s', restOfLine: %s", pTpl->pszName, p);
 
 	*ppRestOfConfLine = p;
 	return(pTpl);
@@ -236,6 +279,43 @@ struct template *tplFind(char *pName, int iLenName)
 	return(pTpl);
 }
 
+/* Print the template structure. This is more or less a 
+ * debug or test aid, but anyhow I think it's worth it...
+ */
+void tplPrintList(void)
+{
+	struct template *pTpl;
+	struct templateEntry *pTpe;
+
+	pTpl = tplRoot;
+	while(pTpl != NULL) {
+		dprintf("Template: Name='%s'\n", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
+		pTpe = pTpl->pEntryRoot;
+		while(pTpe != NULL) {
+			dprintf("\tEntry: type %d, ", pTpe->eEntryType);
+			switch(pTpe->eEntryType) {
+				case UNDEFINED:
+					dprintf("(UNDEFINED)\n");
+					break;
+				case CONSTANT:
+					dprintf("(CONSTANT), value: '%s'\n",
+					        pTpe->data.constant.pConstant);
+					break;
+				case FIELD:
+					dprintf("(FIELD), value: '%s'\n", pTpe->data.pPropRepl);
+					break;
+			}
+			pTpe = pTpe->pNext;
+		}
+		pTpl = pTpl->pNext; /* done, go next */
+	}
+}
+
+int tplGetEntryCount(struct template *pTpl)
+{
+	assert(pTpl != NULL);
+	return(pTpl->tpenElements);
+}
 /*
  * vi:set ai:
  */

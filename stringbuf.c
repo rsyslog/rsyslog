@@ -43,6 +43,7 @@
 #include <string.h>
 #include "liblogging-stub.h"
 #include "stringbuf.h"
+#include "srUtils.h"
 
 /* ################################################################# *
  * private members                                                   *
@@ -101,7 +102,6 @@ srRetVal sbStrBAppendStr(sbStrBObj *pThis, char* psz)
 }
 
 
-#if 0 /* we hope we don't need this ;) */
 srRetVal sbStrBAppendInt(sbStrBObj *pThis, int i)
 {
 	srRetVal iRet;
@@ -114,7 +114,6 @@ srRetVal sbStrBAppendInt(sbStrBObj *pThis, int i)
 
 	return sbStrBAppendStr(pThis, szBuf);
 }
-#endif
 
 
 srRetVal sbStrBAppendChar(sbStrBObj *pThis, char c)

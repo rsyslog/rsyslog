@@ -103,7 +103,7 @@ char copyright2[] =
 #endif /* not lint */
 
 #if !defined(lint) && !defined(NO_SCCS)
-static char sccsid[] = "@(#)rsyslogd.c	0.1 (Adiscon) 11/08/2004";
+static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 #endif /* not lint */
 
 /*
@@ -742,8 +742,12 @@ struct msg {
 #define SOURCE_STDIN 1
 #define SOURCE_UNIXAF 2
 #define SOURCE_INET 3
-/**/	short	iSeverity;		/* the severity 0..7 */
+/**/	short	iSeverity;	/* the severity 0..7 */
+/**/	char *pszSeverity;	/* severity as string... */
+/**/	int iLenSeverity;	/* ... and its length. */
 /**/	int	iFacility;	/* Facility code (up to 2^32-1) */
+/**/	char *pszFacility;	/* Facility as string... */
+/**/	int iLenFacility;	/* ... and its length. */
 /**/	char	*pszRawMsg;	/* message as it was received on the
 				 * wire. This is important in case we
 				 * need to preserve cryptographic verifiers.
@@ -760,6 +764,7 @@ struct msg {
 /**/	char	*pszRcvFrom;	/* System message was received from */
 /**/	int	iLenRcvFrom;	/* Length of pszRcvFrom */
 /**/	struct syslogTime tRcvdAt;/* time the message entered this program */
+/**/	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 chracters) */
 /**/	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 };
 
@@ -1163,7 +1168,7 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, unsigned char* psz
  *******************************************************************/
 
 /**
- * Format a syslogTimestamp to a text format.
+ * Format a syslogTimestamp to a RFC3164 timestamp sring.
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
@@ -1177,13 +1182,27 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 	assert(ts != NULL);
 	assert(pBuf != NULL);
 	
+	if(iLenBuf < 16)
+		return(0); /* we NEED 16 bytes */
+	return(snprintf(pBuf, iLenBuf, "%s %2d %2.2d:%2.2d:%2.2d",
+		monthNames[ts->month], ts->day, ts->hour,
+		ts->minute, ts->second
+		));
+}
+/**
+ * Format a syslogTimestamp to a text format.
+ * The caller must provide the timestamp as well as a character
+ * buffer that will receive the resulting string. The function
+ * returns the size of the timestamp written in bytes (without
+ * the string termnator). If 0 is returend, an error occured.
+ */
+int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+{
+	assert(ts != NULL);
+	assert(pBuf != NULL);
+	
 	if(ts->timeType == 1) {
-		if(iLenBuf < 16)
-			return(0); /* we NEED 16 bytes */
-		return(snprintf(pBuf, iLenBuf, "%s %2d %2.2d:%2.2d:%2.2d",
-			monthNames[ts->month], ts->day, ts->hour,
-			ts->minute, ts->second
-			));
+		return(formatTimestamp3164(ts, pBuf, iLenBuf));
 	}
 
 	if(ts->timeType == 2) {
@@ -1273,6 +1292,7 @@ struct msg* MsgConstruct()
 		pM->iSyslogVers = -1;
 		pM->iSeverity = -1;
 		pM->iFacility = -1;
+		pM->pszRcvdAt3164 = NULL;
 		pM->pszRawMsg = NULL;
 		pM->pszUxTradMsg = NULL;
 		pM->pszTAG = NULL;
@@ -1290,7 +1310,7 @@ struct msg* MsgConstruct()
 		pM->tTIMESTAMP.timeType = 0;
 	}
 
-printf("MsgConstruct\t0x%x\n", (int)pM);
+	dprintf("MsgConstruct\t0x%x\n", (int)pM);
 
 	return(pM);
 }
@@ -1301,10 +1321,11 @@ printf("MsgConstruct\t0x%x\n", (int)pM);
  */
 void MsgDestruct(struct msg * pM)
 {
-printf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
+	assert(pM != NULL);
+	dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
 	if(--pM->iRefCount == 0)
 	{
-printf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
+		dprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
 		if(pM->pszRawMsg != NULL)
 			free(pM->pszRawMsg);
 		if(pM->pszTAG != NULL)
@@ -1315,6 +1336,12 @@ printf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
 			free(pM->pszRcvFrom);
 		if(pM->pszMSG != NULL)
 			free(pM->pszMSG);
+		if(pM->pszFacility != NULL)
+			free(pM->pszFacility);
+		if(pM->pszSeverity != NULL)
+			free(pM->pszSeverity);
+		if(pM->pszRcvdAt3164 != NULL)
+			free(pM->pszRcvdAt3164);
 		free(pM);
 	}
 }
@@ -1330,7 +1357,7 @@ struct msg *MsgAddRef(struct msg *pM)
 {
 	assert(pM != NULL);
 	pM->iRefCount++;
-printf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);
+	dprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);
 	return(pM);
 }
 
@@ -1342,6 +1369,17 @@ int getMSGLen(struct msg *pM)
 }
 
 
+char *getUxTradMsg(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+	else
+		if(pM->pszUxTradMsg == NULL)
+			return "";
+		else
+			return pM->pszUxTradMsg;
+}
+
 char *getMSG(struct msg *pM)
 {
 	if(pM == NULL)
@@ -1351,6 +1389,18 @@ char *getMSG(struct msg *pM)
 			return "";
 		else
 			return pM->pszMSG;
+}
+
+
+char *getTAG(struct msg *pM)
+{
+	if(pM == NULL)
+		return "";
+	else
+		if(pM->pszTAG == NULL)
+			return "";
+		else
+			return pM->pszTAG;
 }
 
 
@@ -1484,6 +1534,82 @@ int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
 	memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg + 1);
 
 	return(0);
+}
+
+
+/* This function returns a string-representation of the 
+ * requested message property. This is a generic function used
+ * to abstract properties so that these can be easier
+ * queried. Returns NULL if property could not be found.
+ * Actually, this function is a big if..elseif. What it does
+ * is simply to map property names (from MonitorWare) to the
+ * message object data fields.
+ *
+ * In case we need string forms of propertis we do not
+ * yet have in string form, we do a memory allocation that
+ * is sufficiently large (in all cases). Once the string
+ * form has been obtained, it is saved until the Msg object
+ * is finally destroyed. This is so that we save the processing
+ * time in the (likely) case that this property is requested
+ * again. It also saves us a lot of dynamic memory management
+ * issues in the upper layers, because we so can guarantee that
+ * the buffer will remain static AND available during the lifetime
+ * of the object. Please note that both the max size allocation as
+ * well as keeping things in memory might like look like a 
+ * waste of memory (some might say it actually is...) - we
+ * deliberately accept this because performance is more important
+ * to us ;)
+ * rgerhards 2004-11-18
+ */
+char *MsgGetProp(struct msg *pMsg, char *pName)
+{
+	char *pRes; /* result pointer */
+	char *pBuf;
+	static char errMsg[] = "##Can't get property - memory allocation failed!##";
+
+	assert(pMsg != NULL);
+	assert(pName != NULL);
+
+	if(!strcmp(pName, "msg")) {
+		pRes = getMSG(pMsg);
+	} else if(!strcmp(pName, "UxTradMsg")) {
+		pRes = getUxTradMsg(pMsg);
+	} else if(!strcmp(pName, "hostname")) {
+		pRes = getHOSTNAME(pMsg);
+	} else if(!strcmp(pName, "syslogtag")) {
+		pRes = getTAG(pMsg);
+	} else if(!strcmp(pName, "syslogfacility")) {
+		if(pMsg->pszFacility == NULL) {
+			/* we use a 12 byte buffer - as of 
+			 * syslog-protocol, facility can go
+			 * up to 2^32 -1
+			 */
+			if((pMsg->pszFacility = malloc(12)) == NULL) return errMsg;
+			pMsg->iLenFacility =
+			   snprintf(pMsg->pszFacility, 12, "%d", pMsg->iFacility);
+		}
+		pRes = pMsg->pszFacility;
+	} else if(!strcmp(pName, "syslogpriority")) {
+		if(pMsg->pszSeverity == NULL) {
+			/* we use a 2 byte buffer - can only be one digit */
+			if((pMsg->pszSeverity = malloc(2)) == NULL) return errMsg;
+			pMsg->iLenSeverity =
+			   snprintf(pMsg->pszSeverity, 2, "%d", pMsg->iSeverity);
+		}
+		pRes = pMsg->pszSeverity;
+	} else if(!strcmp(pName, "timegenerated")) {
+		if(pMsg->pszRcvdAt3164 == NULL) {
+			if((pMsg->pszRcvdAt3164 = malloc(16)) == NULL) return errMsg;
+printf("fomrat returns %d\n",			formatTimestamp3164(&pMsg->tRcvdAt, pMsg->pszRcvdAt3164, 16)
+);
+printf("Timesamp: '%s'\n", pMsg->pszRcvdAt3164);
+		}
+		pRes = pMsg->pszRcvdAt3164;
+	} else {
+		pRes = "INVALID PROPERTY NAME"; /* NULL;*/
+	}
+	
+	return(pRes);
 }
 
 /* rgerhards 2004-11-09: end of helper routines. On to the 
@@ -2503,9 +2629,13 @@ void logmsg(pri, pMsg, flags)
  */
 void writeFile(struct filed *f)
 {
-	struct iovec iov[10];
-	register struct iovec *v = iov;
-	char szTIMESTAMP[40];
+	struct iovec *iov;
+	register struct iovec *v;
+	int iIOVused;
+	/*char szTIMESTAMP[40];*/
+	struct template *pTpl;
+	struct templateEntry *pTpe;
+	struct msg *pMsg;
 
 	assert(f != NULL);
 	/* f->f_file == -1 is an indicator that the we couldn't
@@ -2519,23 +2649,37 @@ void writeFile(struct filed *f)
 	 * code this part of the function. rgerhards 2004-11-11
 	 */
 
-	v->iov_base = " ";
-	v->iov_len = 1;
-	v++;
-	v->iov_len = formatTimestamp3164(&f->f_pMsg->tTIMESTAMP,
-		     szTIMESTAMP, sizeof(szTIMESTAMP) / sizeof(char));
-	v->iov_base = szTIMESTAMP;
-	v++;
-	v->iov_base = " ";
-	v->iov_len = 1;
-	v++;
+	 pMsg = f->f_pMsg;
 
-	/*v->iov_base = f->f_pMsg->pszRawMsg;
-	v->iov_len = f->f_pMsg->iLenRawMsg;*/
-	v->iov_base = f->f_pMsg->pszMSG;
-	v->iov_len = f->f_pMsg->iLenMSG;
-	v++;
+	/*if((pTpl = tplFind("TraditionalFormat", strlen("TraditionalFormat"))) == NULL) {*/
+	if((pTpl = tplFind("precise", strlen("precise"))) == NULL) {
+		dprintf("Could not find template '%s'\n", "precise");
+		return;
+	}
+	
+	/* TODO: allocate iov in struct filed! */
+	iov = calloc(tplGetEntryCount(pTpl), sizeof(struct iovec));
+	v = iov;
+	
+	iIOVused = 0;
+	pTpe = pTpl->pEntryRoot;
+	while(pTpe != NULL) {
+		if(pTpe->eEntryType == CONSTANT) {
+			v->iov_base = pTpe->data.constant.pConstant;
+			v->iov_len = pTpe->data.constant.iLenConstant;
+			++v;
+			++iIOVused;
+		} else 	if(pTpe->eEntryType == FIELD) {
+			v->iov_base = MsgGetProp(pMsg, pTpe->data.pPropRepl);
+			v->iov_len = strlen(v->iov_base);
+			/* TODO: performance optimize - can we obtain the length? */
+			++v;
+			++iIOVused;
+		}
+		pTpe = pTpe->pNext;
+	}
 
+#if 0
 	/* almost done - just let's check how we need to terminate
 	 * the message.
 	 */
@@ -2548,8 +2692,9 @@ void writeFile(struct filed *f)
 		v->iov_len = 1;
 	}
 	
+#endif
 again:
-	if (writev(f->f_file, iov, v - iov + 1) < 0) {
+	if (writev(f->f_file, iov, iIOVused) < 0) {
 		int e = errno;
 
 		/* If a named pipe is full, just ignore it for now
@@ -3447,6 +3592,7 @@ void init()
 				printf("\n");
 			}
 		}
+		tplPrintList();
 	}
 
 	if ( AcceptRemote )

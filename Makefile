@@ -63,8 +63,8 @@ test: syslog_tst ksym oops_test tsyslogd
 
 install: install_man install_exec
 
-syslogd: syslogd.o pidfile.o template.o stringbuf.o
-	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o stringbuf.o ${LIBS}
+syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o
+	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o stringbuf.o srUtils.o ${LIBS}
 
 klogd:	klogd.o syslog.o pidfile.o ksym.o ksym_mod.o
 	${CC} ${LDFLAGS} -o klogd klogd.o syslog.o pidfile.o ksym.o \
@@ -78,6 +78,9 @@ tsyslogd: syslogd.c version.h
 
 tklogd: klogd.c syslog.c ksym.c ksym_mod.c version.h
 	$(CC) $(CFLAGS) -g -DTESTING $(KLOGD_FLAGS) -o tklogd klogd.c syslog.c ksym.c ksym_mod.c
+
+srUtils.o: srUtils.c srUtils.h liblogging-stub.h
+	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c srUtils.c
 
 stringbuf.o: stringbuf.c stringbuf.h liblogging-stub.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c stringbuf.c
