@@ -953,7 +953,7 @@ void writeMySQL(register struct filed *f);
 void closeMySQL(register struct filed *f);
 #endif
 
-int getSubString(char **pSrc, char *pDst, char cSep, int len);
+int getSubString(char **pSrc, char *pDst, size_t DstSize, char cSep);
 
 #ifdef SYSLOG_UNIXAF
 static int create_inet_socket();
@@ -3101,7 +3101,6 @@ void cfline(line, f)
 	int singlpri = 0;
 	int ignorepri = 0;
 	int syncfile;
-	int iErr;
 #ifdef SYSLOG_INET
 	struct hostent *hp;
 #endif
@@ -3325,32 +3324,24 @@ void cfline(line, f)
 			 * >server,dbname,userid,password
 			 */
 		dprintf ("in init() - WITH_DB case \n");
-		dprintf("p is: %s\n", p);
 		f->f_type = F_MYSQL;
-		initMySQL(f);
 		p++;
 		dprintf("p is: %s\n", p);
 		
-		iErr = getSubString(&p, f->f_dbsrv, ',', 1);
-		iErr = getSubString(&p, f->f_dbname, ',', 1);
-		iErr = getSubString(&p, f->f_dbuid, ',', 1);
-		iErr = getSubString(&p, f->f_dbpwd, ',', 1);
+		/* TODO: We have to prove invalide input! */
+		if(getSubString(&p, f->f_dbsrv, MAXHOSTNAMELEN+1, ','))
+			exit(1);
+		if(getSubString(&p, f->f_dbname, _DB_MAXDBLEN+1, ','))
+			exit(1);
+		if(getSubString(&p, f->f_dbuid, _DB_MAXUNAMELEN+1, ','))
+			exit(1);
+		if(getSubString(&p, f->f_dbpwd, _DB_MAXPWDLEN+1, ','))
+			exit(1);
 		dprintf("f->f_dbsrv is: %s\n", f->f_dbsrv);
 		dprintf("f->f_dbname is: %s\n", f->f_dbname);
 		dprintf("f->f_dbuid is: %s\n", f->f_dbuid);
 		dprintf("f->f_dbpwd is: %s\n", f->f_dbpwd);
-		
-	/*	pLine = f->f_dbsrv;
-		while (*p != ',' || *p == '\0') {
-			*pLine = *p;
-			dprintf("pLine is: %s\n", pLine);
-			pLine++; p++;
-		}
-		pLine = '\0';
-		dprintf("p is: %s\n", p);
-		dprintf("pLine is: %s\n", pLine);
-		dprintf("f->f_dbsrv is: %s\n", f->f_dbsrv);
-	*/
+		initMySQL(f);
 		break;
 #endif	/* #ifdef WITH_DB */
 
@@ -3495,7 +3486,7 @@ void initMySQL(register struct filed *f)
 	
 	mysql_init(&f->f_hmysql);
 	/* Connect to database */
-	if (!mysql_real_connect(&f->f_hmysql, "localhost", "root", "", "testsyslog", 0, NULL, 0)) {
+	if (!mysql_real_connect(&f->f_hmysql, f->f_dbsrv, f->f_dbuid, f->f_dbpwd, f->f_dbname, 0, NULL, 0)) {
 		printf("cant connect to database \n");
 		exit(0);
 	}
@@ -3537,16 +3528,33 @@ void writeMySQL(register struct filed *f)
 
 /*
  * getSubString
+ *
+ * Copy a string byte by byte until the occurrence  
+ * of a given separator.
+ *
+ * \param ppSrc		Pointer to a pointer of the source array of characters 
+ * \param pDst		Pointer to the destination array of characters
+ * \param DstSize	Maximum numbers of characters to store
+ * \param cSep		Separator char
+ * \ret int		Returns 0 if no error occur
  */
-int getSubString(char **ppSrc,  char *pDst, char cSep, int len)
+int getSubString(char **ppSrc,  char *pDst, size_t DstSize, char cSep)
 {
 	char *pSrc = *ppSrc;
-	while(*pSrc != cSep && *pSrc != '\0') {
+	int iErr = 0; /* 0 = no error, >0 = error */
+	while(*pSrc != cSep && *pSrc != '\0' && DstSize>1) {
 		*pDst++ = *(pSrc)++;
+		DstSize--;
 	}
+	/* check if the Dst buffer was to small */
+	if (*pSrc != cSep && *pSrc != '\0')
+	{ 
+		dprintf("in getSubString, error Src buffer > Dst buffer\n");
+		iErr = 1;
+	}	
 	*ppSrc=pSrc+1;
 	*pDst = '\0';
-	return len;
+	return iErr;
 }
 
 /*
