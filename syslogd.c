@@ -577,6 +577,8 @@ static char sccsid[] = "@(#)rsyslogd.c	0.1 (Adiscon) 11/08/2004";
 #endif
 #include "version.h"
 
+#include <assert.h>
+
 #ifdef	WITH_DB
 #include "mysql/mysql.h" 
 #endif
@@ -697,18 +699,21 @@ const char *sys_h_errlist[] = {
  */
 struct msg {
 	short	iSyslogVers;	/* version of syslog protocol
-							* 0 - RFC 3164
-							* 1 - RFC draft-protocol-08
-							*/
-	short	iSever;			/* the severity 0..7 */
-	int		iFacility;		/* Facility code (up to 2^32-1) */
-	char	*pszRawMsg;		/* message as it was received on the
-							 * wire. This is important in case we
-							 * need to preserve cryptographic verifiers.
-							 */
+				 * 0 - RFC 3164
+				 * 1 - RFC draft-protocol-08
+				 */
+	short	iSeverity;		/* the severity 0..7 */
+	int	iFacility;	/* Facility code (up to 2^32-1) */
+	char	*pszRawMsg;	/* message as it was received on the
+				 * wire. This is important in case we
+				 * need to preserve cryptographic verifiers.
+				 */
+	char	*pszMSG;	/* the MSG part itself */
+	int	iLenMSG;	/* Length of the MSG part */
 	char	*pszTimestamp;	/* timestamp in its textual from (from the msg) */
-	char	*pszTag;		/* pointer to tag value */
-	char	*pszHostname;	/* HOSTNAME from syslog message */
+	char	*pszTag;	/* pointer to tag value */
+	char	*pszHOSTNAME;	/* HOSTNAME from syslog message */
+	int	iLenHOSTNAME;	/* Length of HOSTNAME */
 	char	*pszRcvFrom;	/* System message was received from */
 };
 
@@ -716,7 +721,7 @@ struct msg {
  * This structure represents the files that will have log
  * copies printed.
  * RGerhards 2004-11-08: Each instance of the filed structure 
- * actually describes an "output channel". This is important
+ * describes what I call an "output channel". This is important
  * to mention as we now allow database connections to be
  * present in the filed structure. If helps immensely, if we
  * think of it as the abstraction of an output channel.
@@ -753,6 +758,9 @@ struct filed {
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */
 	int	f_flags;			/* store some additional flags */
+	struct msg* pMsg;			/* pointer to the message (this wil
+					         * replace the other vars with msg
+						 * content later). */
 };
 
 /*
@@ -877,10 +885,10 @@ int main(int argc, char **argv);
 char **crunch_list(char *list);
 int usage(void);
 void untty(void);
-void printchopped(const char *hname, char *msg, int len, int fd);
-void printline(const char *hname, char *msg);
+void printchopped(char *hname, char *msg, int len, int fd);
+void printline(char *hname, char *msg);
 void printsys(char *msg);
-void logmsg(int pri, char *msg, const char *from, int flags);
+void logmsg(int pri, struct msg*, int flags);
 void fprintlog(register struct filed *f, char *from, int flags, char *msg);
 void endtty();
 void wallmsg(register struct filed *f, struct iovec *iov);
@@ -911,6 +919,118 @@ void closeMySQL(register struct filed *f);
 #ifdef SYSLOG_UNIXAF
 static int create_inet_socket();
 #endif
+
+/* rgerhards 2004-11-09: helper routines for handling the
+ * message object. We do only the most important things. It
+ * is our firm hope that this will sooner or later be
+ * obsoleted by liblogging.
+ */
+
+/* rgerhards 2004-11-09: the following function is used to 
+ * log emergency message when syslogd has no way of using
+ * regular meas of processing. It is supposed to be 
+ * primarily be called when there is memory shortage. As
+ * we now rely on dynamic memory allocation for the messages,
+ * we can no longer act correctly when we do not receive
+ * memory.
+ */
+void syslogdPanic(char* ErrMsg)
+{
+	/* TODO: provide a meaningful implementation! */
+	dprintf("syslogdPanic: '%s'\n", ErrMsg);
+}
+
+/* "Constructor" for a msg "object". Returns a pointer to
+ * the new object or NULL if no such object could be allocated.
+ * An object constructed via this function should only be destroyed
+ * via "MsgDestroy()".
+ */
+struct msg* MsgConstruct()
+{
+	struct msg *pM;
+
+	if((pM = malloc(sizeof(struct msg))) != NULL)
+	{ /* initialize members */
+		pM->iSyslogVers = -1;
+		pM->iSeverity = -1;
+		pM->iFacility = -1;
+		pM->pszRawMsg = NULL;
+		pM->pszTimestamp = NULL;
+		pM->pszTag = NULL;
+		pM->pszHOSTNAME = NULL;
+		pM->pszRcvFrom = NULL;
+		pM->pszMSG = NULL;
+		pM->iLenMSG = 0;
+		pM->iLenHOSTNAME = 0;
+	}
+
+	return(pM);
+}
+
+/* Destructor for a msg "object". Must be called to dispose
+ * of a msg object.
+ */
+void MsgDestruct(struct msg * pM)
+{
+	if(pM->pszRawMsg != NULL)
+		free(pM->pszRawMsg);
+	if(pM->pszTag != NULL)
+		free(pM->pszTag);
+	if(pM->pszHOSTNAME != NULL)
+		free(pM->pszHOSTNAME);
+	if(pM->pszRcvFrom != NULL)
+		free(pM->pszRcvFrom);
+	if(pM->pszMSG != NULL)
+		free(pM->pszMSG);
+	if(pM->pszTimestamp != NULL)
+		free(pM->pszTimestamp);
+	free(pM);
+}
+
+
+/* rgerhards 2004-11-09: set HOSTNAME in msg object
+ * returns 0 if OK, other value if not. In case of failure,
+ * logs error message and destroys msg object.
+ */
+int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
+{
+	assert(pMsg != NULL);
+	if(pMsg->pszHOSTNAME != NULL)
+		free(pMsg->pszHOSTNAME);
+
+	pMsg->iLenHOSTNAME = strlen(pszHOSTNAME);
+	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) == NULL) {
+		syslogdPanic("Could not allocate memory for pszHOSTNAME buffer.");
+		MsgDestruct(pMsg);
+		return(-1);
+	}
+	memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
+
+	return(0);
+}
+
+
+/* rgerhards 2004-11-09: set MSG in msg object
+ * returns 0 if OK, other value if not. In case of failure,
+ * logs error message and destroys msg object.
+ */
+int MsgSetMSG(struct msg *pMsg, char* pszMSG)
+{
+	pMsg->iLenMSG = strlen(pszMSG);
+	if((pMsg->pszMSG = malloc(pMsg->iLenMSG + 1)) == NULL) {
+		syslogdPanic("Could not allocate memory for pszMSG buffer.");
+		MsgDestruct(pMsg);
+		return(-1);
+	}
+	memcpy(pMsg->pszMSG, pszMSG, pMsg->iLenMSG + 1);
+
+	return(0);
+}
+
+/* rgerhards 2004-11-09: end of helper routines. On to the 
+ * "real" code ;)
+ */
+
 
 int main(argc, argv)
 	int argc;
@@ -1486,7 +1606,7 @@ void untty()
  */
 
 void printchopped(hname, msg, len, fd)
-	const char *hname;
+	char *hname;
 	char *msg;
 	int len;
 	int fd;
@@ -1567,18 +1687,19 @@ void printchopped(hname, msg, len, fd)
  */
 
 void printline(hname, msg)
-	const char *hname;
+	char *hname;
 	char *msg;
 {
 	register char *p, *q;
+	char *pEnd;
 	register unsigned char c;
-	char line[MAXLINE + 1];
 	int pri;
+	struct msg *pMsg;
 
 	/* test for special codes */
 	pri = DEFUPRI;
 	p = msg;
-
+dprintf("p: '%s' msg '%s'\n", p, msg);
 	if (*p == '<') {
 		pri = 0;
 		while (isdigit(*++p))
@@ -1591,16 +1712,32 @@ void printline(hname, msg)
 	if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
 		pri = DEFUPRI;
 
-	memset (line, 0, sizeof(line));
-	q = line;
+	/* Now it is time to create the message object (rgerhards)
+	*/
+	if((pMsg = MsgConstruct()) == NULL){
+		/* rgerhards 2004-11-09: calling panic might not be the
+		 * brightest idea - however, it is the best I currently have
+		 * (TODO: think a bit more about this).
+		 */
+		syslogdPanic("Could not construct Msg object.");
+		return;
+	}
+
+	/* got the buffer, now copy over the message. We use the "old" code
+	 * here, it doesn't make sense to optimize as that code will soon
+	 * be replaced.
+	 */
+#if 0	 /* TODO: REMOVE THIS LATER */
+	q = pMsg->pszMSG;
 	/* we soon need to support UTF-8, so we will soon need to remove
 	 * this. As a side-note, the current code destroys MBCS messages
 	 * (like Japanese).
 	 */
-	while ((c = *p++) && q < &line[sizeof(line) - 4]) {
+	pEnd = pMsg->pszMSG + pMsg->iLenMSG;	 /* was -4 */
+	while ((c = *p++) && q < pEnd) {
 		if (c == '\n')
 			*q++ = ' ';
-		else if (c < 040) {
+/* not yet!		else if (c < 040) {
 			*q++ = '^';
 			*q++ = c ^ 0100;
 		} else if (c == 0177 || (c & 0177) < 040) {
@@ -1608,12 +1745,19 @@ void printline(hname, msg)
 			*q++ = '0' + ((c & 0300) >> 6);
 			*q++ = '0' + ((c & 0070) >> 3);
 			*q++ = '0' + (c & 0007);
-		} else
+		}*/ else
 			*q++ = c;
 	}
 	*q = '\0';
+#endif
 
-	logmsg(pri, line, hname, SYNC_FILE);
+	if(MsgSetMSG(pMsg, p) != 0)
+		return;
+	if(MsgSetHOSTNAME(pMsg, hname) != 0)
+		return;
+
+dprintf("msg1: '%s'\n", pMsg->pszMSG);
+	logmsg(pri, pMsg, SYNC_FILE);
 	return;
 }
 
@@ -1686,23 +1830,66 @@ char *textpri(pri)
 
 time_t	now;
 
+/* rgerhards 2004-11-09: the following is a function that can be used
+ * to log a message orginating from the syslogd itself. In sysklogd code,
+ * this is done by simply calling logmsg(). However, logmsg() is changed in
+ * rsyslog so that it takes a msg "object". So it can no longer be called
+ * directly. This method here solves the need. It provides an interface that
+ * allows to construct a locally-generated message. Please note that this
+ * function here probably is only an interim solution and that we need to
+ * think on the best way to do this.
+ */
+void logmsgInternal(pri, msg, from, flags)
+	int pri;
+	char *msg;
+	char *from;
+	int flags;
+{
+	struct msg *pMsg;
+
+	if((pMsg = MsgConstruct()) == NULL){
+		/* rgerhards 2004-11-09: calling panic might not be the
+		 * brightest idea - however, it is the best I currently have
+		 * (TODO: think a bit more about this).
+		 */
+		syslogdPanic("Could not construct Msg object.");
+		return;
+	}
+
+	if(MsgSetMSG(pMsg, msg) != 0)
+		return;
+	if(MsgSetHOSTNAME(pMsg, from) != 0)
+		return;
+
+	logmsg(pri, pMsg, flags);
+	MsgDestruct(pMsg);
+}
+
 /*
  * Log a message to the appropriate log files, users, etc. based on
  * the priority.
  * rgerhards 2004-11-08: actually, this also decodes all but the PRI part.
+ * rgerhards 2004-11-09: ... but only, if syslogd could properly be initialized
+ *			 if not, we use emergency logging to the console and in
+ *                       this case, no further decoding happens.
+ * changed to no longer receive a plain message but a msg object instead.
  */
 
-void logmsg(pri, msg, from, flags)
+void logmsg(pri, pMsg, flags)
 	int pri;
-	char *msg;
-	const char *from;
+	struct msg *pMsg;
 	int flags;
 {
 	register struct filed *f;
 	int fac, prilev, lognum;
 	int msglen;
 	char *timestamp;
+	char *msg;
+	char *from;
 
+	assert(pMsg != NULL);
+	msg = pMsg->pszMSG;
+	from = pMsg->pszHOSTNAME;
 	dprintf("logmsg: %s, flags %x, from %s, msg %s\n", textpri(pri), flags, from, msg);
 
 #ifndef SYSV
@@ -1712,7 +1899,7 @@ void logmsg(pri, msg, from, flags)
 	/*
 	 * Check to see if msg looks non-standard.
 	 */
-	msglen = strlen(msg);
+	msglen = pMsg->iLenMSG;
 	if (msglen < 16 || msg[3] != ' ' || msg[6] != ' ' ||
 	    msg[9] != ':' || msg[12] != ':' || msg[15] != ' ')
 		flags |= ADDDATE;
@@ -1722,8 +1909,13 @@ void logmsg(pri, msg, from, flags)
 		timestamp = ctime(&now) + 4;
 	else {
 		timestamp = msg;
+		/* TODO: the following line does no longer work (we now have
+		 * our dedicated MSG buffer). However, we keep it for now, because
+		 * the problem will disappear once we have the full-blown parser.
+		 * rgerhards 2004-11-09
 		msg += 16;
 		msglen -= 16;
+		*/
 	}
 
 	/* extract facility and priority level */
@@ -1735,7 +1927,7 @@ void logmsg(pri, msg, from, flags)
 
 	/* log the message to the particular outputs */
 	if (!Initialized) {
-		/* If we reach this point, the daemon access FAILED. That is,
+		/* If we reach this point, the daemon initialization FAILED. That is,
 		 * syslogd is NOT actually running. So what we do here is just
 		 * initialize a pointer to the system console and then output
 		 * the message to the it. So at least we have a little
@@ -1754,8 +1946,9 @@ void logmsg(pri, msg, from, flags)
 #ifndef SYSV
 		(void) sigsetmask(omask);
 #endif
-		return;
+		return; /* we are done with emergency loging */
 	}
+
 #ifdef SYSV
 	for (lognum = 0; lognum <= nlogs; lognum++) {
 		f = &Files[lognum];
@@ -1798,16 +1991,26 @@ void logmsg(pri, msg, from, flags)
 			}
 		} else {
 			/* new line, save it */
-			if (f->f_prevcount)
+			if (f->f_prevcount) /* first check if we need to flush a prev msg */
 				fprintlog(f, (char *)from, 0, (char *)NULL);
 			f->f_prevpri = pri;
 			f->f_repeatcount = 0;
 			(void) strncpy(f->f_lasttime, timestamp, 15);
-			(void) strncpy(f->f_prevhost, from,
-					sizeof(f->f_prevhost));
+			memcpy(f->f_prevhost, from, pMsg->iLenHOSTNAME + 1);
+			/* we now check if we can save the message or not. If the message is
+			 * too large for the save buffer, we simply do not save it. In this case
+			 * the prevline is discarded.
+			 */
 			if (msglen < MAXSVLINE) {
 				f->f_prevlen = msglen;
-				(void) strcpy(f->f_prevline, msg);
+				/* rgerhards 2004-11-09: we use memcpy() instead of
+				 * strcpy() because we know the message size - so this is
+				 * faster (besides, it also allows us to deal with \0 in the
+				 * message (will become important later). Please note that we
+				 * need to add 1 byte to the message length so that the
+				 * string terminator will be copied, too
+				 */
+				memcpy(f->f_prevline, msg, msglen + 1);
 				fprintlog(f, (char *)from, flags, (char *)NULL);
 			} else {
 				f->f_prevline[0] = 0;
@@ -1824,6 +2027,19 @@ void logmsg(pri, msg, from, flags)
 } /* balance parentheses for emacs */
 #endif
 
+/* rgerhards 2004-11-09: fprintlog() is the actual driver for
+ * the output channel. It receives the channel description (f) as
+ * well as the message and outputs them according to the channel
+ * semantics. The message is typically already contained in the
+ * channel save buffer (f->f_prevline). This is not only the case
+ * when a message was already repeated but also when a new message
+ * arrived. Parameter "msg", which souns like the message content,
+ * actually contains the message only in those few cases where it
+ * was too large to fit into the channel save buffer.
+ *
+ * This whole function is probably about to change once we have the
+ * message abstraction.
+ */
 void fprintlog(f, from, flags, msg)
 	register struct filed *f;
 	char *from;
@@ -2253,7 +2469,7 @@ void domark()
 	now = time(0);
 	MarkSeq += TIMERINTVL;
 	if (MarkSeq >= MarkInterval) {
-		logmsg(LOG_INFO, "-- MARK --", LocalHostName, ADDDATE|MARK);
+		logmsgInternal(LOG_INFO, "-- MARK --", LocalHostName, ADDDATE|MARK);
 		MarkSeq = 0;
 	}
 
@@ -2300,7 +2516,7 @@ void logerror(type)
 	else
 		(void) snprintf(buf, sizeof(buf), "syslogd: %s: %s", type, strerror(errno));
 	errno = 0;
-	logmsg(LOG_SYSLOG|LOG_ERR, buf, LocalHostName, ADDDATE);
+	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, LocalHostName, ADDDATE);
 	return;
 }
 
@@ -2330,7 +2546,7 @@ void die(sig)
 		dprintf("syslogd: exiting on signal %d\n", sig);
 		(void) snprintf(buf, sizeof(buf), "exiting on signal %d", sig);
 		errno = 0;
-		logmsg(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
 
 	/* Close the UNIX sockets. */
@@ -2450,7 +2666,7 @@ void init()
 		 * abandoning the run in this case - but this, too, is not
 		 * very clever...
 		 */
-		dprintf("cannot open %s.\n", ConfFile);
+		dprintf("cannot open %s (%s).\n", ConfFile, strerror(errno));
 #ifdef SYSV
 		allocate_log();
 		f = &Files[lognum++];
@@ -2601,20 +2817,20 @@ void init()
 
 	if ( AcceptRemote )
 #ifdef DEBRELEASE
-		logmsg(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
 		       ": restart (remote reception)." , LocalHostName, \
 		       	ADDDATE);
 #else
-		logmsg(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL \
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL \
 		       ": restart (remote reception)." , LocalHostName, \
 		       	ADDDATE);
 #endif
 	else
 #ifdef DEBRELEASE
-		logmsg(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
 		       ": restart." , LocalHostName, ADDDATE);
 #else
-		logmsg(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL \
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "syslogd " VERSION "." PATCHLEVEL \
 		       ": restart." , LocalHostName, ADDDATE);
 #endif
 	(void) signal(SIGHUP, sighup_handler);
@@ -3061,5 +3277,3 @@ void writeMySQL(register struct filed *f)
  * End:
  * vi:set ai:
  */
-
-
