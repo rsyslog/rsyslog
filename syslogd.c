@@ -1,4 +1,8 @@
 /**
+ * TODO:
+ * - check if syslogd really needs to be shut down totally if
+ *   "syslog" service from etc/services can not be found
+ *
  * \brief This is what will become the rsyslogd daemon.
  *
  * Please note that as of now, most of the code in this file stems
@@ -44,7 +48,7 @@
  *       liblogging. These have actually not yet been merged to the
  *       source you see currently (but they hopefully will)
  *
- * \date 2004-11-04
+ * \date 2004-10-28
  *       Restarted the modifications of sysklogd. This time, we
  *       focus on a simpler approach first. The initial goal is to
  *       provide MySQL database support (so that syslogd can log
@@ -99,7 +103,7 @@ char copyright2[] =
 #endif /* not lint */
 
 #if !defined(lint) && !defined(NO_SCCS)
-static char sccsid[] = "@(#)syslogd.c	5.27 (Berkeley) 10/10/88";
+static char sccsid[] = "@(#)rsyslogd.c	0.1 (Adiscon) 11/08/2004";
 #endif /* not lint */
 
 /*
@@ -682,9 +686,34 @@ const char *sys_h_errlist[] = {
     "no address, look for MX record"				/* NO_ADDRESS */
  };
 
+/* rgerhards 2004-11-08: The following structure represents a
+ * syslog message. 
+ */
+struct msg {
+	short	iSyslogVers;	/* version of syslog protocol
+							* 0 - RFC 3164
+							* 1 - RFC draft-protocol-08
+							*/
+	short	iSever;			/* the severity 0..7 */
+	int		iFacility;		/* Facility code (up to 2^32-1) */
+	char	*pszRawMsg;		/* message as it was received on the
+							 * wire. This is important in case we
+							 * need to preserve cryptographic verifiers.
+							 */
+	char	*pszTimestamp;	/* timestamp in its textual from (from the msg) */
+	char	*pszTag;		/* pointer to tag value */
+	char	*pszHostname;	/* HOSTNAME from syslog message */
+	char	*pszRcvFrom;	/* System message was received from */
+};
+
 /*
  * This structure represents the files that will have log
  * copies printed.
+ * RGerhards 2004-11-08: Each instance of the filed structure 
+ * actually describes an "output channel". This is important
+ * to mention as we now allow database connections to be
+ * present in the filed structure. If helps immensely, if we
+ * think of it as the abstraction of an output channel.
  */
 
 struct filed {
@@ -695,7 +724,7 @@ struct filed {
 	short	f_file;			/* file descriptor */
 #ifdef	WITH_DB
 	MYSQL	f_hmysql;		/* handle to MySQL */
-	char	f_dbsrv;		/* IP or hostname 
+	char	f_dbsrv;		/* IP or hostname */
 #endif
 	time_t	f_time;			/* time this was last written */
 	u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
@@ -812,7 +841,6 @@ char	*LocalDomain;		/* our local domain name */
 int	InetInuse = 0;		/* non-zero if INET sockets are being used */
 int	finet = -1;		/* Internet datagram socket */
 int	LogPort;		/* port number for INET connections */
-int	Initialized = 0;	/* set when we have initialized ourselves */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds */
 int	MarkSeq = 0;		/* mark sequence number */
 int	NoFork = 0; 		/* don't fork - don't run in daemon mode */
@@ -821,6 +849,17 @@ char	**StripDomains = NULL;	/* these domains may be stripped before writing logs
 char	**LocalHosts = NULL;	/* these hosts are logged with their hostname */
 int	NoHops = 1;		/* Can we bounce syslog messages through an
 				   intermediate host. */
+int     Initialized = 0;        /* set when we have initialized ourselves
+                                 * rgerhards 2004-11-09: and by initialized, we mean that
+                                 * the configuration file could be properly read AND the
+                                 * syslog/udp port could be obtained (the later is debatable).
+                                 * It is mainly a setting used for emergency logging: if
+                                 * something really goes wild, we can not do as indicated in
+                                 * the log file, but we still log messages to the system
+                                 * console. This is probably the best that can be done in
+                                 * such a case.
+                                 */
+
 
 extern	int errno;
 
@@ -867,8 +906,7 @@ static int create_inet_socket();
 int main(argc, argv)
 	int argc;
 	char **argv;
-{
-	register int i;
+{	register int i;
 	register char *p;
 #if !defined(__GLIBC__)
 	int len, num_fds;
@@ -1429,6 +1467,13 @@ void untty()
 /*
  * Parse the line to make sure that the msg is not a composite of more
  * than one message.
+ * This function is called from ALL receivers, no matter how the message
+ * was received. rgerhards
+ * Partial messages are reconstruced via the parts[] table. This table is
+ * dynamically allocated on startup based on getdtablesize(). This design has
+ * its advantages, however it typically allocates way too many table
+ * entries. If we've nothing better to do, we might want to look into this.
+ * rgerhards 2004-11-08
  */
 
 void printchopped(hname, msg, len, fd)
@@ -1502,6 +1547,14 @@ void printchopped(hname, msg, len, fd)
 /*
  * Take a raw input line, decode the message, and print the message
  * on the appropriate log files.
+ * rgerhards 2004-11-08: TODO: change this function with decoder! Please note
+ * that this function does only a partial decoding. At best, it splits 
+ * the PRI part. No further decode happens. The rest is done in 
+ * logmsg(). Please note that printsys() calls logmsg() directly, so
+ * this is something we need to restructure once we are moving the
+ * real decoder in here. I now (2004-11-09) found that printsys() seems
+ * not to be called from anywhere. So we might as well decode the full
+ * message here.
  */
 
 void printline(hname, msg)
@@ -1531,6 +1584,10 @@ void printline(hname, msg)
 
 	memset (line, 0, sizeof(line));
 	q = line;
+	/* we soon need to support UTF-8, so we will soon need to remove
+	 * this. As a side-note, the current code destroys MBCS messages
+	 * (like Japanese).
+	 */
 	while ((c = *p++) && q < &line[sizeof(line) - 4]) {
 		if (c == '\n')
 			*q++ = ' ';
@@ -1552,9 +1609,14 @@ void printline(hname, msg)
 }
 
 
-
+#if 0
 /*
  * Take a raw input line from /dev/klog, split and format similar to syslog().
+ * rgerhards 2004-11-08: TODO: why is this a separate function - check later, not
+ * yet important.
+ * rgerhards 2004-11-09: interesting - this function seems to be no longer 
+ * called from anyone. For now, I am commenting it out via an #if 0 ... #endif.
+ * Let's see if we later can remove it (I am not confident enough right now).
  */
 
 void printsys(msg)
@@ -1592,9 +1654,12 @@ void printsys(msg)
 	}
 	return;
 }
+#endif  /* printsys() commented out rgerhards 2004-11-09 */
 
 /*
  * Decode a priority into textual information like auth.emerg.
+ * rgerhards: This needs to be changed for syslog-protocol - severities
+ * are then supported up to 2^32-1.
  */
 char *textpri(pri)
 	int pri;
@@ -1615,6 +1680,7 @@ time_t	now;
 /*
  * Log a message to the appropriate log files, users, etc. based on
  * the priority.
+ * rgerhards 2004-11-08: actually, this also decodes all but the PRI part.
  */
 
 void logmsg(pri, msg, from, flags)
@@ -1660,6 +1726,13 @@ void logmsg(pri, msg, from, flags)
 
 	/* log the message to the particular outputs */
 	if (!Initialized) {
+		/* If we reach this point, the daemon access FAILED. That is,
+		 * syslogd is NOT actually running. So what we do here is just
+		 * initialize a pointer to the system console and then output
+		 * the message to the it. So at least we have a little
+		 * chance that messages show up somewhere.
+		 * rgerhards 2004-11-09
+		 */
 		f = &consfile;
 		f->f_file = open(ctty, O_WRONLY|O_NOCTTY);
 
@@ -1668,9 +1741,6 @@ void logmsg(pri, msg, from, flags)
 			fprintlog(f, (char *)from, flags, msg);
 			(void) close(f->f_file);
 			f->f_file = -1;
-
-			/* TODO: Find out what happend here 
-			   and add code to close MySQL connection */ 
 		}
 #ifndef SYSV
 		(void) sigsetmask(omask);
@@ -2265,6 +2335,8 @@ void die(sig)
         for (i = 0; i < nfunix; i++)
 		if (funixn[i] && funix[i] != -1)
 			(void)unlink(funixn[i]);
+	/* rgerhards 2004-11-09 TODO: deinitialize MySQL here!
+	 */
 #ifndef TESTING
 	(void) remove_pid(PidFile);
 #endif
@@ -2352,7 +2424,7 @@ void init()
 		 */
 		nlogs = -1;
 		free((void *) Files);
-		Files = (struct filed *) 0;
+		Files = NULL;
 	}
 	
 
@@ -2364,6 +2436,11 @@ void init()
 
 	/* open the configuration file */
 	if ((cf = fopen(ConfFile, "r")) == NULL) {
+		/* rgerhards: this code is executed to set defaults when the
+		 * config file could not be opened. We might think about
+		 * abandoning the run in this case - but this, too, is not
+		 * very clever...
+		 */
 		dprintf("cannot open %s.\n", ConfFile);
 #ifdef SYSV
 		allocate_log();
@@ -2968,6 +3045,7 @@ void writeMySQL(register struct filed *f)
  *  c-basic-offset: 8
  *  tab-width: 8
  * End:
+ * vi:set ai:
  */
 
 
