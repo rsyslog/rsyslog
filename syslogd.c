@@ -730,6 +730,34 @@ struct syslogTime {
 };
 
 
+/* The following structure represents syslog message strings.
+ * The need for this structure arises from different formatting
+ * templates. All of this application expects strings to be
+ * present in read-only memory that is managed by the message
+ * object itself. This design allows to keep memory allocation
+ * extremely easy. However, the drawback is that we must
+ * preserve all strings (including custom-formatted ones)
+ * during the lifetime of a message. We solve this by
+ * providing the message string entry linked list. Whenever
+ * a custom formatted property is to be generated, we link
+ * it to this list. We use the pointer to the template entry
+ * as a key - because that template entry is read-only too
+ * (and never moved around in memory). In the worst case, we
+ * may create a duplicate string, but this is less effort than
+ * keeping track of which format was already generated. This
+ * design is relatively lightweight and the author hopes that
+ * it is a good compromise between simplicity, speed and memory
+ * used. Most importantly, we do NOT expect that there are many
+ * custom-formatted properties in each message. Memory in this
+ * structure is freed only when the MSG object is destroyed.
+ * rgerhards 2004-11-23
+ */
+struct msgCustomString {
+	struct templateEntry *pKey;
+	char *psz;	/* the string itself */
+	struct msgCustomString *pNext;
+};
+
 /* rgerhards 2004-11-08: The following structure represents a
  * syslog message. 
  *
@@ -746,11 +774,11 @@ struct syslogTime {
  * called each time a "copy" is stored somewhere.
  */
 struct msg {
-/**/	int	iRefCount;	/* reference counter (0 = unused) */
-/**/	short	iSyslogVers;	/* version of syslog protocol
+	int	iRefCount;	/* reference counter (0 = unused) */
+	short	iSyslogVers;	/* version of syslog protocol
 				 * 0 - RFC 3164
 				 * 1 - RFC draft-protocol-08 */
-/**/	short	iMsgSource;	/* where did the msg originate from? */
+	short	iMsgSource;	/* where did the msg originate from? */
 #define SOURCE_INTERNAL 0
 #define SOURCE_STDIN 1
 #define SOURCE_UNIXAF 2
@@ -784,6 +812,8 @@ struct msg {
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 chracters) */
 	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 chracters) */
+	struct msgCustomString *pCustomStringsRoot;
+	struct msgCustomString *pCustomStringsLast;
 };
 
 /*
@@ -1216,6 +1246,50 @@ int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst)
 }
 
 /**
+ * Format a syslogTimestamp to a RFC3339 timestamp string (as
+ * specified in syslog-protocol).
+ * The caller must provide the timestamp as well as a character
+ * buffer that will receive the resulting string. The function
+ * returns the size of the timestamp written in bytes (without
+ * the string terminator). If 0 is returend, an error occured.
+ */
+int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+{
+	int iRet;
+
+	assert(ts != NULL);
+	assert(pBuf != NULL);
+	
+	if(iLenBuf < 20)
+		return(0); /* we NEED at least 20 bytes */
+
+	if(ts->secfracPrecision > 0)
+	{	/* we now need to include fractional seconds. While doing so, we must look at
+		 * the precision specified. For example, if we have millisec precision (3 digits), a
+		 * secFrac value of 12 is not equivalent to ".12" but ".012". Obviously, this
+		 * is a huge difference ;). To avoid this, we first create a format string with
+		 * the specific precision and *then* use that format string to do the actual
+		 * formating (mmmmhhh... kind of self-modifying code... ;)).
+		 */
+		char szFmtStr[64];
+		/* be careful: there is ONE actual %d in the format string below ;) */
+		snprintf(szFmtStr, sizeof(szFmtStr),
+		         "%%04d-%%02d-%%02dT%%02d:%%02d:%%02d.%%0%dd%%c%%02d:%%02d ",
+			ts->secfracPrecision);
+		iRet = snprintf(pBuf, iLenBuf, szFmtStr, ts->year, ts->month, ts->day,
+			        ts->hour, ts->minute, ts->second, ts->secfrac,
+				ts->OffsetMode, ts->OffsetHour, ts->OffsetMinute);
+	}
+	else
+		iRet = snprintf(pBuf, iLenBuf,
+		 		"%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%c%2.2d:%2.2d ",
+				ts->year, ts->month, ts->day,
+			        ts->hour, ts->minute, ts->second,
+				ts->OffsetMode, ts->OffsetHour, ts->OffsetMinute);
+	return(iRet);
+}
+
+/**
  * Format a syslogTimestamp to a RFC3164 timestamp sring.
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
@@ -1237,6 +1311,7 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 		ts->minute, ts->second
 		));
 }
+
 /**
  * Format a syslogTimestamp to a text format.
  * The caller must provide the timestamp as well as a character
@@ -1324,6 +1399,50 @@ void syslogdPanic(char* ErrMsg)
  * obsoleted by liblogging.
  */
 
+/* Find a custom string based on its Key. Returns a pointer
+ * to the custom string object if found or NULL otherwise.
+ */
+struct msgCustomString *FindCustomString(struct msg *pMsg, struct templateEntry *pKey)
+{
+	assert(pMsg != NULL);
+	struct msgCustomString *pCS;
+
+	for(pCS = pMsg->pCustomStringsRoot ; pCS != NULL ; pCS = pCS->pNext) {
+		if(pCS->pKey == pKey)
+			return pCS;	/* done! */
+	}
+	
+	return NULL; 	/* not found */
+}
+
+
+/* Create a custom string object and add it to the msg
+ * object. Returns NULL if failed, pointer to object
+ * otherwise. NO buffer for the string itself is allocated.
+ */
+struct msgCustomString *AddCustomString(struct msg *pMsg, struct templateEntry *pKey)
+{
+	assert(pMsg != NULL);
+	struct msgCustomString *pCS;
+
+	if((pCS = calloc(1, sizeof(struct msgCustomString))) == NULL)
+		return NULL;
+
+	/* Now link it to the msg object */
+	if(pMsg->pCustomStringsLast == NULL) {
+		pMsg->pCustomStringsLast = pCS;
+		pMsg->pCustomStringsRoot = pCS;
+	} else {
+		pMsg->pCustomStringsLast->pNext = pCS;
+		pMsg->pCustomStringsLast = pCS;
+	}
+
+	pCS->pKey = pKey;
+
+	return(pCS);
+}
+
+
 /* "Constructor" for a msg "object". Returns a pointer to
  * the new object or NULL if no such object could be allocated.
  * An object constructed via this function should only be destroyed
@@ -1353,6 +1472,8 @@ struct msg* MsgConstruct()
  */
 void MsgDestruct(struct msg * pM)
 {
+	struct msgCustomString *pCustString;
+	struct msgCustomString *p2Free;
 	assert(pM != NULL);
 	dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
 	if(--pM->iRefCount == 0)
@@ -1382,6 +1503,13 @@ void MsgDestruct(struct msg * pM)
 			free(pM->pszTIMESTAMP_MySQL);
 		if(pM->pszPRI != NULL)
 			free(pM->pszPRI);
+		/* Now free the custom string */
+		pCustString = pM->pCustomStringsRoot;
+		while(pCustString != NULL) {
+			p2Free = pCustString;
+			pCustString = pCustString->pNext;
+			free(p2Free);
+		}
 		free(pM);
 	}
 }
@@ -1789,9 +1917,32 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe)
 		  || !strcmp(pName, "TIMESTAMP")) {
 		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 	} else {
-		pRes = "INVALID PROPERTY NAME"; /* NULL;*/
+		pRes = "**INVALID PROPERTY NAME**";
 	}
 	
+	/* if below very quick and dirty, must be done right.
+	 * currently, it is only a tester!!!
+	 * TODO: implement!
+	 */
+	if(pTpe->data.field.eCaseConv == tplCaseConvUpper) {
+		/* we need to obtain a private copy */
+		int iLen = strlen(pRes);
+		struct msgCustomString *pCS;
+		char *pBuf = malloc((iLen + 1) * sizeof(char));
+		if(pBuf == NULL)
+			return "**OUT OF MEMORY**";
+		pCS = AddCustomString(pMsg, pTpe);
+		if(pCS == NULL)
+			return "**OUT OF MEMORY**";
+		pCS->psz = pBuf;
+		while(*pRes) {
+			*pBuf++ = toupper(*pRes);
+			++pRes;
+		}
+		*pBuf = '\0';
+		pRes = pCS->psz;
+	}
+
 	dprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); 
 	return(pRes);
 }
