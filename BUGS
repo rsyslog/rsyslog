@@ -1,0 +1,7 @@
+This file contains know bugs and incompatibilities
+
+REPEATED LOG LINES
+   If multiple log lines with the exact same content are received,
+   the duplicates are NOT suppressed. This is done by sysklogd
+   in all cases. We plan to add this as an optional feature,
+   but as of now every line is logged.
