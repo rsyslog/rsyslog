@@ -3,8 +3,8 @@
 CC= gcc
 #CFLAGS= -g -DSYSV -Wall
 LDFLAGS= -g
-#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
-CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB
+CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
+#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB
 LDFLAGS= -s
 
 # Look where your install program is.
@@ -13,7 +13,7 @@ BINDIR = /usr/sbin
 MANDIR = /usr/man
 
 # Uncommenting the following to use mysql.
-LIBS = -lmysqlclient #/var/lib/mysql/mysql 
+#LIBS = -lmysqlclient #/var/lib/mysql/mysql 
 
 # There is one report that under an all ELF system there may be a need to
 # explicilty link with libresolv.a.  If linking syslogd fails you may wish

@@ -2116,7 +2116,7 @@ int main(argc, argv)
 			StripDomains = crunch_list(optarg);
 			break;
 		case 'v':
-			printf("rsyslogd %s.%s\n", VERSION, PATCHLEVEL);
+			printf("syslogd %s.%s\n", VERSION, PATCHLEVEL);
 			exit (0);
 		case '?':
 		default:
@@ -2431,7 +2431,7 @@ int main(argc, argv)
 
 int usage()
 {
-	fprintf(stderr, "usage: rsyslogd [-drvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
+	fprintf(stderr, "usage: syslogd [-drvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
 		" [-s domainlist] [-f conffile]\n");
 	exit(1);
 }
@@ -4820,7 +4820,7 @@ void initMySQL(register struct filed *f)
 		else
 		{
 			f->f_timeResumeOnError = 0; /* We have a working db connection */
-			dprintf("connect successfully to db\n");
+			dprintf("connected successfully to db\n");
 		}
 	} while (mysql_errno(&f->f_hmysql) && iCounter<2);
 }
@@ -4939,7 +4939,7 @@ void DBErrorHandler(register struct filed *f)
  * a little bit longer. It also check if the DB hanlde is still valid. 
  * If it is necessary, it takes action to reinitiate the db connection.
  *
- * \ret int		Returns 0 if no error dedected.
+ * \ret int		Returns 0 if successful (no error)
  */ 
 int checkDBErrorState(register struct filed *f)
 {
