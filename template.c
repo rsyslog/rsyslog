@@ -93,7 +93,9 @@ static int do_Constant(char **pp, struct template *pTpl)
 	if((pStrB = sbStrBConstruct()) == NULL)
 		 return 1;
 	sbStrBSetAllocIncrement(pStrB, 32);
-	/* TODO: implement escape characters! */
+	/* process the message and expand escapes
+	 * (additional escapes can be added here if needed)
+	 */
 	while(*p && *p != '%' && *p != '\"') {
 		if(*p == '\\') {
 			switch(*++p) {
@@ -143,7 +145,11 @@ static int do_Constant(char **pp, struct template *pTpl)
 	}
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
-		/* TODO: add handler */
+		/* OK, we are out of luck. Let's invalidate the
+		 * entry and that's it.
+		 * TODO: add panic message once we have a mechanism for this
+		 */
+		pTpe->eEntryType = UNDEFINED;
 		return 1;
 	}
 	pTpe->eEntryType = CONSTANT;
@@ -219,6 +225,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 	char *p;
 	sbStrBObj *pStrB;
 	struct templateEntry *pTpe;
+	int iNum;	/* to compute numbers */
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -243,12 +250,17 @@ static int do_Parameter(char **pp, struct template *pTpl)
 	/* got the name*/
 	pTpe->data.field.pPropRepl = sbStrBFinish(pStrB);
 
-
 	/* check frompos */
 	if(*p == ':') {
 		++p; /* eat ':' */
+		iNum = 0;
+		while(isdigit(*p))
+			iNum = iNum * 10 + *p++ - '0';
+		pTpe->data.field.iFromPos = iNum;
+		/* skip to next known good */
 		while(*p && *p != '%' && *p != ':') {
-			/* for now, just skip it */
+			/* TODO: complain on extra characters */
+			dprintf("error: extra character in frompos: '%s'\n", p);
 			++p;
 		}
 	}
@@ -256,10 +268,23 @@ static int do_Parameter(char **pp, struct template *pTpl)
 	/* check topos */
 	if(*p == ':') {
 		++p; /* eat ':' */
+		iNum = 0;
+		while(isdigit(*p))
+			iNum = iNum * 10 + *p++ - '0';
+		pTpe->data.field.iToPos = iNum;
+		/* skip to next known good */
 		while(*p && *p != '%' && *p != ':') {
-			/* for now, just skip it */
+			/* TODO: complain on extra characters */
+			dprintf("error: extra character in frompos: '%s'\n", p);
 			++p;
 		}
+	}
+
+	/* TODO: add more sanity checks. For now, we do the bare minimum */
+	if(pTpe->data.field.iToPos < pTpe->data.field.iFromPos) {
+		iNum = pTpe->data.field.iToPos;
+		pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
+		pTpe->data.field.iFromPos = iNum;
 	}
 
 	/* check options */
@@ -293,7 +318,7 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 		return NULL;
 	
 	pTpl->iLenName = strlen(pName);
-	pTpl->pszName = (char*) malloc(sizeof(char) * pTpl->iLenName);
+	pTpl->pszName = (char*) malloc(sizeof(char) * (pTpl->iLenName + 1));
 	if(pTpl->pszName == NULL) {
 		dprintf("tplAddLine could not alloc memory for template name!");
 		pTpl->iLenName = 0;
@@ -305,20 +330,6 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 	}
 	memcpy(pTpl->pszName, pName, pTpl->iLenName + 1);
 
-#if 0
-	pTpl->iLenTemplate = strlen(pName);
-	pTpl->pszTemplate = (char*) malloc(sizeof(char) * pTpl->iLenTemplate);
-	if(pTpl->pszTemplate == NULL) {
-		/rintf("could not alloc memory Template"); /* TODO: change to dprintf()! */
-		free(pTpl->pszName);
-		pTpl->pszName = NULL;
-		pTpl->iLenName = 0;
-		pTpl->iLenTemplate = 0;
-		return NULL;
-		/* see note on leak above */
-	}
-#endif
-
 	/* now actually parse the line */
 	p = *ppRestOfConfLine;
 	assert(p != NULL);
@@ -327,8 +338,14 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 		++p;
 	
 	if(*p != '"') {
-		dprintf("Template invalid, does not start with '\"'!\n");
-		/* TODO: Free mem! */
+		dprintf("Template '%s' invalid, does not start with '\"'!\n", pTpl->pszName);
+		/* we simply make the template defunct in this case by setting
+		 * its name to a zero-string. We do not free it, as this would
+		 * require additional code and causes only a very small memory
+		 * consumption. Memory is freed, however, in normal operation
+		 * and most importantly by HUPing syslogd.
+		 */
+		*pTpl->pszName = '\0';
 		return NULL;
 	}
 	++p;
@@ -363,7 +380,7 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 			++p;
 		
 		if(*p != ',')
-			return(pTpl);
+			break; /*return(pTpl);*/
 		++p; /* eat ',' */
 
 		while(isspace(*p))/* skip whitespace */
@@ -470,6 +487,12 @@ void tplPrintList(void)
 				case tplCaseConvUpper:
 					dprintf("[Converted to Upper Case] ");
 					break;
+				}
+				if(pTpe->data.field.iFromPos != 0 ||
+				   pTpe->data.field.iToPos != 0) {
+				  	dprintf("[substring, from character %d to %d] ",
+						pTpe->data.field.iFromPos,
+						pTpe->data.field.iToPos);
 				}
 				break;
 			}

@@ -49,7 +49,8 @@ all: syslogd
 
 test: syslog_tst ksym oops_test tsyslogd
 
-install: install_man install_exec
+#install: install_man install_exec
+install: install_exec
 
 syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o
 	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o stringbuf.o srUtils.o ${LIBS}
@@ -84,8 +85,12 @@ clean:
 clobber: clean
 	rm -f syslogd klogd ksym syslog_tst oops_test TAGS tsyslogd tklogd
 
+install-replace: syslogd
+	${INSTALL} -b -m 500 -s syslogd ${BINDIR}/syslogd
+
 install_exec: syslogd
-	${INSTALL} -m 500 -s syslogd ${BINDIR}/syslogd
+	cp ${BINDIR}/syslogd ${BINDIR}/syslogd-previous
+	${INSTALL} -b -m 500 -s syslogd ${BINDIR}/syslogd
 
 # man not yet supported ;)
 #install_man:

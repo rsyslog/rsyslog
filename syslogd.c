@@ -8,6 +8,7 @@
  * - make sure that syslogd handles the case that NO template
  *   is specified in an action line (hint: keep action type
  *   to F_UNUSED unless a proper template could be found)
+ *   ONLY TO BE DONE FOR MySQL logging, rest is fixed rgerhards 2004-12-02
  *
  * \brief This is what will become the rsyslogd daemon.
  *
@@ -1308,8 +1309,7 @@ int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 	}
 
 	if(ts->timeType == 2) {
-		return(snprintf(pBuf, iLenBuf, "NOT YET IMPLEMENTED"));
-		/* TODO: Implement! */
+		return(formatTimestamp3339(ts, pBuf, iLenBuf));
 	}
 
 	return(0);
@@ -1575,21 +1575,6 @@ char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
 	return "INVALID eFmt OPTION!";
 }
 
-#if 0
-
-char *getTimeGenerated(struct msg *pM)
-{
-	if(pM == NULL)
-		return "";
-
-	if(pM->pszRcvdAt3164 == NULL) {
-		if((pM->pszRcvdAt3164 = malloc(16)) == NULL) return "";
-		formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
-	}
-
-	return(pM->pszRcvdAt3164);
-}
-#endif
 
 char *getSeverity(struct msg *pM)
 {
@@ -1881,9 +1866,60 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 		pRes = "**INVALID PROPERTY NAME**";
 	}
 	
-	/* if below very quick and dirty, must be done right.
-	 * currently, it is only a tester!!!
-	 * TODO: implement!
+	/* Now check if we need to make "temporary" transformations (these
+	 * are transformations that do not go back into the message -
+	 * memory must be allocated for them!).
+	 */
+	
+	/* substring extraction */
+	if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
+		/* we need to obtain a private copy */
+		int iLen;
+		int iFrom, iTo;
+		char *pBufStart;
+		char *pBuf;
+		iFrom = pTpe->data.field.iFromPos;
+		iTo = pTpe->data.field.iToPos;
+		/* need to zero-base to and from (they are 1-based!) */
+		if(iFrom > 0)
+			--iFrom;
+		if(iTo > 0)
+			--iTo;
+		iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
+		pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
+		if(pBuf == NULL) {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			*pbMustBeFreed = 0;
+			return "**OUT OF MEMORY**";
+		}
+		if(iFrom) {
+		/* skip to the start of the substring (can't do pointer arithmetic
+		 * because the whole string might be smaller!!)
+		 */
+		//	++iFrom; /* nbr of chars to skip! */
+			while(*pRes && iFrom) {
+			printf("%c", *pRes);
+				--iFrom;
+				++pRes;
+			}
+		}
+		/* OK, we are at the begin - now let's copy... */
+		while(*pRes && iLen) {
+			printf("%c", *pRes);
+			*pBuf++ = *pRes;
+			++pRes;
+			--iLen;
+		}
+		*pBuf = '\0';
+		if(*pbMustBeFreed == 1)
+			free(pRes);
+		pRes = pBufStart;
+		*pbMustBeFreed = 1;
+	}
+
+	/* case conversations (should go last, because so we are able to
+	 * work on the smalles possible buffer).
 	 */
 	if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
 		/* we need to obtain a private copy */
@@ -1891,8 +1927,12 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 		char *pBufStart;
 		char *pBuf;
 		pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
-		if(pBuf == NULL)
+		if(pBuf == NULL) {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			*pbMustBeFreed = 0;
 			return "**OUT OF MEMORY**";
+		}
 		while(*pRes) {
 			*pBuf++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
 			          toupper(*pRes) : tolower(*pRes);
@@ -1900,11 +1940,13 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 			++pRes;
 		}
 		*pBuf = '\0';
+		if(*pbMustBeFreed == 1)
+			free(pRes);
 		pRes = pBufStart;
 		*pbMustBeFreed = 1;
 	}
 
-	dprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); 
+	/*dprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
 	return(pRes);
 }
 
@@ -2575,7 +2617,7 @@ void printchopped(hname, msg, len, fd, iSource)
 
 /* Take a raw input line, decode the message, and print the message
  * on the appropriate log files.
- * rgerhards 2004-11-08: TODO: change this function with decoder! Please note
+ * rgerhards 2004-11-08: Please note
  * that this function does only a partial decoding. At best, it splits 
  * the PRI part. No further decode happens. The rest is done in 
  * logmsg(). Please note that printsys() calls logmsg() directly, so
@@ -2630,11 +2672,11 @@ void printline(hname, msg, iSource)
 	 * be replaced.
 	 */
 #if 0	 /* TODO: REMOVE THIS LATER */
-	q = pMsg->pszMSG;
 	/* we soon need to support UTF-8, so we will soon need to remove
 	 * this. As a side-note, the current code destroys MBCS messages
 	 * (like Japanese).
 	 */
+	q = pMsg->pszMSG;
 	pEnd = pMsg->pszMSG + pMsg->iLenMSG;	 /* was -4 */
 	while ((c = *p++) && q < pEnd) {
 		if (c == '\n')
@@ -2670,29 +2712,6 @@ void printline(hname, msg, iSource)
 	 * to it.
 	 */
 	if(MsgSetUxTradMsg(pMsg, p) != 0) return;
-#if 0
-	/* Oh, oh... its not that easy, because we also need the UxTradMsg
-	 * for further parsing. So far, code is disabled, looking for better
-	 * ideas. I leave it in for now so that I have a reminder item.
-	 * TODO: fix!
-	 * rgerhards 2004-11-19
-	 */
-	if(iSource != SOURCE_INET) {
-		sbStrBObj *pStrB;
-		if((pStrB = sbStrBConstruct()) == NULL) {
-			/* oops - no mem, let's try to set the message we have
-			 * most probably, this will fail, too. But at least we
-			 * can try... */
-			if(MsgSetUxTradMsg(pMsg, p) != 0) return;
-		}
-		sbStrBAppendStr(pStrB, hname);
-		sbStrBAppendChar(pStrB, ' ');
-		sbStrBAppendStr(pStrB, p+15);
-		MsgAssignUxTradMsg(pMsg, sbStrBFinish(pStrB));
-	} else {
-		if(MsgSetUxTradMsg(pMsg, p) != 0) return;
-	}
-#endif
 
 	logmsg(pri, pMsg, SYNC_FILE);
 
@@ -2987,7 +3006,6 @@ void logmsg(pri, pMsg, flags)
  */
 void doSQLEmergencyEscape(register char *p)
 {
-printf("In doSQLEmergencyEscape '%s'\n", p);
 	while(*p) {
 		if(*p == '\'')
 			*p = '"';
@@ -3015,7 +3033,6 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 	assert(pLen != NULL);
 	assert(pbMustBeFreed != NULL);
 
-printf("In doSQLEscape '%s'\n", *pp);
 	/* first check if we need to do anything at all... */
 	for(p = *pp ; *p && *p != '\'' ; ++p)
 		;
@@ -3131,7 +3148,7 @@ void iovDeleteFreeableStrings(struct filed *f)
 	for(i = 0 ; i < f->f_iIovUsed ; ++i) {
 		/* free to-be-freed strings in iovec */
 		if(*(f->f_bMustBeFreed + i)) {
-			printf("DELETE freeable string '%s'\n", (char*)(f->f_iov + i)->iov_base);
+			dprintf("DELETE freeable string '%s'\n", (char*)(f->f_iov + i)->iov_base);
 			free((f->f_iov + i)->iov_base);
 			*(f->f_bMustBeFreed) = 0;
 		}
@@ -4571,7 +4588,6 @@ void cfline(line, f)
 		/* done, now check if we have a template name
 		 * TODO: we need to handle the case where i >= MAXUNAME!
 		 */
-printf("USer, type %d\n", f->f_type);
 		szTemplateName[0] = '\0';
 		if(*p == ';') {
 			/* we have a template specifier! */
@@ -4582,7 +4598,6 @@ printf("USer, type %d\n", f->f_type);
 		if(szTemplateName[0] == '\0')
 			strcpy(szTemplateName, " StdUsrMsgFmt");
 		cflineSetTemplateAndIOV(f, szTemplateName);
-printf("OUT USer, type %d\n", f->f_type);
 		break;
 	}
 	return;
