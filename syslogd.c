@@ -3833,6 +3833,13 @@ void die(sig)
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
 
+	/* Close the MySQL connection */
+	for (lognum = 0; lognum <= nlogs; lognum++) {
+		f = &Files[lognum];
+		if (f->f_type == F_MYSQL)
+			closeMySQL(f);
+	}
+
 	/* Close the UNIX sockets. */
         for (i = 0; i < nfunix; i++)
 		if (funix[i] != -1)
@@ -3844,8 +3851,7 @@ void die(sig)
         for (i = 0; i < nfunix; i++)
 		if (funixn[i] && funix[i] != -1)
 			(void)unlink(funixn[i]);
-	/* rgerhards 2004-11-09 TODO: deinitialize MySQL here!
-	 */
+
 #ifndef TESTING
 	(void) remove_pid(PidFile);
 #endif
@@ -4805,7 +4811,11 @@ void initMySQL(register struct filed *f)
 {
 	int iCounter = 0;
 	assert(f != NULL);
-	printf("in initMysql() \n");
+
+	if (checkDBErrorState(f))
+		return;
+	
+	dprintf("in initMysql() \n");
 	
 	mysql_init(&f->f_hmysql);
 	do {
@@ -4833,7 +4843,7 @@ void initMySQL(register struct filed *f)
 void closeMySQL(register struct filed *f)
 {
 	assert(f != NULL);
-	printf("in closeMySQL\n");
+	dprintf("in closeMySQL\n");
 	mysql_close(&f->f_hmysql);	
 }
 
@@ -4887,7 +4897,7 @@ void writeMySQL(register struct filed *f)
 				DBErrorHandler(f);	
 		}
 		else {
-			dprintf("db insert sucessfully\n");
+			/* dprintf("db insert sucessfully\n"); */
 		}
 	} while (mysql_errno(&f->f_hmysql) && iCounter<2);
 }
@@ -4957,16 +4967,20 @@ int checkDBErrorState(register struct filed *f)
 	   yet, we return an error status. */  
 	if (f->f_timeResumeOnError > now)
 	{
-		dprintf("Wait time is not over yet.\n");
+		/* dprintf("Wait time is not over yet.\n"); */
 		return 1;
 	}
 	 	
 	/* Ok, we can try to resume the database logging. First
-	   we have to reset the status to 0 (timeResumeOnError).
-	   Then we check if we need to reinitiate the database
-	   connection. We reinitiate if we know that the database
-	   handle is invalid or if an unkown error appeared. */
-/* TODO: this is not really implemented yet */
+	   we have to reset the status (timeResumeOnError) and
+	   the last error no. */
+	/* TODO:
+	 * To improve this code it would be better to check 
+	   if we really need to reInit the db connection. If 
+	   only the insert failed and the db conncetcion is
+	   still valid, we need no reInit. 
+	   Of course, if an unkown error appeared, we should
+	   reInit. */
 	f->f_timeResumeOnError = 0;
 	f->f_iLastDBErrNo = 0; 
 	reInitMySQL(f);
