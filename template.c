@@ -81,6 +81,7 @@ static int do_Constant(char **pp, struct template *pTpl)
 	register char *p;
 	sbStrBObj *pStrB;
 	struct templateEntry *pTpe;
+	int i;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -103,6 +104,10 @@ static int do_Constant(char **pp, struct template *pTpl)
 					sbStrBAppendChar(pStrB, '\n');
 					++p;
 					break;
+				case 'r':
+					sbStrBAppendChar(pStrB, '\r');
+					++p;
+					break;
 				case '\\':
 					sbStrBAppendChar(pStrB, '\\');
 					++p;
@@ -110,6 +115,22 @@ static int do_Constant(char **pp, struct template *pTpl)
 				case '%':
 					sbStrBAppendChar(pStrB, '%');
 					++p;
+					break;
+				case '0': /* numerical escape sequence */
+				case '1':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9':
+					i = 0;
+					while(*p && isdigit(*p)) {
+						i = i * 10 + *p++ - '0';
+					}
+					sbStrBAppendChar(pStrB, i);
 					break;
 				default:
 					sbStrBAppendChar(pStrB, *p++);
@@ -206,7 +227,7 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 	pTpl->iLenTemplate = strlen(pName);
 	pTpl->pszTemplate = (char*) malloc(sizeof(char) * pTpl->iLenTemplate);
 	if(pTpl->pszTemplate == NULL) {
-		printf("could not alloc memory Template"); /* TODO: change to dprintf()! */
+		/rintf("could not alloc memory Template"); /* TODO: change to dprintf()! */
 		free(pTpl->pszName);
 		pTpl->pszName = NULL;
 		pTpl->iLenName = 0;

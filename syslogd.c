@@ -3,6 +3,8 @@
  * - check if syslogd really needs to be shut down totally if
  *   "syslog" service from etc/services can not be found
  * - check if MsgGetProp() can be used for MySQL, too
+ * - check template lins for extra characters and provide 
+ *   a warning, if they exists
  *
  * \brief This is what will become the rsyslogd daemon.
  *
@@ -590,6 +592,11 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 #include "template.h"
 #include "syslogd.h"
 
+/* from liblogging */
+#include "liblogging-stub.h"
+#include "stringbuf.h"
+/* end liblogging */
+
 #ifdef	WITH_DB
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
 #define _DB_MAXUNAMELEN	128	/* maximum number of user name */
@@ -948,7 +955,7 @@ void printsys(char *msg);
 void logmsg(int pri, struct msg*, int flags);
 void fprintlog(register struct filed *f, int flags);
 void endtty();
-void wallmsg(register struct filed *f, struct iovec *iov);
+void wallmsg(register struct filed *f);
 void reapchild();
 const char *cvthname(struct sockaddr_in *f);
 void domark();
@@ -1323,7 +1330,6 @@ struct msg* MsgConstruct()
 		pM->iSeverity = -1;
 		pM->iFacility = -1;
 		getCurrTime(&(pM->tRcvdAt));
-		/* TODO: we can set the time HERE! */
 	}
 
 	dprintf("MsgConstruct\t0x%x\n", (int)pM);
@@ -1454,6 +1460,20 @@ int MsgSetRcvFrom(struct msg *pMsg, char* pszRcvFrom)
 }
 
 
+/* Set the HOSTNAME to a caller-provided string. This is thought
+ * to be a heap buffer that the caller will no longer use. This
+ * function is a performance optimization over MsgSetHOSTNAME().
+ * rgerhards 2004-11-19
+ */
+void MsgAssignHOSTNAME(struct msg *pMsg, char *pBuf)
+{
+	assert(pMsg != NULL);
+	assert(pBuf != NULL);
+	pMsg->iLenHOSTNAME = strlen(pBuf);
+	pMsg->pszHOSTNAME = pBuf;
+}
+
+
 /* rgerhards 2004-11-09: set HOSTNAME in msg object
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
@@ -1476,6 +1496,20 @@ int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
 }
 
 
+/* Set the TAG to a caller-provided string. This is thought
+ * to be a heap buffer that the caller will no longer use. This
+ * function is a performance optimization over MsgSetTAG().
+ * rgerhards 2004-11-19
+ */
+void MsgAssignTAG(struct msg *pMsg, char *pBuf)
+{
+	assert(pMsg != NULL);
+	assert(pBuf != NULL);
+	pMsg->iLenTAG = strlen(pBuf);
+	pMsg->pszTAG = pBuf;
+}
+
+
 /* rgerhards 2004-11-16: set TAG in msg object
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
@@ -1492,6 +1526,20 @@ int MsgSetTAG(struct msg *pMsg, char* pszTAG)
 	memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
 
 	return(0);
+}
+
+
+/* Set the UxTradMsg to a caller-provided string. This is thought
+ * to be a heap buffer that the caller will no longer use. This
+ * function is a performance optimization over MsgSetUxTradMsg().
+ * rgerhards 2004-11-19
+ */
+void MsgAssignUxTradMsg(struct msg *pMsg, char *pBuf)
+{
+	assert(pMsg != NULL);
+	assert(pBuf != NULL);
+	pMsg->iLenUxTradMsg = strlen(pBuf);
+	pMsg->pszUxTradMsg = pBuf;
 }
 
 
@@ -2356,8 +2404,6 @@ void printline(hname, msg, iSource)
 	*q = '\0';
 #endif
 
-	if(MsgSetUxTradMsg(pMsg, p) != 0) return;
-
 	/* Now we look at the HOSTNAME. That is a bit complicated...
 	 * If we have a locally received message, it does NOT
 	 * contain any hostname information in the message itself.
@@ -2368,6 +2414,36 @@ void printline(hname, msg, iSource)
 	if(iSource != SOURCE_INET)
 		if(MsgSetHOSTNAME(pMsg, hname) != 0) return;
 	if(MsgSetRcvFrom(pMsg, hname) != 0) return;
+
+	/* rgerhards 2004-11-19: well, well... we've now seen that we
+	 * have the "hostname problem" also with the traditional Unix
+	 * message. As we like to emulate it, we need to add the hostname
+	 * to it.
+	 */
+	if(MsgSetUxTradMsg(pMsg, p) != 0) return;
+#if 0
+	/* Oh, oh... its not that easy, because we also need the UxTradMsg
+	 * for further parsing. So far, code is disabled, looking for better
+	 * ideas. I leave it in for now so that I have a reminder item.
+	 * TODO: fix!
+	 * rgerhards 2004-11-19
+	 */
+	if(iSource != SOURCE_INET) {
+		sbStrBObj *pStrB;
+		if((pStrB = sbStrBConstruct()) == NULL) {
+			/* oops - no mem, let's try to set the message we have
+			 * most probably, this will fail, too. But at least we
+			 * can try... */
+			if(MsgSetUxTradMsg(pMsg, p) != 0) return;
+		}
+		sbStrBAppendStr(pStrB, hname);
+		sbStrBAppendChar(pStrB, ' ');
+		sbStrBAppendStr(pStrB, p+15);
+		MsgAssignUxTradMsg(pMsg, sbStrBFinish(pStrB));
+	} else {
+		if(MsgSetUxTradMsg(pMsg, p) != 0) return;
+	}
+#endif
 
 	logmsg(pri, pMsg, SYNC_FILE);
 
@@ -2481,6 +2557,8 @@ void logmsg(pri, pMsg, flags)
 	char *p2parse;
 	char *pBuf;
 	char *pWork;
+	sbStrBObj *pStrB;
+	int iCnt;
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
@@ -2520,7 +2598,7 @@ void logmsg(pri, pMsg, flags)
 
 	/* parse HOSTNAME - but only if this is network-received! */
 	if(pMsg->iMsgSource == SOURCE_INET) {
-		/* quick and dirty memory allocation */
+		/* TODO: quick and dirty memory allocation */
 		if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
 			return;
 		pWork = pBuf;
@@ -2529,36 +2607,42 @@ void logmsg(pri, pMsg, flags)
 		if(*p2parse == ' ')
 			++p2parse;
 		*pWork = '\0';
-		/* TODO: optimize, we can re-use the buffer! */
-		if(MsgSetHOSTNAME(pMsg, pBuf) != 0) { free(pBuf); return; }
-		free(pBuf);
+		MsgAssignHOSTNAME(pMsg, pBuf);
 	}
 
 	/* now parse TAG - that should be present in message from
-	 * all sources. */
+	 * all sources.
+	 * This code is somewhat not compliant with RFC 3164. As of 3164,
+	 * the TAG field is ended by any non-alphanumeric character. In
+	 * practice, however, the TAG often contains dashes and other things,
+	 * which would end the TAG. So it is not desirable. As such, we only
+	 * accept colon and SP to be terminators. Even there is a slight difference:
+	 * a colon is PART of the TAG, while a SP is NOT part of the tag
+	 * (it is CONTENT). Finally, we allow only up to 32 characters for
+	 * TAG, as it is specified in RFC 3164.
+	 */
 	/* The following code in general is quick & dirty - I need to get
 	 * it going for a test, TODO: redo later. rgerhards 2004-11-16 */
-	/* quick and dirty memory allocation */
-	/*if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)*/
-	if((pBuf = calloc(sizeof(char)* strlen(p2parse) +1, 1)) == NULL)
+	/* TODO: quick and dirty memory allocation */
+	/* lol.. we tried to solve it, just to remind ourselfs that 32 octets
+	 * is the max size ;) we need to shuffle the code again... */
+	if((pStrB = sbStrBConstruct()) == NULL) 
 		return;
+	sbStrBSetAllocIncrement(pStrB, 33);
 	pWork = pBuf;
-	while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
-		*pWork++ = *p2parse++;
+	iCnt = 0;
+	while(*p2parse && *p2parse != ':' && *p2parse != ' ' && iCnt < 32) {
+		sbStrBAppendChar(pStrB, *p2parse++);
+		++iCnt;
 	}
 	if(*p2parse == ':') {
-		++p2parse;
-		*pWork++ = ':';
+		++p2parse; 
+		sbStrBAppendChar(pStrB, ':');
 	}
-	if(*p2parse == ' ')
-		++p2parse;
-	*pWork = '\0';
-	/* TODO: optimize, we can re-use the buffer! */
-	if(MsgSetTAG(pMsg, pBuf) != 0) { free(pBuf); return; }
+	MsgAssignTAG(pMsg, sbStrBFinish(pStrB));
 
 	/* The rest is the actual MSG */
 	if(MsgSetMSG(pMsg, p2parse) != 0) return;
-	free(pBuf);
 
 	/* ---------------------- END PARSING ---------------- */
 
@@ -2647,11 +2731,14 @@ void logmsg(pri, pMsg, flags)
 } /* balance parentheses for emacs */
 #endif
 
-/* rgerhards 2004-11-11: write to a file output. This
- * will be called for all outputs using file semantics,
- * for example also for pipes.
+
+/* rgerhards 2004-11-19: create the iovec for
+ * a given template. This is called by all methods
+ * using iovec's for their output. Returns the number
+ * of iovecs used (might be different from max if the
+ * template contains an invalid entry).
  */
-void writeFile(struct filed *f)
+int iovCreate(struct filed *f)
 {
 	register struct iovec *v;
 	int iIOVused;
@@ -2660,13 +2747,6 @@ void writeFile(struct filed *f)
 	struct msg *pMsg;
 
 	assert(f != NULL);
-
-	/* Now generate the message. This can eventually be moved to
-	 * a generic subroutine (need to think about this....).
-	 * for now, this is a quick and dirty dummy. We need to have the
-	 * ability to specify the message format before we can actually 
-	 * code this part of the function. rgerhards 2004-11-11
-	 */
 
 	pMsg = f->f_pMsg;
 	pTpl = f->f_pTpl;
@@ -2704,6 +2784,26 @@ void writeFile(struct filed *f)
 	}
 	
 #endif
+	return(iIOVused);
+}
+
+/* rgerhards 2004-11-11: write to a file output. This
+ * will be called for all outputs using file semantics,
+ * for example also for pipes.
+ */
+void writeFile(struct filed *f)
+{
+	int iIOVused;
+
+	assert(f != NULL);
+
+	/* Now generate the message. This can eventually be moved to
+	 * a generic subroutine (need to think about this....).
+	 * for now, this is a quick and dirty dummy. We need to have the
+	 * ability to specify the message format before we can actually 
+	 * code this part of the function. rgerhards 2004-11-11
+	 */
+	iIOVused = iovCreate(f);
 again:
 	if (writev(f->f_file, f->f_iov, iIOVused) < 0) {
 		int e = errno;
@@ -2759,9 +2859,6 @@ void fprintlog(f, flags)
 	int flags;
 {
 	char *msg;
-	struct iovec iov[6];
-	register struct iovec *v = iov;
-	char repbuf[80];
 #ifdef SYSLOG_INET
 	register int l;
 	char line[MAXLINE + 1];
@@ -2772,19 +2869,9 @@ void fprintlog(f, flags)
 	msg = f->f_pMsg->pszMSG;
 	dprintf("Called fprintlog, ");
 
-	v->iov_base = f->f_lasttime;
-	v->iov_len = 15;
-	v++;
-	v->iov_base = " ";
-	v->iov_len = 1;
-	v++;
-	v->iov_base = f->f_prevhost;
-	v->iov_len = f->f_prevhost == 0 ? 0 : strlen(v->iov_base);
-	v++;
-	v->iov_base = " ";
-	v->iov_len = 1;
-	v++;
-	/* TODO: handle the case of message repeation. Currently, there is still
+#if 0
+	/* finally commented code out, because it is not working at all ;)
+	 * TODO: handle the case of message repeation. Currently, there is still
 	 * some code to do it, but that code is defunct due to our changes!
 	 */
 	if (msg) {
@@ -2801,7 +2888,7 @@ void fprintlog(f, flags)
 		v->iov_base = f->f_pMsg->pszMSG;
 		v->iov_len = f->f_pMsg->iLenMSG;
 	}
-	v++;
+#endif
 
 	dprintf("logging to %s", TypeNames[f->f_type]);
 
@@ -2877,7 +2964,8 @@ void fprintlog(f, flags)
 		else {
 			f->f_time = now;
 			(void) snprintf(line, sizeof(line), "<%d>%s\n", f->f_prevpri, \
-				(char *) iov[4].iov_base);
+				(char *) f->f_pMsg->pszMSG);
+				/* was: (char *) iov[4].iov_base); */
 			l = strlen(line);
 			if (l > MAXLINE)
 				l = MAXLINE;
@@ -2910,6 +2998,7 @@ void fprintlog(f, flags)
 	case F_TTY:
 	case F_FILE:
 	case F_PIPE:
+		/* TODO: check if we need f->f_time = now;*/
 		/* f->f_file == -1 is an indicator that the we couldn't
 		   open the file at startup. */
 		if (f->f_file != -1)
@@ -2920,9 +3009,7 @@ void fprintlog(f, flags)
 	case F_WALL:
 		f->f_time = now;
 		dprintf("\n");
-		v->iov_base = "\r\n";
-		v->iov_len = 2;
-		wallmsg(f, iov);
+		wallmsg(f);
 		break;
 
 #ifdef	WITH_DB
@@ -2956,24 +3043,24 @@ void endtty()
  *	world, or a list of approved users.
  */
 
-void wallmsg(f, iov)
+void wallmsg(f)
 	register struct filed *f;
-	struct iovec *iov;
 {
 	char p[6 + UNAMESZ];
 	register int i;
-	int ttyf, len;
+	int ttyf;
 	static int reenter = 0;
 	struct utmp ut;
 	struct utmp *uptr;
-	char greetings[200];
+	int iIOVused;
+
+	assert(f != NULL);
 
 	if (reenter++)
 		return;
 
 	/* open the user login file */
 	setutent();
-
 
 	/*
 	 * Might as well fork instead of using nonblocking I/O
@@ -2987,10 +3074,10 @@ void wallmsg(f, iov)
 		(void) signal(SIGTTOU, SIG_IGN);
 		(void) sigsetmask(0);
 #endif
-		(void) snprintf(greetings, sizeof(greetings),
-		    "\r\n\7Message from syslogd@%s at %.24s ...\r\n",
-			(char *) iov[2].iov_base, ctime(&now));
-		len = strlen(greetings);
+	/* TODO: find a way to limit the max size of the message. hint: this
+	 * should go into the template!
+	 */
+		iIOVused = iovCreate(f);
 
 		/* scan the user login file */
 		while ((uptr = getutent())) {
@@ -3022,11 +3109,6 @@ void wallmsg(f, iov)
 			strcpy(p, _PATH_DEV);
 			strncat(p, ut.ut_line, UNAMESZ);
 
-			if (f->f_type == F_WALL) {
-				iov[0].iov_base = greetings;
-				iov[0].iov_len = len;
-				iov[1].iov_len = 0;
-			}
 			if (setjmp(ttybuf) == 0) {
 				(void) alarm(15);
 				/* open the terminal */
@@ -3036,7 +3118,7 @@ void wallmsg(f, iov)
 
 					if (fstat(ttyf, &statb) == 0 &&
 					    (statb.st_mode & S_IWRITE))
-						(void) writev(ttyf, iov, 6);
+						(void) writev(ttyf, f->f_iov, iIOVused);
 					close(ttyf);
 					ttyf = -1;
 				}
@@ -3587,13 +3669,73 @@ void init()
 	}}} /* balance parentheses for emacs */
 #endif
 
+/* helper to cfline() and its helpers. Assignd the right template
+ * to a filed entry and allocates memory for its iovec.
+ * rgerhards 2004-11-19
+ */
+void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
+{
+	assert(f != NULL);
+	assert(pTemplateName != NULL);
+
+	/* Ok, we got everything, so it now is time to look up the
+	 * template (Hint: templates MUST be defined before they are
+	 * used!) and initialize the pointer to it PLUS the iov 
+	 * pointer. We do the later because the template tells us
+	 * how many elements iov must have - and this can never change.
+	 */
+	if((f->f_pTpl = tplFind(pTemplateName, strlen(pTemplateName))) == NULL) {
+		dprintf("Could not find template '%s'\n", pTemplateName);
+		f->f_type = F_UNUSED;
+	} else {
+		if((f->f_iov = calloc(tplGetEntryCount(f->f_pTpl),
+		    sizeof(struct iovec))) == NULL) {
+			/* TODO: provide better message! */
+			dprintf("Could not allocate iovec memory\n");
+			f->f_type = F_UNUSED;
+		}
+	}
+}
+	
+/* Helper to cfline() and its helpers. Parses a template name
+ * from an "action" line. Must be called with the Line pointer
+ * pointing to the first character after the comma.
+ * Everything is stored in the filed struct.
+ * rgerhards 2004-11-19
+ */
+void cflineParseTemplateName(struct filed *f, char** pp,
+			     register char* pTemplateName, int iLenTemplate)
+{
+	register char *p;
+	int i;
+
+	assert(f != NULL);
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	p =*pp;
+
+	/* Just as a general precaution, we skip whitespace.  */
+	while(*p && isspace(*p))
+		++p;
+
+	i = 1; /* we start at 1 so that we resever space for the '\0'! */
+	while(*p && i < iLenTemplate) {
+		*pTemplateName++ = *p++;
+		++i;
+	}
+	*pTemplateName = '\0';
+
+	*pp = p;
+}
+
 /* Helper to cfline(). Parses a file name up until the first
  * comma and then looks for the template specifier. Tries
  * to find that template. Everything is stored in the
  * filed struct.
  * rgerhards 2004-11-18
  */
-void cflineParseFileName(struct filed *f, register char* p)
+void cflineParseFileName(struct filed *f, char* p)
 {
 	register char *pName;
 	int i;
@@ -3607,8 +3749,8 @@ void cflineParseFileName(struct filed *f, register char* p)
 	}
 
 	pName = f->f_un.f_fname;
-	i = 0;
-	while(*p && *p != ',' && i < MAXFNAME - 1) {
+	i = 1; /* we start at 1 so that we resever space for the '\0'! */
+	while(*p && *p != ';' && i < MAXFNAME) {
 		*pName++ = *p++;
 		++i;
 	}
@@ -3619,35 +3761,12 @@ void cflineParseFileName(struct filed *f, register char* p)
 	 */
 	while(*p && isspace(*p))
 		++p;
-	if(*p == ',')
+	if(*p == ';')
 		++p; /* eat it */
-	while(*p && isspace(*p))
-		++p;
 
-	pName = szTemplateName;
-	i = 0;
-	while(*p && i < sizeof(szTemplateName) / sizeof(char) - 1) {
-		*pName++ = *p++;
-		++i;
-	}
-	*pName = '\0';
-
-	/* Ok, we got everything, so it now is time to look up the
-	 * template (Hint: templates MUST be defined before they are
-	 * used!) and initialize the pointer to it PLUS the iov 
-	 * pointer. We do the later because the template tells us
-	 * how many elements iov must have - and this can never change.
-	 */
-	if((f->f_pTpl = tplFind(szTemplateName, i)) == NULL) {
-		dprintf("Could not find template '%s'\n", szTemplateName);
-		f->f_type = F_UNUSED;
-	} else {
-		if((f->f_iov = calloc(tplGetEntryCount(f->f_pTpl),
-		    sizeof(struct iovec))) == NULL) {
-			dprintf("Could not allocate iovec memory for file '%s'\n", f->f_un.f_fname);
-			f->f_type = F_UNUSED;
-		}
-	}
+	cflineParseTemplateName(f, &p, szTemplateName,
+	                        sizeof(szTemplateName) / sizeof(char));
+	cflineSetTemplateAndIOV(f, szTemplateName);
 	
 	dprintf("filename: '%s', template: '%s'\n", f->f_un.f_fname, szTemplateName);
 }
@@ -3890,7 +4009,17 @@ void cfline(line, f)
 		break;
 
 	case '*':
-		dprintf ("write-all\n");
+		dprintf ("write-all");
+		if(*(p+1) == ';') {
+			char szTemplateName[128];
+			/* we have a template specifier! */
+			p += 2; /* eat "*;" */
+			cflineParseTemplateName(f, &p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(char));
+			cflineSetTemplateAndIOV(f, szTemplateName);
+			dprintf(" template '%s'", szTemplateName);
+		}
+		dprintf("\n");
 		f->f_type = F_WALL;
 		break;
 
@@ -3922,8 +4051,8 @@ void cfline(line, f)
 
 	default:
 		dprintf ("users: %s\n", p);	/* ASP */
-		for (i = 0; i < MAXUNAMES && *p; i++) {
-			for (q = p; *q && *q != ','; )
+		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
+			for (q = p; *q && *q != ',' && *q != ';'; )
 				q++;
 			(void) strncpy(f->f_un.f_uname[i], p, UNAMESZ);
 			if ((q - p) > UNAMESZ)
@@ -3933,6 +4062,17 @@ void cfline(line, f)
 			while (*q == ',' || *q == ' ')
 				q++;
 			p = q;
+		}
+		/* done, now check if we have a template name
+		 * TODO: we need to handle the case where i >= MAXUNAME!
+		 */
+		if(*p == ';') {
+			char szTemplateName[128];
+			/* we have a template specifier! */
+			++p; /* eat ";" */
+			cflineParseTemplateName(f, &p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(char));
+			cflineSetTemplateAndIOV(f, szTemplateName);
 		}
 		f->f_type = F_USERS;
 		break;
