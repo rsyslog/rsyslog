@@ -1411,7 +1411,7 @@ struct msg* MsgConstruct()
 		getCurrTime(&(pM->tRcvdAt));
 	}
 
-	dprintf("MsgConstruct\t0x%x\n", (int)pM);
+	/* DEV debugging only! dprintf("MsgConstruct\t0x%x\n", (int)pM);*/
 
 	return(pM);
 }
@@ -1423,10 +1423,10 @@ struct msg* MsgConstruct()
 void MsgDestruct(struct msg * pM)
 {
 	assert(pM != NULL);
-	dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
+	/* DEV Debugging only ! dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1); */
 	if(--pM->iRefCount == 0)
 	{
-		dprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
+		/* DEV Debugging Only! dprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM); */
 		if(pM->pszUxTradMsg != NULL)
 			free(pM->pszUxTradMsg);
 		if(pM->pszRawMsg != NULL)
@@ -1472,7 +1472,7 @@ struct msg *MsgAddRef(struct msg *pM)
 {
 	assert(pM != NULL);
 	pM->iRefCount++;
-	dprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);
+	/* DEV debugging only! dprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);*/
 	return(pM);
 }
 
@@ -2342,7 +2342,7 @@ int main(argc, argv)
 
 		if ( debugging_on )
 		{
-			dprintf("Calling select, active file descriptors (max %d): ", maxfds);
+			dprintf("----------------------------------------\nCalling select, active file descriptors (max %d): ", maxfds);
 			for (nfds= 0; nfds <= maxfds; ++nfds)
 				if ( FD_ISSET(nfds, &readfds) )
 					dprintf("%d ", nfds);
@@ -3251,7 +3251,6 @@ void iovDeleteFreeableStrings(struct filed *f)
 	for(i = 0 ; i < f->f_iIovUsed ; ++i) {
 		/* free to-be-freed strings in iovec */
 		if(*(f->f_bMustBeFreed + i)) {
-			dprintf("DELETE freeable string '%s'\n", (char*)(f->f_iov + i)->iov_base);
 			free((f->f_iov + i)->iov_base);
 			*(f->f_bMustBeFreed) = 0;
 		}
@@ -3543,6 +3542,7 @@ void fprintlog(f, flags)
 	case F_TTY:
 	case F_FILE:
 	case F_PIPE:
+		dprintf("\n");
 		/* TODO: check if we need f->f_time = now;*/
 		/* f->f_file == -1 is an indicator that the we couldn't
 		   open the file at startup. */
@@ -3561,7 +3561,6 @@ void fprintlog(f, flags)
 	case F_MYSQL:
 		f->f_time = now;
 		dprintf("\n");
-		dprintf("Line: '%s'\n", msg);
 		writeMySQL(f);
 		break;
 #endif
