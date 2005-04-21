@@ -2472,7 +2472,6 @@ int usage()
 #ifdef SYSLOG_UNIXAF
 static int create_unix_socket(const char *path)
 {
-fprintf(stderr, "create_unix_socket(%s)\n", path);
 	struct sockaddr_un sunx;
 	int fd;
 	char line[MAXLINE +1];
