@@ -8,11 +8,7 @@
 #endif
 
 #include <stdio.h>
-#ifdef BSD
 #include <stdlib.h>
-#else
-#include <malloc.h>
-#endif
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>

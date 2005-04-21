@@ -37,16 +37,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifdef __FreeBSD__
-#define	BSD
-#endif
-
-
-#ifdef BSD
 #include <stdlib.h>
-#else
-#include <malloc.h>
-#endif
 #include <assert.h>
 #include <string.h>
 #include "liblogging-stub.h"

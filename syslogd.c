@@ -2487,11 +2487,7 @@ fprintf(stderr, "create_unix_socket(%s)\n", path);
 	(void) strncpy(sunx.sun_path, path, sizeof(sunx.sun_path));
 	fd = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (fd < 0 || bind(fd, (struct sockaddr *) &sunx,
-#ifdef BSD
 			   SUN_LEN(&sunx)) < 0 ||
-#else
-			   sizeof(sunx.sun_family)+strlen(sunx.sun_path)) < 0 ||
-#endif
 	    chmod(path, 0666) < 0) {
 		(void) snprintf(line, sizeof(line), "cannot create %s", path);
 		logerror(line);
@@ -3596,7 +3592,7 @@ void endtty()
 	longjmp(ttybuf, 1);
 }
 
-/** TODO:
+/**
  * BSD setutent/getutent() replacement routines
  * The following routines emulate setutent() and getutent() under
  * BSD because they are not available there. We only emulate what we actually
