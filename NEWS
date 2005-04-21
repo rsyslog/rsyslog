@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------
+Version 0.8.4
+
+- improved -d debug output (removed developer-only content)
+- now compiles under FreeBSD
+---------------------------------------------------------------------------
+Version 0.8.3
+
+- security model in "make install" changed
+- minor doc updates
+---------------------------------------------------------------------------
 Version 0.8.2
 
 - added man page for rsyslog.conf and rsyslogd

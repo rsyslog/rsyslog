@@ -3,8 +3,16 @@
  * This code is placed under the GPL.
  * begun 2004-11-17 rgerhards
  */
+#ifdef __FreeBSD__
+#define	BSD
+#endif
+
 #include <stdio.h>
+#ifdef BSD
+#include <stdlib.h>
+#else
 #include <malloc.h>
+#endif
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>

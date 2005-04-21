@@ -107,7 +107,7 @@ char copyright2[] =
 #endif /* not lint */
 
 #if !defined(lint) && !defined(NO_SCCS)
-static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
+static char sccsid[] = "@(#)rsyslogd.c	0.8 (Adiscon) 18/03/2005";
 #endif /* not lint */
 
 /*
@@ -527,6 +527,9 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
  *	Thanks to Bill Nottingham <notting@redhat.com> for providing
  *	a patch.
  */
+#ifdef __FreeBSD__
+#define	BSD
+#endif
 
 #define	MAXLINE		1024		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
@@ -573,7 +576,9 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 
 #include <netinet/in.h>
 #include <netdb.h>
+#ifndef BSD
 #include <syscall.h>
+#endif
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
 #include <resolv.h>
@@ -628,6 +633,9 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 #if defined(SYSLOGD_PIDNAME)
 #undef _PATH_LOGPID
 #if defined(FSSTND)
+#ifdef BSD
+#define _PATH_VARRUN "/var/run/"
+#endif
 #define _PATH_LOGPID _PATH_VARRUN SYSLOGD_PIDNAME
 #else
 #define _PATH_LOGPID "/etc/" SYSLOGD_PIDNAME
@@ -635,9 +643,9 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 #else
 #ifndef _PATH_LOGPID
 #if defined(FSSTND)
-#define _PATH_LOGPID _PATH_VARRUN "syslogd.pid"
+#define _PATH_LOGPID _PATH_VARRUN "rsyslogd.pid"
 #else
-#define _PATH_LOGPID "/etc/syslogd.pid"
+#define _PATH_LOGPID "/etc/rsyslogd.pid"
 #endif
 #endif
 #endif
@@ -655,7 +663,11 @@ static char sccsid[] = "@(#)rsyslogd.c	0.2 (Adiscon) 11/08/2004";
 #endif
 
 #ifndef _PATH_LOG
+#ifdef BSD
+#define _PATH_LOG	"/var/run/log"
+#else
 #define _PATH_LOG	"/dev/log"
+#endif
 #endif
 
 char	*ConfFile = _PATH_LOGCONF;
@@ -1349,7 +1361,7 @@ void getCurrTime(struct syslogTime *t)
 
 	assert(t != NULL);
 	gettimeofday(&tp, NULL);
-	tm = localtime(&(tp.tv_sec));
+	tm = localtime((time_t*) &(tp.tv_sec));
 
 	t->year = tm->tm_year + 1900;
 	t->month = tm->tm_mon + 1;
@@ -2460,6 +2472,7 @@ int usage()
 #ifdef SYSLOG_UNIXAF
 static int create_unix_socket(const char *path)
 {
+fprintf(stderr, "create_unix_socket(%s)\n", path);
 	struct sockaddr_un sunx;
 	int fd;
 	char line[MAXLINE +1];
@@ -2474,7 +2487,11 @@ static int create_unix_socket(const char *path)
 	(void) strncpy(sunx.sun_path, path, sizeof(sunx.sun_path));
 	fd = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (fd < 0 || bind(fd, (struct sockaddr *) &sunx,
+#ifdef BSD
+			   SUN_LEN(&sunx)) < 0 ||
+#else
 			   sizeof(sunx.sun_family)+strlen(sunx.sun_path)) < 0 ||
+#endif
 	    chmod(path, 0666) < 0) {
 		(void) snprintf(line, sizeof(line), "cannot create %s", path);
 		logerror(line);
@@ -2513,12 +2530,14 @@ static int create_inet_socket()
 	/* We need to enable BSD compatibility. Otherwise an attacker
 	 * could flood our log files by sending us tons of ICMP errors.
 	 */
+#ifndef BSD	
 	if (setsockopt(fd, SOL_SOCKET, SO_BSDCOMPAT, \
 			(char *) &on, sizeof(on)) < 0) {
 		logerror("setsockopt(BSDCOMPAT), suspending inet");
 		close(fd);
 		return -1;
 	}
+#endif
 	if (bind(fd, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
 		logerror("bind, suspending inet");
 		close(fd);
@@ -3577,6 +3596,41 @@ void endtty()
 	longjmp(ttybuf, 1);
 }
 
+/** TODO:
+ * BSD setutent/getutent() replacement routines
+ * The following routines emulate setutent() and getutent() under
+ * BSD because they are not available there. We only emulate what we actually
+ * need! rgerhards 2005-03-18
+ */
+#ifdef BSD
+static FILE *BSD_uf = NULL;
+void setutent(void)
+{
+	assert(BSD_uf == NULL);
+	if ((BSD_uf = fopen(_PATH_UTMP, "r")) == NULL) {
+		logerror(_PATH_UTMP);
+		return;
+	}
+}
+
+struct utmp* getutent(void)
+{
+	static struct utmp st_utmp;
+
+	if(fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1)
+		return NULL;
+
+	return(&st_utmp);
+}
+
+void endutent(void)
+{
+	fclose(BSD_uf);
+	BSD_uf = NULL;
+}
+#endif
+
+
 /*
  *  WALLMSG -- Write a message to the world at large
  *
@@ -3626,9 +3680,11 @@ void wallmsg(f)
 			/* is this slot used? */
 			if (ut.ut_name[0] == '\0')
 				continue;
+#ifndef BSD
 			if (ut.ut_type == LOGIN_PROCESS)
 			        continue;
-			if (!(strcmp (ut.ut_name,"LOGIN"))) /* paranoia */
+#endif
+			if (!(strncmp (ut.ut_name,"LOGIN", 6))) /* paranoia */
 			        continue;
 
 			/* should we send the message to this user? */
@@ -3800,6 +3856,7 @@ void debug_switch()
 /*
  * Print syslogd errors some place.
  */
+/*###*/
 void logerror(type)
 	char *type;
 {
