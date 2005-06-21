@@ -12,7 +12,7 @@ CC= gcc
 # enables the MySQL code. By default, that one is commented out
 # change the comment chars to activate it if you need MySQL!
 # In this case, also look down further to uncomment the libs
-CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
+CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -D__LARGEFILE64
 #CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB
 LDFLAGS= -s
 

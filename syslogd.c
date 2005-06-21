@@ -110,423 +110,6 @@ char copyright2[] =
 static char sccsid[] = "@(#)rsyslogd.c	0.8 (Adiscon) 18/03/2005";
 #endif /* not lint */
 
-/*
- *  syslogd -- log system messages
- *
- * This program implements a system log. It takes a series of lines.
- * Each line may have a priority, signified as "<n>" as
- * the first characters of the line.  If this is
- * not present, a default priority is used.
- *
- * To kill syslogd, send a signal 15 (terminate).  A signal 1 (hup) will
- * cause it to reread its configuration file.
- *
- * Defined Constants:
- *
- * MAXLINE -- the maximum line length that can be handled.
- * DEFUPRI -- the default priority for user messages
- * DEFSPRI -- the default priority for kernel messages
- *
- * Author: Eric Allman
- * extensive changes by Ralph Campbell
- * more extensive changes by Eric Allman (again)
- *
- * Steve Lord:	Fix UNIX domain socket code, added linux kernel logging
- *		change defines to
- *		SYSLOG_INET	- listen on a UDP socket
- *		SYSLOG_UNIXAF	- listen on unix domain socket
- *		SYSLOG_KERNEL	- listen to linux kernel
- *
- * Mon Feb 22 09:55:42 CST 1993:  Dr. Wettstein
- * 	Additional modifications to the source.  Changed priority scheme
- *	to increase the level of configurability.  In its stock configuration
- *	syslogd no longer logs all messages of a certain priority and above
- *	to a log file.  The * wildcard is supported to specify all priorities.
- *	Note that this is a departure from the BSD standard.
- *
- *	Syslogd will now listen to both the inetd and the unixd socket.  The
- *	strategy is to allow all local programs to direct their output to
- *	syslogd through the unixd socket while the program listens to the
- *	inetd socket to get messages forwarded from other hosts.
- *
- * Fri Mar 12 16:55:33 CST 1993:  Dr. Wettstein
- *	Thanks to Stephen Tweedie (dcs.ed.ac.uk!sct) for helpful bug-fixes
- *	and an enlightened commentary on the prioritization problem.
- *
- *	Changed the priority scheme so that the default behavior mimics the
- *	standard BSD.  In this scenario all messages of a specified priority
- *	and above are logged.
- *
- *	Add the ability to specify a wildcard (=) as the first character
- *	of the priority name.  Doing this specifies that ONLY messages with
- *	this level of priority are to be logged.  For example:
- *
- *		*.=debug			/usr/adm/debug
- *
- *	Would log only messages with a priority of debug to the /usr/adm/debug
- *	file.
- *
- *	Providing an * as the priority specifies that all messages are to be
- *	logged.  Note that this case is degenerate with specifying a priority
- *	level of debug.  The wildcard * was retained because I believe that
- *	this is more intuitive.
- *
- * Thu Jun 24 11:34:13 CDT 1993:  Dr. Wettstein
- *	Modified sources to incorporate changes in libc4.4.  Messages from
- *	syslog are now null-terminated, syslogd code now parses messages
- *	based on this termination scheme.  Linux as of libc4.4 supports the
- *	fsync system call.  Modified code to fsync after all writes to
- *	log files.
- *
- * Sat Dec 11 11:59:43 CST 1993:  Dr. Wettstein
- *	Extensive changes to the source code to allow compilation with no
- *	complaints with -Wall.
- *
- *	Reorganized the facility and priority name arrays so that they
- *	compatible with the syslog.h source found in /usr/include/syslog.h.
- *	NOTE that this should really be changed.  The reason I do not
- *	allow the use of the values defined in syslog.h is on account of
- *	the extensions made to allow the wildcard character in the
- *	priority field.  To fix this properly one should malloc an array,
- *	copy the contents of the array defined by syslog.h and then
- *	make whatever modifications that are desired.  Next round.
- *
- * Thu Jan  6 12:07:36 CST 1994:  Dr. Wettstein
- *	Added support for proper decomposition and re-assembly of
- *	fragment messages on UNIX domain sockets.  Lack of this capability
- *	was causing 'partial' messages to be output.  Since facility and
- *	priority information is encoded as a leader on the messages this
- *	was causing lines to be placed in erroneous files.
- *
- *	Also added a patch from Shane Alderton (shane@ion.apana.org.au) to
- *	correct a problem with syslogd dumping core when an attempt was made
- *	to write log messages to a logged-on user.  Thank you.
- *
- *	Many thanks to Juha Virtanen (jiivee@hut.fi) for a series of
- *	interchanges which lead to the fixing of problems with messages set
- *	to priorities of none and emerg.  Also thanks to Juha for a patch
- *	to exclude users with a class of LOGIN from receiving messages.
- *
- *	Shane Alderton provided an additional patch to fix zombies which
- *	were conceived when messages were written to multiple users.
- *
- * Mon Feb  6 09:57:10 CST 1995:  Dr. Wettstein
- *	Patch to properly reset the single priority message flag.  Thanks
- *	to Christopher Gori for spotting this bug and forwarding a patch.
- *
- * Wed Feb 22 15:38:31 CST 1995:  Dr. Wettstein
- *	Added version information to startup messages.
- *
- *	Added defines so that paths to important files are taken from
- *	the definitions in paths.h.  Hopefully this will insure that
- *	everything follows the FSSTND standards.  Thanks to Chris Metcalf
- *	for a set of patches to provide this functionality.  Also thanks
- *	Elias Levy for prompting me to get these into the sources.
- *
- * Wed Jul 26 18:57:23 MET DST 1995:  Martin Schulze
- *	Linux' gethostname only returns the hostname and not the fqdn as
- *	expected in the code. But if you call hostname with an fqdn then
- *	gethostname will return an fqdn, so we have to mention that. This
- *	has been changed.
- *
- *	The 'LocalDomain' and the hostname of a remote machine is
- *	converted to lower case, because the original caused some
- *	inconsistency, because the (at least my) nameserver did respond an
- *	fqdn containing of upper- _and_ lowercase letters while
- *	'LocalDomain' consisted only of lowercase letters and that didn't
- *	match.
- *
- * Sat Aug  5 18:59:15 MET DST 1995:  Martin Schulze
- *	Now no messages that were received from any remote host are sent
- *	out to another. At my domain this missing feature caused ugly
- *	syslog-loops, sometimes.
- *
- *	Remember that no message is sent out. I can't figure out any
- *	scenario where it might be useful to change this behavior and to
- *	send out messages to other hosts than the one from which we
- *	received the message, but I might be shortsighted. :-/
- *
- * Thu Aug 10 19:01:08 MET DST 1995:  Martin Schulze
- *	Added my pidfile.[ch] to it to perform a better handling with
- *	pidfiles. Now both, syslogd and klogd, can only be started
- *	once. They check the pidfile.
- *
- * Sun Aug 13 19:01:41 MET DST 1995:  Martin Schulze
- *	Add an addition to syslog.conf's interpretation. If a priority
- *	begins with an exclamation mark ('!') the normal interpretation
- *	of the priority is inverted: ".!*" is the same as ".none", ".!=info"
- *	don't logs the info priority, ".!crit" won't log any message with
- *	the priority crit or higher. For example:
- *
- *		mail.*;mail.!=info		/usr/adm/mail
- *
- *	Would log all messages of the facility mail except those with
- *	the priority info to /usr/adm/mail. This makes the syslogd
- *	much more flexible.
- *
- *	Defined TABLE_ALLPRI=255 and changed some occurrences.
- *
- * Sat Aug 19 21:40:13 MET DST 1995:  Martin Schulze
- *	Making the table of facilities and priorities while in debug
- *	mode more readable.
- *
- *	If debugging is turned on, printing the whole table of
- *	facilities and priorities every hexadecimal or 'X' entry is
- *	now 2 characters wide.
- *
- *	The number of the entry is prepended to each line of
- *	facilities and priorities, and F_UNUSED lines are not shown
- *	anymore.
- *
- *	Corrected some #ifdef SYSV's.
- *
- * Mon Aug 21 22:10:35 MET DST 1995:  Martin Schulze
- *	Corrected a strange behavior during parsing of configuration
- *	file. The original BSD syslogd doesn't understand spaces as
- *	separators between specifier and action. This syslogd now
- *	understands them. The old behavior caused some confusion over
- *	the Linux community.
- *
- * Thu Oct 19 00:02:07 MET 1995:  Martin Schulze
- *	The default behavior has changed for security reasons. The
- *	syslogd will not receive any remote message unless you turn
- *	reception on with the "-r" option.
- *
- *	Not defining SYSLOG_INET will result in not doing any network
- *	activity, i.e. not sending or receiving messages.  I changed
- *	this because the old idea is implemented with the "-r" option
- *	and the old thing didn't work anyway.
- *
- * Thu Oct 26 13:14:06 MET 1995:  Martin Schulze
- *	Added another logfile type F_FORW_UNKN.  The problem I ran into
- *	was a name server that runs on my machine and a forwarder of
- *	kern.crit to another host.  The hosts address can only be
- *	fetched using the nameserver.  But named is started after
- *	syslogd, so syslogd complained.
- *
- *	This logfile type will retry to get the address of the
- *	hostname ten times and then complain.  This should be enough to
- *	get the named up and running during boot sequence.
- *
- * Fri Oct 27 14:08:15 1995:  Dr. Wettstein
- *	Changed static array of logfiles to a dynamic array. This
- *	can grow during process.
- *
- * Fri Nov 10 23:08:18 1995:  Martin Schulze
- *	Inserted a new tabular sys_h_errlist that contains plain text
- *	for error codes that are returned from the net subsystem and
- *	stored in h_errno. I have also changed some wrong lookups to
- *	sys_errlist.
- *
- * Wed Nov 22 22:32:55 1995:  Martin Schulze
- *	Added the fabulous strip-domain feature that allows us to
- *	strip off (several) domain names from the fqdn and only log
- *	the simple hostname. This is useful if you're in a LAN that
- *	has a central log server and also different domains.
- *
- *	I have also also added the -l switch do define hosts as
- *	local. These will get logged with their simple hostname, too.
- *
- * Thu Nov 23 19:02:56 MET DST 1995:  Martin Schulze
- *	Added the possibility to omit fsyncing of logfiles after every
- *	write. This will give some performance back if you have
- *	programs that log in a very verbose manner (like innd or
- *	smartlist). Thanks to Stephen R. van den Berg <srb@cuci.nl>
- *	for the idea.
- *
- * Thu Jan 18 11:14:36 CST 1996:  Dr. Wettstein
- *	Added patche from beta-testers to stop compile error.  Also
- *	added removal of pid file as part of termination cleanup.
- *
- * Wed Feb 14 12:42:09 CST 1996:  Dr. Wettstein
- *	Allowed forwarding of messages received from remote hosts to
- *	be controlled by a command-line switch.  Specifying -h allows
- *	forwarding.  The default behavior is to disable forwarding of
- *	messages which were received from a remote host.
- *
- *	Parent process of syslogd does not exit until child process has
- *	finished initialization process.  This allows rc.* startup to
- *	pause until syslogd facility is up and operating.
- *
- *	Re-arranged the select code to move UNIX domain socket accepts
- *	to be processed later.  This was a contributed change which
- *	has been proposed to correct the delays sometimes encountered
- *	when syslogd starts up.
- *
- *	Minor code cleanups.
- *
- * Thu May  2 15:15:33 CDT 1996:  Dr. Wettstein
- *	Fixed bug in init function which resulted in file descripters
- *	being orphaned when syslogd process was re-initialized with SIGHUP
- *	signal.  Thanks to Edvard Tuinder
- *	(Edvard.Tuinder@praseodymium.cistron.nl) for putting me on the
- *	trail of this bug.  I am amazed that we didn't catch this one
- *	before now.
- *
- * Tue May 14 00:03:35 MET DST 1996:  Martin Schulze
- *	Corrected a mistake that causes the syslogd to stop logging at
- *	some virtual consoles under Linux. This was caused by checking
- *	the wrong error code. Thanks to Michael Nonweiler
- *	<mrn20@hermes.cam.ac.uk> for sending me a patch.
- *
- * Mon May 20 13:29:32 MET DST 1996:  Miquel van Smoorenburg <miquels@cistron.nl>
- *	Added continuation line supported and fixed a bug in
- *	the init() code.
- *
- * Tue May 28 00:58:45 MET DST 1996:  Martin Schulze
- *	Corrected behaviour of blocking pipes - i.e. the whole system
- *	hung.  Michael Nonweiler <mrn20@hermes.cam.ac.uk> has sent us
- *	a patch to correct this.  A new logfile type F_PIPE has been
- *	introduced.
- *
- * Mon Feb 3 10:12:15 MET DST 1997:  Martin Schulze
- *	Corrected behaviour of logfiles if the file can't be opened.
- *	There was a bug that causes syslogd to try to log into non
- *	existing files which ate cpu power.
- *
- * Sun Feb 9 03:22:12 MET DST 1997:  Martin Schulze
- *	Modified syslogd.c to not kill itself which confuses bash 2.0.
- *
- * Mon Feb 10 00:09:11 MET DST 1997:  Martin Schulze
- *	Improved debug code to decode the numeric facility/priority
- *	pair into textual information.
- *
- * Tue Jun 10 12:35:10 MET DST 1997:  Martin Schulze
- *	Corrected freeing of logfiles.  Thanks to Jos Vos <jos@xos.nl>
- *	for reporting the bug and sending an idea to fix the problem.
- *
- * Tue Jun 10 12:51:41 MET DST 1997:  Martin Schulze
- *	Removed sleep(10) from parent process.  This has caused a slow
- *	startup in former times - and I don't see any reason for this.
- *
- * Sun Jun 15 16:23:29 MET DST 1997: Michael Alan Dorman
- *	Some more glibc patches made by <mdorman@debian.org>.
- *
- * Thu Jan  1 16:04:52 CET 1998: Martin Schulze <joey@infodrom.north.de
- *	Applied patch from Herbert Thielen <Herbert.Thielen@lpr.e-technik.tu-muenchen.de>.
- *	This included some balance parentheses for emacs and a bug in
- *	the exclamation mark handling.
- *
- *	Fixed small bug which caused syslogd to write messages to the
- *	wrong logfile under some very rare conditions.  Thanks to
- *	Herbert Xu <herbert@gondor.apana.org.au> for fiddling this out.
- *
- * Thu Jan  8 22:46:35 CET 1998: Martin Schulze <joey@infodrom.north.de>
- *	Reworked one line of the above patch as it prevented syslogd
- *	from binding the socket with the result that no messages were
- *	forwarded to other hosts.
- *
- * Sat Jan 10 01:33:06 CET 1998: Martin Schulze <joey@infodrom.north.de>
- *	Fixed small bugs in F_FORW_UNKN meachanism.  Thanks to Torsten
- *	Neumann <torsten@londo.rhein-main.de> for pointing me to it.
- *
- * Mon Jan 12 19:50:58 CET 1998: Martin Schulze <joey@infodrom.north.de>
- *	Modified debug output concerning remote receiption.
- *
- * Mon Feb 23 23:32:35 CET 1998: Topi Miettinen <Topi.Miettinen@ml.tele.fi>
- *	Re-worked handling of Unix and UDP sockets to support closing /
- *	opening of them in order to have it open only if it is needed
- *	either for forwarding to a remote host or by receiption from
- *	the network.
- *
- * Wed Feb 25 10:54:09 CET 1998: Martin Schulze <joey@infodrom.north.de>
- *	Fixed little comparison mistake that prevented the MARK
- *	feature to work properly.
- *
- * Wed Feb 25 13:21:44 CET 1998: Martin Schulze <joey@infodrom.north.de>
- *	Corrected Topi's patch as it prevented forwarding during
- *	startup due to an unknown LogPort.
- *
- * Sat Oct 10 20:01:48 CEST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Added support for TESTING define which will turn syslogd into
- *	stdio-mode used for debugging.
- *
- * Sun Oct 11 20:16:59 CEST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Reworked the initialization/fork code.  Now the parent
- *	process activates a signal handler which the daughter process
- *	will raise if it is initialized.  Only after that one the
- *	parent process may exit.  Otherwise klogd might try to flush
- *	its log cache while syslogd can't receive the messages yet.
- *
- * Mon Oct 12 13:30:35 CEST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Redirected some error output with regard to argument parsing to
- *	stderr.
- *
- * Mon Oct 12 14:02:51 CEST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Applied patch provided vom Topi Miettinen with regard to the
- *	people from OpenBSD.  This provides the additional '-a'
- *	argument used for specifying additional UNIX domain sockets to
- *	listen to.  This is been used with chroot()'ed named's for
- *	example.  See for http://www.psionic.com/papers/dns.html
- *
- * Mon Oct 12 18:29:44 CEST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Added `ftp' facility which was introduced in glibc version 2.
- *	It's #ifdef'ed so won't harm with older libraries.
- *
- * Mon Oct 12 19:59:21 MET DST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Code cleanups with regard to bsd -> posix transition and
- *	stronger security (buffer length checking).  Thanks to Topi
- *	Miettinen <tom@medialab.sonera.net>
- *	. index() --> strchr()
- *	. sprintf() --> snprintf()
- *	. bcopy() --> memcpy()
- *	. bzero() --> memset()
- *	. UNAMESZ --> UT_NAMESIZE
- *	. sys_errlist --> strerror()
- *
- * Mon Oct 12 20:22:59 CEST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Added support for setutent()/getutent()/endutend() instead of
- *	binary reading the UTMP file.  This is the the most portable
- *	way.  This allows /var/run/utmp format to change, even to a
- *	real database or utmp daemon. Also if utmp file locking is
- *	implemented in libc, syslog will use it immediately.  Thanks
- *	to Topi Miettinen <tom@medialab.sonera.net>.
- *
- * Mon Oct 12 20:49:18 MET DST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Avoid logging of SIGCHLD when syslogd is in the process of
- *	exiting and closing its files.  Again thanks to Topi.
- *
- * Mon Oct 12 22:18:34 CEST 1998: Martin Schulze <joey@infodrom.north.de>
- *	Modified printline() to support 8bit characters - such as
- *	russion letters.  Thanks to Vladas Lapinskas <lapinskas@mail.iae.lt>.
- *
- * Sat Nov 14 02:29:37 CET 1998: Martin Schulze <joey@infodrom.north.de>
- *	``-m 0'' now turns of MARK logging entirely.
- *
- * Tue Jan 19 01:04:18 MET 1999: Martin Schulze <joey@infodrom.north.de>
- *	Finally fixed an error with `-a' processing, thanks to Topi
- *	Miettinen <tom@medialab.sonera.net>.
- *
- * Sun May 23 10:08:53 CEST 1999: Martin Schulze <joey@infodrom.north.de>
- *	Removed superflous call to utmpname().  The path to the utmp
- *	file is defined in the used libc and should not be hardcoded
- *	into the syslogd binary referring the system it was compiled on.
- *
- * Sun Sep 17 20:45:33 CEST 2000: Martin Schulze <joey@infodrom.ffis.de>
- *	Fixed some bugs in printline() code that did not escape
- *	control characters '\177' through '\237' and contained a
- *	single-byte buffer overflow.  Thanks to Solar Designer
- *	<solar@false.com>.
- *
- * Sun Sep 17 21:26:16 CEST 2000: Martin Schulze <joey@infodrom.ffis.de>
- *	Don't close open sockets upon reload.  Thanks to Bill
- *	Nottingham.
- *
- * Mon Sep 18 09:10:47 CEST 2000: Martin Schulze <joey@infodrom.ffis.de>
- *	Fixed bug in printchopped() that caused syslogd to emit
- *	kern.emerg messages when splitting long lines.  Thanks to
- *	Daniel Jacobowitz <dan@debian.org> for the fix.
- *
- * Mon Sep 18 15:33:26 CEST 2000: Martin Schulze <joey@infodrom.ffis.de>
- *	Removed unixm/unix domain sockets and switch to Datagram Unix
- *	Sockets.  This should remove one possibility to play DoS with
- *	syslogd.  Thanks to Olaf Kirch <okir@caldera.de> for the patch.
- *
- * Sun Mar 11 20:23:44 CET 2001: Martin Schulze <joey@infodrom.ffis.de>
- *	Don't return a closed fd if `-a' is called with a wrong path.
- *	Thanks to Bill Nottingham <notting@redhat.com> for providing
- *	a patch.
- */
 #ifdef __FreeBSD__
 #define	BSD
 #endif
@@ -816,9 +399,7 @@ struct msg {
  */
 
 struct filed {
-#ifndef SYSV
 	struct	filed *f_next;		/* next in linked list */
-#endif
 	short	f_type;			/* entry type, see below */
 	short	f_file;			/* file descriptor */
 #ifdef	WITH_DB
@@ -2906,7 +2487,9 @@ void logmsg(pri, pMsg, flags)
 	int flags;
 {
 	register struct filed *f;
-	int fac, prilev, lognum;
+
+	/* allocate next entry and add it */
+	int fac, prilev;
 	int msglen;
 	char *msg;
 	char *from;
@@ -3049,12 +2632,7 @@ void logmsg(pri, pMsg, flags)
 		return; /* we are done with emergency loging */
 	}
 
-#ifdef SYSV
-	for (lognum = 0; lognum <= nlogs; lognum++) {
-		f = &Files[lognum];
-#else
 	for (f = Files; f; f = f->f_next) {
-#endif
 
 		/* skip messages that are incorrect priority */
 		if ( (f->f_pmask[fac] == TABLE_NOPRI) || \
@@ -3104,9 +2682,6 @@ void logmsg(pri, pMsg, flags)
 	(void) sigsetmask(omask);
 #endif
 }
-#if FALSE
-} /* balance parentheses for emacs */
-#endif
 
 
 /* Helper to doSQLEscape. This is called if doSQLEscape
@@ -3364,8 +2939,12 @@ void writeFile(struct filed *f)
 	 */
 	iovCreate(f);
 again:
+/* TODO printf("Pre writev, current pos: %u\n", lseek(f->f_file, 0, SEEK_CUR));*/
 	if (writev(f->f_file, f->f_iov, f->f_iIovUsed) < 0) {
-		int e = errno;
+		int e;
+//printf("Post writev\n");
+		e = errno;
+//printf("Post writev, errno %d\n", e);
 
 		/* If a named pipe is full, just ignore it for now
 		   - mrn 24 May 96 */
@@ -3374,7 +2953,7 @@ again:
 
 		(void) close(f->f_file);
 		/*
-		 * Check for EBADF on TTY's due to vhangup() XXX
+		 * Check for EBADF on TTY's due to vhangup()
 		 * Linux uses EIO instead (mrn 12 May 96)
 		 */
 		if ((f->f_type == F_TTY || f->f_type == F_CONSOLE)
@@ -3808,10 +3387,6 @@ const char *cvthname(f)
 void domark()
 {
 	register struct filed *f;
-#ifdef SYSV
-	int lognum;
-#endif
-
 	if (MarkInterval > 0) {
 	now = time(0);
 	MarkSeq += TIMERINTVL;
@@ -3820,12 +3395,7 @@ void domark()
 		MarkSeq = 0;
 	}
 
-#ifdef SYSV
-	for (lognum = 0; lognum <= nlogs; lognum++) {
-		f = &Files[lognum];
-#else
 	for (f = Files; f; f = f->f_next) {
-#endif
 		if (f->f_prevcount && now >= REPEATTIME(f)) {
 			dprintf("flush %s: repeated %d times, %d sec.\n",
 			    TypeNames[f->f_type], f->f_prevcount,
@@ -4029,14 +3599,10 @@ void cfsysline(char *p)
  */
 void init()
 {
-	register int i, lognum;
+	register int i;
 	register FILE *cf;
 	register struct filed *f;
-#ifndef TESTING
-#ifndef SYSV
-	register struct filed **nextp = (struct filed **) 0;
-#endif
-#endif
+	register struct filed *nextp;
 	register char *p;
 	register unsigned int Forwarding = 0;
 #ifdef CONT_LINE
@@ -4047,6 +3613,7 @@ void init()
 #endif
 	struct servent *sp;
 
+	nextp = NULL;
 	sp = getservbyname("syslog", "udp");
 	if (sp == NULL) {
 		errno = 0;
@@ -4065,9 +3632,8 @@ void init()
 	{
 		dprintf("Initializing log structures.\n");
 
-		for (lognum = 0; lognum <= nlogs; lognum++ ) {
-			f = &Files[lognum];
-
+		f = Files;
+		while (f != NULL) {
 			/* flush any pending output */
 			if (f->f_prevcount)
 				/* rgerhards: 2004-11-09: I am now changing it, but
@@ -4098,22 +3664,18 @@ void init()
 				break;
 #endif
 			}
+			/* done with this entry, we now need to delete itself */
+			f = f->f_next;
+			free(f);
 		}
 
-		/*
-		 * This is needed especially when HUPing syslogd as the
-		 * structure would grow infinitively.  -Joey
-		 */
+		/* Reflect the deletion of the Files linked list. */
 		nlogs = -1;
-		free((void *) Files);
 		Files = NULL;
 	}
 	
-#ifdef SYSV
-	lognum = 0;
-#else
 	f = NULL;
-#endif
+	nextp = NULL;
 	/* open the configuration file */
 	if ((cf = fopen(ConfFile, "r")) == NULL) {
 		/* rgerhards: this code is executed to set defaults when the
@@ -4122,83 +3684,83 @@ void init()
 		 * very clever...
 		 */
 		dprintf("cannot open %s (%s).\n", ConfFile, strerror(errno));
-#ifdef SYSV
-		allocate_log();
-		f = &Files[lognum++];
-#ifndef TESTING
-		cfline("*.err\t" _PATH_CONSOLE, f);
-#else
+		nextp = (struct filed *)calloc(1, sizeof(struct filed));
+		Files = nextp; /* set the root! */
+		cfline("*.ERR\t" _PATH_CONSOLE, nextp);
+		nextp->f_next = (struct filed *)calloc(1, sizeof(struct filed));
+		//cfline("*.PANIC\t*", nextp->f_next);
+		cfline("*.*\t*", nextp->f_next);
+		nextp->f_next = (struct filed *)calloc(1, sizeof(struct filed));
 		snprintf(cbuf,sizeof(cbuf), "*.*\t%s", ttyname(0));
-		cfline(cbuf, f);
-#endif
-#else
-		*nextp = (struct filed *)calloc(1, sizeof(*f));
-		cfline("*.ERR\t" _PATH_CONSOLE, *nextp);
-		(*nextp)->f_next = (struct filed *)calloc(1, sizeof(*f))	/* ASP */
-		cfline("*.PANIC\t*", (*nextp)->f_next);
-#endif
+		cfline(cbuf, nextp->f_next);
 		Initialized = 1;
-		return;
 	}
-
-	/*
-	 *  Foreach line in the conf table, open that file.
-	 */
-#if CONT_LINE
-	cline = cbuf;
-	while (fgets(cline, sizeof(cbuf) - (cline - cbuf), cf) != NULL) {
-#else
-	while (fgets(cline, sizeof(cline), cf) != NULL) {
-#endif
+	else { /* we should consider moving this into a separate function - TODO */
 		/*
-		 * check for end-of-section, comments, strip off trailing
-		 * spaces and newline character.
+		 *  Foreach line in the conf table, open that file.
 		 */
-		for (p = cline; isspace(*p); ++p) /*SKIP SPACES*/;
-		if (*p == '\0' || *p == '#')
-			continue;
+	#if CONT_LINE
+		cline = cbuf;
+		while (fgets(cline, sizeof(cbuf) - (cline - cbuf), cf) != NULL) {
+	#else
+		while (fgets(cline, sizeof(cline), cf) != NULL) {
+	#endif
+			/*
+			 * check for end-of-section, comments, strip off trailing
+			 * spaces and newline character.
+			 */
+			for (p = cline; isspace(*p); ++p) /*SKIP SPACES*/;
+			if (*p == '\0' || *p == '#')
+				continue;
 
-		if(*p == '$') {
-			cfsysline(++p);
-			continue;
-		}
-#if CONT_LINE
-		strcpy(cline, p);
-#endif
-		for (p = strchr(cline, '\0'); isspace(*--p););
-#if CONT_LINE
-		if (*p == '\\') {
-			if ((p - cbuf) > BUFSIZ - 30) {
-				/* Oops the buffer is full - what now? */
-				cline = cbuf;
-			} else {
-				*p = 0;
-				cline = p;
+			if(*p == '$') {
+				cfsysline(++p);
 				continue;
 			}
-		}  else
-			cline = cbuf;
-#endif
-		*++p = '\0';
-#ifndef SYSV
-		f = (struct filed *)calloc(1, sizeof(*f));
-		*nextp = f;
-		nextp = &f->f_next;
-#endif
-		allocate_log();
-		f = &Files[lognum++];
-#if CONT_LINE
-		cfline(cbuf, f);
-#else
-		cfline(cline, f);
-#endif
-		if (f->f_type == F_FORW || f->f_type == F_FORW_SUSP || f->f_type == F_FORW_UNKN) {
-			Forwarding++;
+	#if CONT_LINE
+			strcpy(cline, p);
+	#endif
+			for (p = strchr(cline, '\0'); isspace(*--p););
+	#if CONT_LINE
+			if (*p == '\\') {
+				if ((p - cbuf) > BUFSIZ - 30) {
+					/* Oops the buffer is full - what now? */
+					cline = cbuf;
+				} else {
+					*p = 0;
+					cline = p;
+					continue;
+				}
+			}  else
+				cline = cbuf;
+	#endif
+			*++p = '\0';
+
+			/* allocate next entry and add it */
+			f = (struct filed *)calloc(1, sizeof(struct filed));
+			/* TODO: check for NULL pointer (this is a general issue in this code...)! */
+			if(nextp == NULL) {
+				Files = f;
+			}
+			else {
+				nextp->f_next = f;
+			}
+			nextp = f;
+
+	#if CONT_LINE
+			cfline(cbuf, f);
+	#else
+			cfline(cline, f);
+	#endif
+			if (f->f_type == F_FORW || f->f_type == F_FORW_SUSP || f->f_type == F_FORW_UNKN) {
+				Forwarding++;
+			}
 		}
+
+		/* close the configuration file */
+		(void) fclose(cf);
 	}
 
-	/* close the configuration file */
-	(void) fclose(cf);
 
 #ifdef SYSLOG_UNIXAF
 	for (i = 0; i < nfunix; i++) {
@@ -4234,15 +3796,8 @@ void init()
 	Initialized = 1;
 
 	if ( Debug ) {
-#ifdef SYSV
-		for (lognum = 0; lognum <= nlogs; lognum++) {
-			f = &Files[lognum];
-			if (f->f_type != F_UNUSED) {
-				printf ("%2d: ", lognum);
-#else
 		for (f = Files; f; f = f->f_next) {
 			if (f->f_type != F_UNUSED) {
-#endif
 				for (i = 0; i <= LOG_NFACILITIES; i++)
 					if (f->f_pmask[i] == TABLE_NOPRI)
 						printf(" X ");
@@ -4459,10 +4014,9 @@ void cfline(line, f)
 
 	errno = 0;	/* keep strerror() stuff out of logerror messages */
 
-	/* clear out file entry */
-#ifndef SYSV
-	memset((char *) f, 0, sizeof(*f));
-#endif
+	/* Note: file structure is pre-initialized to zero because it was
+	 * created with calloc()!
+	 */
 	for (i = 0; i <= LOG_NFACILITIES; i++) {
 		f->f_pmask[i] = TABLE_NOPRI;
 		f->f_flags = 0;
