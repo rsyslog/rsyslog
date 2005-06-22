@@ -101,6 +101,13 @@
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#ifndef	NOLARGEFILE
+#	define _GNU_SOURCE
+#	define _LARGEFILE_SOURCE  
+#	define _LARGEFILE64_SOURCE  
+#	define _FILE_OFFSET_BITS 64
+#endif
+
 #if !defined(lint) && !defined(NO_SCCS)
 char copyright2[] =
 "@(#) Copyright (c) 1983, 1988 Regents of the University of California.\n\

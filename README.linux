@@ -49,7 +49,16 @@ New versions of this package and additional information will be available
 under www.monitorware.com/rsyslog as well as under the rsyslog project
 on sourceforge.net.
 
+IMPORTANT
+Starting with version 0.9.0, rsyslogd supports files larger than 2gb. 
+This was added simply by some c compiler definitions which ask the run
+time library to include different code. Depending on your file system,
+glibc, kernel or whatever, you might not be able to use this support. If
+so, rsyslogd might be terminated by the operating system when a file
+reaches 2gb of size. To guard against this, use the output channel 
+file size limitation (see man rsyslog.conf for details).
+
 Best regards,
 Rainer Gerhards
 Adiscon
-2005-04-04
+2005-06-22

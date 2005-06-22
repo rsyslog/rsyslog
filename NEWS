@@ -16,6 +16,15 @@ Version 0.9.0 (RGer)
 - changed some error messages during init to be sent to the console
   and/or emergency log. Previously, they were only seen if the
   -d (debug) option was present on the command line.
+- fixed the "2gb file issue on 32bit systems". If a file grew to
+  more than 2gb, the syslogd was aborted with "file size exceeded". 
+  Now, defines have been added according to
+  http://www.daimi.au.dk/~kasperd/comp.os.linux.development.faq.html#LARGEFILE
+  Testing revealed that they work ;)
+  HOWEVER, if your file system, glibc, kernel, whatever does not
+  support files larger 2gb, you need to set a file size limit with
+  the new output channel mechanism.
+- updated man pages to reflect the changes
 
 ---------------------------------------------------------------------------
 Version 0.8.4
