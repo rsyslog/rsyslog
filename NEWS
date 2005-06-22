@@ -7,6 +7,15 @@ Version 0.9.0 (RGer)
   that is needed for other upcoming modifications.
 - fixed a bug that caused rsyslogd not to listen to anything if
   the configuration file could not be read
+- pervious versions disabled network logging (send/receive) if
+  syslog/udp port was not in /etc/services. Now defaulting to
+  port 514 in this case.
+- internal error messages are now supported up to 256 bytes
+- error message seen during config file read are now also displayed
+  to the attached tty and not only the console
+- changed some error messages during init to be sent to the console
+  and/or emergency log. Previously, they were only seen if the
+  -d (debug) option was present on the command line.
 
 ---------------------------------------------------------------------------
 Version 0.8.4

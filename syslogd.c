@@ -1,15 +1,16 @@
 /**
  * TODO:
- * - check if syslogd really needs to be shut down totally if
- *   "syslog" service from etc/services can not be found
  * - check template lines for extra characters and provide 
  *   a warning, if they exists
  * - check that no exit() is used!
  * - implement the escape-cc property replacer option
+ * - it looks liek the time stamp is missing on internally-generated
+ *   messages - but maybe we need to keep this for compatibility
+ *   reasons.
  *
  * \brief This is what will become the rsyslogd daemon.
  *
- * Please note that as of now, most of the code in this file stems
+ * Please note that as of now, a lot of the code in this file stems
  * from the sysklogd project. To learn more over this project, please
  * visit
  *
@@ -182,6 +183,7 @@ static char sccsid[] = "@(#)rsyslogd.c	0.8 (Adiscon) 18/03/2005";
 #endif
 
 #include "template.h"
+#include "outchannel.h"
 #include "syslogd.h"
 
 /* from liblogging */
@@ -305,6 +307,16 @@ const char *sys_h_errlist[] = {
     "no address, look for MX record"				/* NO_ADDRESS */
  };
 
+/*
+ * This table lists the directive lines:
+ */
+const char *directive_name_list[] = {
+	"template",
+	"outchannel"
+};
+/* ... and their definitions: */
+enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1};
+
 /* rgerhards 2004-11-11: the following structure represents
  * a time as it is used in syslog.
  */
@@ -402,6 +414,8 @@ struct filed {
 	struct	filed *f_next;		/* next in linked list */
 	short	f_type;			/* entry type, see below */
 	short	f_file;			/* file descriptor */
+	off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
+	char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
 #ifdef	WITH_DB
 	MYSQL	f_hmysql;		/* handle to MySQL */
 	/* TODO: optimize memory layout / consumption; rgerhards 2004-11-19 */
@@ -482,6 +496,9 @@ char	*TypeNames[] = {
 
 struct	filed *Files = NULL;
 struct	filed consfile;
+struct 	filed emergfile; /* this is only used for emergency logging when
+			  * no actual config has been loaded.
+			  */
 
 struct code {
 	char	*c_name;
@@ -2626,6 +2643,26 @@ void logmsg(pri, pMsg, flags)
 			(void) close(f->f_file);
 			f->f_file = -1;
 		}
+
+		/* now log to a second emergency log... 2005-06-21 rgerhards */
+		/* TODO: make this configurable, eventually via the command line */
+		if(ttyname(0) != NULL) {
+			memset(&emergfile, 0, sizeof(emergfile));
+			f = &emergfile;
+			emergfile.f_type = F_TTY;
+			(void) strcpy(emergfile.f_un.f_fname, ttyname(0));
+			cflineSetTemplateAndIOV(&emergfile, " TradFmt");
+			f->f_file = open(ttyname(0), O_WRONLY|O_NOCTTY);
+
+			if (f->f_file >= 0) {
+				untty();
+				f->f_pMsg = MsgAddRef(pMsg); /* is expected here... */
+				fprintlog(f, flags);
+				MsgDestruct(pMsg);
+				(void) close(f->f_file);
+				f->f_file = -1;
+			}
+		}
 #ifndef SYSV
 		(void) sigsetmask(omask);
 #endif
@@ -2923,12 +2960,46 @@ void  iovCreate(struct filed *f)
 	return;
 }
 
+/* rgerhards 2005-06-21: Try to resolve a size limit
+ * situation. This first runs the command, and then
+ * checks if we are still above the treshold.
+ * returns 0 if ok, 1 otherwise
+ * TODO: consider moving the initial check in here, too
+ */
+int resolveFileSizeLimit(struct filed *f)
+{
+	off_t actualFileSize;
+	assert(f != NULL);
+
+	if(f->f_sizeLimitCmd == NULL)
+		return 1; /* nothing we can do in this case... */
+	
+	/* TODO: this is a really quick hack. We need something more
+	 * solid when it goes into production. This was just to see if
+	 * the overall idea works (I hope it won't survive...).
+	 * rgerhards 2005-06-21
+	 */
+	system(f->f_sizeLimitCmd);
+
+	f->f_file = open(f->f_un.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+			 0644);
+
+	actualFileSize = lseek(f->f_file, 0, SEEK_END);
+	if(actualFileSize >= f->f_sizeLimit) {
+		/* OK, it didn't work out... */
+		return 1;
+		}
+
+	return 0;
+}
+
 /* rgerhards 2004-11-11: write to a file output. This
  * will be called for all outputs using file semantics,
  * for example also for pipes.
  */
 void writeFile(struct filed *f)
 {
+	off_t actualFileSize;
 	assert(f != NULL);
 
 	/* Now generate the message. This can eventually be moved to
@@ -2939,12 +3010,40 @@ void writeFile(struct filed *f)
 	 */
 	iovCreate(f);
 again:
-/* TODO printf("Pre writev, current pos: %u\n", lseek(f->f_file, 0, SEEK_CUR));*/
+	/* first check if we have a file size limit and, if so,
+	 * obey to it.
+	 */
+	if(f->f_sizeLimit != 0) {
+		actualFileSize = lseek(f->f_file, 0, SEEK_END);
+		if(actualFileSize >= f->f_sizeLimit) {
+			char errMsg[256];
+			/* for now, we simply disable a file once it is
+			 * beyond the maximum size. This is better than having
+			 * us aborted by the OS... rgerhards 2005-06-21
+			 */
+			(void) close(f->f_file);
+			/* try to resolve the situation */
+			if(resolveFileSizeLimit(f) != 0) {
+				/* didn't work out, so disable... */
+				f->f_type = F_UNUSED;
+				snprintf(errMsg, sizeof(errMsg),
+					 "no longer writing to file %s; grown beyond configured file size of %lu bytes, actual size %lu - configured command did not resolve situation\n",
+					 f->f_un.f_fname, f->f_sizeLimit, actualFileSize);
+				errno = 0;
+				logerror(errMsg);
+				return;
+			} else {
+				snprintf(errMsg, sizeof(errMsg),
+					 "file %s had grown beyond configured file size of %lu bytes, actual size was %lu - configured command resolved situation\n",
+					 f->f_un.f_fname, f->f_sizeLimit, actualFileSize);
+				errno = 0;
+				logerror(errMsg);
+			}
+		}
+	}
+
 	if (writev(f->f_file, f->f_iov, f->f_iIovUsed) < 0) {
-		int e;
-//printf("Post writev\n");
-		e = errno;
-//printf("Post writev, errno %d\n", e);
+		int e = errno;
 
 		/* If a named pipe is full, just ignore it for now
 		   - mrn 24 May 96 */
@@ -2985,7 +3084,7 @@ again:
  * semantics. The message is typically already contained in the
  * channel save buffer (f->f_prevline). This is not only the case
  * when a message was already repeated but also when a new message
- * arrived. Parameter "msg", which souns like the message content,
+ * arrived. Parameter "msg", which sounds like the message content,
  * actually contains the message only in those few cases where it
  * was too large to fit into the channel save buffer.
  *
@@ -3421,18 +3520,17 @@ void debug_switch()
 /*
  * Print syslogd errors some place.
  */
-/*###*/
 void logerror(type)
 	char *type;
 {
-	char buf[100];
+	char buf[256];
 
 	dprintf("Called logerr, msg: %s\n", type);
 
 	if (errno == 0)
-		(void) snprintf(buf, sizeof(buf), "syslogd: %s", type);
+		(void) snprintf(buf, sizeof(buf), "rsyslogd: %s", type);
 	else
-		(void) snprintf(buf, sizeof(buf), "syslogd: %s: %s", type, strerror(errno));
+		(void) snprintf(buf, sizeof(buf), "rsyslogd: %s: %s", type, strerror(errno));
 	errno = 0;
 	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, LocalHostName, ADDDATE);
 	return;
@@ -3537,31 +3635,44 @@ void doexit(sig)
 }
 #endif
 
-/* parse and interpret a template line. The line is added
- * to the deamon's template linked list.
+/* parse and interpret a $-config line that starts with
+ * a name (this is common code). It is parsed to the name
+ * and then the proper sub-function is called to handle
+ * the actual directive.
  * rgerhards 2004-11-17
+ * rgerhards 2005-06-21: previously only for templates, now 
+ *    generalized.
  */
-void doTemplateLine(char **pp)
+void doNameLine(char **pp, enum eDirective eDir)
 {
 	char *p = *pp;
 	char szName[128];
 
 	assert(pp != NULL);
 	assert(p != NULL);
+	assert((eDir == DIR_TEMPLATE) || (eDir == DIR_OUTCHANNEL));
 
 	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
-		dprintf("Invalid $-configline - could not extract Templatename - line ignored\n");
+		char errMsg[128];
+		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
+		         "Invalid $%s line: could not extract name - line ignored",
+			 directive_name_list[eDir]);
+		logerror(errMsg);
 		return;
 	}
 	if(*p == ',')
 		++p; /* comma was eaten */
 	
 	/* we got the name - now we pass name & the rest of the string
-	 * to the template creator. It makes no sense to do further
+	 * to the subfunction. It makes no sense to do further
 	 * parsing here, as this is in close interaction with the
-	 * template subsystem. rgerhads 2004-11-17
+	 * respective subsystem. rgerhards 2004-11-17
 	 */
-	tplAddLine(szName, &p);
+	
+	if(eDir == DIR_TEMPLATE)
+		tplAddLine(szName, &p);
+	else
+		ochAddLine(szName, &p);
 
 	*pp = p;
 	return;
@@ -3578,17 +3689,23 @@ void cfsysline(char *p)
 	char szCmd[32];
 
 	assert(p != NULL);
+	errno = 0;
 	dprintf("cfsysline --> %s", p);
 	if(getSubString(&p, szCmd, sizeof(szCmd) / sizeof(char), ' ')  != 0) {
-		dprintf("Invalid $-configline - could not extract command - line ignored\n");
+		logerror("Invalid $-configline - could not extract command - line ignored\n");
 		return;
 	}
 
 	/* check the command and carry out processing */
 	if(!strcmp(szCmd, "template")) { 
-		doTemplateLine(&p);
+		doNameLine(&p, DIR_TEMPLATE);
+	} else if(!strcmp(szCmd, "outchannel")) { 
+		doNameLine(&p, DIR_OUTCHANNEL);
 	} else { /* invalid command! */
-		dprintf("Invalid command in $-configline: '%s' - line ignored\n", szCmd);
+		char err[100];
+		snprintf(err, sizeof(err)/sizeof(char),
+		         "Invalid command in $-configline: '%s' - line ignored\n", szCmd);
+		logerror(err);
 		return;
 	}
 }
@@ -3617,11 +3734,12 @@ void init()
 	sp = getservbyname("syslog", "udp");
 	if (sp == NULL) {
 		errno = 0;
-		logerror("network logging disabled (syslog/udp service unknown).");
-		logerror("see syslogd(8) for details of whether and how to enable it.");
-		return;
+		logerror("Could not find syslog/udp port in /etc/services.");
+		logerror("Now using default of 514.");
+		LogPort = 514;
 	}
-	LogPort = sp->s_port;
+	else
+		LogPort = sp->s_port;
 
 	/*
 	 *  Close all open log files and free log descriptor array.
@@ -3688,8 +3806,7 @@ void init()
 		Files = nextp; /* set the root! */
 		cfline("*.ERR\t" _PATH_CONSOLE, nextp);
 		nextp->f_next = (struct filed *)calloc(1, sizeof(struct filed));
-		//cfline("*.PANIC\t*", nextp->f_next);
-		cfline("*.*\t*", nextp->f_next);
+		cfline("*.PANIC\t*", nextp->f_next);
 		nextp->f_next = (struct filed *)calloc(1, sizeof(struct filed));
 		snprintf(cbuf,sizeof(cbuf), "*.*\t%s", ttyname(0));
 		cfline(cbuf, nextp->f_next);
@@ -3747,6 +3864,8 @@ void init()
 			}
 			nextp = f;
 
+			/* be careful: the default below must be set BEFORE calling cfline()! */
+			f->f_sizeLimit = 0; /* default value, use outchannels to configure! */
 	#if CONT_LINE
 			cfline(cbuf, f);
 	#else
@@ -3829,6 +3948,7 @@ void init()
 			}
 		}
 		tplPrintList();
+		ochPrintList();
 	}
 
 	if ( AcceptRemote )
@@ -3852,9 +3972,6 @@ void init()
 	(void) signal(SIGHUP, sighup_handler);
 	dprintf("syslogd: restarted.\n");
 }
-#if FALSE
-	}}} /* balance parentheses for emacs */
-#endif
 
 /* helper to cfline() and its helpers. Assign the right template
  * to a filed entry and allocates memory for its iovec.
@@ -3977,12 +4094,98 @@ void cflineParseFileName(struct filed *f, char* p)
 }
 
 
+/* Helper to cfline(). Parses a output channel name up until the first
+ * comma and then looks for the template specifier. Tries
+ * to find that template. Maps the output channel to the 
+ * proper filed structure settings. Everything is stored in the
+ * filed struct. Over time, the dependency on filed might be
+ * removed.
+ * rgerhards 2005-06-21
+ */
+void cflineParseOutchannel(struct filed *f, char* p)
+{
+	int i;
+	struct outchannel *pOch;
+	char szBuf[128];	/* should be more than sufficient */
+
+	/* this must always be a file, because we can not set a size limit
+	 * on a pipe...
+	 * rgerhards 2005-06-21: later, this will be a separate type, but let's
+	 * emulate things for the time being. When everything runs, we can
+	 * extend it...
+	 */
+	f->f_type = F_FILE;
+
+	++p; /* skip '$' */
+	i = 0;
+	/* get outchannel name */
+	while(*p && *p != ';' && *p != ' ' &&
+	      i < sizeof(szBuf) / sizeof(char)) {
+	      szBuf[i++] = *p++;
+	}
+	szBuf[i] = '\0';
+
+	/* got the name, now look up the channel... */
+	pOch = ochFind(szBuf, i);
+
+	if(pOch == NULL) {
+		char errMsg[128];
+		errno = 0;
+		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
+			 "outchannel '%s' not found - ignoring action line",
+			 szBuf);
+		logerror(errMsg);
+		f->f_type = F_UNUSED;
+		return;
+	}
+
+	/* check if there is a file name in the outchannel... */
+	if(pOch->pszFileTemplate == NULL) {
+		char errMsg[128];
+		errno = 0;
+		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
+			 "outchannel '%s' has no file name template - ignoring action line",
+			 szBuf);
+		logerror(errMsg);
+		f->f_type = F_UNUSED;
+		return;
+	}
+
+	/* OK, we finally got a correct template. So let's use it... */
+	strncpy(f->f_un.f_fname, pOch->pszFileTemplate, MAXFNAME);
+	f->f_sizeLimit = pOch->uSizeLimit;
+	/* WARNING: It is dangerous "just" to pass the pointer. As wer
+	 * never rebuild the output channel description, this is acceptable here.
+	 */
+	f->f_sizeLimitCmd = pOch->cmdOnSizeLimit;
+
+	/* back to the input string - now let's look for the template to use
+	 * Just as a general precaution, we skip whitespace.
+	 */
+	while(*p && isspace(*p))
+		++p;
+	if(*p == ';')
+		++p; /* eat it */
+
+	cflineParseTemplateName(f, &p, szBuf,
+	                        sizeof(szBuf) / sizeof(char));
+
+	if(szBuf[0] == '\0')	/* no template? */
+		strcpy(szBuf, " TradFmt"); /* use default! */
+
+	cflineSetTemplateAndIOV(f, szBuf);
+	
+	dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_fname, szBuf,
+		f->f_sizeLimit);
+}
+
+
 /*
  * Crack a configuration file line
  * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
  * handle config lines in general, but only lines that reflect actual filter
  * pairs (the original syslog message line format). Extended lines (those starting
- * with "$" have been filtered out by the caller and are passed to another function.
+ * with "$" have been filtered out by the caller and are passed to another function (cfsysline()).
  * Please note, however, that I needed to make changes in the line syntax to support
  * assignment of format definitions to a file. So it is not (yet) 100% transparent.
  * Eventually, we can overcome this limitation by prefixing the actual action indicator
@@ -4207,6 +4410,17 @@ void cfline(line, f)
 		 * FORW_SUSP.
 		 */
 #endif
+		break;
+
+        case '$':
+		/* rgerhards 2005-06-21: this is a special setting for output-channel
+		 * defintions. In the long term, this setting will probably replace
+		 * anything else, but for the time being we must co-exist with the
+		 * traditional mode lines.
+		 */
+		cflineParseOutchannel(f, p);
+		f->f_file = open(f->f_un.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+				 0644);
 		break;
 
         case '|':

@@ -59,14 +59,14 @@ test: syslog_tst tsyslogd
 
 install: install_man install_exec
 
-syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o
-	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o stringbuf.o srUtils.o ${LIBS}
+syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o outchannel.o
+	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o outchannel.o stringbuf.o srUtils.o ${LIBS}
 
 syslog_tst: syslog_tst.o
 	${CC} ${LDFLAGS} -o syslog_tst syslog_tst.o
 
-tsyslogd: syslogd.c version.h template.o stringbuf.o srUtils.o
-	$(CC) $(CFLAGS) -g -DTESTING $(SYSLOGD_FLAGS) -o tsyslogd syslogd.c pidfile.o template.o stringbuf.o srUtils.o $(LIBS)
+tsyslogd: syslogd.c version.h template.o outchannel.o stringbuf.o srUtils.o
+	$(CC) $(CFLAGS) -g -DTESTING $(SYSLOGD_FLAGS) -o tsyslogd syslogd.c pidfile.o template.o outchannel.o stringbuf.o srUtils.o $(LIBS)
 
 srUtils.o: srUtils.c srUtils.h liblogging-stub.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c srUtils.c
@@ -77,7 +77,10 @@ stringbuf.o: stringbuf.c stringbuf.h liblogging-stub.h
 template.o: template.c template.h stringbuf.h liblogging-stub.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c template.c
 
-syslogd.o: syslogd.c version.h template.h
+outchannel.o: outchannel.c outchannel.h stringbuf.h liblogging-stub.h
+	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c outchannel.c
+
+syslogd.o: syslogd.c version.h template.h outchannel.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c syslogd.c
 
 syslog.o: syslog.c

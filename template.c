@@ -358,7 +358,7 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 	}
 	++p;
 
-	/* we finally got to the actual template string - so let's have some fun... */
+	/* we finally go to the actual template string - so let's have some fun... */
 	bDone = *p ? 0 : 1;
 	while(!bDone) {
 		switch(*p) {
