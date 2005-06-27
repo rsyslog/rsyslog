@@ -1,3 +1,10 @@
+#ifndef	NOLARGEFILE
+#	define _GNU_SOURCE
+#	define _LARGEFILE_SOURCE  
+#	define _LARGEFILE64_SOURCE  
+#	define _FILE_OFFSET_BITS 64
+#endif
+
 /* This is the output channel processing code of rsyslog.
  * Output channels - in the long term - will define how
  * messages will be sent to whatever file or other medium.
@@ -12,6 +19,7 @@
 #endif
 
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
