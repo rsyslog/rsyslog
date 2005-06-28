@@ -11,7 +11,7 @@ CC= gcc
 # uncomment the following line if you would like
 # to DISABLE large file support (or if your compiler
 # does not provide this feature)
-NOLARGEFILE = -DNOLARGEFILE
+#NOLARGEFILE = -DNOLARGEFILE
 
 # the next two lines are essentially the same, but -DWITH_DB
 # enables the MySQL code. By default, that one is commented out
@@ -26,7 +26,6 @@ BINDIR = /usr/sbin
 MANDIR = /usr/share/man
 
 # Uncomment the following to use mysql.
-#LIBS = -lmysqlclient #/var/lib/mysql/mysql 
 LIBS = -lmysqlclient -L/usr/local/lib/mysql # thid define for FreeBSD
 
 # There is one report that under an all ELF system there may be a need to
@@ -37,12 +36,6 @@ LIBS = -lmysqlclient -L/usr/local/lib/mysql # thid define for FreeBSD
 # The following define determines whether the package adheres to the
 # file system standard.
 FSSTND = -DFSSTND
-
-# The following define establishes ownership for the man pages.
-# Avery tells me that there is a difference between Debian and
-# Slackware.  Rather than choose sides I am leaving it up to the user.
-MAN_OWNER = root
-# MAN_OWNER = man
 
 # The following define establishes the name of the pid file for the
 # rsyslogd daemon.  The library include file (paths.h) defines the
