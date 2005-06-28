@@ -3026,14 +3026,14 @@ again:
 				/* didn't work out, so disable... */
 				f->f_type = F_UNUSED;
 				snprintf(errMsg, sizeof(errMsg),
-					 "no longer writing to file %s; grown beyond configured file size of %llu bytes, actual size %llu - configured command did not resolve situation\n",
+					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation\n",
 					 f->f_un.f_fname, f->f_sizeLimit, actualFileSize);
 				errno = 0;
 				logerror(errMsg);
 				return;
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
-					 "file %s had grown beyond configured file size of %llu bytes, actual size was %llu - configured command resolved situation\n",
+					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation\n",
 					 f->f_un.f_fname, f->f_sizeLimit, actualFileSize);
 				errno = 0;
 				logerror(errMsg);

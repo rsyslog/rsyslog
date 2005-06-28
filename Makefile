@@ -8,12 +8,17 @@ CC= gcc
 #LDFLAGS= -g -Wall -fno-omit-frame-pointer
 #CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
 
+# uncomment the following line if you would like
+# to DISABLE large file support (or if your compiler
+# does not provide this feature)
+NOLARGEFILE = -DNOLARGEFILE
+
 # the next two lines are essentially the same, but -DWITH_DB
 # enables the MySQL code. By default, that one is commented out
 # change the comment chars to activate it if you need MySQL!
 # In this case, also look down further to uncomment the libs
-#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
-CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB -I/usr/local/include
+#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce $(NOLARGEFILE)
+CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB -I/usr/local/include $(NOLARGEFILE)
 LDFLAGS= -s
 
 INSTALL = install
@@ -66,7 +71,7 @@ syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o outchannel.o
 syslog_tst: syslog_tst.o
 	${CC} ${LDFLAGS} -o syslog_tst syslog_tst.o
 
-tsyslogd: syslogd.c version.h template.o outchannel.o stringbuf.o srUtils.o
+tsyslogd: syslogd.c syslogd.h version.h template.o outchannel.o stringbuf.o srUtils.o
 	$(CC) $(CFLAGS) -g -DTESTING $(SYSLOGD_FLAGS) -o tsyslogd syslogd.c pidfile.o template.o outchannel.o stringbuf.o srUtils.o $(LIBS)
 
 srUtils.o: srUtils.c srUtils.h liblogging-stub.h
@@ -78,10 +83,10 @@ stringbuf.o: stringbuf.c stringbuf.h liblogging-stub.h
 template.o: template.c template.h stringbuf.h liblogging-stub.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c template.c
 
-outchannel.o: outchannel.c outchannel.h stringbuf.h liblogging-stub.h
+outchannel.o: outchannel.c outchannel.h stringbuf.h liblogging-stub.h syslogd.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c outchannel.c
 
-syslogd.o: syslogd.c version.h template.h outchannel.h
+syslogd.o: syslogd.c version.h template.h outchannel.h syslogd.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} $(DEB) -c syslogd.c
 
 syslog.o: syslog.c
