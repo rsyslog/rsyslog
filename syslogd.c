@@ -101,13 +101,6 @@
  * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef	NOLARGEFILE
-#	define _GNU_SOURCE
-#	define _LARGEFILE_SOURCE  
-#	define _LARGEFILE64_SOURCE  
-#	define _FILE_OFFSET_BITS 64
-#endif
-
 #if !defined(lint) && !defined(NO_SCCS)
 char copyright2[] =
 "@(#) Copyright (c) 1983, 1988 Regents of the University of California.\n\
@@ -617,7 +610,6 @@ void doexit(int sig);
 void init();
 void cfline(char *line, register struct filed *f);
 int decode(char *name, struct code *codetab);
-static void allocate_log(void);
 void sighup_handler();
 #ifdef WITH_DB
 void initMySQL(register struct filed *f);
@@ -3034,14 +3026,14 @@ again:
 				/* didn't work out, so disable... */
 				f->f_type = F_UNUSED;
 				snprintf(errMsg, sizeof(errMsg),
-					 "no longer writing to file %s; grown beyond configured file size of %lu bytes, actual size %lu - configured command did not resolve situation\n",
+					 "no longer writing to file %s; grown beyond configured file size of %llu bytes, actual size %llu - configured command did not resolve situation\n",
 					 f->f_un.f_fname, f->f_sizeLimit, actualFileSize);
 				errno = 0;
 				logerror(errMsg);
 				return;
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
-					 "file %s had grown beyond configured file size of %lu bytes, actual size was %lu - configured command resolved situation\n",
+					 "file %s had grown beyond configured file size of %llu bytes, actual size was %llu - configured command resolved situation\n",
 					 f->f_un.f_fname, f->f_sizeLimit, actualFileSize);
 				errno = 0;
 				logerror(errMsg);
@@ -4625,52 +4617,6 @@ void dprintf(char *fmt, ...)
 
 
 /*
- * The following function is responsible for allocating/reallocating the
- * array which holds the structures which define the logging outputs.
- */
-static void allocate_log()
-
-{
-	dprintf("Called allocate_log, nlogs = %d.\n", nlogs);
-	
-	/*
-	 * Decide whether the array needs to be initialized or needs to
-	 * grow.
-	 */
-	if ( nlogs == -1 )
-	{
-		Files = (struct filed *) malloc(sizeof(struct filed));
-		if ( Files == (void *) 0 )
-		{
-			dprintf("Cannot initialize log structure.");
-			logerror("Cannot initialize log structure.");
-			return;
-		}
-	}
-	else
-	{
-		/* Re-allocate the array. */
-		Files = (struct filed *) realloc(Files, (nlogs+2) * \
-						  sizeof(struct filed));
-		if ( Files == (struct filed *) 0 )
-		{
-			dprintf("Cannot grow log structure.");
-			logerror("Cannot grow log structure.");
-			return;
-		}
-	}
-	
-	/*
-	 * Initialize the array element, bump the number of elements in the
-	 * the array and return.
-	 */
-	++nlogs;
-	memset(&Files[nlogs], '\0', sizeof(struct filed));
-	return;
-}
-
-
-/*
  * The following function is resposible for handling a SIGHUP signal.  Since
  * we are now doing mallocs/free as part of init we had better not being
  * doing this during a signal handler.  Instead this function simply sets
@@ -4688,7 +4634,7 @@ void sighup_handler()
 /*
  * The following function is responsible for initiatlizing a
  * MySQL connection.
- * Initially added 2004-10-28
+ * Initially added 2004-10-28 mmeckelein
  */
 void initMySQL(register struct filed *f)
 {
@@ -4697,8 +4643,6 @@ void initMySQL(register struct filed *f)
 
 	if (checkDBErrorState(f))
 		return;
-	
-	dprintf("in initMysql() \n");
 	
 	mysql_init(&f->f_hmysql);
 	do {

@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 0.9.1 (RGer)
+- fixed code so that it compiles without errors under FreeBSD
+- removed now unused function "allocate_log()" from syslogd.c
+
+---------------------------------------------------------------------------
 Version 0.9.0 (RGer)
 - changed the filed structure to be a linked list. Previously, it
   was a table - well, for non-SYSV it was defined as linked list,

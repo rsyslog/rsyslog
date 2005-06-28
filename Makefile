@@ -12,8 +12,8 @@ CC= gcc
 # enables the MySQL code. By default, that one is commented out
 # change the comment chars to activate it if you need MySQL!
 # In this case, also look down further to uncomment the libs
-CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
-#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB
+#CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce
+CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -DWITH_DB -I/usr/local/include
 LDFLAGS= -s
 
 INSTALL = install
@@ -22,6 +22,7 @@ MANDIR = /usr/share/man
 
 # Uncomment the following to use mysql.
 #LIBS = -lmysqlclient #/var/lib/mysql/mysql 
+LIBS = -lmysqlclient -L/usr/local/lib/mysql # thid define for FreeBSD
 
 # There is one report that under an all ELF system there may be a need to
 # explicilty link with libresolv.a.  If linking syslogd fails you may wish
