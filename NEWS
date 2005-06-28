@@ -5,6 +5,11 @@ Version 0.9.1 (RGer)
 - changed the make file so that it contains more defines for
   different environments (in the long term, we need a better
   system for disabling/enabling features...)
+- changed some printf's printing off_t types to %lld and
+  explicit (long long) casts. I tried to figure out the exact type,
+  but did not succeed in this. In the worst case, ultra-large peta-
+  byte files will now display funny informational messages on rollover,
+  something I think we can live with for the next 10 years or so...
 
 ---------------------------------------------------------------------------
 Version 0.9.0 (RGer)
