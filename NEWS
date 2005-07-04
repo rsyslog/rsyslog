@@ -4,7 +4,10 @@ Version 0.9.2 (RGer), around 2005-07-05
   the needs of the IHE (Integrating the Healthcare Environment)
   initiative. They use syslog for auditing and may generate messages
   that large.
-- begun a simple TCP syslog receiver
+- added a syslog/tcp receiver; we now can receive messages via
+  plain tcp, but we can still send only via UDP.
+- slightly changed some error messages that contained a spurios \n at
+  the end of the line (which gives empty lines in your log...)
 
 ---------------------------------------------------------------------------
 Version 0.9.1 (RGer)

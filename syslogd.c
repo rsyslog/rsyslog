@@ -630,6 +630,8 @@ static int sockTCPLstn = -1;
 struct TCPSession {
 	int sock;
 	char msg[MAXLINE];
+/*	struct sockaddr remHost; maybe not needed...*/
+	char *fromHost;
 } TCPSessions[TCPSESS_MAX];
 
 
@@ -749,12 +751,18 @@ void TCPSessAccept(void)
 {
 	int newConn;
 	int iSess;
-	newConn = accept(sockTCPLstn, NULL, NULL);
+	struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(struct sockaddr);
+	int lenHostName;
+	char *fromHost;
+	char *pBuf;
+
+	newConn = accept(sockTCPLstn, (struct sockaddr*) &addr, &addrlen);
 	if (newConn < 0) {
-		logerror("tcp accept, ignoring error");
+		logerror("tcp accept, ignoring error and connection request");
 		return;
 	}
-	/* TODO: must change to nonblocking? */
+	/* TODO: must change to nonblocking! */
 
 	/* Add to session list */
 	iSess = TCPSessFindFreeSpot();
@@ -766,6 +774,17 @@ void TCPSessAccept(void)
 	}
 
 	/* OK, we have a "good" index... */
+	/* get the host name */
+	fromHost = (char *)cvthname(&addr);
+	lenHostName = strlen(fromHost) + 1; /* for \0 byte */
+	if((pBuf = (char*) malloc(sizeof(char) * lenHostName)) == NULL) {
+		logerror("couldn't allocate buffer for hostname - ignored");
+		TCPSessions[iSess].fromHost = "NO-MEMORY-FOR-HOSTNAME";
+	} else {
+		memcpy(pBuf, fromHost, lenHostName);
+		TCPSessions[iSess].fromHost = pBuf;
+	}
+
 	TCPSessions[iSess].sock = newConn;
 	TCPSessions[iSess].msg[0] = '\0'; /* init msg buffer! */
 }
@@ -785,7 +804,34 @@ void TCPSessClose(int iSess)
 
 	close(TCPSessions[iSess].sock);
 	TCPSessions[iSess].sock = -1;
+	free(TCPSessions[iSess].fromHost);
+	TCPSessions[iSess].fromHost = NULL; /* not really needed, but... */
 }
+
+
+/* Processes the data received via a TCP session. If there
+ * is no other way to handle it, data is discarded.
+ * Input parameter data is the data received, iLen is its
+ * len as returned from recv(). iLen must be 1 or more (that
+ * is errors must be handled by caller!). iTCPSess must be
+ * the index of the TCP session that received the data.
+ * rgerhards 2005-07-04
+ */
+void TCPSessDataRcvd(int iTCPSess, char *data, int iLen)
+{
+	assert(data != NULL);
+	assert(iLen > 0);
+	assert(iTCPSess >= 0);
+	assert(iTCPSess < TCPSESS_MAX);
+	assert(TCPSessions[iTCPSess].sock != -1);
+
+	if(*(data+iLen - 1) == '\n')
+		*(data+iLen-1) = '\0';
+	else
+		*(data+iLen) = '\0';
+	printline(TCPSessions[iTCPSess].fromHost, data, SOURCE_INET);
+}
+
 
 #endif
 /********************************************************************
@@ -2244,15 +2290,16 @@ int main(argc, argv)
 					/* Session closed */
 					TCPSessClose(iTCPSess);
 				} else if(state == -1) {
-					/*TODO: good error message */
-					logerror("TCP session - session will be closed, error ignored");
-				/*		 fd);*/
+					char errmsg[128];
+					snprintf(errmsg, sizeof(errmsg)/sizeof(char),
+						 "TCP session %d will be closed, error ignored",
+						 fd);
+					logerror(errmsg);
 					TCPSessClose(iTCPSess);
 				} else {
 					/* valid data received, process it! */
-					dprintf("Data received: '%s'\n", buf);
+					TCPSessDataRcvd(iTCPSess, buf, state);
 				}
-				getchar();
 			}
 			iTCPSess = TCPSessGetNxtSess(iTCPSess);
 		}
@@ -2478,7 +2525,7 @@ void printchopped(hname, msg, len, fd, iSource)
 
 	dprintf("Message length: %d, File descriptor: %d.\n", len, fd);
 	tmpline[0] = '\0';
-	if ( parts[fd] != (char *) 0 )
+	if ( parts[fd] != (char *) NULL )
 	{
 		dprintf("Including part from messages.\n");
 		strcpy(tmpline, parts[fd]);
@@ -3246,14 +3293,14 @@ again:
 				/* didn't work out, so disable... */
 				f->f_type = F_UNUSED;
 				snprintf(errMsg, sizeof(errMsg),
-					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation\n",
+					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation",
 					 f->f_un.f_fname, (long long) f->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
 				return;
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
-					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation\n",
+					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation",
 					 f->f_un.f_fname, (long long) f->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
