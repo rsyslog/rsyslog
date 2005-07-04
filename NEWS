@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------
+Version 0.9.2 (RGer)
+- changed the max supported message size to 32K. This is to satisfy
+  the needs of the IHE (Integrating the Healthcare Environment)
+  initiative. They use syslog for auditing and may generate messages
+  that large.
+
+---------------------------------------------------------------------------
 Version 0.9.1 (RGer)
 - fixed code so that it compiles without errors under FreeBSD
 - removed now unused function "allocate_log()" from syslogd.c

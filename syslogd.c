@@ -7,6 +7,8 @@
  * - it looks liek the time stamp is missing on internally-generated
  *   messages - but maybe we need to keep this for compatibility
  *   reasons.
+ * - selector line for MySQL aborts if no template is given and
+ *   also no semicolon is present at the end of the line
  *
  * \brief This is what will become the rsyslogd daemon.
  *
@@ -115,7 +117,7 @@ static char sccsid[] = "@(#)rsyslogd.c	0.8 (Adiscon) 18/03/2005";
 #define	BSD
 #endif
 
-#define	MAXLINE		1024		/* maximum line length */
+#define	MAXLINE		32768		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define DEFSPRI		(LOG_KERN|LOG_CRIT)
 #define TIMERINTVL	30		/* interval for checking flush, mark */
