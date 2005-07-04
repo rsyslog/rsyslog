@@ -81,26 +81,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
- *
- * The following copyright and license applies to the original
- * sysklogd package that was used as a basis for this release of
- * rsyslogd. Obviously, it applies to those parts stemming directly
- * back to the original sysklogd package.
- *
- * Copyright (c) 1983, 1988 Regents of the University of California.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms are permitted
- * provided that the above copyright notice and this paragraph are
- * duplicated in all such forms and that any documentation,
- * advertising materials, and other materials related to such
- * distribution and use acknowledge that the software was developed
- * by the University of California, Berkeley.  The name of the
- * University may not be used to endorse or promote products derived
- * from this software without specific prior written permission.
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
- * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
 #if !defined(lint) && !defined(NO_SCCS)
@@ -577,7 +557,6 @@ int     Initialized = 0;        /* set when we have initialized ourselves
                                  * such a case.
                                  */
 
-
 extern	int errno;
 
 /* hardcoded standard templates (used for defaults) */
@@ -627,8 +606,191 @@ void getCurrTime(struct syslogTime *t);
 void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
 
 #ifdef SYSLOG_UNIXAF
-static int create_inet_socket();
+static int create_udp_socket();
 #endif
+
+/********************************************************************
+ *                    ###  SYSLOG/TCP CODE ###
+ * This is code for syslog/tcp. This code would belong to a separate
+ * file - but I have put it here to avoid hassle with CVS. Over
+ * time, I expect rsyslog to utilize liblogging for actual network
+ * I/O. So the tcp code will be (re)moved some time. I don't like
+ * to add a new file to cvs that I will push to the attic in just
+ * a few weeks (month at most...). So I simply add the code here.
+ *
+ * Place no unrelated code between this comment and the
+ * END tcp comment!
+ *
+ * 2005-07-04 RGerhards (Happy independence day to our US friends!)
+ ********************************************************************/
+#ifdef SYSLOG_INET
+
+#define TCPSESS_MAX 100 /* TODO: remove hardcoded limit */
+static int sockTCPLstn = -1;
+struct TCPSession {
+	int sock;
+	char msg[MAXLINE];
+} TCPSessions[TCPSESS_MAX];
+
+
+/* Initialize the session table
+ */
+void TCPSessInit(void)
+{
+	register int i;
+
+	for(i = 0 ; i < TCPSESS_MAX ; ++i) {
+		TCPSessions[i].sock = -1; /* no sock */
+		TCPSessions[i].msg[0] = '\0'; /* just make sure... */
+	}
+}
+
+
+/* find a free spot in the session table. If the table
+ * is full, -1 is returned, else the index of the free
+ * entry (0 or higher).
+ */
+int TCPSessFindFreeSpot(void)
+{
+	register int i;
+
+	for(i = 0 ; i < TCPSESS_MAX ; ++i) {
+		if(TCPSessions[i].sock == -1)
+			break;
+	}
+
+	return((i < TCPSESS_MAX) ? i : -1);
+}
+
+
+/* Get the next session index. Free session tables entries are
+ * skipped. This function is provided the index of the last
+ * session entry, or -1 if no previous entry was obtained. It
+ * returns the index of the next session or -1, if there is no
+ * further entry in the table. Please note that the initial call
+ * might as well return -1, if there is no session at all in the
+ * session table.
+ */
+int TCPSessGetNxtSess(int iCurr)
+{
+	register int i;
+
+	for(i = iCurr + 1 ; i < TCPSESS_MAX ; ++i)
+		if(TCPSessions[i].sock != -1)
+			break;
+
+	return((i < TCPSESS_MAX) ? i : -1);
+}
+
+
+/* Initialize TCP sockets
+ */
+static int create_tcp_socket(void)
+{
+	int fd, on = 1;
+	struct sockaddr_in sin;
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd < 0) {
+		logerror("syslog: TCP: Unknown protocol, suspending tcp inet service.");
+		return fd;
+	}
+
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	sin.sin_port = 514;	/* TODO: get this from a variable!!! */
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, \
+		       (char *) &on, sizeof(on)) < 0 ) {
+		logerror("setsockopt(REUSEADDR), suspending tcp inet");
+		close(fd);
+		return -1;
+	}
+	/* We need to enable BSD compatibility. Otherwise an attacker
+	 * could flood our log files by sending us tons of ICMP errors.
+	 */
+#ifndef BSD	
+	if (setsockopt(fd, SOL_SOCKET, SO_BSDCOMPAT, \
+			(char *) &on, sizeof(on)) < 0) {
+		logerror("setsockopt(BSDCOMPAT), suspending tcp inet");
+		close(fd);
+		return -1;
+	}
+#endif
+	if (bind(fd, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
+		logerror("bind, suspending tcp inet");
+		close(fd);
+		return -1;
+	}
+
+	if(listen(fd, 5) < 0) {
+		logerror("listen, suspending tcp inet");
+		close(fd);
+		return -1;
+	}
+
+	sockTCPLstn = fd;
+
+	/* OK, we had success. Now it is also time to
+	 * initialize our connections
+	 */
+	TCPSessInit();
+
+	printf("Opened TCP socket %d.\n", sockTCPLstn);
+
+	return fd;
+}
+
+/* Accept new TCP connection; make entry in session table. If there
+ * is no more space left in the connection table, the new TCP
+ * connection is immediately dropped.
+ */
+void TCPSessAccept(void)
+{
+	int newConn;
+	int iSess;
+	newConn = accept(sockTCPLstn, NULL, NULL);
+	if (newConn < 0) {
+		logerror("tcp accept, ignoring error");
+		return;
+	}
+	/* TODO: must change to nonblocking? */
+
+	/* Add to session list */
+	iSess = TCPSessFindFreeSpot();
+	if(iSess == -1) {
+		errno = 0;
+		logerror("too many tcp sessions - dropping incoming request");
+		close(newConn);
+		return;
+	}
+
+	/* OK, we have a "good" index... */
+	TCPSessions[iSess].sock = newConn;
+	TCPSessions[iSess].msg[0] = '\0'; /* init msg buffer! */
+}
+
+
+/* Closes a TCP session and marks its slot in the session
+ * table as unused. No attention is paid to the return code
+ * of close, so potential-double closes are not detected.
+ */
+void TCPSessClose(int iSess)
+{
+	if(iSess < 0 || iSess > TCPSESS_MAX) {
+		errno = 0;
+		logerror("internal error, trying to close an invalid TCP session!");
+		return;
+	}
+
+	close(TCPSessions[iSess].sock);
+	TCPSessions[iSess].sock = -1;
+}
+
+#endif
+/********************************************************************
+ *                  ###  END OF SYSLOG/TCP CODE ###
+ ********************************************************************/
 
 
 /*******************************************************************
@@ -1680,6 +1842,7 @@ int main(argc, argv)
 #ifdef  SYSLOG_INET
 	struct sockaddr_in frominet;
 	char *from;
+	int iTCPSess;
 #endif
 	pid_t ppid = getpid();
 #endif
@@ -1901,7 +2064,7 @@ int main(argc, argv)
 	if ( Debug )
 	{
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
-		debugging_on = 0;
+		// TODO: ADD LATER: debugging_on = 0;
 	}
 	/*
 	 * Send a signal to the parent to it can terminate.
@@ -1942,6 +2105,23 @@ int main(argc, argv)
 			if (inetm>maxfds) maxfds=inetm;
 			dprintf("Listening on syslog UDP port.\n");
 		}
+
+		/* Add the TCP socket to the list of read descriptors.
+	    	 */
+			FD_SET(sockTCPLstn, &readfds);
+			if (sockTCPLstn>maxfds) maxfds=sockTCPLstn;
+			dprintf("Listening on syslog TCP port.\n");
+			/* do the sessions */
+			iTCPSess = TCPSessGetNxtSess(-1);
+			while(iTCPSess != -1) {
+				int fd;
+				fd = TCPSessions[iTCPSess].sock;
+				dprintf("Adding TCP Session %d\n", fd);
+				FD_SET(fd, &readfds);
+				if (fd>maxfds) maxfds=fd;
+				/* now get next... */
+				iTCPSess = TCPSessGetNxtSess(iTCPSess);
+			}
 #endif
 #endif
 #ifdef TESTING
@@ -2014,7 +2194,7 @@ int main(argc, argv)
 			memset(line, '\0', sizeof(line));
 			i = recvfrom(finet, line, MAXLINE - 2, 0, \
 				     (struct sockaddr *) &frominet, &len);
-			dprintf("Message from inetd socket: #%d, host: %s\n",
+			dprintf("Message from UDP inetd socket: #%d, host: %s\n",
 				inetm, inet_ntoa(frominet.sin_addr));
 			if (i > 0) {
 				line[i] = line[i+1] = '\0';
@@ -2037,6 +2217,44 @@ int main(argc, argv)
 				 * BSDCOMPAT on the socket */
 				sleep(10);
 			}
+		}
+
+		/* Now check for TCP */
+		if(FD_ISSET(sockTCPLstn, &readfds)) {
+			dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn);
+			TCPSessAccept();
+		}
+
+		/* now check the sessions */
+		/* TODO: optimize the whole thing. We could stop enumerating as
+		 * soon as we have found all sockets flagged as active. */
+		iTCPSess = TCPSessGetNxtSess(-1);
+		while(iTCPSess != -1) {
+			int fd;
+			int state;
+			fd = TCPSessions[iTCPSess].sock;
+			if(FD_ISSET(fd, &readfds)) {
+				char buf[MAXLINE];
+				dprintf("tcp session socket with new data: #%d\n", fd);
+
+				/* Receive message */
+				state = recv(fd, buf, sizeof(buf), 0);
+				printf("recv state %d\n", state);
+				if(state == 0) {
+					/* Session closed */
+					TCPSessClose(iTCPSess);
+				} else if(state == -1) {
+					/*TODO: good error message */
+					logerror("TCP session - session will be closed, error ignored");
+				/*		 fd);*/
+					TCPSessClose(iTCPSess);
+				} else {
+					/* valid data received, process it! */
+					dprintf("Data received: '%s'\n", buf);
+				}
+				getchar();
+			}
+			iTCPSess = TCPSessGetNxtSess(iTCPSess);
 		}
 #endif
 #else
@@ -2101,7 +2319,7 @@ static int create_unix_socket(const char *path)
 #endif
 
 #ifdef SYSLOG_INET
-static int create_inet_socket()
+static int create_udp_socket()
 {
 	int fd, on = 1;
 	struct sockaddr_in sin;
@@ -3597,8 +3815,12 @@ void die(sig)
         for (i = 0; i < nfunix; i++)
 		if (funix[i] != -1)
 			close(funix[i]);
-	/* Close the inet socket. */
+	/* Close the UDP inet socket. */
 	if (InetInuse) close(inetm);
+	/* Close the TCP inet socket. */
+	/* TODO: close all TCP connections! */
+
+	if (InetInuse) close(sockTCPLstn);
 
 	/* Clean-up files. */
         for (i = 0; i < nfunix; i++)
@@ -3895,9 +4117,18 @@ void init()
 #endif
 
 #ifdef SYSLOG_INET
+	if (1) {	/* TODO: create a real condition! */
+		if (sockTCPLstn < 0) {
+			sockTCPLstn = create_tcp_socket();
+			if (sockTCPLstn >= 0) {
+				dprintf("Opened syslog TCP port.\n");
+			}
+		}
+	}
+
 	if (Forwarding || AcceptRemote) {
 		if (finet < 0) {
-			finet = create_inet_socket();
+			finet = create_udp_socket();
 			if (finet >= 0) {
 				InetInuse = 1;
 				dprintf("Opened syslog UDP port.\n");

@@ -1,9 +1,10 @@
 ---------------------------------------------------------------------------
-Version 0.9.2 (RGer)
+Version 0.9.2 (RGer), around 2005-07-05
 - changed the max supported message size to 32K. This is to satisfy
   the needs of the IHE (Integrating the Healthcare Environment)
   initiative. They use syslog for auditing and may generate messages
   that large.
+- begun a simple TCP syslog receiver
 
 ---------------------------------------------------------------------------
 Version 0.9.1 (RGer)
@@ -507,4 +508,24 @@ helpful.
  *	Don't return a closed fd if `-a' is called with a wrong path.
  *	Thanks to Bill Nottingham <notting@redhat.com> for providing
  *	a patch.
+ *
+ * The following copyright and license applies to the original
+ * sysklogd package that was used as a basis for this release of
+ * rsyslogd. Obviously, it applies to those parts stemming directly
+ * back to the original sysklogd package.
+ *
+ * Copyright (c) 1983, 1988 Regents of the University of California.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms are permitted
+ * provided that the above copyright notice and this paragraph are
+ * duplicated in all such forms and that any documentation,
+ * advertising materials, and other materials related to such
+ * distribution and use acknowledge that the software was developed
+ * by the University of California, Berkeley.  The name of the
+ * University may not be used to endorse or promote products derived
+ * from this software without specific prior written permission.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+ * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
