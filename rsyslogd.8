@@ -1,7 +1,7 @@
-.\" Copyright 2004 Rainer Gerhards and Adiscon for the rsyslog modifications
+.\" Copyright 2004-2005 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "18 March 2005" "Version 0.8" "Linux System Administration"
+.TH RSYSLOGD 8 "05 July 2005" "Version 0.9.2" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -28,6 +28,10 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-s "
 .I domainlist
 ]
+.br
+.RB [ " \-t "
+.I port
+]
 .RB [ " \-v " ]
 .LP
 .SH DESCRIPTION
@@ -35,7 +39,7 @@ rsyslogd \- reliable and extended syslogd
 is a system utility providing support for message logging.
 Support of both internet and
 unix domain sockets enables this utility to support both local
-and remote logging.
+and remote logging (via UDP and TCP).
 
 .BR Rsyslogd (8)
 is derived from the sysklogd package which in turn is derived from the
@@ -159,6 +163,11 @@ is specified and the host logging resolves to satu.infodrom.north.de
 no domain would be cut, you will have to specify two domains like:
 .BR "\-s north.de:infodrom.north.de" .
 .TP
+.BI "\-t " "port"
+Activates the syslog/tcp listener service. The listener will listen to
+the specified port. Please note that syslog/tcp is not standardized,
+but the implementation in rsyslogd follows common practice and is
+compatible with e.G. Cisco PIX, syslog-ng and MonitorWare (Windows).
 .B "\-v"
 Print version and exit.
 .LP
@@ -209,11 +218,15 @@ Network support means that messages can be forwarded from one node
 running rsyslogd to another node running rsyslogd where they will be
 actually logged to a disk file.
 
-To enable this you have to specify the
+To enable this you have to specify either the
 .B "\-r"
+or
+.B "\-t"
 option on the command line.  The default behavior is that
 .B rsyslogd
-won't listen to the network.
+won't listen to the network. You can also combine these two
+options if you want rsyslogd to listen to bost TCP and UDP
+messages.
 
 The strategy is to have rsyslogd listen on a unix domain socket for
 locally generated log messages.  This behavior will allow rsyslogd to

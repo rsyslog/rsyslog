@@ -10,7 +10,7 @@
  * - selector line for MySQL aborts if no template is given and
  *   also no semicolon is present at the end of the line
  *
- * \brief This is what will become the rsyslogd daemon.
+ * \brief This is the maint file of the rsyslogd daemon.
  *
  * Please note that as of now, a lot of the code in this file stems
  * from the sysklogd project. To learn more over this project, please
@@ -32,6 +32,11 @@
  *
  * As I have made a lot of modifications, please assume that all bugs
  * in this package are mine and not those of the sysklogd team.
+ *
+ * As of this writing, there already exist heavy
+ * modifications to the orginal sysklogd package. I suggest to no
+ * longer rely too much on code knowledge you eventually have with
+ * sysklogd - rgerhards 2005-07-05
  * 
  * I have decided to put my code under the GPL. The sysklog package
  * is distributed under the BSD license. As such, this package here
@@ -82,22 +87,27 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-
-#if !defined(lint) && !defined(NO_SCCS)
-char copyright2[] =
-"@(#) Copyright (c) 1983, 1988 Regents of the University of California.\n\
- All rights reserved.\n";
-#endif /* not lint */
-
-#if !defined(lint) && !defined(NO_SCCS)
-static char sccsid[] = "@(#)rsyslogd.c	0.8 (Adiscon) 18/03/2005";
-#endif /* not lint */
-
 #ifdef __FreeBSD__
 #define	BSD
 #endif
 
-#define	MAXLINE		32768		/* maximum line length */
+/* change the following setting to e.g. 32768 if you would like to
+ * support large message sizes for IHE (32k is the current maximum
+ * needed for IHE). I was initially tempted to increase it to 32k,
+ * but there is a large memory footprint with the current
+ * implementation in rsyslog. This will change as the processing
+ * changes, but I have re-set it to 1k, because the vast majority
+ * of messages is below that and the memory savings is huge, at
+ * least compared to the overall memory footprint.
+ *
+ * If you intend to receive Windows Event Log data (e.g. via
+ * EventReporter - www.eventreporter.com), you might want to 
+ * increase this number to an even higher value, as event
+ * log messages can be very lengthy.
+ *
+ * rgerhards, 2005-07-05
+ */
+#define	MAXLINE		1024		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define DEFSPRI		(LOG_KERN|LOG_CRIT)
 #define TIMERINTVL	30		/* interval for checking flush, mark */
@@ -626,11 +636,13 @@ static int create_udp_socket();
 #ifdef SYSLOG_INET
 
 #define TCPSESS_MAX 100 /* TODO: remove hardcoded limit */
+static int TCPLstnPort = 0;
+static int bEnableTCP = 0;
 static int sockTCPLstn = -1;
 struct TCPSession {
 	int sock;
-	char msg[MAXLINE];
-/*	struct sockaddr remHost; maybe not needed...*/
+	int iMsg; /* index of next char to store in msg */
+	char msg[MAXLINE+1];
 	char *fromHost;
 } TCPSessions[TCPSESS_MAX];
 
@@ -643,7 +655,7 @@ void TCPSessInit(void)
 
 	for(i = 0 ; i < TCPSESS_MAX ; ++i) {
 		TCPSessions[i].sock = -1; /* no sock */
-		TCPSessions[i].msg[0] = '\0'; /* just make sure... */
+		TCPSessions[i].iMsg = 0; /* just make sure... */
 	}
 }
 
@@ -698,10 +710,19 @@ static int create_tcp_socket(void)
 		return fd;
 	}
 
+	if(TCPLstnPort == 0) {
+		TCPLstnPort = 514; /* use default, no error */
+	}
+	if(TCPLstnPort < 1 || TCPLstnPort > 65535) {
+		TCPLstnPort = 514; /* just let's use our default... */
+		errno = 0;
+		logerror("TCP listen port was invalid, changed to 514");
+	}
+
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
 	sin.sin_addr.s_addr = htonl(INADDR_ANY);
-	sin.sin_port = 514;	/* TODO: get this from a variable!!! */
+	sin.sin_port = htons(TCPLstnPort);
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, \
 		       (char *) &on, sizeof(on)) < 0 ) {
 		logerror("setsockopt(REUSEADDR), suspending tcp inet");
@@ -762,7 +783,6 @@ void TCPSessAccept(void)
 		logerror("tcp accept, ignoring error and connection request");
 		return;
 	}
-	/* TODO: must change to nonblocking! */
 
 	/* Add to session list */
 	iSess = TCPSessFindFreeSpot();
@@ -786,7 +806,7 @@ void TCPSessAccept(void)
 	}
 
 	TCPSessions[iSess].sock = newConn;
-	TCPSessions[iSess].msg[0] = '\0'; /* init msg buffer! */
+	TCPSessions[iSess].iMsg = 0; /* init msg buffer! */
 }
 
 
@@ -817,19 +837,58 @@ void TCPSessClose(int iSess)
  * the index of the TCP session that received the data.
  * rgerhards 2005-07-04
  */
-void TCPSessDataRcvd(int iTCPSess, char *data, int iLen)
+void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 {
-	assert(data != NULL);
+	register int iMsg;
+	char *pMsg;
+	char *pEnd;
+	assert(pData != NULL);
 	assert(iLen > 0);
 	assert(iTCPSess >= 0);
 	assert(iTCPSess < TCPSESS_MAX);
 	assert(TCPSessions[iTCPSess].sock != -1);
 
-	if(*(data+iLen - 1) == '\n')
-		*(data+iLen-1) = '\0';
-	else
-		*(data+iLen) = '\0';
-	printline(TCPSessions[iTCPSess].fromHost, data, SOURCE_INET);
+	 /* We now copy the message to the session buffer. As
+	  * it looks, we need to do this in any case because
+	  * we might run into multiple messages inside a single
+	  * buffer. Of course, we could think about optimizations,
+	  * but as this code is to be replaced by liblogging, it
+	  * probably doesn't make so much sense...
+	  * rgerhards 2005-07-04
+	  *
+	  * Algo:
+	  * - copy message to buffer until the first LF is found
+	  * - printline() the buffer
+	  * - continue with copying
+	  */
+	iMsg = TCPSessions[iTCPSess].iMsg; /* copy for speed */
+	pMsg = TCPSessions[iTCPSess].msg; /* just a shortcut */
+	pEnd = pData + iLen; /* this is one off, which is intensional */
+
+	while(pData < pEnd) {
+		if(iMsg >= MAXLINE) {
+			/* emergency, we now need to flush, no matter if
+			 * we are at end of message or not...
+			 */
+			*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
+			printline(TCPSessions[iTCPSess].fromHost, pMsg, SOURCE_INET);
+			iMsg = 0;
+		}
+		if(*pData == '\0') { /* guard against \0 characters... */
+			*(pMsg + iMsg++) = '\\';
+			*(pMsg + iMsg++) = '0';
+			++pData;
+		} else if(*pData == '\n') { /* record delemiter */
+			*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
+			printline(TCPSessions[iTCPSess].fromHost, pMsg, SOURCE_INET);
+			iMsg = 0;
+			++pData;
+		} else {
+			*(pMsg + iMsg++) = *pData++;
+		}
+	}
+
+	TCPSessions[iTCPSess].iMsg = iMsg; /* persist value */
 }
 
 
@@ -1909,7 +1968,7 @@ int main(argc, argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "a:dhf:l:m:np:rs:v")) != EOF)
+	while ((ch = getopt(argc, argv, "a:dhf:l:m:np:rs:t:v")) != EOF)
 		switch((char)ch) {
 		case 'a':
 			if (nfunix < MAXFUNIX)
@@ -1953,6 +2012,10 @@ int main(argc, argv)
 				break;
 			}
 			StripDomains = crunch_list(optarg);
+			break;
+		case 't':		/* enable tcp logging */
+			bEnableTCP = -1;
+			TCPLstnPort = atoi(optarg);
 			break;
 		case 'v':
 			printf("syslogd %s.%s\n", VERSION, PATCHLEVEL);
@@ -2154,6 +2217,7 @@ int main(argc, argv)
 
 		/* Add the TCP socket to the list of read descriptors.
 	    	 */
+		if(bEnableTCP) {
 			FD_SET(sockTCPLstn, &readfds);
 			if (sockTCPLstn>maxfds) maxfds=sockTCPLstn;
 			dprintf("Listening on syslog TCP port.\n");
@@ -2168,6 +2232,7 @@ int main(argc, argv)
 				/* now get next... */
 				iTCPSess = TCPSessGetNxtSess(iTCPSess);
 			}
+		}
 #endif
 #endif
 #ifdef TESTING
@@ -2265,43 +2330,45 @@ int main(argc, argv)
 			}
 		}
 
-		/* Now check for TCP */
-		if(FD_ISSET(sockTCPLstn, &readfds)) {
-			dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn);
-			TCPSessAccept();
-		}
-
-		/* now check the sessions */
-		/* TODO: optimize the whole thing. We could stop enumerating as
-		 * soon as we have found all sockets flagged as active. */
-		iTCPSess = TCPSessGetNxtSess(-1);
-		while(iTCPSess != -1) {
-			int fd;
-			int state;
-			fd = TCPSessions[iTCPSess].sock;
-			if(FD_ISSET(fd, &readfds)) {
-				char buf[MAXLINE];
-				dprintf("tcp session socket with new data: #%d\n", fd);
-
-				/* Receive message */
-				state = recv(fd, buf, sizeof(buf), 0);
-				printf("recv state %d\n", state);
-				if(state == 0) {
-					/* Session closed */
-					TCPSessClose(iTCPSess);
-				} else if(state == -1) {
-					char errmsg[128];
-					snprintf(errmsg, sizeof(errmsg)/sizeof(char),
-						 "TCP session %d will be closed, error ignored",
-						 fd);
-					logerror(errmsg);
-					TCPSessClose(iTCPSess);
-				} else {
-					/* valid data received, process it! */
-					TCPSessDataRcvd(iTCPSess, buf, state);
-				}
+		if(bEnableTCP) {
+			/* Now check for TCP */
+			if(FD_ISSET(sockTCPLstn, &readfds)) {
+				dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn);
+				TCPSessAccept();
 			}
-			iTCPSess = TCPSessGetNxtSess(iTCPSess);
+
+			/* now check the sessions */
+			/* TODO: optimize the whole thing. We could stop enumerating as
+			 * soon as we have found all sockets flagged as active. */
+			iTCPSess = TCPSessGetNxtSess(-1);
+			while(iTCPSess != -1) {
+				int fd;
+				int state;
+				fd = TCPSessions[iTCPSess].sock;
+				if(FD_ISSET(fd, &readfds)) {
+					char buf[MAXLINE];
+					dprintf("tcp session socket with new data: #%d\n", fd);
+
+					/* Receive message */
+					state = recv(fd, buf, sizeof(buf), 0);
+					printf("recv state %d\n", state);
+					if(state == 0) {
+						/* Session closed */
+						TCPSessClose(iTCPSess);
+					} else if(state == -1) {
+						char errmsg[128];
+						snprintf(errmsg, sizeof(errmsg)/sizeof(char),
+							 "TCP session %d will be closed, error ignored",
+							 fd);
+						logerror(errmsg);
+						TCPSessClose(iTCPSess);
+					} else {
+						/* valid data received, process it! */
+						TCPSessDataRcvd(iTCPSess, buf, state);
+					}
+				}
+				iTCPSess = TCPSessGetNxtSess(iTCPSess);
+			}
 		}
 #endif
 #else
@@ -2379,7 +2446,7 @@ static int create_udp_socket()
 
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
-	sin.sin_port = LogPort;
+	sin.sin_port = htons(LogPort);
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, \
 		       (char *) &on, sizeof(on)) < 0 ) {
 		logerror("setsockopt(REUSEADDR), suspending inet");
@@ -3864,10 +3931,23 @@ void die(sig)
 			close(funix[i]);
 	/* Close the UDP inet socket. */
 	if (InetInuse) close(inetm);
-	/* Close the TCP inet socket. */
-	/* TODO: close all TCP connections! */
 
-	if (InetInuse) close(sockTCPLstn);
+	/* Close the TCP inet socket. */
+	if(bEnableTCP) {
+		int iTCPSess;
+		/* close all TCP connections! */
+		iTCPSess = TCPSessGetNxtSess(-1);
+		while(iTCPSess != -1) {
+			int fd;
+			fd = TCPSessions[iTCPSess].sock;
+			dprintf("Closing TCP Session %d\n", fd);
+			close(fd);
+			/* now get next... */
+			iTCPSess = TCPSessGetNxtSess(iTCPSess);
+		}
+
+		close(sockTCPLstn);
+	}
 
 	/* Clean-up files. */
         for (i = 0; i < nfunix; i++)
@@ -4164,7 +4244,7 @@ void init()
 #endif
 
 #ifdef SYSLOG_INET
-	if (1) {	/* TODO: create a real condition! */
+	if (bEnableTCP) {
 		if (sockTCPLstn < 0) {
 			sockTCPLstn = create_tcp_socket();
 			if (sockTCPLstn >= 0) {
@@ -4679,7 +4759,7 @@ void cfline(line, f)
 		memset((char *) &f->f_un.f_forw.f_addr, 0,
 			 sizeof(f->f_un.f_forw.f_addr));
 		f->f_un.f_forw.f_addr.sin_family = AF_INET;
-		f->f_un.f_forw.f_addr.sin_port = LogPort;
+		f->f_un.f_forw.f_addr.sin_port = htons(LogPort);
 		if ( f->f_type == F_FORW )
 			memcpy((char *) &f->f_un.f_forw.f_addr.sin_addr, hp->h_addr, hp->h_length);
 		/*

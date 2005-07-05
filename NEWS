@@ -1,11 +1,14 @@
 ---------------------------------------------------------------------------
 Version 0.9.2 (RGer), around 2005-07-05
-- changed the max supported message size to 32K. This is to satisfy
-  the needs of the IHE (Integrating the Healthcare Environment)
-  initiative. They use syslog for auditing and may generate messages
-  that large.
+- I intended to change the maxsupported message size to 32k to
+  support IHE - but given the memory inefficiency in the usual use
+  cases, I have not done this. I have, however, included very
+  specific instructions on how to do this in the source code. I have
+  also done some testing with 32k messages, so you can change the
+  max size without taking too much risk.
 - added a syslog/tcp receiver; we now can receive messages via
-  plain tcp, but we can still send only via UDP.
+  plain tcp, but we can still send only via UDP. The syslog/tcp
+  receiver is the primary enhancement of this release.
 - slightly changed some error messages that contained a spurios \n at
   the end of the line (which gives empty lines in your log...)
 

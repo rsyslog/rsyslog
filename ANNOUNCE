@@ -4,12 +4,13 @@ Rsyslog has been forked from the sysklogd package. It currently shares its
 base design but includes many important enhancements. Most importantly
 it supports
 
+- the ability to receive syslog messages via tcp
+- direct logging to MySQL database servers
 - fully configurable output formats, including
   * high precision timestamps with year ;)
   * access to each of the message parts as well as substrings thereof
     (includes access to facility and priority)
   * access to the raw message received
-- direct logging to MySQL database servers
 - compatibility to stock linux syslogd
 
 Rsyslog is GPL'ed software. Details and the download on it can be found at
@@ -18,8 +19,8 @@ Rsyslog is GPL'ed software. Details and the download on it can be found at
 
 This package has performed well in our test environments but it is a beta
 release. So you might experience problems of all kind when you try it. So far,
-it has been compiled under both Red Hat and Debian Linux, only (we did not 
-try some other system, so others hopefully will work, too).
+it has been compiled Red Hat and Debian Linux as well as FreeBSD (but BSD
+sometimes slips final testing and thus there might be some compile issues).
 
 We would appreciate any feedback from early testers, including bug reports,
 additional platforms it runs on and new ideas.
@@ -31,8 +32,10 @@ made it into rsyslog ;)).
 
 We hope to receive ample feedback. The more feedback we receive, the more
 enhancements will happen (and the faster they will appear). You can
-send any feedback and suggestion to me at rgerhards@adiscon.com (A mailing
-list will be added soon).
+send any feedback and suggestion to the rsyslog mailing list. Archive
+and subscription management is available at
+
+http://lists.adiscon.net/mailman/listinfo/rsyslog
 
 Rainer Gerhards
 Adiscon
