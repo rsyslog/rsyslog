@@ -2173,7 +2173,7 @@ int main(argc, argv)
 	if ( Debug )
 	{
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
-		// TODO: ADD LATER: debugging_on = 0;
+		debugging_on = 0;
 	}
 	/*
 	 * Send a signal to the parent to it can terminate.
