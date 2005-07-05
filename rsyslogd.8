@@ -245,10 +245,7 @@ entry:
 .PP
 If this entry is missing
 .B rsyslogd
-neither can receive remote messages nor send them, because the UDP
-port cant be opened.  Instead 
-.B rsyslogd
-will die immediately, blowing out an error message.
+will use the well known port of 514.
 
 To cause messages to be forwarded to another host replace
 the normal file line in the
