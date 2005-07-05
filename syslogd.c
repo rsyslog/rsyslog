@@ -2173,7 +2173,7 @@ int main(argc, argv)
 	if ( Debug )
 	{
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
-		debugging_on = 0;
+		/*debugging_on = 0;*/
 	}
 	/*
 	 * Send a signal to the parent to it can terminate.
@@ -2217,7 +2217,7 @@ int main(argc, argv)
 
 		/* Add the TCP socket to the list of read descriptors.
 	    	 */
-		if(bEnableTCP) {
+		if(bEnableTCP && sockTCPLstn != -1) {
 			FD_SET(sockTCPLstn, &readfds);
 			if (sockTCPLstn>maxfds) maxfds=sockTCPLstn;
 			dprintf("Listening on syslog TCP port.\n");
@@ -2330,7 +2330,7 @@ int main(argc, argv)
 			}
 		}
 
-		if(bEnableTCP) {
+		if(bEnableTCP && sockTCPLstn != -1) {
 			/* Now check for TCP */
 			if(FD_ISSET(sockTCPLstn, &readfds)) {
 				dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn);
@@ -2351,7 +2351,6 @@ int main(argc, argv)
 
 					/* Receive message */
 					state = recv(fd, buf, sizeof(buf), 0);
-					printf("recv state %d\n", state);
 					if(state == 0) {
 						/* Session closed */
 						TCPSessClose(iTCPSess);
@@ -3933,7 +3932,7 @@ void die(sig)
 	if (InetInuse) close(inetm);
 
 	/* Close the TCP inet socket. */
-	if(bEnableTCP) {
+	if(bEnableTCP && sockTCPLstn != -1) {
 		int iTCPSess;
 		/* close all TCP connections! */
 		iTCPSess = TCPSessGetNxtSess(-1);
