@@ -9,6 +9,7 @@
  *   reasons.
  * - selector line for MySQL aborts if no template is given and
  *   also no semicolon is present at the end of the line
+ * - check how to handle SIGPIPE correctly (TCP sender)
  *
  * \brief This is the maint file of the rsyslogd daemon.
  *
@@ -701,7 +702,7 @@ int TCPSessGetNxtSess(int iCurr)
 }
 
 
-/* Initialize TCP sockets
+/* Initialize TCP sockets (for listener)
  */
 static int create_tcp_socket(void)
 {
@@ -895,6 +896,111 @@ void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 	TCPSessions[iTCPSess].iMsg = iMsg; /* persist value */
 }
 
+/* CODE FOR SENDING TCP MESSAGES */
+
+/* Initialize TCP sockets (for sender)
+ */
+static int TCPSendCreateSocket(struct filed *f)
+{
+	int fd;
+	socklen_t addrlen = sizeof(struct sockaddr_in);
+
+	assert(f != NULL);
+
+printf("##cre f_file %d\n", f->f_file);
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd < 0) {
+		dprintf("couldn't create send socket\n");
+		return fd;
+	}
+
+
+	if(connect(fd, (struct sockaddr*) &(f->f_un.f_forw.f_addr), addrlen) < 0) {
+		dprintf("create tcp connection failed");
+		close(fd);
+		return -1;
+	}
+
+	return fd;
+}
+
+
+/* Sends a TCP message. It is first checked if the
+ * session is open and, if not, it is opened. Then the send
+ * is tried. If it fails, one silent e-try is made. If the send
+ * fails again, an error status (-1) is returned. If all goes well,
+ * 0 is returned. The TCP session is NOT torn down.
+ * For now, EAGAIN is ignored (causing message loss) - but it is
+ * hard to do something intelligent in this case. With this
+ * implementation here, we can not block and/or defer. Things are
+ * probably a bit better when we move to liblogging. The alternative
+ * would be to enhance the current select server with buffering and
+ * write descriptors. This seems not justified, given the expected
+ * short life span of this code (and the unlikeliness of this event).
+ * rgerhards 2005-07-06
+ */
+int TCPSend(struct filed *f, char *msg)
+{
+	int retry = 0;
+	int done = 0;
+	size_t len;
+	size_t lenSend;
+	short f_type;
+
+	assert(f != NULL);
+	assert(msg != NULL);
+
+	len = strlen(msg);
+
+	do { /* try to send message */
+		if(f->f_file <= 0) {
+			/* we need to open the socket first */
+			if((f->f_file = TCPSendCreateSocket(f)) <= 0)
+				return -1;
+		}
+
+printf("##sending '%s'\n", msg);
+		lenSend = send(f->f_file, msg, len, 0);
+printf("##Send %d bytes, requested %d\n", lenSend, len);
+		if(lenSend == len) {
+			/* ok, this is a quick hack... rgerhards 2005-07-06 */
+			if(send(f->f_file, "\n", 1, 0) == 1)
+				return 0; /* we are done! */
+		}
+
+		switch(errno) {
+		case EMSGSIZE:
+			dprintf("message not (tcp)send, too large");
+			break;
+		case EAGAIN:
+			dprintf("message not (tcp)send, would block");
+			/* we loose this message, but that's better than loosing
+			 * all ;)
+			 */
+			break;
+		default:
+			f_type = f->f_type;
+			f->f_type = F_UNUSED;
+printf("##pre logerror\n");
+			logerror("message not (tcp)send");
+printf("##post logerror\n");
+			f->f_type = f_type;
+			break;
+		}
+	
+		if(retry == 0) {
+			++retry;
+			/* try to recover */
+printf("##close\n");
+			close(f->f_file);
+			f->f_file = -1;
+		} else
+			return -1;
+printf("##retry f_file %d\n", f->f_file);
+	} while(!done); /* warning: do ... while() */
+	/*NOT REACHED*/
+	return -1; /* only to avoid compiler warning! */
+}
 
 #endif
 /********************************************************************
@@ -2157,6 +2263,7 @@ int main(argc, argv)
 	(void) signal(SIGCHLD, reapchild);
 	(void) signal(SIGALRM, domark);
 	(void) signal(SIGUSR1, Debug ? debug_switch : SIG_IGN);
+	(void) signal(SIGPIPE, SIG_IGN);
 	(void) alarm(TIMERINTVL);
 
 	/* Create a partial message table for all file descriptors. */
@@ -2177,7 +2284,7 @@ int main(argc, argv)
 	if ( Debug )
 	{
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
-		/*debugging_on = 0;*/
+		/* TODO: remove before final debugging_on = 0;*/
 	}
 	/*
 	 * Send a signal to the parent to it can terminate.
@@ -3532,15 +3639,26 @@ void fprintlog(f, flags)
 			l = f->f_iLenpsziov;
 			if (l > MAXLINE)
 				l = MAXLINE;
-			if (sendto(finet, psz, l, 0, \
-				   (struct sockaddr *) &f->f_un.f_forw.f_addr,
-				   sizeof(f->f_un.f_forw.f_addr)) != l) {
-				int e = errno;
-				dprintf("INET sendto error: %d = %s.\n", 
-					e, strerror(e));
-				f->f_type = F_FORW_SUSP;
-				errno = e;
-				logerror("sendto");
+			if(f->f_un.f_forw.protocol == FORW_UDP) {
+				/* forward via UDP */
+				if (sendto(finet, psz, l, 0, \
+					   (struct sockaddr *) &f->f_un.f_forw.f_addr,
+					   sizeof(f->f_un.f_forw.f_addr)) != l) {
+					int e = errno;
+					dprintf("INET sendto error: %d = %s.\n", 
+						e, strerror(e));
+					f->f_type = F_FORW_SUSP;
+					errno = e;
+					logerror("sendto");
+				}
+			} else {
+				/* forward via TCP */
+				if(TCPSend(f, psz) != 0) {
+					/* error! */
+					f->f_type = F_FORW_SUSP;
+					errno = 0;
+					logerror("error forwarding via tcp, suspending...");
+				}
 			}
 		}
 		break;
