@@ -427,6 +427,10 @@ struct filed {
 		struct {
 			char	f_hname[MAXHOSTNAMELEN+1];
 			struct sockaddr_in	f_addr;
+			int port;
+			int protocol;
+#			define	FORW_UDP 0
+#			define	FORW_TCP 1
 		} f_forw;		/* forwarding address */
 		char	f_fname[MAXFNAME];
 	} f_un;
@@ -2394,8 +2398,8 @@ int main(argc, argv)
 
 int usage()
 {
-	fprintf(stderr, "usage: syslogd [-drvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
-		" [-s domainlist] [-f conffile]\n");
+	fprintf(stderr, "usage: rsyslogd [-drvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
+		" [-s domainlist] [-t port] [-f conffile]\n");
 	exit(1);
 }
 
@@ -3334,12 +3338,7 @@ void writeFile(struct filed *f)
 	off_t actualFileSize;
 	assert(f != NULL);
 
-	/* Now generate the message. This can eventually be moved to
-	 * a generic subroutine (need to think about this....).
-	 * for now, this is a quick and dirty dummy. We need to have the
-	 * ability to specify the message format before we can actually 
-	 * code this part of the function. rgerhards 2004-11-11
-	 */
+	/* create the message based on format specified */
 	iovCreate(f);
 again:
 	/* first check if we have a file size limit and, if so,
@@ -3520,13 +3519,9 @@ void fprintlog(f, flags)
 		break;
 
 	case F_FORW:
-		/* 
-		 * Don't send any message to a remote host if it
-		 * already comes from one. (we don't care 'bout who
-		 * sent the message, we don't send it anyway)  -Joey
-		 */
 	f_forw:
-		dprintf(" %s\n", f->f_un.f_forw.f_hname);
+		dprintf(" %s:%d/%s\n", f->f_un.f_forw.f_hname, f->f_un.f_forw.port,
+			 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp");
 		iovCreate(f);
 		if ( strcmp(f->f_pMsg->pszHOSTNAME, LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
@@ -4563,6 +4558,7 @@ void cfline(line, f)
 	int syncfile;
 #ifdef SYSLOG_INET
 	struct hostent *hp;
+	int bErr;
 #endif
 	char buf[MAXLINE];
 	char szTemplateName[128];
@@ -4722,12 +4718,43 @@ void cfline(line, f)
 	case '@':
 #ifdef SYSLOG_INET
 		++p; /* eat '@' */
+		if(*p == '@') { /* indicator for TCP! */
+			f->f_un.f_forw.protocol = FORW_TCP;
+			++p; /* eat this '@', too */
+		} else {
+			f->f_un.f_forw.protocol = FORW_UDP;
+		}
 		/* extract the host first (we do a trick - we 
-		 * replace the ';' with a '\0') */
-		for(q = p ; *p && *p != ';' ; ++p)
+		 * replace the ';' or ':' with a '\0')
+		 * now skip to port and then template name 
+		 * rgerhards 2005-07-06
+		 */
+		for(q = p ; *p && *p != ';' && *p != ':' ; ++p)
 		 	/* JUST SKIP */;
+		if(*p == ':') { /* process port */
+			*p = '\0'; /* trick to obtain hostname (later)! */
+			register int i = 0;
+			for(++p ; *p && isdigit(*p) ; ++p) {
+				i = i * 10 + *p - '0';
+			}
+			f->f_un.f_forw.port = i;
+		}
+		
+		/* now skip to template */
+		bErr = 0;
+		while(*p && *p != ';') {
+			if(*p && *p != ';' && !isspace(*p)) {
+				if(bErr == 0) { /* only 1 error msg! */
+					bErr = 1;
+					errno = 0;
+					logerror("invalid selector line (port), probably not doing what was intended");
+				}
+			}
+			++p;
+		}
+	
 		if(*p == ';') {
-			*p = '\0'; /* trick! */
+			*p = '\0'; /* trick to obtain hostname (later)! */
 			++p;
 			 /* Now look for the template! */
 			cflineParseTemplateName(f, &p, szTemplateName,
@@ -4753,12 +4780,18 @@ void cfline(line, f)
 		cflineSetTemplateAndIOV(f, szTemplateName);
 
 		(void) strcpy(f->f_un.f_forw.f_hname, q);
-		dprintf("forwarding host: '%s' template '%s'\n",
-		         q, szTemplateName);	/*ASP*/
 		memset((char *) &f->f_un.f_forw.f_addr, 0,
 			 sizeof(f->f_un.f_forw.f_addr));
 		f->f_un.f_forw.f_addr.sin_family = AF_INET;
-		f->f_un.f_forw.f_addr.sin_port = htons(LogPort);
+		if(f->f_un.f_forw.port == 0)
+			f->f_un.f_forw.port = 514;
+		f->f_un.f_forw.f_addr.sin_port = htons(f->f_un.f_forw.port);
+
+		dprintf("forwarding host: '%s:%d/%s' template '%s'\n",
+		         q, f->f_un.f_forw.port,
+			 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp",
+			 szTemplateName);
+
 		if ( f->f_type == F_FORW )
 			memcpy((char *) &f->f_un.f_forw.f_addr.sin_addr, hp->h_addr, hp->h_length);
 		/*

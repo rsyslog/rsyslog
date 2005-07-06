@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
-Version 0.9.2 (RGer), around 2005-07-05
+Version 0.9.3 (RGer), around 2005-07-07
+- added the ability to specify the destination port when forwarding
+  syslog messages (both for TCP and UDP)
+- added the TCP sender (activated by @@machine:port in config)
+
+---------------------------------------------------------------------------
+Version 0.9.2 (RGer), around 2005-07-06
 - I intended to change the maxsupported message size to 32k to
   support IHE - but given the memory inefficiency in the usual use
   cases, I have not done this. I have, however, included very
