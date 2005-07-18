@@ -907,7 +907,7 @@ static int TCPSendCreateSocket(struct filed *f)
 
 	assert(f != NULL);
 
-printf("##cre f_file %d\n", f->f_file);
+dprintf("##cre f_file %d\n", f->f_file);
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		dprintf("couldn't create send socket\n");
@@ -959,9 +959,9 @@ int TCPSend(struct filed *f, char *msg)
 				return -1;
 		}
 
-printf("##sending '%s'\n", msg);
+dprintf("##sending '%s'\n", msg);
 		lenSend = send(f->f_file, msg, len, 0);
-printf("##Send %d bytes, requested %d\n", lenSend, len);
+dprintf("##Send %d bytes, requested %d\n", lenSend, len);
 		if(lenSend == len) {
 			/* ok, this is a quick hack... rgerhards 2005-07-06 */
 			if(send(f->f_file, "\n", 1, 0) == 1)
@@ -981,9 +981,9 @@ printf("##Send %d bytes, requested %d\n", lenSend, len);
 		default:
 			f_type = f->f_type;
 			f->f_type = F_UNUSED;
-printf("##pre logerror\n");
+dprintf("##pre logerror\n");
 			logerror("message not (tcp)send");
-printf("##post logerror\n");
+dprintf("##post logerror\n");
 			f->f_type = f_type;
 			break;
 		}
@@ -991,12 +991,12 @@ printf("##post logerror\n");
 		if(retry == 0) {
 			++retry;
 			/* try to recover */
-printf("##close\n");
+dprintf("##close\n");
 			close(f->f_file);
 			f->f_file = -1;
 		} else
 			return -1;
-printf("##retry f_file %d\n", f->f_file);
+dprintf("##retry f_file %d\n", f->f_file);
 	} while(!done); /* warning: do ... while() */
 	/*NOT REACHED*/
 	return -1; /* only to avoid compiler warning! */
@@ -1065,93 +1065,124 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, unsigned char* psz
 	 *
 	 * We will use this for parsing, as it probably is the
 	 * fastest way to parse it.
+	 *
+	 * 2005-07-18, well sometimes it pays to be a bit more verbose, even in C...
+	 * Fixed a bug that lead to invalid detection of the data. The issue was that
+	 * we had an if(++pszTS == 'x') inside of some of the consturcts below. However,
+	 * there were also some elseifs (doing the same ++), which than obviously did not
+	 * check the orginal character but the next one. Now removed the ++ and put it
+	 * into the statements below. Was a really nasty bug... I didn't detect it before
+	 * june, when it first manifested. This also lead to invalid parsing of the rest
+	 * of the message, as the time stamp was not detected to be correct. - rgerhards
 	 */
 	switch(*pszTS++)
 	{
 	case 'J':
-		if(*pszTS++ == 'a')
-			if(*pszTS++ == 'n')
+		if(*pszTS == 'a') {
+			++pszTS;
+			if(*pszTS == 'n') {
+				++pszTS;
 				pTime->month = 1;
-			else
+			} else
 				return FALSE;
-		else if(*pszTS++ == 'u')
-			if(*pszTS++ == 'n')
+		} else if(*pszTS == 'u') {
+			++pszTS;
+			if(*pszTS == 'n') {
+				++pszTS;
 				pTime->month = 6;
-			else if(*pszTS++ == 'l')
+			} else if(*pszTS == 'l') {
+				++pszTS;
 				pTime->month = 7;
-			else
+			} else
 				return FALSE;
-		else
+		} else
 			return FALSE;
 		break;
 	case 'F':
-		if(*pszTS++ == 'e')
-			if(*pszTS++ == 'b')
+		if(*pszTS == 'e') {
+			++pszTS;
+			if(*pszTS == 'b') {
+				++pszTS;
 				pTime->month = 2;
-			else
+			} else
 				return FALSE;
-		else
+		} else
 			return FALSE;
 		break;
 	case 'M':
-		if(*pszTS++ == 'a')
-			if(*pszTS++ == 'r')
+		if(*pszTS == 'a') {
+			++pszTS;
+			if(*pszTS == 'r') {
+				++pszTS;
 				pTime->month = 3;
-			else if(*pszTS++ == 'y')
+			} else if(*pszTS == 'y') {
+				++pszTS;
 				pTime->month = 5;
-			else
+			} else
 				return FALSE;
-		else
+		} else
 			return FALSE;
 		break;
 	case 'A':
-		if(*pszTS++ == 'p')
-			if(*pszTS++ == 'r')
+		if(*pszTS == 'p') {
+			++pszTS;
+			if(*pszTS == 'r') {
+				++pszTS;
 				pTime->month = 4;
-			else
+			} else
 				return FALSE;
-		else if(*pszTS++ == 'u')
-			if(*pszTS++ == 'g')
+		} else if(*pszTS == 'u') {
+			++pszTS;
+			if(*pszTS == 'g') {
+				++pszTS;
 				pTime->month = 8;
-			else
+			} else
 				return FALSE;
-		else
+		} else
 			return FALSE;
 		break;
 	case 'S':
-		if(*pszTS++ == 'e')
-			if(*pszTS++ == 'p')
+		if(*pszTS == 'e') {
+			++pszTS;
+			if(*pszTS == 'p') {
+				++pszTS;
 				pTime->month = 9;
-			else
+			} else
 				return FALSE;
-		else
+		} else
 			return FALSE;
 		break;
 	case 'O':
-		if(*pszTS++ == 'c')
-			if(*pszTS++ == 't')
+		if(*pszTS == 'c') {
+			++pszTS;
+			if(*pszTS == 't') {
+				++pszTS;
 				pTime->month = 10;
-			else
+			} else
 				return FALSE;
-		else
+		} else
 			return FALSE;
 		break;
 	case 'N':
-		if(*pszTS++ == 'o')
-			if(*pszTS++ == 'v')
+		if(*pszTS == 'o') {
+			++pszTS;
+			if(*pszTS == 'v') {
+				++pszTS;
 				pTime->month = 11;
-			else
+			} else
 				return FALSE;
-		else
+		} else
 			return FALSE;
 		break;
 	case 'D':
-		if(*pszTS++ == 'e')
-			if(*pszTS++ == 'c')
+		if(*pszTS == 'e') {
+			++pszTS;
+			if(*pszTS == 'c') {
+				++pszTS;
 				pTime->month = 12;
-			else
+			} else
 				return FALSE;
-		else
+		} else
 			return FALSE;
 		break;
 	default:
@@ -1190,6 +1221,7 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, unsigned char* psz
 	pTime->second = srSLMGParseInt32(&pszTS);
 	if(pTime->second < 0 || pTime->second > 60)
 		return FALSE;
+	if(*pszTS++ != ':')
 
 	/* OK, we actually have a 3164 timestamp, so let's indicate this
 	 * and fill the rest of the properties. */
@@ -2284,7 +2316,7 @@ int main(argc, argv)
 	if ( Debug )
 	{
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
-		/* TODO: remove before final debugging_on = 0;*/
+		/* TODO-BEFORERELEASE: remove before final debugging_on = 0;*/
 	}
 	/*
 	 * Send a signal to the parent to it can terminate.

@@ -1,8 +1,15 @@
 ---------------------------------------------------------------------------
-Version 0.9.3 (RGer), around 2005-07-07
+Version 0.9.3 (RGer), around 2005-07-18
+- fixed a bug in the message parser. In June, the RFC 3164 timestamp
+  was not correctly parsed (yes, only in June and some other months,
+  see the code comment to learn why...)
 - added the ability to specify the destination port when forwarding
   syslog messages (both for TCP and UDP)
-- added the TCP sender (activated by @@machine:port in config)
+- added an very experimental TCP sender (activated by
+  @@machine:port in config). This is not yet for production use. If
+  the receiver is not alive, rsyslogd will wait quite some time until
+  the connection request times out, which most probably leads to
+  loss of incoming messages.
 
 ---------------------------------------------------------------------------
 Version 0.9.2 (RGer), around 2005-07-06
