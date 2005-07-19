@@ -4882,8 +4882,8 @@ void cfline(line, f)
 		for(q = p ; *p && *p != ';' && *p != ':' ; ++p)
 		 	/* JUST SKIP */;
 		if(*p == ':') { /* process port */
-			*p = '\0'; /* trick to obtain hostname (later)! */
 			register int i = 0;
+			*p = '\0'; /* trick to obtain hostname (later)! */
 			for(++p ; *p && isdigit(*p) ; ++p) {
 				i = i * 10 + *p - '0';
 			}
