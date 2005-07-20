@@ -2199,7 +2199,7 @@ int main(argc, argv)
 			TCPLstnPort = atoi(optarg);
 			break;
 		case 'v':
-			printf("syslogd %s.%s\n", VERSION, PATCHLEVEL);
+			printf("rsyslogd %s.%s\n", VERSION, PATCHLEVEL);
 			exit (0);
 		case '?':
 		default:
@@ -4558,25 +4558,16 @@ void init()
 	}
 
 	if ( AcceptRemote )
-#ifdef DEBRELEASE
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
-		       ": restart (remote reception)." , LocalHostName, \
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd: [origin software=\"rsyslogd\" " \
+			      "swVersion=\"" VERSION "." PATCHLEVEL "\"]" \
+		       " restart (remote reception)." , LocalHostName, \
 		       	ADDDATE);
-#else
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd " VERSION "." PATCHLEVEL \
-		       ": restart (remote reception)." , LocalHostName, \
-		       	ADDDATE);
-#endif
 	else
-#ifdef DEBRELEASE
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd " VERSION "." PATCHLEVEL "#" DEBRELEASE \
-		       ": restart." , LocalHostName, ADDDATE);
-#else
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd " VERSION "." PATCHLEVEL \
-		       ": restart." , LocalHostName, ADDDATE);
-#endif
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd: [origin software=\"rsyslogd\" " \
+			      "swVersion=\"" VERSION "." PATCHLEVEL "\"]" \
+		       " restart." , LocalHostName, ADDDATE);
 	(void) signal(SIGHUP, sighup_handler);
-	dprintf("syslogd: restarted.\n");
+	dprintf("rsyslogd: restarted.\n");
 }
 
 /* helper to cfline() and its helpers. Assign the right template

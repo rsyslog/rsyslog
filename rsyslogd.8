@@ -216,7 +216,8 @@ Wait for childs if some were born, because of wall'ing messages.
 .B Rsyslogd
 provides network support to the syslogd facility.
 Network support means that messages can be forwarded from one node
-running rsyslogd to another node running rsyslogd where they will be
+running rsyslogd to another node running rsyslogd (or a
+compatible syslog implementation) where they will be
 actually logged to a disk file.
 
 To enable this you have to specify either the
@@ -226,7 +227,7 @@ or
 option on the command line.  The default behavior is that
 .B rsyslogd
 won't listen to the network. You can also combine these two
-options if you want rsyslogd to listen to bost TCP and UDP
+options if you want rsyslogd to listen to both TCP and UDP
 messages.
 
 The strategy is to have rsyslogd listen on a unix domain socket for
@@ -246,13 +247,17 @@ entry:
 .PP
 If this entry is missing
 .B rsyslogd
-will use the well known port of 514.
+will use the well known port of 514 (so in most cases, it's not
+really needed).
 
 To cause messages to be forwarded to another host replace
 the normal file line in the
 .I rsyslog.conf
 file with the name of the host to which the messages is to be sent
-prepended with an @.
+prepended with an @ (for UDP delivery) or the sequence @@ (for
+TCP delivery). The host name can also be followed by a colon and
+a port number, in which case the message is sent to the specified
+port on the remote host.
 .IP
 For example, to forward
 .B ALL
@@ -266,6 +271,8 @@ entry:
 	# messages to a remote host forward all.
 	*.*			@hostname
 .fi
+More samples can be found in sample.conf.
+
 If the remote hostname cannot be resolved at startup, because the
 name-server might not be accessible (it may be started after rsyslogd)
 you don't have to worry.

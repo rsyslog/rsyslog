@@ -17,7 +17,7 @@
 .\" along with this program; if not, write to the Free Software
 .\" Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111, USA.
 .\"
-.TH RSYSLOG.CONF 5 "2005-03-17" "Version 0.8" "Linux System Administration"
+.TH RSYSLOG.CONF 5 "2005-07-20" "Version 0.9" "Linux System Administration"
 .SH NAME
 rsyslog.conf \- rsyslogd(8) configuration file
 .SH DESCRIPTION
@@ -380,15 +380,13 @@ host won't forward the message again, it will just log them
 locally.  To forward messages to another host, prepend the hostname
 with the at sign (``@'').
 
-Using this feature you're able to control all rsyslog messages on one
+Using this feature you're able to control all syslog messages on one
 host, if all other machines will log remotely to that.  This tears down
 administration needs.
 
-Please note that this version of rsyslogd does NOT forward messages
-it has received from the network to another host. So it can NOT work
-as a relay. If you need this functionality, either ask 
-rgerhards@adiscon.com or wait until it is configurable in the next
-version.
+Please note that this version of rsyslogd by default does NOT forward messages
+it has received from the network to another host. Specify the -h
+option to enable this.
 
 .SS List of Users
 Usually critical messages are also directed to ``root'' on that
@@ -650,13 +648,13 @@ is the wall action.
 # Messages of the priority alert will be directed
 # to the operator
 #
-*.alert                      root,joey
+*.alert                      root,rgerhards
 .fi
 .LP
 This rule directs all messages with a priority of
 .B alert
 or higher to the terminals of the operator, i.e. of the users ``root''
-and ``joey'' if they're logged in.
+and ``rgerhards'' if they're logged in.
 
 .IP
 .nf
@@ -665,7 +663,40 @@ and ``joey'' if they're logged in.
 .LP
 This rule would redirect all messages to a remote host called
 finlandia.  This is useful especially in a cluster of machines where
-all rsyslog messages will be stored on only one machine.
+all syslog messages will be stored on only one machine.
+
+In the format shown above, UDP is used for transmitting the message. The
+destination port is set to the default auf 514. Rsyslog is also capable of
+using much more secure and reliable TCP sessions for message forwarding.
+Also, the destination port can be specified. To select TCP, simply
+add one additional @ in front of the host name (that is, @host is UPD,
+@@host is TCP). For example:
+
+.IP
+.nf
+*.*                          @@finlandia
+.fi
+.LP
+To specify the destination port on the remote machine, use a colon followed
+by the port number after the machine name. The following forwards to port
+1514 on finlandia:
+
+.IP
+.nf
+*.*                          @@finlandia:1514
+.fi
+.LP
+This syntax works both with TCP and UDP based syslog. However, you will
+probably primarily need it for TCP, as there is no well-accepted port
+for this transport (it is non-standard). For UDP, you can usually stick
+with the default auf 514, but might want to modify it for security reasons.
+If you would like to do that, it's quite easy:
+
+.IP
+.nf
+*.*                          @finlandia:1514
+.fi
+.LP
 
 .IP
 .fi
