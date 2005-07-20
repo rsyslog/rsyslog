@@ -437,6 +437,7 @@ struct filed {
 				TCP_SEND_CONNECTING = 1,
 				TCP_SEND_READY = 2
 			} status;
+			char *savedMsg;
 		} f_forw;		/* forwarding address */
 		char	f_fname[MAXFNAME];
 	} f_un;
@@ -974,7 +975,22 @@ int TCPSend(struct filed *f, char *msg)
 		}
 
 dprintf("##sending '%s'\n", msg);
-		if(f->f_un.f_forw.status != TCP_SEND_READY)
+		if(f->f_un.f_forw.status == TCP_SEND_CONNECTING) {
+			/* In this case, we save the buffer. If we have a
+			 * system with few messages, that hopefully prevents
+			 * message loss at all. However, we make no further attempts,
+			 * just the first message is saved. So we only try this
+			 * if there is not yet a saved message present.
+			 * rgerhards 2005-07-20
+			 */
+			 if(f->f_un.f_forw.savedMsg == NULL) {
+				f->f_un.f_forw.savedMsg = malloc((len + 1) * sizeof(char));
+				if(f->f_un.f_forw.savedMsg == NULL)
+					return 0; /* nothing we can do... */
+				memcpy(f->f_un.f_forw.savedMsg, msg, len + 1);
+				return 0;
+			 }
+		} else if(f->f_un.f_forw.status != TCP_SEND_READY)
 			/* This here is debatable. For the time being, we
 			 * accept the loss of a single message (e.g. during
 			 * connection setup in favour of not messing with
@@ -2402,7 +2418,7 @@ int main(argc, argv)
 			 * scheduled to be replaced after the liblogging integration.
 			 * rgerhards 2005-07-20
 			 */
-			 FD_ZERO(&writefds);
+			FD_ZERO(&writefds);
 			for (f = Files; f; f = f->f_next) {
 				if(   (f->f_type == F_FORW)
 				   && (f->f_un.f_forw.protocol == FORW_TCP)
@@ -2489,6 +2505,15 @@ int main(argc, argv)
 				   && (FD_ISSET(f->f_file, &writefds))) {
 					dprintf("tcp send socket %d ready for writing.\n", f->f_file);
 					f->f_un.f_forw.status = TCP_SEND_READY;
+					/* Send stored message (if any) */
+					if(f->f_un.f_forw.savedMsg != NULL)
+						if(TCPSend(f, f->f_un.f_forw.savedMsg) != 0) {
+							/* error! */
+							f->f_type = F_FORW_SUSP;
+							errno = 0;
+							logerror("error forwarding via tcp, suspending...");
+						}
+				   f->f_un.f_forw.savedMsg = NULL;
 				   }
 			}
 		}

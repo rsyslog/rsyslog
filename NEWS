@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 0.9.4 (RGer), around 2005-07-20
+- finally added the TCP sender. It now supports non-blocking mode, no
+  longer disabling message reception during connect. As it is now, it
+  is usable in production. The code could be more sophisticated, but
+  I've kept it short in anticipation of the move to liblogging, which
+  will lead to the removal of the code just written ;)
 - the "exiting on signal..." message still had the "syslogd" name in 
   it. Changed this to "rsyslogd", as we do not have a large user base
   yet, this should pose no problem.
