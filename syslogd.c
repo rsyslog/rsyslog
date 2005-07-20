@@ -582,7 +582,7 @@ int     Initialized = 0;        /* set when we have initialized ourselves
 extern	int errno;
 
 /* hardcoded standard templates (used for defaults) */
-static char template_TraditionalFormat[] = "\"%timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
+static char template_TraditionalFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static char template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
 static char template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
 static char template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
@@ -1004,7 +1004,15 @@ dprintf("##sending '%s'\n", msg);
 
 		lenSend = send(f->f_file, msg, len, 0);
 dprintf("##Sent %d bytes, requested %d\n", lenSend, len);
-		if(lenSend == len) {
+		/* Some messages already contain a \n character at the end
+		 * of the message. We append one only if we there is not
+		 * already one. This seems the best fit, though this also
+		 * means the message does not arrive unaltered at the final
+		 * destination. But in the spirit of legacy syslog, this is
+		 * probably the best to do...
+		 * rgerhards 2005-07-20
+		 */
+		if((lenSend == len) && (*(msg+len-1) != '\n')) {
 			/* ok, this is a quick hack... rgerhards 2005-07-06 */
 			if(send(f->f_file, "\n", 1, 0) == 1)
 				return 0; /* we are done! */

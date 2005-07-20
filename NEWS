@@ -11,6 +11,11 @@ Version 0.9.4 (RGer), around 2005-07-20
 - fixed "the semiconlon" bug. rsyslogd dumped core if a write-db action
   was specified but no semicolon was given after the password (an empty
   template was ok, but the semicolon needed to be present).
+- changed a default for traditional output format. During testing, it
+  was seen that the timestamp written to file in default format was
+  the time of message reception, not the time specified in the TIMESTAMP
+  field of the message itself. Traditionally, the message TIMESTAMP is
+  used and this has been changed now.
 ---------------------------------------------------------------------------
 Version 0.9.3 (RGer), 2005-07-19
 - fixed a bug in the message parser. In June, the RFC 3164 timestamp
