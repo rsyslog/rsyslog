@@ -1,5 +1,13 @@
 ---------------------------------------------------------------------------
-Version 0.9.3 (RGer), around 2005-07-18
+Version 0.9.4 (RGer), around 2005-07-20
+- the "exiting on signal..." message still had the "syslogd" name in 
+  it. Changed this to "rsyslogd", as we do not have a large user base
+  yet, this should pose no problem.
+- fixed "the semiconlon" bug. rsyslogd dumped core if a write-db action
+  was specified but no semicolon was given after the password (an empty
+  template was ok, but the semicolon needed to be present).
+---------------------------------------------------------------------------
+Version 0.9.3 (RGer), 2005-07-19
 - fixed a bug in the message parser. In June, the RFC 3164 timestamp
   was not correctly parsed (yes, only in June and some other months,
   see the code comment to learn why...)

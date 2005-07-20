@@ -1,5 +1,6 @@
 /**
  * TODO:
+ * - INET_SUSPEND_TIME reset (contains debug value!)
  * - check template lines for extra characters and provide 
  *   a warning, if they exists
  * - check that no exit() is used!
@@ -66,8 +67,6 @@
  *       focus on a simpler approach first. The initial goal is to
  *       provide MySQL database support (so that syslogd can log
  *       to the database).
- *
- * This license applies to the new code not in sysklogd:
  *
  * rsyslog - An Enhanced syslogd Replacement.
  * Copyright 2003-2005 Rainer Gerhards and Adiscon GmbH.
@@ -411,7 +410,7 @@ struct filed {
 	char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
 #ifdef	WITH_DB
 	MYSQL	f_hmysql;		/* handle to MySQL */
-	/* TODO: optimize memory layout / consumption; rgerhards 2004-11-19 */
+	/* TODO: optimize memory layout & consumption; rgerhards 2004-11-19 */
 	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
 	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
@@ -432,6 +431,12 @@ struct filed {
 			int protocol;
 #			define	FORW_UDP 0
 #			define	FORW_TCP 1
+			/* following fields for TCP-based delivery */
+			enum {
+				TCP_SEND_NOTCONNECTED = 0,
+				TCP_SEND_CONNECTING = 1,
+				TCP_SEND_READY = 2
+			} status;
 		} f_forw;		/* forwarding address */
 		char	f_fname[MAXFNAME];
 	} f_un;
@@ -467,7 +472,8 @@ int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
 				 (f)->f_repeatcount = MAXREPEAT; \
 			}
 #ifdef SYSLOG_INET
-#define INET_SUSPEND_TIME 180		/* equal to 3 minutes */
+//#define INET_SUSPEND_TIME 180		/* equal to 3 minutes */
+#define INET_SUSPEND_TIME 4		/* equal to 3 minutes */
 #define INET_RETRY_MAX 10		/* maximum of retries for gethostbyname() */
 #endif
 
@@ -907,18 +913,26 @@ static int TCPSendCreateSocket(struct filed *f)
 
 	assert(f != NULL);
 
-dprintf("##cre f_file %d\n", f->f_file);
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		dprintf("couldn't create send socket\n");
 		return fd;
 	}
 
+	/* set to nonblocking - rgerhards 2005-07-20 */
+	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 
 	if(connect(fd, (struct sockaddr*) &(f->f_un.f_forw.f_addr), addrlen) < 0) {
-		dprintf("create tcp connection failed");
-		close(fd);
-		return -1;
+		if(errno == EINPROGRESS) {
+			/* this is normal - will complete during select */
+			f->f_un.f_forw.status = TCP_SEND_CONNECTING;
+		} else {
+			dprintf("create tcp connection failed, reason %s", strerror(errno));
+			close(fd);
+			return -1;
+		}
+	} else {
+		f->f_un.f_forw.status = TCP_SEND_READY;
 	}
 
 	return fd;
@@ -960,8 +974,20 @@ int TCPSend(struct filed *f, char *msg)
 		}
 
 dprintf("##sending '%s'\n", msg);
+		if(f->f_un.f_forw.status != TCP_SEND_READY)
+			/* This here is debatable. For the time being, we
+			 * accept the loss of a single message (e.g. during
+			 * connection setup in favour of not messing with
+			 * wait time and timeouts. The reason is that such
+			 * things might otherwise cost us considerable message
+			 * loss on the receiving side (even at a timeout set
+			 * to just 1 second).
+			 * rgerhards 2005-07-20
+			 */
+			return 0;
+
 		lenSend = send(f->f_file, msg, len, 0);
-dprintf("##Send %d bytes, requested %d\n", lenSend, len);
+dprintf("##Sent %d bytes, requested %d\n", lenSend, len);
 		if(lenSend == len) {
 			/* ok, this is a quick hack... rgerhards 2005-07-06 */
 			if(send(f->f_file, "\n", 1, 0) == 1)
@@ -970,10 +996,10 @@ dprintf("##Send %d bytes, requested %d\n", lenSend, len);
 
 		switch(errno) {
 		case EMSGSIZE:
-			dprintf("message not (tcp)send, too large");
+			dprintf("message not (tcp)send, too large\n");
 			break;
 		case EAGAIN:
-			dprintf("message not (tcp)send, would block");
+			dprintf("message not (tcp)send, would block\n");
 			/* we loose this message, but that's better than loosing
 			 * all ;)
 			 */
@@ -981,9 +1007,7 @@ dprintf("##Send %d bytes, requested %d\n", lenSend, len);
 		default:
 			f_type = f->f_type;
 			f->f_type = F_UNUSED;
-dprintf("##pre logerror\n");
 			logerror("message not (tcp)send");
-dprintf("##post logerror\n");
 			f->f_type = f_type;
 			break;
 		}
@@ -991,8 +1015,8 @@ dprintf("##post logerror\n");
 		if(retry == 0) {
 			++retry;
 			/* try to recover */
-dprintf("##close\n");
 			close(f->f_file);
+			f->f_un.f_forw.status = TCP_SEND_NOTCONNECTED;
 			f->f_file = -1;
 		} else
 			return -1;
@@ -2064,20 +2088,11 @@ int main(argc, argv)
 #endif
 	int num_fds;
 #endif /* __GLIBC__ */
-	/*
-	 * It took me quite some time to figure out how this is
-	 * supposed to work so I guess I should better write it down.
-	 * unixm is a list of file descriptors from which one can
-	 * read().  This is in contrary to readfds which is a list of
-	 * file descriptors where activity is monitored by select()
-	 * and from which one cannot read().  -Joey
-	 *
-	 * Changed: unixm is gone, since we now use datagram unix sockets.
-	 * Hence we recv() from unix sockets directly (rather than
-	 * first accept()ing connections on them), so there's no need
-	 * for separate book-keeping.  --okir
-	 */
 	fd_set readfds;
+#ifdef  SYSLOG_INET
+	fd_set writefds;
+	struct filed *f;
+#endif
 
 #ifdef	MTRACE
 	mtrace(); /* this is a debug aid for leak detection - either remove
@@ -2376,6 +2391,28 @@ int main(argc, argv)
 				iTCPSess = TCPSessGetNxtSess(iTCPSess);
 			}
 		}
+
+		/* TODO: activate the code below only if we actually need to check
+		 * for outstanding writefds.
+		 */
+		if(1) {
+			/* Now add the TCP output sockets to the writefds set. This implementation
+			 * is not optimal (performance-wise) and it should be replaced with something
+			 * better in the longer term. I've not yet done this, as this code is
+			 * scheduled to be replaced after the liblogging integration.
+			 * rgerhards 2005-07-20
+			 */
+			 FD_ZERO(&writefds);
+			for (f = Files; f; f = f->f_next) {
+				if(   (f->f_type == F_FORW)
+				   && (f->f_un.f_forw.protocol == FORW_TCP)
+				   && (f->f_un.f_forw.status == TCP_SEND_CONNECTING)) {
+				   FD_SET(f->f_file, &writefds);
+				   if(f->f_file > maxfds)
+					maxfds = f->f_file;
+				   }
+			}
+		}
 #endif
 #endif
 #ifdef TESTING
@@ -2393,8 +2430,13 @@ int main(argc, argv)
 					dprintf("%d ", nfds);
 			dprintf("\n");
 		}
+#ifdef SYSLOG_INET
+		nfds = select(maxfds+1, (fd_set *) &readfds, (fd_set *) &writefds,
+				  (fd_set *) NULL, (struct timeval *) NULL);
+#else
 		nfds = select(maxfds+1, (fd_set *) &readfds, (fd_set *) NULL,
 				  (fd_set *) NULL, (struct timeval *) NULL);
+#endif
 		if ( restart )
 		{
 			dprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
@@ -2424,6 +2466,33 @@ int main(argc, argv)
 		}
 
 #ifndef TESTING
+#ifdef SYSLOG_INET
+		/* TODO: activate the code below only if we actually need to check
+		 * for outstanding writefds.
+		 */
+		if(1) {
+			/* Now check the TCP send sockets. So far, we only see if they become
+			 * writable and then change their internal status. No real async
+			 * writing is currently done. This code will be replaced once liblogging
+			 * is used, thus we try not to focus too much on it.
+			 *
+			 * IMPORTANT: With the current code, the writefds must be checked first,
+			 * because the readfds might have messages to be forwarded, which
+			 * rely on the status setting that is done here!
+			 *
+			 * rgerhards 2005-07-20
+			 */
+			for (f = Files; f; f = f->f_next) {
+				if(   (f->f_type == F_FORW)
+				   && (f->f_un.f_forw.protocol == FORW_TCP)
+				   && (f->f_un.f_forw.status == TCP_SEND_CONNECTING)
+				   && (FD_ISSET(f->f_file, &writefds))) {
+					dprintf("tcp send socket %d ready for writing.\n", f->f_file);
+					f->f_un.f_forw.status = TCP_SEND_READY;
+				   }
+			}
+		}
+#endif /* #ifdef SYSLOG_INET */
 #ifdef SYSLOG_UNIXAF
 		for (i = 0; i < nfunix; i++) {
 		    if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
@@ -2474,7 +2543,7 @@ int main(argc, argv)
 		}
 
 		if(bEnableTCP && sockTCPLstn != -1) {
-			/* Now check for TCP */
+			/* Now check for TCP input */
 			if(FD_ISSET(sockTCPLstn, &readfds)) {
 				dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn);
 				TCPSessAccept();
@@ -2512,6 +2581,7 @@ int main(argc, argv)
 				iTCPSess = TCPSessGetNxtSess(iTCPSess);
 			}
 		}
+
 #endif
 #else
 		if ( FD_ISSET(fileno(stdin), &readfds) ) {
@@ -4042,8 +4112,8 @@ void die(sig)
 	                                * below can work ... and keep in mind we need the
 					* filed structure still intact (initialized) for the below! */
 	if (sig) {
-		dprintf("syslogd: exiting on signal %d\n", sig);
-		(void) snprintf(buf, sizeof(buf), "syslogd: exiting on signal %d", sig);
+		dprintf("rsyslogd: exiting on signal %d\n", sig);
+		(void) snprintf(buf, sizeof(buf), "rsyslogd: exiting on signal %d", sig);
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
@@ -5037,13 +5107,14 @@ void cfline(line, f)
 			iMySQLPropErr++;
 		if(getSubString(&p, f->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
 			iMySQLPropErr++;
-		if(*p != '\n') { 
+		if(*p == '\n' || *p == '\0') { 
+			/* assign default format if none given! */
+			szTemplateName[0] = '\0';
+		} else {
 			/* we have a template specifier! */
 			cflineParseTemplateName(f, &p, szTemplateName,
 						sizeof(szTemplateName) / sizeof(char));
 		}
-		else	/* assign default format if none given! */
-			szTemplateName[0] = '\0';
 
 		if(szTemplateName[0] == '\0')
 			strcpy(szTemplateName, " StdDBFmt");
