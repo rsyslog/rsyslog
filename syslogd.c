@@ -961,6 +961,7 @@ int TCPSend(struct filed *f, char *msg)
 	size_t len;
 	size_t lenSend;
 	short f_type;
+	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
 
 	assert(f != NULL);
 	assert(msg != NULL);
@@ -974,7 +975,6 @@ int TCPSend(struct filed *f, char *msg)
 				return -1;
 		}
 
-dprintf("##sending '%s'\n", msg);
 		if(f->f_un.f_forw.status == TCP_SEND_CONNECTING) {
 			/* In this case, we save the buffer. If we have a
 			 * system with few messages, that hopefully prevents
@@ -997,14 +997,17 @@ dprintf("##sending '%s'\n", msg);
 			 * wait time and timeouts. The reason is that such
 			 * things might otherwise cost us considerable message
 			 * loss on the receiving side (even at a timeout set
-			 * to just 1 second).
-			 * rgerhards 2005-07-20
+			 * to just 1 second).  - rgerhards 2005-07-20
 			 */
 			return 0;
 
-		lenSend = send(f->f_file, msg, len, 0);
-dprintf("##Sent %d bytes, requested %d\n", lenSend, len);
-		/* Some messages already contain a \n character at the end
+		/* now check if we need to add a line terminator. We need to
+		 * copy the string in memory in this case, this is probably
+		 * quicker than using writev and definitely quicker than doing
+		 * two socket calls.
+		 * rgerhards 2005-07-22
+		 *
+		 * Some messages already contain a \n character at the end
 		 * of the message. We append one only if we there is not
 		 * already one. This seems the best fit, though this also
 		 * means the message does not arrive unaltered at the final
@@ -1012,16 +1015,50 @@ dprintf("##Sent %d bytes, requested %d\n", lenSend, len);
 		 * probably the best to do...
 		 * rgerhards 2005-07-20
 		 */
-		if((lenSend == len) && (*(msg+len-1) != '\n')) {
-			/* ok, this is a quick hack... rgerhards 2005-07-06 */
-			if(send(f->f_file, "\n", 1, 0) == 1)
-				return 0; /* we are done! */
+		if((*(msg+len-1) != '\n')) {
+			if(buf != NULL)
+				free(buf);
+			if((buf = malloc((len + 1) * sizeof(char))) == NULL) {
+				/* extreme mem shortage, try to solve
+				 * as good as we can. No point in calling
+				 * any alarms, they might as well run out
+				 * of memory (the risk is very high, so we
+				 * do NOT risk that). If we have a message of
+				 * more than 1 byte (what I guess), we simply
+				 * overwrite the last character.
+				 * rgerhards 2005-07-22
+				 */
+				if(len > 1) {
+					*(msg+len-1) = '\n';
+				} else {
+					/* we simply can not do anything in
+					 * this case (its an error anyhow...).
+					 */
+				}
+			} else {
+				/* we got memory, so we can copy the message */
+				memcpy(buf, msg, len); /* do not copy '\0' */
+				*(buf+len) = '\n';
+				*(buf+len+1) = '\0';
+				msg = buf; /* use new one */
+				++len; /* care for the \n */
+			}
+		}
+
+		lenSend = send(f->f_file, msg, len, 0);
+dprintf("##Sent %d bytes, requested %d, msg: '%s'\n", lenSend, len, msg);
+		if(lenSend == len) {
+			/* all well */
+			if(buf != NULL)
+				free(buf);
+			return 0;
 		}
 
 		switch(errno) {
 		case EMSGSIZE:
 			dprintf("message not (tcp)send, too large\n");
 			break;
+		case EINPROGRESS:
 		case EAGAIN:
 			dprintf("message not (tcp)send, would block\n");
 			/* we loose this message, but that's better than loosing
@@ -1031,6 +1068,7 @@ dprintf("##Sent %d bytes, requested %d\n", lenSend, len);
 		default:
 			f_type = f->f_type;
 			f->f_type = F_UNUSED;
+printf("##error(%d): %s\n", errno, strerror(errno));
 			logerror("message not (tcp)send");
 			f->f_type = f_type;
 			break;
@@ -1043,10 +1081,14 @@ dprintf("##Sent %d bytes, requested %d\n", lenSend, len);
 			f->f_un.f_forw.status = TCP_SEND_NOTCONNECTED;
 			f->f_file = -1;
 		} else
+			if(buf != NULL)
+				free(buf);
 			return -1;
 dprintf("##retry f_file %d\n", f->f_file);
 	} while(!done); /* warning: do ... while() */
 	/*NOT REACHED*/
+	if(buf != NULL)
+		free(buf);
 	return -1; /* only to avoid compiler warning! */
 }
 
