@@ -1,18 +1,15 @@
 /**
  * TODO:
- * - INET_SUSPEND_TIME reset (contains debug value!)
  * - check template lines for extra characters and provide 
  *   a warning, if they exists
- * - check that no exit() is used!
  * - implement the escape-cc property replacer option
  * - it looks liek the time stamp is missing on internally-generated
  *   messages - but maybe we need to keep this for compatibility
  *   reasons.
  * - selector line for MySQL aborts if no template is given and
  *   also no semicolon is present at the end of the line
- * - check how to handle SIGPIPE correctly (TCP sender)
  *
- * \brief This is the maint file of the rsyslogd daemon.
+ * \brief This is the main file of the rsyslogd daemon.
  *
  * Please note that as of now, a lot of the code in this file stems
  * from the sysklogd project. To learn more over this project, please
@@ -25,7 +22,7 @@
  *
  * Please note that I made quite some changes to the orignal package.
  * I expect to do even more changes - up
- * to a full rewrite - to meat my design goals, which among others
+ * to a full rewrite - to meet my design goals, which among others
  * contain a (at least) dual-thread design with a memory buffer for
  * storing received bursts of data. This is also the reason why I 
  * kind of "forked" a completely new branch of the package. My intension
@@ -473,9 +470,20 @@ int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
 				 (f)->f_repeatcount = MAXREPEAT; \
 			}
 #ifdef SYSLOG_INET
-//#define INET_SUSPEND_TIME 180		/* equal to 3 minutes */
-#define INET_SUSPEND_TIME 4		/* equal to 3 minutes */
-#define INET_RETRY_MAX 10		/* maximum of retries for gethostbyname() */
+#define INET_SUSPEND_TIME 60		/* equal to 1 minute 
+					 * rgerhards, 2005-07-26: This was 3 minutes. As the
+					 * same timer is used for tcp based syslog, we have
+					 * reduced it. However, it might actually be worth
+					 * thinking about a buffered tcp sender, which would be 
+					 * a much better alternative. When that happens, this
+					 * time here can be re-adjusted to 3 minutes (or,
+					 * even better, made configurable).
+					 */
+#define INET_RETRY_MAX 30		/* maximum of retries for gethostbyname() */
+	/* was 10, changed to 30 because we reduced INET_SUSPEND_TIME by one third. So
+	 * this "fixes" some of implications of it (see comment on INET_SUSPEND_TIME).
+	 * rgerhards, 2005-07-26
+	 */
 #endif
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
@@ -2397,7 +2405,8 @@ int main(argc, argv)
 	if ( Debug )
 	{
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
-		/* TODO-BEFORERELEASE: remove before final debugging_on = 0;*/
+		/* DEBUG-AID: comment out line below if you need that */
+		debugging_on = 0;
 	}
 	/*
 	 * Send a signal to the parent to it can terminate.

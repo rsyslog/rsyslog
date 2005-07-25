@@ -40,6 +40,20 @@ BUILDING WITH MYSQL
    and such. Building with MySQL is currently not as straightforward
    as it should be ;)
 
+CALLS to exit()
+   I have removed all calls to exit() I have introduced. However, there are
+   still some left from the original code. Most of them are OK, being done
+   on initial startup when a severe error happens. There are some, I think,
+   that might happen during runtime when a memory shortag is detected. We
+   should look into this issues. Finding some smarter code would allow
+   rsyslog to become even more fault-tolerant (but obviously, there is always
+   a cost, in this case most probably the loss of at least on message).
+
+SIGPIPE HANDLING
+  Currently, SIGPIPE is ignored. This is necessary to handle broken TCP
+  connections. We should further look into this issue and see which other
+  ways exist to handle the situation.
+
 Updates to the bug lists (and potential fixes...) can be found at the 
 official home page at
 
