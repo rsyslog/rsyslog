@@ -2250,7 +2250,7 @@ int main(argc, argv)
 			break;
 		case 'v':
 			printf("rsyslogd %s.%s\n", VERSION, PATCHLEVEL);
-			exit (0);
+			exit(0);
 		case '?':
 		default:
 			usage();
@@ -4279,7 +4279,7 @@ void die(sig)
 void doexit(sig)
 	int sig;
 {
-	exit (0);
+	exit(0);
 }
 #endif
 
@@ -4640,21 +4640,23 @@ void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 	 */
 	if((f->f_pTpl = tplFind(pTemplateName, strlen(pTemplateName))) == NULL) {
 		snprintf(errMsg, sizeof(errMsg) / sizeof(char),
-			 "rsyslogd: Could not find template '%s'\n", pTemplateName);
-		logmsgInternal(LOG_SYSLOG|LOG_ERR, errMsg, LocalHostName, ADDDATE);
-		dprintf(errMsg);
+			 "rsyslogd: Could not find template '%s' - selector line disabled\n",
+			 pTemplateName);
+		errno = 0;
+		logerror(errMsg);
 		f->f_type = F_UNUSED;
 	} else {
 		if((f->f_iov = calloc(tplGetEntryCount(f->f_pTpl),
 		    sizeof(struct iovec))) == NULL) {
 			/* TODO: provide better message! */
-			dprintf("Could not allocate iovec memory\n");
+			errno = 0;
+			logerror("Could not allocate iovec memory - 1 selector line disabled\n");
 			f->f_type = F_UNUSED;
 		}
 		if((f->f_bMustBeFreed = calloc(tplGetEntryCount(f->f_pTpl),
 		    sizeof(unsigned short))) == NULL) {
-			/* TODO: provide better message! */
-			dprintf("Could not allocate bMustBeFreed memory\n");
+			errno = 0;
+			logerror("Could not allocate bMustBeFreed memory - 1 selector line disabled\n");
 			f->f_type = F_UNUSED;
 		}
 	}
@@ -5195,6 +5197,15 @@ void cfline(line, f)
 			strcpy(szTemplateName, " StdDBFmt");
 
 		cflineSetTemplateAndIOV(f, szTemplateName);
+		
+		/* we now check if the template was present. If not, we
+		 * can abort this run as the selector line has been
+		 * disabled. If we don't abort, we'll core dump
+		 * below. rgerhards 2005-07-29
+		 */
+		if(f->f_type == F_UNUSED)
+			break;
+
 		dprintf(" template '%s'\n", szTemplateName);
 		
 		/* If db used, the template have to use the SQL option.
@@ -5202,8 +5213,9 @@ void cfline(line, f)
 		if (f->f_pTpl->optFormatForSQL != 1)
 		{
 			f->f_type = F_UNUSED;
-			dprintf("DB logging disabled. You have to use"
+			logerror("DB logging disabled. You have to use"
 				" the SQL option in your template!\n");
+			break;
 
 		}
 		
@@ -5544,8 +5556,13 @@ int getSubString(char **ppSrc,  char *pDst, size_t DstSize, char cSep)
 		dprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
 	}	
-	if (*pSrc != '\0')
-		*ppSrc=pSrc+1;
+	if (*pSrc == '\0')
+		/* this line was missing, causing ppSrc to be invalid when it
+		 * was returned in case of end-of-string. rgerhards 2005-07-29
+		 */
+		*ppSrc = pSrc;
+	else
+		*ppSrc = pSrc+1;
 	*pDst = '\0';
 	return iErr;
 }
