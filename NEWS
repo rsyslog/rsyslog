@@ -1,5 +1,19 @@
 ---------------------------------------------------------------------------
-Version 0.9.4 (RGer), around 2005-07-20
+Version 0.9.5 (RGer), around 2005-07-28
+- the "semicolon bug" was actually not (fully) solved in 0.9.4. One
+  part of the bug was solved, but another still existed. This one
+  is fixed now, too.
+- the "semicolon bug" actually turned out to be a more generic bug.
+  It appeared whenever an invalid template name was given. With some
+  selector actions, rsyslogd dumped core, with other it "just" had
+  a small ressource leak with others all worked well. These anomalies
+  are now fixed. Note that they only appeared during system initaliziation
+  once the system was running, nothing bad happened.
+- improved error reporting for template errors on startup. They are now
+  shown on the console and the start-up tty. Formerly, they were only
+  visible in debug mode.
+---------------------------------------------------------------------------
+Version 0.9.4 (RGer), 2005-07-25
 - finally added the TCP sender. It now supports non-blocking mode, no
   longer disabling message reception during connect. As it is now, it
   is usable in production. The code could be more sophisticated, but
