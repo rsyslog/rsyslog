@@ -1054,7 +1054,7 @@ int TCPSend(struct filed *f, char *msg)
 		}
 
 		lenSend = send(f->f_file, msg, len, 0);
-dprintf("##Sent %d bytes, requested %d, msg: '%s'\n", lenSend, len, msg);
+		dprintf("TCP sent %d bytes, requested %d, msg: '%s'\n", lenSend, len, msg);
 		if(lenSend == len) {
 			/* all well */
 			if(buf != NULL)
@@ -1076,7 +1076,6 @@ dprintf("##Sent %d bytes, requested %d, msg: '%s'\n", lenSend, len, msg);
 		default:
 			f_type = f->f_type;
 			f->f_type = F_UNUSED;
-printf("##error(%d): %s\n", errno, strerror(errno));
 			logerror("message not (tcp)send");
 			f->f_type = f_type;
 			break;
@@ -1092,7 +1091,6 @@ printf("##error(%d): %s\n", errno, strerror(errno));
 			if(buf != NULL)
 				free(buf);
 			return -1;
-dprintf("##retry f_file %d\n", f->f_file);
 	} while(!done); /* warning: do ... while() */
 	/*NOT REACHED*/
 	if(buf != NULL)
@@ -5075,6 +5073,12 @@ void cfline(line, f)
 		/* then try to find the template and re-set f_type to UNUSED
 		 * if it can not be found. */
 		cflineSetTemplateAndIOV(f, szTemplateName);
+		if(f->f_type == F_UNUSED)
+			/* safety measure to make sure we have a valid
+			 * selector line before we continue down below.
+			 * rgerhards 2005-07-29
+			 */
+			break;
 
 		(void) strcpy(f->f_un.f_forw.f_hname, q);
 		memset((char *) &f->f_un.f_forw.f_addr, 0,
@@ -5119,6 +5123,13 @@ void cfline(line, f)
 		 * and then look at the rest of the line.
 		 */
 		cflineParseFileName(f, p);
+		if(f->f_type == F_UNUSED)
+			/* safety measure to make sure we have a valid
+			 * selector line before we continue down below.
+			 * rgerhards 2005-07-29
+			 */
+			break;
+
 		if (syncfile)
 			f->f_flags |= SYNC_FILE;
 		if (f->f_type == F_PIPE) {
@@ -5144,6 +5155,7 @@ void cfline(line, f)
 
 	case '*':
 		dprintf ("write-all");
+		f->f_type = F_WALL;
 		if(*(p+1) == ';') {
 			/* we have a template specifier! */
 			p += 2; /* eat "*;" */
@@ -5155,15 +5167,20 @@ void cfline(line, f)
 		if(szTemplateName[0] == '\0')
 			strcpy(szTemplateName, " WallFmt");
 		cflineSetTemplateAndIOV(f, szTemplateName);
+		if(f->f_type == F_UNUSED)
+			/* safety measure to make sure we have a valid
+			 * selector line before we continue down below.
+			 * rgerhards 2005-07-29
+			 */
+			break;
+
 		dprintf(" template '%s'\n", szTemplateName);
-		f->f_type = F_WALL;
 		break;
 
 #ifdef	WITH_DB
 	case '>':	/* rger 2004-10-28: added support for MySQL
 			 * >server,dbname,userid,password
 			 */
-		dprintf ("in init() - WITH_DB case \n");
 		f->f_type = F_MYSQL;
 		p++;
 		
@@ -5262,6 +5279,16 @@ void cfline(line, f)
 		if(szTemplateName[0] == '\0')
 			strcpy(szTemplateName, " StdUsrMsgFmt");
 		cflineSetTemplateAndIOV(f, szTemplateName);
+		/* Please note that we would need to check if the template
+		 * was found. If not, f->f_type would be F_UNUSED and we
+		 * can NOT carry on processing. These checks can be seen
+		 * on all other selector line code above. However, as we
+		 * do not have anything else to do here, we do not include
+		 * this check. Should you add any further processing at
+		 * this point here, you must first add a check for this
+		 * condition!
+		 * rgerhards 2005-07-29
+		 */
 		break;
 	}
 	return;
