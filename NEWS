@@ -12,6 +12,10 @@ Version 0.9.5 (RGer), around 2005-07-28
 - improved error reporting for template errors on startup. They are now
   shown on the console and the start-up tty. Formerly, they were only
   visible in debug mode.
+- added new option "-o" --> omit local unix domain socket. This option
+  enables rsyslogd NOT to listen to the local socket. This is most
+  helpful when multiple instances of rsyslogd (or rsyslogd and another
+  syslogd) shall run on a single system.
 ---------------------------------------------------------------------------
 Version 0.9.4 (RGer), 2005-07-25
 - finally added the TCP sender. It now supports non-blocking mode, no

@@ -258,6 +258,9 @@ static int restart = 0;
 #define MAXFUNIX	20
 
 int nfunix = 1;
+int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
+ 				   * suppress local logging. rgerhards 2005-08-01
+				   */
 char *funixn[MAXFUNIX] = { _PATH_LOG };
 int funix[MAXFUNIX] = { -1, };
 
@@ -2197,7 +2200,7 @@ int main(argc, argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "a:dhf:l:m:np:rs:t:v")) != EOF)
+	while ((ch = getopt(argc, argv, "a:dhf:l:m:nop:rs:t:v")) != EOF)
 		switch((char)ch) {
 		case 'a':
 			if (nfunix < MAXFUNIX)
@@ -2227,6 +2230,9 @@ int main(argc, argv)
 			break;
 		case 'n':		/* don't fork */
 			NoFork = 1;
+			break;
+		case 'o':		/* omit local logging (/dev/log) */
+			startIndexUxLocalSockets = 1;
 			break;
 		case 'p':		/* path to regular log socket */
 			funixn[0] = optarg;
@@ -2403,7 +2409,7 @@ int main(argc, argv)
 	if ( Debug )
 	{
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
-		/* DEBUG-AID: comment out line below if you need that */
+		/* DEBUG-AID/RELEASE: comment out line below if you need that */
 		debugging_on = 0;
 	}
 	/*
@@ -2424,9 +2430,12 @@ int main(argc, argv)
 		/*
 		 * Add the Unix Domain Sockets to the list of read
 		 * descriptors.
+		 * rgerhards 2005-08-01: we must now check if there are
+		 * any local sockets to listen to at all. If the -o option
+		 * is given without -a, we do not need to listen at all..
 		 */
 		/* Copy master connections */
-		for (i = 0; i < nfunix; i++) {
+		for (i = startIndexUxLocalSockets; i < nfunix; i++) {
 			if (funix[i] != -1) {
 				FD_SET(funix[i], &readfds);
 				if (funix[i]>maxfds) maxfds=funix[i];
