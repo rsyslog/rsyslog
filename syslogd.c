@@ -2412,8 +2412,11 @@ int main(argc, argv)
 	if ( Debug )
 	{
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
-		/* DEBUG-AID/RELEASE: comment out line below if you need that */
-		debugging_on = 1;
+		/* DEBUG-AID/RELEASE: value 0 below should be used for
+		 * release. Value 1 might be used if you would like to keep debug
+		 * mode enabled during testing. 
+		 */
+		debugging_on = 0;
 	}
 	/*
 	 * Send a signal to the parent to it can terminate.

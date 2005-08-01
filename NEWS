@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 0.9.5 (RGer), around 2005-07-28
+Version 0.9.5 (RGer), around 2005-08-01
 - the "semicolon bug" was actually not (fully) solved in 0.9.4. One
   part of the bug was solved, but another still existed. This one
   is fixed now, too.
@@ -12,10 +12,14 @@ Version 0.9.5 (RGer), around 2005-07-28
 - improved error reporting for template errors on startup. They are now
   shown on the console and the start-up tty. Formerly, they were only
   visible in debug mode.
+- support for multiple instances of rsyslogd on a single machine added
 - added new option "-o" --> omit local unix domain socket. This option
   enables rsyslogd NOT to listen to the local socket. This is most
   helpful when multiple instances of rsyslogd (or rsyslogd and another
   syslogd) shall run on a single system.
+- added new option "-i <pidfile>" which allows to specify the pidfile.
+  This is needed when multiple instances of rsyslogd are to be run.
+- the new project home page is now online at www.rsyslog.com
 ---------------------------------------------------------------------------
 Version 0.9.4 (RGer), 2005-07-25
 - finally added the TCP sender. It now supports non-blocking mode, no

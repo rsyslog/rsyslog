@@ -11,13 +11,8 @@ ERRORS ON STARTUP
    errors correctly, but sometimes a message is only reported if
    running in debug mode. If you experience some strange behaviour
    I suggest to run the syslogd interactively with debugging enabled.
-
-VERY LARGE LOG FILES
-   We have done nothing to support log files larger than 2GB. As such, it
-   behaves just like sysklogd in this regard. And, as far as I recall, this
-   means that - at least with certain glibc versions - no more than 2GB
-   will be written. This will be checked and supported at a later time, for
-   now just be careful ;).
+   As of August, 2005, the situation has much improved. Keep in mind,
+   thought, that debug mode is your friend ;)
 
 EQUALLY-NAMED TEMPLATES
    If multiple templates with the SAME name are created, all but the
@@ -34,12 +29,6 @@ WALLMSG FORMAT (* selector)
    date is missing. Will be fixed soon and can also be fixed just via
    the proper template. Anyone up for this? ;)
 
-BUILDING WITH MYSQL
-   The MySQL code is activated by defining -DWITH_DB in the CFLAGS.
-   Depending on your system, you may need to change some library locations
-   and such. Building with MySQL is currently not as straightforward
-   as it should be ;)
-
 CALLS to exit()
    I have removed all calls to exit() I have introduced. However, there are
    still some left from the original code. Most of them are OK, being done
@@ -53,6 +42,12 @@ SIGPIPE HANDLING
   Currently, SIGPIPE is ignored. This is necessary to handle broken TCP
   connections. We should further look into this issue and see which other
   ways exist to handle the situation.
+
+MULTIPLE INSTANCES
+  If multiple instances are running on a single machine, the one with
+  the -r switch must start first. Also, UDP-based syslog forwarding 
+  between the instances does not work. Use TCP instead.
+  2005-08-01
 
 Updates to the bug lists (and potential fixes...) can be found at the 
 official home page at
