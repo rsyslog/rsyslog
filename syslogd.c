@@ -2200,7 +2200,7 @@ int main(argc, argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "a:dhf:l:m:nop:rs:t:v")) != EOF)
+	while ((ch = getopt(argc, argv, "a:dhi:f:l:m:nop:rs:t:v")) != EOF)
 		switch((char)ch) {
 		case 'a':
 			if (nfunix < MAXFUNIX)
@@ -2216,6 +2216,9 @@ int main(argc, argv)
 			break;
 		case 'h':
 			NoHops = 0;
+			break;
+		case 'i':		/* pid file name */
+			PidFile = optarg;
 			break;
 		case 'l':
 			if (LocalHosts) {
@@ -2410,7 +2413,7 @@ int main(argc, argv)
 	{
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
 		/* DEBUG-AID/RELEASE: comment out line below if you need that */
-		debugging_on = 0;
+		debugging_on = 1;
 	}
 	/*
 	 * Send a signal to the parent to it can terminate.
@@ -4615,7 +4618,7 @@ void init()
 		ochPrintList();
 	}
 
-	if ( AcceptRemote )
+	if ( AcceptRemote ) 
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd: [origin software=\"rsyslogd\" " \
 			      "swVersion=\"" VERSION "." PATCHLEVEL "\"]" \
 		       " restart (remote reception)." , LocalHostName, \
