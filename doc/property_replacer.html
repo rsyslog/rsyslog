@@ -1,0 +1,64 @@
+<html>
+<head>
+<title>The Rsyslogd Property Replacer</title>
+</head>
+<body>
+<h1>The Property Replacer</h1>
+<p><b>The property replacer is a core component in rsyslogd's output system.</b> 
+A syslog message has a number of well-defined properties (see below). Each of 
+this properties can be accessed <b>and</b> manipulated by the property replacer. 
+With it, it is easy to use only part of a property value or manipulate the value, 
+e.g. by converting all characters to lower case.</p>
+<h1>Accessing Properties</h1>
+<p>Syslog message properties are used inside templates. They are accessed by putting them between percent signs. Properties can be modified by 
+the property replacer. The full syntax is as follows:</p>
+<blockquote><b><code>%propname:fromChar:toChar:options%</code></b></blockquote>
+<h2>Available Properties</h2>
+<p><b><code>propname</code></b> is the name of the property to access. It is case-sensitive.
+Currently supported are:</p>
+<table>
+<tr><td><b>msg</b></td><td>the MSG part of the message (aka &quot;the message&quot; ;))</td></tr>
+<tr><td><b>rawmsg</b></td><td>the message excactly as it was received from the
+socket. Should be useful for debugging.</td></tr>
+<tr><td><b>UxTradMsg</b></td><td>will disappear soon - do NOT use!</td></tr>
+<tr><td><b>HOSTNAME</b></td><td>hostname from the message</td></tr>
+<tr><td><b>source</b></td><td>alias for HOSTNAME</td></tr>
+<tr><td><b>syslogtag</b></td><td>TAG from the message</td></tr>
+<tr><td><b>PRI</b></td><td>PRI part of the message - undecoded (single value)</td></tr>
+<tr><td><b>IUT</b></td><td>the monitorware InfoUnitType - used when talking
+to a <a href="http://www.monitorware.com">MonitorWare</a> backend (also for 
+	<a href="http://www.phplogcon.org/">phpLogCon</a>)</td></tr>
+<tr><td><b>syslogfacility</b></td><td>the facility from the message - in numerical form</td></tr>
+<tr><td><b>syslogpriority</b></td><td>the priority (actully severity!) from the
+	message - in numerical form</td></tr>
+<tr><td><b>timegenerated</b></td><td>timestamp when the message was RECEIVED. Always in
+	high resolution</td></tr>
+<tr><td><b>timereported</b></td><td>timestamp from the message. Resolution depends on
+what was provided in the message (in most cases,
+only seconds)</td></tr>
+<tr><td><b>TIMESTAMP</b></td><td>alias for timereported</td></tr>
+</table>
+<h2>Character Positions</h2>
+<p><b><code>FromChar</code></b> and <b><code>toChar</code></b> are used to build substrings. They specify the offset within 
+the string that should be copied. Offset counting starts at 1, so if you need to 
+obtain the first 2 characters of the message text, you can use this syntax: 
+&quot;%msg:1:2%&quot;. If you do not whish to specify from and to, but you want to specify 
+options, you still need to include the colons. For example, if you would like to 
+convert the full message text to lower case, use &quot;%msg:::lowercase%&quot;.<br>
+<br>
+<h2>Property Options</h2>
+<b><code>property options</code></b> are case-insensitive. Currently, the following options 
+are defined:</p>
+<table>
+<tr><td><b>uppercase</b></td><td>convert property to lowercase only</td></tr>
+<tr><td><b>lowercase</b></td><td>convert property text to uppercase only</td></tr>
+<tr><td><b>drop-last-lf</b></td><td>The last LF in the message (if any), is dropped.
+	Especially useful for PIX.</td></tr>
+<tr><td><b>date-mysql</b></td><td>format as mysql date</td></tr>
+<tr><td><b>date-rfc3164</b></td><td>format as RFC 3164 date</td></tr>
+<tr><td><b>date-rfc3339</b></td><td>format as RFC 3339 date</td></tr>
+<tr><td><b>escape-cc</b></td><td>NOT yet implemented</td></tr>
+</table>
+
+</body>
+</html>

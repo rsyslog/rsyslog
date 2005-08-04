@@ -1,0 +1,460 @@
+<html>
+<head>
+<title>rsyslog.conf file</title>
+</head>
+<body>
+<h1>rsyslog.conf configuration file</h1>
+<p><b>This document is currently being enhanced. Please pardon its current 
+appearance.</b></p>
+<p><b>Rsyslogd is configured via the rsyslog.conf file</b>, typically found in 
+/etc. By default, rsyslog reads the file /etc/rsyslog.conf.</p>
+<p>While rsyslogd contains enhancements over standard syslogd, efforts have been 
+made to keep the configuration file as compatible as possible. While, for 
+obvious reasons, <a href="features.html">enhanced features</a> require a 
+different config file syntax, rsyslogd should be able to work with a standard 
+syslog.conf file. This is especially useful while you are migrating from syslogd 
+to rsyslogd.</p>
+<h2>Basic Structure</h2>
+<p>Every rule consists of two fields, a selector field and an action field. 
+These two fields are separated by one or more spaces or tabs. The selector field 
+specifies a pattern of facilities and priorities belonging to the specified 
+action.<br>
+<br>
+Lines starting with a hash mark (``#'') and empty lines are ignored.
+<h2>Templates</h2>
+<p>Templates are a key feature of rsyslog. They allow to specify any format a user 
+might want. Every output in rsyslog uses templates - this holds true for files, 
+user messages and so on. The database writer expects its template to be a proper 
+SQL statement - so this is highly customizable too. You might ask how does all 
+of this work when no templates at all are specified. Good question ;) The answer 
+is simple, though. Templates compatible with the stock syslogd formats are 
+hardcoded into rsyslogd. So if no template is specified, we use one of these 
+hardcoded templates. Search for &quot;template_&quot; in syslogd.c and you will find the 
+hardcoded ones.</p>
+<p>A template consists of a template directive, a name, the actual template text 
+and optional options. A sample is:</p>
+<blockquote><code>$template MyTemplateName,&quot;\7Text %property% some more text\n&quot;,&lt;options&gt;</code></blockquote>
+<p>The &quot;$template&quot; is the template directive. It tells rsyslog that this line 
+contains a template. &quot;MyTemplateName&quot; is the template name. All
+other config lines refer to this name. The text within quotes is the actual 
+template text. The backslash is an escape character, much as it is in C. It does 
+all these &quot;cool&quot; things. For example, \7 rings the bell (this is an ASCII 
+value), \n is a new line. C programmers and perl coders have the advantage of 
+knowing this, but the set in rsyslog is a bit restricted currently.
+<p>
+All text in the template is used literally, except for things within percent 
+signs. These are properties and allow you access to the contents of the syslog 
+message. Properties are accessed via the property replacer (nice name, huh) and 
+it can do cool things, too. For example, it can pick a substring or do 
+date-specific formatting. More on this is below, on some lines of the property 
+replacer.<br>
+<br>
+The &lt;options&gt; part is optional. It carries options influencing the template as 
+whole. See details below. Be sure NOT to mistake template options with property 
+options - the later ones are processed by the property replacer and apply to a 
+SINGLE property, only (and not the whole template).<br>
+<br>
+Template options are case-insensitive. Currently defined are: </p>
+<p><b>sql</b> - format the string suitable for a SQL statement. This will 
+replace single quotes (&quot;'&quot;) by two single quotes (&quot;''&quot;) inside each field. This 
+option MUST be specified when a template is used for writing to a database, 
+otherwise SQL injection might occur.<br>
+<br>
+Please note that the database writer *checks* that the sql option is present in 
+the template. If it is not present, the write database action is disabled. This 
+is to guard you against accidential forgetting it and then becoming vulnerable 
+to SQL injection. The sql option can also be useful with files - especially if 
+you want to import them into a database on another machine for performance 
+reasons. However, do NOT use it if you do not have a real need for it - among 
+others, it takes some toll on the processing time. Not much, but on a really 
+busy system you might notice it ;)<br>
+<br>
+To escape:<br>
+% = \%<br>
+\ = \\ --&gt; '\' is used to escape (as in C)<br>
+$template TraditionalFormat,%timegenerated% %HOSTNAME% %syslogtag%%msg%\n&quot;<br>
+<br>
+Properties can be accessed by the <a href="property_replacer.html">property replacer</a> 
+(see there for details).</p>
+<h2>Output Channels</h2>
+<p>Output Channels are a new concept first introduced in rsyslog 0.9.0. As of this 
+writing, it is still unclear if they will stay in rsyslog or go away. So if you 
+use them, be prepared to change you configuration file syntax when you upgrade 
+to a later release.<br>
+<br>
+The idea behind output channel definitions is that it shall provide an umbrella 
+for any type of output that the user might want. In essence,<br>
+this is the &quot;file&quot; part of selector lines (and this is why we are not sure 
+output channel syntax will stay after the next review). There is a<br>
+difference, though: selector channels both have filter conditions (currently 
+facility and severity) as well as the output destination. Output channels define 
+the output defintion, only. As of this build, they can only be used to write to 
+files - not pipes, ttys or whatever else. If we stick with output channels, this 
+will change over time.</p>
+<p>In concept, an output channel includes everything needed to know about an 
+output actions. In practice, the current implementation only carries<br>
+a filename, a maximum file size and a command to be issued when this file size 
+is reached. More things might be present in future version, which might also 
+change the syntax of the directive.</p>
+<p>Output channels are defined via an $outchannel directive. It's syntax is as 
+follows:<br>
+<br>
+$outchannel name,file-name,max-size,action-on-max-size<br>
+<br>
+name is the name of the output channel (not the file), file-name is the file 
+name to be written to, max-size the maximum allowed size and action-on-max-size 
+a command to be issued when the max size is reached.<br>
+<br>
+Please note that max-size is queried BEFORE writing the log message to the file. 
+So be sure to set this limit reasonably low so that any message might fit. For 
+the current release, setting it 1k lower than you expected is helpful. The 
+max-size must always be specified in bytes - there are no special symbols (like 
+1k, 1m,...) at this point of development.<br>
+<br>
+Keep in mind that $outchannel just defines a channel with &quot;name&quot;. It does not 
+activate it. To do so, you must use a selector line (see below). That selector 
+line includes the channel name plus an $ sign in front of it. A sample might be:<br>
+<br>
+*.* $mychannel<br>
+<br>
+In its current form, output channels primarily provide the ability to size-limit 
+an output file. To do so, specify a maximum size. When this size is reachead, 
+rsyslogd will execute the action-on-max-size command and then reopen the file 
+and retry. The command should be something like a log rotation script or a 
+similar thing.</p>
+<blockquote>
+	<p><b>WARNING</b>
+	<p>The current command logic is a quick hack. It simply issues the command via a 
+system() call, which is very dirty. Don't make rsyslogd a suid
+binary and use action-on-max-size commands - this will mess up things. Fixing 
+this is on top of the todo list and the fix will hopefully
+appear soon.</p>
+</blockquote>
+<p>If there is no action-on-max-size command or the command did not resolve the 
+situation, the file is closed and never reopened by rsyslogd (except, of course, 
+by huping it). This logic was integrated when we first experienced severe issues 
+with files larger 2gb, which could lead to rsyslogd dumping core. In such cases, 
+it is more appropriate to stop writing to a single file. Meanwhile, rsyslogd has 
+been fixed to support files larger 2gb, but obviously only on file systems and 
+operating system versions that do so. So it can still make sense to enforce a 
+2gb file size limit.</p>
+<h2>SELECTORS</h2>
+<p>The selector field itself again consists of two parts, a facility and a 
+priority, separated by a period (``.''). Both parts are case insenstive and can 
+also be specified as decimal numbers, but don't do that, you have been warned. 
+Both facilities and priorities are described in rsyslog(3). The names mentioned 
+below correspond to the similar LOG_-values in /usr/include/rsyslog.h.<br><br>The facility is one of the following keywords: auth, authpriv, cron, daemon, 
+kern, lpr, mail, mark, news, security (same as auth), syslog, user, uucp and 
+local0 through local7. The keyword security should not be used anymore and mark 
+is only for internal use and therefore should not be used in applications. 
+Anyway, you may want to specify and redirect these messages here. The facility 
+specifies the subsystem that produced the message, i.e. all mail programs log 
+with the mail facility (LOG_MAIL) if they log using syslog.<br><br>Please note that the upcoming next syslog-RFC specifies many more facilities. 
+Support for them will be added in a future version of rsyslog, which might 
+require changes to existing configuration files.<br><br>The priority is one of the following keywords, in ascending order: debug, info, 
+notice, warning, warn (same as warning), err, error (same as err), crit, alert, 
+emerg, panic (same as emerg). The keywords error, warn and panic are deprecated 
+and should not be used anymore. The priority defines the severity of the message<br>
+<br>The behavior of the original BSD syslogd is that all messages of the specified 
+priority and higher are logged according to the given action. This rsyslogd(8) 
+behaves the same, but has some extensions.<br><br>In addition to the above mentioned names the rsyslogd(8) understands the 
+following extensions: An asterisk (``*'') stands for all facilities or all 
+priorities, depending on where it is used (before or after the period). The 
+keyword none stands for no priority of the given facility.<br><br>You can specify multiple facilities with the same priority pattern in one 
+statement using the comma (``,'') operator. You may specify as much facilities 
+as you want. Remember that only the facility part from such a statement is 
+taken, a priority part would be skipped.</p>
+<p>Multiple selectors may be specified for a single action using the semicolon 
+(``;'') separator. Remember that each selector in the selector field is capable 
+to overwrite the preceding ones. Using this behavior you can exclude some 
+priorities from the pattern.</p>
+<p>Rsyslogd(8) has a syntax extension to the original BSD source, that makes its 
+use more intuitively. You may precede every priority with an equation sign 
+(``='') to specify only this single priority and not any of the above. You may 
+also (both is valid, too) precede the priority with an exclamation mark (``!'') 
+to ignore all that priorities, either exact this one or this and any higher 
+priority. If you use both extensions than the exclamation mark must occur before 
+the equation sign, just use it intuitively.</p>
+<h2>ACTIONS</h2>
+<p>The action field of a rule describes what to do with the message. In general, 
+message content is written to a kind of &quot;logfile&quot;. But also other actions might 
+be done, like writing to a database table or forwarding to another host.<br>
+<br>
+Templates can be used with all actions. If used, the specified template is used 
+to generate the message content (instead of the default template). To specify a 
+template, write a semicolon after the action value immediately followed by the 
+template name.<br>
+<br>
+Beware: templates MUST be defined BEFORE they are used. It is OK to define some 
+templates, then use them in selector lines, define more templates and use use 
+them in the following selector lines. But it is NOT permitted to use a template 
+in a selectore line that is above its definition. If you do this, the selector 
+line will be ignored.</p>
+<h3>Regular File</h3>
+<p>Typically messages are logged to real files. The file has to be specified with 
+full pathname, beginning with a slash ``/''.<br>
+<br>
+You may prefix each entry with the minus ``-'' sign to omit syncing the file 
+after every logging. Note that you might lose information if the system crashes 
+right behind a write attempt. Nevertheless this might give you back some 
+performance, especially if you run programs that use<br>
+logging in a very verbose manner.</p>
+<p>If your system is connected to a reliable UPS and you receive lots of log 
+data (e.g. firewall logs), it might be a very good idea to turn of<br>
+syncing by specifying the &quot;-&quot; in front of the file name. </p>
+<h3>Named Pipes</h3>
+<p>This version of rsyslogd(8) has support for logging output to named pipes (fifos). 
+A fifo or named pipe can be used as a destination for log messages by prepending 
+a pipe symbol (``|'') to the name of the file. This is handy for debugging. Note 
+that the fifo must be created with the mkfifo(1) command before rsyslogd(8) is 
+started.</p>
+<h3>Terminal and Console</h3>
+<p>If the file you specified is a tty, special tty-handling is done, same with 
+/dev/console.</p>
+<h3>Remote Machine</h3>
+<p>Rsyslogd provides full remote logging, i.e. is able to send messages to a 
+remote host running rsyslogd(8) and to receive messages from remote hosts. The 
+remote host won't forward the message again, it will just log them locally. To 
+forward messages to another host, prepend the hostname with the at sign (``@'').<br>
+<br>
+Using this feature you're able to control all syslog messages on one host, if 
+all other machines will log remotely to that. This tears down<br>
+administration needs.<br>
+<br>
+Please note that this version of rsyslogd by default does NOT forward messages 
+it has received from the network to another host. Specify the<br>
+-h option to enable this.</p>
+<h3>List of Users</h3>
+<p>Usually critical messages are also directed to ``root'' on that machine. You can 
+specify a list of users that shall get the message by simply writing the login. 
+You may specify more than one user by separating them with commas (``,''). If 
+they're logged in they get the message. Don't think a mail would be sent, that 
+might be too late.</p>
+<h3>Everyone logged on</h3>
+<p>Emergency messages often go to all users currently online to notify them that 
+something strange is happening with the system. To specify this wall(1)-feature 
+use an asterisk (``*'').</p>
+<h3>Database Table</h3>
+<p>This allows logging of the message to a database table. Currently, only MySQL 
+databases are supported. By default, a MonitorWare-compatible schema is required 
+for this to work. You can create that schema with the createDB.SQL file that 
+came with the rsyslog package. You can also<br>
+use any other schema of your liking - you just need to define a proper template 
+and assign this template to the action.<br>
+<br>
+The database writer is called by specifying a greater-then sign (&quot;&gt;&quot;) in front 
+of the database connect information. Immediately after that<br>
+sign the database host name must be given, a comma, the database name, another 
+comma, the database user, a comma and then the user's password. If a specific 
+template is to be used, a semicolong followed by the template name can follow 
+the connect information. This is as follows:<br>
+<br>
+&gt;dbhost,dbname,dbuser,dbpassword;dbtemplate</p>
+<h3>Output Channel</h3>
+<p>Binds an output channel definition (see there for details) to this action. 
+Output channel actions must start with a $-sign, e.g. if you would like to bind 
+your output channel definition &quot;mychannel&quot; to the action, use &quot;$mychannel&quot;. 
+Output channels support template definitions like all all other actions.</p>
+<h2>TEMPLATE NAME</h2>
+<p>Every ACTION can be followed by a template name. If so, that template is used 
+for message formatting. If no name is given, a hardcoded default template is 
+used for the action. There can only be one template name for each given action. 
+The default template is specific to each action. For a description of what a 
+template is and what you can do with it, see &quot;TEMPLATES&quot; at the top of this 
+document.</p>
+<h2>EXAMPLES</h2>
+<p>Below are example for templates and selector lines. I hope they are 
+self-explanatory. If not, please see www.monitorware.com/rsyslog/ for advise.</p>
+<h3>TEMPLATES</h3>
+<p>Please note that the samples are split across multiple lines. A template MUST 
+NOT actually be split across multiple lines.<br>
+<br>
+A template that resambles traditional syslogd file output:<br>
+$template TraditionalFormat,&quot;%timegenerated% %HOSTNAME%<br>
+%syslogtag%%msg:::drop-last-lf%\n&quot;<br>
+<br>
+A template that tells you a little more about the message:<br>
+$template precise,&quot;%syslogpriority%,%syslogfacility%,%timegenerated%,%HOSTNAME%,<br>
+%syslogtag%,%msg%\n&quot;<br>
+<br>
+A template for RFC 3164 format:<br>
+$template RFC3164fmt,&quot;&lt;%PRI%&gt;%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%&quot;<br>
+<br>
+A template for the format traditonally used for user messages:<br>
+$template usermsg,&quot; XXXX%syslogtag%%msg%\n\r&quot;<br>
+<br>
+And a template with the traditonal wall-message format:<br>
+$template wallmsg,&quot;\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated%<br>
+<br>
+A template that can be used for the database write (please note the SQL<br>
+template option)<br>
+$template MySQLInsert,&quot;insert iut, message, receivedat values<br>
+('%iut%', '%msg:::UPPERCASE%', '%timegenerated:::date-mysql%')<br>
+into systemevents\r\n&quot;, SQL<br>
+<br>
+The following template emulates <a href="http://www.winsyslog.com/en/">WinSyslog</a> 
+format (it's an <a href="http://www.adiscon.com/en/">Adiscon</a> format, you do 
+not feel bad if you don't know it ;)). It's interesting to see how it takes 
+different parts out of the date stamps. What happens is that the date stamp is 
+split into the actual date and time and the these two are combined with just a 
+comma in between them.<br>
+<br>
+$template WinSyslogFmt,&quot;%HOSTNAME%,%timegenerated:1:10:date-rfc3339%,<br>
+%timegenerated:12:19:date-rfc3339%,%timegenerated:1:10:date-rfc3339%,<br>
+%timegenerated:12:19:date-rfc3339%,%syslogfacility%,%syslogpriority%,<br>
+%syslogtag%%msg%\n&quot;</p>
+<h3>SELECTOR LINES</h3>
+<p># Store critical stuff in critical<br>
+#<br>
+*.=crit;kern.none /var/adm/critical<br>
+<br>
+This will store all messages with the priority crit in the file /var/adm/critical, 
+except for any kernel message.<br>
+<br>
+<br>
+# Kernel messages are first, stored in the kernel<br>
+# file, critical messages and higher ones also go<br>
+# to another host and to the console. Messages to<br>
+# the host finlandia are forwarded in RFC 3164<br>
+# format (using the template defined above).<br>
+#<br>
+kern.* /var/adm/kernel<br>
+kern.crit @finlandia;RFC3164fmt<br>
+kern.crit /dev/console<br>
+kern.info;kern.!err /var/adm/kernel-info<br>
+<br>
+The first rule direct any message that has the kernel facility to the file /var/adm/kernel.<br>
+<br>
+The second statement directs all kernel messages of the priority crit and higher 
+to the remote host finlandia. This is useful, because if the host crashes and 
+the disks get irreparable errors you might not be able to read the stored 
+messages. If they're on a remote host, too, you still can try to find out the 
+reason for the crash.<br>
+<br>
+The third rule directs these messages to the actual console, so the person who 
+works on the machine will get them, too.<br>
+<br>
+The fourth line tells rsyslogd to save all kernel messages that come with 
+priorities from info up to warning in the file /var/adm/kernel-info. Everything 
+from err and higher is excluded.<br>
+<br>
+<br>
+# The tcp wrapper loggs with mail.info, we display<br>
+# all the connections on tty12<br>
+#<br>
+mail.=info /dev/tty12<br>
+<br>
+This directs all messages that uses mail.info (in source LOG_MAIL | LOG_INFO) to 
+/dev/tty12, the 12th console. For example the tcpwrapper tcpd(8) uses this as 
+it's default.<br>
+<br>
+<br>
+# Store all mail concerning stuff in a file<br>
+#<br>
+mail.*;mail.!=info /var/adm/mail<br>
+<br>
+This pattern matches all messages that come with the mail facility, except for 
+the info priority. These will be stored in the file /var/adm/mail.<br>
+<br>
+<br>
+# Log all mail.info and news.info messages to info<br>
+#<br>
+mail,news.=info /var/adm/info<br>
+<br>
+This will extract all messages that come either with mail.info or with news.info 
+and store them in the file /var/adm/info.<br>
+<br>
+<br>
+# Log info and notice messages to messages file<br>
+#<br>
+*.=info;*.=notice;\<br>
+mail.none /var/log/messages<br>
+<br>
+This lets rsyslogd log all messages that come with either the info or the notice 
+facility into the file /var/log/messages, except for all<br>
+messages that use the mail facility.<br>
+<br>
+<br>
+# Log info messages to messages file<br>
+#<br>
+*.=info;\<br>
+mail,news.none /var/log/messages<br>
+<br>
+This statement causes rsyslogd to log all messages that come with the info 
+priority to the file /var/log/messages. But any message coming either with the 
+mail or the news facility will not be stored.<br>
+<br>
+<br>
+# Emergency messages will be displayed using wall<br>
+#<br>
+*.=emerg *<br>
+<br>
+This rule tells rsyslogd to write all emergency messages to all currently logged 
+in users. This is the wall action.<br>
+<br>
+<br>
+# Messages of the priority alert will be directed<br>
+# to the operator<br>
+#<br>
+*.alert root,rgerhards<br>
+<br>
+This rule directs all messages with a priority of alert or higher to the 
+terminals of the operator, i.e. of the users ``root'' and ``rgerhards'' if 
+they're logged in.<br>
+<br>
+<br>
+*.* @finlandia<br>
+<br>
+This rule would redirect all messages to a remote host called finlandia. This is 
+useful especially in a cluster of machines where all syslog messages will be 
+stored on only one machine.<br>
+<br>
+In the format shown above, UDP is used for transmitting the message. The 
+destination port is set to the default auf 514. Rsyslog is also capable of using 
+much more secure and reliable TCP sessions for message forwarding. Also, the 
+destination port can be specified. To select TCP, simply add one additional @ in 
+front of the host name (that is, @host is UPD, @@host is TCP). For example:<br>
+<br>
+<br>
+*.* @@finlandia<br>
+<br>
+To specify the destination port on the remote machine, use a colon followed by 
+the port number after the machine name. The following forwards to port 1514 on 
+finlandia:<br>
+<br>
+<br>
+*.* @@finlandia:1514<br>
+<br>
+This syntax works both with TCP and UDP based syslog. However, you will probably 
+primarily need it for TCP, as there is no well-accepted port for this transport 
+(it is non-standard). For UDP, you can usually stick with the default auf 514, 
+but might want to modify it for security rea-<br>
+sons. If you would like to do that, it's quite easy:<br>
+<br>
+<br>
+*.* @finlandia:1514<br>
+<br>
+<br>
+<br>
+*.* &gt;dbhost,dbname,dbuser,dbpassword;dbtemplate<br>
+<br>
+This rule writes all message to the database &quot;dbname&quot; hosted on &quot;dbhost&quot;. The 
+login is done with user &quot;dbuser&quot; and password &quot;dbpassword&quot;. The actual table 
+that is updated is specified within the template (which contains the insert 
+statement). The template is called &quot;dbtemplate&quot; in this case.</p>
+<h2>CONFIGURATION FILE SYNTAX DIFFERENCES</h2>
+<p>Rsyslogd uses a slightly different syntax for its configuration file than the 
+original BSD sources. Originally all messages of a specific priority and above 
+were forwarded to the log file. The modifiers ``='', ``!'' and ``-'' were added 
+to make rsyslogd more flexible and to use it in a more intuitive manner.<br>
+<br>
+The original BSD syslogd doesn't understand spaces as separators between the 
+selector and the action field.<br>
+<br>
+When compared to syslogd from sysklogd package, rsyslogd offers additional
+<a href="features.html">features</a> (like template and database support). For obvious reasons, the syntax for 
+defining such features is available 
+in rsyslogd, only.<br>
+&nbsp;</p>
+</body>
+</html>
