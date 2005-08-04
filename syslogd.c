@@ -2416,7 +2416,7 @@ int main(argc, argv)
 		 * release. Value 1 might be used if you would like to keep debug
 		 * mode enabled during testing. 
 		 */
-		debugging_on = 0;
+		debugging_on = 1;
 	}
 	/*
 	 * Send a signal to the parent to it can terminate.
@@ -5480,6 +5480,7 @@ void writeMySQL(register struct filed *f)
  */
 void DBErrorHandler(register struct filed *f)
 {
+	char errMsg[512];
 	/* TODO:
 	 * NO DB connection -> Can not log to DB
 	 * -------------------- 
@@ -5503,8 +5504,11 @@ void DBErrorHandler(register struct filed *f)
 	 *
 	 * Think about diffrent "delay" for diffrent errors!
 	 */
-	dprintf("db error no: %d\n", mysql_errno(&f->f_hmysql));
-	dprintf("db error: %s\n", mysql_error(&f->f_hmysql));
+	errno = 0;
+	snprintf(errMsg, sizeof(errMsg)/sizeof(char),
+		"db error (%d): %s\n", mysql_errno(&f->f_hmysql),
+		mysql_error(&f->f_hmysql));
+	logerror(errMsg);
 	/* Enable "delay" */
 	f->f_timeResumeOnError = time(&f->f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
 	f->f_iLastDBErrNo = mysql_errno(&f->f_hmysql);
