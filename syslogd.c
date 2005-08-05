@@ -1,4 +1,6 @@
 /**
+ * \brief This is the main file of the rsyslogd daemon.
+ *
  * TODO:
  * - check template lines for extra characters and provide 
  *   a warning, if they exists
@@ -6,10 +8,6 @@
  * - it looks liek the time stamp is missing on internally-generated
  *   messages - but maybe we need to keep this for compatibility
  *   reasons.
- * - selector line for MySQL aborts if no template is given and
- *   also no semicolon is present at the end of the line
- *
- * \brief This is the main file of the rsyslogd daemon.
  *
  * Please note that as of now, a lot of the code in this file stems
  * from the sysklogd project. To learn more over this project, please
@@ -101,8 +99,16 @@
  * EventReporter - www.eventreporter.com), you might want to 
  * increase this number to an even higher value, as event
  * log messages can be very lengthy.
- *
  * rgerhards, 2005-07-05
+ *
+ * during my recent testing, it showed that 4k seems to be
+ * the typical maximum for UDP based syslog. This is a IP stack
+ * restriction. Not always ... but very often. If you go beyond
+ * that value, be sure to test that rsyslogd actually does what
+ * you think it should do ;) Also, it is a good idea to check the
+ * doc set for anything on IHE - it most probably has information on
+ * message sizes.
+ * rgerhards, 2005-08-05
  */
 #define	MAXLINE		1024		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
@@ -570,7 +576,7 @@ char	LocalHostName[MAXHOSTNAMELEN+1];	/* our hostname */
 char	*LocalDomain;		/* our local domain name */
 int	InetInuse = 0;		/* non-zero if INET sockets are being used */
 int	finet = -1;		/* Internet datagram socket */
-int	LogPort;		/* port number for INET connections */
+int	LogPort = 0;		/* port number for INET connections */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds */
 int	MarkSeq = 0;		/* mark sequence number */
 int	NoFork = 0; 		/* don't fork - don't run in daemon mode */
@@ -2200,7 +2206,7 @@ int main(argc, argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "a:dhi:f:l:m:nop:rs:t:v")) != EOF)
+	while ((ch = getopt(argc, argv, "a:dhi:f:l:m:nop:r:s:t:v")) != EOF)
 		switch((char)ch) {
 		case 'a':
 			if (nfunix < MAXFUNIX)
@@ -2242,6 +2248,7 @@ int main(argc, argv)
 			break;
 		case 'r':		/* accept remote messages */
 			AcceptRemote = 1;
+			LogPort = atoi(optarg);
 			break;
 		case 's':
 			if (StripDomains) {
@@ -4392,15 +4399,20 @@ void init()
 	struct servent *sp;
 
 	nextp = NULL;
-	sp = getservbyname("syslog", "udp");
-	if (sp == NULL) {
-		errno = 0;
-		logerror("Could not find syslog/udp port in /etc/services.");
-		logerror("Now using default of 514.");
-		LogPort = 514;
+	if(LogPort == 0) {
+		/* we shall use the default syslog/udp port, so let's
+		 * look it up.
+		 */
+		sp = getservbyname("syslog", "udp");
+		if (sp == NULL) {
+			errno = 0;
+			logerror("Could not find syslog/udp port in /etc/services."
+			         "Now using IANA-assigned default of 514.");
+			LogPort = 514;
+		}
+		else
+			LogPort = sp->s_port;
 	}
-	else
-		LogPort = sp->s_port;
 
 	/*
 	 *  Close all open log files and free log descriptor array.

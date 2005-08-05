@@ -1,5 +1,16 @@
 ---------------------------------------------------------------------------
-Version 0.9.5 (RGer), around 2005-08-01
+Version 0.9.6 (RGer), around 2005-08-01
+- greatly enhanced documentation. Now available in html format in
+  the "doc" folder
+- improved MySQL error messages a little - they now show up as log
+  messages, too (formerly only in debug mode)
+- added the ability to specify the listen port for udp syslog.
+  WARNING: This introduces an incompatibility. Formerly, udp
+  syslog was enabled by the -r command line option. Now, it is
+  "-r [port]", which is consistent with the tcp listener. However,
+  just -r will now return an error message.
+---------------------------------------------------------------------------
+Version 0.9.5 (RGer), 2005-08-01
 - the "semicolon bug" was actually not (fully) solved in 0.9.4. One
   part of the bug was solved, but another still existed. This one
   is fixed now, too.
