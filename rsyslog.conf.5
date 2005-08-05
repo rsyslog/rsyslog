@@ -17,7 +17,7 @@
 .\" along with this program; if not, write to the Free Software
 .\" Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111, USA.
 .\"
-.TH RSYSLOG.CONF 5 "2005-07-20" "Version 0.9" "Linux System Administration"
+.TH RSYSLOG.CONF 5 "2005-08-08" "Version 0.9.6" "Linux System Administration"
 .SH NAME
 rsyslog.conf \- rsyslogd(8) configuration file
 .SH DESCRIPTION
@@ -709,23 +709,6 @@ actual table that is updated is specified within the template (which
 contains the insert statement). The template is called "dbtemplate" 
 in this case.
 
-.SH CONFIGURATION FILE SYNTAX DIFFERENCES
-.B Rsyslogd
-uses a slightly different syntax for its configuration file than
-the original BSD sources.  Originally all messages of a specific priority
-and above were forwarded to the log file.  The modifiers ``='', ``!''
-and ``-'' were added to make
-.B rsyslogd
-more flexible and to use it in a more intuitive manner.
-
-The original BSD rsyslogd doesn't understand spaces as separators between
-the selector and the action field.
-
-When compared to syslogd from sysklogd package,
-.B rsyslogd
-offers template support. For obvious reasons, the syntax for
-template definitions is available in rsyslogd, only. The same
-applies to the write database action.
 .SH FILES
 .PD 0
 .TP
@@ -733,14 +716,6 @@ applies to the write database action.
 Configuration file for
 .B rsyslogd
 
-.SH BUGS
-The effects of multiple selectors are sometimes not intuitive.  For
-example ``mail.crit,*.err'' will select ``mail'' facility messages at
-the level of ``err'' or higher, not at the level of ``crit'' or
-higher.
-
-This is an early release. So be sure to check the file BUGS that came with
-the package for all the fun it offers ;)
 .SH SEE ALSO
 .BR syslogd (8),
 .BR logger (1),
@@ -751,3 +726,9 @@ The
 .B rsyslogd
 is taken from sysklogd sources, which have been heavily modified
 by Rainer Gerhards (rgerhards@adiscon.com) and others.
+
+.SH MORE INFORMATION
+The documentation has grown in size. Thus, this man page lists only the most
+important facts. The full documentation is available in html format in the doc
+folder of the rsyslog files or online at
+http://www.rsyslog.com/doc

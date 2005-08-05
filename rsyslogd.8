@@ -1,7 +1,7 @@
 .\" Copyright 2004-2005 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "01 August 2005" "Version 0.9.5" "Linux System Administration"
+.TH RSYSLOGD 8 "08 August 2005" "Version 0.9.6" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -28,7 +28,9 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-p"
 .IB socket 
 ]
-.RB [ " \-r " ]
+.RB [ " \-r "
+.I port
+]
 .br
 .RB [ " \-s "
 .I domainlist
@@ -160,7 +162,7 @@ machine. When specified, no local log socket is opened at all.
 You can specify an alternative unix domain socket instead of
 .IR /dev/log "."
 .TP
-.B "\-r " "port"
+.BI "\-r " "port"
 Activates the syslog/udp listener service. The listener
 will listen to the specified port. Please note that a 
 port must be specified in any case. This is different from
