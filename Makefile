@@ -35,13 +35,12 @@ BINDIR = /usr/sbin
 MANDIR = /usr/share/man
 
 
-ifeq ($(FEATURE_LARGEFILE), 0)
+# now comes the evaluation of the FEATURE_* settings
+ifeq ($(strip $(FEATURE_LARGEFILE)), 0)
   NOLARGEFILE = -DNOLARGEFILE
 endif
 
-# uncomment the following line if you would
-# like to disable MySQL support
-ifeq ($(FEATURE_DB), 1)
+ifeq ($(strip $(FEATURE_DB)), 1)
   WITHDB=-DWITHDB
 endif
 
