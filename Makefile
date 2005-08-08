@@ -25,19 +25,24 @@ FEATURE_LARGEFILE=1
 FEATURE_DB=0
 
 #############################################################
-#                     END OF USER SETTINGS                  #
-#                     --------------------                  #
+#                  END OF USER SETTINGS                     #
+#                  --------------------                     #
 # DO NOT MAKE ANY MODIFICATIONS BELOW THIS POINT!           #
 #############################################################
 
-ifeq ($FEATURE_LARGEFILE, 0)
-NOLARGEFILE = -DNOLARGEFILE
+INSTALL = install
+BINDIR = /usr/sbin
+MANDIR = /usr/share/man
+
+
+ifeq ($(FEATURE_LARGEFILE), 0)
+  NOLARGEFILE = -DNOLARGEFILE
 endif
 
 # uncomment the following line if you would
 # like to disable MySQL support
-ifneq "$FEATURE_DB" "0"
-WITHDB=-DWITHDB
+ifeq ($(FEATURE_DB), 1)
+  WITHDB=-DWITHDB
 endif
 
 CC= gcc
@@ -48,16 +53,8 @@ CC= gcc
 #LDFLAGS= -g -Wall -fno-omit-frame-pointer
 #CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
 
-# the next two lines are essentially the same, but -DWITH_DB
-# enables the MySQL code. By default, that one is commented out
-# change the comment chars to activate it if you need MySQL!
-# In this case, also look down further to uncomment the libs
 CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -I/usr/local/include $(NOLARGEFILE) $(WITHDB)
 LDFLAGS= -s
-
-INSTALL = install
-BINDIR = /usr/sbin
-MANDIR = /usr/share/man
 
 # Include MySQL client lib if DB is selected
 ifdef WITHDB
@@ -75,9 +72,7 @@ FSSTND = -DFSSTND
 
 # The following define establishes the name of the pid file for the
 # rsyslogd daemon.  The library include file (paths.h) defines the
-# name for the rsyslogd pid to be rsyslog.pid.  A number of people have
-# suggested that this should be rsyslogd.pid.  You may cast your
-# ballot below.
+# name for the rsyslogd pid to be rsyslog.pid.
 SYSLOGD_PIDNAME = -DSYSLOGD_PIDNAME=\"rsyslogd.pid\"
 
 SYSLOGD_FLAGS= -DSYSLOG_INET -DSYSLOG_UNIXAF ${FSSTND} \
