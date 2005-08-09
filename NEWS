@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 0.9.6 (RGer), around 2005-08-01
+Version 0.9.6 (RGer), 2005-08-09
 - greatly enhanced documentation. Now available in html format in
   the "doc" folder
 - improved MySQL error messages a little - they now show up as log
@@ -9,6 +9,7 @@ Version 0.9.6 (RGer), around 2005-08-01
   syslog was enabled by the -r command line option. Now, it is
   "-r [port]", which is consistent with the tcp listener. However,
   just -r will now return an error message.
+- added startup script for Debian
 ---------------------------------------------------------------------------
 Version 0.9.5 (RGer), 2005-08-01
 - the "semicolon bug" was actually not (fully) solved in 0.9.4. One

@@ -10,10 +10,9 @@ test -x $binpath || exit 0
 
 # Options for start/restart the daemons
 #   For remote UDP logging use SYSLOGD="-r 0"
-#   "-t 1470" is a TCP listener on port 1470 (PIX)
 #   For relaying add "-h" to SYSLOGD
 #
-SYSLOGD="-r 0 -h -t 1470"
+SYSLOGD="-r 0 -h"
 
 create_xconsole()
 {
