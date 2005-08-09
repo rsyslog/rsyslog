@@ -20,7 +20,9 @@ line</a>). Thus, this guide focusses on installing from the source, which
 thankfully is <b>quite easy</b>.</p>
 <h3>Step 1 - Download Software</h3>
 <p>For obvious reasons, you need to download rsyslog. Load the most recent build 
-from <a href="http://www.rsyslog.com/downloads">http://www.rsyslog.com/downloads</a>.</p>
+from <a href="http://www.rsyslog.com/downloads">http://www.rsyslog.com/downloads</a>. 
+Extract the software with &quot;tar xzf -nameOfDownloadSet-&quot;. This will create a new 
+subdirectory rsyslog-version in the current working directory. CD into that. </p>
 <p>Depending on your system configuration, you also need to install some build 
 tools, most importantly make, the gcc compiler and the MySQL development system 
 (if you intend to use MySQL). On many systems, these things should already be 
@@ -28,7 +30,20 @@ present. If you don't know exactly, simply skip this step for now and see if
 nice error messages pop up during the compile process. If they do, you can still 
 install the missing build environment tools. So this is nothing that you need to 
 look at very carefully.</p>
-<h3>Step 2 - Check Makefile</h3>
+<h3>Step 2 - Change into correct Subdirectory</h3>
+<p>Rsyslog contains subdirectories for all platforms it has been compiled on so 
+far. If your platform is missing, that does not mean it won't run - it simply 
+means either nobody tried before or did not let us know. Please note that there 
+is a generic subdirectory &quot;linux&quot;, which should cover allmost all linux variants. 
+If you run Linux but your distro has no specific directory, use the linux 
+directory instead. For example, at the time of this writing there wasn't even a 
+redhat directory, because it would have been no different from the linux 
+directory. So the absence of a distro-specific directory does not (necessarily) 
+mean rsyslog has never been compiled on that distro.</p>
+<p><b>CD into the distribution-specific directory that best matches your 
+platform.</b> All further steps assume that you are inside this directory and 
+NOT the rsyslog home directory.</p>
+<h3>Step 3 - Check Makefile</h3>
 <p>The Makefile that comes with rsyslog contains all common options, instead of 
 support for MySQL. By default, it is compiled without it, because most folks do 
 not need it. If you need MySQL, you need to activate it. It's straightforward:</p>
@@ -51,22 +66,22 @@ not need it. If you need MySQL, you need to activate it. It's straightforward:</
 <p><b>Important:</b> If you modify the Makefile more than once, be sure to call 
 &quot;make clean&quot; before going further.</p>
 <p>Now you are ready for the next step, the compilation.</p>
-<h3>Step 3 - Compile</h3>
+<h3>Step 4 - Compile</h3>
 <p>That is easy. Just type &quot;make&quot; and let the compiler work. On any recent 
 system, that should be a very quick task, on many systems just a matter of a vew 
 seconds. If an error message comes up, most probably a part of your build 
 environment is not installed. Check with step 1 in those cases.</p>
-<h3>Step 4 - Install</h3>
+<h3>Step 5 - Install</h3>
 <p>Again, that is quite easy. All it takes is a &quot;make install&quot;. That will copy 
 the rsyslogd and the man pages to the relavant directories.</p>
-<h3>Step 5 - Configure rsyslogd</h3>
+<h3>Step 6 - Configure rsyslogd</h3>
 <p>In this step, you tell rsyslogd what to do with received messages. If you are 
 upgrading from stock syslogd, /etc/syslog.conf is probably a good starting 
 point. Rsyslogd understands stock syslogd syntax, so you can simply copy over 
 /etc/syslog.conf to /etc/rsyslog.conf. Then, edit rsyslog.conf for any 
 enhancements you would like to see. For example, you can add database writing as 
 outlined in the paper &quot;<a href="rsyslog_mysql.html">Writing syslog Data to MySQL</a>&quot;.</p>
-<h3>Step 6 - Disable stock syslogd</h3>
+<h3>Step 7 - Disable stock syslogd</h3>
 <p>In almost all cases, there already is stock syslogd installed. Because both 
 it and rsyslogd listen to the same sockets, they can NOT be run concurrently. So 
 you need to disable the stock syslogd. To do this, you typically must change 
@@ -77,7 +92,7 @@ runlevel 2 - in parctice, you need to do this for all run levels you will ever
 use (which probably means all). Under /etc/rc2.d there is a S10sysklogd script (actually 
 a symlink). Change the name to _S10sysklogd (this keeps the symlink in place, 
 but will prevent further execution - effectively disabling it).</p>
-<h3>Step 7 - Enable rsyslogd Autostart</h3>
+<h3>Step 8 - Enable rsyslogd Autostart</h3>
 <p>This step is very close to step 3. Now, we want to enable rsyslogd to start 
 automatically. The rsyslog package contains a (currently small) number of 
 startup scripts. They are inside the distro-specific directory (e.g. debian). If 
@@ -119,6 +134,9 @@ comments or bug sighting reports are very welcome. Please
 	<li>2005-08-08 * 
 	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> * Initial 
 	version created</li>
+	<li>2005-08-09 * 
+	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
+	* updated to include distro-specific directories, which are now mandatory</li>
 </ul>
 <h3>Copyright</h3>
 <p>Copyright (c)  2005 
