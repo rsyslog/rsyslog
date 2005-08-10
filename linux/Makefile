@@ -19,7 +19,7 @@
 #            before any other command!                      #
 #############################################################
 
-# Enable large file support (typically on, not needed on
+# Enable large file support (typically on, not needed for
 # 64 bit operating systems)
 FEATURE_LARGEFILE=1
 
@@ -51,5 +51,5 @@ ifdef WITHDB
 LIBS = -lmysqlclient -L/usr/local/lib/mysql 
 endif
 
-VPATH = ..
+VPATH = ../
 include ../Makefile

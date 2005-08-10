@@ -1,3 +1,12 @@
+This file basically stems back to the sysklog package. It is currently not
+being maintained and is considered to be replaced by some other method
+in the future. We have not yet removed it, because it still contains some
+helpful information. When using it, keep in mind that it is not up to date.
+However, what is written here still applies, but often is not the
+sole truth ;)
+
+Rainer Gerhards, 2005-08-10
+
 A virgin copy of these sources should include 12 files:
 
 MANIFEST:	This file.

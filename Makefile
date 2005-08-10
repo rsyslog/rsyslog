@@ -33,7 +33,7 @@ SYSLOGD_FLAGS= -DSYSLOG_INET -DSYSLOG_UNIXAF ${FSSTND} \
 SYSLOG_FLAGS= -DALLOW_KERNEL_LOGGING
 
 .c.o:
-	${CC} ${CFLAGS} -c $(VPATH)/$*.c
+	${CC} ${CFLAGS} -c $(VPATH)$*.c
 
 all: syslogd
 
@@ -50,10 +50,10 @@ template.o: template.c template.h stringbuf.h liblogging-stub.h
 outchannel.o: outchannel.c outchannel.h stringbuf.h liblogging-stub.h syslogd.h
 
 syslogd.o: syslogd.c version.h template.h outchannel.h syslogd.h
-	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} -c $(VPATH)/syslogd.c
+	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} -c $(VPATH)syslogd.c
 
 syslog.o: syslog.c
-	${CC} ${CFLAGS} ${SYSLOG_FLAGS} -c $(VPATH)/syslog.c
+	${CC} ${CFLAGS} ${SYSLOG_FLAGS} -c $(VPATH)syslog.c
 
 clean:
 	rm -f *.o *.log *~ *.orig syslogd
@@ -65,8 +65,8 @@ install_exec: syslogd
 	${INSTALL} -b -s syslogd ${DESTDIR}${BINDIR}/rsyslogd
 
 install_man:
-	${INSTALL} $(VPATH)/rsyslogd.8 ${DESTDIR}${MANDIR}/man8/rsyslogd.8
-	${INSTALL} $(VPATH)/rsyslog.conf.5 ${DESTDIR}${MANDIR}/man5/rsyslog.conf.5
+	${INSTALL} $(VPATH)rsyslogd.8 ${DESTDIR}${MANDIR}/man8/rsyslogd.8
+	${INSTALL} $(VPATH)rsyslog.conf.5 ${DESTDIR}${MANDIR}/man5/rsyslog.conf.5
 
 # The following lines are some legacy from sysklogd, which we might need
 # again in the future. So it is just commented out for now, eventually

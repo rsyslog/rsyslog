@@ -1,13 +1,25 @@
+There is an additional install HOWTO available under
+
+   doc/install.html
+
+Probably this HOWTO is easier to follow then the steps here
+below.
+
+
 1.) READ the README.linux file and the accompanying man pages.
     It will save you some frustration. Be sure to review sample.conf
     it has a lot of information and samples on templates. If you
     want to do all the cool things, this is what you need to know.
 
-2.) Edit the Makefile for your installation.  NOTE that if you have not
+2.) The actual build process is done from a distro-specific 
+    subdirectory. If in doubt, use the "linux" directory. CD
+    into it. We assume you stay in it for the rest of the process.
+   
+3.) Edit the Makefile for your installation.  NOTE that if you have not
     carried out step 1 you may make choices which could render your
     system and/or these utilities unusable.  Compile the utilities.
 
-3.) The FSSTND makes suggestions as to appropriate locations for
+4.) The FSSTND makes suggestions as to appropriate locations for
     system binaries.  Since not everyone agrees with standards it is
     up to the system administrator installing the utilities to choose
     the most appropriate locations for the binaries and their
@@ -18,13 +30,13 @@
     influenced by the choice of conformance with the FSSTND or site
     preferences.
 
-4.) For proper functioning the daemon is best run as root.
+5.) For proper functioning the daemon is best run as root.
     This is probably not much of a problem since it will probably be
     started either by init or as part of the rc.* startup process.  There
     may be security concerns with running it as root.  Please repeat
     step 1 if you are unsure of why this may be the case.
 
-5.) Contrary to previous releases, this release does NOT replace the
+6.) Contrary to previous releases, this release does NOT replace the
     standard syslogd in your system. Instead, the tool is installed
     under the name rsyslogd. Similarily, it does NOT automatically read
     syslog.conf, but rsyslog.conf instead. This was done based on user
@@ -32,15 +44,15 @@
     probably save you a lot of hassle. On the other hand, if you used
     previous versions of rsyslog, you need to change some things now!
 
-6) If you would like to use database logging, you need a database ;)
-   The default configuration requires a MonitorWare schema. To do this, you
-   can follow this advise:
-   How to create the database for rsyslog?
-   It is really easy. Simply run the following command in your shell. Be sure
-   that the mysql user you are using have permission to create a database.
-   mysql -u username -p < /path/to/createDB.sql 
-   Enter the password if requested. The database "Syslog" with the necessary
-   tables is created.
-   If you would like to use a different schema, you can do so ;) Just create
-   your schema and database and then create a matching template in rsyslog.conf.
-   See sample.conf for a description on how templates work.
+7.) If you would like to use database logging, you need a database ;)
+    The default configuration requires a MonitorWare schema. To do this, you
+    can follow this advise:
+    How to create the database for rsyslog?
+    It is really easy. Simply run the following command in your shell. Be sure
+    that the mysql user you are using have permission to create a database.
+    mysql -u username -p < /path/to/createDB.sql 
+    Enter the password if requested. The database "Syslog" with the necessary
+    tables is created.
+    If you would like to use a different schema, you can do so ;) Just create
+    your schema and database and then create a matching template in rsyslog.conf.
+    See sample.conf for a description on how templates work.

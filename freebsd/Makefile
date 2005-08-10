@@ -50,5 +50,5 @@ MANDIR = /usr/share/man
 LIBS = -lmysqlclient -L/usr/local/lib/mysql 
 .endif
 
-VPATH = ..
+VPATH = ../
 .include "../Makefile"

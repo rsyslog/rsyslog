@@ -1,7 +1,12 @@
 ---------------------------------------------------------------------------
+Version 0.9.7 (RGer), 2005-08-15
+- some of the previous doc files (like INSTALL) did not properly
+  reflect the changes to the build process and the new doc. Fixed
+  that.
+---------------------------------------------------------------------------
 Version 0.9.6 (RGer), 2005-08-09
 - greatly enhanced documentation. Now available in html format in
-  the "doc" folder and FreeBSD. Finally includes a install howto.
+  the "doc" folder and FreeBSD. Finally includes an install howto.
 - improved MySQL error messages a little - they now show up as log
   messages, too (formerly only in debug mode)
 - added the ability to specify the listen port for udp syslog.
