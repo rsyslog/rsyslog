@@ -5206,10 +5206,18 @@ void cfline(line, f)
 		dprintf(" template '%s'\n", szTemplateName);
 		break;
 
-#ifdef	WITH_DB
 	case '>':	/* rger 2004-10-28: added support for MySQL
 			 * >server,dbname,userid,password
+			 * rgerhards 2005-08-12: changed rsyslogd so that
+			 * if no DB is selected and > is used, an error
+			 * message is logged.
 			 */
+#ifndef	WITH_DB
+		f->f_type = F_UNUSED;
+		errno = 0;
+		logerror("write to database action in config file, but rsyslogd compiled without "
+		         "database functionality - ignored");
+#else /* WITH_DB defined! */
 		f->f_type = F_MYSQL;
 		p++;
 		

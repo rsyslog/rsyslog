@@ -3,6 +3,9 @@ Version 0.9.7 (RGer), 2005-08-15
 - some of the previous doc files (like INSTALL) did not properly
   reflect the changes to the build process and the new doc. Fixed
   that.
+- changed syslogd.c so that when compiled without database support,
+  an error message is displayed when a database action is detected
+  in the config file (previously this was used as an user rule ;))
 ---------------------------------------------------------------------------
 Version 0.9.6 (RGer), 2005-08-09
 - greatly enhanced documentation. Now available in html format in
