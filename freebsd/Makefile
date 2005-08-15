@@ -42,7 +42,7 @@ MANDIR = /usr/share/man
 .endif
 
 .if $(FEATURE_DB) == 1
-  WITHDB=-DWITHDB
+  WITHDB=-DWITH_DB
 .endif
 
 # Include MySQL client lib if DB is selected

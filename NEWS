@@ -6,6 +6,8 @@ Version 0.9.7 (RGer), 2005-08-15
 - changed syslogd.c so that when compiled without database support,
   an error message is displayed when a database action is detected
   in the config file (previously this was used as an user rule ;))
+- fixed a bug in the os-specific Makefiles which caused MySQL
+  support to not be compiled, even if selected
 ---------------------------------------------------------------------------
 Version 0.9.6 (RGer), 2005-08-09
 - greatly enhanced documentation. Now available in html format in

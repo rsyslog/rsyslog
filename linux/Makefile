@@ -43,11 +43,11 @@ ifeq ($(strip $(FEATURE_LARGEFILE)), 0)
 endif
 
 ifeq ($(strip $(FEATURE_DB)), 1)
-  WITHDB=-DWITHDB
+  WITHDB=-DWITH_DB
 endif
 
 # Include MySQL client lib if DB is selected
-ifdef WITHDB
+ifdef WITH_DB
 LIBS = -lmysqlclient -L/usr/local/lib/mysql 
 endif
 
