@@ -25,7 +25,7 @@ FEATURE_LARGEFILE=1
 
 # Enable database support (off by default, must be turned
 # on when support for MySQL is desired).
-FEATURE_DB=0
+FEATURE_DB=1
 
 #############################################################
 #                  END OF USER SETTINGS                     #
@@ -47,7 +47,7 @@ ifeq ($(strip $(FEATURE_DB)), 1)
 endif
 
 # Include MySQL client lib if DB is selected
-ifdef WITH_DB
+ifdef WITHDB
 LIBS = -lmysqlclient -L/usr/local/lib/mysql 
 endif
 
