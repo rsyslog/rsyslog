@@ -1,4 +1,15 @@
 ---------------------------------------------------------------------------
+Version 0.9.8 (RGer), 2005-08-19
+- made startup and shutdown message more consistent and included the
+  pid, so that they can be easier correlated. Used syslog-protocol
+  structured data format for this purpose.
+- improved config info in startup message, now tells not only
+  if it is listeing remote on udp, but also for tcp. Also includes
+  the port numbers. The previous startup message was misleading, because
+  it did not say "remote reception" if rsyslogd was only listening via
+  tcp (but not via udp).
+- added a "how can you help" document to the doc set
+---------------------------------------------------------------------------
 Version 0.9.7 (RGer), 2005-08-15
 - some of the previous doc files (like INSTALL) did not properly
   reflect the changes to the build process and the new doc. Fixed

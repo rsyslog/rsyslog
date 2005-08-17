@@ -257,6 +257,7 @@ char	ctty[] = _PATH_CONSOLE;
 char	**parts;
 
 int inetm = 0;
+pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 static int debugging_on = 0;
 static int nlogs = -1;
 static int restart = 0;
@@ -2335,6 +2336,7 @@ int main(argc, argv)
 		}
 	} /* if ( !Debug ) */
 #endif
+	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
 
 	/* initialize the default templates
 	 * we use template names with a SP in front - these 
@@ -2430,7 +2432,7 @@ int main(argc, argv)
 	/*
 	 * Send a signal to the parent to it can terminate.
 	 */
-	if (getpid() != ppid)
+	if (myPid != ppid)
 		kill (ppid, SIGTERM);
 #endif
 
@@ -4195,7 +4197,7 @@ void die(sig)
 	
 {
 	register struct filed *f;
-	char buf[100];
+	char buf[256];
 	int lognum;
 	int i;
 	int was_initialized = Initialized;
@@ -4219,7 +4221,10 @@ void die(sig)
 					* filed structure still intact (initialized) for the below! */
 	if (sig) {
 		dprintf("rsyslogd: exiting on signal %d\n", sig);
-		(void) snprintf(buf, sizeof(buf), "rsyslogd: exiting on signal %d", sig);
+		(void) snprintf(buf, sizeof(buf) / sizeof(char),
+		 "rsyslogd: [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
+		 PATCHLEVEL "\" x-pid=\"%d\"]" " exiting on signal %d.",
+		 myPid, sig);
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
@@ -4399,6 +4404,7 @@ void init()
 	char cline[BUFSIZ];
 #endif
 	struct servent *sp;
+	char bufStartUpMsg[512];
 
 	nextp = NULL;
 	if(LogPort == 0) {
@@ -4635,15 +4641,21 @@ void init()
 		ochPrintList();
 	}
 
-	if ( AcceptRemote ) 
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd: [origin software=\"rsyslogd\" " \
-			      "swVersion=\"" VERSION "." PATCHLEVEL "\"]" \
-		       " restart (remote reception)." , LocalHostName, \
-		       	ADDDATE);
-	else
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, "rsyslogd: [origin software=\"rsyslogd\" " \
-			      "swVersion=\"" VERSION "." PATCHLEVEL "\"]" \
-		       " restart." , LocalHostName, ADDDATE);
+	/* we now generate the startup message. It now includes everything to
+	 * identify this instance.
+	 * rgerhards, 2005-08-17
+	 */
+	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
+		 "rsyslogd: [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
+		 PATCHLEVEL "\" x-pid=\"%d\"][x-configInfo udpReception=\"%s\" " \
+		 "udpPort=\"%d\" tcpReception=\"%s\" tcpPort=\"%d\"]" \
+		 " restart",
+		 myPid,
+		 AcceptRemote ? "Yes" : "No", LogPort,
+		 bEnableTCP   ? "Yes" : "No",  TCPLstnPort );
+		 //AcceptRemote ? "(remote recpetion)" : "");
+	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, LocalHostName, ADDDATE);
+
 	(void) signal(SIGHUP, sighup_handler);
 	dprintf("rsyslogd: restarted.\n");
 }
