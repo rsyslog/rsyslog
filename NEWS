@@ -1,3 +1,4 @@
+- changed install doc to cover daily cron scripts - a trouble source
 ---------------------------------------------------------------------------
 Version 0.9.8 (RGer), 2005-09-05
 - made startup and shutdown message more consistent and included the

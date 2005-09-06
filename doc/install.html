@@ -109,6 +109,25 @@ started.</p>
 that MySQL starts before rsyslogd. If it starts later, you will receive an error 
 message during each restart (this might be acceptable to you). To do so, either 
 move MySQL's start order before rsyslogd or rsyslogd's after MySQL.</p>
+<h3>Step 9 - Check daily cron scripts</h3>
+<p>Most distributions come pre-configured with some daily scripts for log 
+rotation. As long as you use the same log file names, the log rotation scripts 
+will probably work quite well. There is one caveat, though. The scripts need to 
+tell syslogd that the files have been rotated. To do this, they typically have a 
+part using syslogd's init script to do that. Obviously, the default scripts do 
+not know about rsyslogd, so they manipulate syslogd. If that happens, in most 
+cases an additional instance of stock syslogd is started (in almost all cases, 
+this was not functional, but it is at least distracting). It also means that 
+rsyslogd is not properly told about the log rotation, which will lead it to 
+continue to write to the now-rotated files.</p>
+<p>So you need to fix these scripts. See your distro-specific documentation how 
+they are located. Under most Linuxes, the primary script to modify is /etc/cron.daily/sysklogd. 
+Watch for a comment &quot;Restart syslogd&quot; (usually at the very end of the file). The 
+restart command must be changed to use rsyslogd's rc script.</p>
+<p>Also, if you use klogd together with rsyslogd (under most Linuxes you will do 
+that), you need to make sure that klogd is restarted after rsyslogd is restarted. 
+So it might be a good idea to put a klogd reload-or-restart command right after 
+the rsyslogd command in your daily script. This can save you lots of troubles.</p>
 <h3>Done</h3>
 <p>This concludes the steps necesary to install rsyslogd. Of course, it is 
 always a good idea to test everything thouroughly. At a minimalist level, you 
@@ -137,6 +156,9 @@ comments or bug sighting reports are very welcome. Please
 	<li>2005-08-09 * 
 	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
 	* updated to include distro-specific directories, which are now mandatory</li>
+	<li>2005-09-06 * 
+	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
+	* added information on log rotation scripts</li>
 </ul>
 <h3>Copyright</h3>
 <p>Copyright (c)  2005 
