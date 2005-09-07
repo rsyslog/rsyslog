@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 1.0.0 (RGer), 2005-09-12
 - changed install doc to cover daily cron scripts - a trouble source
+- added rc script for slackware (provided by Chris Elvidge - thanks!) 
 ---------------------------------------------------------------------------
 Version 0.9.8 (RGer), 2005-09-05
 - made startup and shutdown message more consistent and included the
