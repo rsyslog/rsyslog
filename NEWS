@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 1.10.0 (RGer), 2005-09-??
+  REMINDER: 1.10 is the first unstable version if the 1.x series!
+- changed stringbuf into a new counted string class
+---------------------------------------------------------------------------
 Version 1.0.0 (RGer), 2005-09-12
 - changed install doc to cover daily cron scripts - a trouble source
 - added rc script for slackware (provided by Chris Elvidge - thanks!) 

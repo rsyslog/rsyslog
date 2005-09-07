@@ -1,84 +1,53 @@
 /*! \file stringbuf.h
- *  \brief The dynamic stringt buffer helper object.
+ *  \brief The counted string object
  *
- * The string buffer object is a slim string handler. It implements
- * a dynamically growing string and can be used whereever data needs
- * to be appended to a string AND it is not known how large the
- * resulting structure is. If you know the string size or can
- * retrieve it quickly, you should NOT use the string buffer
- * object - because it has some overhead not associated with direct
- * string manipulations.
- *
- * This object is used to grow a string. For performance reasons,
- * the termination \0 byte is only written after the caller 
- * indicates the string is completed.
+ * This is the byte-counted string class for rsyslog. It is a replacement
+ * for classical \0 terminated string functions. We introduce it in
+ * the hope it will make the program more secure, obtain some performance
+ * and, most importantly, lay they foundation for syslog-protocol, which
+ * requires strings to be able to handle embedded \0 characters.
  *
  * \author  Rainer Gerhards <rgerhards@adiscon.com>
- * \date    2003-08-08
+ * \date    2005-09-07
  *          Initial version  begun.
  *
- * Copyright 2002-2003 
+ * All functions in this "class" start with rsCStr (rsyslog Counted String).
+ * Copyright 2005
  *     Rainer Gerhards and Adiscon GmbH. All Rights Reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- * 
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- * 
- *     * Neither the name of Adiscon GmbH or Rainer Gerhards
- *       nor the names of its contributors may be used to
- *       endorse or promote products derived from this software without
- *       specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *     This code is placed under the GPL.
  */
 #ifndef __LIB3195_STRINGBUF_H_INCLUDED__
 #define __LIB3195_STRINGBUF_H_INCLUDED__ 1
 
-#define sbSTRBCHECKVALIDOBJECT(x) {assert(x != NULL); assert(x->OID == OIDsbStrB);}
+#define sbSTRBCHECKVALIDOBJECT(x) {assert(x != NULL); assert(x->OID == OIDrsCStr);}
 
 
 /** 
  * The dynamic string buffer object.
  *
  */
-struct sbStrBObject
+struct rsCStrObject
 {	
 	srObjID OID;			/**< object ID */
 	char *pBuf;			/**< pointer to the string buffer, may be NULL if string is empty */
+	char *pszBuf;			/**< pointer to the sz version of the string (after it has been created )*/
 	int iBufSize;			/**< current maximum size of the string buffer */
 	int iBufPtr;			/**< pointer (index) of next character position to be written to. */
+	int iStrLen;			/**< length of the string in characters. */
 	int iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
 };
-typedef struct sbStrBObject sbStrBObj;
+typedef struct rsCStrObject rsCStrObj;
 
 
 /**
- * Construct a sbStrB object.
+ * Construct a rsCStr object.
  */
-sbStrBObj *sbStrBConstruct(void);
+rsCStrObj *rsCStrConstruct(void);
 
 /**
  * Destruct the string buffer object.
  */
-void sbStrBDestruct(sbStrBObj *pThis);
+void rsCStrDestruct(rsCStrObj *pThis);
 
 /**
  * Append a character to an existing string. If necessary, the
@@ -86,7 +55,7 @@ void sbStrBDestruct(sbStrBObj *pThis);
  *
  * \param c Character to append to string.
  */
-srRetVal sbStrBAppendChar(sbStrBObj *pThis, char c);
+srRetVal rsCStrAppendChar(rsCStrObj *pThis, char c);
 
 /**
  * Finish the string buffer. That means, the string
@@ -101,14 +70,14 @@ srRetVal sbStrBAppendChar(sbStrBObj *pThis, char c);
  * \retval pointer to \0 terminated string. May be NULL
  *         (empty string) and MUST be free()ed by caller.
  */
-char* sbStrBFinish(sbStrBObj *pThis);
+void rsCStrFinish(rsCStrObj *pThis);
 
 /**
  * Append a string to the buffer.
  *
  * \param psz pointer to string to be appended. Must not be NULL.
  */
-srRetVal sbStrBAppendStr(sbStrBObj *pThis, char* psz);
+srRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz);
 
 /**
  * Set a new allocation incremet. This will influence
@@ -124,13 +93,13 @@ srRetVal sbStrBAppendStr(sbStrBObj *pThis, char* psz);
  *       advise not to use an increment below 32 bytes, except
  *       if you are very well aware why you are doing it ;)
  */
-void sbStrBSetAllocIncrement(sbStrBObj *pThis, int iNewIncrement);
+void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement);
 
 /**
  * Append an integer to the string. No special formatting is
  * done.
  */
-srRetVal sbStrBAppendInt(sbStrBObj *pThis, int i);
+srRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
 
 
 #endif

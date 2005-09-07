@@ -1,41 +1,12 @@
-/*! \file stringbuf.c
- *  \brief Implemetation of the dynamic string buffer helper object.
- *
- * \author  Rainer Gerhards <rgerhards@adiscon.com>
- * \date    2003-08-08
- *          Initial version  begun.
- *
- * Copyright 2002-2003 
- *     Rainer Gerhards and Adiscon GmbH. All Rights Reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- * 
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- * 
- *     * Neither the name of Adiscon GmbH or Rainer Gerhards
- *       nor the names of its contributors may be used to
- *       endorse or promote products derived from this software without
- *       specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/* This is the byte-counted string class for rsyslog. It is a replacement
+ * for classical \0 terminated string functions. We introduce it in
+ * the hope it will make the program more secure, obtain some performance
+ * and, most importantly, lay they foundation for syslog-protocol, which
+ * requires strings to be able to handle embedded \0 characters.
+ * Please see syslogd.c for license information.
+ * All functions in this "class" start with rsCStr (rsyslog Counted String).
+ * This code is placed under the GPL.
+ * begun 2005-09-07 rgerhards
  */
 #include <stdlib.h>
 #include <assert.h>
@@ -55,24 +26,26 @@
  * ################################################################# */
 
 
-sbStrBObj *sbStrBConstruct(void)
+rsCStrObj *rsCStrConstruct(void)
 {
-	sbStrBObj *pThis;
+	rsCStrObj *pThis;
 
-	if((pThis = (sbStrBObj*) calloc(1, sizeof(sbStrBObj))) == NULL)
+	if((pThis = (rsCStrObj*) calloc(1, sizeof(rsCStrObj))) == NULL)
 		return NULL;
 
-	pThis->OID = OIDsbStrB;
+	pThis->OID = OIDrsCStr;
 	pThis->pBuf = NULL;
+	pThis->pszBuf = NULL;
 	pThis->iBufSize = 0;
 	pThis->iBufPtr = 0;
+	pThis->iStrLen = 0;
 	pThis->iAllocIncrement = STRINGBUF_ALLOC_INCREMENT;
 
 	return pThis;
 }
 
 
-void sbStrBDestruct(sbStrBObj *pThis)
+void rsCStrDestruct(rsCStrObj *pThis)
 {
 #	if STRINGBUF_TRIM_ALLOCSIZE == 1
 	/* in this mode, a new buffer already was allocated,
@@ -83,11 +56,15 @@ void sbStrBDestruct(sbStrBObj *pThis)
 		}
 #	endif
 
+	if(pThis->pszBuf != NULL) {
+		free(pThis->pszBuf);
+	}
+
 	SRFREEOBJ(pThis);
 }
 
 
-srRetVal sbStrBAppendStr(sbStrBObj *pThis, char* psz)
+srRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz)
 {
 	srRetVal iRet;
 
@@ -95,14 +72,14 @@ srRetVal sbStrBAppendStr(sbStrBObj *pThis, char* psz)
 	assert(psz != NULL);
 
 	while(*psz)
-		if((iRet = sbStrBAppendChar(pThis, *psz++)) != SR_RET_OK)
+		if((iRet = rsCStrAppendChar(pThis, *psz++)) != SR_RET_OK)
 			return iRet;
 
 	return SR_RET_OK;
 }
 
 
-srRetVal sbStrBAppendInt(sbStrBObj *pThis, int i)
+srRetVal rsCStrAppendInt(rsCStrObj *pThis, int i)
 {
 	srRetVal iRet;
 	char szBuf[32];
@@ -112,11 +89,11 @@ srRetVal sbStrBAppendInt(sbStrBObj *pThis, int i)
 	if((iRet = srUtilItoA(szBuf, sizeof(szBuf), i)) != SR_RET_OK)
 		return iRet;
 
-	return sbStrBAppendStr(pThis, szBuf);
+	return rsCStrAppendStr(pThis, szBuf);
 }
 
 
-srRetVal sbStrBAppendChar(sbStrBObj *pThis, char c)
+srRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 {
 	char* pNewBuf;
 
@@ -136,18 +113,63 @@ srRetVal sbStrBAppendChar(sbStrBObj *pThis, char c)
 
 	/* ok, when we reach this, we have sufficient memory */
 	*(pThis->pBuf + pThis->iBufPtr++) = c;
+	pThis->iStrLen++;
 
 	return SR_RET_OK;
 }
 
 
-char* sbStrBFinish(sbStrBObj *pThis)
+/* Converts the CStr object to a classical zero-terminated C string,
+ * returns that string and destroys the CStr object. The returned string
+ * MUST be freed by the caller. The function might return NULL if
+ * no memory can be allocated.
+ *
+ * TODO:
+ * This function should at some time become special. The base idea is to
+ * add one extra byte to the end of the regular buffer, so that we can
+ * convert it to an szString without the need to copy. The extra memory
+ * footprint is not hefty, but the performance gain is potentially large.
+ * To get it done now, I am not doing the optimiziation right now.
+ *
+ * rgerhards, 2005-09-07
+ */
+char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
 {
 	char* pRetBuf;
 
 	sbSTRBCHECKVALIDOBJECT(pThis);
 
-	sbStrBAppendChar(pThis, '\0');
+	if(pThis->pszBuf == NULL) {
+		/* we do not yet have a usable sz version - so create it... */
+		if((pThis->pszBuf = malloc(pThis->iStrLen + 1 * sizeof(char))) == NULL) {
+			/* TODO: think about what to do - so far, I have no bright
+			 *       idea... rgerhards 2005-09-07
+			 */
+		}
+		else {
+			/* we can create the sz String */
+			if(pThis->pBuf != NULL)
+				memcpy(pThis->pszBuf, pThis->pBuf, pThis->iStrLen);
+			*(pThis->pszBuf + pThis->iStrLen) = '\0';
+		}
+	}
+
+	/* We got it, now free the object ourselfs. Please note
+	 * that we can NOT use the rsCStrDestruct function as it would
+	 * also free the sz String buffer, which we pass on to the user.
+	 */
+	pRetBuf = pThis->pszBuf;
+	if(pThis->pBuf != NULL)
+		free(pThis->pBuf);
+	SRFREEOBJ(pThis);
+	
+	return(pRetBuf);
+}
+
+
+void  rsCStrFinish(rsCStrObj *pThis)
+{
+	sbSTRBCHECKVALIDOBJECT(pThis);
 
 #	if STRINGBUF_TRIM_ALLOCSIZE == 1
 	/* in this mode, we need to trim the string. To do
@@ -155,34 +177,36 @@ char* sbStrBFinish(sbStrBObj *pThis)
 	 * string size, and then copy the old one over. 
 	 * This new buffer is then to be returned.
 	 */
-	if((pRetBuf = malloc((pThis->iBufSize + 1) * sizeof(char))) == NULL)
+	if((pRetBuf = malloc((pThis->iBufSize) * sizeof(char))) == NULL)
 	{	/* OK, in this case we use the previous buffer. At least
 		 * we have it ;)
 		 */
-		pRetBuf = pThis->pBuf;
 	}
 	else
 	{	/* got the new buffer, so let's use it */
-		memcpy(pRetBuf, pThis->pBuf, pThis->iBufPtr + 1);
+		char* pBuf;
+		memcpy(pBuf, pThis->pBuf, pThis->iBufPtr + 1);
+		pThis->pBuf = pBuf;
 	}
 #	else
-	/* here, we can simply return a pointer to the
-	 * currently existing buffer. We don't care about
-	 * the extra memory, as we achieve a big performance
-	 * gain.
+	/* here, we need to do ... nothing ;)
 	 */
-	pRetBuf = pThis->pBuf;
 #	endif
-	
-	sbStrBDestruct(pThis);
-
-	return(pRetBuf);
 }
 
-void sbStrBSetAllocIncrement(sbStrBObj *pThis, int iNewIncrement)
+void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement)
 {
 	sbSTRBCHECKVALIDOBJECT(pThis);
 	assert(iNewIncrement > 0);
 
 	pThis->iAllocIncrement = iNewIncrement;
 }
+
+/*
+ * Local variables:
+ *  c-indent-level: 8
+ *  c-basic-offset: 8
+ *  tab-width: 8
+ * End:
+ * vi:set ai:
+ */

@@ -195,7 +195,12 @@ enum srObjectID
 	OIDsbStrB = 0xCDAB000B,
 	OIDsbLstn = 0xCDAB000C,
 	OIDsbPSSR = 0xCDAB000D,
-	OIDsbPSRC = 0xCDAB000E
+	OIDsbPSRC = 0xCDAB000E,
+
+	/* stringbuf extensions (must be kept after merge with liblogging...)
+  	 * rgerhards 2005-9-07
+	 */
+	OIDrsCStr = 0xABCD0001
 };
 typedef enum srObjectID srObjID;
 

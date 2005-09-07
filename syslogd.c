@@ -3166,7 +3166,7 @@ void logmsg(pri, pMsg, flags)
 	char *p2parse;
 	char *pBuf;
 	char *pWork;
-	sbStrBObj *pStrB;
+	rsCStrObj *pStrB;
 	int iCnt;
 	int bContParse = 1;
 
@@ -3252,20 +3252,20 @@ void logmsg(pri, pMsg, flags)
 	 * is the max size ;) we need to shuffle the code again... Just for 
 	 * the records: the code is currently clean, but we could optimize it! */
 	if(bContParse) {
-		if((pStrB = sbStrBConstruct()) == NULL) 
+		if((pStrB = rsCStrConstruct()) == NULL) 
 			return;
-		sbStrBSetAllocIncrement(pStrB, 33);
+		rsCStrSetAllocIncrement(pStrB, 33);
 		pWork = pBuf;
 		iCnt = 0;
 		while(*p2parse && *p2parse != ':' && *p2parse != ' ' && iCnt < 32) {
-			sbStrBAppendChar(pStrB, *p2parse++);
+			rsCStrAppendChar(pStrB, *p2parse++);
 			++iCnt;
 		}
 		if(*p2parse == ':') {
 			++p2parse; 
-			sbStrBAppendChar(pStrB, ':');
+			rsCStrAppendChar(pStrB, ':');
 		}
-		MsgAssignTAG(pMsg, sbStrBFinish(pStrB));
+		MsgAssignTAG(pMsg, rsCStrFinish(pStrB));
 	} else {
 		/* we have no TAG, so we ... */
 		/*DO NOTHING*/;
@@ -3407,7 +3407,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 {
 	char *p;
 	int iLen;
-	sbStrBObj *pStrB;
+	rsCStrObj *pStrB;
 	char *pszGenerated;
 
 	assert(pp != NULL);
@@ -3425,7 +3425,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 
 	p = *pp;
 	iLen = *pLen;
-	if((pStrB = sbStrBConstruct()) == NULL) {
+	if((pStrB = rsCStrConstruct()) == NULL) {
 		/* oops - no mem ... Do emergency... */
 		doSQLEmergencyEscape(p);
 		return;
@@ -3433,25 +3433,25 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 	
 	while(*p) {
 		if(*p == '\'') {
-			if(sbStrBAppendChar(pStrB, '\'') != SR_RET_OK) {
+			if(rsCStrAppendChar(pStrB, '\'') != SR_RET_OK) {
 				doSQLEmergencyEscape(*pp);
-				if((pszGenerated = sbStrBFinish(pStrB))
+				if((pszGenerated = rsCStrFinish(pStrB))
 					!= NULL)
 					free(pszGenerated);
 					return;
 			iLen++;	/* reflect the extra character */
 			}
 		}
-		if(sbStrBAppendChar(pStrB, *p) != SR_RET_OK) {
+		if(rsCStrAppendChar(pStrB, *p) != SR_RET_OK) {
 			doSQLEmergencyEscape(*pp);
-			if((pszGenerated = sbStrBFinish(pStrB))
+			if((pszGenerated = rsCStrFinish(pStrB))
 				!= NULL)
 				free(pszGenerated);
 				return;
 		}
 		++p;
 	}
-	if((pszGenerated = sbStrBFinish(pStrB)) == NULL) {
+	if((pszGenerated = rsCStrFinish(pStrB)) == NULL) {
 		doSQLEmergencyEscape(*pp);
 		return;
 	}
@@ -3477,7 +3477,7 @@ char *iovAsString(struct filed *f)
 {
 	struct iovec *v;
 	int i;
-	sbStrBObj *pStrB;
+	rsCStrObj *pStrB;
 
 	assert(f != NULL);
 
@@ -3489,7 +3489,7 @@ char *iovAsString(struct filed *f)
 		free(f->f_psziov);
 	}
 
-	if((pStrB = sbStrBConstruct()) == NULL) {
+	if((pStrB = rsCStrConstruct()) == NULL) {
 		/* oops - no mem, let's try to set the message we have
 		 * most probably, this will fail, too. But at least we
 		 * can try... */
@@ -3501,13 +3501,13 @@ char *iovAsString(struct filed *f)
 	v = f->f_iov;
 	while(i++ < f->f_iIovUsed) {
 		if(v->iov_len > 0) {
-			sbStrBAppendStr(pStrB, v->iov_base);
+			rsCStrAppendStr(pStrB, v->iov_base);
 			f->f_iLenpsziov += v->iov_len;
 		}
 		++v;
 	}
 
-	f->f_psziov = sbStrBFinish(pStrB);
+	f->f_psziov = rsCStrFinish(pStrB);
 	return f->f_psziov;
 }
 
