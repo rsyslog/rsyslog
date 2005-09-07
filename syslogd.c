@@ -2715,8 +2715,8 @@ int main(argc, argv)
 
 int usage()
 {
-	fprintf(stderr, "usage: rsyslogd [-drvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
-		" [-s domainlist] [-t port] [-f conffile]\n");
+	fprintf(stderr, "usage: rsyslogd [-dvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
+		" [-s domainlist] [-r port] [-t port] [-f conffile]\n");
 	exit(1);
 }
 
