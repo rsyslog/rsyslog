@@ -510,10 +510,11 @@ int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
 #define F_FORW_UNKN	8		/* unknown host forwarding */
 #define F_PIPE		9		/* named pipe */
 #define F_MYSQL		10		/* MySQL database */
+#define F_DISCARD	11		/* discard event (do not process any further selector lines) */
 char	*TypeNames[] = {
 	"UNUSED",	"FILE",		"TTY",		"CONSOLE",
 	"FORW",		"USERS",	"WALL",		"FORW(SUSPENDED)",
-	"FORW(UNKNOWN)", "PIPE", 	"MYSQL"
+	"FORW(UNKNOWN)", "PIPE", 	"MYSQL",	"DISCARD"
 };
 
 struct	filed *Files = NULL;
@@ -3139,7 +3140,7 @@ void logmsgInternal(pri, msg, from, flags)
  *			 if not, we use emergency logging to the console and in
  *                       this case, no further decoding happens.
  * changed to no longer receive a plain message but a msg object instead.
- * rgerhards-2994-11-16: OK, we are now up to another change... This method
+ * rgerhards-2004-11-16: OK, we are now up to another change... This method
  * actually needs to PARSE the message. How exactly this needs to happen depends on
  * a number of things. Most importantly, it depends on the source. For example,
  * locally received messages (SOURCE_UNIXAF) do NOT have a hostname in them. So
@@ -3325,10 +3326,26 @@ void logmsg(pri, pMsg, flags)
 
 	for (f = Files; f; f = f->f_next) {
 
+		/* This is actually the "filter logic". Looks like we need
+		 * to improve it a little for complex selector line conditions. We
+		 * won't do that for now, but at least we now know where
+		 * to look at.
+		 * 2005-09-09 rgerhards
+		 */
 		/* skip messages that are incorrect priority */
 		if ( (f->f_pmask[fac] == TABLE_NOPRI) || \
 		    ((f->f_pmask[fac] & (1<<prilev)) == 0) )
 		  	continue;
+
+		/* We now need to check a special case - F_DISCARD. If that
+		 * action is specified in the selector line, no futher processing
+		 * must be done. Thus, we stop the for-loop.
+		 * 2005-09-09 rgerhards
+		 */
+		if(f->f_type == F_DISCARD) {
+			dprintf("Discarding message based on selector config\n");
+			break; /* that's it for this message ;) */
+			}
 
 		if (f->f_type == F_CONSOLE && (flags & IGN_CONS))
 			continue;
@@ -5221,6 +5238,11 @@ void cfline(line, f)
 			break;
 
 		dprintf(" template '%s'\n", szTemplateName);
+		break;
+
+	case '~':	/* rgerhards 2005-09-09: added support for discard */
+		dprintf ("discard");
+		f->f_type = F_DISCARD;
 		break;
 
 	case '>':	/* rger 2004-10-28: added support for MySQL

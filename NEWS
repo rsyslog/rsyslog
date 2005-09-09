@@ -2,6 +2,9 @@
 Version 1.10.0 (RGer), 2005-09-??
   REMINDER: 1.10 is the first unstable version if the 1.x series!
 - changed stringbuf into a new counted string class
+- added support for a "discard" action. If a selector line with
+  discard (~ character) is found, no selector lines *after* that
+  line will be processed.
 ---------------------------------------------------------------------------
 Version 1.0.0 (RGer), 2005-09-12
 - changed install doc to cover daily cron scripts - a trouble source
