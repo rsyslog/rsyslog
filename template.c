@@ -84,7 +84,7 @@ struct template* tplConstruct(void)
 static int do_Constant(char **pp, struct template *pTpl)
 {
 	register char *p;
-	sbStrBObj *pStrB;
+	rsCStrObj *pStrB;
 	struct templateEntry *pTpe;
 	int i;
 
@@ -94,9 +94,9 @@ static int do_Constant(char **pp, struct template *pTpl)
 
 	p = *pp;
 
-	if((pStrB = sbStrBConstruct()) == NULL)
+	if((pStrB = rsCStrConstruct()) == NULL)
 		 return 1;
-	sbStrBSetAllocIncrement(pStrB, 32);
+	rsCStrSetAllocIncrement(pStrB, 32);
 	/* process the message and expand escapes
 	 * (additional escapes can be added here if needed)
 	 */
@@ -105,22 +105,22 @@ static int do_Constant(char **pp, struct template *pTpl)
 			switch(*++p) {
 				case '\0':	
 					/* the best we can do - it's invalid anyhow... */
-					sbStrBAppendChar(pStrB, *p);
+					rsCStrAppendChar(pStrB, *p);
 					break;
 				case 'n':
-					sbStrBAppendChar(pStrB, '\n');
+					rsCStrAppendChar(pStrB, '\n');
 					++p;
 					break;
 				case 'r':
-					sbStrBAppendChar(pStrB, '\r');
+					rsCStrAppendChar(pStrB, '\r');
 					++p;
 					break;
 				case '\\':
-					sbStrBAppendChar(pStrB, '\\');
+					rsCStrAppendChar(pStrB, '\\');
 					++p;
 					break;
 				case '%':
-					sbStrBAppendChar(pStrB, '%');
+					rsCStrAppendChar(pStrB, '%');
 					++p;
 					break;
 				case '0': /* numerical escape sequence */
@@ -137,15 +137,15 @@ static int do_Constant(char **pp, struct template *pTpl)
 					while(*p && isdigit(*p)) {
 						i = i * 10 + *p++ - '0';
 					}
-					sbStrBAppendChar(pStrB, i);
+					rsCStrAppendChar(pStrB, i);
 					break;
 				default:
-					sbStrBAppendChar(pStrB, *p++);
+					rsCStrAppendChar(pStrB, *p++);
 					break;
 			}
 		}
 		else
-			sbStrBAppendChar(pStrB, *p++);
+			rsCStrAppendChar(pStrB, *p++);
 	}
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
@@ -157,11 +157,14 @@ static int do_Constant(char **pp, struct template *pTpl)
 		return 1;
 	}
 	pTpe->eEntryType = CONSTANT;
-	pTpe->data.constant.pConstant = sbStrBFinish(pStrB);
-	/* we need to call strlen() below because of the escape sequneces.
-	 * due to them p -*pp is NOT the right size!
+	rsCStrFinish(pStrB);
+	/* We obtain the length from the counted string object
+	 * (before we delete it). Later we might take additional
+	 * benefit from the counted string object.
+	 * 2005-09-09 rgerhards
 	 */
-	pTpe->data.constant.iLenConstant = strlen(pTpe->data.constant.pConstant);
+	pTpe->data.constant.iLenConstant = rsCStrLen(pStrB);
+	pTpe->data.constant.pConstant = rsCStrConvSzStrAndDestruct(pStrB);
 
 	*pp = p;
 
@@ -231,7 +234,7 @@ static void doOptions(char **pp, struct templateEntry *pTpe)
 static int do_Parameter(char **pp, struct template *pTpl)
 {
 	char *p;
-	sbStrBObj *pStrB;
+	rsCStrObj *pStrB;
 	struct templateEntry *pTpe;
 	int iNum;	/* to compute numbers */
 
@@ -241,7 +244,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 
 	p = *pp;
 
-	if((pStrB = sbStrBConstruct()) == NULL)
+	if((pStrB = rsCStrConstruct()) == NULL)
 		 return 1;
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
@@ -252,11 +255,12 @@ static int do_Parameter(char **pp, struct template *pTpl)
 	pTpe->eEntryType = FIELD;
 
 	while(*p && *p != '%' && *p != ':') {
-		sbStrBAppendChar(pStrB, *p++);
+		rsCStrAppendChar(pStrB, *p++);
 	}
 
 	/* got the name*/
-	pTpe->data.field.pPropRepl = sbStrBFinish(pStrB);
+	rsCStrFinish(pStrB);
+	pTpe->data.field.pPropRepl = rsCStrConvSzStrAndDestruct(pStrB);
 
 	/* check frompos */
 	if(*p == ':') {

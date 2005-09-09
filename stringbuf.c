@@ -136,6 +136,7 @@ srRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
 {
 	char* pRetBuf;
+	int i;
 
 	sbSTRBCHECKVALIDOBJECT(pThis);
 
@@ -152,6 +153,16 @@ char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
 				memcpy(pThis->pszBuf, pThis->pBuf, pThis->iStrLen);
 			*(pThis->pszBuf + pThis->iStrLen) = '\0';
 		}
+	}
+	/* we now need to do a sanity check. The string mgiht contain a
+	 * \0 byte. There is no way how a sz string can handle this. For
+	 * the time being, we simply replace it with space - something that
+	 * could definitely be improved (TODO).
+	 * 2005-09-09 rgerhards
+	 */
+	for(i = 0 ; i < pThis->iStrLen ; ++i) {
+		if(*(pThis->pszBuf + i) == '\0')
+			*(pThis->pszBuf + i) = ' ';
 	}
 
 	/* We got it, now free the object ourselfs. Please note
@@ -200,6 +211,15 @@ void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement)
 	assert(iNewIncrement > 0);
 
 	pThis->iAllocIncrement = iNewIncrement;
+}
+
+/* return the length of the current string
+ * 2005-09-09 rgerhards
+ */
+int rsCStrLen(rsCStrObj *pThis)
+{
+	sbSTRBCHECKVALIDOBJECT(pThis);
+	return(pThis->iStrLen);
 }
 
 /*

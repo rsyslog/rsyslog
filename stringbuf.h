@@ -102,4 +102,6 @@ void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement);
 srRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
 
 
+char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
+int rsCStrLen(rsCStrObj *pThis);
 #endif

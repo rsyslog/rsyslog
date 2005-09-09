@@ -79,7 +79,7 @@ static void skip_Comma(char **pp)
 static int get_Field(char **pp, char **pField)
 {
 	register char *p;
-	sbStrBObj *pStrB;
+	rsCStrObj *pStrB;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -88,17 +88,18 @@ static int get_Field(char **pp, char **pField)
 	skip_Comma(pp);
 	p = *pp;
 
-	if((pStrB = sbStrBConstruct()) == NULL)
+	if((pStrB = rsCStrConstruct()) == NULL)
 		 return 1;
-	sbStrBSetAllocIncrement(pStrB, 32);
+	rsCStrSetAllocIncrement(pStrB, 32);
 
 	/* copy the field */
 	while(*p && *p != ' ' && *p != ',') {
-		sbStrBAppendChar(pStrB, *p++);
+		rsCStrAppendChar(pStrB, *p++);
 	}
 
 	*pp = p;
-	*pField = sbStrBFinish(pStrB);
+	rsCStrFinish(pStrB);
+	*pField = rsCStrConvSzStrAndDestruct(pStrB);
 
 	return 0;
 }
@@ -142,7 +143,7 @@ static int get_off_t(char **pp, off_t *pOff_t)
 static int get_restOfLine(char **pp, char **pBuf)
 {
 	register char *p;
-	sbStrBObj *pStrB;
+	rsCStrObj *pStrB;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -151,17 +152,18 @@ static int get_restOfLine(char **pp, char **pBuf)
 	skip_Comma(pp);
 	p = *pp;
 
-	if((pStrB = sbStrBConstruct()) == NULL)
+	if((pStrB = rsCStrConstruct()) == NULL)
 		 return 1;
-	sbStrBSetAllocIncrement(pStrB, 32);
+	rsCStrSetAllocIncrement(pStrB, 32);
 
 	/* copy the field */
 	while(*p) {
-		sbStrBAppendChar(pStrB, *p++);
+		rsCStrAppendChar(pStrB, *p++);
 	}
 
 	*pp = p;
-	*pBuf = sbStrBFinish(pStrB);
+	rsCStrFinish(pStrB);
+	*pBuf = rsCStrConvSzStrAndDestruct(pStrB);
 
 	return 0;
 }

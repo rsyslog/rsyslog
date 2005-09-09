@@ -3265,7 +3265,8 @@ void logmsg(pri, pMsg, flags)
 			++p2parse; 
 			rsCStrAppendChar(pStrB, ':');
 		}
-		MsgAssignTAG(pMsg, rsCStrFinish(pStrB));
+		rsCStrFinish(pStrB);
+		MsgAssignTAG(pMsg, rsCStrConvSzStrAndDestruct(pStrB));
 	} else {
 		/* we have no TAG, so we ... */
 		/*DO NOTHING*/;
@@ -3435,7 +3436,8 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 		if(*p == '\'') {
 			if(rsCStrAppendChar(pStrB, '\'') != SR_RET_OK) {
 				doSQLEmergencyEscape(*pp);
-				if((pszGenerated = rsCStrFinish(pStrB))
+				rsCStrFinish(pStrB);
+				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))
 					!= NULL)
 					free(pszGenerated);
 					return;
@@ -3444,14 +3446,16 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 		}
 		if(rsCStrAppendChar(pStrB, *p) != SR_RET_OK) {
 			doSQLEmergencyEscape(*pp);
-			if((pszGenerated = rsCStrFinish(pStrB))
+			rsCStrFinish(pStrB);
+			if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))
 				!= NULL)
 				free(pszGenerated);
 				return;
 		}
 		++p;
 	}
-	if((pszGenerated = rsCStrFinish(pStrB)) == NULL) {
+	rsCStrFinish(pStrB);
+	if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) == NULL) {
 		doSQLEmergencyEscape(*pp);
 		return;
 	}
@@ -3507,7 +3511,8 @@ char *iovAsString(struct filed *f)
 		++v;
 	}
 
-	f->f_psziov = rsCStrFinish(pStrB);
+	rsCStrFinish(pStrB);
+	f->f_psziov = rsCStrConvSzStrAndDestruct(pStrB);
 	return f->f_psziov;
 }
 
