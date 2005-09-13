@@ -5,6 +5,11 @@ Version 1.10.0 (RGer), 2005-09-??
 - added support for a "discard" action. If a selector line with
   discard (~ character) is found, no selector lines *after* that
   line will be processed.
+- thanks to Andres Riancho, regular expression support has been
+  added to the template engine
+- added the FROMHOST property in the template processor, which could
+  previously not be obtained. Thanks to Cristian Testa for pointing
+  this out and even providing a fix.
 ---------------------------------------------------------------------------
 Version 1.0.0 (RGer), 2005-09-12
 - changed install doc to cover daily cron scripts - a trouble source

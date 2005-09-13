@@ -28,7 +28,7 @@ FEATURE_LARGEFILE=1
 FEATURE_DB=0
 
 # Enable regular expressions
-FEATURE_REGEXP=0
+FEATURE_REGEXP=1
 
 #############################################################
 #                  END OF USER SETTINGS                     #

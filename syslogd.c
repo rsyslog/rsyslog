@@ -2031,6 +2031,8 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 		pRes = getRawMsg(pMsg);
 	} else if(!strcmp(pName, "UxTradMsg")) {
 		pRes = getUxTradMsg(pMsg);
+	} else if(!strcmp(pName, "FROMHOST")) {
+		pRes = getRcvFrom(pMsg);
 	} else if(!strcmp(pName, "source")
 		  || !strcmp(pName, "HOSTNAME")) {
 		pRes = getHOSTNAME(pMsg);

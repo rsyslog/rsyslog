@@ -25,6 +25,9 @@ FEATURE_LARGEFILE=1
 # on when support for MySQL is desired).
 FEATURE_DB=0
 
+# Enable regular expressions
+FEATURE_REGEXP=1
+
 #############################################################
 #                  END OF USER SETTINGS                     #
 #                  --------------------                     #

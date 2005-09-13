@@ -2,6 +2,7 @@ Rainer Gerhards <rgerhards@adiscon.com>, Adiscon GmbH
 Michael Meckelein <mmeckelein@hq.adiscon.com>, Adiscon GmbH
 
 Contributors
-Andres Riancho (alias APR in code files)
+Andres Riancho (andres-dot-riancho-at-gmail-dot-com)
+ (alias APR in code files)
  - supplied regexp functionality for the property replacer - a great feature.
    thanks!
