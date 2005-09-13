@@ -4748,7 +4748,7 @@ void cflineParseTemplateName(struct filed *f, char** pp,
 	while(*p && isspace(*p))
 		++p;
 
-	i = 1; /* we start at 1 so that we resever space for the '\0'! */
+	i = 1; /* we start at 1 so that we reserve space for the '\0'! */
 	while(*p && i < iLenTemplate) {
 		*pTemplateName++ = *p++;
 		++i;
