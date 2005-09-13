@@ -3,6 +3,12 @@
  * This code is placed under the GPL.
  * begun 2004-11-17 rgerhards
  */
+
+#ifdef FEATURE_REGEXP
+/* Include regular expressions */
+#include <regex.h>
+#endif
+
 struct template {
 	struct template *pNext;
 	char *pszName;
@@ -35,6 +41,10 @@ struct templateEntry {
 			char *pPropRepl;	/* pointer to property replacer string */
 			unsigned iFromPos;	/* for partial strings only chars from this position ... */
 			unsigned iToPos;	/* up to that one... */
+#ifdef FEATURE_REGEXP
+			regex_t re;	/* APR: this is the regular expression */
+			unsigned has_regex;
+#endif
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
 			struct { 		/* bit fields! */

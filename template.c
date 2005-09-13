@@ -33,15 +33,13 @@ struct templateEntry* tpeConstruct(struct template *pTpl)
 	if((pTpe = calloc(1, sizeof(struct templateEntry))) == NULL)
 		return NULL;
 	
-	/* basic initialisaion is done via calloc() - need to
+	/* basic initialization is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(pTpl->pEntryLast == NULL)
-	{ /* we are the first element! */
+	if(pTpl->pEntryLast == NULL){
+		/* we are the first element! */
 		pTpl->pEntryRoot = pTpl->pEntryLast  = pTpe;
-	}
-	else
-	{
+	} else {
 		pTpl->pEntryLast->pNext = pTpe;
 		pTpl->pEntryLast  = pTpe;
 	}
@@ -60,15 +58,13 @@ struct template* tplConstruct(void)
 	if((pTpl = calloc(1, sizeof(struct template))) == NULL)
 		return NULL;
 	
-	/* basic initialisaion is done via calloc() - need to
+	/* basic initialisation is done via calloc() - need to
 	 * initialize only values != 0. */
 
-	if(tplLast == NULL)
-	{ /* we are the first element! */
+	if(tplLast == NULL)	{
+		/* we are the first element! */
 		tplRoot = tplLast = pTpl;
-	}
-	else
-	{
+	} else {
 		tplLast->pNext = pTpl;
 		tplLast = pTpl;
 	}
@@ -238,6 +234,13 @@ static int do_Parameter(char **pp, struct template *pTpl)
 	struct templateEntry *pTpe;
 	int iNum;	/* to compute numbers */
 
+#ifdef FEATURE_REGEXP
+	/* APR: variables for regex */
+	int longitud;
+	char *regex_char;
+	char *regex_end;
+#endif
+
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pTpl != NULL);
@@ -262,9 +265,27 @@ static int do_Parameter(char **pp, struct template *pTpl)
 	rsCStrFinish(pStrB);
 	pTpe->data.field.pPropRepl = rsCStrConvSzStrAndDestruct(pStrB);
 
-	/* check frompos */
+	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
 		++p; /* eat ':' */
+#ifdef FEATURE_REGEXP	
+		if (*p == 'R') {
+			/* APR: R found! regex alarm ! :) */
+			++p;	/* eat ':' */
+
+			if (*p != ':') {
+				/* There is something more than an R , this is invalid ! */
+				/* Complain on extra characters */
+				dprintf
+				    ("error: extra character in frompos, only \"R\" and numbers are allowed: '%s'\n",
+				     p);
+				/* TODO: rger- add/change to logerror? */
+			} else {
+				pTpe->data.field.has_regex = 1;
+			}
+		} else {
+			/* now we fall through the "regular" FromPos code */
+#endif /* #ifdef FEATURE_REGEXP */
 		iNum = 0;
 		while(isdigit(*p))
 			iNum = iNum * 10 + *p++ - '0';
@@ -276,10 +297,59 @@ static int do_Parameter(char **pp, struct template *pTpl)
 			++p;
 		}
 	}
-
-	/* check topos */
+	/* check topos  (holds an regex if FromPos is "R"*/
 	if(*p == ':') {
 		++p; /* eat ':' */
+
+#ifdef FEATURE_REGEXP
+		if (pTpe->data.field.has_regex) {
+
+			dprintf("debug: has regex \n");
+
+			/* APR 2005-09 I need the string that represent the regex */
+			/* The regex end is: "--end" */
+			/* TODO : this is hardcoded and cant be escaped, please change */
+			regex_end = strstr(p, "--end");
+			if (regex_end == NULL) {
+				dprintf("error: Cant find regex end in: '%s'\n", p);
+				pTpe->data.field.has_regex = 0;
+			} else {
+				/* We get here ONLY if the regex end was found */
+				longitud = regex_end - p;
+				/* Malloc for the regex string */
+				regex_char = (char *) malloc(longitud + 1);
+				if (regex_char == NULL) {
+					dprintf
+					    ("Could not allocate memory for template parameter!\n");
+					pTpe->data.field.has_regex = 0;
+					return 1;
+					/* TODO: RGer: check if we can recover better... (probably not) */
+				}
+
+				regex_char[0] = '\0';
+
+				/* Get the regex string for compiling later */
+				strncpy(regex_char, p, longitud);
+
+				dprintf("debug: regex detected: '%s'\n",
+					regex_char);
+
+				/* Now i compile the regex */
+				/* Remember that the re is an attribute of the Template entry */
+				if (regcomp(&(pTpe->data.field.re), regex_char, 0) != 0) {
+					dprintf("error: Cant compile regex: '%s'\n", regex_char);
+					pTpe->data.field.has_regex = 2;
+				}
+
+				/* Finally we move the pointer to the end of the regex so it aint parsed twice or something weird */
+				p = regex_end + 5/*strlen("--end")*/;
+				free(regex_char);
+			}
+		} else {
+			/* fallthrough to "regular" ToPos code */
+
+#endif /* #ifdef FEATURE_REGEXP */
+
 		iNum = 0;
 		while(isdigit(*p))
 			iNum = iNum * 10 + *p++ - '0';

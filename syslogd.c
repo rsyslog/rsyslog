@@ -897,7 +897,6 @@ void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
-printf("## in loop\n");
 		if(iMsg >= MAXLINE) {
 			/* emergency, we now need to flush, no matter if
 			 * we are at end of message or not...
@@ -915,7 +914,6 @@ printf("## in loop\n");
 			printline(TCPSessions[iTCPSess].fromHost, pMsg, SOURCE_INET);
 			iMsg = 0;
 			++pData;
-printf("## record delim found\n");
 		} else {
 			*(pMsg + iMsg++) = *pData++;
 		}
@@ -2004,11 +2002,19 @@ int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
  * a memory leak of a program abort (do to double-frees or frees on
  * the constant memory pool). So be careful to do it right.
  * rgerhards 2004-11-23
+ * regular expression support contributed by Andres Riancho merged
+ * on 2005-09-13
  */
 char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *pbMustBeFreed)
 {
 	char *pName;
 	char *pRes; /* result pointer */
+
+#ifdef	FEATURE_REGEXP
+	/* Variables necessary for regular expression matching */
+	size_t nmatch = 2;
+	regmatch_t pmatch[2];
+#endif
 
 	assert(pMsg != NULL);
 	assert(pTpe != NULL);
@@ -2095,6 +2101,55 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 			free(pRes);
 		pRes = pBufStart;
 		*pbMustBeFreed = 1;
+	#ifdef FEATURE_REGEXP
+	} else {
+		/* Check for regular expressions */
+		if (pTpe->data.field.has_regex != 0) {
+			if (pTpe->data.field.has_regex == 2)
+				/* Could not compile regex before! */
+				return
+				    "**NO MATCH** **BAD REGULAR EXPRESSION**";
+
+			dprintf
+			    ("debug: String to match for regex is: %s\n",
+			     pRes);
+
+			if (0 !=
+			    regexec(&pTpe->data.field.re, pRes, nmatch,
+				    pmatch, 0)) {
+				/* we got no match! */
+				return "**NO MATCH**";
+			} else {
+				/* Match! */
+				/* I need to malloc pBuf */
+				int iLen;
+				char *pBuf;
+
+				iLen = pmatch[1].rm_eo - pmatch[1].rm_so;
+				pBuf = (char *) malloc((iLen + 1) * sizeof(char));
+
+				if (pBuf == NULL) {
+					if (*pbMustBeFreed == 1)
+						free(pRes);
+					*pbMustBeFreed = 0;
+					return
+					    "**OUT OF MEMORY ALLOCATING pBuf**";
+				}
+				*pBuf = '\0';
+
+				/* Lets copy the matched substring to the buffer */
+				/* TODO: RGer: I think we can use memcpy() here, too (faster) */
+				strncpy(pBuf, pRes + pmatch[1].rm_so,
+					iLen);
+				pBuf[iLen] = '\0';	/* Null termination of string */
+
+				if (*pbMustBeFreed == 1)
+					free(pRes);
+				pRes = pBuf;
+				*pbMustBeFreed = 1;
+			}
+		}
+#endif /* #ifdef FEATURE_REGEXP */
 	}
 
 	/* case conversations (should go after substring, because so we are able to
@@ -3781,9 +3836,7 @@ void fprintlog(f, flags)
 	 * some code to do it, but that code is defunct due to our changes!
 	 */
 	if (msg) {
-		/*v->iov_base = msg;
-		v->iov_len = strlen(msg);
-		*/v->iov_base = f->f_pMsg->pszRawMsg;
+		v->iov_base = f->f_pMsg->pszRawMsg;
 		v->iov_len = f->f_pMsg->iLenRawMsg;
 	} else if (f->f_prevcount > 1) {
 		(void) snprintf(repbuf, sizeof(repbuf), "last message repeated %d times",
