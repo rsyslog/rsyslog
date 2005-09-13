@@ -268,7 +268,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
 		++p; /* eat ':' */
-#ifdef FEATURE_REGEXP	
+#ifdef FEATURE_REGEXP
 		if (*p == 'R') {
 			/* APR: R found! regex alarm ! :) */
 			++p;	/* eat ':' */
@@ -286,16 +286,19 @@ static int do_Parameter(char **pp, struct template *pTpl)
 		} else {
 			/* now we fall through the "regular" FromPos code */
 #endif /* #ifdef FEATURE_REGEXP */
-		iNum = 0;
-		while(isdigit(*p))
-			iNum = iNum * 10 + *p++ - '0';
-		pTpe->data.field.iFromPos = iNum;
-		/* skip to next known good */
-		while(*p && *p != '%' && *p != ':') {
-			/* TODO: complain on extra characters */
-			dprintf("error: extra character in frompos: '%s'\n", p);
-			++p;
+			iNum = 0;
+			while(isdigit(*p))
+				iNum = iNum * 10 + *p++ - '0';
+			pTpe->data.field.iFromPos = iNum;
+			/* skip to next known good */
+			while(*p && *p != '%' && *p != ':') {
+				/* TODO: complain on extra characters */
+				dprintf("error: extra character in frompos: '%s'\n", p);
+				++p;
+			}
+#ifdef FEATURE_REGEXP
 		}
+#endif /* #ifdef FEATURE_REGEXP */
 	}
 	/* check topos  (holds an regex if FromPos is "R"*/
 	if(*p == ':') {
@@ -341,25 +344,28 @@ static int do_Parameter(char **pp, struct template *pTpl)
 					pTpe->data.field.has_regex = 2;
 				}
 
-				/* Finally we move the pointer to the end of the regex so it aint parsed twice or something weird */
+				/* Finally we move the pointer to the end of the regex
+				 * so it aint parsed twice or something weird */
 				p = regex_end + 5/*strlen("--end")*/;
 				free(regex_char);
 			}
 		} else {
 			/* fallthrough to "regular" ToPos code */
-
 #endif /* #ifdef FEATURE_REGEXP */
 
-		iNum = 0;
-		while(isdigit(*p))
-			iNum = iNum * 10 + *p++ - '0';
-		pTpe->data.field.iToPos = iNum;
-		/* skip to next known good */
-		while(*p && *p != '%' && *p != ':') {
-			/* TODO: complain on extra characters */
-			dprintf("error: extra character in frompos: '%s'\n", p);
-			++p;
+			iNum = 0;
+			while(isdigit(*p))
+				iNum = iNum * 10 + *p++ - '0';
+			pTpe->data.field.iToPos = iNum;
+			/* skip to next known good */
+			while(*p && *p != '%' && *p != ':') {
+				/* TODO: complain on extra characters */
+				dprintf("error: extra character in frompos: '%s'\n", p);
+				++p;
+			}
+#ifdef FEATURE_REGEXP
 		}
+#endif /* #ifdef FEATURE_REGEXP */
 	}
 
 	/* TODO: add more sanity checks. For now, we do the bare minimum */

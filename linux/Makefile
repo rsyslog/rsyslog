@@ -49,6 +49,10 @@ ifeq ($(strip $(FEATURE_DB)), 1)
   WITHDB=-DWITH_DB
 endif
 
+ifeq ($(strip $(FEATURE_REGEXP)), 1)
+  F_REGEXP=-DFEATURE_REGEXP
+endif
+
 # Include MySQL client lib if DB is selected
 ifdef WITHDB
 LIBS = -lmysqlclient -L/usr/local/lib/mysql 

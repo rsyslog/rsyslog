@@ -2325,6 +2325,16 @@ int main(argc, argv)
 			break;
 		case 'v':
 			printf("rsyslogd %s.%s\n", VERSION, PATCHLEVEL);
+			printf("compiled with:\n");
+#ifdef FEATURE_REGEXP
+			printf("\tFEATURE_REGEXP\n");
+#endif
+#ifdef WITH_DB
+			printf("\tFEATURE_DB\n");
+#endif
+#ifndef	NOLARGEFILE
+			printf("\tFEATURE_LARGEFILE\n");
+#endif
 			exit(0);
 		case '?':
 		default:
