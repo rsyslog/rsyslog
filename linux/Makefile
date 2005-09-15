@@ -30,6 +30,9 @@ FEATURE_DB=0
 # Enable regular expressions
 FEATURE_REGEXP=1
 
+# Enable debug mode (much slower code)
+FEATURE_DEBUG=1
+
 #############################################################
 #                  END OF USER SETTINGS                     #
 #                  --------------------                     #
@@ -51,6 +54,10 @@ endif
 
 ifeq ($(strip $(FEATURE_REGEXP)), 1)
   F_REGEXP=-DFEATURE_REGEXP
+endif
+
+ifeq ($(strip $(FEATURE_DEBUG)), 0)
+  DBG=-DNDEBUG
 endif
 
 # Include MySQL client lib if DB is selected

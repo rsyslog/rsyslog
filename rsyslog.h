@@ -31,7 +31,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 {
 	RS_RET_OUT_OF_MEMORY = -6,	/**< memory allocation failed */
 	RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50,/**< the caller provided a buffer, but the called function sees the size of this buffer is too small - operation not carried out */
-	/* start next error at -3000 */
+	RS_TRUNCAT_TOO_LARGE = -3000, /**< truncation operation where too many chars should be truncated */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
@@ -61,13 +61,22 @@ enum rsObjectID
 };
 typedef enum rsObjectID rsObjID;
 
+/* support to set object types */
+#ifdef NDEBUG
+#define rsSETOBJTYPE(pObj, type)
+#define rsCHECKVALIDOBJECT(x, type)
+#else
+#define rsSETOBJTYPE(pObj, type) pObj->OID = type;
+#define rsCHECKVALIDOBJECT(x, type) {assert(x != NULL); assert(x->OID == type);}
+#endif
+
 /**
  * This macro should be used to free objects. 
  * It aids in interpreting dumps during debugging.
  */
-#if DEBUGLEVEL > 0
-#define RSFREEOBJ(x) {(x)->OID = OID_Freed; free(x);}
-#else
+#ifdef NDEBUG
 #define RSFREEOBJ(x) free(x)
+#else
+#define RSFREEOBJ(x) {(x)->OID = OID_Freed; free(x);}
 #endif
 #endif

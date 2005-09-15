@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 #include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
@@ -33,7 +34,7 @@ rsCStrObj *rsCStrConstruct(void)
 	if((pThis = (rsCStrObj*) calloc(1, sizeof(rsCStrObj))) == NULL)
 		return NULL;
 
-	pThis->OID = OIDrsCStr;
+	rsSETOBJTYPE(pThis, OIDrsCStr);
 	pThis->pBuf = NULL;
 	pThis->pszBuf = NULL;
 	pThis->iBufSize = 0;
@@ -93,7 +94,7 @@ rsRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz)
 {
 	rsRetVal iRet;
 
-	sbSTRBCHECKVALIDOBJECT(pThis);
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(psz != NULL);
 
 	while(*psz)
@@ -109,7 +110,7 @@ rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i)
 	rsRetVal iRet;
 	char szBuf[32];
 
-	sbSTRBCHECKVALIDOBJECT(pThis);
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
 	if((iRet = srUtilItoA(szBuf, sizeof(szBuf), i)) != RS_RET_OK)
 		return iRet;
@@ -122,7 +123,7 @@ rsRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 {
 	char* pNewBuf;
 
-	sbSTRBCHECKVALIDOBJECT(pThis);
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
 	if(pThis->iBufPtr >= pThis->iBufSize)
 	{  /* need more memory! */
@@ -163,7 +164,7 @@ char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
 	char* pRetBuf;
 	int i;
 
-	sbSTRBCHECKVALIDOBJECT(pThis);
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
 	if(pThis->pszBuf == NULL) {
 		/* we do not yet have a usable sz version - so create it... */
@@ -203,9 +204,9 @@ char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
 }
 
 
-void  rsCStrFinish(rsCStrObj *pThis)
+rsRetVal  rsCStrFinish(rsCStrObj *pThis)
 {
-	sbSTRBCHECKVALIDOBJECT(pThis);
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
 #	if STRINGBUF_TRIM_ALLOCSIZE == 1
 	/* in this mode, we need to trim the string. To do
@@ -228,23 +229,66 @@ void  rsCStrFinish(rsCStrObj *pThis)
 	/* here, we need to do ... nothing ;)
 	 */
 #	endif
+
+	return RS_RET_OK;
 }
 
 void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement)
 {
-	sbSTRBCHECKVALIDOBJECT(pThis);
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(iNewIncrement > 0);
 
 	pThis->iAllocIncrement = iNewIncrement;
 }
 
+
 /* return the length of the current string
  * 2005-09-09 rgerhards
+ * Please note: this is only a function in a debug build.
+ * For release builds, it is a macro defined in stringbuf.h.
+ * This is due to performance reasons.
  */
+#ifndef NDEBUG
 int rsCStrLen(rsCStrObj *pThis)
 {
-	sbSTRBCHECKVALIDOBJECT(pThis);
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	return(pThis->iStrLen);
+}
+#endif
+
+/* Truncate characters from the end of the string.
+ * rgerhards 2005-09-15
+ */
+rsRetVal rsCStrTruncate(rsCStrObj *pThis, int nTrunc)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+
+	if(pThis->iStrLen < nTrunc)
+		return RS_TRUNCAT_TOO_LARGE;
+	
+	pThis->iStrLen -= nTrunc;
+
+	return RS_RET_OK;
+}
+
+/* Trim trailing whitespace from a given string
+ */
+rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis)
+{
+	register int i;
+	register char *pC;
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+
+	i = pThis->iStrLen;
+	pC = pThis->pBuf + i - 1;
+	while(i > 0 && !isspace(*pC)) {
+		--pC;
+		--i;
+	}
+	/* i now is the new string length! */
+	pThis->iStrLen = i;
+
+	return RS_RET_OK;
 }
 
 /*

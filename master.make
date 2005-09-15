@@ -11,7 +11,7 @@
 #LDFLAGS= -g -Wall -fno-omit-frame-pointer
 #CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
 
-CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -I/usr/local/include $(NOLARGEFILE) $(WITHDB) $(F_REGEXP)
+CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -I/usr/local/include $(NOLARGEFILE) $(WITHDB) $(F_REGEXP) $(DBG)
 LDFLAGS= -s
 
 # There is one report that under an all ELF system there may be a need to

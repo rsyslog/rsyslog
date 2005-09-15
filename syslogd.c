@@ -425,7 +425,22 @@ struct filed {
 	int	f_iLastDBErrNo;			/* Last db error number. 0 = no error */
 #endif
 	time_t	f_time;			/* time this was last written */
-	u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
+	/* filter properties */
+	enum {
+		FILTER_PRI = 0,		/* traditional PRI based filer */
+		FILTER_PROP = 1		/* extended filter, property based */
+	} f_filter_type;
+	union {
+		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
+		struct {
+			rsCStrObj pCSPropName;
+			enum {
+				FIOP_NOP = 0,		/* do not use - No Operation */
+				FIOP_CONTAINS  = 1,	/* contains string? */
+			} operation;
+			rsCStrObj pCSCompValue;		/* value to "compare" against */
+		} prop;
+	} f_filterData;
 	union {
 		char	f_uname[MAXUNAMES][UNAMESZ+1];
 		struct {
@@ -2328,7 +2343,7 @@ int main(argc, argv)
 			TCPLstnPort = atoi(optarg);
 			break;
 		case 'v':
-			printf("rsyslogd %s.%s\n", VERSION, PATCHLEVEL);
+			printf("rsyslogd %s.%s, ", VERSION, PATCHLEVEL);
 			printf("compiled with:\n");
 #ifdef FEATURE_REGEXP
 			printf("\tFEATURE_REGEXP\n");
@@ -2339,6 +2354,10 @@ int main(argc, argv)
 #ifndef	NOLARGEFILE
 			printf("\tFEATURE_LARGEFILE\n");
 #endif
+#ifndef	NDEBUG
+			printf("\tFEATURE_DEBUG (debug build, slow code)\n");
+#endif
+			printf("\nSee http://www.rsyslog.com for more information.\n");
 			exit(0);
 		case '?':
 		default:
@@ -3404,8 +3423,8 @@ void logmsg(pri, pMsg, flags)
 		 * 2005-09-09 rgerhards
 		 */
 		/* skip messages that are incorrect priority */
-		if ( (f->f_pmask[fac] == TABLE_NOPRI) || \
-		    ((f->f_pmask[fac] & (1<<prilev)) == 0) )
+		if ( (f->f_filterData.f_pmask[fac] == TABLE_NOPRI) || \
+		    ((f->f_filterData.f_pmask[fac] & (1<<prilev)) == 0) )
 		  	continue;
 
 		/* We now need to check a special case - F_DISCARD. If that
@@ -4699,10 +4718,10 @@ void init()
 		for (f = Files; f; f = f->f_next) {
 			if (f->f_type != F_UNUSED) {
 				for (i = 0; i <= LOG_NFACILITIES; i++)
-					if (f->f_pmask[i] == TABLE_NOPRI)
+					if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
 						printf(" X ");
 					else
-						printf("%2X ", f->f_pmask[i]);
+						printf("%2X ", f->f_filterData.f_pmask[i]);
 				printf("%s: ", TypeNames[f->f_type]);
 				switch (f->f_type) {
 				case F_FILE:
@@ -5002,7 +5021,7 @@ void cfline(line, f)
 	 * created with calloc()!
 	 */
 	for (i = 0; i <= LOG_NFACILITIES; i++) {
-		f->f_pmask[i] = TABLE_NOPRI;
+		f->f_filterData.f_pmask[i] = TABLE_NOPRI;
 		f->f_flags = 0;
 	}
 
@@ -5057,32 +5076,32 @@ void cfline(line, f)
 				for (i = 0; i <= LOG_NFACILITIES; i++) {
 					if ( pri == INTERNAL_NOPRI ) {
 						if ( ignorepri )
-							f->f_pmask[i] = TABLE_ALLPRI;
+							f->f_filterData.f_pmask[i] = TABLE_ALLPRI;
 						else
-							f->f_pmask[i] = TABLE_NOPRI;
+							f->f_filterData.f_pmask[i] = TABLE_NOPRI;
 					}
 					else if ( singlpri ) {
 						if ( ignorepri )
-				  			f->f_pmask[i] &= ~(1<<pri);
+				  			f->f_filterData.f_pmask[i] &= ~(1<<pri);
 						else
-				  			f->f_pmask[i] |= (1<<pri);
+				  			f->f_filterData.f_pmask[i] |= (1<<pri);
 					}
 					else
 					{
 						if ( pri == TABLE_ALLPRI ) {
 							if ( ignorepri )
-								f->f_pmask[i] = TABLE_NOPRI;
+								f->f_filterData.f_pmask[i] = TABLE_NOPRI;
 							else
-								f->f_pmask[i] = TABLE_ALLPRI;
+								f->f_filterData.f_pmask[i] = TABLE_ALLPRI;
 						}
 						else
 						{
 							if ( ignorepri )
 								for (i2= 0; i2 <= pri; ++i2)
-									f->f_pmask[i] &= ~(1<<i2);
+									f->f_filterData.f_pmask[i] &= ~(1<<i2);
 							else
 								for (i2= 0; i2 <= pri; ++i2)
-									f->f_pmask[i] |= (1<<i2);
+									f->f_filterData.f_pmask[i] |= (1<<i2);
 						}
 					}
 				}
@@ -5097,27 +5116,27 @@ void cfline(line, f)
 
 				if ( pri == INTERNAL_NOPRI ) {
 					if ( ignorepri )
-						f->f_pmask[i >> 3] = TABLE_ALLPRI;
+						f->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
 					else
-						f->f_pmask[i >> 3] = TABLE_NOPRI;
+						f->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
 				} else if ( singlpri ) {
 					if ( ignorepri )
-						f->f_pmask[i >> 3] &= ~(1<<pri);
+						f->f_filterData.f_pmask[i >> 3] &= ~(1<<pri);
 					else
-						f->f_pmask[i >> 3] |= (1<<pri);
+						f->f_filterData.f_pmask[i >> 3] |= (1<<pri);
 				} else {
 					if ( pri == TABLE_ALLPRI ) {
 						if ( ignorepri )
-							f->f_pmask[i >> 3] = TABLE_NOPRI;
+							f->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
 						else
-							f->f_pmask[i >> 3] = TABLE_ALLPRI;
+							f->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
 					} else {
 						if ( ignorepri )
 							for (i2= 0; i2 <= pri; ++i2)
-								f->f_pmask[i >> 3] &= ~(1<<i2);
+								f->f_filterData.f_pmask[i >> 3] &= ~(1<<i2);
 						else
 							for (i2= 0; i2 <= pri; ++i2)
-								f->f_pmask[i >> 3] |= (1<<i2);
+								f->f_filterData.f_pmask[i >> 3] |= (1<<i2);
 					}
 				}
 			}

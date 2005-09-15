@@ -19,14 +19,14 @@
 #ifndef _STRINGBUF_H_INCLUDED__
 #define _STRINGBUF_H_INCLUDED__ 1
 
-#define sbSTRBCHECKVALIDOBJECT(x) {assert(x != NULL); assert(x->OID == OIDrsCStr);}
-
 /** 
  * The dynamic string buffer object.
  */
 struct rsCStrObject
 {	
+#ifndef	NDEBUG
 	rsObjID OID;		/**< object ID */
+#endif
 	char *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
 	char *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
 	int iBufSize;		/**< current maximum size of the string buffer */
@@ -57,19 +57,19 @@ void rsCStrDestruct(rsCStrObj *pThis);
 rsRetVal rsCStrAppendChar(rsCStrObj *pThis, char c);
 
 /**
- * Finish the string buffer. That means, the string
- * is returned to the caller and then the string
- * buffer is destroyed. The caller is reponsible for
- * freeing the returned string pointer.
- *
- * After calling this method, the string buffer object
- * is destroyed and thus the provided handle (pThis)
- * can no longer be used.
- *
- * \retval pointer to \0 terminated string. May be NULL
- *         (empty string) and MUST be free()ed by caller.
+ * Finish the string buffer dynamic allocation.
  */
-void rsCStrFinish(rsCStrObj *pThis);
+rsRetVal rsCStrFinish(rsCStrObj *pThis);
+
+/**
+ * Truncate "n" number of characters from the end of the
+ * string. The buffer remains unchanged, just the
+ * string length is manipulated. This is for performance
+ * reasons.
+ */
+rsRetVal rsCStrTruncate(rsCStrObj *pThis, int nTrunc);
+
+rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis);
 
 /**
  * Append a string to the buffer.
@@ -102,5 +102,14 @@ rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
 
 
 char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
-int rsCStrLen(rsCStrObj *pThis);
+
+/* now come inline-like functions */
+#ifdef NDEBUG
+#	define rsCStrLen(x) ((x)->iStrLen)
+#else
+	int rsCStrLen(rsCStrObj *pThis);
 #endif
+
+#define rsCStrGetBufBeg(x) ((x)->pBuf)
+
+#endif /* single include */
