@@ -41,15 +41,16 @@ test: syslog_tst tsyslogd
 
 install: install_man install_exec
 
-syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o outchannel.o
+syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o outchannel.o parse.o
 	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o outchannel.o stringbuf.o srUtils.o ${LIBS}
 
-srUtils.o: srUtils.c srUtils.h liblogging-stub.h
-stringbuf.o: stringbuf.c stringbuf.h liblogging-stub.h
-template.o: template.c template.h stringbuf.h liblogging-stub.h
-outchannel.o: outchannel.c outchannel.h stringbuf.h liblogging-stub.h syslogd.h
+srUtils.o: srUtils.c srUtils.h liblogging-stub.h rsyslog.h
+stringbuf.o: stringbuf.c stringbuf.h rsyslog.h
+parse.o: parse.c parse.h rsyslog.h
+template.o: template.c template.h stringbuf.h rsyslog.h
+outchannel.o: outchannel.c outchannel.h stringbuf.h syslogd.h rsyslog.h
 
-syslogd.o: syslogd.c version.h template.h outchannel.h syslogd.h
+syslogd.o: syslogd.c version.h template.h outchannel.h syslogd.h rsyslog.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} -c $(VPATH)syslogd.c
 
 syslog.o: syslog.c

@@ -58,6 +58,6 @@
  *
  * \param iToConv The integer to be converted.
  */
-srRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv);
+rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv);
 
 #endif

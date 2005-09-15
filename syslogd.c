@@ -181,10 +181,7 @@
 #include "outchannel.h"
 #include "syslogd.h"
 
-/* from liblogging */
-#include "liblogging-stub.h"
 #include "stringbuf.h"
-/* end liblogging */
 
 #ifdef	WITH_DB
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
@@ -2004,6 +2001,10 @@ int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
  * rgerhards 2004-11-23
  * regular expression support contributed by Andres Riancho merged
  * on 2005-09-13
+ * changed so that it now an be called without a template entry (NULL).
+ * In this case, only the (unmodified) property is returned. This will
+ * be used in selector line processing.
+ * rgerhards 2005-09-15
  */
 char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *pbMustBeFreed)
 {
@@ -2017,7 +2018,6 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 #endif
 
 	assert(pMsg != NULL);
-	assert(pTpe != NULL);
 	assert(pbMustBeFreed != NULL);
 
 	pName = pTpe->data.field.pPropRepl;
@@ -2053,6 +2053,12 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 	} else {
 		pRes = "**INVALID PROPERTY NAME**";
+	}
+
+	/* If we did not receive a template pointer, we are already done... */
+	if(pTpe == NULL) {
+		*pbMustBeFreed = 0;
+		return pRes;
 	}
 	
 	/* Now check if we need to make "temporary" transformations (these
@@ -2103,7 +2109,7 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 			free(pRes);
 		pRes = pBufStart;
 		*pbMustBeFreed = 1;
-	#ifdef FEATURE_REGEXP
+#ifdef FEATURE_REGEXP
 	} else {
 		/* Check for regular expressions */
 		if (pTpe->data.field.has_regex != 0) {
@@ -2112,12 +2118,10 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 				return
 				    "**NO MATCH** **BAD REGULAR EXPRESSION**";
 
-			dprintf
-			    ("debug: String to match for regex is: %s\n",
-			     pRes);
+			dprintf("debug: String to match for regex is: %s\n",
+			        pRes);
 
-			if (0 !=
-			    regexec(&pTpe->data.field.re, pRes, nmatch,
+			if (0 != regexec(&pTpe->data.field.re, pRes, nmatch,
 				    pmatch, 0)) {
 				/* we got no match! */
 				return "**NO MATCH**";
@@ -3518,7 +3522,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 	
 	while(*p) {
 		if(*p == '\'') {
-			if(rsCStrAppendChar(pStrB, '\'') != SR_RET_OK) {
+			if(rsCStrAppendChar(pStrB, '\'') != RS_RET_OK) {
 				doSQLEmergencyEscape(*pp);
 				rsCStrFinish(pStrB);
 				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))
@@ -3528,7 +3532,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 			iLen++;	/* reflect the extra character */
 			}
 		}
-		if(rsCStrAppendChar(pStrB, *p) != SR_RET_OK) {
+		if(rsCStrAppendChar(pStrB, *p) != RS_RET_OK) {
 			doSQLEmergencyEscape(*pp);
 			rsCStrFinish(pStrB);
 			if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))

@@ -12,7 +12,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include "liblogging-stub.h"
+#include "rsyslog.h"
 #include "stringbuf.h"
 #include "template.h"
 #include "syslogd.h"

@@ -16,24 +16,22 @@
  *     Rainer Gerhards and Adiscon GmbH. All Rights Reserved.
  *     This code is placed under the GPL.
  */
-#ifndef __LIB3195_STRINGBUF_H_INCLUDED__
-#define __LIB3195_STRINGBUF_H_INCLUDED__ 1
+#ifndef _STRINGBUF_H_INCLUDED__
+#define _STRINGBUF_H_INCLUDED__ 1
 
 #define sbSTRBCHECKVALIDOBJECT(x) {assert(x != NULL); assert(x->OID == OIDrsCStr);}
 
-
 /** 
  * The dynamic string buffer object.
- *
  */
 struct rsCStrObject
 {	
-	srObjID OID;			/**< object ID */
-	char *pBuf;			/**< pointer to the string buffer, may be NULL if string is empty */
-	char *pszBuf;			/**< pointer to the sz version of the string (after it has been created )*/
-	int iBufSize;			/**< current maximum size of the string buffer */
-	int iBufPtr;			/**< pointer (index) of next character position to be written to. */
-	int iStrLen;			/**< length of the string in characters. */
+	rsObjID OID;		/**< object ID */
+	char *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
+	char *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
+	int iBufSize;		/**< current maximum size of the string buffer */
+	int iBufPtr;		/**< pointer (index) of next character position to be written to. */
+	int iStrLen;		/**< length of the string in characters. */
 	int iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
 };
 typedef struct rsCStrObject rsCStrObj;
@@ -43,6 +41,7 @@ typedef struct rsCStrObject rsCStrObj;
  * Construct a rsCStr object.
  */
 rsCStrObj *rsCStrConstruct(void);
+rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, char *sz);
 
 /**
  * Destruct the string buffer object.
@@ -55,7 +54,7 @@ void rsCStrDestruct(rsCStrObj *pThis);
  *
  * \param c Character to append to string.
  */
-srRetVal rsCStrAppendChar(rsCStrObj *pThis, char c);
+rsRetVal rsCStrAppendChar(rsCStrObj *pThis, char c);
 
 /**
  * Finish the string buffer. That means, the string
@@ -77,7 +76,7 @@ void rsCStrFinish(rsCStrObj *pThis);
  *
  * \param psz pointer to string to be appended. Must not be NULL.
  */
-srRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz);
+rsRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz);
 
 /**
  * Set a new allocation incremet. This will influence
@@ -99,7 +98,7 @@ void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement);
  * Append an integer to the string. No special formatting is
  * done.
  */
-srRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
+rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
 
 
 char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);

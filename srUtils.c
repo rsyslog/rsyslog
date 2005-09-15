@@ -40,6 +40,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "rsyslog.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #include "liblogging-stub.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #define TRUE 1
 #define FALSE 0
@@ -59,7 +60,7 @@
  * public members                                                    *
  * ################################################################# */
 
-srRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv)
+rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv)
 {
 	int i;
 	int bIsNegative;
@@ -86,7 +87,7 @@ srRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv)
 
 	/* make sure we are within bounds... */
 	if(i + 2 > iLenBuf)	/* +2 because: a) i starts at zero! b) the \0 byte */
-		return SR_RET_PROVIDED_BUFFER_TOO_SMALL;
+		return RS_RET_PROVIDED_BUFFER_TOO_SMALL;
 
 	/* then move it to the right direction... */
 	if(bIsNegative == TRUE)
@@ -95,5 +96,5 @@ srRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv)
 		*pBuf++ = szBuf[i--];
 	*pBuf = '\0';	/* terminate it!!! */
 
-	return SR_RET_OK;
+	return RS_RET_OK;
 }

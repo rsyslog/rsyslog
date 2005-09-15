@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include "liblogging-stub.h"
+#include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
 
@@ -44,6 +44,31 @@ rsCStrObj *rsCStrConstruct(void)
 	return pThis;
 }
 
+/* construct from sz string
+ * rgerhards 2005-09-15
+ */
+rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, char *sz)
+{
+	rsCStrObj *pThis;
+
+	assert(ppThis != NULL);
+
+	if((pThis = rsCStrConstruct()) == NULL)
+		return RS_RET_OUT_OF_MEMORY;
+
+	pThis->iStrLen = strlen(sz);
+	if((pThis->pBuf = (char*) malloc(sizeof(char) * pThis->iStrLen)) == NULL) {
+		RSFREEOBJ(pThis);
+		return RS_RET_OUT_OF_MEMORY;
+	}
+
+	/* we do NOT need to copy the \0! */
+	memcpy(pThis->pBuf, sz, pThis->iStrLen);
+
+	*ppThis = pThis;
+	return RS_RET_OK;
+}
+
 
 void rsCStrDestruct(rsCStrObj *pThis)
 {
@@ -60,40 +85,40 @@ void rsCStrDestruct(rsCStrObj *pThis)
 		free(pThis->pszBuf);
 	}
 
-	SRFREEOBJ(pThis);
+	RSFREEOBJ(pThis);
 }
 
 
-srRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz)
+rsRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz)
 {
-	srRetVal iRet;
+	rsRetVal iRet;
 
 	sbSTRBCHECKVALIDOBJECT(pThis);
 	assert(psz != NULL);
 
 	while(*psz)
-		if((iRet = rsCStrAppendChar(pThis, *psz++)) != SR_RET_OK)
+		if((iRet = rsCStrAppendChar(pThis, *psz++)) != RS_RET_OK)
 			return iRet;
 
-	return SR_RET_OK;
+	return RS_RET_OK;
 }
 
 
-srRetVal rsCStrAppendInt(rsCStrObj *pThis, int i)
+rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i)
 {
-	srRetVal iRet;
+	rsRetVal iRet;
 	char szBuf[32];
 
 	sbSTRBCHECKVALIDOBJECT(pThis);
 
-	if((iRet = srUtilItoA(szBuf, sizeof(szBuf), i)) != SR_RET_OK)
+	if((iRet = srUtilItoA(szBuf, sizeof(szBuf), i)) != RS_RET_OK)
 		return iRet;
 
 	return rsCStrAppendStr(pThis, szBuf);
 }
 
 
-srRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
+rsRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 {
 	char* pNewBuf;
 
@@ -102,7 +127,7 @@ srRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 	if(pThis->iBufPtr >= pThis->iBufSize)
 	{  /* need more memory! */
 		if((pNewBuf = (char*) malloc((pThis->iBufSize + pThis->iAllocIncrement) * sizeof(char))) == NULL)
-			return SR_RET_OUT_OF_MEMORY;
+			return RS_RET_OUT_OF_MEMORY;
 		memcpy(pNewBuf, pThis->pBuf, pThis->iBufSize);
 		pThis->iBufSize += pThis->iAllocIncrement;
 		if(pThis->pBuf != NULL) {
@@ -115,7 +140,7 @@ srRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 	*(pThis->pBuf + pThis->iBufPtr++) = c;
 	pThis->iStrLen++;
 
-	return SR_RET_OK;
+	return RS_RET_OK;
 }
 
 
@@ -172,7 +197,7 @@ char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
 	pRetBuf = pThis->pszBuf;
 	if(pThis->pBuf != NULL)
 		free(pThis->pBuf);
-	SRFREEOBJ(pThis);
+	RSFREEOBJ(pThis);
 	
 	return(pRetBuf);
 }

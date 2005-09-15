@@ -17,7 +17,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include "liblogging-stub.h"
+#include "rsyslog.h"
 #include "stringbuf.h"
 #include "outchannel.h"
 #include "syslogd.h"
