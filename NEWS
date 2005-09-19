@@ -15,6 +15,8 @@ Version 1.10.0 (RGer), 2005-09-??
 - added display of compile-time options to -v output
 - performance improvement for production build - made some checks
   to happen only during debug mode
+- fixed a problem with compiling on SUSE and - while doing so - removed
+  the socket call to set SO_BSDCOMPAT in cases where it is obsolete.
 ---------------------------------------------------------------------------
 Version 1.0.0 (RGer), 2005-09-12
 - changed install doc to cover daily cron scripts - a trouble source

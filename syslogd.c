@@ -249,6 +249,54 @@
 #endif
 #endif
 
+
+/* The following #ifdef sequence is a small compatibility 
+ * layer. It tries to work around the different availality
+ * levels of SO_BSDCOMPAT on linuxes...
+ * I borrowed this code from
+ *    http://www.erlang.org/ml-archive/erlang-questions/200307/msg00037.html
+ * It still needs to be a bit better adapted to rsyslog.
+ * rgerhards 2005-09-19
+ */
+#ifndef BSD
+#include <sys/utsname.h>
+static int should_use_so_bsdcompat(void)
+{
+    static int init_done;
+    static int so_bsdcompat_is_obsolete;
+
+    if (!init_done) {
+	struct utsname utsname;
+	unsigned int version, patchlevel;
+
+	init_done = 1;
+	if (uname(&utsname) < 0) {
+	    dprintf("uname: %s\r\n", strerror(errno));
+	    return 1;
+	}
+	/* Format is <version>.<patchlevel>.<sublevel><extraversion>
+	   where the first three are unsigned integers and the last
+	   is an arbitrary string. We only care about the first two. */
+	if (sscanf(utsname.release, "%u.%u", &version, &patchlevel) != 2) {
+	    dprintf("uname: unexpected release '%s'\r\n",
+		    utsname.release);
+	    return 1;
+	}
+	/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5
+	   kernels. It is a no-op in 2.4 but not in 2.2 kernels. */
+	if (version > 2 || (version == 2 && patchlevel >= 5))
+	    so_bsdcompat_is_obsolete = 1;
+    }
+    return !so_bsdcompat_is_obsolete;
+}
+#else	/* #ifndef BSD */
+#define should_use_so_bsdcompat() 1
+#endif	/* #ifndef BSD */
+#ifndef SO_BSDCOMPAT
+/* this shall prevent compiler errors due to undfined name */
+#define SO_BSDCOMPAT 0
+#endif
+
 char	*ConfFile = _PATH_LOGCONF;
 char	*PidFile = _PATH_LOGPID;
 char	ctty[] = _PATH_CONSOLE;
@@ -780,11 +828,13 @@ static int create_tcp_socket(void)
 	 * could flood our log files by sending us tons of ICMP errors.
 	 */
 #ifndef BSD	
-	if (setsockopt(fd, SOL_SOCKET, SO_BSDCOMPAT, \
-			(char *) &on, sizeof(on)) < 0) {
-		logerror("setsockopt(BSDCOMPAT), suspending tcp inet");
-		close(fd);
-		return -1;
+	if (should_use_so_bsdcompat()) {
+		if (setsockopt(fd, SOL_SOCKET, SO_BSDCOMPAT, \
+				(char *) &on, sizeof(on)) < 0) {
+			logerror("setsockopt(BSDCOMPAT), suspending tcp inet");
+			close(fd);
+			return -1;
+		}
 	}
 #endif
 	if (bind(fd, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
@@ -2878,11 +2928,13 @@ static int create_udp_socket()
 	 * could flood our log files by sending us tons of ICMP errors.
 	 */
 #ifndef BSD	
-	if (setsockopt(fd, SOL_SOCKET, SO_BSDCOMPAT, \
-			(char *) &on, sizeof(on)) < 0) {
-		logerror("setsockopt(BSDCOMPAT), suspending inet");
-		close(fd);
-		return -1;
+	if (should_use_so_bsdcompat()) {
+		if (setsockopt(fd, SOL_SOCKET, SO_BSDCOMPAT, \
+				(char *) &on, sizeof(on)) < 0) {
+			logerror("setsockopt(BSDCOMPAT), suspending inet");
+			close(fd);
+			return -1;
+		}
 	}
 #endif
 	if (bind(fd, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
