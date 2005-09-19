@@ -177,11 +177,13 @@
 #include <paths.h>
 #endif
 
+#include "rsyslog.h"
 #include "template.h"
 #include "outchannel.h"
 #include "syslogd.h"
 
 #include "stringbuf.h"
+#include "parse.h"
 
 #ifdef	WITH_DB
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
@@ -433,12 +435,12 @@ struct filed {
 	union {
 		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
 		struct {
-			rsCStrObj pCSPropName;
+			rsCStrObj *pCSPropName;
 			enum {
 				FIOP_NOP = 0,		/* do not use - No Operation */
 				FIOP_CONTAINS  = 1,	/* contains string? */
 			} operation;
-			rsCStrObj pCSCompValue;		/* value to "compare" against */
+			rsCStrObj *pCSCompValue;	/* value to "compare" against */
 		} prop;
 	} f_filterData;
 	union {
@@ -637,12 +639,14 @@ const char *cvthname(struct sockaddr_in *f);
 void domark();
 void debug_switch();
 void logerror(char *type);
+void logerrorInt(char *type, int errCode);
+void logerrorSz(char *type, char *errMsg);
 void die(int sig);
 #ifndef TESTING
 void doexit(int sig);
 #endif
 void init();
-void cfline(char *line, register struct filed *f);
+rsRetVal cfline(char *line, register struct filed *f);
 int decode(char *name, struct code *codetab);
 void sighup_handler();
 #ifdef WITH_DB
@@ -4283,12 +4287,42 @@ void debug_switch()
 
 
 /*
+ * Add a string to error message and send it to logerror()
+ * The error message is passed to snprintf() and must be
+ * correctly formatted for it (containing a single %s param).
+ * rgerhards 2005-09-19
+ */
+void logerrorSz(char *type, char *errMsg)
+{
+	char buf[1024];
+
+	snprintf(buf, sizeof(buf), type, errMsg);
+	logerror(buf);
+	return;
+}
+
+/*
+ * Add an integer to error message and send it to logerror()
+ * The error message is passed to snprintf() and must be
+ * correctly formatted for it (containing a single %d param).
+ * rgerhards 2005-09-19
+ */
+void logerrorInt(char *type, int errCode)
+{
+	char buf[1024];
+
+	snprintf(buf, sizeof(buf), type, errCode);
+	logerror(buf);
+	return;
+}
+
+/*
  * Print syslogd errors some place.
  */
 void logerror(type)
 	char *type;
 {
-	char buf[256];
+	char buf[1024];
 
 	dprintf("Called logerr, msg: %s\n", type);
 
@@ -4980,19 +5014,13 @@ void cflineParseOutchannel(struct filed *f, char* p)
 
 
 /*
- * Crack a configuration file line
- * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
- * handle config lines in general, but only lines that reflect actual filter
- * pairs (the original syslog message line format). Extended lines (those starting
- * with "$" have been filtered out by the caller and are passed to another function (cfsysline()).
- * Please note, however, that I needed to make changes in the line syntax to support
- * assignment of format definitions to a file. So it is not (yet) 100% transparent.
- * Eventually, we can overcome this limitation by prefixing the actual action indicator
- * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
+ * Helper to cfline(). This function takes the filter part of a traditional, PRI
+ * based line and decodes the PRIs given in the selector line. It processed the
+ * line up to the beginning of the action part. A pointer to that beginnig is
+ * passed back to the caller.
+ * rgerhards 2005-09-15
  */
-void cfline(line, f)
-	char *line;
-	register struct filed *f;
+rsRetVal cflineProcessTradPRIFilter(char **pline, register struct filed *f)
 {
 	char *p;
 	register char *q;
@@ -5001,22 +5029,17 @@ void cfline(line, f)
 	int pri;
 	int singlpri = 0;
 	int ignorepri = 0;
-	int syncfile;
-#ifdef SYSLOG_INET
-	struct hostent *hp;
-	int bErr;
-#endif
 	char buf[MAXLINE];
-	char szTemplateName[128];
 	char xbuf[200];
-#ifdef WITH_DB
-	int iMySQLPropErr = 0;
-#endif
 
-	dprintf("cfline(%s)\n", line);
+	assert(pline != NULL);
+	assert(*pline != NULL);
+	assert(f != NULL);
 
+	dprintf(" - traditional PRI filter\n");
 	errno = 0;	/* keep strerror() stuff out of logerror messages */
 
+	f->f_filter_type = FILTER_PRI;
 	/* Note: file structure is pre-initialized to zero because it was
 	 * created with calloc()!
 	 */
@@ -5026,7 +5049,7 @@ void cfline(line, f)
 	}
 
 	/* scan through the list of selectors */
-	for (p = line; *p && *p != '\t' && *p != ' ';) {
+	for (p = *pline; *p && *p != '\t' && *p != ' ';) {
 
 		/* find the end of this facility name list */
 		for (q = p; *q && *q != '\t' && *q++ != '.'; )
@@ -5064,7 +5087,7 @@ void cfline(line, f)
 		if (pri < 0) {
 			(void) snprintf(xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
 			logerror(xbuf);
-			return;
+			return RS_RET_ERR;
 		}
 
 		/* scan facilities */
@@ -5111,7 +5134,7 @@ void cfline(line, f)
 
 					(void) snprintf(xbuf, sizeof(xbuf), "unknown facility name \"%s\"", buf);
 					logerror(xbuf);
-					return;
+					return RS_RET_ERR;
 				}
 
 				if ( pri == INTERNAL_NOPRI ) {
@@ -5150,6 +5173,140 @@ void cfline(line, f)
 	/* skip to action part */
 	while (*p == '\t' || *p == ' ')
 		p++;
+
+	*pline = p;
+	return RS_RET_OK;
+}
+
+
+/*
+ * Helper to cfline(). This function takes the filter part of a property
+ * based filter and decodes it. It processes the line up to the beginning
+ * of the action part. A pointer to that beginnig is passed back to the caller.
+ * rgerhards 2005-09-15
+ */
+rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
+{
+	rsParsObj *pPars;
+	rsCStrObj *pCSLine;
+	rsCStrObj *pCSCompOp;
+	rsRetVal iRet;
+
+	assert(pline != NULL);
+	assert(*pline != NULL);
+	assert(f != NULL);
+
+	dprintf(" - property-based filter\n");
+	errno = 0;	/* keep strerror() stuff out of logerror messages */
+
+	f->f_filter_type = FILTER_PROP;
+
+	/* create line string without leading colon */
+	if((iRet = rsCStrConstructFromszStr(&pCSLine, (*pline)+1)) != RS_RET_OK) {
+		logerrorInt("Error %d allocating string space - ignoring selector", iRet);
+		return(iRet);
+	}
+
+	/* create parser */
+	if((iRet = rsParsConstruct(&pPars)) != RS_RET_OK) {
+		logerrorInt("error %d creating parser - ignoring selector", iRet);
+		RSFREEOBJ(pCSLine);
+		return(iRet);
+	}
+
+	if((iRet = rsParsAssignString(pPars, pCSLine)) != RS_RET_OK) {
+		logerrorInt("error %d assigning string to parser - ignoring selector", iRet);
+		RSFREEOBJ(pPars);
+		RSFREEOBJ(pCSLine);
+		return(iRet);
+	}
+
+	/* read property */
+	iRet = parsDelimCStr(pPars, &f->f_filterData.prop.pCSPropName, ',', 1, 1);
+	if(iRet != RS_RET_OK) {
+		logerrorInt("error %d parsing filter property - ignoring selector", iRet);
+		RSFREEOBJ(pPars);
+		RSFREEOBJ(pCSLine);
+		return(iRet);
+	}
+	printf("after read prop, prop name '%s'\n", rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
+
+	/* read operation */
+	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1);
+	if(iRet != RS_RET_OK) {
+		logerrorInt("error %d compare operation property - ignoring selector", iRet);
+		RSFREEOBJ(pPars);
+		RSFREEOBJ(pCSLine);
+		return(iRet);
+	}
+	printf("after read CompOp, prop name '%s'\n", rsCStrGetSzStr(pCSCompOp));
+	if(!rsCStrSzCmp(pCSCompOp, "contains")) {
+		f->f_filterData.prop.operation = FIOP_CONTAINS;
+dprintf("Contains filter!\n");
+	} else {
+		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
+		           rsCStrGetSzStr(pCSCompOp));
+	}
+
+	/* read compare value */
+	iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
+	if(iRet != RS_RET_OK) {
+		logerrorInt("error %d compare value property - ignoring selector", iRet);
+		RSFREEOBJ(pPars);
+		RSFREEOBJ(pCSLine);
+		return(iRet);
+	}
+	printf("after read CompVal, prop name '%s'\n", rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
+
+	/* skip to action part */
+
+	/**pline = p;*/
+	return RS_RET_OK;
+}
+
+
+/*
+ * Crack a configuration file line
+ * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
+ * handle config lines in general, but only lines that reflect actual filter
+ * pairs (the original syslog message line format). Extended lines (those starting
+ * with "$" have been filtered out by the caller and are passed to another function (cfsysline()).
+ * Please note, however, that I needed to make changes in the line syntax to support
+ * assignment of format definitions to a file. So it is not (yet) 100% transparent.
+ * Eventually, we can overcome this limitation by prefixing the actual action indicator
+ * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
+ */
+rsRetVal cfline(char *line, register struct filed *f)
+{
+	char *p;
+	register char *q;
+	register int i;
+	int syncfile;
+	rsRetVal iRet;
+#ifdef SYSLOG_INET
+	struct hostent *hp;
+	int bErr;
+#endif
+	char szTemplateName[128];
+#ifdef WITH_DB
+	int iMySQLPropErr = 0;
+#endif
+
+	dprintf("cfline(%s)", line);
+
+	errno = 0;	/* keep strerror() stuff out of logerror messages */
+	p = line;
+
+	/* check which filter we need to pull... */
+	if(*p == ':') {
+		iRet = cflineProcessPropFilter(&p, f);
+	} else {
+		iRet = cflineProcessTradPRIFilter(&p, f);
+	}
+
+	/* check if that went well... */
+	if(iRet != RS_RET_OK)
+		return iRet;
 
 	if (*p == '-')
 	{
@@ -5455,7 +5612,7 @@ void cfline(line, f)
 		 */
 		break;
 	}
-	return;
+	return RS_RET_OK;
 }
 
 

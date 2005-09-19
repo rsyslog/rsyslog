@@ -42,7 +42,7 @@ test: syslog_tst tsyslogd
 install: install_man install_exec
 
 syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o outchannel.o parse.o
-	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o outchannel.o stringbuf.o srUtils.o ${LIBS}
+	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o outchannel.o stringbuf.o srUtils.o parse.o ${LIBS}
 
 srUtils.o: srUtils.c srUtils.h liblogging-stub.h rsyslog.h
 stringbuf.o: stringbuf.c stringbuf.h rsyslog.h

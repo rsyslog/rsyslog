@@ -38,7 +38,6 @@ rsCStrObj *rsCStrConstruct(void)
 	pThis->pBuf = NULL;
 	pThis->pszBuf = NULL;
 	pThis->iBufSize = 0;
-	pThis->iBufPtr = 0;
 	pThis->iStrLen = 0;
 	pThis->iAllocIncrement = STRINGBUF_ALLOC_INCREMENT;
 
@@ -125,7 +124,7 @@ rsRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	if(pThis->iBufPtr >= pThis->iBufSize)
+	if(pThis->iStrLen >= pThis->iBufSize)
 	{  /* need more memory! */
 		if((pNewBuf = (char*) malloc((pThis->iBufSize + pThis->iAllocIncrement) * sizeof(char))) == NULL)
 			return RS_RET_OUT_OF_MEMORY;
@@ -138,10 +137,56 @@ rsRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 	}
 
 	/* ok, when we reach this, we have sufficient memory */
-	*(pThis->pBuf + pThis->iBufPtr++) = c;
-	pThis->iStrLen++;
+	*(pThis->pBuf + pThis->iStrLen++) = c;
+
+	/* check if we need to invalidate an sz representation! */
+	if(pThis->pszBuf != NULL) {
+		free(pThis->pszBuf);
+		pThis->pszBuf = NULL;
+	}
 
 	return RS_RET_OK;
+}
+
+
+/* Converts the CStr object to a classical zero-terminated C string
+ * and returns that string. The caller must not free it and must not
+ * destroy the CStr object as long as the ascii string is used.
+ * rgerhards, 2005-09-15
+ */
+char*  rsCStrGetSzStr(rsCStrObj *pThis)
+{
+	int i;
+
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+
+	if(pThis->pBuf != NULL)
+		if(pThis->pszBuf == NULL) {
+			/* we do not yet have a usable sz version - so create it... */
+			if((pThis->pszBuf = malloc(pThis->iStrLen + 1 * sizeof(char))) == NULL) {
+				/* TODO: think about what to do - so far, I have no bright
+				 *       idea... rgerhards 2005-09-07
+				 */
+			}
+			else { /* we can create the sz String */
+				/* now copy it while doing a sanity check. The string might contain a
+				 * \0 byte. There is no way how a sz string can handle this. For
+				 * the time being, we simply replace it with space - something that
+				 * could definitely be improved (TODO).
+				 * 2005-09-15 rgerhards
+				 */
+				for(i = 0 ; i < pThis->iStrLen ; ++i) {
+					if(pThis->pBuf[i] == '\0')
+						pThis->pszBuf[i] = ' ';
+					else
+						pThis->pszBuf[i] = pThis->pBuf[i];
+				}
+				/* write terminator... */
+				pThis->pszBuf[i] = '\0';
+			}
+		}
+
+	return(pThis->pszBuf);
 }
 
 
@@ -162,40 +207,15 @@ rsRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
 {
 	char* pRetBuf;
-	int i;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	if(pThis->pszBuf == NULL) {
-		/* we do not yet have a usable sz version - so create it... */
-		if((pThis->pszBuf = malloc(pThis->iStrLen + 1 * sizeof(char))) == NULL) {
-			/* TODO: think about what to do - so far, I have no bright
-			 *       idea... rgerhards 2005-09-07
-			 */
-		}
-		else {
-			/* we can create the sz String */
-			if(pThis->pBuf != NULL)
-				memcpy(pThis->pszBuf, pThis->pBuf, pThis->iStrLen);
-			*(pThis->pszBuf + pThis->iStrLen) = '\0';
-		}
-	}
-	/* we now need to do a sanity check. The string mgiht contain a
-	 * \0 byte. There is no way how a sz string can handle this. For
-	 * the time being, we simply replace it with space - something that
-	 * could definitely be improved (TODO).
-	 * 2005-09-09 rgerhards
-	 */
-	for(i = 0 ; i < pThis->iStrLen ; ++i) {
-		if(*(pThis->pszBuf + i) == '\0')
-			*(pThis->pszBuf + i) = ' ';
-	}
+	pRetBuf = rsCStrGetSzStr(pThis);
 
 	/* We got it, now free the object ourselfs. Please note
 	 * that we can NOT use the rsCStrDestruct function as it would
 	 * also free the sz String buffer, which we pass on to the user.
 	 */
-	pRetBuf = pThis->pszBuf;
 	if(pThis->pBuf != NULL)
 		free(pThis->pBuf);
 	RSFREEOBJ(pThis);
@@ -229,7 +249,6 @@ rsRetVal  rsCStrFinish(rsCStrObj *pThis)
 	/* here, we need to do ... nothing ;)
 	 */
 #	endif
-
 	return RS_RET_OK;
 }
 
@@ -268,6 +287,15 @@ rsRetVal rsCStrTruncate(rsCStrObj *pThis, int nTrunc)
 	
 	pThis->iStrLen -= nTrunc;
 
+	if(pThis->pszBuf != NULL) {
+		/* in this case, we adjust the psz representation
+		 * by writing a new \0 terminator - this is by far
+		 * the fastest way and outweights the additional memory
+		 * required. 2005-9-19 rgerhards.
+		 */
+		 pThis->pszBuf[pThis->iStrLen] = '\0';
+	}
+
 	return RS_RET_OK;
 }
 
@@ -281,7 +309,7 @@ rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis)
 
 	i = pThis->iStrLen;
 	pC = pThis->pBuf + i - 1;
-	while(i > 0 && !isspace(*pC)) {
+	while(i > 0 && isspace(*pC)) {
 		--pC;
 		--i;
 	}
@@ -290,6 +318,53 @@ rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis)
 
 	return RS_RET_OK;
 }
+
+/* compare two string objects - works like strcmp(), but operates
+ * on CStr objects. Please note that this version here is
+ * faster in the majority of cases, simply because it can
+ * rely on StrLen.
+ * rgerhards 2005-09-19
+ */
+int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2)
+{
+	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+	rsCHECKVALIDOBJECT(pCS2, OIDrsCStr);
+	if(pCS1->iStrLen == pCS2->iStrLen)
+		if(pCS1->iStrLen == 0)
+			return 0; /* zero-sized string are equal ;) */
+		else
+			return   pCS1->pBuf[pCS1->iStrLen - 1]
+			       - pCS2->pBuf[pCS2->iStrLen - 1];
+	else
+		return pCS1->iStrLen - pCS2->iStrLen;
+}
+
+/* compare a string object with a classical zero-terminated C-string.
+ * this function is primarily meant to support comparisons with constants.
+ * It should not be used for variables (except with a very good reason).
+ * rgerhards 2005-09-19
+ */
+int rsCStrSzCmp(rsCStrObj *pCStr, char *sz)
+{
+	int iszLen;
+
+	rsCHECKVALIDOBJECT(pCStr, OIDrsCStr);
+	assert(sz != NULL);
+
+	iszLen = strlen(sz);
+
+	if(pCStr->iStrLen == iszLen)
+		/* note: we are using iszLen below, because it doesn't matter
+		 * and the simple integer is faster to derefence...
+		 */
+		if(iszLen == 0)
+			return 0; /* zero-sized string are equal ;) */
+		else
+			return   pCStr->pBuf[iszLen - 1] - sz[iszLen - 1];
+	else
+		return pCStr->iStrLen - iszLen;
+}
+
 
 /*
  * Local variables:

@@ -31,7 +31,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 {
 	RS_RET_OUT_OF_MEMORY = -6,	/**< memory allocation failed */
 	RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50,/**< the caller provided a buffer, but the called function sees the size of this buffer is too small - operation not carried out */
-	RS_TRUNCAT_TOO_LARGE = -3000, /**< truncation operation where too many chars should be truncated */
+	RS_RET_ERR = -3000,	/**< generic failure */
+	RS_TRUNCAT_TOO_LARGE = -3001, /**< truncation operation where too many chars should be truncated */
+	RS_RET_FOUND_AT_STRING_END = -3002, /**< some value found, but at the last pos of string */
+	RS_RET_NOT_FOUND = -3003, /**< some requested value not found */
+	RS_RET_MISSING_TRAIL_QUOTE = -3004, /**< an expected trailing quote is missing */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */

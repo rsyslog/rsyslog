@@ -30,7 +30,6 @@ struct rsCStrObject
 	char *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
 	char *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
 	int iBufSize;		/**< current maximum size of the string buffer */
-	int iBufPtr;		/**< pointer (index) of next character position to be written to. */
 	int iStrLen;		/**< length of the string in characters. */
 	int iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
 };
@@ -101,7 +100,10 @@ void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement);
 rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
 
 
+char*  rsCStrGetSzStr(rsCStrObj *pThis);
 char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
+int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2);
+int rsCStrSzCmp(rsCStrObj *pCStr, char *sz);
 
 /* now come inline-like functions */
 #ifdef NDEBUG

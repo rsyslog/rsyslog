@@ -46,6 +46,7 @@ typedef struct rsParsObject rsParsObj;
  * Construct a rsPars object.
  */
 rsRetVal rsParsConstruct(rsParsObj **ppThis);
+rsRetVal rsParsAssignString(rsParsObj *pThis, rsCStrObj *pCStr);
 
 /* parse an integer. The parse pointer is advanced */
 rsRetVal parsInt(rsParsObj *pThis, int* pInt);
@@ -67,6 +68,8 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis);
  */
 rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing);
 
+rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c);
+rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr);
 #if 0 /* later! */
 /* Parse a property
  * This is a complex parsing routine. It parses an property
