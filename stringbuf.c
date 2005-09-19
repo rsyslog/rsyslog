@@ -366,6 +366,94 @@ int rsCStrSzCmp(rsCStrObj *pCStr, char *sz)
 }
 
 
+/* Locate the first occurence of this rsCStr object inside a standard sz string.
+ * Returns the offset (0-bound) of this first occurrence. If not found, -1 is
+ * returned. Both parameters MUST be given (NULL is not allowed).
+ * rgerhards 2005-09-19
+ */
+int rsCStrLocateInSzStr(rsCStrObj *pThis, char *sz)
+{
+	int i;
+	int iMax;
+	int bFound;
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	assert(sz != NULL);
+	
+	if(pThis->iStrLen == 0)
+		return 0;
+	
+	/* compute the largest index where a match could occur - after all,
+	 * the to-be-located string must be able to be present in the 
+	 * searched string (it needs its size ;)).
+	 */
+	iMax = strlen(sz) - pThis->iStrLen;
+
+	bFound = 0;
+	i = 0;
+	while(i  <= iMax && !bFound) {
+		int iCheck;
+		char *pComp = sz + i;
+		for(iCheck = 0 ; iCheck < pThis->iStrLen ; ++iCheck)
+			if(*(pComp + iCheck) != *(pThis->pBuf + iCheck))
+				break;
+		if(iCheck == pThis->iStrLen)
+			bFound = 1; /* found! - else it wouldn't be equal */
+		else
+			++i; /* on to the next try */
+	}
+
+	return(bFound ? i : -1);
+}
+
+
+/* locate the first occurence of a standard sz string inside a rsCStr object.
+ * Returns the offset (0-bound) of this first occurrence. If not found, -1 is
+ * returned.
+ * rgerhards 2005-09-19
+ * WARNING: i accidently created this function (I later noticed I didn't relly
+ *          need it... I will not remove the function, as it probably is useful
+ *          some time later. However, it is not fully tested, so start with testing
+ *          it before you put it to first use).
+ */
+int rsCStrLocateSzStr(rsCStrObj *pThis, char *sz)
+{
+	int iLenSz;
+	int i;
+	int iMax;
+	int bFound;
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	
+	if(sz == NULL)
+		return 0;
+
+	iLenSz = strlen(sz);
+	if(iLenSz == 0)
+		return 0;
+	
+	/* compute the largest index where a match could occur - after all,
+	 * the to-be-located string must be able to be present in the 
+	 * searched string (it needs its size ;)).
+	 */
+	iMax = pThis->iStrLen - iLenSz;
+
+	bFound = 0;
+	i = 0;
+	while(i  < iMax && !bFound) {
+		int iCheck;
+		char *pComp = pThis->pBuf + i;
+		for(iCheck = 0 ; iCheck < iLenSz ; ++iCheck)
+			if(*(pComp + iCheck) != *(sz + iCheck))
+				break;
+		if(iCheck == iLenSz)
+			bFound = 1; /* found! - else it wouldn't be equal */
+		else
+			++i; /* on to the next try */
+	}
+
+	return(bFound ? i : -1);
+}
+
+
 /*
  * Local variables:
  *  c-indent-level: 8

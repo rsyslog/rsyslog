@@ -42,6 +42,12 @@ struct rsParsObject
 };
 typedef struct rsParsObject rsParsObj;
 
+
+/* BEGIN "inline"-like functions */
+/* END "inline"-like functions */
+
+int rsParsGetParsePointer(rsParsObj *pThis);
+
 /**
  * Construct a rsPars object.
  */

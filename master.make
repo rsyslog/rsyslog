@@ -50,7 +50,7 @@ parse.o: parse.c parse.h rsyslog.h
 template.o: template.c template.h stringbuf.h rsyslog.h
 outchannel.o: outchannel.c outchannel.h stringbuf.h syslogd.h rsyslog.h
 
-syslogd.o: syslogd.c version.h template.h outchannel.h syslogd.h rsyslog.h
+syslogd.o: syslogd.c version.h parse.h template.h stringbuf.h outchannel.h syslogd.h rsyslog.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} -c $(VPATH)syslogd.c
 
 syslog.o: syslog.c

@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------
 Version 1.10.0 (RGer), 2005-09-??
   REMINDER: 1.10 is the first unstable version if the 1.x series!
+- added the capability to filter on any property in selector lines
+  (not just facility and priority)
 - changed stringbuf into a new counted string class
 - added support for a "discard" action. If a selector line with
   discard (~ character) is found, no selector lines *after* that

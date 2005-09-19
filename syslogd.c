@@ -2025,7 +2025,8 @@ int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
  * be used in selector line processing.
  * rgerhards 2005-09-15
  */
-char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *pbMustBeFreed)
+char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
+                 rsCStrObj *pCSPropName, unsigned short *pbMustBeFreed)
 {
 	char *pName;
 	char *pRes; /* result pointer */
@@ -2039,7 +2040,12 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe, unsigned short *p
 	assert(pMsg != NULL);
 	assert(pbMustBeFreed != NULL);
 
-	pName = pTpe->data.field.pPropRepl;
+	if(pCSPropName == NULL) {
+		assert(pTpe != NULL);
+		pName = pTpe->data.field.pPropRepl;
+	} else {
+		pName = rsCStrGetSzStr(pCSPropName);
+	}
 	*pbMustBeFreed = 0;
 
 	/* sometimes there are aliases to the original MonitoWare
@@ -3227,6 +3233,54 @@ void logmsgInternal(pri, msg, from, flags)
 }
 
 /*
+ * This functions looks at the given message and checks if it matches the
+ * provided filter condition. If so, it returns true, else it returns
+ * false. This is a helper to logmsg() and meant to drive the decision
+ * process if a message is to be processed or not. As I expect this
+ * decision code to grow more complex over time AND logmsg() is already
+ * a very lengthe function, I thought a separate function is more appropriate.
+ * 2005-09-19 rgerhards
+ */
+int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
+{
+	unsigned short pbMustBeFreed;
+	char *pszPropVal;
+	int iRet = 0;
+
+	assert(f != NULL);
+	assert(pMsg != NULL);
+
+	if(f->f_filter_type == FILTER_PRI) {
+		/* skip messages that are incorrect priority */
+		if ( (f->f_filterData.f_pmask[pMsg->iFacility] == TABLE_NOPRI) || \
+		    ((f->f_filterData.f_pmask[pMsg->iFacility] & (1<<pMsg->iSeverity)) == 0) )
+			iRet = 0;
+		else
+			iRet = 1;
+	} else {
+		assert(f->f_filter_type == FILTER_PROP); /* assert() just in case... */
+		pszPropVal = MsgGetProp(pMsg, NULL,
+			        f->f_filterData.prop.pCSPropName, &pbMustBeFreed);
+
+		/* Now do the compares (short list currently ;)) */
+		if(f->f_filterData.prop.operation == FIOP_CONTAINS) {
+			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, pszPropVal) != -1)
+				iRet = 1;
+		} else { /* here, it handles NOP (for performance reasons) */
+			assert(f->f_filterData.prop.operation == FIOP_NOP);
+			iRet = 1; /* as good as any other default ;) */
+		}
+
+		/* cleanup */
+		if(pbMustBeFreed)
+			free(pszPropVal);
+	}
+
+	return(iRet);
+}
+
+
+/*
  * Log a message to the appropriate log files, users, etc. based on
  * the priority.
  * rgerhards 2004-11-08: actually, this also decodes all but the PRI part.
@@ -3246,10 +3300,7 @@ void logmsgInternal(pri, msg, from, flags)
  * circumstances given.
  */
 
-void logmsg(pri, pMsg, flags)
-	int pri;
-	struct msg *pMsg;
-	int flags;
+void logmsg(int pri, struct msg *pMsg, int flags)
 {
 	register struct filed *f;
 
@@ -3425,11 +3476,12 @@ void logmsg(pri, pMsg, flags)
 		 * won't do that for now, but at least we now know where
 		 * to look at.
 		 * 2005-09-09 rgerhards
+		 * ok, we are now ready to move to something more advanced. Because
+		 * of this, I am moving the actual decision code to outside this function.
+		 * 2005-09-19 rgerhards
 		 */
-		/* skip messages that are incorrect priority */
-		if ( (f->f_filterData.f_pmask[fac] == TABLE_NOPRI) || \
-		    ((f->f_filterData.f_pmask[fac] & (1<<prilev)) == 0) )
-		  	continue;
+		if(!shouldProcessThisMessage(f, pMsg))
+			continue;
 
 		/* We now need to check a special case - F_DISCARD. If that
 		 * action is specified in the selector line, no futher processing
@@ -3685,7 +3737,7 @@ void  iovCreate(struct filed *f)
 			++v;
 			++iIOVused;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			v->iov_base = MsgGetProp(pMsg, pTpe, f->f_bMustBeFreed + iIOVused);
+			v->iov_base = MsgGetProp(pMsg, pTpe, NULL, f->f_bMustBeFreed + iIOVused);
 			v->iov_len = strlen(v->iov_base);
 			/* TODO: performance optimize - can we obtain the length? */
 			/* we now need to check if we should use SQL option. In this case,
@@ -4749,13 +4801,31 @@ void init()
 	Initialized = 1;
 
 	if ( Debug ) {
+		printf("Active selectors:\n");
 		for (f = Files; f; f = f->f_next) {
 			if (f->f_type != F_UNUSED) {
-				for (i = 0; i <= LOG_NFACILITIES; i++)
-					if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
-						printf(" X ");
+				if(f->f_filter_type == FILTER_PRI) {
+					for (i = 0; i <= LOG_NFACILITIES; i++)
+						if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
+							printf(" X ");
+						else
+							printf("%2X ", f->f_filterData.f_pmask[i]);
+				} else {
+					printf("PROPERTY-BASED Filter:\n");
+					printf("\tProperty.: '%s'\n",
+					       rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
+					printf("\tOperation: ");
+					if(f->f_filterData.prop.operation == FIOP_NOP)
+						printf("'NOP'");
+					else if(f->f_filterData.prop.operation == FIOP_CONTAINS)
+						printf("'contains'");
 					else
-						printf("%2X ", f->f_filterData.f_pmask[i]);
+						printf("'ERROR - invalid filter type!'");
+					printf("\n");
+					printf("\tValue....: '%s'\n",
+					       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
+					printf("\tAction...: ");
+				}
 				printf("%s: ", TypeNames[f->f_type]);
 				switch (f->f_type) {
 				case F_FILE:
@@ -4781,6 +4851,7 @@ void init()
 				printf("\n");
 			}
 		}
+		printf("\n");
 		tplPrintList();
 		ochPrintList();
 	}
@@ -5229,7 +5300,6 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 		RSFREEOBJ(pCSLine);
 		return(iRet);
 	}
-	printf("after read prop, prop name '%s'\n", rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
 
 	/* read operation */
 	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1);
@@ -5239,14 +5309,13 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 		RSFREEOBJ(pCSLine);
 		return(iRet);
 	}
-	printf("after read CompOp, prop name '%s'\n", rsCStrGetSzStr(pCSCompOp));
 	if(!rsCStrSzCmp(pCSCompOp, "contains")) {
 		f->f_filterData.prop.operation = FIOP_CONTAINS;
-dprintf("Contains filter!\n");
 	} else {
 		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
 		           rsCStrGetSzStr(pCSCompOp));
 	}
+	RSFREEOBJ(pCSCompOp); /* no longer needed */
 
 	/* read compare value */
 	iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
@@ -5259,8 +5328,20 @@ dprintf("Contains filter!\n");
 	printf("after read CompVal, prop name '%s'\n", rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
 
 	/* skip to action part */
+	if((iRet = parsSkipWhitespace(pPars)) != RS_RET_OK) {
+		logerrorInt("error %d skipping to action part - ignoring selector", iRet);
+		RSFREEOBJ(pPars);
+		RSFREEOBJ(pCSLine);
+		return(iRet);
+	}
 
-	/**pline = p;*/
+	/* cleanup */
+	*pline = *pline + rsParsGetParsePointer(pPars) + 1;
+		/* we are adding one for the skipped initial ":" */
+
+	RSFREEOBJ(pPars);
+	RSFREEOBJ(pCSLine);
+
 	return RS_RET_OK;
 }
 
@@ -5569,8 +5650,8 @@ rsRetVal cfline(char *line, register struct filed *f)
 		else {
 			initMySQL(f);
 		}
-		break;
 #endif	/* #ifdef WITH_DB */
+		break;
 
 	default:
 		dprintf ("users: %s\n", p);	/* ASP */

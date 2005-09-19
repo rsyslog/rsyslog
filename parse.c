@@ -152,11 +152,8 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bT
 
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
-printf("after trim leading, len %d - %d, pC: %c, Delim '%c'\n", pThis->iCurrPos, rsCStrLen(pThis->pCStr),
-	*pC, cDelim);
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
 	      && *pC != cDelim) {
-		printf("parse[%d,%d]: %c\n", pThis->iCurrPos, rsCStrLen(pThis->pCStr), *pC);
 		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
 			RSFREEOBJ(pCStr);
 			return(iRet);
@@ -221,10 +218,7 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 	if((pCStr = rsCStrConstruct()) == NULL)
 		return RS_RET_OUT_OF_MEMORY;
 
-printf("at start of quoted string, len %d - %d, pC: '%c'\n", pThis->iCurrPos, rsCStrLen(pThis->pCStr),
-	*pC);
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
-		printf("parse[%d,%d]: '%c'\n", pThis->iCurrPos, rsCStrLen(pThis->pCStr), *pC);
 		if(*pC == '"') {
 			break;	/* we are done! */
 		} else if(*pC == '\\') {
@@ -268,6 +262,19 @@ printf("at start of quoted string, len %d - %d, pC: '%c'\n", pThis->iCurrPos, rs
 	*ppCStr = pCStr;
 	return RS_RET_OK;
 }
+
+/* return the position of the parse pointer
+ */
+int rsParsGetParsePointer(rsParsObj *pThis)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
+
+	if(pThis->iCurrPos < rsCStrLen(pThis->pCStr))
+		return pThis->iCurrPos;
+	else
+		return rsCStrLen(pThis->pCStr) - 1;
+}
+
 
 /*
  * Local variables:

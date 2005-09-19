@@ -104,6 +104,8 @@ char*  rsCStrGetSzStr(rsCStrObj *pThis);
 char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
 int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2);
 int rsCStrSzCmp(rsCStrObj *pCStr, char *sz);
+int rsCStrLocateSzStr(rsCStrObj *pCStr, char *sz);
+int rsCStrLocateInSzStr(rsCStrObj *pThis, char *sz);
 
 /* now come inline-like functions */
 #ifdef NDEBUG
