@@ -47,7 +47,16 @@ the string that should be copied. Offset counting starts at 1, so if you need to
 obtain the first 2 characters of the message text, you can use this syntax: 
 &quot;%msg:1:2%&quot;. If you do not whish to specify from and to, but you want to specify 
 options, you still need to include the colons. For example, if you would like to 
-convert the full message text to lower case, use &quot;%msg:::lowercase%&quot;.<br>
+convert the full message text to lower case, use &quot;%msg:::lowercase%&quot;.<p>
+There is also support for <b>regular expressions</b>. To use them, you need to 
+place a &quot;R&quot; into FromChar. This tells rsyslog that a regular expression instead 
+of position-based extraction is desired. The actual regular expression must then 
+be provided in toChar. The regular expression <b>must</b> be followed by the 
+string &quot;--end&quot;. It denotes the end of the regular expression and will not become 
+part of it. If you are using regular expressions, the property replacer will 
+return the part of the property text that matches the regular expression. An 
+example for a property replacer sequence with a regular expression is: &quot;%msg:R:.*Sev:. 
+\(.*\) \[.*--end%&quot;<br>
 <br>
 <h2>Property Options</h2>
 <b><code>property options</code></b> are case-insensitive. Currently, the following options 

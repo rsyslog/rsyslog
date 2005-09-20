@@ -25,7 +25,7 @@ Extract the software with &quot;tar xzf -nameOfDownloadSet-&quot;. This will cre
 subdirectory rsyslog-version in the current working directory. CD into that. </p>
 <p>Depending on your system configuration, you also need to install some build 
 tools, most importantly make, the gcc compiler and the MySQL development system 
-(if you intend to use MySQL). On many systems, these things should already be 
+(if you intend to use MySQL - the package is often named &quot;mysql-dev&quot;). On many systems, these things should already be 
 present. If you don't know exactly, simply skip this step for now and see if 
 nice error messages pop up during the compile process. If they do, you can still 
 install the missing build environment tools. So this is nothing that you need to 
@@ -70,7 +70,7 @@ not need it. If you need MySQL, you need to activate it. It's straightforward:</
 <p>That is easy. Just type &quot;make&quot; and let the compiler work. On any recent 
 system, that should be a very quick task, on many systems just a matter of a vew 
 seconds. If an error message comes up, most probably a part of your build 
-environment is not installed. Check with step 1 in those cases.</p>
+environment is not installed. Check with step 1 in those cases. </p>
 <h3>Step 5 - Install</h3>
 <p>Again, that is quite easy. All it takes is a &quot;make install&quot;. That will copy 
 the rsyslogd and the man pages to the relavant directories.</p>

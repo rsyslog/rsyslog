@@ -138,7 +138,19 @@ it is more appropriate to stop writing to a single file. Meanwhile, rsyslogd has
 been fixed to support files larger 2gb, but obviously only on file systems and 
 operating system versions that do so. So it can still make sense to enforce a 
 2gb file size limit.</p>
-<h2>SELECTORS</h2>
+<h2>Filter Conditions</h2>
+<p>Rsyslog offers two different types &quot;filter conditions&quot;:</p>
+<ul>
+	<li>&quot;traditional&quot; severity and facility based selectors</li>
+	<li>property-based filters</li>
+</ul>
+<h3>Selectors</h3>
+<p><b>Selectors are the traditional way of filtering syslog messages.</b> They 
+have been kept in rsyslog with their orginal syntax, because it is well-known, 
+highly effective and also needed for compatibility with stock syslogd 
+configuration files. If you just need to filter based on priority and facility, 
+you should do this with selector lines. They are <b>not</b> second-class 
+citicens in rsyslog and offer the best performance for this job.</p>
 <p>The selector field itself again consists of two parts, a facility and a 
 priority, separated by a period (``.''). Both parts are case insenstive and can 
 also be specified as decimal numbers, but don't do that, you have been warned. 
@@ -168,13 +180,61 @@ taken, a priority part would be skipped.</p>
 (``;'') separator. Remember that each selector in the selector field is capable 
 to overwrite the preceding ones. Using this behavior you can exclude some 
 priorities from the pattern.</p>
-<p>Rsyslogd(8) has a syntax extension to the original BSD source, that makes its 
+<p>Rsyslogd has a syntax extension to the original BSD source, that makes its 
 use more intuitively. You may precede every priority with an equation sign 
 (``='') to specify only this single priority and not any of the above. You may 
 also (both is valid, too) precede the priority with an exclamation mark (``!'') 
 to ignore all that priorities, either exact this one or this and any higher 
 priority. If you use both extensions than the exclamation mark must occur before 
 the equation sign, just use it intuitively.</p>
+<h3>Property-Based Filters</h3>
+<p>Property-based filters are unique to rsyslogd. They allow to filter on any 
+property, like HOSTNAME, syslogtag and msg. A list of all currently-supported 
+properties can be found in the <a href="property_replacer.html">property 
+replacer documentation</a> (but keep in mind that only the properties, not the 
+replacer is supported). With this filter, each properties can be checked against 
+a specified value, using a specified compare operation. Currently, there is only 
+a single compare operation (contains) available, but additional operations will be added in the 
+future.</p>
+<p>A property-based filter must start with a colon in column 0. This tells 
+rsyslogd that it is the new filter type. The colon must be followed by the 
+property name, a comma, the name of the compare operation to carry out, another 
+comma and then the value to compare against. This value must be quoted. There 
+can be spaces and tabs between the commas. Property names and compare operations 
+are case-sensitive, so &quot;msg&quot; works, while &quot;MSG&quot; is an invalid property name. In 
+brief, the syntax is as follows:</p>
+<p><code><b>:property, compare-operation, &quot;value&quot;</b></code></p>
+<p>The following <b>compare-operations</b> are currently supported:</p>
+<table border="1" width="100%" id="table1">
+	<tr>
+		<td>contains</td>
+		<td>Checks if the string provided in value is contained in the property. 
+		There must be an exact match, wildcards are not supported.</td>
+	</tr>
+	<tr>
+		<td>regex</td>
+		<td><b>NOT YET IMPLEMENTED</b> - value holds an regular expression</td>
+	</tr>
+</table>
+<p><b>Value</b> is a quoted string. It supports some escape sequences:</p>
+<p>\&quot; - the quote character (e.g. &quot;String with \&quot;Quotes\&quot;&quot;)<br>
+\\ - the backslash character (e.g. &quot;C:\\tmp&quot;)</p>
+<p>Escape sequences always start with a backslash. Additional escape sequences 
+might be added in the future. Backslash characters <b>must</b> be escaped. Any 
+other sequence then those outlined above is invalid and may lead to 
+unpredictable results.</p>
+<p>Probably, &quot;msg&quot; is the most prominent use case of property based filters. It 
+is the actual message text. If you would like to filter based on some message 
+content (e.g. the presence of a specific code), this can be done easily by:</p>
+<p><code><b>:msg, contains, &quot;ID-4711&quot;</b></code></p>
+<p>This filter will match when the message contains the string &quot;ID-4711&quot;. Please 
+note that the comparison is case-sensitive, so it would not match if &quot;id-4711&quot; 
+would be contained in the message.</p>
+<p>Boolean operations inside property based filters (like 'message contains 
+&quot;ID17&quot; or message contains &quot;ID18&quot;') are currently not supported. Please note 
+that it is possible to query facility and severity via property-based filters, 
+but it is far more advisable to use classic selectors (see above) for those 
+cases.</p>
 <h2>ACTIONS</h2>
 <p>The action field of a rule describes what to do with the message. In general, 
 message content is written to a kind of &quot;logfile&quot;. But also other actions might 
@@ -442,6 +502,10 @@ This rule writes all message to the database &quot;dbname&quot; hosted on &quot;
 login is done with user &quot;dbuser&quot; and password &quot;dbpassword&quot;. The actual table 
 that is updated is specified within the template (which contains the insert 
 statement). The template is called &quot;dbtemplate&quot; in this case.</p>
+<p>:msg,contains,&quot;error&quot; @errorServer</p>
+<p>This rule forwards all messages that contain the word &quot;error&quot; in the msg part 
+to the server &quot;errorServer&quot;. Forwarding is via UDP. Please note the colon in 
+fron</p>
 <h2>CONFIGURATION FILE SYNTAX DIFFERENCES</h2>
 <p>Rsyslogd uses a slightly different syntax for its configuration file than the 
 original BSD sources. Originally all messages of a specific priority and above 
