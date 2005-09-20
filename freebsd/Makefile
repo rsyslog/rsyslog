@@ -23,10 +23,13 @@ FEATURE_LARGEFILE=1
 
 # Enable database support (off by default, must be turned
 # on when support for MySQL is desired).
-FEATURE_DB=0
+FEATURE_DB=1
 
 # Enable regular expressions
 FEATURE_REGEXP=1
+
+# Enable debug mode (much slower code)
+FEATURE_DEBUG=0
 
 #############################################################
 #                  END OF USER SETTINGS                     #
@@ -46,6 +49,14 @@ MANDIR = /usr/share/man
 
 .if $(FEATURE_DB) == 1
   WITHDB=-DWITH_DB
+.endif
+
+.if $(FEATURE_REGEXP) == 1
+  F_REGEXP=-DFEATURE_REGEXP
+.endif
+
+.if $(FEATURE_DEBUG) == 0
+  DBG=-DNDEBUG
 .endif
 
 # Include MySQL client lib if DB is selected
