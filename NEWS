@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.10.0 (RGer), 2005-09-??
+Version 1.10.0 (RGer), 2005-09-20
   REMINDER: 1.10 is the first unstable version if the 1.x series!
 - added the capability to filter on any property in selector lines
   (not just facility and priority)
