@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 1.10.1 (RGer), 2005-09-2?
+- added the ability to execute a shell script as an action.
+  Thanks to Bjoern Kalkbrenner for providing the code!
+---------------------------------------------------------------------------
 Version 1.10.0 (RGer), 2005-09-20
   REMINDER: 1.10 is the first unstable version if the 1.x series!
 - added the capability to filter on any property in selector lines

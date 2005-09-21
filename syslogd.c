@@ -573,10 +573,12 @@ int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
 #define F_PIPE		9		/* named pipe */
 #define F_MYSQL		10		/* MySQL database */
 #define F_DISCARD	11		/* discard event (do not process any further selector lines) */
+#define F_SHELL		12		/* execute a shell */
 char	*TypeNames[] = {
 	"UNUSED",	"FILE",		"TTY",		"CONSOLE",
 	"FORW",		"USERS",	"WALL",		"FORW(SUSPENDED)",
-	"FORW(UNKNOWN)", "PIPE", 	"MYSQL",	"DISCARD"
+	"FORW(UNKNOWN)", "PIPE", 	"MYSQL",	"DISCARD",
+	"SHELL"
 };
 
 struct	filed *Files = NULL;
@@ -3959,11 +3961,12 @@ again:
  * This whole function is probably about to change once we have the
  * message abstraction.
  */
-void fprintlog(f, flags)
-	register struct filed *f;
-	int flags;
+void fprintlog(register struct filed *f, int flags)
 {
 	char *msg;
+	char *psz; /* for shell support */
+	int esize; /* for shell support */
+	char *exec; /* for shell support */
 #ifdef SYSLOG_INET
 	register int l;
 	time_t fwd_suspend;
@@ -4129,6 +4132,25 @@ void fprintlog(f, flags)
 		writeMySQL(f);
 		break;
 #endif
+
+	case F_SHELL: /* shell support by bkalkbrenner 2005-09-20 */
+		f->f_time = now;
+		iovCreate(f);
+		psz = iovAsString(f);
+		l = f->f_iLenpsziov;
+		if (l > MAXLINE)
+			l = MAXLINE;
+		esize = strlen(f->f_un.f_fname) + strlen(psz) + 4;
+		exec = (char*) calloc(1, esize * sizeof(char));
+		strcpy(exec,f->f_un.f_fname);
+		strcat(exec," \"");
+		strcat(exec,psz);
+		strcat(exec,"\"");
+		dprintf("Executing \"%s\"\n",exec);
+		system(exec);	/* rgerhards: TODO: need to change this for root jail support! */
+		free(exec);
+		break;
+
 	} /* switch */
 	if (f->f_type != F_FORW_UNKN)
 		f->f_prevcount = 0;
@@ -4887,6 +4909,10 @@ void init()
 					printf("%s", f->f_un.f_fname);
 					if (f->f_file == -1)
 						printf(" (unused)");
+					break;
+
+				case F_SHELL:
+					printf("%s", f->f_un.f_fname);
 					break;
 
 				case F_FORW:
@@ -5681,29 +5707,35 @@ rsRetVal cfline(char *line, register struct filed *f)
 		
 		/* If db used, the template have to use the SQL option.
 		   This is for your own protection (prevent sql injection). */
-		if (f->f_pTpl->optFormatForSQL != 1)
-		{
+		if (f->f_pTpl->optFormatForSQL != 1) {
 			f->f_type = F_UNUSED;
 			logerror("DB logging disabled. You have to use"
 				" the SQL option in your template!\n");
 			break;
-
 		}
 		
 		/* If we dedect invalid properties, we disable logging, 
 		 * because right properties are vital at this place.  
-		 * Retrials make no sens. 
+		 * Retries make no sense. 
 		 */
 		if (iMySQLPropErr) { 
 			f->f_type = F_UNUSED;
 			dprintf("Trouble with MySQL conncetion properties.\n"
 				"MySQL logging disabled.\n");
-		}
-		else {
+		} else {
 			initMySQL(f);
 		}
 #endif	/* #ifdef WITH_DB */
 		break;
+
+	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
+		dprintf("exec\n");
+		++p;
+		cflineParseFileName(f, p);
+		if (f->f_type == F_FILE) {
+			f->f_type = F_SHELL;
+		}
+		break; 
 
 	default:
 		dprintf ("users: %s\n", p);	/* ASP */

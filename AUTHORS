@@ -6,3 +6,5 @@ Andres Riancho (andres-dot-riancho-at-gmail-dot-com)
  (alias APR in code files)
  - supplied regexp functionality for the property replacer - a great feature.
    thanks!
+Bjoern Kalkbrenner
+ - provided code for the "execute shell script" action
