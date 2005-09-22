@@ -3967,6 +3967,8 @@ void fprintlog(register struct filed *f, int flags)
 	char *psz; /* for shell support */
 	int esize; /* for shell support */
 	char *exec; /* for shell support */
+	rsCStrObj *pCSCmdLine; /* for shell support: command to execute */
+	rsRetVal iRet;
 #ifdef SYSLOG_INET
 	register int l;
 	time_t fwd_suspend;
@@ -4141,17 +4143,49 @@ void fprintlog(register struct filed *f, int flags)
 		if (l > MAXLINE)
 			l = MAXLINE;
 		esize = strlen(f->f_un.f_fname) + strlen(psz) + 4;
-		exec = (char*) calloc(1, esize * sizeof(char));
-		strcpy(exec,f->f_un.f_fname);
-		strcat(exec," \"");
-		strcat(exec,psz);
-		strcat(exec,"\"");
+		if((pCSCmdLine = rsCStrConstruct()) == NULL) {
+			/* nothing smart we can do - just keep going... */
+			dprintf("memory shortage - can not execute\n");
+			break;
+		}
+		if((iRet = rsCStrAppendStr(pCSCmdLine, f->f_un.f_fname)) != RS_RET_OK) {
+			dprintf("error %d during build command line(1)\n", iRet);
+			break;
+		}
+		if((iRet = rsCStrAppendStr(pCSCmdLine, " \"")) != RS_RET_OK) {
+			dprintf("error %d during build command line(2)\n", iRet);
+			break;
+		}
+		/* now copy the message as parameter but escape dangerous things.
+		 * we probably have not taken care of everything an attacker might
+		 * think of, so execute shell *is* a dangerous command.
+		 * rgerhards 2005-09-22
+		 */
+		while(*psz) {
+			if(*psz == '"' || *psz == '\\') 
+				if((iRet = rsCStrAppendChar(pCSCmdLine, '\\')) != RS_RET_OK) {
+					dprintf("error %d during build command line(3)\n", iRet);
+					break;
+				}
+			if((iRet = rsCStrAppendChar(pCSCmdLine, *psz)) != RS_RET_OK) {
+				dprintf("error %d during build command line(4)\n", iRet);
+				break;
+			}
+			++psz;
+		}
+		if((iRet = rsCStrAppendChar(pCSCmdLine, '"')) != RS_RET_OK) {
+			dprintf("error %d during build command line(5)\n", iRet);
+			break;
+		}
+		rsCStrFinish(pCSCmdLine);
+		exec = rsCStrConvSzStrAndDestruct(pCSCmdLine);
 		dprintf("Executing \"%s\"\n",exec);
 		system(exec);	/* rgerhards: TODO: need to change this for root jail support! */
 		free(exec);
 		break;
 
 	} /* switch */
+
 	if (f->f_type != F_FORW_UNKN)
 		f->f_prevcount = 0;
 	return;		

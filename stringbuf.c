@@ -92,14 +92,33 @@ void rsCStrDestruct(rsCStrObj *pThis)
 rsRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz)
 {
 	rsRetVal iRet;
+	int iOldAllocInc;
+	int iStrLen;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(psz != NULL);
+
+	/* we first check if the to-be-added string is larger than the
+	 * alloc increment. If so, we temporarily increase the alloc
+	 * increment to the length of the string. This will ensure that
+	 * one string copy will be needed at most. As this is a very
+	 * costly operation, it outweights the cost of the strlen() and
+	 * related stuff - at least I think so.
+	 * rgerhards 2005-09-22
+	 */
+	/* We save the current alloc increment in any case, so we can just
+	 * overwrite it below, this is faster than any if-construct.
+	 */
+	iOldAllocInc = pThis->iAllocIncrement;
+	if((iStrLen = strlen(psz)) > pThis->iAllocIncrement) {
+		pThis->iAllocIncrement = iStrLen;
+	}
 
 	while(*psz)
 		if((iRet = rsCStrAppendChar(pThis, *psz++)) != RS_RET_OK)
 			return iRet;
 
+	pThis->iAllocIncrement = iOldAllocInc; /* restore */
 	return RS_RET_OK;
 }
 

@@ -2,6 +2,9 @@
 Version 1.10.1 (RGer), 2005-09-2?
 - added the ability to execute a shell script as an action.
   Thanks to Bjoern Kalkbrenner for providing the code!
+- fixed a bug in the MySQL code; due to the bug the automatic one-time
+  retry after an error did not happen - this lead to error message in
+  cases where none should be seen (e.g. after a MySQL restart)
 ---------------------------------------------------------------------------
 Version 1.10.0 (RGer), 2005-09-20
   REMINDER: 1.10 is the first unstable version if the 1.x series!
