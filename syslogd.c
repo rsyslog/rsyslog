@@ -5859,7 +5859,6 @@ void initMySQL(register struct filed *f)
 	
 	mysql_init(&f->f_hmysql);
 	do {
-		iCounter++;
 		/* Connect to database */
 		if (!mysql_real_connect(&f->f_hmysql, f->f_dbsrv, f->f_dbuid, f->f_dbpwd, f->f_dbname, 0, NULL, 0)) {
 			/* if also the second attempt failed
@@ -5872,6 +5871,7 @@ void initMySQL(register struct filed *f)
 			f->f_timeResumeOnError = 0; /* We have a working db connection */
 			dprintf("connected successfully to db\n");
 		}
+		iCounter++;
 	} while (mysql_errno(&f->f_hmysql) && iCounter<2);
 }
 
@@ -5927,7 +5927,6 @@ void writeMySQL(register struct filed *f)
 	 * the "delay" error hanlding.
 	 */
 	do {
-		iCounter++;
 		/* query */
 		if(mysql_query(&f->f_hmysql, psz)) {
 
@@ -5939,6 +5938,7 @@ void writeMySQL(register struct filed *f)
 		else {
 			/* dprintf("db insert sucessfully\n"); */
 		}
+		iCounter++;
 	} while (mysql_errno(&f->f_hmysql) && iCounter<2);
 }
 
