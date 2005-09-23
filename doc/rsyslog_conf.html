@@ -55,10 +55,23 @@ options - the later ones are processed by the property replacer and apply to a
 SINGLE property, only (and not the whole template).<br>
 <br>
 Template options are case-insensitive. Currently defined are: </p>
-<p><b>sql</b> - format the string suitable for a SQL statement. This will 
-replace single quotes (&quot;'&quot;) by two single quotes (&quot;''&quot;) inside each field. This 
-option MUST be specified when a template is used for writing to a database, 
-otherwise SQL injection might occur.<br>
+<p><b>sql</b> - format the string suitable for a SQL statement in MySQL format. This will 
+replace single quotes (&quot;'&quot;) and the backslash character by their 
+backslash-escaped counterpart (&quot;\'&quot; and &quot;\\&quot;) inside each field. Please note 
+that in MySQL configuration, the <code class="literal">NO_BACKSLASH_ESCAPES</code> 
+mode must be turned off for this format to work (this is the default).</p>
+<p><b>stdsql</b> - format the string suitable for a SQL statement that is to be 
+sent to a standards-compliant sql server. This will 
+replace single quotes (&quot;'&quot;) by two single quotes (&quot;''&quot;) inside each field. 
+You must use stdsql together with MySQL if in MySQL configuration the
+<code class="literal">NO_BACKSLASH_ESCAPES</code> is turned on.</p>
+<p>Either the <b>sql</b> or <b>stdsql</b>&nbsp; 
+option <b>must</b> be specified when a template is used for writing to a database, 
+otherwise injection might occur. Please note that due to the unfortunate fact 
+that several vendors have violated the sql standard and introduced their own 
+escape methods, it is impossible to have a single option doing all the work.&nbsp; 
+So you yourself must make sure you are using the right format. <b>If you choose 
+the wrong one, you are still vulnerable to sql injection.</b><br>
 <br>
 Please note that the database writer *checks* that the sql option is present in 
 the template. If it is not present, the write database action is disabled. This 
@@ -67,7 +80,13 @@ to SQL injection. The sql option can also be useful with files - especially if
 you want to import them into a database on another machine for performance 
 reasons. However, do NOT use it if you do not have a real need for it - among 
 others, it takes some toll on the processing time. Not much, but on a really 
-busy system you might notice it ;)<br>
+busy system you might notice it ;)</p>
+<p>The default template for the write to database action has the sql option set. 
+As we currently support only MySQL and the sql option matches the default MySQL 
+configuration, this is a good choice. However, if you have turned on
+<code class="literal">NO_BACKSLASH_ESCAPES</code> in your MySQL config, you need 
+to supply a template with the stdsql option. Otherwise you will become 
+vulnerable to SQL injection. <br>
 <br>
 To escape:<br>
 % = \%<br>
