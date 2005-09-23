@@ -468,7 +468,7 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 			++p;
 		
 		if(*p != ',')
-			break; /*return(pTpl);*/
+			break;
 		++p; /* eat ',' */
 
 		while(isspace(*p))/* skip whitespace */
@@ -489,7 +489,9 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 		/* as of now, the no form is nonsense... but I do include
 		 * it anyhow... ;) rgerhards 2004-11-22
 		 */
-		if(!strcmp(optBuf, "sql")) {
+		if(!strcmp(optBuf, "stdsql")) {
+			pTpl->optFormatForSQL = 2;
+		} else if(!strcmp(optBuf, "sql")) {
 			pTpl->optFormatForSQL = 1;
 		} else if(!strcmp(optBuf, "nosql")) {
 			pTpl->optFormatForSQL = 0;
@@ -580,8 +582,10 @@ void tplPrintList(void)
 	pTpl = tplRoot;
 	while(pTpl != NULL) {
 		dprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
-		if(pTpl->optFormatForSQL)
-			dprintf("[SQL-Format] ");
+		if(pTpl->optFormatForSQL == 1)
+			dprintf("[SQL-Format (MySQL)] ");
+		else if(pTpl->optFormatForSQL == 2)
+			dprintf("[SQL-Format (standard SQL)] ");
 		dprintf("\n");
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {

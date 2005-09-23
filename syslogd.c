@@ -3603,12 +3603,17 @@ void logmsg(int pri, struct msg *pMsg, int flags)
  * signatures eventually present - but this is the
  * best thing we can do now (or does anybody 
  * have a better idea?). rgerhards 2004-11-23
+ * added support for "escapeMode" (so doSQLEscape for details).
+ * if mode = 1, then backslashes are changed to slashes.
+ * rgerhards 2005-09-22
  */
-void doSQLEmergencyEscape(register char *p)
+void doSQLEmergencyEscape(register char *p, int escapeMode)
 {
 	while(*p) {
 		if(*p == '\'')
 			*p = '"';
+		else if((escapeMode == 1) && (*p == '\\'))
+			*p = '/';
 		++p;
 	}
 }
@@ -3620,8 +3625,22 @@ void doSQLEmergencyEscape(register char *p)
  * freed. The length is updated. Parameter pbMustBeFreed
  * is set to 1 if a new buffer is allocated. Otherwise,
  * it is left untouched.
+ * --
+ * We just discovered a security issue. MySQL is so
+ * "smart" to not only support the standard SQL mechanism
+ * for escaping quotes, but to also provide its own (using
+ * c-type syntax with backslashes). As such, it is actually
+ * possible to do sql injection via rsyslogd. The cure is now
+ * to escape backslashes, too. As we have found on the web, some
+ * other databases seem to be similar "smart" (why do we have standards
+ * at all if they are violated without any need???). Even better, MySQL's
+ * smartness depends on config settings. So we add a new option to this
+ * function that allows the caller to select if they want to standard or
+ * "smart" encoding ;)
+ * new parameter escapeMode is 0 - standard sql, 1 - "smart" engines
+ * 2005-09-22 rgerhards
  */
-void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
+void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode)
 {
 	char *p;
 	int iLen;
@@ -3634,8 +3653,12 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 	assert(pbMustBeFreed != NULL);
 
 	/* first check if we need to do anything at all... */
-	for(p = *pp ; *p && *p != '\'' ; ++p)
-		;
+	if(escapeMode == 0)
+		for(p = *pp ; *p && *p != '\'' ; ++p)
+			;
+	else
+		for(p = *pp ; *p && *p != '\'' && *p != '\\' ; ++p)
+			;
 	/* when we get out of the loop, we are either at the
 	 * string terminator or the first \'. */
 	if(*p == '\0')
@@ -3645,35 +3668,46 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed)
 	iLen = *pLen;
 	if((pStrB = rsCStrConstruct()) == NULL) {
 		/* oops - no mem ... Do emergency... */
-		doSQLEmergencyEscape(p);
+		doSQLEmergencyEscape(p, escapeMode);
 		return;
 	}
 	
 	while(*p) {
 		if(*p == '\'') {
-			if(rsCStrAppendChar(pStrB, '\'') != RS_RET_OK) {
-				doSQLEmergencyEscape(*pp);
+			if(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\') != RS_RET_OK) {
+				doSQLEmergencyEscape(*pp, escapeMode);
 				rsCStrFinish(pStrB);
 				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))
 					!= NULL)
 					free(pszGenerated);
-					return;
+				return;
+				}
 			iLen++;	/* reflect the extra character */
-			}
+		} else if((escapeMode == 1) && (*p == '\\')) {
+			if(rsCStrAppendChar(pStrB, '\\') != RS_RET_OK) {
+				doSQLEmergencyEscape(*pp, escapeMode);
+				rsCStrFinish(pStrB);
+				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))
+					!= NULL)
+					free(pszGenerated);
+				return;
+				}
+			iLen++;	/* reflect the extra character */
 		}
 		if(rsCStrAppendChar(pStrB, *p) != RS_RET_OK) {
-			doSQLEmergencyEscape(*pp);
+			doSQLEmergencyEscape(*pp, escapeMode);
 			rsCStrFinish(pStrB);
 			if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))
-				!= NULL)
+				!= NULL) {
 				free(pszGenerated);
 				return;
+			}
 		}
 		++p;
 	}
 	rsCStrFinish(pStrB);
 	if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) == NULL) {
-		doSQLEmergencyEscape(*pp);
+		doSQLEmergencyEscape(*pp, escapeMode);
 		return;
 	}
 
@@ -3796,10 +3830,16 @@ void  iovCreate(struct filed *f)
 			/* TODO: performance optimize - can we obtain the length? */
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
+			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
+			 * but they are handled in this way because of legacy (don't break any
+			 * existing thing).
 			 */
-			if(f->f_pTpl->optFormatForSQL)
+			if(f->f_pTpl->optFormatForSQL == 1)
 				doSQLEscape((char**)&v->iov_base, &v->iov_len,
-					    f->f_bMustBeFreed + iIOVused);
+					    f->f_bMustBeFreed + iIOVused, 1);
+			else if(f->f_pTpl->optFormatForSQL == 2)
+				doSQLEscape((char**)&v->iov_base, &v->iov_len,
+					    f->f_bMustBeFreed + iIOVused, 0);
 			++v;
 			++iIOVused;
 		}
@@ -5741,10 +5781,10 @@ rsRetVal cfline(char *line, register struct filed *f)
 		
 		/* If db used, the template have to use the SQL option.
 		   This is for your own protection (prevent sql injection). */
-		if (f->f_pTpl->optFormatForSQL != 1) {
+		if (f->f_pTpl->optFormatForSQL == 0) {
 			f->f_type = F_UNUSED;
 			logerror("DB logging disabled. You have to use"
-				" the SQL option in your template!\n");
+				" the SQL or stdSQL option in your template!\n");
 			break;
 		}
 		
