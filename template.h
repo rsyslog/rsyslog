@@ -10,11 +10,14 @@ struct template {
 	int tpenElements; /* number of elements in templateEntry list */
 	struct templateEntry *pEntryRoot;
 	struct templateEntry *pEntryLast;
+ 	char optFormatForSQL;	/* in text fields,  0 - do not escape,
+ 	                         * 1 - escape quotes by double quotes,
+ 				 * 2 - escape "the MySQL way" 
+ 				 */
 	/* following are options. All are 0/1 defined (either on or off).
 	 * we use chars because they are faster than bit fields and smaller
 	 * than short...
 	 */
-	char optFormatForSQL;	/* in text fields, escape quotes by double quotes  */
 };
 
 enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
