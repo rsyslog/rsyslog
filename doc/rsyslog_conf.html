@@ -3,7 +3,7 @@
 <title>rsyslog.conf file</title>
 </head>
 <body>
-<h1>rsyslog.conf configuration file</h1>
+<h1>sqrsyslog.conf configuration file</h1>
 <p><b>This document is currently being enhanced. Please pardon its current 
 appearance.</b></p>
 <p><b>Rsyslogd is configured via the rsyslog.conf file</b>, typically found in 
@@ -55,10 +55,23 @@ options - the later ones are processed by the property replacer and apply to a
 SINGLE property, only (and not the whole template).<br>
 <br>
 Template options are case-insensitive. Currently defined are: </p>
-<p><b>sql</b> - format the string suitable for a SQL statement. This will 
-replace single quotes (&quot;'&quot;) by two single quotes (&quot;''&quot;) inside each field. This 
-option MUST be specified when a template is used for writing to a database, 
-otherwise SQL injection might occur.<br>
+<p><b>sql</b> - format the string suitable for a SQL statement in MySQL format. This will 
+replace single quotes (&quot;'&quot;) and the backslash character by their 
+backslash-escaped counterpart (&quot;\'&quot; and &quot;\\&quot;) inside each field. Please note 
+that in MySQL configuration, the <code class="literal">NO_BACKSLASH_ESCAPES</code> 
+mode must be turned off for this format to work (this is the default).</p>
+<p><b>stdsql</b> - format the string suitable for a SQL statement that is to be 
+sent to a standards-compliant sql server. This will 
+replace single quotes (&quot;'&quot;) by two single quotes (&quot;''&quot;) inside each field. 
+You must use stdsql together with MySQL if in MySQL configuration the
+<code class="literal">NO_BACKSLASH_ESCAPES</code> is turned on.</p>
+<p>Either the <b>sql</b> or <b>stdsql</b>&nbsp; 
+option <b>must</b> be specified when a template is used for writing to a database, 
+otherwise injection might occur. Please note that due to the unfortunate fact 
+that several vendors have violated the sql standard and introduced their own 
+escape methods, it is impossible to have a single option doing all the work.&nbsp; 
+So you yourself must make sure you are using the right format. <b>If you choose 
+the wrong one, you are still vulnerable to sql injection.</b><br>
 <br>
 Please note that the database writer *checks* that the sql option is present in 
 the template. If it is not present, the write database action is disabled. This 
@@ -67,7 +80,13 @@ to SQL injection. The sql option can also be useful with files - especially if
 you want to import them into a database on another machine for performance 
 reasons. However, do NOT use it if you do not have a real need for it - among 
 others, it takes some toll on the processing time. Not much, but on a really 
-busy system you might notice it ;)<br>
+busy system you might notice it ;)</p>
+<p>The default template for the write to database action has the sql option set. 
+As we currently support only MySQL and the sql option matches the default MySQL 
+configuration, this is a good choice. However, if you have turned on
+<code class="literal">NO_BACKSLASH_ESCAPES</code> in your MySQL config, you need 
+to supply a template with the stdsql option. Otherwise you will become 
+vulnerable to SQL injection. <br>
 <br>
 To escape:<br>
 % = \%<br>
@@ -315,6 +334,33 @@ the connect information. This is as follows:<br>
 Output channel actions must start with a $-sign, e.g. if you would like to bind 
 your output channel definition &quot;mychannel&quot; to the action, use &quot;$mychannel&quot;. 
 Output channels support template definitions like all all other actions.</p>
+<h3>Shell Execute</h3>
+<p>This executes a program in a subshell. The programm is passed the 
+template-generated message as the only command line parameter. Rsyslog waits 
+until the program terminates and only then continues to run.</p>
+<p>^programm-to-execute;template</p>
+<p>The program-to-execute can be any valid executable.</p>
+<p><b>WARNING:</b> The Shell Execute action was added to serve an urgent need. 
+While it is considered reasonable save when used with some thinking, its 
+implications must be considered. The current implementation uses a system() call 
+to execute the command. This is not the best way to do it (and will hopefully 
+changed in further releases). Also, proper escaping of special characters is 
+done to prevent command injection. However, attackers always find smart ways to 
+circumvent escaping, so we can not say if the escaping applied will really safe 
+you from all hassles. Lastely, rsyslog will wait until the shell command 
+terminates. Thus, a program error in it (e.g. an infinite loop) can actually 
+disable rsyslog. Even without that, during the programs run-time no messages are 
+processed by rsyslog. As the IP stacks buffers are quickly overflowed, this 
+bears an increased risk of message loss. You must be aware of these implications. 
+Even though they are severe, there are several cases where the &quot;shell execute&quot; 
+action is very useful. This is the reason why we have included it in its current 
+form. To mitigate its risks, always a) test your program thouroughly, b) make 
+sure its runtime is as short as possible (if it requires a longer run-time, you 
+might want to spawn your own sub-shell asynchronously), c) apply proper 
+firewalling so that only known senders can send syslog messages to rsyslog. 
+Point c) is especially important: if rsyslog is accepting message from any hosts, 
+chances are much higher that an attacker might try to exploit the &quot;shell execute&quot; 
+action.</p>
 <h2>TEMPLATE NAME</h2>
 <p>Every ACTION can be followed by a template name. If so, that template is used 
 for message formatting. If no name is given, a hardcoded default template is 
