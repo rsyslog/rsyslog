@@ -3677,8 +3677,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int esc
 			if(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\') != RS_RET_OK) {
 				doSQLEmergencyEscape(*pp, escapeMode);
 				rsCStrFinish(pStrB);
-				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))
-					!= NULL)
+				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) != NULL)
 					free(pszGenerated);
 				return;
 				}
@@ -3687,8 +3686,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int esc
 			if(rsCStrAppendChar(pStrB, '\\') != RS_RET_OK) {
 				doSQLEmergencyEscape(*pp, escapeMode);
 				rsCStrFinish(pStrB);
-				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))
-					!= NULL)
+				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) != NULL)
 					free(pszGenerated);
 				return;
 				}
@@ -3697,11 +3695,9 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int esc
 		if(rsCStrAppendChar(pStrB, *p) != RS_RET_OK) {
 			doSQLEmergencyEscape(*pp, escapeMode);
 			rsCStrFinish(pStrB);
-			if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB))
-				!= NULL) {
+			if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) != NULL) 
 				free(pszGenerated);
-				return;
-			}
+			return;
 		}
 		++p;
 	}
