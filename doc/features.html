@@ -20,19 +20,20 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 	log files larger than 2gb<li>support for file size limitation and automatic 
 	rollover command execution<li>support for running multiple rsyslogd 
 	instances on a single machine<li>support for <a href="rsyslog_stunnel.html">
-	ssl-protected syslog</a> (via stunnel)</ul>
+	ssl-protected syslog</a> (via stunnel)<li>ability to filter on any part of 
+	the message, not just facility and severity<li>support for discarding 
+	messages based on filters<li>ability to execute shell scripts on received 
+	messages<li>control of whether the local hostname or the hostname of the
+ origin of the data is shown as the hostname in the output<li>ability to 
+	preserve the orginal hostname in NAT environments and relay chains </ul>
 <h2>Upcoming Features</h2>
 <ul>
  <li>support for
 	<a href="http://www.syslog.cc/ietf/drafts/draft-ietf-syslog-protocol-14.txt">
 	syslog-protocol-14</a> compliant messages 
-	<li>support for native SSL enryption of plain tcp syslog sessions<li>control of whether the local hostname or the hostname of the
- origin of the data is shown as the hostname in the output - prepared
- for, but not yet implemented (should be easy)
- <li>support for syslog-protocol - planned
- <li>RFC 3195 support - planned (but late)
- <li>pcre filtering - maybe (depending on feedback)
- <li>multi-threaded redesign - maybe (depending on feedback; also
+	(pending, as IETF will change proposed format)<li>support for native SSL enryption of plain tcp syslog sessions<li>RFC 3195 support - planned (but late)
+ <li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
+	partly added<li>ability to limit the allowed network senders<li>multi-threaded redesign - maybe (depending on feedback; also
  opens Pandorra's cross-platform development box ;))
 	</ul>
 <p>To see when each feature was added, see the
