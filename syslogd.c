@@ -361,7 +361,8 @@ const char *directive_name_list[] = {
 	"outchannel"
 };
 /* ... and their definitions: */
-enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1};
+enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1,
+                  DIR_ALLOWEDUDPSENDER = 2, DIR_ALLOWEDTCPSENDER = 3};
 
 /* rgerhards 2004-11-11: the following structure represents
  * a time as it is used in syslog.
@@ -433,18 +434,15 @@ struct msg {
 	char	*pszRcvFrom;	/* System message was received from */
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
-	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 chracters) */
-	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 chracters at most) */
-	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 chracters) */
+	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
+	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
+	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
-	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 chracters) */
-	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 chracters at most) */
-	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 chracters) */
+	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 charcters) */
+	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
+	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
 };
 
-#ifdef WITH_DB
-	
-#endif
 
 /*
  * This structure represents the files that will have log
@@ -667,6 +665,23 @@ int     Initialized = 0;        /* set when we have initialized ourselves
 
 extern	int errno;
 
+/* support for defining allowed TCP and UDP senders. We use the same
+ * structure to implement this (a linked list), but we define two different
+ * list roots, one for UDP and one for TCP.
+ * rgerhards, 2005-09-26
+ */
+struct AllowedSenders {
+	unsigned long allowedSender;    /* ip addres allowed */
+	unsigned char bitsToShift;  /* defines how many bits should be discarded (eqiv to mask) */
+	struct AllowedSenders *pNext;
+};
+
+int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
+
+static struct AllowedSenders *pAllowedSenders_UDP = NULL; /* the roots of the allowed sender */
+static struct AllowedSenders *pAllowedSenders_TCP = NULL; /* lists. If NULL, all senders are ok! */
+
+
 /* hardcoded standard templates (used for defaults) */
 static char template_TraditionalFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static char template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
@@ -718,6 +733,48 @@ void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
 #ifdef SYSLOG_UNIXAF
 static int create_udp_socket();
 #endif
+
+/* Code for handling allowed/disallowed senders
+ */
+
+/* check if a sender is allowed. The root of the the allowed sender
+ * list must be proveded by the caller. As such, this function can be
+ * used to check both UDP and TCP allowed sender lists.
+ * returns 1, if the sender is allowed, 0 otherwise.
+ * rgerhads, 2005-09-26
+ */
+int isAllowedUDPSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in *pFrom)
+{
+	struct AllowedSenders *pAllow;
+	unsigned long ulAddrInLocalByteOrder;
+
+	assert(pFrom != NULL);
+
+	printf("checking allowed sender %x\n", ntohl(pFrom->sin_addr.s_addr));
+
+	if(pAllowRoot == NULL)
+		return 1; /* checking disabled, everything is valid! */
+
+	if(pFrom->sin_family != AF_INET)
+		return 0; /* malformed, so by default no valid sender! */
+
+	ulAddrInLocalByteOrder = ntohl(pFrom->sin_addr.s_addr);
+
+	/* now we loop through the list of allowed senders. As soon as
+	 * we find a match, we return back (indicating allowed). We loop
+	 * until we are out of allowed senders. If so, we fall through the
+	 * loop and the function's terminal return statement will indicate
+	 * that the sender is disallowed.
+	 */
+	for(pAllow = pAllowRoot ; pAllow != NULL ; pAllow = pAllow->pNext) {
+		if(   (ulAddrInLocalByteOrder >> pAllow->bitsToShift)
+		   == pAllow->allowedSender)
+		   	return 1;
+	}
+	return 0;
+}
+
+
 
 /********************************************************************
  *                    ###  SYSLOG/TCP CODE ###
@@ -2424,6 +2481,9 @@ int main(argc, argv)
 #endif
 			printf("\nSee http://www.rsyslog.com for more information.\n");
 			exit(0);
+		case 'w':		/* disable disallowed host warnigs */
+			option_DisallowWarning = 0;
+			break;
 		case '?':
 		default:
 			usage();
@@ -2784,18 +2844,22 @@ int main(argc, argv)
 			dprintf("Message from UDP inetd socket: #%d, host: %s\n",
 				inetm, inet_ntoa(frominet.sin_addr));
 			if (i > 0) {
-				line[i] = line[i+1] = '\0';
 				from = (char *)cvthname(&frominet);
-				/*
-				 * Here we could check if the host is permitted
-				 * to send us syslog messages. We just have to
-				 * catch the result of cvthname, look for a dot
-				 * and if that doesn't exist, replace the first
-				 * '\0' with '.' and we have the fqdn in lowercase
-				 * letters so we could match them against whatever.
-				 *  -Joey
+				/* Here we check if a host is permitted to send us
+				 * syslog messages. If it isn't, we do not further
+				 * process the message but log a warning (if we are
+				 * configured to do this).
+				 * rgerhards, 2005-09-26
 				 */
-				printchopped(from, line, i + 2,  finet, SOURCE_INET);
+				if(isAllowedUDPSender(pAllowedSenders_UDP, &frominet)) {
+					line[i] = line[i+1] = '\0';
+					printchopped(from, line, i + 2,  finet, SOURCE_INET);
+				} else {
+					if(option_DisallowWarning) {
+						logerrorSz("message from disallowed sender %s discarded",
+							   from);
+					}
+				}
 			} else if (i < 0 && errno != EINTR) {
 				dprintf("INET socket error: %d = %s.\n", \
 					errno, strerror(errno));
@@ -2871,7 +2935,7 @@ int main(argc, argv)
 
 int usage()
 {
-	fprintf(stderr, "usage: rsyslogd [-dvh] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
+	fprintf(stderr, "usage: rsyslogd [-dhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
 		" [-s domainlist] [-r port] [-t port] [-f conffile]\n");
 	exit(1);
 }
@@ -4676,7 +4740,8 @@ void doNameLine(char **pp, enum eDirective eDir)
 
 	assert(pp != NULL);
 	assert(p != NULL);
-	assert((eDir == DIR_TEMPLATE) || (eDir == DIR_OUTCHANNEL));
+	assert(   (eDir == DIR_TEMPLATE) || (eDir == DIR_OUTCHANNEL)
+	       || (eDir == DIR_ALLOWEDUDPSENDER) || (eDir == DIR_ALLOWEDTCPSENDER));
 
 	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
 		char errMsg[128];
@@ -4695,10 +4760,20 @@ void doNameLine(char **pp, enum eDirective eDir)
 	 * respective subsystem. rgerhards 2004-11-17
 	 */
 	
-	if(eDir == DIR_TEMPLATE)
-		tplAddLine(szName, &p);
-	else
-		ochAddLine(szName, &p);
+	switch(eDir) {
+		case DIR_TEMPLATE: 
+			tplAddLine(szName, &p);
+			break;
+		case DIR_OUTCHANNEL: 
+			ochAddLine(szName, &p);
+			break;
+		case DIR_ALLOWEDUDPSENDER: 
+			// TODO: addUDPSender(szName, &p);
+			break;
+		case DIR_ALLOWEDTCPSENDER: 
+			// TODO: addTCPSender(szName, &p);
+			break;
+	}
 
 	*pp = p;
 	return;
@@ -4723,10 +4798,14 @@ void cfsysline(char *p)
 	}
 
 	/* check the command and carry out processing */
-	if(!strcmp(szCmd, "template")) { 
+	if(!strcasecmp(szCmd, "template")) { 
 		doNameLine(&p, DIR_TEMPLATE);
-	} else if(!strcmp(szCmd, "outchannel")) { 
+	} else if(!strcasecmp(szCmd, "outchannel")) { 
 		doNameLine(&p, DIR_OUTCHANNEL);
+	} else if(!strcasecmp(szCmd, "allowedudpsender")) { 
+		doNameLine(&p, DIR_ALLOWEDUDPSENDER);
+	} else if(!strcasecmp(szCmd, "allowedtcpsender")) { 
+		doNameLine(&p, DIR_ALLOWEDTCPSENDER);
 	} else { /* invalid command! */
 		char err[100];
 		snprintf(err, sizeof(err)/sizeof(char),
