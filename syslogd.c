@@ -670,16 +670,20 @@ extern	int errno;
  * list roots, one for UDP and one for TCP.
  * rgerhards, 2005-09-26
  */
+#ifdef SYSLOG_INET
 struct AllowedSenders {
-	unsigned long allowedSender;    /* ip addres allowed */
+	unsigned long allowedSender;/* ip address allowed */
 	unsigned char bitsToShift;  /* defines how many bits should be discarded (eqiv to mask) */
 	struct AllowedSenders *pNext;
 };
 
-int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
-
 static struct AllowedSenders *pAllowedSenders_UDP = NULL; /* the roots of the allowed sender */
 static struct AllowedSenders *pAllowedSenders_TCP = NULL; /* lists. If NULL, all senders are ok! */
+static struct AllowedSenders *pLastAllowedSenders_UDP = NULL; /* and now the pointers to the last */
+static struct AllowedSenders *pLastAllowedSenders_TCP = NULL; /* element in the respective list */
+#endif /* #ifdef SYSLOG_INET */
+
+int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 
 
 /* hardcoded standard templates (used for defaults) */
@@ -737,20 +741,60 @@ static int create_udp_socket();
 /* Code for handling allowed/disallowed senders
  */
 
-/* check if a sender is allowed. The root of the the allowed sender
+#ifdef SYSLOG_INET
+/* function to add an allowed sender to the allowed sender list. The
+ * root of the list is caller-provided, so it can be used for all
+ * supported lists. The caller must provide a pointer to the root,
+ * as it eventually needs to be updated. Also, a pointer to the
+ * pointer to the last element must be provided (to speed up adding
+ * list elements).
+ * returns 1 if sender could be added, 0 otherwise (this probably indicates
+ * big trouble with the memory allocator).
+ * rgerhards, 2005-09-26
+ */
+static int AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
+		     unsigned int iAllow, int iSignificantBits)
+{
+	struct AllowedSenders *pEntry;
+
+	assert(ppRoot != NULL);
+	assert(ppLast != NULL);
+
+	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders)))
+	   == NULL)
+	   	return 0; /* no options left :( */
+
+	/* populate entry */
+	pEntry->bitsToShift = 32 - iSignificantBits; /* IPv4! */
+	pEntry->allowedSender = iAllow >> pEntry->bitsToShift;
+	pEntry->pNext = NULL;
+
+	/* enqueue */
+	if(*ppRoot == NULL) {
+		*ppRoot = pEntry;
+	} else {
+		(*ppLast)->pNext = pEntry;
+	}
+	*ppLast = pEntry;
+
+	return 1;
+}
+#endif /* #ifdef SYSLOG_INET */
+
+
+#ifdef SYSLOG_INET
+/* check if a sender is allowed. The root of the the allowed sender.
  * list must be proveded by the caller. As such, this function can be
  * used to check both UDP and TCP allowed sender lists.
  * returns 1, if the sender is allowed, 0 otherwise.
  * rgerhads, 2005-09-26
  */
-int isAllowedUDPSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in *pFrom)
+static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in *pFrom)
 {
 	struct AllowedSenders *pAllow;
 	unsigned long ulAddrInLocalByteOrder;
 
 	assert(pFrom != NULL);
-
-	printf("checking allowed sender %x\n", ntohl(pFrom->sin_addr.s_addr));
 
 	if(pAllowRoot == NULL)
 		return 1; /* checking disabled, everything is valid! */
@@ -767,12 +811,18 @@ int isAllowedUDPSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in *pF
 	 * that the sender is disallowed.
 	 */
 	for(pAllow = pAllowRoot ; pAllow != NULL ; pAllow = pAllow->pNext) {
+		dprintf("checking sender %x against %x (%d bits)\n",
+			ulAddrInLocalByteOrder, pAllow->allowedSender,
+			pAllow->bitsToShift);
 		if(   (ulAddrInLocalByteOrder >> pAllow->bitsToShift)
 		   == pAllow->allowedSender)
 		   	return 1;
 	}
+
+	dprintf("Sender %x was not in list of allowed senders!\n", ulAddrInLocalByteOrder);
 	return 0;
 }
+#endif /* #ifdef SYSLOG_INET */
 
 
 
@@ -2358,9 +2408,7 @@ char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
  */
 
 
-int main(argc, argv)
-	int argc;
-	char **argv;
+int main(int argc, char **argv)
 {	register int i;
 	register char *p;
 #if !defined(__GLIBC__)
@@ -2408,7 +2456,7 @@ int main(argc, argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "a:dhi:f:l:m:nop:r:s:t:v")) != EOF)
+	while ((ch = getopt(argc, argv, "a:dhi:f:l:m:nop:r:s:t:vw")) != EOF)
 		switch((char)ch) {
 		case 'a':
 			if (nfunix < MAXFUNIX)
@@ -2491,6 +2539,8 @@ int main(argc, argv)
 	if ((argc -= optind))
 		usage();
 
+printf("Test addAllowed %d\n", AddAllowedSender(&pAllowedSenders_UDP, &pLastAllowedSenders_UDP,
+		     0xac120000, 16));
 #ifndef TESTING
 	if ( !(Debug || NoFork) )
 	{
@@ -2851,7 +2901,7 @@ int main(argc, argv)
 				 * configured to do this).
 				 * rgerhards, 2005-09-26
 				 */
-				if(isAllowedUDPSender(pAllowedSenders_UDP, &frominet)) {
+				if(isAllowedSender(pAllowedSenders_UDP, &frominet)) {
 					line[i] = line[i+1] = '\0';
 					printchopped(from, line, i + 2,  finet, SOURCE_INET);
 				} else {
