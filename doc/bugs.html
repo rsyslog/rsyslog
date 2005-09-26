@@ -11,14 +11,10 @@ bug tracker at sourceforge.net</a>. This list here contains more architectural
 things while the bug tracker most often lists things that you will actually 
 experience. I am working to combine the two lists, but for now you need to visit 
 both.</p>
-<p>This list has last been updated on 2005-09-20 by
+<p>This list has last been updated on 2005-09-26 by
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a>.</p>
 <h1>rsyslogd</h1>
-<h2>Property-Based Filters</h2>
-<p>If you forget to specify the quotes around &quot;value&quot; in a property-based filter, 
-rsyslogd segfaults immediately upon startup. Due to be fixed soon.</p>
-<h2>REPEATED LOG LINES
-   </h2>
+<h2>REPEATED LOG LINES</h2>
 <p>If multiple log lines with the exact same content are received,
    the duplicates are NOT suppressed. This is done by sysklogd
    in all cases. We plan to add this as an optional feature,

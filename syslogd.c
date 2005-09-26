@@ -488,6 +488,7 @@ struct filed {
 				FIOP_NOP = 0,		/* do not use - No Operation */
 				FIOP_CONTAINS  = 1,	/* contains string? */
 				FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
+				FIOP_STARTSWITH = 3	/* starts with a string? */
 			} operation;
 			rsCStrObj *pCSCompValue;	/* value to "compare" against */
 			char isNegated;			/* actually a boolean ;) */
@@ -3326,6 +3327,10 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 			if(rsCStrSzStrCmp(f->f_filterData.prop.pCSCompValue,
 			                  pszPropVal, strlen(pszPropVal)) == 0)
 				iRet = 1; /* process message! */
+		} else if(f->f_filterData.prop.operation == FIOP_STARTSWITH) {
+			if(rsCStrStartsWithSzStr(f->f_filterData.prop.pCSCompValue,
+			                  pszPropVal, strlen(pszPropVal)) == 0)
+				iRet = 1; /* process message! */
 		} else { /* here, it handles NOP (for performance reasons) */
 			assert(f->f_filterData.prop.operation == FIOP_NOP);
 			iRet = 1; /* as good as any other default ;) */
@@ -3553,7 +3558,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 		 * 2005-09-19 rgerhards
 		 */
 		if(!shouldProcessThisMessage(f, pMsg)) {
-			dprintf("message filter does not match - ignore this selector line\n");
+			dprintf("message filter does not match - ignoring selector line\n");
 			continue;
 		}
 
@@ -4154,7 +4159,7 @@ void fprintlog(register struct filed *f, int flags)
 	case F_TTY:
 	case F_FILE:
 	case F_PIPE:
-		dprintf("(%s)\n", f->f_un.f_fname);
+		dprintf(" (%s)\n", f->f_un.f_fname);
 		/* TODO: check if we need f->f_time = now;*/
 		/* f->f_file == -1 is an indicator that the we couldn't
 		   open the file at startup. */
@@ -4973,6 +4978,8 @@ void init()
 						printf("'contains'");
 					else if(f->f_filterData.prop.operation == FIOP_ISEQUAL)
 						printf("'isequal'");
+					else if(f->f_filterData.prop.operation == FIOP_STARTSWITH)
+						printf("'startswith'");
 					else
 						printf("'ERROR - invalid filter type!'");
 					printf("\n");
@@ -5491,6 +5498,8 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 		f->f_filterData.prop.operation = FIOP_CONTAINS;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, "isequal", 7)) {
 		f->f_filterData.prop.operation = FIOP_ISEQUAL;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, "startswith", 10)) {
+		f->f_filterData.prop.operation = FIOP_STARTSWITH;
 	} else {
 		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
 		           rsCStrGetSzStr(pCSCompOp));
@@ -5749,7 +5758,7 @@ rsRetVal cfline(char *line, register struct filed *f)
 		break;
 
 	case '~':	/* rgerhards 2005-09-09: added support for discard */
-		dprintf ("discard");
+		dprintf ("discard\n");
 		f->f_type = F_DISCARD;
 		break;
 

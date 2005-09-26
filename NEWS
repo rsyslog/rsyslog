@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------
 Version 1.10.2 (RGer), 2005-09-2?
-- added the "isequal" comparison operation in property-based filters
+- added comparison operations in property-based filters:
+  * isequal
+  * startswith
 - added ability to negate all property-based filter comparison oprations
   by adding a !-sign right in front of the operation name
 - fixed a bug that caused rsyslogd to dump core when the compare value
