@@ -343,6 +343,9 @@ rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis)
  * faster in the majority of cases, simply because it can
  * rely on StrLen.
  * rgerhards 2005-09-19
+ * fixed bug, in which only the last byte was actually compared
+ * in equal-size strings.
+ * rgerhards, 2005-09-26
  */
 int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2)
 {
@@ -351,37 +354,113 @@ int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2)
 	if(pCS1->iStrLen == pCS2->iStrLen)
 		if(pCS1->iStrLen == 0)
 			return 0; /* zero-sized string are equal ;) */
-		else
-			return   pCS1->pBuf[pCS1->iStrLen - 1]
-			       - pCS2->pBuf[pCS2->iStrLen - 1];
+		else {  /* we now have two non-empty strings of equal
+			 * length, so we need to actually check if they
+			 * are equal.
+			 */
+			register int i;
+			for(i = 0 ; i < pCS1->iStrLen ; ++i) {
+				if(pCS1->pBuf[i] != pCS2->pBuf[i])
+					return pCS1->pBuf[i] - pCS2->pBuf[i];
+			}
+			/* if we arrive here, the strings are equal */
+			return 0;
+		}
 	else
 		return pCS1->iStrLen - pCS2->iStrLen;
 }
 
-/* compare a string object with a classical zero-terminated C-string.
- * this function is primarily meant to support comparisons with constants.
- * It should not be used for variables (except with a very good reason).
- * rgerhards 2005-09-19
+
+/* compare a rsCStr object with a classical sz string.  This function
+ * is almost identical to rsCStrZsStrCmp(), but it also takes an offset
+ * to the CStr object from where the comparison is to start.
+ * I have thought quite a while if it really makes sense to more or
+ * less duplicate the code. After all, if you call it with an offset of
+ * zero, the functionality is exactly the same. So it looks natural to
+ * just have a single function. However, supporting the offset requires
+ * some (few) additional integer operations. While they are few, they
+ * happen at places in the code that is run very frequently. All in all,
+ * I have opted for performance and thus duplicated the code. I hope
+ * this is a good, or at least acceptable, compromise.
+ * rgerhards, 2005-09-26
+ * This function also has an offset-pointer which allows to
+ * specify *where* the compare operation should begin in
+ * the CStr. If everything is to be compared, it must be set
+ * to 0. If some leading bytes are to be skipped, it must be set
+ * to the first index that is to be compared. It must not be
+ * set higher than the string length (this is considered a
+ * program bug and will lead to unpredictable results and program aborts).
+ * rgerhards 2005-09-26
  */
-int rsCStrSzCmp(rsCStrObj *pCStr, char *sz)
+int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, char *psz, int iLenSz)
 {
-	int iszLen;
-
-	rsCHECKVALIDOBJECT(pCStr, OIDrsCStr);
-	assert(sz != NULL);
-
-	iszLen = strlen(sz);
-
-	if(pCStr->iStrLen == iszLen)
-		/* note: we are using iszLen below, because it doesn't matter
-		 * and the simple integer is faster to derefence...
+	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+	assert(iOffset >= 0);
+	assert(iOffset < pCS1->iStrLen);
+	assert(psz != NULL);
+	assert(iLenSz == strlen(psz)); /* just make sure during debugging! */
+	if((pCS1->iStrLen - iOffset) == iLenSz) {
+		/* we are using iLenSz below, because the lengths
+		 * are equal and iLenSz is faster to access
 		 */
-		if(iszLen == 0)
-			return 0; /* zero-sized string are equal ;) */
-		else
-			return   pCStr->pBuf[iszLen - 1] - sz[iszLen - 1];
+		if(iLenSz == 0)
+			return 0; /* zero-sized strings are equal ;) */
+		else {  /* we now have two non-empty strings of equal
+			 * length, so we need to actually check if they
+			 * are equal.
+			 */
+			register int i;
+			for(i = 0 ; i < iLenSz ; ++i) {
+				if(pCS1->pBuf[i+iOffset] != psz[i])
+					return pCS1->pBuf[i+iOffset] - psz[i];
+			}
+			/* if we arrive here, the strings are equal */
+			return 0;
+		}
+	}
 	else
-		return pCStr->iStrLen - iszLen;
+		return pCS1->iStrLen - iOffset - iLenSz;
+}
+
+
+/* compare a rsCStr object with a classical sz string.
+ * Just like rsCStrCStrCmp, just for a different data type.
+ * There must not only the sz string but also its length be
+ * provided. If the caller does not know the length he can
+ * call with
+ * rsCstrSzStrCmp(pCS, psz, strlen(psz));
+ * we are not doing the strlen() ourselfs as the caller might
+ * already know the length and in such cases we can save the
+ * overhead of doing it one more time (strelen() is costly!).
+ * The bottom line is that the provided length MUST be correct!
+ * The to sz string pointer must not be NULL!
+ * rgerhards 2005-09-26
+ */
+int rsCStrSzStrCmp(rsCStrObj *pCS1, char *psz, int iLenSz)
+{
+	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+	assert(psz != NULL);
+	assert(iLenSz == strlen(psz)); /* just make sure during debugging! */
+	if(pCS1->iStrLen == iLenSz)
+		/* we are using iLenSz below, because the lengths
+		 * are equal and iLenSz is faster to access
+		 */
+		if(iLenSz == 0)
+			return 0; /* zero-sized strings are equal ;) */
+		else {  /* we now have two non-empty strings of equal
+			 * length, so we need to actually check if they
+			 * are equal.
+			 */
+			register int i;
+			for(i = 0 ; i < iLenSz ; ++i) {
+				if(pCS1->pBuf[i] != psz[i])
+					return pCS1->pBuf[i] - psz[i];
+			}
+			/* if we arrive here, the strings are equal */
+			return 0;
+		}
+	else
+		return pCS1->iStrLen - iLenSz;
 }
 
 

@@ -487,8 +487,10 @@ struct filed {
 			enum {
 				FIOP_NOP = 0,		/* do not use - No Operation */
 				FIOP_CONTAINS  = 1,	/* contains string? */
+				FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
 			} operation;
 			rsCStrObj *pCSCompValue;	/* value to "compare" against */
+			char isNegated;			/* actually a boolean ;) */
 		} prop;
 	} f_filterData;
 	union {
@@ -2799,7 +2801,7 @@ int main(argc, argv)
 				logerror("recvfrom inet");
 				/* should be harmless now that we set
 				 * BSDCOMPAT on the socket */
-				sleep(10);
+				sleep(1);
 			}
 		}
 
@@ -3320,10 +3322,18 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 		if(f->f_filterData.prop.operation == FIOP_CONTAINS) {
 			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, pszPropVal) != -1)
 				iRet = 1;
+		} else if(f->f_filterData.prop.operation == FIOP_ISEQUAL) {
+			if(rsCStrSzStrCmp(f->f_filterData.prop.pCSCompValue,
+			                  pszPropVal, strlen(pszPropVal)) == 0)
+				iRet = 1; /* process message! */
 		} else { /* here, it handles NOP (for performance reasons) */
 			assert(f->f_filterData.prop.operation == FIOP_NOP);
 			iRet = 1; /* as good as any other default ;) */
 		}
+
+		/* now check if the value must be negated */
+		if(f->f_filterData.prop.isNegated)
+			iRet = (iRet == 1) ?  0 : 1;
 
 		/* cleanup */
 		if(pbMustBeFreed)
@@ -3524,6 +3534,14 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	}
 
 	for (f = Files; f; f = f->f_next) {
+		/* first, we need to check if this is a disabled (F_UNUSED)
+		 * entry. If so, we must not further process it, as the data
+		 * structure probably contains invalid pointers and other
+		 * such mess.
+		 * rgerhards 2005-09-26
+		 */
+		if(f->f_type == F_UNUSED)
+			continue; /* on to next */
 
 		/* This is actually the "filter logic". Looks like we need
 		 * to improve it a little for complex selector line conditions. We
@@ -3534,8 +3552,10 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 		 * of this, I am moving the actual decision code to outside this function.
 		 * 2005-09-19 rgerhards
 		 */
-		if(!shouldProcessThisMessage(f, pMsg))
+		if(!shouldProcessThisMessage(f, pMsg)) {
+			dprintf("message filter does not match - ignore this selector line\n");
 			continue;
+		}
 
 		/* We now need to check a special case - F_DISCARD. If that
 		 * action is specified in the selector line, no futher processing
@@ -3854,20 +3874,6 @@ void  iovCreate(struct filed *f)
 	}
 }
 #endif /* debug aid */
-#if 0
-	/* almost done - just let's check how we need to terminate
-	 * the message.
-	 */
-	dprintf(" %s\n", f->f_un.f_fname);
-	if (f->f_type == F_TTY || f->f_type == F_CONSOLE) {
-		v->iov_base = "\r\n";
-		v->iov_len = 2;
-	} else {
-		v->iov_base = "\n";
-		v->iov_len = 1;
-	}
-	
-#endif
 	return;
 }
 
@@ -4148,7 +4154,7 @@ void fprintlog(register struct filed *f, int flags)
 	case F_TTY:
 	case F_FILE:
 	case F_PIPE:
-		dprintf("\n");
+		dprintf("(%s)\n", f->f_un.f_fname);
 		/* TODO: check if we need f->f_time = now;*/
 		/* f->f_file == -1 is an indicator that the we couldn't
 		   open the file at startup. */
@@ -4959,10 +4965,14 @@ void init()
 					printf("\tProperty.: '%s'\n",
 					       rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
 					printf("\tOperation: ");
+					if(f->f_filterData.prop.isNegated)
+						printf("NOT ");
 					if(f->f_filterData.prop.operation == FIOP_NOP)
 						printf("'NOP'");
 					else if(f->f_filterData.prop.operation == FIOP_CONTAINS)
 						printf("'contains'");
+					else if(f->f_filterData.prop.operation == FIOP_ISEQUAL)
+						printf("'isequal'");
 					else
 						printf("'ERROR - invalid filter type!'");
 					printf("\n");
@@ -5410,6 +5420,7 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 	rsCStrObj *pCSLine;
 	rsCStrObj *pCSCompOp;
 	rsRetVal iRet;
+	int iOffset; /* for compare operations */
 
 	assert(pline != NULL);
 	assert(*pline != NULL);
@@ -5457,8 +5468,29 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 		RSFREEOBJ(pCSLine);
 		return(iRet);
 	}
-	if(!rsCStrSzCmp(pCSCompOp, "contains")) {
+
+	/* we now first check if the condition is to be negated. To do so, we first
+	 * must make sure we have at least one char in the param and then check the
+	 * first one.
+	 * rgerhards, 2005-09-26
+	 */
+	if(rsCStrLen(pCSCompOp) > 0) {
+		if(*rsCStrGetBufBeg(pCSCompOp) == '!') {
+			f->f_filterData.prop.isNegated = 1;
+			iOffset = 1; /* ignore '!' */
+		} else {
+			f->f_filterData.prop.isNegated = 0;
+			iOffset = 0;
+		}
+	} else {
+		f->f_filterData.prop.isNegated = 0;
+		iOffset = 0;
+	}
+
+	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, "contains", 8)) {
 		f->f_filterData.prop.operation = FIOP_CONTAINS;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, "isequal", 7)) {
+		f->f_filterData.prop.operation = FIOP_ISEQUAL;
 	} else {
 		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
 		           rsCStrGetSzStr(pCSCompOp));
@@ -5534,8 +5566,10 @@ rsRetVal cfline(char *line, register struct filed *f)
 	}
 
 	/* check if that went well... */
-	if(iRet != RS_RET_OK)
+	if(iRet != RS_RET_OK) {
+		f->f_type = F_UNUSED;
 		return iRet;
+	}
 
 	if (*p == '-')
 	{

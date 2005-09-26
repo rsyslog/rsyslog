@@ -103,7 +103,8 @@ rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
 char*  rsCStrGetSzStr(rsCStrObj *pThis);
 char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
 int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2);
-int rsCStrSzCmp(rsCStrObj *pCStr, char *sz);
+int rsCStrSzStrCmp(rsCStrObj *pCS1, char *psz, int iLenSz);
+int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, char *psz, int iLenSz);
 int rsCStrLocateSzStr(rsCStrObj *pCStr, char *sz);
 int rsCStrLocateInSzStr(rsCStrObj *pThis, char *sz);
 

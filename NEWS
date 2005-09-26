@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------
+Version 1.10.2 (RGer), 2005-09-2?
+- added the "isequal" comparison operation in property-based filters
+- added ability to negate all property-based filter comparison oprations
+  by adding a !-sign right in front of the operation name
+- fixed a bug that caused rsyslogd to dump core when the compare value
+  was not quoted in property-based filters
+- fixed a bug in the new CStr compare function which lead to invalid
+  results (fortunately, this function was not yet used widely)
+---------------------------------------------------------------------------
 Version 1.10.1 (RGer), 2005-09-23
 - added the ability to execute a shell script as an action.
   Thanks to Bjoern Kalkbrenner for providing the code!
