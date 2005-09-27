@@ -6330,11 +6330,13 @@ void DBErrorHandler(register struct filed *f)
 	snprintf(errMsg, sizeof(errMsg)/sizeof(char),
 		"db error (%d): %s\n", mysql_errno(&f->f_hmysql),
 		mysql_error(&f->f_hmysql));
-	logerror(errMsg);
+
 	/* Enable "delay" */
 	f->f_timeResumeOnError = time(&f->f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
 	f->f_iLastDBErrNo = mysql_errno(&f->f_hmysql);
 
+	/* Log error is the last step. */ 
+	logerror(errMsg);
 }
 
 /**
