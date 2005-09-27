@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <ctype.h>
+#include <arpa/inet.h>
 #include "rsyslog.h"
 #include "parse.h"
 
@@ -23,6 +24,21 @@
 /* ################################################################# *
  * public members                                                    *
  * ################################################################# */
+
+
+/**
+ * Destruct a rsPars object and its associated string.
+ * rgerhards, 2005-09-26
+ */
+rsRetVal rsParsDestruct(rsParsObj *pThis)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
+
+	if(pThis->pCStr != NULL)
+		RSFREEOBJ(pThis->pCStr);
+	RSFREEOBJ(pThis);
+	return RS_RET_OK;
+}
 
 
 /**
@@ -44,6 +60,40 @@ rsRetVal rsParsConstruct(rsParsObj **ppThis)
 }
 
 /**
+ * Construct a rsPars object and populate it with a
+ * classical zero-terinated C-String.
+ * rgerhards, 2005-09-27
+ */
+rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, char *psz)
+{
+	rsParsObj *pThis;
+	rsCStrObj *pCS;
+	rsRetVal iRet;
+
+	assert(ppThis != NULL);
+	assert(psz != NULL);
+
+	/* create string for parser */
+	if((iRet = rsCStrConstructFromszStr(&pCS, psz)) != RS_RET_OK)
+		return(iRet);
+
+	/* create parser */
+	if((iRet = rsParsConstruct(&pThis)) != RS_RET_OK) {
+		RSFREEOBJ(pCS);
+		return(iRet);
+	}
+
+	/* assign string to parser */
+	if((iRet = rsParsAssignString(pThis, pCS)) != RS_RET_OK) {
+		rsParsDestruct(pThis);
+		return(iRet);
+	}
+
+	*ppThis = pThis;
+	return RS_RET_OK;
+}
+
+/**
  * Assign the to-be-parsed string.
  */
 rsRetVal rsParsAssignString(rsParsObj *pThis, rsCStrObj *pCStr)
@@ -57,11 +107,41 @@ rsRetVal rsParsAssignString(rsParsObj *pThis, rsCStrObj *pCStr)
 	return RS_RET_OK;
 }
 
-/* parse an integer. The parse pointer is advanced */
+/* parse an integer. The parse pointer is advanced to the
+ * position directly after the last digit. If no digit is
+ * found at all, an error is returned and the parse pointer
+ * is NOT advanced.
+ * PORTABILITY WARNING: this function depends on the
+ * continues representation of digits inside the character
+ * set (as in ASCII).
+ * rgerhards 2005-09-27
+ */
 rsRetVal parsInt(rsParsObj *pThis, int* pInt)
 {
+	char *pC;
+	int iVal;
+
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 	assert(pInt != NULL);
+
+	iVal = 0;
+	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
+
+	/* order of checks is important, else we might do
+	 * mis-addressing! (off by one)
+	 */
+	if(pThis->iCurrPos >= rsCStrLen(pThis->pCStr))
+		return RS_RET_NO_MORE_DATA;
+	if(!isdigit(*pC))
+		return RS_RET_NO_DIGIT;
+
+	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && isdigit(*pC)) {
+		iVal = iVal * 10 + *pC - '0';
+		++pThis->iCurrPos;
+		++pC;
+	}
+
+	*pInt = iVal;
 
 	return RS_RET_OK;
 }
@@ -262,6 +342,104 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 	*ppCStr = pCStr;
 	return RS_RET_OK;
 }
+
+/* Parse an IPv4-Adress with optional "mask-bits" in the
+ * format "a.b.c.d/bits" (e.g. "192.168.0.0/24"). The parsed
+ * IP (in HOST byte order!) as well as the mask bits are returned. Leading and
+ * trailing whitespace is ignored. The function moves the parse
+ * pointer to the next non-whitespace, non-comma character after the address.
+ * rgerhards, 2005-09-27
+ */
+rsRetVal parsIPv4WithBits(rsParsObj *pThis, unsigned long *pIP, int *pBits)
+{
+	register char *pC;
+	char *pszIP;
+	rsCStrObj *pCStr;
+	rsRetVal iRet;
+
+	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
+	assert(pIP != NULL);
+	assert(pBits != NULL);
+
+	if((pCStr = rsCStrConstruct()) == NULL)
+		return RS_RET_OUT_OF_MEMORY;
+
+	parsSkipWhitespace(pThis);
+	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
+
+	/* we parse everything until either '/', ',' or
+	 * whitespace. Validity will be checked down below.
+	 */
+	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
+	      && *pC != '/' && *pC != ',' && !isspace(*pC)) {
+		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
+			RSFREEOBJ(pCStr);
+			return(iRet);
+		}
+		++pThis->iCurrPos;
+		++pC;
+	}
+	
+	/* We got the string, let's finish it...  */
+	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
+		RSFREEOBJ(pCStr);
+		return(iRet);
+	}
+
+	/* now we have the string and must check/convert it to
+	 * an IPv4 address in host byte order.
+	 */
+	if(rsCStrLen(pCStr) < 7) {
+		/* 7 ist the minimum length of an IPv4 address (1.2.3.4) */
+		RSFREEOBJ(pCStr);
+		return RS_RET_INVALID_IP;
+	}
+
+	if((pszIP = rsCStrConvSzStrAndDestruct(pCStr)) == NULL)
+		return RS_RET_ERR;
+
+	if((*pIP = inet_addr(pszIP)) == -1) {
+		free(pszIP);
+		return RS_RET_INVALID_IP;
+	}
+	*pIP = ntohl(*pIP); /* convert to host byte order */
+	free(pszIP); /* no longer needed */
+
+	if(*pC == '/') {
+		/* mask bits follow, let's parse them! */
+		++pThis->iCurrPos; /* eat slash */
+		if((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
+			return(iRet);
+		}
+		/* we need to refresh pointer (changed by parsInt()) */
+		pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
+	} else {
+		/* no slash, so we assume a single host (/32) */
+		*pBits = 32;
+	}
+
+	/* skip to next processable character */
+	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
+	      && (*pC == ',' || isspace(*pC))) {
+		++pThis->iCurrPos;
+		++pC;
+	}
+
+	return RS_RET_OK;
+}
+
+
+/* tell if the parsepointer is at the end of the
+ * to-be-parsed string. Returns 1, if so, 0
+ * otherwise. rgerhards, 2005-09-27
+ */
+int parsIsAtEndOfParseString(rsParsObj *pThis)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
+
+	return (pThis->iCurrPos < rsCStrLen(pThis->pCStr)) ? 0 : 1;
+}
+
 
 /* return the position of the parse pointer
  */

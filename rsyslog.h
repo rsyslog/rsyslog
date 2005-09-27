@@ -36,6 +36,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FOUND_AT_STRING_END = -3002, /**< some value found, but at the last pos of string */
 	RS_RET_NOT_FOUND = -3003, /**< some requested value not found */
 	RS_RET_MISSING_TRAIL_QUOTE = -3004, /**< an expected trailing quote is missing */
+	RS_RET_NO_DIGIT = -3005,	/**< an digit was expected, but none found (mostly parsing) */
+	RS_RET_NO_MORE_DATA = -3006,	/**< insufficient data, e.g. end of string during parsing */
+	RS_RET_INVALID_IP = -3007,	/**< invalid ip found where valid was expected */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */

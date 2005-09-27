@@ -362,7 +362,7 @@ const char *directive_name_list[] = {
 };
 /* ... and their definitions: */
 enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1,
-                  DIR_ALLOWEDUDPSENDER = 2, DIR_ALLOWEDTCPSENDER = 3};
+                  DIR_ALLOWEDSENDER = 2};
 
 /* rgerhards 2004-11-11: the following structure represents
  * a time as it is used in syslog.
@@ -748,11 +748,9 @@ static int create_udp_socket();
  * as it eventually needs to be updated. Also, a pointer to the
  * pointer to the last element must be provided (to speed up adding
  * list elements).
- * returns 1 if sender could be added, 0 otherwise (this probably indicates
- * big trouble with the memory allocator).
  * rgerhards, 2005-09-26
  */
-static int AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
+static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
 		     unsigned int iAllow, int iSignificantBits)
 {
 	struct AllowedSenders *pEntry;
@@ -762,7 +760,7 @@ static int AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSender
 
 	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders)))
 	   == NULL)
-	   	return 0; /* no options left :( */
+	   	return RS_RET_OUT_OF_MEMORY; /* no options left :( */
 
 	/* populate entry */
 	pEntry->bitsToShift = 32 - iSignificantBits; /* IPv4! */
@@ -777,7 +775,7 @@ static int AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSender
 	}
 	*ppLast = pEntry;
 
-	return 1;
+	return RS_RET_OK;
 }
 #endif /* #ifdef SYSLOG_INET */
 
@@ -2524,6 +2522,9 @@ int main(int argc, char **argv)
 #ifndef	NOLARGEFILE
 			printf("\tFEATURE_LARGEFILE\n");
 #endif
+#ifdef	SYSLOG_INET
+			printf("\tSYSLOG_INET (Internet/remote support)\n");
+#endif
 #ifndef	NDEBUG
 			printf("\tFEATURE_DEBUG (debug build, slow code)\n");
 #endif
@@ -2539,8 +2540,6 @@ int main(int argc, char **argv)
 	if ((argc -= optind))
 		usage();
 
-printf("Test addAllowed %d\n", AddAllowedSender(&pAllowedSenders_UDP, &pLastAllowedSenders_UDP,
-		     0xac120000, 16));
 #ifndef TESTING
 	if ( !(Debug || NoFork) )
 	{
@@ -3672,7 +3671,6 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 		 * 2005-09-19 rgerhards
 		 */
 		if(!shouldProcessThisMessage(f, pMsg)) {
-			dprintf("message filter does not match - ignoring selector line\n");
 			continue;
 		}
 
@@ -4775,6 +4773,77 @@ void doexit(sig)
 }
 #endif
 
+
+/* parse an allowed sender config line and add the allowed senders
+ * (if the line is correct).
+ * rgerhards, 2005-09-27
+ */
+rsRetVal addAllowedSenderLine(char* pName, char** ppRestOfConfLine)
+{
+	struct AllowedSenders **ppRoot;
+	struct AllowedSenders **ppLast;
+	rsParsObj *pPars;
+	rsRetVal iRet;
+	unsigned long uIP;
+	int iBits;
+
+	assert(pName != NULL);
+	assert(ppRestOfConfLine != NULL);
+	assert(*ppRestOfConfLine != NULL);
+
+#ifndef SYSLOG_INET
+	errno = 0;
+	logerror("config file contains allowed sender list, but rsyslogd "
+	         "compiled without Internet support - line ignored");
+#else
+	if(!strcasecmp(pName, "udp")) {
+		ppRoot = &pAllowedSenders_UDP;
+		ppLast = &pLastAllowedSenders_UDP;
+	} else if(!strcasecmp(pName, "tcp")) {
+		ppRoot = &pAllowedSenders_TCP;
+		ppLast = &pLastAllowedSenders_TCP;
+	} else {
+		logerrorSz("Invalid protocol '%s' in allowed sender "
+		           "list, line ignored", pName);
+		return RS_RET_ERR;
+	}
+
+printf("addAllow..., name '%s', line: '%s'\n", pName, *ppRestOfConfLine);
+	/* OK, we now know the protocol and have valid list pointers.
+	 * So let's process the entries. We are using the parse class
+	 * for this.
+	 */
+	/* create parser object starting with line string without leading colon */
+	if((iRet = rsParsConstructFromSz(&pPars, *ppRestOfConfLine) != RS_RET_OK)) {
+		logerrorInt("Error %d constructing parser object - ignoring allowed sender list", iRet);
+		return(iRet);
+	}
+
+	while(!parsIsAtEndOfParseString(pPars)) {
+		/* now parse a single IP address */
+		if((iRet = parsIPv4WithBits(pPars, &uIP, &iBits)) != RS_RET_OK) {
+			logerrorInt("Error %d parsing IP address in allowed sender"
+				    "list - ignoring.", iRet);
+			rsParsDestruct(pPars);
+			return(iRet);
+		}
+		printf("returned IP %x, bits %d\n", uIP, iBits);
+		if((iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits))
+			!= RS_RET_OK) {
+			logerrorInt("Error %d adding allowed sender entry "
+				    "- ignoring.", iRet);
+			rsParsDestruct(pPars);
+			return(iRet);
+		}
+
+	}
+
+	/* cleanup */
+	return rsParsDestruct(pPars);
+#endif /*#ifndef SYSLOG_INET */
+}
+
+
 /* parse and interpret a $-config line that starts with
  * a name (this is common code). It is parsed to the name
  * and then the proper sub-function is called to handle
@@ -4791,7 +4860,7 @@ void doNameLine(char **pp, enum eDirective eDir)
 	assert(pp != NULL);
 	assert(p != NULL);
 	assert(   (eDir == DIR_TEMPLATE) || (eDir == DIR_OUTCHANNEL)
-	       || (eDir == DIR_ALLOWEDUDPSENDER) || (eDir == DIR_ALLOWEDTCPSENDER));
+	       || (eDir == DIR_ALLOWEDSENDER));
 
 	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
 		char errMsg[128];
@@ -4817,11 +4886,8 @@ void doNameLine(char **pp, enum eDirective eDir)
 		case DIR_OUTCHANNEL: 
 			ochAddLine(szName, &p);
 			break;
-		case DIR_ALLOWEDUDPSENDER: 
-			// TODO: addUDPSender(szName, &p);
-			break;
-		case DIR_ALLOWEDTCPSENDER: 
-			// TODO: addTCPSender(szName, &p);
+		case DIR_ALLOWEDSENDER: 
+			addAllowedSenderLine(szName, &p);
 			break;
 	}
 
@@ -4852,10 +4918,8 @@ void cfsysline(char *p)
 		doNameLine(&p, DIR_TEMPLATE);
 	} else if(!strcasecmp(szCmd, "outchannel")) { 
 		doNameLine(&p, DIR_OUTCHANNEL);
-	} else if(!strcasecmp(szCmd, "allowedudpsender")) { 
-		doNameLine(&p, DIR_ALLOWEDUDPSENDER);
-	} else if(!strcasecmp(szCmd, "allowedtcpsender")) { 
-		doNameLine(&p, DIR_ALLOWEDTCPSENDER);
+	} else if(!strcasecmp(szCmd, "allowedsender")) { 
+		doNameLine(&p, DIR_ALLOWEDSENDER);
 	} else { /* invalid command! */
 		char err[100];
 		snprintf(err, sizeof(err)/sizeof(char),
@@ -5553,7 +5617,6 @@ rsRetVal cflineProcessTradPRIFilter(char **pline, register struct filed *f)
 rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 {
 	rsParsObj *pPars;
-	rsCStrObj *pCSLine;
 	rsCStrObj *pCSCompOp;
 	rsRetVal iRet;
 	int iOffset; /* for compare operations */
@@ -5567,23 +5630,9 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 
 	f->f_filter_type = FILTER_PROP;
 
-	/* create line string without leading colon */
-	if((iRet = rsCStrConstructFromszStr(&pCSLine, (*pline)+1)) != RS_RET_OK) {
-		logerrorInt("Error %d allocating string space - ignoring selector", iRet);
-		return(iRet);
-	}
-
-	/* create parser */
-	if((iRet = rsParsConstruct(&pPars)) != RS_RET_OK) {
-		logerrorInt("error %d creating parser - ignoring selector", iRet);
-		RSFREEOBJ(pCSLine);
-		return(iRet);
-	}
-
-	if((iRet = rsParsAssignString(pPars, pCSLine)) != RS_RET_OK) {
-		logerrorInt("error %d assigning string to parser - ignoring selector", iRet);
-		RSFREEOBJ(pPars);
-		RSFREEOBJ(pCSLine);
+	/* create parser object starting with line string without leading colon */
+	if((iRet = rsParsConstructFromSz(&pPars, (*pline)+1)) != RS_RET_OK) {
+		logerrorInt("Error %d constructing parser object - ignoring selector", iRet);
 		return(iRet);
 	}
 
@@ -5591,8 +5640,7 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 	iRet = parsDelimCStr(pPars, &f->f_filterData.prop.pCSPropName, ',', 1, 1);
 	if(iRet != RS_RET_OK) {
 		logerrorInt("error %d parsing filter property - ignoring selector", iRet);
-		RSFREEOBJ(pPars);
-		RSFREEOBJ(pCSLine);
+		rsParsDestruct(pPars);
 		return(iRet);
 	}
 
@@ -5600,8 +5648,7 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1);
 	if(iRet != RS_RET_OK) {
 		logerrorInt("error %d compare operation property - ignoring selector", iRet);
-		RSFREEOBJ(pPars);
-		RSFREEOBJ(pCSLine);
+		rsParsDestruct(pPars);
 		return(iRet);
 	}
 
@@ -5639,17 +5686,14 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 	iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
 	if(iRet != RS_RET_OK) {
 		logerrorInt("error %d compare value property - ignoring selector", iRet);
-		RSFREEOBJ(pPars);
-		RSFREEOBJ(pCSLine);
+		rsParsDestruct(pPars);
 		return(iRet);
 	}
-	printf("after read CompVal, prop name '%s'\n", rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
 
 	/* skip to action part */
 	if((iRet = parsSkipWhitespace(pPars)) != RS_RET_OK) {
 		logerrorInt("error %d skipping to action part - ignoring selector", iRet);
-		RSFREEOBJ(pPars);
-		RSFREEOBJ(pCSLine);
+		rsParsDestruct(pPars);
 		return(iRet);
 	}
 
@@ -5657,10 +5701,7 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 	*pline = *pline + rsParsGetParsePointer(pPars) + 1;
 		/* we are adding one for the skipped initial ":" */
 
-	RSFREEOBJ(pPars);
-	RSFREEOBJ(pCSLine);
-
-	return RS_RET_OK;
+	return rsParsDestruct(pPars);
 }
 
 

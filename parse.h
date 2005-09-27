@@ -76,7 +76,12 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bT
 
 rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c);
 rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr);
-#if 0 /* later! */
+rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, char *psz);
+rsRetVal rsParsDestruct(rsParsObj *pThis);
+rsRetVal parsIPv4WithBits(rsParsObj *pThis, unsigned long *pIP, int *pBits);
+int parsIsAtEndOfParseString(rsParsObj *pThis);
+
+#if 0 /* later! - but leave it in in case we need it some day... */
 /* Parse a property
  * This is a complex parsing routine. It parses an property
  * entry suitable for use in the property replacer. It is currently
