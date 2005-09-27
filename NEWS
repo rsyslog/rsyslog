@@ -5,6 +5,8 @@ Version 1.10.2 (RGer), 2005-09-2?
   * startswith
 - added ability to negate all property-based filter comparison oprations
   by adding a !-sign right in front of the operation name
+- added the ability to specify remote senders for UDP
+  received messages. Allows to block all but well-known hosts
 - changed the $-config line directives to be case-INsensitive
 - new command line option -w added: "do not display warnings if messages
   from disallowed senders are received"
@@ -12,6 +14,8 @@ Version 1.10.2 (RGer), 2005-09-2?
   was not quoted in property-based filters
 - fixed a bug in the new CStr compare function which lead to invalid
   results (fortunately, this function was not yet used widely)
+- added better support for "debugging" rsyslog.conf property filters
+  (only if -d switch is given)
 ---------------------------------------------------------------------------
 Version 1.10.1 (RGer), 2005-09-23
 - added the ability to execute a shell script as an action.

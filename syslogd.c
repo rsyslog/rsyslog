@@ -665,6 +665,31 @@ int     Initialized = 0;        /* set when we have initialized ourselves
 
 extern	int errno;
 
+
+/* support for simple textual representatio of FIOP names
+ * rgerhards, 2005-09-27
+ */
+static char* getFIOPName(unsigned iFIOP)
+{
+	char *pRet;
+	switch(iFIOP) {
+		case FIOP_CONTAINS:
+			pRet = "contains";
+			break;
+		case FIOP_ISEQUAL:
+			pRet = "isequal";
+			break;
+		case FIOP_STARTSWITH:
+			pRet = "startswith";
+			break;
+		default:
+			pRet = "NOP";
+			break;
+	}
+	return pRet;
+}
+
+
 /* support for defining allowed TCP and UDP senders. We use the same
  * structure to implement this (a linked list), but we define two different
  * list roots, one for UDP and one for TCP.
@@ -707,13 +732,13 @@ void fprintlog(register struct filed *f, int flags);
 void endtty();
 void wallmsg(register struct filed *f);
 void reapchild();
-const char *cvthname(struct sockaddr_in *f);
+static const char *cvthname(struct sockaddr_in *f);
 void domark();
 void debug_switch();
-void logerror(char *type);
-void logerrorInt(char *type, int errCode);
-void logerrorSz(char *type, char *errMsg);
-void die(int sig);
+static void logerror(char *type);
+static void logerrorInt(char *type, int errCode);
+static void logerrorSz(char *type, char *errMsg);
+static void die(int sig);
 #ifndef TESTING
 void doexit(int sig);
 #endif
@@ -781,6 +806,44 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 
 
 #ifdef SYSLOG_INET
+/* Print an allowed sender list. The caller must tell us which one.
+ * iListToPrint = 1 means UDP, 2 means TCP
+ * rgerhards, 2005-09-27
+ */
+static void PrintAllowedSenders(int iListToPrint)
+{
+	struct AllowedSenders *pSender;
+	unsigned uSender;
+
+	assert((iListToPrint == 1) || (iListToPrint == 2));
+
+	printf("\nAllowed %s Senders:\n",
+	       (iListToPrint == 1) ? "UDP" : "TCP");
+	pSender = (iListToPrint == 1) ?
+		  pAllowedSenders_UDP : pAllowedSenders_TCP;
+	if(pSender == NULL) {
+		printf("\tNo restrictions set.\n");
+	} else {
+		while(pSender != NULL) {
+			uSender = pSender->allowedSender  << pSender->bitsToShift;
+			/* it might be wiser to use socket functions to
+			 * do the conversion, but we need to change it for
+			 * IPv6 anyhow... so we use the quick way.
+			 */
+			printf("\t%u.%u.%u.%u/%u\n",
+			       uSender >> 24 & 0xff,
+			       uSender >> 16 & 0xff,
+			       uSender >>  8 & 0xff,
+			       uSender       & 0xff,
+			       32 - pSender->bitsToShift
+			      );
+		    pSender = pSender->pNext;
+		}
+	}
+}
+#endif /* #ifdef SYSLOG_INET */
+
+#ifdef SYSLOG_INET
 /* check if a sender is allowed. The root of the the allowed sender.
  * list must be proveded by the caller. As such, this function can be
  * used to check both UDP and TCP allowed sender lists.
@@ -809,15 +872,11 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in
 	 * that the sender is disallowed.
 	 */
 	for(pAllow = pAllowRoot ; pAllow != NULL ; pAllow = pAllow->pNext) {
-		dprintf("checking sender %x against %x (%d bits)\n",
-			ulAddrInLocalByteOrder, pAllow->allowedSender,
-			pAllow->bitsToShift);
 		if(   (ulAddrInLocalByteOrder >> pAllow->bitsToShift)
 		   == pAllow->allowedSender)
 		   	return 1;
 	}
 
-	dprintf("Sender %x was not in list of allowed senders!\n", ulAddrInLocalByteOrder);
 	return 0;
 }
 #endif /* #ifdef SYSLOG_INET */
@@ -2685,8 +2744,7 @@ int main(int argc, char **argv)
 	dprintf("Starting.\n");
 	init();
 #ifndef TESTING
-	if ( Debug )
-	{
+	if(Debug) {
 		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
 		/* DEBUG-AID/RELEASE: value 0 below should be used for
 		 * release. Value 1 might be used if you would like to keep debug
@@ -3433,20 +3491,26 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 			        f->f_filterData.prop.pCSPropName, &pbMustBeFreed);
 
 		/* Now do the compares (short list currently ;)) */
-		if(f->f_filterData.prop.operation == FIOP_CONTAINS) {
+		switch(f->f_filterData.prop.operation ) {
+		case FIOP_CONTAINS:
 			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, pszPropVal) != -1)
 				iRet = 1;
-		} else if(f->f_filterData.prop.operation == FIOP_ISEQUAL) {
+			break;
+		case FIOP_ISEQUAL:
 			if(rsCStrSzStrCmp(f->f_filterData.prop.pCSCompValue,
-			                  pszPropVal, strlen(pszPropVal)) == 0)
+					  pszPropVal, strlen(pszPropVal)) == 0)
 				iRet = 1; /* process message! */
-		} else if(f->f_filterData.prop.operation == FIOP_STARTSWITH) {
+			break;
+		case FIOP_STARTSWITH:
 			if(rsCStrStartsWithSzStr(f->f_filterData.prop.pCSCompValue,
-			                  pszPropVal, strlen(pszPropVal)) == 0)
+					  pszPropVal, strlen(pszPropVal)) == 0)
 				iRet = 1; /* process message! */
-		} else { /* here, it handles NOP (for performance reasons) */
+			break;
+		default:
+			/* here, it handles NOP (for performance reasons) */
 			assert(f->f_filterData.prop.operation == FIOP_NOP);
 			iRet = 1; /* as good as any other default ;) */
+			break;
 		}
 
 		/* now check if the value must be negated */
@@ -3456,6 +3520,16 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 		/* cleanup */
 		if(pbMustBeFreed)
 			free(pszPropVal);
+		
+		if(Debug) {
+			printf("Property filter '%s' ", rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
+			if(f->f_filterData.prop.isNegated)
+				printf("NOT ");
+			printf("%s '%s' does %smatch.\n",
+			       getFIOPName(f->f_filterData.prop.operation),
+			       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue),
+			       iRet ? "" : "not ");
+		}
 	}
 
 	return(iRet);
@@ -4511,8 +4585,7 @@ void reapchild()
 /*
  * Return a printable representation of a host address.
  */
-const char *cvthname(f)
-	struct sockaddr_in *f;
+static const char *cvthname(struct sockaddr_in *f)
 {
 	struct hostent *hp;
 	register char *p;
@@ -4611,7 +4684,7 @@ void debug_switch()
  * correctly formatted for it (containing a single %s param).
  * rgerhards 2005-09-19
  */
-void logerrorSz(char *type, char *errMsg)
+static void logerrorSz(char *type, char *errMsg)
 {
 	char buf[1024];
 
@@ -4626,7 +4699,7 @@ void logerrorSz(char *type, char *errMsg)
  * correctly formatted for it (containing a single %d param).
  * rgerhards 2005-09-19
  */
-void logerrorInt(char *type, int errCode)
+static void logerrorInt(char *type, int errCode)
 {
 	char buf[1024];
 
@@ -4638,7 +4711,7 @@ void logerrorInt(char *type, int errCode)
 /*
  * Print syslogd errors some place.
  */
-void logerror(type)
+static void logerror(type)
 	char *type;
 {
 	char buf[1024];
@@ -4654,7 +4727,7 @@ void logerror(type)
 	return;
 }
 
-void die(sig)
+static void die(sig)
 
 	int sig;
 	
@@ -4778,7 +4851,7 @@ void doexit(sig)
  * (if the line is correct).
  * rgerhards, 2005-09-27
  */
-rsRetVal addAllowedSenderLine(char* pName, char** ppRestOfConfLine)
+static rsRetVal addAllowedSenderLine(char* pName, char** ppRestOfConfLine)
 {
 	struct AllowedSenders **ppRoot;
 	struct AllowedSenders **ppLast;
@@ -4827,7 +4900,6 @@ printf("addAllow..., name '%s', line: '%s'\n", pName, *ppRestOfConfLine);
 			rsParsDestruct(pPars);
 			return(iRet);
 		}
-		printf("returned IP %x, bits %d\n", uIP, iBits);
 		if((iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits))
 			!= RS_RET_OK) {
 			logerrorInt("Error %d adding allowed sender entry "
@@ -4852,7 +4924,7 @@ printf("addAllow..., name '%s', line: '%s'\n", pName, *ppRestOfConfLine);
  * rgerhards 2005-06-21: previously only for templates, now 
  *    generalized.
  */
-void doNameLine(char **pp, enum eDirective eDir)
+static void doNameLine(char **pp, enum eDirective eDir)
 {
 	char *p = *pp;
 	char szName[128];
@@ -5148,7 +5220,7 @@ void init()
 
 	Initialized = 1;
 
-	if ( Debug ) {
+	if(Debug) {
 		printf("Active selectors:\n");
 		for (f = Files; f; f = f->f_next) {
 			if (f->f_type != F_UNUSED) {
@@ -5165,17 +5237,7 @@ void init()
 					printf("\tOperation: ");
 					if(f->f_filterData.prop.isNegated)
 						printf("NOT ");
-					if(f->f_filterData.prop.operation == FIOP_NOP)
-						printf("'NOP'");
-					else if(f->f_filterData.prop.operation == FIOP_CONTAINS)
-						printf("'contains'");
-					else if(f->f_filterData.prop.operation == FIOP_ISEQUAL)
-						printf("'isequal'");
-					else if(f->f_filterData.prop.operation == FIOP_STARTSWITH)
-						printf("'startswith'");
-					else
-						printf("'ERROR - invalid filter type!'");
-					printf("\n");
+					printf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
 					printf("\tValue....: '%s'\n",
 					       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
 					printf("\tAction...: ");
@@ -5212,6 +5274,12 @@ void init()
 		printf("\n");
 		tplPrintList();
 		ochPrintList();
+
+#ifdef	SYSLOG_INET
+		/* now the allowedSender lists: */
+		PrintAllowedSenders(1); /* UDP */
+		PrintAllowedSenders(2); /* TCP */
+#endif 	/* #ifdef SYSLOG_INET */
 	}
 
 	/* we now generate the startup message. It now includes everything to
