@@ -729,9 +729,9 @@ void printline(char *hname, char *msg, int iSource);
 void printsys(char *msg);
 void logmsg(int pri, struct msg*, int flags);
 void fprintlog(register struct filed *f, int flags);
-void endtty();
-void wallmsg(register struct filed *f);
-void reapchild();
+static void endtty();
+static void wallmsg(register struct filed *f);
+static void reapchild();
 static const char *cvthname(struct sockaddr_in *f);
 void domark();
 void debug_switch();
@@ -876,7 +876,7 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in
 		   == pAllow->allowedSender)
 		   	return 1;
 	}
-
+	dprintf("%x is not an allowed sender\n", (unsigned) ulAddrInLocalByteOrder);
 	return 0;
 }
 #endif /* #ifdef SYSLOG_INET */
@@ -1062,6 +1062,26 @@ void TCPSessAccept(void)
 	/* OK, we have a "good" index... */
 	/* get the host name */
 	fromHost = (char *)cvthname(&addr);
+
+	/* Here we check if a host is permitted to send us
+	 * syslog messages. If it isn't, we do not further
+	 * process the message but log a warning (if we are
+	 * configured to do this).
+	 * rgerhards, 2005-09-26
+	 */
+printf("pre check allowed\n");
+	if(!isAllowedSender(pAllowedSenders_TCP, &addr)) {
+		if(option_DisallowWarning) {
+			errno = 0;
+			logerrorSz("TCP message from disallowed sender %s discarded",
+				   fromHost);
+		}
+		close(newConn);
+		return;
+	}
+printf("post check allowed\n");
+
+	/* OK, we have an allowed sender, so let's continue */
 	lenHostName = strlen(fromHost) + 1; /* for \0 byte */
 	if((pBuf = (char*) malloc(sizeof(char) * lenHostName)) == NULL) {
 		logerror("couldn't allocate buffer for hostname - ignored");
@@ -2926,20 +2946,20 @@ int main(int argc, char **argv)
 #endif /* #ifdef SYSLOG_INET */
 #ifdef SYSLOG_UNIXAF
 		for (i = 0; i < nfunix; i++) {
-		    if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
-			memset(line, '\0', sizeof(line));
-			i = recv(fd, line, MAXLINE - 2, 0);
-			dprintf("Message from UNIX socket: #%d\n", fd);
-			if (i > 0) {
-				line[i] = line[i+1] = '\0';
-				printchopped(LocalHostName, line, i + 2,  fd, SOURCE_UNIXAF);
-			} else if (i < 0 && errno != EINTR) {
-				dprintf("UNIX socket error: %d = %s.\n", \
-					errno, strerror(errno));
-				logerror("recvfrom UNIX");
-	      	}
+			if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
+				memset(line, '\0', sizeof(line));
+				i = recv(fd, line, MAXLINE - 2, 0);
+				dprintf("Message from UNIX socket: #%d\n", fd);
+				if (i > 0) {
+					line[i] = line[i+1] = '\0';
+					printchopped(LocalHostName, line, i + 2,  fd, SOURCE_UNIXAF);
+				} else if (i < 0 && errno != EINTR) {
+					dprintf("UNIX socket error: %d = %s.\n", \
+						errno, strerror(errno));
+					logerror("recvfrom UNIX");
 				}
 			}
+		}
 #endif
 
 #ifdef SYSLOG_INET
@@ -2963,7 +2983,7 @@ int main(int argc, char **argv)
 					printchopped(from, line, i + 2,  finet, SOURCE_INET);
 				} else {
 					if(option_DisallowWarning) {
-						logerrorSz("message from disallowed sender %s discarded",
+						logerrorSz("UDP message from disallowed sender %s discarded",
 							   from);
 					}
 				}
@@ -4426,7 +4446,7 @@ void fprintlog(register struct filed *f, int flags)
 
 jmp_buf ttybuf;
 
-void endtty()
+static void endtty()
 {
 	longjmp(ttybuf, 1);
 }
@@ -4473,8 +4493,7 @@ void endutent(void)
  *	world, or a list of approved users.
  */
 
-void wallmsg(f)
-	register struct filed *f;
+static void wallmsg(register struct filed *f)
 {
 	char p[6 + UNAMESZ];
 	register int i;
@@ -4564,7 +4583,7 @@ void wallmsg(f)
 	reenter = 0;
 }
 
-void reapchild()
+static void reapchild()
 {
 	int saved_errno = errno;
 #if defined(SYSV) && !defined(linux)
@@ -4893,6 +4912,8 @@ printf("addAllow..., name '%s', line: '%s'\n", pName, *ppRestOfConfLine);
 	}
 
 	while(!parsIsAtEndOfParseString(pPars)) {
+		if(parsPeekAtCharAtParsPtr(pPars) == '#')
+			break; /* a comment-sign stops processing of line */
 		/* now parse a single IP address */
 		if((iRet = parsIPv4WithBits(pPars, &uIP, &iBits)) != RS_RET_OK) {
 			logerrorInt("Error %d parsing IP address in allowed sender"

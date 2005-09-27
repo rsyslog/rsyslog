@@ -453,6 +453,20 @@ int rsParsGetParsePointer(rsParsObj *pThis)
 		return rsCStrLen(pThis->pCStr) - 1;
 }
 
+/* peek at the character at the parse pointer
+ * the caller must ensure that the parse pointer is not
+ * at the end of the parse buffer (e.g. by first calling
+ * parsIsAtEndOfParseString).
+ * rgerhards, 2005-09-27
+ */
+char parsPeekAtCharAtParsPtr(rsParsObj *pThis)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
+	assert(pThis->iCurrPos < rsCStrLen(pThis->pCStr));
+	
+	return(*(pThis->pCStr->pBuf + pThis->iCurrPos));
+}
+
 
 /*
  * Local variables:

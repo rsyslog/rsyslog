@@ -3,9 +3,9 @@ Version 1.10.2 (RGer), 2005-09-2?
 - added comparison operations in property-based filters:
   * isequal
   * startswith
-- added ability to negate all property-based filter comparison oprations
+- added ability to negate all property-based filter comparison operations
   by adding a !-sign right in front of the operation name
-- added the ability to specify remote senders for UDP
+- added the ability to specify remote senders for UDP and TCP
   received messages. Allows to block all but well-known hosts
 - changed the $-config line directives to be case-INsensitive
 - new command line option -w added: "do not display warnings if messages
@@ -16,6 +16,11 @@ Version 1.10.2 (RGer), 2005-09-2?
   results (fortunately, this function was not yet used widely)
 - added better support for "debugging" rsyslog.conf property filters
   (only if -d switch is given)
+- changed some function definitions to static, which eventually enables
+  some compiler optimizations
+- fixed a bug in MySQL code; when a SQL error occured, rsyslogd could
+  run in a tight loop. This was due to invalid sequence of error reporting
+  and is now fixed.
 ---------------------------------------------------------------------------
 Version 1.10.1 (RGer), 2005-09-23
 - added the ability to execute a shell script as an action.
@@ -44,6 +49,10 @@ Version 1.10.0 (RGer), 2005-09-20
   to happen only during debug mode
 - fixed a problem with compiling on SUSE and - while doing so - removed
   the socket call to set SO_BSDCOMPAT in cases where it is obsolete.
+---------------------------------------------------------------------------
+Version 1.0.1 (RGer), 2005-09-23
+- fixed a security issue with SQL-escaping in conjunction with
+  non-(SQL-)standard MySQL features.
 ---------------------------------------------------------------------------
 Version 1.0.0 (RGer), 2005-09-12
 - changed install doc to cover daily cron scripts - a trouble source
