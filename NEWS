@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.10.2 (RGer), 2005-09-2?
+Version 1.10.2 (RGer), 2005-09-27
 - added comparison operations in property-based filters:
   * isequal
   * startswith
