@@ -787,6 +787,19 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 	   == NULL)
 	   	return RS_RET_OUT_OF_MEMORY; /* no options left :( */
 
+	if(iSignificantBits == 0)
+		/* we handle this seperatly just to provide a better
+		 * error message.
+		 */
+		logerror("You can not specify 0 bits of the netmask, this would "
+		         "match ALL systems. If you really intend to do that, "
+			 "remove all $AllowedSender directives.");
+	if((iSignificantBits < 1) || (iSignificantBits > 32)) {
+		logerrorInt("Invalid bit number in IP address - adjusted to 32",
+			    iSignificantBits);
+		iSignificantBits = 32;
+	}
+
 	/* populate entry */
 	pEntry->bitsToShift = 32 - iSignificantBits; /* IPv4! */
 	pEntry->allowedSender = iAllow >> pEntry->bitsToShift;

@@ -31,7 +31,7 @@ FEATURE_DB=0
 FEATURE_REGEXP=1
 
 # Enable debug mode (much slower code)
-FEATURE_DEBUG=1
+FEATURE_DEBUG=0
 
 #############################################################
 #                  END OF USER SETTINGS                     #
