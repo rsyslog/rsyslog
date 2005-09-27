@@ -1,7 +1,7 @@
 .\" Copyright 2004-2005 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "12 September 2005" "Version 1.10.0 (unstable)" "Linux System Administration"
+.TH RSYSLOGD 8 "27 September 2005" "Version 1.10.2 (unstable)" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -39,6 +39,7 @@ rsyslogd \- reliable and extended syslogd
 .I port
 ]
 .RB [ " \-v " ]
+.RB [ " \-w " ]
 .LP
 .SH DESCRIPTION
 .B Rsyslogd
@@ -191,6 +192,10 @@ compatible with e.G. Cisco PIX, syslog-ng and MonitorWare (Windows).
 .TP
 .B "\-v"
 Print version and exit.
+.TP
+.B "\-w"
+Supress warnings issued when messages are received from non-authorized
+machines (those, that are in no AllowedSender list).
 .LP
 .SH SIGNALS
 .B Rsyslogd
