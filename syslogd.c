@@ -5569,14 +5569,19 @@ void DBErrorHandler(register struct filed *f)
 	 *
 	 * Think about diffrent "delay" for diffrent errors!
 	 */
+	/* Enable "delay" */
+	f->f_timeResumeOnError = time(&f->f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
+	f->f_iLastDBErrNo = mysql_errno(&f->f_hmysql);
+	/* *NOW* report the error. The order of operations is vitally important.
+	 * Previously, we reported before setting the db error suspend, which
+	 * lead to an endless loop. So do not do that again ;)
+	 * rgerhards, 2005-10-05
+	 */
 	errno = 0;
 	snprintf(errMsg, sizeof(errMsg)/sizeof(char),
 		"db error (%d): %s\n", mysql_errno(&f->f_hmysql),
 		mysql_error(&f->f_hmysql));
 	logerror(errMsg);
-	/* Enable "delay" */
-	f->f_timeResumeOnError = time(&f->f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
-	f->f_iLastDBErrNo = mysql_errno(&f->f_hmysql);
 
 }
 

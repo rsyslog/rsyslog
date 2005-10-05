@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 1.0.2 (RGer), 2005-10-05
+- fixed an issue with MySQL error reporting. When an error occured,
+  the MySQL driver went into an endless loop (at least in most cases).
+---------------------------------------------------------------------------
 Version 1.0.1 (RGer), 2005-09-23
 - fixed a security issue with SQL-escaping in conjunction with
   non-(SQL-)standard MySQL features.
