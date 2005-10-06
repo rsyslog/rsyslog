@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 1.11.0 (RGer), 2005-??-??
+- support for receiving messages via RFC 3195; added rfc3195d for that
+  purpose
 ---------------------------------------------------------------------------
 Version 1.10.2 (RGer), 2005-09-27
 - added comparison operations in property-based filters:

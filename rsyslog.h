@@ -9,8 +9,7 @@
 /* ############################################################# *
  * #                    Config Settings                        # *
  * ############################################################# */
-/* from liblogging config.h */
-#define STRINGBUF_ALLOC_INCREMENT 128
+#define RS_STRINGBUF_ALLOC_INCREMENT 128
 
 /* ############################################################# *
  * #                  End Config Settings                      # *
@@ -53,11 +52,11 @@ typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
  */
 enum rsObjectID
 {
-	OID_Freed = -1,		/**< assigned, when an object is freed. If this
+	OIDrsFreed = -1,		/**< assigned, when an object is freed. If this
 				 *   is seen during a method call, this is an
 				 *   invalid object pointer!
 				 */
-	OID_Invalid = 0,	/**< value created by calloc(), so do not use ;) */
+	OIDrsInvalid = 0,	/**< value created by calloc(), so do not use ;) */
 	/* The 0xEFCD is a debug aid. It helps us find object IDs in memory
 	 * dumps (on X86, this is CDEF in the dump ;)
 	 * If you are on an embedded device and you would like to save space
@@ -84,6 +83,6 @@ typedef enum rsObjectID rsObjID;
 #ifdef NDEBUG
 #define RSFREEOBJ(x) free(x)
 #else
-#define RSFREEOBJ(x) {(x)->OID = OID_Freed; free(x);}
+#define RSFREEOBJ(x) {(x)->OID = OIDrsFreed; free(x);}
 #endif
 #endif

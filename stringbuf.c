@@ -39,7 +39,7 @@ rsCStrObj *rsCStrConstruct(void)
 	pThis->pszBuf = NULL;
 	pThis->iBufSize = 0;
 	pThis->iStrLen = 0;
-	pThis->iAllocIncrement = STRINGBUF_ALLOC_INCREMENT;
+	pThis->iAllocIncrement = RS_STRINGBUF_ALLOC_INCREMENT;
 
 	return pThis;
 }

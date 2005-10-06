@@ -11,7 +11,7 @@
 #LDFLAGS= -g -Wall -fno-omit-frame-pointer
 #CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
 
-CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -I/usr/local/include $(NOLARGEFILE) $(WITHDB) $(F_REGEXP) $(DBG)
+CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -I/usr/local/include $(NOLARGEFILE) $(WITHDB) $(F_REGEXP) $(DBG) $(F_RFC3195)
 LDFLAGS= -s
 
 # There is one report that under an all ELF system there may be a need to
@@ -23,6 +23,12 @@ LDFLAGS= -s
 # file system standard.
 FSSTND = -DFSSTND
 
+# The following defines tell us where liblogging is located. This
+# is only needed if we build with RFC 3195 support. By default, 
+# liblogging is expected to be present in the our parent directory.
+LIBLOGGING_INC=-I../../liblogging/src
+LIBLOGGING_BIN=../../liblogging/src/linux/liblogging.a
+
 # The following define establishes the name of the pid file for the
 # rsyslogd daemon.  The library include file (paths.h) defines the
 # name for the rsyslogd pid to be rsyslog.pid.
@@ -33,9 +39,9 @@ SYSLOGD_FLAGS= -DSYSLOG_INET -DSYSLOG_UNIXAF ${FSSTND} \
 SYSLOG_FLAGS= -DALLOW_KERNEL_LOGGING
 
 .c.o:
-	${CC} ${CFLAGS} -c $(VPATH)$*.c
+	${CC} ${CFLAGS} ${LIBLOGGING_INC} -c $(VPATH)$*.c
 
-all: syslogd
+all: rfc3195d syslogd
 
 test: syslog_tst tsyslogd
 
@@ -44,11 +50,15 @@ install: install_man install_exec
 syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o outchannel.o parse.o
 	${CC} ${LDFLAGS} -o syslogd syslogd.o pidfile.o template.o outchannel.o stringbuf.o srUtils.o parse.o ${LIBS}
 
+rfc3195d: rfc3195d.o
+	${CC} ${LDFLAGS} -o rfc3195d rfc3195d.o ${LIBLOGGING_BIN}
+
 srUtils.o: srUtils.c srUtils.h liblogging-stub.h rsyslog.h
 stringbuf.o: stringbuf.c stringbuf.h rsyslog.h
 parse.o: parse.c parse.h rsyslog.h
 template.o: template.c template.h stringbuf.h rsyslog.h
 outchannel.o: outchannel.c outchannel.h stringbuf.h syslogd.h rsyslog.h
+rfc3195d.o: rfc3195d.c rsyslog.h
 
 syslogd.o: syslogd.c version.h parse.h template.h stringbuf.h outchannel.h syslogd.h rsyslog.h
 	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} -c $(VPATH)syslogd.c

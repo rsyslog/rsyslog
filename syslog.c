@@ -17,10 +17,6 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "@(#)syslog.c	5.28 (Berkeley) 6/27/90";
-#endif /* LIBC_SCCS and not lint */
-
 /*
  * SYSLOG -- print message on log file
  *
