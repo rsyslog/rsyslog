@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------
+Version 1.0.3 (RGer), 2005-10-10
+- added an additional guard to prevent rsyslogd from aborting when the
+  2gb file size limit is hit. While a user can configure rsyslogd to
+  handle such situations, it would abort if that was not done AND large
+  file support was not enabled (ok, this is hopefully an unlikely scenario)
+- fixed a bug that caused additional Unix domain sockets to be incorrectly
+  processed - could lead to message loss in extreme cases
+---------------------------------------------------------------------------
 Version 1.0.2 (RGer), 2005-10-05
 - fixed an issue with MySQL error reporting. When an error occured,
   the MySQL driver went into an endless loop (at least in most cases).

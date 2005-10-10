@@ -2403,6 +2403,7 @@ int main(argc, argv)
 	(void) signal(SIGALRM, domark);
 	(void) signal(SIGUSR1, Debug ? debug_switch : SIG_IGN);
 	(void) signal(SIGPIPE, SIG_IGN);
+	(void) signal(SIGXFSZ, SIG_IGN); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
 
 	/* Create a partial message table for all file descriptors. */
@@ -2604,19 +2605,20 @@ int main(argc, argv)
 #ifdef SYSLOG_UNIXAF
 		for (i = 0; i < nfunix; i++) {
 		    if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
+		    	int iRcvd;
 			memset(line, '\0', sizeof(line));
-			i = recv(fd, line, MAXLINE - 2, 0);
+			iRcvd = recv(fd, line, MAXLINE - 2, 0);
 			dprintf("Message from UNIX socket: #%d\n", fd);
-			if (i > 0) {
-				line[i] = line[i+1] = '\0';
-				printchopped(LocalHostName, line, i + 2,  fd, SOURCE_UNIXAF);
-			} else if (i < 0 && errno != EINTR) {
+			if (iRcvd > 0) {
+				line[iRcvd] = line[iRcvd+1] = '\0';
+				printchopped(LocalHostName, line, iRcvd + 2,  fd, SOURCE_UNIXAF);
+			} else if (iRcvd < 0 && errno != EINTR) {
 				dprintf("UNIX socket error: %d = %s.\n", \
 					errno, strerror(errno));
 				logerror("recvfrom UNIX");
-	      	}
 				}
-			}
+		     }
+		}
 #endif
 
 #ifdef SYSLOG_INET
