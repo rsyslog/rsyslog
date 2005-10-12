@@ -76,6 +76,7 @@ install_exec: syslogd
 	${INSTALL} -b -s syslogd ${DESTDIR}${BINDIR}/rsyslogd
 
 install_man:
+	${INSTALL} $(VPATH)rfc3195d.8 ${DESTDIR}${MANDIR}/man8/rfc3195d.8
 	${INSTALL} $(VPATH)rsyslogd.8 ${DESTDIR}${MANDIR}/man8/rsyslogd.8
 	${INSTALL} $(VPATH)rsyslog.conf.5 ${DESTDIR}${MANDIR}/man5/rsyslog.conf.5
 

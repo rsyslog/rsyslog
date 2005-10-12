@@ -60,7 +60,7 @@ static int usage()
 	 * currently actually do...
 	 fprintf(stderr, "usage: rfc3195d [-dv] [-i pidfile] [-n] [-p path]\n");
 	 */
-	fprintf(stderr, "usage: rfc3195d [-p path]\n");
+	fprintf(stderr, "usage: rfc3195d [-dv] [-p path]\n");
 	exit(1);
 }
 
@@ -208,6 +208,7 @@ int main(int argc, char* argv[])
 	if(!Debug)
 		signal(SIGINT, SIG_IGN);
 	signal(SIGUSR1, doShutdown);
+	signal(SIGTERM, doShutdown);
 
 	if((pAPI = srAPIInitLib()) == NULL)
 	{
