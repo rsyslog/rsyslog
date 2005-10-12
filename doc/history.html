@@ -30,8 +30,10 @@ places indicated that RFC3195 is NOT a prime priority for users, but
 rather better control over the output format. So here we are, with
 a rsyslod that covers a lot of enhancements, but not a single one
 of these that made its name ;) Since version 0.9.2, receiving syslog messages 
-via plain tcp is finally supported, bringing rsyslogd a bit closer to its name.
-</p><p>
+via plain tcp is finally supported, a bit later sending via TCP, too. Starting 
+with 1.11.0, RFC 3195 is finally support at the receiving side (a.k.a. &quot;listener&quot;). 
+Support for sending via RFC 3195 is still due. Anyhow, rsyslog has come much 
+closer to what it name promises.</p><p>
 The next enhancement scheduled is support for the new syslog-protocol
 internet draft format, not the least to see how easy/complicated it is
 to implement. We already know that some subleties of syslog-protocol will
@@ -42,7 +44,7 @@ we intend to advance the code and introduce new features.
 </p><p>
 The database support was included so that our web-based syslog interface
 can be used. This is another open source project which can be found
-under <a href="http://www.liblogging.org/">http://www.liblogging.org</a>. We highly recommend having a look at 
+under <a href="http://www.phplogcon.org">http://www.phplogcon.org</a>. We highly recommend having a look at 
 it. It might not work for you if you expect thousands of messages per
 second (because your database won't be able to provide adequate performance),
 but in many cases it is a very handy analysis and troubleshooting tool.
@@ -60,8 +62,10 @@ sizes of 32k and more. This feature has been tested, but by default is turned of
 (as it has some memory footprint that we didn't want to put on users not 
 actually requiring it). Search the file syslogd.c and search for &quot;IHE&quot; - you 
 will find easy and precise instructions on what you need to change (it's just 
-one line of code!).
-<p>Be sure to visit Rainer's <a href="http://rgerhards.blogspot.com/">syslog block</a>
+one line of code!). Please note that RFC 3195/COOKED supports 1K message sizes 
+only. It'll probably support longer messages in the future, but it is our 
+believe that using larger messages with current RFC 3195 is a violation of the 
+standard.<p>Be sure to visit Rainer's <a href="http://rgerhards.blogspot.com/">syslog block</a>
 to get some more insight into the development of rsyslog and syslog in general.</p>
 <h2>Some useful links</h2>
 <ul>

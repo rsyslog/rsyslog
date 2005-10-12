@@ -14,7 +14,7 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 <ul>
 
  <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a><li>support for (plain) tcp 
-	based syslog - much better reliability<li>control of log output format, 
+	based syslog - much better reliability<li>support for receiving messages via 	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">	RFC 3195</a> delivery<li>control of log output format, 
 	including ability to present channel and priority as visible log data<li>good timestamp format control; at a minimum, ISO 8601/RFC 3339
  second-resolution UTC zone<li>ability to reformat message contents and work with substrings<li>support for 
 	log files larger than 2gb<li>support for file size limitation and automatic 
@@ -33,8 +33,7 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 	<a href="http://www.syslog.cc/ietf/drafts/draft-ietf-syslog-protocol-14.txt">
 	syslog-protocol-14</a> compliant messages 
 	(pending, as IETF will change proposed format)<li>support for native SSL enryption of plain tcp syslog sessions
-	<li>RFC 3195 support - planned (but late)
- 	<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
+	<li>support for	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - planned<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
 	partly added
  	<li>multi-threaded redesign - maybe (depending on feedback; also
  opens Pandorra's cross-platform development box ;))
