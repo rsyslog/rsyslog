@@ -67,7 +67,7 @@ syslog.o: syslog.c
 	${CC} ${CFLAGS} ${SYSLOG_FLAGS} -c $(VPATH)syslog.c
 
 clean:
-	rm -f *.o *.log *~ *.orig syslogd
+	rm -f *.o *.log *~ *.orig syslogd rfc3195d
 
 clobber: clean
 	rm -f syslogd ksym syslog_tst oops_test TAGS tsyslogd tklogd

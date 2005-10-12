@@ -315,6 +315,7 @@ int nfunix = 1;
 int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
 				   */
+int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name? */
 char *funixn[MAXFUNIX] = { _PATH_LOG };
 int funix[MAXFUNIX] = { -1, };
 
@@ -405,7 +406,13 @@ struct msg {
 	short	iSyslogVers;	/* version of syslog protocol
 				 * 0 - RFC 3164
 				 * 1 - RFC draft-protocol-08 */
-	short	iMsgSource;	/* where did the msg originate from? */
+	short	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
+	   /* background: the hostname is not present on "regular" messages
+	    * received via UNIX domain sockets from the same machine. However,
+	    * it is available when we have a forwarder (e.g. rfc3195d) using local
+	    * sockets. All in all, the parser would need parse templates, that would
+	    * resolve all these issues... rgerhards, 2005-10-06
+	    */
 #define SOURCE_INTERNAL 0
 #define SOURCE_STDIN 1
 #define SOURCE_UNIXAF 2
@@ -722,7 +729,7 @@ static char template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility
 /* Function prototypes. */
 int main(int argc, char **argv);
 char **crunch_list(char *list);
-int usage(void);
+static int usage(void);
 void untty(void);
 void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
 void printline(char *hname, char *msg, int iSource);
@@ -2550,7 +2557,14 @@ int main(int argc, char **argv)
 		switch((char)ch) {
 		case 'a':
 			if (nfunix < MAXFUNIX)
-				funixn[nfunix++] = optarg;
+				if(*optarg == ':') {
+					funixParseHost[nfunix] = 1;
+					funixn[nfunix++] = optarg+1;
+				}
+				else {
+					funixParseHost[nfunix] = 0;
+					funixn[nfunix++] = optarg;
+				}
 			else
 				fprintf(stderr, "Out of descriptors, ignoring %s\n", optarg);
 			break;
@@ -2760,6 +2774,7 @@ int main(int argc, char **argv)
 	(void) signal(SIGALRM, domark);
 	(void) signal(SIGUSR1, Debug ? debug_switch : SIG_IGN);
 	(void) signal(SIGPIPE, SIG_IGN);
+	(void) signal(SIGXFSZ, SIG_IGN); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
 
 	/* Create a partial message table for all file descriptors. */
@@ -2960,13 +2975,14 @@ int main(int argc, char **argv)
 #ifdef SYSLOG_UNIXAF
 		for (i = 0; i < nfunix; i++) {
 			if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
+				int iRcvd;
 				memset(line, '\0', sizeof(line));
-				i = recv(fd, line, MAXLINE - 2, 0);
+				iRcvd = recv(fd, line, MAXLINE - 2, 0);
 				dprintf("Message from UNIX socket: #%d\n", fd);
-				if (i > 0) {
-					line[i] = line[i+1] = '\0';
-					printchopped(LocalHostName, line, i + 2,  fd, SOURCE_UNIXAF);
-				} else if (i < 0 && errno != EINTR) {
+				if (iRcvd > 0) {
+					line[iRcvd] = line[iRcvd+1] = '\0';
+					printchopped(LocalHostName, line, iRcvd + 2,  fd, funixParseHost[i]);
+				} else if (iRcvd < 0 && errno != EINTR) {
 					dprintf("UNIX socket error: %d = %s.\n", \
 						errno, strerror(errno));
 					logerror("recvfrom UNIX");
@@ -2993,7 +3009,7 @@ int main(int argc, char **argv)
 				 */
 				if(isAllowedSender(pAllowedSenders_UDP, &frominet)) {
 					line[i] = line[i+1] = '\0';
-					printchopped(from, line, i + 2,  finet, SOURCE_INET);
+					printchopped(from, line, i + 2,  finet, 1);
 				} else {
 					if(option_DisallowWarning) {
 						logerrorSz("UDP message from disallowed sender %s discarded",
@@ -3060,7 +3076,7 @@ int main(int argc, char **argv)
 			i = read(fileno(stdin), line, MAXLINE);
 			if (i > 0) {
 				printchopped(LocalHostName, line, i+1,
-					     fileno(stdin), SOURCE_STDIN);
+					     fileno(stdin), 0);
 		  	} else if (i < 0) {
 		    		if (errno != EINTR) {
 		      			logerror("stdin");
@@ -3073,7 +3089,7 @@ int main(int argc, char **argv)
 	}
 }
 
-int usage()
+static int usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [-dhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
 		" [-s domainlist] [-r port] [-t port] [-f conffile]\n");
@@ -3256,14 +3272,14 @@ void untty()
  * I added the "iSource" parameter. This is needed to distinguish between
  * messages that have a hostname in them (received from the internet) and
  * those that do not have (most prominently /dev/log).  rgerhards 2004-11-16
+ * And now I removed the "iSource" parameter and changed it to be "bParseHost",
+ * because all that it actually controls is whether the host is parsed or not.
+ * For rfc3195 support, we needed to modify the algo for host parsing, so we can
+ * no longer rely just on the source (rfc3195d forwarded messages arrive via
+ * unix domain sockets but contain the hostname). rgerhards, 2005-10-06
  */
 
-void printchopped(hname, msg, len, fd, iSource)
-	char *hname;
-	char *msg;
-	int len;
-	int fd;
-	int iSource;
+void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 {
 	auto int ptlngth;
 
@@ -3283,7 +3299,7 @@ void printchopped(hname, msg, len, fd, iSource)
 		if ( (strlen(msg) + strlen(tmpline)) > MAXLINE )
 		{
 			logerror("Cannot glue message parts together");
-			printline(hname, tmpline, iSource);
+			printline(hname, tmpline, bParseHost);
 			start = msg;
 		}
 		else
@@ -3291,7 +3307,7 @@ void printchopped(hname, msg, len, fd, iSource)
 			dprintf("Previous: %s\n", tmpline);
 			dprintf("Next: %s\n", msg);
 			strcat(tmpline, msg);	/* length checked above */
-			printline(hname, tmpline, iSource);
+			printline(hname, tmpline, bParseHost);
 			if ( (strlen(msg) + 1) == len )
 				return;
 			else
@@ -3318,7 +3334,7 @@ void printchopped(hname, msg, len, fd, iSource)
 
 	do {
 		end = strchr(start + 1, '\0');
-		printline(hname, start, iSource);
+		printline(hname, start, bParseHost);
 		start = end + 1;
 	} while ( *start != '\0' );
 
@@ -3337,11 +3353,10 @@ void printchopped(hname, msg, len, fd, iSource)
  * message here.
  * Added the iSource parameter so that we know if we have to parse
  * HOSTNAME or not. rgerhards 2004-11-16.
+ * changed parameter iSource to bParseHost. For details, see comment in
+ * printchopped(). rgerhards 2005-10-06
  */
-void printline(hname, msg, iSource)
-	char *hname;
-	char *msg;
-	int iSource;
+void printline(char *hname, char *msg, int bParseHost)
 {
 	register char *p;
 	int pri;
@@ -3359,7 +3374,7 @@ void printline(hname, msg, iSource)
 	}
 	if(MsgSetRawMsg(pMsg, msg) != 0) return;
 	
-	pMsg->iMsgSource = iSource;
+	pMsg->bParseHOSTNAME  = bParseHost;
 	/* test for special codes */
 	pri = DEFUPRI;
 	p = msg;
@@ -3412,7 +3427,7 @@ void printline(hname, msg, iSource)
 	 * the message was received from (that, for obvious reasons,
 	 * being the local host).  rgerhards 2004-11-16
 	 */
-	if(iSource != SOURCE_INET)
+	if(bParseHost == 0)
 		if(MsgSetHOSTNAME(pMsg, hname) != 0) return;
 	if(MsgSetRcvFrom(pMsg, hname) != 0) return;
 
@@ -3429,7 +3444,7 @@ void printline(hname, msg, iSource)
 	 * we are done with the message object. If it still is
 	 * stored somewhere, we can call discard anyhow. This
 	 * is handled via the reference count - see description
-	 * for struct msg for details.
+	 * of struct msg for details.
 	 */
 	MsgDestruct(pMsg);
 	return;
@@ -3486,7 +3501,7 @@ void logmsgInternal(pri, msg, from, flags)
 	if(MsgSetHOSTNAME(pMsg, LocalHostName) != 0) return;
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
-	pMsg->iMsgSource = SOURCE_INTERNAL;
+	pMsg->bParseHOSTNAME = 0;
 	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 
 	logmsg(pri, pMsg, flags);
@@ -3649,7 +3664,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	}
 
 	/* parse HOSTNAME - but only if this is network-received! */
-	if(pMsg->iMsgSource == SOURCE_INET) {
+	if(pMsg->bParseHOSTNAME) {
 		if(bContParse) {
 			/* TODO: quick and dirty memory allocation */
 			if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)

@@ -1,7 +1,13 @@
 ---------------------------------------------------------------------------
-Version 1.11.0 (RGer), 2005-??-??
+Version 1.11.0 (RGer), 2005-10-12
 - support for receiving messages via RFC 3195; added rfc3195d for that
   purpose
+- added an additional guard to prevent rsyslogd from aborting when the
+  2gb file size limit is hit. While a user can configure rsyslogd to
+  handle such situations, it would abort if that was not done AND large
+  file support was not enabled (ok, this is hopefully an unlikely scenario)
+- fixed a bug that caused additional Unix domain sockets to be incorrectly
+  processed - could lead to message loss in extreme cases
 ---------------------------------------------------------------------------
 Version 1.10.2 (RGer), 2005-09-27
 - added comparison operations in property-based filters:

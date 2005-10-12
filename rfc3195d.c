@@ -1,103 +1,163 @@
 /** 
- * testsrvr.cpp : This is a small sample C++ server app
- * using liblogging. It just demonstrates how things can be 
- * done. It accepts incoming messages and just dumps them
- * to stdout. It is single-threaded.
+ * rfc3195d.c
+ * This is an RFC 3195 listener. All data received is forwarded to
+ * local UNIX domain socket, where it can be picked up by a
+ * syslog daemon (like rsyslogd ;)).
  *
  * \author  Rainer Gerhards <rgerhards@adiscon.com>
- * \date    2003-08-13
- *          file created.
  *
- * Copyright 2003 
- *     Rainer Gerhards and Adiscon GmbH. All Rights Reserved.
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- * 
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- * 
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in
- *       the documentation and/or other materials provided with the
- *       distribution.
- * 
- *     * Neither the name of Adiscon GmbH or Rainer Gerhards
- *       nor the names of its contributors may be used to
- *       endorse or promote products derived from this software without
- *       specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Copyright 2003-2005 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <sys/errno.h>
 #include "rsyslog.h"
 #include "liblogging.h"
 #include "srAPI.h"
 #include "syslogmessage.h"
+#include "version.h"
 
 /* configurable params! */
-#define	_PATH_LOGNAME	"/dev/log"
+static char* pPathLogname = "/dev/log3195";
+static char *PidFile;
+static int NoFork = 0;
+static int Debug = 0;
 
-/* quick hack, so all can access it. Do NOT do this in your server ;-) */
+/* we use a global API object below, because this listener is
+ * not very complex. As such, this hack should not harm anything.
+ * rgerhards, 2005-10-12
+ */
 static srAPIObj* pAPI;
 
 static int	LogFile = -1;		/* fd for log */
 static int	connected;		/* have done connect */
 static struct sockaddr SyslogAddr;	/* AF_UNIX address of local logger */
 
-/*
- * OPENLOG -- open system log
+/* small usage info */
+static int usage()
+{
+	/* The following usage line is what we intend to have - it
+	 * is commented out as a reminder. The one below is what we
+	 * currently actually do...
+	 fprintf(stderr, "usage: rfc3195d [-dv] [-i pidfile] [-n] [-p path]\n");
+	 */
+	fprintf(stderr, "usage: rfc3195d [-p path]\n");
+	exit(1);
+}
+
+/* CLOSELOG -- close the system log
+ */
+static void closelog(void)
+{
+	close(LogFile);
+	LogFile = -1;
+	connected = 0;
+}
+
+/* OPENLOG -- open system log
  */
 static void openlog()
 {
 	if (LogFile == -1) {
 		SyslogAddr.sa_family = AF_UNIX;
-		strncpy(SyslogAddr.sa_data, _PATH_LOGNAME,
+		strncpy(SyslogAddr.sa_data, pPathLogname,
 		    sizeof(SyslogAddr.sa_data));
 		LogFile = socket(AF_UNIX, SOCK_DGRAM, 0);
+		if(LogFile < 0)
+			printf("error opening '%s': %s\n", 
+			       pPathLogname, strerror(errno));
 	}
 	if (LogFile != -1 && !connected &&
 	    connect(LogFile, &SyslogAddr, sizeof(SyslogAddr.sa_family)+
 			strlen(SyslogAddr.sa_data)) != -1)
 		connected = 1;
+	else
+		printf("error connecting '%s': %s\n", 
+		       pPathLogname, strerror(errno));
 }
 
+
 /* This method is called when a message has been fully received.
- * In a real sample, you would do all your enqueuing and/or
- * processing here.
- * 
- * It is highly recommended that no lengthy processing is done in
- * this callback. Please see \ref architecture.c for a suggested
- * threading model.
+ * It passes the received message to the specified unix domain
+ * socket. Please note that this callback is synchronous, thus
+ * liblogging will be on hold until it returns. This is important
+ * to note because in an error case we might stay in this code
+ * for an extended amount of time. So far, we think this is the
+ * best solution, but real-world experience might tell us a
+ * different truth ;)
+ * rgerhards 2005-10-12
  */
 void OnReceive(srAPIObj* pAPI, srSLMGObj* pSLMG)
 {
 	unsigned char *pszRawMsg;
+	int iRetries; /* number of retries connecting to log socket */
+	int iSleep;
+	int iWriteOffset;
+	ssize_t nToWrite;
+	ssize_t nWritten;
 
 	srSLMGGetRawMSG(pSLMG, &pszRawMsg);
 
-	if (LogFile < 0 || !connected)
-		openlog();
+	/* we need to loop writing the message. At least in
+	 * theory, a single write might not send all data to the
+	 * syslogd. So we need to continue until everything is written.
+	 * Also, we need to check if there are any socket erros, in 
+	 * which case we reconect. We will re-try indefinitely, if this
+	 * is not acceptable, you need to change the code.
+	 * rgerhards 2005-10-12
+	 */
+	iRetries = 0;
+	nToWrite = strlen(pszRawMsg);
+	iWriteOffset = 0;
+	while(nToWrite != 0) {
+		if(LogFile < 0 || !connected)
+			openlog();
+		if(LogFile < 0 || !connected) {
+			/* still not connected, retry */
+			if(iRetries > 0) {
+				iSleep = (iRetries < 30) ? iRetries : 30;
+				/* we sleep a little to prevent a thight loop */
+				if(Debug)
+					printf("multiple retries connecting to log socket"
+					       " - doing sleep(%d)\n", iSleep);
+				sleep(iSleep);
+			}
+			++iRetries;
+		} else {
+			nWritten = write(LogFile, pszRawMsg, strlen(pszRawMsg));
+			if(nWritten < 0) {
+				/* error, recover! */
+				printf("error writing to domain socket: %s\r\n", strerror(errno));
+				closelog();
+			} else {
+				/* prepare for (potential) next write */
+				nToWrite -= nWritten;
+				iWriteOffset += nWritten;
+			}
+		}
+	}
 
-	/* output the message to the local logger */
-	write(LogFile, pszRawMsg, strlen(pszRawMsg));
-
-	printf("RAW:%s\n\n", pszRawMsg);
+	if(Debug)
+		printf("Msg:%s\n\n", pszRawMsg);
 }
 
 
@@ -106,51 +166,76 @@ void OnReceive(srAPIObj* pAPI, srSLMGObj* pSLMG)
  * single thread. We use SIG_INT to do so - it effectively
  * provides a short-lived second thread ;-)
  */
-void doSIGINT(int i)
+void doShutdown(int i)
 {
-	printf("SIG_INT - shutting down listener. Be patient, can take up to 30 seconds...\n");
+	printf("Shutting down rfc3195d. Be patient, this can take up to 30 seconds...\n");
 	srAPIShutdownListener(pAPI);
 }
 
 int main(int argc, char* argv[])
 {
 	srRetVal iRet;
+	int ch;
 
-#	ifdef	WIN32
-		_CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#	endif
+	while ((ch = getopt(argc, argv, "di:np:v")) != EOF)
+		switch((char)ch) {
+		case 'd':		/* debug */
+			Debug = 1;
+			break;
+		case 'i':		/* pid file name */
+			PidFile = optarg;
+			break;
+		case 'n':		/* don't fork */
+			NoFork = 1;
+			break;
+		case 'p':		/* path to regular log socket */
+			pPathLogname = optarg;
+			break;
+		case 'v':
+			printf("rfc3195d %s.%s (using liblogging version %d.%d.%d).\n",
+			       VERSION, PATCHLEVEL,
+			       LIBLOGGING_VERSION_MAJOR, LIBLOGGING_VERSION_MINOR,
+			       LIBLOGGING_VERSION_SUBMINOR);
+			printf("See http://www.rsyslog.com for more information.\n");
+			exit(0);
+		case '?':
+		default:
+			usage();
+		}
+	if ((argc -= optind))
+		usage();
 
-	printf("testsrvr test server - just a quick debuging aid and sample....\n");
-	printf("Compiled with liblogging version %d.%d.%d.\n", LIBLOGGING_VERSION_MAJOR, LIBLOGGING_VERSION_MINOR, LIBLOGGING_VERSION_SUBMINOR);
-	printf("See http://www.monitorware.com/liblogging/ for updates.\n");
-	printf("Listening for incoming requests....\n");
-
-	signal(SIGINT, doSIGINT);
+	if(!Debug)
+		signal(SIGINT, SIG_IGN);
+	signal(SIGUSR1, doShutdown);
 
 	if((pAPI = srAPIInitLib()) == NULL)
 	{
-		printf("Error initializing lib!\n");
+		printf("Error initializing liblogging - aborting!\n");
 		exit(1);
 	}
 
 	if((iRet = srAPISetupListener(pAPI, OnReceive)) != SR_RET_OK)
 	{
-		printf("Error %d setting up listener!\n", iRet);
+		printf("Error %d setting up listener - aborting\n", iRet);
 		exit(100);
 	}
 
 	/* now move the listener to running state. Control will only
-	 * return after SIG_INT.
+	 * return after SIGUSR1.
 	 */
 	if((iRet = srAPIRunListener(pAPI)) != SR_RET_OK)
 	{
-		printf("Error %d running the listener!\n", iRet);
-		exit(100);
+		printf("Error %d running the listener - aborting\n", iRet);
+		exit(101);
 	}
 
-	/** control will reach this point after SIG_INT */
+	/** control will reach this point after shutdown */
 
 	srAPIExitLib(pAPI);
 	return 0;
 }
 
+/*
+ * vi:set ai:
+ */
