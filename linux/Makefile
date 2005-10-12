@@ -36,6 +36,15 @@ FEATURE_RFC3195=0
 # Enable debug mode (much slower code)
 FEATURE_DEBUG=0
 
+# The following defines tell us where liblogging is located. This
+# is only needed if we build with RFC 3195 support. By default, 
+# liblogging is expected to be present in the our parent directory.
+#
+# THESE PATHES MUST ONLY BE SET IF RSYSLOG IS BUILD WITH
+# RFC 3195 SUPPORT!
+LIBLOGGING_INC=-I../../liblogging/src
+LIBLOGGING_BIN=../../liblogging/src/linux/liblogging.a
+
 #############################################################
 #                  END OF USER SETTINGS                     #
 #                  --------------------                     #
@@ -61,6 +70,9 @@ endif
 
 ifeq ($(strip $(FEATURE_RFC3195)), 1)
   F_RFC3195=-DFEATURE_RFC3195
+else
+  LIBLOGGING_INC=
+  LIBLOGGING_BIN=
 endif
 
 ifeq ($(strip $(FEATURE_DEBUG)), 0)

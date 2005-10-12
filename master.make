@@ -23,12 +23,6 @@ LDFLAGS= -s
 # file system standard.
 FSSTND = -DFSSTND
 
-# The following defines tell us where liblogging is located. This
-# is only needed if we build with RFC 3195 support. By default, 
-# liblogging is expected to be present in the our parent directory.
-LIBLOGGING_INC=-I../../liblogging/src
-LIBLOGGING_BIN=../../liblogging/src/linux/liblogging.a
-
 # The following define establishes the name of the pid file for the
 # rsyslogd daemon.  The library include file (paths.h) defines the
 # name for the rsyslogd pid to be rsyslog.pid.
