@@ -28,6 +28,9 @@ FEATURE_DB=1
 # Enable regular expressions
 FEATURE_REGEXP=1
 
+# Enable RFC 3195 support (REQUIRES LIBLOGGING 0.6.0 or above!)
+FEATURE_RFC3195=0
+
 # Enable debug mode (much slower code)
 FEATURE_DEBUG=0
 
@@ -53,6 +56,10 @@ MANDIR = /usr/share/man
 
 .if $(FEATURE_REGEXP) == 1
   F_REGEXP=-DFEATURE_REGEXP
+.endif
+
+.if $(FEATURE_RFC3195) == 1
+  F_RFC3195=-DFEATURE_RFC3195
 .endif
 
 .if $(FEATURE_DEBUG) == 0

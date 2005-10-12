@@ -26,6 +26,16 @@
  */
 
 #include <stdio.h>
+#ifndef FEATURE_RFC3195
+/* this is a trick: if RFC3195 is not to be supported, we just do an
+ * error message.
+ */
+int main()
+{
+	fprintf(stderr, "error: not compiled with FEATURE_RFC3195 - terminating.\n");
+	return(1);
+}
+#else
 #include <unistd.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -236,6 +246,7 @@ int main(int argc, char* argv[])
 	srAPIExitLib(pAPI);
 	return 0;
 }
+#endif /* #ifndef FEATURE_RFC3195 - main wrapper */
 
 /*
  * vi:set ai:
