@@ -731,7 +731,7 @@ int main(int argc, char **argv);
 char **crunch_list(char *list);
 static int usage(void);
 void untty(void);
-void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
+static void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
 void printline(char *hname, char *msg, int iSource);
 void printsys(char *msg);
 void logmsg(int pri, struct msg*, int flags);
@@ -3279,7 +3279,7 @@ void untty()
  * unix domain sockets but contain the hostname). rgerhards, 2005-10-06
  */
 
-void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
+static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 {
 	auto int ptlngth;
 
@@ -3584,6 +3584,136 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 }
 
 
+/* Process (consume) a received message. Calls the actions configured.
+ * Can some time later run in its own thread. To aid this, the calling
+ * parameters should be reduced to just pMsg.
+ * See comment dated 2005-10-13 in logmsg() on multithreading.
+ * rgerhards, 2005-10-13
+ */
+static void processMsg(struct msg *pMsg, int flags)
+{
+	register struct filed *f;
+
+	assert(pMsg != NULL);
+
+	/* log the message to the particular outputs */
+	if (!Initialized) {
+		/* If we reach this point, the daemon initialization FAILED. That is,
+		 * syslogd is NOT actually running. So what we do here is just
+		 * initialize a pointer to the system console and then output
+		 * the message to the it. So at least we have a little
+		 * chance that messages show up somewhere.
+		 * rgerhards 2004-11-09
+		 */
+		f = &consfile;
+		f->f_file = open(ctty, O_WRONLY|O_NOCTTY);
+
+		if (f->f_file >= 0) {
+			untty();
+			f->f_pMsg = MsgAddRef(pMsg); /* is expected here... */
+			fprintlog(f, flags);
+			MsgDestruct(pMsg);
+			(void) close(f->f_file);
+			f->f_file = -1;
+		}
+
+		/* now log to a second emergency log... 2005-06-21 rgerhards */
+		/* TODO: make this configurable, eventually via the command line */
+		if(ttyname(0) != NULL) {
+			memset(&emergfile, 0, sizeof(emergfile));
+			f = &emergfile;
+			emergfile.f_type = F_TTY;
+			(void) strcpy(emergfile.f_un.f_fname, ttyname(0));
+			cflineSetTemplateAndIOV(&emergfile, " TradFmt");
+			f->f_file = open(ttyname(0), O_WRONLY|O_NOCTTY);
+
+			if (f->f_file >= 0) {
+				untty();
+				f->f_pMsg = MsgAddRef(pMsg); /* is expected here... */
+				fprintlog(f, flags);
+				MsgDestruct(pMsg);
+				(void) close(f->f_file);
+				f->f_file = -1;
+			}
+		}
+		return; /* we are done with emergency loging */
+	}
+
+	for (f = Files; f; f = f->f_next) {
+		/* first, we need to check if this is a disabled (F_UNUSED)
+		 * entry. If so, we must not further process it, as the data
+		 * structure probably contains invalid pointers and other
+		 * such mess.
+		 * rgerhards 2005-09-26
+		 */
+		if(f->f_type == F_UNUSED)
+			continue; /* on to next */
+
+		/* This is actually the "filter logic". Looks like we need
+		 * to improve it a little for complex selector line conditions. We
+		 * won't do that for now, but at least we now know where
+		 * to look at.
+		 * 2005-09-09 rgerhards
+		 * ok, we are now ready to move to something more advanced. Because
+		 * of this, I am moving the actual decision code to outside this function.
+		 * 2005-09-19 rgerhards
+		 */
+		if(!shouldProcessThisMessage(f, pMsg)) {
+			continue;
+		}
+
+		/* We now need to check a special case - F_DISCARD. If that
+		 * action is specified in the selector line, no futher processing
+		 * must be done. Thus, we stop the for-loop.
+		 * 2005-09-09 rgerhards
+		 */
+		if(f->f_type == F_DISCARD) {
+			dprintf("Discarding message based on selector config\n");
+			break; /* that's it for this message ;) */
+			}
+
+		if (f->f_type == F_CONSOLE && (flags & IGN_CONS))
+			continue;
+
+		/* don't output marks to recently written files */
+		if ((flags & MARK) && (now - f->f_time) < MarkInterval / 2)
+			continue;
+
+		/*
+		 * suppress duplicate lines to this file
+		 */
+		if ((flags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(f->f_pMsg) &&
+		    !strcmp(getMSG(pMsg), getMSG(f->f_pMsg)) &&
+		    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(f->f_pMsg))) {
+			f->f_prevcount++;
+			dprintf("msg repeated %d times, %ld sec of %d.\n",
+			    f->f_prevcount, now - f->f_time,
+			    repeatinterval[f->f_repeatcount]);
+			/*
+			 * If domark would have logged this by now,
+			 * flush it now (so we don't hold isolated messages),
+			 * but back off so we'll flush less often
+			 * in the future.
+			 */
+			if (now > REPEATTIME(f)) {
+				fprintlog(f, flags);
+				BACKOFF(f);
+			}
+		} else {
+			/* new line, save it */
+			/* first check if we have a previous message stored
+			 * if so, discard that first
+			 */
+			if(f->f_pMsg != NULL)
+				MsgDestruct(f->f_pMsg);
+			f->f_pMsg = MsgAddRef(pMsg);
+			/* call the output driver */
+			fprintlog(f, flags);
+		}
+	}
+}
+
+
 /*
  * Log a message to the appropriate log files, users, etc. based on
  * the priority.
@@ -3603,16 +3733,10 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
  * potential for misinterpretation, which we simply can not solve under the
  * circumstances given.
  */
-
 void logmsg(int pri, struct msg *pMsg, int flags)
 {
-	register struct filed *f;
-
 	/* allocate next entry and add it */
-	int fac, prilev;
-	int msglen;
 	char *msg;
-	char *from;
 	char *p2parse;
 	char *pBuf;
 	char *pWork;
@@ -3623,25 +3747,16 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	msg = pMsg->pszUxTradMsg;
-	from = pMsg->pszHOSTNAME;
-	dprintf("logmsg: %s, flags %x, from %s, msg %s\n", textpri(pri), flags, from, msg);
+	dprintf("logmsg: %s, flags %x, from %s, msg %s\n", textpri(pri), flags, pMsg->pszHOSTNAME, msg);
 
 #ifndef SYSV
 	omask = sigblock(sigmask(SIGHUP)|sigmask(SIGALRM));
 #endif
 
-	/* extract facility and priority level */
-	if (flags & MARK)
-		fac = LOG_NFACILITIES;
-	else
-		fac = LOG_FAC(pri);
-	prilev = LOG_PRI(pri);
-
 	p2parse = msg;	/* our "message" begins here */
 	/*
 	 * Check to see if msg contains a timestamp
 	 */
-	msglen = pMsg->iLenMSG;
 	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), msg) == TRUE)
 		p2parse += 16;
 	else {
@@ -3727,124 +3842,40 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 
 	/* ---------------------- END PARSING ---------------- */
 
-	/* log the message to the particular outputs */
-	if (!Initialized) {
-		/* If we reach this point, the daemon initialization FAILED. That is,
-		 * syslogd is NOT actually running. So what we do here is just
-		 * initialize a pointer to the system console and then output
-		 * the message to the it. So at least we have a little
-		 * chance that messages show up somewhere.
-		 * rgerhards 2004-11-09
-		 */
-		f = &consfile;
-		f->f_file = open(ctty, O_WRONLY|O_NOCTTY);
+	/* rgerhards, 2005-10-13: if we consider going multi-threaded, this
+	 * is probably the best point to split between a producer and a consumer
+	 * thread. In general, with the first multi-threaded approach, we should
+	 * NOT try to do more than have a single producer and consumer, at least
+	 * if both are from the current code base. The issue is that this code
+	 * was definitely not written with reentrancy in mind and uses a lot of
+	 * global variables. So it is very dangerous to simply go ahead and multi
+	 * thread it. However, I think there is a clear distinction between
+	 * producer (where data is received) and consumer (where the actions are).
+	 * It should be fairly safe to create a single thread for each and run them
+	 * concurrently, thightly coupled via an in-memory queue. Even with this 
+	 * limited multithraeding, benefits are immediate: the lengthy actions
+	 * (database writes!) are de-coupled from the receivers, what should result
+	 * in less likely message loss (loss due to receiver overrun). It also allows
+	 * us to utilize 2-cpu systems, which will soon be common given the current
+	 * advances in multicore CPU hardware. So this is well worth trying.
+	 * Another plus of this two-thread-approach would be that it can easily be configured,
+	 * so if there are compatibility issues with the threading libs, we could simply
+	 * disable it (as a makefile feature).
+	 * There is one important thing to keep in mind when doing this basic
+	 * multithreading. The syslog/tcp message forwarder manipulates a structutre
+	 * that is used by the main thread, which actually sends the data. This
+	 * structure must be guarded by a mutex, else we will have race conditions and
+	 * some very bad things could happen.
+	 *
+	 * Additional consumer threads might be added relatively easy for new receivers,
+	 * e.g. if we decide to move RFC 3195 via liblogging natively into rsyslogd.
+	 *
+	 * To aid this functionality, I am moving the rest of the code (the actual
+	 * consumer) to its own method, now called "processMsg()".
+	 */
+	
+	processMsg(pMsg, flags);
 
-		if (f->f_file >= 0) {
-			untty();
-			f->f_pMsg = MsgAddRef(pMsg); /* is expected here... */
-			fprintlog(f, flags);
-			MsgDestruct(pMsg);
-			(void) close(f->f_file);
-			f->f_file = -1;
-		}
-
-		/* now log to a second emergency log... 2005-06-21 rgerhards */
-		/* TODO: make this configurable, eventually via the command line */
-		if(ttyname(0) != NULL) {
-			memset(&emergfile, 0, sizeof(emergfile));
-			f = &emergfile;
-			emergfile.f_type = F_TTY;
-			(void) strcpy(emergfile.f_un.f_fname, ttyname(0));
-			cflineSetTemplateAndIOV(&emergfile, " TradFmt");
-			f->f_file = open(ttyname(0), O_WRONLY|O_NOCTTY);
-
-			if (f->f_file >= 0) {
-				untty();
-				f->f_pMsg = MsgAddRef(pMsg); /* is expected here... */
-				fprintlog(f, flags);
-				MsgDestruct(pMsg);
-				(void) close(f->f_file);
-				f->f_file = -1;
-			}
-		}
-#ifndef SYSV
-		(void) sigsetmask(omask);
-#endif
-		return; /* we are done with emergency loging */
-	}
-
-	for (f = Files; f; f = f->f_next) {
-		/* first, we need to check if this is a disabled (F_UNUSED)
-		 * entry. If so, we must not further process it, as the data
-		 * structure probably contains invalid pointers and other
-		 * such mess.
-		 * rgerhards 2005-09-26
-		 */
-		if(f->f_type == F_UNUSED)
-			continue; /* on to next */
-
-		/* This is actually the "filter logic". Looks like we need
-		 * to improve it a little for complex selector line conditions. We
-		 * won't do that for now, but at least we now know where
-		 * to look at.
-		 * 2005-09-09 rgerhards
-		 * ok, we are now ready to move to something more advanced. Because
-		 * of this, I am moving the actual decision code to outside this function.
-		 * 2005-09-19 rgerhards
-		 */
-		if(!shouldProcessThisMessage(f, pMsg)) {
-			continue;
-		}
-
-		/* We now need to check a special case - F_DISCARD. If that
-		 * action is specified in the selector line, no futher processing
-		 * must be done. Thus, we stop the for-loop.
-		 * 2005-09-09 rgerhards
-		 */
-		if(f->f_type == F_DISCARD) {
-			dprintf("Discarding message based on selector config\n");
-			break; /* that's it for this message ;) */
-			}
-
-		if (f->f_type == F_CONSOLE && (flags & IGN_CONS))
-			continue;
-
-		/* don't output marks to recently written files */
-		if ((flags & MARK) && (now - f->f_time) < MarkInterval / 2)
-			continue;
-
-		/*
-		 * suppress duplicate lines to this file
-		 */
-		if ((flags & MARK) == 0 && msglen == getMSGLen(f->f_pMsg) &&
-		    !strcmp(msg, getMSG(f->f_pMsg)) &&
-		    !strcmp(from, getHOSTNAME(f->f_pMsg))) {
-			f->f_prevcount++;
-			dprintf("msg repeated %d times, %ld sec of %d.\n",
-			    f->f_prevcount, now - f->f_time,
-			    repeatinterval[f->f_repeatcount]);
-			/*
-			 * If domark would have logged this by now,
-			 * flush it now (so we don't hold isolated messages),
-			 * but back off so we'll flush less often
-			 * in the future.
-			 */
-			if (now > REPEATTIME(f)) {
-				fprintlog(f, flags);
-				BACKOFF(f);
-			}
-		} else {
-			/* new line, save it */
-			/* first check if we have a previous message stored
-			 * if so, discard that first
-			 */
-			if(f->f_pMsg != NULL)
-				MsgDestruct(f->f_pMsg);
-			f->f_pMsg = MsgAddRef(pMsg);
-			/* call the output driver */
-			fprintlog(f, flags);
-		}
-	}
 #ifndef SYSV
 	(void) sigsetmask(omask);
 #endif

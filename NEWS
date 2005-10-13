@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 1.11.1 (RGer), 2005-10-13
+- some internal restructuring in anticipation/preparation of minimal
+  multi-threading support
+---------------------------------------------------------------------------
 Version 1.11.0 (RGer), 2005-10-12
 - support for receiving messages via RFC 3195; added rfc3195d for that
   purpose
