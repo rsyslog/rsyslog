@@ -10,6 +10,9 @@ rfc3195d \- RFC 3195 listener
 .RB [ " \-p"
 .IB socket 
 ]
+.RB [ " \-r"
+.IB port 
+]
 .RB [ " \-v " ]
 .LP
 .SH DESCRIPTION
@@ -44,6 +47,9 @@ time as the rsyslog project is continously being enhanced.
 .BI "\-p " "socket"
 The socket the received messages are to be sent to. If not specified,
 /dev/log3195 is used.
+.TP
+.BI "\-r " "port"
+The listen port to use. If not specified, IANA-assigned port 601 is used.
 .TP
 .B "\-d"
 Turns on debug mode.  In it, rfc3195d spits out diagnostic information

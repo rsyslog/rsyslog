@@ -51,6 +51,7 @@ static char* pPathLogname = "/dev/log3195";
 static char *PidFile;
 static int NoFork = 0;
 static int Debug = 0;
+static int listenPort = 0;
 
 /* we use a global API object below, because this listener is
  * not very complex. As such, this hack should not harm anything.
@@ -70,7 +71,7 @@ static int usage()
 	 * currently actually do...
 	 fprintf(stderr, "usage: rfc3195d [-dv] [-i pidfile] [-n] [-p path]\n");
 	 */
-	fprintf(stderr, "usage: rfc3195d [-dv] [-p path]\n");
+	fprintf(stderr, "usage: rfc3195d [-dv] [-r port] [-p path]\n");
 	exit(1);
 }
 
@@ -187,7 +188,7 @@ int main(int argc, char* argv[])
 	srRetVal iRet;
 	int ch;
 
-	while ((ch = getopt(argc, argv, "di:np:v")) != EOF)
+	while ((ch = getopt(argc, argv, "di:np:r:v")) != EOF)
 		switch((char)ch) {
 		case 'd':		/* debug */
 			Debug = 1;
@@ -200,6 +201,14 @@ int main(int argc, char* argv[])
 			break;
 		case 'p':		/* path to regular log socket */
 			pPathLogname = optarg;
+			break;
+		case 'r':		/* listen port */
+			listenPort = atoi(optarg);
+			if(listenPort < 1 || listenPort > 65535) {
+				printf("Error: invalid listen port '%s', using 601 instead\n",
+					optarg);
+				listenPort = 601;
+			}
 			break;
 		case 'v':
 			printf("rfc3195d %s.%s (using liblogging version %d.%d.%d).\n",
@@ -226,10 +235,17 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
+printf("Setting listen port %d\n", listenPort);
+	if((iRet = srAPISetOption(pAPI, srOPTION_BEEP_LISTENPORT, listenPort)) != SR_RET_OK)
+	{
+		printf("Error %d setting listen port - aborting\n", iRet);
+		exit(100);
+	}
+
 	if((iRet = srAPISetupListener(pAPI, OnReceive)) != SR_RET_OK)
 	{
 		printf("Error %d setting up listener - aborting\n", iRet);
-		exit(100);
+		exit(101);
 	}
 
 	/* now move the listener to running state. Control will only
@@ -238,7 +254,7 @@ int main(int argc, char* argv[])
 	if((iRet = srAPIRunListener(pAPI)) != SR_RET_OK)
 	{
 		printf("Error %d running the listener - aborting\n", iRet);
-		exit(101);
+		exit(102);
 	}
 
 	/** control will reach this point after shutdown */

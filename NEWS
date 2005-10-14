@@ -2,6 +2,7 @@
 Version 1.11.1 (RGer), 2005-10-13
 - some internal restructuring in anticipation/preparation of minimal
   multi-threading support
+- added ability to specify listen port for rfc3195d
 ---------------------------------------------------------------------------
 Version 1.11.0 (RGer), 2005-10-12
 - support for receiving messages via RFC 3195; added rfc3195d for that
