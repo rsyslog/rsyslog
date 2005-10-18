@@ -41,6 +41,7 @@ typedef struct rsCStrObject rsCStrObj;
  */
 rsCStrObj *rsCStrConstruct(void);
 rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, char *sz);
+rsRetVal rsCStrConstructFromCStr(rsCStrObj **ppThis, rsCStrObj *pFrom);
 
 /**
  * Destruct the string buffer object.
@@ -101,6 +102,7 @@ rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
 
 
 char*  rsCStrGetSzStr(rsCStrObj *pThis);
+rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, char *pszNew);
 char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
 int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2);
 int rsCStrSzStrCmp(rsCStrObj *pCS1, char *psz, int iLenSz);

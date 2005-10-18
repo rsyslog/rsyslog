@@ -56,7 +56,7 @@ rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, char *sz)
 	if((pThis = rsCStrConstruct()) == NULL)
 		return RS_RET_OUT_OF_MEMORY;
 
-	pThis->iStrLen = strlen(sz);
+	pThis->iBufSize = pThis->iStrLen = strlen(sz);
 	if((pThis->pBuf = (char*) malloc(sizeof(char) * pThis->iStrLen)) == NULL) {
 		RSFREEOBJ(pThis);
 		return RS_RET_OUT_OF_MEMORY;
@@ -64,6 +64,33 @@ rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, char *sz)
 
 	/* we do NOT need to copy the \0! */
 	memcpy(pThis->pBuf, sz, pThis->iStrLen);
+
+	*ppThis = pThis;
+	return RS_RET_OK;
+}
+
+/* construct from CStr object. only the counted string is
+ * copied, not the szString.
+ * rgerhards 2005-10-18
+ */
+rsRetVal rsCStrConstructFromCStr(rsCStrObj **ppThis, rsCStrObj *pFrom)
+{
+	rsCStrObj *pThis;
+
+	assert(ppThis != NULL);
+	rsCHECKVALIDOBJECT(pFrom, OIDrsCStr);
+
+	if((pThis = rsCStrConstruct()) == NULL)
+		return RS_RET_OUT_OF_MEMORY;
+
+	pThis->iBufSize = pThis->iStrLen = pFrom->iStrLen;
+	if((pThis->pBuf = (char*) malloc(sizeof(char) * pThis->iStrLen)) == NULL) {
+		RSFREEOBJ(pThis);
+		return RS_RET_OUT_OF_MEMORY;
+	}
+
+	/* copy properties */
+	memcpy(pThis->pBuf, pFrom->pBuf, pThis->iStrLen);
 
 	*ppThis = pThis;
 	return RS_RET_OK;
@@ -162,6 +189,46 @@ rsRetVal rsCStrAppendChar(rsCStrObj *pThis, char c)
 	if(pThis->pszBuf != NULL) {
 		free(pThis->pszBuf);
 		pThis->pszBuf = NULL;
+	}
+
+	return RS_RET_OK;
+}
+
+
+/* Sets the string object to the classigal sz-string provided.
+ * Any previously stored vlaue is discarded. If a NULL pointer
+ * the the new value (pszNew) is provided, an empty string is
+ * created (this is NOT an error!). Property iAllocIncrement is
+ * not modified by this function.
+ * rgerhards, 2005-10-18
+ */
+rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, char *pszNew)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+
+	if(pThis->pBuf != NULL)
+		free(pThis->pBuf);
+	if(pThis->pszBuf != NULL)
+		free(pThis->pszBuf);
+	if(pszNew == NULL) {
+		pThis->iStrLen = 0;
+		pThis->iBufSize = 0;
+		pThis->pBuf = NULL;
+		pThis->pszBuf = NULL;
+	} else {
+		pThis->iStrLen = strlen(pszNew);
+		pThis->iBufSize = pThis->iStrLen;
+		pThis->pszBuf = NULL;
+		/* iAllocIncrement is NOT modified! */
+
+		/* now save the new value */
+		if((pThis->pBuf = (char*) malloc(sizeof(char) * pThis->iStrLen)) == NULL) {
+			RSFREEOBJ(pThis);
+			return RS_RET_OUT_OF_MEMORY;
+		}
+
+		/* we do NOT need to copy the \0! */
+		memcpy(pThis->pBuf, pszNew, pThis->iStrLen);
 	}
 
 	return RS_RET_OK;

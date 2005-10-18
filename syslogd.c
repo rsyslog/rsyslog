@@ -451,6 +451,16 @@ struct msg {
 };
 
 
+/* values for host comparisons specified with host selector blocks
+ * (+host, -host). rgerhards 2005-10-18.
+ */
+enum _EHostnameCmpMode {
+	HN_NO_COMP = 0, /* do not compare hostname */
+	HN_COMP_MATCH = 1, /* hostname must match */
+	HN_COMP_NOMATH = 2 /* hostname must NOT match */
+};
+typedef enum _EHostnameCmpMode EHostnameCmpMode;
+
 /*
  * This structure represents the files that will have log
  * copies printed.
@@ -485,6 +495,9 @@ struct filed {
 		FILTER_PRI = 0,		/* traditional PRI based filer */
 		FILTER_PROP = 1		/* extended filter, property based */
 	} f_filter_type;
+	EHostnameCmpMode eHostnameCmpMode;
+	rsCStrObj *pCSHostnameComp;/* hostname to check */
+	rsCStrObj *pCSTagComp;	/* tag to check or NULL, if not to be checked */
 	union {
 		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
 		struct {
@@ -537,6 +550,18 @@ struct filed {
 						 * the message has been processed - it is
 						 * also used to detect duplicates. */
 };
+
+/* The following global variables are used for building
+ * tag and host selector lines during startup and config reload.
+ * This is stored as a global variable pool because of its ease. It is
+ * also fairly compatible with multi-threading as the stratup code must
+ * be run in a single thread anyways. So there can be no race conditions. These
+ * variables are no longer used once the configuration has been loaded (except,
+ * of course, during a reload). rgerhardsd 2005-10-18
+ */
+static EHostnameCmpMode eDfltHostnameCmpMode;
+static rsCStrObj *pDfltHostnameCmp;
+static rsCStrObj *pDfltTagCmp;
 
 /*
  * Intervals at which we flush out "message repeated" messages,
@@ -715,7 +740,7 @@ static struct AllowedSenders *pLastAllowedSenders_UDP = NULL; /* and now the poi
 static struct AllowedSenders *pLastAllowedSenders_TCP = NULL; /* element in the respective list */
 #endif /* #ifdef SYSLOG_INET */
 
-int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
+static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 
 
 /* hardcoded standard templates (used for defaults) */
@@ -730,41 +755,40 @@ static char template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility
 int main(int argc, char **argv);
 char **crunch_list(char *list);
 static int usage(void);
-void untty(void);
+static void untty(void);
 static void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
-void printline(char *hname, char *msg, int iSource);
-void printsys(char *msg);
-void logmsg(int pri, struct msg*, int flags);
-void fprintlog(register struct filed *f, int flags);
+static void printline(char *hname, char *msg, int iSource);
+static void logmsg(int pri, struct msg*, int flags);
+static void fprintlog(register struct filed *f, int flags);
 static void endtty();
 static void wallmsg(register struct filed *f);
 static void reapchild();
 static const char *cvthname(struct sockaddr_in *f);
-void domark();
-void debug_switch();
+static void domark();
+static void debug_switch();
 static void logerror(char *type);
 static void logerrorInt(char *type, int errCode);
 static void logerrorSz(char *type, char *errMsg);
 static void die(int sig);
 #ifndef TESTING
-void doexit(int sig);
+static void doexit(int sig);
 #endif
-void init();
-rsRetVal cfline(char *line, register struct filed *f);
-int decode(char *name, struct code *codetab);
+static void init();
+static rsRetVal cfline(char *line, register struct filed *f);
+static int decode(char *name, struct code *codetab);
 void sighup_handler();
 #ifdef WITH_DB
-void initMySQL(register struct filed *f);
-void writeMySQL(register struct filed *f);
-void closeMySQL(register struct filed *f);
-void reInitMySQL(register struct filed *f);
-int checkDBErrorState(register struct filed *f);
-void DBErrorHandler(register struct filed *f);
+static void initMySQL(register struct filed *f);
+static void writeMySQL(register struct filed *f);
+static void closeMySQL(register struct filed *f);
+static void reInitMySQL(register struct filed *f);
+static int checkDBErrorState(register struct filed *f);
+static void DBErrorHandler(register struct filed *f);
 #endif
 
-int getSubString(char **pSrc, char *pDst, size_t DstSize, char cSep);
-void getCurrTime(struct syslogTime *t);
-void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
+static int getSubString(char **pSrc, char *pDst, size_t DstSize, char cSep);
+static void getCurrTime(struct syslogTime *t);
+static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
 
 #ifdef SYSLOG_UNIXAF
 static int create_udp_socket();
@@ -1626,7 +1650,7 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, unsigned char* psz
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occured.
  */
-int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst)
+static int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst)
 {
 	/* TODO: currently we do not consider localtime/utc */
 	assert(ts != NULL);
@@ -5085,7 +5109,7 @@ void cfsysline(char *p)
 /*
  *  INIT -- Initialize syslogd from configuration table
  */
-void init()
+static void init()
 {
 	register int i;
 	register FILE *cf;
@@ -5101,6 +5125,11 @@ void init()
 #endif
 	struct servent *sp;
 	char bufStartUpMsg[512];
+
+	/* initialize some static variables */
+	pDfltHostnameCmp = NULL;
+	pDfltTagCmp = NULL;
+	eDfltHostnameCmpMode = HN_NO_COMP;
 
 	nextp = NULL;
 	if(LogPort == 0) {
@@ -5304,6 +5333,8 @@ void init()
 		printf("Active selectors:\n");
 		for (f = Files; f; f = f->f_next) {
 			if (f->f_type != F_UNUSED) {
+				if(f->pCSTagComp != NULL)
+					printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSTagComp));
 				if(f->f_filter_type == FILTER_PRI) {
 					for (i = 0; i <= LOG_NFACILITIES; i++)
 						if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
@@ -5385,7 +5416,7 @@ void init()
  * to a filed entry and allocates memory for its iovec.
  * rgerhards 2004-11-19
  */
-void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
+static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 {
 	char errMsg[512];
 
@@ -5431,7 +5462,7 @@ void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
  * to be \0 in this case.
  * rgerhards 2004-11-19
  */
-void cflineParseTemplateName(struct filed *f, char** pp,
+static void cflineParseTemplateName(struct filed *f, char** pp,
 			     register char* pTemplateName, int iLenTemplate)
 {
 	register char *p;
@@ -5463,7 +5494,7 @@ void cflineParseTemplateName(struct filed *f, char** pp,
  * filed struct.
  * rgerhards 2004-11-18
  */
-void cflineParseFileName(struct filed *f, char* p)
+static void cflineParseFileName(struct filed *f, char* p)
 {
 	register char *pName;
 	int i;
@@ -5512,7 +5543,7 @@ void cflineParseFileName(struct filed *f, char* p)
  * removed.
  * rgerhards 2005-06-21
  */
-void cflineParseOutchannel(struct filed *f, char* p)
+static void cflineParseOutchannel(struct filed *f, char* p)
 {
 	int i;
 	struct outchannel *pOch;
@@ -5597,7 +5628,7 @@ void cflineParseOutchannel(struct filed *f, char* p)
  * passed back to the caller.
  * rgerhards 2005-09-15
  */
-rsRetVal cflineProcessTradPRIFilter(char **pline, register struct filed *f)
+static rsRetVal cflineProcessTradPRIFilter(char **pline, register struct filed *f)
 {
 	char *p;
 	register char *q;
@@ -5762,7 +5793,7 @@ rsRetVal cflineProcessTradPRIFilter(char **pline, register struct filed *f)
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
  */
-rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
+static rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 {
 	rsParsObj *pPars;
 	rsCStrObj *pCSCompOp;
@@ -5854,6 +5885,53 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 
 
 /*
+ * Helper to cfline(). This function interprets a tag selector line
+ * from the config file ("!tagname"). It stores it for further reference.
+ * rgerhards 2005-10-18
+ */
+static rsRetVal cflineProcessTagSelector(char **pline, register struct filed *f)
+{
+	rsRetVal iRet;
+
+	assert(pline != NULL);
+	assert(*pline != NULL);
+	assert(**pline == '!');
+	assert(f != NULL);
+
+	dprintf(" - TAG selector line (aka program selector)\n");
+	errno = 0;	/* keep strerror() stuff out of logerror messages */
+
+	(*pline)++;	/* eat '!' */
+
+	/* the below is somewhat of a quick hack, but it is efficient (this is
+	 * why it is in here. "!*" resets the tag selector with BSD syslog. We mimic
+	 * this, too. As it is easy to check that condition, we do not fire up a
+	 * parser process, just make sure we do not address beyond our space.
+	 * Order of conditions in if-statement is vital! rgerhards 2005-10-18
+	 */
+	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
+		dprintf("resetting tag filter\n");
+		if(pDfltTagCmp != NULL) {
+			if((iRet = rsCStrSetSzStr(pDfltTagCmp, NULL)) != RS_RET_OK)
+				return(iRet);
+			pDfltTagCmp = NULL;
+		}
+	} else {
+		dprintf("setting tag filter to '%s'\n", *pline);
+		if(pDfltTagCmp == NULL) {
+			/* create string for parser */
+			if((iRet = rsCStrConstructFromszStr(&pDfltTagCmp, *pline)) != RS_RET_OK)
+				return(iRet);
+		} else { /* string objects exists, just update... */
+			if((iRet = rsCStrSetSzStr(pDfltTagCmp, *pline)) != RS_RET_OK)
+				return(iRet);
+		}
+	}
+	return RS_RET_OK;
+}
+
+
+/*
  * Crack a configuration file line
  * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
  * handle config lines in general, but only lines that reflect actual filter
@@ -5864,7 +5942,7 @@ rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
  * Eventually, we can overcome this limitation by prefixing the actual action indicator
  * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
  */
-rsRetVal cfline(char *line, register struct filed *f)
+static rsRetVal cfline(char *line, register struct filed *f)
 {
 	char *p;
 	register char *q;
@@ -5886,10 +5964,16 @@ rsRetVal cfline(char *line, register struct filed *f)
 	p = line;
 
 	/* check which filter we need to pull... */
-	if(*p == ':') {
-		iRet = cflineProcessPropFilter(&p, f);
-	} else {
-		iRet = cflineProcessTradPRIFilter(&p, f);
+	switch(*p) {
+		case ':':
+			iRet = cflineProcessPropFilter(&p, f);
+			break;
+		case '!':
+			iRet = cflineProcessTagSelector(&p, f);
+			return iRet; /* in this case, we are done */
+		default:
+			iRet = cflineProcessTradPRIFilter(&p, f);
+			break;
 	}
 
 	/* check if that went well... */
@@ -5897,9 +5981,15 @@ rsRetVal cfline(char *line, register struct filed *f)
 		f->f_type = F_UNUSED;
 		return iRet;
 	}
+	
+	/* we now check if there are some global (BSD-style) filter conditions
+	 * and, if so, we copy them over. rgerhards, 2005-10-18
+	 */
+	if(pDfltTagCmp != NULL)
+		if((iRet = rsCStrConstructFromCStr(&(f->pCSTagComp), pDfltTagCmp)) != RS_RET_OK)
+			return(iRet);
 
-	if (*p == '-')
-	{
+	if (*p == '-') {
 		syncfile = 0;
 		p++;
 	} else
@@ -6280,7 +6370,7 @@ void sighup_handler()
  * MySQL connection.
  * Initially added 2004-10-28 mmeckelein
  */
-void initMySQL(register struct filed *f)
+static void initMySQL(register struct filed *f)
 {
 	int iCounter = 0;
 	assert(f != NULL);
@@ -6311,7 +6401,7 @@ void initMySQL(register struct filed *f)
  * MySQL connection.
  * Initially added 2004-10-28
  */
-void closeMySQL(register struct filed *f)
+static void closeMySQL(register struct filed *f)
 {
 	assert(f != NULL);
 	dprintf("in closeMySQL\n");
@@ -6322,15 +6412,13 @@ void closeMySQL(register struct filed *f)
  * Reconnect a MySQL connection.
  * Initially added 2004-12-02
  */
-void reInitMySQL(register struct filed *f)
+static void reInitMySQL(register struct filed *f)
 {
 	assert(f != NULL);
 
 	dprintf("reInitMySQL\n");
-	/* close the current handle */
-	closeMySQL(f);
-	/* new connection */   
-	initMySQL(f);
+	closeMySQL(f); /* close the current handle */
+	initMySQL(f); /* new connection */   
 }
 
 /*
@@ -6338,7 +6426,7 @@ void reInitMySQL(register struct filed *f)
  * to an established MySQL session.
  * Initially added 2004-10-28
  */
-void writeMySQL(register struct filed *f)
+static void writeMySQL(register struct filed *f)
 {
 	char *psz;
 	int iCounter=0;
@@ -6380,7 +6468,7 @@ void writeMySQL(register struct filed *f)
  * the "delay" handling which stopped the db logging for some 
  * time.  
  */
-void DBErrorHandler(register struct filed *f)
+static void DBErrorHandler(register struct filed *f)
 {
 	char errMsg[512];
 	/* TODO:

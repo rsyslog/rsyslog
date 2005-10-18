@@ -51,7 +51,7 @@ static char* pPathLogname = "/dev/log3195";
 static char *PidFile;
 static int NoFork = 0;
 static int Debug = 0;
-static int listenPort = 0;
+static int listenPort = 601;
 
 /* we use a global API object below, because this listener is
  * not very complex. As such, this hack should not harm anything.
@@ -167,8 +167,13 @@ void OnReceive(srAPIObj* pAPI, srSLMGObj* pSLMG)
 		}
 	}
 
-	if(Debug)
-		printf("Msg:%s\n\n", pszRawMsg);
+	if(Debug) {
+		static int largest = 0;
+		int sz = strlen(pszRawMsg);
+		if(sz > largest)
+			largest = sz;
+		printf("Msg(%d/%d):%s\n\n", largest, sz, pszRawMsg);
+	}
 }
 
 
@@ -183,6 +188,8 @@ void doShutdown(int i)
 	srAPIShutdownListener(pAPI);
 }
 
+
+/* on the the real program ;) */
 int main(int argc, char* argv[])
 {
 	srRetVal iRet;
@@ -235,7 +242,6 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-printf("Setting listen port %d\n", listenPort);
 	if((iRet = srAPISetOption(pAPI, srOPTION_BEEP_LISTENPORT, listenPort)) != SR_RET_OK)
 	{
 		printf("Error %d setting listen port - aborting\n", iRet);
