@@ -3550,6 +3550,20 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 	assert(f != NULL);
 	assert(pMsg != NULL);
 
+	/* we first have a look at the global, BSD-style block filters (for tag
+	 * and host). Only if they match, we evaluate the actual filter.
+	 * rgerhards, 2005-10-18
+	 */
+	if(f->pCSTagComp != NULL){
+		/* TODO: make access to pMSg through methods, only (below) */
+		if(rsCStrSzStrCmp(f->pCSTagComp, getTAG(pMsg), pMsg->iLenTAG)) {
+			/* not equal, so we are already done... */
+			dprintf("tag filter '%s' does not match '%s'\n", 
+				rsCStrGetSzStr(f->pCSTagComp), getTAG(pMsg));
+			return 0;
+		}
+	}
+
 	if(f->f_filter_type == FILTER_PRI) {
 		/* skip messages that are incorrect priority */
 		if ( (f->f_filterData.f_pmask[pMsg->iFacility] == TABLE_NOPRI) || \
