@@ -205,6 +205,27 @@ operating system versions that do so. So it can still make sense to enforce a
 	<li>&quot;traditional&quot; severity and facility based selectors</li>
 	<li>property-based filters</li>
 </ul>
+<h3>Blocks</h3>
+<p>Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each block of lines 
+is separated from the previous block by a program or hostname specification. A 
+block will only log messages corresponding to the most recent program and 
+hostname specifications given. Thus, a block which selects ‘ppp’ as the program, 
+directly followed by a block that selects messages from the hostname ‘dialhost’, 
+then the second block will only log messages from the ppp program on dialhost.
+</p>
+<p>A program specification is a line beginning with ‘!prog’ and the following 
+blocks will be associated with calls to syslog from that specific program. A 
+program specification for ‘foo’ will also match any message logged by the kernel 
+with the prefix ‘foo: ’. A hostname specification of the form ‘+hostname’ and 
+the following blocks will be applied to messages received from the specified 
+hostname. Alternatively, a hostname specification ‘-hostname’ causes the 
+following blocks to be applied to messages from any host but the one specified. 
+If the hostname is given as ‘@’, the local hostname will be used. (NOT YET 
+IMPLEMENTED) A program or hostname specification may be reset by giving the 
+program or hostname as ‘*’.</p>
+<p>Please note that the &quot;#!prog&quot;, &quot;#+hostname&quot; and &quot;#-hostname&quot; syntax available 
+in BSD syslogd is not supported by rsyslogd. By default, no hostname or program 
+is set.</p>
 <h3>Selectors</h3>
 <p><b>Selectors are the traditional way of filtering syslog messages.</b> They 
 have been kept in rsyslog with their orginal syntax, because it is well-known, 
