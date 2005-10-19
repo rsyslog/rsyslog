@@ -11,6 +11,8 @@ Version 1.11.1 (RGer), 2005-10-13
 - fixed a potential memory leak in the string buffer class destructor.
   As the destructur was previously never called, the leak did not actually
   appear.
+- fixed a bug that rendered the "startswith" comparison operation to be
+  unusable.
 ---------------------------------------------------------------------------
 Version 1.11.0 (RGer), 2005-10-12
 - support for receiving messages via RFC 3195; added rfc3195d for that

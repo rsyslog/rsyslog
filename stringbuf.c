@@ -440,13 +440,47 @@ int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2)
 }
 
 
-/* check if a CStr object starts with a sz-type string. This function
+/* check if a sz-type string start with a CStr object. This function
  * is initially written to support the "startswith" property-filter
  * comparison operation. Maybe it also has other needs.
+ * rgerhards 2005-10-19
+ */
+int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, char *psz, int iLenSz)
+{
+	register int i;
+	int iMax;
+
+	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+	assert(psz != NULL);
+	assert(iLenSz == strlen(psz)); /* just make sure during debugging! */
+	if(iLenSz >= pCS1->iStrLen) {
+		/* we need to checkusing pCS1->iStrLen charactes at maximum, thus
+		 * we move it to iMax.
+		 */
+		iMax = pCS1->iStrLen;
+		if(iMax == 0)
+			return 0; /* yes, it starts with a zero-sized string ;) */
+		else {  /* we now have something to compare, so let's do it... */
+			for(i = 0 ; i < iMax ; ++i) {
+				if(psz[i] != pCS1->pBuf[i])
+					return psz[i] - pCS1->pBuf[i];
+			}
+			/* if we arrive here, the string actually starts with pCS1 */
+			return 0;
+		}
+	}
+	else
+		return -1; /* pCS1 is less then psz */
+}
+
+
+/* check if a CStr object starts with a sz-type string.
  * rgerhards 2005-09-26
  */
 int rsCStrStartsWithSzStr(rsCStrObj *pCS1, char *psz, int iLenSz)
 {
+	register int i;
+
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(psz != NULL);
 	assert(iLenSz == strlen(psz)); /* just make sure during debugging! */
@@ -457,7 +491,6 @@ int rsCStrStartsWithSzStr(rsCStrObj *pCS1, char *psz, int iLenSz)
 		if(iLenSz == 0)
 			return 0; /* yes, it starts with a zero-sized string ;) */
 		else {  /* we now have something to compare, so let's do it... */
-			register int i;
 			for(i = 0 ; i < iLenSz ; ++i) {
 				if(pCS1->pBuf[i] != psz[i])
 					return pCS1->pBuf[i] - psz[i];
@@ -540,7 +573,6 @@ int rsCStrSzStrCmp(rsCStrObj *pCS1, char *psz, int iLenSz)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(psz != NULL);
-printf("strlen('%s'): %d, given %d\n", psz, strlen(psz), iLenSz);
 	assert(iLenSz == strlen(psz)); /* just make sure during debugging! */
 	if(pCS1->iStrLen == iLenSz)
 		/* we are using iLenSz below, because the lengths

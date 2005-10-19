@@ -413,10 +413,6 @@ struct msg {
 	    * sockets. All in all, the parser would need parse templates, that would
 	    * resolve all these issues... rgerhards, 2005-10-06
 	    */
-#define SOURCE_INTERNAL 0
-#define SOURCE_STDIN 1
-#define SOURCE_UNIXAF 2
-#define SOURCE_INET 3
 	short	iSeverity;	/* the severity 0..7 */
 	char *pszSeverity;	/* severity as string... */
 	int iLenSeverity;	/* ... and its length. */
@@ -440,6 +436,7 @@ struct msg {
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
 	char	*pszRcvFrom;	/* System message was received from */
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
+	rsCStrObj *pCSProgName;	/* the (BSD) program name */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
 	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
@@ -1199,7 +1196,7 @@ static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			 * we are at end of message or not...
 			 */
 			*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-			printline(TCPSessions[iTCPSess].fromHost, pMsg, SOURCE_INET);
+			printline(TCPSessions[iTCPSess].fromHost, pMsg, 1);
 			iMsg = 0;
 		}
 		if(*pData == '\0') { /* guard against \0 characters... */
@@ -1208,7 +1205,7 @@ static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			++pData;
 		} else if(*pData == '\n') { /* record delemiter */
 			*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-			printline(TCPSessions[iTCPSess].fromHost, pMsg, SOURCE_INET);
+			printline(TCPSessions[iTCPSess].fromHost, pMsg, 1);
 			iMsg = 0;
 			++pData;
 		} else {
@@ -2118,6 +2115,31 @@ static char *getRcvFrom(struct msg *pM)
 			return "";
 		else
 			return pM->pszRcvFrom;
+}
+
+
+/* get the "programname". Programname is a BSD concept, it is the tag
+ * without any instance-specific information. Precisely, the programname
+ * is terminated by either (whichever occurs first):
+ * - end of tag
+ * - nonprintable character
+ * - ':'
+ * - '['
+ * - '/'
+ * The above definition has been taken from the FreeBSD syslogd sources.
+ * 
+ * The program name is not parsed by default, because it is infrequently-used.
+ * Thus, this function first checks if it already exists. If not, it is generated
+ * before being returned. A message must be provided, else a crash will occur.
+ * rgerhards, 2005-10-19
+ */
+static char *getProgramName(struct msg *pM)
+{
+	assert(pM != NULL);
+	if(pM->pCSProgName == NULL) {
+	} else {
+		return pM->pszHOSTNAME;
+	}
 }
 
 
@@ -3631,7 +3653,7 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 				iRet = 1; /* process message! */
 			break;
 		case FIOP_STARTSWITH:
-			if(rsCStrStartsWithSzStr(f->f_filterData.prop.pCSCompValue,
+			if(rsCStrSzStrStartsWithCStr(f->f_filterData.prop.pCSCompValue,
 					  pszPropVal, strlen(pszPropVal)) == 0)
 				iRet = 1; /* process message! */
 			break;
@@ -5973,7 +5995,7 @@ static rsRetVal cflineProcessHostSelector(char **pline, register struct filed *f
 	assert(**pline == '-' || **pline == '+');
 	assert(f != NULL);
 
-	dprintf(" - host selector line (aka program selector)\n");
+	dprintf(" - host selector line\n");
 
 	/* check include/exclude setting */
 	if(**pline == '+') {
@@ -6026,7 +6048,7 @@ static rsRetVal cflineProcessTagSelector(char **pline, register struct filed *f)
 	assert(**pline == '!');
 	assert(f != NULL);
 
-	dprintf(" - TAG selector line (aka program selector)\n");
+	dprintf(" - programname selector line\n");
 
 	(*pline)++;	/* eat '!' */
 

@@ -110,6 +110,7 @@ int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, char *psz, int iLenSz);
 int rsCStrLocateSzStr(rsCStrObj *pCStr, char *sz);
 int rsCStrLocateInSzStr(rsCStrObj *pThis, char *sz);
 int rsCStrStartsWithSzStr(rsCStrObj *pCS1, char *psz, int iLenSz);
+int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, char *psz, int iLenSz);
 
 /* now come inline-like functions */
 #ifdef NDEBUG
