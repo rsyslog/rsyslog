@@ -8,6 +8,9 @@ Version 1.11.1 (RGer), 2005-10-13
 - support for BSD-style program and host blocks ("program" actually
   is tag and probably has slightly different semantics than in BSD
   syslogd - but that should be easy to deal with)
+- fixed a potential memory leak in the string buffer class destructor.
+  As the destructur was previously never called, the leak did not actually
+  appear.
 ---------------------------------------------------------------------------
 Version 1.11.0 (RGer), 2005-10-12
 - support for receiving messages via RFC 3195; added rfc3195d for that

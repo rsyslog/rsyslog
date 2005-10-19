@@ -99,14 +99,16 @@ rsRetVal rsCStrConstructFromCStr(rsCStrObj **ppThis, rsCStrObj *pFrom)
 
 void rsCStrDestruct(rsCStrObj *pThis)
 {
-#	if STRINGBUF_TRIM_ALLOCSIZE == 1
-	/* in this mode, a new buffer already was allocated,
-	 * so we need to free the old one.
+	/* rgerhards 2005-10-19: The free of pBuf was contained in conditional compilation.
+	 * The code was only compiled if STRINGBUF_TRIM_ALLOCSIZE was set to 1. I honestly
+	 * do not know why it was so, I think it was an artefact. Anyhow, I have changed this
+	 * now. Should there any issue occur, this comment hopefully will shed some light 
+	 * on what happened. I re-verified, and this function has never before been called
+	 * by anyone. So changing it can have no impact for obvious reasons...
 	 */
-		if(pThis->pBuf != NULL) {
-			free(pThis->pBuf);
-		}
-#	endif
+	if(pThis->pBuf != NULL) {
+		free(pThis->pBuf);
+	}
 
 	if(pThis->pszBuf != NULL) {
 		free(pThis->pszBuf);
@@ -538,6 +540,7 @@ int rsCStrSzStrCmp(rsCStrObj *pCS1, char *psz, int iLenSz)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(psz != NULL);
+printf("strlen('%s'): %d, given %d\n", psz, strlen(psz), iLenSz);
 	assert(iLenSz == strlen(psz)); /* just make sure during debugging! */
 	if(pCS1->iStrLen == iLenSz)
 		/* we are using iLenSz below, because the lengths

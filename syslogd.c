@@ -457,7 +457,7 @@ struct msg {
 enum _EHostnameCmpMode {
 	HN_NO_COMP = 0, /* do not compare hostname */
 	HN_COMP_MATCH = 1, /* hostname must match */
-	HN_COMP_NOMATH = 2 /* hostname must NOT match */
+	HN_COMP_NOMATCH = 2 /* hostname must NOT match */
 };
 typedef enum _EHostnameCmpMode EHostnameCmpMode;
 
@@ -753,7 +753,7 @@ static char template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility
 
 /* Function prototypes. */
 int main(int argc, char **argv);
-char **crunch_list(char *list);
+static char **crunch_list(char *list);
 static int usage(void);
 static void untty(void);
 static void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
@@ -776,7 +776,7 @@ static void doexit(int sig);
 static void init();
 static rsRetVal cfline(char *line, register struct filed *f);
 static int decode(char *name, struct code *codetab);
-void sighup_handler();
+static void sighup_handler();
 #ifdef WITH_DB
 static void initMySQL(register struct filed *f);
 static void writeMySQL(register struct filed *f);
@@ -957,7 +957,7 @@ struct TCPSession {
 
 /* Initialize the session table
  */
-void TCPSessInit(void)
+static void TCPSessInit(void)
 {
 	register int i;
 
@@ -972,7 +972,7 @@ void TCPSessInit(void)
  * is full, -1 is returned, else the index of the free
  * entry (0 or higher).
  */
-int TCPSessFindFreeSpot(void)
+static int TCPSessFindFreeSpot(void)
 {
 	register int i;
 
@@ -993,7 +993,7 @@ int TCPSessFindFreeSpot(void)
  * might as well return -1, if there is no session at all in the
  * session table.
  */
-int TCPSessGetNxtSess(int iCurr)
+static int TCPSessGetNxtSess(int iCurr)
 {
 	register int i;
 
@@ -1078,7 +1078,7 @@ static int create_tcp_socket(void)
  * is no more space left in the connection table, the new TCP
  * connection is immediately dropped.
  */
-void TCPSessAccept(void)
+static void TCPSessAccept(void)
 {
 	int newConn;
 	int iSess;
@@ -1113,7 +1113,6 @@ void TCPSessAccept(void)
 	 * configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-printf("pre check allowed\n");
 	if(!isAllowedSender(pAllowedSenders_TCP, &addr)) {
 		if(option_DisallowWarning) {
 			errno = 0;
@@ -1123,7 +1122,6 @@ printf("pre check allowed\n");
 		close(newConn);
 		return;
 	}
-printf("post check allowed\n");
 
 	/* OK, we have an allowed sender, so let's continue */
 	lenHostName = strlen(fromHost) + 1; /* for \0 byte */
@@ -1144,7 +1142,7 @@ printf("post check allowed\n");
  * table as unused. No attention is paid to the return code
  * of close, so potential-double closes are not detected.
  */
-void TCPSessClose(int iSess)
+static void TCPSessClose(int iSess)
 {
 	if(iSess < 0 || iSess > TCPSESS_MAX) {
 		errno = 0;
@@ -1167,7 +1165,7 @@ void TCPSessClose(int iSess)
  * the index of the TCP session that received the data.
  * rgerhards 2005-07-04
  */
-void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
+static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 {
 	register int iMsg;
 	char *pMsg;
@@ -1272,7 +1270,7 @@ static int TCPSendCreateSocket(struct filed *f)
  * short life span of this code (and the unlikeliness of this event).
  * rgerhards 2005-07-06
  */
-int TCPSend(struct filed *f, char *msg)
+static int TCPSend(struct filed *f, char *msg)
 {
 	int retry = 0;
 	int done = 0;
@@ -1440,7 +1438,7 @@ int TCPSend(struct filed *f, char *msg)
  * \retval The number parsed.
  */
 
-int srSLMGParseInt32(unsigned char** ppsz)
+static int srSLMGParseInt32(unsigned char** ppsz)
 {
 	int i;
 
@@ -1673,7 +1671,7 @@ static int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLen
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occured.
  */
-int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+static int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 {
 	int iRet;
 
@@ -1716,7 +1714,7 @@ int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
  * returns the size of the timestamp written in bytes (without
  * the string termnator). If 0 is returend, an error occured.
  */
-int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+static int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 {
 	static char* monthNames[13] = {"ERR", "Jan", "Feb", "Mar",
 	                               "Apr", "May", "Jun", "Jul",
@@ -1739,7 +1737,7 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
  * returns the size of the timestamp written in bytes (without
  * the string termnator). If 0 is returend, an error occured.
  */
-int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+static int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 {
 	assert(ts != NULL);
 	assert(pBuf != NULL);
@@ -1767,7 +1765,7 @@ int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
  *
  * Obviously, all caller-provided pointers must not be NULL...
  */
-void getCurrTime(struct syslogTime *t)
+static void getCurrTime(struct syslogTime *t)
 {
 	struct timeval tp;
 	struct tm *tm;
@@ -1806,7 +1804,7 @@ void getCurrTime(struct syslogTime *t)
  * we can no longer act correctly when we do not receive
  * memory.
  */
-void syslogdPanic(char* ErrMsg)
+static void syslogdPanic(char* ErrMsg)
 {
 	/* TODO: provide a meaningful implementation! */
 	dprintf("rsyslogdPanic: '%s'\n", ErrMsg);
@@ -1824,7 +1822,7 @@ void syslogdPanic(char* ErrMsg)
  * An object constructed via this function should only be destroyed
  * via "MsgDestruct()".
  */
-struct msg* MsgConstruct()
+static struct msg* MsgConstruct()
 {
 	struct msg *pM;
 
@@ -1846,7 +1844,7 @@ struct msg* MsgConstruct()
 /* Destructor for a msg "object". Must be called to dispose
  * of a msg object.
  */
-void MsgDestruct(struct msg * pM)
+static void MsgDestruct(struct msg * pM)
 {
 	assert(pM != NULL);
 	/* DEV Debugging only ! dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1); */
@@ -1894,7 +1892,7 @@ void MsgDestruct(struct msg * pM)
  *
  * pSecondMsgPointer = MsgAddRef(pOrgMsgPointer);
  */
-struct msg *MsgAddRef(struct msg *pM)
+static struct msg *MsgAddRef(struct msg *pM)
 {
 	assert(pM != NULL);
 	pM->iRefCount++;
@@ -1904,13 +1902,13 @@ struct msg *MsgAddRef(struct msg *pM)
 
 /* Access methods - dumb & easy, not a comment for each ;)
  */
-int getMSGLen(struct msg *pM)
+static int getMSGLen(struct msg *pM)
 {
 	return((pM == NULL) ? 0 : pM->iLenMSG);
 }
 
 
-char *getRawMsg(struct msg *pM)
+static char *getRawMsg(struct msg *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -1921,7 +1919,7 @@ char *getRawMsg(struct msg *pM)
 			return pM->pszRawMsg;
 }
 
-char *getUxTradMsg(struct msg *pM)
+static char *getUxTradMsg(struct msg *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -1932,7 +1930,7 @@ char *getUxTradMsg(struct msg *pM)
 			return pM->pszUxTradMsg;
 }
 
-char *getMSG(struct msg *pM)
+static char *getMSG(struct msg *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -1944,7 +1942,7 @@ char *getMSG(struct msg *pM)
 }
 
 
-char *getPRI(struct msg *pM)
+static char *getPRI(struct msg *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -1964,7 +1962,7 @@ char *getPRI(struct msg *pM)
 }
 
 
-char *getTimeReported(struct msg *pM, enum tplFormatTypes eFmt)
+static char *getTimeReported(struct msg *pM, enum tplFormatTypes eFmt)
 {
 	if(pM == NULL)
 		return "";
@@ -1998,7 +1996,7 @@ char *getTimeReported(struct msg *pM, enum tplFormatTypes eFmt)
 	return "INVALID eFmt OPTION!";
 }
 
-char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
+static char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
 {
 	if(pM == NULL)
 		return "";
@@ -2045,7 +2043,7 @@ char *getSeverity(struct msg *pM)
 	return(pM->pszSeverity);
 }
 
-char *getFacility(struct msg *pM)
+static char *getFacility(struct msg *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2063,7 +2061,19 @@ char *getFacility(struct msg *pM)
 }
 
 
-char *getTAG(struct msg *pM)
+static int getTAGLen(struct msg *pM)
+{
+	if(pM == NULL)
+		return 0;
+	else
+		if(pM->pszTAG == NULL)
+			return 0;
+		else
+			return pM->iLenTAG;
+}
+
+
+static char *getTAG(struct msg *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2075,7 +2085,19 @@ char *getTAG(struct msg *pM)
 }
 
 
-char *getHOSTNAME(struct msg *pM)
+static int getHOSTNAMELen(struct msg *pM)
+{
+	if(pM == NULL)
+		return 0;
+	else
+		if(pM->pszHOSTNAME == NULL)
+			return 0;
+		else
+			return pM->iLenHOSTNAME;
+}
+
+
+static char *getHOSTNAME(struct msg *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2087,7 +2109,7 @@ char *getHOSTNAME(struct msg *pM)
 }
 
 
-char *getRcvFrom(struct msg *pM)
+static char *getRcvFrom(struct msg *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2103,7 +2125,7 @@ char *getRcvFrom(struct msg *pM)
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
  */
-int MsgSetRcvFrom(struct msg *pMsg, char* pszRcvFrom)
+static int MsgSetRcvFrom(struct msg *pMsg, char* pszRcvFrom)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszRcvFrom != NULL)
@@ -2126,7 +2148,7 @@ int MsgSetRcvFrom(struct msg *pMsg, char* pszRcvFrom)
  * function is a performance optimization over MsgSetHOSTNAME().
  * rgerhards 2004-11-19
  */
-void MsgAssignHOSTNAME(struct msg *pMsg, char *pBuf)
+static void MsgAssignHOSTNAME(struct msg *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
 	assert(pBuf != NULL);
@@ -2139,7 +2161,7 @@ void MsgAssignHOSTNAME(struct msg *pMsg, char *pBuf)
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
  */
-int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
+static int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszHOSTNAME != NULL)
@@ -2162,7 +2184,7 @@ int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
  * function is a performance optimization over MsgSetTAG().
  * rgerhards 2004-11-19
  */
-void MsgAssignTAG(struct msg *pMsg, char *pBuf)
+static void MsgAssignTAG(struct msg *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
 	assert(pBuf != NULL);
@@ -2175,7 +2197,7 @@ void MsgAssignTAG(struct msg *pMsg, char *pBuf)
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
  */
-int MsgSetTAG(struct msg *pMsg, char* pszTAG)
+static int MsgSetTAG(struct msg *pMsg, char* pszTAG)
 {
 	assert(pMsg != NULL);
 	pMsg->iLenTAG = strlen(pszTAG);
@@ -2195,7 +2217,7 @@ int MsgSetTAG(struct msg *pMsg, char* pszTAG)
  * function is a performance optimization over MsgSetUxTradMsg().
  * rgerhards 2004-11-19
  */
-void MsgAssignUxTradMsg(struct msg *pMsg, char *pBuf)
+static void MsgAssignUxTradMsg(struct msg *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
 	assert(pBuf != NULL);
@@ -2208,7 +2230,7 @@ void MsgAssignUxTradMsg(struct msg *pMsg, char *pBuf)
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
  */
-int MsgSetUxTradMsg(struct msg *pMsg, char* pszUxTradMsg)
+static int MsgSetUxTradMsg(struct msg *pMsg, char* pszUxTradMsg)
 {
 	assert(pMsg != NULL);
 	assert(pszUxTradMsg != NULL);
@@ -2230,7 +2252,7 @@ int MsgSetUxTradMsg(struct msg *pMsg, char* pszUxTradMsg)
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
  */
-int MsgSetMSG(struct msg *pMsg, char* pszMSG)
+static int MsgSetMSG(struct msg *pMsg, char* pszMSG)
 {
 	assert(pMsg != NULL);
 	assert(pszMSG != NULL);
@@ -2253,7 +2275,7 @@ int MsgSetMSG(struct msg *pMsg, char* pszMSG)
  * returns 0 if OK, other value if not. In case of failure,
  * logs error message and destroys msg object.
  */
-int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
+static int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszRawMsg != NULL) {
@@ -2308,7 +2330,7 @@ int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
  * be used in selector line processing.
  * rgerhards 2005-09-15
  */
-char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
+static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
                  rsCStrObj *pCSPropName, unsigned short *pbMustBeFreed)
 {
 	char *pName;
@@ -3554,15 +3576,36 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 	 * and host). Only if they match, we evaluate the actual filter.
 	 * rgerhards, 2005-10-18
 	 */
-	if(f->pCSTagComp != NULL){
-		/* TODO: make access to pMSg through methods, only (below) */
-		if(rsCStrSzStrCmp(f->pCSTagComp, getTAG(pMsg), pMsg->iLenTAG)) {
+	if(f->eHostnameCmpMode == HN_NO_COMP) {
+		/* EMPTY BY INTENSION - we check this value first, because
+		 * it is the one most often used, so this saves us time!
+		 */
+	} else if(f->eHostnameCmpMode == HN_COMP_MATCH) {
+		if(rsCStrSzStrCmp(f->pCSHostnameComp, getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
+			/* not equal, so we are already done... */
+			dprintf("hostname filter '+%s' does not match '%s'\n", 
+				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
+			return 0;
+		}
+	} else { /* must be -hostname */
+		if(!rsCStrSzStrCmp(f->pCSHostnameComp, getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
+			/* not equal, so we are already done... */
+			dprintf("hostname filter '-%s' does not match '%s'\n", 
+				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
+			return 0;
+		}
+	}
+	
+	if(f->pCSTagComp != NULL) {
+		if(rsCStrSzStrCmp(f->pCSTagComp, getTAG(pMsg), getTAGLen(pMsg))) {
 			/* not equal, so we are already done... */
 			dprintf("tag filter '%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSTagComp), getTAG(pMsg));
 			return 0;
 		}
 	}
+	
+	/* done with the BSD-style block filters */
 
 	if(f->f_filter_type == FILTER_PRI) {
 		/* skip messages that are incorrect priority */
@@ -5300,6 +5343,19 @@ static void init()
 		(void) fclose(cf);
 	}
 
+	/* we are now done with reading the configuraton. This is the right time to
+	 * free some objects that were just needed for loading it. rgerhards 2005-10-19
+	 */
+	if(pDfltHostnameCmp != NULL) {
+		rsCStrDestruct(pDfltHostnameCmp);
+		pDfltHostnameCmp = NULL;
+	}
+
+	if(pDfltTagCmp != NULL) {
+		rsCStrDestruct(pDfltTagCmp);
+		pDfltTagCmp = NULL;
+	}
+
 
 #ifdef SYSLOG_UNIXAF
 	for (i = 0; i < nfunix; i++) {
@@ -5349,6 +5405,11 @@ static void init()
 			if (f->f_type != F_UNUSED) {
 				if(f->pCSTagComp != NULL)
 					printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSTagComp));
+				if(f->eHostnameCmpMode != HN_NO_COMP)
+					printf("hostname: %s '%s'\n",
+						f->eHostnameCmpMode == HN_COMP_MATCH ?
+							"only" : "allbut",
+						rsCStrGetSzStr(f->pCSHostnameComp));
 				if(f->f_filter_type == FILTER_PRI) {
 					for (i = 0; i <= LOG_NFACILITIES; i++)
 						if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
@@ -5899,7 +5960,60 @@ static rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 
 
 /*
- * Helper to cfline(). This function interprets a tag selector line
+ * Helper to cfline(). This function interprets a BSD host selector line
+ * from the config file ("+/-hostname"). It stores it for further reference.
+ * rgerhards 2005-10-19
+ */
+static rsRetVal cflineProcessHostSelector(char **pline, register struct filed *f)
+{
+	rsRetVal iRet;
+
+	assert(pline != NULL);
+	assert(*pline != NULL);
+	assert(**pline == '-' || **pline == '+');
+	assert(f != NULL);
+
+	dprintf(" - host selector line (aka program selector)\n");
+
+	/* check include/exclude setting */
+	if(**pline == '+') {
+		eDfltHostnameCmpMode = HN_COMP_MATCH;
+	} else { /* we do not check for '-', it must be, else we wouldn't be here */
+		eDfltHostnameCmpMode = HN_COMP_NOMATCH;
+	}
+	(*pline)++;	/* eat + or - */
+
+	/* the below is somewhat of a quick hack, but it is efficient (this is
+	 * why it is in here. "+*" resets the tag selector with BSD syslog. We mimic
+	 * this, too. As it is easy to check that condition, we do not fire up a
+	 * parser process, just make sure we do not address beyond our space.
+	 * Order of conditions in the if-statement is vital! rgerhards 2005-10-18
+	 */
+	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
+		dprintf("resetting BSD-like hostname filter\n");
+		eDfltHostnameCmpMode = HN_NO_COMP;
+		if(pDfltHostnameCmp != NULL) {
+			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, NULL)) != RS_RET_OK)
+				return(iRet);
+			pDfltHostnameCmp = NULL;
+		}
+	} else {
+		dprintf("setting BSD-like hostname filter to '%s'\n", *pline);
+		if(pDfltHostnameCmp == NULL) {
+			/* create string for parser */
+			if((iRet = rsCStrConstructFromszStr(&pDfltHostnameCmp, *pline)) != RS_RET_OK)
+				return(iRet);
+		} else { /* string objects exists, just update... */
+			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, *pline)) != RS_RET_OK)
+				return(iRet);
+		}
+	}
+	return RS_RET_OK;
+}
+
+
+/*
+ * Helper to cfline(). This function interprets a BSD tag selector line
  * from the config file ("!tagname"). It stores it for further reference.
  * rgerhards 2005-10-18
  */
@@ -5913,7 +6027,6 @@ static rsRetVal cflineProcessTagSelector(char **pline, register struct filed *f)
 	assert(f != NULL);
 
 	dprintf(" - TAG selector line (aka program selector)\n");
-	errno = 0;	/* keep strerror() stuff out of logerror messages */
 
 	(*pline)++;	/* eat '!' */
 
@@ -5921,7 +6034,7 @@ static rsRetVal cflineProcessTagSelector(char **pline, register struct filed *f)
 	 * why it is in here. "!*" resets the tag selector with BSD syslog. We mimic
 	 * this, too. As it is easy to check that condition, we do not fire up a
 	 * parser process, just make sure we do not address beyond our space.
-	 * Order of conditions in if-statement is vital! rgerhards 2005-10-18
+	 * Order of conditions in the if-statement is vital! rgerhards 2005-10-18
 	 */
 	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
 		dprintf("resetting tag filter\n");
@@ -5985,6 +6098,10 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		case '!':
 			iRet = cflineProcessTagSelector(&p, f);
 			return iRet; /* in this case, we are done */
+		case '+':
+		case '-':
+			iRet = cflineProcessHostSelector(&p, f);
+			return iRet; /* in this case, we are done */
 		default:
 			iRet = cflineProcessTradPRIFilter(&p, f);
 			break;
@@ -6002,6 +6119,12 @@ static rsRetVal cfline(char *line, register struct filed *f)
 	if(pDfltTagCmp != NULL)
 		if((iRet = rsCStrConstructFromCStr(&(f->pCSTagComp), pDfltTagCmp)) != RS_RET_OK)
 			return(iRet);
+
+	if(eDfltHostnameCmpMode != HN_NO_COMP) {
+		f->eHostnameCmpMode = eDfltHostnameCmpMode;
+		if((iRet = rsCStrConstructFromCStr(&(f->pCSHostnameComp), pDfltHostnameCmp)) != RS_RET_OK)
+			return(iRet);
+	}
 
 	if (*p == '-') {
 		syncfile = 0;
