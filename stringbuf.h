@@ -102,6 +102,7 @@ rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
 
 
 char*  rsCStrGetSzStr(rsCStrObj *pThis);
+char*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis);
 rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, char *pszNew);
 char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
 int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2);

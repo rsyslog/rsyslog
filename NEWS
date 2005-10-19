@@ -5,9 +5,8 @@ Version 1.11.1 (RGer), 2005-10-13
 - added ability to specify listen port for rfc3195d
 - changed more functions to "static" storage class to help compiler
   optimize (should have been static in the first place...)
-- support for BSD-style program and host blocks ("program" actually
-  is tag and probably has slightly different semantics than in BSD
-  syslogd - but that should be easy to deal with)
+- support for BSD-style program name and host blocks
+- added a new property "programname" that can be used in templates
 - fixed a potential memory leak in the string buffer class destructor.
   As the destructur was previously never called, the leak did not actually
   appear.

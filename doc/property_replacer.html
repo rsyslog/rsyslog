@@ -27,6 +27,8 @@ socket. Should be useful for debugging.</td></tr>
 	from (in a relay chain, this is the system immediately in front of us and 
 	not necessarily the original sender)</td></tr>
 <tr><td><b>syslogtag</b></td><td>TAG from the message</td></tr>
+<tr><td><b>programname</b></td><td>the &quot;static&quot; part of the tag, as defined by
+BSD syslogd. For example, when TAG is "named[12345]", programname is "named".</td></tr>
 <tr><td><b>PRI</b></td><td>PRI part of the message - undecoded (single value)</td></tr>
 <tr><td><b>IUT</b></td><td>the monitorware InfoUnitType - used when talking
 to a <a href="http://www.monitorware.com">MonitorWare</a> backend (also for 

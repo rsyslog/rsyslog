@@ -236,10 +236,29 @@ rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, char *pszNew)
 	return RS_RET_OK;
 }
 
+/* Converts the CStr object to a classical sz string and returns that.
+ * Same restrictions as in rsCStrGetSzStr() applies (see there!). This
+ * function here guarantees that a valid string is returned, even if
+ * the CStr object currently holds a NULL pointer string buffer. If so,
+ * "" is returned.
+ * rgerhards 2005-10-19
+ */
+char*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	if(pThis->pBuf == NULL)
+		return "";
+	else
+		return rsCStrGetSzStr(pThis);
+}
+
 
 /* Converts the CStr object to a classical zero-terminated C string
  * and returns that string. The caller must not free it and must not
  * destroy the CStr object as long as the ascii string is used.
+ * This function may return NULL, if the string is currently NULL. This
+ * is a feature, not a bug. If you need non-NULL in any case, use
+ * rsCStrGetSzStrNoNULL() instead.
  * rgerhards, 2005-09-15
  */
 char*  rsCStrGetSzStr(rsCStrObj *pThis)

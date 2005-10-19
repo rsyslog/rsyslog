@@ -494,7 +494,7 @@ struct filed {
 	} f_filter_type;
 	EHostnameCmpMode eHostnameCmpMode;
 	rsCStrObj *pCSHostnameComp;/* hostname to check */
-	rsCStrObj *pCSTagComp;	/* tag to check or NULL, if not to be checked */
+	rsCStrObj *pCSProgNameComp;	/* tag to check or NULL, if not to be checked */
 	union {
 		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
 		struct {
@@ -558,7 +558,7 @@ struct filed {
  */
 static EHostnameCmpMode eDfltHostnameCmpMode;
 static rsCStrObj *pDfltHostnameCmp;
-static rsCStrObj *pDfltTagCmp;
+static rsCStrObj *pDfltProgNameCmp;
 
 /*
  * Intervals at which we flush out "message repeated" messages,
@@ -2118,9 +2118,9 @@ static char *getRcvFrom(struct msg *pM)
 }
 
 
-/* get the "programname". Programname is a BSD concept, it is the tag
- * without any instance-specific information. Precisely, the programname
- * is terminated by either (whichever occurs first):
+/* Parse and set the "programname" for a given MSG object. Programname
+ * is a BSD concept, it is the tag without any instance-specific information.
+ * Precisely, the programname is terminated by either (whichever occurs first):
  * - end of tag
  * - nonprintable character
  * - ':'
@@ -2129,17 +2129,70 @@ static char *getRcvFrom(struct msg *pM)
  * The above definition has been taken from the FreeBSD syslogd sources.
  * 
  * The program name is not parsed by default, because it is infrequently-used.
- * Thus, this function first checks if it already exists. If not, it is generated
- * before being returned. A message must be provided, else a crash will occur.
+ * If it is needed, this function should be called first. It checks if it is
+ * already set and extracts it, if not.
+ * A message object must be provided, else a crash will occur.
+ * rgerhards, 2005-10-19
+ */
+static rsRetVal aquireProgramName(struct msg *pM)
+{
+	register int i;
+	int iRet;
+
+	assert(pM != NULL);
+	if(pM->pCSProgName == NULL) {
+		/* ok, we do not yet have it. So let's parse the TAG
+		 * to obtain it.
+		 */
+		if((pM->pCSProgName = rsCStrConstruct()) == NULL) 
+			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+		rsCStrSetAllocIncrement(pM->pCSProgName, 33);
+		for(  i = 0
+		    ; (i < pM->iLenTAG) && isprint(pM->pszTAG[i])
+		      && (pM->pszTAG[i] != '\0') && (pM->pszTAG[i] != ':')
+		      && (pM->pszTAG[i] != '[')  && (pM->pszTAG[i] != '/')
+		    ; ++i) {
+			if((iRet = rsCStrAppendChar(pM->pCSProgName, pM->pszTAG[i])) != RS_RET_OK)
+				return iRet;
+		}
+		if((iRet = rsCStrFinish(pM->pCSProgName)) != RS_RET_OK)
+			return iRet;
+	}
+	return RS_RET_OK;
+}
+
+
+/* get the length of the "programname" sz string
+ * rgerhards, 2005-10-19
+ */
+static int getProgramNameLen(struct msg *pM)
+{
+	int iRet;
+
+	assert(pM != NULL);
+	if((iRet = aquireProgramName(pM)) != RS_RET_OK) {
+		dprintf("error %d returned by aquireProgramName() in getProgramNameLen()\n", iRet);
+		return 0; /* best we can do (consistent wiht what getProgramName() returns) */
+	}
+
+	return (pM->pCSProgName == NULL) ? 0 : rsCStrLen(pM->pCSProgName);
+}
+
+
+/* get the "programname" as sz string
  * rgerhards, 2005-10-19
  */
 static char *getProgramName(struct msg *pM)
 {
+	int iRet;
+
 	assert(pM != NULL);
-	if(pM->pCSProgName == NULL) {
-	} else {
-		return pM->pszHOSTNAME;
+	if((iRet = aquireProgramName(pM)) != RS_RET_OK) {
+		dprintf("error %d returned by aquireProgramName() in getProgramName()\n", iRet);
+		return ""; /* best we can do */
 	}
+
+	return (pM->pCSProgName == NULL) ? "" : rsCStrGetSzStrNoNULL(pM->pCSProgName);
 }
 
 
@@ -2403,6 +2456,8 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 	} else if(!strcmp(pName, "timereported")
 		  || !strcmp(pName, "TIMESTAMP")) {
 		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
+	} else if(!strcmp(pName, "programname")) {
+		pRes = getProgramName(pMsg);
 	} else {
 		pRes = "**INVALID PROPERTY NAME**";
 	}
@@ -3618,11 +3673,11 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 		}
 	}
 	
-	if(f->pCSTagComp != NULL) {
-		if(rsCStrSzStrCmp(f->pCSTagComp, getTAG(pMsg), getTAGLen(pMsg))) {
+	if(f->pCSProgNameComp != NULL) {
+		if(rsCStrSzStrCmp(f->pCSProgNameComp, getProgramName(pMsg), getProgramNameLen(pMsg))) {
 			/* not equal, so we are already done... */
-			dprintf("tag filter '%s' does not match '%s'\n", 
-				rsCStrGetSzStr(f->pCSTagComp), getTAG(pMsg));
+			dprintf("programname filter '%s' does not match '%s'\n", 
+				rsCStrGetSzStr(f->pCSProgNameComp), getProgramName(pMsg));
 			return 0;
 		}
 	}
@@ -5207,7 +5262,7 @@ static void init()
 
 	/* initialize some static variables */
 	pDfltHostnameCmp = NULL;
-	pDfltTagCmp = NULL;
+	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
 
 	nextp = NULL;
@@ -5373,9 +5428,9 @@ static void init()
 		pDfltHostnameCmp = NULL;
 	}
 
-	if(pDfltTagCmp != NULL) {
-		rsCStrDestruct(pDfltTagCmp);
-		pDfltTagCmp = NULL;
+	if(pDfltProgNameCmp != NULL) {
+		rsCStrDestruct(pDfltProgNameCmp);
+		pDfltProgNameCmp = NULL;
 	}
 
 
@@ -5425,8 +5480,8 @@ static void init()
 		printf("Active selectors:\n");
 		for (f = Files; f; f = f->f_next) {
 			if (f->f_type != F_UNUSED) {
-				if(f->pCSTagComp != NULL)
-					printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSTagComp));
+				if(f->pCSProgNameComp != NULL)
+					printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSProgNameComp));
 				if(f->eHostnameCmpMode != HN_NO_COMP)
 					printf("hostname: %s '%s'\n",
 						f->eHostnameCmpMode == HN_COMP_MATCH ?
@@ -6059,20 +6114,20 @@ static rsRetVal cflineProcessTagSelector(char **pline, register struct filed *f)
 	 * Order of conditions in the if-statement is vital! rgerhards 2005-10-18
 	 */
 	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
-		dprintf("resetting tag filter\n");
-		if(pDfltTagCmp != NULL) {
-			if((iRet = rsCStrSetSzStr(pDfltTagCmp, NULL)) != RS_RET_OK)
+		dprintf("resetting programname filter\n");
+		if(pDfltProgNameCmp != NULL) {
+			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, NULL)) != RS_RET_OK)
 				return(iRet);
-			pDfltTagCmp = NULL;
+			pDfltProgNameCmp = NULL;
 		}
 	} else {
-		dprintf("setting tag filter to '%s'\n", *pline);
-		if(pDfltTagCmp == NULL) {
+		dprintf("setting programname filter to '%s'\n", *pline);
+		if(pDfltProgNameCmp == NULL) {
 			/* create string for parser */
-			if((iRet = rsCStrConstructFromszStr(&pDfltTagCmp, *pline)) != RS_RET_OK)
+			if((iRet = rsCStrConstructFromszStr(&pDfltProgNameCmp, *pline)) != RS_RET_OK)
 				return(iRet);
 		} else { /* string objects exists, just update... */
-			if((iRet = rsCStrSetSzStr(pDfltTagCmp, *pline)) != RS_RET_OK)
+			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, *pline)) != RS_RET_OK)
 				return(iRet);
 		}
 	}
@@ -6138,8 +6193,8 @@ static rsRetVal cfline(char *line, register struct filed *f)
 	/* we now check if there are some global (BSD-style) filter conditions
 	 * and, if so, we copy them over. rgerhards, 2005-10-18
 	 */
-	if(pDfltTagCmp != NULL)
-		if((iRet = rsCStrConstructFromCStr(&(f->pCSTagComp), pDfltTagCmp)) != RS_RET_OK)
+	if(pDfltProgNameCmp != NULL)
+		if((iRet = rsCStrConstructFromCStr(&(f->pCSProgNameComp), pDfltProgNameCmp)) != RS_RET_OK)
 			return(iRet);
 
 	if(eDfltHostnameCmpMode != HN_NO_COMP) {
