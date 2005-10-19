@@ -2775,11 +2775,11 @@ int main(int argc, char **argv)
 		dprintf("Checking pidfile.\n");
 		if (!check_pid(PidFile))
 		{
+			signal (SIGTERM, doexit);
 			if (fork()) {
 				/*
 				 * Parent process
 				 */
-				signal (SIGTERM, doexit);
 				sleep(300);
 				/*
 				 * Not reached unless something major went wrong.  5
@@ -3139,7 +3139,10 @@ int main(int argc, char **argv)
 							   from);
 					}
 				}
-			} else if (i < 0 && errno != EINTR) {
+			} else if (i < 0 && errno != EINTR && errno != EAGAIN) {
+				/* see link below why we check EAGAIN:
+				 * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=188194
+				 */
 				dprintf("INET socket error: %d = %s.\n", \
 					errno, strerror(errno));
 				logerror("recvfrom inet");
@@ -3256,6 +3259,7 @@ static int create_udp_socket()
 {
 	int fd, on = 1;
 	struct sockaddr_in sin;
+	int sockflags;
 
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd < 0) {
@@ -3285,6 +3289,27 @@ static int create_udp_socket()
 		}
 	}
 #endif
+	/* We must not block on the network socket, in case a packet
+	 * gets lost between select and recv, otherwise the process
+	 * will stall until the timeout, and other processes trying to
+	 * log will also stall.
+	 * Patch vom Colin Phipps <cph@cph.demon.co.uk> to the original
+	 * sysklogd source. Applied to rsyslogd on 2005-10-19.
+	 */
+	if ((sockflags = fcntl(fd, F_GETFL)) != -1) {
+		sockflags |= O_NONBLOCK;
+		/*
+		 * SETFL could fail too, so get it caught by the subsequent
+		 * error check.
+		 */
+		sockflags = fcntl(fd, F_SETFL, sockflags);
+	}
+	if (sockflags == -1) {
+		logerror("fcntl(O_NONBLOCK), suspending inet");
+		close(fd);
+		return -1;
+	}
+
 	if (bind(fd, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
 		logerror("bind, suspending inet");
 		close(fd);
@@ -3294,9 +3319,7 @@ static int create_udp_socket()
 }
 #endif
 
-char **
-crunch_list(list)
-	char *list;
+static char **crunch_list(char *list)
 {
 	int count, i;
 	char *p, *q;
@@ -3319,7 +3342,7 @@ crunch_list(list)
 	for (count=i=0; p[i]; i++)
 		if (p[i] == LIST_DELIMITER) count++;
 	
-	if ((result = (char **)malloc(sizeof(char *) * count+2)) == NULL) {
+	if ((result = (char **)malloc(sizeof(char *) * (count+2))) == NULL) {
 		printf ("Sorry, can't get enough memory, exiting.\n");
 		exit(0);
 	}
@@ -4708,11 +4731,17 @@ void endutent(void)
  *
  *	Write the specified message to either the entire
  *	world, or a list of approved users.
+ *
+ * rgerhards, 2005-10-19: applying the following sysklogd patch:
+ * Tue May  4 16:52:01 CEST 2004: Solar Designer <solar@openwall.com>
+ *	Adjust the size of a variable to prevent a buffer overflow
+ *	should _PATH_DEV ever contain something different than "/dev/".
  */
 
 static void wallmsg(register struct filed *f)
 {
-	char p[6 + UNAMESZ];
+  
+	char p[sizeof(_PATH_DEV) + UNAMESZ];
 	register int i;
 	int ttyf;
 	static int reenter = 0;
@@ -4736,7 +4765,6 @@ static void wallmsg(register struct filed *f)
 	if (fork() == 0) {
 		(void) signal(SIGTERM, SIG_DFL);
 		(void) alarm(0);
-		(void) signal(SIGALRM, endtty);
 #ifndef SYSV
 		(void) signal(SIGTTOU, SIG_IGN);
 		(void) sigsetmask(0);
@@ -4752,7 +4780,7 @@ static void wallmsg(register struct filed *f)
 			if (ut.ut_name[0] == '\0')
 				continue;
 #ifndef BSD
-			if (ut.ut_type == LOGIN_PROCESS)
+			if (ut.ut_type != USER_PROCESS)
 			        continue;
 #endif
 			if (!(strncmp (ut.ut_name,"LOGIN", 6))) /* paranoia */
@@ -4778,6 +4806,7 @@ static void wallmsg(register struct filed *f)
 			strncat(p, ut.ut_line, UNAMESZ);
 
 			if (setjmp(ttybuf) == 0) {
+				(void) signal(SIGALRM, endtty);
 				(void) alarm(15);
 				/* open the terminal */
 				ttyf = open(p, O_WRONLY|O_NOCTTY);
@@ -4880,6 +4909,17 @@ static const char *cvthname(struct sockaddr_in *f)
 	return (hp->h_name);
 }
 
+/* This method is called by an alarm handler. As such, we can have potentially
+ * race-conditons. It might be a very good idea to change this to real threading,
+ * for now we "just" need to be very careful about potential side-effects. For an
+ * example (and explanation), see:
+ * http://lkml.org/lkml/2005/3/26/37
+ * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=301511
+ * TODO: I assume there are actually some bugs here, we are just lucky that
+ * the interval is so seldom that they (usually) do not manifest. It would
+ * probably be a good idea to redisign this whole thing...
+ * rgerhards, 2005-10-19
+ */
 void domark()
 {
 	register struct filed *f;
