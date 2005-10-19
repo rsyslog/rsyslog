@@ -2281,11 +2281,11 @@ int main(argc, argv)
 		dprintf("Checking pidfile.\n");
 		if (!check_pid(PidFile))
 		{
+			signal (SIGTERM, doexit);
 			if (fork()) {
 				/*
 				 * Parent process
 				 */
-				signal (SIGTERM, doexit);
 				sleep(300);
 				/*
 				 * Not reached unless something major went wrong.  5
@@ -2820,7 +2820,7 @@ crunch_list(list)
 	for (count=i=0; p[i]; i++)
 		if (p[i] == LIST_DELIMITER) count++;
 	
-	if ((result = (char **)malloc(sizeof(char *) * count+2)) == NULL) {
+	if ((result = (char **)malloc(sizeof(char *) * (count+2))) == NULL) {
 		printf ("Sorry, can't get enough memory, exiting.\n");
 		exit(0);
 	}
@@ -4002,7 +4002,7 @@ void endutent(void)
 void wallmsg(f)
 	register struct filed *f;
 {
-	char p[6 + UNAMESZ];
+	char p[sizeof(_PATH_DEV) +  UNAMESZ];
 	register int i;
 	int ttyf;
 	static int reenter = 0;

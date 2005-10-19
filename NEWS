@@ -6,6 +6,8 @@ Version 1.0.3 (RGer), 2005-10-10
   file support was not enabled (ok, this is hopefully an unlikely scenario)
 - fixed a bug that caused additional Unix domain sockets to be incorrectly
   processed - could lead to message loss in extreme cases
+- applied some patches available from the sysklogd project to code
+  shared from there
 ---------------------------------------------------------------------------
 Version 1.0.2 (RGer), 2005-10-05
 - fixed an issue with MySQL error reporting. When an error occured,
