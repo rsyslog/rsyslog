@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.11.2 (RGer), 2005-10-20
+---------------------------------------------------------------------------
 Version 1.11.1 (RGer), 2005-10-19
 - support for BSD-style program name and host blocks
 - added a new property "programname" that can be used in templates
