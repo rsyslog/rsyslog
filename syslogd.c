@@ -297,18 +297,19 @@ static int should_use_so_bsdcompat(void)
 #define SO_BSDCOMPAT 0
 #endif
 
-char	*ConfFile = _PATH_LOGCONF;
-char	*PidFile = _PATH_LOGPID;
-char	ctty[] = _PATH_CONSOLE;
+static char	*ConfFile = _PATH_LOGCONF;
+static char	*PidFile = _PATH_LOGPID;
+static char	ctty[] = _PATH_CONSOLE;
 
-char	**parts;
+static char	**parts;
 
-int inetm = 0;
-pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
+static int inetm = 0;
+static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 static int debugging_on = 0;
 static int nlogs = -1;
 static int restart = 0;
 
+static int bRequestDoMark = 0; /* do mark processing? */
 #define MAXFUNIX	20
 
 int nfunix = 1;
@@ -761,7 +762,8 @@ static void endtty();
 static void wallmsg(register struct filed *f);
 static void reapchild();
 static const char *cvthname(struct sockaddr_in *f);
-static void domark();
+static void domark(void);
+static void domarkAlarmHdlr();
 static void debug_switch();
 static void logerror(char *type);
 static void logerrorInt(char *type, int errCode);
@@ -2894,7 +2896,7 @@ int main(int argc, char **argv)
 	(void) signal(SIGINT, Debug ? die : SIG_IGN);
 	(void) signal(SIGQUIT, Debug ? die : SIG_IGN);
 	(void) signal(SIGCHLD, reapchild);
-	(void) signal(SIGALRM, domark);
+	(void) signal(SIGALRM, domarkAlarmHdlr);
 	(void) signal(SIGUSR1, Debug ? debug_switch : SIG_IGN);
 	(void) signal(SIGPIPE, SIG_IGN);
 	(void) signal(SIGXFSZ, SIG_IGN); /* do not abort if 2gig file limit is hit */
@@ -3030,8 +3032,14 @@ int main(int argc, char **argv)
 		nfds = select(maxfds+1, (fd_set *) &readfds, (fd_set *) NULL,
 				  (fd_set *) NULL, (struct timeval *) NULL);
 #endif
-		if ( restart )
-		{
+		if(bRequestDoMark) {
+			domark();
+			bRequestDoMark = 0;
+			/* We do not use continue, because domark() is carried out
+			 * only when something else happened.
+			 */
+		}
+		if (restart) {
 			dprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
 			init();
 			restart = 0;
@@ -3751,13 +3759,21 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 			free(pszPropVal);
 		
 		if(Debug) {
-			printf("Property filter '%s' ", rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
+			char *pszPropVal;
+			unsigned short pbMustBeFreed;
+			pszPropVal = MsgGetProp(pMsg, NULL,
+					f->f_filterData.prop.pCSPropName, &pbMustBeFreed);
+			printf("Filter: check for property '%s' (value '%s') ",
+			        rsCStrGetSzStr(f->f_filterData.prop.pCSPropName),
+			        pszPropVal);
 			if(f->f_filterData.prop.isNegated)
 				printf("NOT ");
-			printf("%s '%s' does %smatch.\n",
+			printf("%s '%s': %s\n",
 			       getFIOPName(f->f_filterData.prop.operation),
 			       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue),
-			       iRet ? "" : "not ");
+			       iRet ? "TRUE" : "FALSE");
+			if(pbMustBeFreed)
+				free(pszPropVal);
 		}
 	}
 
@@ -4909,18 +4925,22 @@ static const char *cvthname(struct sockaddr_in *f)
 	return (hp->h_name);
 }
 
-/* This method is called by an alarm handler. As such, we can have potentially
- * race-conditons. It might be a very good idea to change this to real threading,
- * for now we "just" need to be very careful about potential side-effects. For an
- * example (and explanation), see:
+
+/* This method writes mark messages and - some time later - flushes reapeat
+ * messages (not doing this currently).
+ * This method was initially called by an alarm handler. As such, it could potentially
+ * have  race-conditons. For details, see
  * http://lkml.org/lkml/2005/3/26/37
  * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=301511
- * TODO: I assume there are actually some bugs here, we are just lucky that
- * the interval is so seldom that they (usually) do not manifest. It would
- * probably be a good idea to redisign this whole thing...
- * rgerhards, 2005-10-19
+ * I have now changed it so that the alarm handler only sets a global variable, telling
+ * the main thread that it must do mark processing. So domark() is now called from the
+ * main thread itself, which is the only thing to make sure rsyslogd will not do
+ * strange things. The way it originally was seemed to work because mark occurs very
+ * seldom. However, the code called was anything else but reentrant, so it was like
+ * russian roulette.
+ * rgerhards, 2005-10-20
  */
-void domark()
+static void domark(void)
 {
 	register struct filed *f;
 	if (MarkInterval > 0) {
@@ -4941,12 +4961,22 @@ void domark()
 		}
 	}
 	}
-	(void) signal(SIGALRM, domark);
+}
+
+
+/* This is the alarm handler setting the global variable for
+ * domark request. See domark() comments for further details.
+ * rgerhards, 2005-10-20
+ */
+static void domarkAlarmHdlr()
+{
+	bRequestDoMark = 1; /* request alarm */
+	(void) signal(SIGALRM, domarkAlarmHdlr);
 	(void) alarm(TIMERINTVL);
 }
 
-void debug_switch()
 
+static void debug_switch()
 {
 	dprintf("Switching debugging_on to %s\n", (debugging_on == 0) ? "true" : "false");
 	debugging_on = (debugging_on == 0) ? 1 : 0;
@@ -4987,8 +5017,7 @@ static void logerrorInt(char *type, int errCode)
 /*
  * Print syslogd errors some place.
  */
-static void logerror(type)
-	char *type;
+static void logerror(char *type)
 {
 	char buf[1024];
 
@@ -5157,7 +5186,6 @@ static rsRetVal addAllowedSenderLine(char* pName, char** ppRestOfConfLine)
 		return RS_RET_ERR;
 	}
 
-printf("addAllow..., name '%s', line: '%s'\n", pName, *ppRestOfConfLine);
 	/* OK, we now know the protocol and have valid list pointers.
 	 * So let's process the entries. We are using the parse class
 	 * for this.

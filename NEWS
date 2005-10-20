@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 1.11.2 (RGer), 2005-10-20
+- fixed a potential race condition. In the original code, marking was done
+  by an alarm handler, which could lead to all sorts of bad things. This
+  has been changed now. See comments in syslogd.c/domark() for details.
+- improved debug output for property-based filters
 ---------------------------------------------------------------------------
 Version 1.11.1 (RGer), 2005-10-19
 - support for BSD-style program name and host blocks
