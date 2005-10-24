@@ -9,6 +9,10 @@ Version 1.11.2 (RGer), 2005-10-20
   (like low-memory conditions) rsyslogd somehow remains active. Of course,
   it might loose a message or two, but at least it does not abort and it
   can also recover when the condition no longer persist.
+- fixed a bug that could cause loss of the last message received
+  immediately before rsyslogd was terminated.
+- added comments on thread-safety of global variables in syslogd.c
+- fixed a small bug: spurios printf() when TCP syslog was used
 ---------------------------------------------------------------------------
 Version 1.11.1 (RGer), 2005-10-19
 - support for BSD-style program name and host blocks

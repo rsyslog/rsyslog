@@ -185,6 +185,10 @@
 #include "stringbuf.h"
 #include "parse.h"
 
+#ifdef USE_PTHREADS
+#include <pthread.h>
+#endif
+
 #ifdef	WITH_DB
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
 #define _DB_MAXUNAMELEN	128	/* maximum number of user name */
@@ -297,28 +301,34 @@ static int should_use_so_bsdcompat(void)
 #define SO_BSDCOMPAT 0
 #endif
 
-static char	*ConfFile = _PATH_LOGCONF;
-static char	*PidFile = _PATH_LOGPID;
-static char	ctty[] = _PATH_CONSOLE;
+static char	*ConfFile = _PATH_LOGCONF; /* read-only after startup */
+static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
+static char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
 
 static char	**parts;
+/* parts is read-write in the code handling message reception. It is not
+ * modified once the message has been received. So it should be safe to
+ * not guard access to it once we have completed msg object compilation.
+ * rgerhards 2005-10-24
+ */
 
-static int inetm = 0;
+static int inetm = 0; /* read-only after init, except when HUPed */
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
-static int debugging_on = 0;
-static int nlogs = -1;
-static int restart = 0;
+/* mypid is read-only after the initial fork() */
+static int debugging_on = 0; /* read-only, except on sig USR1 */
+static int restart = 0; /* do restart (config read) - multithread safe */
 
-static int bRequestDoMark = 0; /* do mark processing? */
+static int bRequestDoMark = 0; /* do mark processing? (multithread safe) */
 #define MAXFUNIX	20
 
-int nfunix = 1;
+int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
+				   * read-only after startup
 				   */
-int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name? */
-char *funixn[MAXFUNIX] = { _PATH_LOG };
-int funix[MAXFUNIX] = { -1, };
+int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
+char *funixn[MAXFUNIX] = { _PATH_LOG }; /* read-only after startup */
+int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
 
 #ifdef UT_NAMESIZE
 # define UNAMESZ	UT_NAMESIZE	/* length of a login name */
@@ -346,7 +356,7 @@ int funix[MAXFUNIX] = { -1, };
  * This table contains plain text for h_errno errors used by the
  * net subsystem.
  */
-const char *sys_h_errlist[] = {
+static const char *sys_h_errlist[] = {
     "No problem",						/* NETDB_SUCCESS */
     "Authoritative answer: host not found",			/* HOST_NOT_FOUND */
     "Non-authoritative answer: host not found, or serverfail",	/* TRY_AGAIN */
@@ -358,7 +368,7 @@ const char *sys_h_errlist[] = {
 /*
  * This table lists the directive lines:
  */
-const char *directive_name_list[] = {
+static const char *directive_name_list[] = {
 	"template",
 	"outchannel"
 };
@@ -467,8 +477,11 @@ typedef enum _EHostnameCmpMode EHostnameCmpMode;
  * to mention as we now allow database connections to be
  * present in the filed structure. If helps immensely, if we
  * think of it as the abstraction of an output channel.
+ * rgerhards, 2005-10-26: The structure below provides ample
+ * opportunity for non-thread-safety. Each of the variable
+ * accesses must be carefully evaluated, many of them probably
+ * be guarded by mutexes. But beware of deadlocks...
  */
-
 struct filed {
 	struct	filed *f_next;		/* next in linked list */
 	short	f_type;			/* entry type, see below */
@@ -520,7 +533,7 @@ struct filed {
 #			define	FORW_UDP 0
 #			define	FORW_TCP 1
 			/* following fields for TCP-based delivery */
-			enum {
+			enum TCPSendStatus {
 				TCP_SEND_NOTCONNECTED = 0,
 				TCP_SEND_CONNECTING = 1,
 				TCP_SEND_READY = 2
@@ -555,7 +568,7 @@ struct filed {
  * also fairly compatible with multi-threading as the stratup code must
  * be run in a single thread anyways. So there can be no race conditions. These
  * variables are no longer used once the configuration has been loaded (except,
- * of course, during a reload). rgerhardsd 2005-10-18
+ * of course, during a reload). rgerhards 2005-10-18
  */
 static EHostnameCmpMode eDfltHostnameCmpMode;
 static rsCStrObj *pDfltHostnameCmp;
@@ -612,10 +625,11 @@ char	*TypeNames[] = {
 	"SHELL"
 };
 
-struct	filed *Files = NULL;
-struct	filed consfile;
+struct	filed *Files = NULL; /* read-only after init() (but beware of sigusr1!) */
+struct	filed consfile; /* initialized on startup, used during actions - maybe NON THREAD-SAFE */
 struct 	filed emergfile; /* this is only used for emergency logging when
 			  * no actual config has been loaded.
+			  * useded during actions in emergencase - thread-safety doubtful
 			  */
 
 struct code {
@@ -623,7 +637,7 @@ struct code {
 	int	c_val;
 };
 
-struct code	PriNames[] = {
+static struct code	PriNames[] = {
 	{"alert",	LOG_ALERT},
 	{"crit",	LOG_CRIT},
 	{"debug",	LOG_DEBUG},
@@ -640,7 +654,7 @@ struct code	PriNames[] = {
 	{NULL,		-1}
 };
 
-struct code	FacNames[] = {
+static struct code	FacNames[] = {
 	{"auth",         LOG_AUTH},
 	{"authpriv",     LOG_AUTHPRIV},
 	{"cron",         LOG_CRON},
@@ -668,21 +682,23 @@ struct code	FacNames[] = {
 	{NULL,           -1},
 };
 
-int	Debug;			/* debug flag */
-char	LocalHostName[MAXHOSTNAMELEN+1];	/* our hostname */
-char	*LocalDomain;		/* our local domain name */
-int	InetInuse = 0;		/* non-zero if INET sockets are being used */
-int	finet = -1;		/* Internet datagram socket */
-int	LogPort = 0;		/* port number for INET connections */
-int	MarkInterval = 20 * 60;	/* interval between marks in seconds */
-int	MarkSeq = 0;		/* mark sequence number */
-int	NoFork = 0; 		/* don't fork - don't run in daemon mode */
-int	AcceptRemote = 0;	/* receive messages that come via UDP */
-char	**StripDomains = NULL;	/* these domains may be stripped before writing logs */
-char	**LocalHosts = NULL;	/* these hosts are logged with their hostname */
-int	NoHops = 1;		/* Can we bounce syslog messages through an
-				   intermediate host. */
-int     Initialized = 0;        /* set when we have initialized ourselves
+static int	Debug;		/* debug flag  - read-only after startup */
+static char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
+static char	*LocalDomain;	/* our local domain name  - read-only after startup */
+static int	InetInuse = 0;	/* non-zero if INET sockets are being used
+				 * read-only after init(), but beware of restart! */
+static int	finet = -1;	/* Internet datagram socket *
+				 * read-only after init(), but beware of restart! */
+static int	LogPort = 0;	/* port number for INET connections - read-only after startup */
+static int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
+static int	MarkSeq = 0;	/* mark sequence number - modified in domark() only */
+static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
+static int	AcceptRemote = 0;/* receive messages that come via UDP - read-only after startup */
+static char	**StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u.*/
+static char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup*/
+static int	NoHops = 1;	/* Can we bounce syslog messages through an
+				   intermediate host.  Read-only after startup */
+static int     Initialized = 0; /* set when we have initialized ourselves
                                  * rgerhards 2004-11-09: and by initialized, we mean that
                                  * the configuration file could be properly read AND the
                                  * syslog/udp port could be obtained (the later is debatable).
@@ -691,6 +707,7 @@ int     Initialized = 0;        /* set when we have initialized ourselves
                                  * the log file, but we still log messages to the system
                                  * console. This is probably the best that can be done in
                                  * such a case.
+				 * read-only after startup, but modified during restart
                                  */
 
 extern	int errno;
@@ -732,6 +749,7 @@ struct AllowedSenders {
 	struct AllowedSenders *pNext;
 };
 
+/* All of the five below are read-only after startup */
 static struct AllowedSenders *pAllowedSenders_UDP = NULL; /* the roots of the allowed sender */
 static struct AllowedSenders *pAllowedSenders_TCP = NULL; /* lists. If NULL, all senders are ok! */
 static struct AllowedSenders *pLastAllowedSenders_UDP = NULL; /* and now the pointers to the last */
@@ -793,6 +811,15 @@ static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
 static int create_udp_socket();
 #endif
 
+
+/* Access functions for the struct filed. These functions are primarily
+ * necessary to make things thread-safe. Consequently, they are slim
+ * if we compile without pthread support.
+ * rgerhards 2005-10-24
+ */
+
+/* END Acess functions for the struct filed */
+
 /* Code for handling allowed/disallowed senders
  */
 
@@ -806,7 +833,7 @@ static int create_udp_socket();
  * rgerhards, 2005-09-26
  */
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
-		     unsigned int iAllow, int iSignificantBits)
+		     		 unsigned int iAllow, int iSignificantBits)
 {
 	struct AllowedSenders *pEntry;
 
@@ -943,15 +970,16 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in
 #ifdef SYSLOG_INET
 
 #define TCPSESS_MAX 100 /* TODO: remove hardcoded limit */
-static int TCPLstnPort = 0;
-static int bEnableTCP = 0;
-static int sockTCPLstn = -1;
+static int TCPLstnPort = 0; /* read-only after startup */
+static int bEnableTCP = 0; /* read-only after startup */
+static int sockTCPLstn = -1; /* read-only after startup, modified by restart */
 struct TCPSession {
 	int sock;
 	int iMsg; /* index of next char to store in msg */
 	char msg[MAXLINE+1];
 	char *fromHost;
 } TCPSessions[TCPSESS_MAX];
+/* The thread-safeness of the sesion table is doubtful */
 
 
 /* Initialize the session table
@@ -1068,7 +1096,7 @@ static int create_tcp_socket(void)
 	 */
 	TCPSessInit();
 
-	printf("Opened TCP socket %d.\n", sockTCPLstn);
+	dprintf("Opened TCP socket %d.\n", sockTCPLstn);
 
 	return fd;
 }
@@ -1220,6 +1248,36 @@ static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 
 /* CODE FOR SENDING TCP MESSAGES */
 
+/* get send status
+ * rgerhards, 2005-10-24
+ */
+static void TCPSendSetStatus(struct filed *f, enum TCPSendStatus iNewState)
+{
+	assert(f != NULL);
+	assert(   (iNewState == TCP_SEND_NOTCONNECTED)
+	       || (iNewState == TCP_SEND_CONNECTING)
+	       || (iNewState == TCP_SEND_READY));
+
+	/*guard the section below by a mutex*/
+	f->f_un.f_forw.status = iNewState;
+}
+
+
+/* set send status
+ * rgerhards, 2005-10-24
+ */
+static enum TCPSendStatus TCPSendGetStatus(struct filed *f)
+{
+	enum TCPSendStatus eState;
+	assert(f != NULL);
+
+	/*guard the section below by a mutex*/
+	eState = f->f_un.f_forw.status;
+
+	return eState;
+}
+
+
 /* Initialize TCP sockets (for sender)
  */
 static int TCPSendCreateSocket(struct filed *f)
@@ -1241,14 +1299,14 @@ static int TCPSendCreateSocket(struct filed *f)
 	if(connect(fd, (struct sockaddr*) &(f->f_un.f_forw.f_addr), addrlen) < 0) {
 		if(errno == EINPROGRESS) {
 			/* this is normal - will complete during select */
-			f->f_un.f_forw.status = TCP_SEND_CONNECTING;
+			TCPSendSetStatus(f, TCP_SEND_CONNECTING);
 		} else {
 			dprintf("create tcp connection failed, reason %s", strerror(errno));
 			close(fd);
 			return -1;
 		}
 	} else {
-		f->f_un.f_forw.status = TCP_SEND_READY;
+		TCPSendSetStatus(f, TCP_SEND_READY);
 	}
 
 	return fd;
@@ -1257,7 +1315,7 @@ static int TCPSendCreateSocket(struct filed *f)
 
 /* Sends a TCP message. It is first checked if the
  * session is open and, if not, it is opened. Then the send
- * is tried. If it fails, one silent e-try is made. If the send
+ * is tried. If it fails, one silent re-try is made. If the send
  * fails again, an error status (-1) is returned. If all goes well,
  * 0 is returned. The TCP session is NOT torn down.
  * For now, EAGAIN is ignored (causing message loss) - but it is
@@ -1277,6 +1335,7 @@ static int TCPSend(struct filed *f, char *msg)
 	size_t lenSend;
 	short f_type;
 	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
+	enum TCPSendStatus eState;
 
 	assert(f != NULL);
 	assert(msg != NULL);
@@ -1290,7 +1349,9 @@ static int TCPSend(struct filed *f, char *msg)
 				return -1;
 		}
 
-		if(f->f_un.f_forw.status == TCP_SEND_CONNECTING) {
+		eState = TCPSendGetStatus(f); /* cache info */
+
+		if(eState == TCP_SEND_CONNECTING) {
 			/* In this case, we save the buffer. If we have a
 			 * system with few messages, that hopefully prevents
 			 * message loss at all. However, we make no further attempts,
@@ -1305,7 +1366,7 @@ static int TCPSend(struct filed *f, char *msg)
 				memcpy(f->f_un.f_forw.savedMsg, msg, len + 1);
 				return 0;
 			 }
-		} else if(f->f_un.f_forw.status != TCP_SEND_READY)
+		} else if(eState != TCP_SEND_READY)
 			/* This here is debatable. For the time being, we
 			 * accept the loss of a single message (e.g. during
 			 * connection setup in favour of not messing with
@@ -1392,7 +1453,7 @@ static int TCPSend(struct filed *f, char *msg)
 			++retry;
 			/* try to recover */
 			close(f->f_file);
-			f->f_un.f_forw.status = TCP_SEND_NOTCONNECTED;
+			TCPSendSetStatus(f, TCP_SEND_NOTCONNECTED);
 			f->f_file = -1;
 		} else
 			if(buf != NULL)
@@ -2993,10 +3054,10 @@ int main(int argc, char **argv)
 			 * rgerhards 2005-07-20
 			 */
 			FD_ZERO(&writefds);
-			for (f = Files; f; f = f->f_next) {
+			for (f = Files; f != NULL ; f = f->f_next) {
 				if(   (f->f_type == F_FORW)
 				   && (f->f_un.f_forw.protocol == FORW_TCP)
-				   && (f->f_un.f_forw.status == TCP_SEND_CONNECTING)) {
+				   && (TCPSendGetStatus(f) == TCP_SEND_CONNECTING)) {
 				   FD_SET(f->f_file, &writefds);
 				   if(f->f_file > maxfds)
 					maxfds = f->f_file;
@@ -3012,8 +3073,7 @@ int main(int argc, char **argv)
 		dprintf("Listening on stdin.  Press Ctrl-C to interrupt.\n");
 #endif
 
-		if ( debugging_on )
-		{
+		if ( debugging_on ) {
 			dprintf("----------------------------------------\nCalling select, active file descriptors (max %d): ", maxfds);
 			for (nfds= 0; nfds <= maxfds; ++nfds)
 				if ( FD_ISSET(nfds, &readfds) )
@@ -3078,13 +3138,16 @@ int main(int argc, char **argv)
 			 *
 			 * rgerhards 2005-07-20
 			 */
-			for (f = Files; f; f = f->f_next) {
+			for (f = Files; f != NULL ; f = f->f_next) {
 				if(   (f->f_type == F_FORW)
 				   && (f->f_un.f_forw.protocol == FORW_TCP)
-				   && (f->f_un.f_forw.status == TCP_SEND_CONNECTING)
+				   && (TCPSendGetStatus(f) == TCP_SEND_CONNECTING)
 				   && (FD_ISSET(f->f_file, &writefds))) {
 					dprintf("tcp send socket %d ready for writing.\n", f->f_file);
-					f->f_un.f_forw.status = TCP_SEND_READY;
+					/* TODO: multithreading note: at least in theory, this
+					 * must be guarded by a mutex! rgerhards, 2005-10-24
+					 */
+					TCPSendSetStatus(f, TCP_SEND_READY);
 					/* Send stored message (if any) */
 					if(f->f_un.f_forw.savedMsg != NULL)
 						if(TCPSend(f, f->f_un.f_forw.savedMsg) != 0) {
@@ -3201,7 +3264,7 @@ int main(int argc, char **argv)
 			dprintf("Message from stdin.\n");
 			memset(line, '\0', sizeof(line));
 			line[0] = '.';
-			parts[fileno(stdin)] = (char *) 0;
+			parts[fileno(stdin)] = NULL;
 			i = read(fileno(stdin), line, MAXLINE);
 			if (i > 0) {
 				printchopped(LocalHostName, line, i+1,
@@ -3433,7 +3496,6 @@ static void untty()
 static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 {
 	auto int ptlngth;
-
 	auto char *start = msg,
 		  *p,
 	          *end,
@@ -3441,20 +3503,16 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 
 	dprintf("Message length: %d, File descriptor: %d.\n", len, fd);
 	tmpline[0] = '\0';
-	if ( parts[fd] != (char *) NULL )
-	{
+	if(parts[fd] != NULL) {
 		dprintf("Including part from messages.\n");
 		strcpy(tmpline, parts[fd]);
 		free(parts[fd]);
 		parts[fd] = (char *) 0;
-		if ( (strlen(msg) + strlen(tmpline)) > MAXLINE )
-		{
+		if ( (strlen(msg) + strlen(tmpline)) > MAXLINE ) {
 			logerror("Cannot glue message parts together");
 			printline(hname, tmpline, bParseHost);
 			start = msg;
-		}
-		else
-		{
+		} else {
 			dprintf("Previous: %s\n", tmpline);
 			dprintf("Next: %s\n", msg);
 			strcat(tmpline, msg);	/* length checked above */
@@ -3466,8 +3524,7 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 		}
 	}
 
-	if ( msg[len-1] != '\0' )
-	{
+	if ( msg[len-1] != '\0' ) {
 		msg[len] = '\0';
 		for(p= msg+len-1; *p != '\0' && p > msg; )
 			--p;
@@ -3833,7 +3890,7 @@ static void processMsg(struct msg *pMsg, int flags)
 		return; /* we are done with emergency loging */
 	}
 
-	for (f = Files; f; f = f->f_next) {
+	for (f = Files; f != NULL ; f = f->f_next) {
 		/* first, we need to check if this is a disabled (F_UNUSED)
 		 * entry. If so, we must not further process it, as the data
 		 * structure probably contains invalid pointers and other
@@ -4945,22 +5002,22 @@ static void domark(void)
 {
 	register struct filed *f;
 	if (MarkInterval > 0) {
-	now = time(0);
-	MarkSeq += TIMERINTVL;
-	if (MarkSeq >= MarkInterval) {
-		logmsgInternal(LOG_INFO, "-- MARK --", LocalHostName, ADDDATE|MARK);
-		MarkSeq = 0;
-	}
-
-	for (f = Files; f; f = f->f_next) {
-		if (f->f_prevcount && now >= REPEATTIME(f)) {
-			dprintf("flush %s: repeated %d times, %d sec.\n",
-			    TypeNames[f->f_type], f->f_prevcount,
-			    repeatinterval[f->f_repeatcount]);
-			/* TODO: re-implement fprintlog(f, LocalHostName, 0, (char *)NULL); */
-			BACKOFF(f);
+		now = time(0);
+		MarkSeq += TIMERINTVL;
+		if (MarkSeq >= MarkInterval) {
+			logmsgInternal(LOG_INFO, "-- MARK --", LocalHostName, ADDDATE|MARK);
+			MarkSeq = 0;
 		}
-	}
+
+		for (f = Files; f != NULL ; f = f->f_next) {
+			if (f->f_prevcount && now >= REPEATTIME(f)) {
+				dprintf("flush %s: repeated %d times, %d sec.\n",
+				    TypeNames[f->f_type], f->f_prevcount,
+				    repeatinterval[f->f_repeatcount]);
+				/* TODO: re-implement fprintlog(f, LocalHostName, 0, (char *)NULL); */
+				BACKOFF(f);
+			}
+		}
 	}
 }
 
@@ -5047,15 +5104,13 @@ static void die(int sig)
 {
 	register struct filed *f;
 	char buf[256];
-	int lognum;
 	int i;
 	int was_initialized = Initialized;
 
 	Initialized = 0;	/* Don't log SIGCHLDs in case we
 				   receive one during exiting */
 
-	for (lognum = 0; lognum <= nlogs; lognum++) {
-		f = &Files[lognum];
+	for (f = Files; f != NULL ; f = f->f_next) {
 		/* flush any pending output */
 		if (f->f_prevcount)
 			/* rgerhards: 2004-11-09: I am now changing it, but
@@ -5078,9 +5133,8 @@ static void die(int sig)
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
 
-	/* Close the MySQL connection */
-	for (lognum = 0; lognum <= nlogs; lognum++) {
-		f = &Files[lognum];
+	/* Free ressources and close MySQL connections */
+	for (f = Files; f != NULL ; f = f->f_next) {
 		/* free iovec if it was allocated */
 		if(f->f_iov != NULL) {
 			if(f->f_bMustBeFreed != NULL) {
@@ -5363,8 +5417,7 @@ static void init()
 	 */
 	dprintf("Called init.\n");
 	Initialized = 0;
-	if ( nlogs > -1 )
-	{
+	if(Files != NULL) {
 		dprintf("Initializing log structures.\n");
 
 		f = Files;
@@ -5405,7 +5458,6 @@ static void init()
 		}
 
 		/* Reflect the deletion of the Files linked list. */
-		nlogs = -1;
 		Files = NULL;
 	}
 	
@@ -5634,7 +5686,6 @@ static void init()
 		 myPid,
 		 AcceptRemote ? "Yes" : "No", LogPort,
 		 bEnableTCP   ? "Yes" : "No",  TCPLstnPort );
-		 //AcceptRemote ? "(remote recpetion)" : "");
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, LocalHostName, ADDDATE);
 
 	(void) signal(SIGHUP, sighup_handler);
