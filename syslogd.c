@@ -539,6 +539,9 @@ struct filed {
 				TCP_SEND_READY = 2
 			} status;
 			char *savedMsg;
+#			ifdef USE_PTHREADS
+			pthread_mutex_t mtxTCPSend;
+#			endif
 		} f_forw;		/* forwarding address */
 		char	f_fname[MAXFNAME];
 	} f_un;
@@ -1254,12 +1257,22 @@ static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 static void TCPSendSetStatus(struct filed *f, enum TCPSendStatus iNewState)
 {
 	assert(f != NULL);
+	assert(f->f_type == F_FORW);
+	assert(f->f_un.f_forw.protocol == FORW_TCP);
 	assert(   (iNewState == TCP_SEND_NOTCONNECTED)
 	       || (iNewState == TCP_SEND_CONNECTING)
 	       || (iNewState == TCP_SEND_READY));
 
-	/*guard the section below by a mutex*/
+	/* there can potentially be a race condition, so guard by mutex */
+#	ifdef	USE_PTHREADS
+		pthread_mutex_lock(&f->f_un.f_forw.mtxTCPSend);
+dprintf("SetStats aquired mutex\n");
+#	endif
 	f->f_un.f_forw.status = iNewState;
+#	ifdef	USE_PTHREADS
+		pthread_mutex_unlock(&f->f_un.f_forw.mtxTCPSend);
+dprintf("SetStats freed mutex\n");
+#	endif
 }
 
 
@@ -1270,9 +1283,17 @@ static enum TCPSendStatus TCPSendGetStatus(struct filed *f)
 {
 	enum TCPSendStatus eState;
 	assert(f != NULL);
+	assert(f->f_type == F_FORW);
+	assert(f->f_un.f_forw.protocol == FORW_TCP);
 
-	/*guard the section below by a mutex*/
+	/* there can potentially be a race condition, so guard by mutex */
+#	ifdef	USE_PTHREADS
+		pthread_mutex_lock(&f->f_un.f_forw.mtxTCPSend);
+#	endif
 	eState = f->f_un.f_forw.status;
+#	ifdef	USE_PTHREADS
+		pthread_mutex_unlock(&f->f_un.f_forw.mtxTCPSend);
+#	endif
 
 	return eState;
 }
@@ -5446,12 +5467,21 @@ static void init()
 				case F_CONSOLE:
 					(void) close(f->f_file);
 				break;
-#ifdef	WITH_DB
+#				ifdef	WITH_DB
 				case F_MYSQL:
 					closeMySQL(f);
 				break;
-#endif
+#				endif
 			}
+#			ifdef USE_PTHREADS
+			/* delete any mutex objects, if present */
+			if(   (   (f->f_type == F_FORW_SUSP)
+			       || (f->f_type == F_FORW)
+			       || (f->f_type == F_FORW_UNKN) )
+			   && (f->f_un.f_forw.protocol == FORW_TCP)) {
+				pthread_mutex_destroy(&f->f_un.f_forw.mtxTCPSend);
+			}
+#			endif
 			/* done with this entry, we now need to delete itself */
 			f = f->f_next;
 			free(f);
@@ -6346,6 +6376,11 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		if(*p == '@') { /* indicator for TCP! */
 			f->f_un.f_forw.protocol = FORW_TCP;
 			++p; /* eat this '@', too */
+			/* in this case, we also need a mutex... */
+#			ifdef USE_PTHREADS
+			pthread_mutex_init(&f->f_un.f_forw.mtxTCPSend, 0);
+dprintf("initializing mutex!\n");
+#			endif
 		} else {
 			f->f_un.f_forw.protocol = FORW_UDP;
 		}
