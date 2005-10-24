@@ -41,14 +41,6 @@ names...).</p>
 <p>This format is actually not 100% compatible with stock syslogd - the
    date is missing. Will be fixed soon and can also be fixed just via
    the proper template. Anyone up for this? ;)</p>
-<h2>CALLS to exit()</h2>
-<p>I have removed all calls to exit() I have introduced. However, there are
-   still some left from the original code. Most of them are OK, being done
-   on initial startup when a severe error happens. There are some, I think,
-   that might happen during runtime when a memory shortage is detected. We
-   should look into this issues. Finding some smarter code would allow
-   rsyslog to become even more fault-tolerant (but obviously, there is always
-   a cost, in this case most probably the loss of at least one message).</p>
 <h2>SIGPIPE HANDLING</h2>
 <p>Currently, SIGPIPE is ignored. This is necessary to handle broken TCP
   connections. We should further look into this issue and see which other

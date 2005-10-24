@@ -2760,7 +2760,7 @@ int main(int argc, char **argv)
 			printf("\tFEATURE_DEBUG (debug build, slow code)\n");
 #endif
 			printf("\nSee http://www.rsyslog.com for more information.\n");
-			exit(0);
+			exit(0); /* exit for -v option - so this is a "good one" */
 		case 'w':		/* disable disallowed host warnigs */
 			option_DisallowWarning = 0;
 			break;
@@ -2791,7 +2791,7 @@ int main(int argc, char **argv)
 				 * initialized or the klogd won't be able to flush its
 				 * logs.  -Joey
 				 */
-				exit(1);
+				exit(1); /* "good" exit - after forking, not diasabling anything */
 			}
 			num_fds = getdtablesize();
 			for (i= 0; i < num_fds; i++)
@@ -2801,7 +2801,7 @@ int main(int argc, char **argv)
 		else
 		{
 			fputs("rsyslogd: Already running.\n", stderr);
-			exit(1);
+			exit(1); /* "good" exit, done if syslogd is already running */
 		}
 	}
 	else
@@ -2822,13 +2822,13 @@ int main(int argc, char **argv)
 			if (!write_pid(PidFile))
 			{
 				dprintf("Can't write pid.\n");
-				exit(1);
+				exit(1); /* exit during startup - questionable */
 			}
 		}
 		else
 		{
 			dprintf("Pidfile (and pid) already exist.\n");
-			exit(1);
+			exit(1); /* exit during startup - questionable */
 		}
 	} /* if ( !Debug ) */
 #endif
@@ -2905,24 +2905,19 @@ int main(int argc, char **argv)
 	/* Create a partial message table for all file descriptors. */
 	num_fds = getdtablesize();
 	dprintf("Allocated parts table for %d file descriptors.\n", num_fds);
-	if ( (parts = (char **) malloc(num_fds * sizeof(char *))) == \
-	    (char **) 0 )
+	if ((parts = (char **) malloc(num_fds * sizeof(char *))) == NULL)
 	{
 		logerror("Cannot allocate memory for message parts table.");
 		die(0);
 	}
 	for(i= 0; i < num_fds; ++i)
-	    parts[i] = (char *) 0;
+	    parts[i] = NULL;
 
 	dprintf("Starting.\n");
 	init();
 #ifndef TESTING
 	if(Debug) {
-		dprintf("Debugging disabled, SIGUSR1 to turn on debugging.\n");
-		/* DEBUG-AID/RELEASE: value 0 below should be used for
-		 * release. Value 1 might be used if you would like to keep debug
-		 * mode enabled during testing. 
-		 */
+		dprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 		debugging_on = 1;
 	}
 	/*
@@ -3227,7 +3222,7 @@ static int usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [-dhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
 		" [-s domainlist] [-r port] [-t port] [-f conffile]\n");
-	exit(1);
+	exit(1); /* "good" exit - done to terminate usage() */
 }
 
 #ifdef SYSLOG_UNIXAF
@@ -3249,13 +3244,10 @@ static int create_unix_socket(const char *path)
 	if (fd < 0 || bind(fd, (struct sockaddr *) &sunx,
 			   SUN_LEN(&sunx)) < 0 ||
 	    chmod(path, 0666) < 0) {
-		(void) snprintf(line, sizeof(line), "cannot create %s", path);
+		snprintf(line, sizeof(line), "cannot create %s", path);
 		logerror(line);
 		dprintf("cannot create %s (%d).\n", path, errno);
 		close(fd);
-#ifndef SYSV
-		die(0);
-#endif
 		return -1;
 	}
 	return fd;
@@ -3327,6 +3319,12 @@ static int create_udp_socket()
 }
 #endif
 
+/* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
+ * it is never called once rsyslogd is running (not even when HUPed). This code
+ * contains some exist, but they are considered safe because they only happen
+ * during startup. Anyhow, when we review the code here, we might want to
+ * reconsider the exit()s.
+ */
 static char **crunch_list(char *list)
 {
 	int count, i;
@@ -3352,7 +3350,7 @@ static char **crunch_list(char *list)
 	
 	if ((result = (char **)malloc(sizeof(char *) * (count+2))) == NULL) {
 		printf ("Sorry, can't get enough memory, exiting.\n");
-		exit(0);
+		exit(0); /* safe exit, because only called during startup */
 	}
 	
 	/*
@@ -3365,7 +3363,7 @@ static char **crunch_list(char *list)
 		result[count] = (char *) malloc((q - p + 1) * sizeof(char));
 		if (result[count] == NULL) {
 			printf ("Sorry, can't get enough memory, exiting.\n");
-			exit(0);
+			exit(0); /* safe exit, because only called during startup */
 		}
 		strncpy(result[count], p, q - p);
 		result[count][q - p] = '\0';
@@ -3375,7 +3373,7 @@ static char **crunch_list(char *list)
 	if ((result[count] = \
 	     (char *)malloc(sizeof(char) * strlen(p) + 1)) == NULL) {
 		printf ("Sorry, can't get enough memory, exiting.\n");
-		exit(0);
+		exit(0); /* safe exit, because only called during startup */
 	}
 	strcpy(result[count],p);
 	result[++count] = NULL;
@@ -3389,7 +3387,7 @@ static char **crunch_list(char *list)
 }
 
 
-void untty()
+static void untty()
 #ifdef SYSV
 {
 	if ( !Debug ) {
@@ -3432,7 +3430,6 @@ void untty()
  * no longer rely just on the source (rfc3195d forwarded messages arrive via
  * unix domain sockets but contain the hostname). rgerhards, 2005-10-06
  */
-
 static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 {
 	auto int ptlngth;
@@ -4788,6 +4785,10 @@ static void wallmsg(register struct filed *f)
 	/* TODO: find a way to limit the max size of the message. hint: this
 	 * should go into the template!
 	 */
+	
+	/* rgerhards 2005-10-24: HINT: this code might be run in a seperate thread
+	 * instead of a seperate process once we have multithreading...
+	 */
 
 		/* scan the user login file */
 		while ((uptr = getutent())) {
@@ -4838,7 +4839,7 @@ static void wallmsg(register struct filed *f)
 			}
 			(void) alarm(0);
 		}
-		exit(0);
+		exit(0); /* "good" exit - this terminates the child forked just for message delivery */
 	}
 	/* close the user login file */
 	endutent();
@@ -5024,18 +5025,25 @@ static void logerror(char *type)
 	dprintf("Called logerr, msg: %s\n", type);
 
 	if (errno == 0)
-		(void) snprintf(buf, sizeof(buf), "rsyslogd: %s", type);
+		snprintf(buf, sizeof(buf), "rsyslogd: %s", type);
 	else
-		(void) snprintf(buf, sizeof(buf), "rsyslogd: %s: %s", type, strerror(errno));
+		snprintf(buf, sizeof(buf), "rsyslogd: %s: %s", type, strerror(errno));
 	errno = 0;
 	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, LocalHostName, ADDDATE);
 	return;
 }
 
-static void die(sig)
 
-	int sig;
-	
+/* die() is called when the program shall end. This typically only occurs
+ * during sigterm or during the initialization. If you search for places where
+ * it is called, search for "die", not "die(", because the later will not find
+ * setting of signal handlers! As die() is intended to shutdown rsyslogd, it is
+ * safe to call exit() here. Just make sure that die() itself is not called
+ * at inapropriate places. As a general rule of thumb, it is a bad idea to add
+ * any calls to die() in new code!
+ * rgerhards, 2005-10-24
+ */
+static void die(int sig)
 {
 	register struct filed *f;
 	char buf[256];
@@ -5137,17 +5145,18 @@ static void die(sig)
 #ifndef TESTING
 	(void) remove_pid(PidFile);
 #endif
-	exit(0);
+	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 
 /*
  * Signal handler to terminate the parent process.
+ * rgerhards, 2005-10-24: this is only called during forking of the
+ * detached syslogd. I consider this method to be safe.
  */
 #ifndef TESTING
-void doexit(sig)
-	int sig;
+static void doexit(int sig)
 {
-	exit(0);
+	exit(0); /* "good" exit, only during child-creation */
 }
 #endif
 

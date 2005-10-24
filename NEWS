@@ -4,6 +4,11 @@ Version 1.11.2 (RGer), 2005-10-20
   by an alarm handler, which could lead to all sorts of bad things. This
   has been changed now. See comments in syslogd.c/domark() for details.
 - improved debug output for property-based filters
+- not a code change, but: I have checked all exit()s to make sure that
+  none occurs once rsyslogd has started up. Even in unusual conditions
+  (like low-memory conditions) rsyslogd somehow remains active. Of course,
+  it might loose a message or two, but at least it does not abort and it
+  can also recover when the condition no longer persist.
 ---------------------------------------------------------------------------
 Version 1.11.1 (RGer), 2005-10-19
 - support for BSD-style program name and host blocks
