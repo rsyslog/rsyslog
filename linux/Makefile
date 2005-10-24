@@ -73,6 +73,7 @@ endif
 
 ifeq ($(strip $(FEATURE_PTHREADS)), 1)
   F_PTHREADS=-DUSE_PTHREADS
+  LPTHREAD=-lpthread
 endif
 
 ifeq ($(strip $(FEATURE_RFC3195)), 1)
