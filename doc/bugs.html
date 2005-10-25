@@ -14,6 +14,11 @@ both.</p>
 <p>This list has last been updated on 2005-09-26 by
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a>.</p>
 <h1>rsyslogd</h1>
+<h2>multi-threading and BSD</h2>
+<p>Multi-threading does currently not work reliably on BSD, at least
+not upon program termination. It looks like this is related with the
+way BSD handles signals. I am currently looking at it. In the mean
+time, compile BSD builds without threading support (the default).
 <h2>REPEATED LOG LINES</h2>
 <p>If multiple log lines with the exact same content are received,
    the duplicates are NOT suppressed. This is done by sysklogd
