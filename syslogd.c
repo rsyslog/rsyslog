@@ -1440,7 +1440,14 @@ static int TCPSend(struct filed *f, char *msg)
 		if((*(msg+len-1) != '\n')) {
 			if(buf != NULL)
 				free(buf);
-			if((buf = malloc((len + 1) * sizeof(char))) == NULL) {
+			/* in the malloc below, we need to add 2 to the length. The
+			 * reason is that we a) add one character and b) len does
+			 * not take care of the '\0' byte. Up until today, it was just
+			 * +1 , which caused rsyslogd to sometimes dump core.
+			 * I have added this comment so that the logic is not accidently
+			 * changed again. rgerhards, 2005-10-25
+			 */
+			if((buf = malloc((len + 2) * sizeof(char))) == NULL) {
 				/* extreme mem shortage, try to solve
 				 * as good as we can. No point in calling
 				 * any alarms, they might as well run out
@@ -1471,8 +1478,9 @@ static int TCPSend(struct filed *f, char *msg)
 		dprintf("TCP sent %d bytes, requested %d, msg: '%s'\n", lenSend, len, msg);
 		if(lenSend == len) {
 			/* all well */
-			if(buf != NULL)
+			if(buf != NULL) {
 				free(buf);
+			}
 			return 0;
 		}
 
@@ -1507,6 +1515,7 @@ static int TCPSend(struct filed *f, char *msg)
 			return -1;
 	} while(!done); /* warning: do ... while() */
 	/*NOT REACHED*/
+
 	if(buf != NULL)
 		free(buf);
 	return -1; /* only to avoid compiler warning! */
@@ -1942,7 +1951,6 @@ static struct msg* MsgConstruct()
 	}
 
 	/* DEV debugging only! dprintf("MsgConstruct\t0x%x, ref 1\n", (int)pM);*/
-	dprintf("MsgConstruct\t0x%x, ref 1\n", (int)pM);
 
 	return(pM);
 }
@@ -1955,11 +1963,9 @@ static void MsgDestruct(struct msg * pM)
 {
 	assert(pM != NULL);
 	/* DEV Debugging only ! dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1); */
-	dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1);
 	if(--pM->iRefCount == 0)
 	{
 		/* DEV Debugging Only! dprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM); */
-		dprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM);
 		if(pM->pszUxTradMsg != NULL)
 			free(pM->pszUxTradMsg);
 		if(pM->pszRawMsg != NULL)
@@ -2006,7 +2012,6 @@ static struct msg *MsgAddRef(struct msg *pM)
 	assert(pM != NULL);
 	pM->iRefCount++;
 	/* DEV debugging only! dprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);*/
-	dprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);
 	return(pM);
 }
 
@@ -2855,6 +2860,9 @@ int main(int argc, char **argv)
 		case 'v':
 			printf("rsyslogd %s.%s, ", VERSION, PATCHLEVEL);
 			printf("compiled with:\n");
+#ifdef USE_PTHREADS
+			printf("\tFEATURE_PTHREADS (dual-threading)\n");
+#endif
 #ifdef FEATURE_REGEXP
 			printf("\tFEATURE_REGEXP\n");
 #endif

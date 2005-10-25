@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
-Version 1.11.2 (RGer), 2005-10-20
+Version 1.12.0 (RGer), 2005-10-20
+- moved to a multi-threaded design. single-threading is still optionally
+  available
 - fixed a potential race condition. In the original code, marking was done
   by an alarm handler, which could lead to all sorts of bad things. This
   has been changed now. See comments in syslogd.c/domark() for details.
@@ -13,6 +15,11 @@ Version 1.11.2 (RGer), 2005-10-20
   immediately before rsyslogd was terminated.
 - added comments on thread-safety of global variables in syslogd.c
 - fixed a small bug: spurios printf() when TCP syslog was used
+- fixed a bug that causes rsyslogd to dump core on termination when one
+  of the selector lines did not receive a message during the run (very
+  unlikely)
+- fixed an one-too-low memory allocation in the TCP sender. Could result
+  in rsyslogd dumping core.
 ---------------------------------------------------------------------------
 Version 1.11.1 (RGer), 2005-10-19
 - support for BSD-style program name and host blocks
