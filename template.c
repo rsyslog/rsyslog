@@ -329,10 +329,8 @@ static int do_Parameter(char **pp, struct template *pTpl)
 					/* TODO: RGer: check if we can recover better... (probably not) */
 				}
 
-				regex_char[0] = '\0';
-
 				/* Get the regex string for compiling later */
-				strncpy(regex_char, p, longitud);
+				memcpy(regex_char, p, longitud);
 				regex_char[longitud] = '\0';
 
 				dprintf("debug: regex detected: '%s'\n",
