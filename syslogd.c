@@ -6661,7 +6661,7 @@ static void mainloop(void)
 {
 	int i;
 #if !defined(__GLIBC__)
-	int len, num_fds;
+	int len;
 #else /* __GLIBC__ */
 #ifndef TESTING
 	size_t len;
@@ -6987,7 +6987,7 @@ int main(int argc, char **argv)
 {	register int i;
 	register char *p;
 #if !defined(__GLIBC__)
-	int len, num_fds;
+	int num_fds;
 #else /* __GLIBC__ */
 	int num_fds;
 #endif /* __GLIBC__ */
