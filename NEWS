@@ -20,6 +20,7 @@ Version 1.12.0 (RGer), 2005-10-20
   unlikely)
 - fixed an one-too-low memory allocation in the TCP sender. Could result
   in rsyslogd dumping core.
+- fixed a bug with regular expression support (thanks to Andres Riancho)
 ---------------------------------------------------------------------------
 Version 1.11.1 (RGer), 2005-10-19
 - support for BSD-style program name and host blocks
