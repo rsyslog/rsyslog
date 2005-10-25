@@ -79,6 +79,7 @@ MANDIR = /usr/share/man
 
 .if $(FEATURE_PTHREADS) == 1
   F_PTHREADS=-DUSE_PTHREADS
+  LPTHREAD=-lpthread
 .endif
 
 .if $(FEATURE_DEBUG) == 0
