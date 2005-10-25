@@ -582,7 +582,7 @@ static rsCStrObj *pDfltProgNameCmp;
 /* this is the first approach to a queue, this time with static
  * memory.
  */
-#define QUEUESIZE 100
+#define QUEUESIZE 10000
 typedef struct {
 	void* buf[QUEUESIZE];
 	long head, tail;
@@ -4071,9 +4071,6 @@ void queueAdd (msgQueue *q, void* in)
 		q->tail = 0;
 	if (q->tail == q->head)
 		q->full = 1;
-	/* TODO: THE FOLLOWING LINE IS A TEST AID! Remove it! */
-//	if(q->tail > 1)
-	/* syslogd will NOT work when the line above is present! */
 	q->empty = 0;
 
 	return;
@@ -4105,7 +4102,7 @@ static void *singleWorker(void *vParam)
 
 	assert(fifo != NULL);
 
-	while(!bGlblDone) {
+	while(!bGlblDone || !fifo->empty) {
 		pthread_mutex_lock(fifo->mut);
 		while (fifo->empty && !bGlblDone) {
 			dprintf ("singleWorker: queue EMPTY, waiting for next message.\n");
@@ -4113,19 +4110,22 @@ static void *singleWorker(void *vParam)
 		}
 		if(!fifo->empty) {
 			/* dequeue element (still protected from mutex) */
-		dprintf("Worker dequeues...\n");
 			queueDel(fifo, &pMsg);
 			assert(pMsg != NULL);
 			pthread_mutex_unlock(fifo->mut);
 			pthread_cond_signal (fifo->notFull);
 			/* do actual processing (the lengthy part, runs in parallel) */
-			dprintf("worker is running\n");
+			dprintf("Lone worker is running...\n");
 			processMsg(pMsg);
-		dprintf("calling destructMsg(), Ref %d\n", pMsg->iRefCount);
 			MsgDestruct(pMsg);
+			/* If you need a delay for testing, here do a */
+			/* sleep(1); */
 		}
+		if(debugging_on && bGlblDone && !fifo->empty)
+			dprintf("Worker does not yet terminate because it still has messages to process.\n");
 	}
 
+	dprintf("Worker thread terminates\n");
 	pthread_exit(0);
 }
 
