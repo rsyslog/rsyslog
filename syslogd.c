@@ -3491,7 +3491,7 @@ static void stopWorker(void)
 static void startWorker(void)
 {
 	int i;
-	if(pMsgQueue == NULL) {
+	if(pMsgQueue != NULL) {
 		bGlblDone = 0; /* we are NOT done (else worker would immediately terminate) */
 		i = pthread_create(&thrdWorker, NULL, singleWorker, NULL);
 		dprintf("Worker thread started with state %d.\n", i);
@@ -7274,7 +7274,7 @@ int main(int argc, char **argv)
 #ifdef	USE_PTHREADS
 	/* create message queue */
 	pMsgQueue = queueInit();
-	if(pMsgQueue != NULL) {
+	if(pMsgQueue == NULL) {
 		errno = 0;
 		logerror("error: could not create message queue - running single-threaded!\n");
 	} else { /* start up worker thread */
