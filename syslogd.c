@@ -1038,7 +1038,7 @@ int TCPSend(struct filed *f, char *msg)
 		if((*(msg+len-1) != '\n')) {
 			if(buf != NULL)
 				free(buf);
-			if((buf = malloc((len + 1) * sizeof(char))) == NULL) {
+			if((buf = malloc((len + 2) * sizeof(char))) == NULL) {
 				/* extreme mem shortage, try to solve
 				 * as good as we can. No point in calling
 				 * any alarms, they might as well run out
@@ -4274,7 +4274,8 @@ void die(sig)
 			free(f->f_iov);
 		}
 		/* Now delete cached messages */
-		MsgDestruct(f->f_pMsg);
+		if(f->f_pMsg != NULL)
+			MsgDestruct(f->f_pMsg);
 #ifdef WITH_DB
 		if (f->f_type == F_MYSQL)
 			closeMySQL(f);

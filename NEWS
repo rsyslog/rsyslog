@@ -8,6 +8,11 @@ Version 1.0.3 (RGer), 2005-10-10
   processed - could lead to message loss in extreme cases
 - applied some patches available from the sysklogd project to code
   shared from there
+- fixed a bug that causes rsyslogd to dump core on termination when one
+  of the selector lines did not receive a message during the run (very
+  unlikely)
+- fixed an one-too-low memory allocation in the TCP sender. Could result
+  in rsyslogd dumping core.
 ---------------------------------------------------------------------------
 Version 1.0.2 (RGer), 2005-10-05
 - fixed an issue with MySQL error reporting. When an error occured,
