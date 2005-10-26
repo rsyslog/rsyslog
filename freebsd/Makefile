@@ -35,7 +35,7 @@ FEATURE_RFC3195=0
 # Current thread code causes grief with signal handlers under
 # BSD - chances are extremely high rsyslogd will dump core if
 # enabled under BSD!
-FEATURE_PTHREADS=0
+FEATURE_PTHREADS=1
 
 # Enable debug mode (much slower code)
 FEATURE_DEBUG=0

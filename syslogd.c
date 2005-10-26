@@ -597,6 +597,10 @@ static int bGlblDone = 0;
 #endif
 /* END supporting structures for multithreading */
 
+static int bFinished = 0;	/* used by termination signal handler, read-only except there
+				 * is either 0 or the number of the signal that requested the
+ 				 * termination.
+				 */
 
 /*
  * Intervals at which we flush out "message repeated" messages,
@@ -4763,6 +4767,20 @@ static void logerror(char *type)
 	return;
 }
 
+/* doDie() is a signal handler. If called, it sets the bFinished variable
+ * to indicate the program should terminate. However, it does not terminate
+ * it itself, because that causes issues with multi-threading. The actual
+ * termination is then done on the main thread. This solution might introduce
+ * a minimal delay, but it is much cleaner than the approach of doing everything
+ * inside the signal handler.
+ * rgerhards, 2005-10-26
+ */
+static void doDie(int sig)
+{
+	dprintf("DoDie called.\n");
+	bFinished = sig;
+}
+
 
 /* die() is called when the program shall end. This typically only occurs
  * during sigterm or during the initialization. If you search for places where
@@ -6672,6 +6690,11 @@ static void mainloop(void)
 	fd_set writefds;
 	struct filed *f;
 #endif
+#ifdef	BSD
+#ifdef	USE_PTHREADS
+	struct timeval tvSelectTimeout;
+#endif
+#endif
 
 #ifndef TESTING
 	int	fd;
@@ -6686,7 +6709,7 @@ static void mainloop(void)
 	int maxfds;
 
 	/* --------------------- Main loop begins here. ----------------------------------------- */
-	for (;;) {
+	while(!bFinished){
 		int nfds;
 		errno = 0;
 		FD_ZERO(&readfds);
@@ -6777,13 +6800,38 @@ static void mainloop(void)
 					dprintf("%d ", nfds);
 			dprintf("\n");
 		}
-#ifdef SYSLOG_INET
-		nfds = select(maxfds+1, (fd_set *) &readfds, (fd_set *) &writefds,
-				  (fd_set *) NULL, (struct timeval *) NULL);
-#else
-		nfds = select(maxfds+1, (fd_set *) &readfds, (fd_set *) NULL,
-				  (fd_set *) NULL, (struct timeval *) NULL);
+
+#define  MAIN_SELECT_TIMEVAL NULL
+#ifdef BSD
+#ifdef USE_PTHREADS
+		/* There seems to be a problem with BSD and threads. When running on
+		 * multiple threads, a signal will not cause the select call to be
+		 * interrrupted. I am not sure if this is by design or an bug (some
+		 * information on the web let's me think it is a bug), but that really
+		 * does not matter. The issue with our code is that we will not gain
+		 * control when rsyslogd is terminated or huped. What I am doing now is
+		 * make the select call timeout after 10 seconds, so that we can check
+		 * the condition then. Obviously, this causes some sluggish behaviour and
+		 * also the loss of some (very few) cpu cycles. Both, I think, are
+		 * absolutely acceptable.
+		 * rgerhards, 2005-10-26
+		 */
+		tvSelectTimeout.tv_sec = 10;
+		tvSelectTimeout.tv_usec = 0;
+#		undef MAIN_SELECT_TIMEVAL 
+#		define MAIN_SELECT_TIMEVAL &tvSelectTimeout
 #endif
+#endif
+#ifdef SYSLOG_INET
+#define MAIN_SELECT_WRITEFDS (fd_set *) &writefds
+#else
+#define MAIN_SELECT_WRITEFDS NULL
+#endif
+		nfds = select(maxfds+1, (fd_set *) &readfds, MAIN_SELECT_WRITEFDS,
+				  (fd_set *) NULL, MAIN_SELECT_TIMEVAL);
+#undef MAIN_SELECT_TIMEVAL 
+#undef MAIN_SELECT_WRITEFDS
+
 		if(bRequestDoMark) {
 			domark();
 			bRequestDoMark = 0;
@@ -6978,7 +7026,6 @@ static void mainloop(void)
 		  	}
 			FD_CLR(fileno(stdin), &readfds);
 		  }
-
 #endif
 	}
 }
@@ -7231,9 +7278,9 @@ int main(int argc, char **argv)
 		if (isupper(*p))
 			*p = tolower(*p);
 
-	(void) signal(SIGTERM, die);
-	(void) signal(SIGINT, Debug ? die : SIG_IGN);
-	(void) signal(SIGQUIT, Debug ? die : SIG_IGN);
+	(void) signal(SIGTERM, doDie);
+	(void) signal(SIGINT, Debug ? doDie : SIG_IGN);
+	(void) signal(SIGQUIT, Debug ? doDie : SIG_IGN);
 	(void) signal(SIGCHLD, reapchild);
 	(void) signal(SIGALRM, domarkAlarmHdlr);
 	(void) signal(SIGUSR1, Debug ? debug_switch : SIG_IGN);
@@ -7284,6 +7331,7 @@ int main(int argc, char **argv)
 
 	/* --------------------- Main loop begins here. ----------------------------------------- */
 	mainloop();
+	die(bFinished);
 	return 0;
 }
 
