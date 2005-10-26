@@ -31,13 +31,13 @@ FEATURE_DB=0
 FEATURE_REGEXP=1
 
 # Enable RFC 3195 support (REQUIRES LIBLOGGING 0.6.0 or above!)
-FEATURE_RFC3195=1
+FEATURE_RFC3195=0
 
 # Enable multithreading via pthreads (very experimental!)
 FEATURE_PTHREADS=1
 
 # Enable debug mode (much slower code)
-FEATURE_DEBUG=1
+FEATURE_DEBUG=0
 
 # The following defines tell us where liblogging is located. This
 # is only needed if we build with RFC 3195 support. By default, 

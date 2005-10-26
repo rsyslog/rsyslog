@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------
-Version 1.12.0 (RGer), 2005-10-20
+Version 1.12.0 (RGer), 2005-10-26
 - moved to a multi-threaded design. single-threading is still optionally
-  available
+  available. Multi-threading is experimental!
 - fixed a potential race condition. In the original code, marking was done
   by an alarm handler, which could lead to all sorts of bad things. This
   has been changed now. See comments in syslogd.c/domark() for details.
@@ -10,7 +10,7 @@ Version 1.12.0 (RGer), 2005-10-20
   none occurs once rsyslogd has started up. Even in unusual conditions
   (like low-memory conditions) rsyslogd somehow remains active. Of course,
   it might loose a message or two, but at least it does not abort and it
-  can also recover when the condition no longer persist.
+  can also recover when the condition no longer persists.
 - fixed a bug that could cause loss of the last message received
   immediately before rsyslogd was terminated.
 - added comments on thread-safety of global variables in syslogd.c

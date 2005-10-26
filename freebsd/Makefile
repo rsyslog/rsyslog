@@ -32,7 +32,10 @@ FEATURE_REGEXP=1
 FEATURE_RFC3195=0
 
 # Enable multithreading via pthreads (very experimental!)
-FEATURE_PTHREADS=1
+# Current thread code causes grief with signal handlers under
+# BSD - chances are extremely high rsyslogd will dump core if
+# enabled under BSD!
+FEATURE_PTHREADS=0
 
 # Enable debug mode (much slower code)
 FEATURE_DEBUG=0
