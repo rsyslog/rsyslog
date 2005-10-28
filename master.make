@@ -66,8 +66,9 @@ clean:
 clobber: clean
 	rm -f syslogd ksym syslog_tst oops_test TAGS tsyslogd tklogd
 
-install_exec: syslogd
+install_exec: syslogd rfc3195d	
 	${INSTALL} -b -s syslogd ${DESTDIR}${BINDIR}/rsyslogd
+	${INSTALL} -b -s rfc3195d ${DESTDIR}${BINDIR}/rfc3195d
 
 install_man:
 	${INSTALL} $(VPATH)rfc3195d.8 ${DESTDIR}${MANDIR}/man8/rfc3195d.8

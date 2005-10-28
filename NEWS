@@ -1,6 +1,9 @@
+---------------------------------------------------------------------------
+Version 1.12.1 (RGer), 2005-10-??
 - made multithreading work with BSD. Some signal-handling needed to be
   restructured. Also, there might be a slight delay of up to 10 seconds
   when huping and terminating rsyslogd under BSD
+- fixed a bug where a NULL-pointer was passed to printf() in logmsg().
 ---------------------------------------------------------------------------
 Version 1.12.0 (RGer), 2005-10-26
 - moved to a multi-threaded design. single-threading is still optionally

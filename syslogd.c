@@ -3683,7 +3683,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	msg = pMsg->pszUxTradMsg;
-	dprintf("logmsg: %s, flags %x, from %s, msg %s\n", textpri(pri), flags, pMsg->pszHOSTNAME, msg);
+	dprintf("logmsg: %s, flags %x, from '%s', msg %s\n", textpri(pri), flags, getRcvFrom(pMsg), msg);
 
 #ifndef SYSV
 	omask = sigblock(sigmask(SIGHUP)|sigmask(SIGALRM));
@@ -4316,7 +4316,7 @@ void fprintlog(register struct filed *f)
 		dprintf(" %s:%d/%s\n", f->f_un.f_forw.f_hname, f->f_un.f_forw.port,
 			 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp");
 		iovCreate(f);
-		if ( strcmp(f->f_pMsg->pszHOSTNAME, LocalHostName) && NoHops )
+		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
 		else {
 			char *psz;
