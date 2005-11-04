@@ -2411,8 +2411,7 @@ static int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
 static void MsgAssignTAG(struct msg *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
-	assert(pBuf != NULL);
-	pMsg->iLenTAG = strlen(pBuf);
+	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen(pBuf);
 	pMsg->pszTAG = pBuf;
 }
 
@@ -3767,6 +3766,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 			rsCStrAppendChar(pStrB, ':');
 		}
 		rsCStrFinish(pStrB);
+
 		MsgAssignTAG(pMsg, rsCStrConvSzStrAndDestruct(pStrB));
 	} else {
 		/* we have no TAG, so we ... */
