@@ -1008,8 +1008,8 @@ int TCPSend(struct filed *f, char *msg)
 				if(f->f_un.f_forw.savedMsg == NULL)
 					return 0; /* nothing we can do... */
 				memcpy(f->f_un.f_forw.savedMsg, msg, len + 1);
-				return 0;
 			 }
+			return 0;
 		} else if(f->f_un.f_forw.status != TCP_SEND_READY)
 			/* This here is debatable. For the time being, we
 			 * accept the loss of a single message (e.g. during
@@ -1867,8 +1867,7 @@ int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
 void MsgAssignTAG(struct msg *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
-	assert(pBuf != NULL);
-	pMsg->iLenTAG = strlen(pBuf);
+	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen(pBuf);
 	pMsg->pszTAG = pBuf;
 }
 
@@ -4463,6 +4462,7 @@ void init()
 	Initialized = 0;
 	if ( nlogs > -1 )
 	{
+		struct filed *fPrev;
 		dprintf("Initializing log structures.\n");
 
 		f = Files;
@@ -4498,8 +4498,9 @@ void init()
 #endif
 			}
 			/* done with this entry, we now need to delete itself */
+			fPrev = f;
 			f = f->f_next;
-			free(f);
+			free(fPrev);
 		}
 
 		/* Reflect the deletion of the Files linked list. */

@@ -13,6 +13,11 @@ Version 1.0.3 (RGer), 2005-10-10
   unlikely)
 - fixed an one-too-low memory allocation in the TCP sender. Could result
   in rsyslogd dumping core.
+- fixed a bug in the TCP sender that caused the retry logic to fail
+  after an error or receiver overrun
+- fixed a bug in init() that could lead to dumping core
+- fixed a bug that could lead to dumping core when no HOSTNAME or no TAG
+  was present in the syslog message
 ---------------------------------------------------------------------------
 Version 1.0.2 (RGer), 2005-10-05
 - fixed an issue with MySQL error reporting. When an error occured,
