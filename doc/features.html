@@ -1,44 +1,42 @@
-<html>
-<head>
-<title>rsyslog features</title>
-</head>
-<body>
-<h1>RSyslog - Features</h1>
-<p><b>This page lists both current features as well as those being considered 
-for future versions of rsyslog.</b> If you think a feature is missing, drop
-<a href="mailto:rgerhards@adiscon.com">Rainer</a> a note. Rsyslog is a vital 
-project. Features are added each few days. If you would like to keep up of what 
-is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mailman/listinfo/rsyslog">rsyslog mailing list</a>.
-</p>
-<h2>Current Features</h2>
-<ul>
-
- <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a><li>support for (plain) tcp 
-	based syslog - much better reliability<li>support for receiving messages via 	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">	RFC 3195</a> delivery<li>control of log output format, 
-	including ability to present channel and priority as visible log data<li>good timestamp format control; at a minimum, ISO 8601/RFC 3339
- second-resolution UTC zone<li>ability to reformat message contents and work with substrings<li>support for 
-	log files larger than 2gb<li>support for file size limitation and automatic 
-	rollover command execution<li>support for running multiple rsyslogd 
-	instances on a single machine<li>support for <a href="rsyslog_stunnel.html">
-	ssl-protected syslog</a> (via stunnel)<li>ability to filter on any part of 
-	the message, not just facility and severity<li>support for discarding 
-	messages based on filters<li>ability to execute shell scripts on received 
-	messages<li>control of whether the local hostname or the hostname of the
- origin of the data is shown as the hostname in the output<li>ability to 
-	preserve the original hostname in NAT environments and relay chains
-	<li>ability to limit the allowed network senders<li>powerful BSD-style 	hostname and program name blocks for easy multi-host support<li>	multi-threaded - currently experimental, does NOT work under BSD</ul>
-<p>&nbsp;</p>
-<h2>Upcoming Features</h2>
-<ul>
- <li>support for
-	<a href="http://www.syslog.cc/ietf/drafts/draft-ietf-syslog-protocol-14.txt">
-	syslog-protocol-14</a> compliant messages 
-	(pending, as IETF will change proposed format)<li>support for native SSL enryption of plain tcp syslog sessions
-	<li>support for	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - planned<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
-	partly added
- 	<li>solid multi-threading</ul>
-<p>To see when each feature was added, see the
-<a href="http://www.rsyslog.com/Topic4.phtml">rsyslog change log</a> (online 
-only).</p>
-</body>
-</html>
+<html>
+<head>
+<title>rsyslog features</title>
+</head>
+<body>
+<h1>RSyslog - Features</h1>
+<p><b>This page lists both current features as well as those being considered 
+for future versions of rsyslog.</b> If you think a feature is missing, drop
+<a href="mailto:rgerhards@adiscon.com">Rainer</a> a note. Rsyslog is a vital 
+project. Features are added each few days. If you would like to keep up of what 
+is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mailman/listinfo/rsyslog">rsyslog mailing list</a>.
+</p>
+<h2>Current Features</h2>
+<ul>
+
+ <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a><li>support for (plain) tcp 
+	based syslog - much better reliability<li>support for receiving messages via 	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">	RFC 3195</a> delivery<li>control of log output format, 
+	including ability to present channel and priority as visible log data<li>good timestamp format control; at a minimum, ISO 8601/RFC 3339
+ second-resolution UTC zone<li>ability to reformat message contents and work with substrings<li>support for 
+	log files larger than 2gb<li>support for file size limitation and automatic 
+	rollover command execution<li>support for running multiple rsyslogd 
+	instances on a single machine<li>support for <a href="rsyslog_stunnel.html">
+	ssl-protected syslog</a> (via stunnel)<li>ability to filter on any part of 
+	the message, not just facility and severity<li>support for discarding 
+	messages based on filters<li>ability to execute shell scripts on received 
+	messages<li>control of whether the local hostname or the hostname of the
+ origin of the data is shown as the hostname in the output<li>ability to 
+	preserve the original hostname in NAT environments and relay chains
+	<li>ability to limit the allowed network senders<li>powerful BSD-style 	hostname and program name blocks for easy multi-host support<li>	multi-threaded - currently experimental, does NOT work under BSD</ul>
+<p>&nbsp;</p>
+<h2>Upcoming Features</h2>
+<ul>
+ <li>support for native SSL enryption of plain tcp syslog sessions
+	<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
+	partly added
+ 	<li>solid multi-threading<li>support for	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - planned<li>support for
+	<a href="http://www.syslog.cc/ietf/drafts/draft-ietf-syslog-protocol-15.txt">syslog-protocol-15</a> 	compliant messages (will not happen any time soon (if at all), for reason 	see	<a href="http://www.mail-archive.com/syslog@lists.ietf.org/msg00094.html">	here</a>)</ul>
+<p>To see when each feature was added, see the
+<a href="http://www.rsyslog.com/Topic4.phtml">rsyslog change log</a> (online 
+only).</p>
+</body>
+</html>
