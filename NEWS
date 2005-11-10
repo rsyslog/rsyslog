@@ -8,6 +8,8 @@ Version 1.12.1 (RGer), 2005-10-??
   Thanks to Bennett Todd for spotting this.
 - fixed a bug where rsyslogd dumped core when no TAG was found in the
   received message
+- enhanced message parser so that it can deal with missing hostnames
+  in many cases (may not be totally fail-safe)
 ---------------------------------------------------------------------------
 Version 1.12.0 (RGer), 2005-10-26
 - moved to a multi-threaded design. single-threading is still optionally

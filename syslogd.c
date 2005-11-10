@@ -2266,6 +2266,27 @@ static char *getRcvFrom(struct msg *pM)
 			return pM->pszRcvFrom;
 }
 
+/* This function moves the HOSTNAME inside the message object to the
+ * TAG. It is a specialised function used to handle the condition when
+ * a message without HOSTNAME is being processed. The missing HOSTNAME
+ * is only detected at a later stage, during TAG processing, so that
+ * we already had set the HOSTNAME property and now need to move it to
+ * the TAG. Of course, we could do this via a couple of get/set methods,
+ * but it is far more efficient to do it via this specialised method.
+ * This is especially important as this can be a very common case, e.g.
+ * when BSD syslog is acting as a sender.
+ * rgerhards, 2005-11-10.
+ */
+static void moveHOSTNAMEtoTAG(struct msg *pM)
+{
+	assert(pM != NULL);
+	pM->pszTAG = pM->pszHOSTNAME;
+	pM->iLenTAG = pM->iLenHOSTNAME;
+	pM->pszHOSTNAME = NULL;
+	pM->iLenHOSTNAME = 0;
+}
+
+
 
 /* Parse and set the "programname" for a given MSG object. Programname
  * is a BSD concept, it is the tag without any instance-specific information.
@@ -3752,6 +3773,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	 * is the max size ;) we need to shuffle the code again... Just for 
 	 * the records: the code is currently clean, but we could optimize it! */
 	if(bContParse) {
+		char *pszTAG;
 		if((pStrB = rsCStrConstruct()) == NULL) 
 			return;
 		rsCStrSetAllocIncrement(pStrB, 33);
@@ -3767,7 +3789,24 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 		}
 		rsCStrFinish(pStrB);
 
-		MsgAssignTAG(pMsg, rsCStrConvSzStrAndDestruct(pStrB));
+		pszTAG = rsCStrConvSzStrAndDestruct(pStrB);
+		if(pszTAG == NULL)
+		{	/* rger, 2005-11-10: no TAG found - this implies that what
+			 * we have considered to be the HOSTNAME is most probably the
+			 * TAG. We consider it so probable, that we now adjust it
+			 * that way. So we pick up the previously set hostname, assign
+			 * it to tag and use the sender system (from IP stack) as
+			 * the hostname. This situation is the standard case with
+			 * stock BSD syslogd.
+			 */
+			dprintf("No TAG in message, assuming that HOSTNAME is missing.\n");
+			moveHOSTNAMEtoTAG(pMsg);
+			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
+		}
+		else
+		{ /* we have a TAG, so we can happily set it ;) */
+			MsgAssignTAG(pMsg, pszTAG);
+		}
 	} else {
 		/* we have no TAG, so we ... */
 		/*DO NOTHING*/;
