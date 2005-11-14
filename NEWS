@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.0.3 (RGer), 2005-10-10
+Version 1.0.3 (RGer), 2005-11-14
 - added an additional guard to prevent rsyslogd from aborting when the
   2gb file size limit is hit. While a user can configure rsyslogd to
   handle such situations, it would abort if that was not done AND large
