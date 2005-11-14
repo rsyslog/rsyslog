@@ -3699,6 +3699,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	rsCStrObj *pStrB;
 	int iCnt;
 	int bContParse = 1;
+	int bTAGCharDetected;
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
@@ -3734,16 +3735,37 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 		pMsg->tTIMESTAMP.secfrac = 0;
 	}
 
-	/* parse HOSTNAME - but only if this is network-received! */
+	/* parse HOSTNAME - but only if this is network-received!
+	 * rger, 2005-11-14: we still have a problem with BSD messages. These messages
+	 * do NOT include a host name. In most cases, this leads to the TAG to be treated
+	 * as hostname and the first word of the message as the TAG. Clearly, this is not
+	 * of advantage ;) I think I have now found a way to handle this situation: there
+	 * are certain characters which are frequently used in TAG (e.g. ':'), which are
+	 * *invalid* in host names. So while parsing the hostname, I check for these characters.
+	 * If I find them, I set a simple flag but continue. After parsing, I check the flag.
+	 * If it was set, then we most probably do not have a hostname but a TAG. Thus, I change
+	 * the fields. I think this logic shall work with any type of syslog message.
+	 */
+	bTAGCharDetected = 0;
 	if(pMsg->bParseHOSTNAME) {
 		if(bContParse) {
 			/* TODO: quick and dirty memory allocation */
 			if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
 				return;
 			pWork = pBuf;
-			while(*p2parse && *p2parse != ' ')
+			/* this is the actual parsing loop */
+			while(*p2parse && *p2parse != ' ' && *p2parse != ':') {
+				if(   *p2parse == '[' || *p2parse == ']' || *p2parse == '/')
+					bTAGCharDetected = 1;
 				*pWork++ = *p2parse++;
-			if(*p2parse == ' ')
+			}
+			/* we need to handle ':' seperately, because it terminates the
+			 * TAG - so we also need to terminate the parser here!
+			 */
+			if(*p2parse == ':') {
+				bTAGCharDetected = 1;
+				++p2parse;
+			} else if(*p2parse == ' ')
 				++p2parse;
 			*pWork = '\0';
 			MsgAssignHOSTNAME(pMsg, pBuf);
@@ -3753,6 +3775,15 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 			 */
 			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
+	}
+	/* check if we seem to have a TAG */
+	if(bTAGCharDetected) {
+		/* indeed, this smells like a TAG, so lets use it for this. We take
+		 * the HOSTNAME from the sender system instead.
+		 */
+		dprintf("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
+		moveHOSTNAMEtoTAG(pMsg);
+		MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 	}
 
 	/* now parse TAG - that should be present in message from
@@ -3772,7 +3803,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	/* lol.. we tried to solve it, just to remind ourselfs that 32 octets
 	 * is the max size ;) we need to shuffle the code again... Just for 
 	 * the records: the code is currently clean, but we could optimize it! */
-	if(bContParse) {
+	if(bContParse && !bTAGCharDetected) {
 		char *pszTAG;
 		if((pStrB = rsCStrConstruct()) == NULL) 
 			return;
