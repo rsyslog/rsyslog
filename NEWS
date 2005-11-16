@@ -10,6 +10,8 @@ Version 1.12.1 (RGer), 2005-10-??
   received message
 - enhanced message parser so that it can deal with missing hostnames
   in many cases (may not be totally fail-safe)
+- fixed a bug where internally-generated messages did not have the correct
+  TAG
 ---------------------------------------------------------------------------
 Version 1.12.0 (RGer), 2005-10-26
 - moved to a multi-threaded design. single-threading is still optionally

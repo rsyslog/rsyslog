@@ -4830,9 +4830,9 @@ static void logerror(char *type)
 	dprintf("Called logerr, msg: %s\n", type);
 
 	if (errno == 0)
-		snprintf(buf, sizeof(buf), "rsyslogd: %s", type);
+		snprintf(buf, sizeof(buf), "%s", type);
 	else
-		snprintf(buf, sizeof(buf), "rsyslogd: %s: %s", type, strerror(errno));
+		snprintf(buf, sizeof(buf), "%s: %s", type, strerror(errno));
 	errno = 0;
 	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, LocalHostName, ADDDATE);
 	return;
@@ -4885,9 +4885,9 @@ static void die(int sig)
 	                                * below can work ... and keep in mind we need the
 					* filed structure still intact (initialized) for the below! */
 	if (sig) {
-		dprintf("rsyslogd: exiting on signal %d\n", sig);
+		dprintf(" exiting on signal %d\n", sig);
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
-		 "rsyslogd: [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
+		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
 		 PATCHLEVEL "\" x-pid=\"%d\"]" " exiting on signal %d.",
 		 myPid, sig);
 		errno = 0;
@@ -5460,7 +5460,7 @@ static void init()
 	 * rgerhards, 2005-08-17
 	 */
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
-		 "rsyslogd: [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
+		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
 		 PATCHLEVEL "\" x-pid=\"%d\"][x-configInfo udpReception=\"%s\" " \
 		 "udpPort=\"%d\" tcpReception=\"%s\" tcpPort=\"%d\"]" \
 		 " restart",
@@ -5470,7 +5470,7 @@ static void init()
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, LocalHostName, ADDDATE);
 
 	(void) signal(SIGHUP, sighup_handler);
-	dprintf("rsyslogd: restarted.\n");
+	dprintf(" restarted.\n");
 }
 
 /* helper to cfline() and its helpers. Assign the right template
@@ -5492,7 +5492,7 @@ static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 	 */
 	if((f->f_pTpl = tplFind(pTemplateName, strlen(pTemplateName))) == NULL) {
 		snprintf(errMsg, sizeof(errMsg) / sizeof(char),
-			 "rsyslogd: Could not find template '%s' - selector line disabled\n",
+			 " Could not find template '%s' - selector line disabled\n",
 			 pTemplateName);
 		errno = 0;
 		logerror(errMsg);
@@ -7258,7 +7258,7 @@ int main(int argc, char **argv)
 		}
 		else
 		{
-			fputs("rsyslogd: Already running.\n", stderr);
+			fputs(" Already running.\n", stderr);
 			exit(1); /* "good" exit, done if syslogd is already running */
 		}
 	}
