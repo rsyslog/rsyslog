@@ -3219,6 +3219,7 @@ static void logmsgInternal(int pri, char * msg, char* from, int flags)
 	if(MsgSetUxTradMsg(pMsg, msg) != 0) return;
 	if(MsgSetRawMsg(pMsg, msg) != 0) return;
 	if(MsgSetHOSTNAME(pMsg, LocalHostName) != 0) return;
+	if(MsgSetTAG(pMsg, "rsyslogd:") != 0) return;
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->bParseHOSTNAME = 0;
@@ -4890,7 +4891,7 @@ static void die(int sig)
 		 PATCHLEVEL "\" x-pid=\"%d\"]" " exiting on signal %d.",
 		 myPid, sig);
 		errno = 0;
-	logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
 
 #ifdef	USE_PTHREADS
