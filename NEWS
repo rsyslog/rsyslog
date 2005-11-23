@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.12.2 (RGer), 2005-11-??
+---------------------------------------------------------------------------
 Version 1.12.1 (RGer), 2005-11-23
 - made multithreading work with BSD. Some signal-handling needed to be
   restructured. Also, there might be a slight delay of up to 10 seconds
