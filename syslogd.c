@@ -1838,7 +1838,7 @@ static int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf
 		char szFmtStr[64];
 		/* be careful: there is ONE actual %d in the format string below ;) */
 		snprintf(szFmtStr, sizeof(szFmtStr),
-		         "%%04d-%%02d-%%02dT%%02d:%%02d:%%02d.%%0%dd%%c%%02d:%%02d ",
+		         "%%04d-%%02d-%%02dT%%02d:%%02d:%%02d.%%0%dd%%c%%02d:%%02d",
 			ts->secfracPrecision);
 		iRet = snprintf(pBuf, iLenBuf, szFmtStr, ts->year, ts->month, ts->day,
 			        ts->hour, ts->minute, ts->second, ts->secfrac,
@@ -1846,7 +1846,7 @@ static int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf
 	}
 	else
 		iRet = snprintf(pBuf, iLenBuf,
-		 		"%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%c%2.2d:%2.2d ",
+		 		"%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%c%2.2d:%2.2d",
 				ts->year, ts->month, ts->day,
 			        ts->hour, ts->minute, ts->second,
 				ts->OffsetMode, ts->OffsetHour, ts->OffsetMinute);
@@ -3730,10 +3730,6 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	(void) time(&now);
 	if (flags & ADDDATE) {
 		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
-		/* but modify it to be an RFC 3164 time... */
-		pMsg->tTIMESTAMP.timeType = 1;
-		pMsg->tTIMESTAMP.secfracPrecision = 0;
-		pMsg->tTIMESTAMP.secfrac = 0;
 	}
 
 	/* parse HOSTNAME - but only if this is network-received!

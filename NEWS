@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 1.12.2 (RGer), 2005-11-??
+- fixed a bug in the RFC 3339 date formater. An extra space was added
+  after the actual timestamp
+- added support for providing high-precision RFC3339 timestamps for
+  (rsyslogd-)internally-generated messages
 ---------------------------------------------------------------------------
 Version 1.12.1 (RGer), 2005-11-23
 - made multithreading work with BSD. Some signal-handling needed to be
