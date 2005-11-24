@@ -2524,12 +2524,17 @@ static void tryEmulateTAG(struct msg *pM)
 		return; /* done, no need to emulate */
 	
 	if(getProtocolVersion(pM) == 1) {
-		/* now we can try to emulate */
-		iTAGLen = getAPPNAMELen(pM) + getPROCIDLen(pM) + 3;
-		if((pBuf = malloc(iTAGLen * sizeof(char))) == NULL)
-			return; /* nothing we can do */
-		snprintf(pBuf, iTAGLen, "%s[%s]", getAPPNAME(pM), getPROCID(pM));
-		MsgAssignTAG(pM, pBuf);
+		if(!strcmp(getPROCID(pM), "-")) {
+			/* no process ID, use APP-NAME only */
+			MsgSetTAG(pM, getAPPNAME(pM));
+		} else {
+			/* now we can try to emulate */
+			iTAGLen = getAPPNAMELen(pM) + getPROCIDLen(pM) + 3;
+			if((pBuf = malloc(iTAGLen * sizeof(char))) == NULL)
+				return; /* nothing we can do */
+			snprintf(pBuf, iTAGLen, "%s[%s]", getAPPNAME(pM), getPROCID(pM));
+			MsgAssignTAG(pM, pBuf);
+		}
 	}
 }
 
@@ -4210,6 +4215,13 @@ static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
 	if((pBuf = malloc(sizeof(char)* strlen(p2parse) + 1)) == NULL)
 		return 1;
 		
+	/* IMPORTANT NOTE:
+	 * Validation is not actually done below nor are any errors handled. I have
+	 * NOT included this for the current proof of concept. However, it is strongly
+	 * advisable to add it when this code actually goes into production.
+	 * rgerhards, 2005-11-24
+	 */
+
 	/* TIMESTAMP */
 	if(srSLMGParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), (unsigned char **) &p2parse) == FALSE) {
 		dprintf("no TIMESTAMP detected!\n");
@@ -4224,7 +4236,6 @@ static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
 	/* HOSTNAME */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-dprintf("HOSTNAME: '%s'\n", pBuf);
 		MsgSetHOSTNAME(pMsg, pBuf);
 	} else {
 		/* we can not parse, so we get the system we
@@ -4236,28 +4247,24 @@ dprintf("HOSTNAME: '%s'\n", pBuf);
 	/* APP-NAME */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-dprintf("APP-NAME: '%s'\n", pBuf);
 		MsgSetAPPNAME(pMsg, pBuf);
 	}
 
 	/* PROCID */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-dprintf("PROCID: '%s'\n", pBuf);
 		MsgSetPROCID(pMsg, pBuf);
 	}
 
 	/* MSGID */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-dprintf("MSGID: '%s'\n", pBuf);
 		MsgSetMSGID(pMsg, pBuf);
 	}
 
 	/* STRUCTURED-DATA */
 	if(bContParse) {
 		parseRFCStructuredData(&p2parse, pBuf);
-dprintf("STRUCTURED-DATA: '%s'\n", pBuf);
 		MsgSetStructuredData(pMsg, pBuf);
 	}
 
@@ -7932,9 +7939,9 @@ int main(int argc, char **argv)
 	/* prepare emergency logging system */
 
 	consfile.f_type = F_CONSOLE;
-	(void) strcpy(consfile.f_un.f_fname, ctty);
+	strcpy(consfile.f_un.f_fname, ctty);
 	cflineSetTemplateAndIOV(&consfile, " TradFmt");
-	(void) gethostname(LocalHostName, sizeof(LocalHostName));
+	gethostname(LocalHostName, sizeof(LocalHostName));
 	if ( (p = strchr(LocalHostName, '.')) ) {
 		*p++ = '\0';
 		LocalDomain = p;
