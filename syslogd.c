@@ -448,6 +448,9 @@ struct msg {
 	int	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
 	rsCStrObj *pCSProgName;	/* the (BSD) program name */
 	rsCStrObj *pCSStrucData;/* STRUCTURED-DATA */
+	rsCStrObj *pCSAPPNAME;	/* APP-NAME */
+	rsCStrObj *pCSPROCID;	/* PROCID */
+	rsCStrObj *pCSMSGID;	/* MSGID */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
 	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
@@ -804,6 +807,8 @@ static msgQueue *queueInit (void);
 static void *singleWorker(void *vParam); /* REMOVEME later 2005-10-24 */
 #endif
 /* Function prototypes. */
+static rsRetVal aquirePROCIDFromTAG(struct msg *pM);
+static char* getProgramName(struct msg*);
 static char **crunch_list(char *list);
 static void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
 static void printline(char *hname, char *msg, int iSource);
@@ -1927,12 +1932,22 @@ static int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLen
 static int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 {
 	int iRet;
+	char szTZ[7]; /* buffer for TZ information */
 
 	assert(ts != NULL);
 	assert(pBuf != NULL);
 	
 	if(iLenBuf < 20)
 		return(0); /* we NEED at least 20 bytes */
+
+	/* do TZ information first, this is easier to take care of "Z" zone in rfc3339 */
+	if(ts->OffsetMode == 'Z') {
+		szTZ[0] = 'Z';
+		szTZ[1] = '\0';
+	} else {
+		snprintf(szTZ, sizeof(szTZ) / sizeof(char), "%c%2.2d:%2.2d",
+			ts->OffsetMode, ts->OffsetHour, ts->OffsetMinute);
+	}
 
 	if(ts->secfracPrecision > 0)
 	{	/* we now need to include fractional seconds. While doing so, we must look at
@@ -1945,18 +1960,16 @@ static int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf
 		char szFmtStr[64];
 		/* be careful: there is ONE actual %d in the format string below ;) */
 		snprintf(szFmtStr, sizeof(szFmtStr),
-		         "%%04d-%%02d-%%02dT%%02d:%%02d:%%02d.%%0%dd%%c%%02d:%%02d",
+		         "%%04d-%%02d-%%02dT%%02d:%%02d:%%02d.%%0%dd%%s",
 			ts->secfracPrecision);
 		iRet = snprintf(pBuf, iLenBuf, szFmtStr, ts->year, ts->month, ts->day,
-			        ts->hour, ts->minute, ts->second, ts->secfrac,
-				ts->OffsetMode, ts->OffsetHour, ts->OffsetMinute);
+			        ts->hour, ts->minute, ts->second, ts->secfrac, szTZ);
 	}
 	else
 		iRet = snprintf(pBuf, iLenBuf,
-		 		"%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%c%2.2d:%2.2d",
+		 		"%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%s",
 				ts->year, ts->month, ts->day,
-			        ts->hour, ts->minute, ts->second,
-				ts->OffsetMode, ts->OffsetHour, ts->OffsetMinute);
+			        ts->hour, ts->minute, ts->second, szTZ);
 	return(iRet);
 }
 
@@ -2337,15 +2350,201 @@ static char *getFacility(struct msg *pM)
 }
 
 
+/* rgerhards 2004-11-24: set APP-NAME in msg object
+ */
+static rsRetVal MsgSetAPPNAME(struct msg *pMsg, char* pszAPPNAME)
+{
+	assert(pMsg != NULL);
+	if(pMsg->pCSAPPNAME == NULL) {
+		/* we need to obtain the object first */
+		if((pMsg->pCSAPPNAME = rsCStrConstruct()) == NULL) 
+			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+		rsCStrSetAllocIncrement(pMsg->pCSAPPNAME, 128);
+	}
+	/* if we reach this point, we have the object */
+	return rsCStrSetSzStr(pMsg->pCSAPPNAME, pszAPPNAME);
+}
+
+
+/* This function tries to emulate APPNAME if it is not present. Its
+ * main use is when we have received a log record via legacy syslog and
+ * now would like to send out the same one via syslog-protocol.
+ */
+static void tryEmulateAPPNAME(struct msg *pM)
+{
+	assert(pM != NULL);
+	if(pM->pCSAPPNAME != NULL)
+		return; /* we are already done */
+
+	if(getProtocolVersion(pM) == 0) {
+		/* only then it makes sense to emulate */
+		MsgSetAPPNAME(pM, getProgramName(pM));
+	}
+}
+
+
+/* rgerhards, 2005-11-24
+ */
+static int getAPPNAMELen(struct msg *pM)
+{
+	assert(pM != NULL);
+	if(pM->pCSAPPNAME == NULL)
+		tryEmulateAPPNAME(pM);
+	return (pM->pCSAPPNAME == NULL) ? 0 : rsCStrLen(pM->pCSAPPNAME);
+}
+
+
+/* rgerhards, 2005-11-24
+ */
+static char *getAPPNAME(struct msg *pM)
+{
+	assert(pM != NULL);
+	if(pM->pCSAPPNAME == NULL)
+		tryEmulateAPPNAME(pM);
+	return (pM->pCSAPPNAME == NULL) ? "" : rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
+}
+
+
+
+
+/* rgerhards 2004-11-24: set PROCID in msg object
+ */
+static rsRetVal MsgSetPROCID(struct msg *pMsg, char* pszPROCID)
+{
+	assert(pMsg != NULL);
+	if(pMsg->pCSPROCID == NULL) {
+		/* we need to obtain the object first */
+		if((pMsg->pCSPROCID = rsCStrConstruct()) == NULL) 
+			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+		rsCStrSetAllocIncrement(pMsg->pCSPROCID, 128);
+	}
+	/* if we reach this point, we have the object */
+	return rsCStrSetSzStr(pMsg->pCSPROCID, pszPROCID);
+}
+
+/* rgerhards, 2005-11-24
+ */
+static int getPROCIDLen(struct msg *pM)
+{
+	assert(pM != NULL);
+	if(pM->pCSPROCID == NULL)
+		aquirePROCIDFromTAG(pM);
+	return (pM->pCSPROCID == NULL) ? 1 : rsCStrLen(pM->pCSPROCID);
+}
+
+
+/* rgerhards, 2005-11-24
+ */
+static char *getPROCID(struct msg *pM)
+{
+	assert(pM != NULL);
+	if(pM->pCSPROCID == NULL)
+		aquirePROCIDFromTAG(pM);
+	return (pM->pCSPROCID == NULL) ? "-" : rsCStrGetSzStrNoNULL(pM->pCSPROCID);
+}
+
+
+/* rgerhards 2004-11-24: set MSGID in msg object
+ */
+static rsRetVal MsgSetMSGID(struct msg *pMsg, char* pszMSGID)
+{
+	assert(pMsg != NULL);
+	if(pMsg->pCSMSGID == NULL) {
+		/* we need to obtain the object first */
+		if((pMsg->pCSMSGID = rsCStrConstruct()) == NULL) 
+			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+		rsCStrSetAllocIncrement(pMsg->pCSMSGID, 128);
+	}
+	/* if we reach this point, we have the object */
+	return rsCStrSetSzStr(pMsg->pCSMSGID, pszMSGID);
+}
+
+/* rgerhards, 2005-11-24
+ */
+static int getMSGIDLen(struct msg *pM)
+{
+	return (pM->pCSMSGID == NULL) ? 1 : rsCStrLen(pM->pCSMSGID);
+}
+
+
+/* rgerhards, 2005-11-24
+ */
+static char *getMSGID(struct msg *pM)
+{
+	return (pM->pCSMSGID == NULL) ? "-" : rsCStrGetSzStrNoNULL(pM->pCSMSGID);
+}
+
+
+/* Set the TAG to a caller-provided string. This is thought
+ * to be a heap buffer that the caller will no longer use. This
+ * function is a performance optimization over MsgSetTAG().
+ * rgerhards 2004-11-19
+ */
+static void MsgAssignTAG(struct msg *pMsg, char *pBuf)
+{
+	assert(pMsg != NULL);
+	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen(pBuf);
+	pMsg->pszTAG = pBuf;
+}
+
+
+/* rgerhards 2004-11-16: set TAG in msg object
+ * returns 0 if OK, other value if not. In case of failure,
+ * logs error message and destroys msg object.
+ */
+static int MsgSetTAG(struct msg *pMsg, char* pszTAG)
+{
+	assert(pMsg != NULL);
+	pMsg->iLenTAG = strlen(pszTAG);
+	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) == NULL) {
+		syslogdPanic("Could not allocate memory for pszTAG buffer.");
+		MsgDestruct(pMsg);
+		return(-1);
+	}
+	memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
+
+	return(0);
+}
+
+
+/* This function tries to emulate the TAG if none is
+ * set. Its primary purpose is to provide an old-style TAG
+ * when a syslog-protocol message has been received. Then,
+ * the tag is APP-NAME "[" PROCID "]". The function first checks
+ * if there is a TAG and, if not, if it can emulate it.
+ * rgerhards, 2005-11-24
+ */
+static void tryEmulateTAG(struct msg *pM)
+{
+	int iTAGLen;
+	char *pBuf;
+	assert(pM != NULL);
+
+	if(pM->pszTAG != NULL) 
+		return; /* done, no need to emulate */
+	
+	if(getProtocolVersion(pM) == 1) {
+		/* now we can try to emulate */
+		iTAGLen = getAPPNAMELen(pM) + getPROCIDLen(pM) + 3;
+		if((pBuf = malloc(iTAGLen * sizeof(char))) == NULL)
+			return; /* nothing we can do */
+		snprintf(pBuf, iTAGLen, "%s[%s]", getAPPNAME(pM), getPROCID(pM));
+		MsgAssignTAG(pM, pBuf);
+	}
+}
+
+
 static int getTAGLen(struct msg *pM)
 {
 	if(pM == NULL)
 		return 0;
-	else
+	else {
+		tryEmulateTAG(pM);
 		if(pM->pszTAG == NULL)
 			return 0;
 		else
 			return pM->iLenTAG;
+	}
 }
 
 
@@ -2353,11 +2552,13 @@ static char *getTAG(struct msg *pM)
 {
 	if(pM == NULL)
 		return "";
-	else
+	else {
+		tryEmulateTAG(pM);
 		if(pM->pszTAG == NULL)
 			return "";
 		else
 			return pM->pszTAG;
+	}
 }
 
 
@@ -2395,6 +2596,38 @@ static char *getRcvFrom(struct msg *pM)
 		else
 			return pM->pszRcvFrom;
 }
+/* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
+ */
+static rsRetVal MsgSetStructuredData(struct msg *pMsg, char* pszStrucData)
+{
+	assert(pMsg != NULL);
+	if(pMsg->pCSStrucData == NULL) {
+		/* we need to obtain the object first */
+		if((pMsg->pCSStrucData = rsCStrConstruct()) == NULL) 
+			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+		rsCStrSetAllocIncrement(pMsg->pCSStrucData, 128);
+	}
+	/* if we reach this point, we have the object */
+	return rsCStrSetSzStr(pMsg->pCSStrucData, pszStrucData);
+}
+
+/* get the length of the "STRUCTURED-DATA" sz string
+ * rgerhards, 2005-11-24
+ */
+static int getStructuredDataLen(struct msg *pM)
+{
+	return (pM->pCSStrucData == NULL) ? 1 : rsCStrLen(pM->pCSStrucData);
+}
+
+
+/* get the "STRUCTURED-DATA" as sz string
+ * rgerhards, 2005-11-24
+ */
+static char *getStructuredData(struct msg *pM)
+{
+	return (pM->pCSStrucData == NULL) ? "-" : rsCStrGetSzStrNoNULL(pM->pCSStrucData);
+}
+
 
 /* This function moves the HOSTNAME inside the message object to the
  * TAG. It is a specialised function used to handle the condition when
@@ -2416,6 +2649,67 @@ static void moveHOSTNAMEtoTAG(struct msg *pM)
 	pM->iLenHOSTNAME = 0;
 }
 
+
+/* This functions tries to aquire the PROCID from TAG. Its primary use is
+ * when a legacy syslog message has been received and should be forwarded as
+ * syslog-protocol (or the PROCID is requested for any other reason).
+ * In legacy syslog, the PROCID is considered to be the character sequence
+ * between the first [ and the first ]. This usually are digits only, but we
+ * do not check that. However, if there is no closing ], we do not assume we
+ * can obtain a PROCID. Take in mind that not every legacy syslog message
+ * actually has a PROCID.
+ * rgerhards, 2005-11-24
+ */
+static rsRetVal aquirePROCIDFromTAG(struct msg *pM)
+{
+	register int i;
+	int iRet;
+
+dprintf("PROCIDFromTAG: in\n");
+	assert(pM != NULL);
+	if(pM->pCSPROCID != NULL)
+		return RS_RET_OK; /* we are already done ;) */
+
+	if(getProtocolVersion(pM) != 0)
+		return RS_RET_OK; /* we can only emulate if we have legacy format */
+
+	/* find first '['... */
+	i = 0;
+	while((i < pM->iLenTAG) && (pM->pszTAG[i] != '['))
+		++i;
+	if(!(i < pM->iLenTAG))
+		return RS_RET_OK;	/* no [, so can not emulate... */
+	
+	++i; /* skip '[' */
+
+	/* now obtain the PROCID string... */
+	if((pM->pCSPROCID = rsCStrConstruct()) == NULL) 
+		return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+	rsCStrSetAllocIncrement(pM->pCSPROCID, 16);
+	while((i < pM->iLenTAG) && (pM->pszTAG[i] != ']')) {
+		if((iRet = rsCStrAppendChar(pM->pCSPROCID, pM->pszTAG[i])) != RS_RET_OK)
+			return iRet;
+		++i;
+	}
+
+	if(!(i < pM->iLenTAG)) {
+		/* oops... it looked like we had a PROCID, but now it has
+		 * turned out this is not true. In this case, we need to free
+		 * the buffer and simply return. Note that this is NOT an error
+		 * case!
+		 */
+		rsCStrDestruct(pM->pCSPROCID);
+		pM->pCSPROCID = NULL;
+		return RS_RET_OK;
+	}
+
+	/* OK, finaally we could obtain a PROCID. So let's use it ;) */
+	if((iRet = rsCStrFinish(pM->pCSPROCID)) != RS_RET_OK)
+		return iRet;
+
+dprintf("PROCIDFromTAG: out\n");
+	return RS_RET_OK;
+}
 
 
 /* Parse and set the "programname" for a given MSG object. Programname
@@ -2549,38 +2843,6 @@ static int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
 		return(-1);
 	}
 	memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
-
-	return(0);
-}
-
-
-/* Set the TAG to a caller-provided string. This is thought
- * to be a heap buffer that the caller will no longer use. This
- * function is a performance optimization over MsgSetTAG().
- * rgerhards 2004-11-19
- */
-static void MsgAssignTAG(struct msg *pMsg, char *pBuf)
-{
-	assert(pMsg != NULL);
-	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen(pBuf);
-	pMsg->pszTAG = pBuf;
-}
-
-
-/* rgerhards 2004-11-16: set TAG in msg object
- * returns 0 if OK, other value if not. In case of failure,
- * logs error message and destroys msg object.
- */
-static int MsgSetTAG(struct msg *pMsg, char* pszTAG)
-{
-	assert(pMsg != NULL);
-	pMsg->iLenTAG = strlen(pszTAG);
-	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) == NULL) {
-		syslogdPanic("Could not allocate memory for pszTAG buffer.");
-		MsgDestruct(pMsg);
-		return(-1);
-	}
-	memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
 
 	return(0);
 }
@@ -2757,8 +3019,17 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp(pName, "programname")) {
 		pRes = getProgramName(pMsg);
+// TODO DOC: document new properties
 	} else if(!strcmp(pName, "PROTOCOL-VERSION")) {
 		pRes = getProtocolVersionString(pMsg);
+	} else if(!strcmp(pName, "STRUCTURED-DATA")) {
+		pRes = getStructuredData(pMsg);
+	} else if(!strcmp(pName, "APP-NAME")) {
+		pRes = getAPPNAME(pMsg);
+	} else if(!strcmp(pName, "PROCID")) {
+		pRes = getPROCID(pMsg);
+	} else if(!strcmp(pName, "MSGID")) {
+		pRes = getMSGID(pMsg);
 	} else {
 		pRes = "**INVALID PROPERTY NAME**";
 	}
@@ -3954,7 +4225,7 @@ static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
 dprintf("HOSTNAME: '%s'\n", pBuf);
-		MsgAssignHOSTNAME(pMsg, pBuf);
+		MsgSetHOSTNAME(pMsg, pBuf);
 	} else {
 		/* we can not parse, so we get the system we
 		 * received the data from.
@@ -3966,28 +4237,28 @@ dprintf("HOSTNAME: '%s'\n", pBuf);
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
 dprintf("APP-NAME: '%s'\n", pBuf);
-	//	MsgAssignHOSTNAME(pMsg, pBuf);
+		MsgSetAPPNAME(pMsg, pBuf);
 	}
 
 	/* PROCID */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
 dprintf("PROCID: '%s'\n", pBuf);
-	//	MsgAssignHOSTNAME(pMsg, pBuf);
+		MsgSetPROCID(pMsg, pBuf);
 	}
 
 	/* MSGID */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
 dprintf("MSGID: '%s'\n", pBuf);
-	//	MsgAssignHOSTNAME(pMsg, pBuf);
+		MsgSetMSGID(pMsg, pBuf);
 	}
 
 	/* STRUCTURED-DATA */
 	if(bContParse) {
 		parseRFCStructuredData(&p2parse, pBuf);
 dprintf("STRUCTURED-DATA: '%s'\n", pBuf);
-	//	MsgAssignHOSTNAME(pMsg, pBuf);
+		MsgSetStructuredData(pMsg, pBuf);
 	}
 
 	/* MSG */
