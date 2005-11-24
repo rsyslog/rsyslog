@@ -445,7 +445,9 @@ struct msg {
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
 	char	*pszRcvFrom;	/* System message was received from */
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
+	int	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
 	rsCStrObj *pCSProgName;	/* the (BSD) program name */
+	rsCStrObj *pCSStrucData;/* STRUCTURED-DATA */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
 	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
@@ -1597,6 +1599,111 @@ static int srSLMGParseInt32(unsigned char** ppsz)
 
 	return i;
 }
+
+
+/**
+ * Parse a TIMESTAMP-3339.
+ * updates the parse pointer position.
+ */
+static int srSLMGParseTIMESTAMP3339(struct syslogTime *pTime, unsigned char** ppszTS)
+{
+	unsigned char *pszTS = *ppszTS;
+
+	assert(pTime != NULL);
+	assert(ppszTS != NULL);
+	assert(pszTS != NULL);
+
+	pTime->year = srSLMGParseInt32(&pszTS);
+
+	/* We take the liberty to accept slightly malformed timestamps e.g. in 
+	 * the format of 2003-9-1T1:0:0. This doesn't hurt on receiving. Of course,
+	 * with the current state of affairs, we would never run into this code
+	 * here because at postion 11, there is no "T" in such cases ;)
+	 */
+	if(*pszTS++ != '-')
+		return FALSE;
+	pTime->month = srSLMGParseInt32(&pszTS);
+	if(pTime->month < 1 || pTime->month > 12)
+		return FALSE;
+
+	if(*pszTS++ != '-')
+		return FALSE;
+	pTime->day = srSLMGParseInt32(&pszTS);
+	if(pTime->day < 1 || pTime->day > 31)
+		return FALSE;
+
+	if(*pszTS++ != 'T')
+		return FALSE;
+
+	pTime->hour = srSLMGParseInt32(&pszTS);
+	if(pTime->hour < 0 || pTime->hour > 23)
+		return FALSE;
+
+	if(*pszTS++ != ':')
+		return FALSE;
+	pTime->minute = srSLMGParseInt32(&pszTS);
+	if(pTime->minute < 0 || pTime->minute > 59)
+		return FALSE;
+
+	if(*pszTS++ != ':')
+		return FALSE;
+	pTime->second = srSLMGParseInt32(&pszTS);
+	if(pTime->second < 0 || pTime->second > 60)
+		return FALSE;
+
+	/* Now let's see if we have secfrac */
+	if(*pszTS == '.')
+	{
+		unsigned char *pszStart = ++pszTS;
+		pTime->secfrac = srSLMGParseInt32(&pszTS);
+		pTime->secfracPrecision = (int) (pszTS - pszStart);
+	}
+	else
+	{
+		pTime->secfracPrecision = 0;
+		pTime->secfrac = 0;
+	}
+
+	/* check the timezone */
+	if(*pszTS == 'Z')
+	{
+		pszTS++; /* eat Z */
+		pTime->OffsetMode = 'Z';
+		pTime->OffsetHour = 0;
+		pTime->OffsetMinute = 0;
+	}
+	else if((*pszTS == '+') || (*pszTS == '-'))
+	{
+		pTime->OffsetMode = *pszTS;
+		pszTS++;
+
+		pTime->OffsetHour = srSLMGParseInt32(&pszTS);
+		if(pTime->OffsetHour < 0 || pTime->OffsetHour > 23)
+			return FALSE;
+
+		if(*pszTS++ != ':')
+			return FALSE;
+		pTime->OffsetMinute = srSLMGParseInt32(&pszTS);
+		if(pTime->OffsetMinute < 0 || pTime->OffsetMinute > 59)
+			return FALSE;
+	}
+	else
+		/* there MUST be TZ information */
+		return FALSE;
+
+	/* OK, we actually have a 3339 timestamp, so let's indicated this */
+	if(*pszTS == ' ')
+		++pszTS;
+	else
+		return FALSE;
+
+	/* update parse pointer */
+	*ppszTS = pszTS;
+
+	return TRUE;
+}
+
+
 /**
  * Parse a TIMESTAMP-3164.
  * Returns TRUE on parse OK, FALSE on parse error.
@@ -2048,6 +2155,29 @@ static struct msg *MsgAddRef(struct msg *pM)
 
 /* Access methods - dumb & easy, not a comment for each ;)
  */
+static void setProtocolVersion(struct msg *pM, int iNewVersion)
+{
+	assert(pM != NULL);
+	if(iNewVersion != 0 && iNewVersion != 1) {
+		dprintf("Tried to set unsupported protocol version %d - changed to 0.\n", iNewVersion);
+		iNewVersion = 0;
+	}
+	pM->iProtocolVersion = iNewVersion;
+}
+
+static int getProtocolVersion(struct msg *pM)
+{
+	assert(pM != NULL);
+	return(pM->iProtocolVersion);
+}
+
+/* note: string is taken from constant pool, do NOT free */
+static char *getProtocolVersionString(struct msg *pM)
+{
+	assert(pM != NULL);
+	return(pM->iProtocolVersion ? "1" : "0");
+}
+
 static int getMSGLen(struct msg *pM)
 {
 	return((pM == NULL) ? 0 : pM->iLenMSG);
@@ -2627,6 +2757,8 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp(pName, "programname")) {
 		pRes = getProgramName(pMsg);
+	} else if(!strcmp(pName, "PROTOCOL-VERSION")) {
+		pRes = getProtocolVersionString(pMsg);
 	} else {
 		pRes = "**INVALID PROPERTY NAME**";
 	}
@@ -3671,29 +3803,206 @@ static void enqueueMsg(struct msg *pMsg)
 #endif /* #ifndef USE_PTHREADS */
 
 
-/*
- * Log a message to the appropriate log files, users, etc. based on
- * the priority.
- * rgerhards 2004-11-08: actually, this also decodes all but the PRI part.
- * rgerhards 2004-11-09: ... but only, if syslogd could properly be initialized
- *			 if not, we use emergency logging to the console and in
- *                       this case, no further decoding happens.
- * changed to no longer receive a plain message but a msg object instead.
- * rgerhards-2004-11-16: OK, we are now up to another change... This method
- * actually needs to PARSE the message. How exactly this needs to happen depends on
- * a number of things. Most importantly, it depends on the source. For example,
- * locally received messages (SOURCE_UNIXAF) do NOT have a hostname in them. So
- * we need to treat them differntly form network-received messages which have.
- * Well, actually not all network-received message really have a hostname. We
- * can just hope they do, but we can not be sure. So this method tries to find
- * whatever can be found in the message and uses that... Obviously, there is some
- * potential for misinterpretation, which we simply can not solve under the
- * circumstances given.
+/* Helper to parseRFCSyslogMsg. This function parses a field up to
+ * (and including) the SP character after it. The field contents is
+ * returned in a caller-provided buffer. The parsepointer is advanced
+ * to after the terminating SP. The caller must ensure that the 
+ * provided buffer is large enough to hold the to be extracted value.
+ * Returns 0 if everything is fine or 1 if either the field is not
+ * SP-terminated or any other error occurs.
+ * rger, 2005-11-24
  */
-void logmsg(int pri, struct msg *pMsg, int flags)
+static int parseRFCField(char **pp2parse, char *pResult)
 {
-	/* allocate next entry and add it */
-	char *msg;
+	char *p2parse;
+	int iRet = 0;
+
+	assert(pp2parse != NULL);
+	assert(*pp2parse != NULL);
+	assert(pResult != NULL);
+
+	p2parse = *pp2parse;
+
+	/* this is the actual parsing loop */
+	while(*p2parse && *p2parse != ' ') {
+		*pResult++ = *p2parse++;
+	}
+
+	if(*p2parse == ' ')
+		++p2parse; /* eat SP, but only if not at end of string */
+	else
+		iRet = 1; /* there MUST be an SP! */
+	*pResult = '\0';
+
+	/* set the new parse pointer */
+	*pp2parse = p2parse;
+	return 0;
+}
+
+
+/* Helper to parseRFCSyslogMsg. This function parses the structured
+ * data field of a message. It does NOT parse inside structured data,
+ * just gets the field as whole. Parsing the single entities is left
+ * to other functions. The parsepointer is advanced
+ * to after the terminating SP. The caller must ensure that the 
+ * provided buffer is large enough to hold the to be extracted value.
+ * Returns 0 if everything is fine or 1 if either the field is not
+ * SP-terminated or any other error occurs.
+ * rger, 2005-11-24
+ */
+static int parseRFCStructuredData(char **pp2parse, char *pResult)
+{
+	char *p2parse;
+	int bCont = 1;
+	int iRet = 0;
+
+	assert(pp2parse != NULL);
+	assert(*pp2parse != NULL);
+	assert(pResult != NULL);
+
+	p2parse = *pp2parse;
+
+	/* this is the actual parsing loop
+	 * Remeber: structured data starts with [ and includes any characters
+	 * until the first ] followed by a SP. There may be spaces inside
+	 * structured data. There may also be \] inside the structured data, which
+	 * do NOT terminate an element.
+	 */
+	if(*p2parse != '[')
+		return 1; /* this is NOT structured data! */
+
+	while(bCont) {
+		if(*p2parse == '\0') {
+			iRet = 1; /* this is not valid! */
+			bCont = 0;
+		} else if(*p2parse == '\\' && *(p2parse+1) == ']') {
+			/* this is escaped, need to copy both */
+			*pResult++ = *p2parse++;
+			*pResult++ = *p2parse++;
+		} else if(*p2parse == ']' && *(p2parse+1) == ' ') {
+			/* found end, just need to copy the ] and eat the SP */
+			*pResult++ = *p2parse;
+			p2parse += 2;
+			bCont = 0;
+		} else {
+			*pResult++ = *p2parse++;
+		}
+	}
+
+	if(*p2parse == ' ')
+		++p2parse; /* eat SP, but only if not at end of string */
+	else
+		iRet = 1; /* there MUST be an SP! */
+	*pResult = '\0';
+
+	/* set the new parse pointer */
+	*pp2parse = p2parse;
+	return 0;
+}
+
+/* parse a RFC-formatted syslog message. This function returns
+ * 0 if processing of the message shall continue and 1 if something
+ * went wrong and this messe should be ignored. This function has been
+ * implemented in the effort to support syslog-protocol. Please note that
+ * the name (parse *RFC*) stems from the hope that syslog-protocol will
+ * some time become an RFC. Do not confuse this with informational
+ * RFC 3164 (which is legacy syslog).
+ *
+ * currently supported format:
+ *
+ * <PRI>VERSION SP TIMESTAMP SP HOSTNAME SP APP-NAME SP PROCID SP MSGID SP [SD-ID]s SP MSG
+ *
+ * <PRI> is already stripped when this function is entered. VERSION already
+ * has been confirmed to be "1", but has NOT been stripped from the message.
+ *
+ * rger, 2005-11-24
+ */
+static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
+{
+	char *p2parse;
+	char *pBuf;
+	int bContParse = 1;
+
+	assert(pMsg != NULL);
+	assert(pMsg->pszUxTradMsg != NULL);
+	p2parse = pMsg->pszUxTradMsg;
+
+	/* do a sanity check on the version and eat it */
+	assert(p2parse[0] == '1' && p2parse[1] == ' ');
+	p2parse += 2;
+
+	/* Now get us some memory we can use as a work buffer while parsing.
+	 * We simply allocated a buffer sufficiently large to hold all of the
+	 * message, so we can not run into any troubles. I think this is
+	 * more wise then to use individual buffers.
+	 */
+	if((pBuf = malloc(sizeof(char)* strlen(p2parse) + 1)) == NULL)
+		return 1;
+		
+	/* TIMESTAMP */
+	if(srSLMGParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), (unsigned char **) &p2parse) == FALSE) {
+		dprintf("no TIMESTAMP detected!\n");
+		bContParse = 0;
+		flags |= ADDDATE;
+	}
+
+	if (flags & ADDDATE) {
+		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+	}
+
+	/* HOSTNAME */
+	if(bContParse) {
+		parseRFCField(&p2parse, pBuf);
+dprintf("HOSTNAME: '%s'\n", pBuf);
+		MsgAssignHOSTNAME(pMsg, pBuf);
+	} else {
+		/* we can not parse, so we get the system we
+		 * received the data from.
+		 */
+		MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
+	}
+
+	/* APP-NAME */
+	if(bContParse) {
+		parseRFCField(&p2parse, pBuf);
+dprintf("APP-NAME: '%s'\n", pBuf);
+	//	MsgAssignHOSTNAME(pMsg, pBuf);
+	}
+
+	/* PROCID */
+	if(bContParse) {
+		parseRFCField(&p2parse, pBuf);
+dprintf("PROCID: '%s'\n", pBuf);
+	//	MsgAssignHOSTNAME(pMsg, pBuf);
+	}
+
+	/* MSGID */
+	if(bContParse) {
+		parseRFCField(&p2parse, pBuf);
+dprintf("MSGID: '%s'\n", pBuf);
+	//	MsgAssignHOSTNAME(pMsg, pBuf);
+	}
+
+	/* STRUCTURED-DATA */
+	if(bContParse) {
+		parseRFCStructuredData(&p2parse, pBuf);
+dprintf("STRUCTURED-DATA: '%s'\n", pBuf);
+	//	MsgAssignHOSTNAME(pMsg, pBuf);
+	}
+
+	/* MSG */
+	if(MsgSetMSG(pMsg, p2parse) != 0) return 1;
+
+	return 0; /* all ok */
+}
+/* parse a legay-formatted syslog message. This function returns
+ * 0 if processing of the message shall continue and 1 if something
+ * went wrong and this messe should be ignored. This function has been
+ * implemented in the effort to support syslog-protocol.
+ * rger, 2005-11-24
+ */
+static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
+{
 	char *p2parse;
 	char *pBuf;
 	char *pWork;
@@ -3704,18 +4013,12 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
-	msg = pMsg->pszUxTradMsg;
-	dprintf("logmsg: %s, flags %x, from '%s', msg %s\n", textpri(pri), flags, getRcvFrom(pMsg), msg);
+	p2parse = pMsg->pszUxTradMsg;
 
-#ifndef SYSV
-	omask = sigblock(sigmask(SIGHUP)|sigmask(SIGALRM));
-#endif
-
-	p2parse = msg;	/* our "message" begins here */
 	/*
 	 * Check to see if msg contains a timestamp
 	 */
-	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), msg) == TRUE)
+	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE)
 		p2parse += 16;
 	else {
 		bContParse = 0;
@@ -3748,7 +4051,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 		if(bContParse) {
 			/* TODO: quick and dirty memory allocation */
 			if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
-				return;
+				return 1;
 			pWork = pBuf;
 			/* this is the actual parsing loop */
 			while(*p2parse && *p2parse != ' ' && *p2parse != ':') {
@@ -3803,7 +4106,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	if(bContParse && !bTAGCharDetected) {
 		char *pszTAG;
 		if((pStrB = rsCStrConstruct()) == NULL) 
-			return;
+			return 1;
 		rsCStrSetAllocIncrement(pStrB, 33);
 		pWork = pBuf;
 		iCnt = 0;
@@ -3841,7 +4144,59 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	}
 
 	/* The rest is the actual MSG */
-	if(MsgSetMSG(pMsg, p2parse) != 0) return;
+	if(MsgSetMSG(pMsg, p2parse) != 0) return 1;
+
+	return 0; /* all ok */
+}
+
+
+/*
+ * Log a message to the appropriate log files, users, etc. based on
+ * the priority.
+ * rgerhards 2004-11-08: actually, this also decodes all but the PRI part.
+ * rgerhards 2004-11-09: ... but only, if syslogd could properly be initialized
+ *			 if not, we use emergency logging to the console and in
+ *                       this case, no further decoding happens.
+ * changed to no longer receive a plain message but a msg object instead.
+ * rgerhards-2004-11-16: OK, we are now up to another change... This method
+ * actually needs to PARSE the message. How exactly this needs to happen depends on
+ * a number of things. Most importantly, it depends on the source. For example,
+ * locally received messages (SOURCE_UNIXAF) do NOT have a hostname in them. So
+ * we need to treat them differntly form network-received messages which have.
+ * Well, actually not all network-received message really have a hostname. We
+ * can just hope they do, but we can not be sure. So this method tries to find
+ * whatever can be found in the message and uses that... Obviously, there is some
+ * potential for misinterpretation, which we simply can not solve under the
+ * circumstances given.
+ */
+void logmsg(int pri, struct msg *pMsg, int flags)
+{
+	char *msg;
+
+	assert(pMsg != NULL);
+	assert(pMsg->pszUxTradMsg != NULL);
+	msg = pMsg->pszUxTradMsg;
+	dprintf("logmsg: %s, flags %x, from '%s', msg %s\n", textpri(pri), flags, getRcvFrom(pMsg), msg);
+
+#ifndef SYSV
+	omask = sigblock(sigmask(SIGHUP)|sigmask(SIGALRM));
+#endif
+	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
+	 * a traditional syslog message or one formatted according to syslog-protocol.
+	 * We need to apply different parsers depending on that. We use the
+	 * -protocol VERSION field for the detection.
+	 */
+	if(msg[0] == '1' && msg[1] == ' ') {
+		dprintf("Message has syslog-protocol format.\n");
+		setProtocolVersion(pMsg, 1);
+		if(parseRFCSyslogMsg(pMsg, flags) == 1)
+			return;
+	} else { /* we have legacy syslog */
+		dprintf("Message has legacy syslog format.\n");
+		setProtocolVersion(pMsg, 0);
+		if(parseLegacySyslogMsg(pMsg, flags) == 1)
+			return;
+	}
 
 	/* ---------------------- END PARSING ---------------- */
 
@@ -7401,6 +7756,7 @@ int main(int argc, char **argv)
 	die(bFinished);
 	return 0;
 }
+
 
 /*
  * Local variables:

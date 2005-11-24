@@ -4,6 +4,8 @@ Version 1.12.2 (RGer), 2005-11-??
   after the actual timestamp
 - added support for providing high-precision RFC3339 timestamps for
   (rsyslogd-)internally-generated messages
+- very (!) experimental support for syslog-protocol internet draft
+  added
 ---------------------------------------------------------------------------
 Version 1.12.1 (RGer), 2005-11-23
 - made multithreading work with BSD. Some signal-handling needed to be
