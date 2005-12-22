@@ -2670,7 +2670,6 @@ static rsRetVal aquirePROCIDFromTAG(struct msg *pM)
 	register int i;
 	int iRet;
 
-dprintf("PROCIDFromTAG: in\n");
 	assert(pM != NULL);
 	if(pM->pCSPROCID != NULL)
 		return RS_RET_OK; /* we are already done ;) */
@@ -2712,7 +2711,6 @@ dprintf("PROCIDFromTAG: in\n");
 	if((iRet = rsCStrFinish(pM->pCSPROCID)) != RS_RET_OK)
 		return iRet;
 
-dprintf("PROCIDFromTAG: out\n");
 	return RS_RET_OK;
 }
 
@@ -2976,6 +2974,9 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 {
 	char *pName;
 	char *pRes; /* result pointer */
+	char *pBufStart;
+	char *pBuf;
+	int iLen;
 
 #ifdef	FEATURE_REGEXP
 	/* Variables necessary for regular expression matching */
@@ -3051,12 +3052,67 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 	 */
 	
 	/* substring extraction */
-	if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
+	/* first we check if we need to extract by field number
+	 * rgerhards, 2005-12-22
+	 */
+	if(pTpe->data.field.has_fields == 1) {
+		int iCurrFld;
+		char *pFld;
+		char *pFldEnd;
+		/* first, skip to the field in question. For now, a field
+		 * is made up of HT (tab) characters. This should be
+		 * configurable over time.
+		 */
+		iCurrFld = 1;
+		pFld = pRes;
+		while(*pFld && iCurrFld < pTpe->data.field.iFromPos) {
+			/* skip fields until the requested field or end of string is found */
+			while(*pFld && *pFld != '\t')
+				++pFld; /* skip to field terminator */
+			if(*pFld == '\t') {
+				++pFld; /* eat it */
+				++iCurrFld;
+			}
+		}
+		dprintf("field requested %d, field found %d\n", pTpe->data.field.iFromPos, iCurrFld);
+			
+		
+		if(iCurrFld == pTpe->data.field.iFromPos) {
+			/* field found, now extract it */
+			/* first of all, we need to find the end */
+			pFldEnd = pFld;
+			while(*pFldEnd && *pFldEnd != '\t')
+				++pFldEnd;
+			if(*pFldEnd == '\0')
+				--pFldEnd; /* back of to last real char */
+			/* we got our end pointer, now do the copy */
+			/* TODO: code copied from below, this is a candidate for a separate function */
+			iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
+dprintf("field len %d, start '%s'\n", iLen, pFld);
+			pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
+			if(pBuf == NULL) {
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				*pbMustBeFreed = 0;
+				return "**OUT OF MEMORY**";
+			}
+			/* now copy */
+			memcpy(pBuf, pFld, iLen);
+			pBuf[iLen] = '\0'; /* terminate it */
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = pBufStart;
+			*pbMustBeFreed = 1;
+		} else {
+			/* field not found, return error */
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			*pbMustBeFreed = 0;
+			return "**FIELD NOT FOUND**";
+		}
+	} else if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
 		/* we need to obtain a private copy */
-		int iLen;
 		int iFrom, iTo;
-		char *pBufStart;
-		char *pBuf;
 		iFrom = pTpe->data.field.iFromPos;
 		iTo = pTpe->data.field.iToPos;
 		/* need to zero-base to and from (they are 1-based!) */

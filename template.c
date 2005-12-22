@@ -286,6 +286,14 @@ static int do_Parameter(char **pp, struct template *pTpl)
 		} else {
 			/* now we fall through the "regular" FromPos code */
 #endif /* #ifdef FEATURE_REGEXP */
+			if(*p == 'F') {
+				/* we have a field counter, so indicate it in the template */
+				++p; /* eat 'F' */
+				pTpe->data.field.has_fields = 1;
+			}
+			/* we now fall through, as this is only a modifier, but it is followed
+			 * by a count as usual. rgerhards, 2005-12-22
+			 */
 			iNum = 0;
 			while(isdigit(*p))
 				iNum = iNum * 10 + *p++ - '0';
@@ -314,7 +322,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 			/* TODO : this is hardcoded and cant be escaped, please change */
 			regex_end = strstr(p, "--end");
 			if (regex_end == NULL) {
-				dprintf("error: Cant find regex end in: '%s'\n", p);
+				dprintf("error: can not find regex end in: '%s'\n", p);
 				pTpe->data.field.has_regex = 0;
 			} else {
 				/* We get here ONLY if the regex end was found */
@@ -339,7 +347,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
 				if (regcomp(&(pTpe->data.field.re), regex_char, 0) != 0) {
-					dprintf("error: Cant compile regex: '%s'\n", regex_char);
+					dprintf("error: can not compile regex: '%s'\n", regex_char);
 					pTpe->data.field.has_regex = 2;
 				}
 
@@ -368,7 +376,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 	}
 
 	/* TODO: add more sanity checks. For now, we do the bare minimum */
-	if(pTpe->data.field.iToPos < pTpe->data.field.iFromPos) {
+	if((pTpe->data.field.has_fields == 0) && (pTpe->data.field.iToPos < pTpe->data.field.iFromPos)) {
 		iNum = pTpe->data.field.iToPos;
 		pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
 		pTpe->data.field.iFromPos = iNum;
@@ -628,8 +636,11 @@ void tplPrintList(void)
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dprintf("[drop last LF in msg] ");
 				}
-				if(pTpe->data.field.iFromPos != 0 ||
-				   pTpe->data.field.iToPos != 0) {
+				if(pTpe->data.field.has_fields == 1) {
+				  	dprintf("[substring, field #%d only] ",
+						pTpe->data.field.iFromPos);
+				} else if(pTpe->data.field.iFromPos != 0 ||
+				          pTpe->data.field.iToPos != 0) {
 				  	dprintf("[substring, from character %d to %d] ",
 						pTpe->data.field.iFromPos,
 						pTpe->data.field.iToPos);
