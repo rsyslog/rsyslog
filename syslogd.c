@@ -818,9 +818,7 @@ static void wallmsg(register struct filed *f);
 static void reapchild();
 static const char *cvthname(struct sockaddr_in *f);
 static void debug_switch();
-static void logerror(char *type);
 static void logerrorInt(char *type, int errCode);
-static void logerrorSz(char *type, char *errMsg);
 static rsRetVal cfline(char *line, register struct filed *f);
 static int decode(char *name, struct code *codetab);
 static void sighup_handler();
@@ -3065,7 +3063,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		 */
 		iCurrFld = 1;
 		pFld = pRes;
-		while(*pFld && iCurrFld < pTpe->data.field.iFromPos) {
+		while(*pFld && iCurrFld < pTpe->data.field.iToPos) {
 			/* skip fields until the requested field or end of string is found */
 			while(*pFld && *pFld != '\t')
 				++pFld; /* skip to field terminator */
@@ -3074,10 +3072,10 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 				++iCurrFld;
 			}
 		}
-		dprintf("field requested %d, field found %d\n", pTpe->data.field.iFromPos, iCurrFld);
+		dprintf("field requested %d, field found %d\n", pTpe->data.field.iToPos, iCurrFld);
 			
 		
-		if(iCurrFld == pTpe->data.field.iFromPos) {
+		if(iCurrFld == pTpe->data.field.iToPos) {
 			/* field found, now extract it */
 			/* first of all, we need to find the end */
 			pFldEnd = pFld;
@@ -5482,7 +5480,7 @@ static void debug_switch()
  * correctly formatted for it (containing a single %s param).
  * rgerhards 2005-09-19
  */
-static void logerrorSz(char *type, char *errMsg)
+void logerrorSz(char *type, char *errMsg)
 {
 	char buf[1024];
 
@@ -5508,7 +5506,7 @@ static void logerrorInt(char *type, int errCode)
 
 /* Print syslogd errors some place.
  */
-static void logerror(char *type)
+void logerror(char *type)
 {
 	char buf[1024];
 

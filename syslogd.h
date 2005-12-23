@@ -3,5 +3,7 @@
 #define dprintf mydprintf
 #endif /* __GLIBC__ */
 void dprintf(char *, ...);
+void logerror(char *type);
+void logerrorSz(char *type, char *errMsg);
 
 #include "rsyslog.h"

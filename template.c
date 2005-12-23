@@ -276,10 +276,9 @@ static int do_Parameter(char **pp, struct template *pTpl)
 			if (*p != ':') {
 				/* There is something more than an R , this is invalid ! */
 				/* Complain on extra characters */
-				dprintf
-				    ("error: extra character in frompos, only \"R\" and numbers are allowed: '%s'\n",
-				     p);
-				/* TODO: rger- add/change to logerror? */
+				logerrorSz
+				  ("error: invalid character in frompos after \"R\", property: '%%%s'",
+				    *pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
 			}
@@ -289,20 +288,30 @@ static int do_Parameter(char **pp, struct template *pTpl)
 			if(*p == 'F') {
 				/* we have a field counter, so indicate it in the template */
 				++p; /* eat 'F' */
-				pTpe->data.field.has_fields = 1;
-			}
-			/* we now fall through, as this is only a modifier, but it is followed
-			 * by a count as usual. rgerhards, 2005-12-22
-			 */
-			iNum = 0;
-			while(isdigit(*p))
-				iNum = iNum * 10 + *p++ - '0';
-			pTpe->data.field.iFromPos = iNum;
-			/* skip to next known good */
-			while(*p && *p != '%' && *p != ':') {
-				/* TODO: complain on extra characters */
-				dprintf("error: extra character in frompos: '%s'\n", p);
-				++p;
+				if (*p != ':') {
+					/* There is something more than an F, this is invalid ! */
+					/* 2005-12-23 rgerhards: later, we will add modifiers, so
+					 * extra characters will then be valid. this is the number 1
+					 * reason why this code is NOT combined with the "R" case.
+					 */
+					logerrorSz
+					  ("error: invalid character in frompos after \"F\", property: '%%%s'",
+					    *pp);
+				} else {
+					pTpe->data.field.has_fields = 1;
+				}
+			} else {
+				/* we now have a simple offset in frompos (the previously "normal" case) */
+				iNum = 0;
+				while(isdigit(*p))
+					iNum = iNum * 10 + *p++ - '0';
+				pTpe->data.field.iFromPos = iNum;
+				/* skip to next known good */
+				while(*p && *p != '%' && *p != ':') {
+					/* TODO: complain on extra characters */
+					dprintf("error: extra character in frompos: '%s'\n", p);
+					++p;
+				}
 			}
 #ifdef FEATURE_REGEXP
 		}
@@ -341,8 +350,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 				memcpy(regex_char, p, longitud);
 				regex_char[longitud] = '\0';
 
-				dprintf("debug: regex detected: '%s'\n",
-					regex_char);
+				dprintf("debug: regex detected: '%s'\n", regex_char);
 
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
@@ -638,7 +646,7 @@ void tplPrintList(void)
 				}
 				if(pTpe->data.field.has_fields == 1) {
 				  	dprintf("[substring, field #%d only] ",
-						pTpe->data.field.iFromPos);
+						pTpe->data.field.iToPos);
 				} else if(pTpe->data.field.iFromPos != 0 ||
 				          pTpe->data.field.iToPos != 0) {
 				  	dprintf("[substring, from character %d to %d] ",
