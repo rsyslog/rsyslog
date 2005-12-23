@@ -33,6 +33,8 @@ SP MSG</code></b></p>
 	the message was received via legacy format, API or syslog-protocol format (non-present 
 	fields are being emulated with great success)</li>
 	<li>maximum message size is set via preprocessor #define</li>
+	<li>syslog-protocol messages can be transmitted both over UDP and plain TCP 
+	with some restrictions on compliance in the case of TCP</li>
 </ul>
 <h2>Findings</h2>
 <p>This lists what has been found during implementation:</p>
@@ -132,6 +134,40 @@ SP MSG</code></b></p>
 	<li>The error logging recommendations (those I insisted on;)) are not really 
 	practical. My application has its own error logging philosophy and I will 
 	not change this to follow a draft.</li>
+	<li>Relevance of support for leap seconds and senders without knowledge of 
+	time is questionable. I have not made any specific provisions in the code 
+	nor would I know how to handle that differently. I could, however, pull the 
+	local reception timestamp in this case, so it might be useful to have this 
+	feature. I do not think any more about this for the initial proof-of-concept. 
+	Note it as a potential problem area, especially when logging to databases.</li>
+	<li>The HOSTNAME field for internally generated messages currently contains 
+	the hostname part only, not the FQDN. This can be changed inside the code 
+	base, but it requires some thinking so that thinks are kept compatible with 
+	legacy syslog. I have not done this for the proof-of-concept, but I think it 
+	is not really bad. Maybe an hour or half a day of thinking.</li>
+	<li>It is possible that I did not receive a TAG with legacy syslog or via 
+	the syslog API. In this case, I can not generate the APP-NAME. For 
+	consistency, I have used &quot;-&quot; in such cases (just like in PROCID, MSGID and 
+	STRUCTURED-DATA).</li>
+	<li>As an architectural side-effect, syslog-protocol formatted messages can 
+	also be transmitted over non-standard syslog/raw tcp. This implementation 
+	uses the industry-standard LF termination of tcp syslog records. As such, 
+	syslog-protocol messages containing a LF will be broken invalidly. There is 
+	nothing that can be done against this without specifying a TCP transport. 
+	This issue might be more important than one thinks on first thought. The 
+	reason is the wide deployment of syslog/tcp via industry standard.</li>
+</ul>
+<p><b>Some notes on syslog-transport-udp-06</b></p>
+<ul>
+	<li>I did not make any low-level modifications to the UDP code and think I 
+	am still basically covered with this I-D.</li>
+	<li>I deliberately violate section 3.3 insofar as that I do not necessarily 
+	accept messages destined to port 514. This feature is user-required and a 
+	must. The same applies to the destination port. I am not sure if the &quot;MUST&quot; 
+	in section 3.3 was meant that this MUST be an option, but not necessarily be 
+	active. The wording should be clarified.</li>
+	<li>section 3.6: I do not check checksums. See the issue with discarding 
+	messages above. The same solution will probably be applied in my code.</li>
 </ul>
 <p>&nbsp;</p>
 <h2>Conlusions/Suggestions</h2>
@@ -149,6 +185,10 @@ discussed ;)</p>
 	<li>Requirements to drop messages should be reconsidered. I guess I would 
 	not be the only implementor ignoring them.</li>
 	<li>Logging requirements should be reconsidered and probably be removed.</li>
+	<li>It would be advisable to specify &quot;-&quot; for APP-NAME is the name is not 
+	known to the sender.</li>
+	<li>The implications of the current syslog/tcp industry standard on 
+	syslog-protocol should be further evaluated and be fully understood</li>
 </ul>
 <p>&nbsp;</p>
 </body>
