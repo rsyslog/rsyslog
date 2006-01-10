@@ -6025,7 +6025,7 @@ static void init()
 
 
 #ifdef SYSLOG_UNIXAF
-	for (i = 0; i < nfunix; i++) {
+	for (i = startIndexUxLocalSockets ; i < nfunix ; i++) {
 		if (funix[i] != -1)
 			/* Don't close the socket, preserve it instead
 			close(funix[i]);

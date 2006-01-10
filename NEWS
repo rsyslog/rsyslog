@@ -9,6 +9,8 @@ Version 1.12.2 (RGer), 2005-12-??
 - added support for field-extracting in the property replacer
 - enhanced the legacy-syslog parser so that it can interpret messages
   that do not contain a TIMESTAMP
+- fixed a bug that caused the default socket (usually /dev/log) to be
+  opened even when -o command line option was given
 ---------------------------------------------------------------------------
 Version 1.12.1 (RGer), 2005-11-23
 - made multithreading work with BSD. Some signal-handling needed to be
