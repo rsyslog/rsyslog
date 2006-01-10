@@ -4332,6 +4332,13 @@ static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
  * went wrong and this messe should be ignored. This function has been
  * implemented in the effort to support syslog-protocol.
  * rger, 2005-11-24
+ * As of 2006-01-10, I am removing the logic to continue parsing only
+ * when a valid TIMESTAMP is detected. Validity of other fields already
+ * is ignored. This is due to the fact that the parser has grown smarter
+ * and is now more able to understand different dialects of the syslog
+ * message format. I do not expect any bad side effects of this change,
+ * but I thought I log it in this comment.
+ * rgerhards, 2006-01-10
  */
 static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 {
@@ -4340,7 +4347,6 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 	char *pWork;
 	rsCStrObj *pStrB;
 	int iCnt;
-	int bContParse = 1;
 	int bTAGCharDetected;
 
 	assert(pMsg != NULL);
@@ -4353,7 +4359,6 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE)
 		p2parse += 16;
 	else {
-		bContParse = 0;
 		flags |= ADDDATE;
 	}
 
@@ -4380,33 +4385,26 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 	 */
 	bTAGCharDetected = 0;
 	if(pMsg->bParseHOSTNAME) {
-		if(bContParse) {
-			/* TODO: quick and dirty memory allocation */
-			if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
-				return 1;
-			pWork = pBuf;
-			/* this is the actual parsing loop */
-			while(*p2parse && *p2parse != ' ' && *p2parse != ':') {
-				if(   *p2parse == '[' || *p2parse == ']' || *p2parse == '/')
-					bTAGCharDetected = 1;
-				*pWork++ = *p2parse++;
-			}
-			/* we need to handle ':' seperately, because it terminates the
-			 * TAG - so we also need to terminate the parser here!
-			 */
-			if(*p2parse == ':') {
+		/* TODO: quick and dirty memory allocation */
+		if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
+			return 1;
+		pWork = pBuf;
+		/* this is the actual parsing loop */
+		while(*p2parse && *p2parse != ' ' && *p2parse != ':') {
+			if(   *p2parse == '[' || *p2parse == ']' || *p2parse == '/')
 				bTAGCharDetected = 1;
-				++p2parse;
-			} else if(*p2parse == ' ')
-				++p2parse;
-			*pWork = '\0';
-			MsgAssignHOSTNAME(pMsg, pBuf);
-		} else {
-			/* we can not parse, so we get the system we
-			 * received the data from.
-			 */
-			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
+			*pWork++ = *p2parse++;
 		}
+		/* we need to handle ':' seperately, because it terminates the
+		 * TAG - so we also need to terminate the parser here!
+		 */
+		if(*p2parse == ':') {
+			bTAGCharDetected = 1;
+			++p2parse;
+		} else if(*p2parse == ' ')
+			++p2parse;
+		*pWork = '\0';
+		MsgAssignHOSTNAME(pMsg, pBuf);
 	}
 	/* check if we seem to have a TAG */
 	if(bTAGCharDetected) {
@@ -4435,7 +4433,7 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 	/* lol.. we tried to solve it, just to remind ourselfs that 32 octets
 	 * is the max size ;) we need to shuffle the code again... Just for 
 	 * the records: the code is currently clean, but we could optimize it! */
-	if(bContParse && !bTAGCharDetected) {
+	if(!bTAGCharDetected) {
 		char *pszTAG;
 		if((pStrB = rsCStrConstruct()) == NULL) 
 			return 1;
