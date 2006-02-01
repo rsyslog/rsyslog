@@ -896,7 +896,6 @@ void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
-printf("## in loop\n");
 		if(iMsg >= MAXLINE) {
 			/* emergency, we now need to flush, no matter if
 			 * we are at end of message or not...
@@ -914,7 +913,6 @@ printf("## in loop\n");
 			printline(TCPSessions[iTCPSess].fromHost, pMsg, SOURCE_INET);
 			iMsg = 0;
 			++pData;
-printf("## record delim found\n");
 		} else {
 			*(pMsg + iMsg++) = *pData++;
 		}

@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 1.0.4 (RGer), 2006-02-01
+- a small but important fix: the tcp receiver had two forgotten printf's
+  in it that caused a lot of unnecessary output to stdout. This was
+  important enough to justify a new release
+---------------------------------------------------------------------------
 Version 1.0.3 (RGer), 2005-11-14
 - added an additional guard to prevent rsyslogd from aborting when the
   2gb file size limit is hit. While a user can configure rsyslogd to
