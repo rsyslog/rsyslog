@@ -12,7 +12,7 @@ test -x $binpath || exit 0
 #   For remote UDP logging use SYSLOGD="-r 0"
 #   For relaying add "-h" to SYSLOGD
 #
-SYSLOGD="-r 0 -h"
+SYSLOGD=""
 
 create_xconsole()
 {

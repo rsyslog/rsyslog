@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 1.0.5 (RGer), 2006-02-??
+- fixed a bug in the Debian sample startup script - it caused rsyslogd
+  to listen to remote requests, which it shouldn't by default
+---------------------------------------------------------------------------
 Version 1.0.4 (RGer), 2006-02-01
 - a small but important fix: the tcp receiver had two forgotten printf's
   in it that caused a lot of unnecessary output to stdout. This was
