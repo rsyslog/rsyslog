@@ -11,6 +11,8 @@ Version 1.12.2 (RGer), 2005-12-??
   that do not contain a TIMESTAMP
 - fixed a bug that caused the default socket (usually /dev/log) to be
   opened even when -o command line option was given
+- fixed a bug in the Debian sample startup script - it caused rsyslogd
+  to listen to remote requests, which it shouldn't by default
 ---------------------------------------------------------------------------
 Version 1.12.1 (RGer), 2005-11-23
 - made multithreading work with BSD. Some signal-handling needed to be
@@ -127,6 +129,31 @@ Version 1.10.0 (RGer), 2005-09-20
   to happen only during debug mode
 - fixed a problem with compiling on SUSE and - while doing so - removed
   the socket call to set SO_BSDCOMPAT in cases where it is obsolete.
+---------------------------------------------------------------------------
+Version 1.0.4 (RGer), 2006-02-01
+- a small but important fix: the tcp receiver had two forgotten printf's
+  in it that caused a lot of unnecessary output to stdout. This was
+  important enough to justify a new release
+---------------------------------------------------------------------------
+Version 1.0.3 (RGer), 2005-11-14
+- added an additional guard to prevent rsyslogd from aborting when the
+  2gb file size limit is hit. While a user can configure rsyslogd to
+  handle such situations, it would abort if that was not done AND large
+  file support was not enabled (ok, this is hopefully an unlikely scenario)
+- fixed a bug that caused additional Unix domain sockets to be incorrectly
+  processed - could lead to message loss in extreme cases
+- applied some patches available from the sysklogd project to code
+  shared from there
+- fixed a bug that causes rsyslogd to dump core on termination when one
+  of the selector lines did not receive a message during the run (very
+  unlikely)
+- fixed an one-too-low memory allocation in the TCP sender. Could result
+  in rsyslogd dumping core.
+- fixed a bug in the TCP sender that caused the retry logic to fail
+  after an error or receiver overrun
+- fixed a bug in init() that could lead to dumping core
+- fixed a bug that could lead to dumping core when no HOSTNAME or no TAG
+  was present in the syslog message
 ---------------------------------------------------------------------------
 Version 1.0.2 (RGer), 2005-10-05
 - fixed an issue with MySQL error reporting. When an error occured,
