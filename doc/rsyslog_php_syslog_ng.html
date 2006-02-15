@@ -67,7 +67,7 @@ That is easy. Just these two lines are needed:</p>
 <blockquote>
 	<code><font color="green">$template syslog-ng,&quot;insert into logs(host, facility, priority, tag, date, 
 	time, msg) values ('%HOSTNAME%', %syslogfacility%, %syslogpriority%, 
-	%syslogtag%',&nbsp; '%timereported:::date-mysql%', '%timereported:::date-mysql%', 
+	'%syslogtag%',&nbsp; '%timereported:::date-mysql%', '%timereported:::date-mysql%', 
 	'%msg%')&quot;, SQL</font> <br>
 	<font color="red">*.*&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&gt;mysql-server,syslog,user,pass;syslog-ng</font>
 	</code>
