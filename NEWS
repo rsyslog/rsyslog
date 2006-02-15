@@ -1,11 +1,11 @@
 ---------------------------------------------------------------------------
-Version 1.12.2 (RGer), 2005-12-??
-- fixed a bug in the RFC 3339 date formater. An extra space was added
+Version 1.12.2 (RGer), 2006-02-15
+- fixed a bug in the RFC 3339 date formatter. An extra space was added
   after the actual timestamp
 - added support for providing high-precision RFC3339 timestamps for
   (rsyslogd-)internally-generated messages
 - very (!) experimental support for syslog-protocol internet draft
-  added
+  added (the draft is experimental, the code is solid ;))
 - added support for field-extracting in the property replacer
 - enhanced the legacy-syslog parser so that it can interpret messages
   that do not contain a TIMESTAMP

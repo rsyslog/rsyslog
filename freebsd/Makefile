@@ -31,10 +31,7 @@ FEATURE_REGEXP=1
 # Enable RFC 3195 support (REQUIRES LIBLOGGING 0.6.0 or above!)
 FEATURE_RFC3195=0
 
-# Enable multithreading via pthreads (very experimental!)
-# Current thread code causes grief with signal handlers under
-# BSD - chances are extremely high rsyslogd will dump core if
-# enabled under BSD!
+# Enable multithreading via pthreads (experimental!)
 FEATURE_PTHREADS=1
 
 # Enable debug mode (much slower code)
