@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.12.x (RGer), 2006-xx-xx
+---------------------------------------------------------------------------
 Version 1.12.2 (RGer), 2006-02-15
 - fixed a bug in the RFC 3339 date formatter. An extra space was added
   after the actual timestamp
