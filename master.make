@@ -42,7 +42,7 @@ test: syslog_tst tsyslogd
 install: install_man install_exec
 
 syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o outchannel.o parse.o
-	${CC} ${LDFLAGS} $(LPTHREAD) -o syslogd syslogd.o pidfile.o template.o outchannel.o stringbuf.o srUtils.o parse.o ${LIBS}
+	${CC} ${LDFLAGS} ${EXTRALIB} $(LPTHREAD) -o syslogd syslogd.o pidfile.o template.o outchannel.o stringbuf.o srUtils.o parse.o ${LIBS}
 
 rfc3195d: rfc3195d.o
 	${CC} ${LDFLAGS} -o rfc3195d rfc3195d.o ${LIBLOGGING_BIN}

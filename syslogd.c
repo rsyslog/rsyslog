@@ -183,6 +183,12 @@
 #include <paths.h>
 #endif
 
+/* handle some defines missing on more than one platform */
+#ifndef SUN_LEN
+#define SUN_LEN(su) \
+   (sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))
+#endif
+
 /* missing definitions for solaris
  * 2006-02-16 Rger
  */
@@ -191,6 +197,9 @@
 #define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
 #define	LOG_PRI(p)	((p) & LOG_PRIMASK)
 #define	LOG_FAC(p)	(((p) & LOG_FACMASK) >> 3)
+#define INTERNAL_NOPRI  0x10    /* the "no priority" priority */
+#define LOG_FTP         (11<<3) /* ftp daemon */
+#define INTERNAL_MARK   LOG_MAKEPRI((LOG_NFACILITIES<<3), 0)
 typedef struct _code {
         char    *c_name;
         int     c_val;
@@ -2068,6 +2077,7 @@ static int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf
  * returns the size of the timestamp written in bytes (without
  * the string termnator). If 0 is returend, an error occured.
  */
+#if 0 /* This method is currently not called, be we like to preserve it */
 static int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 {
 	assert(ts != NULL);
@@ -2083,6 +2093,7 @@ static int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 
 	return(0);
 }
+#endif
 
 
 /**
@@ -2115,7 +2126,14 @@ static void getCurrTime(struct syslogTime *t)
 	t->secfrac = tp.tv_usec;
 	t->secfracPrecision = 6;
 
-	lBias = tm->tm_gmtoff;
+#	if __sun
+		/* Solaris uses a different method of exporting the time zone.
+		 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
+		 */
+		lBias = -(daylight ? altzone : timezone);
+#	else
+		lBias = tm->tm_gmtoff;
+#	endif
 	if(lBias < 0)
 	{
 		t->OffsetMode = '-';
@@ -2526,10 +2544,12 @@ static rsRetVal MsgSetMSGID(struct msg *pMsg, char* pszMSGID)
 
 /* rgerhards, 2005-11-24
  */
+#if 0 /* This method is currently not called, be we like to preserve it */
 static int getMSGIDLen(struct msg *pM)
 {
 	return (pM->pCSMSGID == NULL) ? 1 : rsCStrLen(pM->pCSMSGID);
 }
+#endif
 
 
 /* rgerhards, 2005-11-24
@@ -2604,6 +2624,7 @@ static void tryEmulateTAG(struct msg *pM)
 }
 
 
+#if 0 /* This method is currently not called, be we like to preserve it */
 static int getTAGLen(struct msg *pM)
 {
 	if(pM == NULL)
@@ -2616,6 +2637,7 @@ static int getTAGLen(struct msg *pM)
 			return pM->iLenTAG;
 	}
 }
+#endif
 
 
 static char *getTAG(struct msg *pM)
@@ -2684,10 +2706,12 @@ static rsRetVal MsgSetStructuredData(struct msg *pMsg, char* pszStrucData)
 /* get the length of the "STRUCTURED-DATA" sz string
  * rgerhards, 2005-11-24
  */
+#if 0 /* This method is currently not called, be we like to preserve it */
 static int getStructuredDataLen(struct msg *pM)
 {
 	return (pM->pCSStrucData == NULL) ? 1 : rsCStrLen(pM->pCSStrucData);
 }
+#endif
 
 
 /* get the "STRUCTURED-DATA" as sz string
@@ -2921,6 +2945,7 @@ static int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
  * function is a performance optimization over MsgSetUxTradMsg().
  * rgerhards 2004-11-19
  */
+#if 0 /* This method is currently not called, be we like to preserve it */
 static void MsgAssignUxTradMsg(struct msg *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
@@ -2928,6 +2953,7 @@ static void MsgAssignUxTradMsg(struct msg *pMsg, char *pBuf)
 	pMsg->iLenUxTradMsg = strlen(pBuf);
 	pMsg->pszUxTradMsg = pBuf;
 }
+#endif
 
 
 /* rgerhards 2004-11-17: set the traditional Unix message in msg object
@@ -5635,7 +5661,7 @@ static void die(int sig)
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
 		 PATCHLEVEL "\" x-pid=\"%d\"]" " exiting on signal %d.",
-		 myPid, sig);
+		 (int) myPid, sig);
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
 	}
@@ -6210,7 +6236,7 @@ static void init()
 		 PATCHLEVEL "\" x-pid=\"%d\"][x-configInfo udpReception=\"%s\" " \
 		 "udpPort=\"%d\" tcpReception=\"%s\" tcpPort=\"%d\"]" \
 		 " restart",
-		 myPid,
+		 (int) myPid,
 		 AcceptRemote ? "Yes" : "No", LogPort,
 		 bEnableTCP   ? "Yes" : "No",  TCPLstnPort );
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, LocalHostName, ADDDATE);

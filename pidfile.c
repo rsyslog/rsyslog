@@ -31,6 +31,9 @@
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
+#ifdef __sun
+#include <fcntl.h>
+#endif
 
 /* read_pid
  *
@@ -93,12 +96,22 @@ int write_pid (char *pidfile)
       return 0;
   }
 
+ /* It seems to be acceptable that we do not lock the pid file
+  * if we run under Solaris. In any case, it is highly unlikely
+  * that two instances try to access this file. And flock is really
+  * causing me grief on my initial steps on Solaris. Some time later,
+  * we might re-enable it (or use some alternate method).
+  * 2006-02-16 rgerhards
+  */
+
+#ifndef	__sun
   if (flock(fd, LOCK_EX|LOCK_NB) == -1) {
       fscanf(f, "%d", &pid);
       fclose(f);
       printf("Can't lock, lock is held by pid %d.\n", pid);
       return 0;
   }
+#endif
 
   pid = getpid();
   if (!fprintf(f,"%d\n", pid)) {
@@ -108,11 +121,13 @@ int write_pid (char *pidfile)
   }
   fflush(f);
 
+#ifndef	__sun
   if (flock(fd, LOCK_UN) == -1) {
       printf("Can't unlock pidfile %s, %s.\n", pidfile, strerror(errno));
       close(fd);
       return 0;
   }
+#endif
   close(fd);
 
   return pid;
