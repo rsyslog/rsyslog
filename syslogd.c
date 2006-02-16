@@ -136,7 +136,11 @@
 #define SYSLOG_NAMES
 #include <sys/syslog.h>
 #include <sys/param.h>
+#ifdef	__sun
+#include <errno.h>
+#else
 #include <sys/errno.h>
+#endif
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -155,8 +159,10 @@
 
 #include <netinet/in.h>
 #include <netdb.h>
+#ifndef __sun
 #ifndef BSD
 #include <syscall.h>
+#endif
 #endif
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
@@ -175,6 +181,16 @@
 
 #if defined(__linux__)
 #include <paths.h>
+#endif
+
+/* missing definitions for solaris
+ * 2006-02-16 Rger
+ */
+#ifdef __sun
+#define LOG_AUTHPRIV LOG_AUTH
+#define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
+#define	LOG_PRI(p)	((p) & LOG_PRIMASK)
+#define	LOG_FAC(p)	(((p) & LOG_FACMASK) >> 3)
 #endif
 
 #include "rsyslog.h"
@@ -217,6 +233,9 @@
 #undef _PATH_LOGPID
 #if defined(FSSTND)
 #ifdef BSD
+#define _PATH_VARRUN "/var/run/"
+#endif
+#ifdef __sun
 #define _PATH_VARRUN "/var/run/"
 #endif
 #define _PATH_LOGPID _PATH_VARRUN SYSLOGD_PIDNAME
@@ -3637,8 +3656,6 @@ void printline(char *hname, char *msg, int bParseHost)
 }
 
 /* Decode a priority into textual information like auth.emerg.
- * rgerhards: This needs to be changed for syslog-protocol - severities
- * are then supported up to 2^32-1.
  */
 char *textpri(pri)
 	int pri;

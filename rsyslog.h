@@ -16,6 +16,9 @@
  * ############################################################# */
 
 #ifndef	NOLARGEFILE
+#	undef _LARGEFILE_SOURCE  
+#	undef _LARGEFILE64_SOURCE  
+#	undef _FILE_OFFSET_BITS
 #	define _GNU_SOURCE
 #	define _LARGEFILE_SOURCE  
 #	define _LARGEFILE64_SOURCE  
