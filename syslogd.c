@@ -329,7 +329,6 @@ CODE facilitynames[] =
 #endif
 #endif
 
-
 /* The following #ifdef sequence is a small compatibility 
  * layer. It tries to work around the different availality
  * levels of SO_BSDCOMPAT on linuxes...
@@ -6123,7 +6122,7 @@ static void init()
 			*/
 			continue;
 		if ((funix[i] = create_unix_socket(funixn[i])) != -1)
-			dprintf("Opened UNIX socket `%s'.\n", funixn[i]);
+			dprintf("Opened UNIX socket `%s' (fd %d).\n", funixn[i], funix[i]);
 	}
 #endif
 

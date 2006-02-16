@@ -1,9 +1,25 @@
 # Makefile for rsyslog
-# Copyright (C) 2004, 2005 Rainer Gerhards and Adiscon GmbH
-# This is the distro-specifc part of the Makefile.
-# This makefile here should be suitable for all flavours
-# of linux.
+# Copyright (C) 2004-2006 Rainer Gerhards and Adiscon GmbH
+# This is the Solaris part of the Makefile.
 # For details, see http://www.rsyslog.com/doc
+#
+#    C A U T I O N
+# So far, I have just make sure that rsyslog compiles under
+# Solaris. I have NOT used the RFC 3195 options, but that
+# should work, too, as liblogging cleanly compiles under
+# Solaris. I have done only very limited testing. From that,
+# it *seems* to work, but Solaris support is still experimental.
+# IT IS KNOWN THAT THE LOCAL LOG SOCKET SEEMS **NOT** TO WORK.
+# This seems to be related to using a different interface for
+# /dev/log than Linux and BSD. I am evaluating this problem,
+# but for the time being rsyslogd seems to be unable to act
+# as a local logger. But you can run it alongside the Solaris
+# stock syslogd.
+#
+# I will only look into this issue if people show up that
+# ask for local logging under Solaris. So please speak up
+# if you would like to see it!
+#
 
 #############################################################
 #                       USER SETTINGS                       #
