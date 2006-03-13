@@ -677,6 +677,8 @@ static int bGlblDone = 0;
 #endif
 /* END supporting structures for multithreading */
 
+static int bParseHOSTNAMEandTAG = 1; /* global config var: should the hostname and tag be
+                                      * parsed inside message - rgerhards, 2006-03-13 */
 static int bFinished = 0;	/* used by termination signal handler, read-only except there
 				 * is either 0 or the number of the signal that requested the
  				 * termination.
@@ -4462,105 +4464,121 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	}
 
-	/* parse HOSTNAME - but only if this is network-received!
-	 * rger, 2005-11-14: we still have a problem with BSD messages. These messages
-	 * do NOT include a host name. In most cases, this leads to the TAG to be treated
-	 * as hostname and the first word of the message as the TAG. Clearly, this is not
-	 * of advantage ;) I think I have now found a way to handle this situation: there
-	 * are certain characters which are frequently used in TAG (e.g. ':'), which are
-	 * *invalid* in host names. So while parsing the hostname, I check for these characters.
-	 * If I find them, I set a simple flag but continue. After parsing, I check the flag.
-	 * If it was set, then we most probably do not have a hostname but a TAG. Thus, I change
-	 * the fields. I think this logic shall work with any type of syslog message.
+	/* rgerhards, 2006-03-13: next, we parse the hostname and tag. But we 
+	 * do this only when the user has not forbidden this. I now introduce some
+	 * code that allows a user to configure rsyslogd to treat the rest of the
+	 * message as MSG part completely. In this case, the hostname will be the
+	 * machine that we received the message from and the tag will be empty. This
+	 * is meant to be an interim solution, but for now it is in the code.
 	 */
-	bTAGCharDetected = 0;
-	if(pMsg->bParseHOSTNAME) {
-		/* TODO: quick and dirty memory allocation */
-		if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
-			return 1;
-		pWork = pBuf;
-		/* this is the actual parsing loop */
-		while(*p2parse && *p2parse != ' ' && *p2parse != ':') {
-			if(   *p2parse == '[' || *p2parse == ']' || *p2parse == '/')
-				bTAGCharDetected = 1;
-			*pWork++ = *p2parse++;
-		}
-		/* we need to handle ':' seperately, because it terminates the
-		 * TAG - so we also need to terminate the parser here!
-		 */
-		if(*p2parse == ':') {
-			bTAGCharDetected = 1;
-			++p2parse;
-		} else if(*p2parse == ' ')
-			++p2parse;
-		*pWork = '\0';
-		MsgAssignHOSTNAME(pMsg, pBuf);
-	}
-	/* check if we seem to have a TAG */
-	if(bTAGCharDetected) {
-		/* indeed, this smells like a TAG, so lets use it for this. We take
-		 * the HOSTNAME from the sender system instead.
-		 */
-		dprintf("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
-		moveHOSTNAMEtoTAG(pMsg);
-		MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
-	}
 
-	/* now parse TAG - that should be present in message from
-	 * all sources.
-	 * This code is somewhat not compliant with RFC 3164. As of 3164,
-	 * the TAG field is ended by any non-alphanumeric character. In
-	 * practice, however, the TAG often contains dashes and other things,
-	 * which would end the TAG. So it is not desirable. As such, we only
-	 * accept colon and SP to be terminators. Even there is a slight difference:
-	 * a colon is PART of the TAG, while a SP is NOT part of the tag
-	 * (it is CONTENT). Finally, we allow only up to 32 characters for
-	 * TAG, as it is specified in RFC 3164.
-	 */
-	/* The following code in general is quick & dirty - I need to get
-	 * it going for a test, TODO: redo later. rgerhards 2004-11-16 */
-	/* TODO: quick and dirty memory allocation */
-	/* lol.. we tried to solve it, just to remind ourselfs that 32 octets
-	 * is the max size ;) we need to shuffle the code again... Just for 
-	 * the records: the code is currently clean, but we could optimize it! */
-	if(!bTAGCharDetected) {
-		char *pszTAG;
-		if((pStrB = rsCStrConstruct()) == NULL) 
-			return 1;
-		rsCStrSetAllocIncrement(pStrB, 33);
-		pWork = pBuf;
-		iCnt = 0;
-		while(*p2parse && *p2parse != ':' && *p2parse != ' ' && iCnt < 32) {
-			rsCStrAppendChar(pStrB, *p2parse++);
-			++iCnt;
-		}
-		if(*p2parse == ':') {
-			++p2parse; 
-			rsCStrAppendChar(pStrB, ':');
-		}
-		rsCStrFinish(pStrB);
-
-		pszTAG = rsCStrConvSzStrAndDestruct(pStrB);
-		if(pszTAG == NULL)
-		{	/* rger, 2005-11-10: no TAG found - this implies that what
-			 * we have considered to be the HOSTNAME is most probably the
-			 * TAG. We consider it so probable, that we now adjust it
-			 * that way. So we pick up the previously set hostname, assign
-			 * it to tag and use the sender system (from IP stack) as
-			 * the hostname. This situation is the standard case with
-			 * stock BSD syslogd.
+	if(bParseHOSTNAMEandTAG) {
+		/* parse HOSTNAME - but only if this is network-received!
+		 * rger, 2005-11-14: we still have a problem with BSD messages. These messages
+		 * do NOT include a host name. In most cases, this leads to the TAG to be treated
+		 * as hostname and the first word of the message as the TAG. Clearly, this is not
+		 * of advantage ;) I think I have now found a way to handle this situation: there
+		 * are certain characters which are frequently used in TAG (e.g. ':'), which are
+		 * *invalid* in host names. So while parsing the hostname, I check for these characters.
+		 * If I find them, I set a simple flag but continue. After parsing, I check the flag.
+		 * If it was set, then we most probably do not have a hostname but a TAG. Thus, I change
+		 * the fields. I think this logic shall work with any type of syslog message.
+		 */
+		bTAGCharDetected = 0;
+		if(pMsg->bParseHOSTNAME) {
+			/* TODO: quick and dirty memory allocation */
+			if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
+				return 1;
+			pWork = pBuf;
+			/* this is the actual parsing loop */
+			while(*p2parse && *p2parse != ' ' && *p2parse != ':') {
+				if(   *p2parse == '[' || *p2parse == ']' || *p2parse == '/')
+					bTAGCharDetected = 1;
+				*pWork++ = *p2parse++;
+			}
+			/* we need to handle ':' seperately, because it terminates the
+			 * TAG - so we also need to terminate the parser here!
 			 */
-			dprintf("No TAG in message, assuming that HOSTNAME is missing.\n");
+			if(*p2parse == ':') {
+				bTAGCharDetected = 1;
+				++p2parse;
+			} else if(*p2parse == ' ')
+				++p2parse;
+			*pWork = '\0';
+			MsgAssignHOSTNAME(pMsg, pBuf);
+		}
+		/* check if we seem to have a TAG */
+		if(bTAGCharDetected) {
+			/* indeed, this smells like a TAG, so lets use it for this. We take
+			 * the HOSTNAME from the sender system instead.
+			 */
+			dprintf("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
 			moveHOSTNAMEtoTAG(pMsg);
 			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
-		else
-		{ /* we have a TAG, so we can happily set it ;) */
-			MsgAssignTAG(pMsg, pszTAG);
+
+		/* now parse TAG - that should be present in message from
+		 * all sources.
+		 * This code is somewhat not compliant with RFC 3164. As of 3164,
+		 * the TAG field is ended by any non-alphanumeric character. In
+		 * practice, however, the TAG often contains dashes and other things,
+		 * which would end the TAG. So it is not desirable. As such, we only
+		 * accept colon and SP to be terminators. Even there is a slight difference:
+		 * a colon is PART of the TAG, while a SP is NOT part of the tag
+		 * (it is CONTENT). Finally, we allow only up to 32 characters for
+		 * TAG, as it is specified in RFC 3164.
+		 */
+		/* The following code in general is quick & dirty - I need to get
+		 * it going for a test, TODO: redo later. rgerhards 2004-11-16 */
+		/* TODO: quick and dirty memory allocation */
+		/* lol.. we tried to solve it, just to remind ourselfs that 32 octets
+		 * is the max size ;) we need to shuffle the code again... Just for 
+		 * the records: the code is currently clean, but we could optimize it! */
+		if(!bTAGCharDetected) {
+			char *pszTAG;
+			if((pStrB = rsCStrConstruct()) == NULL) 
+				return 1;
+			rsCStrSetAllocIncrement(pStrB, 33);
+			pWork = pBuf;
+			iCnt = 0;
+			while(*p2parse && *p2parse != ':' && *p2parse != ' ' && iCnt < 32) {
+				rsCStrAppendChar(pStrB, *p2parse++);
+				++iCnt;
+			}
+			if(*p2parse == ':') {
+				++p2parse; 
+				rsCStrAppendChar(pStrB, ':');
+			}
+			rsCStrFinish(pStrB);
+
+			pszTAG = rsCStrConvSzStrAndDestruct(pStrB);
+			if(pszTAG == NULL)
+			{	/* rger, 2005-11-10: no TAG found - this implies that what
+				 * we have considered to be the HOSTNAME is most probably the
+				 * TAG. We consider it so probable, that we now adjust it
+				 * that way. So we pick up the previously set hostname, assign
+				 * it to tag and use the sender system (from IP stack) as
+				 * the hostname. This situation is the standard case with
+				 * stock BSD syslogd.
+				 */
+				dprintf("No TAG in message, assuming that HOSTNAME is missing.\n");
+				moveHOSTNAMEtoTAG(pMsg);
+				MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
+			}
+			else
+			{ /* we have a TAG, so we can happily set it ;) */
+				MsgAssignTAG(pMsg, pszTAG);
+			}
+		} else {
+			/* we have no TAG, so we ... */
+			/*DO NOTHING*/;
 		}
 	} else {
-		/* we have no TAG, so we ... */
-		/*DO NOTHING*/;
+		/* we enter this code area when the user has instructed rsyslog NOT
+		 * to parse HOSTNAME and TAG - rgerhards, 2006-03-13
+		 */
+		dprintf("HOSTNAME and TAG not parsed by user configuraton.\n");
+		MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 	}
 
 	/* The rest is the actual MSG */
@@ -7904,7 +7922,7 @@ int main(int argc, char **argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "a:dhi:f:l:m:nop:r:s:t:vw")) != EOF)
+	while ((ch = getopt(argc, argv, "a:dhi:f:l:m:nop:r:s:t:u:vw")) != EOF)
 		switch((char)ch) {
 		case 'a':
 			if (nfunix < MAXFUNIX)
@@ -7966,6 +7984,10 @@ int main(int argc, char **argv)
 		case 't':		/* enable tcp logging */
 			bEnableTCP = -1;
 			TCPLstnPort = atoi(optarg);
+			break;
+		case 'u':		/* misc user settings */
+			if(atoi(optarg) == 1)
+				bParseHOSTNAMEandTAG = 0;
 			break;
 		case 'v':
 			printf("rsyslogd %s.%s, ", VERSION, PATCHLEVEL);
