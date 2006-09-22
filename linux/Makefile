@@ -25,7 +25,7 @@ FEATURE_LARGEFILE=1
 
 # Enable database support (off by default, must be turned
 # on when support for MySQL is desired).
-FEATURE_DB=0
+FEATURE_DB=1
 
 # Enable regular expressions
 FEATURE_REGEXP=1
@@ -89,7 +89,10 @@ endif
 
 # Include MySQL client lib if DB is selected
 ifdef WITHDB
-LIBS = -lmysqlclient -L/usr/local/lib/mysql 
+# use the line below for Linux OTHER than Fedora
+#LIBS = -lmysqlclient -L/usr/local/lib/mysql 
+# use the line below for Fedora
+LIBS = -lmysqlclient -L/usr/lib/mysql 
 endif
 
 VPATH = ../
