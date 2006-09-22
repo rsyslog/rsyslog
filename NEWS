@@ -1,9 +1,11 @@
 ---------------------------------------------------------------------------
 Version 1.12.x (RGer), 2006-xx-xx
-- implemented some changes to support Solaris
+- implemented some changes to support Solaris (but support is not
+  yet complete)
 - commented out (via #if 0) some methods that are currently not being use
   but should be kept for further us
 - added (interim) -u 1 option to turn off hostname and tag parsing
+- done some modifications to better support Fedora
 ---------------------------------------------------------------------------
 Version 1.12.2 (RGer), 2006-02-15
 - fixed a bug in the RFC 3339 date formatter. An extra space was added
