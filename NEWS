@@ -8,6 +8,14 @@ Version 1.12.x (RGer), 2006-xx-xx
 - done some modifications to better support Fedora
 - made the field delimiter inside property replace configurable via
   template
+- fixed a bug in property replacer: if fields were used, the delimitor
+  became part of the field. Up until now, this was barely noticable as 
+  the delimiter as TAB only and thus invisible to a human. With other
+  delimiters available now, it quickly showed up. This bug fix might cause
+  some grief to existing installations if they used the extra TAB for
+  whatever reasons - sorry folks... Anyhow, a solution is easy: just add
+  a TAB character contstant into your template. Thus, there has no attempt
+  been made to do this in a backwards-compatible way.
 ---------------------------------------------------------------------------
 Version 1.12.2 (RGer), 2006-02-15
 - fixed a bug in the RFC 3339 date formatter. An extra space was added

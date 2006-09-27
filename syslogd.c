@@ -3177,8 +3177,8 @@ dprintf("compare %d != %d: %d (field %d)\n", (unsigned char) *pFld, pTpe->data.f
 			pFldEnd = pFld;
 			while(*pFldEnd && *pFldEnd != pTpe->data.field.field_delim)
 				++pFldEnd;
-			if(*pFldEnd == '\0')
-				--pFldEnd; /* back of to last real char */
+			--pFldEnd; /* we are already at the delimiter - so we need to
+			            * step back a little not to copy it as part of the field. */
 			/* we got our end pointer, now do the copy */
 			/* TODO: code copied from below, this is a candidate for a separate function */
 			iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
@@ -3197,6 +3197,8 @@ dprintf("field len %d, start '%s'\n", iLen, pFld);
 				free(pRes);
 			pRes = pBufStart;
 			*pbMustBeFreed = 1;
+			if(*(pFldEnd+1) != '\0')
+				++pFldEnd; /* OK, skip again over delimiter char */
 		} else {
 			/* field not found, return error */
 			if(*pbMustBeFreed == 1)
