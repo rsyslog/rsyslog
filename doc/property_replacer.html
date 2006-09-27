@@ -60,8 +60,16 @@ return the part of the property text that matches the regular expression. An
 example for a property replacer sequence with a regular expression is: &quot;%msg:R:.*Sev:. 
 \(.*\) \[.*--end%&quot;<br>
 <p>
-<b>Also, extraction can be done based on so-called &quot;fields&quot;</b>. To do so, place a &quot;F&quot; into FromChar. A field in its current definition is anything that is delemited by TAB characters (US-ASCII value 9). If your syslog data is tabular, this is a quicker way to extract than via regular expressions (actually, a *much* quicker way). Field counting starts at 1. Field zero is accepted, but will always lead to a &quot;field not found&quot; error. The same happens if a field number higher than the number of fields in the property is requested. The field number must be placed in the &quot;ToChar&quot; parameter. An example where the 3rd field from the msg property is extracted is as follows: &quot;%msg:F:3%&quot;.<p>
-Please note that the special characters &quot;F&quot; and &quot;R&quot; are case-sensitive. Only upper case works, lower case will return an error.<br>
+<b>Also, extraction can be done based on so-called &quot;fields&quot;</b>. To do so, place a &quot;F&quot; into FromChar. A field in its current definition is anything that is delimited by a delimiter character. The delimiter by default is TAB (US-ASCII value 9). 
+However, if can be changed to any other US-ASCII character by specifying a comma 
+and teh <b>decimal</b> US-ASCII value of the delimiter immediately after the 
+&quot;F&quot;. For example, to use comma (&quot;,&quot;) as a delimiter, use this field specifier: 
+&quot;F,44&quot;.&nbsp; If your syslog data is delimited, this is a quicker way to extract than via regular expressions (actually, a *much* quicker way). Field counting starts at 1. Field zero is accepted, but will always lead to a &quot;field not found&quot; error. The same happens if a field number higher than the number of fields in the property is requested. The field number must be placed in the &quot;ToChar&quot; parameter. An example where the 3rd field 
+(delimited by TAB) from the msg property is extracted is as follows: &quot;%msg:F:3%&quot;. The same 
+example with semicolon as delimiter is &quot;%msg:F,59:3%&quot;.<p>
+Please note that the special characters &quot;F&quot; and &quot;R&quot; are case-sensitive. Only upper case works, lower case will return an error. There are no white spaces 
+permitted inside the sequence (that will lead to error messages and will NOT 
+provide the intended result).<br>
 <h2>Property Options</h2>
 <b><code>property options</code></b> are case-insensitive. Currently, the following options 
 are defined:</p>
