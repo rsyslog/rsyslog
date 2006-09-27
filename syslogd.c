@@ -3157,10 +3157,6 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		pFld = pRes;
 		while(*pFld && iCurrFld < pTpe->data.field.iToPos) {
 			/* skip fields until the requested field or end of string is found */
-dprintf("compare %d != %d: %d (field %d)\n", (unsigned char) *pFld, pTpe->data.field.field_delim,
-			((unsigned char) *pFld != pTpe->data.field.field_delim),
-			pFld
-);
 			while(*pFld && (unsigned char) *pFld != pTpe->data.field.field_delim)
 				++pFld; /* skip to field terminator */
 			if(*pFld == pTpe->data.field.field_delim) {
@@ -3182,7 +3178,6 @@ dprintf("compare %d != %d: %d (field %d)\n", (unsigned char) *pFld, pTpe->data.f
 			/* we got our end pointer, now do the copy */
 			/* TODO: code copied from below, this is a candidate for a separate function */
 			iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-dprintf("field len %d, start '%s'\n", iLen, pFld);
 			pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
 			if(pBuf == NULL) {
 				if(*pbMustBeFreed == 1)
