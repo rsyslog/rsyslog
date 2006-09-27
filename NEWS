@@ -6,6 +6,8 @@ Version 1.12.x (RGer), 2006-xx-xx
   but should be kept for further us
 - added (interim) -u 1 option to turn off hostname and tag parsing
 - done some modifications to better support Fedora
+- made the field delimiter inside property replace configurable via
+  template
 ---------------------------------------------------------------------------
 Version 1.12.2 (RGer), 2006-02-15
 - fixed a bug in the RFC 3339 date formatter. An extra space was added

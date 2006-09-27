@@ -48,7 +48,8 @@ struct templateEntry {
 			regex_t re;	/* APR: this is the regular expression */
 			unsigned has_regex;
 #endif
-			unsigned has_fields; /* support for field-couting */
+			unsigned has_fields; /* support for field-counting: field to extract */
+			unsigned char field_delim; /* support for field-counting: field delemiter char */
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
 			struct { 		/* bit fields! */

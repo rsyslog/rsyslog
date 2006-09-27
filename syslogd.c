@@ -895,7 +895,6 @@ static void wallmsg(register struct filed *f);
 static void reapchild();
 static const char *cvthname(struct sockaddr_in *f);
 static void debug_switch();
-static void logerrorInt(char *type, int errCode);
 static rsRetVal cfline(char *line, register struct filed *f);
 static int decode(char *name, struct code *codetab);
 static void sighup_handler();
@@ -3151,17 +3150,20 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		int iCurrFld;
 		char *pFld;
 		char *pFldEnd;
-		/* first, skip to the field in question. For now, a field
-		 * is made up of HT (tab) characters. This should be
-		 * configurable over time.
+		/* first, skip to the field in question. The field separator
+		 * is always one character and is stored in the template entry.
 		 */
 		iCurrFld = 1;
 		pFld = pRes;
 		while(*pFld && iCurrFld < pTpe->data.field.iToPos) {
 			/* skip fields until the requested field or end of string is found */
-			while(*pFld && *pFld != '\t')
+dprintf("compare %d != %d: %d (field %d)\n", (unsigned char) *pFld, pTpe->data.field.field_delim,
+			((unsigned char) *pFld != pTpe->data.field.field_delim),
+			pFld
+);
+			while(*pFld && (unsigned char) *pFld != pTpe->data.field.field_delim)
 				++pFld; /* skip to field terminator */
-			if(*pFld == '\t') {
+			if(*pFld == pTpe->data.field.field_delim) {
 				++pFld; /* eat it */
 				++iCurrFld;
 			}
@@ -3173,7 +3175,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 			/* field found, now extract it */
 			/* first of all, we need to find the end */
 			pFldEnd = pFld;
-			while(*pFldEnd && *pFldEnd != '\t')
+			while(*pFldEnd && *pFldEnd != pTpe->data.field.field_delim)
 				++pFldEnd;
 			if(*pFldEnd == '\0')
 				--pFldEnd; /* back of to last real char */
@@ -5601,7 +5603,7 @@ void logerrorSz(char *type, char *errMsg)
  * correctly formatted for it (containing a single %d param).
  * rgerhards 2005-09-19
  */
-static void logerrorInt(char *type, int errCode)
+void logerrorInt(char *type, int errCode)
 {
 	char buf[1024];
 

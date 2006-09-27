@@ -5,5 +5,6 @@
 void dprintf(char *, ...);
 void logerror(char *type);
 void logerrorSz(char *type, char *errMsg);
+void logerrorInt(char *type, int iErr);
 
 #include "rsyslog.h"

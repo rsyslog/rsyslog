@@ -288,17 +288,42 @@ static int do_Parameter(char **pp, struct template *pTpl)
 			if(*p == 'F') {
 				/* we have a field counter, so indicate it in the template */
 				++p; /* eat 'F' */
-				if (*p != ':') {
-					/* There is something more than an F, this is invalid ! */
-					/* 2005-12-23 rgerhards: later, we will add modifiers, so
-					 * extra characters will then be valid. this is the number 1
-					 * reason why this code is NOT combined with the "R" case.
+				if (*p == ':') {
+					/* no delimiter specified, so use the default (HT) */
+					pTpe->data.field.has_fields = 1;
+					pTpe->data.field.field_delim = 9;
+				} else if (*p == ',') {
+					++p; /* eat ',' */
+					/* configured delimiter follows, so we need to obtain
+					 * it. Important: the following number must be the
+					 * **DECIMAL** ASCII value of the delimiter character.
+					 */
+					pTpe->data.field.has_fields = 1;
+					if(!isdigit(*p)) {
+						/* complain and use default */
+						logerrorSz
+						  ("error: invalid character in frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
+						    *pp);
+						pTpe->data.field.field_delim = 9;
+					} else {
+						iNum = 0;
+						while(isdigit(*p))
+							iNum = iNum * 10 + *p++ - '0';
+						if(iNum < 0 || iNum > 255) {
+							logerrorInt
+							  ("error: non-USASCII delimiter character value in template - using 9 (HT) as substitute", iNum);
+							pTpe->data.field.field_delim = 9;
+						  } else {
+							pTpe->data.field.field_delim = iNum;
+							}
+					}
+				} else {
+					/* invalid character after F, so we need to reject
+					 * this.
 					 */
 					logerrorSz
 					  ("error: invalid character in frompos after \"F\", property: '%%%s'",
 					    *pp);
-				} else {
-					pTpe->data.field.has_fields = 1;
 				}
 			} else {
 				/* we now have a simple offset in frompos (the previously "normal" case) */
@@ -645,8 +670,8 @@ void tplPrintList(void)
 				  	dprintf("[drop last LF in msg] ");
 				}
 				if(pTpe->data.field.has_fields == 1) {
-				  	dprintf("[substring, field #%d only] ",
-						pTpe->data.field.iToPos);
+				  	dprintf("[substring, field #%d only (delemiter %d)] ",
+						pTpe->data.field.iToPos, pTpe->data.field.field_delim);
 				} else if(pTpe->data.field.iFromPos != 0 ||
 				          pTpe->data.field.iToPos != 0) {
 				  	dprintf("[substring, from character %d to %d] ",
