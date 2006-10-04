@@ -37,7 +37,7 @@ FEATURE_RFC3195=0
 FEATURE_PTHREADS=1
 
 # Enable debug mode (much slower code)
-FEATURE_DEBUG=1
+FEATURE_DEBUG=0
 
 # The following defines tell us where liblogging is located. This
 # is only needed if we build with RFC 3195 support. By default, 
