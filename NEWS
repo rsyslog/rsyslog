@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
-Version 1.12.x (RGer), 2006-10-04
+Version 1.12.4 (RGer), 2006-??-??
+---------------------------------------------------------------------------
+Version 1.12.3 (RGer), 2006-10-04
 - implemented some changes to support Solaris (but support is not
   yet complete)
 - commented out (via #if 0) some methods that are currently not being use
