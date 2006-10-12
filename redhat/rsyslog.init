@@ -1,0 +1,84 @@
+#!/bin/bash
+#
+# rsyslog        Starts rsyslogd/klogd.
+#
+#
+# chkconfig: 2345 12 88
+# description: Syslog is the facility by which many daemons use to log \
+# messages to various system log files.  It is a good idea to always \
+# run rsyslog.
+### BEGIN INIT INFO
+# Provides: $rsyslog
+### END INIT INFO
+
+# Source function library.
+. /etc/init.d/functions
+
+[ -f /usr/sbin/rsyslogd ] || exit 0
+[ -f /sbin/klogd ] || exit 0
+
+# Source config
+if [ -f /etc/sysconfig/rsyslog ] ; then
+        . /etc/sysconfig/rsyslog
+else
+        SYSLOGD_OPTIONS="-m 0"
+        KLOGD_OPTIONS="-2"
+fi
+
+RETVAL=0
+
+umask 077
+
+start() {
+        echo -n $"Starting system logger (rsyslog): "
+        daemon rsyslogd $SYSLOGD_OPTIONS
+        RETVAL=$?
+        echo
+        echo -n $"Starting kernel logger: "
+        daemon klogd $KLOGD_OPTIONS
+        echo
+        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/rsyslog
+        return $RETVAL
+}
+stop() {
+        echo -n $"Shutting down kernel logger: "
+        killproc klogd
+        echo
+        echo -n $"Shutting down system logger (rsyslog): "
+        killproc rsyslogd
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/rsyslog
+        return $RETVAL
+}
+rhstatus() {
+        status rsyslogd
+        status klogd
+}
+restart() {
+        stop
+        start
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  status)
+        rhstatus
+        ;;
+  restart|reload)
+        restart
+        ;;
+  condrestart)
+        [ -f /var/lock/subsys/rsyslog ] && restart || :
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart}"
+        exit 1
+esac
+
+exit $?
