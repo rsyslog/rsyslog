@@ -389,6 +389,16 @@ static int do_Parameter(char **pp, struct template *pTpl)
 				p = regex_end + 5/*strlen("--end")*/;
 				free(regex_char);
 			}
+		} else if(*p == '$') {
+			/* shortcut for "end of message */
+			p++; /* eat '$' */
+			/* in this case, we do a quick, somewhat dirty but totally
+			 * legitimate trick: we simply use a topos that is higher than
+			 * potentially ever can happen. The code below checks that no copy
+			 * will occur after the end of string, so this is perfectly legal.
+			 * rgerhards, 2006-10-17
+			 */
+			pTpe->data.field.iToPos = 9999999;
 		} else {
 			/* fallthrough to "regular" ToPos code */
 #endif /* #ifdef FEATURE_REGEXP */

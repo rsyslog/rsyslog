@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 1.12.4 (RGer), 2006-??-??
+- added '$' as ToPos proptery replacer specifier - means "up to the
+  end of the string
 ---------------------------------------------------------------------------
 Version 1.12.3 (RGer), 2006-10-04
 - implemented some changes to support Solaris (but support is not
