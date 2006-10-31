@@ -1621,10 +1621,11 @@ static int TCPSend(struct filed *f, char *msg)
 			close(f->f_file);
 			TCPSendSetStatus(f, TCP_SEND_NOTCONNECTED);
 			f->f_file = -1;
-		} else
+		} else {
 			if(buf != NULL)
 				free(buf);
 			return -1;
+		}
 	} while(!done); /* warning: do ... while() */
 	/*NOT REACHED*/
 
