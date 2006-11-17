@@ -3166,7 +3166,6 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 			}
 		}
 		dprintf("field requested %d, field found %d\n", pTpe->data.field.iToPos, iCurrFld);
-			
 		
 		if(iCurrFld == pTpe->data.field.iToPos) {
 			/* field found, now extract it */
@@ -3318,10 +3317,58 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		*pbMustBeFreed = 1;
 	}
 
+	/* now do control character dropping/escaping/replacement
+	 * RGerhards, 2006-11-17
+	 */
+	if(pTpe->data.field.options.bEscapeCC) {
+		/* we must first count how many control charactes are
+		 * present, because we need this to compute the new string
+		 * buffer length. While doing so, we also compute the string
+		 * length.
+		 */
+		int iNumCC = 0;
+		int iLen = 0;
+		char *pBuf;
+
+		for(pBuf = pRes ; *pBuf ; ++pBuf) {
+			++iLen;
+			if(iscntrl(*pBuf))
+				++iNumCC;
+		}
+
+		if(iNumCC > 0) { /* if 0, there is nothing to escape, so we are done */
+			/* OK, let's do the escaping... */
+			char *pBufStart;
+			char szCCEsc[8]; /* buffer for escape sequence */
+
+			iLen += iNumCC * 4;
+			pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
+			if(pBuf == NULL) {
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				*pbMustBeFreed = 0;
+				return "**OUT OF MEMORY**";
+			}
+			while(*pRes) {
+				if(iscntrl(*pRes)) {
+					/* TODO: fill escape coding */
+				} else {
+					*pBuf++ = *pRes;
+				}
+				++pRes;
+			}
+			*pBuf = '\0';
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = pBufStart;
+			*pbMustBeFreed = 1;
+		}
+	}
+
 	/* Now drop last LF if present (pls note that this must not be done
 	 * if bEscapeCC was set! - once that is implemented ;)).
 	 */
-	if(pTpe->data.field.options.bDropLastLF) {
+	if(pTpe->data.field.options.bDropLastLF && !pTpe->data.field.options.bEscapeCC) {
 		int iLen = strlen(pRes);
 		char *pBuf;
 		if(*(pRes + iLen - 1) == '\n') {
