@@ -3318,9 +3318,29 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 	}
 
 	/* now do control character dropping/escaping/replacement
+	 * Only one of these can be used. If multiple options are given, the
+	 * result is random (though currently there obviously is an order of
+	 * preferrence, see code below. But this is NOT guaranteed.
 	 * RGerhards, 2006-11-17
 	 */
-	if(pTpe->data.field.options.bEscapeCC) {
+	if(pTpe->data.field.options.bDropCC) {
+		char *pSrc = pRes;
+		char *pDst = pRes;
+
+		while(*pSrc) {
+			if(!iscntrl(*pSrc))
+				*pDst++ = *pSrc;
+			++pSrc;
+		}
+		*pDst = '\0';
+	} else if(pTpe->data.field.options.bSpaceCC) {
+		char *pBuf = pRes;
+		while(*pBuf) {
+			if(iscntrl(*pBuf))
+				*pBuf = ' ';
+			++pBuf;
+		}
+	} else if(pTpe->data.field.options.bEscapeCC) {
 		/* we must first count how many control charactes are
 		 * present, because we need this to compute the new string
 		 * buffer length. While doing so, we also compute the string
@@ -3369,7 +3389,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 	}
 
 	/* Now drop last LF if present (pls note that this must not be done
-	 * if bEscapeCC was set! - once that is implemented ;)).
+	 * if bEscapeCC was set!
 	 */
 	if(pTpe->data.field.options.bDropLastLF && !pTpe->data.field.options.bEscapeCC) {
 		int iLen = strlen(pRes);

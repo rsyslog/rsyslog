@@ -53,6 +53,8 @@ struct templateEntry {
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
 			struct { 		/* bit fields! */
+				unsigned bDropCC: 1;		/* drop control characters? */
+				unsigned bSpaceCC: 1;		/* change control characters to spaceescape? */
 				unsigned bEscapeCC: 1;		/* escape control characters? */
 				unsigned bDropLastLF: 1;	/* drop last LF char in msg (PIX!) */
 			} options;		/* options as bit fields */

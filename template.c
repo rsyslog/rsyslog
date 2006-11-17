@@ -212,6 +212,10 @@ static void doOptions(char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eCaseConv = tplCaseConvUpper;
 		 } else if(!strcmp(Buf, "escape-cc")) {
 			pTpe->data.field.options.bEscapeCC = 1;
+		 } else if(!strcmp(Buf, "drop-cc")) {
+			pTpe->data.field.options.bDropCC = 1;
+		 } else if(!strcmp(Buf, "space-cc")) {
+			pTpe->data.field.options.bSpaceCC = 1;
 		 } else if(!strcmp(Buf, "drop-last-lf")) {
 			pTpe->data.field.options.bDropLastLF = 1;
 		 } else {
@@ -675,6 +679,12 @@ void tplPrintList(void)
 				}
 				if(pTpe->data.field.options.bEscapeCC) {
 				  	dprintf("[escape control-characters] ");
+				}
+				if(pTpe->data.field.options.bDropCC) {
+				  	dprintf("[drop control-characters] ");
+				}
+				if(pTpe->data.field.options.bSpaceCC) {
+				  	dprintf("[replace control-characters with space] ");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dprintf("[drop last LF in msg] ");
