@@ -3340,6 +3340,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 			/* OK, let's do the escaping... */
 			char *pBufStart;
 			char szCCEsc[8]; /* buffer for escape sequence */
+			int i;
 
 			iLen += iNumCC * 4;
 			pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
@@ -3351,7 +3352,9 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 			}
 			while(*pRes) {
 				if(iscntrl(*pRes)) {
-					/* TODO: fill escape coding */
+					snprintf(szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
+					for(i = 0 ; i < 4 ; ++i)
+						*pBuf++ = szCCEsc[i];
 				} else {
 					*pBuf++ = *pRes;
 				}
