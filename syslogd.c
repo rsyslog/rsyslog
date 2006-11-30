@@ -4,7 +4,6 @@
  * TODO:
  * - check template lines for extra characters and provide 
  *   a warning, if they exists
- * - implement the escape-cc property replacer option
  * - it looks liek the time stamp is missing on internally-generated
  *   messages - but maybe we need to keep this for compatibility
  *   reasons.
@@ -110,7 +109,7 @@
  * message sizes.
  * rgerhards, 2005-08-05
  */
-#define	MAXLINE		1024		/* maximum line length */
+#define	MAXLINE		2048		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define DEFSPRI		(LOG_KERN|LOG_CRIT)
 #define TIMERINTVL	30		/* interval for checking flush, mark */
@@ -181,6 +180,10 @@
 
 #if defined(__linux__)
 #include <paths.h>
+#endif
+
+#ifdef USE_NETZIP
+#include <zlib.h>
 #endif
 
 /* handle some defines missing on more than one platform */
@@ -379,13 +382,6 @@ static int should_use_so_bsdcompat(void)
 static char	*ConfFile = _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 static char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
-
-static char	**parts;
-/* parts is read-write in the code handling message reception. It is not
- * modified once the message has been received. So it should be safe to
- * not guard access to it once we have completed msg object compilation.
- * rgerhards 2005-10-24
- */
 
 static int inetm = 0; /* read-only after init, except when HUPed */
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
@@ -1334,8 +1330,16 @@ static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			iMsg = 0;
 		}
 		if(*pData == '\0') { /* guard against \0 characters... */
-			*(pMsg + iMsg++) = '\\';
-			*(pMsg + iMsg++) = '0';
+			/* changed to the sequence (somewhat) proposed in
+			 * draft-ietf-syslog-protocol-19. rgerhards, 2006-11-30
+			 */
+			if(iMsg + 3 < MAXLINE) { /* do we have space? */
+				*(pMsg + iMsg++) = '#';
+				*(pMsg + iMsg++) = '0';
+				*(pMsg + iMsg++) = '0';
+				*(pMsg + iMsg++) = '0';
+			} /* if we do not have space, we simply ignore the '\0'... */
+			  /* TODO: log an error? Very questionable... rgerhards, 2006-11-30 */
 			++pData;
 		} else if(*pData == '\n') { /* record delemiter */
 			*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
@@ -3616,6 +3620,105 @@ static void untty()
 #endif
 
 
+/* rgerhards, 2006-11-30: I have greatly changed this function. Formerly,
+ * it tried to reassemble multi-part messages, which is a legacy stock
+ * sysklogd concept. In essence, that was that messages not ending with
+ * \0 were glued together. As far as I can see, this is a sysklogd
+ * specific feature and, from looking at the code, seems to be used
+ * pretty seldom. I remove this now, not the least because it is totally
+ * incompatible with upcoming IETF syslog standards. If you experience
+ * strange behaviour with messages beeing split across multiple lines,
+ * this function here might be the place to look at.
+ *
+ * Some previous history worth noting:
+ * I added the "iSource" parameter. This is needed to distinguish between
+ * messages that have a hostname in them (received from the internet) and
+ * those that do not have (most prominently /dev/log).  rgerhards 2004-11-16
+ * And now I removed the "iSource" parameter and changed it to be "bParseHost",
+ * because all that it actually controls is whether the host is parsed or not.
+ * For rfc3195 support, we needed to modify the algo for host parsing, so we can
+ * no longer rely just on the source (rfc3195d forwarded messages arrive via
+ * unix domain sockets but contain the hostname). rgerhards, 2005-10-06
+ */
+static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
+{
+	register int iMsg;
+	char *pMsg;
+	char *pData;
+	char *pEnd;
+	char tmpline[MAXLINE + 1];
+#	ifdef USE_NETZIP
+	char deflateBuf[MAXLINE + 1];
+	uLongf iLenDefBuf;
+#	endif
+
+	assert(hname != NULL);
+	assert(msg != NULL);
+	assert(len >= 0);
+
+	dprintf("Message length: %d, File descriptor: %d.\n", len, fd);
+
+	iMsg = 0;	/* initialize receiving buffer index */
+	pMsg = tmpline; /* set receiving buffer pointer */
+	pData = msg;	/* set source buffer pointer */
+	pEnd = msg + len; /* this is one off, which is intensional */
+
+#	ifdef USE_NETZIP
+	/* we first need to check if we have a compressed record. If so,
+	 * we must decompress it.
+	 */
+	if(len > 0 && *msg == 'z') { /* compressed data present? (do NOT change order if conditions!) */
+		/* we have compressed data, so let's deflate it. We support a maximum
+		 * message size of MAXLINE. If it is larger, an error message is logged
+		 * and the message is dropped. We do NOT try to decompress larger messages
+		 * as such might be used for denial of service. It might happen to later
+		 * builds that such functionality be added as an optional, operator-configurable
+		 * feature.
+		 */
+dprintf("compressed message, doing decompress ");
+		int ret;
+		iLenDefBuf = MAXLINE;
+		ret = uncompress(deflateBuf, &iLenDefBuf, msg+1, len-1);
+dprintf(" - return %d, size new %d, old %d\n", ret, iLenDefBuf, len-1);
+		pMsg = deflateBuf;
+		pEnd = deflateBuf + iLenDefBuf;
+	}
+#	endif /* ifdef USE_NETZIP */
+
+	while(pData < pEnd) {
+		if(iMsg >= MAXLINE) {
+			/* emergency, we now need to flush, no matter if
+			 * we are at end of message or not...
+			 */
+			*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
+			printline(hname, tmpline, bParseHost);
+			return; /* in this case, we are done... nothing left we can do */
+		}
+		if(*pData == '\0') { /* guard against \0 characters... */
+			/* changed to the sequence (somewhat) proposed in
+			 * draft-ietf-syslog-protocol-19. rgerhards, 2006-11-30
+			 */
+			if(iMsg + 3 < MAXLINE) { /* do we have space? */
+				*(pMsg + iMsg++) = '#';
+				*(pMsg + iMsg++) = '0';
+				*(pMsg + iMsg++) = '0';
+				*(pMsg + iMsg++) = '0';
+			} /* if we do not have space, we simply ignore the '\0'... */
+			  /* TODO: log an error? Very questionable... rgerhards, 2006-11-30 */
+			++pData;
+		} else {
+			*(pMsg + iMsg++) = *pData++;
+		}
+	}
+	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
+
+	/* typically, we should end up here! */
+	printline(hname, tmpline, bParseHost);
+
+	return;
+}
+
+#if 0 // old code, temporarily commented out
 /*
  * Parse the line to make sure that the msg is not a composite of more
  * than one message.
@@ -3634,6 +3737,14 @@ static void untty()
  * For rfc3195 support, we needed to modify the algo for host parsing, so we can
  * no longer rely just on the source (rfc3195d forwarded messages arrive via
  * unix domain sockets but contain the hostname). rgerhards, 2005-10-06
+ *
+ * rgerhards, 2006-11-30: TODO: Questionable function
+ * The usefulness of this function is quite questionable. We need to investigate
+ * further how this is handled in stock sysklogd. What is done here looks
+ * highly non-compliant to new standards, especially the use of \0 characters.
+ * I think I will also remove much of the functionality by the new "received msg
+ * postprocessing code", which removes \0s and deflates compressed messages. Once
+ * we implement syslog-tls, we also have an issue with multiple records.
  */
 static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 {
@@ -3649,7 +3760,7 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 		dprintf("Including part from messages.\n");
 		strcpy(tmpline, parts[fd]);
 		free(parts[fd]);
-		parts[fd] = (char *) 0;
+		parts[fd] = NULL;
 		if ( (strlen(msg) + strlen(tmpline)) > MAXLINE ) {
 			logerror("Cannot glue message parts together");
 			printline(hname, tmpline, bParseHost);
@@ -3690,6 +3801,7 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 
 	return;
 }
+#endif // #if 0
 
 /* Take a raw input line, decode the message, and print the message
  * on the appropriate log files.
@@ -5249,17 +5361,35 @@ void fprintlog(register struct filed *f)
 		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
 		else {
-			char *psz;
+			unsigned char *psz;
 			f->f_time = now;
 			psz = iovAsString(f);
 			l = f->f_iLenpsziov;
 			if (l > MAXLINE)
 				l = MAXLINE;
 			if(f->f_un.f_forw.protocol == FORW_UDP) {
+
+
+#			ifdef	USE_NETZIP
+/* TODO: this is test code! bring it to production quality! RGer 2006-11-30 */
+/* Test code for zlib compression BEGIN */
+Bytef in[2048], out[4096] = "z";
+uLongf destLen = sizeof(out) / sizeof(Bytef);
+uLong srcLen = l;
+int ret;
+dprintf("PRE compress: len %d, msg '%60s...'\n", l, psz);
+ret = compress2(out+1, &destLen, psz, srcLen, 9);
+dprintf("compress returns: %d, len %d\n", ret, (int) destLen);
+++destLen;
+
+/* Test code for zlib compression END */
+#		endif
+
 				/* forward via UDP */
-				if (sendto(finet, psz, l, 0, \
+				//if (sendto(finet, psz, l, 0, \ */
+				if (sendto(finet, out, destLen, 0, \
 					   (struct sockaddr *) &f->f_un.f_forw.f_addr,
-					   sizeof(f->f_un.f_forw.f_addr)) != l) {
+					   sizeof(f->f_un.f_forw.f_addr)) != destLen) {
 					int e = errno;
 					dprintf("INET sendto error: %d = %s.\n", 
 						e, strerror(e));
@@ -5817,7 +5947,6 @@ static void die(int sig)
 	 * easier.
 	 */
 	tplDeleteAll();
-	free(parts);
 	free(Files);
 	if(consfile.f_iov != NULL)
 		free(consfile.f_iov);
@@ -7845,12 +7974,10 @@ static void mainloop(void)
 		for (i = 0; i < nfunix; i++) {
 			if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
 				int iRcvd;
-				memset(line, '\0', sizeof(line));
-				iRcvd = recv(fd, line, MAXLINE - 2, 0);
+				iRcvd = recv(fd, line, MAXLINE - 1, 0);
 				dprintf("Message from UNIX socket: #%d\n", fd);
 				if (iRcvd > 0) {
-					line[iRcvd] = line[iRcvd+1] = '\0';
-					printchopped(LocalHostName, line, iRcvd + 2,  fd, funixParseHost[i]);
+					printchopped(LocalHostName, line, iRcvd,  fd, funixParseHost[i]);
 				} else if (iRcvd < 0 && errno != EINTR) {
 					dprintf("UNIX socket error: %d = %s.\n", \
 						errno, strerror(errno));
@@ -7863,8 +7990,7 @@ static void mainloop(void)
 #ifdef SYSLOG_INET
 		if (InetInuse && AcceptRemote && FD_ISSET(inetm, &readfds)) {
 			len = sizeof(frominet);
-			memset(line, '\0', sizeof(line));
-			i = recvfrom(finet, line, MAXLINE - 2, 0, \
+			i = recvfrom(finet, line, MAXLINE - 1, 0, \
 				     (struct sockaddr *) &frominet, &len);
 			dprintf("Message from UDP inetd socket: #%d, host: %s\n",
 				inetm, inet_ntoa(frominet.sin_addr));
@@ -7877,8 +8003,7 @@ static void mainloop(void)
 				 * rgerhards, 2005-09-26
 				 */
 				if(isAllowedSender(pAllowedSenders_UDP, &frominet)) {
-					line[i] = line[i+1] = '\0';
-					printchopped(from, line, i + 2,  finet, 1);
+					printchopped(from, line, i,  finet, 1);
 				} else {
 					if(option_DisallowWarning) {
 						logerrorSz("UDP message from disallowed sender %s discarded",
@@ -7944,7 +8069,6 @@ static void mainloop(void)
 			dprintf("Message from stdin.\n");
 			memset(line, '\0', sizeof(line));
 			line[0] = '.';
-			parts[fileno(stdin)] = NULL;
 			i = read(fileno(stdin), line, MAXLINE);
 			if (i > 0) {
 				printchopped(LocalHostName, line, i+1,
@@ -8073,6 +8197,9 @@ int main(int argc, char **argv)
 #endif
 #ifndef	NOLARGEFILE
 			printf("\tFEATURE_LARGEFILE\n");
+#endif
+#ifndef	USE_NETZIP
+			printf("\tFEATURE_NETZIP\n");
 #endif
 #ifdef	SYSLOG_INET
 			printf("\tSYSLOG_INET (Internet/remote support)\n");
@@ -8221,17 +8348,6 @@ int main(int argc, char **argv)
 	(void) signal(SIGPIPE, SIG_IGN);
 	(void) signal(SIGXFSZ, SIG_IGN); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
-
-	/* Create a partial message table for all file descriptors. */
-	num_fds = getdtablesize();
-	dprintf("Allocated parts table for %d file descriptors.\n", num_fds);
-	if ((parts = (char **) malloc(num_fds * sizeof(char *))) == NULL)
-	{
-		logerror("Cannot allocate memory for message parts table.");
-		die(0);
-	}
-	for(i= 0; i < num_fds; ++i)
-	    parts[i] = NULL;
 
 	dprintf("Starting.\n");
 	init();

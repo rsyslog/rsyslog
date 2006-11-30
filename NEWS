@@ -3,6 +3,17 @@ Version 1.12.4 (RGer), 2006-??-??
 - added '$' as ToPos proptery replacer specifier - means "up to the
   end of the string
 - property replacer option "escape-cc", "drop-cc" and "space-cc"  added
+- changed the handling of \0 characters inside syslog messages. We now
+  consistently escape them to "#000". This is somewhat recommended in
+  the draft-ietf-syslog-protocol-19 draft. While the real recomendation
+  is to not escape any characters at all, we can not do this without
+  considerable modification of the code. So we escape it to "#000", which
+  is consistent with a sample found in the Internet-draft.
+- removed message glue logic (see printchopped() comment for details)
+  Also caused removal of parts table and thus some improvements in
+  memory usage.
+- changed the default MAXLINE to 2048 to take care of recent syslog
+  standardization efforts (can easily be changed in syslogd.c)
 ---------------------------------------------------------------------------
 Version 1.12.3 (RGer), 2006-10-04
 - implemented some changes to support Solaris (but support is not

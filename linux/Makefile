@@ -30,6 +30,11 @@ FEATURE_DB=0
 # Enable regular expressions
 FEATURE_REGEXP=1
 
+# Enable zlib compression
+# Depending on the messages, turning zlib compression on
+# results in moderate savings of network traffic.
+FEATURE_NETZIP=1
+
 # Enable RFC 3195 support (REQUIRES LIBLOGGING 0.6.0 or above!)
 FEATURE_RFC3195=0
 
@@ -69,6 +74,10 @@ endif
 
 ifeq ($(strip $(FEATURE_REGEXP)), 1)
   F_REGEXP=-DFEATURE_REGEXP
+endif
+
+ifeq ($(strip $(FEATURE_NETZIP)), 1)
+  WITHDB=-DUSE_NETZIP
 endif
 
 ifeq ($(strip $(FEATURE_PTHREADS)), 1)

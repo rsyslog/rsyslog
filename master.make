@@ -12,7 +12,7 @@
 #CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
 
 CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -I/usr/local/include $(NOLARGEFILE) $(WITHDB) $(F_REGEXP) $(DBG) $(F_RFC3195) $(F_PTHREADS)
-LDFLAGS= -s
+LDFLAGS= -s -lz
 
 # There is one report that under an all ELF system there may be a need to
 # explicilty link with libresolv.a.  If linking syslogd fails you may wish
