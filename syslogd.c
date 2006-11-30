@@ -184,6 +184,18 @@
 
 #ifdef USE_NETZIP
 #include <zlib.h>
+/* config param: minimum message size to try compression. The smaller
+ * the message, the less likely is any compression gain. We check for
+ * gain before we submit the message. But to do so we still need to
+ * do the (costly) compress() call. The following setting sets a size
+ * for which no call to compress() is done at all. This may result in
+ * a few more bytes being transmited but better overall performance.
+ * Note: I have not yet checked the minimum UDP packet size. It might be
+ * that we do not save anything by compressing very small messages, because
+ * UDP might need to pad ;)
+ * rgerhards, 2006-11-30
+ */
+#define	MIN_SIZE_FOR_COMPRESS	60
 #endif
 
 /* handle some defines missing on more than one platform */
@@ -3680,7 +3692,9 @@ dprintf("compressed message, doing decompress ");
 		iLenDefBuf = MAXLINE;
 		ret = uncompress(deflateBuf, &iLenDefBuf, msg+1, len-1);
 dprintf(" - return %d, size new %d, old %d\n", ret, iLenDefBuf, len-1);
-		pMsg = deflateBuf;
+deflateBuf[iLenDefBuf] = 0;
+dprintf("deflateBuf: '%s'\n", deflateBuf);
+		pData = deflateBuf;
 		pEnd = deflateBuf + iLenDefBuf;
 	}
 #	endif /* ifdef USE_NETZIP */
@@ -3717,91 +3731,6 @@ dprintf(" - return %d, size new %d, old %d\n", ret, iLenDefBuf, len-1);
 
 	return;
 }
-
-#if 0 // old code, temporarily commented out
-/*
- * Parse the line to make sure that the msg is not a composite of more
- * than one message.
- * This function is called from ALL receivers, no matter how the message
- * was received. rgerhards
- * Partial messages are reconstruced via the parts[] table. This table is
- * dynamically allocated on startup based on getdtablesize(). This design has
- * its advantages, however it typically allocates way too many table
- * entries. If we've nothing better to do, we might want to look into this.
- * rgerhards 2004-11-08
- * I added the "iSource" parameter. This is needed to distinguish between
- * messages that have a hostname in them (received from the internet) and
- * those that do not have (most prominently /dev/log).  rgerhards 2004-11-16
- * And now I removed the "iSource" parameter and changed it to be "bParseHost",
- * because all that it actually controls is whether the host is parsed or not.
- * For rfc3195 support, we needed to modify the algo for host parsing, so we can
- * no longer rely just on the source (rfc3195d forwarded messages arrive via
- * unix domain sockets but contain the hostname). rgerhards, 2005-10-06
- *
- * rgerhards, 2006-11-30: TODO: Questionable function
- * The usefulness of this function is quite questionable. We need to investigate
- * further how this is handled in stock sysklogd. What is done here looks
- * highly non-compliant to new standards, especially the use of \0 characters.
- * I think I will also remove much of the functionality by the new "received msg
- * postprocessing code", which removes \0s and deflates compressed messages. Once
- * we implement syslog-tls, we also have an issue with multiple records.
- */
-static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
-{
-	auto int ptlngth;
-	auto char *start = msg,
-		  *p,
-	          *end,
-		  tmpline[MAXLINE + 1];
-
-	dprintf("Message length: %d, File descriptor: %d.\n", len, fd);
-	tmpline[0] = '\0';
-	if(parts[fd] != NULL) {
-		dprintf("Including part from messages.\n");
-		strcpy(tmpline, parts[fd]);
-		free(parts[fd]);
-		parts[fd] = NULL;
-		if ( (strlen(msg) + strlen(tmpline)) > MAXLINE ) {
-			logerror("Cannot glue message parts together");
-			printline(hname, tmpline, bParseHost);
-			start = msg;
-		} else {
-			dprintf("Previous: %s\n", tmpline);
-			dprintf("Next: %s\n", msg);
-			strcat(tmpline, msg);	/* length checked above */
-			printline(hname, tmpline, bParseHost);
-			if ( (strlen(msg) + 1) == len )
-				return;
-			else
-				start = strchr(msg, '\0') + 1;
-		}
-	}
-
-	if ( msg[len-1] != '\0' ) {
-		msg[len] = '\0';
-		for(p= msg+len-1; *p != '\0' && p > msg; )
-			--p;
-		if(*p == '\0') p++;
-		ptlngth = strlen(p);
-		if ( (parts[fd] = malloc(ptlngth + 1)) == (char *) 0 )
-			logerror("Cannot allocate memory for message part.");
-		else
-		{
-			strcpy(parts[fd], p);
-			dprintf("Saving partial msg: %s\n", parts[fd]);
-			memset(p, '\0', ptlngth);
-		}
-	}
-
-	do {
-		end = strchr(start + 1, '\0');
-		printline(hname, start, bParseHost);
-		start = end + 1;
-	} while ( *start != '\0' );
-
-	return;
-}
-#endif // #if 0
 
 /* Take a raw input line, decode the message, and print the message
  * on the appropriate log files.
@@ -5371,25 +5300,28 @@ void fprintlog(register struct filed *f)
 
 
 #			ifdef	USE_NETZIP
-/* TODO: this is test code! bring it to production quality! RGer 2006-11-30 */
-/* Test code for zlib compression BEGIN */
-Bytef in[2048], out[4096] = "z";
-uLongf destLen = sizeof(out) / sizeof(Bytef);
-uLong srcLen = l;
-int ret;
-dprintf("PRE compress: len %d, msg '%60s...'\n", l, psz);
-ret = compress2(out+1, &destLen, psz, srcLen, 9);
-dprintf("compress returns: %d, len %d\n", ret, (int) destLen);
-++destLen;
-
-/* Test code for zlib compression END */
-#		endif
+			/* TODO: this is test code! bring it to production quality! RGer 2006-11-30 */
+			/* Test code for zlib compression BEGIN */
+			Bytef in[2048], out[4096] = "z";
+			uLongf destLen = sizeof(out) / sizeof(Bytef);
+			uLong srcLen = l;
+			int ret;
+			dprintf("PRE compress: len %d, msg '%60s...'\n", l, psz);
+			ret = compress2(out+1, &destLen, psz, srcLen, 9);
+			dprintf("compress returns: %d, len %d\n", ret, (int) destLen);
+			if(destLen+1 < l) {
+				dprintf("there is gain in compression, so we do it\n");
+				psz = out;
+				l = destLen;
+			}
+			++destLen;
+#			endif
 
 				/* forward via UDP */
-				//if (sendto(finet, psz, l, 0, \ */
-				if (sendto(finet, out, destLen, 0, \
+				if (sendto(finet, psz, l, 0, \
+				/*if (sendto(finet, out, destLen, 0, \*/
 					   (struct sockaddr *) &f->f_un.f_forw.f_addr,
-					   sizeof(f->f_un.f_forw.f_addr)) != destLen) {
+					   sizeof(f->f_un.f_forw.f_addr)) != l) {
 					int e = errno;
 					dprintf("INET sendto error: %d = %s.\n", 
 						e, strerror(e));
