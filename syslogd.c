@@ -5312,7 +5312,7 @@ void fprintlog(register struct filed *f)
 			if(destLen+1 < l) {
 				dprintf("there is gain in compression, so we do it\n");
 				psz = out;
-				l = destLen;
+				l = destLen + 1; /* take care for the "z" at message start! */
 			}
 			++destLen;
 #			endif
