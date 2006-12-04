@@ -33,6 +33,8 @@
  * modifications to the orginal sysklogd package. I suggest to no
  * longer rely too much on code knowledge you eventually have with
  * sysklogd - rgerhards 2005-07-05
+ * The code is now almost completely different. Be careful!
+ * rgerhards, 2006-11-30
  * 
  * I have decided to put my code under the GPL. The sysklog package
  * is distributed under the BSD license. As such, this package here
@@ -108,6 +110,10 @@
  * doc set for anything on IHE - it most probably has information on
  * message sizes.
  * rgerhards, 2005-08-05
+ * 
+ * I have increased the default message size to 2048 to be in sync
+ * with recent IETF syslog standardization efforts.
+ * rgerhards, 2006-11-30
  */
 #define	MAXLINE		2048		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
@@ -1081,13 +1087,19 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in
  ********************************************************************/
 #ifdef SYSLOG_INET
 
-#define TCPSESS_MAX 100 /* TODO: remove hardcoded limit */
+#define TCPSESS_MAX 200 /* TODO: remove hardcoded limit */
 static int TCPLstnPort = 0; /* read-only after startup */
 static int bEnableTCP = 0; /* read-only after startup */
 static int sockTCPLstn = -1; /* read-only after startup, modified by restart */
 struct TCPSession {
 	int sock;
 	int iMsg; /* index of next char to store in msg */
+	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
+	int iOctetsRemain;	/* Number of Octets remaining in message */
+	enum TCPFRAMINGMODE {
+		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
+		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
+	} eFraming;
 	char msg[MAXLINE+1];
 	char *fromHost;
 } TCPSessions[TCPSESS_MAX];
@@ -1103,6 +1115,8 @@ static void TCPSessInit(void)
 	for(i = 0 ; i < TCPSESS_MAX ; ++i) {
 		TCPSessions[i].sock = -1; /* no sock */
 		TCPSessions[i].iMsg = 0; /* just make sure... */
+		TCPSessions[i].bAtStrtOfFram = 1; /* indicate frame header expected */
+		TCPSessions[i].eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
 	}
 }
 
@@ -1333,38 +1347,88 @@ static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
+		/* Check if we are at a new frame */
+		if(TCPSessions[iTCPSess].bAtStrtOfFram) {
+			/* we need to look at the message and detect
+			 * the framing mode used
+			 */
+			if(isdigit(*pData)) {
+				TCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_COUNTING;
+				/* in this mode, we have OCTET-COUNT SP MSG - so we now need
+				 * to extract the OCTET-COUNT and the SP and then extract
+				 * the msg.
+				 */
+				int iCnt = 0;	/* the frame count specified */
+				int iNbrOctets = 0; /* numer of octets already consumed */
+				while(isdigit(*pData)) {
+					iCnt = iCnt * 10 + *pData - '0';
+					++iNbrOctets;
+					++pData;
+				}
+				dprintf("TCP Message with octet-counter, size %d.\n", iCnt);
+				if(*pData == ' ') {
+					++pData;	/* skip over SP */
+					++iNbrOctets;
+				} else {
+					/* TODO: handle "invalid frame" case */
+					dprintf("Framing Error: delimiter is not SP - ignored\n");
+				}
+				TCPSessions[iTCPSess].iOctetsRemain = iCnt - iNbrOctets;
+				if(TCPSessions[iTCPSess].iOctetsRemain < 1) {
+					/* TODO: handle the case where the octet count is 0 or negative! */
+					dprintf("Framing Error: invalid octet count\n");
+				}
+			} else {
+				TCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_STUFFING;
+				/* No need to do anything else here in this case */
+			}
+			TCPSessions[iTCPSess].bAtStrtOfFram = 0; /* done frame header */
+		}
+	
+		/* now copy message until end of record */
+
 		if(iMsg >= MAXLINE) {
 			/* emergency, we now need to flush, no matter if
 			 * we are at end of message or not...
 			 */
-			*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-			printline(TCPSessions[iTCPSess].fromHost, pMsg, 1);
+			printchopped(TCPSessions[iTCPSess].fromHost, pMsg, iMsg,
+			 	     TCPSessions[iTCPSess].sock, 1);
 			iMsg = 0;
-		}
-		if(*pData == '\0') { /* guard against \0 characters... */
-			/* changed to the sequence (somewhat) proposed in
-			 * draft-ietf-syslog-protocol-19. rgerhards, 2006-11-30
+			/* we might think if it is better to ignore the rest of the
+		 	 * message than to treat it as a new one. Maybe this is a good
+			 * candidate for a configuration parameter...
+			 * rgerhards, 2006-12-04
 			 */
-			if(iMsg + 3 < MAXLINE) { /* do we have space? */
-				*(pMsg + iMsg++) = '#';
-				*(pMsg + iMsg++) = '0';
-				*(pMsg + iMsg++) = '0';
-				*(pMsg + iMsg++) = '0';
-			} /* if we do not have space, we simply ignore the '\0'... */
-			  /* TODO: log an error? Very questionable... rgerhards, 2006-11-30 */
-			++pData;
-		} else if(*pData == '\n') { /* record delemiter */
-			*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-			printline(TCPSessions[iTCPSess].fromHost, pMsg, 1);
+		}
+
+		if(*pData == '\n' &&
+		   TCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
+			printchopped(TCPSessions[iTCPSess].fromHost, pMsg, iMsg,
+				     TCPSessions[iTCPSess].sock, 1);
 			iMsg = 0;
+			TCPSessions[iTCPSess].bAtStrtOfFram = 1;
 			++pData;
 		} else {
+			/* IMPORTANT: here we copy the actual frame content to the message! */
 			*(pMsg + iMsg++) = *pData++;
+		}
+
+		if(TCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_COUNTING) {
+			/* do we need to find end-of-frame via octet counting? */
+			TCPSessions[iTCPSess].iOctetsRemain--;
+			if(TCPSessions[iTCPSess].iOctetsRemain < 1) {
+				/* we have end of frame! */
+				printchopped(TCPSessions[iTCPSess].fromHost, pMsg, iMsg,
+					     TCPSessions[iTCPSess].sock, 1);
+				iMsg = 0;
+				TCPSessions[iTCPSess].bAtStrtOfFram = 1;
+			}
 		}
 	}
 
 	TCPSessions[iTCPSess].iMsg = iMsg; /* persist value */
 }
+
 
 /* CODE FOR SENDING TCP MESSAGES */
 
@@ -1476,12 +1540,16 @@ static int TCPSendCreateSocket(struct filed *f)
  * write descriptors. This seems not justified, given the expected
  * short life span of this code (and the unlikeliness of this event).
  * rgerhards 2005-07-06
+ * This function is now expected to stay. Libloging won't be used for
+ * that purpose. I have added the param "len", because it is known by the
+ * caller and so safes us some time. Also, it MUST be given because there
+ * may be NULs inside msg so that we can not rely on strlen().
+ * rgerhards, 2006-11-30
  */
-static int TCPSend(struct filed *f, char *msg)
+static int TCPSend(struct filed *f, char *msg, size_t len)
 {
 	int retry = 0;
 	int done = 0;
-	size_t len;
 	size_t lenSend;
 	short f_type;
 	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
@@ -1489,8 +1557,7 @@ static int TCPSend(struct filed *f, char *msg)
 
 	assert(f != NULL);
 	assert(msg != NULL);
-
-	len = strlen(msg);
+	assert(len > 0);
 
 	do { /* try to send message */
 		if(f->f_file <= 0) {
@@ -3637,7 +3704,7 @@ static void untty()
  * sysklogd concept. In essence, that was that messages not ending with
  * \0 were glued together. As far as I can see, this is a sysklogd
  * specific feature and, from looking at the code, seems to be used
- * pretty seldom. I remove this now, not the least because it is totally
+ * pretty seldom (if at all). I remove this now, not the least because it is totally
  * incompatible with upcoming IETF syslog standards. If you experience
  * strange behaviour with messages beeing split across multiple lines,
  * this function here might be the place to look at.
@@ -3691,6 +3758,7 @@ dprintf("compressed message, doing decompress ");
 		int ret;
 		iLenDefBuf = MAXLINE;
 		ret = uncompress(deflateBuf, &iLenDefBuf, msg+1, len-1);
+//fprintf(stderr, "%d,%d\n", len -1, iLenDefBuf);
 dprintf(" - return %d, size new %d, old %d\n", ret, iLenDefBuf, len-1);
 deflateBuf[iLenDefBuf] = 0;
 dprintf("deflateBuf: '%s'\n", deflateBuf);
@@ -5300,21 +5368,40 @@ void fprintlog(register struct filed *f)
 
 
 #			ifdef	USE_NETZIP
-			/* TODO: this is test code! bring it to production quality! RGer 2006-11-30 */
-			/* Test code for zlib compression BEGIN */
-			Bytef in[2048], out[4096] = "z";
-			uLongf destLen = sizeof(out) / sizeof(Bytef);
-			uLong srcLen = l;
-			int ret;
-			dprintf("PRE compress: len %d, msg '%60s...'\n", l, psz);
-			ret = compress2(out+1, &destLen, psz, srcLen, 9);
-			dprintf("compress returns: %d, len %d\n", ret, (int) destLen);
-			if(destLen+1 < l) {
-				dprintf("there is gain in compression, so we do it\n");
-				psz = out;
-				l = destLen + 1; /* take care for the "z" at message start! */
+			/* Check if we should compress and, if so, do it. We also
+			 * check if the message is large enough to justify compression.
+			 * The smaller the message, the less likely is a gain in compression.
+			 * To save CPU cycles, we do not try to compress very small messages.
+			 * What "very small" means needs to be configured. Currently, it is
+			 * hard-coded but this may be changed to a config parameter.
+			 * rgerhards, 2006-11-30
+			 */
+			if(l > 60) {
+				Bytef out[4096] = "z";
+				uLongf destLen = sizeof(out) / sizeof(Bytef);
+				uLong srcLen = l;
+				int ret;
+				dprintf("PRE compress: len %d, msg '%60s...'\n", l, psz);
+				ret = compress2(out+1, &destLen, psz, srcLen, 9);
+				dprintf("compress returns: %d, len %d\n", ret, (int) destLen);
+				if(ret != Z_OK) {
+					/* if we fail, we complain, but only in debug mode
+					 * Otherwise, we are silent. In any case, we ignore the
+					 * failed compression and just sent the uncompressed
+					 * data, which is still valid. So this is probably the
+					 * best course of action.
+					 * rgerhards, 2006-11-30
+					 */
+					dprintf("Error: message compression failed with code %d\n",
+						 ret);
+				} else if(destLen+1 < l) {
+					/* only use compression if there is a gain in using it! */
+					dprintf("there is gain in compression, so we do it\n");
+					psz = out;
+					l = destLen + 1; /* take care for the "z" at message start! */
+				}
+				++destLen;
 			}
-			++destLen;
 #			endif
 
 				/* forward via UDP */
@@ -5331,7 +5418,7 @@ void fprintlog(register struct filed *f)
 				}
 			} else {
 				/* forward via TCP */
-				if(TCPSend(f, psz) != 0) {
+				if(TCPSend(f, psz, l) != 0) {
 					/* error! */
 					f->f_type = F_FORW_SUSP;
 					errno = 0;
@@ -7889,7 +7976,13 @@ static void mainloop(void)
 					TCPSendSetStatus(f, TCP_SEND_READY);
 					/* Send stored message (if any) */
 					if(f->f_un.f_forw.savedMsg != NULL) {
-						if(TCPSend(f, f->f_un.f_forw.savedMsg) != 0) {
+						if(TCPSend(f, f->f_un.f_forw.savedMsg, strlen(f->f_un.f_forw.savedMsg)) != 0) {
+						/* TODO: we must check the forward handling in respect
+						 * to the new compression code. Then, we should also make
+						 * sure that the message length is stored, so that we
+						 * can safe the strlen() call above.
+						 * rgerhards, 2006-11-30
+						 */
 							/* error! */
 							f->f_type = F_FORW_SUSP;
 							errno = 0;

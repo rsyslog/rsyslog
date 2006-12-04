@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.12.4 (RGer), 2006-??-??
+Version 1.13.0 (RGer), 2006-??-??
 - added '$' as ToPos proptery replacer specifier - means "up to the
   end of the string
 - property replacer option "escape-cc", "drop-cc" and "space-cc"  added
@@ -14,6 +14,9 @@ Version 1.12.4 (RGer), 2006-??-??
   memory usage.
 - changed the default MAXLINE to 2048 to take care of recent syslog
   standardization efforts (can easily be changed in syslogd.c)
+- added support for byte-counted TCP syslog messages (much like
+  syslog-transport-tls-05 Internet Draft). This was necessary to
+  support compression over TCP.
 ---------------------------------------------------------------------------
 Version 1.12.3 (RGer), 2006-10-04
 - implemented some changes to support Solaris (but support is not
