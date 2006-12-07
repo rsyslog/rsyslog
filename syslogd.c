@@ -7,6 +7,7 @@
  * - it looks liek the time stamp is missing on internally-generated
  *   messages - but maybe we need to keep this for compatibility
  *   reasons.
+ * - include a global option for control character replacemet on receive? (not just NUL)
  *
  * Please note that as of now, a lot of the code in this file stems
  * from the sysklogd project. To learn more over this project, please
@@ -40,7 +41,7 @@
  * is distributed under the BSD license. As such, this package here
  * currently comes with two licenses. Both are given below. As it is
  * probably hard for you to see what was part of the sysklogd package
- * and what is part of my code, I recommend that you visit the 
+ * and what is part of my code, I suggest that you visit the 
  * sysklogd site on the URL above if you would like to base your
  * development on a version that is not under the GPL.
  *
@@ -562,6 +563,11 @@ enum _EHostnameCmpMode {
 };
 typedef enum _EHostnameCmpMode EHostnameCmpMode;
 
+typedef enum _TCPFRAMINGMODE {
+		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
+		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
+	} TCPFRAMINGMODE;
+
 /*
  * This structure represents the files that will have log
  * copies printed.
@@ -621,8 +627,10 @@ struct filed {
 		struct {
 			char	f_hname[MAXHOSTNAMELEN+1];
 			struct sockaddr_in	f_addr;
+			int compressionLevel; /* 0 - no compression, else level for zlib */
 			int port;
 			int protocol;
+			TCPFRAMINGMODE tcp_framing;
 #			define	FORW_UDP 0
 #			define	FORW_TCP 1
 			/* following fields for TCP-based delivery */
@@ -632,6 +640,7 @@ struct filed {
 				TCP_SEND_READY = 2
 			} status;
 			char *savedMsg;
+			int savedMsgLen; /* length of savedMsg in octets */
 #			ifdef USE_PTHREADS
 			pthread_mutex_t mtxTCPSend;
 #			endif
@@ -1096,10 +1105,7 @@ struct TCPSession {
 	int iMsg; /* index of next char to store in msg */
 	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
 	int iOctetsRemain;	/* Number of Octets remaining in message */
-	enum TCPFRAMINGMODE {
-		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
-		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
-	} eFraming;
+	TCPFRAMINGMODE eFraming;
 	char msg[MAXLINE+1];
 	char *fromHost;
 } TCPSessions[TCPSESS_MAX];
@@ -1327,8 +1333,7 @@ static void TCPSessPrepareClose(int iTCPSess)
 			    "ignoring extra data (a message may be lost).\n",
 			    TCPSessions[iTCPSess].sock);
 		/* nothing more to do */
-	} else {
-		/* here, we have traditional framing. Missing LF at the end
+	} else { /* here, we have traditional framing. Missing LF at the end
 		 * of message may occur. As such, we process the message in
 		 * this case.
 		 */
@@ -1617,21 +1622,45 @@ static int TCPSendCreateSocket(struct filed *f)
  * This function is now expected to stay. Libloging won't be used for
  * that purpose. I have added the param "len", because it is known by the
  * caller and so safes us some time. Also, it MUST be given because there
- * may be NULs inside msg so that we can not rely on strlen().
+ * may be NULs inside msg so that we can not rely on strlen(). Please note
+ * that the restrictions outlined above do not existin in multi-threaded
+ * mode, which we assume will now be most often used. So there is no
+ * real issue with the potential message loss in single-threaded builds.
  * rgerhards, 2006-11-30
+ * 
+ * In order to support compressed messages via TCP, we must support an
+ * octet-counting based framing (LF may be part of the compressed message).
+ * We are now supporting the same mode that is available in IETF I-D
+ * syslog-transport-tls-05 (current at the time of this writing). This also
+ * eases things when we go ahead and implement that framing. I have now made
+ * available two cases where this framing is used: either by explitely
+ * specifying it in the config file or implicitely when sending a compressed
+ * message. In the later case, compressed and uncompressed messages within
+ * the same session have different framings. If it is explicitely set to
+ * octet-counting, only this framing mode is used within the session.
+ * rgerhards, 2006-12-07
  */
 static int TCPSend(struct filed *f, char *msg, size_t len)
 {
 	int retry = 0;
 	int done = 0;
+	int bIsCompressed;
 	size_t lenSend;
 	short f_type;
 	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
 	enum TCPSendStatus eState;
+	TCPFRAMINGMODE framingToUse;
 
 	assert(f != NULL);
 	assert(msg != NULL);
 	assert(len > 0);
+
+	bIsCompressed = *msg == 'z';	/* cache this, so that we can modify the message buffer */
+	/* select framing for this record. If we have a compressed record, we always need to
+	 * use octet counting because the data potentially contains all control characters
+	 * including LF.
+	 */
+	framingToUse = bIsCompressed ? TCP_FRAMING_OCTET_COUNTING : f->f_un.f_forw.tcp_framing;
 
 	do { /* try to send message */
 		if(f->f_file <= 0) {
@@ -1652,10 +1681,11 @@ static int TCPSend(struct filed *f, char *msg, size_t len)
 			 * rgerhards 2005-07-20
 			 */
 			if(f->f_un.f_forw.savedMsg == NULL) {
-				f->f_un.f_forw.savedMsg = malloc((len + 1) * sizeof(char));
+				f->f_un.f_forw.savedMsg = malloc(len * sizeof(char));
 				if(f->f_un.f_forw.savedMsg == NULL)
 					return 0; /* nothing we can do... */
-				memcpy(f->f_un.f_forw.savedMsg, msg, len + 1);
+				memcpy(f->f_un.f_forw.savedMsg, msg, len);
+				f->f_un.f_forw.savedMsgLen = len;
 			}
 			return 0;
 		} else if(eState != TCP_SEND_READY)
@@ -1674,7 +1704,7 @@ static int TCPSend(struct filed *f, char *msg, size_t len)
 		 * quicker than using writev and definitely quicker than doing
 		 * two socket calls.
 		 * rgerhards 2005-07-22
-		 *
+		 *//*
 		 * Some messages already contain a \n character at the end
 		 * of the message. We append one only if we there is not
 		 * already one. This seems the best fit, though this also
@@ -1683,45 +1713,87 @@ static int TCPSend(struct filed *f, char *msg, size_t len)
 		 * probably the best to do...
 		 * rgerhards 2005-07-20
 		 */
-		if((*(msg+len-1) != '\n')) {
-			if(buf != NULL)
-				free(buf);
-			/* in the malloc below, we need to add 2 to the length. The
-			 * reason is that we a) add one character and b) len does
-			 * not take care of the '\0' byte. Up until today, it was just
-			 * +1 , which caused rsyslogd to sometimes dump core.
-			 * I have added this comment so that the logic is not accidently
-			 * changed again. rgerhards, 2005-10-25
-			 */
-			if((buf = malloc((len + 2) * sizeof(char))) == NULL) {
-				/* extreme mem shortage, try to solve
-				 * as good as we can. No point in calling
-				 * any alarms, they might as well run out
-				 * of memory (the risk is very high, so we
-				 * do NOT risk that). If we have a message of
-				 * more than 1 byte (what I guess), we simply
-				 * overwrite the last character.
-				 * rgerhards 2005-07-22
+
+		/* Build frame based on selected framing */
+		if(framingToUse == TCP_FRAMING_OCTET_STUFFING) {
+			if((*(msg+len-1) != '\n')) {
+				if(buf != NULL)
+					free(buf);
+				/* in the malloc below, we need to add 2 to the length. The
+				 * reason is that we a) add one character and b) len does
+				 * not take care of the '\0' byte. Up until today, it was just
+				 * +1 , which caused rsyslogd to sometimes dump core.
+				 * I have added this comment so that the logic is not accidently
+				 * changed again. rgerhards, 2005-10-25
 				 */
-				if(len > 1) {
-					*(msg+len-1) = '\n';
-				} else {
-					/* we simply can not do anything in
-					 * this case (its an error anyhow...).
+				if((buf = malloc((len + 2) * sizeof(char))) == NULL) {
+					/* extreme mem shortage, try to solve
+					 * as good as we can. No point in calling
+					 * any alarms, they might as well run out
+					 * of memory (the risk is very high, so we
+					 * do NOT risk that). If we have a message of
+					 * more than 1 byte (what I guess), we simply
+					 * overwrite the last character.
+					 * rgerhards 2005-07-22
 					 */
+					if(len > 1) {
+						*(msg+len-1) = '\n';
+					} else {
+						/* we simply can not do anything in
+						 * this case (its an error anyhow...).
+						 */
+					}
+				} else {
+					/* we got memory, so we can copy the message */
+					memcpy(buf, msg, len); /* do not copy '\0' */
+					*(buf+len) = '\n';
+					*(buf+len+1) = '\0';
+					msg = buf; /* use new one */
+					++len; /* care for the \n */
 				}
-			} else {
-				/* we got memory, so we can copy the message */
-				memcpy(buf, msg, len); /* do not copy '\0' */
-				*(buf+len) = '\n';
-				*(buf+len+1) = '\0';
-				msg = buf; /* use new one */
-				++len; /* care for the \n */
 			}
+		} else {
+			/* Octect-Counting
+			 * In this case, we need to always allocate a buffer. This is because
+			 * we need to put a header in front of the message text
+			 */
+			char szLenBuf[16];
+			int iLenBuf;
+
+			/* important: the printf-mask is "%d<sp>" because there must be a
+			 * space after the len!
+			 */
+			iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len);
+			iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len + iLenBuf);
+
+			if((buf = malloc((len + iLenBuf) * sizeof(char))) == NULL) {
+			 	/* we are out of memory. This is an extreme situation. We do not
+				 * call any alarm handlers because they most likely run out of mem,
+				 * too. We are brave enough to call debug output, though. Other than
+				 * that, there is nothing left to do. We can not sent the message (as
+				 * in case of the other framing, because the message is incomplete.
+				 * We could, however, send two chunks (header and text separate), but
+				 * that would cause a lot of complexity in the code. So we think it
+				 * is appropriate enough to just make sure we do not crash in this
+				 * very unlikely case. For this, it is justified just to loose
+				 * the message. Rgerhards, 2006-12-07
+				 */
+				 dprintf("Error: out of memory when building TCP octet-counted "
+				         "frame. Message is lost, trying to continue.\n");
+				return 0;
+			}
+
+			 memcpy(buf, szLenBuf, iLenBuf); /* header */
+			 memcpy(buf + iLenBuf, msg, len); /* message */
+			 len += iLenBuf;	/* new message size */
+			 msg = buf;	/* set message buffer */
 		}
 
+		/* frame building complete, on to actual sending */
+
 		lenSend = send(f->f_file, msg, len, 0);
-		dprintf("TCP sent %d bytes, requested %d, msg: '%s'\n", lenSend, len, msg);
+		dprintf("TCP sent %d bytes, requested %d, msg: '%s'\n", lenSend, len,
+			bIsCompressed ? "***compressed***" : msg);
 		if(lenSend == len) {
 			/* all well */
 			if(buf != NULL) {
@@ -3660,8 +3732,7 @@ static int create_udp_socket()
 	 */
 	if ((sockflags = fcntl(fd, F_GETFL)) != -1) {
 		sockflags |= O_NONBLOCK;
-		/*
-		 * SETFL could fail too, so get it caught by the subsequent
+		/* SETFL could fail too, so get it caught by the subsequent
 		 * error check.
 		 */
 		sockflags = fcntl(fd, F_SETFL, sockflags);
@@ -5458,8 +5529,6 @@ void fprintlog(register struct filed *f)
 			l = f->f_iLenpsziov;
 			if (l > MAXLINE)
 				l = MAXLINE;
-			if(f->f_un.f_forw.protocol == FORW_UDP) {
-
 
 #			ifdef	USE_NETZIP
 			/* Check if we should compress and, if so, do it. We also
@@ -5470,14 +5539,14 @@ void fprintlog(register struct filed *f)
 			 * hard-coded but this may be changed to a config parameter.
 			 * rgerhards, 2006-11-30
 			 */
-			if(l > 60) {
-				Bytef out[4096] = "z";
+			if(f->f_un.f_forw.compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
+				Bytef out[MAXLINE+MAXLINE/100+12] = "z";
 				uLongf destLen = sizeof(out) / sizeof(Bytef);
 				uLong srcLen = l;
 				int ret;
-				dprintf("PRE compress: len %d, msg '%60s...'\n", l, psz);
-				ret = compress2(out+1, &destLen, psz, srcLen, 9);
-				dprintf("compress returns: %d, len %d\n", ret, (int) destLen);
+				ret = compress2(out+1, &destLen, psz, srcLen, f->f_un.f_forw.compressionLevel);
+				dprintf("Compressing message, length was %d now %d, return state  %d.\n",
+					l, (int) destLen, ret);
 				if(ret != Z_OK) {
 					/* if we fail, we complain, but only in debug mode
 					 * Otherwise, we are silent. In any case, we ignore the
@@ -5486,8 +5555,7 @@ void fprintlog(register struct filed *f)
 					 * best course of action.
 					 * rgerhards, 2006-11-30
 					 */
-					dprintf("Error: message compression failed with code %d\n",
-						 ret);
+					dprintf("Compression failed, sending uncompressed message\n");
 				} else if(destLen+1 < l) {
 					/* only use compression if there is a gain in using it! */
 					dprintf("there is gain in compression, so we do it\n");
@@ -5498,6 +5566,7 @@ void fprintlog(register struct filed *f)
 			}
 #			endif
 
+			if(f->f_un.f_forw.protocol == FORW_UDP) {
 				/* forward via UDP */
 				if (sendto(finet, psz, l, 0, \
 				/*if (sendto(finet, out, destLen, 0, \*/
@@ -7238,6 +7307,65 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		} else {
 			f->f_un.f_forw.protocol = FORW_UDP;
 		}
+		/* we are now after the protcol indicator. Now check if we should
+		 * use compression. We begin to use a new option format for this:
+		 * @(option,option)host:port
+		 * The first option defined is "z[0..9]" where the digit indicates
+		 * the compression level. If it is not given, 9 (best compression) is
+		 * assumed. An example action statement might be:
+		 * @@(z5,o)127.0.0.1:1400  
+		 * Which means send via TCP with medium (5) compresion (z) to the local
+		 * host on port 1400. The '0' option means that octet-couting (as in
+		 * IETF I-D syslog-transport-tls) is to be used for framing (this option
+		 * applies to TCP-based syslog only and is ignored when specified with UDP).
+		 * That is not yet implemented.
+		 * rgerhards, 2006-12-07
+		 */
+		if(*p == '(') {
+			/* at this position, it *must* be an option indicator */
+			do {
+				++p; /* eat '(' or ',' (depending on when called) */
+				/* check options */
+				if(*p == 'z') { /* compression */
+#					ifdef USE_NETZIP
+					++p; /* eat */
+					if(isdigit(*p)) {
+						int iLevel;
+						iLevel = *p - '0';
+						++p; /* eat */
+						f->f_un.f_forw.compressionLevel = iLevel;
+					} else {
+						logerrorInt("Invalid compression level '%c' specified in "
+						         "forwardig action - NOT turning on compression.",
+							 *p);
+					}
+#					else
+					logerror("Compression requested, but rsyslogd is not compiled "
+					         "with compression support - request ignored.");
+#					endif /* #ifdef USE_NETZIP */
+				} else if(*p == 'o') { /* octet-couting based TCP framing? */
+					++p; /* eat */
+					/* no further options settable */
+					f->f_un.f_forw.tcp_framing = TCP_FRAMING_OCTET_COUNTING;
+				} else { /* invalid option! Just skip it... */
+					logerrorInt("Invalid option %c in forwarding action - ignoring.", *p);
+					++p; /* eat invalid option */
+				}
+				/* the option processing is done. We now do a generic skip
+				 * to either the next option or the end of the option
+				 * block.
+				 */
+				while(*p && *p != ')' && *p != ',')
+					++p;	/* just skip it */
+			} while(*p && *p == ','); /* Attention: do.. while() */
+			if(*p == ')')
+				++p; /* eat terminator, on to next */
+			else
+				/* we probably have end of string - leave it for the rest
+				 * of the code to handle it (but warn the user)
+				 */
+				logerror("Option block not terminated in forwarding action.");
+		}
 		/* extract the host first (we do a trick - we 
 		 * replace the ';' or ':' with a '\0')
 		 * now skip to port and then template name 
@@ -7261,7 +7389,8 @@ static rsRetVal cfline(char *line, register struct filed *f)
 				if(bErr == 0) { /* only 1 error msg! */
 					bErr = 1;
 					errno = 0;
-					logerror("invalid selector line (port), probably not doing what was intended");
+					logerror("invalid selector line (port), probably not doing "
+					         "what was intended");
 				}
 			}
 			++p;
@@ -7299,7 +7428,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			 */
 			break;
 
-		(void) strcpy(f->f_un.f_forw.f_hname, q);
+		strcpy(f->f_un.f_forw.f_hname, q);
 		memset((char *) &f->f_un.f_forw.f_addr, 0,
 			 sizeof(f->f_un.f_forw.f_addr));
 		f->f_un.f_forw.f_addr.sin_family = AF_INET;
@@ -7909,8 +8038,7 @@ static void mainloop(void)
 #endif
 #ifdef SYSLOG_INET
 #ifndef TESTING
-		/*
-		 * Add the Internet Domain Socket to the list of read
+		/* Add the Internet Domain Socket to the list of read
 		 * descriptors.
 		 */
 		if ( InetInuse && AcceptRemote ) {
@@ -8076,14 +8204,8 @@ static void mainloop(void)
 					TCPSendSetStatus(f, TCP_SEND_READY);
 					/* Send stored message (if any) */
 					if(f->f_un.f_forw.savedMsg != NULL) {
-						if(TCPSend(f, f->f_un.f_forw.savedMsg, strlen(f->f_un.f_forw.savedMsg)) != 0) {
-// TODO: see comment immediately below
-						/* TODO: we must check the forward handling in respect
-						 * to the new compression code. Then, we should also make
-						 * sure that the message length is stored, so that we
-						 * can safe the strlen() call above.
-						 * rgerhards, 2006-11-30
-						 */
+						if(TCPSend(f, f->f_un.f_forw.savedMsg,
+						           f->f_un.f_forw.savedMsgLen) != 0) {
 							/* error! */
 							f->f_type = F_FORW_SUSP;
 							errno = 0;
@@ -8331,8 +8453,8 @@ int main(int argc, char **argv)
 #ifndef	NOLARGEFILE
 			printf("\tFEATURE_LARGEFILE\n");
 #endif
-#ifndef	USE_NETZIP
-			printf("\tFEATURE_NETZIP\n");
+#ifdef	USE_NETZIP
+			printf("\tFEATURE_NETZIP (syslog message compression)\n");
 #endif
 #ifdef	SYSLOG_INET
 			printf("\tSYSLOG_INET (Internet/remote support)\n");
