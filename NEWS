@@ -17,6 +17,9 @@ Version 1.13.0 (RGer), 2006-??-??
 - added support for byte-counted TCP syslog messages (much like
   syslog-transport-tls-05 Internet Draft). This was necessary to
   support compression over TCP.
+- added support for receiving compressed syslog messages
+- fixed a bug where the last message in a syslog/tcp stream was
+  lost if it was not properly terminated by a LF character
 ---------------------------------------------------------------------------
 Version 1.12.3 (RGer), 2006-10-04
 - implemented some changes to support Solaris (but support is not

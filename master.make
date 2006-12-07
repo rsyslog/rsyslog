@@ -12,7 +12,7 @@
 #CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
 
 CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -I/usr/local/include $(NOLARGEFILE) $(WITHDB) $(F_REGEXP) $(DBG) $(F_RFC3195) $(F_PTHREADS)
-LDFLAGS= -s -lz
+LDFLAGS= -s
 
 # There is one report that under an all ELF system there may be a need to
 # explicilty link with libresolv.a.  If linking syslogd fails you may wish
@@ -42,7 +42,7 @@ test: syslog_tst tsyslogd
 install: install_man install_exec
 
 syslogd: syslogd.o pidfile.o template.o stringbuf.o srUtils.o outchannel.o parse.o
-	${CC} ${LDFLAGS} ${EXTRALIB} $(LPTHREAD) -o syslogd syslogd.o pidfile.o template.o outchannel.o stringbuf.o srUtils.o parse.o ${LIBS}
+	${CC} ${LDFLAGS} ${LZ} ${EXTRALIB} $(LPTHREAD) -o syslogd syslogd.o pidfile.o template.o outchannel.o stringbuf.o srUtils.o parse.o ${LIBS}
 
 rfc3195d: rfc3195d.o
 	${CC} ${LDFLAGS} -o rfc3195d rfc3195d.o ${LIBLOGGING_BIN}

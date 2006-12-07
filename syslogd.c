@@ -1291,6 +1291,55 @@ static void TCPSessAccept(void)
 }
 
 
+/* This should be called before a normal (non forced) close
+ * of a TCP session. This function checks if there is any unprocessed
+ * message left in the TCP stream. Such a message is probably a
+ * fragement. If evrything goes well, we must be right at the
+ * beginnig of a new frame without any data received from it. If
+ * not, there is some kind of a framing error. I think I remember that
+ * some legacy syslog/TCP implementations have non-LF terminated
+ * messages at the end of the stream. For now, we allow this behaviour.
+ * Later, it should probably become a configuration option.
+ * rgerhards, 2006-12-07
+ */
+static void TCPSessPrepareClose(int iTCPSess)
+{
+	if(iTCPSess < 0 || iTCPSess > TCPSESS_MAX) {
+		errno = 0;
+		logerror("internal error, trying to close an invalid TCP session!");
+		return;
+	}
+	
+	if(TCPSessions[iTCPSess].bAtStrtOfFram == 1) {
+		/* this is how it should be. There is no unprocessed
+		 * data left and such we have nothing to do. For simplicity
+		 * reasons, we immediately return in that case.
+		 */
+		 return;
+	}
+
+	/* we have some data left! */
+	if(TCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_COUNTING) {
+		/* In this case, we have an invalid frame count and thus
+		 * generate an error message and discard the frame.
+		 */
+		logerrorInt("Incomplete frame at end of stream in session %d - "
+			    "ignoring extra data (a message may be lost).\n",
+			    TCPSessions[iTCPSess].sock);
+		/* nothing more to do */
+	} else {
+		/* here, we have traditional framing. Missing LF at the end
+		 * of message may occur. As such, we process the message in
+		 * this case.
+		 */
+		dprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
+		printchopped(TCPSessions[iTCPSess].fromHost, TCPSessions[iTCPSess].msg,
+			     TCPSessions[iTCPSess].iMsg, TCPSessions[iTCPSess].sock, 1);
+		TCPSessions[iTCPSess].bAtStrtOfFram = 1;
+	}
+}
+
+
 /* Closes a TCP session and marks its slot in the session
  * table as unused. No attention is paid to the return code
  * of close, so potential-double closes are not detected.
@@ -1317,8 +1366,18 @@ static void TCPSessClose(int iSess)
  * is errors must be handled by caller!). iTCPSess must be
  * the index of the TCP session that received the data.
  * rgerhards 2005-07-04
+ * Changed this functions interface. We now return a status of
+ * what shall happen with the session. This is information for
+ * the caller. If 1 is returned, the session should remain open
+ * and additional data be accepted. If we return 0, the TCP
+ * session is to be closed by the caller. This functionality is
+ * needed in order to support framing errors, from which there
+ * is no recovery possible other than session termination and
+ * re-establishment. The need for this functionality thus is
+ * primarily rooted in support for -transport-tls I-D framing.
+ * rgerhards, 2006-12-07
  */
-static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
+static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 {
 	register int iMsg;
 	char *pMsg;
@@ -1351,6 +1410,12 @@ static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 		if(TCPSessions[iTCPSess].bAtStrtOfFram) {
 			/* we need to look at the message and detect
 			 * the framing mode used
+			 *//*
+			 * Contrary to -transport-tls, we accept leading zeros in the message
+			 * length. We do this in the spirit of "Be liberal in what you accept,
+			 * and conservative in what you send". We expect that including leading
+			 * zeros could be a common coding error.
+			 * rgerhards, 2006-12-07
 			 */
 			if(isdigit(*pData)) {
 				TCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_COUNTING;
@@ -1371,12 +1436,19 @@ static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 					++iNbrOctets;
 				} else {
 					/* TODO: handle "invalid frame" case */
-					dprintf("Framing Error: delimiter is not SP - ignored\n");
+					logerrorInt("Framing Error in received TCP message: "
+					            "delimiter is not SP but has ASCII value %d.\n",
+						    *pData);
+					return(0); /* unconditional error exit */
 				}
 				TCPSessions[iTCPSess].iOctetsRemain = iCnt - iNbrOctets;
 				if(TCPSessions[iTCPSess].iOctetsRemain < 1) {
 					/* TODO: handle the case where the octet count is 0 or negative! */
 					dprintf("Framing Error: invalid octet count\n");
+					logerrorInt("Framing Error in received TCP message: "
+					            "invalid octet count %d.\n",
+				 		    TCPSessions[iTCPSess].iOctetsRemain);
+					return(0); /* unconditional error exit */
 				}
 			} else {
 				TCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_STUFFING;
@@ -1427,6 +1499,8 @@ static void TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 	}
 
 	TCPSessions[iTCPSess].iMsg = iMsg; /* persist value */
+
+	return(1);	/* successful return */
 }
 
 
@@ -3754,17 +3828,37 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 		 * builds that such functionality be added as an optional, operator-configurable
 		 * feature.
 		 */
-dprintf("compressed message, doing decompress ");
 		int ret;
 		iLenDefBuf = MAXLINE;
 		ret = uncompress(deflateBuf, &iLenDefBuf, msg+1, len-1);
-//fprintf(stderr, "%d,%d\n", len -1, iLenDefBuf);
-dprintf(" - return %d, size new %d, old %d\n", ret, iLenDefBuf, len-1);
-deflateBuf[iLenDefBuf] = 0;
-dprintf("deflateBuf: '%s'\n", deflateBuf);
+		dprintf("Compressed message uncompressed with status %d, length: new %d, old %d.\n",
+		        ret, iLenDefBuf, len-1);
+		/* Now check if the uncompression worked. If not, there is not much we can do. In
+		 * that case, we log an error message but ignore the message itself. Storing the
+		 * compressed text is dangerous, as it contains control characters. So we do
+		 * not do this. If someone would like to have a copy, this code here could be
+		 * modified to do a hex-dump of the buffer in question. We do not include
+		 * this functionality right now.
+		 * rgerhards, 2006-12-07
+		 */
+		if(ret != Z_OK) {
+			logerrorInt("Uncompression of a message failed with return code %d "
+			            "- enable debug logging if you need further information. "
+				    "Message ignored.", ret);
+			return; /* unconditional exit, nothing left to do... */
+		}
 		pData = deflateBuf;
 		pEnd = deflateBuf + iLenDefBuf;
 	}
+#	else /* ifdef USE_NETZIP */
+	/* in this case, we still need to check if the message is compressed. If so, we must
+	 * tell the user we can not accept it.
+	 */
+	if(len > 0 && *msg == 'z') {
+		logerror("Received a compressed message, but rsyslogd does not have compression "
+		         "support enabled. The message will be ignored.");
+		return;
+	}	
 #	endif /* ifdef USE_NETZIP */
 
 	while(pData < pEnd) {
@@ -5810,6 +5904,7 @@ void logerrorSz(char *type, char *errMsg)
 	char buf[1024];
 
 	snprintf(buf, sizeof(buf), type, errMsg);
+	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	logerror(buf);
 	return;
 }
@@ -5825,6 +5920,7 @@ void logerrorInt(char *type, int errCode)
 	char buf[1024];
 
 	snprintf(buf, sizeof(buf), type, errCode);
+	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	logerror(buf);
 	return;
 }
@@ -5841,6 +5937,7 @@ void logerror(char *type)
 		snprintf(buf, sizeof(buf), "%s", type);
 	else
 		snprintf(buf, sizeof(buf), "%s: %s", type, strerror(errno));
+	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
 	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, LocalHostName, ADDDATE);
 	return;
@@ -7964,8 +8061,11 @@ static void mainloop(void)
 			 * IMPORTANT: With the current code, the writefds must be checked first,
 			 * because the readfds might have messages to be forwarded, which
 			 * rely on the status setting that is done here!
-			 *
 			 * rgerhards 2005-07-20
+			 *
+			 * liblogging implementation will not happen as anticipated above. So
+			 * this code here will stay for quite a while.
+			 * rgerhards, 2006-12-07
 			 */
 			for (f = Files; f != NULL ; f = f->f_next) {
 				if(   (f->f_type == F_FORW)
@@ -7977,6 +8077,7 @@ static void mainloop(void)
 					/* Send stored message (if any) */
 					if(f->f_un.f_forw.savedMsg != NULL) {
 						if(TCPSend(f, f->f_un.f_forw.savedMsg, strlen(f->f_un.f_forw.savedMsg)) != 0) {
+// TODO: see comment immediately below
 						/* TODO: we must check the forward handling in respect
 						 * to the new compression code. Then, we should also make
 						 * sure that the message length is stored, so that we
@@ -8070,18 +8171,25 @@ static void mainloop(void)
 					/* Receive message */
 					state = recv(fd, buf, sizeof(buf), 0);
 					if(state == 0) {
+						/* process any incomplete frames left over */
+						TCPSessPrepareClose(iTCPSess);
 						/* Session closed */
 						TCPSessClose(iTCPSess);
 					} else if(state == -1) {
-						char errmsg[128];
-						snprintf(errmsg, sizeof(errmsg)/sizeof(char),
-							 "TCP session %d will be closed, error ignored",
-							 fd);
-						logerror(errmsg);
+						logerrorInt("TCP session %d will be closed, error ignored\n",
+							    fd);
 						TCPSessClose(iTCPSess);
 					} else {
 						/* valid data received, process it! */
-						TCPSessDataRcvd(iTCPSess, buf, state);
+						if(TCPSessDataRcvd(iTCPSess, buf, state) == 0) {
+							/* in this case, something went awfully wrong.
+							 * We are instructed to terminate the session.
+							 */
+							logerrorInt("Tearing down TCP Session %d - see "
+							            "previous messages for reason(s)\n",
+								    iTCPSess);
+							TCPSessClose(iTCPSess);
+						}
 					}
 				}
 				iTCPSess = TCPSessGetNxtSess(iTCPSess);

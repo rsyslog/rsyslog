@@ -1,6 +1,6 @@
 # Makefile for rsyslog
-# Copyright (C) 2004, 2005 Rainer Gerhards and Adiscon GmbH
-# This is the distro-specifc part of the Makefile.
+# Copyright (C) 2004-2006 Rainer Gerhards and Adiscon GmbH
+# This is the distro-specific part of the Makefile.
 # This makefile here should be suitable for all flavours
 # of linux.
 # For details, see http://www.rsyslog.com/doc
@@ -78,6 +78,7 @@ endif
 
 ifeq ($(strip $(FEATURE_NETZIP)), 1)
   WITHDB=-DUSE_NETZIP
+  LZ=-lz
 endif
 
 ifeq ($(strip $(FEATURE_PTHREADS)), 1)
