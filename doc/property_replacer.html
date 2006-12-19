@@ -49,7 +49,10 @@ the string that should be copied. Offset counting starts at 1, so if you need to
 obtain the first 2 characters of the message text, you can use this syntax: 
 &quot;%msg:1:2%&quot;. If you do not whish to specify from and to, but you want to specify 
 options, you still need to include the colons. For example, if you would like to 
-convert the full message text to lower case, use &quot;%msg:::lowercase%&quot;.<p>
+convert the full message text to lower case, use &quot;%msg:::lowercase%&quot;. 
+If you would like to extract from a position until the end of the string, you 
+can place a dollar-sign (&quot;$&quot;) in toChar (e.g. %msg:10:$%, which will extract 
+from position 10 to the end of the string).<p>
 There is also support for <b>regular expressions</b>. To use them, you need to 
 place a &quot;R&quot; into FromChar. This tells rsyslog that a regular expression instead 
 of position-based extraction is desired. The actual regular expression must then 

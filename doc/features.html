@@ -14,7 +14,8 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 <ul>
 
  <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a><li>support for (plain) tcp 
-	based syslog - much better reliability<li>support for receiving messages via 	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">	RFC 3195</a> delivery<li>control of log output format, 
+	based syslog - much better reliability<li>support for sending and receiving 
+	compressed syslog messages<li>support for receiving messages via 	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">	RFC 3195</a> delivery<li>control of log output format, 
 	including ability to present channel and priority as visible log data<li>good timestamp format control; at a minimum, ISO 8601/RFC 3339
  second-resolution UTC zone<li>ability to reformat message contents and work with substrings<li>support for 
 	log files larger than 2gb<li>support for file size limitation and automatic 
@@ -26,14 +27,16 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 	messages<li>control of whether the local hostname or the hostname of the
  origin of the data is shown as the hostname in the output<li>ability to 
 	preserve the original hostname in NAT environments and relay chains
-	<li>ability to limit the allowed network senders<li>powerful BSD-style 	hostname and program name blocks for easy multi-host support<li>	multi-threaded - currently experimental<li>very 	experimental and volatile support for <a href="syslog-protocol.html">syslog-protocol</a> 	compliant messages (it is volatile because standardization is currently 	underway and this is a proof-of-concept implementation to aid this effort)</ul>
+	<li>ability to limit the allowed network senders<li>powerful BSD-style 	hostname and program name blocks for easy multi-host support<li>	multi-threaded - currently experimental<li>very 	experimental and volatile support for <a href="syslog-protocol.html">syslog-protocol</a> 	compliant messages (it is volatile because standardization is currently 	underway and this is a proof-of-concept implementation to aid this effort)<li>
+	experimental support for syslog-transport-tls based framing on syslog/tcp 
+	connections</ul>
 <p>&nbsp;</p>
 <h2>Upcoming Features</h2>
 <ul>
- <li>support for native SSL enryption of plain tcp syslog sessions
-	<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
-	partly added
- 	<li>solid multi-threading<li>support for	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - planned</ul>
+ <li>support for native SSL enryption of plain tcp syslog sessions. This will 
+	most probably happen based on syslog-transport-tls.<li>even more enhanced multi-threading<li>support for	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - planned<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
+	partly added. So far, this seems sufficient so that there is no urgent</ul>
+<p>&nbsp;</p>
 <p>To see when each feature was added, see the
 <a href="http://www.rsyslog.com/Topic4.phtml">rsyslog change log</a> (online 
 only).</p>
