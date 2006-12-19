@@ -1421,6 +1421,13 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			 * and conservative in what you send". We expect that including leading
 			 * zeros could be a common coding error.
 			 * rgerhards, 2006-12-07
+			 * The chairs of the IETF syslog-sec WG have announced that it is
+			 * consensus to do the octet count on the SYSLOG-MSG part only. I am
+			 * now changing the code to reflect this. Hopefully, it will not change
+			 * once again (there can no compatibility layer programmed for this).
+			 * To be on the save side, I just comment the code out. I mark these
+			 * comments with "IETF20061218".
+			 * rgerhards, 2006-12-19
 			 */
 			if(isdigit(*pData)) {
 				TCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_COUNTING;
@@ -1429,16 +1436,16 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 				 * the msg.
 				 */
 				int iCnt = 0;	/* the frame count specified */
-				int iNbrOctets = 0; /* numer of octets already consumed */
+				/* IETF20061218 int iNbrOctets = 0; / * number of octets already consumed */
 				while(isdigit(*pData)) {
 					iCnt = iCnt * 10 + *pData - '0';
-					++iNbrOctets;
+					/* IETF20061218 ++iNbrOctets; */
 					++pData;
 				}
 				dprintf("TCP Message with octet-counter, size %d.\n", iCnt);
 				if(*pData == ' ') {
 					++pData;	/* skip over SP */
-					++iNbrOctets;
+					/* IETF20061218 ++iNbrOctets; */
 				} else {
 					/* TODO: handle "invalid frame" case */
 					logerrorInt("Framing Error in received TCP message: "
@@ -1446,7 +1453,8 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 						    *pData);
 					return(0); /* unconditional error exit */
 				}
-				TCPSessions[iTCPSess].iOctetsRemain = iCnt - iNbrOctets;
+				/* IETF20061218 TCPSessions[iTCPSess].iOctetsRemain = iCnt - iNbrOctets; */
+				TCPSessions[iTCPSess].iOctetsRemain = iCnt;
 				if(TCPSessions[iTCPSess].iOctetsRemain < 1) {
 					/* TODO: handle the case where the octet count is 0 or negative! */
 					dprintf("Framing Error: invalid octet count\n");
@@ -1762,9 +1770,17 @@ static int TCPSend(struct filed *f, char *msg, size_t len)
 
 			/* important: the printf-mask is "%d<sp>" because there must be a
 			 * space after the len!
+			 *//* The chairs of the IETF syslog-sec WG have announced that it is
+			 * consensus to do the octet count on the SYSLOG-MSG part only. I am
+			 * now changing the code to reflect this. Hopefully, it will not change
+			 * once again (there can no compatibility layer programmed for this).
+			 * To be on the save side, I just comment the code out. I mark these
+			 * comments with "IETF20061218".
+			 * rgerhards, 2006-12-19
 			 */
 			iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len);
-			iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len + iLenBuf);
+			/* IETF20061218 iLenBuf =
+			  snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len + iLenBuf);*/
 
 			if((buf = malloc((len + iLenBuf) * sizeof(char))) == NULL) {
 			 	/* we are out of memory. This is an extreme situation. We do not
