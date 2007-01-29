@@ -1173,7 +1173,7 @@ static int create_tcp_socket(void)
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
-		logerror("syslog: TCP: Unknown protocol, suspending tcp inet service.");
+		logerror("syslog: TCP: could not create socket, suspending tcp inet service.");
 		return fd;
 	}
 
@@ -1214,11 +1214,19 @@ static int create_tcp_socket(void)
 		close(fd);
 		return -1;
 	}
-
-	if(listen(fd, 5) < 0) {
-		logerror("listen, suspending tcp inet");
-		close(fd);
-		return -1;
+	if(listen(fd, TCPSESS_MAX / 10 + 5) < 0) {
+		/* If the listen fails, it most probably fails because we ask
+		 * for a too-large backlog. So in this case we first set back
+		 * to a fixed, reasonable, limit that should work. Only if
+		 * that fails, too, we give up.
+		 */
+		logerrorInt("listen with a backlog of %d failed - retrying with default of 32.",
+			    TCPSESS_MAX / 10 + 5);
+		if(listen(fd, 32) < 0) {
+			logerror("listen, suspending tcp inet");
+			close(fd);
+			return -1;
+		}
 	}
 
 	sockTCPLstn = fd;
