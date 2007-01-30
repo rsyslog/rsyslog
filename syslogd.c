@@ -588,7 +588,7 @@ struct filed {
 	off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
 	char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
 #ifdef	WITH_DB
-	MYSQL	f_hmysql;		/* handle to MySQL */
+	MYSQL	*f_hmysql;		/* handle to MySQL */
 	/* TODO: optimize memory layout & consumption; rgerhards 2004-11-19 */
 	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
 	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
@@ -7769,7 +7769,7 @@ void sighup_handler()
 
 #ifdef WITH_DB
 /*
- * The following function is responsible for initiatlizing a
+ * The following function is responsible for initializing a
  * MySQL connection.
  * Initially added 2004-10-28 mmeckelein
  */
@@ -7781,21 +7781,29 @@ static void initMySQL(register struct filed *f)
 	if (checkDBErrorState(f))
 		return;
 	
-	/* TODO: in rare cases, NULL may be returned below! */
-	mysql_init(&f->f_hmysql);
-	do {
-		/* Connect to database */
-		if (!mysql_real_connect(&f->f_hmysql, f->f_dbsrv, f->f_dbuid, f->f_dbpwd, f->f_dbname, 0, NULL, 0)) {
-			/* if also the second attempt failed
-			   we call the error handler */
-			if(iCounter)
-				DBErrorHandler(f);
-		} else {
-			f->f_timeResumeOnError = 0; /* We have a working db connection */
-			dprintf("connected successfully to db\n");
-		}
-		iCounter++;
-	} while (mysql_errno(&f->f_hmysql) && iCounter<2);
+	f->f_hmysql = mysql_init(NULL);
+	if(f->f_hmysql == NULL) {
+		logerror("can not initialize MySQL handle - ignoring this action");
+		/* The next statement  causes a redundant message, but it is the
+		 * best thing we can do in this situation. -- rgerhards, 2007-01-30
+	     	 */
+		 f->f_type = F_UNUSED;
+	} else { /* we could get the handle, now on with work... */
+		do {
+			/* Connect to database */
+			if (!mysql_real_connect(f->f_hmysql, f->f_dbsrv, f->f_dbuid,
+			                        f->f_dbpwd, f->f_dbname, 0, NULL, 0)) {
+				/* if also the second attempt failed
+				   we call the error handler */
+				if(iCounter)
+					DBErrorHandler(f);
+			} else {
+				f->f_timeResumeOnError = 0; /* We have a working db connection */
+				dprintf("connected successfully to db\n");
+			}
+			iCounter++;
+		} while (mysql_errno(f->f_hmysql) && iCounter<2);
+	}
 }
 
 /*
@@ -7807,7 +7815,8 @@ static void closeMySQL(register struct filed *f)
 {
 	assert(f != NULL);
 	dprintf("in closeMySQL\n");
-	mysql_close(&f->f_hmysql);	
+	if(f->f_hmysql != NULL)	/* just to be on the safe side... */
+		mysql_close(f->f_hmysql);	
 }
 
 /*
@@ -7833,34 +7842,31 @@ static void writeMySQL(register struct filed *f)
 	char *psz;
 	int iCounter=0;
 	assert(f != NULL);
-	/* dprintf("in writeMySQL()\n"); */
+
 	iovCreate(f);
 	psz = iovAsString(f);
 	
 	if (checkDBErrorState(f))
 		return;
 
-	/* 
-	 * Now we are trying to insert the data. 
+	/* Now we are trying to insert the data. 
 	 *
-	 * If the first attampt failes we simply try a second one. If also 
-	 * the second attampt failed we discard this message and enable  
-	 * the "delay" error hanlding.
+	 * If the first attampt fails we simply try a second one. If that
+	 * fails too, we discard the message and enable "delay" error handling.
 	 */
 	do {
 		/* query */
-		if(mysql_query(&f->f_hmysql, psz)) {
-
-			/* if also the second attempt failed
+		if(mysql_query(f->f_hmysql, psz)) {
+			/* if the second attempt fails
 			   we call the error handler */
 			if(iCounter)
-				DBErrorHandler(f);	
+				DBErrorHandler(f);
 		}
 		else {
 			/* dprintf("db insert sucessfully\n"); */
 		}
 		iCounter++;
-	} while (mysql_errno(&f->f_hmysql) && iCounter<2);
+	} while (mysql_errno(f->f_hmysql) && iCounter<2);
 }
 
 /**
@@ -7869,10 +7875,16 @@ static void writeMySQL(register struct filed *f)
  * Call this function if an db error apears. It will initiate 
  * the "delay" handling which stopped the db logging for some 
  * time.  
+ *
+ * We now check if we have a valid MySQL handle. If not, we simply
+ * report an error, but can not be specific. RGerhards, 2007-01-30
  */
 static void DBErrorHandler(register struct filed *f)
 {
 	char errMsg[512];
+
+	assert(f != NULL);
+
 	/* TODO:
 	 * NO DB connection -> Can not log to DB
 	 * -------------------- 
@@ -7894,19 +7906,21 @@ static void DBErrorHandler(register struct filed *f)
 	 * invalid sql sturcture (wrong template) force us to disable db
 	 * logging. 
 	 *
-	 * Think about diffrent "delay" for diffrent errors!
+	 * Think about different "delay" for different errors!
 	 */
-	errno = 0;
-	snprintf(errMsg, sizeof(errMsg)/sizeof(char),
-		"db error (%d): %s\n", mysql_errno(&f->f_hmysql),
-		mysql_error(&f->f_hmysql));
-
+	if(f->f_hmysql == NULL) {
+		logerror("unknown DB error occured - called error handler with NULL MySQL handle.");
+	} else { /* we can ask mysql for the error description... */
+		errno = 0;
+		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
+			"db error (%d): %s\n", mysql_errno(f->f_hmysql),
+			mysql_error(f->f_hmysql));
+		f->f_iLastDBErrNo = mysql_errno(f->f_hmysql);
+		logerror(errMsg);
+	}
+		
 	/* Enable "delay" */
 	f->f_timeResumeOnError = time(&f->f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
-	f->f_iLastDBErrNo = mysql_errno(&f->f_hmysql);
-
-	/* Log error is the last step. */ 
-	logerror(errMsg);
 }
 
 /**
