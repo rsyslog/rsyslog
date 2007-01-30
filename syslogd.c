@@ -816,6 +816,10 @@ static struct code	FacNames[] = {
 };
 
 static int	Debug;		/* debug flag  - read-only after startup */
+static int	logEveryMsg = 0;/* no repeat message processing  - read-only after startup
+				 * 0 - suppress duplicate messages
+				 * 1 - do NOT suppress duplicate messages
+				 */
 static char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
 static char	*LocalDomain;	/* our local domain name  - read-only after startup */
 static int	InetInuse = 0;	/* non-zero if INET sockets are being used
@@ -4364,7 +4368,8 @@ static void processMsg(struct msg *pMsg)
 
 		/* suppress duplicate lines to this file
 		 */
-		if ((pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(f->f_pMsg) &&
+		if ((logEveryMsg == 0) &&
+		    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(f->f_pMsg) &&
 		    !strcmp(getMSG(pMsg), getMSG(f->f_pMsg)) &&
 		    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(f->f_pMsg))) {
 			f->f_prevcount++;
@@ -7776,6 +7781,7 @@ static void initMySQL(register struct filed *f)
 	if (checkDBErrorState(f))
 		return;
 	
+	/* TODO: in rare cases, NULL may be returned below! */
 	mysql_init(&f->f_hmysql);
 	do {
 		/* Connect to database */
@@ -8395,7 +8401,7 @@ int main(int argc, char **argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "a:dhi:f:l:m:nop:r:s:t:u:vw")) != EOF)
+	while ((ch = getopt(argc, argv, "a:dehi:f:l:m:nop:r:s:t:u:vw")) != EOF)
 		switch((char)ch) {
 		case 'a':
 			if (nfunix < MAXFUNIX)
@@ -8412,6 +8418,9 @@ int main(int argc, char **argv)
 			break;
 		case 'd':		/* debug */
 			Debug = 1;
+			break;
+		case 'e':		/* log every message (no repeat message supression) */
+			logEveryMsg = 1;
 			break;
 		case 'f':		/* configuration file */
 			ConfFile = optarg;

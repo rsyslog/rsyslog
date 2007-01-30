@@ -1,7 +1,7 @@
 .\" Copyright 2004-2005 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "04 October 2006" "Version 1.12.3 (unstable)" "Linux System Administration"
+.TH RSYSLOGD 8 "01 February 2007" "Version 1.13.1 (unstable)" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -10,6 +10,7 @@ rsyslogd \- reliable and extended syslogd
 .I socket
 ]
 .RB [ " \-d " ]
+.RB [ " \-e " ]
 .RB [ " \-f "
 .I config file
 ]
@@ -28,10 +29,10 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-p"
 .IB socket 
 ]
+.br
 .RB [ " \-r "
 .I port
 ]
-.br
 .RB [ " \-s "
 .I domainlist
 ]
@@ -110,6 +111,13 @@ Turns on debug mode.  Using this the daemon will not proceed a
 to set itself in the background, but opposite to that stay in the
 foreground and write much debug information on the current tty.  See the
 DEBUGGING section for more information.
+.TP
+.B "\-e"
+Turns on delivery of every message (e like "every"). Without this
+option, rsyslog tries to suppress what seems to be duplicate messages.
+This is done by stock syslogd and rsyslogd mimics this behaviour for
+best compatibility. In many cases, however, one would like to see all
+messages on remote hosts. In this case, turn on the -e option.
 .TP
 .BI "\-f " "config file"
 Specify an alternative configuration file instead of

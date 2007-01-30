@@ -6,6 +6,8 @@ Version 1.13.1 (RGer), 2007-02-xx
   left-over from early testing).
 - fixed a bug in makefile which caused DB-support to be disabled when
   NETZIP support was enabled
+- added the -e option to allow transmission of every message to remote
+  hosts (effectively turns off duplicate message suppression)
 ---------------------------------------------------------------------------
 Version 1.13.0 (RGer), 2006-12-19
 - added '$' as ToPos proptery replacer specifier - means "up to the
