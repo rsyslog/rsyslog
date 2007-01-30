@@ -77,7 +77,7 @@ ifeq ($(strip $(FEATURE_REGEXP)), 1)
 endif
 
 ifeq ($(strip $(FEATURE_NETZIP)), 1)
-  WITHDB=-DUSE_NETZIP
+  NETZIP=-DUSE_NETZIP
   LZ=-lz
 endif
 

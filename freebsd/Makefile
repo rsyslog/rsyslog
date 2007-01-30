@@ -34,6 +34,11 @@ FEATURE_RFC3195=0
 # Enable multithreading via pthreads (experimental!)
 FEATURE_PTHREADS=1
 
+# Enable zlib compression
+# Depending on the messages, turning zlib compression on
+# results in moderate savings of network traffic.
+FEATURE_NETZIP=1
+
 # Enable debug mode (much slower code)
 FEATURE_DEBUG=0
 
@@ -64,6 +69,10 @@ MANDIR = /usr/share/man
 
 .if $(FEATURE_DB) == 1
   WITHDB=-DWITH_DB
+.endif
+
+.if $(FEATURE_NETZIP) == 1
+  NETZIP=-DWITH_DB
 .endif
 
 .if $(FEATURE_REGEXP) == 1

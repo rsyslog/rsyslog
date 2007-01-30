@@ -33,7 +33,7 @@ SYSLOGD_FLAGS= -DSYSLOG_INET -DSYSLOG_UNIXAF ${FSSTND} \
 SYSLOG_FLAGS= -DALLOW_KERNEL_LOGGING
 
 .c.o:
-	${CC} ${CFLAGS} ${LIBLOGGING_INC} -c $(VPATH)$*.c
+	${CC} ${CFLAGS} ${NETZIP} ${LIBLOGGING_INC} -c $(VPATH)$*.c
 
 all: rfc3195d syslogd
 
@@ -55,7 +55,7 @@ outchannel.o: outchannel.c outchannel.h stringbuf.h syslogd.h rsyslog.h
 rfc3195d.o: rfc3195d.c rsyslog.h
 
 syslogd.o: syslogd.c version.h parse.h template.h stringbuf.h outchannel.h syslogd.h rsyslog.h
-	${CC} ${CFLAGS} ${SYSLOGD_FLAGS} -c $(VPATH)syslogd.c
+	${CC} ${CFLAGS} ${NETZIP} ${SYSLOGD_FLAGS} -c $(VPATH)syslogd.c
 
 syslog.o: syslog.c
 	${CC} ${CFLAGS} ${SYSLOG_FLAGS} -c $(VPATH)syslog.c
