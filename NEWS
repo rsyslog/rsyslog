@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.13.1 (RGer), 2007-02-xx
+Version 1.13.1 (RGer), 2007-02-05
 - changed the listen backlog limit to a more reasonable value based on
   the maximum number of TCP connections configurd (10% + 5) - thanks to Guy
   Standen for the hint (actually, the limit was 5 and that was a 

@@ -25,7 +25,7 @@ FEATURE_LARGEFILE=1
 
 # Enable database support (off by default, must be turned
 # on when support for MySQL is desired).
-FEATURE_DB=1
+FEATURE_DB=0
 
 # Enable regular expressions
 FEATURE_REGEXP=1
