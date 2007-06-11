@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# rsyslog        Starts rsyslogd/klogd.
+# rsyslog        Starts rsyslogd/rklogd.
 #
 #
 # chkconfig: 2345 12 88
@@ -8,14 +8,19 @@
 # messages to various system log files.  It is a good idea to always \
 # run rsyslog.
 ### BEGIN INIT INFO
-# Provides: $rsyslog
+# Provides: $syslog
+# Short-Description: Rsyslog, the enhanced syslogd for Linux and Unix 
+# Description: Rsyslog is an enhanced multi-threaded syslogd supporting, 
+#              among others, MySQL, syslog/tcp, RFC 3195, permitted 
+#              sender lists, filtering on any message part, and fine 
+#              grain output format control.
 ### END INIT INFO
 
 # Source function library.
 . /etc/init.d/functions
 
-[ -f /usr/sbin/rsyslogd ] || exit 0
-[ -f /sbin/klogd ] || exit 0
+[ -f /sbin/rsyslogd ] || exit 0
+[ -f /sbin/rklogd ] || exit 0
 
 # Source config
 if [ -f /etc/sysconfig/rsyslog ] ; then
@@ -34,15 +39,15 @@ start() {
         daemon rsyslogd $SYSLOGD_OPTIONS
         RETVAL=$?
         echo
-        echo -n $"Starting kernel logger: "
-        daemon klogd $KLOGD_OPTIONS
+        echo -n $"Starting kernel logger (rklogd): "
+        daemon rklogd $KLOGD_OPTIONS
         echo
         [ $RETVAL -eq 0 ] && touch /var/lock/subsys/rsyslog
         return $RETVAL
 }
 stop() {
-        echo -n $"Shutting down kernel logger: "
-        killproc klogd
+        echo -n $"Shutting down kernel logger (rklogd): "
+        killproc rklogd
         echo
         echo -n $"Shutting down system logger (rsyslog): "
         killproc rsyslogd
@@ -53,7 +58,7 @@ stop() {
 }
 rhstatus() {
         status rsyslogd
-        status klogd
+        status rklogd
 }
 restart() {
         stop
