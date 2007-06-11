@@ -1,9 +1,9 @@
 # master makefile for rsyslog
-# Copyright (C) 2004, 2005 Rainer Gerhards and Adiscon GmbH
+# Copyright (C) 2004-2007 Rainer Gerhards and Adiscon GmbH
 # This is the part of the makefile common to all distros.
 # For details, see http://www.rsyslog.com/doc
 
-#CC= gcc
+CC= gcc
 #CFLAGS= -g -DSYSV -Wall
 # Add the -DMTRACE macro if you would like to use mtrace()
 # to hunt for memory leaks
@@ -12,7 +12,7 @@
 #CFLAGS= -DSYSV -g -Wall -fno-omit-frame-pointer
 
 CFLAGS= $(RPM_OPT_FLAGS) -O3 -DSYSV -fomit-frame-pointer -Wall -fno-strength-reduce -I/usr/local/include $(NOLARGEFILE) $(WITHDB) $(F_REGEXP) $(DBG) $(F_RFC3195) $(F_PTHREADS)
-LDFLAGS= -s
+#LDFLAGS= -s
 
 # There is one report that under an all ELF system there may be a need to
 # explicilty link with libresolv.a.  If linking syslogd fails you may wish
@@ -81,9 +81,9 @@ clobber: clean
 	rm -f syslogd ksym syslog_tst oops_test TAGS tsyslogd tklogd
 
 install_exec: syslogd rfc3195d	
-	${INSTALL} -b -s klogd ${DESTDIR}${BINDIR}/rklogd
-	${INSTALL} -b -s syslogd ${DESTDIR}${BINDIR}/rsyslogd
-	${INSTALL} -b -s rfc3195d ${DESTDIR}${BINDIR}/rfc3195d
+	${INSTALL} -b klogd ${DESTDIR}${BINDIR}/rklogd
+	${INSTALL} -b syslogd ${DESTDIR}${BINDIR}/rsyslogd
+	${INSTALL} -b rfc3195d ${DESTDIR}${BINDIR}/rfc3195d
 
 install_man:
 	${INSTALL} -m 644 $(VPATH)rfc3195d.8 ${DESTDIR}${MANDIR}/man8/rfc3195d.8
