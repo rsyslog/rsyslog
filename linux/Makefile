@@ -41,6 +41,11 @@ FEATURE_RFC3195=0
 # Enable multithreading via pthreads (experimental!)
 FEATURE_PTHREADS=1
 
+# This feature indicates if klogd functionality
+# should be integrated. If it is switched off, klogd
+# is still compiled, but it is an empty shell.
+FEATURE_KLOGD=1
+
 # Enable debug mode (much slower code)
 FEATURE_DEBUG=0
 
@@ -70,6 +75,10 @@ endif
 
 ifeq ($(strip $(FEATURE_DB)), 1)
   WITHDB=-DWITH_DB
+endif
+
+ifeq ($(strip $(FEATURE_KLOGD)), 1)
+  FEATKLOGD=-DFEATURE_KLOGD
 endif
 
 ifeq ($(strip $(FEATURE_REGEXP)), 1)

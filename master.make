@@ -66,13 +66,13 @@ syslog.o: syslog.c
 	${CC} ${CFLAGS} ${SYSLOG_FLAGS} -c $(VPATH)syslog.c
 
 klogd.o: klogd.c klogd.h version.h
-	${CC} ${CFLAGS} ${KLOGD_FLAGS} $(DEB) -c $(VPATH)klogd.c
+	${CC} ${CFLAGS} ${KLOGD_FLAGS} ${FEATKLOGD} $(DEB) -c $(VPATH)klogd.c
 
 ksym.o: ksym.c klogd.h
-	${CC} ${CFLAGS} ${KLOGD_FLAGS} -c $(VPATH)ksym.c
+	${CC} ${CFLAGS} ${KLOGD_FLAGS} ${FEATKLOGD} -c $(VPATH)ksym.c
 
 ksym_mod.o: ksym_mod.c klogd.h
-	${CC} ${CFLAGS} ${KLOGD_FLAGS} -c $(VPATH)ksym_mod.c
+	${CC} ${CFLAGS} ${KLOGD_FLAGS} ${FEATKLOGD} -c $(VPATH)ksym_mod.c
 
 clean:
 	rm -f *.o *.log *~ *.orig syslogd rfc3195d

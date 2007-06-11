@@ -75,7 +75,7 @@ MANDIR = /usr/share/man
 .endif
 
 .if $(FEATURE_KLOGD) == 1
-  WITHDB=-DWITH_KLOGD
+  FEATKLOGD=-DFEATURE_KLOGD
 .endif
 
 .if $(FEATURE_NETZIP) == 1
