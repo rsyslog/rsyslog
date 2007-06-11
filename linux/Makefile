@@ -50,8 +50,8 @@ FEATURE_DEBUG=0
 #
 # THESE PATHES MUST ONLY BE SET IF RSYSLOG IS BUILD WITH
 # RFC 3195 SUPPORT!
-LIBLOGGING_INC=-I../../liblogging/src
-LIBLOGGING_BIN=../../liblogging/src/linux/liblogging.a
+LIBLOGGING_INC=-I../../liblogging-0.6.0/src
+LIBLOGGING_BIN=../../liblogging-0.6.0/src/linux/liblogging.a
 
 #############################################################
 #                  END OF USER SETTINGS                     #

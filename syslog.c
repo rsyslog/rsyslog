@@ -50,6 +50,8 @@
 #include <sys/file.h>
 #include <sys/signal.h>
 #include <sys/syslog.h>
+#undef   syslog
+#undef   vsyslog
 #if 0
 #include "syslog.h"
 #include "pathnames.h"

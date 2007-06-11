@@ -1,7 +1,12 @@
 ---------------------------------------------------------------------------
-Version 1.13.2 (RGer), 2007-02-??
+Version 1.13.2 (RGer), 2007-06-11
 - lib order in makefile patched to facilitate static linking - thanks
   to Bennett Todd for providing the patch
+- Integrated a patch from Peter Vrabec (pvrabec@redheat.com):
+  - added klogd under the name of rklogd (remove dependency on
+    original sysklogd package
+  - createDB.sql now in UTF
+  - added additional config files for use on Red Hat
 ---------------------------------------------------------------------------
 Version 1.13.1 (RGer), 2007-02-05
 - changed the listen backlog limit to a more reasonable value based on

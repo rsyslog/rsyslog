@@ -31,11 +31,12 @@ SYSLOGD_PIDNAME = -DSYSLOGD_PIDNAME=\"rsyslogd.pid\"
 SYSLOGD_FLAGS= -DSYSLOG_INET -DSYSLOG_UNIXAF ${FSSTND} \
 	${SYSLOGD_PIDNAME}
 SYSLOG_FLAGS= -DALLOW_KERNEL_LOGGING
+KLOGD_FLAGS = ${FSSTND} ${KLOGD_START_DELAY}
 
 .c.o:
 	${CC} ${CFLAGS} ${NETZIP} ${LIBLOGGING_INC} -c $(VPATH)$*.c
 
-all: rfc3195d syslogd
+all: klogd rfc3195d syslogd
 
 test: syslog_tst tsyslogd
 
@@ -57,8 +58,21 @@ rfc3195d.o: rfc3195d.c rsyslog.h
 syslogd.o: syslogd.c version.h parse.h template.h stringbuf.h outchannel.h syslogd.h rsyslog.h
 	${CC} ${CFLAGS} ${NETZIP} ${SYSLOGD_FLAGS} -c $(VPATH)syslogd.c
 
+klogd:  klogd.o syslog.o pidfile.o ksym.o ksym_mod.o
+	${CC} ${LDFLAGS} -o klogd klogd.o syslog.o pidfile.o ksym.o \
+                ksym_mod.o ${LIBS}
+
 syslog.o: syslog.c
 	${CC} ${CFLAGS} ${SYSLOG_FLAGS} -c $(VPATH)syslog.c
+
+klogd.o: klogd.c klogd.h version.h
+	${CC} ${CFLAGS} ${KLOGD_FLAGS} $(DEB) -c $(VPATH)klogd.c
+
+ksym.o: ksym.c klogd.h
+	${CC} ${CFLAGS} ${KLOGD_FLAGS} -c $(VPATH)ksym.c
+
+ksym_mod.o: ksym_mod.c klogd.h
+	${CC} ${CFLAGS} ${KLOGD_FLAGS} -c $(VPATH)ksym_mod.c
 
 clean:
 	rm -f *.o *.log *~ *.orig syslogd rfc3195d
@@ -67,13 +81,14 @@ clobber: clean
 	rm -f syslogd ksym syslog_tst oops_test TAGS tsyslogd tklogd
 
 install_exec: syslogd rfc3195d	
+	${INSTALL} -b -s klogd ${DESTDIR}${BINDIR}/rklogd
 	${INSTALL} -b -s syslogd ${DESTDIR}${BINDIR}/rsyslogd
 	${INSTALL} -b -s rfc3195d ${DESTDIR}${BINDIR}/rfc3195d
 
 install_man:
-	${INSTALL} $(VPATH)rfc3195d.8 ${DESTDIR}${MANDIR}/man8/rfc3195d.8
-	${INSTALL} $(VPATH)rsyslogd.8 ${DESTDIR}${MANDIR}/man8/rsyslogd.8
-	${INSTALL} $(VPATH)rsyslog.conf.5 ${DESTDIR}${MANDIR}/man5/rsyslog.conf.5
+	${INSTALL} -m 644 $(VPATH)rfc3195d.8 ${DESTDIR}${MANDIR}/man8/rfc3195d.8
+	${INSTALL} -m 644 $(VPATH)rsyslogd.8 ${DESTDIR}${MANDIR}/man8/rsyslogd.8
+	${INSTALL} -m 644 $(VPATH)rsyslog.conf.5 ${DESTDIR}${MANDIR}/man5/rsyslog.conf.5
 
 # The following lines are some legacy from sysklogd, which we might need
 # again in the future. So it is just commented out for now, eventually
