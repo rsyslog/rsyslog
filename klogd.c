@@ -285,9 +285,9 @@ _syscall3(int,ksyslog,int, type, char *, buf, int, len);
 
 #ifndef TESTING
 #if defined(FSSTND)
-static char	*PidFile = _PATH_VARRUN "klogd.pid";
+static char	*PidFile = _PATH_VARRUN "rklogd.pid";
 #else
-static char	*PidFile = "/etc/klogd.pid";
+static char	*PidFile = "/etc/rklogd.pid";
 #endif
 #endif
 
@@ -466,7 +466,7 @@ static void ChangeLogging(void)
 		Terminate();
 
 	/* Indicate that something is happening. */
-	Syslog(LOG_INFO, "klogd %s.%s, ---------- state change ----------\n", \
+	Syslog(LOG_INFO, "rklogd %s.%s, ---------- state change ----------\n", \
 	       VERSION, PATCHLEVEL);
 
 	/* Reload symbols. */
@@ -538,10 +538,10 @@ static enum LOGSRC GetKernelLogSrc(void)
 	  	/* Initialize kernel logging. */
 	  	ksyslog(1, NULL, 0);
 #ifdef DEBRELEASE
-		Syslog(LOG_INFO, "klogd %s.%s#%s, log source = ksyslog "
+		Syslog(LOG_INFO, "rklogd %s.%s#%s, log source = ksyslog "
 		       "started.", VERSION, PATCHLEVEL, DEBRELEASE);
 #else
-		Syslog(LOG_INFO, "klogd %s.%s, log source = ksyslog "
+		Syslog(LOG_INFO, "rklogd %s.%s, log source = ksyslog "
 		       "started.", VERSION, PATCHLEVEL);
 #endif
 		return(kernel);
@@ -550,7 +550,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 #ifndef TESTING
 	if ( (kmsg = open(_PATH_KLOG, O_RDONLY)) < 0 )
 	{
-		fprintf(stderr, "klogd: Cannot open proc file system, " \
+		fprintf(stderr, "rklogd: Cannot open proc file system, " \
 			"%d - %s.\n", errno, strerror(errno));
 		ksyslog(7, NULL, 0);
 		exit(1);
@@ -560,10 +560,10 @@ static enum LOGSRC GetKernelLogSrc(void)
 #endif
 
 #ifdef DEBRELEASE
-	Syslog(LOG_INFO, "klogd %s.%s#%s, log source = %s started.", \
+	Syslog(LOG_INFO, "rklogd %s.%s#%s, log source = %s started.", \
 	       VERSION, PATCHLEVEL, DEBRELEASE, _PATH_KLOG);
 #else
-	Syslog(LOG_INFO, "klogd %s.%s, log source = %s started.", \
+	Syslog(LOG_INFO, "rklogd %s.%s, log source = %s started.", \
 	       VERSION, PATCHLEVEL, _PATH_KLOG);
 #endif
 	return(proc);
@@ -924,7 +924,7 @@ static void LogKernelLine(void)
 	{
 		if ( errno == EINTR )
 			return;
-		fprintf(stderr, "klogd: Error return from sys_sycall: " \
+		fprintf(stderr, "rklogd: Error return from sys_sycall: " \
 			"%d - %s\n", errno, strerror(errno));
 	}
 	else
@@ -1014,7 +1014,7 @@ int main(argc, argv)
 			use_syscall = 1;
 			break;
 		    case 'v':
-			printf("klogd %s.%s\n", VERSION, PATCHLEVEL);
+			printf("rklogd %s.%s\n", VERSION, PATCHLEVEL);
 			exit (1);
 		    case 'x':
 			symbol_lookup = 0;
@@ -1028,7 +1028,7 @@ int main(argc, argv)
 		if ( (strlen(log_level) > 1) || \
 		     (strchr("12345678", *log_level) == (char *) 0) )
 		{
-			fprintf(stderr, "klogd: Invalid console logging "
+			fprintf(stderr, "rklogd: Invalid console logging "
 				"level <%s> specified.\n", log_level);
 			return(1);
 		}
@@ -1073,7 +1073,7 @@ int main(argc, argv)
 		}
 		else
 		{
-			fputs("klogd: Already running.\n", stderr);
+			fputs("rklogd: Already running.\n", stderr);
 			exit(1);
 		}
 	}
@@ -1087,7 +1087,7 @@ int main(argc, argv)
 	}
 	else
 	{
-		fputs("klogd: Already running.\n", stderr);
+		fputs("rklogd: Already running.\n", stderr);
 		Terminate();
 	}
 #endif	
@@ -1112,7 +1112,7 @@ int main(argc, argv)
 			output_file = stdout;
 		else if ( (output_file = fopen(output, "w")) == (FILE *) 0 )
 		{
-			fprintf(stderr, "klogd: Cannot open output file " \
+			fprintf(stderr, "rklogd: Cannot open output file " \
 				"%s - %s\n", output, strerror(errno));
 			return(1);
 		}
