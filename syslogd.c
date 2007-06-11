@@ -1942,7 +1942,7 @@ static int srSLMGParseInt32(unsigned char** ppsz)
  * Parse a TIMESTAMP-3339.
  * updates the parse pointer position.
  */
-static int srSLMGParseTIMESTAMP3339(struct syslogTime *pTime, unsigned char** ppszTS)
+static int srSLMGParseTIMESTAMP3339(struct syslogTime *pTime, char** ppszTS)
 {
 	unsigned char *pszTS = *ppszTS;
 
@@ -4742,7 +4742,7 @@ static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
 	 */
 
 	/* TIMESTAMP */
-	if(srSLMGParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), (unsigned char **) &p2parse) == FALSE) {
+	if(srSLMGParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse) == FALSE) {
 		dprintf("no TIMESTAMP detected!\n");
 		bContParse = 0;
 		flags |= ADDDATE;
