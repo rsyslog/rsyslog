@@ -1,3 +1,4 @@
+#ifdef FEATURE_KLOGD
 /*
     ksym_mod.c - functions for building symbol lookup tables for klogd
     Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
@@ -83,7 +84,6 @@
 
 /* Includes. */
 #include <stdlib.h>
-#include <malloc.h>
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
@@ -698,3 +698,4 @@ extern void Syslog(int priority, char *fmt, ...)
 }
 
 #endif
+#endif /* #ifdef FEATURE_KLOGD */

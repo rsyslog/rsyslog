@@ -19,6 +19,7 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#ifdef WITH_KLOGD
 /*
  * Steve Lord (lord@cray.com) 7th Nov 92
  *
@@ -1169,6 +1170,13 @@ int main(argc, argv)
 		}
 	}
 }
+#else /* #ifdef WITH_KLOGD */
+#include <stdio.h>
+void main()
+{
+	fprintf(stderr, "FEATURE_KLOGD was disabled during this build, so klogd is not available.\n");
+}
+#endif /* #ifdef WITH_KLOGD */
 /*
  * Local variables:
  *  c-indent-level: 8

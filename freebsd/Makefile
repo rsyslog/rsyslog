@@ -39,6 +39,9 @@ FEATURE_PTHREADS=1
 # results in moderate savings of network traffic.
 FEATURE_NETZIP=1
 
+# For Freebsd, we disable klogd
+FEATURE_KLOGD=0
+
 # Enable debug mode (much slower code)
 FEATURE_DEBUG=0
 
@@ -69,6 +72,10 @@ MANDIR = /usr/share/man
 
 .if $(FEATURE_DB) == 1
   WITHDB=-DWITH_DB
+.endif
+
+.if $(FEATURE_KLOGD) == 1
+  WITHDB=-DWITH_KLOGD
 .endif
 
 .if $(FEATURE_NETZIP) == 1

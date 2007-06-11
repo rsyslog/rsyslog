@@ -1,3 +1,4 @@
+#ifdef FEATURE_KLOGD
 /*
     ksym.c - functions for kernel address->symbol translation
     Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
@@ -110,7 +111,6 @@
 
 /* Includes. */
 #include <stdlib.h>
-#include <malloc.h>
 #include <sys/utsname.h>
 #include <ctype.h>
 #include "klogd.h"
@@ -980,3 +980,4 @@ extern void Syslog(int priority, char *fmt, ...)
 	return;
 }
 #endif
+#endif /* #ifdef FEATURE_KLOGD */
