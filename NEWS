@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.13.2 (RGer), 2007-06-11
+Version 1.13.2 (RGer), 2007-06-13
 - lib order in makefile patched to facilitate static linking - thanks
   to Bennett Todd for providing the patch
 - Integrated a patch from Peter Vrabec (pvrabec@redheat.com):
