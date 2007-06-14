@@ -275,6 +275,8 @@ _syscall3(int,ksyslog,int, type, char *, buf, int, len);
 #include <sys/klog.h>
 #define ksyslog klogctl
 #endif
+extern int writeSyslogV(int pri, const char *szFmt, va_list va);
+extern int writeSyslog(int iPri, const char *szFmt, ...);
 
 #ifndef _PATH_KLOG
 #define _PATH_KLOG  "/proc/kmsg"
@@ -332,8 +334,84 @@ static void LogProcLine(void);
 extern int main(int argc, char *argv[]);
 
 
-static void CloseLogSrc()
+extern void Syslog(int priority, char *fmt, ...)
+{
+	va_list ap;
+	char *argl;
 
+	if ( debugging )
+	{
+		fputs("Logging line:\n", stderr);
+		fprintf(stderr, "\tLine: %s\n", fmt);
+		fprintf(stderr, "\tPriority: %d\n", priority);
+	}
+
+	/* Handle output to a file. */
+	if ( output_file != (FILE *) 0 ) {
+		va_start(ap, fmt);
+		vfprintf(output_file, fmt, ap);
+		va_end(ap);
+		fputc('\n', output_file);
+		fflush(output_file);
+		if (!one_shot)
+			fsync(fileno(output_file));
+		return;
+	}
+	
+	/* Output using syslog. */
+	if (!strcmp(fmt, "%s")) {
+		va_start(ap, fmt);
+		argl = va_arg(ap, char *);
+		if (argl[0] == '<' && argl[1] && argl[2] == '>') {
+			switch ( argl[1] )
+			{
+			case '0':
+				priority = LOG_EMERG;
+				break;
+			case '1':
+				priority = LOG_ALERT;
+				break;
+			case '2':
+				priority = LOG_CRIT;
+				break;
+			case '3':
+				priority = LOG_ERR;
+				break;
+			case '4':
+				priority = LOG_WARNING;
+				break;
+			case '5':
+				priority = LOG_NOTICE;
+				break;
+			case '6':
+				priority = LOG_INFO;
+				break;
+			case '7':
+			default:
+				priority = LOG_DEBUG;
+			}
+			argl += 3;
+		}
+		writeSyslog(priority, fmt, argl);
+		va_end(ap);
+#ifdef TESTING
+		putchar('\n');
+#endif
+		return;
+	}
+
+	va_start(ap, fmt);
+	writeSyslogV(priority, fmt, ap);
+	va_end(ap);
+#ifdef TESTING
+	printf ("\n");
+#endif
+
+	return;
+}
+
+
+static void CloseLogSrc(void)
 {
 	/* Turn on logging of messages to console. */
   	ksyslog(7, NULL, 0);
@@ -371,10 +449,7 @@ void restart(sig)
 }
 
 
-void stop_logging(sig)
-
-	int sig;
-	
+void stop_logging(int sig)
 {
 	signal(SIGTSTP, stop_logging);
 	change_state = 1;
@@ -383,20 +458,14 @@ void stop_logging(sig)
 }
 
 
-void stop_daemon(sig)
-
-	int sig;
-
+void stop_daemon(int sig)
 {
 	Terminate();
 	return;
 }
 
 
-void reload_daemon(sig)
-
-     int sig;
-
+void reload_daemon(int sig)
 {
 	change_state = 1;
 	reload_symbols = 1;
@@ -415,7 +484,6 @@ void reload_daemon(sig)
 
 
 static void Terminate()
-
 {
 	CloseLogSrc();
 	Syslog(LOG_INFO, "Kernel log daemon terminating.");
@@ -429,10 +497,7 @@ static void Terminate()
 	exit(1);
 }
 
-static void SignalDaemon(sig)
-
-     int sig;
-
+static void SignalDaemon(int sig)
 {
 #ifndef TESTING
 	auto int pid = check_pid(PidFile);
@@ -445,8 +510,7 @@ static void SignalDaemon(sig)
 }
 
 
-static void ReloadSymbols()
-
+static void ReloadSymbols(void)
 {
 	if (symbol_lookup) {
 		if ( reload_symbols > 1 )
@@ -459,7 +523,6 @@ static void ReloadSymbols()
 
 
 static void ChangeLogging(void)
-
 {
 	/* Terminate kernel logging. */
 	if ( terminate == 1 )
@@ -508,10 +571,8 @@ static void ChangeLogging(void)
 
 
 static enum LOGSRC GetKernelLogSrc(void)
-
 {
 	auto struct stat sb;
-
 
 	/* Set level of kernel console messaging.. */
 	if ( (ksyslog(8, NULL, console_log_level) < 0) && \
@@ -567,87 +628,6 @@ static enum LOGSRC GetKernelLogSrc(void)
 	       VERSION, PATCHLEVEL, _PATH_KLOG);
 #endif
 	return(proc);
-}
-
-
-extern void Syslog(int priority, char *fmt, ...)
-
-{
-	va_list ap;
-	char *argl;
-
-	if ( debugging )
-	{
-		fputs("Logging line:\n", stderr);
-		fprintf(stderr, "\tLine: %s\n", fmt);
-		fprintf(stderr, "\tPriority: %d\n", priority);
-	}
-
-	/* Handle output to a file. */
-	if ( output_file != (FILE *) 0 )
-	{
-		va_start(ap, fmt);
-		vfprintf(output_file, fmt, ap);
-		va_end(ap);
-		fputc('\n', output_file);
-		fflush(output_file);
-		if (!one_shot)
-			fsync(fileno(output_file));
-		return;
-	}
-	
-	/* Output using syslog. */
-	if (!strcmp(fmt, "%s"))
-	{
-		va_start(ap, fmt);
-		argl = va_arg(ap, char *);
-		if (argl[0] == '<' && argl[1] && argl[2] == '>')
-		{
-			switch ( argl[1] )
-			{
-			case '0':
-				priority = LOG_EMERG;
-				break;
-			case '1':
-				priority = LOG_ALERT;
-				break;
-			case '2':
-				priority = LOG_CRIT;
-				break;
-			case '3':
-				priority = LOG_ERR;
-				break;
-			case '4':
-				priority = LOG_WARNING;
-				break;
-			case '5':
-				priority = LOG_NOTICE;
-				break;
-			case '6':
-				priority = LOG_INFO;
-				break;
-			case '7':
-			default:
-				priority = LOG_DEBUG;
-			}
-			argl += 3;
-		}
-		syslog(priority, fmt, argl);
-		va_end(ap);
-#ifdef TESTING
-		putchar('\n');
-#endif
-		return;
-	}
-
-	va_start(ap, fmt);
-	vsyslog(priority, fmt, ap);
-	va_end(ap);
-#ifdef TESTING
-	printf ("\n");
-#endif
-
-	return;
 }
 
 
@@ -909,7 +889,6 @@ static void LogLine(char *ptr, int len)
 
 
 static void LogKernelLine(void)
-
 {
 	auto int rdcnt;
 
@@ -934,7 +913,6 @@ static void LogKernelLine(void)
 
 
 static void LogProcLine(void)
-
 {
 	auto int rdcnt;
 
@@ -959,12 +937,7 @@ static void LogProcLine(void)
 }
 
 
-int main(argc, argv)
-
-	int argc;
-
-	char *argv[];
-
+int main(int argc, char *argv[])
 {
 	auto int	ch,
 			use_output = 0;
@@ -1117,9 +1090,6 @@ int main(argc, argv)
 			return(1);
 		}
 	}
-	else
-		openlog("kernel", 0, LOG_KERN);
-
 
 	/* Handle one-shot logging. */
 	if ( one_shot )

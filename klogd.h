@@ -40,6 +40,5 @@ extern int InitMsyms(void);
 extern char * ExpandKadds(char *, char *);
 extern void SetParanoiaLevel(int);
 extern void Syslog(int priority, char *fmt, ...);
-extern void syslog(int pri, const char *fmt, ...);
 extern void vsyslog(int pri, const char *fmt, va_list ap);
 extern void openlog(const char *ident, int logstat, int logfac);

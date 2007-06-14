@@ -1442,12 +1442,13 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			 * rgerhards, 2006-12-19
 			 */
 			if(isdigit(*pData)) {
+				int iCnt;	/* the frame count specified */
 				TCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_COUNTING;
 				/* in this mode, we have OCTET-COUNT SP MSG - so we now need
 				 * to extract the OCTET-COUNT and the SP and then extract
 				 * the msg.
 				 */
-				int iCnt = 0;	/* the frame count specified */
+				iCnt = 0;
 				/* IETF20061218 int iNbrOctets = 0; / * number of octets already consumed */
 				while(isdigit(*pData)) {
 					iCnt = iCnt * 10 + *pData - '0';
