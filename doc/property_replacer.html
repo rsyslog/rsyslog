@@ -30,6 +30,8 @@ socket. Should be useful for debugging.</td></tr>
 <tr><td><b>programname</b></td><td>the &quot;static&quot; part of the tag, as defined by
 BSD syslogd. For example, when TAG is "named[12345]", programname is "named".</td></tr>
 <tr><td><b>PRI</b></td><td>PRI part of the message - undecoded (single value)</td></tr>
+<tr><td><b>PRI-text</b></td><td>the PRI part of the message in a textual form 
+	(e.g. &quot;syslog.info&quot;)</td></tr>
 <tr><td><b>IUT</b></td><td>the monitorware InfoUnitType - used when talking
 to a <a href="http://www.monitorware.com">MonitorWare</a> backend (also for 
 	<a href="http://www.phplogcon.org/">phpLogCon</a>)</td></tr>
@@ -42,6 +44,16 @@ to a <a href="http://www.monitorware.com">MonitorWare</a> backend (also for
 what was provided in the message (in most cases,
 only seconds)</td></tr>
 <tr><td><b>TIMESTAMP</b></td><td>alias for timereported</td></tr>
+<tr><td><b>PROTOCOL-VERSION</b></td><td>The contents of the PROTCOL-VERSION 
+	field from IETF draft draft-ietf-syslog-protcol</td></tr>
+<tr><td><b>STRUCTURED-DATA</b></td><td>The contents of the STRUCTURED-DATA field 
+	from IETF draft draft-ietf-syslog-protocol</td></tr>
+<tr><td><b>APP-NAME</b></td><td>The contents of the APP-NAME field from IETF 
+	draft draft-ietf-syslog-protocol</td></tr>
+<tr><td><b>PROCID</b></td><td>The contents of the PROCID field from IETF draft 
+	draft-ietf-syslog-protocol</td></tr>
+<tr><td><b>MSGID</b></td><td>The contents of the MSGID field from IETF draft 
+	draft-ietf-syslog-protocol</td></tr>
 </table>
 <h2>Character Positions</h2>
 <p><b><code>FromChar</code></b> and <b><code>toChar</code></b> are used to build substrings. They specify the offset within 
