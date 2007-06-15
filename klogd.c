@@ -1182,7 +1182,7 @@ int main(int argc, char *argv[])
 #include <stdio.h>
 int main()
 {
-	fprintf(stderr, "FEATURE_KLOGD was disabled during this build, so klogd is not available.\n");
+	fprintf(stderr, "FEATURE_KLOGD was disabled during make, so rklogd is not available.\n");
 	return(1);
 }
 #endif /* #ifdef WITH_KLOGD */
