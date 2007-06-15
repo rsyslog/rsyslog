@@ -339,7 +339,7 @@ extern void Syslog(int priority, char *fmt, ...)
 	va_list ap;
 	char *argl;
 
-	if ( debugging )
+	if(debugging)
 	{
 		fputs("Logging line:\n", stderr);
 		fprintf(stderr, "\tLine: %s\n", fmt);
@@ -437,10 +437,7 @@ static void CloseLogSrc(void)
 }
 
 
-void restart(sig)
-	
-	int sig;
-
+void restart(int sig)
 {
 	signal(SIGCONT, restart);
 	change_state = 1;
@@ -470,7 +467,6 @@ void reload_daemon(int sig)
 	change_state = 1;
 	reload_symbols = 1;
 
-
 	if ( sig == SIGUSR2 )
 	{
 		++reload_symbols;
@@ -483,7 +479,7 @@ void reload_daemon(int sig)
 }
 
 
-static void Terminate()
+static void Terminate(void)
 {
 	CloseLogSrc();
 	Syslog(LOG_INFO, "Kernel log daemon terminating.");
@@ -647,7 +643,9 @@ static int copyin( char *line,      int space,
 
     count = len < space ? len : space;
 
-    for(i=0; i<count && !strchr(delim, *ptr); i++ ) { *line++ = *ptr++; }
+    for(i=0; i<count && !strchr(delim, *ptr); i++ ) {
+	*line++ = *ptr++;
+    }
 
     return( i );
 }
@@ -1067,7 +1065,7 @@ int main(int argc, char *argv[])
 
 	/* Signal setups. */
 	for (ch= 1; ch < NSIG; ++ch)
-		signal(ch, SIG_IGN);
+	signal(ch, SIG_IGN);
 	signal(SIGINT, stop_daemon);
 	signal(SIGKILL, stop_daemon);
 	signal(SIGTERM, stop_daemon);

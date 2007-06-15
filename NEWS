@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.13.3 (RGer), 2007-??-??
+Version 1.13.3 (RGer), 2007-06-15
 - create a version of syslog.c from scratch. This is now
   - highly optimized for rsyslog
   - removes an incompatible license problem as the original
@@ -7,8 +7,10 @@ Version 1.13.3 (RGer), 2007-??-??
   - fixed in the regard that rklogd will continue to work when
     rsysogd has been restarted (the original version, as well
     as sysklogd, will remain silent then)
- - solved an issue with an extra NUL char at message end that the
-   original version had
+  - solved an issue with an extra NUL char at message end that the
+    original version had
+- applied some changes to klogd to care for the new interface
+- fixed a bug in syslogd.c which prevented compiling under debian
 ---------------------------------------------------------------------------
 Version 1.13.2 (RGer), 2007-06-13
 - lib order in makefile patched to facilitate static linking - thanks
