@@ -2404,6 +2404,29 @@ static void getCurrTime(struct syslogTime *t)
 	t->OffsetMinute = lBias % 3600;
 }
 
+/* Decode a priority into textual information like auth.emerg.
+ * The variable pRes must point to a user-supplied buffer and
+ * pResLen must contain its size. The pointer to the buffer
+ * is also returned, what makes this functiona suitable for
+ * use in printf-like functions.
+ * Note: a buffer size of 20 characters is always sufficient.
+ * Interface to this function changed 2007-06-15 by RGerhards
+ */
+char *textpri(char *pRes, size_t pResLen, int pri)
+{
+	CODE *c_pri, *c_fac;
+
+	assert(pRes != NULL);
+	assert(pResLen > 0);
+
+	for (c_fac = facilitynames; c_fac->c_name && !(c_fac->c_val == LOG_FAC(pri)<<3); c_fac++);
+	for (c_pri = prioritynames; c_pri->c_name && !(c_pri->c_val == LOG_PRI(pri)); c_pri++);
+
+	snprintf (pRes, pResLen, "%s.%s<%d>", c_fac->c_name, c_pri->c_name, pri);
+
+	return pRes;
+}
+
 /* rgerhards 2004-11-09: the following function is used to 
  * log emergency message when syslogd has no way of using
  * regular meas of processing. It is supposed to be 
@@ -2573,6 +2596,7 @@ static char *getMSG(struct msg *pM)
 }
 
 
+/* Get PRI value in text form */
 static char *getPRI(struct msg *pM)
 {
 	if(pM == NULL)
@@ -2590,6 +2614,14 @@ static char *getPRI(struct msg *pM)
 	}
 
 	return pM->pszPRI;
+}
+
+
+/* Get PRI value as integer */
+static int getPRIi(struct msg *pM)
+{
+	assert(pM != NULL);
+	return (pM->iFacility << 3) + (pM->iSeverity);
 }
 
 
@@ -3362,6 +3394,15 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		pRes = getTAG(pMsg);
 	} else if(!strcmp(pName, "PRI")) {
 		pRes = getPRI(pMsg);
+	} else if(!strcmp(pName, "PRI-text")) {
+		pBuf = malloc(20 * sizeof(char));
+		if(pBuf == NULL) {
+			*pbMustBeFreed = 0;
+			return "**OUT OF MEMORY**";
+		} else {
+			*pbMustBeFreed = 1;
+			pRes = textpri(pBuf, 20, getPRIi(pMsg));
+		}
 	} else if(!strcmp(pName, "iut")) {
 		pRes = "1"; /* always 1 for syslog messages (a MonitorWare thing;)) */
 	} else if(!strcmp(pName, "syslogfacility")) {
@@ -3375,7 +3416,6 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp(pName, "programname")) {
 		pRes = getProgramName(pMsg);
-// TODO DOC: document new properties
 	} else if(!strcmp(pName, "PROTOCOL-VERSION")) {
 		pRes = getProtocolVersionString(pMsg);
 	} else if(!strcmp(pName, "STRUCTURED-DATA")) {
@@ -4101,22 +4141,6 @@ void printline(char *hname, char *msg, int bParseHost)
 	 */
 	MsgDestruct(pMsg);
 	return;
-}
-
-/* Decode a priority into textual information like auth.emerg.
- */
-char *textpri(pri)
-	int pri;
-{
-	static char res[20];
-	CODE *c_pri, *c_fac;
-
-	for (c_fac = facilitynames; c_fac->c_name && !(c_fac->c_val == LOG_FAC(pri)<<3); c_fac++);
-	for (c_pri = prioritynames; c_pri->c_name && !(c_pri->c_val == LOG_PRI(pri)); c_pri++);
-
-	snprintf (res, sizeof(res), "%s.%s<%d>", c_fac->c_name, c_pri->c_name, pri);
-
-	return res;
 }
 
 time_t	now;
@@ -4984,11 +5008,14 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 void logmsg(int pri, struct msg *pMsg, int flags)
 {
 	char *msg;
+	char PRItext[20];
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	msg = pMsg->pszUxTradMsg;
-	dprintf("logmsg: %s, flags %x, from '%s', msg %s\n", textpri(pri), flags, getRcvFrom(pMsg), msg);
+	dprintf("logmsg: %s, flags %x, from '%s', msg %s\n",
+	        textpri(PRItext, sizeof(PRItext) / sizeof(char), pri),
+		flags, getRcvFrom(pMsg), msg);
 
 #ifndef SYSV
 	omask = sigblock(sigmask(SIGHUP)|sigmask(SIGALRM));
@@ -7692,17 +7719,16 @@ static rsRetVal cfline(char *line, register struct filed *f)
 }
 
 
-/*
- *  Decode a symbolic name to a numeric value
+/*  Decode a symbolic name to a numeric value
  */
-
-int decode(name, codetab)
-	char *name;
-	struct code *codetab;
+int decode(char *name, struct code *codetab)
 {
 	register struct code *c;
 	register char *p;
 	char buf[80];
+
+	assert(name != NULL);
+	assert(codetab != NULL);
 
 	dprintf ("symbolic name: %s", name);
 	if (isdigit(*name))

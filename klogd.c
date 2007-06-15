@@ -457,7 +457,7 @@ void stop_logging(int sig)
 
 void stop_daemon(int sig)
 {
-	Terminate();
+	change_state = 1;
 	return;
 }
 
@@ -1120,7 +1120,12 @@ int main(int argc, char *argv[])
 	}
 
         /* The main loop. */
-	while (1)
+	/* The main loop will be broken by a signal handler which set the
+	 * terminate variable. That is then cheked in ChangeLogging(), which
+	 * will then terminate klogd.
+	 * RGerhards, 2007-06-15
+	 */
+	while(1)
 	{
 		if ( change_state )
 			ChangeLogging();
@@ -1152,4 +1157,5 @@ int main()
  *  c-basic-offset: 8
  *  tab-width: 8
  * End:
+ * vi:set ai:
  */

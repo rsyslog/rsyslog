@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 1.13.4 (RGer), 2007-06-18
+- added a new property "PRI-text", which holds the PRI field in
+  textual form (e.g. "syslog.info")
+---------------------------------------------------------------------------
 Version 1.13.3 (RGer), 2007-06-15
 - create a version of syslog.c from scratch. This is now
   - highly optimized for rsyslog
