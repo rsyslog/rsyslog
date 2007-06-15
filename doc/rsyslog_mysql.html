@@ -197,13 +197,9 @@ becoming too slow). If you expect an extremely high syslog message volume,
 storing it in real-time to the database may outperform your database server. In 
 such cases, either filter out some messages or think about alternate approaches 
 involving non-real-time database writing (beyond the scope of this paper).</P>
-<P>The method outline in this paper provides an easy to setup and maintain 
+<P>The method outlined in this paper provides an easy to setup and maintain 
 solution for most use cases, especially with low and medium syslog message 
 volume (or fast database servers).</P>
-<P>I have set up a site to <a href="http://demo.rsyslog.com/">demo web access to 
-syslog data</a>. It is build using the steps outlined here and uses phpLogCon as 
-the front-end. You might want to <a href="http://demo.rsyslog.com/">visit</a> it 
-to get a glimpse of how such a beast might look.</P>
 <h3>Feedback Requested</h3>
 <P>I would appreciate feedback on this paper. If you have additional ideas, 
 comments or find bugs, please
@@ -211,8 +207,6 @@ comments or find bugs, please
 <h2>References and Additional Material</h2>
 <ul>
 	<li><a href="http://www.rsyslog.com">www.rsyslog.com</a> - the rsyslog site</li>
-	<li><a href="http://demo.rsyslog.com/">demo.rsyslog.com</a> -&nbsp; demo 
-	site for rsyslog and the phpLogCon web interface</li>
 	<li>
 	<a href="http://www.monitorware.com/Common/en/Articles/performance-optimizing-syslog-server.php">
 	Paper on Syslog Server Optimization</a></li>
@@ -225,9 +219,12 @@ comments or find bugs, please
 	<li>2005-08-03 *
 	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
 	* added references to demo site</li>
+	<li>2007-06-13 *
+	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
+	* removed demo site - was torn down because too expensive for usage count</li>
 </ul>
 <h2>Copyright</h2>
-<p>Copyright (c) 2005
+<p>Copyright (c) 2005-2007
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
 and <a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
 <p>Permission is granted to copy, distribute and/or modify this document under 
