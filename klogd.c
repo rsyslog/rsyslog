@@ -458,6 +458,7 @@ void stop_logging(int sig)
 void stop_daemon(int sig)
 {
 	change_state = 1;
+	terminate = 1;
 	return;
 }
 
@@ -937,11 +938,12 @@ static void LogProcLine(void)
 
 int main(int argc, char *argv[])
 {
-	auto int	ch,
-			use_output = 0;
+	int	ch,
+		use_output = 0;
 
-	auto char	*log_level = (char *) 0,
-			*output = (char *) 0;
+	char	*log_level = (char *) 0,
+		*output = (char *) 0;
+	struct sigaction sigAct;
 
 #ifndef TESTING
 	chdir ("/");
@@ -1064,12 +1066,18 @@ int main(int argc, char *argv[])
 #endif	
 
 	/* Signal setups. */
+	// TODO: change this all to sigaction
 	for (ch= 1; ch < NSIG; ++ch)
-	signal(ch, SIG_IGN);
-	signal(SIGINT, stop_daemon);
-	signal(SIGKILL, stop_daemon);
-	signal(SIGTERM, stop_daemon);
-	signal(SIGHUP, stop_daemon);
+		signal(ch, SIG_IGN);
+
+	sigAct.sa_handler = stop_daemon;
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_flags = 0;
+	sigaction(SIGINT, &sigAct, NULL);
+	sigaction(SIGKILL, &sigAct, NULL);
+	sigaction(SIGTERM, &sigAct, NULL);
+	sigaction(SIGHUP, &sigAct, NULL);
+
 	signal(SIGTSTP, stop_logging);
 	signal(SIGCONT, restart);
 	signal(SIGUSR1, reload_daemon);
