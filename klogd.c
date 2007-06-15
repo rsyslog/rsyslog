@@ -439,7 +439,6 @@ static void CloseLogSrc(void)
 
 void restart(int sig)
 {
-	signal(SIGCONT, restart);
 	change_state = 1;
 	caught_TSTP = 0;
 	return;
@@ -448,7 +447,6 @@ void restart(int sig)
 
 void stop_logging(int sig)
 {
-	signal(SIGTSTP, stop_logging);
 	change_state = 1;
 	caught_TSTP = 1;
 	return;
@@ -471,10 +469,7 @@ void reload_daemon(int sig)
 	if ( sig == SIGUSR2 )
 	{
 		++reload_symbols;
-		signal(SIGUSR2, reload_daemon);
 	}
-	else
-		signal(SIGUSR1, reload_daemon);
 		
 	return;
 }
@@ -936,6 +931,17 @@ static void LogProcLine(void)
 }
 
 
+/* helper routine to spit out an error message and terminate
+ * klogd when setting a signal error fails.
+ */
+void sigactionErrAbort()
+{
+	fprintf(stderr, "rklogd: could net set a signal handler - terminating. Error: %s\n",
+		strerror(errno));
+	exit(1);
+}
+
+
 int main(int argc, char *argv[])
 {
 	int	ch,
@@ -1065,23 +1071,44 @@ int main(int argc, char *argv[])
 	}
 #endif	
 
-	/* Signal setups. */
-	// TODO: change this all to sigaction
-	for (ch= 1; ch < NSIG; ++ch)
-		signal(ch, SIG_IGN);
-
-	sigAct.sa_handler = stop_daemon;
+	/* Signal setups.
+	 * Please note that the "original" klogd in sysklogd tries to
+	 * handle SIGKILL and SIGSTOP. That does not work - but as the
+	 * original klogd had no error checking, nobody ever noticed. We
+	 * do now have error checking and consequently those ever-failing
+	 * calls are now removed.
+	 */
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_flags = 0;
-	sigaction(SIGINT, &sigAct, NULL);
-	sigaction(SIGKILL, &sigAct, NULL);
-	sigaction(SIGTERM, &sigAct, NULL);
-	sigaction(SIGHUP, &sigAct, NULL);
 
-	signal(SIGTSTP, stop_logging);
-	signal(SIGCONT, restart);
-	signal(SIGUSR1, reload_daemon);
-	signal(SIGUSR2, reload_daemon);
+	/* first, set all signals to ignore
+	 * In this loop, we try blindly to ignore all signals. I am leaving
+	 * intentionally out all error checking. If we can ignore the signal,
+	 * that's nice, but if we can't ... well, so be it ;)
+	 * RGerhards, 2007-06-15
+	 */
+	sigAct.sa_handler = SIG_IGN;
+	for (ch= 1; ch < NSIG ; ++ch)
+	{
+		if(ch != SIGKILL && ch != SIGSTOP)
+			sigaction(ch, &sigAct, NULL);
+	}
+
+	/* Now specific handlers (one after another) */
+	sigAct.sa_handler = stop_daemon;
+	if(sigaction(SIGINT, &sigAct, NULL) != 0) sigactionErrAbort();
+	if(sigaction(SIGTERM, &sigAct, NULL) != 0) sigactionErrAbort();
+	if(sigaction(SIGHUP, &sigAct, NULL) != 0) sigactionErrAbort();
+
+	sigAct.sa_handler = stop_daemon;
+	if(sigaction(SIGTSTP, &sigAct, NULL) != 0) sigactionErrAbort();
+	
+	sigAct.sa_handler = restart;
+	if(sigaction(SIGCONT, &sigAct, NULL) != 0) sigactionErrAbort();
+
+	sigAct.sa_handler = reload_daemon;
+	if(sigaction(SIGUSR1, &sigAct, NULL) != 0) sigactionErrAbort();
+	if(sigaction(SIGUSR2, &sigAct, NULL) != 0) sigactionErrAbort();
 
 
 	/* Open outputs. */
