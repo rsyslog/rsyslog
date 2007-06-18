@@ -3407,7 +3407,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		pRes = "1"; /* always 1 for syslog messages (a MonitorWare thing;)) */
 	} else if(!strcmp(pName, "syslogfacility")) {
 		pRes = getFacility(pMsg);
-	} else if(!strcmp(pName, "syslogpriority")) {
+	} else if(!strcmp(pName, "syslogseverity") || !strcmp(pName, "syslogpriority")) {
 		pRes = getSeverity(pMsg);
 	} else if(!strcmp(pName, "timegenerated")) {
 		pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
