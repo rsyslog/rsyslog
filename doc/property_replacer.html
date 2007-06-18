@@ -36,8 +36,12 @@ BSD syslogd. For example, when TAG is "named[12345]", programname is "named".</t
 to a <a href="http://www.monitorware.com">MonitorWare</a> backend (also for 
 	<a href="http://www.phplogcon.org/">phpLogCon</a>)</td></tr>
 <tr><td><b>syslogfacility</b></td><td>the facility from the message - in numerical form</td></tr>
-<tr><td><b>syslogpriority</b></td><td>the priority (actully severity!) from the
-	message - in numerical form</td></tr>
+<tr>
+	<td><b>syslogseverity</b></td><td>severity from the
+	message - in numerical form</td>
+</tr>
+<tr><td><b>syslogpriority</b></td><td>an alis for syslogseverity - included for 
+	historical reasons (be careful: it still is the severity, not PRI!)</td></tr>
 <tr><td><b>timegenerated</b></td><td>timestamp when the message was RECEIVED. Always in
 	high resolution</td></tr>
 <tr><td><b>timereported</b></td><td>timestamp from the message. Resolution depends on
@@ -105,6 +109,13 @@ are defined:</p>
 	will neither contain control characters, escape sequences nor any other 
 	replacement character like space.</td></tr>
 </table>
+
+<h2>Further Links</h2>
+<ul>
+	<li>Article on &quot;<a href="rsyslog_recording_pri.html">Recording the Priority of 
+	Syslog Messages</a>&quot; (describes use of templates to record severity and 
+	facility of a message)</li>
+</ul>
 
 </body>
 </html>
