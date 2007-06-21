@@ -4100,7 +4100,8 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 				*(pMsg + iMsg++) = '0';
 				*(pMsg + iMsg++) = '0';
 			} /* if we do not have space, we simply ignore the '\0'... */
-			  /* TODO: log an error? Very questionable... rgerhards, 2006-11-30 */
+			  /* log an error? Very questionable... rgerhards, 2006-11-30 */
+			  /* decided: we do not log an error, it won't help... rger, 2007-06-21 */
 			++pData;
 		} else {
 			*(pMsg + iMsg++) = *pData++;
@@ -5014,8 +5015,7 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 		 * TAG, as it is specified in RFC 3164.
 		 */
 		/* The following code in general is quick & dirty - I need to get
-		 * it going for a test, TODO: redo later. rgerhards 2004-11-16 */
-		/* TODO: quick and dirty memory allocation */
+		 * it going for a test, rgerhards 2004-11-16 */
 		/* lol.. we tried to solve it, just to remind ourselfs that 32 octets
 		 * is the max size ;) we need to shuffle the code again... Just for 
 		 * the records: the code is currently clean, but we could optimize it! */
