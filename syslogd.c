@@ -4,9 +4,6 @@
  * TODO:
  * - check template lines for extra characters and provide 
  *   a warning, if they exists
- * - it looks liek the time stamp is missing on internally-generated
- *   messages - but maybe we need to keep this for compatibility
- *   reasons.
  * - include a global option for control character replacemet on receive? (not just NUL)
  *
  * Please note that as of now, a lot of the code in this file stems
@@ -115,6 +112,21 @@
  * I have increased the default message size to 2048 to be in sync
  * with recent IETF syslog standardization efforts.
  * rgerhards, 2006-11-30
+ *
+ * I have removed syslogdPanic(). That function was supposed to be used
+ * for logging in low-memory conditons. Ever since it was introduced, it
+ * was a wrapper for dprintf(). A more intelligent choice was hard to
+ * find. After all, if we are short on memory, doing anything fance will
+ * again cause memory problems. I have now modified the code so that
+ * those elements for which we do not get memory are simply discarded.
+ * That might be a single property like the TAG, but it might also be
+ * a complete message. The overall goal of this code change is to keep
+ * rsyslogd up and running, while we sacrifice some messages to reach
+ * that goal. It also keeps the code cleaner. A real out of memory
+ * condition is highly unlikely. If it happens, there will probably be
+ * much more trouble on the system in question. Anyhow - rsyslogd will
+ * most probably be able to survive it and carry on with processing
+ * once the situation has been resolved.
  */
 #define	MAXLINE		2048		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
@@ -2427,19 +2439,6 @@ char *textpri(char *pRes, size_t pResLen, int pri)
 	return pRes;
 }
 
-/* rgerhards 2004-11-09: the following function is used to 
- * log emergency message when syslogd has no way of using
- * regular meas of processing. It is supposed to be 
- * primarily be called when there is memory shortage. As
- * we now rely on dynamic memory allocation for the messages,
- * we can no longer act correctly when we do not receive
- * memory.
- */
-static void syslogdPanic(char* ErrMsg)
-{
-	/* TODO: provide a meaningful implementation! */
-	dprintf("rsyslogdPanic: '%s'\n", ErrMsg);
-}
 
 /* rgerhards 2004-11-09: helper routines for handling the
  * message object. We do only the most important things. It
@@ -2865,21 +2864,17 @@ static void MsgAssignTAG(struct msg *pMsg, char *pBuf)
 
 
 /* rgerhards 2004-11-16: set TAG in msg object
- * returns 0 if OK, other value if not. In case of failure,
- * logs error message and destroys msg object.
  */
-static int MsgSetTAG(struct msg *pMsg, char* pszTAG)
+static void MsgSetTAG(struct msg *pMsg, char* pszTAG)
 {
 	assert(pMsg != NULL);
+	if(pMsg->pszTAG != NULL)
+		free(pMsg->pszTAG);
 	pMsg->iLenTAG = strlen(pszTAG);
-	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) == NULL) {
-		syslogdPanic("Could not allocate memory for pszTAG buffer.");
-		MsgDestruct(pMsg);
-		return(-1);
-	}
-	memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
-
-	return(0);
+	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) != NULL)
+		memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
+	else
+		dprintf("Could not allocate memory in MsgSetTAG()\n");
 }
 
 
@@ -3028,6 +3023,8 @@ static char *getStructuredData(struct msg *pM)
 static void moveHOSTNAMEtoTAG(struct msg *pM)
 {
 	assert(pM != NULL);
+	if(pM->pszTAG != NULL)
+		free(pM->pszTAG);
 	pM->pszTAG = pM->pszHOSTNAME;
 	pM->iLenTAG = pM->iLenHOSTNAME;
 	pM->pszHOSTNAME = NULL;
@@ -3174,24 +3171,17 @@ static char *getProgramName(struct msg *pM)
 
 
 /* rgerhards 2004-11-16: set pszRcvFrom in msg object
- * returns 0 if OK, other value if not. In case of failure,
- * logs error message and destroys msg object.
  */
-static int MsgSetRcvFrom(struct msg *pMsg, char* pszRcvFrom)
+static void MsgSetRcvFrom(struct msg *pMsg, char* pszRcvFrom)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszRcvFrom != NULL)
 		free(pMsg->pszRcvFrom);
 
 	pMsg->iLenRcvFrom = strlen(pszRcvFrom);
-	if((pMsg->pszRcvFrom = malloc(pMsg->iLenRcvFrom + 1)) == NULL) {
-		syslogdPanic("Could not allocate memory for pszRcvFrom buffer.");
-		MsgDestruct(pMsg);
-		return(-1);
+	if((pMsg->pszRcvFrom = malloc(pMsg->iLenRcvFrom + 1)) != NULL) {
+		memcpy(pMsg->pszRcvFrom, pszRcvFrom, pMsg->iLenRcvFrom + 1);
 	}
-	memcpy(pMsg->pszRcvFrom, pszRcvFrom, pMsg->iLenRcvFrom + 1);
-
-	return(0);
 }
 
 
@@ -3210,24 +3200,26 @@ static void MsgAssignHOSTNAME(struct msg *pMsg, char *pBuf)
 
 
 /* rgerhards 2004-11-09: set HOSTNAME in msg object
- * returns 0 if OK, other value if not. In case of failure,
- * logs error message and destroys msg object.
+ * rgerhards, 2007-06-21:
+ * Does not return anything. If an error occurs, the hostname is
+ * simply not set. I have changed this behaviour. The only problem
+ * we can run into is memory shortage. If we have such, it is better
+ * to loose the hostname than the full message. So we silently ignore
+ * that problem and hope that memory will be available the next time
+ * we need it. The rest of the code already knows how to handle an
+ * unset HOSTNAME.
  */
-static int MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
+static void MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszHOSTNAME != NULL)
 		free(pMsg->pszHOSTNAME);
 
 	pMsg->iLenHOSTNAME = strlen(pszHOSTNAME);
-	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) == NULL) {
-		syslogdPanic("Could not allocate memory for pszHOSTNAME buffer.");
-		MsgDestruct(pMsg);
-		return(-1);
-	}
-	memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
-
-	return(0);
+	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) != NULL)
+		memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
+	else
+		dprintf("Could not allocate memory in MsgSetHOSTNAME()\n");
 }
 
 
@@ -3248,8 +3240,6 @@ static void MsgAssignUxTradMsg(struct msg *pMsg, char *pBuf)
 
 
 /* rgerhards 2004-11-17: set the traditional Unix message in msg object
- * returns 0 if OK, other value if not. In case of failure,
- * logs error message and destroys msg object.
  */
 static int MsgSetUxTradMsg(struct msg *pMsg, char* pszUxTradMsg)
 {
@@ -3258,59 +3248,45 @@ static int MsgSetUxTradMsg(struct msg *pMsg, char* pszUxTradMsg)
 	pMsg->iLenUxTradMsg = strlen(pszUxTradMsg);
 	if(pMsg->pszUxTradMsg != NULL)
 		free(pMsg->pszUxTradMsg);
-	if((pMsg->pszUxTradMsg = malloc(pMsg->iLenUxTradMsg + 1)) == NULL) {
-		syslogdPanic("Could not allocate memory for pszUxTradMsg buffer.");
-		MsgDestruct(pMsg);
-		return(-1);
-	}
-	memcpy(pMsg->pszUxTradMsg, pszUxTradMsg, pMsg->iLenUxTradMsg + 1);
+	if((pMsg->pszUxTradMsg = malloc(pMsg->iLenUxTradMsg + 1)) != NULL)
+		memcpy(pMsg->pszUxTradMsg, pszUxTradMsg, pMsg->iLenUxTradMsg + 1);
+	else
+		dprintf("Could not allocate memory for pszUxTradMsg buffer.");
 
 	return(0);
 }
 
 
 /* rgerhards 2004-11-09: set MSG in msg object
- * returns 0 if OK, other value if not. In case of failure,
- * logs error message and destroys msg object.
  */
-static int MsgSetMSG(struct msg *pMsg, char* pszMSG)
+static void MsgSetMSG(struct msg *pMsg, char* pszMSG)
 {
 	assert(pMsg != NULL);
 	assert(pszMSG != NULL);
 
-	if(pMsg->pszMSG != NULL) {
+	if(pMsg->pszMSG != NULL)
 		free(pMsg->pszMSG);
-	}
-	pMsg->iLenMSG = strlen(pszMSG);
-	if((pMsg->pszMSG = malloc(pMsg->iLenMSG + 1)) == NULL) {
-		syslogdPanic("Could not allocate memory for pszMSG buffer.");
-		MsgDestruct(pMsg);
-		return(-1);
-	}
-	memcpy(pMsg->pszMSG, pszMSG, pMsg->iLenMSG + 1);
 
-	return(0);
+	pMsg->iLenMSG = strlen(pszMSG);
+	if((pMsg->pszMSG = malloc(pMsg->iLenMSG + 1)) != NULL)
+		memcpy(pMsg->pszMSG, pszMSG, pMsg->iLenMSG + 1);
+	else
+		dprintf("MsgSetMSG could not allocate memory for pszMSG buffer.");
 }
 
 /* rgerhards 2004-11-11: set RawMsg in msg object
- * returns 0 if OK, other value if not. In case of failure,
- * logs error message and destroys msg object.
  */
-static int MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
+static void MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
 {
 	assert(pMsg != NULL);
-	if(pMsg->pszRawMsg != NULL) {
+	if(pMsg->pszRawMsg != NULL)
 		free(pMsg->pszRawMsg);
-	}
-	pMsg->iLenRawMsg = strlen(pszRawMsg);
-	if((pMsg->pszRawMsg = malloc(pMsg->iLenRawMsg + 1)) == NULL) {
-		syslogdPanic("Could not allocate memory for pszRawMsg buffer.");
-		MsgDestruct(pMsg);
-		return(-1);
-	}
-	memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg + 1);
 
-	return(0);
+	pMsg->iLenRawMsg = strlen(pszRawMsg);
+	if((pMsg->pszRawMsg = malloc(pMsg->iLenRawMsg + 1)) != NULL)
+		memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg + 1);
+	else
+		dprintf("Could not allocate memory for pszRawMsg buffer.");
 }
 
 
@@ -4058,14 +4034,13 @@ void printline(char *hname, char *msg, int bParseHost)
 	/* Now it is time to create the message object (rgerhards)
 	*/
 	if((pMsg = MsgConstruct()) == NULL){
-		/* rgerhards 2004-11-09: calling panic might not be the
-		 * brightest idea - however, it is the best I currently have
-		 * (TODO: think a bit more about this).
+		/* rgerhards, 2007-06-21: if we can not get memory, we discard this
+		 * message but continue to run (in the hope that things improve)
 		 */
-		syslogdPanic("Could not construct Msg object.");
+		dprintf("Memory shortage in printline(): Could not construct Msg object.\n");
 		return;
 	}
-	if(MsgSetRawMsg(pMsg, msg) != 0) return;
+	MsgSetRawMsg(pMsg, msg);
 	
 	pMsg->bParseHOSTNAME  = bParseHost;
 	/* test for special codes */
@@ -4121,8 +4096,8 @@ void printline(char *hname, char *msg, int bParseHost)
 	 * being the local host).  rgerhards 2004-11-16
 	 */
 	if(bParseHost == 0)
-		if(MsgSetHOSTNAME(pMsg, hname) != 0) return;
-	if(MsgSetRcvFrom(pMsg, hname) != 0) return;
+		MsgSetHOSTNAME(pMsg, hname);
+	MsgSetRcvFrom(pMsg, hname);
 
 	/* rgerhards 2004-11-19: well, well... we've now seen that we
 	 * have the "hostname problem" also with the traditional Unix
@@ -4161,16 +4136,24 @@ static void logmsgInternal(int pri, char * msg, char* from, int flags)
 	if((pMsg = MsgConstruct()) == NULL){
 		/* rgerhards 2004-11-09: calling panic might not be the
 		 * brightest idea - however, it is the best I currently have
-		 * (TODO: think a bit more about this).
+		 * (think a bit more about this).
+		 * rgehards, 2007-06-21: I have now thought a bit more about
+		 * it. If we are so low on memory, there is few we can do. calling
+		 * panic so far only write a debug line - this is seomthing we keep.
+		 * Other than that, however, we ignore the error and hope that 
+		 * memory shortage will be resolved while we continue to run. In any
+		 * case, there is no valid point in aborting the syslogd for this
+		 * reason - that would be counter-productive. So we ignore the
+		 * to be logged message.
 		 */
-		syslogdPanic("Could not construct Msg object.");
+		dprintf("Memory shortage in logmsgInternal: could not construct Msg object.\n");
 		return;
 	}
 
-	if(MsgSetUxTradMsg(pMsg, msg) != 0) return;
-	if(MsgSetRawMsg(pMsg, msg) != 0) return;
-	if(MsgSetHOSTNAME(pMsg, LocalHostName) != 0) return;
-	if(MsgSetTAG(pMsg, "rsyslogd:") != 0) return;
+	MsgSetUxTradMsg(pMsg, msg);
+	MsgSetRawMsg(pMsg, msg);
+	MsgSetHOSTNAME(pMsg, LocalHostName);
+	MsgSetTAG(pMsg, "rsyslogd:");
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->bParseHOSTNAME = 0;
@@ -4813,7 +4796,7 @@ static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
 	}
 
 	/* MSG */
-	if(MsgSetMSG(pMsg, p2parse) != 0) return 1;
+	MsgSetMSG(pMsg, p2parse);
 
 	return 0; /* all ok */
 }
@@ -4983,7 +4966,7 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 	}
 
 	/* The rest is the actual MSG */
-	if(MsgSetMSG(pMsg, p2parse) != 0) return 1;
+	MsgSetMSG(pMsg, p2parse);
 
 	return 0; /* all ok */
 }

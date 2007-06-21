@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------
+Version 1.13.5 (RGer), 2007-06-??
+- fixed a bug that caused internal messages (e.g. rsyslogd startup) to
+  appear without a tag.
+- removed a minor memory leak that occured when TAG processing requalified
+  a HOSTNAME to be a TAG (and a TAG already was set).
+- removed potential small memory leaks in MsgSet***() functions. There
+  would be a leak if a property was re-set, something that happened
+  extremely seldom.
+---------------------------------------------------------------------------
 Version 1.13.4 (RGer), 2007-06-18
 - added a new property "PRI-text", which holds the PRI field in
   textual form (e.g. "syslog.info")
