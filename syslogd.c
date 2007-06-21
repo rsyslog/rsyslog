@@ -1112,7 +1112,9 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in
  ********************************************************************/
 #ifdef SYSLOG_INET
 
-#define TCPSESS_MAX 200 /* TODO: remove hardcoded limit */
+#define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
+
+static int iTCPSessMax =  TCPSESS_MAX_DEFAULT;	/* actual number of sessions */
 static int TCPLstnPort = 0; /* read-only after startup */
 static int bEnableTCP = 0; /* read-only after startup */
 static int sockTCPLstn = -1; /* read-only after startup, modified by restart */
@@ -1124,22 +1126,84 @@ struct TCPSession {
 	TCPFRAMINGMODE eFraming;
 	char msg[MAXLINE+1];
 	char *fromHost;
-} TCPSessions[TCPSESS_MAX];
+} *pTCPSessions = NULL;
 /* The thread-safeness of the sesion table is doubtful */
 
 
-/* Initialize the session table
+/* configure TCP listener settings. This is called during command
+ * line parsing. The argument following -t is supplied as an argument.
+ * The format of this argument is
+ * "<port-to-use>, <nbr-of-sessions>"
+ * Typically, there is no whitespace between port and session number.
+ * (but it may be...).
+ * NOTE: you can not use dprintf() in here - the dprintf() system is
+ * not yet initilized when this function is called.
+ * rgerhards, 2007-06-21
  */
-static void TCPSessInit(void)
+static void configureTCPListen(char *optarg)
+{
+	register int i;
+	register char *pArg = optarg;
+
+	assert(optarg != NULL);
+	bEnableTCP = -1;
+
+	/* extract port */
+	i = 0;
+	while(isdigit(*pArg)) {
+		i = i * 10 + *pArg++ - '0';
+	}
+	TCPLstnPort = i;
+
+	/* number of sessions */
+	if(*pArg == ','){
+		++pArg;
+		while(isspace(*pArg))
+			++pArg;
+		/* ok, here should be the number... */
+		i = 0;
+		while(isdigit(*pArg)) {
+			i = i * 10 + *pArg++ - '0';
+		}
+		if(i > 1)
+			iTCPSessMax = i;
+		else {
+			/* too small, need to adjust */
+			fprintf(stderr, "TCP session max configured to %d [-t %s] - changing to 1.\n",
+				i, optarg);
+			iTCPSessMax = 1;
+		}
+	} else if(*pArg == '\0') {
+		/* use default for session number - that's already set...*/
+		/*EMPTY BY INTENSION*/
+	} else {
+		fprintf(stderr, "Invalid -t %s command line option.\n", optarg);
+	}
+}
+
+
+/* Initialize the session table
+ * returns 0 if OK, somewhat else otherwise
+ */
+static int TCPSessInit(void)
 {
 	register int i;
 
-	for(i = 0 ; i < TCPSESS_MAX ; ++i) {
-		TCPSessions[i].sock = -1; /* no sock */
-		TCPSessions[i].iMsg = 0; /* just make sure... */
-		TCPSessions[i].bAtStrtOfFram = 1; /* indicate frame header expected */
-		TCPSessions[i].eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
+	assert(pTCPSessions == NULL);
+	dprintf("Allocating buffer for %d TCP sessions.\n", iTCPSessMax);
+	if((pTCPSessions = (struct TCPSession *) malloc(sizeof(struct TCPSession) * iTCPSessMax))
+	    == NULL) {
+		dprintf("Error: TCPSessInit() could not alloc memory for TCP session table.\n");
+		return(1);
 	}
+
+	for(i = 0 ; i < iTCPSessMax ; ++i) {
+		pTCPSessions[i].sock = -1; /* no sock */
+		pTCPSessions[i].iMsg = 0; /* just make sure... */
+		pTCPSessions[i].bAtStrtOfFram = 1; /* indicate frame header expected */
+		pTCPSessions[i].eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
+	}
+	return(0);
 }
 
 
@@ -1151,12 +1215,12 @@ static int TCPSessFindFreeSpot(void)
 {
 	register int i;
 
-	for(i = 0 ; i < TCPSESS_MAX ; ++i) {
-		if(TCPSessions[i].sock == -1)
+	for(i = 0 ; i < iTCPSessMax ; ++i) {
+		if(pTCPSessions[i].sock == -1)
 			break;
 	}
 
-	return((i < TCPSESS_MAX) ? i : -1);
+	return((i < iTCPSessMax) ? i : -1);
 }
 
 
@@ -1172,11 +1236,43 @@ static int TCPSessGetNxtSess(int iCurr)
 {
 	register int i;
 
-	for(i = iCurr + 1 ; i < TCPSESS_MAX ; ++i)
-		if(TCPSessions[i].sock != -1)
+	for(i = iCurr + 1 ; i < iTCPSessMax ; ++i)
+		if(pTCPSessions[i].sock != -1)
 			break;
 
-	return((i < TCPSESS_MAX) ? i : -1);
+	return((i < iTCPSessMax) ? i : -1);
+}
+
+
+/* De-Initialize TCP listner sockets.
+ * This function deinitializes everything, including freeing the
+ * session table. No TCP listen receive operations are permitted
+ * unless the subsystem is reinitialized.
+ * rgerhards, 2007-06-21
+ */
+static void deinit_tcp_listener(void)
+{
+	int iTCPSess;
+
+	assert(pTCPSessions != NULL);
+	/* close all TCP connections! */
+	iTCPSess = TCPSessGetNxtSess(-1);
+	while(iTCPSess != -1) {
+		int fd;
+		fd = pTCPSessions[iTCPSess].sock;
+		dprintf("Closing TCP Session %d\n", fd);
+		close(fd);
+		/* now get next... */
+		iTCPSess = TCPSessGetNxtSess(iTCPSess);
+	}
+	
+	/* we are done with the session table - so get rid of it...
+	*/
+	free(pTCPSessions);
+	pTCPSessions = NULL; /* just to make sure... */
+
+	/* finally close the listen socket itself */
+	close(sockTCPLstn);
 }
 
 
@@ -1230,14 +1326,14 @@ static int create_tcp_socket(void)
 		close(fd);
 		return -1;
 	}
-	if(listen(fd, TCPSESS_MAX / 10 + 5) < 0) {
+	if(listen(fd, iTCPSessMax / 10 + 5) < 0) {
 		/* If the listen fails, it most probably fails because we ask
 		 * for a too-large backlog. So in this case we first set back
 		 * to a fixed, reasonable, limit that should work. Only if
 		 * that fails, too, we give up.
 		 */
 		logerrorInt("listen with a backlog of %d failed - retrying with default of 32.",
-			    TCPSESS_MAX / 10 + 5);
+			    iTCPSessMax / 10 + 5);
 		if(listen(fd, 32) < 0) {
 			logerror("listen, suspending tcp inet");
 			close(fd);
@@ -1250,7 +1346,15 @@ static int create_tcp_socket(void)
 	/* OK, we had success. Now it is also time to
 	 * initialize our connections
 	 */
-	TCPSessInit();
+	if(TCPSessInit() != 0) {
+		/* OK, we are in some trouble - we could not initialize the
+		 * session table, so we can not continue. We need to free all
+		 * we have assigned so far, because we can not really use it...
+		 */
+		logerror("Could not initialize TCP session table, suspending TCP inet");
+		close(fd);
+		return -1;
+	}
 
 	dprintf("Opened TCP socket %d.\n", sockTCPLstn);
 
@@ -1310,14 +1414,14 @@ static void TCPSessAccept(void)
 	lenHostName = strlen(fromHost) + 1; /* for \0 byte */
 	if((pBuf = (char*) malloc(sizeof(char) * lenHostName)) == NULL) {
 		logerror("couldn't allocate buffer for hostname - ignored");
-		TCPSessions[iSess].fromHost = "NO-MEMORY-FOR-HOSTNAME";
+		pTCPSessions[iSess].fromHost = "NO-MEMORY-FOR-HOSTNAME";
 	} else {
 		memcpy(pBuf, fromHost, lenHostName);
-		TCPSessions[iSess].fromHost = pBuf;
+		pTCPSessions[iSess].fromHost = pBuf;
 	}
 
-	TCPSessions[iSess].sock = newConn;
-	TCPSessions[iSess].iMsg = 0; /* init msg buffer! */
+	pTCPSessions[iSess].sock = newConn;
+	pTCPSessions[iSess].iMsg = 0; /* init msg buffer! */
 }
 
 
@@ -1334,13 +1438,13 @@ static void TCPSessAccept(void)
  */
 static void TCPSessPrepareClose(int iTCPSess)
 {
-	if(iTCPSess < 0 || iTCPSess > TCPSESS_MAX) {
+	if(iTCPSess < 0 || iTCPSess > iTCPSessMax) {
 		errno = 0;
 		logerror("internal error, trying to close an invalid TCP session!");
 		return;
 	}
 	
-	if(TCPSessions[iTCPSess].bAtStrtOfFram == 1) {
+	if(pTCPSessions[iTCPSess].bAtStrtOfFram == 1) {
 		/* this is how it should be. There is no unprocessed
 		 * data left and such we have nothing to do. For simplicity
 		 * reasons, we immediately return in that case.
@@ -1349,22 +1453,22 @@ static void TCPSessPrepareClose(int iTCPSess)
 	}
 
 	/* we have some data left! */
-	if(TCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_COUNTING) {
+	if(pTCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_COUNTING) {
 		/* In this case, we have an invalid frame count and thus
 		 * generate an error message and discard the frame.
 		 */
 		logerrorInt("Incomplete frame at end of stream in session %d - "
 			    "ignoring extra data (a message may be lost).\n",
-			    TCPSessions[iTCPSess].sock);
+			    pTCPSessions[iTCPSess].sock);
 		/* nothing more to do */
 	} else { /* here, we have traditional framing. Missing LF at the end
 		 * of message may occur. As such, we process the message in
 		 * this case.
 		 */
 		dprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		printchopped(TCPSessions[iTCPSess].fromHost, TCPSessions[iTCPSess].msg,
-			     TCPSessions[iTCPSess].iMsg, TCPSessions[iTCPSess].sock, 1);
-		TCPSessions[iTCPSess].bAtStrtOfFram = 1;
+		printchopped(pTCPSessions[iTCPSess].fromHost, pTCPSessions[iTCPSess].msg,
+			     pTCPSessions[iTCPSess].iMsg, pTCPSessions[iTCPSess].sock, 1);
+		pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
 	}
 }
 
@@ -1375,16 +1479,16 @@ static void TCPSessPrepareClose(int iTCPSess)
  */
 static void TCPSessClose(int iSess)
 {
-	if(iSess < 0 || iSess > TCPSESS_MAX) {
+	if(iSess < 0 || iSess > iTCPSessMax) {
 		errno = 0;
 		logerror("internal error, trying to close an invalid TCP session!");
 		return;
 	}
 
-	close(TCPSessions[iSess].sock);
-	TCPSessions[iSess].sock = -1;
-	free(TCPSessions[iSess].fromHost);
-	TCPSessions[iSess].fromHost = NULL; /* not really needed, but... */
+	close(pTCPSessions[iSess].sock);
+	pTCPSessions[iSess].sock = -1;
+	free(pTCPSessions[iSess].fromHost);
+	pTCPSessions[iSess].fromHost = NULL; /* not really needed, but... */
 }
 
 
@@ -1414,8 +1518,8 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 	assert(pData != NULL);
 	assert(iLen > 0);
 	assert(iTCPSess >= 0);
-	assert(iTCPSess < TCPSESS_MAX);
-	assert(TCPSessions[iTCPSess].sock != -1);
+	assert(iTCPSess < iTCPSessMax);
+	assert(pTCPSessions[iTCPSess].sock != -1);
 
 	 /* We now copy the message to the session buffer. As
 	  * it looks, we need to do this in any case because
@@ -1430,13 +1534,13 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 	  * - printline() the buffer
 	  * - continue with copying
 	  */
-	iMsg = TCPSessions[iTCPSess].iMsg; /* copy for speed */
-	pMsg = TCPSessions[iTCPSess].msg; /* just a shortcut */
+	iMsg = pTCPSessions[iTCPSess].iMsg; /* copy for speed */
+	pMsg = pTCPSessions[iTCPSess].msg; /* just a shortcut */
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
 		/* Check if we are at a new frame */
-		if(TCPSessions[iTCPSess].bAtStrtOfFram) {
+		if(pTCPSessions[iTCPSess].bAtStrtOfFram) {
 			/* we need to look at the message and detect
 			 * the framing mode used
 			 *//*
@@ -1455,7 +1559,7 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			 */
 			if(isdigit(*pData)) {
 				int iCnt;	/* the frame count specified */
-				TCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_COUNTING;
+				pTCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_COUNTING;
 				/* in this mode, we have OCTET-COUNT SP MSG - so we now need
 				 * to extract the OCTET-COUNT and the SP and then extract
 				 * the msg.
@@ -1478,21 +1582,21 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 						    *pData);
 					return(0); /* unconditional error exit */
 				}
-				/* IETF20061218 TCPSessions[iTCPSess].iOctetsRemain = iCnt - iNbrOctets; */
-				TCPSessions[iTCPSess].iOctetsRemain = iCnt;
-				if(TCPSessions[iTCPSess].iOctetsRemain < 1) {
+				/* IETF20061218 pTCPSessions[iTCPSess].iOctetsRemain = iCnt - iNbrOctets; */
+				pTCPSessions[iTCPSess].iOctetsRemain = iCnt;
+				if(pTCPSessions[iTCPSess].iOctetsRemain < 1) {
 					/* TODO: handle the case where the octet count is 0 or negative! */
 					dprintf("Framing Error: invalid octet count\n");
 					logerrorInt("Framing Error in received TCP message: "
 					            "invalid octet count %d.\n",
-				 		    TCPSessions[iTCPSess].iOctetsRemain);
+				 		    pTCPSessions[iTCPSess].iOctetsRemain);
 					return(0); /* unconditional error exit */
 				}
 			} else {
-				TCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_STUFFING;
+				pTCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_STUFFING;
 				/* No need to do anything else here in this case */
 			}
-			TCPSessions[iTCPSess].bAtStrtOfFram = 0; /* done frame header */
+			pTCPSessions[iTCPSess].bAtStrtOfFram = 0; /* done frame header */
 		}
 	
 		/* now copy message until end of record */
@@ -1501,8 +1605,8 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			/* emergency, we now need to flush, no matter if
 			 * we are at end of message or not...
 			 */
-			printchopped(TCPSessions[iTCPSess].fromHost, pMsg, iMsg,
-			 	     TCPSessions[iTCPSess].sock, 1);
+			printchopped(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg,
+			 	     pTCPSessions[iTCPSess].sock, 1);
 			iMsg = 0;
 			/* we might think if it is better to ignore the rest of the
 		 	 * message than to treat it as a new one. Maybe this is a good
@@ -1512,31 +1616,31 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 		}
 
 		if(*pData == '\n' &&
-		   TCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
-			printchopped(TCPSessions[iTCPSess].fromHost, pMsg, iMsg,
-				     TCPSessions[iTCPSess].sock, 1);
+		   pTCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
+			printchopped(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg,
+				     pTCPSessions[iTCPSess].sock, 1);
 			iMsg = 0;
-			TCPSessions[iTCPSess].bAtStrtOfFram = 1;
+			pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
 			++pData;
 		} else {
 			/* IMPORTANT: here we copy the actual frame content to the message! */
 			*(pMsg + iMsg++) = *pData++;
 		}
 
-		if(TCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_COUNTING) {
+		if(pTCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_COUNTING) {
 			/* do we need to find end-of-frame via octet counting? */
-			TCPSessions[iTCPSess].iOctetsRemain--;
-			if(TCPSessions[iTCPSess].iOctetsRemain < 1) {
+			pTCPSessions[iTCPSess].iOctetsRemain--;
+			if(pTCPSessions[iTCPSess].iOctetsRemain < 1) {
 				/* we have end of frame! */
-				printchopped(TCPSessions[iTCPSess].fromHost, pMsg, iMsg,
-					     TCPSessions[iTCPSess].sock, 1);
+				printchopped(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg,
+					     pTCPSessions[iTCPSess].sock, 1);
 				iMsg = 0;
-				TCPSessions[iTCPSess].bAtStrtOfFram = 1;
+				pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
 			}
 		}
 	}
 
-	TCPSessions[iTCPSess].iMsg = iMsg; /* persist value */
+	pTCPSessions[iTCPSess].iMsg = iMsg; /* persist value */
 
 	return(1);	/* successful return */
 }
@@ -4418,7 +4522,7 @@ static void processMsg(struct msg *pMsg)
 /* shuts down the worker process. The worker will first finish
  * with the message queue. Control returns, when done.
  * This function is intended to be called during syslogd shutdown
- * AND restat (init()!).
+ * AND restart (init()!).
  * rgerhards, 2005-10-25
  */
 static void stopWorker(void)
@@ -6091,10 +6195,6 @@ static void die(int sig)
 	for (f = Files; f != NULL ; f = f->f_next) {
 		/* flush any pending output */
 		if (f->f_prevcount)
-			/* rgerhards: 2004-11-09: I am now changing it, but
-			 * I am not sure it is correct as done.
-			 * TODO: verify later!
-			 */
 			fprintlog(f);
 	}
 
@@ -6148,19 +6248,7 @@ static void die(int sig)
 
 	/* Close the TCP inet socket. */
 	if(bEnableTCP && sockTCPLstn != -1) {
-		int iTCPSess;
-		/* close all TCP connections! */
-		iTCPSess = TCPSessGetNxtSess(-1);
-		while(iTCPSess != -1) {
-			int fd;
-			fd = TCPSessions[iTCPSess].sock;
-			dprintf("Closing TCP Session %d\n", fd);
-			close(fd);
-			/* now get next... */
-			iTCPSess = TCPSessGetNxtSess(iTCPSess);
-		}
-
-		close(sockTCPLstn);
+		deinit_tcp_listener();
 	}
 
 	/* Clean-up files. */
@@ -6409,10 +6497,6 @@ static void init()
 		while (f != NULL) {
 			/* flush any pending output */
 			if (f->f_prevcount) {
-				/* rgerhards: 2004-11-09: I am now changing it, but
-				 * I am not sure it is correct as done.
-				 * TODO: verify later!
-				 */
 				fprintlog(f);
 			}
 
@@ -6464,7 +6548,7 @@ static void init()
 		/* rgerhards: this code is executed to set defaults when the
 		 * config file could not be opened. We might think about
 		 * abandoning the run in this case - but this, too, is not
-		 * very clever...
+		 * very clever... So we stick with what we have.
 		 */
 		dprintf("cannot open %s (%s).\n", ConfFile, strerror(errno));
 		nextp = (struct filed *)calloc(1, sizeof(struct filed));
@@ -6574,6 +6658,12 @@ static void init()
 #ifdef SYSLOG_INET
 	if (bEnableTCP) {
 		if (sockTCPLstn < 0) {
+			/* even when doing a re-init, we do not shut down and
+			 * re-open the TCP socket. That would break existing TCP
+			 * session, which we do not desire. Should at some time arise
+			 * need to do that, I recommend controlling that via a
+			 * user-selectable option. rgerhards, 2007-06-21
+			 */
 			sockTCPLstn = create_tcp_socket();
 			if (sockTCPLstn >= 0) {
 				dprintf("Opened syslog TCP port.\n");
@@ -8117,7 +8207,7 @@ static void mainloop(void)
 			iTCPSess = TCPSessGetNxtSess(-1);
 			while(iTCPSess != -1) {
 				int fd;
-				fd = TCPSessions[iTCPSess].sock;
+				fd = pTCPSessions[iTCPSess].sock;
 				dprintf("Adding TCP Session %d\n", fd);
 				FD_SET(fd, &readfds);
 				if (fd>maxfds) maxfds=fd;
@@ -8345,7 +8435,7 @@ static void mainloop(void)
 			while(iTCPSess != -1) {
 				int fd;
 				int state;
-				fd = TCPSessions[iTCPSess].sock;
+				fd = pTCPSessions[iTCPSess].sock;
 				if(FD_ISSET(fd, &readfds)) {
 					char buf[MAXLINE];
 					dprintf("tcp session socket with new data: #%d\n", fd);
@@ -8494,8 +8584,7 @@ int main(int argc, char **argv)
 			StripDomains = crunch_list(optarg);
 			break;
 		case 't':		/* enable tcp logging */
-			bEnableTCP = -1;
-			TCPLstnPort = atoi(optarg);
+			configureTCPListen(optarg);
 			break;
 		case 'u':		/* misc user settings */
 			if(atoi(optarg) == 1)
