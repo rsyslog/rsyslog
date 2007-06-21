@@ -1,7 +1,7 @@
 .\" Copyright 2004-2005 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "01 February 2007" "Version 1.13.1 (unstable)" "Linux System Administration"
+.TH RSYSLOGD 8 "21 June 2007" "Version 1.13.5 (devel)" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -37,8 +37,9 @@ rsyslogd \- reliable and extended syslogd
 .I domainlist
 ]
 .RB [ " \-t "
-.I port
+.I port,max-nbr-of-sessions
 ]
+.br
 .RB [ " \-v " ]
 .RB [ " \-w " ]
 .LP
@@ -192,11 +193,13 @@ is specified and the host logging resolves to satu.infodrom.north.de
 no domain would be cut, you will have to specify two domains like:
 .BR "\-s north.de:infodrom.north.de" .
 .TP
-.BI "\-t " "port"
+.BI "\-t " "port,max-nbr-of-sessions"
 Activates the syslog/tcp listener service. The listener will listen to
-the specified port. Please note that syslog/tcp is not standardized,
+the specified port. If max-nbr-of-sessions is specified, that becomes
+the maximum number of concurrent tcp sessions. If not specified, the
+default is 200. Please note that syslog/tcp is not standardized,
 but the implementation in rsyslogd follows common practice and is
-compatible with e.G. Cisco PIX, syslog-ng and MonitorWare (Windows).
+compatible with e.g. Cisco PIX, syslog-ng and MonitorWare (Windows).
 .TP
 .B "\-v"
 Print version and exit.
