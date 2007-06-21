@@ -88,6 +88,7 @@ install_exec: syslogd rfc3195d
 install_man:
 	${INSTALL} -m 644 $(VPATH)rfc3195d.8 ${DESTDIR}${MANDIR}/man8/rfc3195d.8
 	${INSTALL} -m 644 $(VPATH)rsyslogd.8 ${DESTDIR}${MANDIR}/man8/rsyslogd.8
+	${INSTALL} -m 644 $(VPATH)rklogd.8 ${DESTDIR}${MANDIR}/man8/rklogd.8
 	${INSTALL} -m 644 $(VPATH)rsyslog.conf.5 ${DESTDIR}${MANDIR}/man5/rsyslog.conf.5
 
 # The following lines are some legacy from sysklogd, which we might need
