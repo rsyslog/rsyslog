@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.13.5 (RGer), 2007-06-??
+Version 1.13.5 (RGer), 2007-06-22
 - made the TCP session limit configurable via command line switch
   now -t <port>,<max sessions>
 - added man page for rklogd(8) (basically a copy from klogd, but now
