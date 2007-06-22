@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 /**
  * \brief This is the main file of the rsyslogd daemon.
  *
@@ -146,6 +147,305 @@
 #endif
 #include <utmp.h>
 #include <ctype.h>
+#define _GNU_SOURCE
+/**
+ * \brief This is the main file of the rsyslogd daemon.
+ *
+ * TODO:
+ * - check template lines for extra characters and provide 
+ *   a warning, if they exists
+ * - include a global option for control character replacemet on receive? (not just NUL)
+ *
+ * Please note that as of now, a lot of the code in this file stems
+ * from the sysklogd project. To learn more over this project, please
+ * visit
+ *
+ * http://www.infodrom.org/projects/sysklogd/
+ *
+ * I would like to express my thanks to the developers of the sysklogd
+ * package - without it, I would have had a much harder start...
+ *
+ * Please note that I made quite some changes to the orignal package.
+ * I expect to do even more changes - up
+ * to a full rewrite - to meet my design goals, which among others
+ * contain a (at least) dual-thread design with a memory buffer for
+ * storing received bursts of data. This is also the reason why I 
+ * kind of "forked" a completely new branch of the package. My intension
+ * is to do many changes and only this initial release will look
+ * similar to sysklogd (well, one never knows...).
+ *
+ * As I have made a lot of modifications, please assume that all bugs
+ * in this package are mine and not those of the sysklogd team.
+ *
+ * As of this writing, there already exist heavy
+ * modifications to the orginal sysklogd package. I suggest to no
+ * longer rely too much on code knowledge you eventually have with
+ * sysklogd - rgerhards 2005-07-05
+ * The code is now almost completely different. Be careful!
+ * rgerhards, 2006-11-30
+ * 
+ * I have decided to put my code under the GPL. The sysklog package
+ * is distributed under the BSD license. As such, this package here
+ * currently comes with two licenses. Both are given below. As it is
+ * probably hard for you to see what was part of the sysklogd package
+ * and what is part of my code, I suggest that you visit the 
+ * sysklogd site on the URL above if you would like to base your
+ * development on a version that is not under the GPL.
+ *
+ * This Project was intiated and is maintened by
+ * Rainer Gerhards <rgerhards@hq.adiscon.com>. See
+ * AUTHORS to learn who helped make it become a reality.
+ *
+ * If you have questions about rsyslogd in general, please email
+ * info@adiscon.com. To learn more about rsyslogd, please visit
+ * http://www.rsyslog.com.
+ *
+ * \author Rainer Gerhards <rgerhards@adiscon.com>
+ * \date 2003-10-17
+ *       Some initial modifications on the sysklogd package to support
+ *       liblogging. These have actually not yet been merged to the
+ *       source you see currently (but they hopefully will)
+ *
+ * \date 2004-10-28
+ *       Restarted the modifications of sysklogd. This time, we
+ *       focus on a simpler approach first. The initial goal is to
+ *       provide MySQL database support (so that syslogd can log
+ *       to the database).
+ *
+ * rsyslog - An Enhanced syslogd Replacement.
+ * Copyright 2003-2005 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ */
+#ifdef __FreeBSD__
+#define	BSD
+#endif
+
+/* change the following setting to e.g. 32768 if you would like to
+ * support large message sizes for IHE (32k is the current maximum
+ * needed for IHE). I was initially tempted to increase it to 32k,
+ * but there is a large memory footprint with the current
+ * implementation in rsyslog. This will change as the processing
+ * changes, but I have re-set it to 1k, because the vast majority
+ * of messages is below that and the memory savings is huge, at
+ * least compared to the overall memory footprint.
+ *
+ * If you intend to receive Windows Event Log data (e.g. via
+ * EventReporter - www.eventreporter.com), you might want to 
+ * increase this number to an even higher value, as event
+ * log messages can be very lengthy.
+ * rgerhards, 2005-07-05
+ *
+ * during my recent testing, it showed that 4k seems to be
+ * the typical maximum for UDP based syslog. This is a IP stack
+ * restriction. Not always ... but very often. If you go beyond
+ * that value, be sure to test that rsyslogd actually does what
+ * you think it should do ;) Also, it is a good idea to check the
+ * doc set for anything on IHE - it most probably has information on
+ * message sizes.
+ * rgerhards, 2005-08-05
+ * 
+ * I have increased the default message size to 2048 to be in sync
+ * with recent IETF syslog standardization efforts.
+ * rgerhards, 2006-11-30
+ *
+ * I have removed syslogdPanic(). That function was supposed to be used
+ * for logging in low-memory conditons. Ever since it was introduced, it
+ * was a wrapper for dprintf(). A more intelligent choice was hard to
+ * find. After all, if we are short on memory, doing anything fance will
+ * again cause memory problems. I have now modified the code so that
+ * those elements for which we do not get memory are simply discarded.
+ * That might be a single property like the TAG, but it might also be
+ * a complete message. The overall goal of this code change is to keep
+ * rsyslogd up and running, while we sacrifice some messages to reach
+ * that goal. It also keeps the code cleaner. A real out of memory
+ * condition is highly unlikely. If it happens, there will probably be
+ * much more trouble on the system in question. Anyhow - rsyslogd will
+ * most probably be able to survive it and carry on with processing
+ * once the situation has been resolved.
+ */
+#define	MAXLINE		2048		/* maximum line length */
+#define DEFUPRI		(LOG_USER|LOG_NOTICE)
+#define DEFSPRI		(LOG_KERN|LOG_CRIT)
+#define TIMERINTVL	30		/* interval for checking flush, mark */
+
+#define CONT_LINE	1		/* Allow continuation lines */
+
+#ifdef MTRACE
+#include <mcheck.h>
+#endif
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#ifdef SYSV
+#include <sys/types.h>
+#endif
+#include <utmp.h>
+#include <ctype.h>
+#define _GNU_SOURCE
+/**
+ * \brief This is the main file of the rsyslogd daemon.
+ *
+ * TODO:
+ * - check template lines for extra characters and provide 
+ *   a warning, if they exists
+ * - include a global option for control character replacemet on receive? (not just NUL)
+ *
+ * Please note that as of now, a lot of the code in this file stems
+ * from the sysklogd project. To learn more over this project, please
+ * visit
+ *
+ * http://www.infodrom.org/projects/sysklogd/
+ *
+ * I would like to express my thanks to the developers of the sysklogd
+ * package - without it, I would have had a much harder start...
+ *
+ * Please note that I made quite some changes to the orignal package.
+ * I expect to do even more changes - up
+ * to a full rewrite - to meet my design goals, which among others
+ * contain a (at least) dual-thread design with a memory buffer for
+ * storing received bursts of data. This is also the reason why I 
+ * kind of "forked" a completely new branch of the package. My intension
+ * is to do many changes and only this initial release will look
+ * similar to sysklogd (well, one never knows...).
+ *
+ * As I have made a lot of modifications, please assume that all bugs
+ * in this package are mine and not those of the sysklogd team.
+ *
+ * As of this writing, there already exist heavy
+ * modifications to the orginal sysklogd package. I suggest to no
+ * longer rely too much on code knowledge you eventually have with
+ * sysklogd - rgerhards 2005-07-05
+ * The code is now almost completely different. Be careful!
+ * rgerhards, 2006-11-30
+ * 
+ * I have decided to put my code under the GPL. The sysklog package
+ * is distributed under the BSD license. As such, this package here
+ * currently comes with two licenses. Both are given below. As it is
+ * probably hard for you to see what was part of the sysklogd package
+ * and what is part of my code, I suggest that you visit the 
+ * sysklogd site on the URL above if you would like to base your
+ * development on a version that is not under the GPL.
+ *
+ * This Project was intiated and is maintened by
+ * Rainer Gerhards <rgerhards@hq.adiscon.com>. See
+ * AUTHORS to learn who helped make it become a reality.
+ *
+ * If you have questions about rsyslogd in general, please email
+ * info@adiscon.com. To learn more about rsyslogd, please visit
+ * http://www.rsyslog.com.
+ *
+ * \author Rainer Gerhards <rgerhards@adiscon.com>
+ * \date 2003-10-17
+ *       Some initial modifications on the sysklogd package to support
+ *       liblogging. These have actually not yet been merged to the
+ *       source you see currently (but they hopefully will)
+ *
+ * \date 2004-10-28
+ *       Restarted the modifications of sysklogd. This time, we
+ *       focus on a simpler approach first. The initial goal is to
+ *       provide MySQL database support (so that syslogd can log
+ *       to the database).
+ *
+ * rsyslog - An Enhanced syslogd Replacement.
+ * Copyright 2003-2005 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ */
+#ifdef __FreeBSD__
+#define	BSD
+#endif
+
+/* change the following setting to e.g. 32768 if you would like to
+ * support large message sizes for IHE (32k is the current maximum
+ * needed for IHE). I was initially tempted to increase it to 32k,
+ * but there is a large memory footprint with the current
+ * implementation in rsyslog. This will change as the processing
+ * changes, but I have re-set it to 1k, because the vast majority
+ * of messages is below that and the memory savings is huge, at
+ * least compared to the overall memory footprint.
+ *
+ * If you intend to receive Windows Event Log data (e.g. via
+ * EventReporter - www.eventreporter.com), you might want to 
+ * increase this number to an even higher value, as event
+ * log messages can be very lengthy.
+ * rgerhards, 2005-07-05
+ *
+ * during my recent testing, it showed that 4k seems to be
+ * the typical maximum for UDP based syslog. This is a IP stack
+ * restriction. Not always ... but very often. If you go beyond
+ * that value, be sure to test that rsyslogd actually does what
+ * you think it should do ;) Also, it is a good idea to check the
+ * doc set for anything on IHE - it most probably has information on
+ * message sizes.
+ * rgerhards, 2005-08-05
+ * 
+ * I have increased the default message size to 2048 to be in sync
+ * with recent IETF syslog standardization efforts.
+ * rgerhards, 2006-11-30
+ *
+ * I have removed syslogdPanic(). That function was supposed to be used
+ * for logging in low-memory conditons. Ever since it was introduced, it
+ * was a wrapper for dprintf(). A more intelligent choice was hard to
+ * find. After all, if we are short on memory, doing anything fance will
+ * again cause memory problems. I have now modified the code so that
+ * those elements for which we do not get memory are simply discarded.
+ * That might be a single property like the TAG, but it might also be
+ * a complete message. The overall goal of this code change is to keep
+ * rsyslogd up and running, while we sacrifice some messages to reach
+ * that goal. It also keeps the code cleaner. A real out of memory
+ * condition is highly unlikely. If it happens, there will probably be
+ * much more trouble on the system in question. Anyhow - rsyslogd will
+ * most probably be able to survive it and carry on with processing
+ * once the situation has been resolved.
+ */
+#define	MAXLINE		2048		/* maximum line length */
+#define DEFUPRI		(LOG_USER|LOG_NOTICE)
+#define DEFSPRI		(LOG_KERN|LOG_CRIT)
+#define TIMERINTVL	30		/* interval for checking flush, mark */
+
+#define CONT_LINE	1		/* Allow continuation lines */
+
+#ifdef MTRACE
+#include <mcheck.h>
+#endif
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#ifdef SYSV
+#include <sys/types.h>
+#endif
+#include <utmp.h>
+#include <ctype.h>
+#define GNU_SOURCE
 #include <string.h>
 #include <setjmp.h>
 #include <stdarg.h>
@@ -363,6 +663,20 @@ CODE facilitynames[] =
 #endif
 #endif
 
+
+/* IPv6 compatibility layer for older platforms
+ * We need to handle a few things different if we are running
+ * on an older platform which does not support all the glory
+ * of IPv6. We try to limit toll on features and reliability,
+ * but obviously it is better to run rsyslog on a platform that
+ * supports everything...
+ * rgerhards, 2007-06-22
+ */
+#ifndef AI_NUMERICSERV
+#  define AI_NUMERICSERV 0
+#endif
+
+
 /* The following #ifdef sequence is a small compatibility 
  * layer. It tries to work around the different availality
  * levels of SO_BSDCOMPAT on linuxes...
@@ -414,7 +728,6 @@ static char	*ConfFile = _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 static char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
 
-static int inetm = 0; /* read-only after init, except when HUPed */
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
 static int debugging_on = 0; /* read-only, except on sig USR1 */
@@ -638,9 +951,9 @@ struct filed {
 		char	f_uname[MAXUNAMES][UNAMESZ+1];
 		struct {
 			char	f_hname[MAXHOSTNAMELEN+1];
-			struct sockaddr_in	f_addr;
+			struct addrinfo		*f_addr;
 			int compressionLevel; /* 0 - no compression, else level for zlib */
-			int port;
+			char * port;
 			int protocol;
 			TCPFRAMINGMODE tcp_framing;
 #			define	FORW_UDP 0
@@ -834,12 +1147,12 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 				 */
 static char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
 static char	*LocalDomain;	/* our local domain name  - read-only after startup */
-static int	InetInuse = 0;	/* non-zero if INET sockets are being used
+static int	*finet = NULL;	/* Internet datagram sockets, first element is nbr of elements
 				 * read-only after init(), but beware of restart! */
-static int	finet = -1;	/* Internet datagram socket *
-				 * read-only after init(), but beware of restart! */
-static int	LogPort = 0;	/* port number for INET connections - read-only after startup */
+static char     *LogPort = "514";    /* port number for INET connections */
 static int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
+static int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
+static int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	MarkSeq = 0;	/* mark sequence number - modified in domark() only */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
 static int	AcceptRemote = 0;/* receive messages that come via UDP - read-only after startup */
@@ -932,11 +1245,12 @@ static void logmsg(int pri, struct msg*, int flags);
 static void fprintlog(register struct filed *f);
 static void wallmsg(register struct filed *f);
 static void reapchild();
-static const char *cvthname(struct sockaddr_in *f);
+static char *cvthname(struct sockaddr_storage *f);
 static void debug_switch();
 static rsRetVal cfline(char *line, register struct filed *f);
 static int decode(char *name, struct code *codetab);
 static void sighup_handler();
+static void die(int sig);
 #ifdef WITH_DB
 static void initMySQL(register struct filed *f);
 static void writeMySQL(register struct filed *f);
@@ -949,11 +1263,6 @@ static void DBErrorHandler(register struct filed *f);
 static int getSubString(char **pSrc, char *pDst, size_t DstSize, char cSep);
 static void getCurrTime(struct syslogTime *t);
 static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
-
-#ifdef SYSLOG_UNIXAF
-static int create_udp_socket();
-#endif
-
 
 /* Access functions for the struct filed. These functions are primarily
  * necessary to make things thread-safe. Consequently, they are slim
@@ -1061,22 +1370,39 @@ static void PrintAllowedSenders(int iListToPrint)
  * list must be proveded by the caller. As such, this function can be
  * used to check both UDP and TCP allowed sender lists.
  * returns 1, if the sender is allowed, 0 otherwise.
- * rgerhads, 2005-09-26
+ * rgerhards, 2005-09-26
+ * for the time being, this function works with IPv4 addresses only. All
+ * others are allowed senders by virtue of being IPv6. This needs to be
+ * changed - TODO. rgerhards, 2007-06-22
  */
-static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_in *pFrom)
+static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_storage *pFrom)
 {
 	struct AllowedSenders *pAllow;
 	unsigned long ulAddrInLocalByteOrder;
+
+	union sockunion {
+		struct sockinet {
+			u_char si_len;
+			u_char si_family;
+			} su_si;
+		struct sockaddr_in  su_sin;
+		struct sockaddr_in6 su_sin6;
+	} *pFromAddr;
 
 	assert(pFrom != NULL);
 
 	if(pAllowRoot == NULL)
 		return 1; /* checking disabled, everything is valid! */
 
-	if(pFrom->sin_family != AF_INET)
+	if(pFrom->ss_family == AF_INET6)
+		return 1; /* for the time being, IPv6 addresses are always valid */
+
+	if(pFrom->ss_family != AF_INET)
 		return 0; /* malformed, so by default no valid sender! */
 
-	ulAddrInLocalByteOrder = ntohl(pFrom->sin_addr.s_addr);
+	pFromAddr = (union sockunion*) pFrom;
+	ulAddrInLocalByteOrder = ntohl(pFromAddr->su_sin.sin_addr.s_addr);
+	/* was: ulAddrInLocalByteOrder = ntohl(pFrom->sin_addr.s_addr); */
 
 	/* now we loop through the list of allowed senders. As soon as
 	 * we find a match, we return back (indicating allowed). We loop
@@ -1369,7 +1695,7 @@ static void TCPSessAccept(void)
 {
 	int newConn;
 	int iSess;
-	struct sockaddr_in addr;
+	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(struct sockaddr);
 	int lenHostName;
 	char *fromHost;
@@ -1392,7 +1718,7 @@ static void TCPSessAccept(void)
 
 	/* OK, we have a "good" index... */
 	/* get the host name */
-	fromHost = (char *)cvthname(&addr);
+	fromHost = cvthname(&addr);
 
 	/* Here we check if a host is permitted to send us
 	 * syslog messages. If it isn't, we do not further
@@ -3803,7 +4129,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 
 static int usage(void)
 {
-	fprintf(stderr, "usage: rsyslogd [-dhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
+	fprintf(stderr, "usage: rsyslogd [-46Adhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
 		" [-s domainlist] [-r port] [-t port] [-f conffile]\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
@@ -3838,66 +4164,165 @@ static int create_unix_socket(const char *path)
 #endif
 
 #ifdef SYSLOG_INET
-static int create_udp_socket()
+/* closes the UDP listen sockets (if they exist) and frees
+ * all dynamically assigned memory. 
+ */
+static void closeUDPListenSockets()
 {
-	int fd, on = 1;
-	struct sockaddr_in sin;
+	register int i;
+
+        if(finet != NULL) {
+	        for (i = 0; i < *finet; i++)
+	                close(finet[i+1]);
+		free(finet);
+		finet = NULL;
+	}
+}
+
+
+/* creates the UDP listen sockets
+ */
+static int * create_udp_socket()
+{
+        struct addrinfo hints, *res, *r;
+        int error, maxs, *s, *socks, on = 1;
 	int sockflags;
 
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (fd < 0) {
-		logerror("syslog: Unknown protocol, suspending inet service.");
-		return fd;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+        hints.ai_family = family;
+        hints.ai_socktype = SOCK_DGRAM;
+dprintf("create_udp_socket: logport %s\n", LogPort);
+        error = getaddrinfo(NULL, LogPort, &hints, &res);
+        if(error) {
+               logerror((char*) gai_strerror(error));
+	       logerror("UDP message reception disabled due to error logged in last message.\n");
+	       return NULL;
 	}
 
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(LogPort);
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, \
-		       (char *) &on, sizeof(on)) < 0 ) {
-		logerror("setsockopt(REUSEADDR), suspending inet");
-		close(fd);
-		return -1;
-	}
-	/* We need to enable BSD compatibility. Otherwise an attacker
-	 * could flood our log files by sending us tons of ICMP errors.
-	 */
-#ifndef BSD	
-	if (should_use_so_bsdcompat()) {
-		if (setsockopt(fd, SOL_SOCKET, SO_BSDCOMPAT, \
-				(char *) &on, sizeof(on)) < 0) {
-			logerror("setsockopt(BSDCOMPAT), suspending inet");
-			close(fd);
-			return -1;
-		}
-	}
-#endif
-	/* We must not block on the network socket, in case a packet
-	 * gets lost between select and recv, otherwise the process
-	 * will stall until the timeout, and other processes trying to
-	 * log will also stall.
-	 * Patch vom Colin Phipps <cph@cph.demon.co.uk> to the original
-	 * sysklogd source. Applied to rsyslogd on 2005-10-19.
-	 */
-	if ((sockflags = fcntl(fd, F_GETFL)) != -1) {
-		sockflags |= O_NONBLOCK;
-		/* SETFL could fail too, so get it caught by the subsequent
-		 * error check.
+        /* Count max number of sockets we may open */
+        for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+		/* EMPTY */;
+        socks = malloc((maxs+1) * sizeof(int));
+        if (socks == NULL) {
+               logerror("couldn't allocate memory for UDP sockets, suspending UDP message reception");
+               freeaddrinfo(res);
+               return NULL;
+        }
+
+        *socks = 0;   /* num of sockets counter at start of array */
+        s = socks + 1;
+	for (r = res; r != NULL ; r = r->ai_next) {
+               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+        	if (*s < 0) {
+			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+				logerror("create_udp_socket(), socket");
+				/* it is debatable if PF_INET with EAFNOSUPPORT should
+				 * also be ignored...
+				 */
+                        continue;
+                }
+
+#		ifdef IPV6_V6ONLY
+                if (r->ai_family == AF_INET6) {
+                	int on = 1;
+			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
+			      (char *)&on, sizeof (on)) < 0) {
+			logerror("setsockopt");
+			close(*s);
+			*s = -1;
+			continue;
+                	}
+                }
+#		endif
+
+		/* if we have an error, we "just" suspend that socket. Eventually
+		 * other sockets will work. At the end of this function, we check
+		 * if we managed to open at least one socket. If not, we'll write
+		 * a "inet suspended" message and declare failure. Else we use
+		 * what we could obtain.
+		 * rgerhards, 2007-06-22
 		 */
-		sockflags = fcntl(fd, F_SETFL, sockflags);
-	}
-	if (sockflags == -1) {
-		logerror("fcntl(O_NONBLOCK), suspending inet");
-		close(fd);
-		return -1;
+       		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
+			       (char *) &on, sizeof(on)) < 0 ) {
+			logerror("setsockopt(REUSEADDR)");
+                        close(*s);
+			*s = -1;
+			continue;
+		}
+
+		/* We need to enable BSD compatibility. Otherwise an attacker
+		 * could flood our log files by sending us tons of ICMP errors.
+		 */
+#ifndef BSD	
+		if (should_use_so_bsdcompat()) {
+			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
+					(char *) &on, sizeof(on)) < 0) {
+				logerror("setsockopt(BSDCOMPAT)");
+                                close(*s);
+				*s = -1;
+				continue;
+			}
+		}
+#endif
+		/* We must not block on the network socket, in case a packet
+		 * gets lost between select and recv, otherwise the process
+		 * will stall until the timeout, and other processes trying to
+		 * log will also stall.
+		 * Patch vom Colin Phipps <cph@cph.demon.co.uk> to the original
+		 * sysklogd source. Applied to rsyslogd on 2005-10-19.
+		 */
+		if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
+			sockflags |= O_NONBLOCK;
+			/* SETFL could fail too, so get it caught by the subsequent
+			 * error check.
+			 */
+			sockflags = fcntl(*s, F_SETFL, sockflags);
+		}
+		if (sockflags == -1) {
+			logerror("fcntl(O_NONBLOCK)");
+                        close(*s);
+			*s = -1;
+			continue;
+		}
+
+		/* rgerhards, 2007-06-22: if we run on a kernel that does not support
+		 * the IPV6_V6ONLY socket option, we need to use a work-around. On such
+		 * systems the IPv6 socket does also accept IPv4 sockets. So an IPv4
+		 * socket can not listen on the same port as an IPv6 socket. The only
+		 * workaround is to ignore the "socket in use" error. This is what we
+		 * do if we have to.
+		 */
+	        if(     (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
+#		ifndef IPV6_V6ONLY
+		     && (errno != EADDRINUSE)
+#		endif
+	           ) {
+                        logerror("bind");
+                	close(*s);
+			*s = -1;
+                        continue;
+                }
+
+                (*socks)++;
+                s++;
 	}
 
-	if (bind(fd, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
-		logerror("bind, suspending inet");
-		close(fd);
-		return -1;
+        if(res != NULL)
+               freeaddrinfo(res);
+
+	if(Debug && *socks != maxs)
+		dprintf("We could initialize %d UDP listen sockets out of %d we received "
+		 	"- this may or may not be an error indication.\n", *socks, maxs);
+
+        if(*socks == 0) {
+		logerror("No UDP listen socket could successfully be initialized, "
+			 "message reception via UDP disabled.\n");
+        	free(socks);
+		return(NULL);
 	}
-	return fd;
+
+	return(socks);
 }
 #endif
 
@@ -5575,8 +6000,11 @@ void fprintlog(register struct filed *f)
 	rsRetVal iRet;
 #ifdef SYSLOG_INET
 	register int l;
+	int e, i, lsent = 0;
+	int bSendSuccess;
 	time_t fwd_suspend;
-	struct hostent *hp;
+	struct addrinfo *res, *r;
+	struct addrinfo hints;
 #endif
 
 	msg = f->f_pMsg->pszMSG;
@@ -5639,7 +6067,9 @@ void fprintlog(register struct filed *f)
 		fwd_suspend = time((time_t *) 0) - f->f_time;
 		if ( fwd_suspend >= INET_SUSPEND_TIME ) {
 			dprintf("Forwarding suspension to unknown over, retrying\n");
-			if ( (hp = gethostbyname(f->f_un.f_forw.f_hname)) == NULL ) {
+			memset(&hints, 0, sizeof(hints));
+			hints.ai_socktype = f->f_un.f_forw.protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
+			if ( (e = getaddrinfo(f->f_un.f_forw.f_hname, "syslog", &hints, &res)) != 0 ) {
 				dprintf("Failure: %s\n", sys_h_errlist[h_errno]);
 				dprintf("Retries: %d\n", f->f_prevcount);
 				if ( --f->f_prevcount < 0 ) {
@@ -5651,7 +6081,7 @@ void fprintlog(register struct filed *f)
 			}
 			else {
 			        dprintf("%s found, resuming.\n", f->f_un.f_forw.f_hname);
-				memcpy((char *) &f->f_un.f_forw.f_addr.sin_addr, hp->h_addr, hp->h_length);
+				f->f_un.f_forw.f_addr = res;
 				f->f_prevcount = 0;
 				f->f_type = F_FORW;
 				goto f_forw;
@@ -5664,7 +6094,7 @@ void fprintlog(register struct filed *f)
 
 	case F_FORW:
 	f_forw:
-		dprintf(" %s:%d/%s\n", f->f_un.f_forw.f_hname, f->f_un.f_forw.port,
+		dprintf(" %s:%s/%s\n", f->f_un.f_forw.f_hname, f->f_un.f_forw.port,
 			 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp");
 		iovCreate(f);
 		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
@@ -5715,16 +6145,38 @@ void fprintlog(register struct filed *f)
 
 			if(f->f_un.f_forw.protocol == FORW_UDP) {
 				/* forward via UDP */
-				if (sendto(finet, psz, l, 0, \
-				/*if (sendto(finet, out, destLen, 0, \*/
-					   (struct sockaddr *) &f->f_un.f_forw.f_addr,
-					   sizeof(f->f_un.f_forw.f_addr)) != l) {
-					int e = errno;
-					dprintf("INET sendto error: %d = %s.\n", 
-						e, strerror(e));
-					f->f_type = F_FORW_SUSP;
-					errno = e;
-					logerror("sendto");
+	                        if(finet != NULL) {
+					/* we need to track if we have success sending to the remote
+					 * peer. Success is indicated by at least one sendto() call
+					 * succeeding. We track this be bSendSuccess. We can not simply
+					 * rely on lsent, as a call might initially work, but a later
+					 * call fails. Then, lsent has the error status, even though
+					 * the sendto() succeeded.
+					 * rgerhards, 2007-06-22
+					 */
+					bSendSuccess = FALSE;
+					for (r = f->f_un.f_forw.f_addr; r; r = r->ai_next) {
+		                       		for (i = 0; i < *finet; i++) {
+		                                       lsent = sendto(finet[i+1], psz, l, 0,
+		                                                      r->ai_addr, r->ai_addrlen);
+							if (lsent == l) {
+						       		bSendSuccess = TRUE;
+								break;
+							} else {
+								int e = errno;
+								dprintf("sendto() error: %d = %s.\n",
+									e, strerror(e));
+							}
+		                                }
+						if (lsent == l && !send_to_all)
+	                         	               break;
+					}
+					/* finished looping */
+	                                if (bSendSuccess == FALSE) {
+		                                f->f_type = F_FORW_SUSP;
+		                                errno = 0;
+		                                logerror("error forwarding via udp, suspending");
+					}
 				}
 			} else {
 				/* forward via TCP */
@@ -5993,43 +6445,62 @@ static void reapchild()
 
 /* Return a printable representation of a host address.
  */
-static const char *cvthname(struct sockaddr_in *f)
+static char *cvthname(struct sockaddr_storage *f)
 {
-	struct hostent *hp;
 	register char *p;
-	int count;
+	int count, error;
+	sigset_t omask, nmask;
+	/* TODO: check - the static below may be problematic in
+	 * multi-threading. rgerhards, 2007-06-22
+	 */
+	static char hname[NI_MAXHOST], ip[NI_MAXHOST];
 
-	if (f->sin_family != AF_INET) {
-		dprintf("Malformed from address.\n");
+        error = getnameinfo((struct sockaddr *)f,
+                             sizeof(*f),
+                             ip, sizeof ip, NULL, 0,
+                             NI_NUMERICHOST);
+        dprintf("cvthname(%s)\n", ip);
+
+        if (error) {
+                dprintf("Malformed from address %s\n", gai_strerror(error));
 		return ("???");
 	}
-	hp = gethostbyaddr((char *) &f->sin_addr, sizeof(struct in_addr), \
-			   f->sin_family);
-	if (hp == NULL) {
-		dprintf("Host name for your address (%s) unknown.\n",
-			inet_ntoa(f->sin_addr));
-		return (inet_ntoa(f->sin_addr));
-	}
+
+        sigemptyset(&nmask);
+        sigaddset(&nmask, SIGHUP);
+        sigprocmask(SIG_BLOCK, &nmask, &omask);
+
+        error = getnameinfo((struct sockaddr *)f,
+                             sizeof(*f),
+                             hname, sizeof hname, NULL, 0,
+                             NI_NAMEREQD);
+
+        sigprocmask(SIG_SETMASK, &omask, NULL);
+        if (error) {
+                dprintf("Host name for your address (%s) unknown\n", ip);
+                return (ip);
+        }
+
 	/* Convert to lower case, just like LocalDomain above
 	 */
-	for (p = (char *)hp->h_name; *p ; p++)
+	for (p = (char *) hname; *p ; p++)
 		if (isupper(*p))
 			*p = tolower(*p);
 
 	/* Notice that the string still contains the fqdn, but your
 	 * hostname and domain are separated by a '\0'.
 	 */
-	if ((p = strchr(hp->h_name, '.'))) {
+	if ((p = strchr(hname, '.'))) {
 		if (strcmp(p + 1, LocalDomain) == 0) {
 			*p = '\0';
-			return (hp->h_name);
+			return (hname);
 		} else {
 			if (StripDomains) {
 				count=0;
 				while (StripDomains[count]) {
 					if (strcmp(p + 1, StripDomains[count]) == 0) {
 						*p = '\0';
-						return (hp->h_name);
+						return (hname);
 					}
 					count++;
 				}
@@ -6037,9 +6508,9 @@ static const char *cvthname(struct sockaddr_in *f)
 			if (LocalHosts) {
 				count=0;
 				while (LocalHosts[count]) {
-					if (!strcmp(hp->h_name, LocalHosts[count])) {
+					if (!strcmp(hname, LocalHosts[count])) {
 						*p = '\0';
-						return (hp->h_name);
+						return (hname);
 					}
 					count++;
 				}
@@ -6047,7 +6518,7 @@ static const char *cvthname(struct sockaddr_in *f)
 		}
 	}
 
-	return (hp->h_name);
+	return (hname);
 }
 
 
@@ -6244,7 +6715,7 @@ static void die(int sig)
 		if (funix[i] != -1)
 			close(funix[i]);
 	/* Close the UDP inet socket. */
-	if (InetInuse) close(inetm);
+	closeUDPListenSockets();
 
 	/* Close the TCP inet socket. */
 	if(bEnableTCP && sockTCPLstn != -1) {
@@ -6460,7 +6931,6 @@ static void init()
 #else
 	char cline[BUFSIZ];
 #endif
-	struct servent *sp;
 	char bufStartUpMsg[512];
 
 	/* initialize some static variables */
@@ -6469,20 +6939,6 @@ static void init()
 	eDfltHostnameCmpMode = HN_NO_COMP;
 
 	nextp = NULL;
-	if(LogPort == 0) {
-		/* we shall use the default syslog/udp port, so let's
-		 * look it up.
-		 */
-		sp = getservbyname("syslog", "udp");
-		if (sp == NULL) {
-			errno = 0;
-			logerror("Could not find syslog/udp port in /etc/services."
-			         "Now using IANA-assigned default of 514.");
-			LogPort = 514;
-		}
-		else
-			LogPort = sp->s_port;
-	}
 
 	/*
 	 *  Close all open log files and free log descriptor array.
@@ -6516,6 +6972,9 @@ static void init()
 				case F_CONSOLE:
 					(void) close(f->f_file);
 				break;
+                                case F_FORW:
+                                        freeaddrinfo(f->f_un.f_forw.f_addr);
+                                break;
 #				ifdef	WITH_DB
 				case F_MYSQL:
 					closeMySQL(f);
@@ -6672,21 +7131,15 @@ static void init()
 	}
 
 	if (Forwarding || AcceptRemote) {
-		if (finet < 0) {
-			finet = create_udp_socket();
-			if (finet >= 0) {
-				InetInuse = 1;
-				dprintf("Opened syslog UDP port.\n");
-			}
+		if (finet == NULL) {
+			if((finet = create_udp_socket()) != NULL)
+				dprintf("Opened %d syslog UDP port(s).\n", *finet);
 		}
 	}
 	else {
-		if (finet >= 0)
-			close(finet);
-		finet = -1;
-		InetInuse = 0;
+		/* this case can happen during HUP processing. */
+		closeUDPListenSockets();
 	}
-	inetm = finet;
 #endif
 
 	Initialized = 1;
@@ -6768,7 +7221,7 @@ static void init()
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
 		 PATCHLEVEL "\" x-pid=\"%d\"][x-configInfo udpReception=\"%s\" " \
-		 "udpPort=\"%d\" tcpReception=\"%s\" tcpPort=\"%d\"]" \
+		 "udpPort=\"%s\" tcpReception=\"%s\" tcpPort=\"%d\"]" \
 		 " restart",
 		 (int) myPid,
 		 AcceptRemote ? "Yes" : "No", LogPort,
@@ -7369,7 +7822,8 @@ static rsRetVal cfline(char *line, register struct filed *f)
 	int syncfile;
 	rsRetVal iRet;
 #ifdef SYSLOG_INET
-	struct hostent *hp;
+        struct addrinfo hints, *res;
+        int error;
 	int bErr;
 #endif
 	char szTemplateName[128];
@@ -7506,13 +7960,17 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		 */
 		for(q = p ; *p && *p != ';' && *p != ':' ; ++p)
 		 	/* JUST SKIP */;
+
+		f->f_un.f_forw.port = "514";
 		if(*p == ':') { /* process port */
 			register int i = 0;
+			char * tmp;
+
 			*p = '\0'; /* trick to obtain hostname (later)! */
-			for(++p ; *p && isdigit(*p) ; ++p) {
-				i = i * 10 + *p - '0';
-			}
-			f->f_un.f_forw.port = i;
+			tmp = ++p;
+			for( ; *p && isdigit(*p) ; ++p, ++i)
+				/* SKIP AND COUNT */;
+			f->f_un.f_forw.port = strndup(tmp, i);
 		}
 		
 		/* now skip to template */
@@ -7543,12 +8001,18 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		}
 
 		/* first set the f->f_type */
-		if ( (hp = gethostbyname(q)) == NULL ) {
+		strcpy(f->f_un.f_forw.f_hname, q);
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_flags = AI_NUMERICSERV;
+		hints.ai_family = family;
+		hints.ai_socktype = f->f_un.f_forw.protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
+		if ( (error = getaddrinfo(f->f_un.f_forw.f_hname, f->f_un.f_forw.port, &hints, &res)) != 0 ) {
 			f->f_type = F_FORW_UNKN;
 			f->f_prevcount = INET_RETRY_MAX;
 			f->f_time = time((time_t *) NULL);
 		} else {
 			f->f_type = F_FORW;
+			f->f_un.f_forw.f_addr = res;
 		}
 
 		/* then try to find the template and re-set f_type to UNUSED
@@ -7561,21 +8025,10 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			 */
 			break;
 
-		strcpy(f->f_un.f_forw.f_hname, q);
-		memset((char *) &f->f_un.f_forw.f_addr, 0,
-			 sizeof(f->f_un.f_forw.f_addr));
-		f->f_un.f_forw.f_addr.sin_family = AF_INET;
-		if(f->f_un.f_forw.port == 0)
-			f->f_un.f_forw.port = 514;
-		f->f_un.f_forw.f_addr.sin_port = htons(f->f_un.f_forw.port);
-
-		dprintf("forwarding host: '%s:%d/%s' template '%s'\n",
+		dprintf("forwarding host: '%s:%s/%s' template '%s'\n",
 		         q, f->f_un.f_forw.port,
 			 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp",
 			 szTemplateName);
-
-		if ( f->f_type == F_FORW )
-			memcpy((char *) &f->f_un.f_forw.f_addr.sin_addr, hp->h_addr, hp->h_length);
 		/*
 		 * Otherwise the host might be unknown due to an
 		 * inaccessible nameserver (perhaps on the same
@@ -8132,13 +8585,6 @@ int getSubString(char **ppSrc,  char *pDst, size_t DstSize, char cSep)
 static void mainloop(void)
 {
 	int i;
-#if !defined(__GLIBC__)
-	int len;
-#else /* __GLIBC__ */
-#ifndef TESTING
-	size_t len;
-#endif
-#endif /* __GLIBC__ */
 	fd_set readfds;
 #ifdef  SYSLOG_INET
 	fd_set writefds;
@@ -8153,9 +8599,11 @@ static void mainloop(void)
 #ifndef TESTING
 	int	fd;
 #ifdef  SYSLOG_INET
-	struct sockaddr_in frominet;
+	struct sockaddr_storage frominet;
+	socklen_t socklen;
 	char *from;
 	int iTCPSess;
+	ssize_t l;
 #endif
 #endif
 
@@ -8188,13 +8636,17 @@ static void mainloop(void)
 #endif
 #ifdef SYSLOG_INET
 #ifndef TESTING
-		/* Add the Internet Domain Socket to the list of read
+		/* Add the UDP Internet Domain Socket to the list of read
 		 * descriptors.
 		 */
-		if ( InetInuse && AcceptRemote ) {
-			FD_SET(inetm, &readfds);
-			if (inetm>maxfds) maxfds=inetm;
-			dprintf("Listening on syslog UDP port.\n");
+		if(finet != NULL && AcceptRemote) {
+                        for (i = 0; i < *finet; i++) {
+                                if (finet[i+1] != -1) {
+					dprintf("Listening on syslogd UDP port, socket %d.\n", finet[i+1]);
+                                        FD_SET(finet[i+1], &readfds);
+					if (finet[i+1]>maxfds) maxfds=finet[i+1];
+				}
+                        }
 		}
 
 		/* Add the TCP socket to the list of read descriptors.
@@ -8268,6 +8720,9 @@ static void mainloop(void)
 		 * also the loss of some (very few) cpu cycles. Both, I think, are
 		 * absolutely acceptable.
 		 * rgerhards, 2005-10-26
+		 * TODO: I got some information: this seems to be expected signal() behaviour
+		 * we should investigate the use of sigaction() (see klogd.c for an sample).
+		 * rgerhards, 2007-06-22
 		 */
 		tvSelectTimeout.tv_sec = 10;
 		tvSelectTimeout.tv_usec = 0;
@@ -8386,39 +8841,43 @@ static void mainloop(void)
 #endif
 
 #ifdef SYSLOG_INET
-		if (InetInuse && AcceptRemote && FD_ISSET(inetm, &readfds)) {
-			len = sizeof(frominet);
-			i = recvfrom(finet, line, MAXLINE - 1, 0, \
-				     (struct sockaddr *) &frominet, &len);
-			dprintf("Message from UDP inetd socket: #%d, host: %s\n",
-				inetm, inet_ntoa(frominet.sin_addr));
-			if (i > 0) {
-				from = (char *)cvthname(&frominet);
-				/* Here we check if a host is permitted to send us
-				 * syslog messages. If it isn't, we do not further
-				 * process the message but log a warning (if we are
-				 * configured to do this).
-				 * rgerhards, 2005-09-26
-				 */
-				if(isAllowedSender(pAllowedSenders_UDP, &frominet)) {
-					printchopped(from, line, i,  finet, 1);
-				} else {
-					if(option_DisallowWarning) {
-						logerrorSz("UDP message from disallowed sender %s discarded",
-							   from);
-					}
-				}
-			} else if (i < 0 && errno != EINTR && errno != EAGAIN) {
-				/* see link below why we check EAGAIN:
-				 * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=188194
-				 */
-				dprintf("INET socket error: %d = %s.\n", \
-					errno, strerror(errno));
-				logerror("recvfrom inet");
-				/* should be harmless now that we set
-				 * BSDCOMPAT on the socket */
-				sleep(1);
-			}
+               if (finet != NULL && AcceptRemote) {
+                       for (i = 0; i < *finet; i++) {
+                               if (FD_ISSET(finet[i+1], &readfds)) {
+                                       socklen = sizeof(frominet);
+                                       memset(line, '\0', sizeof(line));
+                                       l = recvfrom(finet[i+1], line, MAXLINE - 1,
+                                                    0, (struct sockaddr *)&frominet,
+                                                    &socklen);
+                                       if (l > 0) {
+                                               line[l] = '\0';
+                                               from = cvthname(&frominet);
+                                               dprintf("Message from inetd socket: #%d, host: %s\n",
+                                                       finet[i+1], from);
+						/* Here we check if a host is permitted to send us
+						 * syslog messages. If it isn't, we do not further
+						 * process the message but log a warning (if we are
+						 * configured to do this).
+						 * rgerhards, 2005-09-26
+						 */
+						if(isAllowedSender(pAllowedSenders_UDP, &frominet)) {
+                                               		printchopped(from, line, l,  finet[i+1], 1);
+						} else {
+							if(option_DisallowWarning) {
+								logerrorSz("UDP message from disallowed sender %s discarded",
+					               			   from);
+							}	
+						}
+                                       }
+                                       else if (l < 0 && errno != EINTR && errno != EAGAIN) {
+                                                       dprintf("INET socket error: %d = %s.\n",
+                                                                errno, strerror(errno));
+                                                       logerror("recvfrom inet");
+                                                       /* should be harmless */
+                                                       sleep(1);
+                                               }
+                               }
+                       }
 		}
 
 		if(bEnableTCP && sockTCPLstn != -1) {
@@ -8521,8 +8980,17 @@ int main(int argc, char **argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "a:dehi:f:l:m:nop:r:s:t:u:vw")) != EOF)
+	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r:s:t:u:vw")) != EOF)
 		switch((char)ch) {
+                case '4':
+	                family = PF_INET;
+                        break;
+                case '6':
+                        family = PF_INET6;
+                        break;
+                case 'A':
+                        send_to_all++;
+                        break;
 		case 'a':
 			if (nfunix < MAXFUNIX)
 				if(*optarg == ':') {
@@ -8573,7 +9041,7 @@ int main(int argc, char **argv)
 			break;
 		case 'r':		/* accept remote messages */
 			AcceptRemote = 1;
-			LogPort = atoi(optarg);
+			LogPort = optarg;
 			break;
 		case 's':
 			if (StripDomains) {
