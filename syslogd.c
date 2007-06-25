@@ -2366,7 +2366,7 @@ static int TCPSend(struct filed *f, char *msg, size_t len)
  * \retval The number parsed.
  */
 
-static int srSLMGParseInt32(unsigned char** ppsz)
+static int srSLMGParseInt32(char** ppsz)
 {
 	int i;
 
@@ -2387,7 +2387,7 @@ static int srSLMGParseInt32(unsigned char** ppsz)
  */
 static int srSLMGParseTIMESTAMP3339(struct syslogTime *pTime, char** ppszTS)
 {
-	unsigned char *pszTS = *ppszTS;
+	char *pszTS = *ppszTS;
 
 	assert(pTime != NULL);
 	assert(ppszTS != NULL);
@@ -2434,7 +2434,7 @@ static int srSLMGParseTIMESTAMP3339(struct syslogTime *pTime, char** ppszTS)
 	/* Now let's see if we have secfrac */
 	if(*pszTS == '.')
 	{
-		unsigned char *pszStart = ++pszTS;
+		char *pszStart = ++pszTS;
 		pTime->secfrac = srSLMGParseInt32(&pszTS);
 		pTime->secfracPrecision = (int) (pszTS - pszStart);
 	}
@@ -2488,7 +2488,7 @@ static int srSLMGParseTIMESTAMP3339(struct syslogTime *pTime, char** ppszTS)
  * Parse a TIMESTAMP-3164.
  * Returns TRUE on parse OK, FALSE on parse error.
  */
-static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, unsigned char* pszTS)
+static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, char* pszTS)
 {
 	assert(pTime != NULL);
 	assert(pszTS != NULL);
@@ -4475,7 +4475,7 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 		 */
 		int ret;
 		iLenDefBuf = MAXLINE;
-		ret = uncompress(deflateBuf, &iLenDefBuf, msg+1, len-1);
+		ret = uncompress((unsigned char *) deflateBuf, &iLenDefBuf, (unsigned char *) msg+1, len-1);
 		dprintf("Compressed message uncompressed with status %d, length: new %d, old %d.\n",
 		        ret, iLenDefBuf, len-1);
 		/* Now check if the uncompression worked. If not, there is not much we can do. In
@@ -6100,7 +6100,7 @@ void fprintlog(register struct filed *f)
 		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
 		else {
-			unsigned char *psz;
+			char *psz;
 			f->f_time = now;
 			psz = iovAsString(f);
 			l = f->f_iLenpsziov;
@@ -6121,7 +6121,8 @@ void fprintlog(register struct filed *f)
 				uLongf destLen = sizeof(out) / sizeof(Bytef);
 				uLong srcLen = l;
 				int ret;
-				ret = compress2(out+1, &destLen, psz, srcLen, f->f_un.f_forw.compressionLevel);
+				ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
+						srcLen, f->f_un.f_forw.compressionLevel);
 				dprintf("Compressing message, length was %d now %d, return state  %d.\n",
 					l, (int) destLen, ret);
 				if(ret != Z_OK) {
@@ -6136,7 +6137,7 @@ void fprintlog(register struct filed *f)
 				} else if(destLen+1 < l) {
 					/* only use compression if there is a gain in using it! */
 					dprintf("there is gain in compression, so we do it\n");
-					psz = out;
+					psz = (char*) out;
 					l = destLen + 1; /* take care for the "z" at message start! */
 				}
 				++destLen;
