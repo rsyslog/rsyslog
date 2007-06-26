@@ -9,7 +9,7 @@
 # run rsyslog.
 ### BEGIN INIT INFO
 # Provides: $syslog
-# Short-Description: Rsyslog, the enhanced syslogd for Linux and Unix 
+# Short-Description: Enhanced system logging and kernel message trapping daemons
 # Description: Rsyslog is an enhanced multi-threaded syslogd supporting, 
 #              among others, MySQL, syslog/tcp, RFC 3195, permitted 
 #              sender lists, filtering on any message part, and fine 
@@ -19,22 +19,22 @@
 # Source function library.
 . /etc/init.d/functions
 
-[ -f /sbin/rsyslogd ] || exit 0
-[ -f /sbin/rklogd ] || exit 0
-
-# Source config
-if [ -f /etc/sysconfig/rsyslog ] ; then
-        . /etc/sysconfig/rsyslog
-else
-        SYSLOGD_OPTIONS="-m 0"
-        KLOGD_OPTIONS="-2"
-fi
-
 RETVAL=0
 
-umask 077
-
 start() {
+	[ -x /sbin/rsyslogd ] || exit 5
+	[ -x /sbin/rklogd ] || exit 5
+
+	# Source config
+	if [ -f /etc/sysconfig/rsyslog ] ; then
+        	. /etc/sysconfig/rsyslog
+	else
+        	SYSLOGD_OPTIONS="-m 0"
+	        KLOGD_OPTIONS="-2"
+	fi
+
+	umask 077
+
         echo -n $"Starting system logger (rsyslog): "
         daemon rsyslogd $SYSLOGD_OPTIONS
         RETVAL=$?
@@ -83,7 +83,7 @@ case "$1" in
         ;;
   *)
         echo $"Usage: $0 {start|stop|status|restart|condrestart}"
-        exit 1
+        exit 2
 esac
 
 exit $?
