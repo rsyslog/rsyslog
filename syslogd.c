@@ -5809,6 +5809,8 @@ void  iovCreate(struct filed *f)
 	struct template *pTpl;
 	struct templateEntry *pTpe;
 	struct msg *pMsg;
+	char *pVal;	/* This variable must be introduced to keep with strict aliasing rules */
+	size_t iLenVal;	/* This variable must be introduced to keep with strict aliasing rules */
 
 	assert(f != NULL);
 
@@ -5828,9 +5830,16 @@ void  iovCreate(struct filed *f)
 			++v;
 			++iIOVused;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			v->iov_base = MsgGetProp(pMsg, pTpe, NULL, f->f_bMustBeFreed + iIOVused);
-			v->iov_len = strlen(v->iov_base);
-			/* TODO: performance optimize - can we obtain the length? */
+			/* Just for the records and because I needed some time to look it up again:
+			 * f->f_bMustBeFreed + iIOVused is a pointer to the "must be freed" indicator
+			 * for the entry in question. So, yes, we are passing in a pointer and it gets
+			 * updated by the called procedures. The address of operator (&) must NOT be used
+			 * because it already is a pointer. Actually, f->f_bMustBeFreed is the base address
+			 * of an array of unsigned shorts. This array is allocated when the configuration
+			 * file is read. rgerhards, 2007-06-26
+			 */
+			pVal = MsgGetProp(pMsg, pTpe, NULL, f->f_bMustBeFreed + iIOVused);
+			iLenVal = strlen(pVal);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
@@ -5838,11 +5847,11 @@ void  iovCreate(struct filed *f)
 			 * existing thing).
 			 */
 			if(f->f_pTpl->optFormatForSQL == 1)
-				doSQLEscape((char**)&v->iov_base, &v->iov_len,
-					    f->f_bMustBeFreed + iIOVused, 1);
+				doSQLEscape(&pVal, &iLenVal, f->f_bMustBeFreed + iIOVused, 1);
 			else if(f->f_pTpl->optFormatForSQL == 2)
-				doSQLEscape((char**)&v->iov_base, &v->iov_len,
-					    f->f_bMustBeFreed + iIOVused, 0);
+				doSQLEscape(&pVal, &iLenVal, f->f_bMustBeFreed + iIOVused, 0);
+			v->iov_base = pVal;
+			v->iov_len = iLenVal;
 			++v;
 			++iIOVused;
 		}
@@ -5974,7 +5983,7 @@ again:
 			logerror(f->f_un.f_fname);
 		}
 	} else if (f->f_flags & SYNC_FILE)
-		(void) fsync(f->f_file);
+		fsync(f->f_file);
 }
 
 /* rgerhards 2004-11-09: fprintlog() is the actual driver for

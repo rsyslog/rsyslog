@@ -1,6 +1,9 @@
 ---------------------------------------------------------------------------
 Version 1.14.0 (RGer/Peter Vrabec), 2007-06-??
 - Peter Vrabec provided IPv6 for rsyslog, so we are now IPv6 enabled
+-fixed code in iovCreate() that broke C's strict aliasing rules 
+- fixed some char/unsigned char differences that forced the compiler
+  to spit out warning messages
 ---------------------------------------------------------------------------
 Version 1.13.5 (RGer), 2007-06-22
 - made the TCP session limit configurable via command line switch
