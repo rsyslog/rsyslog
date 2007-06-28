@@ -1144,9 +1144,9 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_st
 #define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
 
 static int iTCPSessMax =  TCPSESS_MAX_DEFAULT;	/* actual number of sessions */
-static int TCPLstnPort = 0; /* read-only after startup */
+static char *TCPLstnPort = "514"; /* read-only after startup */
 static int bEnableTCP = 0; /* read-only after startup */
-static int sockTCPLstn = -1; /* read-only after startup, modified by restart */
+static int  * sockTCPLstn = NULL; /* read-only after startup, modified by restart */
 struct TCPSession {
 	int sock;
 	int iMsg; /* index of next char to store in msg */
@@ -1182,10 +1182,12 @@ static void configureTCPListen(char *optarg)
 	while(isdigit(*pArg)) {
 		i = i * 10 + *pArg++ - '0';
 	}
-	TCPLstnPort = i;
+	if( i >= 1 && i <= 65535) 
+		TCPLstnPort = optarg;
 
 	/* number of sessions */
 	if(*pArg == ','){
+		*pArg = '\0';
 		++pArg;
 		while(isspace(*pArg))
 			++pArg;
@@ -1301,76 +1303,137 @@ static void deinit_tcp_listener(void)
 	pTCPSessions = NULL; /* just to make sure... */
 
 	/* finally close the listen socket itself */
-	close(sockTCPLstn);
+	while( *sockTCPLstn ) {
+		close(sockTCPLstn[*sockTCPLstn]);
+		(*sockTCPLstn)--;
+	}
+	free(sockTCPLstn);
+	sockTCPLstn = NULL;
 }
 
 
 /* Initialize TCP sockets (for listener)
  */
-static int create_tcp_socket(void)
+static int * create_tcp_socket(void)
 {
-	int fd, on = 1;
-	struct sockaddr_in sin;
+        struct addrinfo hints, *res, *r;
+        int error, maxs, *s, *socks, on = 1;
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd < 0) {
-		logerror("syslog: TCP: could not create socket, suspending tcp inet service.");
-		return fd;
-	}
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+        hints.ai_family = family;
+        hints.ai_socktype = SOCK_STREAM;
 
-	if(TCPLstnPort == 0) {
-		TCPLstnPort = 514; /* use default, no error */
-	}
-	if(TCPLstnPort < 1 || TCPLstnPort > 65535) {
-		TCPLstnPort = 514; /* just let's use our default... */
-		errno = 0;
-		logerror("TCP listen port was invalid, changed to 514");
+	dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
+
+        error = getaddrinfo(NULL, TCPLstnPort, &hints, &res);
+        if(error) {
+               logerror((char*) gai_strerror(error));
+	       return NULL;
 	}
 
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = htonl(INADDR_ANY);
-	sin.sin_port = htons(TCPLstnPort);
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, \
-		       (char *) &on, sizeof(on)) < 0 ) {
-		logerror("setsockopt(REUSEADDR), suspending tcp inet");
-		close(fd);
-		return -1;
-	}
-	/* We need to enable BSD compatibility. Otherwise an attacker
-	 * could flood our log files by sending us tons of ICMP errors.
-	 */
-#ifndef BSD	
-	if (should_use_so_bsdcompat()) {
-		if (setsockopt(fd, SOL_SOCKET, SO_BSDCOMPAT, \
-				(char *) &on, sizeof(on)) < 0) {
-			logerror("setsockopt(BSDCOMPAT), suspending tcp inet");
-			close(fd);
-			return -1;
-		}
-	}
+        /* Count max number of sockets we may open */
+        for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+		/* EMPTY */;
+        socks = malloc((maxs+1) * sizeof(int));
+        if (socks == NULL) {
+               logerror("couldn't allocate memory for UDP sockets, suspending TCP message reception");
+               freeaddrinfo(res);
+               return NULL;
+        }
+
+        *socks = 0;   /* num of sockets counter at start of array */
+        s = socks + 1;
+	for (r = res; r != NULL ; r = r->ai_next) {
+               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+        	if (*s < 0) {
+			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+				logerror("create_udp_socket(), socket");
+				/* it is debatable if PF_INET with EAFNOSUPPORT should
+				 * also be ignored...
+				 */
+                        continue;
+                }
+
+#ifdef IPV6_V6ONLY
+                if (r->ai_family == AF_INET6) {
+                	int on = 1;
+			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
+			      (char *)&on, sizeof (on)) < 0) {
+			logerror("setsockopt");
+			close(*s);
+			*s = -1;
+			continue;
+                	}
+                }
 #endif
-	if (bind(fd, (struct sockaddr *) &sin, sizeof(sin)) < 0) {
-		logerror("bind, suspending tcp inet");
-		close(fd);
-		return -1;
-	}
-	if(listen(fd, iTCPSessMax / 10 + 5) < 0) {
-		/* If the listen fails, it most probably fails because we ask
-		 * for a too-large backlog. So in this case we first set back
-		 * to a fixed, reasonable, limit that should work. Only if
-		 * that fails, too, we give up.
-		 */
-		logerrorInt("listen with a backlog of %d failed - retrying with default of 32.",
-			    iTCPSessMax / 10 + 5);
-		if(listen(fd, 32) < 0) {
-			logerror("listen, suspending tcp inet");
-			close(fd);
-			return -1;
+       		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
+			       (char *) &on, sizeof(on)) < 0 ) {
+			logerror("setsockopt(REUSEADDR)");
+                        close(*s);
+			*s = -1;
+			continue;
 		}
+
+		/* We need to enable BSD compatibility. Otherwise an attacker
+		 * could flood our log files by sending us tons of ICMP errors.
+		 */
+#ifndef BSD	
+		if (should_use_so_bsdcompat()) {
+			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
+					(char *) &on, sizeof(on)) < 0) {
+				logerror("setsockopt(BSDCOMPAT)");
+                                close(*s);
+				*s = -1;
+				continue;
+			}
+		}
+#endif
+
+	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
+#ifndef IPV6_V6ONLY
+		     && (errno != EADDRINUSE)
+#endif
+	           ) {
+                        logerror("bind");
+                	close(*s);
+			*s = -1;
+                        continue;
+                }
+
+		if( listen(*s,iTCPSessMax / 10 + 5) < 0) {
+			/* If the listen fails, it most probably fails because we ask
+			 * for a too-large backlog. So in this case we first set back
+			 * to a fixed, reasonable, limit that should work. Only if
+			 * that fails, too, we give up.
+			 */
+			logerrorInt("listen with a backlog of %d failed - retrying with default of 32.",
+				    iTCPSessMax / 10 + 5);
+			if(listen(*s, 32) < 0) {
+				logerror("listen, suspending tcp inet");
+	                	close(*s);
+				*s = -1;
+               		        continue;
+			}
+		}
+
+		(*socks)++;
+		s++;
 	}
 
-	sockTCPLstn = fd;
+        if(res != NULL)
+               freeaddrinfo(res);
+
+	if(Debug && *socks != maxs)
+		dprintf("We could initialize %d TCP listen sockets out of %d we received "
+		 	"- this may or may not be an error indication.\n", *socks, maxs);
+
+        if(*socks == 0) {
+		logerror("No TCP listen socket could successfully be initialized, "
+			 "message reception via UDP disabled.\n");
+        	free(socks);
+		return(NULL);
+	}
 
 	/* OK, we had success. Now it is also time to
 	 * initialize our connections
@@ -1381,20 +1444,18 @@ static int create_tcp_socket(void)
 		 * we have assigned so far, because we can not really use it...
 		 */
 		logerror("Could not initialize TCP session table, suspending TCP inet");
-		close(fd);
-		return -1;
+		free(socks);
+		return(NULL);
 	}
 
-	dprintf("Opened TCP socket %d.\n", sockTCPLstn);
-
-	return fd;
+	return(socks);
 }
 
 /* Accept new TCP connection; make entry in session table. If there
  * is no more space left in the connection table, the new TCP
  * connection is immediately dropped.
  */
-static void TCPSessAccept(void)
+static void TCPSessAccept(int fd)
 {
 	int newConn;
 	int iSess;
@@ -1404,7 +1465,7 @@ static void TCPSessAccept(void)
 	char *fromHost;
 	char *pBuf;
 
-	newConn = accept(sockTCPLstn, (struct sockaddr*) &addr, &addrlen);
+	newConn = accept(fd, (struct sockaddr*) &addr, &addrlen);
 	if (newConn < 0) {
 		logerror("tcp accept, ignoring error and connection request");
 		return;
@@ -1728,47 +1789,54 @@ static enum TCPSendStatus TCPSendGetStatus(struct filed *f)
 static int TCPSendCreateSocket(struct filed *f)
 {
 	int fd;
-	socklen_t addrlen = sizeof(struct sockaddr_in);
-
+	struct addrinfo *r; 
+	
 	assert(f != NULL);
+	
+	r = f->f_un.f_forw.f_addr;
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd < 0) {
-		dprintf("couldn't create send socket\n");
-		return fd;
-	}
-
-	/* We can not allow the TCP sender to block syslogd, at least
-	 * not in a single-threaded design. That would cause rsyslogd to
-	 * loose input messages - which obviously also would affect
-	 * other selector lines, too. So we do set it to non-blocking and 
-	 * handle the situation ourselfs (by discarding messages). IF we run
-	 * dual-threaded, however, the situation is different: in this case,
-	 * the receivers and the selector line processing is only loosely
-	 * coupled via a memory buffer. Now, I think, we can afford the extra
-	 * wait time. Thus, we enable blocking mode for TCP if we compile with
-	 * pthreads.
-	 * rgerhards, 2005-10-25
-	 */
+	while (r != NULL) {
+		fd = socket (r->ai_family, r->ai_socktype, r->ai_protocol);
+		if (fd != -1) {
+			/* We can not allow the TCP sender to block syslogd, at least
+			 * not in a single-threaded design. That would cause rsyslogd to
+			 * loose input messages - which obviously also would affect
+			 * other selector lines, too. So we do set it to non-blocking and 
+			 * handle the situation ourselfs (by discarding messages). IF we run
+			 * dual-threaded, however, the situation is different: in this case,
+			 * the receivers and the selector line processing is only loosely
+			 * coupled via a memory buffer. Now, I think, we can afford the extra
+			 * wait time. Thus, we enable blocking mode for TCP if we compile with
+			 * pthreads.
+			 * rgerhards, 2005-10-25
+			 */
 #	ifndef USE_PTHREADS
-	/* set to nonblocking - rgerhards 2005-07-20 */
-	fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
-#	endif
+			/* set to nonblocking - rgerhards 2005-07-20 */
+			fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+#	endif		
+			if (connect (fd, r->ai_addr, r->ai_addrlen) != 0) {
+				if(errno == EINPROGRESS) {
+					/* this is normal - will complete during select */
+					TCPSendSetStatus(f, TCP_SEND_CONNECTING);
+					return fd;
+				} else {
+					dprintf("create tcp connection failed, reason %s", strerror(errno));
+				}
 
-	if(connect(fd, (struct sockaddr*) &(f->f_un.f_forw.f_addr), addrlen) < 0) {
-		if(errno == EINPROGRESS) {
-			/* this is normal - will complete during select */
-			TCPSendSetStatus(f, TCP_SEND_CONNECTING);
-		} else {
-			dprintf("create tcp connection failed, reason %s", strerror(errno));
+			}
+			else {
+				TCPSendSetStatus(f, TCP_SEND_READY);
+				return fd;
+			}
 			close(fd);
-			return -1;
 		}
-	} else {
-		TCPSendSetStatus(f, TCP_SEND_READY);
+		else {
+			dprintf("couldn't create send socket, reason %s", strerror(errno));
+		}		
+		r = r->ai_next;
 	}
 
-	return fd;
+	return -1;
 }
 
 
@@ -1936,7 +2004,7 @@ static int TCPSend(struct filed *f, char *msg, size_t len)
 			 * comments with "IETF20061218".
 			 * rgerhards, 2006-12-19
 			 */
-			iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len);
+			iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", (int) len);
 			/* IETF20061218 iLenBuf =
 			  snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len + iLenBuf);*/
 
@@ -6452,7 +6520,7 @@ static void die(int sig)
 	closeUDPListenSockets();
 
 	/* Close the TCP inet socket. */
-	if(bEnableTCP && sockTCPLstn != -1) {
+	if(bEnableTCP && *sockTCPLstn) {
 		deinit_tcp_listener();
 	}
 
@@ -6873,16 +6941,15 @@ static void init()
 
 #ifdef SYSLOG_INET
 	if (bEnableTCP) {
-		if (sockTCPLstn < 0) {
+		if (sockTCPLstn == NULL) {
 			/* even when doing a re-init, we do not shut down and
 			 * re-open the TCP socket. That would break existing TCP
 			 * session, which we do not desire. Should at some time arise
 			 * need to do that, I recommend controlling that via a
 			 * user-selectable option. rgerhards, 2007-06-21
 			 */
-			sockTCPLstn = create_tcp_socket();
-			if (sockTCPLstn >= 0) {
-				dprintf("Opened syslog TCP port.\n");
+			if ((sockTCPLstn = create_tcp_socket()) != NULL) {
+				dprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
 			}
 		}
 	}
@@ -6978,11 +7045,11 @@ static void init()
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
 		 PATCHLEVEL "\" x-pid=\"%d\"][x-configInfo udpReception=\"%s\" " \
-		 "udpPort=\"%s\" tcpReception=\"%s\" tcpPort=\"%d\"]" \
+		 "udpPort=\"%s\" tcpReception=\"%s\" tcpPort=\"%s\"]" \
 		 " restart",
 		 (int) myPid,
 		 AcceptRemote ? "Yes" : "No", LogPort,
-		 bEnableTCP   ? "Yes" : "No",  TCPLstnPort );
+		 bEnableTCP   ? "Yes" : "No", TCPLstnPort );
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, LocalHostName, ADDDATE);
 
 	(void) signal(SIGHUP, sighup_handler);
@@ -8412,10 +8479,14 @@ static void mainloop(void)
 
 		/* Add the TCP listen sockets to the list of read descriptors.
 	    	 */
-		if(bEnableTCP && sockTCPLstn != -1) {
-			FD_SET(sockTCPLstn, &readfds);
-			if (sockTCPLstn>maxfds) maxfds=sockTCPLstn;
-			dprintf("Listening on syslog TCP port.\n");
+		if(bEnableTCP && *sockTCPLstn) {
+			for (i = 0; i < *sockTCPLstn; i++) {
+				if (sockTCPLstn[i+1] != -1) {
+					dprintf("Listening on syslogd TCP port, socket %d.\n", sockTCPLstn[i+1]);
+					FD_SET(sockTCPLstn[i+1], &readfds);
+					if (sockTCPLstn[i+1]>maxfds) maxfds=sockTCPLstn[i+1];
+				}
+			}
 			/* do the sessions */
 			iTCPSess = TCPSessGetNxtSess(-1);
 			while(iTCPSess != -1) {
@@ -8641,11 +8712,12 @@ static void mainloop(void)
                        }
 		}
 
-		if(bEnableTCP && sockTCPLstn != -1) {
-			/* Now check for TCP input */
-			if(FD_ISSET(sockTCPLstn, &readfds)) {
-				dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn);
-				TCPSessAccept();
+		if(bEnableTCP && *sockTCPLstn) {
+			for (i = 0; i < *sockTCPLstn; i++) {
+				if (FD_ISSET(sockTCPLstn[i+1], &readfds)) {
+					dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
+					TCPSessAccept(sockTCPLstn[i+1]);
+				}
 			}
 
 			/* now check the sessions */
