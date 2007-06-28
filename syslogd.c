@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 /**
  * \brief This is the main file of the rsyslogd daemon.
  *
@@ -85,6 +84,8 @@
 #ifdef __FreeBSD__
 #define	BSD
 #endif
+
+#define _GNU_SOURCE
 
 /* change the following setting to e.g. 32768 if you would like to
  * support large message sizes for IHE (32k is the current maximum
@@ -653,7 +654,7 @@ struct filed {
 		char	f_uname[MAXUNAMES][UNAMESZ+1];
 		struct {
 			char	f_hname[MAXHOSTNAMELEN+1];
-			struct addrinfo		*f_addr;
+			struct addrinfo *f_addr;
 			int compressionLevel; /* 0 - no compression, else level for zlib */
 			char * port;
 			int protocol;
@@ -853,7 +854,7 @@ static int	*finet = NULL;	/* Internet datagram sockets, first element is nbr of 
 				 * read-only after init(), but beware of restart! */
 static char     *LogPort = "514";    /* port number for INET connections */
 static int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
-static int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
+static int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
 static int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	MarkSeq = 0;	/* mark sequence number - modified in domark() only */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
@@ -2042,6 +2043,22 @@ static int TCPSend(struct filed *f, char *msg, size_t len)
  ********************************************************************/
 
 
+/* get the syslog forward port from struct filed. The passed in
+ * struct must be one that is setup for forwarding.
+ * rgerhards, 2007-06-28
+ * TODO: We may change the implementation to try to lookup the port
+ * if it is unspecified. So far, we use the IANA default auf 514.
+ */
+static char *getFwdSyslogPt(struct filed *f)
+{
+	assert(f != NULL);
+	if(f->f_un.f_forw.port == NULL)
+		return("514");
+	else
+		return(f->f_un.f_forw.port);
+}
+
+
 /*******************************************************************
  * BEGIN CODE-LIBLOGGING                                           *
  *******************************************************************
@@ -2385,7 +2402,12 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, char* pszTS)
  */
 static int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst)
 {
-	/* TODO: currently we do not consider localtime/utc */
+	/* currently we do not consider localtime/utc. This may later be
+	 * added. If so, I recommend using a property replacer option
+	 * and/or a global configuration option. However, we should wait
+	 * on user requests for this feature before doing anything.
+	 * rgerhards, 2007-06-26
+	 */
 	assert(ts != NULL);
 	assert(pDst != NULL);
 
@@ -3675,16 +3697,12 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 					if (*pbMustBeFreed == 1)
 						free(pRes);
 					*pbMustBeFreed = 0;
-					return
-					    "**OUT OF MEMORY ALLOCATING pBuf**";
+					return "**OUT OF MEMORY ALLOCATING pBuf**";
 				}
-				*pBuf = '\0';
 
 				/* Lets copy the matched substring to the buffer */
-				/* TODO: RGer: I think we can use memcpy() here, too (faster) */
-				strncpy(pBuf, pRes + pmatch[1].rm_so,
-					iLen);
-				pBuf[iLen] = '\0';	/* Null termination of string */
+				memcpy(pBuf, pRes + pmatch[1].rm_so, iLen);
+				pBuf[iLen] = '\0';/* terminate string, did not happen before */
 
 				if (*pbMustBeFreed == 1)
 					free(pRes);
@@ -3832,7 +3850,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 static int usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [-46Adhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
-		" [-s domainlist] [-r port] [-t port] [-f conffile]\n");
+		" [-s domainlist] [-r port] [-t port[,max-sessions]] [-f conffile]\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
 
@@ -3894,7 +3912,6 @@ static int * create_udp_socket()
         hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
         hints.ai_family = family;
         hints.ai_socktype = SOCK_DGRAM;
-dprintf("create_udp_socket: logport %s\n", LogPort);
         error = getaddrinfo(NULL, LogPort, &hints, &res);
         if(error) {
                logerror((char*) gai_strerror(error));
@@ -4298,7 +4315,7 @@ void printline(char *hname, char *msg, int bParseHost)
 	 */
 #if 0	 /* TODO: REMOVE THIS LATER */
 	/* we soon need to support UTF-8, so we will soon need to remove
-	 * this. As a side-note, the current code destroys MBCS messages
+	 * this. As a side-note, the commented out code would destroy MBCS messages
 	 * (like Japanese).
 	 */
 	q = pMsg->pszMSG;
@@ -5750,23 +5767,20 @@ void fprintlog(register struct filed *f)
 
 #ifdef SYSLOG_INET
 	case F_FORW_SUSP:
-		fwd_suspend = time((time_t *) 0) - f->f_time;
+		fwd_suspend = time(NULL) - f->f_time;
 		if ( fwd_suspend >= INET_SUSPEND_TIME ) {
-			dprintf("\nForwarding suspension over, " \
-				"retrying FORW ");
+			dprintf("\nForwarding suspension over, retrying FORW ");
 			f->f_type = F_FORW;
 			goto f_forw;
 		}
 		else {
 			dprintf(" %s\n", f->f_un.f_forw.f_hname);
-			dprintf("Forwarding suspension not over, time " \
-				"left: %d.\n", INET_SUSPEND_TIME - \
-				fwd_suspend);
+			dprintf("Forwarding suspension not over, time left: %d.\n",
+			        INET_SUSPEND_TIME - fwd_suspend);
 		}
 		break;
 		
-	/*
-	 * The trick is to wait some time, then retry to get the
+	/* The trick is to wait some time, then retry to get the
 	 * address. If that fails retry x times and then give up.
 	 *
 	 * You'll run into this problem mostly if the name server you
@@ -5774,13 +5788,21 @@ void fprintlog(register struct filed *f)
 	 * is started after syslogd. 
 	 */
 	case F_FORW_UNKN:
+	/* The remote address is not yet known and needs to be obtained */
 		dprintf(" %s\n", f->f_un.f_forw.f_hname);
-		fwd_suspend = time((time_t *) 0) - f->f_time;
-		if ( fwd_suspend >= INET_SUSPEND_TIME ) {
+		fwd_suspend = time(NULL) - f->f_time;
+		if(fwd_suspend >= INET_SUSPEND_TIME) {
 			dprintf("Forwarding suspension to unknown over, retrying\n");
 			memset(&hints, 0, sizeof(hints));
+			/* port must be numeric, because config file syntax requests this */
+			/* TODO: this code is a duplicate from cfline() - we should later create
+			 * a common function.
+			 */
+			hints.ai_flags = AI_NUMERICSERV;
+			hints.ai_family = family;
 			hints.ai_socktype = f->f_un.f_forw.protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
-			if ( (e = getaddrinfo(f->f_un.f_forw.f_hname, "syslog", &hints, &res)) != 0 ) {
+			if((e = getaddrinfo(f->f_un.f_forw.f_hname,
+					    getFwdSyslogPt(f), &hints, &res)) != 0) {
 				dprintf("Failure: %s\n", sys_h_errlist[h_errno]);
 				dprintf("Retries: %d\n", f->f_prevcount);
 				if ( --f->f_prevcount < 0 ) {
@@ -5805,7 +5827,7 @@ void fprintlog(register struct filed *f)
 
 	case F_FORW:
 	f_forw:
-		dprintf(" %s:%s/%s\n", f->f_un.f_forw.f_hname, f->f_un.f_forw.port,
+		dprintf(" %s:%s/%s\n", f->f_un.f_forw.f_hname, getFwdSyslogPt(f),
 			 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp");
 		iovCreate(f);
 		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
@@ -6628,6 +6650,7 @@ void cfsysline(char *p)
 
 
 /* INIT -- Initialize syslogd from configuration table
+ * init() is called at initial startup AND each time syslogd is HUPed
  */
 static void init()
 {
@@ -6651,9 +6674,29 @@ static void init()
 	eDfltHostnameCmpMode = HN_NO_COMP;
 
 	nextp = NULL;
+	/* TODO: This code must be re-activated, but of course with the proper
+	 * IPv6 way of doing things... rgerhards, 2007-0627
+	 */
+        if(!strcmp(LogPort, "0")) {
+                /* we shall use the default syslog/udp port, so let's
+                 * look it up.
+                 */
+#if 0
+                sp = getservbyname("syslog", "udp");
+                if (sp == NULL) {
+#endif
+                        errno = 0;
+                        logerror("Could not find syslog/udp port in /etc/services. "
+                                 "Now using IANA-assigned default of 514.");
+                        LogPort = "514";
+#if 0
+                }
+                else
+                        LogPort = sp->s_port;
+#endif
+        }
 
-	/*
-	 *  Close all open log files and free log descriptor array.
+	/*  Close all open log files and free log descriptor array.
 	 */
 	dprintf("Called init.\n");
 	Initialized = 0;
@@ -6682,10 +6725,12 @@ static void init()
 				case F_PIPE:
 				case F_TTY:
 				case F_CONSOLE:
-					(void) close(f->f_file);
+					close(f->f_file);
 				break;
                                 case F_FORW:
                                         freeaddrinfo(f->f_un.f_forw.f_addr);
+					if(f->f_un.f_forw.port != NULL)
+						free(f->f_un.f_forw.port);
                                 break;
 #				ifdef	WITH_DB
 				case F_MYSQL:
@@ -6732,7 +6777,7 @@ static void init()
 		cfline(cbuf, nextp->f_next);
 		Initialized = 1;
 	}
-	else { /* we should consider moving this into a separate function - TODO */
+	else { /* we should consider moving this into a separate function, its lengthy... */
 		/*
 		 *  Foreach line in the conf table, open that file.
 		 */
@@ -6971,7 +7016,6 @@ static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
 	} else {
 		if((f->f_iov = calloc(tplGetEntryCount(f->f_pTpl),
 		    sizeof(struct iovec))) == NULL) {
-			/* TODO: provide better message! */
 			errno = 0;
 			logerror("Could not allocate iovec memory - 1 selector line disabled\n");
 			f->f_type = F_UNUSED;
@@ -7606,7 +7650,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		} else {
 			f->f_un.f_forw.protocol = FORW_UDP;
 		}
-		/* we are now after the protcol indicator. Now check if we should
+		/* we are now after the protocol indicator. Now check if we should
 		 * use compression. We begin to use a new option format for this:
 		 * @(option,option)host:port
 		 * The first option defined is "z[0..9]" where the digit indicates
@@ -7673,7 +7717,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		for(q = p ; *p && *p != ';' && *p != ':' ; ++p)
 		 	/* JUST SKIP */;
 
-		f->f_un.f_forw.port = "514";
+		f->f_un.f_forw.port = NULL;
 		if(*p == ':') { /* process port */
 			register int i = 0;
 			char * tmp;
@@ -7683,6 +7727,13 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			for( ; *p && isdigit(*p) ; ++p, ++i)
 				/* SKIP AND COUNT */;
 			f->f_un.f_forw.port = strndup(tmp, i);
+			if(f->f_un.f_forw.port == NULL) {
+				logerror("Could not get memory to store syslog forwarding port, "
+					 "using default port, results may not be what you intend\n");
+				/* we leave f_forw.port set to NULL, this is then handled by
+				 * getFwdSyslogPt().
+				 */
+			}
 		}
 		
 		/* now skip to template */
@@ -7715,13 +7766,14 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		/* first set the f->f_type */
 		strcpy(f->f_un.f_forw.f_hname, q);
 		memset(&hints, 0, sizeof(hints));
+		/* port must be numeric, because config file syntax requests this */
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = family;
 		hints.ai_socktype = f->f_un.f_forw.protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
-		if ( (error = getaddrinfo(f->f_un.f_forw.f_hname, f->f_un.f_forw.port, &hints, &res)) != 0 ) {
+		if( (error = getaddrinfo(f->f_un.f_forw.f_hname, getFwdSyslogPt(f), &hints, &res)) != 0) {
 			f->f_type = F_FORW_UNKN;
 			f->f_prevcount = INET_RETRY_MAX;
-			f->f_time = time((time_t *) NULL);
+			f->f_time = time(NULL);
 		} else {
 			f->f_type = F_FORW;
 			f->f_un.f_forw.f_addr = res;
@@ -7737,8 +7789,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			 */
 			break;
 
-		dprintf("forwarding host: '%s:%s/%s' template '%s'\n",
-		         q, f->f_un.f_forw.port,
+		dprintf("forwarding host: '%s:%s/%s' template '%s'\n", q, getFwdSyslogPt(f),
 			 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp",
 			 szTemplateName);
 		/*
@@ -7747,12 +7798,12 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		 * host). We try to get the ip number later, like
 		 * FORW_SUSP.
 		 */
-#endif
+#endif /* #ifdef SYSLOG_INET */
 		break;
 
         case '$':
 		/* rgerhards 2005-06-21: this is a special setting for output-channel
-		 * defintions. In the long term, this setting will probably replace
+		 * definitions. In the long term, this setting will probably replace
 		 * anything else, but for the time being we must co-exist with the
 		 * traditional mode lines.
 		 */
@@ -8330,8 +8381,7 @@ static void mainloop(void)
 		maxfds = 0;
 #ifdef SYSLOG_UNIXAF
 #ifndef TESTING
-		/*
-		 * Add the Unix Domain Sockets to the list of read
+		/* Add the Unix Domain Sockets to the list of read
 		 * descriptors.
 		 * rgerhards 2005-08-01: we must now check if there are
 		 * any local sockets to listen to at all. If the -o option
@@ -8348,8 +8398,7 @@ static void mainloop(void)
 #endif
 #ifdef SYSLOG_INET
 #ifndef TESTING
-		/* Add the UDP Internet Domain Socket to the list of read
-		 * descriptors.
+		/* Add the UDP listen sockets to the list of read descriptors.
 		 */
 		if(finet != NULL && AcceptRemote) {
                         for (i = 0; i < *finet; i++) {
@@ -8361,7 +8410,7 @@ static void mainloop(void)
                         }
 		}
 
-		/* Add the TCP socket to the list of read descriptors.
+		/* Add the TCP listen sockets to the list of read descriptors.
 	    	 */
 		if(bEnableTCP && sockTCPLstn != -1) {
 			FD_SET(sockTCPLstn, &readfds);
