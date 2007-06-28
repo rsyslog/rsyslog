@@ -1144,7 +1144,7 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_st
 #define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
 
 static int iTCPSessMax =  TCPSESS_MAX_DEFAULT;	/* actual number of sessions */
-static char *TCPLstnPort = "514"; /* read-only after startup */
+static char *TCPLstnPort = "0"; /* read-only after startup */
 static int bEnableTCP = 0; /* read-only after startup */
 static int  * sockTCPLstn = NULL; /* read-only after startup, modified by restart */
 struct TCPSession {
@@ -1168,6 +1168,8 @@ struct TCPSession {
  * NOTE: you can not use dprintf() in here - the dprintf() system is
  * not yet initilized when this function is called.
  * rgerhards, 2007-06-21
+ * We can also not use logerror(), as that system is also not yet
+ * initialized... rgerhards, 2007-06-28
  */
 static void configureTCPListen(char *optarg)
 {
@@ -1182,8 +1184,13 @@ static void configureTCPListen(char *optarg)
 	while(isdigit(*pArg)) {
 		i = i * 10 + *pArg++ - '0';
 	}
-	if( i >= 1 && i <= 65535) 
+
+	if( i >= 0 && i <= 65535) {
 		TCPLstnPort = optarg;
+	} else {
+		fprintf(stderr, "rsyslogd: Invalid TCP listen port %d - changed to 514.\n", i);
+		TCPLstnPort = "514";
+	}
 
 	/* number of sessions */
 	if(*pArg == ','){
@@ -1200,7 +1207,8 @@ static void configureTCPListen(char *optarg)
 			iTCPSessMax = i;
 		else {
 			/* too small, need to adjust */
-			fprintf(stderr, "TCP session max configured to %d [-t %s] - changing to 1.\n",
+			fprintf(stderr,
+				"rsyslogd: TCP session max configured to %d [-t %s] - changing to 1.\n",
 				i, optarg);
 			iTCPSessMax = 1;
 		}
@@ -1208,7 +1216,7 @@ static void configureTCPListen(char *optarg)
 		/* use default for session number - that's already set...*/
 		/*EMPTY BY INTENSION*/
 	} else {
-		fprintf(stderr, "Invalid -t %s command line option.\n", optarg);
+		fprintf(stderr, "rsyslogd: Invalid -t %s command line option.\n", optarg);
 	}
 }
 
@@ -1319,12 +1327,20 @@ static int * create_tcp_socket(void)
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 
+	if(!strcmp(TCPLstnPort, "0"))
+		TCPLstnPort = "514";
+		/* use default - we can not do service db update, because there is
+		 * no IANA-assignment for syslog/tcp. In the long term, we might
+		 * re-use RFC 3195 port of 601, but that would probably break to
+		 * many existing configurations.
+		 * rgerhards, 2007-06-28
+		 */
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
         hints.ai_family = family;
         hints.ai_socktype = SOCK_STREAM;
 
-	dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
+dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
 
         error = getaddrinfo(NULL, TCPLstnPort, &hints, &res);
         if(error) {
@@ -1337,7 +1353,7 @@ static int * create_tcp_socket(void)
 		/* EMPTY */;
         socks = malloc((maxs+1) * sizeof(int));
         if (socks == NULL) {
-               logerror("couldn't allocate memory for UDP sockets, suspending TCP message reception");
+               logerror("couldn't allocate memory for TCP listen sockets, suspending TCP message reception.");
                freeaddrinfo(res);
                return NULL;
         }
@@ -8835,7 +8851,7 @@ int main(int argc, char **argv)
 					funixn[nfunix++] = optarg;
 				}
 			else
-				fprintf(stderr, "Out of descriptors, ignoring %s\n", optarg);
+				fprintf(stderr, "rsyslogd: Out of descriptors, ignoring %s\n", optarg);
 			break;
 		case 'd':		/* debug */
 			Debug = 1;
@@ -8854,7 +8870,7 @@ int main(int argc, char **argv)
 			break;
 		case 'l':
 			if (LocalHosts) {
-				fprintf (stderr, "Only one -l argument allowed," \
+				fprintf (stderr, "rsyslogd: Only one -l argument allowed," \
 					"the first one is taken.\n");
 				break;
 			}
@@ -8878,7 +8894,7 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			if (StripDomains) {
-				fprintf (stderr, "Only one -s argument allowed," \
+				fprintf (stderr, "rsyslogd: Only one -s argument allowed," \
 					"the first one is taken.\n");
 				break;
 			}
