@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 1.14.1 (RGer/Peter Vrabec), 2007-06-??
+- added Peter Vrabec's patch for IPv6 TCP
+---------------------------------------------------------------------------
 Version 1.14.0 (RGer/Peter Vrabec), 2007-06-28
 - Peter Vrabec provided IPv6 for rsyslog, so we are now IPv6 enabled
   IPv6 Support is currently for UDP only, TCP is to come soon.
