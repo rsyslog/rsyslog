@@ -1,4 +1,4 @@
-# Copyright (C) 2004, 2005 Rainer Gerhards and Adiscon GmbH
+# Copyright (C) 2004-2007 Rainer Gerhards and Adiscon GmbH
 # this is no longer the real make file. To prevent install
 # errors, it displays instructions on how to go to the
 # right spot.

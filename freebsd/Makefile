@@ -1,5 +1,5 @@
 # Makefile for rsyslog
-# Copyright (C) 2004, 2005 Rainer Gerhards and Adiscon GmbH
+# Copyright (C) 2004-2007 Rainer Gerhards and Adiscon GmbH
 # This is the distro-specifc part of the Makefile.
 # For details, see http://www.rsyslog.com/doc
 
