@@ -6,6 +6,8 @@ Version 1.14.0 (RGer/Peter Vrabec), 2007-06-28
 - fixed code in iovCreate() that broke C's strict aliasing rules 
 - fixed some char/unsigned char differences that forced the compiler
   to spit out warning messages
+- updated the Red Hat init script to fix a known issue (thanks to
+  Peter Vrabec)
 ---------------------------------------------------------------------------
 Version 1.13.5 (RGer), 2007-06-22
 - made the TCP session limit configurable via command line switch
