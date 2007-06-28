@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 1.14.1 (RGer/Peter Vrabec), 2007-06-??
 - added Peter Vrabec's patch for IPv6 TCP
+- prefixed all messages send to stderr in rsyslogd with "rsyslogd: "
 ---------------------------------------------------------------------------
 Version 1.14.0 (RGer/Peter Vrabec), 2007-06-28
 - Peter Vrabec provided IPv6 for rsyslog, so we are now IPv6 enabled

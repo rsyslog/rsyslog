@@ -1124,6 +1124,26 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_st
 #endif /* #ifdef SYSLOG_INET */
 
 
+/* code to free all sockets within a socket table.
+ * A socket table is a descriptor table where the zero
+ * element has the count of elements. This is used for
+ * listening sockets. The socket table itself is also
+ * freed.
+ * A POINTER to this structure must be provided, thus
+ * double indirection!
+ * rgerhards, 2007-06-28
+ */
+static void freeAllSockets(int **socks)
+{
+	assert(socks != NULL);
+	assert(*socks != NULL);
+	while(**socks) {
+		close(*socks[**socks]);
+		(**socks)--;
+	}
+	free(*socks);
+	socks = NULL;
+}
 
 /********************************************************************
  *                    ###  SYSLOG/TCP CODE ###
@@ -1146,7 +1166,7 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_st
 static int iTCPSessMax =  TCPSESS_MAX_DEFAULT;	/* actual number of sessions */
 static char *TCPLstnPort = "0"; /* read-only after startup */
 static int bEnableTCP = 0; /* read-only after startup */
-static int  * sockTCPLstn = NULL; /* read-only after startup, modified by restart */
+static int  *sockTCPLstn = NULL; /* read-only after startup, modified by restart */
 struct TCPSession {
 	int sock;
 	int iMsg; /* index of next char to store in msg */
@@ -1177,7 +1197,7 @@ static void configureTCPListen(char *optarg)
 	register char *pArg = optarg;
 
 	assert(optarg != NULL);
-	bEnableTCP = -1;
+	bEnableTCP = -1;	/* enable TCP listening */
 
 	/* extract port */
 	i = 0;
@@ -1194,7 +1214,7 @@ static void configureTCPListen(char *optarg)
 
 	/* number of sessions */
 	if(*pArg == ','){
-		*pArg = '\0';
+		*pArg = '\0'; /* hack: terminates port (see a few lines above, same buffer!) */
 		++pArg;
 		while(isspace(*pArg))
 			++pArg;
@@ -1310,19 +1330,14 @@ static void deinit_tcp_listener(void)
 	free(pTCPSessions);
 	pTCPSessions = NULL; /* just to make sure... */
 
-	/* finally close the listen socket itself */
-	while( *sockTCPLstn ) {
-		close(sockTCPLstn[*sockTCPLstn]);
-		(*sockTCPLstn)--;
-	}
-	free(sockTCPLstn);
-	sockTCPLstn = NULL;
+	/* finally close the listen sockets themselfs */
+	freeAllSockets(&sockTCPLstn);
 }
 
 
 /* Initialize TCP sockets (for listener)
  */
-static int * create_tcp_socket(void)
+static int *create_tcp_socket(void)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
@@ -1339,8 +1354,6 @@ static int * create_tcp_socket(void)
         hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
         hints.ai_family = family;
         hints.ai_socktype = SOCK_STREAM;
-
-dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
 
         error = getaddrinfo(NULL, TCPLstnPort, &hints, &res);
         if(error) {
@@ -1376,7 +1389,7 @@ dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
                 	int on = 1;
 			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
 			      (char *)&on, sizeof (on)) < 0) {
-			logerror("setsockopt");
+			logerror("TCP setsockopt");
 			close(*s);
 			*s = -1;
 			continue;
@@ -1385,7 +1398,7 @@ dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
 #endif
        		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
 			       (char *) &on, sizeof(on)) < 0 ) {
-			logerror("setsockopt(REUSEADDR)");
+			logerror("TCP setsockopt(REUSEADDR)");
                         close(*s);
 			*s = -1;
 			continue;
@@ -1398,7 +1411,7 @@ dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
 		if (should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
-				logerror("setsockopt(BSDCOMPAT)");
+				logerror("TCP setsockopt(BSDCOMPAT)");
                                 close(*s);
 				*s = -1;
 				continue;
@@ -1411,7 +1424,7 @@ dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
 		     && (errno != EADDRINUSE)
 #endif
 	           ) {
-                        logerror("bind");
+                        logerror("TCP bind");
                 	close(*s);
 			*s = -1;
                         continue;
@@ -1426,7 +1439,7 @@ dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
 			logerrorInt("listen with a backlog of %d failed - retrying with default of 32.",
 				    iTCPSessMax / 10 + 5);
 			if(listen(*s, 32) < 0) {
-				logerror("listen, suspending tcp inet");
+				logerror("TCP listen, suspending tcp inet");
 	                	close(*s);
 				*s = -1;
                		        continue;
@@ -1446,7 +1459,7 @@ dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
 
         if(*socks == 0) {
 		logerror("No TCP listen socket could successfully be initialized, "
-			 "message reception via UDP disabled.\n");
+			 "message reception via TCP disabled.\n");
         	free(socks);
 		return(NULL);
 	}
@@ -1459,13 +1472,14 @@ dprintf("create_tcp_socket: logport %s\n", TCPLstnPort);
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
 		 */
-		logerror("Could not initialize TCP session table, suspending TCP inet");
-		free(socks);
+		logerror("Could not initialize TCP session table, suspending TCP message reception.");
+		freeAllSockets(&socks); /* prevent a socket leak */
 		return(NULL);
 	}
 
 	return(socks);
 }
+
 
 /* Accept new TCP connection; make entry in session table. If there
  * is no more space left in the connection table, the new TCP
@@ -3986,7 +4000,7 @@ static void closeUDPListenSockets()
 
 /* creates the UDP listen sockets
  */
-static int * create_udp_socket()
+static int *create_udp_socket()
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
@@ -4121,6 +4135,7 @@ static int * create_udp_socket()
         if(*socks == 0) {
 		logerror("No UDP listen socket could successfully be initialized, "
 			 "message reception via UDP disabled.\n");
+		/* we do NOT need to free any sockets, because there were none... */
         	free(socks);
 		return(NULL);
 	}
@@ -6536,7 +6551,7 @@ static void die(int sig)
 	closeUDPListenSockets();
 
 	/* Close the TCP inet socket. */
-	if(bEnableTCP && *sockTCPLstn) {
+	if(*sockTCPLstn) {
 		deinit_tcp_listener();
 	}
 
@@ -6956,6 +6971,23 @@ static void init()
 #endif
 
 #ifdef SYSLOG_INET
+	/* I have moved initializing UDP sockets before the TCP sockets. This ensures
+	 * they are as soon ready for reception as possible. Of course, it is only a 
+	 * very small window of exposure, but it doesn't hurt to limit the message
+	 * loss risk to as low as possible - especially if it costs nothing...
+	 * rgerhards, 2007-06-28
+	 */
+	if (Forwarding || AcceptRemote) {
+		if (finet == NULL) {
+			if((finet = create_udp_socket()) != NULL)
+				dprintf("Opened %d syslog UDP port(s).\n", *finet);
+		}
+	}
+	else {
+		/* this case can happen during HUP processing. */
+		closeUDPListenSockets();
+	}
+
 	if (bEnableTCP) {
 		if (sockTCPLstn == NULL) {
 			/* even when doing a re-init, we do not shut down and
@@ -6968,17 +7000,6 @@ static void init()
 				dprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
 			}
 		}
-	}
-
-	if (Forwarding || AcceptRemote) {
-		if (finet == NULL) {
-			if((finet = create_udp_socket()) != NULL)
-				dprintf("Opened %d syslog UDP port(s).\n", *finet);
-		}
-	}
-	else {
-		/* this case can happen during HUP processing. */
-		closeUDPListenSockets();
 	}
 #endif
 
@@ -8495,7 +8516,7 @@ static void mainloop(void)
 
 		/* Add the TCP listen sockets to the list of read descriptors.
 	    	 */
-		if(bEnableTCP && *sockTCPLstn) {
+		if(sockTCPLstn != NULL && *sockTCPLstn) {
 			for (i = 0; i < *sockTCPLstn; i++) {
 				if (sockTCPLstn[i+1] != -1) {
 					dprintf("Listening on syslogd TCP port, socket %d.\n", sockTCPLstn[i+1]);
@@ -8728,7 +8749,7 @@ static void mainloop(void)
                        }
 		}
 
-		if(bEnableTCP && *sockTCPLstn) {
+		if(sockTCPLstn != NULL && *sockTCPLstn) {
 			for (i = 0; i < *sockTCPLstn; i++) {
 				if (FD_ISSET(sockTCPLstn[i+1], &readfds)) {
 					dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
