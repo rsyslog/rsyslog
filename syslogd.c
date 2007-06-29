@@ -1138,7 +1138,8 @@ static void freeAllSockets(int **socks)
 	assert(socks != NULL);
 	assert(*socks != NULL);
 	while(**socks) {
-		close(*socks[**socks]);
+		dprintf("Closing socket %d.\n", (*socks)[**socks]);
+		close((*socks)[**socks]);
 		(**socks)--;
 	}
 	free(*socks);
@@ -1336,6 +1337,16 @@ static void deinit_tcp_listener(void)
 
 
 /* Initialize TCP sockets (for listener)
+ * This function returns either NULL (which means it failed) or 
+ * a pointer to an array of file descriptiors. If the pointer is
+ * returned, the zeroest element [0] contains the count of valid
+ * descriptors. The descriptors themself follow in range
+ * [1] ... [num-descriptors]. It is guaranteed that each of these
+ * descriptors is valid, at least when this function returns.
+ * Please note that technically the array may be larger than the number
+ * of valid pointers stored in it. The memory overhead is minimal, so
+ * we do not bother to re-allocate an array of the exact size. Logically,
+ * the array still contains the exactly correct number of descriptors.
  */
 static int *create_tcp_socket(void)
 {
@@ -1815,6 +1826,7 @@ static enum TCPSendStatus TCPSendGetStatus(struct filed *f)
 
 
 /* Initialize TCP sockets (for sender)
+ * This is done once per selector line, if not yet initialized.
  */
 static int TCPSendCreateSocket(struct filed *f)
 {
@@ -1825,8 +1837,8 @@ static int TCPSendCreateSocket(struct filed *f)
 	
 	r = f->f_un.f_forw.f_addr;
 
-	while (r != NULL) {
-		fd = socket (r->ai_family, r->ai_socktype, r->ai_protocol);
+	while(r != NULL) {
+		fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
 		if (fd != -1) {
 			/* We can not allow the TCP sender to block syslogd, at least
 			 * not in a single-threaded design. That would cause rsyslogd to
@@ -1834,7 +1846,7 @@ static int TCPSendCreateSocket(struct filed *f)
 			 * other selector lines, too. So we do set it to non-blocking and 
 			 * handle the situation ourselfs (by discarding messages). IF we run
 			 * dual-threaded, however, the situation is different: in this case,
-			 * the receivers and the selector line processing is only loosely
+			 * the receivers and the selector line processing are only loosely
 			 * coupled via a memory buffer. Now, I think, we can afford the extra
 			 * wait time. Thus, we enable blocking mode for TCP if we compile with
 			 * pthreads.
@@ -1850,7 +1862,8 @@ static int TCPSendCreateSocket(struct filed *f)
 					TCPSendSetStatus(f, TCP_SEND_CONNECTING);
 					return fd;
 				} else {
-					dprintf("create tcp connection failed, reason %s", strerror(errno));
+					dprintf("create tcp connection failed, reason %s",
+						strerror(errno));
 				}
 
 			}
@@ -6977,7 +6990,7 @@ static void init()
 	 * loss risk to as low as possible - especially if it costs nothing...
 	 * rgerhards, 2007-06-28
 	 */
-	if (Forwarding || AcceptRemote) {
+	if(Forwarding || AcceptRemote) {
 		if (finet == NULL) {
 			if((finet = create_udp_socket()) != NULL)
 				dprintf("Opened %d syslog UDP port(s).\n", *finet);
@@ -6989,14 +7002,14 @@ static void init()
 	}
 
 	if (bEnableTCP) {
-		if (sockTCPLstn == NULL) {
+		if(sockTCPLstn == NULL) {
 			/* even when doing a re-init, we do not shut down and
 			 * re-open the TCP socket. That would break existing TCP
 			 * session, which we do not desire. Should at some time arise
 			 * need to do that, I recommend controlling that via a
 			 * user-selectable option. rgerhards, 2007-06-21
 			 */
-			if ((sockTCPLstn = create_tcp_socket()) != NULL) {
+			if((sockTCPLstn = create_tcp_socket()) != NULL) {
 				dprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
 			}
 		}
@@ -7086,7 +7099,7 @@ static void init()
 		 " restart",
 		 (int) myPid,
 		 AcceptRemote ? "Yes" : "No", LogPort,
-		 bEnableTCP   ? "Yes" : "No", TCPLstnPort );
+		 bEnableTCP   ? "Yes" : "No", TCPLstnPort);
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, LocalHostName, ADDDATE);
 
 	(void) signal(SIGHUP, sighup_handler);
@@ -8509,7 +8522,7 @@ static void mainloop(void)
                                 if (finet[i+1] != -1) {
 					dprintf("Listening on syslogd UDP port, socket %d.\n", finet[i+1]);
                                         FD_SET(finet[i+1], &readfds);
-					if (finet[i+1]>maxfds) maxfds=finet[i+1];
+					if(finet[i+1]>maxfds) maxfds=finet[i+1];
 				}
                         }
 		}
@@ -8518,10 +8531,15 @@ static void mainloop(void)
 	    	 */
 		if(sockTCPLstn != NULL && *sockTCPLstn) {
 			for (i = 0; i < *sockTCPLstn; i++) {
+				/* The if() below is theoretically not needed, but I leave it in
+				 * so that a socket may become unsuable during execution. That
+				 * feature is not yet supported by the current code base.
+				 */
 				if (sockTCPLstn[i+1] != -1) {
-					dprintf("Listening on syslogd TCP port, socket %d.\n", sockTCPLstn[i+1]);
+					dprintf("Listening on syslogd TCP port, socket %d.\n",
+						sockTCPLstn[i+1]);
 					FD_SET(sockTCPLstn[i+1], &readfds);
-					if (sockTCPLstn[i+1]>maxfds) maxfds=sockTCPLstn[i+1];
+					if(sockTCPLstn[i+1]>maxfds) maxfds=sockTCPLstn[i+1];
 				}
 			}
 			/* do the sessions */
@@ -8568,7 +8586,8 @@ static void mainloop(void)
 #endif
 
 		if ( debugging_on ) {
-			dprintf("----------------------------------------\nCalling select, active file descriptors (max %d): ", maxfds);
+			dprintf("----------------------------------------\n");
+			dprintf("Calling select, active file descriptors (max %d): ", maxfds);
 			for (nfds= 0; nfds <= maxfds; ++nfds)
 				if ( FD_ISSET(nfds, &readfds) )
 					dprintf("%d ", nfds);
@@ -8616,7 +8635,7 @@ static void mainloop(void)
 			 * only when something else happened.
 			 */
 		}
-		if (restart) {
+		if(restart) {
 			dprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
 #			ifdef USE_PTHREADS
 				stopWorker();
