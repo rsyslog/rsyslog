@@ -1,5 +1,13 @@
 ---------------------------------------------------------------------------
 Version 1.14.2 (RGer), 2007-07-??
+** this release fixes all known nits with IPv6 **
+- restored capability to do /etc/service lookup for "syslog"
+  service when -r 0 was given
+- documented IPv6 handling of syslog messages
+- integrate patch from Bartosz Kuźma to make rsyslog compile under
+  Solaris again (the patch replaced a strndup() call, which is not
+  available under Solaris
+- improved debug logging when waiting on select
 ---------------------------------------------------------------------------
 Version 1.14.1 (RGer/Peter Vrabec), 2007-06-29
 - added Peter Vrabec's patch for IPv6 TCP

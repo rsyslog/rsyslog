@@ -747,6 +747,15 @@ int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
 				 (f)->f_repeatcount = MAXREPEAT; \
 			}
 #ifdef SYSLOG_INET
+union sockunion {
+	struct sockinet {
+		u_char si_len;
+		u_char si_family;
+		} su_si;
+	struct sockaddr_in  su_sin;
+	struct sockaddr_in6 su_sin6;
+};
+
 #define INET_SUSPEND_TIME 60		/* equal to 1 minute 
 					 * rgerhards, 2005-07-26: This was 3 minutes. As the
 					 * same timer is used for tcp based syslog, we have
@@ -1068,6 +1077,8 @@ static void PrintAllowedSenders(int iListToPrint)
 }
 #endif /* #ifdef SYSLOG_INET */
 
+
+
 #ifdef SYSLOG_INET
 /* check if a sender is allowed. The root of the the allowed sender.
  * list must be proveded by the caller. As such, this function can be
@@ -1083,14 +1094,7 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_st
 	struct AllowedSenders *pAllow;
 	unsigned long ulAddrInLocalByteOrder;
 
-	union sockunion {
-		struct sockinet {
-			u_char si_len;
-			u_char si_family;
-			} su_si;
-		struct sockaddr_in  su_sin;
-		struct sockaddr_in6 su_sin6;
-	} *pFromAddr;
+	union sockunion *pFromAddr;
 
 	assert(pFrom != NULL);
 
@@ -1878,6 +1882,8 @@ static int TCPSendCreateSocket(struct filed *f)
 		}		
 		r = r->ai_next;
 	}
+
+	dprintf("no working socket could be obtained");
 
 	return -1;
 }
@@ -6779,6 +6785,7 @@ static void init()
 	char cline[BUFSIZ];
 #endif
 	char bufStartUpMsg[512];
+	struct servent *sp;
 
 	/* initialize some static variables */
 	pDfltHostnameCmp = NULL;
@@ -6787,25 +6794,34 @@ static void init()
 
 	nextp = NULL;
 	/* TODO: This code must be re-activated, but of course with the proper
-	 * IPv6 way of doing things... rgerhards, 2007-0627
+	 * IPv6 way of doing things... rgerhards, 2007-06-27
+	 * I was told by an IPv6 expert that calling getservbyname() seems to be
+	 * still valid, at least for the use case we have. So I re-enabled that
+	 * code. rgerhards, 2007-07-02
 	 */
         if(!strcmp(LogPort, "0")) {
                 /* we shall use the default syslog/udp port, so let's
                  * look it up.
                  */
-#if 0
                 sp = getservbyname("syslog", "udp");
                 if (sp == NULL) {
-#endif
                         errno = 0;
                         logerror("Could not find syslog/udp port in /etc/services. "
                                  "Now using IANA-assigned default of 514.");
                         LogPort = "514";
-#if 0
-                }
-                else
-                        LogPort = sp->s_port;
-#endif
+                } else {
+			/* we can dynamically allocate memory here and do NOT need
+			 * to care about freeing it because even though init() is
+			 * called on each restart, the LogPort can never again be
+			 * "0". So we will only once run into this part of the code
+			 * here. rgerhards, 2007-07-02
+			 * We save ourselfs the hassle of dynamic memory management
+			 * for the very same reason.
+			 */
+			static char defPort[8];
+			snprintf(defPort, sizeof(defPort) * sizeof(char), "%d", sp->s_port);
+                        LogPort = defPort;
+		}
         }
 
 	/*  Close all open log files and free log descriptor array.
@@ -7826,10 +7842,8 @@ static rsRetVal cfline(char *line, register struct filed *f)
 				 */
 				logerror("Option block not terminated in forwarding action.");
 		}
-		/* extract the host first (we do a trick - we 
-		 * replace the ';' or ':' with a '\0')
-		 * now skip to port and then template name 
-		 * rgerhards 2005-07-06
+		/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
+		 * now skip to port and then template name. rgerhards 2005-07-06
 		 */
 		for(q = p ; *p && *p != ';' && *p != ':' ; ++p)
 		 	/* JUST SKIP */;
@@ -8464,6 +8478,48 @@ int getSubString(char **ppSrc,  char *pDst, size_t DstSize, char cSep)
 }
 
 
+/* print out which socket we are listening on. This is only
+ * a debug aid.
+ */
+static void debugListenInfo(int fd, char *type)
+{
+	char *szFamily;
+	int port;
+	struct sockaddr sa;
+	struct sockaddr_in *ipv4;
+	struct sockaddr_in6 *ipv6;
+	socklen_t saLen = sizeof(sa);
+
+	if(getsockname(fd, &sa, &saLen) == 0) {
+		switch(sa.sa_family) {
+		case PF_INET:
+			szFamily = "IPv4";
+			ipv4 = (struct sockaddr_in*) &sa;
+			port = ntohs(ipv4->sin_port);
+			break;
+		case PF_INET6:
+			szFamily = "IPv6";
+			ipv6 = (struct sockaddr_in6*) &sa;
+			port = ntohs(ipv6->sin6_port);
+			break;
+		default:
+			szFamily = "other";
+			port = -1;
+			break;
+		}
+		dprintf("Listening on %s syslogd socket %d (%s/port %d).\n",
+			type, fd, szFamily, port);
+		return;
+	}
+	perror("getpeername()");
+
+	/* we can not obtain peer info. We are just providing
+	 * debug info, so this is no reason to break the program
+	 * or do any serious error reporting.
+	 */
+	dprintf("Listening on syslogd socket %d - could not obtain peer info.\n", fd);
+}
+
 
 static void mainloop(void)
 {
@@ -8523,7 +8579,8 @@ static void mainloop(void)
 		if(finet != NULL && AcceptRemote) {
                         for (i = 0; i < *finet; i++) {
                                 if (finet[i+1] != -1) {
-					dprintf("Listening on syslogd UDP port, socket %d.\n", finet[i+1]);
+					if(Debug)
+						debugListenInfo(finet[i+1], "UDP");
                                         FD_SET(finet[i+1], &readfds);
 					if(finet[i+1]>maxfds) maxfds=finet[i+1];
 				}
@@ -8539,8 +8596,8 @@ static void mainloop(void)
 				 * feature is not yet supported by the current code base.
 				 */
 				if (sockTCPLstn[i+1] != -1) {
-					dprintf("Listening on syslogd TCP port, socket %d.\n",
-						sockTCPLstn[i+1]);
+					if(Debug)
+						debugListenInfo(sockTCPLstn[i+1], "TCP");
 					FD_SET(sockTCPLstn[i+1], &readfds);
 					if(sockTCPLstn[i+1]>maxfds) maxfds=sockTCPLstn[i+1];
 				}
