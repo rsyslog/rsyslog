@@ -63,7 +63,7 @@
  *       to the database).
  *
  * rsyslog - An Enhanced syslogd Replacement.
- * Copyright 2003-2005 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2007 Rainer Gerhards and Adiscon GmbH.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -7843,13 +7843,16 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			tmp = ++p;
 			for( ; *p && isdigit(*p) ; ++p, ++i)
 				/* SKIP AND COUNT */;
-			f->f_un.f_forw.port = strndup(tmp, i);
+			f->f_un.f_forw.port = malloc(i + 1);
 			if(f->f_un.f_forw.port == NULL) {
 				logerror("Could not get memory to store syslog forwarding port, "
 					 "using default port, results may not be what you intend\n");
 				/* we leave f_forw.port set to NULL, this is then handled by
 				 * getFwdSyslogPt().
 				 */
+			} else {
+				memcpy(f->f_un.f_forw.port, tmp, i);
+				*(f->f_un.f_forw.port + i) = '\0';
 			}
 		}
 		
