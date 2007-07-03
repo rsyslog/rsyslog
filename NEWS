@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.14.2 (RGer), 2007-07-??
+Version 1.14.2 (RGer), 2007-07-03
 ** this release fixes all known nits with IPv6 **
 - restored capability to do /etc/service lookup for "syslog"
   service when -r 0 was given
