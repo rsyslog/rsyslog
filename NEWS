@@ -8,6 +8,7 @@ Version 1.14.2 (RGer), 2007-07-03
   Solaris again (the patch replaced a strndup() call, which is not
   available under Solaris
 - improved debug logging when waiting on select
+- updated rsyslogd man page with new options (-46A)
 ---------------------------------------------------------------------------
 Version 1.14.1 (RGer/Peter Vrabec), 2007-06-29
 - added Peter Vrabec's patch for IPv6 TCP

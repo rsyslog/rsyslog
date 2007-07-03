@@ -1,16 +1,20 @@
 .\" Copyright 2004-2005 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "21 June 2007" "Version 1.13.5 (devel)" "Linux System Administration"
+.TH RSYSLOGD 8 "03 July 2007" "Version 1.14.2 (devel)" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
 .B rsyslogd
+.RB [ " \-4 " ]
+.RB [ " \-6 " ]
+.RB [ " \-A " ]
 .RB [ " \-a "
 .I socket
 ]
 .RB [ " \-d " ]
 .RB [ " \-e " ]
+.br
 .RB [ " \-f "
 .I config file
 ]
@@ -21,6 +25,7 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-l "
 .I hostlist
 ]
+.br
 .RB [ " \-m "
 .I interval
 ] 
@@ -93,6 +98,31 @@ man page.
 
 .LP
 .SH OPTIONS
+.TP
+.BI "\-A"
+When sending UDP messages, there are potentially multiple pathes to
+the target destination. By default,
+.B rsyslogd
+only sends to the first target it can successfully send to. If -A 
+is given, messages are sent to all targets. This may improve
+reliability, but may also cause message duplicaton. This option
+should enabled only if it is fully understood.
+.TP
+.BI "\-4"
+Causes
+.B rsyslogd
+to listen to IPv4 addresses only.
+If neither -4 nor -6 is given,
+.B rsyslogd
+listens to all configured addresses of the system.
+.TP
+.BI "\-6"
+Causes
+.B rsyslogd
+to listen to IPv6 addresses only.
+If neither -4 nor -6 is given,
+.B rsyslogd
+listens to all configured addresses of the system.
 .TP
 .BI "\-a " "socket"
 Using this argument you can specify additional sockets from that
