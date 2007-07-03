@@ -6819,7 +6819,7 @@ static void init()
 			 * for the very same reason.
 			 */
 			static char defPort[8];
-			snprintf(defPort, sizeof(defPort) * sizeof(char), "%d", sp->s_port);
+			snprintf(defPort, sizeof(defPort) * sizeof(char), "%d", ntohs(sp->s_port));
                         LogPort = defPort;
 		}
         }
@@ -8479,7 +8479,7 @@ int getSubString(char **ppSrc,  char *pDst, size_t DstSize, char cSep)
 
 
 /* print out which socket we are listening on. This is only
- * a debug aid.
+ * a debug aid. rgerhards, 2007-07-02
  */
 static void debugListenInfo(int fd, char *type)
 {
@@ -8511,7 +8511,6 @@ static void debugListenInfo(int fd, char *type)
 			type, fd, szFamily, port);
 		return;
 	}
-	perror("getpeername()");
 
 	/* we can not obtain peer info. We are just providing
 	 * debug info, so this is no reason to break the program
