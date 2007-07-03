@@ -118,14 +118,14 @@ void rsCStrDestruct(rsCStrObj *pThis)
 }
 
 
-rsRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz)
+rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, char* psz, size_t iStrLen)
 {
 	rsRetVal iRet;
 	int iOldAllocInc;
-	int iStrLen;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(psz != NULL);
+	assert(iStrLen >= 0);
 
 	/* we first check if the to-be-added string is larger than the
 	 * alloc increment. If so, we temporarily increase the alloc
@@ -139,7 +139,7 @@ rsRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz)
 	 * overwrite it below, this is faster than any if-construct.
 	 */
 	iOldAllocInc = pThis->iAllocIncrement;
-	if((iStrLen = strlen(psz)) > pThis->iAllocIncrement) {
+	if(iStrLen > pThis->iAllocIncrement) {
 		pThis->iAllocIncrement = iStrLen;
 	}
 
@@ -149,6 +149,17 @@ rsRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz)
 
 	pThis->iAllocIncrement = iOldAllocInc; /* restore */
 	return RS_RET_OK;
+}
+
+
+/* changed to be a wrapper to rsCStrAppendStrWithLen() so that
+ * we can save some time when we have the length but do not
+ * need to change existing code.
+ * rgerhards, 2007-07-03
+ */
+rsRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz)
+{
+	return rsCStrAppendStrWithLen(pThis, psz, strlen(psz));
 }
 
 

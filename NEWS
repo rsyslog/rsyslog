@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 1.15.0 (RGer), 2007-07-??
+- added ability to dynamically generate file names based on templates
+  and thus properties. This was a much-requested feature. It makes
+  life easy when it eG comes to splitting files based on the sender
+  address.
 ---------------------------------------------------------------------------
 Version 1.14.2 (RGer), 2007-07-03
 ** this release fixes all known nits with IPv6 **

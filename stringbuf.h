@@ -72,11 +72,20 @@ rsRetVal rsCStrTruncate(rsCStrObj *pThis, int nTrunc);
 rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis);
 
 /**
- * Append a string to the buffer.
+ * Append a string to the buffer. For performance reasons,
+ * use rsCStrAppenStrWithLen() if you know the length.
  *
  * \param psz pointer to string to be appended. Must not be NULL.
  */
 rsRetVal rsCStrAppendStr(rsCStrObj *pThis, char* psz);
+
+/**
+ * Append a string to the buffer.
+ *
+ * \param psz pointer to string to be appended. Must not be NULL.
+ * \param iStrLen the length of the string pointed to by psz
+ */
+rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, char* psz, size_t iStrLen);
 
 /**
  * Set a new allocation incremet. This will influence

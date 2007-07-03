@@ -656,7 +656,7 @@ struct filed {
 			char	f_hname[MAXHOSTNAMELEN+1];
 			struct addrinfo *f_addr;
 			int compressionLevel; /* 0 - no compression, else level for zlib */
-			char * port;
+			char *port;
 			int protocol;
 			TCPFRAMINGMODE tcp_framing;
 #			define	FORW_UDP 0
@@ -673,7 +673,11 @@ struct filed {
 			pthread_mutex_t mtxTCPSend;
 #			endif
 		} f_forw;		/* forwarding address */
-		char	f_fname[MAXFNAME];
+		struct {
+			char	f_fname[MAXFNAME];
+			char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
+			char	*pCurrName;	/* name currently open, if dynamic name */
+		} f_file;
 	} f_un;
 	char	f_lasttime[16];			/* time of last occurrence */
 	char	f_prevhost[MAXHOSTNAMELEN+1];	/* host from which recd. */
@@ -4688,7 +4692,7 @@ static void processMsg(struct msg *pMsg)
 			memset(&emergfile, 0, sizeof(emergfile));
 			f = &emergfile;
 			emergfile.f_type = F_TTY;
-			(void) strcpy(emergfile.f_un.f_fname, ttyname(0));
+			(void) strcpy(emergfile.f_un.f_file.f_fname, ttyname(0));
 			cflineSetTemplateAndIOV(&emergfile, " TradFmt");
 			f->f_file = open(ttyname(0), O_WRONLY|O_NOCTTY);
 
@@ -5710,6 +5714,97 @@ void  iovCreate(struct filed *f)
 	return;
 }
 
+/* This functions converts a template into a string. It should
+ * actually be in template.c, but this requires larger re-structuring
+ * of the code (because all the property-access functions are static
+ * to this module). I have placed it next to the iov*() functions, as
+ * it is somewhat similiar in what it does.
+ *
+ * The function takes a template name and a pointer to a msg object.
+ * It the creates a string based on the template definition. A pointer
+ * to that string is returned to the caller. The caller MUST FREE that
+ * pointer when it is no longer needed. If the function fails, NULL
+ * is returned.
+ * If memory allocation fails in this function, we silently return
+ * NULL. The reason is that we can not do anything against it. And
+ * if we raise an alert, the memory situation might become even
+ * worse. So we prefer to let the caller deal with it.
+ * rgerhards, 2007-07-03
+ */
+static char *tplToString(char *tplName, struct msg *pMsg)
+{
+	struct template *pTpl;
+	struct templateEntry *pTpe;
+	rsCStrObj *pCStr;
+	unsigned short bMustBeFreed;
+	char *pVal;
+	size_t iLenVal;
+	rsRetVal iRet;
+
+	assert(tplName != NULL);
+	assert(pMsg != NULL);
+
+	if((pTpl = tplFind(tplName, strlen(tplName))) == NULL)
+		return NULL;
+
+	/* we now loop through the template. We obtain one value
+	 * and copy it over to our dynamic string buffer. Then, we
+	 * free the obtained value (if requested). We continue this
+	 * loop until we got hold of all values.
+	 */
+	if((pCStr = rsCStrConstruct()) == NULL) {
+		dprintf("memory shortage, tplToString failed\n");
+		return NULL;
+	}
+
+	pTpe = pTpl->pEntryRoot;
+	while(pTpe != NULL) {
+		if(pTpe->eEntryType == CONSTANT) {
+			if((iRet = rsCStrAppendStrWithLen(pCStr, 
+							  pTpe->data.constant.pConstant,
+							  pTpe->data.constant.iLenConstant)
+							 ) != RS_RET_OK) {
+				dprintf("error %d during tplToString()\n", iRet);
+				/* it does not make sense to continue now */
+				rsCStrDestruct(pCStr);
+				return NULL;
+			}
+		} else 	if(pTpe->eEntryType == FIELD) {
+			pVal = MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
+			iLenVal = strlen(pVal);
+			/* we now need to check if we should use SQL option. In this case,
+			 * we must go over the generated string and escape '\'' characters.
+			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
+			 * but they are handled in this way because of legacy (don't break any
+			 * existing thing).
+			 */
+			if(pTpl->optFormatForSQL == 1)
+				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 1);
+			else if(pTpl->optFormatForSQL == 2)
+				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
+			/* value extracted, so lets copy */
+			if((iRet = rsCStrAppendStrWithLen(pCStr, pVal, iLenVal)) != RS_RET_OK) {
+				dprintf("error %d during tplToString()\n", iRet);
+				/* it does not make sense to continue now */
+				rsCStrDestruct(pCStr);
+				if(bMustBeFreed)
+					free(pVal);
+				return NULL;
+			}
+			if(bMustBeFreed)
+				free(pVal);
+		}
+		pTpe = pTpe->pNext;
+	}
+
+	/* we are done with the template, now let's convert the result into a
+	 * "real" (usable) string and discard the helper structures.
+	 */
+	rsCStrFinish(pCStr);
+	return rsCStrConvSzStrAndDestruct(pCStr);
+}
+
+
 /* rgerhards 2005-06-21: Try to resolve a size limit
  * situation. This first runs the command, and then
  * checks if we are still above the treshold.
@@ -5731,7 +5826,7 @@ int resolveFileSizeLimit(struct filed *f)
 	 */
 	system(f->f_sizeLimitCmd);
 
-	f->f_file = open(f->f_un.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+	f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 			 0644);
 
 	actualFileSize = lseek(f->f_file, 0, SEEK_END);
@@ -5743,6 +5838,42 @@ int resolveFileSizeLimit(struct filed *f)
 	return 0;
 }
 
+
+/* This function handles dynamic file names. It generates a new one
+ * based on the current message, checks if that file is already open
+ * and, if not, does everything needed to switch to the new one.
+ * Function returns 0 if all went well and non-zero otherwise.
+ * This is a helper to writeFile(). rgerhards, 2007-07-03
+ */
+static int prepareDynFile(struct filed *f)
+{
+	char *newFileName;
+
+	assert(f != NULL);
+	if((newFileName = tplToString(f->f_un.f_file.f_fname, f->f_pMsg)) == NULL) {
+		/* memory shortage - there is nothing we can do to resolve it.
+		 * We silently ignore it, this is probably the best we can do.
+		 */
+		dprintf("prepareDynfile(): could not create file name, discarding this reques\n");
+		return -1;
+	}
+	if(strcmp(newFileName, f->f_un.f_file.pCurrName)) {
+		dprintf("Requested log file different from currently open one - switching.\n");
+		dprintf("Current file: '%s'\n", f->f_un.f_file.pCurrName);
+		dprintf("New file    : '%s'\n", newFileName);
+		close(f->f_file);
+		f->f_file = open(newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY, 0644);
+		free(f->f_un.f_file.pCurrName);
+		f->f_un.f_file.pCurrName = newFileName;
+
+	} else { /* we are all set, the log file is already open */
+		free(newFileName);
+	}
+	
+	return 0;
+}
+
+
 /* rgerhards 2004-11-11: write to a file output. This
  * will be called for all outputs using file semantics,
  * for example also for pipes.
@@ -5750,12 +5881,20 @@ int resolveFileSizeLimit(struct filed *f)
 void writeFile(struct filed *f)
 {
 	off_t actualFileSize;
+
 	assert(f != NULL);
+
+	/* first check if we have a dynamic file name and, if so,
+	 * check if it still is ok or a new file needs to be created
+	 */
+	if(f->f_un.f_file.bDynamicName)
+		if(prepareDynFile(f) != 0)
+			return;
 
 	/* create the message based on format specified */
 	iovCreate(f);
 again:
-	/* first check if we have a file size limit and, if so,
+	/* check if we have a file size limit and, if so,
 	 * obey to it.
 	 */
 	if(f->f_sizeLimit != 0) {
@@ -5773,14 +5912,14 @@ again:
 				f->f_type = F_UNUSED;
 				snprintf(errMsg, sizeof(errMsg),
 					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation",
-					 f->f_un.f_fname, (long long) f->f_sizeLimit, (long long) actualFileSize);
+					 f->f_un.f_file.f_fname, (long long) f->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
 				return;
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
 					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation",
-					 f->f_un.f_fname, (long long) f->f_sizeLimit, (long long) actualFileSize);
+					 f->f_un.f_file.f_fname, (long long) f->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
 			}
@@ -5806,10 +5945,10 @@ again:
 #else
 			&& e == EBADF) {
 #endif
-			f->f_file = open(f->f_un.f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
+			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
 			if (f->f_file < 0) {
 				f->f_type = F_UNUSED;
-				logerror(f->f_un.f_fname);
+				logerror(f->f_un.f_file.f_fname);
 			} else {
 				untty();
 				goto again;
@@ -5817,7 +5956,7 @@ again:
 		} else {
 			f->f_type = F_UNUSED;
 			errno = e;
-			logerror(f->f_un.f_fname);
+			logerror(f->f_un.f_file.f_fname);
 		}
 	} else if (f->f_flags & SYNC_FILE)
 		fsync(f->f_file);
@@ -6050,7 +6189,7 @@ void fprintlog(register struct filed *f)
 	case F_TTY:
 	case F_FILE:
 	case F_PIPE:
-		dprintf(" (%s)\n", f->f_un.f_fname);
+		dprintf(" (%s)\n", f->f_un.f_file.f_fname);
 		/* TODO: check if we need f->f_time = now;*/
 		/* f->f_file == -1 is an indicator that the we couldn't
 		   open the file at startup. */
@@ -6080,13 +6219,13 @@ void fprintlog(register struct filed *f)
 		l = f->f_iLenpsziov;
 		if (l > MAXLINE)
 			l = MAXLINE;
-		esize = strlen(f->f_un.f_fname) + strlen(psz) + 4;
+		esize = strlen(f->f_un.f_file.f_fname) + strlen(psz) + 4;
 		if((pCSCmdLine = rsCStrConstruct()) == NULL) {
 			/* nothing smart we can do - just keep going... */
 			dprintf("memory shortage - can not execute\n");
 			break;
 		}
-		if((iRet = rsCStrAppendStr(pCSCmdLine, f->f_un.f_fname)) != RS_RET_OK) {
+		if((iRet = rsCStrAppendStr(pCSCmdLine, f->f_un.f_file.f_fname)) != RS_RET_OK) {
 			dprintf("error %d during build command line(1)\n", iRet);
 			break;
 		}
@@ -7070,13 +7209,15 @@ static void init()
 				case F_PIPE:
 				case F_TTY:
 				case F_CONSOLE:
-					printf("%s", f->f_un.f_fname);
+					printf("%s", f->f_un.f_file.f_fname);
 					if (f->f_file == -1)
 						printf(" (unused)");
+					if(f->f_un.f_file.bDynamicName)
+						printf(" (dynamic name)");
 					break;
 
 				case F_SHELL:
-					printf("%s", f->f_un.f_fname);
+					printf("%s", f->f_un.f_file.f_fname);
 					break;
 
 				case F_FORW:
@@ -7216,8 +7357,8 @@ static void cflineParseFileName(struct filed *f, char* p)
 		f->f_type = F_FILE;
 	}
 
-	pName = f->f_un.f_fname;
-	i = 1; /* we start at 1 so that we resever space for the '\0'! */
+	pName = f->f_un.f_file.f_fname;
+	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
 	while(*p && *p != ';' && i < MAXFNAME) {
 		*pName++ = *p++;
 		++i;
@@ -7240,7 +7381,7 @@ static void cflineParseFileName(struct filed *f, char* p)
 
 	cflineSetTemplateAndIOV(f, szTemplateName);
 	
-	dprintf("filename: '%s', template: '%s'\n", f->f_un.f_fname, szTemplateName);
+	dprintf("filename: '%s', template: '%s'\n", f->f_un.f_file.f_fname, szTemplateName);
 }
 
 
@@ -7302,9 +7443,9 @@ static void cflineParseOutchannel(struct filed *f, char* p)
 	}
 
 	/* OK, we finally got a correct template. So let's use it... */
-	strncpy(f->f_un.f_fname, pOch->pszFileTemplate, MAXFNAME);
+	strncpy(f->f_un.f_file.f_fname, pOch->pszFileTemplate, MAXFNAME);
 	f->f_sizeLimit = pOch->uSizeLimit;
-	/* WARNING: It is dangerous "just" to pass the pointer. As wer
+	/* WARNING: It is dangerous "just" to pass the pointer. As we
 	 * never rebuild the output channel description, this is acceptable here.
 	 */
 	f->f_sizeLimitCmd = pOch->cmdOnSizeLimit;
@@ -7325,7 +7466,7 @@ static void cflineParseOutchannel(struct filed *f, char* p)
 
 	cflineSetTemplateAndIOV(f, szBuf);
 	
-	dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_fname, szBuf,
+	dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_file.f_fname, szBuf,
 		f->f_sizeLimit);
 }
 
@@ -7942,8 +8083,38 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		 * traditional mode lines.
 		 */
 		cflineParseOutchannel(f, p);
-		f->f_file = open(f->f_un.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+		f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 				 0644);
+		break;
+
+	case '?': /* This is much like a regular file handle, but we need to obtain
+		   * a template name. rgerhards, 2007-07-03
+		   */
+		++p; /* eat '?' */
+		cflineParseFileName(f, p);
+		if(f->f_type == F_UNUSED)
+			/* safety measure to make sure we have a valid
+			 * selector line before we continue down below.
+			 * rgerhards 2005-07-29
+			 */
+			break;
+
+		if(syncfile)
+			f->f_flags |= SYNC_FILE;
+		f->f_un.f_file.bDynamicName = 1;
+		/* we now allocate a single-byte buffer to create an emtpy previous
+		 * file name. That way, we do not need to check for an uninitialized
+		 * variable when we do the comparison. This saves us some CPU cycles
+		 * on each message processed - and it also simplifies code. If we 
+		 * do not get memory, we more or less silently ignore the problem,
+		 * because we can't do anything against it right now.
+		 */
+		if((f->f_un.f_file.pCurrName = malloc(sizeof(char))) == NULL) {
+			f->f_type = F_UNUSED;
+			dprintf("Could not allocate memory for pCurrName - selector disabled.\n");
+		} else {
+			*f->f_un.f_file.pCurrName = '\0';
+		}
 		break;
 
         case '|':
@@ -7961,19 +8132,20 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			 */
 			break;
 
-		if (syncfile)
+		if(syncfile)
 			f->f_flags |= SYNC_FILE;
-		if (f->f_type == F_PIPE) {
-			f->f_file = open(f->f_un.f_fname, O_RDWR|O_NONBLOCK);
+		f->f_un.f_file.bDynamicName = 0;
+		if(f->f_type == F_PIPE) {
+			f->f_file = open(f->f_un.f_file.f_fname, O_RDWR|O_NONBLOCK);
 	        } else {
-			f->f_file = open(f->f_un.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 					 0644);
 		}
 		        
 	  	if ( f->f_file < 0 ){
 			f->f_file = -1;
-			dprintf("Error opening log file: %s\n", f->f_un.f_fname);
-			logerror(f->f_un.f_fname);
+			dprintf("Error opening log file: %s\n", f->f_un.f_file.f_fname);
+			logerror(f->f_un.f_file.f_fname);
 			break;
 		}
 		if (isatty(f->f_file)) {
@@ -9123,7 +9295,7 @@ int main(int argc, char **argv)
 	/* prepare emergency logging system */
 
 	consfile.f_type = F_CONSOLE;
-	strcpy(consfile.f_un.f_fname, ctty);
+	strcpy(consfile.f_un.f_file.f_fname, ctty);
 	cflineSetTemplateAndIOV(&consfile, " TradFmt");
 	gethostname(LocalHostName, sizeof(LocalHostName));
 	if ( (p = strchr(LocalHostName, '.')) ) {
