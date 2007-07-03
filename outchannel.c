@@ -62,11 +62,11 @@ static void skip_Comma(char **pp)
 	assert(*pp != NULL);
 
 	p = *pp;
-	while(isspace(*p))
+	while(isspace((int)*p))
 		++p;
 	if(*p == ',')
 		++p;
-	while(isspace(*p))
+	while(isspace((int)*p))
 		++p;
 	*pp = p;
 }
@@ -99,7 +99,7 @@ static int get_Field(char **pp, char **pField)
 
 	*pp = p;
 	rsCStrFinish(pStrB);
-	*pField = rsCStrConvSzStrAndDestruct(pStrB);
+	*pField = (char*) rsCStrConvSzStrAndDestruct(pStrB);
 
 	return 0;
 }
@@ -122,7 +122,7 @@ static int get_off_t(char **pp, off_t *pOff_t)
 	p = *pp;
 
 	val = 0;
-	while(*p && isdigit(*p)) {
+	while(*p && isdigit((int)*p)) {
 		val = val * 10 + (*p - '0');
 		++p;
 	}
@@ -163,7 +163,7 @@ static int get_restOfLine(char **pp, char **pBuf)
 
 	*pp = p;
 	rsCStrFinish(pStrB);
-	*pBuf = rsCStrConvSzStrAndDestruct(pStrB);
+	*pBuf = (char*) rsCStrConvSzStrAndDestruct(pStrB);
 
 	return 0;
 }

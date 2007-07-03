@@ -64,7 +64,7 @@ rsRetVal rsParsConstruct(rsParsObj **ppThis)
  * classical zero-terinated C-String.
  * rgerhards, 2005-09-27
  */
-rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, char *psz)
+rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz)
 {
 	rsParsObj *pThis;
 	rsCStrObj *pCS;
@@ -118,7 +118,7 @@ rsRetVal rsParsAssignString(rsParsObj *pThis, rsCStrObj *pCStr)
  */
 rsRetVal parsInt(rsParsObj *pThis, int* pInt)
 {
-	char *pC;
+	unsigned char *pC;
 	int iVal;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
@@ -132,10 +132,10 @@ rsRetVal parsInt(rsParsObj *pThis, int* pInt)
 	 */
 	if(pThis->iCurrPos >= rsCStrLen(pThis->pCStr))
 		return RS_RET_NO_MORE_DATA;
-	if(!isdigit(*pC))
+	if(!isdigit((int)*pC))
 		return RS_RET_NO_DIGIT;
 
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && isdigit(*pC)) {
+	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && isdigit((int)*pC)) {
 		iVal = iVal * 10 + *pC - '0';
 		++pThis->iCurrPos;
 		++pC;
@@ -155,7 +155,7 @@ rsRetVal parsInt(rsParsObj *pThis, int* pInt)
  */
 rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
 {
-	register char *pC;
+	register unsigned char *pC;
 	rsRetVal iRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
@@ -189,14 +189,14 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
  */
 rsRetVal parsSkipWhitespace(rsParsObj *pThis)
 {
-	register char *pC;
+	register unsigned char *pC;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
 	pC = rsCStrGetBufBeg(pThis->pCStr);
 
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
-		if(!isspace(*(pC+pThis->iCurrPos)))
+		if(!isspace((int)*(pC+pThis->iCurrPos)))
 			break;
 		++pThis->iCurrPos;
 	}
@@ -218,7 +218,7 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
  */
 rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing)
 {
-	register char *pC;
+	register unsigned char *pC;
 	rsCStrObj *pCStr;
 	rsRetVal iRet;
 
@@ -284,7 +284,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bT
  */
 rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 {
-	register char *pC;
+	register unsigned char *pC;
 	rsCStrObj *pCStr;
 	rsRetVal iRet;
 
@@ -352,8 +352,8 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
  */
 rsRetVal parsIPv4WithBits(rsParsObj *pThis, unsigned long *pIP, int *pBits)
 {
-	register char *pC;
-	char *pszIP;
+	register unsigned char *pC;
+	unsigned char *pszIP;
 	rsCStrObj *pCStr;
 	rsRetVal iRet;
 
@@ -371,7 +371,7 @@ rsRetVal parsIPv4WithBits(rsParsObj *pThis, unsigned long *pIP, int *pBits)
 	 * whitespace. Validity will be checked down below.
 	 */
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
-	      && *pC != '/' && *pC != ',' && !isspace(*pC)) {
+	      && *pC != '/' && *pC != ',' && !isspace((int)*pC)) {
 		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
 			RSFREEOBJ(pCStr);
 			return(iRet);
@@ -398,7 +398,7 @@ rsRetVal parsIPv4WithBits(rsParsObj *pThis, unsigned long *pIP, int *pBits)
 	if((pszIP = rsCStrConvSzStrAndDestruct(pCStr)) == NULL)
 		return RS_RET_ERR;
 
-	if((*pIP = inet_addr(pszIP)) == -1) {
+	if((*pIP = inet_addr((char*) pszIP)) == -1) {
 		free(pszIP);
 		return RS_RET_INVALID_IP;
 	}
@@ -420,7 +420,7 @@ rsRetVal parsIPv4WithBits(rsParsObj *pThis, unsigned long *pIP, int *pBits)
 
 	/* skip to next processable character */
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
-	      && (*pC == ',' || isspace(*pC))) {
+	      && (*pC == ',' || isspace((int)*pC))) {
 		++pThis->iCurrPos;
 		++pC;
 	}

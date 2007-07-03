@@ -964,7 +964,7 @@ static void reapchild();
 static char *cvthname(struct sockaddr_storage *f);
 static void debug_switch();
 static rsRetVal cfline(char *line, register struct filed *f);
-static int decode(char *name, struct code *codetab);
+static int decode(unsigned char *name, struct code *codetab);
 static void sighup_handler();
 static void die(int sig);
 #ifdef WITH_DB
@@ -3010,7 +3010,7 @@ static rsRetVal MsgSetAPPNAME(struct msg *pMsg, char* pszAPPNAME)
 		rsCStrSetAllocIncrement(pMsg->pCSAPPNAME, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSAPPNAME, pszAPPNAME);
+	return rsCStrSetSzStr(pMsg->pCSAPPNAME, (unsigned char*) pszAPPNAME);
 }
 
 
@@ -3049,7 +3049,7 @@ static char *getAPPNAME(struct msg *pM)
 	assert(pM != NULL);
 	if(pM->pCSAPPNAME == NULL)
 		tryEmulateAPPNAME(pM);
-	return (pM->pCSAPPNAME == NULL) ? "" : rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
+	return (pM->pCSAPPNAME == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
 }
 
 
@@ -3067,7 +3067,7 @@ static rsRetVal MsgSetPROCID(struct msg *pMsg, char* pszPROCID)
 		rsCStrSetAllocIncrement(pMsg->pCSPROCID, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSPROCID, pszPROCID);
+	return rsCStrSetSzStr(pMsg->pCSPROCID, (unsigned char*) pszPROCID);
 }
 
 /* rgerhards, 2005-11-24
@@ -3088,7 +3088,7 @@ static char *getPROCID(struct msg *pM)
 	assert(pM != NULL);
 	if(pM->pCSPROCID == NULL)
 		aquirePROCIDFromTAG(pM);
-	return (pM->pCSPROCID == NULL) ? "-" : rsCStrGetSzStrNoNULL(pM->pCSPROCID);
+	return (pM->pCSPROCID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSPROCID);
 }
 
 
@@ -3104,7 +3104,7 @@ static rsRetVal MsgSetMSGID(struct msg *pMsg, char* pszMSGID)
 		rsCStrSetAllocIncrement(pMsg->pCSMSGID, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSMSGID, pszMSGID);
+	return rsCStrSetSzStr(pMsg->pCSMSGID, (unsigned char*) pszMSGID);
 }
 
 /* rgerhards, 2005-11-24
@@ -3121,7 +3121,7 @@ static int getMSGIDLen(struct msg *pM)
  */
 static char *getMSGID(struct msg *pM)
 {
-	return (pM->pCSMSGID == NULL) ? "-" : rsCStrGetSzStrNoNULL(pM->pCSMSGID);
+	return (pM->pCSMSGID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSMSGID);
 }
 
 
@@ -3261,7 +3261,7 @@ static rsRetVal MsgSetStructuredData(struct msg *pMsg, char* pszStrucData)
 		rsCStrSetAllocIncrement(pMsg->pCSStrucData, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSStrucData, pszStrucData);
+	return rsCStrSetSzStr(pMsg->pCSStrucData, (unsigned char*) pszStrucData);
 }
 
 /* get the length of the "STRUCTURED-DATA" sz string
@@ -3280,7 +3280,7 @@ static int getStructuredDataLen(struct msg *pM)
  */
 static char *getStructuredData(struct msg *pM)
 {
-	return (pM->pCSStrucData == NULL) ? "-" : rsCStrGetSzStrNoNULL(pM->pCSStrucData);
+	return (pM->pCSStrucData == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSStrucData);
 }
 
 
@@ -3441,7 +3441,7 @@ static char *getProgramName(struct msg *pM)
 		return ""; /* best we can do */
 	}
 
-	return (pM->pCSProgName == NULL) ? "" : rsCStrGetSzStrNoNULL(pM->pCSProgName);
+	return (pM->pCSProgName == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSProgName);
 }
 
 
@@ -3624,7 +3624,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		assert(pTpe != NULL);
 		pName = pTpe->data.field.pPropRepl;
 	} else {
-		pName = rsCStrGetSzStr(pCSPropName);
+		pName = (char*) rsCStrGetSzStr(pCSPropName);
 	}
 	*pbMustBeFreed = 0;
 
@@ -4561,14 +4561,14 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 		 * it is the one most often used, so this saves us time!
 		 */
 	} else if(f->eHostnameCmpMode == HN_COMP_MATCH) {
-		if(rsCStrSzStrCmp(f->pCSHostnameComp, getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
+		if(rsCStrSzStrCmp(f->pCSHostnameComp, (unsigned char*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
 			dprintf("hostname filter '+%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
 			return 0;
 		}
 	} else { /* must be -hostname */
-		if(!rsCStrSzStrCmp(f->pCSHostnameComp, getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
+		if(!rsCStrSzStrCmp(f->pCSHostnameComp, (unsigned char*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
 			dprintf("hostname filter '-%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
@@ -4577,7 +4577,7 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 	}
 	
 	if(f->pCSProgNameComp != NULL) {
-		if(rsCStrSzStrCmp(f->pCSProgNameComp, getProgramName(pMsg), getProgramNameLen(pMsg))) {
+		if(rsCStrSzStrCmp(f->pCSProgNameComp, (unsigned char*) getProgramName(pMsg), getProgramNameLen(pMsg))) {
 			/* not equal, so we are already done... */
 			dprintf("programname filter '%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSProgNameComp), getProgramName(pMsg));
@@ -4602,17 +4602,17 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 		/* Now do the compares (short list currently ;)) */
 		switch(f->f_filterData.prop.operation ) {
 		case FIOP_CONTAINS:
-			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, pszPropVal) != -1)
+			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, (unsigned char*) pszPropVal) != -1)
 				iRet = 1;
 			break;
 		case FIOP_ISEQUAL:
 			if(rsCStrSzStrCmp(f->f_filterData.prop.pCSCompValue,
-					  pszPropVal, strlen(pszPropVal)) == 0)
+					  (unsigned char*) pszPropVal, strlen(pszPropVal)) == 0)
 				iRet = 1; /* process message! */
 			break;
 		case FIOP_STARTSWITH:
 			if(rsCStrSzStrStartsWithCStr(f->f_filterData.prop.pCSCompValue,
-					  pszPropVal, strlen(pszPropVal)) == 0)
+					  (unsigned char*) pszPropVal, strlen(pszPropVal)) == 0)
 				iRet = 1; /* process message! */
 			break;
 		default:
@@ -5302,7 +5302,7 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 			}
 			rsCStrFinish(pStrB);
 
-			pszTAG = rsCStrConvSzStrAndDestruct(pStrB);
+			pszTAG = (char*) rsCStrConvSzStrAndDestruct(pStrB);
 			if(pszTAG == NULL)
 			{	/* rger, 2005-11-10: no TAG found - this implies that what
 				 * we have considered to be the HOSTNAME is most probably the
@@ -5493,7 +5493,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int esc
 	char *p;
 	int iLen;
 	rsCStrObj *pStrB;
-	char *pszGenerated;
+	unsigned char *pszGenerated;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -5558,7 +5558,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int esc
 	if(*pbMustBeFreed)
 		free(*pp); /* discard previous value */
 
-	*pp = pszGenerated;
+	*pp = (char*) pszGenerated;
 	*pLen = iLen;
 	*pbMustBeFreed = 1;
 }
@@ -5607,7 +5607,7 @@ char *iovAsString(struct filed *f)
 	}
 
 	rsCStrFinish(pStrB);
-	f->f_psziov = rsCStrConvSzStrAndDestruct(pStrB);
+	f->f_psziov = (char*) rsCStrConvSzStrAndDestruct(pStrB);
 	return f->f_psziov;
 }
 
@@ -5731,7 +5731,7 @@ void  iovCreate(struct filed *f)
  * worse. So we prefer to let the caller deal with it.
  * rgerhards, 2007-07-03
  */
-static char *tplToString(char *tplName, struct msg *pMsg)
+static unsigned char *tplToString(unsigned char *tplName, struct msg *pMsg)
 {
 	struct template *pTpl;
 	struct templateEntry *pTpe;
@@ -5744,7 +5744,7 @@ static char *tplToString(char *tplName, struct msg *pMsg)
 	assert(tplName != NULL);
 	assert(pMsg != NULL);
 
-	if((pTpl = tplFind(tplName, strlen(tplName))) == NULL)
+	if((pTpl = tplFind((char*)tplName, strlen((char*) tplName))) == NULL)
 		return NULL;
 
 	/* we now loop through the template. We obtain one value
@@ -5761,7 +5761,7 @@ static char *tplToString(char *tplName, struct msg *pMsg)
 	while(pTpe != NULL) {
 		if(pTpe->eEntryType == CONSTANT) {
 			if((iRet = rsCStrAppendStrWithLen(pCStr, 
-							  pTpe->data.constant.pConstant,
+							  (unsigned char *) pTpe->data.constant.pConstant,
 							  pTpe->data.constant.iLenConstant)
 							 ) != RS_RET_OK) {
 				dprintf("error %d during tplToString()\n", iRet);
@@ -5770,7 +5770,7 @@ static char *tplToString(char *tplName, struct msg *pMsg)
 				return NULL;
 			}
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
+			pVal = (char*) MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
 			iLenVal = strlen(pVal);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
@@ -5783,7 +5783,7 @@ static char *tplToString(char *tplName, struct msg *pMsg)
 			else if(pTpl->optFormatForSQL == 2)
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
 			/* value extracted, so lets copy */
-			if((iRet = rsCStrAppendStrWithLen(pCStr, pVal, iLenVal)) != RS_RET_OK) {
+			if((iRet = rsCStrAppendStrWithLen(pCStr, (unsigned char*) pVal, iLenVal)) != RS_RET_OK) {
 				dprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
 				rsCStrDestruct(pCStr);
@@ -5847,24 +5847,24 @@ int resolveFileSizeLimit(struct filed *f)
  */
 static int prepareDynFile(struct filed *f)
 {
-	char *newFileName;
+	unsigned char *newFileName;
 
 	assert(f != NULL);
-	if((newFileName = tplToString(f->f_un.f_file.f_fname, f->f_pMsg)) == NULL) {
+	if((newFileName = tplToString((unsigned char *) f->f_un.f_file.f_fname, f->f_pMsg)) == NULL) {
 		/* memory shortage - there is nothing we can do to resolve it.
 		 * We silently ignore it, this is probably the best we can do.
 		 */
 		dprintf("prepareDynfile(): could not create file name, discarding this reques\n");
 		return -1;
 	}
-	if(strcmp(newFileName, f->f_un.f_file.pCurrName)) {
+	if(strcmp((char*) newFileName, f->f_un.f_file.pCurrName)) {
 		dprintf("Requested log file different from currently open one - switching.\n");
 		dprintf("Current file: '%s'\n", f->f_un.f_file.pCurrName);
 		dprintf("New file    : '%s'\n", newFileName);
 		close(f->f_file);
-		f->f_file = open(newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY, 0644);
+		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY, 0644);
 		free(f->f_un.f_file.pCurrName);
-		f->f_un.f_file.pCurrName = newFileName;
+		f->f_un.f_file.pCurrName = (char*) newFileName;
 
 	} else { /* we are all set, the log file is already open */
 		free(newFileName);
@@ -5980,7 +5980,7 @@ void fprintlog(register struct filed *f)
 	char *msg;
 	char *psz; /* for shell support */
 	int esize; /* for shell support */
-	char *exec; /* for shell support */
+	unsigned char *exec; /* for shell support */
 	rsCStrObj *pCSCmdLine; /* for shell support: command to execute */
 	rsRetVal iRet;
 #ifdef SYSLOG_INET
@@ -6225,11 +6225,11 @@ void fprintlog(register struct filed *f)
 			dprintf("memory shortage - can not execute\n");
 			break;
 		}
-		if((iRet = rsCStrAppendStr(pCSCmdLine, f->f_un.f_file.f_fname)) != RS_RET_OK) {
+		if((iRet = rsCStrAppendStr(pCSCmdLine, (unsigned char*) f->f_un.f_file.f_fname)) != RS_RET_OK) {
 			dprintf("error %d during build command line(1)\n", iRet);
 			break;
 		}
-		if((iRet = rsCStrAppendStr(pCSCmdLine, " \"")) != RS_RET_OK) {
+		if((iRet = rsCStrAppendStr(pCSCmdLine, (unsigned char*) " \"")) != RS_RET_OK) {
 			dprintf("error %d during build command line(2)\n", iRet);
 			break;
 		}
@@ -6257,7 +6257,7 @@ void fprintlog(register struct filed *f)
 		rsCStrFinish(pCSCmdLine);
 		exec = rsCStrConvSzStrAndDestruct(pCSCmdLine);
 		dprintf("Executing \"%s\"\n",exec);
-		system(exec);	/* rgerhards: TODO: need to change this for root jail support! */
+		system((char*) exec);	/* rgerhards: TODO: need to change this for root jail support! */
 		free(exec);
 		break;
 
@@ -6789,7 +6789,7 @@ static rsRetVal addAllowedSenderLine(char* pName, char** ppRestOfConfLine)
 	 * for this.
 	 */
 	/* create parser object starting with line string without leading colon */
-	if((iRet = rsParsConstructFromSz(&pPars, *ppRestOfConfLine) != RS_RET_OK)) {
+	if((iRet = rsParsConstructFromSz(&pPars, (unsigned char*) *ppRestOfConfLine) != RS_RET_OK)) {
 		logerrorInt("Error %d constructing parser object - ignoring allowed sender list", iRet);
 		return(iRet);
 	}
@@ -7312,10 +7312,10 @@ static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
  * to be \0 in this case.
  * rgerhards 2004-11-19
  */
-static void cflineParseTemplateName(struct filed *f, char** pp,
+static void cflineParseTemplateName(struct filed *f, unsigned char** pp,
 			     register char* pTemplateName, int iLenTemplate)
 {
-	register char *p;
+	register unsigned char *p;
 	int i;
 
 	assert(f != NULL);
@@ -7344,7 +7344,7 @@ static void cflineParseTemplateName(struct filed *f, char** pp,
  * filed struct.
  * rgerhards 2004-11-18
  */
-static void cflineParseFileName(struct filed *f, char* p)
+static void cflineParseFileName(struct filed *f, unsigned char* p)
 {
 	register char *pName;
 	int i;
@@ -7393,7 +7393,7 @@ static void cflineParseFileName(struct filed *f, char* p)
  * removed.
  * rgerhards 2005-06-21
  */
-static void cflineParseOutchannel(struct filed *f, char* p)
+static void cflineParseOutchannel(struct filed *f, unsigned char* p)
 {
 	int i;
 	struct outchannel *pOch;
@@ -7478,17 +7478,17 @@ static void cflineParseOutchannel(struct filed *f, char* p)
  * passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessTradPRIFilter(char **pline, register struct filed *f)
+static rsRetVal cflineProcessTradPRIFilter(unsigned char **pline, register struct filed *f)
 {
-	char *p;
-	register char *q;
+	unsigned char *p;
+	register unsigned char *q;
 	register int i, i2;
-	char *bp;
+	unsigned char *bp;
 	int pri;
 	int singlpri = 0;
 	int ignorepri = 0;
-	char buf[MAXLINE];
-	char xbuf[200];
+	unsigned char buf[MAXLINE];
+	unsigned char xbuf[200];
 
 	assert(pline != NULL);
 	assert(*pline != NULL);
@@ -7543,8 +7543,8 @@ static rsRetVal cflineProcessTradPRIFilter(char **pline, register struct filed *
 		}
 
 		if (pri < 0) {
-			(void) snprintf(xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
-			logerror(xbuf);
+			snprintf((char*) xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
+			logerror((char*) xbuf);
 			return RS_RET_ERR;
 		}
 
@@ -7590,8 +7590,8 @@ static rsRetVal cflineProcessTradPRIFilter(char **pline, register struct filed *
 				i = decode(buf, FacNames);
 				if (i < 0) {
 
-					(void) snprintf(xbuf, sizeof(xbuf), "unknown facility name \"%s\"", buf);
-					logerror(xbuf);
+					snprintf((char*) xbuf, sizeof(xbuf), "unknown facility name \"%s\"", buf);
+					logerror((char*) xbuf);
 					return RS_RET_ERR;
 				}
 
@@ -7643,7 +7643,7 @@ static rsRetVal cflineProcessTradPRIFilter(char **pline, register struct filed *
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
+static rsRetVal cflineProcessPropFilter(unsigned char **pline, register struct filed *f)
 {
 	rsParsObj *pPars;
 	rsCStrObj *pCSCompOp;
@@ -7699,15 +7699,15 @@ static rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
 		iOffset = 0;
 	}
 
-	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, "contains", 8)) {
+	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "contains", 8)) {
 		f->f_filterData.prop.operation = FIOP_CONTAINS;
-	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, "isequal", 7)) {
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "isequal", 7)) {
 		f->f_filterData.prop.operation = FIOP_ISEQUAL;
-	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, "startswith", 10)) {
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "startswith", 10)) {
 		f->f_filterData.prop.operation = FIOP_STARTSWITH;
 	} else {
 		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
-		           rsCStrGetSzStr(pCSCompOp));
+		           (char*) rsCStrGetSzStr(pCSCompOp));
 	}
 	RSFREEOBJ(pCSCompOp); /* no longer needed */
 
@@ -7739,7 +7739,7 @@ static rsRetVal cflineProcessPropFilter(char **pline, register struct filed *f)
  * from the config file ("+/-hostname"). It stores it for further reference.
  * rgerhards 2005-10-19
  */
-static rsRetVal cflineProcessHostSelector(char **pline, register struct filed *f)
+static rsRetVal cflineProcessHostSelector(unsigned char **pline, register struct filed *f)
 {
 	rsRetVal iRet;
 
@@ -7792,7 +7792,7 @@ static rsRetVal cflineProcessHostSelector(char **pline, register struct filed *f
  * from the config file ("!tagname"). It stores it for further reference.
  * rgerhards 2005-10-18
  */
-static rsRetVal cflineProcessTagSelector(char **pline, register struct filed *f)
+static rsRetVal cflineProcessTagSelector(unsigned char **pline, register struct filed *f)
 {
 	rsRetVal iRet;
 
@@ -7846,8 +7846,8 @@ static rsRetVal cflineProcessTagSelector(char **pline, register struct filed *f)
  */
 static rsRetVal cfline(char *line, register struct filed *f)
 {
-	char *p;
-	register char *q;
+	unsigned char *p;
+	register unsigned char *q;
 	register int i;
 	int syncfile;
 	rsRetVal iRet;
@@ -7864,7 +7864,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 	dprintf("cfline(%s)", line);
 
 	errno = 0;	/* keep strerror() stuff out of logerror messages */
-	p = line;
+	p = (unsigned char*) line;
 
 	/* check which filter we need to pull... */
 	switch(*p) {
@@ -7992,7 +7992,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		f->f_un.f_forw.port = NULL;
 		if(*p == ':') { /* process port */
 			register int i = 0;
-			char * tmp;
+			unsigned char * tmp;
 
 			*p = '\0'; /* trick to obtain hostname (later)! */
 			tmp = ++p;
@@ -8039,7 +8039,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		}
 
 		/* first set the f->f_type */
-		strcpy(f->f_un.f_forw.f_hname, q);
+		strcpy(f->f_un.f_forw.f_hname, (char*) q);
 		memset(&hints, 0, sizeof(hints));
 		/* port must be numeric, because config file syntax requests this */
 		hints.ai_flags = AI_NUMERICSERV;
@@ -8152,7 +8152,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			f->f_type = F_TTY;
 			untty();
 		}
-		if (strcmp(p, ctty) == 0)
+		if (strcmp((char*) p, ctty) == 0)
 			f->f_type = F_CONSOLE;
 		break;
 
@@ -8163,7 +8163,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			/* we have a template specifier! */
 			p += 2; /* eat "*;" */
 			cflineParseTemplateName(f, &p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(char));
+						sizeof(szTemplateName) / sizeof(unsigned char));
 		}
 		else	/* assign default format if none given! */
 			szTemplateName[0] = '\0';
@@ -8279,7 +8279,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
 			for (q = p; *q && *q != ',' && *q != ';'; )
 				q++;
-			(void) strncpy(f->f_un.f_uname[i], p, UNAMESZ);
+			(void) strncpy((char*) f->f_un.f_uname[i], (char*) p, UNAMESZ);
 			if ((q - p) > UNAMESZ)
 				f->f_un.f_uname[i][UNAMESZ] = '\0';
 			else
@@ -8319,11 +8319,11 @@ static rsRetVal cfline(char *line, register struct filed *f)
 
 /*  Decode a symbolic name to a numeric value
  */
-int decode(char *name, struct code *codetab)
+int decode(unsigned char *name, struct code *codetab)
 {
 	register struct code *c;
-	register char *p;
-	char buf[80];
+	register unsigned char *p;
+	unsigned char buf[80];
 
 	assert(name != NULL);
 	assert(codetab != NULL);
@@ -8332,14 +8332,14 @@ int decode(char *name, struct code *codetab)
 	if (isdigit(*name))
 	{
 		dprintf ("\n");
-		return (atoi(name));
+		return (atoi((char*) name));
 	}
-	(void) strncpy(buf, name, 79);
+	strncpy((char*) buf, (char*) name, 79);
 	for (p = buf; *p; p++)
-		if (isupper(*p))
-			*p = tolower(*p);
+		if (isupper((int) *p))
+			*p = tolower((int) *p);
 	for (c = codetab; c->c_name; c++)
-		if (!strcmp(buf, c->c_name))
+		if (!strcmp((char*) buf, (char*) c->c_name))
 		{
 			dprintf (" ==> %d\n", c->c_val);
 			return (c->c_val);

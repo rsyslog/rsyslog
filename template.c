@@ -130,7 +130,7 @@ static int do_Constant(char **pp, struct template *pTpl)
 				case '8':
 				case '9':
 					i = 0;
-					while(*p && isdigit(*p)) {
+					while(*p && isdigit((int)*p)) {
 						i = i * 10 + *p++ - '0';
 					}
 					rsCStrAppendChar(pStrB, i);
@@ -160,7 +160,7 @@ static int do_Constant(char **pp, struct template *pTpl)
 	 * 2005-09-09 rgerhards
 	 */
 	pTpe->data.constant.iLenConstant = rsCStrLen(pStrB);
-	pTpe->data.constant.pConstant = rsCStrConvSzStrAndDestruct(pStrB);
+	pTpe->data.constant.pConstant = (char*) rsCStrConvSzStrAndDestruct(pStrB);
 
 	*pp = p;
 
@@ -190,7 +190,7 @@ static void doOptions(char **pp, struct templateEntry *pTpe)
 		while((i < sizeof(Buf) / sizeof(char)) &&
 		      *p && *p != '%' && *p != ',') {
 			/* inner loop - until end of ONE option */
-			Buf[i++] = tolower(*p);
+			Buf[i++] = tolower((int)*p);
 			++p;
 		}
 		Buf[i] = '\0'; /* terminate */
@@ -267,7 +267,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 
 	/* got the name*/
 	rsCStrFinish(pStrB);
-	pTpe->data.field.pPropRepl = rsCStrConvSzStrAndDestruct(pStrB);
+	pTpe->data.field.pPropRepl = (char*) rsCStrConvSzStrAndDestruct(pStrB);
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
@@ -303,7 +303,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 					 * **DECIMAL** ASCII value of the delimiter character.
 					 */
 					pTpe->data.field.has_fields = 1;
-					if(!isdigit(*p)) {
+					if(!isdigit((int)*p)) {
 						/* complain and use default */
 						logerrorSz
 						  ("error: invalid character in frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
@@ -311,7 +311,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 						pTpe->data.field.field_delim = 9;
 					} else {
 						iNum = 0;
-						while(isdigit(*p))
+						while(isdigit((int)*p))
 							iNum = iNum * 10 + *p++ - '0';
 						if(iNum < 0 || iNum > 255) {
 							logerrorInt
@@ -332,7 +332,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 			} else {
 				/* we now have a simple offset in frompos (the previously "normal" case) */
 				iNum = 0;
-				while(isdigit(*p))
+				while(isdigit((int)*p))
 					iNum = iNum * 10 + *p++ - '0';
 				pTpe->data.field.iFromPos = iNum;
 				/* skip to next known good */
@@ -408,7 +408,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 #endif /* #ifdef FEATURE_REGEXP */
 
 			iNum = 0;
-			while(isdigit(*p))
+			while(isdigit((int)*p))
 				iNum = iNum * 10 + *p++ - '0';
 			pTpe->data.field.iToPos = iNum;
 			/* skip to next known good */
@@ -476,7 +476,7 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 	p = *ppRestOfConfLine;
 	assert(p != NULL);
 
-	while(isspace(*p))/* skip whitespace */
+	while(isspace((int)*p))/* skip whitespace */
 		++p;
 	
 	if(*p != '"') {
@@ -518,21 +518,21 @@ struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
 	 * an error occurs - whichever is first.
 	 */
 	while(*p) {
-		while(isspace(*p))/* skip whitespace */
+		while(isspace((int)*p))/* skip whitespace */
 			++p;
 		
 		if(*p != ',')
 			break;
 		++p; /* eat ',' */
 
-		while(isspace(*p))/* skip whitespace */
+		while(isspace((int)*p))/* skip whitespace */
 			++p;
 		
 		/* read option word */
 		i = 0;
 		while(i < sizeof(optBuf) / sizeof(char) - 1
 		      && *p && *p != '=' && *p !=',' && *p != '\n') {
-			optBuf[i++] = tolower(*p);
+			optBuf[i++] = tolower((int)*p);
 			++p;
 		}
 		optBuf[i] = '\0';

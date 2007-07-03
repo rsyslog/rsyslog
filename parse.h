@@ -76,7 +76,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bT
 
 rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c);
 rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr);
-rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, char *psz);
+rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz);
 rsRetVal rsParsDestruct(rsParsObj *pThis);
 rsRetVal parsIPv4WithBits(rsParsObj *pThis, unsigned long *pIP, int *pBits);
 int parsIsAtEndOfParseString(rsParsObj *pThis);
