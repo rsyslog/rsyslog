@@ -4,7 +4,9 @@ Version 1.15.0 (RGer), 2007-07-??
   and thus properties. This was a much-requested feature. It makes
   life easy when it eG comes to splitting files based on the sender
   address.
+- added $umask and $FileCreateMode config file directives
 - applied a patch from Bartosz Kuzma to compile cleanly under NetBSD
+- added IPv6 documentation - was accidently missing from CVS
 - begun to change char to unsigned char
 ---------------------------------------------------------------------------
 Version 1.14.2 (RGer), 2007-07-03

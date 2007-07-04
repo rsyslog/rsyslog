@@ -439,6 +439,7 @@ static int restart = 0; /* do restart (config read) - multithread safe */
 static int bRequestDoMark = 0; /* do mark processing? (multithread safe) */
 #define MAXFUNIX	20
 
+int fCreateMode = 0644; /* mode to use when creating files */
 int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
@@ -481,16 +482,19 @@ static const char *sys_h_errlist[] = {
     "no address, look for MX record"				/* NO_ADDRESS */
  };
 
-/*
- * This table lists the directive lines:
+/* This table lists the directive lines:
  */
 static const char *directive_name_list[] = {
 	"template",
-	"outchannel"
+	"outchannel",
+	"allowedsender",
+	"filecreatemode",
+	"umask"
 };
 /* ... and their definitions: */
 enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1,
-                  DIR_ALLOWEDSENDER = 2};
+                  DIR_ALLOWEDSENDER = 2, DIR_FILECREATEMODE = 3,
+		  DIR_UMASK = 4};
 
 /* rgerhards 2004-11-11: the following structure represents
  * a time as it is used in syslog.
@@ -938,11 +942,11 @@ static int option_DisallowWarning = 1;	/* complain if message from disallowed se
 
 
 /* hardcoded standard templates (used for defaults) */
-static char template_TraditionalFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
-static char template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
-static char template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
-static char template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
-static char template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
+static unsigned char template_TraditionalFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
+static unsigned char template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
+static unsigned char template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
+static unsigned char template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
+static unsigned char template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
 /* end template */
 
 
@@ -976,7 +980,7 @@ static int checkDBErrorState(register struct filed *f);
 static void DBErrorHandler(register struct filed *f);
 #endif
 
-static int getSubString(char **pSrc, char *pDst, size_t DstSize, char cSep);
+static int getSubString(unsigned char **pSrc, char *pDst, size_t DstSize, char cSep);
 static void getCurrTime(struct syslogTime *t);
 static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
 
@@ -5827,7 +5831,7 @@ int resolveFileSizeLimit(struct filed *f)
 	system(f->f_sizeLimitCmd);
 
 	f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-			 0644);
+			 fCreateMode);
 
 	actualFileSize = lseek(f->f_file, 0, SEEK_END);
 	if(actualFileSize >= f->f_sizeLimit) {
@@ -5862,7 +5866,7 @@ static int prepareDynFile(struct filed *f)
 		dprintf("Current file: '%s'\n", f->f_un.f_file.pCurrName);
 		dprintf("New file    : '%s'\n", newFileName);
 		close(f->f_file);
-		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY, 0644);
+		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY, fCreateMode);
 		free(f->f_un.f_file.pCurrName);
 		f->f_un.f_file.pCurrName = (char*) newFileName;
 
@@ -6754,7 +6758,7 @@ static void doexit(int sig)
  * (if the line is correct).
  * rgerhards, 2005-09-27
  */
-static rsRetVal addAllowedSenderLine(char* pName, char** ppRestOfConfLine)
+static rsRetVal addAllowedSenderLine(char* pName, unsigned char** ppRestOfConfLine)
 {
 	struct AllowedSenders **ppRoot;
 	struct AllowedSenders **ppLast;
@@ -6820,6 +6824,75 @@ static rsRetVal addAllowedSenderLine(char* pName, char** ppRestOfConfLine)
 }
 
 
+/* Parse and interpet a $FileCreateMode and $umask line. This function
+ * pulls the creation mode and, if successful, stores it
+ * into the global variable so that the rest of rsyslogd
+ * opens files with that mode. Any previous value will be
+ * overwritten.
+ * HINT: if we store the creation mode in struct filed, we
+ * can even specify multiple modes simply be virtue of
+ * being placed in the right section of rsyslog.conf
+ * rgerhards, 2007-07-4 (happy independence day to my US friends!)
+ * Parameter **pp has a pointer to the current config line.
+ * On exit, it will be updated to the processed position.
+ */
+static void doFileCreateModeUmaskLine(unsigned char **pp, enum eDirective eDir)
+{
+	unsigned char *p;
+	unsigned char errMsg[128];	/* for dynamic error messages */
+	int iMode;	
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	p = *pp;
+	
+	/* skip over any whitespace */
+	while(*p && isspace((int) *p))
+		++p;
+
+	/* for now, we parse and accept only octal numbers
+	 * Sequence of tests is important, we are using boolean shortcuts
+	 * to avoid addressing invalid memory!
+	 */
+	if(!(   (*p == '0')
+	     && (*(p+1) && *(p+1) >= '0' && *(p+1) <= '7')
+	     && (*(p+2) && *(p+2) >= '0' && *(p+2) <= '7')
+	     && (*(p+3) && *(p+3) >= '0' && *(p+3) <= '7')  )  ) {
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		         "%s value must be octal (e.g 0644), invalid value '%s'.",
+			 eDir == DIR_UMASK ? "umask" : "filecreatemode", p);
+		errno = 0;
+		logerror((char*) errMsg);
+		return;
+	}
+
+	/*  we reach this code only if the octal number is ok - so we can now
+	 *  compute the value.
+	 */
+	iMode  = (*(p+1)-'0') * 64 + (*(p+2)-'0') * 8 + (*(p+3)-'0');
+	switch(eDir) {
+		case DIR_FILECREATEMODE:
+			fCreateMode = iMode;
+			dprintf("FileCreateMode set to 0%o.\n", iMode);
+			break;
+		case DIR_UMASK:
+			umask(iMode);
+			dprintf("umask set to 0%3.3o.\n", iMode);
+			break;
+		default:/* we do this to avoid compiler warning - not all
+			 * enum values call this function, so an incomplete list
+			 * is quite ok (but then we should not run into this code,
+			 * so at least we log a debug warning).
+			 */
+			dprintf("INTERNAL ERROR: doFileCreateModeUmaskLine() called with invalid eDir %d.\n",
+				eDir);
+			break;
+	}
+
+	p += 4;	/* eat the octal number */
+	*pp = p;
+}
+
 /* parse and interpret a $-config line that starts with
  * a name (this is common code). It is parsed to the name
  * and then the proper sub-function is called to handle
@@ -6828,15 +6901,14 @@ static rsRetVal addAllowedSenderLine(char* pName, char** ppRestOfConfLine)
  * rgerhards 2005-06-21: previously only for templates, now 
  *    generalized.
  */
-static void doNameLine(char **pp, enum eDirective eDir)
+static void doNameLine(unsigned char **pp, enum eDirective eDir)
 {
-	char *p = *pp;
+	unsigned char *p;
 	char szName[128];
 
 	assert(pp != NULL);
+	p = *pp;
 	assert(p != NULL);
-	assert(   (eDir == DIR_TEMPLATE) || (eDir == DIR_OUTCHANNEL)
-	       || (eDir == DIR_ALLOWEDSENDER));
 
 	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
 		char errMsg[128];
@@ -6865,6 +6937,14 @@ static void doNameLine(char **pp, enum eDirective eDir)
 		case DIR_ALLOWEDSENDER: 
 			addAllowedSenderLine(szName, &p);
 			break;
+		default:/* we do this to avoid compiler warning - not all
+			 * enum values call this function, so an incomplete list
+			 * is quite ok (but then we should not run into this code,
+			 * so at least we log a debug warning).
+			 */
+			dprintf("INTERNAL ERROR: doNameLine() called with invalid eDir %d.\n",
+				eDir);
+			break;
 	}
 
 	*pp = p;
@@ -6877,25 +6957,29 @@ static void doNameLine(char **pp, enum eDirective eDir)
  * extended configuration parameters.
  * 2004-11-17 rgerhards
  */
-void cfsysline(char *p)
+void cfsysline(unsigned char *p)
 {
-	char szCmd[32];
+	unsigned char szCmd[32];
 
 	assert(p != NULL);
 	errno = 0;
 	dprintf("cfsysline --> %s", p);
-	if(getSubString(&p, szCmd, sizeof(szCmd) / sizeof(char), ' ')  != 0) {
+	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(unsigned char), ' ')  != 0) {
 		logerror("Invalid $-configline - could not extract command - line ignored\n");
 		return;
 	}
 
 	/* check the command and carry out processing */
-	if(!strcasecmp(szCmd, "template")) { 
+	if(!strcasecmp((char*) szCmd, "template")) { 
 		doNameLine(&p, DIR_TEMPLATE);
-	} else if(!strcasecmp(szCmd, "outchannel")) { 
+	} else if(!strcasecmp((char*) szCmd, "outchannel")) { 
 		doNameLine(&p, DIR_OUTCHANNEL);
-	} else if(!strcasecmp(szCmd, "allowedsender")) { 
+	} else if(!strcasecmp((char*) szCmd, "allowedsender")) { 
 		doNameLine(&p, DIR_ALLOWEDSENDER);
+	} else if(!strcasecmp((char*) szCmd, "filecreatemode")) { 
+		doFileCreateModeUmaskLine(&p, DIR_FILECREATEMODE);
+	} else if(!strcasecmp((char*) szCmd, "umask")) { 
+		doFileCreateModeUmaskLine(&p, DIR_UMASK);
 	} else { /* invalid command! */
 		char err[100];
 		snprintf(err, sizeof(err)/sizeof(char),
@@ -7063,7 +7147,7 @@ static void init()
 				continue;
 
 			if(*p == '$') {
-				cfsysline(++p);
+				cfsysline((unsigned char*) ++p);
 				continue;
 			}
 	#if CONT_LINE
@@ -8084,7 +8168,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		 */
 		cflineParseOutchannel(f, p);
 		f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-				 0644);
+				 fCreateMode);
 		break;
 
 	case '?': /* This is much like a regular file handle, but we need to obtain
@@ -8139,7 +8223,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			f->f_file = open(f->f_un.f_file.f_fname, O_RDWR|O_NONBLOCK);
 	        } else {
 			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-					 0644);
+					 fCreateMode);
 		}
 		        
 	  	if ( f->f_file < 0 ){
@@ -8624,9 +8708,9 @@ int checkDBErrorState(register struct filed *f)
  * \param cSep		Separator char.
  * \ret int		Returns 0 if no error occured.
  */
-int getSubString(char **ppSrc,  char *pDst, size_t DstSize, char cSep)
+int getSubString(unsigned char **ppSrc,  char *pDst, size_t DstSize, char cSep)
 {
-	char *pSrc = *ppSrc;
+	unsigned char *pSrc = *ppSrc;
 	int iErr = 0; /* 0 = no error, >0 = error */
 	while(*pSrc != cSep && *pSrc != '\0' && DstSize>1) {
 		*pDst++ = *(pSrc)++;
@@ -9090,7 +9174,7 @@ int main(int argc, char **argv)
 
 	extern int optind;
 	extern char *optarg;
-	char *pTmp;
+	unsigned char *pTmp;
 
 #ifndef TESTING
 	chdir ("/");
