@@ -65,7 +65,7 @@ egress and ingress filtering at the firewall and router level.</p>
 <p><code><b>$AllowedSender UDP, 127.0.0.1, 192.0.2.0/24</b></code></p>
 <h2>Templates</h2>
 <p>Templates are a key feature of rsyslog. They allow to specify any format a user 
-might want. Every output in rsyslog uses templates - this holds true for files, 
+might want. They are also used for dynamic file name generation. Every output in rsyslog uses templates - this holds true for files, 
 user messages and so on. The database writer expects its template to be a proper 
 SQL statement - so this is highly customizable too. You might ask how does all 
 of this work when no templates at all are specified. Good question ;) The answer 
@@ -137,6 +137,13 @@ $template TraditionalFormat,%timegenerated% %HOSTNAME% %syslogtag%%msg%\n&quot;<
 <br>
 Properties can be accessed by the <a href="property_replacer.html">property replacer</a> 
 (see there for details).</p>
+<p><b>Please note that as of 1.15.0, templates can also by used to generate 
+selector lines with dynamic file names.</b> For example, if you would like to 
+split syslog messages from different hosts to different files (one per host), 
+you can define the following template:</p>
+<blockquote><code>$template DynFile,&quot;/var/log/system-%HOSTNAME%.log&quot;</code></blockquote>
+<p>This template can then be used when defining an output selector line. It will 
+result in something like &quot;/var/log/system-localhost.log&quot;</p>
 <h2>Output Channels</h2>
 <p>Output Channels are a new concept first introduced in rsyslog 0.9.0. As of this 
 writing, it is still unclear if they will stay in rsyslog or go away. So if you 
@@ -381,11 +388,33 @@ full pathname, beginning with a slash &quot;/''.<br>
 You may prefix each entry with the minus ``-'' sign to omit syncing the file 
 after every logging. Note that you might lose information if the system crashes 
 right behind a write attempt. Nevertheless this might give you back some 
-performance, especially if you run programs that use<br>
+performance, especially if you run programs that use
 logging in a very verbose manner.</p>
 <p>If your system is connected to a reliable UPS and you receive lots of log 
 data (e.g. firewall logs), it might be a very good idea to turn of
 syncing by specifying the &quot;-&quot; in front of the file name. </p>
+<p><b>The filename can be either static </b>(always the same) or <b>dynamic</b> 
+(different based on message received). The later is useful if you would 
+automatically split messages into different files based on some message 
+criteria. For example, dynamic file name selectors allow you to split messages 
+into different files based on the host that sent them. With dynamic file names, 
+everything is automatic and you do not need any filters. </p>
+<p>It works via the template system. First, you define a template for the file 
+name. An example can be seen above in the description of template. We will use 
+the &quot;DynFile&quot; template defined there. Dynamic filenames are indicated by 
+specifying a questions mark &quot;?&quot; instead of a slash, followed by the template 
+name. Thus, the selector line for our dynamic file name would look as follows:</p>
+<p align="center">
+<code>*.* ?DynFile</code>
+</p>
+<p>That's all you need to do. Rsyslog will now automatically generate file names 
+for you and store the right messages into the right files.</p>
+<p><b>A word of caution:</b> rsyslog creates files as needed. So if a new host 
+is using your syslog server, rsyslog will automatically create a new file for 
+it. <b>However, directories are never created</b>. So if you use a dynamic 
+directory name, you must make sure that all possible directories are created, 
+otherwise the writes will fail. This restriction will most probably be removed 
+in later versions of rsyslogd.</p>
 <h3>Named Pipes</h3>
 <p>This version of rsyslogd(8) has support for logging output to named pipes (fifos). 
 A fifo or named pipe can be used as a destination for log messages by prepending 
