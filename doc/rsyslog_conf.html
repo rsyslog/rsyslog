@@ -35,7 +35,7 @@ between an attacker and rsyslogd. If a message from a system not in the allowed
 sender list is received, that message is discarded. A diagnostic message is 
 logged, so that the fact is recorded (this message can be turned off with the 
 &quot;-w&quot; rsyslogd command line option).</p>
-<p>Allowed sender lists can be defined for UDP and TCP senders seperately. There 
+<p>Allowed sender lists can be defined for UDP and TCP senders separately. There 
 can be as many allowed senders as needed. The syntax to specify them is:</p>
 <p><code><b>$AllowedSender &lt;protocol&gt;, ip[/bits], ip[/bits]</b></code></p>
 <p>&quot;$AllowedSender&quot; is the directive - it must be written exactly as shown and 
@@ -63,6 +63,60 @@ exclusively. If you need to use UDP-based syslog, make sure that you do proper
 egress and ingress filtering at the firewall and router level.</p>
 <p>An example for an allowed sender list is as follows:</p>
 <p><code><b>$AllowedSender UDP, 127.0.0.1, 192.0.2.0/24</b></code></p>
+<h2>UMASK</h2>
+<p>The $umask directive allows to specify the rsyslogd processes' umask. If not 
+specified, the system-provided default is used. The value given must always be a 
+4-digit octal number, with the initial digit being zero. This sample removes all 
+umask-restriction:</p>
+<p><code><b>$umask 0000</b></code></p>
+<p>If $umask is specified multiple times in the configuration file, results may 
+be somewhat unpredictable. It is recommended to specify it only once.</p>
+<h2>FileCreateMode</h2>
+<p>The $FileCreateMode directive allows to specify the creation mode with which 
+rsyslogd creates new files. If not specified, the value 0644 is used (which 
+retains backward-compatibility with earlier releases). The value given must 
+always be a 4-digit octal number, with the initial digit being zero. This sample 
+lets rsyslog create files with read and write access only for the users it runs 
+under:</p>
+<p><code><b>$FileCreateMode 0600</b></code></p>
+<p>Please note that the actual permission depend on rsyslogd's process umask. If 
+in doubt, use &quot;$umask 0000&quot; right at the beginning of the configuration file to 
+remove any restrictions.</p>
+<p>$FileCreateMode may be specified multiple times. If so, it specifies the 
+creation mode for all selector lines that follow until the next $FileCreateMode 
+directive. Order of lines is vitally important. Here is a sample (this is deemed 
+to be a complete rsyslog.conf):</p>
+<p><code><b>$umask 0000 # make sure nothing interfers with the following 
+definitions<br>
+*.* /var/log/file-with-0644-default<br>
+$FileCreateMode 0600<br>
+*.* /var/log/file-with-0600<br>
+$FileCreateMode 0644<br>
+*.* /var/log/file-with-0644</b></code></p>
+<p>As you can see, open modes depend on position in the config file. Note the 
+first line, which is created with the hardcoded default creation mode.</p>
+<h2>DynaFileCacheSize</h2>
+<p>This directive specifies the maximum size of the cache for 
+dynamically-generated file names. Selector lines with dynamic files names ('?' 
+indicator) support writing to multiple files with a single selector line. This 
+setting specifies how many open file handles should be cached. If, for example, 
+the file name is generated with the hostname in it and you have 100 different 
+hosts, a cache size of 100 would ensure that files are opened once and then stay 
+open. This can be a great way to increase performance. If the cache size is 
+lower than the number of different files, the least recently used one is 
+discarded (and the file closed). The hardcoded maximum is 10,000 - a value that 
+we assume should already be very extreme. Please note that if you expect to run 
+with a very large number of files, you probably need to reconfigure the kernel 
+to support such a large number. In practice, we do NOT recommend to use a cache 
+of more than 1,000 entries. The cache lookup would probably require more time 
+than the open and close operations. The minimum value is 1. Here is a sample:</p>
+<p><code><b>$DynaFileCacheSize 100&nbsp;&nbsp;&nbsp; # a cache of 100 files at 
+most</b></code></p>
+<p>Numbers are always in decimal. Leading zeros should be avoided (in some later 
+version, they may be mis-interpreted as being octal). Multiple directives may be 
+given. They are applied to selector lines based on order of appearance.</p>
+<p><font color="#FF0000"><b>This value can be specified,&nbsp; but currently has 
+no effect. The necessary background code is not yet implemented.</b></font></p>
 <h2>Templates</h2>
 <p>Templates are a key feature of rsyslog. They allow to specify any format a user 
 might want. They are also used for dynamic file name generation. Every output in rsyslog uses templates - this holds true for files, 
