@@ -4,6 +4,12 @@
  * TODO:
  * - include a global option for control character replacemet on receive? (not just NUL)
  *
+ * Please visit the rsyslog project at
+ *
+ * http://www.rsyslog.com
+ *
+ * to learn more about it and discuss any questions you may have.
+ *
  * Please note that as of now, a lot of the code in this file stems
  * from the sysklogd project. To learn more over this project, please
  * visit
@@ -678,7 +684,9 @@ struct filed {
 		struct {
 			char	f_fname[MAXFNAME];
 			char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
-			char	*pCurrName;	/* name currently open, if dynamic name */
+			unsigned char	*pCurrName;	/* name currently open, if dynamic name */
+			int	fCreateMode;	/* file creation mode for open() */
+
 		} f_file;
 	} f_un;
 	char	f_lasttime[16];			/* time of last occurrence */
@@ -5829,7 +5837,7 @@ int resolveFileSizeLimit(struct filed *f)
 	system(f->f_sizeLimitCmd);
 
 	f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-			 fCreateMode);
+			f->f_un.f_file.fCreateMode);
 
 	actualFileSize = lseek(f->f_file, 0, SEEK_END);
 	if(actualFileSize >= f->f_sizeLimit) {
@@ -5859,14 +5867,15 @@ static int prepareDynFile(struct filed *f)
 		dprintf("prepareDynfile(): could not create file name, discarding this reques\n");
 		return -1;
 	}
-	if(strcmp((char*) newFileName, f->f_un.f_file.pCurrName)) {
+	if(strcmp((char*) newFileName, (char*) f->f_un.f_file.pCurrName)) {
 		dprintf("Requested log file different from currently open one - switching.\n");
 		dprintf("Current file: '%s'\n", f->f_un.f_file.pCurrName);
 		dprintf("New file    : '%s'\n", newFileName);
 		close(f->f_file);
-		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY, fCreateMode);
+		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+				f->f_un.f_file.fCreateMode);
 		free(f->f_un.f_file.pCurrName);
-		f->f_un.f_file.pCurrName = (char*) newFileName;
+		f->f_un.f_file.pCurrName = newFileName;
 
 	} else { /* we are all set, the log file is already open */
 		free(newFileName);
@@ -6817,6 +6826,7 @@ static rsRetVal addAllowedSenderLine(char* pName, unsigned char** ppRestOfConfLi
 	}
 
 	/* cleanup */
+	*ppRestOfConfLine += parsGetCurrentPosition(pPars);
 	return rsParsDestruct(pPars);
 #endif /*#ifndef SYSLOG_INET */
 }
@@ -6989,13 +6999,14 @@ void cfsysline(unsigned char *p)
 
 	/* now check if we have some extra characters left on the line - that
 	 * should not be the case. Whitespace is OK, but everything else should
-	 * trigger a warning (that may be an indication of undesired behaviour.
+	 * trigger a warning (that may be an indication of undesired behaviour).
+	 * An exception, of course, are comments (starting with '#').
 	 * rgerhards, 2007-07-04
 	 */
 	while(*p && isspace(*p))
 		++p;	/* skip it */
 
-	if(*p) { /* we have a non-whitespace, so let's complain */
+	if(*p && *p != '#') { /* we have a non-whitespace, so let's complain */
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
 		         "error: extra characters in config line ignored: '%s'", p);
 		errno = 0;
@@ -8181,8 +8192,10 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		 * traditional mode lines.
 		 */
 		cflineParseOutchannel(f, p);
+		f->f_un.f_file.bDynamicName = 0;
+		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
 		f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-				 fCreateMode);
+				 f->f_un.f_file.fCreateMode);
 		break;
 
 	case '?': /* This is much like a regular file handle, but we need to obtain
@@ -8200,6 +8213,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		if(syncfile)
 			f->f_flags |= SYNC_FILE;
 		f->f_un.f_file.bDynamicName = 1;
+		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
 		/* we now allocate a single-byte buffer to create an emtpy previous
 		 * file name. That way, we do not need to check for an uninitialized
 		 * variable when we do the comparison. This saves us some CPU cycles
@@ -8233,11 +8247,12 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		if(syncfile)
 			f->f_flags |= SYNC_FILE;
 		f->f_un.f_file.bDynamicName = 0;
+		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
 		if(f->f_type == F_PIPE) {
 			f->f_file = open(f->f_un.f_file.f_fname, O_RDWR|O_NONBLOCK);
 	        } else {
 			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-					 fCreateMode);
+					 f->f_un.f_file.fCreateMode);
 		}
 		        
 	  	if ( f->f_file < 0 ){

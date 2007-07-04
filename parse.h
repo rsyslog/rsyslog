@@ -80,6 +80,7 @@ rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz);
 rsRetVal rsParsDestruct(rsParsObj *pThis);
 rsRetVal parsIPv4WithBits(rsParsObj *pThis, unsigned long *pIP, int *pBits);
 int parsIsAtEndOfParseString(rsParsObj *pThis);
+int parsGetCurrentPosition(rsParsObj *pThis);
 char parsPeekAtCharAtParsPtr(rsParsObj *pThis);
 
 #if 0 /* later! - but leave it in in case we need it some day... */

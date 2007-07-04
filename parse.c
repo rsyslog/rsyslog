@@ -467,6 +467,14 @@ char parsPeekAtCharAtParsPtr(rsParsObj *pThis)
 	return(*(pThis->pCStr->pBuf + pThis->iCurrPos));
 }
 
+/* return the current position inside the parse object.
+ * rgerhards, 2007-07-04
+ */
+int parsGetCurrentPosition(rsParsObj *pThis)
+{
+	return pThis->iCurrPos;
+}
+
 
 /*
  * Local variables:

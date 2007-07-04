@@ -6,6 +6,8 @@ Version 1.15.0 (RGer), 2007-07-??
   address.
 - added $umask and $FileCreateMode config file directives
 - applied a patch from Bartosz Kuzma to compile cleanly under NetBSD
+- checks for extra (unexpected) characters in system config file lines
+  have been added
 - added IPv6 documentation - was accidently missing from CVS
 - begun to change char to unsigned char
 ---------------------------------------------------------------------------
