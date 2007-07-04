@@ -2,8 +2,6 @@
  * \brief This is the main file of the rsyslogd daemon.
  *
  * TODO:
- * - check template lines for extra characters and provide 
- *   a warning, if they exists
  * - include a global option for control character replacemet on receive? (not just NUL)
  *
  * Please note that as of now, a lot of the code in this file stems
@@ -6960,6 +6958,7 @@ static void doNameLine(unsigned char **pp, enum eDirective eDir)
 void cfsysline(unsigned char *p)
 {
 	unsigned char szCmd[32];
+	unsigned char errMsg[128];	/* for dynamic error messages */
 
 	assert(p != NULL);
 	errno = 0;
@@ -6986,6 +6985,21 @@ void cfsysline(unsigned char *p)
 		         "Invalid command in $-configline: '%s' - line ignored\n", szCmd);
 		logerror(err);
 		return;
+	}
+
+	/* now check if we have some extra characters left on the line - that
+	 * should not be the case. Whitespace is OK, but everything else should
+	 * trigger a warning (that may be an indication of undesired behaviour.
+	 * rgerhards, 2007-07-04
+	 */
+	while(*p && isspace(*p))
+		++p;	/* skip it */
+
+	if(*p) { /* we have a non-whitespace, so let's complain */
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		         "error: extra characters in config line ignored: '%s'", p);
+		errno = 0;
+		logerror((char*) errMsg);
 	}
 }
 
