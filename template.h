@@ -63,7 +63,7 @@ struct templateEntry {
 };
 
 struct template* tplConstruct(void);
-struct template *tplAddLine(char* pName, char** pRestOfConfLine);
+struct template *tplAddLine(char* pName, unsigned char** pRestOfConfLine);
 struct template *tplFind(char *pName, int iLenName);
 int tplGetEntryCount(struct template *pTpl);
 void tplDeleteAll(void);

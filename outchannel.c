@@ -175,7 +175,7 @@ static int get_restOfLine(char **pp, char **pBuf)
  * There might be some whitespace between the field (but not within)
  * and the commas. This can be removed.
  */
-struct outchannel *ochAddLine(char* pName, char** ppRestOfConfLine)
+struct outchannel *ochAddLine(char* pName, unsigned char** ppRestOfConfLine)
 {
 	struct outchannel *pOch;
  	char *p;

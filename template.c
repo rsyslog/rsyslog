@@ -445,7 +445,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 /* Add a new template line
  * returns pointer to new object if it succeeds, NULL otherwise.
  */
-struct template *tplAddLine(char* pName, char** ppRestOfConfLine)
+struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
 {
 	struct template *pTpl;
  	char *p;
