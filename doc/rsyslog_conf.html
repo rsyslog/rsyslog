@@ -408,7 +408,14 @@ name. Thus, the selector line for our dynamic file name would look as follows:</
 <code>*.* ?DynFile</code>
 </p>
 <p>That's all you need to do. Rsyslog will now automatically generate file names 
-for you and store the right messages into the right files.</p>
+for you and store the right messages into the right files. Please note that the 
+minus sign also works with dynamic file name selectors. Thus, to avoid syncing, 
+you may use</p>
+<p align="center">
+<code>*.* -?DynFile</code></p>
+<p>And of course you can use templates to specify the output format:</p>
+<p align="center">
+<code>*.* ?DynFile;MyTemplate</code></p>
 <p><b>A word of caution:</b> rsyslog creates files as needed. So if a new host 
 is using your syslog server, rsyslog will automatically create a new file for 
 it. <b>However, directories are never created</b>. So if you use a dynamic 
