@@ -77,9 +77,9 @@ struct template* tplConstruct(void)
  * the necessary structure.
  * returns: 0 - ok, 1 - failure
  */
-static int do_Constant(char **pp, struct template *pTpl)
+static int do_Constant(unsigned char **pp, struct template *pTpl)
 {
-	register char *p;
+	register unsigned char *p;
 	rsCStrObj *pStrB;
 	struct templateEntry *pTpe;
 	int i;
@@ -172,10 +172,10 @@ static int do_Constant(char **pp, struct template *pTpl)
  * specified in a template variable. It returns the passed-in pointer
  * updated to the next processed character.
  */
-static void doOptions(char **pp, struct templateEntry *pTpe)
+static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 {
-	register char *p;
-	char Buf[64];
+	register unsigned char *p;
+	unsigned char Buf[64];
 	int i;
 
 	assert(pp != NULL);
@@ -200,23 +200,23 @@ static void doOptions(char **pp, struct templateEntry *pTpe)
 		/* OK, we got the option, so now lets look what
 		 * it tells us...
 		 */
-		 if(!strcmp(Buf, "date-mysql")) {
+		 if(!strcmp((char*)Buf, "date-mysql")) {
 			pTpe->data.field.eDateFormat = tplFmtMySQLDate;
-		 } else if(!strcmp(Buf, "date-rfc3164")) {
+		 } else if(!strcmp((char*)Buf, "date-rfc3164")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
-		 } else if(!strcmp(Buf, "date-rfc3339")) {
+		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
-		 } else if(!strcmp(Buf, "lowercase")) {
+		 } else if(!strcmp((char*)Buf, "lowercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvLower;
-		 } else if(!strcmp(Buf, "uppercase")) {
+		 } else if(!strcmp((char*)Buf, "uppercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvUpper;
-		 } else if(!strcmp(Buf, "escape-cc")) {
+		 } else if(!strcmp((char*)Buf, "escape-cc")) {
 			pTpe->data.field.options.bEscapeCC = 1;
-		 } else if(!strcmp(Buf, "drop-cc")) {
+		 } else if(!strcmp((char*)Buf, "drop-cc")) {
 			pTpe->data.field.options.bDropCC = 1;
-		 } else if(!strcmp(Buf, "space-cc")) {
+		 } else if(!strcmp((char*)Buf, "space-cc")) {
 			pTpe->data.field.options.bSpaceCC = 1;
-		 } else if(!strcmp(Buf, "drop-last-lf")) {
+		 } else if(!strcmp((char*)Buf, "drop-last-lf")) {
 			pTpe->data.field.options.bDropLastLF = 1;
 		 } else {
 			dprintf("Invalid field option '%s' specified - ignored.\n", Buf);
@@ -231,9 +231,9 @@ static void doOptions(char **pp, struct templateEntry *pTpe)
  * the necessary structure.
  * returns: 0 - ok, 1 - failure
  */
-static int do_Parameter(char **pp, struct template *pTpl)
+static int do_Parameter(unsigned char **pp, struct template *pTpl)
 {
-	char *p;
+	unsigned char *p;
 	rsCStrObj *pStrB;
 	struct templateEntry *pTpe;
 	int iNum;	/* to compute numbers */
@@ -241,15 +241,15 @@ static int do_Parameter(char **pp, struct template *pTpl)
 #ifdef FEATURE_REGEXP
 	/* APR: variables for regex */
 	int longitud;
-	char *regex_char;
-	char *regex_end;
+	unsigned char *regex_char;
+	unsigned char *regex_end;
 #endif
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pTpl != NULL);
 
-	p = *pp;
+	p = (unsigned char*) *pp;
 
 	if((pStrB = rsCStrConstruct()) == NULL)
 		 return 1;
@@ -282,7 +282,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 				/* Complain on extra characters */
 				logerrorSz
 				  ("error: invalid character in frompos after \"R\", property: '%%%s'",
-				    *pp);
+				    (char*) *pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
 			}
@@ -307,7 +307,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 						/* complain and use default */
 						logerrorSz
 						  ("error: invalid character in frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
-						    *pp);
+						    (char*) *pp);
 						pTpe->data.field.field_delim = 9;
 					} else {
 						iNum = 0;
@@ -327,7 +327,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 					 */
 					logerrorSz
 					  ("error: invalid character in frompos after \"F\", property: '%%%s'",
-					    *pp);
+					    (char*) *pp);
 				}
 			} else {
 				/* we now have a simple offset in frompos (the previously "normal" case) */
@@ -358,7 +358,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 			/* APR 2005-09 I need the string that represent the regex */
 			/* The regex end is: "--end" */
 			/* TODO : this is hardcoded and cant be escaped, please change */
-			regex_end = strstr(p, "--end");
+			regex_end = (unsigned char*) strstr((char*)p, "--end");
 			if (regex_end == NULL) {
 				dprintf("error: can not find regex end in: '%s'\n", p);
 				pTpe->data.field.has_regex = 0;
@@ -366,7 +366,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 				/* We get here ONLY if the regex end was found */
 				longitud = regex_end - p;
 				/* Malloc for the regex string */
-				regex_char = (char *) malloc(longitud + 1);
+				regex_char = (unsigned char *) malloc(longitud + 1);
 				if (regex_char == NULL) {
 					dprintf
 					    ("Could not allocate memory for template parameter!\n");
@@ -383,7 +383,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
-				if (regcomp(&(pTpe->data.field.re), regex_char, 0) != 0) {
+				if(regcomp(&(pTpe->data.field.re), (char*) regex_char, 0) != 0) {
 					dprintf("error: can not compile regex: '%s'\n", regex_char);
 					pTpe->data.field.has_regex = 2;
 				}
@@ -448,7 +448,7 @@ static int do_Parameter(char **pp, struct template *pTpl)
 struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
 {
 	struct template *pTpl;
- 	char *p;
+ 	unsigned char *p;
 	int bDone;
 	char optBuf[128]; /* buffer for options - should be more than enough... */
 	int i;
@@ -585,6 +585,9 @@ struct template *tplFind(char *pName, int iLenName)
 /* Destroy the template structure. This is for de-initialization
  * at program end. Everything is deleted.
  * rgerhards 2005-02-22
+ * I have commented out dprintfs, because they are not needed for
+ * "normal" debugging. Uncomment them, if they are needed.
+ * rgerhards, 2007-07-05
  */
 void tplDeleteAll(void)
 {
@@ -593,12 +596,12 @@ void tplDeleteAll(void)
 
 	pTpl = tplRoot;
 	while(pTpl != NULL) {
-		dprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
+		/* dprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {
 			pTpeDel = pTpe;
 			pTpe = pTpe->pNext;
-			dprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);
+			/*dprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
 			switch(pTpeDel->eEntryType) {
 			case UNDEFINED:
 				dprintf("(UNDEFINED)");
