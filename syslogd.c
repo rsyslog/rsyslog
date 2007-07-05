@@ -443,7 +443,9 @@ static int restart = 0; /* do restart (config read) - multithread safe */
 static int bRequestDoMark = 0; /* do mark processing? (multithread safe) */
 #define MAXFUNIX	20
 
-int fCreateMode = 0644; /* mode to use when creating files */
+static int glblHadMemShortage = 0; /* indicates if we had memory shortage some time during the run */
+static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
+static int fCreateMode = 0644; /* mode to use when creating files */
 int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
@@ -493,12 +495,13 @@ static const char *directive_name_list[] = {
 	"outchannel",
 	"allowedsender",
 	"filecreatemode",
-	"umask"
+	"umask",
+	"dynafilecachesize"
 };
 /* ... and their definitions: */
 enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1,
                   DIR_ALLOWEDSENDER = 2, DIR_FILECREATEMODE = 3,
-		  DIR_UMASK = 4};
+		  DIR_UMASK = 4, DIR_DYNAFILECACHESIZE = 5};
 
 /* rgerhards 2004-11-11: the following structure represents
  * a time as it is used in syslog.
@@ -604,8 +607,17 @@ typedef enum _TCPFRAMINGMODE {
 		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
 	} TCPFRAMINGMODE;
 
-/*
- * This structure represents the files that will have log
+/* The following structure is a dynafile name cache entry.
+ */
+struct s_dynaFileCacheEntry {
+	unsigned char *pName;	/* name currently open, if dynamic name */
+	short	fd;		/* name associated with file name in cache */
+	time_t	lastUsed;	/* for LRU - last access */
+};
+typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
+
+
+/* This structure represents the files that will have log
  * copies printed.
  * RGerhards 2004-11-08: Each instance of the filed structure 
  * describes what I call an "output channel". This is important
@@ -684,9 +696,15 @@ struct filed {
 		struct {
 			char	f_fname[MAXFNAME];
 			char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
-			unsigned char	*pCurrName;	/* name currently open, if dynamic name */
 			int	fCreateMode;	/* file creation mode for open() */
-
+			int	iCurrElt;	/* currently active cache element (-1 = none) */
+			int	iCurrCacheSize;	/* currently cache size (1-based) */
+			int	iDynaFileCacheSize; /* size of file handle cache */
+			/* The cache is implemented as an array. An empty element is indicated
+			 * by a NULL pointer. Memory is allocated as needed. The following
+			 * pointer points to the overall structure.
+			 */
+			dynaFileCacheEntry **dynCache;
 		} f_file;
 	} f_un;
 	char	f_lasttime[16];			/* time of last occurrence */
@@ -5849,38 +5867,153 @@ int resolveFileSizeLimit(struct filed *f)
 }
 
 
+/* This function deletes an entry from the dynamic file name
+ * cache. A pointer to the cache must be passed in as well
+ * as the index of the to-be-deleted entry. This index may
+ * point to an unallocated entry, in whcih case the
+ * function immediately returns. Parameter bFreeEntry is 1
+ * if the entry should be free()ed and 0 if not.
+ */
+static void dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
+{
+	assert(pCache != NULL);
+
+	if(pCache[iEntry] == NULL)
+		return;
+
+	dprintf("Removed entry %d for file '%s' from dynaCache.\n", iEntry, pCache[iEntry]->pName);
+	close(pCache[iEntry]->fd);
+	free(pCache[iEntry]->pName);
+	pCache[iEntry]->pName = NULL;
+
+	if(bFreeEntry) {
+		free(pCache[iEntry]);
+		pCache[iEntry] = NULL;
+	}
+}
+
+
+/* This function frees the dynamic file name cache.
+ */
+static void dynaFileFreeCache(struct filed *f)
+{
+	register int i;
+	assert(f != NULL);
+
+	for(i = 0 ; i < f->f_un.f_file.iCurrCacheSize ; ++i) {
+		dynaFileDelCacheEntry(f->f_un.f_file.dynCache, i, 1);
+	}
+
+	free(f->f_un.f_file.dynCache);
+}
+
+
 /* This function handles dynamic file names. It generates a new one
  * based on the current message, checks if that file is already open
  * and, if not, does everything needed to switch to the new one.
  * Function returns 0 if all went well and non-zero otherwise.
+ * On successful return f->f_file must point to the correct file to
+ * be written.
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
 static int prepareDynFile(struct filed *f)
 {
 	unsigned char *newFileName;
+	time_t ttOldest; /* timestamp of oldest element */
+	int iOldest;
+	int i;
+	int iFirstFree;
+	dynaFileCacheEntry **pCache;
 
 	assert(f != NULL);
 	if((newFileName = tplToString((unsigned char *) f->f_un.f_file.f_fname, f->f_pMsg)) == NULL) {
 		/* memory shortage - there is nothing we can do to resolve it.
 		 * We silently ignore it, this is probably the best we can do.
 		 */
-		dprintf("prepareDynfile(): could not create file name, discarding this reques\n");
+		glblHadMemShortage = TRUE;
+		dprintf("prepareDynfile(): could not create file name, discarding this request\n");
 		return -1;
 	}
-	if(strcmp((char*) newFileName, (char*) f->f_un.f_file.pCurrName)) {
-		dprintf("Requested log file different from currently open one - switching.\n");
-		dprintf("Current file: '%s'\n", f->f_un.f_file.pCurrName);
-		dprintf("New file    : '%s'\n", newFileName);
-		close(f->f_file);
-		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-				f->f_un.f_file.fCreateMode);
-		free(f->f_un.f_file.pCurrName);
-		f->f_un.f_file.pCurrName = newFileName;
 
-	} else { /* we are all set, the log file is already open */
+	pCache = f->f_un.f_file.dynCache;
+
+	/* first check, if we still have the current file
+	 * I *hope* this will be a performance enhancement.
+	 */
+	if(   (f->f_un.f_file.iCurrElt != -1)
+	   && !strcmp((char*) newFileName,
+	              (char*) pCache[f->f_un.f_file.iCurrElt])) {
+	   	/* great, we are all set */
 		free(newFileName);
+		pCache[f->f_un.f_file.iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */
+		return 0;
 	}
-	
+
+	/* ok, no luck. Now let's search the table if we find a matching spot.
+	 * While doing so, we also prepare for creation of a new one.
+	 */
+	iFirstFree = -1; /* not yet found */
+	iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
+	ttOldest = time(NULL) + 1; /* there must always be an older one */
+	for(i = 0 ; i < f->f_un.f_file.iCurrCacheSize ; ++i) {
+		if(pCache[i] == NULL) {
+			if(iFirstFree == -1)
+				iFirstFree = i;
+		} else { /* got an element, let's see if it matches */
+			if(!strcmp((char*) newFileName, (char*) pCache[i]->pName)) {
+				/* we found our element! */
+				f->f_file = pCache[i]->fd;
+				f->f_un.f_file.iCurrElt = i;
+				free(newFileName);
+				pCache[i]->lastUsed = time(NULL); /* update timestamp for LRU */
+				return 0;
+			}
+			/* did not find it - so lets keep track of the counters for LRU */
+			if(pCache[i]->lastUsed < ttOldest) {
+				ttOldest = pCache[i]->lastUsed;
+				iOldest = i;
+				}
+		}
+	}
+
+	/* we have not found an entry */
+	if(iFirstFree == -1 && (f->f_un.f_file.iCurrCacheSize < f->f_un.f_file.iDynaFileCacheSize)) {
+		/* there is space left, so set it to that index */
+		iFirstFree = f->f_un.f_file.iCurrCacheSize++;
+	}
+
+	if(iFirstFree == -1) {
+		dynaFileDelCacheEntry(pCache, iOldest, 0);
+#if 0
+		dprintf("Removed entry %d for file '%s' - LRU\n",
+			iOldest, pCache[iOldest]->pName);
+		close(pCache[iOldest]->fd);
+		free(pCache[iOldest]->pName);
+		pCache[iOldest]->pName = NULL;
+#endif
+		iFirstFree = iOldest; /* this one *is* now free ;) */
+	} else {
+		/* we need to allocate memory for the cache structure */
+		pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry));
+		if(pCache[iFirstFree] == NULL) {
+			glblHadMemShortage = TRUE;
+			dprintf("prepareDynfile(): could not alloc mem, discarding this request\n");
+			free(newFileName);
+			return -1;
+		}
+	}
+
+	/* Ok, we finally can open the file */
+	f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+			f->f_un.f_file.fCreateMode);
+	/* TODO: check for error */
+	pCache[iFirstFree]->fd = f->f_file;
+	pCache[iFirstFree]->pName = newFileName;
+	pCache[iFirstFree]->lastUsed = time(NULL);
+	f->f_un.f_file.iCurrElt = iFirstFree;
+	dprintf("Added new entry %d for file cache, file '%s'.\n",
+		iFirstFree, newFileName);
+
 	return 0;
 }
 
@@ -6832,6 +6965,74 @@ static rsRetVal addAllowedSenderLine(char* pName, unsigned char** ppRestOfConfLi
 }
 
 
+/* skip over whitespace in a standard C string. The
+ * provided pointer is advanced to the first non-whitespace
+ * charater or the \0 byte, if there is none. It is never
+ * moved past the \0.
+ */
+static void skipWhiteSpace(unsigned char **pp)
+{
+	register unsigned char *p;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	p = *pp;
+	while(*p && isspace((int) *p))
+		++p;
+	*pp = p;
+}
+
+
+/* Parse and interpret a $DynaFileCacheSize line.
+ * Parameter **pp has a pointer to the current config line.
+ * On exit, it will be updated to the processed position.
+ * rgerhards, 2007-07-4 (happy independence day to my US friends!)
+ */
+static void doDynaFileCacheSizeLine(unsigned char **pp, enum eDirective eDir)
+{
+	unsigned char *p;
+	unsigned char errMsg[128];	/* for dynamic error messages */
+	int i;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	
+	skipWhiteSpace(pp); /* skip over any whitespace */
+	p = *pp;
+
+	if(!isdigit((int) *p)) {
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		         "DynaFileCacheSize invalid, value '%s'.", p);
+		errno = 0;
+		logerror((char*) errMsg);
+		return;
+	}
+
+	/* pull value */
+	for(i = 0 ; *p && isdigit((int) *p) ; ++p)
+		i = i * 10 + *p - '0';
+	
+	if(i < 1) {
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", i);
+		errno = 0;
+		logerror((char*) errMsg);
+		i = 1;
+	} else if(i > 10000) {
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		         "DynaFileCacheSize maximum is 10,000 (%d given), changed to 10,000.", i);
+		errno = 0;
+		logerror((char*) errMsg);
+		i = 10000;
+	}
+
+	iDynaFileCacheSize = i;
+	dprintf("DynaFileCacheSize changed to %d.\n", i);
+
+	*pp = p;
+}
+
 /* Parse and interpet a $FileCreateMode and $umask line. This function
  * pulls the creation mode and, if successful, stores it
  * into the global variable so that the rest of rsyslogd
@@ -6852,11 +7053,9 @@ static void doFileCreateModeUmaskLine(unsigned char **pp, enum eDirective eDir)
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
-	p = *pp;
 	
-	/* skip over any whitespace */
-	while(*p && isspace((int) *p))
-		++p;
+	skipWhiteSpace(pp); /* skip over any whitespace */
+	p = *pp;
 
 	/* for now, we parse and accept only octal numbers
 	 * Sequence of tests is important, we are using boolean shortcuts
@@ -6989,6 +7188,8 @@ void cfsysline(unsigned char *p)
 		doFileCreateModeUmaskLine(&p, DIR_FILECREATEMODE);
 	} else if(!strcasecmp((char*) szCmd, "umask")) { 
 		doFileCreateModeUmaskLine(&p, DIR_UMASK);
+	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
+		doDynaFileCacheSizeLine(&p, DIR_DYNAFILECACHESIZE);
 	} else { /* invalid command! */
 		char err[100];
 		snprintf(err, sizeof(err)/sizeof(char),
@@ -7003,8 +7204,7 @@ void cfsysline(unsigned char *p)
 	 * An exception, of course, are comments (starting with '#').
 	 * rgerhards, 2007-07-04
 	 */
-	while(*p && isspace(*p))
-		++p;	/* skip it */
+	skipWhiteSpace(&p);
 
 	if(*p && *p != '#') { /* we have a non-whitespace, so let's complain */
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
@@ -7041,9 +7241,7 @@ static void init()
 	eDfltHostnameCmpMode = HN_NO_COMP;
 
 	nextp = NULL;
-	/* TODO: This code must be re-activated, but of course with the proper
-	 * IPv6 way of doing things... rgerhards, 2007-06-27
-	 * I was told by an IPv6 expert that calling getservbyname() seems to be
+	/* I was told by an IPv6 expert that calling getservbyname() seems to be
 	 * still valid, at least for the use case we have. So I re-enabled that
 	 * code. rgerhards, 2007-07-02
 	 */
@@ -7101,7 +7299,10 @@ static void init()
 				case F_PIPE:
 				case F_TTY:
 				case F_CONSOLE:
-					close(f->f_file);
+					if(f->f_un.f_file.bDynamicName) {
+						dynaFileFreeCache(f);
+					} else 
+						close(f->f_file);
 				break;
                                 case F_FORW:
                                         freeaddrinfo(f->f_un.f_forw.f_addr);
@@ -7318,11 +7519,15 @@ static void init()
 				case F_PIPE:
 				case F_TTY:
 				case F_CONSOLE:
-					printf("%s", f->f_un.f_file.f_fname);
-					if (f->f_file == -1)
-						printf(" (unused)");
-					if(f->f_un.f_file.bDynamicName)
-						printf(" (dynamic name)");
+					if(f->f_un.f_file.bDynamicName) {
+						printf("[dynamic, template='%s', cache size=%d]",
+							f->f_un.f_file.f_fname,
+							f->f_un.f_file.iDynaFileCacheSize);
+					} else { /* regular file */
+						printf("%s", f->f_un.f_file.f_fname);
+						if (f->f_file == -1)
+							printf(" (unused)");
+					}
 					break;
 
 				case F_SHELL:
@@ -8213,19 +8418,16 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		if(syncfile)
 			f->f_flags |= SYNC_FILE;
 		f->f_un.f_file.bDynamicName = 1;
-		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
-		/* we now allocate a single-byte buffer to create an emtpy previous
-		 * file name. That way, we do not need to check for an uninitialized
-		 * variable when we do the comparison. This saves us some CPU cycles
-		 * on each message processed - and it also simplifies code. If we 
-		 * do not get memory, we more or less silently ignore the problem,
-		 * because we can't do anything against it right now.
+		f->f_un.f_file.iCurrElt = -1;		  /* no current element */
+		f->f_un.f_file.fCreateMode = fCreateMode; /* freeze current setting */
+		f->f_un.f_file.iDynaFileCacheSize = iDynaFileCacheSize; /* freeze current setting */
+		/* we now allocate the cache table. We use calloc() intentionally, as we 
+		 * need all pointers to be initialized to NULL pointers.
 		 */
-		if((f->f_un.f_file.pCurrName = malloc(sizeof(char))) == NULL) {
+		if((f->f_un.f_file.dynCache = (dynaFileCacheEntry**)
+		    calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*))) == NULL) {
 			f->f_type = F_UNUSED;
-			dprintf("Could not allocate memory for pCurrName - selector disabled.\n");
-		} else {
-			*f->f_un.f_file.pCurrName = '\0';
+			dprintf("Could not allocate memory for dynaFileCache - selector disabled.\n");
 		}
 		break;
 
