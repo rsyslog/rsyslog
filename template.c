@@ -604,19 +604,19 @@ void tplDeleteAll(void)
 			/*dprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
 			switch(pTpeDel->eEntryType) {
 			case UNDEFINED:
-				dprintf("(UNDEFINED)");
+				/*dprintf("(UNDEFINED)");*/
 				break;
 			case CONSTANT:
-				dprintf("(CONSTANT), value: '%s'",
-					pTpeDel->data.constant.pConstant);
+				/*dprintf("(CONSTANT), value: '%s'",
+					pTpeDel->data.constant.pConstant);*/
 				free(pTpeDel->data.constant.pConstant);
 				break;
 			case FIELD:
-				dprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);
+				/*dprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
 				free(pTpeDel->data.field.pPropRepl);
 				break;
 			}
-			dprintf("\n");
+			/*dprintf("\n");*/
 			free(pTpeDel);
 		}
 		pTplDel = pTpl;
