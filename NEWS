@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 1.15.1 (RGer), 2007-07-0?
+- fixed a bug that caused a dynaFile selector to stall when there was
+  an open error with one file 
+---------------------------------------------------------------------------
 Version 1.15.0 (RGer), 2007-07-05
 - added ability to dynamically generate file names based on templates
   and thus properties. This was a much-requested feature. It makes

@@ -4197,7 +4197,7 @@ static int *create_udp_socket()
 
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
  * it is never called once rsyslogd is running (not even when HUPed). This code
- * contains some exist, but they are considered safe because they only happen
+ * contains some exits, but they are considered safe because they only happen
  * during startup. Anyhow, when we review the code here, we might want to
  * reconsider the exit()s.
  */
@@ -4545,6 +4545,7 @@ static void logmsgInternal(int pri, char * msg, char* from, int flags)
 		 * reason - that would be counter-productive. So we ignore the
 		 * to be logged message.
 		 */
+		glblHadMemShortage = 1;
 		dprintf("Memory shortage in logmsgInternal: could not construct Msg object.\n");
 		return;
 	}
@@ -5881,10 +5882,17 @@ static void dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int b
 	if(pCache[iEntry] == NULL)
 		return;
 
-	dprintf("Removed entry %d for file '%s' from dynaCache.\n", iEntry, pCache[iEntry]->pName);
-	close(pCache[iEntry]->fd);
-	free(pCache[iEntry]->pName);
-	pCache[iEntry]->pName = NULL;
+	dprintf("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
+		pCache[iEntry]->pName == NULL ? "[OPEN FAILED]" : (char*)pCache[iEntry]->pName);
+	/* if the name is NULL, this is an improperly initilized entry which
+	 * needs to be discarded. In this case, neither the file is to be closed
+	 * not the name to be freed.
+	 */
+	if(pCache[iEntry]->pName != NULL) {
+		close(pCache[iEntry]->fd);
+		free(pCache[iEntry]->pName);
+		pCache[iEntry]->pName = NULL;
+	}
 
 	if(bFreeEntry) {
 		free(pCache[iEntry]);
@@ -5984,13 +5992,6 @@ static int prepareDynFile(struct filed *f)
 
 	if(iFirstFree == -1) {
 		dynaFileDelCacheEntry(pCache, iOldest, 0);
-#if 0
-		dprintf("Removed entry %d for file '%s' - LRU\n",
-			iOldest, pCache[iOldest]->pName);
-		close(pCache[iOldest]->fd);
-		free(pCache[iOldest]->pName);
-		pCache[iOldest]->pName = NULL;
-#endif
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
 		/* we need to allocate memory for the cache structure */
@@ -6006,7 +6007,20 @@ static int prepareDynFile(struct filed *f)
 	/* Ok, we finally can open the file */
 	f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 			f->f_un.f_file.fCreateMode);
-	/* TODO: check for error */
+	if(f->f_file == -1) {
+		/* do not report anything if the message is an internally-generated
+		 * message. Otherwise, we could run into a never-ending loop. The bad
+		 * news is that we also loose errors on startup messages, but so it is.
+		 */
+		if(f->f_pMsg->msgFlags & INTERNAL_MSG)
+			dprintf("Could not open dynaFile, discarding message\n");
+		else
+			logerrorSz("Could not open dynamic file '%s' - discarding message", (char*)newFileName);
+		free(newFileName);
+		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
+		return -1;
+	}
+
 	pCache[iFirstFree]->fd = f->f_file;
 	pCache[iFirstFree]->pName = newFileName;
 	pCache[iFirstFree]->lastUsed = time(NULL);
@@ -6031,9 +6045,10 @@ void writeFile(struct filed *f)
 	/* first check if we have a dynamic file name and, if so,
 	 * check if it still is ok or a new file needs to be created
 	 */
-	if(f->f_un.f_file.bDynamicName)
+	if(f->f_un.f_file.bDynamicName) {
 		if(prepareDynFile(f) != 0)
 			return;
+	}
 
 	/* create the message based on format specified */
 	iovCreate(f);
@@ -6336,8 +6351,10 @@ void fprintlog(register struct filed *f)
 		dprintf(" (%s)\n", f->f_un.f_file.f_fname);
 		/* TODO: check if we need f->f_time = now;*/
 		/* f->f_file == -1 is an indicator that the we couldn't
-		   open the file at startup. */
-		if (f->f_file != -1)
+		 * open the file at startup. For dynaFiles, this is ok,
+		 * all others are doomed.
+		 */
+		if(f->f_un.f_file.bDynamicName || (f->f_file != -1))
 			writeFile(f);
 		break;
 
@@ -6876,8 +6893,9 @@ static void die(int sig)
 		free(consfile.f_bMustBeFreed);
 
 #ifndef TESTING
-	(void) remove_pid(PidFile);
+	remove_pid(PidFile);
 #endif
+	dprintf("Clean shutdown completed, bye.\n");
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 
