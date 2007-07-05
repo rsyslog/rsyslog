@@ -694,7 +694,8 @@ struct filed {
 #			endif
 		} f_forw;		/* forwarding address */
 		struct {
-			char	f_fname[MAXFNAME];
+			char	f_fname[MAXFNAME];/* file or template name (dispaly only) */
+			struct template *pTpl;	/* pointer to template object */
 			char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
 			int	fCreateMode;	/* file creation mode for open() */
 			int	iCurrElt;	/* currently active cache element (-1 = none) */
@@ -4721,7 +4722,7 @@ static void processMsg(struct msg *pMsg)
 			memset(&emergfile, 0, sizeof(emergfile));
 			f = &emergfile;
 			emergfile.f_type = F_TTY;
-			(void) strcpy(emergfile.f_un.f_file.f_fname, ttyname(0));
+			strcpy(emergfile.f_un.f_file.f_fname, ttyname(0));
 			cflineSetTemplateAndIOV(&emergfile, " TradFmt");
 			f->f_file = open(ttyname(0), O_WRONLY|O_NOCTTY);
 
@@ -5749,7 +5750,7 @@ void  iovCreate(struct filed *f)
  * to this module). I have placed it next to the iov*() functions, as
  * it is somewhat similiar in what it does.
  *
- * The function takes a template name and a pointer to a msg object.
+ * The function takes a pointer to a template and a pointer to a msg object.
  * It the creates a string based on the template definition. A pointer
  * to that string is returned to the caller. The caller MUST FREE that
  * pointer when it is no longer needed. If the function fails, NULL
@@ -5760,9 +5761,8 @@ void  iovCreate(struct filed *f)
  * worse. So we prefer to let the caller deal with it.
  * rgerhards, 2007-07-03
  */
-static unsigned char *tplToString(unsigned char *tplName, struct msg *pMsg)
+static unsigned char *tplToString(struct template *pTpl, struct msg *pMsg)
 {
-	struct template *pTpl;
 	struct templateEntry *pTpe;
 	rsCStrObj *pCStr;
 	unsigned short bMustBeFreed;
@@ -5770,13 +5770,10 @@ static unsigned char *tplToString(unsigned char *tplName, struct msg *pMsg)
 	size_t iLenVal;
 	rsRetVal iRet;
 
-	assert(tplName != NULL);
+	assert(pTpl != NULL);
 	assert(pMsg != NULL);
 
-	if((pTpl = tplFind((char*)tplName, strlen((char*) tplName))) == NULL)
-		return NULL;
-
-	/* we now loop through the template. We obtain one value
+	/* loop through the template. We obtain one value
 	 * and copy it over to our dynamic string buffer. Then, we
 	 * free the obtained value (if requested). We continue this
 	 * loop until we got hold of all values.
@@ -5934,7 +5931,7 @@ static int prepareDynFile(struct filed *f)
 	dynaFileCacheEntry **pCache;
 
 	assert(f != NULL);
-	if((newFileName = tplToString((unsigned char *) f->f_un.f_file.f_fname, f->f_pMsg)) == NULL) {
+	if((newFileName = tplToString(f->f_un.f_file.pTpl, f->f_pMsg)) == NULL) {
 		/* memory shortage - there is nothing we can do to resolve it.
 		 * We silently ignore it, this is probably the best we can do.
 		 */
@@ -8426,6 +8423,12 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		   */
 		++p; /* eat '?' */
 		cflineParseFileName(f, p);
+		f->f_un.f_file.pTpl = tplFind((char*)f->f_un.f_file.f_fname,
+					       strlen((char*) f->f_un.f_file.f_fname));
+		if(f->f_un.f_file.pTpl == NULL) {
+			logerrorSz("Template '%s' not found - dynaFile deactivated.", f->f_un.f_file.f_fname);
+			f->f_type = F_UNUSED; /* that's it... :( */
+		}
 		if(f->f_type == F_UNUSED)
 			/* safety measure to make sure we have a valid
 			 * selector line before we continue down below.
