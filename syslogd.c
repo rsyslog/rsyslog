@@ -1239,7 +1239,7 @@ static void configureTCPListen(char *optarg)
 
 	/* extract port */
 	i = 0;
-	while(isdigit(*pArg)) {
+	while(isdigit((int) *pArg)) {
 		i = i * 10 + *pArg++ - '0';
 	}
 
@@ -1254,11 +1254,11 @@ static void configureTCPListen(char *optarg)
 	if(*pArg == ','){
 		*pArg = '\0'; /* hack: terminates port (see a few lines above, same buffer!) */
 		++pArg;
-		while(isspace(*pArg))
+		while(isspace((int) *pArg))
 			++pArg;
 		/* ok, here should be the number... */
 		i = 0;
-		while(isdigit(*pArg)) {
+		while(isdigit((int) *pArg)) {
 			i = i * 10 + *pArg++ - '0';
 		}
 		if(i > 1)
@@ -1725,7 +1725,7 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			 * comments with "IETF20061218".
 			 * rgerhards, 2006-12-19
 			 */
-			if(isdigit(*pData)) {
+			if(isdigit((int) *pData)) {
 				int iCnt;	/* the frame count specified */
 				pTCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_COUNTING;
 				/* in this mode, we have OCTET-COUNT SP MSG - so we now need
@@ -1734,7 +1734,7 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 				 */
 				iCnt = 0;
 				/* IETF20061218 int iNbrOctets = 0; / * number of octets already consumed */
-				while(isdigit(*pData)) {
+				while(isdigit((int) *pData)) {
 					iCnt = iCnt * 10 + *pData - '0';
 					/* IETF20061218 ++iNbrOctets; */
 					++pData;
@@ -2240,7 +2240,7 @@ static int srSLMGParseInt32(char** ppsz)
 	int i;
 
 	i = 0;
-	while(isdigit(**ppsz))
+	while(isdigit((int) **ppsz))
 	{
 		i = i * 10 + **ppsz - '0';
 		++(*ppsz);
@@ -3426,7 +3426,7 @@ static rsRetVal aquireProgramName(struct msg *pM)
 			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
 		rsCStrSetAllocIncrement(pM->pCSProgName, 33);
 		for(  i = 0
-		    ; (i < pM->iLenTAG) && isprint(pM->pszTAG[i])
+		    ; (i < pM->iLenTAG) && isprint((int) pM->pszTAG[i])
 		      && (pM->pszTAG[i] != '\0') && (pM->pszTAG[i] != ':')
 		      && (pM->pszTAG[i] != '[')  && (pM->pszTAG[i] != '/')
 		    ; ++i) {
@@ -3902,7 +3902,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		char *pDst = pRes;
 
 		while(*pSrc) {
-			if(!iscntrl(*pSrc))
+			if(!iscntrl((int) *pSrc))
 				*pDst++ = *pSrc;
 			++pSrc;
 		}
@@ -3910,7 +3910,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 	} else if(pTpe->data.field.options.bSpaceCC) {
 		char *pBuf = pRes;
 		while(*pBuf) {
-			if(iscntrl(*pBuf))
+			if(iscntrl((int) *pBuf))
 				*pBuf = ' ';
 			++pBuf;
 		}
@@ -3926,7 +3926,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 
 		for(pBuf = pRes ; *pBuf ; ++pBuf) {
 			++iLen;
-			if(iscntrl(*pBuf))
+			if(iscntrl((int) *pBuf))
 				++iNumCC;
 		}
 
@@ -3945,7 +3945,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 				return "**OUT OF MEMORY**";
 			}
 			while(*pRes) {
-				if(iscntrl(*pRes)) {
+				if(iscntrl((int) *pRes)) {
 					snprintf(szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
 					for(i = 0 ; i < 4 ; ++i)
 						*pBuf++ = szCCEsc[i];
@@ -4448,7 +4448,7 @@ void printline(char *hname, char *msg, int bParseHost)
 	p = msg;
 	if (*p == '<') {
 		pri = 0;
-		while (isdigit(*++p))
+		while (isdigit((int) *++p))
 		{
 		   pri = 10 * pri + (*p - '0');
 		}
@@ -6633,7 +6633,7 @@ static char *cvthname(struct sockaddr_storage *f)
 	/* Convert to lower case, just like LocalDomain above
 	 */
 	for (p = (char *) hname; *p ; p++)
-		if (isupper(*p))
+		if (isupper((int) *p))
 			*p = tolower(*p);
 
 	/* Notice that the string still contains the fqdn, but your
@@ -7383,7 +7383,7 @@ static void init()
 			 * check for end-of-section, comments, strip off trailing
 			 * spaces and newline character.
 			 */
-			for (p = cline; isspace(*p); ++p) /*SKIP SPACES*/;
+			for (p = cline; isspace((int) *p); ++p) /*SKIP SPACES*/;
 			if (*p == '\0' || *p == '#')
 				continue;
 
@@ -7394,7 +7394,7 @@ static void init()
 	#if CONT_LINE
 			strcpy(cline, p);
 	#endif
-			for (p = strchr(cline, '\0'); isspace(*--p););
+			for (p = strchr(cline, '\0'); isspace((int) *--p););
 	#if CONT_LINE
 			if (*p == '\\') {
 				if ((p - cbuf) > BUFSIZ - 30) {
@@ -7654,7 +7654,7 @@ static void cflineParseTemplateName(struct filed *f, unsigned char** pp,
 	p =*pp;
 
 	/* Just as a general precaution, we skip whitespace.  */
-	while(*p && isspace(*p))
+	while(*p && isspace((int) *p))
 		++p;
 
 	i = 1; /* we start at 1 so that we reserve space for the '\0'! */
@@ -7697,7 +7697,7 @@ static void cflineParseFileName(struct filed *f, unsigned char* p)
 	/* got the file name - now let's look for the template to use
 	 * Just as a general precaution, we skip whitespace.
 	 */
-	while(*p && isspace(*p))
+	while(*p && isspace((int) *p))
 		++p;
 	if(*p == ';')
 		++p; /* eat it */
@@ -7782,7 +7782,7 @@ static void cflineParseOutchannel(struct filed *f, unsigned char* p)
 	/* back to the input string - now let's look for the template to use
 	 * Just as a general precaution, we skip whitespace.
 	 */
-	while(*p && isspace(*p))
+	while(*p && isspace((int) *p))
 		++p;
 	if(*p == ';')
 		++p; /* eat it */
@@ -8275,7 +8275,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 				if(*p == 'z') { /* compression */
 #					ifdef USE_NETZIP
 					++p; /* eat */
-					if(isdigit(*p)) {
+					if(isdigit((int) *p)) {
 						int iLevel;
 						iLevel = *p - '0';
 						++p; /* eat */
@@ -8325,7 +8325,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 
 			*p = '\0'; /* trick to obtain hostname (later)! */
 			tmp = ++p;
-			for( ; *p && isdigit(*p) ; ++p, ++i)
+			for( ; *p && isdigit((int) *p) ; ++p, ++i)
 				/* SKIP AND COUNT */;
 			f->f_un.f_forw.port = malloc(i + 1);
 			if(f->f_un.f_forw.port == NULL) {
@@ -8343,7 +8343,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		/* now skip to template */
 		bErr = 0;
 		while(*p && *p != ';') {
-			if(*p && *p != ';' && !isspace(*p)) {
+			if(*p && *p != ';' && !isspace((int) *p)) {
 				if(bErr == 0) { /* only 1 error msg! */
 					bErr = 1;
 					errno = 0;
@@ -8665,7 +8665,7 @@ int decode(unsigned char *name, struct code *codetab)
 	assert(codetab != NULL);
 
 	dprintf ("symbolic name: %s", name);
-	if (isdigit(*name))
+	if (isdigit((int) *name))
 	{
 		dprintf ("\n");
 		return (atoi((char*) name));
@@ -9667,7 +9667,7 @@ int main(int argc, char **argv)
 	/* Convert to lower case to recognize the correct domain laterly
 	 */
 	for (p = (char *)LocalDomain; *p ; p++)
-		if (isupper(*p))
+		if (isupper((int) *p))
 			*p = tolower(*p);
 
 	(void) signal(SIGTERM, doDie);
