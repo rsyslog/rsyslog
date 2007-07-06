@@ -635,18 +635,6 @@ struct filed {
 	short	f_file;			/* file descriptor */
 	off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
 	char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
-#ifdef	WITH_DB
-	MYSQL	*f_hmysql;		/* handle to MySQL */
-	/* TODO: optimize memory layout & consumption; rgerhards 2004-11-19 */
-	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
-	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
-	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
-	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
-	time_t	f_timeResumeOnError;		/* 0 if no error is present,	
-						   otherwise is it set to the
-						   time a retrail should be attampt */
-	int	f_iLastDBErrNo;			/* Last db error number. 0 = no error */
-#endif
 	time_t	f_time;			/* time this was last written */
 	/* filter properties */
 	enum {
@@ -672,6 +660,19 @@ struct filed {
 	} f_filterData;
 	union {
 		char	f_uname[MAXUNAMES][UNAMESZ+1];
+#ifdef	WITH_DB
+		struct {
+			MYSQL	*f_hmysql;		/* handle to MySQL */
+			char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
+			char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
+			char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
+			char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
+			time_t	f_timeResumeOnError;		/* 0 if no error is present,	
+								   otherwise is it set to the
+								   time a retrail should be attampt */
+			int	f_iLastDBErrNo;			/* Last db error number. 0 = no error */
+		} f_mysql;
+#endif
 		struct {
 			char	f_hname[MAXHOSTNAMELEN+1];
 			struct addrinfo *f_addr;
@@ -8539,19 +8540,19 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		/* Now we read the MySQL connection properties 
 		 * and verify that the properties are valid.
 		 */
-		if(getSubString(&p, f->f_dbsrv, MAXHOSTNAMELEN+1, ','))
+		if(getSubString(&p, f->f_un.f_mysql.f_dbsrv, MAXHOSTNAMELEN+1, ','))
 			iMySQLPropErr++;
-		if(*f->f_dbsrv == '\0')
+		if(*f->f_un.f_mysql.f_dbsrv == '\0')
 			iMySQLPropErr++;
-		if(getSubString(&p, f->f_dbname, _DB_MAXDBLEN+1, ','))
+		if(getSubString(&p, f->f_un.f_mysql.f_dbname, _DB_MAXDBLEN+1, ','))
 			iMySQLPropErr++;
-		if(*f->f_dbname == '\0')
+		if(*f->f_un.f_mysql.f_dbname == '\0')
 			iMySQLPropErr++;
-		if(getSubString(&p, f->f_dbuid, _DB_MAXUNAMELEN+1, ','))
+		if(getSubString(&p, f->f_un.f_mysql.f_dbuid, _DB_MAXUNAMELEN+1, ','))
 			iMySQLPropErr++;
-		if(*f->f_dbuid == '\0')
+		if(*f->f_un.f_mysql.f_dbuid == '\0')
 			iMySQLPropErr++;
-		if(getSubString(&p, f->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
+		if(getSubString(&p, f->f_un.f_mysql.f_dbpwd, _DB_MAXPWDLEN+1, ';'))
 			iMySQLPropErr++;
 		if(*p == '\n' || *p == '\0') { 
 			/* assign default format if none given! */
@@ -8745,8 +8746,8 @@ static void initMySQL(register struct filed *f)
 	if (checkDBErrorState(f))
 		return;
 	
-	f->f_hmysql = mysql_init(NULL);
-	if(f->f_hmysql == NULL) {
+	f->f_un.f_mysql.f_hmysql = mysql_init(NULL);
+	if(f->f_un.f_mysql.f_hmysql == NULL) {
 		logerror("can not initialize MySQL handle - ignoring this action");
 		/* The next statement  causes a redundant message, but it is the
 		 * best thing we can do in this situation. -- rgerhards, 2007-01-30
@@ -8755,18 +8756,18 @@ static void initMySQL(register struct filed *f)
 	} else { /* we could get the handle, now on with work... */
 		do {
 			/* Connect to database */
-			if (!mysql_real_connect(f->f_hmysql, f->f_dbsrv, f->f_dbuid,
-			                        f->f_dbpwd, f->f_dbname, 0, NULL, 0)) {
+			if (!mysql_real_connect(f->f_un.f_mysql.f_hmysql, f->f_un.f_mysql.f_dbsrv, f->f_un.f_mysql.f_dbuid,
+			                        f->f_un.f_mysql.f_dbpwd, f->f_un.f_mysql.f_dbname, 0, NULL, 0)) {
 				/* if also the second attempt failed
 				   we call the error handler */
 				if(iCounter)
 					DBErrorHandler(f);
 			} else {
-				f->f_timeResumeOnError = 0; /* We have a working db connection */
+				f->f_un.f_mysql.f_timeResumeOnError = 0; /* We have a working db connection */
 				dprintf("connected successfully to db\n");
 			}
 			iCounter++;
-		} while (mysql_errno(f->f_hmysql) && iCounter<2);
+		} while (mysql_errno(f->f_un.f_mysql.f_hmysql) && iCounter<2);
 	}
 }
 
@@ -8779,8 +8780,8 @@ static void closeMySQL(register struct filed *f)
 {
 	assert(f != NULL);
 	dprintf("in closeMySQL\n");
-	if(f->f_hmysql != NULL)	/* just to be on the safe side... */
-		mysql_close(f->f_hmysql);	
+	if(f->f_un.f_mysql.f_hmysql != NULL)	/* just to be on the safe side... */
+		mysql_close(f->f_un.f_mysql.f_hmysql);	
 }
 
 /*
@@ -8820,7 +8821,7 @@ static void writeMySQL(register struct filed *f)
 	 */
 	do {
 		/* query */
-		if(mysql_query(f->f_hmysql, psz)) {
+		if(mysql_query(f->f_un.f_mysql.f_hmysql, psz)) {
 			/* if the second attempt fails
 			   we call the error handler */
 			if(iCounter)
@@ -8830,7 +8831,7 @@ static void writeMySQL(register struct filed *f)
 			/* dprintf("db insert sucessfully\n"); */
 		}
 		iCounter++;
-	} while (mysql_errno(f->f_hmysql) && iCounter<2);
+	} while (mysql_errno(f->f_un.f_mysql.f_hmysql) && iCounter<2);
 }
 
 /**
@@ -8872,19 +8873,19 @@ static void DBErrorHandler(register struct filed *f)
 	 *
 	 * Think about different "delay" for different errors!
 	 */
-	if(f->f_hmysql == NULL) {
+	if(f->f_un.f_mysql.f_hmysql == NULL) {
 		logerror("unknown DB error occured - called error handler with NULL MySQL handle.");
 	} else { /* we can ask mysql for the error description... */
 		errno = 0;
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
-			"db error (%d): %s\n", mysql_errno(f->f_hmysql),
-			mysql_error(f->f_hmysql));
-		f->f_iLastDBErrNo = mysql_errno(f->f_hmysql);
+			"db error (%d): %s\n", mysql_errno(f->f_un.f_mysql.f_hmysql),
+			mysql_error(f->f_un.f_mysql.f_hmysql));
+		f->f_un.f_mysql.f_iLastDBErrNo = mysql_errno(f->f_un.f_mysql.f_hmysql);
 		logerror(errMsg);
 	}
 		
 	/* Enable "delay" */
-	f->f_timeResumeOnError = time(&f->f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
+	f->f_un.f_mysql.f_timeResumeOnError = time(&f->f_un.f_mysql.f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
 }
 
 /**
@@ -8903,14 +8904,14 @@ int checkDBErrorState(register struct filed *f)
 
 	/* If timeResumeOnError == 0 no error occured, 
 	   we can return with 0 (no error) */
-	if (f->f_timeResumeOnError == 0)
+	if (f->f_un.f_mysql.f_timeResumeOnError == 0)
 		return 0;
 	
 	(void) time(&now);
 	/* Now we know an error occured. We check timeResumeOnError
 	   if we can process. If we have not reach the resume time
 	   yet, we return an error status. */  
-	if (f->f_timeResumeOnError > now)
+	if (f->f_un.f_mysql.f_timeResumeOnError > now)
 	{
 		/* dprintf("Wait time is not over yet.\n"); */
 		return 1;
@@ -8935,8 +8936,8 @@ int checkDBErrorState(register struct filed *f)
 	  * I added this comment (and did not remove Michaels) just so
 	  * that we all know what we are looking for.
 	  */
-	f->f_timeResumeOnError = 0;
-	f->f_iLastDBErrNo = 0; 
+	f->f_un.f_mysql.f_timeResumeOnError = 0;
+	f->f_un.f_mysql.f_iLastDBErrNo = 0; 
 	reInitMySQL(f);
 	return 0;
 
