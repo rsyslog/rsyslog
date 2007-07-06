@@ -15,7 +15,8 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 
  <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a><li>support for (plain) tcp 
 	based syslog - much better reliability<li>support for sending and receiving 
-	compressed syslog messages<li>support for receiving messages via 	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">	RFC 3195</a> delivery<li>control of log output format, 
+	compressed syslog messages<li>support for receiving messages via 	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">	RFC 3195</a> delivery<li>ability to generate file names (log targets) 
+	dynamically, based on many different properties<li>control of log output format, 
 	including ability to present channel and priority as visible log data<li>good timestamp format control; at a minimum, ISO 8601/RFC 3339
  second-resolution UTC zone<li>ability to reformat message contents and work with substrings<li>support for 
 	log files larger than 2gb<li>support for file size limitation and automatic 
@@ -36,8 +37,20 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 	support for IPv6</ul>
 <p>&nbsp;</p>
 <h2>Upcoming Features</h2>
+<p>The list below is something like a repository of ideas we'd like to 
+implement. Features on this list are typically NOT scheduled for immediate 
+inclusion. We maintain a
+<a href="http://sourceforge.net/tracker/?group_id=123448&atid=696555">feature 
+request tracker at sourceforge.net</a>. This tracker has things typically within 
+reach of implementation. Users are encouraged to submit feature requests there 
+(or via our forums). If we like them but they look quite long-lived (aka &quot;not 
+soon to be implemented&quot;), they will possibly be migrated to this list here and 
+at some time moved back to the sourceforge tracker.</p>
 <ul>
- <li>support for native SSL enryption of plain tcp syslog sessions. This will 
+ <li>create a plug-in-interface<li>implement native email-functionality in 
+	selector (probably best done as a plug-in)<li>port it to more *nix variants 
+	(eg AIX and HP UX) - this needs volunteers with access to those machines and 
+	knowledge<li>support for native SSL enryption of plain tcp syslog sessions. This will 
 	most probably happen based on syslog-transport-tls.<li>even more enhanced multi-threading<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
 	partly added. So far, this seems sufficient so that there is no urgent<li>support for	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - this is currently unlikely to happen, because there is no real 
 	demand for it. Any work on RFC 3195 has been suspend until we see some real 
