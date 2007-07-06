@@ -2,7 +2,7 @@
 Version 1.0.5 (RGer), 2007-07-06
 - fixed a bug in the Debian sample startup script - it caused rsyslogd
   to listen to remote requests, which it shouldn't by default
-- fixed a bug with the -o option - thanks to  Jonas Eriksson for the patch
+- fixed a bug with the -o option - thanks to Jonas Eriksson for the patch
 ---------------------------------------------------------------------------
 Version 1.0.4 (RGer), 2006-02-01
 - a small but important fix: the tcp receiver had two forgotten printf's
