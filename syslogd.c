@@ -6140,8 +6140,8 @@ void fprintlog(register struct filed *f)
 	unsigned char *exec; /* for shell support */
 	rsCStrObj *pCSCmdLine; /* for shell support: command to execute */
 	rsRetVal iRet;
-#ifdef SYSLOG_INET
 	register int l;
+#ifdef SYSLOG_INET
 	int e, i, lsent = 0;
 	int bSendSuccess;
 	time_t fwd_suspend;
@@ -6860,6 +6860,7 @@ static void die(int sig)
 	
 	/* now clean up the listener part */
 
+#ifdef SYSLOG_INET
 	/* Close the UNIX sockets. */
         for (i = 0; i < nfunix; i++)
 		if (funix[i] != -1)
@@ -6871,6 +6872,7 @@ static void die(int sig)
 	if(*sockTCPLstn) {
 		deinit_tcp_listener();
 	}
+#endif
 
 	/* Clean-up files. */
         for (i = 0; i < nfunix; i++)
@@ -6916,12 +6918,14 @@ static void doexit(int sig)
  */
 static rsRetVal addAllowedSenderLine(char* pName, unsigned char** ppRestOfConfLine)
 {
+#ifdef SYSLOG_INET
 	struct AllowedSenders **ppRoot;
 	struct AllowedSenders **ppLast;
 	rsParsObj *pPars;
 	rsRetVal iRet;
 	unsigned long uIP;
 	int iBits;
+#endif
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
@@ -6931,6 +6935,7 @@ static rsRetVal addAllowedSenderLine(char* pName, unsigned char** ppRestOfConfLi
 	errno = 0;
 	logerror("config file contains allowed sender list, but rsyslogd "
 	         "compiled without Internet support - line ignored");
+	return RS_RET_ERR;
 #else
 	if(!strcasecmp(pName, "udp")) {
 		ppRoot = &pAllowedSenders_UDP;
@@ -7585,8 +7590,13 @@ static void init()
 		 "udpPort=\"%s\" tcpReception=\"%s\" tcpPort=\"%s\"]" \
 		 " restart",
 		 (int) myPid,
+#ifdef	SYSLOG_INET
 		 AcceptRemote ? "Yes" : "No", LogPort,
-		 bEnableTCP   ? "Yes" : "No", TCPLstnPort);
+		 bEnableTCP   ? "Yes" : "No", TCPLstnPort
+#else
+		"No", "0", "No", "0"
+#endif 	/* #ifdef SYSLOG_INET */
+		);
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, LocalHostName, ADDDATE);
 
 	(void) signal(SIGHUP, sighup_handler);
@@ -9031,30 +9041,29 @@ static void debugListenInfo(int fd, char *type)
 
 static void mainloop(void)
 {
-	int i;
 	fd_set readfds;
+	int i;
 #ifdef  SYSLOG_INET
 	fd_set writefds;
 	struct filed *f;
-#endif
-#ifdef	BSD
-#ifdef	USE_PTHREADS
-	struct timeval tvSelectTimeout;
-#endif
-#endif
-
-#ifndef TESTING
-	int	fd;
-#ifdef  SYSLOG_INET
+#  ifndef TESTING
 	struct sockaddr_storage frominet;
 	socklen_t socklen;
 	char *from;
 	int iTCPSess;
 	ssize_t l;
+#  endif /* #ifndef TESTING */
+#endif	/* #ifdef SYSLOG_INET */
+#ifdef	BSD
+#ifdef	USE_PTHREADS
+	struct timeval tvSelectTimeout;
 #endif
 #endif
-
+#ifndef TESTING
+	int	fd;
+#endif /* #ifndef TESTING */
 	char line[MAXLINE +1];
+
 	int maxfds;
 
 	/* --------------------- Main loop begins here. ----------------------------------------- */
@@ -9509,7 +9518,11 @@ int main(int argc, char **argv)
 			StripDomains = crunch_list(optarg);
 			break;
 		case 't':		/* enable tcp logging */
+#ifdef SYSLOG_INET
 			configureTCPListen(optarg);
+#else
+			fprintf(stderr, "rsyslogd: -t not valid - not compiled for network support");
+#endif
 			break;
 		case 'u':		/* misc user settings */
 			if(atoi(optarg) == 1)
