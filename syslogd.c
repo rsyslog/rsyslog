@@ -9417,11 +9417,7 @@ static void mainloop(void)
 int main(int argc, char **argv)
 {	register int i;
 	register char *p;
-#if !defined(__GLIBC__)
 	int num_fds;
-#else /* __GLIBC__ */
-	int num_fds;
-#endif /* __GLIBC__ */
 
 #ifdef	MTRACE
 	mtrace(); /* this is a debug aid for leak detection - either remove
