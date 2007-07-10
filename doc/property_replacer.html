@@ -56,9 +56,18 @@ only seconds)</td></tr>
 	draft draft-ietf-syslog-protocol</td></tr>
 <tr><td><b>PROCID</b></td><td>The contents of the PROCID field from IETF draft 
 	draft-ietf-syslog-protocol</td></tr>
-<tr><td><b>MSGID</b></td><td>The contents of the MSGID field from IETF draft 
+<tr><td height="24"><b>MSGID</b></td><td height="24">The contents of the MSGID field from IETF draft 
 	draft-ietf-syslog-protocol</td></tr>
+<tr><td><b>$NOW</b></td><td>The current date stamp in the format YYYY-MM-DD</td></tr>
+<tr><td><b>$YEAR</b></td><td>The current year (4-digit)</td></tr>
+<tr><td><b>$MONTH</b></td><td>The current month (2-digit)</td></tr>
+<tr><td><b>$DAY</b></td><td>The current day of the month (2-digit)</td></tr>
+<tr><td><b>$HOUR</b></td><td>The current hour in military (24 hour) time 
+	(2-digit)</td></tr>
+<tr><td><b>$MINUTE</b></td><td>The current minute (2-digit)</td></tr>
 </table>
+<p>Properties starting with a $-sign are so-called system properties. These do 
+NOT stem from the message but are rather internally-generated.</p>
 <h2>Character Positions</h2>
 <p><b><code>FromChar</code></b> and <b><code>toChar</code></b> are used to build substrings. They specify the offset within 
 the string that should be copied. Offset counting starts at 1, so if you need to 
