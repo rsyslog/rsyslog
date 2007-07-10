@@ -137,7 +137,8 @@
 #define	MAXLINE		2048		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define DEFSPRI		(LOG_KERN|LOG_CRIT)
-#define TIMERINTVL	30		/* interval for checking flush, mark */
+//#define TIMERINTVL	30		/* interval for checking flush, mark */
+#define TIMERINTVL	20		/* interval for checking flush, mark */
 
 #define CONT_LINE	1		/* Allow continuation lines */
 
@@ -298,6 +299,7 @@ CODE facilitynames[] =
 
 #include "stringbuf.h"
 #include "parse.h"
+#include "srUtils.h"
 
 #ifdef USE_PTHREADS
 #include <pthread.h>
@@ -552,27 +554,27 @@ struct msg {
 	    * resolve all these issues... rgerhards, 2005-10-06
 	    */
 	short	iSeverity;	/* the severity 0..7 */
-	char *pszSeverity;	/* severity as string... */
+	uchar *pszSeverity;	/* severity as string... */
 	int iLenSeverity;	/* ... and its length. */
 	int	iFacility;	/* Facility code (up to 2^32-1) */
-	char *pszFacility;	/* Facility as string... */
+	uchar *pszFacility;	/* Facility as string... */
 	int iLenFacility;	/* ... and its length. */
-	char *pszPRI;		/* the PRI as a string */
+	uchar *pszPRI;		/* the PRI as a string */
 	int iLenPRI;		/* and its length */
-	char	*pszRawMsg;	/* message as it was received on the
+	uchar	*pszRawMsg;	/* message as it was received on the
 				 * wire. This is important in case we
 				 * need to preserve cryptographic verifiers.
 				 */
 	int	iLenRawMsg;	/* length of raw message */
-	char	*pszMSG;	/* the MSG part itself */
+	uchar	*pszMSG;	/* the MSG part itself */
 	int	iLenMSG;	/* Length of the MSG part */
-	char	*pszUxTradMsg;	/* the traditional UNIX message */
+	uchar	*pszUxTradMsg;	/* the traditional UNIX message */
 	int	iLenUxTradMsg;/* Length of the traditional UNIX message */
-	char	*pszTAG;	/* pointer to tag value */
+	uchar	*pszTAG;	/* pointer to tag value */
 	int	iLenTAG;	/* Length of the TAG part */
-	char	*pszHOSTNAME;	/* HOSTNAME from syslog message */
+	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-	char	*pszRcvFrom;	/* System message was received from */
+	uchar	*pszRcvFrom;	/* System message was received from */
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
 	int	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
 	rsCStrObj *pCSProgName;	/* the (BSD) program name */
@@ -610,7 +612,7 @@ typedef enum _TCPFRAMINGMODE {
 /* The following structure is a dynafile name cache entry.
  */
 struct s_dynaFileCacheEntry {
-	unsigned char *pName;	/* name currently open, if dynamic name */
+	uchar *pName;	/* name currently open, if dynamic name */
 	short	fd;		/* name associated with file name in cache */
 	time_t	lastUsed;	/* for LRU - last access */
 };
@@ -774,7 +776,8 @@ static int bFinished = 0;	/* used by termination signal handler, read-only excep
  * in seconds after previous message is logged.  After each flush,
  * we move to the next interval until we reach the largest.
  */
-int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
+//TODO int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
+int	repeatinterval[] = { 10, 15 };	/* # of secs before flush */
 #define	MAXREPEAT ((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1)
 #define	REPEATTIME(f)	((f)->f_time + repeatinterval[(f)->f_repeatcount])
 #define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \
@@ -953,7 +956,7 @@ static char* getFIOPName(unsigned iFIOP)
 #ifdef SYSLOG_INET
 struct AllowedSenders {
 	unsigned long allowedSender;/* ip address allowed */
-	unsigned char bitsToShift;  /* defines how many bits should be discarded (eqiv to mask) */
+	uchar bitsToShift;  /* defines how many bits should be discarded (eqiv to mask) */
 	struct AllowedSenders *pNext;
 };
 
@@ -968,11 +971,11 @@ static int option_DisallowWarning = 1;	/* complain if message from disallowed se
 
 
 /* hardcoded standard templates (used for defaults) */
-static unsigned char template_TraditionalFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
-static unsigned char template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
-static unsigned char template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
-static unsigned char template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
-static unsigned char template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
+static uchar template_TraditionalFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
+static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
+static uchar template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
+static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
+static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
 /* end template */
 
 
@@ -994,7 +997,7 @@ static void reapchild();
 static char *cvthname(struct sockaddr_storage *f);
 static void debug_switch();
 static rsRetVal cfline(char *line, register struct filed *f);
-static int decode(unsigned char *name, struct code *codetab);
+static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
 static void die(int sig);
 #ifdef WITH_DB
@@ -1006,7 +1009,7 @@ static int checkDBErrorState(register struct filed *f);
 static void DBErrorHandler(register struct filed *f);
 #endif
 
-static int getSubString(unsigned char **pSrc, char *pDst, size_t DstSize, char cSep);
+static int getSubString(uchar **pSrc, char *pDst, size_t DstSize, char cSep);
 static void getCurrTime(struct syslogTime *t);
 static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
 
@@ -2820,6 +2823,83 @@ static void MsgDestruct(struct msg * pM)
 	}
 }
 
+
+/* The macros below are used in MsgDup(). I use macros
+ * to keep the fuction code somewhat more readyble. It is my
+ * replacement for inline functions in CPP
+ */
+#define tmpCOPYSZ(name) \
+	if(pOld->psz##name != NULL) { \
+		if((pNew->psz##name = srUtilStrDup(pOld->psz##name, pOld->iLen##name)) == NULL) {\
+			MsgDestruct(pNew);\
+			return NULL;\
+		}\
+		pNew->iLen##name = pOld->iLen##name;\
+	}
+
+/* copy the CStr objects.
+ * if the old value is NULL, we do not need to do anything because we
+ * initialized the new value to NULL via calloc().
+ */
+#define tmpCOPYCSTR(name) \
+	if(pOld->pCS##name != NULL) {\
+		if(rsCStrConstructFromCStr(&(pNew->pCS##name), pOld->pCS##name) != RS_RET_OK) {\
+			MsgDestruct(pNew);\
+			return NULL;\
+		}\
+	}
+/* Constructs a message object by duplicating another one.
+ * Returns NULL if duplication failed.
+ * rgerhards, 2007-07-10
+ */
+static struct msg* MsgDup(struct msg* pOld)
+{
+	struct msg* pNew;
+
+	assert(pOld != NULL);
+
+	if((pNew = (struct msg*) calloc(1, sizeof(struct msg))) == NULL) {
+		glblHadMemShortage = 1;
+		return NULL;
+	}
+
+	/* now copy the message properties */
+	pNew->iRefCount = 1;
+	pNew->iSyslogVers = pOld->iSyslogVers;
+	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
+	pNew->iSeverity = pOld->iSeverity;
+	pNew->iFacility = pOld->iFacility;
+	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
+	pNew->msgFlags = pOld->msgFlags;
+	pNew->iProtocolVersion = pOld->iProtocolVersion;
+	memcpy(&pNew->tRcvdAt, &pOld->tRcvdAt, sizeof(struct syslogTime));
+	memcpy(&pNew->tTIMESTAMP, &pOld->tTIMESTAMP, sizeof(struct syslogTime));
+	tmpCOPYSZ(Severity);
+	tmpCOPYSZ(Facility);
+	tmpCOPYSZ(PRI);
+	tmpCOPYSZ(RawMsg);
+	tmpCOPYSZ(MSG);
+	tmpCOPYSZ(UxTradMsg);
+	tmpCOPYSZ(TAG);
+	tmpCOPYSZ(HOSTNAME);
+	tmpCOPYSZ(RcvFrom);
+
+	tmpCOPYCSTR(ProgName);
+	tmpCOPYCSTR(StrucData);
+	tmpCOPYCSTR(APPNAME);
+	tmpCOPYCSTR(PROCID);
+	tmpCOPYCSTR(MSGID);
+
+	/* we do not copy all other cache properties, as we do not even know
+	 * if they are needed once again. So we let them re-create if needed.
+	 */
+
+	return pNew;
+}
+#undef tmpCOPYSZ
+#undef tmpCOPYCSTR
+
+
 /* Increment reference count - see description of the "msg"
  * structure for details. As a convenience to developers,
  * this method returns the msg pointer that is passed to it.
@@ -2874,7 +2954,7 @@ static char *getRawMsg(struct msg *pM)
 		if(pM->pszRawMsg == NULL)
 			return "";
 		else
-			return pM->pszRawMsg;
+			return (char*)pM->pszRawMsg;
 }
 
 static char *getUxTradMsg(struct msg *pM)
@@ -2885,7 +2965,7 @@ static char *getUxTradMsg(struct msg *pM)
 		if(pM->pszUxTradMsg == NULL)
 			return "";
 		else
-			return pM->pszUxTradMsg;
+			return (char*)pM->pszUxTradMsg;
 }
 
 static char *getMSG(struct msg *pM)
@@ -2896,7 +2976,7 @@ static char *getMSG(struct msg *pM)
 		if(pM->pszMSG == NULL)
 			return "";
 		else
-			return pM->pszMSG;
+			return (char*)pM->pszMSG;
 }
 
 
@@ -2913,11 +2993,11 @@ static char *getPRI(struct msg *pM)
 		 * still be, snprintf will truncate...
 		 */
 		if((pM->pszPRI = malloc(5)) == NULL) return "";
-		pM->iLenPRI = snprintf(pM->pszPRI, 5, "%d",
+		pM->iLenPRI = snprintf((char*)pM->pszPRI, 5, "%d",
 			LOG_MAKEPRI(pM->iFacility, pM->iSeverity));
 	}
 
-	return pM->pszPRI;
+	return (char*)pM->pszPRI;
 }
 
 
@@ -3005,9 +3085,9 @@ char *getSeverity(struct msg *pM)
 		/* we use a 2 byte buffer - can only be one digit */
 		if((pM->pszSeverity = malloc(2)) == NULL) return "";
 		pM->iLenSeverity =
-		   snprintf(pM->pszSeverity, 2, "%d", pM->iSeverity);
+		   snprintf((char*)pM->pszSeverity, 2, "%d", pM->iSeverity);
 	}
-	return(pM->pszSeverity);
+	return((char*)pM->pszSeverity);
 }
 
 static char *getFacility(struct msg *pM)
@@ -3022,9 +3102,9 @@ static char *getFacility(struct msg *pM)
 		 */
 		if((pM->pszFacility = malloc(12)) == NULL) return "";
 		pM->iLenFacility =
-		   snprintf(pM->pszFacility, 12, "%d", pM->iFacility);
+		   snprintf((char*)pM->pszFacility, 12, "%d", pM->iFacility);
 	}
-	return(pM->pszFacility);
+	return((char*)pM->pszFacility);
 }
 
 
@@ -3040,7 +3120,7 @@ static rsRetVal MsgSetAPPNAME(struct msg *pMsg, char* pszAPPNAME)
 		rsCStrSetAllocIncrement(pMsg->pCSAPPNAME, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSAPPNAME, (unsigned char*) pszAPPNAME);
+	return rsCStrSetSzStr(pMsg->pCSAPPNAME, (uchar*) pszAPPNAME);
 }
 
 
@@ -3097,7 +3177,7 @@ static rsRetVal MsgSetPROCID(struct msg *pMsg, char* pszPROCID)
 		rsCStrSetAllocIncrement(pMsg->pCSPROCID, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSPROCID, (unsigned char*) pszPROCID);
+	return rsCStrSetSzStr(pMsg->pCSPROCID, (uchar*) pszPROCID);
 }
 
 /* rgerhards, 2005-11-24
@@ -3134,7 +3214,7 @@ static rsRetVal MsgSetMSGID(struct msg *pMsg, char* pszMSGID)
 		rsCStrSetAllocIncrement(pMsg->pCSMSGID, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSMSGID, (unsigned char*) pszMSGID);
+	return rsCStrSetSzStr(pMsg->pCSMSGID, (uchar*) pszMSGID);
 }
 
 /* rgerhards, 2005-11-24
@@ -3164,7 +3244,7 @@ static void MsgAssignTAG(struct msg *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
 	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen(pBuf);
-	pMsg->pszTAG = pBuf;
+	pMsg->pszTAG =  (uchar*) pBuf;
 }
 
 
@@ -3240,7 +3320,7 @@ static char *getTAG(struct msg *pM)
 		if(pM->pszTAG == NULL)
 			return "";
 		else
-			return pM->pszTAG;
+			return (char*) pM->pszTAG;
 	}
 }
 
@@ -3265,7 +3345,7 @@ static char *getHOSTNAME(struct msg *pM)
 		if(pM->pszHOSTNAME == NULL)
 			return "";
 		else
-			return pM->pszHOSTNAME;
+			return (char*) pM->pszHOSTNAME;
 }
 
 
@@ -3277,7 +3357,7 @@ static char *getRcvFrom(struct msg *pM)
 		if(pM->pszRcvFrom == NULL)
 			return "";
 		else
-			return pM->pszRcvFrom;
+			return (char*) pM->pszRcvFrom;
 }
 /* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
  */
@@ -3291,7 +3371,7 @@ static rsRetVal MsgSetStructuredData(struct msg *pMsg, char* pszStrucData)
 		rsCStrSetAllocIncrement(pMsg->pCSStrucData, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSStrucData, (unsigned char*) pszStrucData);
+	return rsCStrSetSzStr(pMsg->pCSStrucData, (uchar*) pszStrucData);
 }
 
 /* get the length of the "STRUCTURED-DATA" sz string
@@ -3500,7 +3580,7 @@ static void MsgAssignHOSTNAME(struct msg *pMsg, char *pBuf)
 	assert(pMsg != NULL);
 	assert(pBuf != NULL);
 	pMsg->iLenHOSTNAME = strlen(pBuf);
-	pMsg->pszHOSTNAME = pBuf;
+	pMsg->pszHOSTNAME = (uchar*) pBuf;
 }
 
 
@@ -3604,12 +3684,12 @@ static void MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
  */
 typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_MINUTE } eNOWType;
 #define tmpBUFSIZE 16	/* size of formatting buffer */
-static unsigned char *getNOW(eNOWType eNow)
+static uchar *getNOW(eNOWType eNow)
 {
-	unsigned char *pBuf;
+	uchar *pBuf;
 	struct syslogTime t;
 
-	if((pBuf = (unsigned char*) malloc(sizeof(unsigned char) * tmpBUFSIZE)) == NULL) {
+	if((pBuf = (uchar*) malloc(sizeof(uchar) * tmpBUFSIZE)) == NULL) {
 		glblHadMemShortage = 1;
 		return NULL;
 	}
@@ -3816,7 +3896,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		pFld = pRes;
 		while(*pFld && iCurrFld < pTpe->data.field.iToPos) {
 			/* skip fields until the requested field or end of string is found */
-			while(*pFld && (unsigned char) *pFld != pTpe->data.field.field_delim)
+			while(*pFld && (uchar) *pFld != pTpe->data.field.field_delim)
 				++pFld; /* skip to field terminator */
 			if(*pFld == pTpe->data.field.field_delim) {
 				++pFld; /* eat it */
@@ -4425,7 +4505,7 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 		 */
 		int ret;
 		iLenDefBuf = MAXLINE;
-		ret = uncompress((unsigned char *) deflateBuf, &iLenDefBuf, (unsigned char *) msg+1, len-1);
+		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
 		dprintf("Compressed message uncompressed with status %d, length: new %d, old %d.\n",
 		        ret, iLenDefBuf, len-1);
 		/* Now check if the uncompression worked. If not, there is not much we can do. In
@@ -4671,14 +4751,14 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 		 * it is the one most often used, so this saves us time!
 		 */
 	} else if(f->eHostnameCmpMode == HN_COMP_MATCH) {
-		if(rsCStrSzStrCmp(f->pCSHostnameComp, (unsigned char*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
+		if(rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
 			dprintf("hostname filter '+%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
 			return 0;
 		}
 	} else { /* must be -hostname */
-		if(!rsCStrSzStrCmp(f->pCSHostnameComp, (unsigned char*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
+		if(!rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
 			dprintf("hostname filter '-%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
@@ -4687,7 +4767,7 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 	}
 	
 	if(f->pCSProgNameComp != NULL) {
-		if(rsCStrSzStrCmp(f->pCSProgNameComp, (unsigned char*) getProgramName(pMsg), getProgramNameLen(pMsg))) {
+		if(rsCStrSzStrCmp(f->pCSProgNameComp, (uchar*) getProgramName(pMsg), getProgramNameLen(pMsg))) {
 			/* not equal, so we are already done... */
 			dprintf("programname filter '%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSProgNameComp), getProgramName(pMsg));
@@ -4712,17 +4792,17 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
 		/* Now do the compares (short list currently ;)) */
 		switch(f->f_filterData.prop.operation ) {
 		case FIOP_CONTAINS:
-			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, (unsigned char*) pszPropVal) != -1)
+			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, (uchar*) pszPropVal) != -1)
 				iRet = 1;
 			break;
 		case FIOP_ISEQUAL:
 			if(rsCStrSzStrCmp(f->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal, strlen(pszPropVal)) == 0)
+					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
 				iRet = 1; /* process message! */
 			break;
 		case FIOP_STARTSWITH:
 			if(rsCStrSzStrStartsWithCStr(f->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal, strlen(pszPropVal)) == 0)
+					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
 				iRet = 1; /* process message! */
 			break;
 		default:
@@ -4876,10 +4956,13 @@ static void processMsg(struct msg *pMsg)
 		} else {
 			/* new line, save it */
 			/* first check if we have a previous message stored
-			 * if so, discard that first
+			 * if so, emit and then discard it first
 			 */
-			if(f->f_pMsg != NULL)
+			if(f->f_pMsg != NULL) {
+				if(f->f_prevcount > 0)
+					fprintlog(f);
 				MsgDestruct(f->f_pMsg);
+			}
 			f->f_pMsg = MsgAddRef(pMsg);
 			/* call the output driver */
 			fprintlog(f);
@@ -5209,7 +5292,7 @@ static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = pMsg->pszUxTradMsg;
+	p2parse = (char*) pMsg->pszUxTradMsg;
 
 	/* do a sanity check on the version and eat it */
 	assert(p2parse[0] == '1' && p2parse[1] == ' ');
@@ -5305,7 +5388,7 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = pMsg->pszUxTradMsg;
+	p2parse = (char*) pMsg->pszUxTradMsg;
 
 	/*
 	 * Check to see if msg contains a timestamp
@@ -5478,7 +5561,7 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
-	msg = pMsg->pszUxTradMsg;
+	msg = (char*) pMsg->pszUxTradMsg;
 	dprintf("logmsg: %s, flags %x, from '%s', msg %s\n",
 	        textpri(PRItext, sizeof(PRItext) / sizeof(char), pri),
 		flags, getRcvFrom(pMsg), msg);
@@ -5603,7 +5686,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int esc
 	char *p;
 	int iLen;
 	rsCStrObj *pStrB;
-	unsigned char *pszGenerated;
+	uchar *pszGenerated;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -5710,7 +5793,11 @@ char *iovAsString(struct filed *f)
 	v = f->f_iov;
 	while(i++ < f->f_iIovUsed) {
 		if(v->iov_len > 0) {
-			rsCStrAppendStr(pStrB, v->iov_base);
+			if(rsCStrAppendStr(pStrB, v->iov_base) != RS_RET_OK) {
+				/* most probably out of memory... */
+				rsCStrDestruct(pStrB);
+				return NULL;
+			}
 			f->f_iLenpsziov += v->iov_len;
 		}
 		++v;
@@ -5841,7 +5928,7 @@ void  iovCreate(struct filed *f)
  * worse. So we prefer to let the caller deal with it.
  * rgerhards, 2007-07-03
  */
-static unsigned char *tplToString(struct template *pTpl, struct msg *pMsg)
+static uchar *tplToString(struct template *pTpl, struct msg *pMsg)
 {
 	struct templateEntry *pTpe;
 	rsCStrObj *pCStr;
@@ -5867,7 +5954,7 @@ static unsigned char *tplToString(struct template *pTpl, struct msg *pMsg)
 	while(pTpe != NULL) {
 		if(pTpe->eEntryType == CONSTANT) {
 			if((iRet = rsCStrAppendStrWithLen(pCStr, 
-							  (unsigned char *) pTpe->data.constant.pConstant,
+							  (uchar *) pTpe->data.constant.pConstant,
 							  pTpe->data.constant.iLenConstant)
 							 ) != RS_RET_OK) {
 				dprintf("error %d during tplToString()\n", iRet);
@@ -5889,7 +5976,7 @@ static unsigned char *tplToString(struct template *pTpl, struct msg *pMsg)
 			else if(pTpl->optFormatForSQL == 2)
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
 			/* value extracted, so lets copy */
-			if((iRet = rsCStrAppendStrWithLen(pCStr, (unsigned char*) pVal, iLenVal)) != RS_RET_OK) {
+			if((iRet = rsCStrAppendStrWithLen(pCStr, (uchar*) pVal, iLenVal)) != RS_RET_OK) {
 				dprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
 				rsCStrDestruct(pCStr);
@@ -6003,7 +6090,7 @@ static void dynaFileFreeCache(struct filed *f)
  */
 static int prepareDynFile(struct filed *f)
 {
-	unsigned char *newFileName;
+	uchar *newFileName;
 	time_t ttOldest; /* timestamp of oldest element */
 	int iOldest;
 	int i;
@@ -6213,13 +6300,14 @@ again:
  */
 void fprintlog(register struct filed *f)
 {
-	char *msg;
 	char *psz; /* for shell support */
 	int esize; /* for shell support */
-	unsigned char *exec; /* for shell support */
+	uchar *exec; /* for shell support */
 	rsCStrObj *pCSCmdLine; /* for shell support: command to execute */
 	rsRetVal iRet;
 	register int l;
+	struct msg *pMsgSave;	/* to save current message pointer, necessary to restore
+				   it in case it needs to be updated (e.g. repeated msgs) */
 #ifdef SYSLOG_INET
 	int e, i, lsent = 0;
 	int bSendSuccess;
@@ -6228,29 +6316,42 @@ void fprintlog(register struct filed *f)
 	struct addrinfo hints;
 #endif
 
-	msg = f->f_pMsg->pszMSG;
-	dprintf("Called fprintlog, ");
+	pMsgSave = NULL;	/* indicate message poiner not saved */
 
-#if 0
-	/* finally commented code out, because it is not working at all ;)
-	 * TODO: handle the case of message repeation. Currently, there is still
-	 * some code to do it, but that code is defunct due to our changes!
+	/* first check if this is a regular message or the repeation of
+	 * a previous message. If so, we need to change the message text
+	 * to "last message repeated n times" and then go ahead and write
+	 * it. Please note that we can not modify the message object, because
+	 * that would update it in other selectors as well. As such, we first
+	 * need to create a local copy of the message, which we than can update.
+	 * rgerhards, 2007-07-10
 	 */
-	if (msg) {
-		v->iov_base = f->f_pMsg->pszRawMsg;
-		v->iov_len = f->f_pMsg->iLenRawMsg;
-	} else if (f->f_prevcount > 1) {
-		(void) snprintf(repbuf, sizeof(repbuf), "last message repeated %d times",
+	if(f->f_prevcount > 1) {
+		struct msg *pMsg;
+		uchar szRepMsg[64];
+		snprintf((char*)szRepMsg, sizeof(szRepMsg), "last message repeated %d times",
 		    f->f_prevcount);
-		v->iov_base = repbuf;
-		v->iov_len = strlen(repbuf);
-	} else {
-		v->iov_base = f->f_pMsg->pszMSG;
-		v->iov_len = f->f_pMsg->iLenMSG;
-	}
-#endif
 
-	dprintf("logging to %s", TypeNames[f->f_type]);
+		if((pMsg = MsgDup(f->f_pMsg)) == NULL) {
+			/* it failed - nothing we can do against it... */
+			dprintf("Message duplication failed, dropping repeat message.\n");
+			return;
+		}
+
+		/* We now need to update the other message properties.
+		 * ... RAWMSG is a problem ... Please note that digital
+		 * signatures inside the message are also invalidated.
+		 */
+		getCurrTime(&(pMsg->tRcvdAt));
+		getCurrTime(&(pMsg->tTIMESTAMP));
+		MsgSetMSG(pMsg, (char*)szRepMsg);
+		MsgSetRawMsg(pMsg, (char*)szRepMsg);
+
+		pMsgSave = f->f_pMsg;	/* save message pointer for later restoration */
+		f->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
+	}
+
+	dprintf("Called fprintlog, logging to %s", TypeNames[f->f_type]);
 
 	switch (f->f_type) {
 	case F_UNUSED:
@@ -6426,7 +6527,7 @@ void fprintlog(register struct filed *f)
 	case F_FILE:
 	case F_PIPE:
 		dprintf(" (%s)\n", f->f_un.f_file.f_fname);
-		/* TODO: check if we need f->f_time = now;*/
+		f->f_time = now; /* we need this for message repeation processing */
 		/* f->f_file == -1 is an indicator that the we couldn't
 		 * open the file at startup. For dynaFiles, this is ok,
 		 * all others are doomed.
@@ -6463,11 +6564,11 @@ void fprintlog(register struct filed *f)
 			dprintf("memory shortage - can not execute\n");
 			break;
 		}
-		if((iRet = rsCStrAppendStr(pCSCmdLine, (unsigned char*) f->f_un.f_file.f_fname)) != RS_RET_OK) {
+		if((iRet = rsCStrAppendStr(pCSCmdLine, (uchar*) f->f_un.f_file.f_fname)) != RS_RET_OK) {
 			dprintf("error %d during build command line(1)\n", iRet);
 			break;
 		}
-		if((iRet = rsCStrAppendStr(pCSCmdLine, (unsigned char*) " \"")) != RS_RET_OK) {
+		if((iRet = rsCStrAppendStr(pCSCmdLine, (uchar*) " \"")) != RS_RET_OK) {
 			dprintf("error %d during build command line(2)\n", iRet);
 			break;
 		}
@@ -6503,6 +6604,21 @@ void fprintlog(register struct filed *f)
 
 	if (f->f_type != F_FORW_UNKN)
 		f->f_prevcount = 0;
+
+	if(pMsgSave != NULL) {
+		/* we had saved the original message pointer. That was
+		 * done because we needed to create a temporary one
+		 * (most often for "message repeated n time" handling. If so,
+		 * we need to restore the original one now, so that procesing
+		 * can continue as normal. We also need to discard the temporary
+		 * one, as we do not like memory leaks ;) Please note that the original
+		 * message object will be discarded by our callers, so this is nothing
+		 * of our buisiness. rgerhards, 2007-07-10
+		 */
+		MsgDestruct(f->f_pMsg);
+		f->f_pMsg = pMsgSave;	/* restore it */
+	}
+
 	return;		
 }
 
@@ -6776,12 +6892,13 @@ static void domark(void)
 			MarkSeq = 0;
 		}
 
+		/* see if we need to flush any "message repeated n times"... */
 		for (f = Files; f != NULL ; f = f->f_next) {
 			if (f->f_prevcount && now >= REPEATTIME(f)) {
 				dprintf("flush %s: repeated %d times, %d sec.\n",
 				    TypeNames[f->f_type], f->f_prevcount,
 				    repeatinterval[f->f_repeatcount]);
-				/* TODO: re-implement fprintlog(f, LocalHostName, 0, (char *)NULL); */
+				fprintlog(f);
 				BACKOFF(f);
 			}
 		}
@@ -6995,7 +7112,7 @@ static void doexit(int sig)
  * (if the line is correct).
  * rgerhards, 2005-09-27
  */
-static rsRetVal addAllowedSenderLine(char* pName, unsigned char** ppRestOfConfLine)
+static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 {
 #ifdef SYSLOG_INET
 	struct AllowedSenders **ppRoot;
@@ -7033,7 +7150,7 @@ static rsRetVal addAllowedSenderLine(char* pName, unsigned char** ppRestOfConfLi
 	 * for this.
 	 */
 	/* create parser object starting with line string without leading colon */
-	if((iRet = rsParsConstructFromSz(&pPars, (unsigned char*) *ppRestOfConfLine) != RS_RET_OK)) {
+	if((iRet = rsParsConstructFromSz(&pPars, (uchar*) *ppRestOfConfLine) != RS_RET_OK)) {
 		logerrorInt("Error %d constructing parser object - ignoring allowed sender list", iRet);
 		return(iRet);
 	}
@@ -7070,9 +7187,9 @@ static rsRetVal addAllowedSenderLine(char* pName, unsigned char** ppRestOfConfLi
  * charater or the \0 byte, if there is none. It is never
  * moved past the \0.
  */
-static void skipWhiteSpace(unsigned char **pp)
+static void skipWhiteSpace(uchar **pp)
 {
-	register unsigned char *p;
+	register uchar *p;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -7089,10 +7206,10 @@ static void skipWhiteSpace(unsigned char **pp)
  * On exit, it will be updated to the processed position.
  * rgerhards, 2007-07-4 (happy independence day to my US friends!)
  */
-static void doDynaFileCacheSizeLine(unsigned char **pp, enum eDirective eDir)
+static void doDynaFileCacheSizeLine(uchar **pp, enum eDirective eDir)
 {
-	unsigned char *p;
-	unsigned char errMsg[128];	/* for dynamic error messages */
+	uchar *p;
+	uchar errMsg[128];	/* for dynamic error messages */
 	int i;
 
 	assert(pp != NULL);
@@ -7102,7 +7219,7 @@ static void doDynaFileCacheSizeLine(unsigned char **pp, enum eDirective eDir)
 	p = *pp;
 
 	if(!isdigit((int) *p)) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "DynaFileCacheSize invalid, value '%s'.", p);
 		errno = 0;
 		logerror((char*) errMsg);
@@ -7114,13 +7231,13 @@ static void doDynaFileCacheSizeLine(unsigned char **pp, enum eDirective eDir)
 		i = i * 10 + *p - '0';
 	
 	if(i < 1) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", i);
 		errno = 0;
 		logerror((char*) errMsg);
 		i = 1;
 	} else if(i > 10000) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "DynaFileCacheSize maximum is 10,000 (%d given), changed to 10,000.", i);
 		errno = 0;
 		logerror((char*) errMsg);
@@ -7145,10 +7262,10 @@ static void doDynaFileCacheSizeLine(unsigned char **pp, enum eDirective eDir)
  * Parameter **pp has a pointer to the current config line.
  * On exit, it will be updated to the processed position.
  */
-static void doFileCreateModeUmaskLine(unsigned char **pp, enum eDirective eDir)
+static void doFileCreateModeUmaskLine(uchar **pp, enum eDirective eDir)
 {
-	unsigned char *p;
-	unsigned char errMsg[128];	/* for dynamic error messages */
+	uchar *p;
+	uchar errMsg[128];	/* for dynamic error messages */
 	int iMode;	
 
 	assert(pp != NULL);
@@ -7165,7 +7282,7 @@ static void doFileCreateModeUmaskLine(unsigned char **pp, enum eDirective eDir)
 	     && (*(p+1) && *(p+1) >= '0' && *(p+1) <= '7')
 	     && (*(p+2) && *(p+2) >= '0' && *(p+2) <= '7')
 	     && (*(p+3) && *(p+3) >= '0' && *(p+3) <= '7')  )  ) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "%s value must be octal (e.g 0644), invalid value '%s'.",
 			 eDir == DIR_UMASK ? "umask" : "filecreatemode", p);
 		errno = 0;
@@ -7208,9 +7325,9 @@ static void doFileCreateModeUmaskLine(unsigned char **pp, enum eDirective eDir)
  * rgerhards 2005-06-21: previously only for templates, now 
  *    generalized.
  */
-static void doNameLine(unsigned char **pp, enum eDirective eDir)
+static void doNameLine(uchar **pp, enum eDirective eDir)
 {
-	unsigned char *p;
+	uchar *p;
 	char szName[128];
 
 	assert(pp != NULL);
@@ -7264,15 +7381,15 @@ static void doNameLine(unsigned char **pp, enum eDirective eDir)
  * extended configuration parameters.
  * 2004-11-17 rgerhards
  */
-void cfsysline(unsigned char *p)
+void cfsysline(uchar *p)
 {
-	unsigned char szCmd[32];
-	unsigned char errMsg[128];	/* for dynamic error messages */
+	uchar szCmd[32];
+	uchar errMsg[128];	/* for dynamic error messages */
 
 	assert(p != NULL);
 	errno = 0;
 	dprintf("cfsysline --> %s", p);
-	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(unsigned char), ' ')  != 0) {
+	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(uchar), ' ')  != 0) {
 		logerror("Invalid $-configline - could not extract command - line ignored\n");
 		return;
 	}
@@ -7307,7 +7424,7 @@ void cfsysline(unsigned char *p)
 	skipWhiteSpace(&p);
 
 	if(*p && *p != '#') { /* we have a non-whitespace, so let's complain */
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(unsigned char),
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "error: extra characters in config line ignored: '%s'", p);
 		errno = 0;
 		logerror((char*) errMsg);
@@ -7473,7 +7590,7 @@ static void init()
 				continue;
 
 			if(*p == '$') {
-				cfsysline((unsigned char*) ++p);
+				cfsysline((uchar*) ++p);
 				continue;
 			}
 	#if CONT_LINE
@@ -7731,10 +7848,10 @@ static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
  * to be \0 in this case.
  * rgerhards 2004-11-19
  */
-static void cflineParseTemplateName(struct filed *f, unsigned char** pp,
+static void cflineParseTemplateName(struct filed *f, uchar** pp,
 			     register char* pTemplateName, int iLenTemplate)
 {
-	register unsigned char *p;
+	register uchar *p;
 	int i;
 
 	assert(f != NULL);
@@ -7763,7 +7880,7 @@ static void cflineParseTemplateName(struct filed *f, unsigned char** pp,
  * filed struct.
  * rgerhards 2004-11-18
  */
-static void cflineParseFileName(struct filed *f, unsigned char* p)
+static void cflineParseFileName(struct filed *f, uchar* p)
 {
 	register char *pName;
 	int i;
@@ -7812,7 +7929,7 @@ static void cflineParseFileName(struct filed *f, unsigned char* p)
  * removed.
  * rgerhards 2005-06-21
  */
-static void cflineParseOutchannel(struct filed *f, unsigned char* p)
+static void cflineParseOutchannel(struct filed *f, uchar* p)
 {
 	int i;
 	struct outchannel *pOch;
@@ -7897,17 +8014,17 @@ static void cflineParseOutchannel(struct filed *f, unsigned char* p)
  * passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessTradPRIFilter(unsigned char **pline, register struct filed *f)
+static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register struct filed *f)
 {
-	unsigned char *p;
-	register unsigned char *q;
+	uchar *p;
+	register uchar *q;
 	register int i, i2;
-	unsigned char *bp;
+	uchar *bp;
 	int pri;
 	int singlpri = 0;
 	int ignorepri = 0;
-	unsigned char buf[MAXLINE];
-	unsigned char xbuf[200];
+	uchar buf[MAXLINE];
+	uchar xbuf[200];
 
 	assert(pline != NULL);
 	assert(*pline != NULL);
@@ -8062,7 +8179,7 @@ static rsRetVal cflineProcessTradPRIFilter(unsigned char **pline, register struc
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessPropFilter(unsigned char **pline, register struct filed *f)
+static rsRetVal cflineProcessPropFilter(uchar **pline, register struct filed *f)
 {
 	rsParsObj *pPars;
 	rsCStrObj *pCSCompOp;
@@ -8118,11 +8235,11 @@ static rsRetVal cflineProcessPropFilter(unsigned char **pline, register struct f
 		iOffset = 0;
 	}
 
-	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "contains", 8)) {
+	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "contains", 8)) {
 		f->f_filterData.prop.operation = FIOP_CONTAINS;
-	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "isequal", 7)) {
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isequal", 7)) {
 		f->f_filterData.prop.operation = FIOP_ISEQUAL;
-	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "startswith", 10)) {
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "startswith", 10)) {
 		f->f_filterData.prop.operation = FIOP_STARTSWITH;
 	} else {
 		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
@@ -8158,7 +8275,7 @@ static rsRetVal cflineProcessPropFilter(unsigned char **pline, register struct f
  * from the config file ("+/-hostname"). It stores it for further reference.
  * rgerhards 2005-10-19
  */
-static rsRetVal cflineProcessHostSelector(unsigned char **pline, register struct filed *f)
+static rsRetVal cflineProcessHostSelector(uchar **pline, register struct filed *f)
 {
 	rsRetVal iRet;
 
@@ -8211,7 +8328,7 @@ static rsRetVal cflineProcessHostSelector(unsigned char **pline, register struct
  * from the config file ("!tagname"). It stores it for further reference.
  * rgerhards 2005-10-18
  */
-static rsRetVal cflineProcessTagSelector(unsigned char **pline, register struct filed *f)
+static rsRetVal cflineProcessTagSelector(uchar **pline, register struct filed *f)
 {
 	rsRetVal iRet;
 
@@ -8265,8 +8382,8 @@ static rsRetVal cflineProcessTagSelector(unsigned char **pline, register struct 
  */
 static rsRetVal cfline(char *line, register struct filed *f)
 {
-	unsigned char *p;
-	register unsigned char *q;
+	uchar *p;
+	register uchar *q;
 	register int i;
 	int syncfile;
 	rsRetVal iRet;
@@ -8283,7 +8400,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 	dprintf("cfline(%s)", line);
 
 	errno = 0;	/* keep strerror() stuff out of logerror messages */
-	p = (unsigned char*) line;
+	p = (uchar*) line;
 
 	/* check which filter we need to pull... */
 	switch(*p) {
@@ -8411,7 +8528,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 		f->f_un.f_forw.port = NULL;
 		if(*p == ':') { /* process port */
 			register int i = 0;
-			unsigned char * tmp;
+			uchar * tmp;
 
 			*p = '\0'; /* trick to obtain hostname (later)! */
 			tmp = ++p;
@@ -8589,7 +8706,7 @@ static rsRetVal cfline(char *line, register struct filed *f)
 			/* we have a template specifier! */
 			p += 2; /* eat "*;" */
 			cflineParseTemplateName(f, &p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(unsigned char));
+						sizeof(szTemplateName) / sizeof(uchar));
 		}
 		else	/* assign default format if none given! */
 			szTemplateName[0] = '\0';
@@ -8745,11 +8862,11 @@ static rsRetVal cfline(char *line, register struct filed *f)
 
 /*  Decode a symbolic name to a numeric value
  */
-int decode(unsigned char *name, struct code *codetab)
+int decode(uchar *name, struct code *codetab)
 {
 	register struct code *c;
-	register unsigned char *p;
-	unsigned char buf[80];
+	register uchar *p;
+	uchar buf[80];
 
 	assert(name != NULL);
 	assert(codetab != NULL);
@@ -9009,8 +9126,7 @@ int checkDBErrorState(register struct filed *f)
 	/* Ok, we can try to resume the database logging. First
 	   we have to reset the status (timeResumeOnError) and
 	   the last error no. */
-	/* TODO:
-	 * To improve this code it would be better to check 
+	/* To improve this code it would be better to check 
 	   if we really need to reInit the db connection. If 
 	   only the insert failed and the db conncetcion is
 	   still valid, we need no reInit. 
@@ -9050,9 +9166,9 @@ int checkDBErrorState(register struct filed *f)
  * \param cSep		Separator char.
  * \ret int		Returns 0 if no error occured.
  */
-int getSubString(unsigned char **ppSrc,  char *pDst, size_t DstSize, char cSep)
+int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 {
-	unsigned char *pSrc = *ppSrc;
+	uchar *pSrc = *ppSrc;
 	int iErr = 0; /* 0 = no error, >0 = error */
 	while(*pSrc != cSep && *pSrc != '\0' && DstSize>1) {
 		*pDst++ = *(pSrc)++;
@@ -9511,7 +9627,7 @@ int main(int argc, char **argv)
 
 	extern int optind;
 	extern char *optarg;
-	unsigned char *pTmp;
+	uchar *pTmp;
 
 #ifndef TESTING
 	chdir ("/");
