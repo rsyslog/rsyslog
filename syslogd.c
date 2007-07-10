@@ -776,8 +776,7 @@ static int bFinished = 0;	/* used by termination signal handler, read-only excep
  * in seconds after previous message is logged.  After each flush,
  * we move to the next interval until we reach the largest.
  */
-//TODO int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
-int	repeatinterval[] = { 10, 15 };	/* # of secs before flush */
+int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
 #define	MAXREPEAT ((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1)
 #define	REPEATTIME(f)	((f)->f_time + repeatinterval[(f)->f_repeatcount])
 #define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \
