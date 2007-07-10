@@ -85,6 +85,8 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+#include "config.h"
+
 #ifdef __FreeBSD__
 #define	BSD
 #endif
@@ -141,17 +143,12 @@
 
 #define CONT_LINE	1		/* Allow continuation lines */
 
-#include "config.h"
-
 #ifdef MTRACE
 #include <mcheck.h>
 #endif
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-#ifdef SYSV
-#include <sys/types.h>
-#endif
 #include <utmp.h>
 #include <ctype.h>
 #define GNU_SOURCE
@@ -173,7 +170,7 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/file.h>
-#ifdef SYSV
+#if HAVE_FCNTL_H
 #include <fcntl.h>
 #else
 #include <sys/msgbuf.h>
