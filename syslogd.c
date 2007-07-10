@@ -3595,6 +3595,52 @@ static void MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
 }
 
 
+/* This function returns the current date in different
+ * variants. It is used to construct the $NOW series of
+ * system properties. The returned buffer must be freed
+ * by the caller when no longer needed. If the function
+ * can not allocate memory, it returns a NULL pointer.
+ * Added 2007-07-10 rgerhards
+ */
+typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_MINUTE } eNOWType;
+#define tmpBUFSIZE 16	/* size of formatting buffer */
+static unsigned char *getNOW(eNOWType eNow)
+{
+	unsigned char *pBuf;
+	struct syslogTime t;
+
+	if((pBuf = (unsigned char*) malloc(sizeof(unsigned char) * tmpBUFSIZE)) == NULL) {
+		glblHadMemShortage = 1;
+		return NULL;
+	}
+
+	getCurrTime(&t);
+	switch(eNow) {
+	case NOW_NOW:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
+		break;
+	case NOW_YEAR:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d", t.year);
+		break;
+	case NOW_MONTH:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.month);
+		break;
+	case NOW_DAY:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.day);
+		break;
+	case NOW_HOUR:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour);
+		break;
+	case NOW_MINUTE:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute);
+		break;
+	}
+
+	return(pBuf);
+}
+#undef tmpBUFSIZE /* clean up */
+
+
 /* This function returns a string-representation of the 
  * requested message property. This is a generic function used
  * to abstract properties so that these can be easier
@@ -3707,13 +3753,46 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		pRes = getPROCID(pMsg);
 	} else if(!strcmp(pName, "MSGID")) {
 		pRes = getMSGID(pMsg);
+	/* here start system properties (those, that do not relate to the message itself */
+	} else if(!strcmp(pName, "$NOW")) {
+		if((pRes = (char*) getNOW(NOW_NOW)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$YEAR")) {
+		if((pRes = (char*) getNOW(NOW_YEAR)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$MONTH")) {
+		if((pRes = (char*) getNOW(NOW_MONTH)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$DAY")) {
+		if((pRes = (char*) getNOW(NOW_DAY)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$HOUR")) {
+		if((pRes = (char*) getNOW(NOW_HOUR)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$MINUTE")) {
+		if((pRes = (char*) getNOW(NOW_MINUTE)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 	} else {
-		pRes = "**INVALID PROPERTY NAME**";
+		/* there is no point in continuing, we may even otherwise render the
+		 * error message unreadable. rgerhards, 2007-07-10
+		 */
+		return "**INVALID PROPERTY NAME**";
 	}
 
 	/* If we did not receive a template pointer, we are already done... */
 	if(pTpe == NULL) {
-		*pbMustBeFreed = 0;
 		return pRes;
 	}
 	
