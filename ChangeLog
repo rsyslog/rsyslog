@@ -1,0 +1,956 @@
+---------------------------------------------------------------------------
+Version 1.16.0 (RGer/Peter Vrabec), 2007-07-1?
+- build system switched to autotools
+---------------------------------------------------------------------------
+Version 1.15.1 (RGer), 2007-07-10
+- fixed a bug that caused a dynaFile selector to stall when there was
+  an open error with one file 
+- improved template processing for dynaFiles; templates are now only
+  looked up during initialization - speeds up processing
+- optimized memory layout in struct filed when compiled with MySQL
+  support
+- fixed a bug that caused compilation without SYSLOG_INET to fail
+- re-enabled the "last message repeated n times" feature. This
+  feature was not taken care of while rsyslogd evolved from sysklogd
+  and it was more or less defunct. Now it is fully functional again.
+- added system properties: $NOW, $YEAR, $MONTH, $DAY, $HOUR, $MINUTE
+- fixed a bug in iovAsString() that caused a memory leak under stress
+  conditions (most probably memory shortage). This was unlikely to
+  ever happen, but it doesn't hurt doing it right
+- cosmetic: defined type "uchar", change all unsigned chars to uchar
+---------------------------------------------------------------------------
+Version 1.15.0 (RGer), 2007-07-05
+- added ability to dynamically generate file names based on templates
+  and thus properties. This was a much-requested feature. It makes
+  life easy when it e.g. comes to splitting files based on the sender
+  address.
+- added $umask and $FileCreateMode config file directives
+- applied a patch from Bartosz Kuzma to compile cleanly under NetBSD
+- checks for extra (unexpected) characters in system config file lines
+  have been added
+- added IPv6 documentation - was accidently missing from CVS
+- begun to change char to unsigned char
+---------------------------------------------------------------------------
+Version 1.14.2 (RGer), 2007-07-03
+** this release fixes all known nits with IPv6 **
+- restored capability to do /etc/service lookup for "syslog"
+  service when -r 0 was given
+- documented IPv6 handling of syslog messages
+- integrate patch from Bartosz Kuźma to make rsyslog compile under
+  Solaris again (the patch replaced a strndup() call, which is not
+  available under Solaris
+- improved debug logging when waiting on select
+- updated rsyslogd man page with new options (-46A)
+---------------------------------------------------------------------------
+Version 1.14.1 (RGer/Peter Vrabec), 2007-06-29
+- added Peter Vrabec's patch for IPv6 TCP
+- prefixed all messages send to stderr in rsyslogd with "rsyslogd: "
+---------------------------------------------------------------------------
+Version 1.14.0 (RGer/Peter Vrabec), 2007-06-28
+- Peter Vrabec provided IPv6 for rsyslog, so we are now IPv6 enabled
+  IPv6 Support is currently for UDP only, TCP is to come soon.
+  AllowedSender configuration does not yet work for IPv6.
+- fixed code in iovCreate() that broke C's strict aliasing rules 
+- fixed some char/unsigned char differences that forced the compiler
+  to spit out warning messages
+- updated the Red Hat init script to fix a known issue (thanks to
+  Peter Vrabec)
+---------------------------------------------------------------------------
+Version 1.13.5 (RGer), 2007-06-22
+- made the TCP session limit configurable via command line switch
+  now -t <port>,<max sessions>
+- added man page for rklogd(8) (basically a copy from klogd, but now
+  there is one...)
+- fixed a bug that caused internal messages (e.g. rsyslogd startup) to
+  appear without a tag.
+- removed a minor memory leak that occurred when TAG processing requalified
+  a HOSTNAME to be a TAG (and a TAG already was set).
+- removed potential small memory leaks in MsgSet***() functions. There
+  would be a leak if a property was re-set, something that happened
+  extremely seldom.
+---------------------------------------------------------------------------
+Version 1.13.4 (RGer), 2007-06-18
+- added a new property "PRI-text", which holds the PRI field in
+  textual form (e.g. "syslog.info")
+- added alias "syslogseverity" for "syslogpriority", which is a
+  misleading property name that needs to stay for historical
+  reasons (and backward-compatility)
+- added doc on how to record PRI value in log file
+- enhanced signal handling in klogd, including removal of an unsafe
+  call to the logging system during signal handling
+---------------------------------------------------------------------------
+Version 1.13.3 (RGer), 2007-06-15
+- create a version of syslog.c from scratch. This is now
+  - highly optimized for rsyslog
+  - removes an incompatible license problem as the original
+    version had a BSD license with advertising clause
+  - fixed in the regard that rklogd will continue to work when
+    rsysogd has been restarted (the original version, as well
+    as sysklogd, will remain silent then)
+  - solved an issue with an extra NUL char at message end that the
+    original version had
+- applied some changes to klogd to care for the new interface
+- fixed a bug in syslogd.c which prevented compiling under debian
+---------------------------------------------------------------------------
+Version 1.13.2 (RGer), 2007-06-13
+- lib order in makefile patched to facilitate static linking - thanks
+  to Bennett Todd for providing the patch
+- Integrated a patch from Peter Vrabec (pvrabec@redheat.com):
+  - added klogd under the name of rklogd (remove dependency on
+    original sysklogd package
+  - createDB.sql now in UTF
+  - added additional config files for use on Red Hat
+---------------------------------------------------------------------------
+Version 1.13.1 (RGer), 2007-02-05
+- changed the listen backlog limit to a more reasonable value based on
+  the maximum number of TCP connections configurd (10% + 5) - thanks to Guy
+  Standen for the hint (actually, the limit was 5 and that was a 
+  left-over from early testing).
+- fixed a bug in makefile which caused DB-support to be disabled when
+  NETZIP support was enabled
+- added the -e option to allow transmission of every message to remote
+  hosts (effectively turns off duplicate message suppression)
+- (somewhat) improved memory consumption when compiled with MySQL support
+- looks like we fixed an incompatibility with MySQL 5.x and above software
+  At least in one case, the remote server name was destroyed, leading to 
+  a connection failure. The new, improved code does not have this issue and
+  so we see this as solved (the new code is generally somewhat better, so
+  there is a good chance we fixed this incompatibility).
+---------------------------------------------------------------------------
+Version 1.13.0 (RGer), 2006-12-19
+- added '$' as ToPos proptery replacer specifier - means "up to the
+  end of the string"
+- property replacer option "escape-cc", "drop-cc" and "space-cc"  added
+- changed the handling of \0 characters inside syslog messages. We now
+  consistently escape them to "#000". This is somewhat recommended in
+  the draft-ietf-syslog-protocol-19 draft. While the real recomendation
+  is to not escape any characters at all, we can not do this without
+  considerable modification of the code. So we escape it to "#000", which
+  is consistent with a sample found in the Internet-draft.
+- removed message glue logic (see printchopped() comment for details)
+  Also caused removal of parts table and thus some improvements in
+  memory usage.
+- changed the default MAXLINE to 2048 to take care of recent syslog
+  standardization efforts (can easily be changed in syslogd.c)
+- added support for byte-counted TCP syslog messages (much like
+  syslog-transport-tls-05 Internet Draft). This was necessary to
+  support compression over TCP.
+- added support for receiving compressed syslog messages
+- added support for sending compressed syslog messages
+- fixed a bug where the last message in a syslog/tcp stream was
+  lost if it was not properly terminated by a LF character
+---------------------------------------------------------------------------
+Version 1.12.3 (RGer), 2006-10-04
+- implemented some changes to support Solaris (but support is not
+  yet complete)
+- commented out (via #if 0) some methods that are currently not being use
+  but should be kept for further us
+- added (interim) -u 1 option to turn off hostname and tag parsing
+- done some modifications to better support Fedora
+- made the field delimiter inside property replace configurable via
+  template
+- fixed a bug in property replacer: if fields were used, the delimitor
+  became part of the field. Up until now, this was barely noticable as 
+  the delimiter as TAB only and thus invisible to a human. With other
+  delimiters available now, it quickly showed up. This bug fix might cause
+  some grief to existing installations if they used the extra TAB for
+  whatever reasons - sorry folks... Anyhow, a solution is easy: just add
+  a TAB character contstant into your template. Thus, there has no attempt
+  been made to do this in a backwards-compatible way.
+---------------------------------------------------------------------------
+Version 1.12.2 (RGer), 2006-02-15
+- fixed a bug in the RFC 3339 date formatter. An extra space was added
+  after the actual timestamp
+- added support for providing high-precision RFC3339 timestamps for
+  (rsyslogd-)internally-generated messages
+- very (!) experimental support for syslog-protocol internet draft
+  added (the draft is experimental, the code is solid ;))
+- added support for field-extracting in the property replacer
+- enhanced the legacy-syslog parser so that it can interpret messages
+  that do not contain a TIMESTAMP
+- fixed a bug that caused the default socket (usually /dev/log) to be
+  opened even when -o command line option was given
+- fixed a bug in the Debian sample startup script - it caused rsyslogd
+  to listen to remote requests, which it shouldn't by default
+---------------------------------------------------------------------------
+Version 1.12.1 (RGer), 2005-11-23
+- made multithreading work with BSD. Some signal-handling needed to be
+  restructured. Also, there might be a slight delay of up to 10 seconds
+  when huping and terminating rsyslogd under BSD
+- fixed a bug where a NULL-pointer was passed to printf() in logmsg().
+- fixed a bug during "make install" where rc3195d was not installed
+  Thanks to Bennett Todd for spotting this.
+- fixed a bug where rsyslogd dumped core when no TAG was found in the
+  received message
+- enhanced message parser so that it can deal with missing hostnames
+  in many cases (may not be totally fail-safe)
+- fixed a bug where internally-generated messages did not have the correct
+  TAG
+---------------------------------------------------------------------------
+Version 1.12.0 (RGer), 2005-10-26
+- moved to a multi-threaded design. single-threading is still optionally
+  available. Multi-threading is experimental!
+- fixed a potential race condition. In the original code, marking was done
+  by an alarm handler, which could lead to all sorts of bad things. This
+  has been changed now. See comments in syslogd.c/domark() for details.
+- improved debug output for property-based filters
+- not a code change, but: I have checked all exit()s to make sure that
+  none occurs once rsyslogd has started up. Even in unusual conditions
+  (like low-memory conditions) rsyslogd somehow remains active. Of course,
+  it might loose a message or two, but at least it does not abort and it
+  can also recover when the condition no longer persists.
+- fixed a bug that could cause loss of the last message received
+  immediately before rsyslogd was terminated.
+- added comments on thread-safety of global variables in syslogd.c
+- fixed a small bug: spurios printf() when TCP syslog was used
+- fixed a bug that causes rsyslogd to dump core on termination when one
+  of the selector lines did not receive a message during the run (very
+  unlikely)
+- fixed an one-too-low memory allocation in the TCP sender. Could result
+  in rsyslogd dumping core.
+- fixed a bug with regular expression support (thanks to Andres Riancho)
+- a little bit of code restructuring (especially main(), which was
+  horribly large)
+---------------------------------------------------------------------------
+Version 1.11.1 (RGer), 2005-10-19
+- support for BSD-style program name and host blocks
+- added a new property "programname" that can be used in templates
+- added ability to specify listen port for rfc3195d
+- fixed a bug that rendered the "startswith" comparison operation
+  unusable.
+- changed more functions to "static" storage class to help compiler
+  optimize (should have been static in the first place...)
+- fixed a potential memory leak in the string buffer class destructor.
+  As the destructur was previously never called, the leak did not actually
+  appear.
+- some internal restructuring in anticipation/preparation of minimal
+  multi-threading support
+- rsyslogd still shares some code with the sysklogd project. Some patches
+  for this shared code have been brought over from the sysklogd CVS.
+---------------------------------------------------------------------------
+Version 1.11.0 (RGer), 2005-10-12
+- support for receiving messages via RFC 3195; added rfc3195d for that
+  purpose
+- added an additional guard to prevent rsyslogd from aborting when the
+  2gb file size limit is hit. While a user can configure rsyslogd to
+  handle such situations, it would abort if that was not done AND large
+  file support was not enabled (ok, this is hopefully an unlikely scenario)
+- fixed a bug that caused additional Unix domain sockets to be incorrectly
+  processed - could lead to message loss in extreme cases
+---------------------------------------------------------------------------
+Version 1.10.2 (RGer), 2005-09-27
+- added comparison operations in property-based filters:
+  * isequal
+  * startswith
+- added ability to negate all property-based filter comparison operations
+  by adding a !-sign right in front of the operation name
+- added the ability to specify remote senders for UDP and TCP
+  received messages. Allows to block all but well-known hosts
+- changed the $-config line directives to be case-INsensitive
+- new command line option -w added: "do not display warnings if messages
+  from disallowed senders are received"
+- fixed a bug that caused rsyslogd to dump core when the compare value
+  was not quoted in property-based filters
+- fixed a bug in the new CStr compare function which lead to invalid
+  results (fortunately, this function was not yet used widely)
+- added better support for "debugging" rsyslog.conf property filters
+  (only if -d switch is given)
+- changed some function definitions to static, which eventually enables
+  some compiler optimizations
+- fixed a bug in MySQL code; when a SQL error occured, rsyslogd could
+  run in a tight loop. This was due to invalid sequence of error reporting
+  and is now fixed.
+---------------------------------------------------------------------------
+Version 1.10.1 (RGer), 2005-09-23
+- added the ability to execute a shell script as an action.
+  Thanks to Bjoern Kalkbrenner for providing the code!
+- fixed a bug in the MySQL code; due to the bug the automatic one-time
+  retry after an error did not happen - this lead to error message in
+  cases where none should be seen (e.g. after a MySQL restart)
+- fixed a security issue with SQL-escaping in conjunction with
+  non-(SQL-)standard MySQL features.
+---------------------------------------------------------------------------
+Version 1.10.0 (RGer), 2005-09-20
+  REMINDER: 1.10 is the first unstable version if the 1.x series!
+- added the capability to filter on any property in selector lines
+  (not just facility and priority)
+- changed stringbuf into a new counted string class
+- added support for a "discard" action. If a selector line with
+  discard (~ character) is found, no selector lines *after* that
+  line will be processed.
+- thanks to Andres Riancho, regular expression support has been
+  added to the template engine
+- added the FROMHOST property in the template processor, which could
+  previously not be obtained. Thanks to Cristian Testa for pointing
+  this out and even providing a fix.
+- added display of compile-time options to -v output
+- performance improvement for production build - made some checks
+  to happen only during debug mode
+- fixed a problem with compiling on SUSE and - while doing so - removed
+  the socket call to set SO_BSDCOMPAT in cases where it is obsolete.
+---------------------------------------------------------------------------
+Version 1.0.4 (RGer), 2006-02-01
+- a small but important fix: the tcp receiver had two forgotten printf's
+  in it that caused a lot of unnecessary output to stdout. This was
+  important enough to justify a new release
+---------------------------------------------------------------------------
+Version 1.0.3 (RGer), 2005-11-14
+- added an additional guard to prevent rsyslogd from aborting when the
+  2gb file size limit is hit. While a user can configure rsyslogd to
+  handle such situations, it would abort if that was not done AND large
+  file support was not enabled (ok, this is hopefully an unlikely scenario)
+- fixed a bug that caused additional Unix domain sockets to be incorrectly
+  processed - could lead to message loss in extreme cases
+- applied some patches available from the sysklogd project to code
+  shared from there
+- fixed a bug that causes rsyslogd to dump core on termination when one
+  of the selector lines did not receive a message during the run (very
+  unlikely)
+- fixed an one-too-low memory allocation in the TCP sender. Could result
+  in rsyslogd dumping core.
+- fixed a bug in the TCP sender that caused the retry logic to fail
+  after an error or receiver overrun
+- fixed a bug in init() that could lead to dumping core
+- fixed a bug that could lead to dumping core when no HOSTNAME or no TAG
+  was present in the syslog message
+---------------------------------------------------------------------------
+Version 1.0.2 (RGer), 2005-10-05
+- fixed an issue with MySQL error reporting. When an error occured,
+  the MySQL driver went into an endless loop (at least in most cases).
+---------------------------------------------------------------------------
+Version 1.0.1 (RGer), 2005-09-23
+- fixed a security issue with SQL-escaping in conjunction with
+  non-(SQL-)standard MySQL features.
+---------------------------------------------------------------------------
+Version 1.0.0 (RGer), 2005-09-12
+- changed install doc to cover daily cron scripts - a trouble source
+- added rc script for slackware (provided by Chris Elvidge - thanks!) 
+- fixed a really minor bug in usage() - the -r option was still
+  reported as without the port parameter
+---------------------------------------------------------------------------
+Version 0.9.8 (RGer), 2005-09-05
+- made startup and shutdown message more consistent and included the
+  pid, so that they can be easier correlated. Used syslog-protocol
+  structured data format for this purpose.
+- improved config info in startup message, now tells not only
+  if it is listening remote on udp, but also for tcp. Also includes
+  the port numbers. The previous startup message was misleading, because
+  it did not say "remote reception" if rsyslogd was only listening via
+  tcp (but not via udp).
+- added a "how can you help" document to the doc set
+---------------------------------------------------------------------------
+Version 0.9.7 (RGer), 2005-08-15
+- some of the previous doc files (like INSTALL) did not properly
+  reflect the changes to the build process and the new doc. Fixed
+  that.
+- changed syslogd.c so that when compiled without database support,
+  an error message is displayed when a database action is detected
+  in the config file (previously this was used as an user rule ;))
+- fixed a bug in the os-specific Makefiles which caused MySQL
+  support to not be compiled, even if selected
+---------------------------------------------------------------------------
+Version 0.9.6 (RGer), 2005-08-09
+- greatly enhanced documentation. Now available in html format in
+  the "doc" folder and FreeBSD. Finally includes an install howto.
+- improved MySQL error messages a little - they now show up as log
+  messages, too (formerly only in debug mode)
+- added the ability to specify the listen port for udp syslog.
+  WARNING: This introduces an incompatibility. Formerly, udp
+  syslog was enabled by the -r command line option. Now, it is
+  "-r [port]", which is consistent with the tcp listener. However,
+  just -r will now return an error message.
+- added sample startup scripts for Debian and FreeBSD
+- added support for easy feature selection in the makefile. Un-
+  fortunately, this also means I needed to spilt the make file
+  for different OS and distros. There are some really bad syntax
+  differences between FreeBSD and Linux make.
+---------------------------------------------------------------------------
+Version 0.9.5 (RGer), 2005-08-01
+- the "semicolon bug" was actually not (fully) solved in 0.9.4. One
+  part of the bug was solved, but another still existed. This one
+  is fixed now, too.
+- the "semicolon bug" actually turned out to be a more generic bug.
+  It appeared whenever an invalid template name was given. With some
+  selector actions, rsyslogd dumped core, with other it "just" had
+  a small ressource leak with others all worked well. These anomalies
+  are now fixed. Note that they only appeared during system initaliziation
+  once the system was running, nothing bad happened.
+- improved error reporting for template errors on startup. They are now
+  shown on the console and the start-up tty. Formerly, they were only
+  visible in debug mode.
+- support for multiple instances of rsyslogd on a single machine added
+- added new option "-o" --> omit local unix domain socket. This option
+  enables rsyslogd NOT to listen to the local socket. This is most
+  helpful when multiple instances of rsyslogd (or rsyslogd and another
+  syslogd) shall run on a single system.
+- added new option "-i <pidfile>" which allows to specify the pidfile.
+  This is needed when multiple instances of rsyslogd are to be run.
+- the new project home page is now online at www.rsyslog.com
+---------------------------------------------------------------------------
+Version 0.9.4 (RGer), 2005-07-25
+- finally added the TCP sender. It now supports non-blocking mode, no
+  longer disabling message reception during connect. As it is now, it
+  is usable in production. The code could be more sophisticated, but
+  I've kept it short in anticipation of the move to liblogging, which
+  will lead to the removal of the code just written ;)
+- the "exiting on signal..." message still had the "syslogd" name in 
+  it. Changed this to "rsyslogd", as we do not have a large user base
+  yet, this should pose no problem.
+- fixed "the semiconlon" bug. rsyslogd dumped core if a write-db action
+  was specified but no semicolon was given after the password (an empty
+  template was ok, but the semicolon needed to be present).
+- changed a default for traditional output format. During testing, it
+  was seen that the timestamp written to file in default format was
+  the time of message reception, not the time specified in the TIMESTAMP
+  field of the message itself. Traditionally, the message TIMESTAMP is
+  used and this has been changed now.
+---------------------------------------------------------------------------
+Version 0.9.3 (RGer), 2005-07-19
+- fixed a bug in the message parser. In June, the RFC 3164 timestamp
+  was not correctly parsed (yes, only in June and some other months,
+  see the code comment to learn why...)
+- added the ability to specify the destination port when forwarding
+  syslog messages (both for TCP and UDP)
+- added an very experimental TCP sender (activated by
+  @@machine:port in config). This is not yet for production use. If
+  the receiver is not alive, rsyslogd will wait quite some time until
+  the connection request times out, which most probably leads to
+  loss of incoming messages.
+
+---------------------------------------------------------------------------
+Version 0.9.2 (RGer), around 2005-07-06
+- I intended to change the maxsupported message size to 32k to
+  support IHE - but given the memory inefficiency in the usual use
+  cases, I have not done this. I have, however, included very
+  specific instructions on how to do this in the source code. I have
+  also done some testing with 32k messages, so you can change the
+  max size without taking too much risk.
+- added a syslog/tcp receiver; we now can receive messages via
+  plain tcp, but we can still send only via UDP. The syslog/tcp
+  receiver is the primary enhancement of this release.
+- slightly changed some error messages that contained a spurios \n at
+  the end of the line (which gives empty lines in your log...)
+
+---------------------------------------------------------------------------
+Version 0.9.1 (RGer)
+- fixed code so that it compiles without errors under FreeBSD
+- removed now unused function "allocate_log()" from syslogd.c
+- changed the make file so that it contains more defines for
+  different environments (in the long term, we need a better
+  system for disabling/enabling features...)
+- changed some printf's printing off_t types to %lld and
+  explicit (long long) casts. I tried to figure out the exact type,
+  but did not succeed in this. In the worst case, ultra-large peta-
+  byte files will now display funny informational messages on rollover,
+  something I think we can live with for the next 10 years or so...
+
+---------------------------------------------------------------------------
+Version 0.9.0 (RGer)
+- changed the filed structure to be a linked list. Previously, it
+  was a table - well, for non-SYSV it was defined as linked list,
+  but from what I see that code did no longer work after my
+  modifications. I am now using a linked list in general because
+  that is needed for other upcoming modifications.
+- fixed a bug that caused rsyslogd not to listen to anything if
+  the configuration file could not be read
+- pervious versions disabled network logging (send/receive) if
+  syslog/udp port was not in /etc/services. Now defaulting to
+  port 514 in this case.
+- internal error messages are now supported up to 256 bytes
+- error message seen during config file read are now also displayed
+  to the attached tty and not only the console
+- changed some error messages during init to be sent to the console
+  and/or emergency log. Previously, they were only seen if the
+  -d (debug) option was present on the command line.
+- fixed the "2gb file issue on 32bit systems". If a file grew to
+  more than 2gb, the syslogd was aborted with "file size exceeded". 
+  Now, defines have been added according to
+  http://www.daimi.au.dk/~kasperd/comp.os.linux.development.faq.html#LARGEFILE
+  Testing revealed that they work ;)
+  HOWEVER, if your file system, glibc, kernel, whatever does not
+  support files larger 2gb, you need to set a file size limit with
+  the new output channel mechanism.
+- updated man pages to reflect the changes
+
+---------------------------------------------------------------------------
+Version 0.8.4
+
+- improved -d debug output (removed developer-only content)
+- now compiles under FreeBSD and NetBSD (only quick testing done on NetBSD)
+---------------------------------------------------------------------------
+Version 0.8.3
+
+- security model in "make install" changed
+- minor doc updates
+---------------------------------------------------------------------------
+Version 0.8.2
+
+- added man page for rsyslog.conf and rsyslogd
+- gave up on the concept of rsyslog being a "drop in" replacement
+  for syslogd. Now, the user installs rsyslogd and also needs to
+  adjust his system settings to this specifically. This also lead
+  to these changes:
+  * changed Makefile so that install now installs rsyslogd instead
+    of dealing with syslogd
+  * changed the default config file name to rsyslog.conf
+---------------------------------------------------------------------------
+Version 0.8.1
+
+- fixed a nasty memory leak (probably not the last one with this release)
+- some enhancements to Makefile as suggested by Bennett Todd
+- syslogd-internal messages (like restart) were missing the hostname
+  this has been corrected
+---------------------------------------------------------------------------
+Version 0.8.0
+
+Initial testing release. Based on the sysklogd package. Thanks to the
+sysklogd maintainers for all their good work!
+---------------------------------------------------------------------------
+
+----------------------------------------------------------------------
+The following comments are from the stock syslogd.c source. They provide
+some insight into what happened to the source before we forked
+rsyslogd. However, much of the code already has been replaced and more
+is to be replaced. So over time, these comments become less valuable.
+I have moved them out of the syslogd.c file to shrink it, especially
+as a lot of them do no longer apply. For historical reasons and
+understanding of how the daemon evolved, they are probably still
+helpful.
+----------------------------------------------------------------------
+/*
+ *  syslogd -- log system messages
+ *
+ * This program implements a system log. It takes a series of lines.
+ * Each line may have a priority, signified as "<n>" as
+ * the first characters of the line.  If this is
+ * not present, a default priority is used.
+ *
+ * To kill syslogd, send a signal 15 (terminate).  A signal 1 (hup) will
+ * cause it to reread its configuration file.
+ *
+ * Defined Constants:
+ *
+ * MAXLINE -- the maximum line length that can be handled.
+ * DEFUPRI -- the default priority for user messages
+ * DEFSPRI -- the default priority for kernel messages
+ *
+ * Author: Eric Allman
+ * extensive changes by Ralph Campbell
+ * more extensive changes by Eric Allman (again)
+ *
+ * Steve Lord:	Fix UNIX domain socket code, added linux kernel logging
+ *		change defines to
+ *		SYSLOG_INET	- listen on a UDP socket
+ *		SYSLOG_UNIXAF	- listen on unix domain socket
+ *		SYSLOG_KERNEL	- listen to linux kernel
+ *
+ * Mon Feb 22 09:55:42 CST 1993:  Dr. Wettstein
+ * 	Additional modifications to the source.  Changed priority scheme
+ *	to increase the level of configurability.  In its stock configuration
+ *	syslogd no longer logs all messages of a certain priority and above
+ *	to a log file.  The * wildcard is supported to specify all priorities.
+ *	Note that this is a departure from the BSD standard.
+ *
+ *	Syslogd will now listen to both the inetd and the unixd socket.  The
+ *	strategy is to allow all local programs to direct their output to
+ *	syslogd through the unixd socket while the program listens to the
+ *	inetd socket to get messages forwarded from other hosts.
+ *
+ * Fri Mar 12 16:55:33 CST 1993:  Dr. Wettstein
+ *	Thanks to Stephen Tweedie (dcs.ed.ac.uk!sct) for helpful bug-fixes
+ *	and an enlightened commentary on the prioritization problem.
+ *
+ *	Changed the priority scheme so that the default behavior mimics the
+ *	standard BSD.  In this scenario all messages of a specified priority
+ *	and above are logged.
+ *
+ *	Add the ability to specify a wildcard (=) as the first character
+ *	of the priority name.  Doing this specifies that ONLY messages with
+ *	this level of priority are to be logged.  For example:
+ *
+ *		*.=debug			/usr/adm/debug
+ *
+ *	Would log only messages with a priority of debug to the /usr/adm/debug
+ *	file.
+ *
+ *	Providing an * as the priority specifies that all messages are to be
+ *	logged.  Note that this case is degenerate with specifying a priority
+ *	level of debug.  The wildcard * was retained because I believe that
+ *	this is more intuitive.
+ *
+ * Thu Jun 24 11:34:13 CDT 1993:  Dr. Wettstein
+ *	Modified sources to incorporate changes in libc4.4.  Messages from
+ *	syslog are now null-terminated, syslogd code now parses messages
+ *	based on this termination scheme.  Linux as of libc4.4 supports the
+ *	fsync system call.  Modified code to fsync after all writes to
+ *	log files.
+ *
+ * Sat Dec 11 11:59:43 CST 1993:  Dr. Wettstein
+ *	Extensive changes to the source code to allow compilation with no
+ *	complaints with -Wall.
+ *
+ *	Reorganized the facility and priority name arrays so that they
+ *	compatible with the syslog.h source found in /usr/include/syslog.h.
+ *	NOTE that this should really be changed.  The reason I do not
+ *	allow the use of the values defined in syslog.h is on account of
+ *	the extensions made to allow the wildcard character in the
+ *	priority field.  To fix this properly one should malloc an array,
+ *	copy the contents of the array defined by syslog.h and then
+ *	make whatever modifications that are desired.  Next round.
+ *
+ * Thu Jan  6 12:07:36 CST 1994:  Dr. Wettstein
+ *	Added support for proper decomposition and re-assembly of
+ *	fragment messages on UNIX domain sockets.  Lack of this capability
+ *	was causing 'partial' messages to be output.  Since facility and
+ *	priority information is encoded as a leader on the messages this
+ *	was causing lines to be placed in erroneous files.
+ *
+ *	Also added a patch from Shane Alderton (shane@ion.apana.org.au) to
+ *	correct a problem with syslogd dumping core when an attempt was made
+ *	to write log messages to a logged-on user.  Thank you.
+ *
+ *	Many thanks to Juha Virtanen (jiivee@hut.fi) for a series of
+ *	interchanges which lead to the fixing of problems with messages set
+ *	to priorities of none and emerg.  Also thanks to Juha for a patch
+ *	to exclude users with a class of LOGIN from receiving messages.
+ *
+ *	Shane Alderton provided an additional patch to fix zombies which
+ *	were conceived when messages were written to multiple users.
+ *
+ * Mon Feb  6 09:57:10 CST 1995:  Dr. Wettstein
+ *	Patch to properly reset the single priority message flag.  Thanks
+ *	to Christopher Gori for spotting this bug and forwarding a patch.
+ *
+ * Wed Feb 22 15:38:31 CST 1995:  Dr. Wettstein
+ *	Added version information to startup messages.
+ *
+ *	Added defines so that paths to important files are taken from
+ *	the definitions in paths.h.  Hopefully this will insure that
+ *	everything follows the FSSTND standards.  Thanks to Chris Metcalf
+ *	for a set of patches to provide this functionality.  Also thanks
+ *	Elias Levy for prompting me to get these into the sources.
+ *
+ * Wed Jul 26 18:57:23 MET DST 1995:  Martin Schulze
+ *	Linux' gethostname only returns the hostname and not the fqdn as
+ *	expected in the code. But if you call hostname with an fqdn then
+ *	gethostname will return an fqdn, so we have to mention that. This
+ *	has been changed.
+ *
+ *	The 'LocalDomain' and the hostname of a remote machine is
+ *	converted to lower case, because the original caused some
+ *	inconsistency, because the (at least my) nameserver did respond an
+ *	fqdn containing of upper- _and_ lowercase letters while
+ *	'LocalDomain' consisted only of lowercase letters and that didn't
+ *	match.
+ *
+ * Sat Aug  5 18:59:15 MET DST 1995:  Martin Schulze
+ *	Now no messages that were received from any remote host are sent
+ *	out to another. At my domain this missing feature caused ugly
+ *	syslog-loops, sometimes.
+ *
+ *	Remember that no message is sent out. I can't figure out any
+ *	scenario where it might be useful to change this behavior and to
+ *	send out messages to other hosts than the one from which we
+ *	received the message, but I might be shortsighted. :-/
+ *
+ * Thu Aug 10 19:01:08 MET DST 1995:  Martin Schulze
+ *	Added my pidfile.[ch] to it to perform a better handling with
+ *	pidfiles. Now both, syslogd and klogd, can only be started
+ *	once. They check the pidfile.
+ *
+ * Sun Aug 13 19:01:41 MET DST 1995:  Martin Schulze
+ *	Add an addition to syslog.conf's interpretation. If a priority
+ *	begins with an exclamation mark ('!') the normal interpretation
+ *	of the priority is inverted: ".!*" is the same as ".none", ".!=info"
+ *	don't logs the info priority, ".!crit" won't log any message with
+ *	the priority crit or higher. For example:
+ *
+ *		mail.*;mail.!=info		/usr/adm/mail
+ *
+ *	Would log all messages of the facility mail except those with
+ *	the priority info to /usr/adm/mail. This makes the syslogd
+ *	much more flexible.
+ *
+ *	Defined TABLE_ALLPRI=255 and changed some occurrences.
+ *
+ * Sat Aug 19 21:40:13 MET DST 1995:  Martin Schulze
+ *	Making the table of facilities and priorities while in debug
+ *	mode more readable.
+ *
+ *	If debugging is turned on, printing the whole table of
+ *	facilities and priorities every hexadecimal or 'X' entry is
+ *	now 2 characters wide.
+ *
+ *	The number of the entry is prepended to each line of
+ *	facilities and priorities, and F_UNUSED lines are not shown
+ *	anymore.
+ *
+ *	Corrected some #ifdef SYSV's.
+ *
+ * Mon Aug 21 22:10:35 MET DST 1995:  Martin Schulze
+ *	Corrected a strange behavior during parsing of configuration
+ *	file. The original BSD syslogd doesn't understand spaces as
+ *	separators between specifier and action. This syslogd now
+ *	understands them. The old behavior caused some confusion over
+ *	the Linux community.
+ *
+ * Thu Oct 19 00:02:07 MET 1995:  Martin Schulze
+ *	The default behavior has changed for security reasons. The
+ *	syslogd will not receive any remote message unless you turn
+ *	reception on with the "-r" option.
+ *
+ *	Not defining SYSLOG_INET will result in not doing any network
+ *	activity, i.e. not sending or receiving messages.  I changed
+ *	this because the old idea is implemented with the "-r" option
+ *	and the old thing didn't work anyway.
+ *
+ * Thu Oct 26 13:14:06 MET 1995:  Martin Schulze
+ *	Added another logfile type F_FORW_UNKN.  The problem I ran into
+ *	was a name server that runs on my machine and a forwarder of
+ *	kern.crit to another host.  The hosts address can only be
+ *	fetched using the nameserver.  But named is started after
+ *	syslogd, so syslogd complained.
+ *
+ *	This logfile type will retry to get the address of the
+ *	hostname ten times and then complain.  This should be enough to
+ *	get the named up and running during boot sequence.
+ *
+ * Fri Oct 27 14:08:15 1995:  Dr. Wettstein
+ *	Changed static array of logfiles to a dynamic array. This
+ *	can grow during process.
+ *
+ * Fri Nov 10 23:08:18 1995:  Martin Schulze
+ *	Inserted a new tabular sys_h_errlist that contains plain text
+ *	for error codes that are returned from the net subsystem and
+ *	stored in h_errno. I have also changed some wrong lookups to
+ *	sys_errlist.
+ *
+ * Wed Nov 22 22:32:55 1995:  Martin Schulze
+ *	Added the fabulous strip-domain feature that allows us to
+ *	strip off (several) domain names from the fqdn and only log
+ *	the simple hostname. This is useful if you're in a LAN that
+ *	has a central log server and also different domains.
+ *
+ *	I have also also added the -l switch do define hosts as
+ *	local. These will get logged with their simple hostname, too.
+ *
+ * Thu Nov 23 19:02:56 MET DST 1995:  Martin Schulze
+ *	Added the possibility to omit fsyncing of logfiles after every
+ *	write. This will give some performance back if you have
+ *	programs that log in a very verbose manner (like innd or
+ *	smartlist). Thanks to Stephen R. van den Berg <srb@cuci.nl>
+ *	for the idea.
+ *
+ * Thu Jan 18 11:14:36 CST 1996:  Dr. Wettstein
+ *	Added patche from beta-testers to stop compile error.  Also
+ *	added removal of pid file as part of termination cleanup.
+ *
+ * Wed Feb 14 12:42:09 CST 1996:  Dr. Wettstein
+ *	Allowed forwarding of messages received from remote hosts to
+ *	be controlled by a command-line switch.  Specifying -h allows
+ *	forwarding.  The default behavior is to disable forwarding of
+ *	messages which were received from a remote host.
+ *
+ *	Parent process of syslogd does not exit until child process has
+ *	finished initialization process.  This allows rc.* startup to
+ *	pause until syslogd facility is up and operating.
+ *
+ *	Re-arranged the select code to move UNIX domain socket accepts
+ *	to be processed later.  This was a contributed change which
+ *	has been proposed to correct the delays sometimes encountered
+ *	when syslogd starts up.
+ *
+ *	Minor code cleanups.
+ *
+ * Thu May  2 15:15:33 CDT 1996:  Dr. Wettstein
+ *	Fixed bug in init function which resulted in file descripters
+ *	being orphaned when syslogd process was re-initialized with SIGHUP
+ *	signal.  Thanks to Edvard Tuinder
+ *	(Edvard.Tuinder@praseodymium.cistron.nl) for putting me on the
+ *	trail of this bug.  I am amazed that we didn't catch this one
+ *	before now.
+ *
+ * Tue May 14 00:03:35 MET DST 1996:  Martin Schulze
+ *	Corrected a mistake that causes the syslogd to stop logging at
+ *	some virtual consoles under Linux. This was caused by checking
+ *	the wrong error code. Thanks to Michael Nonweiler
+ *	<mrn20@hermes.cam.ac.uk> for sending me a patch.
+ *
+ * Mon May 20 13:29:32 MET DST 1996:  Miquel van Smoorenburg <miquels@cistron.nl>
+ *	Added continuation line supported and fixed a bug in
+ *	the init() code.
+ *
+ * Tue May 28 00:58:45 MET DST 1996:  Martin Schulze
+ *	Corrected behaviour of blocking pipes - i.e. the whole system
+ *	hung.  Michael Nonweiler <mrn20@hermes.cam.ac.uk> has sent us
+ *	a patch to correct this.  A new logfile type F_PIPE has been
+ *	introduced.
+ *
+ * Mon Feb 3 10:12:15 MET DST 1997:  Martin Schulze
+ *	Corrected behaviour of logfiles if the file can't be opened.
+ *	There was a bug that causes syslogd to try to log into non
+ *	existing files which ate cpu power.
+ *
+ * Sun Feb 9 03:22:12 MET DST 1997:  Martin Schulze
+ *	Modified syslogd.c to not kill itself which confuses bash 2.0.
+ *
+ * Mon Feb 10 00:09:11 MET DST 1997:  Martin Schulze
+ *	Improved debug code to decode the numeric facility/priority
+ *	pair into textual information.
+ *
+ * Tue Jun 10 12:35:10 MET DST 1997:  Martin Schulze
+ *	Corrected freeing of logfiles.  Thanks to Jos Vos <jos@xos.nl>
+ *	for reporting the bug and sending an idea to fix the problem.
+ *
+ * Tue Jun 10 12:51:41 MET DST 1997:  Martin Schulze
+ *	Removed sleep(10) from parent process.  This has caused a slow
+ *	startup in former times - and I don't see any reason for this.
+ *
+ * Sun Jun 15 16:23:29 MET DST 1997: Michael Alan Dorman
+ *	Some more glibc patches made by <mdorman@debian.org>.
+ *
+ * Thu Jan  1 16:04:52 CET 1998: Martin Schulze <joey@infodrom.north.de
+ *	Applied patch from Herbert Thielen <Herbert.Thielen@lpr.e-technik.tu-muenchen.de>.
+ *	This included some balance parentheses for emacs and a bug in
+ *	the exclamation mark handling.
+ *
+ *	Fixed small bug which caused syslogd to write messages to the
+ *	wrong logfile under some very rare conditions.  Thanks to
+ *	Herbert Xu <herbert@gondor.apana.org.au> for fiddling this out.
+ *
+ * Thu Jan  8 22:46:35 CET 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Reworked one line of the above patch as it prevented syslogd
+ *	from binding the socket with the result that no messages were
+ *	forwarded to other hosts.
+ *
+ * Sat Jan 10 01:33:06 CET 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Fixed small bugs in F_FORW_UNKN meachanism.  Thanks to Torsten
+ *	Neumann <torsten@londo.rhein-main.de> for pointing me to it.
+ *
+ * Mon Jan 12 19:50:58 CET 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Modified debug output concerning remote receiption.
+ *
+ * Mon Feb 23 23:32:35 CET 1998: Topi Miettinen <Topi.Miettinen@ml.tele.fi>
+ *	Re-worked handling of Unix and UDP sockets to support closing /
+ *	opening of them in order to have it open only if it is needed
+ *	either for forwarding to a remote host or by receiption from
+ *	the network.
+ *
+ * Wed Feb 25 10:54:09 CET 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Fixed little comparison mistake that prevented the MARK
+ *	feature to work properly.
+ *
+ * Wed Feb 25 13:21:44 CET 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Corrected Topi's patch as it prevented forwarding during
+ *	startup due to an unknown LogPort.
+ *
+ * Sat Oct 10 20:01:48 CEST 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Added support for TESTING define which will turn syslogd into
+ *	stdio-mode used for debugging.
+ *
+ * Sun Oct 11 20:16:59 CEST 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Reworked the initialization/fork code.  Now the parent
+ *	process activates a signal handler which the daughter process
+ *	will raise if it is initialized.  Only after that one the
+ *	parent process may exit.  Otherwise klogd might try to flush
+ *	its log cache while syslogd can't receive the messages yet.
+ *
+ * Mon Oct 12 13:30:35 CEST 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Redirected some error output with regard to argument parsing to
+ *	stderr.
+ *
+ * Mon Oct 12 14:02:51 CEST 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Applied patch provided vom Topi Miettinen with regard to the
+ *	people from OpenBSD.  This provides the additional '-a'
+ *	argument used for specifying additional UNIX domain sockets to
+ *	listen to.  This is been used with chroot()'ed named's for
+ *	example.  See for http://www.psionic.com/papers/dns.html
+ *
+ * Mon Oct 12 18:29:44 CEST 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Added `ftp' facility which was introduced in glibc version 2.
+ *	It's #ifdef'ed so won't harm with older libraries.
+ *
+ * Mon Oct 12 19:59:21 MET DST 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Code cleanups with regard to bsd -> posix transition and
+ *	stronger security (buffer length checking).  Thanks to Topi
+ *	Miettinen <tom@medialab.sonera.net>
+ *	. index() --> strchr()
+ *	. sprintf() --> snprintf()
+ *	. bcopy() --> memcpy()
+ *	. bzero() --> memset()
+ *	. UNAMESZ --> UT_NAMESIZE
+ *	. sys_errlist --> strerror()
+ *
+ * Mon Oct 12 20:22:59 CEST 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Added support for setutent()/getutent()/endutend() instead of
+ *	binary reading the UTMP file.  This is the the most portable
+ *	way.  This allows /var/run/utmp format to change, even to a
+ *	real database or utmp daemon. Also if utmp file locking is
+ *	implemented in libc, syslog will use it immediately.  Thanks
+ *	to Topi Miettinen <tom@medialab.sonera.net>.
+ *
+ * Mon Oct 12 20:49:18 MET DST 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Avoid logging of SIGCHLD when syslogd is in the process of
+ *	exiting and closing its files.  Again thanks to Topi.
+ *
+ * Mon Oct 12 22:18:34 CEST 1998: Martin Schulze <joey@infodrom.north.de>
+ *	Modified printline() to support 8bit characters - such as
+ *	russion letters.  Thanks to Vladas Lapinskas <lapinskas@mail.iae.lt>.
+ *
+ * Sat Nov 14 02:29:37 CET 1998: Martin Schulze <joey@infodrom.north.de>
+ *	``-m 0'' now turns of MARK logging entirely.
+ *
+ * Tue Jan 19 01:04:18 MET 1999: Martin Schulze <joey@infodrom.north.de>
+ *	Finally fixed an error with `-a' processing, thanks to Topi
+ *	Miettinen <tom@medialab.sonera.net>.
+ *
+ * Sun May 23 10:08:53 CEST 1999: Martin Schulze <joey@infodrom.north.de>
+ *	Removed superflous call to utmpname().  The path to the utmp
+ *	file is defined in the used libc and should not be hardcoded
+ *	into the syslogd binary referring the system it was compiled on.
+ *
+ * Sun Sep 17 20:45:33 CEST 2000: Martin Schulze <joey@infodrom.ffis.de>
+ *	Fixed some bugs in printline() code that did not escape
+ *	control characters '\177' through '\237' and contained a
+ *	single-byte buffer overflow.  Thanks to Solar Designer
+ *	<solar@false.com>.
+ *
+ * Sun Sep 17 21:26:16 CEST 2000: Martin Schulze <joey@infodrom.ffis.de>
+ *	Don't close open sockets upon reload.  Thanks to Bill
+ *	Nottingham.
+ *
+ * Mon Sep 18 09:10:47 CEST 2000: Martin Schulze <joey@infodrom.ffis.de>
+ *	Fixed bug in printchopped() that caused syslogd to emit
+ *	kern.emerg messages when splitting long lines.  Thanks to
+ *	Daniel Jacobowitz <dan@debian.org> for the fix.
+ *
+ * Mon Sep 18 15:33:26 CEST 2000: Martin Schulze <joey@infodrom.ffis.de>
+ *	Removed unixm/unix domain sockets and switch to Datagram Unix
+ *	Sockets.  This should remove one possibility to play DoS with
+ *	syslogd.  Thanks to Olaf Kirch <okir@caldera.de> for the patch.
+ *
+ * Sun Mar 11 20:23:44 CET 2001: Martin Schulze <joey@infodrom.ffis.de>
+ *	Don't return a closed fd if `-a' is called with a wrong path.
+ *	Thanks to Bill Nottingham <notting@redhat.com> for providing
+ *	a patch.
+ *
+ * The following copyright and license applies to the original
+ * sysklogd package that was used as a basis for this release of
+ * rsyslogd. Obviously, it applies to those parts stemming directly
+ * back to the original sysklogd package.
+ *
+ * Copyright (c) 1983, 1988 Regents of the University of California.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms are permitted
+ * provided that the above copyright notice and this paragraph are
+ * duplicated in all such forms and that any documentation,
+ * advertising materials, and other materials related to such
+ * distribution and use acknowledge that the software was developed
+ * by the University of California, Berkeley.  The name of the
+ * University may not be used to endorse or promote products derived
+ * from this software without specific prior written permission.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+ * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+ */

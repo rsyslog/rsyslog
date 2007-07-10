@@ -137,10 +137,11 @@
 #define	MAXLINE		2048		/* maximum line length */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define DEFSPRI		(LOG_KERN|LOG_CRIT)
-//#define TIMERINTVL	30		/* interval for checking flush, mark */
-#define TIMERINTVL	20		/* interval for checking flush, mark */
+#define TIMERINTVL	30		/* interval for checking flush, mark */
 
 #define CONT_LINE	1		/* Allow continuation lines */
+
+#include "config.h"
 
 #ifdef MTRACE
 #include <mcheck.h>
@@ -196,7 +197,6 @@
 #ifndef TESTING
 #include "pidfile.h"
 #endif
-#include "version.h"
 
 #include <assert.h>
 
@@ -7020,8 +7020,8 @@ static void die(int sig)
 	if (sig) {
 		dprintf(" exiting on signal %d\n", sig);
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
-		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
-		 PATCHLEVEL "\" x-pid=\"%d\"]" " exiting on signal %d.",
+		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+		 "\" x-pid=\"%d\"]" " exiting on signal %d.",
 		 (int) myPid, sig);
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
@@ -7780,8 +7780,8 @@ static void init()
 	 * rgerhards, 2005-08-17
 	 */
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
-		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION "." \
-		 PATCHLEVEL "\" x-pid=\"%d\"][x-configInfo udpReception=\"%s\" " \
+		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
+		 "\" x-pid=\"%d\"][x-configInfo udpReception=\"%s\" " \
 		 "udpPort=\"%s\" tcpReception=\"%s\" tcpPort=\"%s\"]" \
 		 " restart",
 		 (int) myPid,
@@ -9719,7 +9719,7 @@ int main(int argc, char **argv)
 				bParseHOSTNAMEandTAG = 0;
 			break;
 		case 'v':
-			printf("rsyslogd %s.%s, ", VERSION, PATCHLEVEL);
+			printf("rsyslogd %s, ", VERSION);
 			printf("compiled with:\n");
 #ifdef USE_PTHREADS
 			printf("\tFEATURE_PTHREADS (dual-threading)\n");
