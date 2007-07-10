@@ -546,26 +546,12 @@ The file containing the process id of
 .BR rsyslogd .
 .PD
 .SH BUGS
-This is an early release of
-.B Rsyslogd .
-As such, there are probably a number of bugs. Those that I know
-are described in the file BUGS that came with the package. Be sure
-to review it.
-
-If an error occurs in one line the whole rule is ignored.
-
-.B Rsyslogd
-doesn't change the filemode of opened logfiles at any stage of
-process.  If a file is created it is world readable.  If you want to
-avoid this, you have to create it and change permissions on your own.
-This could be done in combination with rotating logfiles using the 
-.BR savelog (8)
-program that is shipped in the 
-.B smail
-3.x distribution.  Remember that it might be a security hole if
-everybody is able to read auth.* messages as these might contain
-passwords.
-.LP
+Please review the file BUGS for up-to-date information on known
+bugs and annouyances.
+.SH Further Information
+Please visit
+.BR http://www.rsyslog.com/doc
+for additional information, tutorials and a support forum.
 .SH SEE ALSO
 .BR rsyslog.conf (5),
 .BR logger (1),

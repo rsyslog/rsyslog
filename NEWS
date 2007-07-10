@@ -1,7 +1,20 @@
 ---------------------------------------------------------------------------
-Version 1.15.1 (RGer), 2007-07-0?
+Version 1.15.1 (RGer), 2007-07-10
 - fixed a bug that caused a dynaFile selector to stall when there was
   an open error with one file 
+- improved template processing for dynaFiles; templates are now only
+  looked up during initialization - speeds up processing
+- optimized memory layout in struct filed when compiled with MySQL
+  support
+- fixed a bug that caused compilation without SYSLOG_INET to fail
+- re-enabled the "last message repeated n times" feature. This
+  feature was not taken care of while rsyslogd evolved from sysklogd
+  and it was more or less defunct. Now it is fully functional again.
+- added system properties: $NOW, $YEAR, $MONTH, $DAY, $HOUR, $MINUTE
+- fixed a bug in iovAsString() that caused a memory leak under stress
+  conditions (most probably memory shortage). This was unlikely to
+  ever happen, but it doesn't hurt doing it right
+- cosmetic: defined type "uchar", change all unsigned chars to uchar
 ---------------------------------------------------------------------------
 Version 1.15.0 (RGer), 2007-07-05
 - added ability to dynamically generate file names based on templates
