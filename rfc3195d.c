@@ -24,6 +24,7 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+#include "config.h"
 
 #include <stdio.h>
 #ifndef FEATURE_RFC3195
@@ -44,7 +45,6 @@ int main()
 #include "liblogging.h"
 #include "srAPI.h"
 #include "syslogmessage.h"
-#include "version.h"
 
 /* configurable params! */
 static char* pPathLogname = "/dev/log3195";
