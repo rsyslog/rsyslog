@@ -1295,6 +1295,7 @@ Optional Features:
   --enable-zlib           Enable zlib compression support [default=yes]
   --enable-pthreads       Enable multithreading via pthreads [default=yes]
   --enable-klogd          Integrated klogd functionality [default=yes]
+  --enable-inet           Enable networking support [default=yes]
   --enable-debug          Enable debug mode [default=no]
 
 Some influential environment variables:
@@ -6785,14 +6786,6 @@ done
 
 
 
-# Ugly stuff
-
-cat >>confdefs.h <<\_ACEOF
-#define SYSLOG_INET 1
-_ACEOF
-
-
-
 # Large file support
 # Check whether --enable-largefile was given.
 if test "${enable_largefile+set}" = set; then
@@ -7192,6 +7185,30 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 fi
+
+# inet
+# Check whether --enable-inet was given.
+if test "${enable_inet+set}" = set; then
+  enableval=$enable_inet; case "${enableval}" in
+         yes) enable_inet="yes" ;;
+          no) enable_inet="no" ;;
+           *) { { echo "$as_me:$LINENO: error: bad value ${enableval} for --enable-inet" >&5
+echo "$as_me: error: bad value ${enableval} for --enable-inet" >&2;}
+   { (exit 1); exit 1; }; } ;;
+         esac
+else
+  enable_inet="yes"
+
+fi
+
+if test "$enable_inet" = "yes"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define SYSLOG_INET 1
+_ACEOF
+
+fi
+
 
 # debug
 # Check whether --enable-debug was given.
@@ -8564,5 +8581,6 @@ echo "Regular expressions support enabled:	$enable_regexp"
 echo "Zlib compression support enabled:	$enable_zlib"
 echo "MySql support enabled:			$enable_mysql"
 echo "Large file support enabled:		$enable_largefile"
+echo "Networking support enabled:		$enable_inet"
 echo "Debug mode enabled:			$enable_debug"
 

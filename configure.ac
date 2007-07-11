@@ -42,10 +42,6 @@ AC_FUNC_WAIT3
 AC_CHECK_FUNCS([setsid alarm gethostbyname gethostname gettimeofday memset regcomp select socket strcasecmp strchr strerror strndup strrchr strstr strtol strtoul uname])
 
 
-# Ugly stuff 
-AC_DEFINE(SYSLOG_INET, 1, [Why there is this macro])
-
-
 # Large file support
 AC_ARG_ENABLE(largefile,
         [AC_HELP_STRING([--enable-largefile],[Enable large file support @<:@default=yes@:>@])],
@@ -148,6 +144,21 @@ if test "$enable_klogd" = "yes"; then
         AC_DEFINE(FEATURE_KLOGD, 1, [klogd functionality is integrated.])
 fi
 
+# inet
+AC_ARG_ENABLE(inet,
+        [AC_HELP_STRING([--enable-inet],[Enable networking support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_inet="yes" ;;
+          no) enable_inet="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-inet) ;;
+         esac],
+        [enable_inet="yes"]
+)
+if test "$enable_inet" = "yes"; then
+        AC_DEFINE(SYSLOG_INET, 1, [network support is integrated.])
+fi
+
+
 # debug
 AC_ARG_ENABLE(debug,
         [AC_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
@@ -174,5 +185,6 @@ echo "Regular expressions support enabled:	$enable_regexp"
 echo "Zlib compression support enabled:	$enable_zlib"
 echo "MySql support enabled:			$enable_mysql"
 echo "Large file support enabled:		$enable_largefile"
+echo "Networking support enabled:		$enable_inet"
 echo "Debug mode enabled:			$enable_debug"
 
