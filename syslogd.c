@@ -7041,9 +7041,8 @@ static void die(int sig)
 			close(funix[i]);
 	/* Close the UDP inet socket. */
 	closeUDPListenSockets();
-
 	/* Close the TCP inet socket. */
-	if(*sockTCPLstn) {
+	if(sockTCPLstn != NULL && *sockTCPLstn) {
 		deinit_tcp_listener();
 	}
 #endif

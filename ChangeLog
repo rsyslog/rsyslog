@@ -2,6 +2,8 @@
 Version 1.16.0 (RGer/Peter Vrabec), 2007-07-1?
 - build system switched to autotools
 - removed SYSV preprocessor macro use, replaced with autotools equivalents
+- fixed a bug that caused rsyslogd to segfault when TCP listening was
+  disabled and it terminated
 ---------------------------------------------------------------------------
 Version 1.15.1 (RGer), 2007-07-10
 - fixed a bug that caused a dynaFile selector to stall when there was
