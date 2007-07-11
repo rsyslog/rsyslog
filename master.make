@@ -55,7 +55,7 @@ template.o: template.c template.h stringbuf.h rsyslog.h
 outchannel.o: outchannel.c outchannel.h stringbuf.h syslogd.h rsyslog.h
 rfc3195d.o: rfc3195d.c rsyslog.h
 
-syslogd.o: syslogd.c version.h parse.h template.h stringbuf.h outchannel.h syslogd.h rsyslog.h
+syslogd.o: syslogd.c parse.h template.h stringbuf.h outchannel.h syslogd.h rsyslog.h
 	${CC} ${CFLAGS} ${NETZIP} ${SYSLOGD_FLAGS} -c $(VPATH)syslogd.c
 
 klogd:  klogd.o syslog.o pidfile.o ksym.o ksym_mod.o
@@ -65,7 +65,7 @@ klogd:  klogd.o syslog.o pidfile.o ksym.o ksym_mod.o
 syslog.o: syslog.c
 	${CC} ${CFLAGS} ${SYSLOG_FLAGS} -c $(VPATH)syslog.c
 
-klogd.o: klogd.c klogd.h version.h
+klogd.o: klogd.c klogd.h
 	${CC} ${CFLAGS} ${KLOGD_FLAGS} ${FEATKLOGD} $(DEB) -c $(VPATH)klogd.c
 
 ksym.o: ksym.c klogd.h

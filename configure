@@ -6689,7 +6689,8 @@ fi
 
 
 
-for ac_func in alarm gethostbyname gethostname gettimeofday memset regcomp select socket strcasecmp strchr strerror strndup strrchr strstr strtol strtoul uname
+
+for ac_func in setsid alarm gethostbyname gethostname gettimeofday memset regcomp select socket strcasecmp strchr strerror strndup strrchr strstr strtol strtoul uname
 do
 as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
 { echo "$as_me:$LINENO: checking for $ac_func" >&5
@@ -6785,11 +6786,6 @@ done
 
 
 # Ugly stuff
-
-cat >>confdefs.h <<\_ACEOF
-#define SYSV 1
-_ACEOF
-
 
 cat >>confdefs.h <<\_ACEOF
 #define SYSLOG_INET 1

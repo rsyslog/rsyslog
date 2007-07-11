@@ -71,6 +71,9 @@
 /* Define to 1 if you have the `select' function. */
 #undef HAVE_SELECT
 
+/* Define to 1 if you have the `setsid' function. */
+#undef HAVE_SETSID
+
 /* Define to 1 if you have the `socket' function. */
 #undef HAVE_SOCKET
 
@@ -223,9 +226,6 @@
 
 /* Why there is this macro */
 #undef SYSLOG_INET
-
-/* I'd like to get rid of this. */
-#undef SYSV
 
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
 #undef TIME_WITH_SYS_TIME

@@ -202,7 +202,7 @@
 #include "mysql/errmsg.h"
 #endif
 
-#if defined(__linux__)
+#if	HAVE_PATHS_H
 #include <paths.h>
 #endif
 
@@ -4421,14 +4421,13 @@ static char **crunch_list(char *list)
 
 
 static void untty()
-#ifdef SYSV
+#ifdef HAVE_SETSID
 {
 	if ( !Debug ) {
 		setsid();
 	}
 	return;
 }
-
 #else
 {
 	int i;
@@ -5562,9 +5561,6 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	        textpri(PRItext, sizeof(PRItext) / sizeof(char), pri),
 		flags, getRcvFrom(pMsg), msg);
 
-#ifndef SYSV
-	omask = sigblock(sigmask(SIGHUP)|sigmask(SIGALRM));
-#endif
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
 	 * a traditional syslog message or one formatted according to syslog-protocol.
 	 * We need to apply different parsers depending on that. We use the
@@ -5622,10 +5618,6 @@ void logmsg(int pri, struct msg *pMsg, int flags)
 	
 	pMsg->msgFlags = flags;
 	enqueueMsg(pMsg);
-
-#ifndef SYSV
-	(void) sigsetmask(omask);
-#endif
 }
 
 
@@ -6696,12 +6688,12 @@ static void wallmsg(register struct filed *f)
 	 * and doing notty().
 	 */
 	if (fork() == 0) {
-		(void) signal(SIGTERM, SIG_DFL);
-		(void) alarm(0);
-#ifndef SYSV
-		(void) signal(SIGTTOU, SIG_IGN);
-		(void) sigsetmask(0);
-#endif
+		signal(SIGTERM, SIG_DFL);
+		alarm(0);
+#		ifdef		SIGTTOU
+		signal(SIGTTOU, SIG_IGN);
+#		endif
+		sigsetmask(0);
 	/* TODO: find a way to limit the max size of the message. hint: this
 	 * should go into the template!
 	 */
@@ -6769,18 +6761,8 @@ static void wallmsg(register struct filed *f)
 static void reapchild()
 {
 	int saved_errno = errno;
-#if defined(SYSV) && !defined(linux)
-	(void) signal(SIGCHLD, reapchild);	/* reset signal handler -ASP */
-	wait ((int *)0);
-#else
-	union wait status;
-
-	while (wait3(&status, WNOHANG, (struct rusage *) NULL) > 0)
-		;
-#endif
-#ifdef linux
-	(void) signal(SIGCHLD, reapchild);	/* reset signal handler -ASP */
-#endif
+	signal(SIGCHLD, reapchild);	/* reset signal handler -ASP */
+	wait(NULL);
 	errno = saved_errno;
 }
 
@@ -9787,10 +9769,6 @@ int main(int argc, char **argv)
 	else
 #endif
 		debugging_on = 1;
-#ifndef SYSV
-	else
-		setlinebuf(stdout);
-#endif
 
 #ifndef TESTING
 	/* tuck my process id away */

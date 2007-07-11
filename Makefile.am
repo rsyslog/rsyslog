@@ -1,7 +1,7 @@
 
 bin_PROGRAMS=klogd rfc3195d syslogd
 
-klogd_SOURCES=klogd.c syslog.c pidfile.c ksym.c 
+klogd_SOURCES=klogd.c syslog.c pidfile.c ksym.c ksym_mod.c
 
 rfc3195d_SOURCES=rfc3195d.c
 

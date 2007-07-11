@@ -49,7 +49,7 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_klogd_OBJECTS = klogd.$(OBJEXT) syslog.$(OBJEXT) pidfile.$(OBJEXT) \
-	ksym.$(OBJEXT)
+	ksym.$(OBJEXT) ksym_mod.$(OBJEXT)
 klogd_OBJECTS = $(am_klogd_OBJECTS)
 klogd_LDADD = $(LDADD)
 am_rfc3195d_OBJECTS = rfc3195d.$(OBJEXT)
@@ -174,7 +174,7 @@ target_alias =
 top_builddir = .
 top_srcdir = .
 zlib_libs = -lz
-klogd_SOURCES = klogd.c syslog.c pidfile.c ksym.c 
+klogd_SOURCES = klogd.c syslog.c pidfile.c ksym.c ksym_mod.c
 rfc3195d_SOURCES = rfc3195d.c
 syslogd_SOURCES = syslogd.c pidfile.c template.c outchannel.c stringbuf.c srUtils.c parse.c 
 syslogd_CPPFLAGS = $(mysql_includes)
@@ -275,6 +275,7 @@ distclean-compile:
 
 include ./$(DEPDIR)/klogd.Po
 include ./$(DEPDIR)/ksym.Po
+include ./$(DEPDIR)/ksym_mod.Po
 include ./$(DEPDIR)/pidfile.Po
 include ./$(DEPDIR)/rfc3195d.Po
 include ./$(DEPDIR)/syslog.Po

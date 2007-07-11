@@ -39,11 +39,10 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
 AC_FUNC_WAIT3
-AC_CHECK_FUNCS([alarm gethostbyname gethostname gettimeofday memset regcomp select socket strcasecmp strchr strerror strndup strrchr strstr strtol strtoul uname])
+AC_CHECK_FUNCS([setsid alarm gethostbyname gethostname gettimeofday memset regcomp select socket strcasecmp strchr strerror strndup strrchr strstr strtol strtoul uname])
 
 
 # Ugly stuff 
-AC_DEFINE(SYSV, 1, [I'd like to get rid of this.])
 AC_DEFINE(SYSLOG_INET, 1, [Why there is this macro])
 
 
