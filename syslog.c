@@ -28,6 +28,8 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+#include "config.h"
+
 #include <stdio.h>
 #include <assert.h>
 #include <sys/socket.h>

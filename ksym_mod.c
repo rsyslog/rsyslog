@@ -1,3 +1,5 @@
+#include "config.h"
+
 #ifdef FEATURE_KLOGD
 /*
     ksym_mod.c - functions for building symbol lookup tables for klogd

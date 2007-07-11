@@ -18,6 +18,7 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
+#include "config.h"
 
 #ifdef FEATURE_KLOGD
 /*
@@ -264,7 +265,6 @@
 #ifndef TESTING
 #include "pidfile.h"
 #endif
-#include "version.h"
 
 #define __LIBRARY__
 #include <linux/unistd.h>
@@ -521,8 +521,8 @@ static void ChangeLogging(void)
 		Terminate();
 
 	/* Indicate that something is happening. */
-	Syslog(LOG_INFO, "rklogd %s.%s, ---------- state change ----------\n", \
-	       VERSION, PATCHLEVEL);
+	Syslog(LOG_INFO, "rklogd %s, ---------- state change ----------\n", \
+	       VERSION);
 
 	/* Reload symbols. */
 	if ( reload_symbols > 0 )
@@ -591,11 +591,11 @@ static enum LOGSRC GetKernelLogSrc(void)
 	  	/* Initialize kernel logging. */
 	  	ksyslog(1, NULL, 0);
 #ifdef DEBRELEASE
-		Syslog(LOG_INFO, "rklogd %s.%s#%s, log source = ksyslog "
-		       "started.", VERSION, PATCHLEVEL, DEBRELEASE);
+		Syslog(LOG_INFO, "rklogd %s#%s, log source = ksyslog "
+		       "started.", VERSION, DEBRELEASE);
 #else
-		Syslog(LOG_INFO, "rklogd %s.%s, log source = ksyslog "
-		       "started.", VERSION, PATCHLEVEL);
+		Syslog(LOG_INFO, "rklogd %s, log source = ksyslog "
+		       "started.", VERSION);
 #endif
 		return(kernel);
 	}
@@ -613,11 +613,11 @@ static enum LOGSRC GetKernelLogSrc(void)
 #endif
 
 #ifdef DEBRELEASE
-	Syslog(LOG_INFO, "rklogd %s.%s#%s, log source = %s started.", \
-	       VERSION, PATCHLEVEL, DEBRELEASE, _PATH_KLOG);
+	Syslog(LOG_INFO, "rklogd %ss#%s, log source = %s started.", \
+	       VERSION, DEBRELEASE, _PATH_KLOG);
 #else
-	Syslog(LOG_INFO, "rklogd %s.%s, log source = %s started.", \
-	       VERSION, PATCHLEVEL, _PATH_KLOG);
+	Syslog(LOG_INFO, "rklogd %s, log source = %s started.", \
+	       VERSION, _PATH_KLOG);
 #endif
 	return(proc);
 }
@@ -993,7 +993,7 @@ int main(int argc, char *argv[])
 			use_syscall = 1;
 			break;
 		    case 'v':
-			printf("rklogd %s.%s\n", VERSION, PATCHLEVEL);
+			printf("rklogd %s\n", VERSION);
 			exit (1);
 		    case 'x':
 			symbol_lookup = 0;

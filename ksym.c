@@ -1,3 +1,5 @@
+#include "config.h"
+
 #ifdef FEATURE_KLOGD
 /*
     ksym.c - functions for kernel address->symbol translation

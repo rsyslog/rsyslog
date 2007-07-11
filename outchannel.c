@@ -7,6 +7,8 @@
  * This code is placed under the GPL.
  * begun 2005-06-21 rgerhards
  */
+#include "config.h"
+
 #ifdef __FreeBSD__
 #define	BSD
 #endif

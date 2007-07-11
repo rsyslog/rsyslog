@@ -7,6 +7,8 @@
  *     Rainer Gerhards and Adiscon GmbH. All Rights Reserved.
  *     This code is placed under the GPL.
  */
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>

@@ -3,6 +3,8 @@
  * This code is placed under the GPL.
  * begun 2004-11-17 rgerhards
  */
+#include "config.h"
+
 #ifdef __FreeBSD__
 #define	BSD
 #endif
@@ -669,6 +671,8 @@ void tplPrintList(void)
 				case tplFmtRFC3339Date:
 					dprintf("[Format as RFC3339-Date] ");
 					break;
+				default:
+					dprintf("[INVALID eDateFormat %d] ", pTpe->data.field.eDateFormat);
 				}
 				switch(pTpe->data.field.eCaseConv) {
 				case tplCaseConvNo:

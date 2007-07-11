@@ -14,6 +14,8 @@
  *	to be a problem with overrunning a UNIX domain socket with
  *	excessive amounts of input.
  */
+#include "config.h"
+
 
 #include <stdio.h>
 #include <string.h>
