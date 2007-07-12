@@ -553,9 +553,13 @@ struct msg {
 	short	iSeverity;	/* the severity 0..7 */
 	uchar *pszSeverity;	/* severity as string... */
 	int iLenSeverity;	/* ... and its length. */
+ 	uchar *pszSeverityStr;   /* severity name... */
+ 	int iLenSeverityStr;    /* ... and its length. */
 	int	iFacility;	/* Facility code (up to 2^32-1) */
 	uchar *pszFacility;	/* Facility as string... */
 	int iLenFacility;	/* ... and its length. */
+ 	uchar *pszFacilityStr;   /* facility name... */
+ 	int iLenFacilityStr;    /* ... and its length. */
 	uchar *pszPRI;		/* the PRI as a string */
 	int iLenPRI;		/* and its length */
 	uchar	*pszRawMsg;	/* message as it was received on the
@@ -1581,7 +1585,7 @@ static void TCPSessAccept(int fd)
 	/* OK, we have an allowed sender, so let's continue */
 	lenHostName = strlen(fromHost) + 1; /* for \0 byte */
 	if((pBuf = (char*) malloc(sizeof(char) * lenHostName)) == NULL) {
-		logerror("couldn't allocate buffer for hostname - ignored");
+		glblHadMemShortage = 1;
 		pTCPSessions[iSess].fromHost = "NO-MEMORY-FOR-HOSTNAME";
 	} else {
 		memcpy(pBuf, fromHost, lenHostName);
@@ -2799,8 +2803,12 @@ static void MsgDestruct(struct msg * pM)
 			free(pM->pszMSG);
 		if(pM->pszFacility != NULL)
 			free(pM->pszFacility);
+		if(pM->pszFacilityStr != NULL)
+			free(pM->pszFacilityStr);
 		if(pM->pszSeverity != NULL)
 			free(pM->pszSeverity);
+		if(pM->pszSeverityStr != NULL)
+			free(pM->pszSeverityStr);
 		if(pM->pszRcvdAt3164 != NULL)
 			free(pM->pszRcvdAt3164);
 		if(pM->pszRcvdAt3339 != NULL)
@@ -2871,7 +2879,9 @@ static struct msg* MsgDup(struct msg* pOld)
 	memcpy(&pNew->tRcvdAt, &pOld->tRcvdAt, sizeof(struct syslogTime));
 	memcpy(&pNew->tTIMESTAMP, &pOld->tTIMESTAMP, sizeof(struct syslogTime));
 	tmpCOPYSZ(Severity);
+	tmpCOPYSZ(SeverityStr);
 	tmpCOPYSZ(Facility);
+	tmpCOPYSZ(FacilityStr);
 	tmpCOPYSZ(PRI);
 	tmpCOPYSZ(RawMsg);
 	tmpCOPYSZ(MSG);
@@ -3086,6 +3096,34 @@ char *getSeverity(struct msg *pM)
 	return((char*)pM->pszSeverity);
 }
 
+static char *getSeverityStr(struct msg *pM)
+{
+	CODE *c;
+	int val;
+	char *name = NULL;
+
+	if(pM == NULL)
+		return "";
+
+	if(pM->pszSeverityStr == NULL) {
+		for(c = prioritynames, val = pM->iSeverity; c->c_name; c++)
+			if(c->c_val == val) {
+				name = c->c_name;
+				break;
+			}
+		if(name == NULL) {
+			/* we use a 2 byte buffer - can only be one digit */
+			if((pM->pszSeverityStr = malloc(2)) == NULL) return "";
+			pM->iLenSeverityStr =
+				snprintf(pM->pszSeverityStr, 2, "%d", pM->iSeverity);
+		} else {
+			if((pM->pszSeverityStr = strdup(name)) == NULL) return "";
+			pM->iLenSeverityStr = strlen(name);
+		}
+	}
+	return(pM->pszSeverityStr);
+}
+
 static char *getFacility(struct msg *pM)
 {
 	if(pM == NULL)
@@ -3101,6 +3139,37 @@ static char *getFacility(struct msg *pM)
 		   snprintf((char*)pM->pszFacility, 12, "%d", pM->iFacility);
 	}
 	return((char*)pM->pszFacility);
+}
+
+static char *getFacilityStr(struct msg *pM)
+{
+        CODE *c;
+        int val;
+        char *name = NULL;
+
+        if(pM == NULL)
+                return "";
+
+        if(pM->pszFacilityStr == NULL) {
+                for(c = facilitynames, val = pM->iFacility << 3; c->c_name; c++)
+                        if(c->c_val == val) {
+                                name = c->c_name;
+                                break;
+                        }
+                if(name == NULL) {
+			/* we use a 12 byte buffer - as of 
+			 * syslog-protocol, facility can go
+			 * up to 2^32 -1
+			 */
+			if((pM->pszFacilityStr = malloc(12)) == NULL) return "";
+			pM->iLenFacilityStr =
+				snprintf(pM->pszFacilityStr, 12, "%d", val >> 3);
+                } else {
+                        if((pM->pszFacilityStr = strdup(name)) == NULL) return "";
+                        pM->iLenFacilityStr = strlen(name);
+                }
+        }
+        return(pM->pszFacilityStr);
 }
 
 
@@ -3810,8 +3879,12 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 		pRes = "1"; /* always 1 for syslog messages (a MonitorWare thing;)) */
 	} else if(!strcmp(pName, "syslogfacility")) {
 		pRes = getFacility(pMsg);
+	} else if(!strcmp(pName, "syslogfacility-text")) {
+		pRes = getFacilityStr(pMsg);
 	} else if(!strcmp(pName, "syslogseverity") || !strcmp(pName, "syslogpriority")) {
 		pRes = getSeverity(pMsg);
+	} else if(!strcmp(pName, "syslogseverity-text") || !strcmp(pName, "syslogpriority-text")) {
+		pRes = getSeverityStr(pMsg);
 	} else if(!strcmp(pName, "timegenerated")) {
 		pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp(pName, "timereported")
