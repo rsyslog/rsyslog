@@ -11,6 +11,20 @@ AC_CONFIG_HEADER([config.h])
 AC_PROG_CC
 AM_PROG_CC_C_O
 
+AC_CANONICAL_HOST
+
+case "${host}" in
+  *-*-linux*)
+    # This feature indicates if klogd functionality
+    # should be integrated. If it is switched off, klogd
+    # is still compiled, but it is an empty shell.
+    AC_DEFINE([FEATURE_KLOGD], [1], [Description])
+  ;;
+  *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
+    AC_DEFINE([BSD], [1], [Description])
+  ;;
+esac
+
 # Checks for libraries.
 
 # Checks for header files.
@@ -66,16 +80,25 @@ AC_ARG_ENABLE(mysql,
          esac],
         [enable_mysql=no]
 )
-if test "$enable_mysql" = "yes"; then
-    AC_CHECK_PROG(MYSQL_CONFIG, mysql_config, yes)
-    if test x$MYSQL_CONFIG = xyes; then
-        AC_DEFINE(WITH_DB, 1, [MySql database support enabled])
-        mysql_includes=`mysql_config --cflags`
-        mysql_libs=`mysql_config --libs`
-    else
-        enable_mysql=no
-    fi
-fi
+AS_IF([test "x$enable_mysql" != "xno"],
+  [AC_CHECK_HEADERS(
+    [mysql/mysql.h],
+    [
+      AC_CHECK_LIB(
+        [mysqlclient],
+        [mysql_init],
+        [
+	  AC_DEFINE([WITH_DB], [1], [MySql database support enabled])
+	  mysql_includes=`mysql_config --cflags`
+	  mysql_libs=`mysql_config --libs`
+        ],
+        [AC_MSG_FAILURE([MySQL is missing])],
+        [-lmysqlclient]
+      )
+    ],
+    [AC_MSG_FAILURE([MySQL is missing])]
+  )]
+)
 AM_CONDITIONAL(enable_mysql, test x$enable_mysql = xyes)
 AC_SUBST(mysql_includes)
 AC_SUBST(mysql_libs)
@@ -124,11 +147,25 @@ AC_ARG_ENABLE(pthreads,
          esac],
         [enable_pthreads=yes]
 )
-if test "$enable_pthreads" = "yes"; then
-        AC_DEFINE(USE_PTHREADS, 1, [Multithreading support enabled.])
-	pthreads_libs="-lpthread"
-	AC_SUBST(pthreads_libs)
-fi
+AS_IF([test "x$enable_pthreads" != "xno"],
+  [AC_CHECK_HEADERS(
+    [pthread.h],
+    [
+      AC_CHECK_LIB(
+        [pthread],
+        [pthread_create],
+        [
+          AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
+	  pthreads_libs="-lpthread"
+	  AC_SUBST(pthreads_libs)
+        ],
+        [AC_MSG_FAILURE([pthread is missing])],
+        [-lpthread]
+      )
+    ],
+    [AC_MSG_FAILURE([pthread is missing])]
+  )]
+)
 
 # klogd
 AC_ARG_ENABLE(klogd,
@@ -144,6 +181,26 @@ if test "$enable_klogd" = "yes"; then
         AC_DEFINE(FEATURE_KLOGD, 1, [klogd functionality is integrated.])
 fi
 
+#
+# SYSLOG_UNIXAF
+#
+AC_MSG_CHECKING(for SYSLOG_UNIXAF support)
+AC_ARG_ENABLE([unix],
+  [AS_HELP_STRING([--disable-unix], [disable support for unix])],
+  [
+    if test "x${enableval}" == "xyes"; then
+      AC_MSG_RESULT([yes])
+      AC_DEFINE([SYSLOG_UNIXAF], [1], [Description])
+    else
+      AC_MSG_RESULT([no])
+    fi
+  ],
+  [
+    # enabled by default
+    AC_MSG_RESULT([yes])
+    AC_DEFINE([SYSLOG_UNIXAF], [1], [Description])
+  ])
+
 # inet
 AC_ARG_ENABLE(inet,
         [AC_HELP_STRING([--enable-inet],[Enable networking support @<:@default=yes@:>@])],
@@ -158,6 +215,26 @@ if test "$enable_inet" = "yes"; then
         AC_DEFINE(SYSLOG_INET, 1, [network support is integrated.])
 fi
 
+#
+# The following define determines whether the package adheres to the
+# file system standard.
+#
+AC_MSG_CHECKING(for FSSTND support)
+AC_ARG_ENABLE([fsstnd],
+  [AS_HELP_STRING([--disable-fsstnd], [disable support for FSSTND])],
+  [
+    if test "x${enableval}" == "xyes"; then
+      AC_MSG_RESULT([yes])
+      AC_DEFINE([FSSTND], [1], [Description])
+    else
+      AC_MSG_RESULT([no])
+    fi
+  ],
+  [
+    # enabled by default
+    AC_MSG_RESULT([yes])
+    AC_DEFINE([FSSTND], [1], [Description])
+  ])
 
 # debug
 AC_ARG_ENABLE(debug,
