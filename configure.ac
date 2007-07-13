@@ -84,17 +84,18 @@ AS_IF([test "x$enable_mysql" != "xno"],
   [AC_CHECK_HEADERS(
     [mysql/mysql.h],
     [
-      AC_CHECK_LIB(
-        [mysqlclient],
-        [mysql_init],
-        [
+#TODO: re-enable
+#      AC_CHECK_LIB(
+#        [mysqlclient],
+#        [mysql_init],
+#        [
 	  AC_DEFINE([WITH_DB], [1], [MySql database support enabled])
 	  mysql_includes=`mysql_config --cflags`
 	  mysql_libs=`mysql_config --libs`
-        ],
-        [AC_MSG_FAILURE([MySQL is missing])],
-        [-lmysqlclient]
-      )
+#        ],
+#        [AC_MSG_FAILURE([MySQL is missing])],
+#        [-lmysqlclient]
+#      )
     ],
     [AC_MSG_FAILURE([MySQL is missing])]
   )]
