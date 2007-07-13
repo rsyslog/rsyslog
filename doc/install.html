@@ -6,7 +6,7 @@
 <h1>HOWTO install rsyslog</h1>
 		<P><small><i>Written by
 		<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer 
-		Gerhards</a> (2005-08-08)</i></small></P>
+		Gerhards</a></i></small></P>
 <h2>Abstract</h2>
 <p><i><b>In this paper, I describe how to install
 <a href="http://www.rsyslog.com/">rsyslog</a>.</b> It is intentionally a brief 
@@ -21,7 +21,7 @@ distribution available.</p>
 <h2>Steps To Do</h2>
 <p>Rsyslog does currently only have very limited availability as a package (if 
 you volunteer to create one, <a href="mailto:rgerhards@adiscon.com">drop me a 
-line</a>). Thus, this guide focusses on installing from the source, which 
+line</a>). Thus, this guide focuses on installing from the source, which 
 thankfully is <b>quite easy</b>.</p>
 <h3>Step 1 - Download Software</h3>
 <p>For obvious reasons, you need to download rsyslog. Load the most recent build 
@@ -35,69 +35,41 @@ present. If you don't know exactly, simply skip this step for now and see if
 nice error messages pop up during the compile process. If they do, you can still 
 install the missing build environment tools. So this is nothing that you need to 
 look at very carefully.</p>
-<h3>Step 2 - Change into correct Subdirectory</h3>
-<p>Rsyslog contains subdirectories for all platforms it has been compiled on so 
-far. If your platform is missing, that does not mean it won't run - it simply 
-means either nobody tried before or did not let us know. Please note that there 
-is a generic subdirectory &quot;linux&quot;, which should cover allmost all linux variants. 
-If you run Linux but your distro has no specific directory, use the linux 
-directory instead. For example, at the time of this writing there wasn't even a 
-redhat directory, because it would have been no different from the linux 
-directory. So the absence of a distro-specific directory does not (necessarily) 
-mean rsyslog has never been compiled on that distro.</p>
-<p><b>CD into the distribution-specific directory that best matches your 
-platform.</b> All further steps assume that you are inside this directory and 
-NOT the rsyslog home directory.</p>
-<h3>Step 3 - Check Makefile</h3>
-<p>The Makefile that comes with rsyslog contains all common options, instead of 
-support for MySQL. By default, it is compiled without it, because most folks do 
-not need it. If you need MySQL, you need to activate it. It's straightforward:</p>
-<ul>
-	<li>load Makefile in your preferred text editor</li>
-	<li>search for the &quot;FEATURE_DB&quot; definition close to the top of the file:
-	<blockquote><code># Enable database support (off by default, must be turned<br>
-		# on when support for MySQL is desired).<br>
-		<b>FEATURE_DB=<font color="#FF0000">0</font></b></code></blockquote>
-	</li>
-	<li>change FEATURE_DB to 1, that enables MySQL support. The line should now 
-	look as follows:<blockquote>
-		<p><code># Enable database support (off by default, must be turned<br>
-		# on when support for MySQL is desired).<br>
-		<b>FEATURE_DB=<font color="#FF0000">1</font></b></code></p>
-	</blockquote>
-	</li>
-	<li>write the updated Makefile to disk</li>
-</ul>
-<p><b>Important:</b> If you modify the Makefile more than once, be sure to call 
-&quot;make clean&quot; before going further.</p>
-<p>Now you are ready for the next step, the compilation.</p>
-<h3>Step 4 - Compile</h3>
+<h3>Step 2 - Run ./configure</h3>
+<p>Run ./configure to adopt rsyslog to your environment. While doing so, you can 
+also enable options. Configure will display selected options when it is 
+finished. For example, to enable MySQL support, run</p>
+<p>./configure --enable-mysql</p>
+<p>Please note that MySQL support by default is NOT disabled.</p>
+<h3>Step 3 - Compile</h3>
 <p>That is easy. Just type &quot;make&quot; and let the compiler work. On any recent 
-system, that should be a very quick task, on many systems just a matter of a vew 
+system, that should be a very quick task, on many systems just a matter of a few 
 seconds. If an error message comes up, most probably a part of your build 
 environment is not installed. Check with step 1 in those cases. </p>
-<h3>Step 5 - Install</h3>
+<h3>Step 4 - Install</h3>
 <p>Again, that is quite easy. All it takes is a &quot;make install&quot;. That will copy 
 the rsyslogd and the man pages to the relavant directories.</p>
-<h3>Step 6 - Configure rsyslogd</h3>
+<h3>Step 5 - Configure rsyslogd</h3>
 <p>In this step, you tell rsyslogd what to do with received messages. If you are 
 upgrading from stock syslogd, /etc/syslog.conf is probably a good starting 
 point. Rsyslogd understands stock syslogd syntax, so you can simply copy over 
 /etc/syslog.conf to /etc/rsyslog.conf. Then, edit rsyslog.conf for any 
 enhancements you would like to see. For example, you can add database writing as 
-outlined in the paper &quot;<a href="rsyslog_mysql.html">Writing syslog Data to MySQL</a>&quot;.</p>
-<h3>Step 7 - Disable stock syslogd</h3>
+outlined in the paper &quot;<a href="rsyslog_mysql.html">Writing syslog Data to MySQL</a>&quot; 
+(remember you need to enable MySQL support during step 2 if you want to do 
+that!).</p>
+<h3>Step 6 - Disable stock syslogd</h3>
 <p>In almost all cases, there already is stock syslogd installed. Because both 
 it and rsyslogd listen to the same sockets, they can NOT be run concurrently. So 
 you need to disable the stock syslogd. To do this, you typically must change 
 your rc.d startup scripts.</p>
-<p>For example, under <a href="http://www.debian.org/">Debian</a> this mus be 
+<p>For example, under <a href="http://www.debian.org/">Debian</a> this must be 
 done as follows: The default runlevel is 2. We modify the init scripts for 
 runlevel 2 - in parctice, you need to do this for all run levels you will ever 
 use (which probably means all). Under /etc/rc2.d there is a S10sysklogd script (actually 
 a symlink). Change the name to _S10sysklogd (this keeps the symlink in place, 
 but will prevent further execution - effectively disabling it).</p>
-<h3>Step 8 - Enable rsyslogd Autostart</h3>
+<h3>Step 7 - Enable rsyslogd Autostart</h3>
 <p>This step is very close to step 3. Now, we want to enable rsyslogd to start 
 automatically. The rsyslog package contains a (currently small) number of 
 startup scripts. They are inside the distro-specific directory (e.g. debian). If 
@@ -114,7 +86,7 @@ started.</p>
 that MySQL starts before rsyslogd. If it starts later, you will receive an error 
 message during each restart (this might be acceptable to you). To do so, either 
 move MySQL's start order before rsyslogd or rsyslogd's after MySQL.</p>
-<h3>Step 9 - Check daily cron scripts</h3>
+<h3>Step 8 - Check daily cron scripts</h3>
 <p>Most distributions come pre-configured with some daily scripts for log 
 rotation. As long as you use the same log file names, the log rotation scripts 
 will probably work quite well. There is one caveat, though. The scripts need to 
@@ -134,7 +106,7 @@ that), you need to make sure that klogd is restarted after rsyslogd is restarted
 So it might be a good idea to put a klogd reload-or-restart command right after 
 the rsyslogd command in your daily script. This can save you lots of troubles.</p>
 <h3>Done</h3>
-<p>This concludes the steps necesary to install rsyslogd. Of course, it is 
+<p>This concludes the steps neccesary to install rsyslogd. Of course, it is 
 always a good idea to test everything thouroughly. At a minimalist level, you 
 should do a reboot and after that check if everything has come up correctly. Pay 
 attention not only to running processes, but also check if the log files (or the 
@@ -164,9 +136,12 @@ comments or bug sighting reports are very welcome. Please
 	<li>2005-09-06 * 
 	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
 	* added information on log rotation scripts</li>
+	<li>2007-07-13 * 
+	<a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a>&nbsp; 
+	* updated to new autotools-based build system</li>
 </ul>
 <h3>Copyright</h3>
-<p>Copyright (c)  2005 
+<p>Copyright (c)  2005, 2007 
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
 <p>      Permission is granted to copy, distribute and/or modify this document
