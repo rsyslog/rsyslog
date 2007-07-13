@@ -10,6 +10,9 @@ Version 1.16.0 (RGer/Peter Vrabec), 2007-07-1?
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - begun to better modularize syslogd.c - this is an ongoing project; moved
   type definitions to a separate file
+- removed some now-unused fields from struct filed
+- move file size limit fiels in struct field to the "right spot" (the file
+  writing part of the union - f_un.f_file)
 ---------------------------------------------------------------------------
 Version 1.15.1 (RGer), 2007-07-10
 - fixed a bug that caused a dynaFile selector to stall when there was

@@ -5835,7 +5835,7 @@ int resolveFileSizeLimit(selector_t *f)
 	off_t actualFileSize;
 	assert(f != NULL);
 
-	if(f->f_sizeLimitCmd == NULL)
+	if(f->f_un.f_file.f_sizeLimitCmd == NULL)
 		return 1; /* nothing we can do in this case... */
 	
 	/* TODO: this is a really quick hack. We need something more
@@ -5843,13 +5843,13 @@ int resolveFileSizeLimit(selector_t *f)
 	 * the overall idea works (I hope it won't survive...).
 	 * rgerhards 2005-06-21
 	 */
-	system(f->f_sizeLimitCmd);
+	system(f->f_un.f_file.f_sizeLimitCmd);
 
 	f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 			f->f_un.f_file.fCreateMode);
 
 	actualFileSize = lseek(f->f_file, 0, SEEK_END);
-	if(actualFileSize >= f->f_sizeLimit) {
+	if(actualFileSize >= f->f_un.f_file.f_sizeLimit) {
 		/* OK, it didn't work out... */
 		return 1;
 		}
@@ -6046,9 +6046,9 @@ again:
 	/* check if we have a file size limit and, if so,
 	 * obey to it.
 	 */
-	if(f->f_sizeLimit != 0) {
+	if(f->f_un.f_file.f_sizeLimit != 0) {
 		actualFileSize = lseek(f->f_file, 0, SEEK_END);
-		if(actualFileSize >= f->f_sizeLimit) {
+		if(actualFileSize >= f->f_un.f_file.f_sizeLimit) {
 			char errMsg[256];
 			/* for now, we simply disable a file once it is
 			 * beyond the maximum size. This is better than having
@@ -6061,14 +6061,14 @@ again:
 				f->f_type = F_UNUSED;
 				snprintf(errMsg, sizeof(errMsg),
 					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation",
-					 f->f_un.f_file.f_fname, (long long) f->f_sizeLimit, (long long) actualFileSize);
+					 f->f_un.f_file.f_fname, (long long) f->f_un.f_file.f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
 				return;
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
 					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation",
-					 f->f_un.f_file.f_fname, (long long) f->f_sizeLimit, (long long) actualFileSize);
+					 f->f_un.f_file.f_fname, (long long) f->f_un.f_file.f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
 			}
@@ -7442,7 +7442,7 @@ static void init()
 			nextp = f;
 
 			/* be careful: the default below must be set BEFORE calling cfline()! */
-			f->f_sizeLimit = 0; /* default value, use outchannels to configure! */
+			f->f_un.f_file.f_sizeLimit = 0; /* default value, use outchannels to configure! */
 	#if CONT_LINE
 			cfline(cbuf, f);
 	#else
@@ -7798,11 +7798,11 @@ static void cflineParseOutchannel(selector_t *f, uchar* p)
 
 	/* OK, we finally got a correct template. So let's use it... */
 	strncpy(f->f_un.f_file.f_fname, pOch->pszFileTemplate, MAXFNAME);
-	f->f_sizeLimit = pOch->uSizeLimit;
+	f->f_un.f_file.f_sizeLimit = pOch->uSizeLimit;
 	/* WARNING: It is dangerous "just" to pass the pointer. As we
 	 * never rebuild the output channel description, this is acceptable here.
 	 */
-	f->f_sizeLimitCmd = pOch->cmdOnSizeLimit;
+	f->f_un.f_file.f_sizeLimitCmd = pOch->cmdOnSizeLimit;
 
 	/* back to the input string - now let's look for the template to use
 	 * Just as a general precaution, we skip whitespace.
@@ -7821,7 +7821,7 @@ static void cflineParseOutchannel(selector_t *f, uchar* p)
 	cflineSetTemplateAndIOV(f, szBuf);
 	
 	dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_file.f_fname, szBuf,
-		f->f_sizeLimit);
+		f->f_un.f_file.f_sizeLimit);
 }
 
 

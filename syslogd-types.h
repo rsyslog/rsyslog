@@ -170,8 +170,6 @@ struct filed {
 	struct	filed *f_next;		/* next in linked list */
 	short	f_type;			/* entry type, see below */
 	short	f_file;			/* file descriptor */
-	off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
-	char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
 	time_t	f_time;			/* time this was last written */
 	/* filter properties */
 	enum {
@@ -244,12 +242,10 @@ struct filed {
 			 * pointer points to the overall structure.
 			 */
 			dynaFileCacheEntry **dynCache;
+			off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
+			char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
 		} f_file;
 	} f_un;
-	char	f_lasttime[16];			/* time of last occurrence */
-	char	f_prevhost[MAXHOSTNAMELEN+1];	/* host from which recd. */
-	int	f_prevpri;			/* pri of f_prevline */
-	int	f_prevlen;			/* length of f_prevline */
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */
 	int	f_flags;			/* store some additional flags */
@@ -259,7 +255,7 @@ struct filed {
 	int	f_iIovUsed;			/* nbr of elements used in IOV */
 	char	*f_psziov;			/* iov as string */
 	int	f_iLenpsziov;			/* length of iov as string */
-	struct msg* f_pMsg;			/* pointer to the message (this wil
+	struct msg* f_pMsg;			/* pointer to the message (this will
 					         * replace the other vars with msg
 						 * content later). This is preserved after
 						 * the message has been processed - it is
