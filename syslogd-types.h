@@ -22,6 +22,9 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+#ifndef	SYSLOGD_TYPES_INCLUDED
+#define	SYSLOGD_TYPES_INCLUDED 1
+
 #include "config.h"  /* make sure we have autoconf macros */
 #include "stringbuf.h"
 
@@ -263,3 +266,5 @@ struct filed {
 						 * also used to detect duplicates. */
 };
 typedef struct filed selector_t;	/* new type name */
+
+#endif /* #ifndef SYSLOGD_TYPES_INCLUDED */
