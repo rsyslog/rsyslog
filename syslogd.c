@@ -575,20 +575,6 @@ union sockunion {
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
-/* values for f_type */
-#define F_UNUSED	0		/* unused entry */
-#define F_FILE		1		/* regular file */
-#define F_TTY		2		/* terminal */
-#define F_CONSOLE	3		/* console terminal */
-#define F_FORW		4		/* remote machine */
-#define F_USERS		5		/* list of users */
-#define F_WALL		6		/* everyone logged on */
-#define F_FORW_SUSP	7		/* suspended host forwarding */
-#define F_FORW_UNKN	8		/* unknown host forwarding */
-#define F_PIPE		9		/* named pipe */
-#define F_MYSQL		10		/* MySQL database */
-#define F_DISCARD	11		/* discard event (do not process any further selector lines) */
-#define F_SHELL		12		/* execute a shell */
 char	*TypeNames[] = {
 	"UNUSED",	"FILE",		"TTY",		"CONSOLE",
 	"FORW",		"USERS",	"WALL",		"FORW(SUSPENDED)",
@@ -750,12 +736,12 @@ static msgQueue *queueInit (void);
 static void *singleWorker(void *vParam); /* REMOVEME later 2005-10-24 */
 #endif
 /* Function prototypes. */
-static rsRetVal aquirePROCIDFromTAG(struct msg *pM);
-static char* getProgramName(struct msg*);
+static rsRetVal aquirePROCIDFromTAG(msg_t *pM);
+static char* getProgramName(msg_t*);
 static char **crunch_list(char *list);
 static void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
 static void printline(char *hname, char *msg, int iSource);
-static void logmsg(int pri, struct msg*, int flags);
+static void logmsg(int pri, msg_t*, int flags);
 static void fprintlog(register selector_t *f);
 static void wallmsg(register selector_t *f);
 static void reapchild();
@@ -2525,11 +2511,11 @@ char *textpri(char *pRes, size_t pResLen, int pri)
  * An object constructed via this function should only be destroyed
  * via "MsgDestruct()".
  */
-static struct msg* MsgConstruct()
+static msg_t* MsgConstruct()
 {
-	struct msg *pM;
+	msg_t *pM;
 
-	if((pM = calloc(1, sizeof(struct msg))) != NULL)
+	if((pM = calloc(1, sizeof(msg_t))) != NULL)
 	{ /* initialize members that are non-zero */
 		pM->iRefCount = 1;
 		pM->iSyslogVers = -1;
@@ -2547,7 +2533,7 @@ static struct msg* MsgConstruct()
 /* Destructor for a msg "object". Must be called to dispose
  * of a msg object.
  */
-static void MsgDestruct(struct msg * pM)
+static void MsgDestruct(msg_t * pM)
 {
 	assert(pM != NULL);
 	/* DEV Debugging only ! dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1); */
@@ -2621,13 +2607,13 @@ static void MsgDestruct(struct msg * pM)
  * Returns NULL if duplication failed.
  * rgerhards, 2007-07-10
  */
-static struct msg* MsgDup(struct msg* pOld)
+static msg_t* MsgDup(msg_t* pOld)
 {
-	struct msg* pNew;
+	msg_t* pNew;
 
 	assert(pOld != NULL);
 
-	if((pNew = (struct msg*) calloc(1, sizeof(struct msg))) == NULL) {
+	if((pNew = (msg_t*) calloc(1, sizeof(msg_t))) == NULL) {
 		glblHadMemShortage = 1;
 		return NULL;
 	}
@@ -2678,7 +2664,7 @@ static struct msg* MsgDup(struct msg* pOld)
  *
  * pSecondMsgPointer = MsgAddRef(pOrgMsgPointer);
  */
-static struct msg *MsgAddRef(struct msg *pM)
+static msg_t *MsgAddRef(msg_t *pM)
 {
 	assert(pM != NULL);
 	pM->iRefCount++;
@@ -2688,7 +2674,7 @@ static struct msg *MsgAddRef(struct msg *pM)
 
 /* Access methods - dumb & easy, not a comment for each ;)
  */
-static void setProtocolVersion(struct msg *pM, int iNewVersion)
+static void setProtocolVersion(msg_t *pM, int iNewVersion)
 {
 	assert(pM != NULL);
 	if(iNewVersion != 0 && iNewVersion != 1) {
@@ -2698,26 +2684,26 @@ static void setProtocolVersion(struct msg *pM, int iNewVersion)
 	pM->iProtocolVersion = iNewVersion;
 }
 
-static int getProtocolVersion(struct msg *pM)
+static int getProtocolVersion(msg_t *pM)
 {
 	assert(pM != NULL);
 	return(pM->iProtocolVersion);
 }
 
 /* note: string is taken from constant pool, do NOT free */
-static char *getProtocolVersionString(struct msg *pM)
+static char *getProtocolVersionString(msg_t *pM)
 {
 	assert(pM != NULL);
 	return(pM->iProtocolVersion ? "1" : "0");
 }
 
-static int getMSGLen(struct msg *pM)
+static int getMSGLen(msg_t *pM)
 {
 	return((pM == NULL) ? 0 : pM->iLenMSG);
 }
 
 
-static char *getRawMsg(struct msg *pM)
+static char *getRawMsg(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2728,7 +2714,7 @@ static char *getRawMsg(struct msg *pM)
 			return (char*)pM->pszRawMsg;
 }
 
-static char *getUxTradMsg(struct msg *pM)
+static char *getUxTradMsg(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2739,7 +2725,7 @@ static char *getUxTradMsg(struct msg *pM)
 			return (char*)pM->pszUxTradMsg;
 }
 
-static char *getMSG(struct msg *pM)
+static char *getMSG(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2752,7 +2738,7 @@ static char *getMSG(struct msg *pM)
 
 
 /* Get PRI value in text form */
-static char *getPRI(struct msg *pM)
+static char *getPRI(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2773,14 +2759,14 @@ static char *getPRI(struct msg *pM)
 
 
 /* Get PRI value as integer */
-static int getPRIi(struct msg *pM)
+static int getPRIi(msg_t *pM)
 {
 	assert(pM != NULL);
 	return (pM->iFacility << 3) + (pM->iSeverity);
 }
 
 
-static char *getTimeReported(struct msg *pM, enum tplFormatTypes eFmt)
+static char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 {
 	if(pM == NULL)
 		return "";
@@ -2814,7 +2800,7 @@ static char *getTimeReported(struct msg *pM, enum tplFormatTypes eFmt)
 	return "INVALID eFmt OPTION!";
 }
 
-static char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
+static char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 {
 	if(pM == NULL)
 		return "";
@@ -2847,7 +2833,7 @@ static char *getTimeGenerated(struct msg *pM, enum tplFormatTypes eFmt)
 }
 
 
-char *getSeverity(struct msg *pM)
+char *getSeverity(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2861,7 +2847,7 @@ char *getSeverity(struct msg *pM)
 	return((char*)pM->pszSeverity);
 }
 
-static char *getSeverityStr(struct msg *pM)
+static char *getSeverityStr(msg_t *pM)
 {
 	CODE *c;
 	int val;
@@ -2889,7 +2875,7 @@ static char *getSeverityStr(struct msg *pM)
 	return(pM->pszSeverityStr);
 }
 
-static char *getFacility(struct msg *pM)
+static char *getFacility(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -2906,7 +2892,7 @@ static char *getFacility(struct msg *pM)
 	return((char*)pM->pszFacility);
 }
 
-static char *getFacilityStr(struct msg *pM)
+static char *getFacilityStr(msg_t *pM)
 {
         CODE *c;
         int val;
@@ -2940,7 +2926,7 @@ static char *getFacilityStr(struct msg *pM)
 
 /* rgerhards 2004-11-24: set APP-NAME in msg object
  */
-static rsRetVal MsgSetAPPNAME(struct msg *pMsg, char* pszAPPNAME)
+static rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pCSAPPNAME == NULL) {
@@ -2958,7 +2944,7 @@ static rsRetVal MsgSetAPPNAME(struct msg *pMsg, char* pszAPPNAME)
  * main use is when we have received a log record via legacy syslog and
  * now would like to send out the same one via syslog-protocol.
  */
-static void tryEmulateAPPNAME(struct msg *pM)
+static void tryEmulateAPPNAME(msg_t *pM)
 {
 	assert(pM != NULL);
 	if(pM->pCSAPPNAME != NULL)
@@ -2973,7 +2959,7 @@ static void tryEmulateAPPNAME(struct msg *pM)
 
 /* rgerhards, 2005-11-24
  */
-static int getAPPNAMELen(struct msg *pM)
+static int getAPPNAMELen(msg_t *pM)
 {
 	assert(pM != NULL);
 	if(pM->pCSAPPNAME == NULL)
@@ -2984,7 +2970,7 @@ static int getAPPNAMELen(struct msg *pM)
 
 /* rgerhards, 2005-11-24
  */
-static char *getAPPNAME(struct msg *pM)
+static char *getAPPNAME(msg_t *pM)
 {
 	assert(pM != NULL);
 	if(pM->pCSAPPNAME == NULL)
@@ -2997,7 +2983,7 @@ static char *getAPPNAME(struct msg *pM)
 
 /* rgerhards 2004-11-24: set PROCID in msg object
  */
-static rsRetVal MsgSetPROCID(struct msg *pMsg, char* pszPROCID)
+static rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pCSPROCID == NULL) {
@@ -3012,7 +2998,7 @@ static rsRetVal MsgSetPROCID(struct msg *pMsg, char* pszPROCID)
 
 /* rgerhards, 2005-11-24
  */
-static int getPROCIDLen(struct msg *pM)
+static int getPROCIDLen(msg_t *pM)
 {
 	assert(pM != NULL);
 	if(pM->pCSPROCID == NULL)
@@ -3023,7 +3009,7 @@ static int getPROCIDLen(struct msg *pM)
 
 /* rgerhards, 2005-11-24
  */
-static char *getPROCID(struct msg *pM)
+static char *getPROCID(msg_t *pM)
 {
 	assert(pM != NULL);
 	if(pM->pCSPROCID == NULL)
@@ -3034,7 +3020,7 @@ static char *getPROCID(struct msg *pM)
 
 /* rgerhards 2004-11-24: set MSGID in msg object
  */
-static rsRetVal MsgSetMSGID(struct msg *pMsg, char* pszMSGID)
+static rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pCSMSGID == NULL) {
@@ -3050,7 +3036,7 @@ static rsRetVal MsgSetMSGID(struct msg *pMsg, char* pszMSGID)
 /* rgerhards, 2005-11-24
  */
 #if 0 /* This method is currently not called, be we like to preserve it */
-static int getMSGIDLen(struct msg *pM)
+static int getMSGIDLen(msg_t *pM)
 {
 	return (pM->pCSMSGID == NULL) ? 1 : rsCStrLen(pM->pCSMSGID);
 }
@@ -3059,7 +3045,7 @@ static int getMSGIDLen(struct msg *pM)
 
 /* rgerhards, 2005-11-24
  */
-static char *getMSGID(struct msg *pM)
+static char *getMSGID(msg_t *pM)
 {
 	return (pM->pCSMSGID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSMSGID);
 }
@@ -3070,7 +3056,7 @@ static char *getMSGID(struct msg *pM)
  * function is a performance optimization over MsgSetTAG().
  * rgerhards 2004-11-19
  */
-static void MsgAssignTAG(struct msg *pMsg, char *pBuf)
+static void MsgAssignTAG(msg_t *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
 	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen(pBuf);
@@ -3080,7 +3066,7 @@ static void MsgAssignTAG(struct msg *pMsg, char *pBuf)
 
 /* rgerhards 2004-11-16: set TAG in msg object
  */
-static void MsgSetTAG(struct msg *pMsg, char* pszTAG)
+static void MsgSetTAG(msg_t *pMsg, char* pszTAG)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszTAG != NULL)
@@ -3100,7 +3086,7 @@ static void MsgSetTAG(struct msg *pMsg, char* pszTAG)
  * if there is a TAG and, if not, if it can emulate it.
  * rgerhards, 2005-11-24
  */
-static void tryEmulateTAG(struct msg *pM)
+static void tryEmulateTAG(msg_t *pM)
 {
 	int iTAGLen;
 	char *pBuf;
@@ -3126,7 +3112,7 @@ static void tryEmulateTAG(struct msg *pM)
 
 
 #if 0 /* This method is currently not called, be we like to preserve it */
-static int getTAGLen(struct msg *pM)
+static int getTAGLen(msg_t *pM)
 {
 	if(pM == NULL)
 		return 0;
@@ -3141,7 +3127,7 @@ static int getTAGLen(struct msg *pM)
 #endif
 
 
-static char *getTAG(struct msg *pM)
+static char *getTAG(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -3155,7 +3141,7 @@ static char *getTAG(struct msg *pM)
 }
 
 
-static int getHOSTNAMELen(struct msg *pM)
+static int getHOSTNAMELen(msg_t *pM)
 {
 	if(pM == NULL)
 		return 0;
@@ -3167,7 +3153,7 @@ static int getHOSTNAMELen(struct msg *pM)
 }
 
 
-static char *getHOSTNAME(struct msg *pM)
+static char *getHOSTNAME(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -3179,7 +3165,7 @@ static char *getHOSTNAME(struct msg *pM)
 }
 
 
-static char *getRcvFrom(struct msg *pM)
+static char *getRcvFrom(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -3191,7 +3177,7 @@ static char *getRcvFrom(struct msg *pM)
 }
 /* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
  */
-static rsRetVal MsgSetStructuredData(struct msg *pMsg, char* pszStrucData)
+static rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pCSStrucData == NULL) {
@@ -3208,7 +3194,7 @@ static rsRetVal MsgSetStructuredData(struct msg *pMsg, char* pszStrucData)
  * rgerhards, 2005-11-24
  */
 #if 0 /* This method is currently not called, be we like to preserve it */
-static int getStructuredDataLen(struct msg *pM)
+static int getStructuredDataLen(msg_t *pM)
 {
 	return (pM->pCSStrucData == NULL) ? 1 : rsCStrLen(pM->pCSStrucData);
 }
@@ -3218,7 +3204,7 @@ static int getStructuredDataLen(struct msg *pM)
 /* get the "STRUCTURED-DATA" as sz string
  * rgerhards, 2005-11-24
  */
-static char *getStructuredData(struct msg *pM)
+static char *getStructuredData(msg_t *pM)
 {
 	return (pM->pCSStrucData == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSStrucData);
 }
@@ -3235,7 +3221,7 @@ static char *getStructuredData(struct msg *pM)
  * when BSD syslog is acting as a sender.
  * rgerhards, 2005-11-10.
  */
-static void moveHOSTNAMEtoTAG(struct msg *pM)
+static void moveHOSTNAMEtoTAG(msg_t *pM)
 {
 	assert(pM != NULL);
 	if(pM->pszTAG != NULL)
@@ -3257,7 +3243,7 @@ static void moveHOSTNAMEtoTAG(struct msg *pM)
  * actually has a PROCID.
  * rgerhards, 2005-11-24
  */
-static rsRetVal aquirePROCIDFromTAG(struct msg *pM)
+static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 {
 	register int i;
 	int iRet;
@@ -3323,7 +3309,7 @@ static rsRetVal aquirePROCIDFromTAG(struct msg *pM)
  * A message object must be provided, else a crash will occur.
  * rgerhards, 2005-10-19
  */
-static rsRetVal aquireProgramName(struct msg *pM)
+static rsRetVal aquireProgramName(msg_t *pM)
 {
 	register int i;
 	int iRet;
@@ -3354,7 +3340,7 @@ static rsRetVal aquireProgramName(struct msg *pM)
 /* get the length of the "programname" sz string
  * rgerhards, 2005-10-19
  */
-static int getProgramNameLen(struct msg *pM)
+static int getProgramNameLen(msg_t *pM)
 {
 	int iRet;
 
@@ -3371,7 +3357,7 @@ static int getProgramNameLen(struct msg *pM)
 /* get the "programname" as sz string
  * rgerhards, 2005-10-19
  */
-static char *getProgramName(struct msg *pM)
+static char *getProgramName(msg_t *pM)
 {
 	int iRet;
 
@@ -3387,7 +3373,7 @@ static char *getProgramName(struct msg *pM)
 
 /* rgerhards 2004-11-16: set pszRcvFrom in msg object
  */
-static void MsgSetRcvFrom(struct msg *pMsg, char* pszRcvFrom)
+static void MsgSetRcvFrom(msg_t *pMsg, char* pszRcvFrom)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszRcvFrom != NULL)
@@ -3405,7 +3391,7 @@ static void MsgSetRcvFrom(struct msg *pMsg, char* pszRcvFrom)
  * function is a performance optimization over MsgSetHOSTNAME().
  * rgerhards 2004-11-19
  */
-static void MsgAssignHOSTNAME(struct msg *pMsg, char *pBuf)
+static void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
 	assert(pBuf != NULL);
@@ -3424,7 +3410,7 @@ static void MsgAssignHOSTNAME(struct msg *pMsg, char *pBuf)
  * we need it. The rest of the code already knows how to handle an
  * unset HOSTNAME.
  */
-static void MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
+static void MsgSetHOSTNAME(msg_t *pMsg, char* pszHOSTNAME)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszHOSTNAME != NULL)
@@ -3444,7 +3430,7 @@ static void MsgSetHOSTNAME(struct msg *pMsg, char* pszHOSTNAME)
  * rgerhards 2004-11-19
  */
 #if 0 /* This method is currently not called, be we like to preserve it */
-static void MsgAssignUxTradMsg(struct msg *pMsg, char *pBuf)
+static void MsgAssignUxTradMsg(msg_t *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
 	assert(pBuf != NULL);
@@ -3456,7 +3442,7 @@ static void MsgAssignUxTradMsg(struct msg *pMsg, char *pBuf)
 
 /* rgerhards 2004-11-17: set the traditional Unix message in msg object
  */
-static int MsgSetUxTradMsg(struct msg *pMsg, char* pszUxTradMsg)
+static int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg)
 {
 	assert(pMsg != NULL);
 	assert(pszUxTradMsg != NULL);
@@ -3474,7 +3460,7 @@ static int MsgSetUxTradMsg(struct msg *pMsg, char* pszUxTradMsg)
 
 /* rgerhards 2004-11-09: set MSG in msg object
  */
-static void MsgSetMSG(struct msg *pMsg, char* pszMSG)
+static void MsgSetMSG(msg_t *pMsg, char* pszMSG)
 {
 	assert(pMsg != NULL);
 	assert(pszMSG != NULL);
@@ -3491,7 +3477,7 @@ static void MsgSetMSG(struct msg *pMsg, char* pszMSG)
 
 /* rgerhards 2004-11-11: set RawMsg in msg object
  */
-static void MsgSetRawMsg(struct msg *pMsg, char* pszRawMsg)
+static void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszRawMsg != NULL)
@@ -3588,7 +3574,7 @@ static uchar *getNOW(eNOWType eNow)
  * be used in selector line processing.
  * rgerhards 2005-09-15
  */
-static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
+static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  rsCStrObj *pCSPropName, unsigned short *pbMustBeFreed)
 {
 	char *pName;
@@ -4422,7 +4408,7 @@ void printline(char *hname, char *msg, int bParseHost)
 {
 	register char *p;
 	int pri;
-	struct msg *pMsg;
+	msg_t *pMsg;
 
 	/* Now it is time to create the message object (rgerhards)
 	*/
@@ -4505,7 +4491,7 @@ void printline(char *hname, char *msg, int bParseHost)
 	 * we are done with the message object. If it still is
 	 * stored somewhere, we can call discard anyhow. This
 	 * is handled via the reference count - see description
-	 * of struct msg for details.
+	 * of msg_t for details.
 	 */
 	MsgDestruct(pMsg);
 	return;
@@ -4524,7 +4510,7 @@ time_t	now;
  */
 static void logmsgInternal(int pri, char * msg, char* from, int flags)
 {
-	struct msg *pMsg;
+	msg_t *pMsg;
 
 	if((pMsg = MsgConstruct()) == NULL){
 		/* rgerhards 2004-11-09: calling panic might not be the
@@ -4566,7 +4552,7 @@ static void logmsgInternal(int pri, char * msg, char* from, int flags)
  * a very lengthe function, I thought a separate function is more appropriate.
  * 2005-09-19 rgerhards
  */
-int shouldProcessThisMessage(selector_t *f, struct msg *pMsg)
+int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 {
 	unsigned short pbMustBeFreed;
 	char *pszPropVal;
@@ -4682,7 +4668,7 @@ int shouldProcessThisMessage(selector_t *f, struct msg *pMsg)
  * See comment dated 2005-10-13 in logmsg() on multithreading.
  * rgerhards, 2005-10-13
  */
-static void processMsg(struct msg *pMsg)
+static void processMsg(msg_t *pMsg)
 {
 	selector_t *f;
 
@@ -4904,9 +4890,9 @@ static void queueAdd (msgQueue *q, void* in)
 	return;
 }
 
-static void queueDel (msgQueue *q, struct msg **out)
+static void queueDel (msgQueue *q, msg_t **out)
 {
-	*out = (struct msg*) q->buf[q->head];
+	*out = (msg_t*) q->buf[q->head];
 
 	q->head++;
 	if (q->head == QUEUESIZE)
@@ -4926,7 +4912,7 @@ static void queueDel (msgQueue *q, struct msg **out)
 static void *singleWorker(void *vParam)
 {
 	msgQueue *fifo = pMsgQueue;
-	struct msg *pMsg;
+	msg_t *pMsg;
 
 	assert(fifo != NULL);
 
@@ -4973,7 +4959,7 @@ static void *singleWorker(void *vParam)
 #ifndef	USE_PTHREADS
 #define enqueueMsg(x) processMsg((x))
 #else
-static void enqueueMsg(struct msg *pMsg)
+static void enqueueMsg(msg_t *pMsg)
 {
 	int iRet;
 	msgQueue *fifo = pMsgQueue;
@@ -5117,7 +5103,7 @@ static int parseRFCStructuredData(char **pp2parse, char *pResult)
  *
  * rger, 2005-11-24
  */
-static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
+static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 {
 	char *p2parse;
 	char *pBuf;
@@ -5210,7 +5196,7 @@ static int parseRFCSyslogMsg(struct msg *pMsg, int flags)
  * but I thought I log it in this comment.
  * rgerhards, 2006-01-10
  */
-static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
+static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 {
 	char *p2parse;
 	char *pBuf;
@@ -5387,7 +5373,7 @@ static int parseLegacySyslogMsg(struct msg *pMsg, int flags)
  * potential for misinterpretation, which we simply can not solve under the
  * circumstances given.
  */
-void logmsg(int pri, struct msg *pMsg, int flags)
+void logmsg(int pri, msg_t *pMsg, int flags)
 {
 	char *msg;
 	char PRItext[20];
@@ -5672,7 +5658,7 @@ void  iovCreate(selector_t *f)
 	int iIOVused;
 	struct template *pTpl;
 	struct templateEntry *pTpe;
-	struct msg *pMsg;
+	msg_t *pMsg;
 	char *pVal;	/* This variable must be introduced to keep with strict aliasing rules */
 	size_t iLenVal;	/* This variable must be introduced to keep with strict aliasing rules */
 
@@ -5754,7 +5740,7 @@ void  iovCreate(selector_t *f)
  * worse. So we prefer to let the caller deal with it.
  * rgerhards, 2007-07-03
  */
-static uchar *tplToString(struct template *pTpl, struct msg *pMsg)
+static uchar *tplToString(struct template *pTpl, msg_t *pMsg)
 {
 	struct templateEntry *pTpe;
 	rsCStrObj *pCStr;
@@ -6132,7 +6118,7 @@ void fprintlog(register selector_t *f)
 	rsCStrObj *pCSCmdLine; /* for shell support: command to execute */
 	rsRetVal iRet;
 	register int l;
-	struct msg *pMsgSave;	/* to save current message pointer, necessary to restore
+	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
 #ifdef SYSLOG_INET
 	int e, i, lsent = 0;
@@ -6153,7 +6139,7 @@ void fprintlog(register selector_t *f)
 	 * rgerhards, 2007-07-10
 	 */
 	if(f->f_prevcount > 1) {
-		struct msg *pMsg;
+		msg_t *pMsg;
 		uchar szRepMsg[64];
 		snprintf((char*)szRepMsg, sizeof(szRepMsg), "last message repeated %d times",
 		    f->f_prevcount);

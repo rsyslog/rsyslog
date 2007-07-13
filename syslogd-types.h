@@ -152,7 +152,23 @@ struct msg {
 	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
 	int msgFlags;		/* flags associated with this message */
 };
+typedef struct msg msg_t;	/* new name */
 
+
+/* values for f_type in struct filed below*/
+#define F_UNUSED	0		/* unused entry */
+#define F_FILE		1		/* regular file */
+#define F_TTY		2		/* terminal */
+#define F_CONSOLE	3		/* console terminal */
+#define F_FORW		4		/* remote machine */
+#define F_USERS		5		/* list of users */
+#define F_WALL		6		/* everyone logged on */
+#define F_FORW_SUSP	7		/* suspended host forwarding */
+#define F_FORW_UNKN	8		/* unknown host forwarding */
+#define F_PIPE		9		/* named pipe */
+#define F_MYSQL		10		/* MySQL database */
+#define F_DISCARD	11		/* discard event (do not process any further selector lines) */
+#define F_SHELL		12		/* execute a shell */
 
 /* This structure represents the files that will have log
  * copies printed.
