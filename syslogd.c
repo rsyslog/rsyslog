@@ -184,9 +184,6 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #ifndef __sun
-#ifndef BSD
-#include <syscall.h>
-#endif
 #endif
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
