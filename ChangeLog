@@ -11,11 +11,8 @@ Version 1.16.0 (RGer/Peter Vrabec), 2007-07-13 - The Friday, 13th Release ;)
 - begun to better modularize syslogd.c - this is an ongoing project; moved
   type definitions to a separate file
 - removed some now-unused fields from struct filed
-- move file size limit fiels in struct field to the "right spot" (the file
+- move file size limit fields in struct field to the "right spot" (the file
   writing part of the union - f_un.f_file)
-- subdirectories linux and solaris are no longer part of the distribution
-  package. This is not because we cease support for them, but there are no
-  longer any files in them after the move to autotools
 - subdirectories linux and solaris are no longer part of the distribution
   package. This is not because we cease support for them, but there are no
   longer any files in them after the move to autotools
