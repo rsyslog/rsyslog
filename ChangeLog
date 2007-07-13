@@ -8,6 +8,8 @@ Version 1.16.0 (RGer/Peter Vrabec), 2007-07-1?
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - added the -x option to disable hostname dns reslution
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
+- begun to better modularize syslogd.c - this is an ongoing project; moved
+  type definitions to a separate file
 ---------------------------------------------------------------------------
 Version 1.15.1 (RGer), 2007-07-10
 - fixed a bug that caused a dynaFile selector to stall when there was
@@ -523,24 +525,6 @@ I have moved them out of the syslogd.c file to shrink it, especially
 as a lot of them do no longer apply. For historical reasons and
 understanding of how the daemon evolved, they are probably still
 helpful.
-----------------------------------------------------------------------
-/*
- *  syslogd -- log system messages
- *
- * This program implements a system log. It takes a series of lines.
- * Each line may have a priority, signified as "<n>" as
- * the first characters of the line.  If this is
- * not present, a default priority is used.
- *
- * To kill syslogd, send a signal 15 (terminate).  A signal 1 (hup) will
- * cause it to reread its configuration file.
- *
- * Defined Constants:
- *
- * MAXLINE -- the maximum line length that can be handled.
- * DEFUPRI -- the default priority for user messages
- * DEFSPRI -- the default priority for kernel messages
- *
  * Author: Eric Allman
  * extensive changes by Ralph Campbell
  * more extensive changes by Eric Allman (again)
@@ -940,24 +924,3 @@ helpful.
  *	Don't return a closed fd if `-a' is called with a wrong path.
  *	Thanks to Bill Nottingham <notting@redhat.com> for providing
  *	a patch.
- *
- * The following copyright and license applies to the original
- * sysklogd package that was used as a basis for this release of
- * rsyslogd. Obviously, it applies to those parts stemming directly
- * back to the original sysklogd package.
- *
- * Copyright (c) 1983, 1988 Regents of the University of California.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms are permitted
- * provided that the above copyright notice and this paragraph are
- * duplicated in all such forms and that any documentation,
- * advertising materials, and other materials related to such
- * distribution and use acknowledge that the software was developed
- * by the University of California, Berkeley.  The name of the
- * University may not be used to endorse or promote products derived
- * from this software without specific prior written permission.
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
- * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- */

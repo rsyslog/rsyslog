@@ -46,7 +46,7 @@
  * sysklogd site on the URL above if you would like to base your
  * development on a version that is not under the GPL.
  *
- * This Project was intiated and is maintened by
+ * This Project was intiated and is maintained by
  * Rainer Gerhards <rgerhards@hq.adiscon.com>. See
  * AUTHORS to learn who helped make it become a reality.
  *
@@ -293,6 +293,8 @@ CODE facilitynames[] =
 #include "template.h"
 #include "outchannel.h"
 #include "syslogd.h"
+#include "syslogd-types.h"
+
 
 #include "stringbuf.h"
 #include "parse.h"
@@ -454,14 +456,6 @@ int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-o
 char *funixn[MAXFUNIX] = { _PATH_LOG }; /* read-only after startup */
 int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
 
-#ifdef UT_NAMESIZE
-# define UNAMESZ	UT_NAMESIZE	/* length of a login name */
-#else
-# define UNAMESZ	8	/* length of a login name */
-#endif
-#define MAXUNAMES	20	/* maximum number of user names */
-#define MAXFNAME	200	/* max file pathname length */
-
 #define INTERNAL_NOPRI	0x10	/* the "no priority" priority */
 #define TABLE_NOPRI	0	/* Value to indicate no priority in f_pmask */
 #define TABLE_ALLPRI    0xFF    /* Value to indicate all priorities in f_pmask */
@@ -501,236 +495,6 @@ static const char *directive_name_list[] = {
 enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1,
                   DIR_ALLOWEDSENDER = 2, DIR_FILECREATEMODE = 3,
 		  DIR_UMASK = 4, DIR_DYNAFILECACHESIZE = 5};
-
-/* rgerhards 2004-11-11: the following structure represents
- * a time as it is used in syslog.
- */
-struct syslogTime {
-	int timeType;	/* 0 - unitinialized , 1 - RFC 3164, 2 - syslog-protocol */
-	int year;
-	int month;
-	int day;
-	int hour; /* 24 hour clock */
-	int minute;
-	int second;
-	int secfrac;	/* fractional seconds (must be 32 bit!) */
-	int secfracPrecision;
-	char OffsetMode;	/* UTC offset + or - */
-	char OffsetHour;	/* UTC offset in hours */
-	int OffsetMinute;	/* UTC offset in minutes */
-	/* full UTC offset minutes = OffsetHours*60 + OffsetMinute. Then use
-	 * OffsetMode to know the direction.
-	 */
-};
-
-/* rgerhards 2004-11-08: The following structure represents a
- * syslog message. 
- *
- * Important Note:
- * The message object is used for multiple purposes (once it
- * has been created). Once created, it actully is a read-only
- * object (though we do not specifically express this). In order
- * to avoid multiple copies of the same object, we use a
- * reference counter. This counter is set to 1 by the constructer
- * and increased by 1 with a call to MsgAddRef(). The destructor
- * checks the reference count. If it is more than 1, only the counter
- * will be decremented. If it is 1, however, the object is actually
- * destroyed. To make this work, it is vital that MsgAddRef() is
- * called each time a "copy" is stored somewhere.
- */
-struct msg {
-	int	iRefCount;	/* reference counter (0 = unused) */
-	short	iSyslogVers;	/* version of syslog protocol
-				 * 0 - RFC 3164
-				 * 1 - RFC draft-protocol-08 */
-	short	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
-	   /* background: the hostname is not present on "regular" messages
-	    * received via UNIX domain sockets from the same machine. However,
-	    * it is available when we have a forwarder (e.g. rfc3195d) using local
-	    * sockets. All in all, the parser would need parse templates, that would
-	    * resolve all these issues... rgerhards, 2005-10-06
-	    */
-	short	iSeverity;	/* the severity 0..7 */
-	uchar *pszSeverity;	/* severity as string... */
-	int iLenSeverity;	/* ... and its length. */
- 	uchar *pszSeverityStr;   /* severity name... */
- 	int iLenSeverityStr;    /* ... and its length. */
-	int	iFacility;	/* Facility code (up to 2^32-1) */
-	uchar *pszFacility;	/* Facility as string... */
-	int iLenFacility;	/* ... and its length. */
- 	uchar *pszFacilityStr;   /* facility name... */
- 	int iLenFacilityStr;    /* ... and its length. */
-	uchar *pszPRI;		/* the PRI as a string */
-	int iLenPRI;		/* and its length */
-	uchar	*pszRawMsg;	/* message as it was received on the
-				 * wire. This is important in case we
-				 * need to preserve cryptographic verifiers.
-				 */
-	int	iLenRawMsg;	/* length of raw message */
-	uchar	*pszMSG;	/* the MSG part itself */
-	int	iLenMSG;	/* Length of the MSG part */
-	uchar	*pszUxTradMsg;	/* the traditional UNIX message */
-	int	iLenUxTradMsg;/* Length of the traditional UNIX message */
-	uchar	*pszTAG;	/* pointer to tag value */
-	int	iLenTAG;	/* Length of the TAG part */
-	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
-	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-	uchar	*pszRcvFrom;	/* System message was received from */
-	int	iLenRcvFrom;	/* Length of pszRcvFrom */
-	int	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
-	rsCStrObj *pCSProgName;	/* the (BSD) program name */
-	rsCStrObj *pCSStrucData;/* STRUCTURED-DATA */
-	rsCStrObj *pCSAPPNAME;	/* APP-NAME */
-	rsCStrObj *pCSPROCID;	/* PROCID */
-	rsCStrObj *pCSMSGID;	/* MSGID */
-	struct syslogTime tRcvdAt;/* time the message entered this program */
-	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
-	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
-	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
-	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
-	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 charcters) */
-	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
-	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
-	int msgFlags;		/* flags associated with this message */
-};
-
-
-/* values for host comparisons specified with host selector blocks
- * (+host, -host). rgerhards 2005-10-18.
- */
-enum _EHostnameCmpMode {
-	HN_NO_COMP = 0, /* do not compare hostname */
-	HN_COMP_MATCH = 1, /* hostname must match */
-	HN_COMP_NOMATCH = 2 /* hostname must NOT match */
-};
-typedef enum _EHostnameCmpMode EHostnameCmpMode;
-
-typedef enum _TCPFRAMINGMODE {
-		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
-		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
-	} TCPFRAMINGMODE;
-
-/* The following structure is a dynafile name cache entry.
- */
-struct s_dynaFileCacheEntry {
-	uchar *pName;	/* name currently open, if dynamic name */
-	short	fd;		/* name associated with file name in cache */
-	time_t	lastUsed;	/* for LRU - last access */
-};
-typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
-
-
-/* This structure represents the files that will have log
- * copies printed.
- * RGerhards 2004-11-08: Each instance of the filed structure 
- * describes what I call an "output channel". This is important
- * to mention as we now allow database connections to be
- * present in the filed structure. If helps immensely, if we
- * think of it as the abstraction of an output channel.
- * rgerhards, 2005-10-26: The structure below provides ample
- * opportunity for non-thread-safety. Each of the variable
- * accesses must be carefully evaluated, many of them probably
- * be guarded by mutexes. But beware of deadlocks...
- */
-struct filed {
-	struct	filed *f_next;		/* next in linked list */
-	short	f_type;			/* entry type, see below */
-	short	f_file;			/* file descriptor */
-	off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
-	char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
-	time_t	f_time;			/* time this was last written */
-	/* filter properties */
-	enum {
-		FILTER_PRI = 0,		/* traditional PRI based filer */
-		FILTER_PROP = 1		/* extended filter, property based */
-	} f_filter_type;
-	EHostnameCmpMode eHostnameCmpMode;
-	rsCStrObj *pCSHostnameComp;/* hostname to check */
-	rsCStrObj *pCSProgNameComp;	/* tag to check or NULL, if not to be checked */
-	union {
-		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
-		struct {
-			rsCStrObj *pCSPropName;
-			enum {
-				FIOP_NOP = 0,		/* do not use - No Operation */
-				FIOP_CONTAINS  = 1,	/* contains string? */
-				FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
-				FIOP_STARTSWITH = 3	/* starts with a string? */
-			} operation;
-			rsCStrObj *pCSCompValue;	/* value to "compare" against */
-			char isNegated;			/* actually a boolean ;) */
-		} prop;
-	} f_filterData;
-	union {
-		char	f_uname[MAXUNAMES][UNAMESZ+1];
-#ifdef	WITH_DB
-		struct {
-			MYSQL	*f_hmysql;		/* handle to MySQL */
-			char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
-			char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
-			char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
-			char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
-			time_t	f_timeResumeOnError;		/* 0 if no error is present,	
-								   otherwise is it set to the
-								   time a retrail should be attampt */
-			int	f_iLastDBErrNo;			/* Last db error number. 0 = no error */
-		} f_mysql;
-#endif
-		struct {
-			char	f_hname[MAXHOSTNAMELEN+1];
-			struct addrinfo *f_addr;
-			int compressionLevel; /* 0 - no compression, else level for zlib */
-			char *port;
-			int protocol;
-			TCPFRAMINGMODE tcp_framing;
-#			define	FORW_UDP 0
-#			define	FORW_TCP 1
-			/* following fields for TCP-based delivery */
-			enum TCPSendStatus {
-				TCP_SEND_NOTCONNECTED = 0,
-				TCP_SEND_CONNECTING = 1,
-				TCP_SEND_READY = 2
-			} status;
-			char *savedMsg;
-			int savedMsgLen; /* length of savedMsg in octets */
-#			ifdef USE_PTHREADS
-			pthread_mutex_t mtxTCPSend;
-#			endif
-		} f_forw;		/* forwarding address */
-		struct {
-			char	f_fname[MAXFNAME];/* file or template name (dispaly only) */
-			struct template *pTpl;	/* pointer to template object */
-			char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
-			int	fCreateMode;	/* file creation mode for open() */
-			int	iCurrElt;	/* currently active cache element (-1 = none) */
-			int	iCurrCacheSize;	/* currently cache size (1-based) */
-			int	iDynaFileCacheSize; /* size of file handle cache */
-			/* The cache is implemented as an array. An empty element is indicated
-			 * by a NULL pointer. Memory is allocated as needed. The following
-			 * pointer points to the overall structure.
-			 */
-			dynaFileCacheEntry **dynCache;
-		} f_file;
-	} f_un;
-	char	f_lasttime[16];			/* time of last occurrence */
-	char	f_prevhost[MAXHOSTNAMELEN+1];	/* host from which recd. */
-	int	f_prevpri;			/* pri of f_prevline */
-	int	f_prevlen;			/* length of f_prevline */
-	int	f_prevcount;			/* repetition cnt of prevline */
-	int	f_repeatcount;			/* number of "repeated" msgs */
-	int	f_flags;			/* store some additional flags */
-	struct template *f_pTpl;		/* pointer to template to use */
-	struct iovec *f_iov;			/* dyn allocated depinding on template */
-	unsigned short *f_bMustBeFreed;		/* indicator, if iov_base must be freed to destruct */
-	int	f_iIovUsed;			/* nbr of elements used in IOV */
-	char	*f_psziov;			/* iov as string */
-	int	f_iLenpsziov;			/* length of iov as string */
-	struct msg* f_pMsg;			/* pointer to the message (this wil
-					         * replace the other vars with msg
-						 * content later). This is preserved after
-						 * the message has been processed - it is
-						 * also used to detect duplicates. */
-};
 
 /* The following global variables are used for building
  * tag and host selector lines during startup and config reload.
@@ -992,35 +756,35 @@ static char **crunch_list(char *list);
 static void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
 static void printline(char *hname, char *msg, int iSource);
 static void logmsg(int pri, struct msg*, int flags);
-static void fprintlog(register struct filed *f);
-static void wallmsg(register struct filed *f);
+static void fprintlog(register selector_t *f);
+static void wallmsg(register selector_t *f);
 static void reapchild();
 static char *cvthname(struct sockaddr_storage *f);
 static void debug_switch();
-static rsRetVal cfline(char *line, register struct filed *f);
+static rsRetVal cfline(char *line, register selector_t *f);
 static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
 static void die(int sig);
 #ifdef WITH_DB
-static void initMySQL(register struct filed *f);
-static void writeMySQL(register struct filed *f);
-static void closeMySQL(register struct filed *f);
-static void reInitMySQL(register struct filed *f);
-static int checkDBErrorState(register struct filed *f);
-static void DBErrorHandler(register struct filed *f);
+static void initMySQL(register selector_t *f);
+static void writeMySQL(register selector_t *f);
+static void closeMySQL(register selector_t *f);
+static void reInitMySQL(register selector_t *f);
+static int checkDBErrorState(register selector_t *f);
+static void DBErrorHandler(register selector_t *f);
 #endif
 
 static int getSubString(uchar **pSrc, char *pDst, size_t DstSize, char cSep);
 static void getCurrTime(struct syslogTime *t);
-static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName);
+static void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName);
 
-/* Access functions for the struct filed. These functions are primarily
+/* Access functions for the selector_t. These functions are primarily
  * necessary to make things thread-safe. Consequently, they are slim
  * if we compile without pthread support.
  * rgerhards 2005-10-24
  */
 
-/* END Access functions for the struct filed */
+/* END Access functions for the selector_t */
 
 /* Code for handling allowed/disallowed senders
  */
@@ -1824,7 +1588,7 @@ static int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 /* get send status
  * rgerhards, 2005-10-24
  */
-static void TCPSendSetStatus(struct filed *f, enum TCPSendStatus iNewState)
+static void TCPSendSetStatus(selector_t *f, enum TCPSendStatus iNewState)
 {
 	assert(f != NULL);
 	assert(f->f_type == F_FORW);
@@ -1847,7 +1611,7 @@ static void TCPSendSetStatus(struct filed *f, enum TCPSendStatus iNewState)
 /* set send status
  * rgerhards, 2005-10-24
  */
-static enum TCPSendStatus TCPSendGetStatus(struct filed *f)
+static enum TCPSendStatus TCPSendGetStatus(selector_t *f)
 {
 	enum TCPSendStatus eState;
 	assert(f != NULL);
@@ -1870,7 +1634,7 @@ static enum TCPSendStatus TCPSendGetStatus(struct filed *f)
 /* Initialize TCP sockets (for sender)
  * This is done once per selector line, if not yet initialized.
  */
-static int TCPSendCreateSocket(struct filed *f)
+static int TCPSendCreateSocket(selector_t *f)
 {
 	int fd;
 	struct addrinfo *r; 
@@ -1961,7 +1725,7 @@ static int TCPSendCreateSocket(struct filed *f)
  * octet-counting, only this framing mode is used within the session.
  * rgerhards, 2006-12-07
  */
-static int TCPSend(struct filed *f, char *msg, size_t len)
+static int TCPSend(selector_t *f, char *msg, size_t len)
 {
 	int retry = 0;
 	int done = 0;
@@ -2198,13 +1962,13 @@ static int TCPSend(struct filed *f, char *msg, size_t len)
  ********************************************************************/
 
 
-/* get the syslog forward port from struct filed. The passed in
+/* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
  * rgerhards, 2007-06-28
  * TODO: We may change the implementation to try to lookup the port
  * if it is unspecified. So far, we use the IANA default auf 514.
  */
-static char *getFwdSyslogPt(struct filed *f)
+static char *getFwdSyslogPt(selector_t *f)
 {
 	assert(f != NULL);
 	if(f->f_un.f_forw.port == NULL)
@@ -4802,7 +4566,7 @@ static void logmsgInternal(int pri, char * msg, char* from, int flags)
  * a very lengthe function, I thought a separate function is more appropriate.
  * 2005-09-19 rgerhards
  */
-int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
+int shouldProcessThisMessage(selector_t *f, struct msg *pMsg)
 {
 	unsigned short pbMustBeFreed;
 	char *pszPropVal;
@@ -4920,7 +4684,7 @@ int shouldProcessThisMessage(struct filed *f, struct msg *pMsg)
  */
 static void processMsg(struct msg *pMsg)
 {
-	struct filed *f;
+	selector_t *f;
 
 	assert(pMsg != NULL);
 
@@ -5827,7 +5591,7 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int esc
  * string if it succeeded, or NULL otherwise.
  * rgerhards 2004-11-22 
  */
-char *iovAsString(struct filed *f)
+char *iovAsString(selector_t *f)
 {
 	struct iovec *v;
 	int i;
@@ -5880,7 +5644,7 @@ char *iovAsString(struct filed *f)
  * string array is invalid and must either be totally
  * discarded or e-initialized!
  */
-void iovDeleteFreeableStrings(struct filed *f)
+void iovDeleteFreeableStrings(selector_t *f)
 {
 	register int i;
 
@@ -5902,7 +5666,7 @@ void iovDeleteFreeableStrings(struct filed *f)
  * of iovecs used (might be different from max if the
  * template contains an invalid entry).
  */
-void  iovCreate(struct filed *f)
+void  iovCreate(selector_t *f)
 {
 	register struct iovec *v;
 	int iIOVused;
@@ -6066,7 +5830,7 @@ static uchar *tplToString(struct template *pTpl, struct msg *pMsg)
  * returns 0 if ok, 1 otherwise
  * TODO: consider moving the initial check in here, too
  */
-int resolveFileSizeLimit(struct filed *f)
+int resolveFileSizeLimit(selector_t *f)
 {
 	off_t actualFileSize;
 	assert(f != NULL);
@@ -6129,7 +5893,7 @@ static void dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int b
 
 /* This function frees the dynamic file name cache.
  */
-static void dynaFileFreeCache(struct filed *f)
+static void dynaFileFreeCache(selector_t *f)
 {
 	register int i;
 	assert(f != NULL);
@@ -6150,7 +5914,7 @@ static void dynaFileFreeCache(struct filed *f)
  * be written.
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
-static int prepareDynFile(struct filed *f)
+static int prepareDynFile(selector_t *f)
 {
 	uchar *newFileName;
 	time_t ttOldest; /* timestamp of oldest element */
@@ -6262,7 +6026,7 @@ static int prepareDynFile(struct filed *f)
  * will be called for all outputs using file semantics,
  * for example also for pipes.
  */
-void writeFile(struct filed *f)
+void writeFile(selector_t *f)
 {
 	off_t actualFileSize;
 
@@ -6360,7 +6124,7 @@ again:
  * This whole function is probably about to change once we have the
  * message abstraction.
  */
-void fprintlog(register struct filed *f)
+void fprintlog(register selector_t *f)
 {
 	char *psz; /* for shell support */
 	int esize; /* for shell support */
@@ -6737,7 +6501,7 @@ void endutent(void)
  *	Adjust the size of a variable to prevent a buffer overflow
  *	should _PATH_DEV ever contain something different than "/dev/".
  */
-static void wallmsg(register struct filed *f)
+static void wallmsg(register selector_t *f)
 {
   
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
@@ -6938,7 +6702,7 @@ static char *cvthname(struct sockaddr_storage *f)
  */
 static void domark(void)
 {
-	register struct filed *f;
+	register selector_t *f;
 	if (MarkInterval > 0) {
 		now = time(0);
 		MarkSeq += TIMERINTVL;
@@ -7057,7 +6821,7 @@ static void doDie(int sig)
  */
 static void die(int sig)
 {
-	register struct filed *f;
+	register selector_t *f;
 	char buf[256];
 	int i;
 	int was_initialized = Initialized;
@@ -7309,7 +7073,7 @@ static void doDynaFileCacheSizeLine(uchar **pp, enum eDirective eDir)
  * into the global variable so that the rest of rsyslogd
  * opens files with that mode. Any previous value will be
  * overwritten.
- * HINT: if we store the creation mode in struct filed, we
+ * HINT: if we store the creation mode in selector_t, we
  * can even specify multiple modes simply be virtue of
  * being placed in the right section of rsyslog.conf
  * rgerhards, 2007-07-4 (happy independence day to my US friends!)
@@ -7493,8 +7257,8 @@ static void init()
 {
 	register int i;
 	register FILE *cf;
-	register struct filed *f;
-	register struct filed *nextp;
+	register selector_t *f;
+	register selector_t *nextp;
 	register char *p;
 	register unsigned int Forwarding = 0;
 #ifdef CONT_LINE
@@ -7546,7 +7310,7 @@ static void init()
 	dprintf("Called init.\n");
 	Initialized = 0;
 	if(Files != NULL) {
-		struct filed *fPrev;
+		selector_t *fPrev;
 		dprintf("Initializing log structures.\n");
 
 		f = Files;
@@ -7615,12 +7379,12 @@ static void init()
 		 * very clever... So we stick with what we have.
 		 */
 		dprintf("cannot open %s (%s).\n", ConfFile, strerror(errno));
-		nextp = (struct filed *)calloc(1, sizeof(struct filed));
+		nextp = (selector_t *)calloc(1, sizeof(selector_t));
 		Files = nextp; /* set the root! */
 		cfline("*.ERR\t" _PATH_CONSOLE, nextp);
-		nextp->f_next = (struct filed *)calloc(1, sizeof(struct filed));
+		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
 		cfline("*.PANIC\t*", nextp->f_next);
-		nextp->f_next = (struct filed *)calloc(1, sizeof(struct filed));
+		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
 		snprintf(cbuf,sizeof(cbuf), "*.*\t%s", ttyname(0));
 		cfline(cbuf, nextp->f_next);
 		Initialized = 1;
@@ -7667,7 +7431,7 @@ static void init()
 			*++p = '\0';
 
 			/* allocate next entry and add it */
-			f = (struct filed *)calloc(1, sizeof(struct filed));
+			f = (selector_t *)calloc(1, sizeof(selector_t));
 			/* TODO: check for NULL pointer (this is a general issue in this code...)! */
 			if(nextp == NULL) {
 				Files = f;
@@ -7857,7 +7621,7 @@ static void init()
  * to a filed entry and allocates memory for its iovec.
  * rgerhards 2004-11-19
  */
-static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
+static void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
 {
 	char errMsg[512];
 
@@ -7902,7 +7666,7 @@ static void cflineSetTemplateAndIOV(struct filed *f, char *pTemplateName)
  * to be \0 in this case.
  * rgerhards 2004-11-19
  */
-static void cflineParseTemplateName(struct filed *f, uchar** pp,
+static void cflineParseTemplateName(selector_t *f, uchar** pp,
 			     register char* pTemplateName, int iLenTemplate)
 {
 	register uchar *p;
@@ -7934,7 +7698,7 @@ static void cflineParseTemplateName(struct filed *f, uchar** pp,
  * filed struct.
  * rgerhards 2004-11-18
  */
-static void cflineParseFileName(struct filed *f, uchar* p)
+static void cflineParseFileName(selector_t *f, uchar* p)
 {
 	register char *pName;
 	int i;
@@ -7983,7 +7747,7 @@ static void cflineParseFileName(struct filed *f, uchar* p)
  * removed.
  * rgerhards 2005-06-21
  */
-static void cflineParseOutchannel(struct filed *f, uchar* p)
+static void cflineParseOutchannel(selector_t *f, uchar* p)
 {
 	int i;
 	struct outchannel *pOch;
@@ -8068,7 +7832,7 @@ static void cflineParseOutchannel(struct filed *f, uchar* p)
  * passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register struct filed *f)
+static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f)
 {
 	uchar *p;
 	register uchar *q;
@@ -8233,7 +7997,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register struct filed 
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessPropFilter(uchar **pline, register struct filed *f)
+static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 {
 	rsParsObj *pPars;
 	rsCStrObj *pCSCompOp;
@@ -8329,7 +8093,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register struct filed *f)
  * from the config file ("+/-hostname"). It stores it for further reference.
  * rgerhards 2005-10-19
  */
-static rsRetVal cflineProcessHostSelector(uchar **pline, register struct filed *f)
+static rsRetVal cflineProcessHostSelector(uchar **pline, register selector_t *f)
 {
 	rsRetVal iRet;
 
@@ -8382,7 +8146,7 @@ static rsRetVal cflineProcessHostSelector(uchar **pline, register struct filed *
  * from the config file ("!tagname"). It stores it for further reference.
  * rgerhards 2005-10-18
  */
-static rsRetVal cflineProcessTagSelector(uchar **pline, register struct filed *f)
+static rsRetVal cflineProcessTagSelector(uchar **pline, register selector_t *f)
 {
 	rsRetVal iRet;
 
@@ -8434,7 +8198,7 @@ static rsRetVal cflineProcessTagSelector(uchar **pline, register struct filed *f
  * Eventually, we can overcome this limitation by prefixing the actual action indicator
  * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
  */
-static rsRetVal cfline(char *line, register struct filed *f)
+static rsRetVal cfline(char *line, register selector_t *f)
 {
 	uchar *p;
 	register uchar *q;
@@ -8998,7 +8762,7 @@ void sighup_handler()
  * MySQL connection.
  * Initially added 2004-10-28 mmeckelein
  */
-static void initMySQL(register struct filed *f)
+static void initMySQL(register selector_t *f)
 {
 	int iCounter = 0;
 	assert(f != NULL);
@@ -9036,7 +8800,7 @@ static void initMySQL(register struct filed *f)
  * MySQL connection.
  * Initially added 2004-10-28
  */
-static void closeMySQL(register struct filed *f)
+static void closeMySQL(register selector_t *f)
 {
 	assert(f != NULL);
 	dprintf("in closeMySQL\n");
@@ -9048,7 +8812,7 @@ static void closeMySQL(register struct filed *f)
  * Reconnect a MySQL connection.
  * Initially added 2004-12-02
  */
-static void reInitMySQL(register struct filed *f)
+static void reInitMySQL(register selector_t *f)
 {
 	assert(f != NULL);
 
@@ -9062,7 +8826,7 @@ static void reInitMySQL(register struct filed *f)
  * to an established MySQL session.
  * Initially added 2004-10-28
  */
-static void writeMySQL(register struct filed *f)
+static void writeMySQL(register selector_t *f)
 {
 	char *psz;
 	int iCounter=0;
@@ -9104,7 +8868,7 @@ static void writeMySQL(register struct filed *f)
  * We now check if we have a valid MySQL handle. If not, we simply
  * report an error, but can not be specific. RGerhards, 2007-01-30
  */
-static void DBErrorHandler(register struct filed *f)
+static void DBErrorHandler(register selector_t *f)
 {
 	char errMsg[512];
 
@@ -9157,7 +8921,7 @@ static void DBErrorHandler(register struct filed *f)
  *
  * \ret int		Returns 0 if successful (no error)
  */ 
-int checkDBErrorState(register struct filed *f)
+int checkDBErrorState(register selector_t *f)
 {
 	assert(f != NULL);
 	/* dprintf("in checkDBErrorState, timeResumeOnError: %d\n", f->f_timeResumeOnError); */
@@ -9294,7 +9058,7 @@ static void mainloop(void)
 	int i;
 #ifdef  SYSLOG_INET
 	fd_set writefds;
-	struct filed *f;
+	selector_t *f;
 #  ifndef TESTING
 	struct sockaddr_storage frominet;
 	socklen_t socklen;
