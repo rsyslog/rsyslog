@@ -4,6 +4,10 @@ Version 1.16.0 (RGer/Peter Vrabec), 2007-07-1?
 - removed SYSV preprocessor macro use, replaced with autotools equivalents
 - fixed a bug that caused rsyslogd to segfault when TCP listening was
   disabled and it terminated
+- added new properties "syslogfacility-text" and "syslogseverity-text"
+  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
+- added the -x option to disable hostname dns reslution
+  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 ---------------------------------------------------------------------------
 Version 1.15.1 (RGer), 2007-07-10
 - fixed a bug that caused a dynaFile selector to stall when there was

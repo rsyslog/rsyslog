@@ -904,6 +904,7 @@ static int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both),
 static int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	MarkSeq = 0;	/* mark sequence number - modified in domark() only */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
+static int	DisableDNS = 0; /* don't look up IP addresses of remote messages */
 static int	AcceptRemote = 0;/* receive messages that come via UDP - read-only after startup */
 static char	**StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u.*/
 static char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup*/
@@ -4229,7 +4230,7 @@ static char *MsgGetProp(struct msg *pMsg, struct templateEntry *pTpe,
 static int usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [-46Adhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
-		" [-s domainlist] [-r port] [-t port[,max-sessions]] [-f conffile]\n");
+		" [-s domainlist] [-r port] [-t port[,max-sessions]] [-f conffile] [-x]\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
 
@@ -6862,17 +6863,20 @@ static char *cvthname(struct sockaddr_storage *f)
 		return ("???");
 	}
 
-        sigemptyset(&nmask);
-        sigaddset(&nmask, SIGHUP);
-        sigprocmask(SIG_BLOCK, &nmask, &omask);
+	if (!DisableDNS) {
+		sigemptyset(&nmask);
+		sigaddset(&nmask, SIGHUP);
+		sigprocmask(SIG_BLOCK, &nmask, &omask);
 
-        error = getnameinfo((struct sockaddr *)f,
-                             sizeof(*f),
-                             hname, sizeof hname, NULL, 0,
-                             NI_NAMEREQD);
+		error = getnameinfo((struct sockaddr *)f,
+				    sizeof(*f),
+				    hname, sizeof hname, NULL, 0,
+				    NI_NAMEREQD);
 
-        sigprocmask(SIG_SETMASK, &omask, NULL);
-        if (error) {
+		sigprocmask(SIG_SETMASK, &omask, NULL);
+	}
+
+        if (error || DisableDNS) {
                 dprintf("Host name for your address (%s) unknown\n", ip);
                 return (ip);
         }
@@ -9687,7 +9691,7 @@ int main(int argc, char **argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r:s:t:u:vw")) != EOF)
+	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r:s:t:u:vwx")) != EOF)
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -9797,6 +9801,9 @@ int main(int argc, char **argv)
 			exit(0); /* exit for -v option - so this is a "good one" */
 		case 'w':		/* disable disallowed host warnigs */
 			option_DisallowWarning = 0;
+			break;
+		case 'x':		/* disable dns for remote messages */
+			DisableDNS = 1;
 			break;
 		case '?':
 		default:
