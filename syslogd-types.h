@@ -262,6 +262,7 @@ struct filed {
 			char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
 		} f_file;
 	} f_un;
+	int	f_ReduceRepeated;		/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */
 	int	f_flags;			/* store some additional flags */

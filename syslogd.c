@@ -4755,7 +4755,7 @@ static void processMsg(msg_t *pMsg)
 
 		/* suppress duplicate lines to this file
 		 */
-		if ((logEveryMsg == 0) &&
+		if ((f->f_ReduceRepeated == 1) &&
 		    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(f->f_pMsg) &&
 		    !strcmp(getMSG(pMsg), getMSG(f->f_pMsg)) &&
 		    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(f->f_pMsg))) {
@@ -7573,8 +7573,7 @@ static void init()
 	if(Debug) {
 		printf("Active selectors:\n");
 		for (f = Files; f != NULL ; f = f->f_next) {
-			if (1) {
-			//if (f->f_type != F_UNUSED) {
+			if (f->f_type != F_UNUSED) {
 				if(f->pCSProgNameComp != NULL)
 					printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSProgNameComp));
 				if(f->eHostnameCmpMode != HN_NO_COMP)
@@ -7632,6 +7631,8 @@ static void init()
 						printf("%s, ", f->f_un.f_uname[i]);
 					break;
 				}
+				if(f->f_ReduceRepeated)
+					printf(" [RepeatedLineReduction]");
 				printf("\n");
 			}
 		}
@@ -8295,6 +8296,9 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		return iRet;
 	}
 	
+	/* common properties */
+	f->f_ReduceRepeated = bReduceRepeatMsgs;
+
 	/* we now check if there are some global (BSD-style) filter conditions
 	 * and, if so, we copy them over. rgerhards, 2005-10-18
 	 */
