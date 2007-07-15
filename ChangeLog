@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 1.16.0 (RGer), 2007-07-1?
+- added $RepeatedLineReduction config parameter
+---------------------------------------------------------------------------
 Version 1.16.0 (RGer/Peter Vrabec), 2007-07-13 - The Friday, 13th Release ;)
 - build system switched to autotools
 - removed SYSV preprocessor macro use, replaced with autotools equivalents

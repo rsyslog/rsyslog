@@ -637,6 +637,8 @@ static struct code	FacNames[] = {
 };
 
 static int	Debug;		/* debug flag  - read-only after startup */
+static int 	bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
+static int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 static int	logEveryMsg = 0;/* no repeat message processing  - read-only after startup
 				 * 0 - suppress duplicate messages
 				 * 1 - do NOT suppress duplicate messages
@@ -7051,6 +7053,64 @@ static void doDynaFileCacheSizeLine(uchar **pp, enum eDirective eDir)
 	*pp = p;
 }
 
+
+/* Parse and interpret an on/off inside a config file line. This is most
+ * often used for boolean options, but of course it may also be used
+ * for other things. The passed-in pointer is updated to point to
+ * the first unparsed character on exit. Function emits error messages
+ * if the value is neither on or off. It returns 0 if the option is off,
+ * 1 if it is on and another value if there was an error.
+ * rgerhards, 2007-07-15
+ */
+static int doParseOnOffOption(uchar **pp)
+{
+	char *pOptStart;
+	uchar szOpt[32];
+	int iRet = -1;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	pOptStart = *pp;
+	skipWhiteSpace(pp); /* skip over any whitespace */
+
+	if(getSubString(pp, (char*) szOpt, sizeof(szOpt) / sizeof(uchar), ' ')  != 0) {
+		logerror("Invalid $-configline - could not extract on/off option");
+		return;
+	}
+	
+	if(!strcmp(szOpt, "on")) {
+		return 1;
+	} else if(!strcmp(szOpt, "off")) {
+		return 0;
+	} else {
+		logerrorSz("Option value must be on or off, but is '%s'", pOptStart);
+		return -1;
+	}
+}
+
+
+/* Parse and process an binary cofig option. pVal must be
+ * a pointer to an integer which is to receive the option
+ * value.
+ * rgerhards, 2007-07-15
+ */
+static void doBinaryOptionLine(uchar **pp, int *pVal)
+{
+	int iOption;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pVal != NULL);
+
+	if((iOption = doParseOnOffOption(pp)) == -1)
+		return;	/* nothing left to do */
+	
+	*pVal = iOption;
+	skipWhiteSpace(pp); /* skip over any whitespace */
+}
+
+
 /* Parse and interpet a $FileCreateMode and $umask line. This function
  * pulls the creation mode and, if successful, stores it
  * into the global variable so that the rest of rsyslogd
@@ -7184,7 +7244,7 @@ static void doNameLine(uchar **pp, enum eDirective eDir)
  */
 void cfsysline(uchar *p)
 {
-	uchar szCmd[32];
+	uchar szCmd[64];
 	uchar errMsg[128];	/* for dynamic error messages */
 
 	assert(p != NULL);
@@ -7208,6 +7268,10 @@ void cfsysline(uchar *p)
 		doFileCreateModeUmaskLine(&p, DIR_UMASK);
 	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
 		doDynaFileCacheSizeLine(&p, DIR_DYNAFILECACHESIZE);
+	} else if(!strcasecmp((char*) szCmd, "repeatedlinereduction")) { 
+		doBinaryOptionLine(&p, &bReduceRepeatMsgs);
+	} else if(!strcasecmp((char*) szCmd, "escapecontrolcharactersonreceive")) { 
+		doBinaryOptionLine(&p, &bEscapeCCOnRcv);
 	} else { /* invalid command! */
 		char err[100];
 		snprintf(err, sizeof(err)/sizeof(char),
@@ -7354,6 +7418,11 @@ static void init()
 	
 	f = NULL;
 	nextp = NULL;
+
+	/* re-setting values to command line defaults (where applicable) */
+	bEscapeCCOnRcv = 1; /* default is to escape control characters */
+	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
+
 	/* open the configuration file */
 	if ((cf = fopen(ConfFile, "r")) == NULL) {
 		/* rgerhards: this code is executed to set defaults when the
@@ -8971,17 +9040,17 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 {
 	uchar *pSrc = *ppSrc;
 	int iErr = 0; /* 0 = no error, >0 = error */
-	while(*pSrc != cSep && *pSrc != '\0' && DstSize>1) {
+	while(*pSrc != cSep && *pSrc != '\n' && *pSrc != '\0' && DstSize>1) {
 		*pDst++ = *(pSrc)++;
 		DstSize--;
 	}
 	/* check if the Dst buffer was to small */
-	if (*pSrc != cSep && *pSrc != '\0')
+	if (*pSrc != cSep && *pSrc != '\n' && *pSrc != '\0')
 	{ 
 		dprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
 	}	
-	if (*pSrc == '\0')
+	if (*pSrc == '\0' || *pSrc == '\n')
 		/* this line was missing, causing ppSrc to be invalid when it
 		 * was returned in case of end-of-string. rgerhards 2005-07-29
 		 */
