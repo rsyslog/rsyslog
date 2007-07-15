@@ -95,6 +95,15 @@ $FileCreateMode 0644<br>
 *.* /var/log/file-with-0644</b></code></p>
 <p>As you can see, open modes depend on position in the config file. Note the 
 first line, which is created with the hardcoded default creation mode.</p>
+<h2>RepeatedLineReduction</h2>
+<p>This directive specifies whether or not repeated lines should be reduced 
+(this is the &quot;Last line repeated n times&quot; feature). If set to on, repeated lines 
+(messages) are reduced. If set to off, every line is logged. Please note that 
+this directive overrides the -e command line option. In case -e is given, it is 
+just the default value until the first RepeatedLineReduction directive is 
+encountered. Sample:</p>
+<p><code><b>$RepeatedLineReduction off&nbsp;&nbsp;&nbsp; # log every message</b></code></p>
+<p>Directives affects selector lines until a new directive is specified.</p>
 <h2>DynaFileCacheSize</h2>
 <p>This directive specifies the maximum size of the cache for 
 dynamically-generated file names. Selector lines with dynamic files names ('?' 
