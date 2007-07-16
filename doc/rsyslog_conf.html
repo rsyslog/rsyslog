@@ -132,6 +132,15 @@ most</b></code></p>
 <p>Numbers are always in decimal. Leading zeros should be avoided (in some later 
 version, they may be mis-interpreted as being octal). Multiple directives may be 
 given. They are applied to selector lines based on order of appearance.</p>
+<h2>DropMsgsWithMaliciousDnsPTRRecords</h2>
+<p>Rsyslog contains code to detect malicious DNS PTR records (reverse name 
+resolution). An attacker might use specially-crafted DNS entries to make you 
+think that a message might have originated on another IP address. Rsyslog can 
+detect those cases. It will log an error message in any case. It this option 
+here is set to &quot;on&quot;, the malicious message will be completely dropped from your 
+logs. If the option is set to &quot;off&quot;, the message will be logged, but the 
+original IP will be used instead of the DNS name.</p>
+<p><code><b>$DropMsgsWithMaliciousDnsPTRRecords on</b></code></p>
 <h2>Templates</h2>
 <p>Templates are a key feature of rsyslog. They allow to specify any format a user 
 might want. They are also used for dynamic file name generation. Every output in rsyslog uses templates - this holds true for files, 
