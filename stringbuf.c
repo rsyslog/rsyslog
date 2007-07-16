@@ -14,9 +14,12 @@
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <regex.h>
 #include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
+
 
 /* ################################################################# *
  * private members                                                   *
@@ -535,6 +538,21 @@ int rsCStrStartsWithSzStr(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
 		return -1; /* pCS1 is less then psz */
 }
 
+/* check if a CStr object matches a regex.
+ * msamia@redhat.com 2007-07-12
+ * @return returns 0 if matched
+ * bug: doesn't work for CStr containing \0
+ * rgerhards, 2007-07-16: bug is no real bug, because rsyslogd ensures there
+ * never is a \0 *inside* a property string.
+ */
+int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
+{
+    regex_t preq;
+    regcomp(&preq, rsCStrGetSzStr(pCS1), 0);
+    int iRet = regexec(&preq, psz, 0, NULL, 0);
+    regfree(&preq);
+    return iRet;
+}
 
 /* compare a rsCStr object with a classical sz string.  This function
  * is almost identical to rsCStrZsStrCmp(), but it also takes an offset

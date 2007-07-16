@@ -690,6 +690,9 @@ static char* getFIOPName(unsigned iFIOP)
 		case FIOP_STARTSWITH:
 			pRet = "startswith";
 			break;
+		case FIOP_REGEX:
+			pRet = "regex";
+			break;
 		default:
 			pRet = "NOP";
 			break;
@@ -4623,6 +4626,11 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
 				iRet = 1; /* process message! */
 			break;
+		case FIOP_REGEX:
+			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
+					  (unsigned char*) pszPropVal, strlen(pszPropVal)) == 0)
+				iRet = 1;
+			break;
 		default:
 			/* here, it handles NOP (for performance reasons) */
 			assert(f->f_filterData.prop.operation == FIOP_NOP);
@@ -8112,6 +8120,8 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 		f->f_filterData.prop.operation = FIOP_ISEQUAL;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "startswith", 10)) {
 		f->f_filterData.prop.operation = FIOP_STARTSWITH;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
+		f->f_filterData.prop.operation = FIOP_REGEX;
 	} else {
 		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
 		           (char*) rsCStrGetSzStr(pCSCompOp));

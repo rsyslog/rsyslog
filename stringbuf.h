@@ -121,6 +121,7 @@ int rsCStrLocateSzStr(rsCStrObj *pCStr, unsigned char *sz);
 int rsCStrLocateInSzStr(rsCStrObj *pThis, unsigned char *sz);
 int rsCStrStartsWithSzStr(rsCStrObj *pCS1, unsigned char *psz, int iLenSz);
 int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, unsigned char *psz, int iLenSz);
+int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, unsigned char *psz, int iLenSz);
 
 /* now come inline-like functions */
 #ifdef NDEBUG
