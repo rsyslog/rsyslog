@@ -7268,7 +7268,7 @@ void cfsysline(uchar *p)
 		doFileCreateModeUmaskLine(&p, DIR_UMASK);
 	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
 		doDynaFileCacheSizeLine(&p, DIR_DYNAFILECACHESIZE);
-	} else if(!strcasecmp((char*) szCmd, "repeatedlinereduction")) { 
+	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
 		doBinaryOptionLine(&p, &bReduceRepeatMsgs);
 	} else if(!strcasecmp((char*) szCmd, "escapecontrolcharactersonreceive")) { 
 		doBinaryOptionLine(&p, &bEscapeCCOnRcv);
@@ -7632,7 +7632,7 @@ static void init()
 					break;
 				}
 				if(f->f_ReduceRepeated)
-					printf(" [RepeatedLineReduction]");
+					printf(" [RepeatedMsgReduction]");
 				printf("\n");
 			}
 		}
