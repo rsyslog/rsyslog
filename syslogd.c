@@ -183,6 +183,9 @@
 
 #include <netinet/in.h>
 #include <netdb.h>
+#include <fnmatch.h>
+#include "net.h" /* struct NetAddr */
+
 #ifndef __sun
 #endif
 #include <arpa/nameser.h>
@@ -708,8 +711,8 @@ static char* getFIOPName(unsigned iFIOP)
  */
 #ifdef SYSLOG_INET
 struct AllowedSenders {
-	unsigned long allowedSender;/* ip address allowed */
-	uchar bitsToShift;  /* defines how many bits should be discarded (eqiv to mask) */
+	struct NetAddr allowedSender; // unsigned long allowedSender;/* ip address allowed */
+	uint8_t SignificantBits;      //uchar bitsToShift;  /* defines how many bits should be discarded (eqiv to mask) */
 	struct AllowedSenders *pNext;
 };
 
@@ -747,7 +750,7 @@ static void logmsg(int pri, msg_t*, int flags);
 static void fprintlog(register selector_t *f);
 static void wallmsg(register selector_t *f);
 static void reapchild();
-static char *cvthname(struct sockaddr_storage *f);
+static char *cvthname(struct sockaddr_storage *f, char **pszFullHost);
 static void debug_switch();
 static rsRetVal cfline(char *line, register selector_t *f);
 static int decode(uchar *name, struct code *codetab);
@@ -786,36 +789,190 @@ static void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName);
  * list elements).
  * rgerhards, 2005-09-26
  */
+
+static inline void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
+	register uint8_t i;
+	
+	assert (addr != NULL);
+	assert (bits <= 128);
+	
+	i = bits/32;
+	if (bits%32)
+		addr->s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
+	for (; i < (sizeof addr->s6_addr32)/4; i++)
+		addr->s6_addr32[i] = 0;
+}
+
+static inline void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
+	
+	assert (addr != NULL);
+	assert (bits <=32 );
+	
+	addr->s_addr &= htonl(0xffffffff << (32 - bits));
+}
+
+#define SIN(sa)  ((struct sockaddr_in  *)(sa))
+#define SIN6(sa) ((struct sockaddr_in6 *)(sa))
+
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
-		     		 unsigned int iAllow, int iSignificantBits)
+		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
 {
-	struct AllowedSenders *pEntry;
+	struct AllowedSenders *pEntry = NULL;
 
 	assert(ppRoot != NULL);
 	assert(ppLast != NULL);
+	assert(iAllow != NULL);
 
+	if (!F_ISSET(iAllow->flags, ADDR_NAME)) {
+		switch (iAllow->addr.NetAddr->sa_family) {
+		case AF_INET:
+			if(iSignificantBits == 0)
+				/* we handle this seperatly just to provide a better
+				 * error message.
+				 */
+				logerror("You can not specify 0 bits of the netmask, this would "
+					 "match ALL systems. If you really intend to do that, "
+					 "remove all $AllowedSender directives.");
+			
+			if((iSignificantBits < 1) || (iSignificantBits > 32)) {
+				logerrorInt("Invalid bit number in IPv4 address - adjusted to 32",
+					    (int)iSignificantBits);
+				iSignificantBits = 32;
+			}
+			
+			MaskIP4 (&(SIN(iAllow->addr.NetAddr)->sin_addr), iSignificantBits);
+			break;
+		case AF_INET6:
+			if(iSignificantBits == 0)
+				/* we handle this seperatly just to provide a better
+				 * error message.
+				 */
+				logerror("You can not specify 0 bits of the netmask, this would "
+					 "match ALL systems. If you really intend to do that, "
+					 "remove all $AllowedSender directives.");
+			
+			if((iSignificantBits < 1) || (iSignificantBits > 128)) {
+				logerrorInt("Invalid bit number in IPv6 address - adjusted to 128",
+					    iSignificantBits);
+				iSignificantBits = 128;
+			}
+			
+			MaskIP6 (&(SIN6(iAllow->addr.NetAddr)->sin6_addr), iSignificantBits);
+			break;
+		default:
+			abort (/* too much caffeine */);
+		}
+	} else {
+		if (DisableDNS) {
+			logerror ("Ignoring hostname based ACLs because DNS is disabled.");
+			return RS_RET_OK;
+		}
+		
+		if (!strchr (iAllow->addr.HostWildcard, '*') &&
+		    !strchr (iAllow->addr.HostWildcard, '?')) {
+			struct addrinfo hints, *res, *restmp;
+			struct AllowedSenders *AllowedTmp = NULL, *LastTmp = NULL;
+			/* full host */
+			
+			memset (&hints, 0, sizeof (struct addrinfo));
+			hints.ai_family = AF_UNSPEC;
+			hints.ai_flags  = AI_ADDRCONFIG;
+			hints.ai_socktype = SOCK_DGRAM;
+
+			if (getaddrinfo (iAllow->addr.HostWildcard, NULL,
+					 &hints, &res) != 0) {
+				dprintf ("DNS error: Can't resolve \"%s\"\n", iAllow->addr.HostWildcard);
+				return RS_RET_ERR;
+			}
+			
+			for (restmp = res; res != NULL; res = res->ai_next) {
+				switch (res->ai_family) {
+				case AF_INET:
+					/* add IPv4 */
+					
+					if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders)))
+					   == NULL) {
+						freeaddrinfo (restmp);
+						return RS_RET_OUT_OF_MEMORY; /* no options left :( */
+					}
+					pEntry->pNext = AllowedTmp;
+					if (AllowedTmp == NULL)
+						LastTmp = pEntry;
+					
+					pEntry->SignificantBits = 0;
+					pEntry->allowedSender.flags = 0;
+					pEntry->allowedSender.addr.NetAddr = malloc (res->ai_addrlen);
+					memcpy (pEntry->allowedSender.addr.NetAddr,
+						res->ai_addr, res->ai_addrlen);
+					AllowedTmp = pEntry;
+					
+					break;
+				case AF_INET6:
+					
+					if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders)))
+					   == NULL) {
+						freeaddrinfo (restmp);
+						return RS_RET_OUT_OF_MEMORY; /* no options left :( */
+					}
+
+					if (IN6_IS_ADDR_V4MAPPED (&SIN6(res->ai_addr)->sin6_addr)) {
+						/* extract & add IPv4 */
+						
+						pEntry->pNext = AllowedTmp;
+						if (AllowedTmp == NULL)
+							LastTmp = pEntry;
+						
+						pEntry->SignificantBits = 0;
+						pEntry->allowedSender.flags = 0;
+						pEntry->allowedSender.addr.NetAddr = malloc (sizeof (struct sockaddr_in));
+						SIN(pEntry->allowedSender.addr.NetAddr)->sin_family = AF_INET;
+						SIN(pEntry->allowedSender.addr.NetAddr)->sin_port   = 0;
+						
+						memcpy (&(SIN(pEntry->allowedSender.addr.NetAddr)->sin_addr.s_addr),
+							&(SIN6(res->ai_addr)->sin6_addr.s6_addr32[3]),
+							sizeof (struct sockaddr_in));
+						
+						AllowedTmp = pEntry;
+					} else {
+						
+						pEntry->pNext = AllowedTmp;
+						if (AllowedTmp == NULL)
+							LastTmp = pEntry;
+					
+						pEntry->SignificantBits = 0;
+						pEntry->allowedSender.flags = 0;
+						pEntry->allowedSender.addr.NetAddr = malloc (res->ai_addrlen);
+						memcpy (pEntry->allowedSender.addr.NetAddr,
+							res->ai_addr, res->ai_addrlen);
+						AllowedTmp = pEntry;
+					}
+					break;
+				}
+			}
+			freeaddrinfo (restmp);
+
+			if (pEntry != NULL) {
+				if (*ppRoot == NULL) {
+					*ppRoot = pEntry;
+				} else {
+					(*ppLast)->pNext = pEntry;
+				}
+				*ppLast = LastTmp;
+				return RS_RET_OK;
+			}
+			
+			return RS_RET_ERR;
+		}
+	}
+	
 	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders)))
 	   == NULL)
-	   	return RS_RET_OUT_OF_MEMORY; /* no options left :( */
-
-	if(iSignificantBits == 0)
-		/* we handle this seperatly just to provide a better
-		 * error message.
-		 */
-		logerror("You can not specify 0 bits of the netmask, this would "
-		         "match ALL systems. If you really intend to do that, "
-			 "remove all $AllowedSender directives.");
-	if((iSignificantBits < 1) || (iSignificantBits > 32)) {
-		logerrorInt("Invalid bit number in IP address - adjusted to 32",
-			    iSignificantBits);
-		iSignificantBits = 32;
-	}
-
-	/* populate entry */
-	pEntry->bitsToShift = 32 - iSignificantBits; /* IPv4! */
-	pEntry->allowedSender = iAllow >> pEntry->bitsToShift;
+		return RS_RET_OUT_OF_MEMORY; /* no options left :( */
+	
+	memcpy (&(pEntry->allowedSender), iAllow, sizeof (struct NetAddr));
 	pEntry->pNext = NULL;
-
+	pEntry->SignificantBits = iSignificantBits;
+	
 	/* enqueue */
 	if(*ppRoot == NULL) {
 		*ppRoot = pEntry;
@@ -823,7 +980,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 		(*ppLast)->pNext = pEntry;
 	}
 	*ppLast = pEntry;
-
+	
 	return RS_RET_OK;
 }
 #endif /* #ifdef SYSLOG_INET */
@@ -834,11 +991,20 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
  * iListToPrint = 1 means UDP, 2 means TCP
  * rgerhards, 2005-09-27
  */
+
+static inline size_t SALEN(struct sockaddr *sa) {
+	switch (sa->sa_family) {
+	case AF_INET:  return (sizeof (struct sockaddr_in));
+	case AF_INET6: return (sizeof (struct sockaddr_in6));
+	default:       return 0;
+	}
+}
+
 static void PrintAllowedSenders(int iListToPrint)
 {
 	struct AllowedSenders *pSender;
-	unsigned uSender;
-
+	char *pszIP = NULL;
+	
 	assert((iListToPrint == 1) || (iListToPrint == 2));
 
 	printf("\nAllowed %s Senders:\n",
@@ -849,19 +1015,22 @@ static void PrintAllowedSenders(int iListToPrint)
 		printf("\tNo restrictions set.\n");
 	} else {
 		while(pSender != NULL) {
-			uSender = pSender->allowedSender  << pSender->bitsToShift;
-			/* it might be wiser to use socket functions to
-			 * do the conversion, but we need to change it for
-			 * IPv6 anyhow... so we use the quick way.
-			 */
-			printf("\t%u.%u.%u.%u/%u\n",
-			       uSender >> 24 & 0xff,
-			       uSender >> 16 & 0xff,
-			       uSender >>  8 & 0xff,
-			       uSender       & 0xff,
-			       32 - pSender->bitsToShift
-			      );
-		    pSender = pSender->pNext;
+			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME))
+				printf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
+			else {
+				pszIP = malloc (sizeof (char) * 64);
+				switch (getnameinfo (pSender->allowedSender.addr.NetAddr,
+						     SALEN(pSender->allowedSender.addr.NetAddr),
+						     pszIP, 64, NULL, 0, NI_NUMERICHOST)) {
+				case 0: break;
+					/* TODO: better error handling */
+				default:
+					printf ("\t ERROR\n");
+				}
+				printf ("\t%s/%u\n", pszIP, pSender->SignificantBits);
+				free (pszIP);
+			}
+			pSender = pSender->pNext;
 		}
 	}
 }
@@ -879,28 +1048,87 @@ static void PrintAllowedSenders(int iListToPrint)
  * others are allowed senders by virtue of being IPv6. This needs to be
  * changed - TODO. rgerhards, 2007-06-22
  */
-static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_storage *pFrom)
+
+static int MaskCmp (struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char *pszFromHost) {
+	switch (pFrom->sa_family) {
+	case AF_INET:
+		if (!F_ISSET(pAllow->flags, ADDR_NAME) &&
+		    AF_INET == pAllow->addr.NetAddr->sa_family)
+			return(( SIN(pFrom)->sin_addr.s_addr & htonl(0xffffffff << (32 - bits)) )
+			       == SIN(pAllow->addr.NetAddr)->sin_addr.s_addr);
+		else {
+			dprintf ("MaskCmp: host = \"%s\"; pattern = \"%s\"\n",
+				 pszFromHost, pAllow->addr.HostWildcard);
+			
+			if (pszFromHost != NULL)
+				return (fnmatch (pAllow->addr.HostWildcard, pszFromHost,
+						 FNM_NOESCAPE|FNM_CASEFOLD) == 0);
+			else
+				return 0;
+		}
+		break;
+	case AF_INET6:
+		if (!F_ISSET(pAllow->flags, ADDR_NAME)) {
+			switch (pAllow->addr.NetAddr->sa_family) {
+			case AF_INET6: {
+				struct in6_addr ip, net;
+				register uint8_t i;
+				
+				memcpy (&ip,  &(SIN6(pFrom))->sin6_addr, sizeof (struct in6_addr));
+				memcpy (&net, &(SIN6(pAllow->addr.NetAddr))->sin6_addr, sizeof (struct in6_addr));
+				
+				i = bits/32;
+				if (bits % 32)
+					ip.s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
+				for (; i < (sizeof ip.s6_addr32)/4; i++)
+					ip.s6_addr32[i] = 0;
+				
+				return (memcmp (ip.s6_addr, net.s6_addr, sizeof ip.s6_addr) == 0);
+			}
+			case AF_INET: {
+				struct in6_addr *ip6 = &(SIN6(pFrom))->sin6_addr;
+				struct in_addr  *net = &(SIN(pAllow->addr.NetAddr))->sin_addr;
+				
+				if ((ip6->s6_addr32[3] & (u_int32_t) htonl((0xffffffff << (32 - bits)))) == net->s_addr &&
+#if BYTE_ORDER == LITTLE_ENDIAN
+				    (ip6->s6_addr32[2] == (u_int32_t)0xffff0000) &&
+#else
+				    (ip6->s6_addr32[2] == (u_int32_t)0x0000ffff) &&
+#endif
+				    (ip6->s6_addr32[1] == 0) && (ip6->s6_addr32[0] == 0))
+					return 1;
+				else
+					return 0;
+			}
+			default:
+				/* Unsupported AF */
+				return 0;
+			}
+		} else {
+			dprintf ("MaskCmp: host = \"%s\"; pattern = \"%s\"\n",
+				 pszFromHost, pAllow->addr.HostWildcard);
+			
+			if (pszFromHost != NULL)
+				return (fnmatch (pAllow->addr.HostWildcard, pszFromHost,
+						 FNM_NOESCAPE|FNM_CASEFOLD) == 0);
+			else
+				return 0;
+		}
+	default:
+		/* Unsupported AF */
+		return 0;
+	}
+}
+
+static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost)
 {
 	struct AllowedSenders *pAllow;
-	unsigned long ulAddrInLocalByteOrder;
-
-	union sockunion *pFromAddr;
-
+	
 	assert(pFrom != NULL);
 
 	if(pAllowRoot == NULL)
 		return 1; /* checking disabled, everything is valid! */
-
-	if(pFrom->ss_family == AF_INET6)
-		return 1; /* for the time being, IPv6 addresses are always valid */
-
-	if(pFrom->ss_family != AF_INET)
-		return 0; /* malformed, so by default no valid sender! */
-
-	pFromAddr = (union sockunion*) pFrom;
-	ulAddrInLocalByteOrder = ntohl(pFromAddr->su_sin.sin_addr.s_addr);
-	/* was: ulAddrInLocalByteOrder = ntohl(pFrom->sin_addr.s_addr); */
-
+	
 	/* now we loop through the list of allowed senders. As soon as
 	 * we find a match, we return back (indicating allowed). We loop
 	 * until we are out of allowed senders. If so, we fall through the
@@ -908,11 +1136,10 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr_st
 	 * that the sender is disallowed.
 	 */
 	for(pAllow = pAllowRoot ; pAllow != NULL ; pAllow = pAllow->pNext) {
-		if(   (ulAddrInLocalByteOrder >> pAllow->bitsToShift)
-		   == pAllow->allowedSender)
-		   	return 1;
+		if (MaskCmp (&(pAllow->allowedSender), pAllow->SignificantBits, pFrom, pszFromHost))
+			return 1;
 	}
-	dprintf("%x is not an allowed sender\n", (unsigned) ulAddrInLocalByteOrder);
+	dprintf("%s is not an allowed sender\n", pszFromHost);
 	return 0;
 }
 #endif /* #ifdef SYSLOG_INET */
@@ -1295,9 +1522,10 @@ static void TCPSessAccept(int fd)
 	int newConn;
 	int iSess;
 	struct sockaddr_storage addr;
-	socklen_t addrlen = sizeof(struct sockaddr);
+	socklen_t addrlen = sizeof(struct sockaddr_storage);
 	int lenHostName;
 	char *fromHost;
+	char *fromFullHost = NULL;
 	char *pBuf;
 
 	newConn = accept(fd, (struct sockaddr*) &addr, &addrlen);
@@ -1317,7 +1545,13 @@ static void TCPSessAccept(int fd)
 
 	/* OK, we have a "good" index... */
 	/* get the host name */
-	fromHost = cvthname(&addr);
+	fromHost = cvthname(&addr, &fromFullHost);
+	
+	if (fromHost == NULL && *fromFullHost == '\0') {
+		close (newConn);
+		logerror ("TCP message discarded: Malicious DNS record");
+		return;
+	}
 
 	/* Here we check if a host is permitted to send us
 	 * syslog messages. If it isn't, we do not further
@@ -1325,15 +1559,17 @@ static void TCPSessAccept(int fd)
 	 * configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(!isAllowedSender(pAllowedSenders_TCP, &addr)) {
+	if(!isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, fromFullHost)) {
 		if(option_DisallowWarning) {
 			errno = 0;
 			logerrorSz("TCP message from disallowed sender %s discarded",
 				   fromHost);
 		}
+		free (fromFullHost);
 		close(newConn);
 		return;
 	}
+	free (fromFullHost);
 
 	/* OK, we have an allowed sender, so let's continue */
 	lenHostName = strlen(fromHost) + 1; /* for \0 byte */
@@ -6599,7 +6835,7 @@ static void reapchild()
 
 /* Return a printable representation of a host address.
  */
-static char *cvthname(struct sockaddr_storage *f)
+static char *cvthname(struct sockaddr_storage *f, char **pszFullHost)
 {
 	register char *p;
 	int count, error;
@@ -6608,11 +6844,12 @@ static char *cvthname(struct sockaddr_storage *f)
 	 * multi-threading. rgerhards, 2007-06-22
 	 */
 	static char hname[NI_MAXHOST], ip[NI_MAXHOST];
-
+	struct addrinfo hints, *res;
+	
         error = getnameinfo((struct sockaddr *)f,
-                             sizeof(*f),
-                             ip, sizeof ip, NULL, 0,
-                             NI_NUMERICHOST);
+			    SALEN((struct sockaddr *)f),
+			    ip, sizeof ip, NULL, 0,
+			    NI_NUMERICHOST);
         dprintf("cvthname(%s)\n", ip);
 
         if (error) {
@@ -6620,16 +6857,33 @@ static char *cvthname(struct sockaddr_storage *f)
 		return ("???");
 	}
 
-	if (!DisableDNS) {
+	if (!DisableDNS) {		
 		sigemptyset(&nmask);
 		sigaddset(&nmask, SIGHUP);
 		sigprocmask(SIG_BLOCK, &nmask, &omask);
+		
+		if (error == 0) {
+			memset (&hints, 0, sizeof (struct addrinfo));
+			hints.ai_flags = AI_NUMERICHOST;
+			hints.ai_socktype = SOCK_DGRAM;
 
+			if (getaddrinfo (hname, NULL, &hints, &res) == 0) {
+				freeaddrinfo (res);
+				dprintf ("[!!!] Malicious PTR record: IP = \"%s\", HOST = \"%s\"\n",
+					 ip, hname);
+				if (pszFullHost != NULL)
+					*pszFullHost = "\0";
+
+				sigprocmask (SIG_SETMASK, &omask, NULL);
+				return (ip);
+			}
+		}
+		
 		error = getnameinfo((struct sockaddr *)f,
 				    sizeof(*f),
 				    hname, sizeof hname, NULL, 0,
 				    NI_NAMEREQD);
-
+		
 		sigprocmask(SIG_SETMASK, &omask, NULL);
 	}
 
@@ -6644,6 +6898,9 @@ static char *cvthname(struct sockaddr_storage *f)
 		if (isupper((int) *p))
 			*p = tolower(*p);
 
+	if (pszFullHost != NULL)
+		*pszFullHost = strdup (hname);
+	
 	/* Notice that the string still contains the fqdn, but your
 	 * hostname and domain are separated by a '\0'.
 	 */
@@ -6930,7 +7187,7 @@ static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 	struct AllowedSenders **ppLast;
 	rsParsObj *pPars;
 	rsRetVal iRet;
-	unsigned long uIP;
+	struct NetAddr *uIP = NULL;
 	int iBits;
 #endif
 
@@ -6970,8 +7227,8 @@ static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 		if(parsPeekAtCharAtParsPtr(pPars) == '#')
 			break; /* a comment-sign stops processing of line */
 		/* now parse a single IP address */
-		if((iRet = parsIPv4WithBits(pPars, &uIP, &iBits)) != RS_RET_OK) {
-			logerrorInt("Error %d parsing IP address in allowed sender"
+		if((iRet = parsAddrWithBits(pPars, &uIP, &iBits)) != RS_RET_OK) {
+			logerrorInt("Error %d parsing address in allowed sender"
 				    "list - ignoring.", iRet);
 			rsParsDestruct(pPars);
 			return(iRet);
@@ -6983,7 +7240,7 @@ static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 			rsParsDestruct(pPars);
 			return(iRet);
 		}
-
+		free (uIP); /* copy stored in AllowedSenders list */ 
 	}
 
 	/* cleanup */
@@ -9129,6 +9386,7 @@ static void mainloop(void)
 	struct sockaddr_storage frominet;
 	socklen_t socklen;
 	char *from;
+	char *fromFullHost = NULL;
 	int iTCPSess;
 	ssize_t l;
 #  endif /* #ifndef TESTING */
@@ -9395,26 +9653,34 @@ static void mainloop(void)
                                                     &socklen);
                                        if (l > 0) {
                                                line[l] = '\0';
-                                               from = cvthname(&frominet);
-                                               dprintf("Message from inetd socket: #%d, host: %s\n",
-                                                       finet[i+1], from);
-						/* Here we check if a host is permitted to send us
-						 * syslog messages. If it isn't, we do not further
-						 * process the message but log a warning (if we are
-						 * configured to do this).
-						 * rgerhards, 2005-09-26
-						 */
-						if(isAllowedSender(pAllowedSenders_UDP, &frominet)) {
-                                               		printchopped(from, line, l,  finet[i+1], 1);
-						} else {
-							if(option_DisallowWarning) {
-								logerrorSz("UDP message from disallowed sender %s discarded",
-					               			   from);
-							}	
-						}
-                                       }
+                                               from = cvthname(&frominet, &fromFullHost);
+                                               
+					       if (from == NULL && *fromFullHost == '\0') {
+						       assert (from != NULL);
+						       
+						       dprintf("Message from inetd socket: #%d, host: %s\n",
+							       finet[i+1], from);
+						       
+						       /* Here we check if a host is permitted to send us
+							* syslog messages. If it isn't, we do not further
+							* process the message but log a warning (if we are
+							* configured to do this).
+							* rgerhards, 2005-09-26
+							*/
+						       if(isAllowedSender(pAllowedSenders_UDP, (struct sockaddr *)&frominet, fromFullHost)) {
+							       printchopped(from, line, l,  finet[i+1], 1);
+						       } else {
+							       if(option_DisallowWarning) {
+								       logerrorSz("UDP message from disallowed sender %s discarded",
+										  from);
+							       }	
+						       }
+						       free (fromFullHost);
+					       } else
+						       logerror ("UDP message discarded: Malicious DNS record.");
+				       }
                                        else if (l < 0 && errno != EINTR && errno != EAGAIN) {
-                                                       dprintf("INET socket error: %d = %s.\n",
+					       dprintf("INET socket error: %d = %s.\n",
                                                                 errno, strerror(errno));
                                                        logerror("recvfrom inet");
                                                        /* should be harmless */
