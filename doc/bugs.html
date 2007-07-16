@@ -11,19 +11,9 @@ bug tracker at sourceforge.net</a>. This list here contains more architectural
 things while the bug tracker most often lists things that you will actually 
 experience. Please be sure to visit the bug tracker in addition to this list 
 here.</p>
-<p>This list has last been updated on 2007-06-28 by
+<p>This list has last been updated on 2007-07-16 by
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a>.</p>
 <h1>rsyslogd</h1>
-<h2>AllowedSender and IPv6</h2>
-<p>AllowedSenders currently can be used with IPv4, only. IPv6 senders are always 
-allowed. If you need access control for IPv6, use iptables. AllowedSender 
-support for IPv6 will most probably be added. Please note that you can also 
-disable IPv6 support by specifying -4 on the command line.</p>
-<h2>REPEATED LOG LINES</h2>
-<p>If multiple log lines with the exact same content are received,
-   the duplicates are NOT suppressed. This is done by sysklogd
-   in all cases. We plan to add this as an optional feature,
-   but as of now every line is logged.</p>
 <h2>EQUALLY-NAMED TEMPLATES</h2>
 <p>If multiple templates with the SAME name are created, all but the
    first definition is IGNORED. So you can NOT (yet) replace a

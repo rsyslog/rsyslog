@@ -45,7 +45,10 @@ error message. &quot;ip[/bits]&quot; is a machine or network ip address as in
 &quot;192.0.2.0/24&quot; or &quot;127.0.0.1&quot;. If the &quot;/bits&quot; part is omitted, a single host is 
 assumed (32 bits or mask 255.255.255.255). &quot;/0&quot; is not allowed, because that 
 would match any sending system. If you intend to do that, just remove all $AllowedSender 
-directives. If more than 32 bits are requested, they are adjusted to 32. 
+directives. If more than 32 bits are requested with IPv4, they are adjusted to 32. 
+For IPv6, the limit is 128 for obvious reasons. Hostnames, with and without 
+wildcards, may also be provided. If so, the result of revers DNS resolution is 
+used for filtering. 
 Multiple allowed senders can be specified in a comma-delimited list. Also, 
 multiple $AllowedSender lines can be given. They are all combined into one UDP 
 and one TCP list. Performance-wise, it is good to specify those allowed senders 
@@ -56,13 +59,18 @@ the first action after receiving a message. This keeps the access to potential
 vulnerable code in rsyslog at a minimum. However, it is still a good idea to 
 impose allowed sender limitations via firewalling.</p>
 <p><b>WARNING:</b> by UDP design, rsyslogd can not identify a spoofed sender 
-address in UDP syslog packets. As such, a malicous person could spoof the adress 
+address in UDP syslog packets. As such, a malicious person could spoof the 
+address 
 of an allowed sender, send such packets to rsyslogd and rsyslogd would accept 
 them as being from the faked sender. To prevent this, use syslog via TCP 
 exclusively. If you need to use UDP-based syslog, make sure that you do proper 
 egress and ingress filtering at the firewall and router level.</p>
+<p>Rsyslog also detects some kind of malicious reverse DNS entries. In any case, 
+using DNS names adds an extra layer of vulnerability. We recommend to stick with 
+hard-coded IP addresses whereever possible.</p>
 <p>An example for an allowed sender list is as follows:</p>
-<p><code><b>$AllowedSender UDP, 127.0.0.1, 192.0.2.0/24</b></code></p>
+<p><code><b>$AllowedSender UDP, 127.0.0.1, 192.0.2.0/24, [::1]/128, 
+*.example.net, somehost.example.com</b></code></p>
 <h2>UMASK</h2>
 <p>The $umask directive allows to specify the rsyslogd processes' umask. If not 
 specified, the system-provided default is used. The value given must always be a 
