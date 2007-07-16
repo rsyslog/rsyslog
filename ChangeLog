@@ -8,6 +8,7 @@ Version 1.16.0 (RGer), 2007-07-1?
   - added IPv6 support
   - allowed DNS hostnames
   - allowed DNS wildcard names
+- added new option $DropMsgsWithMaliciousDnsPTRRecords
 ---------------------------------------------------------------------------
 Version 1.16.0 (RGer/Peter Vrabec), 2007-07-13 - The Friday, 13th Release ;)
 - build system switched to autotools

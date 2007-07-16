@@ -640,6 +640,7 @@ static struct code	FacNames[] = {
 };
 
 static int	Debug;		/* debug flag  - read-only after startup */
+static int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static int 	bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
 static int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 static int	logEveryMsg = 0;/* no repeat message processing  - read-only after startup
@@ -6897,10 +6898,21 @@ static int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQ
 				/* OK, we know we have evil. The question now is what to do about
 				 * it. One the one hand, the message might probably be intended
 				 * to harm us. On the other hand, losing the message may also harm us.
-				 * TODO: I think this is a good place for a configurable option. For the
+				 * Thus, the behaviour is controlled by the $DropMsgsWithMaliciousDnsPTRRecords
+				 * option. If it tells us we should discard, we do so, else we proceed,
+				 * but log an error message together with it.
 				 * time being, we simply drop the name we obtained and use the IP - that one
 				 * is OK in any way. We do also log the error message. rgerhards, 2007-07-16
-				 */
+		 		 */
+		 		if(bDropMalPTRMsgs == 1) {
+					snprintf(szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
+						 "Malicious PTR record, message dropped "
+						 "IP = \"%s\" HOST = \"%s\"",
+						 ip, pszHostFQDN);
+					logerror(szErrMsg);
+					return 0;
+				}
+
 				/* Please note: we deal with a malicous entry. Thus, we have crafted
 				 * the snprintf() below so that all text is in front of the entry - maybe
 				 * it would contain characters that would make the message unreadble
@@ -7574,6 +7586,8 @@ void cfsysline(uchar *p)
 		doBinaryOptionLine(&p, &bReduceRepeatMsgs);
 	} else if(!strcasecmp((char*) szCmd, "escapecontrolcharactersonreceive")) { 
 		doBinaryOptionLine(&p, &bEscapeCCOnRcv);
+	} else if(!strcasecmp((char*) szCmd, "dropmsgswithmaliciousdnsptrrecords")) { 
+		doBinaryOptionLine(&p, &bDropMalPTRMsgs);
 	} else { /* invalid command! */
 		char err[100];
 		snprintf(err, sizeof(err)/sizeof(char),
@@ -7947,6 +7961,9 @@ static void init()
 		PrintAllowedSenders(1); /* UDP */
 		PrintAllowedSenders(2); /* TCP */
 #endif 	/* #ifdef SYSLOG_INET */
+
+		printf("Messages with malicious PTR DNS Records are %sdropped.\n",
+			bDropMalPTRMsgs	? "" : "not ");
 	}
 
 	/* we now generate the startup message. It now includes everything to
