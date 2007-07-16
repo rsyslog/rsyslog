@@ -52,7 +52,7 @@ rsCStrObj *rsCStrConstruct(void)
 /* construct from sz string
  * rgerhards 2005-09-15
  */
-rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, unsigned char *sz)
+rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, uchar *sz)
 {
 	rsCStrObj *pThis;
 
@@ -62,7 +62,7 @@ rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, unsigned char *sz)
 		return RS_RET_OUT_OF_MEMORY;
 
 	pThis->iBufSize = pThis->iStrLen = strlen((char*)(char *) sz);
-	if((pThis->pBuf = (unsigned char*) malloc(sizeof(unsigned char) * pThis->iStrLen)) == NULL) {
+	if((pThis->pBuf = (uchar*) malloc(sizeof(uchar) * pThis->iStrLen)) == NULL) {
 		RSFREEOBJ(pThis);
 		return RS_RET_OUT_OF_MEMORY;
 	}
@@ -89,7 +89,7 @@ rsRetVal rsCStrConstructFromCStr(rsCStrObj **ppThis, rsCStrObj *pFrom)
 		return RS_RET_OUT_OF_MEMORY;
 
 	pThis->iBufSize = pThis->iStrLen = pFrom->iStrLen;
-	if((pThis->pBuf = (unsigned char*) malloc(sizeof(unsigned char) * pThis->iStrLen)) == NULL) {
+	if((pThis->pBuf = (uchar*) malloc(sizeof(uchar) * pThis->iStrLen)) == NULL) {
 		RSFREEOBJ(pThis);
 		return RS_RET_OUT_OF_MEMORY;
 	}
@@ -123,7 +123,7 @@ void rsCStrDestruct(rsCStrObj *pThis)
 }
 
 
-rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, unsigned char* psz, size_t iStrLen)
+rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, uchar* psz, size_t iStrLen)
 {
 	rsRetVal iRet;
 	int iOldAllocInc;
@@ -162,7 +162,7 @@ rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, unsigned char* psz, size_t iSt
  * need to change existing code.
  * rgerhards, 2007-07-03
  */
-rsRetVal rsCStrAppendStr(rsCStrObj *pThis, unsigned char* psz)
+rsRetVal rsCStrAppendStr(rsCStrObj *pThis, uchar* psz)
 {
 	return rsCStrAppendStrWithLen(pThis, psz, strlen((char*)(char*) psz));
 }
@@ -171,7 +171,7 @@ rsRetVal rsCStrAppendStr(rsCStrObj *pThis, unsigned char* psz)
 rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i)
 {
 	rsRetVal iRet;
-	unsigned char szBuf[32];
+	uchar szBuf[32];
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
@@ -182,15 +182,15 @@ rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i)
 }
 
 
-rsRetVal rsCStrAppendChar(rsCStrObj *pThis, unsigned char c)
+rsRetVal rsCStrAppendChar(rsCStrObj *pThis, uchar c)
 {
-	unsigned char* pNewBuf;
+	uchar* pNewBuf;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
 	if(pThis->iStrLen >= pThis->iBufSize)
 	{  /* need more memory! */
-		if((pNewBuf = (unsigned char*) malloc((pThis->iBufSize + pThis->iAllocIncrement) * sizeof(unsigned char))) == NULL)
+		if((pNewBuf = (uchar*) malloc((pThis->iBufSize + pThis->iAllocIncrement) * sizeof(uchar))) == NULL)
 			return RS_RET_OUT_OF_MEMORY;
 		memcpy(pNewBuf, pThis->pBuf, pThis->iBufSize);
 		pThis->iBufSize += pThis->iAllocIncrement;
@@ -220,7 +220,7 @@ rsRetVal rsCStrAppendChar(rsCStrObj *pThis, unsigned char c)
  * not modified by this function.
  * rgerhards, 2005-10-18
  */
-rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, unsigned char *pszNew)
+rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, uchar *pszNew)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
@@ -240,7 +240,7 @@ rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, unsigned char *pszNew)
 		/* iAllocIncrement is NOT modified! */
 
 		/* now save the new value */
-		if((pThis->pBuf = (unsigned char*) malloc(sizeof(unsigned char) * pThis->iStrLen)) == NULL) {
+		if((pThis->pBuf = (uchar*) malloc(sizeof(uchar) * pThis->iStrLen)) == NULL) {
 			RSFREEOBJ(pThis);
 			return RS_RET_OUT_OF_MEMORY;
 		}
@@ -259,11 +259,11 @@ rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, unsigned char *pszNew)
  * "" is returned.
  * rgerhards 2005-10-19
  */
-unsigned char*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis)
+uchar*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	if(pThis->pBuf == NULL)
-		return (unsigned char*) "";
+		return (uchar*) "";
 	else
 		return rsCStrGetSzStr(pThis);
 }
@@ -277,7 +277,7 @@ unsigned char*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis)
  * rsCStrGetSzStrNoNULL() instead.
  * rgerhards, 2005-09-15
  */
-unsigned char*  rsCStrGetSzStr(rsCStrObj *pThis)
+uchar*  rsCStrGetSzStr(rsCStrObj *pThis)
 {
 	int i;
 
@@ -286,7 +286,7 @@ unsigned char*  rsCStrGetSzStr(rsCStrObj *pThis)
 	if(pThis->pBuf != NULL)
 		if(pThis->pszBuf == NULL) {
 			/* we do not yet have a usable sz version - so create it... */
-			if((pThis->pszBuf = malloc(pThis->iStrLen + 1 * sizeof(unsigned char))) == NULL) {
+			if((pThis->pszBuf = malloc(pThis->iStrLen + 1 * sizeof(uchar))) == NULL) {
 				/* TODO: think about what to do - so far, I have no bright
 				 *       idea... rgerhards 2005-09-07
 				 */
@@ -327,9 +327,9 @@ unsigned char*  rsCStrGetSzStr(rsCStrObj *pThis)
  *
  * rgerhards, 2005-09-07
  */
-unsigned char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
+uchar*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
 {
-	unsigned char* pRetBuf;
+	uchar* pRetBuf;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
@@ -357,14 +357,14 @@ rsRetVal  rsCStrFinish(rsCStrObj *pThis)
 	 * string size, and then copy the old one over. 
 	 * This new buffer is then to be returned.
 	 */
-	if((pRetBuf = malloc((pThis->iBufSize) * sizeof(unsigned char))) == NULL)
+	if((pRetBuf = malloc((pThis->iBufSize) * sizeof(uchar))) == NULL)
 	{	/* OK, in this case we use the previous buffer. At least
 		 * we have it ;)
 		 */
 	}
 	else
 	{	/* got the new buffer, so let's use it */
-		unsigned char* pBuf;
+		uchar* pBuf;
 		memcpy(pBuf, pThis->pBuf, pThis->iBufPtr + 1);
 		pThis->pBuf = pBuf;
 	}
@@ -427,7 +427,7 @@ rsRetVal rsCStrTruncate(rsCStrObj *pThis, int nTrunc)
 rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis)
 {
 	register int i;
-	register unsigned char *pC;
+	register uchar *pC;
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
 	i = pThis->iStrLen;
@@ -480,7 +480,7 @@ int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2)
  * comparison operation. Maybe it also has other needs.
  * rgerhards 2005-10-19
  */
-int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
+int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, uchar *psz, int iLenSz)
 {
 	register int i;
 	int iMax;
@@ -512,7 +512,7 @@ int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
 /* check if a CStr object starts with a sz-type string.
  * rgerhards 2005-09-26
  */
-int rsCStrStartsWithSzStr(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
+int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, int iLenSz)
 {
 	register int i;
 
@@ -545,7 +545,7 @@ int rsCStrStartsWithSzStr(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
  * rgerhards, 2007-07-16: bug is no real bug, because rsyslogd ensures there
  * never is a \0 *inside* a property string.
  */
-int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
+int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz, int iLenSz)
 {
     regex_t preq;
     regcomp(&preq, rsCStrGetSzStr(pCS1), 0);
@@ -575,7 +575,7 @@ int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
  * program bug and will lead to unpredictable results and program aborts).
  * rgerhards 2005-09-26
  */
-int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, unsigned char *psz, int iLenSz)
+int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, uchar *psz, int iLenSz)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(iOffset >= 0);
@@ -619,7 +619,7 @@ int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, unsigned char *psz, int i
  * The to sz string pointer must not be NULL!
  * rgerhards 2005-09-26
  */
-int rsCStrSzStrCmp(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
+int rsCStrSzStrCmp(rsCStrObj *pCS1, uchar *psz, int iLenSz)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(psz != NULL);
@@ -652,7 +652,7 @@ int rsCStrSzStrCmp(rsCStrObj *pCS1, unsigned char *psz, int iLenSz)
  * returned. Both parameters MUST be given (NULL is not allowed).
  * rgerhards 2005-09-19
  */
-int rsCStrLocateInSzStr(rsCStrObj *pThis, unsigned char *sz)
+int rsCStrLocateInSzStr(rsCStrObj *pThis, uchar *sz)
 {
 	int i;
 	int iMax;
@@ -673,7 +673,7 @@ int rsCStrLocateInSzStr(rsCStrObj *pThis, unsigned char *sz)
 	i = 0;
 	while(i  <= iMax && !bFound) {
 		int iCheck;
-		unsigned char *pComp = sz + i;
+		uchar *pComp = sz + i;
 		for(iCheck = 0 ; iCheck < pThis->iStrLen ; ++iCheck)
 			if(*(pComp + iCheck) != *(pThis->pBuf + iCheck))
 				break;
@@ -696,7 +696,7 @@ int rsCStrLocateInSzStr(rsCStrObj *pThis, unsigned char *sz)
  *          some time later. However, it is not fully tested, so start with testing
  *          it before you put it to first use).
  */
-int rsCStrLocateSzStr(rsCStrObj *pThis, unsigned char *sz)
+int rsCStrLocateSzStr(rsCStrObj *pThis, uchar *sz)
 {
 	int iLenSz;
 	int i;
@@ -721,7 +721,7 @@ int rsCStrLocateSzStr(rsCStrObj *pThis, unsigned char *sz)
 	i = 0;
 	while(i  < iMax && !bFound) {
 		int iCheck;
-		unsigned char *pComp = pThis->pBuf + i;
+		uchar *pComp = pThis->pBuf + i;
 		for(iCheck = 0 ; iCheck < iLenSz ; ++iCheck)
 			if(*(pComp + iCheck) != *(sz + iCheck))
 				break;

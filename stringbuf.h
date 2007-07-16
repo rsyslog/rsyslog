@@ -27,8 +27,8 @@ struct rsCStrObject
 #ifndef	NDEBUG
 	rsObjID OID;		/**< object ID */
 #endif
-	unsigned char *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
-	unsigned char *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
+	uchar *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
+	uchar *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
 	int iBufSize;		/**< current maximum size of the string buffer */
 	int iStrLen;		/**< length of the string in characters. */
 	int iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
@@ -40,7 +40,7 @@ typedef struct rsCStrObject rsCStrObj;
  * Construct a rsCStr object.
  */
 rsCStrObj *rsCStrConstruct(void);
-rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, unsigned char *sz);
+rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, uchar *sz);
 rsRetVal rsCStrConstructFromCStr(rsCStrObj **ppThis, rsCStrObj *pFrom);
 
 /**
@@ -54,7 +54,7 @@ void rsCStrDestruct(rsCStrObj *pThis);
  *
  * \param c Character to append to string.
  */
-rsRetVal rsCStrAppendChar(rsCStrObj *pThis, unsigned char c);
+rsRetVal rsCStrAppendChar(rsCStrObj *pThis, uchar c);
 
 /**
  * Finish the string buffer dynamic allocation.
@@ -77,7 +77,7 @@ rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis);
  *
  * \param psz pointer to string to be appended. Must not be NULL.
  */
-rsRetVal rsCStrAppendStr(rsCStrObj *pThis, unsigned char* psz);
+rsRetVal rsCStrAppendStr(rsCStrObj *pThis, uchar* psz);
 
 /**
  * Append a string to the buffer.
@@ -85,7 +85,7 @@ rsRetVal rsCStrAppendStr(rsCStrObj *pThis, unsigned char* psz);
  * \param psz pointer to string to be appended. Must not be NULL.
  * \param iStrLen the length of the string pointed to by psz
  */
-rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, unsigned char* psz, size_t iStrLen);
+rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, uchar* psz, size_t iStrLen);
 
 /**
  * Set a new allocation incremet. This will influence
@@ -110,18 +110,18 @@ void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement);
 rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
 
 
-unsigned char*  rsCStrGetSzStr(rsCStrObj *pThis);
-unsigned char*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis);
-rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, unsigned char *pszNew);
-unsigned char*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
+uchar*  rsCStrGetSzStr(rsCStrObj *pThis);
+uchar*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis);
+rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, uchar *pszNew);
+uchar*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
 int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2);
-int rsCStrSzStrCmp(rsCStrObj *pCS1, unsigned char *psz, int iLenSz);
-int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, unsigned char *psz, int iLenSz);
-int rsCStrLocateSzStr(rsCStrObj *pCStr, unsigned char *sz);
-int rsCStrLocateInSzStr(rsCStrObj *pThis, unsigned char *sz);
-int rsCStrStartsWithSzStr(rsCStrObj *pCS1, unsigned char *psz, int iLenSz);
-int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, unsigned char *psz, int iLenSz);
-int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, unsigned char *psz, int iLenSz);
+int rsCStrSzStrCmp(rsCStrObj *pCS1, uchar *psz, int iLenSz);
+int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, uchar *psz, int iLenSz);
+int rsCStrLocateSzStr(rsCStrObj *pCStr, uchar *sz);
+int rsCStrLocateInSzStr(rsCStrObj *pThis, uchar *sz);
+int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, int iLenSz);
+int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, uchar *psz, int iLenSz);
+int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz, int iLenSz);
 
 /* now come inline-like functions */
 #ifdef NDEBUG
