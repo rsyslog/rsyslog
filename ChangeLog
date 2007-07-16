@@ -3,6 +3,11 @@ Version 1.16.0 (RGer), 2007-07-1?
 - added $RepeatedLineReduction config parameter
 - added regular expression support to the filter engine
   thanks to Michel Samia for providing the patch!
+- enhanced $AllowedSender functionality. Credits to mildew@gmail.com for
+  the patch doing that
+  - added IPv6 support
+  - allowed DNS hostnames
+  - allowed DNS wildcard names
 ---------------------------------------------------------------------------
 Version 1.16.0 (RGer/Peter Vrabec), 2007-07-13 - The Friday, 13th Release ;)
 - build system switched to autotools
