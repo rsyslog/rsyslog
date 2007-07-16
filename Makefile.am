@@ -1,5 +1,5 @@
 
-bin_PROGRAMS=klogd rfc3195d syslogd
+sbin_PROGRAMS=klogd rfc3195d syslogd
 
 klogd_SOURCES=klogd.c syslog.c pidfile.c ksym.c ksym_mod.c klogd.h ksyms.h pidfile.h module.h
 
