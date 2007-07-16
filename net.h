@@ -1,8 +1,11 @@
 /*
- *  FIXME: All network stuff should go here (and to net.c)
+ *  TODO: All network stuff should go here (and to net.c)
  */
 
-//#ifdef SYSLOG_INET
+#ifndef INCLUDED_NET_H
+#define INCLUDED_NET_H
+
+#ifdef SYSLOG_INET
 
 #define   F_SET(where, flag) (where)|=(flag)
 #define F_ISSET(where, flag) ((where)&(flag))==(flag)
@@ -25,4 +28,5 @@ struct NetAddr {
   } addr;
 };
 
-//#endif
+#endif
+#endif /* #ifndef INCLUDED_NET_H */

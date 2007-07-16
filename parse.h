@@ -78,10 +78,12 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c);
 rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr);
 rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz);
 rsRetVal rsParsDestruct(rsParsObj *pThis);
-rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits);
 int parsIsAtEndOfParseString(rsParsObj *pThis);
 int parsGetCurrentPosition(rsParsObj *pThis);
 char parsPeekAtCharAtParsPtr(rsParsObj *pThis);
+#ifdef SYSLOG_INET
+rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits);
+#endif
 
 #if 0 /* later! - but leave it in in case we need it some day... */
 /* Parse a property

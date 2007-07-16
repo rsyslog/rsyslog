@@ -90,8 +90,6 @@ typedef enum rsObjectID rsObjID;
 #define RSFREEOBJ(x) {(x)->OID = OIDrsFreed; free(x);}
 #endif
 
-
-#define free(ptr) free(ptr); (ptr) = NULL;
 /* get rid of the unhandy "unsigned char"
  */
 typedef unsigned char uchar;

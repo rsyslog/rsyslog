@@ -358,11 +358,12 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
  * full hostname (e.g.: localhost.localdomain) or hostname wildcard
  * (e.g.: *.localdomain).
  */
+#ifdef SYSLOG_INET
 rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 {
 	register unsigned char *pC;
 	unsigned char *pszIP;
-	char *pszTmp;
+	uchar *pszTmp;
 	struct addrinfo hints, *res = NULL;
 	rsCStrObj *pCStr;
 	rsRetVal iRet;
@@ -447,7 +448,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			/* no slash, so we assume a single host (/128) */
 			*pBits = 128;
 		}
-	} else {
+	} else { /* now parse IPv4 */
 		memset (&hints, 0, sizeof (struct addrinfo));
 		hints.ai_family = AF_INET;
 		hints.ai_flags  = AI_ADDRCONFIG | AI_NUMERICHOST;
@@ -494,6 +495,8 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 
 	return RS_RET_OK;
 }
+#endif  /* #ifdef SYSLOG_INET */
+
 
 /* tell if the parsepointer is at the end of the
  * to-be-parsed string. Returns 1, if so, 0
