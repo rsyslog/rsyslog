@@ -444,6 +444,7 @@ static int bRequestDoMark = 0; /* do mark processing? (multithread safe) */
 static int glblHadMemShortage = 0; /* indicates if we had memory shortage some time during the run */
 static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
 static int fCreateMode = 0644; /* mode to use when creating files */
+static int fDirCreateMode = 0644; /* mode to use when creating files */
 int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
@@ -491,7 +492,8 @@ static const char *directive_name_list[] = {
 /* ... and their definitions: */
 enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1,
                   DIR_ALLOWEDSENDER = 2, DIR_FILECREATEMODE = 3,
-		  DIR_UMASK = 4, DIR_DYNAFILECACHESIZE = 5};
+		  DIR_DIRCREATEMODE = 4,
+		  DIR_UMASK = 5, DIR_DYNAFILECACHESIZE = 6};
 
 /* The following global variables are used for building
  * tag and host selector lines during startup and config reload.
@@ -6237,7 +6239,7 @@ static int prepareDynFile(selector_t *f)
 		 * handler below.
 		 */
 		if(makeFileParentDirs(newFileName, strlen(newFileName),
-		     f->f_un.f_file.fCreateMode) == 0) {
+		     f->f_un.f_file.fDirCreateMode) == 0) {
 			f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 					f->f_un.f_file.fCreateMode);
 		}
@@ -7503,6 +7505,10 @@ static void doFileCreateModeUmaskLine(uchar **pp, enum eDirective eDir)
 	 */
 	iMode  = (*(p+1)-'0') * 64 + (*(p+2)-'0') * 8 + (*(p+3)-'0');
 	switch(eDir) {
+		case DIR_DIRCREATEMODE:
+			fDirCreateMode = iMode;
+			dprintf("FileCreateMode set to 0%o.\n", iMode);
+			break;
 		case DIR_FILECREATEMODE:
 			fCreateMode = iMode;
 			dprintf("FileCreateMode set to 0%o.\n", iMode);
@@ -7609,6 +7615,8 @@ void cfsysline(uchar *p)
 		doNameLine(&p, DIR_OUTCHANNEL);
 	} else if(!strcasecmp((char*) szCmd, "allowedsender")) { 
 		doNameLine(&p, DIR_ALLOWEDSENDER);
+	} else if(!strcasecmp((char*) szCmd, "dircreatemode")) { 
+		doFileCreateModeUmaskLine(&p, DIR_DIRCREATEMODE);
 	} else if(!strcasecmp((char*) szCmd, "filecreatemode")) { 
 		doFileCreateModeUmaskLine(&p, DIR_FILECREATEMODE);
 	} else if(!strcasecmp((char*) szCmd, "umask")) { 
@@ -7771,6 +7779,9 @@ static void init()
 	nextp = NULL;
 
 	/* re-setting values to defaults (where applicable) */
+	iDynaFileCacheSize = 10;
+	fCreateMode = 0644;
+	fDirCreateMode = 0644;
 	cCCEscapeChar = '#';
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
@@ -8858,6 +8869,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		cflineParseOutchannel(f, p);
 		f->f_un.f_file.bDynamicName = 0;
 		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
+		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
 		f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 				 f->f_un.f_file.fCreateMode);
 		break;
@@ -8885,6 +8897,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		f->f_un.f_file.bDynamicName = 1;
 		f->f_un.f_file.iCurrElt = -1;		  /* no current element */
 		f->f_un.f_file.fCreateMode = fCreateMode; /* freeze current setting */
+		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
 		f->f_un.f_file.iDynaFileCacheSize = iDynaFileCacheSize; /* freeze current setting */
 		/* we now allocate the cache table. We use calloc() intentionally, as we 
 		 * need all pointers to be initialized to NULL pointers.

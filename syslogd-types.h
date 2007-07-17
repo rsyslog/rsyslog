@@ -251,6 +251,7 @@ struct filed {
 			struct template *pTpl;	/* pointer to template object */
 			char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
 			int	fCreateMode;	/* file creation mode for open() */
+			int	fDirCreateMode;	/* creation mode for mkdir() */
 			int	iCurrElt;	/* currently active cache element (-1 = none) */
 			int	iCurrCacheSize;	/* currently cache size (1-based) */
 			int	iDynaFileCacheSize; /* size of file handle cache */
