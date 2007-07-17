@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.16.1 (RGer), 2007-07-1?
+Version 1.16.1 (RGer), 2007-07-17
 - added $RepeatedLineReduction config parameter
 - added $EscapeControlCharactersOnReceive config parameter
 - added $ControlCharacterEscapePrefix config parameter

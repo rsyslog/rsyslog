@@ -1,5 +1,4 @@
-/*
- *  TODO: All network stuff should go here (and to net.c)
+/* All network stuff should go here (and to net.c)
  */
 
 #ifndef INCLUDED_NET_H
@@ -28,5 +27,5 @@ struct NetAddr {
   } addr;
 };
 
-#endif
+#endif /* #ifdef SYSLOG_INET */
 #endif /* #ifndef INCLUDED_NET_H */

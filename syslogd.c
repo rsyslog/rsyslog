@@ -1,9 +1,6 @@
 /**
  * \brief This is the main file of the rsyslogd daemon.
  *
- * TODO:
- * - include a global option for control character replacemet on receive? (not just NUL)
- *
  * Please visit the rsyslog project at
  *
  * http://www.rsyslog.com
@@ -713,8 +710,8 @@ static char* getFIOPName(unsigned iFIOP)
  */
 #ifdef SYSLOG_INET
 struct AllowedSenders {
-	struct NetAddr allowedSender; // unsigned long allowedSender;/* ip address allowed */
-	uint8_t SignificantBits;      //uchar bitsToShift;  /* defines how many bits should be discarded (eqiv to mask) */
+	struct NetAddr allowedSender; /* ip address allowed */
+	uint8_t SignificantBits;      /* defines how many bits should be discarded (eqiv to mask) */
 	struct AllowedSenders *pNext;
 };
 
@@ -781,17 +778,7 @@ static void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName);
 
 /* Code for handling allowed/disallowed senders
  */
-
 #ifdef SYSLOG_INET
-/* function to add an allowed sender to the allowed sender list. The
- * root of the list is caller-provided, so it can be used for all
- * supported lists. The caller must provide a pointer to the root,
- * as it eventually needs to be updated. Also, a pointer to the
- * pointer to the last element must be provided (to speed up adding
- * list elements).
- * rgerhards, 2005-09-26
- */
-
 static inline void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
 	register uint8_t i;
 	
@@ -816,10 +803,57 @@ static inline void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
 #define SIN(sa)  ((struct sockaddr_in  *)(sa))
 #define SIN6(sa) ((struct sockaddr_in6 *)(sa))
 
+/* This function adds an allowed sender entry to the ACL linked list.
+ * In any case, a single entry is added. If an error occurs, the
+ * function does its error reporting itself. All validity checks
+ * must already have been done by the caller.
+ * This is a helper to AddAllowedSender().
+ * rgerhards, 2007-07-17
+ */
+static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
+		     		      struct NetAddr *iAllow, uint8_t iSignificantBits)
+{
+	struct AllowedSenders *pEntry = NULL;
+
+	assert(ppRoot != NULL);
+	assert(ppLast != NULL);
+	assert(iAllow != NULL);
+
+	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders))) == NULL) {
+		glblHadMemShortage = 1;
+		return RS_RET_OUT_OF_MEMORY; /* no options left :( */
+	}
+	
+	memcpy(&(pEntry->allowedSender), iAllow, sizeof (struct NetAddr));
+	pEntry->pNext = NULL;
+	pEntry->SignificantBits = iSignificantBits;
+	
+	/* enqueue */
+	if(*ppRoot == NULL) {
+		*ppRoot = pEntry;
+	} else {
+		(*ppLast)->pNext = pEntry;
+	}
+	*ppLast = pEntry;
+	
+	return RS_RET_OK;
+}
+
+
+/* function to add an allowed sender to the allowed sender list. The
+ * root of the list is caller-provided, so it can be used for all
+ * supported lists. The caller must provide a pointer to the root,
+ * as it eventually needs to be updated. Also, a pointer to the
+ * pointer to the last element must be provided (to speed up adding
+ * list elements).
+ * rgerhards, 2005-09-26
+ * If a hostname is given there are possible multiple entries
+ * added (all addresses from that host).
+ */
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
 		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
 {
-	struct AllowedSenders *pEntry = NULL;
+	rsRetVal iRet;
 
 	assert(ppRoot != NULL);
 	assert(ppLast != NULL);
@@ -865,7 +899,10 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 				    iAllow->addr.NetAddr->sa_family);
 			return RS_RET_ERR;
 		}
+		/* OK, entry constructed, now lets add it to the ACL list */
+		iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 	} else {
+		/* we need to process a hostname ACL */
 		if (DisableDNS) {
 			logerror ("Ignoring hostname based ACLs because DNS is disabled.");
 			return RS_RET_OK;
@@ -873,123 +910,91 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 		
 		if (!strchr (iAllow->addr.HostWildcard, '*') &&
 		    !strchr (iAllow->addr.HostWildcard, '?')) {
+			/* single host - in this case, we pull its IP addresses from DNS
+			* and add IP-based ACLs.
+			*/
 			struct addrinfo hints, *res, *restmp;
-			struct AllowedSenders *AllowedTmp = NULL, *LastTmp = NULL;
-			/* full host */
+			struct NetAddr allowIP;
 			
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_family = AF_UNSPEC;
 			hints.ai_flags  = AI_ADDRCONFIG;
 			hints.ai_socktype = SOCK_DGRAM;
 
-			if (getaddrinfo (iAllow->addr.HostWildcard, NULL,
-					 &hints, &res) != 0) {
-				dprintf ("DNS error: Can't resolve \"%s\"\n", iAllow->addr.HostWildcard);
+			if (getaddrinfo (iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
+				logerrorSz("DNS error: Can't resolve \"%s\", not added as allowed sender", iAllow->addr.HostWildcard);
+				/* We could use the text name in this case - maybe this could become
+				 * a user-defined option at some stage.
+				 */
 				return RS_RET_ERR;
 			}
 			
-			for (restmp = res; res != NULL; res = res->ai_next) {
+			for (restmp = res ; res != NULL ; res = res->ai_next) {
 				switch (res->ai_family) {
-				case AF_INET:
-					/* add IPv4 */
-					
-					if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders)))
-					   == NULL) {
-						freeaddrinfo (restmp);
-						glblHadMemShortage  = 1;
-						return RS_RET_OUT_OF_MEMORY; /* no options left :( */
+				case AF_INET: /* add IPv4 */
+					iSignificantBits = 32;
+					allowIP.flags = 0;
+					if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
+						glblHadMemShortage = 1;
+						return RS_RET_OUT_OF_MEMORY;
 					}
-					pEntry->pNext = AllowedTmp;
-					if (AllowedTmp == NULL)
-						LastTmp = pEntry;
+					memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
 					
-					pEntry->SignificantBits = 32;
-					pEntry->allowedSender.flags = 0;
-					pEntry->allowedSender.addr.NetAddr = malloc (res->ai_addrlen);
-					memcpy (pEntry->allowedSender.addr.NetAddr,
-						res->ai_addr, res->ai_addrlen);
-					AllowedTmp = pEntry;
-					
+					if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP, iSignificantBits))
+						!= RS_RET_OK)
+						return(iRet);
 					break;
-				case AF_INET6:
-					
-					if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders)))
-					   == NULL) {
-						freeaddrinfo (restmp);
-						glblHadMemShortage  = 1;
-						return RS_RET_OUT_OF_MEMORY; /* no options left :( */
-					}
-
-					if (IN6_IS_ADDR_V4MAPPED (&SIN6(res->ai_addr)->sin6_addr)) {
+				case AF_INET6: /* IPv6 - but need to check if it is a v6-mapped IPv4 */
+					if(IN6_IS_ADDR_V4MAPPED (&SIN6(res->ai_addr)->sin6_addr)) {
 						/* extract & add IPv4 */
 						
-						pEntry->pNext = AllowedTmp;
-						if (AllowedTmp == NULL)
-							LastTmp = pEntry;
-						
-						pEntry->SignificantBits = 32;
-						pEntry->allowedSender.flags = 0;
-						pEntry->allowedSender.addr.NetAddr = malloc (sizeof (struct sockaddr_in));
-						SIN(pEntry->allowedSender.addr.NetAddr)->sin_family = AF_INET;
-						SIN(pEntry->allowedSender.addr.NetAddr)->sin_port   = 0;
-						
-						memcpy (&(SIN(pEntry->allowedSender.addr.NetAddr)->sin_addr.s_addr),
+						iSignificantBits = 32;
+						allowIP.flags = 0;
+						if((allowIP.addr.NetAddr = malloc(sizeof(struct sockaddr_in)))
+						    == NULL) {
+							glblHadMemShortage = 1;
+							return RS_RET_OUT_OF_MEMORY;
+						}
+						SIN(allowIP.addr.NetAddr)->sin_family = AF_INET;
+						SIN(allowIP.addr.NetAddr)->sin_port   = 0;
+						memcpy(&(SIN(allowIP.addr.NetAddr)->sin_addr.s_addr),
 							&(SIN6(res->ai_addr)->sin6_addr.s6_addr32[3]),
 							sizeof (struct sockaddr_in));
-						
-						AllowedTmp = pEntry;
+
+						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
+								iSignificantBits))
+							!= RS_RET_OK)
+							return(iRet);
 					} else {
+						/* finally add IPv6 */
 						
-						pEntry->pNext = AllowedTmp;
-						if (AllowedTmp == NULL)
-							LastTmp = pEntry;
-					
-						pEntry->SignificantBits = 128;
-						pEntry->allowedSender.flags = 0;
-						pEntry->allowedSender.addr.NetAddr = malloc (res->ai_addrlen);
-						memcpy (pEntry->allowedSender.addr.NetAddr,
-							res->ai_addr, res->ai_addrlen);
-						AllowedTmp = pEntry;
+						iSignificantBits = 128;
+						allowIP.flags = 0;
+						if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
+							glblHadMemShortage = 1;
+							return RS_RET_OUT_OF_MEMORY;
+						}
+						memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
+						
+						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
+								iSignificantBits))
+							!= RS_RET_OK)
+							return(iRet);
 					}
 					break;
 				}
 			}
 			freeaddrinfo (restmp);
-
-/* TODO: why this below? */
-			if (pEntry != NULL) {
-				if (*ppRoot == NULL) {
-					*ppRoot = pEntry;
-				} else {
-					(*ppLast)->pNext = pEntry;
-				}
-				*ppLast = LastTmp;
-				return RS_RET_OK;
-			}
-			
-			return RS_RET_ERR;
+		} else {
+			/* wildcards in hostname - we need to add a text-based ACL.
+			 * For this, we already have everything ready and just need
+			 * to pass it along...
+			 */
+			iRet =  AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 		}
 	}
-	
-	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders)))
-	   == NULL) {
-		glblHadMemShortage = 1;
-		return RS_RET_OUT_OF_MEMORY; /* no options left :( */
-	}
-	
-	memcpy (&(pEntry->allowedSender), iAllow, sizeof (struct NetAddr));
-	pEntry->pNext = NULL;
-	pEntry->SignificantBits = iSignificantBits;
-	
-	/* enqueue */
-	if(*ppRoot == NULL) {
-		*ppRoot = pEntry;
-	} else {
-		(*ppLast)->pNext = pEntry;
-	}
-	*ppLast = pEntry;
-	
-	return RS_RET_OK;
+
+	return iRet;
 }
 #endif /* #ifdef SYSLOG_INET */
 
@@ -7986,7 +7991,7 @@ static void init()
 		printf("Control characters are %sreplaced upon reception.\n",
 				bEscapeCCOnRcv? "" : "not ");
 		if(bEscapeCCOnRcv)
-			printf("Control Character escape sequenz prefix is '%c'.\n",
+			printf("Control character escape sequence prefix is '%c'.\n",
 				cCCEscapeChar);
 	}
 
