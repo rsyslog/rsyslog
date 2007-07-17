@@ -1105,15 +1105,9 @@ static inline int MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr 
 	assert(pFrom != NULL);
 
 	if(F_ISSET(pAllow->flags, ADDR_NAME)) {
-		dprintf ("MaskCmp: host=\"%s\"; pattern=\"%s\"\n",
-			 pszFromHost == NULL ? "(NULL)" : pszFromHost, pAllow->addr.HostWildcard);
-			 // TODO: check NULL case - can this happen at all?
+		dprintf ("MaskCmp: host=\"%s\"; pattern=\"%s\"\n", pszFromHost, pAllow->addr.HostWildcard);
 		
-		if (pszFromHost != NULL)
-			return (fnmatch (pAllow->addr.HostWildcard, pszFromHost,
-					 FNM_NOESCAPE|FNM_CASEFOLD) == 0);
-		else
-			return 0;
+		return(fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE|FNM_CASEFOLD) == 0);
 	} else {/* We need to compare an IP address */
 		switch (pFrom->sa_family) {
 		case AF_INET:
