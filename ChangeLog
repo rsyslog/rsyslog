@@ -2,6 +2,7 @@
 Version 1.16.1 (RGer), 2007-07-1?
 - added $RepeatedLineReduction config parameter
 - added $EscapeControlCharactersOnReceive config parameter
+- added $ControlCharacterEscapePrefix config parameter
 - added regular expression support to the filter engine
   thanks to Michel Samia for providing the patch!
 - enhanced $AllowedSender functionality. Credits to mildew@gmail.com for

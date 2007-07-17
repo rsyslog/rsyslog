@@ -641,7 +641,7 @@ static struct code	FacNames[] = {
 
 static int	Debug;		/* debug flag  - read-only after startup */
 static int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
-static uchar	cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
+static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
 static int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 static int	logEveryMsg = 0;/* no repeat message processing  - read-only after startup
@@ -7418,6 +7418,28 @@ static void doBinaryOptionLine(uchar **pp, int *pVal)
 }
 
 
+/* parse the control character escape prefix and store it.
+ * added 2007-07-17 by rgerhards
+ */
+static void doControlCharEscPrefix(uchar **pp)
+{
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+
+	/* if we are not at a '\0', we have our new char - no validity checks here... */
+	if(**pp == '\0') {
+		logerror("No Control Character Prefix Character given - ignoring directive");
+	} else {
+		cCCEscapeChar = **pp;
+		++(*pp); /* eat processed char */
+	}
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+}
+
+
 /* Parse and interpet a $FileCreateMode and $umask line. This function
  * pulls the creation mode and, if successful, stores it
  * into the global variable so that the rest of rsyslogd
@@ -7577,6 +7599,8 @@ void cfsysline(uchar *p)
 		doDynaFileCacheSizeLine(&p, DIR_DYNAFILECACHESIZE);
 	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
 		doBinaryOptionLine(&p, &bReduceRepeatMsgs);
+	} else if(!strcasecmp((char*) szCmd, "controlcharacterescapeprefix")) { 
+		doControlCharEscPrefix(&p);
 	} else if(!strcasecmp((char*) szCmd, "escapecontrolcharactersonreceive")) { 
 		doBinaryOptionLine(&p, &bEscapeCCOnRcv);
 	} else if(!strcasecmp((char*) szCmd, "dropmsgswithmaliciousdnsptrrecords")) { 
@@ -7961,6 +7985,9 @@ static void init()
 
 		printf("Control characters are %sreplaced upon reception.\n",
 				bEscapeCCOnRcv? "" : "not ");
+		if(bEscapeCCOnRcv)
+			printf("Control Character escape sequenz prefix is '%c'.\n",
+				cCCEscapeChar);
 	}
 
 	/* we now generate the startup message. It now includes everything to
