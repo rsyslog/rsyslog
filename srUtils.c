@@ -111,11 +111,13 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
  * Param "mode" holds the mode that all non-existing directories
  * are to be created with.
  */
-int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode)
+int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
+		       uid_t uid, gid_t gid)
 {
         uchar *p;
         uchar *pszWork;
         size_t len;
+	int bErr = 0;
 
 	assert(szFile != NULL);
 	assert(len > 0);
@@ -128,14 +130,26 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode)
                 if(*p == '/') {
 			/* temporarily terminate string, create dir and go on */
                         *p = '\0';
-                        if(access(pszWork, F_OK))
-                                if(mkdir(pszWork, mode) != 0) {
+                        if(access(pszWork, F_OK)) {
+                                if(mkdir(pszWork, mode) == 0) {
+					if(uid != -1 || gid != -1) {
+						/* we need to set owner/group */
+						if(chown(pszWork, uid, gid) != 0)
+							bErr = 1;
+					}
+				} else
+					bErr = 1;
+				if(bErr) {
 					int eSave = errno;
 					free(pszWork);
 					errno = eSave;
 					return -1;
 				}
+			}
                         *p = '/';
                 }
 	free(pszWork);
 }
+/*
+ * vi:set ai:
+ */

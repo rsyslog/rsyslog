@@ -253,6 +253,10 @@ struct filed {
 			int	fCreateMode;	/* file creation mode for open() */
 			int	fDirCreateMode;	/* creation mode for mkdir() */
 			int	bCreateDirs;	/* auto-create directories? */
+			uid_t	fileUID;	/* IDs for creation */
+			uid_t	dirUID;
+			gid_t	fileGID;
+			gid_t	dirGID;
 			int	iCurrElt;	/* currently active cache element (-1 = none) */
 			int	iCurrCacheSize;	/* currently cache size (1-based) */
 			int	iDynaFileCacheSize; /* size of file handle cache */

@@ -153,6 +153,8 @@
 #include <setjmp.h>
 #include <stdarg.h>
 #include <time.h>
+#include <pwd.h>
+#include <grp.h>
 
 #define SYSLOG_NAMES
 #include <sys/syslog.h>
@@ -638,7 +640,12 @@ static struct code	FacNames[] = {
 	{NULL,           -1},
 };
 
+/* global variables for config file state */
 static int	Debug;		/* debug flag  - read-only after startup */
+static uid_t	fileUID;	/* UID to be used for newly created files */
+static uid_t	fileGID;	/* GID to be used for newly created files */
+static uid_t	dirUID;		/* UID to be used for newly created directories */
+static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bDebugPrintTemplateList;/* output template list in debug mode? */
 static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
@@ -649,6 +656,8 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 				 * 0 - suppress duplicate messages
 				 * 1 - do NOT suppress duplicate messages
 				 */
+/* end global config file state variables */
+
 static char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
 static char	*LocalDomain;	/* our local domain name  - read-only after startup */
 static int	*finet = NULL;	/* Internet datagram sockets, first element is nbr of elements
@@ -678,7 +687,6 @@ static int     Initialized = 0; /* set when we have initialized ourselves
                                  */
 
 extern	int errno;
-
 
 /* support for simple textual representatio of FIOP names
  * rgerhards, 2005-09-27
@@ -712,6 +720,10 @@ static char* getFIOPName(unsigned iFIOP)
  */
 static void resetConfigVariables(void)
 {
+	fileUID = -1;
+	fileGID = -1;
+	dirUID = -1;
+	dirGID = -1;
 	iDynaFileCacheSize = 10;
 	fCreateMode = 0644;
 	fDirCreateMode = 0644;
@@ -6248,21 +6260,44 @@ static int prepareDynFile(selector_t *f)
 	}
 
 	/* Ok, we finally can open the file */
-	f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-			f->f_un.f_file.fCreateMode);
-	
-	if(f->f_file == -1 && f->f_un.f_file.bCreateDirs) {
-		/* on first failure, we try to create parent directories and then
-		 * retry the open. Only if that fails, we give up. We do not report
-		 * any errors here ourselfs but let the code fall through to error
-		 * handler below.
-		 */
-		if(makeFileParentDirs(newFileName, strlen(newFileName),
-		     f->f_un.f_file.fDirCreateMode) == 0) {
-			f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-					f->f_un.f_file.fCreateMode);
+	if(access(newFileName, F_OK) == 0) {
+		/* file already exists */
+		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+				f->f_un.f_file.fCreateMode);
+	} else {
+		/* file does not exist, create it (and eventually parent directories */
+		if(f->f_un.f_file.bCreateDirs) {
+			/* we fist need to create parent dirs if they are missing
+			 * We do not report any errors here ourselfs but let the code
+			 * fall through to error handler below.
+			 */
+			if(makeFileParentDirs(newFileName, strlen(newFileName),
+			     f->f_un.f_file.fDirCreateMode, f->f_un.f_file.dirUID,
+			     f->f_un.f_file.dirGID) == 0) {
+				f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+						f->f_un.f_file.fCreateMode);
+				if(f->f_file != -1) {
+					/* check and set uid/gid */
+					if(f->f_un.f_file.fileUID != -1 || f->f_un.f_file.fileGID != -1) {
+						/* we need to set owner/group */
+						if(fchown(f->f_file, f->f_un.f_file.fileUID,
+						          f->f_un.f_file.fileGID) != 0) {
+							/* we fail in this case - later we could
+							 * possibly control this via a user-defined
+							 * option.
+							 */
+							int eSave = errno;
+							close(f->f_file);
+							f->f_file = -1;
+							errno = eSave;
+							}
+					}
+				}
+			}
 		}
 	}
+
+	/* file is either open now or an error state set */
 	if(f->f_file == -1) {
 		/* do not report anything if the message is an internally-generated
 		 * message. Otherwise, we could run into a never-ending loop. The bad
@@ -7457,6 +7492,70 @@ static void doBinaryOptionLine(uchar **pp, int *pVal)
 }
 
 
+/* extract a groupname and return its gid.
+ * rgerhards, 2007-07-17
+ */
+static void doGetGID(uchar **pp, gid_t *pGid)
+{
+	struct group *pgBuf;
+	struct group gBuf;
+	uchar szName[256];
+	uchar stringBuf[2048];	/* I hope this is large enough... */
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pGid != NULL);
+
+	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
+		logerror("could not extract group name");
+		return;
+	}
+
+	getgrnam_r(szName, &gBuf, stringBuf, sizeof(stringBuf), &pgBuf);
+
+	if(pgBuf == NULL) {
+		logerrorSz("ID for group '%s' could not be found or error", szName);
+	} else {
+		*pGid = pgBuf->gr_gid;
+		dprintf("gid %d obtained for group '%s'\n", *pGid, szName);
+	}
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+}
+
+
+/* extract a username and return its uid.
+ * rgerhards, 2007-07-17
+ */
+static void doGetUID(uchar **pp, uid_t *pUid)
+{
+	struct passwd *ppwBuf;
+	struct passwd pwBuf;
+	uchar szName[256];
+	uchar stringBuf[2048];	/* I hope this is large enough... */
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pUid != NULL);
+
+	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
+		logerror("could not extract user name");
+		return;
+	}
+
+	getpwnam_r(szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
+
+	if(ppwBuf == NULL) {
+		logerrorSz("ID for user '%s' could not be found or error", szName);
+	} else {
+		*pUid = ppwBuf->pw_uid;
+		dprintf("uid %d obtained for user '%s'\n", *pUid, szName);
+	}
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+}
+
+
 /* parse the control character escape prefix and store it.
  * added 2007-07-17 by rgerhards
  */
@@ -7640,6 +7739,14 @@ void cfsysline(uchar *p)
 		doFileCreateModeUmaskLine(&p, DIR_FILECREATEMODE);
 	} else if(!strcasecmp((char*) szCmd, "umask")) { 
 		doFileCreateModeUmaskLine(&p, DIR_UMASK);
+	} else if(!strcasecmp((char*) szCmd, "dirowner")) { 
+		doGetUID(&p, &dirUID);
+	} else if(!strcasecmp((char*) szCmd, "dirgroup")) { 
+		doGetGID(&p, &dirGID);
+	} else if(!strcasecmp((char*) szCmd, "fileowner")) { 
+		doGetUID(&p, &fileUID);
+	} else if(!strcasecmp((char*) szCmd, "filegroup")) { 
+		doGetGID(&p, &fileGID);
 	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
 		doDynaFileCacheSizeLine(&p, DIR_DYNAFILECACHESIZE);
 	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
@@ -8922,7 +9029,11 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		f->f_un.f_file.iCurrElt = -1;		  /* no current element */
 		f->f_un.f_file.fCreateMode = fCreateMode; /* freeze current setting */
 		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
-		f->f_un.f_file.bCreateDirs = bCreateDirs; /* preserve current setting */
+		f->f_un.f_file.bCreateDirs = bCreateDirs;
+		f->f_un.f_file.fileUID = fileUID;
+		f->f_un.f_file.fileGID = fileGID;
+		f->f_un.f_file.dirUID = dirUID;
+		f->f_un.f_file.dirGID = dirGID;
 		f->f_un.f_file.iDynaFileCacheSize = iDynaFileCacheSize; /* freeze current setting */
 		/* we now allocate the cache table. We use calloc() intentionally, as we 
 		 * need all pointers to be initialized to NULL pointers.
