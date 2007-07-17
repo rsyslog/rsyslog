@@ -35,6 +35,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h locale.h netdb.h netinet/in.h paths.h stdi
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
+AC_C_INLINE
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
