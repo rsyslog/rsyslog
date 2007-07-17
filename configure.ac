@@ -44,6 +44,14 @@ AC_HEADER_TIME
 AC_STRUCT_TM
 AC_C_VOLATILE
 
+sa_includes="\
+$ac_includes_default
+#if HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#endif
+"
+AC_CHECK_MEMBERS([struct sockaddr.sa_len],,,[$sa_includes])
+
 # Checks for library functions.
 AC_FUNC_FORK
 AC_PROG_GCC_TRADITIONAL

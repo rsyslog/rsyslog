@@ -991,6 +991,9 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 							return RS_RET_OUT_OF_MEMORY;
 						}
 						SIN(allowIP.addr.NetAddr)->sin_family = AF_INET;
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN    
+                                                SIN(allowIP.addr.NetAddr)->sin_len    = sizeof (struct sockaddr_in);
+#endif
 						SIN(allowIP.addr.NetAddr)->sin_port   = 0;
 						memcpy(&(SIN(allowIP.addr.NetAddr)->sin_addr.s_addr),
 							&(SIN6(res->ai_addr)->sin6_addr.s6_addr32[3]),
@@ -1040,6 +1043,9 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
  * rgerhards, 2005-09-27
  */
 
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+#define SALEN(sa) ((sa)->sa_len)
+#else
 static inline size_t SALEN(struct sockaddr *sa) {
 	switch (sa->sa_family) {
 	case AF_INET:  return (sizeof (struct sockaddr_in));
@@ -1047,6 +1053,7 @@ static inline size_t SALEN(struct sockaddr *sa) {
 	default:       return 0;
 	}
 }
+#endif
 
 static void PrintAllowedSenders(int iListToPrint)
 {
@@ -1131,7 +1138,8 @@ static inline int MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr 
 				for (; i < (sizeof ip.s6_addr32)/4; i++)
 					ip.s6_addr32[i] = 0;
 				
-				return (memcmp (ip.s6_addr, net.s6_addr, sizeof ip.s6_addr) == 0);
+				return (memcmp (ip.s6_addr, net.s6_addr, sizeof ip.s6_addr) == 0 &&
+					SIN6(pFrom)->sin6_scope_id == SIN6(pAllow->addr.NetAddr)->sin6_scope_id);
 			}
 			case AF_INET: {
 				struct in6_addr *ip6 = &(SIN6(pFrom))->sin6_addr;
