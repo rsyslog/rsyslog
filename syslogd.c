@@ -641,6 +641,7 @@ static struct code	FacNames[] = {
 
 static int	Debug;		/* debug flag  - read-only after startup */
 static int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
+static uchar	cCCEscapeChar = '#';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
 static int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 static int	logEveryMsg = 0;/* no repeat message processing  - read-only after startup
@@ -2194,7 +2195,7 @@ static int TCPSend(selector_t *f, char *msg, size_t len)
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
  * rgerhards, 2007-06-28
- * TODO: We may change the implementation to try to lookup the port
+ * We may change the implementation to try to lookup the port
  * if it is unspecified. So far, we use the IANA default auf 514.
  */
 static char *getFwdSyslogPt(selector_t *f)
@@ -4612,7 +4613,7 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 			 * draft-ietf-syslog-protocol-19. rgerhards, 2006-11-30
 			 */
 			if(iMsg + 3 < MAXLINE) { /* do we have space? */
-				*(pMsg + iMsg++) = '#';
+				*(pMsg + iMsg++) =  cCCEscapeChar;
 				*(pMsg + iMsg++) = '0';
 				*(pMsg + iMsg++) = '0';
 				*(pMsg + iMsg++) = '0';
@@ -4620,10 +4621,29 @@ static void printchopped(char *hname, char *msg, int len, int fd, int bParseHost
 			  /* log an error? Very questionable... rgerhards, 2006-11-30 */
 			  /* decided: we do not log an error, it won't help... rger, 2007-06-21 */
 			++pData;
+		} else if(bEscapeCCOnRcv && iscntrl((int) *pData)) {
+			/* we are configured to escape control characters. Please note
+			 * that this most probably break non-western character sets like
+			 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
+			 * Note: sysklogd logs octal values only for DEL and CCs above 127.
+			 * For others, it logs ^n where n is the control char converted to an
+			 * alphabet character. We like consistency and thus escape it to octal
+			 * in all cases. If someone complains, we may change the mode. At least
+			 * we known now what's going on.
+			 * rgerhards, 2007-07-17
+			 */
+			if(iMsg + 3 < MAXLINE) { /* do we have space? */
+				*(pMsg + iMsg++) = cCCEscapeChar;
+				*(pMsg + iMsg++) = '0' + ((*pData & 0300) >> 6);
+				*(pMsg + iMsg++) = '0' + ((*pData & 0070) >> 3);
+				*(pMsg + iMsg++) = '0' + ((*pData & 0007));
+			} /* again, if we do not have space, we ignore the char - see comment at '\0' */
+			++pData;
 		} else {
 			*(pMsg + iMsg++) = *pData++;
 		}
 	}
+
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
@@ -4659,6 +4679,7 @@ void printline(char *hname, char *msg, int bParseHost)
 		/* rgerhards, 2007-06-21: if we can not get memory, we discard this
 		 * message but continue to run (in the hope that things improve)
 		 */
+		glblHadMemShortage = 1;
 		dprintf("Memory shortage in printline(): Could not construct Msg object.\n");
 		return;
 	}
@@ -4681,34 +4702,6 @@ void printline(char *hname, char *msg, int bParseHost)
 		pri = DEFUPRI;
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
-
-	/* got the buffer, now copy over the message. We use the "old" code
-	 * here, it doesn't make sense to optimize as that code will soon
-	 * be replaced.
-	 */
-#if 0	 /* TODO: REMOVE THIS LATER */
-	/* we soon need to support UTF-8, so we will soon need to remove
-	 * this. As a side-note, the commented out code would destroy MBCS messages
-	 * (like Japanese).
-	 */
-	q = pMsg->pszMSG;
-	pEnd = pMsg->pszMSG + pMsg->iLenMSG;	 /* was -4 */
-	while ((c = *p++) && q < pEnd) {
-		if (c == '\n')
-			*q++ = ' ';
-/* not yet!		else if (c < 040) {
-			*q++ = '^';
-			*q++ = c ^ 0100;
-		} else if (c == 0177 || (c & 0177) < 040) {
-			*q++ = '\\';
-			*q++ = '0' + ((c & 0300) >> 6);
-			*q++ = '0' + ((c & 0070) >> 3);
-			*q++ = '0' + (c & 0007);
-		}*/ else
-			*q++ = c;
-	}
-	*q = '\0';
-#endif
 
 	/* Now we look at the HOSTNAME. That is a bit complicated...
 	 * If we have a locally received message, it does NOT
@@ -6849,7 +6842,7 @@ static void reapchild()
  * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
  * for some explanation of the code found below. We do by default not
  * discard message where we detected malicouos DNS PTR records. However,
- * there is a user-configurabel option (TODO: implement) that will tell us if
+ * there is a user-configurabel option that will tell us if
  * we should abort. For this, the return value tells the caller if the
  * message should be processed (1) or discarded (0).
  */
@@ -7735,7 +7728,8 @@ static void init()
 	f = NULL;
 	nextp = NULL;
 
-	/* re-setting values to command line defaults (where applicable) */
+	/* re-setting values to defaults (where applicable) */
+	cCCEscapeChar = '#';
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
 
@@ -7964,6 +7958,9 @@ static void init()
 
 		printf("Messages with malicious PTR DNS Records are %sdropped.\n",
 			bDropMalPTRMsgs	? "" : "not ");
+
+		printf("Control characters are %sreplaced upon reception.\n",
+				bEscapeCCOnRcv? "" : "not ");
 	}
 
 	/* we now generate the startup message. It now includes everything to
