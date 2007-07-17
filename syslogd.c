@@ -639,6 +639,8 @@ static struct code	FacNames[] = {
 };
 
 static int	Debug;		/* debug flag  - read-only after startup */
+static int	bDebugPrintTemplateList;/* output template list in debug mode? */
+static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
@@ -702,6 +704,23 @@ static char* getFIOPName(unsigned iFIOP)
 			break;
 	}
 	return pRet;
+}
+
+
+/* Reset config variables to default values.
+ * rgerhards, 2007-07-17
+ */
+static void resetConfigVariables(void)
+{
+	iDynaFileCacheSize = 10;
+	fCreateMode = 0644;
+	fDirCreateMode = 0644;
+	cCCEscapeChar = '#';
+	bCreateDirs = 1;
+	bDebugPrintTemplateList = 1;
+	bEscapeCCOnRcv = 1; /* default is to escape control characters */
+	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
+
 }
 
 
@@ -6232,7 +6251,7 @@ static int prepareDynFile(selector_t *f)
 	f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 			f->f_un.f_file.fCreateMode);
 	
-	if(f->f_file == -1) {
+	if(f->f_file == -1 && f->f_un.f_file.bCreateDirs) {
 		/* on first failure, we try to create parent directories and then
 		 * retry the open. Only if that fails, we give up. We do not report
 		 * any errors here ourselfs but let the code fall through to error
@@ -7507,7 +7526,7 @@ static void doFileCreateModeUmaskLine(uchar **pp, enum eDirective eDir)
 	switch(eDir) {
 		case DIR_DIRCREATEMODE:
 			fDirCreateMode = iMode;
-			dprintf("FileCreateMode set to 0%o.\n", iMode);
+			dprintf("DirCreateMode set to 0%o.\n", iMode);
 			break;
 		case DIR_FILECREATEMODE:
 			fCreateMode = iMode;
@@ -7631,6 +7650,12 @@ void cfsysline(uchar *p)
 		doBinaryOptionLine(&p, &bEscapeCCOnRcv);
 	} else if(!strcasecmp((char*) szCmd, "dropmsgswithmaliciousdnsptrrecords")) { 
 		doBinaryOptionLine(&p, &bDropMalPTRMsgs);
+	} else if(!strcasecmp((char*) szCmd, "createdirs")) { 
+		doBinaryOptionLine(&p, &bCreateDirs);
+	} else if(!strcasecmp((char*) szCmd, "debugprinttemplatelist")) { 
+		doBinaryOptionLine(&p, &bDebugPrintTemplateList);
+	} else if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
+		resetConfigVariables();
 	} else { /* invalid command! */
 		char err[100];
 		snprintf(err, sizeof(err)/sizeof(char),
@@ -7779,12 +7804,7 @@ static void init()
 	nextp = NULL;
 
 	/* re-setting values to defaults (where applicable) */
-	iDynaFileCacheSize = 10;
-	fCreateMode = 0644;
-	fDirCreateMode = 0644;
-	cCCEscapeChar = '#';
-	bEscapeCCOnRcv = 1; /* default is to escape control characters */
-	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
+	resetConfigVariables();
 
 	/* open the configuration file */
 	if ((cf = fopen(ConfFile, "r")) == NULL) {
@@ -7969,9 +7989,11 @@ static void init()
 				case F_TTY:
 				case F_CONSOLE:
 					if(f->f_un.f_file.bDynamicName) {
-						printf("[dynamic, template='%s', cache size=%d]",
+						printf("[dynamic, template='%s', cache size=%d, "
+						       "create dirs=%d]",
 							f->f_un.f_file.f_fname,
-							f->f_un.f_file.iDynaFileCacheSize);
+							f->f_un.f_file.iDynaFileCacheSize,
+							f->f_un.f_file.bCreateDirs);
 					} else { /* regular file */
 						printf("%s", f->f_un.f_file.f_fname);
 						if (f->f_file == -1)
@@ -8000,13 +8022,15 @@ static void init()
 			}
 		}
 		printf("\n");
-		tplPrintList();
+		if(bDebugPrintTemplateList)
+			tplPrintList();
 		ochPrintList();
 
 #ifdef	SYSLOG_INET
 		/* now the allowedSender lists: */
 		PrintAllowedSenders(1); /* UDP */
 		PrintAllowedSenders(2); /* TCP */
+		printf("\n");
 #endif 	/* #ifdef SYSLOG_INET */
 
 		printf("Messages with malicious PTR DNS Records are %sdropped.\n",
@@ -8898,6 +8922,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		f->f_un.f_file.iCurrElt = -1;		  /* no current element */
 		f->f_un.f_file.fCreateMode = fCreateMode; /* freeze current setting */
 		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
+		f->f_un.f_file.bCreateDirs = bCreateDirs; /* preserve current setting */
 		f->f_un.f_file.iDynaFileCacheSize = iDynaFileCacheSize; /* freeze current setting */
 		/* we now allocate the cache table. We use calloc() intentionally, as we 
 		 * need all pointers to be initialized to NULL pointers.

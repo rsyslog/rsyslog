@@ -4,6 +4,9 @@ Version 1.16.1 (RGer), 2007-07-17
 - added $EscapeControlCharactersOnReceive config parameter
 - added $ControlCharacterEscapePrefix config parameter
 - added $DirCreateMode config parameter
+- added $CreateDirs config parameter
+- added $DebugPrintTemplateList config parameter
+- added $ResetConfigVariables config parameter
 - added regular expression support to the filter engine
   thanks to Michel Samia for providing the patch!
 - enhanced $AllowedSender functionality. Credits to mildew@gmail.com for
