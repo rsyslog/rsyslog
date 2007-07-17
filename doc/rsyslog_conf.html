@@ -141,6 +141,31 @@ here is set to &quot;on&quot;, the malicious message will be completely dropped 
 logs. If the option is set to &quot;off&quot;, the message will be logged, but the 
 original IP will be used instead of the DNS name.</p>
 <p><code><b>$DropMsgsWithMaliciousDnsPTRRecords on</b></code></p>
+<h2>ControlCharacterEscapePrefix</h2>
+<p>This option specifies the prefix character to be used for control character 
+escaping (see option $EscapeControlCharactersOnReceive). By default, it is '\', 
+which is backwards-compatible with sysklogd. Change it to '#' in order to be 
+compliant to the value that is somewhat suggested by Internet-Draft 
+syslog-protocol. The first non-whitespace character after the command is treated 
+as prefix:</p>
+<p><code><b>$EscapeControlCharactersOnReceive #&nbsp; # as of syslog-protocol</b></code></p>
+<h2>EscapeControlCharactersOnReceive</h2>
+<p>This directive instructs rsyslogd to replace control characters during 
+reception of the message. The intent is to provide a way to stop non-printable 
+messages from entering the syslog system as whole. If this option is truned on, 
+all control-characters are converted to a 3-digit octal number and be prefixed 
+with the $ControlCharacterEscapePrefix character (being '\' by default). For 
+example, if the BEL character (ctrl-g) is included in the message, it would be 
+converted to &quot;\007&quot;. To be compatible to sysklogd, this option must be turned 
+on.</p>
+<p><code><b>$EscapeControlCharactersOnReceive on</b></code></p>
+<p><b>Warning:</b></p>
+<ul>
+	<li>turning on this option most probably destroys non-western character sets 
+	(like Japanese, Chinese and Korean)</li>
+	<li>turning on this option destroys digital signutures if such exists inside 
+	the message</li>
+</ul>
 <h2>Templates</h2>
 <p>Templates are a key feature of rsyslog. They allow to specify any format a user 
 might want. They are also used for dynamic file name generation. Every output in rsyslog uses templates - this holds true for files, 
