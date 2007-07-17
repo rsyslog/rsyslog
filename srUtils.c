@@ -30,6 +30,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <errno.h>
 #include "rsyslog.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #include "liblogging-stub.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #define TRUE 1
@@ -89,9 +91,9 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv)
 	return RS_RET_OK;
 }
 
-unsigned char *srUtilStrDup(unsigned char *pOld, size_t len)
+uchar *srUtilStrDup(uchar *pOld, size_t len)
 {
-	unsigned char *pNew;
+	uchar *pNew;
 
 	assert(pOld != NULL);
 	assert(len >= 0);
@@ -100,4 +102,40 @@ unsigned char *srUtilStrDup(unsigned char *pOld, size_t len)
 		memcpy(pNew, pOld, len + 1);
 
 	return pNew;
+}
+
+
+/* creates a path recursively
+ * Return 0 on success, -1 otherwise. On failure, errno
+ * hold the last OS error.
+ * Param "mode" holds the mode that all non-existing directories
+ * are to be created with.
+ */
+int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode)
+{
+        uchar *p;
+        uchar *pszWork;
+        size_t len;
+
+	assert(szFile != NULL);
+	assert(len > 0);
+
+        len = strlen(szFile) + 1; /* add one for '\0'-byte */
+	if((pszWork = malloc(sizeof(uchar) * len)) == NULL)
+		return -1;
+        memcpy(pszWork, szFile, len);
+        for(p = pszWork+1 ; *p ; p++)
+                if(*p == '/') {
+			/* temporarily terminate string, create dir and go on */
+                        *p = '\0';
+                        if(access(pszWork, F_OK))
+                                if(mkdir(pszWork, mode) != 0) {
+					int eSave = errno;
+					free(pszWork);
+					errno = eSave;
+					return -1;
+				}
+                        *p = '/';
+                }
+	free(pszWork);
 }

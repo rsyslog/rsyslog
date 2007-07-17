@@ -6229,10 +6229,23 @@ static int prepareDynFile(selector_t *f)
 	/* Ok, we finally can open the file */
 	f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 			f->f_un.f_file.fCreateMode);
+	
+	if(f->f_file == -1) {
+		/* on first failure, we try to create parent directories and then
+		 * retry the open. Only if that fails, we give up. We do not report
+		 * any errors here ourselfs but let the code fall through to error
+		 * handler below.
+		 */
+		if(makeFileParentDirs(newFileName, strlen(newFileName),
+		     f->f_un.f_file.fCreateMode) == 0) {
+			f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+					f->f_un.f_file.fCreateMode);
+		}
+	}
 	if(f->f_file == -1) {
 		/* do not report anything if the message is an internally-generated
 		 * message. Otherwise, we could run into a never-ending loop. The bad
-		 * news is that we also loose errors on startup messages, but so it is.
+		 * news is that we also lose errors on startup messages, but so it is.
 		 */
 		if(f->f_pMsg->msgFlags & INTERNAL_MSG)
 			dprintf("Could not open dynaFile, discarding message\n");

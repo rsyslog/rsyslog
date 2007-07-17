@@ -52,4 +52,12 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv);
  * rgerhards, 2007-07-10
  */
 unsigned char *srUtilStrDup(unsigned char *pOld, size_t len);
+/**
+ * A method to create a directory and all its missing parents for
+ * a given file name. Please not that the rightmost element is
+ * considered to be a file name and thus NO directory is being created
+ * for it.
+ * added 2007-07-17 by rgerhards
+ */
+int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode);
 #endif
