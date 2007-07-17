@@ -257,6 +257,7 @@ struct filed {
 			uid_t	dirUID;
 			gid_t	fileGID;
 			gid_t	dirGID;
+			int	bFailOnChown;	/* fail creation if chown fails? */
 			int	iCurrElt;	/* currently active cache element (-1 = none) */
 			int	iCurrCacheSize;	/* currently cache size (1-based) */
 			int	iDynaFileCacheSize; /* size of file handle cache */
@@ -288,3 +289,6 @@ struct filed {
 typedef struct filed selector_t;	/* new type name */
 
 #endif /* #ifndef SYSLOGD_TYPES_INCLUDED */
+/*
+ * vi:set ai:
+ */

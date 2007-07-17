@@ -11,6 +11,7 @@ Version 1.16.1 (RGer), 2007-07-17
 - added $FileGroup config parameter
 - added $DirOwner config parameter
 - added $DirGroup config parameter
+- added $FailOnChownFailure config parameter
 - added regular expression support to the filter engine
   thanks to Michel Samia for providing the patch!
 - enhanced $AllowedSender functionality. Credits to mildew@gmail.com for

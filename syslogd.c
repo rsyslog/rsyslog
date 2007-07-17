@@ -642,6 +642,7 @@ static struct code	FacNames[] = {
 
 /* global variables for config file state */
 static int	Debug;		/* debug flag  - read-only after startup */
+static int	bFailOnChown;	/* fail if chown fails? */
 static uid_t	fileUID;	/* UID to be used for newly created files */
 static uid_t	fileGID;	/* GID to be used for newly created files */
 static uid_t	dirUID;		/* UID to be used for newly created directories */
@@ -724,6 +725,7 @@ static void resetConfigVariables(void)
 	fileGID = -1;
 	dirUID = -1;
 	dirGID = -1;
+	bFailOnChown = 1;
 	iDynaFileCacheSize = 10;
 	fCreateMode = 0644;
 	fDirCreateMode = 0644;
@@ -6273,7 +6275,7 @@ static int prepareDynFile(selector_t *f)
 			 */
 			if(makeFileParentDirs(newFileName, strlen(newFileName),
 			     f->f_un.f_file.fDirCreateMode, f->f_un.f_file.dirUID,
-			     f->f_un.f_file.dirGID) == 0) {
+			     f->f_un.f_file.dirGID, f->f_un.f_file.bFailOnChown) == 0) {
 				f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 						f->f_un.f_file.fCreateMode);
 				if(f->f_file != -1) {
@@ -6282,15 +6284,16 @@ static int prepareDynFile(selector_t *f)
 						/* we need to set owner/group */
 						if(fchown(f->f_file, f->f_un.f_file.fileUID,
 						          f->f_un.f_file.fileGID) != 0) {
-							/* we fail in this case - later we could
-							 * possibly control this via a user-defined
-							 * option.
-							 */
-							int eSave = errno;
-							close(f->f_file);
-							f->f_file = -1;
-							errno = eSave;
+							if(f->f_un.f_file.bFailOnChown) {
+								int eSave = errno;
+								close(f->f_file);
+								f->f_file = -1;
+								errno = eSave;
 							}
+							/* we will silently ignore the chown() failure
+							 * if configured to do so.
+							 */
+						}
 					}
 				}
 			}
@@ -7761,6 +7764,8 @@ void cfsysline(uchar *p)
 		doBinaryOptionLine(&p, &bCreateDirs);
 	} else if(!strcasecmp((char*) szCmd, "debugprinttemplatelist")) { 
 		doBinaryOptionLine(&p, &bDebugPrintTemplateList);
+	} else if(!strcasecmp((char*) szCmd, "failonchownfailure")) { 
+		doBinaryOptionLine(&p, &bFailOnChown);
 	} else if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
 		resetConfigVariables();
 	} else { /* invalid command! */
@@ -8096,11 +8101,19 @@ static void init()
 				case F_TTY:
 				case F_CONSOLE:
 					if(f->f_un.f_file.bDynamicName) {
-						printf("[dynamic, template='%s', cache size=%d, "
-						       "create dirs=%d]",
+						printf("[dynamic]\n\ttemplate='%s'\n"
+						       "\tfile cache size=%d\n"
+						       "\tcreate directories: %s\n"
+						       "\tfile owner %d, group %d\n"
+						       "\tdirectory owner %d, group %d\n"
+						       "\tfail if owner/group can not be set: %s\n",
 							f->f_un.f_file.f_fname,
 							f->f_un.f_file.iDynaFileCacheSize,
-							f->f_un.f_file.bCreateDirs);
+							f->f_un.f_file.bCreateDirs ? "yes" : "no",
+							f->f_un.f_file.fileUID, f->f_un.f_file.fileGID,
+							f->f_un.f_file.dirUID, f->f_un.f_file.dirGID,
+							f->f_un.f_file.bFailOnChown ? "yes" : "no"
+							);
 					} else { /* regular file */
 						printf("%s", f->f_un.f_file.f_fname);
 						if (f->f_file == -1)
@@ -9030,6 +9043,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		f->f_un.f_file.fCreateMode = fCreateMode; /* freeze current setting */
 		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
 		f->f_un.f_file.bCreateDirs = bCreateDirs;
+		f->f_un.f_file.bFailOnChown = bFailOnChown;
 		f->f_un.f_file.fileUID = fileUID;
 		f->f_un.f_file.fileGID = fileGID;
 		f->f_un.f_file.dirUID = dirUID;
