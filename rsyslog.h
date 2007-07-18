@@ -94,4 +94,12 @@ typedef enum rsObjectID rsObjID;
  */
 typedef unsigned char uchar;
 
+/* for the time being, we do our own portability handling here. It
+ * looks like autotools either does not yet support checks for it, or
+ * I wasn't smart enough to find them ;) rgerhards, 2007-07-18
+ */
+#ifndef __GNUC__
+#  define  __attribute__(x)  /*NOTHING*/
+#endif
+
 #endif /* multi-include protection */

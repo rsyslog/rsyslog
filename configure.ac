@@ -11,7 +11,7 @@ AC_CONFIG_HEADER([config.h])
 AC_PROG_CC
 AM_PROG_CC_C_O
 if test "$GCC" = "yes"
-then CFLAGS="$CFLAGS -W -Wall -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
 fi
 AC_CANONICAL_HOST
 

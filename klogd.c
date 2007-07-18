@@ -334,6 +334,7 @@ static void LogProcLine(void);
 extern int main(int argc, char *argv[]);
 
 
+extern void Syslog(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
 extern void Syslog(int priority, char *fmt, ...)
 {
 	va_list ap;
