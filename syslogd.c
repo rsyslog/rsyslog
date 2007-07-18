@@ -919,7 +919,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					    iSignificantBits);
 				iSignificantBits = 128;
 			}
-			
+
 			MaskIP6 (&(SIN6(iAllow->addr.NetAddr)->sin6_addr), iSignificantBits);
 			break;
 		default:
@@ -1133,7 +1133,8 @@ static inline int MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr 
 					ip.s6_addr32[i] = 0;
 				
 				return (memcmp (ip.s6_addr, net.s6_addr, sizeof ip.s6_addr) == 0 &&
-					SIN6(pFrom)->sin6_scope_id == SIN6(pAllow->addr.NetAddr)->sin6_scope_id);
+					(SIN6(pAllow->addr.NetAddr)->sin6_scope_id != 0 ?
+					 SIN6(pFrom)->sin6_scope_id == SIN6(pAllow->addr.NetAddr)->sin6_scope_id : 1));
 			}
 			case AF_INET: {
 				struct in6_addr *ip6 = &(SIN6(pFrom))->sin6_addr;
