@@ -67,6 +67,7 @@ struct template *tplAddLine(char* pName, unsigned char** pRestOfConfLine);
 struct template *tplFind(char *pName, int iLenName);
 int tplGetEntryCount(struct template *pTpl);
 void tplDeleteAll(void);
+void tplDeleteNew(void);
 void tplPrintList(void);
 
 /*

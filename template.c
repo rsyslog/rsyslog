@@ -21,6 +21,7 @@
 
 static struct template *tplRoot = NULL;	/* the root of the template list */
 static struct template *tplLast = NULL;	/* points to the last element of the template list */
+static struct template *tplLastStatic = NULL; /* last static element of the template list */
 
 /* Constructs a template entry object. Returns pointer to it
  * or NULL (if it fails). Pointer to associated template list entry 
@@ -629,6 +630,56 @@ void tplDeleteAll(void)
 	}
 }
 
+/* Destroy all templates obtained from conf file
+ * preserving hadcoded ones. This is called from init().
+ */
+void tplDeleteNew(void)
+{
+	struct template *pTpl, *pTplDel;
+	struct templateEntry *pTpe, *pTpeDel;
+
+	if(tplRoot == NULL || tplLastStatic == NULL)
+		return;
+
+	pTpl = tplLastStatic->pNext;
+	tplLastStatic->pNext = NULL;
+	tplLast = tplLastStatic;
+	while(pTpl != NULL) {
+		/* dprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
+		pTpe = pTpl->pEntryRoot;
+		while(pTpe != NULL) {
+			pTpeDel = pTpe;
+			pTpe = pTpe->pNext;
+			/*dprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
+			switch(pTpeDel->eEntryType) {
+			case UNDEFINED:
+				/*dprintf("(UNDEFINED)");*/
+				break;
+			case CONSTANT:
+				/*dprintf("(CONSTANT), value: '%s'",
+					pTpeDel->data.constant.pConstant);*/
+				free(pTpeDel->data.constant.pConstant);
+				break;
+			case FIELD:
+				/*dprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
+				free(pTpeDel->data.field.pPropRepl);
+				break;
+			}
+			/*dprintf("\n");*/
+			free(pTpeDel);
+		}
+		pTplDel = pTpl;
+		pTpl = pTpl->pNext;
+		if(pTplDel->pszName != NULL)
+			free(pTplDel->pszName);
+		free(pTplDel);
+	}
+}
+
+/* Store the pointer to the last hardcoded teplate */
+void tplLastStaticInit(struct template *tpl) {
+	tplLastStatic = tpl;
+}
 
 /* Print the template structure. This is more or less a 
  * debug or test aid, but anyhow I think it's worth it...

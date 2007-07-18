@@ -7913,6 +7913,9 @@ static void init()
 		/* Reflect the deletion of the Files linked list. */
 		Files = NULL;
 	}
+
+	dprintf("Clearing templates.\n");
+	tplDeleteNew();
 	
 	f = NULL;
 	nextp = NULL;
@@ -10233,7 +10236,7 @@ int main(int argc, char **argv)
 	pTmp = template_StdUsrMsgFmt;
 	tplAddLine(" StdUsrMsgFmt", &pTmp);
 	pTmp = template_StdDBFmt;
-	tplAddLine(" StdDBFmt", &pTmp);
+	tplLastStaticInit(tplAddLine(" StdDBFmt", &pTmp));
 
 	/* prepare emergency logging system */
 

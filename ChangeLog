@@ -5,6 +5,9 @@ Version 1.17.1 (RGer), 2007-07-??
 - fixed bug that caused $AllowedSenders to handle IPv6 scopes incorrectly;
   also fixed but that could grabble $AllowedSender wildcards. Thanks to
   mildew@gmail.com for the patch
+- minor code cleanup - thanks to Peter Vrabec for the patch
+- fixed minimal memory leak on HUP (caused by templates)
+  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 ---------------------------------------------------------------------------
 Version 1.17.0 (RGer), 2007-07-17
 - added $RepeatedLineReduction config parameter
