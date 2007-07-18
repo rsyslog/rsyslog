@@ -78,16 +78,16 @@ static void skip_Comma(char **pp)
  * is "eaten" and does not become part of the field content.
  * returns: 0 - ok, 1 - failure
  */
-static int get_Field(char **pp, char **pField)
+static int get_Field(uchar **pp, char **pField)
 {
-	register char *p;
+	register uchar *p;
 	rsCStrObj *pStrB;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pField != NULL);
 
-	skip_Comma(pp);
+	skip_Comma((char**)pp);
 	p = *pp;
 
 	if((pStrB = rsCStrConstruct()) == NULL)
@@ -101,7 +101,7 @@ static int get_Field(char **pp, char **pField)
 
 	*pp = p;
 	rsCStrFinish(pStrB);
-	*pField = (char*) rsCStrConvSzStrAndDestruct(pStrB);
+	*pField = (char*)rsCStrConvSzStrAndDestruct(pStrB);
 
 	return 0;
 }
@@ -111,16 +111,16 @@ static int get_Field(char **pp, char **pField)
  * input line.
  * returns: 0 - ok, 1 - failure
  */
-static int get_off_t(char **pp, off_t *pOff_t)
+static int get_off_t(uchar **pp, off_t *pOff_t)
 {
-	register char *p;
+	register uchar *p;
 	off_t val;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pOff_t != NULL);
 
-	skip_Comma(pp);
+	skip_Comma((char**)pp);
 	p = *pp;
 
 	val = 0;
@@ -142,16 +142,16 @@ static int get_off_t(char **pp, off_t *pOff_t)
  * not trailing.
  * returns: 0 - ok, 1 - failure
  */
-static int get_restOfLine(char **pp, char **pBuf)
+static inline int get_restOfLine(uchar **pp, char **pBuf)
 {
-	register char *p;
+	register uchar *p;
 	rsCStrObj *pStrB;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pBuf != NULL);
 
-	skip_Comma(pp);
+	skip_Comma((char**)pp);
 	p = *pp;
 
 	if((pStrB = rsCStrConstruct()) == NULL)
@@ -177,10 +177,10 @@ static int get_restOfLine(char **pp, char **pBuf)
  * There might be some whitespace between the field (but not within)
  * and the commas. This can be removed.
  */
-struct outchannel *ochAddLine(char* pName, unsigned char** ppRestOfConfLine)
+struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
 {
 	struct outchannel *pOch;
- 	char *p;
+ 	uchar *p;
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);

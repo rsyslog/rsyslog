@@ -29,9 +29,9 @@ struct rsCStrObject
 #endif
 	uchar *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
 	uchar *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
-	int iBufSize;		/**< current maximum size of the string buffer */
-	int iStrLen;		/**< length of the string in characters. */
-	int iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
+	size_t iBufSize;		/**< current maximum size of the string buffer */
+	size_t iStrLen;		/**< length of the string in characters. */
+	size_t iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
 };
 typedef struct rsCStrObject rsCStrObj;
 
@@ -67,7 +67,7 @@ rsRetVal rsCStrFinish(rsCStrObj *pThis);
  * string length is manipulated. This is for performance
  * reasons.
  */
-rsRetVal rsCStrTruncate(rsCStrObj *pThis, int nTrunc);
+rsRetVal rsCStrTruncate(rsCStrObj *pThis, size_t nTrunc);
 
 rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis);
 
@@ -115,13 +115,13 @@ uchar*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis);
 rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, uchar *pszNew);
 uchar*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis);
 int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2);
-int rsCStrSzStrCmp(rsCStrObj *pCS1, uchar *psz, int iLenSz);
-int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, uchar *psz, int iLenSz);
+int rsCStrSzStrCmp(rsCStrObj *pCS1, uchar *psz, size_t iLenSz);
+int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, size_t iOffset, uchar *psz, size_t iLenSz);
 int rsCStrLocateSzStr(rsCStrObj *pCStr, uchar *sz);
 int rsCStrLocateInSzStr(rsCStrObj *pThis, uchar *sz);
-int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, int iLenSz);
-int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, uchar *psz, int iLenSz);
-int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz, int iLenSz);
+int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, size_t iLenSz);
+int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, uchar *psz, size_t iLenSz);
+int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz);
 
 /* now come inline-like functions */
 #ifdef NDEBUG

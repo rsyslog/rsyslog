@@ -407,7 +407,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	memset (*pIP, 0, sizeof (struct NetAddr));
 	
 	if (*((char*)pszIP) == '[') {
-		pszTmp = strchr ((char*)pszIP, ']');
+		pszTmp = (uchar*)strchr ((char*)pszIP, ']');
 		if (pszTmp == NULL) {
 			free (pszIP);
 			return RS_RET_INVALID_IP;

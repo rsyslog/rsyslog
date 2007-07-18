@@ -437,7 +437,7 @@ static void CloseLogSrc(void)
 }
 
 
-void restart(int sig)
+void restart(int __attribute__((unused)) sig)
 {
 	change_state = 1;
 	caught_TSTP = 0;
@@ -445,7 +445,7 @@ void restart(int sig)
 }
 
 
-void stop_logging(int sig)
+void stop_logging(int __attribute__((unused)) sig)
 {
 	change_state = 1;
 	caught_TSTP = 1;
@@ -453,7 +453,7 @@ void stop_logging(int sig)
 }
 
 
-void stop_daemon(int sig)
+void stop_daemon(int __attribute__((unused)) sig)
 {
 	change_state = 1;
 	terminate = 1;
@@ -854,7 +854,7 @@ static void LogLine(char *ptr, int len)
                ** verify there is room in the line buffer
                */
                sym_space = space + ( line - sym_start );
-               if( sym_space < strlen(symbol) + 30 ) /*(30 should be overkill)*/
+               if( (unsigned) sym_space < strlen(symbol) + 30 ) /*(30 should be overkill)*/
                {
                   parse_state = PARSING_TEXT;  /* not enough space */
                   break;

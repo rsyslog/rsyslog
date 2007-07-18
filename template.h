@@ -69,6 +69,7 @@ int tplGetEntryCount(struct template *pTpl);
 void tplDeleteAll(void);
 void tplDeleteNew(void);
 void tplPrintList(void);
+void tplLastStaticInit(struct template *tpl);
 
 /*
  * vi:set ai:

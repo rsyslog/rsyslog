@@ -32,6 +32,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "rsyslog.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #include "liblogging-stub.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #define TRUE 1
@@ -96,7 +98,6 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
 	uchar *pNew;
 
 	assert(pOld != NULL);
-	assert(len >= 0);
 	
 	if((pNew = malloc(len + 1)) != NULL)
 		memcpy(pNew, pOld, len + 1);
@@ -120,9 +121,9 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
 	int bErr = 0;
 
 	assert(szFile != NULL);
-	assert(len > 0);
+	assert(lenFile > 0);
 
-        len = strlen(szFile) + 1; /* add one for '\0'-byte */
+        len = lenFile + 1; /* add one for '\0'-byte */
 	if((pszWork = malloc(sizeof(uchar) * len)) == NULL)
 		return -1;
         memcpy(pszWork, szFile, len);
@@ -130,11 +131,11 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
                 if(*p == '/') {
 			/* temporarily terminate string, create dir and go on */
                         *p = '\0';
-                        if(access(pszWork, F_OK)) {
-                                if(mkdir(pszWork, mode) == 0) {
-					if(uid != -1 || gid != -1) {
+                        if(access((char*)pszWork, F_OK)) {
+                                if(mkdir((char*)pszWork, mode) == 0) {
+					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
 						/* we need to set owner/group */
-						if(chown(pszWork, uid, gid) != 0)
+						if(chown((char*)pszWork, uid, gid) != 0)
 							if(bFailOnChown)
 								bErr = 1;
 							/* silently ignore if configured

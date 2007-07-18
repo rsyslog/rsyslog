@@ -543,7 +543,7 @@ static int bFinished = 0;	/* used by termination signal handler, read-only excep
  * we move to the next interval until we reach the largest.
  */
 int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
-#define	MAXREPEAT ((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1)
+#define	MAXREPEAT ((int)((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1))
 #define	REPEATTIME(f)	((f)->f_time + repeatinterval[(f)->f_repeatcount])
 #define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \
 				 (f)->f_repeatcount = MAXREPEAT; \
@@ -772,7 +772,7 @@ static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facilit
 /* up to the next comment, prototypes that should be removed by reordering */
 #ifdef USE_PTHREADS
 static msgQueue *queueInit (void);
-static void *singleWorker(void *vParam); /* REMOVEME later 2005-10-24 */
+static void *singleWorker(); /* REMOVEME later 2005-10-24 */
 #endif
 /* Function prototypes. */
 static rsRetVal aquirePROCIDFromTAG(msg_t *pM);
@@ -1075,7 +1075,7 @@ static void PrintAllowedSenders(int iListToPrint)
 			else {
 				if(getnameinfo (pSender->allowedSender.addr.NetAddr,
 						     SALEN(pSender->allowedSender.addr.NetAddr),
-						     szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
+						     (char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
 					printf ("\t%s/%u\n", szIP, pSender->SignificantBits);
 				} else {
 					/* getnameinfo() failed - but as this is only a
@@ -1262,12 +1262,12 @@ struct TCPSession {
  * We can also not use logerror(), as that system is also not yet
  * initialized... rgerhards, 2007-06-28
  */
-static void configureTCPListen(char *optarg)
+static void configureTCPListen(char *cOptarg)
 {
 	register int i;
-	register char *pArg = optarg;
+	register char *pArg = cOptarg;
 
-	assert(optarg != NULL);
+	assert(cOptarg != NULL);
 	bEnableTCP = -1;	/* enable TCP listening */
 
 	/* extract port */
@@ -1277,7 +1277,7 @@ static void configureTCPListen(char *optarg)
 	}
 
 	if( i >= 0 && i <= 65535) {
-		TCPLstnPort = optarg;
+		TCPLstnPort = cOptarg;
 	} else {
 		fprintf(stderr, "rsyslogd: Invalid TCP listen port %d - changed to 514.\n", i);
 		TCPLstnPort = "514";
@@ -1300,14 +1300,14 @@ static void configureTCPListen(char *optarg)
 			/* too small, need to adjust */
 			fprintf(stderr,
 				"rsyslogd: TCP session max configured to %d [-t %s] - changing to 1.\n",
-				i, optarg);
+				i, cOptarg);
 			iTCPSessMax = 1;
 		}
 	} else if(*pArg == '\0') {
 		/* use default for session number - that's already set...*/
 		/*EMPTY BY INTENSION*/
 	} else {
-		fprintf(stderr, "rsyslogd: Invalid -t %s command line option.\n", optarg);
+		fprintf(stderr, "rsyslogd: Invalid -t %s command line option.\n", cOptarg);
 	}
 }
 
@@ -1467,9 +1467,9 @@ static int *create_tcp_socket(void)
 
 #ifdef IPV6_V6ONLY
                 if (r->ai_family == AF_INET6) {
-                	int on = 1;
+                	int iOn = 1;
 			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&on, sizeof (on)) < 0) {
+			      (char *)&iOn, sizeof (iOn)) < 0) {
 			logerror("TCP setsockopt");
 			close(*s);
 			*s = -1;
@@ -1576,7 +1576,6 @@ static void TCPSessAccept(int fd)
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
 	char *pBuf;
-	rsRetVal iRet;
 
 	newConn = accept(fd, (struct sockaddr*) &addr, &addrlen);
 	if (newConn < 0) {
@@ -1610,18 +1609,18 @@ static void TCPSessAccept(int fd)
 	 * configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(!isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, fromHostFQDN)) {
+	if(!isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, (char*)fromHostFQDN)) {
 		if(option_DisallowWarning) {
 			errno = 0;
 			logerrorSz("TCP message from disallowed sender %s discarded",
-				   fromHost);
+				   (char*)fromHost);
 		}
 		close(newConn);
 		return;
 	}
 
 	/* OK, we have an allowed sender, so let's continue */
-	lenHostName = strlen(fromHost) + 1; /* for \0 byte */
+	lenHostName = strlen((char*)fromHost) + 1; /* for \0 byte */
 	if((pBuf = (char*) malloc(sizeof(char) * lenHostName)) == NULL) {
 		glblHadMemShortage = 1;
 		pTCPSessions[iSess].fromHost = "NO-MEMORY-FOR-HOSTNAME";
@@ -2003,7 +2002,7 @@ static int TCPSend(selector_t *f, char *msg, size_t len)
 	int retry = 0;
 	int done = 0;
 	int bIsCompressed;
-	size_t lenSend;
+	int lenSend;
 	short f_type;
 	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
 	enum TCPSendStatus eState;
@@ -2160,7 +2159,7 @@ static int TCPSend(selector_t *f, char *msg, size_t len)
 		lenSend = send(f->f_file, msg, len, 0);
 		dprintf("TCP sent %d bytes, requested %d, msg: '%s'\n", lenSend, len,
 			bIsCompressed ? "***compressed***" : msg);
-		if(lenSend == len) {
+		if((unsigned)lenSend == len) {
 			/* all well */
 			if(buf != NULL) {
 				free(buf);
@@ -3153,13 +3152,13 @@ static char *getSeverityStr(msg_t *pM)
 			/* we use a 2 byte buffer - can only be one digit */
 			if((pM->pszSeverityStr = malloc(2)) == NULL) return "";
 			pM->iLenSeverityStr =
-				snprintf(pM->pszSeverityStr, 2, "%d", pM->iSeverity);
+				snprintf((char*)pM->pszSeverityStr, 2, "%d", pM->iSeverity);
 		} else {
-			if((pM->pszSeverityStr = strdup(name)) == NULL) return "";
-			pM->iLenSeverityStr = strlen(name);
+			if((pM->pszSeverityStr = (uchar*) strdup(name)) == NULL) return "";
+			pM->iLenSeverityStr = strlen((char*)name);
 		}
 	}
-	return(pM->pszSeverityStr);
+	return((char*)pM->pszSeverityStr);
 }
 
 static char *getFacility(msg_t *pM)
@@ -3201,13 +3200,13 @@ static char *getFacilityStr(msg_t *pM)
 			 */
 			if((pM->pszFacilityStr = malloc(12)) == NULL) return "";
 			pM->iLenFacilityStr =
-				snprintf(pM->pszFacilityStr, 12, "%d", val >> 3);
+				snprintf((char*)pM->pszFacilityStr, 12, "%d", val >> 3);
                 } else {
-                        if((pM->pszFacilityStr = strdup(name)) == NULL) return "";
-                        pM->iLenFacilityStr = strlen(name);
+                        if((pM->pszFacilityStr = (uchar*)strdup(name)) == NULL) return "";
+                        pM->iLenFacilityStr = strlen((char*)name);
                 }
         }
-        return(pM->pszFacilityStr);
+        return((char*)pM->pszFacilityStr);
 }
 
 
@@ -3993,7 +3992,7 @@ static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 * rgerhards, 2005-12-22
 	 */
 	if(pTpe->data.field.has_fields == 1) {
-		int iCurrFld;
+		size_t iCurrFld;
 		char *pFld;
 		char *pFldEnd;
 		/* first, skip to the field in question. The field separator
@@ -4103,14 +4102,14 @@ static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				return "**NO MATCH**";
 			} else {
 				/* Match! */
-				/* I need to malloc pBuf */
-				int iLen;
-				char *pBuf;
+				/* I need to malloc pB */
+				int iLenBuf;
+				char *pB;
 
-				iLen = pmatch[1].rm_eo - pmatch[1].rm_so;
-				pBuf = (char *) malloc((iLen + 1) * sizeof(char));
+				iLenBuf = pmatch[1].rm_eo - pmatch[1].rm_so;
+				pB = (char *) malloc((iLenBuf + 1) * sizeof(char));
 
-				if (pBuf == NULL) {
+				if (pB == NULL) {
 					if (*pbMustBeFreed == 1)
 						free(pRes);
 					*pbMustBeFreed = 0;
@@ -4118,12 +4117,12 @@ static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				}
 
 				/* Lets copy the matched substring to the buffer */
-				memcpy(pBuf, pRes + pmatch[1].rm_so, iLen);
-				pBuf[iLen] = '\0';/* terminate string, did not happen before */
+				memcpy(pB, pRes + pmatch[1].rm_so, iLenBuf);
+				pB[iLenBuf] = '\0';/* terminate string, did not happen before */
 
 				if (*pbMustBeFreed == 1)
 					free(pRes);
-				pRes = pBuf;
+				pRes = pB;
 				*pbMustBeFreed = 1;
 			}
 		}
@@ -4135,26 +4134,26 @@ static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 */
 	if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
 		/* we need to obtain a private copy */
-		int iLen = strlen(pRes);
-		char *pBufStart;
-		char *pBuf;
-		pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
-		if(pBuf == NULL) {
+		int iBufLen = strlen(pRes);
+		char *pBStart;
+		char *pB;
+		pBStart = pB = malloc((iBufLen + 1) * sizeof(char));
+		if(pB == NULL) {
 			if(*pbMustBeFreed == 1)
 				free(pRes);
 			*pbMustBeFreed = 0;
 			return "**OUT OF MEMORY**";
 		}
 		while(*pRes) {
-			*pBuf++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
+			*pB++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
 			          toupper(*pRes) : tolower(*pRes);
 				  /* currently only these two exist */
 			++pRes;
 		}
-		*pBuf = '\0';
+		*pB = '\0';
 		if(*pbMustBeFreed == 1)
 			free(pRes);
-		pRes = pBufStart;
+		pRes = pBStart;
 		*pbMustBeFreed = 1;
 	}
 
@@ -4175,11 +4174,11 @@ static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 		*pDst = '\0';
 	} else if(pTpe->data.field.options.bSpaceCC) {
-		char *pBuf = pRes;
-		while(*pBuf) {
-			if(iscntrl((int) *pBuf))
-				*pBuf = ' ';
-			++pBuf;
+		char *pB = pRes;
+		while(*pB) {
+			if(iscntrl((int) *pB))
+				*pB = ' ';
+			++pB;
 		}
 	} else if(pTpe->data.field.options.bEscapeCC) {
 		/* we must first count how many control charactes are
@@ -4188,24 +4187,24 @@ static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		 * length.
 		 */
 		int iNumCC = 0;
-		int iLen = 0;
-		char *pBuf;
+		int iLenBuf = 0;
+		char *pB;
 
-		for(pBuf = pRes ; *pBuf ; ++pBuf) {
-			++iLen;
-			if(iscntrl((int) *pBuf))
+		for(pB = pRes ; *pB ; ++pB) {
+			++iLenBuf;
+			if(iscntrl((int) *pB))
 				++iNumCC;
 		}
 
 		if(iNumCC > 0) { /* if 0, there is nothing to escape, so we are done */
 			/* OK, let's do the escaping... */
-			char *pBufStart;
+			char *pBStart;
 			char szCCEsc[8]; /* buffer for escape sequence */
 			int i;
 
-			iLen += iNumCC * 4;
-			pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
-			if(pBuf == NULL) {
+			iLenBuf += iNumCC * 4;
+			pBStart = pB = malloc((iLenBuf + 1) * sizeof(char));
+			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				*pbMustBeFreed = 0;
@@ -4215,16 +4214,16 @@ static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(iscntrl((int) *pRes)) {
 					snprintf(szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
 					for(i = 0 ; i < 4 ; ++i)
-						*pBuf++ = szCCEsc[i];
+						*pB++ = szCCEsc[i];
 				} else {
-					*pBuf++ = *pRes;
+					*pB++ = *pRes;
 				}
 				++pRes;
 			}
-			*pBuf = '\0';
+			*pB = '\0';
 			if(*pbMustBeFreed == 1)
 				free(pRes);
-			pRes = pBufStart;
+			pRes = pBStart;
 			*pbMustBeFreed = 1;
 		}
 	}
@@ -4233,25 +4232,25 @@ static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 * if bEscapeCC was set!
 	 */
 	if(pTpe->data.field.options.bDropLastLF && !pTpe->data.field.options.bEscapeCC) {
-		int iLen = strlen(pRes);
-		char *pBuf;
-		if(*(pRes + iLen - 1) == '\n') {
+		int iLn = strlen(pRes);
+		char *pB;
+		if(*(pRes + iLn - 1) == '\n') {
 			/* we have a LF! */
 			/* check if we need to obtain a private copy */
 			if(pbMustBeFreed == 0) {
 				/* ok, original copy, need a private one */
-				pBuf = malloc((iLen + 1) * sizeof(char));
-				if(pBuf == NULL) {
+				pB = malloc((iLn + 1) * sizeof(char));
+				if(pB == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
 					*pbMustBeFreed = 0;
 					return "**OUT OF MEMORY**";
 				}
-				memcpy(pBuf, pRes, iLen - 1);
-				pRes = pBuf;
+				memcpy(pB, pRes, iLn - 1);
+				pRes = pB;
 				*pbMustBeFreed = 1;
 			}
-			*(pRes + iLen - 1) = '\0'; /* drop LF ;) */
+			*(pRes + iLn - 1) = '\0'; /* drop LF ;) */
 		}
 	}
 
@@ -4361,9 +4360,9 @@ static int *create_udp_socket()
 
 #		ifdef IPV6_V6ONLY
                 if (r->ai_family == AF_INET6) {
-                	int on = 1;
+                	int ion = 1;
 			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&on, sizeof (on)) < 0) {
+			      (char *)&ion, sizeof (ion)) < 0) {
 			logerror("setsockopt");
 			close(*s);
 			*s = -1;
@@ -4787,7 +4786,7 @@ time_t	now;
  * function here probably is only an interim solution and that we need to
  * think on the best way to do this.
  */
-static void logmsgInternal(int pri, char * msg, char* from, int flags)
+static void logmsgInternal(int pri, char * msg, int flags)
 {
 	msg_t *pMsg;
 
@@ -4905,7 +4904,7 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 			break;
 		case FIOP_REGEX:
 			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal, strlen(pszPropVal)) == 0)
+					  (unsigned char*) pszPropVal) == 0)
 				iRet = 1;
 			break;
 		default:
@@ -4924,21 +4923,21 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 			free(pszPropVal);
 		
 		if(Debug) {
-			char *pszPropVal;
-			unsigned short pbMustBeFreed;
-			pszPropVal = MsgGetProp(pMsg, NULL,
-					f->f_filterData.prop.pCSPropName, &pbMustBeFreed);
+			char *pszPropValDeb;
+			unsigned short pbMustBeFreedDeb;
+			pszPropValDeb = MsgGetProp(pMsg, NULL,
+					f->f_filterData.prop.pCSPropName, &pbMustBeFreedDeb);
 			printf("Filter: check for property '%s' (value '%s') ",
 			        rsCStrGetSzStr(f->f_filterData.prop.pCSPropName),
-			        pszPropVal);
+			        pszPropValDeb);
 			if(f->f_filterData.prop.isNegated)
 				printf("NOT ");
 			printf("%s '%s': %s\n",
 			       getFIOPName(f->f_filterData.prop.operation),
 			       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue),
 			       iRet ? "TRUE" : "FALSE");
-			if(pbMustBeFreed)
-				free(pszPropVal);
+			if(pbMustBeFreedDeb)
+				free(pszPropValDeb);
 		}
 	}
 
@@ -5193,7 +5192,7 @@ static void queueDel (msgQueue *q, msg_t **out)
  * worker thread. Having more than one worker requires considerable
  * additional code review in regard to thread-safety.
  */
-static void *singleWorker(void *vParam)
+static void *singleWorker()
 {
 	msgQueue *fifo = pMsgQueue;
 	msg_t *pMsg;
@@ -6265,7 +6264,7 @@ static int prepareDynFile(selector_t *f)
 	}
 
 	/* Ok, we finally can open the file */
-	if(access(newFileName, F_OK) == 0) {
+	if(access((char*)newFileName, F_OK) == 0) {
 		/* file already exists */
 		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 				f->f_un.f_file.fCreateMode);
@@ -6276,14 +6275,14 @@ static int prepareDynFile(selector_t *f)
 			 * We do not report any errors here ourselfs but let the code
 			 * fall through to error handler below.
 			 */
-			if(makeFileParentDirs(newFileName, strlen(newFileName),
+			if(makeFileParentDirs(newFileName, strlen((char*)newFileName),
 			     f->f_un.f_file.fDirCreateMode, f->f_un.f_file.dirUID,
 			     f->f_un.f_file.dirGID, f->f_un.f_file.bFailOnChown) == 0) {
 				f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 						f->f_un.f_file.fCreateMode);
 				if(f->f_file != -1) {
 					/* check and set uid/gid */
-					if(f->f_un.f_file.fileUID != -1 || f->f_un.f_file.fileGID != -1) {
+					if(f->f_un.f_file.fileUID != (uid_t)-1 || f->f_un.f_file.fileGID != (gid_t) -1) {
 						/* we need to set owner/group */
 						if(fchown(f->f_file, f->f_un.f_file.fileUID,
 						          f->f_un.f_file.fileGID) != 0) {
@@ -6438,11 +6437,12 @@ void fprintlog(register selector_t *f)
 	uchar *exec; /* for shell support */
 	rsCStrObj *pCSCmdLine; /* for shell support: command to execute */
 	rsRetVal iRet;
-	register int l;
+	register unsigned l;
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
 #ifdef SYSLOG_INET
-	int e, i, lsent = 0;
+	int i;
+	unsigned e, lsent = 0;
 	int bSendSuccess;
 	time_t fwd_suspend;
 	struct addrinfo *res, *r;
@@ -6560,7 +6560,6 @@ void fprintlog(register selector_t *f)
 		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
 		else {
-			char *psz;
 			f->f_time = now;
 			psz = iovAsString(f);
 			l = f->f_iLenpsziov;
@@ -6624,9 +6623,9 @@ void fprintlog(register selector_t *f)
 						       		bSendSuccess = TRUE;
 								break;
 							} else {
-								int e = errno;
+								int eno = errno;
 								dprintf("sendto() error: %d = %s.\n",
-									e, strerror(e));
+									eno, strerror(eno));
 							}
 		                                }
 						if (lsent == l && !send_to_all)
@@ -6686,6 +6685,7 @@ void fprintlog(register selector_t *f)
 
 	case F_SHELL: /* shell support by bkalkbrenner 2005-09-20 */
 		f->f_time = now;
+		dprintf("\n");
 		iovCreate(f);
 		psz = iovAsString(f);
 		l = f->f_iLenpsziov;
@@ -6954,7 +6954,7 @@ static int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQ
 		sigprocmask(SIG_BLOCK, &nmask, &omask);
 
 		error = getnameinfo((struct sockaddr *)f, sizeof(*f),
-				    pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
+				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 		
 		if (error == 0) {
 			memset (&hints, 0, sizeof (struct addrinfo));
@@ -6965,7 +6965,7 @@ static int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQ
 			 * because we should not have obtained a numeric address. If
 			 * we got a numeric one, someone messed with DNS!
 			 */
-			if (getaddrinfo (pszHostFQDN, NULL, &hints, &res) == 0) {
+			if (getaddrinfo ((char*)pszHostFQDN, NULL, &hints, &res) == 0) {
 				uchar szErrMsg[1024];
 				freeaddrinfo (res);
 				/* OK, we know we have evil. The question now is what to do about
@@ -6978,11 +6978,11 @@ static int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQ
 				 * is OK in any way. We do also log the error message. rgerhards, 2007-07-16
 		 		 */
 		 		if(bDropMalPTRMsgs == 1) {
-					snprintf(szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
+					snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
 						 "Malicious PTR record, message dropped "
 						 "IP = \"%s\" HOST = \"%s\"",
 						 ip, pszHostFQDN);
-					logerror(szErrMsg);
+					logerror((char*)szErrMsg);
 					return 0;
 				}
 
@@ -6992,11 +6992,11 @@ static int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQ
 				 * (OK, I admit this is more or less impossible, but I am paranoid...)
 				 * rgerhards, 2007-07-16
 				 */
-				snprintf(szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
+				snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
 					 "Malicious PTR record (message accepted, but used IP "
 					 "instead of PTR name: IP = \"%s\" HOST = \"%s\"",
 					 ip, pszHostFQDN);
-				logerror(szErrMsg);
+				logerror((char*)szErrMsg);
 
 				error = 1; /* that will trigger using IP address below. */
 			}
@@ -7020,19 +7020,19 @@ static int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQ
 	/* OK, the fqdn is now known. Now it is time to extract only the hostname
 	 * part if we were instructed to do so.
 	 */
-	/* TODO: quick and drity right now: we need to optimize that. We simply
+	/* TODO: quick and dirty right now: we need to optimize that. We simply
 	 * copy over the buffer and then use the old code.
 	 */
 	strcpy((char*)pszHost, (char*)pszHostFQDN);
-	if ((p = strchr(pszHost, '.'))) {
-		if (strcmp(p + 1, LocalDomain) == 0) {
+	if ((p = (uchar*) strchr((char*)pszHost, '.'))) {
+		if(strcmp((char*) (p + 1), LocalDomain) == 0) {
 			*p = '\0'; /* simply terminate the string */
 			return 1;
 		} else {
 			if (StripDomains) {
 				count=0;
 				while (StripDomains[count]) {
-					if (strcmp(p + 1, StripDomains[count]) == 0) {
+					if (strcmp((char*)(p + 1), StripDomains[count]) == 0) {
 						*p = '\0';
 						return 1;
 					}
@@ -7043,7 +7043,7 @@ static int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQ
 			if (LocalHosts) {
 				count=0;
 				while (LocalHosts[count]) {
-					if (!strcmp(pszHost, LocalHosts[count])) {
+					if (!strcmp((char*)pszHost, LocalHosts[count])) {
 						*p = '\0';
 						return 1;
 					}
@@ -7077,7 +7077,7 @@ static void domark(void)
 		now = time(0);
 		MarkSeq += TIMERINTVL;
 		if (MarkSeq >= MarkInterval) {
-			logmsgInternal(LOG_INFO, "-- MARK --", LocalHostName, ADDDATE|MARK);
+			logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
 			MarkSeq = 0;
 		}
 
@@ -7161,7 +7161,7 @@ void logerror(char *type)
 		snprintf(buf, sizeof(buf), "%s: %s", type, strerror(errno));
 	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
-	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, LocalHostName, ADDDATE);
+	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, ADDDATE);
 	return;
 }
 
@@ -7214,7 +7214,7 @@ static void die(int sig)
 		 "\" x-pid=\"%d\"]" " exiting on signal %d.",
 		 (int) myPid, sig);
 		errno = 0;
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, LocalHostName, ADDDATE);
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, ADDDATE);
 	}
 
 #ifdef	USE_PTHREADS
@@ -7291,7 +7291,7 @@ static void die(int sig)
  * detached syslogd. I consider this method to be safe.
  */
 #ifndef TESTING
-static void doexit(int sig)
+static void doexit()
 {
 	exit(0); /* "good" exit, only during child-creation */
 }
@@ -7396,7 +7396,7 @@ static void skipWhiteSpace(uchar **pp)
  * On exit, it will be updated to the processed position.
  * rgerhards, 2007-07-4 (happy independence day to my US friends!)
  */
-static void doDynaFileCacheSizeLine(uchar **pp, enum eDirective eDir)
+static void doDynaFileCacheSizeLine(uchar **pp)
 {
 	uchar *p;
 	uchar errMsg[128];	/* for dynamic error messages */
@@ -7451,7 +7451,7 @@ static void doDynaFileCacheSizeLine(uchar **pp, enum eDirective eDir)
  */
 static int doParseOnOffOption(uchar **pp)
 {
-	char *pOptStart;
+	uchar *pOptStart;
 	uchar szOpt[32];
 
 	assert(pp != NULL);
@@ -7465,12 +7465,12 @@ static int doParseOnOffOption(uchar **pp)
 		return -1;
 	}
 	
-	if(!strcmp(szOpt, "on")) {
+	if(!strcmp((char*)szOpt, "on")) {
 		return 1;
-	} else if(!strcmp(szOpt, "off")) {
+	} else if(!strcmp((char*)szOpt, "off")) {
 		return 0;
 	} else {
-		logerrorSz("Option value must be on or off, but is '%s'", pOptStart);
+		logerrorSz("Option value must be on or off, but is '%s'", (char*)pOptStart);
 		return -1;
 	}
 }
@@ -7505,7 +7505,7 @@ static void doGetGID(uchar **pp, gid_t *pGid)
 	struct group *pgBuf;
 	struct group gBuf;
 	uchar szName[256];
-	uchar stringBuf[2048];	/* I hope this is large enough... */
+	char stringBuf[2048];	/* I hope this is large enough... */
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -7516,10 +7516,10 @@ static void doGetGID(uchar **pp, gid_t *pGid)
 		return;
 	}
 
-	getgrnam_r(szName, &gBuf, stringBuf, sizeof(stringBuf), &pgBuf);
+	getgrnam_r((char*)szName, &gBuf, stringBuf, sizeof(stringBuf), &pgBuf);
 
 	if(pgBuf == NULL) {
-		logerrorSz("ID for group '%s' could not be found or error", szName);
+		logerrorSz("ID for group '%s' could not be found or error", (char*)szName);
 	} else {
 		*pGid = pgBuf->gr_gid;
 		dprintf("gid %d obtained for group '%s'\n", *pGid, szName);
@@ -7537,7 +7537,7 @@ static void doGetUID(uchar **pp, uid_t *pUid)
 	struct passwd *ppwBuf;
 	struct passwd pwBuf;
 	uchar szName[256];
-	uchar stringBuf[2048];	/* I hope this is large enough... */
+	char stringBuf[2048];	/* I hope this is large enough... */
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -7548,10 +7548,10 @@ static void doGetUID(uchar **pp, uid_t *pUid)
 		return;
 	}
 
-	getpwnam_r(szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
+	getpwnam_r((char*)szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
 
 	if(ppwBuf == NULL) {
-		logerrorSz("ID for user '%s' could not be found or error", szName);
+		logerrorSz("ID for user '%s' could not be found or error", (char*)szName);
 	} else {
 		*pUid = ppwBuf->pw_uid;
 		dprintf("uid %d obtained for user '%s'\n", *pUid, szName);
@@ -7753,7 +7753,7 @@ void cfsysline(uchar *p)
 	} else if(!strcasecmp((char*) szCmd, "filegroup")) { 
 		doGetGID(&p, &fileGID);
 	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
-		doDynaFileCacheSizeLine(&p, DIR_DYNAFILECACHESIZE);
+		doDynaFileCacheSizeLine(&p);
 	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
 		doBinaryOptionLine(&p, &bReduceRepeatMsgs);
 	} else if(!strcasecmp((char*) szCmd, "controlcharacterescapeprefix")) { 
@@ -8185,7 +8185,7 @@ static void init()
 		"No", "0", "No", "0"
 #endif 	/* #ifdef SYSLOG_INET */
 		);
-	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, LocalHostName, ADDDATE);
+	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, ADDDATE);
 
 	(void) signal(SIGHUP, sighup_handler);
 	dprintf(" restarted.\n");
@@ -8323,7 +8323,7 @@ static void cflineParseFileName(selector_t *f, uchar* p)
  */
 static void cflineParseOutchannel(selector_t *f, uchar* p)
 {
-	int i;
+	size_t i;
 	struct outchannel *pOch;
 	char szBuf[128];	/* should be more than sufficient */
 
@@ -9294,6 +9294,7 @@ int decode(uchar *name, struct code *codetab)
 	return (-1);
 }
 
+extern void dprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
 void dprintf(char *fmt, ...)
 {
 #	ifdef USE_PTHREADS
@@ -9648,8 +9649,8 @@ static void mainloop(void)
 #  ifndef TESTING
 	struct sockaddr_storage frominet;
 	socklen_t socklen;
-	char fromHost[NI_MAXHOST];
-	char fromHostFQDN[NI_MAXHOST];
+	uchar fromHost[NI_MAXHOST];
+	uchar fromHostFQDN[NI_MAXHOST];
 	int iTCPSess;
 	ssize_t l;
 #  endif /* #ifndef TESTING */
@@ -9722,11 +9723,11 @@ static void mainloop(void)
 			/* do the sessions */
 			iTCPSess = TCPSessGetNxtSess(-1);
 			while(iTCPSess != -1) {
-				int fd;
-				fd = pTCPSessions[iTCPSess].sock;
-				dprintf("Adding TCP Session %d\n", fd);
-				FD_SET(fd, &readfds);
-				if (fd>maxfds) maxfds=fd;
+				int fdSess;
+				fdSess = pTCPSessions[iTCPSess].sock;
+				dprintf("Adding TCP Session %d\n", fdSess);
+				FD_SET(fdSess, &readfds);
+				if (fdSess>maxfds) maxfds=fdSess;
 				/* now get next... */
 				iTCPSess = TCPSessGetNxtSess(iTCPSess);
 			}
@@ -9925,12 +9926,13 @@ static void mainloop(void)
 							* configured to do this).
 							* rgerhards, 2005-09-26
 							*/
-						       if(isAllowedSender(pAllowedSenders_UDP, (struct sockaddr *)&frominet, fromHostFQDN)) {
-							       printchopped(fromHost, line, l,  finet[i+1], 1);
+						       if(isAllowedSender(pAllowedSenders_UDP,
+						          (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
+							       printchopped((char*)fromHost, line, l,  finet[i+1], 1);
 						       } else {
 							       if(option_DisallowWarning) {
 								       logerrorSz("UDP message from disallowed sender %s discarded",
-										  fromHost);
+										  (char*)fromHost);
 							       }	
 						       }
 					       }
@@ -9959,15 +9961,15 @@ static void mainloop(void)
 			 * soon as we have found all sockets flagged as active. */
 			iTCPSess = TCPSessGetNxtSess(-1);
 			while(iTCPSess != -1) {
-				int fd;
+				int fdSess;
 				int state;
-				fd = pTCPSessions[iTCPSess].sock;
-				if(FD_ISSET(fd, &readfds)) {
+				fdSess = pTCPSessions[iTCPSess].sock;
+				if(FD_ISSET(fdSess, &readfds)) {
 					char buf[MAXLINE];
-					dprintf("tcp session socket with new data: #%d\n", fd);
+					dprintf("tcp session socket with new data: #%d\n", fdSess);
 
 					/* Receive message */
-					state = recv(fd, buf, sizeof(buf), 0);
+					state = recv(fdSess, buf, sizeof(buf), 0);
 					if(state == 0) {
 						/* process any incomplete frames left over */
 						TCPSessPrepareClose(iTCPSess);
@@ -9975,7 +9977,7 @@ static void mainloop(void)
 						TCPSessClose(iTCPSess);
 					} else if(state == -1) {
 						logerrorInt("TCP session %d will be closed, error ignored\n",
-							    fd);
+							    fdSess);
 						TCPSessClose(iTCPSess);
 					} else {
 						/* valid data received, process it! */

@@ -179,7 +179,7 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 {
 	register unsigned char *p;
 	unsigned char Buf[64];
-	int i;
+	size_t i;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -454,7 +454,7 @@ struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
  	unsigned char *p;
 	int bDone;
 	char optBuf[128]; /* buffer for options - should be more than enough... */
-	int i;
+	size_t i;
 
 	assert(pName != NULL);
 	assert(ppRestOfConfLine != NULL);
@@ -677,7 +677,8 @@ void tplDeleteNew(void)
 }
 
 /* Store the pointer to the last hardcoded teplate */
-void tplLastStaticInit(struct template *tpl) {
+void tplLastStaticInit(struct template *tpl)
+{
 	tplLastStatic = tpl;
 }
 

@@ -130,7 +130,6 @@ rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, uchar* psz, size_t iStrLen)
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(psz != NULL);
-	assert(iStrLen >= 0);
 
 	/* we first check if the to-be-added string is larger than the
 	 * alloc increment. If so, we temporarily increase the alloc
@@ -279,7 +278,7 @@ uchar*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis)
  */
 uchar*  rsCStrGetSzStr(rsCStrObj *pThis)
 {
-	int i;
+	size_t i;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
@@ -401,7 +400,7 @@ int rsCStrLen(rsCStrObj *pThis)
 /* Truncate characters from the end of the string.
  * rgerhards 2005-09-15
  */
-rsRetVal rsCStrTruncate(rsCStrObj *pThis, int nTrunc)
+rsRetVal rsCStrTruncate(rsCStrObj *pThis, size_t nTrunc)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
@@ -462,7 +461,7 @@ int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2)
 			 * length, so we need to actually check if they
 			 * are equal.
 			 */
-			register int i;
+			register size_t i;
 			for(i = 0 ; i < pCS1->iStrLen ; ++i) {
 				if(pCS1->pBuf[i] != pCS2->pBuf[i])
 					return pCS1->pBuf[i] - pCS2->pBuf[i];
@@ -480,7 +479,7 @@ int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2)
  * comparison operation. Maybe it also has other needs.
  * rgerhards 2005-10-19
  */
-int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, uchar *psz, int iLenSz)
+int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
 {
 	register int i;
 	int iMax;
@@ -512,9 +511,9 @@ int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, uchar *psz, int iLenSz)
 /* check if a CStr object starts with a sz-type string.
  * rgerhards 2005-09-26
  */
-int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, int iLenSz)
+int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
 {
-	register int i;
+	register size_t i;
 
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(psz != NULL);
@@ -545,11 +544,11 @@ int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, int iLenSz)
  * rgerhards, 2007-07-16: bug is no real bug, because rsyslogd ensures there
  * never is a \0 *inside* a property string.
  */
-int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz, int iLenSz)
+int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz)
 {
     regex_t preq;
-    regcomp(&preq, rsCStrGetSzStr(pCS1), 0);
-    int iRet = regexec(&preq, psz, 0, NULL, 0);
+    regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), 0);
+    int iRet = regexec(&preq, (char*) psz, 0, NULL, 0);
     regfree(&preq);
     return iRet;
 }
@@ -575,10 +574,9 @@ int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz, int iLenSz)
  * program bug and will lead to unpredictable results and program aborts).
  * rgerhards 2005-09-26
  */
-int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, uchar *psz, int iLenSz)
+int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, size_t iOffset, uchar *psz, size_t iLenSz)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
-	assert(iOffset >= 0);
 	assert(iOffset < pCS1->iStrLen);
 	assert(psz != NULL);
 	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
@@ -592,7 +590,7 @@ int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, uchar *psz, int iLenSz)
 			 * length, so we need to actually check if they
 			 * are equal.
 			 */
-			register int i;
+			register size_t i;
 			for(i = 0 ; i < iLenSz ; ++i) {
 				if(pCS1->pBuf[i+iOffset] != psz[i])
 					return pCS1->pBuf[i+iOffset] - psz[i];
@@ -619,7 +617,7 @@ int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, int iOffset, uchar *psz, int iLenSz)
  * The to sz string pointer must not be NULL!
  * rgerhards 2005-09-26
  */
-int rsCStrSzStrCmp(rsCStrObj *pCS1, uchar *psz, int iLenSz)
+int rsCStrSzStrCmp(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(psz != NULL);
@@ -634,7 +632,7 @@ int rsCStrSzStrCmp(rsCStrObj *pCS1, uchar *psz, int iLenSz)
 			 * length, so we need to actually check if they
 			 * are equal.
 			 */
-			register int i;
+			register size_t i;
 			for(i = 0 ; i < iLenSz ; ++i) {
 				if(pCS1->pBuf[i] != psz[i])
 					return pCS1->pBuf[i] - psz[i];
@@ -672,7 +670,7 @@ int rsCStrLocateInSzStr(rsCStrObj *pThis, uchar *sz)
 	bFound = 0;
 	i = 0;
 	while(i  <= iMax && !bFound) {
-		int iCheck;
+		size_t iCheck;
 		uchar *pComp = sz + i;
 		for(iCheck = 0 ; iCheck < pThis->iStrLen ; ++iCheck)
 			if(*(pComp + iCheck) != *(pThis->pBuf + iCheck))

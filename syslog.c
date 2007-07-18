@@ -96,7 +96,7 @@ int writeSyslogV(int iPRI, const char *szFmt, va_list va)
 	iLen = sprintf(msgBuf, "<%d>%.15s kernel: ", iPRI, ctime(&tNow) + 4);
 
 	iChars = vsnprintf(msgBuf + iLen, sizeof(msgBuf) / sizeof(char) - iLen, szFmt, va);
-	if(iChars > sizeof(msgBuf) / sizeof(char) - iLen)
+	if(iChars > (int)(sizeof(msgBuf) / sizeof(char) - iLen))
 		iLen = sizeof(msgBuf) / sizeof(char) - 1; /* full buffer siz minus \0 byte */
 	else
 		iLen += iChars;
