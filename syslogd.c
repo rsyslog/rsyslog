@@ -888,7 +888,7 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
 		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
 {
-	rsRetVal iRet;
+	rsRetVal iRet = RS_RET_OK;
 
 	assert(ppRoot != NULL);
 	assert(ppLast != NULL);
@@ -1572,7 +1572,7 @@ static void TCPSessAccept(int fd)
 	int iSess;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(struct sockaddr_storage);
-	int lenHostName;
+	size_t lenHostName;
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
 	char *pBuf;
@@ -7453,7 +7453,6 @@ static int doParseOnOffOption(uchar **pp)
 {
 	char *pOptStart;
 	uchar szOpt[32];
-	int iRet = -1;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -7463,7 +7462,7 @@ static int doParseOnOffOption(uchar **pp)
 
 	if(getSubString(pp, (char*) szOpt, sizeof(szOpt) / sizeof(uchar), ' ')  != 0) {
 		logerror("Invalid $-configline - could not extract on/off option");
-		return;
+		return -1;
 	}
 	
 	if(!strcmp(szOpt, "on")) {
@@ -8922,12 +8921,11 @@ static rsRetVal cfline(char *line, register selector_t *f)
 
 		f->f_un.f_forw.port = NULL;
 		if(*p == ':') { /* process port */
-			register int i = 0;
 			uchar * tmp;
 
 			*p = '\0'; /* trick to obtain hostname (later)! */
 			tmp = ++p;
-			for( ; *p && isdigit((int) *p) ; ++p, ++i)
+			for(i=0 ; *p && isdigit((int) *p) ; ++p, ++i)
 				/* SKIP AND COUNT */;
 			f->f_un.f_forw.port = malloc(i + 1);
 			if(f->f_un.f_forw.port == NULL) {

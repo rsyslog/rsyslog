@@ -10,7 +10,9 @@ AC_CONFIG_HEADER([config.h])
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
-
+if test "$GCC" = "yes"
+then CFLAGS="$CFLAGS -W -Wall -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+fi
 AC_CANONICAL_HOST
 
 case "${host}" in

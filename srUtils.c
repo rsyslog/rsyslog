@@ -153,6 +153,7 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
                         *p = '/';
                 }
 	free(pszWork);
+	return 0;
 }
 /*
  * vi:set ai:
