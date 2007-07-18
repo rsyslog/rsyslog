@@ -426,7 +426,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			break;
 		case EAI_NONAME:
 			F_SET((*pIP)->flags, ADDR_NAME|ADDR_PRI6);
-			(*pIP)->addr.HostWildcard = strdup ((const char*)pszIP);
+			(*pIP)->addr.HostWildcard = strdup ((const char*)pszIP+1);
 			break;
 		default:
 			free (pszIP);
