@@ -27,6 +27,8 @@
 
 #include "config.h"  /* make sure we have autoconf macros */
 #include "stringbuf.h"
+#include <sys/param.h>
+#include <sys/syslog.h>
 
 #ifdef UT_NAMESIZE
 # define UNAMESZ	UT_NAMESIZE	/* length of a login name */
@@ -36,6 +38,13 @@
 #define MAXUNAMES	20	/* maximum number of user names */
 #define MAXFNAME	200	/* max file pathname length */
 
+
+/* we define our own facility and severities */
+/* facility and severity codes */
+typedef struct _syslogCode {
+	char    *c_name;
+	int     c_val;
+} syslogCODE;
 
 typedef enum _TCPFRAMINGMODE {
 		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
@@ -81,78 +90,6 @@ struct syslogTime {
 	 * OffsetMode to know the direction.
 	 */
 };
-
-/* rgerhards 2004-11-08: The following structure represents a
- * syslog message. 
- *
- * Important Note:
- * The message object is used for multiple purposes (once it
- * has been created). Once created, it actully is a read-only
- * object (though we do not specifically express this). In order
- * to avoid multiple copies of the same object, we use a
- * reference counter. This counter is set to 1 by the constructer
- * and increased by 1 with a call to MsgAddRef(). The destructor
- * checks the reference count. If it is more than 1, only the counter
- * will be decremented. If it is 1, however, the object is actually
- * destroyed. To make this work, it is vital that MsgAddRef() is
- * called each time a "copy" is stored somewhere.
- */
-struct msg {
-	int	iRefCount;	/* reference counter (0 = unused) */
-	short	iSyslogVers;	/* version of syslog protocol
-				 * 0 - RFC 3164
-				 * 1 - RFC draft-protocol-08 */
-	short	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
-	   /* background: the hostname is not present on "regular" messages
-	    * received via UNIX domain sockets from the same machine. However,
-	    * it is available when we have a forwarder (e.g. rfc3195d) using local
-	    * sockets. All in all, the parser would need parse templates, that would
-	    * resolve all these issues... rgerhards, 2005-10-06
-	    */
-	short	iSeverity;	/* the severity 0..7 */
-	uchar *pszSeverity;	/* severity as string... */
-	int iLenSeverity;	/* ... and its length. */
- 	uchar *pszSeverityStr;   /* severity name... */
- 	int iLenSeverityStr;    /* ... and its length. */
-	int	iFacility;	/* Facility code (up to 2^32-1) */
-	uchar *pszFacility;	/* Facility as string... */
-	int iLenFacility;	/* ... and its length. */
- 	uchar *pszFacilityStr;   /* facility name... */
- 	int iLenFacilityStr;    /* ... and its length. */
-	uchar *pszPRI;		/* the PRI as a string */
-	int iLenPRI;		/* and its length */
-	uchar	*pszRawMsg;	/* message as it was received on the
-				 * wire. This is important in case we
-				 * need to preserve cryptographic verifiers.
-				 */
-	int	iLenRawMsg;	/* length of raw message */
-	uchar	*pszMSG;	/* the MSG part itself */
-	int	iLenMSG;	/* Length of the MSG part */
-	uchar	*pszUxTradMsg;	/* the traditional UNIX message */
-	int	iLenUxTradMsg;/* Length of the traditional UNIX message */
-	uchar	*pszTAG;	/* pointer to tag value */
-	int	iLenTAG;	/* Length of the TAG part */
-	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
-	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-	uchar	*pszRcvFrom;	/* System message was received from */
-	int	iLenRcvFrom;	/* Length of pszRcvFrom */
-	int	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
-	rsCStrObj *pCSProgName;	/* the (BSD) program name */
-	rsCStrObj *pCSStrucData;/* STRUCTURED-DATA */
-	rsCStrObj *pCSAPPNAME;	/* APP-NAME */
-	rsCStrObj *pCSPROCID;	/* PROCID */
-	rsCStrObj *pCSMSGID;	/* MSGID */
-	struct syslogTime tRcvdAt;/* time the message entered this program */
-	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
-	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
-	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
-	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
-	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 charcters) */
-	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
-	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
-	int msgFlags;		/* flags associated with this message */
-};
-typedef struct msg msg_t;	/* new name */
 
 
 /* values for f_type in struct filed below*/

@@ -9,6 +9,8 @@ Version 1.17.1 (RGer), 2007-07-??
 - fixed minimal memory leak on HUP (caused by templates)
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - code cleanup (removed compiler warnings)
+- fixed portability bug in configure.ac - thanks to Bartosz Kuźma for patch
+- moved msg object into its own file set
 ---------------------------------------------------------------------------
 Version 1.17.0 (RGer), 2007-07-17
 - added $RepeatedLineReduction config parameter
