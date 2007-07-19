@@ -20,10 +20,6 @@ here.</p>
    template definition. I also strongly doubt I will ever support this, because 
 it does not make an awful lot of sense (after all, why not use two template 
 names...).</p>
-<h2>MEMORY LEAK ON HUPING</h2>
-<p>Currently, the template memory is NOT freed when SIGHUP is received.
-   This causes a small memory leak on each HUP. Will be fixed soon and
-   should not cause real trouble unless you HUP syslogd quite frequently.</p>
 <h2>WALLMSG FORMAT (* selector)
    </h2>
 <p>This format is actually not 100% compatible with stock syslogd - the
