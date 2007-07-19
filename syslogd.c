@@ -6194,7 +6194,7 @@ static void doDie(int sig)
  */
 static void die(int sig)
 {
-	register selector_t *f;
+	register selector_t *f, *fPrev;
 	char buf[256];
 	int i;
 	int was_initialized = Initialized;
@@ -6228,7 +6228,7 @@ static void die(int sig)
 
 
 	/* Free ressources and close MySQL connections */
-	for (f = Files; f != NULL ; f = f->f_next) {
+	for (f = Files; f != NULL ;) {
 		/* free iovec if it was allocated */
 		if(f->f_iov != NULL) {
 			if(f->f_bMustBeFreed != NULL) {
@@ -6244,6 +6244,9 @@ static void die(int sig)
 		if (f->f_type == F_MYSQL)
 			closeMySQL(f);
 #endif
+		fPrev = f;
+		f = f->f_next;
+		free(fPrev);
 	}
 	
 	/* now clean up the listener part */
@@ -6273,7 +6276,6 @@ static void die(int sig)
 	 * easier.
 	 */
 	tplDeleteAll();
-	free(Files);
 	if(consfile.f_iov != NULL)
 		free(consfile.f_iov);
 	if(consfile.f_bMustBeFreed != NULL)
@@ -6907,6 +6909,9 @@ static void init()
 				pthread_mutex_destroy(&f->f_un.f_forw.mtxTCPSend);
 			}
 #			endif
+			if(f->f_pMsg != NULL)
+				MsgDestruct(f->f_pMsg);
+
 			/* done with this entry, we now need to delete itself */
 			fPrev = f;
 			f = f->f_next;

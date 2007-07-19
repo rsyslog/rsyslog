@@ -8,6 +8,8 @@ Version 1.17.1 (RGer), 2007-07-??
 - minor code cleanup - thanks to Peter Vrabec for the patch
 - fixed minimal memory leak on HUP (caused by templates)
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
+- fixed another memory leak on HUPin and on exiting rsyslogd
+  again thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - code cleanup (removed compiler warnings)
 - fixed portability bug in configure.ac - thanks to Bartosz Kuźma for patch
 - moved msg object into its own file set
