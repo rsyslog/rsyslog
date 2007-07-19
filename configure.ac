@@ -200,7 +200,7 @@ AC_MSG_CHECKING(for SYSLOG_UNIXAF support)
 AC_ARG_ENABLE([unix],
   [AS_HELP_STRING([--disable-unix], [disable support for unix])],
   [
-    if test "x${enableval}" == "xyes"; then
+    if test "x${enableval}" = "xyes"; then
       AC_MSG_RESULT([yes])
       AC_DEFINE([SYSLOG_UNIXAF], [1], [Description])
     else
@@ -235,7 +235,7 @@ AC_MSG_CHECKING(for FSSTND support)
 AC_ARG_ENABLE([fsstnd],
   [AS_HELP_STRING([--disable-fsstnd], [disable support for FSSTND])],
   [
-    if test "x${enableval}" == "xyes"; then
+    if test "x${enableval}" = "xyes"; then
       AC_MSG_RESULT([yes])
       AC_DEFINE([FSSTND], [1], [Description])
     else
