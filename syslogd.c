@@ -5392,6 +5392,13 @@ again:
 		if (f->f_type == F_PIPE && e == EAGAIN)
 			return;
 
+		/* If the filesystem is filled up, just ignore
+		 * it for now and continue writing when possible
+		 * based on patch for sysklogd by Martin Schulze on 2007-05-24
+		 */
+		if (f->f_type == F_FILE && e == ENOSPC)
+			return;
+
 		(void) close(f->f_file);
 		/*
 		 * Check for EBADF on TTY's due to vhangup()

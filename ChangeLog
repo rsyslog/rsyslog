@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.17.1 (RGer), 2007-07-??
+Version 1.17.1 (RGer), 2007-07-20
 - fixed a bug that caused make install to install rsyslogd and rklogd under
   the wrong names
 - fixed bug that caused $AllowedSenders to handle IPv6 scopes incorrectly;
@@ -8,11 +8,14 @@ Version 1.17.1 (RGer), 2007-07-??
 - minor code cleanup - thanks to Peter Vrabec for the patch
 - fixed minimal memory leak on HUP (caused by templates)
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
-- fixed another memory leak on HUPin and on exiting rsyslogd
+- fixed another memory leak on HUPing and on exiting rsyslogd
   again thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - code cleanup (removed compiler warnings)
 - fixed portability bug in configure.ac - thanks to Bartosz Kuźma for patch
 - moved msg object into its own file set
+- added the capability to continue trying to write log files when the
+  file system is full. Functionality based on patch by Martin Schulze
+  to sysklogd package.
 ---------------------------------------------------------------------------
 Version 1.17.0 (RGer), 2007-07-17
 - added $RepeatedLineReduction config parameter
