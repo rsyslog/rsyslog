@@ -5104,18 +5104,43 @@ static uchar *tplToString(struct template *pTpl, msg_t *pMsg)
  */
 int resolveFileSizeLimit(selector_t *f)
 {
+	uchar *pParams;
+	uchar *pCmd;
+	uchar *p;
 	off_t actualFileSize;
 	assert(f != NULL);
 
 	if(f->f_un.f_file.f_sizeLimitCmd == NULL)
 		return 1; /* nothing we can do in this case... */
 	
-	/* TODO: this is a really quick hack. We need something more
-	 * solid when it goes into production. This was just to see if
-	 * the overall idea works (I hope it won't survive...).
-	 * rgerhards 2005-06-21
+	/* the execProg() below is probably not great, but at least is is
+	 * fairly secure now. Once we change the way file size limits are
+	 * handled, we should also revisit how this command is run (and
+	 * with which parameters).   rgerhards, 2007-07-20
 	 */
-	system(f->f_un.f_file.f_sizeLimitCmd);
+	/* we first check if we have command line parameters. We assume this, 
+	 * when we have a space in the program name. If we find it, everything after
+	 * the space is treated as a single argument.
+	 */
+	if((pCmd = (uchar*)strdup((char*)f->f_un.f_file.f_sizeLimitCmd)) == NULL) {
+		/* there is not much we can do - let's hope for the best and let's
+		 * hope the memory can be allocated on next try
+		 */
+		glblHadMemShortage = 1;
+		return 1;
+		}
+
+	for(p = pCmd ; *p && *p != ' ' ; ++p) {
+		/* JUST SKIP */
+	}
+
+	if(*p == ' ') {
+		*p = '\0'; /* pretend string-end */
+		pParams = p+1;
+	} else
+		pParams = NULL;
+
+	execProg(pCmd, 1, pParams);
 
 	f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 			f->f_un.f_file.fCreateMode);
@@ -5442,11 +5467,7 @@ again:
  */
 void fprintlog(register selector_t *f)
 {
-	char *psz; /* for shell support */
-	int esize; /* for shell support */
-	uchar *exec; /* for shell support */
-	rsCStrObj *pCSCmdLine; /* for shell support: command to execute */
-	rsRetVal iRet;
+	char *psz; /* temporary buffering */
 	register unsigned l;
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
@@ -5694,53 +5715,16 @@ void fprintlog(register selector_t *f)
 #endif
 
 	case F_SHELL: /* shell support by bkalkbrenner 2005-09-20 */
+		/* TODO: using f->f_un.f_file.f_name is not clean from the point of
+		 * modularization. We'll change that as we go ahead with modularization.
+		 * rgerhards, 2007-07-20
+		 */
 		f->f_time = now;
 		dprintf("\n");
 		iovCreate(f);
 		psz = iovAsString(f);
-		l = f->f_iLenpsziov;
-		if (l > MAXLINE)
-			l = MAXLINE;
-		esize = strlen(f->f_un.f_file.f_fname) + strlen(psz) + 4;
-		if((pCSCmdLine = rsCStrConstruct()) == NULL) {
-			/* nothing smart we can do - just keep going... */
-			dprintf("memory shortage - can not execute\n");
-			break;
-		}
-		if((iRet = rsCStrAppendStr(pCSCmdLine, (uchar*) f->f_un.f_file.f_fname)) != RS_RET_OK) {
-			dprintf("error %d during build command line(1)\n", iRet);
-			break;
-		}
-		if((iRet = rsCStrAppendStr(pCSCmdLine, (uchar*) " \"")) != RS_RET_OK) {
-			dprintf("error %d during build command line(2)\n", iRet);
-			break;
-		}
-		/* now copy the message as parameter but escape dangerous things.
-		 * we probably have not taken care of everything an attacker might
-		 * think of, so execute shell *is* a dangerous command.
-		 * rgerhards 2005-09-22
-		 */
-		while(*psz) {
-			if(*psz == '"' || *psz == '\\') 
-				if((iRet = rsCStrAppendChar(pCSCmdLine, '\\')) != RS_RET_OK) {
-					dprintf("error %d during build command line(3)\n", iRet);
-					break;
-				}
-			if((iRet = rsCStrAppendChar(pCSCmdLine, *psz)) != RS_RET_OK) {
-				dprintf("error %d during build command line(4)\n", iRet);
-				break;
-			}
-			++psz;
-		}
-		if((iRet = rsCStrAppendChar(pCSCmdLine, '"')) != RS_RET_OK) {
-			dprintf("error %d during build command line(5)\n", iRet);
-			break;
-		}
-		rsCStrFinish(pCSCmdLine);
-		exec = rsCStrConvSzStrAndDestruct(pCSCmdLine);
-		dprintf("Executing \"%s\"\n",exec);
-		system((char*) exec);	/* rgerhards: TODO: need to change this for root jail support! */
-		free(exec);
+		if(execProg((uchar*) f->f_un.f_file.f_fname, 1, (uchar*) psz) == 0)
+			logerrorSz("Executing program '%s' failed", f->f_un.f_file.f_fname);
 		break;
 
 	} /* switch */

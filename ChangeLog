@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------
+Version 1.17.2 (rgerhards), 2007-07-2?
+- made the port part of the -r option optional. Needed for backward
+  compatibility with sysklogd
+- replaced system() calls with something more reasonable. Please note that
+  this might break compatibility with some existing configuration files.
+  We accept this in favour of the gained security.
+---------------------------------------------------------------------------
 Version 1.17.1 (rgerhards), 2007-07-20
 - fixed a bug that caused make install to install rsyslogd and rklogd under
   the wrong names

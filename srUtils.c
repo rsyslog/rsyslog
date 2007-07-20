@@ -27,19 +27,21 @@
  */
 #include "config.h"
 
-
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <signal.h>
+#include <assert.h>
+#include <wait.h>
 #include "rsyslog.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #include "liblogging-stub.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #define TRUE 1
 #define FALSE 0
 #include "srUtils.h"
-#include "assert.h"
+#include "syslogd.h"
 
 
 /* ################################################################# *
@@ -155,6 +157,56 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
                 }
 	free(pszWork);
 	return 0;
+}
+
+
+/* execute a program with a single argument
+ * returns child pid if everything ok, 0 on failure. if
+ * it fails, errno is set. if it fails after the fork(), the caller
+ * can not be notfied for obvious reasons. if bwait is set to 1,
+ * the code waits until the child terminates - that potentially takes
+ * a lot of time.
+ * implemented 2007-07-20 rgerhards
+ */
+int execProg(uchar *program, int bWait, uchar *arg)
+{
+        int pid;
+	int sig;
+
+	dprintf("exec program '%s' with param '%s'\n", program, arg);
+        pid = fork();
+        if (pid < 0) {
+                return 0;
+        }
+
+        if(pid) {       /* Parent */
+		if(bWait)
+			if(waitpid(pid, NULL, 0) == -1)
+				if(errno != ECHILD) {
+					/* we do not use logerror(), because
+					 * that might bring us into an endless
+					 * loop. At some time, we may
+					 * reconsider this behaviour.
+					 */
+					dprintf("could not wait on child after executing '%s'",
+					        (char*)program);
+				}
+                return pid;
+	}
+        /* Child */
+	alarm(0); /* create a clean environment before we exec the real child */
+	for(sig = 0 ; sig < 32 ; ++sig)
+		signal(sig, SIG_DFL);
+	execlp((char*)program, (char*) program, (char*)arg, NULL);
+	/* In the long term, it's a good idea to implement some enhanced error
+	 * checking here. However, it can not easily be done. For starters, we
+	 * may run into endless loops if we log to syslog. The next problem is
+	 * that output is typically not seen by the user. For the time being,
+	 * we use no error reporting, which is quite consitent with the old
+	 * system() way of doing things. rgerhards, 2007-07-20
+	 */
+	perror("exec");
+	exit(1); /* not much we can do in this case */
 }
 /*
  * vi:set ai:

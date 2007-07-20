@@ -60,4 +60,6 @@ unsigned char *srUtilStrDup(unsigned char *pOld, size_t len);
  * added 2007-07-17 by rgerhards
  */
 int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode, uid_t uid, gid_t gid, int bFailOnChown);
+
+int execProg(uchar *program, int wait, uchar *arg);
 #endif
