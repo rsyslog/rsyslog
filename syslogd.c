@@ -3269,7 +3269,7 @@ static char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 static int usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [-46Adhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
-		" [-s domainlist] [-r port] [-t port[,max-sessions]] [-f conffile] [-x]\n");
+		" [-s domainlist] [-r [port]] [-t port[,max-sessions]] [-f conffile] [-x]\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
 
