@@ -40,11 +40,19 @@
 #include "srUtils.h"
 #include "msg.h"
 
-/* rgerhards 2004-11-09: helper routines for handling the
- * message object. We do only the most important things. It
- * is our firm hope that this will sooner or later be
- * obsoleted by liblogging.
+/* The following functions will support advanced output module
+ * multithreading, once this is implemented. Currently, we
+ * include them as hooks only. The idea is that we need to guard
+ * some msg objects data fields against concurrent access if
+ * we run on multiple threads. Please note that in any case this
+ * is not necessary for calls from INPUT modules, because they
+ * construct the message object and do this serially. Only when
+ * the message is in the processing queue, multiple threads may
+ * access a single object.
+ * rgerhards, 2007-07-20
  */
+#define MsgLock(pMsg)
+#define MsgUnLock(pMsg)
 
 
 /* "Constructor" for a msg "object". Returns a pointer to
@@ -1032,8 +1040,6 @@ void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg)
 	else
 		dprintf("Could not allocate memory for pszRawMsg buffer.");
 }
-
-
 
 
 /*
