@@ -662,7 +662,7 @@ static char	*LocalDomain;	/* our local domain name  - read-only after startup */
 static int	*finet = NULL;	/* Internet datagram sockets, first element is nbr of elements
 				 * read-only after init(), but beware of restart! */
 static char     *LogPort = "514";    /* port number for INET connections */
-static int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
+static int	MarkInterval = 5;//20 * 60;	/* interval between marks in seconds - read-only after startup */
 static int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
 static int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	MarkSeq = 0;	/* mark sequence number - modified in domark() only */
@@ -5123,9 +5123,7 @@ int resolveFileSizeLimit(selector_t *f)
 	 * the space is treated as a single argument.
 	 */
 	if((pCmd = (uchar*)strdup((char*)f->f_un.f_file.f_sizeLimitCmd)) == NULL) {
-		/* there is not much we can do - let's hope for the best and let's
-		 * hope the memory can be allocated on next try
-		 */
+		/* there is not much we can do - we make syslogd close the file in this case */
 		glblHadMemShortage = 1;
 		return 1;
 		}
@@ -6068,7 +6066,7 @@ static void domark(void)
 {
 	register selector_t *f;
 	if (MarkInterval > 0) {
-		now = time(0);
+		now = time(NULL);
 		MarkSeq += TIMERINTVL;
 		if (MarkSeq >= MarkInterval) {
 			logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
