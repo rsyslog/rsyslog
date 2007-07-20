@@ -36,7 +36,7 @@ rsyslogd \- reliable and extended syslogd
 ]
 .br
 .RB [ " \-r "
-.I port
+.I [port]
 ]
 .RB [ " \-s "
 .I domainlist
@@ -200,7 +200,7 @@ machine. When specified, no local log socket is opened at all.
 You can specify an alternative unix domain socket instead of
 .IR /dev/log "."
 .TP
-.BI "\-r " "port"
+.BI "\-r " ["port"]
 Activates the syslog/udp listener service. The listener
 will listen to the specified port. Please note that a 
 port must be specified in any case. This is different from
@@ -208,7 +208,7 @@ the stock sysklogd package. If you would like to use
 the system's default port, specify 0 as the port number. That
 will result in an /etc/services lookup for the actual port
 number. If the "-r" option is not given, no syslog/udp listner
-is available.
+is available. If no port is provided, 0 is used as default
 .TP
 .BI "\-s " "domainlist"
 Specify a domainname that should be stripped off before
