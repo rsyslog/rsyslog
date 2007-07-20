@@ -9060,7 +9060,7 @@ int main(int argc, char **argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r:s:t:u:vwx")) != EOF)
+	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r::s:t:u:vwx")) != EOF)
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -9121,7 +9121,10 @@ int main(int argc, char **argv)
 			break;
 		case 'r':		/* accept remote messages */
 			AcceptRemote = 1;
-			LogPort = optarg;
+			if(optarg == NULL)
+				LogPort = "0";
+			else
+				LogPort = optarg;
 			break;
 		case 's':
 			if (StripDomains) {
