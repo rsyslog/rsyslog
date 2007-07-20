@@ -146,11 +146,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <utmp.h>
 #include <ctype.h>
 #define GNU_SOURCE
 #include <string.h>
-#include <setjmp.h>
 #include <stdarg.h>
 #include <time.h>
 #include <pwd.h>
@@ -164,16 +162,9 @@
 #include <sys/errno.h>
 #endif
 #include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/file.h>
-#if HAVE_FCNTL_H
-#include <fcntl.h>
-#else
-#include <sys/msgbuf.h>
-#endif
-#include <sys/uio.h>
 #include <sys/un.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -240,6 +231,7 @@
 #include "srUtils.h"
 #include "msg.h"
 #include "omshell.h"
+#include "omusrmsg.h"
 
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
@@ -779,7 +771,6 @@ static void printchopped(char *hname, char *msg, int len, int fd, int iSourceTyp
 static void printline(char *hname, char *msg, int iSource);
 static void logmsg(int pri, msg_t*, int flags);
 static void fprintlog(register selector_t *f);
-static void wallmsg(register selector_t *f);
 static void reapchild();
 static int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN);
 static void debug_switch();
@@ -5700,9 +5691,7 @@ void fprintlog(register selector_t *f)
 
 	case F_USERS:
 	case F_WALL:
-		f->f_time = now;
-		dprintf("\n");
-		wallmsg(f);
+		doActionUsrMsg(f, now);
 		break;
 
 #ifdef	WITH_DB
@@ -5715,18 +5704,6 @@ void fprintlog(register selector_t *f)
 
 	case F_SHELL: /* shell support by bkalkbrenner 2005-09-20 */
 		doActionShell(f, now);
-#if 0
-		/* TODO: using f->f_un.f_file.f_name is not clean from the point of
-		 * modularization. We'll change that as we go ahead with modularization.
-		 * rgerhards, 2007-07-20
-		 */
-		f->f_time = now;
-		dprintf("\n");
-		iovCreate(f);
-		psz = iovAsString(f);
-		if(execProg((uchar*) f->f_un.f_file.f_fname, 1, (uchar*) psz) == 0)
-			logerrorSz("Executing program '%s' failed", f->f_un.f_file.f_fname);
-#endif
 		break;
 
 	} /* switch */
@@ -5751,153 +5728,6 @@ void fprintlog(register selector_t *f)
 	return;		
 }
 
-jmp_buf ttybuf;
-
-static void endtty()
-{
-	longjmp(ttybuf, 1);
-}
-
-/**
- * BSD setutent/getutent() replacement routines
- * The following routines emulate setutent() and getutent() under
- * BSD because they are not available there. We only emulate what we actually
- * need! rgerhards 2005-03-18
- */
-#ifdef BSD
-static FILE *BSD_uf = NULL;
-void setutent(void)
-{
-	assert(BSD_uf == NULL);
-	if ((BSD_uf = fopen(_PATH_UTMP, "r")) == NULL) {
-		logerror(_PATH_UTMP);
-		return;
-	}
-}
-
-struct utmp* getutent(void)
-{
-	static struct utmp st_utmp;
-
-	if(fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1)
-		return NULL;
-
-	return(&st_utmp);
-}
-
-void endutent(void)
-{
-	fclose(BSD_uf);
-	BSD_uf = NULL;
-}
-#endif
-
-
-/*
- *  WALLMSG -- Write a message to the world at large
- *
- *	Write the specified message to either the entire
- *	world, or a list of approved users.
- *
- * rgerhards, 2005-10-19: applying the following sysklogd patch:
- * Tue May  4 16:52:01 CEST 2004: Solar Designer <solar@openwall.com>
- *	Adjust the size of a variable to prevent a buffer overflow
- *	should _PATH_DEV ever contain something different than "/dev/".
- */
-static void wallmsg(register selector_t *f)
-{
-  
-	char p[sizeof(_PATH_DEV) + UNAMESZ];
-	register int i;
-	int ttyf;
-	static int reenter = 0;
-	struct utmp ut;
-	struct utmp *uptr;
-
-	assert(f != NULL);
-
-	if (reenter++)
-		return;
-
-	iovCreate(f);	/* init the iovec */
-
-	/* open the user login file */
-	setutent();
-
-	/*
-	 * Might as well fork instead of using nonblocking I/O
-	 * and doing notty().
-	 */
-	if (fork() == 0) {
-		signal(SIGTERM, SIG_DFL);
-		alarm(0);
-#		ifdef		SIGTTOU
-		signal(SIGTTOU, SIG_IGN);
-#		endif
-		sigsetmask(0);
-	/* TODO: find a way to limit the max size of the message. hint: this
-	 * should go into the template!
-	 */
-	
-	/* rgerhards 2005-10-24: HINT: this code might be run in a seperate thread
-	 * instead of a seperate process once we have multithreading...
-	 */
-
-		/* scan the user login file */
-		while ((uptr = getutent())) {
-			memcpy(&ut, uptr, sizeof(ut));
-			/* is this slot used? */
-			if (ut.ut_name[0] == '\0')
-				continue;
-#ifndef BSD
-			if (ut.ut_type != USER_PROCESS)
-			        continue;
-#endif
-			if (!(strncmp (ut.ut_name,"LOGIN", 6))) /* paranoia */
-			        continue;
-
-			/* should we send the message to this user? */
-			if (f->f_type == F_USERS) {
-				for (i = 0; i < MAXUNAMES; i++) {
-					if (!f->f_un.f_uname[i][0]) {
-						i = MAXUNAMES;
-						break;
-					}
-					if (strncmp(f->f_un.f_uname[i],
-					    ut.ut_name, UNAMESZ) == 0)
-						break;
-				}
-				if (i >= MAXUNAMES)
-					continue;
-			}
-
-			/* compute the device name */
-			strcpy(p, _PATH_DEV);
-			strncat(p, ut.ut_line, UNAMESZ);
-
-			if (setjmp(ttybuf) == 0) {
-				(void) signal(SIGALRM, endtty);
-				(void) alarm(15);
-				/* open the terminal */
-				ttyf = open(p, O_WRONLY|O_NOCTTY);
-				if (ttyf >= 0) {
-					struct stat statb;
-
-					if (fstat(ttyf, &statb) == 0 &&
-					    (statb.st_mode & S_IWRITE))
-						(void) writev(ttyf, f->f_iov, f->f_iIovUsed);
-					close(ttyf);
-					ttyf = -1;
-				}
-			}
-			(void) alarm(0);
-		}
-		exit(0); /* "good" exit - this terminates the child forked just for message delivery */
-	}
-	/* close the user login file */
-	endutent();
-	reenter = 0;
-}
 
 static void reapchild()
 {

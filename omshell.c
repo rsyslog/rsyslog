@@ -47,6 +47,7 @@ int doActionShell(selector_t *f, time_t now)
 {
 	uchar *psz;
 
+	assert(f != NULL);
 	/* TODO: using f->f_un.f_file.f_name is not clean from the point of
 	 * modularization. We'll change that as we go ahead with modularization.
 	 * rgerhards, 2007-07-20
