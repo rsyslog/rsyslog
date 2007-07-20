@@ -48,11 +48,13 @@
  * is not necessary for calls from INPUT modules, because they
  * construct the message object and do this serially. Only when
  * the message is in the processing queue, multiple threads may
- * access a single object.
+ * access a single object. Consequently, there are no guard functions
+ * for "set" methods, as these are called during input. Only "get"
+ * functions that modify important structures have them.
  * rgerhards, 2007-07-20
  */
 #define MsgLock(pMsg)
-#define MsgUnLock(pMsg)
+#define MsgUnlock(pMsg)
 
 
 /* "Constructor" for a msg "object". Returns a pointer to
@@ -86,6 +88,7 @@ void MsgDestruct(msg_t * pM)
 {
 	assert(pM != NULL);
 	/* DEV Debugging only ! dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1); */
+	MsgLock();
 	if(--pM->iRefCount == 0)
 	{
 		/* DEV Debugging Only! dprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM); */
@@ -125,6 +128,7 @@ void MsgDestruct(msg_t * pM)
 			free(pM->pszPRI);
 		free(pM);
 	}
+	MsgUnlock();
 }
 
 
@@ -153,7 +157,11 @@ void MsgDestruct(msg_t * pM)
 		}\
 	}
 /* Constructs a message object by duplicating another one.
- * Returns NULL if duplication failed.
+ * Returns NULL if duplication failed. We do not need to lock the
+ * message object here, because a fully-created msg object is never
+ * allowed to be manipulated. For this, MsgDup() must be used, so MsgDup()
+ * can never run into a situation where the message object is being
+ * modified while its content is copied - it's forbidden by definition.
  * rgerhards, 2007-07-10
  */
 msg_t* MsgDup(msg_t* pOld)
@@ -216,7 +224,9 @@ msg_t* MsgDup(msg_t* pOld)
 msg_t *MsgAddRef(msg_t *pM)
 {
 	assert(pM != NULL);
+	MsgLock();
 	pM->iRefCount++;
+	MsgUnlock();
 	/* DEV debugging only! dprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);*/
 	return(pM);
 }
@@ -419,6 +429,7 @@ char *getPRI(msg_t *pM)
 	if(pM == NULL)
 		return "";
 
+	MsgLock();
 	if(pM->pszPRI == NULL) {
 		/* OK, we need to construct it... 
 		 * we use a 5 byte buffer - as of 
@@ -429,6 +440,7 @@ char *getPRI(msg_t *pM)
 		pM->iLenPRI = snprintf((char*)pM->pszPRI, 5, "%d",
 			LOG_MAKEPRI(pM->iFacility, pM->iSeverity));
 	}
+	MsgUnlock();
 
 	return (char*)pM->pszPRI;
 }
@@ -449,28 +461,52 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 
 	switch(eFmt) {
 	case tplFmtDefault:
+		MsgLock();
 		if(pM->pszTIMESTAMP3164 == NULL) {
-			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) return "";
+			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) {
+				glblHadMemShortage = 1;
+				MsgUnlock();
+				return "";
+			}
 			formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
 		}
+		MsgUnlock();
 		return(pM->pszTIMESTAMP3164);
 	case tplFmtMySQLDate:
+		MsgLock();
 		if(pM->pszTIMESTAMP_MySQL == NULL) {
-			if((pM->pszTIMESTAMP_MySQL = malloc(15)) == NULL) return "";
+			if((pM->pszTIMESTAMP_MySQL = malloc(15)) == NULL) {
+				glblHadMemShortage = 1;
+				MsgUnlock();
+				return "";
+			}
 			formatTimestampToMySQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_MySQL, 15);
 		}
+		MsgUnlock();
 		return(pM->pszTIMESTAMP_MySQL);
 	case tplFmtRFC3164Date:
+		MsgLock();
 		if(pM->pszTIMESTAMP3164 == NULL) {
-			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) return "";
+			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) {
+				glblHadMemShortage = 1;
+				MsgUnlock();
+				return "";
+			}
 			formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
 		}
+		MsgUnlock();
 		return(pM->pszTIMESTAMP3164);
 	case tplFmtRFC3339Date:
+		MsgLock();
 		if(pM->pszTIMESTAMP3339 == NULL) {
-			if((pM->pszTIMESTAMP3339 = malloc(33)) == NULL) return "";
+			if((pM->pszTIMESTAMP3339 = malloc(33)) == NULL) {
+				glblHadMemShortage = 1;
+				MsgUnlock();
+				return "";
+			}
 			formatTimestamp3339(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 33);
 		}
+		MsgUnlock();
 		return(pM->pszTIMESTAMP3339);
 	}
 	return "INVALID eFmt OPTION!";
@@ -483,26 +519,52 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 
 	switch(eFmt) {
 	case tplFmtDefault:
+		MsgLock();
 		if(pM->pszRcvdAt3164 == NULL) {
-			if((pM->pszRcvdAt3164 = malloc(16)) == NULL) return "";
+			if((pM->pszRcvdAt3164 = malloc(16)) == NULL) {
+				glblHadMemShortage = 1;
+				MsgUnlock();
+				return "";
+			}
 			formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
 		}
+		MsgUnlock();
 		return(pM->pszRcvdAt3164);
 	case tplFmtMySQLDate:
+		MsgLock();
 		if(pM->pszRcvdAt_MySQL == NULL) {
-			if((pM->pszRcvdAt_MySQL = malloc(15)) == NULL) return "";
+			if((pM->pszRcvdAt_MySQL = malloc(15)) == NULL) {
+				glblHadMemShortage = 1;
+				MsgUnlock();
+				return "";
+			}
 			formatTimestampToMySQL(&pM->tRcvdAt, pM->pszRcvdAt_MySQL, 15);
 		}
+		MsgUnlock();
 		return(pM->pszRcvdAt_MySQL);
 	case tplFmtRFC3164Date:
-		if((pM->pszRcvdAt3164 = malloc(16)) == NULL) return "";
-		formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
+		MsgLock();
+		if(pM->pszRcvdAt3164 == NULL) {
+			if((pM->pszRcvdAt3164 = malloc(16)) == NULL) {
+					glblHadMemShortage = 1;
+					MsgUnlock();
+					return "";
+				}
+			formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
+		}
+		MsgUnlock();
 		return(pM->pszRcvdAt3164);
 	case tplFmtRFC3339Date:
+		MsgLock();
 		if(pM->pszRcvdAt3339 == NULL) {
-			if((pM->pszRcvdAt3339 = malloc(33)) == NULL) return "";
+			if((pM->pszRcvdAt3339 = malloc(33)) == NULL) {
+				glblHadMemShortage = 1;
+				MsgUnlock();
+				return "";
+			}
 			formatTimestamp3339(&pM->tRcvdAt, pM->pszRcvdAt3339, 33);
 		}
+		MsgUnlock();
 		return(pM->pszRcvdAt3339);
 	}
 	return "INVALID eFmt OPTION!";
@@ -514,12 +576,14 @@ char *getSeverity(msg_t *pM)
 	if(pM == NULL)
 		return "";
 
+	MsgLock();
 	if(pM->pszSeverity == NULL) {
 		/* we use a 2 byte buffer - can only be one digit */
-		if((pM->pszSeverity = malloc(2)) == NULL) return "";
+		if((pM->pszSeverity = malloc(2)) == NULL) { MsgUnlock() ; return ""; }
 		pM->iLenSeverity =
 		   snprintf((char*)pM->pszSeverity, 2, "%d", pM->iSeverity);
 	}
+	MsgUnlock();
 	return((char*)pM->pszSeverity);
 }
 
@@ -533,6 +597,7 @@ char *getSeverityStr(msg_t *pM)
 	if(pM == NULL)
 		return "";
 
+	MsgLock();
 	if(pM->pszSeverityStr == NULL) {
 		for(c = rs_prioritynames, val = pM->iSeverity; c->c_name; c++)
 			if(c->c_val == val) {
@@ -541,14 +606,15 @@ char *getSeverityStr(msg_t *pM)
 			}
 		if(name == NULL) {
 			/* we use a 2 byte buffer - can only be one digit */
-			if((pM->pszSeverityStr = malloc(2)) == NULL) return "";
+			if((pM->pszSeverityStr = malloc(2)) == NULL) { MsgUnlock() ; return ""; }
 			pM->iLenSeverityStr =
 				snprintf((char*)pM->pszSeverityStr, 2, "%d", pM->iSeverity);
 		} else {
-			if((pM->pszSeverityStr = (uchar*) strdup(name)) == NULL) return "";
+			if((pM->pszSeverityStr = (uchar*) strdup(name)) == NULL) { MsgUnlock() ; return ""; }
 			pM->iLenSeverityStr = strlen((char*)name);
 		}
 	}
+	MsgUnlock();
 	return((char*)pM->pszSeverityStr);
 }
 
@@ -557,15 +623,17 @@ char *getFacility(msg_t *pM)
 	if(pM == NULL)
 		return "";
 
+	MsgLock();
 	if(pM->pszFacility == NULL) {
 		/* we use a 12 byte buffer - as of 
 		 * syslog-protocol, facility can go
 		 * up to 2^32 -1
 		 */
-		if((pM->pszFacility = malloc(12)) == NULL) return "";
+		if((pM->pszFacility = malloc(12)) == NULL) { MsgUnlock() ; return ""; }
 		pM->iLenFacility =
 		   snprintf((char*)pM->pszFacility, 12, "%d", pM->iFacility);
 	}
+	MsgUnlock();
 	return((char*)pM->pszFacility);
 }
 
@@ -578,6 +646,7 @@ char *getFacilityStr(msg_t *pM)
         if(pM == NULL)
                 return "";
 
+	MsgLock();
         if(pM->pszFacilityStr == NULL) {
                 for(c = rs_facilitynames, val = pM->iFacility << 3; c->c_name; c++)
                         if(c->c_val == val) {
@@ -589,14 +658,15 @@ char *getFacilityStr(msg_t *pM)
 			 * syslog-protocol, facility can go
 			 * up to 2^32 -1
 			 */
-			if((pM->pszFacilityStr = malloc(12)) == NULL) return "";
+			if((pM->pszFacilityStr = malloc(12)) == NULL) { MsgUnlock() ; return ""; }
 			pM->iLenFacilityStr =
 				snprintf((char*)pM->pszFacilityStr, 12, "%d", val >> 3);
                 } else {
-                        if((pM->pszFacilityStr = (uchar*)strdup(name)) == NULL) return "";
+                        if((pM->pszFacilityStr = (uchar*)strdup(name)) == NULL) { MsgUnlock() ; return ""; }
                         pM->iLenFacilityStr = strlen((char*)name);
                 }
         }
+	MsgUnlock();
         return((char*)pM->pszFacilityStr);
 }
 
@@ -639,8 +709,10 @@ static void tryEmulateAPPNAME(msg_t *pM)
 int getAPPNAMELen(msg_t *pM)
 {
 	assert(pM != NULL);
+	MsgLock();
 	if(pM->pCSAPPNAME == NULL)
 		tryEmulateAPPNAME(pM);
+	MsgUnlock();
 	return (pM->pCSAPPNAME == NULL) ? 0 : rsCStrLen(pM->pCSAPPNAME);
 }
 
@@ -650,8 +722,10 @@ int getAPPNAMELen(msg_t *pM)
 char *getAPPNAME(msg_t *pM)
 {
 	assert(pM != NULL);
+	MsgLock();
 	if(pM->pCSAPPNAME == NULL)
 		tryEmulateAPPNAME(pM);
+	MsgUnlock();
 	return (pM->pCSAPPNAME == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
 }
 
@@ -678,8 +752,10 @@ rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID)
 int getPROCIDLen(msg_t *pM)
 {
 	assert(pM != NULL);
+	MsgLock();
 	if(pM->pCSPROCID == NULL)
 		aquirePROCIDFromTAG(pM);
+	MsgUnlock();
 	return (pM->pCSPROCID == NULL) ? 1 : rsCStrLen(pM->pCSPROCID);
 }
 
@@ -689,8 +765,10 @@ int getPROCIDLen(msg_t *pM)
 char *getPROCID(msg_t *pM)
 {
 	assert(pM != NULL);
+	MsgLock();
 	if(pM->pCSPROCID == NULL)
 		aquirePROCIDFromTAG(pM);
+	MsgUnlock();
 	return (pM->pCSPROCID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSPROCID);
 }
 
@@ -806,15 +884,20 @@ static int getTAGLen(msg_t *pM)
 
 char *getTAG(msg_t *pM)
 {
+	char *ret;
+
+	MsgLock();
 	if(pM == NULL)
-		return "";
+		ret = "";
 	else {
 		tryEmulateTAG(pM);
 		if(pM->pszTAG == NULL)
-			return "";
+			ret = "";
 		else
-			return (char*) pM->pszTAG;
+			ret = (char*) pM->pszTAG;
 	}
+	MsgUnlock();
+	return(ret);
 }
 
 
@@ -852,6 +935,7 @@ char *getRcvFrom(msg_t *pM)
 		else
 			return (char*) pM->pszRcvFrom;
 }
+
 /* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
  */
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData)
@@ -896,10 +980,13 @@ int getProgramNameLen(msg_t *pM)
 	int iRet;
 
 	assert(pM != NULL);
+	MsgLock();
 	if((iRet = aquireProgramName(pM)) != RS_RET_OK) {
 		dprintf("error %d returned by aquireProgramName() in getProgramNameLen()\n", iRet);
+		MsgUnlock();
 		return 0; /* best we can do (consistent wiht what getProgramName() returns) */
 	}
+	MsgUnlock();
 
 	return (pM->pCSProgName == NULL) ? 0 : rsCStrLen(pM->pCSProgName);
 }
@@ -913,10 +1000,13 @@ char *getProgramName(msg_t *pM)
 	int iRet;
 
 	assert(pM != NULL);
+	MsgLock();
 	if((iRet = aquireProgramName(pM)) != RS_RET_OK) {
 		dprintf("error %d returned by aquireProgramName() in getProgramName()\n", iRet);
+		MsgUnlock();
 		return ""; /* best we can do */
 	}
+	MsgUnlock();
 
 	return (pM->pCSProgName == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSProgName);
 }
