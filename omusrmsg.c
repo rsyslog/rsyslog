@@ -48,7 +48,7 @@
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
-#include "omshell.h"
+#include "omusrmsg.h"
 
 
 jmp_buf ttybuf;
