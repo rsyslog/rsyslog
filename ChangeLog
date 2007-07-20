@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.17.1 (RGer), 2007-07-20
+Version 1.17.1 (rgerhards), 2007-07-20
 - fixed a bug that caused make install to install rsyslogd and rklogd under
   the wrong names
 - fixed bug that caused $AllowedSenders to handle IPv6 scopes incorrectly;
