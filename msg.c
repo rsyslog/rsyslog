@@ -36,7 +36,6 @@
 #include <ctype.h>
 #include "rsyslog.h"
 #include "syslogd.h"
-#include "template.h"
 #include "srUtils.h"
 #include "msg.h"
 

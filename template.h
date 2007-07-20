@@ -4,6 +4,9 @@
  * begun 2004-11-17 rgerhards
  */
 
+#ifndef	TEMPLATE_H_INCLUDED
+#define	TEMPLATE_H_INCLUDED 1
+
 #ifdef FEATURE_REGEXP
 /* Include regular expressions */
 #include <regex.h>
@@ -71,6 +74,7 @@ void tplDeleteNew(void);
 void tplPrintList(void);
 void tplLastStaticInit(struct template *tpl);
 
+#endif /* #ifndef TEMPLATE_H_INCLUDED */
 /*
  * vi:set ai:
  */

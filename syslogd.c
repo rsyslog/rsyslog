@@ -239,6 +239,7 @@
 #include "parse.h"
 #include "srUtils.h"
 #include "msg.h"
+#include "omshell.h"
 
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
@@ -5713,6 +5714,8 @@ void fprintlog(register selector_t *f)
 #endif
 
 	case F_SHELL: /* shell support by bkalkbrenner 2005-09-20 */
+		doActionShell(f, now);
+#if 0
 		/* TODO: using f->f_un.f_file.f_name is not clean from the point of
 		 * modularization. We'll change that as we go ahead with modularization.
 		 * rgerhards, 2007-07-20
@@ -5723,6 +5726,7 @@ void fprintlog(register selector_t *f)
 		psz = iovAsString(f);
 		if(execProg((uchar*) f->f_un.f_file.f_fname, 1, (uchar*) psz) == 0)
 			logerrorSz("Executing program '%s' failed", f->f_un.f_file.f_fname);
+#endif
 		break;
 
 	} /* switch */
@@ -9042,7 +9046,7 @@ int main(int argc, char **argv)
 		funix[i]  = -1;
 	}
 
-	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r::s:t:u:vwx")) != EOF)
+	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -9159,10 +9163,12 @@ int main(int argc, char **argv)
 		case 'x':		/* disable dns for remote messages */
 			DisableDNS = 1;
 			break;
-		case '?':
+		case '?':              
 		default:
 			usage();
 		}
+	}
+
 	if ((argc -= optind))
 		usage();
 
