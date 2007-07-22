@@ -7,6 +7,7 @@
 #ifndef	TEMPLATE_H_INCLUDED
 #define	TEMPLATE_H_INCLUDED 1
 
+
 #ifdef FEATURE_REGEXP
 /* Include regular expressions */
 #include <regex.h>
@@ -33,6 +34,8 @@ enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
 enum tplFormatTypes { tplFmtDefault = 0, tplFmtMySQLDate = 1,
 		      tplFmtRFC3164Date = 2, tplFmtRFC3339Date = 3 };
 enum tplFormatCaseConvTypes { tplCaseConvNo = 0, tplCaseConvUpper = 1, tplCaseConvLower = 2 };
+
+#include "msg.h"
 
 /* a specific parse entry */
 struct templateEntry {
@@ -73,6 +76,8 @@ void tplDeleteAll(void);
 void tplDeleteNew(void);
 void tplPrintList(void);
 void tplLastStaticInit(struct template *tpl);
+uchar *tplToString(struct template *pTpl, msg_t *pMsg);
+void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */
 /*

@@ -43,6 +43,7 @@
 #include "srUtils.h"
 #include "net.h"
 #include "omfwd.h"
+#include "template.h"
 #include "msg.h"
 #include "tcpsyslog.h"
 

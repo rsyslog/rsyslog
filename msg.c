@@ -37,6 +37,7 @@
 #include "rsyslog.h"
 #include "syslogd.h"
 #include "srUtils.h"
+#include "template.h"
 #include "msg.h"
 
 /* The following functions will support advanced output module
@@ -1128,6 +1129,512 @@ void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg)
 		memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg + 1);
 	else
 		dprintf("Could not allocate memory for pszRawMsg buffer.");
+}
+
+
+/* Decode a priority into textual information like auth.emerg.
+ * The variable pRes must point to a user-supplied buffer and
+ * pResLen must contain its size. The pointer to the buffer
+ * is also returned, what makes this functiona suitable for
+ * use in printf-like functions.
+ * Note: a buffer size of 20 characters is always sufficient.
+ * Interface to this function changed 2007-06-15 by RGerhards
+ */
+char *textpri(char *pRes, size_t pResLen, int pri)
+{
+	syslogCODE *c_pri, *c_fac;
+
+	assert(pRes != NULL);
+	assert(pResLen > 0);
+
+	for (c_fac = rs_facilitynames; c_fac->c_name && !(c_fac->c_val == LOG_FAC(pri)<<3); c_fac++);
+	for (c_pri = rs_prioritynames; c_pri->c_name && !(c_pri->c_val == LOG_PRI(pri)); c_pri++);
+
+	snprintf (pRes, pResLen, "%s.%s<%d>", c_fac->c_name, c_pri->c_name, pri);
+
+	return pRes;
+}
+
+
+/* This function returns the current date in different
+ * variants. It is used to construct the $NOW series of
+ * system properties. The returned buffer must be freed
+ * by the caller when no longer needed. If the function
+ * can not allocate memory, it returns a NULL pointer.
+ * Added 2007-07-10 rgerhards
+ */
+typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_MINUTE } eNOWType;
+#define tmpBUFSIZE 16	/* size of formatting buffer */
+static uchar *getNOW(eNOWType eNow)
+{
+	uchar *pBuf;
+	struct syslogTime t;
+
+	if((pBuf = (uchar*) malloc(sizeof(uchar) * tmpBUFSIZE)) == NULL) {
+		glblHadMemShortage = 1;
+		return NULL;
+	}
+
+	getCurrTime(&t);
+	switch(eNow) {
+	case NOW_NOW:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
+		break;
+	case NOW_YEAR:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d", t.year);
+		break;
+	case NOW_MONTH:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.month);
+		break;
+	case NOW_DAY:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.day);
+		break;
+	case NOW_HOUR:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour);
+		break;
+	case NOW_MINUTE:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute);
+		break;
+	}
+
+	return(pBuf);
+}
+#undef tmpBUFSIZE /* clean up */
+
+
+/* This function returns a string-representation of the 
+ * requested message property. This is a generic function used
+ * to abstract properties so that these can be easier
+ * queried. Returns NULL if property could not be found.
+ * Actually, this function is a big if..elseif. What it does
+ * is simply to map property names (from MonitorWare) to the
+ * message object data fields.
+ *
+ * In case we need string forms of propertis we do not
+ * yet have in string form, we do a memory allocation that
+ * is sufficiently large (in all cases). Once the string
+ * form has been obtained, it is saved until the Msg object
+ * is finally destroyed. This is so that we save the processing
+ * time in the (likely) case that this property is requested
+ * again. It also saves us a lot of dynamic memory management
+ * issues in the upper layers, because we so can guarantee that
+ * the buffer will remain static AND available during the lifetime
+ * of the object. Please note that both the max size allocation as
+ * well as keeping things in memory might like look like a 
+ * waste of memory (some might say it actually is...) - we
+ * deliberately accept this because performance is more important
+ * to us ;)
+ * rgerhards 2004-11-18
+ * Parameter "bMustBeFreed" is set by this function. It tells the
+ * caller whether or not the string returned must be freed by the
+ * caller itself. It is is 0, the caller MUST NOT free it. If it is
+ * 1, the caller MUST free 1. Handling this wrongly leads to either
+ * a memory leak of a program abort (do to double-frees or frees on
+ * the constant memory pool). So be careful to do it right.
+ * rgerhards 2004-11-23
+ * regular expression support contributed by Andres Riancho merged
+ * on 2005-09-13
+ * changed so that it now an be called without a template entry (NULL).
+ * In this case, only the (unmodified) property is returned. This will
+ * be used in selector line processing.
+ * rgerhards 2005-09-15
+ */
+char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
+                 rsCStrObj *pCSPropName, unsigned short *pbMustBeFreed)
+{
+	char *pName;
+	char *pRes; /* result pointer */
+	char *pBufStart;
+	char *pBuf;
+	int iLen;
+
+#ifdef	FEATURE_REGEXP
+	/* Variables necessary for regular expression matching */
+	size_t nmatch = 2;
+	regmatch_t pmatch[2];
+#endif
+
+	assert(pMsg != NULL);
+	assert(pbMustBeFreed != NULL);
+
+	if(pCSPropName == NULL) {
+		assert(pTpe != NULL);
+		pName = pTpe->data.field.pPropRepl;
+	} else {
+		pName = (char*) rsCStrGetSzStr(pCSPropName);
+	}
+	*pbMustBeFreed = 0;
+
+	/* sometimes there are aliases to the original MonitoWare
+	 * property names. These come after || in the ifs below. */
+	if(!strcmp(pName, "msg")) {
+		pRes = getMSG(pMsg);
+	} else if(!strcmp(pName, "rawmsg")) {
+		pRes = getRawMsg(pMsg);
+	} else if(!strcmp(pName, "UxTradMsg")) {
+		pRes = getUxTradMsg(pMsg);
+	} else if(!strcmp(pName, "FROMHOST")) {
+		pRes = getRcvFrom(pMsg);
+	} else if(!strcmp(pName, "source")
+		  || !strcmp(pName, "HOSTNAME")) {
+		pRes = getHOSTNAME(pMsg);
+	} else if(!strcmp(pName, "syslogtag")) {
+		pRes = getTAG(pMsg);
+	} else if(!strcmp(pName, "PRI")) {
+		pRes = getPRI(pMsg);
+	} else if(!strcmp(pName, "PRI-text")) {
+		pBuf = malloc(20 * sizeof(char));
+		if(pBuf == NULL) {
+			*pbMustBeFreed = 0;
+			return "**OUT OF MEMORY**";
+		} else {
+			*pbMustBeFreed = 1;
+			pRes = textpri(pBuf, 20, getPRIi(pMsg));
+		}
+	} else if(!strcmp(pName, "iut")) {
+		pRes = "1"; /* always 1 for syslog messages (a MonitorWare thing;)) */
+	} else if(!strcmp(pName, "syslogfacility")) {
+		pRes = getFacility(pMsg);
+	} else if(!strcmp(pName, "syslogfacility-text")) {
+		pRes = getFacilityStr(pMsg);
+	} else if(!strcmp(pName, "syslogseverity") || !strcmp(pName, "syslogpriority")) {
+		pRes = getSeverity(pMsg);
+	} else if(!strcmp(pName, "syslogseverity-text") || !strcmp(pName, "syslogpriority-text")) {
+		pRes = getSeverityStr(pMsg);
+	} else if(!strcmp(pName, "timegenerated")) {
+		pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
+	} else if(!strcmp(pName, "timereported")
+		  || !strcmp(pName, "TIMESTAMP")) {
+		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
+	} else if(!strcmp(pName, "programname")) {
+		pRes = getProgramName(pMsg);
+	} else if(!strcmp(pName, "PROTOCOL-VERSION")) {
+		pRes = getProtocolVersionString(pMsg);
+	} else if(!strcmp(pName, "STRUCTURED-DATA")) {
+		pRes = getStructuredData(pMsg);
+	} else if(!strcmp(pName, "APP-NAME")) {
+		pRes = getAPPNAME(pMsg);
+	} else if(!strcmp(pName, "PROCID")) {
+		pRes = getPROCID(pMsg);
+	} else if(!strcmp(pName, "MSGID")) {
+		pRes = getMSGID(pMsg);
+	/* here start system properties (those, that do not relate to the message itself */
+	} else if(!strcmp(pName, "$NOW")) {
+		if((pRes = (char*) getNOW(NOW_NOW)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$YEAR")) {
+		if((pRes = (char*) getNOW(NOW_YEAR)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$MONTH")) {
+		if((pRes = (char*) getNOW(NOW_MONTH)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$DAY")) {
+		if((pRes = (char*) getNOW(NOW_DAY)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$HOUR")) {
+		if((pRes = (char*) getNOW(NOW_HOUR)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp(pName, "$MINUTE")) {
+		if((pRes = (char*) getNOW(NOW_MINUTE)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else {
+		/* there is no point in continuing, we may even otherwise render the
+		 * error message unreadable. rgerhards, 2007-07-10
+		 */
+		return "**INVALID PROPERTY NAME**";
+	}
+
+	/* If we did not receive a template pointer, we are already done... */
+	if(pTpe == NULL) {
+		return pRes;
+	}
+	
+	/* Now check if we need to make "temporary" transformations (these
+	 * are transformations that do not go back into the message -
+	 * memory must be allocated for them!).
+	 */
+	
+	/* substring extraction */
+	/* first we check if we need to extract by field number
+	 * rgerhards, 2005-12-22
+	 */
+	if(pTpe->data.field.has_fields == 1) {
+		size_t iCurrFld;
+		char *pFld;
+		char *pFldEnd;
+		/* first, skip to the field in question. The field separator
+		 * is always one character and is stored in the template entry.
+		 */
+		iCurrFld = 1;
+		pFld = pRes;
+		while(*pFld && iCurrFld < pTpe->data.field.iToPos) {
+			/* skip fields until the requested field or end of string is found */
+			while(*pFld && (uchar) *pFld != pTpe->data.field.field_delim)
+				++pFld; /* skip to field terminator */
+			if(*pFld == pTpe->data.field.field_delim) {
+				++pFld; /* eat it */
+				++iCurrFld;
+			}
+		}
+		dprintf("field requested %d, field found %d\n", pTpe->data.field.iToPos, iCurrFld);
+		
+		if(iCurrFld == pTpe->data.field.iToPos) {
+			/* field found, now extract it */
+			/* first of all, we need to find the end */
+			pFldEnd = pFld;
+			while(*pFldEnd && *pFldEnd != pTpe->data.field.field_delim)
+				++pFldEnd;
+			--pFldEnd; /* we are already at the delimiter - so we need to
+			            * step back a little not to copy it as part of the field. */
+			/* we got our end pointer, now do the copy */
+			/* TODO: code copied from below, this is a candidate for a separate function */
+			iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
+			pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
+			if(pBuf == NULL) {
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				*pbMustBeFreed = 0;
+				return "**OUT OF MEMORY**";
+			}
+			/* now copy */
+			memcpy(pBuf, pFld, iLen);
+			pBuf[iLen] = '\0'; /* terminate it */
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = pBufStart;
+			*pbMustBeFreed = 1;
+			if(*(pFldEnd+1) != '\0')
+				++pFldEnd; /* OK, skip again over delimiter char */
+		} else {
+			/* field not found, return error */
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			*pbMustBeFreed = 0;
+			return "**FIELD NOT FOUND**";
+		}
+	} else if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
+		/* we need to obtain a private copy */
+		int iFrom, iTo;
+		iFrom = pTpe->data.field.iFromPos;
+		iTo = pTpe->data.field.iToPos;
+		/* need to zero-base to and from (they are 1-based!) */
+		if(iFrom > 0)
+			--iFrom;
+		if(iTo > 0)
+			--iTo;
+		iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
+		pBufStart = pBuf = malloc((iLen + 1) * sizeof(char));
+		if(pBuf == NULL) {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			*pbMustBeFreed = 0;
+			return "**OUT OF MEMORY**";
+		}
+		if(iFrom) {
+		/* skip to the start of the substring (can't do pointer arithmetic
+		 * because the whole string might be smaller!!)
+		 */
+		//	++iFrom; /* nbr of chars to skip! */
+			while(*pRes && iFrom) {
+				--iFrom;
+				++pRes;
+			}
+		}
+		/* OK, we are at the begin - now let's copy... */
+		while(*pRes && iLen) {
+			*pBuf++ = *pRes;
+			++pRes;
+			--iLen;
+		}
+		*pBuf = '\0';
+		if(*pbMustBeFreed == 1)
+			free(pRes);
+		pRes = pBufStart;
+		*pbMustBeFreed = 1;
+#ifdef FEATURE_REGEXP
+	} else {
+		/* Check for regular expressions */
+		if (pTpe->data.field.has_regex != 0) {
+			if (pTpe->data.field.has_regex == 2)
+				/* Could not compile regex before! */
+				return
+				    "**NO MATCH** **BAD REGULAR EXPRESSION**";
+
+			dprintf("debug: String to match for regex is: %s\n",
+			        pRes);
+
+			if (0 != regexec(&pTpe->data.field.re, pRes, nmatch,
+				    pmatch, 0)) {
+				/* we got no match! */
+				return "**NO MATCH**";
+			} else {
+				/* Match! */
+				/* I need to malloc pB */
+				int iLenBuf;
+				char *pB;
+
+				iLenBuf = pmatch[1].rm_eo - pmatch[1].rm_so;
+				pB = (char *) malloc((iLenBuf + 1) * sizeof(char));
+
+				if (pB == NULL) {
+					if (*pbMustBeFreed == 1)
+						free(pRes);
+					*pbMustBeFreed = 0;
+					return "**OUT OF MEMORY ALLOCATING pBuf**";
+				}
+
+				/* Lets copy the matched substring to the buffer */
+				memcpy(pB, pRes + pmatch[1].rm_so, iLenBuf);
+				pB[iLenBuf] = '\0';/* terminate string, did not happen before */
+
+				if (*pbMustBeFreed == 1)
+					free(pRes);
+				pRes = pB;
+				*pbMustBeFreed = 1;
+			}
+		}
+#endif /* #ifdef FEATURE_REGEXP */
+	}
+
+	/* case conversations (should go after substring, because so we are able to
+	 * work on the smallest possible buffer).
+	 */
+	if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
+		/* we need to obtain a private copy */
+		int iBufLen = strlen(pRes);
+		char *pBStart;
+		char *pB;
+		pBStart = pB = malloc((iBufLen + 1) * sizeof(char));
+		if(pB == NULL) {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			*pbMustBeFreed = 0;
+			return "**OUT OF MEMORY**";
+		}
+		while(*pRes) {
+			*pB++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
+			          toupper(*pRes) : tolower(*pRes);
+				  /* currently only these two exist */
+			++pRes;
+		}
+		*pB = '\0';
+		if(*pbMustBeFreed == 1)
+			free(pRes);
+		pRes = pBStart;
+		*pbMustBeFreed = 1;
+	}
+
+	/* now do control character dropping/escaping/replacement
+	 * Only one of these can be used. If multiple options are given, the
+	 * result is random (though currently there obviously is an order of
+	 * preferrence, see code below. But this is NOT guaranteed.
+	 * RGerhards, 2006-11-17
+	 */
+	if(pTpe->data.field.options.bDropCC) {
+		char *pSrc = pRes;
+		char *pDst = pRes;
+
+		while(*pSrc) {
+			if(!iscntrl((int) *pSrc))
+				*pDst++ = *pSrc;
+			++pSrc;
+		}
+		*pDst = '\0';
+	} else if(pTpe->data.field.options.bSpaceCC) {
+		char *pB = pRes;
+		while(*pB) {
+			if(iscntrl((int) *pB))
+				*pB = ' ';
+			++pB;
+		}
+	} else if(pTpe->data.field.options.bEscapeCC) {
+		/* we must first count how many control charactes are
+		 * present, because we need this to compute the new string
+		 * buffer length. While doing so, we also compute the string
+		 * length.
+		 */
+		int iNumCC = 0;
+		int iLenBuf = 0;
+		char *pB;
+
+		for(pB = pRes ; *pB ; ++pB) {
+			++iLenBuf;
+			if(iscntrl((int) *pB))
+				++iNumCC;
+		}
+
+		if(iNumCC > 0) { /* if 0, there is nothing to escape, so we are done */
+			/* OK, let's do the escaping... */
+			char *pBStart;
+			char szCCEsc[8]; /* buffer for escape sequence */
+			int i;
+
+			iLenBuf += iNumCC * 4;
+			pBStart = pB = malloc((iLenBuf + 1) * sizeof(char));
+			if(pB == NULL) {
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				*pbMustBeFreed = 0;
+				return "**OUT OF MEMORY**";
+			}
+			while(*pRes) {
+				if(iscntrl((int) *pRes)) {
+					snprintf(szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
+					for(i = 0 ; i < 4 ; ++i)
+						*pB++ = szCCEsc[i];
+				} else {
+					*pB++ = *pRes;
+				}
+				++pRes;
+			}
+			*pB = '\0';
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = pBStart;
+			*pbMustBeFreed = 1;
+		}
+	}
+
+	/* Now drop last LF if present (pls note that this must not be done
+	 * if bEscapeCC was set!
+	 */
+	if(pTpe->data.field.options.bDropLastLF && !pTpe->data.field.options.bEscapeCC) {
+		int iLn = strlen(pRes);
+		char *pB;
+		if(*(pRes + iLn - 1) == '\n') {
+			/* we have a LF! */
+			/* check if we need to obtain a private copy */
+			if(pbMustBeFreed == 0) {
+				/* ok, original copy, need a private one */
+				pB = malloc((iLn + 1) * sizeof(char));
+				if(pB == NULL) {
+					if(*pbMustBeFreed == 1)
+						free(pRes);
+					*pbMustBeFreed = 0;
+					return "**OUT OF MEMORY**";
+				}
+				memcpy(pB, pRes, iLn - 1);
+				pRes = pB;
+				*pbMustBeFreed = 1;
+			}
+			*(pRes + iLn - 1) = '\0'; /* drop LF ;) */
+		}
+	}
+
+	/*dprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
+	return(pRes);
 }
 
 

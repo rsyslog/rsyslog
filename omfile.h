@@ -1,7 +1,7 @@
-/* omshell.c
- * These are the definitions for the build-in shell output module.
+/* omfile.h
+ * These are the definitions for the build-in file output module.
  *
- * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
+ * File begun on 2007-07-21 by RGerhards (extracted from syslogd.c)
  *
  * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
  *
@@ -21,14 +21,15 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-#ifndef	ACTSHELL_H_INCLUDED
-#define	ACTSHELL_H_INCLUDED 1
+#ifndef	OMFILE_H_INCLUDED
+#define	OMFILE_H_INCLUDED 1
 
 /* prototypes */
 
-int doActionShell(selector_t *f);
+int doActionFile(selector_t *f);
+int freeInstanceFile(selector_t *f);
 
-#endif /* #ifndef ACTSHELL_H_INCLUDED */
+#endif /* #ifndef OMFILE_H_INCLUDED */
 /*
  * vi:set ai:
  */

@@ -16,12 +16,223 @@
 #include <assert.h>
 #include "rsyslog.h"
 #include "stringbuf.h"
+#include "syslogd-types.h"
 #include "template.h"
+#include "msg.h"
 #include "syslogd.h"
 
 static struct template *tplRoot = NULL;	/* the root of the template list */
 static struct template *tplLast = NULL;	/* points to the last element of the template list */
 static struct template *tplLastStatic = NULL; /* last static element of the template list */
+
+/* This functions converts a template into a string. It should
+ * actually be in template.c, but this requires larger re-structuring
+ * of the code (because all the property-access functions are static
+ * to this module). I have placed it next to the iov*() functions, as
+ * it is somewhat similiar in what it does.
+ *
+ * The function takes a pointer to a template and a pointer to a msg object.
+ * It the creates a string based on the template definition. A pointer
+ * to that string is returned to the caller. The caller MUST FREE that
+ * pointer when it is no longer needed. If the function fails, NULL
+ * is returned.
+ * If memory allocation fails in this function, we silently return
+ * NULL. The reason is that we can not do anything against it. And
+ * if we raise an alert, the memory situation might become even
+ * worse. So we prefer to let the caller deal with it.
+ * rgerhards, 2007-07-03
+ */
+uchar *tplToString(struct template *pTpl, msg_t *pMsg)
+{
+	struct templateEntry *pTpe;
+	rsCStrObj *pCStr;
+	unsigned short bMustBeFreed;
+	char *pVal;
+	size_t iLenVal;
+	rsRetVal iRet;
+
+	assert(pTpl != NULL);
+	assert(pMsg != NULL);
+
+	/* loop through the template. We obtain one value
+	 * and copy it over to our dynamic string buffer. Then, we
+	 * free the obtained value (if requested). We continue this
+	 * loop until we got hold of all values.
+	 */
+	if((pCStr = rsCStrConstruct()) == NULL) {
+		dprintf("memory shortage, tplToString failed\n");
+		return NULL;
+	}
+
+	pTpe = pTpl->pEntryRoot;
+	while(pTpe != NULL) {
+		if(pTpe->eEntryType == CONSTANT) {
+			if((iRet = rsCStrAppendStrWithLen(pCStr, 
+							  (uchar *) pTpe->data.constant.pConstant,
+							  pTpe->data.constant.iLenConstant)
+							 ) != RS_RET_OK) {
+				dprintf("error %d during tplToString()\n", iRet);
+				/* it does not make sense to continue now */
+				rsCStrDestruct(pCStr);
+				return NULL;
+			}
+		} else 	if(pTpe->eEntryType == FIELD) {
+			pVal = (char*) MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
+			iLenVal = strlen(pVal);
+			/* we now need to check if we should use SQL option. In this case,
+			 * we must go over the generated string and escape '\'' characters.
+			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
+			 * but they are handled in this way because of legacy (don't break any
+			 * existing thing).
+			 */
+			if(pTpl->optFormatForSQL == 1)
+				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 1);
+			else if(pTpl->optFormatForSQL == 2)
+				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
+			/* value extracted, so lets copy */
+			if((iRet = rsCStrAppendStrWithLen(pCStr, (uchar*) pVal, iLenVal)) != RS_RET_OK) {
+				dprintf("error %d during tplToString()\n", iRet);
+				/* it does not make sense to continue now */
+				rsCStrDestruct(pCStr);
+				if(bMustBeFreed)
+					free(pVal);
+				return NULL;
+			}
+			if(bMustBeFreed)
+				free(pVal);
+		}
+		pTpe = pTpe->pNext;
+	}
+
+	/* we are done with the template, now let's convert the result into a
+	 * "real" (usable) string and discard the helper structures.
+	 */
+	rsCStrFinish(pCStr);
+	return rsCStrConvSzStrAndDestruct(pCStr);
+}
+
+/* Helper to doSQLEscape. This is called if doSQLEscape
+ * runs out of memory allocating the escaped string.
+ * Then we are in trouble. We can
+ * NOT simply return the unmodified string because this
+ * may cause SQL injection. But we also can not simply
+ * abort the run, this would be a DoS. I think an appropriate
+ * measure is to remove the dangerous \' characters. We
+ * replace them by \", which will break the message and
+ * signatures eventually present - but this is the
+ * best thing we can do now (or does anybody 
+ * have a better idea?). rgerhards 2004-11-23
+ * added support for "escapeMode" (so doSQLEscape for details).
+ * if mode = 1, then backslashes are changed to slashes.
+ * rgerhards 2005-09-22
+ */
+static void doSQLEmergencyEscape(register char *p, int escapeMode)
+{
+	while(*p) {
+		if(*p == '\'')
+			*p = '"';
+		else if((escapeMode == 1) && (*p == '\\'))
+			*p = '/';
+		++p;
+	}
+}
+
+
+/* SQL-Escape a string. Single quotes are found and
+ * replaced by two of them. A new buffer is allocated
+ * for the provided string and the provided buffer is
+ * freed. The length is updated. Parameter pbMustBeFreed
+ * is set to 1 if a new buffer is allocated. Otherwise,
+ * it is left untouched.
+ * --
+ * We just discovered a security issue. MySQL is so
+ * "smart" to not only support the standard SQL mechanism
+ * for escaping quotes, but to also provide its own (using
+ * c-type syntax with backslashes). As such, it is actually
+ * possible to do sql injection via rsyslogd. The cure is now
+ * to escape backslashes, too. As we have found on the web, some
+ * other databases seem to be similar "smart" (why do we have standards
+ * at all if they are violated without any need???). Even better, MySQL's
+ * smartness depends on config settings. So we add a new option to this
+ * function that allows the caller to select if they want to standard or
+ * "smart" encoding ;)
+ * new parameter escapeMode is 0 - standard sql, 1 - "smart" engines
+ * 2005-09-22 rgerhards
+ */
+void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode)
+{
+	char *p;
+	int iLen;
+	rsCStrObj *pStrB;
+	uchar *pszGenerated;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pLen != NULL);
+	assert(pbMustBeFreed != NULL);
+
+	/* first check if we need to do anything at all... */
+	if(escapeMode == 0)
+		for(p = *pp ; *p && *p != '\'' ; ++p)
+			;
+	else
+		for(p = *pp ; *p && *p != '\'' && *p != '\\' ; ++p)
+			;
+	/* when we get out of the loop, we are either at the
+	 * string terminator or the first \'. */
+	if(*p == '\0')
+		return; /* nothing to do in this case! */
+
+	p = *pp;
+	iLen = *pLen;
+	if((pStrB = rsCStrConstruct()) == NULL) {
+		/* oops - no mem ... Do emergency... */
+		doSQLEmergencyEscape(p, escapeMode);
+		return;
+	}
+	
+	while(*p) {
+		if(*p == '\'') {
+			if(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\') != RS_RET_OK) {
+				doSQLEmergencyEscape(*pp, escapeMode);
+				rsCStrFinish(pStrB);
+				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) != NULL)
+					free(pszGenerated);
+				return;
+				}
+			iLen++;	/* reflect the extra character */
+		} else if((escapeMode == 1) && (*p == '\\')) {
+			if(rsCStrAppendChar(pStrB, '\\') != RS_RET_OK) {
+				doSQLEmergencyEscape(*pp, escapeMode);
+				rsCStrFinish(pStrB);
+				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) != NULL)
+					free(pszGenerated);
+				return;
+				}
+			iLen++;	/* reflect the extra character */
+		}
+		if(rsCStrAppendChar(pStrB, *p) != RS_RET_OK) {
+			doSQLEmergencyEscape(*pp, escapeMode);
+			rsCStrFinish(pStrB);
+			if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) != NULL) 
+				free(pszGenerated);
+			return;
+		}
+		++p;
+	}
+	rsCStrFinish(pStrB);
+	if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) == NULL) {
+		doSQLEmergencyEscape(*pp, escapeMode);
+		return;
+	}
+
+	if(*pbMustBeFreed)
+		free(*pp); /* discard previous value */
+
+	*pp = (char*) pszGenerated;
+	*pLen = iLen;
+	*pbMustBeFreed = 1;
+}
 
 /* Constructs a template entry object. Returns pointer to it
  * or NULL (if it fails). Pointer to associated template list entry 

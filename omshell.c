@@ -43,7 +43,7 @@
 /* call the shell action
  * returns 0 if it succeeds, something else otherwise
  */
-int doActionShell(selector_t *f, time_t now)
+int doActionShell(selector_t *f)
 {
 	uchar *psz;
 

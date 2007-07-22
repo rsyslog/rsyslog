@@ -145,6 +145,9 @@ void MsgSetMSG(msg_t *pMsg, char* pszMSG);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg);
 void moveHOSTNAMEtoTAG(msg_t *pM);
 char *getMSGID(msg_t *pM);
+char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
+                 rsCStrObj *pCSPropName, unsigned short *pbMustBeFreed);
+char *textpri(char *pRes, size_t pResLen, int pri);
 
 #endif /* #ifndef MSG_H_INCLUDED */
 /*
