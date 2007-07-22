@@ -24,11 +24,15 @@
  */
 #ifndef	SYSLOGD_TYPES_INCLUDED
 #define	SYSLOGD_TYPES_INCLUDED 1
-
 #include "config.h"  /* make sure we have autoconf macros */
+
 #include "stringbuf.h"
+#include "net.h"
 #include <sys/param.h>
 #include <sys/syslog.h>
+
+#define FALSE 0
+#define TRUE 1
 
 #ifdef UT_NAMESIZE
 # define UNAMESZ	UT_NAMESIZE	/* length of a login name */
@@ -284,6 +288,14 @@ typedef struct moduleInfo {
 		};
 	} mod;
 } modInfo_t;
+
+#ifdef SYSLOG_INET
+struct AllowedSenders {
+	struct NetAddr allowedSender; /* ip address allowed */
+	uint8_t SignificantBits;      /* defines how many bits should be discarded (eqiv to mask) */
+	struct AllowedSenders *pNext;
+};
+#endif
 
 #endif /* #ifndef SYSLOGD_TYPES_INCLUDED */
 /*
