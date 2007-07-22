@@ -211,6 +211,12 @@ will not be applied to configuration lines following the $ResetConfigVariables.
 This is a good method to make sure no side-effects exists from previous 
 directives. This directive has no parameters.</p>
 <p><code><b>$ResetConfigVariables</b></code></p>
+<h2>ModLoad</h2>
+<p>This currently is a dummy directive. It will support the loading of plug-ins 
+in future releases of rsyslog supporting plug-ins. Currently, only</p>
+<p><code><b>$ModLoad MySQL</b></code></p>
+<p>is supported, which activates MySQL support (if rsyslog is compiled with 
+MySQL functionality).</p>
 <h2>Templates</h2>
 <p>Templates are a key feature of rsyslog. They allow to specify any format a user 
 might want. They are also used for dynamic file name generation. Every output in rsyslog uses templates - this holds true for files, 
@@ -293,8 +299,9 @@ you can define the following template:</p>
 <p>This template can then be used when defining an output selector line. It will 
 result in something like &quot;/var/log/system-localhost.log&quot;</p>
 <h2>Output Channels</h2>
-<p>Output Channels are a new concept first introduced in rsyslog 0.9.0. As of this 
-writing, it is still unclear if they will stay in rsyslog or go away. So if you 
+<p>Output Channels are a new concept first introduced in rsyslog 0.9.0. <b>As of this 
+writing, it is most likely that they will be replaced by something different in 
+the future.</b> So if you 
 use them, be prepared to change you configuration file syntax when you upgrade 
 to a later release.<br>
 <br>
@@ -319,7 +326,9 @@ $outchannel name,file-name,max-size,action-on-max-size<br>
 <br>
 name is the name of the output channel (not the file), file-name is the file 
 name to be written to, max-size the maximum allowed size and action-on-max-size 
-a command to be issued when the max size is reached.<br>
+a command to be issued when the max size is reached. This command always has 
+exactly one parameter. The binary is that part of action-on-max-size before the 
+first space, its parameter is everything behind that space.<br>
 <br>
 Please note that max-size is queried BEFORE writing the log message to the file. 
 So be sure to set this limit reasonably low so that any message might fit. For 
@@ -338,14 +347,6 @@ an output file. To do so, specify a maximum size. When this size is reachead,
 rsyslogd will execute the action-on-max-size command and then reopen the file 
 and retry. The command should be something like a log rotation script or a 
 similar thing.</p>
-<blockquote>
-	<p><b>WARNING</b>
-	<p>The current command logic is a quick hack. It simply issues the command via a 
-system() call, which is very dirty. Don't make rsyslogd a suid
-binary and use action-on-max-size commands - this will mess up things. Fixing 
-this is on top of the todo list and the fix will hopefully
-appear soon.</p>
-</blockquote>
 <p>If there is no action-on-max-size command or the command did not resolve the 
 situation, the file is closed and never reopened by rsyslogd (except, of course, 
 by huping it). This logic was integrated when we first experienced severe issues 
@@ -682,10 +683,18 @@ The database writer is called by specifying a greater-then sign (&quot;&gt;&quot
 of the database connect information. Immediately after that<br>
 sign the database host name must be given, a comma, the database name, another 
 comma, the database user, a comma and then the user's password. If a specific 
-template is to be used, a semicolong followed by the template name can follow 
+template is to be used, a semicolon followed by the template name can follow 
 the connect information. This is as follows:<br>
 <br>
 &gt;dbhost,dbname,dbuser,dbpassword;dbtemplate</p>
+<p><b>Important: to use the database functionality, MySQL must be enabled in the 
+config file</b> BEFORE the first database table action is used. This is done by 
+placing the</p>
+<p><code><b>$ModLoad MySQL</b></code></p>
+<p>directive some place above the first use of the database write (we recommend 
+doing at the the begining of the config file). <b>Please note that rsyslog must 
+also have been built with MySQL support</b> (many packages do not do this by 
+default).</p>
 <h3>Discard</h3>
 <p>If the discard action is carried out, the received message is immediately 
 discarded. No further processing of it occurs. Discard has primarily been added 
@@ -709,11 +718,12 @@ Output channel actions must start with a $-sign, e.g. if you would like to bind
 your output channel definition &quot;mychannel&quot; to the action, use &quot;$mychannel&quot;. 
 Output channels support template definitions like all all other actions.</p>
 <h3>Shell Execute</h3>
-<p>This executes a program in a subshell. The programm is passed the 
+<p>This executes a program in a subshell. The program is passed the 
 template-generated message as the only command line parameter. Rsyslog waits 
 until the program terminates and only then continues to run.</p>
-<p>^programm-to-execute;template</p>
-<p>The program-to-execute can be any valid executable.</p>
+<p>^program-to-execute;template</p>
+<p>The program-to-execute can be any valid executable. It receives the template 
+string as a single parameter (argv[1]).</p>
 <p><b>WARNING:</b> The Shell Execute action was added to serve an urgent need. 
 While it is considered reasonable save when used with some thinking, its 
 implications must be considered. The current implementation uses a system() call 
@@ -721,14 +731,14 @@ to execute the command. This is not the best way to do it (and will hopefully
 changed in further releases). Also, proper escaping of special characters is 
 done to prevent command injection. However, attackers always find smart ways to 
 circumvent escaping, so we can not say if the escaping applied will really safe 
-you from all hassles. Lastely, rsyslog will wait until the shell command 
+you from all hassles. Lastly, rsyslog will wait until the shell command 
 terminates. Thus, a program error in it (e.g. an infinite loop) can actually 
 disable rsyslog. Even without that, during the programs run-time no messages are 
 processed by rsyslog. As the IP stacks buffers are quickly overflowed, this 
 bears an increased risk of message loss. You must be aware of these implications. 
 Even though they are severe, there are several cases where the &quot;shell execute&quot; 
 action is very useful. This is the reason why we have included it in its current 
-form. To mitigate its risks, always a) test your program thouroughly, b) make 
+form. To mitigate its risks, always a) test your program thoroughly, b) make 
 sure its runtime is as short as possible (if it requires a longer run-time, you 
 might want to spawn your own sub-shell asynchronously), c) apply proper 
 firewalling so that only known senders can send syslog messages to rsyslog. 
@@ -737,7 +747,7 @@ chances are much higher that an attacker might try to exploit the &quot;shell ex
 action.</p>
 <h2>TEMPLATE NAME</h2>
 <p>Every ACTION can be followed by a template name. If so, that template is used 
-for message formatting. If no name is given, a hardcoded default template is 
+for message formatting. If no name is given, a hard-coded default template is 
 used for the action. There can only be one template name for each given action. 
 The default template is specific to each action. For a description of what a 
 template is and what you can do with it, see &quot;TEMPLATES&quot; at the top of this 
