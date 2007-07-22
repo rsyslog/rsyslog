@@ -359,6 +359,7 @@ static char	*ConfFile = _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 static char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
 
+static int bModMySQLLoaded = 0; /* was a $ModLoad MySQL done? */
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
 static int debugging_on = 0; /* read-only, except on sig USR1 */
@@ -4873,6 +4874,36 @@ static void doBinaryOptionLine(uchar **pp, int *pVal)
 }
 
 
+/* process a $ModLoad config line.
+ * As of now, it is a dummy, that will later evolve into the
+ * loader for plug-ins.
+ * rgerhards, 2007-07-21
+ */
+static void doModLoad(uchar **pp)
+{
+	uchar szName[512];
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
+		logerror("could not extract group name");
+		return;
+	}
+
+	dprintf("Requested to load module '%s'\n", szName);
+
+	if(!strcmp((char*)szName, "MySQL")) {
+		bModMySQLLoaded = 1;
+	} else {
+		logerrorSz("$ModLoad with invalid module name '%s' - currently 'MySQL' only supported",
+			   (char*) szName);
+	}
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+}
+
+
 /* extract a groupname and return its gid.
  * rgerhards, 2007-07-17
  */
@@ -5146,6 +5177,8 @@ void cfsysline(uchar *p)
 		doBinaryOptionLine(&p, &bFailOnChown);
 	} else if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
 		resetConfigVariables();
+	} else if(!strcasecmp((char*) szCmd, "modload")) { 
+		doModLoad(&p);
 	} else { /* invalid command! */
 		char err[100];
 		snprintf(err, sizeof(err)/sizeof(char),
@@ -6517,6 +6550,9 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			 * if no DB is selected and > is used, an error
 			 * message is logged.
 			 */
+		if(bModMySQLLoaded == 0)
+			logerror("To enable MySQL logging, a \"$ModLoad MySQL\" must be done - accepted for "
+		        	 "the time being, but will fail in future releases.");
 #ifndef	WITH_DB
 		f->f_type = F_UNUSED;
 		errno = 0;
