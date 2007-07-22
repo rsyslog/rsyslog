@@ -52,7 +52,6 @@ int doActionShell(selector_t *f, time_t now)
 	 * modularization. We'll change that as we go ahead with modularization.
 	 * rgerhards, 2007-07-20
 	 */
-	f->f_time = now; /* TODO: find out, if we can not simply replace this with time(NULL) */
 	dprintf("\n");
 	iovCreate(f);
 	psz = (uchar*) iovAsString(f);

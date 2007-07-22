@@ -207,7 +207,6 @@ int doActionUsrMsg(selector_t *f, time_t now)
 {
 	assert(f != NULL);
 
-	f->f_time = now;
 	dprintf("\n");
 	wallmsg(f);
 	return 0;

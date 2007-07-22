@@ -4370,7 +4370,7 @@ void fprintlog(register selector_t *f)
 	case F_TTY:
 	case F_FILE:
 	case F_PIPE:
-		dprintf(" (%s)\n", f->f_un.f_file.f_fname);
+		printf(" (%s)\n", f->f_un.f_file.f_fname);
 		f->f_time = now; /* we need this for message repeation processing */
 		/* f->f_file == -1 is an indicator that the we couldn't
 		 * open the file at startup. For dynaFiles, this is ok,
@@ -4382,16 +4382,19 @@ void fprintlog(register selector_t *f)
 
 	case F_USERS:
 	case F_WALL:
+		f->f_time = now;
 		doActionUsrMsg(f, now);
 		break;
 
 #ifdef	WITH_DB
 	case F_MYSQL:
+		f->f_time = now;
 		doActionMySQL(f, now);
 		break;
 #endif
 
 	case F_SHELL: /* shell support by bkalkbrenner 2005-09-20 */
+		f->f_time = now;
 		doActionShell(f, now);
 		break;
 

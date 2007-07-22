@@ -263,7 +263,6 @@ int doActionMySQL(selector_t *f, time_t now)
 {
 	assert(f != NULL);
 
-	f->f_time = now;
 	dprintf("\n");
 	writeMySQL(f);
 	return 0;
