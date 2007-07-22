@@ -26,7 +26,7 @@
 
 /* prototypes */
 
-int doActionUsrMsg(selector_t *f, time_t now);
+int doActionUsrMsg(selector_t *f);
 
 #endif /* #ifndef OMUSRMSG_H_INCLUDED */
 /*

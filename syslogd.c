@@ -4383,7 +4383,7 @@ void fprintlog(register selector_t *f)
 	case F_USERS:
 	case F_WALL:
 		f->f_time = now;
-		doActionUsrMsg(f, now);
+		doActionUsrMsg(f);
 		break;
 
 #ifdef	WITH_DB

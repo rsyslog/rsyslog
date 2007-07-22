@@ -203,7 +203,7 @@ static void wallmsg(register selector_t *f)
 /* call the shell action
  * returns 0 if it succeeds, something else otherwise
  */
-int doActionUsrMsg(selector_t *f, time_t now)
+int doActionUsrMsg(selector_t *f)
 {
 	assert(f != NULL);
 
