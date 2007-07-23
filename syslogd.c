@@ -2349,7 +2349,7 @@ static void processMsg(msg_t *pMsg)
 				MsgDestruct(pMsg);
 				(void) close(f->f_file);
 				f->f_file = -1;
-			}
+			}                        
 		}
 		return; /* we are done with emergency loging */
 	}
@@ -3544,10 +3544,16 @@ static void die(int sig)
 	 * easier.
 	 */
 	tplDeleteAll();
+
 	if(consfile.f_iov != NULL)
 		free(consfile.f_iov);
 	if(consfile.f_bMustBeFreed != NULL)
 		free(consfile.f_bMustBeFreed);
+
+	if(emergfile.f_iov != NULL)
+		free(emergfile.f_iov);
+	if(emergfile.f_bMustBeFreed != NULL)
+		free(emergfile.f_bMustBeFreed);
 
 #ifndef TESTING
 	remove_pid(PidFile);
@@ -4948,7 +4954,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
 		           (char*) rsCStrGetSzStr(pCSCompOp));
 	}
-	RSFREEOBJ(pCSCompOp); /* no longer needed */
+	rsCStrDestruct (pCSCompOp); /* no longer needed */
 
 	/* read compare value */
 	iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
