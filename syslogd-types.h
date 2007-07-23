@@ -30,6 +30,7 @@
 #include "net.h"
 #include <sys/param.h>
 #include <sys/syslog.h>
+#include <utmp.h>	/* TOODO: this goes away when struct filed has been relieved of UT_NAMESIZE */
 
 #define FALSE 0
 #define TRUE 1
@@ -240,56 +241,6 @@ struct filed {
 };
 typedef struct filed selector_t;	/* new type name */
 
-
-/* The following definitions are to be used for modularization. Currently,
- * the code is NOT actually used. I am just adding pieces to it as I
- * go along in designing the interface.
- * rgerhards, 2007-07-19
- */
-typedef enum eModType_ {
-	eMOD_IN,	/* input module */
-	eMOD_OUT,	/* output module */
-	eMOD_FILTER	/* filter module (not know yet if we will once have such at all...) */
-} eModType_t;
-
-/* how is this module linked? */
-typedef enum eModLinkType_ {
-	eMOD_LINK_STATIC,
-	eMOD_LINK_DYNAMIC_UNLOADED,	/* dynalink module, currently not loaded */
-	eMOD_LINK_DYNAMIC_LOADED	/* dynalink module, currently loaded */
-} eModLinkType_t;
-
-typedef struct moduleInfo {
-	struct moduleInfo *pNext;	/* support for creating a linked module list */
-	int		iModVers;	/* Interface version of module */
-	eModType_t	eModType;	/* type of this module */
-	eModLinkType_t	eModLinkType;
-	uchar*		pszModName;	/* printable module name, e.g. for dprintf */
-	/* functions supported by all types of modules */
-	rsRetVal (*modInit)();		/* initialize the module */
-		/* be sure to support version handshake! */
-	rsRetVal (*modExit)();		/* called before termination or module unload */
-	/* below: parse a configuration line - return if processed
-	 * or not. If not, must be parsed to next module.
-	 */
-	rsRetVal (*parseConfigLine)(uchar **pConfLine);
-	/* below: create an instance of this module. Most importantly the module
-	 * can allocate instance memory in this call.
-	 */
-	rsRetVal (*createInstance)();
-	union	{
-		struct {/* data for input modules */
-			/* input modules come after output modules are finished, I am
-			 * currently not really thinking about them. rgerhards, 2007-07-19
-			 */
-		};
-		struct {/* data for output modules */
-			/* below: perform the configured action
-			 */
-			rsRetVal (*doAction)();
-		};
-	} mod;
-} modInfo_t;
 
 #ifdef SYSLOG_INET
 struct AllowedSenders {

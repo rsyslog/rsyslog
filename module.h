@@ -1,4 +1,3 @@
-
 /* Module definitions for klogd's module support */
 struct kernel_sym
 {

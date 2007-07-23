@@ -27,6 +27,7 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
+#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -44,10 +45,10 @@
 #else
 #include <sys/msgbuf.h>
 #endif
-#include "rsyslog.h"
-#include "syslogd.h"
-#include "syslogd-types.h"
 #include "srUtils.h"
+#include "stringbuf.h"
+#include "syslogd-types.h"
+#include "syslogd.h"
 #include "omusrmsg.h"
 
 
@@ -104,7 +105,7 @@ void endutent(void)
  *	Adjust the size of a variable to prevent a buffer overflow
  *	should _PATH_DEV ever contain something different than "/dev/".
  */
-static void wallmsg(register selector_t *f)
+static void wallmsg(selector_t *f)
 {
   
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
@@ -120,8 +121,6 @@ static void wallmsg(register selector_t *f)
 		return;
 
 	iovCreate(f);	/* init the iovec */
-printf("gen iIovUsed %d\n", f->f_iIovUsed);
-printf("iovUsed address: %x, size %d\n",&f->f_iIovUsed, sizeof(selector_t));
 
 	/* open the user login file */
 	setutent();
@@ -181,19 +180,13 @@ printf("iovUsed address: %x, size %d\n",&f->f_iIovUsed, sizeof(selector_t));
 				(void) signal(SIGALRM, endtty);
 				(void) alarm(15);
 				/* open the terminal */
-//errno = 0;
 				ttyf = open(p, O_WRONLY|O_NOCTTY);
-printf("try tty '%s' open: %d\n", p, ttyf);
 				if (ttyf >= 0) {
-printf("tty open!\n");
 					struct stat statb;
 
 					if (fstat(ttyf, &statb) == 0 &&
 					    (statb.st_mode & S_IWRITE)) {
-int written;
-				//		(void) writev(ttyf, f->f_iov, f->f_iIovUsed);
-						written = writev(ttyf, f->f_iov, f->f_iIovUsed);
-printf("write tty %d bytes, iIovUsed %d\n", written, f->f_iIovUsed);
+						(void) writev(ttyf, f->f_iov, f->f_iIovUsed);
 					}
 					close(ttyf);
 					ttyf = -1;

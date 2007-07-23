@@ -83,12 +83,11 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
+#include "rsyslog.h"
 
 #ifdef __FreeBSD__
 #define	BSD
 #endif
-
-#define _GNU_SOURCE
 
 /* change the following setting to e.g. 32768 if you would like to
  * support large message sizes for IHE (32k is the current maximum
@@ -204,7 +203,6 @@
 #include "mysql/errmsg.h"
 #endif
 
-#include "rsyslog.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "syslogd-types.h"
@@ -3215,11 +3213,9 @@ void  iovCreate(selector_t *f)
 	
 	f->f_iIovUsed = iIOVused;
 
-#if 1 /* debug aid */
+#if 0 /* debug aid */
 {
 	int i;
-	printf("iovUsed address: %x, size %d\n",&f->f_iIovUsed, sizeof(selector_t));
-	printf("dumping iov:\n");
 	v = f->f_iov;
 	for(i = 0 ; i < iIOVused ; ++i, ++v) {
 		printf("iovCreate(%d), string '%s', mustbeFreed %d\n", i,
@@ -4538,13 +4534,12 @@ static void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
  * to be \0 in this case.
  * rgerhards 2004-11-19
  */
-static void cflineParseTemplateName(selector_t *f, uchar** pp,
+static void cflineParseTemplateName(uchar** pp,
 			     register char* pTemplateName, int iLenTemplate)
 {
 	register uchar *p;
 	int i;
 
-	assert(f != NULL);
 	assert(pp != NULL);
 	assert(*pp != NULL);
 
@@ -4601,7 +4596,7 @@ static void cflineParseFileName(selector_t *f, uchar* p)
 	if(*p == ';')
 		++p; /* eat it */
 
-	cflineParseTemplateName(f, &p, szTemplateName,
+	cflineParseTemplateName(&p, szTemplateName,
 	                        sizeof(szTemplateName) / sizeof(char));
 
 	if(szTemplateName[0] == '\0')	/* no template? */
@@ -4687,7 +4682,7 @@ static void cflineParseOutchannel(selector_t *f, uchar* p)
 	if(*p == ';')
 		++p; /* eat it */
 
-	cflineParseTemplateName(f, &p, szBuf,
+	cflineParseTemplateName(&p, szBuf,
 	                        sizeof(szBuf) / sizeof(char));
 
 	if(szBuf[0] == '\0')	/* no template? */
@@ -4970,14 +4965,13 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
  * from the config file ("+/-hostname"). It stores it for further reference.
  * rgerhards 2005-10-19
  */
-static rsRetVal cflineProcessHostSelector(uchar **pline, register selector_t *f)
+static rsRetVal cflineProcessHostSelector(uchar **pline)
 {
 	rsRetVal iRet;
 
 	assert(pline != NULL);
 	assert(*pline != NULL);
 	assert(**pline == '-' || **pline == '+');
-	assert(f != NULL);
 
 	dprintf(" - host selector line\n");
 
@@ -5023,14 +5017,13 @@ static rsRetVal cflineProcessHostSelector(uchar **pline, register selector_t *f)
  * from the config file ("!tagname"). It stores it for further reference.
  * rgerhards 2005-10-18
  */
-static rsRetVal cflineProcessTagSelector(uchar **pline, register selector_t *f)
+static rsRetVal cflineProcessTagSelector(uchar **pline)
 {
 	rsRetVal iRet;
 
 	assert(pline != NULL);
 	assert(*pline != NULL);
 	assert(**pline == '!');
-	assert(f != NULL);
 
 	dprintf(" - programname selector line\n");
 
@@ -5103,11 +5096,11 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			iRet = cflineProcessPropFilter(&p, f);
 			break;
 		case '!':
-			iRet = cflineProcessTagSelector(&p, f);
+			iRet = cflineProcessTagSelector(&p);
 			return iRet; /* in this case, we are done */
 		case '+':
 		case '-':
-			iRet = cflineProcessHostSelector(&p, f);
+			iRet = cflineProcessHostSelector(&p);
 			return iRet; /* in this case, we are done */
 		default:
 			iRet = cflineProcessTradPRIFilter(&p, f);
@@ -5262,7 +5255,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			*p = '\0'; /* trick to obtain hostname (later)! */
 			++p;
 			 /* Now look for the template! */
-			cflineParseTemplateName(f, &p, szTemplateName,
+			cflineParseTemplateName(&p, szTemplateName,
 						sizeof(szTemplateName) / sizeof(char));
 		} else
 			szTemplateName[0] = '\0';
@@ -5412,7 +5405,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		if(*(p+1) == ';') {
 			/* we have a template specifier! */
 			p += 2; /* eat "*;" */
-			cflineParseTemplateName(f, &p, szTemplateName,
+			cflineParseTemplateName(&p, szTemplateName,
 						sizeof(szTemplateName) / sizeof(uchar));
 		}
 		else	/* assign default format if none given! */
@@ -5476,7 +5469,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			szTemplateName[0] = '\0';
 		} else {
 			/* we have a template specifier! */
-			cflineParseTemplateName(f, &p, szTemplateName,
+			cflineParseTemplateName(&p, szTemplateName,
 						sizeof(szTemplateName) / sizeof(char));
 		}
 
@@ -5551,7 +5544,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		if(*p == ';') {
 			/* we have a template specifier! */
 			++p; /* eat ";" */
-			cflineParseTemplateName(f, &p, szTemplateName,
+			cflineParseTemplateName(&p, szTemplateName,
 						sizeof(szTemplateName) / sizeof(char));
 		}
 		if(szTemplateName[0] == '\0')

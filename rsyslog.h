@@ -19,10 +19,13 @@
 #	undef _LARGEFILE_SOURCE  
 #	undef _LARGEFILE64_SOURCE  
 #	undef _FILE_OFFSET_BITS
-#	define _GNU_SOURCE
 #	define _LARGEFILE_SOURCE  
 #	define _LARGEFILE64_SOURCE  
 #	define _FILE_OFFSET_BITS 64
+#endif
+
+#ifndef	_GNU_SOURCE
+#	define	_GNU_SOURCE 1
 #endif
 
 /* The error codes below are orginally "borrowed" from
