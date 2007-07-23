@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.17.2 (rgerhards), 2007-07-2?
+Version 1.17.2 (rgerhards), 2007-07-23
 - made the port part of the -r option optional. Needed for backward
   compatibility with sysklogd
 - replaced system() calls with something more reasonable. Please note that
