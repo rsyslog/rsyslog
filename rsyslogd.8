@@ -199,13 +199,12 @@ You can specify an alternative unix domain socket instead of
 .TP
 .BI "\-r " ["port"]
 Activates the syslog/udp listener service. The listener
-will listen to the specified port. Please note that a 
-port must be specified in any case. This is different from
-the stock sysklogd package. If you would like to use
-the system's default port, specify 0 as the port number. That
-will result in an /etc/services lookup for the actual port
-number. If the "-r" option is not given, no syslog/udp listner
-is available. If no port is provided, 0 is used as default
+will listen to the specified port.  If no port is specified,
+0 is used as port number, which in turn will lead to a
+lookup of the system default syslog port. If there is
+no system default, 514 is used. Please note that the port
+must immediately follow the -r option. Thus "-r514" is valid
+while "-r 514" is invalid (note the space).
 .TP
 .BI "\-s " "domainlist"
 Specify a domainname that should be stripped off before
@@ -225,6 +224,9 @@ the maximum number of concurrent tcp sessions. If not specified, the
 default is 200. Please note that syslog/tcp is not standardized,
 but the implementation in rsyslogd follows common practice and is
 compatible with e.g. Cisco PIX, syslog-ng and MonitorWare (Windows).
+Please note that the port
+must immediately follow the -t option. Thus "-t514" is valid
+while "-t 514" is invalid (note the space).
 .TP
 .B "\-v"
 Print version and exit.
