@@ -531,6 +531,7 @@ static struct code	FacNames[] = {
 };
 
 /* global variables for config file state */
+static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	Debug;		/* debug flag  - read-only after startup */
 static int	bFailOnChown;	/* fail if chown fails? */
 static uid_t	fileUID;	/* UID to be used for newly created files */
@@ -1931,6 +1932,16 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 	assert(len >= 0);
 
 	dprintf("Message length: %d, File descriptor: %d.\n", len, fd);
+
+	/* we first check if we need to drop trailing LFs, which often make
+	 * their way into syslog messages unintentionally. In order to remain
+	 * compatible to recent IETF developments, we allow the user to
+	 * turn on/off this handling.  rgerhards, 2007-07-23
+	 */
+	if(bDropTrailingLF && *(msg + len - 1) == '\n') {
+		*(msg + len - 1) = '\0';
+		len--;
+	}
 
 	iMsg = 0;	/* initialize receiving buffer index */
 	pMsg = tmpline; /* set receiving buffer pointer */
@@ -4060,6 +4071,8 @@ void cfsysline(uchar *p)
 		doBinaryOptionLine(&p, &bDebugPrintTemplateList);
 	} else if(!strcasecmp((char*) szCmd, "failonchownfailure")) { 
 		doBinaryOptionLine(&p, &bFailOnChown);
+	} else if(!strcasecmp((char*) szCmd, "droptrailinglfonreception")) { 
+		doBinaryOptionLine(&p, &bDropTrailingLF);
 	} else if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
 		resetConfigVariables();
 	} else if(!strcasecmp((char*) szCmd, "modload")) { 

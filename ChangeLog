@@ -11,6 +11,7 @@ Version 1.17.2 (rgerhards), 2007-07-2?
   hooks, but not yet any active code
 - worked further on modularization
 - added $ModLoad MySQL (dummy) config directive
+- added DropTrailingLFOnReception config directive
 ---------------------------------------------------------------------------
 Version 1.17.1 (rgerhards), 2007-07-20
 - fixed a bug that caused make install to install rsyslogd and rklogd under
