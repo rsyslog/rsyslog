@@ -166,7 +166,8 @@ character of the message. In allmost all cases, this LF should not really become
 part of the message. However, recent IETF syslog standardization recommends 
 against modifying syslog messages (e.g. to keep digital signatures valid). This 
 option allows to specify if trailing LFs should be dropped or not. The default 
-is to drop them, which is consistent with what sysklogd does. To drop them, use</p>
+is to drop them, which is consistent with what sysklogd does. To not drop them, 
+use</p>
 <p><code><b>$DropTrailingLFOnRecption off</b></code></p>
 <h2>ControlCharacterEscapePrefix</h2>
 <p>This option specifies the prefix character to be used for control character 
