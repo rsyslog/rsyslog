@@ -45,13 +45,15 @@ typedef enum eModLinkType_ {
 
 typedef struct moduleInfo {
 	struct moduleInfo *pNext;	/* support for creating a linked module list */
-	int		iModVers;	/* Interface version of module */
-	eModType_t	eModType;	/* type of this module */
-	eModLinkType_t	eModLinkType;
-	uchar*		pszModName;	/* printable module name, e.g. for dprintf */
+	int		iIFVers;	/* Interface version of module */
+	eModType_t	eType;		/* type of this module */
+	eModLinkType_t	eLinkType;
+	uchar*		pszName;	/* printable module name, e.g. for dprintf */
 	/* functions supported by all types of modules */
-	rsRetVal (*modInit)();		/* initialize the module */
+	rsRetVal (*modInit)(int, int*, rsRetVal(**)());		/* initialize the module */
 		/* be sure to support version handshake! */
+	rsRetVal (*modQueryEtryPt)(uchar *name, rsRetVal (**EtryPoint)()); /* query entry point addresses */
+	rsRetVal (*freeInstance)(struct filed*);/* called before termination or module unload */
 	rsRetVal (*modExit)();		/* called before termination or module unload */
 	/* below: parse a configuration line - return if processed
 	 * or not. If not, must be parsed to next module.
@@ -66,16 +68,18 @@ typedef struct moduleInfo {
 			/* input modules come after output modules are finished, I am
 			 * currently not really thinking about them. rgerhards, 2007-07-19
 			 */
-		};
+		} im;
 		struct {/* data for output modules */
 			/* below: perform the configured action
 			 */
 			rsRetVal (*doAction)();
-		};
+		} om;
 	} mod;
 } modInfo_t;
 
 /* prototypes */
+rsRetVal doModInit(rsRetVal (*modInit)(), uchar *name);
+void modPrintList(void);
 
 #endif /* #ifndef MODULES_H_INCLUDED */
 /*

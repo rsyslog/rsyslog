@@ -237,6 +237,42 @@ int doActionFwd(selector_t *f)
 	return 0;
 }
 
+/* query an entry point
+ */
+static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
+{
+	if((name == NULL) || (pEtryPoint == NULL))
+		return RS_RET_PARAM_ERROR;
+
+	*pEtryPoint = NULL;
+	if(!strcmp((char*) name, "doAction")) {
+		*pEtryPoint = doActionFwd;
+	} /*else if(!strcmp((char*) name, "freeInstance")) {
+		*pEtryPoint = freeInstanceFile;
+	}*/
+
+	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
+}
+
+/* initialize the module
+ *
+ * Later, much more must be done. So far, we only return a pointer
+ * to the queryEtryPt() function
+ * TODO: do interface version checking & handshaking
+ * iIfVersRequeted is the version of the interface specification that the
+ * caller would like to see being used. ipIFVersProvided is what we
+ * decide to provide.
+ */
+rsRetVal modInitFwd(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())
+{
+	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))
+		return RS_RET_PARAM_ERROR;
+
+	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+
+	*pQueryEtryPt = queryEtryPt;
+	return RS_RET_OK;
+}
 #endif /* #ifdef SYSLOG_INET */
 /*
  * vi:set ai:

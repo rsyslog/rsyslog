@@ -25,8 +25,8 @@
 #define	OMFWD_H_INCLUDED 1
 
 /* prototypes */
-
 int doActionFwd(selector_t *f);
+rsRetVal modInitFwd(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
 
 #endif /* #ifndef OMFWD_H_INCLUDED */
 /*

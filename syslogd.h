@@ -84,6 +84,9 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 void  iovCreate(selector_t *f);
 char *iovAsString(selector_t *f);
 void untty(void);
+void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName);
+void cflineParseTemplateName(uchar** pp, register char* pTemplateName, int iLenTemplate);
+void cflineParseFileName(selector_t *f, uchar* p);
 
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */
 extern syslogCODE rs_prioritynames[];
@@ -101,5 +104,15 @@ extern char **StripDomains;
 extern char *LocalDomain;
 extern int bDropMalPTRMsgs;
 extern struct AllowedSenders *pAllowedSenders_TCP;
+extern int fCreateMode;
+extern int fDirCreateMode;
+extern int	bFailOnChown;
+extern uid_t	fileUID;
+extern uid_t	fileGID;
+extern uid_t	dirUID;
+extern uid_t	dirGID;
+extern int	bCreateDirs;
+extern int iDynaFileCacheSize;
+extern char	ctty[];
 
 #endif /* #ifndef SYSLOGD_H_INCLUDED */

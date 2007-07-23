@@ -213,6 +213,7 @@
 
 #include "parse.h"
 #include "msg.h"
+#include "modules.h"
 #include "tcpsyslog.h"
 #include "omshell.h"
 #include "omusrmsg.h"
@@ -357,7 +358,7 @@ syslogCODE rs_facilitynames[] =
 
 static char	*ConfFile = _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
-static char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
+char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
 
 static int bModMySQLLoaded = 0; /* was a $ModLoad MySQL done? */
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
@@ -369,9 +370,9 @@ static int bRequestDoMark = 0; /* do mark processing? (multithread safe) */
 #define MAXFUNIX	20
 
 int glblHadMemShortage = 0; /* indicates if we had memory shortage some time during the run */
-static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
-static int fCreateMode = 0644; /* mode to use when creating files */
-static int fDirCreateMode = 0644; /* mode to use when creating files */
+int iDynaFileCacheSize = 10; /* max cache for dynamic files */
+int fCreateMode = 0644; /* mode to use when creating files */
+int fDirCreateMode = 0644; /* mode to use when creating files */
 int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
@@ -533,13 +534,13 @@ static struct code	FacNames[] = {
 /* global variables for config file state */
 static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	Debug;		/* debug flag  - read-only after startup */
-static int	bFailOnChown;	/* fail if chown fails? */
-static uid_t	fileUID;	/* UID to be used for newly created files */
-static uid_t	fileGID;	/* GID to be used for newly created files */
-static uid_t	dirUID;		/* UID to be used for newly created directories */
-static uid_t	dirGID;		/* GID to be used for newly created directories */
+int	bFailOnChown;	/* fail if chown fails? */
+uid_t	fileUID;	/* UID to be used for newly created files */
+uid_t	fileGID;	/* GID to be used for newly created files */
+uid_t	dirUID;		/* UID to be used for newly created directories */
+uid_t	dirGID;		/* GID to be used for newly created directories */
+int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bDebugPrintTemplateList;/* output template list in debug mode? */
-static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
@@ -672,7 +673,6 @@ static void sighup_handler();
 static void die(int sig);
 
 static int getSubString(uchar **pSrc, char *pDst, size_t DstSize, char cSep);
-static void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName);
 
 /* Access functions for the selector_t. These functions are primarily
  * necessary to make things thread-safe. Consequently, they are slim
@@ -4462,6 +4462,7 @@ static void init()
 		printf("\n");
 		if(bDebugPrintTemplateList)
 			tplPrintList();
+		modPrintList();
 		ochPrintList();
 
 #ifdef	SYSLOG_INET
@@ -4508,7 +4509,7 @@ static void init()
  * to a filed entry and allocates memory for its iovec.
  * rgerhards 2004-11-19
  */
-static void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
+void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
 {
 	char errMsg[512];
 
@@ -4553,7 +4554,7 @@ static void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
  * to be \0 in this case.
  * rgerhards 2004-11-19
  */
-static void cflineParseTemplateName(uchar** pp,
+void cflineParseTemplateName(uchar** pp,
 			     register char* pTemplateName, int iLenTemplate)
 {
 	register uchar *p;
@@ -4584,7 +4585,7 @@ static void cflineParseTemplateName(uchar** pp,
  * filed struct.
  * rgerhards 2004-11-18
  */
-static void cflineParseFileName(selector_t *f, uchar* p)
+void cflineParseFileName(selector_t *f, uchar* p)
 {
 	register char *pName;
 	int i;
@@ -4624,93 +4625,6 @@ static void cflineParseFileName(selector_t *f, uchar* p)
 	cflineSetTemplateAndIOV(f, szTemplateName);
 	
 	dprintf("filename: '%s', template: '%s'\n", f->f_un.f_file.f_fname, szTemplateName);
-}
-
-
-/* Helper to cfline(). Parses a output channel name up until the first
- * comma and then looks for the template specifier. Tries
- * to find that template. Maps the output channel to the 
- * proper filed structure settings. Everything is stored in the
- * filed struct. Over time, the dependency on filed might be
- * removed.
- * rgerhards 2005-06-21
- */
-static void cflineParseOutchannel(selector_t *f, uchar* p)
-{
-	size_t i;
-	struct outchannel *pOch;
-	char szBuf[128];	/* should be more than sufficient */
-
-	/* this must always be a file, because we can not set a size limit
-	 * on a pipe...
-	 * rgerhards 2005-06-21: later, this will be a separate type, but let's
-	 * emulate things for the time being. When everything runs, we can
-	 * extend it...
-	 */
-	f->f_type = F_FILE;
-	f->doAction = doActionFile;
-
-	++p; /* skip '$' */
-	i = 0;
-	/* get outchannel name */
-	while(*p && *p != ';' && *p != ' ' &&
-	      i < sizeof(szBuf) / sizeof(char)) {
-	      szBuf[i++] = *p++;
-	}
-	szBuf[i] = '\0';
-
-	/* got the name, now look up the channel... */
-	pOch = ochFind(szBuf, i);
-
-	if(pOch == NULL) {
-		char errMsg[128];
-		errno = 0;
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
-			 "outchannel '%s' not found - ignoring action line",
-			 szBuf);
-		logerror(errMsg);
-		f->f_type = F_UNUSED;
-		return;
-	}
-
-	/* check if there is a file name in the outchannel... */
-	if(pOch->pszFileTemplate == NULL) {
-		char errMsg[128];
-		errno = 0;
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
-			 "outchannel '%s' has no file name template - ignoring action line",
-			 szBuf);
-		logerror(errMsg);
-		f->f_type = F_UNUSED;
-		return;
-	}
-
-	/* OK, we finally got a correct template. So let's use it... */
-	strncpy(f->f_un.f_file.f_fname, pOch->pszFileTemplate, MAXFNAME);
-	f->f_un.f_file.f_sizeLimit = pOch->uSizeLimit;
-	/* WARNING: It is dangerous "just" to pass the pointer. As we
-	 * never rebuild the output channel description, this is acceptable here.
-	 */
-	f->f_un.f_file.f_sizeLimitCmd = pOch->cmdOnSizeLimit;
-
-	/* back to the input string - now let's look for the template to use
-	 * Just as a general precaution, we skip whitespace.
-	 */
-	while(*p && isspace((int) *p))
-		++p;
-	if(*p == ';')
-		++p; /* eat it */
-
-	cflineParseTemplateName(&p, szBuf,
-	                        sizeof(szBuf) / sizeof(char));
-
-	if(szBuf[0] == '\0')	/* no template? */
-		strcpy(szBuf, " TradFmt"); /* use default! */
-
-	cflineSetTemplateAndIOV(f, szBuf);
-	
-	dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_file.f_fname, szBuf,
-		f->f_un.f_file.f_sizeLimit);
 }
 
 
@@ -5323,123 +5237,14 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		break;
 
         case '$':
-		/* rgerhards 2005-06-21: this is a special setting for output-channel
-		 * definitions. In the long term, this setting will probably replace
-		 * anything else, but for the time being we must co-exist with the
-		 * traditional mode lines.
-		 */
-		cflineParseOutchannel(f, p);
-		f->f_un.f_file.bDynamicName = 0;
-		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
-		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
-		f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-				 f->f_un.f_file.fCreateMode);
-		break;
-
-	case '?': /* This is much like a regular file handle, but we need to obtain
-		   * a template name. rgerhards, 2007-07-03
-		   */
-		++p; /* eat '?' */
-		cflineParseFileName(f, p);
-		f->f_un.f_file.pTpl = tplFind((char*)f->f_un.f_file.f_fname,
-					       strlen((char*) f->f_un.f_file.f_fname));
-		if(f->f_un.f_file.pTpl == NULL) {
-			logerrorSz("Template '%s' not found - dynaFile deactivated.", f->f_un.f_file.f_fname);
-			f->f_type = F_UNUSED; /* that's it... :( */
-		}
-		if(f->f_type == F_UNUSED)
-			/* safety measure to make sure we have a valid
-			 * selector line before we continue down below.
-			 * rgerhards 2005-07-29
-			 */
-			break;
-
-		if(syncfile)
-			f->f_flags |= SYNC_FILE;
-		f->f_un.f_file.bDynamicName = 1;
-		f->f_un.f_file.iCurrElt = -1;		  /* no current element */
-		f->f_un.f_file.fCreateMode = fCreateMode; /* freeze current setting */
-		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
-		f->f_un.f_file.bCreateDirs = bCreateDirs;
-		f->f_un.f_file.bFailOnChown = bFailOnChown;
-		f->f_un.f_file.fileUID = fileUID;
-		f->f_un.f_file.fileGID = fileGID;
-		f->f_un.f_file.dirUID = dirUID;
-		f->f_un.f_file.dirGID = dirGID;
-		f->f_un.f_file.iDynaFileCacheSize = iDynaFileCacheSize; /* freeze current setting */
-		/* we now allocate the cache table. We use calloc() intentionally, as we 
-		 * need all pointers to be initialized to NULL pointers.
-		 */
-		if((f->f_un.f_file.dynCache = (dynaFileCacheEntry**)
-		    calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*))) == NULL) {
-			f->f_type = F_UNUSED;
-			dprintf("Could not allocate memory for dynaFileCache - selector disabled.\n");
-		}
-		break;
-
+	case '?':
         case '|':
 	case '/':
-		/* rgerhards 2004-11-17: from now, we need to have different
-		 * processing, because after the first comma, the template name
-		 * to use is specified. So we need to scan for the first coma first
-		 * and then look at the rest of the line.
-		 */
-		cflineParseFileName(f, p);
-		if(f->f_type == F_UNUSED)
-			/* safety measure to make sure we have a valid
-			 * selector line before we continue down below.
-			 * rgerhards 2005-07-29
-			 */
-			break;
-
-		if(syncfile)
-			f->f_flags |= SYNC_FILE;
-		f->f_un.f_file.bDynamicName = 0;
-		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
-		if(f->f_type == F_PIPE) {
-			f->f_file = open(f->f_un.f_file.f_fname, O_RDWR|O_NONBLOCK);
-	        } else {
-			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-					 f->f_un.f_file.fCreateMode);
-		}
-		        
-	  	if ( f->f_file < 0 ){
-			f->f_file = -1;
-			dprintf("Error opening log file: %s\n", f->f_un.f_file.f_fname);
-			logerror(f->f_un.f_file.f_fname);
-			break;
-		}
-		if (isatty(f->f_file)) {
-			f->f_type = F_TTY;
-			untty();
-		}
-		if (strcmp((char*) p, ctty) == 0)
-			f->f_type = F_CONSOLE;
+		parseSelectorActFile(&p, f);
 		break;
 
 	case '*':
-		dprintf ("write-all");
-		f->f_type = F_WALL;
-		f->doAction = doActionUsrMsg;
-		if(*(p+1) == ';') {
-			/* we have a template specifier! */
-			p += 2; /* eat "*;" */
-			cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(uchar));
-		}
-		else	/* assign default format if none given! */
-			szTemplateName[0] = '\0';
-		if(szTemplateName[0] == '\0')
-			strcpy(szTemplateName, " WallFmt");
-		cflineSetTemplateAndIOV(f, szTemplateName);
-		if(f->f_type == F_UNUSED)
-			/* safety measure to make sure we have a valid
-			 * selector line before we continue down below.
-			 * rgerhards 2005-07-29
-			 */
-			break;
-
-		dprintf(" template '%s'\n", szTemplateName);
+		parseSelectorActUsrMsg(&p, f);
 		break;
 
 	case '~':	/* rgerhards 2005-09-09: added support for discard */
@@ -5541,45 +5346,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		break; 
 
 	default:
-		dprintf ("users: %s\n", p);	/* ASP */
-		f->f_type = F_USERS;
-		f->doAction = doActionUsrMsg;
-		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
-			for (q = p; *q && *q != ',' && *q != ';'; )
-				q++;
-			(void) strncpy((char*) f->f_un.f_uname[i], (char*) p, UNAMESZ);
-			if ((q - p) > UNAMESZ)
-				f->f_un.f_uname[i][UNAMESZ] = '\0';
-			else
-				f->f_un.f_uname[i][q - p] = '\0';
-			while (*q == ',' || *q == ' ')
-				q++;
-			p = q;
-		}
-		/* done, now check if we have a template name
-		 * TODO: we need to handle the case where i >= MAXUNAME!
-		 */
-		szTemplateName[0] = '\0';
-		if(*p == ';') {
-			/* we have a template specifier! */
-			++p; /* eat ";" */
-			cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(char));
-		}
-		if(szTemplateName[0] == '\0')
-			strcpy(szTemplateName, " StdUsrMsgFmt");
-		cflineSetTemplateAndIOV(f, szTemplateName);
-		/* Please note that we would need to check if the template
-		 * was found. If not, f->f_type would be F_UNUSED and we
-		 * can NOT carry on processing. These checks can be seen
-		 * on all other selector line code above. However, as we
-		 * do not have anything else to do here, we do not include
-		 * this check. Should you add any further processing at
-		 * this point here, you must first add a check for this
-		 * condition!
-		 * rgerhards 2005-07-29
-		 */
-		break;
+		parseSelectorActUsrMsg(&p, f);
 	}
 	return RS_RET_OK;
 }
@@ -6157,10 +5924,44 @@ static void checkPermissions()
 	}
 }
 
+
+/* load build-in modules
+ * very first version begun on 2007-07-23 by rgerhards
+ */
+static rsRetVal loadBuildInModules(void)
+{
+	rsRetVal iRet;
+
+	if((iRet = doModInit(modInitFile, (uchar*) "builtin-file")) != RS_RET_OK)
+		return iRet;
+	if((iRet = doModInit(modInitFwd, (uchar*) "builtin-fwd")) != RS_RET_OK)
+		return iRet;
+	if((iRet = doModInit(modInitShell, (uchar*) "builtin-shell")) != RS_RET_OK)
+		return iRet;
+#	ifdef WITH_DB
+	if((iRet = doModInit(modInitMySQL, (uchar*) "builtin-mysql")) != RS_RET_OK)
+		return iRet;
+#	endif
+
+	/* dirty, but this must be for the time being: the usrmsg module must always be
+	 * loaded as last module. This is because it processes any time of action selector.
+	 * If we load it before other modules, these others will never have a chance of
+	 * working with the config file. We may change that implementation so that a user name
+	 * must start with an alnum, that would definitely help (but would it break backwards
+	 * compatibility?). * rgerhards, 2007-07-23
+	 */
+	if((iRet = doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg")) != RS_RET_OK)
+		return iRet;
+
+	return RS_RET_OK;
+}
+
+
 int main(int argc, char **argv)
 {	register int i;
 	register char *p;
 	int num_fds;
+	rsRetVal iRet;
 
 #ifdef	MTRACE
 	mtrace(); /* this is a debug aid for leak detection - either remove
@@ -6183,6 +5984,12 @@ int main(int argc, char **argv)
 	for (i = 1; i < MAXFUNIX; i++) {
 		funixn[i] = "";
 		funix[i]  = -1;
+	}
+
+	if((iRet = loadBuildInModules()) != RS_RET_OK) {
+		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
+			iRet);
+		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
 
 	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r::s:t:u:vwx")) != EOF) {

@@ -25,8 +25,8 @@
 #define	OMUSRMSG_H_INCLUDED 1
 
 /* prototypes */
-
-int doActionUsrMsg(selector_t *f);
+rsRetVal modInitUsrMsg(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
+rsRetVal parseSelectorActUsrMsg(uchar **pp, selector_t *f);
 
 #endif /* #ifndef OMUSRMSG_H_INCLUDED */
 /*

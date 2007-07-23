@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 1.17.3 (rgerhards), 2007-07-2?
+- continued working on modularization
 - fixed a memory leak in config file parsing
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - rsyslogd now checks on startup if it is capable to performa any work

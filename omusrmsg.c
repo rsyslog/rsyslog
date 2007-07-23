@@ -205,13 +205,139 @@ static void wallmsg(selector_t *f)
 /* call the shell action
  * returns 0 if it succeeds, something else otherwise
  */
-int doActionUsrMsg(selector_t *f)
+static int doAction(selector_t *f)
 {
 	assert(f != NULL);
 
 	dprintf("\n");
 	wallmsg(f);
 	return 0;
+}
+
+/* query an entry point
+ */
+static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
+{
+	if((name == NULL) || (pEtryPoint == NULL))
+		return RS_RET_PARAM_ERROR;
+
+	*pEtryPoint = NULL;
+	if(!strcmp((char*) name, "doAction")) {
+		*pEtryPoint = doAction;
+	} /*else if(!strcmp((char*) name, "freeInstance")) {
+		*pEtryPoint = freeInstanceFile;
+	}*/
+
+	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
+}
+
+/* try to process a selector action line. Checks if the action
+ * applies to this module and, if so, processed it. If not, it
+ * is left untouched. The driver will then call another module
+ */
+rsRetVal parseSelectorActUsrMsg(uchar **pp, selector_t *f)
+{
+	uchar *p, *q;
+	int i;
+	char szTemplateName[128];
+
+	assert(pp != NULL);
+	assert(f != NULL);
+
+#if 0 /* TODO: think about it and activate later - see comments in else below */
+	if(**pp != '*')
+		return RS_RET_CONFLINE_UNPROCESSED;
+#endif
+	p = *pp;
+
+	if(*p == '*') { /* wall */
+		dprintf ("write-all");
+		f->f_type = F_WALL;
+		f->doAction = doAction;
+		if(*(p+1) == ';') {
+			/* we have a template specifier! */
+			p += 2; /* eat "*;" */
+			cflineParseTemplateName(&p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(uchar));
+		}
+		else	/* assign default format if none given! */
+			szTemplateName[0] = '\0';
+		if(szTemplateName[0] == '\0')
+			strcpy(szTemplateName, " WallFmt");
+		cflineSetTemplateAndIOV(f, szTemplateName);
+		if(f->f_type != F_UNUSED)
+			/* safety measure to make sure we have a valid
+			 * selector line before we continue down below.
+			 * rgerhards 2005-07-29
+			 */
+			dprintf(" template '%s'\n", szTemplateName);
+	} else {
+		/* everything else is currently treated as a user name
+		 * TODO: we must reconsider this - see also comment in
+		 * loadBuildInModules() in syslogd.c
+		 */
+		dprintf ("users: %s\n", p);	/* ASP */
+		f->f_type = F_USERS;
+		f->doAction = doAction;
+		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
+			for (q = p; *q && *q != ',' && *q != ';'; )
+				q++;
+			(void) strncpy((char*) f->f_un.f_uname[i], (char*) p, UNAMESZ);
+			if ((q - p) > UNAMESZ)
+				f->f_un.f_uname[i][UNAMESZ] = '\0';
+			else
+				f->f_un.f_uname[i][q - p] = '\0';
+			while (*q == ',' || *q == ' ')
+				q++;
+			p = q;
+		}
+		/* done, now check if we have a template name
+		 * TODO: we need to handle the case where i >= MAXUNAME!
+		 */
+		szTemplateName[0] = '\0';
+		if(*p == ';') {
+			/* we have a template specifier! */
+			++p; /* eat ";" */
+			cflineParseTemplateName(&p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(char));
+		}
+		if(szTemplateName[0] == '\0')
+			strcpy(szTemplateName, " StdUsrMsgFmt");
+		cflineSetTemplateAndIOV(f, szTemplateName);
+		/* Please note that we would need to check if the template
+		 * was found. If not, f->f_type would be F_UNUSED and we
+		 * can NOT carry on processing. These checks can be seen
+		 * on all other selector line code above. However, as we
+		 * do not have anything else to do here, we do not include
+		 * this check. Should you add any further processing at
+		 * this point here, you must first add a check for this
+		 * condition!
+		 * rgerhards 2005-07-29
+		 */
+	}
+
+	*pp = p;
+	return RS_RET_CONFLINE_PROCESSED;
+}
+
+/* initialize the module
+ *
+ * Later, much more must be done. So far, we only return a pointer
+ * to the queryEtryPt() function
+ * TODO: do interface version checking & handshaking
+ * iIfVersRequeted is the version of the interface specification that the
+ * caller would like to see being used. ipIFVersProvided is what we
+ * decide to provide.
+ */
+rsRetVal modInitUsrMsg(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())
+{
+	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))
+		return RS_RET_PARAM_ERROR;
+
+	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+
+	*pQueryEtryPt = queryEtryPt;
+	return RS_RET_OK;
 }
 
 /*

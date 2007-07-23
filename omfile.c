@@ -35,7 +35,7 @@
 #include <time.h>
 #include <assert.h>
 #include <errno.h>
-
+#include <ctype.h>
 #include <unistd.h>
 #include <sys/file.h>
 
@@ -44,7 +44,95 @@
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
+#include "outchannel.h"
 #include "omfile.h"
+
+
+/* Helper to cfline(). Parses a output channel name up until the first
+ * comma and then looks for the template specifier. Tries
+ * to find that template. Maps the output channel to the 
+ * proper filed structure settings. Everything is stored in the
+ * filed struct. Over time, the dependency on filed might be
+ * removed.
+ * rgerhards 2005-06-21
+ */
+static void cflineParseOutchannel(selector_t *f, uchar* p)
+{
+	size_t i;
+	struct outchannel *pOch;
+	char szBuf[128];	/* should be more than sufficient */
+
+	/* this must always be a file, because we can not set a size limit
+	 * on a pipe...
+	 * rgerhards 2005-06-21: later, this will be a separate type, but let's
+	 * emulate things for the time being. When everything runs, we can
+	 * extend it...
+	 */
+	f->f_type = F_FILE;
+	f->doAction = doActionFile;
+
+	++p; /* skip '$' */
+	i = 0;
+	/* get outchannel name */
+	while(*p && *p != ';' && *p != ' ' &&
+	      i < sizeof(szBuf) / sizeof(char)) {
+	      szBuf[i++] = *p++;
+	}
+	szBuf[i] = '\0';
+
+	/* got the name, now look up the channel... */
+	pOch = ochFind(szBuf, i);
+
+	if(pOch == NULL) {
+		char errMsg[128];
+		errno = 0;
+		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
+			 "outchannel '%s' not found - ignoring action line",
+			 szBuf);
+		logerror(errMsg);
+		f->f_type = F_UNUSED;
+		return;
+	}
+
+	/* check if there is a file name in the outchannel... */
+	if(pOch->pszFileTemplate == NULL) {
+		char errMsg[128];
+		errno = 0;
+		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
+			 "outchannel '%s' has no file name template - ignoring action line",
+			 szBuf);
+		logerror(errMsg);
+		f->f_type = F_UNUSED;
+		return;
+	}
+
+	/* OK, we finally got a correct template. So let's use it... */
+	strncpy(f->f_un.f_file.f_fname, pOch->pszFileTemplate, MAXFNAME);
+	f->f_un.f_file.f_sizeLimit = pOch->uSizeLimit;
+	/* WARNING: It is dangerous "just" to pass the pointer. As we
+	 * never rebuild the output channel description, this is acceptable here.
+	 */
+	f->f_un.f_file.f_sizeLimitCmd = pOch->cmdOnSizeLimit;
+
+	/* back to the input string - now let's look for the template to use
+	 * Just as a general precaution, we skip whitespace.
+	 */
+	while(*p && isspace((int) *p))
+		++p;
+	if(*p == ';')
+		++p; /* eat it */
+
+	cflineParseTemplateName(&p, szBuf,
+	                        sizeof(szBuf) / sizeof(char));
+
+	if(szBuf[0] == '\0')	/* no template? */
+		strcpy(szBuf, " TradFmt"); /* use default! */
+
+	cflineSetTemplateAndIOV(f, szBuf);
+	
+	dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_file.f_fname, szBuf,
+		f->f_un.f_file.f_sizeLimit);
+}
 
 
 /* rgerhards 2005-06-21: Try to resolve a size limit
@@ -405,7 +493,7 @@ again:
 /* free an instance
  * returns 0 if it succeeds, something else otherwise
  */
-int freeInstanceFile(selector_t *f)
+rsRetVal freeInstanceFile(selector_t *f)
 {
 	assert(f != NULL);
 	if(f->f_un.f_file.bDynamicName) {
@@ -419,12 +507,11 @@ int freeInstanceFile(selector_t *f)
 /* call the shell action
  * returns 0 if it succeeds, something else otherwise
  */
-int doActionFile(selector_t *f)
+rsRetVal doActionFile(selector_t *f)
 {
 	assert(f != NULL);
 
 	dprintf(" (%s)\n", f->f_un.f_file.f_fname);
-printf("iovUsed address: %x, size %d\n",&f->f_iIovUsed, sizeof(selector_t));
 	/* f->f_file == -1 is an indicator that the we couldn't
 	 * open the file at startup. For dynaFiles, this is ok,
 	 * all others are doomed.
@@ -433,6 +520,173 @@ printf("iovUsed address: %x, size %d\n",&f->f_iIovUsed, sizeof(selector_t));
 		writeFile(f);
 	return 0;
 }
+
+/* try to process a selector action line. Checks if the action
+ * applies to this module and, if so, processed it. If not, it
+ * is left untouched. The driver will then call another module
+ */
+rsRetVal parseSelectorActFile(uchar **pp, selector_t *f)
+{
+	uchar *p;
+	int syncfile;
+	rsRetVal iRet = RS_RET_CONFLINE_PROCESSED;
+
+	assert(pp != NULL);
+	assert(f != NULL);
+
+	p = *pp;
+
+	if (*p == '-') {
+		syncfile = 0;
+		p++;
+	} else
+		syncfile = 1;
+
+	switch (*p)
+	{
+        case '$':
+		/* rgerhards 2005-06-21: this is a special setting for output-channel
+		 * definitions. In the long term, this setting will probably replace
+		 * anything else, but for the time being we must co-exist with the
+		 * traditional mode lines.
+		 */
+		cflineParseOutchannel(f, p);
+		f->f_un.f_file.bDynamicName = 0;
+		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
+		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
+		f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+				 f->f_un.f_file.fCreateMode);
+		break;
+
+	case '?': /* This is much like a regular file handle, but we need to obtain
+		   * a template name. rgerhards, 2007-07-03
+		   */
+		++p; /* eat '?' */
+		cflineParseFileName(f, p);
+		f->f_un.f_file.pTpl = tplFind((char*)f->f_un.f_file.f_fname,
+					       strlen((char*) f->f_un.f_file.f_fname));
+		if(f->f_un.f_file.pTpl == NULL) {
+			logerrorSz("Template '%s' not found - dynaFile deactivated.", f->f_un.f_file.f_fname);
+			f->f_type = F_UNUSED; /* that's it... :( */
+		}
+		if(f->f_type == F_UNUSED)
+			/* safety measure to make sure we have a valid
+			 * selector line before we continue down below.
+			 * rgerhards 2005-07-29
+			 */
+			break;
+
+		if(syncfile)
+			f->f_flags |= SYNC_FILE;
+		f->f_un.f_file.bDynamicName = 1;
+		f->f_un.f_file.iCurrElt = -1;		  /* no current element */
+		f->f_un.f_file.fCreateMode = fCreateMode; /* freeze current setting */
+		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
+		f->f_un.f_file.bCreateDirs = bCreateDirs;
+		f->f_un.f_file.bFailOnChown = bFailOnChown;
+		f->f_un.f_file.fileUID = fileUID;
+		f->f_un.f_file.fileGID = fileGID;
+		f->f_un.f_file.dirUID = dirUID;
+		f->f_un.f_file.dirGID = dirGID;
+		f->f_un.f_file.iDynaFileCacheSize = iDynaFileCacheSize; /* freeze current setting */
+		/* we now allocate the cache table. We use calloc() intentionally, as we 
+		 * need all pointers to be initialized to NULL pointers.
+		 */
+		if((f->f_un.f_file.dynCache = (dynaFileCacheEntry**)
+		    calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*))) == NULL) {
+			f->f_type = F_UNUSED;
+			dprintf("Could not allocate memory for dynaFileCache - selector disabled.\n");
+		}
+		break;
+
+        case '|':
+	case '/':
+		/* rgerhards 2004-11-17: from now, we need to have different
+		 * processing, because after the first comma, the template name
+		 * to use is specified. So we need to scan for the first coma first
+		 * and then look at the rest of the line.
+		 */
+		cflineParseFileName(f, p);
+		if(f->f_type == F_UNUSED)
+			/* safety measure to make sure we have a valid
+			 * selector line before we continue down below.
+			 * rgerhards 2005-07-29
+			 */
+			break;
+
+		if(syncfile)
+			f->f_flags |= SYNC_FILE;
+		f->f_un.f_file.bDynamicName = 0;
+		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
+		if(f->f_type == F_PIPE) {
+			f->f_file = open(f->f_un.f_file.f_fname, O_RDWR|O_NONBLOCK);
+	        } else {
+			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+					 f->f_un.f_file.fCreateMode);
+		}
+		        
+	  	if ( f->f_file < 0 ){
+			f->f_file = -1;
+			dprintf("Error opening log file: %s\n", f->f_un.f_file.f_fname);
+			logerror(f->f_un.f_file.f_fname);
+			break;
+		}
+		if (isatty(f->f_file)) {
+			f->f_type = F_TTY;
+			untty();
+		}
+		if (strcmp((char*) p, ctty) == 0)
+			f->f_type = F_CONSOLE;
+		break;
+	default:
+		iRet = RS_RET_CONFLINE_UNPROCESSED;
+		break;
+	}
+
+	if(iRet == RS_RET_CONFLINE_PROCESSED)
+		*pp = p;
+	return iRet;
+}
+
+
+/* query an entry point
+ */
+static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
+{
+	if((name == NULL) || (pEtryPoint == NULL))
+		return RS_RET_PARAM_ERROR;
+
+	*pEtryPoint = NULL;
+	if(!strcmp((char*) name, "doAction")) {
+		*pEtryPoint = doActionFile;
+	} else if(!strcmp((char*) name, "freeInstance")) {
+		*pEtryPoint = freeInstanceFile;
+	}
+
+	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
+}
+
+/* initialize the module
+ *
+ * Later, much more must be done. So far, we only return a pointer
+ * to the queryEtryPt() function
+ * TODO: do interface version checking & handshaking
+ * iIfVersRequeted is the version of the interface specification that the
+ * caller would like to see being used. ipIFVersProvided is what we
+ * decide to provide.
+ */
+rsRetVal modInitFile(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())
+{
+	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))
+		return RS_RET_PARAM_ERROR;
+
+	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+
+	*pQueryEtryPt = queryEtryPt;
+	return RS_RET_OK;
+}
+
+
 /*
  * vi:set ai:
  */

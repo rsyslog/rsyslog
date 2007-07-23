@@ -34,7 +34,7 @@ void writeMySQL(register selector_t *f);
 void closeMySQL(register selector_t *f);
 void reInitMySQL(register selector_t *f);
 int checkDBErrorState(register selector_t *f);
-//void DBErrorHandler(register selector_t *f);
+rsRetVal modInitMySQL(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
 
 int doActionMySQL(selector_t *f);
 

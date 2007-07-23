@@ -115,7 +115,7 @@ uchar *srUtilStrDup(uchar *pOld, size_t len)
  * are to be created with.
  */
 int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
-		       uid_t uid, gid_t gid, int bFailOnChown)
+		       uid_t uid, gid_t gid, int bFailOnChownFail)
 {
         uchar *p;
         uchar *pszWork;
@@ -138,7 +138,7 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode,
 					if(uid != (uid_t) -1 || gid != (gid_t) -1) {
 						/* we need to set owner/group */
 						if(chown((char*)pszWork, uid, gid) != 0)
-							if(bFailOnChown)
+							if(bFailOnChownFail)
 								bErr = 1;
 							/* silently ignore if configured
 							 * to do so.
