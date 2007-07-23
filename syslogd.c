@@ -2311,6 +2311,7 @@ static void processMsg(msg_t *pMsg)
 		 */
 		f = &consfile;
 		f->f_file = open(ctty, O_WRONLY|O_NOCTTY);
+		f->doAction = doActionFile;
 
 		if (f->f_file >= 0) {
 			untty();
@@ -2327,6 +2328,7 @@ static void processMsg(msg_t *pMsg)
 			memset(&emergfile, 0, sizeof(emergfile));
 			f = &emergfile;
 			emergfile.f_type = F_TTY;
+			emergfile.doAction = doActionFile;
 			strcpy(emergfile.f_un.f_file.f_fname, ttyname(0));
 			cflineSetTemplateAndIOV(&emergfile, " TradFmt");
 			f->f_file = open(ttyname(0), O_WRONLY|O_NOCTTY);
@@ -3213,9 +3215,11 @@ void  iovCreate(selector_t *f)
 	
 	f->f_iIovUsed = iIOVused;
 
-#if 0 /* debug aid */
+#if 1 /* debug aid */
 {
 	int i;
+	printf("iovUsed address: %x, size %d\n",&f->f_iIovUsed, sizeof(selector_t));
+	printf("dumping iov:\n");
 	v = f->f_iov;
 	for(i = 0 ; i < iIOVused ; ++i, ++v) {
 		printf("iovCreate(%d), string '%s', mustbeFreed %d\n", i,
@@ -3281,46 +3285,10 @@ void fprintlog(register selector_t *f)
 
 	dprintf("Called fprintlog, logging to %s", TypeNames[f->f_type]);
 
-	switch (f->f_type) {
-	case F_UNUSED:
-		f->f_time = now;
-		dprintf("\n");
-		break;
-
-	case F_FORW_SUSP:
-	case F_FORW_UNKN:
-	case F_FORW:
-		doActionFwd(f, now);
-		break;
-
-	case F_CONSOLE:
-	case F_TTY:
-	case F_FILE:
-	case F_PIPE:
-		printf(" (%s)\n", f->f_un.f_file.f_fname);
-		f->f_time = now; /* we need this for message repeation processing */
-		doActionFile(f);
-		break;
-
-	case F_USERS:
-	case F_WALL:
-		f->f_time = now;
-		doActionUsrMsg(f);
-		break;
-
-#ifdef	WITH_DB
-	case F_MYSQL:
-		f->f_time = now;
-		doActionMySQL(f, now);
-		break;
-#endif
-
-	case F_SHELL: /* shell support by bkalkbrenner 2005-09-20 */
-		f->f_time = now;
-		doActionShell(f);
-		break;
-
-	} /* switch */
+	f->f_time = now; /* we need this for message repeation processing TODO: why must it be global now? */
+	if(f->f_type != F_UNUSED) {
+		f->doAction(f);	/* call configured action */
+	}
 
 	if (f->f_type != F_FORW_UNKN)
 		f->f_prevcount = 0;
@@ -4610,9 +4578,11 @@ static void cflineParseFileName(selector_t *f, uchar* p)
 
 	if(*p == '|') {
 		f->f_type = F_PIPE;
+		f->doAction = doActionFile;
 		++p;
 	} else {
 		f->f_type = F_FILE;
+		f->doAction = doActionFile;
 	}
 
 	pName = f->f_un.f_file.f_fname;
@@ -4664,6 +4634,7 @@ static void cflineParseOutchannel(selector_t *f, uchar* p)
 	 * extend it...
 	 */
 	f->f_type = F_FILE;
+	f->doAction = doActionFile;
 
 	++p; /* skip '$' */
 	i = 0;
@@ -5307,10 +5278,11 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = family;
 		hints.ai_socktype = f->f_un.f_forw.protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
+		f->doAction = doActionFwd;
 		if( (error = getaddrinfo(f->f_un.f_forw.f_hname, getFwdSyslogPt(f), &hints, &res)) != 0) {
 			f->f_type = F_FORW_UNKN;
 			f->f_prevcount = INET_RETRY_MAX;
-			f->f_time = time(NULL);
+			f->f_un.f_forw.ttSuspend = time(NULL);
 		} else {
 			f->f_type = F_FORW;
 			f->f_un.f_forw.f_addr = res;
@@ -5436,6 +5408,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	case '*':
 		dprintf ("write-all");
 		f->f_type = F_WALL;
+		f->doAction = doActionUsrMsg;
 		if(*(p+1) == ';') {
 			/* we have a template specifier! */
 			p += 2; /* eat "*;" */
@@ -5478,6 +5451,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		         "database functionality - ignored");
 #else /* WITH_DB defined! */
 		f->f_type = F_MYSQL;
+		f->doAction = doActionMySQL;
 		p++;
 		
 		/* Now we read the MySQL connection properties 
@@ -5550,12 +5524,14 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		cflineParseFileName(f, p);
 		if (f->f_type == F_FILE) {
 			f->f_type = F_SHELL;
+			f->doAction = doActionShell;
 		}
 		break; 
 
 	default:
 		dprintf ("users: %s\n", p);	/* ASP */
 		f->f_type = F_USERS;
+		f->doAction = doActionUsrMsg;
 		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
 			for (q = p; *q && *q != ',' && *q != ';'; )
 				q++;

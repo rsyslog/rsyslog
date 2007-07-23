@@ -36,7 +36,7 @@ void reInitMySQL(register selector_t *f);
 int checkDBErrorState(register selector_t *f);
 //void DBErrorHandler(register selector_t *f);
 
-int doActionMySQL(selector_t *f, time_t now);
+int doActionMySQL(selector_t *f);
 
 #endif /* #ifdef WITH_DB */
 #endif /* #ifndef OMMYSQL_H_INCLUDED */

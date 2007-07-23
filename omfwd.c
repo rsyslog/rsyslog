@@ -63,7 +63,7 @@ static const char *sys_h_errlist[] = {
 /* call the shell action
  * returns 0 if it succeeds, something else otherwise
  */
-int doActionFwd(selector_t *f, time_t now)
+int doActionFwd(selector_t *f)
 {
 	char *psz; /* temporary buffering */
 	register unsigned l;
@@ -78,7 +78,7 @@ int doActionFwd(selector_t *f, time_t now)
 
 	switch (f->f_type) {
 	case F_FORW_SUSP:
-		fwd_suspend = time(NULL) - f->f_time;
+		fwd_suspend = time(NULL) - f->f_un.f_forw.ttSuspend;
 		if ( fwd_suspend >= INET_SUSPEND_TIME ) {
 			dprintf("\nForwarding suspension over, retrying FORW ");
 			f->f_type = F_FORW;
@@ -101,7 +101,7 @@ int doActionFwd(selector_t *f, time_t now)
 	case F_FORW_UNKN:
 	/* The remote address is not yet known and needs to be obtained */
 		dprintf(" %s\n", f->f_un.f_forw.f_hname);
-		fwd_suspend = time(NULL) - f->f_time;
+		fwd_suspend = time(NULL) - f->f_un.f_forw.ttSuspend;
 		if(fwd_suspend >= INET_SUSPEND_TIME) {
 			dprintf("Forwarding suspension to unknown over, retrying\n");
 			memset(&hints, 0, sizeof(hints));
@@ -144,7 +144,7 @@ int doActionFwd(selector_t *f, time_t now)
 		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
 		else {
-			f->f_time = now;
+			f->f_un.f_forw.ttSuspend = time(NULL);
 			psz = iovAsString(f);
 			l = f->f_iLenpsziov;
 			if (l > MAXLINE)

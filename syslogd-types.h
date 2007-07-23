@@ -134,6 +134,7 @@ struct syslogTime {
  */
 struct filed {
 	struct	filed *f_next;		/* next in linked list */
+	int (*doAction)(struct filed *);		/* method to call to perform an action */
 	short	f_type;			/* entry type, see below */
 	short	f_file;			/* file descriptor */
 	time_t	f_time;			/* time this was last written */
@@ -192,12 +193,13 @@ struct filed {
 			} status;
 			char *savedMsg;
 			int savedMsgLen; /* length of savedMsg in octets */
+			time_t	ttSuspend;	/* time selector was suspended */
 #			ifdef USE_PTHREADS
 			pthread_mutex_t mtxTCPSend;
 #			endif
 		} f_forw;		/* forwarding address */
 		struct {
-			char	f_fname[MAXFNAME];/* file or template name (dispaly only) */
+			char	f_fname[MAXFNAME];/* file or template name (display only) */
 			struct template *pTpl;	/* pointer to template object */
 			char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
 			int	fCreateMode;	/* file creation mode for open() */

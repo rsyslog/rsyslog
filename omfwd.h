@@ -26,7 +26,7 @@
 
 /* prototypes */
 
-int doActionFwd(selector_t *f, time_t now);
+int doActionFwd(selector_t *f);
 
 #endif /* #ifndef OMFWD_H_INCLUDED */
 /*

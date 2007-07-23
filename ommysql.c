@@ -259,7 +259,7 @@ void writeMySQL(register selector_t *f)
 /* call the shell action
  * returns 0 if it succeeds, something else otherwise
  */
-int doActionMySQL(selector_t *f, time_t now)
+int doActionMySQL(selector_t *f)
 {
 	assert(f != NULL);
 

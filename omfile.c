@@ -38,7 +38,6 @@
 
 #include <unistd.h>
 #include <sys/file.h>
-//#include <sys/param.h>
 
 #include "rsyslog.h"
 #include "syslogd.h"
@@ -424,6 +423,8 @@ int doActionFile(selector_t *f)
 {
 	assert(f != NULL);
 
+	dprintf(" (%s)\n", f->f_un.f_file.f_fname);
+printf("iovUsed address: %x, size %d\n",&f->f_iIovUsed, sizeof(selector_t));
 	/* f->f_file == -1 is an indicator that the we couldn't
 	 * open the file at startup. For dynaFiles, this is ok,
 	 * all others are doomed.
