@@ -6122,7 +6122,10 @@ static void mainloop(void)
 }
 
 /* If user is not root, prints warnings or even exits 
- * TODO: check all dynafiles for write permission */
+ * TODO: check all dynafiles for write permission
+ * ... but it is probably better to wait here until we have
+ * a module interface - rgerhards, 2007-07-23
+ */
 static void checkPermissions()
 {
 	/* we are not root */
