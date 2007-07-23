@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 1.17.3 (rgerhards), 2007-07-2?
+- rsyslogd now checks on startup if it is capable to performa any work
+  at all. If it cant, it complains and terminates
+  thanks to Michel Samia for providing the patch!
 ---------------------------------------------------------------------------
 Version 1.17.2 (rgerhards), 2007-07-23
 - made the port part of the -r option optional. Needed for backward

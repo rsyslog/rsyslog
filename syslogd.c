@@ -1608,7 +1608,7 @@ void getCurrTime(struct syslogTime *t)
 static int usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [-46Adhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
-		" [-s domainlist] [-r[port]] [-tport[,max-sessions]] [-f conffile] [-x]\n");
+		" [-s domainlist] [-r[port]] [-tport[,max-sessions]] [-f conffile] [-i pidfile] [-x]\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
 
@@ -6121,6 +6121,33 @@ static void mainloop(void)
 	}
 }
 
+/* If user is not root, prints warnings or even exits 
+ * TODO: check all dynafiles for write permission */
+static void checkPermissions()
+{
+	/* we are not root */
+	if (geteuid() != 0)
+	{
+		fputs("WARNING: Local messages will not be logged! If you want to log them, run rsyslog as root.\n",stderr); 
+	
+		/* udp enabled and port number less than or equal to 1024 */
+		if ( AcceptRemote && (atoi(LogPort) <= 1024) )
+			fprintf(stderr, "WARNING: Will not listen on UDP port %s. Use port number higher than 1024 or run rsyslog as root!\n", LogPort);
+		
+		/* tcp enabled and port number less or equal to 1024 */
+		if( bEnableTCP   && (atoi(TCPLstnPort) <= 1024) )
+			fprintf(stderr, "WARNING: Will not listen on TCP port %s. Use port number higher than 1024 or run rsyslog as root!\n", TCPLstnPort);
+
+		/* Neither explicit high UDP port nor explicit high TCP port.
+                 * It is useless to run anymore */
+		if( !(AcceptRemote && (atoi(LogPort) > 1024)) && !( bEnableTCP && (atoi(TCPLstnPort) > 1024)) )
+		{
+			fprintf(stderr, "ERROR: Nothing to log, no reason to run. Please run rsyslog as root.\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
 int main(int argc, char **argv)
 {	register int i;
 	register char *p;
@@ -6274,6 +6301,8 @@ int main(int argc, char **argv)
 
 	if ((argc -= optind))
 		usage();
+
+	checkPermissions();
 
 #ifndef TESTING
 	if ( !(Debug || NoFork) )
