@@ -160,6 +160,14 @@ here is set to &quot;on&quot;, the malicious message will be completely dropped 
 logs. If the option is set to &quot;off&quot;, the message will be logged, but the 
 original IP will be used instead of the DNS name.</p>
 <p><code><b>$DropMsgsWithMaliciousDnsPTRRecords on</b></code></p>
+<h2>DropTrailingLFOnReception</h2>
+<p>Syslog messages frequently have the line feed character (LF) as the last 
+character of the message. In allmost all cases, this LF should not really become 
+part of the message. However, recent IETF syslog standardization recommends 
+against modifying syslog messages (e.g. to keep digital signatures valid). This 
+option allows to specify if trailing LFs should be dropped or not. The default 
+is to drop them, which is consistent with what sysklogd does. To drop them, use</p>
+<p><code><b>$DropTrailingLFOnRecption off</b></code></p>
 <h2>ControlCharacterEscapePrefix</h2>
 <p>This option specifies the prefix character to be used for control character 
 escaping (see option $EscapeControlCharactersOnReceive). By default, it is '\', 
