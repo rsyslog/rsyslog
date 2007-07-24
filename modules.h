@@ -73,12 +73,15 @@ typedef struct moduleInfo {
 			/* below: perform the configured action
 			 */
 			rsRetVal (*doAction)();
+			rsRetVal (*parseSelectorAct)(uchar**, selector_t*);
 		} om;
 	} mod;
 } modInfo_t;
 
 /* prototypes */
 rsRetVal doModInit(rsRetVal (*modInit)(), uchar *name);
+modInfo_t *omodGetNxt(modInfo_t *pThis);
+uchar *modGetName(modInfo_t *pThis);
 void modPrintList(void);
 
 #endif /* #ifndef MODULES_H_INCLUDED */

@@ -69,6 +69,14 @@ static void moduleDestruct(modInfo_t *pThis)
 }
 
 
+/* get the name of a module
+ */
+uchar *modGetName(modInfo_t *pThis)
+{
+	return((pThis->pszName == NULL) ? (uchar*) "" : pThis->pszName);
+}
+
+
 /* Add a module to the loaded module linked list
  */
 static inline void addModToList(modInfo_t *pThis)
@@ -105,6 +113,17 @@ modInfo_t *modGetNxt(modInfo_t *pThis)
 }
 
 
+/* this function is like modGetNxt(), but it returns pointers to
+ * output modules only. As we currently deal just with output modules,
+ * it is a dummy, to be filled with real code later.
+ * rgerhards, 2007-07-24
+ */
+modInfo_t *omodGetNxt(modInfo_t *pThis)
+{
+	return(modGetNxt(pThis));
+}
+
+
 /* Add an already-loaded module to the module linked list. This function does
  * anything that is needed to fully initialize the module.
  */
@@ -137,6 +156,10 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)()), uchar *name)
 		moduleDestruct(pNew);
 		return iRet;
 	}
+	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct)) != RS_RET_OK) {
+		moduleDestruct(pNew);
+		return iRet;
+	}
 /* later...
 	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
 		moduleDestruct(pNew);
@@ -164,8 +187,7 @@ void modPrintList(void)
 	pMod = modGetNxt(NULL);
 	while(pMod != NULL) {
 		dprintf("Loaded Module: Name='%s', IFVersion=%d, ",
-			(pMod->pszName == NULL) ? "NULL" : (char*)pMod->pszName,
-			pMod->iIFVers);
+			(char*) modGetName(pMod), pMod->iIFVers);
 		dprintf("type=");
 		switch(pMod->eType) {
 		case eMOD_OUT:
@@ -180,9 +202,10 @@ void modPrintList(void)
 		}
 		dprintf(" module.\n");
 		dprintf("Entry points:\n");
-		dprintf("\tqueryEtryPt:    0x%x\n", (unsigned) pMod->modQueryEtryPt);
-		dprintf("\tdoAction:       0x%x\n", (unsigned) pMod->mod.om.doAction);
-		dprintf("\tfreeInstance:   0x%x\n", (unsigned) pMod->freeInstance);
+		dprintf("\tqueryEtryPt:        0x%x\n", (unsigned) pMod->modQueryEtryPt);
+		dprintf("\tdoAction:           0x%x\n", (unsigned) pMod->mod.om.doAction);
+		dprintf("\tparseSelectorAct:   0x%x\n", (unsigned) pMod->mod.om.parseSelectorAct);
+		dprintf("\tfreeInstance:       0x%x\n", (unsigned) pMod->freeInstance);
 		dprintf("\n");
 		pMod = modGetNxt(pMod); /* done, go next */
 	}

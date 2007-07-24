@@ -424,6 +424,7 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		 * host). We try to get the ip number later, like
 		 * FORW_SUSP.
 		 */
+		break;
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;

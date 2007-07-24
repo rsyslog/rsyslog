@@ -5036,7 +5036,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 {
 	uchar *p;
 	rsRetVal iRet;
-	modInfo_t pMod;
+	modInfo_t *pMod;
 
 	dprintf("cfline(%s)", line);
 
@@ -5090,35 +5090,22 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		f->f_type = F_DISCARD;
 	} else {
 		/* loop through all modules and see if one picks up the line */
-		pMod = modGetNxt(NULL);
+		pMod = omodGetNxt(NULL);
 		while(pMod != NULL) {
-			pMod = modGetNxt(pMod);
-		}
-#if 0
-		switch (*p)
-		{
-		case '@':
-			parseSelectorActFwd(&p, f);
-			break;
-		case '$':
-		case '?':
-		case '|':
-		case '/':
-			parseSelectorActFile(&p, f);
-			break;
-		case '*':
-			parseSelectorActUsrMsg(&p, f);
-			break;
-		case '>':
-			parseSelectorActMySQL(&p, f);
-			break;
-		case '^': /* bkalkbrenner 2005-09-20: execute shell command */
-			parseSelectorActShell(&p, f);
-			break; 
-		default:
-			parseSelectorActUsrMsg(&p, f);
-			break;
-#endif
+			iRet = pMod->mod.om.parseSelectorAct(&p , f);
+			if(iRet == RS_RET_CONFLINE_PROCESSED) {
+				dprintf("Module %s processed this config line.\n",
+					modGetName(pMod));
+				break;
+			}
+			else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
+				/* we ignore any errors that might have occured - we can
+				 * not do anything at all, and it would block other modules
+				 * from initializing. -- rgerhards, 2007-07-24
+				 */
+				dprintf("error %d parsing config line - continuing\n", (int) iRet);
+			}
+			pMod = omodGetNxt(pMod);
 		}
 	}
 

@@ -86,6 +86,7 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 			f->f_type = F_SHELL;
 			f->doAction = doActionShell;
 		}
+		break;
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;

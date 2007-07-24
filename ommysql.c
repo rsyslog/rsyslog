@@ -370,6 +370,7 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 			initMySQL(f);
 		}
 #endif	/* #ifdef WITH_DB */
+		break;
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;
