@@ -2327,12 +2327,14 @@ static void processMsg(msg_t *pMsg)
 
 	assert(pMsg != NULL);
 
+	/* log the message to the particular outputs */
+	if (!Initialized) {
+		fprintf(stderr, "%s\n", pMsg->pszMSG);
+		return;
 #if 0	/* TODO: I temporarily disable the emergency logging system. We must re-think
 	 * how this is done, as we now have modules.
 	 * rgerhards, 2007-07-24
 	 */
-	/* log the message to the particular outputs */
-	if (!Initialized) {
 		/* If we reach this point, the daemon initialization FAILED. That is,
 		 * syslogd is NOT actually running. So what we do here is just
 		 * initialize a pointer to the system console and then output
@@ -2374,8 +2376,8 @@ static void processMsg(msg_t *pMsg)
 			}                        
 		}
 		return; /* we are done with emergency loging */
-	}
 #endif
+	}
 
 	bContinue = 1;
 	for (f = Files; f != NULL && bContinue ; f = f->f_next) {
@@ -4350,23 +4352,30 @@ static void init()
 			/* allocate next entry and add it */
 			f = (selector_t *)calloc(1, sizeof(selector_t));
 			/* TODO: check for NULL pointer (this is a general issue in this code...)! */
-			if(nextp == NULL) {
-				Files = f;
-			}
-			else {
-				nextp->f_next = f;
-			}
-			nextp = f;
 
 			/* be careful: the default below must be set BEFORE calling cfline()! */
 			f->f_un.f_file.f_sizeLimit = 0; /* default value, use outchannels to configure! */
 	#if CONT_LINE
-			cfline(cbuf, f);
+			if(cfline(cbuf, f) != RS_RET_OK) {
 	#else
-			cfline(cline, f);
+			if(cfline(cline, f) != RS_RET_OK) {
 	#endif
-			if (f->f_type == F_FORW || f->f_type == F_FORW_SUSP || f->f_type == F_FORW_UNKN) {
-				Forwarding++;
+				/* creation of the entry failed, we need to discard it */
+				dprintf("selector line NOT successfully processed\n");
+				free(f); 
+			} else {
+				/* successfully created an entry */
+				dprintf("selector line successfully processed\n");
+				if(nextp == NULL) {
+					Files = f;
+				}
+				else {
+					nextp->f_next = f;
+				}
+				nextp = f;
+				if (f->f_type == F_FORW || f->f_type == F_FORW_SUSP || f->f_type == F_FORW_UNKN) {
+					Forwarding++;
+				}
 			}
 		}
 
@@ -4438,7 +4447,7 @@ static void init()
 	if(Debug) {
 		printf("Active selectors:\n");
 		for (f = Files; f != NULL ; f = f->f_next) {
-			if (f->f_type != F_UNUSED) {
+			if (1) {
 				if(f->pCSProgNameComp != NULL)
 					printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSProgNameComp));
 				if(f->eHostnameCmpMode != HN_NO_COMP)
@@ -4505,6 +4514,10 @@ static void init()
 					for (i = 0; i < MAXUNAMES && *f->f_un.f_uname[i]; i++)
 						printf("%s, ", f->f_un.f_uname[i]);
 					break;
+
+				case F_UNUSED:
+					printf("UNUSED");
+					break;
 				}
 				if(f->f_ReduceRepeated)
 					printf(" [RepeatedMsgReduction]");
@@ -4561,8 +4574,9 @@ static void init()
  * to a filed entry and allocates memory for its iovec.
  * rgerhards 2004-11-19
  */
-void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
+rsRetVal cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
 {
+	rsRetVal iRet = RS_RET_OK;
 	char errMsg[512];
 
 	assert(f != NULL);
@@ -4580,21 +4594,22 @@ void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
 			 pTemplateName);
 		errno = 0;
 		logerror(errMsg);
-		f->f_type = F_UNUSED;
+		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if((f->f_iov = calloc(tplGetEntryCount(f->f_pTpl),
 		    sizeof(struct iovec))) == NULL) {
 			errno = 0;
 			logerror("Could not allocate iovec memory - 1 selector line disabled\n");
-			f->f_type = F_UNUSED;
+			iRet = RS_RET_ERR;
 		}
 		if((f->f_bMustBeFreed = calloc(tplGetEntryCount(f->f_pTpl),
 		    sizeof(unsigned short))) == NULL) {
 			errno = 0;
 			logerror("Could not allocate bMustBeFreed memory - 1 selector line disabled\n");
-			f->f_type = F_UNUSED;
+			iRet = RS_RET_ERR;
 		}
 	}
+	return iRet;
 }
 	
 /* Helper to cfline() and its helpers. Parses a template name
@@ -4606,10 +4621,11 @@ void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
  * to be \0 in this case.
  * rgerhards 2004-11-19
  */
-void cflineParseTemplateName(uchar** pp,
+rsRetVal cflineParseTemplateName(uchar** pp,
 			     register char* pTemplateName, int iLenTemplate)
 {
 	register uchar *p;
+	rsRetVal iRet = RS_RET_OK;
 	int i;
 
 	assert(pp != NULL);
@@ -4629,6 +4645,8 @@ void cflineParseTemplateName(uchar** pp,
 	*pTemplateName = '\0';
 
 	*pp = p;
+
+	return iRet;
 }
 
 /* Helper to cfline(). Parses a file name up until the first
@@ -4637,12 +4655,14 @@ void cflineParseTemplateName(uchar** pp,
  * filed struct.
  * rgerhards 2004-11-18
  */
-void cflineParseFileName(selector_t *f, uchar* p)
+rsRetVal cflineParseFileName(selector_t *f, uchar* p)
 {
 	register char *pName;
 	int i;
+	rsRetVal iRet = RS_RET_OK;
 	char szTemplateName[128];	/* should be more than sufficient */
 
+	/* TODO: below is problematic  from modularization standpoint */
 	if(*p == '|') {
 		f->f_type = F_PIPE;
 		++p;
@@ -4666,15 +4686,17 @@ void cflineParseFileName(selector_t *f, uchar* p)
 	if(*p == ';')
 		++p; /* eat it */
 
-	cflineParseTemplateName(&p, szTemplateName,
-	                        sizeof(szTemplateName) / sizeof(char));
+	if((iRet = cflineParseTemplateName(&p, szTemplateName,
+	                        sizeof(szTemplateName) / sizeof(char))) != RS_RET_OK)
+		return iRet;
 
 	if(szTemplateName[0] == '\0')	/* no template? */
 		strcpy(szTemplateName, " TradFmt"); /* use default! */
 
-	cflineSetTemplateAndIOV(f, szTemplateName);
-	
-	dprintf("filename: '%s', template: '%s'\n", f->f_un.f_file.f_fname, szTemplateName);
+	if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) == RS_RET_OK)
+		dprintf("filename: '%s', template: '%s'\n", f->f_un.f_file.f_fname, szTemplateName);
+
+	return iRet;
 }
 
 
@@ -5068,12 +5090,14 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			iRet = cflineProcessPropFilter(&p, f);
 			break;
 		case '!':
-			iRet = cflineProcessTagSelector(&p);
-			return iRet; /* in this case, we are done */
+			if((iRet = cflineProcessTagSelector(&p)) == RS_RET_OK)
+				iRet = RS_RET_NOENTRY;
+			break;
 		case '+':
 		case '-':
-			iRet = cflineProcessHostSelector(&p);
-			return iRet; /* in this case, we are done */
+			if((iRet = cflineProcessHostSelector(&p)) == RS_RET_OK)
+				iRet = RS_RET_NOENTRY;
+			break;
 		default:
 			iRet = cflineProcessTradPRIFilter(&p, f);
 			break;
@@ -5081,8 +5105,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 
 	/* check if that went well... */
 	if(iRet != RS_RET_OK) {
-		f->f_type = F_UNUSED;
-		return iRet;
+		return RS_RET_NOENTRY;
 	}
 	
 	/* we now check if there are some global (BSD-style) filter conditions
@@ -5104,6 +5127,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	pMod = omodGetNxt(NULL);
 	while(pMod != NULL) {
 		iRet = pMod->mod.om.parseSelectorAct(&p , f);
+		dprintf("modprobe %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_CONFLINE_PROCESSED) {
 			dprintf("Module %s processed this config line.\n",
 				modGetName(pMod));
@@ -5118,16 +5142,20 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			break;
 		}
 		else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
-			/* we ignore any errors that might have occured - we can
-			 * not do anything at all, and it would block other modules
-			 * from initializing. -- rgerhards, 2007-07-24
+			/* In this case, the module would have handled the config
+			 * line, but some error occured while doing so. This error should
+			 * already by reported by the module. We do not try any other
+			 * modules on this line, because we found the right one.
+			 * rgerhards, 2007-07-24
 			 */
-			dprintf("error %d parsing config line - continuing\n", (int) iRet);
+			dprintf("error %d parsing config line\n", (int) iRet);
+			break;
 		}
 		pMod = omodGetNxt(pMod);
 	}
 
-	return RS_RET_OK;
+dprintf("cfline returns %d\n", iRet);
+	return (iRet == RS_RET_CONFLINE_PROCESSED) ? RS_RET_OK : RS_RET_NOENTRY;
 }
 
 
@@ -5979,6 +6007,7 @@ int main(int argc, char **argv)
 
 	consfile.f_type = F_CONSOLE;
 	strcpy(consfile.f_un.f_file.f_fname, ctty);
+	/* TODO: check this */
 	cflineSetTemplateAndIOV(&consfile, " TradFmt");
 	gethostname(LocalHostName, sizeof(LocalHostName));
 	if ( (p = strchr(LocalHostName, '.')) ) {

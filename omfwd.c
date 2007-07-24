@@ -414,14 +414,8 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 			f->f_un.f_forw.f_addr = res;
 		}
 
-		/* then try to find the template and re-set f_type to UNUSED
-		 * if it can not be found. */
-		cflineSetTemplateAndIOV(f, szTemplateName);
-		if(f->f_type == F_UNUSED)
-			/* safety measure to make sure we have a valid
-			 * selector line before we continue down below.
-			 * rgerhards 2005-07-29
-			 */
+		/* then try to find the template */
+		if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) != RS_RET_OK)
 			break;
 
 		dprintf("forwarding host: '%s:%s/%s' template '%s'\n", q, getFwdSyslogPt(f),
@@ -438,6 +432,9 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;
 	}
+
+	if(iRet == RS_RET_OK)
+		iRet = RS_RET_CONFLINE_PROCESSED;
 
 	if(iRet == RS_RET_CONFLINE_PROCESSED)
 		*pp = p;

@@ -84,9 +84,9 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 void  iovCreate(selector_t *f);
 char *iovAsString(selector_t *f);
 void untty(void);
-void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName);
-void cflineParseTemplateName(uchar** pp, register char* pTemplateName, int iLenTemplate);
-void cflineParseFileName(selector_t *f, uchar* p);
+rsRetVal cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName);
+rsRetVal cflineParseTemplateName(uchar** pp, register char* pTemplateName, int iLenTemplate);
+rsRetVal cflineParseFileName(selector_t *f, uchar* p);
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */

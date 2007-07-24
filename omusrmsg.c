@@ -233,6 +233,7 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 	uchar *p, *q;
 	int i;
 	char szTemplateName[128];
+	rsRetVal iRet = RS_RET_CONFLINE_PROCESSED;
 
 	assert(pp != NULL);
 	assert(f != NULL);
@@ -249,19 +250,15 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		if(*(p+1) == ';') {
 			/* we have a template specifier! */
 			p += 2; /* eat "*;" */
-			cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(uchar));
+			if((iRet = cflineParseTemplateName(&p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(uchar))) != RS_RET_OK)
+				return iRet;
 		}
 		else	/* assign default format if none given! */
 			szTemplateName[0] = '\0';
 		if(szTemplateName[0] == '\0')
 			strcpy(szTemplateName, " WallFmt");
-		cflineSetTemplateAndIOV(f, szTemplateName);
-		if(f->f_type != F_UNUSED)
-			/* safety measure to make sure we have a valid
-			 * selector line before we continue down below.
-			 * rgerhards 2005-07-29
-			 */
+		if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) == RS_RET_OK)
 			dprintf(" template '%s'\n", szTemplateName);
 	} else {
 		/* everything else is currently treated as a user name
@@ -289,12 +286,13 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		if(*p == ';') {
 			/* we have a template specifier! */
 			++p; /* eat ";" */
-			cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(char));
+			if((iRet = cflineParseTemplateName(&p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(char))) != RS_RET_OK)
+				return iRet;
 		}
 		if(szTemplateName[0] == '\0')
 			strcpy(szTemplateName, " StdUsrMsgFmt");
-		cflineSetTemplateAndIOV(f, szTemplateName);
+		iRet = cflineSetTemplateAndIOV(f, szTemplateName);
 		/* Please note that we would need to check if the template
 		 * was found. If not, f->f_type would be F_UNUSED and we
 		 * can NOT carry on processing. These checks can be seen
@@ -307,8 +305,12 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		 */
 	}
 
-	*pp = p;
-	return RS_RET_CONFLINE_PROCESSED;
+	if(iRet == RS_RET_OK)
+		iRet = RS_RET_CONFLINE_PROCESSED;
+
+	if(iRet == RS_RET_CONFLINE_PROCESSED)
+		*pp = p;
+	return iRet;
 }
 
 /* query an entry point

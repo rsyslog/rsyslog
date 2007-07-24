@@ -339,29 +339,23 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 			szTemplateName[0] = '\0';
 		} else {
 			/* we have a template specifier! */
-			cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(char));
+			if((iRet = cflineParseTemplateName(&p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(char))) != RS_RET_OK)
+				break;
 		}
 
 		if(szTemplateName[0] == '\0')
 			strcpy(szTemplateName, " StdDBFmt");
 
-		cflineSetTemplateAndIOV(f, szTemplateName);
-		
-		/* we now check if the template was present. If not, we
-		 * can abort this run as the selector line has been
-		 * disabled. If we don't abort, we'll core dump
-		 * below. rgerhards 2005-07-29
-		 */
-		if(f->f_type == F_UNUSED)
+		if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) != RS_RET_OK)
 			break;
-
+		
 		dprintf(" template '%s'\n", szTemplateName);
 		
 		/* If db used, the template have to use the SQL option.
 		   This is for your own protection (prevent sql injection). */
 		if (f->f_pTpl->optFormatForSQL == 0) {
-			f->f_type = F_UNUSED;
+			iRet = RS_RET_NO_SQL_STRING;
 			logerror("DB logging disabled. You have to use"
 				" the SQL or stdSQL option in your template!\n");
 			break;
@@ -372,9 +366,10 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		 * Retries make no sense. 
 		 */
 		if (iMySQLPropErr) { 
-			f->f_type = F_UNUSED;
+			iRet = RS_RET_ERR; /* re-vist error code when working on this module */
 			dprintf("Trouble with MySQL conncetion properties.\n"
 				"MySQL logging disabled.\n");
+			break;
 		} else {
 			initMySQL(f);
 		}
@@ -384,6 +379,9 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;
 	}
+
+	if(iRet == RS_RET_OK)
+		iRet = RS_RET_CONFLINE_PROCESSED;
 
 	if(iRet == RS_RET_CONFLINE_PROCESSED)
 		*pp = p;

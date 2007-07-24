@@ -52,6 +52,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CONFLINE_UNPROCESSED = -2001,/**< config line was not processed, pass to other module */
 	RS_RET_DISCARDMSG = -2002,	/**< discard message (no error state, processing request!) */
 	RS_RET_INCOMPATIBLE = -2003,	/**< function not compatible with requested feature */
+	RS_RET_NOENTRY = -2004,		/**< do not create an entry for (whatever) - not necessary an error */
+	RS_RET_NO_SQL_STRING = -2005,	/**< string is not suitable for use as SQL */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */

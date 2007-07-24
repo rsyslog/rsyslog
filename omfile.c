@@ -67,8 +67,9 @@ static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
  * removed.
  * rgerhards 2005-06-21
  */
-static void cflineParseOutchannel(selector_t *f, uchar* p)
+static rsRetVal cflineParseOutchannel(selector_t *f, uchar* p)
 {
+	rsRetVal iRet = RS_RET_OK;
 	size_t i;
 	struct outchannel *pOch;
 	char szBuf[128];	/* should be more than sufficient */
@@ -100,8 +101,7 @@ static void cflineParseOutchannel(selector_t *f, uchar* p)
 			 "outchannel '%s' not found - ignoring action line",
 			 szBuf);
 		logerror(errMsg);
-		f->f_type = F_UNUSED;
-		return;
+		return RS_RET_NOT_FOUND;
 	}
 
 	/* check if there is a file name in the outchannel... */
@@ -112,8 +112,7 @@ static void cflineParseOutchannel(selector_t *f, uchar* p)
 			 "outchannel '%s' has no file name template - ignoring action line",
 			 szBuf);
 		logerror(errMsg);
-		f->f_type = F_UNUSED;
-		return;
+		return RS_RET_ERR;
 	}
 
 	/* OK, we finally got a correct template. So let's use it... */
@@ -138,10 +137,12 @@ static void cflineParseOutchannel(selector_t *f, uchar* p)
 	if(szBuf[0] == '\0')	/* no template? */
 		strcpy(szBuf, " TradFmt"); /* use default! */
 
-	cflineSetTemplateAndIOV(f, szBuf);
+	iRet = cflineSetTemplateAndIOV(f, szBuf);
 	
 	dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_file.f_fname, szBuf,
 		f->f_un.f_file.f_sizeLimit);
+
+	return(iRet);
 }
 
 
@@ -560,6 +561,7 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		 * traditional mode lines.
 		 */
 		cflineParseOutchannel(f, p);
+		/* TODO: provide status back if successful F_UNUSED */
 		f->f_un.f_file.bDynamicName = 0;
 		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
 		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
@@ -571,19 +573,14 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		   * a template name. rgerhards, 2007-07-03
 		   */
 		++p; /* eat '?' */
-		cflineParseFileName(f, p);
+		cflineParseFileName(f, p); /* TODO: check if successful */
 		f->f_un.f_file.pTpl = tplFind((char*)f->f_un.f_file.f_fname,
 					       strlen((char*) f->f_un.f_file.f_fname));
 		if(f->f_un.f_file.pTpl == NULL) {
 			logerrorSz("Template '%s' not found - dynaFile deactivated.", f->f_un.f_file.f_fname);
-			f->f_type = F_UNUSED; /* that's it... :( */
-		}
-		if(f->f_type == F_UNUSED)
-			/* safety measure to make sure we have a valid
-			 * selector line before we continue down below.
-			 * rgerhards 2005-07-29
-			 */
+			iRet = RS_RET_NOT_FOUND; /* that's it... :( */
 			break;
+		}
 
 		if(syncfile)
 			f->f_flags |= SYNC_FILE;
@@ -603,7 +600,7 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		 */
 		if((f->f_un.f_file.dynCache = (dynaFileCacheEntry**)
 		    calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*))) == NULL) {
-			f->f_type = F_UNUSED;
+			iRet = RS_RET_OUT_OF_MEMORY;
 			dprintf("Could not allocate memory for dynaFileCache - selector disabled.\n");
 		}
 		break;
@@ -615,12 +612,7 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		 * to use is specified. So we need to scan for the first coma first
 		 * and then look at the rest of the line.
 		 */
-		cflineParseFileName(f, p);
-		if(f->f_type == F_UNUSED)
-			/* safety measure to make sure we have a valid
-			 * selector line before we continue down below.
-			 * rgerhards 2005-07-29
-			 */
+		if((iRet = cflineParseFileName(f, p)) != RS_RET_OK)
 			break;
 
 		if(syncfile)
@@ -651,6 +643,9 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;
 	}
+
+	if(iRet == RS_RET_OK)
+		iRet = RS_RET_CONFLINE_PROCESSED;
 
 	if(iRet == RS_RET_CONFLINE_PROCESSED)
 		*pp = p;

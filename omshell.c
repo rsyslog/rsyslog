@@ -91,15 +91,18 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
 		dprintf("exec\n");
 		++p;
-		cflineParseFileName(f, p);
-		if (f->f_type == F_FILE) {
-			f->f_type = F_SHELL;
-		}
+		if((iRet = cflineParseFileName(f, p)) == RS_RET_OK)
+			if (f->f_type == F_FILE) {
+				f->f_type = F_SHELL;
+			}
 		break;
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;
 	}
+
+	if(iRet == RS_RET_OK)
+		iRet = RS_RET_CONFLINE_PROCESSED;
 
 	if(iRet == RS_RET_CONFLINE_PROCESSED)
 		*pp = p;
