@@ -45,6 +45,17 @@
 #include "mysql/errmsg.h"
 
 
+/* query feature compatibility
+ */
+static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
+{
+	if(eFeat == sFEATURERepeatedMsgReduction)
+		return RS_RET_OK;
+
+	return RS_RET_INCOMPATIBLE;
+}
+
+
 /**
  * DBErrorHandler
  *
@@ -258,15 +269,14 @@ void writeMySQL(register selector_t *f)
 }
 
 /* call the shell action
- * returns 0 if it succeeds, something else otherwise
  */
-int doActionMySQL(selector_t *f)
+static rsRetVal doActionMySQL(selector_t *f)
 {
 	assert(f != NULL);
 
 	dprintf("\n");
 	writeMySQL(f);
-	return 0;
+	return RS_RET_OK;
 }
 
 
@@ -392,6 +402,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		*pEtryPoint = doActionMySQL;
 	} else if(!strcmp((char*) name, "parseSelectorAct")) {
 		*pEtryPoint = parseSelectorAct;
+	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
+		*pEtryPoint = isCompatibleWithFeature;
 	} /*else if(!strcmp((char*) name, "freeInstance")) {
 		*pEtryPoint = freeInstanceFile;
 	}*/

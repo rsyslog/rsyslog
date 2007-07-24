@@ -220,6 +220,7 @@
 #include "ommysql.h"
 #include "omfwd.h"
 #include "omfile.h"
+#include "omdiscard.h"
 
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
@@ -664,7 +665,7 @@ static void *singleWorker(); /* REMOVEME later 2005-10-24 */
 static char **crunch_list(char *list);
 static void printline(char *hname, char *msg, int iSource);
 static void logmsg(int pri, msg_t*, int flags);
-static void fprintlog(register selector_t *f);
+static rsRetVal fprintlog(register selector_t *f);
 static void reapchild();
 static void debug_switch();
 static rsRetVal cfline(char *line, register selector_t *f);
@@ -2322,6 +2323,7 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 static void processMsg(msg_t *pMsg)
 {
 	selector_t *f;
+	int bContinue;
 
 	assert(pMsg != NULL);
 
@@ -2375,7 +2377,8 @@ static void processMsg(msg_t *pMsg)
 	}
 #endif
 
-	for (f = Files; f != NULL ; f = f->f_next) {
+	bContinue = 1;
+	for (f = Files; f != NULL && bContinue ; f = f->f_next) {
 		/* first, we need to check if this is a disabled (F_UNUSED)
 		 * entry. If so, we must not further process it, as the data
 		 * structure probably contains invalid pointers and other
@@ -2398,16 +2401,6 @@ static void processMsg(msg_t *pMsg)
 			continue;
 		}
 
-		/* We now need to check a special case - F_DISCARD. If that
-		 * action is specified in the selector line, no futher processing
-		 * must be done. Thus, we stop the for-loop.
-		 * 2005-09-09 rgerhards
-		 */
-		if(f->f_type == F_DISCARD) {
-			dprintf("Discarding message based on selector config\n");
-			break; /* that's it for this message ;) */
-			}
-
 		/* don't output marks to recently written files */
 		if ((pMsg->msgFlags & MARK) && (now - f->f_time) < MarkInterval / 2)
 			continue;
@@ -2427,7 +2420,8 @@ static void processMsg(msg_t *pMsg)
 			 * but back off so we'll flush less often in the future.
 			 */
 			if (now > REPEATTIME(f)) {
-				fprintlog(f);
+				if(fprintlog(f) == RS_RET_DISCARDMSG)
+					bContinue = 0;
 				BACKOFF(f);
 			}
 		} else {
@@ -2437,12 +2431,14 @@ static void processMsg(msg_t *pMsg)
 			 */
 			if(f->f_pMsg != NULL) {
 				if(f->f_prevcount > 0)
-					fprintlog(f);
+					if(fprintlog(f) == RS_RET_DISCARDMSG)
+						bContinue = 0;
 				MsgDestruct(f->f_pMsg);
 			}
 			f->f_pMsg = MsgAddRef(pMsg);
 			/* call the output driver */
-			fprintlog(f);
+			if(fprintlog(f) == RS_RET_DISCARDMSG)
+				bContinue = 0;
 		}
 	}
 }
@@ -3265,18 +3261,14 @@ void  iovCreate(selector_t *f)
  * semantics. The message is typically already contained in the
  * channel save buffer (f->f_prevline). This is not only the case
  * when a message was already repeated but also when a new message
- * arrived. Parameter "msg", which sounds like the message content,
- * actually contains the message only in those few cases where it
- * was too large to fit into the channel save buffer.
- *
- * This whole function is probably about to change once we have the
- * message abstraction.
+ * arrived.
  */
-void fprintlog(register selector_t *f)
+rsRetVal fprintlog(register selector_t *f)
 {
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
 	pMsgSave = NULL;	/* indicate message poiner not saved */
+	rsRetVal iRet = RS_RET_OK;
 
 	/* first check if this is a regular message or the repeation of
 	 * a previous message. If so, we need to change the message text
@@ -3295,7 +3287,7 @@ void fprintlog(register selector_t *f)
 		if((pMsg = MsgDup(f->f_pMsg)) == NULL) {
 			/* it failed - nothing we can do against it... */
 			dprintf("Message duplication failed, dropping repeat message.\n");
-			return;
+			return RS_RET_ERR;
 		}
 
 		/* We now need to update the other message properties.
@@ -3312,11 +3304,13 @@ void fprintlog(register selector_t *f)
 	}
 
 	dprintf("Called fprintlog, logging to %s", TypeNames[f->f_type]);
+	/*dprintf("Called fprintlog, logging to %s", modGetName(pMod)); // TODO: this does not work with unused!*/
 
-	f->f_time = now; /* we need this for message repeation processing TODO: why must it be global now? */
+	f->f_time = now; /* we need this for message repeation processing TODO: why must "now" be global? */
 	if(f->f_type != F_UNUSED) {
-		if(f->pMod->mod.om.doAction != NULL)	/* safety check */
-			f->pMod->mod.om.doAction(f);	/* call configured action */
+		if(f->pMod->mod.om.doAction != NULL) {	/* safety check */
+			iRet = f->pMod->mod.om.doAction(f);	/* call configured action */
+		}
 		// TODO: this causes problems for the emergency logging system!
 	}
 
@@ -3337,7 +3331,7 @@ void fprintlog(register selector_t *f)
 		f->f_pMsg = pMsgSave;	/* restore it */
 	}
 
-	return;		
+	return iRet;
 }
 
 
@@ -5071,9 +5065,6 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		return iRet;
 	}
 	
-	/* common properties */
-	f->f_ReduceRepeated = bReduceRepeatMsgs;
-
 	/* we now check if there are some global (BSD-style) filter conditions
 	 * and, if so, we copy them over. rgerhards, 2005-10-18
 	 */
@@ -5089,30 +5080,31 @@ static rsRetVal cfline(char *line, register selector_t *f)
 
 	dprintf("leading char in action: %c\n", *p);
 	
-	if(*p == '~') {
-		/* for the time being, we must handle discard in a special way */
-		dprintf ("discard\n");
-		f->f_type = F_DISCARD;
-	} else {
-		/* loop through all modules and see if one picks up the line */
-		pMod = omodGetNxt(NULL);
-		while(pMod != NULL) {
-			iRet = pMod->mod.om.parseSelectorAct(&p , f);
-			if(iRet == RS_RET_CONFLINE_PROCESSED) {
-				dprintf("Module %s processed this config line.\n",
-					modGetName(pMod));
-				f->pMod = pMod;
-				break;
+	/* loop through all modules and see if one picks up the line */
+	pMod = omodGetNxt(NULL);
+	while(pMod != NULL) {
+		iRet = pMod->mod.om.parseSelectorAct(&p , f);
+		if(iRet == RS_RET_CONFLINE_PROCESSED) {
+			dprintf("Module %s processed this config line.\n",
+				modGetName(pMod));
+			f->pMod = pMod;
+			/* now check if the module is compatible with select features */
+			if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
+				f->f_ReduceRepeated = bReduceRepeatMsgs;
+			else {
+				dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
+				f->f_ReduceRepeated = 0;
 			}
-			else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
-				/* we ignore any errors that might have occured - we can
-				 * not do anything at all, and it would block other modules
-				 * from initializing. -- rgerhards, 2007-07-24
-				 */
-				dprintf("error %d parsing config line - continuing\n", (int) iRet);
-			}
-			pMod = omodGetNxt(pMod);
+			break;
 		}
+		else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
+			/* we ignore any errors that might have occured - we can
+			 * not do anything at all, and it would block other modules
+			 * from initializing. -- rgerhards, 2007-07-24
+			 */
+			dprintf("error %d parsing config line - continuing\n", (int) iRet);
+		}
+		pMod = omodGetNxt(pMod);
 	}
 
 	return RS_RET_OK;
@@ -5709,6 +5701,8 @@ static rsRetVal loadBuildInModules(void)
 	if((iRet = doModInit(modInitMySQL, (uchar*) "builtin-mysql")) != RS_RET_OK)
 		return iRet;
 #	endif
+	if((iRet = doModInit(modInitDiscard, (uchar*) "builtin-discard")) != RS_RET_OK)
+		return iRet;
 
 	/* dirty, but this must be for the time being: the usrmsg module must always be
 	 * loaded as last module. This is because it processes any time of action selector.

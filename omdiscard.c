@@ -1,13 +1,7 @@
-/* omshell.c
- * This is the implementation of the build-in shell output module.
+/* omdiscard.c
+ * This is the implementation of the built-in discard output module.
  *
- * shell support was initially written by bkalkbrenner 2005-09-20
- *
- * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
- * This file is under development and has not yet arrived at being fully
- * self-contained and a real object. So far, it is mostly an excerpt
- * of the "old" message code without any modifications. However, it
- * helps to have things at the right place one we go to the meat of it.
+ * File begun on 2007-07-24 by RGerhards
  *
  * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
  *
@@ -36,39 +30,26 @@
 #include "rsyslog.h"
 #include "syslogd.h"
 #include "syslogd-types.h"
-#include "srUtils.h"
-#include "omshell.h"
+#include "omdiscard.h"
 
 
 /* query feature compatibility
  */
-static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
+static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eFeat)
 {
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		return RS_RET_OK;
-
+	/* this module is incompatible with all currently-known optional
+	 * syslog features. Turn them on if that changes over time.
+	 */
 	return RS_RET_INCOMPATIBLE;
 }
 
 
 /* call the shell action
  */
-static rsRetVal doActionShell(selector_t *f)
+static rsRetVal doAction(__attribute__((unused)) selector_t *f)
 {
-	uchar *psz;
-
-	assert(f != NULL);
-	/* TODO: using f->f_un.f_file.f_name is not clean from the point of
-	 * modularization. We'll change that as we go ahead with modularization.
-	 * rgerhards, 2007-07-20
-	 */
-	dprintf("\n");
-	iovCreate(f);
-	psz = (uchar*) iovAsString(f);
-	if(execProg((uchar*) f->f_un.f_file.f_fname, 1, (uchar*) psz) == 0)
-		logerrorSz("Executing program '%s' failed", f->f_un.f_file.f_fname);
-
-	return RS_RET_OK;
+	dprintf("Discarding message based on selector config\n");
+	return RS_RET_DISCARDMSG;
 }
 
 
@@ -86,19 +67,12 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 
 	p = *pp;
 
-	switch (*p)
-	{
-	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
-		dprintf("exec\n");
-		++p;
-		cflineParseFileName(f, p);
-		if (f->f_type == F_FILE) {
-			f->f_type = F_SHELL;
-		}
-		break;
-	default:
+	if(*p == '~') {
+		/* TODO: check the rest of the selector line - error reporting */
+		dprintf("discard\n");
+		f->f_type = F_DISCARD;
+	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
-		break;
 	}
 
 	if(iRet == RS_RET_CONFLINE_PROCESSED)
@@ -115,7 +89,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 
 	*pEtryPoint = NULL;
 	if(!strcmp((char*) name, "doAction")) {
-		*pEtryPoint = doActionShell;
+		*pEtryPoint = doAction;
 	} else if(!strcmp((char*) name, "parseSelectorAct")) {
 		*pEtryPoint = parseSelectorAct;
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
@@ -136,7 +110,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
  * caller would like to see being used. ipIFVersProvided is what we
  * decide to provide.
  */
-rsRetVal modInitShell(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())
+rsRetVal modInitDiscard(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())
 {
 	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))
 		return RS_RET_PARAM_ERROR;

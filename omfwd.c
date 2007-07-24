@@ -64,10 +64,20 @@ static const char *sys_h_errlist[] = {
     "no address, look for MX record"				/* NO_ADDRESS */
  };
 
-/* call the shell action
- * returns 0 if it succeeds, something else otherwise
+/* query feature compatibility
  */
-int doActionFwd(selector_t *f)
+static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
+{
+	if(eFeat == sFEATURERepeatedMsgReduction)
+		return RS_RET_OK;
+
+	return RS_RET_INCOMPATIBLE;
+}
+
+
+/* call the shell action
+ */
+static rsRetVal doActionFwd(selector_t *f)
 {
 	char *psz; /* temporary buffering */
 	register unsigned l;
@@ -238,7 +248,7 @@ int doActionFwd(selector_t *f)
 		}
 		break;
 	}
-	return 0;
+	return RS_RET_OK;
 }
 
 
@@ -446,6 +456,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		*pEtryPoint = doActionFwd;
 	} else if(!strcmp((char*) name, "parseSelectorAct")) {
 		*pEtryPoint = parseSelectorAct;
+	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
+		*pEtryPoint = isCompatibleWithFeature;
 	} /*else if(!strcmp((char*) name, "freeInstance")) {
 		*pEtryPoint = freeInstanceFile;
 	}*/

@@ -53,6 +53,14 @@
 #endif
 
 
+/* we define features of the syslog code. This features can be used
+ * to check if modules are compatible with them - and possible other
+ * applications I do not yet envision. -- rgerhards, 2007-07-24
+ */
+typedef enum _syslogFeature {
+	sFEATURERepeatedMsgReduction = 1
+} syslogFeature;
+
 /* we define our own facility and severities */
 /* facility and severity codes */
 typedef struct _syslogCode {
@@ -135,7 +143,7 @@ struct syslogTime {
  */
 struct filed {
 	struct	filed *f_next;		/* next in linked list */
-	short	f_type;			/* entry type, see below */
+	/*__attribute__((deprecated))*/ short	f_type; /* entry type, see below */
 	short	f_file;			/* file descriptor */
 	time_t	f_time;			/* time this was last written */
 	/* filter properties */

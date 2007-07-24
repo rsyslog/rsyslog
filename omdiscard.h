@@ -1,7 +1,7 @@
-/* omfile.h
- * These are the definitions for the build-in file output module.
+/* omdiscard.h
+ * These are the definitions for the built-in discard output module.
  *
- * File begun on 2007-07-21 by RGerhards (extracted from syslogd.c)
+ * File begun on 2007-07-24 by RGerhards
  *
  * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
  *
@@ -21,13 +21,13 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-#ifndef	OMFILE_H_INCLUDED
-#define	OMFILE_H_INCLUDED 1
+#ifndef	OMDISCARD_H_INCLUDED
+#define	OMDISCARD_H_INCLUDED 1
 
 /* prototypes */
-rsRetVal modInitFile(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
+rsRetVal modInitDiscard(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
 
-#endif /* #ifndef OMFILE_H_INCLUDED */
+#endif /* #ifndef OMDISCARD_H_INCLUDED */
 /*
  * vi:set ai:
  */

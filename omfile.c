@@ -48,6 +48,17 @@
 #include "omfile.h"
 
 
+/* query feature compatibility
+ */
+static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
+{
+	if(eFeat == sFEATURERepeatedMsgReduction)
+		return RS_RET_OK;
+
+	return RS_RET_INCOMPATIBLE;
+}
+
+
 /* Helper to cfline(). Parses a output channel name up until the first
  * comma and then looks for the template specifier. Tries
  * to find that template. Maps the output channel to the 
@@ -504,9 +515,8 @@ rsRetVal freeInstanceFile(selector_t *f)
 
 
 /* call the shell action
- * returns 0 if it succeeds, something else otherwise
  */
-rsRetVal doActionFile(selector_t *f)
+static rsRetVal doActionFile(selector_t *f)
 {
 	assert(f != NULL);
 
@@ -517,7 +527,7 @@ rsRetVal doActionFile(selector_t *f)
 	 */
 	if(f->f_un.f_file.bDynamicName || (f->f_file != -1))
 		writeFile(f);
-	return 0;
+	return RS_RET_OK;
 }
 
 /* try to process a selector action line. Checks if the action
@@ -660,6 +670,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		*pEtryPoint = doActionFile;
 	} else if(!strcmp((char*) name, "parseSelectorAct")) {
 		*pEtryPoint = parseSelectorAct;
+	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
+		*pEtryPoint = isCompatibleWithFeature;
 	} else if(!strcmp((char*) name, "freeInstance")) {
 		*pEtryPoint = freeInstanceFile;
 	}

@@ -160,6 +160,11 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)()), uchar *name)
 		moduleDestruct(pNew);
 		return iRet;
 	}
+	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature",
+			                   &pNew->isCompatibleWithFeature)) != RS_RET_OK) {
+		moduleDestruct(pNew);
+		return iRet;
+	}
 /* later...
 	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
 		moduleDestruct(pNew);

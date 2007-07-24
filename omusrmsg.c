@@ -52,7 +52,18 @@
 #include "omusrmsg.h"
 
 
-jmp_buf ttybuf;
+/* query feature compatibility
+ */
+static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
+{
+	if(eFeat == sFEATURERepeatedMsgReduction)
+		return RS_RET_OK;
+
+	return RS_RET_INCOMPATIBLE;
+}
+
+
+static jmp_buf ttybuf;
 
 static void endtty()
 {
@@ -203,15 +214,14 @@ static void wallmsg(selector_t *f)
 
 
 /* call the shell action
- * returns 0 if it succeeds, something else otherwise
  */
-static int doAction(selector_t *f)
+static rsRetVal doAction(selector_t *f)
 {
 	assert(f != NULL);
 
 	dprintf("\n");
 	wallmsg(f);
-	return 0;
+	return RS_RET_OK;
 }
 
 /* try to process a selector action line. Checks if the action
@@ -313,6 +323,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		*pEtryPoint = doAction;
 	} else if(!strcmp((char*) name, "parseSelectorAct")) {
 		*pEtryPoint = parseSelectorAct;
+	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
+		*pEtryPoint = isCompatibleWithFeature;
 	} /*else if(!strcmp((char*) name, "freeInstance")) {
 		*pEtryPoint = freeInstanceFile;
 	}*/
