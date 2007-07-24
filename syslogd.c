@@ -3529,6 +3529,19 @@ static void die(int sig)
 		if (f->f_type == F_MYSQL)
 			closeMySQL(f);
 #endif
+		switch (f->f_type) {
+			case F_FORW:
+			case F_FORW_SUSP:
+				freeaddrinfo(f->f_un.f_forw.f_addr);
+				/* fall through */
+			case F_FORW_UNKN:
+				if (f->f_un.f_forw.port != NULL)
+					free(f->f_un.f_forw.port);
+		}
+
+		if (f->f_psziov != NULL)
+			free(f->f_psziov);
+
 		fPrev = f;
 		f = f->f_next;
 		free(fPrev);
@@ -4219,6 +4232,10 @@ static void init()
 				free(f->f_iov);
 			}
 
+			/* free iov string */
+			if (f->f_psziov != NULL)
+				free(f->f_psziov);
+
 			switch (f->f_type) {
 				case F_FILE:
 				case F_PIPE:
@@ -4227,7 +4244,10 @@ static void init()
 					freeInstanceFile(f);
 				break;
                                 case F_FORW:
+				case F_FORW_SUSP:
                                         freeaddrinfo(f->f_un.f_forw.f_addr);
+					/* fall through */
+				case F_FORW_UNKN:
 					if(f->f_un.f_forw.port != NULL)
 						free(f->f_un.f_forw.port);
                                 break;
