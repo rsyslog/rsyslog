@@ -27,6 +27,7 @@
 /* prototypes */
 int doActionShell(selector_t *f);
 rsRetVal modInitShell(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
+rsRetVal parseSelectorActShell(uchar **pp, selector_t *f);
 
 #endif /* #ifndef ACTSHELL_H_INCLUDED */
 /*

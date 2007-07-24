@@ -61,6 +61,41 @@ int doActionShell(selector_t *f)
 	return 0;
 }
 
+
+/* try to process a selector action line. Checks if the action
+ * applies to this module and, if so, processed it. If not, it
+ * is left untouched. The driver will then call another module
+ */
+rsRetVal parseSelectorActShell(uchar **pp, selector_t *f)
+{
+	uchar *p;
+	rsRetVal iRet = RS_RET_CONFLINE_PROCESSED;
+
+	assert(pp != NULL);
+	assert(f != NULL);
+
+	p = *pp;
+
+	switch (*p)
+	{
+	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
+		dprintf("exec\n");
+		++p;
+		cflineParseFileName(f, p);
+		if (f->f_type == F_FILE) {
+			f->f_type = F_SHELL;
+			f->doAction = doActionShell;
+		}
+	default:
+		iRet = RS_RET_CONFLINE_UNPROCESSED;
+		break;
+	}
+
+	if(iRet == RS_RET_CONFLINE_PROCESSED)
+		*pp = p;
+	return iRet;
+}
+
 /* query an entry point
  */
 static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())

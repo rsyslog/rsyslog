@@ -5094,37 +5094,25 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	case '@':
 		parseSelectorActFwd(&p, f);
 		break;
-
         case '$':
 	case '?':
         case '|':
 	case '/':
 		parseSelectorActFile(&p, f);
 		break;
-
 	case '*':
 		parseSelectorActUsrMsg(&p, f);
 		break;
-
 	case '~':	/* rgerhards 2005-09-09: added support for discard */
 		dprintf ("discard\n");
 		f->f_type = F_DISCARD;
 		break;
-
 	case '>':
 		parseSelectorActMySQL(&p, f);
 		break;
-
 	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
-		dprintf("exec\n");
-		++p;
-		cflineParseFileName(f, p);
-		if (f->f_type == F_FILE) {
-			f->f_type = F_SHELL;
-			f->doAction = doActionShell;
-		}
+		parseSelectorActShell(&p, f);
 		break; 
-
 	default:
 		parseSelectorActUsrMsg(&p, f);
 	}
