@@ -2317,7 +2317,7 @@ static void processMsg(msg_t *pMsg)
 
 	/* log the message to the particular outputs */
 	if (!Initialized) {
-		fprintf(stderr, "%s\n", pMsg->pszMSG);
+		fprintf(stderr, "rsyslog: %s\n", pMsg->pszMSG);
 		return;
 #if 0	/* TODO: I temporarily disable the emergency logging system. We must re-think
 	 * how this is done, as we now have modules.
@@ -4289,7 +4289,12 @@ static void init()
 
 			/* allocate next entry and add it */
 			f = (selector_t *)calloc(1, sizeof(selector_t));
-			/* TODO: check for NULL pointer (this is a general issue in this code...)! */
+			if(f == NULL) {
+				/* this time, it looks like we really have no point in continuing to run... */
+				logerror("fatal: could not allocated selector\n");
+				exit(1); /* TODO: think about it, maybe we can avoid */
+			}
+				
 
 			/* be careful: the default below must be set BEFORE calling cfline()! */
 			f->f_un.f_file.f_sizeLimit = 0; /* default value, use outchannels to configure! */
