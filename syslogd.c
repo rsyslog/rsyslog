@@ -2381,13 +2381,17 @@ static void processMsg(msg_t *pMsg)
 
 	bContinue = 1;
 	for (f = Files; f != NULL && bContinue ; f = f->f_next) {
-		/* first, we need to check if this is a disabled (F_UNUSED)
-		 * entry. If so, we must not further process it, as the data
-		 * structure probably contains invalid pointers and other
-		 * such mess.
+		/* first, we need to check if this is a disabled
+		 * entry. If so, we must not further process it.
 		 * rgerhards 2005-09-26
+		 * In the future, disabled modules may be re-probed from time
+		 * to time. They are in a perfectly legal state, except that the
+		 * doAction method indicated that it wanted to be disabled - but
+		 * we do not consider this is a solution for eternity... So we
+		 * should check from time to time if affairs have improved.
+		 * rgerhards, 2007-07-24
 		 */
-		if(f->f_type == F_UNUSED)
+		if(f->bEnabled == 0)
 			continue; /* on to next */
 
 		/* This is actually the "filter logic". Looks like we need
@@ -3309,12 +3313,14 @@ rsRetVal fprintlog(register selector_t *f)
 	/*dprintf("Called fprintlog, logging to %s", modGetName(pMod)); // TODO: this does not work with unused!*/
 
 	f->f_time = now; /* we need this for message repeation processing TODO: why must "now" be global? */
-	if(f->f_type != F_UNUSED) {
-		if(f->pMod->mod.om.doAction != NULL) {	/* safety check */
-			iRet = f->pMod->mod.om.doAction(f);	/* call configured action */
-		}
-		// TODO: this causes problems for the emergency logging system!
-	}
+
+	/* When we reach this point, we have a valid, non-disabled action.
+	 * So let's execute it. -- rgerhards, 2007-07-24
+	 */
+	iRet = f->pMod->mod.om.doAction(f);	/* call configured action */
+	if(iRet == RS_RET_DISABLE_ACTION)
+		f->bEnabled = 0; /* that's it... */
+	// TODO: this causes problems for the emergency logging system!
 
 	if (f->f_type != F_FORW_UNKN)
 		f->f_prevcount = 0;
@@ -4514,13 +4520,11 @@ static void init()
 					for (i = 0; i < MAXUNAMES && *f->f_un.f_uname[i]; i++)
 						printf("%s, ", f->f_un.f_uname[i]);
 					break;
-
-				case F_UNUSED:
-					printf("UNUSED");
-					break;
 				}
 				if(f->f_ReduceRepeated)
 					printf(" [RepeatedMsgReduction]");
+				if(f->bEnabled == 0)
+					printf(" [disabled]");
 				printf("\n");
 			}
 		}
@@ -5127,7 +5131,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	pMod = omodGetNxt(NULL);
 	while(pMod != NULL) {
 		iRet = pMod->mod.om.parseSelectorAct(&p , f);
-		dprintf("modprobe %s: %d\n", modGetName(pMod), iRet);
+		dprintf("trying selector action for %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_CONFLINE_PROCESSED) {
 			dprintf("Module %s processed this config line.\n",
 				modGetName(pMod));
@@ -5139,6 +5143,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 				dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
 				f->f_ReduceRepeated = 0;
 			}
+			f->bEnabled = 1; /* action is enabled */
 			break;
 		}
 		else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
@@ -5154,7 +5159,6 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		pMod = omodGetNxt(pMod);
 	}
 
-dprintf("cfline returns %d\n", iRet);
 	return (iRet == RS_RET_CONFLINE_PROCESSED) ? RS_RET_OK : RS_RET_NOENTRY;
 }
 

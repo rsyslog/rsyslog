@@ -293,15 +293,9 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		if(szTemplateName[0] == '\0')
 			strcpy(szTemplateName, " StdUsrMsgFmt");
 		iRet = cflineSetTemplateAndIOV(f, szTemplateName);
-		/* Please note that we would need to check if the template
-		 * was found. If not, f->f_type would be F_UNUSED and we
-		 * can NOT carry on processing. These checks can be seen
-		 * on all other selector line code above. However, as we
-		 * do not have anything else to do here, we do not include
-		 * this check. Should you add any further processing at
-		 * this point here, you must first add a check for this
-		 * condition!
-		 * rgerhards 2005-07-29
+		/* NOTE: if you intend to do anything else here, be sure to
+		 * chck iRet - as we currently have nothing else to do, we do not
+		 * care (yet).
 		 */
 	}
 

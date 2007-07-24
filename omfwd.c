@@ -81,6 +81,7 @@ static rsRetVal doActionFwd(selector_t *f)
 {
 	char *psz; /* temporary buffering */
 	register unsigned l;
+	rsRetVal iRet = RS_RET_OK;
 	int i;
 	unsigned e, lsent = 0;
 	int bSendSuccess;
@@ -132,7 +133,7 @@ static rsRetVal doActionFwd(selector_t *f)
 				dprintf("Retries: %d\n", f->f_prevcount);
 				if ( --f->f_prevcount < 0 ) {
 					dprintf("Giving up.\n");
-					f->f_type = F_UNUSED;
+					iRet = RS_RET_DISABLE_ACTION;
 				}
 				else
 					dprintf("Left retries: %d\n", f->f_prevcount);
@@ -248,7 +249,7 @@ static rsRetVal doActionFwd(selector_t *f)
 		}
 		break;
 	}
-	return RS_RET_OK;
+	return iRet;
 }
 
 

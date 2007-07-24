@@ -115,7 +115,7 @@ struct syslogTime {
 
 
 /* values for f_type in struct filed below*/
-#define F_UNUSED	0		/* unused entry */
+/* gone away #define F_UNUSED	0 */		/* unused entry */
 #define F_FILE		1		/* regular file */
 #define F_TTY		2		/* terminal */
 #define F_CONSOLE	3		/* console terminal */
@@ -145,6 +145,7 @@ struct filed {
 	struct	filed *f_next;		/* next in linked list */
 	/*__attribute__((deprecated))*/ short	f_type; /* entry type, see below */
 	short	f_file;			/* file descriptor */
+	short	bEnabled;		/* is the related action enabled (1) or disabled (0)? */
 	time_t	f_time;			/* time this was last written */
 	/* filter properties */
 	enum {

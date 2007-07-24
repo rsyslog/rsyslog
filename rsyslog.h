@@ -54,6 +54,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INCOMPATIBLE = -2003,	/**< function not compatible with requested feature */
 	RS_RET_NOENTRY = -2004,		/**< do not create an entry for (whatever) - not necessary an error */
 	RS_RET_NO_SQL_STRING = -2005,	/**< string is not suitable for use as SQL */
+	RS_RET_DISABLE_ACTION = -2006,  /**< action requests that it be disabled */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */

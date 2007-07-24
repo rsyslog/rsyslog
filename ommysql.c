@@ -45,6 +45,7 @@
 #include "mysql/errmsg.h"
 
 
+static rsRetVal reInitMySQL(register selector_t *f);
 /* query feature compatibility
  */
 static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
@@ -120,7 +121,7 @@ static void DBErrorHandler(register selector_t *f)
  *
  * \ret int		Returns 0 if successful (no error)
  */ 
-int checkDBErrorState(register selector_t *f)
+rsRetVal checkDBErrorState(register selector_t *f)
 {
 	time_t now;
 	assert(f != NULL);
@@ -129,7 +130,7 @@ int checkDBErrorState(register selector_t *f)
 	/* If timeResumeOnError == 0 no error occured, 
 	   we can return with 0 (no error) */
 	if (f->f_un.f_mysql.f_timeResumeOnError == 0)
-		return 0;
+		return RS_RET_OK;
 	
 	(void) time(&now);
 	/* Now we know an error occured. We check timeResumeOnError
@@ -138,7 +139,7 @@ int checkDBErrorState(register selector_t *f)
 	if (f->f_un.f_mysql.f_timeResumeOnError > now)
 	{
 		/* dprintf("Wait time is not over yet.\n"); */
-		return 1;
+		return RS_RET_ERR;
 	}
 	 	
 	/* Ok, we can try to resume the database logging. First
@@ -161,9 +162,7 @@ int checkDBErrorState(register selector_t *f)
 	  */
 	f->f_un.f_mysql.f_timeResumeOnError = 0;
 	f->f_un.f_mysql.f_iLastDBErrNo = 0; 
-	reInitMySQL(f);
-	return 0;
-
+	return reInitMySQL(f);
 }
 
 /*
@@ -171,13 +170,14 @@ int checkDBErrorState(register selector_t *f)
  * MySQL connection.
  * Initially added 2004-10-28 mmeckelein
  */
-void initMySQL(register selector_t *f)
+static rsRetVal initMySQL(register selector_t *f)
 {
 	int iCounter = 0;
+	rsRetVal iRet = RS_RET_OK;
 	assert(f != NULL);
 
-	if (checkDBErrorState(f))
-		return;
+	if((iRet = checkDBErrorState(f)) != RS_RET_OK)
+		return iRet;
 	
 	f->f_un.f_mysql.f_hmysql = mysql_init(NULL);
 	if(f->f_un.f_mysql.f_hmysql == NULL) {
@@ -185,7 +185,7 @@ void initMySQL(register selector_t *f)
 		/* The next statement  causes a redundant message, but it is the
 		 * best thing we can do in this situation. -- rgerhards, 2007-01-30
 	     	 */
-		 f->f_type = F_UNUSED;
+		 iRet = RS_RET_DISABLE_ACTION;
 	} else { /* we could get the handle, now on with work... */
 		do {
 			/* Connect to database */
@@ -202,6 +202,7 @@ void initMySQL(register selector_t *f)
 			iCounter++;
 		} while (mysql_errno(f->f_un.f_mysql.f_hmysql) && iCounter<2);
 	}
+	return iRet;
 }
 
 /*
@@ -221,13 +222,13 @@ void closeMySQL(register selector_t *f)
  * Reconnect a MySQL connection.
  * Initially added 2004-12-02
  */
-void reInitMySQL(register selector_t *f)
+static rsRetVal reInitMySQL(register selector_t *f)
 {
 	assert(f != NULL);
 
 	dprintf("reInitMySQL\n");
 	closeMySQL(f); /* close the current handle */
-	initMySQL(f); /* new connection */   
+	return initMySQL(f); /* new connection */   
 }
 
 
@@ -236,17 +237,17 @@ void reInitMySQL(register selector_t *f)
  * to an established MySQL session.
  * Initially added 2004-10-28 mmeckelein
  */
-void writeMySQL(register selector_t *f)
+rsRetVal writeMySQL(register selector_t *f)
 {
 	char *psz;
 	int iCounter=0;
+	rsRetVal iRet = RS_RET_OK;
 	assert(f != NULL);
 
 	iovCreate(f);
 	psz = iovAsString(f);
-	
-	if (checkDBErrorState(f))
-		return;
+	if((iRet = checkDBErrorState(f)) != RS_RET_OK)
+		return iRet;
 
 	/* Now we are trying to insert the data. 
 	 *
@@ -262,10 +263,11 @@ void writeMySQL(register selector_t *f)
 				DBErrorHandler(f);
 		}
 		else {
-			/* dprintf("db insert sucessfully\n"); */
+			/* dprintf("db insert sucessfull\n"); */
 		}
 		iCounter++;
 	} while (mysql_errno(f->f_un.f_mysql.f_hmysql) && iCounter<2);
+	return iRet;
 }
 
 /* call the shell action
@@ -275,8 +277,7 @@ static rsRetVal doActionMySQL(selector_t *f)
 	assert(f != NULL);
 
 	dprintf("\n");
-	writeMySQL(f);
-	return RS_RET_OK;
+	return writeMySQL(f);
 }
 
 
@@ -309,7 +310,7 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 			logerror("To enable MySQL logging, a \"$ModLoad MySQL\" must be done - accepted for "
 		        	 "the time being, but will fail in future releases.");
 #ifndef	WITH_DB
-		f->f_type = F_UNUSED;
+		iRet = RS_RET_ERROR; /* this goes away anyhow, so it's not worth putting much effort in the return code */
 		errno = 0;
 		logerror("write to database action in config file, but rsyslogd compiled without "
 		         "database functionality - ignored");

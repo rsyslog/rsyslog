@@ -826,7 +826,6 @@ int TCPSend(selector_t *f, char *msg, size_t len)
 	int done = 0;
 	int bIsCompressed;
 	int lenSend;
-	short f_type;
 	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
 	enum TCPSendStatus eState;
 	TCPFRAMINGMODE framingToUse;
@@ -1025,10 +1024,7 @@ int TCPSend(selector_t *f, char *msg, size_t len)
 			return 0;
 			break;
 		default:
-			f_type = f->f_type;
-			f->f_type = F_UNUSED;
-			logerror("message not (tcp)send");
-			f->f_type = f_type;
+			dprintf("message not (tcp)send");
 			break;
 		}
 	

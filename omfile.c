@@ -131,16 +131,16 @@ static rsRetVal cflineParseOutchannel(selector_t *f, uchar* p)
 	if(*p == ';')
 		++p; /* eat it */
 
-	cflineParseTemplateName(&p, szBuf,
-	                        sizeof(szBuf) / sizeof(char));
+	if((iRet = cflineParseTemplateName(&p, szBuf,
+	                        sizeof(szBuf) / sizeof(char))) == RS_RET_OK) {
+		if(szBuf[0] == '\0')	/* no template? */
+			strcpy(szBuf, " TradFmt"); /* use default! */
 
-	if(szBuf[0] == '\0')	/* no template? */
-		strcpy(szBuf, " TradFmt"); /* use default! */
-
-	iRet = cflineSetTemplateAndIOV(f, szBuf);
-	
-	dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_file.f_fname, szBuf,
-		f->f_un.f_file.f_sizeLimit);
+		iRet = cflineSetTemplateAndIOV(f, szBuf);
+		
+		dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_file.f_fname, szBuf,
+			f->f_un.f_file.f_sizeLimit);
+	}
 
 	return(iRet);
 }
@@ -408,9 +408,10 @@ static int prepareDynFile(selector_t *f)
  * will be called for all outputs using file semantics,
  * for example also for pipes.
  */
-void writeFile(selector_t *f)
+static rsRetVal writeFile(selector_t *f)
 {
 	off_t actualFileSize;
+	rsRetVal iRet = RS_RET_OK;
 
 	assert(f != NULL);
 
@@ -419,7 +420,7 @@ void writeFile(selector_t *f)
 	 */
 	if(f->f_un.f_file.bDynamicName) {
 		if(prepareDynFile(f) != 0)
-			return;
+			return RS_RET_ERR;
 	}
 
 	/* create the message based on format specified */
@@ -440,13 +441,12 @@ again:
 			/* try to resolve the situation */
 			if(resolveFileSizeLimit(f) != 0) {
 				/* didn't work out, so disable... */
-				f->f_type = F_UNUSED;
 				snprintf(errMsg, sizeof(errMsg),
 					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation",
 					 f->f_un.f_file.f_fname, (long long) f->f_un.f_file.f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
-				return;
+				return RS_RET_DISABLE_ACTION;
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
 					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation",
@@ -463,14 +463,14 @@ again:
 		/* If a named pipe is full, just ignore it for now
 		   - mrn 24 May 96 */
 		if (f->f_type == F_PIPE && e == EAGAIN)
-			return;
+			return RS_RET_OK;
 
 		/* If the filesystem is filled up, just ignore
 		 * it for now and continue writing when possible
 		 * based on patch for sysklogd by Martin Schulze on 2007-05-24
 		 */
 		if (f->f_type == F_FILE && e == ENOSPC)
-			return;
+			return RS_RET_OK;
 
 		(void) close(f->f_file);
 		/*
@@ -485,19 +485,20 @@ again:
 #endif
 			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
 			if (f->f_file < 0) {
-				f->f_type = F_UNUSED;
+				iRet = RS_RET_DISABLE_ACTION;
 				logerror(f->f_un.f_file.f_fname);
 			} else {
 				untty();
 				goto again;
 			}
 		} else {
-			f->f_type = F_UNUSED;
+			iRet = RS_RET_DISABLE_ACTION;
 			errno = e;
 			logerror(f->f_un.f_file.f_fname);
 		}
 	} else if (f->f_flags & SYNC_FILE)
 		fsync(f->f_file);
+	return(iRet);
 }
 
 
@@ -520,6 +521,7 @@ rsRetVal freeInstanceFile(selector_t *f)
 static rsRetVal doActionFile(selector_t *f)
 {
 	assert(f != NULL);
+	rsRetVal iRet = RS_RET_OK;
 
 	dprintf(" (%s)\n", f->f_un.f_file.f_fname);
 	/* f->f_file == -1 is an indicator that the we couldn't
@@ -527,8 +529,9 @@ static rsRetVal doActionFile(selector_t *f)
 	 * all others are doomed.
 	 */
 	if(f->f_un.f_file.bDynamicName || (f->f_file != -1))
-		writeFile(f);
-	return RS_RET_OK;
+		iRet = writeFile(f);
+
+	return iRet;
 }
 
 /* try to process a selector action line. Checks if the action
@@ -559,21 +562,24 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		 * definitions. In the long term, this setting will probably replace
 		 * anything else, but for the time being we must co-exist with the
 		 * traditional mode lines.
+		 * rgerhards, 2007-07-24: output-channels will go away. We keep them
+		 * for compatibility reasons, but seems to have been a bad idea.
 		 */
-		cflineParseOutchannel(f, p);
-		/* TODO: provide status back if successful F_UNUSED */
-		f->f_un.f_file.bDynamicName = 0;
-		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
-		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
-		f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-				 f->f_un.f_file.fCreateMode);
+		if((iRet = cflineParseOutchannel(f, p)) == RS_RET_OK) {
+			f->f_un.f_file.bDynamicName = 0;
+			f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
+			f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
+			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+					 f->f_un.f_file.fCreateMode);
+		}
 		break;
 
 	case '?': /* This is much like a regular file handle, but we need to obtain
 		   * a template name. rgerhards, 2007-07-03
 		   */
 		++p; /* eat '?' */
-		cflineParseFileName(f, p); /* TODO: check if successful */
+		if((iRet = cflineParseFileName(f, p)) != RS_RET_OK)
+			break;
 		f->f_un.f_file.pTpl = tplFind((char*)f->f_un.f_file.f_fname,
 					       strlen((char*) f->f_un.f_file.f_fname));
 		if(f->f_un.f_file.pTpl == NULL) {
