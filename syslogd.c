@@ -745,6 +745,24 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 	return RS_RET_OK;
 }
 
+/* function to clear the allowed sender structure in cases where
+ * it must be freed (occurs most often when HUPed.
+ * TODO: reconsider recursive implementation
+ */
+static void clearAllowedSenders (struct AllowedSenders *pAllow) {
+	if (pAllow != NULL) {
+		if (pAllow->pNext != NULL)
+			clearAllowedSenders (pAllow->pNext);
+		else {
+			if (F_ISSET(pAllow->allowedSender.flags, ADDR_NAME))
+				free (pAllow->allowedSender.addr.HostWildcard);
+			else
+				free (pAllow->allowedSender.addr.NetAddr);
+			
+			free (pAllow);
+		}
+	}
+}
 
 /* function to add an allowed sender to the allowed sender list. The
  * root of the list is caller-provided, so it can be used for all
@@ -4132,6 +4150,21 @@ static void init()
 	pDfltHostnameCmp = NULL;
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
+
+	if (restart) {
+		if (pAllowedSenders_UDP != NULL) {
+			clearAllowedSenders (pAllowedSenders_UDP);
+			pAllowedSenders_UDP = NULL;
+		}
+		
+		if (pAllowedSenders_TCP != NULL) {
+			clearAllowedSenders (pAllowedSenders_TCP);
+			pAllowedSenders_TCP = NULL;
+		}
+	}
+	
+	assert (pAllowedSenders_UDP == NULL &&
+		pAllowedSenders_TCP == NULL );
 
 	nextp = NULL;
 	/* I was told by an IPv6 expert that calling getservbyname() seems to be
