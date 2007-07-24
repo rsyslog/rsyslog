@@ -466,13 +466,6 @@ union sockunion {
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
-char	*TypeNames[] = {
-	"UNUSED",	"FILE",		"TTY",		"CONSOLE",
-	"FORW",		"USERS",	"WALL",		"FORW(SUSPENDED)",
-	"FORW(UNKNOWN)", "PIPE", 	"MYSQL",	"DISCARD",
-	"SHELL"
-};
-
 struct	filed *Files = NULL; /* read-only after init() (but beware of sigusr1!) */
 struct	filed consfile; /* initialized on startup, used during actions - maybe NON THREAD-SAFE */
 struct 	filed emergfile; /* this is only used for emergency logging when
@@ -3308,8 +3301,7 @@ rsRetVal fprintlog(register selector_t *f)
 		f->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
 	}
 
-	dprintf("Called fprintlog, logging to %s", TypeNames[f->f_type]);
-	/*dprintf("Called fprintlog, logging to %s", modGetName(pMod)); // TODO: this does not work with unused!*/
+	dprintf("Called fprintlog, logging to %s", modGetStateName(f->pMod));
 
 	f->f_time = now; /* we need this for message repeation processing TODO: why must "now" be global? */
 
@@ -3380,7 +3372,7 @@ static void domark(void)
 		for (f = Files; f != NULL ; f = f->f_next) {
 			if (f->f_prevcount && now >= REPEATTIME(f)) {
 				dprintf("flush %s: repeated %d times, %d sec.\n",
-				    TypeNames[f->f_type], f->f_prevcount,
+				    modGetStateName(f->pMod), f->f_prevcount,
 				    repeatinterval[f->f_repeatcount]);
 				fprintlog(f);
 				BACKOFF(f);
@@ -4432,7 +4424,7 @@ static void init()
 					       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
 					printf("\tAction...: ");
 				}
-				printf("%s: ", TypeNames[f->f_type]);
+				printf("%s: ", modGetStateName(f->pMod));
 				switch (f->f_type) {
 				case F_FILE:
 				case F_PIPE:

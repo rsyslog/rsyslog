@@ -83,6 +83,7 @@ typedef struct moduleInfo {
 rsRetVal doModInit(rsRetVal (*modInit)(), uchar *name);
 modInfo_t *omodGetNxt(modInfo_t *pThis);
 uchar *modGetName(modInfo_t *pThis);
+uchar *modGetStateName(modInfo_t *pThis);
 void modPrintList(void);
 
 #endif /* #ifndef MODULES_H_INCLUDED */

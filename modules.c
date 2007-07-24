@@ -69,6 +69,18 @@ static void moduleDestruct(modInfo_t *pThis)
 }
 
 
+/* get the state-name of a module. The state name is its name
+ * together with a short description of the module state (which
+ * is pulled from the module itself.
+ * rgerhards, 2007-07-24
+ * TODO: the actual state name is not yet pulled
+ */
+uchar *modGetStateName(modInfo_t *pThis)
+{
+	return(modGetName(pThis));
+}
+
+
 /* get the name of a module
  */
 uchar *modGetName(modInfo_t *pThis)
