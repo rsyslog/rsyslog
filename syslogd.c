@@ -467,11 +467,7 @@ union sockunion {
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
 struct	filed *Files = NULL; /* read-only after init() (but beware of sigusr1!) */
-struct	filed consfile; /* initialized on startup, used during actions - maybe NON THREAD-SAFE */
-struct 	filed emergfile; /* this is only used for emergency logging when
-			  * no actual config has been loaded.
-			  * useded during actions in emergencase - thread-safety doubtful
-			  */
+// TODO: REMOVE! struct	filed consfile; /* initialized on startup, used during actions - maybe NON THREAD-SAFE */
 
 struct code {
 	char	*c_name;
@@ -3541,16 +3537,6 @@ static void die(int sig)
 	 */
 	tplDeleteAll();
 
-	if(consfile.f_iov != NULL)
-		free(consfile.f_iov);
-	if(consfile.f_bMustBeFreed != NULL)
-		free(consfile.f_bMustBeFreed);
-
-	if(emergfile.f_iov != NULL)
-		free(emergfile.f_iov);
-	if(emergfile.f_bMustBeFreed != NULL)
-		free(emergfile.f_bMustBeFreed);
-
 	remove_pid(PidFile);
 	if(glblHadMemShortage)
 		dprintf("Had memory shortage at least once during the run.\n");
@@ -5917,12 +5903,6 @@ int main(int argc, char **argv)
 	pTmp = template_StdDBFmt;
 	tplLastStaticInit(tplAddLine(" StdDBFmt", &pTmp));
 
-	/* prepare emergency logging system */
-
-	consfile.f_type = F_CONSOLE;
-	strcpy(consfile.f_un.f_file.f_fname, ctty);
-	/* TODO: check this */
-	cflineSetTemplateAndIOV(&consfile, " TradFmt");
 	gethostname(LocalHostName, sizeof(LocalHostName));
 	if ( (p = strchr(LocalHostName, '.')) ) {
 		*p++ = '\0';
