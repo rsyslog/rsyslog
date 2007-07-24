@@ -214,28 +214,11 @@ static int doAction(selector_t *f)
 	return 0;
 }
 
-/* query an entry point
- */
-static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
-{
-	if((name == NULL) || (pEtryPoint == NULL))
-		return RS_RET_PARAM_ERROR;
-
-	*pEtryPoint = NULL;
-	if(!strcmp((char*) name, "doAction")) {
-		*pEtryPoint = doAction;
-	} /*else if(!strcmp((char*) name, "freeInstance")) {
-		*pEtryPoint = freeInstanceFile;
-	}*/
-
-	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
-}
-
 /* try to process a selector action line. Checks if the action
  * applies to this module and, if so, processed it. If not, it
  * is left untouched. The driver will then call another module
  */
-rsRetVal parseSelectorActUsrMsg(uchar **pp, selector_t *f)
+static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 {
 	uchar *p, *q;
 	int i;
@@ -318,6 +301,25 @@ rsRetVal parseSelectorActUsrMsg(uchar **pp, selector_t *f)
 
 	*pp = p;
 	return RS_RET_CONFLINE_PROCESSED;
+}
+
+/* query an entry point
+ */
+static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
+{
+	if((name == NULL) || (pEtryPoint == NULL))
+		return RS_RET_PARAM_ERROR;
+
+	*pEtryPoint = NULL;
+	if(!strcmp((char*) name, "doAction")) {
+		*pEtryPoint = doAction;
+	} else if(!strcmp((char*) name, "parseSelectorAct")) {
+		*pEtryPoint = parseSelectorAct;
+	} /*else if(!strcmp((char*) name, "freeInstance")) {
+		*pEtryPoint = freeInstanceFile;
+	}*/
+
+	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
 }
 
 /* initialize the module

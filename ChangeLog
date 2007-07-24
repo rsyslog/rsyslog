@@ -7,7 +7,7 @@ Version 1.17.3 (rgerhards), 2007-07-2?
   at all. If it cant, it complains and terminates
   thanks to Michel Samia for providing the patch!
 - fixed a small memory leak when HUPing syslogd. The allowed sender
-  list now gets freed. thanks varmojfekoj to for the patch.
+  list now gets freed. thanks mildew to for the patch.
 ---------------------------------------------------------------------------
 Version 1.17.2 (rgerhards), 2007-07-23
 - made the port part of the -r option optional. Needed for backward

@@ -27,7 +27,6 @@
 /* prototypes */
 int doActionFwd(selector_t *f);
 rsRetVal modInitFwd(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
-rsRetVal parseSelectorActFwd(uchar **pp, selector_t *f);
 
 #endif /* #ifndef OMFWD_H_INCLUDED */
 /*

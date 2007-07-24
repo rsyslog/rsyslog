@@ -5035,8 +5035,8 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 static rsRetVal cfline(char *line, register selector_t *f)
 {
 	uchar *p;
-	int syncfile;
 	rsRetVal iRet;
+	modInfo_t pMod;
 
 	dprintf("cfline(%s)", line);
 
@@ -5082,40 +5082,46 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			return(iRet);
 	}
 
-	if (*p == '-') {
-		syncfile = 0;
-		p++;
-	} else
-		syncfile = 1;
-
 	dprintf("leading char in action: %c\n", *p);
-	switch (*p)
-	{
-	case '@':
-		parseSelectorActFwd(&p, f);
-		break;
-        case '$':
-	case '?':
-        case '|':
-	case '/':
-		parseSelectorActFile(&p, f);
-		break;
-	case '*':
-		parseSelectorActUsrMsg(&p, f);
-		break;
-	case '~':	/* rgerhards 2005-09-09: added support for discard */
+	
+	if(*p == '~') {
+		/* for the time being, we must handle discard in a special way */
 		dprintf ("discard\n");
 		f->f_type = F_DISCARD;
-		break;
-	case '>':
-		parseSelectorActMySQL(&p, f);
-		break;
-	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
-		parseSelectorActShell(&p, f);
-		break; 
-	default:
-		parseSelectorActUsrMsg(&p, f);
+	} else {
+		/* loop through all modules and see if one picks up the line */
+		pMod = modGetNxt(NULL);
+		while(pMod != NULL) {
+			pMod = modGetNxt(pMod);
+		}
+#if 0
+		switch (*p)
+		{
+		case '@':
+			parseSelectorActFwd(&p, f);
+			break;
+		case '$':
+		case '?':
+		case '|':
+		case '/':
+			parseSelectorActFile(&p, f);
+			break;
+		case '*':
+			parseSelectorActUsrMsg(&p, f);
+			break;
+		case '>':
+			parseSelectorActMySQL(&p, f);
+			break;
+		case '^': /* bkalkbrenner 2005-09-20: execute shell command */
+			parseSelectorActShell(&p, f);
+			break; 
+		default:
+			parseSelectorActUsrMsg(&p, f);
+			break;
+#endif
+		}
 	}
+
 	return RS_RET_OK;
 }
 

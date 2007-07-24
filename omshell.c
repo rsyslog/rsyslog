@@ -66,7 +66,7 @@ int doActionShell(selector_t *f)
  * applies to this module and, if so, processed it. If not, it
  * is left untouched. The driver will then call another module
  */
-rsRetVal parseSelectorActShell(uchar **pp, selector_t *f)
+static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 {
 	uchar *p;
 	rsRetVal iRet = RS_RET_CONFLINE_PROCESSED;
@@ -106,9 +106,11 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 	*pEtryPoint = NULL;
 	if(!strcmp((char*) name, "doAction")) {
 		*pEtryPoint = doActionShell;
+	} else if(!strcmp((char*) name, "parseSelectorAct")) {
+		*pEtryPoint = parseSelectorAct;
 	} /*else if(!strcmp((char*) name, "freeInstance")) {
-		*pEtryPoint = freeInstanceFile;
-	}*/
+		*pEtryPoint = freeInstanceFile; 
+	} */
 
 	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
 }

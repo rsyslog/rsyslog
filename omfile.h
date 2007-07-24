@@ -29,7 +29,6 @@
 rsRetVal doActionFile(selector_t *f);
 rsRetVal freeInstanceFile(selector_t *f);
 rsRetVal modInitFile(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
-rsRetVal parseSelectorActFile(uchar **pp, selector_t *f);
 
 #endif /* #ifndef OMFILE_H_INCLUDED */
 /*

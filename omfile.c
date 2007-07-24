@@ -525,7 +525,7 @@ rsRetVal doActionFile(selector_t *f)
  * applies to this module and, if so, processed it. If not, it
  * is left untouched. The driver will then call another module
  */
-rsRetVal parseSelectorActFile(uchar **pp, selector_t *f)
+static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 {
 	uchar *p;
 	int syncfile;
@@ -659,6 +659,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 	*pEtryPoint = NULL;
 	if(!strcmp((char*) name, "doAction")) {
 		*pEtryPoint = doActionFile;
+	} else if(!strcmp((char*) name, "parseSelectorAct")) {
+		*pEtryPoint = parseSelectorAct;
 	} else if(!strcmp((char*) name, "freeInstance")) {
 		*pEtryPoint = freeInstanceFile;
 	}

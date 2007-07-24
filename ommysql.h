@@ -35,8 +35,6 @@ void closeMySQL(register selector_t *f);
 void reInitMySQL(register selector_t *f);
 int checkDBErrorState(register selector_t *f);
 rsRetVal modInitMySQL(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
-rsRetVal parseSelectorActMySQL(uchar **pp, selector_t *f);
-
 int doActionMySQL(selector_t *f);
 
 #endif /* #ifdef WITH_DB */
