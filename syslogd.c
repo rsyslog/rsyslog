@@ -4182,6 +4182,7 @@ static void init()
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
 
+#ifdef SYSLOG_INET
 	if (restart) {
 		if (pAllowedSenders_UDP != NULL) {
 			clearAllowedSenders (pAllowedSenders_UDP);
@@ -4193,10 +4194,10 @@ static void init()
 			pAllowedSenders_TCP = NULL;
 		}
 	}
-	
+
 	assert (pAllowedSenders_UDP == NULL &&
 		pAllowedSenders_TCP == NULL );
-
+#endif
 	nextp = NULL;
 	/* I was told by an IPv6 expert that calling getservbyname() seems to be
 	 * still valid, at least for the use case we have. So I re-enabled that
@@ -5629,7 +5630,7 @@ static void checkPermissions()
 	if (geteuid() != 0)
 	{
 		fputs("WARNING: Local messages will not be logged! If you want to log them, run rsyslog as root.\n",stderr); 
-	
+#ifdef SYSLOG_INET	
 		/* udp enabled and port number less than or equal to 1024 */
 		if ( AcceptRemote && (atoi(LogPort) <= 1024) )
 			fprintf(stderr, "WARNING: Will not listen on UDP port %s. Use port number higher than 1024 or run rsyslog as root!\n", LogPort);
@@ -5645,6 +5646,7 @@ static void checkPermissions()
 			fprintf(stderr, "ERROR: Nothing to log, no reason to run. Please run rsyslog as root.\n");
 			exit(EXIT_FAILURE);
 		}
+#endif
 	}
 }
 
@@ -5658,8 +5660,10 @@ static rsRetVal loadBuildInModules(void)
 
 	if((iRet = doModInit(modInitFile, (uchar*) "builtin-file")) != RS_RET_OK)
 		return iRet;
+#ifdef SYSLOG_INET
 	if((iRet = doModInit(modInitFwd, (uchar*) "builtin-fwd")) != RS_RET_OK)
 		return iRet;
+#endif
 	if((iRet = doModInit(modInitShell, (uchar*) "builtin-shell")) != RS_RET_OK)
 		return iRet;
 #	ifdef WITH_DB
