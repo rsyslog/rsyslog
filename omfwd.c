@@ -442,6 +442,25 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 	return iRet;
 }
 
+/* free an instance
+ */
+static rsRetVal freeInstance(selector_t *f)
+{
+	assert(f != NULL);
+	switch (f->f_type) {
+		case F_FORW:
+		case F_FORW_SUSP:
+			freeaddrinfo(f->f_un.f_forw.f_addr);
+			/* fall through */
+		case F_FORW_UNKN:
+			if(f->f_un.f_forw.port != NULL)
+				free(f->f_un.f_forw.port);
+			break;
+	}
+	return RS_RET_OK;
+}
+
+
 /* query an entry point
  */
 static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
@@ -456,9 +475,9 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		*pEtryPoint = parseSelectorAct;
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
 		*pEtryPoint = isCompatibleWithFeature;
-	} /*else if(!strcmp((char*) name, "freeInstance")) {
-		*pEtryPoint = freeInstanceFile;
-	}*/
+	} else if(!strcmp((char*) name, "freeInstance")) {
+		*pEtryPoint = freeInstance;
+	}
 
 	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
 }

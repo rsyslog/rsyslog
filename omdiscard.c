@@ -53,6 +53,15 @@ static rsRetVal doAction(__attribute__((unused)) selector_t *f)
 }
 
 
+/* free an instance
+ */
+static rsRetVal freeInstance(selector_t *f)
+{
+	assert(f != NULL);
+	return RS_RET_OK;
+}
+
+
 /* try to process a selector action line. Checks if the action
  * applies to this module and, if so, processed it. If not, it
  * is left untouched. The driver will then call another module
@@ -94,9 +103,9 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		*pEtryPoint = parseSelectorAct;
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
 		*pEtryPoint = isCompatibleWithFeature;
-	} /*else if(!strcmp((char*) name, "freeInstance")) {
-		*pEtryPoint = freeInstanceFile; 
-	} */
+	} else if(!strcmp((char*) name, "freeInstance")) {
+		*pEtryPoint = freeInstance; 
+	}
 
 	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
 }

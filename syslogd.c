@@ -672,6 +672,7 @@ static rsRetVal cfline(char *line, register selector_t *f);
 static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
 static void die(int sig);
+static void freeSelectors(void);
 
 /* Access functions for the selector_t. These functions are primarily
  * necessary to make things thread-safe. Consequently, they are slim
@@ -3487,7 +3488,7 @@ static void doDie(int sig)
  */
 static void die(int sig)
 {
-	register selector_t *f, *fPrev;
+	register selector_t *f;
 	char buf[256];
 	int i;
 	int was_initialized = Initialized;
@@ -3520,43 +3521,10 @@ static void die(int sig)
 #endif
 
 
-	/* Free ressources and close MySQL connections */
-	for (f = Files; f != NULL ;) {
-		/* free iovec if it was allocated */
-		if(f->f_iov != NULL) {
-			if(f->f_bMustBeFreed != NULL) {
-				iovDeleteFreeableStrings(f);
-				free(f->f_bMustBeFreed);
-			}
-			free(f->f_iov);
-		}
-		/* Now delete cached messages */
-		if(f->f_pMsg != NULL)
-			MsgDestruct(f->f_pMsg);
-#ifdef WITH_DB
-		if (f->f_type == F_MYSQL)
-			closeMySQL(f);
-#endif
-		switch (f->f_type) {
-			case F_FORW:
-			case F_FORW_SUSP:
-				freeaddrinfo(f->f_un.f_forw.f_addr);
-				/* fall through */
-			case F_FORW_UNKN:
-				if (f->f_un.f_forw.port != NULL)
-					free(f->f_un.f_forw.port);
-		}
-
-		if (f->f_psziov != NULL)
-			free(f->f_psziov);
-
-		fPrev = f;
-		f = f->f_next;
-		free(fPrev);
-	}
+	/* Free ressources and close connections */
+	freeSelectors();
 	
 	/* now clean up the listener part */
-
 #ifdef SYSLOG_INET
 	/* Close the UNIX sockets. */
         for (i = 0; i < nfunix; i++)
@@ -4146,6 +4114,63 @@ void cfsysline(uchar *p)
 }
 
 
+/*  Close all open log files and free selector descriptor array.
+ */
+static void freeSelectors(void)
+{
+	selector_t *f;
+	selector_t *fPrev;
+
+	Initialized = 0;
+	if(Files != NULL) {
+		dprintf("Freeing log structures.\n");
+
+		f = Files;
+		while (f != NULL) {
+			/* flush any pending output */
+			if (f->f_prevcount) {
+				fprintlog(f);
+			}
+
+			/* free iovec if it was allocated */
+			if(f->f_iov != NULL) {
+				if(f->f_bMustBeFreed != NULL) {
+					iovDeleteFreeableStrings(f);
+					free(f->f_bMustBeFreed);
+				}
+				free(f->f_iov);
+			}
+
+			/* free iov string */
+			if (f->f_psziov != NULL)
+				free(f->f_psziov);
+
+			/* free the action instances */
+			f->pMod->freeInstance(f);
+#			ifdef USE_PTHREADS
+			/* delete any mutex objects, if present */
+			if(   (   (f->f_type == F_FORW_SUSP)
+			       || (f->f_type == F_FORW)
+			       || (f->f_type == F_FORW_UNKN) )
+			   && (f->f_un.f_forw.protocol == FORW_TCP)) {
+				pthread_mutex_destroy(&f->f_un.f_forw.mtxTCPSend);
+			}
+#			endif
+			if(f->f_pMsg != NULL)
+				MsgDestruct(f->f_pMsg);
+
+			/* done with this entry, we now need to delete itself */
+			fPrev = f;
+			f = f->f_next;
+			free(fPrev);
+		}
+
+		/* Reflect the deletion of the selectors linked list. */
+		Files = NULL;
+	}
+}
+
+
 /* INIT -- Initialize syslogd from configuration table
  * init() is called at initial startup AND each time syslogd is HUPed
  */
@@ -4216,85 +4241,19 @@ static void init()
 		}
         }
 
-	/*  Close all open log files and free log descriptor array.
-	 */
 	dprintf("Called init.\n");
-	Initialized = 0;
-	if(Files != NULL) {
-		selector_t *fPrev;
-		dprintf("Initializing log structures.\n");
 
-		f = Files;
-		while (f != NULL) {
-			/* flush any pending output */
-			if (f->f_prevcount) {
-				fprintlog(f);
-			}
-
-			/* free iovec if it was allocated */
-			if(f->f_iov != NULL) {
-				if(f->f_bMustBeFreed != NULL) {
-					iovDeleteFreeableStrings(f);
-					free(f->f_bMustBeFreed);
-				}
-				free(f->f_iov);
-			}
-
-			/* free iov string */
-			if (f->f_psziov != NULL)
-				free(f->f_psziov);
-
-			switch (f->f_type) {
-				case F_FILE:
-				case F_PIPE:
-				case F_TTY:
-				case F_CONSOLE:
-					freeInstanceFile(f);
-				break;
-                                case F_FORW:
-				case F_FORW_SUSP:
-                                        freeaddrinfo(f->f_un.f_forw.f_addr);
-					/* fall through */
-				case F_FORW_UNKN:
-					if(f->f_un.f_forw.port != NULL)
-						free(f->f_un.f_forw.port);
-                                break;
-#				ifdef	WITH_DB
-				case F_MYSQL:
-					closeMySQL(f);
-				break;
-#				endif
-			}
-#			ifdef USE_PTHREADS
-			/* delete any mutex objects, if present */
-			if(   (   (f->f_type == F_FORW_SUSP)
-			       || (f->f_type == F_FORW)
-			       || (f->f_type == F_FORW_UNKN) )
-			   && (f->f_un.f_forw.protocol == FORW_TCP)) {
-				pthread_mutex_destroy(&f->f_un.f_forw.mtxTCPSend);
-			}
-#			endif
-			if(f->f_pMsg != NULL)
-				MsgDestruct(f->f_pMsg);
-
-			/* done with this entry, we now need to delete itself */
-			fPrev = f;
-			f = f->f_next;
-			free(fPrev);
-		}
-
-		/* Reflect the deletion of the Files linked list. */
-		Files = NULL;
-	}
+	/*  Close all open log files and free log descriptor array. */
+	freeSelectors();
 
 	dprintf("Clearing templates.\n");
 	tplDeleteNew();
 	
-	f = NULL;
-	nextp = NULL;
-
 	/* re-setting values to defaults (where applicable) */
 	resetConfigVariables();
+
+	f = NULL;
+	nextp = NULL;
 
 	/* open the configuration file */
 	if ((cf = fopen(ConfFile, "r")) == NULL) {
@@ -5792,7 +5751,8 @@ int main(int argc, char **argv)
 	uchar *pTmp;
 
 #ifndef TESTING
-	chdir ("/");
+	if(chdir ("/") != 0)
+		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
 #endif
 	for (i = 1; i < MAXFUNIX; i++) {
 		funixn[i] = "";

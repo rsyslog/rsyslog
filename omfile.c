@@ -503,16 +503,15 @@ again:
 
 
 /* free an instance
- * returns 0 if it succeeds, something else otherwise
  */
-rsRetVal freeInstanceFile(selector_t *f)
+static rsRetVal freeInstance(selector_t *f)
 {
 	assert(f != NULL);
 	if(f->f_un.f_file.bDynamicName) {
 		dynaFileFreeCache(f);
 	} else 
 		close(f->f_file);
-	return 0;
+	return RS_RET_OK;
 }
 
 
@@ -674,7 +673,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
 		*pEtryPoint = isCompatibleWithFeature;
 	} else if(!strcmp((char*) name, "freeInstance")) {
-		*pEtryPoint = freeInstanceFile;
+		*pEtryPoint = freeInstance;
 	}
 
 	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;

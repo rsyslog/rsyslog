@@ -165,12 +165,10 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)()), uchar *name)
 		moduleDestruct(pNew);
 		return iRet;
 	}
-/* later...
 	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
 		moduleDestruct(pNew);
 		return iRet;
 	}
-*/
 
 	pNew->pszName = (uchar*) strdup((char*)name); /* we do not care if strdup() fails, we can accept that */
 	pNew->eType = eMOD_OUT; /* TODO: take this from module */
