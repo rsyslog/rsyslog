@@ -87,6 +87,7 @@ void untty(void);
 void cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName);
 void cflineParseTemplateName(uchar** pp, register char* pTemplateName, int iLenTemplate);
 void cflineParseFileName(selector_t *f, uchar* p);
+int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */
 extern syslogCODE rs_prioritynames[];
@@ -114,5 +115,6 @@ extern uid_t	dirGID;
 extern int	bCreateDirs;
 extern int iDynaFileCacheSize;
 extern char	ctty[];
+extern int bModMySQLLoaded;
 
 #endif /* #ifndef SYSLOGD_H_INCLUDED */

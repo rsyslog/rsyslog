@@ -39,6 +39,7 @@
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
+#include "template.h"
 #include "ommysql.h"
 #include "mysql/mysql.h" 
 #include "mysql/errmsg.h"
@@ -304,6 +305,118 @@ rsRetVal modInitMySQL(int iIFVersRequested __attribute__((unused)), int *ipIFVer
 	*pQueryEtryPt = queryEtryPt;
 	return RS_RET_OK;
 }
+
+
+/* try to process a selector action line. Checks if the action
+ * applies to this module and, if so, processed it. If not, it
+ * is left untouched. The driver will then call another module
+ */
+rsRetVal parseSelectorActMySQL(uchar **pp, selector_t *f)
+{
+	uchar *p;
+	rsRetVal iRet = RS_RET_CONFLINE_PROCESSED;
+	int iMySQLPropErr = 0;
+	char szTemplateName[128];
+
+	assert(pp != NULL);
+	assert(f != NULL);
+
+	p = *pp;
+
+	switch (*p)
+	{
+	case '>':
+			/* rger 2004-10-28: added support for MySQL
+			 * >server,dbname,userid,password
+			 * rgerhards 2005-08-12: changed rsyslogd so that
+			 * if no DB is selected and > is used, an error
+			 * message is logged.
+			 */
+		if(bModMySQLLoaded == 0)
+			logerror("To enable MySQL logging, a \"$ModLoad MySQL\" must be done - accepted for "
+		        	 "the time being, but will fail in future releases.");
+#ifndef	WITH_DB
+		f->f_type = F_UNUSED;
+		errno = 0;
+		logerror("write to database action in config file, but rsyslogd compiled without "
+		         "database functionality - ignored");
+#else /* WITH_DB defined! */
+		f->f_type = F_MYSQL;
+		f->doAction = doActionMySQL;
+		p++;
+		
+		/* Now we read the MySQL connection properties 
+		 * and verify that the properties are valid.
+		 */
+		if(getSubString(&p, f->f_un.f_mysql.f_dbsrv, MAXHOSTNAMELEN+1, ','))
+			iMySQLPropErr++;
+		if(*f->f_un.f_mysql.f_dbsrv == '\0')
+			iMySQLPropErr++;
+		if(getSubString(&p, f->f_un.f_mysql.f_dbname, _DB_MAXDBLEN+1, ','))
+			iMySQLPropErr++;
+		if(*f->f_un.f_mysql.f_dbname == '\0')
+			iMySQLPropErr++;
+		if(getSubString(&p, f->f_un.f_mysql.f_dbuid, _DB_MAXUNAMELEN+1, ','))
+			iMySQLPropErr++;
+		if(*f->f_un.f_mysql.f_dbuid == '\0')
+			iMySQLPropErr++;
+		if(getSubString(&p, f->f_un.f_mysql.f_dbpwd, _DB_MAXPWDLEN+1, ';'))
+			iMySQLPropErr++;
+		if(*p == '\n' || *p == '\0') { 
+			/* assign default format if none given! */
+			szTemplateName[0] = '\0';
+		} else {
+			/* we have a template specifier! */
+			cflineParseTemplateName(&p, szTemplateName,
+						sizeof(szTemplateName) / sizeof(char));
+		}
+
+		if(szTemplateName[0] == '\0')
+			strcpy(szTemplateName, " StdDBFmt");
+
+		cflineSetTemplateAndIOV(f, szTemplateName);
+		
+		/* we now check if the template was present. If not, we
+		 * can abort this run as the selector line has been
+		 * disabled. If we don't abort, we'll core dump
+		 * below. rgerhards 2005-07-29
+		 */
+		if(f->f_type == F_UNUSED)
+			break;
+
+		dprintf(" template '%s'\n", szTemplateName);
+		
+		/* If db used, the template have to use the SQL option.
+		   This is for your own protection (prevent sql injection). */
+		if (f->f_pTpl->optFormatForSQL == 0) {
+			f->f_type = F_UNUSED;
+			logerror("DB logging disabled. You have to use"
+				" the SQL or stdSQL option in your template!\n");
+			break;
+		}
+		
+		/* If we dedect invalid properties, we disable logging, 
+		 * because right properties are vital at this place.  
+		 * Retries make no sense. 
+		 */
+		if (iMySQLPropErr) { 
+			f->f_type = F_UNUSED;
+			dprintf("Trouble with MySQL conncetion properties.\n"
+				"MySQL logging disabled.\n");
+		} else {
+			initMySQL(f);
+		}
+#endif	/* #ifdef WITH_DB */
+	default:
+		iRet = RS_RET_CONFLINE_UNPROCESSED;
+		break;
+	}
+
+	if(iRet == RS_RET_CONFLINE_PROCESSED)
+		*pp = p;
+	return iRet;
+}
+
 #endif /* #ifdef WITH_DB */
 /*
  * vi:set ai:

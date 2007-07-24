@@ -360,7 +360,7 @@ static char	*ConfFile = _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
 
-static int bModMySQLLoaded = 0; /* was a $ModLoad MySQL done? */
+int bModMySQLLoaded = 0; /* was a $ModLoad MySQL done? */
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
 static int debugging_on = 0; /* read-only, except on sig USR1 */
@@ -671,8 +671,6 @@ static rsRetVal cfline(char *line, register selector_t *f);
 static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
 static void die(int sig);
-
-static int getSubString(uchar **pSrc, char *pDst, size_t DstSize, char cSep);
 
 /* Access functions for the selector_t. These functions are primarily
  * necessary to make things thread-safe. Consequently, they are slim
@@ -5039,9 +5037,6 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	uchar *p;
 	int syncfile;
 	rsRetVal iRet;
-#ifdef WITH_DB
-	int iMySQLPropErr = 0;
-#endif
 
 	dprintf("cfline(%s)", line);
 
@@ -5116,87 +5111,8 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		f->f_type = F_DISCARD;
 		break;
 
-	case '>':	/* rger 2004-10-28: added support for MySQL
-			 * >server,dbname,userid,password
-			 * rgerhards 2005-08-12: changed rsyslogd so that
-			 * if no DB is selected and > is used, an error
-			 * message is logged.
-			 */
-		if(bModMySQLLoaded == 0)
-			logerror("To enable MySQL logging, a \"$ModLoad MySQL\" must be done - accepted for "
-		        	 "the time being, but will fail in future releases.");
-#ifndef	WITH_DB
-		f->f_type = F_UNUSED;
-		errno = 0;
-		logerror("write to database action in config file, but rsyslogd compiled without "
-		         "database functionality - ignored");
-#else /* WITH_DB defined! */
-		f->f_type = F_MYSQL;
-		f->doAction = doActionMySQL;
-		p++;
-		
-		/* Now we read the MySQL connection properties 
-		 * and verify that the properties are valid.
-		 */
-		if(getSubString(&p, f->f_un.f_mysql.f_dbsrv, MAXHOSTNAMELEN+1, ','))
-			iMySQLPropErr++;
-		if(*f->f_un.f_mysql.f_dbsrv == '\0')
-			iMySQLPropErr++;
-		if(getSubString(&p, f->f_un.f_mysql.f_dbname, _DB_MAXDBLEN+1, ','))
-			iMySQLPropErr++;
-		if(*f->f_un.f_mysql.f_dbname == '\0')
-			iMySQLPropErr++;
-		if(getSubString(&p, f->f_un.f_mysql.f_dbuid, _DB_MAXUNAMELEN+1, ','))
-			iMySQLPropErr++;
-		if(*f->f_un.f_mysql.f_dbuid == '\0')
-			iMySQLPropErr++;
-		if(getSubString(&p, f->f_un.f_mysql.f_dbpwd, _DB_MAXPWDLEN+1, ';'))
-			iMySQLPropErr++;
-		if(*p == '\n' || *p == '\0') { 
-			/* assign default format if none given! */
-			szTemplateName[0] = '\0';
-		} else {
-			/* we have a template specifier! */
-			cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(char));
-		}
-
-		if(szTemplateName[0] == '\0')
-			strcpy(szTemplateName, " StdDBFmt");
-
-		cflineSetTemplateAndIOV(f, szTemplateName);
-		
-		/* we now check if the template was present. If not, we
-		 * can abort this run as the selector line has been
-		 * disabled. If we don't abort, we'll core dump
-		 * below. rgerhards 2005-07-29
-		 */
-		if(f->f_type == F_UNUSED)
-			break;
-
-		dprintf(" template '%s'\n", szTemplateName);
-		
-		/* If db used, the template have to use the SQL option.
-		   This is for your own protection (prevent sql injection). */
-		if (f->f_pTpl->optFormatForSQL == 0) {
-			f->f_type = F_UNUSED;
-			logerror("DB logging disabled. You have to use"
-				" the SQL or stdSQL option in your template!\n");
-			break;
-		}
-		
-		/* If we dedect invalid properties, we disable logging, 
-		 * because right properties are vital at this place.  
-		 * Retries make no sense. 
-		 */
-		if (iMySQLPropErr) { 
-			f->f_type = F_UNUSED;
-			dprintf("Trouble with MySQL conncetion properties.\n"
-				"MySQL logging disabled.\n");
-		} else {
-			initMySQL(f);
-		}
-#endif	/* #ifdef WITH_DB */
+	case '>':
+		parseSelectorActMySQL(&p, f);
 		break;
 
 	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
