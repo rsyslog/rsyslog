@@ -135,7 +135,6 @@ struct syslogTime {
  */
 struct filed {
 	struct	filed *f_next;		/* next in linked list */
-	int (*doAction)(struct filed *);		/* method to call to perform an action */
 	short	f_type;			/* entry type, see below */
 	short	f_file;			/* file descriptor */
 	time_t	f_time;			/* time this was last written */
@@ -147,6 +146,7 @@ struct filed {
 	EHostnameCmpMode eHostnameCmpMode;
 	rsCStrObj *pCSHostnameComp;/* hostname to check */
 	rsCStrObj *pCSProgNameComp;	/* tag to check or NULL, if not to be checked */
+	struct moduleInfo *pMod;			/* pointer to output module handling this selector */
 	union {
 		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
 		struct {

@@ -395,7 +395,6 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = family;
 		hints.ai_socktype = f->f_un.f_forw.protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
-		f->doAction = doActionFwd;
 		if( (error = getaddrinfo(f->f_un.f_forw.f_hname, getFwdSyslogPt(f), &hints, &res)) != 0) {
 			f->f_type = F_FORW_UNKN;
 			f->f_prevcount = INET_RETRY_MAX;

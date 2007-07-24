@@ -2325,6 +2325,10 @@ static void processMsg(msg_t *pMsg)
 
 	assert(pMsg != NULL);
 
+#if 0	/* TODO: I temporarily disable the emergency logging system. We must re-think
+	 * how this is done, as we now have modules.
+	 * rgerhards, 2007-07-24
+	 */
 	/* log the message to the particular outputs */
 	if (!Initialized) {
 		/* If we reach this point, the daemon initialization FAILED. That is,
@@ -2369,6 +2373,7 @@ static void processMsg(msg_t *pMsg)
 		}
 		return; /* we are done with emergency loging */
 	}
+#endif
 
 	for (f = Files; f != NULL ; f = f->f_next) {
 		/* first, we need to check if this is a disabled (F_UNUSED)
@@ -3310,7 +3315,9 @@ void fprintlog(register selector_t *f)
 
 	f->f_time = now; /* we need this for message repeation processing TODO: why must it be global now? */
 	if(f->f_type != F_UNUSED) {
-		f->doAction(f);	/* call configured action */
+		if(f->pMod->mod.om.doAction != NULL)	/* safety check */
+			f->pMod->mod.om.doAction(f);	/* call configured action */
+		// TODO: this causes problems for the emergency logging system!
 	}
 
 	if (f->f_type != F_FORW_UNKN)
@@ -4624,11 +4631,9 @@ void cflineParseFileName(selector_t *f, uchar* p)
 
 	if(*p == '|') {
 		f->f_type = F_PIPE;
-		f->doAction = doActionFile;
 		++p;
 	} else {
 		f->f_type = F_FILE;
-		f->doAction = doActionFile;
 	}
 
 	pName = f->f_un.f_file.f_fname;
@@ -5096,6 +5101,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			if(iRet == RS_RET_CONFLINE_PROCESSED) {
 				dprintf("Module %s processed this config line.\n",
 					modGetName(pMod));
+				f->pMod = pMod;
 				break;
 			}
 			else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {

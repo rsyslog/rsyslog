@@ -236,7 +236,6 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 	if(*p == '*') { /* wall */
 		dprintf ("write-all");
 		f->f_type = F_WALL;
-		f->doAction = doAction;
 		if(*(p+1) == ';') {
 			/* we have a template specifier! */
 			p += 2; /* eat "*;" */
@@ -261,7 +260,6 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		 */
 		dprintf ("users: %s\n", p);	/* ASP */
 		f->f_type = F_USERS;
-		f->doAction = doAction;
 		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
 			for (q = p; *q && *q != ',' && *q != ';'; )
 				q++;

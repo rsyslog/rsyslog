@@ -305,7 +305,6 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		         "database functionality - ignored");
 #else /* WITH_DB defined! */
 		f->f_type = F_MYSQL;
-		f->doAction = doActionMySQL;
 		p++;
 		
 		/* Now we read the MySQL connection properties 

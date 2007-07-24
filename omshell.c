@@ -84,7 +84,6 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		cflineParseFileName(f, p);
 		if (f->f_type == F_FILE) {
 			f->f_type = F_SHELL;
-			f->doAction = doActionShell;
 		}
 		break;
 	default:

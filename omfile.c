@@ -69,7 +69,6 @@ static void cflineParseOutchannel(selector_t *f, uchar* p)
 	 * extend it...
 	 */
 	f->f_type = F_FILE;
-	f->doAction = doActionFile;
 
 	++p; /* skip '$' */
 	i = 0;
