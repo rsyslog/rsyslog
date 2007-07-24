@@ -177,9 +177,7 @@
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
 #include <resolv.h>
-#ifndef TESTING
 #include "pidfile.h"
-#endif
 
 #include <assert.h>
 
@@ -3561,9 +3559,7 @@ static void die(int sig)
 	if(emergfile.f_bMustBeFreed != NULL)
 		free(emergfile.f_bMustBeFreed);
 
-#ifndef TESTING
 	remove_pid(PidFile);
-#endif
 	if(glblHadMemShortage)
 		dprintf("Had memory shortage at least once during the run.\n");
 	dprintf("Clean shutdown completed, bye.\n");
@@ -3575,12 +3571,10 @@ static void die(int sig)
  * rgerhards, 2005-10-24: this is only called during forking of the
  * detached syslogd. I consider this method to be safe.
  */
-#ifndef TESTING
 static void doexit()
 {
 	exit(0); /* "good" exit, only during child-creation */
 }
-#endif
 
 
 /* parse an allowed sender config line and add the allowed senders
@@ -5290,29 +5284,25 @@ static void mainloop(void)
 {
 	fd_set readfds;
 	int i;
+	int	fd;
+	char line[MAXLINE +1];
+	int maxfds;
 #ifdef  SYSLOG_INET
 	fd_set writefds;
 	selector_t *f;
-#  ifndef TESTING
 	struct sockaddr_storage frominet;
 	socklen_t socklen;
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
 	int iTCPSess;
 	ssize_t l;
-#  endif /* #ifndef TESTING */
 #endif	/* #ifdef SYSLOG_INET */
 #ifdef	BSD
 #ifdef	USE_PTHREADS
 	struct timeval tvSelectTimeout;
 #endif
 #endif
-#ifndef TESTING
-	int	fd;
-#endif /* #ifndef TESTING */
-	char line[MAXLINE +1];
 
-	int maxfds;
 
 	/* --------------------- Main loop begins here. ----------------------------------------- */
 	while(!bFinished){
@@ -5321,7 +5311,6 @@ static void mainloop(void)
 		FD_ZERO(&readfds);
 		maxfds = 0;
 #ifdef SYSLOG_UNIXAF
-#ifndef TESTING
 		/* Add the Unix Domain Sockets to the list of read
 		 * descriptors.
 		 * rgerhards 2005-08-01: we must now check if there are
@@ -5336,9 +5325,7 @@ static void mainloop(void)
 			}
 		}
 #endif
-#endif
 #ifdef SYSLOG_INET
-#ifndef TESTING
 		/* Add the UDP listen sockets to the list of read descriptors.
 		 */
 		if(finet != NULL && AcceptRemote) {
@@ -5401,13 +5388,6 @@ static void mainloop(void)
 				   }
 			}
 		}
-#endif
-#endif
-#ifdef TESTING
-		FD_SET(fileno(stdin), &readfds);
-		if (fileno(stdin) > maxfds) maxfds = fileno(stdin);
-
-		dprintf("Listening on stdin.  Press Ctrl-C to interrupt.\n");
 #endif
 
 		if ( debugging_on ) {
@@ -5493,7 +5473,6 @@ static void mainloop(void)
 			dprintf(("\n"));
 		}
 
-#ifndef TESTING
 #ifdef SYSLOG_INET
 		/* TODO: activate the code below only if we actually need to check
 		 * for outstanding writefds.
@@ -5644,23 +5623,6 @@ static void mainloop(void)
 		}
 
 #endif
-#else
-		if ( FD_ISSET(fileno(stdin), &readfds) ) {
-			dprintf("Message from stdin.\n");
-			memset(line, '\0', sizeof(line));
-			line[0] = '.';
-			i = read(fileno(stdin), line, MAXLINE);
-			if (i > 0) {
-				printchopped(LocalHostName, line, i+1,
-					     fileno(stdin), 0);
-		  	} else if (i < 0) {
-		    		if (errno != EINTR) {
-		      			logerror("stdin");
-				}
-		  	}
-			FD_CLR(fileno(stdin), &readfds);
-		  }
-#endif
 	}
 }
 
@@ -5740,9 +5702,7 @@ int main(int argc, char **argv)
 	           * or put in conditional compilation. 2005-01-18 RGerhards */
 #endif
 
-#ifndef TESTING
 	pid_t ppid = getpid();
-#endif
 	int ch;
 	struct hostent *hent;
 
@@ -5750,10 +5710,8 @@ int main(int argc, char **argv)
 	extern char *optarg;
 	uchar *pTmp;
 
-#ifndef TESTING
 	if(chdir ("/") != 0)
 		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
-#endif
 	for (i = 1; i < MAXFUNIX; i++) {
 		funixn[i] = "";
 		funix[i]  = -1;
@@ -5893,7 +5851,6 @@ int main(int argc, char **argv)
 
 	checkPermissions();
 
-#ifndef TESTING
 	if ( !(Debug || NoFork) )
 	{
 		dprintf("Checking pidfile.\n");
@@ -5927,10 +5884,8 @@ int main(int argc, char **argv)
 		}
 	}
 	else
-#endif
 		debugging_on = 1;
 
-#ifndef TESTING
 	/* tuck my process id away */
 	if ( !Debug )
 	{
@@ -5949,7 +5904,6 @@ int main(int argc, char **argv)
 			exit(1); /* exit during startup - questionable */
 		}
 	} /* if ( !Debug ) */
-#endif
 	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
 
 	/* initialize the default templates
@@ -6022,7 +5976,6 @@ int main(int argc, char **argv)
 
 	dprintf("Starting.\n");
 	init();
-#ifndef TESTING
 	if(Debug) {
 		dprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 		debugging_on = 1;
@@ -6032,7 +5985,6 @@ int main(int argc, char **argv)
 	 */
 	if (myPid != ppid)
 		kill (ppid, SIGTERM);
-#endif
 	/* END OF INTIALIZATION
 	 * ... but keep in mind that we might do a restart and thus init() might
 	 * be called again. If that happens, we must shut down all active threads,
