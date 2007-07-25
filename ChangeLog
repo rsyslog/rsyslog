@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.17.3 (rgerhards), 2007-07-2?
+Version 1.17.3 (rgerhards), 2007-07-25
 - continued working on modularization
 - fixed a bug that caused rsyslogd to segfault on exit (and
   probably also on HUP), when there was an unsent message in a selector
@@ -15,7 +15,7 @@ Version 1.17.3 (rgerhards), 2007-07-2?
   list now gets freed. thanks mildew to for the patch.
 - changed the way error messages in early startup are logged. They
   now do no longer use the syslogd code directly but are rather
-  send to stderr, the console and a user-configurable file.
+  send to stderr.
 ---------------------------------------------------------------------------
 Version 1.17.2 (rgerhards), 2007-07-23
 - made the port part of the -r option optional. Needed for backward
