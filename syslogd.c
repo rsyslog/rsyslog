@@ -4121,7 +4121,7 @@ static void freeSelectors(void)
 				free(f->f_psziov);
 
 			/* free the action instances */
-			f->pMod->freeInstance(f);
+			f->pMod->freeInstance(f, f->pModData);
 #			ifdef USE_PTHREADS
 			/* delete any mutex objects, if present */
 			if(   (   (f->f_type == F_FORW_SUSP)

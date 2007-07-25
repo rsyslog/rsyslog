@@ -45,8 +45,10 @@ static rsRetVal createInstance(instanceData **ppData)\
 	instanceData *pData; /* use this to point to data elements */
 
 #define CODESTARTcreateInstance \
-	if((pData = calloc(1, sizeof(instanceData))) == NULL)\
-		return RS_RET_OUT_OF_MEMORY;
+	if((pData = calloc(1, sizeof(instanceData))) == NULL) {\
+		*ppData = NULL;\
+		return RS_RET_OUT_OF_MEMORY;\
+	}
 
 #define ENDcreateInstance \
 	*ppData = pData;\
@@ -56,14 +58,18 @@ static rsRetVal createInstance(instanceData **ppData)\
 /* freeInstance()
  */
 #define BEGINfreeInstance \
-static rsRetVal freeInstance(selector_t *f)\
+static rsRetVal freeInstance(selector_t *f, void* pModData)\
 {\
-	rsRetVal iRet = RS_RET_OK;
+	rsRetVal iRet = RS_RET_OK;\
+	instanceData *pData;
 
 #define CODESTARTfreeInstance \
-	assert(f != NULL);
+	assert(f != NULL);\
+	pData = (instanceData*) pModData;
 
 #define ENDfreeInstance \
+	if(pData != NULL)\
+		free(pData); /* we need to free this in any case */\
 	return iRet;\
 }
 
