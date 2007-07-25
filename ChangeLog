@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.17.4 (rgerhards), 2007-07-2?
+---------------------------------------------------------------------------
 Version 1.17.3 (rgerhards), 2007-07-25
 - continued working on modularization
 - fixed a bug that caused rsyslogd to segfault on exit (and
