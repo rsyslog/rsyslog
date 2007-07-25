@@ -2288,6 +2288,20 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 }
 
 
+/* doEmergencyLoggin()
+ * ... does exactly do that. It logs messages when the subsystem has not yet
+ * been initialized. This almost always happens during initial startup or
+ * during HUPing.
+ * rgerhards, 2007-07-25
+ * TODO: add logging to system console
+ */
+static void doEmergencyLogging(msg_t *pMsg)
+{
+	assert(pMsg != NULL);
+	fprintf(stderr, "rsyslog: %s\n", pMsg->pszMSG);
+}
+
+
 /* Process (consume) a received message. Calls the actions configured.
  * Can some time later run in its own thread. To aid this, the calling
  * parameters should be reduced to just pMsg.
@@ -2303,54 +2317,8 @@ static void processMsg(msg_t *pMsg)
 
 	/* log the message to the particular outputs */
 	if (!Initialized) {
-		fprintf(stderr, "rsyslog: %s\n", pMsg->pszMSG);
+		doEmergencyLogging(pMsg);
 		return;
-#if 0	/* TODO: I temporarily disable the emergency logging system. We must re-think
-	 * how this is done, as we now have modules.
-	 * rgerhards, 2007-07-24
-	 */
-		/* If we reach this point, the daemon initialization FAILED. That is,
-		 * syslogd is NOT actually running. So what we do here is just
-		 * initialize a pointer to the system console and then output
-		 * the message to the it. So at least we have a little
-		 * chance that messages show up somewhere.
-		 * rgerhards 2004-11-09
-		 */
-		f = &consfile;
-		f->f_file = open(ctty, O_WRONLY|O_NOCTTY);
-		f->doAction = doActionFile;
-
-		if (f->f_file >= 0) {
-			untty();
-			f->f_pMsg = MsgAddRef(pMsg); /* is expected here... */
-			fprintlog(f);
-			MsgDestruct(pMsg);
-			(void) close(f->f_file);
-			f->f_file = -1;
-		}
-
-		/* now log to a second emergency log... 2005-06-21 rgerhards */
-		/* TODO: make this configurable, eventually via the command line */
-		if(ttyname(0) != NULL) {
-			memset(&emergfile, 0, sizeof(emergfile));
-			f = &emergfile;
-			emergfile.f_type = F_TTY;
-			emergfile.doAction = doActionFile;
-			strcpy(emergfile.f_un.f_file.f_fname, ttyname(0));
-			cflineSetTemplateAndIOV(&emergfile, " TradFmt");
-			f->f_file = open(ttyname(0), O_WRONLY|O_NOCTTY);
-
-			if (f->f_file >= 0) {
-				untty();
-				f->f_pMsg = MsgAddRef(pMsg); /* is expected here... */
-				fprintlog(f);
-				MsgDestruct(pMsg);
-				(void) close(f->f_file);
-				f->f_file = -1;
-			}                        
-		}
-		return; /* we are done with emergency loging */
-#endif
 	}
 
 	bContinue = 1;
