@@ -74,7 +74,7 @@ typedef struct moduleInfo {
 			/* below: perform the configured action
 			 */
 			rsRetVal (*doAction)();
-			rsRetVal (*parseSelectorAct)(uchar**, selector_t*);
+			rsRetVal (*parseSelectorAct)(uchar**, selector_t*, void**);
 		} om;
 	} mod;
 } modInfo_t;

@@ -156,6 +156,7 @@ struct filed {
 	rsCStrObj *pCSHostnameComp;/* hostname to check */
 	rsCStrObj *pCSProgNameComp;	/* tag to check or NULL, if not to be checked */
 	struct moduleInfo *pMod;			/* pointer to output module handling this selector */
+	void	*pModData;		/* pointer to module data - contents is module-specific */
 	union {
 		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
 		struct {
@@ -171,6 +172,7 @@ struct filed {
 			char isNegated;			/* actually a boolean ;) */
 		} prop;
 	} f_filterData;
+#if 1
 	union {
 		char	f_uname[MAXUNAMES][UNAMESZ+1];
 #ifdef	WITH_DB
@@ -232,6 +234,7 @@ struct filed {
 			char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
 		} f_file;
 	} f_un;
+#endif
 	int	f_ReduceRepeated;		/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */

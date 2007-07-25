@@ -50,6 +50,7 @@
 #include "template.h"
 #include "msg.h"
 #include "tcpsyslog.h"
+#include "module-template.h"
 
 /*
  * This table contains plain text for h_errno errors used by the
@@ -64,33 +65,50 @@ static const char *sys_h_errlist[] = {
     "no address, look for MX record"				/* NO_ADDRESS */
  };
 
-/* query feature compatibility
+/* internal structures
  */
-static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
-{
+
+typedef struct _instanceData {
+} instanceData;
+
+
+BEGINcreateInstance
+CODESTARTcreateInstance
+ENDcreateInstance
+
+
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
 	if(eFeat == sFEATURERepeatedMsgReduction)
-		return RS_RET_OK;
-
-	return RS_RET_INCOMPATIBLE;
-}
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
 
 
-/* call the shell action
- */
-static rsRetVal doActionFwd(selector_t *f)
-{
+BEGINfreeInstance
+CODESTARTfreeInstance
+	switch (f->f_type) {
+		case F_FORW:
+		case F_FORW_SUSP:
+			freeaddrinfo(f->f_un.f_forw.f_addr);
+			/* fall through */
+		case F_FORW_UNKN:
+			if(f->f_un.f_forw.port != NULL)
+				free(f->f_un.f_forw.port);
+			break;
+	}
+ENDfreeInstance
+
+
+BEGINdoAction
 	char *psz; /* temporary buffering */
 	register unsigned l;
-	rsRetVal iRet = RS_RET_OK;
 	int i;
 	unsigned e, lsent = 0;
 	int bSendSuccess;
 	time_t fwd_suspend;
 	struct addrinfo *res, *r;
 	struct addrinfo hints;
-
-	assert(f != NULL);
-
+CODESTARTdoAction
 	switch (f->f_type) {
 	case F_FORW_SUSP:
 		fwd_suspend = time(NULL) - f->f_un.f_forw.ttSuspend;
@@ -249,32 +267,22 @@ static rsRetVal doActionFwd(selector_t *f)
 		}
 		break;
 	}
-	return iRet;
-}
+ENDdoAction
 
 
-/* try to process a selector action line. Checks if the action
- * applies to this module and, if so, processed it. If not, it
- * is left untouched. The driver will then call another module
- */
-static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
-{
+BEGINparseSelectorAct
 	uchar *p, *q;
 	int i;
         int error;
 	int bErr;
-	rsRetVal iRet = RS_RET_CONFLINE_PROCESSED;
         struct addrinfo hints, *res;
 	char szTemplateName[128];
-
-	assert(pp != NULL);
-	assert(f != NULL);
-
+CODESTARTparseSelectorAct
 	p = *pp;
 
-	switch (*p)
-	{
-	case '@':
+	if(*p == '@') {
+		if((iRet = createInstance(&pModData)) != RS_RET_OK)
+			return iRet;
 		++p; /* eat '@' */
 		if(*p == '@') { /* indicator for TCP! */
 			f->f_un.f_forw.protocol = FORW_TCP;
@@ -416,91 +424,41 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		}
 
 		/* then try to find the template */
-		if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) != RS_RET_OK)
-			break;
-
-		dprintf("forwarding host: '%s:%s/%s' template '%s'\n", q, getFwdSyslogPt(f),
-			 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp",
-			 szTemplateName);
+		if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) == RS_RET_OK) {
+			dprintf("forwarding host: '%s:%s/%s' template '%s'\n", q, getFwdSyslogPt(f),
+				 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp",
+				 szTemplateName);
+		}
 		/*
 		 * Otherwise the host might be unknown due to an
 		 * inaccessible nameserver (perhaps on the same
 		 * host). We try to get the ip number later, like
 		 * FORW_SUSP.
 		 */
-		break;
-	default:
+	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
-		break;
 	}
 
-	if(iRet == RS_RET_OK)
-		iRet = RS_RET_CONFLINE_PROCESSED;
-
-	if(iRet == RS_RET_CONFLINE_PROCESSED)
+	if(iRet == RS_RET_OK) {
+		*ppModData = pModData;
 		*pp = p;
-	return iRet;
-}
-
-/* free an instance
- */
-static rsRetVal freeInstance(selector_t *f)
-{
-	assert(f != NULL);
-	switch (f->f_type) {
-		case F_FORW:
-		case F_FORW_SUSP:
-			freeaddrinfo(f->f_un.f_forw.f_addr);
-			/* fall through */
-		case F_FORW_UNKN:
-			if(f->f_un.f_forw.port != NULL)
-				free(f->f_un.f_forw.port);
-			break;
 	}
-	return RS_RET_OK;
-}
+	/* TODO: do we need to call freeInstance if we failed - this is a general question for
+	 * all output modules. I'll address it lates as the interface evolves. rgerhards, 2007-07-25
+	 */
+ENDparseSelectorAct
 
 
-/* query an entry point
- */
-static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
-{
-	if((name == NULL) || (pEtryPoint == NULL))
-		return RS_RET_PARAM_ERROR;
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_OMOD_QUERIES
+ENDqueryEtryPt
 
-	*pEtryPoint = NULL;
-	if(!strcmp((char*) name, "doAction")) {
-		*pEtryPoint = doActionFwd;
-	} else if(!strcmp((char*) name, "parseSelectorAct")) {
-		*pEtryPoint = parseSelectorAct;
-	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
-		*pEtryPoint = isCompatibleWithFeature;
-	} else if(!strcmp((char*) name, "freeInstance")) {
-		*pEtryPoint = freeInstance;
-	}
 
-	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
-}
-
-/* initialize the module
- *
- * Later, much more must be done. So far, we only return a pointer
- * to the queryEtryPt() function
- * TODO: do interface version checking & handshaking
- * iIfVersRequeted is the version of the interface specification that the
- * caller would like to see being used. ipIFVersProvided is what we
- * decide to provide.
- */
-rsRetVal modInitFwd(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())
-{
-	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))
-		return RS_RET_PARAM_ERROR;
-
+BEGINmodInit(Fwd)
+CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
-
-	*pQueryEtryPt = queryEtryPt;
-	return RS_RET_OK;
-}
+ENDmodInit
 
 #endif /* #ifdef SYSLOG_INET */
 /*

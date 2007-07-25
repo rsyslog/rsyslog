@@ -3307,7 +3307,6 @@ rsRetVal fprintlog(register selector_t *f)
 	iRet = f->pMod->mod.om.doAction(f);	/* call configured action */
 	if(iRet == RS_RET_DISABLE_ACTION)
 		f->bEnabled = 0; /* that's it... */
-	// TODO: this causes problems for the emergency logging system!
 
 	if (f->f_type != F_FORW_UNKN)
 		f->f_prevcount = 0;
@@ -4462,6 +4461,7 @@ static void init()
 						printf("%s, ", f->f_un.f_uname[i]);
 					break;
 				}
+				printf("\tinstance data: 0x%x\n", (unsigned) f->pModData);
 				if(f->f_ReduceRepeated)
 					printf(" [RepeatedMsgReduction]");
 				if(f->bEnabled == 0)
@@ -5023,6 +5023,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	uchar *p;
 	rsRetVal iRet;
 	modInfo_t *pMod;
+	void *pModData;
 
 	dprintf("cfline(%s)", line);
 
@@ -5071,12 +5072,13 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	/* loop through all modules and see if one picks up the line */
 	pMod = omodGetNxt(NULL);
 	while(pMod != NULL) {
-		iRet = pMod->mod.om.parseSelectorAct(&p , f);
+		iRet = pMod->mod.om.parseSelectorAct(&p , f, &pModData);
 		dprintf("trying selector action for %s: %d\n", modGetName(pMod), iRet);
-		if(iRet == RS_RET_CONFLINE_PROCESSED) {
+		if(iRet == RS_RET_OK) {
 			dprintf("Module %s processed this config line.\n",
 				modGetName(pMod));
 			f->pMod = pMod;
+			f->pModData = pModData;
 			/* now check if the module is compatible with select features */
 			if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
 				f->f_ReduceRepeated = bReduceRepeatMsgs;
@@ -5100,7 +5102,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		pMod = omodGetNxt(pMod);
 	}
 
-	return (iRet == RS_RET_CONFLINE_PROCESSED) ? RS_RET_OK : RS_RET_NOENTRY;
+	return iRet;
 }
 
 

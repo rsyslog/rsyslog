@@ -146,8 +146,6 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)()), uchar *name)
 
 	assert(modInit != NULL);
 
-	printf("Enter doModInit for module '%s'\n", (char*)name);
-
 	if((iRet = moduleConstruct(&pNew)) != RS_RET_OK)
 		return iRet;
 

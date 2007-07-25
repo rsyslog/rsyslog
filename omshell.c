@@ -38,26 +38,36 @@
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "omshell.h"
+#include "module-template.h"
 
-
-/* query feature compatibility
+/* internal structures
  */
-static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
-{
+typedef struct _instanceData {
+} instanceData;
+
+
+BEGINcreateInstance
+CODESTARTcreateInstance
+ENDcreateInstance
+
+
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
 	if(eFeat == sFEATURERepeatedMsgReduction)
-		return RS_RET_OK;
-
-	return RS_RET_INCOMPATIBLE;
-}
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
 
 
-/* call the shell action
- */
-static rsRetVal doActionShell(selector_t *f)
-{
+BEGINfreeInstance
+CODESTARTfreeInstance
+	/* TODO: free the instance pointer (currently a leak, will go away) */
+ENDfreeInstance
+
+
+
+BEGINdoAction
 	uchar *psz;
-
-	assert(f != NULL);
+CODESTARTdoAction
 	/* TODO: using f->f_un.f_file.f_name is not clean from the point of
 	 * modularization. We'll change that as we go ahead with modularization.
 	 * rgerhards, 2007-07-20
@@ -67,24 +77,21 @@ static rsRetVal doActionShell(selector_t *f)
 	psz = (uchar*) iovAsString(f);
 	if(execProg((uchar*) f->f_un.f_file.f_fname, 1, (uchar*) psz) == 0)
 		logerrorSz("Executing program '%s' failed", f->f_un.f_file.f_fname);
-
-	return RS_RET_OK;
-}
+ENDdoAction
 
 
-/* try to process a selector action line. Checks if the action
- * applies to this module and, if so, processed it. If not, it
- * is left untouched. The driver will then call another module
- */
-static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
-{
+BEGINparseSelectorAct
 	uchar *p;
-	rsRetVal iRet = RS_RET_CONFLINE_PROCESSED;
-
-	assert(pp != NULL);
-	assert(f != NULL);
-
+CODESTARTparseSelectorAct
 	p = *pp;
+	/* yes, the if below is redundant, but I need it now. Will go away as
+	 * the code further changes.  -- rgerhards, 2007-07-25
+	 */
+	if(*p == '^') {
+		if((iRet = createInstance(&pModData)) != RS_RET_OK)
+			return iRet;
+	}
+
 
 	switch (*p)
 	{
@@ -101,63 +108,24 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		break;
 	}
 
-	if(iRet == RS_RET_OK)
-		iRet = RS_RET_CONFLINE_PROCESSED;
-
-	if(iRet == RS_RET_CONFLINE_PROCESSED)
+	if(iRet == RS_RET_OK) {
+		*ppModData = pModData;
 		*pp = p;
-	return iRet;
-}
-
-
-/* free an instance
- */
-static rsRetVal freeInstance(selector_t *f)
-{
-	assert(f != NULL);
-	return RS_RET_OK;
-}
-
-/* query an entry point
- */
-static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
-{
-	if((name == NULL) || (pEtryPoint == NULL))
-		return RS_RET_PARAM_ERROR;
-
-	*pEtryPoint = NULL;
-	if(!strcmp((char*) name, "doAction")) {
-		*pEtryPoint = doActionShell;
-	} else if(!strcmp((char*) name, "parseSelectorAct")) {
-		*pEtryPoint = parseSelectorAct;
-	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
-		*pEtryPoint = isCompatibleWithFeature;
-	} else if(!strcmp((char*) name, "freeInstance")) {
-		*pEtryPoint = freeInstance; 
 	}
+ENDparseSelectorAct
 
-	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
-}
 
-/* initialize the module
- *
- * Later, much more must be done. So far, we only return a pointer
- * to the queryEtryPt() function
- * TODO: do interface version checking & handshaking
- * iIfVersRequeted is the version of the interface specification that the
- * caller would like to see being used. ipIFVersProvided is what we
- * decide to provide.
- */
-rsRetVal modInitShell(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())
-{
-	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))
-		return RS_RET_PARAM_ERROR;
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_OMOD_QUERIES
+ENDqueryEtryPt
 
+
+BEGINmodInit(Shell)
+CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+ENDmodInit
 
-	*pQueryEtryPt = queryEtryPt;
-	return RS_RET_OK;
-}
 /*
  * vi:set ai:
  */

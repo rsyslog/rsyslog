@@ -50,17 +50,30 @@
 #include "syslogd-types.h"
 #include "syslogd.h"
 #include "omusrmsg.h"
+#include "module-template.h"
 
-
-/* query feature compatibility
+/* internal structures
  */
-static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
-{
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		return RS_RET_OK;
+typedef struct _instanceData {
+} instanceData;
 
-	return RS_RET_INCOMPATIBLE;
-}
+
+BEGINcreateInstance
+CODESTARTcreateInstance
+ENDcreateInstance
+
+
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATURERepeatedMsgReduction)
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
+
+
+BEGINfreeInstance
+CODESTARTfreeInstance
+	/* TODO: free the instance pointer (currently a leak, will go away) */
+ENDfreeInstance
 
 
 static jmp_buf ttybuf;
@@ -213,36 +226,28 @@ static void wallmsg(selector_t *f)
 }
 
 
-/* call the shell action
- */
-static rsRetVal doAction(selector_t *f)
-{
-	assert(f != NULL);
-
+BEGINdoAction
+CODESTARTdoAction
 	dprintf("\n");
+	/* TODO: change wallmsg so that it returns iRet */
 	wallmsg(f);
-	return RS_RET_OK;
-}
+ENDdoAction
 
-/* try to process a selector action line. Checks if the action
- * applies to this module and, if so, processed it. If not, it
- * is left untouched. The driver will then call another module
- */
-static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
-{
+
+BEGINparseSelectorAct
 	uchar *p, *q;
 	int i;
 	char szTemplateName[128];
-	rsRetVal iRet = RS_RET_CONFLINE_PROCESSED;
-
-	assert(pp != NULL);
-	assert(f != NULL);
+CODESTARTparseSelectorAct
 
 #if 0 /* TODO: think about it and activate later - see comments in else below */
 	if(**pp != '*')
 		return RS_RET_CONFLINE_UNPROCESSED;
 #endif
 	p = *pp;
+	if((iRet = createInstance(&pModData)) != RS_RET_OK)
+		return iRet;
+
 
 	if(*p == '*') { /* wall */
 		dprintf ("write-all");
@@ -299,63 +304,23 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		 */
 	}
 
-	if(iRet == RS_RET_OK)
-		iRet = RS_RET_CONFLINE_PROCESSED;
-
-	if(iRet == RS_RET_CONFLINE_PROCESSED)
+	if(iRet == RS_RET_OK) {
+		*ppModData = pModData;
 		*pp = p;
-	return iRet;
-}
-
-
-/* free an instance
- */
-static rsRetVal freeInstance(selector_t *f)
-{
-	assert(f != NULL);
-	return RS_RET_OK;
-}
-
-/* query an entry point
- */
-static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
-{
-	if((name == NULL) || (pEtryPoint == NULL))
-		return RS_RET_PARAM_ERROR;
-
-	*pEtryPoint = NULL;
-	if(!strcmp((char*) name, "doAction")) {
-		*pEtryPoint = doAction;
-	} else if(!strcmp((char*) name, "parseSelectorAct")) {
-		*pEtryPoint = parseSelectorAct;
-	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
-		*pEtryPoint = isCompatibleWithFeature;
-	} else if(!strcmp((char*) name, "freeInstance")) {
-		*pEtryPoint = freeInstance;
 	}
+ENDparseSelectorAct
 
-	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
-}
 
-/* initialize the module
- *
- * Later, much more must be done. So far, we only return a pointer
- * to the queryEtryPt() function
- * TODO: do interface version checking & handshaking
- * iIfVersRequeted is the version of the interface specification that the
- * caller would like to see being used. ipIFVersProvided is what we
- * decide to provide.
- */
-rsRetVal modInitUsrMsg(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())
-{
-	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))
-		return RS_RET_PARAM_ERROR;
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_OMOD_QUERIES
+ENDqueryEtryPt
 
+
+BEGINmodInit(UsrMsg)
+CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
-
-	*pQueryEtryPt = queryEtryPt;
-	return RS_RET_OK;
-}
+ENDmodInit
 
 /*
  * vi:set ai:

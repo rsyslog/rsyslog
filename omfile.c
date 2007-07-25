@@ -46,17 +46,19 @@
 #include "template.h"
 #include "outchannel.h"
 #include "omfile.h"
+#include "module-template.h"
 
-
-/* query feature compatibility
+/* internal structures
  */
-static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)
-{
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		return RS_RET_OK;
 
-	return RS_RET_INCOMPATIBLE;
-}
+typedef struct _instanceData {
+} instanceData;
+
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+	if(eFeat == sFEATURERepeatedMsgReduction)
+		iRet = RS_RET_OK;
+ENDisCompatibleWithFeature
 
 
 /* Helper to cfline(). Parses a output channel name up until the first
@@ -502,26 +504,22 @@ again:
 }
 
 
-/* free an instance
- */
-static rsRetVal freeInstance(selector_t *f)
-{
-	assert(f != NULL);
+BEGINcreateInstance
+CODESTARTcreateInstance
+ENDcreateInstance
+
+
+BEGINfreeInstance
+CODESTARTfreeInstance
 	if(f->f_un.f_file.bDynamicName) {
 		dynaFileFreeCache(f);
 	} else 
 		close(f->f_file);
-	return RS_RET_OK;
-}
+ENDfreeInstance
 
 
-/* call the shell action
- */
-static rsRetVal doActionFile(selector_t *f)
-{
-	assert(f != NULL);
-	rsRetVal iRet = RS_RET_OK;
-
+BEGINdoAction
+CODESTARTdoAction
 	dprintf(" (%s)\n", f->f_un.f_file.f_fname);
 	/* f->f_file == -1 is an indicator that the we couldn't
 	 * open the file at startup. For dynaFiles, this is ok,
@@ -529,23 +527,13 @@ static rsRetVal doActionFile(selector_t *f)
 	 */
 	if(f->f_un.f_file.bDynamicName || (f->f_file != -1))
 		iRet = writeFile(f);
+ENDdoAction
 
-	return iRet;
-}
 
-/* try to process a selector action line. Checks if the action
- * applies to this module and, if so, processed it. If not, it
- * is left untouched. The driver will then call another module
- */
-static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
-{
+BEGINparseSelectorAct
 	uchar *p;
 	int syncfile;
-	rsRetVal iRet = RS_RET_CONFLINE_PROCESSED;
-
-	assert(pp != NULL);
-	assert(f != NULL);
-
+CODESTARTparseSelectorAct
 	p = *pp;
 
 	if (*p == '-') {
@@ -553,6 +541,14 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		p++;
 	} else
 		syncfile = 1;
+
+	/* yes, the if below is redundant, but I need it now. Will go away as
+	 * the code further changes.  -- rgerhards, 2007-07-25
+	 */
+	if(*p == '$' || *p == '?' || *p == '|' || *p == '/') {
+		if((iRet = createInstance(&pModData)) != RS_RET_OK)
+			return iRet;
+	}
 
 	switch (*p)
 	{
@@ -649,55 +645,23 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f)
 		break;
 	}
 
-	if(iRet == RS_RET_OK)
-		iRet = RS_RET_CONFLINE_PROCESSED;
-
-	if(iRet == RS_RET_CONFLINE_PROCESSED)
+	if(iRet == RS_RET_OK) {
+		*ppModData = (void*) pModData;
 		*pp = p;
-	return iRet;
-}
-
-
-/* query an entry point
- */
-static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
-{
-	if((name == NULL) || (pEtryPoint == NULL))
-		return RS_RET_PARAM_ERROR;
-
-	*pEtryPoint = NULL;
-	if(!strcmp((char*) name, "doAction")) {
-		*pEtryPoint = doActionFile;
-	} else if(!strcmp((char*) name, "parseSelectorAct")) {
-		*pEtryPoint = parseSelectorAct;
-	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {
-		*pEtryPoint = isCompatibleWithFeature;
-	} else if(!strcmp((char*) name, "freeInstance")) {
-		*pEtryPoint = freeInstance;
 	}
+ENDparseSelectorAct
 
-	return(*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
-}
 
-/* initialize the module
- *
- * Later, much more must be done. So far, we only return a pointer
- * to the queryEtryPt() function
- * TODO: do interface version checking & handshaking
- * iIfVersRequeted is the version of the interface specification that the
- * caller would like to see being used. ipIFVersProvided is what we
- * decide to provide.
- */
-rsRetVal modInitFile(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())
-{
-	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))
-		return RS_RET_PARAM_ERROR;
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_OMOD_QUERIES
+ENDqueryEtryPt
 
+
+BEGINmodInit(File)
+CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
-
-	*pQueryEtryPt = queryEtryPt;
-	return RS_RET_OK;
-}
+ENDmodInit
 
 
 /*
