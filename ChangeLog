@@ -1,6 +1,11 @@
 ---------------------------------------------------------------------------
 Version 1.17.3 (rgerhards), 2007-07-2?
 - continued working on modularization
+- fixed a bug that caused rsyslogd to segfault on exit (and
+  probably also on HUP), when there was an unsent message in a selector
+  that required forwarding and the dns lookup failed for that selector
+  (yes, it was pretty unlikely to happen;))
+  thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - fixed a memory leak in config file parsing and die()
   thanks to varmojfekoj <varmojfekoj@gmail.com> for the patch
 - rsyslogd now checks on startup if it is capable to performa any work
@@ -8,6 +13,9 @@ Version 1.17.3 (rgerhards), 2007-07-2?
   thanks to Michel Samia for providing the patch!
 - fixed a small memory leak when HUPing syslogd. The allowed sender
   list now gets freed. thanks mildew to for the patch.
+- changed the way error messages in early startup are logged. They
+  now do no longer use the syslogd code directly but are rather
+  send to stderr, the console and a user-configurable file.
 ---------------------------------------------------------------------------
 Version 1.17.2 (rgerhards), 2007-07-23
 - made the port part of the -r option optional. Needed for backward

@@ -4100,7 +4100,11 @@ static void freeSelectors(void)
 		f = Files;
 		while (f != NULL) {
 			/* flush any pending output */
-			if (f->f_prevcount) {
+			/* TODO: the output module must handle this internally in the 
+			 * future - implement it when moving f_type out of selector_t
+			 * rgerhards, 2007-07-24
+			 */
+			if(f->f_type != F_FORW_UNKN && f->f_prevcount) {
 				fprintlog(f);
 			}
 
