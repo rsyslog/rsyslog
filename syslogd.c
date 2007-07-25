@@ -5638,8 +5638,10 @@ static void checkPermissions()
                  * It is useless to run anymore */
 		if( !(AcceptRemote && (atoi(LogPort) > 1024)) && !( bEnableTCP && (atoi(TCPLstnPort) > 1024)) )
 		{
+#endif
 			fprintf(stderr, "ERROR: Nothing to log, no reason to run. Please run rsyslog as root.\n");
 			exit(EXIT_FAILURE);
+#ifdef SYSLOG_INET
 		}
 #endif
 	}
