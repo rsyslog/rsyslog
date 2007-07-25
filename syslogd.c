@@ -3459,22 +3459,9 @@ static void doDie(int sig)
  */
 static void die(int sig)
 {
-	register selector_t *f;
 	char buf[256];
 	int i;
-	int was_initialized = Initialized;
 
-	Initialized = 0;	/* Don't log SIGCHLDs in case we receive one during exiting */
-
-	for (f = Files; f != NULL ; f = f->f_next) {
-		/* flush any pending output */
-		if (f->f_prevcount)
-			fprintlog(f);
-	}
-
-	Initialized = was_initialized; /* we restore this so that the logmsgInternal() 
-	                                * below can work ... and keep in mind we need the
-					* filed structure still intact (initialized) for the below! */
 	if (sig) {
 		dprintf(" exiting on signal %d\n", sig);
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
@@ -3485,15 +3472,14 @@ static void die(int sig)
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, ADDDATE);
 	}
 
+	/* Free ressources and close connections */
+	freeSelectors();
+
 #ifdef	USE_PTHREADS
 	stopWorker();
 	queueDelete(pMsgQueue); /* delete fifo here! */
 	pMsgQueue = 0;
 #endif
-
-
-	/* Free ressources and close connections */
-	freeSelectors();
 	
 	/* now clean up the listener part */
 #ifdef SYSLOG_INET
@@ -4108,18 +4094,9 @@ static void freeSelectors(void)
 
 			/* free the action instances */
 			f->pMod->freeInstance(f, f->pModData);
-#			ifdef USE_PTHREADS
-			/* delete any mutex objects, if present */
-			if(   (   (f->f_type == F_FORW_SUSP)
-			       || (f->f_type == F_FORW)
-			       || (f->f_type == F_FORW_UNKN) )
-			   && (f->f_un.f_forw.protocol == FORW_TCP)) {
-				pthread_mutex_destroy(&f->f_un.f_forw.mtxTCPSend);
-			}
-#			endif
+
 			if(f->f_pMsg != NULL)
 				MsgDestruct(f->f_pMsg);
-
 			/* done with this entry, we now need to delete itself */
 			fPrev = f;
 			f = f->f_next;
@@ -4284,9 +4261,6 @@ static void init()
 				exit(1); /* TODO: think about it, maybe we can avoid */
 			}
 				
-
-			/* be careful: the default below must be set BEFORE calling cfline()! */
-			f->f_un.f_file.f_sizeLimit = 0; /* default value, use outchannels to configure! */
 	#if CONT_LINE
 			if(cfline(cbuf, f) != RS_RET_OK) {
 	#else
@@ -4545,10 +4519,13 @@ rsRetVal cflineParseTemplateName(uchar** pp,
  * to find that template. Everything is stored in the
  * filed struct.
  * rgerhards 2004-11-18
+ * parameter pFileName must point to a buffer large enough
+ * to hold the largest possible filename.
+ * rgerhards, 2007-07-25
  */
-rsRetVal cflineParseFileName(selector_t *f, uchar* p)
+rsRetVal cflineParseFileName(selector_t *f, uchar* p, uchar *pFileName)
 {
-	register char *pName;
+	register uchar *pName;
 	int i;
 	rsRetVal iRet = RS_RET_OK;
 	char szTemplateName[128];	/* should be more than sufficient */
@@ -4561,7 +4538,7 @@ rsRetVal cflineParseFileName(selector_t *f, uchar* p)
 		f->f_type = F_FILE;
 	}
 
-	pName = f->f_un.f_file.f_fname;
+	pName = pFileName;
 	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
 	while(*p && *p != ';' && i < MAXFNAME) {
 		*pName++ = *p++;
@@ -4585,7 +4562,7 @@ rsRetVal cflineParseFileName(selector_t *f, uchar* p)
 		strcpy(szTemplateName, " TradFmt"); /* use default! */
 
 	if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) == RS_RET_OK)
-		dprintf("filename: '%s', template: '%s'\n", f->f_un.f_file.f_fname, szTemplateName);
+		dprintf("filename: '%s', template: '%s'\n", pFileName, szTemplateName);
 
 	return iRet;
 }

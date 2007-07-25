@@ -96,6 +96,12 @@ CODESTARTfreeInstance
 				free(f->f_un.f_forw.port);
 			break;
 	}
+#	ifdef USE_PTHREADS
+	/* delete any mutex objects, if present */
+	if(f->f_un.f_forw.protocol == FORW_TCP) {
+		pthread_mutex_destroy(&f->f_un.f_forw.mtxTCPSend);
+	}
+#	endif
 ENDfreeInstance
 
 

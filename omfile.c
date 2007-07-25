@@ -566,6 +566,8 @@ CODESTARTparseSelectorAct
 	} else
 		syncfile = 1;
 
+	f->f_un.f_file.f_sizeLimit = 0; /* default value, use outchannels to configure! */
+
 	/* yes, the if below is redundant, but I need it now. Will go away as
 	 * the code further changes.  -- rgerhards, 2007-07-25
 	 */
@@ -597,7 +599,7 @@ CODESTARTparseSelectorAct
 		   * a template name. rgerhards, 2007-07-03
 		   */
 		++p; /* eat '?' */
-		if((iRet = cflineParseFileName(f, p)) != RS_RET_OK)
+		if((iRet = cflineParseFileName(f, p, (uchar*) f->f_un.f_file.f_fname)) != RS_RET_OK)
 			break;
 		f->f_un.f_file.pTpl = tplFind((char*)f->f_un.f_file.f_fname,
 					       strlen((char*) f->f_un.f_file.f_fname));
@@ -637,7 +639,7 @@ CODESTARTparseSelectorAct
 		 * to use is specified. So we need to scan for the first coma first
 		 * and then look at the rest of the line.
 		 */
-		if((iRet = cflineParseFileName(f, p)) != RS_RET_OK)
+		if((iRet = cflineParseFileName(f, p, (uchar*) f->f_un.f_file.f_fname)) != RS_RET_OK)
 			break;
 
 		if(syncfile)
