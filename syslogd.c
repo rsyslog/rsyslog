@@ -4420,47 +4420,7 @@ static void init()
 					printf("\tAction...: ");
 				}
 				printf("%s: ", modGetStateName(f->pMod));
-				switch (f->f_type) {
-				case F_FILE:
-				case F_PIPE:
-				case F_TTY:
-				case F_CONSOLE:
-					if(f->f_un.f_file.bDynamicName) {
-						printf("[dynamic]\n\ttemplate='%s'\n"
-						       "\tfile cache size=%d\n"
-						       "\tcreate directories: %s\n"
-						       "\tfile owner %d, group %d\n"
-						       "\tdirectory owner %d, group %d\n"
-						       "\tfail if owner/group can not be set: %s\n",
-							f->f_un.f_file.f_fname,
-							f->f_un.f_file.iDynaFileCacheSize,
-							f->f_un.f_file.bCreateDirs ? "yes" : "no",
-							f->f_un.f_file.fileUID, f->f_un.f_file.fileGID,
-							f->f_un.f_file.dirUID, f->f_un.f_file.dirGID,
-							f->f_un.f_file.bFailOnChown ? "yes" : "no"
-							);
-					} else { /* regular file */
-						printf("%s", f->f_un.f_file.f_fname);
-						if (f->f_file == -1)
-							printf(" (unused)");
-					}
-					break;
-
-				case F_SHELL:
-					printf("%s", f->f_un.f_file.f_fname);
-					break;
-
-				case F_FORW:
-				case F_FORW_SUSP:
-				case F_FORW_UNKN:
-					printf("%s", f->f_un.f_forw.f_hname);
-					break;
-
-				case F_USERS:
-					for (i = 0; i < MAXUNAMES && *f->f_un.f_uname[i]; i++)
-						printf("%s, ", f->f_un.f_uname[i]);
-					break;
-				}
+				f->pMod->dbgPrintInstInfo(f, f->pModData);
 				printf("\tinstance data: 0x%x\n", (unsigned) f->pModData);
 				if(f->f_ReduceRepeated)
 					printf(" [RepeatedMsgReduction]");
