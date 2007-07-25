@@ -1081,20 +1081,6 @@ void freeAllSockets(int **socks)
 }
 
 
-/* get the syslog forward port from selector_t. The passed in
- * struct must be one that is setup for forwarding.
- * rgerhards, 2007-06-28
- * We may change the implementation to try to lookup the port
- * if it is unspecified. So far, we use the IANA default auf 514.
- */
-char *getFwdSyslogPt(selector_t *f)
-{
-	assert(f != NULL);
-	if(f->f_un.f_forw.port == NULL)
-		return("514");
-	else
-		return(f->f_un.f_forw.port);
-}
 
 
 /*******************************************************************

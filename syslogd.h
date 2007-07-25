@@ -76,7 +76,6 @@ void logerrorInt(char *type, int iErr);
 void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
 void freeAllSockets(int **socks);
 int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost);
-char *getFwdSyslogPt(selector_t *f);
 void getCurrTime(struct syslogTime *t);
 int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst);
 int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
