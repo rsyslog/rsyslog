@@ -73,6 +73,12 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo
+	/* nothing special here */
+ENDdbgPrintInstInfo
+
+
 static rsRetVal reInitMySQL(register selector_t *f);
 
 

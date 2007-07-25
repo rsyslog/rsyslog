@@ -61,6 +61,30 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
+BEGINdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo
+	if(f->f_un.f_file.bDynamicName) {
+		printf("[dynamic]\n\ttemplate='%s'\n"
+		       "\tfile cache size=%d\n"
+		       "\tcreate directories: %s\n"
+		       "\tfile owner %d, group %d\n"
+		       "\tdirectory owner %d, group %d\n"
+		       "\tfail if owner/group can not be set: %s\n",
+			f->f_un.f_file.f_fname,
+			f->f_un.f_file.iDynaFileCacheSize,
+			f->f_un.f_file.bCreateDirs ? "yes" : "no",
+			f->f_un.f_file.fileUID, f->f_un.f_file.fileGID,
+			f->f_un.f_file.dirUID, f->f_un.f_file.dirGID,
+			f->f_un.f_file.bFailOnChown ? "yes" : "no"
+			);
+	} else { /* regular file */
+		printf("%s", f->f_un.f_file.f_fname);
+		if (f->f_file == -1)
+			printf(" (unused)");
+	}
+ENDdbgPrintInstInfo
+
+
 /* Helper to cfline(). Parses a output channel name up until the first
  * comma and then looks for the template specifier. Tries
  * to find that template. Maps the output channel to the 

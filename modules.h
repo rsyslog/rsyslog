@@ -55,6 +55,7 @@ typedef struct moduleInfo {
 	rsRetVal (*modQueryEtryPt)(uchar *name, rsRetVal (**EtryPoint)()); /* query entry point addresses */
 	rsRetVal (*isCompatibleWithFeature)(syslogFeature);
 	rsRetVal (*freeInstance)(struct filed*, void*);/* called before termination or module unload */
+	rsRetVal (*dbgPrintInstInfo)(struct filed*, void*);/* called before termination or module unload */
 	rsRetVal (*modExit)();		/* called before termination or module unload */
 	/* below: parse a configuration line - return if processed
 	 * or not. If not, must be parsed to next module.

@@ -100,6 +100,26 @@ static rsRetVal doAction(selector_t *f)\
 	return iRet;\
 }
 
+
+/* dbgPrintInstInfo()
+ * Extra comments:
+ * Print debug information about this instance.
+ */
+#define BEGINdbgPrintInstInfo \
+static rsRetVal dbgPrintInstInfo(selector_t *f, void *pModData)\
+{\
+	rsRetVal iRet = RS_RET_OK;\
+	instanceData *pData = NULL;
+
+#define CODESTARTdbgPrintInstInfo \
+	assert(f != NULL);\
+	pData = (instanceData*) pModData;
+
+#define ENDdbgPrintInstInfo \
+	return iRet;\
+}
+
+
 /* parseSelectorAct()
  * Extra comments:
  * try to process a selector action line. Checks if the action
@@ -120,6 +140,7 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f, void **ppModData)\
 #define ENDparseSelectorAct \
 	return iRet;\
 }
+
 
 /* queryEtryPt()
  */
@@ -150,6 +171,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = parseSelectorAct;\
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
 		*pEtryPoint = isCompatibleWithFeature;\
+	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
+		*pEtryPoint = dbgPrintInstInfo;\
 	} else if(!strcmp((char*) name, "freeInstance")) {\
 		*pEtryPoint = freeInstance;\
 	}

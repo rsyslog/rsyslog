@@ -45,6 +45,12 @@ ENDcreateInstance
 */
 
 
+BEGINdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo
+	/* do nothing */
+ENDdbgPrintInstInfo
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 	/* we are not compatible with repeated msg reduction feature, so do not allow it */

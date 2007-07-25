@@ -99,6 +99,12 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo
+	printf("%s", f->f_un.f_forw.f_hname);
+ENDdbgPrintInstInfo
+
+
 BEGINdoAction
 	char *psz; /* temporary buffering */
 	register unsigned l;

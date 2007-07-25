@@ -64,6 +64,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo
+	printf("%s", f->f_un.f_file.f_fname);
+ENDdbgPrintInstInfo
+
 
 BEGINdoAction
 	uchar *psz;

@@ -76,6 +76,14 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINdbgPrintInstInfo
+	register int i;
+CODESTARTdbgPrintInstInfo
+	for (i = 0; i < MAXUNAMES && *f->f_un.f_uname[i]; i++)
+		printf("%s, ", f->f_un.f_uname[i]);
+ENDdbgPrintInstInfo
+
+
 static jmp_buf ttybuf;
 
 static void endtty()

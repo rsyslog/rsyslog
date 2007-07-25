@@ -175,6 +175,11 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)()), uchar *name)
 		moduleDestruct(pNew);
 		return iRet;
 	}
+	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"dbgPrintInstInfo",
+			                   &pNew->dbgPrintInstInfo)) != RS_RET_OK) {
+		moduleDestruct(pNew);
+		return iRet;
+	}
 	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
 		moduleDestruct(pNew);
 		return iRet;
@@ -218,6 +223,7 @@ void modPrintList(void)
 		dprintf("\tqueryEtryPt:        0x%x\n", (unsigned) pMod->modQueryEtryPt);
 		dprintf("\tdoAction:           0x%x\n", (unsigned) pMod->mod.om.doAction);
 		dprintf("\tparseSelectorAct:   0x%x\n", (unsigned) pMod->mod.om.parseSelectorAct);
+		dprintf("\tdbgPrintInstInfo:   0x%x\n", (unsigned) pMod->dbgPrintInstInfo);
 		dprintf("\tfreeInstance:       0x%x\n", (unsigned) pMod->freeInstance);
 		dprintf("\n");
 		pMod = modGetNxt(pMod); /* done, go next */
