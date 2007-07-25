@@ -79,6 +79,11 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
+BEGINgetWriteFDForSelect
+CODESTARTgetWriteFDForSelect
+ENDgetWriteFDForSelect
+
+
 static rsRetVal reInitMySQL(register selector_t *f);
 
 

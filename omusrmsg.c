@@ -319,6 +319,11 @@ CODESTARTparseSelectorAct
 ENDparseSelectorAct
 
 
+BEGINgetWriteFDForSelect
+CODESTARTgetWriteFDForSelect
+ENDgetWriteFDForSelect
+
+
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES

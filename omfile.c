@@ -542,6 +542,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINgetWriteFDForSelect
+CODESTARTgetWriteFDForSelect
+ENDgetWriteFDForSelect
+
+
 BEGINdoAction
 CODESTARTdoAction
 	dprintf(" (%s)\n", f->f_un.f_file.f_fname);

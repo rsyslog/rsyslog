@@ -120,6 +120,27 @@ static rsRetVal dbgPrintInstInfo(selector_t *f, void *pModData)\
 }
 
 
+
+/* getWriteFDForSelect()
+ * Extra comments:
+ * Print debug information about this instance.
+ */
+#define BEGINgetWriteFDForSelect \
+static rsRetVal getWriteFDForSelect(selector_t *f, void *pModData, short *fd)\
+{\
+	rsRetVal iRet = RS_RET_NONE;\
+	instanceData *pData = NULL;
+
+#define CODESTARTgetWriteFDForSelect \
+	assert(f != NULL);\
+	assert(fd != NULL);\
+	pData = (instanceData*) pModData;
+
+#define ENDgetWriteFDForSelect \
+	return iRet;\
+}
+
+
 /* parseSelectorAct()
  * Extra comments:
  * try to process a selector action line. Checks if the action
@@ -175,6 +196,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = dbgPrintInstInfo;\
 	} else if(!strcmp((char*) name, "freeInstance")) {\
 		*pEtryPoint = freeInstance;\
+	} else if(!strcmp((char*) name, "getWriteFDForSelect")) {\
+		*pEtryPoint = getWriteFDForSelect;\
 	}
 
 /* modInit()

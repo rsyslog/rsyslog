@@ -5258,14 +5258,13 @@ static void mainloop(void)
 			 * scheduled to be replaced after the liblogging integration.
 			 * rgerhards 2005-07-20
 			 */
+			short fdMod;
 			FD_ZERO(&writefds);
 			for (f = Files; f != NULL ; f = f->f_next) {
-				if(   (f->f_type == F_FORW)
-				   && (f->f_un.f_forw.protocol == FORW_TCP)
-				   && (TCPSendGetStatus(f) == TCP_SEND_CONNECTING)) {
-				   FD_SET(f->f_file, &writefds);
-				   if(f->f_file > maxfds)
-					maxfds = f->f_file;
+				if(f->pMod->getWriteFDForSelect(f, f->pModData, &fdMod) == RS_RET_OK) {
+				   FD_SET(fdMod, &writefds);
+				   if(fdMod > maxfds)
+					maxfds = fdMod;
 				   }
 			}
 		}

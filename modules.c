@@ -180,6 +180,10 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)()), uchar *name)
 		moduleDestruct(pNew);
 		return iRet;
 	}
+	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"getWriteFDForSelect", &pNew->getWriteFDForSelect)) != RS_RET_OK) {
+		moduleDestruct(pNew);
+		return iRet;
+	}
 	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
 		moduleDestruct(pNew);
 		return iRet;

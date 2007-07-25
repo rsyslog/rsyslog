@@ -475,6 +475,17 @@ CODESTARTparseSelectorAct
 ENDparseSelectorAct
 
 
+BEGINgetWriteFDForSelect
+CODESTARTgetWriteFDForSelect
+	if(   (f->f_type == F_FORW)
+	   && (f->f_un.f_forw.protocol == FORW_TCP)
+	   && TCPSendGetStatus(f) == TCP_SEND_CONNECTING) {
+		*fd = f->f_file;
+		iRet = RS_RET_OK;
+	}
+ENDgetWriteFDForSelect
+
+
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
