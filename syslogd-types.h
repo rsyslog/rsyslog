@@ -127,6 +127,7 @@ struct syslogTime {
  * be guarded by mutexes. But beware of deadlocks...
  */
 struct filed {
+	int	iID;			/* ID of this entry - a "selector handle" */
 	struct	filed *f_next;		/* next in linked list */
 	short	bEnabled;		/* is the related action enabled (1) or disabled (0)? */
 	time_t	f_time;			/* time this was last written */

@@ -918,7 +918,6 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
  * iListToPrint = 1 means UDP, 2 means TCP
  * rgerhards, 2005-09-27
  */
-
 static void PrintAllowedSenders(int iListToPrint)
 {
 	struct AllowedSenders *pSender;
@@ -1412,6 +1411,33 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, char* pszTS)
 /*******************************************************************
  * END CODE-LIBLOGGING                                             *
  *******************************************************************/
+
+/* find a selector entry based on its ID.
+ * rgerhards, 2007-07-26
+ */
+static rsRetVal findSelector(int iID, selector_t **ppf)
+{
+	selector_t *f;
+	selector_t *psFound;
+	rsRetVal iRet;
+
+	assert(ppf != NULL);
+	for(f = Files; f != NULL && psFound == NULL ; f = f->f_next) {
+		if(f->iID == iID) {
+			psFound = f;
+		}
+	}
+
+	if(psFound != NULL) {
+		*ppf = psFound;
+		iRet = RS_RET_OK;
+	} else {
+		iRet = RS_RET_NOT_FOUND;
+	}
+
+	return iRet;
+}
+
 
 /**
  * Format a syslogTimestamp into format required by MySQL.
@@ -4009,14 +4035,17 @@ static void init()
 		nextp = (selector_t *)calloc(1, sizeof(selector_t));
 		Files = nextp; /* set the root! */
 		cfline("*.ERR\t" _PATH_CONSOLE, nextp);
+		nextp->iID = 0;
 		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
 		cfline("*.PANIC\t*", nextp->f_next);
 		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
+		nextp->iID = 1;
 		snprintf(cbuf,sizeof(cbuf), "*.*\t%s", ttyname(0));
 		cfline(cbuf, nextp->f_next);
 		Initialized = 1;
 	}
 	else { /* we should consider moving this into a separate function, its lengthy... */
+		int iIDf = 0; /* ID for next struct filed entry */
 		/*
 		 *  Foreach line in the conf table, open that file.
 		 */
@@ -4076,6 +4105,7 @@ static void init()
 			} else {
 				/* successfully created an entry */
 				dprintf("selector line successfully processed\n");
+				f->iID = iIDf++;
 				if(nextp == NULL) {
 					Files = f;
 				}
@@ -4165,6 +4195,7 @@ static void init()
 						f->eHostnameCmpMode == HN_COMP_MATCH ?
 							"only" : "allbut",
 						rsCStrGetSzStr(f->pCSHostnameComp));
+				printf("%d: ", f->iID);
 				if(f->f_filter_type == FILTER_PRI) {
 					for (i = 0; i <= LOG_NFACILITIES; i++)
 						if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
