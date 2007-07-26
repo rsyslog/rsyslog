@@ -120,6 +120,27 @@ static rsRetVal dbgPrintInstInfo(selector_t *f, void *pModData)\
 }
 
 
+/* needUDPSocket()
+ * Talks back to syslogd if the global UDP syslog socket is needed for
+ * sending. Returns 0 if not, 1 if needed. This interface hopefully goes
+ * away at some time, because it is kind of a hack. However, currently
+ * there is no way around it, so we need to support it.
+ * rgerhards, 2007-07-26
+ */
+#define BEGINneedUDPSocket \
+static rsRetVal needUDPSocket(void *pModData)\
+{\
+	rsRetVal iRet = RS_RET_FALSE;\
+	instanceData *pData = NULL;
+
+#define CODESTARTneedUDPSocket \
+	pData = (instanceData*) pModData;
+
+#define ENDneedUDPSocket \
+	return iRet;\
+}
+
+
 /* onSelectReadyWrite()
  * Extra comments:
  * This is called when select() returned with a writable file descriptor
@@ -230,6 +251,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = getWriteFDForSelect;\
 	} else if(!strcmp((char*) name, "onSelectReadyWrite")) {\
 		*pEtryPoint = onSelectReadyWrite;\
+	} else if(!strcmp((char*) name, "needUDPSocket")) {\
+		*pEtryPoint = needUDPSocket;\
 	}
 
 /* modInit()
@@ -260,15 +283,6 @@ rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ip
 	*pQueryEtryPt = queryEtryPt;\
 	return iRet;\
 }
-
-/*
- */
-#define BEGIN \
-
-#define CODESTART \
-
-#define END \
-
 
 #endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */
 /*

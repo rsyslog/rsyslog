@@ -95,6 +95,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINneedUDPSocket
+CODESTARTneedUDPSocket
+ENDneedUDPSocket
+
+
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	/* nothing special here */
@@ -182,7 +187,7 @@ rsRetVal checkDBErrorState(instanceData *pData)
 {
 	time_t now;
 	assert(pData != NULL);
-	/* dprintf("in checkDBErrorState, timeResumeOnError: %d\n", f->f_timeResumeOnError); */
+	/* dprintf("in checkDBErrorState, timeResumeOnError: %d\n", pData->f_timeResumeOnError); */
 
 	/* If timeResumeOnError == 0 no error occured, 
 	   we can return with 0 (no error) */

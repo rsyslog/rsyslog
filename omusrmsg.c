@@ -81,6 +81,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
+BEGINneedUDPSocket
+CODESTARTneedUDPSocket
+ENDneedUDPSocket
+
+
 BEGINdbgPrintInstInfo
 	register int i;
 CODESTARTdbgPrintInstInfo

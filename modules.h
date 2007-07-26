@@ -57,6 +57,7 @@ typedef struct moduleInfo {
 	rsRetVal (*freeInstance)(struct filed*, void*);/* called before termination or module unload */
 	rsRetVal (*getWriteFDForSelect)(struct filed*, void*,short *);/* called before termination or module unload */
 	rsRetVal (*onSelectReadyWrite)(struct filed*, void*);/* called when fd is writeable after select() */
+	rsRetVal (*needUDPSocket)(void*);/* called when fd is writeable after select() */
 	rsRetVal (*dbgPrintInstInfo)(struct filed*, void*);/* called before termination or module unload */
 	rsRetVal (*modExit)();		/* called before termination or module unload */
 	/* below: parse a configuration line - return if processed

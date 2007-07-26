@@ -114,8 +114,6 @@ struct syslogTime {
 };
 
 
-/* values for f_type in struct filed below*/
-
 /* This structure represents the files that will have log
  * copies printed.
  * RGerhards 2004-11-08: Each instance of the filed structure 
@@ -130,8 +128,6 @@ struct syslogTime {
  */
 struct filed {
 	struct	filed *f_next;		/* next in linked list */
-	/*__attribute__((deprecated))*/ short	f_type; /* entry type, see below */
-	short	f_file;			/* file descriptor */
 	short	bEnabled;		/* is the related action enabled (1) or disabled (0)? */
 	time_t	f_time;			/* time this was last written */
 	/* filter properties */
@@ -162,7 +158,6 @@ struct filed {
 	int	f_ReduceRepeated;		/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */
-	int	f_flags;			/* store some additional flags */
 	struct template *f_pTpl;		/* pointer to template to use */
 	struct iovec *f_iov;			/* dyn allocated depinding on template */
 	unsigned short *f_bMustBeFreed;		/* indicator, if iov_base must be freed to destruct */

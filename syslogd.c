@@ -3262,8 +3262,8 @@ rsRetVal fprintlog(register selector_t *f)
 	if(iRet == RS_RET_DISABLE_ACTION)
 		f->bEnabled = 0; /* that's it... */
 
-	if (f->f_type != F_FORW_UNKN)
-		f->f_prevcount = 0;
+	if(iRet == RS_RET_OK)
+		f->f_prevcount = 0; /* message process, so we start a new cycle */
 
 	if(pMsgSave != NULL) {
 		/* we had saved the original message pointer. That was
@@ -4038,13 +4038,12 @@ static void freeSelectors(void)
 		f = Files;
 		while (f != NULL) {
 			/* flush any pending output */
-			/* TODO: the output module must handle this internally in the 
-			 * future - implement it when moving f_type out of selector_t
-			 * rgerhards, 2007-07-24
-			 */
-			if(f->f_type != F_FORW_UNKN && f->f_prevcount) {
+			if(f->f_prevcount) {
 				fprintlog(f);
 			}
+
+			/* free the action instances */
+			f->pMod->freeInstance(f, f->pModData);
 
 			/* free iovec if it was allocated */
 			if(f->f_iov != NULL) {
@@ -4058,9 +4057,6 @@ static void freeSelectors(void)
 			/* free iov string */
 			if (f->f_psziov != NULL)
 				free(f->f_psziov);
-
-			/* free the action instances */
-			f->pMod->freeInstance(f, f->pModData);
 
 			if(f->f_pMsg != NULL)
 				MsgDestruct(f->f_pMsg);
@@ -4247,7 +4243,7 @@ static void init()
 					nextp->f_next = f;
 				}
 				nextp = f;
-				if (f->f_type == F_FORW || f->f_type == F_FORW_SUSP || f->f_type == F_FORW_UNKN) {
+				if(f->pMod->needUDPSocket(f->pModData) == RS_RET_TRUE) {
 					Forwarding++;
 				}
 			}
@@ -4560,7 +4556,6 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 	 */
 	for (i = 0; i <= LOG_NFACILITIES; i++) {
 		f->f_filterData.f_pmask[i] = TABLE_NOPRI;
-		f->f_flags = 0;
 	}
 
 	/* scan through the list of selectors */
@@ -5368,7 +5363,7 @@ static void mainloop(void)
 			rsRetVal iRet;
 			for (f = Files; f != NULL ; f = f->f_next) {
 				if(f->pMod->getWriteFDForSelect(f, f->pModData, &fdMod) == RS_RET_OK) {
-					if(FD_ISSET(f->f_file, &writefds)) {
+					if(FD_ISSET(fdMod, &writefds)) {
 						if((iRet = f->pMod->onSelectReadyWrite(f, f->pModData)) != RS_RET_OK) {
 							dprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
 						}

@@ -55,6 +55,7 @@
  */
 typedef struct _instanceData {
 	char	f_fname[MAXFNAME];/* file or template name (display only) */
+	short	fd;		  /* file descriptor for (current) file */
 	enum {
 		eTypeFILE,
 		eTypeTTY,
@@ -66,6 +67,7 @@ typedef struct _instanceData {
 	int	fCreateMode;	/* file creation mode for open() */
 	int	fDirCreateMode;	/* creation mode for mkdir() */
 	int	bCreateDirs;	/* auto-create directories? */
+	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
 	gid_t	fileGID;
@@ -109,7 +111,7 @@ CODESTARTdbgPrintInstInfo
 			);
 	} else { /* regular file */
 		printf("%s", pData->f_fname);
-		if (f->f_file == -1)
+		if (pData->fd == -1)
 			printf(" (unused)");
 	}
 ENDdbgPrintInstInfo
@@ -208,7 +210,7 @@ static rsRetVal cflineParseOutchannel(selector_t *f, instanceData *pData, uchar*
  * returns 0 if ok, 1 otherwise
  * TODO: consider moving the initial check in here, too
  */
-int resolveFileSizeLimit(selector_t *f, instanceData *pData)
+int resolveFileSizeLimit(instanceData *pData)
 {
 	uchar *pParams;
 	uchar *pCmd;
@@ -246,10 +248,10 @@ int resolveFileSizeLimit(selector_t *f, instanceData *pData)
 
 	execProg(pCmd, 1, pParams);
 
-	f->f_file = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+	pData->fd = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 			pData->fCreateMode);
 
-	actualFileSize = lseek(f->f_file, 0, SEEK_END);
+	actualFileSize = lseek(pData->fd, 0, SEEK_END);
 	if(actualFileSize >= pData->f_sizeLimit) {
 		/* OK, it didn't work out... */
 		return 1;
@@ -311,7 +313,7 @@ static void dynaFileFreeCache(instanceData *pData)
  * based on the current message, checks if that file is already open
  * and, if not, does everything needed to switch to the new one.
  * Function returns 0 if all went well and non-zero otherwise.
- * On successful return f->f_file must point to the correct file to
+ * On successful return pData->fd must point to the correct file to
  * be written.
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
@@ -362,7 +364,7 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
 		} else { /* got an element, let's see if it matches */
 			if(!strcmp((char*) newFileName, (char*) pCache[i]->pName)) {
 				/* we found our element! */
-				f->f_file = pCache[i]->fd;
+				pData->fd = pCache[i]->fd;
 				pData->iCurrElt = i;
 				free(newFileName);
 				pCache[i]->lastUsed = time(NULL); /* update timestamp for LRU */
@@ -399,7 +401,7 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
 	/* Ok, we finally can open the file */
 	if(access((char*)newFileName, F_OK) == 0) {
 		/* file already exists */
-		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 				pData->fCreateMode);
 	} else {
 		/* file does not exist, create it (and eventually parent directories */
@@ -411,18 +413,18 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
 			if(makeFileParentDirs(newFileName, strlen((char*)newFileName),
 			     pData->fDirCreateMode, pData->dirUID,
 			     pData->dirGID, pData->bFailOnChown) == 0) {
-				f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+				pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 						pData->fCreateMode);
-				if(f->f_file != -1) {
+				if(pData->fd != -1) {
 					/* check and set uid/gid */
 					if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
 						/* we need to set owner/group */
-						if(fchown(f->f_file, pData->fileUID,
+						if(fchown(pData->fd, pData->fileUID,
 						          pData->fileGID) != 0) {
 							if(pData->bFailOnChown) {
 								int eSave = errno;
-								close(f->f_file);
-								f->f_file = -1;
+								close(pData->fd);
+								pData->fd = -1;
 								errno = eSave;
 							}
 							/* we will silently ignore the chown() failure
@@ -436,7 +438,7 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
 	}
 
 	/* file is either open now or an error state set */
-	if(f->f_file == -1) {
+	if(pData->fd == -1) {
 		/* do not report anything if the message is an internally-generated
 		 * message. Otherwise, we could run into a never-ending loop. The bad
 		 * news is that we also lose errors on startup messages, but so it is.
@@ -450,7 +452,7 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
 		return -1;
 	}
 
-	pCache[iFirstFree]->fd = f->f_file;
+	pCache[iFirstFree]->fd = pData->fd;
 	pCache[iFirstFree]->pName = newFileName;
 	pCache[iFirstFree]->lastUsed = time(NULL);
 	pData->iCurrElt = iFirstFree;
@@ -488,16 +490,16 @@ again:
 	 * obey to it.
 	 */
 	if(pData->f_sizeLimit != 0) {
-		actualFileSize = lseek(f->f_file, 0, SEEK_END);
+		actualFileSize = lseek(pData->fd, 0, SEEK_END);
 		if(actualFileSize >= pData->f_sizeLimit) {
 			char errMsg[256];
 			/* for now, we simply disable a file once it is
 			 * beyond the maximum size. This is better than having
 			 * us aborted by the OS... rgerhards 2005-06-21
 			 */
-			(void) close(f->f_file);
+			(void) close(pData->fd);
 			/* try to resolve the situation */
-			if(resolveFileSizeLimit(f, pData) != 0) {
+			if(resolveFileSizeLimit(pData) != 0) {
 				/* didn't work out, so disable... */
 				snprintf(errMsg, sizeof(errMsg),
 					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation",
@@ -515,7 +517,7 @@ again:
 		}
 	}
 
-	if (writev(f->f_file, f->f_iov, f->f_iIovUsed) < 0) {
+	if (writev(pData->fd, f->f_iov, f->f_iIovUsed) < 0) {
 		int e = errno;
 
 		/* If a named pipe is full, just ignore it for now
@@ -530,7 +532,7 @@ again:
 		if (pData->fileType == eTypeFILE && e == ENOSPC)
 			return RS_RET_OK;
 
-		(void) close(f->f_file);
+		(void) close(pData->fd);
 		/*
 		 * Check for EBADF on TTY's due to vhangup()
 		 * Linux uses EIO instead (mrn 12 May 96)
@@ -541,8 +543,8 @@ again:
 #else
 			&& e == EBADF) {
 #endif
-			f->f_file = open(pData->f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
-			if (f->f_file < 0) {
+			pData->fd = open(pData->f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
+			if (pData->fd < 0) {
 				iRet = RS_RET_DISABLE_ACTION;
 				logerror(pData->f_fname);
 			} else {
@@ -554,8 +556,8 @@ again:
 			errno = e;
 			logerror(pData->f_fname);
 		}
-	} else if (f->f_flags & SYNC_FILE)
-		fsync(f->f_file);
+	} else if (pData->bSyncFile)
+		fsync(pData->fd);
 	return(iRet);
 }
 
@@ -570,13 +572,18 @@ CODESTARTfreeInstance
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
 	} else 
-		close(f->f_file);
+		close(pData->fd);
 ENDfreeInstance
 
 
 BEGINonSelectReadyWrite
 CODESTARTonSelectReadyWrite
 ENDonSelectReadyWrite
+
+
+BEGINneedUDPSocket
+CODESTARTneedUDPSocket
+ENDneedUDPSocket
 
 
 BEGINgetWriteFDForSelect
@@ -587,17 +594,16 @@ ENDgetWriteFDForSelect
 BEGINdoAction
 CODESTARTdoAction
 	dprintf(" (%s)\n", pData->f_fname);
-	/* f->f_file == -1 is an indicator that the we couldn't
+	/* pData->fd == -1 is an indicator that the we couldn't
 	 * open the file at startup. For dynaFiles, this is ok,
 	 * all others are doomed.
 	 */
-	if(pData->bDynamicName || (f->f_file != -1))
+	if(pData->bDynamicName || (pData->fd != -1))
 		iRet = writeFile(f, pData);
 ENDdoAction
 
 
 BEGINparseSelectorAct
-	int syncfile;
 CODESTARTparseSelectorAct
 	/* yes, the if below is redundant, but I need it now. Will go away as
 	 * the code further changes.  -- rgerhards, 2007-07-25
@@ -615,10 +621,10 @@ dprintf("parseSelActFile 1\n");
 dprintf("parseSelActFile 2\n");
 
 	if (*p == '-') {
-		syncfile = 0;
+		pData->bSyncFile = 0;
 		p++;
 	} else
-		syncfile = 1;
+		pData->bSyncFile = 1;
 
 	pData->f_sizeLimit = 0; /* default value, use outchannels to configure! */
 
@@ -636,7 +642,7 @@ dprintf("parseSelActFile 2\n");
 			pData->bDynamicName = 0;
 			pData->fCreateMode = fCreateMode; /* preserve current setting */
 			pData->fDirCreateMode = fDirCreateMode; /* preserve current setting */
-			f->f_file = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+			pData->fd = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 					 pData->fCreateMode);
 		}
 		break;
@@ -655,8 +661,6 @@ dprintf("parseSelActFile 2\n");
 			break;
 		}
 
-		if(syncfile)
-			f->f_flags |= SYNC_FILE;
 		pData->bDynamicName = 1;
 		pData->iCurrElt = -1;		  /* no current element */
 		pData->fCreateMode = fCreateMode; /* freeze current setting */
@@ -695,24 +699,22 @@ dprintf("parseSelActFile 2\n");
 		if((iRet = cflineParseFileName(f, p, (uchar*) pData->f_fname)) != RS_RET_OK)
 			break;
 
-		if(syncfile)
-			f->f_flags |= SYNC_FILE;
 		pData->bDynamicName = 0;
 		pData->fCreateMode = fCreateMode; /* preserve current setting */
 		if(pData->fileType == eTypePIPE) {
-			f->f_file = open(pData->f_fname, O_RDWR|O_NONBLOCK);
+			pData->fd = open(pData->f_fname, O_RDWR|O_NONBLOCK);
 	        } else {
-			f->f_file = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+			pData->fd = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 					 pData->fCreateMode);
 		}
 		        
-	  	if ( f->f_file < 0 ){
-			f->f_file = -1;
+	  	if ( pData->fd < 0 ){
+			pData->fd = -1;
 			dprintf("Error opening log file: %s\n", pData->f_fname);
 			logerror(pData->f_fname);
 			break;
 		}
-		if (isatty(f->f_file)) {
+		if (isatty(pData->fd)) {
 			pData->fileType = eTypeTTY;
 			untty();
 		}

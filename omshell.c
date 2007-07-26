@@ -116,6 +116,11 @@ CODESTARTparseSelectorAct
 ENDparseSelectorAct
 
 
+BEGINneedUDPSocket
+CODESTARTneedUDPSocket
+ENDneedUDPSocket
+
+
 BEGINonSelectReadyWrite
 CODESTARTonSelectReadyWrite
 ENDonSelectReadyWrite
