@@ -76,7 +76,7 @@ static rsRetVal freeInstance(selector_t *f, void* pModData)\
 /* isCompatibleWithFeature()
  */
 #define BEGINisCompatibleWithFeature \
-static rsRetVal isCompatibleWithFeature(syslogFeature eFeat)\
+static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eFeat)\
 {\
 	rsRetVal iRet = RS_RET_INCOMPATIBLE;
 
@@ -120,10 +120,34 @@ static rsRetVal dbgPrintInstInfo(selector_t *f, void *pModData)\
 }
 
 
+/* onSelectReadyWrite()
+ * Extra comments:
+ * This is called when select() returned with a writable file descriptor
+ * for this module. The fd was most probably obtained by getWriteFDForSelect()
+ * before.
+ */
+#define BEGINonSelectReadyWrite \
+static rsRetVal onSelectReadyWrite(selector_t *f, void *pModData)\
+{\
+	rsRetVal iRet = RS_RET_NONE;\
+	instanceData *pData = NULL;
+
+#define CODESTARTonSelectReadyWrite \
+	assert(f != NULL);\
+	pData = (instanceData*) pModData;
+
+#define ENDonSelectReadyWrite \
+	return iRet;\
+}
+
 
 /* getWriteFDForSelect()
  * Extra comments:
- * Print debug information about this instance.
+ * Gets writefd for select call. Must only be returned when the selector must
+ * be written to. If the module has no such fds, it must return RS_RET_NONE.
+ * In this case, the default implementation is sufficient.
+ * This interface will probably go away over time, but we need it now to
+ * continue modularization.
  */
 #define BEGINgetWriteFDForSelect \
 static rsRetVal getWriteFDForSelect(selector_t *f, void *pModData, short *fd)\
@@ -198,6 +222,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = freeInstance;\
 	} else if(!strcmp((char*) name, "getWriteFDForSelect")) {\
 		*pEtryPoint = getWriteFDForSelect;\
+	} else if(!strcmp((char*) name, "onSelectReadyWrite")) {\
+		*pEtryPoint = onSelectReadyWrite;\
 	}
 
 /* modInit()

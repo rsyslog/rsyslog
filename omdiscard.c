@@ -1,6 +1,9 @@
 /* omdiscard.c
  * This is the implementation of the built-in discard output module.
  *
+ * NOTE: read comments in module-template.h to understand how this file
+ *       works!
+ *
  * File begun on 2007-07-24 by RGerhards
  *
  * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
@@ -90,6 +93,11 @@ CODESTARTparseSelectorAct
 		*pp = p;
 	}
 ENDparseSelectorAct
+
+
+BEGINonSelectReadyWrite
+CODESTARTonSelectReadyWrite
+ENDonSelectReadyWrite
 
 
 BEGINgetWriteFDForSelect

@@ -1,6 +1,9 @@
 /* omusrmsg.c
  * This is the implementation of the build-in output module for MySQL.
  *
+ * NOTE: read comments in module-template.h to understand how this file
+ *       works!
+ *
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
  * This file is under development and has not yet arrived at being fully
  * self-contained and a real object. So far, it is mostly an excerpt
@@ -77,6 +80,11 @@ BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	/* nothing special here */
 ENDdbgPrintInstInfo
+
+
+BEGINonSelectReadyWrite
+CODESTARTonSelectReadyWrite
+ENDonSelectReadyWrite
 
 
 BEGINgetWriteFDForSelect

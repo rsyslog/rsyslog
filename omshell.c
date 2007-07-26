@@ -1,6 +1,9 @@
 /* omshell.c
  * This is the implementation of the build-in shell output module.
  *
+ * NOTE: read comments in module-template.h to understand how this file
+ *       works!
+ *
  * shell support was initially written by bkalkbrenner 2005-09-20
  *
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
@@ -118,6 +121,11 @@ CODESTARTparseSelectorAct
 		*pp = p;
 	}
 ENDparseSelectorAct
+
+
+BEGINonSelectReadyWrite
+CODESTARTonSelectReadyWrite
+ENDonSelectReadyWrite
 
 
 BEGINgetWriteFDForSelect

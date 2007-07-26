@@ -184,6 +184,10 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)()), uchar *name)
 		moduleDestruct(pNew);
 		return iRet;
 	}
+	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"onSelectReadyWrite", &pNew->onSelectReadyWrite)) != RS_RET_OK) {
+		moduleDestruct(pNew);
+		return iRet;
+	}
 	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
 		moduleDestruct(pNew);
 		return iRet;

@@ -4032,7 +4032,6 @@ static void freeSelectors(void)
 	selector_t *f;
 	selector_t *fPrev;
 
-	Initialized = 0;
 	if(Files != NULL) {
 		dprintf("Freeing log structures.\n");
 
@@ -4073,6 +4072,7 @@ static void freeSelectors(void)
 
 		/* Reflect the deletion of the selectors linked list. */
 		Files = NULL;
+		Initialized = 0;
 	}
 }
 
@@ -5372,24 +5372,14 @@ static void mainloop(void)
 			 * this code here will stay for quite a while.
 			 * rgerhards, 2006-12-07
 			 */
+			short fdMod;
+			rsRetVal iRet;
 			for (f = Files; f != NULL ; f = f->f_next) {
-				if(   (f->f_type == F_FORW)
-				   && (f->f_un.f_forw.protocol == FORW_TCP)
-				   && (TCPSendGetStatus(f) == TCP_SEND_CONNECTING)
-				   && (FD_ISSET(f->f_file, &writefds))) {
-					dprintf("tcp send socket %d ready for writing.\n", f->f_file);
-					TCPSendSetStatus(f, TCP_SEND_READY);
-					/* Send stored message (if any) */
-					if(f->f_un.f_forw.savedMsg != NULL) {
-						if(TCPSend(f, f->f_un.f_forw.savedMsg,
-						           f->f_un.f_forw.savedMsgLen) != 0) {
-							/* error! */
-							f->f_type = F_FORW_SUSP;
-							errno = 0;
-							logerror("error forwarding via tcp, suspending...");
+				if(f->pMod->getWriteFDForSelect(f, f->pModData, &fdMod) == RS_RET_OK) {
+					if(FD_ISSET(f->f_file, &writefds)) {
+						if((iRet = f->pMod->onSelectReadyWrite(f, f->pModData)) != RS_RET_OK) {
+							dprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
 						}
-					   free(f->f_un.f_forw.savedMsg);
-					   f->f_un.f_forw.savedMsg = NULL;
 					}
 				   }
 			}

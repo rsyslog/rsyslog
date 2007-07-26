@@ -1,6 +1,9 @@
 /* omfwd.c
  * This is the implementation of the build-in forwarding output module.
  *
+ * NOTE: read comments in module-template.h to understand how this file
+ *       works!
+ *
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
  * This file is under development and has not yet arrived at being fully
  * self-contained and a real object. So far, it is mostly an excerpt
@@ -473,6 +476,25 @@ CODESTARTparseSelectorAct
 	 * all output modules. I'll address it lates as the interface evolves. rgerhards, 2007-07-25
 	 */
 ENDparseSelectorAct
+
+
+BEGINonSelectReadyWrite
+CODESTARTonSelectReadyWrite
+	dprintf("tcp send socket %d ready for writing.\n", f->f_file);
+	TCPSendSetStatus(f, TCP_SEND_READY);
+	/* Send stored message (if any) */
+	if(f->f_un.f_forw.savedMsg != NULL) {
+		if(TCPSend(f, f->f_un.f_forw.savedMsg,
+			   f->f_un.f_forw.savedMsgLen) != 0) {
+			/* error! */
+			f->f_type = F_FORW_SUSP;
+			errno = 0;
+			logerror("error forwarding via tcp, suspending...");
+		}
+		free(f->f_un.f_forw.savedMsg);
+		f->f_un.f_forw.savedMsg = NULL;
+	}
+ENDonSelectReadyWrite
 
 
 BEGINgetWriteFDForSelect
