@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 1.17.4 (rgerhards), 2007-07-2?
+- continued to work on modularization
+- fixed a situation where rsyslogd could create zombie processes
+  thanks to mildew for the patch
+- applied patch from Michel Samia to fix compilation when NOT
+  compiled for pthreads
 ---------------------------------------------------------------------------
 Version 1.17.3 (rgerhards), 2007-07-25
 - continued working on modularization
@@ -14,7 +19,7 @@ Version 1.17.3 (rgerhards), 2007-07-25
   at all. If it cant, it complains and terminates
   thanks to Michel Samia for providing the patch!
 - fixed a small memory leak when HUPing syslogd. The allowed sender
-  list now gets freed. thanks mildew to for the patch.
+  list now gets freed. thanks to mildew for the patch.
 - changed the way error messages in early startup are logged. They
   now do no longer use the syslogd code directly but are rather
   send to stderr.

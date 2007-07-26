@@ -38,6 +38,9 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#if HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
 #ifdef USE_PTHREADS
 #include <pthread.h>
 #endif
