@@ -46,6 +46,7 @@
 /* internal structures
  */
 typedef struct _instanceData {
+	uchar	progName[MAXFNAME]; /* program  to execute */
 } instanceData;
 
 
@@ -69,22 +70,22 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	printf("%s", f->f_un.f_file.f_fname);
+	printf("%s", pData->progName);
 ENDdbgPrintInstInfo
 
 
 BEGINdoAction
 	uchar *psz;
 CODESTARTdoAction
-	/* TODO: using f->f_un.f_file.f_name is not clean from the point of
+	/* TODO: using pData->progName is not clean from the point of
 	 * modularization. We'll change that as we go ahead with modularization.
 	 * rgerhards, 2007-07-20
 	 */
 	dprintf("\n");
 	iovCreate(f);
 	psz = (uchar*) iovAsString(f);
-	if(execProg((uchar*) f->f_un.f_file.f_fname, 1, (uchar*) psz) == 0)
-		logerrorSz("Executing program '%s' failed", f->f_un.f_file.f_fname);
+	if(execProg((uchar*) pData->progName, 1, (uchar*) psz) == 0)
+	 	logerrorSz("Executing program '%s' failed", (char*)pData->progName);
 ENDdoAction
 
 
@@ -105,7 +106,7 @@ CODESTARTparseSelectorAct
 	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
 		dprintf("exec\n");
 		++p;
-		if((iRet = cflineParseFileName(f, p, (uchar*) f->f_un.f_file.f_fname)) == RS_RET_OK)
+		if((iRet = cflineParseFileName(f, p, (uchar*) pData->progName)) == RS_RET_OK)
 			if (f->f_type == F_FILE) {
 				f->f_type = F_SHELL;
 			}
