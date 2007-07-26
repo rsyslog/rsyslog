@@ -51,6 +51,15 @@
 /* internal structures
  */
 typedef struct _instanceData {
+	MYSQL	*f_hmysql;		/* handle to MySQL */
+	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
+	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
+	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
+	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
+	time_t	f_timeResumeOnError;		/* 0 if no error is present,	
+						   otherwise is it set to the
+						   time a retrail should be attampt */
+	int	f_iLastDBErrNo;			/* Last db error number. 0 = no error */
 } instanceData;
 
 
@@ -66,11 +75,23 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
+/* The following function is responsible for closing a
+ * MySQL connection.
+ * Initially added 2004-10-28
+ */
+static void closeMySQL(instanceData *pData)
+{
+	assert(pData != NULL);
+	dprintf("in closeMySQL\n");
+	if(pData->f_hmysql != NULL)	/* just to be on the safe side... */
+		mysql_close(pData->f_hmysql);	
+}
+
 BEGINfreeInstance
 CODESTARTfreeInstance
 	switch (f->f_type) {
 #				ifdef	WITH_DB
-			closeMySQL(f);
+			closeMySQL(pData);
 #				endif
 	}
 ENDfreeInstance
@@ -92,7 +113,7 @@ CODESTARTgetWriteFDForSelect
 ENDgetWriteFDForSelect
 
 
-static rsRetVal reInitMySQL(register selector_t *f);
+static rsRetVal reInitMySQL(instanceData *);
 
 
 /**
@@ -105,11 +126,11 @@ static rsRetVal reInitMySQL(register selector_t *f);
  * We now check if we have a valid MySQL handle. If not, we simply
  * report an error, but can not be specific. RGerhards, 2007-01-30
  */
-static void DBErrorHandler(register selector_t *f)
+static void DBErrorHandler(instanceData *pData)
 {
 	char errMsg[512];
 
-	assert(f != NULL);
+	assert(pData != NULL);
 
 	/* TODO:
 	 * NO DB connection -> Can not log to DB
@@ -134,19 +155,19 @@ static void DBErrorHandler(register selector_t *f)
 	 *
 	 * Think about different "delay" for different errors!
 	 */
-	if(f->f_un.f_mysql.f_hmysql == NULL) {
+	if(pData->f_hmysql == NULL) {
 		logerror("unknown DB error occured - called error handler with NULL MySQL handle.");
 	} else { /* we can ask mysql for the error description... */
 		errno = 0;
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
-			"db error (%d): %s\n", mysql_errno(f->f_un.f_mysql.f_hmysql),
-			mysql_error(f->f_un.f_mysql.f_hmysql));
-		f->f_un.f_mysql.f_iLastDBErrNo = mysql_errno(f->f_un.f_mysql.f_hmysql);
+			"db error (%d): %s\n", mysql_errno(pData->f_hmysql),
+			mysql_error(pData->f_hmysql));
+		pData->f_iLastDBErrNo = mysql_errno(pData->f_hmysql);
 		logerror(errMsg);
 	}
 		
 	/* Enable "delay" */
-	f->f_un.f_mysql.f_timeResumeOnError = time(&f->f_un.f_mysql.f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
+	pData->f_timeResumeOnError = time(&pData->f_timeResumeOnError) + _DB_DELAYTIMEONERROR ;
 }
 
 
@@ -159,22 +180,22 @@ static void DBErrorHandler(register selector_t *f)
  *
  * \ret int		Returns 0 if successful (no error)
  */ 
-rsRetVal checkDBErrorState(register selector_t *f)
+rsRetVal checkDBErrorState(instanceData *pData)
 {
 	time_t now;
-	assert(f != NULL);
+	assert(pData != NULL);
 	/* dprintf("in checkDBErrorState, timeResumeOnError: %d\n", f->f_timeResumeOnError); */
 
 	/* If timeResumeOnError == 0 no error occured, 
 	   we can return with 0 (no error) */
-	if (f->f_un.f_mysql.f_timeResumeOnError == 0)
+	if (pData->f_timeResumeOnError == 0)
 		return RS_RET_OK;
 	
 	(void) time(&now);
 	/* Now we know an error occured. We check timeResumeOnError
 	   if we can process. If we have not reach the resume time
 	   yet, we return an error status. */  
-	if (f->f_un.f_mysql.f_timeResumeOnError > now)
+	if (pData->f_timeResumeOnError > now)
 	{
 		/* dprintf("Wait time is not over yet.\n"); */
 		return RS_RET_ERR;
@@ -198,9 +219,9 @@ rsRetVal checkDBErrorState(register selector_t *f)
 	  * I added this comment (and did not remove Michaels) just so
 	  * that we all know what we are looking for.
 	  */
-	f->f_un.f_mysql.f_timeResumeOnError = 0;
-	f->f_un.f_mysql.f_iLastDBErrNo = 0; 
-	return reInitMySQL(f);
+	pData->f_timeResumeOnError = 0;
+	pData->f_iLastDBErrNo = 0; 
+	return reInitMySQL(pData);
 }
 
 /*
@@ -208,17 +229,17 @@ rsRetVal checkDBErrorState(register selector_t *f)
  * MySQL connection.
  * Initially added 2004-10-28 mmeckelein
  */
-static rsRetVal initMySQL(register selector_t *f)
+static rsRetVal initMySQL(instanceData *pData)
 {
 	int iCounter = 0;
 	rsRetVal iRet = RS_RET_OK;
-	assert(f != NULL);
+	assert(pData != NULL);
 
-	if((iRet = checkDBErrorState(f)) != RS_RET_OK)
+	if((iRet = checkDBErrorState(pData)) != RS_RET_OK)
 		return iRet;
 	
-	f->f_un.f_mysql.f_hmysql = mysql_init(NULL);
-	if(f->f_un.f_mysql.f_hmysql == NULL) {
+	pData->f_hmysql = mysql_init(NULL);
+	if(pData->f_hmysql == NULL) {
 		logerror("can not initialize MySQL handle - ignoring this action");
 		/* The next statement  causes a redundant message, but it is the
 		 * best thing we can do in this situation. -- rgerhards, 2007-01-30
@@ -227,46 +248,33 @@ static rsRetVal initMySQL(register selector_t *f)
 	} else { /* we could get the handle, now on with work... */
 		do {
 			/* Connect to database */
-			if (!mysql_real_connect(f->f_un.f_mysql.f_hmysql, f->f_un.f_mysql.f_dbsrv, f->f_un.f_mysql.f_dbuid,
-			                        f->f_un.f_mysql.f_dbpwd, f->f_un.f_mysql.f_dbname, 0, NULL, 0)) {
+			if (!mysql_real_connect(pData->f_hmysql, pData->f_dbsrv, pData->f_dbuid,
+			                        pData->f_dbpwd, pData->f_dbname, 0, NULL, 0)) {
 				/* if also the second attempt failed
 				   we call the error handler */
 				if(iCounter)
-					DBErrorHandler(f);
+					DBErrorHandler(pData);
 			} else {
-				f->f_un.f_mysql.f_timeResumeOnError = 0; /* We have a working db connection */
+				pData->f_timeResumeOnError = 0; /* We have a working db connection */
 				dprintf("connected successfully to db\n");
 			}
 			iCounter++;
-		} while (mysql_errno(f->f_un.f_mysql.f_hmysql) && iCounter<2);
+		} while (mysql_errno(pData->f_hmysql) && iCounter<2);
 	}
 	return iRet;
-}
-
-/*
- * The following function is responsible for closing a
- * MySQL connection.
- * Initially added 2004-10-28
- */
-void closeMySQL(register selector_t *f)
-{
-	assert(f != NULL);
-	dprintf("in closeMySQL\n");
-	if(f->f_un.f_mysql.f_hmysql != NULL)	/* just to be on the safe side... */
-		mysql_close(f->f_un.f_mysql.f_hmysql);	
 }
 
 /*
  * Reconnect a MySQL connection.
  * Initially added 2004-12-02
  */
-static rsRetVal reInitMySQL(register selector_t *f)
+static rsRetVal reInitMySQL(instanceData *pData)
 {
-	assert(f != NULL);
+	assert(pData != NULL);
 
 	dprintf("reInitMySQL\n");
-	closeMySQL(f); /* close the current handle */
-	return initMySQL(f); /* new connection */   
+	closeMySQL(pData); /* close the current handle */
+	return initMySQL(pData); /* new connection */   
 }
 
 
@@ -275,16 +283,17 @@ static rsRetVal reInitMySQL(register selector_t *f)
  * to an established MySQL session.
  * Initially added 2004-10-28 mmeckelein
  */
-rsRetVal writeMySQL(register selector_t *f)
+rsRetVal writeMySQL(register selector_t *f, instanceData *pData)
 {
 	char *psz;
 	int iCounter=0;
 	rsRetVal iRet = RS_RET_OK;
 	assert(f != NULL);
+	assert(pData != NULL);
 
 	iovCreate(f);
 	psz = iovAsString(f);
-	if((iRet = checkDBErrorState(f)) != RS_RET_OK)
+	if((iRet = checkDBErrorState(pData)) != RS_RET_OK)
 		return iRet;
 
 	/* Now we are trying to insert the data. 
@@ -294,17 +303,17 @@ rsRetVal writeMySQL(register selector_t *f)
 	 */
 	do {
 		/* query */
-		if(mysql_query(f->f_un.f_mysql.f_hmysql, psz)) {
+		if(mysql_query(pData->f_hmysql, psz)) {
 			/* if the second attempt fails
 			   we call the error handler */
 			if(iCounter)
-				DBErrorHandler(f);
+				DBErrorHandler(pData);
 		}
 		else {
 			/* dprintf("db insert sucessfull\n"); */
 		}
 		iCounter++;
-	} while (mysql_errno(f->f_un.f_mysql.f_hmysql) && iCounter<2);
+	} while (mysql_errno(pData->f_hmysql) && iCounter<2);
 	return iRet;
 }
 
@@ -312,7 +321,7 @@ rsRetVal writeMySQL(register selector_t *f)
 BEGINdoAction
 CODESTARTdoAction
 	dprintf("\n");
-	iRet = writeMySQL(f);
+	iRet = writeMySQL(f, pData);
 ENDdoAction
 
 
@@ -354,19 +363,19 @@ CODESTARTparseSelectorAct
 		/* Now we read the MySQL connection properties 
 		 * and verify that the properties are valid.
 		 */
-		if(getSubString(&p, f->f_un.f_mysql.f_dbsrv, MAXHOSTNAMELEN+1, ','))
+		if(getSubString(&p, pData->f_dbsrv, MAXHOSTNAMELEN+1, ','))
 			iMySQLPropErr++;
-		if(*f->f_un.f_mysql.f_dbsrv == '\0')
+		if(*pData->f_dbsrv == '\0')
 			iMySQLPropErr++;
-		if(getSubString(&p, f->f_un.f_mysql.f_dbname, _DB_MAXDBLEN+1, ','))
+		if(getSubString(&p, pData->f_dbname, _DB_MAXDBLEN+1, ','))
 			iMySQLPropErr++;
-		if(*f->f_un.f_mysql.f_dbname == '\0')
+		if(*pData->f_dbname == '\0')
 			iMySQLPropErr++;
-		if(getSubString(&p, f->f_un.f_mysql.f_dbuid, _DB_MAXUNAMELEN+1, ','))
+		if(getSubString(&p, pData->f_dbuid, _DB_MAXUNAMELEN+1, ','))
 			iMySQLPropErr++;
-		if(*f->f_un.f_mysql.f_dbuid == '\0')
+		if(*pData->f_dbuid == '\0')
 			iMySQLPropErr++;
-		if(getSubString(&p, f->f_un.f_mysql.f_dbpwd, _DB_MAXPWDLEN+1, ';'))
+		if(getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
 			iMySQLPropErr++;
 		if(*p == '\n' || *p == '\0') { 
 			/* assign default format if none given! */
@@ -405,7 +414,7 @@ CODESTARTparseSelectorAct
 				"MySQL logging disabled.\n");
 			break;
 		} else {
-			initMySQL(f);
+			initMySQL(pData);
 		}
 #endif	/* #ifdef WITH_DB */
 		break;

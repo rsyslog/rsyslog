@@ -29,10 +29,6 @@
 /* prototypes will be removed as syslogd needs no longer to directly
  * call into the module!
  */
-//void initMySQL(register selector_t *f);
-rsRetVal writeMySQL(register selector_t *f);
-void closeMySQL(register selector_t *f);
-rsRetVal checkDBErrorState(register selector_t *f);
 rsRetVal modInitMySQL(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
 
 #endif /* #ifdef WITH_DB */

@@ -174,20 +174,6 @@ struct filed {
 	} f_filterData;
 #if 1
 	union {
-		//char	f_uname[MAXUNAMES][UNAMESZ+1];
-#ifdef	WITH_DB
-		struct {
-			MYSQL	*f_hmysql;		/* handle to MySQL */
-			char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
-			char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
-			char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
-			char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
-			time_t	f_timeResumeOnError;		/* 0 if no error is present,	
-								   otherwise is it set to the
-								   time a retrail should be attampt */
-			int	f_iLastDBErrNo;			/* Last db error number. 0 = no error */
-		} f_mysql;
-#endif
 		struct {
 			char	f_hname[MAXHOSTNAMELEN+1];
 			struct addrinfo *f_addr;
