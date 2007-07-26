@@ -82,7 +82,6 @@ CODESTARTparseSelectorAct
 	if(*p == '~') {
 		/* TODO: check the rest of the selector line - error reporting */
 		dprintf("discard\n");
-		f->f_type = F_DISCARD;
 	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 	}

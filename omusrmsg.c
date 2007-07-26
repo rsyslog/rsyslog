@@ -58,6 +58,7 @@
 /* internal structures
  */
 typedef struct _instanceData {
+	int bIsWall; /* 1- is wall, 0 - individual users */
 	char uname[MAXUNAMES][UNAMESZ+1];
 } instanceData;
 
@@ -194,7 +195,7 @@ static void wallmsg(selector_t *f, instanceData *pData)
 			        continue;
 
 			/* should we send the message to this user? */
-			if (f->f_type == F_USERS) {
+			if (pData->bIsWall == 0) {
 				for (i = 0; i < MAXUNAMES; i++) {
 					if (!pData->uname[i][0]) {
 						i = MAXUNAMES;
@@ -262,7 +263,7 @@ CODESTARTparseSelectorAct
 
 	if(*p == '*') { /* wall */
 		dprintf ("write-all");
-		f->f_type = F_WALL;
+		pData->bIsWall = 1; /* write to all users */
 		if(*(p+1) == ';') {
 			/* we have a template specifier! */
 			p += 2; /* eat "*;" */
@@ -282,7 +283,7 @@ CODESTARTparseSelectorAct
 		 * loadBuildInModules() in syslogd.c
 		 */
 		dprintf ("users: %s\n", p);	/* ASP */
-		f->f_type = F_USERS;
+		pData->bIsWall = 0; /* write to individual users */
 		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
 			for (q = p; *q && *q != ',' && *q != ';'; )
 				q++;

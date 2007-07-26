@@ -106,10 +106,7 @@ CODESTARTparseSelectorAct
 	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
 		dprintf("exec\n");
 		++p;
-		if((iRet = cflineParseFileName(f, p, (uchar*) pData->progName)) == RS_RET_OK)
-			if (f->f_type == F_FILE) {
-				f->f_type = F_SHELL;
-			}
+		iRet = cflineParseFileName(f, p, (uchar*) pData->progName);
 		break;
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;

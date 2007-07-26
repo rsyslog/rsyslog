@@ -1,7 +1,7 @@
 /* omfile.c
  * This is the implementation of the build-in file output module.
  *
- * Handles: F_CONSOLE, F_TTY, F_FILE, F_PIPE
+ * Handles: eTypeCONSOLE, eTypeTTY, eTypeFILE, eTypePIPE
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -55,6 +55,12 @@
  */
 typedef struct _instanceData {
 	char	f_fname[MAXFNAME];/* file or template name (display only) */
+	enum {
+		eTypeFILE,
+		eTypeTTY,
+		eTypeCONSOLE,
+		eTypePIPE
+	} fileType;	
 	struct template *pTpl;	/* pointer to template object */
 	char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
 	int	fCreateMode;	/* file creation mode for open() */
@@ -130,7 +136,7 @@ static rsRetVal cflineParseOutchannel(selector_t *f, instanceData *pData, uchar*
 	 * emulate things for the time being. When everything runs, we can
 	 * extend it...
 	 */
-	f->f_type = F_FILE;
+	pData->fileType = eTypeFILE;
 
 	++p; /* skip '$' */
 	i = 0;
@@ -514,14 +520,14 @@ again:
 
 		/* If a named pipe is full, just ignore it for now
 		   - mrn 24 May 96 */
-		if (f->f_type == F_PIPE && e == EAGAIN)
+		if (pData->fileType == eTypePIPE && e == EAGAIN)
 			return RS_RET_OK;
 
 		/* If the filesystem is filled up, just ignore
 		 * it for now and continue writing when possible
 		 * based on patch for sysklogd by Martin Schulze on 2007-05-24
 		 */
-		if (f->f_type == F_FILE && e == ENOSPC)
+		if (pData->fileType == eTypeFILE && e == ENOSPC)
 			return RS_RET_OK;
 
 		(void) close(f->f_file);
@@ -529,7 +535,7 @@ again:
 		 * Check for EBADF on TTY's due to vhangup()
 		 * Linux uses EIO instead (mrn 12 May 96)
 		 */
-		if ((f->f_type == F_TTY || f->f_type == F_CONSOLE)
+		if ((pData->fileType == eTypeTTY || pData->fileType == eTypeCONSOLE)
 #ifdef linux
 			&& e == EIO) {
 #else
@@ -596,15 +602,17 @@ CODESTARTparseSelectorAct
 	/* yes, the if below is redundant, but I need it now. Will go away as
 	 * the code further changes.  -- rgerhards, 2007-07-25
 	 */
-	if(*p == '$' || *p == '?' || *p == '|' || *p == '/') {
+	if(*p == '$' || *p == '?' || *p == '|' || *p == '/' || *p == '-') {
 		if((iRet = createInstance(&pData)) != RS_RET_OK)
 			return iRet;
+dprintf("parseSelActFile 1\n");
 	} else {
 		/* this is not clean, but we need it for the time being
 		 * TODO: remove when cleaning up modularization 
 		 */
 		return RS_RET_CONFLINE_UNPROCESSED;
 	}
+dprintf("parseSelActFile 2\n");
 
 	if (*p == '-') {
 		syncfile = 0;
@@ -672,6 +680,13 @@ CODESTARTparseSelectorAct
 
         case '|':
 	case '/':
+		/* rgerhards, 2007-0726: first check if file or pipe */
+		if(*p == '|') {
+			pData->fileType = eTypePIPE;
+			++p;
+		} else {
+			pData->fileType = eTypeFILE;
+		}
 		/* rgerhards 2004-11-17: from now, we need to have different
 		 * processing, because after the first comma, the template name
 		 * to use is specified. So we need to scan for the first coma first
@@ -684,7 +699,7 @@ CODESTARTparseSelectorAct
 			f->f_flags |= SYNC_FILE;
 		pData->bDynamicName = 0;
 		pData->fCreateMode = fCreateMode; /* preserve current setting */
-		if(f->f_type == F_PIPE) {
+		if(pData->fileType == eTypePIPE) {
 			f->f_file = open(pData->f_fname, O_RDWR|O_NONBLOCK);
 	        } else {
 			f->f_file = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
@@ -698,11 +713,11 @@ CODESTARTparseSelectorAct
 			break;
 		}
 		if (isatty(f->f_file)) {
-			f->f_type = F_TTY;
+			pData->fileType = eTypeTTY;
 			untty();
 		}
 		if (strcmp((char*) p, ctty) == 0)
-			f->f_type = F_CONSOLE;
+			pData->fileType = eTypeCONSOLE;
 		break;
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;

@@ -89,11 +89,9 @@ static void closeMySQL(instanceData *pData)
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	switch (f->f_type) {
-#				ifdef	WITH_DB
-			closeMySQL(pData);
-#				endif
-	}
+#	ifdef	WITH_DB
+	closeMySQL(pData);
+#	endif
 ENDfreeInstance
 
 
@@ -357,7 +355,6 @@ CODESTARTparseSelectorAct
 		logerror("write to database action in config file, but rsyslogd compiled without "
 		         "database functionality - ignored");
 #else /* WITH_DB defined! */
-		f->f_type = F_MYSQL;
 		p++;
 		
 		/* Now we read the MySQL connection properties 

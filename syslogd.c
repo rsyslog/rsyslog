@@ -4498,14 +4498,6 @@ rsRetVal cflineParseFileName(selector_t *f, uchar* p, uchar *pFileName)
 	rsRetVal iRet = RS_RET_OK;
 	char szTemplateName[128];	/* should be more than sufficient */
 
-	/* TODO: below is problematic  from modularization standpoint */
-	if(*p == '|') {
-		f->f_type = F_PIPE;
-		++p;
-	} else {
-		f->f_type = F_FILE;
-	}
-
 	pName = pFileName;
 	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
 	while(*p && *p != ';' && i < MAXFNAME) {
