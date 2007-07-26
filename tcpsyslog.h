@@ -41,17 +41,14 @@ extern int bEnableTCP;
 extern struct TCPSession *pTCPSessions;
 
 /* prototypes */
-int TCPSend(selector_t *f, char *msg, size_t len);
 void deinit_tcp_listener(void);
 int *create_tcp_socket(void);
-enum TCPSendStatus TCPSendGetStatus(selector_t *f);
 int TCPSessGetNxtSess(int iCurr);
 void TCPSessAccept(int fd);
 void TCPSessPrepareClose(int iTCPSess);
 void TCPSessClose(int iSess);
 int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen);
 void configureTCPListen(char *cOptarg);
-void TCPSendSetStatus(selector_t *f, enum TCPSendStatus iNewState);
 
 #endif /* #ifndef TCPSYSLOG_H_INCLUDED */
 /*
