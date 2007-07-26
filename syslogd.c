@@ -3287,7 +3287,7 @@ static void reapchild()
 {
 	int saved_errno = errno;
 	signal(SIGCHLD, reapchild);	/* reset signal handler -ASP */
-	wait(NULL);
+	while(waitpid(-1, NULL, WNOHANG) > 0);
 	errno = saved_errno;
 }
 
