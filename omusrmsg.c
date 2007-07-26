@@ -58,6 +58,7 @@
 /* internal structures
  */
 typedef struct _instanceData {
+	char uname[MAXUNAMES][UNAMESZ+1];
 } instanceData;
 
 
@@ -82,8 +83,8 @@ ENDfreeInstance
 BEGINdbgPrintInstInfo
 	register int i;
 CODESTARTdbgPrintInstInfo
-	for (i = 0; i < MAXUNAMES && *f->f_un.f_uname[i]; i++)
-		printf("%s, ", f->f_un.f_uname[i]);
+	for (i = 0; i < MAXUNAMES && *pData->uname[i]; i++)
+		printf("%s, ", pData->uname[i]);
 ENDdbgPrintInstInfo
 
 
@@ -140,7 +141,7 @@ void endutent(void)
  *	Adjust the size of a variable to prevent a buffer overflow
  *	should _PATH_DEV ever contain something different than "/dev/".
  */
-static void wallmsg(selector_t *f)
+static void wallmsg(selector_t *f, instanceData *pData)
 {
   
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
@@ -195,11 +196,11 @@ static void wallmsg(selector_t *f)
 			/* should we send the message to this user? */
 			if (f->f_type == F_USERS) {
 				for (i = 0; i < MAXUNAMES; i++) {
-					if (!f->f_un.f_uname[i][0]) {
+					if (!pData->uname[i][0]) {
 						i = MAXUNAMES;
 						break;
 					}
-					if (strncmp(f->f_un.f_uname[i],
+					if (strncmp(pData->uname[i],
 					    ut.ut_name, UNAMESZ) == 0)
 						break;
 				}
@@ -241,12 +242,12 @@ BEGINdoAction
 CODESTARTdoAction
 	dprintf("\n");
 	/* TODO: change wallmsg so that it returns iRet */
-	wallmsg(f);
+	wallmsg(f, pData);
 ENDdoAction
 
 
 BEGINparseSelectorAct
-	uchar *p, *q;
+	uchar *q;
 	int i;
 	char szTemplateName[128];
 CODESTARTparseSelectorAct
@@ -255,8 +256,7 @@ CODESTARTparseSelectorAct
 	if(**pp != '*')
 		return RS_RET_CONFLINE_UNPROCESSED;
 #endif
-	p = *pp;
-	if((iRet = createInstance(&pModData)) != RS_RET_OK)
+	if((iRet = createInstance(&pData)) != RS_RET_OK)
 		return iRet;
 
 
@@ -286,11 +286,11 @@ CODESTARTparseSelectorAct
 		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
 			for (q = p; *q && *q != ',' && *q != ';'; )
 				q++;
-			(void) strncpy((char*) f->f_un.f_uname[i], (char*) p, UNAMESZ);
+			(void) strncpy((char*) pData->uname[i], (char*) p, UNAMESZ);
 			if ((q - p) > UNAMESZ)
-				f->f_un.f_uname[i][UNAMESZ] = '\0';
+				pData->uname[i][UNAMESZ] = '\0';
 			else
-				f->f_un.f_uname[i][q - p] = '\0';
+				pData->uname[i][q - p] = '\0';
 			while (*q == ',' || *q == ' ')
 				q++;
 			p = q;
@@ -315,10 +315,6 @@ CODESTARTparseSelectorAct
 		 */
 	}
 
-	if(iRet == RS_RET_OK) {
-		*ppModData = pModData;
-		*pp = p;
-	}
 ENDparseSelectorAct
 
 

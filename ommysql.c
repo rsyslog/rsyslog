@@ -317,7 +317,6 @@ ENDdoAction
 
 
 BEGINparseSelectorAct
-	uchar *p;
 	int iMySQLPropErr = 0;
 	char szTemplateName[128];
 CODESTARTparseSelectorAct
@@ -327,7 +326,7 @@ CODESTARTparseSelectorAct
 	 * the code further changes.  -- rgerhards, 2007-07-25
 	 */
 	if(*p == '>') {
-		if((iRet = createInstance(&pModData)) != RS_RET_OK)
+		if((iRet = createInstance(&pData)) != RS_RET_OK)
 			return iRet;
 	}
 
@@ -413,11 +412,6 @@ CODESTARTparseSelectorAct
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;
-	}
-
-	if(iRet == RS_RET_OK) {
-		*ppModData = pModData;
-		*pp = p;
 	}
 ENDparseSelectorAct
 

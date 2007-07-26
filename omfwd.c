@@ -670,7 +670,7 @@ ENDdoAction
 
 
 BEGINparseSelectorAct
-	uchar *p, *q;
+	uchar *q;
 	int i;
         int error;
 	int bErr;
@@ -680,7 +680,7 @@ CODESTARTparseSelectorAct
 	p = *pp;
 
 	if(*p == '@') {
-		if((iRet = createInstance(&pModData)) != RS_RET_OK)
+		if((iRet = createInstance(&pData)) != RS_RET_OK)
 			return iRet;
 		++p; /* eat '@' */
 		if(*p == '@') { /* indicator for TCP! */
@@ -838,10 +838,6 @@ CODESTARTparseSelectorAct
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 	}
 
-	if(iRet == RS_RET_OK) {
-		*ppModData = pModData;
-		*pp = p;
-	}
 	/* TODO: do we need to call freeInstance if we failed - this is a general question for
 	 * all output modules. I'll address it lates as the interface evolves. rgerhards, 2007-07-25
 	 */

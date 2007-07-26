@@ -174,7 +174,7 @@ struct filed {
 	} f_filterData;
 #if 1
 	union {
-		char	f_uname[MAXUNAMES][UNAMESZ+1];
+		//char	f_uname[MAXUNAMES][UNAMESZ+1];
 #ifdef	WITH_DB
 		struct {
 			MYSQL	*f_hmysql;		/* handle to MySQL */

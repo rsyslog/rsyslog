@@ -568,7 +568,6 @@ ENDdoAction
 
 
 BEGINparseSelectorAct
-	uchar *p;
 	int syncfile;
 CODESTARTparseSelectorAct
 	p = *pp;
@@ -585,7 +584,7 @@ CODESTARTparseSelectorAct
 	 * the code further changes.  -- rgerhards, 2007-07-25
 	 */
 	if(*p == '$' || *p == '?' || *p == '|' || *p == '/') {
-		if((iRet = createInstance(&pModData)) != RS_RET_OK)
+		if((iRet = createInstance(&pData)) != RS_RET_OK)
 			return iRet;
 	}
 
@@ -682,11 +681,6 @@ CODESTARTparseSelectorAct
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;
-	}
-
-	if(iRet == RS_RET_OK) {
-		*ppModData = (void*) pModData;
-		*pp = p;
 	}
 ENDparseSelectorAct
 

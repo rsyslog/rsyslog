@@ -89,14 +89,13 @@ ENDdoAction
 
 
 BEGINparseSelectorAct
-	uchar *p;
 CODESTARTparseSelectorAct
 	p = *pp;
 	/* yes, the if below is redundant, but I need it now. Will go away as
 	 * the code further changes.  -- rgerhards, 2007-07-25
 	 */
 	if(*p == '^') {
-		if((iRet = createInstance(&pModData)) != RS_RET_OK)
+		if((iRet = createInstance(&pData)) != RS_RET_OK)
 			return iRet;
 	}
 
@@ -116,10 +115,6 @@ CODESTARTparseSelectorAct
 		break;
 	}
 
-	if(iRet == RS_RET_OK) {
-		*ppModData = pModData;
-		*pp = p;
-	}
 ENDparseSelectorAct
 
 

@@ -89,7 +89,7 @@ static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eF
 /* doAction()
  */
 #define BEGINdoAction \
-static rsRetVal doAction(selector_t *f)\
+static rsRetVal doAction(selector_t *f, instanceData __attribute__((unused)) *pData)\
 {\
 	rsRetVal iRet = RS_RET_OK;
 
@@ -175,14 +175,20 @@ static rsRetVal getWriteFDForSelect(selector_t *f, void *pModData, short *fd)\
 static rsRetVal parseSelectorAct(uchar **pp, selector_t *f, void **ppModData)\
 {\
 	rsRetVal iRet = RS_RET_OK;\
-	instanceData *pModData = NULL;
+	uchar *p;\
+	instanceData *pData = NULL;
 
 #define CODESTARTparseSelectorAct \
 	assert(pp != NULL);\
 	assert(ppModData != NULL);\
-	assert(f != NULL);
+	assert(f != NULL);\
+	p = *pp;
 
 #define ENDparseSelectorAct \
+	if(iRet == RS_RET_OK) {\
+		*ppModData = pData;\
+		*pp = p;\
+	}\
 	return iRet;\
 }
 

@@ -3258,7 +3258,7 @@ rsRetVal fprintlog(register selector_t *f)
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's execute it. -- rgerhards, 2007-07-24
 	 */
-	iRet = f->pMod->mod.om.doAction(f);	/* call configured action */
+	iRet = f->pMod->mod.om.doAction(f, f->pModData); /* call configured action */
 	if(iRet == RS_RET_DISABLE_ACTION)
 		f->bEnabled = 0; /* that's it... */
 

@@ -75,9 +75,8 @@ ENDfreeInstance
 
 
 BEGINparseSelectorAct
-	uchar *p;
 CODESTARTparseSelectorAct
-	pModData = NULL; /* this action does not have any instance data */
+	pData = NULL; /* this action does not have any instance data */
 	p = *pp;
 
 	if(*p == '~') {
@@ -86,11 +85,6 @@ CODESTARTparseSelectorAct
 		f->f_type = F_DISCARD;
 	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
-	}
-
-	if(iRet == RS_RET_OK) {
-		*ppModData = pModData;
-		*pp = p;
 	}
 ENDparseSelectorAct
 
