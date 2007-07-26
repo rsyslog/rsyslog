@@ -3047,162 +3047,6 @@ void logmsg(int pri, msg_t *pMsg, int flags)
 }
 
 
-
-/* create a string from the provided iovec. This can
- * be called by all functions who need the template
- * text in a single string. The function takes an
- * entry of the filed structure. It uses all data
- * from there. It returns a pointer to the generated
- * string if it succeeded, or NULL otherwise.
- * rgerhards 2004-11-22 
- */
-char *iovAsString(selector_t *f)
-{
-	struct iovec *v;
-	int i;
-	rsCStrObj *pStrB;
-
-	assert(f != NULL);
-
-	if(f->f_psziov != NULL) {
-		/* for now, we always free a previous buffer.
-		 * The idea, however, is to keep a copy of the
-		 * buffer until we know we no longer can re-use it.
-		 */
-		free(f->f_psziov);
-	}
-
-	if((pStrB = rsCStrConstruct()) == NULL) {
-		/* oops - no mem, let's try to set the message we have
-		 * most probably, this will fail, too. But at least we
-		 * can try... */
-		return NULL;
-	}
-
-	i = 0;
-	f->f_iLenpsziov = 0;
-	v = f->f_iov;
-	while(i++ < f->f_iIovUsed) {
-		if(v->iov_len > 0) {
-			if(rsCStrAppendStr(pStrB, v->iov_base) != RS_RET_OK) {
-				/* most probably out of memory... */
-				rsCStrDestruct(pStrB);
-				return NULL;
-			}
-			f->f_iLenpsziov += v->iov_len;
-		}
-		++v;
-	}
-
-	rsCStrFinish(pStrB);
-	f->f_psziov = (char*) rsCStrConvSzStrAndDestruct(pStrB);
-	return f->f_psziov;
-}
-
-
-/* rgerhards 2004-11-24: free the to-be-freed string in
- * iovec. Some strings point to read-only constants in the
- * msg object, these must not be taken care of. But some
- * are specifically created for this instance and those
- * must be freed before the next is created. This is done
- * here. After this method has been called, the iovec
- * string array is invalid and must either be totally
- * discarded or e-initialized!
- */
-void iovDeleteFreeableStrings(selector_t *f)
-{
-	register int i;
-
-	assert(f != NULL);
-
-	for(i = 0 ; i < f->f_iIovUsed ; ++i) {
-		/* free to-be-freed strings in iovec */
-		if(*(f->f_bMustBeFreed + i)) {
-			free((f->f_iov + i)->iov_base);
-			*(f->f_bMustBeFreed) = 0;
-		}
-	}
-}
-
-
-/* rgerhards 2004-11-19: create the iovec for
- * a given message. This is called by all methods
- * using iovec's for their output. Returns the number
- * of iovecs used (might be different from max if the
- * template contains an invalid entry).
- */
-void  iovCreate(selector_t *f)
-{
-	register struct iovec *v;
-	int iIOVused;
-	struct template *pTpl;
-	struct templateEntry *pTpe;
-	msg_t *pMsg;
-	char *pVal;	/* This variable must be introduced to keep with strict aliasing rules */
-	size_t iLenVal;	/* This variable must be introduced to keep with strict aliasing rules */
-
-	assert(f != NULL);
-
-	/* discard previous memory buffers */
-	iovDeleteFreeableStrings(f);
-	
-	pMsg = f->f_pMsg;
-	pTpl = f->f_pTpl;
-	v = f->f_iov;
-	
-	iIOVused = 0;
-	pTpe = pTpl->pEntryRoot;
-	while(pTpe != NULL) {
-		if(pTpe->eEntryType == CONSTANT) {
-			v->iov_base = pTpe->data.constant.pConstant;
-			v->iov_len = pTpe->data.constant.iLenConstant;
-			++v;
-			++iIOVused;
-		} else 	if(pTpe->eEntryType == FIELD) {
-			/* Just for the records and because I needed some time to look it up again:
-			 * f->f_bMustBeFreed + iIOVused is a pointer to the "must be freed" indicator
-			 * for the entry in question. So, yes, we are passing in a pointer and it gets
-			 * updated by the called procedures. The address of operator (&) must NOT be used
-			 * because it already is a pointer. Actually, f->f_bMustBeFreed is the base address
-			 * of an array of unsigned shorts. This array is allocated when the configuration
-			 * file is read. rgerhards, 2007-06-26
-			 */
-			pVal = MsgGetProp(pMsg, pTpe, NULL, f->f_bMustBeFreed + iIOVused);
-			iLenVal = strlen(pVal);
-			/* we now need to check if we should use SQL option. In this case,
-			 * we must go over the generated string and escape '\'' characters.
-			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
-			 * but they are handled in this way because of legacy (don't break any
-			 * existing thing).
-			 */
-			if(f->f_pTpl->optFormatForSQL == 1)
-				doSQLEscape(&pVal, &iLenVal, f->f_bMustBeFreed + iIOVused, 1);
-			else if(f->f_pTpl->optFormatForSQL == 2)
-				doSQLEscape(&pVal, &iLenVal, f->f_bMustBeFreed + iIOVused, 0);
-			v->iov_base = pVal;
-			v->iov_len = iLenVal;
-			++v;
-			++iIOVused;
-		}
-		pTpe = pTpe->pNext;
-	}
-	
-	f->f_iIovUsed = iIOVused;
-
-#if 0 /* debug aid */
-{
-	int i;
-	v = f->f_iov;
-	for(i = 0 ; i < iIOVused ; ++i, ++v) {
-		printf("iovCreate(%d), string '%s', mustbeFreed %d\n", i,
-		        v->iov_base, *(f->f_bMustBeFreed + i));
-	}
-}
-#endif /* debug aid */
-	return;
-}
-
-
 /* rgerhards 2004-11-09: fprintlog() is the actual driver for
  * the output channel. It receives the channel description (f) as
  * well as the message and outputs them according to the channel
@@ -3216,6 +3060,7 @@ rsRetVal fprintlog(register selector_t *f)
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
 	pMsgSave = NULL;	/* indicate message poiner not saved */
+	uchar *pszMsg;
 	rsRetVal iRet = RS_RET_OK;
 
 	/* first check if this is a regular message or the repeation of
@@ -3258,7 +3103,15 @@ rsRetVal fprintlog(register selector_t *f)
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's execute it. -- rgerhards, 2007-07-24
 	 */
-	iRet = f->pMod->mod.om.doAction(f, f->pModData); /* call configured action */
+	if((pszMsg = tplToString(f->f_pTpl, f->f_pMsg)) == NULL) {
+		dprintf("memory alloc failed while generating message string - message ignored\n");
+		glblHadMemShortage = 1;
+		iRet = RS_RET_OUT_OF_MEMORY;
+	} else {
+		iRet = f->pMod->mod.om.doAction(f, pszMsg, f->pModData); /* call configured action */
+		free(pszMsg);
+	}
+
 	if(iRet == RS_RET_DISABLE_ACTION)
 		f->bEnabled = 0; /* that's it... */
 
@@ -4045,19 +3898,6 @@ static void freeSelectors(void)
 			/* free the action instances */
 			f->pMod->freeInstance(f, f->pModData);
 
-			/* free iovec if it was allocated */
-			if(f->f_iov != NULL) {
-				if(f->f_bMustBeFreed != NULL) {
-					iovDeleteFreeableStrings(f);
-					free(f->f_bMustBeFreed);
-				}
-				free(f->f_iov);
-			}
-
-			/* free iov string */
-			if (f->f_psziov != NULL)
-				free(f->f_psziov);
-
 			if(f->f_pMsg != NULL)
 				MsgDestruct(f->f_pMsg);
 			/* done with this entry, we now need to delete itself */
@@ -4424,19 +4264,6 @@ rsRetVal cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
 		errno = 0;
 		logerror(errMsg);
 		iRet = RS_RET_NOT_FOUND;
-	} else {
-		if((f->f_iov = calloc(tplGetEntryCount(f->f_pTpl),
-		    sizeof(struct iovec))) == NULL) {
-			errno = 0;
-			logerror("Could not allocate iovec memory - 1 selector line disabled\n");
-			iRet = RS_RET_ERR;
-		}
-		if((f->f_bMustBeFreed = calloc(tplGetEntryCount(f->f_pTpl),
-		    sizeof(unsigned short))) == NULL) {
-			errno = 0;
-			logerror("Could not allocate bMustBeFreed memory - 1 selector line disabled\n");
-			iRet = RS_RET_ERR;
-		}
 	}
 	return iRet;
 }

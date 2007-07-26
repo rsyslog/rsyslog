@@ -467,7 +467,7 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
  * will be called for all outputs using file semantics,
  * for example also for pipes.
  */
-static rsRetVal writeFile(selector_t *f, instanceData *pData)
+static rsRetVal writeFile(selector_t *f, uchar *pMsg, instanceData *pData)
 {
 	off_t actualFileSize;
 	rsRetVal iRet = RS_RET_OK;
@@ -484,7 +484,6 @@ static rsRetVal writeFile(selector_t *f, instanceData *pData)
 	}
 
 	/* create the message based on format specified */
-	iovCreate(f);
 again:
 	/* check if we have a file size limit and, if so,
 	 * obey to it.
@@ -517,7 +516,7 @@ again:
 		}
 	}
 
-	if (writev(pData->fd, f->f_iov, f->f_iIovUsed) < 0) {
+	if (write(pData->fd, pMsg, strlen((char*)pMsg)) < 0) {
 		int e = errno;
 
 		/* If a named pipe is full, just ignore it for now
@@ -599,7 +598,7 @@ CODESTARTdoAction
 	 * all others are doomed.
 	 */
 	if(pData->bDynamicName || (pData->fd != -1))
-		iRet = writeFile(f, pData);
+		iRet = writeFile(f, pMsg, pData);
 ENDdoAction
 
 

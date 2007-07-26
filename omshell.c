@@ -75,16 +75,13 @@ ENDdbgPrintInstInfo
 
 
 BEGINdoAction
-	uchar *psz;
 CODESTARTdoAction
 	/* TODO: using pData->progName is not clean from the point of
 	 * modularization. We'll change that as we go ahead with modularization.
 	 * rgerhards, 2007-07-20
 	 */
 	dprintf("\n");
-	iovCreate(f);
-	psz = (uchar*) iovAsString(f);
-	if(execProg((uchar*) pData->progName, 1, (uchar*) psz) == 0)
+	if(execProg((uchar*) pData->progName, 1, pMsg) == 0)
 	 	logerrorSz("Executing program '%s' failed", (char*)pData->progName);
 ENDdoAction
 

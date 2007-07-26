@@ -159,11 +159,6 @@ struct filed {
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */
 	struct template *f_pTpl;		/* pointer to template to use */
-	struct iovec *f_iov;			/* dyn allocated depinding on template */
-	unsigned short *f_bMustBeFreed;		/* indicator, if iov_base must be freed to destruct */
-	int	f_iIovUsed;			/* nbr of elements used in IOV */
-	char	*f_psziov;			/* iov as string */
-	int	f_iLenpsziov;			/* length of iov as string */
 	struct msg* f_pMsg;			/* pointer to the message (this will
 					         * replace the other vars with msg
 						 * content later). This is preserved after

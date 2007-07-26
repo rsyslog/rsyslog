@@ -89,12 +89,13 @@ static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eF
 /* doAction()
  */
 #define BEGINdoAction \
-static rsRetVal doAction(selector_t *f, instanceData __attribute__((unused)) *pData)\
+static rsRetVal doAction(selector_t *f, uchar __attribute__((unused)) *pMsg, instanceData __attribute__((unused)) *pData)\
 {\
 	rsRetVal iRet = RS_RET_OK;
 
 #define CODESTARTdoAction \
-	assert(f != NULL);
+	assert(f != NULL);\
+	assert(pMsg != NULL);
 
 #define ENDdoAction \
 	return iRet;\

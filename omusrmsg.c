@@ -147,7 +147,7 @@ void endutent(void)
  *	Adjust the size of a variable to prevent a buffer overflow
  *	should _PATH_DEV ever contain something different than "/dev/".
  */
-static void wallmsg(selector_t *f, instanceData *pData)
+static void wallmsg(selector_t *f, uchar* pMsg, instanceData *pData)
 {
   
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
@@ -158,11 +158,10 @@ static void wallmsg(selector_t *f, instanceData *pData)
 	struct utmp *uptr;
 
 	assert(f != NULL);
+	assert(pMsg != NULL);
 
 	if (reenter++)
 		return;
-
-	iovCreate(f);	/* init the iovec */
 
 	/* open the user login file */
 	setutent();
@@ -228,7 +227,7 @@ static void wallmsg(selector_t *f, instanceData *pData)
 
 					if (fstat(ttyf, &statb) == 0 &&
 					    (statb.st_mode & S_IWRITE)) {
-						(void) writev(ttyf, f->f_iov, f->f_iIovUsed);
+						(void) write(ttyf, pMsg, strlen((char*)pMsg));
 					}
 					close(ttyf);
 					ttyf = -1;
@@ -248,7 +247,7 @@ BEGINdoAction
 CODESTARTdoAction
 	dprintf("\n");
 	/* TODO: change wallmsg so that it returns iRet */
-	wallmsg(f, pData);
+	wallmsg(f, pMsg, pData);
 ENDdoAction
 
 

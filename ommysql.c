@@ -286,16 +286,13 @@ static rsRetVal reInitMySQL(instanceData *pData)
  * to an established MySQL session.
  * Initially added 2004-10-28 mmeckelein
  */
-rsRetVal writeMySQL(register selector_t *f, instanceData *pData)
+rsRetVal writeMySQL(register selector_t *f, uchar *psz, instanceData *pData)
 {
-	char *psz;
 	int iCounter=0;
 	rsRetVal iRet = RS_RET_OK;
 	assert(f != NULL);
 	assert(pData != NULL);
 
-	iovCreate(f);
-	psz = iovAsString(f);
 	if((iRet = checkDBErrorState(pData)) != RS_RET_OK)
 		return iRet;
 
@@ -306,7 +303,7 @@ rsRetVal writeMySQL(register selector_t *f, instanceData *pData)
 	 */
 	do {
 		/* query */
-		if(mysql_query(pData->f_hmysql, psz)) {
+		if(mysql_query(pData->f_hmysql, (char*)psz)) {
 			/* if the second attempt fails
 			   we call the error handler */
 			if(iCounter)
@@ -324,7 +321,7 @@ rsRetVal writeMySQL(register selector_t *f, instanceData *pData)
 BEGINdoAction
 CODESTARTdoAction
 	dprintf("\n");
-	iRet = writeMySQL(f, pData);
+	iRet = writeMySQL(f, pMsg, pData);
 ENDdoAction
 
 

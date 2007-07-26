@@ -523,6 +523,7 @@ static char *getFwdSyslogPt(instanceData *pData)
 		return(pData->port);
 }
 
+
 BEGINdoAction
 	char *psz; /* temporary buffering */
 	register unsigned l;
@@ -597,13 +598,12 @@ CODESTARTdoAction
 	f_forw:
 		dprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData),
 			 pData->protocol == FORW_UDP ? "udp" : "tcp");
-		iovCreate(f);
 		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
 		else {
 			pData->ttSuspend = time(NULL);
-			psz = iovAsString(f);
-			l = f->f_iLenpsziov;
+			psz = (char*) pMsg;
+			l = strlen((char*) psz);
 			if (l > MAXLINE)
 				l = MAXLINE;
 
