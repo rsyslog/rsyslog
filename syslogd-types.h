@@ -175,28 +175,6 @@ struct filed {
 #if 1
 	union {
 		struct {
-			char	f_hname[MAXHOSTNAMELEN+1];
-			struct addrinfo *f_addr;
-			int compressionLevel; /* 0 - no compression, else level for zlib */
-			char *port;
-			int protocol;
-			TCPFRAMINGMODE tcp_framing;
-#			define	FORW_UDP 0
-#			define	FORW_TCP 1
-			/* following fields for TCP-based delivery */
-			enum TCPSendStatus {
-				TCP_SEND_NOTCONNECTED = 0,
-				TCP_SEND_CONNECTING = 1,
-				TCP_SEND_READY = 2
-			} status;
-			char *savedMsg;
-			int savedMsgLen; /* length of savedMsg in octets */
-			time_t	ttSuspend;	/* time selector was suspended */
-#			ifdef USE_PTHREADS
-			pthread_mutex_t mtxTCPSend;
-#			endif
-		} f_forw;		/* forwarding address */
-		struct {
 			char	f_fname[MAXFNAME];/* file or template name (display only) */
 			struct template *pTpl;	/* pointer to template object */
 			char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */

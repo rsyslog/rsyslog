@@ -73,6 +73,26 @@ static const char *sys_h_errlist[] = {
  */
 
 typedef struct _instanceData {
+	char	f_hname[MAXHOSTNAMELEN+1];
+	struct addrinfo *f_addr;
+	int compressionLevel; /* 0 - no compression, else level for zlib */
+	char *port;
+	int protocol;
+	TCPFRAMINGMODE tcp_framing;
+#	define	FORW_UDP 0
+#	define	FORW_TCP 1
+	/* following fields for TCP-based delivery */
+	enum TCPSendStatus {
+		TCP_SEND_NOTCONNECTED = 0,
+		TCP_SEND_CONNECTING = 1,
+		TCP_SEND_READY = 2
+	} status;
+	char *savedMsg;
+	int savedMsgLen; /* length of savedMsg in octets */
+	time_t	ttSuspend;	/* time selector was suspended */
+#	ifdef USE_PTHREADS
+	pthread_mutex_t mtxTCPSend;
+#	endif
 } instanceData;
 
 
@@ -93,17 +113,17 @@ CODESTARTfreeInstance
 	switch (f->f_type) {
 		case F_FORW:
 		case F_FORW_SUSP:
-			freeaddrinfo(f->f_un.f_forw.f_addr);
+			freeaddrinfo(pData->f_addr);
 			/* fall through */
 		case F_FORW_UNKN:
-			if(f->f_un.f_forw.port != NULL)
-				free(f->f_un.f_forw.port);
+			if(pData->port != NULL)
+				free(pData->port);
 			break;
 	}
 #	ifdef USE_PTHREADS
 	/* delete any mutex objects, if present */
-	if(f->f_un.f_forw.protocol == FORW_TCP) {
-		pthread_mutex_destroy(&f->f_un.f_forw.mtxTCPSend);
+	if(pData->protocol == FORW_TCP) {
+		pthread_mutex_destroy(&pData->mtxTCPSend);
 	}
 #	endif
 ENDfreeInstance
@@ -111,7 +131,7 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	printf("%s", f->f_un.f_forw.f_hname);
+	printf("%s", pData->f_hname);
 ENDdbgPrintInstInfo
 
 /* CODE FOR SENDING TCP MESSAGES */
@@ -119,22 +139,21 @@ ENDdbgPrintInstInfo
 /* get send status
  * rgerhards, 2005-10-24
  */
-static void TCPSendSetStatus(selector_t *f, enum TCPSendStatus iNewState)
+static void TCPSendSetStatus(instanceData *pData, enum TCPSendStatus iNewState)
 {
-	assert(f != NULL);
-	assert(f->f_type == F_FORW);
-	assert(f->f_un.f_forw.protocol == FORW_TCP);
+	assert(pData != NULL);
+	assert(pData->protocol == FORW_TCP);
 	assert(   (iNewState == TCP_SEND_NOTCONNECTED)
 	       || (iNewState == TCP_SEND_CONNECTING)
 	       || (iNewState == TCP_SEND_READY));
 
 	/* there can potentially be a race condition, so guard by mutex */
 #	ifdef	USE_PTHREADS
-		pthread_mutex_lock(&f->f_un.f_forw.mtxTCPSend);
+		pthread_mutex_lock(&pData->mtxTCPSend);
 #	endif
-	f->f_un.f_forw.status = iNewState;
+	pData->status = iNewState;
 #	ifdef	USE_PTHREADS
-		pthread_mutex_unlock(&f->f_un.f_forw.mtxTCPSend);
+		pthread_mutex_unlock(&pData->mtxTCPSend);
 #	endif
 }
 
@@ -142,20 +161,19 @@ static void TCPSendSetStatus(selector_t *f, enum TCPSendStatus iNewState)
 /* set send status
  * rgerhards, 2005-10-24
  */
-static enum TCPSendStatus TCPSendGetStatus(selector_t *f)
+static enum TCPSendStatus TCPSendGetStatus(instanceData *pData)
 {
 	enum TCPSendStatus eState;
-	assert(f != NULL);
-	assert(f->f_type == F_FORW);
-	assert(f->f_un.f_forw.protocol == FORW_TCP);
+	assert(pData != NULL);
+	assert(pData->protocol == FORW_TCP);
 
 	/* there can potentially be a race condition, so guard by mutex */
 #	ifdef	USE_PTHREADS
-		pthread_mutex_lock(&f->f_un.f_forw.mtxTCPSend);
+		pthread_mutex_lock(&pData->mtxTCPSend);
 #	endif
-	eState = f->f_un.f_forw.status;
+	eState = pData->status;
 #	ifdef	USE_PTHREADS
-		pthread_mutex_unlock(&f->f_un.f_forw.mtxTCPSend);
+		pthread_mutex_unlock(&pData->mtxTCPSend);
 #	endif
 
 	return eState;
@@ -165,12 +183,12 @@ static enum TCPSendStatus TCPSendGetStatus(selector_t *f)
 /* Initialize TCP sockets (for sender)
  * This is done once per selector line, if not yet initialized.
  */
-static int TCPSendCreateSocket(selector_t *f, struct addrinfo *addrDest)
+static int TCPSendCreateSocket(instanceData *pData, struct addrinfo *addrDest)
 {
 	int fd;
 	struct addrinfo *r; 
 	
-	assert(f != NULL);
+	assert(pData != NULL);
 	
 	r = addrDest;
 
@@ -196,7 +214,7 @@ static int TCPSendCreateSocket(selector_t *f, struct addrinfo *addrDest)
 			if (connect (fd, r->ai_addr, r->ai_addrlen) != 0) {
 				if(errno == EINPROGRESS) {
 					/* this is normal - will complete during select */
-					TCPSendSetStatus(f, TCP_SEND_CONNECTING);
+					TCPSendSetStatus(pData, TCP_SEND_CONNECTING);
 					return fd;
 				} else {
 					dprintf("create tcp connection failed, reason %s",
@@ -205,7 +223,7 @@ static int TCPSendCreateSocket(selector_t *f, struct addrinfo *addrDest)
 
 			}
 			else {
-				TCPSendSetStatus(f, TCP_SEND_READY);
+				TCPSendSetStatus(pData, TCP_SEND_READY);
 				return fd;
 			}
 			close(fd);
@@ -255,7 +273,7 @@ static int TCPSendCreateSocket(selector_t *f, struct addrinfo *addrDest)
  * octet-counting, only this framing mode is used within the session.
  * rgerhards, 2006-12-07
  */
-static int TCPSend(selector_t *f, char *msg, size_t len)
+static int TCPSend(selector_t *f, instanceData *pData, char *msg, size_t len)
 {
 	int retry = 0;
 	int done = 0;
@@ -265,6 +283,7 @@ static int TCPSend(selector_t *f, char *msg, size_t len)
 	enum TCPSendStatus eState;
 	TCPFRAMINGMODE framingToUse;
 
+	assert(pData != NULL);
 	assert(f != NULL);
 	assert(msg != NULL);
 	assert(len > 0);
@@ -274,17 +293,17 @@ static int TCPSend(selector_t *f, char *msg, size_t len)
 	 * use octet counting because the data potentially contains all control characters
 	 * including LF.
 	 */
-	framingToUse = bIsCompressed ? TCP_FRAMING_OCTET_COUNTING : f->f_un.f_forw.tcp_framing;
+	framingToUse = bIsCompressed ? TCP_FRAMING_OCTET_COUNTING : pData->tcp_framing;
 
 	do { /* try to send message */
 		if(f->f_file <= 0) {
 			/* we need to open the socket first */
-			if((f->f_file = TCPSendCreateSocket(f, f->f_un.f_forw.f_addr)) <= 0) {
+			if((f->f_file = TCPSendCreateSocket(pData, pData->f_addr)) <= 0) {
 				return -1;
 			}
 		}
 
-		eState = TCPSendGetStatus(f); /* cache info */
+		eState = TCPSendGetStatus(pData); /* cache info */
 
 		if(eState == TCP_SEND_CONNECTING) {
 			/* In this case, we save the buffer. If we have a
@@ -294,12 +313,12 @@ static int TCPSend(selector_t *f, char *msg, size_t len)
 			 * if there is not yet a saved message present.
 			 * rgerhards 2005-07-20
 			 */
-			if(f->f_un.f_forw.savedMsg == NULL) {
-				f->f_un.f_forw.savedMsg = malloc(len * sizeof(char));
-				if(f->f_un.f_forw.savedMsg == NULL)
+			if(pData->savedMsg == NULL) {
+				pData->savedMsg = malloc(len * sizeof(char));
+				if(pData->savedMsg == NULL)
 					return 0; /* nothing we can do... */
-				memcpy(f->f_un.f_forw.savedMsg, msg, len);
-				f->f_un.f_forw.savedMsgLen = len;
+				memcpy(pData->savedMsg, msg, len);
+				pData->savedMsgLen = len;
 			}
 			return 0;
 		} else if(eState != TCP_SEND_READY)
@@ -467,7 +486,7 @@ static int TCPSend(selector_t *f, char *msg, size_t len)
 			++retry;
 			/* try to recover */
 			close(f->f_file);
-			TCPSendSetStatus(f, TCP_SEND_NOTCONNECTED);
+			TCPSendSetStatus(pData, TCP_SEND_NOTCONNECTED);
 			f->f_file = -1;
 		} else {
 			if(buf != NULL)
@@ -489,13 +508,13 @@ static int TCPSend(selector_t *f, char *msg, size_t len)
  * We may change the implementation to try to lookup the port
  * if it is unspecified. So far, we use the IANA default auf 514.
  */
-static char *getFwdSyslogPt(selector_t *f)
+static char *getFwdSyslogPt(instanceData *pData)
 {
-	assert(f != NULL);
-	if(f->f_un.f_forw.port == NULL)
+	assert(pData != NULL);
+	if(pData->port == NULL)
 		return("514");
 	else
-		return(f->f_un.f_forw.port);
+		return(pData->port);
 }
 
 BEGINdoAction
@@ -510,14 +529,14 @@ BEGINdoAction
 CODESTARTdoAction
 	switch (f->f_type) {
 	case F_FORW_SUSP:
-		fwd_suspend = time(NULL) - f->f_un.f_forw.ttSuspend;
+		fwd_suspend = time(NULL) - pData->ttSuspend;
 		if ( fwd_suspend >= INET_SUSPEND_TIME ) {
 			dprintf("\nForwarding suspension over, retrying FORW ");
 			f->f_type = F_FORW;
 			goto f_forw;
 		}
 		else {
-			dprintf(" %s\n", f->f_un.f_forw.f_hname);
+			dprintf(" %s\n", pData->f_hname);
 			dprintf("Forwarding suspension not over, time left: %d.\n",
 			        INET_SUSPEND_TIME - fwd_suspend);
 		}
@@ -532,8 +551,8 @@ CODESTARTdoAction
 	 */
 	case F_FORW_UNKN:
 	/* The remote address is not yet known and needs to be obtained */
-		dprintf(" %s\n", f->f_un.f_forw.f_hname);
-		fwd_suspend = time(NULL) - f->f_un.f_forw.ttSuspend;
+		dprintf(" %s\n", pData->f_hname);
+		fwd_suspend = time(NULL) - pData->ttSuspend;
 		if(fwd_suspend >= INET_SUSPEND_TIME) {
 			dprintf("Forwarding suspension to unknown over, retrying\n");
 			memset(&hints, 0, sizeof(hints));
@@ -543,9 +562,9 @@ CODESTARTdoAction
 			 */
 			hints.ai_flags = AI_NUMERICSERV;
 			hints.ai_family = family;
-			hints.ai_socktype = f->f_un.f_forw.protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
-			if((e = getaddrinfo(f->f_un.f_forw.f_hname,
-					    getFwdSyslogPt(f), &hints, &res)) != 0) {
+			hints.ai_socktype = pData->protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
+			if((e = getaddrinfo(pData->f_hname,
+					    getFwdSyslogPt(pData), &hints, &res)) != 0) {
 				dprintf("Failure: %s\n", sys_h_errlist[h_errno]);
 				dprintf("Retries: %d\n", f->f_prevcount);
 				if ( --f->f_prevcount < 0 ) {
@@ -556,8 +575,8 @@ CODESTARTdoAction
 					dprintf("Left retries: %d\n", f->f_prevcount);
 			}
 			else {
-			        dprintf("%s found, resuming.\n", f->f_un.f_forw.f_hname);
-				f->f_un.f_forw.f_addr = res;
+			        dprintf("%s found, resuming.\n", pData->f_hname);
+				pData->f_addr = res;
 				f->f_prevcount = 0;
 				f->f_type = F_FORW;
 				goto f_forw;
@@ -570,13 +589,13 @@ CODESTARTdoAction
 
 	case F_FORW:
 	f_forw:
-		dprintf(" %s:%s/%s\n", f->f_un.f_forw.f_hname, getFwdSyslogPt(f),
-			 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp");
+		dprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData),
+			 pData->protocol == FORW_UDP ? "udp" : "tcp");
 		iovCreate(f);
 		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
 			dprintf("Not sending message to remote.\n");
 		else {
-			f->f_un.f_forw.ttSuspend = time(NULL);
+			pData->ttSuspend = time(NULL);
 			psz = iovAsString(f);
 			l = f->f_iLenpsziov;
 			if (l > MAXLINE)
@@ -591,13 +610,13 @@ CODESTARTdoAction
 			 * hard-coded but this may be changed to a config parameter.
 			 * rgerhards, 2006-11-30
 			 */
-			if(f->f_un.f_forw.compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
+			if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
 				Bytef out[MAXLINE+MAXLINE/100+12] = "z";
 				uLongf destLen = sizeof(out) / sizeof(Bytef);
 				uLong srcLen = l;
 				int ret;
 				ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
-						srcLen, f->f_un.f_forw.compressionLevel);
+						srcLen, pData->compressionLevel);
 				dprintf("Compressing message, length was %d now %d, return state  %d.\n",
 					l, (int) destLen, ret);
 				if(ret != Z_OK) {
@@ -619,7 +638,7 @@ CODESTARTdoAction
 			}
 #			endif
 
-			if(f->f_un.f_forw.protocol == FORW_UDP) {
+			if(pData->protocol == FORW_UDP) {
 				/* forward via UDP */
 	                        if(finet != NULL) {
 					/* we need to track if we have success sending to the remote
@@ -631,7 +650,7 @@ CODESTARTdoAction
 					 * rgerhards, 2007-06-22
 					 */
 					bSendSuccess = FALSE;
-					for (r = f->f_un.f_forw.f_addr; r; r = r->ai_next) {
+					for (r = pData->f_addr; r; r = r->ai_next) {
 		                       		for (i = 0; i < *finet; i++) {
 		                                       lsent = sendto(finet[i+1], psz, l, 0,
 		                                                      r->ai_addr, r->ai_addrlen);
@@ -656,7 +675,7 @@ CODESTARTdoAction
 				}
 			} else {
 				/* forward via TCP */
-				if(TCPSend(f, psz, l) != 0) {
+				if(TCPSend(f, pData, psz, l) != 0) {
 					/* error! */
 					f->f_type = F_FORW_SUSP;
 					errno = 0;
@@ -684,14 +703,14 @@ CODESTARTparseSelectorAct
 			return iRet;
 		++p; /* eat '@' */
 		if(*p == '@') { /* indicator for TCP! */
-			f->f_un.f_forw.protocol = FORW_TCP;
+			pData->protocol = FORW_TCP;
 			++p; /* eat this '@', too */
 			/* in this case, we also need a mutex... */
 #			ifdef USE_PTHREADS
-			pthread_mutex_init(&f->f_un.f_forw.mtxTCPSend, 0);
+			pthread_mutex_init(&pData->mtxTCPSend, 0);
 #			endif
 		} else {
-			f->f_un.f_forw.protocol = FORW_UDP;
+			pData->protocol = FORW_UDP;
 		}
 		/* we are now after the protocol indicator. Now check if we should
 		 * use compression. We begin to use a new option format for this:
@@ -719,7 +738,7 @@ CODESTARTparseSelectorAct
 						int iLevel;
 						iLevel = *p - '0';
 						++p; /* eat */
-						f->f_un.f_forw.compressionLevel = iLevel;
+						pData->compressionLevel = iLevel;
 					} else {
 						logerrorInt("Invalid compression level '%c' specified in "
 						         "forwardig action - NOT turning on compression.",
@@ -732,7 +751,7 @@ CODESTARTparseSelectorAct
 				} else if(*p == 'o') { /* octet-couting based TCP framing? */
 					++p; /* eat */
 					/* no further options settable */
-					f->f_un.f_forw.tcp_framing = TCP_FRAMING_OCTET_COUNTING;
+					pData->tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 				} else { /* invalid option! Just skip it... */
 					logerrorInt("Invalid option %c in forwarding action - ignoring.", *p);
 					++p; /* eat invalid option */
@@ -758,7 +777,7 @@ CODESTARTparseSelectorAct
 		for(q = p ; *p && *p != ';' && *p != ':' ; ++p)
 		 	/* JUST SKIP */;
 
-		f->f_un.f_forw.port = NULL;
+		pData->port = NULL;
 		if(*p == ':') { /* process port */
 			uchar * tmp;
 
@@ -766,16 +785,16 @@ CODESTARTparseSelectorAct
 			tmp = ++p;
 			for(i=0 ; *p && isdigit((int) *p) ; ++p, ++i)
 				/* SKIP AND COUNT */;
-			f->f_un.f_forw.port = malloc(i + 1);
-			if(f->f_un.f_forw.port == NULL) {
+			pData->port = malloc(i + 1);
+			if(pData->port == NULL) {
 				logerror("Could not get memory to store syslog forwarding port, "
 					 "using default port, results may not be what you intend\n");
 				/* we leave f_forw.port set to NULL, this is then handled by
 				 * getFwdSyslogPt().
 				 */
 			} else {
-				memcpy(f->f_un.f_forw.port, tmp, i);
-				*(f->f_un.f_forw.port + i) = '\0';
+				memcpy(pData->port, tmp, i);
+				*(pData->port + i) = '\0';
 			}
 		}
 		
@@ -807,25 +826,25 @@ CODESTARTparseSelectorAct
 		}
 
 		/* first set the f->f_type */
-		strcpy(f->f_un.f_forw.f_hname, (char*) q);
+		strcpy(pData->f_hname, (char*) q);
 		memset(&hints, 0, sizeof(hints));
 		/* port must be numeric, because config file syntax requests this */
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = family;
-		hints.ai_socktype = f->f_un.f_forw.protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
-		if( (error = getaddrinfo(f->f_un.f_forw.f_hname, getFwdSyslogPt(f), &hints, &res)) != 0) {
+		hints.ai_socktype = pData->protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
+		if( (error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
 			f->f_type = F_FORW_UNKN;
 			f->f_prevcount = INET_RETRY_MAX;
-			f->f_un.f_forw.ttSuspend = time(NULL);
+			pData->ttSuspend = time(NULL);
 		} else {
 			f->f_type = F_FORW;
-			f->f_un.f_forw.f_addr = res;
+			pData->f_addr = res;
 		}
 
 		/* then try to find the template */
 		if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) == RS_RET_OK) {
-			dprintf("forwarding host: '%s:%s/%s' template '%s'\n", q, getFwdSyslogPt(f),
-				 f->f_un.f_forw.protocol == FORW_UDP ? "udp" : "tcp",
+			dprintf("forwarding host: '%s:%s/%s' template '%s'\n", q, getFwdSyslogPt(pData),
+				 pData->protocol == FORW_UDP ? "udp" : "tcp",
 				 szTemplateName);
 		}
 		/*
@@ -847,18 +866,18 @@ ENDparseSelectorAct
 BEGINonSelectReadyWrite
 CODESTARTonSelectReadyWrite
 	dprintf("tcp send socket %d ready for writing.\n", f->f_file);
-	TCPSendSetStatus(f, TCP_SEND_READY);
+	TCPSendSetStatus(pData, TCP_SEND_READY);
 	/* Send stored message (if any) */
-	if(f->f_un.f_forw.savedMsg != NULL) {
-		if(TCPSend(f, f->f_un.f_forw.savedMsg,
-			   f->f_un.f_forw.savedMsgLen) != 0) {
+	if(pData->savedMsg != NULL) {
+		if(TCPSend(f, pData, pData->savedMsg,
+			   pData->savedMsgLen) != 0) {
 			/* error! */
 			f->f_type = F_FORW_SUSP;
 			errno = 0;
 			logerror("error forwarding via tcp, suspending...");
 		}
-		free(f->f_un.f_forw.savedMsg);
-		f->f_un.f_forw.savedMsg = NULL;
+		free(pData->savedMsg);
+		pData->savedMsg = NULL;
 	}
 ENDonSelectReadyWrite
 
@@ -866,8 +885,8 @@ ENDonSelectReadyWrite
 BEGINgetWriteFDForSelect
 CODESTARTgetWriteFDForSelect
 	if(   (f->f_type == F_FORW)
-	   && (f->f_un.f_forw.protocol == FORW_TCP)
-	   && TCPSendGetStatus(f) == TCP_SEND_CONNECTING) {
+	   && (pData->protocol == FORW_TCP)
+	   && TCPSendGetStatus(pData) == TCP_SEND_CONNECTING) {
 		*fd = f->f_file;
 		iRet = RS_RET_OK;
 	}
