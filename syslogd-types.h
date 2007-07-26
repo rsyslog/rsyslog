@@ -172,33 +172,6 @@ struct filed {
 			char isNegated;			/* actually a boolean ;) */
 		} prop;
 	} f_filterData;
-#if 1
-	union {
-		struct {
-			char	f_fname[MAXFNAME];/* file or template name (display only) */
-			struct template *pTpl;	/* pointer to template object */
-			char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
-			int	fCreateMode;	/* file creation mode for open() */
-			int	fDirCreateMode;	/* creation mode for mkdir() */
-			int	bCreateDirs;	/* auto-create directories? */
-			uid_t	fileUID;	/* IDs for creation */
-			uid_t	dirUID;
-			gid_t	fileGID;
-			gid_t	dirGID;
-			int	bFailOnChown;	/* fail creation if chown fails? */
-			int	iCurrElt;	/* currently active cache element (-1 = none) */
-			int	iCurrCacheSize;	/* currently cache size (1-based) */
-			int	iDynaFileCacheSize; /* size of file handle cache */
-			/* The cache is implemented as an array. An empty element is indicated
-			 * by a NULL pointer. Memory is allocated as needed. The following
-			 * pointer points to the overall structure.
-			 */
-			dynaFileCacheEntry **dynCache;
-			off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
-			char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
-		} f_file;
-	} f_un;
-#endif
 	int	f_ReduceRepeated;		/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */

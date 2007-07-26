@@ -53,9 +53,30 @@
 
 /* internal structures
  */
-
 typedef struct _instanceData {
+	char	f_fname[MAXFNAME];/* file or template name (display only) */
+	struct template *pTpl;	/* pointer to template object */
+	char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
+	int	fCreateMode;	/* file creation mode for open() */
+	int	fDirCreateMode;	/* creation mode for mkdir() */
+	int	bCreateDirs;	/* auto-create directories? */
+	uid_t	fileUID;	/* IDs for creation */
+	uid_t	dirUID;
+	gid_t	fileGID;
+	gid_t	dirGID;
+	int	bFailOnChown;	/* fail creation if chown fails? */
+	int	iCurrElt;	/* currently active cache element (-1 = none) */
+	int	iCurrCacheSize;	/* currently cache size (1-based) */
+	int	iDynaFileCacheSize; /* size of file handle cache */
+	/* The cache is implemented as an array. An empty element is indicated
+	 * by a NULL pointer. Memory is allocated as needed. The following
+	 * pointer points to the overall structure.
+	 */
+	dynaFileCacheEntry **dynCache;
+	off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
+	char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
 } instanceData;
+
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
@@ -66,22 +87,22 @@ ENDisCompatibleWithFeature
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	if(f->f_un.f_file.bDynamicName) {
+	if(pData->bDynamicName) {
 		printf("[dynamic]\n\ttemplate='%s'\n"
 		       "\tfile cache size=%d\n"
 		       "\tcreate directories: %s\n"
 		       "\tfile owner %d, group %d\n"
 		       "\tdirectory owner %d, group %d\n"
 		       "\tfail if owner/group can not be set: %s\n",
-			f->f_un.f_file.f_fname,
-			f->f_un.f_file.iDynaFileCacheSize,
-			f->f_un.f_file.bCreateDirs ? "yes" : "no",
-			f->f_un.f_file.fileUID, f->f_un.f_file.fileGID,
-			f->f_un.f_file.dirUID, f->f_un.f_file.dirGID,
-			f->f_un.f_file.bFailOnChown ? "yes" : "no"
+			pData->f_fname,
+			pData->iDynaFileCacheSize,
+			pData->bCreateDirs ? "yes" : "no",
+			pData->fileUID, pData->fileGID,
+			pData->dirUID, pData->dirGID,
+			pData->bFailOnChown ? "yes" : "no"
 			);
 	} else { /* regular file */
-		printf("%s", f->f_un.f_file.f_fname);
+		printf("%s", pData->f_fname);
 		if (f->f_file == -1)
 			printf(" (unused)");
 	}
@@ -96,7 +117,7 @@ ENDdbgPrintInstInfo
  * removed.
  * rgerhards 2005-06-21
  */
-static rsRetVal cflineParseOutchannel(selector_t *f, uchar* p)
+static rsRetVal cflineParseOutchannel(selector_t *f, instanceData *pData, uchar* p)
 {
 	rsRetVal iRet = RS_RET_OK;
 	size_t i;
@@ -145,12 +166,12 @@ static rsRetVal cflineParseOutchannel(selector_t *f, uchar* p)
 	}
 
 	/* OK, we finally got a correct template. So let's use it... */
-	strncpy(f->f_un.f_file.f_fname, pOch->pszFileTemplate, MAXFNAME);
-	f->f_un.f_file.f_sizeLimit = pOch->uSizeLimit;
+	strncpy(pData->f_fname, pOch->pszFileTemplate, MAXFNAME);
+	pData->f_sizeLimit = pOch->uSizeLimit;
 	/* WARNING: It is dangerous "just" to pass the pointer. As we
 	 * never rebuild the output channel description, this is acceptable here.
 	 */
-	f->f_un.f_file.f_sizeLimitCmd = pOch->cmdOnSizeLimit;
+	pData->f_sizeLimitCmd = pOch->cmdOnSizeLimit;
 
 	/* back to the input string - now let's look for the template to use
 	 * Just as a general precaution, we skip whitespace.
@@ -167,8 +188,8 @@ static rsRetVal cflineParseOutchannel(selector_t *f, uchar* p)
 
 		iRet = cflineSetTemplateAndIOV(f, szBuf);
 		
-		dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", f->f_un.f_file.f_fname, szBuf,
-			f->f_un.f_file.f_sizeLimit);
+		dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", pData->f_fname, szBuf,
+			pData->f_sizeLimit);
 	}
 
 	return(iRet);
@@ -181,15 +202,15 @@ static rsRetVal cflineParseOutchannel(selector_t *f, uchar* p)
  * returns 0 if ok, 1 otherwise
  * TODO: consider moving the initial check in here, too
  */
-int resolveFileSizeLimit(selector_t *f)
+int resolveFileSizeLimit(selector_t *f, instanceData *pData)
 {
 	uchar *pParams;
 	uchar *pCmd;
 	uchar *p;
 	off_t actualFileSize;
-	assert(f != NULL);
+	assert(pData != NULL);
 
-	if(f->f_un.f_file.f_sizeLimitCmd == NULL)
+	if(pData->f_sizeLimitCmd == NULL)
 		return 1; /* nothing we can do in this case... */
 	
 	/* the execProg() below is probably not great, but at least is is
@@ -201,7 +222,7 @@ int resolveFileSizeLimit(selector_t *f)
 	 * when we have a space in the program name. If we find it, everything after
 	 * the space is treated as a single argument.
 	 */
-	if((pCmd = (uchar*)strdup((char*)f->f_un.f_file.f_sizeLimitCmd)) == NULL) {
+	if((pCmd = (uchar*)strdup((char*)pData->f_sizeLimitCmd)) == NULL) {
 		/* there is not much we can do - we make syslogd close the file in this case */
 		glblHadMemShortage = 1;
 		return 1;
@@ -219,11 +240,11 @@ int resolveFileSizeLimit(selector_t *f)
 
 	execProg(pCmd, 1, pParams);
 
-	f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-			f->f_un.f_file.fCreateMode);
+	f->f_file = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+			pData->fCreateMode);
 
 	actualFileSize = lseek(f->f_file, 0, SEEK_END);
-	if(actualFileSize >= f->f_un.f_file.f_sizeLimit) {
+	if(actualFileSize >= pData->f_sizeLimit) {
 		/* OK, it didn't work out... */
 		return 1;
 		}
@@ -267,16 +288,16 @@ static void dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int b
 
 /* This function frees the dynamic file name cache.
  */
-static void dynaFileFreeCache(selector_t *f)
+static void dynaFileFreeCache(instanceData *pData)
 {
 	register int i;
-	assert(f != NULL);
+	assert(pData != NULL);
 
-	for(i = 0 ; i < f->f_un.f_file.iCurrCacheSize ; ++i) {
-		dynaFileDelCacheEntry(f->f_un.f_file.dynCache, i, 1);
+	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
+		dynaFileDelCacheEntry(pData->dynCache, i, 1);
 	}
 
-	free(f->f_un.f_file.dynCache);
+	free(pData->dynCache);
 }
 
 
@@ -288,7 +309,7 @@ static void dynaFileFreeCache(selector_t *f)
  * be written.
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
-static int prepareDynFile(selector_t *f)
+static int prepareDynFile(selector_t *f, instanceData *pData)
 {
 	uchar *newFileName;
 	time_t ttOldest; /* timestamp of oldest element */
@@ -298,7 +319,8 @@ static int prepareDynFile(selector_t *f)
 	dynaFileCacheEntry **pCache;
 
 	assert(f != NULL);
-	if((newFileName = tplToString(f->f_un.f_file.pTpl, f->f_pMsg)) == NULL) {
+	assert(pData != NULL);
+	if((newFileName = tplToString(pData->pTpl, f->f_pMsg)) == NULL) {
 		/* memory shortage - there is nothing we can do to resolve it.
 		 * We silently ignore it, this is probably the best we can do.
 		 */
@@ -307,17 +329,17 @@ static int prepareDynFile(selector_t *f)
 		return -1;
 	}
 
-	pCache = f->f_un.f_file.dynCache;
+	pCache = pData->dynCache;
 
 	/* first check, if we still have the current file
 	 * I *hope* this will be a performance enhancement.
 	 */
-	if(   (f->f_un.f_file.iCurrElt != -1)
+	if(   (pData->iCurrElt != -1)
 	   && !strcmp((char*) newFileName,
-	              (char*) pCache[f->f_un.f_file.iCurrElt])) {
+	              (char*) pCache[pData->iCurrElt])) {
 	   	/* great, we are all set */
 		free(newFileName);
-		pCache[f->f_un.f_file.iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */
+		pCache[pData->iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */
 		return 0;
 	}
 
@@ -327,7 +349,7 @@ static int prepareDynFile(selector_t *f)
 	iFirstFree = -1; /* not yet found */
 	iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
 	ttOldest = time(NULL) + 1; /* there must always be an older one */
-	for(i = 0 ; i < f->f_un.f_file.iCurrCacheSize ; ++i) {
+	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		if(pCache[i] == NULL) {
 			if(iFirstFree == -1)
 				iFirstFree = i;
@@ -335,7 +357,7 @@ static int prepareDynFile(selector_t *f)
 			if(!strcmp((char*) newFileName, (char*) pCache[i]->pName)) {
 				/* we found our element! */
 				f->f_file = pCache[i]->fd;
-				f->f_un.f_file.iCurrElt = i;
+				pData->iCurrElt = i;
 				free(newFileName);
 				pCache[i]->lastUsed = time(NULL); /* update timestamp for LRU */
 				return 0;
@@ -349,9 +371,9 @@ static int prepareDynFile(selector_t *f)
 	}
 
 	/* we have not found an entry */
-	if(iFirstFree == -1 && (f->f_un.f_file.iCurrCacheSize < f->f_un.f_file.iDynaFileCacheSize)) {
+	if(iFirstFree == -1 && (pData->iCurrCacheSize < pData->iDynaFileCacheSize)) {
 		/* there is space left, so set it to that index */
-		iFirstFree = f->f_un.f_file.iCurrCacheSize++;
+		iFirstFree = pData->iCurrCacheSize++;
 	}
 
 	if(iFirstFree == -1) {
@@ -372,26 +394,26 @@ static int prepareDynFile(selector_t *f)
 	if(access((char*)newFileName, F_OK) == 0) {
 		/* file already exists */
 		f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-				f->f_un.f_file.fCreateMode);
+				pData->fCreateMode);
 	} else {
 		/* file does not exist, create it (and eventually parent directories */
-		if(f->f_un.f_file.bCreateDirs) {
+		if(pData->bCreateDirs) {
 			/* we fist need to create parent dirs if they are missing
 			 * We do not report any errors here ourselfs but let the code
 			 * fall through to error handler below.
 			 */
 			if(makeFileParentDirs(newFileName, strlen((char*)newFileName),
-			     f->f_un.f_file.fDirCreateMode, f->f_un.f_file.dirUID,
-			     f->f_un.f_file.dirGID, f->f_un.f_file.bFailOnChown) == 0) {
+			     pData->fDirCreateMode, pData->dirUID,
+			     pData->dirGID, pData->bFailOnChown) == 0) {
 				f->f_file = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-						f->f_un.f_file.fCreateMode);
+						pData->fCreateMode);
 				if(f->f_file != -1) {
 					/* check and set uid/gid */
-					if(f->f_un.f_file.fileUID != (uid_t)-1 || f->f_un.f_file.fileGID != (gid_t) -1) {
+					if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
 						/* we need to set owner/group */
-						if(fchown(f->f_file, f->f_un.f_file.fileUID,
-						          f->f_un.f_file.fileGID) != 0) {
-							if(f->f_un.f_file.bFailOnChown) {
+						if(fchown(f->f_file, pData->fileUID,
+						          pData->fileGID) != 0) {
+							if(pData->bFailOnChown) {
 								int eSave = errno;
 								close(f->f_file);
 								f->f_file = -1;
@@ -425,7 +447,7 @@ static int prepareDynFile(selector_t *f)
 	pCache[iFirstFree]->fd = f->f_file;
 	pCache[iFirstFree]->pName = newFileName;
 	pCache[iFirstFree]->lastUsed = time(NULL);
-	f->f_un.f_file.iCurrElt = iFirstFree;
+	pData->iCurrElt = iFirstFree;
 	dprintf("Added new entry %d for file cache, file '%s'.\n",
 		iFirstFree, newFileName);
 
@@ -437,18 +459,19 @@ static int prepareDynFile(selector_t *f)
  * will be called for all outputs using file semantics,
  * for example also for pipes.
  */
-static rsRetVal writeFile(selector_t *f)
+static rsRetVal writeFile(selector_t *f, instanceData *pData)
 {
 	off_t actualFileSize;
 	rsRetVal iRet = RS_RET_OK;
 
 	assert(f != NULL);
+	assert(pData != NULL);
 
 	/* first check if we have a dynamic file name and, if so,
 	 * check if it still is ok or a new file needs to be created
 	 */
-	if(f->f_un.f_file.bDynamicName) {
-		if(prepareDynFile(f) != 0)
+	if(pData->bDynamicName) {
+		if(prepareDynFile(f, pData) != 0)
 			return RS_RET_ERR;
 	}
 
@@ -458,9 +481,9 @@ again:
 	/* check if we have a file size limit and, if so,
 	 * obey to it.
 	 */
-	if(f->f_un.f_file.f_sizeLimit != 0) {
+	if(pData->f_sizeLimit != 0) {
 		actualFileSize = lseek(f->f_file, 0, SEEK_END);
-		if(actualFileSize >= f->f_un.f_file.f_sizeLimit) {
+		if(actualFileSize >= pData->f_sizeLimit) {
 			char errMsg[256];
 			/* for now, we simply disable a file once it is
 			 * beyond the maximum size. This is better than having
@@ -468,18 +491,18 @@ again:
 			 */
 			(void) close(f->f_file);
 			/* try to resolve the situation */
-			if(resolveFileSizeLimit(f) != 0) {
+			if(resolveFileSizeLimit(f, pData) != 0) {
 				/* didn't work out, so disable... */
 				snprintf(errMsg, sizeof(errMsg),
 					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation",
-					 f->f_un.f_file.f_fname, (long long) f->f_un.f_file.f_sizeLimit, (long long) actualFileSize);
+					 pData->f_fname, (long long) pData->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
 				return RS_RET_DISABLE_ACTION;
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
 					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation",
-					 f->f_un.f_file.f_fname, (long long) f->f_un.f_file.f_sizeLimit, (long long) actualFileSize);
+					 pData->f_fname, (long long) pData->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
 			}
@@ -512,10 +535,10 @@ again:
 #else
 			&& e == EBADF) {
 #endif
-			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
+			f->f_file = open(pData->f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
 			if (f->f_file < 0) {
 				iRet = RS_RET_DISABLE_ACTION;
-				logerror(f->f_un.f_file.f_fname);
+				logerror(pData->f_fname);
 			} else {
 				untty();
 				goto again;
@@ -523,7 +546,7 @@ again:
 		} else {
 			iRet = RS_RET_DISABLE_ACTION;
 			errno = e;
-			logerror(f->f_un.f_file.f_fname);
+			logerror(pData->f_fname);
 		}
 	} else if (f->f_flags & SYNC_FILE)
 		fsync(f->f_file);
@@ -538,8 +561,8 @@ ENDcreateInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	if(f->f_un.f_file.bDynamicName) {
-		dynaFileFreeCache(f);
+	if(pData->bDynamicName) {
+		dynaFileFreeCache(pData);
 	} else 
 		close(f->f_file);
 ENDfreeInstance
@@ -557,20 +580,31 @@ ENDgetWriteFDForSelect
 
 BEGINdoAction
 CODESTARTdoAction
-	dprintf(" (%s)\n", f->f_un.f_file.f_fname);
+	dprintf(" (%s)\n", pData->f_fname);
 	/* f->f_file == -1 is an indicator that the we couldn't
 	 * open the file at startup. For dynaFiles, this is ok,
 	 * all others are doomed.
 	 */
-	if(f->f_un.f_file.bDynamicName || (f->f_file != -1))
-		iRet = writeFile(f);
+	if(pData->bDynamicName || (f->f_file != -1))
+		iRet = writeFile(f, pData);
 ENDdoAction
 
 
 BEGINparseSelectorAct
 	int syncfile;
 CODESTARTparseSelectorAct
-	p = *pp;
+	/* yes, the if below is redundant, but I need it now. Will go away as
+	 * the code further changes.  -- rgerhards, 2007-07-25
+	 */
+	if(*p == '$' || *p == '?' || *p == '|' || *p == '/') {
+		if((iRet = createInstance(&pData)) != RS_RET_OK)
+			return iRet;
+	} else {
+		/* this is not clean, but we need it for the time being
+		 * TODO: remove when cleaning up modularization 
+		 */
+		return RS_RET_CONFLINE_UNPROCESSED;
+	}
 
 	if (*p == '-') {
 		syncfile = 0;
@@ -578,15 +612,7 @@ CODESTARTparseSelectorAct
 	} else
 		syncfile = 1;
 
-	f->f_un.f_file.f_sizeLimit = 0; /* default value, use outchannels to configure! */
-
-	/* yes, the if below is redundant, but I need it now. Will go away as
-	 * the code further changes.  -- rgerhards, 2007-07-25
-	 */
-	if(*p == '$' || *p == '?' || *p == '|' || *p == '/') {
-		if((iRet = createInstance(&pData)) != RS_RET_OK)
-			return iRet;
-	}
+	pData->f_sizeLimit = 0; /* default value, use outchannels to configure! */
 
 	switch (*p)
 	{
@@ -598,12 +624,12 @@ CODESTARTparseSelectorAct
 		 * rgerhards, 2007-07-24: output-channels will go away. We keep them
 		 * for compatibility reasons, but seems to have been a bad idea.
 		 */
-		if((iRet = cflineParseOutchannel(f, p)) == RS_RET_OK) {
-			f->f_un.f_file.bDynamicName = 0;
-			f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
-			f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
-			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-					 f->f_un.f_file.fCreateMode);
+		if((iRet = cflineParseOutchannel(f, pData, p)) == RS_RET_OK) {
+			pData->bDynamicName = 0;
+			pData->fCreateMode = fCreateMode; /* preserve current setting */
+			pData->fDirCreateMode = fDirCreateMode; /* preserve current setting */
+			f->f_file = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+					 pData->fCreateMode);
 		}
 		break;
 
@@ -611,33 +637,33 @@ CODESTARTparseSelectorAct
 		   * a template name. rgerhards, 2007-07-03
 		   */
 		++p; /* eat '?' */
-		if((iRet = cflineParseFileName(f, p, (uchar*) f->f_un.f_file.f_fname)) != RS_RET_OK)
+		if((iRet = cflineParseFileName(f, p, (uchar*) pData->f_fname)) != RS_RET_OK)
 			break;
-		f->f_un.f_file.pTpl = tplFind((char*)f->f_un.f_file.f_fname,
-					       strlen((char*) f->f_un.f_file.f_fname));
-		if(f->f_un.f_file.pTpl == NULL) {
-			logerrorSz("Template '%s' not found - dynaFile deactivated.", f->f_un.f_file.f_fname);
+		pData->pTpl = tplFind((char*)pData->f_fname,
+					       strlen((char*) pData->f_fname));
+		if(pData->pTpl == NULL) {
+			logerrorSz("Template '%s' not found - dynaFile deactivated.", pData->f_fname);
 			iRet = RS_RET_NOT_FOUND; /* that's it... :( */
 			break;
 		}
 
 		if(syncfile)
 			f->f_flags |= SYNC_FILE;
-		f->f_un.f_file.bDynamicName = 1;
-		f->f_un.f_file.iCurrElt = -1;		  /* no current element */
-		f->f_un.f_file.fCreateMode = fCreateMode; /* freeze current setting */
-		f->f_un.f_file.fDirCreateMode = fDirCreateMode; /* preserve current setting */
-		f->f_un.f_file.bCreateDirs = bCreateDirs;
-		f->f_un.f_file.bFailOnChown = bFailOnChown;
-		f->f_un.f_file.fileUID = fileUID;
-		f->f_un.f_file.fileGID = fileGID;
-		f->f_un.f_file.dirUID = dirUID;
-		f->f_un.f_file.dirGID = dirGID;
-		f->f_un.f_file.iDynaFileCacheSize = iDynaFileCacheSize; /* freeze current setting */
+		pData->bDynamicName = 1;
+		pData->iCurrElt = -1;		  /* no current element */
+		pData->fCreateMode = fCreateMode; /* freeze current setting */
+		pData->fDirCreateMode = fDirCreateMode; /* preserve current setting */
+		pData->bCreateDirs = bCreateDirs;
+		pData->bFailOnChown = bFailOnChown;
+		pData->fileUID = fileUID;
+		pData->fileGID = fileGID;
+		pData->dirUID = dirUID;
+		pData->dirGID = dirGID;
+		pData->iDynaFileCacheSize = iDynaFileCacheSize; /* freeze current setting */
 		/* we now allocate the cache table. We use calloc() intentionally, as we 
 		 * need all pointers to be initialized to NULL pointers.
 		 */
-		if((f->f_un.f_file.dynCache = (dynaFileCacheEntry**)
+		if((pData->dynCache = (dynaFileCacheEntry**)
 		    calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*))) == NULL) {
 			iRet = RS_RET_OUT_OF_MEMORY;
 			dprintf("Could not allocate memory for dynaFileCache - selector disabled.\n");
@@ -651,24 +677,24 @@ CODESTARTparseSelectorAct
 		 * to use is specified. So we need to scan for the first coma first
 		 * and then look at the rest of the line.
 		 */
-		if((iRet = cflineParseFileName(f, p, (uchar*) f->f_un.f_file.f_fname)) != RS_RET_OK)
+		if((iRet = cflineParseFileName(f, p, (uchar*) pData->f_fname)) != RS_RET_OK)
 			break;
 
 		if(syncfile)
 			f->f_flags |= SYNC_FILE;
-		f->f_un.f_file.bDynamicName = 0;
-		f->f_un.f_file.fCreateMode = fCreateMode; /* preserve current setting */
+		pData->bDynamicName = 0;
+		pData->fCreateMode = fCreateMode; /* preserve current setting */
 		if(f->f_type == F_PIPE) {
-			f->f_file = open(f->f_un.f_file.f_fname, O_RDWR|O_NONBLOCK);
+			f->f_file = open(pData->f_fname, O_RDWR|O_NONBLOCK);
 	        } else {
-			f->f_file = open(f->f_un.f_file.f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-					 f->f_un.f_file.fCreateMode);
+			f->f_file = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+					 pData->fCreateMode);
 		}
 		        
 	  	if ( f->f_file < 0 ){
 			f->f_file = -1;
-			dprintf("Error opening log file: %s\n", f->f_un.f_file.f_fname);
-			logerror(f->f_un.f_file.f_fname);
+			dprintf("Error opening log file: %s\n", pData->f_fname);
+			logerror(pData->f_fname);
 			break;
 		}
 		if (isatty(f->f_file)) {
