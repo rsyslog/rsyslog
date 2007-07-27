@@ -610,14 +610,12 @@ CODESTARTparseSelectorAct
 	if(*p == '$' || *p == '?' || *p == '|' || *p == '/' || *p == '-') {
 		if((iRet = createInstance(&pData)) != RS_RET_OK)
 			return iRet;
-dprintf("parseSelActFile 1\n");
 	} else {
 		/* this is not clean, but we need it for the time being
 		 * TODO: remove when cleaning up modularization 
 		 */
 		return RS_RET_CONFLINE_UNPROCESSED;
 	}
-dprintf("parseSelActFile 2\n");
 
 	if (*p == '-') {
 		pData->bSyncFile = 0;
