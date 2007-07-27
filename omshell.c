@@ -81,14 +81,14 @@ CODESTARTdoAction
 	 * rgerhards, 2007-07-20
 	 */
 	dprintf("\n");
-	if(execProg((uchar*) pData->progName, 1, pMsg) == 0)
+	if(execProg((uchar*) pData->progName, 1, ppString[0]) == 0)
 	 	logerrorSz("Executing program '%s' failed", (char*)pData->progName);
 ENDdoAction
 
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-	p = *pp;
+CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* yes, the if below is redundant, but I need it now. Will go away as
 	 * the code further changes.  -- rgerhards, 2007-07-25
 	 */
@@ -103,7 +103,7 @@ CODESTARTparseSelectorAct
 	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
 		dprintf("exec\n");
 		++p;
-		iRet = cflineParseFileName(f, p, (uchar*) pData->progName);
+		iRet = cflineParseFileName(p, (uchar*) pData->progName, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS);
 		break;
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;

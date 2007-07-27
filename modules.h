@@ -30,6 +30,8 @@
 #ifndef	MODULES_H_INCLUDED
 #define	MODULES_H_INCLUDED 1
 
+#include "objomsr.h"
+
 typedef enum eModType_ {
 	eMOD_IN,	/* input module */
 	eMOD_OUT,	/* output module */
@@ -77,8 +79,8 @@ typedef struct moduleInfo {
 		struct {/* data for output modules */
 			/* below: perform the configured action
 			 */
-			rsRetVal (*doAction)(selector_t*, uchar*, void*);
-			rsRetVal (*parseSelectorAct)(uchar**, selector_t*, void**);
+			rsRetVal (*doAction)(selector_t*, uchar**, unsigned, void*);
+			rsRetVal (*parseSelectorAct)(uchar**, selector_t*, void**,omodStringRequest_t**);
 		} om;
 	} mod;
 } modInfo_t;

@@ -76,6 +76,7 @@ ENDfreeInstance
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
+CODE_STD_STRING_REQUESTparseSelectorAct(0)
 	pData = NULL; /* this action does not have any instance data */
 	p = *pp;
 

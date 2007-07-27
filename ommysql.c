@@ -321,16 +321,14 @@ rsRetVal writeMySQL(register selector_t *f, uchar *psz, instanceData *pData)
 BEGINdoAction
 CODESTARTdoAction
 	dprintf("\n");
-	iRet = writeMySQL(f, pMsg, pData);
+	iRet = writeMySQL(f, ppString[0], pData);
 ENDdoAction
 
 
 BEGINparseSelectorAct
 	int iMySQLPropErr = 0;
-	char szTemplateName[128];
 CODESTARTparseSelectorAct
-	p = *pp;
-
+CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* yes, the if below is redundant, but I need it now. Will go away as
 	 * the code further changes.  -- rgerhards, 2007-07-25
 	 */
@@ -341,8 +339,7 @@ CODESTARTparseSelectorAct
 
 	switch (*p)
 	{
-	case '>':
-			/* rger 2004-10-28: added support for MySQL
+	case '>':       /* rger 2004-10-28: added support for MySQL
 			 * >server,dbname,userid,password
 			 * rgerhards 2005-08-12: changed rsyslogd so that
 			 * if no DB is selected and > is used, an error
@@ -376,34 +373,15 @@ CODESTARTparseSelectorAct
 			iMySQLPropErr++;
 		if(getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
 			iMySQLPropErr++;
-		if(*p == '\n' || *p == '\0') { 
-			/* assign default format if none given! */
-			szTemplateName[0] = '\0';
-		} else {
-			/* we have a template specifier! */
-			if((iRet = cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(char))) != RS_RET_OK)
-				break;
-		}
-
-		if(szTemplateName[0] == '\0')
-			strcpy(szTemplateName, " StdDBFmt");
-
-		if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) != RS_RET_OK)
-			break;
+		/* now check for template
+		 * We specify that the SQL option must be present in the template.
+		 * This is for your own protection (prevent sql injection).
+		 */
+		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdSQLFmt"))
+		   != RS_RET_OK)
+			return iRet;
 		
-		dprintf(" template '%s'\n", szTemplateName);
-		
-		/* If db used, the template have to use the SQL option.
-		   This is for your own protection (prevent sql injection). */
-		if (f->f_pTpl->optFormatForSQL == 0) {
-			iRet = RS_RET_NO_SQL_STRING;
-			logerror("DB logging disabled. You have to use"
-				" the SQL or stdSQL option in your template!\n");
-			break;
-		}
-		
-		/* If we dedect invalid properties, we disable logging, 
+		/* If we detect invalid properties, we disable logging, 
 		 * because right properties are vital at this place.  
 		 * Retries make no sense. 
 		 */

@@ -602,7 +602,7 @@ CODESTARTdoAction
 			dprintf("Not sending message to remote.\n");
 		else {
 			pData->ttSuspend = time(NULL);
-			psz = (char*) pMsg;
+			psz = (char*) ppString[0];
 			l = strlen((char*) psz);
 			if (l > MAXLINE)
 				l = MAXLINE;
@@ -710,10 +710,8 @@ BEGINparseSelectorAct
         int error;
 	int bErr;
         struct addrinfo hints, *res;
-	char szTemplateName[128];
 CODESTARTparseSelectorAct
-	p = *pp;
-
+CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*p == '@') {
 		if((iRet = createInstance(&pData)) != RS_RET_OK)
 			return iRet;
@@ -828,21 +826,20 @@ CODESTARTparseSelectorAct
 			++p;
 		}
 	
+		/* TODO: make this if go away! */
 		if(*p == ';') {
 			*p = '\0'; /* trick to obtain hostname (later)! */
-			++p;
-			 /* Now look for the template! */
-			cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(char));
+			strcpy(pData->f_hname, (char*) q);
+			*p = ';';
 		} else
-			szTemplateName[0] = '\0';
-		if(szTemplateName[0] == '\0') {
-			/* we do not have a template, so let's use the default */
-			strcpy(szTemplateName, " StdFwdFmt");
-		}
+			strcpy(pData->f_hname, (char*) q);
+
+		/* process template */
+		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " StdFwdFmt"))
+		   != RS_RET_OK)
+			return iRet;
 
 		/* first set the pData->eDestState */
-		strcpy(pData->f_hname, (char*) q);
 		memset(&hints, 0, sizeof(hints));
 		/* port must be numeric, because config file syntax requests this */
 		hints.ai_flags = AI_NUMERICSERV;
@@ -857,12 +854,6 @@ CODESTARTparseSelectorAct
 			pData->f_addr = res;
 		}
 
-		/* then try to find the template */
-		if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) == RS_RET_OK) {
-			dprintf("forwarding host: '%s:%s/%s' template '%s'\n", q, getFwdSyslogPt(pData),
-				 pData->protocol == FORW_UDP ? "udp" : "tcp",
-				 szTemplateName);
-		}
 		/*
 		 * Otherwise the host might be unknown due to an
 		 * inaccessible nameserver (perhaps on the same

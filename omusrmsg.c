@@ -247,15 +247,15 @@ BEGINdoAction
 CODESTARTdoAction
 	dprintf("\n");
 	/* TODO: change wallmsg so that it returns iRet */
-	wallmsg(f, pMsg, pData);
+	wallmsg(f, ppString[0], pData);
 ENDdoAction
 
 
 BEGINparseSelectorAct
 	uchar *q;
 	int i;
-	char szTemplateName[128];
 CODESTARTparseSelectorAct
+CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 #if 0 /* TODO: think about it and activate later - see comments in else below */
 	if(**pp != '*')
@@ -267,20 +267,11 @@ CODESTARTparseSelectorAct
 
 	if(*p == '*') { /* wall */
 		dprintf ("write-all");
+		++p; /* eat '*' */
 		pData->bIsWall = 1; /* write to all users */
-		if(*(p+1) == ';') {
-			/* we have a template specifier! */
-			p += 2; /* eat "*;" */
-			if((iRet = cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(uchar))) != RS_RET_OK)
-				return iRet;
-		}
-		else	/* assign default format if none given! */
-			szTemplateName[0] = '\0';
-		if(szTemplateName[0] == '\0')
-			strcpy(szTemplateName, " WallFmt");
-		if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) == RS_RET_OK)
-			dprintf(" template '%s'\n", szTemplateName);
+		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " WallFmt"))
+		    != RS_RET_OK)
+			return iRet;
 	} else {
 		/* everything else is currently treated as a user name
 		 * TODO: we must reconsider this - see also comment in
@@ -300,26 +291,13 @@ CODESTARTparseSelectorAct
 				q++;
 			p = q;
 		}
-		/* done, now check if we have a template name
+		/* done, on to the template
 		 * TODO: we need to handle the case where i >= MAXUNAME!
 		 */
-		szTemplateName[0] = '\0';
-		if(*p == ';') {
-			/* we have a template specifier! */
-			++p; /* eat ";" */
-			if((iRet = cflineParseTemplateName(&p, szTemplateName,
-						sizeof(szTemplateName) / sizeof(char))) != RS_RET_OK)
-				return iRet;
-		}
-		if(szTemplateName[0] == '\0')
-			strcpy(szTemplateName, " StdUsrMsgFmt");
-		iRet = cflineSetTemplateAndIOV(f, szTemplateName);
-		/* NOTE: if you intend to do anything else here, be sure to
-		 * chck iRet - as we currently have nothing else to do, we do not
-		 * care (yet).
-		 */
+		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*)" StdUsrMsgFmt"))
+		    != RS_RET_OK)
+			return iRet;
 	}
-
 ENDparseSelectorAct
 
 

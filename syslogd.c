@@ -3059,8 +3059,8 @@ rsRetVal fprintlog(register selector_t *f)
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
 	pMsgSave = NULL;	/* indicate message poiner not saved */
-	uchar *pszMsg;
 	rsRetVal iRet = RS_RET_OK;
+	int i;
 
 	/* first check if this is a regular message or the repeation of
 	 * a previous message. If so, we need to change the message text
@@ -3102,20 +3102,32 @@ rsRetVal fprintlog(register selector_t *f)
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's execute it. -- rgerhards, 2007-07-24
 	 */
-	if((pszMsg = tplToString(f->f_pTpl, f->f_pMsg)) == NULL) {
-		dprintf("memory alloc failed while generating message string - message ignored\n");
-		glblHadMemShortage = 1;
-		iRet = RS_RET_OUT_OF_MEMORY;
-	} else {
-		iRet = f->pMod->mod.om.doAction(f, pszMsg, f->pModData); /* call configured action */
-		free(pszMsg);
+	/* here we must loop to process all requested strings */
+
+	for(i = 0 ; i < f->iNumTpls ; ++i) {
+		if((f->ppMsgs[i] = tplToString(f->ppTpl[i], f->f_pMsg)) == NULL) {
+			dprintf("memory alloc failed while generating message strings - message ignored\n");
+			glblHadMemShortage = 1;
+			iRet = RS_RET_OUT_OF_MEMORY;
+			goto finalize_it;
+		}
 	}
+	iRet = f->pMod->mod.om.doAction(f, f->ppMsgs, f->f_pMsg->msgFlags, f->pModData); /* call configured action */
 
 	if(iRet == RS_RET_DISABLE_ACTION)
 		f->bEnabled = 0; /* that's it... */
 
 	if(iRet == RS_RET_OK)
 		f->f_prevcount = 0; /* message process, so we start a new cycle */
+
+finalize_it:
+	/* cleanup */
+	for(i = 0 ; i < f->iNumTpls ; ++i) {
+		if(f->ppMsgs[i] != NULL) {
+			free(f->ppMsgs[i]);
+			f->ppMsgs[i] = NULL;
+		}
+	}
 
 	if(pMsgSave != NULL) {
 		/* we had saved the original message pointer. That was
@@ -3803,7 +3815,7 @@ void cfsysline(uchar *p)
 
 	assert(p != NULL);
 	errno = 0;
-	dprintf("cfsysline --> %s", p);
+	dprintf("cfsysline --> %s\n", p);
 	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(uchar), ' ')  != 0) {
 		logerror("Invalid $-configline - could not extract command - line ignored\n");
 		return;
@@ -3899,6 +3911,11 @@ static void freeSelectors(void)
 
 			if(f->f_pMsg != NULL)
 				MsgDestruct(f->f_pMsg);
+
+			if(f->ppTpl != NULL)
+				free(f->ppTpl);
+			if(f->ppMsgs != NULL)
+				free(f->ppMsgs);
 			/* done with this entry, we now need to delete itself */
 			fPrev = f;
 			f = f->f_next;
@@ -4025,6 +4042,10 @@ static void init()
 	#else
 		while (fgets(cline, sizeof(cline), cf) != NULL) {
 	#endif
+			/* drop LF - TODO: make it better, replace fgets(), but its clean as it is */
+			if(cline[strlen(cline)-1] == '\n') {
+				cline[strlen(cline) -1] = '\0';
+			}
 			/*
 			 * check for end-of-section, comments, strip off trailing
 			 * spaces and newline character.
@@ -4238,67 +4259,65 @@ static void init()
 	dprintf(" restarted.\n");
 }
 
-/* helper to cfline() and its helpers. Assign the right template
- * to a filed entry and allocates memory for its iovec.
- * rgerhards 2004-11-19
- */
-rsRetVal cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName)
-{
-	rsRetVal iRet = RS_RET_OK;
-	char errMsg[512];
 
-	assert(f != NULL);
-	assert(pTemplateName != NULL);
-
-	/* Ok, we got everything, so it now is time to look up the
-	 * template (Hint: templates MUST be defined before they are
-	 * used!) and initialize the pointer to it PLUS the iov 
-	 * pointer. We do the later because the template tells us
-	 * how many elements iov must have - and this can never change.
-	 */
-	if((f->f_pTpl = tplFind(pTemplateName, strlen(pTemplateName))) == NULL) {
-		snprintf(errMsg, sizeof(errMsg) / sizeof(char),
-			 " Could not find template '%s' - selector line disabled\n",
-			 pTemplateName);
-		errno = 0;
-		logerror(errMsg);
-		iRet = RS_RET_NOT_FOUND;
-	}
-	return iRet;
-}
-	
 /* Helper to cfline() and its helpers. Parses a template name
  * from an "action" line. Must be called with the Line pointer
  * pointing to the first character after the semicolon.
- * Everything is stored in the filed struct. If there is no
- * template name (it is empty), than it is ensured that the
- * returned string is "\0". So you can count on the first character
- * to be \0 in this case.
  * rgerhards 2004-11-19
+ * changed function to work with OMSR. -- rgerhards, 2007-07-27
+ * the default template is to be used when no template is specified.
  */
-rsRetVal cflineParseTemplateName(uchar** pp,
-			     register char* pTemplateName, int iLenTemplate)
+rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName)
 {
-	register uchar *p;
+	uchar *p;
+	uchar *tplName;
 	rsRetVal iRet = RS_RET_OK;
-	int i;
+	rsCStrObj *pStrB;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
+	assert(pOMSR != NULL);
+dprintf("cflineParsetTemplateName opts: %d\n", iTplOpts);
 
 	p =*pp;
-
-	/* Just as a general precaution, we skip whitespace.  */
-	while(*p && isspace((int) *p))
-		++p;
-
-	i = 1; /* we start at 1 so that we reserve space for the '\0'! */
-	while(*p && i < iLenTemplate) {
-		*pTemplateName++ = *p++;
-		++i;
+	/* a template must follow - search it and complain, if not found
+	 */
+	skipWhiteSpace(&p);
+	if(*p == ';')
+		++p; /* eat it */
+	else if(*p != '\0' && *p != '#') {
+		logerror("invalid character in selector line - ';template' expected");
+		iRet = RS_RET_ERR;
+		goto finalize_it;
 	}
-	*pTemplateName = '\0';
 
+	skipWhiteSpace(&p); /* go to begin of template name */
+
+	if(*p == '\0') {
+		/* no template specified, use the default */
+		/* TODO: check NULL ptr */
+		tplName = (uchar*) strdup((char*)dfltTplName);
+	} else {
+		/* template specified, pick it up */
+		if((pStrB = rsCStrConstruct()) == NULL) {
+			glblHadMemShortage = 1;
+			iRet = RS_RET_OUT_OF_MEMORY;
+			goto finalize_it;
+		}
+
+		/* now copy the string */
+		while(*p && *p != '#' && !isspace((int) *p)) {
+			if((iRet = rsCStrAppendChar(pStrB, *p)) != RS_RET_OK) goto finalize_it;
+			++p;
+		}
+		if((iRet = rsCStrFinish(pStrB)) != RS_RET_OK) goto finalize_it;
+		tplName = rsCStrConvSzStrAndDestruct(pStrB);
+	}
+
+	iRet = OMSRsetEntry(pOMSR, iEntry, tplName, iTplOpts);
+	if(iRet != RS_RET_OK) goto finalize_it;
+
+finalize_it:
 	*pp = p;
 
 	return iRet;
@@ -4306,19 +4325,20 @@ rsRetVal cflineParseTemplateName(uchar** pp,
 
 /* Helper to cfline(). Parses a file name up until the first
  * comma and then looks for the template specifier. Tries
- * to find that template. Everything is stored in the
- * filed struct.
+ * to find that template.
  * rgerhards 2004-11-18
  * parameter pFileName must point to a buffer large enough
  * to hold the largest possible filename.
  * rgerhards, 2007-07-25
+ * updated to include OMSR pointer -- rgerhards, 2007-07-27
  */
-rsRetVal cflineParseFileName(selector_t *f, uchar* p, uchar *pFileName)
+rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts)
 {
 	register uchar *pName;
 	int i;
 	rsRetVal iRet = RS_RET_OK;
-	char szTemplateName[128];	/* should be more than sufficient */
+
+	assert(pOMSR != NULL);
 
 	pName = pFileName;
 	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
@@ -4328,23 +4348,7 @@ rsRetVal cflineParseFileName(selector_t *f, uchar* p, uchar *pFileName)
 	}
 	*pName = '\0';
 
-	/* got the file name - now let's look for the template to use
-	 * Just as a general precaution, we skip whitespace.
-	 */
-	while(*p && isspace((int) *p))
-		++p;
-	if(*p == ';')
-		++p; /* eat it */
-
-	if((iRet = cflineParseTemplateName(&p, szTemplateName,
-	                        sizeof(szTemplateName) / sizeof(char))) != RS_RET_OK)
-		return iRet;
-
-	if(szTemplateName[0] == '\0')	/* no template? */
-		strcpy(szTemplateName, " TradFmt"); /* use default! */
-
-	if((iRet = cflineSetTemplateAndIOV(f, szTemplateName)) == RS_RET_OK)
-		dprintf("filename: '%s', template: '%s'\n", pFileName, szTemplateName);
+	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, (uchar*) " TradFmt");
 
 	return iRet;
 }
@@ -4711,8 +4715,95 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 }
 
 
+/* add an Action to the current selector
+ * The pOMSR is freed, as it is not needed after this function.
+ * rgerhards, 2007-07-27
+ */
+rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR)
+{
+	rsRetVal iRet = RS_RET_OK;
+	int i;
+	int iTplOpts;
+	uchar *pTplName;
+	char errMsg[512];
+
+	assert(f != NULL);
+	assert(pMod != NULL);
+	assert(pOMSR != NULL);
+	dprintf("Module %s processed this config line.\n", modGetName(pMod));
+
+	/* check if we can obtain the template pointers - TODO: move to separat function? */
+	f->iNumTpls = OMSRgetEntryCount(pOMSR);
+	/* we first need to create the template pointer array */
+	if((f->ppTpl = calloc(1, sizeof(struct template *))) == NULL) {
+		iRet = RS_RET_OUT_OF_MEMORY;
+		glblHadMemShortage = 1;
+		goto finalize_it;
+	}
+	/* and now the array for doAction() message pointers */
+	if((f->ppMsgs = calloc(1, sizeof(uchar *))) == NULL) {
+		iRet = RS_RET_OUT_OF_MEMORY;
+		glblHadMemShortage = 1;
+		goto finalize_it;
+	}
+	
+	for(i = 0 ; i < f->iNumTpls ; ++i) {
+		if((iRet = OMSRgetEntry(pOMSR, i, &pTplName, &iTplOpts)) != RS_RET_OK) goto finalize_it;
+		/* Ok, we got everything, so it now is time to look up the
+		 * template (Hint: templates MUST be defined before they are
+		 * used!)
+		 */
+		if((f->ppTpl[i] = tplFind((char*)pTplName, strlen((char*)pTplName))) == NULL) {
+			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
+				 " Could not find template '%s' - selector line disabled\n",
+				 pTplName);
+			errno = 0;
+			logerror(errMsg);
+			iRet = RS_RET_NOT_FOUND;
+			goto finalize_it;
+		}
+		/* check required template options */
+dprintf("iTplOpts %d, check %d\n", iTplOpts, OMSR_RQD_TPL_OPT_SQL);
+		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
+		   && (f->ppTpl[i]->optFormatForSQL == 0)) {
+			errno = 0;
+			logerror("Selector disabled. To use this action, you have to specify "
+				"the SQL or stdSQL option in your template!\n");
+			iRet = RS_RET_RQD_TPLOPT_MISSING;
+			goto finalize_it;
+		}
+
+		dprintf("template: '%s' assgined\n", pTplName);
+		/* TODO: generate macro CHKiRet((code));? */
+	}
+
+	f->pMod = pMod;
+	f->pModData = pModData;
+	/* now check if the module is compatible with select features */
+	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
+		f->f_ReduceRepeated = bReduceRepeatMsgs;
+	else {
+		dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
+		f->f_ReduceRepeated = 0;
+	}
+	f->bEnabled = 1; /* action is enabled */
+
+finalize_it:
+	if(iRet == RS_RET_OK)
+		iRet = OMSRdestruct(pOMSR);
+	else {
+		/* do not overwrite error state! */
+		OMSRdestruct(pOMSR);
+		/* TODO: free pMod instance data, potential mem leak */
+		/* TODO: better said - where is the selector_t AND its elements destroyed? */
+	}
+
+	return iRet;
+}
+
+
 /*
- * Crack a configuration file line
+ * Cranck a configuration file line
  * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
  * handle config lines in general, but only lines that reflect actual filter
  * pairs (the original syslog message line format). Extended lines (those starting
@@ -4727,6 +4818,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	uchar *p;
 	rsRetVal iRet;
 	modInfo_t *pMod;
+	omodStringRequest_t *pOMSR;
 	void *pModData;
 
 	dprintf("cfline(%s)", line);
@@ -4776,9 +4868,10 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	/* loop through all modules and see if one picks up the line */
 	pMod = omodGetNxt(NULL);
 	while(pMod != NULL) {
-		iRet = pMod->mod.om.parseSelectorAct(&p , f, &pModData);
+		iRet = pMod->mod.om.parseSelectorAct(&p , f, &pModData, &pOMSR);
 		dprintf("trying selector action for %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_OK) {
+			addAction(f, pMod, pModData, pOMSR);
 			dprintf("Module %s processed this config line.\n",
 				modGetName(pMod));
 			f->pMod = pMod;

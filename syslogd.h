@@ -21,6 +21,7 @@
 #define	SYSLOGD_H_INCLUDED 1
 
 #include "syslogd-types.h"
+#include "objomsr.h"
 
 #ifdef USE_NETZIP
 #include <zlib.h>
@@ -83,9 +84,8 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 void  iovCreate(selector_t *f);
 char *iovAsString(selector_t *f);
 void untty(void);
-rsRetVal cflineSetTemplateAndIOV(selector_t *f, char *pTemplateName);
-rsRetVal cflineParseTemplateName(uchar** pp, register char* pTemplateName, int iLenTemplate);
-rsRetVal cflineParseFileName(selector_t *f, uchar* p, uchar *pFileName);
+rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
+rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts);
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */

@@ -96,13 +96,13 @@ ENDisCompatibleWithFeature
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	if(pData->bDynamicName) {
-		printf("[dynamic]\n\ttemplate='%s'\n"
+		printf("[dynamic]\n\ttemplate='%s'"
 		       "\tfile cache size=%d\n"
 		       "\tcreate directories: %s\n"
 		       "\tfile owner %d, group %d\n"
 		       "\tdirectory owner %d, group %d\n"
 		       "\tfail if owner/group can not be set: %s\n",
-			pData->f_fname,
+		        pData->f_fname,
 			pData->iDynaFileCacheSize,
 			pData->bCreateDirs ? "yes" : "no",
 			pData->fileUID, pData->fileGID,
@@ -125,7 +125,7 @@ ENDdbgPrintInstInfo
  * removed.
  * rgerhards 2005-06-21
  */
-static rsRetVal cflineParseOutchannel(selector_t *f, instanceData *pData, uchar* p)
+static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts)
 {
 	rsRetVal iRet = RS_RET_OK;
 	size_t i;
@@ -189,16 +189,7 @@ static rsRetVal cflineParseOutchannel(selector_t *f, instanceData *pData, uchar*
 	if(*p == ';')
 		++p; /* eat it */
 
-	if((iRet = cflineParseTemplateName(&p, szBuf,
-	                        sizeof(szBuf) / sizeof(char))) == RS_RET_OK) {
-		if(szBuf[0] == '\0')	/* no template? */
-			strcpy(szBuf, " TradFmt"); /* use default! */
-
-		iRet = cflineSetTemplateAndIOV(f, szBuf);
-		
-		dprintf("[outchannel]filename: '%s', template: '%s', size: %lu\n", pData->f_fname, szBuf,
-			pData->f_sizeLimit);
-	}
+	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, (uchar*) " TradFmt");
 
 	return(iRet);
 }
@@ -309,33 +300,24 @@ static void dynaFileFreeCache(instanceData *pData)
 }
 
 
-/* This function handles dynamic file names. It generates a new one
- * based on the current message, checks if that file is already open
- * and, if not, does everything needed to switch to the new one.
+/* This function handles dynamic file names. It checks if the
+ * requested file name is already open and, if not, does everything
+ * needed to switch to the it.
  * Function returns 0 if all went well and non-zero otherwise.
  * On successful return pData->fd must point to the correct file to
  * be written.
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
-static int prepareDynFile(selector_t *f, instanceData *pData)
+static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 {
-	uchar *newFileName;
 	time_t ttOldest; /* timestamp of oldest element */
 	int iOldest;
 	int i;
 	int iFirstFree;
 	dynaFileCacheEntry **pCache;
 
-	assert(f != NULL);
 	assert(pData != NULL);
-	if((newFileName = tplToString(pData->pTpl, f->f_pMsg)) == NULL) {
-		/* memory shortage - there is nothing we can do to resolve it.
-		 * We silently ignore it, this is probably the best we can do.
-		 */
-		glblHadMemShortage = TRUE;
-		dprintf("prepareDynfile(): could not create file name, discarding this request\n");
-		return -1;
-	}
+	assert(newFileName != NULL);
 
 	pCache = pData->dynCache;
 
@@ -343,10 +325,8 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
 	 * I *hope* this will be a performance enhancement.
 	 */
 	if(   (pData->iCurrElt != -1)
-	   && !strcmp((char*) newFileName,
-	              (char*) pCache[pData->iCurrElt])) {
+	   && !strcmp((char*) newFileName, (char*) pCache[pData->iCurrElt])) {
 	   	/* great, we are all set */
-		free(newFileName);
 		pCache[pData->iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */
 		return 0;
 	}
@@ -366,7 +346,6 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
 				/* we found our element! */
 				pData->fd = pCache[i]->fd;
 				pData->iCurrElt = i;
-				free(newFileName);
 				pCache[i]->lastUsed = time(NULL); /* update timestamp for LRU */
 				return 0;
 			}
@@ -393,7 +372,6 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
 		if(pCache[iFirstFree] == NULL) {
 			glblHadMemShortage = TRUE;
 			dprintf("prepareDynfile(): could not alloc mem, discarding this request\n");
-			free(newFileName);
 			return -1;
 		}
 	}
@@ -443,17 +421,16 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
 		 * message. Otherwise, we could run into a never-ending loop. The bad
 		 * news is that we also lose errors on startup messages, but so it is.
 		 */
-		if(f->f_pMsg->msgFlags & INTERNAL_MSG)
+		if(iMsgOpts & INTERNAL_MSG)
 			dprintf("Could not open dynaFile, discarding message\n");
 		else
 			logerrorSz("Could not open dynamic file '%s' - discarding message", (char*)newFileName);
-		free(newFileName);
 		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
 		return -1;
 	}
 
 	pCache[iFirstFree]->fd = pData->fd;
-	pCache[iFirstFree]->pName = newFileName;
+	pCache[iFirstFree]->pName = (uchar*)strdup((char*)newFileName); /* TODO: check for NULL (very unlikely) */
 	pCache[iFirstFree]->lastUsed = time(NULL);
 	pData->iCurrElt = iFirstFree;
 	dprintf("Added new entry %d for file cache, file '%s'.\n",
@@ -467,7 +444,7 @@ static int prepareDynFile(selector_t *f, instanceData *pData)
  * will be called for all outputs using file semantics,
  * for example also for pipes.
  */
-static rsRetVal writeFile(selector_t *f, uchar *pMsg, instanceData *pData)
+static rsRetVal writeFile(selector_t *f, uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 {
 	off_t actualFileSize;
 	rsRetVal iRet = RS_RET_OK;
@@ -479,7 +456,7 @@ static rsRetVal writeFile(selector_t *f, uchar *pMsg, instanceData *pData)
 	 * check if it still is ok or a new file needs to be created
 	 */
 	if(pData->bDynamicName) {
-		if(prepareDynFile(f, pData) != 0)
+		if(prepareDynFile(pData, ppString[1], iMsgOpts) != 0)
 			return RS_RET_ERR;
 	}
 
@@ -516,7 +493,7 @@ again:
 		}
 	}
 
-	if (write(pData->fd, pMsg, strlen((char*)pMsg)) < 0) {
+	if (write(pData->fd, ppString[0], strlen((char*)ppString[0])) < 0) {
 		int e = errno;
 
 		/* If a named pipe is full, just ignore it for now
@@ -598,7 +575,7 @@ CODESTARTdoAction
 	 * all others are doomed.
 	 */
 	if(pData->bDynamicName || (pData->fd != -1))
-		iRet = writeFile(f, pMsg, pData);
+		iRet = writeFile(f, ppString, iMsgOpts, pData);
 ENDdoAction
 
 
@@ -628,6 +605,7 @@ CODESTARTparseSelectorAct
 	switch (*p)
 	{
         case '$':
+		CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		/* rgerhards 2005-06-21: this is a special setting for output-channel
 		 * definitions. In the long term, this setting will probably replace
 		 * anything else, but for the time being we must co-exist with the
@@ -635,7 +613,7 @@ CODESTARTparseSelectorAct
 		 * rgerhards, 2007-07-24: output-channels will go away. We keep them
 		 * for compatibility reasons, but seems to have been a bad idea.
 		 */
-		if((iRet = cflineParseOutchannel(f, pData, p)) == RS_RET_OK) {
+		if((iRet = cflineParseOutchannel(pData, p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS)) == RS_RET_OK) {
 			pData->bDynamicName = 0;
 			pData->fCreateMode = fCreateMode; /* preserve current setting */
 			pData->fDirCreateMode = fDirCreateMode; /* preserve current setting */
@@ -647,16 +625,16 @@ CODESTARTparseSelectorAct
 	case '?': /* This is much like a regular file handle, but we need to obtain
 		   * a template name. rgerhards, 2007-07-03
 		   */
+		CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		++p; /* eat '?' */
-		if((iRet = cflineParseFileName(f, p, (uchar*) pData->f_fname)) != RS_RET_OK)
+		if((iRet = cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS))
+		   != RS_RET_OK)
 			break;
-		pData->pTpl = tplFind((char*)pData->f_fname,
-					       strlen((char*) pData->f_fname));
-		if(pData->pTpl == NULL) {
-			logerrorSz("Template '%s' not found - dynaFile deactivated.", pData->f_fname);
-			iRet = RS_RET_NOT_FOUND; /* that's it... :( */
+		/* "filename" is actually a template name, we need this as string 1. So let's add it
+		 * to the pOMSR. -- rgerhards, 2007-07-27
+		 */
+		if((iRet = OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup(pData->f_fname), OMSR_NO_RQD_TPL_OPTS)) != RS_RET_OK)
 			break;
-		}
 
 		pData->bDynamicName = 1;
 		pData->iCurrElt = -1;		  /* no current element */
@@ -681,6 +659,7 @@ CODESTARTparseSelectorAct
 
         case '|':
 	case '/':
+		CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		/* rgerhards, 2007-0726: first check if file or pipe */
 		if(*p == '|') {
 			pData->fileType = eTypePIPE;
@@ -693,7 +672,8 @@ CODESTARTparseSelectorAct
 		 * to use is specified. So we need to scan for the first coma first
 		 * and then look at the rest of the line.
 		 */
-		if((iRet = cflineParseFileName(f, p, (uchar*) pData->f_fname)) != RS_RET_OK)
+		if((iRet = cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS))
+		   != RS_RET_OK)
 			break;
 
 		pData->bDynamicName = 0;
@@ -735,7 +715,6 @@ BEGINmodInit(File)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 ENDmodInit
-
 
 /*
  * vi:set ai:

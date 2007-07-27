@@ -22,10 +22,15 @@
 #ifndef OBJOMSR_H_INCLUDED
 #define OBJOMSR_H_INCLUDED
 
+/* define flags for required template options */
+#define OMSR_NO_RQD_TPL_OPTS	0
+#define OMSR_RQD_TPL_OPT_SQL	1
+/* next option is 2, 4, 8, ... */
+
 struct omodStringRequest_s {	/* strings requested by output module for doAction() */
 	int iNumEntries;	/* number of array entries for data elements below */
 	uchar **ppTplName;	/* pointer to array of template names */
-	int *piTplOpts;		/* pointer to array of check-options when pulling template */
+	int *piTplOpts;/* pointer to array of check-options when pulling template */
 };
 typedef struct omodStringRequest_s omodStringRequest_t;
 

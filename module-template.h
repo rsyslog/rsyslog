@@ -25,6 +25,8 @@
 #ifndef	MODULE_TEMPLATE_H_INCLUDED
 #define	MODULE_TEMPLATE_H_INCLUDED 1
 
+#include "objomsr.h"
+
 /* to following macros are used to generate function headers and standard
  * functionality. It works as follows (described on the sample case of
  * createInstance()):
@@ -89,13 +91,13 @@ static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eF
 /* doAction()
  */
 #define BEGINdoAction \
-static rsRetVal doAction(selector_t *f, uchar __attribute__((unused)) *pMsg, instanceData __attribute__((unused)) *pData)\
+static rsRetVal doAction(selector_t *f, uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, instanceData __attribute__((unused)) *pData)\
 {\
 	rsRetVal iRet = RS_RET_OK;
 
 #define CODESTARTdoAction \
 	assert(f != NULL);\
-	assert(pMsg != NULL);
+	assert(ppString != NULL);
 
 #define ENDdoAction \
 	return iRet;\
@@ -191,10 +193,18 @@ static rsRetVal getWriteFDForSelect(selector_t *f, void *pModData, short *fd)\
  * Extra comments:
  * try to process a selector action line. Checks if the action
  * applies to this module and, if so, processed it. If not, it
- * is left untouched. The driver will then call another module
+ * is left untouched. The driver will then call another module.
+ * On exit, ppModData must point to instance data. Also, a string
+ * request object must be created and filled. A macro is defined
+ * for that.
+ * For the most usual case, we have defined a macro below.
+ * If more than one string is requested, the macro can be used together
+ * with own code that overwrites the entry count. In this case, the
+ * macro must come before the own code. It is recommended to be
+ * placed right after CODESTARTparseSelectorAct.
  */
 #define BEGINparseSelectorAct \
-static rsRetVal parseSelectorAct(uchar **pp, selector_t *f, void **ppModData)\
+static rsRetVal parseSelectorAct(uchar **pp, selector_t *f, void **ppModData, omodStringRequest_t **ppOMSR)\
 {\
 	rsRetVal iRet = RS_RET_OK;\
 	uchar *p;\
@@ -204,13 +214,24 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f, void **ppModData)\
 	assert(pp != NULL);\
 	assert(ppModData != NULL);\
 	assert(f != NULL);\
+	assert(ppOMSR != NULL);\
 	p = *pp;
 
+#define CODE_STD_STRING_REQUESTparseSelectorAct(NumStrReqEntries) \
+	if((iRet = OMSRconstruct(ppOMSR, NumStrReqEntries)) != RS_RET_OK)\
+		goto do_abort;\
+
 #define ENDparseSelectorAct \
+do_abort:\
 	if(iRet == RS_RET_OK) {\
 		*ppModData = pData;\
 		*pp = p;\
-	}\
+	} else {\
+		/* cleanup, we failed */\
+		if(*ppOMSR != NULL)\
+			OMSRdestruct(*ppOMSR);\
+			*ppOMSR = NULL;\
+		}\
 	return iRet;\
 }
 
