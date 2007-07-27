@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.17.4 (rgerhards), 2007-07-2?
+Version 1.17.4 (rgerhards), 2007-07-27
 - continued to work on modularization
 - fixed a situation where rsyslogd could create zombie processes
   thanks to mildew for the patch
