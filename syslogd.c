@@ -4008,17 +4008,14 @@ static void init()
 		nextp = (selector_t *)calloc(1, sizeof(selector_t));
 		Files = nextp; /* set the root! */
 		cfline("*.ERR\t" _PATH_CONSOLE, nextp);
-		nextp->iID = 0;
 		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
 		cfline("*.PANIC\t*", nextp->f_next);
 		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
-		nextp->iID = 1;
 		snprintf(cbuf,sizeof(cbuf), "*.*\t%s", ttyname(0));
 		cfline(cbuf, nextp->f_next);
 		Initialized = 1;
 	}
 	else { /* we should consider moving this into a separate function, its lengthy... */
-		int iIDf = 0; /* ID for next struct filed entry */
 		/*
 		 *  Foreach line in the conf table, open that file.
 		 */
@@ -4078,7 +4075,6 @@ static void init()
 			} else {
 				/* successfully created an entry */
 				dprintf("selector line successfully processed\n");
-				f->iID = iIDf++;
 				if(nextp == NULL) {
 					Files = f;
 				}
@@ -4168,7 +4164,6 @@ static void init()
 						f->eHostnameCmpMode == HN_COMP_MATCH ?
 							"only" : "allbut",
 						rsCStrGetSzStr(f->pCSHostnameComp));
-				printf("%d: ", f->iID);
 				if(f->f_filter_type == FILTER_PRI) {
 					for (i = 0; i <= LOG_NFACILITIES; i++)
 						if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
