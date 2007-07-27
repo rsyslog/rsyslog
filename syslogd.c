@@ -1412,33 +1412,6 @@ static int srSLMGParseTIMESTAMP3164(struct syslogTime *pTime, char* pszTS)
  * END CODE-LIBLOGGING                                             *
  *******************************************************************/
 
-/* find a selector entry based on its ID.
- * rgerhards, 2007-07-26
- */
-static rsRetVal findSelector(int iID, selector_t **ppf)
-{
-	selector_t *f;
-	selector_t *psFound;
-	rsRetVal iRet;
-
-	assert(ppf != NULL);
-	for(f = Files; f != NULL && psFound == NULL ; f = f->f_next) {
-		if(f->iID == iID) {
-			psFound = f;
-		}
-	}
-
-	if(psFound != NULL) {
-		*ppf = psFound;
-		iRet = RS_RET_OK;
-	} else {
-		iRet = RS_RET_NOT_FOUND;
-	}
-
-	return iRet;
-}
-
-
 /**
  * Format a syslogTimestamp into format required by MySQL.
  * We are using the 14 digits format. For example 20041111122600 
