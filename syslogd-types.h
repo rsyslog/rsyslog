@@ -158,7 +158,10 @@ struct filed {
 	int	f_ReduceRepeated;		/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;			/* repetition cnt of prevline */
 	int	f_repeatcount;			/* number of "repeated" msgs */
-	struct template *f_pTpl;		/* pointer to template to use */
+	int	iNumTpls;			/* number of array entries for template element below */
+	struct template **ppTpl;		/* array of template to use - strings must be passed to doAction
+						 * in this order. */
+	struct template __attribute__((deprecated)) *f_pTpl;		/* pointer to template to use */
 	struct msg* f_pMsg;			/* pointer to the message (this will
 					         * replace the other vars with msg
 						 * content later). This is preserved after
