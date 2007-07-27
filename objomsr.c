@@ -101,7 +101,6 @@ rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, i
 	assert(pTplName != NULL);
 	assert(iEntry < pThis->iNumEntries);
 
-printf("OMSRsetEntry %s: %d\n", pTplName, iTplOpts);
 	if(pThis->ppTplName[iEntry] != NULL)
 		free(pThis->ppTplName[iEntry]);
 	pThis->ppTplName[iEntry] = pTplName; /* TODO: do we need to copy? */
