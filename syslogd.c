@@ -3112,7 +3112,7 @@ rsRetVal fprintlog(register selector_t *f)
 			goto finalize_it;
 		}
 	}
-	iRet = f->pMod->mod.om.doAction(f, f->ppMsgs, f->f_pMsg->msgFlags, f->pModData); /* call configured action */
+	iRet = f->pMod->mod.om.doAction(f->ppMsgs, f->f_pMsg->msgFlags, f->pModData); /* call configured action */
 
 	if(iRet == RS_RET_DISABLE_ACTION)
 		f->bEnabled = 0; /* that's it... */
@@ -3907,7 +3907,7 @@ static void freeSelectors(void)
 			}
 
 			/* free the action instances */
-			f->pMod->freeInstance(f, f->pModData);
+			f->pMod->freeInstance(f->pModData);
 
 			if(f->f_pMsg != NULL)
 				MsgDestruct(f->f_pMsg);
@@ -4204,7 +4204,7 @@ static void init()
 					printf("\tAction...: ");
 				}
 				printf("%s: ", modGetStateName(f->pMod));
-				f->pMod->dbgPrintInstInfo(f, f->pModData);
+				f->pMod->dbgPrintInstInfo(f->pModData);
 				printf("\tinstance data: 0x%x\n", (unsigned) f->pModData);
 				if(f->f_ReduceRepeated)
 					printf(" [RepeatedMsgReduction]");
@@ -4868,7 +4868,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	/* loop through all modules and see if one picks up the line */
 	pMod = omodGetNxt(NULL);
 	while(pMod != NULL) {
-		iRet = pMod->mod.om.parseSelectorAct(&p , f, &pModData, &pOMSR);
+		iRet = pMod->mod.om.parseSelectorAct(&p, &pModData, &pOMSR);
 		dprintf("trying selector action for %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_OK) {
 			addAction(f, pMod, pModData, pOMSR);
@@ -5167,7 +5167,7 @@ static void mainloop(void)
 			short fdMod;
 			FD_ZERO(&writefds);
 			for (f = Files; f != NULL ; f = f->f_next) {
-				if(f->pMod->getWriteFDForSelect(f, f->pModData, &fdMod) == RS_RET_OK) {
+				if(f->pMod->getWriteFDForSelect(f->pModData, &fdMod) == RS_RET_OK) {
 				   FD_SET(fdMod, &writefds);
 				   if(fdMod > maxfds)
 					maxfds = fdMod;
@@ -5281,9 +5281,9 @@ static void mainloop(void)
 			short fdMod;
 			rsRetVal iRet;
 			for (f = Files; f != NULL ; f = f->f_next) {
-				if(f->pMod->getWriteFDForSelect(f, f->pModData, &fdMod) == RS_RET_OK) {
+				if(f->pMod->getWriteFDForSelect(f->pModData, &fdMod) == RS_RET_OK) {
 					if(FD_ISSET(fdMod, &writefds)) {
-						if((iRet = f->pMod->onSelectReadyWrite(f, f->pModData)) != RS_RET_OK) {
+						if((iRet = f->pMod->onSelectReadyWrite(f->pModData)) != RS_RET_OK) {
 							dprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
 						}
 					}

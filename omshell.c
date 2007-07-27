@@ -64,7 +64,6 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	/* TODO: free the instance pointer (currently a leak, will go away) */
 ENDfreeInstance
 
 

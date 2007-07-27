@@ -444,12 +444,11 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
  * will be called for all outputs using file semantics,
  * for example also for pipes.
  */
-static rsRetVal writeFile(selector_t *f, uchar **ppString, unsigned iMsgOpts, instanceData *pData)
+static rsRetVal writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 {
 	off_t actualFileSize;
 	rsRetVal iRet = RS_RET_OK;
 
-	assert(f != NULL);
 	assert(pData != NULL);
 
 	/* first check if we have a dynamic file name and, if so,
@@ -575,7 +574,7 @@ CODESTARTdoAction
 	 * all others are doomed.
 	 */
 	if(pData->bDynamicName || (pData->fd != -1))
-		iRet = writeFile(f, ppString, iMsgOpts, pData);
+		iRet = writeFile(ppString, iMsgOpts, pData);
 ENDdoAction
 
 

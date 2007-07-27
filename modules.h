@@ -56,11 +56,11 @@ typedef struct moduleInfo {
 		/* be sure to support version handshake! */
 	rsRetVal (*modQueryEtryPt)(uchar *name, rsRetVal (**EtryPoint)()); /* query entry point addresses */
 	rsRetVal (*isCompatibleWithFeature)(syslogFeature);
-	rsRetVal (*freeInstance)(struct filed*, void*);/* called before termination or module unload */
-	rsRetVal (*getWriteFDForSelect)(struct filed*, void*,short *);/* called before termination or module unload */
-	rsRetVal (*onSelectReadyWrite)(struct filed*, void*);/* called when fd is writeable after select() */
+	rsRetVal (*freeInstance)(void*);/* called before termination or module unload */
+	rsRetVal (*getWriteFDForSelect)(void*,short *);/* called before termination or module unload */
+	rsRetVal (*onSelectReadyWrite)(void*);/* called when fd is writeable after select() */
 	rsRetVal (*needUDPSocket)(void*);/* called when fd is writeable after select() */
-	rsRetVal (*dbgPrintInstInfo)(struct filed*, void*);/* called before termination or module unload */
+	rsRetVal (*dbgPrintInstInfo)(void*);/* called before termination or module unload */
 	rsRetVal (*modExit)();		/* called before termination or module unload */
 	/* below: parse a configuration line - return if processed
 	 * or not. If not, must be parsed to next module.
@@ -79,8 +79,8 @@ typedef struct moduleInfo {
 		struct {/* data for output modules */
 			/* below: perform the configured action
 			 */
-			rsRetVal (*doAction)(selector_t*, uchar**, unsigned, void*);
-			rsRetVal (*parseSelectorAct)(uchar**, selector_t*, void**,omodStringRequest_t**);
+			rsRetVal (*doAction)(uchar**, unsigned, void*);
+			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
 		} om;
 	} mod;
 } modInfo_t;

@@ -279,7 +279,7 @@ static int TCPSendCreateSocket(instanceData *pData, struct addrinfo *addrDest)
  * octet-counting, only this framing mode is used within the session.
  * rgerhards, 2006-12-07
  */
-static int TCPSend(selector_t *f, instanceData *pData, char *msg, size_t len)
+static int TCPSend(instanceData *pData, char *msg, size_t len)
 {
 	int retry = 0;
 	int done = 0;
@@ -290,7 +290,6 @@ static int TCPSend(selector_t *f, instanceData *pData, char *msg, size_t len)
 	TCPFRAMINGMODE framingToUse;
 
 	assert(pData != NULL);
-	assert(f != NULL);
 	assert(msg != NULL);
 	assert(len > 0);
 
@@ -598,7 +597,15 @@ CODESTARTdoAction
 	f_forw:
 		dprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData),
 			 pData->protocol == FORW_UDP ? "udp" : "tcp");
-		if ( strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
+		if ( 0) // TODO: think about this strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
+		/* what we need to do is get the hostname as an additonal string (during parseSe..). Then,
+		 * we can compare that string to LocalHostName. That way, we do not need to access the
+		 * msgobject, and everything is clean. The question remains, though, if that functionality
+		 * here actually makes sense or not. If we really need it, it might make more sense to compare
+		 * the target IP address to the IP addresses of the local machene - that is a far better way of
+		 * handling things than to relay on the error-prone hostname property.
+		 * rgerhards, 2007-07-27
+		 */
 			dprintf("Not sending message to remote.\n");
 		else {
 			pData->ttSuspend = time(NULL);
@@ -681,7 +688,7 @@ CODESTARTdoAction
 				}
 			} else {
 				/* forward via TCP */
-				if(TCPSend(f, pData, psz, l) != 0) {
+				if(TCPSend(pData, psz, l) != 0) {
 					/* error! */
 					pData->eDestState = eDestFORW_SUSP;
 					errno = 0;
@@ -882,7 +889,7 @@ CODESTARTonSelectReadyWrite
 	TCPSendSetStatus(pData, TCP_SEND_READY);
 	/* Send stored message (if any) */
 	if(pData->savedMsg != NULL) {
-		if(TCPSend(f, pData, pData->savedMsg,
+		if(TCPSend(pData, pData->savedMsg,
 			   pData->savedMsgLen) != 0) {
 			/* error! */
 			pData->eDestState = eDestFORW_SUSP;

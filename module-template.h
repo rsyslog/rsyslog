@@ -60,13 +60,12 @@ static rsRetVal createInstance(instanceData **ppData)\
 /* freeInstance()
  */
 #define BEGINfreeInstance \
-static rsRetVal freeInstance(selector_t *f, void* pModData)\
+static rsRetVal freeInstance(void* pModData)\
 {\
 	rsRetVal iRet = RS_RET_OK;\
 	instanceData *pData;
 
 #define CODESTARTfreeInstance \
-	assert(f != NULL);\
 	pData = (instanceData*) pModData;
 
 #define ENDfreeInstance \
@@ -91,12 +90,11 @@ static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eF
 /* doAction()
  */
 #define BEGINdoAction \
-static rsRetVal doAction(selector_t *f, uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, instanceData __attribute__((unused)) *pData)\
+static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, instanceData __attribute__((unused)) *pData)\
 {\
 	rsRetVal iRet = RS_RET_OK;
 
 #define CODESTARTdoAction \
-	assert(f != NULL);\
 	assert(ppString != NULL);
 
 #define ENDdoAction \
@@ -109,13 +107,12 @@ static rsRetVal doAction(selector_t *f, uchar __attribute__((unused)) **ppString
  * Print debug information about this instance.
  */
 #define BEGINdbgPrintInstInfo \
-static rsRetVal dbgPrintInstInfo(selector_t *f, void *pModData)\
+static rsRetVal dbgPrintInstInfo(void *pModData)\
 {\
 	rsRetVal iRet = RS_RET_OK;\
 	instanceData *pData = NULL;
 
 #define CODESTARTdbgPrintInstInfo \
-	assert(f != NULL);\
 	pData = (instanceData*) pModData;
 
 #define ENDdbgPrintInstInfo \
@@ -151,13 +148,12 @@ static rsRetVal needUDPSocket(void *pModData)\
  * before.
  */
 #define BEGINonSelectReadyWrite \
-static rsRetVal onSelectReadyWrite(selector_t *f, void *pModData)\
+static rsRetVal onSelectReadyWrite(void *pModData)\
 {\
 	rsRetVal iRet = RS_RET_NONE;\
 	instanceData *pData = NULL;
 
 #define CODESTARTonSelectReadyWrite \
-	assert(f != NULL);\
 	pData = (instanceData*) pModData;
 
 #define ENDonSelectReadyWrite \
@@ -174,13 +170,12 @@ static rsRetVal onSelectReadyWrite(selector_t *f, void *pModData)\
  * continue modularization.
  */
 #define BEGINgetWriteFDForSelect \
-static rsRetVal getWriteFDForSelect(selector_t *f, void *pModData, short *fd)\
+static rsRetVal getWriteFDForSelect(void *pModData, short *fd)\
 {\
 	rsRetVal iRet = RS_RET_NONE;\
 	instanceData *pData = NULL;
 
 #define CODESTARTgetWriteFDForSelect \
-	assert(f != NULL);\
 	assert(fd != NULL);\
 	pData = (instanceData*) pModData;
 
@@ -204,7 +199,7 @@ static rsRetVal getWriteFDForSelect(selector_t *f, void *pModData, short *fd)\
  * placed right after CODESTARTparseSelectorAct.
  */
 #define BEGINparseSelectorAct \
-static rsRetVal parseSelectorAct(uchar **pp, selector_t *f, void **ppModData, omodStringRequest_t **ppOMSR)\
+static rsRetVal parseSelectorAct(uchar **pp, void **ppModData, omodStringRequest_t **ppOMSR)\
 {\
 	rsRetVal iRet = RS_RET_OK;\
 	uchar *p;\
@@ -213,7 +208,6 @@ static rsRetVal parseSelectorAct(uchar **pp, selector_t *f, void **ppModData, om
 #define CODESTARTparseSelectorAct \
 	assert(pp != NULL);\
 	assert(ppModData != NULL);\
-	assert(f != NULL);\
 	assert(ppOMSR != NULL);\
 	p = *pp;
 
