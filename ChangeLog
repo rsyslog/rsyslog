@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-2?
+- continued to work on modularization
+- fixed a missing file bug - thanks to Andrea Montanari for reporting
+  this problem
 ---------------------------------------------------------------------------
 Version 1.17.4 (rgerhards), 2007-07-27
 - continued to work on modularization
