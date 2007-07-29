@@ -3,6 +3,10 @@ Version 1.17.5 (rgerhards), 2007-07-2?
 - continued to work on modularization
 - fixed a missing file bug - thanks to Andrea Montanari for reporting
   this problem
+- fixed a problem with shutting down the worker thread and freeing the
+  selector_t list - this caused messages to be lost, because the
+  message queue was not properly drained before the selectors got
+  destroyed.
 ---------------------------------------------------------------------------
 Version 1.17.4 (rgerhards), 2007-07-27
 - continued to work on modularization

@@ -3308,9 +3308,9 @@ static void die(int sig)
 	freeSelectors();
 
 #ifdef	USE_PTHREADS
-	stopWorker();
+	/* Worker threads are stopped by freeSelectors() */
 	queueDelete(pMsgQueue); /* delete fifo here! */
-	pMsgQueue = 0;
+	pMsgQueue = NULL;
 #endif
 	
 	/* now clean up the listener part */
@@ -3899,13 +3899,24 @@ static void freeSelectors(void)
 	if(Files != NULL) {
 		dprintf("Freeing log structures.\n");
 
+		/* we need first to flush, then wait for all messages to be processed
+		 * (stopWoker() does that), then we can free the structures.
+		 */
 		f = Files;
 		while (f != NULL) {
 			/* flush any pending output */
 			if(f->f_prevcount) {
 				fprintlog(f);
 			}
+			f = f->f_next;
+		}
 
+#		ifdef USE_PTHREADS
+		stopWorker();
+#		endif
+
+		f = Files;
+		while (f != NULL) {
 			/* free the action instances */
 			f->pMod->freeInstance(f->pModData);
 
@@ -5228,9 +5239,7 @@ static void mainloop(void)
 		}
 		if(restart) {
 			dprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
-#			ifdef USE_PTHREADS
-				stopWorker();
-#			endif
+			/* worker thread is stopped as part of init() */
 			init();
 #			ifdef USE_PTHREADS
 				startWorker();
