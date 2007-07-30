@@ -50,6 +50,7 @@ rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
 	}
 	if(pThis->piTplOpts != NULL)
 		free(pThis->piTplOpts);
+	free(pThis);
 	
 	return RS_RET_OK;
 }

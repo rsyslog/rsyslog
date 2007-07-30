@@ -3,6 +3,8 @@ Version 1.17.6 (rgerhards), 2007-07-3?
 - fixed bug in OMSRcreate() - always returned SR_RET_OK
 - fixed a bug that caused ommysql to always complain about missing
   templates
+- fixed a mem leak in OMSRdestruct - freeing the object itself was
+  forgotten - thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
 - continued to work on modularization
