@@ -11,9 +11,17 @@ bug tracker at sourceforge.net</a>. This list here contains more architectural
 things while the bug tracker most often lists things that you will actually 
 experience. Please be sure to visit the bug tracker in addition to this list 
 here.</p>
-<p>This list has last been updated on 2007-07-16 by
+<p>This list has last been updated on 2007-07-30 by
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a>.</p>
 <h1>rsyslogd</h1>
+<h2>forwarding remotely received messages</h2>
+<p>Sysklogd does not forward remotely received messages to other network 
+destionation except when the -h option is given. This code is currently defunct. 
+No matter if -h is specified or not, messages are ALWAYS forwarded. It is 
+currently under review if the sysklogd's functionality is actually needed. 
+Please see my
+<a href="http://rgerhards.blogspot.com/2007/07/on-syslogd-h-option.html">blog 
+post on this topic</a> for futher detail.</p>
 <h2>EQUALLY-NAMED TEMPLATES</h2>
 <p>If multiple templates with the SAME name are created, all but the
    first definition is IGNORED. So you can NOT (yet) replace a
