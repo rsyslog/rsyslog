@@ -90,10 +90,11 @@ rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 	
 abort_it:
 	*ppThis = pThis;
-	return RS_RET_OK;
+	return iRet;
 }
 
-/* set a template name and option to the object. Index must be given.
+/* set a template name and option to the object. Index must be given. The pTplName must be
+ * pointing to memory that can be freed. If in doubt, the caller must strdup() the value.
  */
 rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, int iTplOpts)
 {
@@ -103,7 +104,7 @@ rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, i
 
 	if(pThis->ppTplName[iEntry] != NULL)
 		free(pThis->ppTplName[iEntry]);
-	pThis->ppTplName[iEntry] = pTplName; /* TODO: do we need to copy? */
+	pThis->ppTplName[iEntry] = pTplName;
 	pThis->piTplOpts[iEntry] = iTplOpts;
 
 	return RS_RET_OK;
