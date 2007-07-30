@@ -36,6 +36,7 @@
 #include <signal.h>
 #include <assert.h>
 #include <wait.h>
+#include <ctype.h>
 #include "rsyslog.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #include "liblogging-stub.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #define TRUE 1
@@ -208,6 +209,27 @@ int execProg(uchar *program, int bWait, uchar *arg)
 	perror("exec");
 	exit(1); /* not much we can do in this case */
 }
+
+
+/* skip over whitespace in a standard C string. The
+ * provided pointer is advanced to the first non-whitespace
+ * charater or the \0 byte, if there is none. It is never
+ * moved past the \0.
+ */
+void skipWhiteSpace(uchar **pp)
+{
+	register uchar *p;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	p = *pp;
+	while(*p && isspace((int) *p))
+		++p;
+	*pp = p;
+}
+
+
 /*
  * vi:set ai:
  */

@@ -27,14 +27,129 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <pwd.h>
 
 #include "rsyslog.h"
+#include "syslogd.h" /* TODO: when the module interface & library design is done, this should be able to go away */
 #include "cfsysline.h"
+#include "srUtils.h"
 
 
 /* static data */
 cslCmd_t *pCmdListRoot = NULL; /* The list of known configuration commands. */
 cslCmd_t *pCmdListLast = NULL;
+
+/* --------------- START functions for handling canned syntaxes --------------- */
+
+/* Parse and interpret an on/off inside a config file line. This is most
+ * often used for boolean options, but of course it may also be used
+ * for other things. The passed-in pointer is updated to point to
+ * the first unparsed character on exit. Function emits error messages
+ * if the value is neither on or off. It returns 0 if the option is off,
+ * 1 if it is on and another value if there was an error.
+ * rgerhards, 2007-07-15
+ */
+static int doParseOnOffOption(uchar **pp)
+{
+	uchar *pOptStart;
+	uchar szOpt[32];
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	pOptStart = *pp;
+	skipWhiteSpace(pp); /* skip over any whitespace */
+
+	if(getSubString(pp, (char*) szOpt, sizeof(szOpt) / sizeof(uchar), ' ')  != 0) {
+		logerror("Invalid $-configline - could not extract on/off option");
+		return -1;
+	}
+	
+	if(!strcmp((char*)szOpt, "on")) {
+		return 1;
+	} else if(!strcmp((char*)szOpt, "off")) {
+		return 0;
+	} else {
+		logerrorSz("Option value must be on or off, but is '%s'", (char*)pOptStart);
+		return -1;
+	}
+}
+
+
+/* extract a username and return its uid.
+ * rgerhards, 2007-07-17
+ */
+rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+{
+	struct passwd *ppwBuf;
+	struct passwd pwBuf;
+	rsRetVal iRet = RS_RET_OK;
+	uchar szName[256];
+	char stringBuf[2048];	/* I hope this is large enough... */
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pVal != NULL);
+
+	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
+		logerror("could not extract user name");
+		iRet = RS_RET_NOT_FOUND;
+		goto finalize_it;
+	}
+
+	getpwnam_r((char*)szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
+
+	if(ppwBuf == NULL) {
+		logerrorSz("ID for user '%s' could not be found or error", (char*)szName);
+	} else {
+		if(pSetHdlr == NULL) {
+			/* we should set value directly to var */
+			*((uid_t*)pVal) = ppwBuf->pw_uid;
+		} else {
+			/* we set value via a set function */
+			pSetHdlr(pVal, ppwBuf->pw_uid);
+		}
+		dprintf("uid %d obtained for user '%s'\n", ppwBuf->pw_uid, szName);
+	}
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+
+finalize_it:
+	return iRet;
+}
+
+
+/* Parse and process an binary cofig option. pVal must be
+ * a pointer to an integer which is to receive the option
+ * value.
+ * rgerhards, 2007-07-15
+ */
+rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
+{
+	int iOption;
+	rsRetVal iRet = RS_RET_OK;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pVal != NULL);
+
+	if((iOption = doParseOnOffOption(pp)) == -1)
+		return RS_RET_ERR;	/* nothing left to do */
+	
+	if(pSetHdlr == NULL) {
+		/* we should set value directly to var */
+		*((int*)pVal) = iOption;
+	} else {
+		/* we set value via a set function */
+		pSetHdlr(pVal, iOption);
+	}
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+	return iRet;
+}
+
+
+/* --------------- END functions for handling canned syntaxes --------------- */
 
 /* destructor for cslCmdHdlr
  */

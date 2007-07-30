@@ -149,7 +149,6 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
-#include <pwd.h>
 #include <grp.h>
 
 #include <sys/syslog.h>
@@ -213,6 +212,7 @@
 #include "msg.h"
 #include "modules.h"
 #include "tcpsyslog.h"
+#include "cfsysline.h"
 #include "omshell.h"
 #include "omusrmsg.h"
 #include "ommysql.h"
@@ -3432,25 +3432,6 @@ static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 }
 
 
-/* skip over whitespace in a standard C string. The
- * provided pointer is advanced to the first non-whitespace
- * charater or the \0 byte, if there is none. It is never
- * moved past the \0.
- */
-static void skipWhiteSpace(uchar **pp)
-{
-	register uchar *p;
-
-	assert(pp != NULL);
-	assert(*pp != NULL);
-
-	p = *pp;
-	while(*p && isspace((int) *p))
-		++p;
-	*pp = p;
-}
-
-
 /* Parse and interpret a $DynaFileCacheSize line.
  * Parameter **pp has a pointer to the current config line.
  * On exit, it will be updated to the processed position.
@@ -3500,61 +3481,6 @@ static void doDynaFileCacheSizeLine(uchar **pp)
 	*pp = p;
 }
 
-
-/* Parse and interpret an on/off inside a config file line. This is most
- * often used for boolean options, but of course it may also be used
- * for other things. The passed-in pointer is updated to point to
- * the first unparsed character on exit. Function emits error messages
- * if the value is neither on or off. It returns 0 if the option is off,
- * 1 if it is on and another value if there was an error.
- * rgerhards, 2007-07-15
- */
-static int doParseOnOffOption(uchar **pp)
-{
-	uchar *pOptStart;
-	uchar szOpt[32];
-
-	assert(pp != NULL);
-	assert(*pp != NULL);
-
-	pOptStart = *pp;
-	skipWhiteSpace(pp); /* skip over any whitespace */
-
-	if(getSubString(pp, (char*) szOpt, sizeof(szOpt) / sizeof(uchar), ' ')  != 0) {
-		logerror("Invalid $-configline - could not extract on/off option");
-		return -1;
-	}
-	
-	if(!strcmp((char*)szOpt, "on")) {
-		return 1;
-	} else if(!strcmp((char*)szOpt, "off")) {
-		return 0;
-	} else {
-		logerrorSz("Option value must be on or off, but is '%s'", (char*)pOptStart);
-		return -1;
-	}
-}
-
-
-/* Parse and process an binary cofig option. pVal must be
- * a pointer to an integer which is to receive the option
- * value.
- * rgerhards, 2007-07-15
- */
-static void doBinaryOptionLine(uchar **pp, int *pVal)
-{
-	int iOption;
-
-	assert(pp != NULL);
-	assert(*pp != NULL);
-	assert(pVal != NULL);
-
-	if((iOption = doParseOnOffOption(pp)) == -1)
-		return;	/* nothing left to do */
-	
-	*pVal = iOption;
-	skipWhiteSpace(pp); /* skip over any whitespace */
-}
 
 
 /* process a $ModLoad config line.
@@ -3613,38 +3539,6 @@ static void doGetGID(uchar **pp, gid_t *pGid)
 	} else {
 		*pGid = pgBuf->gr_gid;
 		dprintf("gid %d obtained for group '%s'\n", *pGid, szName);
-	}
-
-	skipWhiteSpace(pp); /* skip over any whitespace */
-}
-
-
-/* extract a username and return its uid.
- * rgerhards, 2007-07-17
- */
-static void doGetUID(uchar **pp, uid_t *pUid)
-{
-	struct passwd *ppwBuf;
-	struct passwd pwBuf;
-	uchar szName[256];
-	char stringBuf[2048];	/* I hope this is large enough... */
-
-	assert(pp != NULL);
-	assert(*pp != NULL);
-	assert(pUid != NULL);
-
-	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
-		logerror("could not extract user name");
-		return;
-	}
-
-	getpwnam_r((char*)szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
-
-	if(ppwBuf == NULL) {
-		logerrorSz("ID for user '%s' could not be found or error", (char*)szName);
-	} else {
-		*pUid = ppwBuf->pw_uid;
-		dprintf("uid %d obtained for user '%s'\n", *pUid, szName);
 	}
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
@@ -3835,31 +3729,31 @@ void cfsysline(uchar *p)
 	} else if(!strcasecmp((char*) szCmd, "umask")) { 
 		doFileCreateModeUmaskLine(&p, DIR_UMASK);
 	} else if(!strcasecmp((char*) szCmd, "dirowner")) { 
-		doGetUID(&p, &dirUID);
+		doGetUID(&p, NULL, &dirUID);
 	} else if(!strcasecmp((char*) szCmd, "dirgroup")) { 
 		doGetGID(&p, &dirGID);
 	} else if(!strcasecmp((char*) szCmd, "fileowner")) { 
-		doGetUID(&p, &fileUID);
+		doGetUID(&p, NULL, &fileUID);
 	} else if(!strcasecmp((char*) szCmd, "filegroup")) { 
 		doGetGID(&p, &fileGID);
 	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
 		doDynaFileCacheSizeLine(&p);
 	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
-		doBinaryOptionLine(&p, &bReduceRepeatMsgs);
+		doBinaryOptionLine(&p, NULL, &bReduceRepeatMsgs);
 	} else if(!strcasecmp((char*) szCmd, "controlcharacterescapeprefix")) { 
 		doControlCharEscPrefix(&p);
 	} else if(!strcasecmp((char*) szCmd, "escapecontrolcharactersonreceive")) { 
-		doBinaryOptionLine(&p, &bEscapeCCOnRcv);
+		doBinaryOptionLine(&p, NULL, &bEscapeCCOnRcv);
 	} else if(!strcasecmp((char*) szCmd, "dropmsgswithmaliciousdnsptrrecords")) { 
-		doBinaryOptionLine(&p, &bDropMalPTRMsgs);
+		doBinaryOptionLine(&p, NULL, &bDropMalPTRMsgs);
 	} else if(!strcasecmp((char*) szCmd, "createdirs")) { 
-		doBinaryOptionLine(&p, &bCreateDirs);
+		doBinaryOptionLine(&p, NULL, &bCreateDirs);
 	} else if(!strcasecmp((char*) szCmd, "debugprinttemplatelist")) { 
-		doBinaryOptionLine(&p, &bDebugPrintTemplateList);
+		doBinaryOptionLine(&p, NULL, &bDebugPrintTemplateList);
 	} else if(!strcasecmp((char*) szCmd, "failonchownfailure")) { 
-		doBinaryOptionLine(&p, &bFailOnChown);
+		doBinaryOptionLine(&p, NULL, &bFailOnChown);
 	} else if(!strcasecmp((char*) szCmd, "droptrailinglfonreception")) { 
-		doBinaryOptionLine(&p, &bDropTrailingLF);
+		doBinaryOptionLine(&p, NULL, &bDropTrailingLF);
 	} else if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
 		resetConfigVariables();
 	} else if(!strcasecmp((char*) szCmd, "modload")) { 
