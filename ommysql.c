@@ -376,6 +376,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		 * We specify that the SQL option must be present in the template.
 		 * This is for your own protection (prevent sql injection).
 		 */
+		if(*p != ';')
+			--p;	/* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
+				 *       is clean enough for the time being -- rgerhards, 2007-07-30
+			         */
 		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdSQLFmt"))
 		   != RS_RET_OK)
 			return iRet;
