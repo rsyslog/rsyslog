@@ -5,6 +5,8 @@ Version 1.17.6 (rgerhards), 2007-07-3?
   templates
 - fixed a mem leak in OMSRdestruct - freeing the object itself was
   forgotten - thanks to varmojfekoj for the patch
+- fixed a memory leak in syslogd/init() that happend when the config
+  file could not be read - thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
 - continued to work on modularization

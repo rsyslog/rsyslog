@@ -4038,9 +4038,9 @@ static void init()
 		cfline("*.ERR\t" _PATH_CONSOLE, nextp);
 		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
 		cfline("*.PANIC\t*", nextp->f_next);
-		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
+		nextp->f_next->f_next = (selector_t *)calloc(1, sizeof(selector_t));
 		snprintf(cbuf,sizeof(cbuf), "*.*\t%s", ttyname(0));
-		cfline(cbuf, nextp->f_next);
+		cfline(cbuf, nextp->f_next->f_next);
 		Initialized = 1;
 	}
 	else { /* we should consider moving this into a separate function, its lengthy... */
