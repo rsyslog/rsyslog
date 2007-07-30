@@ -4639,17 +4639,24 @@ rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringReq
 
 	/* check if we can obtain the template pointers - TODO: move to separat function? */
 	f->iNumTpls = OMSRgetEntryCount(pOMSR);
-	/* we first need to create the template pointer array */
-	if((f->ppTpl = calloc(1, sizeof(struct template *))) == NULL) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-		glblHadMemShortage = 1;
-		goto finalize_it;
-	}
-	/* and now the array for doAction() message pointers */
-	if((f->ppMsgs = calloc(1, sizeof(uchar *))) == NULL) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-		glblHadMemShortage = 1;
-		goto finalize_it;
+	assert(f->iNumTpls >= 0); /* only debug check because this "can not happen" */
+	/* please note: iNumTpls may validly be zero. This is the case if the module
+	 * does not request any templates. This sounds unlikely, but an actual example is
+	 * the discard action, which does not require a string. -- rgerhards, 2007-07-30
+	 */
+	if(f->iNumTpls > 0) {
+		/* we first need to create the template pointer array */
+		if((f->ppTpl = calloc(f->iNumTpls, sizeof(struct template *))) == NULL) {
+			iRet = RS_RET_OUT_OF_MEMORY;
+			glblHadMemShortage = 1;
+			goto finalize_it;
+		}
+		/* and now the array for doAction() message pointers */
+		if((f->ppMsgs = calloc(f->iNumTpls, sizeof(uchar *))) == NULL) {
+			iRet = RS_RET_OUT_OF_MEMORY;
+			glblHadMemShortage = 1;
+			goto finalize_it;
+		}
 	}
 	
 	for(i = 0 ; i < f->iNumTpls ; ++i) {
@@ -4668,7 +4675,6 @@ rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringReq
 			goto finalize_it;
 		}
 		/* check required template options */
-dprintf("iTplOpts %d, check %d\n", iTplOpts, OMSR_RQD_TPL_OPT_SQL);
 		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
 		   && (f->ppTpl[i]->optFormatForSQL == 0)) {
 			errno = 0;
@@ -4717,6 +4723,18 @@ finalize_it:
  * assignment of format definitions to a file. So it is not (yet) 100% transparent.
  * Eventually, we can overcome this limitation by prefixing the actual action indicator
  * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
+ *
+ * IMPORTANT: if the function returns RS_RET_OK, the selector in question (f) is added
+ * to the list of active selectors. If it returns anything else, the selector is
+ * DISCARDED. Do NOT use f->bEnabled to disable an action when there is **no chance of
+ * recovering** it. bEnabled should only be set to false it the module requests that and
+ * sees chance for recovery. As of this writing, recovery mode is not yet implemented.
+ * But a good example is the omfwd module, which may not be able to dns-resolve the
+ * target. It could start with a disabled action, because the situation may later
+ * be recovered by another dns lookup. But if the situation is not recoverable, e.g.
+ * syntax error in condig syntax, simply return some iRet error status. Disabling in
+ * such a case would just cause the selector to be never executed, but it would still
+ * remain in memory, which would not be a good thing. -- rgerhards, 2007-07-30
  */
 static rsRetVal cfline(char *line, register selector_t *f)
 {
@@ -4776,19 +4794,22 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		iRet = pMod->mod.om.parseSelectorAct(&p, &pModData, &pOMSR);
 		dprintf("trying selector action for %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_OK) {
-			addAction(f, pMod, pModData, pOMSR);
-			dprintf("Module %s processed this config line.\n",
-				modGetName(pMod));
 			f->pMod = pMod;
 			f->pModData = pModData;
-			/* now check if the module is compatible with select features */
-			if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-				f->f_ReduceRepeated = bReduceRepeatMsgs;
-			else {
-				dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
-				f->f_ReduceRepeated = 0;
+			
+			if((iRet = addAction(f, pMod, pModData, pOMSR)) == RS_RET_OK) {
+				dprintf("Module %s processed this config line.\n",
+					modGetName(pMod));
+				
+				/* now check if the module is compatible with select features */
+				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
+					f->f_ReduceRepeated = bReduceRepeatMsgs;
+				else {
+					dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
+					f->f_ReduceRepeated = 0;
+				}
+				f->bEnabled = 1; /* action is enabled */
 			}
-			f->bEnabled = 1; /* action is enabled */
 			break;
 		}
 		else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {

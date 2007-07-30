@@ -7,6 +7,10 @@ Version 1.17.6 (rgerhards), 2007-07-3?
   forgotten - thanks to varmojfekoj for the patch
 - fixed a memory leak in syslogd/init() that happend when the config
   file could not be read - thanks to varmojfekoj for the patch
+- fixed insufficient memory allocation in addAction() and its helpers.
+  The initial fix and idea was developed by mildew, I fine-tuned
+  it a bit. Thanks a lot for the fix, I'd probably had pulled out my
+  hair to find the bug...
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
 - continued to work on modularization
