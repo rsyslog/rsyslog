@@ -49,6 +49,7 @@
 #include "template.h"
 #include "outchannel.h"
 #include "omfile.h"
+#include "cfsysline.h"
 #include "module-template.h"
 
 /* internal structures
@@ -117,6 +118,37 @@ CODESTARTdbgPrintInstInfo
 			printf(" (unused)");
 	}
 ENDdbgPrintInstInfo
+
+
+/* set the dynaFile cache size. Does some limit checking.
+ * rgerhards, 2007-07-31
+ */
+rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
+{
+	DEFiRet;
+	uchar errMsg[128];	/* for dynamic error messages */
+
+	if(iNewVal < 1) {
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
+		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
+		errno = 0;
+		logerror((char*) errMsg);
+		iRet = RS_RET_VAL_OUT_OF_RANGE;
+		iNewVal = 1;
+	} else if(iNewVal > 10000) {
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
+		         "DynaFileCacheSize maximum is 10,000 (%d given), changed to 10,000.", iNewVal);
+		errno = 0;
+		logerror((char*) errMsg);
+		iRet = RS_RET_VAL_OUT_OF_RANGE;
+		iNewVal = 10000;
+	}
+
+	iDynaFileCacheSize = iNewVal;
+	dprintf("DynaFileCacheSize changed to %d.\n", iNewVal);
+
+	return iRet;
+}
 
 
 /* Helper to cfline(). Parses a output channel name up until the first
@@ -716,6 +748,11 @@ BEGINmodInit(File)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", eCmdHdlrUID, NULL, &dirUID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", eCmdHdlrGID, NULL, &dirGID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"fileowner", eCmdHdlrUID, NULL, &fileUID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filegroup", eCmdHdlrGID, NULL, &fileGID));
 ENDmodInit
 
 /*

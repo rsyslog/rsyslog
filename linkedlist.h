@@ -52,10 +52,11 @@ typedef struct linkedList_s linkedList_t;
 typedef llElt_t* linkedListCookie_t;	/* this type avoids exposing internals and keeps us flexible */
 
 /* prototypes */
-rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal (*pKeyDestructor)(void*));
+rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal (*pKeyDestructor)(void*), int pCmpOp());
 rsRetVal llDestroy(linkedList_t *pThis);
 rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppUsr);
 rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData);
 rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData);
+rsRetVal llGetKey(llElt_t *pThis, void **ppData);
 
 #endif /* #ifndef LINKEDLIST_H_INCLUDED */

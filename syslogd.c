@@ -3431,37 +3431,6 @@ static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 }
 
 
-/* set the dynaFile cache size. Does some limit checking.
- * rgerhards, 2007-07-31
- */
-static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
-{
-	DEFiRet;
-	uchar errMsg[128];	/* for dynamic error messages */
-
-	if(iNewVal < 1) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
-		errno = 0;
-		logerror((char*) errMsg);
-		iRet = RS_RET_VAL_OUT_OF_RANGE;
-		iNewVal = 1;
-	} else if(iNewVal > 10000) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "DynaFileCacheSize maximum is 10,000 (%d given), changed to 10,000.", iNewVal);
-		errno = 0;
-		logerror((char*) errMsg);
-		iRet = RS_RET_VAL_OUT_OF_RANGE;
-		iNewVal = 10000;
-	}
-
-	iDynaFileCacheSize = iNewVal;
-	dprintf("DynaFileCacheSize changed to %d.\n", iNewVal);
-
-	return iRet;
-}
-
-
 /* process a $ModLoad config line.
  * As of now, it is a dummy, that will later evolve into the
  * loader for plug-ins.
@@ -3770,6 +3739,8 @@ static void dbgPrintInitInfo(void)
 		tplPrintList();
 	modPrintList();
 	ochPrintList();
+
+	dbgPrintCfSysLineHandlers();
 
 #ifdef	SYSLOG_INET
 	/* now the allowedSender lists: */

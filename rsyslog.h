@@ -34,6 +34,7 @@
 */
 enum rsRetVal_				/** return value. All methods return this if not specified otherwise */
 {
+	RS_RET_NOT_IMPLEMENTED = -7,	/**< implementation is missing (probably internal error or lazyness ;)) */
 	RS_RET_OUT_OF_MEMORY = -6,	/**< memory allocation failed */
 	RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50,/**< the caller provided a buffer, but the called function sees the size of this buffer is too small - operation not carried out */
 	RS_RET_TRUE = -1,
@@ -74,6 +75,8 @@ typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
  * the function finalizer always "finalize_it".
  */
 #define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
+/* macro below is to be used if we need our own handling, eg for cleanup */
+#define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
 #define DEFiRet rsRetVal iRet = RS_RET_OK
 #define ABORT_FINALIZE(errCode) \
 	iRet = errCode;\

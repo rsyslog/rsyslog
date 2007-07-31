@@ -26,6 +26,7 @@
 
 /* prototypes */
 rsRetVal modInitFile(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()));
+rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal); // TODO: remove me after testing!
 
 #endif /* #ifndef OMFILE_H_INCLUDED */
 /*

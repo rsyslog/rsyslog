@@ -428,7 +428,7 @@ static rsRetVal cslcDestruct(void *pData)
 
 	assert(pThis != NULL);
 
-	llDestroy(pThis->pllCmdHdlrs);
+	llDestroy(&pThis->llCmdHdlrs);
 	free(pThis);
 	
 	return RS_RET_OK;
@@ -447,10 +447,33 @@ rsRetVal cslcConstruct(cslCmd_t **ppThis)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
-	CHKiRet(llInit(pThis->pllCmdHdlrs, cslchDestruct, NULL));
+	CHKiRet(llInit(&pThis->llCmdHdlrs, cslchDestruct, NULL, strcmp));
 
 finalize_it:
 	*ppThis = pThis;
+	return iRet;
+}
+
+
+/* add a handler entry to a known command
+ */
+rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
+{
+	DEFiRet;
+	cslCmdHdlr_t *pCmdHdlr = NULL;
+
+	assert(pThis != NULL);
+
+	CHKiRet(cslchConstruct(&pCmdHdlr));
+	CHKiRet(cslchSetEntry(pCmdHdlr, eType, pHdlr, pData));
+	CHKiRet(llAppend(&pThis->llCmdHdlrs, NULL, pCmdHdlr));
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pHdlr != NULL)
+			cslchDestruct(pCmdHdlr);
+	}
+
 	return iRet;
 }
 
@@ -462,7 +485,7 @@ rsRetVal cfsyslineInit(void)
 {
 	DEFiRet;
 
-	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct));
+	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct, strcmp));
 
 finalize_it:
 	return iRet;
@@ -477,10 +500,59 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHd
 	DEFiRet;
 
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void**) &pThis);
-dprintf("regCfSysLineHdlr returned %d\n", iRet);
+	if(iRet == RS_RET_NOT_FOUND) {
+		/* new command */
+		CHKiRet(cslcConstruct(&pThis));
+		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData)) {
+			cslcDestruct(pThis);
+			goto finalize_it;
+		}
+		/* important: add to list, AFTER everything else is OK. Else
+		 * we mess up things in the error case.
+		 */
+		CHKiRet_Hdlr(llAppend(&llCmdList, pCmdName, (void*) pThis)) {
+			cslcDestruct(pThis);
+			goto finalize_it;
+		}
+	} else {
+		/* command already exists, are we allowed to chain? */
+		iRet = RS_RET_NOT_IMPLEMENTED; // TODO: implement it!
+		goto finalize_it;
+	}
 
+finalize_it:
 	return iRet;
 }
+
+
+/* debug print the command handler structure
+ */
+void dbgPrintCfSysLineHandlers(void)
+{
+	DEFiRet;
+
+	cslCmd_t *pCmd;
+	cslCmdHdlr_t *pCmdHdlr;
+	linkedListCookie_t llCookieCmd;
+	linkedListCookie_t llCookieCmdHdlr;
+	uchar *pKey;
+
+	printf("\nSytem Line Configuration Commands:\n");
+	llCookieCmd = NULL;
+	while((iRet = llGetNextElt(&llCmdList, &llCookieCmd, (void**)&pCmd)) == RS_RET_OK) {
+		llGetKey(llCookieCmd, (void**) &pKey); /* TODO: using the cookie is NOT clean! */
+		printf("\tCommand '%s':\n", pKey);
+		llCookieCmdHdlr = NULL;
+		while((iRet = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void**)&pCmdHdlr)) == RS_RET_OK) {
+			printf("\t\ttype : %d\n", pCmdHdlr->eType);
+			printf("\t\tpData: 0x%x\n", (unsigned) pCmdHdlr->pData);
+			printf("\t\tHdlr : 0x%x\n", (unsigned) pCmdHdlr->cslCmdHdlr);
+		}
+	}
+	printf("\n");
+
+}
+
 /*
  * vi:set ai:
  */

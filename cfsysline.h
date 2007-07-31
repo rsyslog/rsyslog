@@ -30,7 +30,7 @@ typedef enum cslCmdHdlrType {
 	eCmdHdlrInvalid = 0,		/* invalid handler type - indicates a coding error */
 	eCmdHdlrCustomHandler,		/* custom handler, just call handler function */
 	eCmdHdlrUID,
-	eCmdHdlrGUID,
+	eCmdHdlrGID,
 	eCmdHdlrBinary,
 	eCmdHdlrFileCreateMode,
 	eCmdHdlrInt,
@@ -54,7 +54,7 @@ typedef struct cslCmdHdlr_s cslCmdHdlr_t;
  * The short name is cslc (Configfile SysLine Command)
  */
 struct cslCmd_s { /* config file sysline parse entry */
-	linkedList_t *pllCmdHdlrs;	/* linked list of command handlers */
+	linkedList_t llCmdHdlrs;	/* linked list of command handlers */
 };
 typedef struct cslCmd_s cslCmd_t;
 
@@ -66,6 +66,7 @@ rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine);
 rsRetVal cslcConstruct(cslCmd_t **ppThis);
 rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData);
 rsRetVal cfsyslineInit(void);
+void dbgPrintCfSysLineHandlers(void);
 
 /* the next ones go away later */
 rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal);

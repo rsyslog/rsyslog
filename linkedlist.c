@@ -42,14 +42,14 @@
 /* Initialize an existing linkedList_t structure
  * pKey destructor may be zero to take care of non-keyed lists.
  */
-rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal (*pKeyDestructor)(void*))
+rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal (*pKeyDestructor)(void*), int pCmpOp())
 {
 	assert(pThis != NULL);
 	assert(pEltDestructor != NULL);
 
 	pThis->pEltDestruct = pEltDestructor;
 	pThis->pKeyDestruct = pKeyDestructor;
-	pThis->cmpOp = NULL;
+	pThis->cmpOp = pCmpOp;
 	pThis->pKey = NULL;
 	pThis->iNumElts = 0;
 	pThis->pRoot = NULL;
@@ -110,13 +110,25 @@ rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppU
 	if(pElt == NULL) {
 		iRet = RS_RET_END_OF_LINKEDLIST;
 	} else {
-		pElt = pThis->pRoot;
 		*ppUsr = pElt->pData;
 	}
 
 	*ppElt = pElt;
 
 	return iRet;
+}
+
+
+/* return the key of an Elt
+ */
+rsRetVal llGetKey(llElt_t *pThis, void **ppData)
+{
+	assert(pThis != NULL);
+	assert(ppData != NULL);
+
+	*ppData = pThis->pKey;
+
+	return RS_RET_OK;
 }
 
 
@@ -148,6 +160,7 @@ finalize_it:
 rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData)
 {
 	llElt_t *pElt;
+llElt_t *pEltPrev = pThis->pLast;
 	DEFiRet;
 	
 	CHKiRet(llEltConstruct(&pElt, pKey, pData));
@@ -159,6 +172,7 @@ rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData)
 		pThis->pLast->pNext = pElt;
 	}
 	pThis->pLast = pElt;
+printf("llAppend pThis 0x%x, pLastPrev 0x%x, pLast 0x%x, pElt 0x%x\n", pThis, pEltPrev, pThis->pLast, pElt);
 
 finalize_it:
 	return iRet;
