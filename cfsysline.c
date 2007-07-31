@@ -80,6 +80,24 @@ finalize_it:
 }
 
 
+/* Parse a number from the configuration line. This is more or less
+ * a shell to call the custom handler.
+ * rgerhards, 2007-07-31
+ */
+rsRetVal doCustomHdlr(uchar **pp, rsRetVal (*pSetHdlr)(uchar**, void*), void *pVal)
+{
+	DEFiRet;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	CHKiRet(pSetHdlr(pp, pVal));
+
+finalize_it:
+	return iRet;
+}
+
+
 /* Parse a number from the configuration line.
  * rgerhards, 2007-07-31
  */

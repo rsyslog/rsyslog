@@ -3467,8 +3467,9 @@ static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNe
  * loader for plug-ins.
  * rgerhards, 2007-07-21
  */
-static void doModLoad(uchar **pp)
+static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 {
+	DEFiRet;
 	uchar szName[512];
 
 	assert(pp != NULL);
@@ -3476,7 +3477,7 @@ static void doModLoad(uchar **pp)
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
 		logerror("could not extract group name");
-		return;
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	dprintf("Requested to load module '%s'\n", szName);
@@ -3489,6 +3490,9 @@ static void doModLoad(uchar **pp)
 	}
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
+
+finalize_it:
+	return iRet;
 }
 
 /* parse and interpret a $-config line that starts with
@@ -3499,15 +3503,18 @@ static void doModLoad(uchar **pp)
  * rgerhards 2005-06-21: previously only for templates, now 
  *    generalized.
  */
-static rsRetVal doNameLine(uchar **pp, enum eDirective eDir)
+static rsRetVal doNameLine(uchar **pp, void* pVal)
 {
 	DEFiRet;
 	uchar *p;
+	enum eDirective eDir;
 	char szName[128];
 
 	assert(pp != NULL);
 	p = *pp;
 	assert(p != NULL);
+
+	eDir = (enum eDirective) pVal;	/* this time, it actually is NOT a pointer! */
 
 	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
 		char errMsg[128];
@@ -3585,11 +3592,11 @@ rsRetVal cfsysline(uchar *p)
 
 	/* check the command and carry out processing */
 	if(!strcasecmp((char*) szCmd, "template")) { 
-		doNameLine(&p, DIR_TEMPLATE);
+		CHKiRet(doCustomHdlr(&p, doNameLine, (void*) DIR_TEMPLATE));
 	} else if(!strcasecmp((char*) szCmd, "outchannel")) { 
-		doNameLine(&p, DIR_OUTCHANNEL);
+		CHKiRet(doCustomHdlr(&p, doNameLine, (void*) DIR_OUTCHANNEL));
 	} else if(!strcasecmp((char*) szCmd, "allowedsender")) { 
-		doNameLine(&p, DIR_ALLOWEDSENDER);
+		CHKiRet(doCustomHdlr(&p, doNameLine, (void*) DIR_ALLOWEDSENDER));
 	} else if(!strcasecmp((char*) szCmd, "dircreatemode")) { 
 		CHKiRet(doFileCreateMode(&p, NULL, &fDirCreateMode));
 	} else if(!strcasecmp((char*) szCmd, "filecreatemode")) { 
@@ -3623,9 +3630,14 @@ rsRetVal cfsysline(uchar *p)
 	} else if(!strcasecmp((char*) szCmd, "droptrailinglfonreception")) { 
 		CHKiRet(doBinaryOptionLine(&p, NULL, &bDropTrailingLF));
 	} else if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
-		resetConfigVariables();
+		/* TODO: the compiler warning for the line below is OK for the time being. In the
+		 * longer term, we should create a special parsing function which
+		 * will also check if there are any spurios characters.
+		 * rgerhards, 2007-07-31
+		 */
+		CHKiRet(doCustomHdlr(&p , resetConfigVariables, NULL));
 	} else if(!strcasecmp((char*) szCmd, "modload")) { 
-		doModLoad(&p);
+		CHKiRet(doCustomHdlr(&p, doModLoad, NULL));
 	} else { /* invalid command! */
 		char err[100];
 		snprintf(err, sizeof(err)/sizeof(char),
@@ -4088,7 +4100,6 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pOMSR != NULL);
-dprintf("cflineParsetTemplateName opts: %d\n", iTplOpts);
 
 	p =*pp;
 	/* a template must follow - search it and complain, if not found
