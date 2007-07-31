@@ -43,6 +43,43 @@ cslCmd_t *pCmdListLast = NULL;
 
 /* --------------- START functions for handling canned syntaxes --------------- */
 
+
+/* parse a character from the config line
+ * added 2007-07-17 by rgerhards
+ * TODO: enhance this function to handle different classes of characters
+ * HINT: check if char is ' and, if so, use 'c' where c may also be things
+ * like \t etc.
+ */
+//static void doControlCharEscPrefix(uchar **pp)
+rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+{
+	rsRetVal iRet = RS_RET_OK;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+
+	/* if we are not at a '\0', we have our new char - no validity checks here... */
+	if(**pp == '\0') {
+		logerror("No character available");
+		iRet = RS_RET_NOT_FOUND;
+	} else {
+		if(pSetHdlr == NULL) {
+			/* we should set value directly to var */
+			*((uchar*)pVal) = **pp;
+		} else {
+			/* we set value via a set function */
+			CHKiRet(pSetHdlr(pVal, **pp));
+		}
+		++(*pp); /* eat processed char */
+	}
+
+finalize_it:
+	return iRet;
+}
+
+
 /* Parse and interpet a $FileCreateMode and $umask line. This function
  * pulls the creation mode and, if successful, stores it
  * into the global variable so that the rest of rsyslogd
@@ -96,31 +133,6 @@ rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 		/* we set value via a set function */
 		CHKiRet(pSetHdlr(pVal, iVal));
 	}
-
-#if 0
-	switch(eDir) {
-		case DIR_DIRCREATEMODE:
-			fDirCreateMode = iMode;
-			dprintf("DirCreateMode set to 0%o.\n", iMode);
-			break;
-		case DIR_FILECREATEMODE:
-			fCreateMode = iMode;
-			dprintf("FileCreateMode set to 0%o.\n", iMode);
-			break;
-		case DIR_UMASK:
-			umask(iMode);
-			dprintf("umask set to 0%3.3o.\n", iMode);
-			break;
-		default:/* we do this to avoid compiler warning - not all
-			 * enum values call this function, so an incomplete list
-			 * is quite ok (but then we should not run into this code,
-			 * so at least we log a debug warning).
-			 */
-			dprintf("INTERNAL ERROR: doFileCreateModeUmaskLine() called with invalid eDir %d.\n",
-				eDir);
-			break;
-	}
-#endif
 
 	p += 4;	/* eat the octal number */
 	*pp = p;

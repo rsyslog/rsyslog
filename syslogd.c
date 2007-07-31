@@ -3511,28 +3511,6 @@ static void doModLoad(uchar **pp)
 	skipWhiteSpace(pp); /* skip over any whitespace */
 }
 
-
-/* parse the control character escape prefix and store it.
- * added 2007-07-17 by rgerhards
- */
-static void doControlCharEscPrefix(uchar **pp)
-{
-	assert(pp != NULL);
-	assert(*pp != NULL);
-
-	skipWhiteSpace(pp); /* skip over any whitespace */
-
-	/* if we are not at a '\0', we have our new char - no validity checks here... */
-	if(**pp == '\0') {
-		logerror("No Control Character Prefix Character given - ignoring directive");
-	} else {
-		cCCEscapeChar = **pp;
-		++(*pp); /* eat processed char */
-	}
-
-	skipWhiteSpace(pp); /* skip over any whitespace */
-}
-
 /* parse and interpret a $-config line that starts with
  * a name (this is common code). It is parsed to the name
  * and then the proper sub-function is called to handle
@@ -3647,7 +3625,7 @@ void cfsysline(uchar *p)
 	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
 		doBinaryOptionLine(&p, NULL, &bReduceRepeatMsgs);
 	} else if(!strcasecmp((char*) szCmd, "controlcharacterescapeprefix")) { 
-		doControlCharEscPrefix(&p);
+		doGetChar(&p, NULL, &cCCEscapeChar);
 	} else if(!strcasecmp((char*) szCmd, "escapecontrolcharactersonreceive")) { 
 		doBinaryOptionLine(&p, NULL, &bEscapeCCOnRcv);
 	} else if(!strcasecmp((char*) szCmd, "dropmsgswithmaliciousdnsptrrecords")) { 
