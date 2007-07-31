@@ -412,10 +412,20 @@ rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
  * now come the handlers for cslCmd_t
  * ---------------------------------------------------------------------- */
 
+/* destructor for a cslCmd list key (a string as of now)
+ */
+static rsRetVal cslcKeyDestruct(void *pData)
+{
+	free(pData); /* we do not need to cast as all we do is free it anyway... */
+	return RS_RET_OK;
+}
+
 /* destructor for cslCmd
  */
-rsRetVal cslcDestruct(cslCmd_t *pThis)
+static rsRetVal cslcDestruct(void *pData)
 {
+	cslCmd_t *pThis = (cslCmd_t*) pData;
+
 	assert(pThis != NULL);
 
 	llDestroy(pThis->pllCmdHdlrs);
@@ -441,6 +451,34 @@ rsRetVal cslcConstruct(cslCmd_t **ppThis)
 
 finalize_it:
 	*ppThis = pThis;
+	return iRet;
+}
+
+
+/* function that initializes this module here. This is primarily a hook
+ * for syslogd.
+ */
+rsRetVal cfsyslineInit(void)
+{
+	DEFiRet;
+
+	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct));
+
+finalize_it:
+	return iRet;
+}
+
+
+/* function that registers cfsysline handlers.
+ */
+rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
+{
+	cslCmd_t *pThis;
+	DEFiRet;
+
+	iRet = llFind(&llCmdList, (void *) pCmdName, (void**) &pThis);
+dprintf("regCfSysLineHdlr returned %d\n", iRet);
+
 	return iRet;
 }
 /*

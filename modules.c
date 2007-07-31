@@ -36,10 +36,12 @@
 #include <sys/file.h>
 
 #include "syslogd.h"
+#include "cfsysline.h"
 #include "modules.h"
 
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
 static modInfo_t *pLoadedModulesLast = NULL; /* tail-pointer */
+static int bCfsyslineInitialized = 0;
 
 
 /* Construct a new module object
@@ -84,8 +86,7 @@ rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		return RS_RET_PARAM_ERROR;
 
 	if(!strcmp((char*) name, "regCfSysLineHdlr")) {
-		//*pEtryPoint = regCfSysLineHdlr;
-		*pEtryPoint = queryHostEtryPt;
+		*pEtryPoint = regCfSysLineHdlr;
 	}
 
 	if(iRet == RS_RET_OK)
@@ -166,10 +167,16 @@ modInfo_t *omodGetNxt(modInfo_t *pThis)
  */
 rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *name)
 {
+	DEFiRet;
 	modInfo_t *pNew;
-	rsRetVal iRet;
 
 	assert(modInit != NULL);
+
+	if(bCfsyslineInitialized == 0) {
+		/* we need to initialize the cfsysline subsystem first */
+		CHKiRet(cfsyslineInit());
+		bCfsyslineInitialized = 1;
+	}
 
 	if((iRet = moduleConstruct(&pNew)) != RS_RET_OK)
 		return iRet;
@@ -228,7 +235,8 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 	/* we initialized the structure, now let's add it to the linked list of modules */
 	addModToList(pNew);
 
-	return RS_RET_OK;
+finalize_it:
+	return iRet;
 }
 
 /* Print loaded modules. This is more or less a 

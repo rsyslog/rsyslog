@@ -56,5 +56,6 @@ rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal
 rsRetVal llDestroy(linkedList_t *pThis);
 rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppUsr);
 rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData);
+rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData);
 
 #endif /* #ifndef LINKEDLIST_H_INCLUDED */

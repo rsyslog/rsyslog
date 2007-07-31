@@ -64,6 +64,8 @@ rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis);
 rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData);
 rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine);
 rsRetVal cslcConstruct(cslCmd_t **ppThis);
+rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData);
+rsRetVal cfsyslineInit(void);
 
 /* the next ones go away later */
 rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal);
