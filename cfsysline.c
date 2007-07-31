@@ -399,11 +399,43 @@ rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pH
  */
 rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 {
+	DEFiRet;
+	rsRetVal (*pHdlr)() = NULL;
 	assert(pThis != NULL);
 	assert(ppConfLine != NULL);
 
-	// TODO: implement
+	switch(pThis->eType) {
+	case eCmdHdlrCustomHandler:
+		pHdlr = doCustomHdlr;
+		break;
+	case eCmdHdlrUID:
+		pHdlr = doGetUID;
+		break;
+	case eCmdHdlrGID:
+		pHdlr = doGetGID;
+		break;
+	case eCmdHdlrBinary:
+		pHdlr = doBinaryOptionLine;
+		break;
+	case eCmdHdlrFileCreateMode:
+		pHdlr = doFileCreateMode;
+		break;
+	case eCmdHdlrInt:
+		pHdlr = doGetInt;
+		break;
+	case eCmdHdlrFileGetChar:
+		pHdlr = doGetChar;
+		break;
+	default:
+		iRet = RS_RET_NOT_IMPLEMENTED;
+		goto finalize_it;
+	}
 
+	/* we got a pointer to the handler, so let's call it */
+	assert(pHdlr != NULL);
+	CHKiRet(pHdlr(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
+
+finalize_it:
 	return RS_RET_OK;
 }
 
@@ -447,7 +479,7 @@ rsRetVal cslcConstruct(cslCmd_t **ppThis)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
-	CHKiRet(llInit(&pThis->llCmdHdlrs, cslchDestruct, NULL, strcmp));
+	CHKiRet(llInit(&pThis->llCmdHdlrs, cslchDestruct, NULL, NULL));
 
 finalize_it:
 	*ppThis = pThis;
@@ -485,7 +517,7 @@ rsRetVal cfsyslineInit(void)
 {
 	DEFiRet;
 
-	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct, strcmp));
+	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct, strcasecmp));
 
 finalize_it:
 	return iRet;
@@ -518,6 +550,48 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHd
 		/* command already exists, are we allowed to chain? */
 		iRet = RS_RET_NOT_IMPLEMENTED; // TODO: implement it!
 		goto finalize_it;
+	}
+
+finalize_it:
+	return iRet;
+}
+
+
+/* process a cfsysline command (based on handler structure)
+ * param "p" is a pointer to the command line after the command. Should be
+ * updated.
+ */
+rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
+{
+	DEFiRet;
+	cslCmd_t *pCmd;
+	cslCmdHdlr_t *pCmdHdlr;
+	linkedListCookie_t llCookieCmdHdlr;
+	uchar *pHdlrP; /* the handler's private p (else we could only call one handler) */
+	int bWasOnceOK; /* was the result of an handler at least once RS_RET_OK? */
+	uchar *pOKp = NULL; /* returned conf line pointer when it was OK */
+
+	CHKiRet(llFind(&llCmdList, (void *) pCmdName, (void**) &pCmd));
+	llCookieCmdHdlr = NULL;
+	bWasOnceOK = 0;
+	while((iRet = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void**)&pCmdHdlr)) == RS_RET_OK) {
+		/* for the time being, we ignore errors during handlers. The
+		 * reason is that handlers are independent. An error in one
+		 * handler does not necessarily mean that another one will
+		 * fail, too. Later, we might add a config variable to control
+		 * this behaviour (but I am not sure if that is rally
+		 * necessary). -- rgerhards, 2007-07-31
+		 */
+		pHdlrP = *p;
+		if(cslchCallHdlr(pCmdHdlr, &pHdlrP) == RS_RET_OK) {
+			bWasOnceOK = 1;
+			pOKp = pHdlrP;
+		}
+	}
+
+	if(bWasOnceOK == 1) {
+		*p = pOKp;
+		iRet = RS_RET_OK;
 	}
 
 finalize_it:

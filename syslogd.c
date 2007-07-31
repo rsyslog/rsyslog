@@ -3566,12 +3566,13 @@ rsRetVal cfsysline(uchar *p)
 		CHKiRet(doCustomHdlr(&p, doNameLine, (void*) DIR_OUTCHANNEL));
 	} else if(!strcasecmp((char*) szCmd, "allowedsender")) { 
 		CHKiRet(doCustomHdlr(&p, doNameLine, (void*) DIR_ALLOWEDSENDER));
+	} else if(!strcasecmp((char*) szCmd, "umask")) { 
+		CHKiRet(doFileCreateMode(&p, (void*) setUmask, NULL));
+#if 0
 	} else if(!strcasecmp((char*) szCmd, "dircreatemode")) { 
 		CHKiRet(doFileCreateMode(&p, NULL, &fDirCreateMode));
 	} else if(!strcasecmp((char*) szCmd, "filecreatemode")) { 
 		CHKiRet(doFileCreateMode(&p, NULL, &fCreateMode));
-	} else if(!strcasecmp((char*) szCmd, "umask")) { 
-		CHKiRet(doFileCreateMode(&p, (void*) setUmask, NULL));
 	} else if(!strcasecmp((char*) szCmd, "dirowner")) { 
 		CHKiRet(doGetUID(&p, NULL, &dirUID));
 	} else if(!strcasecmp((char*) szCmd, "dirgroup")) { 
@@ -3582,6 +3583,7 @@ rsRetVal cfsysline(uchar *p)
 		CHKiRet(doGetGID(&p, NULL, &fileGID));
 	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
 		CHKiRet(doGetInt(&p, (void*) setDynaFileCacheSize, NULL));
+#endif
 	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
 		CHKiRet(doBinaryOptionLine(&p, NULL, &bReduceRepeatMsgs));
 	} else if(!strcasecmp((char*) szCmd, "controlcharacterescapeprefix")) { 
@@ -3590,12 +3592,14 @@ rsRetVal cfsysline(uchar *p)
 		CHKiRet(doBinaryOptionLine(&p, NULL, &bEscapeCCOnRcv));
 	} else if(!strcasecmp((char*) szCmd, "dropmsgswithmaliciousdnsptrrecords")) { 
 		CHKiRet(doBinaryOptionLine(&p, NULL, &bDropMalPTRMsgs));
+#if 0
 	} else if(!strcasecmp((char*) szCmd, "createdirs")) { 
 		CHKiRet(doBinaryOptionLine(&p, NULL, &bCreateDirs));
-	} else if(!strcasecmp((char*) szCmd, "debugprinttemplatelist")) { 
-		CHKiRet(doBinaryOptionLine(&p, NULL, &bDebugPrintTemplateList));
 	} else if(!strcasecmp((char*) szCmd, "failonchownfailure")) { 
 		CHKiRet(doBinaryOptionLine(&p, NULL, &bFailOnChown));
+#endif
+	} else if(!strcasecmp((char*) szCmd, "debugprinttemplatelist")) { 
+		CHKiRet(doBinaryOptionLine(&p, NULL, &bDebugPrintTemplateList));
 	} else if(!strcasecmp((char*) szCmd, "droptrailinglfonreception")) { 
 		CHKiRet(doBinaryOptionLine(&p, NULL, &bDropTrailingLF));
 	} else if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
@@ -3607,12 +3611,18 @@ rsRetVal cfsysline(uchar *p)
 		CHKiRet(doCustomHdlr(&p , resetConfigVariables, NULL));
 	} else if(!strcasecmp((char*) szCmd, "modload")) { 
 		CHKiRet(doCustomHdlr(&p, doModLoad, NULL));
-	} else { /* invalid command! */
-		char err[100];
-		snprintf(err, sizeof(err)/sizeof(char),
-		         "Invalid command in $-configline: '%s' - line ignored\n", szCmd);
-		logerror(err);
-		ABORT_FINALIZE(RS_RET_INVALID_CMD);
+	} else {
+		/* we now try and see if we can find the command in the registered
+		 * list of cfsysline handlers. -- rgerhards, 2007-07-31
+		 */
+		if((iRet = processCfSysLineCommand(szCmd, &p)) != RS_RET_OK) {
+			/* invalid command! */
+			char err[256];
+			snprintf(err, sizeof(err)/sizeof(char),
+				 "Invalid command in $-configline: '%s' (error %d) - line ignored\n", szCmd, iRet);
+			logerror(err);
+			ABORT_FINALIZE(RS_RET_INVALID_CMD);
+		}
 	}
 
 	/* now check if we have some extra characters left on the line - that

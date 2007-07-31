@@ -160,7 +160,6 @@ finalize_it:
 rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData)
 {
 	llElt_t *pElt;
-llElt_t *pEltPrev = pThis->pLast;
 	DEFiRet;
 	
 	CHKiRet(llEltConstruct(&pElt, pKey, pData));
@@ -172,7 +171,6 @@ llElt_t *pEltPrev = pThis->pLast;
 		pThis->pLast->pNext = pElt;
 	}
 	pThis->pLast = pElt;
-printf("llAppend pThis 0x%x, pLastPrev 0x%x, pLast 0x%x, pElt 0x%x\n", pThis, pEltPrev, pThis->pLast, pElt);
 
 finalize_it:
 	return iRet;

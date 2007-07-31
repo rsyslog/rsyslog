@@ -753,6 +753,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", eCmdHdlrGID, NULL, &dirGID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"fileowner", eCmdHdlrUID, NULL, &fileUID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filegroup", eCmdHdlrGID, NULL, &fileGID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dircreatemode", eCmdHdlrFileCreateMode, NULL, &fDirCreateMode));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", eCmdHdlrFileCreateMode, NULL, &fCreateMode));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", eCmdHdlrBinary, NULL, &bCreateDirs));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", eCmdHdlrBinary, NULL, &bFailOnChown));
 ENDmodInit
 
 /*
