@@ -45,6 +45,8 @@
 
 /* internal structures
  */
+DEF_OMOD_STATIC_DATA
+
 typedef struct _instanceData {
 	uchar	progName[MAXFNAME]; /* program  to execute */
 } instanceData;
@@ -136,6 +138,7 @@ ENDqueryEtryPt
 BEGINmodInit(Shell)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 
 /*

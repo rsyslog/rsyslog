@@ -38,6 +38,8 @@
 
 /* internal structures
  */
+DEF_OMOD_STATIC_DATA
+
 typedef struct _instanceData {
 } instanceData;
 
@@ -113,6 +115,7 @@ ENDqueryEtryPt
 BEGINmodInit(Discard)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 /*
  * vi:set ai:

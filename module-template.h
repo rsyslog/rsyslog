@@ -27,6 +27,11 @@
 
 #include "objomsr.h"
 
+/* macro to define standard output-module static data members
+ */
+#define DEF_OMOD_STATIC_DATA \
+	static rsRetVal (*omsdRegCFSLineHdlr)();
+
 /* to following macros are used to generate function headers and standard
  * functionality. It works as follows (described on the sample case of
  * createInstance()):
@@ -248,7 +253,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	return iRet;\
 }
 
-/* the following defintion is the standard block for queryEtryPt for output
+/* the following definition is the standard block for queryEtryPt for output
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.
  */
@@ -287,18 +292,24 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * decide to provide.
  */
 #define BEGINmodInit(uniqName) \
-rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())\
+rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()))\
 {\
 	DEFiRet;
 
 #define CODESTARTmodInit \
+	assert(pHostQueryEtryPt != NULL);\
 	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))\
 		return RS_RET_PARAM_ERROR;
 
 #define ENDmodInit \
+finalize_it:\
 	*pQueryEtryPt = queryEtryPt;\
 	return iRet;\
 }
+
+/* definitions for host API queries */
+#define CODEmodInit_QueryRegCFSLineHdlr \
+	CHKiRet(pHostQueryEtryPt((uchar*)"regCfSysLineHdlr", &omsdRegCFSLineHdlr));
 
 #endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */
 /*

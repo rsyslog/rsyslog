@@ -53,6 +53,8 @@
 
 /* internal structures
  */
+DEF_OMOD_STATIC_DATA
+
 typedef struct _instanceData {
 	char	f_fname[MAXFNAME];/* file or template name (display only) */
 	short	fd;		  /* file descriptor for (current) file */
@@ -713,6 +715,7 @@ ENDqueryEtryPt
 BEGINmodInit(File)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 
 /*

@@ -25,7 +25,7 @@
 #define	ACTSHELL_H_INCLUDED 1
 
 /* prototypes */
-rsRetVal modInitShell(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
+rsRetVal modInitShell(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()));
 
 #endif /* #ifndef ACTSHELL_H_INCLUDED */
 /*

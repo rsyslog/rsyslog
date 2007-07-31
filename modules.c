@@ -69,6 +69,31 @@ static void moduleDestruct(modInfo_t *pThis)
 }
 
 
+/* The followind function is the queryEntryPoint for host-based entry points.
+ * Modules may call it to get access to core interface functions. Please note
+ * that utility functions can be accessed via shared libraries - at least this
+ * is my current shool of thinking.
+ * Please note that the implementation as a query interface allows to take
+ * care of plug-in interface version differences. -- rgerhards, 2007-07-31
+ */
+rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
+{
+	DEFiRet;
+
+	if((name == NULL) || (pEtryPoint == NULL))
+		return RS_RET_PARAM_ERROR;
+
+	if(!strcmp((char*) name, "regCfSysLineHdlr")) {
+		//*pEtryPoint = regCfSysLineHdlr;
+		*pEtryPoint = queryHostEtryPt;
+	}
+
+	if(iRet == RS_RET_OK)
+		iRet = (*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
+	return iRet;
+}
+
+
 /* get the state-name of a module. The state name is its name
  * together with a short description of the module state (which
  * is pulled from the module itself.
@@ -139,7 +164,7 @@ modInfo_t *omodGetNxt(modInfo_t *pThis)
 /* Add an already-loaded module to the module linked list. This function does
  * anything that is needed to fully initialize the module.
  */
-rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)()), uchar *name)
+rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *name)
 {
 	modInfo_t *pNew;
 	rsRetVal iRet;
@@ -149,7 +174,7 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)()), uchar *name)
 	if((iRet = moduleConstruct(&pNew)) != RS_RET_OK)
 		return iRet;
 
-	if((iRet = (*modInit)(1, &pNew->iIFVers, &pNew->modQueryEtryPt)) != RS_RET_OK) {
+	if((iRet = (*modInit)(1, &pNew->iIFVers, &pNew->modQueryEtryPt, queryHostEtryPt)) != RS_RET_OK) {
 		moduleDestruct(pNew);
 		return iRet;
 	}
@@ -241,6 +266,8 @@ void modPrintList(void)
 		pMod = modGetNxt(pMod); /* done, go next */
 	}
 }
+
+
 /*
  * vi:set ai:
  */

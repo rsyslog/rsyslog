@@ -29,7 +29,7 @@
 /* prototypes will be removed as syslogd needs no longer to directly
  * call into the module!
  */
-rsRetVal modInitMySQL(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
+rsRetVal modInitMySQL(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()));
 
 #endif /* #ifdef WITH_DB */
 #endif /* #ifndef OMMYSQL_H_INCLUDED */

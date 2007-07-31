@@ -25,7 +25,7 @@
 #define	OMDISCARD_H_INCLUDED 1
 
 /* prototypes */
-rsRetVal modInitDiscard(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
+rsRetVal modInitDiscard(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()));
 
 #endif /* #ifndef OMDISCARD_H_INCLUDED */
 /*

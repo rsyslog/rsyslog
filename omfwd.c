@@ -71,6 +71,8 @@ static const char *sys_h_errlist[] = {
 
 /* internal structures
  */
+DEF_OMOD_STATIC_DATA
+
 typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
 	short	sock;			/* file descriptor */
@@ -922,6 +924,7 @@ ENDqueryEtryPt
 BEGINmodInit(Fwd)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 
 #endif /* #ifdef SYSLOG_INET */

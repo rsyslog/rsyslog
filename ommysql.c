@@ -50,6 +50,8 @@
 
 /* internal structures
  */
+DEF_OMOD_STATIC_DATA
+
 typedef struct _instanceData {
 	MYSQL	*f_hmysql;		/* handle to MySQL */
 	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
@@ -414,6 +416,7 @@ ENDqueryEtryPt
 BEGINmodInit(MySQL)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 
 #endif /* #ifdef WITH_DB */

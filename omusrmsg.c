@@ -57,6 +57,8 @@
 
 /* internal structures
  */
+DEF_OMOD_STATIC_DATA
+
 typedef struct _instanceData {
 	int bIsWall; /* 1- is wall, 0 - individual users */
 	char uname[MAXUNAMES][UNAMESZ+1];
@@ -319,6 +321,7 @@ ENDqueryEtryPt
 BEGINmodInit(UsrMsg)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 
 /*

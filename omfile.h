@@ -25,7 +25,7 @@
 #define	OMFILE_H_INCLUDED 1
 
 /* prototypes */
-rsRetVal modInitFile(int iIFVersRequested, int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)());
+rsRetVal modInitFile(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()));
 
 #endif /* #ifndef OMFILE_H_INCLUDED */
 /*
