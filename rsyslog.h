@@ -65,6 +65,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_VAL_OUT_OF_RANGE = -2012, /**< value out of range */
 	RS_RET_FOPEN_FAILURE = -2013,	/**< failure during fopen, for example file not found - see errno */
 	RS_RET_END_OF_LINKEDLIST = -2014,	/**< end of linked list, not an error, but a status */
+	RS_RET_IS_EQUAL = -2015,	/**< outcome of a compare is equal */
+	RS_RET_IS_NOT_EQUAL = -2016,	/**< outcome of a compare is not equal */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */

@@ -41,7 +41,7 @@
 
 /* Initialize an existing linkedList_t structure
  */
-rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*))
+rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*, void*))
 {
 	assert(pThis != NULL);
 	assert(pEltDestructor != NULL);
@@ -74,7 +74,7 @@ rsRetVal llDestroy(linkedList_t *pThis)
 		/* we ignore errors during destruction, as we need to try
 		 * finish the linked list in any case.
 		 */
-		pThis->pEltDestruct(pEltPrev->pData);
+		pThis->pEltDestruct(pEltPrev->pData, pEltPrev->pKey);
 		free(pEltPrev);
 	}
 
@@ -110,6 +110,81 @@ rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppU
 	}
 
 	*ppElt = pElt;
+
+	return iRet;
+}
+
+
+/* construct a new llElt_t
+ */
+static rsRetVal llEltConstruct(llElt_t **ppThis, void *pKey, void *pData)
+{
+	DEFiRet;
+	llElt_t *pThis;
+
+	assert(ppThis != NULL);
+
+	if((pThis = (llElt_t*) calloc(1, sizeof(llElt_t))) == NULL) {
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+
+	pThis->pKey = pKey;
+	pThis->pData = pData;
+
+finalize_it:
+	*ppThis = pThis;
+	return iRet;
+}
+
+
+/* append a user element to the end of the linked list. This includes setting a key. If no
+ * key is desired, simply pass in a NULL pointer for it.
+ */
+rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData)
+{
+	llElt_t *pElt;
+	DEFiRet;
+	
+	CHKiRet(llEltConstruct(&pElt, pKey, pData));
+
+	pThis->iNumElts++; /* one more */
+	if(pThis->pLast == NULL) {
+		pThis->pRoot = pElt;
+	} else {
+		pThis->pLast->pNext = pElt;
+	}
+	pThis->pLast = pElt;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* find a user element based on the provided key
+ */
+rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData)
+{
+	DEFiRet;
+	llElt_t *pElt;
+	int bFound = 0;
+
+	assert(pThis != NULL);
+	assert(pKey != NULL);
+	assert(ppData != NULL);
+
+	pElt = pThis->pRoot;
+	while(pElt != NULL && bFound == 0) {
+		if(pThis->cmpOp(pKey, pElt->pKey) == 0)
+			bFound = 1;
+		else
+			pElt = pElt->pNext;
+	}
+
+	if(bFound == 1) {
+		*ppData = pElt->pData;
+	} else {
+		iRet = RS_RET_NOT_FOUND;
+	}
 
 	return iRet;
 }

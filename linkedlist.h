@@ -28,6 +28,7 @@
  */
 struct llElt_s { /* config file sysline parse entry */
 	struct llElt_s *pNext;
+	void *pKey;		/* key for this element */
 	void *pData;		/* user-supplied data pointer */
 };
 typedef struct llElt_s llElt_t;
@@ -39,8 +40,8 @@ typedef struct llElt_s llElt_t;
  */
 struct linkedList_s { /* config file sysline parse entry */
 	int iNumElts;		/* number of elements in list */
-	rsRetVal (*pEltDestruct)(void*);	/* destructor for user pointer in llElt_t's */
-	rsRetVal (*cmpOp)(void*, void*); /* pointer to compare operation function */
+	rsRetVal (*pEltDestruct)(void*pData, void*pKey);	/* destructor for user pointer in llElt_t's */
+	int (*cmpOp)(void*, void*); /* pointer to key compare operation function, retval like strcmp */
 	void *pKey;			/* the list key (searchable, if set) */
 	llElt_t *pRoot;	/* list root */
 	llElt_t *pLast;	/* list tail */
@@ -50,8 +51,9 @@ typedef struct linkedList_s linkedList_t;
 typedef llElt_t* linkedListCookie_t;	/* this type avoids exposing internals and keeps us flexible */
 
 /* prototypes */
-rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*));
+rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*, void*));
 rsRetVal llDestroy(linkedList_t *pThis);
 rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppUsr);
+rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData);
 
 #endif /* #ifndef LINKEDLIST_H_INCLUDED */
