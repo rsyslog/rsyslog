@@ -3705,6 +3705,78 @@ static void freeSelectors(void)
 }
 
 
+/* print debug information as part of init(). This pretty much
+ * outputs the whole config of rsyslogd. I've moved this code
+ * out of init() to clean it somewhat up.
+ * rgerhards, 2007-07-31
+ */
+static void dbgPrintInitInfo(void)
+{
+	register selector_t *f;
+	int i;
+
+	printf("Active selectors:\n");
+	for (f = Files; f != NULL ; f = f->f_next) {
+		if (1) {
+			if(f->pCSProgNameComp != NULL)
+				printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSProgNameComp));
+			if(f->eHostnameCmpMode != HN_NO_COMP)
+				printf("hostname: %s '%s'\n",
+					f->eHostnameCmpMode == HN_COMP_MATCH ?
+						"only" : "allbut",
+					rsCStrGetSzStr(f->pCSHostnameComp));
+			if(f->f_filter_type == FILTER_PRI) {
+				for (i = 0; i <= LOG_NFACILITIES; i++)
+					if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
+						printf(" X ");
+					else
+						printf("%2X ", f->f_filterData.f_pmask[i]);
+			} else {
+				printf("PROPERTY-BASED Filter:\n");
+				printf("\tProperty.: '%s'\n",
+				       rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
+				printf("\tOperation: ");
+				if(f->f_filterData.prop.isNegated)
+					printf("NOT ");
+				printf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
+				printf("\tValue....: '%s'\n",
+				       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
+				printf("\tAction...: ");
+			}
+			printf("%s: ", modGetStateName(f->pMod));
+			f->pMod->dbgPrintInstInfo(f->pModData);
+			printf("\tinstance data: 0x%x\n", (unsigned) f->pModData);
+			if(f->f_ReduceRepeated)
+				printf(" [RepeatedMsgReduction]");
+			if(f->bEnabled == 0)
+				printf(" [disabled]");
+			printf("\n");
+		}
+	}
+	printf("\n");
+	if(bDebugPrintTemplateList)
+		tplPrintList();
+	modPrintList();
+	ochPrintList();
+
+#ifdef	SYSLOG_INET
+	/* now the allowedSender lists: */
+	PrintAllowedSenders(1); /* UDP */
+	PrintAllowedSenders(2); /* TCP */
+	printf("\n");
+#endif 	/* #ifdef SYSLOG_INET */
+
+	printf("Messages with malicious PTR DNS Records are %sdropped.\n",
+		bDropMalPTRMsgs	? "" : "not ");
+
+	printf("Control characters are %sreplaced upon reception.\n",
+			bEscapeCCOnRcv? "" : "not ");
+	if(bEscapeCCOnRcv)
+		printf("Control character escape sequence prefix is '%c'.\n",
+			cCCEscapeChar);
+}
+
+
 /* process a configuration file
  * started with code from init() by rgerhards on 2007-07-31
  */
@@ -3821,7 +3893,6 @@ static void init()
 {
 	DEFiRet;
 	register int i;
-	register selector_t *f;
 	selector_t *nextp;
 	register unsigned int Forwarding = 0;
 #ifdef CONT_LINE
@@ -3853,7 +3924,6 @@ static void init()
 	assert (pAllowedSenders_UDP == NULL &&
 		pAllowedSenders_TCP == NULL );
 #endif
-	nextp = NULL;
 	/* I was told by an IPv6 expert that calling getservbyname() seems to be
 	 * still valid, at least for the use case we have. So I re-enabled that
 	 * code. rgerhards, 2007-07-02
@@ -3894,8 +3964,6 @@ static void init()
 	/* re-setting values to defaults (where applicable) */
 	resetConfigVariables();
 
-	f = NULL;
-
 	/* open the configuration file */
 	if((iRet = processConfFile(ConfFile)) != RS_RET_OK) {
 		/* rgerhards: this code is executed to set defaults when the
@@ -3903,7 +3971,8 @@ static void init()
 		 * abandoning the run in this case - but this, too, is not
 		 * very clever... So we stick with what we have.
 		 */
-		dprintf("cannot open %s (%s).\n", ConfFile, strerror(errno));
+		dprintf("error %d processing config file '%s'- using emergency defintions; os error: %s\n",
+			iRet, ConfFile, strerror(errno));
 		nextp = (selector_t *)calloc(1, sizeof(selector_t));
 		Files = nextp; /* set the root! */
 		cfline("*.ERR\t" _PATH_CONSOLE, nextp);
@@ -3915,7 +3984,7 @@ static void init()
 		Initialized = 1;
 	}
 
-	/* we are now done with reading the configuraton. This is the right time to
+	/* we are now done with reading the configuration. This is the right time to
 	 * free some objects that were just needed for loading it. rgerhards 2005-10-19
 	 */
 	if(pDfltHostnameCmp != NULL) {
@@ -3927,7 +3996,6 @@ static void init()
 		rsCStrDestruct(pDfltProgNameCmp);
 		pDfltProgNameCmp = NULL;
 	}
-
 
 #ifdef SYSLOG_UNIXAF
 	for (i = startIndexUxLocalSockets ; i < nfunix ; i++) {
@@ -3977,70 +4045,11 @@ static void init()
 	Initialized = 1;
 
 	if(Debug) {
-		printf("Active selectors:\n");
-		for (f = Files; f != NULL ; f = f->f_next) {
-			if (1) {
-				if(f->pCSProgNameComp != NULL)
-					printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSProgNameComp));
-				if(f->eHostnameCmpMode != HN_NO_COMP)
-					printf("hostname: %s '%s'\n",
-						f->eHostnameCmpMode == HN_COMP_MATCH ?
-							"only" : "allbut",
-						rsCStrGetSzStr(f->pCSHostnameComp));
-				if(f->f_filter_type == FILTER_PRI) {
-					for (i = 0; i <= LOG_NFACILITIES; i++)
-						if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
-							printf(" X ");
-						else
-							printf("%2X ", f->f_filterData.f_pmask[i]);
-				} else {
-					printf("PROPERTY-BASED Filter:\n");
-					printf("\tProperty.: '%s'\n",
-					       rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
-					printf("\tOperation: ");
-					if(f->f_filterData.prop.isNegated)
-						printf("NOT ");
-					printf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
-					printf("\tValue....: '%s'\n",
-					       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
-					printf("\tAction...: ");
-				}
-				printf("%s: ", modGetStateName(f->pMod));
-				f->pMod->dbgPrintInstInfo(f->pModData);
-				printf("\tinstance data: 0x%x\n", (unsigned) f->pModData);
-				if(f->f_ReduceRepeated)
-					printf(" [RepeatedMsgReduction]");
-				if(f->bEnabled == 0)
-					printf(" [disabled]");
-				printf("\n");
-			}
-		}
-		printf("\n");
-		if(bDebugPrintTemplateList)
-			tplPrintList();
-		modPrintList();
-		ochPrintList();
-
-#ifdef	SYSLOG_INET
-		/* now the allowedSender lists: */
-		PrintAllowedSenders(1); /* UDP */
-		PrintAllowedSenders(2); /* TCP */
-		printf("\n");
-#endif 	/* #ifdef SYSLOG_INET */
-
-		printf("Messages with malicious PTR DNS Records are %sdropped.\n",
-			bDropMalPTRMsgs	? "" : "not ");
-
-		printf("Control characters are %sreplaced upon reception.\n",
-				bEscapeCCOnRcv? "" : "not ");
-		if(bEscapeCCOnRcv)
-			printf("Control character escape sequence prefix is '%c'.\n",
-				cCCEscapeChar);
+		dbgPrintInitInfo();
 	}
 
 	/* we now generate the startup message. It now includes everything to
-	 * identify this instance.
-	 * rgerhards, 2005-08-17
+	 * identify this instance. -- rgerhards, 2005-08-17
 	 */
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \

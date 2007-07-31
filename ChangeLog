@@ -13,6 +13,8 @@ Version 1.17.6 (rgerhards), 2007-07-3?
   it a bit. Thanks a lot for the fix, I'd probably had pulled out my
   hair to find the bug...
 - added output of config file line number when a parsing error occured
+- fixed bug in objomsr.c that caused program to abort in debug mode with
+  an invalid assertion (in some cases)
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
 - continued to work on output module modularization
