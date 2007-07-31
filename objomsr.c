@@ -64,7 +64,7 @@ rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 	DEFiRet;
 
 	assert(ppThis != NULL);
-	assert(iNumEntries > 0);
+	assert(iNumEntries >= 0);
 	if((pThis = calloc(1, sizeof(omodStringRequest_t))) == NULL) {
 		iRet = RS_RET_OUT_OF_MEMORY;
 		goto abort_it;
