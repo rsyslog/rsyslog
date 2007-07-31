@@ -1,0 +1,57 @@
+/* Definition of the linkedlist object.
+ *
+ * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ */
+
+#ifndef LINKEDLIST_H_INCLUDED
+#define LINKEDLIST_H_INCLUDED
+
+/* this is a single entry for a parse routine. It describes exactly
+ * one entry point/handler.
+ * The short name is cslch (Configfile SysLine CommandHandler)
+ */
+struct llElt_s { /* config file sysline parse entry */
+	struct llElt_s *pNext;
+	void *pData;		/* user-supplied data pointer */
+};
+typedef struct llElt_s llElt_t;
+
+
+/* this is the list of known configuration commands with pointers to
+ * their handlers.
+ * The short name is cslc (Configfile SysLine Command)
+ */
+struct linkedList_s { /* config file sysline parse entry */
+	int iNumElts;		/* number of elements in list */
+	rsRetVal (*pEltDestruct)(void*);	/* destructor for user pointer in llElt_t's */
+	rsRetVal (*cmpOp)(void*, void*); /* pointer to compare operation function */
+	void *pKey;			/* the list key (searchable, if set) */
+	llElt_t *pRoot;	/* list root */
+	llElt_t *pLast;	/* list tail */
+};
+typedef struct linkedList_s linkedList_t;
+
+typedef llElt_t* linkedListCookie_t;	/* this type avoids exposing internals and keeps us flexible */
+
+/* prototypes */
+rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*));
+rsRetVal llDestroy(linkedList_t *pThis);
+rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppUsr);
+
+#endif /* #ifndef LINKEDLIST_H_INCLUDED */
