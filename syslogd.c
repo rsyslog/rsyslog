@@ -527,7 +527,9 @@ uid_t	fileGID;	/* GID to be used for newly created files */
 uid_t	dirUID;		/* UID to be used for newly created directories */
 uid_t	dirGID;		/* GID to be used for newly created directories */
 int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
-static int	bDebugPrintTemplateList;/* output template list in debug mode? */
+static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
+static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
+static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
 int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
@@ -3560,57 +3562,13 @@ rsRetVal cfsysline(uchar *p)
 	}
 
 	/* check the command and carry out processing */
-	if(!strcasecmp((char*) szCmd, "template")) { 
-		CHKiRet(doCustomHdlr(&p, doNameLine, (void*) DIR_TEMPLATE));
-	} else if(!strcasecmp((char*) szCmd, "outchannel")) { 
-		CHKiRet(doCustomHdlr(&p, doNameLine, (void*) DIR_OUTCHANNEL));
-	} else if(!strcasecmp((char*) szCmd, "allowedsender")) { 
-		CHKiRet(doCustomHdlr(&p, doNameLine, (void*) DIR_ALLOWEDSENDER));
-	} else if(!strcasecmp((char*) szCmd, "umask")) { 
-		CHKiRet(doFileCreateMode(&p, (void*) setUmask, NULL));
-#if 0
-	} else if(!strcasecmp((char*) szCmd, "dircreatemode")) { 
-		CHKiRet(doFileCreateMode(&p, NULL, &fDirCreateMode));
-	} else if(!strcasecmp((char*) szCmd, "filecreatemode")) { 
-		CHKiRet(doFileCreateMode(&p, NULL, &fCreateMode));
-	} else if(!strcasecmp((char*) szCmd, "dirowner")) { 
-		CHKiRet(doGetUID(&p, NULL, &dirUID));
-	} else if(!strcasecmp((char*) szCmd, "dirgroup")) { 
-		CHKiRet(doGetGID(&p, NULL, &dirGID));
-	} else if(!strcasecmp((char*) szCmd, "fileowner")) { 
-		CHKiRet(doGetUID(&p, NULL, &fileUID));
-	} else if(!strcasecmp((char*) szCmd, "filegroup")) { 
-		CHKiRet(doGetGID(&p, NULL, &fileGID));
-	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
-		CHKiRet(doGetInt(&p, (void*) setDynaFileCacheSize, NULL));
-#endif
-	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
-		CHKiRet(doBinaryOptionLine(&p, NULL, &bReduceRepeatMsgs));
-	} else if(!strcasecmp((char*) szCmd, "controlcharacterescapeprefix")) { 
-		CHKiRet(doGetChar(&p, NULL, &cCCEscapeChar));
-	} else if(!strcasecmp((char*) szCmd, "escapecontrolcharactersonreceive")) { 
-		CHKiRet(doBinaryOptionLine(&p, NULL, &bEscapeCCOnRcv));
-	} else if(!strcasecmp((char*) szCmd, "dropmsgswithmaliciousdnsptrrecords")) { 
-		CHKiRet(doBinaryOptionLine(&p, NULL, &bDropMalPTRMsgs));
-#if 0
-	} else if(!strcasecmp((char*) szCmd, "createdirs")) { 
-		CHKiRet(doBinaryOptionLine(&p, NULL, &bCreateDirs));
-	} else if(!strcasecmp((char*) szCmd, "failonchownfailure")) { 
-		CHKiRet(doBinaryOptionLine(&p, NULL, &bFailOnChown));
-#endif
-	} else if(!strcasecmp((char*) szCmd, "debugprinttemplatelist")) { 
-		CHKiRet(doBinaryOptionLine(&p, NULL, &bDebugPrintTemplateList));
-	} else if(!strcasecmp((char*) szCmd, "droptrailinglfonreception")) { 
-		CHKiRet(doBinaryOptionLine(&p, NULL, &bDropTrailingLF));
-	} else if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
+	if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
 		/* TODO: the compiler warning for the line below is OK for the time being. In the
 		 * longer term, we should create a special parsing function which
 		 * will also check if there are any spurios characters.
 		 * rgerhards, 2007-07-31
 		 */
 		CHKiRet(doCustomHdlr(&p , resetConfigVariables, NULL));
-	} else if(!strcasecmp((char*) szCmd, "modload")) { 
-		CHKiRet(doCustomHdlr(&p, doModLoad, NULL));
 	} else {
 		/* we now try and see if we can find the command in the registered
 		 * list of cfsysline handlers. -- rgerhards, 2007-07-31
@@ -3747,10 +3705,12 @@ static void dbgPrintInitInfo(void)
 	printf("\n");
 	if(bDebugPrintTemplateList)
 		tplPrintList();
-	modPrintList();
+	if(bDebugPrintModuleList)
+		modPrintList();
 	ochPrintList();
 
-	dbgPrintCfSysLineHandlers();
+	if(bDebugPrintCfSysLineHandlerList)
+		dbgPrintCfSysLineHandlers();
 
 #ifdef	SYSLOG_INET
 	/* now the allowedSender lists: */
@@ -5263,7 +5223,7 @@ static void checkPermissions()
  */
 static rsRetVal loadBuildInModules(void)
 {
-	rsRetVal iRet;
+	DEFiRet;
 
 	if((iRet = doModInit(modInitFile, (uchar*) "builtin-file")) != RS_RET_OK)
 		return iRet;
@@ -5290,7 +5250,30 @@ static rsRetVal loadBuildInModules(void)
 	if((iRet = doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg")) != RS_RET_OK)
 		return iRet;
 
-	return RS_RET_OK;
+	/* ok, initialization of the command handler probably does not 100% belong right in
+	 * this space here. However, with the current design, this is actually quite a good
+	 * place to put it. We might decide to shuffle it around later, but for the time
+	 * being, the code has found its home here. A not-just-sideeffect of this decision
+	 * is that rsyslog will terminate if we can not register our built-in config commands.
+	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
+	 */
+	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", eCmdHdlrBinary, NULL, &bReduceRepeatMsgs));
+	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", eCmdHdlrGetChar, NULL, &cCCEscapeChar));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", eCmdHdlrBinary, NULL, &bEscapeCCOnRcv));
+	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, NULL, &bDropMalPTRMsgs));
+	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", eCmdHdlrBinary, NULL, &bDropTrailingLF));
+	CHKiRet(regCfSysLineHdlr((uchar *)"template", eCmdHdlrCustomHandler, doNameLine, (void*)DIR_TEMPLATE));
+	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", eCmdHdlrCustomHandler, doNameLine, (void*)DIR_OUTCHANNEL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", eCmdHdlrCustomHandler, doNameLine, (void*)DIR_ALLOWEDSENDER));
+	CHKiRet(regCfSysLineHdlr((uchar *)"modload", eCmdHdlrCustomHandler, doModLoad, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"umask", eCmdHdlrFileCreateMode, setUmask, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", eCmdHdlrBinary, NULL, &bDebugPrintTemplateList));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", eCmdHdlrBinary, NULL, &bDebugPrintModuleList));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", eCmdHdlrBinary,
+		 NULL, &bDebugPrintCfSysLineHandlerList));
+
+finalize_it:
+	return iRet;
 }
 
 

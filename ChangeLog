@@ -17,6 +17,8 @@ Version 1.17.6 (rgerhards), 2007-07-3?
   an invalid assertion (in some cases)
 - fixed a typo that caused the default template for MySQL to be wrong.
   thanks to mildew for catching this.
+- added configuration file command $DebugPrintModuleList and
+  $DebugPrintCfSysLineHandlerList
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
 - continued to work on output module modularization

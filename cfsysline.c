@@ -423,7 +423,7 @@ rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 	case eCmdHdlrInt:
 		pHdlr = doGetInt;
 		break;
-	case eCmdHdlrFileGetChar:
+	case eCmdHdlrGetChar:
 		pHdlr = doGetChar;
 		break;
 	default:
