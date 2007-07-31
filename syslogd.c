@@ -3705,20 +3705,127 @@ static void freeSelectors(void)
 }
 
 
+/* process a configuration file
+ * started with code from init() by rgerhards on 2007-07-31
+ */
+static rsRetVal processConfFile()
+{
+	DEFiRet;
+	int iLnNbr = 0;
+	FILE *cf;
+	selector_t *f;
+	selector_t *nextp = NULL;
+	uchar *p;
+	unsigned int Forwarding = 0;
+#ifdef CONT_LINE
+	uchar cbuf[BUFSIZ];
+	uchar *cline;
+#else
+	uchar cline[BUFSIZ];
+#endif
+
+	if((cf = fopen(ConfFile, "r")) == NULL) {
+		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
+	}
+
+	/* Now process the file.
+	 */
+#if CONT_LINE
+	cline = cbuf;
+	while (fgets((char*)cline, sizeof(cbuf) - (cline - cbuf), cf) != NULL) {
+#else
+	while (fgets(cline, sizeof(cline), cf) != NULL) {
+#endif
+		++iLnNbr;
+		/* drop LF - TODO: make it better, replace fgets(), but its clean as it is */
+		if(cline[strlen((char*)cline)-1] == '\n') {
+			cline[strlen((char*)cline) -1] = '\0';
+		}
+		/* check for end-of-section, comments, strip off trailing
+		 * spaces and newline character.
+		 */
+		p = cline;
+		skipWhiteSpace(&p);
+		if (*p == '\0' || *p == '#')
+			continue;
+
+		if(*p == '$') {
+			if(cfsysline((uchar*) ++p) != RS_RET_OK) {
+				logerrorInt("the last error occured in config file line %d", iLnNbr);
+			}
+			continue;
+		}
+#if CONT_LINE
+		strcpy((char*)cline, (char*)p);
+#endif
+		for (p = (uchar*) strchr((char*)cline, '\0'); isspace((int) *--p););
+#if CONT_LINE
+		if (*p == '\\') {
+			if ((p - cbuf) > BUFSIZ - 30) {
+				/* Oops the buffer is full - what now? */
+				cline = cbuf;
+			} else {
+				*p = 0;
+				cline = p;
+				continue;
+			}
+		}  else
+			cline = cbuf;
+#endif
+		*++p = '\0';
+
+		/* allocate next entry and add it */
+		f = (selector_t *)calloc(1, sizeof(selector_t));
+		if(f == NULL) {
+			/* this time, it looks like we really have no point in continuing to run... */
+			logerror("fatal: could not allocated selector\n");
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+			
+#if CONT_LINE
+		if(cfline((char*)cbuf, f) != RS_RET_OK) {
+#else
+		if(cfline(cline, f) != RS_RET_OK) {
+#endif
+			/* creation of the entry failed, we need to discard it */
+			dprintf("selector line NOT successfully processed\n");
+			free(f); 
+		} else {
+			/* successfully created an entry */
+			dprintf("selector line successfully processed\n");
+			if(nextp == NULL) {
+				Files = f;
+			}
+			else {
+				nextp->f_next = f;
+			}
+			nextp = f;
+			if(f->pMod->needUDPSocket(f->pModData) == RS_RET_TRUE) {
+				Forwarding++;
+			}
+		}
+	}
+
+	/* close the configuration file */
+	(void) fclose(cf);
+
+finalize_it:
+	return iRet;
+}
+
+
 /* INIT -- Initialize syslogd from configuration table
  * init() is called at initial startup AND each time syslogd is HUPed
  */
 static void init()
 {
+	DEFiRet;
 	register int i;
-	register FILE *cf;
 	register selector_t *f;
-	register selector_t *nextp;
-	register char *p;
+	selector_t *nextp;
 	register unsigned int Forwarding = 0;
 #ifdef CONT_LINE
 	char cbuf[BUFSIZ];
-	char *cline;
 #else
 	char cline[BUFSIZ];
 #endif
@@ -3788,10 +3895,9 @@ static void init()
 	resetConfigVariables();
 
 	f = NULL;
-	nextp = NULL;
 
 	/* open the configuration file */
-	if ((cf = fopen(ConfFile, "r")) == NULL) {
+	if((iRet = processConfFile(ConfFile)) != RS_RET_OK) {
 		/* rgerhards: this code is executed to set defaults when the
 		 * config file could not be opened. We might think about
 		 * abandoning the run in this case - but this, too, is not
@@ -3807,90 +3913,6 @@ static void init()
 		snprintf(cbuf,sizeof(cbuf), "*.*\t%s", ttyname(0));
 		cfline(cbuf, nextp->f_next->f_next);
 		Initialized = 1;
-	}
-	else { /* we should consider moving this into a separate function, its lengthy... */
-		int iLnNbr = 0;
-		/*
-		 *  Foreach line in the conf table, open that file.
-		 */
-	#if CONT_LINE
-		cline = cbuf;
-		while (fgets(cline, sizeof(cbuf) - (cline - cbuf), cf) != NULL) {
-	#else
-		while (fgets(cline, sizeof(cline), cf) != NULL) {
-	#endif
-			++iLnNbr;
-			/* drop LF - TODO: make it better, replace fgets(), but its clean as it is */
-			if(cline[strlen(cline)-1] == '\n') {
-				cline[strlen(cline) -1] = '\0';
-			}
-			/*
-			 * check for end-of-section, comments, strip off trailing
-			 * spaces and newline character.
-			 */
-			for (p = cline; isspace((int) *p); ++p) /*SKIP SPACES*/;
-			if (*p == '\0' || *p == '#')
-				continue;
-
-			if(*p == '$') {
-				if(cfsysline((uchar*) ++p) != RS_RET_OK) {
-					logerrorInt("error occured in config file line %d", iLnNbr);
-				}
-				continue;
-			}
-	#if CONT_LINE
-			strcpy(cline, p);
-	#endif
-			for (p = strchr(cline, '\0'); isspace((int) *--p););
-	#if CONT_LINE
-			if (*p == '\\') {
-				if ((p - cbuf) > BUFSIZ - 30) {
-					/* Oops the buffer is full - what now? */
-					cline = cbuf;
-				} else {
-					*p = 0;
-					cline = p;
-					continue;
-				}
-			}  else
-				cline = cbuf;
-	#endif
-			*++p = '\0';
-
-			/* allocate next entry and add it */
-			f = (selector_t *)calloc(1, sizeof(selector_t));
-			if(f == NULL) {
-				/* this time, it looks like we really have no point in continuing to run... */
-				logerror("fatal: could not allocated selector\n");
-				exit(1); /* TODO: think about it, maybe we can avoid */
-			}
-				
-	#if CONT_LINE
-			if(cfline(cbuf, f) != RS_RET_OK) {
-	#else
-			if(cfline(cline, f) != RS_RET_OK) {
-	#endif
-				/* creation of the entry failed, we need to discard it */
-				dprintf("selector line NOT successfully processed\n");
-				free(f); 
-			} else {
-				/* successfully created an entry */
-				dprintf("selector line successfully processed\n");
-				if(nextp == NULL) {
-					Files = f;
-				}
-				else {
-					nextp->f_next = f;
-				}
-				nextp = f;
-				if(f->pMod->needUDPSocket(f->pModData) == RS_RET_TRUE) {
-					Forwarding++;
-				}
-			}
-		}
-
-		/* close the configuration file */
-		(void) fclose(cf);
 	}
 
 	/* we are now done with reading the configuraton. This is the right time to
