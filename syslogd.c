@@ -763,7 +763,7 @@ static void clearAllowedSenders (struct AllowedSenders *pAllow) {
 static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
 		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
 {
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 	assert(ppRoot != NULL);
 	assert(ppLast != NULL);
@@ -3058,7 +3058,7 @@ rsRetVal fprintlog(register selector_t *f)
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
 	pMsgSave = NULL;	/* indicate message poiner not saved */
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 	int i;
 
 	/* first check if this is a regular message or the repeation of
@@ -4040,7 +4040,7 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 {
 	uchar *p;
 	uchar *tplName;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 	rsCStrObj *pStrB;
 
 	assert(pp != NULL);
@@ -4105,7 +4105,7 @@ rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pO
 {
 	register uchar *pName;
 	int i;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 	assert(pOMSR != NULL);
 
@@ -4490,7 +4490,7 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
  */
 rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR)
 {
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 	int i;
 	int iTplOpts;
 	uchar *pTplName;

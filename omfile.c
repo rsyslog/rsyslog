@@ -127,7 +127,7 @@ ENDdbgPrintInstInfo
  */
 static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts)
 {
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 	size_t i;
 	struct outchannel *pOch;
 	char szBuf[128];	/* should be more than sufficient */
@@ -447,7 +447,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 static rsRetVal writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 {
 	off_t actualFileSize;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 	assert(pData != NULL);
 

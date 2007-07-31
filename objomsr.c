@@ -61,7 +61,7 @@ rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
 rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 {
 	omodStringRequest_t *pThis;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 	assert(ppThis != NULL);
 	assert(iNumEntries > 0);

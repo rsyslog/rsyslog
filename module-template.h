@@ -43,7 +43,7 @@
 #define BEGINcreateInstance \
 static rsRetVal createInstance(instanceData **ppData)\
 	{\
-	rsRetVal iRet = RS_RET_OK; /* store error code here */\
+	DEFiRet; /* store error code here */\
 	instanceData *pData; /* use this to point to data elements */
 
 #define CODESTARTcreateInstance \
@@ -62,7 +62,7 @@ static rsRetVal createInstance(instanceData **ppData)\
 #define BEGINfreeInstance \
 static rsRetVal freeInstance(void* pModData)\
 {\
-	rsRetVal iRet = RS_RET_OK;\
+	DEFiRet;\
 	instanceData *pData;
 
 #define CODESTARTfreeInstance \
@@ -92,7 +92,7 @@ static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eF
 #define BEGINdoAction \
 static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __attribute__((unused)) iMsgOpts, instanceData __attribute__((unused)) *pData)\
 {\
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 #define CODESTARTdoAction \
 	assert(ppString != NULL);
@@ -109,7 +109,7 @@ static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __at
 #define BEGINdbgPrintInstInfo \
 static rsRetVal dbgPrintInstInfo(void *pModData)\
 {\
-	rsRetVal iRet = RS_RET_OK;\
+	DEFiRet;\
 	instanceData *pData = NULL;
 
 #define CODESTARTdbgPrintInstInfo \
@@ -201,7 +201,7 @@ static rsRetVal getWriteFDForSelect(void *pModData, short *fd)\
 #define BEGINparseSelectorAct \
 static rsRetVal parseSelectorAct(uchar **pp, void **ppModData, omodStringRequest_t **ppOMSR)\
 {\
-	rsRetVal iRet = RS_RET_OK;\
+	DEFiRet;\
 	uchar *p;\
 	instanceData *pData = NULL;
 
@@ -235,7 +235,7 @@ do_abort:\
 #define BEGINqueryEtryPt \
 static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 {\
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 #define CODESTARTqueryEtryPt \
 	if((name == NULL) || (pEtryPoint == NULL))\
@@ -289,7 +289,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 #define BEGINmodInit(uniqName) \
 rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)())\
 {\
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 #define CODESTARTmodInit \
 	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))\

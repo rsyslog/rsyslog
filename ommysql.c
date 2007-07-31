@@ -235,7 +235,7 @@ rsRetVal checkDBErrorState(instanceData *pData)
 static rsRetVal initMySQL(instanceData *pData)
 {
 	int iCounter = 0;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 	assert(pData != NULL);
 
 	if((iRet = checkDBErrorState(pData)) != RS_RET_OK)
@@ -289,7 +289,7 @@ static rsRetVal reInitMySQL(instanceData *pData)
 rsRetVal writeMySQL(uchar *psz, instanceData *pData)
 {
 	int iCounter=0;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 	assert(pData != NULL);
 
 	if((iRet = checkDBErrorState(pData)) != RS_RET_OK)
