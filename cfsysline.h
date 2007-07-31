@@ -22,6 +22,8 @@
 #ifndef CFSYSLINE_H_INCLUDED
 #define CFSYSLINE_H_INCLUDED
 
+#include "linkedlist.h"
+
 /* types of configuration handlers
  */
 typedef enum cslCmdHdlrType {
@@ -40,7 +42,6 @@ typedef enum cslCmdHdlrType {
  * The short name is cslch (Configfile SysLine CommandHandler)
  */
 struct cslCmdHdlr_s { /* config file sysline parse entry */
-	struct cslCmdHdlr_s *pNext;
 	ecslCmdHdrlType eType;			/* which type of handler is this? */
 	rsRetVal (*cslCmdHdlr)();		/* function pointer to use with handler (params depending on eType) */
 	void *pData;				/* user-supplied data pointer */
@@ -53,18 +54,16 @@ typedef struct cslCmdHdlr_s cslCmdHdlr_t;
  * The short name is cslc (Configfile SysLine Command)
  */
 struct cslCmd_s { /* config file sysline parse entry */
-	struct cslCmd_s *pNext;
-	uchar *pszCmdString;
-	struct cslCmdHdlr_s *pHdlrRoot;	/* linked list of to-be-called command handlers */
-	struct cslCmdHdlr_s *pHdlrLast;
+	linkedList_t *pllCmdHdlrs;	/* linked list of command handlers */
 };
 typedef struct cslCmd_s cslCmd_t;
 
 /* prototypes */
-rsRetVal cslchDestruct(cslCmdHdlr_t *pThis);
+rsRetVal cslchDestruct(void *pThis);
 rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis);
 rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData);
 rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine);
+rsRetVal cslcConstruct(cslCmd_t **ppThis);
 
 /* the next ones go away later */
 rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal);

@@ -39,8 +39,7 @@
 
 
 /* static data */
-cslCmd_t *pCmdListRoot = NULL; /* The list of known configuration commands. */
-cslCmd_t *pCmdListLast = NULL;
+linkedList_t llCmdList; /* this is NOT a pointer - no typo here ;) */
 
 /* --------------- START functions for handling canned syntaxes --------------- */
 
@@ -352,8 +351,10 @@ finalize_it:
 /* --------------- END functions for handling canned syntaxes --------------- */
 
 /* destructor for cslCmdHdlr
+ * pThis is actually a cslCmdHdlr_t, but we do not cast it as all we currently
+ * need to do is free it.
  */
-rsRetVal cslchDestruct(cslCmdHdlr_t *pThis)
+rsRetVal cslchDestruct(void *pThis)
 {
 	assert(pThis != NULL);
 	free(pThis);
@@ -401,9 +402,11 @@ rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 	assert(pThis != NULL);
 	assert(ppConfLine != NULL);
 
+	// TODO: implement
 
 	return RS_RET_OK;
 }
+
 
 /* ---------------------------------------------------------------------- *
  * now come the handlers for cslCmd_t
@@ -413,23 +416,16 @@ rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
  */
 rsRetVal cslcDestruct(cslCmd_t *pThis)
 {
-	cslCmdHdlr_t *pHdlr;
-	cslCmdHdlr_t *pHdlrPrev;
 	assert(pThis != NULL);
 
-	for(pHdlr = pThis->pHdlrRoot ; pHdlr != NULL ; pHdlr = pHdlrPrev->pNext) {
-		pHdlrPrev = pHdlr; /* else we get a segfault */
-		cslchDestruct(pHdlr);
-	}
-
-	free(pThis->pszCmdString);
+	llDestroy(pThis->pllCmdHdlrs);
 	free(pThis);
 	
 	return RS_RET_OK;
 }
 
 
-/* constructor for cslCmdHdlr
+/* constructor for cslCmd
  */
 rsRetVal cslcConstruct(cslCmd_t **ppThis)
 {
@@ -438,11 +434,12 @@ rsRetVal cslcConstruct(cslCmd_t **ppThis)
 
 	assert(ppThis != NULL);
 	if((pThis = calloc(1, sizeof(cslCmd_t))) == NULL) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-		goto abort_it;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
-abort_it:
+	CHKiRet(llInit(pThis->pllCmdHdlrs, cslchDestruct, NULL));
+
+finalize_it:
 	*ppThis = pThis;
 	return iRet;
 }

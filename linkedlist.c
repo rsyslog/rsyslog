@@ -40,13 +40,15 @@
 
 
 /* Initialize an existing linkedList_t structure
+ * pKey destructor may be zero to take care of non-keyed lists.
  */
-rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*, void*))
+rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal (*pKeyDestructor)(void*))
 {
 	assert(pThis != NULL);
 	assert(pEltDestructor != NULL);
 
 	pThis->pEltDestruct = pEltDestructor;
+	pThis->pKeyDestruct = pKeyDestructor;
 	pThis->cmpOp = NULL;
 	pThis->pKey = NULL;
 	pThis->iNumElts = 0;
@@ -74,7 +76,10 @@ rsRetVal llDestroy(linkedList_t *pThis)
 		/* we ignore errors during destruction, as we need to try
 		 * finish the linked list in any case.
 		 */
-		pThis->pEltDestruct(pEltPrev->pData, pEltPrev->pKey);
+		if(pEltPrev->pData != NULL)
+			pThis->pEltDestruct(pEltPrev->pData);
+		if(pEltPrev->pKey != NULL)
+			pThis->pKeyDestruct(pEltPrev->pKey);
 		free(pEltPrev);
 	}
 

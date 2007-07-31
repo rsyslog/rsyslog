@@ -15,6 +15,8 @@ Version 1.17.6 (rgerhards), 2007-07-3?
 - added output of config file line number when a parsing error occured
 - fixed bug in objomsr.c that caused program to abort in debug mode with
   an invalid assertion (in some cases)
+- fixed a typo that caused the default template for MySQL to be wrong.
+  thanks to mildew for catching this.
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
 - continued to work on output module modularization
