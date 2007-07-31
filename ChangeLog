@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 1.17.6 (rgerhards), 2007-07-3?
+- continued to work on output module modularization
 - fixed bug in OMSRcreate() - always returned SR_RET_OK
 - fixed a bug that caused ommysql to always complain about missing
   templates
@@ -13,7 +14,7 @@ Version 1.17.6 (rgerhards), 2007-07-3?
   hair to find the bug...
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
-- continued to work on modularization
+- continued to work on output module modularization
 - fixed a missing file bug - thanks to Andrea Montanari for reporting
   this problem
 - fixed a problem with shutting down the worker thread and freeing the
@@ -22,14 +23,14 @@ Version 1.17.5 (rgerhards), 2007-07-30
   destroyed.
 ---------------------------------------------------------------------------
 Version 1.17.4 (rgerhards), 2007-07-27
-- continued to work on modularization
+- continued to work on output module modularization
 - fixed a situation where rsyslogd could create zombie processes
   thanks to mildew for the patch
 - applied patch from Michel Samia to fix compilation when NOT
   compiled for pthreads
 ---------------------------------------------------------------------------
 Version 1.17.3 (rgerhards), 2007-07-25
-- continued working on modularization
+- continued working on output module modularization
 - fixed a bug that caused rsyslogd to segfault on exit (and
   probably also on HUP), when there was an unsent message in a selector
   that required forwarding and the dns lookup failed for that selector

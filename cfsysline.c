@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <errno.h>
 #include <pwd.h>
 #include <grp.h>
 
@@ -41,6 +42,93 @@ cslCmd_t *pCmdListRoot = NULL; /* The list of known configuration commands. */
 cslCmd_t *pCmdListLast = NULL;
 
 /* --------------- START functions for handling canned syntaxes --------------- */
+
+/* Parse and interpet a $FileCreateMode and $umask line. This function
+ * pulls the creation mode and, if successful, stores it
+ * into the global variable so that the rest of rsyslogd
+ * opens files with that mode. Any previous value will be
+ * overwritten.
+ * HINT: if we store the creation mode in selector_t, we
+ * can even specify multiple modes simply be virtue of
+ * being placed in the right section of rsyslog.conf
+ * rgerhards, 2007-07-4 (happy independence day to my US friends!)
+ * Parameter **pp has a pointer to the current config line.
+ * On exit, it will be updated to the processed position.
+ */
+rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+{
+	uchar *p;
+	rsRetVal iRet = RS_RET_OK;
+	uchar errMsg[128];	/* for dynamic error messages */
+	int iVal;	
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	
+	skipWhiteSpace(pp); /* skip over any whitespace */
+	p = *pp;
+
+	/* for now, we parse and accept only octal numbers
+	 * Sequence of tests is important, we are using boolean shortcuts
+	 * to avoid addressing invalid memory!
+	 */
+	if(!(   (*p == '0')
+	     && (*(p+1) && *(p+1) >= '0' && *(p+1) <= '7')
+	     && (*(p+2) && *(p+2) >= '0' && *(p+2) <= '7')
+	     && (*(p+3) && *(p+3) >= '0' && *(p+3) <= '7')  )  ) {
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
+		         "value must be octal (e.g 0644).");
+		errno = 0;
+		logerror((char*) errMsg);
+		iRet = RS_RET_INVALID_VALUE;
+		goto finalize_it;
+	}
+
+	/*  we reach this code only if the octal number is ok - so we can now
+	 *  compute the value.
+	 */
+	iVal  = (*(p+1)-'0') * 64 + (*(p+2)-'0') * 8 + (*(p+3)-'0');
+
+	if(pSetHdlr == NULL) {
+		/* we should set value directly to var */
+		*((int*)pVal) = iVal;
+	} else {
+		/* we set value via a set function */
+		CHKiRet(pSetHdlr(pVal, iVal));
+	}
+
+#if 0
+	switch(eDir) {
+		case DIR_DIRCREATEMODE:
+			fDirCreateMode = iMode;
+			dprintf("DirCreateMode set to 0%o.\n", iMode);
+			break;
+		case DIR_FILECREATEMODE:
+			fCreateMode = iMode;
+			dprintf("FileCreateMode set to 0%o.\n", iMode);
+			break;
+		case DIR_UMASK:
+			umask(iMode);
+			dprintf("umask set to 0%3.3o.\n", iMode);
+			break;
+		default:/* we do this to avoid compiler warning - not all
+			 * enum values call this function, so an incomplete list
+			 * is quite ok (but then we should not run into this code,
+			 * so at least we log a debug warning).
+			 */
+			dprintf("INTERNAL ERROR: doFileCreateModeUmaskLine() called with invalid eDir %d.\n",
+				eDir);
+			break;
+	}
+#endif
+
+	p += 4;	/* eat the octal number */
+	*pp = p;
+
+finalize_it:
+	return iRet;
+}
+
 
 /* Parse and interpret an on/off inside a config file line. This is most
  * often used for boolean options, but of course it may also be used
@@ -90,7 +178,6 @@ rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
-	assert(pVal != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
 		logerror("could not extract group name");
@@ -109,7 +196,7 @@ rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 			*((gid_t*)pVal) = pgBuf->gr_gid;
 		} else {
 			/* we set value via a set function */
-			pSetHdlr(pVal, pgBuf->gr_gid);
+			CHKiRet(pSetHdlr(pVal, pgBuf->gr_gid));
 		}
 		dprintf("gid %d obtained for group '%s'\n", pgBuf->gr_gid, szName);
 	}
@@ -134,7 +221,6 @@ rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
-	assert(pVal != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
 		logerror("could not extract user name");
@@ -153,7 +239,7 @@ rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 			*((uid_t*)pVal) = ppwBuf->pw_uid;
 		} else {
 			/* we set value via a set function */
-			pSetHdlr(pVal, ppwBuf->pw_uid);
+			CHKiRet(pSetHdlr(pVal, ppwBuf->pw_uid));
 		}
 		dprintf("uid %d obtained for user '%s'\n", ppwBuf->pw_uid, szName);
 	}
@@ -177,7 +263,6 @@ rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
-	assert(pVal != NULL);
 
 	if((iOption = doParseOnOffOption(pp)) == -1)
 		return RS_RET_ERR;	/* nothing left to do */
@@ -187,10 +272,12 @@ rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *
 		*((int*)pVal) = iOption;
 	} else {
 		/* we set value via a set function */
-		pSetHdlr(pVal, iOption);
+		CHKiRet(pSetHdlr(pVal, iOption));
 	}
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
+
+finalize_it:
 	return iRet;
 }
 

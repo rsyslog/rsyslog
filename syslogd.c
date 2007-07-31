@@ -3533,78 +3533,6 @@ static void doControlCharEscPrefix(uchar **pp)
 	skipWhiteSpace(pp); /* skip over any whitespace */
 }
 
-
-/* Parse and interpet a $FileCreateMode and $umask line. This function
- * pulls the creation mode and, if successful, stores it
- * into the global variable so that the rest of rsyslogd
- * opens files with that mode. Any previous value will be
- * overwritten.
- * HINT: if we store the creation mode in selector_t, we
- * can even specify multiple modes simply be virtue of
- * being placed in the right section of rsyslog.conf
- * rgerhards, 2007-07-4 (happy independence day to my US friends!)
- * Parameter **pp has a pointer to the current config line.
- * On exit, it will be updated to the processed position.
- */
-static void doFileCreateModeUmaskLine(uchar **pp, enum eDirective eDir)
-{
-	uchar *p;
-	uchar errMsg[128];	/* for dynamic error messages */
-	int iMode;	
-
-	assert(pp != NULL);
-	assert(*pp != NULL);
-	
-	skipWhiteSpace(pp); /* skip over any whitespace */
-	p = *pp;
-
-	/* for now, we parse and accept only octal numbers
-	 * Sequence of tests is important, we are using boolean shortcuts
-	 * to avoid addressing invalid memory!
-	 */
-	if(!(   (*p == '0')
-	     && (*(p+1) && *(p+1) >= '0' && *(p+1) <= '7')
-	     && (*(p+2) && *(p+2) >= '0' && *(p+2) <= '7')
-	     && (*(p+3) && *(p+3) >= '0' && *(p+3) <= '7')  )  ) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "%s value must be octal (e.g 0644), invalid value '%s'.",
-			 eDir == DIR_UMASK ? "umask" : "filecreatemode", p);
-		errno = 0;
-		logerror((char*) errMsg);
-		return;
-	}
-
-	/*  we reach this code only if the octal number is ok - so we can now
-	 *  compute the value.
-	 */
-	iMode  = (*(p+1)-'0') * 64 + (*(p+2)-'0') * 8 + (*(p+3)-'0');
-	switch(eDir) {
-		case DIR_DIRCREATEMODE:
-			fDirCreateMode = iMode;
-			dprintf("DirCreateMode set to 0%o.\n", iMode);
-			break;
-		case DIR_FILECREATEMODE:
-			fCreateMode = iMode;
-			dprintf("FileCreateMode set to 0%o.\n", iMode);
-			break;
-		case DIR_UMASK:
-			umask(iMode);
-			dprintf("umask set to 0%3.3o.\n", iMode);
-			break;
-		default:/* we do this to avoid compiler warning - not all
-			 * enum values call this function, so an incomplete list
-			 * is quite ok (but then we should not run into this code,
-			 * so at least we log a debug warning).
-			 */
-			dprintf("INTERNAL ERROR: doFileCreateModeUmaskLine() called with invalid eDir %d.\n",
-				eDir);
-			break;
-	}
-
-	p += 4;	/* eat the octal number */
-	*pp = p;
-}
-
 /* parse and interpret a $-config line that starts with
  * a name (this is common code). It is parsed to the name
  * and then the proper sub-function is called to handle
@@ -3664,6 +3592,17 @@ static void doNameLine(uchar **pp, enum eDirective eDir)
 }
 
 
+/* set the processes umask (upon configuration request)
+ */
+static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
+{
+	umask(iUmask);
+	dprintf("umask set to 0%3.3o.\n", iUmask);
+
+	return RS_RET_OK;
+}
+
+
 /* Parse and interpret a system-directive in the config line
  * A system directive is one that starts with a "$" sign. It offers
  * extended configuration parameters.
@@ -3690,11 +3629,11 @@ void cfsysline(uchar *p)
 	} else if(!strcasecmp((char*) szCmd, "allowedsender")) { 
 		doNameLine(&p, DIR_ALLOWEDSENDER);
 	} else if(!strcasecmp((char*) szCmd, "dircreatemode")) { 
-		doFileCreateModeUmaskLine(&p, DIR_DIRCREATEMODE);
+		doFileCreateMode(&p, NULL, &fDirCreateMode);
 	} else if(!strcasecmp((char*) szCmd, "filecreatemode")) { 
-		doFileCreateModeUmaskLine(&p, DIR_FILECREATEMODE);
+		doFileCreateMode(&p, NULL, &fCreateMode);
 	} else if(!strcasecmp((char*) szCmd, "umask")) { 
-		doFileCreateModeUmaskLine(&p, DIR_UMASK);
+		doFileCreateMode(&p, (void*) setUmask, NULL);
 	} else if(!strcasecmp((char*) szCmd, "dirowner")) { 
 		doGetUID(&p, NULL, &dirUID);
 	} else if(!strcasecmp((char*) szCmd, "dirgroup")) { 

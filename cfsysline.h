@@ -69,5 +69,7 @@ rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine);
 rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal);
 rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
 rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
+//void doFileCreateModeUmaskLine(uchar **pp, enum eDirective eDir);
+rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
 
 #endif /* #ifndef CFSYSLINE_H_INCLUDED */
