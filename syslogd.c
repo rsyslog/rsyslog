@@ -600,7 +600,7 @@ static char* getFIOPName(unsigned iFIOP)
 /* Reset config variables to default values.
  * rgerhards, 2007-07-17
  */
-static void resetConfigVariables(void)
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	fileUID = -1;
 	fileGID = -1;
@@ -610,12 +610,15 @@ static void resetConfigVariables(void)
 	iDynaFileCacheSize = 10;
 	fCreateMode = 0644;
 	fDirCreateMode = 0644;
-	cCCEscapeChar = '#';
 	bCreateDirs = 1;
+	cCCEscapeChar = '#';
 	bDebugPrintTemplateList = 1;
+	bDebugPrintCfSysLineHandlerList = 1;
+	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
 
+	return RS_RET_OK;
 }
 
 
@@ -3561,26 +3564,16 @@ rsRetVal cfsysline(uchar *p)
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
-	/* check the command and carry out processing */
-	if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
-		/* TODO: the compiler warning for the line below is OK for the time being. In the
-		 * longer term, we should create a special parsing function which
-		 * will also check if there are any spurios characters.
-		 * rgerhards, 2007-07-31
-		 */
-		CHKiRet(doCustomHdlr(&p , resetConfigVariables, NULL));
-	} else {
-		/* we now try and see if we can find the command in the registered
-		 * list of cfsysline handlers. -- rgerhards, 2007-07-31
-		 */
-		if((iRet = processCfSysLineCommand(szCmd, &p)) != RS_RET_OK) {
-			/* invalid command! */
-			char err[256];
-			snprintf(err, sizeof(err)/sizeof(char),
-				 "Invalid command in $-configline: '%s' (error %d) - line ignored\n", szCmd, iRet);
-			logerror(err);
-			ABORT_FINALIZE(RS_RET_INVALID_CMD);
-		}
+	/* we now try and see if we can find the command in the registered
+	 * list of cfsysline handlers. -- rgerhards, 2007-07-31
+	 */
+	if((iRet = processCfSysLineCommand(szCmd, &p)) != RS_RET_OK) {
+		/* invalid command! */
+		char err[256];
+		snprintf(err, sizeof(err)/sizeof(char),
+			 "Invalid command in $-configline: '%s' (error %d) - line ignored\n", szCmd, iRet);
+		logerror(err);
+		ABORT_FINALIZE(RS_RET_INVALID_CMD);
 	}
 
 	/* now check if we have some extra characters left on the line - that
@@ -3915,7 +3908,9 @@ static void init()
 	tplDeleteNew();
 	
 	/* re-setting values to defaults (where applicable) */
-	resetConfigVariables();
+dprintf("check TODO in init()\n");
+// TODO: problem: the modules are not yet loaded here
+	cfsysline("ResetConfigVariables");
 
 	/* open the configuration file */
 	if((iRet = processConfFile(ConfFile)) != RS_RET_OK) {
@@ -5271,6 +5266,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", eCmdHdlrBinary, NULL, &bDebugPrintModuleList));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", eCmdHdlrBinary,
 		 NULL, &bDebugPrintCfSysLineHandlerList));
+	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", eCmdHdlrCustomHandler, resetConfigVariables, NULL));
 
 finalize_it:
 	return iRet;

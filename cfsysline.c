@@ -548,8 +548,14 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHd
 		}
 	} else {
 		/* command already exists, are we allowed to chain? */
+#if 0
 		iRet = RS_RET_NOT_IMPLEMENTED; // TODO: implement it!
 		goto finalize_it;
+#endif
+		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData)) {
+			cslcDestruct(pThis);
+			goto finalize_it;
+		}
 	}
 
 finalize_it:
@@ -621,6 +627,7 @@ void dbgPrintCfSysLineHandlers(void)
 			printf("\t\ttype : %d\n", pCmdHdlr->eType);
 			printf("\t\tpData: 0x%x\n", (unsigned) pCmdHdlr->pData);
 			printf("\t\tHdlr : 0x%x\n", (unsigned) pCmdHdlr->cslCmdHdlr);
+			printf("\n");
 		}
 	}
 	printf("\n");

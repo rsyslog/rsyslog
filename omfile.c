@@ -738,6 +738,25 @@ CODESTARTparseSelectorAct
 ENDparseSelectorAct
 
 
+/* Reset config variables for this module to default values.
+ * rgerhards, 2007-07-17
+ */
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	fileUID = -1;
+	fileGID = -1;
+	dirUID = -1;
+	dirGID = -1;
+	bFailOnChown = 1;
+	iDynaFileCacheSize = 10;
+	fCreateMode = 0644;
+	fDirCreateMode = 0644;
+	bCreateDirs = 1;
+
+	return RS_RET_OK;
+}
+
+
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
@@ -757,6 +776,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", eCmdHdlrFileCreateMode, NULL, &fCreateMode));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", eCmdHdlrBinary, NULL, &bCreateDirs));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", eCmdHdlrBinary, NULL, &bFailOnChown));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", eCmdHdlrCustomHandler, resetConfigVariables, NULL));
 ENDmodInit
 
 /*
