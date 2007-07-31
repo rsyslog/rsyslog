@@ -98,8 +98,7 @@ rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 	if(!isdigit((int) *p)) {
 		errno = 0;
 		logerror("invalid number");
-		iRet = RS_RET_INVALID_INT;
-		goto finalize_it;
+		ABORT_FINALIZE(RS_RET_INVALID_INT);
 	}
 
 	/* pull value */
@@ -158,8 +157,7 @@ rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 		         "value must be octal (e.g 0644).");
 		errno = 0;
 		logerror((char*) errMsg);
-		iRet = RS_RET_INVALID_VALUE;
-		goto finalize_it;
+		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 
 	/*  we reach this code only if the octal number is ok - so we can now
@@ -234,8 +232,7 @@ rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
 		logerror("could not extract group name");
-		iRet = RS_RET_NOT_FOUND;
-		goto finalize_it;
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	getgrnam_r((char*)szName, &gBuf, stringBuf, sizeof(stringBuf), &pgBuf);
@@ -277,8 +274,7 @@ rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
 		logerror("could not extract user name");
-		iRet = RS_RET_NOT_FOUND;
-		goto finalize_it;
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	getpwnam_r((char*)szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
@@ -357,11 +353,10 @@ rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis)
 
 	assert(ppThis != NULL);
 	if((pThis = calloc(1, sizeof(cslCmdHdlr_t))) == NULL) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-		goto abort_it;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
-abort_it:
+finalize_it:
 	*ppThis = pThis;
 	return iRet;
 }

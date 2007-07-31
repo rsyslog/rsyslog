@@ -12,6 +12,7 @@ Version 1.17.6 (rgerhards), 2007-07-3?
   The initial fix and idea was developed by mildew, I fine-tuned
   it a bit. Thanks a lot for the fix, I'd probably had pulled out my
   hair to find the bug...
+- added output of config file line number when a parsing error occured
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
 - continued to work on output module modularization

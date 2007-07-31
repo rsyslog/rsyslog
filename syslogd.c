@@ -3499,8 +3499,9 @@ static void doModLoad(uchar **pp)
  * rgerhards 2005-06-21: previously only for templates, now 
  *    generalized.
  */
-static void doNameLine(uchar **pp, enum eDirective eDir)
+static rsRetVal doNameLine(uchar **pp, enum eDirective eDir)
 {
+	DEFiRet;
 	uchar *p;
 	char szName[128];
 
@@ -3514,7 +3515,7 @@ static void doNameLine(uchar **pp, enum eDirective eDir)
 		         "Invalid $%s line: could not extract name - line ignored",
 			 directive_name_list[eDir]);
 		logerror(errMsg);
-		return;
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 	if(*p == ',')
 		++p; /* comma was eaten */
@@ -3546,7 +3547,9 @@ static void doNameLine(uchar **pp, enum eDirective eDir)
 	}
 
 	*pp = p;
-	return;
+
+finalize_it:
+	return iRet;
 }
 
 
@@ -3566,8 +3569,9 @@ static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
  * extended configuration parameters.
  * 2004-11-17 rgerhards
  */
-void cfsysline(uchar *p)
+rsRetVal cfsysline(uchar *p)
 {
+	DEFiRet;
 	uchar szCmd[64];
 	uchar errMsg[128];	/* for dynamic error messages */
 
@@ -3576,7 +3580,7 @@ void cfsysline(uchar *p)
 	dprintf("cfsysline --> %s\n", p);
 	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(uchar), ' ')  != 0) {
 		logerror("Invalid $-configline - could not extract command - line ignored\n");
-		return;
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	/* check the command and carry out processing */
@@ -3587,37 +3591,37 @@ void cfsysline(uchar *p)
 	} else if(!strcasecmp((char*) szCmd, "allowedsender")) { 
 		doNameLine(&p, DIR_ALLOWEDSENDER);
 	} else if(!strcasecmp((char*) szCmd, "dircreatemode")) { 
-		doFileCreateMode(&p, NULL, &fDirCreateMode);
+		CHKiRet(doFileCreateMode(&p, NULL, &fDirCreateMode));
 	} else if(!strcasecmp((char*) szCmd, "filecreatemode")) { 
-		doFileCreateMode(&p, NULL, &fCreateMode);
+		CHKiRet(doFileCreateMode(&p, NULL, &fCreateMode));
 	} else if(!strcasecmp((char*) szCmd, "umask")) { 
-		doFileCreateMode(&p, (void*) setUmask, NULL);
+		CHKiRet(doFileCreateMode(&p, (void*) setUmask, NULL));
 	} else if(!strcasecmp((char*) szCmd, "dirowner")) { 
-		doGetUID(&p, NULL, &dirUID);
+		CHKiRet(doGetUID(&p, NULL, &dirUID));
 	} else if(!strcasecmp((char*) szCmd, "dirgroup")) { 
-		doGetGID(&p, NULL, &dirGID);
+		CHKiRet(doGetGID(&p, NULL, &dirGID));
 	} else if(!strcasecmp((char*) szCmd, "fileowner")) { 
-		doGetUID(&p, NULL, &fileUID);
+		CHKiRet(doGetUID(&p, NULL, &fileUID));
 	} else if(!strcasecmp((char*) szCmd, "filegroup")) { 
-		doGetGID(&p, NULL, &fileGID);
+		CHKiRet(doGetGID(&p, NULL, &fileGID));
 	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
-		doGetInt(&p, (void*) setDynaFileCacheSize, NULL);
+		CHKiRet(doGetInt(&p, (void*) setDynaFileCacheSize, NULL));
 	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
-		doBinaryOptionLine(&p, NULL, &bReduceRepeatMsgs);
+		CHKiRet(doBinaryOptionLine(&p, NULL, &bReduceRepeatMsgs));
 	} else if(!strcasecmp((char*) szCmd, "controlcharacterescapeprefix")) { 
-		doGetChar(&p, NULL, &cCCEscapeChar);
+		CHKiRet(doGetChar(&p, NULL, &cCCEscapeChar));
 	} else if(!strcasecmp((char*) szCmd, "escapecontrolcharactersonreceive")) { 
-		doBinaryOptionLine(&p, NULL, &bEscapeCCOnRcv);
+		CHKiRet(doBinaryOptionLine(&p, NULL, &bEscapeCCOnRcv));
 	} else if(!strcasecmp((char*) szCmd, "dropmsgswithmaliciousdnsptrrecords")) { 
-		doBinaryOptionLine(&p, NULL, &bDropMalPTRMsgs);
+		CHKiRet(doBinaryOptionLine(&p, NULL, &bDropMalPTRMsgs));
 	} else if(!strcasecmp((char*) szCmd, "createdirs")) { 
-		doBinaryOptionLine(&p, NULL, &bCreateDirs);
+		CHKiRet(doBinaryOptionLine(&p, NULL, &bCreateDirs));
 	} else if(!strcasecmp((char*) szCmd, "debugprinttemplatelist")) { 
-		doBinaryOptionLine(&p, NULL, &bDebugPrintTemplateList);
+		CHKiRet(doBinaryOptionLine(&p, NULL, &bDebugPrintTemplateList));
 	} else if(!strcasecmp((char*) szCmd, "failonchownfailure")) { 
-		doBinaryOptionLine(&p, NULL, &bFailOnChown);
+		CHKiRet(doBinaryOptionLine(&p, NULL, &bFailOnChown));
 	} else if(!strcasecmp((char*) szCmd, "droptrailinglfonreception")) { 
-		doBinaryOptionLine(&p, NULL, &bDropTrailingLF);
+		CHKiRet(doBinaryOptionLine(&p, NULL, &bDropTrailingLF));
 	} else if(!strcasecmp((char*) szCmd, "resetconfigvariables")) { 
 		resetConfigVariables();
 	} else if(!strcasecmp((char*) szCmd, "modload")) { 
@@ -3627,7 +3631,7 @@ void cfsysline(uchar *p)
 		snprintf(err, sizeof(err)/sizeof(char),
 		         "Invalid command in $-configline: '%s' - line ignored\n", szCmd);
 		logerror(err);
-		return;
+		ABORT_FINALIZE(RS_RET_INVALID_CMD);
 	}
 
 	/* now check if we have some extra characters left on the line - that
@@ -3644,6 +3648,9 @@ void cfsysline(uchar *p)
 		errno = 0;
 		logerror((char*) errMsg);
 	}
+
+finalize_it:
+	return iRet;
 }
 
 
@@ -3802,6 +3809,7 @@ static void init()
 		Initialized = 1;
 	}
 	else { /* we should consider moving this into a separate function, its lengthy... */
+		int iLnNbr = 0;
 		/*
 		 *  Foreach line in the conf table, open that file.
 		 */
@@ -3811,6 +3819,7 @@ static void init()
 	#else
 		while (fgets(cline, sizeof(cline), cf) != NULL) {
 	#endif
+			++iLnNbr;
 			/* drop LF - TODO: make it better, replace fgets(), but its clean as it is */
 			if(cline[strlen(cline)-1] == '\n') {
 				cline[strlen(cline) -1] = '\0';
@@ -3824,7 +3833,9 @@ static void init()
 				continue;
 
 			if(*p == '$') {
-				cfsysline((uchar*) ++p);
+				if(cfsysline((uchar*) ++p) != RS_RET_OK) {
+					logerrorInt("error occured in config file line %d", iLnNbr);
+				}
 				continue;
 			}
 	#if CONT_LINE
