@@ -3431,55 +3431,35 @@ static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 }
 
 
-/* Parse and interpret a $DynaFileCacheSize line.
- * Parameter **pp has a pointer to the current config line.
- * On exit, it will be updated to the processed position.
- * rgerhards, 2007-07-4 (happy independence day to my US friends!)
+/* set the dynaFile cache size. Does some limit checking.
+ * rgerhards, 2007-07-31
  */
-static void doDynaFileCacheSizeLine(uchar **pp)
+static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 {
-	uchar *p;
+	DEFiRet;
 	uchar errMsg[128];	/* for dynamic error messages */
-	int i;
 
-	assert(pp != NULL);
-	assert(*pp != NULL);
-	
-	skipWhiteSpace(pp); /* skip over any whitespace */
-	p = *pp;
-
-	if(!isdigit((int) *p)) {
+	if(iNewVal < 1) {
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "DynaFileCacheSize invalid, value '%s'.", p);
+		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
 		errno = 0;
 		logerror((char*) errMsg);
-		return;
+		iRet = RS_RET_VAL_OUT_OF_RANGE;
+		iNewVal = 1;
+	} else if(iNewVal > 10000) {
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
+		         "DynaFileCacheSize maximum is 10,000 (%d given), changed to 10,000.", iNewVal);
+		errno = 0;
+		logerror((char*) errMsg);
+		iRet = RS_RET_VAL_OUT_OF_RANGE;
+		iNewVal = 10000;
 	}
 
-	/* pull value */
-	for(i = 0 ; *p && isdigit((int) *p) ; ++p)
-		i = i * 10 + *p - '0';
-	
-	if(i < 1) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", i);
-		errno = 0;
-		logerror((char*) errMsg);
-		i = 1;
-	} else if(i > 10000) {
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "DynaFileCacheSize maximum is 10,000 (%d given), changed to 10,000.", i);
-		errno = 0;
-		logerror((char*) errMsg);
-		i = 10000;
-	}
+	iDynaFileCacheSize = iNewVal;
+	dprintf("DynaFileCacheSize changed to %d.\n", iNewVal);
 
-	iDynaFileCacheSize = i;
-	dprintf("DynaFileCacheSize changed to %d.\n", i);
-
-	*pp = p;
+	return iRet;
 }
-
 
 
 /* process a $ModLoad config line.
@@ -3621,7 +3601,7 @@ void cfsysline(uchar *p)
 	} else if(!strcasecmp((char*) szCmd, "filegroup")) { 
 		doGetGID(&p, NULL, &fileGID);
 	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
-		doDynaFileCacheSizeLine(&p);
+		doGetInt(&p, (void*) setDynaFileCacheSize, NULL);
 	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 
 		doBinaryOptionLine(&p, NULL, &bReduceRepeatMsgs);
 	} else if(!strcasecmp((char*) szCmd, "controlcharacterescapeprefix")) { 

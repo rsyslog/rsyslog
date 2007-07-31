@@ -60,6 +60,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_SUSPENDED = -2007,  /**< something was suspended, not neccesarily an error */
 	RS_RET_RQD_TPLOPT_MISSING = -2008,/**< a required template option is missing */
 	RS_RET_INVALID_VALUE = -2009,/**< some value is invalid (e.g. user-supplied data) */
+	RS_RET_INVALID_INT = -2010,/**< invalid integer */
+	RS_RET_VAL_OUT_OF_RANGE = -2011, /**< value out of range */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
@@ -69,6 +71,7 @@ typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
  * the function finalizer always "finalize_it".
  */
 #define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
+#define DEFiRet rsRetVal iRet = RS_RET_OK
 
 /** Object ID. These are for internal checking. Each
  * object is assigned a specific ID. This is contained in

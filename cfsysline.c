@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 #include <pwd.h>
 #include <grp.h>
 
@@ -50,10 +51,9 @@ cslCmd_t *pCmdListLast = NULL;
  * HINT: check if char is ' and, if so, use 'c' where c may also be things
  * like \t etc.
  */
-//static void doControlCharEscPrefix(uchar **pp)
 rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -80,6 +80,47 @@ finalize_it:
 }
 
 
+/* Parse a number from the configuration line.
+ * rgerhards, 2007-07-31
+ */
+rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+{
+	uchar *p;
+	DEFiRet;
+	int i;	
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	
+	skipWhiteSpace(pp); /* skip over any whitespace */
+	p = *pp;
+
+	if(!isdigit((int) *p)) {
+		errno = 0;
+		logerror("invalid number");
+		iRet = RS_RET_INVALID_INT;
+		goto finalize_it;
+	}
+
+	/* pull value */
+	for(i = 0 ; *p && isdigit((int) *p) ; ++p)
+		i = i * 10 + *p - '0';
+
+	if(pSetHdlr == NULL) {
+		/* we should set value directly to var */
+		*((int*)pVal) = i;
+	} else {
+		/* we set value via a set function */
+		CHKiRet(pSetHdlr(pVal, i));
+	}
+
+	*pp = p;
+
+finalize_it:
+	return iRet;
+}
+
+
 /* Parse and interpet a $FileCreateMode and $umask line. This function
  * pulls the creation mode and, if successful, stores it
  * into the global variable so that the rest of rsyslogd
@@ -95,7 +136,7 @@ finalize_it:
 rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
 	uchar *p;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 	uchar errMsg[128];	/* for dynamic error messages */
 	int iVal;	
 
@@ -184,7 +225,7 @@ rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
 	struct group *pgBuf;
 	struct group gBuf;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 	uchar szName[256];
 	char stringBuf[2048];	/* I hope this is large enough... */
 
@@ -227,7 +268,7 @@ rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
 	struct passwd *ppwBuf;
 	struct passwd pwBuf;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 	uchar szName[256];
 	char stringBuf[2048];	/* I hope this is large enough... */
 
@@ -271,7 +312,7 @@ finalize_it:
 rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
 {
 	int iOption;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -312,7 +353,7 @@ rsRetVal cslchDestruct(cslCmdHdlr_t *pThis)
 rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis)
 {
 	cslCmdHdlr_t *pThis;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 	assert(ppThis != NULL);
 	if((pThis = calloc(1, sizeof(cslCmdHdlr_t))) == NULL) {
@@ -380,7 +421,7 @@ rsRetVal cslcDestruct(cslCmd_t *pThis)
 rsRetVal cslcConstruct(cslCmd_t **ppThis)
 {
 	cslCmd_t *pThis;
-	rsRetVal iRet = RS_RET_OK;
+	DEFiRet;
 
 	assert(ppThis != NULL);
 	if((pThis = calloc(1, sizeof(cslCmd_t))) == NULL) {

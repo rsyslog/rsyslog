@@ -31,6 +31,7 @@ typedef enum cslCmdHdlrType {
 	eCmdHdlrGUID,
 	eCmdHdlrBinary,
 	eCmdHdlrFileCreateMode,
+	eCmdHdlrInt,
 	eCmdHdlrFileGetChar
 } ecslCmdHdrlType;
 
@@ -71,5 +72,6 @@ rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
 rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
 rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
 rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
+rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
 
 #endif /* #ifndef CFSYSLINE_H_INCLUDED */
