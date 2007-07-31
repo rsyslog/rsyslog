@@ -149,7 +149,6 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
-#include <grp.h>
 
 #include <sys/syslog.h>
 #include <sys/param.h>
@@ -3513,38 +3512,6 @@ static void doModLoad(uchar **pp)
 }
 
 
-/* extract a groupname and return its gid.
- * rgerhards, 2007-07-17
- */
-static void doGetGID(uchar **pp, gid_t *pGid)
-{
-	struct group *pgBuf;
-	struct group gBuf;
-	uchar szName[256];
-	char stringBuf[2048];	/* I hope this is large enough... */
-
-	assert(pp != NULL);
-	assert(*pp != NULL);
-	assert(pGid != NULL);
-
-	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
-		logerror("could not extract group name");
-		return;
-	}
-
-	getgrnam_r((char*)szName, &gBuf, stringBuf, sizeof(stringBuf), &pgBuf);
-
-	if(pgBuf == NULL) {
-		logerrorSz("ID for group '%s' could not be found or error", (char*)szName);
-	} else {
-		*pGid = pgBuf->gr_gid;
-		dprintf("gid %d obtained for group '%s'\n", *pGid, szName);
-	}
-
-	skipWhiteSpace(pp); /* skip over any whitespace */
-}
-
-
 /* parse the control character escape prefix and store it.
  * added 2007-07-17 by rgerhards
  */
@@ -3731,11 +3698,11 @@ void cfsysline(uchar *p)
 	} else if(!strcasecmp((char*) szCmd, "dirowner")) { 
 		doGetUID(&p, NULL, &dirUID);
 	} else if(!strcasecmp((char*) szCmd, "dirgroup")) { 
-		doGetGID(&p, &dirGID);
+		doGetGID(&p, NULL, &dirGID);
 	} else if(!strcasecmp((char*) szCmd, "fileowner")) { 
 		doGetUID(&p, NULL, &fileUID);
 	} else if(!strcasecmp((char*) szCmd, "filegroup")) { 
-		doGetGID(&p, &fileGID);
+		doGetGID(&p, NULL, &fileGID);
 	} else if(!strcasecmp((char*) szCmd, "dynafilecachesize")) { 
 		doDynaFileCacheSizeLine(&p);
 	} else if(!strcasecmp((char*) szCmd, "repeatedmsgreduction")) { 

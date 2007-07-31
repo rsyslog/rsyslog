@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <string.h>
 #include <pwd.h>
+#include <grp.h>
 
 #include "rsyslog.h"
 #include "syslogd.h" /* TODO: when the module interface & library design is done, this should be able to go away */
@@ -76,6 +77,50 @@ static int doParseOnOffOption(uchar **pp)
 }
 
 
+/* extract a groupname and return its gid.
+ * rgerhards, 2007-07-17
+ */
+rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+{
+	struct group *pgBuf;
+	struct group gBuf;
+	rsRetVal iRet = RS_RET_OK;
+	uchar szName[256];
+	char stringBuf[2048];	/* I hope this is large enough... */
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pVal != NULL);
+
+	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
+		logerror("could not extract group name");
+		iRet = RS_RET_NOT_FOUND;
+		goto finalize_it;
+	}
+
+	getgrnam_r((char*)szName, &gBuf, stringBuf, sizeof(stringBuf), &pgBuf);
+
+	if(pgBuf == NULL) {
+		logerrorSz("ID for group '%s' could not be found or error", (char*)szName);
+		iRet = RS_RET_NOT_FOUND;
+	} else {
+		if(pSetHdlr == NULL) {
+			/* we should set value directly to var */
+			*((gid_t*)pVal) = pgBuf->gr_gid;
+		} else {
+			/* we set value via a set function */
+			pSetHdlr(pVal, pgBuf->gr_gid);
+		}
+		dprintf("gid %d obtained for group '%s'\n", pgBuf->gr_gid, szName);
+	}
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+
+finalize_it:
+	return iRet;
+}
+
+
 /* extract a username and return its uid.
  * rgerhards, 2007-07-17
  */
@@ -101,6 +146,7 @@ rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 
 	if(ppwBuf == NULL) {
 		logerrorSz("ID for user '%s' could not be found or error", (char*)szName);
+		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
 			/* we should set value directly to var */
