@@ -149,7 +149,7 @@ void endutent(void)
  *	Adjust the size of a variable to prevent a buffer overflow
  *	should _PATH_DEV ever contain something different than "/dev/".
  */
-static srRetVal wallmsg(uchar* pMsg, instanceData *pData)
+static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 {
   
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
