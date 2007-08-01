@@ -368,10 +368,6 @@ static int bRequestDoMark = 0; /* do mark processing? (multithread safe) */
 #define MAXFUNIX	20
 
 int glblHadMemShortage = 0; /* indicates if we had memory shortage some time during the run */
-int iDynaFileCacheSize = 10; /* max cache for dynamic files */
-int fCreateMode = 0644; /* mode to use when creating files */
-int fDirCreateMode = 0644; /* mode to use when creating files */
-int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
@@ -521,12 +517,6 @@ static struct code	FacNames[] = {
 /* global variables for config file state */
 static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	Debug;		/* debug flag  - read-only after startup */
-int	bFailOnChown;	/* fail if chown fails? */
-uid_t	fileUID;	/* UID to be used for newly created files */
-uid_t	fileGID;	/* GID to be used for newly created files */
-uid_t	dirUID;		/* UID to be used for newly created directories */
-uid_t	dirGID;		/* GID to be used for newly created directories */
-int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
@@ -540,6 +530,7 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 				 */
 /* end global config file state variables */
 
+static int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	*finet = NULL;	/* Internet datagram sockets, first element is nbr of elements
@@ -602,15 +593,6 @@ static char* getFIOPName(unsigned iFIOP)
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	fileUID = -1;
-	fileGID = -1;
-	dirUID = -1;
-	dirGID = -1;
-	bFailOnChown = 1;
-	iDynaFileCacheSize = 10;
-	fCreateMode = 0644;
-	fDirCreateMode = 0644;
-	bCreateDirs = 1;
 	cCCEscapeChar = '#';
 	bDebugPrintTemplateList = 1;
 	bDebugPrintCfSysLineHandlerList = 1;
@@ -3908,8 +3890,13 @@ static void init()
 	tplDeleteNew();
 	
 	/* re-setting values to defaults (where applicable) */
-dprintf("check TODO in init()\n");
-// TODO: problem: the modules are not yet loaded here
+	/* TODO: once we have loadable modules, we must re-visit this code. The reason is
+	 * that config variables are not re-set, because the module is not yet loaded. On
+	 * the other hand, that doesn't matter, because the module got unloaded and is then
+	 * re-loaded, so the variables should be re-set via that way. In any case, we should
+	 * think about the whole situation when we implement loadable plugins.
+	 * rgerhards, 2007-07-31
+	 */
 	cfsysline("ResetConfigVariables");
 
 	/* open the configuration file */
