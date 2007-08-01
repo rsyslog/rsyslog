@@ -298,7 +298,7 @@ static int	kmsg,
 		terminate = 0,
 		caught_TSTP = 0,
 		reload_symbols = 0,
-		console_log_level = 6;
+		console_log_level = -1;
 
 static int	use_syscall = 0,
 		one_shot = 0,
@@ -568,7 +568,8 @@ static enum LOGSRC GetKernelLogSrc(void)
 	auto struct stat sb;
 
 	/* Set level of kernel console messaging.. */
-	if ( (ksyslog(8, NULL, console_log_level) < 0) && \
+	if (   (console_log_level != -1) &&
+	       (ksyslog(8, NULL, console_log_level) < 0) &&
 	     (errno == EINVAL) )
 	{
 		/*
@@ -579,7 +580,6 @@ static enum LOGSRC GetKernelLogSrc(void)
 		 */
 		Syslog(LOG_WARNING, "Cannot set console log level - disabling "
 		       "console output.");
-		ksyslog(6, NULL, 0);
 	}
 
 	/*
