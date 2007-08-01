@@ -163,6 +163,9 @@
 #include <sys/file.h>
 #include <sys/un.h>
 #include <sys/time.h>
+#ifdef BSD
+# include <sys/timespec.h>
+#endif
 #include <sys/resource.h>
 #include <signal.h>
 
@@ -2510,6 +2513,7 @@ static void *singleWorker()
 		} else { /* the mutex must be unlocked in any case (important for termination) */
 			pthread_mutex_unlock(fifo->mut);
 		}
+		
 		if(debugging_on && bGlblDone && !fifo->empty)
 			dprintf("Worker does not yet terminate because it still has messages to process.\n");
 	}
@@ -2536,6 +2540,7 @@ static void enqueueMsg(msg_t *pMsg)
 {
 	int iRet;
 	msgQueue *fifo = pMsgQueue;
+	struct timespec t;
 
 	assert(pMsg != NULL);
 
@@ -2547,12 +2552,22 @@ static void enqueueMsg(msg_t *pMsg)
 		 processMsg(pMsg);
 	} else {
 		/* "normal" mode, threading initialized */
-		iRet = pthread_mutex_lock(fifo->mut);
+		pthread_mutex_lock(fifo->mut);
+			
 		while (fifo->full) {
 			dprintf ("enqueueMsg: queue FULL.\n");
-			pthread_cond_wait (fifo->notFull, fifo->mut);
+			
+			clock_gettime (CLOCK_REALTIME, &t);
+			t.tv_sec += 2;
+			
+			if(pthread_cond_timedwait (fifo->notFull,
+						   fifo->mut, &t) != 0) {
+				dprintf("enqueueMsg: cond timeout, dropping message!\n");
+				goto unlock;
+			}
 		}
 		queueAdd(fifo, MsgAddRef(pMsg));
+	unlock:
 		/* now activate the worker thread */
 		pthread_mutex_unlock(fifo->mut);
 		iRet = pthread_cond_signal(fifo->notEmpty);

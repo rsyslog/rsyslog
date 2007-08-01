@@ -22,6 +22,9 @@ Version 1.17.6 (rgerhards), 2007-07-3?
 - fixed an invalid value for the MARK timer - unfortunately, there was
   a testing aid left in place. This resulted in quite frequent MARK messages
 - added $include config directive
+- applied a patch from mildew to prevent rsyslogd from freezing under heavy
+  load. This could happen when the queue was full. Now, we drop messages
+  but rsyslogd remains active.
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
 - continued to work on output module modularization
