@@ -2278,6 +2278,76 @@ static void doEmergencyLogging(msg_t *pMsg)
 }
 
 
+/* call the configured action. Does all necessary housekeeping.
+ * rgerhards, 2007-08-01
+ * TODO: f shall become a pointer to msg object!
+ */
+static rsRetVal callAction(msg_t *pMsg, selector_t *f)
+{
+	DEFiRet;
+
+	assert(pMsg != NULL);
+	assert(f != NULL);
+
+	/* first, we need to check if this is a disabled
+	 * entry. If so, we must not further process it.
+	 * rgerhards 2005-09-26
+	 * In the future, disabled modules may be re-probed from time
+	 * to time. They are in a perfectly legal state, except that the
+	 * doAction method indicated that it wanted to be disabled - but
+	 * we do not consider this is a solution for eternity... So we
+	 * should check from time to time if affairs have improved.
+	 * rgerhards, 2007-07-24
+	 */
+	if(f->bEnabled == 0) {
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+	/* don't output marks to recently written files */
+	if ((pMsg->msgFlags & MARK) && (now - f->f_time) < MarkInterval / 2) {
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+	/* suppress duplicate lines to this file
+	 */
+	if ((f->f_ReduceRepeated == 1) &&
+	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(f->f_pMsg) &&
+	    !strcmp(getMSG(pMsg), getMSG(f->f_pMsg)) &&
+	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(f->f_pMsg))) {
+		f->f_prevcount++;
+		dprintf("msg repeated %d times, %ld sec of %d.\n",
+		    f->f_prevcount, now - f->f_time,
+		    repeatinterval[f->f_repeatcount]);
+		/* If domark would have logged this by now, flush it now (so we don't hold
+		 * isolated messages), but back off so we'll flush less often in the future.
+		 */
+		if (now > REPEATTIME(f)) {
+			iRet = fprintlog(f);
+			BACKOFF(f);
+		}
+	} else {
+		/* new line, save it */
+		/* first check if we have a previous message stored
+		 * if so, emit and then discard it first
+		 */
+		if(f->f_pMsg != NULL) {
+			if(f->f_prevcount > 0)
+				fprintlog(f);
+				/* we do not care about iRet above - I think it's right but if we have
+				 * some troubles, you know where to look at ;) -- rgerhards, 2007-08-01
+				 */
+			MsgDestruct(f->f_pMsg);
+		}
+		f->f_pMsg = MsgAddRef(pMsg);
+		/* call the output driver */
+		iRet = fprintlog(f);
+	}
+
+finalize_it:
+	return iRet;
+}
+
+
 /* Process (consume) a received message. Calls the actions configured.
  * Can some time later run in its own thread. To aid this, the calling
  * parameters should be reduced to just pMsg.
@@ -2299,19 +2369,6 @@ static void processMsg(msg_t *pMsg)
 
 	bContinue = 1;
 	for (f = Files; f != NULL && bContinue ; f = f->f_next) {
-		/* first, we need to check if this is a disabled
-		 * entry. If so, we must not further process it.
-		 * rgerhards 2005-09-26
-		 * In the future, disabled modules may be re-probed from time
-		 * to time. They are in a perfectly legal state, except that the
-		 * doAction method indicated that it wanted to be disabled - but
-		 * we do not consider this is a solution for eternity... So we
-		 * should check from time to time if affairs have improved.
-		 * rgerhards, 2007-07-24
-		 */
-		if(f->bEnabled == 0)
-			continue; /* on to next */
-
 		/* This is actually the "filter logic". Looks like we need
 		 * to improve it a little for complex selector line conditions. We
 		 * won't do that for now, but at least we now know where
@@ -2325,45 +2382,9 @@ static void processMsg(msg_t *pMsg)
 			continue;
 		}
 
-		/* don't output marks to recently written files */
-		if ((pMsg->msgFlags & MARK) && (now - f->f_time) < MarkInterval / 2)
-			continue;
-
-		/* suppress duplicate lines to this file
-		 */
-		if ((f->f_ReduceRepeated == 1) &&
-		    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(f->f_pMsg) &&
-		    !strcmp(getMSG(pMsg), getMSG(f->f_pMsg)) &&
-		    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(f->f_pMsg))) {
-			f->f_prevcount++;
-			dprintf("msg repeated %d times, %ld sec of %d.\n",
-			    f->f_prevcount, now - f->f_time,
-			    repeatinterval[f->f_repeatcount]);
-			/* If domark would have logged this by now,
-			 * flush it now (so we don't hold isolated messages),
-			 * but back off so we'll flush less often in the future.
-			 */
-			if (now > REPEATTIME(f)) {
-				if(fprintlog(f) == RS_RET_DISCARDMSG)
-					bContinue = 0;
-				BACKOFF(f);
-			}
-		} else {
-			/* new line, save it */
-			/* first check if we have a previous message stored
-			 * if so, emit and then discard it first
-			 */
-			if(f->f_pMsg != NULL) {
-				if(f->f_prevcount > 0)
-					if(fprintlog(f) == RS_RET_DISCARDMSG)
-						bContinue = 0;
-				MsgDestruct(f->f_pMsg);
-			}
-			f->f_pMsg = MsgAddRef(pMsg);
-			/* call the output driver */
-			if(fprintlog(f) == RS_RET_DISCARDMSG)
-				bContinue = 0;
-		}
+		/* ok -- from here, we have action-specific code, nothing really selector-specific -- rger 2007-08-01 */
+		if(callAction(pMsg, f) == RS_RET_DISCARDMSG)
+			bContinue = 0;
 	}
 }
 
@@ -3043,7 +3064,7 @@ void logmsg(int pri, msg_t *pMsg, int flags)
  * when a message was already repeated but also when a new message
  * arrived.
  */
-rsRetVal fprintlog(register selector_t *f)
+rsRetVal fprintlog(selector_t *f)
 {
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
