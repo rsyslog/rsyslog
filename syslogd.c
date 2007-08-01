@@ -194,11 +194,6 @@
    (sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))
 #endif
 
-#ifdef	WITH_DB
-#include "mysql/mysql.h" 
-#include "mysql/errmsg.h"
-#endif
-
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "syslogd-types.h"
@@ -381,21 +376,12 @@ int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
 #define TABLE_ALLPRI    0xFF    /* Value to indicate all priorities in f_pmask */
 #define	LOG_MARK	LOG_MAKEPRI(LOG_NFACILITIES, 0)	/* mark "facility" */
 
-/* This table lists the directive lines:
+/* definitions used for doNameLine to differentiate between different command types
+ * (with otherwise identical code). This is a left-over from the previous config
+ * system. It stays, because it is still useful. So do not wonder why it looks
+ * somewhat strange (at least its name). -- rgerhards, 2007-08-01
  */
-static const char *directive_name_list[] = {
-	"template",
-	"outchannel",
-	"allowedsender",
-	"filecreatemode",
-	"umask",
-	"dynafilecachesize"
-};
-/* ... and their definitions: */
-enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1,
-                  DIR_ALLOWEDSENDER = 2, DIR_FILECREATEMODE = 3,
-		  DIR_DIRCREATEMODE = 4,
-		  DIR_UMASK = 5, DIR_DYNAFILECACHESIZE = 6};
+enum eDirective { DIR_TEMPLATE = 0, DIR_OUTCHANNEL = 1, DIR_ALLOWEDSENDER = 2};
 
 /* The following global variables are used for building
  * tag and host selector lines during startup and config reload.
@@ -462,7 +448,6 @@ union sockunion {
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
 struct	filed *Files = NULL; /* read-only after init() (but beware of sigusr1!) */
-// TODO: REMOVE! struct	filed consfile; /* initialized on startup, used during actions - maybe NON THREAD-SAFE */
 
 struct code {
 	char	*c_name;
@@ -536,7 +521,7 @@ char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	*finet = NULL;	/* Internet datagram sockets, first element is nbr of elements
 				 * read-only after init(), but beware of restart! */
 static char     *LogPort = "514";    /* port number for INET connections */
-static int	MarkInterval = 5;//20 * 60;	/* interval between marks in seconds - read-only after startup */
+static int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	MarkSeq = 0;	/* mark sequence number - modified in domark() only */
@@ -561,7 +546,7 @@ static int     Initialized = 0; /* set when we have initialized ourselves
 
 extern	int errno;
 
-/* support for simple textual representatio of FIOP names
+/* support for simple textual representation of FIOP names
  * rgerhards, 2005-09-27
  */
 static char* getFIOPName(unsigned iFIOP)
@@ -3473,11 +3458,7 @@ static rsRetVal doNameLine(uchar **pp, void* pVal)
 	eDir = (enum eDirective) pVal;	/* this time, it actually is NOT a pointer! */
 
 	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
-		char errMsg[128];
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
-		         "Invalid $%s line: could not extract name - line ignored",
-			 directive_name_list[eDir]);
-		logerror(errMsg);
+		logerror("Invalid config line: could not extract name - line ignored");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 	if(*p == ',')
@@ -3897,7 +3878,7 @@ static void init()
 	 * think about the whole situation when we implement loadable plugins.
 	 * rgerhards, 2007-07-31
 	 */
-	cfsysline("ResetConfigVariables");
+	cfsysline((uchar*)"ResetConfigVariables");
 
 	/* open the configuration file */
 	if((iRet = processConfFile(ConfFile)) != RS_RET_OK) {

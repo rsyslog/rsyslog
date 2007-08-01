@@ -149,7 +149,7 @@ void endutent(void)
  *	Adjust the size of a variable to prevent a buffer overflow
  *	should _PATH_DEV ever contain something different than "/dev/".
  */
-static void wallmsg(uchar* pMsg, instanceData *pData)
+static srRetVal wallmsg(uchar* pMsg, instanceData *pData)
 {
   
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
@@ -162,7 +162,7 @@ static void wallmsg(uchar* pMsg, instanceData *pData)
 	assert(pMsg != NULL);
 
 	if (reenter++)
-		return;
+		return RS_RET_OK;
 
 	/* open the user login file */
 	setutent();
@@ -241,14 +241,14 @@ static void wallmsg(uchar* pMsg, instanceData *pData)
 	/* close the user login file */
 	endutent();
 	reenter = 0;
+	return RS_RET_OK;
 }
 
 
 BEGINdoAction
 CODESTARTdoAction
 	dprintf("\n");
-	/* TODO: change wallmsg so that it returns iRet */
-	wallmsg(ppString[0], pData);
+	iRet = wallmsg(ppString[0], pData);
 ENDdoAction
 
 

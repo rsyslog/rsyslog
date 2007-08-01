@@ -19,6 +19,8 @@ Version 1.17.6 (rgerhards), 2007-07-3?
   thanks to mildew for catching this.
 - added configuration file command $DebugPrintModuleList and
   $DebugPrintCfSysLineHandlerList
+- fixed an invalid value for the MARK timer - unfortunately, there was
+  a testing aid left in place. This resulted in quite frequent MARK messages
 ---------------------------------------------------------------------------
 Version 1.17.5 (rgerhards), 2007-07-30
 - continued to work on output module modularization

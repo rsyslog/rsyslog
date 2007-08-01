@@ -1446,7 +1446,6 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		/* skip to the start of the substring (can't do pointer arithmetic
 		 * because the whole string might be smaller!!)
 		 */
-		//	++iFrom; /* nbr of chars to skip! */
 			while(*pRes && iFrom) {
 				--iFrom;
 				++pRes;

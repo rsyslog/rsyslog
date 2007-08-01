@@ -56,6 +56,18 @@
  */
 DEF_OMOD_STATIC_DATA
 
+/* globals for default values */
+static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
+static int fCreateMode = 0644; /* mode to use when creating files */
+static int fDirCreateMode = 0644; /* mode to use when creating files */
+static int	bFailOnChown;	/* fail if chown fails? */
+static uid_t	fileUID;	/* UID to be used for newly created files */
+static uid_t	fileGID;	/* GID to be used for newly created files */
+static uid_t	dirUID;		/* UID to be used for newly created directories */
+static uid_t	dirGID;		/* GID to be used for newly created directories */
+static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
+/* end globals for default values */
+
 typedef struct _instanceData {
 	char	f_fname[MAXFNAME];/* file or template name (display only) */
 	short	fd;		  /* file descriptor for (current) file */

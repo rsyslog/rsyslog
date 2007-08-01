@@ -548,10 +548,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHd
 		}
 	} else {
 		/* command already exists, are we allowed to chain? */
-#if 0
-		iRet = RS_RET_NOT_IMPLEMENTED; // TODO: implement it!
-		goto finalize_it;
-#endif
+		/* TODO: check permission to chain */
 		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData)) {
 			cslcDestruct(pThis);
 			goto finalize_it;
