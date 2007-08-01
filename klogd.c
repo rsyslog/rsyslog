@@ -414,8 +414,11 @@ extern void Syslog(int priority, char *fmt, ...)
 
 static void CloseLogSrc(void)
 {
-	/* Turn on logging of messages to console. */
-  	ksyslog(7, NULL, 0);
+	/* Turn on logging of messages to console, but only if we had the -c
+	 * option -- rgerhards, 2007-08-01
+	 */
+	if (console_log_level != -1)
+		ksyslog(7, NULL, 0);
   
         /* Shutdown the log sources. */
 	switch ( logsrc )
