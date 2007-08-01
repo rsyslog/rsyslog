@@ -54,28 +54,15 @@ typedef struct cslCmdHdlr_s cslCmdHdlr_t;
  * The short name is cslc (Configfile SysLine Command)
  */
 struct cslCmd_s { /* config file sysline parse entry */
+	int bChainingPermitted;			/* may multiple handlers be chained for this command? */
 	linkedList_t llCmdHdlrs;	/* linked list of command handlers */
 };
 typedef struct cslCmd_s cslCmd_t;
 
 /* prototypes */
-rsRetVal cslchDestruct(void *pThis);
-rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis);
-rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData);
-rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine);
-rsRetVal cslcConstruct(cslCmd_t **ppThis);
-rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData);
-rsRetVal cfsyslineInit(void);
+rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData);
 rsRetVal processCfSysLineCommand(uchar *pCmd, uchar **p);
+rsRetVal cfsyslineInit(void);
 void dbgPrintCfSysLineHandlers(void);
-
-/* the next ones go away later */
-rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal);
-rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
-rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
-rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
-rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
-rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal);
-rsRetVal doCustomHdlr(uchar **pp, rsRetVal (*pSetHdlr)(uchar**, void*), void *pVal);
 
 #endif /* #ifndef CFSYSLINE_H_INCLUDED */

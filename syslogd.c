@@ -5220,21 +5220,21 @@ static rsRetVal loadBuildInModules(void)
 	 * is that rsyslog will terminate if we can not register our built-in config commands.
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
-	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", eCmdHdlrBinary, NULL, &bReduceRepeatMsgs));
-	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", eCmdHdlrGetChar, NULL, &cCCEscapeChar));
-	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", eCmdHdlrBinary, NULL, &bEscapeCCOnRcv));
-	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, NULL, &bDropMalPTRMsgs));
-	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", eCmdHdlrBinary, NULL, &bDropTrailingLF));
-	CHKiRet(regCfSysLineHdlr((uchar *)"template", eCmdHdlrCustomHandler, doNameLine, (void*)DIR_TEMPLATE));
-	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", eCmdHdlrCustomHandler, doNameLine, (void*)DIR_OUTCHANNEL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", eCmdHdlrCustomHandler, doNameLine, (void*)DIR_ALLOWEDSENDER));
-	CHKiRet(regCfSysLineHdlr((uchar *)"modload", eCmdHdlrCustomHandler, doModLoad, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"umask", eCmdHdlrFileCreateMode, setUmask, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", eCmdHdlrBinary, NULL, &bDebugPrintTemplateList));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", eCmdHdlrBinary, NULL, &bDebugPrintModuleList));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", eCmdHdlrBinary,
+	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs));
+	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar));
+	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv));
+	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs));
+	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF));
+	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_TEMPLATE));
+	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_OUTCHANNEL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_ALLOWEDSENDER));
+	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, doModLoad, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode, setUmask, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintTemplateList));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintModuleList));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", 0, eCmdHdlrBinary,
 		 NULL, &bDebugPrintCfSysLineHandlerList));
-	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", eCmdHdlrCustomHandler, resetConfigVariables, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL));
 
 finalize_it:
 	return iRet;

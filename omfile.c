@@ -779,16 +779,16 @@ BEGINmodInit(File)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", eCmdHdlrUID, NULL, &dirUID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", eCmdHdlrGID, NULL, &dirGID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"fileowner", eCmdHdlrUID, NULL, &fileUID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filegroup", eCmdHdlrGID, NULL, &fileGID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dircreatemode", eCmdHdlrFileCreateMode, NULL, &fDirCreateMode));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", eCmdHdlrFileCreateMode, NULL, &fCreateMode));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", eCmdHdlrBinary, NULL, &bCreateDirs));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", eCmdHdlrBinary, NULL, &bFailOnChown));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", eCmdHdlrCustomHandler, resetConfigVariables, NULL));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &dirUID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", 0, eCmdHdlrGID, NULL, &dirGID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"fileowner", 0, eCmdHdlrUID, NULL, &fileUID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filegroup", 0, eCmdHdlrGID, NULL, &fileGID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dircreatemode", 0, eCmdHdlrFileCreateMode, NULL, &fDirCreateMode));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", 0, eCmdHdlrFileCreateMode, NULL, &fCreateMode));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", 0, eCmdHdlrBinary, NULL, &bCreateDirs));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &bFailOnChown));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL));
 ENDmodInit
 
 /*

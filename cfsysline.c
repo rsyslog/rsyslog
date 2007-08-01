@@ -50,7 +50,7 @@ linkedList_t llCmdList; /* this is NOT a pointer - no typo here ;) */
  * HINT: check if char is ' and, if so, use 'c' where c may also be things
  * like \t etc.
  */
-rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
 	DEFiRet;
 
@@ -83,7 +83,7 @@ finalize_it:
  * a shell to call the custom handler.
  * rgerhards, 2007-07-31
  */
-rsRetVal doCustomHdlr(uchar **pp, rsRetVal (*pSetHdlr)(uchar**, void*), void *pVal)
+static rsRetVal doCustomHdlr(uchar **pp, rsRetVal (*pSetHdlr)(uchar**, void*), void *pVal)
 {
 	DEFiRet;
 
@@ -100,7 +100,7 @@ finalize_it:
 /* Parse a number from the configuration line.
  * rgerhards, 2007-07-31
  */
-rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
 	uchar *p;
 	DEFiRet;
@@ -149,7 +149,7 @@ finalize_it:
  * Parameter **pp has a pointer to the current config line.
  * On exit, it will be updated to the processed position.
  */
-rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
 	uchar *p;
 	DEFiRet;
@@ -236,7 +236,7 @@ static int doParseOnOffOption(uchar **pp)
 /* extract a groupname and return its gid.
  * rgerhards, 2007-07-17
  */
-rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
 	struct group *pgBuf;
 	struct group gBuf;
@@ -278,7 +278,7 @@ finalize_it:
 /* extract a username and return its uid.
  * rgerhards, 2007-07-17
  */
-rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
 	struct passwd *ppwBuf;
 	struct passwd pwBuf;
@@ -322,7 +322,7 @@ finalize_it:
  * value.
  * rgerhards, 2007-07-15
  */
-rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
+static rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
 {
 	int iOption;
 	DEFiRet;
@@ -354,7 +354,7 @@ finalize_it:
  * pThis is actually a cslCmdHdlr_t, but we do not cast it as all we currently
  * need to do is free it.
  */
-rsRetVal cslchDestruct(void *pThis)
+static rsRetVal cslchDestruct(void *pThis)
 {
 	assert(pThis != NULL);
 	free(pThis);
@@ -365,7 +365,7 @@ rsRetVal cslchDestruct(void *pThis)
 
 /* constructor for cslCmdHdlr
  */
-rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis)
+static rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis)
 {
 	cslCmdHdlr_t *pThis;
 	DEFiRet;
@@ -397,7 +397,7 @@ rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pH
 
 /* call the specified handler
  */
-rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
+static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 {
 	DEFiRet;
 	rsRetVal (*pHdlr)() = NULL;
@@ -469,7 +469,7 @@ static rsRetVal cslcDestruct(void *pData)
 
 /* constructor for cslCmd
  */
-rsRetVal cslcConstruct(cslCmd_t **ppThis)
+static rsRetVal cslcConstruct(cslCmd_t **ppThis, int bChainingPermitted)
 {
 	cslCmd_t *pThis;
 	DEFiRet;
@@ -478,6 +478,8 @@ rsRetVal cslcConstruct(cslCmd_t **ppThis)
 	if((pThis = calloc(1, sizeof(cslCmd_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
+
+	pThis->bChainingPermitted = bChainingPermitted;
 
 	CHKiRet(llInit(&pThis->llCmdHdlrs, cslchDestruct, NULL, NULL));
 
@@ -489,7 +491,7 @@ finalize_it:
 
 /* add a handler entry to a known command
  */
-rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
+static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
 {
 	DEFiRet;
 	cslCmdHdlr_t *pCmdHdlr = NULL;
@@ -526,7 +528,7 @@ finalize_it:
 
 /* function that registers cfsysline handlers.
  */
-rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
+rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
 {
 	cslCmd_t *pThis;
 	DEFiRet;
@@ -534,7 +536,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHd
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void**) &pThis);
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* new command */
-		CHKiRet(cslcConstruct(&pThis));
+		CHKiRet(cslcConstruct(&pThis, bChainingPermitted));
 		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData)) {
 			cslcDestruct(pThis);
 			goto finalize_it;
@@ -548,7 +550,9 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, ecslCmdHdrlType eType, rsRetVal (*pHd
 		}
 	} else {
 		/* command already exists, are we allowed to chain? */
-		/* TODO: check permission to chain */
+		if(pThis->bChainingPermitted == 0 || bChainingPermitted == 0) {
+			ABORT_FINALIZE(RS_RET_CHAIN_NOT_PERMITTED);
+		}
 		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData)) {
 			cslcDestruct(pThis);
 			goto finalize_it;
