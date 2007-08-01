@@ -554,18 +554,18 @@ extern	int errno;
 /* the following struct defines an syslogd-action descriptor
  */
 struct action_s {
-	time_t	f_time;			/* time this was last written */
-	short	bEnabled;		/* is the related action enabled (1) or disabled (0)? */
-	struct moduleInfo *pMod;	/* pointer to output module handling this selector */
-	void	*pModData;		/* pointer to module data - contents is module-specific */
-	int	f_ReduceRepeated;	/* reduce repeated lines 0 - no, 1 - yes */
-	int	f_prevcount;		/* repetition cnt of prevline */
-	int	f_repeatcount;		/* number of "repeated" msgs */
-	int	iNumTpls;		/* number of array entries for template element below */
-	struct template **ppTpl;	/* array of template to use - strings must be passed to doAction
-					 * in this order. */
+	time_t	f_time;		/* time this was last written */
+	short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
+	struct moduleInfo *pMod;/* pointer to output module handling this selector */
+	void	*pModData;	/* pointer to module data - contents is module-specific */
+	int	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
+	int	f_prevcount;	/* repetition cnt of prevline */
+	int	f_repeatcount;	/* number of "repeated" msgs */
+	int	iNumTpls;	/* number of array entries for template element below */
+	struct template **ppTpl;/* array of template to use - strings must be passed to doAction
+				 * in this order. */
 
-	uchar **ppMsgs;			/* array of message pointers for doAction */
+	uchar **ppMsgs;		/* array of message pointers for doAction */
 	struct msg* f_pMsg;	/* pointer to the message (this will replace the other vars with msg
 				 * content later). This is preserved after the message has been
 				 * processed - it is also used to detect duplicates.
@@ -585,6 +585,9 @@ typedef struct action_s action_t;
  * opportunity for non-thread-safety. Each of the variable
  * accesses must be carefully evaluated, many of them probably
  * be guarded by mutexes. But beware of deadlocks...
+ * rgerhards, 2007-08-01: as you can see, the structure has shrunk pretty much. I will
+ * remove some of the comments some time. It's still the structure that controls much
+ * of the processing that goes on in syslogd, but it now has lots of helpers.
  */
 struct filed {
 	struct	filed *f_next;		/* next in linked list */
@@ -611,7 +614,9 @@ struct filed {
 			char isNegated;			/* actually a boolean ;) */
 		} prop;
 	} f_filterData;
+
 	action_t *pAction;	/* pointer to the action descriptor */
+	linkedList_t llActList;	/* list of configured actions */
 };
 typedef struct filed selector_t;	/* new type name */
 
@@ -696,7 +701,7 @@ static void logmsg(int pri, msg_t*, int flags);
 static rsRetVal fprintlog(action_t *pAction);
 static void reapchild();
 static void debug_switch();
-static rsRetVal cfline(char *line, register selector_t *f);
+static rsRetVal cfline(uchar *line, selector_t *f);
 static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
 static void die(int sig);
@@ -1836,6 +1841,98 @@ static int *create_udp_socket()
 	return(socks);
 }
 #endif
+
+
+/* destructs an action descriptor object
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal actionDestruct(action_t *pThis)
+{
+	assert(pThis != NULL);
+
+	if(pThis->pMod != NULL)
+		pThis->pMod->freeInstance(pThis->pModData);
+
+	if(pThis->f_pMsg != NULL)
+		MsgDestruct(pThis->f_pMsg);
+
+	if(pThis->ppTpl != NULL)
+		free(pThis->ppTpl);
+	if(pThis->ppMsgs != NULL)
+		free(pThis->ppMsgs);
+	free(pThis);
+	
+	return RS_RET_OK;
+}
+
+
+/* create a new action descriptor object
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal actionConstruct(action_t **ppThis)
+{
+	DEFiRet;
+	action_t *pThis;
+
+	assert(ppThis != NULL);
+	
+	if((pThis = (action_t*) calloc(1, sizeof(action_t))) == NULL) {
+		glblHadMemShortage = 1;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+
+finalize_it:
+	*ppThis = pThis;
+	return iRet;
+}
+
+
+/* function to destruct a selector_t object
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal selectorDestruct(void *pVal)
+{
+	selector_t *pThis = (selector_t *) pVal;
+
+	assert(pThis != NULL);
+
+	/* free the action instances */
+	if(pThis->pAction != NULL)
+		actionDestruct(pThis->pAction);
+
+	llDestroy(&pThis->llActList);
+	free(pThis);
+	
+	return RS_RET_OK;
+}
+
+
+/* function to construct a selector_t object
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal selectorConstruct(selector_t **ppThis)
+{
+	DEFiRet;
+	selector_t *pThis;
+
+	assert(ppThis != NULL);
+	
+	if((pThis = (selector_t*) calloc(1, sizeof(selector_t))) == NULL) {
+		glblHadMemShortage = 1;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+	CHKiRet(llInit(&pThis->llActList, actionDestruct, NULL, NULL));
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis != NULL) {
+			selectorDestruct(pThis);
+		}
+	}
+	*ppThis = pThis;
+	return iRet;
+}
+
 
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
  * it is never called once rsyslogd is running (not even when HUPed). This code
@@ -3131,7 +3228,6 @@ void logmsg(int pri, msg_t *pMsg, int flags)
  * arrived.
  * rgerhards 2007-08-01: interface changed to use action_t
  */
-//rsRetVal fprintlog(selector_t *f) TODO: removeme
 rsRetVal fprintlog(action_t *pAction)
 {
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
@@ -3791,13 +3887,9 @@ static void freeSelectors(void)
 
 		f = Files;
 		while (f != NULL) {
-			/* free the action instances */
-			actionDestruct(f->pAction);
-
-			/* done with this entry, we now need to delete itself */
 			fPrev = f;
 			f = f->f_next;
-			free(fPrev);
+			selectorDestruct(fPrev);
 		}
 
 		/* Reflect the deletion of the selectors linked list. */
@@ -3957,21 +4049,17 @@ static rsRetVal processConfFile(uchar *pConfFile)
 		*++p = '\0';
 
 		/* allocate next entry and add it */
-		f = (selector_t *)calloc(1, sizeof(selector_t));
-		if(f == NULL) {
-			/* this time, it looks like we really have no point in continuing to run... */
-			logerror("fatal: could not allocated selector\n");
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
+		CHKiRet(selectorConstruct(&f));
 			
 #if CONT_LINE
-		if(cfline((char*)cbuf, f) != RS_RET_OK) {
+		if(cfline(cbuf, f) != RS_RET_OK) {
 #else
-		if(cfline(cline, f) != RS_RET_OK) {
+		if(cfline((uchar*)cline, f) != RS_RET_OK) {
 #endif
 			/* creation of the entry failed, we need to discard it */
-			dprintf("selector line NOT successfully processed\n");
-			free(f); 
+			dprintf("config line NOT successfully processed\n");
+			logerrorInt("the last error occured in config file line %d", iLnNbr);
+			selectorDestruct(f); 
 		} else {
 			/* successfully created an entry */
 			dprintf("selector line successfully processed\n");
@@ -4093,15 +4181,16 @@ static void init()
 		 * abandoning the run in this case - but this, too, is not
 		 * very clever... So we stick with what we have.
 		 */
-		dprintf("primary config file could not be opened - using emergency defintions.\n");
+		// TODO: we need to use the constructor here! better yet: use a mem-based "file"
+		dprintf("primary config file could not be opened - using emergency definitions.\n");
 		nextp = (selector_t *)calloc(1, sizeof(selector_t));
 		Files = nextp; /* set the root! */
-		cfline("*.ERR\t" _PATH_CONSOLE, nextp);
+		cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, nextp);
 		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
-		cfline("*.PANIC\t*", nextp->f_next);
+		cfline((uchar*)"*.PANIC\t*", nextp->f_next);
 		nextp->f_next->f_next = (selector_t *)calloc(1, sizeof(selector_t));
 		snprintf(cbuf,sizeof(cbuf), "*.*\t%s", ttyname(0));
-		cfline(cbuf, nextp->f_next->f_next);
+		cfline((uchar*)cbuf, nextp->f_next->f_next);
 		Initialized = 1;
 	}
 
@@ -4646,55 +4735,11 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 }
 
 
-/* destructs an action descriptor object
- * rgerhards, 2007-08-01
- */
-static rsRetVal actionDestruct(action_t *pThis)
-{
-	assert(pThis != NULL);
-
-	if(pThis->pMod != NULL)
-		pThis->pMod->freeInstance(pThis->pModData);
-
-	if(pThis->f_pMsg != NULL)
-		MsgDestruct(pThis->f_pMsg);
-
-	if(pThis->ppTpl != NULL)
-		free(pThis->ppTpl);
-	if(pThis->ppMsgs != NULL)
-		free(pThis->ppMsgs);
-	free(pThis);
-	
-	return RS_RET_OK;
-}
-
-
-/* create a new action descriptor object
- * rgerhards, 2007-08-01
- */
-static rsRetVal actionConstruct(action_t **ppThis)
-{
-	DEFiRet;
-	action_t *pThis;
-
-	assert(ppThis != NULL);
-	
-	if((pThis = (action_t*) calloc(1, sizeof(action_t))) == NULL) {
-		glblHadMemShortage = 1;
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-
-finalize_it:
-	*ppThis = pThis;
-	return iRet;
-}
-
-
 /* add an Action to the current selector
  * The pOMSR is freed, as it is not needed after this function.
  * rgerhards, 2007-07-27
  */
-rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR)
+rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR)
 {
 	DEFiRet;
 	int i;
@@ -4703,7 +4748,7 @@ rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringReq
 	action_t *pAction;
 	char errMsg[512];
 
-	assert(f != NULL);
+	assert(ppAction != NULL);
 	assert(pMod != NULL);
 	assert(pOMSR != NULL);
 	dprintf("Module %s processed this config line.\n", modGetName(pMod));
@@ -4773,7 +4818,7 @@ rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringReq
 	}
 	pAction->bEnabled = 1; /* action is enabled */
 
-	f->pAction = pAction; /* finally store the action pointer */
+	*ppAction = pAction; /* finally store the action pointer */
 
 finalize_it:
 	if(iRet == RS_RET_OK)
@@ -4791,67 +4836,27 @@ finalize_it:
 }
 
 
-/*
- * Cranck a configuration file line
- * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
- * handle config lines in general, but only lines that reflect actual filter
- * pairs (the original syslog message line format). Extended lines (those starting
- * with "$" have been filtered out by the caller and are passed to another function (cfsysline()).
- * Please note, however, that I needed to make changes in the line syntax to support
- * assignment of format definitions to a file. So it is not (yet) 100% transparent.
- * Eventually, we can overcome this limitation by prefixing the actual action indicator
- * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
- *
- * IMPORTANT: if the function returns RS_RET_OK, the selector in question (f) is added
- * to the list of active selectors. If it returns anything else, the selector is
- * DISCARDED. Do NOT use f->bEnabled to disable an action when there is **no chance of
- * recovering** it. bEnabled should only be set to false it the module requests that and
- * sees chance for recovery. As of this writing, recovery mode is not yet implemented.
- * But a good example is the omfwd module, which may not be able to dns-resolve the
- * target. It could start with a disabled action, because the situation may later
- * be recovered by another dns lookup. But if the situation is not recoverable, e.g.
- * syntax error in condig syntax, simply return some iRet error status. Disabling in
- * such a case would just cause the selector to be never executed, but it would still
- * remain in memory, which would not be a good thing. -- rgerhards, 2007-07-30
+/* read the filter part of a configuration line and store the filter
+ * in the supplied selector_t
+ * rgerhards, 2007-08-01
  */
-static rsRetVal cfline(char *line, register selector_t *f)
+static rsRetVal cflineDoFilter(uchar **pp, selector_t *f)
 {
-	uchar *p;
-	rsRetVal iRet;
-	modInfo_t *pMod;
-	omodStringRequest_t *pOMSR;
-	action_t *pAction;
-	void *pModData;
+	DEFiRet;
 
-	dprintf("cfline(%s)", line);
-
-	errno = 0;	/* keep strerror() stuff out of logerror messages */
-	p = (uchar*) line;
+	assert(pp != NULL);
+	assert(f != NULL);
 
 	/* check which filter we need to pull... */
-	switch(*p) {
+	switch(**pp) {
 		case ':':
-			iRet = cflineProcessPropFilter(&p, f);
-			break;
-		case '!':
-			if((iRet = cflineProcessTagSelector(&p)) == RS_RET_OK)
-				iRet = RS_RET_NOENTRY;
-			break;
-		case '+':
-		case '-':
-			if((iRet = cflineProcessHostSelector(&p)) == RS_RET_OK)
-				iRet = RS_RET_NOENTRY;
+			iRet = cflineProcessPropFilter(pp, f);
 			break;
 		default:
-			iRet = cflineProcessTradPRIFilter(&p, f);
+			iRet = cflineProcessTradPRIFilter(pp, f);
 			break;
 	}
 
-	/* check if that went well... */
-	if(iRet != RS_RET_OK) {
-		return RS_RET_NOENTRY;
-	}
-	
 	/* we now check if there are some global (BSD-style) filter conditions
 	 * and, if so, we copy them over. rgerhards, 2005-10-18
 	 */
@@ -4865,16 +4870,31 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			return(iRet);
 	}
 
-	dprintf("leading char in action: %c\n", *p);
-	
+	return iRet;
+}
+
+
+/* process the action part of a selector line
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
+{
+	DEFiRet;
+	modInfo_t *pMod;
+	omodStringRequest_t *pOMSR;
+	action_t *pAction;
+	void *pModData;
+
+	assert(p != NULL);
+	assert(ppAction != NULL);
+
 	/* loop through all modules and see if one picks up the line */
 	pMod = omodGetNxt(NULL);
 	while(pMod != NULL) {
-		iRet = pMod->mod.om.parseSelectorAct(&p, &pModData, &pOMSR);
-		dprintf("trying selector action for %s: %d\n", modGetName(pMod), iRet);
+		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
+		dprintf("tried selector action for %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_OK) {
-			if((iRet = addAction(f, pMod, pModData, pOMSR)) == RS_RET_OK) {
-				pAction = f->pAction;
+			if((iRet = addAction(&pAction, pMod, pModData, pOMSR)) == RS_RET_OK) {
 				dprintf("Module %s processed this config line.\n",
 					modGetName(pMod));
 				
@@ -4900,6 +4920,85 @@ static rsRetVal cfline(char *line, register selector_t *f)
 			break;
 		}
 		pMod = omodGetNxt(pMod);
+	}
+
+	*ppAction = pAction;
+	return iRet;
+}
+
+
+/* Process a configuration file line in traditional "filter selector" format
+ * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
+ * handle config lines in general, but only lines that reflect actual filter
+ * pairs (the original syslog message line format). Extended lines (those starting
+ * with "$" have been filtered out by the caller and are passed to another function (cfsysline()).
+ * Please note, however, that I needed to make changes in the line syntax to support
+ * assignment of format definitions to a file. So it is not (yet) 100% transparent.
+ * Eventually, we can overcome this limitation by prefixing the actual action indicator
+ * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
+ *
+ * IMPORTANT: if the function returns RS_RET_OK, the selector in question (f) is added
+ * to the list of active selectors. If it returns anything else, the selector is
+ * DISCARDED. Do NOT use f->bEnabled to disable an action when there is **no chance of
+ * recovering** it. bEnabled should only be set to false it the module requests that and
+ * sees chance for recovery. As of this writing, recovery mode is not yet implemented.
+ * But a good example is the omfwd module, which may not be able to dns-resolve the
+ * target. It could start with a disabled action, because the situation may later
+ * be recovered by another dns lookup. But if the situation is not recoverable, e.g.
+ * syntax error in condig syntax, simply return some iRet error status. Disabling in
+ * such a case would just cause the selector to be never executed, but it would still
+ * remain in memory, which would not be a good thing. -- rgerhards, 2007-07-30
+ */
+static rsRetVal cflineClassic(uchar *p, selector_t *f)
+{
+	DEFiRet;
+	action_t *pAction;
+
+	dprintf("cfline(%s)", p);
+
+	iRet = cflineDoFilter(&p, f); /* pull filters */
+	if(iRet == RS_RET_NOENTRY) {
+		goto finalize_it;
+	} else if(iRet != RS_RET_OK)
+		goto finalize_it;
+
+	dprintf("leading char in action: %c\n", *p);
+	
+	CHKiRet(cflineDoAction(&p, &pAction));
+	f->pAction = pAction;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* process a configuration line
+ * I re-did this functon because it was desperately time to do so
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal cfline(uchar *line, register selector_t *f)
+{
+	DEFiRet;
+
+	assert(line != NULL);
+	assert(f != NULL);
+
+	/* check type of line and call respective processing */
+	switch(*line) {
+		case '!':
+			if((iRet = cflineProcessTagSelector(&line)) == RS_RET_OK) {
+				return RS_RET_NOENTRY;
+			}
+			break;
+		case '+':
+		case '-':
+			if((iRet = cflineProcessHostSelector(&line)) == RS_RET_OK) {
+				return RS_RET_NOENTRY;
+			}
+			break;
+		default:
+			iRet = cflineClassic(line, f);
+			break;
 	}
 
 	return iRet;

@@ -103,7 +103,6 @@ struct syslogTime {
 	 */
 };
 
-
 #ifdef SYSLOG_INET
 struct AllowedSenders {
 	struct NetAddr allowedSender; /* ip address allowed */
