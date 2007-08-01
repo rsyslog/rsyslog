@@ -103,9 +103,17 @@ $FileCreateMode 0644<br>
 *.* /var/log/file-with-0644</b></code></p>
 <p>As you can see, open modes depend on position in the config file. Note the 
 first line, which is created with the hardcoded default creation mode.</p>
+<h2>DebugPrintCFSyslineHandlerList</h2>
+<p>Specifies whether or not the configuration file sysline handler list should be written to the debug 
+log. Possible values: on/off. Default is on. Does not affect operation if debugging is 
+disabled.</p>
+<h2>DebugPrintModuleList</h2>
+<p>Specifies whether or not the module list should be written to the debug 
+log. Possible values: on/off. Default is on. Does not affect operation if debugging is 
+disabled.</p>
 <h2>DebugPrintTemplateList</h2>
 <p>Specifies whether or not the template list should be written to the debug 
-log. Possible values: on/off. Does not affect operation if debugging is 
+log. Possible values: on/off. Default is on. Does not affect operation if debugging is 
 disabled.</p>
 <h2>DirCreateMode</h2>
 <p>This is the same as $FileCreateMode, but for directories automatically 
@@ -122,6 +130,18 @@ setting does not affect the owner of directories already existing. The parameter
 is a user name, for which the userid is obtained by rsyslogd on startup and on 
 HUPing. Interim changes to the user mapping are not detected.</p>
 <p><code><b>$DirOwner loguser</b></code></p>
+<h2>Include</h2>
+<p>This directive allows to include other files into the main configuration 
+file. As soon as an include directive is found, the contents of the new file is 
+processed. Includes can be nested. Please note that from a logical point of view 
+the files are merged. Thus, if the include modifies some parameters (e.g. 
+$DynaFileChacheSize), these new parameters are in place for the &quot;calling&quot; 
+configuration file when the include is completed. To avoid any side effects, do 
+a $ResetConfigVariables after the $Include. It may also be a good idea to do a 
+$ResetConfigVariables right at the start of the include, so that the module 
+knows exactly what it does. Of course, one might specifically NOT do this to 
+inherit parameters from the main file. As always, use it as it best fits...</p>
+<p><code><b>$Include /etc/some-included-file.conf</b></code></p>
 <h2>RepeatedMsgReduction</h2>
 <p>This directive specifies whether or not repeated messages should be reduced 
 (this is the &quot;Last line repeated n times&quot; feature). If set to on, repeated messages are reduced. If set to off, every 
@@ -177,6 +197,9 @@ compliant to the value that is somewhat suggested by Internet-Draft
 syslog-protocol. The first non-whitespace character after the command is treated 
 as prefix:</p>
 <p><code><b>$EscapeControlCharactersOnReceive #&nbsp; # as of syslog-protocol</b></code></p>
+<p><b>IMPORTANT</b>: do not use the ' character. This is reserved and will most 
+probably be used in the future as a character delimiter. For the same reason, 
+the syntax of this directive will probably change in furture releases.</p>
 <h2>EscapeControlCharactersOnReceive</h2>
 <p>This directive instructs rsyslogd to replace control characters during 
 reception of the message. The intent is to provide a way to stop non-printable 
