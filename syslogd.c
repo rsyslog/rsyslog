@@ -349,7 +349,7 @@ syslogCODE rs_facilitynames[] =
 #endif
 
 
-static char	*ConfFile = _PATH_LOGCONF; /* read-only after startup */
+static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
 
@@ -631,6 +631,7 @@ static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
 static void die(int sig);
 static void freeSelectors(void);
+static rsRetVal processConfFile(uchar *pConfFile);
 
 /* Access functions for the selector_t. These functions are primarily
  * necessary to make things thread-safe. Consequently, they are slim
@@ -3403,6 +3404,32 @@ static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 }
 
 
+/* process a $include config line. That type of line requires
+ * inclusion of another file.
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
+{
+	DEFiRet;
+	uchar cfgFile[MAXFNAME];
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	if(getSubString(pp, (char*) cfgFile, sizeof(cfgFile) / sizeof(uchar), ' ')  != 0) {
+		logerror("could not extract group name");
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+
+	dprintf("Requested to include config file '%s'\n", cfgFile);
+
+	processConfFile(cfgFile);
+
+finalize_it:
+	return iRet;
+}
+
+
 /* process a $ModLoad config line.
  * As of now, it is a dummy, that will later evolve into the
  * loader for plug-ins.
@@ -3689,7 +3716,7 @@ static void dbgPrintInitInfo(void)
 /* process a configuration file
  * started with code from init() by rgerhards on 2007-07-31
  */
-static rsRetVal processConfFile()
+static rsRetVal processConfFile(uchar *pConfFile)
 {
 	DEFiRet;
 	int iLnNbr = 0;
@@ -3704,8 +3731,9 @@ static rsRetVal processConfFile()
 #else
 	uchar cline[BUFSIZ];
 #endif
+	assert(pConfFile != NULL);
 
-	if((cf = fopen(ConfFile, "r")) == NULL) {
+	if((cf = fopen((char*)pConfFile, "r")) == NULL) {
 		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
 	}
 
@@ -3791,6 +3819,10 @@ static rsRetVal processConfFile()
 	(void) fclose(cf);
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		dprintf("error %d processing config file '%s'; os error: %s\n",
+			iRet, pConfFile, strerror(errno));
+	}
 	return iRet;
 }
 
@@ -3887,8 +3919,7 @@ static void init()
 		 * abandoning the run in this case - but this, too, is not
 		 * very clever... So we stick with what we have.
 		 */
-		dprintf("error %d processing config file '%s'- using emergency defintions; os error: %s\n",
-			iRet, ConfFile, strerror(errno));
+		dprintf("primary config file could not be opened - using emergency defintions.\n");
 		nextp = (selector_t *)calloc(1, sizeof(selector_t));
 		Files = nextp; /* set the root! */
 		cfline("*.ERR\t" _PATH_CONSOLE, nextp);
@@ -5229,6 +5260,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_OUTCHANNEL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_ALLOWEDSENDER));
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, doModLoad, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"include", 0, eCmdHdlrCustomHandler, doIncludeLine, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode, setUmask, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintTemplateList));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintModuleList));
@@ -5304,7 +5336,7 @@ int main(int argc, char **argv)
 			logEveryMsg = 1;
 			break;
 		case 'f':		/* configuration file */
-			ConfFile = optarg;
+			ConfFile = (uchar*) optarg;
 			break;
 		case 'h':
 			NoHops = 0;
