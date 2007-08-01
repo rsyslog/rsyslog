@@ -436,7 +436,7 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 	CHKiRet(pHdlr(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
 
 finalize_it:
-	return RS_RET_OK;
+	return iRet;
 }
 
 
@@ -571,6 +571,7 @@ finalize_it:
 rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 {
 	DEFiRet;
+	rsRetVal iRetLL; /* for linked list handling */
 	cslCmd_t *pCmd;
 	cslCmdHdlr_t *pCmdHdlr;
 	linkedListCookie_t llCookieCmdHdlr;
@@ -578,10 +579,18 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	int bWasOnceOK; /* was the result of an handler at least once RS_RET_OK? */
 	uchar *pOKp = NULL; /* returned conf line pointer when it was OK */
 
-	CHKiRet(llFind(&llCmdList, (void *) pCmdName, (void**) &pCmd));
+	iRet = llFind(&llCmdList, (void *) pCmdName, (void**) &pCmd);
+
+	if(iRet == RS_RET_NOT_FOUND) {
+		logerror("invalid or yet-unknown config file command - have you forgotten to load a module?");
+	}
+
+	if(iRet != RS_RET_OK)
+		goto finalize_it;
+
 	llCookieCmdHdlr = NULL;
 	bWasOnceOK = 0;
-	while((iRet = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void**)&pCmdHdlr)) == RS_RET_OK) {
+	while((iRetLL = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void**)&pCmdHdlr)) == RS_RET_OK) {
 		/* for the time being, we ignore errors during handlers. The
 		 * reason is that handlers are independent. An error in one
 		 * handler does not necessarily mean that another one will
@@ -590,7 +599,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 		 * necessary). -- rgerhards, 2007-07-31
 		 */
 		pHdlrP = *p;
-		if(cslchCallHdlr(pCmdHdlr, &pHdlrP) == RS_RET_OK) {
+		if((iRet = cslchCallHdlr(pCmdHdlr, &pHdlrP)) == RS_RET_OK) {
 			bWasOnceOK = 1;
 			pOKp = pHdlrP;
 		}
@@ -600,6 +609,9 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 		*p = pOKp;
 		iRet = RS_RET_OK;
 	}
+
+	if(iRetLL != RS_RET_END_OF_LINKEDLIST)
+		iRet = iRetLL;
 
 finalize_it:
 	return iRet;

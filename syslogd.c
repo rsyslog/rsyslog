@@ -144,6 +144,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <ctype.h>
 #define GNU_SOURCE
 #include <string.h>
@@ -172,6 +173,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fnmatch.h>
+#include <dirent.h>
 
 #ifndef __sun
 #endif
@@ -3419,6 +3421,77 @@ static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 }
 
 
+/* process a directory and include all of its files into
+ * the current config file. There is no specific order of inclusion,
+ * files are included in the order they are read from the directory.
+ * The caller must have make sure that the provided parameter is
+ * indeed a directory.
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal doIncludeDirectory(uchar *pDirName)
+{
+	DEFiRet;
+	int iEntriesDone = 0;
+	DIR *pDir;
+	union {
+              struct dirent d;
+              char b[offsetof(struct dirent, d_name) + NAME_MAX + 1];
+	} u;
+	struct dirent *res;
+	size_t iDirNameLen;
+	size_t iFileNameLen;
+	uchar szFullFileName[MAXFNAME];
+
+	assert(pDirName != NULL);
+
+	if((pDir = opendir((char*) pDirName)) == NULL) {
+		logerror("error opening include directory");
+		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
+	}
+
+	/* prepare file name buffer */
+	iDirNameLen = strlen((char*) pDirName);
+	memcpy(szFullFileName, pDirName, iDirNameLen);
+
+	/* now read the directory */
+	iEntriesDone = 0;
+	while(readdir_r(pDir, &u.d, &res) == 0) {
+		if(res == NULL)
+			break; /* this also indicates end of directory */
+		if(res->d_type != DT_REG)
+			continue; /* we are not interested in special files */
+		if(res->d_name[0] == '.')
+			continue; /* these files we are also not interested in */
+		++iEntriesDone;
+		/* construct filename */
+		iFileNameLen = strnlen(res->d_name, NAME_MAX);
+		memcpy(szFullFileName + iDirNameLen, res->d_name, iFileNameLen);
+		*(szFullFileName + iDirNameLen + iFileNameLen) = '\0';
+		dprintf("including file '%s'\n", szFullFileName);
+		processConfFile(szFullFileName);
+		/* we deliberately ignore the iRet of processConfFile() - this is because
+		 * failure to process one file does not mean all files will fail. By ignoring,
+		 * we retry with the next file, which is the best thing we can do. -- rgerhards, 2007-08-01
+		 */
+	}
+
+	if(iEntriesDone == 0) {
+		/* I just make it a debug output, because I can think of a lot of cases where it
+		 * makes sense not to have any files. E.g. a system maintainer may place a $Include
+		 * into the config file just in case, when additional modules be installed. When none
+		 * are installed, the directory will be empty, which is fine. -- rgerhards 2007-08-01
+		 */
+		dprintf("warning: the include directory contained no files - this may be ok.\n");
+	}
+
+finalize_it:
+	if(pDir != NULL)
+		closedir(pDir);
+
+	return iRet;
+}
+
+
 /* process a $include config line. That type of line requires
  * inclusion of another file.
  * rgerhards, 2007-08-01
@@ -3436,9 +3509,13 @@ static rsRetVal doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
-	dprintf("Requested to include config file '%s'\n", cfgFile);
-
-	processConfFile(cfgFile);
+	if(*(cfgFile+strlen((char*) cfgFile) - 1) == '/') {
+		dprintf("requested to include directory '%s'\n", cfgFile);
+		iRet = doIncludeDirectory(cfgFile);
+	} else {
+		dprintf("Requested to include config file '%s'\n", cfgFile);
+		iRet = processConfFile(cfgFile);
+	}
 
 finalize_it:
 	return iRet;
@@ -3572,6 +3649,8 @@ rsRetVal cfsysline(uchar *p)
 	/* we now try and see if we can find the command in the registered
 	 * list of cfsysline handlers. -- rgerhards, 2007-07-31
 	 */
+	CHKiRet(processCfSysLineCommand(szCmd, &p));
+#if 0
 	if((iRet = processCfSysLineCommand(szCmd, &p)) != RS_RET_OK) {
 		/* invalid command! */
 		char err[256];
@@ -3580,6 +3659,7 @@ rsRetVal cfsysline(uchar *p)
 		logerror(err);
 		ABORT_FINALIZE(RS_RET_INVALID_CMD);
 	}
+#endif
 
 	/* now check if we have some extra characters left on the line - that
 	 * should not be the case. Whitespace is OK, but everything else should
