@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
-Version 1.17.6 (rgerhards), 2007-07-3?
-- continued to work on output module modularization
+Version 1.17.6 (rgerhards), 2007-08-01
+- continued to work on output module modularization - basic stage of
+  this work is now FINISHED
 - fixed bug in OMSRcreate() - always returned SR_RET_OK
 - fixed a bug that caused ommysql to always complain about missing
   templates
