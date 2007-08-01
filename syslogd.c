@@ -551,6 +551,29 @@ static int     Initialized = 0; /* set when we have initialized ourselves
 
 extern	int errno;
 
+/* the following struct defines an syslogd-action descriptor
+ */
+struct action_s {
+	time_t	f_time;			/* time this was last written */
+	short	bEnabled;		/* is the related action enabled (1) or disabled (0)? */
+	struct moduleInfo *pMod;	/* pointer to output module handling this selector */
+	void	*pModData;		/* pointer to module data - contents is module-specific */
+	int	f_ReduceRepeated;	/* reduce repeated lines 0 - no, 1 - yes */
+	int	f_prevcount;		/* repetition cnt of prevline */
+	int	f_repeatcount;		/* number of "repeated" msgs */
+	int	iNumTpls;		/* number of array entries for template element below */
+	struct template **ppTpl;	/* array of template to use - strings must be passed to doAction
+					 * in this order. */
+
+	uchar **ppMsgs;			/* array of message pointers for doAction */
+	struct msg* f_pMsg;	/* pointer to the message (this will replace the other vars with msg
+				 * content later). This is preserved after the message has been
+				 * processed - it is also used to detect duplicates.
+				 */
+};
+typedef struct action_s action_t;
+
+
 /* support for simple textual representation of FIOP names
  * rgerhards, 2005-09-27
  */
@@ -628,7 +651,7 @@ static void *singleWorker(); /* REMOVEME later 2005-10-24 */
 static char **crunch_list(char *list);
 static void printline(char *hname, char *msg, int iSource);
 static void logmsg(int pri, msg_t*, int flags);
-static rsRetVal fprintlog(register selector_t *f);
+static rsRetVal fprintlog(action_t *pAction);
 static void reapchild();
 static void debug_switch();
 static rsRetVal cfline(char *line, register selector_t *f);
@@ -637,6 +660,7 @@ static void sighup_handler();
 static void die(int sig);
 static void freeSelectors(void);
 static rsRetVal processConfFile(uchar *pConfFile);
+static rsRetVal actionDestruct(action_t *pThis);
 
 /* Access functions for the selector_t. These functions are primarily
  * necessary to make things thread-safe. Consequently, they are slim
@@ -2282,12 +2306,12 @@ static void doEmergencyLogging(msg_t *pMsg)
  * rgerhards, 2007-08-01
  * TODO: f shall become a pointer to msg object!
  */
-static rsRetVal callAction(msg_t *pMsg, selector_t *f)
+static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 {
 	DEFiRet;
 
 	assert(pMsg != NULL);
-	assert(f != NULL);
+	assert(pAction != NULL);
 
 	/* first, we need to check if this is a disabled
 	 * entry. If so, we must not further process it.
@@ -2299,48 +2323,48 @@ static rsRetVal callAction(msg_t *pMsg, selector_t *f)
 	 * should check from time to time if affairs have improved.
 	 * rgerhards, 2007-07-24
 	 */
-	if(f->bEnabled == 0) {
+	if(pAction->bEnabled == 0) {
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
 	/* don't output marks to recently written files */
-	if ((pMsg->msgFlags & MARK) && (now - f->f_time) < MarkInterval / 2) {
+	if ((pMsg->msgFlags & MARK) && (now - pAction->f_time) < MarkInterval / 2) {
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
 	/* suppress duplicate lines to this file
 	 */
-	if ((f->f_ReduceRepeated == 1) &&
-	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(f->f_pMsg) &&
-	    !strcmp(getMSG(pMsg), getMSG(f->f_pMsg)) &&
-	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(f->f_pMsg))) {
-		f->f_prevcount++;
+	if ((pAction->f_ReduceRepeated == 1) &&
+	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(pAction->f_pMsg) &&
+	    !strcmp(getMSG(pMsg), getMSG(pAction->f_pMsg)) &&
+	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(pAction->f_pMsg))) {
+		pAction->f_prevcount++;
 		dprintf("msg repeated %d times, %ld sec of %d.\n",
-		    f->f_prevcount, now - f->f_time,
-		    repeatinterval[f->f_repeatcount]);
+		    pAction->f_prevcount, now - pAction->f_time,
+		    repeatinterval[pAction->f_repeatcount]);
 		/* If domark would have logged this by now, flush it now (so we don't hold
 		 * isolated messages), but back off so we'll flush less often in the future.
 		 */
-		if (now > REPEATTIME(f)) {
-			iRet = fprintlog(f);
-			BACKOFF(f);
+		if (now > REPEATTIME(pAction)) {
+			iRet = fprintlog(pAction);
+			BACKOFF(pAction);
 		}
 	} else {
 		/* new line, save it */
 		/* first check if we have a previous message stored
 		 * if so, emit and then discard it first
 		 */
-		if(f->f_pMsg != NULL) {
-			if(f->f_prevcount > 0)
-				fprintlog(f);
+		if(pAction->f_pMsg != NULL) {
+			if(pAction->f_prevcount > 0)
+				fprintlog(pAction);
 				/* we do not care about iRet above - I think it's right but if we have
 				 * some troubles, you know where to look at ;) -- rgerhards, 2007-08-01
 				 */
-			MsgDestruct(f->f_pMsg);
+			MsgDestruct(pAction->f_pMsg);
 		}
-		f->f_pMsg = MsgAddRef(pMsg);
+		pAction->f_pMsg = MsgAddRef(pMsg);
 		/* call the output driver */
-		iRet = fprintlog(f);
+		iRet = fprintlog(pAction);
 	}
 
 finalize_it:
@@ -2383,7 +2407,7 @@ static void processMsg(msg_t *pMsg)
 		}
 
 		/* ok -- from here, we have action-specific code, nothing really selector-specific -- rger 2007-08-01 */
-		if(callAction(pMsg, f) == RS_RET_DISCARDMSG)
+		if(callAction(pMsg, f->pAction) == RS_RET_DISCARDMSG)
 			bContinue = 0;
 	}
 }
@@ -3063,8 +3087,10 @@ void logmsg(int pri, msg_t *pMsg, int flags)
  * channel save buffer (f->f_prevline). This is not only the case
  * when a message was already repeated but also when a new message
  * arrived.
+ * rgerhards 2007-08-01: interface changed to use action_t
  */
-rsRetVal fprintlog(selector_t *f)
+//rsRetVal fprintlog(selector_t *f) TODO: removeme
+rsRetVal fprintlog(action_t *pAction)
 {
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
@@ -3080,13 +3106,13 @@ rsRetVal fprintlog(selector_t *f)
 	 * need to create a local copy of the message, which we than can update.
 	 * rgerhards, 2007-07-10
 	 */
-	if(f->f_prevcount > 1) {
+	if(pAction->f_prevcount > 1) {
 		msg_t *pMsg;
 		uchar szRepMsg[64];
 		snprintf((char*)szRepMsg, sizeof(szRepMsg), "last message repeated %d times",
-		    f->f_prevcount);
+		    pAction->f_prevcount);
 
-		if((pMsg = MsgDup(f->f_pMsg)) == NULL) {
+		if((pMsg = MsgDup(pAction->f_pMsg)) == NULL) {
 			/* it failed - nothing we can do against it... */
 			dprintf("Message duplication failed, dropping repeat message.\n");
 			return RS_RET_ERR;
@@ -3101,41 +3127,41 @@ rsRetVal fprintlog(selector_t *f)
 		MsgSetMSG(pMsg, (char*)szRepMsg);
 		MsgSetRawMsg(pMsg, (char*)szRepMsg);
 
-		pMsgSave = f->f_pMsg;	/* save message pointer for later restoration */
-		f->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
+		pMsgSave = pAction->f_pMsg;	/* save message pointer for later restoration */
+		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
 	}
 
-	dprintf("Called fprintlog, logging to %s", modGetStateName(f->pMod));
+	dprintf("Called fprintlog, logging to %s", modGetStateName(pAction->pMod));
 
-	f->f_time = now; /* we need this for message repeation processing TODO: why must "now" be global? */
+	pAction->f_time = now; /* we need this for message repeation processing TODO: why must "now" be global? */
 
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's execute it. -- rgerhards, 2007-07-24
 	 */
 	/* here we must loop to process all requested strings */
 
-	for(i = 0 ; i < f->iNumTpls ; ++i) {
-		if((f->ppMsgs[i] = tplToString(f->ppTpl[i], f->f_pMsg)) == NULL) {
+	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+		if((pAction->ppMsgs[i] = tplToString(pAction->ppTpl[i], pAction->f_pMsg)) == NULL) {
 			dprintf("memory alloc failed while generating message strings - message ignored\n");
 			glblHadMemShortage = 1;
 			iRet = RS_RET_OUT_OF_MEMORY;
 			goto finalize_it;
 		}
 	}
-	iRet = f->pMod->mod.om.doAction(f->ppMsgs, f->f_pMsg->msgFlags, f->pModData); /* call configured action */
+	iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData); /* call configured action */
 
 	if(iRet == RS_RET_DISABLE_ACTION)
-		f->bEnabled = 0; /* that's it... */
+		pAction->bEnabled = 0; /* that's it... */
 
 	if(iRet == RS_RET_OK)
-		f->f_prevcount = 0; /* message process, so we start a new cycle */
+		pAction->f_prevcount = 0; /* message process, so we start a new cycle */
 
 finalize_it:
 	/* cleanup */
-	for(i = 0 ; i < f->iNumTpls ; ++i) {
-		if(f->ppMsgs[i] != NULL) {
-			free(f->ppMsgs[i]);
-			f->ppMsgs[i] = NULL;
+	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+		if(pAction->ppMsgs[i] != NULL) {
+			free(pAction->ppMsgs[i]);
+			pAction->ppMsgs[i] = NULL;
 		}
 	}
 
@@ -3149,8 +3175,8 @@ finalize_it:
 		 * message object will be discarded by our callers, so this is nothing
 		 * of our buisiness. rgerhards, 2007-07-10
 		 */
-		MsgDestruct(f->f_pMsg);
-		f->f_pMsg = pMsgSave;	/* restore it */
+		MsgDestruct(pAction->f_pMsg);
+		pAction->f_pMsg = pMsgSave;	/* restore it */
 	}
 
 	return iRet;
@@ -3183,6 +3209,8 @@ static void reapchild()
 static void domark(void)
 {
 	register selector_t *f;
+	action_t *pAction;
+
 	if (MarkInterval > 0) {
 		now = time(NULL);
 		MarkSeq += TIMERINTVL;
@@ -3193,12 +3221,13 @@ static void domark(void)
 
 		/* see if we need to flush any "message repeated n times"... */
 		for (f = Files; f != NULL ; f = f->f_next) {
-			if (f->f_prevcount && now >= REPEATTIME(f)) {
+			pAction = f->pAction;
+			if (pAction->f_prevcount && now >= REPEATTIME(pAction)) {
 				dprintf("flush %s: repeated %d times, %d sec.\n",
-				    modGetStateName(f->pMod), f->f_prevcount,
-				    repeatinterval[f->f_repeatcount]);
-				fprintlog(f);
-				BACKOFF(f);
+				    modGetStateName(pAction->pMod), pAction->f_prevcount,
+				    repeatinterval[pAction->f_repeatcount]);
+				fprintlog(pAction);
+				BACKOFF(pAction);
 			}
 		}
 	}
@@ -3698,6 +3727,7 @@ static void freeSelectors(void)
 {
 	selector_t *f;
 	selector_t *fPrev;
+	action_t *pAction;
 
 	if(Files != NULL) {
 		dprintf("Freeing log structures.\n");
@@ -3705,13 +3735,12 @@ static void freeSelectors(void)
 		/* we need first to flush, then wait for all messages to be processed
 		 * (stopWoker() does that), then we can free the structures.
 		 */
-		f = Files;
-		while (f != NULL) {
+		for(f = Files ; f != NULL ; f = f->f_next) {
+			pAction = f->pAction;
 			/* flush any pending output */
-			if(f->f_prevcount) {
-				fprintlog(f);
+			if(pAction->f_prevcount) {
+				fprintlog(pAction);
 			}
-			f = f->f_next;
 		}
 
 #		ifdef USE_PTHREADS
@@ -3721,15 +3750,8 @@ static void freeSelectors(void)
 		f = Files;
 		while (f != NULL) {
 			/* free the action instances */
-			f->pMod->freeInstance(f->pModData);
+			actionDestruct(f->pAction);
 
-			if(f->f_pMsg != NULL)
-				MsgDestruct(f->f_pMsg);
-
-			if(f->ppTpl != NULL)
-				free(f->ppTpl);
-			if(f->ppMsgs != NULL)
-				free(f->ppMsgs);
 			/* done with this entry, we now need to delete itself */
 			fPrev = f;
 			f = f->f_next;
@@ -3751,45 +3773,47 @@ static void freeSelectors(void)
 static void dbgPrintInitInfo(void)
 {
 	register selector_t *f;
+	action_t *pAction;
 	int i;
 
 	printf("Active selectors:\n");
 	for (f = Files; f != NULL ; f = f->f_next) {
-		if (1) {
-			if(f->pCSProgNameComp != NULL)
-				printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSProgNameComp));
-			if(f->eHostnameCmpMode != HN_NO_COMP)
-				printf("hostname: %s '%s'\n",
-					f->eHostnameCmpMode == HN_COMP_MATCH ?
-						"only" : "allbut",
-					rsCStrGetSzStr(f->pCSHostnameComp));
-			if(f->f_filter_type == FILTER_PRI) {
-				for (i = 0; i <= LOG_NFACILITIES; i++)
-					if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
-						printf(" X ");
-					else
-						printf("%2X ", f->f_filterData.f_pmask[i]);
-			} else {
-				printf("PROPERTY-BASED Filter:\n");
-				printf("\tProperty.: '%s'\n",
-				       rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
-				printf("\tOperation: ");
-				if(f->f_filterData.prop.isNegated)
-					printf("NOT ");
-				printf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
-				printf("\tValue....: '%s'\n",
-				       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
-				printf("\tAction...: ");
-			}
-			printf("%s: ", modGetStateName(f->pMod));
-			f->pMod->dbgPrintInstInfo(f->pModData);
-			printf("\tinstance data: 0x%x\n", (unsigned) f->pModData);
-			if(f->f_ReduceRepeated)
-				printf(" [RepeatedMsgReduction]");
-			if(f->bEnabled == 0)
-				printf(" [disabled]");
-			printf("\n");
+		if(f->pCSProgNameComp != NULL)
+			printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSProgNameComp));
+		if(f->eHostnameCmpMode != HN_NO_COMP)
+			printf("hostname: %s '%s'\n",
+				f->eHostnameCmpMode == HN_COMP_MATCH ?
+					"only" : "allbut",
+				rsCStrGetSzStr(f->pCSHostnameComp));
+		if(f->f_filter_type == FILTER_PRI) {
+			for (i = 0; i <= LOG_NFACILITIES; i++)
+				if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
+					printf(" X ");
+				else
+					printf("%2X ", f->f_filterData.f_pmask[i]);
+		} else {
+			printf("PROPERTY-BASED Filter:\n");
+			printf("\tProperty.: '%s'\n",
+			       rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
+			printf("\tOperation: ");
+			if(f->f_filterData.prop.isNegated)
+				printf("NOT ");
+			printf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
+			printf("\tValue....: '%s'\n",
+			       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
+			printf("\tAction...: ");
 		}
+
+		/* actions */
+		pAction = f->pAction;
+		printf("%s: ", modGetStateName(pAction->pMod));
+		pAction->pMod->dbgPrintInstInfo(pAction->pModData);
+		printf("\tinstance data: 0x%x\n", (unsigned) pAction->pModData);
+		if(pAction->f_ReduceRepeated)
+			printf(" [RepeatedMsgReduction]");
+		if(pAction->bEnabled == 0)
+			printf(" [disabled]");
+		printf("\n");
 	}
 	printf("\n");
 	if(bDebugPrintTemplateList)
@@ -3831,6 +3855,7 @@ static rsRetVal processConfFile(uchar *pConfFile)
 	selector_t *nextp = NULL;
 	uchar *p;
 	unsigned int Forwarding = 0;
+	action_t *pAction;
 #ifdef CONT_LINE
 	uchar cbuf[BUFSIZ];
 	uchar *cline;
@@ -3915,7 +3940,8 @@ static rsRetVal processConfFile(uchar *pConfFile)
 				nextp->f_next = f;
 			}
 			nextp = f;
-			if(f->pMod->needUDPSocket(f->pModData) == RS_RET_TRUE) {
+			pAction = f->pAction;
+			if(pAction->pMod->needUDPSocket(pAction->pModData) == RS_RET_TRUE) {
 				Forwarding++;
 			}
 		}
@@ -4578,6 +4604,50 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 }
 
 
+/* destructs an action descriptor object
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal actionDestruct(action_t *pThis)
+{
+	assert(pThis != NULL);
+
+	if(pThis->pMod != NULL)
+		pThis->pMod->freeInstance(pThis->pModData);
+
+	if(pThis->f_pMsg != NULL)
+		MsgDestruct(pThis->f_pMsg);
+
+	if(pThis->ppTpl != NULL)
+		free(pThis->ppTpl);
+	if(pThis->ppMsgs != NULL)
+		free(pThis->ppMsgs);
+	free(pThis);
+	
+	return RS_RET_OK;
+}
+
+
+/* create a new action descriptor object
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal actionConstruct(action_t **ppThis)
+{
+	DEFiRet;
+	action_t *pThis;
+
+	assert(ppThis != NULL);
+	
+	if((pThis = (action_t*) calloc(1, sizeof(action_t))) == NULL) {
+		glblHadMemShortage = 1;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+
+finalize_it:
+	*ppThis = pThis;
+	return iRet;
+}
+
+
 /* add an Action to the current selector
  * The pOMSR is freed, as it is not needed after this function.
  * rgerhards, 2007-07-27
@@ -4588,6 +4658,7 @@ rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringReq
 	int i;
 	int iTplOpts;
 	uchar *pTplName;
+	action_t *pAction;
 	char errMsg[512];
 
 	assert(f != NULL);
@@ -4595,35 +4666,39 @@ rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringReq
 	assert(pOMSR != NULL);
 	dprintf("Module %s processed this config line.\n", modGetName(pMod));
 
+	CHKiRet(actionConstruct(&pAction)); /* create action object first */
+	pAction->pMod = pMod;
+	pAction->pModData = pModData;
+
 	/* check if we can obtain the template pointers - TODO: move to separat function? */
-	f->iNumTpls = OMSRgetEntryCount(pOMSR);
-	assert(f->iNumTpls >= 0); /* only debug check because this "can not happen" */
+	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);
+	assert(pAction->iNumTpls >= 0); /* only debug check because this "can not happen" */
 	/* please note: iNumTpls may validly be zero. This is the case if the module
 	 * does not request any templates. This sounds unlikely, but an actual example is
 	 * the discard action, which does not require a string. -- rgerhards, 2007-07-30
 	 */
-	if(f->iNumTpls > 0) {
+	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template pointer array */
-		if((f->ppTpl = calloc(f->iNumTpls, sizeof(struct template *))) == NULL) {
+		if((pAction->ppTpl = calloc(pAction->iNumTpls, sizeof(struct template *))) == NULL) {
 			iRet = RS_RET_OUT_OF_MEMORY;
 			glblHadMemShortage = 1;
 			goto finalize_it;
 		}
 		/* and now the array for doAction() message pointers */
-		if((f->ppMsgs = calloc(f->iNumTpls, sizeof(uchar *))) == NULL) {
+		if((pAction->ppMsgs = calloc(pAction->iNumTpls, sizeof(uchar *))) == NULL) {
 			iRet = RS_RET_OUT_OF_MEMORY;
 			glblHadMemShortage = 1;
 			goto finalize_it;
 		}
 	}
 	
-	for(i = 0 ; i < f->iNumTpls ; ++i) {
-		if((iRet = OMSRgetEntry(pOMSR, i, &pTplName, &iTplOpts)) != RS_RET_OK) goto finalize_it;
+	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+		CHKiRet(OMSRgetEntry(pOMSR, i, &pTplName, &iTplOpts));
 		/* Ok, we got everything, so it now is time to look up the
 		 * template (Hint: templates MUST be defined before they are
 		 * used!)
 		 */
-		if((f->ppTpl[i] = tplFind((char*)pTplName, strlen((char*)pTplName))) == NULL) {
+		if((pAction->ppTpl[i] = tplFind((char*)pTplName, strlen((char*)pTplName))) == NULL) {
 			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
 				 " Could not find template '%s' - selector line disabled\n",
 				 pTplName);
@@ -4634,7 +4709,7 @@ rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringReq
 		}
 		/* check required template options */
 		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
-		   && (f->ppTpl[i]->optFormatForSQL == 0)) {
+		   && (pAction->ppTpl[i]->optFormatForSQL == 0)) {
 			errno = 0;
 			logerror("Selector disabled. To use this action, you have to specify "
 				"the SQL or stdSQL option in your template!\n");
@@ -4643,19 +4718,20 @@ rsRetVal addAction(selector_t *f, modInfo_t *pMod, void *pModData, omodStringReq
 		}
 
 		dprintf("template: '%s' assgined\n", pTplName);
-		/* TODO: generate macro CHKiRet((code));? */
 	}
 
-	f->pMod = pMod;
-	f->pModData = pModData;
+	pAction->pMod = pMod;
+	pAction->pModData = pModData;
 	/* now check if the module is compatible with select features */
 	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-		f->f_ReduceRepeated = bReduceRepeatMsgs;
+		pAction->f_ReduceRepeated = bReduceRepeatMsgs;
 	else {
 		dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
-		f->f_ReduceRepeated = 0;
+		pAction->f_ReduceRepeated = 0;
 	}
-	f->bEnabled = 1; /* action is enabled */
+	pAction->bEnabled = 1; /* action is enabled */
+
+	f->pAction = pAction; /* finally store the action pointer */
 
 finalize_it:
 	if(iRet == RS_RET_OK)
@@ -4663,6 +4739,8 @@ finalize_it:
 	else {
 		/* do not overwrite error state! */
 		OMSRdestruct(pOMSR);
+		if(pAction != NULL)
+			actionDestruct(pAction); /* this line should take care of the TODO's below */
 		/* TODO: free pMod instance data, potential mem leak */
 		/* TODO: better said - where is the selector_t AND its elements destroyed? */
 	}
@@ -4700,6 +4778,7 @@ static rsRetVal cfline(char *line, register selector_t *f)
 	rsRetVal iRet;
 	modInfo_t *pMod;
 	omodStringRequest_t *pOMSR;
+	action_t *pAction;
 	void *pModData;
 
 	dprintf("cfline(%s)", line);
@@ -4752,21 +4831,19 @@ static rsRetVal cfline(char *line, register selector_t *f)
 		iRet = pMod->mod.om.parseSelectorAct(&p, &pModData, &pOMSR);
 		dprintf("trying selector action for %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_OK) {
-			f->pMod = pMod;
-			f->pModData = pModData;
-			
 			if((iRet = addAction(f, pMod, pModData, pOMSR)) == RS_RET_OK) {
+				pAction = f->pAction;
 				dprintf("Module %s processed this config line.\n",
 					modGetName(pMod));
 				
 				/* now check if the module is compatible with select features */
 				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-					f->f_ReduceRepeated = bReduceRepeatMsgs;
+					pAction->f_ReduceRepeated = bReduceRepeatMsgs;
 				else {
 					dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
-					f->f_ReduceRepeated = 0;
+					pAction->f_ReduceRepeated = 0;
 				}
-				f->bEnabled = 1; /* action is enabled */
+				pAction->bEnabled = 1; /* action is enabled */
 			}
 			break;
 		}
@@ -4958,6 +5035,7 @@ static void mainloop(void)
 	int	fd;
 	char line[MAXLINE +1];
 	int maxfds;
+	action_t *pAction;
 #ifdef  SYSLOG_INET
 	fd_set writefds;
 	selector_t *f;
@@ -5051,7 +5129,8 @@ static void mainloop(void)
 			short fdMod;
 			FD_ZERO(&writefds);
 			for (f = Files; f != NULL ; f = f->f_next) {
-				if(f->pMod->getWriteFDForSelect(f->pModData, &fdMod) == RS_RET_OK) {
+				pAction = f->pAction;
+				if(pAction->pMod->getWriteFDForSelect(pAction->pModData, &fdMod) == RS_RET_OK) {
 				   FD_SET(fdMod, &writefds);
 				   if(fdMod > maxfds)
 					maxfds = fdMod;
@@ -5163,9 +5242,11 @@ static void mainloop(void)
 			short fdMod;
 			rsRetVal iRet;
 			for (f = Files; f != NULL ; f = f->f_next) {
-				if(f->pMod->getWriteFDForSelect(f->pModData, &fdMod) == RS_RET_OK) {
+				pAction = f->pAction;
+				if(pAction->pMod->getWriteFDForSelect(pAction->pModData, &fdMod) == RS_RET_OK) {
 					if(FD_ISSET(fdMod, &writefds)) {
-						if((iRet = f->pMod->onSelectReadyWrite(f->pModData)) != RS_RET_OK) {
+						if((iRet = pAction->pMod->onSelectReadyWrite(pAction->pModData))
+						   != RS_RET_OK) {
 							dprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
 						}
 					}

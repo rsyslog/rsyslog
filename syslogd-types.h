@@ -141,26 +141,7 @@ struct filed {
 			char isNegated;			/* actually a boolean ;) */
 		} prop;
 	} f_filterData;
-
-	/* settings for the action */
-	time_t	f_time;			/* time this was last written */
-	short	bEnabled;		/* is the related action enabled (1) or disabled (0)? */
-	struct moduleInfo *pMod;	/* pointer to output module handling this selector */
-	void	*pModData;		/* pointer to module data - contents is module-specific */
-	int	f_ReduceRepeated;	/* reduce repeated lines 0 - no, 1 - yes */
-	int	f_prevcount;		/* repetition cnt of prevline */
-	int	f_repeatcount;		/* number of "repeated" msgs */
-	int	iNumTpls;		/* number of array entries for template element below */
-	struct template **ppTpl;	/* array of template to use - strings must be passed to doAction
-					 * in this order. */
-	/* end action-specifc data members */
-
-	uchar **ppMsgs;			/* array of message pointers for doAction */
-	/* End action */
-	struct msg* f_pMsg;	/* pointer to the message (this will replace the other vars with msg
-				 * content later). This is preserved after the message has been
-				 * processed - it is also used to detect duplicates.
-				 */
+	struct action_s *pAction;	/* pointer to the action descriptor */
 };
 typedef struct filed selector_t;	/* new type name */
 
