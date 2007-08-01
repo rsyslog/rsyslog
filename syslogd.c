@@ -3650,16 +3650,6 @@ rsRetVal cfsysline(uchar *p)
 	 * list of cfsysline handlers. -- rgerhards, 2007-07-31
 	 */
 	CHKiRet(processCfSysLineCommand(szCmd, &p));
-#if 0
-	if((iRet = processCfSysLineCommand(szCmd, &p)) != RS_RET_OK) {
-		/* invalid command! */
-		char err[256];
-		snprintf(err, sizeof(err)/sizeof(char),
-			 "Invalid command in $-configline: '%s' (error %d) - line ignored\n", szCmd, iRet);
-		logerror(err);
-		ABORT_FINALIZE(RS_RET_INVALID_CMD);
-	}
-#endif
 
 	/* now check if we have some extra characters left on the line - that
 	 * should not be the case. Whitespace is OK, but everything else should
@@ -5355,7 +5345,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_OUTCHANNEL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_ALLOWEDSENDER));
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, doModLoad, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"include", 0, eCmdHdlrCustomHandler, doIncludeLine, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler, doIncludeLine, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode, setUmask, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintTemplateList));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintModuleList));
