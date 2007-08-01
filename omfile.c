@@ -56,6 +56,16 @@
  */
 DEF_OMOD_STATIC_DATA
 
+/* The following structure is a dynafile name cache entry.
+ */
+struct s_dynaFileCacheEntry {
+	uchar *pName;	/* name currently open, if dynamic name */
+	short	fd;		/* name associated with file name in cache */
+	time_t	lastUsed;	/* for LRU - last access */
+};
+typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
+
+
 /* globals for default values */
 static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
 static int fCreateMode = 0644; /* mode to use when creating files */

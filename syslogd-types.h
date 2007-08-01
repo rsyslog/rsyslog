@@ -30,7 +30,6 @@
 #include "net.h"
 #include <sys/param.h>
 #include <sys/syslog.h>
-#include <utmp.h>	/* TOODO: this goes away when struct filed has been relieved of UT_NAMESIZE */
 
 #define FALSE 0
 #define TRUE 1
@@ -72,15 +71,6 @@ typedef enum _TCPFRAMINGMODE {
 		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
 		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
 	} TCPFRAMINGMODE;
-
-/* The following structure is a dynafile name cache entry.
- */
-struct s_dynaFileCacheEntry {
-	uchar *pName;	/* name currently open, if dynamic name */
-	short	fd;		/* name associated with file name in cache */
-	time_t	lastUsed;	/* for LRU - last access */
-};
-typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
 /* values for host comparisons specified with host selector blocks
  * (+host, -host). rgerhards 2005-10-18.
@@ -128,18 +118,14 @@ struct syslogTime {
  */
 struct filed {
 	struct	filed *f_next;		/* next in linked list */
-	short	bEnabled;		/* is the related action enabled (1) or disabled (0)? */
-	time_t	f_time;			/* time this was last written */
 	/* filter properties */
 	enum {
 		FILTER_PRI = 0,		/* traditional PRI based filer */
 		FILTER_PROP = 1		/* extended filter, property based */
 	} f_filter_type;
 	EHostnameCmpMode eHostnameCmpMode;
-	rsCStrObj *pCSHostnameComp;/* hostname to check */
+	rsCStrObj *pCSHostnameComp;	/* hostname to check */
 	rsCStrObj *pCSProgNameComp;	/* tag to check or NULL, if not to be checked */
-	struct moduleInfo *pMod;			/* pointer to output module handling this selector */
-	void	*pModData;		/* pointer to module data - contents is module-specific */
 	union {
 		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
 		struct {
@@ -155,19 +141,26 @@ struct filed {
 			char isNegated;			/* actually a boolean ;) */
 		} prop;
 	} f_filterData;
-	int	f_ReduceRepeated;		/* reduce repeated lines 0 - no, 1 - yes */
-	int	f_prevcount;			/* repetition cnt of prevline */
-	int	f_repeatcount;			/* number of "repeated" msgs */
-	int	iNumTpls;			/* number of array entries for template element below */
-	struct template **ppTpl;		/* array of template to use - strings must be passed to doAction
-						 * in this order. */
-	uchar **ppMsgs;				/* array of message pointers for doAction */
-	struct template __attribute__((deprecated)) *f_pTpl;		/* pointer to template to use */
-	struct msg* f_pMsg;			/* pointer to the message (this will
-					         * replace the other vars with msg
-						 * content later). This is preserved after
-						 * the message has been processed - it is
-						 * also used to detect duplicates. */
+
+	/* settings for the action */
+	time_t	f_time;			/* time this was last written */
+	short	bEnabled;		/* is the related action enabled (1) or disabled (0)? */
+	struct moduleInfo *pMod;	/* pointer to output module handling this selector */
+	void	*pModData;		/* pointer to module data - contents is module-specific */
+	int	f_ReduceRepeated;	/* reduce repeated lines 0 - no, 1 - yes */
+	int	f_prevcount;		/* repetition cnt of prevline */
+	int	f_repeatcount;		/* number of "repeated" msgs */
+	int	iNumTpls;		/* number of array entries for template element below */
+	struct template **ppTpl;	/* array of template to use - strings must be passed to doAction
+					 * in this order. */
+	/* end action-specifc data members */
+
+	uchar **ppMsgs;			/* array of message pointers for doAction */
+	/* End action */
+	struct msg* f_pMsg;	/* pointer to the message (this will replace the other vars with msg
+				 * content later). This is preserved after the message has been
+				 * processed - it is also used to detect duplicates.
+				 */
 };
 typedef struct filed selector_t;	/* new type name */
 

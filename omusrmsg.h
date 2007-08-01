@@ -26,7 +26,6 @@
 
 /* prototypes */
 rsRetVal modInitUsrMsg(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()));
-rsRetVal parseSelectorActUsrMsg(uchar **pp, selector_t *f);
 
 #endif /* #ifndef OMUSRMSG_H_INCLUDED */
 /*
