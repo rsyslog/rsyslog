@@ -321,6 +321,7 @@ rsRetVal writeMySQL(uchar *psz, instanceData *pData)
 
 BEGINtryResume
 CODESTARTtryResume
+dprintf("tryResume returns %d\n", iRet);
 ENDtryResume
 
 BEGINdoAction

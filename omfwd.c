@@ -590,7 +590,6 @@ static rsRetVal doTryResume(instanceData *pData)
 BEGINtryResume
 CODESTARTtryResume
 	iRet = doTryResume(pData);
-dprintf("tryResume returns %d\n", iRet);
 ENDtryResume
 
 BEGINdoAction
@@ -714,7 +713,6 @@ CODESTARTdoAction
 		}
 		break;
 	}
-dprintf("doAction returns %d\n", iRet);
 ENDdoAction
 
 

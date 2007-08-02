@@ -1900,7 +1900,6 @@ static rsRetVal actionResume(action_t *pThis)
 {
 	DEFiRet;
 
-dprintf("actionResume\n");
 	assert(pThis != NULL);
 	pThis->bSuspended = 0;
 
@@ -1915,7 +1914,6 @@ static rsRetVal actionSuspend(action_t *pThis)
 {
 	DEFiRet;
 
-dprintf("actionSuspend\n");
 	assert(pThis != NULL);
 	pThis->bSuspended = 1;
 	pThis->ttResumeRtry = time(NULL) + ACTION_RESUME_INTERVAL;
@@ -5117,7 +5115,6 @@ DEFFUNC_llExecFunc(selectorAddListCheckActionsChecker)
 
 	assert(pAction != NULL);
 
-dprintf("selectorAddListCheckActionsChecker 0x%x\n", (unsigned) pAction);
 	if(pAction->pMod->needUDPSocket(pAction->pModData) == RS_RET_TRUE) {
 		Forwarding++;
 	}

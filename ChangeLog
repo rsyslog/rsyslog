@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
-Version 1.17.7 (rgerhards), 2007-08-??
+Version 1.17.7 (rgerhards), 2007-08-0?
 - modified rklogd to only change the console log level if -c is specified
+- added feature to use multiple actions inside a single selector
 - implemented $ActionExecOnlyWhenPreviousIsSuspended config directive
 ---------------------------------------------------------------------------
 Version 1.17.6 (rgerhards), 2007-08-01
