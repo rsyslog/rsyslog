@@ -2532,14 +2532,18 @@ finalize_it:
  * executed from within llExecFunc() of the action list.
  * rgerhards, 2007-08-02
  */
+typedef struct processMsgDoActions_s {
+	int bPrevWasSuspended; /* was the previous action suspended? */
+	msg_t *pMsg;
+} processMsgDoActions_t;
 DEFFUNC_llExecFunc(processMsgDoActions)
 {
 	DEFiRet;
 	action_t *pAction = (action_t*) pData;
-	msg_t *pMsg = (msg_t*) pParam;
+	processMsgDoActions_t *pDoActData = (processMsgDoActions_t*) pParam;
 
 	assert(pAction != NULL);
-	if(callAction(pMsg, pAction) == RS_RET_DISCARDMSG) {
+	if(callAction(pDoActData->pMsg, pAction) == RS_RET_DISCARDMSG) {
 		ABORT_FINALIZE(RS_RET_DISCARDMSG);
 	}
 
@@ -2558,6 +2562,7 @@ static void processMsg(msg_t *pMsg)
 {
 	selector_t *f;
 	int bContinue;
+	processMsgDoActions_t DoActData;
 
 	assert(pMsg != NULL);
 
@@ -2583,7 +2588,9 @@ static void processMsg(msg_t *pMsg)
 		}
 
 		/* ok -- from here, we have action-specific code, nothing really selector-specific -- rger 2007-08-01 */
-		if(llExecFunc(&f->llActList, processMsgDoActions, (void*)pMsg) == RS_RET_DISCARDMSG)
+		DoActData.pMsg = pMsg;
+		DoActData.bPrevWasSuspended = 0;
+		if(llExecFunc(&f->llActList, processMsgDoActions, (void*)&DoActData) == RS_RET_DISCARDMSG)
 			bContinue = 0;
 	}
 }
