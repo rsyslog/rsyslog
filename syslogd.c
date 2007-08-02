@@ -1897,11 +1897,12 @@ static rsRetVal actionDbgPrint(action_t *pThis)
 
 	printf("%s: ", modGetStateName(pThis->pMod));
 	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
-	printf("\tinstance data: 0x%x\n", (unsigned) pThis->pModData);
+	printf("\n\tinstance data: 0x%x\n", (unsigned) pThis->pModData);
 	if(pThis->f_ReduceRepeated)
-		printf(" [RepeatedMsgReduction]");
+		printf("\t[RepeatedMsgReduction]");
 	if(pThis->bEnabled == 0)
 		printf(" [disabled]");
+	printf("\n");
 
 	return iRet;
 }
@@ -3966,7 +3967,11 @@ static void freeSelectors(void)
  */
 DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
 {
-	return actionDbgPrint((action_t*) pData);
+	DEFiRet;
+	iRet = actionDbgPrint((action_t*) pData);
+	printf("\n");
+
+	return iRet;
 }
 
 /* print debug information as part of init(). This pretty much
@@ -3977,10 +3982,12 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
 static void dbgPrintInitInfo(void)
 {
 	register selector_t *f;
+	int iSelNbr = 1;
 	int i;
 
-	printf("Active selectors:\n");
+	printf("\nActive selectors:\n");
 	for (f = Files; f != NULL ; f = f->f_next) {
+		printf("Selector %d:\n", iSelNbr++);
 		if(f->pCSProgNameComp != NULL)
 			printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSProgNameComp));
 		if(f->eHostnameCmpMode != HN_NO_COMP)
@@ -4007,6 +4014,7 @@ static void dbgPrintInitInfo(void)
 			printf("\tAction...: ");
 		}
 
+		printf("\nActions:\n");
 		llExecFunc(&f->llActList, dbgPrintInitInfoAction, NULL); /* actions */
 
 		printf("\n");
@@ -4116,7 +4124,7 @@ static rsRetVal processConfFile(uchar *pConfFile)
 			dprintf("config line NOT successfully processed\n");
 			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
 				 "%s, line %d", pConfFile, iLnNbr);
-			logerrorSz("the last error occured in: ", (char*)szErrLoc);
+			logerrorSz("the last error occured in %s", (char*)szErrLoc);
 		}
 	}
 
@@ -5053,26 +5061,6 @@ finalize_it:
 
 
 /* Process a configuration file line in traditional "filter selector" format
- * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
- * handle config lines in general, but only lines that reflect actual filter
- * pairs (the original syslog message line format). Extended lines (those starting
- * with "$" have been filtered out by the caller and are passed to another function (cfsysline()).
- * Please note, however, that I needed to make changes in the line syntax to support
- * assignment of format definitions to a file. So it is not (yet) 100% transparent.
- * Eventually, we can overcome this limitation by prefixing the actual action indicator
- * (e.g. "/file..") by something (e.g. "$/file..") - but for now, we just modify it... 
- *
- * IMPORTANT: if the function returns RS_RET_OK, the selector in question (f) is added
- * to the list of active selectors. If it returns anything else, the selector is
- * DISCARDED. Do NOT use f->bEnabled to disable an action when there is **no chance of
- * recovering** it. bEnabled should only be set to false it the module requests that and
- * sees chance for recovery. As of this writing, recovery mode is not yet implemented.
- * But a good example is the omfwd module, which may not be able to dns-resolve the
- * target. It could start with a disabled action, because the situation may later
- * be recovered by another dns lookup. But if the situation is not recoverable, e.g.
- * syntax error in condig syntax, simply return some iRet error status. Disabling in
- * such a case would just cause the selector to be never executed, but it would still
- * remain in memory, which would not be a good thing. -- rgerhards, 2007-07-30
  */
 static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 {
@@ -5087,7 +5075,10 @@ static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 	/* lines starting with '&' have no new filters and just add
 	 * new actions to the currently processed selector.
 	 */
-	if(*p != '&') {
+	if(*p == '&') {
+		++p; /* eat '&' */
+		skipWhiteSpace(&p); /* on to command */
+	} else {
 		/* we are finished with the current selector. So we now need to check
 		 * if it has any actions associated and, if so, link it to the linked
 		 * list. If it has nothing associated with it, we can simply discard
