@@ -57,7 +57,8 @@
 #include "module-template.h"
 
 #ifdef SYSLOG_INET
-#define INET_SUSPEND_TIME 60		/* equal to 1 minute 
+//#define INET_SUSPEND_TIME 60		/* equal to 1 minute 
+#define INET_SUSPEND_TIME 2		/* equal to 1 minute 
 					 * rgerhards, 2005-07-26: This was 3 minutes. As the
 					 * same timer is used for tcp based syslog, we have
 					 * reduced it. However, it might actually be worth
@@ -542,83 +543,76 @@ static char *getFwdSyslogPt(instanceData *pData)
 }
 
 
+/* try to resume connection if it is not ready
+ * rgerhards, 2007-08-02
+ */
+static rsRetVal doTryResume(instanceData *pData)
+{
+	DEFiRet;
+	time_t fwd_suspend;
+	struct addrinfo *res;
+	struct addrinfo hints;
+	unsigned e;
+
+	switch (pData->eDestState) {
+	case eDestFORW_SUSP:
+		iRet = RS_RET_OK; /* the actual check happens during doAction() only */
+		pData->eDestState = eDestFORW;
+		break;
+		
+	case eDestFORW_UNKN:
+		/* The remote address is not yet known and needs to be obtained */
+		dprintf(" %s\n", pData->f_hname);
+		memset(&hints, 0, sizeof(hints));
+		/* port must be numeric, because config file syntax requests this */
+		/* TODO: this code is a duplicate from cfline() - we should later create
+		 * a common function.
+		 */
+		hints.ai_flags = AI_NUMERICSERV;
+		hints.ai_family = family;
+		hints.ai_socktype = pData->protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
+		if((e = getaddrinfo(pData->f_hname,
+				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
+			dprintf("%s found, resuming.\n", pData->f_hname);
+			pData->f_addr = res;
+			pData->iRtryCnt = 0;
+			pData->eDestState = eDestFORW;
+		} else {
+			iRet = RS_RET_SUSPENDED;
+		}
+		break;
+	}
+
+	return iRet;
+}
+
+
 BEGINtryResume
 CODESTARTtryResume
-dprintf("###################### tryResume called\n");
+	iRet = doTryResume(pData);
+dprintf("tryResume returns %d\n", iRet);
 ENDtryResume
 
 BEGINdoAction
 	char *psz; /* temporary buffering */
 	register unsigned l;
+	struct addrinfo *r;
 	int i;
-	unsigned e, lsent = 0;
+	unsigned lsent = 0;
 	int bSendSuccess;
-	time_t fwd_suspend;
-	struct addrinfo *res, *r;
-	struct addrinfo hints;
 CODESTARTdoAction
 	switch (pData->eDestState) {
 	case eDestFORW_SUSP:
-		fwd_suspend = time(NULL) - pData->ttSuspend;
-		if ( fwd_suspend >= INET_SUSPEND_TIME ) {
-			dprintf("\nForwarding suspension over, retrying FORW ");
-			pData->eDestState = eDestFORW;
-			goto f_forw;
-		}
-		else {
-			dprintf(" %s\n", pData->f_hname);
-			dprintf("Forwarding suspension not over, time left: %d.\n",
-			        INET_SUSPEND_TIME - fwd_suspend);
-		}
+		dprintf("internal error in omfwd.c, eDestFORW_SUSP in doAction()!\n");
+		iRet = RS_RET_SUSPENDED;
 		break;
 		
-	/* The trick is to wait some time, then retry to get the
-	 * address. If that fails retry x times and then give up.
-	 *
-	 * You'll run into this problem mostly if the name server you
-	 * need for resolving the address is on the same machine, but
-	 * is started after syslogd. 
-	 */
 	case eDestFORW_UNKN:
-	/* The remote address is not yet known and needs to be obtained */
-		dprintf(" %s\n", pData->f_hname);
-		fwd_suspend = time(NULL) - pData->ttSuspend;
-		if(fwd_suspend >= INET_SUSPEND_TIME) {
-			dprintf("Forwarding suspension to unknown over, retrying\n");
-			memset(&hints, 0, sizeof(hints));
-			/* port must be numeric, because config file syntax requests this */
-			/* TODO: this code is a duplicate from cfline() - we should later create
-			 * a common function.
-			 */
-			hints.ai_flags = AI_NUMERICSERV;
-			hints.ai_family = family;
-			hints.ai_socktype = pData->protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
-			if((e = getaddrinfo(pData->f_hname,
-					    getFwdSyslogPt(pData), &hints, &res)) != 0) {
-				dprintf("Failure: %s\n", sys_h_errlist[h_errno]);
-				dprintf("Retries: %d\n", pData->iRtryCnt);
-				if ( --pData->iRtryCnt < 0 ) {
-					dprintf("Giving up.\n");
-					iRet = RS_RET_DISABLE_ACTION;
-				}
-				else
-					dprintf("Left retries: %d\n", pData->iRtryCnt);
-			}
-			else {
-			        dprintf("%s found, resuming.\n", pData->f_hname);
-				pData->f_addr = res;
-				pData->iRtryCnt = 0;
-				pData->eDestState = eDestFORW;
-				goto f_forw;
-			}
-		}
-		else
-			dprintf("Forwarding suspension not over, time " \
-				"left: %d\n", INET_SUSPEND_TIME - fwd_suspend);
+		dprintf("doAction eDestFORW_UNKN\n");
+		iRet = doTryResume(pData);
 		break;
 
 	case eDestFORW:
-	f_forw:
 		dprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData),
 			 pData->protocol == FORW_UDP ? "udp" : "tcp");
 		if ( 0) // TODO: think about this strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
@@ -705,33 +699,22 @@ CODESTARTdoAction
 					}
 					/* finished looping */
 	                                if (bSendSuccess == FALSE) {
-		                                pData->eDestState = eDestFORW_SUSP;
-		                                errno = 0;
-		                                logerror("error forwarding via udp, suspending");
+		                                dprintf("error forwarding via udp, suspending\n");
+						iRet = RS_RET_SUSPENDED;
 					}
 				}
 			} else {
 				/* forward via TCP */
 				if(TCPSend(pData, psz, l) != 0) {
 					/* error! */
-					pData->eDestState = eDestFORW_SUSP;
-					errno = 0;
-					logerror("error forwarding via tcp, suspending...");
+					dprintf("error forwarding via tcp, suspending\n");
+					iRet = RS_RET_SUSPENDED;
 				}
 			}
 		}
 		break;
 	}
-
-	if(pData->eDestState != eDestFORW) {
-		/* TODO: think somewhat more about this code at the end of modularization. I think
-		 * it is clean right now, but we could build a better interface for suspension. I
-		 * think we will naturally re-visit this when we implement global suspension and
-		 * queueing - I anticipate that the whole FORW_SUSP/FORW_UNKN goes away by then.
-		 * rgerhards, 2007-07-26
-		 */
-		iRet = RS_RET_SUSPENDED;
-	}
+dprintf("doAction returns %d\n", iRet);
 ENDdoAction
 
 

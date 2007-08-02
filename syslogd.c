@@ -558,6 +558,8 @@ struct action_s {
 	time_t	f_time;		/* time this was last written */
 	short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
 	short	bSuspended;	/* is the related action temporarily suspended? */
+	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
+	int	iNbrResRtry;	/* number of retries since last suspend */
 	struct moduleInfo *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - contents is module-specific */
 	int	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
@@ -1889,6 +1891,90 @@ finalize_it:
 }
 
 
+/* set an action back to active state -- rgerhards, 2007-08-02
+ */
+static rsRetVal actionResume(action_t *pThis)
+{
+	DEFiRet;
+
+dprintf("actionResume\n");
+	assert(pThis != NULL);
+	pThis->bSuspended = 0;
+
+	return iRet;
+}
+
+
+#define ACTION_RESUME_INTERVAL 5 /* TODO: make this dynamic from conf file */
+/* suspend an action -- rgerhards, 2007-08-02
+ */
+static rsRetVal actionSuspend(action_t *pThis)
+{
+	DEFiRet;
+
+dprintf("actionSuspend\n");
+	assert(pThis != NULL);
+	pThis->bSuspended = 1;
+	pThis->ttResumeRtry = time(NULL) + ACTION_RESUME_INTERVAL;
+	pThis->iNbrResRtry = 0; /* tell that we did not yet retry to resume */
+
+	return iRet;
+}
+
+#if 1
+#define actionIsSuspended(pThis) ((pThis)->bSuspended == 1)
+#else
+static int actionIsSuspended(action_t *pThis)
+{
+	int i;
+	i =  pThis->bSuspended == 1;
+	dprintf("in IsSuspend(), returns %d\n", i);
+	return i;
+}
+#endif
+
+/* try to resume an action -- rgerhards, 2007-08-02
+ * returns RS_RET_OK if resumption worked, RS_RET_SUSPEND if the
+ * action is still suspended.
+ */
+static rsRetVal actionTryResume(action_t *pThis)
+{
+	DEFiRet;
+	time_t ttNow;
+
+	assert(pThis != NULL);
+
+	ttNow = time(NULL); /* do the system call just once */
+
+	/* first check if it is time for a re-try */
+	if(ttNow > pThis->ttResumeRtry) {
+		iRet = pThis->pMod->tryResume(pThis->pModData);
+		if(iRet == RS_RET_SUSPENDED) {
+			/* set new tryResume time */
+			++pThis->iNbrResRtry;
+			/* if we have more than 10 retries, we prolong the
+			 * retry interval. If something is really stalled, it will
+			 * get re-tried only very, very seldom - but that saves
+			 * CPU time. TODO: maybe a config option for that?
+			 * rgerhards, 2007-08-02
+			 */
+			pThis->ttResumeRtry = ttNow + ACTION_RESUME_INTERVAL * (pThis->iNbrResRtry / 10 + 1);
+		}
+	} else {
+		/* it's too early, we are still suspended --> indicate this */
+		iRet = RS_RET_SUSPENDED;
+	}
+
+	if(iRet == RS_RET_OK)
+		actionResume(pThis);
+
+	dprintf("actionTryResume: iRet: %d, next retry (if applicable): %u [now %u]\n",
+		iRet, pThis->ttResumeRtry, (unsigned) ttNow);
+
+	return iRet;
+}
+
+
 /* debug-print the contents of an action object
  * rgerhards, 2007-08-02
  */
@@ -2486,11 +2572,11 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	if(pAction->bSuspended == 1) {
-		CHKiRet(pAction->pMod->tryResume(pAction->pModData));
-		/* if we reach this point, we have resumed */
-		pAction->bSuspended = 0;
+dprintf("callAction, vor IsSusp()\n");
+	if(actionIsSuspended(pAction)) {
+		CHKiRet(actionTryResume(pAction));
 	}
+dprintf("callAction, after IsSusp()\n");
 
 	/* don't output marks to recently written files */
 	if ((pMsg->msgFlags & MARK) && (now - pAction->f_time) < MarkInterval / 2) {
@@ -3354,7 +3440,7 @@ rsRetVal fprintlog(action_t *pAction)
 
 	if(iRet == RS_RET_SUSPENDED) {
 		dprintf("Action requested to be suspended, done that.\n");
-		pAction->bSuspended = 1; /* message process, so we start a new cycle */
+		actionSuspend(pAction);
 	}
 
 	if(iRet == RS_RET_OK)
@@ -4900,8 +4986,10 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 		dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
 		pAction->f_ReduceRepeated = 0;
 	}
-	pAction->bSuspended = bSuspended;
 	pAction->bEnabled = 1; /* action is enabled */
+
+	if(bSuspended)
+		actionSuspend(pAction);
 
 	*ppAction = pAction; /* finally store the action pointer */
 
