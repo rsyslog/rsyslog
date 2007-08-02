@@ -1901,6 +1901,8 @@ static rsRetVal actionDbgPrint(action_t *pThis)
 	printf("\n\tinstance data: 0x%x\n", (unsigned) pThis->pModData);
 	if(pThis->f_ReduceRepeated)
 		printf("\t[RepeatedMsgReduction]");
+	if(pThis->bSuspended == 1)
+		printf(" [suspended]");
 	if(pThis->bEnabled == 0)
 		printf(" [disabled]");
 	printf("\n");
@@ -2484,6 +2486,12 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
+	if(pAction->bSuspended == 1) {
+		CHKiRet(pAction->pMod->tryResume(pAction->pModData));
+		/* if we reach this point, we have resumed */
+		pAction->bSuspended = 0;
+	}
+
 	/* don't output marks to recently written files */
 	if ((pMsg->msgFlags & MARK) && (now - pAction->f_time) < MarkInterval / 2) {
 		ABORT_FINALIZE(RS_RET_OK);
@@ -2540,12 +2548,17 @@ typedef struct processMsgDoActions_s {
 DEFFUNC_llExecFunc(processMsgDoActions)
 {
 	DEFiRet;
+	rsRetVal iRetMod;	/* return of module - we do not always pass that */
 	action_t *pAction = (action_t*) pData;
 	processMsgDoActions_t *pDoActData = (processMsgDoActions_t*) pParam;
 
 	assert(pAction != NULL);
-	if(callAction(pDoActData->pMsg, pAction) == RS_RET_DISCARDMSG) {
+	iRetMod = callAction(pDoActData->pMsg, pAction);
+	if(iRetMod == RS_RET_DISCARDMSG) {
 		ABORT_FINALIZE(RS_RET_DISCARDMSG);
+	} else if(iRetMod == RS_RET_SUSPENDED) {
+		/* indicate suspension for next module to be called */
+		pDoActData->bPrevWasSuspended = 1;
 	}
 
 finalize_it:
@@ -4810,7 +4823,7 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
  * The pOMSR is freed, as it is not needed after this function.
  * rgerhards, 2007-07-27
  */
-rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR)
+rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended)
 {
 	DEFiRet;
 	int i;
@@ -4887,6 +4900,7 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 		dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
 		pAction->f_ReduceRepeated = 0;
 	}
+	pAction->bSuspended = bSuspended;
 	pAction->bEnabled = 1; /* action is enabled */
 
 	*ppAction = pAction; /* finally store the action pointer */
@@ -4964,8 +4978,8 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	while(pMod != NULL) {
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
 		dprintf("tried selector action for %s: %d\n", modGetName(pMod), iRet);
-		if(iRet == RS_RET_OK) {
-			if((iRet = addAction(&pAction, pMod, pModData, pOMSR)) == RS_RET_OK) {
+		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
+			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* now check if the module is compatible with select features */
 				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
 					pAction->f_ReduceRepeated = bReduceRepeatMsgs;

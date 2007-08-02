@@ -544,6 +544,7 @@ static char *getFwdSyslogPt(instanceData *pData)
 
 BEGINtryResume
 CODESTARTtryResume
+dprintf("###################### tryResume called\n");
 ENDtryResume
 
 BEGINdoAction
