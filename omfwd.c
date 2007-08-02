@@ -74,19 +74,6 @@
 	 */
 #endif
 
-/*
- * This table contains plain text for h_errno errors used by the
- * net subsystem.
- */
-static const char *sys_h_errlist[] = {
-    "No problem",						/* NETDB_SUCCESS */
-    "Authoritative answer: host not found",			/* HOST_NOT_FOUND */
-    "Non-authoritative answer: host not found, or serverfail",	/* TRY_AGAIN */
-    "Non recoverable errors",					/* NO_RECOVERY */
-    "Valid name, no data record of requested type",		/* NO_DATA */
-    "no address, look for MX record"				/* NO_ADDRESS */
- };
-
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
@@ -549,7 +536,6 @@ static char *getFwdSyslogPt(instanceData *pData)
 static rsRetVal doTryResume(instanceData *pData)
 {
 	DEFiRet;
-	time_t fwd_suspend;
 	struct addrinfo *res;
 	struct addrinfo hints;
 	unsigned e;
