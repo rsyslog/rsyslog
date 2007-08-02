@@ -3877,7 +3877,6 @@ rsRetVal cfsysline(uchar *p)
 
 	assert(p != NULL);
 	errno = 0;
-	dprintf("cfsysline --> %s\n", p);
 	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(uchar), ' ')  != 0) {
 		logerror("Invalid $-configline - could not extract command - line ignored\n");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
@@ -4083,15 +4082,6 @@ static rsRetVal processConfFile(uchar *pConfFile)
 		if (*p == '\0' || *p == '#')
 			continue;
 
-		if(*p == '$') {
-			if(cfsysline((uchar*) ++p) != RS_RET_OK) {
-				uchar szErrLoc[MAXFNAME + 64];
-				snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
-					 "%s, line %d", pConfFile, iLnNbr);
-				logerrorSz("the last error occured in: ", (char*)szErrLoc);
-			}
-			continue;
-		}
 #if CONT_LINE
 		strcpy((char*)cline, (char*)p);
 #endif
@@ -4122,8 +4112,11 @@ static rsRetVal processConfFile(uchar *pConfFile)
 			/* we log a message, but otherwise ignore the error. After all, the next
 			 * line can be correct.  -- rgerhards, 2007-08-02
 			 */
+			uchar szErrLoc[MAXFNAME + 64];
 			dprintf("config line NOT successfully processed\n");
-			logerrorInt("the last error occured in config file line %d", iLnNbr);
+			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
+				 "%s, line %d", pConfFile, iLnNbr);
+			logerrorSz("the last error occured in: ", (char*)szErrLoc);
 		}
 	}
 
@@ -5108,8 +5101,6 @@ static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 		CHKiRet(cflineDoFilter(&p, fCurr)); /* pull filters */
 	}
 
-	dprintf("leading char in action: %c\n", *p);
-	
 	CHKiRet(cflineDoAction(&p, &pAction));
 	CHKiRet(llAppend(&fCurr->llActList,  NULL, (void*) pAction));
 
@@ -5129,24 +5120,26 @@ static rsRetVal cfline(uchar *line, selector_t **pfCurr)
 
 	assert(line != NULL);
 
-	dprintf("cfline: '%s'", line);
+	dprintf("cfline: '%s'\n", line);
 
 	/* check type of line and call respective processing */
 	switch(*line) {
 		case '!':
-			CHKiRet(cflineProcessTagSelector(&line));
+			iRet = cflineProcessTagSelector(&line);
 			break;
 		case '+':
 		case '-':
-			CHKiRet(cflineProcessHostSelector(&line) == RS_RET_OK);
-				return RS_RET_NOENTRY;
+			iRet = cflineProcessHostSelector(&line);
+			break;
+		case '$':
+			++line; /* eat '$' */
+			iRet = cfsysline(line);
 			break;
 		default:
 			iRet = cflineClassic(line, pfCurr);
 			break;
 	}
 
-finalize_it:
 	return iRet;
 }
 
