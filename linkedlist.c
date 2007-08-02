@@ -206,6 +206,50 @@ rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData)
 	return iRet;
 }
 
+
+/* provide the count of linked list elements
+ */
+rsRetVal llGetNumElts(linkedList_t *pThis, int *piCnt)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+	assert(piCnt != NULL);
+
+	*piCnt = pThis->iNumElts;
+
+	return iRet;
+}
+
+
+/* execute a function on all list members. The functions receives a
+ * user-supplied parameter, which may be either a simple value
+ * or a pointer to a structure with more data. If the user-supplied
+ * function does not return RS_RET_OK, this function here terminates.
+ * rgerhards, 2007-08-02
+ */
+rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* pParam)
+{
+	DEFiRet;
+	rsRetVal iRetLL;
+	void *pData;
+	linkedListCookie_t llCookie = NULL;
+
+	assert(pThis != NULL);
+	assert(pFunc != NULL);
+
+	while((iRetLL = llGetNextElt(pThis, &llCookie, (void**)&pData)) == RS_RET_OK) {
+		CHKiRet(pFunc(pData, pParam));
+	}
+
+	if(iRetLL != RS_RET_END_OF_LINKEDLIST)
+		iRet = iRetLL;
+
+finalize_it:
+	return iRet;
+}
+
+
 /*
  * vi:set ai:
  */

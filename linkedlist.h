@@ -58,5 +58,12 @@ rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppU
 rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData);
 rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData);
 rsRetVal llGetKey(llElt_t *pThis, void **ppData);
+rsRetVal llGetNumElts(linkedList_t *pThis, int *piCnt);
+rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* pParam);
+/* use the macro below to define a function that will be executed by
+ * llExecFunc()
+ */
+#define DEFFUNC_llExecFunc(funcName)\
+	static rsRetVal funcName(void __attribute__((unused)) *pData, void __attribute__((unused)) *pParam)
 
 #endif /* #ifndef LINKEDLIST_H_INCLUDED */
