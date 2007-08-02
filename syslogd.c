@@ -520,6 +520,7 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 				 */
 /* end global config file state variables */
 
+static unsigned int Forwarding = 0;
 static int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
@@ -615,7 +616,6 @@ struct filed {
 		} prop;
 	} f_filterData;
 
-	action_t *pAction;	/* pointer to the action descriptor */
 	linkedList_t llActList;	/* list of configured actions */
 };
 typedef struct filed selector_t;	/* new type name */
@@ -701,13 +701,14 @@ static void logmsg(int pri, msg_t*, int flags);
 static rsRetVal fprintlog(action_t *pAction);
 static void reapchild();
 static void debug_switch();
-static rsRetVal cfline(uchar *line, selector_t *f);
+static rsRetVal cfline(uchar *line, selector_t **pfCurr);
 static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
 static void die(int sig);
 static void freeSelectors(void);
 static rsRetVal processConfFile(uchar *pConfFile);
 static rsRetVal actionDestruct(action_t *pThis);
+static rsRetVal selectorAddList(selector_t *f);
 
 /* Access functions for the selector_t. These functions are primarily
  * necessary to make things thread-safe. Consequently, they are slim
@@ -1887,6 +1888,25 @@ finalize_it:
 }
 
 
+/* debug-print the contents of an action object
+ * rgerhards, 2007-08-02
+ */
+static rsRetVal actionDbgPrint(action_t *pThis)
+{
+	DEFiRet;
+
+	printf("%s: ", modGetStateName(pThis->pMod));
+	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
+	printf("\tinstance data: 0x%x\n", (unsigned) pThis->pModData);
+	if(pThis->f_ReduceRepeated)
+		printf(" [RepeatedMsgReduction]");
+	if(pThis->bEnabled == 0)
+		printf(" [disabled]");
+
+	return iRet;
+}
+
+
 /* function to destruct a selector_t object
  * rgerhards, 2007-08-01
  */
@@ -1895,10 +1915,6 @@ static rsRetVal selectorDestruct(void *pVal)
 	selector_t *pThis = (selector_t *) pVal;
 
 	assert(pThis != NULL);
-
-	/* free the action instances */
-	if(pThis->pAction != NULL)
-		actionDestruct(pThis->pAction);
 
 	llDestroy(&pThis->llActList);
 	free(pThis);
@@ -2511,6 +2527,26 @@ finalize_it:
 }
 
 
+/* helper to processMsg(), used to call the configured actions. It is
+ * executed from within llExecFunc() of the action list.
+ * rgerhards, 2007-08-02
+ */
+DEFFUNC_llExecFunc(processMsgDoActions)
+{
+	DEFiRet;
+	action_t *pAction = (action_t*) pData;
+	msg_t *pMsg = (msg_t*) pParam;
+
+	assert(pAction != NULL);
+	if(callAction(pMsg, pAction) == RS_RET_DISCARDMSG) {
+		ABORT_FINALIZE(RS_RET_DISCARDMSG);
+	}
+
+finalize_it:
+	return iRet;
+}
+
+
 /* Process (consume) a received message. Calls the actions configured.
  * Can some time later run in its own thread. To aid this, the calling
  * parameters should be reduced to just pMsg.
@@ -2546,7 +2582,7 @@ static void processMsg(msg_t *pMsg)
 		}
 
 		/* ok -- from here, we have action-specific code, nothing really selector-specific -- rger 2007-08-01 */
-		if(callAction(pMsg, f->pAction) == RS_RET_DISCARDMSG)
+		if(llExecFunc(&f->llActList, processMsgDoActions, (void*)pMsg) == RS_RET_DISCARDMSG)
 			bContinue = 0;
 	}
 }
@@ -3330,6 +3366,27 @@ static void reapchild()
 }
 
 
+/* helper to domark to flush the individual action links via llExecFunc
+ * rgerhards, 2007-08-02
+ */
+DEFFUNC_llExecFunc(domarkActions)
+{
+	action_t *pAction = (action_t*) pData;
+
+	assert(pAction != NULL);
+
+	if (pAction->f_prevcount && now >= REPEATTIME(pAction)) {
+		dprintf("flush %s: repeated %d times, %d sec.\n",
+		    modGetStateName(pAction->pMod), pAction->f_prevcount,
+		    repeatinterval[pAction->f_repeatcount]);
+		fprintlog(pAction);
+		BACKOFF(pAction);
+	}
+
+	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
+}
+
+
 /* This method writes mark messages and - some time later - flushes reapeat
  * messages.
  * This method was initially called by an alarm handler. As such, it could potentially
@@ -3347,7 +3404,6 @@ static void reapchild()
 static void domark(void)
 {
 	register selector_t *f;
-	action_t *pAction;
 
 	if (MarkInterval > 0) {
 		now = time(NULL);
@@ -3359,14 +3415,7 @@ static void domark(void)
 
 		/* see if we need to flush any "message repeated n times"... */
 		for (f = Files; f != NULL ; f = f->f_next) {
-			pAction = f->pAction;
-			if (pAction->f_prevcount && now >= REPEATTIME(pAction)) {
-				dprintf("flush %s: repeated %d times, %d sec.\n",
-				    modGetStateName(pAction->pMod), pAction->f_prevcount,
-				    repeatinterval[pAction->f_repeatcount]);
-				fprintlog(pAction);
-				BACKOFF(pAction);
-			}
+			llExecFunc(&f->llActList, domarkActions, NULL);
 		}
 	}
 }
@@ -3859,13 +3908,30 @@ finalize_it:
 }
 
 
+/* helper to freeSelectors(), used with llExecFunc() to flush 
+ * pending output.  -- rgerhards, 2007-08-02
+ */
+DEFFUNC_llExecFunc(freeSelectorsActions)
+{
+	action_t *pAction = (action_t*) pData;
+
+	assert(pAction != NULL);
+
+	/* flush any pending output */
+	if(pAction->f_prevcount) {
+		fprintlog(pAction);
+	}
+
+	return RS_RET_OK; /* never fails ;) */
+}
+
+
 /*  Close all open log files and free selector descriptor array.
  */
 static void freeSelectors(void)
 {
 	selector_t *f;
 	selector_t *fPrev;
-	action_t *pAction;
 
 	if(Files != NULL) {
 		dprintf("Freeing log structures.\n");
@@ -3874,11 +3940,7 @@ static void freeSelectors(void)
 		 * (stopWoker() does that), then we can free the structures.
 		 */
 		for(f = Files ; f != NULL ; f = f->f_next) {
-			pAction = f->pAction;
-			/* flush any pending output */
-			if(pAction->f_prevcount) {
-				fprintlog(pAction);
-			}
+			llExecFunc(&f->llActList, freeSelectorsActions, NULL);
 		}
 
 #		ifdef USE_PTHREADS
@@ -3899,6 +3961,15 @@ static void freeSelectors(void)
 }
 
 
+/* helper to dbPrintInitInfo, to print out all actions via
+ * the llExecFunc() facility.
+ * rgerhards, 2007-08-02
+ */
+DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
+{
+	return actionDbgPrint((action_t*) pData);
+}
+
 /* print debug information as part of init(). This pretty much
  * outputs the whole config of rsyslogd. I've moved this code
  * out of init() to clean it somewhat up.
@@ -3907,7 +3978,6 @@ static void freeSelectors(void)
 static void dbgPrintInitInfo(void)
 {
 	register selector_t *f;
-	action_t *pAction;
 	int i;
 
 	printf("Active selectors:\n");
@@ -3938,15 +4008,8 @@ static void dbgPrintInitInfo(void)
 			printf("\tAction...: ");
 		}
 
-		/* actions */
-		pAction = f->pAction;
-		printf("%s: ", modGetStateName(pAction->pMod));
-		pAction->pMod->dbgPrintInstInfo(pAction->pModData);
-		printf("\tinstance data: 0x%x\n", (unsigned) pAction->pModData);
-		if(pAction->f_ReduceRepeated)
-			printf(" [RepeatedMsgReduction]");
-		if(pAction->bEnabled == 0)
-			printf(" [disabled]");
+		llExecFunc(&f->llActList, dbgPrintInitInfoAction, NULL); /* actions */
+
 		printf("\n");
 	}
 	printf("\n");
@@ -3985,11 +4048,8 @@ static rsRetVal processConfFile(uchar *pConfFile)
 	DEFiRet;
 	int iLnNbr = 0;
 	FILE *cf;
-	selector_t *f;
-	selector_t *nextp = NULL;
+	selector_t *fCurr = NULL;
 	uchar *p;
-	unsigned int Forwarding = 0;
-	action_t *pAction;
 #ifdef CONT_LINE
 	uchar cbuf[BUFSIZ];
 	uchar *cline;
@@ -4025,7 +4085,10 @@ static rsRetVal processConfFile(uchar *pConfFile)
 
 		if(*p == '$') {
 			if(cfsysline((uchar*) ++p) != RS_RET_OK) {
-				logerrorInt("the last error occured in config file line %d", iLnNbr);
+				uchar szErrLoc[MAXFNAME + 64];
+				snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
+					 "%s, line %d", pConfFile, iLnNbr);
+				logerrorSz("the last error occured in: ", (char*)szErrLoc);
 			}
 			continue;
 		}
@@ -4046,43 +4109,35 @@ static rsRetVal processConfFile(uchar *pConfFile)
 		}  else
 			cline = cbuf;
 #endif
-		*++p = '\0';
+		*++p = '\0'; // TODO: check this
 
-		/* allocate next entry and add it */
-		CHKiRet(selectorConstruct(&f));
-			
+		/* we now have the complete line, and are positioned at the first non-whitespace
+		 * character. So let's process it
+		 */
 #if CONT_LINE
-		if(cfline(cbuf, f) != RS_RET_OK) {
+		if(cfline(cbuf, &fCurr) != RS_RET_OK) {
 #else
-		if(cfline((uchar*)cline, f) != RS_RET_OK) {
+		if(cfline((uchar*)cline, &fCurr) != RS_RET_OK) {
 #endif
-			/* creation of the entry failed, we need to discard it */
+			/* we log a message, but otherwise ignore the error. After all, the next
+			 * line can be correct.  -- rgerhards, 2007-08-02
+			 */
 			dprintf("config line NOT successfully processed\n");
 			logerrorInt("the last error occured in config file line %d", iLnNbr);
-			selectorDestruct(f); 
-		} else {
-			/* successfully created an entry */
-			dprintf("selector line successfully processed\n");
-			if(nextp == NULL) {
-				Files = f;
-			}
-			else {
-				nextp->f_next = f;
-			}
-			nextp = f;
-			pAction = f->pAction;
-			if(pAction->pMod->needUDPSocket(pAction->pModData) == RS_RET_TRUE) {
-				Forwarding++;
-			}
 		}
 	}
+
+	/* we probably have one selector left to be added - so let's do that now */
+	CHKiRet(selectorAddList(fCurr));
 
 	/* close the configuration file */
 	(void) fclose(cf);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		dprintf("error %d processing config file '%s'; os error: %s\n",
+		if(fCurr != NULL)
+			selectorDestruct(fCurr);
+		dprintf("error %d processing config file '%s'; os error (if any): %s\n",
 			iRet, pConfFile, strerror(errno));
 	}
 	return iRet;
@@ -4096,8 +4151,6 @@ static void init()
 {
 	DEFiRet;
 	register int i;
-	selector_t *nextp;
-	register unsigned int Forwarding = 0;
 #ifdef CONT_LINE
 	char cbuf[BUFSIZ];
 #else
@@ -4110,6 +4163,7 @@ static void init()
 	pDfltHostnameCmp = NULL;
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
+	Forwarding = 0;
 
 #ifdef SYSLOG_INET
 	if (restart) {
@@ -4180,18 +4234,18 @@ static void init()
 		 * config file could not be opened. We might think about
 		 * abandoning the run in this case - but this, too, is not
 		 * very clever... So we stick with what we have.
+		 * We ignore any errors while doing this - we would be lost anyhow...
 		 */
-		// TODO: we need to use the constructor here! better yet: use a mem-based "file"
+		selector_t *f = NULL;
+		char *pTTY = ttyname(0);
 		dprintf("primary config file could not be opened - using emergency definitions.\n");
-		nextp = (selector_t *)calloc(1, sizeof(selector_t));
-		Files = nextp; /* set the root! */
-		cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, nextp);
-		nextp->f_next = (selector_t *)calloc(1, sizeof(selector_t));
-		cfline((uchar*)"*.PANIC\t*", nextp->f_next);
-		nextp->f_next->f_next = (selector_t *)calloc(1, sizeof(selector_t));
-		snprintf(cbuf,sizeof(cbuf), "*.*\t%s", ttyname(0));
-		cfline((uchar*)cbuf, nextp->f_next->f_next);
-		Initialized = 1;
+		cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
+		cfline((uchar*)"*.PANIC\t*", &f);
+		if(pTTY != NULL) {
+			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", pTTY);
+			cfline((uchar*)cbuf, &f);
+		}
+		selectorAddList(f);
 	}
 
 	/* we are now done with reading the configuration. This is the right time to
@@ -4895,9 +4949,6 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 		dprintf("tried selector action for %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_OK) {
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR)) == RS_RET_OK) {
-				dprintf("Module %s processed this config line.\n",
-					modGetName(pMod));
-				
 				/* now check if the module is compatible with select features */
 				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
 					pAction->f_ReduceRepeated = bReduceRepeatMsgs;
@@ -4927,6 +4978,87 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 }
 
 
+/* helper to selectorAddListCheckActions()
+ * This is the fucntion to be executed by llExecFunc
+ */
+DEFFUNC_llExecFunc(selectorAddListCheckActionsChecker)
+{
+	DEFiRet;
+	action_t *pAction = (action_t *) pData;
+
+	assert(pAction != NULL);
+
+dprintf("selectorAddListCheckActionsChecker 0x%x\n", (unsigned) pAction);
+	if(pAction->pMod->needUDPSocket(pAction->pModData) == RS_RET_TRUE) {
+		Forwarding++;
+	}
+
+	return iRet;
+}
+
+/* loop through a list of actions and perform necessary checks and
+ * housekeeping. This function must only be called when the owning
+ * selector_t looks valid and is not likely to be discarded. However,
+ * if we do not return RS_RET_OK, the caller MUST discard the
+ * owning selector_t. -- rgerhards, 2007-08-02
+*/
+static rsRetVal selectorAddListCheckActions(selector_t *f)
+{
+	DEFiRet;
+
+	assert(f != NULL);
+
+	CHKiRet(llExecFunc(&f->llActList, selectorAddListCheckActionsChecker, NULL));
+
+finalize_it:
+	return iRet;
+}
+
+
+/* add a completely-processed selector (after config line parsing) to
+ * the linked list of selectors. We now need to check
+ * if it has any actions associated and, if so, link it to the linked
+ * list. If it has nothing associated with it, we can simply discard
+ * it.
+ * We have one special case during initialization: then, the current
+ * selector is NULL, which means we do not need to care about it at
+ * all.  -- rgerhards, 2007-08-01
+ */
+static rsRetVal selectorAddList(selector_t *f)
+{
+	DEFiRet;
+	int iActionCnt;
+
+static selector_t *nextp = NULL;
+	if(f != NULL) {
+		CHKiRet(llGetNumElts(&f->llActList, &iActionCnt));
+		if(iActionCnt == 0) {
+			logerror("warning: selector line without actions will be discarded");
+			selectorDestruct(f);
+		} else {
+			if((iRet = selectorAddListCheckActions(f)) != RS_RET_OK) {
+				logerror("selector line will be discarded due to error in action(s)");
+				selectorDestruct(f);
+				goto finalize_it;
+			}
+			/* successfully created an entry */
+			dprintf("selector line successfully processed\n");
+		// TODO: we should use the linked list class for the selector list, else we need to add globals
+		// ... well nextp could be added temporarily...
+			if(nextp == NULL) {
+				Files = f;
+			} else {
+				nextp->f_next = f;
+			}
+			nextp = f;
+		}
+	}
+
+finalize_it:
+	return iRet;
+}
+
+
 /* Process a configuration file line in traditional "filter selector" format
  * rgerhards 2004-11-17: well, I somewhat changed this function. It now does NOT
  * handle config lines in general, but only lines that reflect actual filter
@@ -4949,25 +5081,40 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
  * such a case would just cause the selector to be never executed, but it would still
  * remain in memory, which would not be a good thing. -- rgerhards, 2007-07-30
  */
-static rsRetVal cflineClassic(uchar *p, selector_t *f)
+static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 {
 	DEFiRet;
 	action_t *pAction;
+	selector_t *fCurr;
 
-	dprintf("cfline(%s)", p);
+	assert(pfCurr != NULL);
 
-	iRet = cflineDoFilter(&p, f); /* pull filters */
-	if(iRet == RS_RET_NOENTRY) {
-		goto finalize_it;
-	} else if(iRet != RS_RET_OK)
-		goto finalize_it;
+	fCurr = *pfCurr;
+
+	/* lines starting with '&' have no new filters and just add
+	 * new actions to the currently processed selector.
+	 */
+	if(*p != '&') {
+		/* we are finished with the current selector. So we now need to check
+		 * if it has any actions associated and, if so, link it to the linked
+		 * list. If it has nothing associated with it, we can simply discard
+		 * it. In any case, we create a fresh selector for our new filter.
+		 * We have one special case during initialization: then, the current
+		 * selector is NULL, which means we do not need to care about it at
+		 * all.  -- rgerhards, 2007-08-01
+		 */
+		CHKiRet(selectorAddList(fCurr));
+		CHKiRet(selectorConstruct(&fCurr)); /* create "fresh" selector */
+		CHKiRet(cflineDoFilter(&p, fCurr)); /* pull filters */
+	}
 
 	dprintf("leading char in action: %c\n", *p);
 	
 	CHKiRet(cflineDoAction(&p, &pAction));
-	f->pAction = pAction;
+	CHKiRet(llAppend(&fCurr->llActList,  NULL, (void*) pAction));
 
 finalize_it:
+	*pfCurr = fCurr;
 	return iRet;
 }
 
@@ -4976,31 +5123,30 @@ finalize_it:
  * I re-did this functon because it was desperately time to do so
  * rgerhards, 2007-08-01
  */
-static rsRetVal cfline(uchar *line, register selector_t *f)
+static rsRetVal cfline(uchar *line, selector_t **pfCurr)
 {
 	DEFiRet;
 
 	assert(line != NULL);
-	assert(f != NULL);
+
+	dprintf("cfline: '%s'", line);
 
 	/* check type of line and call respective processing */
 	switch(*line) {
 		case '!':
-			if((iRet = cflineProcessTagSelector(&line)) == RS_RET_OK) {
-				return RS_RET_NOENTRY;
-			}
+			CHKiRet(cflineProcessTagSelector(&line));
 			break;
 		case '+':
 		case '-':
-			if((iRet = cflineProcessHostSelector(&line)) == RS_RET_OK) {
+			CHKiRet(cflineProcessHostSelector(&line) == RS_RET_OK);
 				return RS_RET_NOENTRY;
-			}
 			break;
 		default:
-			iRet = cflineClassic(line, f);
+			iRet = cflineClassic(line, pfCurr);
 			break;
 	}
 
+finalize_it:
 	return iRet;
 }
 
@@ -5169,6 +5315,61 @@ static void debugListenInfo(int fd, char *type)
 }
 
 
+/* helper function for mainloop(). This is used to add all module
+ * writeFDsfor Select via llExecFunc().
+ * rgerhards, 2007-08-02
+ */
+typedef struct mainloopWriteFDSInfo_s { /* struct for pParam */
+	fd_set *pWritefds;
+	int *pMaxfds;
+} mainloopWriteFDSInfo_t;
+DEFFUNC_llExecFunc(mainloopAddModWriteFDSforSelect)
+{
+	DEFiRet;
+	action_t *pAction = (action_t*) pData;
+	mainloopWriteFDSInfo_t *pState = (mainloopWriteFDSInfo_t*) pParam;
+	short fdMod;
+
+	assert(pAction != NULL);
+	assert(pState != NULL);
+
+	if(pAction->pMod->getWriteFDForSelect(pAction->pModData, &fdMod) == RS_RET_OK) {
+	   FD_SET(fdMod, pState->pWritefds);
+		if(fdMod > *pState->pMaxfds)
+			*pState->pMaxfds = fdMod;
+		}
+
+	return iRet;
+}
+
+
+/* helper function for mainloop(). This is used to call module action
+ * handlers after select if a fd is writable.
+ * rgerhards, 2007-08-02
+ */
+DEFFUNC_llExecFunc(mainloopCallWithWritableFDsActions)
+{
+	DEFiRet;
+	action_t *pAction = (action_t*) pData;
+	fd_set *pWritefds = (fd_set *) pParam;
+	short fdMod;
+
+	assert(pAction != NULL);
+	assert(pWritefds != NULL);
+
+	if(pAction->pMod->getWriteFDForSelect(pAction->pModData, &fdMod) == RS_RET_OK) {
+		if(FD_ISSET(fdMod, pWritefds)) {
+			if((iRet = pAction->pMod->onSelectReadyWrite(pAction->pModData))
+			   != RS_RET_OK) {
+				dprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
+			}
+		}
+	   }
+
+	return iRet;
+}
+
+
 static void mainloop(void)
 {
 	fd_set readfds;
@@ -5176,8 +5377,8 @@ static void mainloop(void)
 	int	fd;
 	char line[MAXLINE +1];
 	int maxfds;
-	action_t *pAction;
 #ifdef  SYSLOG_INET
+	mainloopWriteFDSInfo_t writeFDSInfo;
 	fd_set writefds;
 	selector_t *f;
 	struct sockaddr_storage frominet;
@@ -5267,15 +5468,11 @@ static void mainloop(void)
 			 * scheduled to be replaced after the liblogging integration.
 			 * rgerhards 2005-07-20
 			 */
-			short fdMod;
 			FD_ZERO(&writefds);
+			writeFDSInfo.pWritefds = &writefds;
+			writeFDSInfo.pMaxfds = &maxfds;
 			for (f = Files; f != NULL ; f = f->f_next) {
-				pAction = f->pAction;
-				if(pAction->pMod->getWriteFDForSelect(pAction->pModData, &fdMod) == RS_RET_OK) {
-				   FD_SET(fdMod, &writefds);
-				   if(fdMod > maxfds)
-					maxfds = fdMod;
-				   }
+				llExecFunc(&f->llActList, mainloopAddModWriteFDSforSelect, &writeFDSInfo);
 			}
 		}
 #endif
@@ -5380,18 +5577,8 @@ static void mainloop(void)
 			 * this code here will stay for quite a while.
 			 * rgerhards, 2006-12-07
 			 */
-			short fdMod;
-			rsRetVal iRet;
-			for (f = Files; f != NULL ; f = f->f_next) {
-				pAction = f->pAction;
-				if(pAction->pMod->getWriteFDForSelect(pAction->pModData, &fdMod) == RS_RET_OK) {
-					if(FD_ISSET(fdMod, &writefds)) {
-						if((iRet = pAction->pMod->onSelectReadyWrite(pAction->pModData))
-						   != RS_RET_OK) {
-							dprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
-						}
-					}
-				   }
+			for(f = Files; f != NULL ; f = f->f_next) {
+				llExecFunc(&f->llActList, mainloopCallWithWritableFDsActions, &writefds);
 			}
 		}
 #endif /* #ifdef SYSLOG_INET */
