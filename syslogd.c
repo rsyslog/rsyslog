@@ -514,6 +514,7 @@ int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during
 static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
 static int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
+static int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
 static int	logEveryMsg = 0;/* no repeat message processing  - read-only after startup
 				 * 0 - suppress duplicate messages
 				 * 1 - do NOT suppress duplicate messages
@@ -556,6 +557,7 @@ extern	int errno;
  */
 struct action_s {
 	time_t	f_time;		/* time this was last written */
+	int	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
 	short	bSuspended;	/* is the related action temporarily suspended? */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
@@ -657,6 +659,7 @@ static char* getFIOPName(unsigned iFIOP)
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	cCCEscapeChar = '#';
+	bActExecWhenPrevSusp = 0;
 	bDebugPrintTemplateList = 1;
 	bDebugPrintCfSysLineHandlerList = 1;
 	bDebugPrintModuleList = 1;
@@ -1984,13 +1987,15 @@ static rsRetVal actionDbgPrint(action_t *pThis)
 
 	printf("%s: ", modGetStateName(pThis->pMod));
 	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
-	printf("\n\tinstance data: 0x%x\n", (unsigned) pThis->pModData);
-	if(pThis->f_ReduceRepeated)
-		printf("\t[RepeatedMsgReduction]");
-	if(pThis->bSuspended == 1)
-		printf(" [suspended]");
-	if(pThis->bEnabled == 0)
-		printf(" [disabled]");
+	printf("\n\tInstance data: 0x%x\n", (unsigned) pThis->pModData);
+	printf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
+	printf("\tSuspended: %d", pThis->bSuspended);
+	if(pThis->bSuspended) {
+		printf(" next retry: %u, number retries: %d", (unsigned) pThis->ttResumeRtry, pThis->iNbrResRtry);
+	}
+	printf("\n");
+	printf("\tDisabled: %d\n", pThis->bEnabled);
+	printf("\tExec only when previous is suspended: %d\n", pThis->bExecWhenPrevSusp);
 	printf("\n");
 
 	return iRet;
@@ -2549,7 +2554,6 @@ static void doEmergencyLogging(msg_t *pMsg)
 
 /* call the configured action. Does all necessary housekeeping.
  * rgerhards, 2007-08-01
- * TODO: f shall become a pointer to msg object!
  */
 static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 {
@@ -2572,11 +2576,9 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-dprintf("callAction, vor IsSusp()\n");
 	if(actionIsSuspended(pAction)) {
 		CHKiRet(actionTryResume(pAction));
 	}
-dprintf("callAction, after IsSusp()\n");
 
 	/* don't output marks to recently written files */
 	if ((pMsg->msgFlags & MARK) && (now - pAction->f_time) < MarkInterval / 2) {
@@ -2639,6 +2641,12 @@ DEFFUNC_llExecFunc(processMsgDoActions)
 	processMsgDoActions_t *pDoActData = (processMsgDoActions_t*) pParam;
 
 	assert(pAction != NULL);
+
+	if((pAction->bExecWhenPrevSusp  == 1) && (pDoActData->bPrevWasSuspended == 0)) {
+		dprintf("not calling action because the previous one is not suspended\n");
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
 	iRetMod = callAction(pDoActData->pMsg, pAction);
 	if(iRetMod == RS_RET_DISCARDMSG) {
 		ABORT_FINALIZE(RS_RET_DISCARDMSG);
@@ -4907,6 +4915,7 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 
 /* add an Action to the current selector
  * The pOMSR is freed, as it is not needed after this function.
+ * Note: this function pulls global data that specifies action config state.
  * rgerhards, 2007-07-27
  */
 rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended)
@@ -4926,6 +4935,7 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
+	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
 
 	/* check if we can obtain the template pointers - TODO: move to separat function? */
 	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);
@@ -5869,6 +5879,7 @@ static rsRetVal loadBuildInModules(void)
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp));
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs));

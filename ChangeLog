@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 1.17.7 (rgerhards), 2007-08-??
 - modified rklogd to only change the console log level if -c is specified
+- implemented $ActionExecOnlyWhenPreviousIsSuspended config directive
 ---------------------------------------------------------------------------
 Version 1.17.6 (rgerhards), 2007-08-01
 - continued to work on output module modularization - basic stage of
