@@ -622,6 +622,10 @@ CODESTARTgetWriteFDForSelect
 ENDgetWriteFDForSelect
 
 
+BEGINtryResume
+CODESTARTtryResume
+ENDtryResume
+
 BEGINdoAction
 CODESTARTdoAction
 	dprintf(" (%s)\n", pData->f_fname);

@@ -319,6 +319,10 @@ rsRetVal writeMySQL(uchar *psz, instanceData *pData)
 }
 
 
+BEGINtryResume
+CODESTARTtryResume
+ENDtryResume
+
 BEGINdoAction
 CODESTARTdoAction
 	dprintf("\n");

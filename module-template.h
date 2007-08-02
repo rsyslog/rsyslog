@@ -235,6 +235,29 @@ do_abort:\
 }
 
 
+/* tryResume()
+ * This entry point is called to check if a module can resume operations. This
+ * happens when a module requested that it be suspended. In suspended state,
+ * the engine periodically tries to resume the module. If that succeeds, normal
+ * processing continues. If not, the module will not be called unless a
+ * tryResume() call succeeds.
+ * Returns RS_RET_OK, if resumption succeeded, RS_RET_SUSPENDED otherwise
+ * rgerhard, 2007-08-02
+ */
+#define BEGINtryResume \
+static rsRetVal tryResume(instanceData __attribute__((unused)) *pData)\
+{\
+	DEFiRet;
+
+#define CODESTARTtryResume \
+	assert(pData != NULL);
+
+#define ENDtryResume \
+	return iRet;\
+}
+
+
+
 /* queryEtryPt()
  */
 #define BEGINqueryEtryPt \
@@ -274,6 +297,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = onSelectReadyWrite;\
 	} else if(!strcmp((char*) name, "needUDPSocket")) {\
 		*pEtryPoint = needUDPSocket;\
+	} else if(!strcmp((char*) name, "tryResume")) {\
+		*pEtryPoint = tryResume;\
 	}
 
 /* modInit()

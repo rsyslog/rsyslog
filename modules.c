@@ -224,6 +224,10 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 		moduleDestruct(pNew);
 		return iRet;
 	}
+	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume)) != RS_RET_OK) {
+		moduleDestruct(pNew);
+		return iRet;
+	}
 	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
 		moduleDestruct(pNew);
 		return iRet;

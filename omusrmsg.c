@@ -245,6 +245,10 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 }
 
 
+BEGINtryResume
+CODESTARTtryResume
+ENDtryResume
+
 BEGINdoAction
 CODESTARTdoAction
 	dprintf("\n");

@@ -557,6 +557,7 @@ extern	int errno;
 struct action_s {
 	time_t	f_time;		/* time this was last written */
 	short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
+	short	bSuspended;	/* is the related action temporarily suspended? */
 	struct moduleInfo *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - contents is module-specific */
 	int	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
@@ -3330,10 +3331,18 @@ rsRetVal fprintlog(action_t *pAction)
 			goto finalize_it;
 		}
 	}
-	iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData); /* call configured action */
+	/* call configured action */
+	iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData);
 
-	if(iRet == RS_RET_DISABLE_ACTION)
+	if(iRet == RS_RET_DISABLE_ACTION) {
+		dprintf("Action requested to be disabled, done that.\n");
 		pAction->bEnabled = 0; /* that's it... */
+	}
+
+	if(iRet == RS_RET_SUSPENDED) {
+		dprintf("Action requested to be suspended, done that.\n");
+		pAction->bSuspended = 1; /* message process, so we start a new cycle */
+	}
 
 	if(iRet == RS_RET_OK)
 		pAction->f_prevcount = 0; /* message process, so we start a new cycle */

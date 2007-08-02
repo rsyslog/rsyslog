@@ -61,6 +61,7 @@ typedef struct moduleInfo {
 	rsRetVal (*onSelectReadyWrite)(void*);/* called when fd is writeable after select() */
 	rsRetVal (*needUDPSocket)(void*);/* called when fd is writeable after select() */
 	rsRetVal (*dbgPrintInstInfo)(void*);/* called before termination or module unload */
+	rsRetVal (*tryResume)(void*);/* called to see if module actin can be resumed now */
 	rsRetVal (*modExit)();		/* called before termination or module unload */
 	/* below: parse a configuration line - return if processed
 	 * or not. If not, must be parsed to next module.

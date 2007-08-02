@@ -62,6 +62,10 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
+BEGINtryResume
+CODESTARTtryResume
+ENDtryResume
+
 BEGINdoAction
 CODESTARTdoAction
 	iRet = RS_RET_DISCARDMSG;

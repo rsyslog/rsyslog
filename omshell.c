@@ -75,6 +75,10 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
+BEGINtryResume
+CODESTARTtryResume
+ENDtryResume
+
 BEGINdoAction
 CODESTARTdoAction
 	/* TODO: using pData->progName is not clean from the point of

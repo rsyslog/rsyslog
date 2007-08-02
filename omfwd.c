@@ -56,6 +56,23 @@
 #include "tcpsyslog.h"
 #include "module-template.h"
 
+#ifdef SYSLOG_INET
+#define INET_SUSPEND_TIME 60		/* equal to 1 minute 
+					 * rgerhards, 2005-07-26: This was 3 minutes. As the
+					 * same timer is used for tcp based syslog, we have
+					 * reduced it. However, it might actually be worth
+					 * thinking about a buffered tcp sender, which would be 
+					 * a much better alternative. When that happens, this
+					 * time here can be re-adjusted to 3 minutes (or,
+					 * even better, made configurable).
+					 */
+#define INET_RETRY_MAX 30		/* maximum of retries for gethostbyname() */
+	/* was 10, changed to 30 because we reduced INET_SUSPEND_TIME by one third. So
+	 * this "fixes" some of implications of it (see comment on INET_SUSPEND_TIME).
+	 * rgerhards, 2005-07-26
+	 */
+#endif
+
 /*
  * This table contains plain text for h_errno errors used by the
  * net subsystem.
@@ -524,6 +541,10 @@ static char *getFwdSyslogPt(instanceData *pData)
 		return(pData->port);
 }
 
+
+BEGINtryResume
+CODESTARTtryResume
+ENDtryResume
 
 BEGINdoAction
 	char *psz; /* temporary buffering */
