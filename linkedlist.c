@@ -59,6 +59,31 @@ rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(), rsRetVal (*pK
 };
 	
 
+/* llDestroyEltData - destroys a list element 
+ * It is a separate function as the
+ * functionality is needed in multiple code-pathes.
+ */
+static rsRetVal llDestroyElt(linkedList_t *pList, llElt_t *pElt)
+{
+	DEFiRet;
+
+	assert(pList != NULL);
+	assert(pElt != NULL);
+
+	/* we ignore errors during destruction, as we need to try
+	 * free the element in any case.
+	 */
+	if(pElt->pData != NULL)
+		pList->pEltDestruct(pElt->pData);
+	if(pElt->pKey != NULL)
+		pList->pKeyDestruct(pElt->pKey);
+	free(pElt);
+	pList->iNumElts--; /* one less */
+
+	return iRet;
+}
+
+
 /* llDestroy - destroys a COMPLETE linkedList
  */
 rsRetVal llDestroy(linkedList_t *pThis)
@@ -76,13 +101,37 @@ rsRetVal llDestroy(linkedList_t *pThis)
 		/* we ignore errors during destruction, as we need to try
 		 * finish the linked list in any case.
 		 */
-		if(pEltPrev->pData != NULL)
-			pThis->pEltDestruct(pEltPrev->pData);
-		if(pEltPrev->pKey != NULL)
-			pThis->pKeyDestruct(pEltPrev->pKey);
-		free(pEltPrev);
+		llDestroyElt(pThis, pEltPrev);
 	}
 
+	return iRet;
+}
+
+/* llDestroyRootElt - destroy the root element but otherwise
+ * keeps this list intact.  -- rgerhards, 2007-08-03
+ */
+rsRetVal llDestroyRootElt(linkedList_t *pThis)
+{
+	DEFiRet;
+	llElt_t *pPrev;
+	
+	if(pThis->pRoot == NULL) {
+		ABORT_FINALIZE(RS_RET_EMPTY_LIST);
+	}
+
+	pPrev = pThis->pRoot;
+	if(pPrev->pNext == NULL) {
+		/* it was the only list element */
+		pThis->pLast = NULL;
+		pThis->pRoot = NULL;
+	} else {
+		/* there are other list elements */
+		pThis->pRoot = pPrev->pNext;
+	}
+
+	CHKiRet(llDestroyElt(pThis, pPrev));
+
+finalize_it:
 	return iRet;
 }
 

@@ -24,6 +24,7 @@
 #ifndef	MSG_H_INCLUDED
 #define	MSG_H_INCLUDED 1
 
+#include "syslogd-types.h"
 #include "template.h"
 
 /* rgerhards 2004-11-08: The following structure represents a

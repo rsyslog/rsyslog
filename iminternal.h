@@ -1,0 +1,48 @@
+/* Definition of the internal messages input module.
+ *
+ * Note: we currently do not have an input module spec, but
+ * we will have one in the future. This module needs then to be
+ * adapted.
+ *
+ * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ */
+
+#ifndef IMINTERNAL_H_INCLUDED
+#define IMINTERNAL_H_INCLUDED
+#include "template.h"
+
+/* this is a single entry for a parse routine. It describes exactly
+ * one entry point/handler.
+ * The short name is cslch (Configfile SysLine CommandHandler)
+ */
+struct iminternal_s { /* config file sysline parse entry */
+	int pri;
+	msg_t *pMsg;	/* the message (in all its glory) */
+	int flags;
+};
+typedef struct iminternal_s iminternal_t;
+
+/* prototypes */
+rsRetVal modInitIminternal(void);
+rsRetVal modExitIminternal(void);
+rsRetVal iminternalAddMsg(int pri, msg_t *pMsg, int flags);
+rsRetVal iminternalHaveMsgReady(int* pbHaveOne);
+rsRetVal iminternalRemoveMsg(int *pPri, msg_t **ppMsg, int *pFlags);
+
+#endif /* #ifndef IMINTERNAL_H_INCLUDED */

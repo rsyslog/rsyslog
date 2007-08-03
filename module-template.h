@@ -333,6 +333,7 @@ finalize_it:\
 	return iRet;\
 }
 
+
 /* definitions for host API queries */
 #define CODEmodInit_QueryRegCFSLineHdlr \
 	CHKiRet(pHostQueryEtryPt((uchar*)"regCfSysLineHdlr", &omsdRegCFSLineHdlr));

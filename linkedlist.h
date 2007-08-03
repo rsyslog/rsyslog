@@ -54,6 +54,7 @@ typedef llElt_t* linkedListCookie_t;	/* this type avoids exposing internals and 
 /* prototypes */
 rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(), rsRetVal (*pKeyDestructor)(void*), int (*pCmpOp)());
 rsRetVal llDestroy(linkedList_t *pThis);
+rsRetVal llDestroyRootElt(linkedList_t *pThis);
 rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppUsr);
 rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData);
 rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData);

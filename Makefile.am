@@ -7,7 +7,7 @@ rfc3195d_SOURCES=rfc3195d.c rsyslog.h
 
 man_MANS = rfc3195d.8 rklogd.8 rsyslogd.8 rsyslog.conf.5 
 
-rsyslogd_SOURCES=syslogd.c pidfile.c template.c outchannel.c stringbuf.c srUtils.c parse.c syslogd-types.h template.h outchannel.h syslogd.h stringbuf.h parse.h srUtils.h liblogging-stub.h net.c net.h msg.c msg.h omshell.c omshell.h omusrmsg.c omusrmsg.h ommysql.c ommysql.h omfwd.c omfwd.h tcpsyslog.c tcpsyslog.h omfile.h omfile.c omdiscard.c omdiscard.h modules.c modules.h module-template.h objomsr.c objomsr.h cfsysline.c cfsysline.h linkedlist.c linkedlist.h
+rsyslogd_SOURCES=syslogd.c pidfile.c template.c outchannel.c stringbuf.c srUtils.c parse.c syslogd-types.h template.h outchannel.h syslogd.h stringbuf.h parse.h srUtils.h liblogging-stub.h net.c net.h msg.c msg.h omshell.c omshell.h omusrmsg.c omusrmsg.h ommysql.c ommysql.h omfwd.c omfwd.h tcpsyslog.c tcpsyslog.h omfile.h omfile.c omdiscard.c omdiscard.h modules.c modules.h module-template.h objomsr.c objomsr.h cfsysline.c cfsysline.h linkedlist.c linkedlist.h iminternal.c iminternal.h
 rsyslogd_CPPFLAGS=$(mysql_includes)
 rsyslogd_LDADD=$(mysql_libs) $(zlib_libs) $(pthreads_libs)
 

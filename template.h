@@ -8,6 +8,8 @@
 #define	TEMPLATE_H_INCLUDED 1
 
 
+#include "stringbuf.h"
+
 #ifdef FEATURE_REGEXP
 /* Include regular expressions */
 #include <regex.h>

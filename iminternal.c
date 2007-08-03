@@ -1,0 +1,189 @@
+/* iminternal.c
+ * This file set implements the internal messages input module for rsyslog.
+ * Note: we currently do not have an input module spec, but
+ * we will have one in the future. This module needs then to be
+ * adapted.
+ * 
+ * File begun on 2007-08-03 by RGerhards
+ *
+ * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ */
+#include "config.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+#include "rsyslog.h"
+#include "syslogd.h"
+#include "linkedlist.h"
+#include "iminternal.h"
+
+static linkedList_t llMsgs;
+
+
+/* destructs an iminternal object
+ */
+static rsRetVal iminternalDestruct(iminternal_t *pThis)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+
+	if(pThis->pMsg != NULL)
+		MsgDestruct(pThis->pMsg);
+
+	free(pThis);
+
+	return iRet;
+}
+
+
+/* Construct an iminternal object
+ */
+static rsRetVal iminternalConstruct(iminternal_t **ppThis)
+{
+	DEFiRet;
+	iminternal_t *pThis;
+
+	assert(ppThis != NULL);
+
+	if((pThis = (iminternal_t*) calloc(1, sizeof(iminternal_t))) == NULL) {
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis != NULL)
+			iminternalDestruct(pThis);
+	}
+
+	*ppThis = pThis;
+
+	return iRet;
+};
+
+
+/* add a message to the linked list
+ * Note: the pMsg reference counter is not incremented. Consequently,
+ * the caller must NOT decrement it. The caller actually hands over
+ * full ownership of the pMsg object.
+ * The interface of this function is modelled after syslogd/logmsg(),
+ * for which it is an "replacement".
+ */
+rsRetVal iminternalAddMsg(int pri, msg_t *pMsg, int flags)
+{
+	DEFiRet;
+	iminternal_t *pThis;
+
+	assert(pMsg != NULL);
+
+	CHKiRet(iminternalConstruct(&pThis));
+
+	pThis->pri = pri;
+	pThis->pMsg = pMsg;
+	pThis->flags = flags;
+
+	CHKiRet(llAppend(&llMsgs,  NULL, (void*) pThis));
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		dprintf("iminternalAddMsg() error %d - can not otherwise report this error, message lost\n", iRet);
+		if(pThis != NULL)
+			iminternalDestruct(pThis);
+	}
+
+	return iRet;
+}
+
+
+/* pull the first error message from the linked list, remove it
+ * from the list and return it to the caller. The caller is
+ * responsible for freeing the message!
+ */
+rsRetVal iminternalRemoveMsg(int *pPri, msg_t **ppMsg, int *pFlags)
+{
+	DEFiRet;
+	iminternal_t *pThis;
+	linkedListCookie_t llCookie = NULL;
+
+	assert(pPri != NULL);
+	assert(ppMsg != NULL);
+	assert(pFlags != NULL);
+
+	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void**) &pThis));
+	*pPri = pThis->pri;
+	*pFlags = pThis->flags;
+	*ppMsg = pThis->pMsg;
+	pThis->pMsg = NULL; /* we do no longer own it - important for destructor */
+
+	if(llDestroyRootElt(&llMsgs) != RS_RET_OK) {
+		dprintf("Root element of iminternal linked list could not be destroyed - there is "
+			"nothing we can do against it, we ignore it for now. Things may go wild "
+			"from here on. This is most probably a program logic error.\n");
+	}
+
+finalize_it:
+	return iRet;
+}
+
+/* tell the caller if we have any messages ready for processing.
+ * 0 means we have none, everything else means there is at least
+ * one message ready.
+ */
+rsRetVal iminternalHaveMsgReady(int* pbHaveOne)
+{
+	assert(pbHaveOne != NULL);
+
+	return llGetNumElts(&llMsgs, pbHaveOne);
+}
+
+
+/* initialize the iminternal subsystem
+ * must be called once at the start of the program
+ */
+rsRetVal modInitIminternal(void)
+{
+	DEFiRet;
+
+	iRet = llInit(&llMsgs, iminternalDestruct, NULL, NULL);
+
+	return iRet;
+}
+
+
+/* de-initialize the iminternal subsystem
+ * must be called once at the end of the program
+ * Note: the error list must have been pulled first. We do
+ * NOT care if there are any errors left - we simply destroy
+ * them.
+ */
+rsRetVal modExitIminternal(void)
+{
+	DEFiRet;
+
+	iRet = llDestroy(&llMsgs);
+
+	return iRet;
+}
+
+/*
+ * vi:set ai:
+ */

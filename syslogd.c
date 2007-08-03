@@ -211,6 +211,7 @@
 #include "msg.h"
 #include "modules.h"
 #include "tcpsyslog.h"
+#include "iminternal.h"
 #include "cfsysline.h"
 #include "omshell.h"
 #include "omusrmsg.h"
@@ -715,6 +716,7 @@ static void freeSelectors(void);
 static rsRetVal processConfFile(uchar *pConfFile);
 static rsRetVal actionDestruct(action_t *pThis);
 static rsRetVal selectorAddList(selector_t *f);
+static void processImInternal(void);
 
 /* Access functions for the selector_t. These functions are primarily
  * necessary to make things thread-safe. Consequently, they are slim
@@ -2377,7 +2379,7 @@ time_t	now;
  * function here probably is only an interim solution and that we need to
  * think on the best way to do this.
  */
-static void logmsgInternal(int pri, char * msg, int flags)
+static void logmsgInternal(int pri, char *msg, int flags)
 {
 	msg_t *pMsg;
 
@@ -2407,9 +2409,17 @@ static void logmsgInternal(int pri, char * msg, int flags)
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->bParseHOSTNAME = 0;
 	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+	flags |= INTERNAL_MSG;
 
-	logmsg(pri, pMsg, flags | INTERNAL_MSG);
-	MsgDestruct(pMsg);
+	if(bRunningMultithreaded == 0) { /* not yet in queued mode */
+		iminternalAddMsg(pri, pMsg, flags);
+	} else {
+		/* we have the queue, so we can simply provide the 
+		 * message to the queue engine.
+		 */
+		logmsg(pri, pMsg, flags);
+		MsgDestruct(pMsg);
+	}
 }
 
 /*
@@ -2539,9 +2549,12 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 /* doEmergencyLoggin()
  * ... does exactly do that. It logs messages when the subsystem has not yet
  * been initialized. This almost always happens during initial startup or
- * during HUPing.
- * rgerhards, 2007-07-25
- * TODO: add logging to system console
+ * during HUPing.  -- rgerhards, 2007-07-25
+ * rgerhards, 2007-08-03: as of now, this can normally no longer happen. All
+ * startup messages are now buffered until the system is ready to run. I leave
+ * this minimal implementation here in in the very remote case that it might
+ * be needed in the future or due to a program bug. Do *not* excpect this
+ * code to be called.
  */
 static void doEmergencyLogging(msg_t *pMsg)
 {
@@ -2651,6 +2664,8 @@ DEFFUNC_llExecFunc(processMsgDoActions)
 	} else if(iRetMod == RS_RET_SUSPENDED) {
 		/* indicate suspension for next module to be called */
 		pDoActData->bPrevWasSuspended = 1;
+	} else {
+		pDoActData->bPrevWasSuspended = 0;
 	}
 
 finalize_it:
@@ -3651,7 +3666,7 @@ static void die(int sig)
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, ADDDATE);
 	}
-
+	
 	/* Free ressources and close connections */
 	freeSelectors();
 
@@ -4056,6 +4071,12 @@ static void freeSelectors(void)
 
 	if(Files != NULL) {
 		dprintf("Freeing log structures.\n");
+
+		/* just in case, we flush the emergency log. If error messages occur after
+		 * this stage, we loose them, but that's ok. With multi-threading, this can
+		 * never happen.  -- rgerhards, 2007-08-03
+		 */
+		processImInternal();
 
 		/* we need first to flush, then wait for all messages to be processed
 		 * (stopWoker() does that), then we can free the structures.
@@ -5012,9 +5033,7 @@ finalize_it:
 		/* do not overwrite error state! */
 		OMSRdestruct(pOMSR);
 		if(pAction != NULL)
-			actionDestruct(pAction); /* this line should take care of the TODO's below */
-		/* TODO: free pMod instance data, potential mem leak */
-		/* TODO: better said - where is the selector_t AND its elements destroyed? */
+			actionDestruct(pAction);
 	}
 
 	return iRet;
@@ -5428,6 +5447,25 @@ static void debugListenInfo(int fd, char *type)
 }
 
 
+/* this function pulls all internal messages from the buffer
+ * and puts them into the processing engine.
+ * We can only do limited error handling, as this would not
+ * really help us. TODO: add error messages?
+ * rgerhards, 2007-08-03
+ */
+static void processImInternal(void)
+{
+	int iPri;
+	int iFlags;
+	msg_t *pMsg;
+
+	while(iminternalRemoveMsg(&iPri, &pMsg, &iFlags) == RS_RET_OK) {
+		logmsg(iPri, pMsg, iFlags);
+		MsgDestruct(pMsg);
+	}
+}
+
+
 /* helper function for mainloop(). This is used to add all module
  * writeFDsfor Select via llExecFunc().
  * rgerhards, 2007-08-02
@@ -5490,6 +5528,10 @@ static void mainloop(void)
 	int	fd;
 	char line[MAXLINE +1];
 	int maxfds;
+	int nfds;
+	errno = 0;
+	FD_ZERO(&readfds);
+	maxfds = 0;
 #ifdef  SYSLOG_INET
 	mainloopWriteFDSInfo_t writeFDSInfo;
 	fd_set writefds;
@@ -5507,13 +5549,10 @@ static void mainloop(void)
 #endif
 #endif
 
-
-	/* --------------------- Main loop begins here. ----------------------------------------- */
 	while(!bFinished){
-		int nfds;
-		errno = 0;
-		FD_ZERO(&readfds);
-		maxfds = 0;
+		/* first check if we have any internal messages queued and spit them out */
+		processImInternal();
+
 #ifdef SYSLOG_UNIXAF
 		/* Add the Unix Domain Sockets to the list of read
 		 * descriptors.
@@ -5926,6 +5965,11 @@ int main(int argc, char **argv)
 	}
 
 	/* doing some core initializations */
+	if((iRet = modInitIminternal()) != RS_RET_OK) {
+		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
+			iRet);
+		exit(1); /* "good" exit, leaving at init for fatal error */
+	}
 
 #ifdef	USE_PTHREADS
 	/* create message queue */
@@ -6208,6 +6252,20 @@ int main(int argc, char **argv)
 	 */
 
 	mainloop();
+
+	/* de-init some modules */
+	modExitIminternal();
+
+	/* TODO: this would also be the right place to de-init the builtin output modules. We
+	 * do not currently do that, because the module interface does not allow for
+	 * it. This will come some time later (it's essential with loadable modules).
+	 * For the time being, this is a memory leak on exit, but as the process is
+	 * terminated, we do not really bother about it.
+	 * rgerhards, 2007-08-03
+	 */
+
+	/* end de-init's */
+
 	die(bFinished);
 	return 0;
 }

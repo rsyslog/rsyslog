@@ -1,4 +1,4 @@
-/* omusrmsg.c
+/* ommysql.c
  * This is the implementation of the build-in output module for MySQL.
  *
  * NOTE: read comments in module-template.h to understand how this file
@@ -115,7 +115,7 @@ ENDgetWriteFDForSelect
  * We check if we have a valid MySQL handle. If not, we simply
  * report an error, but can not be specific. RGerhards, 2007-01-30
  */
-static void reportDBError(instanceData *pData)
+static void reportDBError(instanceData *pData, int bSilent)
 {
 	char errMsg[512];
 
@@ -128,7 +128,10 @@ static void reportDBError(instanceData *pData)
 	} else { /* we can ask mysql for the error description... */
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", mysql_errno(pData->f_hmysql),
 			mysql_error(pData->f_hmysql));
-		logerror(errMsg);
+		if(bSilent)
+			dprintf("mysql, DBError(silent): %s\n", errMsg);
+		else
+			logerror(errMsg);
 	}
 		
 	return;
@@ -139,7 +142,7 @@ static void reportDBError(instanceData *pData)
  * MySQL connection.
  * Initially added 2004-10-28 mmeckelein
  */
-static rsRetVal initMySQL(instanceData *pData)
+static rsRetVal initMySQL(instanceData *pData, int bSilent)
 {
 	DEFiRet;
 
@@ -154,7 +157,7 @@ static rsRetVal initMySQL(instanceData *pData)
 		/* Connect to database */
 		if(mysql_real_connect(pData->f_hmysql, pData->f_dbsrv, pData->f_dbuid,
 				      pData->f_dbpwd, pData->f_dbname, 0, NULL, 0) == NULL) {
-			reportDBError(pData);
+			reportDBError(pData, bSilent);
 			closeMySQL(pData); /* ignore any error we may get */
 			iRet = RS_RET_SUSPENDED;
 		}
@@ -179,10 +182,10 @@ rsRetVal writeMySQL(uchar *psz, instanceData *pData)
 	if(mysql_query(pData->f_hmysql, (char*)psz)) {
 		/* error occured, try to re-init connection and retry */
 		closeMySQL(pData); /* close the current handle */
-		CHKiRet(initMySQL(pData)); /* try to re-open */
+		CHKiRet(initMySQL(pData, 0)); /* try to re-open */
 		if(mysql_query(pData->f_hmysql, (char*)psz)) { /* re-try insert */
 			/* we failed, giving up for now */
-			reportDBError(pData);
+			reportDBError(pData, 0);
 			closeMySQL(pData); /* free ressources */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
@@ -196,7 +199,7 @@ finalize_it:
 BEGINtryResume
 CODESTARTtryResume
 	if(pData->f_hmysql == NULL) {
-		iRet = initMySQL(pData);
+		iRet = initMySQL(pData, 1);
 	}
 ENDtryResume
 
@@ -273,7 +276,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		logerror("Trouble with MySQL connection properties. -MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
-		CHKiRet(initMySQL(pData));
+		CHKiRet(initMySQL(pData, 0));
 	}
 #endif	/* #ifdef WITH_DB */
 
