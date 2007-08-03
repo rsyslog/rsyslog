@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.18.1 (rgerhards), 2007-08-??
+---------------------------------------------------------------------------
 Version 1.18.0 (rgerhards), 2007-08-03
 - rsyslog now supports fallback actions when an action did not work. This
   is a great feature e.g. for backup database servers or backup syslog
