@@ -865,6 +865,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* TODO: do we need to call freeInstance if we failed - this is a general question for
 	 * all output modules. I'll address it lates as the interface evolves. rgerhards, 2007-07-25
 	 */
+CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 

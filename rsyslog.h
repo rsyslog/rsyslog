@@ -67,6 +67,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FOPEN_FAILURE = -2013,	/**< failure during fopen, for example file not found - see errno */
 	RS_RET_END_OF_LINKEDLIST = -2014,	/**< end of linked list, not an error, but a status */
 	RS_RET_CHAIN_NOT_PERMITTED = -2015, /**< chaining (e.g. of config command handlers) not permitted */
+	RS_RET_INVALID_PARAMS = -2016,/**< supplied parameters are invalid */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */

@@ -217,12 +217,11 @@ static rsRetVal parseSelectorAct(uchar **pp, void **ppModData, omodStringRequest
 	p = *pp;
 
 #define CODE_STD_STRING_REQUESTparseSelectorAct(NumStrReqEntries) \
-	if((iRet = OMSRconstruct(ppOMSR, NumStrReqEntries)) != RS_RET_OK)\
-		goto do_abort;\
+	CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
 
-#define ENDparseSelectorAct \
-do_abort:\
-	if(iRet == RS_RET_OK) {\
+#define CODE_STD_FINALIZERparseSelectorAct \
+finalize_it:\
+	if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {\
 		*ppModData = pData;\
 		*pp = p;\
 	} else {\
@@ -230,7 +229,9 @@ do_abort:\
 		if(*ppOMSR != NULL)\
 			OMSRdestruct(*ppOMSR);\
 			*ppOMSR = NULL;\
-		}\
+		}
+
+#define ENDparseSelectorAct \
 	return iRet;\
 }
 

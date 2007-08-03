@@ -1992,7 +1992,7 @@ static rsRetVal actionDbgPrint(action_t *pThis)
 		printf(" next retry: %u, number retries: %d", (unsigned) pThis->ttResumeRtry, pThis->iNbrResRtry);
 	}
 	printf("\n");
-	printf("\tDisabled: %d\n", pThis->bEnabled);
+	printf("\tDisabled: %d\n", !pThis->bEnabled);
 	printf("\tExec only when previous is suspended: %d\n", pThis->bExecWhenPrevSusp);
 	printf("\n");
 
@@ -4269,7 +4269,7 @@ finalize_it:
 /* INIT -- Initialize syslogd from configuration table
  * init() is called at initial startup AND each time syslogd is HUPed
  */
-static void init()
+static void init(void)
 {
 	DEFiRet;
 	register int i;
@@ -4427,6 +4427,10 @@ static void init()
 		}
 	}
 #endif
+
+#	ifdef USE_PTHREADS
+		startWorker();
+#	endif
 
 	Initialized = 1;
 
@@ -5640,9 +5644,6 @@ static void mainloop(void)
 			dprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
 			/* worker thread is stopped as part of init() */
 			init();
-#			ifdef USE_PTHREADS
-				startWorker();
-#			endif
 			restart = 0;
 			continue;
 		}
@@ -5924,11 +5925,24 @@ int main(int argc, char **argv)
 		funix[i]  = -1;
 	}
 
+	/* doing some core initializations */
+
+#ifdef	USE_PTHREADS
+	/* create message queue */
+	pMsgQueue = queueInit();
+	if(pMsgQueue == NULL) {
+		errno = 0;
+		logerror("error: could not create message queue - running single-threaded!\n");
+	}
+#endif
+
 	if((iRet = loadBuildInModules()) != RS_RET_OK) {
 		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
 			iRet);
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
+
+	/* END core initializations */
 
 	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
@@ -6192,18 +6206,7 @@ int main(int argc, char **argv)
 	 * do the init() and then restart things.
 	 * rgerhards, 2005-10-24
 	 */
-#ifdef	USE_PTHREADS
-	/* create message queue */
-	pMsgQueue = queueInit();
-	if(pMsgQueue == NULL) {
-		errno = 0;
-		logerror("error: could not create message queue - running single-threaded!\n");
-	} else { /* start up worker thread */
-		startWorker();
-	}
-#endif
 
-	/* --------------------- Main loop begins here. ----------------------------------------- */
 	mainloop();
 	die(bFinished);
 	return 0;

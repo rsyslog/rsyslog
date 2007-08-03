@@ -303,6 +303,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		    != RS_RET_OK)
 			return iRet;
 	}
+CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 

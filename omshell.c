@@ -115,6 +115,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		break;
 	}
 
+CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 

@@ -92,6 +92,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(0)
 	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 	}
+CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 

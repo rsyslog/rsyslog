@@ -761,6 +761,7 @@ CODESTARTparseSelectorAct
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 		break;
 	}
+CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
