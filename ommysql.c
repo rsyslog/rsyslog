@@ -54,6 +54,7 @@ typedef struct _instanceData {
 	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
 	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
+	unsigned uLastMySQLErrno;	/* last errno returned by MySQL or 0 if all is well */
 } instanceData;
 
 
@@ -77,7 +78,6 @@ static void closeMySQL(instanceData *pData)
 {
 	assert(pData != NULL);
 
-	dprintf("in closeMySQL\n");
 	if(pData->f_hmysql != NULL) {	/* just to be on the safe side... */
 		mysql_close(pData->f_hmysql);	
 		pData->f_hmysql = NULL;
@@ -118,6 +118,7 @@ ENDgetWriteFDForSelect
 static void reportDBError(instanceData *pData, int bSilent)
 {
 	char errMsg[512];
+	unsigned uMySQLErrno;
 
 	assert(pData != NULL);
 
@@ -126,12 +127,15 @@ static void reportDBError(instanceData *pData, int bSilent)
 	if(pData->f_hmysql == NULL) {
 		logerror("unknown DB error occured - could not obtain MySQL handle");
 	} else { /* we can ask mysql for the error description... */
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", mysql_errno(pData->f_hmysql),
+		uMySQLErrno = mysql_errno(pData->f_hmysql);
+		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", uMySQLErrno,
 			mysql_error(pData->f_hmysql));
-		if(bSilent)
+		if(bSilent || uMySQLErrno == pData->uLastMySQLErrno)
 			dprintf("mysql, DBError(silent): %s\n", errMsg);
-		else
+		else {
+			pData->uLastMySQLErrno = uMySQLErrno;
 			logerror(errMsg);
+		}
 	}
 		
 	return;
@@ -192,6 +196,10 @@ rsRetVal writeMySQL(uchar *psz, instanceData *pData)
 	}
 
 finalize_it:
+	if(iRet == RS_RET_OK) {
+		pData->uLastMySQLErrno = 0; /* reset error for error supression */
+	}
+
 	return iRet;
 }
 
