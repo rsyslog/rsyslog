@@ -35,7 +35,8 @@ works hand-in-hand with the multiple actions per selector feature. It can be
 used, for example, to create rules that automatically switch destination servers 
 or databases to a (set of) backup(s), if the primary server fails. Note that 
 this feature depends on proper implementation of the suspend feature in the 
-output module.</p>
+output module. All built-in output modules properly support it (most importantly 
+the database write and the syslog message forwarder).</p>
 <p>The following is an example of what can be done with it (a config file 
 excerpt):</p>
 <p><code><b>*.* @@primary-syslog.example.com<br>

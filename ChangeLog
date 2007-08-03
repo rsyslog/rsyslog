@@ -6,6 +6,8 @@ Version 1.18.0 (rgerhards), 2007-08-03
 - modified rklogd to only change the console log level if -c is specified
 - added feature to use multiple actions inside a single selector
 - implemented $ActionExecOnlyWhenPreviousIsSuspended config directive
+- error messages during startup are now spit out to the configured log
+  destinations
 ---------------------------------------------------------------------------
 Version 1.17.6 (rgerhards), 2007-08-01
 - continued to work on output module modularization - basic stage of
