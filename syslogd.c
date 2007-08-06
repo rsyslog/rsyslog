@@ -210,6 +210,7 @@
 #include "parse.h"
 #include "msg.h"
 #include "modules.h"
+#include "action.h"
 #include "tcpsyslog.h"
 #include "iminternal.h"
 #include "cfsysline.h"
@@ -554,32 +555,6 @@ static int     Initialized = 0; /* set when we have initialized ourselves
 
 extern	int errno;
 
-/* the following struct defines an syslogd-action descriptor
- */
-struct action_s {
-	time_t	f_time;		/* time this was last written */
-	int	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
-	short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
-	short	bSuspended;	/* is the related action temporarily suspended? */
-	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
-	int	iNbrResRtry;	/* number of retries since last suspend */
-	struct moduleInfo *pMod;/* pointer to output module handling this selector */
-	void	*pModData;	/* pointer to module data - contents is module-specific */
-	int	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
-	int	f_prevcount;	/* repetition cnt of prevline */
-	int	f_repeatcount;	/* number of "repeated" msgs */
-	int	iNumTpls;	/* number of array entries for template element below */
-	struct template **ppTpl;/* array of template to use - strings must be passed to doAction
-				 * in this order. */
-
-	uchar **ppMsgs;		/* array of message pointers for doAction */
-	struct msg* f_pMsg;	/* pointer to the message (this will replace the other vars with msg
-				 * content later). This is preserved after the message has been
-				 * processed - it is also used to detect duplicates.
-				 */
-};
-typedef struct action_s action_t;
-
 
 /* This structure represents the files that will have log
  * copies printed.
@@ -714,7 +689,6 @@ static void sighup_handler();
 static void die(int sig);
 static void freeSelectors(void);
 static rsRetVal processConfFile(uchar *pConfFile);
-static rsRetVal actionDestruct(action_t *pThis);
 static rsRetVal selectorAddList(selector_t *f);
 static void processImInternal(void);
 
@@ -1850,156 +1824,6 @@ static int *create_udp_socket()
 	return(socks);
 }
 #endif
-
-
-/* destructs an action descriptor object
- * rgerhards, 2007-08-01
- */
-static rsRetVal actionDestruct(action_t *pThis)
-{
-	assert(pThis != NULL);
-
-	if(pThis->pMod != NULL)
-		pThis->pMod->freeInstance(pThis->pModData);
-
-	if(pThis->f_pMsg != NULL)
-		MsgDestruct(pThis->f_pMsg);
-
-	if(pThis->ppTpl != NULL)
-		free(pThis->ppTpl);
-	if(pThis->ppMsgs != NULL)
-		free(pThis->ppMsgs);
-	free(pThis);
-	
-	return RS_RET_OK;
-}
-
-
-/* create a new action descriptor object
- * rgerhards, 2007-08-01
- */
-static rsRetVal actionConstruct(action_t **ppThis)
-{
-	DEFiRet;
-	action_t *pThis;
-
-	assert(ppThis != NULL);
-	
-	if((pThis = (action_t*) calloc(1, sizeof(action_t))) == NULL) {
-		glblHadMemShortage = 1;
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-
-finalize_it:
-	*ppThis = pThis;
-	return iRet;
-}
-
-
-/* set an action back to active state -- rgerhards, 2007-08-02
- */
-static rsRetVal actionResume(action_t *pThis)
-{
-	DEFiRet;
-
-	assert(pThis != NULL);
-	pThis->bSuspended = 0;
-
-	return iRet;
-}
-
-
-#define ACTION_RESUME_INTERVAL 5 /* TODO: make this dynamic from conf file */
-/* suspend an action -- rgerhards, 2007-08-02
- */
-static rsRetVal actionSuspend(action_t *pThis)
-{
-	DEFiRet;
-
-	assert(pThis != NULL);
-	pThis->bSuspended = 1;
-	pThis->ttResumeRtry = time(NULL) + ACTION_RESUME_INTERVAL;
-	pThis->iNbrResRtry = 0; /* tell that we did not yet retry to resume */
-
-	return iRet;
-}
-
-#if 1
-#define actionIsSuspended(pThis) ((pThis)->bSuspended == 1)
-#else
-static int actionIsSuspended(action_t *pThis)
-{
-	int i;
-	i =  pThis->bSuspended == 1;
-	dprintf("in IsSuspend(), returns %d\n", i);
-	return i;
-}
-#endif
-
-/* try to resume an action -- rgerhards, 2007-08-02
- * returns RS_RET_OK if resumption worked, RS_RET_SUSPEND if the
- * action is still suspended.
- */
-static rsRetVal actionTryResume(action_t *pThis)
-{
-	DEFiRet;
-	time_t ttNow;
-
-	assert(pThis != NULL);
-
-	ttNow = time(NULL); /* do the system call just once */
-
-	/* first check if it is time for a re-try */
-	if(ttNow > pThis->ttResumeRtry) {
-		iRet = pThis->pMod->tryResume(pThis->pModData);
-		if(iRet == RS_RET_SUSPENDED) {
-			/* set new tryResume time */
-			++pThis->iNbrResRtry;
-			/* if we have more than 10 retries, we prolong the
-			 * retry interval. If something is really stalled, it will
-			 * get re-tried only very, very seldom - but that saves
-			 * CPU time. TODO: maybe a config option for that?
-			 * rgerhards, 2007-08-02
-			 */
-			pThis->ttResumeRtry = ttNow + ACTION_RESUME_INTERVAL * (pThis->iNbrResRtry / 10 + 1);
-		}
-	} else {
-		/* it's too early, we are still suspended --> indicate this */
-		iRet = RS_RET_SUSPENDED;
-	}
-
-	if(iRet == RS_RET_OK)
-		actionResume(pThis);
-
-	dprintf("actionTryResume: iRet: %d, next retry (if applicable): %u [now %u]\n",
-		iRet, pThis->ttResumeRtry, (unsigned) ttNow);
-
-	return iRet;
-}
-
-
-/* debug-print the contents of an action object
- * rgerhards, 2007-08-02
- */
-static rsRetVal actionDbgPrint(action_t *pThis)
-{
-	DEFiRet;
-
-	printf("%s: ", modGetStateName(pThis->pMod));
-	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
-	printf("\n\tInstance data: 0x%x\n", (unsigned) pThis->pModData);
-	printf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
-	printf("\tSuspended: %d", pThis->bSuspended);
-	if(pThis->bSuspended) {
-		printf(" next retry: %u, number retries: %d", (unsigned) pThis->ttResumeRtry, pThis->iNbrResRtry);
-	}
-	printf("\n");
-	printf("\tDisabled: %d\n", !pThis->bEnabled);
-	printf("\tExec only when previous is suspended: %d\n", pThis->bExecWhenPrevSusp);
-	printf("\n");
-
-	return iRet;
-}
 
 
 /* function to destruct a selector_t object

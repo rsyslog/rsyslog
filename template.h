@@ -78,6 +78,11 @@ void tplDeleteAll(void);
 void tplDeleteNew(void);
 void tplPrintList(void);
 void tplLastStaticInit(struct template *tpl);
+/* note: if a compiler warning for undefined type tells you to look at this
+ * code line below, the actual cause is that you currently MUST include template.h
+ * BEFORE msg.h, even if your code file does not actually need it.
+ * rgerhards, 2007-08-06
+ */
 uchar *tplToString(struct template *pTpl, msg_t *pMsg);
 void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
