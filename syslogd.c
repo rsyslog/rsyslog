@@ -5178,7 +5178,8 @@ static rsRetVal selectorAddList(selector_t *f)
 	DEFiRet;
 	int iActionCnt;
 
-static selector_t *nextp = NULL;
+	static selector_t *nextp = NULL; /* TODO: make this go away (see comment below) */
+
 	if(f != NULL) {
 		CHKiRet(llGetNumElts(&f->llActList, &iActionCnt));
 		if(iActionCnt == 0) {
@@ -5192,9 +5193,15 @@ static selector_t *nextp = NULL;
 			}
 			/* successfully created an entry */
 			dprintf("selector line successfully processed\n");
-		// TODO: we should use the linked list class for the selector list, else we need to add globals
-		// ... well nextp could be added temporarily...
-			if(nextp == NULL) {
+			/* TODO: we should use the linked list class for the selector list, else we need to add globals
+			 * ... well nextp could be added temporarily...
+			 * Thanks to varmojfekoj for having the idea to just use "Files" to make this
+			 * code work. I had actually forgotten to fix the code here before moving to 1.18.0.
+			 * And, of course, I also did not migrate the selector_t structure to the linked list class.
+			 * However, that should still be one of the very next things to happen.
+			 * rgerhards, 2007-08-06
+			 */
+			if(Files == NULL) {
 				Files = f;
 			} else {
 				nextp->f_next = f;
