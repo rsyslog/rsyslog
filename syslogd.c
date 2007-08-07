@@ -4188,6 +4188,15 @@ static void init(void)
 
 	dprintf("Clearing templates.\n");
 	tplDeleteNew();
+
+#ifdef	USE_PTHREADS
+	if(pMsgQueue != NULL) {
+		dprintf("deleting message queue\n");
+		queueDelete(pMsgQueue); /* delete fifo here! */
+		pMsgQueue = NULL;
+	}
+#endif
+	
 	
 	/* re-setting values to defaults (where applicable) */
 	/* TODO: once we have loadable modules, we must re-visit this code. The reason is
@@ -4278,7 +4287,14 @@ static void init(void)
 #endif
 
 #	ifdef USE_PTHREADS
-		startWorker();
+	/* create message queue */
+	pMsgQueue = queueInit();
+	if(pMsgQueue == NULL) {
+		errno = 0;
+		logerror("error: could not create message queue - running single-threaded!\n");
+	}
+
+	startWorker();
 #	endif
 
 	Initialized = 1;
@@ -5805,15 +5821,6 @@ int main(int argc, char **argv)
 			iRet);
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
-
-#ifdef	USE_PTHREADS
-	/* create message queue */
-	pMsgQueue = queueInit();
-	if(pMsgQueue == NULL) {
-		errno = 0;
-		logerror("error: could not create message queue - running single-threaded!\n");
-	}
-#endif
 
 	if((iRet = loadBuildInModules()) != RS_RET_OK) {
 		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",

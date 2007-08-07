@@ -4,6 +4,7 @@ Version 1.18.1 (rgerhards), 2007-08-??
   of rsyslogd on HUP
 - applied patch from Michel Samia to fix compilation when the pthreads
   feature is disabled
+- some code cleanup (moved action object to its own file set)
 ---------------------------------------------------------------------------
 Version 1.18.0 (rgerhards), 2007-08-03
 - rsyslog now supports fallback actions when an action did not work. This
