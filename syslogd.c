@@ -407,15 +407,15 @@ static rsCStrObj *pDfltProgNameCmp;
 /* this is the first approach to a queue, this time with static
  * memory.
  */
-#define QUEUESIZE 10000
 typedef struct {
-	void* buf[QUEUESIZE];
+	void** pbuf;
 	long head, tail;
 	int full, empty;
 	pthread_mutex_t *mut;
 	pthread_cond_t *notFull, *notEmpty;
 } msgQueue;
 
+int iMainMsgQueueSize;
 int bRunningMultithreaded = 0;	/* Is this program running in multithreaded mode? */
 msgQueue *pMsgQueue = NULL;
 static pthread_t thrdWorker;
@@ -641,6 +641,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
+	iMainMsgQueueSize = 10000;
 
 	return RS_RET_OK;
 }
@@ -2604,8 +2605,12 @@ static msgQueue *queueInit (void)
 {
 	msgQueue *q;
 
-	q = (msgQueue *)malloc (sizeof (msgQueue));
+	q = (msgQueue *)malloc(sizeof(msgQueue));
 	if (q == NULL) return (NULL);
+	if((q->pbuf = malloc(sizeof(void *) * iMainMsgQueueSize)) == NULL) {
+		free(q);
+		return NULL;
+	}
 
 	q->empty = 1;
 	q->full = 0;
@@ -2629,14 +2634,15 @@ static void queueDelete (msgQueue *q)
 	free (q->notFull);
 	pthread_cond_destroy (q->notEmpty);
 	free (q->notEmpty);
+	free(q->pbuf);
 	free (q);
 }
 
 static void queueAdd (msgQueue *q, void* in)
 {
-	q->buf[q->tail] = in;
+	q->pbuf[q->tail] = in;
 	q->tail++;
-	if (q->tail == QUEUESIZE)
+	if (q->tail == iMainMsgQueueSize)
 		q->tail = 0;
 	if (q->tail == q->head)
 		q->full = 1;
@@ -2647,10 +2653,10 @@ static void queueAdd (msgQueue *q, void* in)
 
 static void queueDel (msgQueue *q, msg_t **out)
 {
-	*out = (msg_t*) q->buf[q->head];
+	*out = (msg_t*) q->pbuf[q->head];
 
 	q->head++;
-	if (q->head == QUEUESIZE)
+	if (q->head == iMainMsgQueueSize)
 		q->head = 0;
 	if (q->head == q->tail)
 		q->empty = 1;
@@ -4011,9 +4017,14 @@ static void dbgPrintInitInfo(void)
 
 	printf("Control characters are %sreplaced upon reception.\n",
 			bEscapeCCOnRcv? "" : "not ");
+
 	if(bEscapeCCOnRcv)
 		printf("Control character escape sequence prefix is '%c'.\n",
 			cCCEscapeChar);
+
+#ifdef	USE_PTHREADS
+	printf("Main queue size %d messages.\n", iMainMsgQueueSize);
+#endif
 }
 
 
@@ -5766,6 +5777,9 @@ static rsRetVal loadBuildInModules(void)
 	 * is that rsyslog will terminate if we can not register our built-in config commands.
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
+#ifdef	USE_PTHREADS
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize));
+#endif
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp));
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar));
