@@ -2235,6 +2235,7 @@ static void logmsgInternal(int pri, char *msg, int flags)
 	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	flags |= INTERNAL_MSG;
 
+#ifdef USE_PTHREADS
 	if(bRunningMultithreaded == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pri, pMsg, flags);
 	} else {
@@ -2244,6 +2245,9 @@ static void logmsgInternal(int pri, char *msg, int flags)
 		logmsg(pri, pMsg, flags);
 		MsgDestruct(pMsg);
 	}
+#else
+	iminternalAddMsg(pri, pMsg, flags);
+#endif
 }
 
 /*

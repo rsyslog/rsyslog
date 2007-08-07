@@ -44,6 +44,8 @@
 #include <unistd.h>
 #ifdef USE_PTHREADS
 #include <pthread.h>
+#else
+#include <fcntl.h>
 #endif
 #include "rsyslog.h"
 #include "syslogd.h"
