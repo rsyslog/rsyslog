@@ -10,6 +10,8 @@ Version 1.18.1 (rgerhards), 2007-08-??
 - all compile-time settings are now shown in rsyslogd -v, not just the
   active ones
 - enhanced performance a little bit more
+- added config file directive $ActionResumeInterval
+- fixed a bug that prevented compilation under debian sid
 ---------------------------------------------------------------------------
 Version 1.18.0 (rgerhards), 2007-08-03
 - rsyslog now supports fallback actions when an action did not work. This
