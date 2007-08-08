@@ -69,6 +69,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CHAIN_NOT_PERMITTED = -2015, /**< chaining (e.g. of config command handlers) not permitted */
 	RS_RET_INVALID_PARAMS = -2016,/**< supplied parameters are invalid */
 	RS_RET_EMPTY_LIST = -2017, /**< linked list is empty */
+	RS_RET_FINISHED = -2018, /**< some opertion is finished, not an error state */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */

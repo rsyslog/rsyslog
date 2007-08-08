@@ -641,7 +641,9 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
+#ifdef USE_PTHREADS
 	iMainMsgQueueSize = 10000;
+#endif
 
 	return RS_RET_OK;
 }
@@ -5332,15 +5334,15 @@ static void processImInternal(void)
  * writeFDsfor Select via llExecFunc().
  * rgerhards, 2007-08-02
  */
-typedef struct mainloopWriteFDSInfo_s { /* struct for pParam */
+typedef struct selectHelperWriteFDSInfo_s { /* struct for pParam */
 	fd_set *pWritefds;
 	int *pMaxfds;
-} mainloopWriteFDSInfo_t;
+} selectHelperWriteFDSInfo_t;
 DEFFUNC_llExecFunc(mainloopAddModWriteFDSforSelect)
 {
 	DEFiRet;
 	action_t *pAction = (action_t*) pData;
-	mainloopWriteFDSInfo_t *pState = (mainloopWriteFDSInfo_t*) pParam;
+	selectHelperWriteFDSInfo_t *pState = (selectHelperWriteFDSInfo_t*) pParam;
 	short fdMod;
 
 	assert(pAction != NULL);
@@ -5358,27 +5360,33 @@ DEFFUNC_llExecFunc(mainloopAddModWriteFDSforSelect)
 
 /* helper function for mainloop(). This is used to call module action
  * handlers after select if a fd is writable.
+ * HINT: when we change to the new threading model, this function
+ * is probably no longer needed.
  * rgerhards, 2007-08-02
  */
 DEFFUNC_llExecFunc(mainloopCallWithWritableFDsActions)
 {
 	DEFiRet;
 	action_t *pAction = (action_t*) pData;
-	fd_set *pWritefds = (fd_set *) pParam;
+	selectHelperWriteFDSInfo_t *pState = (selectHelperWriteFDSInfo_t*) pParam;
 	short fdMod;
 
 	assert(pAction != NULL);
-	assert(pWritefds != NULL);
+	assert(pState != NULL);
 
 	if(pAction->pMod->getWriteFDForSelect(pAction->pModData, &fdMod) == RS_RET_OK) {
-		if(FD_ISSET(fdMod, pWritefds)) {
+		if(FD_ISSET(fdMod, pState->pWritefds)) {
 			if((iRet = pAction->pMod->onSelectReadyWrite(pAction->pModData))
 			   != RS_RET_OK) {
 				dprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
 			}
+			if(--(pState->pMaxfds) == 0) {
+				ABORT_FINALIZE(RS_RET_FINISHED); /* all processed, nothing left to do */
+			}
 		}
 	   }
 
+finalize_it:
 	return iRet;
 }
 
@@ -5391,9 +5399,11 @@ DEFFUNC_llExecFunc(mainloopCallWithWritableFDsActions)
 static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_set *pWritefds)
 {
 	DEFiRet;
+	rsRetVal iRetLL;
 	int i;
 	int fd;
 	char line[MAXLINE +1];
+	selectHelperWriteFDSInfo_t writeFDSInfo;
 #ifdef  SYSLOG_INET
 	selector_t *f;
 	struct sockaddr_storage frominet;
@@ -5404,37 +5414,47 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 	ssize_t l;
 #endif	/* #ifdef SYSLOG_INET */
 
-	if ( debugging_on )
-	{
-		dprintf("\nSuccessful select, descriptor count = %d, " \
-			"Activity on: ", nfds);
-		for (nfds= 0; nfds <= maxfds; ++nfds)
-			if ( FD_ISSET(nfds, pReadfds) )
-				dprintf("%d ", nfds);
+	/* the following macro is used to decrement the number of to-be-probed
+	 * fds and abort this function when we are done with all.
+	 */
+#	define FDPROCESSED() if(--nfds == 0) { dprintf("nfds == 0, aborting\n");ABORT_FINALIZE(RS_RET_OK); }
+
+	if (nfds < 0) {
+		if (errno != EINTR)
+			logerror("select");
+		dprintf("Select interrupted.\n");
+		ABORT_FINALIZE(RS_RET_OK); /* we are done in any case */
+	}
+
+	if(debugging_on) {
+		dprintf("\nSuccessful select, descriptor count = %d, Activity on: ", nfds);
+		for (i = 0; i <= maxfds; ++i)
+			if ( FD_ISSET(i, pReadfds) )
+				dprintf("%d ", i);
 		dprintf(("\n"));
 	}
 
 #ifdef SYSLOG_INET
-	/* TODO: activate the code below only if we actually need to check
-	 * for outstanding writefds.
+	/* Now check the TCP send sockets. So far, we only see if they become
+	 * writable and then change their internal status. No real async
+	 * writing is currently done. This code will be replaced once liblogging
+	 * is used, thus we try not to focus too much on it.
+	 *
+	 * IMPORTANT: With the current code, the writefds must be checked first,
+	 * because the readfds might have messages to be forwarded, which
+	 * rely on the status setting that is done here!
+	 * rgerhards 2005-07-20
+	 *
+	 * liblogging implementation will not happen as anticipated above. So
+	 * this code here will stay for quite a while.
+	 * rgerhards, 2006-12-07
 	 */
-	if(1) {
-		/* Now check the TCP send sockets. So far, we only see if they become
-		 * writable and then change their internal status. No real async
-		 * writing is currently done. This code will be replaced once liblogging
-		 * is used, thus we try not to focus too much on it.
-		 *
-		 * IMPORTANT: With the current code, the writefds must be checked first,
-		 * because the readfds might have messages to be forwarded, which
-		 * rely on the status setting that is done here!
-		 * rgerhards 2005-07-20
-		 *
-		 * liblogging implementation will not happen as anticipated above. So
-		 * this code here will stay for quite a while.
-		 * rgerhards, 2006-12-07
-		 */
-		for(f = Files; f != NULL ; f = f->f_next) {
-			llExecFunc(&f->llActList, mainloopCallWithWritableFDsActions, pWritefds);
+	writeFDSInfo.pWritefds = pWritefds;
+	writeFDSInfo.pMaxfds = &nfds;
+	for(f = Files; f != NULL ; f = f->f_next) {
+		iRetLL = llExecFunc(&f->llActList, mainloopCallWithWritableFDsActions, &writeFDSInfo);
+		if(iRetLL == RS_RET_FINISHED) {
+			ABORT_FINALIZE(RS_RET_OK); /* we are done in this case */
 		}
 	}
 #endif /* #ifdef SYSLOG_INET */
@@ -5451,6 +5471,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 					errno, strerror(errno));
 				logerror("recvfrom UNIX");
 			}
+		FDPROCESSED();
 		}
 	}
 #endif
@@ -5461,9 +5482,8 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 		       if (FD_ISSET(finet[i+1], pReadfds)) {
 			       socklen = sizeof(frominet);
 			       memset(line, '\0', sizeof(line));
-			       l = recvfrom(finet[i+1], line, MAXLINE - 1,
-					    0, (struct sockaddr *)&frominet,
-					    &socklen);
+			       l = recvfrom(finet[i+1], line, MAXLINE - 1, 0,
+			       		    (struct sockaddr *)&frominet, &socklen);
 			       if (l > 0) {
 				       line[l] = '\0';
 				       if(cvthname(&frominet, fromHost, fromHostFQDN) == 1) {
@@ -5493,6 +5513,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 					       /* should be harmless */
 					       sleep(1);
 				       }
+			FDPROCESSED();
 			}
 	       }
 	}
@@ -5502,12 +5523,11 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 			if (FD_ISSET(sockTCPLstn[i+1], pReadfds)) {
 				dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
 				TCPSessAccept(sockTCPLstn[i+1]);
+				FDPROCESSED();
 			}
 		}
 
 		/* now check the sessions */
-		/* TODO: optimize the whole thing. We could stop enumerating as
-		 * soon as we have found all sockets flagged as active. */
 		iTCPSess = TCPSessGetNxtSess(-1);
 		while(iTCPSess != -1) {
 			int fdSess;
@@ -5540,6 +5560,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 						TCPSessClose(iTCPSess);
 					}
 				}
+				FDPROCESSED();
 			}
 			iTCPSess = TCPSessGetNxtSess(iTCPSess);
 		}
@@ -5558,7 +5579,7 @@ static void mainloop(void)
 	int maxfds;
 	int nfds;
 #ifdef  SYSLOG_INET
-	mainloopWriteFDSInfo_t writeFDSInfo;
+	selectHelperWriteFDSInfo_t writeFDSInfo;
 	fd_set writefds;
 	selector_t *f;
 	int iTCPSess;
@@ -5710,12 +5731,6 @@ static void mainloop(void)
 		}
 		if (nfds == 0) {
 			dprintf("No select activity.\n");
-			continue;
-		}
-		if (nfds < 0) {
-			if (errno != EINTR)
-				logerror("select");
-			dprintf("Select interrupted.\n");
 			continue;
 		}
 
