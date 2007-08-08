@@ -163,6 +163,9 @@ syslog data in a browser. As of this writing, phpLogCon is not yet a powerful
 tool, but it's open source, so it might be a starting point for your own 
 solution.</p>
 <h2>On Reliability...</h2>
+<p><b>This section needs updating. You can now solve the issue with failover 
+database servers. Read the <a href="rsyslog_conf.html">rsyslog.conf </a>doc on 
+that</b>.</p>
 <p>Rsyslogd writes syslog messages directly to the database. This implies that 
 the database must be available at the time of message arrival. If the database 
 is offline, no space is left or something else goes wrong - rsyslogd can not 
@@ -186,10 +189,10 @@ While not perfect, we consider this to be a better approach then the potential
 loss of all messages in all actions.</p>
 <p><b>In short: try to avoid database downtime if you do not want to experience 
 message loss.</b></p>
-<p>Please note that this restriction is not rsyslogd specific. All approachs to 
+<p>Please note that this restriction is not rsyslogd specific. All approaches to 
 real-time database storage share this problem area.</p>
 <h2>Conclusion</h2>
-<P>With minumal effort, you can use rsyslogd to write syslog messages to a MySQL 
+<P>With minimal effort, you can use rsyslogd to write syslog messages to a MySQL 
 database. Once the messages are arrived there, you can interactivley review and 
 analyse them. In practice, the messages are also stored in text files for 
 longer-term archival and the databases are cleared out after some time (to avoid 
