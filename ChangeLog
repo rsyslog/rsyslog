@@ -7,6 +7,9 @@ Version 1.18.1 (rgerhards), 2007-08-??
 - some code cleanup (moved action object to its own file set)
 - add config directive $MainMsgQueueSize, which now allows to configure the
   queue size dynamically
+- all compile-time settings are now shown in rsyslogd -v, not just the
+  active ones
+- enhanced performance a little bit more
 ---------------------------------------------------------------------------
 Version 1.18.0 (rgerhards), 2007-08-03
 - rsyslog now supports fallback actions when an action did not work. This

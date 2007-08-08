@@ -5840,6 +5840,51 @@ finalize_it:
 }
 
 
+/* print version and compile-time setting information.
+ */
+static void printVersion(void)
+{
+	printf("rsyslogd %s, ", VERSION);
+	printf("compiled with:\n");
+#ifdef USE_PTHREADS
+	printf("\tFEATURE_PTHREADS (dual-threading):\tYes\n");
+#else
+	printf("\tFEATURE_PTHREADS (dual-threading):\tNo\n");
+#endif
+#ifdef FEATURE_REGEXP
+	printf("\tFEATURE_REGEXP:\t\t\t\tYes\n");
+#else
+	printf("\tFEATURE_REGEXP:\t\t\t\tNo\n");
+#endif
+#ifdef WITH_DB
+	printf("\tFEATURE_DB (MySQL):\t\t\tYes\n");
+#else
+	printf("\tFEATURE_DB (MySQL):\t\t\tNo\n");
+#endif
+#ifndef	NOLARGEFILE
+	printf("\tFEATURE_LARGEFILE:\t\t\tYes\n");
+#else
+	printf("\tFEATURE_LARGEFILE:\t\t\tNo\n");
+#endif
+#ifdef	USE_NETZIP
+	printf("\tFEATURE_NETZIP (message compression):\tYes\n");
+#else
+	printf("\tFEATURE_NETZIP (message compression):\tNo\n");
+#endif
+#ifdef	SYSLOG_INET
+	printf("\tSYSLOG_INET (Internet/remote support):\tYes\n");
+#else
+	printf("\tSYSLOG_INET (Internet/remote support):\tNo\n");
+#endif
+#ifndef	NDEBUG
+	printf("\tFEATURE_DEBUG (debug build, slow code):\tYes\n");
+#else
+	printf("\tFEATURE_DEBUG (debug build, slow code):\tNo\n");
+#endif
+	printf("\nSee http://www.rsyslog.com for more information.\n");
+}
+
+
 int main(int argc, char **argv)
 {	register int i;
 	register char *p;
@@ -5967,30 +6012,7 @@ int main(int argc, char **argv)
 				bParseHOSTNAMEandTAG = 0;
 			break;
 		case 'v':
-			printf("rsyslogd %s, ", VERSION);
-			printf("compiled with:\n");
-#ifdef USE_PTHREADS
-			printf("\tFEATURE_PTHREADS (dual-threading)\n");
-#endif
-#ifdef FEATURE_REGEXP
-			printf("\tFEATURE_REGEXP\n");
-#endif
-#ifdef WITH_DB
-			printf("\tFEATURE_DB\n");
-#endif
-#ifndef	NOLARGEFILE
-			printf("\tFEATURE_LARGEFILE\n");
-#endif
-#ifdef	USE_NETZIP
-			printf("\tFEATURE_NETZIP (syslog message compression)\n");
-#endif
-#ifdef	SYSLOG_INET
-			printf("\tSYSLOG_INET (Internet/remote support)\n");
-#endif
-#ifndef	NDEBUG
-			printf("\tFEATURE_DEBUG (debug build, slow code)\n");
-#endif
-			printf("\nSee http://www.rsyslog.com for more information.\n");
+			printVersion();
 			exit(0); /* exit for -v option - so this is a "good one" */
 		case 'w':		/* disable disallowed host warnigs */
 			option_DisallowWarning = 0;
