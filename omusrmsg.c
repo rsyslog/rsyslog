@@ -251,7 +251,7 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	dprintf("\n");
+	dbgprintf("\n");
 	iRet = wallmsg(ppString[0], pData);
 ENDdoAction
 
@@ -271,7 +271,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 
 	if(*p == '*') { /* wall */
-		dprintf ("write-all");
+		dbgprintf("write-all");
 		++p; /* eat '*' */
 		pData->bIsWall = 1; /* write to all users */
 		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " WallFmt"))
@@ -282,7 +282,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		 * TODO: we must reconsider this - see also comment in
 		 * loadBuildInModules() in syslogd.c
 		 */
-		dprintf ("users: %s\n", p);	/* ASP */
+		dbgprintf("users: %s\n", p);	/* ASP */
 		pData->bIsWall = 0; /* write to individual users */
 		for (i = 0; i < MAXUNAMES && *p && *p != ';'; i++) {
 			for (q = p; *q && *q != ',' && *q != ';'; )

@@ -88,7 +88,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(0)
 
 	if(*p == '~') {
 		/* TODO: check the rest of the selector line - error reporting */
-		dprintf("discard\n");
+		dbgprintf("discard\n");
 	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 	}

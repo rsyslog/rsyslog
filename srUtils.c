@@ -174,7 +174,7 @@ int execProg(uchar *program, int bWait, uchar *arg)
         int pid;
 	int sig;
 
-	dprintf("exec program '%s' with param '%s'\n", program, arg);
+	dbgprintf("exec program '%s' with param '%s'\n", program, arg);
         pid = fork();
         if (pid < 0) {
                 return 0;
@@ -189,7 +189,7 @@ int execProg(uchar *program, int bWait, uchar *arg)
 					 * loop. At some time, we may
 					 * reconsider this behaviour.
 					 */
-					dprintf("could not wait on child after executing '%s'",
+					dbgprintf("could not wait on child after executing '%s'",
 					        (char*)program);
 				}
                 return pid;

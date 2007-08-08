@@ -105,7 +105,7 @@ rsRetVal iminternalAddMsg(int pri, msg_t *pMsg, int flags)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		dprintf("iminternalAddMsg() error %d - can not otherwise report this error, message lost\n", iRet);
+		dbgprintf("iminternalAddMsg() error %d - can not otherwise report this error, message lost\n", iRet);
 		if(pThis != NULL)
 			iminternalDestruct(pThis);
 	}
@@ -135,7 +135,7 @@ rsRetVal iminternalRemoveMsg(int *pPri, msg_t **ppMsg, int *pFlags)
 	pThis->pMsg = NULL; /* we do no longer own it - important for destructor */
 
 	if(llDestroyRootElt(&llMsgs) != RS_RET_OK) {
-		dprintf("Root element of iminternal linked list could not be destroyed - there is "
+		dbgprintf("Root element of iminternal linked list could not be destroyed - there is "
 			"nothing we can do against it, we ignore it for now. Things may go wild "
 			"from here on. This is most probably a program logic error.\n");
 	}

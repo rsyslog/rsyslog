@@ -82,7 +82,7 @@ struct TCPSession *pTCPSessions;
  * "<port-to-use>, <nbr-of-sessions>"
  * Typically, there is no whitespace between port and session number.
  * (but it may be...).
- * NOTE: you can not use dprintf() in here - the dprintf() system is
+ * NOTE: you can not use dbgprintf() in here - the dbgprintf() system is
  * not yet initilized when this function is called.
  * rgerhards, 2007-06-21
  * We can also not use logerror(), as that system is also not yet
@@ -146,10 +146,10 @@ static int TCPSessInit(void)
 	register int i;
 
 	assert(pTCPSessions == NULL);
-	dprintf("Allocating buffer for %d TCP sessions.\n", iTCPSessMax);
+	dbgprintf("Allocating buffer for %d TCP sessions.\n", iTCPSessMax);
 	if((pTCPSessions = (struct TCPSession *) malloc(sizeof(struct TCPSession) * iTCPSessMax))
 	    == NULL) {
-		dprintf("Error: TCPSessInit() could not alloc memory for TCP session table.\n");
+		dbgprintf("Error: TCPSessInit() could not alloc memory for TCP session table.\n");
 		return(1);
 	}
 
@@ -216,7 +216,7 @@ void deinit_tcp_listener(void)
 	while(iTCPSess != -1) {
 		int fd;
 		fd = pTCPSessions[iTCPSess].sock;
-		dprintf("Closing TCP Session %d\n", fd);
+		dbgprintf("Closing TCP Session %d\n", fd);
 		close(fd);
 		/* now get next... */
 		iTCPSess = TCPSessGetNxtSess(iTCPSess);
@@ -361,7 +361,7 @@ int *create_tcp_socket(void)
                freeaddrinfo(res);
 
 	if(Debug && *socks != maxs)
-		dprintf("We could initialize %d TCP listen sockets out of %d we received "
+		dbgprintf("We could initialize %d TCP listen sockets out of %d we received "
 		 	"- this may or may not be an error indication.\n", *socks, maxs);
 
         if(*socks == 0) {
@@ -500,7 +500,7 @@ void TCPSessPrepareClose(int iTCPSess)
 		 * of message may occur. As such, we process the message in
 		 * this case.
 		 */
-		dprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
+		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
 		printchopped(pTCPSessions[iTCPSess].fromHost, pTCPSessions[iTCPSess].msg,
 			     pTCPSessions[iTCPSess].iMsg, pTCPSessions[iTCPSess].sock, 1);
 		pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
@@ -606,7 +606,7 @@ int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 					/* IETF20061218 ++iNbrOctets; */
 					++pData;
 				}
-				dprintf("TCP Message with octet-counter, size %d.\n", iCnt);
+				dbgprintf("TCP Message with octet-counter, size %d.\n", iCnt);
 				if(*pData == ' ') {
 					++pData;	/* skip over SP */
 					/* IETF20061218 ++iNbrOctets; */
@@ -621,7 +621,7 @@ int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 				pTCPSessions[iTCPSess].iOctetsRemain = iCnt;
 				if(pTCPSessions[iTCPSess].iOctetsRemain < 1) {
 					/* TODO: handle the case where the octet count is 0 or negative! */
-					dprintf("Framing Error: invalid octet count\n");
+					dbgprintf("Framing Error: invalid octet count\n");
 					logerrorInt("Framing Error in received TCP message: "
 					            "invalid octet count %d.\n",
 				 		    pTCPSessions[iTCPSess].iOctetsRemain);

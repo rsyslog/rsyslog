@@ -191,7 +191,7 @@ struct outchannel *ochAddLine(char* pName, uchar** ppRestOfConfLine)
 	pOch->iLenName = strlen(pName);
 	pOch->pszName = (char*) malloc(sizeof(char) * (pOch->iLenName + 1));
 	if(pOch->pszName == NULL) {
-		dprintf("ochAddLine could not alloc memory for outchannel name!");
+		dbgprintf("ochAddLine could not alloc memory for outchannel name!");
 		pOch->iLenName = 0;
 		return NULL;
 		/* I know - we create a memory leak here - but I deem
@@ -248,7 +248,7 @@ void ochDeleteAll(void)
 
 	pOch = ochRoot;
 	while(pOch != NULL) {
-		dprintf("Delete Outchannel: Name='%s'\n ", pOch->pszName == NULL? "NULL" : pOch->pszName);
+		dbgprintf("Delete Outchannel: Name='%s'\n ", pOch->pszName == NULL? "NULL" : pOch->pszName);
 		pOchDel = pOch;
 		pOch = pOch->pNext;
 		if(pOchDel->pszName != NULL)
@@ -267,10 +267,10 @@ void ochPrintList(void)
 
 	pOch = ochRoot;
 	while(pOch != NULL) {
-		dprintf("Outchannel: Name='%s'\n", pOch->pszName == NULL? "NULL" : pOch->pszName);
-		dprintf("\tFile Template: '%s'\n", pOch->pszFileTemplate == NULL ? "NULL" : pOch->pszFileTemplate);
-		dprintf("\tMax Size.....: %lu\n", pOch->uSizeLimit);
-		dprintf("\tOnSizeLimtCmd: '%s'\n", pOch->cmdOnSizeLimit == NULL ? "NULL" : pOch->cmdOnSizeLimit);
+		dbgprintf("Outchannel: Name='%s'\n", pOch->pszName == NULL? "NULL" : pOch->pszName);
+		dbgprintf("\tFile Template: '%s'\n", pOch->pszFileTemplate == NULL ? "NULL" : pOch->pszFileTemplate);
+		dbgprintf("\tMax Size.....: %lu\n", pOch->uSizeLimit);
+		dbgprintf("\tOnSizeLimtCmd: '%s'\n", pOch->cmdOnSizeLimit == NULL ? "NULL" : pOch->cmdOnSizeLimit);
 		pOch = pOch->pNext; /* done, go next */
 	}
 }

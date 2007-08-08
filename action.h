@@ -69,7 +69,7 @@ inline int actionIsSuspended(action_t *pThis)
 {
 	int i;
 	i =  pThis->bSuspended == 1;
-	dprintf("in IsSuspend(), returns %d\n", i);
+	dbgprintf("in IsSuspend(), returns %d\n", i);
 	return i;
 }
 #endif

@@ -60,7 +60,7 @@ uchar *tplToString(struct template *pTpl, msg_t *pMsg)
 	 * loop until we got hold of all values.
 	 */
 	if((pCStr = rsCStrConstruct()) == NULL) {
-		dprintf("memory shortage, tplToString failed\n");
+		dbgprintf("memory shortage, tplToString failed\n");
 		return NULL;
 	}
 
@@ -71,7 +71,7 @@ uchar *tplToString(struct template *pTpl, msg_t *pMsg)
 							  (uchar *) pTpe->data.constant.pConstant,
 							  pTpe->data.constant.iLenConstant)
 							 ) != RS_RET_OK) {
-				dprintf("error %d during tplToString()\n", iRet);
+				dbgprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
 				rsCStrDestruct(pCStr);
 				return NULL;
@@ -91,7 +91,7 @@ uchar *tplToString(struct template *pTpl, msg_t *pMsg)
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
 			/* value extracted, so lets copy */
 			if((iRet = rsCStrAppendStrWithLen(pCStr, (uchar*) pVal, iLenVal)) != RS_RET_OK) {
-				dprintf("error %d during tplToString()\n", iRet);
+				dbgprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
 				rsCStrDestruct(pCStr);
 				if(bMustBeFreed)
@@ -433,7 +433,7 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 } else if(!strcmp((char*)Buf, "drop-last-lf")) {
 			pTpe->data.field.options.bDropLastLF = 1;
 		 } else {
-			dprintf("Invalid field option '%s' specified - ignored.\n", Buf);
+			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }
 	}
 
@@ -470,7 +470,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
 		/* TODO: add handler */
-		dprintf("Could not allocate memory for template parameter!\n");
+		dbgprintf("Could not allocate memory for template parameter!\n");
 		return 1;
 	}
 	pTpe->eEntryType = FIELD;
@@ -552,7 +552,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				/* skip to next known good */
 				while(*p && *p != '%' && *p != ':') {
 					/* TODO: complain on extra characters */
-					dprintf("error: extra character in frompos: '%s'\n", p);
+					dbgprintf("error: extra character in frompos: '%s'\n", p);
 					++p;
 				}
 			}
@@ -567,14 +567,14 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 #ifdef FEATURE_REGEXP
 		if (pTpe->data.field.has_regex) {
 
-			dprintf("debug: has regex \n");
+			dbgprintf("debug: has regex \n");
 
 			/* APR 2005-09 I need the string that represent the regex */
 			/* The regex end is: "--end" */
 			/* TODO : this is hardcoded and cant be escaped, please change */
 			regex_end = (unsigned char*) strstr((char*)p, "--end");
 			if (regex_end == NULL) {
-				dprintf("error: can not find regex end in: '%s'\n", p);
+				dbgprintf("error: can not find regex end in: '%s'\n", p);
 				pTpe->data.field.has_regex = 0;
 			} else {
 				/* We get here ONLY if the regex end was found */
@@ -582,7 +582,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				/* Malloc for the regex string */
 				regex_char = (unsigned char *) malloc(longitud + 1);
 				if (regex_char == NULL) {
-					dprintf
+					dbgprintf
 					    ("Could not allocate memory for template parameter!\n");
 					pTpe->data.field.has_regex = 0;
 					return 1;
@@ -593,12 +593,12 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				memcpy(regex_char, p, longitud);
 				regex_char[longitud] = '\0';
 
-				dprintf("debug: regex detected: '%s'\n", regex_char);
+				dbgprintf("debug: regex detected: '%s'\n", regex_char);
 
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
 				if(regcomp(&(pTpe->data.field.re), (char*) regex_char, 0) != 0) {
-					dprintf("error: can not compile regex: '%s'\n", regex_char);
+					dbgprintf("error: can not compile regex: '%s'\n", regex_char);
 					pTpe->data.field.has_regex = 2;
 				}
 
@@ -628,7 +628,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 			/* skip to next known good */
 			while(*p && *p != '%' && *p != ':') {
 				/* TODO: complain on extra characters */
-				dprintf("error: extra character in frompos: '%s'\n", p);
+				dbgprintf("error: extra character in frompos: '%s'\n", p);
 				++p;
 			}
 #ifdef FEATURE_REGEXP
@@ -676,7 +676,7 @@ struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
 	pTpl->iLenName = strlen(pName);
 	pTpl->pszName = (char*) malloc(sizeof(char) * (pTpl->iLenName + 1));
 	if(pTpl->pszName == NULL) {
-		dprintf("tplAddLine could not alloc memory for template name!");
+		dbgprintf("tplAddLine could not alloc memory for template name!");
 		pTpl->iLenName = 0;
 		return NULL;
 		/* I know - we create a memory leak here - but I deem
@@ -694,7 +694,7 @@ struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
 		++p;
 	
 	if(*p != '"') {
-		dprintf("Template '%s' invalid, does not start with '\"'!\n", pTpl->pszName);
+		dbgprintf("Template '%s' invalid, does not start with '\"'!\n", pTpl->pszName);
 		/* we simply make the template defunct in this case by setting
 		 * its name to a zero-string. We do not free it, as this would
 		 * require additional code and causes only a very small memory
@@ -764,7 +764,7 @@ struct template *tplAddLine(char* pName, unsigned char** ppRestOfConfLine)
 		} else if(!strcmp(optBuf, "nosql")) {
 			pTpl->optFormatForSQL = 0;
 		} else {
-			dprintf("Invalid option '%s' ignored.\n", optBuf);
+			dbgprintf("Invalid option '%s' ignored.\n", optBuf);
 		}
 	}
 
@@ -799,7 +799,7 @@ struct template *tplFind(char *pName, int iLenName)
 /* Destroy the template structure. This is for de-initialization
  * at program end. Everything is deleted.
  * rgerhards 2005-02-22
- * I have commented out dprintfs, because they are not needed for
+ * I have commented out dbgprintfs, because they are not needed for
  * "normal" debugging. Uncomment them, if they are needed.
  * rgerhards, 2007-07-05
  */
@@ -810,27 +810,27 @@ void tplDeleteAll(void)
 
 	pTpl = tplRoot;
 	while(pTpl != NULL) {
-		/* dprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
+		/* dbgprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {
 			pTpeDel = pTpe;
 			pTpe = pTpe->pNext;
-			/*dprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
+			/*dbgprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
 			switch(pTpeDel->eEntryType) {
 			case UNDEFINED:
-				/*dprintf("(UNDEFINED)");*/
+				/*dbgprintf("(UNDEFINED)");*/
 				break;
 			case CONSTANT:
-				/*dprintf("(CONSTANT), value: '%s'",
+				/*dbgprintf("(CONSTANT), value: '%s'",
 					pTpeDel->data.constant.pConstant);*/
 				free(pTpeDel->data.constant.pConstant);
 				break;
 			case FIELD:
-				/*dprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
+				/*dbgprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
 				free(pTpeDel->data.field.pPropRepl);
 				break;
 			}
-			/*dprintf("\n");*/
+			/*dbgprintf("\n");*/
 			free(pTpeDel);
 		}
 		pTplDel = pTpl;
@@ -856,27 +856,27 @@ void tplDeleteNew(void)
 	tplLastStatic->pNext = NULL;
 	tplLast = tplLastStatic;
 	while(pTpl != NULL) {
-		/* dprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
+		/* dbgprintf("Delete Template: Name='%s'\n ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);*/
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {
 			pTpeDel = pTpe;
 			pTpe = pTpe->pNext;
-			/*dprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
+			/*dbgprintf("\tDelete Entry(%x): type %d, ", (unsigned) pTpeDel, pTpeDel->eEntryType);*/
 			switch(pTpeDel->eEntryType) {
 			case UNDEFINED:
-				/*dprintf("(UNDEFINED)");*/
+				/*dbgprintf("(UNDEFINED)");*/
 				break;
 			case CONSTANT:
-				/*dprintf("(CONSTANT), value: '%s'",
+				/*dbgprintf("(CONSTANT), value: '%s'",
 					pTpeDel->data.constant.pConstant);*/
 				free(pTpeDel->data.constant.pConstant);
 				break;
 			case FIELD:
-				/*dprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
+				/*dbgprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
 				free(pTpeDel->data.field.pPropRepl);
 				break;
 			}
-			/*dprintf("\n");*/
+			/*dbgprintf("\n");*/
 			free(pTpeDel);
 		}
 		pTplDel = pTpl;
@@ -903,74 +903,74 @@ void tplPrintList(void)
 
 	pTpl = tplRoot;
 	while(pTpl != NULL) {
-		dprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
+		dbgprintf("Template: Name='%s' ", pTpl->pszName == NULL? "NULL" : pTpl->pszName);
 		if(pTpl->optFormatForSQL == 1)
-			dprintf("[SQL-Format (MySQL)] ");
+			dbgprintf("[SQL-Format (MySQL)] ");
 		else if(pTpl->optFormatForSQL == 2)
-			dprintf("[SQL-Format (standard SQL)] ");
-		dprintf("\n");
+			dbgprintf("[SQL-Format (standard SQL)] ");
+		dbgprintf("\n");
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {
-			dprintf("\tEntry(%x): type %d, ", (unsigned) pTpe, pTpe->eEntryType);
+			dbgprintf("\tEntry(%x): type %d, ", (unsigned) pTpe, pTpe->eEntryType);
 			switch(pTpe->eEntryType) {
 			case UNDEFINED:
-				dprintf("(UNDEFINED)");
+				dbgprintf("(UNDEFINED)");
 				break;
 			case CONSTANT:
-				dprintf("(CONSTANT), value: '%s'",
+				dbgprintf("(CONSTANT), value: '%s'",
 					pTpe->data.constant.pConstant);
 				break;
 			case FIELD:
-				dprintf("(FIELD), value: '%s' ", pTpe->data.field.pPropRepl);
+				dbgprintf("(FIELD), value: '%s' ", pTpe->data.field.pPropRepl);
 				switch(pTpe->data.field.eDateFormat) {
 				case tplFmtDefault:
 					break;
 				case tplFmtMySQLDate:
-					dprintf("[Format as MySQL-Date] ");
+					dbgprintf("[Format as MySQL-Date] ");
 					break;
 				case tplFmtRFC3164Date:
-					dprintf("[Format as RFC3164-Date] ");
+					dbgprintf("[Format as RFC3164-Date] ");
 					break;
 				case tplFmtRFC3339Date:
-					dprintf("[Format as RFC3339-Date] ");
+					dbgprintf("[Format as RFC3339-Date] ");
 					break;
 				default:
-					dprintf("[INVALID eDateFormat %d] ", pTpe->data.field.eDateFormat);
+					dbgprintf("[INVALID eDateFormat %d] ", pTpe->data.field.eDateFormat);
 				}
 				switch(pTpe->data.field.eCaseConv) {
 				case tplCaseConvNo:
 					break;
 				case tplCaseConvLower:
-					dprintf("[Converted to Lower Case] ");
+					dbgprintf("[Converted to Lower Case] ");
 					break;
 				case tplCaseConvUpper:
-					dprintf("[Converted to Upper Case] ");
+					dbgprintf("[Converted to Upper Case] ");
 					break;
 				}
 				if(pTpe->data.field.options.bEscapeCC) {
-				  	dprintf("[escape control-characters] ");
+				  	dbgprintf("[escape control-characters] ");
 				}
 				if(pTpe->data.field.options.bDropCC) {
-				  	dprintf("[drop control-characters] ");
+				  	dbgprintf("[drop control-characters] ");
 				}
 				if(pTpe->data.field.options.bSpaceCC) {
-				  	dprintf("[replace control-characters with space] ");
+				  	dbgprintf("[replace control-characters with space] ");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
-				  	dprintf("[drop last LF in msg] ");
+				  	dbgprintf("[drop last LF in msg] ");
 				}
 				if(pTpe->data.field.has_fields == 1) {
-				  	dprintf("[substring, field #%d only (delemiter %d)] ",
+				  	dbgprintf("[substring, field #%d only (delemiter %d)] ",
 						pTpe->data.field.iToPos, pTpe->data.field.field_delim);
 				} else if(pTpe->data.field.iFromPos != 0 ||
 				          pTpe->data.field.iToPos != 0) {
-				  	dprintf("[substring, from character %d to %d] ",
+				  	dbgprintf("[substring, from character %d to %d] ",
 						pTpe->data.field.iFromPos,
 						pTpe->data.field.iToPos);
 				}
 				break;
 			}
-			dprintf("\n");
+			dbgprintf("\n");
 			pTpe = pTpe->pNext;
 		}
 		pTpl = pTpl->pNext; /* done, go next */

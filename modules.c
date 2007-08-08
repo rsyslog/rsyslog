@@ -245,7 +245,7 @@ finalize_it:
 
 /* Print loaded modules. This is more or less a 
  * debug or test aid, but anyhow I think it's worth it...
- * This only works if the dprintf() subsystem is initialized.
+ * This only works if the dbgprintf() subsystem is initialized.
  */
 void modPrintList(void)
 {
@@ -253,28 +253,28 @@ void modPrintList(void)
 
 	pMod = modGetNxt(NULL);
 	while(pMod != NULL) {
-		dprintf("Loaded Module: Name='%s', IFVersion=%d, ",
+		dbgprintf("Loaded Module: Name='%s', IFVersion=%d, ",
 			(char*) modGetName(pMod), pMod->iIFVers);
-		dprintf("type=");
+		dbgprintf("type=");
 		switch(pMod->eType) {
 		case eMOD_OUT:
-			dprintf("output");
+			dbgprintf("output");
 			break;
 		case eMOD_IN:
-			dprintf("input");
+			dbgprintf("input");
 			break;
 		case eMOD_FILTER:
-			dprintf("filter");
+			dbgprintf("filter");
 			break;
 		}
-		dprintf(" module.\n");
-		dprintf("Entry points:\n");
-		dprintf("\tqueryEtryPt:        0x%x\n", (unsigned) pMod->modQueryEtryPt);
-		dprintf("\tdoAction:           0x%x\n", (unsigned) pMod->mod.om.doAction);
-		dprintf("\tparseSelectorAct:   0x%x\n", (unsigned) pMod->mod.om.parseSelectorAct);
-		dprintf("\tdbgPrintInstInfo:   0x%x\n", (unsigned) pMod->dbgPrintInstInfo);
-		dprintf("\tfreeInstance:       0x%x\n", (unsigned) pMod->freeInstance);
-		dprintf("\n");
+		dbgprintf(" module.\n");
+		dbgprintf("Entry points:\n");
+		dbgprintf("\tqueryEtryPt:        0x%x\n", (unsigned) pMod->modQueryEtryPt);
+		dbgprintf("\tdoAction:           0x%x\n", (unsigned) pMod->mod.om.doAction);
+		dbgprintf("\tparseSelectorAct:   0x%x\n", (unsigned) pMod->mod.om.parseSelectorAct);
+		dbgprintf("\tdbgPrintInstInfo:   0x%x\n", (unsigned) pMod->dbgPrintInstInfo);
+		dbgprintf("\tfreeInstance:       0x%x\n", (unsigned) pMod->freeInstance);
+		dbgprintf("\n");
 		pMod = modGetNxt(pMod); /* done, go next */
 	}
 }

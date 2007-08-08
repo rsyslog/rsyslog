@@ -232,7 +232,7 @@ static int TCPSendCreateSocket(instanceData *pData, struct addrinfo *addrDest)
 					TCPSendSetStatus(pData, TCP_SEND_CONNECTING);
 					return fd;
 				} else {
-					dprintf("create tcp connection failed, reason %s",
+					dbgprintf("create tcp connection failed, reason %s",
 						strerror(errno));
 				}
 
@@ -244,12 +244,12 @@ static int TCPSendCreateSocket(instanceData *pData, struct addrinfo *addrDest)
 			close(fd);
 		}
 		else {
-			dprintf("couldn't create send socket, reason %s", strerror(errno));
+			dbgprintf("couldn't create send socket, reason %s", strerror(errno));
 		}		
 		r = r->ai_next;
 	}
 
-	dprintf("no working socket could be obtained");
+	dbgprintf("no working socket could be obtained");
 
 	return -1;
 }
@@ -433,7 +433,7 @@ static int TCPSend(instanceData *pData, char *msg, size_t len)
 				 * very unlikely case. For this, it is justified just to loose
 				 * the message. Rgerhards, 2006-12-07
 				 */
-				 dprintf("Error: out of memory when building TCP octet-counted "
+				 dbgprintf("Error: out of memory when building TCP octet-counted "
 				         "frame. Message is lost, trying to continue.\n");
 				return 0;
 			}
@@ -447,7 +447,7 @@ static int TCPSend(instanceData *pData, char *msg, size_t len)
 		/* frame building complete, on to actual sending */
 
 		lenSend = send(pData->sock, msg, len, 0);
-		dprintf("TCP sent %d bytes, requested %d, msg: '%s'\n", lenSend, len,
+		dbgprintf("TCP sent %d bytes, requested %d, msg: '%s'\n", lenSend, len,
 			bIsCompressed ? "***compressed***" : msg);
 		if((unsigned)lenSend == len) {
 			/* all well */
@@ -460,7 +460,7 @@ static int TCPSend(instanceData *pData, char *msg, size_t len)
 			 * For the time being, we ignore this...
 			 * rgerhards, 2005-10-25
 			 */
-			dprintf("message not completely (tcp)send, ignoring %d\n", lenSend);
+			dbgprintf("message not completely (tcp)send, ignoring %d\n", lenSend);
 #			if USE_PTHREADS
 			usleep(1000); /* experimental - might be benefitial in this situation */
 #			endif
@@ -471,7 +471,7 @@ static int TCPSend(instanceData *pData, char *msg, size_t len)
 
 		switch(errno) {
 		case EMSGSIZE:
-			dprintf("message not (tcp)send, too large\n");
+			dbgprintf("message not (tcp)send, too large\n");
 			/* This is not a real error, so it is not flagged as one */
 			if(buf != NULL)
 				free(buf);
@@ -479,7 +479,7 @@ static int TCPSend(instanceData *pData, char *msg, size_t len)
 			break;
 		case EINPROGRESS:
 		case EAGAIN:
-			dprintf("message not (tcp)send, would block\n");
+			dbgprintf("message not (tcp)send, would block\n");
 #			if USE_PTHREADS
 			usleep(1000); /* experimental - might be benefitial in this situation */
 #			endif
@@ -492,7 +492,7 @@ static int TCPSend(instanceData *pData, char *msg, size_t len)
 			return 0;
 			break;
 		default:
-			dprintf("message not (tcp)send");
+			dbgprintf("message not (tcp)send");
 			break;
 		}
 	
@@ -550,7 +550,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		
 	case eDestFORW_UNKN:
 		/* The remote address is not yet known and needs to be obtained */
-		dprintf(" %s\n", pData->f_hname);
+		dbgprintf(" %s\n", pData->f_hname);
 		memset(&hints, 0, sizeof(hints));
 		/* port must be numeric, because config file syntax requests this */
 		/* TODO: this code is a duplicate from cfline() - we should later create
@@ -561,7 +561,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		hints.ai_socktype = pData->protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
 		if((e = getaddrinfo(pData->f_hname,
 				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
-			dprintf("%s found, resuming.\n", pData->f_hname);
+			dbgprintf("%s found, resuming.\n", pData->f_hname);
 			pData->f_addr = res;
 			pData->iRtryCnt = 0;
 			pData->eDestState = eDestFORW;
@@ -590,17 +590,17 @@ BEGINdoAction
 CODESTARTdoAction
 	switch (pData->eDestState) {
 	case eDestFORW_SUSP:
-		dprintf("internal error in omfwd.c, eDestFORW_SUSP in doAction()!\n");
+		dbgprintf("internal error in omfwd.c, eDestFORW_SUSP in doAction()!\n");
 		iRet = RS_RET_SUSPENDED;
 		break;
 		
 	case eDestFORW_UNKN:
-		dprintf("doAction eDestFORW_UNKN\n");
+		dbgprintf("doAction eDestFORW_UNKN\n");
 		iRet = doTryResume(pData);
 		break;
 
 	case eDestFORW:
-		dprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData),
+		dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData),
 			 pData->protocol == FORW_UDP ? "udp" : "tcp");
 		if ( 0) // TODO: think about this strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
 		/* what we need to do is get the hostname as an additonal string (during parseSe..). Then,
@@ -611,7 +611,7 @@ CODESTARTdoAction
 		 * handling things than to relay on the error-prone hostname property.
 		 * rgerhards, 2007-07-27
 		 */
-			dprintf("Not sending message to remote.\n");
+			dbgprintf("Not sending message to remote.\n");
 		else {
 			pData->ttSuspend = time(NULL);
 			psz = (char*) ppString[0];
@@ -635,7 +635,7 @@ CODESTARTdoAction
 				int ret;
 				ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
 						srcLen, pData->compressionLevel);
-				dprintf("Compressing message, length was %d now %d, return state  %d.\n",
+				dbgprintf("Compressing message, length was %d now %d, return state  %d.\n",
 					l, (int) destLen, ret);
 				if(ret != Z_OK) {
 					/* if we fail, we complain, but only in debug mode
@@ -645,10 +645,10 @@ CODESTARTdoAction
 					 * best course of action.
 					 * rgerhards, 2006-11-30
 					 */
-					dprintf("Compression failed, sending uncompressed message\n");
+					dbgprintf("Compression failed, sending uncompressed message\n");
 				} else if(destLen+1 < l) {
 					/* only use compression if there is a gain in using it! */
-					dprintf("there is gain in compression, so we do it\n");
+					dbgprintf("there is gain in compression, so we do it\n");
 					psz = (char*) out;
 					l = destLen + 1; /* take care for the "z" at message start! */
 				}
@@ -677,7 +677,7 @@ CODESTARTdoAction
 								break;
 							} else {
 								int eno = errno;
-								dprintf("sendto() error: %d = %s.\n",
+								dbgprintf("sendto() error: %d = %s.\n",
 									eno, strerror(eno));
 							}
 		                                }
@@ -686,7 +686,7 @@ CODESTARTdoAction
 					}
 					/* finished looping */
 	                                if (bSendSuccess == FALSE) {
-		                                dprintf("error forwarding via udp, suspending\n");
+		                                dbgprintf("error forwarding via udp, suspending\n");
 						iRet = RS_RET_SUSPENDED;
 					}
 				}
@@ -694,7 +694,7 @@ CODESTARTdoAction
 				/* forward via TCP */
 				if(TCPSend(pData, psz, l) != 0) {
 					/* error! */
-					dprintf("error forwarding via tcp, suspending\n");
+					dbgprintf("error forwarding via tcp, suspending\n");
 					iRet = RS_RET_SUSPENDED;
 				}
 			}
@@ -879,7 +879,7 @@ ENDneedUDPSocket
 
 BEGINonSelectReadyWrite
 CODESTARTonSelectReadyWrite
-	dprintf("tcp send socket %d ready for writing.\n", pData->sock);
+	dbgprintf("tcp send socket %d ready for writing.\n", pData->sock);
 	TCPSendSetStatus(pData, TCP_SEND_READY);
 	/* Send stored message (if any) */
 	if(pData->savedMsg != NULL) {

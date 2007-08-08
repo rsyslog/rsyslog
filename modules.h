@@ -50,7 +50,7 @@ typedef struct moduleInfo {
 	int		iIFVers;	/* Interface version of module */
 	eModType_t	eType;		/* type of this module */
 	eModLinkType_t	eLinkType;
-	uchar*		pszName;	/* printable module name, e.g. for dprintf */
+	uchar*		pszName;	/* printable module name, e.g. for dbgprintf */
 	/* functions supported by all types of modules */
 	rsRetVal (*modInit)(int, int*, rsRetVal(**)());		/* initialize the module */
 		/* be sure to support version handshake! */

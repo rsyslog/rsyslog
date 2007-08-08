@@ -167,7 +167,7 @@ rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 	}
 
 	iDynaFileCacheSize = iNewVal;
-	dprintf("DynaFileCacheSize changed to %d.\n", iNewVal);
+	dbgprintf("DynaFileCacheSize changed to %d.\n", iNewVal);
 
 	return iRet;
 }
@@ -322,7 +322,7 @@ static void dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int b
 	if(pCache[iEntry] == NULL)
 		return;
 
-	dprintf("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
+	dbgprintf("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? "[OPEN FAILED]" : (char*)pCache[iEntry]->pName);
 	/* if the name is NULL, this is an improperly initilized entry which
 	 * needs to be discarded. In this case, neither the file is to be closed
@@ -427,7 +427,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 		pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry));
 		if(pCache[iFirstFree] == NULL) {
 			glblHadMemShortage = TRUE;
-			dprintf("prepareDynfile(): could not alloc mem, discarding this request\n");
+			dbgprintf("prepareDynfile(): could not alloc mem, discarding this request\n");
 			return -1;
 		}
 	}
@@ -478,7 +478,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 		 * news is that we also lose errors on startup messages, but so it is.
 		 */
 		if(iMsgOpts & INTERNAL_MSG)
-			dprintf("Could not open dynaFile, discarding message\n");
+			dbgprintf("Could not open dynaFile, discarding message\n");
 		else
 			logerrorSz("Could not open dynamic file '%s' - discarding message", (char*)newFileName);
 		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
@@ -489,7 +489,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	pCache[iFirstFree]->pName = (uchar*)strdup((char*)newFileName); /* TODO: check for NULL (very unlikely) */
 	pCache[iFirstFree]->lastUsed = time(NULL);
 	pData->iCurrElt = iFirstFree;
-	dprintf("Added new entry %d for file cache, file '%s'.\n",
+	dbgprintf("Added new entry %d for file cache, file '%s'.\n",
 		iFirstFree, newFileName);
 
 	return 0;
@@ -628,7 +628,7 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	dprintf(" (%s)\n", pData->f_fname);
+	dbgprintf(" (%s)\n", pData->f_fname);
 	/* pData->fd == -1 is an indicator that the we couldn't
 	 * open the file at startup. For dynaFiles, this is ok,
 	 * all others are doomed.
@@ -712,7 +712,7 @@ CODESTARTparseSelectorAct
 		if((pData->dynCache = (dynaFileCacheEntry**)
 		    calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*))) == NULL) {
 			iRet = RS_RET_OUT_OF_MEMORY;
-			dprintf("Could not allocate memory for dynaFileCache - selector disabled.\n");
+			dbgprintf("Could not allocate memory for dynaFileCache - selector disabled.\n");
 		}
 		break;
 
@@ -746,7 +746,7 @@ CODESTARTparseSelectorAct
 		        
 	  	if ( pData->fd < 0 ){
 			pData->fd = -1;
-			dprintf("Error opening log file: %s\n", pData->f_fname);
+			dbgprintf("Error opening log file: %s\n", pData->f_fname);
 			logerror(pData->f_fname);
 			break;
 		}

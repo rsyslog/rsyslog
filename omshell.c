@@ -85,7 +85,7 @@ CODESTARTdoAction
 	 * modularization. We'll change that as we go ahead with modularization.
 	 * rgerhards, 2007-07-20
 	 */
-	dprintf("\n");
+	dbgprintf("\n");
 	if(execProg((uchar*) pData->progName, 1, ppString[0]) == 0)
 	 	logerrorSz("Executing program '%s' failed", (char*)pData->progName);
 ENDdoAction
@@ -106,7 +106,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	switch (*p)
 	{
 	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
-		dprintf("exec\n");
+		dbgprintf("exec\n");
 		++p;
 		iRet = cflineParseFileName(p, (uchar*) pData->progName, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS);
 		break;

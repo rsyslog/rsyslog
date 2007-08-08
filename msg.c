@@ -75,7 +75,7 @@ msg_t* MsgConstruct(void)
 		getCurrTime(&(pM->tRcvdAt));
 	}
 
-	/* DEV debugging only! dprintf("MsgConstruct\t0x%x, ref 1\n", (int)pM);*/
+	/* DEV debugging only! dbgprintf("MsgConstruct\t0x%x, ref 1\n", (int)pM);*/
 
 	return(pM);
 }
@@ -87,11 +87,11 @@ msg_t* MsgConstruct(void)
 void MsgDestruct(msg_t * pM)
 {
 	assert(pM != NULL);
-	/* DEV Debugging only ! dprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1); */
+	/* DEV Debugging only ! dbgprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1); */
 	MsgLock();
 	if(--pM->iRefCount == 0)
 	{
-		/* DEV Debugging Only! dprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM); */
+		/* DEV Debugging Only! dbgprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM); */
 		if(pM->pszUxTradMsg != NULL)
 			free(pM->pszUxTradMsg);
 		if(pM->pszRawMsg != NULL)
@@ -227,7 +227,7 @@ msg_t *MsgAddRef(msg_t *pM)
 	MsgLock();
 	pM->iRefCount++;
 	MsgUnlock();
-	/* DEV debugging only! dprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);*/
+	/* DEV debugging only! dbgprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);*/
 	return(pM);
 }
 
@@ -364,7 +364,7 @@ void setProtocolVersion(msg_t *pM, int iNewVersion)
 {
 	assert(pM != NULL);
 	if(iNewVersion != 0 && iNewVersion != 1) {
-		dprintf("Tried to set unsupported protocol version %d - changed to 0.\n", iNewVersion);
+		dbgprintf("Tried to set unsupported protocol version %d - changed to 0.\n", iNewVersion);
 		iNewVersion = 0;
 	}
 	pM->iProtocolVersion = iNewVersion;
@@ -830,7 +830,7 @@ void MsgSetTAG(msg_t *pMsg, char* pszTAG)
 	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) != NULL)
 		memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
 	else
-		dprintf("Could not allocate memory in MsgSetTAG()\n");
+		dbgprintf("Could not allocate memory in MsgSetTAG()\n");
 }
 
 
@@ -982,7 +982,7 @@ int getProgramNameLen(msg_t *pM)
 	assert(pM != NULL);
 	MsgLock();
 	if((iRet = aquireProgramName(pM)) != RS_RET_OK) {
-		dprintf("error %d returned by aquireProgramName() in getProgramNameLen()\n", iRet);
+		dbgprintf("error %d returned by aquireProgramName() in getProgramNameLen()\n", iRet);
 		MsgUnlock();
 		return 0; /* best we can do (consistent wiht what getProgramName() returns) */
 	}
@@ -1002,7 +1002,7 @@ char *getProgramName(msg_t *pM)
 	assert(pM != NULL);
 	MsgLock();
 	if((iRet = aquireProgramName(pM)) != RS_RET_OK) {
-		dprintf("error %d returned by aquireProgramName() in getProgramName()\n", iRet);
+		dbgprintf("error %d returned by aquireProgramName() in getProgramName()\n", iRet);
 		MsgUnlock();
 		return ""; /* best we can do */
 	}
@@ -1061,7 +1061,7 @@ void MsgSetHOSTNAME(msg_t *pMsg, char* pszHOSTNAME)
 	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) != NULL)
 		memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
 	else
-		dprintf("Could not allocate memory in MsgSetHOSTNAME()\n");
+		dbgprintf("Could not allocate memory in MsgSetHOSTNAME()\n");
 }
 
 
@@ -1093,7 +1093,7 @@ int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg)
 	if((pMsg->pszUxTradMsg = malloc(pMsg->iLenUxTradMsg + 1)) != NULL)
 		memcpy(pMsg->pszUxTradMsg, pszUxTradMsg, pMsg->iLenUxTradMsg + 1);
 	else
-		dprintf("Could not allocate memory for pszUxTradMsg buffer.");
+		dbgprintf("Could not allocate memory for pszUxTradMsg buffer.");
 
 	return(0);
 }
@@ -1113,7 +1113,7 @@ void MsgSetMSG(msg_t *pMsg, char* pszMSG)
 	if((pMsg->pszMSG = malloc(pMsg->iLenMSG + 1)) != NULL)
 		memcpy(pMsg->pszMSG, pszMSG, pMsg->iLenMSG + 1);
 	else
-		dprintf("MsgSetMSG could not allocate memory for pszMSG buffer.");
+		dbgprintf("MsgSetMSG could not allocate memory for pszMSG buffer.");
 }
 
 /* rgerhards 2004-11-11: set RawMsg in msg object
@@ -1128,7 +1128,7 @@ void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg)
 	if((pMsg->pszRawMsg = malloc(pMsg->iLenRawMsg + 1)) != NULL)
 		memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg + 1);
 	else
-		dprintf("Could not allocate memory for pszRawMsg buffer.");
+		dbgprintf("Could not allocate memory for pszRawMsg buffer.");
 }
 
 
@@ -1388,7 +1388,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				++iCurrFld;
 			}
 		}
-		dprintf("field requested %d, field found %d\n", pTpe->data.field.iToPos, iCurrFld);
+		dbgprintf("field requested %d, field found %d\n", pTpe->data.field.iToPos, iCurrFld);
 		
 		if(iCurrFld == pTpe->data.field.iToPos) {
 			/* field found, now extract it */
@@ -1471,7 +1471,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				return
 				    "**NO MATCH** **BAD REGULAR EXPRESSION**";
 
-			dprintf("debug: String to match for regex is: %s\n",
+			dbgprintf("debug: String to match for regex is: %s\n",
 			        pRes);
 
 			if (0 != regexec(&pTpe->data.field.re, pRes, nmatch,
@@ -1632,7 +1632,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 	}
 
-	/*dprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
+	/*dbgprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
 	return(pRes);
 }
 

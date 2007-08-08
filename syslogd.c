@@ -119,7 +119,7 @@
  *
  * I have removed syslogdPanic(). That function was supposed to be used
  * for logging in low-memory conditons. Ever since it was introduced, it
- * was a wrapper for dprintf(). A more intelligent choice was hard to
+ * was a wrapper for dbgprintf(). A more intelligent choice was hard to
  * find. After all, if we are short on memory, doing anything fance will
  * again cause memory problems. I have now modified the code so that
  * those elements for which we do not get memory are simply discarded.
@@ -979,7 +979,7 @@ static void PrintAllowedSenders(int iListToPrint)
 					 * debug function, we simply spit out an error and do
 					 * not care much about it.
 					 */
-					dprintf("\tERROR in getnameinfo() - something may be wrong "
+					dbgprintf("\tERROR in getnameinfo() - something may be wrong "
 						"- ignored for now\n");
 				}
 			}
@@ -1002,7 +1002,7 @@ static inline int MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr 
 	assert(pFrom != NULL);
 
 	if(F_ISSET(pAllow->flags, ADDR_NAME)) {
-		dprintf ("MaskCmp: host=\"%s\"; pattern=\"%s\"\n", pszFromHost, pAllow->addr.HostWildcard);
+		dbgprintf("MaskCmp: host=\"%s\"; pattern=\"%s\"\n", pszFromHost, pAllow->addr.HostWildcard);
 		
 		return(fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE|FNM_CASEFOLD) == 0);
 	} else {/* We need to compare an IP address */
@@ -1085,7 +1085,7 @@ int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, c
 		if (MaskCmp (&(pAllow->allowedSender), pAllow->SignificantBits, pFrom, pszFromHost))
 			return 1;
 	}
-	dprintf("%s is not an allowed sender\n", pszFromHost);
+	dbgprintf("%s is not an allowed sender\n", pszFromHost);
 	return 0;
 }
 #endif /* #ifdef SYSLOG_INET */
@@ -1105,7 +1105,7 @@ void freeAllSockets(int **socks)
 	assert(socks != NULL);
 	assert(*socks != NULL);
 	while(**socks) {
-		dprintf("Closing socket %d.\n", (*socks)[**socks]);
+		dbgprintf("Closing socket %d.\n", (*socks)[**socks]);
 		close((*socks)[**socks]);
 		(**socks)--;
 	}
@@ -1657,7 +1657,7 @@ static int create_unix_socket(const char *path)
 	    chmod(path, 0666) < 0) {
 		snprintf(line, sizeof(line), "cannot create %s", path);
 		logerror(line);
-		dprintf("cannot create %s (%d).\n", path, errno);
+		dbgprintf("cannot create %s (%d).\n", path, errno);
 		close(fd);
 		return -1;
 	}
@@ -1813,7 +1813,7 @@ static int *create_udp_socket()
                freeaddrinfo(res);
 
 	if(Debug && *socks != maxs)
-		dprintf("We could initialize %d UDP listen sockets out of %d we received "
+		dbgprintf("We could initialize %d UDP listen sockets out of %d we received "
 		 	"- this may or may not be an error indication.\n", *socks, maxs);
 
         if(*socks == 0) {
@@ -1934,7 +1934,7 @@ static char **crunch_list(char *list)
 #if 0
 	count=0;
 	while (result[count])
-		dprintf ("#%d: %s\n", count, StripDomains[count++]);
+		dbgprintf("#%d: %s\n", count, StripDomains[count++]);
 #endif
 	return result;
 }
@@ -1999,7 +1999,7 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 	assert(msg != NULL);
 	assert(len >= 0);
 
-	dprintf("Message length: %d, File descriptor: %d.\n", len, fd);
+	dbgprintf("Message length: %d, File descriptor: %d.\n", len, fd);
 
 	/* we first check if we need to drop trailing LFs, which often make
 	 * their way into syslog messages unintentionally. In order to remain
@@ -2031,7 +2031,7 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 		int ret;
 		iLenDefBuf = MAXLINE;
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
-		dprintf("Compressed message uncompressed with status %d, length: new %d, old %d.\n",
+		dbgprintf("Compressed message uncompressed with status %d, length: new %d, old %d.\n",
 		        ret, iLenDefBuf, len-1);
 		/* Now check if the uncompression worked. If not, there is not much we can do. In
 		 * that case, we log an error message but ignore the message itself. Storing the
@@ -2142,7 +2142,7 @@ void printline(char *hname, char *msg, int bParseHost)
 		 * message but continue to run (in the hope that things improve)
 		 */
 		glblHadMemShortage = 1;
-		dprintf("Memory shortage in printline(): Could not construct Msg object.\n");
+		dbgprintf("Memory shortage in printline(): Could not construct Msg object.\n");
 		return;
 	}
 	MsgSetRawMsg(pMsg, msg);
@@ -2224,7 +2224,7 @@ static void logmsgInternal(int pri, char *msg, int flags)
 		 * to be logged message.
 		 */
 		glblHadMemShortage = 1;
-		dprintf("Memory shortage in logmsgInternal: could not construct Msg object.\n");
+		dbgprintf("Memory shortage in logmsgInternal: could not construct Msg object.\n");
 		return;
 	}
 
@@ -2282,14 +2282,14 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 	} else if(f->eHostnameCmpMode == HN_COMP_MATCH) {
 		if(rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
-			dprintf("hostname filter '+%s' does not match '%s'\n", 
+			dbgprintf("hostname filter '+%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
 			return 0;
 		}
 	} else { /* must be -hostname */
 		if(!rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
-			dprintf("hostname filter '-%s' does not match '%s'\n", 
+			dbgprintf("hostname filter '-%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
 			return 0;
 		}
@@ -2298,7 +2298,7 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 	if(f->pCSProgNameComp != NULL) {
 		if(rsCStrSzStrCmp(f->pCSProgNameComp, (uchar*) getProgramName(pMsg), getProgramNameLen(pMsg))) {
 			/* not equal, so we are already done... */
-			dprintf("programname filter '%s' does not match '%s'\n", 
+			dbgprintf("programname filter '%s' does not match '%s'\n", 
 				rsCStrGetSzStr(f->pCSProgNameComp), getProgramName(pMsg));
 			return 0;
 		}
@@ -2434,7 +2434,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 	    !strcmp(getMSG(pMsg), getMSG(pAction->f_pMsg)) &&
 	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(pAction->f_pMsg))) {
 		pAction->f_prevcount++;
-		dprintf("msg repeated %d times, %ld sec of %d.\n",
+		dbgprintf("msg repeated %d times, %ld sec of %d.\n",
 		    pAction->f_prevcount, now - pAction->f_time,
 		    repeatinterval[pAction->f_repeatcount]);
 		/* If domark would have logged this by now, flush it now (so we don't hold
@@ -2485,7 +2485,7 @@ DEFFUNC_llExecFunc(processMsgDoActions)
 	assert(pAction != NULL);
 
 	if((pAction->bExecWhenPrevSusp  == 1) && (pDoActData->bPrevWasSuspended == 0)) {
-		dprintf("not calling action because the previous one is not suspended\n");
+		dbgprintf("not calling action because the previous one is not suspended\n");
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
@@ -2569,7 +2569,7 @@ static void stopWorker(void)
 		 * during startup. Then, we obviously do not need to
 		 * do anything to stop the worker ;)
 		 */
-		dprintf("Initiating worker thread shutdown sequence...\n");
+		dbgprintf("Initiating worker thread shutdown sequence...\n");
 		/* We are now done with all messages, so we need to wake up the
 		 * worker thread and then wait for it to finish.
 		 */
@@ -2580,7 +2580,7 @@ static void stopWorker(void)
 		pthread_cond_signal(pMsgQueue->notEmpty);
 		pthread_join(thrdWorker, NULL);
 		bRunningMultithreaded = 0;
-		dprintf("Worker thread terminated.\n");
+		dbgprintf("Worker thread terminated.\n");
 	}
 }
 
@@ -2595,10 +2595,10 @@ static void startWorker(void)
 	if(pMsgQueue != NULL) {
 		bGlblDone = 0; /* we are NOT done (else worker would immediately terminate) */
 		i = pthread_create(&thrdWorker, NULL, singleWorker, NULL);
-		dprintf("Worker thread started with state %d.\n", i);
+		dbgprintf("Worker thread started with state %d.\n", i);
 		bRunningMultithreaded = 1;
 	} else {
-		dprintf("message queue not existing, remaining single-threaded.\n");
+		dbgprintf("message queue not existing, remaining single-threaded.\n");
 	}
 }
 
@@ -2682,7 +2682,7 @@ static void *singleWorker()
 	while(!bGlblDone || !fifo->empty) {
 		pthread_mutex_lock(fifo->mut);
 		while (fifo->empty && !bGlblDone) {
-			dprintf ("singleWorker: queue EMPTY, waiting for next message.\n");
+			dbgprintf("singleWorker: queue EMPTY, waiting for next message.\n");
 			pthread_cond_wait (fifo->notEmpty, fifo->mut);
 		}
 		if(!fifo->empty) {
@@ -2692,7 +2692,7 @@ static void *singleWorker()
 			pthread_mutex_unlock(fifo->mut);
 			pthread_cond_signal (fifo->notFull);
 			/* do actual processing (the lengthy part, runs in parallel) */
-			dprintf("Lone worker is running...\n");
+			dbgprintf("Lone worker is running...\n");
 			processMsg(pMsg);
 			MsgDestruct(pMsg);
 			/* If you need a delay for testing, here do a */
@@ -2702,10 +2702,10 @@ static void *singleWorker()
 		}
 		
 		if(debugging_on && bGlblDone && !fifo->empty)
-			dprintf("Worker does not yet terminate because it still has messages to process.\n");
+			dbgprintf("Worker does not yet terminate because it still has messages to process.\n");
 	}
 
-	dprintf("Worker thread terminates\n");
+	dbgprintf("Worker thread terminates\n");
 	pthread_exit(0);
 }
 
@@ -2735,21 +2735,21 @@ static void enqueueMsg(msg_t *pMsg)
 		/* multi-threading is not yet initialized, happens e.g.
 		 * during startup and restart. rgerhards, 2005-10-25
 		 */
-		 dprintf("enqueueMsg: not yet running on multiple threads\n");
+		 dbgprintf("enqueueMsg: not yet running on multiple threads\n");
 		 processMsg(pMsg);
 	} else {
 		/* "normal" mode, threading initialized */
 		pthread_mutex_lock(fifo->mut);
 			
 		while (fifo->full) {
-			dprintf ("enqueueMsg: queue FULL.\n");
+			dbgprintf("enqueueMsg: queue FULL.\n");
 			
 			clock_gettime (CLOCK_REALTIME, &t);
 			t.tv_sec += 2;
 			
 			if(pthread_cond_timedwait (fifo->notFull,
 						   fifo->mut, &t) != 0) {
-				dprintf("enqueueMsg: cond timeout, dropping message!\n");
+				dbgprintf("enqueueMsg: cond timeout, dropping message!\n");
 				goto unlock;
 			}
 		}
@@ -2758,7 +2758,7 @@ static void enqueueMsg(msg_t *pMsg)
 		/* now activate the worker thread */
 		pthread_mutex_unlock(fifo->mut);
 		iRet = pthread_cond_signal(fifo->notEmpty);
-		dprintf("EnqueueMsg signaled condition (%d)\n", iRet);
+		dbgprintf("EnqueueMsg signaled condition (%d)\n", iRet);
 	}
 }
 #endif /* #ifndef USE_PTHREADS */
@@ -2909,7 +2909,7 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 
 	/* TIMESTAMP */
 	if(srSLMGParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse) == FALSE) {
-		dprintf("no TIMESTAMP detected!\n");
+		dbgprintf("no TIMESTAMP detected!\n");
 		bContParse = 0;
 		flags |= ADDDATE;
 	}
@@ -3051,7 +3051,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			/* indeed, this smells like a TAG, so lets use it for this. We take
 			 * the HOSTNAME from the sender system instead.
 			 */
-			dprintf("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
+			dbgprintf("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
 			moveHOSTNAMEtoTAG(pMsg);
 			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
@@ -3099,7 +3099,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 				 * the hostname. This situation is the standard case with
 				 * stock BSD syslogd.
 				 */
-				dprintf("No TAG in message, assuming that HOSTNAME is missing.\n");
+				dbgprintf("No TAG in message, assuming that HOSTNAME is missing.\n");
 				moveHOSTNAMEtoTAG(pMsg);
 				MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 			}
@@ -3117,7 +3117,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 */
 		if(!(flags & INTERNAL_MSG))
 		{
-			dprintf("HOSTNAME and TAG not parsed by user configuraton.\n");
+			dbgprintf("HOSTNAME and TAG not parsed by user configuraton.\n");
 			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
 	}
@@ -3156,7 +3156,7 @@ void logmsg(int pri, msg_t *pMsg, int flags)
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	msg = (char*) pMsg->pszUxTradMsg;
-	dprintf("logmsg: %s, flags %x, from '%s', msg %s\n",
+	dbgprintf("logmsg: %s, flags %x, from '%s', msg %s\n",
 	        textpri(PRItext, sizeof(PRItext) / sizeof(char), pri),
 		flags, getRcvFrom(pMsg), msg);
 
@@ -3166,12 +3166,12 @@ void logmsg(int pri, msg_t *pMsg, int flags)
 	 * -protocol VERSION field for the detection.
 	 */
 	if(msg[0] == '1' && msg[1] == ' ') {
-		dprintf("Message has syslog-protocol format.\n");
+		dbgprintf("Message has syslog-protocol format.\n");
 		setProtocolVersion(pMsg, 1);
 		if(parseRFCSyslogMsg(pMsg, flags) == 1)
 			return;
 	} else { /* we have legacy syslog */
-		dprintf("Message has legacy syslog format.\n");
+		dbgprintf("Message has legacy syslog format.\n");
 		setProtocolVersion(pMsg, 0);
 		if(parseLegacySyslogMsg(pMsg, flags) == 1)
 			return;
@@ -3253,7 +3253,7 @@ rsRetVal fprintlog(action_t *pAction)
 
 		if((pMsg = MsgDup(pAction->f_pMsg)) == NULL) {
 			/* it failed - nothing we can do against it... */
-			dprintf("Message duplication failed, dropping repeat message.\n");
+			dbgprintf("Message duplication failed, dropping repeat message.\n");
 			return RS_RET_ERR;
 		}
 
@@ -3270,7 +3270,7 @@ rsRetVal fprintlog(action_t *pAction)
 		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
 	}
 
-	dprintf("Called fprintlog, logging to %s", modGetStateName(pAction->pMod));
+	dbgprintf("Called fprintlog, logging to %s", modGetStateName(pAction->pMod));
 
 	pAction->f_time = now; /* we need this for message repeation processing TODO: why must "now" be global? */
 
@@ -3281,7 +3281,7 @@ rsRetVal fprintlog(action_t *pAction)
 
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		if((pAction->ppMsgs[i] = tplToString(pAction->ppTpl[i], pAction->f_pMsg)) == NULL) {
-			dprintf("memory alloc failed while generating message strings - message ignored\n");
+			dbgprintf("memory alloc failed while generating message strings - message ignored\n");
 			glblHadMemShortage = 1;
 			iRet = RS_RET_OUT_OF_MEMORY;
 			goto finalize_it;
@@ -3291,12 +3291,12 @@ rsRetVal fprintlog(action_t *pAction)
 	iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData);
 
 	if(iRet == RS_RET_DISABLE_ACTION) {
-		dprintf("Action requested to be disabled, done that.\n");
+		dbgprintf("Action requested to be disabled, done that.\n");
 		pAction->bEnabled = 0; /* that's it... */
 	}
 
 	if(iRet == RS_RET_SUSPENDED) {
-		dprintf("Action requested to be suspended, done that.\n");
+		dbgprintf("Action requested to be suspended, done that.\n");
 		actionSuspend(pAction);
 	}
 
@@ -3349,7 +3349,7 @@ DEFFUNC_llExecFunc(domarkActions)
 	assert(pAction != NULL);
 
 	if (pAction->f_prevcount && now >= REPEATTIME(pAction)) {
-		dprintf("flush %s: repeated %d times, %d sec.\n",
+		dbgprintf("flush %s: repeated %d times, %d sec.\n",
 		    modGetStateName(pAction->pMod), pAction->f_prevcount,
 		    repeatinterval[pAction->f_repeatcount]);
 		fprintlog(pAction);
@@ -3408,7 +3408,7 @@ static void domarkAlarmHdlr()
 
 static void debug_switch()
 {
-	dprintf("Switching debugging_on to %s\n", (debugging_on == 0) ? "true" : "false");
+	dbgprintf("Switching debugging_on to %s\n", (debugging_on == 0) ? "true" : "false");
 	debugging_on = (debugging_on == 0) ? 1 : 0;
 	signal(SIGUSR1, debug_switch);
 }
@@ -3452,7 +3452,7 @@ void logerror(char *type)
 {
 	char buf[1024];
 
-	dprintf("Called logerr, msg: %s\n", type);
+	dbgprintf("Called logerr, msg: %s\n", type);
 
 	if (errno == 0)
 		snprintf(buf, sizeof(buf), "%s", type);
@@ -3474,7 +3474,7 @@ void logerror(char *type)
  */
 static void doDie(int sig)
 {
-	dprintf("DoDie called.\n");
+	dbgprintf("DoDie called.\n");
 	bFinished = sig;
 }
 
@@ -3494,7 +3494,7 @@ static void die(int sig)
 	int i;
 
 	if (sig) {
-		dprintf(" exiting on signal %d\n", sig);
+		dbgprintf(" exiting on signal %d\n", sig);
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\"]" " exiting on signal %d.",
@@ -3541,8 +3541,8 @@ static void die(int sig)
 
 	remove_pid(PidFile);
 	if(glblHadMemShortage)
-		dprintf("Had memory shortage at least once during the run.\n");
-	dprintf("Clean shutdown completed, bye.\n");
+		dbgprintf("Had memory shortage at least once during the run.\n");
+	dbgprintf("Clean shutdown completed, bye.\n");
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 
@@ -3677,7 +3677,7 @@ static rsRetVal doIncludeDirectory(uchar *pDirName)
 		iFileNameLen = strnlen(res->d_name, NAME_MAX);
 		memcpy(szFullFileName + iDirNameLen, res->d_name, iFileNameLen);
 		*(szFullFileName + iDirNameLen + iFileNameLen) = '\0';
-		dprintf("including file '%s'\n", szFullFileName);
+		dbgprintf("including file '%s'\n", szFullFileName);
 		processConfFile(szFullFileName);
 		/* we deliberately ignore the iRet of processConfFile() - this is because
 		 * failure to process one file does not mean all files will fail. By ignoring,
@@ -3691,7 +3691,7 @@ static rsRetVal doIncludeDirectory(uchar *pDirName)
 		 * into the config file just in case, when additional modules be installed. When none
 		 * are installed, the directory will be empty, which is fine. -- rgerhards 2007-08-01
 		 */
-		dprintf("warning: the include directory contained no files - this may be ok.\n");
+		dbgprintf("warning: the include directory contained no files - this may be ok.\n");
 	}
 
 finalize_it:
@@ -3720,10 +3720,10 @@ static rsRetVal doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	}
 
 	if(*(cfgFile+strlen((char*) cfgFile) - 1) == '/') {
-		dprintf("requested to include directory '%s'\n", cfgFile);
+		dbgprintf("requested to include directory '%s'\n", cfgFile);
 		iRet = doIncludeDirectory(cfgFile);
 	} else {
-		dprintf("Requested to include config file '%s'\n", cfgFile);
+		dbgprintf("Requested to include config file '%s'\n", cfgFile);
 		iRet = processConfFile(cfgFile);
 	}
 
@@ -3750,7 +3750,7 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
-	dprintf("Requested to load module '%s'\n", szName);
+	dbgprintf("Requested to load module '%s'\n", szName);
 
 	if(!strcmp((char*)szName, "MySQL")) {
 		bModMySQLLoaded = 1;
@@ -3814,7 +3814,7 @@ static rsRetVal doNameLine(uchar **pp, void* pVal)
 			 * is quite ok (but then we should not run into this code,
 			 * so at least we log a debug warning).
 			 */
-			dprintf("INTERNAL ERROR: doNameLine() called with invalid eDir %d.\n",
+			dbgprintf("INTERNAL ERROR: doNameLine() called with invalid eDir %d.\n",
 				eDir);
 			break;
 	}
@@ -3831,7 +3831,7 @@ finalize_it:
 static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 {
 	umask(iUmask);
-	dprintf("umask set to 0%3.3o.\n", iUmask);
+	dbgprintf("umask set to 0%3.3o.\n", iUmask);
 
 	return RS_RET_OK;
 }
@@ -3906,7 +3906,7 @@ static void freeSelectors(void)
 	selector_t *fPrev;
 
 	if(Files != NULL) {
-		dprintf("Freeing log structures.\n");
+		dbgprintf("Freeing log structures.\n");
 
 		/* just in case, we flush the emergency log. If error messages occur after
 		 * this stage, we loose them, but that's ok. With multi-threading, this can
@@ -4104,7 +4104,7 @@ static rsRetVal processConfFile(uchar *pConfFile)
 			 * line can be correct.  -- rgerhards, 2007-08-02
 			 */
 			uchar szErrLoc[MAXFNAME + 64];
-			dprintf("config line NOT successfully processed\n");
+			dbgprintf("config line NOT successfully processed\n");
 			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
 				 "%s, line %d", pConfFile, iLnNbr);
 			logerrorSz("the last error occured in %s", (char*)szErrLoc);
@@ -4121,7 +4121,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(fCurr != NULL)
 			selectorDestruct(fCurr);
-		dprintf("error %d processing config file '%s'; os error (if any): %s\n",
+		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
 			iRet, pConfFile, strerror(errno));
 	}
 	return iRet;
@@ -4194,17 +4194,17 @@ static void init(void)
 		}
         }
 
-	dprintf("Called init.\n");
+	dbgprintf("Called init.\n");
 
 	/*  Close all open log files and free log descriptor array. */
 	freeSelectors();
 
-	dprintf("Clearing templates.\n");
+	dbgprintf("Clearing templates.\n");
 	tplDeleteNew();
 
 #ifdef	USE_PTHREADS
 	if(pMsgQueue != NULL) {
-		dprintf("deleting message queue\n");
+		dbgprintf("deleting message queue\n");
 		queueDelete(pMsgQueue); /* delete fifo here! */
 		pMsgQueue = NULL;
 	}
@@ -4231,7 +4231,7 @@ static void init(void)
 		 */
 		selector_t *f = NULL;
 		char *pTTY = ttyname(0);
-		dprintf("primary config file could not be opened - using emergency definitions.\n");
+		dbgprintf("primary config file could not be opened - using emergency definitions.\n");
 		cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
 		cfline((uchar*)"*.PANIC\t*", &f);
 		if(pTTY != NULL) {
@@ -4262,7 +4262,7 @@ static void init(void)
 			*/
 			continue;
 		if ((funix[i] = create_unix_socket(funixn[i])) != -1)
-			dprintf("Opened UNIX socket `%s' (fd %d).\n", funixn[i], funix[i]);
+			dbgprintf("Opened UNIX socket `%s' (fd %d).\n", funixn[i], funix[i]);
 	}
 #endif
 
@@ -4276,7 +4276,7 @@ static void init(void)
 	if(Forwarding || AcceptRemote) {
 		if (finet == NULL) {
 			if((finet = create_udp_socket()) != NULL)
-				dprintf("Opened %d syslog UDP port(s).\n", *finet);
+				dbgprintf("Opened %d syslog UDP port(s).\n", *finet);
 		}
 	}
 	else {
@@ -4293,7 +4293,7 @@ static void init(void)
 			 * user-selectable option. rgerhards, 2007-06-21
 			 */
 			if((sockTCPLstn = create_tcp_socket()) != NULL) {
-				dprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
+				dbgprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
 			}
 		}
 	}
@@ -4335,7 +4335,7 @@ static void init(void)
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, ADDDATE);
 
 	(void) signal(SIGHUP, sighup_handler);
-	dprintf(" restarted.\n");
+	dbgprintf(" restarted.\n");
 }
 
 
@@ -4455,7 +4455,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 	assert(*pline != NULL);
 	assert(f != NULL);
 
-	dprintf(" - traditional PRI filter\n");
+	dbgprintf(" - traditional PRI filter\n");
 	errno = 0;	/* keep strerror() stuff out of logerror messages */
 
 	f->f_filter_type = FILTER_PRI;
@@ -4614,7 +4614,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 	assert(*pline != NULL);
 	assert(f != NULL);
 
-	dprintf(" - property-based filter\n");
+	dbgprintf(" - property-based filter\n");
 	errno = 0;	/* keep strerror() stuff out of logerror messages */
 
 	f->f_filter_type = FILTER_PROP;
@@ -4709,7 +4709,7 @@ static rsRetVal cflineProcessHostSelector(uchar **pline)
 	assert(*pline != NULL);
 	assert(**pline == '-' || **pline == '+');
 
-	dprintf(" - host selector line\n");
+	dbgprintf(" - host selector line\n");
 
 	/* check include/exclude setting */
 	if(**pline == '+') {
@@ -4726,7 +4726,7 @@ static rsRetVal cflineProcessHostSelector(uchar **pline)
 	 * Order of conditions in the if-statement is vital! rgerhards 2005-10-18
 	 */
 	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
-		dprintf("resetting BSD-like hostname filter\n");
+		dbgprintf("resetting BSD-like hostname filter\n");
 		eDfltHostnameCmpMode = HN_NO_COMP;
 		if(pDfltHostnameCmp != NULL) {
 			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, NULL)) != RS_RET_OK)
@@ -4734,7 +4734,7 @@ static rsRetVal cflineProcessHostSelector(uchar **pline)
 			pDfltHostnameCmp = NULL;
 		}
 	} else {
-		dprintf("setting BSD-like hostname filter to '%s'\n", *pline);
+		dbgprintf("setting BSD-like hostname filter to '%s'\n", *pline);
 		if(pDfltHostnameCmp == NULL) {
 			/* create string for parser */
 			if((iRet = rsCStrConstructFromszStr(&pDfltHostnameCmp, *pline)) != RS_RET_OK)
@@ -4761,7 +4761,7 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 	assert(*pline != NULL);
 	assert(**pline == '!');
 
-	dprintf(" - programname selector line\n");
+	dbgprintf(" - programname selector line\n");
 
 	(*pline)++;	/* eat '!' */
 
@@ -4772,14 +4772,14 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 	 * Order of conditions in the if-statement is vital! rgerhards 2005-10-18
 	 */
 	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
-		dprintf("resetting programname filter\n");
+		dbgprintf("resetting programname filter\n");
 		if(pDfltProgNameCmp != NULL) {
 			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, NULL)) != RS_RET_OK)
 				return(iRet);
 			pDfltProgNameCmp = NULL;
 		}
 	} else {
-		dprintf("setting programname filter to '%s'\n", *pline);
+		dbgprintf("setting programname filter to '%s'\n", *pline);
 		if(pDfltProgNameCmp == NULL) {
 			/* create string for parser */
 			if((iRet = rsCStrConstructFromszStr(&pDfltProgNameCmp, *pline)) != RS_RET_OK)
@@ -4810,7 +4810,7 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 	assert(ppAction != NULL);
 	assert(pMod != NULL);
 	assert(pOMSR != NULL);
-	dprintf("Module %s processed this config line.\n", modGetName(pMod));
+	dbgprintf("Module %s processed this config line.\n", modGetName(pMod));
 
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
@@ -4864,7 +4864,7 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 			goto finalize_it;
 		}
 
-		dprintf("template: '%s' assgined\n", pTplName);
+		dbgprintf("template: '%s' assgined\n", pTplName);
 	}
 
 	pAction->pMod = pMod;
@@ -4873,7 +4873,7 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
 		pAction->f_ReduceRepeated = bReduceRepeatMsgs;
 	else {
-		dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
+		dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
 		pAction->f_ReduceRepeated = 0;
 	}
 	pAction->bEnabled = 1; /* action is enabled */
@@ -4953,14 +4953,14 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	pMod = omodGetNxt(NULL);
 	while(pMod != NULL) {
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
-		dprintf("tried selector action for %s: %d\n", modGetName(pMod), iRet);
+		dbgprintf("tried selector action for %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* now check if the module is compatible with select features */
 				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
 					pAction->f_ReduceRepeated = bReduceRepeatMsgs;
 				else {
-					dprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
+					dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
 					pAction->f_ReduceRepeated = 0;
 				}
 				pAction->bEnabled = 1; /* action is enabled */
@@ -4974,7 +4974,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 			 * modules on this line, because we found the right one.
 			 * rgerhards, 2007-07-24
 			 */
-			dprintf("error %d parsing config line\n", (int) iRet);
+			dbgprintf("error %d parsing config line\n", (int) iRet);
 			break;
 		}
 		pMod = omodGetNxt(pMod);
@@ -5049,7 +5049,7 @@ static rsRetVal selectorAddList(selector_t *f)
 				goto finalize_it;
 			}
 			/* successfully created an entry */
-			dprintf("selector line successfully processed\n");
+			dbgprintf("selector line successfully processed\n");
 			/* TODO: we should use the linked list class for the selector list, else we need to add globals
 			 * ... well nextp could be added temporarily...
 			 * Thanks to varmojfekoj for having the idea to just use "Files" to make this
@@ -5123,7 +5123,7 @@ static rsRetVal cfline(uchar *line, selector_t **pfCurr)
 
 	assert(line != NULL);
 
-	dprintf("cfline: '%s'\n", line);
+	dbgprintf("cfline: '%s'\n", line);
 
 	/* check type of line and call respective processing */
 	switch(*line) {
@@ -5158,10 +5158,10 @@ int decode(uchar *name, struct code *codetab)
 	assert(name != NULL);
 	assert(codetab != NULL);
 
-	dprintf ("symbolic name: %s", name);
+	dbgprintf("symbolic name: %s", name);
 	if (isdigit((int) *name))
 	{
-		dprintf ("\n");
+		dbgprintf("\n");
 		return (atoi((char*) name));
 	}
 	strncpy((char*) buf, (char*) name, 79);
@@ -5171,14 +5171,14 @@ int decode(uchar *name, struct code *codetab)
 	for (c = codetab; c->c_name; c++)
 		if (!strcmp((char*) buf, (char*) c->c_name))
 		{
-			dprintf (" ==> %d\n", c->c_val);
+			dbgprintf(" ==> %d\n", c->c_val);
 			return (c->c_val);
 		}
 	return (-1);
 }
 
-extern void dprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
-void dprintf(char *fmt, ...)
+extern void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
+void dbgprintf(char *fmt, ...)
 {
 #	ifdef USE_PTHREADS
 	static int bWasNL = FALSE;
@@ -5254,7 +5254,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 	/* check if the Dst buffer was to small */
 	if (*pSrc != cSep && *pSrc != '\n' && *pSrc != '\0')
 	{ 
-		dprintf("in getSubString, error Src buffer > Dst buffer\n");
+		dbgprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
 	}	
 	if (*pSrc == '\0' || *pSrc == '\n')
@@ -5298,7 +5298,7 @@ static void debugListenInfo(int fd, char *type)
 			port = -1;
 			break;
 		}
-		dprintf("Listening on %s syslogd socket %d (%s/port %d).\n",
+		dbgprintf("Listening on %s syslogd socket %d (%s/port %d).\n",
 			type, fd, szFamily, port);
 		return;
 	}
@@ -5307,7 +5307,7 @@ static void debugListenInfo(int fd, char *type)
 	 * debug info, so this is no reason to break the program
 	 * or do any serious error reporting.
 	 */
-	dprintf("Listening on syslogd socket %d - could not obtain peer info.\n", fd);
+	dbgprintf("Listening on syslogd socket %d - could not obtain peer info.\n", fd);
 }
 
 
@@ -5378,7 +5378,7 @@ DEFFUNC_llExecFunc(mainloopCallWithWritableFDsActions)
 		if(FD_ISSET(fdMod, pState->pWritefds)) {
 			if((iRet = pAction->pMod->onSelectReadyWrite(pAction->pModData))
 			   != RS_RET_OK) {
-				dprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
+				dbgprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
 			}
 			if(--(pState->pMaxfds) == 0) {
 				ABORT_FINALIZE(RS_RET_FINISHED); /* all processed, nothing left to do */
@@ -5417,21 +5417,21 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 	/* the following macro is used to decrement the number of to-be-probed
 	 * fds and abort this function when we are done with all.
 	 */
-#	define FDPROCESSED() if(--nfds == 0) { dprintf("nfds == 0, aborting\n");ABORT_FINALIZE(RS_RET_OK); }
+#	define FDPROCESSED() if(--nfds == 0) { dbgprintf("nfds == 0, aborting\n");ABORT_FINALIZE(RS_RET_OK); }
 
 	if (nfds < 0) {
 		if (errno != EINTR)
 			logerror("select");
-		dprintf("Select interrupted.\n");
+		dbgprintf("Select interrupted.\n");
 		ABORT_FINALIZE(RS_RET_OK); /* we are done in any case */
 	}
 
 	if(debugging_on) {
-		dprintf("\nSuccessful select, descriptor count = %d, Activity on: ", nfds);
+		dbgprintf("\nSuccessful select, descriptor count = %d, Activity on: ", nfds);
 		for (i = 0; i <= maxfds; ++i)
 			if ( FD_ISSET(i, pReadfds) )
-				dprintf("%d ", i);
-		dprintf(("\n"));
+				dbgprintf("%d ", i);
+		dbgprintf(("\n"));
 	}
 
 #ifdef SYSLOG_INET
@@ -5463,11 +5463,11 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 		if ((fd = funix[i]) != -1 && FD_ISSET(fd, pReadfds)) {
 			int iRcvd;
 			iRcvd = recv(fd, line, MAXLINE - 1, 0);
-			dprintf("Message from UNIX socket: #%d\n", fd);
+			dbgprintf("Message from UNIX socket: #%d\n", fd);
 			if (iRcvd > 0) {
 				printchopped(LocalHostName, line, iRcvd,  fd, funixParseHost[i]);
 			} else if (iRcvd < 0 && errno != EINTR) {
-				dprintf("UNIX socket error: %d = %s.\n", \
+				dbgprintf("UNIX socket error: %d = %s.\n", \
 					errno, strerror(errno));
 				logerror("recvfrom UNIX");
 			}
@@ -5487,7 +5487,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 			       if (l > 0) {
 				       line[l] = '\0';
 				       if(cvthname(&frominet, fromHost, fromHostFQDN) == 1) {
-					       dprintf("Message from inetd socket: #%d, host: %s\n",
+					       dbgprintf("Message from inetd socket: #%d, host: %s\n",
 						       finet[i+1], fromHost);
 					       /* Here we check if a host is permitted to send us
 						* syslog messages. If it isn't, we do not further
@@ -5507,7 +5507,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 				       }
 			       }
 			       else if (l < 0 && errno != EINTR && errno != EAGAIN) {
-				       dprintf("INET socket error: %d = %s.\n",
+				       dbgprintf("INET socket error: %d = %s.\n",
 							errno, strerror(errno));
 					       logerror("recvfrom inet");
 					       /* should be harmless */
@@ -5521,7 +5521,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 	if(sockTCPLstn != NULL && *sockTCPLstn) {
 		for (i = 0; i < *sockTCPLstn; i++) {
 			if (FD_ISSET(sockTCPLstn[i+1], pReadfds)) {
-				dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
+				dbgprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
 				TCPSessAccept(sockTCPLstn[i+1]);
 				FDPROCESSED();
 			}
@@ -5535,7 +5535,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 			fdSess = pTCPSessions[iTCPSess].sock;
 			if(FD_ISSET(fdSess, pReadfds)) {
 				char buf[MAXLINE];
-				dprintf("tcp session socket with new data: #%d\n", fdSess);
+				dbgprintf("tcp session socket with new data: #%d\n", fdSess);
 
 				/* Receive message */
 				state = recv(fdSess, buf, sizeof(buf), 0);
@@ -5647,7 +5647,7 @@ static void mainloop(void)
 			while(iTCPSess != -1) {
 				int fdSess;
 				fdSess = pTCPSessions[iTCPSess].sock;
-				dprintf("Adding TCP Session %d\n", fdSess);
+				dbgprintf("Adding TCP Session %d\n", fdSess);
 				FD_SET(fdSess, &readfds);
 				if (fdSess>maxfds) maxfds=fdSess;
 				/* now get next... */
@@ -5675,12 +5675,12 @@ static void mainloop(void)
 #endif
 
 		if ( debugging_on ) {
-			dprintf("----------------------------------------\n");
-			dprintf("Calling select, active file descriptors (max %d): ", maxfds);
+			dbgprintf("----------------------------------------\n");
+			dbgprintf("Calling select, active file descriptors (max %d): ", maxfds);
 			for (nfds= 0; nfds <= maxfds; ++nfds)
 				if ( FD_ISSET(nfds, &readfds) )
-					dprintf("%d ", nfds);
-			dprintf("\n");
+					dbgprintf("%d ", nfds);
+			dbgprintf("\n");
 		}
 
 #define  MAIN_SELECT_TIMEVAL NULL
@@ -5723,14 +5723,14 @@ static void mainloop(void)
 			 */
 		}
 		if(restart) {
-			dprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
+			dbgprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
 			/* worker thread is stopped as part of init() */
 			init();
 			restart = 0;
 			continue;
 		}
 		if (nfds == 0) {
-			dprintf("No select activity.\n");
+			dbgprintf("No select activity.\n");
 			continue;
 		}
 
@@ -6033,7 +6033,7 @@ int main(int argc, char **argv)
 
 	if ( !(Debug || NoFork) )
 	{
-		dprintf("Checking pidfile.\n");
+		dbgprintf("Checking pidfile.\n");
 		if (!check_pid(PidFile))
 		{
 			signal (SIGTERM, doexit);
@@ -6069,18 +6069,18 @@ int main(int argc, char **argv)
 	/* tuck my process id away */
 	if ( !Debug )
 	{
-		dprintf("Writing pidfile.\n");
+		dbgprintf("Writing pidfile.\n");
 		if (!check_pid(PidFile))
 		{
 			if (!write_pid(PidFile))
 			{
-				dprintf("Can't write pid.\n");
+				dbgprintf("Can't write pid.\n");
 				exit(1); /* exit during startup - questionable */
 			}
 		}
 		else
 		{
-			dprintf("Pidfile (and pid) already exist.\n");
+			dbgprintf("Pidfile (and pid) already exist.\n");
 			exit(1); /* exit during startup - questionable */
 		}
 	} /* if ( !Debug ) */
@@ -6148,10 +6148,10 @@ int main(int argc, char **argv)
 	(void) signal(SIGXFSZ, SIG_IGN); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
 
-	dprintf("Starting.\n");
+	dbgprintf("Starting.\n");
 	init();
 	if(Debug) {
-		dprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
+		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 		debugging_on = 1;
 	}
 	/*

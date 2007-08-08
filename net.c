@@ -65,14 +65,14 @@ int should_use_so_bsdcompat(void)
 
 	init_done = 1;
 	if (uname(&utsname) < 0) {
-	    dprintf("uname: %s\r\n", strerror(errno));
+	    dbgprintf("uname: %s\r\n", strerror(errno));
 	    return 1;
 	}
 	/* Format is <version>.<patchlevel>.<sublevel><extraversion>
 	   where the first three are unsigned integers and the last
 	   is an arbitrary string. We only care about the first two. */
 	if (sscanf(utsname.release, "%u.%u", &version, &patchlevel) != 2) {
-	    dprintf("uname: unexpected release '%s'\r\n",
+	    dbgprintf("uname: unexpected release '%s'\r\n",
 		    utsname.release);
 	    return 1;
 	}
@@ -123,7 +123,7 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 			    ip, sizeof ip, NULL, 0, NI_NUMERICHOST);
 
         if (error) {
-                dprintf("Malformed from address %s\n", gai_strerror(error));
+                dbgprintf("Malformed from address %s\n", gai_strerror(error));
 		strcpy((char*) pszHost, "???");
 		strcpy((char*) pszHostFQDN, "???");
 		return 1;
@@ -186,7 +186,7 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 	}
 
         if (error || DisableDNS) {
-                dprintf("Host name for your address (%s) unknown\n", ip);
+                dbgprintf("Host name for your address (%s) unknown\n", ip);
 		strcpy((char*) pszHostFQDN, ip);
 		strcpy((char*) pszHost, ip);
 		return 1;

@@ -30,7 +30,6 @@
 #include <time.h>
 
 #include "rsyslog.h"
-#include "syslogd.h" /* to get the own definition of dprintf() - not a smart thing... */
 #include "template.h"
 #include "action.h"
 #include "modules.h"
@@ -142,7 +141,7 @@ rsRetVal actionTryResume(action_t *pThis)
 	if(iRet == RS_RET_OK)
 		actionResume(pThis);
 
-	dprintf("actionTryResume: iRet: %d, next retry (if applicable): %u [now %u]\n",
+	dbgprintf("actionTryResume: iRet: %d, next retry (if applicable): %u [now %u]\n",
 		iRet, (unsigned) pThis->ttResumeRtry, (unsigned) ttNow);
 
 	return iRet;

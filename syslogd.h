@@ -48,11 +48,7 @@
 #define ADDDATE		0x004	/* add a date to the message */
 #define MARK		0x008	/* this message is a mark */
 
-#if defined(__GLIBC__)
-#define dprintf mydprintf
-#endif /* __GLIBC__ */
-
-void dprintf(char *, ...);
+void dbgprintf(char *, ...);
 void logerror(char *type);
 void logerrorSz(char *type, char *errMsg);
 void logerrorInt(char *type, int iErr);

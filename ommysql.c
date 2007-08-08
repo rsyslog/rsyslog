@@ -131,7 +131,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", uMySQLErrno,
 			mysql_error(pData->f_hmysql));
 		if(bSilent || uMySQLErrno == pData->uLastMySQLErrno)
-			dprintf("mysql, DBError(silent): %s\n", errMsg);
+			dbgprintf("mysql, DBError(silent): %s\n", errMsg);
 		else {
 			pData->uLastMySQLErrno = uMySQLErrno;
 			logerror(errMsg);
@@ -213,7 +213,7 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	dprintf("\n");
+	dbgprintf("\n");
 	iRet = writeMySQL(ppString[0], pData);
 ENDdoAction
 
