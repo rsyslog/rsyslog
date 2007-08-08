@@ -641,6 +641,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
+	bDropMalPTRMsgs = 0;
 #ifdef USE_PTHREADS
 	iMainMsgQueueSize = 10000;
 #endif
