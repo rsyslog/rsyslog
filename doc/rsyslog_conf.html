@@ -19,7 +19,30 @@ to rsyslogd.</p>
 start with a dollar-sign. Here is a list in alphabetical order. Follow links for 
 a description.</p>
 <ul>
+	<li><a href="rsconf1_actionexeconlyifpreviousissuspended.html">$ActionExecOnlyIfPreviousIsSuspended</a></li>
 	<li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
+	<li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
+	<li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
+	<li><a href="rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
+	<li><a href="rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
+	<li><a href="rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
+	<li><a href="rsconf1_dircreatemode.html">$DirCreateMode</a></li>
+	<li><a href="rsconf1_dirgroup.html">$DirGroup</a></li>
+	<li><a href="rsconf1_dirowner.html">$DirOwner</a></li>
+	<li><a href="rsconf1_dropmsgswithmaliciousdnsptrrecords.html">$DropMsgsWithMaliciousDnsPTRRecords</a></li>
+	<li><a href="rsconf1_droptrailinglfonreception.html">$DropTrailingLFOnReception</a></li>
+	<li><a href="rsconf1_dynafilecachesize.html">$DynaFileCacheSize</a></li>
+	<li><a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
+	<li><a href="rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
+	<li><a href="rsconf1_filecreatemode.html">$FileCreateMode</a></li>
+	<li><a href="rsconf1_filegroup.html">$FileGroup</a></li>
+	<li><a href="rsconf1_fileowner.html">$FileOwner</a></li>
+	<li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li>
+	<li><a href="rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
+	<li><a href="rsconf1_modload.html">$ModLoad</a></li>
+	<li><a href="rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
+	<li><a href="rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
+	<li><a href="rsconf1_umask.html">$UMASK</a></li>
 </ul>
 <h2>Basic Structure</h2>
 <p>Rsyslog supports standard sysklogd's configuration file format and extends 
@@ -35,307 +58,7 @@ specifies a pattern of facilities and priorities belonging to the specified
 action.<br>
 <br>
 Lines starting with a hash mark (&quot;#'') and empty lines are ignored.
-<h2>ActionExecOnlyIfPreviousIsSuspended</h2>
-<p>This directive allows to specify if actions should always be executed (&quot;off,&quot; 
-the default) or only if the previous action is suspended (&quot;on&quot;). This directive 
-works hand-in-hand with the multiple actions per selector feature. It can be 
-used, for example, to create rules that automatically switch destination servers 
-or databases to a (set of) backup(s), if the primary server fails. Note that 
-this feature depends on proper implementation of the suspend feature in the 
-output module. All built-in output modules properly support it (most importantly 
-the database write and the syslog message forwarder).</p>
-<p>The following is an example of what can be done with it (a config file 
-excerpt):</p>
-<p><code><b>*.* @@primary-syslog.example.com<br>
-$ActionExecOnlyIfPreviousIsSuspended on<br>
-&amp;&nbsp;&nbsp; @@secondary-1-syslog.example.com&nbsp;&nbsp;&nbsp; # &amp; is used to 
-have more than one action for<br>
-&amp;&nbsp;&nbsp; @@secondary-2-syslog.example.com&nbsp;&nbsp;&nbsp; # the same 
-selector - the mult-action feature<br>
-&amp;&nbsp;&nbsp; /var/log/localbuffer<br>
-$ActionExecOnlyIfPreviousIsSuspended off # to re-set it for the next selector</b></code></p>
-<p>This selector processes all messages it receives (*.*).&nbsp; It tries to 
-forward every message to primary-syslog.example.com (via tcp). If it can not 
-reach that server, it tries secondary-1-syslog.example.com, if that fails too, 
-it tries secondary-2-syslog.example.com. If neither of these servers can be 
-connected, the data is stored in /var/log/localbuffer. Please note that the 
-secondaries and the local log buffer are only used if the one before them does 
-not work. So ideally, /var/log/localbuffer will never receive a message. If one 
-of the servers resumes operation, it automatically takes over processing again.</p>
-<p>We strongly advise not to use repeated line reduction together with 
-ActionExecOnlyIfPreviousIsSuspended. It may lead to &quot;interesting&quot; and undesired 
-results (but you can try it if you like). </p>
-<h2>Allowed Sender Lists</h2>
-<p>Allowed sender lists can be used to specify which remote systems are allowed 
-to send syslog messages to rsyslogd. With them, further hurdles can be placed 
-between an attacker and rsyslogd. If a message from a system not in the allowed 
-sender list is received, that message is discarded. A diagnostic message is 
-logged, so that the fact is recorded (this message can be turned off with the 
-&quot;-w&quot; rsyslogd command line option).</p>
-<p>Allowed sender lists can be defined for UDP and TCP senders separately. There 
-can be as many allowed senders as needed. The syntax to specify them is:</p>
-<p><code><b>$AllowedSender &lt;protocol&gt;, ip[/bits], ip[/bits]</b></code></p>
-<p>&quot;$AllowedSender&quot; is the directive - it must be written exactly as shown and 
-the $ must start at the first column of the line. &quot;&lt;protocol&gt;&quot; is either &quot;UDP&quot; 
-or &quot;TCP&quot;. It must immediately be followed by the comma, else you will receive an 
-error message. &quot;ip[/bits]&quot; is a machine or network ip address as in 
-&quot;192.0.2.0/24&quot; or &quot;127.0.0.1&quot;. If the &quot;/bits&quot; part is omitted, a single host is 
-assumed (32 bits or mask 255.255.255.255). &quot;/0&quot; is not allowed, because that 
-would match any sending system. If you intend to do that, just remove all $AllowedSender 
-directives. If more than 32 bits are requested with IPv4, they are adjusted to 32. 
-For IPv6, the limit is 128 for obvious reasons. Hostnames, with and without 
-wildcards, may also be provided. If so, the result of revers DNS resolution is 
-used for filtering. 
-Multiple allowed senders can be specified in a comma-delimited list. Also, 
-multiple $AllowedSender lines can be given. They are all combined into one UDP 
-and one TCP list. Performance-wise, it is good to specify those allowed senders 
-with high traffic volume before those with lower volume. As soon as a match is 
-found, no further evaluation is necessary and so you can save CPU cycles.</p>
-<p>Rsyslogd handles allowed sender detection very early in the code, nearly as 
-the first action after receiving a message. This keeps the access to potential 
-vulnerable code in rsyslog at a minimum. However, it is still a good idea to 
-impose allowed sender limitations via firewalling.</p>
-<p><b>WARNING:</b> by UDP design, rsyslogd can not identify a spoofed sender 
-address in UDP syslog packets. As such, a malicious person could spoof the 
-address 
-of an allowed sender, send such packets to rsyslogd and rsyslogd would accept 
-them as being from the faked sender. To prevent this, use syslog via TCP 
-exclusively. If you need to use UDP-based syslog, make sure that you do proper 
-egress and ingress filtering at the firewall and router level.</p>
-<p>Rsyslog also detects some kind of malicious reverse DNS entries. In any case, 
-using DNS names adds an extra layer of vulnerability. We recommend to stick with 
-hard-coded IP addresses whereever possible.</p>
-<p>An example for an allowed sender list is as follows:</p>
-<p><code><b>$AllowedSender UDP, 127.0.0.1, 192.0.2.0/24, [::1]/128, 
-*.example.net, somehost.example.com</b></code></p>
-<h2>UMASK</h2>
-<p>The $umask directive allows to specify the rsyslogd processes' umask. If not 
-specified, the system-provided default is used. The value given must always be a 
-4-digit octal number, with the initial digit being zero. This sample removes all 
-umask-restriction:</p>
-<p><code><b>$umask 0000</b></code></p>
-<p>If $umask is specified multiple times in the configuration file, results may 
-be somewhat unpredictable. It is recommended to specify it only once.</p>
-<h2>FileCreateMode</h2>
-<p>The $FileCreateMode directive allows to specify the creation mode with which 
-rsyslogd creates new files. If not specified, the value 0644 is used (which 
-retains backward-compatibility with earlier releases). The value given must 
-always be a 4-digit octal number, with the initial digit being zero. This sample 
-lets rsyslog create files with read and write access only for the users it runs 
-under:</p>
-<p><code><b>$FileCreateMode 0600</b></code></p>
-<p>Please note that the actual permission depend on rsyslogd's process umask. If 
-in doubt, use &quot;$umask 0000&quot; right at the beginning of the configuration file to 
-remove any restrictions.</p>
-<p>$FileCreateMode may be specified multiple times. If so, it specifies the 
-creation mode for all selector lines that follow until the next $FileCreateMode 
-directive. Order of lines is vitally important. Here is a sample (this is deemed 
-to be a complete rsyslog.conf):</p>
-<p><code><b>$umask 0000 # make sure nothing interfers with the following 
-definitions<br>
-*.* /var/log/file-with-0644-default<br>
-$FileCreateMode 0600<br>
-*.* /var/log/file-with-0600<br>
-$FileCreateMode 0644<br>
-*.* /var/log/file-with-0644</b></code></p>
-<p>As you can see, open modes depend on position in the config file. Note the 
-first line, which is created with the hardcoded default creation mode.</p>
-<h2>DebugPrintCFSyslineHandlerList</h2>
-<p>Specifies whether or not the configuration file sysline handler list should be written to the debug 
-log. Possible values: on/off. Default is on. Does not affect operation if debugging is 
-disabled.</p>
-<h2>DebugPrintModuleList</h2>
-<p>Specifies whether or not the module list should be written to the debug 
-log. Possible values: on/off. Default is on. Does not affect operation if debugging is 
-disabled.</p>
-<h2>DebugPrintTemplateList</h2>
-<p>Specifies whether or not the template list should be written to the debug 
-log. Possible values: on/off. Default is on. Does not affect operation if debugging is 
-disabled.</p>
-<h2>DirCreateMode</h2>
-<p>This is the same as $FileCreateMode, but for directories automatically 
-generated.</p>
-<h2>DirGroup</h2>
-<p>Set the group for directories newly created. Please note that this setting 
-does not affect the group of directories already existing. The parameter is a 
-group name, for which the groupid is obtained by rsyslogd on startup and on 
-HUPing. Interim changes to the user mapping are not detected.</p>
-<p><code><b>$DirGroup loggroup</b></code></p>
-<h2>DirOwner</h2>
-<p>Set the file owner for directories newly created. Please note that this 
-setting does not affect the owner of directories already existing. The parameter 
-is a user name, for which the userid is obtained by rsyslogd on startup and on 
-HUPing. Interim changes to the user mapping are not detected.</p>
-<p><code><b>$DirOwner loguser</b></code></p>
-<h2>IncludeConfig</h2>
-<p>This directive allows to include other files into the main configuration 
-file. As soon as an IncludeConfig directive is found, the contents of the new 
-file is processed. IncludeConfigs can be nested. Please note that from a logical 
-point of view the files are merged. Thus, if the include modifies some 
-parameters (e.g. $DynaFileChacheSize), these new parameters are in place for the 
-&quot;calling&quot; configuration file when the include is completed. To avoid any side 
-effects, do a $ResetConfigVariables after the $IncludeConfig. It may also be a 
-good idea to do a $ResetConfigVariables right at the start of the include, so 
-that the module knows exactly what it does. Of course, one might specifically 
-NOT do this to inherit parameters from the main file. As always, use it as it 
-best fits...</p>
-<p><code><b>$IncludeConfig /etc/some-included-file.conf</b></code></p>
-<p>Directories can also be included. To do so, the name must end on a slash:</p>
-<p><code><b>$IncludeConfig /etc/rsyslog.d/</b></code></p>
-<p>In this case, all regular files in the /etc/rsyslog.d directory are included. 
-Files starting with &quot;.&quot; are ignored - so you can use them to place comments into 
-the dir (e.g. &quot;/etc/rsyslog.d/.mycomment&quot; will be ignored).
-<a href="http://sourceforge.net/tracker/index.php?func=detail&aid=1764088&group_id=123448&atid=696555">
-Michael Biebl had the idea to this functionality</a>. Let me quote hím: </p>
-<blockquote>
-<p><i>Say you can add an option<br>
-$IncludeConfig /etc/rsyslog.d/<br>
-(which probably would make a good default)<br>
-to /etc/rsyslog.conf, which would then merge and include all *.conf files<br>
-in /etc/rsyslog.d/.<br>
-<br>
-This way, a distribution can modify its packages easily to drop a simple<br>
-config file into this directory upon installation.<br>
-<br>
-As an example, the network-manager package could install a simple config<br>
-file /etc/rsyslog.d/network-manager.conf which would contain.<br>
-:programname, contains, &quot;NetworkManager&quot; -/var/log/NetworkManager.log<br>
-<br>
-Upon uninstallation, the file could be easily removed again. This approach<br>
-would be much cleaner and less error prone, than having to munge around<br>
-with the /etc/rsyslog.conf file directly.</i></p>
-</blockquote>
-<p>Please note that in this description, only &quot;*.conf&quot; files would be read. The 
-actual implementation, however, reads all files except for those starting with a 
-dot. If you find this is a real big problem, please complain.</p>
-<h2>RepeatedMsgReduction</h2>
-<p>This directive specifies whether or not repeated messages should be reduced 
-(this is the &quot;Last line repeated n times&quot; feature). If set to on, repeated messages are reduced. If set to off, every 
-message is logged. Please note that 
-this directive overrides the -e command line option. In case -e is given, it is 
-just the default value until the first RepeatedMsgReduction directive is 
-encountered. Sample:</p>
-<p><code><b>$RepeatedMsgReduction off&nbsp;&nbsp;&nbsp; # log every message</b></code></p>
-<p>Directives affects selector lines until a new directive is specified.</p>
-<h2>DynaFileCacheSize</h2>
-<p>This directive specifies the maximum size of the cache for 
-dynamically-generated file names. Selector lines with dynamic files names ('?' 
-indicator) support writing to multiple files with a single selector line. This 
-setting specifies how many open file handles should be cached. If, for example, 
-the file name is generated with the hostname in it and you have 100 different 
-hosts, a cache size of 100 would ensure that files are opened once and then stay 
-open. This can be a great way to increase performance. If the cache size is 
-lower than the number of different files, the least recently used one is 
-discarded (and the file closed). The hardcoded maximum is 10,000 - a value that 
-we assume should already be very extreme. Please note that if you expect to run 
-with a very large number of files, you probably need to reconfigure the kernel 
-to support such a large number. In practice, we do NOT recommend to use a cache 
-of more than 1,000 entries. The cache lookup would probably require more time 
-than the open and close operations. The minimum value is 1. Here is a sample:</p>
-<p><code><b>$DynaFileCacheSize 100&nbsp;&nbsp;&nbsp; # a cache of 100 files at 
-most</b></code></p>
-<p>Numbers are always in decimal. Leading zeros should be avoided (in some later 
-version, they may be mis-interpreted as being octal). Multiple directives may be 
-given. They are applied to selector lines based on order of appearance.</p>
-<h2>DropMsgsWithMaliciousDnsPTRRecords</h2>
-<p>Rsyslog contains code to detect malicious DNS PTR records (reverse name 
-resolution). An attacker might use specially-crafted DNS entries to make you 
-think that a message might have originated on another IP address. Rsyslog can 
-detect those cases. It will log an error message in any case. It this option 
-here is set to &quot;on&quot;, the malicious message will be completely dropped from your 
-logs. If the option is set to &quot;off&quot;, the message will be logged, but the 
-original IP will be used instead of the DNS name.</p>
-<p><code><b>$DropMsgsWithMaliciousDnsPTRRecords on</b></code></p>
-<h2>DropTrailingLFOnReception</h2>
-<p>Syslog messages frequently have the line feed character (LF) as the last 
-character of the message. In allmost all cases, this LF should not really become 
-part of the message. However, recent IETF syslog standardization recommends 
-against modifying syslog messages (e.g. to keep digital signatures valid). This 
-option allows to specify if trailing LFs should be dropped or not. The default 
-is to drop them, which is consistent with what sysklogd does. To not drop them, 
-use</p>
-<p><code><b>$DropTrailingLFOnRecption off</b></code></p>
-<h2>ControlCharacterEscapePrefix</h2>
-<p>This option specifies the prefix character to be used for control character 
-escaping (see option $EscapeControlCharactersOnReceive). By default, it is '\', 
-which is backwards-compatible with sysklogd. Change it to '#' in order to be 
-compliant to the value that is somewhat suggested by Internet-Draft 
-syslog-protocol. The first non-whitespace character after the command is treated 
-as prefix:</p>
-<p><code><b>$EscapeControlCharactersOnReceive #&nbsp; # as of syslog-protocol</b></code></p>
-<p><b>IMPORTANT</b>: do not use the ' character. This is reserved and will most 
-probably be used in the future as a character delimiter. For the same reason, 
-the syntax of this directive will probably change in furture releases.</p>
-<h2>EscapeControlCharactersOnReceive</h2>
-<p>This directive instructs rsyslogd to replace control characters during 
-reception of the message. The intent is to provide a way to stop non-printable 
-messages from entering the syslog system as whole. If this option is truned on, 
-all control-characters are converted to a 3-digit octal number and be prefixed 
-with the $ControlCharacterEscapePrefix character (being '\' by default). For 
-example, if the BEL character (ctrl-g) is included in the message, it would be 
-converted to &quot;\007&quot;. To be compatible to sysklogd, this option must be turned 
-on.</p>
-<p><code><b>$EscapeControlCharactersOnReceive on</b></code></p>
-<p><b>Warning:</b></p>
-<ul>
-	<li>turning on this option most probably destroys non-western character sets 
-	(like Japanese, Chinese and Korean)</li>
-	<li>turning on this option destroys digital signatures if such exists inside 
-	the message</li>
-</ul>
-<h2>FailOnChownFailure</h2>
-<p>This option modifies behaviour of dynaFile creation. If different owners or 
-groups are specified for new files or directories and rsyslogd fails to set 
-these new owners or groups, it will log an error and NOT write to the file in 
-question if that option is set to &quot;on&quot;. If it is set to &quot;off&quot;, the error will be 
-ignored and processing continues. Keep in mind, that the files in this case may 
-be (in)accessible by people who should not have permission. The default is &quot;on&quot;.</p>
-<p><code><b>$FailOnChownFailure off</b></code></p>
-<h2>FileGroup</h2>
-<p>Set the group for dynaFiles newly created. Please note that this setting does 
-not affect the group of files already existing. The parameter is a group name, 
-for which the groupid is obtained by rsyslogd on startup and on HUPing. Interim 
-changes to the user mapping are not detected.</p>
-<p><code><b>$FileGroup loggroup</b></code></p>
-<h2>FileOwner</h2>
-<p>Set the file owner for dynaFiles newly created. Please note that this setting 
-does not affect the owner of files already existing. The parameter is a user 
-name, for which the userid is obtained by rsyslogd on startup and on HUPing. 
-Interim changes to the user mapping are not detected.</p>
-<p><code><b>$FileOwner loguser</b></code></p>
-<h2>ResetConfigVariables</h2>
-<p>Resets all configuration variables to their default value. Any settings made 
-will not be applied to configuration lines following the $ResetConfigVariables. 
-This is a good method to make sure no side-effects exists from previous 
-directives. This directive has no parameters.</p>
-<p><code><b>$ResetConfigVariables</b></code></p>
-<h2>MainMsgQueueSize</h2>
-<p>This allows to specify the maximum size of the message queue. This directive 
-is only available when rsyslogd has been compiled with multithreading support. 
-In this mode, receiver and output modules are de-coupled via an in-memory queue. 
-This queue buffers messages when the output modules are not capable to process 
-them as fast as they are received. Once the queue size is exhausted, messages 
-will be dropped. The slower the output (e.g. MySQL), the larger the queue should 
-be. Buffer space for the actual queue entries is allocated on an as-needed 
-basis. Please keep in mind that a very large queue may exhaust available system 
-memory and swap space. Keep this in mind when configuring the max size. The 
-actual size of a message depends largely on its content and the orginator. As a 
-rule of thumb, typically messages should not take up more then roughtly 1k (this 
-is the memory structure, not what you see in a network dump!). For typical linux 
-messages, 512 bytes should be a good bet. Please also note that there is a 
-minimal amout of memory taken for each queue entry, no matter if it is used or 
-not. This is one pointer value, so on 32bit systems, it should typically be 4 
-bytes and on 64bit systems it should typically be 8 bytes. For example, the 
-default queue size of 10,000 entries needs roughly 40k fixed overhead on a 32 
-bit system. </p>
-<p><code><b>$MainMsgQueueSize 100000 # 100,000 may be a value to handle bursty 
-traffic</b></code></p>
-<h2>ModLoad</h2>
-<p>This currently is a dummy directive. It will support the loading of plug-ins 
-in future releases of rsyslog supporting plug-ins. Currently, only</p>
-<p><code><b>$ModLoad MySQL</b></code></p>
-<p>is supported, which activates MySQL support (if rsyslog is compiled with 
-MySQL functionality).</p>
+
 <h2>Templates</h2>
 <p>Templates are a key feature of rsyslog. They allow to specify any format a user 
 might want. They are also used for dynamic file name generation. Every output in rsyslog uses templates - this holds true for files, 
