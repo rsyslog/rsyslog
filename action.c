@@ -30,10 +30,14 @@
 #include <time.h>
 
 #include "rsyslog.h"
+#include "syslogd.h"
 #include "template.h"
 #include "action.h"
 #include "modules.h"
 
+
+/* object static data (once for all instances) */
+static int glbliActionResumeInterval = 30;
 
 /* destructs an action descriptor object
  * rgerhards, 2007-08-01
@@ -72,6 +76,8 @@ rsRetVal actionConstruct(action_t **ppThis)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
+	pThis->iResumeInterval = glbliActionResumeInterval;
+
 finalize_it:
 	*ppThis = pThis;
 	return iRet;
@@ -91,7 +97,15 @@ static rsRetVal actionResume(action_t *pThis)
 }
 
 
-#define ACTION_RESUME_INTERVAL 30 /* TODO: make this dynamic from conf file */
+/* set the global resume interval
+ */
+rsRetVal actionSetGlobalResumeInterval(int iNewVal)
+{
+	glbliActionResumeInterval = iNewVal;
+	return RS_RET_OK;
+}
+
+
 /* suspend an action -- rgerhards, 2007-08-02
  */
 rsRetVal actionSuspend(action_t *pThis)
@@ -100,7 +114,7 @@ rsRetVal actionSuspend(action_t *pThis)
 
 	assert(pThis != NULL);
 	pThis->bSuspended = 1;
-	pThis->ttResumeRtry = time(NULL) + ACTION_RESUME_INTERVAL;
+	pThis->ttResumeRtry = time(NULL) + pThis->iResumeInterval;
 	pThis->iNbrResRtry = 0; /* tell that we did not yet retry to resume */
 
 	return iRet;
@@ -131,7 +145,7 @@ rsRetVal actionTryResume(action_t *pThis)
 			 * CPU time. TODO: maybe a config option for that?
 			 * rgerhards, 2007-08-02
 			 */
-			pThis->ttResumeRtry = ttNow + ACTION_RESUME_INTERVAL * (pThis->iNbrResRtry / 10 + 1);
+			pThis->ttResumeRtry = ttNow + pThis->iResumeInterval * (pThis->iNbrResRtry / 10 + 1);
 		}
 	} else {
 		/* it's too early, we are still suspended --> indicate this */
@@ -159,6 +173,7 @@ rsRetVal actionDbgPrint(action_t *pThis)
 	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
 	printf("\n\tInstance data: 0x%x\n", (unsigned) pThis->pModData);
 	printf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
+	printf("\tResume Interval: %d\n", pThis->iResumeInterval);
 	printf("\tSuspended: %d", pThis->bSuspended);
 	if(pThis->bSuspended) {
 		printf(" next retry: %u, number retries: %d", (unsigned) pThis->ttResumeRtry, pThis->iNbrResRtry);

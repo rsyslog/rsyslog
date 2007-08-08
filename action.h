@@ -34,6 +34,7 @@ struct action_s {
 	short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
 	short	bSuspended;	/* is the related action temporarily suspended? */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
+	int	iResumeInterval;/* resume interval for this action */
 	int	iNbrResRtry;	/* number of retries since last suspend */
 	struct moduleInfo *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - contents is module-specific */
@@ -60,6 +61,7 @@ rsRetVal actionDestruct(action_t *pThis);
 rsRetVal actionTryResume(action_t *pThis);
 rsRetVal actionSuspend(action_t *pThis);
 rsRetVal actionDbgPrint(action_t *pThis);
+rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 
 #if 1
 #define actionIsSuspended(pThis) ((pThis)->bSuspended == 1)

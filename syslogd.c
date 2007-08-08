@@ -3826,6 +3826,14 @@ finalize_it:
 }
 
 
+/* set the action resume interval
+ */
+static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int iNewVal)
+{
+	return actionSetGlobalResumeInterval(iNewVal);
+}
+
+
 /* set the processes umask (upon configuration request)
  */
 static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
@@ -5819,6 +5827,7 @@ static rsRetVal loadBuildInModules(void)
 #endif
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs));
