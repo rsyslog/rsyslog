@@ -26,6 +26,7 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
+#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -45,7 +46,6 @@
 #include <pthread.h>
 #endif
 
-#include "rsyslog.h"
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "net.h"

@@ -13,13 +13,13 @@
 #define	BSD
 #endif
 
+#include "rsyslog.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include "rsyslog.h"
 #include "stringbuf.h"
 #include "outchannel.h"
 #include "syslogd.h"

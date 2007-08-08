@@ -27,6 +27,7 @@
  */
 #include "config.h"
 
+#include "rsyslog.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -37,7 +38,6 @@
 #include <assert.h>
 #include <wait.h>
 #include <ctype.h>
-#include "rsyslog.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #include "liblogging-stub.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #define TRUE 1
 #define FALSE 0

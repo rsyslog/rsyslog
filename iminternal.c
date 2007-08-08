@@ -25,13 +25,13 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
+#include "rsyslog.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
-#include "rsyslog.h"
 #include "syslogd.h"
 #include "linkedlist.h"
 #include "iminternal.h"

@@ -30,6 +30,7 @@
  */
 #include "config.h"
 #ifdef SYSLOG_INET
+#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -47,7 +48,6 @@
 #else
 #include <fcntl.h>
 #endif
-#include "rsyslog.h"
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

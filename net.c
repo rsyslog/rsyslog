@@ -29,6 +29,7 @@
 
 #ifdef SYSLOG_INET
 
+#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -39,7 +40,6 @@
 #include <ctype.h>
 #include <netdb.h>
 
-#include "rsyslog.h"
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "net.h"

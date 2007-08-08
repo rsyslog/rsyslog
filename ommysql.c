@@ -26,6 +26,7 @@
  */
 #include "config.h"
 #ifdef	WITH_DB
+#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -34,7 +35,6 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
-#include "rsyslog.h"
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

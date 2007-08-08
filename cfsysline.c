@@ -23,6 +23,7 @@
  */
 #include "config.h"
 
+#include "rsyslog.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -32,7 +33,6 @@
 #include <pwd.h>
 #include <grp.h>
 
-#include "rsyslog.h"
 #include "syslogd.h" /* TODO: when the module interface & library design is done, this should be able to go away */
 #include "cfsysline.h"
 #include "srUtils.h"
