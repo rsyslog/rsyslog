@@ -5383,20 +5383,18 @@ DEFFUNC_llExecFunc(mainloopCallWithWritableFDsActions)
 }
 
 
-static void mainloop(void)
+/* process the select() selector array after the successful select.
+ * processing is completed as soon as all selectors needing attention
+ * are processed.
+ * rgerhards, 2007-08-08
+ */
+static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_set *pWritefds)
 {
-	fd_set readfds;
+	DEFiRet;
 	int i;
-	int	fd;
+	int fd;
 	char line[MAXLINE +1];
-	int maxfds;
-	int nfds;
-	errno = 0;
-	FD_ZERO(&readfds);
-	maxfds = 0;
 #ifdef  SYSLOG_INET
-	mainloopWriteFDSInfo_t writeFDSInfo;
-	fd_set writefds;
 	selector_t *f;
 	struct sockaddr_storage frominet;
 	socklen_t socklen;
@@ -5405,11 +5403,175 @@ static void mainloop(void)
 	int iTCPSess;
 	ssize_t l;
 #endif	/* #ifdef SYSLOG_INET */
+
+	if ( debugging_on )
+	{
+		dprintf("\nSuccessful select, descriptor count = %d, " \
+			"Activity on: ", nfds);
+		for (nfds= 0; nfds <= maxfds; ++nfds)
+			if ( FD_ISSET(nfds, pReadfds) )
+				dprintf("%d ", nfds);
+		dprintf(("\n"));
+	}
+
+#ifdef SYSLOG_INET
+	/* TODO: activate the code below only if we actually need to check
+	 * for outstanding writefds.
+	 */
+	if(1) {
+		/* Now check the TCP send sockets. So far, we only see if they become
+		 * writable and then change their internal status. No real async
+		 * writing is currently done. This code will be replaced once liblogging
+		 * is used, thus we try not to focus too much on it.
+		 *
+		 * IMPORTANT: With the current code, the writefds must be checked first,
+		 * because the readfds might have messages to be forwarded, which
+		 * rely on the status setting that is done here!
+		 * rgerhards 2005-07-20
+		 *
+		 * liblogging implementation will not happen as anticipated above. So
+		 * this code here will stay for quite a while.
+		 * rgerhards, 2006-12-07
+		 */
+		for(f = Files; f != NULL ; f = f->f_next) {
+			llExecFunc(&f->llActList, mainloopCallWithWritableFDsActions, pWritefds);
+		}
+	}
+#endif /* #ifdef SYSLOG_INET */
+#ifdef SYSLOG_UNIXAF
+	for (i = 0; i < nfunix; i++) {
+		if ((fd = funix[i]) != -1 && FD_ISSET(fd, pReadfds)) {
+			int iRcvd;
+			iRcvd = recv(fd, line, MAXLINE - 1, 0);
+			dprintf("Message from UNIX socket: #%d\n", fd);
+			if (iRcvd > 0) {
+				printchopped(LocalHostName, line, iRcvd,  fd, funixParseHost[i]);
+			} else if (iRcvd < 0 && errno != EINTR) {
+				dprintf("UNIX socket error: %d = %s.\n", \
+					errno, strerror(errno));
+				logerror("recvfrom UNIX");
+			}
+		}
+	}
+#endif
+
+#ifdef SYSLOG_INET
+       if (finet != NULL && AcceptRemote) {
+	       for (i = 0; i < *finet; i++) {
+		       if (FD_ISSET(finet[i+1], pReadfds)) {
+			       socklen = sizeof(frominet);
+			       memset(line, '\0', sizeof(line));
+			       l = recvfrom(finet[i+1], line, MAXLINE - 1,
+					    0, (struct sockaddr *)&frominet,
+					    &socklen);
+			       if (l > 0) {
+				       line[l] = '\0';
+				       if(cvthname(&frominet, fromHost, fromHostFQDN) == 1) {
+					       dprintf("Message from inetd socket: #%d, host: %s\n",
+						       finet[i+1], fromHost);
+					       /* Here we check if a host is permitted to send us
+						* syslog messages. If it isn't, we do not further
+						* process the message but log a warning (if we are
+						* configured to do this).
+						* rgerhards, 2005-09-26
+						*/
+					       if(isAllowedSender(pAllowedSenders_UDP,
+						  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
+						       printchopped((char*)fromHost, line, l,  finet[i+1], 1);
+					       } else {
+						       if(option_DisallowWarning) {
+							       logerrorSz("UDP message from disallowed sender %s discarded",
+									  (char*)fromHost);
+						       }	
+					       }
+				       }
+			       }
+			       else if (l < 0 && errno != EINTR && errno != EAGAIN) {
+				       dprintf("INET socket error: %d = %s.\n",
+							errno, strerror(errno));
+					       logerror("recvfrom inet");
+					       /* should be harmless */
+					       sleep(1);
+				       }
+			}
+	       }
+	}
+
+	if(sockTCPLstn != NULL && *sockTCPLstn) {
+		for (i = 0; i < *sockTCPLstn; i++) {
+			if (FD_ISSET(sockTCPLstn[i+1], pReadfds)) {
+				dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
+				TCPSessAccept(sockTCPLstn[i+1]);
+			}
+		}
+
+		/* now check the sessions */
+		/* TODO: optimize the whole thing. We could stop enumerating as
+		 * soon as we have found all sockets flagged as active. */
+		iTCPSess = TCPSessGetNxtSess(-1);
+		while(iTCPSess != -1) {
+			int fdSess;
+			int state;
+			fdSess = pTCPSessions[iTCPSess].sock;
+			if(FD_ISSET(fdSess, pReadfds)) {
+				char buf[MAXLINE];
+				dprintf("tcp session socket with new data: #%d\n", fdSess);
+
+				/* Receive message */
+				state = recv(fdSess, buf, sizeof(buf), 0);
+				if(state == 0) {
+					/* process any incomplete frames left over */
+					TCPSessPrepareClose(iTCPSess);
+					/* Session closed */
+					TCPSessClose(iTCPSess);
+				} else if(state == -1) {
+					logerrorInt("TCP session %d will be closed, error ignored\n",
+						    fdSess);
+					TCPSessClose(iTCPSess);
+				} else {
+					/* valid data received, process it! */
+					if(TCPSessDataRcvd(iTCPSess, buf, state) == 0) {
+						/* in this case, something went awfully wrong.
+						 * We are instructed to terminate the session.
+						 */
+						logerrorInt("Tearing down TCP Session %d - see "
+							    "previous messages for reason(s)\n",
+							    iTCPSess);
+						TCPSessClose(iTCPSess);
+					}
+				}
+			}
+			iTCPSess = TCPSessGetNxtSess(iTCPSess);
+		}
+	}
+
+#endif
+finalize_it:
+	return iRet;
+}
+
+
+static void mainloop(void)
+{
+	fd_set readfds;
+	int i;
+	int maxfds;
+	int nfds;
+#ifdef  SYSLOG_INET
+	mainloopWriteFDSInfo_t writeFDSInfo;
+	fd_set writefds;
+	selector_t *f;
+	int iTCPSess;
+#endif	/* #ifdef SYSLOG_INET */
 #ifdef	BSD
 #ifdef	USE_PTHREADS
 	struct timeval tvSelectTimeout;
 #endif
 #endif
+
+	errno = 0;
+	FD_ZERO(&readfds);
+	maxfds = 0;
 
 	while(!bFinished){
 		/* first check if we have any internal messages queued and spit them out */
@@ -5531,8 +5693,6 @@ static void mainloop(void)
 #endif
 		nfds = select(maxfds+1, (fd_set *) &readfds, MAIN_SELECT_WRITEFDS,
 				  (fd_set *) NULL, MAIN_SELECT_TIMEVAL);
-#undef MAIN_SELECT_TIMEVAL 
-#undef MAIN_SELECT_WRITEFDS
 
 		if(bRequestDoMark) {
 			domark();
@@ -5559,148 +5719,10 @@ static void mainloop(void)
 			continue;
 		}
 
-		if ( debugging_on )
-		{
-			dprintf("\nSuccessful select, descriptor count = %d, " \
-				"Activity on: ", nfds);
-			for (nfds= 0; nfds <= maxfds; ++nfds)
-				if ( FD_ISSET(nfds, &readfds) )
-					dprintf("%d ", nfds);
-			dprintf(("\n"));
-		}
+		processSelectAfter(maxfds, nfds, &readfds, MAIN_SELECT_WRITEFDS);
 
-#ifdef SYSLOG_INET
-		/* TODO: activate the code below only if we actually need to check
-		 * for outstanding writefds.
-		 */
-		if(1) {
-			/* Now check the TCP send sockets. So far, we only see if they become
-			 * writable and then change their internal status. No real async
-			 * writing is currently done. This code will be replaced once liblogging
-			 * is used, thus we try not to focus too much on it.
-			 *
-			 * IMPORTANT: With the current code, the writefds must be checked first,
-			 * because the readfds might have messages to be forwarded, which
-			 * rely on the status setting that is done here!
-			 * rgerhards 2005-07-20
-			 *
-			 * liblogging implementation will not happen as anticipated above. So
-			 * this code here will stay for quite a while.
-			 * rgerhards, 2006-12-07
-			 */
-			for(f = Files; f != NULL ; f = f->f_next) {
-				llExecFunc(&f->llActList, mainloopCallWithWritableFDsActions, &writefds);
-			}
-		}
-#endif /* #ifdef SYSLOG_INET */
-#ifdef SYSLOG_UNIXAF
-		for (i = 0; i < nfunix; i++) {
-			if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
-				int iRcvd;
-				iRcvd = recv(fd, line, MAXLINE - 1, 0);
-				dprintf("Message from UNIX socket: #%d\n", fd);
-				if (iRcvd > 0) {
-					printchopped(LocalHostName, line, iRcvd,  fd, funixParseHost[i]);
-				} else if (iRcvd < 0 && errno != EINTR) {
-					dprintf("UNIX socket error: %d = %s.\n", \
-						errno, strerror(errno));
-					logerror("recvfrom UNIX");
-				}
-			}
-		}
-#endif
-
-#ifdef SYSLOG_INET
-               if (finet != NULL && AcceptRemote) {
-                       for (i = 0; i < *finet; i++) {
-                               if (FD_ISSET(finet[i+1], &readfds)) {
-                                       socklen = sizeof(frominet);
-                                       memset(line, '\0', sizeof(line));
-                                       l = recvfrom(finet[i+1], line, MAXLINE - 1,
-                                                    0, (struct sockaddr *)&frominet,
-                                                    &socklen);
-                                       if (l > 0) {
-                                               line[l] = '\0';
-                                               if(cvthname(&frominet, fromHost, fromHostFQDN) == 1) {
-						       dprintf("Message from inetd socket: #%d, host: %s\n",
-							       finet[i+1], fromHost);
-						       /* Here we check if a host is permitted to send us
-							* syslog messages. If it isn't, we do not further
-							* process the message but log a warning (if we are
-							* configured to do this).
-							* rgerhards, 2005-09-26
-							*/
-						       if(isAllowedSender(pAllowedSenders_UDP,
-						          (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
-							       printchopped((char*)fromHost, line, l,  finet[i+1], 1);
-						       } else {
-							       if(option_DisallowWarning) {
-								       logerrorSz("UDP message from disallowed sender %s discarded",
-										  (char*)fromHost);
-							       }	
-						       }
-					       }
-				       }
-                                       else if (l < 0 && errno != EINTR && errno != EAGAIN) {
-					       dprintf("INET socket error: %d = %s.\n",
-                                                                errno, strerror(errno));
-                                                       logerror("recvfrom inet");
-                                                       /* should be harmless */
-                                                       sleep(1);
-                                               }
-		       		}
-		       }
-		}
-
-		if(sockTCPLstn != NULL && *sockTCPLstn) {
-			for (i = 0; i < *sockTCPLstn; i++) {
-				if (FD_ISSET(sockTCPLstn[i+1], &readfds)) {
-					dprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
-					TCPSessAccept(sockTCPLstn[i+1]);
-				}
-			}
-
-			/* now check the sessions */
-			/* TODO: optimize the whole thing. We could stop enumerating as
-			 * soon as we have found all sockets flagged as active. */
-			iTCPSess = TCPSessGetNxtSess(-1);
-			while(iTCPSess != -1) {
-				int fdSess;
-				int state;
-				fdSess = pTCPSessions[iTCPSess].sock;
-				if(FD_ISSET(fdSess, &readfds)) {
-					char buf[MAXLINE];
-					dprintf("tcp session socket with new data: #%d\n", fdSess);
-
-					/* Receive message */
-					state = recv(fdSess, buf, sizeof(buf), 0);
-					if(state == 0) {
-						/* process any incomplete frames left over */
-						TCPSessPrepareClose(iTCPSess);
-						/* Session closed */
-						TCPSessClose(iTCPSess);
-					} else if(state == -1) {
-						logerrorInt("TCP session %d will be closed, error ignored\n",
-							    fdSess);
-						TCPSessClose(iTCPSess);
-					} else {
-						/* valid data received, process it! */
-						if(TCPSessDataRcvd(iTCPSess, buf, state) == 0) {
-							/* in this case, something went awfully wrong.
-							 * We are instructed to terminate the session.
-							 */
-							logerrorInt("Tearing down TCP Session %d - see "
-							            "previous messages for reason(s)\n",
-								    iTCPSess);
-							TCPSessClose(iTCPSess);
-						}
-					}
-				}
-				iTCPSess = TCPSessGetNxtSess(iTCPSess);
-			}
-		}
-
-#endif
+#undef MAIN_SELECT_TIMEVAL 
+#undef MAIN_SELECT_WRITEFDS
 	}
 }
 
