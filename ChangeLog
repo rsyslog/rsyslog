@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.18.2 (rgerhards), 2007-08-??
+---------------------------------------------------------------------------
 Version 1.18.1 (rgerhards), 2007-08-08
 - applied a patch from varmojfekoj which solved a potential segfault
   of rsyslogd on HUP
