@@ -527,10 +527,15 @@ finalize_it:
 
 
 /* function that registers cfsysline handlers.
+ * The supplied pCmdName is copied and a new buffer is allocated. This
+ * buffer is automatically destroyed when the element is freed, the
+ * caller does not need to take care of that. The caller must, however,
+ * free pCmdName if he allocated it dynamically! -- rgerhards, 2007-08-09
  */
 rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
 {
 	cslCmd_t *pThis;
+	uchar *pMyCmdName;
 	DEFiRet;
 
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void**) &pThis);
@@ -544,7 +549,11 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 		/* important: add to list, AFTER everything else is OK. Else
 		 * we mess up things in the error case.
 		 */
-		CHKiRet_Hdlr(llAppend(&llCmdList, pCmdName, (void*) pThis)) {
+		if((pMyCmdName = (uchar*) strdup((char*)pCmdName)) == NULL) {
+			cslcDestruct(pThis);
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+		CHKiRet_Hdlr(llAppend(&llCmdList, pMyCmdName, (void*) pThis)) {
 			cslcDestruct(pThis);
 			goto finalize_it;
 		}
