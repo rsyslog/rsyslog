@@ -164,6 +164,31 @@ modInfo_t *omodGetNxt(modInfo_t *pThis)
 }
 
 
+/* unload a module. If this is called with a statically-linked
+ * (builtin) module, nothing happens.
+ * The module handle is invalid after this function call and 
+ * MUST NOT be used any more.
+ * This is currently a dummy, to be filled when we have a plug-in interface
+ * rgerhards, 2007-08-09
+ */
+static rsRetVal modUnload(modInfo_t *pThis)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+
+	if(pThis->eLinkType == eMOD_LINK_STATIC) {
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+	/* TODO: implement code */
+	ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+
+finalize_it:
+	return iRet;
+}
+
+
 /* Add an already-loaded module to the module linked list. This function does
  * everything needed to fully initialize the module.
  */
@@ -237,6 +262,7 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 
 	pNew->pszName = (uchar*) strdup((char*)name); /* we do not care if strdup() fails, we can accept that */
 	pNew->eType = eMOD_OUT; /* TODO: take this from module */
+	pNew->eLinkType = eMOD_LINK_STATIC; /* TODO: take this from module */
 
 	/* we initialized the structure, now let's add it to the linked list of modules */
 	addModToList(pNew);
