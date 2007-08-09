@@ -67,6 +67,8 @@ static rsRetVal moduleConstruct(modInfo_t **pThis)
  */
 static void moduleDestruct(modInfo_t *pThis)
 {
+	if(pThis->pszName != NULL)
+		free(pThis->pszName);
 	free(pThis);
 }
 
@@ -163,7 +165,7 @@ modInfo_t *omodGetNxt(modInfo_t *pThis)
 
 
 /* Add an already-loaded module to the module linked list. This function does
- * anything that is needed to fully initialize the module.
+ * everything needed to fully initialize the module.
  */
 rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *name)
 {
