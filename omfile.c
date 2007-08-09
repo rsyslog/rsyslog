@@ -237,14 +237,6 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	 */
 	pData->f_sizeLimitCmd = pOch->cmdOnSizeLimit;
 
-	/* back to the input string - now let's look for the template to use
-	 * Just as a general precaution, we skip whitespace.
-	 */
-	while(*p && isspace((int) *p))
-		++p;
-	if(*p == ';')
-		++p; /* eat it */
-
 	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, (uchar*) " TradFmt");
 
 	return(iRet);

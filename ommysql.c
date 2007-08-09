@@ -270,7 +270,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * We specify that the SQL option must be present in the template.
 	 * This is for your own protection (prevent sql injection).
 	 */
-	if(*p != ';')
+	if(*(p-1) == ';')
 		--p;	/* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
 			 *       is clean enough for the time being -- rgerhards, 2007-07-30
 			 */

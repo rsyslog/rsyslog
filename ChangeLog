@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 1.18.2 (rgerhards), 2007-08-??
+- fixed a bug in outchannel code that caused templates to be incorrectly
+  parsed
+- fixed a bug in ommysql that caused a wrong ";template" missing message
+  in some cases
 ---------------------------------------------------------------------------
 Version 1.18.1 (rgerhards), 2007-08-08
 - applied a patch from varmojfekoj which solved a potential segfault
