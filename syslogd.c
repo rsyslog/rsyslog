@@ -3547,6 +3547,8 @@ static void die(int sig)
 	/* de-init some modules */
 	modExitIminternal();
 
+	/*TODO: the module config command handlers must also be freed! */
+
 	/* TODO: this would also be the right place to de-init the builtin output modules. We
 	 * do not currently do that, because the module interface does not allow for
 	 * it. This will come some time later (it's essential with loadable modules).
