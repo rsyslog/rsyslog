@@ -3543,6 +3543,22 @@ static void die(int sig)
 	remove_pid(PidFile);
 	if(glblHadMemShortage)
 		dbgprintf("Had memory shortage at least once during the run.\n");
+
+	/* de-init some modules */
+	modExitIminternal();
+
+	/* TODO: this would also be the right place to de-init the builtin output modules. We
+	 * do not currently do that, because the module interface does not allow for
+	 * it. This will come some time later (it's essential with loadable modules).
+	 * For the time being, this is a memory leak on exit, but as the process is
+	 * terminated, we do not really bother about it.
+	 * rgerhards, 2007-08-03
+	 * I have added some code now, but all that mod init/de-init should be moved to
+	 * init, so that modules are unloaded and reloaded on HUP to. Eventually it should go
+	 * into freeSelectors() - but that needs to be seen. -- rgerhards, 2007-08-09
+	 */
+	modUnloadAndDestructAll();
+
 	dbgprintf("Clean shutdown completed, bye.\n");
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
@@ -6173,18 +6189,6 @@ int main(int argc, char **argv)
 	 */
 
 	mainloop();
-
-	/* de-init some modules */
-	modExitIminternal();
-
-	/* TODO: this would also be the right place to de-init the builtin output modules. We
-	 * do not currently do that, because the module interface does not allow for
-	 * it. This will come some time later (it's essential with loadable modules).
-	 * For the time being, this is a memory leak on exit, but as the process is
-	 * terminated, we do not really bother about it.
-	 * rgerhards, 2007-08-03
-	 */
-
 	/* end de-init's */
 
 	die(bFinished);

@@ -308,6 +308,27 @@ void modPrintList(void)
 }
 
 
+/* unload all modules and free module linked list
+ * rgerhards, 2007-08-09
+ */
+rsRetVal modUnloadAndDestructAll(void)
+{
+	DEFiRet;
+	modInfo_t *pMod;
+	modInfo_t *pModPrev;
+
+	pMod = modGetNxt(NULL);
+	while(pMod != NULL) {
+		pModPrev = pMod;
+		pMod = modGetNxt(pModPrev); /* get next */
+		/* now we can destroy the previous module */
+		dbgprintf("Unloading module %s\n", modGetName(pModPrev));
+		modUnload(pModPrev);
+		moduleDestruct(pModPrev);
+	}
+
+	return iRet;
+}
 /*
  * vi:set ai:
  */

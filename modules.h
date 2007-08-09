@@ -92,6 +92,7 @@ modInfo_t *omodGetNxt(modInfo_t *pThis);
 uchar *modGetName(modInfo_t *pThis);
 uchar *modGetStateName(modInfo_t *pThis);
 void modPrintList(void);
+rsRetVal modUnloadAndDestructAll(void);
 
 #endif /* #ifndef MODULES_H_INCLUDED */
 /*
