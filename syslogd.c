@@ -4836,15 +4836,13 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template pointer array */
 		if((pAction->ppTpl = calloc(pAction->iNumTpls, sizeof(struct template *))) == NULL) {
-			iRet = RS_RET_OUT_OF_MEMORY;
 			glblHadMemShortage = 1;
-			goto finalize_it;
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 		/* and now the array for doAction() message pointers */
 		if((pAction->ppMsgs = calloc(pAction->iNumTpls, sizeof(uchar *))) == NULL) {
-			iRet = RS_RET_OUT_OF_MEMORY;
 			glblHadMemShortage = 1;
-			goto finalize_it;
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 	}
 	
@@ -4856,24 +4854,22 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 		 */
 		if((pAction->ppTpl[i] = tplFind((char*)pTplName, strlen((char*)pTplName))) == NULL) {
 			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
-				 " Could not find template '%s' - selector line disabled\n",
+				 " Could not find template '%s' - action disabled\n",
 				 pTplName);
 			errno = 0;
 			logerror(errMsg);
-			iRet = RS_RET_NOT_FOUND;
-			goto finalize_it;
+			ABORT_FINALIZE(RS_RET_NOT_FOUND);
 		}
 		/* check required template options */
 		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
 		   && (pAction->ppTpl[i]->optFormatForSQL == 0)) {
 			errno = 0;
-			logerror("Selector disabled. To use this action, you have to specify "
+			logerror("Action disabled. To use this action, you have to specify "
 				"the SQL or stdSQL option in your template!\n");
-			iRet = RS_RET_RQD_TPLOPT_MISSING;
-			goto finalize_it;
+			ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
 		}
 
-		dbgprintf("template: '%s' assgined\n", pTplName);
+		dbgprintf("template: '%s' assigned\n", pTplName);
 	}
 
 	pAction->pMod = pMod;
