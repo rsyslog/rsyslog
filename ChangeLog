@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.19.0 (rgerhards), 2007-08-15
+---------------------------------------------------------------------------
 Version 1.18.2 (rgerhards), 2007-08-13
 - fixed a bug in outchannel code that caused templates to be incorrectly
   parsed
