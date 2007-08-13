@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.18.2 (rgerhards), 2007-08-??
+Version 1.18.2 (rgerhards), 2007-08-13
 - fixed a bug in outchannel code that caused templates to be incorrectly
   parsed
 - fixed a bug in ommysql that caused a wrong ";template" missing message
@@ -10,6 +10,8 @@ Version 1.18.2 (rgerhards), 2007-08-??
   is a debian package available - so I gladly did this) in some cases
 - improved overall doc quality (some pages were quite old) and linked to
   more of the online resources.
+- improved /contrib/delete_mysql script by adding a host option and some
+  other minor modifications
 ---------------------------------------------------------------------------
 Version 1.18.1 (rgerhards), 2007-08-08
 - applied a patch from varmojfekoj which solved a potential segfault

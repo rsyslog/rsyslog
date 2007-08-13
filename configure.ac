@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(rsyslog, 1.18.2, rsyslog@lists.adiscon.com.)
+AC_INIT([rsyslog],[1.18.2],[rsyslog@lists.adiscon.com.])
 AM_INIT_AUTOMAKE(rsyslog, 1.18.2)
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADER([config.h])
@@ -70,7 +70,7 @@ AC_CHECK_FUNCS([setsid alarm gethostbyname gethostname gettimeofday memset regco
 
 # Large file support
 AC_ARG_ENABLE(largefile,
-        [AC_HELP_STRING([--enable-largefile],[Enable large file support @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-largefile],[Enable large file support @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_largefile="yes" ;;
           no) enable_largefile="no" ;;
@@ -84,7 +84,7 @@ fi
 
 # SQL support
 AC_ARG_ENABLE(mysql,
-        [AC_HELP_STRING([--enable-mysql],[Enable MySql database support @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-mysql],[Enable MySql database support @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_mysql="yes" ;;
           no) enable_mysql="no" ;;
@@ -118,7 +118,7 @@ AC_SUBST(mysql_libs)
 
 # Regular expressions
 AC_ARG_ENABLE(regexp,
-        [AC_HELP_STRING([--enable-regexp],[Enable regular expressions support @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-regexp],[Enable regular expressions support @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_regexp="yes" ;;
           no) enable_regexp="no" ;;
@@ -132,7 +132,7 @@ fi
 
 # zlib compression
 AC_ARG_ENABLE(zlib,
-        [AC_HELP_STRING([--enable-zlib],[Enable zlib compression  support @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-zlib],[Enable zlib compression  support @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_zlib="yes" ;;
           no) enable_zlib="no" ;;
@@ -152,7 +152,7 @@ fi
 
 # multithreading via pthreads
 AC_ARG_ENABLE(pthreads,
-        [AC_HELP_STRING([--enable-pthreads],[Enable multithreading via pthreads @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-pthreads],[Enable multithreading via pthreads @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_pthreads="yes" ;;
           no) enable_pthreads="no" ;;
@@ -182,7 +182,7 @@ AS_IF([test "x$enable_pthreads" != "xno"],
 
 # klogd
 AC_ARG_ENABLE(klogd,
-        [AC_HELP_STRING([--enable-klogd],[Integrated klogd functionality @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-klogd],[Integrated klogd functionality @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_klogd="yes" ;;
           no) enable_klogd="no" ;;
@@ -216,7 +216,7 @@ AC_ARG_ENABLE([unix],
 
 # inet
 AC_ARG_ENABLE(inet,
-        [AC_HELP_STRING([--enable-inet],[Enable networking support @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-inet],[Enable networking support @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_inet="yes" ;;
           no) enable_inet="no" ;;
@@ -251,7 +251,7 @@ AC_ARG_ENABLE([fsstnd],
 
 # debug
 AC_ARG_ENABLE(debug,
-        [AC_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_debug="yes" ;;
           no) enable_debug="no" ;;
