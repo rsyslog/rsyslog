@@ -3,7 +3,11 @@ Version 1.18.2 (rgerhards), 2007-08-??
 - fixed a bug in outchannel code that caused templates to be incorrectly
   parsed
 - fixed a bug in ommysql that caused a wrong ";template" missing message
-  in some cases
+- added some code for unloading modules; not yet fully complete (and we do
+  not yet have loadable modules, so this is no problem)
+- removed debian subdirectory by request of a debian packager (this is a special
+  subdir for debian and there is also no point in maintaining it when there
+  is a debian package available - so I gladly did this) in some cases
 ---------------------------------------------------------------------------
 Version 1.18.1 (rgerhards), 2007-08-08
 - applied a patch from varmojfekoj which solved a potential segfault
