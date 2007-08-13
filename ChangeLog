@@ -8,6 +8,8 @@ Version 1.18.2 (rgerhards), 2007-08-??
 - removed debian subdirectory by request of a debian packager (this is a special
   subdir for debian and there is also no point in maintaining it when there
   is a debian package available - so I gladly did this) in some cases
+- improved overall doc quality (some pages were quite old) and linked to
+  more of the online resources.
 ---------------------------------------------------------------------------
 Version 1.18.1 (rgerhards), 2007-08-08
 - applied a patch from varmojfekoj which solved a potential segfault
