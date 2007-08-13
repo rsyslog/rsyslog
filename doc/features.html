@@ -31,7 +31,8 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 	messages<li>control of whether the local hostname or the hostname of the
  origin of the data is shown as the hostname in the output<li>ability to 
 	preserve the original hostname in NAT environments and relay chains
-	<li>ability to limit the allowed network senders<li>powerful BSD-style 	hostname and program name blocks for easy multi-host support<li>	multi-threaded<li>very 	experimental and volatile support for <a href="syslog-protocol.html">syslog-protocol</a> 	compliant messages (it is volatile because standardization is currently 	underway and this is a proof-of-concept implementation to aid this effort)<li>
+	<li>ability to limit the allowed network senders<li>powerful BSD-style 	hostname and program name blocks for easy multi-host support<li>	multi-threaded (<a href="http://rgerhards.blogspot.com/2007/08/why-is-rsyslog-multi-threaded-and-is-it.html">is 
+	this important? why?</a>)<li>very 	experimental and volatile support for <a href="syslog-protocol.html">syslog-protocol</a> 	compliant messages (it is volatile because standardization is currently 	underway and this is a proof-of-concept implementation to aid this effort)<li>
 	experimental support for syslog-transport-tls based framing on syslog/tcp 
 	connections<li>
 	a copy of klogd.c has been included under the name of rklogd for those Linux 
@@ -62,9 +63,11 @@ at some time moved back to the sourceforge tracker.</p>
 	knowledge<li>provide an on-disk queue for syslog messages; should be 
 	combined with reliable delivery to the next hop<li>support for native SSL enryption of plain tcp syslog sessions. This will 
 	most probably happen based on syslog-transport-tls.<li>even more enhanced multi-threading, 
-	with a message queue for each selector line (when implementing this, search 
+	with a message queue for each action (when implementing this, search 
 	for CHECKMULTIQUEUE comments in the source - they already contain hints of 
-	what to look at).<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
+	what to look at). Some detail information on this can already be found in
+	<a href="http://rgerhards.blogspot.com/2007/08/syslog-worker-pools-future-hardware-and.html">
+	Rainer's blog</a>.<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
 	partly added. So far, this seems sufficient so that there is no urgent need 
 	to do pcre<li>support for	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - this is currently unlikely to happen, because there is no real 
 	demand for it. Any work on RFC 3195 has been suspend until we see some real 
