@@ -530,7 +530,7 @@ something strange is happening with the system. To specify this wall(1)-feature
 use an asterisk (&quot;*'').</p>
 <h3>Database Table</h3>
 <p>This allows logging of the message to a database table. Currently, only MySQL 
-databases are supported. By default, a MonitorWare-compatible schema is required 
+databases are supported. By default, a <a href="http://www.monitorware.com/">MonitorWare</a>-compatible schema is required 
 for this to work. You can create that schema with the createDB.SQL file that 
 came with the rsyslog package. You can also<br>
 use any other schema of your liking - you just need to define a proper template 
@@ -544,14 +544,12 @@ template is to be used, a semicolon followed by the template name can follow
 the connect information. This is as follows:<br>
 <br>
 &gt;dbhost,dbname,dbuser,dbpassword;dbtemplate</p>
-<p><b>Important: to use the database functionality, MySQL must be enabled in the 
-config file</b> BEFORE the first database table action is used. This is done by 
+<p><b>Important: to use the database functionality, the MySQL output module must be 
+loaded in the config file</b> BEFORE the first database table action is used. This is done by 
 placing the</p>
 <p><code><b>$ModLoad MySQL</b></code></p>
 <p>directive some place above the first use of the database write (we recommend 
-doing at the the begining of the config file). <b>Please note that rsyslog must 
-also have been built with MySQL support</b> (many packages do not do this by 
-default).</p>
+doing at the the beginning of the config file).</p>
 <h3>Discard</h3>
 <p>If the discard action is carried out, the received message is immediately 
 discarded. No further processing of it occurs. Discard has primarily been added 

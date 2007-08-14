@@ -7,9 +7,12 @@
 <p><b>Type:</b> global configuration directive</p>
 <p><b>Default:</b> </p>
 <p><b>Description:</b></p>
-<p>This currently is a dummy directive. It will support the loading of plug-ins in future releases of rsyslog supporting plug-ins. Currently, only "MySQL" is supported as parameter. This activates MySQL support (if rsyslog is compiled with MySQL functionality).</p>
+<p>Dynamically loads a plug-in into rsyslog's address space and activates it. 
+The plug-in must obey the rsyslog module API. Currently, only MySQL is available 
+as a plugin, but others may create their own. A plug-in must be loaded BEFORE 
+any configuration file lines that reference it.</p>
 <p><b>Sample:</b></p>
-<p><code><b>$ModLoad MySQL</b></code></p>
+<p><code><b>$ModLoad MySQL&nbsp; # load MySQL functionality</b></code></p>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
 index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
