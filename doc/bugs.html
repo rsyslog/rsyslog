@@ -14,6 +14,9 @@ here.</p>
 <p>This list has last been updated on 2007-07-30 by
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a>.</p>
 <h1>rsyslogd</h1>
+<h2>plugin-directory</h2>
+<p>The directory for plug-ins is currently hard-coded and must be /lib/rsyslog/. 
+If you want to change it, you need to modify syslogd.c.</p>
 <h2>forwarding remotely received messages</h2>
 <p>Sysklogd does not forward remotely received messages to other network 
 destionation except when the -h option is given. This code is currently defunct. 
