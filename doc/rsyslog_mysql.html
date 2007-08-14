@@ -112,6 +112,15 @@ otherwise you need to customize rsyslogd's default sql template, which we do not
 do 
 in this paper. Then, run the script with your favourite MySQL tool. Double-check 
 that the table was successfully created.</p>
+
+<p>MySQL support in rsyslog is integrated via a loadable plug-in module. To use the database
+functionality, MySQL must be enabled in the config file BEFORE the first database table action is
+used. This is done by placing the</p>
+<blockquote>
+	<p><code>$ModLoad MySQL</code></p>
+</blockquote>
+<p>directive at the begining of /etc/rsyslog.conf</p>
+
 <p>Next, we need to tell rsyslogd to write data to the database. As we use 
 the default schema, we do NOT need to define a template for this. We can use the 
 hardcoded one (rsyslogd handles the proper template linking). So all we need to 
