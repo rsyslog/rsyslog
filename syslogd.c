@@ -3760,6 +3760,7 @@ finalize_it:
  * As of now, it is a dummy, that will later evolve into the
  * loader for plug-ins.
  * rgerhards, 2007-07-21
+ * varmojfekoj added support for dynamically loadable modules on 2007-08-13
  */
 static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 {
@@ -3767,6 +3768,7 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	uchar szName[512];
         uchar szPath[512];
         uchar errMsg[1024];
+	uchar *pModName;
         void *pModHdlr, *pModInit;
 
 	assert(pp != NULL);
@@ -3777,10 +3779,22 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
+	/* this below is a quick and dirty hack to provide compatibility with the
+	 * $ModLoad MySQL forward compatibility statement. TODO: clean this up
+	 * For the time being, it is clean enough, it just needs to be done
+	 * differently when we have a full design for loadable plug-ins. For the
+	 * time being, we just mangle the names a bit.
+	 * rgerhards, 2007-08-14
+	 */
+	if(!strcmp((char*) szName, "MySQL"))
+		pModName = (uchar*) "ommysql.so";
+	else
+		pModName = szName;
+
 	dbgprintf("Requested to load module '%s'\n", szName);
 
 	strncpy((char *) szPath, ModDir, sizeof(szPath));
-	strncat((char *) szPath, (char *) szName, sizeof(szPath) - strlen(szPath) - 1);
+	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen(szPath) - 1);
 	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
 		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
 		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
@@ -3794,7 +3808,7 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	if((iRet = doModInit(pModInit, (uchar*) szName, pModHdlr)) != RS_RET_OK)
+	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK)
 		return iRet;
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
