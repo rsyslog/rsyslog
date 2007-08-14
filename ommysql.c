@@ -235,21 +235,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* rger 2004-10-28: added support for MySQL
 	 * >server,dbname,userid,password
-	 * rgerhards 2005-08-12: changed rsyslogd so that
-	 * if no DB is selected and > is used, an error
-	 * message is logged.
-	 */
-	if(bModMySQLLoaded == 0)
-		logerror("To enable MySQL logging, a \"$ModLoad MySQL\" must be done - accepted for "
-			 "the time being, but will fail in future releases.");
-#ifndef	WITH_DB
-	iRet = RS_RET_ERROR; /* this goes away anyhow, so it's not worth putting much effort in the return code */
-	errno = 0;
-	logerror("write to database action in config file, but rsyslogd compiled without "
-		 "database functionality - ignored");
-#else /* WITH_DB defined! */
-	
-	/* Now we read the MySQL connection properties 
+	 * Now we read the MySQL connection properties 
 	 * and verify that the properties are valid.
 	 */
 	if(getSubString(&p, pData->f_dbsrv, MAXHOSTNAMELEN+1, ','))
@@ -286,7 +272,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	} else {
 		CHKiRet(initMySQL(pData, 0));
 	}
-#endif	/* #ifdef WITH_DB */
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -298,7 +283,7 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 ENDqueryEtryPt
 
 
-BEGINmodInit(MySQL)
+BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr

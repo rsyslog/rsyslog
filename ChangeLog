@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 1.19.0 (rgerhards), 2007-08-15
+- integrated patch from varmojfekoj to make the mysql module a loadable one
+  many thanks for the patch, MUCH appreciated
 ---------------------------------------------------------------------------
 Version 1.18.2 (rgerhards), 2007-08-13
 - fixed a bug in outchannel code that caused templates to be incorrectly

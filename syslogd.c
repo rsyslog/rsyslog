@@ -150,6 +150,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
+#include <dlfcn.h>
 
 #include <sys/syslog.h>
 #include <sys/param.h>
@@ -299,6 +300,10 @@ syslogCODE rs_facilitynames[] =
 #define _PATH_LOGCONF	"/etc/rsyslog.conf"
 #endif
 
+#ifndef _PATH_MODDIR
+#define _PATH_MODDIR	"/lib/rsyslog/"
+#endif
+
 #if defined(SYSLOGD_PIDNAME)
 #undef _PATH_LOGPID
 #if defined(FSSTND)
@@ -358,9 +363,9 @@ syslogCODE rs_facilitynames[] =
 
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
+static char	*ModDir = _PATH_MODDIR; /* read-only after startup */
 char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
 
-int bModMySQLLoaded = 0; /* was a $ModLoad MySQL done? */
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
 static int debugging_on = 0; /* read-only, except on sig USR1 */
@@ -3760,23 +3765,37 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 {
 	DEFiRet;
 	uchar szName[512];
+        uchar szPath[512];
+        uchar errMsg[1024];
+        void *pModHdlr, *pModInit;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
-		logerror("could not extract group name");
+		logerror("could not extract module name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	dbgprintf("Requested to load module '%s'\n", szName);
 
-	if(!strcmp((char*)szName, "MySQL")) {
-		bModMySQLLoaded = 1;
-	} else {
-		logerrorSz("$ModLoad with invalid module name '%s' - currently 'MySQL' only supported",
-			   (char*) szName);
+	strncpy((char *) szPath, ModDir, sizeof(szPath));
+	strncat((char *) szPath, (char *) szName, sizeof(szPath) - strlen(szPath) - 1);
+	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
+		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
+		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
+		logerror((char *) errMsg);
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
+	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
+		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlsym: %s\n", szPath, dlerror());
+		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
+		logerror((char *) errMsg);
+		dlclose(pModHdlr);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if((iRet = doModInit(pModInit, (uchar*) szName, pModHdlr)) != RS_RET_OK)
+		return iRet;
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
@@ -5805,19 +5824,15 @@ static rsRetVal loadBuildInModules(void)
 {
 	DEFiRet;
 
-	if((iRet = doModInit(modInitFile, (uchar*) "builtin-file")) != RS_RET_OK)
+	if((iRet = doModInit(modInitFile, (uchar*) "builtin-file", NULL)) != RS_RET_OK)
 		return iRet;
 #ifdef SYSLOG_INET
-	if((iRet = doModInit(modInitFwd, (uchar*) "builtin-fwd")) != RS_RET_OK)
+	if((iRet = doModInit(modInitFwd, (uchar*) "builtin-fwd", NULL)) != RS_RET_OK)
 		return iRet;
 #endif
-	if((iRet = doModInit(modInitShell, (uchar*) "builtin-shell")) != RS_RET_OK)
+	if((iRet = doModInit(modInitShell, (uchar*) "builtin-shell", NULL)) != RS_RET_OK)
 		return iRet;
-#	ifdef WITH_DB
-	if((iRet = doModInit(modInitMySQL, (uchar*) "builtin-mysql")) != RS_RET_OK)
-		return iRet;
-#	endif
-	if((iRet = doModInit(modInitDiscard, (uchar*) "builtin-discard")) != RS_RET_OK)
+	if((iRet = doModInit(modInitDiscard, (uchar*) "builtin-discard", NULL)) != RS_RET_OK)
 		return iRet;
 
 	/* dirty, but this must be for the time being: the usrmsg module must always be
@@ -5826,8 +5841,10 @@ static rsRetVal loadBuildInModules(void)
 	 * working with the config file. We may change that implementation so that a user name
 	 * must start with an alnum, that would definitely help (but would it break backwards
 	 * compatibility?). * rgerhards, 2007-07-23
+	 * User names now must begin with:
+	 *   [a-zA-Z0-9_.]
 	 */
-	if((iRet = doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg")) != RS_RET_OK)
+	if((iRet = doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL)) != RS_RET_OK)
 		return iRet;
 
 	/* ok, initialization of the command handler probably does not 100% belong right in

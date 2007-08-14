@@ -69,6 +69,8 @@ static void moduleDestruct(modInfo_t *pThis)
 {
 	if(pThis->pszName != NULL)
 		free(pThis->pszName);
+	if(pThis->pModHdlr != NULL)
+		dlclose(pThis->pModHdlr);
 	free(pThis);
 }
 
@@ -192,7 +194,7 @@ finalize_it:
 /* Add an already-loaded module to the module linked list. This function does
  * everything needed to fully initialize the module.
  */
-rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *name)
+rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *name, void *pModHdlr)
 {
 	DEFiRet;
 	modInfo_t *pNew;
@@ -261,8 +263,13 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 	}
 
 	pNew->pszName = (uchar*) strdup((char*)name); /* we do not care if strdup() fails, we can accept that */
+	pNew->pModHdlr = pModHdlr;
 	pNew->eType = eMOD_OUT; /* TODO: take this from module */
-	pNew->eLinkType = eMOD_LINK_STATIC; /* TODO: take this from module */
+	/* TODO: take this from module */
+	if(pModHdlr == NULL)
+		pNew->eLinkType = eMOD_LINK_STATIC;
+	else
+		pNew->eLinkType = eMOD_LINK_DYNAMIC_LOADED;
 
 	/* we initialized the structure, now let's add it to the linked list of modules */
 	addModToList(pNew);

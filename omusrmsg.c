@@ -266,6 +266,14 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(**pp != '*')
 		return RS_RET_CONFLINE_UNPROCESSED;
 #endif
+       /* User names must begin with a gnu e-regex:
+        *   [a-zA-Z0-9_.]
+	* plus '*' for wall
+        */
+       if (!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
+                    || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*'))
+               return RS_RET_CONFLINE_UNPROCESSED;
+
 	if((iRet = createInstance(&pData)) != RS_RET_OK)
 		return iRet;
 
@@ -278,9 +286,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		    != RS_RET_OK)
 			return iRet;
 	} else {
-		/* everything else is currently treated as a user name
-		 * TODO: we must reconsider this - see also comment in
-		 * loadBuildInModules() in syslogd.c
+                /* everything else beginning with the regex above
+                 * is currently treated as a user name
+                 * TODO: is this portable?
 		 */
 		dbgprintf("users: %s\n", p);	/* ASP */
 		pData->bIsWall = 0; /* write to individual users */
