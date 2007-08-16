@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 1.19.1 (rgerhards), 2007-0?-?=
+- .... 
+---------------------------------------------------------------------------
 Version 1.19.0 (varmojfekoj/rgerhards), 2007-08-16
 - integrated patch from varmojfekoj to make the mysql module a loadable one
   many thanks for the patch, MUCH appreciated
