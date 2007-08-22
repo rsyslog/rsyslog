@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 1.19.2 (rgerhards), 2007-?
+- ...
+---------------------------------------------------------------------------
 Version 1.19.1 (rgerhards), 2007-08-22
 - a bug that caused a high load when a TCP/UDP connection was closed is 
   fixed now - Thanks mildew for solving this issue
