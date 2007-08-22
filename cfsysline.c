@@ -573,6 +573,12 @@ finalize_it:
 }
 
 
+rsRetVal unregCfSysLineHdlrs(void)
+{
+	return llDestroy(&llCmdList);
+}
+
+
 /* process a cfsysline command (based on handler structure)
  * param "p" is a pointer to the command line after the command. Should be
  * updated.

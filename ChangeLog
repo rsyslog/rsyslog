@@ -1,6 +1,15 @@
 ---------------------------------------------------------------------------
-Version 1.19.1 (rgerhards), 2007-0?-?=
-- .... 
+Version 1.19.1 (rgerhards), 2007-08-22
+- a bug that caused a high load when a TCP/UDP connection was closed is 
+  fixed now - Thanks mildew for solving this issue
+- fixed a bug which caused a segfault on reinit - Thx varmojfekoj for the
+  patch
+- changed the hardcoded module path "/lib/rsyslog" to $(pkglibdir) in order
+  to avoid trouble e.g. on 64 bit platforms (/lib64) - many thanks Peter
+  Vrabec and darix, both provided a patch for solving this issue
+- enhanced the unloading of modules - thanks again varmojfekoj
+- applied a patch from varmojfekoj which fixes various little things in
+  MySQL output module
 ---------------------------------------------------------------------------
 Version 1.19.0 (varmojfekoj/rgerhards), 2007-08-16
 - integrated patch from varmojfekoj to make the mysql module a loadable one

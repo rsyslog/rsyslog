@@ -94,6 +94,7 @@ uchar *modGetName(modInfo_t *pThis);
 uchar *modGetStateName(modInfo_t *pThis);
 void modPrintList(void);
 rsRetVal modUnloadAndDestructAll(void);
+rsRetVal modUnloadAndDestructDynamic(void);
 
 #endif /* #ifndef MODULES_H_INCLUDED */
 /*

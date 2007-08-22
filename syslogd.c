@@ -3552,7 +3552,7 @@ static void die(int sig)
 	/* de-init some modules */
 	modExitIminternal();
 
-	/*TODO: the module config command handlers must also be freed! */
+	unregCfSysLineHdlrs();
 
 	/* TODO: this would also be the right place to de-init the builtin output modules. We
 	 * do not currently do that, because the module interface does not allow for
@@ -4258,6 +4258,10 @@ static void init(void)
 
 	/*  Close all open log files and free log descriptor array. */
 	freeSelectors();
+
+	/* Unload all non-static modules */
+	dbgprintf("Unloading non-static modules.\n");
+	modUnloadAndDestructDynamic();
 
 	dbgprintf("Clearing templates.\n");
 	tplDeleteNew();
@@ -5646,11 +5650,11 @@ static void mainloop(void)
 #endif
 #endif
 
-	errno = 0;
-	FD_ZERO(&readfds);
-	maxfds = 0;
-
 	while(!bFinished){
+	        errno  = 0;
+	        maxfds = 0;
+	        FD_ZERO (&readfds);
+
 		/* first check if we have any internal messages queued and spit them out */
 		processImInternal();
 

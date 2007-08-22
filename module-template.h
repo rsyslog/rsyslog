@@ -226,10 +226,13 @@ finalize_it:\
 		*pp = p;\
 	} else {\
 		/* cleanup, we failed */\
-		if(*ppOMSR != NULL)\
+		if(*ppOMSR != NULL) {\
 			OMSRdestruct(*ppOMSR);\
 			*ppOMSR = NULL;\
-		}
+		}\
+		if(pData != NULL)\
+			freeInstance(&pData);\
+	}
 
 #define ENDparseSelectorAct \
 	return iRet;\

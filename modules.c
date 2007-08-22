@@ -336,6 +336,31 @@ rsRetVal modUnloadAndDestructAll(void)
 
 	return iRet;
 }
+
+
+rsRetVal modUnloadAndDestructDynamic(void)
+{
+	DEFiRet;
+	modInfo_t *pMod;
+	modInfo_t *pModPrev;
+
+	pLoadedModulesLast = NULL;
+
+	pMod = modGetNxt(NULL);
+	while(pMod != NULL) {
+		pModPrev = pMod;
+		pMod = modGetNxt(pModPrev); /* get next */
+		/* now we can destroy the previous module */
+		if(pModPrev->eLinkType != eMOD_LINK_STATIC) {
+			dbgprintf("Unloading module %s\n", modGetName(pModPrev));
+			moduleDestruct(pModPrev);
+		} else {
+			pLoadedModulesLast = pModPrev;
+		}
+	}
+
+	return iRet;
+}
 /*
  * vi:set ai:
  */

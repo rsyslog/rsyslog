@@ -272,10 +272,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
         */
        if (!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
                     || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*'))
-               return RS_RET_CONFLINE_UNPROCESSED;
+	       ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
 	if((iRet = createInstance(&pData)) != RS_RET_OK)
-		return iRet;
+		goto finalize_it;
 
 
 	if(*p == '*') { /* wall */
@@ -284,7 +284,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->bIsWall = 1; /* write to all users */
 		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " WallFmt"))
 		    != RS_RET_OK)
-			return iRet;
+			goto finalize_it;
 	} else {
                 /* everything else beginning with the regex above
                  * is currently treated as a user name
@@ -309,7 +309,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		 */
 		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*)" StdUsrMsgFmt"))
 		    != RS_RET_OK)
-			return iRet;
+			goto finalize_it;
 	}
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct

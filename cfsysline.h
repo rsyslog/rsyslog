@@ -61,6 +61,7 @@ typedef struct cslCmd_s cslCmd_t;
 
 /* prototypes */
 rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData);
+rsRetVal unregCfSysLineHdlrs(void);
 rsRetVal processCfSysLineCommand(uchar *pCmd, uchar **p);
 rsRetVal cfsyslineInit(void);
 void dbgPrintCfSysLineHandlers(void);

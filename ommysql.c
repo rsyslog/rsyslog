@@ -79,6 +79,7 @@ static void closeMySQL(instanceData *pData)
 	assert(pData != NULL);
 
 	if(pData->f_hmysql != NULL) {	/* just to be on the safe side... */
+		mysql_server_end();
 		mysql_close(pData->f_hmysql);	
 		pData->f_hmysql = NULL;
 	}
@@ -229,7 +230,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* ok, if we reach this point, we have something for us */
 	if((iRet = createInstance(&pData)) != RS_RET_OK)
-		return iRet;
+		goto finalize_it;
 
 	p++; /* eat '>' '*/
 

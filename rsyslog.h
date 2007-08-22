@@ -82,9 +82,11 @@ typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 /* macro below is to be used if we need our own handling, eg for cleanup */
 #define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
 #define DEFiRet rsRetVal iRet = RS_RET_OK
-#define ABORT_FINALIZE(errCode) \
-	iRet = errCode;\
-	goto finalize_it;
+#define ABORT_FINALIZE(errCode)			\
+	do {					\
+		iRet = errCode;			\
+		goto finalize_it;		\
+	} while (0)
 
 /** Object ID. These are for internal checking. Each
  * object is assigned a specific ID. This is contained in
