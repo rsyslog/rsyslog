@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 1.19.3 (rgerhards), 2007-?
+- ...
+---------------------------------------------------------------------------
 Version 1.19.2 (rgerhards), 2007-08-28
 - a specifically formed message caused a segfault - Many thanks varmojfekoj
   for providing a patch
