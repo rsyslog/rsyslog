@@ -1615,12 +1615,10 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		if(*(pRes + iLn - 1) == '\n') {
 			/* we have a LF! */
 			/* check if we need to obtain a private copy */
-			if(pbMustBeFreed == 0) {
+			if(*pbMustBeFreed == 0) {
 				/* ok, original copy, need a private one */
 				pB = malloc((iLn + 1) * sizeof(char));
 				if(pB == NULL) {
-					if(*pbMustBeFreed == 1)
-						free(pRes);
 					*pbMustBeFreed = 0;
 					return "**OUT OF MEMORY**";
 				}

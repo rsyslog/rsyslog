@@ -1,6 +1,11 @@
 ---------------------------------------------------------------------------
-Version 1.19.2 (rgerhards), 2007-?
-- ...
+Version 1.19.2 (rgerhards), 2007-08-28
+- a specifically formed message caused a segfault - Many thanks varmojfekoj
+  for providing a patch
+- a typo and a weird condition are fixed in msg.c - Thanks again
+  varmojfekoj 
+- on file creation the file was always owned by root:root. This is fixed
+  now - Thanks ypsa for solving this issue
 ---------------------------------------------------------------------------
 Version 1.19.1 (rgerhards), 2007-08-22
 - a bug that caused a high load when a TCP/UDP connection was closed is 

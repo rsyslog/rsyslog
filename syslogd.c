@@ -2435,7 +2435,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 
 	/* suppress duplicate lines to this file
 	 */
-	if ((pAction->f_ReduceRepeated == 1) &&
+	if ((pAction->f_ReduceRepeated == 1) && pAction->f_pMsg != NULL &&
 	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(pAction->f_pMsg) &&
 	    !strcmp(getMSG(pMsg), getMSG(pAction->f_pMsg)) &&
 	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(pAction->f_pMsg))) {

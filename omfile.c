@@ -348,6 +348,50 @@ static void dynaFileFreeCache(instanceData *pData)
 }
 
 
+/* This is a shared code for both static and dynamic files.
+ */
+static void prepareFile(instanceData *pData, uchar *newFileName)
+{
+	if(access((char*)newFileName, F_OK) == 0) {
+		/* file already exists */
+		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+				pData->fCreateMode);
+	} else {
+		/* file does not exist, create it (and eventually parent directories */
+		if(pData->bCreateDirs) {
+			/* we fist need to create parent dirs if they are missing
+			 * We do not report any errors here ourselfs but let the code
+			 * fall through to error handler below.
+			 */
+			if(makeFileParentDirs(newFileName, strlen((char*)newFileName),
+			     pData->fDirCreateMode, pData->dirUID,
+			     pData->dirGID, pData->bFailOnChown) == 0) {
+				pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+						pData->fCreateMode);
+				if(pData->fd != -1) {
+					/* check and set uid/gid */
+					if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
+						/* we need to set owner/group */
+						if(fchown(pData->fd, pData->fileUID,
+						          pData->fileGID) != 0) {
+							if(pData->bFailOnChown) {
+								int eSave = errno;
+								close(pData->fd);
+								pData->fd = -1;
+								errno = eSave;
+							}
+							/* we will silently ignore the chown() failure
+							 * if configured to do so.
+							 */
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
 /* This function handles dynamic file names. It checks if the
  * requested file name is already open and, if not, does everything
  * needed to switch to the it.
@@ -425,43 +469,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	}
 
 	/* Ok, we finally can open the file */
-	if(access((char*)newFileName, F_OK) == 0) {
-		/* file already exists */
-		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-				pData->fCreateMode);
-	} else {
-		/* file does not exist, create it (and eventually parent directories */
-		if(pData->bCreateDirs) {
-			/* we fist need to create parent dirs if they are missing
-			 * We do not report any errors here ourselfs but let the code
-			 * fall through to error handler below.
-			 */
-			if(makeFileParentDirs(newFileName, strlen((char*)newFileName),
-			     pData->fDirCreateMode, pData->dirUID,
-			     pData->dirGID, pData->bFailOnChown) == 0) {
-				pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-						pData->fCreateMode);
-				if(pData->fd != -1) {
-					/* check and set uid/gid */
-					if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
-						/* we need to set owner/group */
-						if(fchown(pData->fd, pData->fileUID,
-						          pData->fileGID) != 0) {
-							if(pData->bFailOnChown) {
-								int eSave = errno;
-								close(pData->fd);
-								pData->fd = -1;
-								errno = eSave;
-							}
-							/* we will silently ignore the chown() failure
-							 * if configured to do so.
-							 */
-						}
-					}
-				}
-			}
-		}
-	}
+	prepareFile(pData, newFileName);
 
 	/* file is either open now or an error state set */
 	if(pData->fd == -1) {
@@ -729,11 +737,18 @@ CODESTARTparseSelectorAct
 
 		pData->bDynamicName = 0;
 		pData->fCreateMode = fCreateMode; /* preserve current setting */
+		pData->fDirCreateMode = fDirCreateMode;
+		pData->bCreateDirs = bCreateDirs;
+		pData->bFailOnChown = bFailOnChown;
+		pData->fileUID = fileUID;
+		pData->fileGID = fileGID;
+		pData->dirUID = dirUID;
+		pData->dirGID = dirGID;
+
 		if(pData->fileType == eTypePIPE) {
 			pData->fd = open(pData->f_fname, O_RDWR|O_NONBLOCK);
 	        } else {
-			pData->fd = open(pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-					 pData->fCreateMode);
+			prepareFile(pData, pData->f_fname);
 		}
 		        
 	  	if ( pData->fd < 0 ){
