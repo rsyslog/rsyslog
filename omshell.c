@@ -99,7 +99,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 */
 	if(*p == '^') {
 		if((iRet = createInstance(&pData)) != RS_RET_OK)
-			return iRet;
+			goto finalize_it;
 	}
 
 

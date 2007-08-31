@@ -1,6 +1,11 @@
 ---------------------------------------------------------------------------
-Version 1.19.3 (rgerhards), 2007-?
-- ...
+Version 1.19.3 (rgerhards), 2007-08-31
+- small mem leak fixed (after calling parseSelectorAct) - Thx varmojkekoj
+- documentation section "Regular File" und "Blocks" updated
+- solved an issue with dynamic file generation - Once again many thanks
+  to varmojfekoj
+- the negative selector for program name filter (Blocks) does not work as
+  expected - Thanks varmojfekoj for patching
 ---------------------------------------------------------------------------
 Version 1.19.2 (rgerhards), 2007-08-28
 - a specifically formed message caused a segfault - Many thanks varmojfekoj

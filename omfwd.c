@@ -714,7 +714,7 @@ CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*p == '@') {
 		if((iRet = createInstance(&pData)) != RS_RET_OK)
-			return iRet;
+			goto finalize_it;
 		++p; /* eat '@' */
 		if(*p == '@') { /* indicator for TCP! */
 			pData->protocol = FORW_TCP;
@@ -837,7 +837,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		/* process template */
 		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " StdFwdFmt"))
 		   != RS_RET_OK)
-			return iRet;
+			goto finalize_it;
 
 		/* first set the pData->eDestState */
 		memset(&hints, 0, sizeof(hints));

@@ -432,6 +432,10 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.options.bSpaceCC = 1;
 		 } else if(!strcmp((char*)Buf, "drop-last-lf")) {
 			pTpe->data.field.options.bDropLastLF = 1;
+		 } else if(!strcmp((char*)Buf, "secpath-drop")) {
+			pTpe->data.field.options.bSecPathDrop = 1;
+		 } else if(!strcmp((char*)Buf, "secpath-replace")) {
+			pTpe->data.field.options.bSecPathReplace = 1;
 		 } else {
 			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }

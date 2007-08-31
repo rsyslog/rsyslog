@@ -214,10 +214,14 @@ then the second block will only log messages from the ppp program on dialhost.
 <p>A program specification is a line beginning with ‘!prog’ and the following 
 blocks will be associated with calls to syslog from that specific program. A 
 program specification for ‘foo’ will also match any message logged by the kernel 
-with the prefix ‘foo: ’. A hostname specification of the form ‘+hostname’ and 
+with the prefix ‘foo: ’. Alternatively, a program specification ‘-foo’ causes the 
+following blocks to be applied to messages from any program but the one specified. 
+
+A hostname specification of the form ‘+hostname’ and 
 the following blocks will be applied to messages received from the specified 
 hostname. Alternatively, a hostname specification ‘-hostname’ causes the 
 following blocks to be applied to messages from any host but the one specified. 
+
 If the hostname is given as ‘@’, the local hostname will be used. (NOT YET 
 IMPLEMENTED) A program or hostname specification may be reset by giving the 
 program or hostname as ‘*’.</p>
@@ -410,24 +414,27 @@ name. An example can be seen above in the description of template. We will use
 the &quot;DynFile&quot; template defined there. Dynamic filenames are indicated by 
 specifying a questions mark &quot;?&quot; instead of a slash, followed by the template 
 name. Thus, the selector line for our dynamic file name would look as follows:</p>
-<p align="center">
+<blockquote>
 <code>*.* ?DynFile</code>
-</p>
+</blockquote>
 <p>That's all you need to do. Rsyslog will now automatically generate file names 
 for you and store the right messages into the right files. Please note that the 
 minus sign also works with dynamic file name selectors. Thus, to avoid syncing, 
 you may use</p>
-<p align="center">
-<code>*.* -?DynFile</code></p>
+<blockquote>
+<code>*.* -?DynFile</code></blockquote>
 <p>And of course you can use templates to specify the output format:</p>
-<p align="center">
-<code>*.* ?DynFile;MyTemplate</code></p>
+<blockquote>
+<code>*.* ?DynFile;MyTemplate</code></blockquote>
 <p><b>A word of caution:</b> rsyslog creates files as needed. So if a new host 
 is using your syslog server, rsyslog will automatically create a new file for 
-it. <b>However, directories are never created</b>. So if you use a dynamic 
-directory name, you must make sure that all possible directories are created, 
-otherwise the writes will fail. This restriction will most probably be removed 
-in later versions of rsyslogd.</p>
+it.</p>
+
+<p><b>Creating directories is also supported</b>. For example you can use the hostname as directory 
+and the program name as file name:</p>
+<blockquote>
+<code>$template DynFile,"/var/log/%HOSTNAME%/%programname%.log"</code></blockquote>
+
 <h3>Named Pipes</h3>
 <p>This version of rsyslogd(8) has support for logging output to named pipes (fifos). 
 A fifo or named pipe can be used as a destination for log messages by prepending 

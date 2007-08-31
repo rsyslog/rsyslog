@@ -1606,6 +1606,45 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 	}
 
+	/* Take care of spurious characters to make the property safe
+	 * for a path definition
+	 */
+	if(pTpe->data.field.options.bSecPathDrop || pTpe->data.field.options.bSecPathReplace) {
+		if(pTpe->data.field.options.bSecPathDrop) {
+			char *pSrc = pRes;
+			char *pDst = pRes;
+			while(*pSrc) {
+				if(*pSrc != '/')
+					*pDst++ = *pSrc;
+				pSrc++;
+			}
+			*pDst = '\0';
+		} else {
+			char *pB = pRes;
+			while(*pB) {
+				if(*pB == '/')
+					*pB = '_';
+				pB++;
+			}
+		}
+		
+		if(*pRes == '.' && (*(pRes + 1) == '\0'	|| (*(pRes + 1) == '.' && *(pRes + 2) == '\0')))
+			*pRes = '_';
+
+		if(*pRes == '\0') {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			pRes = malloc(2);
+			if(pRes == NULL) {
+				*pbMustBeFreed = 0;
+				return "**OUT OF MEMORY ALLOCATING pBuf**";
+			}
+			*pRes = '_';
+			*(pRes + 1) = '\0';
+			*pbMustBeFreed = 1;
+		}
+	}
+
 	/* Now drop last LF if present (pls note that this must not be done
 	 * if bEscapeCC was set!
 	 */
