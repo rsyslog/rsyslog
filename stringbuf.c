@@ -257,6 +257,8 @@ rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, uchar *pszNew)
  * the CStr object currently holds a NULL pointer string buffer. If so,
  * "" is returned.
  * rgerhards 2005-10-19
+ * WARNING: The returned pointer MUST NOT be freed, as it may be
+ *          obtained from that constant memory pool (in case of NULL!)
  */
 uchar*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis)
 {
@@ -685,11 +687,12 @@ int rsCStrLocateInSzStr(rsCStrObj *pThis, uchar *sz)
 }
 
 
+#if 0	 /* read comment below why this is commented out. In short: for future use! */
 /* locate the first occurence of a standard sz string inside a rsCStr object.
  * Returns the offset (0-bound) of this first occurrence. If not found, -1 is
  * returned.
  * rgerhards 2005-09-19
- * WARNING: i accidently created this function (I later noticed I didn't relly
+ * WARNING: I accidently created this function (I later noticed I didn't relly
  *          need it... I will not remove the function, as it probably is useful
  *          some time later. However, it is not fully tested, so start with testing
  *          it before you put it to first use).
@@ -731,6 +734,7 @@ int rsCStrLocateSzStr(rsCStrObj *pThis, uchar *sz)
 
 	return(bFound ? i : -1);
 }
+#endif /* end comment out */
 
 
 /*

@@ -1269,7 +1269,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		assert(pTpe != NULL);
 		pName = pTpe->data.field.pPropRepl;
 	} else {
-		pName = (char*) rsCStrGetSzStr(pCSPropName);
+		pName = (char*) rsCStrGetSzStrNoNULL(pCSPropName);
 	}
 	*pbMustBeFreed = 0;
 

@@ -2301,22 +2301,22 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 		if(rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
 			dbgprintf("hostname filter '+%s' does not match '%s'\n", 
-				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
+				rsCStrGetSzStrNoNULL(f->pCSHostnameComp), getHOSTNAME(pMsg));
 			return 0;
 		}
 	} else { /* must be -hostname */
 		if(!rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
 			dbgprintf("hostname filter '-%s' does not match '%s'\n", 
-				rsCStrGetSzStr(f->pCSHostnameComp), getHOSTNAME(pMsg));
+				rsCStrGetSzStrNoNULL(f->pCSHostnameComp), getHOSTNAME(pMsg));
 			return 0;
 		}
 	}
 	
 	if(f->pCSProgNameComp != NULL) {
 		int bInv = 0, bEqv = 0, offset = 0;
-		if(*(rsCStrGetSzStr(f->pCSProgNameComp)) == '-') {
-			if(*(rsCStrGetSzStr(f->pCSProgNameComp) + 1) == '-')
+		if(*(rsCStrGetSzStrNoNULL(f->pCSProgNameComp)) == '-') {
+			if(*(rsCStrGetSzStrNoNULL(f->pCSProgNameComp) + 1) == '-')
 				offset = 1;
 			else {
 				bInv = 1;
@@ -2329,7 +2329,7 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 		if((!bEqv && !bInv) || (bEqv && bInv)) {
 			/* not equal or inverted selection, so we are already done... */
 			dbgprintf("programname filter '%s' does not match '%s'\n", 
-				rsCStrGetSzStr(f->pCSProgNameComp), getProgramName(pMsg));
+				rsCStrGetSzStrNoNULL(f->pCSProgNameComp), getProgramName(pMsg));
 			return 0;
 		}
 	}
@@ -2390,13 +2390,13 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 			pszPropValDeb = MsgGetProp(pMsg, NULL,
 					f->f_filterData.prop.pCSPropName, &pbMustBeFreedDeb);
 			printf("Filter: check for property '%s' (value '%s') ",
-			        rsCStrGetSzStr(f->f_filterData.prop.pCSPropName),
+			        rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSPropName),
 			        pszPropValDeb);
 			if(f->f_filterData.prop.isNegated)
 				printf("NOT ");
 			printf("%s '%s': %s\n",
 			       getFIOPName(f->f_filterData.prop.operation),
-			       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue),
+			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue),
 			       iRet ? "TRUE" : "FALSE");
 			if(pbMustBeFreedDeb)
 				free(pszPropValDeb);
@@ -3818,7 +3818,7 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	dbgprintf("Requested to load module '%s'\n", szName);
 
 	strncpy((char *) szPath, ModDir, sizeof(szPath));
-	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen(szPath) - 1);
+	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen((char*) szPath) - 1);
 	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
 		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
 		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
@@ -4051,12 +4051,12 @@ static void dbgPrintInitInfo(void)
 	for (f = Files; f != NULL ; f = f->f_next) {
 		printf("Selector %d:\n", iSelNbr++);
 		if(f->pCSProgNameComp != NULL)
-			printf("tag: '%s'\n", rsCStrGetSzStr(f->pCSProgNameComp));
+			printf("tag: '%s'\n", rsCStrGetSzStrNoNULL(f->pCSProgNameComp));
 		if(f->eHostnameCmpMode != HN_NO_COMP)
 			printf("hostname: %s '%s'\n",
 				f->eHostnameCmpMode == HN_COMP_MATCH ?
 					"only" : "allbut",
-				rsCStrGetSzStr(f->pCSHostnameComp));
+				rsCStrGetSzStrNoNULL(f->pCSHostnameComp));
 		if(f->f_filter_type == FILTER_PRI) {
 			for (i = 0; i <= LOG_NFACILITIES; i++)
 				if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
@@ -4066,13 +4066,13 @@ static void dbgPrintInitInfo(void)
 		} else {
 			printf("PROPERTY-BASED Filter:\n");
 			printf("\tProperty.: '%s'\n",
-			       rsCStrGetSzStr(f->f_filterData.prop.pCSPropName));
+			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSPropName));
 			printf("\tOperation: ");
 			if(f->f_filterData.prop.isNegated)
 				printf("NOT ");
 			printf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
 			printf("\tValue....: '%s'\n",
-			       rsCStrGetSzStr(f->f_filterData.prop.pCSCompValue));
+			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue));
 			printf("\tAction...: ");
 		}
 
@@ -4757,7 +4757,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 		f->f_filterData.prop.operation = FIOP_REGEX;
 	} else {
 		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
-		           (char*) rsCStrGetSzStr(pCSCompOp));
+		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
 	}
 	rsCStrDestruct (pCSCompOp); /* no longer needed */
 
