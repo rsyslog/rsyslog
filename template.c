@@ -420,6 +420,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		/* check if we need to skip oversize option */
 		while(*p && *p != '%' && *p != ',')
 			++p;	/* just skip */
+		if(*p == ',')
+			++p; /* eat ',' */
 		/* OK, we got the option, so now lets look what
 		 * it tells us...
 		 */

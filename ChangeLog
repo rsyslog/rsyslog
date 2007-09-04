@@ -5,6 +5,12 @@ Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
   in tplToString() - thanks varmojfekoj for patching
 - added a man-version of the config file documenation - thanks to Michel
   Samia for providing the man file
+- fixed bug: a template like this causes an infinite loop:
+  $template opts,"%programname:::a,b%"
+  thanks varmojfekoj for the patch
+- fixed bug: case changing options crash freeing the string pointer
+  because they modify it: $template opts2,"%programname::1:lowercase%"
+  thanks varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 1.19.3 (mmeckelein/varmojfekoj), 2007-08-31
 - small mem leak fixed (after calling parseSelectorAct) - Thx varmojkekoj

@@ -1435,6 +1435,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	} else if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {
 		/* we need to obtain a private copy */
 		int iFrom, iTo;
+		char *pSb;
 		iFrom = pTpe->data.field.iFromPos;
 		iTo = pTpe->data.field.iToPos;
 		/* need to zero-base to and from (they are 1-based!) */
@@ -1450,19 +1451,20 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pbMustBeFreed = 0;
 			return "**OUT OF MEMORY**";
 		}
+		pSb = pRes;
 		if(iFrom) {
 		/* skip to the start of the substring (can't do pointer arithmetic
 		 * because the whole string might be smaller!!)
 		 */
-			while(*pRes && iFrom) {
+			while(*pSb && iFrom) {
 				--iFrom;
-				++pRes;
+				++pSb;
 			}
 		}
 		/* OK, we are at the begin - now let's copy... */
-		while(*pRes && iLen) {
-			*pBuf++ = *pRes;
-			++pRes;
+		while(*pSb && iLen) {
+			*pBuf++ = *pSb;
+			++pSb;
 			--iLen;
 		}
 		*pBuf = '\0';
@@ -1523,6 +1525,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		int iBufLen = strlen(pRes);
 		char *pBStart;
 		char *pB;
+		char *pSrc;
 		pBStart = pB = malloc((iBufLen + 1) * sizeof(char));
 		if(pB == NULL) {
 			if(*pbMustBeFreed == 1)
@@ -1530,11 +1533,12 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pbMustBeFreed = 0;
 			return "**OUT OF MEMORY**";
 		}
-		while(*pRes) {
+		pSrc = pRes;
+		while(*pSrc) {
 			*pB++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
-			          toupper(*pRes) : tolower(*pRes);
+			          toupper(*pSrc) : tolower(*pSrc);
 				  /* currently only these two exist */
-			++pRes;
+			++pSrc;
 		}
 		*pB = '\0';
 		if(*pbMustBeFreed == 1)
