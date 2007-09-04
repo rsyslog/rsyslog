@@ -1,8 +1,12 @@
 ---------------------------------------------------------------------------
-Version 1.19.4 (rgerhards), 2007-?
-- ...
+Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
+- fixed a number of small memory leaks - thanks varmojfekoj for patching
+- fixed an issue with CString class that could lead to rsyslog abort
+  in tplToString() - thanks varmojfekoj for patching
+- added a man-version of the config file documenation - thanks to Michel
+  Samia for providing the man file
 ---------------------------------------------------------------------------
-Version 1.19.3 (rgerhards), 2007-08-31
+Version 1.19.3 (mmeckelein/varmojfekoj), 2007-08-31
 - small mem leak fixed (after calling parseSelectorAct) - Thx varmojkekoj
 - documentation section "Regular File" und "Blocks" updated
 - solved an issue with dynamic file generation - Once again many thanks
@@ -10,7 +14,7 @@ Version 1.19.3 (rgerhards), 2007-08-31
 - the negative selector for program name filter (Blocks) does not work as
   expected - Thanks varmojfekoj for patching
 ---------------------------------------------------------------------------
-Version 1.19.2 (rgerhards), 2007-08-28
+Version 1.19.2 (mmeckelein/varmojfekoj), 2007-08-28
 - a specifically formed message caused a segfault - Many thanks varmojfekoj
   for providing a patch
 - a typo and a weird condition are fixed in msg.c - Thanks again
@@ -18,7 +22,7 @@ Version 1.19.2 (rgerhards), 2007-08-28
 - on file creation the file was always owned by root:root. This is fixed
   now - Thanks ypsa for solving this issue
 ---------------------------------------------------------------------------
-Version 1.19.1 (rgerhards), 2007-08-22
+Version 1.19.1 (mmeckelein), 2007-08-22
 - a bug that caused a high load when a TCP/UDP connection was closed is 
   fixed now - Thanks mildew for solving this issue
 - fixed a bug which caused a segfault on reinit - Thx varmojfekoj for the
