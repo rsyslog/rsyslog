@@ -108,7 +108,11 @@ uchar *tplToString(struct template *pTpl, msg_t *pMsg)
 	 * "real" (usable) string and discard the helper structures.
 	 */
 	rsCStrFinish(pCStr);
-	return rsCStrConvSzStrAndDestruct(pCStr);
+	if((pVal = rsCStrConvSzStrAndDestruct(pCStr)) == NULL) {
+		pVal = malloc(1);
+		*pVal = '\0';
+	}
+	return pVal;
 }
 
 /* Helper to doSQLEscape. This is called if doSQLEscape
@@ -293,7 +297,7 @@ struct template* tplConstruct(void)
  */
 static int do_Constant(unsigned char **pp, struct template *pTpl)
 {
-	register unsigned char *p;
+	register unsigned char *p, *s;
 	rsCStrObj *pStrB;
 	struct templateEntry *pTpe;
 	int i;
@@ -373,8 +377,13 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 	 * benefit from the counted string object.
 	 * 2005-09-09 rgerhards
 	 */
-	pTpe->data.constant.iLenConstant = rsCStrLen(pStrB);
-	pTpe->data.constant.pConstant = (char*) rsCStrConvSzStrAndDestruct(pStrB);
+	if ((pTpe->data.constant.iLenConstant = rsCStrLen(pStrB)) == 0) {
+		s = malloc(1);
+		*s = '\0';
+		rsCStrDestruct(pStrB);
+	} else
+		s = rsCStrConvSzStrAndDestruct(pStrB);
+	pTpe->data.constant.pConstant = (char*) s;
 
 	*pp = p;
 

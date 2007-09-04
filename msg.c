@@ -126,6 +126,14 @@ void MsgDestruct(msg_t * pM)
 			free(pM->pszTIMESTAMP_MySQL);
 		if(pM->pszPRI != NULL)
 			free(pM->pszPRI);
+		if(pM->pCSProgName != NULL)
+			rsCStrDestruct(pM->pCSProgName);
+		if(pM->pCSStrucData != NULL)
+			rsCStrDestruct(pM->pCSStrucData);
+		if(pM->pCSPROCID != NULL)
+			rsCStrDestruct(pM->pCSPROCID);
+		if(pM->pCSMSGID != NULL)
+			rsCStrDestruct(pM->pCSMSGID);
 		free(pM);
 	}
 	MsgUnlock();

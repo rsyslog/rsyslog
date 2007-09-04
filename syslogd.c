@@ -1844,6 +1844,18 @@ static rsRetVal selectorDestruct(void *pVal)
 
 	assert(pThis != NULL);
 
+	if(pThis->pCSHostnameComp != NULL)
+		rsCStrDestruct(pThis->pCSHostnameComp);
+	if(pThis->pCSProgNameComp != NULL)
+		rsCStrDestruct(pThis->pCSProgNameComp);
+
+	if(pThis->f_filter_type == FILTER_PROP) {
+		if(pThis->f_filterData.prop.pCSPropName != NULL)
+			rsCStrDestruct(pThis->f_filterData.prop.pCSPropName);
+		if(pThis->f_filterData.prop.pCSCompValue != NULL)
+			rsCStrDestruct(pThis->f_filterData.prop.pCSCompValue);
+	}
+
 	llDestroy(&pThis->llActList);
 	free(pThis);
 	
@@ -4807,7 +4819,6 @@ static rsRetVal cflineProcessHostSelector(uchar **pline)
 		if(pDfltHostnameCmp != NULL) {
 			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, NULL)) != RS_RET_OK)
 				return(iRet);
-			pDfltHostnameCmp = NULL;
 		}
 	} else {
 		dbgprintf("setting BSD-like hostname filter to '%s'\n", *pline);
@@ -4852,7 +4863,6 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 		if(pDfltProgNameCmp != NULL) {
 			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, NULL)) != RS_RET_OK)
 				return(iRet);
-			pDfltProgNameCmp = NULL;
 		}
 	} else {
 		dbgprintf("setting programname filter to '%s'\n", *pline);
