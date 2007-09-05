@@ -128,7 +128,7 @@ rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
 int getPROCIDLen(msg_t *pM);
 char *getPROCID(msg_t *pM);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
-void MsgAssignTAG(msg_t *pMsg, char *pBuf);
+void MsgAssignTAG(msg_t *pMsg, uchar *pBuf);
 void MsgSetTAG(msg_t *pMsg, char* pszTAG);
 char *getTAG(msg_t *pM);
 int getHOSTNAMELen(msg_t *pM);

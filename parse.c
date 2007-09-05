@@ -361,8 +361,8 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 #ifdef SYSLOG_INET
 rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 {
-	register unsigned char *pC;
-	unsigned char *pszIP;
+	register uchar *pC;
+	uchar *pszIP;
 	uchar *pszTmp;
 	struct addrinfo hints, *res = NULL;
 	rsCStrObj *pCStr;
@@ -373,7 +373,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	assert(pBits != NULL);
 
 	if((pCStr = rsCStrConstruct()) == NULL)
-		return RS_RET_OUT_OF_MEMORY;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	parsSkipWhitespace(pThis);
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
@@ -400,11 +400,9 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	/* now we have the string and must check/convert it to
 	 * an NetAddr structure.
 	 */	
-  	if((pszIP = rsCStrConvSzStrAndDestruct(pCStr)) == NULL)
-		return RS_RET_ERR;
+  	CHKiRet(rsCStrConvSzStrAndDestruct(pCStr, &pszIP, 0));
 
-	*pIP = malloc (sizeof (struct NetAddr));
-	memset (*pIP, 0, sizeof (struct NetAddr));
+	*pIP = calloc(1, sizeof(struct NetAddr));
 	
 	if (*((char*)pszIP) == '[') {
 		pszTmp = (uchar*)strchr ((char*)pszIP, ']');
@@ -493,7 +491,10 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		++pC;
 	}
 
-	return RS_RET_OK;
+	iRet = RS_RET_OK;
+
+finalize_it:
+	return iRet;
 }
 #endif  /* #ifdef SYSLOG_INET */
 

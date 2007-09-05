@@ -41,18 +41,23 @@ static struct template *tplLastStatic = NULL; /* last static element of the temp
  * if we raise an alert, the memory situation might become even
  * worse. So we prefer to let the caller deal with it.
  * rgerhards, 2007-07-03
+ *
+ * rgerhards, 2007-09-05: I changed the interface to use the standard iRet
+ * "calling sequence". This greatly eases complexity when it comes to handling
+ * errors in called modules (plus, it is much nicer).
  */
-uchar *tplToString(struct template *pTpl, msg_t *pMsg)
+rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 {
+	DEFiRet;
 	struct templateEntry *pTpe;
 	rsCStrObj *pCStr;
 	unsigned short bMustBeFreed;
-	char *pVal;
+	uchar *pVal;
 	size_t iLenVal;
-	rsRetVal iRet;
 
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
+	assert(ppSz != NULL);
 
 	/* loop through the template. We obtain one value
 	 * and copy it over to our dynamic string buffer. Then, we
@@ -61,24 +66,24 @@ uchar *tplToString(struct template *pTpl, msg_t *pMsg)
 	 */
 	if((pCStr = rsCStrConstruct()) == NULL) {
 		dbgprintf("memory shortage, tplToString failed\n");
-		return NULL;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
 	pTpe = pTpl->pEntryRoot;
 	while(pTpe != NULL) {
 		if(pTpe->eEntryType == CONSTANT) {
-			if((iRet = rsCStrAppendStrWithLen(pCStr, 
+			CHKiRet_Hdlr(rsCStrAppendStrWithLen(pCStr, 
 							  (uchar *) pTpe->data.constant.pConstant,
 							  pTpe->data.constant.iLenConstant)
-							 ) != RS_RET_OK) {
+							 ) {
 				dbgprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
 				rsCStrDestruct(pCStr);
-				return NULL;
+				FINALIZE;
 			}
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (char*) MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
-			iLenVal = strlen(pVal);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
+			iLenVal = strlen((char*) pVal);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
@@ -90,13 +95,13 @@ uchar *tplToString(struct template *pTpl, msg_t *pMsg)
 			else if(pTpl->optFormatForSQL == 2)
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
 			/* value extracted, so lets copy */
-			if((iRet = rsCStrAppendStrWithLen(pCStr, (uchar*) pVal, iLenVal)) != RS_RET_OK) {
+			CHKiRet_Hdlr(rsCStrAppendStrWithLen(pCStr, (uchar*) pVal, iLenVal)) {
 				dbgprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
 				rsCStrDestruct(pCStr);
 				if(bMustBeFreed)
 					free(pVal);
-				return NULL;
+				FINALIZE;
 			}
 			if(bMustBeFreed)
 				free(pVal);
@@ -107,12 +112,13 @@ uchar *tplToString(struct template *pTpl, msg_t *pMsg)
 	/* we are done with the template, now let's convert the result into a
 	 * "real" (usable) string and discard the helper structures.
 	 */
-	rsCStrFinish(pCStr);
-	if((pVal = rsCStrConvSzStrAndDestruct(pCStr)) == NULL) {
-		pVal = malloc(1);
-		*pVal = '\0';
-	}
-	return pVal;
+	CHKiRet(rsCStrFinish(pCStr));
+	CHKiRet(rsCStrConvSzStrAndDestruct(pCStr, &pVal, 0));
+	
+finalize_it:
+	*ppSz = (iRet == RS_RET_OK) ? pVal : NULL;
+
+	return iRet;
 }
 
 /* Helper to doSQLEscape. This is called if doSQLEscape
@@ -130,7 +136,7 @@ uchar *tplToString(struct template *pTpl, msg_t *pMsg)
  * if mode = 1, then backslashes are changed to slashes.
  * rgerhards 2005-09-22
  */
-static void doSQLEmergencyEscape(register char *p, int escapeMode)
+static void doSQLEmergencyEscape(register uchar *p, int escapeMode)
 {
 	while(*p) {
 		if(*p == '\'')
@@ -163,9 +169,9 @@ static void doSQLEmergencyEscape(register char *p, int escapeMode)
  * new parameter escapeMode is 0 - standard sql, 1 - "smart" engines
  * 2005-09-22 rgerhards
  */
-void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode)
+void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode)
 {
-	char *p;
+	uchar *p;
 	int iLen;
 	rsCStrObj *pStrB;
 	uchar *pszGenerated;
@@ -199,33 +205,27 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int esc
 		if(*p == '\'') {
 			if(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\') != RS_RET_OK) {
 				doSQLEmergencyEscape(*pp, escapeMode);
-				rsCStrFinish(pStrB);
-				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) != NULL)
-					free(pszGenerated);
+				rsCStrDestruct(pStrB);
 				return;
 				}
 			iLen++;	/* reflect the extra character */
 		} else if((escapeMode == 1) && (*p == '\\')) {
 			if(rsCStrAppendChar(pStrB, '\\') != RS_RET_OK) {
 				doSQLEmergencyEscape(*pp, escapeMode);
-				rsCStrFinish(pStrB);
-				if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) != NULL)
-					free(pszGenerated);
+				rsCStrDestruct(pStrB);
 				return;
 				}
 			iLen++;	/* reflect the extra character */
 		}
 		if(rsCStrAppendChar(pStrB, *p) != RS_RET_OK) {
 			doSQLEmergencyEscape(*pp, escapeMode);
-			rsCStrFinish(pStrB);
-			if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) != NULL) 
-				free(pszGenerated);
+			rsCStrDestruct(pStrB);
 			return;
 		}
 		++p;
 	}
 	rsCStrFinish(pStrB);
-	if((pszGenerated = rsCStrConvSzStrAndDestruct(pStrB)) == NULL) {
+	if(rsCStrConvSzStrAndDestruct(pStrB, &pszGenerated, 0) != RS_RET_OK) {
 		doSQLEmergencyEscape(*pp, escapeMode);
 		return;
 	}
@@ -233,10 +233,11 @@ void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int esc
 	if(*pbMustBeFreed)
 		free(*pp); /* discard previous value */
 
-	*pp = (char*) pszGenerated;
+	*pp = pszGenerated;
 	*pLen = iLen;
 	*pbMustBeFreed = 1;
 }
+
 
 /* Constructs a template entry object. Returns pointer to it
  * or NULL (if it fails). Pointer to associated template list entry 
@@ -297,7 +298,7 @@ struct template* tplConstruct(void)
  */
 static int do_Constant(unsigned char **pp, struct template *pTpl)
 {
-	register unsigned char *p, *s;
+	register unsigned char *p;
 	rsCStrObj *pStrB;
 	struct templateEntry *pTpe;
 	int i;
@@ -377,13 +378,9 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 	 * benefit from the counted string object.
 	 * 2005-09-09 rgerhards
 	 */
-	if ((pTpe->data.constant.iLenConstant = rsCStrLen(pStrB)) == 0) {
-		s = malloc(1);
-		*s = '\0';
-		rsCStrDestruct(pStrB);
-	} else
-		s = rsCStrConvSzStrAndDestruct(pStrB);
-	pTpe->data.constant.pConstant = (char*) s;
+	pTpe->data.constant.iLenConstant = rsCStrLen(pStrB);
+	if(rsCStrConvSzStrAndDestruct(pStrB, &pTpe->data.constant.pConstant, 0) != RS_RET_OK)
+		return 1;
 
 	*pp = p;
 
@@ -496,7 +493,8 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	/* got the name*/
 	rsCStrFinish(pStrB);
-	pTpe->data.field.pPropRepl = (char*) rsCStrConvSzStrAndDestruct(pStrB);
+	if(rsCStrConvSzStrAndDestruct(pStrB, &pTpe->data.field.pPropRepl, 0) != RS_RET_OK)
+		return 1;
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {

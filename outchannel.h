@@ -7,9 +7,9 @@ struct outchannel {
 	struct outchannel *pNext;
 	char *pszName;
 	int iLenName;
-	char *pszFileTemplate;
+	uchar *pszFileTemplate;
 	off_t	uSizeLimit;
-	char *cmdOnSizeLimit;
+	uchar *cmdOnSizeLimit;
 };
 
 struct outchannel* ochConstruct(void);

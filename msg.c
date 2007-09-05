@@ -819,10 +819,10 @@ char *getMSGID(msg_t *pM)
  * function is a performance optimization over MsgSetTAG().
  * rgerhards 2004-11-19
  */
-void MsgAssignTAG(msg_t *pMsg, char *pBuf)
+void MsgAssignTAG(msg_t *pMsg, uchar *pBuf)
 {
 	assert(pMsg != NULL);
-	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen(pBuf);
+	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen((char*)pBuf);
 	pMsg->pszTAG =  (uchar*) pBuf;
 }
 
@@ -852,7 +852,7 @@ void MsgSetTAG(msg_t *pMsg, char* pszTAG)
 static void tryEmulateTAG(msg_t *pM)
 {
 	int iTAGLen;
-	char *pBuf;
+	uchar *pBuf;
 	assert(pM != NULL);
 
 	if(pM->pszTAG != NULL) 
@@ -867,7 +867,7 @@ static void tryEmulateTAG(msg_t *pM)
 			iTAGLen = getAPPNAMELen(pM) + getPROCIDLen(pM) + 3;
 			if((pBuf = malloc(iTAGLen * sizeof(char))) == NULL)
 				return; /* nothing we can do */
-			snprintf(pBuf, iTAGLen, "%s[%s]", getAPPNAME(pM), getPROCID(pM));
+			snprintf((char*)pBuf, iTAGLen, "%s[%s]", getAPPNAME(pM), getPROCID(pM));
 			MsgAssignTAG(pM, pBuf);
 		}
 	}
@@ -1250,7 +1250,7 @@ static uchar *getNOW(eNOWType eNow)
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  rsCStrObj *pCSPropName, unsigned short *pbMustBeFreed)
 {
-	char *pName;
+	uchar *pName;
 	char *pRes; /* result pointer */
 	char *pBufStart;
 	char *pBuf;
@@ -1269,28 +1269,28 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		assert(pTpe != NULL);
 		pName = pTpe->data.field.pPropRepl;
 	} else {
-		pName = (char*) rsCStrGetSzStrNoNULL(pCSPropName);
+		pName = rsCStrGetSzStrNoNULL(pCSPropName);
 	}
 	*pbMustBeFreed = 0;
 
 	/* sometimes there are aliases to the original MonitoWare
 	 * property names. These come after || in the ifs below. */
-	if(!strcmp(pName, "msg")) {
+	if(!strcmp((char*) pName, "msg")) {
 		pRes = getMSG(pMsg);
-	} else if(!strcmp(pName, "rawmsg")) {
+	} else if(!strcmp((char*) pName, "rawmsg")) {
 		pRes = getRawMsg(pMsg);
-	} else if(!strcmp(pName, "UxTradMsg")) {
+	} else if(!strcmp((char*) pName, "UxTradMsg")) {
 		pRes = getUxTradMsg(pMsg);
-	} else if(!strcmp(pName, "FROMHOST")) {
+	} else if(!strcmp((char*) pName, "FROMHOST")) {
 		pRes = getRcvFrom(pMsg);
-	} else if(!strcmp(pName, "source")
-		  || !strcmp(pName, "HOSTNAME")) {
+	} else if(!strcmp((char*) pName, "source")
+		  || !strcmp((char*) pName, "HOSTNAME")) {
 		pRes = getHOSTNAME(pMsg);
-	} else if(!strcmp(pName, "syslogtag")) {
+	} else if(!strcmp((char*) pName, "syslogtag")) {
 		pRes = getTAG(pMsg);
-	} else if(!strcmp(pName, "PRI")) {
+	} else if(!strcmp((char*) pName, "PRI")) {
 		pRes = getPRI(pMsg);
-	} else if(!strcmp(pName, "PRI-text")) {
+	} else if(!strcmp((char*) pName, "PRI-text")) {
 		pBuf = malloc(20 * sizeof(char));
 		if(pBuf == NULL) {
 			*pbMustBeFreed = 0;
@@ -1299,60 +1299,60 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pbMustBeFreed = 1;
 			pRes = textpri(pBuf, 20, getPRIi(pMsg));
 		}
-	} else if(!strcmp(pName, "iut")) {
+	} else if(!strcmp((char*) pName, "iut")) {
 		pRes = "1"; /* always 1 for syslog messages (a MonitorWare thing;)) */
-	} else if(!strcmp(pName, "syslogfacility")) {
+	} else if(!strcmp((char*) pName, "syslogfacility")) {
 		pRes = getFacility(pMsg);
-	} else if(!strcmp(pName, "syslogfacility-text")) {
+	} else if(!strcmp((char*) pName, "syslogfacility-text")) {
 		pRes = getFacilityStr(pMsg);
-	} else if(!strcmp(pName, "syslogseverity") || !strcmp(pName, "syslogpriority")) {
+	} else if(!strcmp((char*) pName, "syslogseverity") || !strcmp((char*) pName, "syslogpriority")) {
 		pRes = getSeverity(pMsg);
-	} else if(!strcmp(pName, "syslogseverity-text") || !strcmp(pName, "syslogpriority-text")) {
+	} else if(!strcmp((char*) pName, "syslogseverity-text") || !strcmp((char*) pName, "syslogpriority-text")) {
 		pRes = getSeverityStr(pMsg);
-	} else if(!strcmp(pName, "timegenerated")) {
+	} else if(!strcmp((char*) pName, "timegenerated")) {
 		pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
-	} else if(!strcmp(pName, "timereported")
-		  || !strcmp(pName, "TIMESTAMP")) {
+	} else if(!strcmp((char*) pName, "timereported")
+		  || !strcmp((char*) pName, "TIMESTAMP")) {
 		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
-	} else if(!strcmp(pName, "programname")) {
+	} else if(!strcmp((char*) pName, "programname")) {
 		pRes = getProgramName(pMsg);
-	} else if(!strcmp(pName, "PROTOCOL-VERSION")) {
+	} else if(!strcmp((char*) pName, "PROTOCOL-VERSION")) {
 		pRes = getProtocolVersionString(pMsg);
-	} else if(!strcmp(pName, "STRUCTURED-DATA")) {
+	} else if(!strcmp((char*) pName, "STRUCTURED-DATA")) {
 		pRes = getStructuredData(pMsg);
-	} else if(!strcmp(pName, "APP-NAME")) {
+	} else if(!strcmp((char*) pName, "APP-NAME")) {
 		pRes = getAPPNAME(pMsg);
-	} else if(!strcmp(pName, "PROCID")) {
+	} else if(!strcmp((char*) pName, "PROCID")) {
 		pRes = getPROCID(pMsg);
-	} else if(!strcmp(pName, "MSGID")) {
+	} else if(!strcmp((char*) pName, "MSGID")) {
 		pRes = getMSGID(pMsg);
 	/* here start system properties (those, that do not relate to the message itself */
-	} else if(!strcmp(pName, "$NOW")) {
+	} else if(!strcmp((char*) pName, "$NOW")) {
 		if((pRes = (char*) getNOW(NOW_NOW)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp(pName, "$YEAR")) {
+	} else if(!strcmp((char*) pName, "$YEAR")) {
 		if((pRes = (char*) getNOW(NOW_YEAR)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp(pName, "$MONTH")) {
+	} else if(!strcmp((char*) pName, "$MONTH")) {
 		if((pRes = (char*) getNOW(NOW_MONTH)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp(pName, "$DAY")) {
+	} else if(!strcmp((char*) pName, "$DAY")) {
 		if((pRes = (char*) getNOW(NOW_DAY)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp(pName, "$HOUR")) {
+	} else if(!strcmp((char*) pName, "$HOUR")) {
 		if((pRes = (char*) getNOW(NOW_HOUR)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp(pName, "$MINUTE")) {
+	} else if(!strcmp((char*) pName, "$MINUTE")) {
 		if((pRes = (char*) getNOW(NOW_MINUTE)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else

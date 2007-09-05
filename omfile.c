@@ -230,12 +230,12 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	}
 
 	/* OK, we finally got a correct template. So let's use it... */
-	strncpy(pData->f_fname, pOch->pszFileTemplate, MAXFNAME);
+	strncpy(pData->f_fname, (char*) pOch->pszFileTemplate, MAXFNAME);
 	pData->f_sizeLimit = pOch->uSizeLimit;
 	/* WARNING: It is dangerous "just" to pass the pointer. As we
 	 * never rebuild the output channel description, this is acceptable here.
 	 */
-	pData->f_sizeLimitCmd = pOch->cmdOnSizeLimit;
+	pData->f_sizeLimitCmd = (char*) pOch->cmdOnSizeLimit;
 
 	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, (uchar*) " TradFmt");
 

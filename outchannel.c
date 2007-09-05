@@ -78,7 +78,7 @@ static void skip_Comma(char **pp)
  * is "eaten" and does not become part of the field content.
  * returns: 0 - ok, 1 - failure
  */
-static int get_Field(uchar **pp, char **pField)
+static int get_Field(uchar **pp, uchar **pField)
 {
 	register uchar *p;
 	rsCStrObj *pStrB;
@@ -101,7 +101,8 @@ static int get_Field(uchar **pp, char **pField)
 
 	*pp = p;
 	rsCStrFinish(pStrB);
-	*pField = (char*)rsCStrConvSzStrAndDestruct(pStrB);
+	if(rsCStrConvSzStrAndDestruct(pStrB, pField, 0) != RS_RET_OK)
+		return 1;
 
 	return 0;
 }
@@ -142,7 +143,7 @@ static int get_off_t(uchar **pp, off_t *pOff_t)
  * not trailing.
  * returns: 0 - ok, 1 - failure
  */
-static inline int get_restOfLine(uchar **pp, char **pBuf)
+static inline int get_restOfLine(uchar **pp, uchar **pBuf)
 {
 	register uchar *p;
 	rsCStrObj *pStrB;
@@ -165,7 +166,8 @@ static inline int get_restOfLine(uchar **pp, char **pBuf)
 
 	*pp = p;
 	rsCStrFinish(pStrB);
-	*pBuf = (char*) rsCStrConvSzStrAndDestruct(pStrB);
+	if(rsCStrConvSzStrAndDestruct(pStrB, pBuf, 0) != RS_RET_OK)
+		return 1;
 
 	return 0;
 }
@@ -268,9 +270,9 @@ void ochPrintList(void)
 	pOch = ochRoot;
 	while(pOch != NULL) {
 		dbgprintf("Outchannel: Name='%s'\n", pOch->pszName == NULL? "NULL" : pOch->pszName);
-		dbgprintf("\tFile Template: '%s'\n", pOch->pszFileTemplate == NULL ? "NULL" : pOch->pszFileTemplate);
+		dbgprintf("\tFile Template: '%s'\n", pOch->pszFileTemplate == NULL ? "NULL" : (char*) pOch->pszFileTemplate);
 		dbgprintf("\tMax Size.....: %lu\n", pOch->uSizeLimit);
-		dbgprintf("\tOnSizeLimtCmd: '%s'\n", pOch->cmdOnSizeLimit == NULL ? "NULL" : pOch->cmdOnSizeLimit);
+		dbgprintf("\tOnSizeLimtCmd: '%s'\n", pOch->cmdOnSizeLimit == NULL ? "NULL" : (char*) pOch->cmdOnSizeLimit);
 		pOch = pOch->pNext; /* done, go next */
 	}
 }

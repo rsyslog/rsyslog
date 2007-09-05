@@ -3103,7 +3103,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * is the max size ;) we need to shuffle the code again... Just for 
 		 * the records: the code is currently clean, but we could optimize it! */
 		if(!bTAGCharDetected) {
-			char *pszTAG;
+			uchar *pszTAG;
 			if((pStrB = rsCStrConstruct()) == NULL) 
 				return 1;
 			rsCStrSetAllocIncrement(pStrB, 33);
@@ -3119,7 +3119,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			}
 			rsCStrFinish(pStrB);
 
-			pszTAG = (char*) rsCStrConvSzStrAndDestruct(pStrB);
+			rsCStrConvSzStrAndDestruct(pStrB, &pszTAG, 1);
 			if(pszTAG == NULL)
 			{	/* rger, 2005-11-10: no TAG found - this implies that what
 				 * we have considered to be the HOSTNAME is most probably the
@@ -3310,12 +3310,7 @@ rsRetVal fprintlog(action_t *pAction)
 	/* here we must loop to process all requested strings */
 
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		if((pAction->ppMsgs[i] = tplToString(pAction->ppTpl[i], pAction->f_pMsg)) == NULL) {
-			dbgprintf("memory alloc failed while generating message strings - message ignored\n");
-			glblHadMemShortage = 1;
-			iRet = RS_RET_OUT_OF_MEMORY;
-			goto finalize_it;
-		}
+		CHKiRet(tplToString(pAction->ppTpl[i], pAction->f_pMsg, &pAction->ppMsgs[i]));
 	}
 	/* call configured action */
 	iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData);
@@ -4473,11 +4468,11 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 
 		/* now copy the string */
 		while(*p && *p != '#' && !isspace((int) *p)) {
-			if((iRet = rsCStrAppendChar(pStrB, *p)) != RS_RET_OK) goto finalize_it;
+			CHKiRet(rsCStrAppendChar(pStrB, *p));
 			++p;
 		}
-		if((iRet = rsCStrFinish(pStrB)) != RS_RET_OK) goto finalize_it;
-		tplName = rsCStrConvSzStrAndDestruct(pStrB);
+		CHKiRet(rsCStrFinish(pStrB));
+		CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &tplName, 0));
 	}
 
 	iRet = OMSRsetEntry(pOMSR, iEntry, tplName, iTplOpts);

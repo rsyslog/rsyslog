@@ -45,11 +45,11 @@ struct templateEntry {
 	enum EntryTypes eEntryType;
 	union {
 		struct {
-			char *pConstant;	/* pointer to constant value */
+			uchar *pConstant;	/* pointer to constant value */
 			int iLenConstant;	/* its length */
 		} constant;
 		struct {
-			char *pPropRepl;	/* pointer to property replacer string */
+			uchar *pPropRepl;	/* pointer to property replacer string */
 			unsigned iFromPos;	/* for partial strings only chars from this position ... */
 			unsigned iToPos;	/* up to that one... */
 #ifdef FEATURE_REGEXP
@@ -85,8 +85,8 @@ void tplLastStaticInit(struct template *tpl);
  * BEFORE msg.h, even if your code file does not actually need it.
  * rgerhards, 2007-08-06
  */
-uchar *tplToString(struct template *pTpl, msg_t *pMsg);
-void doSQLEscape(char **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
+rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz);
+void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */
 /*

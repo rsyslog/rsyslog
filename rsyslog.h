@@ -81,6 +81,8 @@ typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 #define CHKiRet(code) if((iRet = code) != RS_RET_OK) goto finalize_it
 /* macro below is to be used if we need our own handling, eg for cleanup */
 #define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
+/* macro below is used in conjunction with CHKiRet_Hdlr, else use ABORT_FINALIZE */
+#define FINALIZE goto finalize_it;
 #define DEFiRet rsRetVal iRet = RS_RET_OK
 #define ABORT_FINALIZE(errCode)			\
 	do {					\

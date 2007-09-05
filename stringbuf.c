@@ -287,7 +287,7 @@ uchar*  rsCStrGetSzStr(rsCStrObj *pThis)
 	if(pThis->pBuf != NULL)
 		if(pThis->pszBuf == NULL) {
 			/* we do not yet have a usable sz version - so create it... */
-			if((pThis->pszBuf = malloc(pThis->iStrLen + 1 * sizeof(uchar))) == NULL) {
+			if((pThis->pszBuf = malloc((pThis->iStrLen + 1) * sizeof(uchar))) == NULL) {
 				/* TODO: think about what to do - so far, I have no bright
 				 *       idea... rgerhards 2005-09-07
 				 */
@@ -325,17 +325,42 @@ uchar*  rsCStrGetSzStr(rsCStrObj *pThis)
  * convert it to an szString without the need to copy. The extra memory
  * footprint is not hefty, but the performance gain is potentially large.
  * To get it done now, I am not doing the optimiziation right now.
- *
  * rgerhards, 2005-09-07
+ *
+ * rgerhards, 2007-09-04: I have changed the interface of this function. It now
+ * returns an rsRetVal, so that we can communicate back if we have an error.
+ * Using the standard method is much better than returning NULL. Secondly, NULL
+ * was not actually an error - it was in indication if the string was empty.
+ * This was needed in some parts of the code, in others not. I have now added
+ * a second parameter to specify what the caller needs. I hope these changes
+ * will make it less likely that the function is called incorrectly, what
+ * previously happend quite often and was the cause of a number of program
+ * aborts. So the parameters are now:
+ * pointer to the object, pointer to string-pointer to receive string and
+ * bRetNULL: 0 - must not return NULL on empty string, return "" in that
+ * case, 1 - return NULL instead of an empty string.
+ * PLEASE NOTE: the caller must free the memory returned in ppSz in any case
+ * (except, of course, if it is NULL).
  */
-uchar*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
+rsRetVal rsCStrConvSzStrAndDestruct(rsCStrObj *pThis, uchar **ppSz, int bRetNULL)
 {
+	DEFiRet;
 	uchar* pRetBuf;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	assert(ppSz != NULL);
+	assert(bRetNULL == 0 || bRetNULL == 1);
 
-	pRetBuf = rsCStrGetSzStr(pThis);
+	if(pThis->pBuf == NULL) {
+		if((pRetBuf = malloc(sizeof(uchar))) == NULL)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		*pRetBuf = '\0';
+	} else
+		pRetBuf = rsCStrGetSzStr(pThis);
+	
+	*ppSz = pRetBuf;
 
+finalize_it:
 	/* We got it, now free the object ourselfs. Please note
 	 * that we can NOT use the rsCStrDestruct function as it would
 	 * also free the sz String buffer, which we pass on to the user.
@@ -344,7 +369,7 @@ uchar*  rsCStrConvSzStrAndDestruct(rsCStrObj *pThis)
 		free(pThis->pBuf);
 	RSFREEOBJ(pThis);
 	
-	return(pRetBuf);
+	return(iRet);
 }
 
 
