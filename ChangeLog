@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.19.5 (rgerhards), 2007-09-0?
+---------------------------------------------------------------------------
 Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
 - fixed a number of small memory leaks - thanks varmojfekoj for patching
 - fixed an issue with CString class that could lead to rsyslog abort
