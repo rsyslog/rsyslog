@@ -525,6 +525,13 @@ framing and maximum compression to the host 192.168.0.1 at port 1470.</p>
 <p>In the example above, messages are forwarded via UDP to the machine 
 192.168.0.1, the destination port defaults to 514. Messages will not be 
 compressed.</p>
+<p><b>Note to sysklogd users:</b> sysklogd does <b>not</b> support RFC 3164 
+format, which is the default forwarding template in rsyslog. As such, you will 
+experience duplicate hostnames if rsyslog is the sender and sysklogd is the 
+receiver. The fix is simple: you need to use a different template. Use that one:</p>
+<p class="MsoPlainText">$template sysklogd,&quot;&lt;%PRI%&gt;%TIMESTAMP% 
+%syslogtag%%msg%\&quot;&quot;<br>
+*.* @192.168.0.1;sysklogd</p>
 <h3>List of Users</h3>
 <p>Usually critical messages are also directed to ``root'' on that machine. You can 
 specify a list of users that shall get the message by simply writing the login. 
