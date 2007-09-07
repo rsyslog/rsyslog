@@ -3,19 +3,18 @@
 <title>rsyslog.conf file</title>
 </head>
 <body>
-<h2>$ModLoad</h2>
+<h2>$ModDir</h2>
 <p><b>Type:</b> global configuration directive</p>
-<p><b>Default:</b> </p>
+<p><b>Default:</b> system default for user libraries, e.g. 
+/usr/local/lib/rsyslog/</p>
 <p><b>Description:</b></p>
-<p>Dynamically loads a plug-in into rsyslog's address space and activates it. 
-The plug-in must obey the rsyslog module API. Currently, only MySQL is available 
-as a plugin, but others may create their own. A plug-in must be loaded BEFORE 
-any configuration file lines that reference it.</p>
-<p>Modules must be present in the system default destination for rsyslog 
-modules. You can also set the direcotry via the <a href="rsconf1_moddir.html">
-$ModDir</a> directive.</p>
+<p>Provides the default directory in which loadable modules reside. This may be 
+used to specify an alternate location that is not based on the system default. 
+If the system default is used, there is no need to specify this directive. Plese 
+note that it is vitally important to end the path name with a slash, else module 
+loads will fail.</p>
 <p><b>Sample:</b></p>
-<p><code><b>$ModLoad MySQL&nbsp; # load MySQL functionality</b></code></p>
+<p><code><b>$ModDir /usr/rsyslog/libs/&nbsp; # note the trailing slash!</b></code></p>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
 index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
