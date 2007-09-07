@@ -417,7 +417,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	 * I *hope* this will be a performance enhancement.
 	 */
 	if(   (pData->iCurrElt != -1)
-	   && !strcmp((char*) newFileName, (char*) pCache[pData->iCurrElt])) {
+	   && !strcmp((char*) newFileName, (char*) pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
 		pCache[pData->iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */
 		return 0;
@@ -482,6 +482,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 		else
 			logerrorSz("Could not open dynamic file '%s' - discarding message", (char*)newFileName);
 		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
+		pData->iCurrElt = -1;
 		return -1;
 	}
 

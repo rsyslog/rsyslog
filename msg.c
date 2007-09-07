@@ -1663,7 +1663,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	if(pTpe->data.field.options.bDropLastLF && !pTpe->data.field.options.bEscapeCC) {
 		int iLn = strlen(pRes);
 		char *pB;
-		if(*(pRes + iLn - 1) == '\n') {
+		if(iLn > 0 && *(pRes + iLn - 1) == '\n') {
 			/* we have a LF! */
 			/* check if we need to obtain a private copy */
 			if(*pbMustBeFreed == 0) {
