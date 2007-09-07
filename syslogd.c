@@ -5505,7 +5505,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 	/* the following macro is used to decrement the number of to-be-probed
 	 * fds and abort this function when we are done with all.
 	 */
-#	define FDPROCESSED() if(--nfds == 0) { dbgprintf("nfds == 0, aborting\n");ABORT_FINALIZE(RS_RET_OK); }
+#	define FDPROCESSED() if(--nfds == 0) { ABORT_FINALIZE(RS_RET_OK); }
 
 	if (nfds < 0) {
 		if (errno != EINTR)
