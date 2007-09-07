@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 1.19.5 (rgerhards), 2007-09-0?
+- changed part of the CStr interface so that better error tracking
+  is provided and the calling sequence is more intuitive (there were
+  invalid calls based on a too-weired interface)
+- (hopefully) fixed some remaining bugs rooted in wrong use of 
+  the CStr class. These could lead to program abort.
 ---------------------------------------------------------------------------
 Version 1.19.4 (rgerhards/varmojfekoj), 2007-09-04
 - fixed a number of small memory leaks - thanks varmojfekoj for patching
@@ -21,6 +26,8 @@ Version 1.19.3 (mmeckelein/varmojfekoj), 2007-08-31
   to varmojfekoj
 - the negative selector for program name filter (Blocks) does not work as
   expected - Thanks varmojfekoj for patching
+- added forwarding information to sysklogd (requires special template)
+  to config doc
 ---------------------------------------------------------------------------
 Version 1.19.2 (mmeckelein/varmojfekoj), 2007-08-28
 - a specifically formed message caused a segfault - Many thanks varmojfekoj

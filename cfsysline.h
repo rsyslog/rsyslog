@@ -34,7 +34,8 @@ typedef enum cslCmdHdlrType {
 	eCmdHdlrBinary,
 	eCmdHdlrFileCreateMode,
 	eCmdHdlrInt,
-	eCmdHdlrGetChar
+	eCmdHdlrGetChar,
+	eCmdHdlrGetWord
 } ecslCmdHdrlType;
 
 /* this is a single entry for a parse routine. It describes exactly

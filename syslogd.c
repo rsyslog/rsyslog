@@ -363,7 +363,7 @@ syslogCODE rs_facilitynames[] =
 
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
-static char	*ModDir = _PATH_MODDIR; /* read-only after startup */
+static uchar	*pModDir = NULL; /* read-only after startup */
 char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
 
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
@@ -647,6 +647,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
 	bDropMalPTRMsgs = 0;
+	if(pModDir != NULL) {
+		free(pModDir);
+		pModDir = NULL;
+	}
 #ifdef USE_PTHREADS
 	iMainMsgQueueSize = 10000;
 #endif
@@ -3585,6 +3589,10 @@ static void die(int sig)
 	 */
 	modUnloadAndDestructAll();
 
+	/* clean up auxiliary data */
+	if(pModDir != NULL)
+		free(pModDir);
+
 	dbgprintf("Clean shutdown completed, bye.\n");
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
@@ -3812,7 +3820,7 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 
 	dbgprintf("Requested to load module '%s'\n", szName);
 
-	strncpy((char *) szPath, ModDir, sizeof(szPath));
+	strncpy((char *) szPath, (pModDir == NULL) ? _PATH_MODDIR : (char*) pModDir, sizeof(szPath));
 	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen((char*) szPath) - 1);
 	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
 		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
@@ -4292,7 +4300,6 @@ static void init(void)
 		pMsgQueue = NULL;
 	}
 #endif
-	
 	
 	/* re-setting values to defaults (where applicable) */
 	/* TODO: once we have loadable modules, we must re-visit this code. The reason is
@@ -5909,6 +5916,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintModuleList));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", 0, eCmdHdlrBinary,
 		 NULL, &bDebugPrintCfSysLineHandlerList));
+	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL));
 
 finalize_it:
