@@ -3820,7 +3820,11 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 
 	dbgprintf("Requested to load module '%s'\n", szName);
 
-	strncpy((char *) szPath, (pModDir == NULL) ? _PATH_MODDIR : (char*) pModDir, sizeof(szPath));
+	if(*pModName == '/') {
+		*szPath = '\0';	/* we do not need to append the path - its already in the module name */
+	} else {
+		strncpy((char *) szPath, (pModDir == NULL) ? _PATH_MODDIR : (char*) pModDir, sizeof(szPath));
+	}
 	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen((char*) szPath) - 1);
 	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
 		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
