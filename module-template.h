@@ -100,7 +100,7 @@ static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __at
 	DEFiRet;
 
 #define CODESTARTdoAction \
-	assert(ppString != NULL);
+	/* ppString may be NULL if the output module requested no strings */
 
 #define ENDdoAction \
 	return iRet;\
