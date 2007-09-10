@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[1.19.5],[rsyslog@lists.adiscon.com.])
-AM_INIT_AUTOMAKE(rsyslog, 1.19.5)
+AC_INIT([rsyslog],[1.19.6],[rsyslog@lists.adiscon.com.])
+AM_INIT_AUTOMAKE(rsyslog, 1.19.6)
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADER([config.h])
 

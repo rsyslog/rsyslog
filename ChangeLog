@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.19.6 (rgerhards), 2007-09-??
+---------------------------------------------------------------------------
 Version 1.19.5 (rgerhards), 2007-09-07
 - changed part of the CStr interface so that better error tracking
   is provided and the calling sequence is more intuitive (there were
