@@ -3060,7 +3060,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		bTAGCharDetected = 0;
 		if(pMsg->bParseHOSTNAME) {
 			/* TODO: quick and dirty memory allocation */
-			if((pBuf = malloc(sizeof(char)* strlen(p2parse) +1)) == NULL)
+			if((pBuf = malloc(sizeof(char)* (strlen(p2parse) +1))) == NULL)
 				return 1;
 			pWork = pBuf;
 			/* this is the actual parsing loop */
@@ -3071,6 +3071,13 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			}
 			/* we need to handle ':' seperately, because it terminates the
 			 * TAG - so we also need to terminate the parser here!
+			 * rgerhards, 2007-09-10 *p2parse points to a valid address here in 
+			 * any case. We can reach this point only if we are at end of string,
+			 * or we have a ':' or ' '. What the if below does is check if we are
+			 * not at end of string and, if so, advance the parse pointer. If we 
+			 * are already at end of string, *p2parse is equal to '\0', neither if
+			 * will be true and the parse pointer remain as is. This is perfectly
+			 * well.
 			 */
 			if(*p2parse == ':') {
 				bTAGCharDetected = 1;
