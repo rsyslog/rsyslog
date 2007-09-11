@@ -1547,12 +1547,17 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pRes = pBStart;
 			*pbMustBeFreed = 1;
 		}
-		
+
 		/* now do control character dropping/escaping/replacement
 		 * Only one of these can be used. If multiple options are given, the
 		 * result is random (though currently there obviously is an order of
 		 * preferrence, see code below. But this is NOT guaranteed.
 		 * RGerhards, 2006-11-17
+		 * We must copy the strings if we modify them, because they may either 
+		 * point to static memory or may point into the message object, in which
+		 * case we would actually modify the original property (which of course
+		 * is wrong).
+		 * This was found and fixed by varmojefkoj on 2007-09-11
 		 */
 		if(pTpe->data.field.options.bDropCC) {
 			int iLen = 0;
@@ -1591,12 +1596,17 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			char *pDstStart;
 			char *pDst;
 			
-			if(*pbMustBeFreed == 1)
+			if(*pbMustBeFreed == 1) {
+				/* in this case, we already work on dynamic
+				 * memory, so there is no need to copy it - we can
+				 * modify it in-place without any harm. This is a
+				 * performance optiomization.
+				 */
 				for(pDst = pRes; *pDst; pDst++) {
 					if(iscntrl((int) *pDst))
 						*pDst = ' ';
 				}
-			else {
+			} else {
 				pDst = pDstStart = malloc(strlen(pRes) + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
@@ -1623,19 +1633,19 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			int iNumCC = 0;
 			int iLenBuf = 0;
 			char *pB;
-			
+
 			for(pB = pRes ; *pB ; ++pB) {
 				++iLenBuf;
 				if(iscntrl((int) *pB))
 					++iNumCC;
 			}
-			
+
 			if(iNumCC > 0) { /* if 0, there is nothing to escape, so we are done */
 				/* OK, let's do the escaping... */
 				char *pBStart;
 				char szCCEsc[8]; /* buffer for escape sequence */
 				int i;
-				
+
 				iLenBuf += iNumCC * 4;
 				pBStart = pB = malloc((iLenBuf + 1) * sizeof(char));
 				if(pB == NULL) {
@@ -1651,7 +1661,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 							*pB++ = szCCEsc[i];
 					} else {
 						*pB++ = *pRes;
-					}
+				}
 					++pRes;
 				}
 				*pB = '\0';
@@ -1704,12 +1714,17 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			char *pDstStart;
 			char *pDst;
 			
-			if(*pbMustBeFreed == 1)
+			if(*pbMustBeFreed == 1) {
+				/* here, again, we can modify the string as we already obtained
+				 * a private buffer. As we do not change the size of that buffer,
+				 * in-place modification is possible. This is a performance
+				 * enhancement.
+				 */
 				for(pDst = pRes; *pDst; pDst++) {
 					if(*pDst == '/')
 						*pDst++ = '_';
 				}
-			else {
+			} else {
 				pDst = pDstStart = malloc(strlen(pRes) + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
@@ -1724,12 +1739,17 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 						*pDst++ = *pSrc;
 				}
 				*pDst = '\0';
+				/* we must NOT check if it needs to be freed, because we have done
+				 * this in the if above. So if we come to hear, the pSrc string needs
+				 * not to be freed (and we do not need to care about it).
+				 */
 				pRes = pDstStart;
 				*pbMustBeFreed = 1;
 			}
 		}
 		
-		if(*pRes == '.' && (*(pRes + 1) == '\0'	|| (*(pRes + 1) == '.' && *(pRes + 2) == '\0'))) {
+		/* check for "." and ".." (note the parenthesis in the if condition!) */
+		if((*pRes == '.') && (*(pRes + 1) == '\0' || (*(pRes + 1) == '.' && *(pRes + 2) == '\0'))) {
 			char *pTmp = pRes;
 
 			if(*(pRes + 1) == '\0')
