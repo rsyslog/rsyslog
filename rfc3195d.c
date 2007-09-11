@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
 {
 	srRetVal iRet;
 	int ch;
-	struct sigaction_t sigAct;
+	struct sigaction sigAct;
 
 	while ((ch = getopt(argc, argv, "di:np:r:v")) != EOF)
 		switch((char)ch) {
