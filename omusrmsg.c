@@ -269,10 +269,6 @@ BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
-#if 0 /* TODO: think about it and activate later - see comments in else below */
-	if(**pp != '*')
-		return RS_RET_CONFLINE_UNPROCESSED;
-#endif
        /* User names must begin with a gnu e-regex:
         *   [a-zA-Z0-9_.]
 	* plus '*' for wall
