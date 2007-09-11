@@ -175,7 +175,7 @@ static rsRetVal onSelectReadyWrite(void *pModData)\
  * continue modularization.
  */
 #define BEGINgetWriteFDForSelect \
-static rsRetVal getWriteFDForSelect(void *pModData, short *fd)\
+static rsRetVal getWriteFDForSelect(void *pModData, short  __attribute__((unused)) *fd)\
 {\
 	rsRetVal iRet = RS_RET_NONE;\
 	instanceData *pData = NULL;

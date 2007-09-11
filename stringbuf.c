@@ -352,9 +352,13 @@ rsRetVal rsCStrConvSzStrAndDestruct(rsCStrObj *pThis, uchar **ppSz, int bRetNULL
 	assert(bRetNULL == 0 || bRetNULL == 1);
 
 	if(pThis->pBuf == NULL) {
-		if((pRetBuf = malloc(sizeof(uchar))) == NULL)
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		*pRetBuf = '\0';
+		if(bRetNULL == 0) {
+			if((pRetBuf = malloc(sizeof(uchar))) == NULL)
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			*pRetBuf = '\0';
+		} else {
+			pRetBuf = NULL;
+		}
 	} else
 		pRetBuf = rsCStrGetSzStr(pThis);
 	

@@ -1560,7 +1560,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		 * This was found and fixed by varmojefkoj on 2007-09-11
 		 */
 		if(pTpe->data.field.options.bDropCC) {
-			int iLen = 0;
+			int iLenBuf = 0;
 			char *pSrc = pRes;
 			char *pDstStart;
 			char *pDst;
@@ -1568,13 +1568,13 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			
 			while(*pSrc) {
 				if(!iscntrl((int) *pSrc++))
-					iLen++;
+					iLenBuf++;
 				else
 					bDropped = 1;
 			}
 
 			if(bDropped) {
-				pDst = pDstStart = malloc(iLen + 1);
+				pDst = pDstStart = malloc(iLenBuf + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -1678,7 +1678,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 */
 	if(pTpe->data.field.options.bSecPathDrop || pTpe->data.field.options.bSecPathReplace) {
 		if(pTpe->data.field.options.bSecPathDrop) {
-			int iLen = 0;
+			int iLenBuf = 0;
 			char *pSrc = pRes;
 			char *pDstStart;
 			char *pDst;
@@ -1686,13 +1686,13 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			
 			while(*pSrc) {
 				if(*pSrc++ != '/')
-					iLen++;
+					iLenBuf++;
 				else
 					bDropped = 1;
 			}
 			
 			if(bDropped) {
-				pDst = pDstStart = malloc(iLen + 1);
+				pDst = pDstStart = malloc(iLenBuf + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
