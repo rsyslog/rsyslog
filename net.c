@@ -143,7 +143,7 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 			hints.ai_socktype = SOCK_DGRAM;
 
 			/* we now do a lookup once again. This one should fail,
-			 * because we should not have obtained a numeric address. If
+			 * because we should not have obtained a non-numeric address. If
 			 * we got a numeric one, someone messed with DNS!
 			 */
 			if (getaddrinfo ((char*)pszHostFQDN, NULL, &hints, &res) == 0) {
@@ -169,7 +169,7 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 
 				/* Please note: we deal with a malicous entry. Thus, we have crafted
 				 * the snprintf() below so that all text is in front of the entry - maybe
-				 * it would contain characters that would make the message unreadble
+				 * it contains characters that make the message unreadable
 				 * (OK, I admit this is more or less impossible, but I am paranoid...)
 				 * rgerhards, 2007-07-16
 				 */

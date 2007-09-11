@@ -268,7 +268,7 @@ AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
 echo "****************************************************"
-echo "rsyslog will be compiled with the followig settings:"
+echo "rsyslog will be compiled with the following settings:"
 echo
 echo "Multithreading support enabled:		$enable_pthreads"
 echo "Klogd functionality enabled:		$enable_klogd"
