@@ -194,6 +194,7 @@ int main(int argc, char* argv[])
 {
 	srRetVal iRet;
 	int ch;
+	struct sigaction_t sigAct;
 
 	while ((ch = getopt(argc, argv, "di:np:r:v")) != EOF)
 		switch((char)ch) {
@@ -231,10 +232,17 @@ int main(int argc, char* argv[])
 	if ((argc -= optind))
 		usage();
 
+	memset(&sigAct, 0, sizeof(sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = doShutdown;
+	sigaction(SIGUSR1, &sigAct, NULL);
+	sigaction(SIGTERM, &sigAct, NULL);
+
 	if(!Debug)
-		signal(SIGINT, SIG_IGN);
-	signal(SIGUSR1, doShutdown);
-	signal(SIGTERM, doShutdown);
+	{
+		sigAct.sa_handler = SIG_IGN;
+		sigaction(SIGINT, &sigAct, NULL);
+	}
 
 	if((pAPI = srAPIInitLib()) == NULL)
 	{

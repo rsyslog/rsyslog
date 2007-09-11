@@ -2710,8 +2710,12 @@ static void *singleWorker()
 {
 	msgQueue *fifo = pMsgQueue;
 	msg_t *pMsg;
+	sigset_t sigSet;
 
 	assert(fifo != NULL);
+
+	sigfillset(&sigSet);
+	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
 	while(!bGlblDone || !fifo->empty) {
 		pthread_mutex_lock(fifo->mut);
@@ -3369,7 +3373,13 @@ finalize_it:
 static void reapchild()
 {
 	int saved_errno = errno;
-	signal(SIGCHLD, reapchild);	/* reset signal handler -ASP */
+	struct sigaction sigAct;
+
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = reapchild;
+	sigaction(SIGCHLD, &sigAct, NULL);  /* reset signal handler -ASP */
+
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 	errno = saved_errno;
 }
@@ -3436,17 +3446,30 @@ static void domark(void)
  */
 static void domarkAlarmHdlr()
 {
-	bRequestDoMark = 1; /* request alarm */
-	(void) signal(SIGALRM, domarkAlarmHdlr);
-	(void) alarm(TIMERINTVL);
+	struct sigaction sigAct;
+
+ 	bRequestDoMark = 1; /* request alarm */
+
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = domarkAlarmHdlr;
+	sigaction(SIGALRM, &sigAct, NULL);
+
+ 	(void) alarm(TIMERINTVL);
 }
 
 
 static void debug_switch()
 {
-	dbgprintf("Switching debugging_on to %s\n", (debugging_on == 0) ? "true" : "false");
-	debugging_on = (debugging_on == 0) ? 1 : 0;
-	signal(SIGUSR1, debug_switch);
+	struct sigaction sigAct;
+
+ 	dprintf("Switching debugging_on to %s\n", (debugging_on == 0) ? "true" : "false");
+ 	debugging_on = (debugging_on == 0) ? 1 : 0;
+	
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = debug_switch;
+	sigaction(SIGUSR1, &sigAct, NULL);
 }
 
 
@@ -4240,6 +4263,7 @@ static void init(void)
 #endif
 	char bufStartUpMsg[512];
 	struct servent *sp;
+	struct sigaction sigAct;
 
 	/* initialize some static variables */
 	pDfltHostnameCmp = NULL;
@@ -4435,7 +4459,11 @@ static void init(void)
 		);
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, ADDDATE);
 
-	(void) signal(SIGHUP, sighup_handler);
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = sighup_handler;
+	sigaction(SIGHUP, &sigAct, NULL);
+
 	dbgprintf(" restarted.\n");
 }
 
@@ -5316,8 +5344,15 @@ void dbgprintf(char *fmt, ...)
  */
 void sighup_handler()
 {
+	struct sigaction sigAct;
+	
 	restart = 1;
-	signal(SIGHUP, sighup_handler);
+
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = sighup_handler;
+	sigaction(SIGHUP, &sigAct, NULL);
+
 	return;
 }
 
@@ -5998,6 +6033,7 @@ int main(int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	uchar *pTmp;
+	struct sigaction sigAct;
 
 	if(chdir ("/") != 0)
 		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
@@ -6131,7 +6167,11 @@ int main(int argc, char **argv)
 		dbgprintf("Checking pidfile.\n");
 		if (!check_pid(PidFile))
 		{
-			signal (SIGTERM, doexit);
+			memset(&sigAct, 0, sizeof (sigAct));
+			sigemptyset(&sigAct.sa_mask);
+			sigAct.sa_handler = doexit;
+			sigaction(SIGTERM, &sigAct, NULL);
+
 			if (fork()) {
 				/*
 				 * Parent process
@@ -6233,14 +6273,23 @@ int main(int argc, char **argv)
 		if (isupper((int) *p))
 			*p = tolower(*p);
 
-	(void) signal(SIGTERM, doDie);
-	(void) signal(SIGINT, Debug ? doDie : SIG_IGN);
-	(void) signal(SIGQUIT, Debug ? doDie : SIG_IGN);
-	(void) signal(SIGCHLD, reapchild);
-	(void) signal(SIGALRM, domarkAlarmHdlr);
-	(void) signal(SIGUSR1, Debug ? debug_switch : SIG_IGN);
-	(void) signal(SIGPIPE, SIG_IGN);
-	(void) signal(SIGXFSZ, SIG_IGN); /* do not abort if 2gig file limit is hit */
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+
+	sigAct.sa_handler = doDie;
+	sigaction(SIGTERM, &sigAct, NULL);
+	sigAct.sa_handler = Debug ? doDie : SIG_IGN;
+	sigaction(SIGINT, &sigAct, NULL);
+	sigaction(SIGQUIT, &sigAct, NULL);
+	sigAct.sa_handler = reapchild;
+	sigaction(SIGCHLD, &sigAct, NULL);
+	sigAct.sa_handler = domarkAlarmHdlr;
+	sigaction(SIGALRM, &sigAct, NULL);
+	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
+	sigaction(SIGUSR1, &sigAct, NULL);
+	sigAct.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sigAct, NULL);
+	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
 
 	dbgprintf("Starting.\n");

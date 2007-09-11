@@ -132,7 +132,7 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 	if (!DisableDNS) {
 		sigemptyset(&nmask);
 		sigaddset(&nmask, SIGHUP);
-		sigprocmask(SIG_BLOCK, &nmask, &omask);
+		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
 
 		error = getnameinfo((struct sockaddr *)f, sizeof(*f),
 				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
@@ -182,7 +182,7 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 				error = 1; /* that will trigger using IP address below. */
 			}
 		}		
-		sigprocmask(SIG_SETMASK, &omask, NULL);
+		pthread_sigmask(SIG_SETMASK, &omask, NULL);
 	}
 
         if (error || DisableDNS) {

@@ -173,6 +173,7 @@ int execProg(uchar *program, int bWait, uchar *arg)
 {
         int pid;
 	int sig;
+	struct sigaction sigAct;
 
 	dbgprintf("exec program '%s' with param '%s'\n", program, arg);
         pid = fork();
@@ -196,8 +197,14 @@ int execProg(uchar *program, int bWait, uchar *arg)
 	}
         /* Child */
 	alarm(0); /* create a clean environment before we exec the real child */
-	for(sig = 0 ; sig < 32 ; ++sig)
-		signal(sig, SIG_DFL);
+
+	memset(&sigAct, 0, sizeof(sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = SIG_DFL;
+
+	for(sig = 1 ; sig < NSIG ; ++sig)
+		sigaction(sig, &sigAct, NULL);
+
 	execlp((char*)program, (char*) program, (char*)arg, NULL);
 	/* In the long term, it's a good idea to implement some enhanced error
 	 * checking here. However, it can not easily be done. For starters, we
