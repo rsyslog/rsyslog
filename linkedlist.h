@@ -58,7 +58,7 @@ rsRetVal llDestroyRootElt(linkedList_t *pThis);
 rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppUsr);
 rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData);
 rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData);
-rsRetVal llGetKey(llElt_t *pThis, void **ppData);
+rsRetVal llGetKey(llElt_t *pThis, void *ppData);
 rsRetVal llGetNumElts(linkedList_t *pThis, int *piCnt);
 rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* pParam);
 /* use the macro below to define a function that will be executed by

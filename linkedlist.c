@@ -169,13 +169,16 @@ rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppU
 
 
 /* return the key of an Elt
+ * rgerhards, 2007-09-11: note that ppDatea is actually a void**,
+ * but I need to make it a void* to avoid lots of compiler warnings.
+ * It will be converted later down in the code.
  */
-rsRetVal llGetKey(llElt_t *pThis, void **ppData)
+rsRetVal llGetKey(llElt_t *pThis, void *ppData)
 {
 	assert(pThis != NULL);
 	assert(ppData != NULL);
 
-	*ppData = pThis->pKey;
+	*(void**) ppData = pThis->pKey;
 
 	return RS_RET_OK;
 }

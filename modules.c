@@ -32,6 +32,8 @@
 #include <assert.h>
 #include <errno.h>
 
+#include <dlfcn.h> /* TODO: replace this with the libtools equivalent! */
+
 #include <unistd.h>
 #include <sys/file.h>
 

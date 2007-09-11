@@ -128,7 +128,7 @@ rsRetVal iminternalRemoveMsg(int *pPri, msg_t **ppMsg, int *pFlags)
 	assert(ppMsg != NULL);
 	assert(pFlags != NULL);
 
-	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void**) &pThis));
+	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void*)&pThis));
 	*pPri = pThis->pri;
 	*pFlags = pThis->flags;
 	*ppMsg = pThis->pMsg;

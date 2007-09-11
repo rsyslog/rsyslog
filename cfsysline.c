@@ -592,7 +592,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 	uchar *pMyCmdName;
 	DEFiRet;
 
-	iRet = llFind(&llCmdList, (void *) pCmdName, (void**) &pThis);
+	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pThis);
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* new command */
 		CHKiRet(cslcConstruct(&pThis, bChainingPermitted));
@@ -648,7 +648,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	int bWasOnceOK; /* was the result of an handler at least once RS_RET_OK? */
 	uchar *pOKp = NULL; /* returned conf line pointer when it was OK */
 
-	iRet = llFind(&llCmdList, (void *) pCmdName, (void**) &pCmd);
+	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pCmd);
 
 	if(iRet == RS_RET_NOT_FOUND) {
 		logerror("invalid or yet-unknown config file command - have you forgotten to load a module?");
@@ -659,7 +659,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 
 	llCookieCmdHdlr = NULL;
 	bWasOnceOK = 0;
-	while((iRetLL = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void**)&pCmdHdlr)) == RS_RET_OK) {
+	while((iRetLL = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void*)&pCmdHdlr)) == RS_RET_OK) {
 		/* for the time being, we ignore errors during handlers. The
 		 * reason is that handlers are independent. An error in one
 		 * handler does not necessarily mean that another one will
@@ -701,11 +701,11 @@ void dbgPrintCfSysLineHandlers(void)
 
 	printf("\nSytem Line Configuration Commands:\n");
 	llCookieCmd = NULL;
-	while((iRet = llGetNextElt(&llCmdList, &llCookieCmd, (void**)&pCmd)) == RS_RET_OK) {
-		llGetKey(llCookieCmd, (void**) &pKey); /* TODO: using the cookie is NOT clean! */
+	while((iRet = llGetNextElt(&llCmdList, &llCookieCmd, (void*)&pCmd)) == RS_RET_OK) {
+		llGetKey(llCookieCmd, (void*) &pKey); /* TODO: using the cookie is NOT clean! */
 		printf("\tCommand '%s':\n", pKey);
 		llCookieCmdHdlr = NULL;
-		while((iRet = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void**)&pCmdHdlr)) == RS_RET_OK) {
+		while((iRet = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void*)&pCmdHdlr)) == RS_RET_OK) {
 			printf("\t\ttype : %d\n", pCmdHdlr->eType);
 			printf("\t\tpData: 0x%x\n", (unsigned) pCmdHdlr->pData);
 			printf("\t\tHdlr : 0x%x\n", (unsigned) pCmdHdlr->cslCmdHdlr);

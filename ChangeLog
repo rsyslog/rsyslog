@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 1.19.6 (rgerhards), 2007-09-??
+- applied patch by varmojfekoj to change signal handling to the new
+  sigaction API set (replacing the depreciated signal() calls and its
+  friends.
+- fixed a bug that in --enable-debug mode caused an assertion when the
+  discard action was used
+- cleaned up compiler warnings
 ---------------------------------------------------------------------------
 Version 1.19.5 (rgerhards), 2007-09-07
 - changed part of the CStr interface so that better error tracking
