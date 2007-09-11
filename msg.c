@@ -1517,104 +1517,149 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 #endif /* #ifdef FEATURE_REGEXP */
 	}
 
-	/* case conversations (should go after substring, because so we are able to
-	 * work on the smallest possible buffer).
-	 */
-	if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
-		/* we need to obtain a private copy */
-		int iBufLen = strlen(pRes);
-		char *pBStart;
-		char *pB;
-		char *pSrc;
-		pBStart = pB = malloc((iBufLen + 1) * sizeof(char));
-		if(pB == NULL) {
-			if(*pbMustBeFreed == 1)
-				free(pRes);
-			*pbMustBeFreed = 0;
-			return "**OUT OF MEMORY**";
-		}
-		pSrc = pRes;
-		while(*pSrc) {
-			*pB++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
-			          toupper(*pSrc) : tolower(*pSrc);
-				  /* currently only these two exist */
-			++pSrc;
-		}
-		*pB = '\0';
-		if(*pbMustBeFreed == 1)
-			free(pRes);
-		pRes = pBStart;
-		*pbMustBeFreed = 1;
-	}
-
-	/* now do control character dropping/escaping/replacement
-	 * Only one of these can be used. If multiple options are given, the
-	 * result is random (though currently there obviously is an order of
-	 * preferrence, see code below. But this is NOT guaranteed.
-	 * RGerhards, 2006-11-17
-	 */
-	if(pTpe->data.field.options.bDropCC) {
-		char *pSrc = pRes;
-		char *pDst = pRes;
-
-		while(*pSrc) {
-			if(!iscntrl((int) *pSrc))
-				*pDst++ = *pSrc;
-			++pSrc;
-		}
-		*pDst = '\0';
-	} else if(pTpe->data.field.options.bSpaceCC) {
-		char *pB = pRes;
-		while(*pB) {
-			if(iscntrl((int) *pB))
-				*pB = ' ';
-			++pB;
-		}
-	} else if(pTpe->data.field.options.bEscapeCC) {
-		/* we must first count how many control charactes are
-		 * present, because we need this to compute the new string
-		 * buffer length. While doing so, we also compute the string
-		 * length.
+	if(*pRes) {
+		/* case conversations (should go after substring, because so we are able to
+		 * work on the smallest possible buffer).
 		 */
-		int iNumCC = 0;
-		int iLenBuf = 0;
-		char *pB;
-
-		for(pB = pRes ; *pB ; ++pB) {
-			++iLenBuf;
-			if(iscntrl((int) *pB))
-				++iNumCC;
-		}
-
-		if(iNumCC > 0) { /* if 0, there is nothing to escape, so we are done */
-			/* OK, let's do the escaping... */
+		if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
+			/* we need to obtain a private copy */
+			int iBufLen = strlen(pRes);
 			char *pBStart;
-			char szCCEsc[8]; /* buffer for escape sequence */
-			int i;
-
-			iLenBuf += iNumCC * 4;
-			pBStart = pB = malloc((iLenBuf + 1) * sizeof(char));
+			char *pB;
+			char *pSrc;
+			pBStart = pB = malloc((iBufLen + 1) * sizeof(char));
 			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				*pbMustBeFreed = 0;
 				return "**OUT OF MEMORY**";
 			}
-			while(*pRes) {
-				if(iscntrl((int) *pRes)) {
-					snprintf(szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
-					for(i = 0 ; i < 4 ; ++i)
-						*pB++ = szCCEsc[i];
-				} else {
-					*pB++ = *pRes;
-				}
-				++pRes;
+			pSrc = pRes;
+			while(*pSrc) {
+				*pB++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
+					toupper(*pSrc) : tolower(*pSrc);
+				/* currently only these two exist */
+				++pSrc;
 			}
 			*pB = '\0';
 			if(*pbMustBeFreed == 1)
 				free(pRes);
 			pRes = pBStart;
 			*pbMustBeFreed = 1;
+		}
+		
+		/* now do control character dropping/escaping/replacement
+		 * Only one of these can be used. If multiple options are given, the
+		 * result is random (though currently there obviously is an order of
+		 * preferrence, see code below. But this is NOT guaranteed.
+		 * RGerhards, 2006-11-17
+		 */
+		if(pTpe->data.field.options.bDropCC) {
+			int iLen = 0;
+			char *pSrc = pRes;
+			char *pDstStart;
+			char *pDst;
+			char bDropped = 0;
+			
+			while(*pSrc) {
+				if(!iscntrl((int) *pSrc++))
+					iLen++;
+				else
+					bDropped = 1;
+			}
+
+			if(bDropped) {
+				pDst = pDstStart = malloc(iLen + 1);
+				if(pDst == NULL) {
+					if(*pbMustBeFreed == 1)
+						free(pRes);
+					*pbMustBeFreed = 0;
+					return "**OUT OF MEMORY**";
+				}
+				for(pSrc = pRes; *pSrc; pSrc++) {
+					if(!iscntrl((int) *pSrc))
+						*pDst++ = *pSrc;
+				}
+				*pDst = '\0';
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				pRes = pDstStart;
+				*pbMustBeFreed = 1;
+			}
+		} else if(pTpe->data.field.options.bSpaceCC) {
+			char *pSrc;
+			char *pDstStart;
+			char *pDst;
+			
+			if(*pbMustBeFreed == 1)
+				for(pDst = pRes; *pDst; pDst++) {
+					if(iscntrl((int) *pDst))
+						*pDst = ' ';
+				}
+			else {
+				pDst = pDstStart = malloc(strlen(pRes) + 1);
+				if(pDst == NULL) {
+					if(*pbMustBeFreed == 1)
+						free(pRes);
+					*pbMustBeFreed = 0;
+					return "**OUT OF MEMORY**";
+				}
+				for(pSrc = pRes; *pSrc; pSrc++) {
+					if(iscntrl((int) *pSrc))
+						*pDst++ = ' ';
+					else
+						*pDst++ = *pSrc;
+				}
+				*pDst = '\0';
+				pRes = pDstStart;
+				*pbMustBeFreed = 1;
+			}
+		} else if(pTpe->data.field.options.bEscapeCC) {
+			/* we must first count how many control charactes are
+			 * present, because we need this to compute the new string
+			 * buffer length. While doing so, we also compute the string
+			 * length.
+			 */
+			int iNumCC = 0;
+			int iLenBuf = 0;
+			char *pB;
+			
+			for(pB = pRes ; *pB ; ++pB) {
+				++iLenBuf;
+				if(iscntrl((int) *pB))
+					++iNumCC;
+			}
+			
+			if(iNumCC > 0) { /* if 0, there is nothing to escape, so we are done */
+				/* OK, let's do the escaping... */
+				char *pBStart;
+				char szCCEsc[8]; /* buffer for escape sequence */
+				int i;
+				
+				iLenBuf += iNumCC * 4;
+				pBStart = pB = malloc((iLenBuf + 1) * sizeof(char));
+				if(pB == NULL) {
+					if(*pbMustBeFreed == 1)
+						free(pRes);
+					*pbMustBeFreed = 0;
+					return "**OUT OF MEMORY**";
+				}
+				while(*pRes) {
+					if(iscntrl((int) *pRes)) {
+						snprintf(szCCEsc, sizeof(szCCEsc), "#%3.3d", *pRes);
+						for(i = 0 ; i < 4 ; ++i)
+							*pB++ = szCCEsc[i];
+					} else {
+						*pB++ = *pRes;
+					}
+					++pRes;
+				}
+				*pB = '\0';
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				pRes = pBStart;
+				*pbMustBeFreed = 1;
+			}
 		}
 	}
 
@@ -1623,37 +1668,82 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 */
 	if(pTpe->data.field.options.bSecPathDrop || pTpe->data.field.options.bSecPathReplace) {
 		if(pTpe->data.field.options.bSecPathDrop) {
+			int iLen = 0;
 			char *pSrc = pRes;
-			char *pDst = pRes;
+			char *pDstStart;
+			char *pDst;
+			char bDropped = 0;
+			
 			while(*pSrc) {
-				if(*pSrc != '/')
-					*pDst++ = *pSrc;
-				pSrc++;
+				if(*pSrc++ != '/')
+					iLen++;
+				else
+					bDropped = 1;
 			}
-			*pDst = '\0';
+			
+			if(bDropped) {
+				pDst = pDstStart = malloc(iLen + 1);
+				if(pDst == NULL) {
+					if(*pbMustBeFreed == 1)
+						free(pRes);
+					*pbMustBeFreed = 0;
+					return "**OUT OF MEMORY**";
+				}
+				for(pSrc = pRes; *pSrc; pSrc++) {
+					if(*pSrc != '/')
+						*pDst++ = *pSrc;
+				}
+				*pDst = '\0';
+				if(*pbMustBeFreed == 1)
+					free(pRes);
+				pRes = pDstStart;
+				*pbMustBeFreed = 1;
+			}
 		} else {
-			char *pB = pRes;
-			while(*pB) {
-				if(*pB == '/')
-					*pB = '_';
-				pB++;
+			char *pSrc;
+			char *pDstStart;
+			char *pDst;
+			
+			if(*pbMustBeFreed == 1)
+				for(pDst = pRes; *pDst; pDst++) {
+					if(*pDst == '/')
+						*pDst++ = '_';
+				}
+			else {
+				pDst = pDstStart = malloc(strlen(pRes) + 1);
+				if(pDst == NULL) {
+					if(*pbMustBeFreed == 1)
+						free(pRes);
+					*pbMustBeFreed = 0;
+					return "**OUT OF MEMORY**";
+				}
+				for(pSrc = pRes; *pSrc; pSrc++) {
+					if(*pSrc == '/')
+						*pDst++ = '_';
+					else
+						*pDst++ = *pSrc;
+				}
+				*pDst = '\0';
+				pRes = pDstStart;
+				*pbMustBeFreed = 1;
 			}
 		}
 		
-		if(*pRes == '.' && (*(pRes + 1) == '\0'	|| (*(pRes + 1) == '.' && *(pRes + 2) == '\0')))
-			*pRes = '_';
+		if(*pRes == '.' && (*(pRes + 1) == '\0'	|| (*(pRes + 1) == '.' && *(pRes + 2) == '\0'))) {
+			char *pTmp = pRes;
 
-		if(*pRes == '\0') {
+			if(*(pRes + 1) == '\0')
+				pRes = "_";
+			else
+				pRes = "_.";;
+			if(*pbMustBeFreed == 1)
+				free(pTmp);
+			*pbMustBeFreed = 0;
+		} else if(*pRes == '\0') {
 			if(*pbMustBeFreed == 1)
 				free(pRes);
-			pRes = malloc(2);
-			if(pRes == NULL) {
-				*pbMustBeFreed = 0;
-				return "**OUT OF MEMORY ALLOCATING pBuf**";
-			}
-			*pRes = '_';
-			*(pRes + 1) = '\0';
-			*pbMustBeFreed = 1;
+			pRes = "_";
+			*pbMustBeFreed = 0;
 		}
 	}
 
