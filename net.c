@@ -202,14 +202,21 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 	 * part if we were instructed to do so.
 	 */
 	/* TODO: quick and dirty right now: we need to optimize that. We simply
-	 * copy over the buffer and then use the old code.
+	 * copy over the buffer and then use the old code. In the long term, that should
+	 * be placed in its own function and probably outside of the net module (at least
+	 * if should no longer reley on syslogd.c's global config-setting variables).
+	 * Note that the old code always removes the local domain. We may want to
+	 * make this in option in the long term. (rgerhards, 2007-09-11)
 	 */
 	strcpy((char*)pszHost, (char*)pszHostFQDN);
-	if ((p = (uchar*) strchr((char*)pszHost, '.'))) {
+	if ((p = (uchar*) strchr((char*)pszHost, '.'))) { /* find start of domain name "machine.example.com" */
 		if(strcmp((char*) (p + 1), LocalDomain) == 0) {
 			*p = '\0'; /* simply terminate the string */
 			return 1;
 		} else {
+			/* now check if we belong to any of the domain names that were specified
+			 * in the -s command line option. If so, remove and we are done.
+			 */
 			if (StripDomains) {
 				count=0;
 				while (StripDomains[count]) {
@@ -220,7 +227,14 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 					count++;
 				}
 			}
-			/* TODO: bug in syslogd? That all doesn't make so much sense... rger 2007-07-16 */
+			/* if we reach this point, we have not found any domain we should strip. Now
+			 * we try and see if the host itself is listed in the -l command line option
+			 * and so should be stripped also. If so, we do it and return. Please note that
+			 * -l list FQDNs, not just the hostname part. If it did just list the hostname, the
+			 * door would be wide-open for all kinds of mixing up of hosts. Because of this,
+			 * you'll see comparison against the full string (pszHost) below. The termination
+			 * still occurs at *p, which points at the first dot after the hostname.
+			 */
 			if (LocalHosts) {
 				count=0;
 				while (LocalHosts[count]) {

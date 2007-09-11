@@ -6,6 +6,10 @@ Version 1.19.6 (rgerhards), 2007-09-??
 - fixed a bug that in --enable-debug mode caused an assertion when the
   discard action was used
 - cleaned up compiler warnings
+- applied patch by varmojfekoj to FIX a bug that could cause 
+  segfaults if empty properties were processed using modifying
+  options (e.g. space-cc, drop-cc)
+- fixed man bug: rsyslogd supports -l option
 ---------------------------------------------------------------------------
 Version 1.19.5 (rgerhards), 2007-09-07
 - changed part of the CStr interface so that better error tracking

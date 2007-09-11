@@ -542,8 +542,8 @@ static int	MarkSeq = 0;	/* mark sequence number - modified in domark() only */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
 static int	AcceptRemote = 0;/* receive messages that come via UDP - read-only after startup */
 int	DisableDNS = 0; /* don't look up IP addresses of remote messages */
-char	**StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u.*/
-char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup*/
+char	**StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
+char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 int	NoHops = 1;	/* Can we bounce syslog messages through an
 				   intermediate host.  Read-only after startup */
 static int     Initialized = 0; /* set when we have initialized ourselves
