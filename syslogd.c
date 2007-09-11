@@ -3463,7 +3463,7 @@ static void debug_switch()
 {
 	struct sigaction sigAct;
 
- 	dprintf("Switching debugging_on to %s\n", (debugging_on == 0) ? "true" : "false");
+ 	dbgprintf("Switching debugging_on to %s\n", (debugging_on == 0) ? "true" : "false");
  	debugging_on = (debugging_on == 0) ? 1 : 0;
 	
 	memset(&sigAct, 0, sizeof (sigAct));
@@ -5830,6 +5830,8 @@ static void mainloop(void)
 		 * TODO: I got some information: this seems to be expected signal() behaviour
 		 * we should investigate the use of sigaction() (see klogd.c for an sample).
 		 * rgerhards, 2007-06-22
+		 * rgerhards, 2007-09-11: code has been converted to sigaction() now. We need
+		 * to re-check on BSD, I think the issue is now solved.
 		 */
 		tvSelectTimeout.tv_sec = 10;
 		tvSelectTimeout.tv_usec = 0;
