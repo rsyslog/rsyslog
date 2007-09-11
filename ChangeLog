@@ -1,5 +1,5 @@
----------------------------------------------------------------------------
-Version 1.19.6 (rgerhards), 2007-09-??
+﻿---------------------------------------------------------------------------
+Version 1.19.6 (rgerhards), 2007-09-11
 - applied patch by varmojfekoj to change signal handling to the new
   sigaction API set (replacing the depreciated signal() calls and its
   friends.
