@@ -183,6 +183,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 		sigAct.sa_handler = SIG_DFL;
 		sigaction(SIGTERM, &sigAct, NULL);
 #		endif
+		/* It is save to call sigprocmask here, as we are now executing the child (no threads) */
 		sigprocmask(SIG_SETMASK, &sigAct.sa_mask, NULL);
 	/* TODO: find a way to limit the max size of the message. hint: this
 	 * should go into the template!
