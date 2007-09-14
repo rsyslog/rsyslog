@@ -2023,13 +2023,28 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 
 	dbgprintf("Message length: %d, File descriptor: %d.\n", len, fd);
 
-	/* we first check if we need to drop trailing LFs, which often make
+	/* we first check if we have a NUL character at the very end of the
+	 * message. This seems to be a frequent problem with a number of senders.
+	 * So I have now decided to drop these NULs. However, if they are intentional,
+	 * that may cause us some problems, e.g. with syslog-sign. On the other hand,
+	 * current code always has problems with intentional NULs (as it needs to escape
+	 * them to prevent problems with the C string libraries), so that does not
+	 * really matter. Just to be on the save side, we'll log destruction of such
+	 * NULs in the debug log.
+	 * rgerhards, 2007-09-14
+	 */
+	if(*(msg + len - 1) == '\0') {
+		dbgprintf("dropped NUL at very end of message\n");
+		len--;
+	}
+
+	/* then we check if we need to drop trailing LFs, which often make
 	 * their way into syslog messages unintentionally. In order to remain
 	 * compatible to recent IETF developments, we allow the user to
 	 * turn on/off this handling.  rgerhards, 2007-07-23
 	 */
 	if(bDropTrailingLF && *(msg + len - 1) == '\n') {
-		*(msg + len - 1) = '\0';
+		dbgprintf("dropped LF at very end of message (DropTrailingLF is set)\n");
 		len--;
 	}
 
@@ -4316,6 +4331,7 @@ static void init(void)
 		}
         }
 
+	dbgprintf("rsyslog %s.\n", VERSION);
 	dbgprintf("Called init.\n");
 
 	/*  Close all open log files and free log descriptor array. */

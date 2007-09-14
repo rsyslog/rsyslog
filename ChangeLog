@@ -1,4 +1,10 @@
-﻿---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+Version 1.19.7 (rgerhards), 2007-09-1?
+- added code to handle situations where senders send us messages ending with
+  a NUL character. It is now simply removed. This also caused trailing LF
+  reduction to fail, when it was followed by such a NUL. This is now also
+  handled.
+---------------------------------------------------------------------------
 Version 1.19.6 (rgerhards), 2007-09-11
 - applied patch by varmojfekoj to change signal handling to the new
   sigaction API set (replacing the depreciated signal() calls and its
