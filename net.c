@@ -134,7 +134,8 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 		sigaddset(&nmask, SIGHUP);
 		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
 
-		error = getnameinfo((struct sockaddr *)f, sizeof(*f),
+		//error = getnameinfo((struct sockaddr *)f, sizeof(*f),
+		error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *) f),
 				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 		
 		if (error == 0) {
@@ -164,6 +165,7 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 						 "IP = \"%s\" HOST = \"%s\"",
 						 ip, pszHostFQDN);
 					logerror((char*)szErrMsg);
+					pthread_sigmask(SIG_SETMASK, &omask, NULL);
 					return 0;
 				}
 
