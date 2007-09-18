@@ -125,7 +125,7 @@ int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz);
 
 /* now come inline-like functions */
 #ifdef NDEBUG
-#	define rsCStrLen(x) ((x)->iStrLen)
+#	define rsCStrLen(x) ((int)((x)->iStrLen))
 #else
 	int rsCStrLen(rsCStrObj *pThis);
 #endif

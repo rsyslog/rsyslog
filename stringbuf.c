@@ -377,7 +377,7 @@ finalize_it:
 }
 
 
-rsRetVal  rsCStrFinish(rsCStrObj *pThis)
+rsRetVal  rsCStrFinish(rsCStrObj __attribute__((unused)) *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
