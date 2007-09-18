@@ -92,14 +92,11 @@ int should_use_so_bsdcompat(void)
 #endif
 
 
-/* Return a printable representation of a host address.
- * Now (2007-07-16) also returns the full host name (if it could be obtained)
- * in the second param [thanks to mildew@gmail.com for the patch].
- * The caller must provide buffer space for pszHost and pszHostFQDN. These
- * buffers must be of size NI_MAXHOST. This is not checked here, because
- * there is no way to check it. We use this way of doing things because it
- * frees us from using dynamic memory allocation where it really does not
- * pay.
+/* get the hostname of the message source. This was originally in cvthname()
+ * but has been moved out of it because of clarity and fuctional separation.
+ * It must be provided by the socket we received the message on as well as
+ * a NI_MAXHOST size large character buffer for the FQDN.
+ *
  * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
  * for some explanation of the code found below. We do by default not
  * discard message where we detected malicouos DNS PTR records. However,
@@ -107,16 +104,16 @@ int should_use_so_bsdcompat(void)
  * we should abort. For this, the return value tells the caller if the
  * message should be processed (1) or discarded (0).
  */
-int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
+/* TODO: after the bughunt, make this function static - rgerhards, 2007-09-18 */
+rsRetVal gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
 {
-	register uchar *p;
-	int count, error;
+	DEFiRet;
+	int error;
 	sigset_t omask, nmask;
 	char ip[NI_MAXHOST];
 	struct addrinfo hints, *res;
 	
 	assert(f != NULL);
-	assert(pszHost != NULL);
 	assert(pszHostFQDN != NULL);
 
         error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *)f),
@@ -124,9 +121,8 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 
         if (error) {
                 dbgprintf("Malformed from address %s\n", gai_strerror(error));
-		strcpy((char*) pszHost, "???");
 		strcpy((char*) pszHostFQDN, "???");
-		return 1;
+		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
 	}
 
 	if (!DisableDNS) {
@@ -134,7 +130,6 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 		sigaddset(&nmask, SIGHUP);
 		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
 
-		//error = getnameinfo((struct sockaddr *)f, sizeof(*f),
 		error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *) f),
 				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 		
@@ -166,7 +161,7 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 						 ip, pszHostFQDN);
 					logerror((char*)szErrMsg);
 					pthread_sigmask(SIG_SETMASK, &omask, NULL);
-					return 0;
+					ABORT_FINALIZE(RS_RET_MALICIOUS_ENTITY);
 				}
 
 				/* Please note: we deal with a malicous entry. Thus, we have crafted
@@ -190,9 +185,41 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
         if (error || DisableDNS) {
                 dbgprintf("Host name for your address (%s) unknown\n", ip);
 		strcpy((char*) pszHostFQDN, ip);
-		strcpy((char*) pszHost, ip);
-		return 1;
+		ABORT_FINALIZE(RS_RET_ADDRESS_UNKNOWN);
         }
+
+finalize_it:
+	return iRet;
+}
+/* Return a printable representation of a host address.
+ * Now (2007-07-16) also returns the full host name (if it could be obtained)
+ * in the second param [thanks to mildew@gmail.com for the patch].
+ * The caller must provide buffer space for pszHost and pszHostFQDN. These
+ * buffers must be of size NI_MAXHOST. This is not checked here, because
+ * there is no way to check it. We use this way of doing things because it
+ * frees us from using dynamic memory allocation where it really does not
+ * pay.
+ */
+rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
+{
+	DEFiRet;
+	register uchar *p;
+	int count;
+	
+	assert(f != NULL);
+	assert(pszHost != NULL);
+	assert(pszHostFQDN != NULL);
+
+	iRet = gethname(f, pszHostFQDN);
+
+	if(iRet == RS_RET_INVALID_SOURCE || iRet == RS_RET_ADDRESS_UNKNOWN) {
+		strcpy((char*) pszHost, (char*) pszHostFQDN); /* we use whatever was provided as replacement */
+		ABORT_FINALIZE(RS_RET_OK); /* this is handled, we are happy with it */
+	} else if(iRet != RS_RET_OK) {
+		FINALIZE; /* we return whatever error state we have - can not handle it */
+	}
+
+	/* if we reach this point, we obtained a non-numeric hostname and can now process it */
 
 	/* Convert to lower case, just like LocalDomain above
 	 */
@@ -249,7 +276,9 @@ int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
 			}
 		}
 	}
-	return 1;
+
+finalize_it:
+	return iRet;
 }
 
 #endif /* #ifdef SYSLOG_INET */

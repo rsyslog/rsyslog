@@ -69,7 +69,7 @@ static inline size_t SALEN(struct sockaddr *sa) {
 }
 #endif
 
-int cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN);
+rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN);
 
 #endif /* #ifdef SYSLOG_INET */
 #endif /* #ifndef INCLUDED_NET_H */

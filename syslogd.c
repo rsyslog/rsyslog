@@ -5627,12 +5627,12 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 	       for (i = 0; i < *finet; i++) {
 		       if (FD_ISSET(finet[i+1], pReadfds)) {
 			       socklen = sizeof(frominet);
-			       memset(line, '\0', sizeof(line));
+			       memset(line, '\0', sizeof(line)); // TODO: I think we need this for debug only - remove after bug hunt
 			       l = recvfrom(finet[i+1], line, MAXLINE - 1, 0,
 			       		    (struct sockaddr *)&frominet, &socklen);
 			       if (l > 0) {
 				       line[l] = '\0';
-				       if(cvthname(&frominet, fromHost, fromHostFQDN) == 1) {
+				       if(cvthname(&frominet, fromHost, fromHostFQDN) == RS_RET_OK) {
 					       dbgprintf("Message from inetd socket: #%d, host: %s\n",
 						       finet[i+1], fromHost);
 					       /* Here we check if a host is permitted to send us
