@@ -88,7 +88,6 @@ void MsgDestruct(msg_t * pM)
 {
 	assert(pM != NULL);
 	/* DEV Debugging only ! dbgprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1); */
-	MsgLock();
 	if(--pM->iRefCount == 0)
 	{
 		/* DEV Debugging Only! dbgprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM); */
@@ -130,13 +129,14 @@ void MsgDestruct(msg_t * pM)
 			rsCStrDestruct(pM->pCSProgName);
 		if(pM->pCSStrucData != NULL)
 			rsCStrDestruct(pM->pCSStrucData);
+		if(pM->pCSAPPNAME != NULL)
+			rsCStrDestruct(pM->pCSAPPNAME);
 		if(pM->pCSPROCID != NULL)
 			rsCStrDestruct(pM->pCSPROCID);
 		if(pM->pCSMSGID != NULL)
 			rsCStrDestruct(pM->pCSMSGID);
 		free(pM);
 	}
-	MsgUnlock();
 }
 
 
@@ -1661,7 +1661,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 							*pB++ = szCCEsc[i];
 					} else {
 						*pB++ = *pRes;
-				}
+					}
 					++pRes;
 				}
 				*pB = '\0';

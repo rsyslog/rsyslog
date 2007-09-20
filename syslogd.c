@@ -705,14 +705,6 @@ static rsRetVal processConfFile(uchar *pConfFile);
 static rsRetVal selectorAddList(selector_t *f);
 static void processImInternal(void);
 
-/* Access functions for the selector_t. These functions are primarily
- * necessary to make things thread-safe. Consequently, they are slim
- * if we compile without pthread support.
- * rgerhards 2005-10-24
- */
-
-/* END Access functions for the selector_t */
-
 /* Code for handling allowed/disallowed senders
  */
 #ifdef SYSLOG_INET
@@ -2103,8 +2095,19 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 			/* emergency, we now need to flush, no matter if
 			 * we are at end of message or not...
 			 */
-			*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-			printline(hname, tmpline, bParseHost);
+			if(iMsg == MAXLINE) {
+				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
+				printline(hname, tmpline, bParseHost);
+			} else {
+				/* This case in theory never can happen. If it happens, we have
+				 * a logic error. I am checking for it, because if I would not,
+				 * we would address memory invalidly with the code above. I
+				 * do not care much about this case, just a debug log entry
+				 * (I couldn't do any more smart things anyway...).
+				 * rgerhards, 2007-9-20
+				 */
+				dbgprintf("internal error: iMsg > MAXLINE in printchopped()\n");
+			}
 			return; /* in this case, we are done... nothing left we can do */
 		}
 		if(*pData == '\0') { /* guard against \0 characters... */
@@ -2156,11 +2159,7 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
  * rgerhards 2004-11-08: Please note
  * that this function does only a partial decoding. At best, it splits 
  * the PRI part. No further decode happens. The rest is done in 
- * logmsg(). Please note that printsys() calls logmsg() directly, so
- * this is something we need to restructure once we are moving the
- * real decoder in here. I now (2004-11-09) found that printsys() seems
- * not to be called from anywhere. So we might as well decode the full
- * message here.
+ * logmsg().
  * Added the iSource parameter so that we know if we have to parse
  * HOSTNAME or not. rgerhards 2004-11-16.
  * changed parameter iSource to bParseHost. For details, see comment in
@@ -2689,6 +2688,22 @@ static void queueDelete (msgQueue *q)
 	free (q);
 }
 
+
+/* In queueAdd() and queueDel() we have a potential race condition. If a message
+ * is dequeued and at the same time a message is enqueued and the queue is either
+ * full or empty, the full (or empty) indicator may be invalidly updated. HOWEVER,
+ * this does not cause any real problems. No queue pointers can be wrong. And even
+ * if one of the flags is set invalidly, that does not pose a real problem. If
+ * "full" is invalidly set, at mose one message might be lost, if we are already in
+ * a timeout situation (this is quite acceptable). And if "empty" is accidently set,
+ * the receiver will not continue the inner loop, but break out of the outer. So no
+ * harm is done at all. For this reason, I do not yet use a mutex to guard the two
+ * flags - there would be a notable performance hit with, IMHO, no gain in stability
+ * or functionality. But anyhow, now it's documented...
+ * rgerhards, 2007-09-20
+ * NOTE: this comment does not really apply - the callers handle the mutex, so it
+ * *is* guarded.
+ */
 static void queueAdd (msgQueue *q, void* in)
 {
 	q->pbuf[q->tail] = in;
@@ -3037,8 +3052,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	assert(pMsg->pszUxTradMsg != NULL);
 	p2parse = (char*) pMsg->pszUxTradMsg;
 
-	/*
-	 * Check to see if msg contains a timestamp
+	/* Check to see if msg contains a timestamp
 	 */
 	if(srSLMGParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE)
 		p2parse += 16;
@@ -3079,12 +3093,15 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		bTAGCharDetected = 0;
 		if(pMsg->bParseHOSTNAME) {
 			/* TODO: quick and dirty memory allocation */
+			/* the memory allocated is far too much in most cases. But on the plus side,
+			 * it is quite fast... - rgerhards, 2007-09-20
+			 */
 			if((pBuf = malloc(sizeof(char)* (strlen(p2parse) +1))) == NULL)
 				return 1;
 			pWork = pBuf;
 			/* this is the actual parsing loop */
 			while(*p2parse && *p2parse != ' ' && *p2parse != ':') {
-				if(   *p2parse == '[' || *p2parse == ']' || *p2parse == '/')
+				if(*p2parse == '[' || *p2parse == ']' || *p2parse == '/')
 					bTAGCharDetected = 1;
 				*pWork++ = *p2parse++;
 			}
@@ -3162,9 +3179,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 				dbgprintf("No TAG in message, assuming that HOSTNAME is missing.\n");
 				moveHOSTNAMEtoTAG(pMsg);
 				MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
-			}
-			else
-			{ /* we have a TAG, so we can happily set it ;) */
+			} else { /* we have a TAG, so we can happily set it ;) */
 				MsgAssignTAG(pMsg, pszTAG);
 			}
 		} else {
@@ -4326,7 +4341,7 @@ static void init(void)
 			 * for the very same reason.
 			 */
 			static char defPort[8];
-			snprintf(defPort, sizeof(defPort) * sizeof(char), "%d", ntohs(sp->s_port));
+			snprintf(defPort, sizeof(defPort), "%d", ntohs(sp->s_port));
                         LogPort = defPort;
 		}
         }
@@ -4419,8 +4434,7 @@ static void init(void)
 			if((finet = create_udp_socket()) != NULL)
 				dbgprintf("Opened %d syslog UDP port(s).\n", *finet);
 		}
-	}
-	else {
+	} else {
 		/* this case can happen during HUP processing. */
 		closeUDPListenSockets();
 	}
@@ -5627,11 +5641,10 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 	       for (i = 0; i < *finet; i++) {
 		       if (FD_ISSET(finet[i+1], pReadfds)) {
 			       socklen = sizeof(frominet);
-			       memset(line, '\0', sizeof(line)); // TODO: I think we need this for debug only - remove after bug hunt
+			       memset(line, 0xff, sizeof(line)); // TODO: I think we need this for debug only - remove after bug hunt
 			       l = recvfrom(finet[i+1], line, MAXLINE - 1, 0,
 			       		    (struct sockaddr *)&frominet, &socklen);
 			       if (l > 0) {
-				       line[l] = '\0';
 				       if(cvthname(&frominet, fromHost, fromHostFQDN) == RS_RET_OK) {
 					       dbgprintf("Message from inetd socket: #%d, host: %s\n",
 						       finet[i+1], fromHost);
@@ -5651,8 +5664,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 						       }	
 					       }
 				       }
-			       }
-			       else if (l < 0 && errno != EINTR && errno != EAGAIN) {
+			       } else if (l < 0 && errno != EINTR && errno != EAGAIN) {
 				       dbgprintf("INET socket error: %d = %s.\n",
 							errno, strerror(errno));
 					       logerror("recvfrom inet");
@@ -5718,6 +5730,9 @@ finalize_it:
 }
 
 
+/* This is the main processing loop. It is called after successful initialization.
+ * When it returns, the syslogd terminates.
+ */
 static void mainloop(void)
 {
 	fd_set readfds;
@@ -6033,11 +6048,21 @@ static void printVersion(void)
 }
 
 
+/* This is the main entry point into rsyslogd. Over time, we should try to
+ * modularize it a bit more...
+ */
 int main(int argc, char **argv)
-{	register int i;
+{	
+	DEFiRet;
+	register int i;
 	register char *p;
 	int num_fds;
-	rsRetVal iRet;
+	int ch;
+	struct hostent *hent;
+	extern int optind;
+	extern char *optarg;
+	uchar *pTmp;
+	struct sigaction sigAct;
 
 #ifdef	MTRACE
 	mtrace(); /* this is a debug aid for leak detection - either remove
@@ -6045,13 +6070,6 @@ int main(int argc, char **argv)
 #endif
 
 	pid_t ppid = getpid();
-	int ch;
-	struct hostent *hent;
-
-	extern int optind;
-	extern char *optarg;
-	uchar *pTmp;
-	struct sigaction sigAct;
 
 	if(chdir ("/") != 0)
 		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
@@ -6118,9 +6136,9 @@ int main(int argc, char **argv)
 			if (LocalHosts) {
 				fprintf (stderr, "rsyslogd: Only one -l argument allowed," \
 					"the first one is taken.\n");
-				break;
+			} else {
+				LocalHosts = crunch_list(optarg);
 			}
-			LocalHosts = crunch_list(optarg);
 			break;
 		case 'm':		/* mark interval */
 			MarkInterval = atoi(optarg) * 60;
@@ -6135,25 +6153,29 @@ int main(int argc, char **argv)
 			funixn[0] = optarg;
 			break;
 		case 'r':		/* accept remote messages */
+#ifdef SYSLOG_INET
 			AcceptRemote = 1;
 			if(optarg == NULL)
 				LogPort = "0";
 			else
 				LogPort = optarg;
+#else
+			fprintf(stderr, "rsyslogd: -r not valid - not compiled with network support");
+#endif
 			break;
 		case 's':
 			if (StripDomains) {
 				fprintf (stderr, "rsyslogd: Only one -s argument allowed," \
 					"the first one is taken.\n");
-				break;
+			} else {
+				StripDomains = crunch_list(optarg);
 			}
-			StripDomains = crunch_list(optarg);
 			break;
 		case 't':		/* enable tcp logging */
 #ifdef SYSLOG_INET
 			configureTCPListen(optarg);
 #else
-			fprintf(stderr, "rsyslogd: -t not valid - not compiled for network support");
+			fprintf(stderr, "rsyslogd: -t not valid - not compiled with network support");
 #endif
 			break;
 		case 'u':		/* misc user settings */
@@ -6227,13 +6249,13 @@ int main(int argc, char **argv)
 		{
 			if (!write_pid(PidFile))
 			{
-				dbgprintf("Can't write pid.\n");
+				fputs("Can't write pid.\n", stderr);
 				exit(1); /* exit during startup - questionable */
 			}
 		}
 		else
 		{
-			dbgprintf("Pidfile (and pid) already exist.\n");
+			fputs("Pidfile (and pid) already exist.\n", stderr);
 			exit(1); /* exit during startup - questionable */
 		}
 	} /* if ( !Debug ) */
@@ -6263,8 +6285,7 @@ int main(int argc, char **argv)
 	{
 		LocalDomain = "";
 
-		/*
-		 * It's not clearly defined whether gethostname()
+		/* It's not clearly defined whether gethostname()
 		 * should return the simple hostname or the fqdn. A
 		 * good piece of software should be aware of both and
 		 * we want to distribute good software.  Joey
@@ -6275,13 +6296,14 @@ int main(int argc, char **argv)
 		 * return NULL. 
 		 */
 		hent = gethostbyname(LocalHostName);
-		if ( hent )
+		if(hent) {
 			snprintf(LocalHostName, sizeof(LocalHostName), "%s", hent->h_name);
-			
-		if ( (p = strchr(LocalHostName, '.')) )
-		{
-			*p++ = '\0';
-			LocalDomain = p;
+				
+			if ( (p = strchr(LocalHostName, '.')) )
+			{
+				*p++ = '\0';
+				LocalDomain = p;
+			}
 		}
 	}
 
@@ -6316,8 +6338,7 @@ int main(int argc, char **argv)
 		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 		debugging_on = 1;
 	}
-	/*
-	 * Send a signal to the parent to it can terminate.
+	/* Send a signal to the parent so it can terminate.
 	 */
 	if (myPid != ppid)
 		kill (ppid, SIGTERM);
@@ -6329,7 +6350,8 @@ int main(int argc, char **argv)
 	 */
 
 	mainloop();
-	/* end de-init's */
+
+	/* do any de-init's that need to be done AFTER this comment */
 
 	die(bFinished);
 	return 0;
