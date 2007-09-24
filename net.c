@@ -65,8 +65,9 @@ int should_use_so_bsdcompat(void)
 
 	init_done = 1;
 	if (uname(&utsname) < 0) {
-	    dbgprintf("uname: %s\r\n", strerror(errno));
-	    return 1;
+		char errStr[1024];
+		dbgprintf("uname: %s\r\n", strerror_r(errno, errStr, sizeof(errStr)));
+		return 1;
 	}
 	/* Format is <version>.<patchlevel>.<sublevel><extraversion>
 	   where the first three are unsigned integers and the last

@@ -93,17 +93,20 @@ static void openlog()
 		strncpy(SyslogAddr.sa_data, pPathLogname,
 		    sizeof(SyslogAddr.sa_data));
 		LogFile = socket(AF_UNIX, SOCK_DGRAM, 0);
-		if(LogFile < 0)
+		if(LogFile < 0) {
+			char errStr[1024];
 			printf("error opening '%s': %s\n", 
-			       pPathLogname, strerror(errno));
+			       pPathLogname, strerror_r(errno, errStr, sizeof(errStr)));
+		}
 	}
 	if (LogFile != -1 && !connected &&
 	    connect(LogFile, &SyslogAddr, sizeof(SyslogAddr.sa_family)+
 			strlen(SyslogAddr.sa_data)) != -1)
 		connected = 1;
-	else
+	else {
 		printf("error connecting '%s': %s\n", 
-		       pPathLogname, strerror(errno));
+		       pPathLogname, strerror_r(errno, errStr, sizeof(errStr)));
+	}
 }
 
 
@@ -157,7 +160,8 @@ void OnReceive(srAPIObj* pAPI, srSLMGObj* pSLMG)
 			nWritten = write(LogFile, pszRawMsg, strlen(pszRawMsg));
 			if(nWritten < 0) {
 				/* error, recover! */
-				printf("error writing to domain socket: %s\r\n", strerror(errno));
+				char errStr[1024];
+				printf("error writing to domain socket: %s\r\n", strerror_r(errno, errStr, sizeof(errStr)));
 				closelog();
 			} else {
 				/* prepare for (potential) next write */

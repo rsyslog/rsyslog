@@ -2289,13 +2289,12 @@ static void logmsgInternal(int pri, char *msg, int flags)
 #endif
 }
 
-/*
- * This functions looks at the given message and checks if it matches the
+/* This functions looks at the given message and checks if it matches the
  * provided filter condition. If so, it returns true, else it returns
  * false. This is a helper to logmsg() and meant to drive the decision
  * process if a message is to be processed or not. As I expect this
  * decision code to grow more complex over time AND logmsg() is already
- * a very lengthe function, I thought a separate function is more appropriate.
+ * a very lengthy function, I thought a separate function is more appropriate.
  * 2005-09-19 rgerhards
  */
 int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
@@ -2398,27 +2397,21 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 		if(f->f_filterData.prop.isNegated)
 			iRet = (iRet == 1) ?  0 : 1;
 
-		/* cleanup */
-		if(pbMustBeFreed)
-			free(pszPropVal);
-		
 		if(Debug) {
-			char *pszPropValDeb;
-			unsigned short pbMustBeFreedDeb;
-			pszPropValDeb = MsgGetProp(pMsg, NULL,
-					f->f_filterData.prop.pCSPropName, &pbMustBeFreedDeb);
 			printf("Filter: check for property '%s' (value '%s') ",
 			        rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSPropName),
-			        pszPropValDeb);
+			        pszPropVal);
 			if(f->f_filterData.prop.isNegated)
 				printf("NOT ");
 			printf("%s '%s': %s\n",
 			       getFIOPName(f->f_filterData.prop.operation),
 			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue),
 			       iRet ? "TRUE" : "FALSE");
-			if(pbMustBeFreedDeb)
-				free(pszPropValDeb);
 		}
+
+		/* cleanup */
+		if(pbMustBeFreed)
+			free(pszPropVal);
 	}
 
 	return(iRet);
@@ -2475,7 +2468,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
-	/* suppress duplicate lines to this file
+	/* suppress duplicate messages
 	 */
 	if ((pAction->f_ReduceRepeated == 1) && pAction->f_pMsg != NULL &&
 	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(pAction->f_pMsg) &&
@@ -2493,7 +2486,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 			BACKOFF(pAction);
 		}
 	} else {
-		/* new line, save it */
+		/* new message, save it */
 		/* first check if we have a previous message stored
 		 * if so, emit and then discard it first
 		 */
@@ -2526,7 +2519,7 @@ typedef struct processMsgDoActions_s {
 DEFFUNC_llExecFunc(processMsgDoActions)
 {
 	DEFiRet;
-	rsRetVal iRetMod;	/* return of module - we do not always pass that */
+	rsRetVal iRetMod;	/* return value of module - we do not always pass that back */
 	action_t *pAction = (action_t*) pData;
 	processMsgDoActions_t *pDoActData = (processMsgDoActions_t*) pParam;
 
@@ -3330,6 +3323,9 @@ rsRetVal fprintlog(action_t *pAction)
 			/* it failed - nothing we can do against it... */
 			dbgprintf("Message duplication failed, dropping repeat message.\n");
 			return RS_RET_ERR;
+			/* This return is OK. The finalizer frees strings, which are not
+			 * yet allocated. So we can not use the finalizer.
+			 */
 		}
 
 		/* We now need to update the other message properties.
@@ -3540,13 +3536,14 @@ void logerrorInt(char *type, int errCode)
 void logerror(char *type)
 {
 	char buf[1024];
+	char errStr[1024];
 
 	dbgprintf("Called logerr, msg: %s\n", type);
 
 	if (errno == 0)
 		snprintf(buf, sizeof(buf), "%s", type);
 	else
-		snprintf(buf, sizeof(buf), "%s: %s", type, strerror(errno));
+		snprintf(buf, sizeof(buf), "%s: %s", type, strerror_r(errno, errStr, sizeof(errStr)));
 	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
 	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, ADDDATE);
@@ -4270,10 +4267,11 @@ static rsRetVal processConfFile(uchar *pConfFile)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		char errStr[1024];
 		if(fCurr != NULL)
 			selectorDestruct(fCurr);
 		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
-			iRet, pConfFile, strerror(errno));
+			iRet, pConfFile, strerror_r(errno, errStr, sizeof(errStr)));
 	}
 	return iRet;
 }
@@ -4615,7 +4613,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 	assert(f != NULL);
 
 	dbgprintf(" - traditional PRI filter\n");
-	errno = 0;	/* keep strerror() stuff out of logerror messages */
+	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
 	f->f_filter_type = FILTER_PRI;
 	/* Note: file structure is pre-initialized to zero because it was
@@ -4774,7 +4772,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 	assert(f != NULL);
 
 	dbgprintf(" - property-based filter\n");
-	errno = 0;	/* keep strerror() stuff out of logerror messages */
+	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
 	f->f_filter_type = FILTER_PROP;
 
@@ -5627,8 +5625,9 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 			if (iRcvd > 0) {
 				printchopped(LocalHostName, line, iRcvd,  fd, funixParseHost[i]);
 			} else if (iRcvd < 0 && errno != EINTR) {
+				char errStr[1024];
 				dbgprintf("UNIX socket error: %d = %s.\n", \
-					errno, strerror(errno));
+					errno, strerror_r(errno, errStr, sizeof(errStr)));
 				logerror("recvfrom UNIX");
 			}
 		FDPROCESSED();
@@ -5665,8 +5664,9 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 					       }
 				       }
 			       } else if (l < 0 && errno != EINTR && errno != EAGAIN) {
+					char errStr[1024];
 				       dbgprintf("INET socket error: %d = %s.\n",
-							errno, strerror(errno));
+							errno, strerror_r(errno, errStr, sizeof(errStr)));
 					       logerror("recvfrom inet");
 					       /* should be harmless */
 					       sleep(1);

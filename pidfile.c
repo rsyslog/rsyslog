@@ -21,6 +21,8 @@
 #include "config.h"
 
 
+#include "rsyslog.h"
+
 /*
  * Sat Aug 19 13:24:33 MET DST 1995: Martin Schulze
  *	First version (v0.2) released
@@ -117,7 +119,8 @@ int write_pid (char *pidfile)
 
   pid = getpid();
   if (!fprintf(f,"%d\n", pid)) {
-      printf("Can't write pid , %s.\n", strerror(errno));
+	char errStr[1024];
+      printf("Can't write pid , %s.\n", strerror_r(errno, errStr, sizeof(errStr)));
       close(fd);
       return 0;
   }
@@ -125,7 +128,8 @@ int write_pid (char *pidfile)
 
 #ifndef	__sun
   if (flock(fd, LOCK_UN) == -1) {
-      printf("Can't unlock pidfile %s, %s.\n", pidfile, strerror(errno));
+	char errStr[1024];
+      printf("Can't unlock pidfile %s, %s.\n", pidfile, strerror_r(errno, errStr, sizeof(errStr)));
       close(fd);
       return 0;
   }
