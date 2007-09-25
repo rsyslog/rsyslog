@@ -66,7 +66,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
 AC_FUNC_WAIT3
-AC_CHECK_FUNCS([setsid alarm gethostbyname gethostname gettimeofday memset regcomp select socket strcasecmp strchr strerror strerror_r strndup strnlen strrchr strstr strtol strtoul uname])
+AC_CHECK_FUNCS([setsid alarm gethostbyname gethostname gettimeofday memset regcomp select socket strcasecmp strchr strerror strerror_r strndup strnlen strrchr strstr strtol strtoul uname ttyname_r])
 
 
 # Large file support

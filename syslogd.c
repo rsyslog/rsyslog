@@ -4384,12 +4384,12 @@ static void init(void)
 		 * We ignore any errors while doing this - we would be lost anyhow...
 		 */
 		selector_t *f = NULL;
-		char *pTTY = ttyname(0);
+		char szTTYNameBuf[TTY_NAME_MAX+1]; /* +1 for NULL character */
 		dbgprintf("primary config file could not be opened - using emergency definitions.\n");
 		cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
 		cfline((uchar*)"*.PANIC\t*", &f);
-		if(pTTY != NULL) {
-			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", pTTY);
+		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
+			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
 			cfline((uchar*)cbuf, &f);
 		}
 		selectorAddList(f);
