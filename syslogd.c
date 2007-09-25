@@ -2474,11 +2474,15 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 	if ((pAction->f_ReduceRepeated == 1) && pAction->f_pMsg != NULL &&
 	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(pAction->f_pMsg) &&
 	    !strcmp(getMSG(pMsg), getMSG(pAction->f_pMsg)) &&
-	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(pAction->f_pMsg))) {
+	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(pAction->f_pMsg)) &&
+	    !strcmp(getPROCID(pMsg), getPROCID(pAction->f_pMsg)) &&
+	    !strcmp(getAPPNAME(pMsg), getAPPNAME(pAction->f_pMsg))) {
 		pAction->f_prevcount++;
 		dbgprintf("msg repeated %d times, %ld sec of %d.\n",
 		    pAction->f_prevcount, now - pAction->f_time,
 		    repeatinterval[pAction->f_repeatcount]);
+		MsgDestruct(pAction->f_pMsg);
+		pAction->f_pMsg = MsgAddRef(pMsg);
 		/* If domark would have logged this by now, flush it now (so we don't hold
 		 * isolated messages), but back off so we'll flush less often in the future.
 		 */
