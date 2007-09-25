@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.19.8 (rgerhards), 2007-09-??
+---------------------------------------------------------------------------
 Version 1.19.7 (rgerhards), 2007-09-25
 - added code to handle situations where senders send us messages ending with
   a NUL character. It is now simply removed. This also caused trailing LF
