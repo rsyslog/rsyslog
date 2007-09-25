@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.19.7 (rgerhards), 2007-09-1?
+Version 1.19.7 (rgerhards), 2007-09-25
 - added code to handle situations where senders send us messages ending with
   a NUL character. It is now simply removed. This also caused trailing LF
   reduction to fail, when it was followed by such a NUL. This is now also
@@ -8,6 +8,12 @@ Version 1.19.7 (rgerhards), 2007-09-1?
   counterparts
 - fixed a minor memory leak that occured when the %APPNAME% property was
   used (I think nobody used that in practice)
+- fixed a bug that caused signal handlers in cvthname() not to be restored when
+  a malicious pointer record was detected and processing of the message been
+  stopped for that reason (this should be really rare and can not be related
+  to the segfault bug we are hunting).
+- fixed a bug in cvthname that lead to passing a wrong parameter - in
+  practice, this had no impact.
 - general code cleanup (e.g. compiler warnings, comments)
 ---------------------------------------------------------------------------
 Version 1.19.6 (rgerhards), 2007-09-11
