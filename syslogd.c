@@ -1593,11 +1593,12 @@ void getCurrTime(struct syslogTime *t)
 {
 	struct timeval tp;
 	struct tm *tm;
+	struct tm tmBuf;
 	long lBias;
 
 	assert(t != NULL);
 	gettimeofday(&tp, NULL);
-	tm = localtime((time_t*) &(tp.tv_sec));
+	tm = localtime_r((time_t*) &(tp.tv_sec), &tmBuf);
 
 	t->year = tm->tm_year + 1900;
 	t->month = tm->tm_mon + 1;
@@ -3845,6 +3846,11 @@ finalize_it:
  * loader for plug-ins.
  * rgerhards, 2007-07-21
  * varmojfekoj added support for dynamically loadable modules on 2007-08-13
+ * rgerhards, 2007-09-25: please note that the non-threadsafe function dlerror() is
+ * called below. This is ok because modules are currently only loaded during
+ * configuration file processing, which is executed on a single thread. Should we
+ * change that design at any stage (what is unlikely), we need to find a
+ * replacement.
  */
 static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 {
@@ -4322,6 +4328,8 @@ static void init(void)
         if(!strcmp(LogPort, "0")) {
                 /* we shall use the default syslog/udp port, so let's
                  * look it up.
+		 * NOTE: getservbyname() is not thread-safe, but this is OK as 
+		 * it is called only during init, in single-threading mode.
                  */
                 sp = getservbyname("syslog", "udp");
                 if (sp == NULL) {
@@ -6294,6 +6302,9 @@ int main(int argc, char **argv)
 		 * If syslogd starts up before DNS is up & /etc/hosts
 		 * doesn't have LocalHostName listed, gethostbyname will
 		 * return NULL. 
+		 */
+		/* TODO: gethostbyname() is not thread-safe, but replacing it is
+		 * not urgent as we do not run on multiple threads here. rgerhards, 2007-09-25
 		 */
 		hent = gethostbyname(LocalHostName);
 		if(hent) {

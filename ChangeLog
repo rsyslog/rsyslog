@@ -4,6 +4,11 @@ Version 1.19.7 (rgerhards), 2007-09-1?
   a NUL character. It is now simply removed. This also caused trailing LF
   reduction to fail, when it was followed by such a NUL. This is now also
   handled.
+- replaced some non-thread-safe function calls by their thread-safe
+  counterparts
+- fixed a minor memory leak that occured when the %APPNAME% property was
+  used (I think nobody used that in practice)
+- general code cleanup (e.g. compiler warnings, comments)
 ---------------------------------------------------------------------------
 Version 1.19.6 (rgerhards), 2007-09-11
 - applied patch by varmojfekoj to change signal handling to the new
