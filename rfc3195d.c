@@ -104,6 +104,7 @@ static void openlog()
 			strlen(SyslogAddr.sa_data)) != -1)
 		connected = 1;
 	else {
+		char errStr[1024];
 		printf("error connecting '%s': %s\n", 
 		       pPathLogname, strerror_r(errno, errStr, sizeof(errStr)));
 	}
