@@ -190,8 +190,11 @@ rsRetVal gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
         }
 
 finalize_it:
+dbgprintf("hname() iRet: %d\n", iRet);
 	return iRet;
 }
+
+
 /* Return a printable representation of a host address.
  * Now (2007-07-16) also returns the full host name (if it could be obtained)
  * in the second param [thanks to mildew@gmail.com for the patch].
@@ -242,7 +245,6 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	if ((p = (uchar*) strchr((char*)pszHost, '.'))) { /* find start of domain name "machine.example.com" */
 		if(strcmp((char*) (p + 1), LocalDomain) == 0) {
 			*p = '\0'; /* simply terminate the string */
-			return 1;
 		} else {
 			/* now check if we belong to any of the domain names that were specified
 			 * in the -s command line option. If so, remove and we are done.
@@ -252,7 +254,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 				while (StripDomains[count]) {
 					if (strcmp((char*)(p + 1), StripDomains[count]) == 0) {
 						*p = '\0';
-						return 1;
+						FINALIZE; /* we are done */
 					}
 					count++;
 				}
@@ -270,7 +272,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 				while (LocalHosts[count]) {
 					if (!strcmp((char*)pszHost, LocalHosts[count])) {
 						*p = '\0';
-						return 1;
+						break; /* we are done */
 					}
 					count++;
 				}
@@ -279,6 +281,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	}
 
 finalize_it:
+dbgprintf("cvthname() iRet: %d\n", iRet);
 	return iRet;
 }
 
