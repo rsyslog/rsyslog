@@ -217,7 +217,6 @@
 #include "cfsysline.h"
 #include "omshell.h"
 #include "omusrmsg.h"
-#include "ommysql.h"
 #include "omfwd.h"
 #include "omfile.h"
 #include "omdiscard.h"
@@ -6030,11 +6029,6 @@ static void printVersion(void)
 	printf("\tFEATURE_REGEXP:\t\t\t\tYes\n");
 #else
 	printf("\tFEATURE_REGEXP:\t\t\t\tNo\n");
-#endif
-#ifdef WITH_DB
-	printf("\tFEATURE_DB (MySQL):\t\t\tYes\n");
-#else
-	printf("\tFEATURE_DB (MySQL):\t\t\tNo\n");
 #endif
 #ifndef	NOLARGEFILE
 	printf("\tFEATURE_LARGEFILE:\t\t\tYes\n");

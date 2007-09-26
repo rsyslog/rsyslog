@@ -24,7 +24,6 @@
  */
 #ifndef	SYSLOGD_TYPES_INCLUDED
 #define	SYSLOGD_TYPES_INCLUDED 1
-#include "config.h"  /* make sure we have autoconf macros */
 
 #include "stringbuf.h"
 #include "net.h"
@@ -42,14 +41,11 @@
 #define MAXUNAMES	20	/* maximum number of user names */
 #define MAXFNAME	200	/* max file pathname length */
 
-#ifdef	WITH_DB
-#include "mysql/mysql.h" 
 #define	_DB_MAXDBLEN	128	/* maximum number of db */
 #define _DB_MAXUNAMELEN	128	/* maximum number of user name */
 #define	_DB_MAXPWDLEN	128 	/* maximum number of user's pass */
 #define _DB_DELAYTIMEONERROR	20	/* If an error occur we stop logging until
 					   a delayed time is over */
-#endif
 
 
 /* we define features of the syslog code. This features can be used

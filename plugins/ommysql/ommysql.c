@@ -24,8 +24,7 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-#include "config.h"
-#ifdef	WITH_DB
+#include "ommysql-config.h"
 #include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -35,13 +34,13 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
+#include <mysql/mysql.h>
+#include <mysql/errmsg.h>
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
 #include "ommysql.h"
-#include "mysql/mysql.h" 
-#include "mysql/errmsg.h"
 #include "module-template.h"
 
 /* internal structures
@@ -289,8 +288,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
-
-#endif /* #ifdef WITH_DB */
 /*
  * vi:set ai:
  */

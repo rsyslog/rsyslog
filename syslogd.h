@@ -83,6 +83,5 @@ extern char *LocalDomain;
 extern int bDropMalPTRMsgs;
 extern struct AllowedSenders *pAllowedSenders_TCP;
 extern char	ctty[];
-extern int bModMySQLLoaded;
 
 #endif /* #ifndef SYSLOGD_H_INCLUDED */
