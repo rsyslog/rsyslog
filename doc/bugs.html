@@ -14,9 +14,19 @@ here.</p>
 <p>This list has last been updated on 2007-07-30 by
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a>.</p>
 <h1>rsyslogd</h1>
-<h2>plugin-directory</h2>
-<p>The directory for plug-ins is currently hard-coded and must be /lib/rsyslog/. 
-If you want to change it, you need to modify syslogd.c.</p>
+<h2>stability in multithreaded mode</h2>
+<p>We have some reports that rsyslogd, if compiled with multi-threading enabled, 
+segfaults in some environments. We are actively looking at fixing this issue, 
+but as it does not occur in our lab environment, that unfortunately takes some 
+time. If you experience a segfault, please report it. As a work-around, you can 
+compile rsyslog without multi-threading:</p>
+<p>./configure --disable-pthreads<br>
+make clean<br>
+make<br>
+make install</p>
+<p>This somewhat reduces the ability to handle large message bursts, but even in 
+single-threaded mode rsyslogd offers great performance (just think that stock 
+sysklogd has always been using a single thread, only).</p>
 <h2>forwarding remotely received messages</h2>
 <p>Sysklogd does not forward remotely received messages to other network 
 destionation except when the -h option is given. This code is currently defunct. 
