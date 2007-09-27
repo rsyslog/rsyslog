@@ -1,6 +1,19 @@
 ---------------------------------------------------------------------------
 Version 1.19.8 (rgerhards), 2007-09-??
 - improved repeated message processing
+- applied patch provided by varmojfekoj to support building ommysql
+  in its own way (now also resides in a plugin subdirectory);
+  ommysql is now a separate package
+- fixed a bug in cvthname() that lead to message loss if part
+  of the source hostname would have been dropped
+- created some support for distributing ommysql together with the
+  main rsyslog package. I need to re-think it in the future, but
+  for the time being the current mode is best. I now simply include
+  one additional tarball for ommysql inside the main distribution.
+  I look forward to user feedback on how this should be done best. In the
+  long term, a separate project should be spawend for ommysql, but I'd
+  like to do that only after the plugin interface is fully stable (what
+  it is not yet).
 ---------------------------------------------------------------------------
 Version 1.19.7 (rgerhards), 2007-09-25
 - added code to handle situations where senders send us messages ending with
