@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.19.9 (rgerhards), 2007-10-08
+---------------------------------------------------------------------------
 Version 1.19.8 (rgerhards), 2007-09-27
 - improved repeated message processing
 - applied patch provided by varmojfekoj to support building ommysql
