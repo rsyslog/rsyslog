@@ -510,6 +510,8 @@ static struct code	FacNames[] = {
 	{NULL,           -1},
 };
 
+static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
+
 /* global variables for config file state */
 static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	Debug;		/* debug flag  - read-only after startup */
@@ -6054,35 +6056,20 @@ static void printVersion(void)
 }
 
 
-/* This is the main entry point into rsyslogd. Over time, we should try to
- * modularize it a bit more...
+/* This is a special function to run all those things (namely the inputs) that
+ * were uses to run on the startup thread. I discovered a problem with malloc/free
+ * when used in different threads.
+ * See http://rgerhards.blogspot.com/2007/10/could-i-really-reproduce-bug.html
+ * This is now a work-around, in which I create a new thread to do all the work. If
+ * the malloc/free behaviour is relly what I described, then this should fix the
+ * segfault issue...
+ * RGerhards, 2007-10-08
  */
-int main(int argc, char **argv)
-{	
+static void *mainThread()
+{
 	DEFiRet;
-	register int i;
-	register char *p;
-	int num_fds;
-	int ch;
-	struct hostent *hent;
-	extern int optind;
-	extern char *optarg;
 	uchar *pTmp;
-	struct sigaction sigAct;
-
-#ifdef	MTRACE
-	mtrace(); /* this is a debug aid for leak detection - either remove
-	           * or put in conditional compilation. 2005-01-18 RGerhards */
-#endif
-
-	pid_t ppid = getpid();
-
-	if(chdir ("/") != 0)
-		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
-	for (i = 1; i < MAXFUNIX; i++) {
-		funixn[i] = "";
-		funix[i]  = -1;
-	}
+	sigset_t sigSet;
 
 	/* doing some core initializations */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
@@ -6095,6 +6082,86 @@ int main(int argc, char **argv)
 		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
 			iRet);
 		exit(1); /* "good" exit, leaving at init for fatal error */
+	}
+
+	/* Block signals, all are delivered to the startup thread.
+	 * TODO: reconsider SIGUSR1 and alarm(), which we may need to interrupt()
+	 * the select call. For the time being, its acceptable (after all, we are right
+	 * now doing a tester...). rgerhards, 2007-10-08
+	 */
+	//sigfillset(&sigSet);
+	//pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
+
+	/* initialize the default templates
+	 * we use template names with a SP in front - these 
+	 * can NOT be generated via the configuration file
+	 */
+	pTmp = template_TraditionalFormat;
+	tplAddLine(" TradFmt", &pTmp);
+	pTmp = template_WallFmt;
+	tplAddLine(" WallFmt", &pTmp);
+	pTmp = template_StdFwdFmt;
+	tplAddLine(" StdFwdFmt", &pTmp);
+	pTmp = template_StdUsrMsgFmt;
+	tplAddLine(" StdUsrMsgFmt", &pTmp);
+	pTmp = template_StdDBFmt;
+	tplLastStaticInit(tplAddLine(" StdDBFmt", &pTmp));
+
+	dbgprintf("Starting.\n");
+	init();
+	if(Debug) {
+		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
+		debugging_on = 1;
+	}
+	/* Send a signal to the parent so it can terminate.
+	 */
+	if (myPid != ppid)
+		kill (ppid, SIGTERM);
+
+	/* END OF INTIALIZATION
+	 * ... but keep in mind that we might do a restart and thus init() might
+	 * be called again. If that happens, we must shut down the worker thread,
+	 * do the init() and then restart things.
+	 * rgerhards, 2005-10-24
+	 */
+
+	mainloop();
+
+	/* do any de-init's that need to be done AFTER this comment */
+	die(bFinished);
+
+	pthread_exit(0);
+}
+
+
+/* This is the main entry point into rsyslogd. Over time, we should try to
+ * modularize it a bit more...
+ */
+int main(int argc, char **argv)
+{	
+	register int i;
+	register char *p;
+	int num_fds;
+	int ch;
+	struct hostent *hent;
+	extern int optind;
+	extern char *optarg;
+	struct sigaction sigAct;
+	pthread_t thrdMain;
+
+	sigset_t sigSet;
+#ifdef	MTRACE
+	mtrace(); /* this is a debug aid for leak detection - either remove
+	           * or put in conditional compilation. 2005-01-18 RGerhards */
+#endif
+
+	ppid = getpid();
+
+	if(chdir ("/") != 0)
+		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
+	for (i = 1; i < MAXFUNIX; i++) {
+		funixn[i] = "";
+		funix[i]  = -1;
 	}
 
 	/* END core initializations */
@@ -6267,20 +6334,6 @@ int main(int argc, char **argv)
 	} /* if ( !Debug ) */
 	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
 
-	/* initialize the default templates
-	 * we use template names with a SP in front - these 
-	 * can NOT be generated via the configuration file
-	 */
-	pTmp = template_TraditionalFormat;
-	tplAddLine(" TradFmt", &pTmp);
-	pTmp = template_WallFmt;
-	tplAddLine(" WallFmt", &pTmp);
-	pTmp = template_StdFwdFmt;
-	tplAddLine(" StdFwdFmt", &pTmp);
-	pTmp = template_StdUsrMsgFmt;
-	tplAddLine(" StdUsrMsgFmt", &pTmp);
-	pTmp = template_StdDBFmt;
-	tplLastStaticInit(tplAddLine(" StdDBFmt", &pTmp));
 
 	gethostname(LocalHostName, sizeof(LocalHostName));
 	if ( (p = strchr(LocalHostName, '.')) ) {
@@ -6341,37 +6394,24 @@ int main(int argc, char **argv)
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
 
-	dbgprintf("Starting.\n");
-	init();
-	if(Debug) {
-		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
-		debugging_on = 1;
-	}
-	/* Send a signal to the parent so it can terminate.
+	i = pthread_create(&thrdMain, NULL, mainThread, NULL);
+	dbgprintf("\"main\" thread started with state %d.\n", i);
+
+	/* we block all signals - they will be processed by the "main"-thread. This most
+	 * closely resembles previous behaviour. TODO: think about optimizing it, some
+	 * signals may better be delivered here. rgerhards, 2007-10-08
 	 */
-	if (myPid != ppid)
-		kill (ppid, SIGTERM);
-	/* END OF INTIALIZATION
-	 * ... but keep in mind that we might do a restart and thus init() might
-	 * be called again. If that happens, we must shut down all active threads,
-	 * do the init() and then restart things.
-	 * rgerhards, 2005-10-24
+	sigfillset(&sigSet);
+	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
+	
+	/* see comment in mainThread on why we start thread and then immediately
+	 * do a blocking wait on it - it makese sense... ;) rgerhards, 2007-10-08
 	 */
+	pthread_join(thrdMain, NULL);
 
-	mainloop();
-
-	/* do any de-init's that need to be done AFTER this comment */
-
-	die(bFinished);
 	return 0;
 }
 
 
-/*
- * Local variables:
- *  c-indent-level: 8
- *  c-basic-offset: 8
- *  tab-width: 8
- * End:
- * vi:set ai:
+/* vi:set ai:
  */

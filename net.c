@@ -190,7 +190,6 @@ rsRetVal gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
         }
 
 finalize_it:
-dbgprintf("hname() iRet: %d\n", iRet);
 	return iRet;
 }
 
@@ -281,7 +280,6 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	}
 
 finalize_it:
-dbgprintf("cvthname() iRet: %d\n", iRet);
 	return iRet;
 }
 
