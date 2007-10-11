@@ -254,17 +254,23 @@ if test "x$enable_mysql" = "xyes"; then
     [mysql/mysql.h],,
     [AC_MSG_FAILURE([MySQL is missing])]
   )
-  AC_SUBST(LIBS_TMP,[$LIBS])
-  AC_SEARCH_LIBS(
-    [mysql_init],
+  AC_CHECK_PROG(
+    [HAVE_MYSQL_CONFIG],
+    [mysql_config],
+    [yes],,,
+  )
+  if test "x${HAVE_MYSQL_CONFIG}" != "xyes"; then
+    AC_MSG_FAILURE([mysql_config not found in PATH])
+  fi
+  AC_CHECK_LIB(
     [mysqlclient],
+    [mysql_init],
     [mysql_cflags=`mysql_config --cflags`
      mysql_libs=`mysql_config --libs`
     ],
     [AC_MSG_FAILURE([MySQL library is missing])],
     [`mysql_config --libs`]
   )
-  AC_SUBST(LIBS,[$LIBS_TMP])
 fi
 AM_CONDITIONAL(ENABLE_MYSQL, test x$enable_mysql = xyes)
 AC_SUBST(mysql_cflags)
