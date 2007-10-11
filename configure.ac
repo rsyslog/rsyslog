@@ -13,6 +13,8 @@ AM_PROG_CC_C_O
 if test "$GCC" = "yes"
 then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
 fi
+AC_DISABLE_STATIC
+AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
 
 case "${host}" in
@@ -131,8 +133,9 @@ AC_ARG_ENABLE(pthreads,
          esac],
         [enable_pthreads=yes]
 )
-AS_IF([test "x$enable_pthreads" != "xno"],
-  [AC_CHECK_HEADERS(
+
+if test "x$enable_pthreads" != "xno"; then
+  AC_CHECK_HEADERS(
     [pthread.h],
     [
       AC_CHECK_LIB(
@@ -148,8 +151,8 @@ AS_IF([test "x$enable_pthreads" != "xno"],
       )
     ],
     [AC_MSG_FAILURE([pthread is missing])]
-  )]
-)
+  )
+fi
 
 # klogd
 AC_ARG_ENABLE(klogd,
@@ -170,7 +173,7 @@ fi
 #
 AC_MSG_CHECKING(for SYSLOG_UNIXAF support)
 AC_ARG_ENABLE([unix],
-  [AS_HELP_STRING([--disable-unix], [disable support for unix])],
+  [AS_HELP_STRING([--disable-unix], [Disable support for unix])],
   [
     if test "x${enableval}" = "xyes"; then
       AC_MSG_RESULT([yes])
@@ -205,7 +208,7 @@ fi
 #
 AC_MSG_CHECKING(for FSSTND support)
 AC_ARG_ENABLE([fsstnd],
-  [AS_HELP_STRING([--disable-fsstnd], [disable support for FSSTND])],
+  [AS_HELP_STRING([--disable-fsstnd], [Disable support for FSSTND])],
   [
     if test "x${enableval}" = "xyes"; then
       AC_MSG_RESULT([yes])
@@ -234,7 +237,43 @@ if test "$enable_debug" = "no"; then
         AC_DEFINE(NDEBUG, 1, [Defined if debug mode is disabled.])
 fi
 
-AC_CONFIG_FILES([Makefile])
+
+
+# SQL support
+AC_ARG_ENABLE(mysql,
+        [AS_HELP_STRING([--enable-mysql],[Enable MySql database support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mysql="yes" ;;
+          no) enable_mysql="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mysql) ;;
+         esac],
+        [enable_mysql=no]
+)
+if test "x$enable_mysql" = "xyes"; then
+  AC_CHECK_HEADERS(
+    [mysql/mysql.h],,
+    [AC_MSG_FAILURE([MySQL is missing])]
+  )
+  AC_SUBST(LIBS_TMP,[$LIBS])
+  AC_SEARCH_LIBS(
+    [mysql_init],
+    [mysqlclient],
+    [mysql_cflags=`mysql_config --cflags`
+     mysql_libs=`mysql_config --libs`
+    ],
+    [AC_MSG_FAILURE([MySQL library is missing])],
+    [`mysql_config --libs`]
+  )
+  AC_SUBST(LIBS,[$LIBS_TMP])
+fi
+AM_CONDITIONAL(ENABLE_MYSQL, test x$enable_mysql = xyes)
+AC_SUBST(mysql_cflags)
+AC_SUBST(mysql_libs)
+
+
+
+
+AC_CONFIG_FILES([Makefile doc/Makefile plugins/ommysql/Makefile])
 AC_OUTPUT
 
 echo "****************************************************"
@@ -244,6 +283,7 @@ echo "Multithreading support enabled:		$enable_pthreads"
 echo "Klogd functionality enabled:		$enable_klogd"
 echo "Regular expressions support enabled:	$enable_regexp"
 echo "Zlib compression support enabled:	$enable_zlib"
+echo "MySql support enabled:			$enable_mysql"
 echo "Large file support enabled:		$enable_largefile"
 echo "Networking support enabled:		$enable_inet"
 echo "Debug mode enabled:			$enable_debug"

@@ -24,7 +24,7 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-#include "ommysql-config.h"
+#include "config.h"
 #include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
