@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
-Version 1.19.9 (rgerhards), 2007-10-08
+Version 1.19.9 (rgerhards), 2007-10-12
+- now packaging system which again contains all components in a single
+  tarball
+- modularized main() a bit more, resulting in less complex code
+- experimentally added an additional thread - will see if that affects
+  the segfault bug we experience on some platforms. Note that this change
+  is scheduled to be removed again later.
 ---------------------------------------------------------------------------
 Version 1.19.8 (rgerhards), 2007-09-27
 - improved repeated message processing
