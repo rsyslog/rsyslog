@@ -222,8 +222,19 @@ BEGINparseSelectorAct
 	int iMySQLPropErr = 0;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us */
-	if(*p != '>') {
+	/* first check if this config line is actually for us
+	 * The first test [*p == '>'] can be skipped if a module shall only
+	 * support the newer slection syntax [:modname:]. This is in fact
+	 * recommended for new modules. Please note that over time this part
+	 * will be handled by rsyslogd itself, but for the time being it is
+	 * a good compromise to do it at the module level.
+	 * rgerhards, 2007-10-15
+	 */
+	if(*p == '>') {
+		p++; /* eat '>' '*/
+	} else if(!strncmp((char*) p, ":ommysql:", sizeof(":ommysql:") - 1)) {
+		p += sizeof(":ommysql:"); /* eat indicator sequence */
+	} else {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
@@ -231,7 +242,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if((iRet = createInstance(&pData)) != RS_RET_OK)
 		goto finalize_it;
 
-	p++; /* eat '>' '*/
 
 	/* rger 2004-10-28: added support for MySQL
 	 * >server,dbname,userid,password
