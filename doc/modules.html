@@ -69,6 +69,18 @@ property replacer. Then, the output module can work with this serialized object.
 The key point is that output modules never deal directly with msg objects (and 
 other internal structures). Besides security, this also greatly simplifies the 
 job of the output module developer.</p>
+<h2>Action Selectors</h2>
+<p>Modules (and rsyslog) need to know when they are called. For this, there must 
+a an action identification in selector lines. There are two syntaxes: the 
+single-character syntax, where a single characters identifies a module (e.g. &quot;*&quot; 
+for a wall message) and the modules designator syntax, where the module name is 
+given between colons (e.g. &quot;:ommysql:&quot;). The single character syntax is 
+depreciated and should not be used for new plugins.</p>
+<p>An in-depth discussion of module designation in action selectors can be found 
+in this forum thread:</p>
+<p>
+<a href="http://www.rsyslog.com/index.php?name=PNphpBB2&file=viewtopic&p=678#678">
+http://www.rsyslog.com/index.php?name=PNphpBB2&amp;file=viewtopic&amp;p=678#678</a></p>
 <h2>Copyright</h2>
 <p>Copyright (c) 2007
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a> 
