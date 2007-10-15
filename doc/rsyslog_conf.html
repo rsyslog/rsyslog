@@ -546,9 +546,26 @@ might be too late.</p>
 <p>Emergency messages often go to all users currently online to notify them that 
 something strange is happening with the system. To specify this wall(1)-feature 
 use an asterisk (&quot;*'').</p>
+<h3>Call Plugin</h3>
+<p>This is a generic way to call an output plugin. The plugin must support this 
+functionality. Actual parameters depend on the module, so see the module's doc 
+on what to supply. The general syntax is as follows:</p>
+<p>:modname:params;template</p>
+<p>Currently, the ommysql database output module supports this syntax (in 
+addtion to the &quot;&gt;&quot; syntax it traditionally supported). For ommysql, the module 
+name is &quot;ommysql&quot; and the params are the traditional ones. The ;template part is 
+not module specific, it is generic rsyslog functionality available to all 
+modules.</p>
+<p>As an example, the ommysql module may be called as follows:</p>
+<p>:ommysql:dbhost,dbname,dbuser,dbpassword;dbtemplate</p>
+<p>For details, please see the &quot;Database Table&quot; section of this documentation.</p>
+<p>Note: as of this writing, the &quot;:modname:&quot; part is hardcoded into the module. 
+So the name to use is not necessarily the name the module's plugin file is 
+called.</p>
 <h3>Database Table</h3>
 <p>This allows logging of the message to a database table. Currently, only MySQL 
-databases are supported. By default, a <a href="http://www.monitorware.com/">MonitorWare</a>-compatible schema is required 
+databases are supported. However, other database drivers will most probably be 
+developed as plugins. By default, a <a href="http://www.monitorware.com/">MonitorWare</a>-compatible schema is required 
 for this to work. You can create that schema with the createDB.SQL file that 
 came with the rsyslog package. You can also<br>
 use any other schema of your liking - you just need to define a proper template 
