@@ -6056,20 +6056,14 @@ static void printVersion(void)
 }
 
 
-/* This is a special function to run all those things (namely the inputs) that
- * were uses to run on the startup thread. I discovered a problem with malloc/free
- * when used in different threads.
- * See http://rgerhards.blogspot.com/2007/10/could-i-really-reproduce-bug.html
- * This is now a work-around, in which I create a new thread to do all the work. If
- * the malloc/free behaviour is relly what I described, then this should fix the
- * segfault issue...
- * RGerhards, 2007-10-08
+/* This function is called after initial initalization. It is used to
+ * move code out of the too-long main() function.
+ * rgerhards, 2007-10-17
  */
-static void *mainThread()
+static void mainThread()
 {
 	DEFiRet;
 	uchar *pTmp;
-	sigset_t sigSet;
 
 	/* doing some core initializations */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
@@ -6084,13 +6078,9 @@ static void *mainThread()
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
 
-	/* Block signals, all are delivered to the startup thread.
-	 * TODO: reconsider SIGUSR1 and alarm(), which we may need to interrupt()
-	 * the select call. For the time being, its acceptable (after all, we are right
-	 * now doing a tester...). rgerhards, 2007-10-08
+	/* Note: signals MUST be processed by the thread this code is running in. The reason
+	 * is that we need to interrupt the select() system call. -- rgerhards, 2007-10-17
 	 */
-	//sigfillset(&sigSet);
-	//pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
 	/* initialize the default templates
 	 * we use template names with a SP in front - these 
@@ -6129,8 +6119,6 @@ static void *mainThread()
 
 	/* do any de-init's that need to be done AFTER this comment */
 	die(bFinished);
-
-	pthread_exit(0);
 }
 
 
@@ -6147,9 +6135,11 @@ int main(int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	struct sigaction sigAct;
+#if 0 /* see comment for #if 0 below (towards end of function) */
 	pthread_t thrdMain;
-
 	sigset_t sigSet;
+#endif
+
 #ifdef	MTRACE
 	mtrace(); /* this is a debug aid for leak detection - either remove
 	           * or put in conditional compilation. 2005-01-18 RGerhards */
@@ -6394,6 +6384,16 @@ int main(int argc, char **argv)
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
 
+	mainThread();
+
+#if 0
+	/* This commented-out code was once used to spawn a separate thread
+	 * for the mainThread(). This was initially done to solve a problem that not
+	 * really existed. Thus the code is now commented out. I do not remove it yet,
+	 * because there may be use for it in the not too distant future. If it is
+	 * still commented out in a year's time, that's a good indication it should
+	 * be removed!  -- rgerhards, 2007-10-17
+	 */
 	i = pthread_create(&thrdMain, NULL, mainThread, NULL);
 	dbgprintf("\"main\" thread started with state %d.\n", i);
 
@@ -6408,6 +6408,7 @@ int main(int argc, char **argv)
 	 * do a blocking wait on it - it makese sense... ;) rgerhards, 2007-10-08
 	 */
 	pthread_join(thrdMain, NULL);
+#endif
 
 	return 0;
 }
