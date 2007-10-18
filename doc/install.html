@@ -48,7 +48,7 @@ seconds. If an error message comes up, most probably a part of your build
 environment is not installed. Check with step 1 in those cases. </p>
 <h3>Step 4 - Install</h3>
 <p>Again, that is quite easy. All it takes is a &quot;make install&quot;. That will copy 
-the rsyslogd and the man pages to the relavant directories.</p>
+the rsyslogd and the man pages to the relevant directories.</p>
 <h3>Step 5 - Configure rsyslogd</h3>
 <p>In this step, you tell rsyslogd what to do with received messages. If you are 
 upgrading from stock syslogd, /etc/syslog.conf is probably a good starting 
@@ -65,7 +65,7 @@ you need to disable the stock syslogd. To do this, you typically must change
 your rc.d startup scripts.</p>
 <p>For example, under <a href="http://www.debian.org/">Debian</a> this must be 
 done as follows: The default runlevel is 2. We modify the init scripts for 
-runlevel 2 - in parctice, you need to do this for all run levels you will ever 
+runlevel 2 - in practice, you need to do this for all run levels you will ever 
 use (which probably means all). Under /etc/rc2.d there is a S10sysklogd script (actually 
 a symlink). Change the name to _S10sysklogd (this keeps the symlink in place, 
 but will prevent further execution - effectively disabling it).</p>
@@ -106,8 +106,8 @@ that), you need to make sure that klogd is restarted after rsyslogd is restarted
 So it might be a good idea to put a klogd reload-or-restart command right after 
 the rsyslogd command in your daily script. This can save you lots of troubles.</p>
 <h3>Done</h3>
-<p>This concludes the steps neccesary to install rsyslogd. Of course, it is 
-always a good idea to test everything thouroughly. At a minimalist level, you 
+<p>This concludes the steps necessary to install rsyslogd. Of course, it is 
+always a good idea to test everything thoroughly. At a minimalist level, you 
 should do a reboot and after that check if everything has come up correctly. Pay 
 attention not only to running processes, but also check if the log files (or the 
 database) are correctly being populated.</p>

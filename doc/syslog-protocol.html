@@ -14,7 +14,7 @@ highly volatile. It may change from release to release. So while it provides
 some advantages in the real world, users are cautioned against using it right 
 now. If you do, be prepared that you will probably need to update all of your 
 rsyslogds with each new release. If you try it anyhow, please provide feedback 
-as that would be most benefitial for us.</p>
+as that would be most beneficial for us.</p>
 <h2>Currently supported message format</h2>
 <p>Due to recent discussion on syslog-protocol, we do not follow any specific 
 revision of the draft but rather the candidate ideas. The format supported 
@@ -59,12 +59,12 @@ SP MSG</code></b></p>
 	as is and stuffed it into the MSG part. Please note that I think this will 
 	be a route that other implementors would take, too.</li>
 	<li>A minimal parser is easy to implement. It took me roughly 2 hours to add 
-	it to rsyslogd. This includes the time for restructering the code to be able 
+	it to rsyslogd. This includes the time for restructuring the code to be able 
 	to parse both legacy syslog as well as syslog-protocol. The parser has some 
 	restrictions, though<ul>
 	<li>STRUCTURED-DATA field is extracted, but not validated. Structured data 
 	&quot;[test ]]&quot; is not caught as an error. Nor are any other errors caught. For 
-	my needs with this syslogd, that level of structued data processing is 
+	my needs with this syslogd, that level of structured data processing is 
 	probably sufficient. I do not want to parse/validate it in all cases. This 
 	is also a performance issue. I think other implementors could have the same 
 	view. As such, we should not make validation a requirement.</li>
@@ -89,7 +89,7 @@ SP MSG</code></b></p>
 	we could do against this. This questions the usefulness of the TRUNCATE bit. 
 	Eventually, I could look at the UDP headers and see that it is a fragment. I 
 	have looked at a network sniffer log of the conversation. This looks like 
-	two totally-independant messages were sent by the sender stack.</li>
+	two totally-independent messages were sent by the sender stack.</li>
 	<li>The maximum message size is currently being configured via a 
 	preprocessor #define. It can easily be set to 2K or 4K, but more than 4K is 
 	not possible because of UDP stack limitations. Eventually, this can be 
@@ -116,7 +116,7 @@ SP MSG</code></b></p>
 	midnight in the old year. I think this is acceptable. However, I can not 
 	assign a high-precision timestamp, at least it is somewhat off if I take the 
 	timestamp from message reception on the local socket. An alternative might 
-	be to ígnore the timestamp present and instead use that one when the message 
+	be to ignore the timestamp present and instead use that one when the message 
 	is pulled from the local socket (I am talking about IPC, not the network - 
 	just a reminder...). This is doable, but eventually not advisable. It looks 
 	like this needs to be resolved via a configuration option.</li>
@@ -174,7 +174,7 @@ SP MSG</code></b></p>
 <p>These are my personal conclusions and suggestions. Obviously, they must be 
 discussed ;)</p>
 <ul>
-	<li>NUL should be disallowd in MSG</li>
+	<li>NUL should be disallowed in MSG</li>
 	<li>As it is not possible to definitely know the character encoding of the 
 	application-provided message, MSG should <b>not</b> be specified to use UTF-8 
 	exclusively. Instead, it is suggested that any encoding may be used but 

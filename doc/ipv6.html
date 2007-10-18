@@ -12,7 +12,7 @@ your way somewhat easier.</p>
 <p>First of all, you can restrict rsyslog to using IPv4 or IPv6 addresses only 
 by specifying the -4 or -6 command line option (now guess which one does 
 what...). If you do not provide any command line option, rsyslog uses IPv4 and 
-IPv6 adresses concurrently. In practice, that means the listener binds to both 
+IPv6 addresses concurrently. In practice, that means the listener binds to both 
 addresses (provided they are configured). When sending syslog messages, rsyslog 
 uses IPv4 addresses when the receiver can be reached via IPv4 and IPv6 addresses 
 if it can be reached via IPv6. If it can be reached on either IPv4 and v6, 
@@ -20,10 +20,10 @@ rsyslog leaves the choice to the socket layer. The important point to know is
 that it uses whatever connectivity is available to reach the destination.</p>
 <p><b>There is one subtle difference between UDP and TCP.</b> With the new 
 IPv4/v6 ignorant code, rsyslog has potentially different ways to reach 
-destinations. The socket layer returns all of these pathes in a sorted array. 
+destinations. The socket layer returns all of these paths in a sorted array. 
 For TCP, rsyslog loops through this array until a successful TCP connect can be 
 made. If that happens, the other addresses are ignored and messages are sent via 
-the succesfully-connected socket.</p>
+the successfully-connected socket.</p>
 <p>For UDP, there is no such definite success indicator. Sure, the socket layer 
 may detect some errors, but it may not notice other errors (due to the 
 unreliable nature of UDP). By default, the UDP sender also tries one entry after 

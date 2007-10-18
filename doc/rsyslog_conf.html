@@ -117,7 +117,7 @@ the wrong one, you are still vulnerable to sql injection.</b><br>
 <br>
 Please note that the database writer *checks* that the sql option is present in 
 the template. If it is not present, the write database action is disabled. This 
-is to guard you against accidential forgetting it and then becoming vulnerable 
+is to guard you against accidental forgetting it and then becoming vulnerable 
 to SQL injection. The sql option can also be useful with files - especially if 
 you want to import them into a database on another machine for performance 
 reasons. However, do NOT use it if you do not have a real need for it - among 
@@ -157,7 +157,7 @@ this is the &quot;file&quot; part of selector lines (and this is why we are not 
 output channel syntax will stay after the next review). There is a<br>
 difference, though: selector channels both have filter conditions (currently 
 facility and severity) as well as the output destination. Output channels define 
-the output defintion, only. As of this build, they can only be used to write to 
+the output definition, only. As of this build, they can only be used to write to 
 files - not pipes, ttys or whatever else. If we stick with output channels, this 
 will change over time.</p>
 <p>In concept, an output channel includes everything needed to know about an 
@@ -189,7 +189,7 @@ line includes the channel name plus an $ sign in front of it. A sample might be:
 *.* $mychannel<br>
 <br>
 In its current form, output channels primarily provide the ability to size-limit 
-an output file. To do so, specify a maximum size. When this size is reachead, 
+an output file. To do so, specify a maximum size. When this size is reached, 
 rsyslogd will execute the action-on-max-size command and then reopen the file 
 and retry. The command should be something like a log rotation script or a 
 similar thing.</p>
@@ -234,13 +234,13 @@ in BSD syslogd is not supported by rsyslogd. By default, no hostname or program
 is set.</p>
 <h3>Selectors</h3>
 <p><b>Selectors are the traditional way of filtering syslog messages.</b> They 
-have been kept in rsyslog with their orginal syntax, because it is well-known, 
+have been kept in rsyslog with their original syntax, because it is well-known, 
 highly effective and also needed for compatibility with stock syslogd 
 configuration files. If you just need to filter based on priority and facility, 
 you should do this with selector lines. They are <b>not</b> second-class 
-citicens in rsyslog and offer the best performance for this job.</p>
+citizens in rsyslog and offer the best performance for this job.</p>
 <p>The selector field itself again consists of two parts, a facility and a 
-priority, separated by a period (``.''). Both parts are case insenstive and can 
+priority, separated by a period (``.''). Both parts are case insensitive and can 
 also be specified as decimal numbers, but don't do that, you have been warned. 
 Both facilities and priorities are described in rsyslog(3). The names mentioned 
 below correspond to the similar LOG_-values in /usr/include/rsyslog.h.<br><br>The facility is one of the following keywords: auth, authpriv, cron, daemon, 
@@ -302,7 +302,7 @@ brief, the syntax is as follows:</p>
 		<td>isequal</td>
 		<td>Compares the &quot;value&quot; string provided and the property contents. 
 		These two values must be exactly equal to match. The difference to 
-		contains is that contains searchs for the value anywhere inside the 
+		contains is that contains searches for the value anywhere inside the 
 		property value, whereas all characters must be identical for isequal. As 
 		such, isequal is most useful for fields like syslogtag or FROMHOST, 
 		where you probably know the exact contents.</td>
@@ -386,7 +386,7 @@ filters. An example would be</p>
 <p><code><b>*.=crit rger<br>
 &amp; root<br>
 &amp; /var/log/critmsgs</b></code></p>
-<p>These three lines send critical messages to the usrs rger and root and also 
+<p>These three lines send critical messages to the user rger and root and also 
 store them in /var/log/critmsgs. <b>Using multiple actions per selector is</b> 
 convenient and also <b>offers a performance benefit</b>. As the filter needs to 
 be evaluated only once, there is less computation required to process the 
@@ -477,10 +477,10 @@ separated by commas. The following options are right now defined:</p>
 		make an awful lot of sense. There is hardly a difference between level 1 
 		and 9 for typical syslog messages. You can expect a compression gain 
 		between 0% and 30% for typical messages. Very chatty messages may 
-		compress up to 50%, but this is seldomly seen with typicaly traffic. 
+		compress up to 50%, but this is seldom seen with typically traffic. 
 		Please note that rsyslogd checks the compression gain. Messages with 60 
 		bytes or less will never be compressed. This is because compression gain 
-		is pretty unlikely and we prefer to save CPU cycles. Messags over that 
+		is pretty unlikely and we prefer to save CPU cycles. Messages over that 
 		size are always compressed. However, it is checked if there is a gain in 
 		compression and only if there is, the compressed message is transmitted. 
 		Otherwise, the uncompressed messages is transmitted. This saves the 
@@ -510,7 +510,7 @@ separated by commas. The following options are right now defined:</p>
 		primary reason for that is that it seems technically impossible to 
 		provide compatibility between some of those changes. So you should take 
 		this note very serious. It is not something we do not *like* to do (and 
-		may change our mind if enough pepole beg...), it is something we most 
+		may change our mind if enough people beg...), it is something we most 
 		probably *can not* do for technical reasons (aka: you can beg as much as 
 		you like, it won't change anything...).</p>
 		<p>The most important implication is that compressed syslog messages via 
@@ -591,7 +591,7 @@ discarded. No further processing of it occurs. Discard has primarily been added
 to filter out messages before carrying on any further processing. For obvious 
 reasons, the results of &quot;discard&quot; are depending on where in the configuration 
 file it is being used. Please note that once a message has been discarded there 
-is no way to retrive it in later configuration file lines.</p>
+is no way to retrieve it in later configuration file lines.</p>
 <p>Discard can be highly effective if you want to filter out some annoying 
 messages that otherwise would fill your log files. To do that, place the discard 
 actions early in your log files. This often plays well with property-based 
@@ -649,7 +649,7 @@ self-explanatory. If not, please see www.monitorware.com/rsyslog/ for advise.</p
 <p>Please note that the samples are split across multiple lines. A template MUST 
 NOT actually be split across multiple lines.<br>
 <br>
-A template that resambles traditional syslogd file output:<br>
+A template that resembles traditional syslogd file output:<br>
 $template TraditionalFormat,&quot;%timegenerated% %HOSTNAME%<br>
 %syslogtag%%msg:::drop-last-lf%\n&quot;<br>
 <br>

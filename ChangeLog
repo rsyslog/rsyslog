@@ -8,6 +8,7 @@ Version 1.19.10 (rgerhards), 2007-10-15
 - updated rsyslogd doc set man page; now in html format
 - undid creation of a separate thread for the main loop -- this did not
   turn out to be needed or useful, so reduce complexity once again.
+- added doc fixes provided by Michael Biebl - thanks
 ---------------------------------------------------------------------------
 Version 1.19.9 (rgerhards), 2007-10-12
 - now packaging system which again contains all components in a single

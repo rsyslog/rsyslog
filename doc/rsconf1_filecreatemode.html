@@ -14,7 +14,7 @@
 <p><code><b>$FileCreateMode 0600</b></code></p>
 <p>This sample lets rsyslog create files with read and write access only for the users it runs under.</p>
 <p>The following sample is deemed to be a complete rsyslog.conf:
-<p><code><b>$umask 0000 # make sure nothing interfers with the following 
+<p><code><b>$umask 0000 # make sure nothing interferes with the following 
 definitions<br>
 *.* /var/log/file-with-0644-default<br>
 $FileCreateMode 0600<br>

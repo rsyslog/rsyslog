@@ -35,7 +35,7 @@ RSYSLOGD(8)               Linux System Administration              RSYSLOGD(8)
        insure that rsyslogd follows its default,  standard  BSD  behavior.  Of
        course,  some configuration file changes are necessary in order to sup-
        port the template system. However, rsyslogd should be  able  to  use  a
-       standard  syslog.conf  and  act  like  the orginal syslogd. However, an
+       standard  syslog.conf  and  act  like  the original syslogd. However, an
        original syslogd will not work correctly with a  rsyslog-enhanced  con-
        figuration  file.  At  best, it will generate funny looking file names.
        The second important concept to note is that this version  of  rsyslogd
@@ -56,11 +56,11 @@ RSYSLOGD(8)               Linux System Administration              RSYSLOGD(8)
 
 
 <B>OPTIONS</B>
-       <B>-A     </B>When sending UDP messages, there are potentially multiple pathes
+       <B>-A     </B>When sending UDP messages, there are potentially multiple paths
               to the target destination. By default, <B>rsyslogd  </B>only  sends  to
               the  first  target  it can successfully send to. If -A is given,
               messages are sent to all targets. This may improve  reliability,
-              but  may  also  cause  message  duplicaton.  This  option should
+              but  may  also  cause  message  duplication.  This  option should
               enabled only if it is fully understood.
 
        <B>-4     </B>Causes <B>rsyslogd </B>to listen to IPv4 addresses only.  If neither -4
@@ -352,7 +352,7 @@ RSYSLOGD(8)               Linux System Administration              RSYSLOGD(8)
        replayed.   As  the messages are transmitted in clear-text, an attacker
        might use the information  obtained  from  the  packets  for  malicious
        things.  Also,  an  attacker  might  reply recorded messages or spoof a
-       sender’s IP address, which could lead to a wrong preception  of  system
+       sender’s IP address, which could lead to a wrong perception  of  system
        activity.  Be  sure  to  think  about  syslog  network  security before
        enabling it.
 
@@ -406,7 +406,7 @@ RSYSLOGD(8)               Linux System Administration              RSYSLOGD(8)
 
 <B>BUGS</B>
        Please review the file BUGS for up-to-date information  on  known  bugs
-       and annouyances.
+       and annoyances.
 
 <B>Further Information</B>
        Please  visit  <B>http://www.rsyslog.com/doc  </B>for  additional information,

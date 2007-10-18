@@ -56,7 +56,7 @@ knowing the generic architecture.</p>
                 Generic Syslog Application Architecture
 </pre></font>
 <ul>
-	<li>A &quot;syslog application&quot; is an application whos purpose is the
+	<li>A &quot;syslog application&quot; is an application whose purpose is the
 processing of syslog messages. It may be part of a larger
 application with a broader purpose. An example: a database
 application might come with its own syslog send subsystem and not
@@ -69,7 +69,7 @@ syslog messages.</li>
 itself may have any format and is totally independent from to
 format specified in this document. The &quot;Message CoDec&quot; of the
 syslog application will bring it into the required format.</li>
-	<li>Payload Orginators (&quot;PLOrig&quot;) are the orginal creators of payload.
+	<li>Payload Originators (&quot;PLOrig&quot;) are the original creators of payload.
 Typically, these are application programs.</li>
 	<li>A &quot;Remote PLOrig&quot; is a payload originator residing in a different
 application than the syslog application itself. That application
@@ -114,7 +114,7 @@ another syslog application.</li>
 	<li>A &quot;RelEng Ext&quot; is an extension that processes syslog information
 as it enters or exits a RelayEng. An example of such a component
 might be a relay cryptographically signing received syslog
-messages. Such a function might be useful to guarantee authenticy
+messages. Such a function might be useful to guarantee authenticity
 starting from a given point inside a relay chain.</li>
 	<li>A &quot;CollectorEng&quot; is a collector engine. At this component, syslog
 information leaves the syslog system and is translated into some
@@ -124,7 +124,7 @@ defined to be of native syslog type.</li>
 syslog information before it is passed on to the CollectorEng. An
 example for this might be the verification of cryptographically
 signed syslog message information. Please note that another
-implementation appraoch would be to do the verification outside of
+implementation approach would be to do the verification outside of
 the syslog application or in a stage after &quot;CollectorEng&quot;.</li>
 	<li>A &quot;GWO&quot; is an outbound gateway. An example of this might be the
 forwarding of syslog information via SNMP or SMTP. Please note
@@ -132,13 +132,13 @@ that when a GWO directly connects to a GWI on a different syslog
 application, no native exchange of syslog information takes place.
 Instead, the native protocol of these gateways (e.g. SNMP) is
 used. The syslog information is embedded inside that protocol.
-Depending on protocol and gatway implementation, some of the
+Depending on protocol and gateway implementation, some of the
 native syslog information might be lost.</li>
 	<li>A &quot;Store&quot; is any way to persistently store the extracted syslog
 information, e.g. to the file system or to a data base.</li>
 	<li>&quot;Disc&quot; means the discarding of messages. Operators often find it
 useful to discard noise messages and so most syslog applications<br>contain a way to do that.</li>
-	<li>The ellipsis after &quot;Disc&quot; indicates that there are potentially avariety of different other ways to consume syslog information.</li>
+	<li>The ellipsis after &quot;Disc&quot; indicates that there are potentially a variety of different other ways to consume syslog information.</li>
 	<li>There may be multiple instances of each of the described
 components in a single syslog application.</li>
 	<li>A syslog application is made up of all or some of the above

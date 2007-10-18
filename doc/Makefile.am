@@ -7,6 +7,8 @@ html_files = \
 	install.html \
 	ipv6.html \
 	manual.html \
+	man_rsyslogd.html \
+	modules.html \
 	property_replacer.html \
 	rsyslog_conf.html \
 	rsyslog_mysql.html \
@@ -39,6 +41,7 @@ html_files = \
 	rsconf1_includeconfig.html \
 	rsconf1_mainmsgqueuesize.html \
 	rsconf1_modload.html \
+	rsconf1_moddir.html \
 	rsconf1_repeatedmsgreduction.html \
 	rsconf1_resetconfigvariables.html \
 	rsconf1_umask.html
