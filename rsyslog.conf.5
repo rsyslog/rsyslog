@@ -182,8 +182,8 @@ Rsyslog offers two different types "filter conditions":
 Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each block of lines is separated from 
 the previous block by a program or hostname specification. A block will only log messages 
 corresponding to the most recent program and hostname specifications given. Thus, a block which 
-selects ‘ppp’ as the program, directly followed by a block that selects messages from the 
-hostname ‘dialhost’, then the second block will only log messages from the ppp program on dialhost.
+selects "ppp" as the program, directly followed by a block that selects messages from the 
+hostname "dialhost", then the second block will only log messages from the ppp program on dialhost.
 
 .SS Selectors
 .B Selectors are the traditional way of filtering syslog messages. 

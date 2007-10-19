@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.19.10 (rgerhards), 2007-10-15
+Version 1.19.10 (rgerhards), 2007-10-19
 - introdcued the new ":modulename:" syntax for calling module actions
   in selector lines; modified ommysql to support it. This is primarily
   an aid for further modules and a prequisite to actually allow third
