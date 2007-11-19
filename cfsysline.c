@@ -376,6 +376,7 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 	CHKiRet(rsCStrFinish(pStrB));
 
 	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &pNewVal, 0));
+	pStrB = NULL;
 
 	/* we got the word, now set it */
 	if(pSetHdlr == NULL) {

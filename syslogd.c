@@ -655,6 +655,12 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 #ifdef USE_PTHREADS
 	iMainMsgQueueSize = 10000;
 #endif
+#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
+	if (gss_listen_service_name != NULL) {
+		free(gss_listen_service_name);
+		gss_listen_service_name = NULL;
+	}
+#endif
 
 	return RS_RET_OK;
 }
@@ -4458,6 +4464,14 @@ static void init(void)
 			 * need to do that, I recommend controlling that via a
 			 * user-selectable option. rgerhards, 2007-06-21
 			 */
+#			ifdef USE_GSSAPI
+			if(bEnableTCP == 2) {
+				if(TCPSessGSSInit()) {
+					logerror("GSS-API initialization failed\n");
+					bEnableTCP = -1;
+				}
+			}
+#			endif
 			if((sockTCPLstn = create_tcp_socket()) != NULL) {
 				dbgprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
 			}
@@ -5693,7 +5707,12 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 		for (i = 0; i < *sockTCPLstn; i++) {
 			if (FD_ISSET(sockTCPLstn[i+1], pReadfds)) {
 				dbgprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
-				TCPSessAccept(sockTCPLstn[i+1]);
+#				ifdef USE_GSSAPI
+				if(bEnableTCP == 2)
+					TCPSessGSSAccept(sockTCPLstn[i+1]);
+				else
+#				endif
+					TCPSessAccept(sockTCPLstn[i+1]);
 				FDPROCESSED();
 			}
 		}
@@ -5709,16 +5728,34 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 				dbgprintf("tcp session socket with new data: #%d\n", fdSess);
 
 				/* Receive message */
-				state = recv(fdSess, buf, sizeof(buf), 0);
+#				ifdef USE_GSSAPI
+				if(bEnableTCP == 2)
+					state = TCPSessGSSRecv(iTCPSess, buf, sizeof(buf));
+				else
+#				endif
+					state = recv(fdSess, buf, sizeof(buf), 0);
 				if(state == 0) {
-					/* process any incomplete frames left over */
-					TCPSessPrepareClose(iTCPSess);
-					/* Session closed */
-					TCPSessClose(iTCPSess);
+#					ifdef USE_GSSAPI
+					if(bEnableTCP == 2)
+						TCPSessGSSClose(iTCPSess);
+					else {
+#					endif
+						/* process any incomplete frames left over */
+						TCPSessPrepareClose(iTCPSess);
+						/* Session closed */
+						TCPSessClose(iTCPSess);
+#					ifdef USE_GSSAPI
+					}
+#					endif
 				} else if(state == -1) {
 					logerrorInt("TCP session %d will be closed, error ignored\n",
 						    fdSess);
-					TCPSessClose(iTCPSess);
+#					ifdef USE_GSSAPI
+					if(bEnableTCP == 2)
+						TCPSessGSSClose(iTCPSess);
+					else
+#					endif
+						TCPSessClose(iTCPSess);
 				} else {
 					/* valid data received, process it! */
 					if(TCPSessDataRcvd(iTCPSess, buf, state) == 0) {
@@ -5728,7 +5765,12 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 						logerrorInt("Tearing down TCP Session %d - see "
 							    "previous messages for reason(s)\n",
 							    iTCPSess);
-						TCPSessClose(iTCPSess);
+#						ifdef USE_GSSAPI
+						if(bEnableTCP == 2)
+							TCPSessGSSClose(iTCPSess);
+						else
+#						endif
+							TCPSessClose(iTCPSess);
 					}
 				}
 				FDPROCESSED();
@@ -6010,6 +6052,9 @@ static rsRetVal loadBuildInModules(void)
 		 NULL, &bDebugPrintCfSysLineHandlerList));
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL));
+#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
+	CHKiRet(regCfSysLineHdlr((uchar *)"gsslistenservicename", 0, eCmdHdlrGetWord, NULL, &gss_listen_service_name));
+#endif
 
 finalize_it:
 	return iRet;
@@ -6156,7 +6201,7 @@ int main(int argc, char **argv)
 
 	/* END core initializations */
 
-	while ((ch = getopt(argc, argv, "46Aa:dehi:f:l:m:nop:r::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46Aa:dehi:f:g:l:m:nop:r::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -6188,6 +6233,14 @@ int main(int argc, char **argv)
 			break;
 		case 'f':		/* configuration file */
 			ConfFile = (uchar*) optarg;
+			break;
+		case 'g':		/* enable tcp gssapi logging */
+#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
+			configureTCPListen(optarg);
+			bEnableTCP = 2;
+#else
+			fprintf(stderr, "rsyslogd: -g not valid - not compiled with gssapi support");
+#endif
 			break;
 		case 'h':
 			NoHops = 0;

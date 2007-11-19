@@ -58,10 +58,12 @@ rsyslogd_SOURCES = \
 	iminternal.c \
 	iminternal.h \
 	action.c \
-	action.h
+	action.h \
+	gss-misc.c \
+	gss-misc.h
 
 rsyslogd_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/\"
-rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) -ldl
+rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(gss_libs) -ldl
 rsyslogd_LDFLAGS = -export-dynamic
 
 man_MANS = rfc3195d.8 rklogd.8 rsyslogd.8 rsyslog.conf.5 

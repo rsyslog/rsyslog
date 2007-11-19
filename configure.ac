@@ -123,6 +123,27 @@ if test "$enable_zlib" = "yes"; then
 	fi
 fi
 
+#gssapi
+AC_ARG_ENABLE(gssapi_krb5,
+	[AS_HELP_STRING([--enable-gssapi-krb5],[Enable GSSAPI Kerberos 5 support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) want_gssapi_krb5="yes" ;;
+          no) want_gssapi_krb5="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gssapi-krb5) ;;
+         esac],
+	[want_gssapi_krb5=no]
+)
+if test $want_gssapi_krb5 = yes; then
+	AC_CHECK_LIB(gssapi_krb5, gss_acquire_cred, [
+		AC_CHECK_HEADER(gssapi/gssapi.h, [
+			AC_DEFINE(USE_GSSAPI,,
+				  Define if you want to use GSSAPI)
+			gss_libs="-lgssapi_krb5"
+			AC_SUBST(gss_libs)
+		])
+	])
+fi
+
 # multithreading via pthreads
 AC_ARG_ENABLE(pthreads,
         [AS_HELP_STRING([--enable-pthreads],[Enable multithreading via pthreads @<:@default=yes@:>@])],
@@ -292,5 +313,6 @@ echo "Zlib compression support enabled:	$enable_zlib"
 echo "MySql support enabled:			$enable_mysql"
 echo "Large file support enabled:		$enable_largefile"
 echo "Networking support enabled:		$enable_inet"
+echo "Enable GSSAPI Kerberos 5 support:	$want_gssapi_krb5"
 echo "Debug mode enabled:			$enable_debug"
 
