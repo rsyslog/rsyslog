@@ -196,6 +196,7 @@ rsRetVal writeMySQL(uchar *psz, instanceData *pData)
 	}
 
 finalize_it:
+dbgprintf("writeMySQL result: %d\n", iRet);
 	if(iRet == RS_RET_OK) {
 		pData->uLastMySQLErrno = 0; /* reset error for error supression */
 	}
