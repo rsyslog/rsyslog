@@ -94,6 +94,8 @@ prepend two at signs ("@@"), the messages will be transmitted via TCP.
 Please note that this version of rsyslogd by default does NOT forward messages it has received 
 from the network to another host. Specify the "-h" option to enable this.
 
+Using the $GssMode directive TCP messages can be wrapped with GSS-API.
+
 .B Example:
 .RS
 *.* @192.168.0.1

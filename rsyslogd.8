@@ -18,33 +18,36 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-f "
 .I config file
 ]
+.RB [ " \-g "
+.I port,max-nbr-of-sessions
+]
 .RB [ " \-h " ] 
+.br
 .RB [ " \-i "
 .I pid file
 ]
 .RB [ " \-l "
 .I hostlist
 ]
-.br
 .RB [ " \-m "
 .I interval
 ] 
 .RB [ " \-n " ]
 .RB [ " \-o " ]
+.br
 .RB [ " \-p"
 .IB socket 
 ]
-.br
 .RB [ " \-r "
 .I [port]
 ]
 .RB [ " \-s "
 .I domainlist
 ]
+.br
 .RB [ " \-t "
 .I port,max-nbr-of-sessions
 ]
-.br
 .RB [ " \-v " ]
 .RB [ " \-w " ]
 .RB [ " \-x " ]
@@ -152,6 +155,12 @@ Hine: "e" like "every message". For further information, see there.
 Specify an alternative configuration file instead of
 .IR /etc/rsyslog.conf ","
 which is the default.
+.TP
+.BI "\-g "
+Identical to -t except that every tcp connection is authenticated
+using gss-api (kerberos 5). Service name may be set using
+$GssListenServiceName or the default "host" will be used. Encryption
+can be used if specified by the client and supported by both sides.
 .TP
 .BI "\-h "
 By default rsyslogd will not forward messages it receives from remote hosts.
@@ -283,15 +292,18 @@ running rsyslogd to another node running rsyslogd (or a
 compatible syslog implementation) where they will be
 actually logged to a disk file.
 
-To enable this you have to specify either the
+To enable this you have to specify one of
+.B "\-g"
+,
 .B "\-r"
 or
 .B "\-t"
-option on the command line.  The default behavior is that
+options on the command line.  The default behavior is that
 .B rsyslogd
-won't listen to the network. You can also combine these two
+won't listen to the network. You can also combine these
 options if you want rsyslogd to listen to both TCP and UDP
-messages.
+messages. Only one of the TCP listener options can be used.
+The last one specified will take effect.
 
 The strategy is to have rsyslogd listen on a unix domain socket for
 locally generated log messages.  This behavior will allow rsyslogd to
@@ -478,8 +490,9 @@ If remote logging is enabled, messages can easily be spoofed and replayed.
 As the messages are transmitted in clear-text, an attacker might use
 the information obtained from the packets for malicious things. Also, an
 attacker might reply recorded messages or spoof a sender's IP address,
-which could lead to a wrong preception of system activity. Be sure to think
-about syslog network security before enabling it.
+which could lead to a wrong perception of system activity. These can
+be prevented by using GSS-API authentication and encryption. Be sure
+to think about syslog network security before enabling it.
 .LP
 .SH DEBUGGING
 When debugging is turned on using
