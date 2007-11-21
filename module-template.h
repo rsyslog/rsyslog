@@ -63,6 +63,13 @@ static rsRetVal createInstance(instanceData **ppData)\
 }
 
 /* freeInstance()
+ * This is the cleanup function for the module instance. It is called immediately before
+ * the module instance is destroyed (unloaded). The module should do any cleanup
+ * here, e.g. close file, free instantance heap memory and the like. Control will
+ * not be passed back to the module once this function is finished. Keep in mind,
+ * however, that other instances may still be loaded and used. So do not destroy
+ * anything that may be used by another instance. If you have such a ressource, you
+ * currently need to do the instance counting yourself.
  */
 #define BEGINfreeInstance \
 static rsRetVal freeInstance(void* pModData)\
@@ -284,7 +291,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.
  */
-#define CODEqueryEtryPt_STD_OMOD_QUERIES\
+#define CODEqueryEtryPt_STD_OMOD_QUERIES \
 	if(!strcmp((char*) name, "doAction")) {\
 		*pEtryPoint = doAction;\
 	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
@@ -295,6 +302,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = dbgPrintInstInfo;\
 	} else if(!strcmp((char*) name, "freeInstance")) {\
 		*pEtryPoint = freeInstance;\
+	} else if(!strcmp((char*) name, "modExit")) {\
+		*pEtryPoint = modExit;\
 	} else if(!strcmp((char*) name, "getWriteFDForSelect")) {\
 		*pEtryPoint = getWriteFDForSelect;\
 	} else if(!strcmp((char*) name, "onSelectReadyWrite")) {\
@@ -305,10 +314,18 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = tryResume;\
 	}
 
+
 /* modInit()
  * This has an extra parameter, which is the specific name of the modInit
  * function. That is needed for built-in modules, which must have unique
- * names in order to link statically.
+ * names in order to link statically. Please note that this is alwaysy only
+ * the case with modInit() and NO other entry point. The reason is that only
+ * modInit() is visible form a linker/loader point of view. All other entry
+ * points are passed via rsyslog-internal query functions and are defined
+ * static inside the modules source. This is an important concept, as it allows
+ * us to support different interface versions within a single module. (Granted,
+ * we do not currently have different interface versions, so we can not put
+ * it to a test - but our firm believe is that we can do all abstraction needed...)
  *
  * Extra Comments:
  * initialize the module
@@ -316,9 +333,12 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * Later, much more must be done. So far, we only return a pointer
  * to the queryEtryPt() function
  * TODO: do interface version checking & handshaking
- * iIfVersRequeted is the version of the interface specification that the
+ * iIfVersRequetsed is the version of the interface specification that the
  * caller would like to see being used. ipIFVersProvided is what we
  * decide to provide.
+ * rgerhards, 2007-11-21: see modExit() comment below for important information
+ * on the need to initialize static data with code. modInit() may be called on a
+ * cached, left-in-memory copy of a previous incarnation.
  */
 #define BEGINmodInit(uniqName) \
 rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()))\
@@ -342,6 +362,31 @@ finalize_it:\
 	CHKiRet(pHostQueryEtryPt((uchar*)"regCfSysLineHdlr", &omsdRegCFSLineHdlr));
 
 #endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */
+
+/* modExit()
+ * This is the counterpart to modInit(). It destroys a module and makes it ready for
+ * unloading. It is similiar to freeInstance() for the instance data. Please note that
+ * this entry point needs to free any module-globale data structures and registrations.
+ * For example, the CfSysLineHandlers a module has registered need to be unregistered
+ * here. This entry point is only called immediately before unloading of the module. So
+ * it is likely to be destroyed. HOWEVER, the caller may decide to keep the module cached.
+ * So a module must never assume that it is actually destroyed. A call to modInit() may
+ * happen immediately after modExit(). So a module can NOT assume that static data elements
+ * are being re-initialized by the loader - this must always be done by module code itself.
+ * It is suggested to do this in modInit(). - rgerhards, 2007-11-21
+ */
+#define BEGINmodExit \
+static rsRetVal modExit(void)\
+{\
+dbgprintf("in modExit\n");\
+	DEFiRet;
+
+#define CODESTARTmodExit 
+
+#define ENDmodExit \
+	return iRet;\
+}
+
 /*
  * vi:set ai:
  */

@@ -3644,7 +3644,7 @@ static void die(int sig)
 	/* de-init some modules */
 	modExitIminternal();
 
-	unregCfSysLineHdlrs();
+	unregCfSysLineHdlrs(); /* TODO: this needs to go away when the module de-init works */
 
 	/* TODO: this would also be the right place to de-init the builtin output modules. We
 	 * do not currently do that, because the module interface does not allow for
@@ -4329,8 +4329,7 @@ static void init(void)
 		}
 	}
 
-	assert (pAllowedSenders_UDP == NULL &&
-		pAllowedSenders_TCP == NULL );
+	assert(pAllowedSenders_UDP == NULL && pAllowedSenders_TCP == NULL);
 #endif
 	/* I was told by an IPv6 expert that calling getservbyname() seems to be
 	 * still valid, at least for the use case we have. So I re-enabled that
@@ -4366,7 +4365,9 @@ static void init(void)
 	dbgprintf("rsyslog %s.\n", VERSION);
 	dbgprintf("Called init.\n");
 
-	/*  Close all open log files and free log descriptor array. */
+	/*  Close all open log files and free log descriptor array. This also frees
+	 *  all output-modules instance data.
+	 */
 	freeSelectors();
 
 	/* Unload all non-static modules */

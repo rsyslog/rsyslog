@@ -42,7 +42,7 @@
 #include "modules.h"
 
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
-static modInfo_t *pLoadedModulesLast = NULL; /* tail-pointer */
+static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 static int bCfsyslineInitialized = 0;
 
 
@@ -64,8 +64,9 @@ static rsRetVal moduleConstruct(modInfo_t **pThis)
 }
 
 
-/* Destructs a module objects. The object must not be linked to the
- * linked list of modules.
+/* Destructs a module object. The object must not be linked to the
+ * linked list of modules. Please note that all other dependencies on this
+ * modules must have been removed before (e.g. CfSysLineHandlers!)
  */
 static void moduleDestruct(modInfo_t *pThis)
 {
@@ -172,8 +173,13 @@ modInfo_t *omodGetNxt(modInfo_t *pThis)
  * (builtin) module, nothing happens.
  * The module handle is invalid after this function call and 
  * MUST NOT be used any more.
- * This is currently a dummy, to be filled when we have a plug-in interface
- * rgerhards, 2007-08-09
+ * This is currently a dummy, to be filled when we have a plug-in
+ * interface - rgerhards, 2007-08-09
+ * rgerhards, 2007-11-21:
+ * When this function is called, all instance-data must already have
+ * been destroyed. In the case of output modules, this happens when the
+ * rule set is being destroyed. When we implement other module types, we
+ * need to think how we handle it there (and if we have any instance data).
  */
 static rsRetVal modUnload(modInfo_t *pThis)
 {
@@ -186,6 +192,11 @@ static rsRetVal modUnload(modInfo_t *pThis)
 	}
 
 	/* TODO: implement code */
+	/* There is a bunch of things we need to do:
+	 * - unregister this modules config handler
+	 * - unload the module itself
+	 * - think about the instances freeInstance()
+	 */
 	ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 
 finalize_it:
@@ -260,6 +271,10 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 		return iRet;
 	}
 	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
+		moduleDestruct(pNew);
+		return iRet;
+	}
+	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"modExit", &pNew->modExit)) != RS_RET_OK) {
 		moduleDestruct(pNew);
 		return iRet;
 	}
@@ -355,6 +370,7 @@ rsRetVal modUnloadAndDestructDynamic(void)
 		/* now we can destroy the previous module */
 		if(pModPrev->eLinkType != eMOD_LINK_STATIC) {
 			dbgprintf("Unloading module %s\n", modGetName(pModPrev));
+			modUnload(pModPrev);
 			moduleDestruct(pModPrev);
 		} else {
 			pLoadedModulesLast = pModPrev;

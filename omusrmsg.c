@@ -329,6 +329,11 @@ CODESTARTgetWriteFDForSelect
 ENDgetWriteFDForSelect
 
 
+BEGINmodExit
+CODESTARTmodExit
+ENDmodExit
+
+
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES

@@ -1,6 +1,10 @@
 ---------------------------------------------------------------------------
-Version 1.19.11 (rgerhards), 2007-10-
-- ...
+Version 1.20.0 (rgerhards), 2007-10-
+- GSS-API support for syslog/TCP connections was added. Thanks to
+  varmojfekoj for providing the patch with this functionality
+- unloading dynamic modules has been cleaned up, we now have a
+  real implementation and not just a dummy "good enough for the time
+  being".
 ---------------------------------------------------------------------------
 Version 1.19.10 (rgerhards), 2007-10-19
 - introdcued the new ":modulename:" syntax for calling module actions

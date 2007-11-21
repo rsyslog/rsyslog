@@ -37,7 +37,7 @@ struct action_s {
 	int	iResumeInterval;/* resume interval for this action */
 	int	iNbrResRtry;	/* number of retries since last suspend */
 	struct moduleInfo *pMod;/* pointer to output module handling this selector */
-	void	*pModData;	/* pointer to module data - contents is module-specific */
+	void	*pModData;	/* pointer to module data - content is module-specific */
 	int	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;	/* repetition cnt of prevline */
 	int	f_repeatcount;	/* number of "repeated" msgs */
