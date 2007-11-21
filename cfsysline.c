@@ -662,6 +662,50 @@ rsRetVal unregCfSysLineHdlrs(void)
 }
 
 
+/* helper function for unregCfSysLineHdlrs4Owner(). This is used to see if there is
+ * a handler of this owner inside the element and, if so, remove it. Please note that
+ * it keeps track of a pointer to the last linked list entry, as this is needed to
+ * remove an entry from the list.
+ * rgerhards, 2007-11-21
+ */
+DEFFUNC_llExecFunc(unregHdlrsHeadExec)
+{
+	DEFiRet;
+	cslCmd_t *pListHdr = (cslCmd_t*) pData;
+	int iNumElts;
+
+	/* first find element */
+	iRet = llFindAndDelete(&(pListHdr->llCmdHdlrs), pParam);
+
+	/* now go back and check how many elements are left */
+	CHKiRet(llGetNumElts(&(pListHdr->llCmdHdlrs), &iNumElts));
+
+	if(iNumElts == 0) {
+		/* nothing left in header, so request to delete it */
+		iRet = RS_RET_OK_DELETE_LISTENTRY;
+	}
+
+finalize_it:
+	return iRet;
+}
+/* unregister and destroy cfSysLineHandlers for a specific owner. This method is
+ * most importantly used before unloading a loadable module providing some handlers.
+ * The full list of handlers is searched. If the to-be removed handler was the only
+ * handler for a directive name, the directive header, too, is deleted.
+ * rgerhards, 2007-11-21
+ */
+rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie)
+{
+	DEFiRet;
+	/* we need to walk through all directive names, as the linked list
+	 * class does not provide a way to just search the lower-level handlers.
+	 */
+	iRet = llExecFunc(&llCmdList, unregHdlrsHeadExec, pOwnerCookie);
+
+	return iRet;
+}
+
+
 /* process a cfsysline command (based on handler structure)
  * param "p" is a pointer to the command line after the command. Should be
  * updated.
@@ -738,7 +782,7 @@ void dbgPrintCfSysLineHandlers(void)
 			printf("\t\ttype : %d\n", pCmdHdlr->eType);
 			printf("\t\tpData: 0x%x\n", (unsigned) pCmdHdlr->pData);
 			printf("\t\tHdlr : 0x%x\n", (unsigned) pCmdHdlr->cslCmdHdlr);
-			printf("\t\tOwner: 0x%x\n", (unsigned) llCookieCmd->pKey);
+			printf("\t\tOwner: 0x%x\n", (unsigned) llCookieCmdHdlr->pKey);
 			printf("\n");
 		}
 	}

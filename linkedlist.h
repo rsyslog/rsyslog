@@ -61,6 +61,7 @@ rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData);
 rsRetVal llGetKey(llElt_t *pThis, void *ppData);
 rsRetVal llGetNumElts(linkedList_t *pThis, int *piCnt);
 rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* pParam);
+rsRetVal llFindAndDelete(linkedList_t *pThis, void *pKey);
 /* use the macro below to define a function that will be executed by
  * llExecFunc()
  */

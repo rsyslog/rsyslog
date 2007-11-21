@@ -73,6 +73,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVALID_SOURCE = -2019, /**< source (address) invalid for some reason */
 	RS_RET_ADDRESS_UNKNOWN = -2020, /**< an address is unknown - not necessarily an error */
 	RS_RET_MALICIOUS_ENTITY = -2021, /**< there is an malicious entity involved */
+	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_OK = 0			/**< operation successful */
 };
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */

@@ -184,6 +184,7 @@ modInfo_t *omodGetNxt(modInfo_t *pThis)
 static rsRetVal modUnload(modInfo_t *pThis)
 {
 	DEFiRet;
+	void *pModCookie;
 
 	assert(pThis != NULL);
 
@@ -192,7 +193,9 @@ static rsRetVal modUnload(modInfo_t *pThis)
 	 * CVS snapshot, be aware of this limitation. For now, you can just remove everything up to
 	 * (but not including) the END DEVEL comment. That will do the trick. rgerhards, 2007-11-21
 	 */
-dbgprintf("we are now calling modExit()\n");
+	CHKiRet(pThis->modGetID(&pModCookie));
+dbgprintf("we are now calling modExit(), module id %x\n", pModCookie);
+	CHKiRet(unregCfSysLineHdlrs4Owner(pModCookie));
 
 	/* END DEVEL */
 
@@ -280,6 +283,10 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 		return iRet;
 	}
 	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
+		moduleDestruct(pNew);
+		return iRet;
+	}
+	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"modGetID", &pNew->modGetID)) != RS_RET_OK) {
 		moduleDestruct(pNew);
 		return iRet;
 	}

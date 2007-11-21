@@ -44,6 +44,16 @@
 #define STD_LOADABLE_MODULE_ID ((void*) modExit)
 
 
+/* macro to implement the "modGetID()" interface function
+ * rgerhards 2007-11-21
+ */
+#define DEFmodGetID \
+static rsRetVal modGetID(void **pID) \
+	{ \
+		*pID = STD_LOADABLE_MODULE_ID;\
+		return RS_RET_OK;\
+	}
+
 /* to following macros are used to generate function headers and standard
  * functionality. It works as follows (described on the sample case of
  * createInstance()):
@@ -284,6 +294,7 @@ static rsRetVal tryResume(instanceData __attribute__((unused)) *pData)\
 /* queryEtryPt()
  */
 #define BEGINqueryEtryPt \
+DEFmodGetID \
 static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 {\
 	DEFiRet;
@@ -324,6 +335,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = needUDPSocket;\
 	} else if(!strcmp((char*) name, "tryResume")) {\
 		*pEtryPoint = tryResume;\
+	} else if(!strcmp((char*) name, "modGetID")) {\
+		*pEtryPoint = modGetID;\
 	}
 
 
