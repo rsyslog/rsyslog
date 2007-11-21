@@ -187,6 +187,16 @@ static rsRetVal modUnload(modInfo_t *pThis)
 
 	assert(pThis != NULL);
 
+	/* WARNING - the current code does NOT work and causes an abort - this is acceptable right now
+	 * as I am DEVELOPING the working code and will NOT release until it is there. If you use a
+	 * CVS snapshot, be aware of this limitation. For now, you can just remove everything up to
+	 * (but not including) the END DEVEL comment. That will do the trick. rgerhards, 2007-11-21
+	 */
+dbgprintf("we are now calling modExit()\n");
+
+	/* END DEVEL */
+
+	pThis->modExit(); /* tell the module to get ready for unload */
 	if(pThis->eLinkType == eMOD_LINK_STATIC) {
 		ABORT_FINALIZE(RS_RET_OK);
 	}
@@ -195,7 +205,6 @@ static rsRetVal modUnload(modInfo_t *pThis)
 	/* There is a bunch of things we need to do:
 	 * - unregister this modules config handler
 	 * - unload the module itself
-	 * - think about the instances freeInstance()
 	 */
 	ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 

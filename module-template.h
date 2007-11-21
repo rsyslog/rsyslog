@@ -32,6 +32,18 @@
 #define DEF_OMOD_STATIC_DATA \
 	static rsRetVal (*omsdRegCFSLineHdlr)();
 
+/* macro to define a unique module id. This must be able to fit in a void*. The
+ * module id must be unique inside a running rsyslogd application. It is used to
+ * track ownership of several objects. Most importantly, when the module is 
+ * unloaded the module id value is used to find what needs to be destroyed.
+ * We currently use a pointer to modExit() as the module id. This sounds to be 
+ * reasonable save, as each module must have this entry point AND there is no valid
+ * reason for twice this entry point being in memory.
+ * rgerhards, 2007-11-21
+ */
+#define STD_LOADABLE_MODULE_ID ((void*) modExit)
+
+
 /* to following macros are used to generate function headers and standard
  * functionality. It works as follows (described on the sample case of
  * createInstance()):
@@ -378,7 +390,6 @@ finalize_it:\
 #define BEGINmodExit \
 static rsRetVal modExit(void)\
 {\
-dbgprintf("in modExit\n");\
 	DEFiRet;
 
 #define CODESTARTmodExit 

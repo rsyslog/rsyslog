@@ -46,6 +46,10 @@ struct cslCmdHdlr_s { /* config file sysline parse entry */
 	ecslCmdHdrlType eType;			/* which type of handler is this? */
 	rsRetVal (*cslCmdHdlr)();		/* function pointer to use with handler (params depending on eType) */
 	void *pData;				/* user-supplied data pointer */
+	void *pOwnerCookie;			/* a pointer to the owner of this handler. This is important if
+						 * the handler for a specifc owner needs to be removed. Most often, this
+						 * is an actual pointer to a module - may be anything, but must be unique.
+						 */
 };
 typedef struct cslCmdHdlr_s cslCmdHdlr_t;
 
@@ -61,7 +65,7 @@ struct cslCmd_s { /* config file sysline parse entry */
 typedef struct cslCmd_s cslCmd_t;
 
 /* prototypes */
-rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData);
+rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie);
 rsRetVal unregCfSysLineHdlrs(void);
 rsRetVal processCfSysLineCommand(uchar *pCmd, uchar **p);
 rsRetVal cfsyslineInit(void);
