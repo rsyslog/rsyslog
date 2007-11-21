@@ -169,10 +169,7 @@ modInfo_t *omodGetNxt(modInfo_t *pThis)
 }
 
 
-/* unload a module. If this is called with a statically-linked
- * (builtin) module, nothing happens.
- * The module handle is invalid after this function call and 
- * MUST NOT be used any more.
+/* Prepare a module for unloading.
  * This is currently a dummy, to be filled when we have a plug-in
  * interface - rgerhards, 2007-08-09
  * rgerhards, 2007-11-21:
@@ -181,7 +178,7 @@ modInfo_t *omodGetNxt(modInfo_t *pThis)
  * rule set is being destroyed. When we implement other module types, we
  * need to think how we handle it there (and if we have any instance data).
  */
-static rsRetVal modUnload(modInfo_t *pThis)
+static rsRetVal modPrepareUnload(modInfo_t *pThis)
 {
 	DEFiRet;
 	void *pModCookie;
@@ -193,23 +190,12 @@ static rsRetVal modUnload(modInfo_t *pThis)
 	 * CVS snapshot, be aware of this limitation. For now, you can just remove everything up to
 	 * (but not including) the END DEVEL comment. That will do the trick. rgerhards, 2007-11-21
 	 */
-	CHKiRet(pThis->modGetID(&pModCookie));
 dbgprintf("we are now calling modExit(), module id %x\n", pModCookie);
+	CHKiRet(pThis->modGetID(&pModCookie));
+	pThis->modExit(); /* tell the module to get ready for unload */
 	CHKiRet(unregCfSysLineHdlrs4Owner(pModCookie));
 
 	/* END DEVEL */
-
-	pThis->modExit(); /* tell the module to get ready for unload */
-	if(pThis->eLinkType == eMOD_LINK_STATIC) {
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-
-	/* TODO: implement code */
-	/* There is a bunch of things we need to do:
-	 * - unregister this modules config handler
-	 * - unload the module itself
-	 */
-	ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 
 finalize_it:
 	return iRet;
@@ -363,7 +349,7 @@ rsRetVal modUnloadAndDestructAll(void)
 		pMod = modGetNxt(pModPrev); /* get next */
 		/* now we can destroy the previous module */
 		dbgprintf("Unloading module %s\n", modGetName(pModPrev));
-		modUnload(pModPrev);
+		modPrepareUnload(pModPrev);
 		moduleDestruct(pModPrev);
 	}
 
@@ -386,7 +372,7 @@ rsRetVal modUnloadAndDestructDynamic(void)
 		/* now we can destroy the previous module */
 		if(pModPrev->eLinkType != eMOD_LINK_STATIC) {
 			dbgprintf("Unloading module %s\n", modGetName(pModPrev));
-			modUnload(pModPrev);
+			modPrepareUnload(pModPrev);
 			moduleDestruct(pModPrev);
 		} else {
 			pLoadedModulesLast = pModPrev;
