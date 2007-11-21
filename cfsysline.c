@@ -432,9 +432,36 @@ finalize_it:
 	return iRet;
 }
 
+/* destructor for linked list keys. As we do not use any dynamic memory,
+ * we simply return. However, this entry point must be defined for the 
+ * linkedList class to make sure we have not forgotten a destructor.
+ * rgerhards, 2007-11-21
+ */
+static rsRetVal cslchKeyDestruct(void __attribute__((unused)) *pData)
+{
+	return RS_RET_OK;
+}
+
+
+/* Key compare operation for linked list class. This compares two
+ * owner cookies (void *).
+ * rgerhards, 2007-11-21
+ */
+static int cslchKeyCompare(void *pKey1, void *pKey2)
+{
+	if(pKey1 == pKey2)
+		return 0;
+	else
+		if(pKey1 < pKey2)
+			return -1;
+		else
+			return 1;
+}
+
+
 /* set data members for this object
  */
-rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
+rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData)
 {
 	assert(pThis != NULL);
 	assert(eType != eCmdHdlrInvalid);
@@ -442,8 +469,6 @@ rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pH
 	pThis->eType = eType;
 	pThis->cslCmdHdlr = pHdlr;
 	pThis->pData = pData;
-	pThis->pOwnerCookie = pOwnerCookie;
-dbgprintf("handler owner cookie %x\n", pOwnerCookie);
 
 	return RS_RET_OK;
 }
@@ -538,7 +563,7 @@ static rsRetVal cslcConstruct(cslCmd_t **ppThis, int bChainingPermitted)
 
 	pThis->bChainingPermitted = bChainingPermitted;
 
-	CHKiRet(llInit(&pThis->llCmdHdlrs, cslchDestruct, NULL, NULL));
+	CHKiRet(llInit(&pThis->llCmdHdlrs, cslchDestruct, cslchKeyDestruct, cslchKeyCompare));
 
 finalize_it:
 	*ppThis = pThis;
@@ -556,8 +581,8 @@ static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*p
 	assert(pThis != NULL);
 
 	CHKiRet(cslchConstruct(&pCmdHdlr));
-	CHKiRet(cslchSetEntry(pCmdHdlr, eType, pHdlr, pData, pOwnerCookie));
-	CHKiRet(llAppend(&pThis->llCmdHdlrs, NULL, pCmdHdlr));
+	CHKiRet(cslchSetEntry(pCmdHdlr, eType, pHdlr, pData));
+	CHKiRet(llAppend(&pThis->llCmdHdlrs, pOwnerCookie, pCmdHdlr));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -713,7 +738,7 @@ void dbgPrintCfSysLineHandlers(void)
 			printf("\t\ttype : %d\n", pCmdHdlr->eType);
 			printf("\t\tpData: 0x%x\n", (unsigned) pCmdHdlr->pData);
 			printf("\t\tHdlr : 0x%x\n", (unsigned) pCmdHdlr->cslCmdHdlr);
-			printf("\t\tOwner: 0x%x\n", (unsigned) pCmdHdlr->pOwnerCookie);
+			printf("\t\tOwner: 0x%x\n", (unsigned) llCookieCmd->pKey);
 			printf("\n");
 		}
 	}
