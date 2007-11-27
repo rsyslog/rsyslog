@@ -67,8 +67,6 @@ rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pO
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */
-extern syslogCODE rs_prioritynames[];
-extern syslogCODE rs_facilitynames[];
 extern char LocalHostName[];
 extern int family;
 extern int NoHops;
