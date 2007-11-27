@@ -319,7 +319,7 @@
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 static uchar	*pModDir = NULL; /* read-only after startup */
-char	ctty[] = _PATH_CONSOLE;	/* this is read-only */
+char	ctty[] = _PATH_CONSOLE;	/* this is read-only; used by omfile -- TODO: remove that dependency */
 
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
@@ -2326,8 +2326,7 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 			iRet = 1;
 	} else {
 		assert(f->f_filter_type == FILTER_PROP); /* assert() just in case... */
-		pszPropVal = MsgGetProp(pMsg, NULL,
-			        f->f_filterData.prop.pCSPropName, &pbMustBeFreed);
+		pszPropVal = MsgGetProp(pMsg, NULL, f->f_filterData.prop.pCSPropName, &pbMustBeFreed);
 
 		/* Now do the compares (short list currently ;)) */
 		switch(f->f_filterData.prop.operation ) {
