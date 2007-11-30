@@ -60,7 +60,7 @@ rsyslogd_SOURCES = \
 	action.c \
 	action.h
 
-rsyslogd_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/\"
+rsyslogd_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
 rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) -ldl
 rsyslogd_LDFLAGS = -export-dynamic
 
