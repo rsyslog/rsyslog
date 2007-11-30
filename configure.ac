@@ -164,8 +164,10 @@ if test "x$enable_pthreads" != "xno"; then
         [pthread_create],
         [
           AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
-	  pthreads_libs="-lpthread"
-	  AC_SUBST(pthreads_libs)
+          pthreads_libs="-lpthread"
+          pthreads_cflags="-pthread"
+          AC_SUBST(pthreads_libs)
+          AC_SUBST(pthreads_cflags)
         ],
         [AC_MSG_FAILURE([pthread is missing])],
         [-lpthread]
