@@ -119,8 +119,9 @@ int write_pid (char *pidfile)
 
   pid = getpid();
   if (!fprintf(f,"%d\n", pid)) {
-	char errStr[1024];
-      printf("Can't write pid , %s.\n", strerror_r(errno, errStr, sizeof(errStr)));
+      char errStr[1024];
+      strerror_r(errno, errStr, sizeof(errStr));
+      printf("Can't write pid , %s.\n", errStr);
       close(fd);
       return 0;
   }
@@ -128,8 +129,9 @@ int write_pid (char *pidfile)
 
 #ifndef	__sun
   if (flock(fd, LOCK_UN) == -1) {
-	char errStr[1024];
-      printf("Can't unlock pidfile %s, %s.\n", pidfile, strerror_r(errno, errStr, sizeof(errStr)));
+      char errStr[1024];
+      strerror_r(errno, errStr, sizeof(errStr));
+      printf("Can't unlock pidfile %s, %s.\n", pidfile, errStr);
       close(fd);
       return 0;
   }

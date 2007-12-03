@@ -1605,7 +1605,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			pSrc = pRes;
 			while(*pSrc) {
 				*pB++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ?
-					toupper(*pSrc) : tolower(*pSrc);
+					(char)toupper((int)*pSrc) : (char)tolower((int)*pSrc);
 				/* currently only these two exist */
 				++pSrc;
 			}

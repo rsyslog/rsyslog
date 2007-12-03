@@ -36,7 +36,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <assert.h>
-#include <wait.h>
+#include <sys/wait.h>
 #include <ctype.h>
 #include "liblogging-stub.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
 #define TRUE 1

@@ -414,7 +414,11 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 
 		memset (&hints, 0, sizeof (struct addrinfo));
 		hints.ai_family = AF_INET6;
-		hints.ai_flags  = AI_ADDRCONFIG | AI_NUMERICHOST;
+#		ifdef AI_ADDRCONFIG
+			hints.ai_flags  = AI_ADDRCONFIG | AI_NUMERICHOST;
+#		else
+			hints.ai_flags  = AI_NUMERICHOST;
+#		endif
 		
 		switch(getaddrinfo ((char*)pszIP+1, NULL, &hints, &res)) {
 		case 0: 
@@ -449,7 +453,11 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	} else { /* now parse IPv4 */
 		memset (&hints, 0, sizeof (struct addrinfo));
 		hints.ai_family = AF_INET;
-		hints.ai_flags  = AI_ADDRCONFIG | AI_NUMERICHOST;
+#		ifdef AI_ADDRCONFIG
+			hints.ai_flags  = AI_ADDRCONFIG | AI_NUMERICHOST;
+#		else
+			hints.ai_flags  = AI_NUMERICHOST;
+#		endif
 		
 		switch(getaddrinfo ((char*)pszIP, NULL, &hints, &res)) {
 		case 0: 

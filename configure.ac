@@ -31,7 +31,8 @@ esac
 
 # Checks for libraries.
 AC_CHECK_LIB(rt,clock_gettime,,,)
-AC_CHECK_LIB(dl,dlopen,,,)
+AC_CHECK_LIB(dl,dlopen,[have_libdl = yes],[have_libdl = no],)
+AM_CONDITIONAL(HAVE_LIBDL, test x$have_libdl = xyes)
 
 # Checks for header files.
 AC_HEADER_RESOLV
@@ -340,14 +341,14 @@ AC_OUTPUT
 echo "****************************************************"
 echo "rsyslog will be compiled with the following settings:"
 echo
-echo "Multithreading support enabled:		$enable_pthreads"
-echo "Klogd functionality enabled:		$enable_klogd"
-echo "Regular expressions support enabled:	$enable_regexp"
+echo "Multithreading support enabled:           $enable_pthreads"
+echo "Klogd functionality enabled:              $enable_klogd"
+echo "Regular expressions support enabled:      $enable_regexp"
 echo "Zlib compression support enabled:         $enable_zlib"
-echo "MySql support enabled:			$enable_mysql"
+echo "MySql support enabled:                    $enable_mysql"
 echo "PostgreSQL support enabled:               $enable_pgsql"
-echo "Large file support enabled:		$enable_largefile"
-echo "Networking support enabled:		$enable_inet"
+echo "Large file support enabled:               $enable_largefile"
+echo "Networking support enabled:               $enable_inet"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
-echo "Debug mode enabled:			$enable_debug"
+echo "Debug mode enabled:                       $enable_debug"
 

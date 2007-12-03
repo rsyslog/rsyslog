@@ -146,6 +146,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <ctype.h>
+#include <limits.h>
 #define GNU_SOURCE
 #include <string.h>
 #include <stdarg.h>
@@ -165,9 +166,11 @@
 #include <sys/file.h>
 #include <sys/un.h>
 #include <sys/time.h>
-#ifdef BSD
+
+#if HAVE_SYS_TIMESPEC_H
 # include <sys/timespec.h>
 #endif
+
 #include <sys/resource.h>
 #include <signal.h>
 
@@ -829,8 +832,10 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_family = AF_UNSPEC;
-			hints.ai_flags  = AI_ADDRCONFIG;
 			hints.ai_socktype = SOCK_DGRAM;
+#			ifdef AI_ADDRCONFIG /* seems not to be present on all systems */
+				hints.ai_flags  = AI_ADDRCONFIG;
+#			endif
 
 			if (getaddrinfo (iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
 				logerrorSz("DNS error: Can't resolve \"%s\", not added as allowed sender", iAllow->addr.HostWildcard);
@@ -3523,8 +3528,10 @@ void logerror(char *type)
 
 	if (errno == 0)
 		snprintf(buf, sizeof(buf), "%s", type);
-	else
-		snprintf(buf, sizeof(buf), "%s: %s", type, strerror_r(errno, errStr, sizeof(errStr)));
+	else {
+		strerror_r(errno, errStr, sizeof(errStr));
+		snprintf(buf, sizeof(buf), "%s: %s", type, errStr);
+	}
 	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
 	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, ADDDATE);
@@ -3767,7 +3774,9 @@ static rsRetVal doIncludeDirectory(uchar *pDirName)
 			continue; /* these files we are also not interested in */
 		++iEntriesDone;
 		/* construct filename */
-		iFileNameLen = strnlen(res->d_name, NAME_MAX);
+		iFileNameLen = strlen(res->d_name);
+		if (iFileNameLen > NAME_MAX)
+			iFileNameLen = NAME_MAX;
 		memcpy(szFullFileName + iDirNameLen, res->d_name, iFileNameLen);
 		*(szFullFileName + iDirNameLen + iFileNameLen) = '\0';
 		dbgprintf("including file '%s'\n", szFullFileName);
@@ -4260,8 +4269,10 @@ finalize_it:
 		char errStr[1024];
 		if(fCurr != NULL)
 			selectorDestruct(fCurr);
+
+		strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
-			iRet, pConfFile, strerror_r(errno, errStr, sizeof(errStr)));
+			iRet, pConfFile, errStr);
 	}
 	return iRet;
 }
@@ -4377,7 +4388,7 @@ static void init(void)
 		 * We ignore any errors while doing this - we would be lost anyhow...
 		 */
 		selector_t *f = NULL;
-		char szTTYNameBuf[TTY_NAME_MAX+1]; /* +1 for NULL character */
+		char szTTYNameBuf[_POSIX_TTY_NAME_MAX+1]; /* +1 for NULL character */
 		dbgprintf("primary config file could not be opened - using emergency definitions.\n");
 		cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
 		cfline((uchar*)"*.PANIC\t*", &f);
@@ -5627,8 +5638,9 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 				printchopped(LocalHostName, line, iRcvd,  fd, funixParseHost[i]);
 			} else if (iRcvd < 0 && errno != EINTR) {
 				char errStr[1024];
+				strerror_r(errno, errStr, sizeof(errStr));
 				dbgprintf("UNIX socket error: %d = %s.\n", \
-					errno, strerror_r(errno, errStr, sizeof(errStr)));
+					errno, errStr);
 				logerror("recvfrom UNIX");
 			}
 		FDPROCESSED();
@@ -5666,8 +5678,8 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 				       }
 			       } else if (l < 0 && errno != EINTR && errno != EAGAIN) {
 					char errStr[1024];
-				       dbgprintf("INET socket error: %d = %s.\n",
-							errno, strerror_r(errno, errStr, sizeof(errStr)));
+					strerror_r(errno, errStr, sizeof(errStr));
+					dbgprintf("INET socket error: %d = %s.\n", errno, errStr);
 					       logerror("recvfrom inet");
 					       /* should be harmless */
 					       sleep(1);
@@ -6392,7 +6404,7 @@ int main(int argc, char **argv)
 	 */
 	for (p = (char *)LocalDomain; *p ; p++)
 		if (isupper((int) *p))
-			*p = tolower(*p);
+			*p = (char)tolower((int)*p);
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
