@@ -1,3 +1,10 @@
+Version 1.19.12 (rgerhards), 2007-12-03
+- cleaned up the build system (thanks to Michael Biebl for the patch)
+- fixed a bug where ommysql was still not compiled with -pthread option
+---------------------------------------------------------------------------
+Version 1.19.11 (rgerhards), 2007-11-29
+- applied -pthread option to build when building for multi-threading mode
+  hopefully solves an issue with segfaulting
 ---------------------------------------------------------------------------
 Version 1.19.10 (rgerhards), 2007-10-19
 - introdcued the new ":modulename:" syntax for calling module actions
