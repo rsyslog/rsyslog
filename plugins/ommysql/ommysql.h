@@ -24,12 +24,6 @@
 #ifndef	OMMYSQL_H_INCLUDED
 #define	OMMYSQL_H_INCLUDED 1
 
-/* prototypes */
-/* prototypes will be removed as syslogd needs no longer to directly
- * call into the module!
- */
-rsRetVal modInitMySQL(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()));
-
 #endif /* #ifndef OMMYSQL_H_INCLUDED */
 /*
  * vi:set ai:
