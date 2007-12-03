@@ -13,7 +13,8 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 <h2>Current Features</h2>
 <ul>
 
- <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a><li>support for (plain) tcp 
+ <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a><li>
+	native support for writing to Postgres databases<li>support for (plain) tcp 
 	based syslog - much better reliability<li>support for sending and receiving 
 	compressed syslog messages<li>ability to configure backup syslog/database 
 	servers - if the primary fails, control is switched to a prioritized list of 
@@ -44,7 +45,8 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 	supports sub-configuration files, which can be automatically read from 
 	directories. Includes are specified in the main configuration file<li>
 	supports multiple actions per selector/filter condition<li>
-	MySQL functionality as a dynamically loadable plug-in</ul>
+	MySQL and Postgres SQL functionality as a dynamically loadable plug-in<li>
+	modular design for outputs - easily extensible</ul>
 <p>&nbsp;</p>
 <h2>Upcoming Features</h2>
 <p>The list below is something like a repository of ideas we'd like to 
