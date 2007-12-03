@@ -47,7 +47,7 @@
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	PGconn	*f_hpgsql;		/* handle to PgSQL */
+	PGconn	*f_hpgsql;			/* handle to PgSQL */
 	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
 	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
@@ -109,7 +109,7 @@ ENDgetWriteFDForSelect
 
 
 /* log a database error with descriptive message.
- * We check if we have a valid MySQL handle. If not, we simply
+ * We check if we have a valid handle. If not, we simply
  * report an error, but can not be specific. RGerhards, 2007-01-30
  */
 static void reportDBError(instanceData *pData, int bSilent)
@@ -118,7 +118,6 @@ static void reportDBError(instanceData *pData, int bSilent)
 	ConnStatusType ePgSQLStatus;
 
 	assert(pData != NULL);
-	dbgprintf("bSilent was %i\n", bSilent);
 	bSilent=0;
 
 	/* output log message */
@@ -151,23 +150,15 @@ static rsRetVal initPgSQL(instanceData *pData, int bSilent)
 	assert(pData != NULL);
 	assert(pData->f_hpgsql == NULL);
 
-	dbgprintf("host=%s dbname=%s uid=%s pswd=%s\n",pData->f_dbsrv,pData->f_dbname,pData->f_dbuid,pData->f_dbpwd);
+	dbgprintf("host=%s dbname=%s uid=%s\n",pData->f_dbsrv,pData->f_dbname,pData->f_dbuid);
 
-	/*
-	pData->f_hmysql = mysql_init(NULL);
-	if(pData->f_hmysql == NULL) {
-		logerror("can not initialize MySQL handle");
+	/* Connect to database */
+	if((pData->f_hpgsql=PQsetdbLogin(pData->f_dbsrv, NULL, NULL, NULL,
+				pData->f_dbname, pData->f_dbuid, pData->f_dbpwd)) == NULL) {
+		reportDBError(pData, bSilent);
+		closePgSQL(pData); /* ignore any error we may get */
 		iRet = RS_RET_SUSPENDED;
-	
-	} else { / * we could get the handle, now on with work... */ 
-		/* Connect to database */
-		if((pData->f_hpgsql=PQsetdbLogin(pData->f_dbsrv, NULL, NULL, NULL,
-					pData->f_dbname, pData->f_dbuid, pData->f_dbpwd)) == NULL) {
-			reportDBError(pData, bSilent);
-			closePgSQL(pData); /* ignore any error we may get */
-			iRet = RS_RET_SUSPENDED;
-		}
-	/*}*/
+	}
 
 	return iRet;
 }
@@ -187,12 +178,12 @@ rsRetVal writePgSQL(uchar *psz, instanceData *pData)
 
 	/* try insert */
 	PQexec(pData->f_hpgsql, (char*)psz);
-	if(PQstatus(pData->f_hpgsql)!=CONNECTION_OK) {
+	if(PQstatus(pData->f_hpgsql) != CONNECTION_OK) {
 		/* error occured, try to re-init connection and retry */
 		closePgSQL(pData); /* close the current handle */
 		CHKiRet(initPgSQL(pData, 0)); /* try to re-open */
 		PQexec(pData->f_hpgsql, (char*)psz);
-		if(PQstatus(pData->f_hpgsql)!=CONNECTION_OK) { /* re-try insert */
+		if(PQstatus(pData->f_hpgsql) != CONNECTION_OK) { /* re-try insert */
 			/* we failed, giving up for now */
 			reportDBError(pData, 0);
 			closePgSQL(pData); /* free ressources */
@@ -236,13 +227,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * rgerhards, 2007-10-15
 	 */
 
-	dbgprintf("%p:%s\n",p,p);
 	if(!strncmp((char*) p, ":ompgsql:", sizeof(":ompgsql:") - 1)) {
 		p += strlen(":ompgsql:"); /* eat indicator sequence */
 	} else {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
-	dbgprintf("%p:%s\n",p,p);
 
 	/* ok, if we reach this point, we have something for us */
 	if((iRet = createInstance(&pData)) != RS_RET_OK)

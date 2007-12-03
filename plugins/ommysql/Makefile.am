@@ -1,4 +1,3 @@
-pkglibdir = $(libdir)/rsyslog
 pkglib_LTLIBRARIES = ommysql.la
 
 ommysql_la_SOURCES = ommysql.c ommysql.h ../../module-template.h
