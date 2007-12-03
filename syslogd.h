@@ -59,6 +59,7 @@ void freeAllSockets(int **socks);
 int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost);
 void getCurrTime(struct syslogTime *t);
 int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst);
+int formatTimestampToPgSQL(struct syslogTime *ts, char* pDst, size_t iLenDst);
 int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 void untty(void);

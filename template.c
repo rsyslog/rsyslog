@@ -424,6 +424,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 		 */
 		 if(!strcmp((char*)Buf, "date-mysql")) {
 			pTpe->data.field.eDateFormat = tplFmtMySQLDate;
+                 } else if(!strcmp((char*)Buf, "date-pgsql")) {
+                        pTpe->data.field.eDateFormat = tplFmtPgSQLDate;
 		 } else if(!strcmp((char*)Buf, "date-rfc3164")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
 		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
@@ -941,6 +943,9 @@ void tplPrintList(void)
 				case tplFmtMySQLDate:
 					dbgprintf("[Format as MySQL-Date] ");
 					break;
+                                case tplFmtPgSQLDate:
+                                        dbgprintf("[Format as PgSQL-Date] ");
+                                        break;
 				case tplFmtRFC3164Date:
 					dbgprintf("[Format as RFC3164-Date] ");
 					break;

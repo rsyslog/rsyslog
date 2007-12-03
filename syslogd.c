@@ -644,6 +644,7 @@ static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %t
 static uchar template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
 static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
 static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
+static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%, '%syslogtag%')\",STDSQL";
 /* end template */
 
 
@@ -1438,6 +1439,19 @@ int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst)
 	return(snprintf(pDst, iLenDst, "%4.4d%2.2d%2.2d%2.2d%2.2d%2.2d", 
 		ts->year, ts->month, ts->day, ts->hour, ts->minute, ts->second));
 
+}
+
+int formatTimestampToPgSQL(struct syslogTime *ts, char *pDst, size_t iLenDst)
+{
+       /* see note in formatTimestampToMySQL, applies here as well */
+       assert(ts != NULL);
+       assert(pDst != NULL);
+
+       if (iLenDst < 21) /* we need 20 bytes + '\n' */
+               return(0);
+
+       return(snprintf(pDst, iLenDst, "%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d",
+                               ts->year, ts->month, ts->day, ts->hour, ts->minute, ts->second));
 }
 
 /**
@@ -6101,6 +6115,8 @@ static void mainThread()
 	tplAddLine(" StdUsrMsgFmt", &pTmp);
 	pTmp = template_StdDBFmt;
 	tplLastStaticInit(tplAddLine(" StdDBFmt", &pTmp));
+        pTmp = template_StdPgSQLFmt;
+        tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
 
 	dbgprintf("Starting.\n");
 	init();

@@ -536,6 +536,18 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock();
 		return(pM->pszTIMESTAMP_MySQL);
+        case tplFmtPgSQLDate:
+                MsgLock();
+                if(pM->pszTIMESTAMP_PgSQL == NULL) {
+                        if((pM->pszTIMESTAMP_PgSQL = malloc(21)) == NULL) {
+                                glblHadMemShortage = 1;
+                                MsgUnlock();
+                                return "";
+                        }
+                        formatTimestampToPgSQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_PgSQL, 21);
+                }
+                MsgUnlock();
+                return(pM->pszTIMESTAMP_PgSQL);
 	case tplFmtRFC3164Date:
 		MsgLock();
 		if(pM->pszTIMESTAMP3164 == NULL) {
@@ -554,7 +566,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 			if((pM->pszTIMESTAMP3339 = malloc(33)) == NULL) {
 				glblHadMemShortage = 1;
 				MsgUnlock();
-				return "";
+				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
 			}
 			formatTimestamp3339(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 33);
 		}
@@ -594,6 +606,18 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock();
 		return(pM->pszRcvdAt_MySQL);
+        case tplFmtPgSQLDate:
+                MsgLock();
+                if(pM->pszRcvdAt_PgSQL == NULL) {
+                        if((pM->pszRcvdAt_PgSQL = malloc(21)) == NULL) {
+                                glblHadMemShortage = 1;
+                                MsgUnlock();
+                                return "";
+                        }
+                        formatTimestampToPgSQL(&pM->tRcvdAt, pM->pszRcvdAt_PgSQL, 21);
+                }
+                MsgUnlock();
+                return(pM->pszRcvdAt_PgSQL);
 	case tplFmtRFC3164Date:
 		MsgLock();
 		if(pM->pszRcvdAt3164 == NULL) {
