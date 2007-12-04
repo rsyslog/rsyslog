@@ -233,7 +233,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*p == '>') {
 		p++; /* eat '>' '*/
 	} else if(!strncmp((char*) p, ":ommysql:", sizeof(":ommysql:") - 1)) {
-		p += sizeof(":ommysql:"); /* eat indicator sequence */
+		p += sizeof(":ommysql:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
 	} else {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
