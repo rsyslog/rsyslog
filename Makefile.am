@@ -63,10 +63,7 @@ rsyslogd_SOURCES = \
 	gss-misc.h
 
 rsyslogd_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
-rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(gss_libs)
-if HAVE_LIBDL
-rsyslogd_LDADD += -ldl
-endif
+rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(gss_libs) $(dl_libs) $(rt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 
 man_MANS = rfc3195d.8 rklogd.8 rsyslogd.8 rsyslog.conf.5 
