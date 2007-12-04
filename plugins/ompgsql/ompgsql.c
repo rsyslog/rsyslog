@@ -228,7 +228,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 */
 
 	if(!strncmp((char*) p, ":ompgsql:", sizeof(":ompgsql:") - 1)) {
-		p += strlen(":ompgsql:"); /* eat indicator sequence */
+		p += sizeof(":ompgsql:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
 	} else {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
