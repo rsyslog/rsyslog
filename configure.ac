@@ -30,8 +30,10 @@ case "${host}" in
 esac
 
 # Checks for libraries.
-AC_CHECK_LIB(rt,clock_gettime,[dl_libs="-ldl" AC_SUBST(dl_libs)],,)
-AC_CHECK_LIB(dl,dlopen,[rt_libs="-lrt" AC_SUBST(rt_libs)],,)
+save_LIBS=$LIBS
+AC_SEARCH_LIBS(clock_gettime, rt, [dl_libs="-ldl" AC_SUBST(dl_libs)])
+AC_SEARCH_LIBS(dlopen, dl, [rt_libs="-lrt" AC_SUBST(rt_libs)])
+LIBS=$save_LIBS
 
 # Checks for header files.
 AC_HEADER_RESOLV
