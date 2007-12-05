@@ -31,8 +31,8 @@ esac
 
 # Checks for libraries.
 save_LIBS=$LIBS
-AC_SEARCH_LIBS(clock_gettime, rt, [dl_libs="-ldl" AC_SUBST(dl_libs)])
-AC_SEARCH_LIBS(dlopen, dl, [rt_libs="-lrt" AC_SUBST(rt_libs)])
+AC_SEARCH_LIBS(clock_gettime, rt, [rt_libs="-lrt" AC_SUBST(rt_libs)])
+AC_SEARCH_LIBS(dlopen, dl, [dl_libs="-ldl" AC_SUBST(dl_libs)])
 LIBS=$save_LIBS
 
 # Checks for header files.
