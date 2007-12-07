@@ -190,7 +190,6 @@ static rsRetVal modPrepareUnload(modInfo_t *pThis)
 	 * CVS snapshot, be aware of this limitation. For now, you can just remove everything up to
 	 * (but not including) the END DEVEL comment. That will do the trick. rgerhards, 2007-11-21
 	 */
-dbgprintf("we are now calling modExit(), module id %x\n", pModCookie);
 	CHKiRet(pThis->modGetID(&pModCookie));
 	pThis->modExit(); /* tell the module to get ready for unload */
 	CHKiRet(unregCfSysLineHdlrs4Owner(pModCookie));
