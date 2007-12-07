@@ -1,10 +1,13 @@
 ---------------------------------------------------------------------------
-Version 1.20.0 (rgerhards), 2007-10-
-- GSS-API support for syslog/TCP connections was added. Thanks to
-  varmojfekoj for providing the patch with this functionality
+Version 1.20.0 (rgerhards), 2007-12-07
+- an output module for postgres databases has been added. Thanks to
+  sur5r for contributing this code
 - unloading dynamic modules has been cleaned up, we now have a
   real implementation and not just a dummy "good enough for the time
   being".
+- enhanced platform independence - thanks to Bartosz Kuzma and Michael
+  Biebl for their very useful contributions
+- some general code cleanup (including warnings on 64 platforms, only)
 ---------------------------------------------------------------------------
 Version 1.19.12 (rgerhards), 2007-12-03
 - cleaned up the build system (thanks to Michael Biebl for the patch)
