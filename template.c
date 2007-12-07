@@ -926,7 +926,7 @@ void tplPrintList(void)
 		dbgprintf("\n");
 		pTpe = pTpl->pEntryRoot;
 		while(pTpe != NULL) {
-			dbgprintf("\tEntry(%x): type %d, ", (unsigned) pTpe, pTpe->eEntryType);
+			dbgprintf("\tEntry(%lx): type %d, ", (unsigned long) pTpe, pTpe->eEntryType);
 			switch(pTpe->eEntryType) {
 			case UNDEFINED:
 				dbgprintf("(UNDEFINED)");

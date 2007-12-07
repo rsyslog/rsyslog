@@ -780,9 +780,9 @@ void dbgPrintCfSysLineHandlers(void)
 		llCookieCmdHdlr = NULL;
 		while((iRet = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void*)&pCmdHdlr)) == RS_RET_OK) {
 			printf("\t\ttype : %d\n", pCmdHdlr->eType);
-			printf("\t\tpData: 0x%x\n", (unsigned) pCmdHdlr->pData);
-			printf("\t\tHdlr : 0x%x\n", (unsigned) pCmdHdlr->cslCmdHdlr);
-			printf("\t\tOwner: 0x%x\n", (unsigned) llCookieCmdHdlr->pKey);
+			printf("\t\tpData: 0x%lx\n", (unsigned long) pCmdHdlr->pData);
+			printf("\t\tHdlr : 0x%lx\n", (unsigned long) pCmdHdlr->cslCmdHdlr);
+			printf("\t\tOwner: 0x%lx\n", (unsigned long) llCookieCmdHdlr->pKey);
 			printf("\n");
 		}
 	}

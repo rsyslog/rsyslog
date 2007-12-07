@@ -323,11 +323,11 @@ void modPrintList(void)
 		}
 		dbgprintf(" module.\n");
 		dbgprintf("Entry points:\n");
-		dbgprintf("\tqueryEtryPt:        0x%x\n", (unsigned) pMod->modQueryEtryPt);
-		dbgprintf("\tdoAction:           0x%x\n", (unsigned) pMod->mod.om.doAction);
-		dbgprintf("\tparseSelectorAct:   0x%x\n", (unsigned) pMod->mod.om.parseSelectorAct);
-		dbgprintf("\tdbgPrintInstInfo:   0x%x\n", (unsigned) pMod->dbgPrintInstInfo);
-		dbgprintf("\tfreeInstance:       0x%x\n", (unsigned) pMod->freeInstance);
+		dbgprintf("\tqueryEtryPt:        0x%lx\n", (unsigned long) pMod->modQueryEtryPt);
+		dbgprintf("\tdoAction:           0x%lx\n", (unsigned long) pMod->mod.om.doAction);
+		dbgprintf("\tparseSelectorAct:   0x%lx\n", (unsigned long) pMod->mod.om.parseSelectorAct);
+		dbgprintf("\tdbgPrintInstInfo:   0x%lx\n", (unsigned long) pMod->dbgPrintInstInfo);
+		dbgprintf("\tfreeInstance:       0x%lx\n", (unsigned long) pMod->freeInstance);
 		dbgprintf("\n");
 		pMod = modGetNxt(pMod); /* done, go next */
 	}
