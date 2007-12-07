@@ -171,7 +171,7 @@ rsRetVal actionDbgPrint(action_t *pThis)
 
 	printf("%s: ", modGetStateName(pThis->pMod));
 	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
-	printf("\n\tInstance data: 0x%x\n", (unsigned) pThis->pModData);
+	printf("\n\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
 	printf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
 	printf("\tResume Interval: %d\n", pThis->iResumeInterval);
 	printf("\tSuspended: %d", pThis->bSuspended);
