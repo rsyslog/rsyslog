@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------
+Version 1.20.1 (rgerhards), 2007-12-07
+- corrected a debug setting that survived release. Caused TCP connections
+  to be retried unnecessarily often.
+- When a hostname ACL was provided and DNS resolution for that name failed,
+  ACL processing was stopped at that point. Thanks to mildew for the patch.
+  Fedora Bugzilla: http://bugzilla.redhat.com/show_bug.cgi?id=395911
+- fixed a potential race condition, see link for details:
+  http://rgerhards.blogspot.com/2007/12/rsyslog-race-condition.html
+  Note that the probability of problems from this bug was very remote
+---------------------------------------------------------------------------
 Version 1.20.0 (rgerhards), 2007-12-07
 - an output module for postgres databases has been added. Thanks to
   sur5r for contributing this code
