@@ -161,6 +161,8 @@ void MsgDestruct(msg_t * pM)
 			free(pM->pszRcvdAt3339);
 		if(pM->pszRcvdAt_MySQL != NULL)
 			free(pM->pszRcvdAt_MySQL);
+		if(pM->pszRcvdAt_PgSQL != NULL)
+			free(pM->pszRcvdAt_PgSQL);
 		if(pM->pszTIMESTAMP3164 != NULL)
 			free(pM->pszTIMESTAMP3164);
 		if(pM->pszTIMESTAMP3339 != NULL)
