@@ -34,6 +34,7 @@
 #include "template.h"
 #include "action.h"
 #include "modules.h"
+#include "sync.h"
 
 
 /* object static data (once for all instances) */
@@ -52,6 +53,7 @@ rsRetVal actionDestruct(action_t *pThis)
 	if(pThis->f_pMsg != NULL)
 		MsgDestruct(pThis->f_pMsg);
 
+	SYNC_OBJ_TOOL_EXIT(pThis);
 	if(pThis->ppTpl != NULL)
 		free(pThis->ppTpl);
 	if(pThis->ppMsgs != NULL)
@@ -77,6 +79,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	}
 
 	pThis->iResumeInterval = glbliActionResumeInterval;
+	SYNC_OBJ_TOOL_INIT(pThis);
 
 finalize_it:
 	*ppThis = pThis;

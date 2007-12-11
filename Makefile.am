@@ -30,6 +30,8 @@ rsyslogd_SOURCES = \
 	template.h \
 	outchannel.h \
 	liblogging-stub.h \
+	sync.c \
+	sync.h \
 	net.c \
 	net.h \
 	msg.c \

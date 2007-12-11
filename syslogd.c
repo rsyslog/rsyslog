@@ -210,6 +210,7 @@
 #include "outchannel.h"
 #include "syslogd.h"
 #include "net.h" /* struct NetAddr */
+#include "sync.h" /* struct NetAddr */
 
 #include "parse.h"
 #include "msg.h"
@@ -2221,8 +2222,6 @@ void printline(char *hname, char *msg, int bParseHost)
 	return;
 }
 
-time_t	now;
-
 /* rgerhards 2004-11-09: the following is a function that can be used
  * to log a message orginating from the syslogd itself. In sysklogd code,
  * this is done by simply calling logmsg(). However, logmsg() is changed in
@@ -2232,7 +2231,8 @@ time_t	now;
  * function here probably is only an interim solution and that we need to
  * think on the best way to do this.
  */
-static void logmsgInternal(int pri, char *msg, int flags)
+static void
+logmsgInternal(int pri, char *msg, int flags)
 {
 	msg_t *pMsg;
 
@@ -2434,6 +2434,13 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 	assert(pMsg != NULL);
 	assert(pAction != NULL);
 
+	/* Make sure nodbody else modifies/uses this action object. Right now, this
+         * is important because of "message repeated n times" processing, later it will
+         * become important when we (possibly) have multiple worker threads.
+ 	 * rgerhards, 2007-12-11
+ 	 */
+	LockObj(pAction);
+
 	/* first, we need to check if this is a disabled
 	 * entry. If so, we must not further process it.
 	 * rgerhards 2005-09-26
@@ -2453,7 +2460,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 	}
 
 	/* don't output marks to recently written files */
-	if ((pMsg->msgFlags & MARK) && (now - pAction->f_time) < MarkInterval / 2) {
+	if ((pMsg->msgFlags & MARK) && (time(NULL) - pAction->f_time) < MarkInterval / 2) {
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
@@ -2467,14 +2474,14 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 	    !strcmp(getAPPNAME(pMsg), getAPPNAME(pAction->f_pMsg))) {
 		pAction->f_prevcount++;
 		dbgprintf("msg repeated %d times, %ld sec of %d.\n",
-		    pAction->f_prevcount, now - pAction->f_time,
+		    pAction->f_prevcount, time(NULL) - pAction->f_time,
 		    repeatinterval[pAction->f_repeatcount]);
 		MsgDestruct(pAction->f_pMsg);
 		pAction->f_pMsg = MsgAddRef(pMsg);
 		/* If domark would have logged this by now, flush it now (so we don't hold
 		 * isolated messages), but back off so we'll flush less often in the future.
 		 */
-		if (now > REPEATTIME(pAction)) {
+		if(time(NULL) > REPEATTIME(pAction)) {
 			iRet = fprintlog(pAction);
 			BACKOFF(pAction);
 		}
@@ -2497,6 +2504,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 	}
 
 finalize_it:
+	UnlockObj(pAction);
 	return iRet;
 }
 
@@ -2665,7 +2673,7 @@ static msgQueue *queueInit (void)
 static void queueDelete (msgQueue *q)
 {
 	pthread_mutex_destroy (q->mut);
-	free (q->mut);	
+	free (q->mut);
 	pthread_cond_destroy (q->notFull);
 	free (q->notFull);
 	pthread_cond_destroy (q->notEmpty);
@@ -3051,8 +3059,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	 * MSG part of the message (as of RFC 3164).
 	 * rgerhards 2004-12-03
 	 */
-	(void) time(&now);
-	if (flags & ADDDATE) {
+	if(flags & ADDDATE) {
 		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	}
 
@@ -3209,7 +3216,8 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
  * potential for misinterpretation, which we simply can not solve under the
  * circumstances given.
  */
-void logmsg(int pri, msg_t *pMsg, int flags)
+void
+logmsg(int pri, msg_t *pMsg, int flags)
 {
 	char *msg;
 	char PRItext[20];
@@ -3289,15 +3297,19 @@ void logmsg(int pri, msg_t *pMsg, int flags)
  * when a message was already repeated but also when a new message
  * arrived.
  * rgerhards 2007-08-01: interface changed to use action_t
+ * rgerhards, 2007-12-11: please note: THIS METHOD MUST ONLY BE
+ * CALLED AFTER THE CALLER HAS LOCKED THE pAction OBJECT! We do
+ * not do this here. Failing to do so results in all kinds of
+ * "interesting" problems!
  */
-rsRetVal fprintlog(action_t *pAction)
+rsRetVal
+fprintlog(action_t *pAction)
 {
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
 	pMsgSave = NULL;	/* indicate message poiner not saved */
 	DEFiRet;
 	int i;
-
 	/* first check if this is a regular message or the repeation of
 	 * a previous message. If so, we need to change the message text
 	 * to "last message repeated n times" and then go ahead and write
@@ -3336,7 +3348,7 @@ rsRetVal fprintlog(action_t *pAction)
 
 	dbgprintf("Called fprintlog, logging to %s", modGetStateName(pAction->pMod));
 
-	pAction->f_time = now; /* we need this for message repeation processing TODO: why must "now" be global? */
+	time(&pAction->f_time); /* we need this for message repeation processing */
 
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's execute it. -- rgerhards, 2007-07-24
@@ -3360,7 +3372,7 @@ rsRetVal fprintlog(action_t *pAction)
 	}
 
 	if(iRet == RS_RET_OK)
-		pAction->f_prevcount = 0; /* message process, so we start a new cycle */
+		pAction->f_prevcount = 0; /* message processed, so we start a new cycle */
 
 finalize_it:
 	/* cleanup */
@@ -3374,12 +3386,12 @@ finalize_it:
 	if(pMsgSave != NULL) {
 		/* we had saved the original message pointer. That was
 		 * done because we needed to create a temporary one
-		 * (most often for "message repeated n time" handling. If so,
+		 * (most often for "message repeated n time" handling). If so,
 		 * we need to restore the original one now, so that procesing
 		 * can continue as normal. We also need to discard the temporary
 		 * one, as we do not like memory leaks ;) Please note that the original
 		 * message object will be discarded by our callers, so this is nothing
-		 * of our buisiness. rgerhards, 2007-07-10
+		 * of our business. rgerhards, 2007-07-10
 		 */
 		MsgDestruct(pAction->f_pMsg);
 		pAction->f_pMsg = pMsgSave;	/* restore it */
@@ -3389,7 +3401,8 @@ finalize_it:
 }
 
 
-static void reapchild()
+static void
+reapchild()
 {
 	int saved_errno = errno;
 	struct sigaction sigAct;
@@ -3412,14 +3425,16 @@ DEFFUNC_llExecFunc(domarkActions)
 	action_t *pAction = (action_t*) pData;
 
 	assert(pAction != NULL);
-
-	if (pAction->f_prevcount && now >= REPEATTIME(pAction)) {
+	
+	LockObj(pAction);
+	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
 		dbgprintf("flush %s: repeated %d times, %d sec.\n",
 		    modGetStateName(pAction->pMod), pAction->f_prevcount,
 		    repeatinterval[pAction->f_repeatcount]);
 		fprintlog(pAction);
 		BACKOFF(pAction);
 	}
+	UnlockObj(pAction);
 
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
@@ -3436,15 +3451,17 @@ DEFFUNC_llExecFunc(domarkActions)
  * main thread itself, which is the only thing to make sure rsyslogd will not do
  * strange things. The way it originally was seemed to work because mark occurs very
  * seldom. However, the code called was anything else but reentrant, so it was like
- * russian roulette.
- * rgerhards, 2005-10-20
+ * russian roulette. - rgerhards, 2005-10-20
+ * rgerhards, 2007-12-11: ... and it still is, if running multithreaded. Because in this
+ * case we run concurrently to the actions... I have now fixed that by using synchronization
+ * macros.
  */
-static void domark(void)
+static void
+domark(void)
 {
 	register selector_t *f;
 
 	if (MarkInterval > 0) {
-		now = time(NULL);
 		MarkSeq += TIMERINTVL;
 		if (MarkSeq >= MarkInterval) {
 			logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
@@ -3463,7 +3480,8 @@ static void domark(void)
  * domark request. See domark() comments for further details.
  * rgerhards, 2005-10-20
  */
-static void domarkAlarmHdlr()
+static void
+domarkAlarmHdlr()
 {
 	struct sigaction sigAct;
 
@@ -4049,6 +4067,7 @@ DEFFUNC_llExecFunc(freeSelectorsActions)
 	assert(pAction != NULL);
 
 	/* flush any pending output */
+/* TODO: look at how this is done in the shutdown sequence (do we need to lock, wait?) */
 	if(pAction->f_prevcount) {
 		fprintlog(pAction);
 	}

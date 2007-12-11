@@ -25,6 +25,7 @@
 #define	ACTION_H_INCLUDED 1
 
 #include "syslogd-types.h"
+#include "sync.h"
 
 /* the following struct defines the action object data structure
  */
@@ -50,6 +51,7 @@ struct action_s {
 				 * content later). This is preserved after the message has been
 				 * processed - it is also used to detect duplicates.
 				 */
+	SYNC_OBJ_TOOL;		/* required for mutex support */
 };
 typedef struct action_s action_t;
 
