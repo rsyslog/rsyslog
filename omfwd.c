@@ -66,8 +66,7 @@
 #endif
 
 #ifdef SYSLOG_INET
-//#define INET_SUSPEND_TIME 60		/* equal to 1 minute 
-#define INET_SUSPEND_TIME 2		/* equal to 1 minute 
+#define INET_SUSPEND_TIME 60		/* equal to 1 minute 
 					 * rgerhards, 2005-07-26: This was 3 minutes. As the
 					 * same timer is used for tcp based syslog, we have
 					 * reduced it. However, it might actually be worth
