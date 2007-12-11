@@ -501,6 +501,8 @@ int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	MarkSeq = 0;	/* mark sequence number - modified in domark() only */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
 static int	AcceptRemote = 0;/* receive messages that come via UDP - read-only after startup */
+int     ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
+int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it to IP(s) */
 int	DisableDNS = 0; /* don't look up IP addresses of remote messages */
 char	**StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
@@ -823,7 +825,8 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 		}
 		
 		if (!strchr (iAllow->addr.HostWildcard, '*') &&
-		    !strchr (iAllow->addr.HostWildcard, '?')) {
+		    !strchr (iAllow->addr.HostWildcard, '?') &&
+		    ACLDontResolve == 0) {
 			/* single host - in this case, we pull its IP addresses from DNS
 			* and add IP-based ACLs.
 			*/
@@ -838,11 +841,15 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 #			endif
 
 			if (getaddrinfo (iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
-				logerrorSz("DNS error: Can't resolve \"%s\", not added as allowed sender", iAllow->addr.HostWildcard);
-				/* We could use the text name in this case - maybe this could become
-				 * a user-defined option at some stage.
-				 */
-				return RS_RET_ERR;
+			        logerrorSz("DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
+				
+				if (ACLAddHostnameOnFail) {
+				        logerrorSz("Adding hostname \"%s\" to ACL as a wildcard entry.", iAllow->addr.HostWildcard);
+				        return AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
+				} else {
+				        logerrorSz("Hostname \"%s\" WON\'T be added to ACL.", iAllow->addr.HostWildcard);
+				        return RS_RET_NOENTRY;
+				}
 			}
 			
 			for (restmp = res ; res != NULL ; res = res->ai_next) {
@@ -1616,7 +1623,7 @@ void getCurrTime(struct syslogTime *t)
 
 static int usage(void)
 {
-	fprintf(stderr, "usage: rsyslogd [-46Adhvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
+	fprintf(stderr, "usage: rsyslogd [-46AdhqQvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
 		" [-s domainlist] [-r[port]] [-tport[,max-sessions]] [-f conffile] [-i pidfile] [-x]\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
@@ -3716,10 +3723,15 @@ static rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 		}
 		if((iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits))
 			!= RS_RET_OK) {
-			logerrorInt("Error %d adding allowed sender entry "
-				    "- ignoring.", iRet);
-			rsParsDestruct(pPars);
-			return(iRet);
+		        if (iRet == RS_RET_NOENTRY) {
+			        logerrorInt("Error %d adding allowed sender entry "
+					    "- ignoring.", iRet);
+		        } else {
+			        logerrorInt("Error %d adding allowed sender entry "
+					    "- terminating, nothing more will be added.", iRet);
+				rsParsDestruct(pPars);
+				return(iRet);
+		        }
 		}
 		free (uIP); /* copy stored in AllowedSenders list */ 
 	}
@@ -6189,7 +6201,7 @@ int main(int argc, char **argv)
 
 	/* END core initializations */
 
-	while ((ch = getopt(argc, argv, "46Aa:dehi:f:g:l:m:nop:r::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46Aa:dehi:f:g:l:m:nop:qQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -6256,6 +6268,12 @@ int main(int argc, char **argv)
 		case 'p':		/* path to regular log socket */
 			funixn[0] = optarg;
 			break;
+		case 'q':               /* add hostname if DNS resolving has failed */
+		        ACLAddHostnameOnFail = 1;
+		        break;
+		case 'Q':               /* dont resolve hostnames in ACL to IPs */
+		        ACLDontResolve = 1;
+		        break;
 		case 'r':		/* accept remote messages */
 #ifdef SYSLOG_INET
 			AcceptRemote = 1;
