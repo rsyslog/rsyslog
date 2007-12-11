@@ -62,7 +62,6 @@ SyncObjExit(pthread_mutex_t **mut)
 void
 lockObj(pthread_mutex_t *mut)
 {
-dbgprintf("trying to lock %lx\n", (unsigned long) mut);
 	pthread_mutex_lock(mut);
 }
 
@@ -71,7 +70,6 @@ dbgprintf("trying to lock %lx\n", (unsigned long) mut);
 void
 unlockObj(pthread_mutex_t *mut)
 {
-dbgprintf("trying to UNlock %lx\n", (unsigned long) mut);
 	pthread_mutex_unlock(mut);
 }
 
