@@ -33,8 +33,18 @@
 #define SYNC_OBJ_TOOL pthread_mutex_t *Sync_mut;
 #define SYNC_OBJ_TOOL_INIT(x) SyncObjInit(&((x)->Sync_mut))
 #define SYNC_OBJ_TOOL_EXIT(x) SyncObjExit(&((x)->Sync_mut))
+
+/* If we run in non-debug mode, we use inline code for the mutex
+ * operations. If we run in debug mode, we use functions, because they
+ * are better to trace in the callframe.
+ */
+#ifndef	NDEBUG
+#define LockObj(x) pthread_mutex_lock((x)->Sync_mut)
+#define UnlockObj(x) pthread_mutex_unlock((x)->Sync_mut)
+#else
 #define LockObj(x) lockObj((x)->Sync_mut)
 #define UnlockObj(x) unlockObj((x)->Sync_mut)
+#endif
 
 void SyncObjInit(pthread_mutex_t **mut);
 void SyncObjExit(pthread_mutex_t **mut);
