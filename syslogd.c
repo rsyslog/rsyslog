@@ -2476,6 +2476,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 		dbgprintf("msg repeated %d times, %ld sec of %d.\n",
 		    pAction->f_prevcount, time(NULL) - pAction->f_time,
 		    repeatinterval[pAction->f_repeatcount]);
+		/* use current message, so we have the new timestamp (means we need to discard previous one) */
 		MsgDestruct(pAction->f_pMsg);
 		pAction->f_pMsg = MsgAddRef(pMsg);
 		/* If domark would have logged this by now, flush it now (so we don't hold
@@ -3469,7 +3470,10 @@ domark(void)
 			MarkSeq = 0;
 		}
 
-		/* see if we need to flush any "message repeated n times"... */
+		/* see if we need to flush any "message repeated n times"... 
+		 * Note that this interferes with objects running on another thread.
+		 * We are using appropriate locking inside the function to handle that.
+		 */
 		for (f = Files; f != NULL ; f = f->f_next) {
 			llExecFunc(&f->llActList, domarkActions, NULL);
 		}

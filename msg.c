@@ -1190,7 +1190,7 @@ void MsgSetMSG(msg_t *pMsg, char* pszMSG)
 		free(pMsg->pszMSG);
 
 	pMsg->iLenMSG = strlen(pszMSG);
-	if((pMsg->pszMSG = malloc(pMsg->iLenMSG + 1)) != NULL)
+	if((pMsg->pszMSG = (uchar*) malloc(pMsg->iLenMSG + 1)) != NULL)
 		memcpy(pMsg->pszMSG, pszMSG, pMsg->iLenMSG + 1);
 	else
 		dbgprintf("MsgSetMSG could not allocate memory for pszMSG buffer.");
@@ -1205,7 +1205,7 @@ void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg)
 		free(pMsg->pszRawMsg);
 
 	pMsg->iLenRawMsg = strlen(pszRawMsg);
-	if((pMsg->pszRawMsg = malloc(pMsg->iLenRawMsg + 1)) != NULL)
+	if((pMsg->pszRawMsg = (uchar*) malloc(pMsg->iLenRawMsg + 1)) != NULL)
 		memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg + 1);
 	else
 		dbgprintf("Could not allocate memory for pszRawMsg buffer.");
