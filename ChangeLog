@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 1.20.2 (rgerhards), 2007-12-??
+---------------------------------------------------------------------------
 Version 1.20.1 (rgerhards), 2007-12-12
 - corrected a debug setting that survived release. Caused TCP connections
   to be retried unnecessarily often.
