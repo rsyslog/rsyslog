@@ -3307,9 +3307,10 @@ fprintlog(action_t *pAction)
 {
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
-	pMsgSave = NULL;	/* indicate message poiner not saved */
 	DEFiRet;
 	int i;
+
+	pMsgSave = NULL;	/* indicate message poiner not saved */
 	/* first check if this is a regular message or the repeation of
 	 * a previous message. If so, we need to change the message text
 	 * to "last message repeated n times" and then go ahead and write
@@ -4059,6 +4060,9 @@ finalize_it:
 
 /* helper to freeSelectors(), used with llExecFunc() to flush 
  * pending output.  -- rgerhards, 2007-08-02
+ * We do not need to lock the action object here as the processing
+ * queue is already empty and no other threads are running when
+ * we call this function. -- rgerhards, 2007-12-12
  */
 DEFFUNC_llExecFunc(freeSelectorsActions)
 {
@@ -4067,7 +4071,6 @@ DEFFUNC_llExecFunc(freeSelectorsActions)
 	assert(pAction != NULL);
 
 	/* flush any pending output */
-/* TODO: look at how this is done in the shutdown sequence (do we need to lock, wait?) */
 	if(pAction->f_prevcount) {
 		fprintlog(pAction);
 	}
@@ -4092,17 +4095,22 @@ static void freeSelectors(void)
 		 */
 		processImInternal();
 
-		/* we need first to flush, then wait for all messages to be processed
-		 * (stopWoker() does that), then we can free the structures.
+		/* we first wait until all messages are processed (stopWorker() does
+		 * that. Then, we go one last time over all actions and flush any
+		 * pending "message repeated n times" messages. We must use this sequence
+		 * because otherwise we would flush at whatever message is currently being
+		 * processed without draining the queue. That would lead to invalid
+		 * results. -- rgerhards, 2007-12-12
 		 */
-		for(f = Files ; f != NULL ; f = f->f_next) {
-			llExecFunc(&f->llActList, freeSelectorsActions, NULL);
-		}
-
 #		ifdef USE_PTHREADS
 		stopWorker();
 #		endif
 
+		for(f = Files ; f != NULL ; f = f->f_next) {
+			llExecFunc(&f->llActList, freeSelectorsActions, NULL);
+		}
+
+		/* actions flushed and ready for destruction - so do that... */
 		f = Files;
 		while (f != NULL) {
 			fPrev = f;
