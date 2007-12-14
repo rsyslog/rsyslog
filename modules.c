@@ -255,6 +255,7 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 	/* ... and now the module-specific interfaces */
 	switch(pNew->eType) {
 		case eMOD_IN:
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"runInput", &pNew->mod.im.runInput));
 			break;
 		case eMOD_OUT:
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"doAction", &pNew->mod.om.doAction));
@@ -293,6 +294,7 @@ finalize_it:
 /* Print loaded modules. This is more or less a 
  * debug or test aid, but anyhow I think it's worth it...
  * This only works if the dbgprintf() subsystem is initialized.
+ * TODO: update for new input modules!
  */
 void modPrintList(void)
 {

@@ -373,7 +373,10 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * differences) is needed.
  */
 #define CODEqueryEtryPt_STD_IMOD_QUERIES \
-	CODEqueryEtryPt_STD_MOD_QUERIES
+	CODEqueryEtryPt_STD_MOD_QUERIES \
+	else if(!strcmp((char*) name, "runInput")) {\
+		*pEtryPoint = runInput;\
+	}
 
 /* modInit()
  * This has an extra parameter, which is the specific name of the modInit

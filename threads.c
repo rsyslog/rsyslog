@@ -101,6 +101,26 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 }
 
 
+/* Start a new thread and add it to the list of currently
+ * executing threads. It is added at the end of the list.
+ * rgerhards, 2007-12-14
+ */
+rsRetVal thrdCreate(void* (*thrdMain)(void*))
+{
+	DEFiRet;
+	thrdInfo_t *pThis;
+	int i;
+
+	assert(thrdMain != NULL);
+
+	CHKiRet(thrdConstruct(&pThis));
+	i = pthread_create(&pThis->thrdID, NULL, thrdMain, NULL);
+
+finalize_it:
+	return iRet;
+}
+
+
 /* initialize the thread-support subsystem
  * must be called once at the start of the program
  */

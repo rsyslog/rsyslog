@@ -73,14 +73,10 @@ typedef struct moduleInfo {
 	 * can allocate instance memory in this call.
 	 */
 	rsRetVal (*createInstance)();
-	/* input module specific members */
-	/* TODO: do a union with members, pass pointer to msg submit function to IM  rger, 2007-12-14 */
-	rsRetVal (*runInput)(void);		/* function to gather input and submit to queue */
+	/* TODO: pass pointer to msg submit function to IM  rger, 2007-12-14 */
 	union	{
 		struct {/* data for input modules */
-			/* input modules come after output modules are finished, I am
-			 * currently not really thinking about them. rgerhards, 2007-07-19
-			 */
+			rsRetVal (*runInput)(void);		/* function to gather input and submit to queue */
 		} im;
 		struct {/* data for output modules */
 			/* below: perform the configured action

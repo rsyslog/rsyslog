@@ -50,6 +50,7 @@ typedef struct {
 
 /* prototypes */
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
+rsRetVal thrdCreate(void* (*thrdMain)(void*));
 msgQueue *queueInit (void);
 void queueDelete (msgQueue *q);
 void queueAdd (msgQueue *q, void* in);

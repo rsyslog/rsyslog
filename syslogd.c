@@ -4243,6 +4243,8 @@ startInputModules(void)
 	pMod = modGetNxtType(NULL, eMOD_IN);
 	while(pMod != NULL) {
 		/* activate here */
+dbgprintf("thread creating...\n");
+		thrdCreate(pMod->mod.im.runInput);
 		pMod = modGetNxtType(pMod, eMOD_IN);
 	}
 
