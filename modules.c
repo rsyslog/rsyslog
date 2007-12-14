@@ -208,7 +208,8 @@ finalize_it:
 rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *name, void *pModHdlr)
 {
 	DEFiRet;
-	modInfo_t *pNew;
+	modInfo_t *pNew = NULL;
+	rsRetVal (*modGetType)(eModType_t *pType);
 
 	assert(modInit != NULL);
 
@@ -218,72 +219,52 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 		bCfsyslineInitialized = 1;
 	}
 
-	if((iRet = moduleConstruct(&pNew)) != RS_RET_OK)
-		return iRet;
-
-	if((iRet = (*modInit)(1, &pNew->iIFVers, &pNew->modQueryEtryPt, queryHostEtryPt)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
+	if((iRet = moduleConstruct(&pNew)) != RS_RET_OK) {
+		pNew = NULL;
+		ABORT_FINALIZE(iRet);
 	}
+
+	CHKiRet((*modInit)(1, &pNew->iIFVers, &pNew->modQueryEtryPt, queryHostEtryPt));
 
 	if(pNew->iIFVers != 1) {
-		moduleDestruct(pNew);
-		return RS_RET_MISSING_INTERFACE;
+		ABORT_FINALIZE(RS_RET_MISSING_INTERFACE);
 	}
 
-	/* OK, we know we can successfully work with the module. So we now fill the
-	 * rest of the data elements.
+	/* We now poll the module to see what type it is. We do this only once as this
+	 * can never change in the lifetime of an module. -- rgerhards, 2007-12-14
 	 */
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"doAction", &pNew->mod.om.doAction)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature",
-			                   &pNew->isCompatibleWithFeature)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"dbgPrintInstInfo",
-			                   &pNew->dbgPrintInstInfo)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"getWriteFDForSelect", &pNew->getWriteFDForSelect)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"onSelectReadyWrite", &pNew->onSelectReadyWrite)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"needUDPSocket", &pNew->needUDPSocket)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"modGetID", &pNew->modGetID)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
-	}
-	if((iRet = (*pNew->modQueryEtryPt)((uchar*)"modExit", &pNew->modExit)) != RS_RET_OK) {
-		moduleDestruct(pNew);
-		return iRet;
+	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getType", &modGetType));
+	CHKiRet((iRet = (*modGetType)(&pNew->eType)) != RS_RET_OK);
+	dbgprintf("module of type %d being loaded.\n", pNew->eType);
+	
+	/* OK, we know we can successfully work with the module. So we now fill the
+	 * rest of the data elements. First we load the interfaces common to all
+	 * module types.
+	 */
+	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"dbgPrintInstInfo", &pNew->dbgPrintInstInfo));
+	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"modGetID", &pNew->modGetID));
+	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"modExit", &pNew->modExit));
+	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance));
+
+	/* ... and now the module-specific interfaces */
+	switch(pNew->eType) {
+		case eMOD_IN:
+			break;
+		case eMOD_OUT:
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"doAction", &pNew->mod.om.doAction));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature", &pNew->isCompatibleWithFeature));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getWriteFDForSelect", &pNew->getWriteFDForSelect));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"onSelectReadyWrite", &pNew->onSelectReadyWrite));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"needUDPSocket", &pNew->needUDPSocket));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume));
+			break;
+		case eMOD_FILTER:
+			break;
 	}
 
 	pNew->pszName = (uchar*) strdup((char*)name); /* we do not care if strdup() fails, we can accept that */
 	pNew->pModHdlr = pModHdlr;
-	pNew->eType = eMOD_OUT; /* TODO: take this from module */
 	/* TODO: take this from module */
 	if(pModHdlr == NULL)
 		pNew->eLinkType = eMOD_LINK_STATIC;
@@ -294,6 +275,12 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 	addModToList(pNew);
 
 finalize_it:
+
+	if(iRet != RS_RET_OK) {
+		if(pNew != NULL)
+			moduleDestruct(pNew);
+	}
+
 	return iRet;
 }
 
@@ -381,6 +368,5 @@ rsRetVal modUnloadAndDestructDynamic(void)
 
 	return iRet;
 }
-/*
- * vi:set ai:
+/* vi:set ai:
  */

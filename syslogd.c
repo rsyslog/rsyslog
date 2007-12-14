@@ -3835,8 +3835,13 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK)
-		return iRet;
+	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK) {
+		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', rsyslog error %d\n", szPath, iRet);
+		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
+		logerror((char *) errMsg);
+		dlclose(pModHdlr);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
@@ -6074,11 +6079,12 @@ static void mainThread()
 	 */
 
 	mainloop();
-
-	/* do any de-init's that need to be done AFTER this comment */
-	die(bFinished);
 }
 
+static void sigusr2Dummy(int sig)
+{
+dbgprintf("sigusr2Dummy called!\n");
+}
 
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
@@ -6351,6 +6357,8 @@ int main(int argc, char **argv)
 	sigaction(SIGALRM, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
 	sigaction(SIGUSR1, &sigAct, NULL);
+	sigAct.sa_handler = sigusr2Dummy;
+	sigaction(SIGUSR2, &sigAct, NULL);
 	sigAct.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sigAct, NULL);
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
@@ -6385,12 +6393,17 @@ int main(int argc, char **argv)
 	 * do a blocking wait on it - it makese sense... ;) rgerhards, 2007-10-08
 	 */
 #endif
+
+	/* do any de-init's that need to be done AFTER this comment */
 #if IMMARK
 dbgprintf("waiting to join thrdMain\n");
+	pthread_kill(thrdMain, SIGUSR2);
 	pthread_join(thrdMain, NULL);
 dbgprintf("joined thrdMain\n");
 #endif
 
+dbgprintf("reaching die\n");
+	die(bFinished);
 	return 0;
 }
 

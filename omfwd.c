@@ -66,6 +66,8 @@
 #include "gss-misc.h"
 #endif
 
+MODULE_TYPE_OUTPUT
+
 #ifdef SYSLOG_INET
 #define INET_SUSPEND_TIME 60		/* equal to 1 minute 
 					 * rgerhards, 2005-07-26: This was 3 minutes. As the

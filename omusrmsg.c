@@ -59,6 +59,8 @@
 #include "omusrmsg.h"
 #include "module-template.h"
 
+MODULE_TYPE_OUTPUT
+
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA

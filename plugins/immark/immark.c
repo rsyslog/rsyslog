@@ -1,4 +1,4 @@
-/* omfwd.c
+/* immark.c
  * This is the implementation of the build-in mark message input module.
  *
  * NOTE: read comments in module-template.h to understand how this file
@@ -30,13 +30,21 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
-#if 0 /* IMMARK */
+#if 1 /* IMMARK */
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include <signal.h>
+#include <string.h>
 #include <pthread.h>
 #include "rsyslog.h"
 #include "syslogd.h"
+#include "module-template.h"
+
+MODULE_TYPE_INPUT
+
+typedef struct _instanceData {
+} instanceData;
 
 /* This function is called to gather input. It must terminate only
  * a) on failure (iRet set accordingly)
@@ -58,15 +66,15 @@ immark_runInput(void)
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGTERM);
-	sigaddset(&sigSet, SIGHUP);
+	sigaddset(&sigSet, SIGUSR2);
 	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-dbgprintf("immark_runInput running!\n");
 	while(!bFinished) {
 dbgprintf("immark pre select\n");
-		tvSelectTimeout.tv_sec = 500;
+		tvSelectTimeout.tv_sec = 5;
 		tvSelectTimeout.tv_usec = 0;
 		select(0, NULL, NULL, NULL, &tvSelectTimeout);
+		if(bFinished)
+			break;
 dbgprintf("immark post select, doing mark, bFinished: %d\n", bFinished);
 		logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE);
 		//logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
@@ -74,6 +82,32 @@ dbgprintf("immark post select, doing mark, bFinished: %d\n", bFinished);
 fprintf(stderr, "immark: finished!\n");
 	return RS_RET_OK;
 }
+
+BEGINfreeInstance
+CODESTARTfreeInstance
+ENDfreeInstance
+
+
+BEGINdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo
+ENDdbgPrintInstInfo
+
+
+BEGINmodExit
+CODESTARTmodExit
+ENDmodExit
+
+
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_IMOD_QUERIES
+ENDqueryEtryPt
+
+
+BEGINmodInit()
+CODESTARTmodInit
+	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+ENDmodInit
 #endif /* #if 0 */
 /*
  * vi:set ai:

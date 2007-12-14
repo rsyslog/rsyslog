@@ -26,12 +26,29 @@
 #ifndef	MODULE_TEMPLATE_H_INCLUDED
 #define	MODULE_TEMPLATE_H_INCLUDED 1
 
+#include "modules.h"
 #include "objomsr.h"
 
 /* macro to define standard output-module static data members
  */
 #define DEF_OMOD_STATIC_DATA \
 	static rsRetVal (*omsdRegCFSLineHdlr)();
+
+/* Macro to define the module type. Each module can only have a single type. If
+ * a module provides multiple types, several separate modules must be created which
+ * then should share a single library containing the majority of code. This macro
+ * must be present in each module. -- rgerhards, 2007-12-14
+ */
+#define MODULE_TYPE(x)\
+static rsRetVal modGetType(eModType_t *modType) \
+	{ \
+		*modType = x; \
+		return RS_RET_OK;\
+	}
+
+#define MODULE_TYPE_INPUT MODULE_TYPE(eMOD_IN)
+#define MODULE_TYPE_OUTPUT MODULE_TYPE(eMOD_OUT)
+#define MODULE_TYPE_FILTER MODULE_TYPE(EMOD_FILTER)
 
 /* macro to define a unique module id. This must be able to fit in a void*. The
  * module id must be unique inside a running rsyslogd application. It is used to
@@ -311,23 +328,35 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	return iRet;\
 }
 
-/* the following definition is the standard block for queryEtryPt for output
- * modules. This can be used if no specific handling (e.g. to cover version
- * differences) is needed.
+/* the following definition is the standard block for queryEtryPt for all types
+ * of modules. It should be included in any module, and typically is so by calling
+ * the module-type specific macros.
  */
-#define CODEqueryEtryPt_STD_OMOD_QUERIES \
-	if(!strcmp((char*) name, "doAction")) {\
-		*pEtryPoint = doAction;\
-	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
-		*pEtryPoint = parseSelectorAct;\
-	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
-		*pEtryPoint = isCompatibleWithFeature;\
-	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
+#define CODEqueryEtryPt_STD_MOD_QUERIES \
+	if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
 		*pEtryPoint = dbgPrintInstInfo;\
 	} else if(!strcmp((char*) name, "freeInstance")) {\
 		*pEtryPoint = freeInstance;\
 	} else if(!strcmp((char*) name, "modExit")) {\
 		*pEtryPoint = modExit;\
+	} else if(!strcmp((char*) name, "modGetID")) {\
+		*pEtryPoint = modGetID;\
+	} else if(!strcmp((char*) name, "getType")) {\
+		*pEtryPoint = modGetType;\
+	}
+
+/* the following definition is the standard block for queryEtryPt for output
+ * modules. This can be used if no specific handling (e.g. to cover version
+ * differences) is needed.
+ */
+#define CODEqueryEtryPt_STD_OMOD_QUERIES \
+	CODEqueryEtryPt_STD_MOD_QUERIES \
+	else if(!strcmp((char*) name, "doAction")) {\
+		*pEtryPoint = doAction;\
+	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
+		*pEtryPoint = parseSelectorAct;\
+	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
+		*pEtryPoint = isCompatibleWithFeature;\
 	} else if(!strcmp((char*) name, "getWriteFDForSelect")) {\
 		*pEtryPoint = getWriteFDForSelect;\
 	} else if(!strcmp((char*) name, "onSelectReadyWrite")) {\
@@ -336,10 +365,14 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = needUDPSocket;\
 	} else if(!strcmp((char*) name, "tryResume")) {\
 		*pEtryPoint = tryResume;\
-	} else if(!strcmp((char*) name, "modGetID")) {\
-		*pEtryPoint = modGetID;\
 	}
 
+/* the following definition is the standard block for queryEtryPt for INPUT
+ * modules. This can be used if no specific handling (e.g. to cover version
+ * differences) is needed.
+ */
+#define CODEqueryEtryPt_STD_IMOD_QUERIES \
+	CODEqueryEtryPt_STD_MOD_QUERIES
 
 /* modInit()
  * This has an extra parameter, which is the specific name of the modInit
