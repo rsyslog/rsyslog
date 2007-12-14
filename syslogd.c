@@ -1,3 +1,9 @@
+#define IMMARK 0 /* this is an aid to allow commiting work in progress to cvs. will be removed
+                  * once we have a version that is ready to compile cleanly. If you don't 
+                  * develop immark, make sure this is set to 0 (should I forget to do that
+                  * when I check in).
+                  * rgerhards, 2007-12-14
+                  */
 /**
  * \brief This is the main file of the rsyslogd daemon.
  *
@@ -224,6 +230,9 @@
 #include "omfwd.h"
 #include "omfile.h"
 #include "omdiscard.h"
+#if IMMARK
+#include "plugins/immark/immark.h"
+#endif
 
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
@@ -389,7 +398,7 @@ static int bGlblDone = 0;
 
 static int bParseHOSTNAMEandTAG = 1; /* global config var: should the hostname and tag be
                                       * parsed inside message - rgerhards, 2006-03-13 */
-static int bFinished = 0;	/* used by termination signal handler, read-only except there
+int bFinished = 0;		/* used by termination signal handler, read-only except there
 				 * is either 0 or the number of the signal that requested the
  				 * termination.
 				 */
@@ -2231,10 +2240,12 @@ void printline(char *hname, char *msg, int bParseHost)
  * function here probably is only an interim solution and that we need to
  * think on the best way to do this.
  */
-static void
+void
 logmsgInternal(int pri, char *msg, int flags)
 {
 	msg_t *pMsg;
+
+dbgprintf("logmsgInternal: msg passed: '%s'\n", msg);
 
 	if((pMsg = MsgConstruct()) == NULL){
 		/* rgerhards 2004-11-09: calling panic might not be the
@@ -3464,11 +3475,17 @@ domark(void)
 	register selector_t *f;
 
 	if (MarkInterval > 0) {
+/* Commented out, will be replaced by immark - just leave it in place for the 
+ * time being so we know what happens. Remove once immark is done.
+ * rgerhards, 2007-12-12
+ */
+#if !IMMARK
 		MarkSeq += TIMERINTVL;
 		if (MarkSeq >= MarkInterval) {
 			logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
 			MarkSeq = 0;
 		}
+#endif
 
 		/* see if we need to flush any "message repeated n times"... 
 		 * Note that this interferes with objects running on another thread.
@@ -6211,7 +6228,7 @@ int main(int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	struct sigaction sigAct;
-#if 0 /* see comment for #if 0 below (towards end of function) */
+#if IMMARK /* see comment for #if 0 below (towards end of function) */
 	pthread_t thrdMain;
 	sigset_t sigSet;
 #endif
@@ -6474,6 +6491,11 @@ int main(int argc, char **argv)
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
 
+#if IMMARK
+	i = pthread_create(&thrdMain, NULL, immark_runInput, NULL);
+	dbgprintf("\"main\" thread started with state %d.\n", i);
+#endif
+
 	mainThread();
 
 #if 0
@@ -6497,7 +6519,11 @@ int main(int argc, char **argv)
 	/* see comment in mainThread on why we start thread and then immediately
 	 * do a blocking wait on it - it makese sense... ;) rgerhards, 2007-10-08
 	 */
+#endif
+#if IMMARK
+dbgprintf("waiting to join thrdMain\n");
 	pthread_join(thrdMain, NULL);
+dbgprintf("joined thrdMain\n");
 #endif
 
 	return 0;

@@ -66,6 +66,11 @@ void untty(void);
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
 rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts);
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
+/* the following prototypes should go away once we have an input
+ * module interface -- rgerhards, 2007-12-12
+ */
+void logmsgInternal(int pri, char *msg, int flags);
+extern int bFinished;		/* used by termination signal handler, read-only except there */
 
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */
 extern char LocalHostName[];

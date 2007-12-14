@@ -83,6 +83,8 @@ EXTRA_DIST = \
 
 SUBDIRS = doc
 
+SUBDIRS += plugins/immark
+
 if ENABLE_MYSQL
 SUBDIRS += plugins/ommysql
 endif

@@ -29,7 +29,7 @@ struct rsCStrObject
 #endif
 	uchar *pBuf;		/**< pointer to the string buffer, may be NULL if string is empty */
 	uchar *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
-	size_t iBufSize;		/**< current maximum size of the string buffer */
+	size_t iBufSize;	/**< current maximum size of the string buffer */
 	size_t iStrLen;		/**< length of the string in characters. */
 	size_t iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
 };
