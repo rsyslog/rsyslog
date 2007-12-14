@@ -216,6 +216,7 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 	DEFiRet;
 	modInfo_t *pNew = NULL;
 	rsRetVal (*modGetType)(eModType_t *pType);
+	rsRetVal (*modGetTermSyncType)(eTermSyncType_t *pType);
 
 	assert(modInit != NULL);
 
@@ -255,6 +256,8 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 	/* ... and now the module-specific interfaces */
 	switch(pNew->eType) {
 		case eMOD_IN:
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getTermSyncType", &modGetTermSyncType));
+			CHKiRet((iRet = (*modGetTermSyncType)(&pNew->mod.im.eTermSyncType)) != RS_RET_OK);
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"runInput", &pNew->mod.im.runInput));
 			break;
 		case eMOD_OUT:

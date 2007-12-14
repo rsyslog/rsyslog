@@ -118,7 +118,7 @@ dbgprintf("thrdTerminateAll out\n");
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(void* (*thrdMain)(void*))
+rsRetVal thrdCreate(void* (*thrdMain)(void*), eTermSyncType_t eTermSyncType)
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -127,11 +127,22 @@ rsRetVal thrdCreate(void* (*thrdMain)(void*))
 	assert(thrdMain != NULL);
 
 	CHKiRet(thrdConstruct(&pThis));
+	pThis->eTermTool = eTermSyncType;
+	pThis->bIsActive = 1;
 	i = pthread_create(&pThis->thrdID, NULL, thrdMain, NULL);
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:
 	return iRet;
+}
+
+
+/* This is a dummy handler. We user SIGUSR2 to interrupt blocking system calls
+ * if we are in termination mode 1.
+ */
+static void sigusr2Dummy(int sig)
+{
+	dbgprintf("sigusr2Dummy called!\n");
 }
 
 
@@ -141,8 +152,15 @@ finalize_it:
 rsRetVal thrdInit(void)
 {
 	DEFiRet;
+	struct sigaction sigAct;
 
 	iRet = llInit(&llThrds, thrdDestruct, NULL, NULL);
+
+	/* set up our termination subsystem */
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = sigusr2Dummy;
+	sigaction(SIGUSR2, &sigAct, NULL);
 
 	return iRet;
 }

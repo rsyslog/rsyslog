@@ -376,6 +376,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	CODEqueryEtryPt_STD_MOD_QUERIES \
 	else if(!strcmp((char*) name, "runInput")) {\
 		*pEtryPoint = runInput;\
+	} else if(!strcmp((char*) name, "getTermSyncType")) {\
+		*pEtryPoint = modGetTermSyncType;\
 	}
 
 /* modInit()
@@ -465,6 +467,16 @@ static rsRetVal runInput(void)\
 
 #define ENDrunInput \
 	return iRet;\
+}
+
+/* method to return which termination sync method is used by this module.
+ */
+#define TERM_SYNC_TYPE(x) \
+static rsRetVal modGetTermSyncType(eTermSyncType_t *pTermSync)\
+{\
+	assert(pTermSync != NULL); \
+	*pTermSync = (x);\
+	return RS_RET_OK;\
 }
 
 /*

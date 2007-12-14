@@ -49,9 +49,11 @@ typedef struct {
 } msgQueue;
 
 /* prototypes */
+rsRetVal thrdExit(void);
+rsRetVal thrdInit(void);
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
-rsRetVal thrdCreate(void* (*thrdMain)(void*));
+rsRetVal thrdCreate(void* (*thrdMain)(void*), eTermSyncType_t eTermSyncType);
 msgQueue *queueInit (void);
 void queueDelete (msgQueue *q);
 void queueAdd (msgQueue *q, void* in);

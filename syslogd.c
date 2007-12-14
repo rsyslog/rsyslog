@@ -4246,7 +4246,7 @@ startInputModules(void)
 	while(pMod != NULL) {
 		/* activate here */
 dbgprintf("thread creating...\n");
-		thrdCreate(pMod->mod.im.runInput);
+		thrdCreate(pMod->mod.im.runInput, pMod->mod.im.eTermSyncType);
 		pMod = modGetNxtType(pMod, eMOD_IN);
 	}
 
@@ -5323,7 +5323,8 @@ int decode(uchar *name, struct code *codetab)
 }
 
 extern void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
-void dbgprintf(char *fmt, ...)
+void
+dbgprintf(char *fmt, ...)
 {
 	static int bWasNL = FALSE;
 	va_list ap;
@@ -5342,7 +5343,7 @@ void dbgprintf(char *fmt, ...)
 	 * rgerhards, 2007-06-15
 	 */
 	if(bWasNL) {
-		fprintf(stdout, "%8.8d: ", (unsigned int) pthread_self());
+		fprintf(stdout, "%8.8x: ", (unsigned int) pthread_self());
 	}
 	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? TRUE : FALSE;
 	va_start(ap, fmt);
@@ -6118,10 +6119,6 @@ static void mainThread()
 	mainloop();
 }
 
-static void sigusr2Dummy(int sig)
-{
-dbgprintf("sigusr2Dummy called!\n");
-}
 
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
@@ -6395,8 +6392,6 @@ int main(int argc, char **argv)
 	sigaction(SIGALRM, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
 	sigaction(SIGUSR1, &sigAct, NULL);
-	sigAct.sa_handler = sigusr2Dummy;
-	sigaction(SIGUSR2, &sigAct, NULL);
 	sigAct.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sigAct, NULL);
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */

@@ -32,6 +32,7 @@
 #define	MODULES_H_INCLUDED 1
 
 #include "objomsr.h"
+#include "threads.h"
 
 typedef enum eModType_ {
 	eMOD_IN,	/* input module */
@@ -76,6 +77,7 @@ typedef struct moduleInfo {
 	/* TODO: pass pointer to msg submit function to IM  rger, 2007-12-14 */
 	union	{
 		struct {/* data for input modules */
+			eTermSyncType_t eTermSyncType;
 			rsRetVal (*runInput)(void);		/* function to gather input and submit to queue */
 		} im;
 		struct {/* data for output modules */

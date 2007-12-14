@@ -43,6 +43,7 @@
 #include "module-template.h"
 
 MODULE_TYPE_INPUT
+TERM_SYNC_TYPE(eTermSync_SIGNAL)
 
 /* Module static data */
 /* TODO: this needs a lot of work ;) */
@@ -84,7 +85,7 @@ dbgprintf("immark post select, doing mark, bFinished: %d\n", bFinished);
 		logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE);
 		//logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
 	}
-fprintf(stderr, "immark: finished!\n");
+dbgprintf("immark: finished!\n");
 	return RS_RET_OK;
 ENDrunInput
 
