@@ -23,10 +23,6 @@
 
 #include "config.h"
 
-#ifdef USE_PTHREADS
-/* all of this code is compiled only if PTHREADS is supported - otherwise
- * we do not need syncrhonization objects (and do not have them!).
- */
 #include <stdlib.h>
 
 #include "rsyslog.h"
@@ -75,5 +71,3 @@ unlockObj(pthread_mutex_t *mut)
 	pthread_mutex_unlock(mut);
 }
 #endif /* #ifndef NDEBUG */
-
-#endif /* #ifdef USE_PTHREADS */

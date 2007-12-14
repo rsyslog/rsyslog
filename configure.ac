@@ -165,6 +165,10 @@ AC_ARG_ENABLE(pthreads,
         [enable_pthreads=yes]
 )
 
+if test "x$enable_pthreads" = "xno"; then
+	AC_MSG_ERROR(rsyslog v3 does no longer support single threading mode -- use a previous version for that);
+fi
+
 if test "x$enable_pthreads" != "xno"; then
   AC_CHECK_HEADERS(
     [pthread.h],

@@ -24,7 +24,6 @@
 #ifndef INCLUDED_SYNC_H
 #define INCLUDED_SYNC_H
 
-#ifdef USE_PTHREADS /* Code to compile for threading support */
 #include <pthread.h>
 
 /* SYNC_OBJ_TOOL definition must be placed in object to be synced!
@@ -51,13 +50,5 @@ void SyncObjInit(pthread_mutex_t **mut);
 void SyncObjExit(pthread_mutex_t **mut);
 extern void lockObj(pthread_mutex_t *mut);
 extern void unlockObj(pthread_mutex_t *mut);
-
-#else /* Code not to compile for threading support */
-#define SYNC_OBJ_TOOL
-#define SYNC_OBJ_TOOL_INIT(x)
-#define SYNC_OBJ_TOOL_EXIT(X)
-#define LockObj(x)
-#define UnlockObj(x)
-#endif
 
 #endif /* #ifndef INCLUDED_SYNC_H */
