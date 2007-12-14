@@ -3491,9 +3491,8 @@ static void doDie(int sig)
 
 
 /* die() is called when the program shall end. This typically only occurs
- * during sigterm or during the initialization. If you search for places where
- * it is called, search for "die", not "die(", because the later will not find
- * setting of signal handlers! As die() is intended to shutdown rsyslogd, it is
+ * during sigterm or during the initialization. 
+ * As die() is intended to shutdown rsyslogd, it is
  * safe to call exit() here. Just make sure that die() itself is not called
  * at inapropriate places. As a general rule of thumb, it is a bad idea to add
  * any calls to die() in new code!
@@ -3514,6 +3513,9 @@ static void die(int sig)
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, ADDDATE);
 	}
 	
+	/* close the inputs */
+	thrdTerminateAll(); /* TODO: inputs only, please */
+
 	/* Free ressources and close connections */
 	freeSelectors();
 
@@ -4275,6 +4277,8 @@ init(void)
 	eDfltHostnameCmpMode = HN_NO_COMP;
 	Forwarding = 0;
 
+dbgprintf("init()\n");
+	thrdTerminateAll(); /* stop all running threads - TODO: reconsider location! */
 #ifdef SYSLOG_INET
 	if (restart) {
 		if (pAllowedSenders_UDP != NULL) {
@@ -6275,6 +6279,7 @@ int main(int argc, char **argv)
 		usage();
 
 	checkPermissions();
+	thrdInit();
 
 	if ( !(Debug || NoFork) )
 	{
@@ -6437,9 +6442,12 @@ dbgprintf("joined thrdMain\n");
 
 dbgprintf("reaching die\n");
 	die(bFinished);
+	
+	thrdExit();
 	return 0;
 }
 
 
-/* vi:set ai:
+/*
+ * vi:set ai:
  */

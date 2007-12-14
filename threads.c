@@ -71,6 +71,7 @@ static rsRetVal thrdConstruct(thrdInfo_t **pThis)
 static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 {
 	assert(pThis != NULL);
+dbgprintf("thrdDestruct, pThis: %lx\n", pThis);
 
 	if(pThis->bIsActive == 1) {
 		thrdTerminate(pThis);
@@ -88,6 +89,7 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 {
 	assert(pThis != NULL);
 	
+dbgprintf("Terminate thread %d via method %d\n", pThis->thrdID, pThis->eTermTool);
 	if(pThis->eTermTool == eTermSync_SIGNAL) {
 		pthread_kill(pThis->thrdID, SIGUSR2);
 		pthread_join(pThis->thrdID, NULL);
@@ -97,6 +99,17 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	}
 	pThis->bIsActive = 0;
 	
+	return RS_RET_OK;
+}
+
+
+/* terminate all known threads gracefully.
+ */
+rsRetVal thrdTerminateAll(void)
+{
+dbgprintf("thrdTerminateAll in\n");
+	llDestroy(&llThrds);
+dbgprintf("thrdTerminateAll out\n");
 	return RS_RET_OK;
 }
 
@@ -115,6 +128,7 @@ rsRetVal thrdCreate(void* (*thrdMain)(void*))
 
 	CHKiRet(thrdConstruct(&pThis));
 	i = pthread_create(&pThis->thrdID, NULL, thrdMain, NULL);
+	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:
 	return iRet;
