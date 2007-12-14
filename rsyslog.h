@@ -2,6 +2,25 @@
  * rsyslog project (including all subprojects like
  * rfc3195d).
  * Begun 2005-09-15 RGerhards
+ *
+ * Copyright (C) 2005 by Rainer Gerhards and Adiscon GmbH
+ *
+ * This file is part of rsyslog.
+ *
+ * Rsyslog is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Rsyslog is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
 */
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H

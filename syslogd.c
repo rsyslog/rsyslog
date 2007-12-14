@@ -41,13 +41,22 @@
  * The code is now almost completely different. Be careful!
  * rgerhards, 2006-11-30
  * 
- * I have decided to put my code under the GPL. The sysklog package
- * is distributed under the BSD license. As such, this package here
- * currently comes with two licenses. Both are given below. As it is
- * probably hard for you to see what was part of the sysklogd package
- * and what is part of my code, I suggest that you visit the 
- * sysklogd site on the URL above if you would like to base your
- * development on a version that is not under the GPL.
+ * This file is part of rsyslog.
+ *
+ * Rsyslog is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Rsyslog is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
  *
  * This Project was intiated and is maintained by
  * Rainer Gerhards <rgerhards@hq.adiscon.com>. See
