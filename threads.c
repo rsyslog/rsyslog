@@ -27,16 +27,110 @@
 #include "config.h"
 #include "rsyslog.h"
 
-#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <pthread.h>
 #include <assert.h>
 
 #include "syslogd.h"
+#include "linkedlist.h"
 #include "threads.h"
 
+/* static data */
 int iMainMsgQueueSize;
 msgQueue *pMsgQueue = NULL;
+
+/* linked list of currently-known threads */
+static linkedList_t llThrds;
+
+/* methods */
+
+/* Construct a new thread object
+ */
+static rsRetVal thrdConstruct(thrdInfo_t **pThis)
+{
+	thrdInfo_t *pNew;
+
+	if((pNew = calloc(1, sizeof(thrdInfo_t))) == NULL)
+		return RS_RET_OUT_OF_MEMORY;
+
+	/* OK, we got the element, now initialize members that should
+	 * not be zero-filled.
+	 */
+
+	*pThis = pNew;
+	return RS_RET_OK;
+}
+
+
+/* Destructs a thread object. The object must not be linked to the
+ * linked list of threads. Please note that the thread should have been
+ * stopped before. If not, we try to do it.
+ */
+static rsRetVal thrdDestruct(thrdInfo_t *pThis)
+{
+	assert(pThis != NULL);
+
+	if(pThis->bIsActive == 1) {
+		thrdTerminate(pThis);
+	}
+	free(pThis);
+
+	return RS_RET_OK;
+}
+
+
+/* terminate a thread gracefully. It's termination sync state is taken into
+ * account.
+ */
+rsRetVal thrdTerminate(thrdInfo_t *pThis)
+{
+	assert(pThis != NULL);
+	
+	if(pThis->eTermTool == eTermSync_SIGNAL) {
+		pthread_kill(pThis->thrdID, SIGUSR2);
+		pthread_join(pThis->thrdID, NULL);
+		/* TODO: TIMEOUT! */
+	} else if(pThis->eTermTool == eTermSync_NONE) {
+		pthread_cancel(pThis->thrdID);
+	}
+	pThis->bIsActive = 0;
+	
+	return RS_RET_OK;
+}
+
+
+/* initialize the thread-support subsystem
+ * must be called once at the start of the program
+ */
+rsRetVal thrdInit(void)
+{
+	DEFiRet;
+
+	iRet = llInit(&llThrds, thrdDestruct, NULL, NULL);
+
+	return iRet;
+}
+
+
+/* de-initialize the thread subsystem
+ * must be called once at the end of the program
+ */
+rsRetVal thrdExit(void)
+{
+	DEFiRet;
+
+	iRet = llDestroy(&llThrds);
+
+	return iRet;
+}
+
+
+
+/* queue functions (may be migrated to some other file...)
+ */
+
 
 msgQueue *queueInit (void)
 {

@@ -73,6 +73,9 @@ typedef struct moduleInfo {
 	 * can allocate instance memory in this call.
 	 */
 	rsRetVal (*createInstance)();
+	/* input module specific members */
+	/* TODO: do a union with members, pass pointer to msg submit function to IM  rger, 2007-12-14 */
+	rsRetVal (*runInput)(void);		/* function to gather input and submit to queue */
 	union	{
 		struct {/* data for input modules */
 			/* input modules come after output modules are finished, I am
@@ -91,7 +94,7 @@ typedef struct moduleInfo {
 
 /* prototypes */
 rsRetVal doModInit(rsRetVal (*modInit)(), uchar *name, void *pModHdlr);
-modInfo_t *omodGetNxt(modInfo_t *pThis);
+modInfo_t *modGetNxtType(modInfo_t *pThis, eModType_t rqtdType);
 uchar *modGetName(modInfo_t *pThis);
 uchar *modGetStateName(modInfo_t *pThis);
 void modPrintList(void);

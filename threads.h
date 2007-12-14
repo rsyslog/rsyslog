@@ -23,6 +23,20 @@
 #ifndef THREADS_H_INCLUDED
 #define THREADS_H_INCLUDED
 
+
+/* type of sync tools for terminating the thread */
+typedef enum eTermSyncType {
+	eTermSync_NONE = 0,	/* no cleanup necessary, just cancel thread */
+	eTermSync_SIGNAL	/* termination via pthread_kill() */
+} eTermSyncType_t;
+
+/* the thread object */
+typedef struct thrdInfo {
+	eTermSyncType_t	eTermTool;
+	int bIsActive;		/* Is thread running? */
+	pthread_t thrdID;
+} thrdInfo_t;
+
 /* this is the first approach to a queue, this time with static
  * memory.
  */
@@ -35,6 +49,7 @@ typedef struct {
 } msgQueue;
 
 /* prototypes */
+rsRetVal thrdTerminate(thrdInfo_t *pThis);
 msgQueue *queueInit (void);
 void queueDelete (msgQueue *q);
 void queueAdd (msgQueue *q, void* in);

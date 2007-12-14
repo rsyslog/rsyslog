@@ -4227,10 +4227,34 @@ finalize_it:
 }
 
 
+/* Start the input modules. This function will probably undergo big changes
+ * while we implement the input module interface. For now, it does the most
+ * important thing to get at least my poor initial input modules up and
+ * running. Almost no config option is taken.
+ * rgerhards, 2007-12-14
+ */
+static rsRetVal
+startInputModules(void)
+{
+	DEFiRet;
+	modInfo_t *pMod;
+
+	/* loop through all modules and activate them (brr...) */
+	pMod = modGetNxtType(NULL, eMOD_IN);
+	while(pMod != NULL) {
+		/* activate here */
+		pMod = modGetNxtType(pMod, eMOD_IN);
+	}
+
+	return iRet;
+}
+
+
 /* INIT -- Initialize syslogd from configuration table
  * init() is called at initial startup AND each time syslogd is HUPed
  */
-static void init(void)
+static void
+init(void)
 {
 	DEFiRet;
 	register int i;
@@ -4422,6 +4446,13 @@ static void init(void)
 
 	Initialized = 1;
 
+	/* the output part and the queue is now ready to run. So it is a good time
+	 * now to start the inputs. Please note that the net code above should be
+	 * shuffled to down here once we have everything in input modules.
+	 * rgerhards, 2007-12-14
+	 */
+	startInputModules();
+
 	if(Debug) {
 		dbgPrintInitInfo();
 	}
@@ -4449,7 +4480,7 @@ static void init(void)
 	sigAct.sa_handler = sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
 
-	dbgprintf(" restarted.\n");
+	dbgprintf(" (re)started.\n");
 }
 
 
@@ -5058,7 +5089,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	assert(ppAction != NULL);
 
 	/* loop through all modules and see if one picks up the line */
-	pMod = omodGetNxt(NULL);
+	pMod = modGetNxtType(NULL, eMOD_OUT);
 	while(pMod != NULL) {
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
 		dbgprintf("tried selector action for %s: %d\n", modGetName(pMod), iRet);
@@ -5085,7 +5116,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 			dbgprintf("error %d parsing config line\n", (int) iRet);
 			break;
 		}
-		pMod = omodGetNxt(pMod);
+		pMod = modGetNxtType(pMod, eMOD_OUT);
 	}
 
 	*ppAction = pAction;

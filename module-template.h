@@ -28,6 +28,7 @@
 
 #include "modules.h"
 #include "objomsr.h"
+#include "threads.h"
 
 /* macro to define standard output-module static data members
  */
@@ -442,6 +443,24 @@ static rsRetVal modExit(void)\
 #define CODESTARTmodExit 
 
 #define ENDmodExit \
+	return iRet;\
+}
+
+
+/* runInput()
+ * This is the main function for input modules. It is used to gather data from the
+ * input source and submit it to the message queue. Each runInput() instance has its own
+ * thread. This is handled by the rsyslog engine. It needs to spawn off new threads only
+ * if there is a module-internal need to do so.
+ */
+#define BEGINrunInput \
+static rsRetVal runInput(void)\
+{\
+	DEFiRet;
+
+#define CODESTARTrunInput 
+
+#define ENDrunInput \
 	return iRet;\
 }
 

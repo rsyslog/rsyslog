@@ -160,13 +160,19 @@ modInfo_t *modGetNxt(modInfo_t *pThis)
 
 
 /* this function is like modGetNxt(), but it returns pointers to
- * output modules only. As we currently deal just with output modules,
+ * modules of specific type only. As we currently deal just with output modules,
  * it is a dummy, to be filled with real code later.
  * rgerhards, 2007-07-24
  */
-modInfo_t *omodGetNxt(modInfo_t *pThis)
+modInfo_t *modGetNxtType(modInfo_t *pThis, eModType_t rqtdType)
 {
-	return(modGetNxt(pThis));
+	modInfo_t *pMod = pThis;
+
+	do {
+		pMod = modGetNxt(pMod);
+	} while(!(pMod == NULL || pMod->eType == rqtdType)); /* warning: do ... while() */
+
+	return pMod;
 }
 
 

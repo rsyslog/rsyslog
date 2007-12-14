@@ -39,9 +39,15 @@
 #include <pthread.h>
 #include "rsyslog.h"
 #include "syslogd.h"
+#include "cfsysline.h"
 #include "module-template.h"
 
 MODULE_TYPE_INPUT
+
+/* Module static data */
+/* TODO: this needs a lot of work ;) */
+DEF_OMOD_STATIC_DATA
+static int bDoMarkMessages = 1;
 
 typedef struct _instanceData {
 } instanceData;
@@ -58,9 +64,8 @@ typedef struct _instanceData {
  * (and pre 1.20.2 releases of rsyslog) did in mark procesing. They simply
  * do not belong here.
  */
-rsRetVal
-immark_runInput(void)
-{
+BEGINrunInput
+CODESTARTrunInput
 	struct timeval tvSelectTimeout;
 	sigset_t sigSet;
 	sigfillset(&sigSet);
@@ -81,7 +86,8 @@ dbgprintf("immark post select, doing mark, bFinished: %d\n", bFinished);
 	}
 fprintf(stderr, "immark: finished!\n");
 	return RS_RET_OK;
-}
+ENDrunInput
+
 
 BEGINfreeInstance
 CODESTARTfreeInstance
@@ -107,6 +113,8 @@ ENDqueryEtryPt
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessages", 0, eCmdHdlrBinary, NULL, &bDoMarkMessages, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 #endif /* #if 0 */
 /*
