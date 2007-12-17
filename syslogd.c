@@ -2212,13 +2212,6 @@ void printline(char *hname, char *msg, int bParseHost)
 
 	logmsg(pri, pMsg, SYNC_FILE);
 
-	/* rgerhards 2004-11-11:
-	 * we are done with the message object. If it still is
-	 * stored somewhere, we can call discard anyhow. This
-	 * is handled via the reference count - see description
-	 * of msg_t for details.
-	 */
-	MsgDestruct(pMsg);
 	return;
 }
 
@@ -2272,7 +2265,6 @@ logmsgInternal(int pri, char *msg, int flags)
 		 * message to the queue engine.
 		 */
 		logmsg(pri, pMsg, flags);
-		MsgDestruct(pMsg);
 	}
 #else
 	iminternalAddMsg(pri, pMsg, flags);
@@ -2816,7 +2808,7 @@ static void enqueueMsg(msg_t *pMsg)
 				goto unlock;
 			}
 		}
-		queueAdd(fifo, MsgAddRef(pMsg));
+		queueAdd(fifo, pMsg);
 	unlock:
 		/* now activate the worker thread */
 		pthread_mutex_unlock(fifo->mut);
@@ -5538,7 +5530,6 @@ static void processImInternal(void)
 
 	while(iminternalRemoveMsg(&iPri, &pMsg, &iFlags) == RS_RET_OK) {
 		logmsg(iPri, pMsg, iFlags);
-		MsgDestruct(pMsg);
 	}
 }
 
