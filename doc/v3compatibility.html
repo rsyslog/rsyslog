@@ -1,0 +1,32 @@
+<html><head>
+<title>Writing syslog Data to MySQL</title>
+<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto">
+</head>
+<body>
+<h1>Compatibility notes for rsyslog v3</h1>
+		<P><small><i>Written by
+		<a href="http://www.gerhards.net/rainer">Rainer 
+		Gerhards</a> (2007-12-17)</i></small></P>
+<P>Rsyslog aims to be a drop-in replacement for sysklogd. However, version 3 has 
+some considerable enhancements, which lead to some backward compatibility issues 
+both in regard to sysklogd and rsyslog v1 and v2.</P>
+<P>Rsyslog v3 is currently under initial development. Compatibility issues may 
+be resolved, so be sure to check back often. Also, comments and suggestions are 
+appreciated. Feedback right in time can now have a big impact on the route we 
+take ;)</P>
+<h2>-m command line option</h2>
+<P>The -m command line option is ignored for the time being. There is no default 
+mark period. If you need a 20 minute mark period you need to</P>
+<P><b>$ModLoad immark # wherever this is<br>
+$MarkMessageInterval 1800 # 20 minutes</b></P>
+<h2>klogd</h2>
+<P>klogd has (finally) been replaced by a loadable input module. To enable klogd 
+functionality, do</P>
+<P><b>$ModLoad imklog</b></P>
+<P>A limited set of klogd command line settings is now supported via 
+rsyslog.conf. That set of configuration directives is to be expanded. So far, we 
+support:</P>
+<P>$klogSymbolsTwice [on/off]<br>
+$DebugPrintKernelSymbols [on/off] # spits *a lot* of messages at startup</P>
+</body>
+</html>
