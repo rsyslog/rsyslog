@@ -1,6 +1,12 @@
 ---------------------------------------------------------------------------
 Version 3.0.0 (rgerhards), 2007-12-??
 - license changed to GPLv3
+- first implementation of loadable input module system
+- mark messages are now provided by loadble module immark
+- rklogd is no longer provided. Its functionality has now been taken over
+  by imklog, a loadable input module. This offers a much better integration
+  into rsyslogd and makes sure that the kernel logger process is brought
+  up and down at the appropriate times
 ---------------------------------------------------------------------------
 Version 1.20.2 (rgerhards), 2007-12-??
 ---------------------------------------------------------------------------
