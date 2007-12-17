@@ -31,13 +31,13 @@
  */
 #include "config.h"
 #if 1 /* IMMARK */
+#include "rsyslog.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <signal.h>
 #include <string.h>
 #include <pthread.h>
-#include "rsyslog.h"
 #include "syslogd.h"
 #include "cfsysline.h"
 #include "module-template.h"
