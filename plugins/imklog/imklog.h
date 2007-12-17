@@ -26,6 +26,7 @@
 #define	IMKLOG_H_INCLUDED 1
 
 #include "rsyslog.h"
+#include "syslogd.h"
 
 /* prototypes */
 extern int InitKsyms(char *);

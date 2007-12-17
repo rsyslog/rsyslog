@@ -1,5 +1,3 @@
-#if 0
-#include "config.h"
 /*
     ksym_mod.c - functions for building symbol lookup tables for klogd
     Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
@@ -85,9 +83,12 @@
 
 
 /* Includes. */
+#include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 #include <errno.h>
 #include <sys/fcntl.h>
 #include <sys/stat.h>
@@ -103,7 +104,8 @@ extern int get_kernel_syms __P ((struct kernel_sym *__table));
 #include <paths.h>
 #include <linux/version.h>
 
-#include "klogd.h"
+#include "rsyslog.h"
+#include "imklog.h"
 #include "ksyms.h"
 
 
@@ -248,8 +250,7 @@ extern int InitMsyms()
 	{
  		if ( !AddModule(p->value, p->name) )
 		{
-			Syslog(LOG_WARNING, "Error adding kernel module table "
-				"entry.\n");
+			Syslog(LOG_WARNING, "Error adding kernel module table entry.\n");
 			free(ksym_table);
 			return(0);
 		}
@@ -354,16 +355,9 @@ static void FreeModules()
  *
  * Return:	int
  **************************************************************************/
-
-static int AddModule(address, symbol)
-
-     unsigned long address;
-
-     char *symbol;
-
+static int AddModule(unsigned long address, char *symbol)
 {
 	auto int memfd;
-
 	auto struct Module *mp;
 
 
@@ -408,7 +402,8 @@ static int AddModule(address, symbol)
 		if ( lseek64(memfd, address, SEEK_SET) < 0 )
 		{
 			Syslog(LOG_WARNING, "Error seeking in /dev/kmem\n");
-			Syslog(LOG_WARNING, "Symbol %s, value %08x\n", symbol, address);
+			Syslog(LOG_WARNING, "Symbol %s, value %08lx\n", symbol, 
+ 			       (unsigned long) address);
 			return(0);
 		}
 		if ( read(memfd, \
@@ -621,4 +616,3 @@ extern char * LookupModuleSymbol(value, sym)
 	/* It has been a hopeless exercise. */
 	return((char *) 0);
 }
-#endif

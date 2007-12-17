@@ -121,8 +121,6 @@
 #include "imklog.h"
 #include "ksyms.h"
 
-#define VERBOSE_DEBUGGING 0
-
 
 /* Variables static to this module. */
 struct sym_table
@@ -140,18 +138,8 @@ static char *system_maps[] =
 {
 	"/boot/System.map",
 	"/System.map",
-#if defined(TEST)
-	"./System.map",
-#endif
-	(char *) 0
+	NULL
 };
-
-
-#if defined(TEST)
-int debugging;
-#else
-extern int debugging;
-#endif
 
 
 /* Function prototypes. */
@@ -162,7 +150,7 @@ static int CheckVersion(char *);
 static int CheckMapVersion(char *);
 
 
-/**************************************************************************
+/*************************************************************************
  * Function:	InitKsyms
  *
  * Purpose:	This function is responsible for initializing and loading
@@ -179,11 +167,7 @@ static int CheckMapVersion(char *);
  *		A boolean style context is returned.  The return value will
  *		be true if initialization was successful.  False if not.
  **************************************************************************/
-
-extern int InitKsyms(mapfile)
-
-	char *mapfile;
-
+extern int InitKsyms(char *mapfile)
 {
 	auto char	type,
 			sym[512];
@@ -217,16 +201,14 @@ extern int InitKsyms(mapfile)
 		if ( (mapfile = FindSymbolFile()) == (char *) 0 ) 
 		{
 			Syslog(LOG_WARNING, "Cannot find map file.");
-			if ( debugging )
-				fputs("Cannot find map file.\n", stderr);
+			dbgprintf("Cannot find map file.\n");
 			return(0);
 		}
 		
 		if ( (sym_file = fopen(mapfile, "r")) == (FILE *) 0 )
 		{
 			Syslog(LOG_WARNING, "Cannot open map file.");
-			if ( debugging )
-				fputs("Cannot open map file.\n", stderr);
+			dbgprintf("Cannot open map file.\n");
 			return(0);
 		}
 	}
@@ -249,9 +231,7 @@ extern int InitKsyms(mapfile)
 			fclose(sym_file);
 			return(0);
 		}
-		if ( VERBOSE_DEBUGGING && debugging )
-			fprintf(stderr, "Address: %lx, Type: %c, Symbol: %s\n",
-				address, type, sym);
+		dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
 
 		if ( AddSymbol(address, sym) == 0 )
 		{
@@ -320,9 +300,7 @@ extern int InitKsyms(mapfile)
  *		caller which points to the name of the file containing
  *		the symbol table to be used.
  **************************************************************************/
-
-static char * FindSymbolFile()
-
+static char *FindSymbolFile(void)
 {
 	auto char	*file = (char *) 0,
 			**mf = system_maps;
@@ -338,15 +316,13 @@ static char * FindSymbolFile()
                 return(0);
         }
 
-	if ( debugging )
-		fputs("Searching for symbol map.\n", stderr);
+	dbgprintf("Searching for symbol map.\n");
 	
 	for (mf = system_maps; *mf != (char *) 0 && file == (char *) 0; ++mf)
 	{
  
 		sprintf (symfile, "%s-%s", *mf, utsname.release);
-		if ( debugging )
-			fprintf(stderr, "Trying %s.\n", symfile);
+		dbgprintf("Trying %s.\n", symfile);
 		if ( (sym_file = fopen(symfile, "r")) != (FILE *) 0 ) {
 			if (CheckMapVersion(symfile) == 1)
 				file = symfile;
@@ -354,8 +330,7 @@ static char * FindSymbolFile()
 		}
 		if (sym_file == (FILE *) 0 || file == (char *) 0) {
 			sprintf (symfile, "%s", *mf);
-			if ( debugging )
-				fprintf(stderr, "Trying %s.\n", symfile);
+			dbgprintf("Trying %s.\n", symfile);
 			if ( (sym_file = fopen(symfile, "r")) != (FILE *) 0 ) {
 				if (CheckMapVersion(symfile) == 1)
 					file = symfile;
@@ -369,8 +344,7 @@ static char * FindSymbolFile()
 	 * At this stage of the game we are at the end of the symbol
 	 * tables.
 	 */
-	if ( debugging )
-		fprintf(stderr, "End of search list encountered.\n");
+	dbgprintf("End of search list encountered.\n");
 	return(file);
 }
 
@@ -411,22 +385,14 @@ static char * FindSymbolFile()
  *			1:->	The executing kernel is of the same version
  *				as the version string.
  **************************************************************************/
-
-static int CheckVersion(version)
-
-	char *version;
-	
-
+static int CheckVersion(char *version)
 {
 	auto int	vnum,
 			major,
 			minor,
 			patch;
-
-#ifndef TESTING
 	int kvnum;
 	auto struct utsname utsname;
-#endif
 
 	static char *prefix = { "Version_" };
 
@@ -449,14 +415,10 @@ static int CheckVersion(version)
 	patch = vnum & 0x000000FF;
 	minor = (vnum >> 8) & 0x000000FF;
 	major = (vnum >> 16) & 0x000000FF;
-	if ( debugging )
-		fprintf(stderr, "Version string = %s, Major = %d, " \
-		       "Minor = %d, Patch = %d.\n", version +
-		       strlen(prefix), major, minor, \
-		       patch);
+	dbgprintf("Version string = %s, Major = %d, Minor = %d, Patch = %d.\n", version +
+		  strlen(prefix), major, minor, patch);
 	sprintf(vstring, "%d.%d.%d", major, minor, patch);
 
-#ifndef TESTING
 	/*
 	 * We should now have the version string in the vstring variable in
 	 * the same format that it is stored in by the kernel.  We now
@@ -469,9 +431,7 @@ static int CheckVersion(version)
 		Syslog(LOG_ERR, "Cannot get kernel version information.");
 		return(0);
 	}
-	if ( debugging )
-		fprintf(stderr, "Comparing kernel %s with symbol table %s.\n",\
-		       utsname.release, vstring);
+	dbgprintf("Comparing kernel %s with symbol table %s.\n", utsname.release, vstring);
 
 	if ( sscanf (utsname.release, "%d.%d.%d", &major, &minor, &patch) < 3 )
 	{
@@ -488,7 +448,6 @@ static int CheckVersion(version)
 		return(-1);
 
 	/* Success. */
-#endif
 	return(1);
 }
 
@@ -517,12 +476,7 @@ static int CheckVersion(version)
  *			1:->	The executing kernel is of the same version
  *				as the version of the map file.
  **************************************************************************/
-
-static int CheckMapVersion(fname)
-
-	char *fname;
-	
-
+static int CheckMapVersion(char *fname)
 {
 	int	version;
 	FILE	*sym_file;
@@ -548,10 +502,7 @@ static int CheckMapVersion(fname)
 				fclose(sym_file);
 				return(0);
 			}
-			if ( VERBOSE_DEBUGGING && debugging )
-				fprintf(stderr, "Address: %lx, Type: %c, " \
-				    "Symbol: %s\n", address, type, sym);
-
+			dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
 			version = CheckVersion(sym);
 		}
 		fclose(sym_file);
@@ -562,16 +513,11 @@ static int CheckMapVersion(fname)
 			Syslog(LOG_ERR, "Symbol table has incorrect " \
 				"version number.\n");
 			break;
-			
 		    case 0:
-			if ( debugging )
-				fprintf(stderr, "No version information " \
-					"found.\n");
+			dbgprintf("No version information found.\n");
 			break;
 		    case 1:
-			if ( debugging )
-				fprintf(stderr, "Found table with " \
-					"matching version number.\n");
+			dbgprintf("Found table with matching version number.\n");
 			break;
 		}
 
@@ -595,13 +541,7 @@ static int CheckMapVersion(fname)
  *		A boolean value is assumed.  True if the addition is
  *		successful.  False if not.
  **************************************************************************/
-
-static int AddSymbol(address, symbol)
-
-	unsigned long address;
-	
-	char *symbol;
-	
+static int AddSymbol(unsigned long address, char *symbol)
 {
 	/* Allocate the the symbol table entry. */
 	sym_array = (struct sym_table *) realloc(sym_array, (num_syms+1) * \
@@ -641,16 +581,9 @@ static int AddSymbol(address, symbol)
  *		If a match is found the pointer to the symbolic name most
  *		closely matching the address is returned.
  **************************************************************************/
-
-char * LookupSymbol(value, sym)
-
-	unsigned long value;
-
-	struct symbol *sym;
-	
+char * LookupSymbol(unsigned long value, struct symbol *sym)
 {
 	auto int lp;
-	
 	auto char *last;
 
 	if (!sym_array)
@@ -677,7 +610,7 @@ char * LookupSymbol(value, sym)
 	if ( (last = LookupModuleSymbol(value, sym)) != (char *) 0 )
 		return(last);
 
-	return((char *) 0);
+	return(NULL);
 }
 
 
@@ -693,9 +626,7 @@ char * LookupSymbol(value, sym)
  *
  * Return:	void
  **************************************************************************/
-
-static void FreeSymbols()
-
+static void FreeSymbols(void)
 {
 	auto int lp;
 
@@ -729,25 +660,16 @@ static void FreeSymbols()
  *
  * Return:	void
  **************************************************************************/
-
-extern char * ExpandKadds(line, el)
-
-	char *line;
-
-	char *el;
-	
+extern char *ExpandKadds(char *line, char *el)
 {
 	auto char	dlm,
 			*kp,
 			*sl = line,
 			*elp = el,
 			*symbol;
-
 	char num[15];
 	auto unsigned long int value;
-
 	auto struct symbol sym;
-
 
 	/*
 	 * This is as handy a place to put this as anyplace.
@@ -881,11 +803,8 @@ extern char * ExpandKadds(line, el)
 			
 		strcat(elp, symbol);
 		elp += strlen(symbol);
-		if ( debugging )
-			fprintf(stderr, "Symbol: %s = %lx = %s, %x/%d\n", \
-				sl+1, value, \
-				(sym.size==0) ? symbol+1 : symbol, \
-				sym.offset, sym.size);
+		dbgprintf("Symbol: %s = %lx = %s, %x/%d\n", sl+1, value, 
+			  (sym.size==0) ? symbol+1 : symbol, sym.offset, sym.size);
 
 		value = 2;
 		if ( sym.size != 0 )
@@ -902,8 +821,7 @@ extern char * ExpandKadds(line, el)
 	}
 	while ( kp != (char *) 0);
 		
-	if ( debugging )
-		fprintf(stderr, "Expanded line: %s\n", el);
+	dbgprintf("Expanded line: %s\n", el);
 	return(el);
 }
 

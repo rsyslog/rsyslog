@@ -40,6 +40,7 @@
 #include "template.h"
 #include "msg.h"
 #include "module-template.h"
+#include "imklog.h"
 
 MODULE_TYPE_INPUT
 TERM_SYNC_TYPE(eTermSync_SIGNAL)
