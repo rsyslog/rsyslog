@@ -28,6 +28,9 @@
 #include "rsyslog.h"
 #include "syslogd.h"
 
+/* global variables */
+extern int dbgPrintSymbols;
+
 /* prototypes */
 extern int InitKsyms(char *);
 extern int InitMsyms(void);

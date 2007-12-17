@@ -231,7 +231,8 @@ extern int InitKsyms(char *mapfile)
 			fclose(sym_file);
 			return(0);
 		}
-		dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
+		if(dbgPrintSymbols)
+			dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
 
 		if ( AddSymbol(address, sym) == 0 )
 		{
@@ -502,7 +503,8 @@ static int CheckMapVersion(char *fname)
 				fclose(sym_file);
 				return(0);
 			}
-			dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
+			if(dbgPrintSymbols)
+				dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
 			version = CheckVersion(sym);
 		}
 		fclose(sym_file);

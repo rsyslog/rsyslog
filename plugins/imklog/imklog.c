@@ -45,10 +45,8 @@
 MODULE_TYPE_INPUT
 TERM_SYNC_TYPE(eTermSync_SIGNAL)
 
-/* defines */
-#define DEFAULT_MARK_PERIOD (20 * 60)
-
 /* Module static data */
+int dbgPrintSymbols = 0;
 DEF_IMOD_STATIC_DATA
 typedef struct _instanceData {
 } instanceData;
@@ -141,7 +139,6 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)// __attrib
 		return RS_RET_OUT_OF_MEMORY;
 	}
 
-dbgprintf("klogd logging Raw: '%s',\nmsg: '%s'\n", msgBuf, msgBuf + iLen);
 	MsgSetUxTradMsg(pMsg, msgBuf);
 	MsgSetRawMsg(pMsg, msgBuf);
 	MsgSetMSG(pMsg, (msgBuf + iLen));
@@ -733,7 +730,7 @@ ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-
+	dbgPrintSymbols = 0;
 	return RS_RET_OK;
 }
 
@@ -742,6 +739,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	//CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL, &iMarkMessagePeriod, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"debugprintkernelsymbols", 0, eCmdHdlrBinary, NULL, &dbgPrintSymbols, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*
