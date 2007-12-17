@@ -204,6 +204,7 @@ AC_ARG_ENABLE(klogd,
 if test "$enable_klogd" = "yes"; then
         AC_DEFINE(FEATURE_KLOGD, 1, [klogd functionality is integrated.])
 fi
+AM_CONDITIONAL(ENABLE_IMKLOGD, test x$enable_klogd = xyes)
 
 #
 # SYSLOG_UNIXAF
@@ -348,7 +349,7 @@ AC_SUBST(pgsql_libs)
 
 
 
-AC_CONFIG_FILES([Makefile doc/Makefile plugins/immark/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile plugins/immark/Makefile plugins/imklog/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile])
 AC_OUTPUT
 
 echo "****************************************************"

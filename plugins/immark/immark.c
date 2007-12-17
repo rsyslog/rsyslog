@@ -30,7 +30,6 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
-#if 1 /* IMMARK */
 #include "rsyslog.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -49,7 +48,7 @@ TERM_SYNC_TYPE(eTermSync_SIGNAL)
 #define DEFAULT_MARK_PERIOD (20 * 60)
 
 /* Module static data */
-DEF_OMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA
 static int iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
 
 typedef struct _instanceData {
@@ -129,7 +128,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL, &iMarkMessagePeriod, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-#endif /* #if 0 */
 /*
  * vi:set ai:
  */

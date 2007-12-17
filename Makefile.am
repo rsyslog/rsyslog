@@ -1,15 +1,4 @@
-sbin_PROGRAMS = rklogd rfc3195d rsyslogd
-
-rklogd_SOURCES = \
-	klogd.c \
-	klogd.h \
-	syslog.c \
-	pidfile.c \
-	pidfile.h \
-	ksym.c \
-	ksyms.h \
-	ksym_mod.c \
-	module.h
+sbin_PROGRAMS = rfc3195d rsyslogd
 
 rfc3195d_SOURCES = rfc3195d.c rsyslog.h
 
@@ -86,6 +75,10 @@ EXTRA_DIST = \
 SUBDIRS = doc
 
 SUBDIRS += plugins/immark
+
+if ENABLE_IMKLOGD
+SUBDIRS += plugins/imklog
+endif
 
 if ENABLE_MYSQL
 SUBDIRS += plugins/ommysql

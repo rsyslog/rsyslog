@@ -492,7 +492,6 @@ static char     *LogPort = "514";    /* port number for INET connections */
 static int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
-static int	MarkSeq = 0;	/* mark sequence number - modified in domark() only */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
 static int	AcceptRemote = 0;/* receive messages that come via UDP - read-only after startup */
 int     ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
@@ -650,7 +649,6 @@ static void *singleWorker(); /* REMOVEME later 2005-10-24 */
 /* Function prototypes. */
 static char **crunch_list(char *list);
 static void printline(char *hname, char *msg, int iSource);
-static void logmsg(int pri, msg_t*, int flags);
 static rsRetVal fprintlog(action_t *pAction);
 static void reapchild();
 static void debug_switch();

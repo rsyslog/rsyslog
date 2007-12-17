@@ -32,8 +32,13 @@
 
 /* macro to define standard output-module static data members
  */
-#define DEF_OMOD_STATIC_DATA \
+#define DEF_MOD_STATIC_DATA \
 	static rsRetVal (*omsdRegCFSLineHdlr)();
+#define DEF_OMOD_STATIC_DATA \
+	DEF_MOD_STATIC_DATA
+#define DEF_IMOD_STATIC_DATA \
+	DEF_MOD_STATIC_DATA
+
 
 /* Macro to define the module type. Each module can only have a single type. If
  * a module provides multiple types, several separate modules must be created which
