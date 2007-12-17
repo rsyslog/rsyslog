@@ -91,7 +91,8 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	
 dbgprintf("Terminate thread %lx via method %d\n", pThis->thrdID, pThis->eTermTool);
 	if(pThis->eTermTool == eTermSync_SIGNAL) {
-		pthread_kill(pThis->thrdID, SIGUSR2);
+		pThis->bShallStop = 1;	/* request termination */
+		pthread_kill(pThis->thrdID, SIGUSR2); /* get thread out ouf blocking calls */
 		pthread_join(pThis->thrdID, NULL);
 		/* TODO: TIMEOUT! */
 	} else if(pThis->eTermTool == eTermSync_NONE) {
@@ -127,8 +128,22 @@ static void* thrdStarter(void *arg)
 
 	assert(pThis != NULL);
 	assert(pThis->pUsrThrdMain != NULL);
-	iRet = pThis->pUsrThrdMain();
-	dbgprintf("thrdStarter: usrThrdMain 0x%lx returned with iRet %d.\n", (unsigned long) pThis->thrdID, iRet);
+
+	/* block all signals except the one we need for graceful termination */
+	sigset_t sigSet;
+	sigfillset(&sigSet);
+	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
+	sigemptyset(&sigSet);
+	sigaddset(&sigSet, SIGUSR2);
+	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
+
+	/* setup complete, we are now ready to execute the user code. We will not
+	 * regain control until the user code is finished, in which case we terminate
+	 * the thread.
+	 */
+	iRet = pThis->pUsrThrdMain(pThis);
+
+	dbgprintf("thrdStarter: usrThrdMain 0x%lx returned with iRet %d, exiting now.\n", (unsigned long) pThis->thrdID, iRet);
 	pthread_exit(0);
 }
 
@@ -136,7 +151,7 @@ static void* thrdStarter(void *arg)
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(void), eTermSyncType_t eTermSyncType)
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSyncType)
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -197,6 +212,29 @@ rsRetVal thrdExit(void)
 	return iRet;
 }
 
+
+/* thrdSleep() - a fairly portable way to put a thread to sleep. It 
+ * will wake up when
+ * a) the wake-time is over
+ * b) the thread shall be terminated
+ * Returns RS_RET_OK if all went well, RS_RET_TERMINATE_NOW if the calling
+ * thread shall be terminated and any other state if an error happened.
+ * rgerhards, 2007-12-17
+ */
+rsRetVal
+thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds)
+{
+	DEFiRet;
+	struct timeval tvSelectTimeout;
+
+	assert(pThis != NULL);
+	tvSelectTimeout.tv_sec = iSeconds;
+	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
+	select(0, NULL, NULL, NULL, &tvSelectTimeout);
+	if(pThis->bShallStop)
+		iRet = RS_RET_TERMINATE_NOW;
+	return iRet;
+}
 
 
 /* queue functions (may be migrated to some other file...)

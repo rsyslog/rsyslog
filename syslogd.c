@@ -6418,12 +6418,6 @@ int main(int argc, char **argv)
 #endif
 
 	/* do any de-init's that need to be done AFTER this comment */
-#if IMMARK
-dbgprintf("waiting to join thrdMain\n");
-	pthread_kill(thrdMain, SIGUSR2);
-	pthread_join(thrdMain, NULL);
-dbgprintf("joined thrdMain\n");
-#endif
 
 dbgprintf("reaching die\n");
 	die(bFinished);

@@ -34,7 +34,8 @@ typedef enum eTermSyncType {
 typedef struct thrdInfo {
 	eTermSyncType_t	eTermTool;
 	int bIsActive;		/* Is thread running? */
-	rsRetVal (*pUsrThrdMain)(void); /* user thread main to be called in new thread */
+	int bShallStop;		/* set to 1 if the thread should be stopped ? */
+	rsRetVal (*pUsrThrdMain)(struct thrdInfo*); /* user thread main to be called in new thread */
 	pthread_t thrdID;
 } thrdInfo_t;
 
@@ -54,7 +55,8 @@ rsRetVal thrdExit(void);
 rsRetVal thrdInit(void);
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(void), eTermSyncType_t eTermSyncType);
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSyncType);
+rsRetVal thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds);
 msgQueue *queueInit (void);
 void queueDelete (msgQueue *q);
 void queueAdd (msgQueue *q, void* in);

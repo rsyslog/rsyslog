@@ -67,26 +67,22 @@ typedef struct _instanceData {
  */
 BEGINrunInput
 CODESTARTrunInput
-	struct timeval tvSelectTimeout;
-	sigset_t sigSet;
-	sigfillset(&sigSet);
-	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGUSR2);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
-	while(!bFinished) {
-dbgprintf("immark pre select\n");
-		tvSelectTimeout.tv_sec = 5;
-		tvSelectTimeout.tv_usec = 0;
-		select(0, NULL, NULL, NULL, &tvSelectTimeout);
-		if(bFinished)
-			break;
-dbgprintf("immark post select, doing mark, bFinished: %d\n", bFinished);
+	/* this is an endless loop - it is terminated when the thread is
+	 * signalled to do so. This, however, is handled by the framework,
+	 * right into the sleep below.
+	 */
+	while(1) {
+		/* we do not need to handle the RS_RET_TERMINATE_NOW case any
+	   	 * special because we just need to terminate. This may be different
+	   	 * if a cleanup is needed. But for now, we can just use CHKiRet().
+	   	 * rgerhards, 2007-12-17
+	   	 */
+		CHKiRet(thrdSleep(pThrd, 5, 0)); /* seconds, micro seconds */
 		logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE);
 		//logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
 	}
-dbgprintf("immark: finished!\n");
-	return RS_RET_OK;
+finalize_it:
+	return iRet;
 ENDrunInput
 
 
