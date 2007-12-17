@@ -1,6 +1,5 @@
+#if 0
 #include "config.h"
-
-#ifdef FEATURE_KLOGD
 /*
     ksym_mod.c - functions for building symbol lookup tables for klogd
     Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
@@ -469,16 +468,11 @@ static int AddModule(address, symbol)
  **************************************************************************/
 
 static int AddSymbol(mp, address, symbol)
-
 	struct Module *mp;     
-
 	unsigned long address;
-	
 	char *symbol;
-	
 {
 	auto int tmp;
-
 
 	/* Allocate space for the symbol table entry. */
 	mp->sym_array = (struct sym_table *) realloc(mp->sym_array, \
@@ -526,17 +520,12 @@ static int AddSymbol(mp, address, symbol)
  **************************************************************************/
 
 extern char * LookupModuleSymbol(value, sym)
-
 	unsigned long value;
-
 	struct symbol *sym;
-	
 {
 	auto int	nmod,
 			nsym;
-
 	auto struct sym_table *last;
-
 	auto struct Module *mp;
 
 
@@ -566,7 +555,6 @@ extern char * LookupModuleSymbol(value, sym)
 			}
 			last = &mp->sym_array[nsym];
 		}
-
 
 		/*
 		 * At this stage of the game we still cannot give up the
@@ -633,72 +621,4 @@ extern char * LookupModuleSymbol(value, sym)
 	/* It has been a hopeless exercise. */
 	return((char *) 0);
 }
-
-
-/*
- * Setting the -DTEST define enables the following code fragment to
- * be compiled.  This produces a small standalone program which will
- * dump the current kernel symbol table.
- */
-#if defined(TEST)
-
-#include <stdarg.h>
-
-
-extern int main(int, char **);
-
-
-int main(argc, argv)
-
-	int argc;
-
-	char *argv[];
-
-{
-	auto int lp, syms;
-
-
-	if ( !InitMsyms() )
-	{
-		fprintf(stderr, "Cannot load module symbols.\n");
-		return(1);
-	}
-
-	printf("Number of modules: %d\n\n", num_modules);
-
-	for(lp= 0; lp < num_modules; ++lp)
-	{
-		printf("Module #%d = %s, Number of symbols = %d\n", lp + 1, \
-		       sym_array_modules[lp].name, \
-		       sym_array_modules[lp].num_syms);
-
-		for (syms= 0; syms < sym_array_modules[lp].num_syms; ++syms)
-		{
-			printf("\tSymbol #%d\n", syms + 1);
-			printf("\tName: %s\n", \
-			       sym_array_modules[lp].sym_array[syms].name);
-			printf("\tAddress: %lx\n\n", \
-			       sym_array_modules[lp].sym_array[syms].value);
-		}
-	}
-
-	FreeModules();
-	return(0);
-}
-
-extern void Syslog(int priority, char *fmt, ...)
-
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	fprintf(stdout, "Pr: %d, ", priority);
-	vfprintf(stdout, fmt, ap);
-	va_end(ap);
-	fputc('\n', stdout);
-
-	return;
-}
-
 #endif
-#endif /* #ifdef FEATURE_KLOGD */

@@ -1,6 +1,3 @@
-#include "config.h"
-
-#ifdef FEATURE_KLOGD
 /*
     ksym.c - functions for kernel address->symbol translation
     Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
@@ -113,10 +110,15 @@
 
 
 /* Includes. */
+#include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/utsname.h>
 #include <ctype.h>
-#include "klogd.h"
+#include <stdarg.h>
+#include <string.h>
+#include <syslog.h>
+#include "imklog.h"
 #include "ksyms.h"
 
 #define VERBOSE_DEBUGGING 0
@@ -920,67 +922,9 @@ extern char * ExpandKadds(line, el)
  * Return:	void
  **************************************************************************/
 
-extern void SetParanoiaLevel(level)
-
-	int level;
-
+extern void SetParanoiaLevel(int level)
 {
 	i_am_paranoid = level;
 	return;
 }
 
-
-/*
- * Setting the -DTEST define enables the following code fragment to
- * be compiled.  This produces a small standalone program which will
- * echo the standard input of the process to stdout while translating
- * all numeric kernel addresses into their symbolic equivalent.
- */
-#if defined(TEST)
-
-#include <stdarg.h>
-
-extern int main(int, char **);
-
-
-extern int main(int argc, char *argv[])
-{
-	auto char line[1024], eline[2048];
-
-	debugging = 1;
-	
-	
-	if ( !InitKsyms((char *) 0) )
-	{
-		fputs("ksym: Error loading system map.\n", stderr);
-		return(1);
-	}
-
-	while ( !feof(stdin) )
-	{
-		fgets(line, sizeof(line), stdin);
-		if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = '\0'; /* Trash NL char */
-		memset(eline, '\0', sizeof(eline));
-		ExpandKadds(line, eline);
-		fprintf(stdout, "%s\n", eline);
-	}
-	
-
-	return(0);
-}
-
-extern void Syslog(int priority, char *fmt, ...)
-
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	fprintf(stdout, "Pr: %d, ", priority);
-	vfprintf(stdout, fmt, ap);
-	va_end(ap);
-	fputc('\n', stdout);
-
-	return;
-}
-#endif
-#endif /* #ifdef FEATURE_KLOGD */
