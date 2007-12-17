@@ -94,6 +94,11 @@ CODESTARTwillRun
 ENDwillRun
 
 
+BEGINafterRun
+CODESTARTafterRun
+ENDafterRun
+
+
 BEGINfreeInstance
 CODESTARTfreeInstance
 ENDfreeInstance

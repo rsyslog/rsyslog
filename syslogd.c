@@ -4214,7 +4214,7 @@ startInputModules(void)
 	while(pMod != NULL) {
 		if((iRet = pMod->mod.im.willRun()) == RS_RET_OK) {
 			/* activate here */
-			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.eTermSyncType);
+			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.eTermSyncType, pMod->mod.im.afterRun);
 		} else {
 			dbgprintf("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
 		}
@@ -4248,7 +4248,6 @@ init(void)
 	eDfltHostnameCmpMode = HN_NO_COMP;
 	Forwarding = 0;
 
-dbgprintf("init()\n");
 	thrdTerminateAll(); /* stop all running threads - TODO: reconsider location! */
 #ifdef SYSLOG_INET
 	if (restart) {

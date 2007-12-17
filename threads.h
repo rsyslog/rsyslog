@@ -36,6 +36,7 @@ typedef struct thrdInfo {
 	int bIsActive;		/* Is thread running? */
 	int bShallStop;		/* set to 1 if the thread should be stopped ? */
 	rsRetVal (*pUsrThrdMain)(struct thrdInfo*); /* user thread main to be called in new thread */
+	rsRetVal (*pAfterRun)(struct thrdInfo*);   /* cleanup function */
 	pthread_t thrdID;
 } thrdInfo_t;
 
@@ -55,7 +56,7 @@ rsRetVal thrdExit(void);
 rsRetVal thrdInit(void);
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSyncType);
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSyncType, rsRetVal(*afterRun)(thrdInfo_t *));
 rsRetVal thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds);
 msgQueue *queueInit (void);
 void queueDelete (msgQueue *q);

@@ -80,6 +80,7 @@ typedef struct moduleInfo {
 			eTermSyncType_t eTermSyncType;
 			rsRetVal (*runInput)(thrdInfo_t*);	/* function to gather input and submit to queue */
 			rsRetVal (*willRun)(void); 		/* function to gather input and submit to queue */
+			rsRetVal (*afterRun)(void); 		/* function to gather input and submit to queue */
 		} im;
 		struct {/* data for output modules */
 			/* below: perform the configured action

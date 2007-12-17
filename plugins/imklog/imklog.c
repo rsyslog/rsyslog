@@ -97,11 +97,6 @@ int symbols_twice = 0;
 
 /* Function prototypes. */
 extern int ksyslog(int type, char *buf, int len);
-static enum LOGSRC GetKernelLogSrc(void);
-static void LogLine(char *ptr, int len);
-static void LogKernelLine(void);
-static void LogProcLine(void);
-
 
 
 /* Write a message to the message queue.
@@ -315,7 +310,7 @@ static int copyin( char *line,      int space,
 	*line++ = *ptr++;
     }
 
-    return( i );
+    return(i);
 }
 
 /*
@@ -591,8 +586,7 @@ static void LogProcLine(void)
 	{
 		if ( errno == EINTR )
 			return;
-		Syslog(LOG_ERR, "Cannot read proc file system: %d - %s.", \
-		       errno, strerror(errno));
+		Syslog(LOG_ERR, "Cannot read proc file system: %d - %s.", errno, strerror(errno));
 	}
 	else
 		LogLine(log_buffer, rdcnt);
@@ -603,16 +597,6 @@ static void LogProcLine(void)
 
 BEGINrunInput
 CODESTARTrunInput
-	/* Determine where kernel logging information is to come from. */
-	logsrc = GetKernelLogSrc();
-	if (symbol_lookup) {
-		symbol_lookup  = (InitKsyms(symfile) == 1);
-		symbol_lookup |= InitMsyms();
-		if (symbol_lookup == 0) {
-			Syslog(LOG_WARNING, "cannot find any symbols, turning off symbol lookups\n");
-		}
-	}
-
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
@@ -632,22 +616,43 @@ CODESTARTrunInput
 				LogProcLine();
 				break;
 		        case none:
-				/* TODO: We need to handle this case here somewhat more intelligent */
+				/* TODO: We need to handle this case here somewhat more intelligent 
+	  			 * This is now at least partly done - code should never reach this point
+	  			 * as willRun() already checked for the "none" status -- rgerhards, 2007-12-17
+	  			 */
 				pause();
 				break;
 		}
 	}
-finalize_it:
-	/* cleanup here */
-	CloseLogSrc();
-
 	return iRet;
 ENDrunInput
 
 
 BEGINwillRun
+	/* Initialize this module. If that fails, we tell the engine we don't like to run */
+	/* Determine where kernel logging information is to come from. */
+	logsrc = GetKernelLogSrc();
+	if(logsrc == none) {
+		iRet = RS_RET_NO_KERNEL_LOGSRC;
+	} else {
+		if (symbol_lookup) {
+			symbol_lookup  = (InitKsyms(symfile) == 1);
+			symbol_lookup |= InitMsyms();
+			if (symbol_lookup == 0) {
+				Syslog(LOG_WARNING, "cannot find any symbols, turning off symbol lookups\n");
+			}
+		}
+	}
 CODESTARTwillRun
 ENDwillRun
+
+
+BEGINafterRun
+CODESTARTafterRun
+	/* cleanup here */
+	if(logsrc != none)
+		CloseLogSrc();
+ENDafterRun
 
 
 BEGINfreeInstance
@@ -673,6 +678,7 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	dbgPrintSymbols = 0;
+	symbols_twice = 0;
 	return RS_RET_OK;
 }
 
@@ -680,8 +686,8 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
-	//CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL, &iMarkMessagePeriod, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"debugprintkernelsymbols", 0, eCmdHdlrBinary, NULL, &dbgPrintSymbols, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary, NULL, &symbols_twice, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*

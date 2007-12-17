@@ -385,6 +385,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = modGetTermSyncType;\
 	} else if(!strcmp((char*) name, "willRun")) {\
 		*pEtryPoint = willRun;\
+	} else if(!strcmp((char*) name, "afterRun")) {\
+		*pEtryPoint = afterRun;\
 	}
 
 /* modInit()
@@ -493,6 +495,25 @@ static rsRetVal willRun(void)\
 #define CODESTARTwillRun 
 
 #define ENDwillRun \
+	return iRet;\
+}
+
+
+/* afterRun()
+ * This function is called after an input module has been run and its thread has
+ * been terminated. It shall do any necessary cleanup.
+ * This is expected to evolve into a freeInstance type of call once the input module
+ * interface evolves to support multiple instances.
+ * rgerhards, 2007-12-17
+ */
+#define BEGINafterRun \
+static rsRetVal afterRun(void)\
+{\
+	DEFiRet;
+
+#define CODESTARTafterRun 
+
+#define ENDafterRun \
 	return iRet;\
 }
 

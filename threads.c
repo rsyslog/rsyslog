@@ -99,6 +99,10 @@ dbgprintf("Terminate thread %lx via method %d\n", pThis->thrdID, pThis->eTermToo
 		pthread_cancel(pThis->thrdID);
 	}
 	pThis->bIsActive = 0;
+
+	/* call cleanup function, if any */
+	if(pThis->pAfterRun != NULL)
+		pThis->pAfterRun(pThis);
 	
 	return RS_RET_OK;
 }
@@ -108,9 +112,7 @@ dbgprintf("Terminate thread %lx via method %d\n", pThis->thrdID, pThis->eTermToo
  */
 rsRetVal thrdTerminateAll(void)
 {
-dbgprintf("thrdTerminateAll in\n");
 	llDestroy(&llThrds);
-dbgprintf("thrdTerminateAll out\n");
 	return RS_RET_OK;
 }
 
@@ -151,7 +153,7 @@ static void* thrdStarter(void *arg)
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSyncType)
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSyncType, rsRetVal(*afterRun)(thrdInfo_t *))
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -163,6 +165,7 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSync
 	pThis->eTermTool = eTermSyncType;
 	pThis->bIsActive = 1;
 	pThis->pUsrThrdMain = thrdMain;
+	pThis->pAfterRun = afterRun;
 	i = pthread_create(&pThis->thrdID, NULL, thrdStarter, pThis);
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
