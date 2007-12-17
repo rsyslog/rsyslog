@@ -89,7 +89,7 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 {
 	assert(pThis != NULL);
 	
-dbgprintf("Terminate thread %d via method %d\n", pThis->thrdID, pThis->eTermTool);
+dbgprintf("Terminate thread %lx via method %d\n", pThis->thrdID, pThis->eTermTool);
 	if(pThis->eTermTool == eTermSync_SIGNAL) {
 		pthread_kill(pThis->thrdID, SIGUSR2);
 		pthread_join(pThis->thrdID, NULL);
@@ -114,11 +114,29 @@ dbgprintf("thrdTerminateAll out\n");
 }
 
 
+/* This is an internal wrapper around the user thread function. Its
+ * purpose is to handle all the necessary housekeeping stuff so that the
+ * user function needs not to be aware of the threading calls. The user
+ * function call has just "normal", non-threading semantics.
+ * rgerhards, 2007-12-17
+ */
+static void* thrdStarter(void *arg)
+{
+	DEFiRet;
+	thrdInfo_t *pThis = (thrdInfo_t*) arg;
+
+	assert(pThis != NULL);
+	assert(pThis->pUsrThrdMain != NULL);
+	iRet = pThis->pUsrThrdMain();
+	dbgprintf("thrdStarter: usrThrdMain 0x%lx returned with iRet %d.\n", (unsigned long) pThis->thrdID, iRet);
+	pthread_exit(0);
+}
+
 /* Start a new thread and add it to the list of currently
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(void* (*thrdMain)(void*), eTermSyncType_t eTermSyncType)
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(void), eTermSyncType_t eTermSyncType)
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -129,7 +147,8 @@ rsRetVal thrdCreate(void* (*thrdMain)(void*), eTermSyncType_t eTermSyncType)
 	CHKiRet(thrdConstruct(&pThis));
 	pThis->eTermTool = eTermSyncType;
 	pThis->bIsActive = 1;
-	i = pthread_create(&pThis->thrdID, NULL, thrdMain, NULL);
+	pThis->pUsrThrdMain = thrdMain;
+	i = pthread_create(&pThis->thrdID, NULL, thrdStarter, pThis);
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:
@@ -140,7 +159,7 @@ finalize_it:
 /* This is a dummy handler. We user SIGUSR2 to interrupt blocking system calls
  * if we are in termination mode 1.
  */
-static void sigusr2Dummy(int sig)
+static void sigusr2Dummy(int __attribute__((unused)) sig)
 {
 	dbgprintf("sigusr2Dummy called!\n");
 }

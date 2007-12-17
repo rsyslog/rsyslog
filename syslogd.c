@@ -2629,7 +2629,8 @@ static void startWorker(void)
  * worker thread. Having more than one worker requires considerable
  * additional code review in regard to thread-safety.
  */
-static void *singleWorker()
+static void *
+singleWorker()
 {
 	msgQueue *fifo = pMsgQueue;
 	msg_t *pMsg;
