@@ -1,9 +1,3 @@
-#define IMMARK 0 /* this is an aid to allow commiting work in progress to cvs. will be removed
-                  * once we have a version that is ready to compile cleanly. If you don't 
-                  * develop immark, make sure this is set to 0 (should I forget to do that
-                  * when I check in).
-                  * rgerhards, 2007-12-14
-                  */
 /**
  * \brief This is the main file of the rsyslogd daemon.
  *
@@ -238,9 +232,6 @@
 #include "omfile.h"
 #include "omdiscard.h"
 #include "threads.h"
-#if IMMARK
-#include "plugins/immark/immark.h"
-#endif
 
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
@@ -3356,18 +3347,6 @@ domark(void)
 	register selector_t *f;
 
 	if (MarkInterval > 0) {
-/* Commented out, will be replaced by immark - just leave it in place for the 
- * time being so we know what happens. Remove once immark is done.
- * rgerhards, 2007-12-12
- */
-#if !IMMARK
-		MarkSeq += TIMERINTVL;
-		if (MarkSeq >= MarkInterval) {
-			logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
-			MarkSeq = 0;
-		}
-#endif
-
 		/* see if we need to flush any "message repeated n times"... 
 		 * Note that this interferes with objects running on another thread.
 		 * We are using appropriate locking inside the function to handle that.
@@ -6123,7 +6102,7 @@ int main(int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	struct sigaction sigAct;
-#if IMMARK /* see comment for #if 0 below (towards end of function) */
+#if 0 /* see comment for #if 0 below (towards end of function) */
 	pthread_t thrdMain;
 	sigset_t sigSet;
 #endif
@@ -6387,7 +6366,7 @@ int main(int argc, char **argv)
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
 
-#if IMMARK
+#if 0
 	i = pthread_create(&thrdMain, NULL, immark_runInput, NULL);
 	dbgprintf("\"main\" thread started with state %d.\n", i);
 #endif
