@@ -259,6 +259,7 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getTermSyncType", &modGetTermSyncType));
 			CHKiRet((iRet = (*modGetTermSyncType)(&pNew->mod.im.eTermSyncType)) != RS_RET_OK);
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"runInput", &pNew->mod.im.runInput));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"willRun", &pNew->mod.im.willRun));
 			break;
 		case eMOD_OUT:
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"doAction", &pNew->mod.om.doAction));

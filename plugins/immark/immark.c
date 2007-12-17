@@ -46,9 +46,8 @@ MODULE_TYPE_INPUT
 TERM_SYNC_TYPE(eTermSync_SIGNAL)
 
 /* Module static data */
-/* TODO: this needs a lot of work ;) */
 DEF_OMOD_STATIC_DATA
-static int bDoMarkMessages = 1;
+static int iMarkMessagePeriod = 5;
 
 typedef struct _instanceData {
 } instanceData;
@@ -77,13 +76,20 @@ CODESTARTrunInput
 	   	 * if a cleanup is needed. But for now, we can just use CHKiRet().
 	   	 * rgerhards, 2007-12-17
 	   	 */
-		CHKiRet(thrdSleep(pThrd, 5, 0)); /* seconds, micro seconds */
+		CHKiRet(thrdSleep(pThrd, iMarkMessagePeriod, 0)); /* seconds, micro seconds */
 		logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE);
 		//logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
 	}
 finalize_it:
 	return iRet;
 ENDrunInput
+
+
+BEGINwillRun
+CODESTARTwillRun
+	if(iMarkMessagePeriod == 0)
+		iRet = RS_RET_NO_RUN;
+ENDwillRun
 
 
 BEGINfreeInstance
@@ -111,7 +117,7 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessages", 0, eCmdHdlrBinary, NULL, &bDoMarkMessages, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL, &iMarkMessagePeriod, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 #endif /* #if 0 */
 /*

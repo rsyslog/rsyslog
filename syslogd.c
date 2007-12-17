@@ -4214,13 +4214,16 @@ startInputModules(void)
 	/* loop through all modules and activate them (brr...) */
 	pMod = modGetNxtType(NULL, eMOD_IN);
 	while(pMod != NULL) {
-		/* activate here */
-dbgprintf("thread creating...\n");
-		thrdCreate(pMod->mod.im.runInput, pMod->mod.im.eTermSyncType);
-		pMod = modGetNxtType(pMod, eMOD_IN);
+		if((iRet = pMod->mod.im.willRun()) == RS_RET_OK) {
+			/* activate here */
+			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.eTermSyncType);
+		} else {
+			dbgprintf("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
+		}
+	pMod = modGetNxtType(pMod, eMOD_IN);
 	}
 
-	return iRet;
+	return RS_RET_OK; /* intentional: we do not care about module errors */
 }
 
 

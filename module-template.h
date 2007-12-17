@@ -378,6 +378,8 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = runInput;\
 	} else if(!strcmp((char*) name, "getTermSyncType")) {\
 		*pEtryPoint = modGetTermSyncType;\
+	} else if(!strcmp((char*) name, "willRun")) {\
+		*pEtryPoint = willRun;\
 	}
 
 /* modInit()
@@ -468,6 +470,27 @@ static rsRetVal runInput(thrdInfo_t *pThrd)\
 #define ENDrunInput \
 	return iRet;\
 }
+
+
+/* willRun()
+ * This is a function that will be replaced in the longer term. It is used so
+ * that a module can tell the caller if it will run or not. This is to be replaced
+ * when we introduce input module instances. However, these require config syntax
+ * changes and I may (or may not... ;)) hold that until another config file 
+ * format is available. -- rgerhards, 2007-12-17
+ * returns RS_RET_NO_RUN if it will not run (RS_RET_OK or error otherwise)
+ */
+#define BEGINwillRun \
+static rsRetVal willRun(void)\
+{\
+	DEFiRet;
+
+#define CODESTARTwillRun 
+
+#define ENDwillRun \
+	return iRet;\
+}
+
 
 /* method to return which termination sync method is used by this module.
  */
