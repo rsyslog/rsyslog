@@ -150,12 +150,6 @@ struct Module *sym_array_modules = (struct Module *) 0;
 
 static int have_modules = 0;
 
-#if defined(TEST)
-static int debugging = 1;
-#else
-extern int debugging;
-#endif
-
 
 /* Function prototypes. */
 static void FreeModules(void);
@@ -179,9 +173,7 @@ static int symsort(const void *, const void *);
  *
  *		True if loading is successful.
  **************************************************************************/
-
-extern int InitMsyms()
-
+extern int InitMsyms(void)
 {
 	auto int	rtn,
 			tmp;
@@ -220,22 +212,17 @@ extern int InitMsyms()
 			       "- %s\n", strerror(errno));
 		return(0);
 	}
-	if ( debugging )
-		fprintf(stderr, "Loading kernel module symbols - "
-			"Size of table: %d\n", rtn);
+	dbgprintf("Loading kernel module symbols - Size of table: %d\n", rtn);
 
-	ksym_table = (struct kernel_sym *) malloc(rtn * \
-						  sizeof(struct kernel_sym));
+	ksym_table = (struct kernel_sym *) malloc(rtn * sizeof(struct kernel_sym));
 	if ( ksym_table == (struct kernel_sym *) 0 )
 	{
-		Syslog(LOG_WARNING, " Failed memory allocation for kernel " \
-		       "symbol table.\n");
+		Syslog(LOG_WARNING, " Failed memory allocation for kernel symbol table.\n");
 		return(0);
 	}
 	if ( (rtn = getsyms(ksym_table)) < 0 )
 	{
-		Syslog(LOG_WARNING, "Error reading kernel symbols - %s\n", \
-		       strerror(errno));
+		Syslog(LOG_WARNING, "Error reading kernel symbols - %s\n", strerror(errno));
 		return(0);
 	}
 
@@ -279,12 +266,7 @@ extern int InitMsyms()
 }
 
 
-static int symsort(p1, p2)
-
-     const void *p1;
-
-     const void *p2;
-
+static int symsort(const void *p1, const void *p2)
 {
 	auto const struct sym_table	*sym1 = p1,
 					*sym2 = p2;
@@ -307,9 +289,7 @@ static int symsort(p1, p2)
  *
  * Return:	void
  **************************************************************************/
-
-static void FreeModules()
-
+static void FreeModules(void)
 {
 	auto int	nmods,
 			nsyms;
@@ -436,7 +416,6 @@ static int AddModule(unsigned long address, char *symbol)
 		AddSymbol(mp, address, symbol);
 	}
 
-
 	return(1);
 }
 
@@ -461,11 +440,7 @@ static int AddModule(unsigned long address, char *symbol)
  *		A boolean value is assumed.  True if the addition is
  *		successful.  False if not.
  **************************************************************************/
-
-static int AddSymbol(mp, address, symbol)
-	struct Module *mp;     
-	unsigned long address;
-	char *symbol;
+static int AddSymbol(struct Module *mp, unsigned long address, char *symbol)
 {
 	auto int tmp;
 
@@ -513,10 +488,7 @@ static int AddSymbol(mp, address, symbol)
  *		If a match is found the pointer to the symbolic name most
  *		closely matching the address is returned.
  **************************************************************************/
-
-extern char * LookupModuleSymbol(value, sym)
-	unsigned long value;
-	struct symbol *sym;
+extern char * LookupModuleSymbol(unsigned long value, struct symbol *sym)
 {
 	auto int	nmod,
 			nsym;
@@ -614,5 +586,5 @@ extern char * LookupModuleSymbol(value, sym)
 	}
 
 	/* It has been a hopeless exercise. */
-	return((char *) 0);
+	return(NULL);
 }

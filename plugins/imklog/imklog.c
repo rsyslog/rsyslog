@@ -92,7 +92,6 @@ static char	*symfile = (char *) 0,
 
 static enum LOGSRC {none, proc, kernel} logsrc;
 
-int debugging = 0;
 int symbols_twice = 0;
 
 
@@ -284,10 +283,11 @@ static enum LOGSRC GetKernelLogSrc(void)
 
 	if ( (kmsg = open(_PATH_KLOG, O_RDONLY)) < 0 )
 	{
-		fprintf(stderr, "rklogd: Cannot open proc file system, " \
-			"%d - %s.\n", errno, strerror(errno));
-		ksyslog(7, NULL, 0);
-		exit(1);
+		char sz[512];
+		snprintf(sz, sizeof(sz), "rklogd: Cannot open proc file system, %d - %s.\n", errno, strerror(errno));
+		logmsgInternal(LOG_SYSLOG|LOG_ERR, sz, ADDDATE);
+		ksyslog(7, NULL, 0); /* TODO: check this, implement more */
+		return(none);
 	}
 
 	Syslog(LOG_INFO, "imklog %s, log source = %s started.", \
@@ -369,11 +369,8 @@ static void LogLine(char *ptr, int len)
             */
             *line = 0;   /* force null terminator */
 
-	    if ( debugging )
-	    {
-		fputs("Line buffer full:\n", stderr);
-		fprintf(stderr, "\tLine: %s\n", line);
-	    }
+	    dbgprintf("Line buffer full:\n");
+       	    dbgprintf("\tLine: %s\n", line);
 
             Syslog( LOG_INFO, "%s", line_buff );
             line  = line_buff;
@@ -567,10 +564,11 @@ static void LogKernelLine(void)
 	memset(log_buffer, '\0', sizeof(log_buffer));
 	if ( (rdcnt = ksyslog(2, log_buffer, sizeof(log_buffer)-1)) < 0 )
 	{
-		if ( errno == EINTR )
+		char sz[512];
+		if(errno == EINTR)
 			return;
-		fprintf(stderr, "rklogd: Error return from sys_sycall: " \
-			"%d - %s\n", errno, strerror(errno));
+		snprintf(sz, sizeof(sz), "rklogd: Error return from sys_sycall: %d - %s\n", errno, strerror(errno));
+		logmsgInternal(LOG_SYSLOG|LOG_ERR, sz, ADDDATE);
 	}
 	else
 		LogLine(log_buffer, rdcnt);
@@ -603,62 +601,6 @@ static void LogProcLine(void)
 }
 
 
-#if 0
-int main(int argc, char *argv[])
-{
-	int	ch,
-		use_output = 0;
-
-	char	*log_level = (char *) 0,
-		*output = (char *) 0;
-
-	/* Parse the command-line. */
-	while ((ch = getopt(argc, argv, "c:df:iIk:nopsvx2")) != EOF)
-		switch((char)ch)
-		{
-		    case '2':		/* Print lines with symbols twice. */
-			symbols_twice = 1;
-			break;
-		    case 'c':		/* Set console message level. */
-			log_level = optarg;
-			break;
-		    case 'd':		/* Activity debug mode. */
-			debugging = 1;
-			break;
-		    case 'f':		/* Define an output file. */
-			output = optarg;
-			use_output++;
-			break;
-		    case 'k':		/* Kernel symbol file. */
-			symfile = optarg;
-			break;
-		    case 'p':
-			SetParanoiaLevel(1);	/* Load symbols on oops. */
-			break;	
-		    case 's':		/* Use syscall interface. */
-			use_syscall = 1;
-			break;
-		    case 'x':
-			symbol_lookup = 0;
-			break;
-		}
-
-
-	/* Set console logging level. */
-	if ( log_level != (char *) 0 )
-	{
-		if ( (strlen(log_level) > 1) || \
-		     (strchr("12345678", *log_level) == (char *) 0) )
-		{
-			fprintf(stderr, "rklogd: Invalid console logging "
-				"level <%s> specified.\n", log_level);
-			return(1);
-		}
-		console_log_level = *log_level - '0';
-	}		
-}
-#endif
-
 BEGINrunInput
 CODESTARTrunInput
 	/* Determine where kernel logging information is to come from. */
@@ -690,10 +632,10 @@ CODESTARTrunInput
 				LogProcLine();
 				break;
 		        case none:
+				/* TODO: We need to handle this case here somewhat more intelligent */
 				pause();
 				break;
 		}
-//		CHKiRet(thrdSleep(pThrd, iMarkMessagePeriod, 0)); /* seconds, micro seconds */
 	}
 finalize_it:
 	/* cleanup here */
