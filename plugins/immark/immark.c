@@ -45,9 +45,12 @@
 MODULE_TYPE_INPUT
 TERM_SYNC_TYPE(eTermSync_SIGNAL)
 
+/* defines */
+#define DEFAULT_MARK_PERIOD (20 * 60)
+
 /* Module static data */
 DEF_OMOD_STATIC_DATA
-static int iMarkMessagePeriod = 5;
+static int iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
 
 typedef struct _instanceData {
 } instanceData;
@@ -112,12 +115,19 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 ENDqueryEtryPt
 
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
+
+	return RS_RET_OK;
+}
 
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL, &iMarkMessagePeriod, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 #endif /* #if 0 */
 /*
