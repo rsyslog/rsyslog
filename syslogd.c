@@ -187,6 +187,10 @@
 #include <netdb.h>
 #include <fnmatch.h>
 #include <dirent.h>
+#include <glob.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 
 #ifndef __sun
 #endif
@@ -3724,23 +3728,43 @@ finalize_it:
 static rsRetVal doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 {
 	DEFiRet;
-	uchar cfgFile[MAXFNAME];
+	char pattern[MAXFNAME];
+	char *cfgFile;
+	glob_t cfgFiles;
+	size_t i = 0;
+	struct stat fileInfo;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
 
-	if(getSubString(pp, (char*) cfgFile, sizeof(cfgFile) / sizeof(uchar), ' ')  != 0) {
+	if(getSubString(pp, (char*) pattern, sizeof(pattern) / sizeof(char), ' ')  != 0) {
 		logerror("could not extract group name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
-	if(*(cfgFile+strlen((char*) cfgFile) - 1) == '/') {
-		dbgprintf("requested to include directory '%s'\n", cfgFile);
-		iRet = doIncludeDirectory(cfgFile);
-	} else {
-		dbgprintf("Requested to include config file '%s'\n", cfgFile);
-		iRet = processConfFile(cfgFile);
+	/* Use GLOB_MARK to append a trailing slash for directories.
+	 * Required by doIncludeDirectory().
+	 */
+	glob(pattern, GLOB_MARK, NULL, &cfgFiles);
+
+	for(i = 0; i < cfgFiles.gl_pathc; i++) {
+		cfgFile = cfgFiles.gl_pathv[i];
+
+		if(stat(cfgFile, &fileInfo) != 0) 
+			continue; /* continue with the next file if we can't stat() the file */
+
+		if(S_ISREG(fileInfo.st_mode)) { /* config file */
+			dbgprintf("requested to include config file '%s'\n", cfgFile);
+			iRet = processConfFile(cfgFile);
+		} else if(S_ISDIR(fileInfo.st_mode)) { /* config directory */
+			dbgprintf("requested to include directory '%s'\n", cfgFile);
+			iRet = doIncludeDirectory(cfgFile);
+		} else { /* TODO: shall we handle symlinks or not? */
+			dbgprintf("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
+		}
 	}
+
+	globfree(&cfgFiles);
 
 finalize_it:
 	return iRet;
