@@ -197,7 +197,6 @@
 #endif
 
 #ifdef USE_NETZIP
-#include <unistd.h>
 #include <zlib.h>
 #endif
 
