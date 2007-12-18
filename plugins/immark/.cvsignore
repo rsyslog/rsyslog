@@ -2,5 +2,5 @@
 .libs
 Makefile
 Makefile.in
-immark.la
-immark_la-ommysql.lo
+*.la
+*.lo

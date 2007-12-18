@@ -44,6 +44,9 @@
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
+#ifdef USE_NETZIP
+#include <zlib.h>
+#endif
 #ifdef USE_PTHREADS
 #include <pthread.h>
 #else

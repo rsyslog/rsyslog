@@ -5,7 +5,7 @@ AC_PREREQ(2.61)
 AC_INIT([rsyslog],[3.0.0],[rsyslog@lists.adiscon.com.])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([syslogd.c])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
@@ -145,7 +145,7 @@ AC_ARG_ENABLE(gssapi_krb5,
 if test $want_gssapi_krb5 = yes; then
 	AC_CHECK_LIB(gssapi_krb5, gss_acquire_cred, [
 		AC_CHECK_HEADER(gssapi/gssapi.h, [
-			AC_MSG_ERROR(GSS-API not ready for primt time yet -- wait for next release);
+			AC_MSG_ERROR(GSS-API not ready for prime time yet -- wait for next release);
 			AC_DEFINE(USE_GSSAPI,,
 				  Define if you want to use GSSAPI)
 			gss_libs="-lgssapi_krb5"
