@@ -7,6 +7,8 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADERS([config.h])
 
+AC_GNU_SOURCE
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
