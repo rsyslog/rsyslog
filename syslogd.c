@@ -203,6 +203,10 @@
 #include <paths.h>
 #endif
 
+#ifdef USE_NETZIP
+#include <unistd.h>
+#include <zlib.h>
+#endif
 
 /* handle some defines missing on more than one platform */
 #ifndef SUN_LEN
