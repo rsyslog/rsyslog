@@ -102,6 +102,9 @@ rsRetVal llDestroy(linkedList_t *pThis)
 		 */
 		llDestroyElt(pThis, pEltPrev);
 	}
+	/* now clean up the pointers */
+	pThis->pRoot = NULL;
+	pThis->pLast = NULL;
 
 	return iRet;
 }
