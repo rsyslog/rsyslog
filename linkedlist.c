@@ -104,6 +104,9 @@ rsRetVal llDestroy(linkedList_t *pThis)
 		llDestroyElt(pThis, pEltPrev);
 	}
 
+	pThis->pRoot = NULL;
+	pThis->pLast = NULL;
+
 	return iRet;
 }
 

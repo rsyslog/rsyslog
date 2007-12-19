@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 2.0.0 (rgerhards), 2007-12-??
 - small doc fix for $IncludeConfig
+- fixed a bug in llDestroy()
 ---------------------------------------------------------------------------
 Version 1.21.0 (rgerhards), 2007-12-19
 - GSS-API support for syslog/TCP connections was added. Thanks to
