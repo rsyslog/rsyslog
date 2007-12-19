@@ -32,6 +32,9 @@ with the /etc/rsyslog.conf file directly.</i></p>
 <p><code><b>$IncludeConfig /etc/some-included-file.conf</b></code></p>
 <p>Directories can also be included. To do so, the name must end on a slash:</p>
 <p><code><b>$IncludeConfig /etc/rsyslog.d/</b></code></p>
+<p><code><b>And finally, only specific files matching a wildcard my be included 
+from a directory:</b></code></p>
+<p><code><b>$IncludeConfig /etc/rsyslog.d/*.conf</b></code></p>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
 index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
