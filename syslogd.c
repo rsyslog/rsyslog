@@ -6292,7 +6292,7 @@ int main(int argc, char **argv)
 
 	/* END core initializations */
 
-	while ((ch = getopt(argc, argv, "46Aa:dehi:f:g:l:m:nop:qQr::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46Aa:c:dehi:f:g:l:m:nop:qQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -6315,6 +6315,9 @@ int main(int argc, char **argv)
 				}
 			else
 				fprintf(stderr, "rsyslogd: Out of descriptors, ignoring %s\n", optarg);
+			break;
+		case 'c':		/* forward-compatibility: sets mode in v3+ */
+			fprintf(stderr, "-c option not yet supported, reserved for future use\n");
 			break;
 		case 'd':		/* debug */
 			Debug = 1;
