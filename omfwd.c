@@ -168,7 +168,7 @@ CODESTARTfreeInstance
 		OM_uint32 maj_stat, min_stat;
 
 		if (pData->gss_context != GSS_C_NO_CONTEXT) {
-			maj_stat = gss_delete_sec_context(&min_stat, pData->gss_context, GSS_C_NO_BUFFER);
+			maj_stat = gss_delete_sec_context(&min_stat, &pData->gss_context, GSS_C_NO_BUFFER);
 			if (maj_stat != GSS_S_COMPLETE)
 				display_status("deleting context", maj_stat, min_stat);
 		}
@@ -1143,7 +1143,7 @@ ENDqueryEtryPt
 
 
 #ifdef USE_GSSAPI
-static rsRetVal setGSSMode(void *pVal, uchar *mode)
+static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
 {
 	if (!strcmp((char *) mode, "none")) {
 		gss_mode = GSSMODE_NONE;

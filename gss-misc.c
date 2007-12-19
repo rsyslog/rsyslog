@@ -85,12 +85,12 @@ static int read_all(int fd, char *buf, unsigned int nbyte)
     fd_set  rfds;
     struct timeval tv;
 
-    FD_ZERO(&rfds);
-    FD_SET(fd, &rfds);
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-
     for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+	    FD_ZERO(&rfds);
+	    FD_SET(fd, &rfds);
+	    tv.tv_sec = 1;
+	    tv.tv_usec = 0;
+
 	    if ((ret = select(FD_SETSIZE, &rfds, NULL, NULL, &tv)) <= 0
 		|| !FD_ISSET(fd, &rfds))
 		    return ret;

@@ -77,7 +77,7 @@ int  *sockTCPLstn = NULL; /* read-only after startup, modified by restart */
 struct TCPSession *pTCPSessions;
 /* The thread-safeness of the sesion table is doubtful */
 #ifdef USE_GSSAPI
-static gss_cred_id_t gss_server_creds;
+static gss_cred_id_t gss_server_creds = GSS_C_NO_CREDENTIAL;
 char *gss_listen_service_name = NULL;
 #endif
 
@@ -99,7 +99,6 @@ void configureTCPListen(char *cOptarg)
 	register char *pArg = cOptarg;
 
 	assert(cOptarg != NULL);
-	bEnableTCP = -1;	/* enable TCP listening */
 
 	/* extract port */
 	i = 0;
@@ -166,6 +165,7 @@ static int TCPSessInit(void)
 #ifdef USE_GSSAPI
 		pTCPSessions[i].gss_flags = 0;
 		pTCPSessions[i].gss_context = GSS_C_NO_CONTEXT;
+		pTCPSessions[i].allowedMethods = 0;
 #endif
 	}
 	return(0);
@@ -229,7 +229,7 @@ void deinit_tcp_listener(void)
 		close(fd);
 		free(pTCPSessions[iTCPSess].fromHost);
 #ifdef USE_GSSAPI
-		if(bEnableTCP == 2) {
+		if(bEnableTCP & ALLOWEDMETHOD_GSS) {
 			OM_uint32 maj_stat, min_stat;
 			maj_stat = gss_delete_sec_context(&min_stat, &pTCPSessions[iTCPSess].gss_context, GSS_C_NO_BUFFER);
 			if (maj_stat != GSS_S_COMPLETE)
@@ -420,6 +420,7 @@ int TCPSessAccept(int fd)
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
 	char *pBuf;
+	char allowedMethods = 0;
 
 	newConn = accept(fd, (struct sockaddr*) &addr, &addrlen);
 	if (newConn < 0) {
@@ -453,7 +454,21 @@ int TCPSessAccept(int fd)
 	 * configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(!isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, (char*)fromHostFQDN)) {
+#ifdef USE_GSSAPI
+	if((bEnableTCP & ALLOWEDMETHOD_TCP) &&
+	   isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, (char*)fromHostFQDN))
+		allowedMethods |= ALLOWEDMETHOD_TCP;
+	if((bEnableTCP & ALLOWEDMETHOD_GSS) &&
+	   isAllowedSender(pAllowedSenders_GSS, (struct sockaddr *)&addr, (char*)fromHostFQDN))
+		allowedMethods |= ALLOWEDMETHOD_GSS;
+	if(allowedMethods)
+		pTCPSessions[iSess].allowedMethods = allowedMethods;
+	else
+#else
+	if(!isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, (char*)fromHostFQDN))
+#endif
+	{
+		dbgprintf("%s is not an allowed sender\n", (char *) fromHostFQDN);
 		if(option_DisallowWarning) {
 			errno = 0;
 			logerrorSz("TCP message from disallowed sender %s discarded",
@@ -706,7 +721,10 @@ int TCPSessGSSInit(void)
 	gss_buffer_desc name_buf;
 	gss_name_t server_name;
 	OM_uint32 maj_stat, min_stat;
-	
+
+	if (gss_server_creds != GSS_C_NO_CREDENTIAL)
+		return 0;
+
 	name_buf.value = (gss_listen_service_name == NULL) ? "host" : gss_listen_service_name;
 	name_buf.length = strlen(name_buf.value) + 1;
 	maj_stat = gss_import_name(&min_stat, &name_buf, GSS_C_NT_HOSTBASED_SERVICE, &server_name);
@@ -733,60 +751,159 @@ int TCPSessGSSAccept(int fd)
 {
 	gss_buffer_desc send_tok, recv_tok;
 	gss_name_t client;
-	gss_OID doid;
 	OM_uint32 maj_stat, min_stat, acc_sec_min_stat;
 	int iSess;
 	gss_ctx_id_t *context;
 	OM_uint32 *sess_flags;
 	int fdSess;
+	char allowedMethods;
 
 	if ((iSess = TCPSessAccept(fd)) == -1)
 		return -1;
 
-	context = &pTCPSessions[iSess].gss_context;
-	*context = GSS_C_NO_CONTEXT;
-	sess_flags = &pTCPSessions[iSess].gss_flags;
-	fdSess = pTCPSessions[iSess].sock;
+	allowedMethods = pTCPSessions[iSess].allowedMethods;
+	if (allowedMethods & ALLOWEDMETHOD_GSS) {
+		/* Buffer to store raw message in case that
+		 * gss authentication fails halfway through.
+		 */
+		char buf[MAXLINE];
+		int ret = 0;
 
-	do {
-		if (recv_token(fdSess, &recv_tok) <= 0)
-			return -1;
+		dbgprintf("GSS-API Trying to accept TCP session %d\n", iSess);
 
-		maj_stat = gss_accept_sec_context(&acc_sec_min_stat, context, gss_server_creds,
-						  &recv_tok, GSS_C_NO_CHANNEL_BINDINGS, &client,
-						  NULL, &send_tok, sess_flags, NULL, NULL);
-		if (recv_tok.value) {
-			free(recv_tok.value);
-			recv_tok.value = NULL;
-		}
-		if (send_tok.length != 0) {
-			if (send_token(fdSess, &send_tok) < 0) {
+		fdSess = pTCPSessions[iSess].sock;
+		if (allowedMethods & ALLOWEDMETHOD_TCP) {
+			int len;
+			fd_set  fds;
+			struct timeval tv;
+		
+			do {
+				FD_ZERO(&fds);
+				FD_SET(fdSess, &fds);
+				tv.tv_sec = 1;
+				tv.tv_usec = 0;
+				ret = select(fdSess + 1, &fds, NULL, NULL, &tv);
+			} while (ret < 0 && errno == EINTR);
+			if (ret < 0) {
+				logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
+				TCPSessClose(iSess);
+				return -1;
+			} else if (ret == 0) {
+				dbgprintf("GSS-API Reverting to plain TCP\n");
+				pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_TCP;
+				return 0;
+			}
+
+			do {
+				ret = recv(fdSess, buf, sizeof (buf), MSG_PEEK);
+			} while (ret < 0 && errno == EINTR);
+			if (ret <= 0) {
+				if (ret == 0)
+					dbgprintf("GSS-API Connection closed by peer\n");
+				else
+					logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
+				TCPSessClose(iSess);
 				return -1;
 			}
 
-			gss_release_buffer(&min_stat, &send_tok);
+			if (ret < 4) {
+				dbgprintf("GSS-API Reverting to plain TCP\n");
+				pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_TCP;
+				return 0;
+			} else if (ret == 4) {
+				/* The client might has been interupted after sending
+				 * the data length (4B), give him another chance.
+				 */
+				sleep(1);
+				do {
+					ret = recv(fdSess, buf, sizeof (buf), MSG_PEEK);
+				} while (ret < 0 && errno == EINTR);
+				if (ret <= 0) {
+					if (ret == 0)
+						dbgprintf("GSS-API Connection closed by peer\n");
+					else
+						logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
+					TCPSessClose(iSess);
+					return -1;
+				}
+			}
+
+			len = ntohl((buf[0] << 24)
+				    | (buf[1] << 16)
+				    | (buf[2] << 8)
+				    | buf[3]);
+			if ((ret - 4) < len || len == 0) {
+				dbgprintf("GSS-API Reverting to plain TCP\n");
+				pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_TCP;
+				return 0;
+			}
 		}
-		if (maj_stat != GSS_S_COMPLETE
-		    && maj_stat != GSS_S_CONTINUE_NEEDED) {
-			display_status("accepting context", maj_stat,
-				       acc_sec_min_stat);
-			if (*context != GSS_C_NO_CONTEXT)
-				gss_delete_sec_context(&min_stat, context,
-						       GSS_C_NO_BUFFER);
-			return -1;
-		}
-	} while (maj_stat == GSS_S_CONTINUE_NEEDED);
 
-	maj_stat = gss_display_name(&min_stat, client, &recv_tok, NULL);
-	if (maj_stat != GSS_S_COMPLETE)
-	    display_status("displaying name", maj_stat, min_stat);
-	gss_release_name(&min_stat, &client);
+		context = &pTCPSessions[iSess].gss_context;
+		*context = GSS_C_NO_CONTEXT;
+		sess_flags = &pTCPSessions[iSess].gss_flags;
+		do {
+			if (recv_token(fdSess, &recv_tok) <= 0) {
+				logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
+				TCPSessClose(iSess);
+				return -1;
+			}
+			maj_stat = gss_accept_sec_context(&acc_sec_min_stat, context, gss_server_creds,
+							  &recv_tok, GSS_C_NO_CHANNEL_BINDINGS, &client,
+							  NULL, &send_tok, sess_flags, NULL, NULL);
+			if (recv_tok.value) {
+				free(recv_tok.value);
+				recv_tok.value = NULL;
+			}
+			if (maj_stat != GSS_S_COMPLETE
+			    && maj_stat != GSS_S_CONTINUE_NEEDED) {
+				gss_release_buffer(&min_stat, &send_tok);
+				if (*context != GSS_C_NO_CONTEXT)
+					gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
+				if ((allowedMethods & ALLOWEDMETHOD_TCP) && 
+				    (GSS_ROUTINE_ERROR(maj_stat) == GSS_S_DEFECTIVE_TOKEN)) {
+					dbgprintf("GSS-API Reverting to plain TCP\n");
+					dbgprintf("tcp session socket with new data: #%d\n", fdSess);
+					if(TCPSessDataRcvd(iSess, buf, ret) == 0) {
+						logerrorInt("Tearing down TCP Session %d - see "
+							    "previous messages for reason(s)\n",
+							    iSess);
+						TCPSessClose(iSess);
+						return -1;
+					}
+					pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_TCP;
+					return 0;
+				}
+				display_status("accepting context", maj_stat,
+					       acc_sec_min_stat);
+				TCPSessClose(iSess);
+				return -1;
+			}
+			if (send_tok.length != 0) {
+				if (send_token(fdSess, &send_tok) < 0) {
+					gss_release_buffer(&min_stat, &send_tok);
+					logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
+					if (*context != GSS_C_NO_CONTEXT)
+						gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
+					TCPSessClose(iSess);
+					return -1;
+				}
+				gss_release_buffer(&min_stat, &send_tok);
+			}
+		} while (maj_stat == GSS_S_CONTINUE_NEEDED);
 
-	dbgprintf("GSS-API Accepted connection from: %s\n", recv_tok.value);
-	gss_release_buffer(&min_stat, &recv_tok);
+		maj_stat = gss_display_name(&min_stat, client, &recv_tok, NULL);
+		if (maj_stat != GSS_S_COMPLETE)
+			display_status("displaying name", maj_stat, min_stat);
+		else
+			dbgprintf("GSS-API Accepted connection from: %s\n", recv_tok.value);
+		gss_release_name(&min_stat, &client);
+		gss_release_buffer(&min_stat, &recv_tok);
 
-	dbgprintf("GSS-API Provided context flags:\n");
-	display_ctx_flags(*sess_flags);
+		dbgprintf("GSS-API Provided context flags:\n");
+		display_ctx_flags(*sess_flags);
+		pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_GSS;
+	}
 
 	return 0;
 }
@@ -845,8 +962,18 @@ void TCPSessGSSClose(int iSess) {
 		display_status("deleting context", maj_stat, min_stat);
 	*context = GSS_C_NO_CONTEXT;
 	pTCPSessions[iSess].gss_flags = 0;
+	pTCPSessions[iSess].allowedMethods = 0;
 
 	TCPSessClose(iSess);
+}
+
+
+void TCPSessGSSDeinit(void) {
+	OM_uint32 maj_stat, min_stat;
+
+	maj_stat = gss_release_cred(&min_stat, &gss_server_creds);
+	if (maj_stat != GSS_S_COMPLETE)
+		display_status("releasing credentials", maj_stat, min_stat);
 }
 #endif /* #ifdef USE_GSSAPI */
 

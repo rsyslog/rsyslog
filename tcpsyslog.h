@@ -39,6 +39,7 @@ struct TCPSession {
 #if defined(SYSLOG_INET) && defined(USE_GSSAPI)
 	OM_uint32 gss_flags;
 	gss_ctx_id_t gss_context;
+	char allowedMethods;
 #endif
 };
 
@@ -49,7 +50,11 @@ extern int bEnableTCP;
 extern struct TCPSession *pTCPSessions;
 #if defined(SYSLOG_INET) && defined(USE_GSSAPI)
 extern char *gss_listen_service_name;
+
+#define ALLOWEDMETHOD_GSS 2
 #endif
+
+#define ALLOWEDMETHOD_TCP 1
 
 /* prototypes */
 void deinit_tcp_listener(void);
@@ -65,6 +70,7 @@ int TCPSessGSSInit(void);
 int TCPSessGSSAccept(int fd);
 int TCPSessGSSRecv(int fd, void *buf, size_t buf_len);
 void TCPSessGSSClose(int sess);
+void TCPSessGSSDeinit(void);
 #endif
 
 #endif /* #ifndef TCPSYSLOG_H_INCLUDED */
