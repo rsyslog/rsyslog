@@ -27,13 +27,12 @@ Upon uninstallation, the file could be easily removed again. This approach<br>
 would be much cleaner and less error prone, than having to munge around<br>
 with the /etc/rsyslog.conf file directly.</i></p>
 </blockquote>
-<p>Please note that in this description, only "*.conf" files would be read. The actual implementation, however, reads all files except for those starting with a dot. If you find this is a real big problem, please complain.</p>
 <p><b>Sample:</b></p>
 <p><code><b>$IncludeConfig /etc/some-included-file.conf</b></code></p>
 <p>Directories can also be included. To do so, the name must end on a slash:</p>
 <p><code><b>$IncludeConfig /etc/rsyslog.d/</b></code></p>
-<p><code><b>And finally, only specific files matching a wildcard my be included 
-from a directory:</b></code></p>
+<p><b>And finally, only specific files matching a wildcard my be included 
+from a directory:</b></p>
 <p><code><b>$IncludeConfig /etc/rsyslog.d/*.conf</b></code></p>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
