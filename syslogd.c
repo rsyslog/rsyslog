@@ -4301,13 +4301,14 @@ init(void)
 	struct servent *sp;
 	struct sigaction sigAct;
 
+	thrdTerminateAll(); /* stop all running threads - TODO: reconsider location! */
+
 	/* initialize some static variables */
 	pDfltHostnameCmp = NULL;
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
 	Forwarding = 0;
 
-	thrdTerminateAll(); /* stop all running threads - TODO: reconsider location! */
 #ifdef SYSLOG_INET
 	if (restart) {
 		if (pAllowedSenders_UDP != NULL) {
