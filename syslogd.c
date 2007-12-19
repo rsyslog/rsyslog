@@ -471,6 +471,9 @@ static pid_t ppid; /* This is a quick and dirty hack used for spliting main/star
 
 /* global variables for config file state */
 static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
+int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
+					   the default, so if no -c<n> option is given, we make ourselvs
+					   as compatible to sysklogd as possible. */
 int	Debug;		/* debug flag  - read-only after startup */
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
@@ -1629,8 +1632,13 @@ void getCurrTime(struct syslogTime *t)
 
 static int usage(void)
 {
-	fprintf(stderr, "usage: rsyslogd [-46AdhqQvw] [-l hostlist] [-m markinterval] [-n] [-p path]\n" \
-		" [-s domainlist] [-r[port]] [-tport[,max-sessions]] [-gport[,max-sessions]] [-f conffile] [-i pidfile] [-x]\n");
+	fprintf(stderr, "usage: rsyslogd [-46AdhqQvw] [-cversion] [-lhostlist] [-mmarkinterval] [-n] [-p path]\n" \
+		" [-s domainlist] [-r[port]] [-tport[,max-sessions]] [-gport[,max-sessions]] [-f conffile] [-i pidfile] [-x]\n\n");
+	fprintf(stderr, "The following options are deprecated and are provided\n"
+ 		        "for compatibility reasons only:\n"
+			"-mmarkinterval\n\n"
+			"For further information see http://www.rsyslog.com/doc\n"
+	       );
 	exit(1); /* "good" exit - done to terminate usage() */
 }
 
@@ -6192,7 +6200,7 @@ int main(int argc, char **argv)
 
 	/* END core initializations */
 
-	while ((ch = getopt(argc, argv, "46Aa:dehi:f:g:l:m:nop:qQr::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46Aa:c:dehi:f:g:l:m:nop:qQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -6215,6 +6223,9 @@ int main(int argc, char **argv)
 				}
 			else
 				fprintf(stderr, "rsyslogd: Out of descriptors, ignoring %s\n", optarg);
+			break;
+		case 'c':		/* compatibility mode */
+			iCompatibilityMode = atoi(optarg);
 			break;
 		case 'd':		/* debug */
 			Debug = 1;
@@ -6249,7 +6260,11 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'm':		/* mark interval */
-			MarkInterval = atoi(optarg) * 60;
+			if(iCompatibilityMode < 3)
+				MarkInterval = atoi(optarg) * 60;
+			else
+				fprintf(stderr,
+					"-m option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
 		case 'n':		/* don't fork */
 			NoFork = 1;
@@ -6316,6 +6331,13 @@ int main(int argc, char **argv)
 	if ((argc -= optind))
 		usage();
 
+	/* TODO: this should go away at a reasonable stage of v3 development.
+	 * rgerhards, 2007-12-19
+	 */
+	if(iCompatibilityMode < 3) {
+		fprintf(stderr, "Warning: compatibility modes < 3 are currently NOT supported - continuing...\n");
+	}
+
 	checkPermissions();
 	thrdInit();
 
@@ -6357,6 +6379,8 @@ int main(int argc, char **argv)
 	}
 	else
 		debugging_on = 1;
+
+	dbgprintf("Compatibility Mode: %d\n", iCompatibilityMode);
 
 	/* tuck my process id away */
 	if ( !Debug )
