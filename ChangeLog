@@ -10,7 +10,12 @@ Version 3.0.0 (rgerhards), 2007-12-??
 - enhanced $IncludeConfig directive to support wildcard characters
   (thanks to Michael Biebl)
 ---------------------------------------------------------------------------
-Version 1.20.2 (rgerhards), 2007-12-??
+Version 1.21.0 (rgerhards), 2007-12-19
+- GSS-API support for syslog/TCP connections was added. Thanks to
+  varmojfekoj for providing the patch with this functionality
+- code cleanup
+- enhanced $IncludeConfig directive to support wildcard filenames
+- changed some multithreading synchronization
 ---------------------------------------------------------------------------
 Version 1.20.1 (rgerhards), 2007-12-12
 - corrected a debug setting that survived release. Caused TCP connections
