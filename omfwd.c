@@ -67,9 +67,6 @@
 #ifdef USE_GSSAPI
 #include "gss-misc.h"
 #endif
-#ifdef USE_NETZIP
-#include <zlib.h>
-#endif
 
 #ifdef SYSLOG_INET
 #define INET_SUSPEND_TIME 60		/* equal to 1 minute 

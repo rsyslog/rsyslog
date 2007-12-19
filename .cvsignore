@@ -19,3 +19,6 @@ stamp-h1
 rfc3195d
 rklogd
 rsyslogd
+INSTALL
+install-sh
+missing
