@@ -191,9 +191,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-
-#ifndef __sun
-#endif
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
 #include <resolv.h>
@@ -203,7 +200,7 @@
 
 #include <pthread.h>
 
-#if	HAVE_PATHS_H
+#if HAVE_PATHS_H
 #include <paths.h>
 #endif
 

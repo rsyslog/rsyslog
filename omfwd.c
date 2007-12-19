@@ -68,9 +68,6 @@
 #ifdef USE_GSSAPI
 #include "gss-misc.h"
 #endif
-#ifdef USE_NETZIP
-#include <zlib.h>
-#endif
 
 MODULE_TYPE_OUTPUT
 

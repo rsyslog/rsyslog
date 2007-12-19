@@ -26,8 +26,6 @@
 #include "template.h"
 
 #ifdef USE_NETZIP
-#include <unistd.h>
-#include <zlib.h>
 /* config param: minimum message size to try compression. The smaller
  * the message, the less likely is any compression gain. We check for
  * gain before we submit the message. But to do so we still need to
