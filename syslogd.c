@@ -3843,7 +3843,7 @@ static rsRetVal doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 {
 	DEFiRet;
 	char pattern[MAXFNAME];
-	char *cfgFile;
+	uchar *cfgFile;
 	glob_t cfgFiles;
 	size_t i = 0;
 	struct stat fileInfo;
@@ -3862,9 +3862,9 @@ static rsRetVal doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	glob(pattern, GLOB_MARK, NULL, &cfgFiles);
 
 	for(i = 0; i < cfgFiles.gl_pathc; i++) {
-		cfgFile = cfgFiles.gl_pathv[i];
+		cfgFile = (uchar*) cfgFiles.gl_pathv[i];
 
-		if(stat(cfgFile, &fileInfo) != 0) 
+		if(stat((char*) cfgFile, &fileInfo) != 0) 
 			continue; /* continue with the next file if we can't stat() the file */
 
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
