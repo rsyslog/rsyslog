@@ -177,6 +177,54 @@ CODESTARTdbgPrintInstInfo
 	printf("%s", pData->f_hname);
 ENDdbgPrintInstInfo
 
+
+/* Send a message via UDP
+ * rgehards, 2007-12-20
+ */
+static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
+{
+	DEFiRet;
+	struct addrinfo *r;
+	int i;
+	unsigned lsent = 0;
+	int bSendSuccess;
+
+	if(finet != NULL) {
+		/* we need to track if we have success sending to the remote
+		 * peer. Success is indicated by at least one sendto() call
+		 * succeeding. We track this be bSendSuccess. We can not simply
+		 * rely on lsent, as a call might initially work, but a later
+		 * call fails. Then, lsent has the error status, even though
+		 * the sendto() succeeded.
+		 * rgerhards, 2007-06-22
+		 */
+		bSendSuccess = FALSE;
+		for (r = pData->f_addr; r; r = r->ai_next) {
+			for (i = 0; i < *finet; i++) {
+			       lsent = sendto(finet[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
+				if (lsent == len) {
+					bSendSuccess = TRUE;
+					break;
+				} else {
+					int eno = errno;
+					char errStr[1024];
+					dbgprintf("sendto() error: %d = %s.\n",
+						eno, strerror_r(eno, errStr, sizeof(errStr)));
+				}
+			}
+			if (lsent == len && !send_to_all)
+			       break;
+		}
+		/* finished looping */
+		if (bSendSuccess == FALSE) {
+			dbgprintf("error forwarding via udp, suspending\n");
+			iRet = RS_RET_SUSPENDED;
+		}
+	}
+
+	return iRet;
+}
+
 /* CODE FOR SENDING TCP MESSAGES */
 
 /* Initialize TCP sockets (for sender)
@@ -695,10 +743,6 @@ ENDtryResume
 BEGINdoAction
 	char *psz; /* temporary buffering */
 	register unsigned l;
-	struct addrinfo *r;
-	int i;
-	unsigned lsent = 0;
-	int bSendSuccess;
 CODESTARTdoAction
 	switch (pData->eDestState) {
 	case eDestFORW_SUSP:
@@ -770,39 +814,7 @@ CODESTARTdoAction
 
 			if(pData->protocol == FORW_UDP) {
 				/* forward via UDP */
-	                        if(finet != NULL) {
-					/* we need to track if we have success sending to the remote
-					 * peer. Success is indicated by at least one sendto() call
-					 * succeeding. We track this be bSendSuccess. We can not simply
-					 * rely on lsent, as a call might initially work, but a later
-					 * call fails. Then, lsent has the error status, even though
-					 * the sendto() succeeded.
-					 * rgerhards, 2007-06-22
-					 */
-					bSendSuccess = FALSE;
-					for (r = pData->f_addr; r; r = r->ai_next) {
-		                       		for (i = 0; i < *finet; i++) {
-		                                       lsent = sendto(finet[i+1], psz, l, 0,
-		                                                      r->ai_addr, r->ai_addrlen);
-							if (lsent == l) {
-						       		bSendSuccess = TRUE;
-								break;
-							} else {
-								int eno = errno;
-								char errStr[1024];
-								dbgprintf("sendto() error: %d = %s.\n",
-									eno, strerror_r(eno, errStr, sizeof(errStr)));
-							}
-		                                }
-						if (lsent == l && !send_to_all)
-	                         	               break;
-					}
-					/* finished looping */
-	                                if (bSendSuccess == FALSE) {
-		                                dbgprintf("error forwarding via udp, suspending\n");
-						iRet = RS_RET_SUSPENDED;
-					}
-				}
+				CHKiRet(UDPSend(pData, psz, l));
 			} else {
 				/* forward via TCP */
 				if(TCPSend(pData, psz, l) != 0) {
@@ -815,6 +827,7 @@ CODESTARTdoAction
 		}
 		break;
 	}
+finalize_it:
 ENDdoAction
 
 
