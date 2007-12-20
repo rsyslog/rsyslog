@@ -31,9 +31,6 @@ rsyslogd \- reliable and extended syslogd
 ]
 .RB [ " \-n " ]
 .br
-.RB [ " \-p"
-.IB socket 
-]
 .RB [ " \-q " ]
 .RB [ " \-Q " ]
 .RB [ " \-r "
@@ -181,10 +178,6 @@ Avoid auto-backgrounding.  This is needed especially if the
 .B rsyslogd
 is started and controlled by
 .BR init (8).
-.TP
-.BI "\-p " "socket"
-You can specify an alternative unix domain socket instead of
-.IR /dev/log "."
 .TP
 .BI "\-q " "add hostname if DNS fails during ACL processing"
 During ACL processing, hostnames are resolved to IP addreses for

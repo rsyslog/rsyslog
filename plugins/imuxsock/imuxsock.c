@@ -44,6 +44,14 @@ TERM_SYNC_TYPE(eTermSync_NONE)
 
 /* defines */
 #define MAXFUNIX	20
+#ifndef _PATH_LOG
+#ifdef BSD
+#define _PATH_LOG	"/var/run/log"
+#else
+#define _PATH_LOG	"/dev/log"
+#endif
+#endif
+
 
 /* handle some defines missing on more than one platform */
 #ifndef SUN_LEN
@@ -61,12 +69,13 @@ static int startIndexUxLocalSockets; /* process funix from that index on (used t
 				   * read-only after startup
 				   */
 static int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
-static char *funixn[MAXFUNIX] = { _PATH_LOG }; /* read-only after startup */
+static uchar *funixn[MAXFUNIX] = { (uchar*) _PATH_LOG }; /* read-only after startup */
 static int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
 static int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 
-/* config setting */
+/* config settings */
 static int bOmitLocalLogging = 0;
+static uchar *pLogSockName = NULL;
 
 
 static int create_unix_socket(const char *path)
@@ -78,7 +87,7 @@ static int create_unix_socket(const char *path)
 	if (path[0] == '\0')
 		return -1;
 
-	(void) unlink(path);
+	unlink(path);
 
 	memset(&sunx, 0, sizeof(sunx));
 	sunx.sun_family = AF_UNIX;
@@ -172,9 +181,14 @@ BEGINwillRun
 CODESTARTwillRun
 	register int i;
 
+	/* first apply some config settings */
 	startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
+	if(pLogSockName != NULL)
+		funixn[0] = pLogSockName;
+
+	/* and now on to the real work... */
 	for (i = 1; i < MAXFUNIX; i++) {
-		funixn[i] = "";
+		funixn[i] = (uchar*) "";
 		funix[i]  = -1;
 	}
 	/* initialize and return if will run or not */
@@ -184,7 +198,7 @@ CODESTARTwillRun
 			close(funix[i]);
 			*/
 			continue;
-		if ((funix[i] = create_unix_socket(funixn[i])) != -1)
+		if ((funix[i] = create_unix_socket((char*) funixn[i])) != -1)
 			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", funixn[i], funix[i]);
 	}
 
@@ -204,7 +218,7 @@ CODESTARTafterRun
 	/* Clean-up files. */
         for (i = 0; i < nfunix; i++)
 		if (funixn[i] && funix[i] != -1)
-			(void)unlink(funixn[i]);
+			unlink((char*) funixn[i]);
 ENDafterRun
 
 
@@ -231,6 +245,10 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	bOmitLocalLogging = 0;
+	if(pLogSockName != NULL) {
+		free(pLogSockName);
+		pLogSockName = NULL;
+	}
 	return RS_RET_OK;
 }
 
@@ -239,6 +257,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary, NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord, NULL, &pLogSockName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*

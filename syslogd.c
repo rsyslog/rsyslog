@@ -302,15 +302,6 @@
 #define _PATH_TTY	"/dev/tty"
 #endif
 
-#ifndef _PATH_LOG
-#ifdef BSD
-#define _PATH_LOG	"/var/run/log"
-#else
-#define _PATH_LOG	"/dev/log"
-#endif
-#endif
-
-
 /* IPv6 compatibility layer for older platforms
  * We need to handle a few things different if we are running
  * on an older platform which does not support all the glory
@@ -6171,11 +6162,6 @@ int main(int argc, char **argv)
 		case 'n':		/* don't fork */
 			NoFork = 1;
 			break;
-#if 0
-		case 'p':		/* path to regular log socket */
-			funixn[0] = optarg;
-			break;
-#endif
 		case 'q':               /* add hostname if DNS resolving has failed */
 		        ACLAddHostnameOnFail = 1;
 		        break;
