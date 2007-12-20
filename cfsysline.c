@@ -352,6 +352,12 @@ finalize_it:
  * a pointer to a string which is to receive the option
  * value. The returned string must be freed by the caller.
  * rgerhards, 2007-09-07
+ * To facilitate multiple instances of the same command line
+ * directive, doGetWord() now checks if pVal is already a
+ * non-NULL pointer. If so, we assume it was created by a previous
+ * incarnation and is automatically freed. This happens only when
+ * no custom handler is defined. If it is, the customer handler
+ * must do the cleanup. -- rgerhards, 2007-12-20
  */
 static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void *pVal)
 {
@@ -380,7 +386,9 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 	/* we got the word, now set it */
 	if(pSetHdlr == NULL) {
 		/* we should set value directly to var */
-		*((uchar**)pVal) = pNewVal;
+		if(pVal != NULL)
+			free(pVal); /* free previous entry */
+		*((uchar**)pVal) = pNewVal; /* set new one */
 	} else {
 		/* we set value via a set function */
 		CHKiRet(pSetHdlr(pVal, pNewVal));
