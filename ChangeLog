@@ -6,6 +6,7 @@ Version 2.0.0 (rgerhards), 2007-12-??
   parsing. Thanks to varmojfekoj for the patch.
 - bugfix: when compiled without network support, unix sockets were
   not properply closed
+- bugfix: memory leak in cfsysline.c/doGetWord() fixed
 ---------------------------------------------------------------------------
 Version 1.21.0 (rgerhards), 2007-12-19
 - GSS-API support for syslog/TCP connections was added. Thanks to
