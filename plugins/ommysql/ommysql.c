@@ -104,16 +104,6 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-BEGINonSelectReadyWrite
-CODESTARTonSelectReadyWrite
-ENDonSelectReadyWrite
-
-
-BEGINgetWriteFDForSelect
-CODESTARTgetWriteFDForSelect
-ENDgetWriteFDForSelect
-
-
 /* log a database error with descriptive message.
  * We check if we have a valid MySQL handle. If not, we simply
  * report an error, but can not be specific. RGerhards, 2007-01-30

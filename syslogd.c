@@ -5448,81 +5448,17 @@ static void processImInternal(void)
 }
 
 
-/* helper function for mainloop(). This is used to add all module
- * writeFDsfor Select via llExecFunc().
- * rgerhards, 2007-08-02
- */
-typedef struct selectHelperWriteFDSInfo_s { /* struct for pParam */
-	fd_set *pWritefds;
-	int *pMaxfds;
-} selectHelperWriteFDSInfo_t;
-DEFFUNC_llExecFunc(mainloopAddModWriteFDSforSelect)
-{
-	DEFiRet;
-	action_t *pAction = (action_t*) pData;
-	selectHelperWriteFDSInfo_t *pState = (selectHelperWriteFDSInfo_t*) pParam;
-	short fdMod;
-
-	assert(pAction != NULL);
-	assert(pState != NULL);
-
-	if(pAction->pMod->getWriteFDForSelect(pAction->pModData, &fdMod) == RS_RET_OK) {
-	   FD_SET(fdMod, pState->pWritefds);
-		if(fdMod > *pState->pMaxfds)
-			*pState->pMaxfds = fdMod;
-		}
-
-	return iRet;
-}
-
-
-/* helper function for mainloop(). This is used to call module action
- * handlers after select if a fd is writable.
- * HINT: when we change to the new threading model, this function
- * is probably no longer needed.
- * rgerhards, 2007-08-02
- */
-DEFFUNC_llExecFunc(mainloopCallWithWritableFDsActions)
-{
-	DEFiRet;
-	action_t *pAction = (action_t*) pData;
-	selectHelperWriteFDSInfo_t *pState = (selectHelperWriteFDSInfo_t*) pParam;
-	short fdMod;
-
-	assert(pAction != NULL);
-	assert(pState != NULL);
-
-	if(pAction->pMod->getWriteFDForSelect(pAction->pModData, &fdMod) == RS_RET_OK) {
-		if(FD_ISSET(fdMod, pState->pWritefds)) {
-			if((iRet = pAction->pMod->onSelectReadyWrite(pAction->pModData))
-			   != RS_RET_OK) {
-				dbgprintf("error %d from onSelectReadyWrite() - continuing\n", iRet);
-			}
-			if(--(pState->pMaxfds) == 0) {
-				ABORT_FINALIZE(RS_RET_FINISHED); /* all processed, nothing left to do */
-			}
-		}
-	   }
-
-finalize_it:
-	return iRet;
-}
-
-
 /* process the select() selector array after the successful select.
  * processing is completed as soon as all selectors needing attention
  * are processed.
  * rgerhards, 2007-08-08
  */
-static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_set *pWritefds)
+static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds)
 {
 	DEFiRet;
-	rsRetVal iRetLL;
 	int i;
 	char line[MAXLINE +1];
-	selectHelperWriteFDSInfo_t writeFDSInfo;
 #ifdef  SYSLOG_INET
-	selector_t *f;
 	struct sockaddr_storage frominet;
 	socklen_t socklen;
 	uchar fromHost[NI_MAXHOST];
@@ -5550,31 +5486,6 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 				dbgprintf("%d ", i);
 		dbgprintf(("\n"));
 	}
-
-#ifdef SYSLOG_INET
-	/* Now check the TCP send sockets. So far, we only see if they become
-	 * writable and then change their internal status. No real async
-	 * writing is currently done. This code will be replaced once liblogging
-	 * is used, thus we try not to focus too much on it.
-	 *
-	 * IMPORTANT: With the current code, the writefds must be checked first,
-	 * because the readfds might have messages to be forwarded, which
-	 * rely on the status setting that is done here!
-	 * rgerhards 2005-07-20
-	 *
-	 * liblogging implementation will not happen as anticipated above. So
-	 * this code here will stay for quite a while.
-	 * rgerhards, 2006-12-07
-	 */
-	writeFDSInfo.pWritefds = pWritefds;
-	writeFDSInfo.pMaxfds = &nfds;
-	for(f = Files; f != NULL ; f = f->f_next) {
-		iRetLL = llExecFunc(&f->llActList, mainloopCallWithWritableFDsActions, &writeFDSInfo);
-		if(iRetLL == RS_RET_FINISHED) {
-			ABORT_FINALIZE(RS_RET_OK); /* we are done in this case */
-		}
-	}
-#endif /* #ifdef SYSLOG_INET */
 
 #ifdef SYSLOG_INET
        if (finet != NULL && AcceptRemote) {
@@ -5711,14 +5622,8 @@ static void mainloop(void)
 	int maxfds;
 	int nfds;
 #ifdef  SYSLOG_INET
-	selectHelperWriteFDSInfo_t writeFDSInfo;
-	fd_set writefds;
-	selector_t *f;
 	int iTCPSess;
 #endif	/* #ifdef SYSLOG_INET */
-#ifdef	BSD
-	struct timeval tvSelectTimeout;
-#endif
 
 	while(!bFinished){
 	        errno  = 0;
@@ -5770,23 +5675,6 @@ static void mainloop(void)
 			}
 		}
 
-		/* TODO: activate the code below only if we actually need to check
-		 * for outstanding writefds.
-		 */
-		if(1) {
-			/* Now add the TCP output sockets to the writefds set. This implementation
-			 * is not optimal (performance-wise) and it should be replaced with something
-			 * better in the longer term. I've not yet done this, as this code is
-			 * scheduled to be replaced after the liblogging integration.
-			 * rgerhards 2005-07-20
-			 */
-			FD_ZERO(&writefds);
-			writeFDSInfo.pWritefds = &writefds;
-			writeFDSInfo.pMaxfds = &maxfds;
-			for (f = Files; f != NULL ; f = f->f_next) {
-				llExecFunc(&f->llActList, mainloopAddModWriteFDSforSelect, &writeFDSInfo);
-			}
-		}
 #endif
 
 		if ( debugging_on ) {
@@ -5798,37 +5686,7 @@ static void mainloop(void)
 			dbgprintf("\n");
 		}
 
-#define  MAIN_SELECT_TIMEVAL NULL
-#ifdef BSD
-		/* There seems to be a problem with BSD and threads. When running on
-		 * multiple threads, a signal will not cause the select call to be
-		 * interrrupted. I am not sure if this is by design or an bug (some
-		 * information on the web let's me think it is a bug), but that really
-		 * does not matter. The issue with our code is that we will not gain
-		 * control when rsyslogd is terminated or huped. What I am doing now is
-		 * make the select call timeout after 10 seconds, so that we can check
-		 * the condition then. Obviously, this causes some sluggish behaviour and
-		 * also the loss of some (very few) cpu cycles. Both, I think, are
-		 * absolutely acceptable.
-		 * rgerhards, 2005-10-26
-		 * TODO: I got some information: this seems to be expected signal() behaviour
-		 * we should investigate the use of sigaction() (see klogd.c for an sample).
-		 * rgerhards, 2007-06-22
-		 * rgerhards, 2007-09-11: code has been converted to sigaction() now. We need
-		 * to re-check on BSD, I think the issue is now solved.
-		 */
-		tvSelectTimeout.tv_sec = 10;
-		tvSelectTimeout.tv_usec = 0;
-#		undef MAIN_SELECT_TIMEVAL 
-#		define MAIN_SELECT_TIMEVAL &tvSelectTimeout
-#endif
-#ifdef SYSLOG_INET
-#define MAIN_SELECT_WRITEFDS (fd_set *) &writefds
-#else
-#define MAIN_SELECT_WRITEFDS NULL
-#endif
-		nfds = select(maxfds+1, (fd_set *) &readfds, MAIN_SELECT_WRITEFDS,
-				  (fd_set *) NULL, MAIN_SELECT_TIMEVAL);
+		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
 
 		if(bRequestDoMark) {
 			domark();
@@ -5849,10 +5707,7 @@ static void mainloop(void)
 			continue;
 		}
 
-		processSelectAfter(maxfds, nfds, &readfds, MAIN_SELECT_WRITEFDS);
-
-#undef MAIN_SELECT_TIMEVAL 
-#undef MAIN_SELECT_WRITEFDS
+		processSelectAfter(maxfds, nfds, &readfds);
 	}
 }
 
@@ -6074,10 +5929,6 @@ int main(int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	struct sigaction sigAct;
-#if 0 /* see comment for #if 0 below (towards end of function) */
-	pthread_t thrdMain;
-	sigset_t sigSet;
-#endif
 
 #ifdef	MTRACE
 	mtrace(); /* this is a debug aid for leak detection - either remove
@@ -6334,35 +6185,7 @@ int main(int argc, char **argv)
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
 	(void) alarm(TIMERINTVL);
 
-#if 0
-	i = pthread_create(&thrdMain, NULL, immark_runInput, NULL);
-	dbgprintf("\"main\" thread started with state %d.\n", i);
-#endif
-
 	mainThread();
-
-#if 0
-	/* This commented-out code was once used to spawn a separate thread
-	 * for the mainThread(). This was initially done to solve a problem that not
-	 * really existed. Thus the code is now commented out. I do not remove it yet,
-	 * because there may be use for it in the not too distant future. If it is
-	 * still commented out in a year's time, that's a good indication it should
-	 * be removed!  -- rgerhards, 2007-10-17
-	 */
-	i = pthread_create(&thrdMain, NULL, mainThread, NULL);
-	dbgprintf("\"main\" thread started with state %d.\n", i);
-
-	/* we block all signals - they will be processed by the "main"-thread. This most
-	 * closely resembles previous behaviour. TODO: think about optimizing it, some
-	 * signals may better be delivered here. rgerhards, 2007-10-08
-	 */
-	sigfillset(&sigSet);
-	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
-	
-	/* see comment in mainThread on why we start thread and then immediately
-	 * do a blocking wait on it - it makese sense... ;) rgerhards, 2007-10-08
-	 */
-#endif
 
 	/* do any de-init's that need to be done AFTER this comment */
 

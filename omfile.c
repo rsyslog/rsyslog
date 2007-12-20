@@ -611,19 +611,9 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
-BEGINonSelectReadyWrite
-CODESTARTonSelectReadyWrite
-ENDonSelectReadyWrite
-
-
 BEGINneedUDPSocket
 CODESTARTneedUDPSocket
 ENDneedUDPSocket
-
-
-BEGINgetWriteFDForSelect
-CODESTARTgetWriteFDForSelect
-ENDgetWriteFDForSelect
 
 
 BEGINtryResume

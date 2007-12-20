@@ -199,49 +199,6 @@ static rsRetVal needUDPSocket(void *pModData)\
 }
 
 
-/* onSelectReadyWrite()
- * Extra comments:
- * This is called when select() returned with a writable file descriptor
- * for this module. The fd was most probably obtained by getWriteFDForSelect()
- * before.
- */
-#define BEGINonSelectReadyWrite \
-static rsRetVal onSelectReadyWrite(void *pModData)\
-{\
-	rsRetVal iRet = RS_RET_NONE;\
-	instanceData *pData = NULL;
-
-#define CODESTARTonSelectReadyWrite \
-	pData = (instanceData*) pModData;
-
-#define ENDonSelectReadyWrite \
-	return iRet;\
-}
-
-
-/* getWriteFDForSelect()
- * Extra comments:
- * Gets writefd for select call. Must only be returned when the selector must
- * be written to. If the module has no such fds, it must return RS_RET_NONE.
- * In this case, the default implementation is sufficient.
- * This interface will probably go away over time, but we need it now to
- * continue modularization.
- */
-#define BEGINgetWriteFDForSelect \
-static rsRetVal getWriteFDForSelect(void *pModData, short  __attribute__((unused)) *fd)\
-{\
-	rsRetVal iRet = RS_RET_NONE;\
-	instanceData *pData = NULL;
-
-#define CODESTARTgetWriteFDForSelect \
-	assert(fd != NULL);\
-	pData = (instanceData*) pModData;
-
-#define ENDgetWriteFDForSelect \
-	return iRet;\
-}
-
-
 /* parseSelectorAct()
  * Extra comments:
  * try to process a selector action line. Checks if the action
@@ -363,10 +320,6 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = parseSelectorAct;\
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
 		*pEtryPoint = isCompatibleWithFeature;\
-	} else if(!strcmp((char*) name, "getWriteFDForSelect")) {\
-		*pEtryPoint = getWriteFDForSelect;\
-	} else if(!strcmp((char*) name, "onSelectReadyWrite")) {\
-		*pEtryPoint = onSelectReadyWrite;\
 	} else if(!strcmp((char*) name, "needUDPSocket")) {\
 		*pEtryPoint = needUDPSocket;\
 	} else if(!strcmp((char*) name, "tryResume")) {\

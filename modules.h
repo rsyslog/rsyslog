@@ -59,8 +59,6 @@ typedef struct moduleInfo {
 	rsRetVal (*modQueryEtryPt)(uchar *name, rsRetVal (**EtryPoint)()); /* query entry point addresses */
 	rsRetVal (*isCompatibleWithFeature)(syslogFeature);
 	rsRetVal (*freeInstance)(void*);/* called before termination or module unload */
-	rsRetVal (*getWriteFDForSelect)(void*,short *);/* called before termination or module unload */
-	rsRetVal (*onSelectReadyWrite)(void*);/* called when fd is writeable after select() */
 	rsRetVal (*needUDPSocket)(void*);/* called when fd is writeable after select() */
 	rsRetVal (*dbgPrintInstInfo)(void*);/* called before termination or module unload */
 	rsRetVal (*tryResume)(void*);/* called to see if module actin can be resumed now */

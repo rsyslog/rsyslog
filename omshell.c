@@ -127,16 +127,6 @@ CODESTARTneedUDPSocket
 ENDneedUDPSocket
 
 
-BEGINonSelectReadyWrite
-CODESTARTonSelectReadyWrite
-ENDonSelectReadyWrite
-
-
-BEGINgetWriteFDForSelect
-CODESTARTgetWriteFDForSelect
-ENDgetWriteFDForSelect
-
-
 BEGINmodExit
 CODESTARTmodExit
 ENDmodExit
