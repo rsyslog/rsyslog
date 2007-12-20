@@ -33,6 +33,7 @@ typedef enum eTermSyncType {
 /* the thread object */
 typedef struct thrdInfo {
 	eTermSyncType_t	eTermTool;
+	pthread_mutex_t *mutTermOK;	/* Is it ok to terminate that thread now? */
 	int bIsActive;		/* Is thread running? */
 	int bShallStop;		/* set to 1 if the thread should be stopped ? */
 	rsRetVal (*pUsrThrdMain)(struct thrdInfo*); /* user thread main to be called in new thread */
@@ -66,5 +67,14 @@ void queueDel (msgQueue *q, void **out);
 /* go-away's */
 extern int iMainMsgQueueSize;
 extern msgQueue *pMsgQueue;
+
+
+/* macros (replace inline functions) */
+/*TODO: remove these macros once we now we can live without -- rgerhards, 2007-12-20
+ * #define thrdBlockTermination(pThis) {dbgprintf("lock mutex\n"); pthread_mutex_lock((pThis)->mutTermOK)  ;}
+ * #define thrdUnblockTermination(pThis) {dbgprintf("unlock mutex\n"); pthread_mutex_unlock((pThis)->mutTermOK)  ;}
+ */
+#define thrdBlockTermination(pThis)
+#define thrdUnblockTermination(pThis)
 
 #endif /* #ifndef THREADS_H_INCLUDED */

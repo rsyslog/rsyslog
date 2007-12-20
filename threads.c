@@ -1,3 +1,7 @@
+/* TODO: we should guard the individual thread actions with a mutex. Else, we may
+ * run into race conditions on thread termination.
+ */
+
 /* threads.c
  *
  * This file implements threading support helpers (and maybe the thread object)
@@ -25,7 +29,6 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
-#include "rsyslog.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +36,7 @@
 #include <pthread.h>
 #include <assert.h>
 
+#include "rsyslog.h"
 #include "syslogd.h"
 #include "linkedlist.h"
 #include "threads.h"
@@ -48,18 +52,22 @@ static linkedList_t llThrds;
 
 /* Construct a new thread object
  */
-static rsRetVal thrdConstruct(thrdInfo_t **pThis)
+static rsRetVal thrdConstruct(thrdInfo_t **ppThis)
 {
-	thrdInfo_t *pNew;
+	thrdInfo_t *pThis;
 
-	if((pNew = calloc(1, sizeof(thrdInfo_t))) == NULL)
+	assert(ppThis != NULL);
+
+	if((pThis = calloc(1, sizeof(thrdInfo_t))) == NULL)
 		return RS_RET_OUT_OF_MEMORY;
 
 	/* OK, we got the element, now initialize members that should
 	 * not be zero-filled.
 	 */
+	pThis->mutTermOK = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
+	pthread_mutex_init (pThis->mutTermOK, NULL);
 
-	*pThis = pNew;
+	*ppThis = pThis;
 	return RS_RET_OK;
 }
 
@@ -76,6 +84,7 @@ dbgprintf("thrdDestruct, pThis: %lx\n", pThis);
 	if(pThis->bIsActive == 1) {
 		thrdTerminate(pThis);
 	}
+	free(pThis->mutTermOK);
 	free(pThis);
 
 	return RS_RET_OK;
@@ -91,9 +100,15 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	
 dbgprintf("Terminate thread %lx via method %d\n", pThis->thrdID, pThis->eTermTool);
 	if(pThis->eTermTool == eTermSync_SIGNAL) {
+		/* we first wait for the thread to reach a point in execution where it
+		 * is safe to terminate it.
+		 * TODO: TIMEOUT!
+		 */
+		pthread_mutex_lock(pThis->mutTermOK);
 		pThis->bShallStop = 1;	/* request termination */
 		pthread_kill(pThis->thrdID, SIGUSR2); /* get thread out ouf blocking calls */
 		pthread_join(pThis->thrdID, NULL);
+		pthread_mutex_unlock(pThis->mutTermOK);	 /* cleanup... */
 		/* TODO: TIMEOUT! */
 	} else if(pThis->eTermTool == eTermSync_NONE) {
 		pthread_cancel(pThis->thrdID);
@@ -162,7 +177,7 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSync
 	assert(thrdMain != NULL);
 
 	CHKiRet(thrdConstruct(&pThis));
-	pThis->eTermTool = eTermSyncType;
+	pThis->eTermTool = eTermSync_NONE; // eTermSyncType; TODO: review
 	pThis->bIsActive = 1;
 	pThis->pUsrThrdMain = thrdMain;
 	pThis->pAfterRun = afterRun;
@@ -233,9 +248,15 @@ thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds)
 	assert(pThis != NULL);
 	tvSelectTimeout.tv_sec = iSeconds;
 	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
+	thrdUnblockTermination(pThis);
+	/* there may be a race condition if pthread_kill() is called after unblock but
+	 * before the select() is setup. TODO: check and re-eval -- rgerhards, 2007-12-20
+	 */
 	select(0, NULL, NULL, NULL, &tvSelectTimeout);
 	if(pThis->bShallStop)
 		iRet = RS_RET_TERMINATE_NOW;
+	else
+		thrdBlockTermination(pThis);
 	return iRet;
 }
 

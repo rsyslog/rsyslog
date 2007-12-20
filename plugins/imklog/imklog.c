@@ -46,10 +46,13 @@ MODULE_TYPE_INPUT
 TERM_SYNC_TYPE(eTermSync_SIGNAL)
 
 /* Module static data */
-int dbgPrintSymbols = 0;
 DEF_IMOD_STATIC_DATA
 typedef struct _instanceData {
 } instanceData;
+
+/* configuration settings TODO: move to instance data? */
+int dbgPrintSymbols = 0;
+int symbols_twice = 0;
 
 
 /* Includes. */
@@ -87,12 +90,11 @@ static int	kmsg,
 static int	use_syscall = 0,
 		symbol_lookup = 1;
 
-static char	*symfile = (char *) 0,
+static char	*symfile = NULL,
 		log_buffer[LOG_BUFFER_SIZE];
 
 static enum LOGSRC {none, proc, kernel} logsrc;
 
-int symbols_twice = 0;
 
 
 /* Function prototypes. */
