@@ -6172,9 +6172,6 @@ int main(int argc, char **argv)
 			NoFork = 1;
 			break;
 #if 0
-		case 'o':		/* omit local logging (/dev/log) */
-			startIndexUxLocalSockets = 1;
-			break;
 		case 'p':		/* path to regular log socket */
 			funixn[0] = optarg;
 			break;

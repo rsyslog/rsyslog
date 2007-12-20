@@ -29,11 +29,7 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-l "
 .I hostlist
 ]
-.RB [ " \-m "
-.I interval
-] 
 .RB [ " \-n " ]
-.RB [ " \-o " ]
 .br
 .RB [ " \-p"
 .IB socket 
@@ -180,26 +176,11 @@ Specify a hostname that should be logged only with its simple hostname
 and not the fqdn.  Multiple hosts may be specified using the colon
 (``:'') separator.
 .TP
-.BI "\-m " "interval"
-The
-.B rsyslogd
-logs a mark timestamp regularly.  The default
-.I interval
-between two \fI-- MARK --\fR lines is 20 minutes.  This can be changed
-with this option.  Setting the
-.I interval
-to zero turns it off entirely.
-.TP
 .B "\-n"
 Avoid auto-backgrounding.  This is needed especially if the
 .B rsyslogd
 is started and controlled by
 .BR init (8).
-.TP
-.B "\-o"
-Omit reading the standard local log socket. This option is most
-useful for running multiple instances of rsyslogd on a single 
-machine. When specified, no local log socket is opened at all.
 .TP
 .BI "\-p " "socket"
 You can specify an alternative unix domain socket instead of

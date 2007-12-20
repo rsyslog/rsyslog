@@ -40,7 +40,7 @@
 #include "module-template.h"
 
 MODULE_TYPE_INPUT
-TERM_SYNC_TYPE(eTermSync_SIGNAL)
+TERM_SYNC_TYPE(eTermSync_NONE)
 
 /* defines */
 #define MAXFUNIX	20
@@ -56,14 +56,17 @@ DEF_IMOD_STATIC_DATA
 typedef struct _instanceData {
 } instanceData;
 
-int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
+static int startIndexUxLocalSockets; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
 				   */
-int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
-char *funixn[MAXFUNIX] = { _PATH_LOG }; /* read-only after startup */
-int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
+static int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
+static char *funixn[MAXFUNIX] = { _PATH_LOG }; /* read-only after startup */
+static int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
 static int nfunix = 1; /* number of Unix sockets open / read-only after startup */
+
+/* config setting */
+static int bOmitLocalLogging = 0;
 
 
 static int create_unix_socket(const char *path)
@@ -134,10 +137,6 @@ CODESTARTrunInput
 	 * right into the sleep below.
 	 */
 	while(1) {
-		/* we do not need to handle the RS_RET_TERMINATE_NOW case any
-	   	 * special because we just need to terminate. Cleanup is done
-		 * during afterRun(). -- rgerhards 2007-12-20
-		 */
 		/* Add the Unix Domain Sockets to the list of read
 		 * descriptors.
 		 * rgerhards 2005-08-01: we must now check if there are
@@ -154,7 +153,7 @@ CODESTARTrunInput
 			}
 		}
 
-		/* select() here */
+		/* wait for io to become ready */
 		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
 
 		for (i = 0; i < nfunix && nfds > 0; i++) {
@@ -172,6 +171,8 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	register int i;
+
+	startIndexUxLocalSockets = bOmitLocalLogging ? 1 : 0;
 	for (i = 1; i < MAXFUNIX; i++) {
 		funixn[i] = "";
 		funix[i]  = -1;
@@ -229,6 +230,7 @@ ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
+	bOmitLocalLogging = 0;
 	return RS_RET_OK;
 }
 
@@ -236,7 +238,7 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
-	//CHKiRet(omsdRegCFSLineHdlr((uchar *)"markmessageperiod", 0, eCmdHdlrInt, NULL, &iMarkMessagePeriod, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary, NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*
