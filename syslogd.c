@@ -3634,11 +3634,11 @@ static void die(int sig)
 #endif
 	
 	/* now clean up the listener part */
-#ifdef SYSLOG_INET
 	/* Close the UNIX sockets. */
         for (i = 0; i < nfunix; i++)
 		if (funix[i] != -1)
 			close(funix[i]);
+#ifdef SYSLOG_INET
 	/* Close the UDP inet socket. */
 	closeUDPListenSockets();
 	/* Close the TCP inet socket. */
