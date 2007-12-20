@@ -51,8 +51,18 @@ typedef struct _instanceData {
 } instanceData;
 
 /* configuration settings TODO: move to instance data? */
-int dbgPrintSymbols = 0;
-int symbols_twice = 0;
+int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
+static int symbols_twice = 0;
+static int use_syscall = 0;
+static int symbol_lookup = 1;
+/* TODO: configuration for the following directives must be implemented. It 
+ * was not done yet because we either do not yet have a config handler for
+ * that type or I thought it was acceptable to push it to a later stage when
+ * I gained more handson experience with the input module interface (and the
+ * changes resulting from that). -- rgerhards, 2007-12-20
+ */
+static char *symfile = NULL; 
+static int console_log_level = -1;
 
 
 /* Includes. */
@@ -84,14 +94,8 @@ _syscall3(int,ksyslog,int, type, char *, buf, int, len);
 #define LOG_BUFFER_SIZE 4096
 #define LOG_LINE_LENGTH 1000
 
-static int	kmsg,
-		console_log_level = -1;
-
-static int	use_syscall = 0,
-		symbol_lookup = 1;
-
-static char	*symfile = NULL,
-		log_buffer[LOG_BUFFER_SIZE];
+static int	kmsg;
+static char	log_buffer[LOG_BUFFER_SIZE];
 
 static enum LOGSRC {none, proc, kernel} logsrc;
 
@@ -681,6 +685,9 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	dbgPrintSymbols = 0;
 	symbols_twice = 0;
+	use_syscall = 0;
+	symfile = NULL;
+	symbol_lookup = 1;
 	return RS_RET_OK;
 }
 
@@ -689,7 +696,9 @@ CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"debugprintkernelsymbols", 0, eCmdHdlrBinary, NULL, &dbgPrintSymbols, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrBinary, NULL, &symbol_lookup, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary, NULL, &symbols_twice, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrBinary, NULL, &use_syscall, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*
