@@ -6091,7 +6091,7 @@ int main(int argc, char **argv)
 
 	/* END core initializations */
 
-	while ((ch = getopt(argc, argv, "46Aa:c:dehi:f:g:l:m:nop:qQr::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46Ac:dehi:f:g:l:m:nqQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -6102,21 +6102,6 @@ int main(int argc, char **argv)
                 case 'A':
                         send_to_all++;
                         break;
-#if 0
-		case 'a':
-			if (nfunix < MAXFUNIX)
-				if(*optarg == ':') {
-					funixParseHost[nfunix] = 1;
-					funixn[nfunix++] = optarg+1;
-				}
-				else {
-					funixParseHost[nfunix] = 0;
-					funixn[nfunix++] = optarg;
-				}
-			else
-				fprintf(stderr, "rsyslogd: Out of descriptors, ignoring %s\n", optarg);
-			break;
-#endif
 		case 'c':		/* compatibility mode */
 			iCompatibilityMode = atoi(optarg);
 			break;

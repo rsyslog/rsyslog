@@ -78,6 +78,54 @@ static int bOmitLocalLogging = 0;
 static uchar *pLogSockName = NULL;
 
 
+/* add an additional listen socket. Socket names are added
+ * until the array is filled up. It is never reset, only at
+ * module unload.
+ * TODO: we should change the array to a list so that we
+ * can support any number of listen socket names.
+ * rgerhards, 2007-12-20
+ */
+static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	char errStr[1024];
+
+	if(nfunix < MAXFUNIX) {
+		if(*pNewVal == ':') {
+			funixParseHost[nfunix] = 1;
+		}
+		else {
+			funixParseHost[nfunix] = 0;
+		}
+		funixn[nfunix++] = pNewVal;
+	}
+	else {
+		snprintf(errStr, sizeof(errStr), "rsyslogd: Out of unix socket name descriptors, ignoring %s\n",
+			 pNewVal);
+		logmsgInternal(LOG_SYSLOG|LOG_ERR, errStr, ADDDATE);
+	}
+
+	return RS_RET_OK;
+}
+
+/* free the funixn[] socket names - needed as cleanup on several places
+ * note that nfunix is NOT reset! funixn[0] is never freed, as it comes from
+ * the constant memory pool - and if not, it is freeed via some other pointer.
+ */
+static rsRetVal discardFunixn(void)
+{
+	int i;
+
+        for (i = 1; i < nfunix; i++) {
+		if(funixn[i] != NULL) {
+			free(funixn[i]);
+			funixn[i] = NULL;
+		}
+	}
+	
+	return RS_RET_OK;
+}
+
+
 static int create_unix_socket(const char *path)
 {
 	struct sockaddr_un sunx;
@@ -162,6 +210,14 @@ CODESTARTrunInput
 			}
 		}
 
+		if(Debug) {
+			dbgprintf("--------imuxsock calling select, active file descriptors (max %d): ", maxfds);
+			for (nfds= 0; nfds <= maxfds; ++nfds)
+				if ( FD_ISSET(nfds, &readfds) )
+					dbgprintf("%d ", nfds);
+			dbgprintf("\n");
+		}
+
 		/* wait for io to become ready */
 		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
 
@@ -186,18 +242,8 @@ CODESTARTwillRun
 	if(pLogSockName != NULL)
 		funixn[0] = pLogSockName;
 
-	/* and now on to the real work... */
-	for (i = 1; i < MAXFUNIX; i++) {
-		funixn[i] = (uchar*) "";
-		funix[i]  = -1;
-	}
 	/* initialize and return if will run or not */
 	for (i = startIndexUxLocalSockets ; i < nfunix ; i++) {
-		if (funix[i] != -1)
-			/* Don't close the socket, preserve it instead
-			close(funix[i]);
-			*/
-			continue;
 		if ((funix[i] = create_unix_socket((char*) funixn[i])) != -1)
 			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", funixn[i], funix[i]);
 	}
@@ -219,6 +265,12 @@ CODESTARTafterRun
         for (i = 0; i < nfunix; i++)
 		if (funixn[i] && funix[i] != -1)
 			unlink((char*) funixn[i]);
+	/* free no longer needed string */
+	if(pLogSockName != NULL)
+		free(pLogSockName);
+
+	discardFunixn();
+	nfunix = 1;
 ENDafterRun
 
 
@@ -249,16 +301,34 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pLogSockName);
 		pLogSockName = NULL;
 	}
+
+	discardFunixn();
+	nfunix = 1;
+
 	return RS_RET_OK;
 }
 
+
 BEGINmodInit()
+	int i;
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary, NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord, NULL, &pLogSockName, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	/* initialize funixn[] array */
+	for(i = 1 ; i < MAXFUNIX ; ++i) {
+		funixn[i] = NULL;
+		funix[i]  = -1;
+	}
+
+	/* register config file handlers */
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
+		NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord,
+		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
+		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*
  * vi:set ai:
