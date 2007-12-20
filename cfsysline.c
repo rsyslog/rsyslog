@@ -357,7 +357,8 @@ finalize_it:
  * non-NULL pointer. If so, we assume it was created by a previous
  * incarnation and is automatically freed. This happens only when
  * no custom handler is defined. If it is, the customer handler
- * must do the cleanup. -- rgerhards, 2007-12-20
+ * must do the cleanup. I have checked and this was al also memory
+ * leak with some code. Obviously, not a large one. -- rgerhards, 2007-12-20
  */
 static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void *pVal)
 {
@@ -386,8 +387,8 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 	/* we got the word, now set it */
 	if(pSetHdlr == NULL) {
 		/* we should set value directly to var */
-		if(pVal != NULL)
-			free(pVal); /* free previous entry */
+		if(*((uchar**)pVal) != NULL)
+			free(*((uchar**)pVal)); /* free previous entry */
 		*((uchar**)pVal) = pNewVal; /* set new one */
 	} else {
 		/* we set value via a set function */
