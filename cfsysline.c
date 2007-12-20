@@ -388,8 +388,8 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 	/* we got the word, now set it */
 	if(pSetHdlr == NULL) {
 		/* we should set value directly to var */
-		if(pVal != NULL)
-			free(pVal); /* free previous entry */
+		if(*((uchar**)pVal) != NULL)
+			free(*((uchar**)pVal)); /* free previous entry */
 		*((uchar**)pVal) = pNewVal; /* set new one */
 	} else {
 		/* we set value via a set function */
