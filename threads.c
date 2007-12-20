@@ -112,6 +112,7 @@ dbgprintf("Terminate thread %lx via method %d\n", pThis->thrdID, pThis->eTermToo
 		/* TODO: TIMEOUT! */
 	} else if(pThis->eTermTool == eTermSync_NONE) {
 		pthread_cancel(pThis->thrdID);
+		pthread_join(pThis->thrdID, NULL); /* wait for cancel to complete */
 	}
 	pThis->bIsActive = 0;
 
