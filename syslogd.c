@@ -173,7 +173,6 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/file.h>
-#include <sys/un.h>
 #include <sys/time.h>
 
 #if HAVE_SYS_TIMESPEC_H
@@ -189,7 +188,6 @@
 #include <dirent.h>
 #include <glob.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
@@ -206,12 +204,6 @@
 
 #ifdef USE_NETZIP
 #include <zlib.h>
-#endif
-
-/* handle some defines missing on more than one platform */
-#ifndef SUN_LEN
-#define SUN_LEN(su) \
-   (sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))
 #endif
 
 #include "srUtils.h"
@@ -343,16 +335,8 @@ static int debugging_on = 0; /* read-only, except on sig USR1 */
 static int restart = 0; /* do restart (config read) - multithread safe */
 
 static int bRequestDoMark = 0; /* do mark processing? (multithread safe) */
-#define MAXFUNIX	20
 
 int glblHadMemShortage = 0; /* indicates if we had memory shortage some time during the run */
-int startIndexUxLocalSockets = 0; /* process funix from that index on (used to 
- 				   * suppress local logging. rgerhards 2005-08-01
-				   * read-only after startup
-				   */
-int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
-char *funixn[MAXFUNIX] = { _PATH_LOG }; /* read-only after startup */
-int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
 
 #define INTERNAL_NOPRI	0x10	/* the "no priority" priority */
 #define TABLE_NOPRI	0	/* Value to indicate no priority in f_pmask */
@@ -490,7 +474,6 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 /* end global config file state variables */
 
 static unsigned int Forwarding = 0;
-static int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	*finet = NULL;	/* Internet datagram sockets, first element is nbr of elements
@@ -1642,34 +1625,6 @@ static int usage(void)
 	exit(1); /* "good" exit - done to terminate usage() */
 }
 
-#ifdef SYSLOG_UNIXAF
-static int create_unix_socket(const char *path)
-{
-	struct sockaddr_un sunx;
-	int fd;
-	char line[MAXLINE +1];
-
-	if (path[0] == '\0')
-		return -1;
-
-	(void) unlink(path);
-
-	memset(&sunx, 0, sizeof(sunx));
-	sunx.sun_family = AF_UNIX;
-	(void) strncpy(sunx.sun_path, path, sizeof(sunx.sun_path));
-	fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (fd < 0 || bind(fd, (struct sockaddr *) &sunx,
-			   SUN_LEN(&sunx)) < 0 ||
-	    chmod(path, 0666) < 0) {
-		snprintf(line, sizeof(line), "cannot create %s", path);
-		logerror(line);
-		dbgprintf("cannot create %s (%d).\n", path, errno);
-		close(fd);
-		return -1;
-	}
-	return fd;
-}
-#endif
 
 #ifdef SYSLOG_INET
 /* closes the UDP listen sockets (if they exist) and frees
@@ -3502,7 +3457,6 @@ static void doDie(int sig)
 static void die(int sig)
 {
 	char buf[256];
-	int i;
 
 	if (sig) {
 		dbgprintf(" exiting on signal %d\n", sig);
@@ -3526,10 +3480,6 @@ static void die(int sig)
 	
 	/* now clean up the listener part */
 #ifdef SYSLOG_INET
-	/* Close the UNIX sockets. */
-        for (i = 0; i < nfunix; i++)
-		if (funix[i] != -1)
-			close(funix[i]);
 	/* Close the UDP inet socket. */
 	closeUDPListenSockets();
 	/* Close the TCP inet socket. */
@@ -3541,11 +3491,6 @@ static void die(int sig)
 		TCPSessGSSDeinit();
 #endif
 #endif
-
-	/* Clean-up files. */
-        for (i = 0; i < nfunix; i++)
-		if (funixn[i] && funix[i] != -1)
-			(void)unlink(funixn[i]);
 
 	/* rger 2005-02-22
 	 * now clean up the in-memory structures. OK, the OS
@@ -4297,7 +4242,6 @@ static void
 init(void)
 {
 	DEFiRet;
-	register int i;
 #ifdef CONT_LINE
 	char cbuf[BUFSIZ];
 #else
@@ -4434,18 +4378,6 @@ init(void)
 		rsCStrDestruct(pDfltProgNameCmp);
 		pDfltProgNameCmp = NULL;
 	}
-
-#ifdef SYSLOG_UNIXAF
-	for (i = startIndexUxLocalSockets ; i < nfunix ; i++) {
-		if (funix[i] != -1)
-			/* Don't close the socket, preserve it instead
-			close(funix[i]);
-			*/
-			continue;
-		if ((funix[i] = create_unix_socket(funixn[i])) != -1)
-			dbgprintf("Opened UNIX socket `%s' (fd %d).\n", funixn[i], funix[i]);
-	}
-#endif
 
 #ifdef SYSLOG_INET
 	/* I have moved initializing UDP sockets before the TCP sockets. This ensures
@@ -5596,7 +5528,6 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 	DEFiRet;
 	rsRetVal iRetLL;
 	int i;
-	int fd;
 	char line[MAXLINE +1];
 	selectHelperWriteFDSInfo_t writeFDSInfo;
 #ifdef  SYSLOG_INET
@@ -5653,25 +5584,6 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 		}
 	}
 #endif /* #ifdef SYSLOG_INET */
-#ifdef SYSLOG_UNIXAF
-	for (i = 0; i < nfunix; i++) {
-		if ((fd = funix[i]) != -1 && FD_ISSET(fd, pReadfds)) {
-			int iRcvd;
-			iRcvd = recv(fd, line, MAXLINE - 1, 0);
-			dbgprintf("Message from UNIX socket: #%d\n", fd);
-			if (iRcvd > 0) {
-				printchopped(LocalHostName, line, iRcvd,  fd, funixParseHost[i]);
-			} else if (iRcvd < 0 && errno != EINTR) {
-				char errStr[1024];
-				strerror_r(errno, errStr, sizeof(errStr));
-				dbgprintf("UNIX socket error: %d = %s.\n", \
-					errno, errStr);
-				logerror("recvfrom UNIX");
-			}
-		FDPROCESSED();
-		}
-	}
-#endif
 
 #ifdef SYSLOG_INET
        if (finet != NULL && AcceptRemote) {
@@ -5825,21 +5737,6 @@ static void mainloop(void)
 		/* first check if we have any internal messages queued and spit them out */
 		processImInternal();
 
-#ifdef SYSLOG_UNIXAF
-		/* Add the Unix Domain Sockets to the list of read
-		 * descriptors.
-		 * rgerhards 2005-08-01: we must now check if there are
-		 * any local sockets to listen to at all. If the -o option
-		 * is given without -a, we do not need to listen at all..
-		 */
-		/* Copy master connections */
-		for (i = startIndexUxLocalSockets; i < nfunix; i++) {
-			if (funix[i] != -1) {
-				FD_SET(funix[i], &readfds);
-				if (funix[i]>maxfds) maxfds=funix[i];
-			}
-		}
-#endif
 #ifdef SYSLOG_INET
 		/* Add the UDP listen sockets to the list of read descriptors.
 		 */
@@ -6200,10 +6097,6 @@ int main(int argc, char **argv)
 
 	if(chdir ("/") != 0)
 		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
-	for (i = 1; i < MAXFUNIX; i++) {
-		funixn[i] = "";
-		funix[i]  = -1;
-	}
 
 	/* END core initializations */
 
@@ -6218,6 +6111,7 @@ int main(int argc, char **argv)
                 case 'A':
                         send_to_all++;
                         break;
+#if 0
 		case 'a':
 			if (nfunix < MAXFUNIX)
 				if(*optarg == ':') {
@@ -6231,6 +6125,7 @@ int main(int argc, char **argv)
 			else
 				fprintf(stderr, "rsyslogd: Out of descriptors, ignoring %s\n", optarg);
 			break;
+#endif
 		case 'c':		/* compatibility mode */
 			iCompatibilityMode = atoi(optarg);
 			break;
@@ -6276,12 +6171,14 @@ int main(int argc, char **argv)
 		case 'n':		/* don't fork */
 			NoFork = 1;
 			break;
+#if 0
 		case 'o':		/* omit local logging (/dev/log) */
 			startIndexUxLocalSockets = 1;
 			break;
 		case 'p':		/* path to regular log socket */
 			funixn[0] = optarg;
 			break;
+#endif
 		case 'q':               /* add hostname if DNS resolving has failed */
 		        ACLAddHostnameOnFail = 1;
 		        break;

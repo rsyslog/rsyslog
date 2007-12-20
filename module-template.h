@@ -468,7 +468,7 @@ static rsRetVal modExit(void)\
  * if there is a module-internal need to do so.
  */
 #define BEGINrunInput \
-static rsRetVal runInput(thrdInfo_t *pThrd)\
+static rsRetVal runInput(thrdInfo_t __attribute__((unused)) *pThrd)\
 {\
 	DEFiRet;
 
