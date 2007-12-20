@@ -2722,6 +2722,7 @@ static void enqueueMsg(msg_t *pMsg)
 			if(pthread_cond_timedwait (fifo->notFull,
 						   fifo->mut, &t) != 0) {
 				dbgprintf("enqueueMsg: cond timeout, dropping message!\n");
+				MsgDestruct(pMsg);
 				goto unlock;
 			}
 		}
@@ -2927,6 +2928,7 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	/* MSG */
 	MsgSetMSG(pMsg, p2parse);
 
+	free(pBuf);
 	return 0; /* all ok */
 }
 /* parse a legay-formatted syslog message. This function returns
@@ -3146,13 +3148,17 @@ logmsg(int pri, msg_t *pMsg, int flags)
 	if(msg[0] == '1' && msg[1] == ' ') {
 		dbgprintf("Message has syslog-protocol format.\n");
 		setProtocolVersion(pMsg, 1);
-		if(parseRFCSyslogMsg(pMsg, flags) == 1)
+		if(parseRFCSyslogMsg(pMsg, flags) == 1) {
+			MsgDestruct(pMsg);
 			return;
+		}
 	} else { /* we have legacy syslog */
 		dbgprintf("Message has legacy syslog format.\n");
 		setProtocolVersion(pMsg, 0);
-		if(parseLegacySyslogMsg(pMsg, flags) == 1)
+		if(parseLegacySyslogMsg(pMsg, flags) == 1) {
+			MsgDestruct(pMsg);
 			return;
+		}
 	}
 
 	/* ---------------------- END PARSING ---------------- */
