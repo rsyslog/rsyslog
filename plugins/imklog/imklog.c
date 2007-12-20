@@ -43,7 +43,7 @@
 #include "imklog.h"
 
 MODULE_TYPE_INPUT
-TERM_SYNC_TYPE(eTermSync_SIGNAL)
+TERM_SYNC_TYPE(eTermSync_NONE)
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
