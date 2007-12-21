@@ -26,18 +26,16 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/stat.h>
-#include <sys/un.h>
+#include "rsyslog.h"
 #include "syslogd.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "tcpsyslog.h"
 
 MODULE_TYPE_INPUT
 TERM_SYNC_TYPE(eTermSync_NONE)
@@ -59,7 +57,7 @@ BEGINrunInput
 	int maxfds;
 	int nfds;
 	int i;
-	int fd;
+	int iTCPSess;
 	fd_set readfds;
 CODESTARTrunInput
 	/* this is an endless loop - it is terminated when the thread is
@@ -76,17 +74,119 @@ CODESTARTrunInput
 	        maxfds = 0;
 	        FD_ZERO (&readfds);
 
+		/* Add the TCP listen sockets to the list of read descriptors.
+	    	 */
+		if(sockTCPLstn != NULL && *sockTCPLstn) {
+			for (i = 0; i < *sockTCPLstn; i++) {
+				/* The if() below is theoretically not needed, but I leave it in
+				 * so that a socket may become unsuable during execution. That
+				 * feature is not yet supported by the current code base.
+				 */
+				if (sockTCPLstn[i+1] != -1) {
+					if(Debug)
+						debugListenInfo(sockTCPLstn[i+1], "TCP");
+					FD_SET(sockTCPLstn[i+1], &readfds);
+					if(sockTCPLstn[i+1]>maxfds) maxfds=sockTCPLstn[i+1];
+				}
+			}
+			/* do the sessions */
+			iTCPSess = TCPSessGetNxtSess(-1);
+			while(iTCPSess != -1) {
+				int fdSess;
+				fdSess = pTCPSessions[iTCPSess].sock;
+				dbgprintf("Adding TCP Session %d\n", fdSess);
+				FD_SET(fdSess, &readfds);
+				if (fdSess>maxfds) maxfds=fdSess;
+				/* now get next... */
+				iTCPSess = TCPSessGetNxtSess(iTCPSess);
+			}
+		}
+
 		if(Debug) {
 			dbgprintf("--------imTCP calling select, active file descriptors (max %d): ", maxfds);
-			for (nfds= 0; nfds <= maxfds; ++nfds)
+			for (nfds = 0; nfds <= maxfds; ++nfds)
 				if ( FD_ISSET(nfds, &readfds) )
 					dbgprintf("%d ", nfds);
 			dbgprintf("\n");
 		}
 
 		/* wait for io to become ready */
-		/* select here */
+		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
 
+		for (i = 0; i < *sockTCPLstn; i++) {
+			if (FD_ISSET(sockTCPLstn[i+1], &readfds)) {
+				dbgprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
+#				ifdef USE_GSSAPI
+				if(bEnableTCP & ALLOWEDMETHOD_GSS)
+					TCPSessGSSAccept(sockTCPLstn[i+1]);
+				else
+#				endif
+					TCPSessAccept(sockTCPLstn[i+1]);
+				--nfds; /* indicate we have processed one */
+			}
+		}
+
+		/* now check the sessions */
+		iTCPSess = TCPSessGetNxtSess(-1);
+		while(nfds && iTCPSess != -1) {
+			int fdSess;
+			int state;
+			fdSess = pTCPSessions[iTCPSess].sock;
+			if(FD_ISSET(fdSess, &readfds)) {
+				char buf[MAXLINE];
+				dbgprintf("tcp session socket with new data: #%d\n", fdSess);
+
+				/* Receive message */
+#				ifdef USE_GSSAPI
+				int allowedMethods = pTCPSessions[iTCPSess].allowedMethods;
+				if(allowedMethods & ALLOWEDMETHOD_GSS)
+					state = TCPSessGSSRecv(iTCPSess, buf, sizeof(buf));
+				else
+#				endif
+					state = recv(fdSess, buf, sizeof(buf), 0);
+				if(state == 0) {
+#					ifdef USE_GSSAPI
+					if(allowedMethods & ALLOWEDMETHOD_GSS)
+						TCPSessGSSClose(iTCPSess);
+					else {
+#					endif
+						/* process any incomplete frames left over */
+						TCPSessPrepareClose(iTCPSess);
+						/* Session closed */
+						TCPSessClose(iTCPSess);
+#					ifdef USE_GSSAPI
+					}
+#					endif
+				} else if(state == -1) {
+					logerrorInt("TCP session %d will be closed, error ignored\n",
+						    fdSess);
+#					ifdef USE_GSSAPI
+					if(allowedMethods & ALLOWEDMETHOD_GSS)
+						TCPSessGSSClose(iTCPSess);
+					else
+#					endif
+						TCPSessClose(iTCPSess);
+				} else {
+					/* valid data received, process it! */
+					if(TCPSessDataRcvd(iTCPSess, buf, state) == 0) {
+						/* in this case, something went awfully wrong.
+						 * We are instructed to terminate the session.
+						 */
+						logerrorInt("Tearing down TCP Session %d - see "
+							    "previous messages for reason(s)\n",
+							    iTCPSess);
+#						ifdef USE_GSSAPI
+						if(allowedMethods & ALLOWEDMETHOD_GSS)
+							TCPSessGSSClose(iTCPSess);
+						else
+#						endif
+							TCPSessClose(iTCPSess);
+					}
+				}
+				--nfds; /* indicate we have processed one */
+			}
+			iTCPSess = TCPSessGetNxtSess(iTCPSess);
+		}
 	}
 
 	return iRet;
@@ -97,6 +197,29 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	/* first apply some config settings */
+dbgprintf("imtcp: bEnableTCP %d\n", bEnableTCP);
+	if (bEnableTCP) {
+		if(sockTCPLstn == NULL) {
+			/* even when doing a re-init, we do not shut down and
+			 * re-open the TCP socket. That would break existing TCP
+			 * session, which we do not desire. Should at some time arise
+			 * need to do that, I recommend controlling that via a
+			 * user-selectable option. rgerhards, 2007-06-21
+			 */
+#			ifdef USE_GSSAPI
+			if(bEnableTCP & ALLOWEDMETHOD_GSS) {
+				if(TCPSessGSSInit()) {
+					logerror("GSS-API initialization failed\n");
+					bEnableTCP &= ~(ALLOWEDMETHOD_GSS);
+				}
+			}
+			if(bEnableTCP)
+#			endif
+				if((sockTCPLstn = create_tcp_socket()) != NULL) {
+					dbgprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
+				}
+		}
+	}
 ENDwillRun
 
 
@@ -140,6 +263,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	//CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
 	//	NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
+#if defined(USE_GSSAPI)
+	CHKiRet(regCfSysLineHdlr((uchar *)"gsslistenservicename", 0, eCmdHdlrGetWord, NULL, &gss_listen_service_name, NULL));
+#endif
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

@@ -276,6 +276,7 @@ int *create_tcp_socket(void)
 		 * many existing configurations.
 		 * rgerhards, 2007-06-28
 		 */
+dbgprintf("creating tcp socket on port %s\n", TCPLstnPort);
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
         hints.ai_family = family;

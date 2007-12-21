@@ -4386,29 +4386,6 @@ init(void)
 		/* this case can happen during HUP processing. */
 		closeUDPListenSockets();
 	}
-
-	if (bEnableTCP) {
-		if(sockTCPLstn == NULL) {
-			/* even when doing a re-init, we do not shut down and
-			 * re-open the TCP socket. That would break existing TCP
-			 * session, which we do not desire. Should at some time arise
-			 * need to do that, I recommend controlling that via a
-			 * user-selectable option. rgerhards, 2007-06-21
-			 */
-#			ifdef USE_GSSAPI
-			if(bEnableTCP & ALLOWEDMETHOD_GSS) {
-				if(TCPSessGSSInit()) {
-					logerror("GSS-API initialization failed\n");
-					bEnableTCP &= ~(ALLOWEDMETHOD_GSS);
-				}
-			}
-			if(bEnableTCP)
-#			endif
-				if((sockTCPLstn = create_tcp_socket()) != NULL) {
-					dbgprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
-				}
-		}
-	}
 #endif
 
 	/* create message queue */
@@ -5391,7 +5368,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 /* print out which socket we are listening on. This is only
  * a debug aid. rgerhards, 2007-07-02
  */
-static void debugListenInfo(int fd, char *type)
+void debugListenInfo(int fd, char *type)
 {
 	char *szFamily;
 	int port;
@@ -5528,84 +5505,6 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds)
 			}
 	       }
 	}
-
-	if(sockTCPLstn != NULL && *sockTCPLstn) {
-		for (i = 0; i < *sockTCPLstn; i++) {
-			if (FD_ISSET(sockTCPLstn[i+1], pReadfds)) {
-				dbgprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
-#				ifdef USE_GSSAPI
-				if(bEnableTCP & ALLOWEDMETHOD_GSS)
-					TCPSessGSSAccept(sockTCPLstn[i+1]);
-				else
-#				endif
-					TCPSessAccept(sockTCPLstn[i+1]);
-				FDPROCESSED();
-			}
-		}
-
-		/* now check the sessions */
-		iTCPSess = TCPSessGetNxtSess(-1);
-		while(iTCPSess != -1) {
-			int fdSess;
-			int state;
-			fdSess = pTCPSessions[iTCPSess].sock;
-			if(FD_ISSET(fdSess, pReadfds)) {
-				char buf[MAXLINE];
-				dbgprintf("tcp session socket with new data: #%d\n", fdSess);
-
-				/* Receive message */
-#				ifdef USE_GSSAPI
-				int allowedMethods = pTCPSessions[iTCPSess].allowedMethods;
-				if(allowedMethods & ALLOWEDMETHOD_GSS)
-					state = TCPSessGSSRecv(iTCPSess, buf, sizeof(buf));
-				else
-#				endif
-					state = recv(fdSess, buf, sizeof(buf), 0);
-				if(state == 0) {
-#					ifdef USE_GSSAPI
-					if(allowedMethods & ALLOWEDMETHOD_GSS)
-						TCPSessGSSClose(iTCPSess);
-					else {
-#					endif
-						/* process any incomplete frames left over */
-						TCPSessPrepareClose(iTCPSess);
-						/* Session closed */
-						TCPSessClose(iTCPSess);
-#					ifdef USE_GSSAPI
-					}
-#					endif
-				} else if(state == -1) {
-					logerrorInt("TCP session %d will be closed, error ignored\n",
-						    fdSess);
-#					ifdef USE_GSSAPI
-					if(allowedMethods & ALLOWEDMETHOD_GSS)
-						TCPSessGSSClose(iTCPSess);
-					else
-#					endif
-						TCPSessClose(iTCPSess);
-				} else {
-					/* valid data received, process it! */
-					if(TCPSessDataRcvd(iTCPSess, buf, state) == 0) {
-						/* in this case, something went awfully wrong.
-						 * We are instructed to terminate the session.
-						 */
-						logerrorInt("Tearing down TCP Session %d - see "
-							    "previous messages for reason(s)\n",
-							    iTCPSess);
-#						ifdef USE_GSSAPI
-						if(allowedMethods & ALLOWEDMETHOD_GSS)
-							TCPSessGSSClose(iTCPSess);
-						else
-#						endif
-							TCPSessClose(iTCPSess);
-					}
-				}
-				FDPROCESSED();
-			}
-			iTCPSess = TCPSessGetNxtSess(iTCPSess);
-		}
-	}
-
 #endif
 finalize_it:
 	return iRet;
@@ -5646,35 +5545,6 @@ static void mainloop(void)
 				}
                         }
 		}
-
-		/* Add the TCP listen sockets to the list of read descriptors.
-	    	 */
-		if(sockTCPLstn != NULL && *sockTCPLstn) {
-			for (i = 0; i < *sockTCPLstn; i++) {
-				/* The if() below is theoretically not needed, but I leave it in
-				 * so that a socket may become unsuable during execution. That
-				 * feature is not yet supported by the current code base.
-				 */
-				if (sockTCPLstn[i+1] != -1) {
-					if(Debug)
-						debugListenInfo(sockTCPLstn[i+1], "TCP");
-					FD_SET(sockTCPLstn[i+1], &readfds);
-					if(sockTCPLstn[i+1]>maxfds) maxfds=sockTCPLstn[i+1];
-				}
-			}
-			/* do the sessions */
-			iTCPSess = TCPSessGetNxtSess(-1);
-			while(iTCPSess != -1) {
-				int fdSess;
-				fdSess = pTCPSessions[iTCPSess].sock;
-				dbgprintf("Adding TCP Session %d\n", fdSess);
-				FD_SET(fdSess, &readfds);
-				if (fdSess>maxfds) maxfds=fdSess;
-				/* now get next... */
-				iTCPSess = TCPSessGetNxtSess(iTCPSess);
-			}
-		}
-
 #endif
 
 		if ( debugging_on ) {
@@ -5802,8 +5672,6 @@ static rsRetVal loadBuildInModules(void)
 		 NULL, &bDebugPrintCfSysLineHandlerList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
-#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
-	CHKiRet(regCfSysLineHdlr((uchar *)"gsslistenservicename", 0, eCmdHdlrGetWord, NULL, &gss_listen_service_name, NULL));
 #endif
 
 finalize_it:
@@ -5831,11 +5699,6 @@ static void printVersion(void)
 	printf("\tFEATURE_NETZIP (message compression):\tYes\n");
 #else
 	printf("\tFEATURE_NETZIP (message compression):\tNo\n");
-#endif
-#ifdef	SYSLOG_INET
-	printf("\tSYSLOG_INET (Internet/remote support):\tYes\n");
-#else
-	printf("\tSYSLOG_INET (Internet/remote support):\tNo\n");
 #endif
 #if defined(SYSLOG_INET) && defined(USE_GSSAPI)
 	printf("\tFEATURE_GSSAPI (GSSAPI Kerberos 5 support):\tYes\n");
@@ -6189,7 +6052,6 @@ int main(int argc, char **argv)
 
 	/* do any de-init's that need to be done AFTER this comment */
 
-dbgprintf("reaching die\n");
 	die(bFinished);
 	
 	thrdExit();
