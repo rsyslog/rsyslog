@@ -3234,15 +3234,14 @@ reapchild()
 }
 
 
-/* helper to domark to flush the individual action links via llExecFunc
+/* helper to doFlushRptdMsgs() to flush the individual action links via llExecFunc
  * rgerhards, 2007-08-02
  */
-DEFFUNC_llExecFunc(domarkActions)
+DEFFUNC_llExecFunc(flushRptdMsgsActions)
 {
 	action_t *pAction = (action_t*) pData;
 
 	assert(pAction != NULL);
-dbgprintf("domarkActions\n");
 	
 	LockObj(pAction);
 	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
@@ -3270,7 +3269,7 @@ doFlushRptdMsgs(void)
 	 * We are using appropriate locking inside the function to handle that.
 	 */
 	for (f = Files; f != NULL ; f = f->f_next) {
-		llExecFunc(&f->llActList, domarkActions, NULL);
+		llExecFunc(&f->llActList, flushRptdMsgsActions, NULL);
 	}
 }
 
@@ -5331,6 +5330,8 @@ static void processImInternal(void)
 
 /* This is the main processing loop. It is called after successful initialization.
  * When it returns, the syslogd terminates.
+ * Its sole function is to provide some housekeeping things. The real work is done
+ * by the other threads spawned.
  */
 static void
 mainloop(void)
@@ -5344,20 +5345,15 @@ mainloop(void)
  		 */
 		processImInternal();
 
-		if ( debugging_on ) {
-			dbgprintf("----------------------------------------\n");
-			dbgprintf("Calling select, without file descriptors.");
-			dbgprintf("\n");
-		}
-
-
 		/* this is now just a wait */
-		tvSelectTimeout.tv_sec = 5;//TIMERINTVL;
+		tvSelectTimeout.tv_sec = TIMERINTVL;
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 
-		/* If we received a HUP signal, we call doFlushRptdMsgs() a bit early. As doFlushRptdMsgs()
- 		 * no longer does the marking, this is quite acceptable.
+		/* If we received a HUP signal, we call doFlushRptdMsgs() a bit early. This
+ 		 * doesn't matter, because doFlushRptdMsgs() checks timestamps. What may happen,
+ 		 * however, is that the too-early call may lead to a bit too-late output
+ 		 * of "last message repeated n times" messages. But that is quite acceptable.
  		 * rgerhards, 2007-12-21
  		 */
 		doFlushRptdMsgs();
