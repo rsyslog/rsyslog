@@ -58,5 +58,18 @@ final decision based on experience gained during creation of input modules.</p>
 specifically exported interface functions. Right now, we do not have an ideal 
 world and the input modules make some calls back into the core. This needs to be 
 re-thought but is accepted for the time being.</p>
+<h2>No real Modules yet</h2>
+<p>As already said in &quot;Call Encapsulation&quot;, the modules look like such, but are 
+not really able to work stand alone. The worst in this regard are</p>
+<ul>
+	<li>imudp/omfwd/syslogd.c</li>
+	<li>imtcp</li>
+</ul>
+<p>But the others are not necessarily better. I have moved the code to the 
+modules, because now at least the majority of code is where it belongs to. But 
+there are still a large number of global variables, cross-function calls and the 
+like. This needs to be solved when we try to claim a real modular design. That's 
+not an easy task, but, hey, aren't we up for that...? ;)</p>
+<p>&nbsp;</p>
 </body>
 </html>
