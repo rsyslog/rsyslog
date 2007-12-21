@@ -377,16 +377,6 @@ int	repeatinterval[] = { 30, 60 };	/* # of secs before flush */
 #define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \
 				 (f)->f_repeatcount = MAXREPEAT; \
 			}
-#ifdef SYSLOG_INET
-union sockunion {
-	struct sockinet {
-		u_char si_len;
-		u_char si_family;
-		} su_si;
-	struct sockaddr_in  su_sin;
-	struct sockaddr_in6 su_sin6;
-};
-#endif
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
@@ -588,12 +578,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		pModDir = NULL;
 	}
 	iMainMsgQueueSize = 10000;
-#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
-	if (gss_listen_service_name != NULL) {
-		free(gss_listen_service_name);
-		gss_listen_service_name = NULL;
-	}
-#endif
 
 	return RS_RET_OK;
 }
@@ -1050,30 +1034,6 @@ int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, c
 	return 0;
 }
 #endif /* #ifdef SYSLOG_INET */
-
-
-/* code to free all sockets within a socket table.
- * A socket table is a descriptor table where the zero
- * element has the count of elements. This is used for
- * listening sockets. The socket table itself is also
- * freed.
- * A POINTER to this structure must be provided, thus
- * double indirection!
- * rgerhards, 2007-06-28
- */
-void freeAllSockets(int **socks)
-{
-	assert(socks != NULL);
-	assert(*socks != NULL);
-	while(**socks) {
-		dbgprintf("Closing socket %d.\n", (*socks)[**socks]);
-		close((*socks)[**socks]);
-		(**socks)--;
-	}
-	free(*socks);
-	socks = NULL;
-}
-
 
 
 
@@ -3473,14 +3433,6 @@ static void die(int sig)
 #ifdef SYSLOG_INET
 	/* Close the UDP inet socket. */
 	closeUDPListenSockets();
-	/* Close the TCP inet socket. */
-	if(sockTCPLstn != NULL && *sockTCPLstn) {
-		deinit_tcp_listener();
-	}
-#ifdef USE_GSSAPI
-	if(bEnableTCP & ALLOWEDMETHOD_GSS)
-		TCPSessGSSDeinit();
-#endif
 #endif
 
 	/* rger 2005-02-22
@@ -4391,8 +4343,9 @@ init(void)
 	/* create message queue */
 	pMsgQueue = queueInit();
 	if(pMsgQueue == NULL) {
-		errno = 0; /* TODO: check if that is possible without threads - I think we must give up... */
-		logerror("error: could not create message queue - running single-threaded!\n");
+		errno = 0; /* no queue is fatal, we need to give up in that case... */
+		fprintf(stderr, "fatal error: could not create message queue - rsyslogd can not run!\n");
+		exit(1);
 	}
 
 	startWorker();
@@ -4400,7 +4353,7 @@ init(void)
 	Initialized = 1;
 
 	/* the output part and the queue is now ready to run. So it is a good time
-	 * now to start the inputs. Please note that the net code above should be
+	 * to start the inputs. Please note that the net code above should be
 	 * shuffled to down here once we have everything in input modules.
 	 * rgerhards, 2007-12-14
 	 */
@@ -4415,17 +4368,8 @@ init(void)
 	 */
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\"][x-configInfo udpReception=\"%s\" " \
-		 "udpPort=\"%s\" tcpReception=\"%s\" tcpPort=\"%s\"]" \
-		 " restart",
-		 (int) myPid,
-#ifdef	SYSLOG_INET
-		 AcceptRemote ? "Yes" : "No", LogPort,
-		 bEnableTCP   ? "Yes" : "No", TCPLstnPort
-#else
-		"No", "0", "No", "0"
-#endif 	/* #ifdef SYSLOG_INET */
-		);
+		 "\" x-pid=\"%d\"] restart",
+		 (int) myPid);
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, ADDDATE);
 
 	memset(&sigAct, 0, sizeof (sigAct));
@@ -5440,7 +5384,6 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds)
 	socklen_t socklen;
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
-	int iTCPSess;
 	ssize_t l;
 #endif	/* #ifdef SYSLOG_INET */
 
@@ -5520,9 +5463,6 @@ static void mainloop(void)
 	int i;
 	int maxfds;
 	int nfds;
-#ifdef  SYSLOG_INET
-	int iTCPSess;
-#endif	/* #ifdef SYSLOG_INET */
 
 	while(!bFinished){
 	        errno  = 0;
@@ -5672,7 +5612,6 @@ static rsRetVal loadBuildInModules(void)
 		 NULL, &bDebugPrintCfSysLineHandlerList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
-#endif
 
 finalize_it:
 	return iRet;

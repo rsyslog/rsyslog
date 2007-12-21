@@ -82,6 +82,30 @@ static gss_cred_id_t gss_server_creds = GSS_C_NO_CREDENTIAL;
 char *gss_listen_service_name = NULL;
 #endif
 
+
+/* code to free all sockets within a socket table.
+ * A socket table is a descriptor table where the zero
+ * element has the count of elements. This is used for
+ * listening sockets. The socket table itself is also
+ * freed.
+ * A POINTER to this structure must be provided, thus
+ * double indirection!
+ * rgerhards, 2007-06-28
+ */
+static void freeAllSockets(int **socks)
+{
+	assert(socks != NULL);
+	assert(*socks != NULL);
+	while(**socks) {
+		dbgprintf("Closing socket %d.\n", (*socks)[**socks]);
+		close((*socks)[**socks]);
+		(**socks)--;
+	}
+	free(*socks);
+	socks = NULL;
+}
+
+
 /* configure TCP listener settings. This is called during command
  * line parsing. The argument following -t is supplied as an argument.
  * The format of this argument is

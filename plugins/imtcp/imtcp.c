@@ -241,6 +241,14 @@ ENDdbgPrintInstInfo
 
 BEGINmodExit
 CODESTARTmodExit
+	/* Close the TCP inet socket. */
+	if(sockTCPLstn != NULL && *sockTCPLstn) {
+		deinit_tcp_listener();
+	}
+#ifdef USE_GSSAPI
+	if(bEnableTCP & ALLOWEDMETHOD_GSS)
+		TCPSessGSSDeinit();
+#endif
 ENDmodExit
 
 
@@ -251,7 +259,12 @@ ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	//bOmitLocalLogging = 0;
+#if defined(USE_GSSAPI)
+	if (gss_listen_service_name != NULL) {
+		free(gss_listen_service_name);
+		gss_listen_service_name = NULL;
+	}
+#endif
 	return RS_RET_OK;
 }
 
