@@ -106,7 +106,6 @@ typedef struct _instanceData {
 #	define	FORW_TCP 1
 	/* following fields for TCP-based delivery */
 	time_t	ttSuspend;	/* time selector was suspended */
-	pthread_mutex_t mtxTCPSend;
 #	ifdef USE_GSSAPI
 	gss_ctx_id_t gss_context;
 	OM_uint32 gss_flags;
@@ -146,10 +145,6 @@ CODESTARTfreeInstance
 			if(pData->port != NULL)
 				free(pData->port);
 			break;
-	}
-	/* delete any mutex objects, if present */
-	if(pData->protocol == FORW_TCP) {
-		pthread_mutex_destroy(&pData->mtxTCPSend);
 	}
 #	ifdef USE_GSSAPI
 	if (gss_mode != GSSMODE_NONE) {
@@ -846,8 +841,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		if(*p == '@') { /* indicator for TCP! */
 			pData->protocol = FORW_TCP;
 			++p; /* eat this '@', too */
-			/* in this case, we also need a mutex... */
-			pthread_mutex_init(&pData->mtxTCPSend, 0);
 		} else {
 			pData->protocol = FORW_UDP;
 		}
