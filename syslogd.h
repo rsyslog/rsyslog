@@ -72,6 +72,7 @@ void logmsgInternal(int pri, char *msg, int flags);
 void logmsg(int pri, msg_t *pMsg, int flags);
 void debugListenInfo(int fd, char *type);
 extern int bFinished;		/* used by termination signal handler, read-only except there */
+extern int AcceptRemote;	/* receive messages that come via UDP - read-only after startup */
 
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */
 extern char LocalHostName[];
@@ -86,6 +87,7 @@ extern int DisableDNS;
 extern char **StripDomains;
 extern char *LocalDomain;
 extern int bDropMalPTRMsgs;
+extern struct AllowedSenders *pAllowedSenders_UDP;
 extern struct AllowedSenders *pAllowedSenders_TCP;
 extern struct AllowedSenders *pAllowedSenders_GSS;
 extern char	ctty[];

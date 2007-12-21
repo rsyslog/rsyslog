@@ -193,9 +193,7 @@
 #include <arpa/inet.h>
 #include <resolv.h>
 #include "pidfile.h"
-
 #include <assert.h>
-
 #include <pthread.h>
 
 #if HAVE_PATHS_H
@@ -464,7 +462,7 @@ static int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-o
 int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
-static int	AcceptRemote = 0;/* receive messages that come via UDP - read-only after startup */
+int	AcceptRemote = 0;/* receive messages that come via UDP - read-only after startup */
 int     ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
 int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it to IP(s) */
 int	DisableDNS = 0; /* don't look up IP addresses of remote messages */
@@ -590,7 +588,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
  */
 #ifdef SYSLOG_INET
 /* All of the five below are read-only after startup */
-static struct AllowedSenders *pAllowedSenders_UDP = NULL; /* the roots of the allowed sender */
+struct AllowedSenders *pAllowedSenders_UDP = NULL; /* the roots of the allowed sender */
 struct AllowedSenders *pAllowedSenders_TCP = NULL; /* lists. If NULL, all senders are ok! */
 static struct AllowedSenders *pLastAllowedSenders_UDP = NULL; /* and now the pointers to the last */
 static struct AllowedSenders *pLastAllowedSenders_TCP = NULL; /* element in the respective list */
@@ -5378,14 +5376,6 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds)
 {
 	DEFiRet;
 	int i;
-	char line[MAXLINE +1];
-#ifdef  SYSLOG_INET
-	struct sockaddr_storage frominet;
-	socklen_t socklen;
-	uchar fromHost[NI_MAXHOST];
-	uchar fromHostFQDN[NI_MAXHOST];
-	ssize_t l;
-#endif	/* #ifdef SYSLOG_INET */
 
 	/* the following macro is used to decrement the number of to-be-probed
 	 * fds and abort this function when we are done with all.
@@ -5406,49 +5396,6 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds)
 				dbgprintf("%d ", i);
 		dbgprintf(("\n"));
 	}
-
-#ifdef SYSLOG_INET
-       if (finet != NULL && AcceptRemote) {
-	       for (i = 0; i < *finet; i++) {
-		       if (FD_ISSET(finet[i+1], pReadfds)) {
-			       socklen = sizeof(frominet);
-			       memset(line, 0xff, sizeof(line)); // TODO: I think we need this for debug only - remove after bug hunt
-			       l = recvfrom(finet[i+1], line, MAXLINE - 1, 0,
-			       		    (struct sockaddr *)&frominet, &socklen);
-			       if (l > 0) {
-				       if(cvthname(&frominet, fromHost, fromHostFQDN) == RS_RET_OK) {
-					       dbgprintf("Message from inetd socket: #%d, host: %s\n",
-						       finet[i+1], fromHost);
-					       /* Here we check if a host is permitted to send us
-						* syslog messages. If it isn't, we do not further
-						* process the message but log a warning (if we are
-						* configured to do this).
-						* rgerhards, 2005-09-26
-						*/
-					       if(isAllowedSender(pAllowedSenders_UDP,
-						  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
-						       printchopped((char*)fromHost, line, l,  finet[i+1], 1);
-					       } else {
-						       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
-						       if(option_DisallowWarning) {
-							       logerrorSz("UDP message from disallowed sender %s discarded",
-									  (char*)fromHost);
-						       }	
-					       }
-				       }
-			       } else if (l < 0 && errno != EINTR && errno != EAGAIN) {
-					char errStr[1024];
-					strerror_r(errno, errStr, sizeof(errStr));
-					dbgprintf("INET socket error: %d = %s.\n", errno, errStr);
-					       logerror("recvfrom inet");
-					       /* should be harmless */
-					       sleep(1);
-				       }
-			FDPROCESSED();
-			}
-	       }
-	}
-#endif
 finalize_it:
 	return iRet;
 }
@@ -5471,21 +5418,6 @@ static void mainloop(void)
 
 		/* first check if we have any internal messages queued and spit them out */
 		processImInternal();
-
-#ifdef SYSLOG_INET
-		/* Add the UDP listen sockets to the list of read descriptors.
-		 */
-		if(finet != NULL && AcceptRemote) {
-                        for (i = 0; i < *finet; i++) {
-                                if (finet[i+1] != -1) {
-					if(Debug)
-						debugListenInfo(finet[i+1], "UDP");
-                                        FD_SET(finet[i+1], &readfds);
-					if(finet[i+1]>maxfds) maxfds=finet[i+1];
-				}
-                        }
-		}
-#endif
 
 		if ( debugging_on ) {
 			dbgprintf("----------------------------------------\n");

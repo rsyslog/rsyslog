@@ -31,6 +31,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <netdb.h>
 #include "rsyslog.h"
 #include "syslogd.h"
 #include "cfsysline.h"
@@ -57,6 +58,12 @@ BEGINrunInput
 	int nfds;
 	int i;
 	fd_set readfds;
+	struct sockaddr_storage frominet;
+	socklen_t socklen;
+	uchar fromHost[NI_MAXHOST];
+	uchar fromHostFQDN[NI_MAXHOST];
+	char line[MAXLINE +1];
+	ssize_t l;
 CODESTARTrunInput
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
@@ -72,8 +79,20 @@ CODESTARTrunInput
 	        maxfds = 0;
 	        FD_ZERO (&readfds);
 
+		/* Add the UDP listen sockets to the list of read descriptors.
+		 */
+		if(finet != NULL && AcceptRemote) {
+                        for (i = 0; i < *finet; i++) {
+                                if (finet[i+1] != -1) {
+					if(Debug)
+						debugListenInfo(finet[i+1], "UDP");
+                                        FD_SET(finet[i+1], &readfds);
+					if(finet[i+1]>maxfds) maxfds=finet[i+1];
+				}
+                        }
+		}
 		if(Debug) {
-			dbgprintf("--------imTCP calling select, active file descriptors (max %d): ", maxfds);
+			dbgprintf("--------imUDP calling select, active file descriptors (max %d): ", maxfds);
 			for (nfds = 0; nfds <= maxfds; ++nfds)
 				if ( FD_ISSET(nfds, &readfds) )
 					dbgprintf("%d ", nfds);
@@ -82,6 +101,47 @@ CODESTARTrunInput
 
 		/* wait for io to become ready */
 		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+
+		if (finet != NULL && AcceptRemote) {
+		       for (i = 0; nfds && i < *finet; i++) {
+			       if (FD_ISSET(finet[i+1], &readfds)) {
+				       socklen = sizeof(frominet);
+				       memset(line, 0xff, sizeof(line)); // TODO: I think we need this for debug only - remove after bug hunt
+				       l = recvfrom(finet[i+1], line, MAXLINE - 1, 0,
+						    (struct sockaddr *)&frominet, &socklen);
+				       if (l > 0) {
+					       if(cvthname(&frominet, fromHost, fromHostFQDN) == RS_RET_OK) {
+						       dbgprintf("Message from inetd socket: #%d, host: %s\n",
+							       finet[i+1], fromHost);
+						       /* Here we check if a host is permitted to send us
+							* syslog messages. If it isn't, we do not further
+							* process the message but log a warning (if we are
+							* configured to do this).
+							* rgerhards, 2005-09-26
+							*/
+						       if(isAllowedSender(pAllowedSenders_UDP,
+							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
+							       printchopped((char*)fromHost, line, l,  finet[i+1], 1);
+						       } else {
+							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
+							       if(option_DisallowWarning) {
+								       logerrorSz("UDP message from disallowed sender %s discarded",
+										  (char*)fromHost);
+							       }	
+						       }
+					       }
+				       } else if (l < 0 && errno != EINTR && errno != EAGAIN) {
+						char errStr[1024];
+						strerror_r(errno, errStr, sizeof(errStr));
+						dbgprintf("INET socket error: %d = %s.\n", errno, errStr);
+						       logerror("recvfrom inet");
+						       /* should be harmless */
+						       sleep(1);
+					       }
+					--nfds; /* indicate we have processed one */
+				}
+		       }
+		}
 	}
 
 	return iRet;
