@@ -5367,68 +5367,27 @@ static void processImInternal(void)
 }
 
 
-/* process the select() selector array after the successful select.
- * processing is completed as soon as all selectors needing attention
- * are processed.
- * rgerhards, 2007-08-08
- */
-static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds)
-{
-	DEFiRet;
-	int i;
-
-	/* the following macro is used to decrement the number of to-be-probed
-	 * fds and abort this function when we are done with all.
-	 */
-#	define FDPROCESSED() if(--nfds == 0) { ABORT_FINALIZE(RS_RET_OK); }
-
-	if (nfds < 0) {
-		if (errno != EINTR)
-			logerror("select");
-		dbgprintf("Select interrupted.\n");
-		ABORT_FINALIZE(RS_RET_OK); /* we are done in any case */
-	}
-
-	if(debugging_on) {
-		dbgprintf("\nSuccessful select, descriptor count = %d, Activity on: ", nfds);
-		for (i = 0; i <= maxfds; ++i)
-			if ( FD_ISSET(i, pReadfds) )
-				dbgprintf("%d ", i);
-		dbgprintf(("\n"));
-	}
-finalize_it:
-	return iRet;
-}
-
-
 /* This is the main processing loop. It is called after successful initialization.
  * When it returns, the syslogd terminates.
  */
-static void mainloop(void)
+static void
+mainloop(void)
 {
-	fd_set readfds;
-	int i;
-	int maxfds;
-	int nfds;
-
 	while(!bFinished){
-	        errno  = 0;
-	        maxfds = 0;
-	        FD_ZERO (&readfds);
-
 		/* first check if we have any internal messages queued and spit them out */
+		/* TODO: do we need this any longer? I doubt it, but let's care about it
+ 		 * later -- rgerhards, 2007-12-21
+ 		 */
 		processImInternal();
 
 		if ( debugging_on ) {
 			dbgprintf("----------------------------------------\n");
-			dbgprintf("Calling select, active file descriptors (max %d): ", maxfds);
-			for (nfds= 0; nfds <= maxfds; ++nfds)
-				if ( FD_ISSET(nfds, &readfds) )
-					dbgprintf("%d ", nfds);
+			dbgprintf("Calling select, without file descriptors.");
 			dbgprintf("\n");
 		}
 
-		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+		/* this is now just a wait */
+		select(1, NULL, NULL, NULL, NULL);
 
 		if(bRequestDoMark) {
 			domark();
@@ -5444,12 +5403,6 @@ static void mainloop(void)
 			restart = 0;
 			continue;
 		}
-		if (nfds == 0) {
-			dbgprintf("No select activity.\n");
-			continue;
-		}
-
-		processSelectAfter(maxfds, nfds, &readfds);
 	}
 }
 

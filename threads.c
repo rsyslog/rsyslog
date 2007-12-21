@@ -253,7 +253,7 @@ thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds)
 	/* there may be a race condition if pthread_kill() is called after unblock but
 	 * before the select() is setup. TODO: check and re-eval -- rgerhards, 2007-12-20
 	 */
-	select(0, NULL, NULL, NULL, &tvSelectTimeout);
+	select(1, NULL, NULL, NULL, &tvSelectTimeout);
 	if(pThis->bShallStop)
 		iRet = RS_RET_TERMINATE_NOW;
 	else
