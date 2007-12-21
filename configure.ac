@@ -349,8 +349,7 @@ AC_SUBST(pgsql_cflags)
 AC_SUBST(pgsql_libs)
 
 
-
-AC_CONFIG_FILES([Makefile doc/Makefile plugins/imtcp/Makefile plugins/imuxsock/Makefile plugins/immark/Makefile plugins/imklog/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile plugins/imudp/Makefile plugins/imtcp/Makefile plugins/imuxsock/Makefile plugins/immark/Makefile plugins/imklog/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile])
 AC_OUTPUT
 
 echo "****************************************************"
