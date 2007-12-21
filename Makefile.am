@@ -74,7 +74,7 @@ EXTRA_DIST = \
 
 SUBDIRS = doc
 
-SUBDIRS += plugins/immark plugins/imuxsock
+SUBDIRS += plugins/immark plugins/imuxsock plugins/imtcp
 
 if ENABLE_IMKLOGD
 SUBDIRS += plugins/imklog
