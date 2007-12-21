@@ -24,12 +24,20 @@ to rsyslogd.</p>
 <p>All global directives need to be specified on a line by their own and must 
 start with a dollar-sign. Here is a list in alphabetical order. Follow links for 
 a description.</p>
+<p>Not all directives have an in-depth description right now. Default values for 
+them are in bold. A more in-depth description will appear as implementation 
+progresses. Directives may change during that process, we will NOT try hard to 
+maintain backwards compatibility (after all, v3 is still very early in 
+development and quite unstable...). So you have been warned ;)</p>
 <ul>
 	<li><a href="rsconf1_actionexeconlyifpreviousissuspended.html">$ActionExecOnlyIfPreviousIsSuspended</a></li>
 	<li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
+	<li>$AddUnixListenSocket &lt;name-of-socket&gt; adds additional unix socket, 
+	default none -- former -a option</li>
 	<li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
 	<li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
 	<li><a href="rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
+	<li>$DebugPrintKernelSymbols (imklog) [on/<b>off</b>]</li>
 	<li><a href="rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
 	<li><a href="rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
 	<li><a href="rsconf1_dircreatemode.html">$DirCreateMode</a></li>
@@ -47,12 +55,18 @@ a description.</p>
 	<li><a href="rsconf1_gsslistenservicename.html">$GssListenServiceName</a></li>
 	<li><a href="rsconf1_gssmode.html">$GssMode</a></li>
 	<li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li>
+	<li>$klogSymbolLookup (imklog) [<b>on</b>/off] -- former klogd -x option</li>
+	<li>$klogUseSyscallInterface (imklog)&nbsp; [on/<b>off</b>] -- former klogd 
+	-2 option</li>
+	<li>$klogSymbolsTwice (imklog) [on/<b>off</b>] -- former klogd -s option</li>
 	<li><a href="rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
-	<li><a href="rsconf1_markmessageperiod.html">$MarkMessagePeriod</a> [immark]</li>
+	<li><a href="rsconf1_markmessageperiod.html">$MarkMessagePeriod</a> (immark)</li>
 	<li><a href="rsconf1_moddir.html">$ModDir</a></li>
 	<li><a href="rsconf1_modload.html">$ModLoad</a></li>
+	<li>$OmitLocalLogging (imuxsock) [on/<b>off</b>] -- former -o option</li>
 	<li><a href="rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
 	<li><a href="rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
+	<li>$SystemLogSocketName &lt;name-of-socket&gt; -- former -p option</li>
 	<li><a href="rsconf1_umask.html">$UMASK</a></li>
 </ul>
 <h2>Basic Structure</h2>
