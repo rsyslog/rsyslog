@@ -210,7 +210,6 @@
 #include "template.h"
 #include "outchannel.h"
 #include "syslogd.h"
-#include "net.h" /* struct NetAddr */
 #include "sync.h" /* struct NetAddr */
 
 #include "parse.h"
@@ -322,8 +321,6 @@ static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on start
 /* mypid is read-only after the initial fork() */
 static int debugging_on = 0; /* read-only, except on sig USR1 */
 static int restart = 0; /* do restart (config read) - multithread safe */
-
-static int bRequestDoMark = 0; /* do mark processing? (multithread safe) */
 
 int glblHadMemShortage = 0; /* indicates if we had memory shortage some time during the run */
 
@@ -3245,6 +3242,7 @@ DEFFUNC_llExecFunc(domarkActions)
 	action_t *pAction = (action_t*) pData;
 
 	assert(pAction != NULL);
+dbgprintf("domarkActions\n");
 	
 	LockObj(pAction);
 	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
@@ -3260,56 +3258,20 @@ DEFFUNC_llExecFunc(domarkActions)
 }
 
 
-/* This method writes mark messages and - some time later - flushes reapeat
- * messages.
- * This method was initially called by an alarm handler. As such, it could potentially
- * have  race-conditons. For details, see
- * http://lkml.org/lkml/2005/3/26/37
- * http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=301511
- * I have now changed it so that the alarm handler only sets a global variable, telling
- * the main thread that it must do mark processing. So domark() is now called from the
- * main thread itself, which is the only thing to make sure rsyslogd will not do
- * strange things. The way it originally was seemed to work because mark occurs very
- * seldom. However, the code called was anything else but reentrant, so it was like
- * russian roulette. - rgerhards, 2005-10-20
- * rgerhards, 2007-12-11: ... and it still is, if running multithreaded. Because in this
- * case we run concurrently to the actions... I have now fixed that by using synchronization
- * macros.
+/* This method flushes reapeat messages.
  */
 static void
-domark(void)
+doFlushRptdMsgs(void)
 {
 	register selector_t *f;
 
-	if (MarkInterval > 0) {
-		/* see if we need to flush any "message repeated n times"... 
-		 * Note that this interferes with objects running on another thread.
-		 * We are using appropriate locking inside the function to handle that.
-		 */
-		for (f = Files; f != NULL ; f = f->f_next) {
-			llExecFunc(&f->llActList, domarkActions, NULL);
-		}
+	/* see if we need to flush any "message repeated n times"... 
+	 * Note that this interferes with objects running on other threads.
+	 * We are using appropriate locking inside the function to handle that.
+	 */
+	for (f = Files; f != NULL ; f = f->f_next) {
+		llExecFunc(&f->llActList, domarkActions, NULL);
 	}
-}
-
-
-/* This is the alarm handler setting the global variable for
- * domark request. See domark() comments for further details.
- * rgerhards, 2005-10-20
- */
-static void
-domarkAlarmHdlr()
-{
-	struct sigaction sigAct;
-
- 	bRequestDoMark = 1; /* request alarm */
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = domarkAlarmHdlr;
-	sigaction(SIGALRM, &sigAct, NULL);
-
- 	(void) alarm(TIMERINTVL);
 }
 
 
@@ -5373,6 +5335,8 @@ static void processImInternal(void)
 static void
 mainloop(void)
 {
+	struct timeval tvSelectTimeout;
+
 	while(!bFinished){
 		/* first check if we have any internal messages queued and spit them out */
 		/* TODO: do we need this any longer? I doubt it, but let's care about it
@@ -5386,16 +5350,18 @@ mainloop(void)
 			dbgprintf("\n");
 		}
 
-		/* this is now just a wait */
-		select(1, NULL, NULL, NULL, NULL);
 
-		if(bRequestDoMark) {
-			domark();
-			bRequestDoMark = 0;
-			/* We do not use continue, because domark() is carried out
-			 * only when something else happened.
-			 */
-		}
+		/* this is now just a wait */
+		tvSelectTimeout.tv_sec = 5;//TIMERINTVL;
+		tvSelectTimeout.tv_usec = 0;
+		select(1, NULL, NULL, NULL, &tvSelectTimeout);
+
+		/* If we received a HUP signal, we call doFlushRptdMsgs() a bit early. As doFlushRptdMsgs()
+ 		 * no longer does the marking, this is quite acceptable.
+ 		 * rgerhards, 2007-12-21
+ 		 */
+		doFlushRptdMsgs();
+
 		if(restart) {
 			dbgprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
 			/* worker thread is stopped as part of init() */
@@ -5863,14 +5829,11 @@ int main(int argc, char **argv)
 	sigaction(SIGQUIT, &sigAct, NULL);
 	sigAct.sa_handler = reapchild;
 	sigaction(SIGCHLD, &sigAct, NULL);
-	sigAct.sa_handler = domarkAlarmHdlr;
-	sigaction(SIGALRM, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
 	sigaction(SIGUSR1, &sigAct, NULL);
 	sigAct.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sigAct, NULL);
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
-	(void) alarm(TIMERINTVL);
 
 	mainThread();
 
