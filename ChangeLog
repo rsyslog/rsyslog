@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 2.0.0 (rgerhards), 2007-12-??
+Version 1.21.1 (rgerhards), 2007-12-23
 - small doc fix for $IncludeConfig
 - fixed a bug in llDestroy()
 - bugfix: fixing memory leak when message queue is full and during
