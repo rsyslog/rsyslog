@@ -4760,48 +4760,6 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 }
 
 
-/* print out which socket we are listening on. This is only
- * a debug aid. rgerhards, 2007-07-02
- */
-void debugListenInfo(int fd, char *type)
-{
-	char *szFamily;
-	int port;
-	struct sockaddr sa;
-	struct sockaddr_in *ipv4;
-	struct sockaddr_in6 *ipv6;
-	socklen_t saLen = sizeof(sa);
-
-	if(getsockname(fd, &sa, &saLen) == 0) {
-		switch(sa.sa_family) {
-		case PF_INET:
-			szFamily = "IPv4";
-			ipv4 = (struct sockaddr_in*) &sa;
-			port = ntohs(ipv4->sin_port);
-			break;
-		case PF_INET6:
-			szFamily = "IPv6";
-			ipv6 = (struct sockaddr_in6*) &sa;
-			port = ntohs(ipv6->sin6_port);
-			break;
-		default:
-			szFamily = "other";
-			port = -1;
-			break;
-		}
-		dbgprintf("Listening on %s syslogd socket %d (%s/port %d).\n",
-			type, fd, szFamily, port);
-		return;
-	}
-
-	/* we can not obtain peer info. We are just providing
-	 * debug info, so this is no reason to break the program
-	 * or do any serious error reporting.
-	 */
-	dbgprintf("Listening on syslogd socket %d - could not obtain peer info.\n", fd);
-}
-
-
 /* this function pulls all internal messages from the buffer
  * and puts them into the processing engine.
  * We can only do limited error handling, as this would not

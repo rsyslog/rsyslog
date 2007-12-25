@@ -75,6 +75,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine);
 void PrintAllowedSenders(int iListToPrint);
 void clearAllowedSenders ();
+void debugListenInfo(int fd, char *type);
 
 extern int     ACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 extern int     ACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
