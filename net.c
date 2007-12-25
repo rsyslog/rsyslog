@@ -137,8 +137,12 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 /* function to clear the allowed sender structure in cases where
  * it must be freed (occurs most often when HUPed.
  * TODO: reconsider recursive implementation
+ * I think there is also a memory leak, because only the last entry
+ * is acutally deleted... -- rgerhards, 2007-12-25
  */
-void clearAllowedSenders (struct AllowedSenders *pAllow) {
+void clearAllowedSenders (struct AllowedSenders *pAllow)
+{
+dbgprintf("clearAllowedSenders(0x%lx)\n", (unsigned long) pAllow);
 	if (pAllow != NULL) {
 		if (pAllow->pNext != NULL)
 			clearAllowedSenders (pAllow->pNext);
@@ -840,6 +844,7 @@ void closeUDPListenSockets()
 {
 	register int i;
 
+dbgprintf("in closeUDPListenSockets()\n");
         if(finet != NULL) {
 	        for (i = 0; i < *finet; i++)
 	                close(finet[i+1]);

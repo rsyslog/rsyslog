@@ -86,9 +86,6 @@ extern int DisableDNS;
 extern char **StripDomains;
 extern char *LocalDomain;
 extern int bDropMalPTRMsgs;
-extern struct AllowedSenders *pAllowedSenders_UDP;
-extern struct AllowedSenders *pAllowedSenders_TCP;
-extern struct AllowedSenders *pAllowedSenders_GSS;
 extern char	ctty[];
 
 #endif /* #ifndef SYSLOGD_H_INCLUDED */

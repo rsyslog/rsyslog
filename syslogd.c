@@ -2760,7 +2760,8 @@ static void doDie(int sig)
  * any calls to die() in new code!
  * rgerhards, 2005-10-24
  */
-static void die(int sig)
+static void
+die(int sig)
 {
 	char buf[256];
 
@@ -3475,11 +3476,6 @@ init(void)
 
 #ifdef SYSLOG_INET
 	if (restart) {
-		if (pAllowedSenders_UDP != NULL) {
-			clearAllowedSenders (pAllowedSenders_UDP);
-			pAllowedSenders_UDP = NULL;
-		}
-		
 		if (pAllowedSenders_TCP != NULL) {
 			clearAllowedSenders (pAllowedSenders_TCP);
 			pAllowedSenders_TCP = NULL;
@@ -3491,13 +3487,8 @@ init(void)
 		}
 #endif
 	}
+#endif
 
-	assert(pAllowedSenders_UDP == NULL && pAllowedSenders_TCP == NULL
-#ifdef USE_GSSAPI
-	       && pAllowedSenders_GSS == NULL
-#endif
-	       );
-#endif
 	/* I was told by an IPv6 expert that calling getservbyname() seems to be
 	 * still valid, at least for the use case we have. So I re-enabled that
 	 * code. rgerhards, 2007-07-02
@@ -3602,7 +3593,7 @@ init(void)
 	 */
 	if(Forwarding || AcceptRemote) {
 		if (finet == NULL) {
-			if((finet = create_udp_socket(LogPort)) != NULL)
+			if((finet = create_udp_socket((uchar*)LogPort)) != NULL)
 				dbgprintf("Opened %d syslog UDP port(s).\n", *finet);
 		}
 	} else {

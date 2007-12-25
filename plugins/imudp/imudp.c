@@ -106,7 +106,6 @@ CODESTARTrunInput
 		       for (i = 0; nfds && i < *finet; i++) {
 			       if (FD_ISSET(finet[i+1], &readfds)) {
 				       socklen = sizeof(frominet);
-				       memset(line, 0xff, sizeof(line)); // TODO: I think we need this for debug only - remove after bug hunt
 				       l = recvfrom(finet[i+1], line, MAXLINE - 1, 0,
 						    (struct sockaddr *)&frominet, &socklen);
 				       if (l > 0) {
@@ -158,6 +157,11 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
+dbgprintf("call clearAllowedSenders(0x%lx)\n", (unsigned long) pAllowedSenders_UDP);
+	if (pAllowedSenders_UDP != NULL) {
+		clearAllowedSenders (pAllowedSenders_UDP);
+		pAllowedSenders_UDP = NULL;
+	}
 ENDafterRun
 
 

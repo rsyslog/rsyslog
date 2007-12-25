@@ -80,6 +80,9 @@ int *create_udp_socket(uchar *LogPort);
 
 extern int     ACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 extern int     ACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
+extern struct AllowedSenders *pAllowedSenders_UDP;
+extern struct AllowedSenders *pAllowedSenders_TCP;
+extern struct AllowedSenders *pAllowedSenders_GSS;
 
 #endif /* #ifdef SYSLOG_INET */
 #endif /* #ifndef INCLUDED_NET_H */
