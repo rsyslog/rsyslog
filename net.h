@@ -71,6 +71,13 @@ static inline size_t SALEN(struct sockaddr *sa) {
 #endif
 
 rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN);
+/* things to go away after proper modularization */
+rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine);
+void PrintAllowedSenders(int iListToPrint);
+void clearAllowedSenders ();
+
+extern int     ACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
+extern int     ACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
 
 #endif /* #ifdef SYSLOG_INET */
 #endif /* #ifndef INCLUDED_NET_H */

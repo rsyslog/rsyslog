@@ -7,6 +7,11 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
+ * Starting 2007-12-24, I have begun to shuffle more network-related code
+ * from syslogd.c to over here. I am not sure if it will stay here in the
+ * long term, but it is good to have it out of syslogd.c. Maybe this here is
+ * an interim location ;)
+ *
  * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
@@ -40,10 +45,508 @@
 #include <signal.h>
 #include <ctype.h>
 #include <netdb.h>
+#include <fnmatch.h>
 
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "net.h"
+#include "parse.h"
+
+/* support for defining allowed TCP and UDP senders. We use the same
+ * structure to implement this (a linked list), but we define two different
+ * list roots, one for UDP and one for TCP.
+ * rgerhards, 2005-09-26
+ */
+/* All of the five below are read-only after startup */
+struct AllowedSenders *pAllowedSenders_UDP = NULL; /* the roots of the allowed sender */
+struct AllowedSenders *pAllowedSenders_TCP = NULL; /* lists. If NULL, all senders are ok! */
+static struct AllowedSenders *pLastAllowedSenders_UDP = NULL; /* and now the pointers to the last */
+static struct AllowedSenders *pLastAllowedSenders_TCP = NULL; /* element in the respective list */
+#ifdef USE_GSSAPI
+struct AllowedSenders *pAllowedSenders_GSS = NULL;
+static struct AllowedSenders *pLastAllowedSenders_GSS = NULL;
+#endif
+
+int     ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
+int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it to IP(s) */
+
+/* Code for handling allowed/disallowed senders
+ */
+static inline void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
+	register uint8_t i;
+	
+	assert (addr != NULL);
+	assert (bits <= 128);
+	
+	i = bits/32;
+	if (bits%32)
+		addr->s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
+	for (; i < (sizeof addr->s6_addr32)/4; i++)
+		addr->s6_addr32[i] = 0;
+}
+
+static inline void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
+	
+	assert (addr != NULL);
+	assert (bits <=32 );
+	
+	addr->s_addr &= htonl(0xffffffff << (32 - bits));
+}
+
+#define SIN(sa)  ((struct sockaddr_in  *)(sa))
+#define SIN6(sa) ((struct sockaddr_in6 *)(sa))
+
+/* This function adds an allowed sender entry to the ACL linked list.
+ * In any case, a single entry is added. If an error occurs, the
+ * function does its error reporting itself. All validity checks
+ * must already have been done by the caller.
+ * This is a helper to AddAllowedSender().
+ * rgerhards, 2007-07-17
+ */
+static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
+		     		      struct NetAddr *iAllow, uint8_t iSignificantBits)
+{
+	struct AllowedSenders *pEntry = NULL;
+
+	assert(ppRoot != NULL);
+	assert(ppLast != NULL);
+	assert(iAllow != NULL);
+
+	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders))) == NULL) {
+		glblHadMemShortage = 1;
+		return RS_RET_OUT_OF_MEMORY; /* no options left :( */
+	}
+	
+	memcpy(&(pEntry->allowedSender), iAllow, sizeof (struct NetAddr));
+	pEntry->pNext = NULL;
+	pEntry->SignificantBits = iSignificantBits;
+	
+	/* enqueue */
+	if(*ppRoot == NULL) {
+		*ppRoot = pEntry;
+	} else {
+		(*ppLast)->pNext = pEntry;
+	}
+	*ppLast = pEntry;
+	
+	return RS_RET_OK;
+}
+
+/* function to clear the allowed sender structure in cases where
+ * it must be freed (occurs most often when HUPed.
+ * TODO: reconsider recursive implementation
+ */
+void clearAllowedSenders (struct AllowedSenders *pAllow) {
+	if (pAllow != NULL) {
+		if (pAllow->pNext != NULL)
+			clearAllowedSenders (pAllow->pNext);
+		else {
+			if (F_ISSET(pAllow->allowedSender.flags, ADDR_NAME))
+				free (pAllow->allowedSender.addr.HostWildcard);
+			else
+				free (pAllow->allowedSender.addr.NetAddr);
+			
+			free (pAllow);
+		}
+	}
+}
+
+/* function to add an allowed sender to the allowed sender list. The
+ * root of the list is caller-provided, so it can be used for all
+ * supported lists. The caller must provide a pointer to the root,
+ * as it eventually needs to be updated. Also, a pointer to the
+ * pointer to the last element must be provided (to speed up adding
+ * list elements).
+ * rgerhards, 2005-09-26
+ * If a hostname is given there are possible multiple entries
+ * added (all addresses from that host).
+ */
+static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedSenders **ppLast,
+		     		 struct NetAddr *iAllow, uint8_t iSignificantBits)
+{
+	DEFiRet;
+
+	assert(ppRoot != NULL);
+	assert(ppLast != NULL);
+	assert(iAllow != NULL);
+
+	if (!F_ISSET(iAllow->flags, ADDR_NAME)) {
+		if(iSignificantBits == 0)
+			/* we handle this seperatly just to provide a better
+			 * error message.
+			 */
+			logerror("You can not specify 0 bits of the netmask, this would "
+				 "match ALL systems. If you really intend to do that, "
+				 "remove all $AllowedSender directives.");
+		
+		switch (iAllow->addr.NetAddr->sa_family) {
+		case AF_INET:
+			if((iSignificantBits < 1) || (iSignificantBits > 32)) {
+				logerrorInt("Invalid bit number in IPv4 address - adjusted to 32",
+					    (int)iSignificantBits);
+				iSignificantBits = 32;
+			}
+			
+			MaskIP4 (&(SIN(iAllow->addr.NetAddr)->sin_addr), iSignificantBits);
+			break;
+		case AF_INET6:
+			if((iSignificantBits < 1) || (iSignificantBits > 128)) {
+				logerrorInt("Invalid bit number in IPv6 address - adjusted to 128",
+					    iSignificantBits);
+				iSignificantBits = 128;
+			}
+
+			MaskIP6 (&(SIN6(iAllow->addr.NetAddr)->sin6_addr), iSignificantBits);
+			break;
+		default:
+			/* rgerhards, 2007-07-16: We have an internal program error in this
+			 * case. However, there is not much we can do against it right now. Of
+			 * course, we could abort, but that would probably cause more harm
+			 * than good. So we continue to run. We simply do not add this line - the
+			 * worst thing that happens is that one host will not be allowed to
+			 * log.
+			 */
+			logerrorInt("Internal error caused AllowedSender to be ignored, AF = %d",
+				    iAllow->addr.NetAddr->sa_family);
+			return RS_RET_ERR;
+		}
+		/* OK, entry constructed, now lets add it to the ACL list */
+		iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
+	} else {
+		/* we need to process a hostname ACL */
+		if (DisableDNS) {
+			logerror ("Ignoring hostname based ACLs because DNS is disabled.");
+			return RS_RET_OK;
+		}
+		
+		if (!strchr (iAllow->addr.HostWildcard, '*') &&
+		    !strchr (iAllow->addr.HostWildcard, '?') &&
+		    ACLDontResolve == 0) {
+			/* single host - in this case, we pull its IP addresses from DNS
+			* and add IP-based ACLs.
+			*/
+			struct addrinfo hints, *res, *restmp;
+			struct NetAddr allowIP;
+			
+			memset (&hints, 0, sizeof (struct addrinfo));
+			hints.ai_family = AF_UNSPEC;
+			hints.ai_socktype = SOCK_DGRAM;
+#			ifdef AI_ADDRCONFIG /* seems not to be present on all systems */
+				hints.ai_flags  = AI_ADDRCONFIG;
+#			endif
+
+			if (getaddrinfo (iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
+			        logerrorSz("DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
+				
+				if (ACLAddHostnameOnFail) {
+				        logerrorSz("Adding hostname \"%s\" to ACL as a wildcard entry.", iAllow->addr.HostWildcard);
+				        return AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
+				} else {
+				        logerrorSz("Hostname \"%s\" WON\'T be added to ACL.", iAllow->addr.HostWildcard);
+				        return RS_RET_NOENTRY;
+				}
+			}
+			
+			for (restmp = res ; res != NULL ; res = res->ai_next) {
+				switch (res->ai_family) {
+				case AF_INET: /* add IPv4 */
+					iSignificantBits = 32;
+					allowIP.flags = 0;
+					if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
+						glblHadMemShortage = 1;
+						return RS_RET_OUT_OF_MEMORY;
+					}
+					memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
+					
+					if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP, iSignificantBits))
+						!= RS_RET_OK)
+						return(iRet);
+					break;
+				case AF_INET6: /* IPv6 - but need to check if it is a v6-mapped IPv4 */
+					if(IN6_IS_ADDR_V4MAPPED (&SIN6(res->ai_addr)->sin6_addr)) {
+						/* extract & add IPv4 */
+						
+						iSignificantBits = 32;
+						allowIP.flags = 0;
+						if((allowIP.addr.NetAddr = malloc(sizeof(struct sockaddr_in)))
+						    == NULL) {
+							glblHadMemShortage = 1;
+							return RS_RET_OUT_OF_MEMORY;
+						}
+						SIN(allowIP.addr.NetAddr)->sin_family = AF_INET;
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN    
+                                                SIN(allowIP.addr.NetAddr)->sin_len    = sizeof (struct sockaddr_in);
+#endif
+						SIN(allowIP.addr.NetAddr)->sin_port   = 0;
+						memcpy(&(SIN(allowIP.addr.NetAddr)->sin_addr.s_addr),
+							&(SIN6(res->ai_addr)->sin6_addr.s6_addr32[3]),
+							sizeof (struct sockaddr_in));
+
+						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
+								iSignificantBits))
+							!= RS_RET_OK)
+							return(iRet);
+					} else {
+						/* finally add IPv6 */
+						
+						iSignificantBits = 128;
+						allowIP.flags = 0;
+						if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
+							glblHadMemShortage = 1;
+							return RS_RET_OUT_OF_MEMORY;
+						}
+						memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
+						
+						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
+								iSignificantBits))
+							!= RS_RET_OK)
+							return(iRet);
+					}
+					break;
+				}
+			}
+			freeaddrinfo (restmp);
+		} else {
+			/* wildcards in hostname - we need to add a text-based ACL.
+			 * For this, we already have everything ready and just need
+			 * to pass it along...
+			 */
+			iRet =  AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
+		}
+	}
+
+	return iRet;
+}
+
+
+/* Print an allowed sender list. The caller must tell us which one.
+ * iListToPrint = 1 means UDP, 2 means TCP
+ * rgerhards, 2005-09-27
+ */
+void PrintAllowedSenders(int iListToPrint)
+{
+	struct AllowedSenders *pSender;
+	uchar szIP[64];
+	
+	assert((iListToPrint == 1) || (iListToPrint == 2)
+#ifdef USE_GSSAPI
+	       || (iListToPrint == 3)
+#endif
+	       );
+
+	printf("\nAllowed %s Senders:\n",
+	       (iListToPrint == 1) ? "UDP" :
+#ifdef USE_GSSAPI
+	       (iListToPrint == 3) ? "GSS" :
+#endif
+	       "TCP");
+
+	pSender = (iListToPrint == 1) ? pAllowedSenders_UDP :
+#ifdef USE_GSSAPI
+		(iListToPrint == 3) ? pAllowedSenders_GSS :
+#endif
+		pAllowedSenders_TCP;
+	if(pSender == NULL) {
+		printf("\tNo restrictions set.\n");
+	} else {
+		while(pSender != NULL) {
+			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME))
+				printf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
+			else {
+				if(getnameinfo (pSender->allowedSender.addr.NetAddr,
+						     SALEN(pSender->allowedSender.addr.NetAddr),
+						     (char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
+					printf ("\t%s/%u\n", szIP, pSender->SignificantBits);
+				} else {
+					/* getnameinfo() failed - but as this is only a
+					 * debug function, we simply spit out an error and do
+					 * not care much about it.
+					 */
+					dbgprintf("\tERROR in getnameinfo() - something may be wrong "
+						"- ignored for now\n");
+				}
+			}
+			pSender = pSender->pNext;
+		}
+	}
+}
+
+
+/* parse an allowed sender config line and add the allowed senders
+ * (if the line is correct).
+ * rgerhards, 2005-09-27
+ */
+rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
+{
+	struct AllowedSenders **ppRoot;
+	struct AllowedSenders **ppLast;
+	rsParsObj *pPars;
+	rsRetVal iRet;
+	struct NetAddr *uIP = NULL;
+	int iBits;
+
+	assert(pName != NULL);
+	assert(ppRestOfConfLine != NULL);
+	assert(*ppRestOfConfLine != NULL);
+
+	if(!strcasecmp(pName, "udp")) {
+		ppRoot = &pAllowedSenders_UDP;
+		ppLast = &pLastAllowedSenders_UDP;
+	} else if(!strcasecmp(pName, "tcp")) {
+		ppRoot = &pAllowedSenders_TCP;
+		ppLast = &pLastAllowedSenders_TCP;
+#ifdef USE_GSSAPI
+	} else if(!strcasecmp(pName, "gss")) {
+		ppRoot = &pAllowedSenders_GSS;
+		ppLast = &pLastAllowedSenders_GSS;
+#endif
+	} else {
+		logerrorSz("Invalid protocol '%s' in allowed sender "
+		           "list, line ignored", pName);
+		return RS_RET_ERR;
+	}
+
+	/* OK, we now know the protocol and have valid list pointers.
+	 * So let's process the entries. We are using the parse class
+	 * for this.
+	 */
+	/* create parser object starting with line string without leading colon */
+	if((iRet = rsParsConstructFromSz(&pPars, (uchar*) *ppRestOfConfLine) != RS_RET_OK)) {
+		logerrorInt("Error %d constructing parser object - ignoring allowed sender list", iRet);
+		return(iRet);
+	}
+
+	while(!parsIsAtEndOfParseString(pPars)) {
+		if(parsPeekAtCharAtParsPtr(pPars) == '#')
+			break; /* a comment-sign stops processing of line */
+		/* now parse a single IP address */
+		if((iRet = parsAddrWithBits(pPars, &uIP, &iBits)) != RS_RET_OK) {
+			logerrorInt("Error %d parsing address in allowed sender"
+				    "list - ignoring.", iRet);
+			rsParsDestruct(pPars);
+			return(iRet);
+		}
+		if((iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits))
+			!= RS_RET_OK) {
+		        if (iRet == RS_RET_NOENTRY) {
+			        logerrorInt("Error %d adding allowed sender entry "
+					    "- ignoring.", iRet);
+		        } else {
+			        logerrorInt("Error %d adding allowed sender entry "
+					    "- terminating, nothing more will be added.", iRet);
+				rsParsDestruct(pPars);
+				return(iRet);
+		        }
+		}
+		free (uIP); /* copy stored in AllowedSenders list */ 
+	}
+
+	/* cleanup */
+	*ppRestOfConfLine += parsGetCurrentPosition(pPars);
+	return rsParsDestruct(pPars);
+}
+
+
+
+/* compares a host to an allowed sender list entry. Handles all subleties
+ * including IPv4/v6 as well as domain name wildcards.
+ * This is a helper to isAllowedSender. As it is only called once, it is
+ * declared inline.
+ * Returns 0 if they do not match, something else otherwise.
+ * contributed 1007-07-16 by mildew@gmail.com
+ */
+static inline int MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr *pFrom, const char *pszFromHost)
+{
+	assert(pAllow != NULL);
+	assert(pFrom != NULL);
+
+	if(F_ISSET(pAllow->flags, ADDR_NAME)) {
+		dbgprintf("MaskCmp: host=\"%s\"; pattern=\"%s\"\n", pszFromHost, pAllow->addr.HostWildcard);
+		
+		return(fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE|FNM_CASEFOLD) == 0);
+	} else {/* We need to compare an IP address */
+		switch (pFrom->sa_family) {
+		case AF_INET:
+			if (AF_INET == pAllow->addr.NetAddr->sa_family)
+				return(( SIN(pFrom)->sin_addr.s_addr & htonl(0xffffffff << (32 - bits)) )
+				       == SIN(pAllow->addr.NetAddr)->sin_addr.s_addr);
+			else
+				return 0;
+			break;
+		case AF_INET6:
+			switch (pAllow->addr.NetAddr->sa_family) {
+			case AF_INET6: {
+				struct in6_addr ip, net;
+				register uint8_t i;
+				
+				memcpy (&ip,  &(SIN6(pFrom))->sin6_addr, sizeof (struct in6_addr));
+				memcpy (&net, &(SIN6(pAllow->addr.NetAddr))->sin6_addr, sizeof (struct in6_addr));
+				
+				i = bits/32;
+				if (bits % 32)
+					ip.s6_addr32[i++] &= htonl(0xffffffff << (32 - (bits % 32)));
+				for (; i < (sizeof ip.s6_addr32)/4; i++)
+					ip.s6_addr32[i] = 0;
+				
+				return (memcmp (ip.s6_addr, net.s6_addr, sizeof ip.s6_addr) == 0 &&
+					(SIN6(pAllow->addr.NetAddr)->sin6_scope_id != 0 ?
+					 SIN6(pFrom)->sin6_scope_id == SIN6(pAllow->addr.NetAddr)->sin6_scope_id : 1));
+			}
+			case AF_INET: {
+				struct in6_addr *ip6 = &(SIN6(pFrom))->sin6_addr;
+				struct in_addr  *net = &(SIN(pAllow->addr.NetAddr))->sin_addr;
+				
+				if ((ip6->s6_addr32[3] & (u_int32_t) htonl((0xffffffff << (32 - bits)))) == net->s_addr &&
+#if BYTE_ORDER == LITTLE_ENDIAN
+				    (ip6->s6_addr32[2] == (u_int32_t)0xffff0000) &&
+#else
+				    (ip6->s6_addr32[2] == (u_int32_t)0x0000ffff) &&
+#endif
+				    (ip6->s6_addr32[1] == 0) && (ip6->s6_addr32[0] == 0))
+					return 1;
+				else
+					return 0;
+			}
+			default:
+				/* Unsupported AF */
+				return 0;
+			}
+		default:
+			/* Unsupported AF */
+			return 0;
+		}
+	}
+}
+
+
+/* check if a sender is allowed. The root of the the allowed sender.
+ * list must be proveded by the caller. As such, this function can be
+ * used to check both UDP and TCP allowed sender lists.
+ * returns 1, if the sender is allowed, 0 otherwise.
+ * rgerhards, 2005-09-26
+ */
+int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost)
+{
+	struct AllowedSenders *pAllow;
+	
+	assert(pFrom != NULL);
+
+	if(pAllowRoot == NULL)
+		return 1; /* checking disabled, everything is valid! */
+	
+	/* now we loop through the list of allowed senders. As soon as
+	 * we find a match, we return back (indicating allowed). We loop
+	 * until we are out of allowed senders. If so, we fall through the
+	 * loop and the function's terminal return statement will indicate
+	 * that the sender is disallowed.
+	 */
+	for(pAllow = pAllowRoot ; pAllow != NULL ; pAllow = pAllow->pNext) {
+		if (MaskCmp (&(pAllow->allowedSender), pAllow->SignificantBits, pFrom, pszFromHost))
+			return 1;
+	}
+	return 0;
+}
+
 
 /* The following #ifdef sequence is a small compatibility 
  * layer. It tries to work around the different availality
