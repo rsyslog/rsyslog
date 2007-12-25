@@ -46,6 +46,8 @@
 #include <ctype.h>
 #include <netdb.h>
 #include <fnmatch.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "syslogd.h"
 #include "syslogd-types.h"
@@ -828,6 +830,169 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 
 finalize_it:
 	return iRet;
+}
+
+
+/* closes the UDP listen sockets (if they exist) and frees
+ * all dynamically assigned memory. 
+ */
+void closeUDPListenSockets()
+{
+	register int i;
+
+        if(finet != NULL) {
+	        for (i = 0; i < *finet; i++)
+	                close(finet[i+1]);
+		free(finet);
+		finet = NULL;
+	}
+}
+
+
+/* creates the UDP listen sockets
+ */
+int *create_udp_socket(uchar *LogPort)
+{
+        struct addrinfo hints, *res, *r;
+        int error, maxs, *s, *socks, on = 1;
+	int sockflags;
+
+	assert(LogPort != NULL);
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+        hints.ai_family = family;
+        hints.ai_socktype = SOCK_DGRAM;
+        error = getaddrinfo(NULL, (char*) LogPort, &hints, &res);
+        if(error) {
+               logerror((char*) gai_strerror(error));
+	       logerror("UDP message reception disabled due to error logged in last message.\n");
+	       return NULL;
+	}
+
+        /* Count max number of sockets we may open */
+        for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+		/* EMPTY */;
+        socks = malloc((maxs+1) * sizeof(int));
+        if (socks == NULL) {
+               logerror("couldn't allocate memory for UDP sockets, suspending UDP message reception");
+               freeaddrinfo(res);
+               return NULL;
+        }
+
+        *socks = 0;   /* num of sockets counter at start of array */
+        s = socks + 1;
+	for (r = res; r != NULL ; r = r->ai_next) {
+               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+        	if (*s < 0) {
+			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+				logerror("create_udp_socket(), socket");
+				/* it is debatable if PF_INET with EAFNOSUPPORT should
+				 * also be ignored...
+				 */
+                        continue;
+                }
+
+#		ifdef IPV6_V6ONLY
+                if (r->ai_family == AF_INET6) {
+                	int ion = 1;
+			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
+			      (char *)&ion, sizeof (ion)) < 0) {
+			logerror("setsockopt");
+			close(*s);
+			*s = -1;
+			continue;
+                	}
+                }
+#		endif
+
+		/* if we have an error, we "just" suspend that socket. Eventually
+		 * other sockets will work. At the end of this function, we check
+		 * if we managed to open at least one socket. If not, we'll write
+		 * a "inet suspended" message and declare failure. Else we use
+		 * what we could obtain.
+		 * rgerhards, 2007-06-22
+		 */
+       		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
+			       (char *) &on, sizeof(on)) < 0 ) {
+			logerror("setsockopt(REUSEADDR)");
+                        close(*s);
+			*s = -1;
+			continue;
+		}
+
+		/* We need to enable BSD compatibility. Otherwise an attacker
+		 * could flood our log files by sending us tons of ICMP errors.
+		 */
+#ifndef BSD	
+		if (should_use_so_bsdcompat()) {
+			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
+					(char *) &on, sizeof(on)) < 0) {
+				logerror("setsockopt(BSDCOMPAT)");
+                                close(*s);
+				*s = -1;
+				continue;
+			}
+		}
+#endif
+		/* We must not block on the network socket, in case a packet
+		 * gets lost between select and recv, otherwise the process
+		 * will stall until the timeout, and other processes trying to
+		 * log will also stall.
+		 * Patch vom Colin Phipps <cph@cph.demon.co.uk> to the original
+		 * sysklogd source. Applied to rsyslogd on 2005-10-19.
+		 */
+		if ((sockflags = fcntl(*s, F_GETFL)) != -1) {
+			sockflags |= O_NONBLOCK;
+			/* SETFL could fail too, so get it caught by the subsequent
+			 * error check.
+			 */
+			sockflags = fcntl(*s, F_SETFL, sockflags);
+		}
+		if (sockflags == -1) {
+			logerror("fcntl(O_NONBLOCK)");
+                        close(*s);
+			*s = -1;
+			continue;
+		}
+
+		/* rgerhards, 2007-06-22: if we run on a kernel that does not support
+		 * the IPV6_V6ONLY socket option, we need to use a work-around. On such
+		 * systems the IPv6 socket does also accept IPv4 sockets. So an IPv4
+		 * socket can not listen on the same port as an IPv6 socket. The only
+		 * workaround is to ignore the "socket in use" error. This is what we
+		 * do if we have to.
+		 */
+	        if(     (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
+#		ifndef IPV6_V6ONLY
+		     && (errno != EADDRINUSE)
+#		endif
+	           ) {
+                        logerror("bind");
+                	close(*s);
+			*s = -1;
+                        continue;
+                }
+
+                (*socks)++;
+                s++;
+	}
+
+        if(res != NULL)
+               freeaddrinfo(res);
+
+	if(Debug && *socks != maxs)
+		dbgprintf("We could initialize %d UDP listen sockets out of %d we received "
+		 	"- this may or may not be an error indication.\n", *socks, maxs);
+
+        if(*socks == 0) {
+		logerror("No UDP listen socket could successfully be initialized, "
+			 "message reception via UDP disabled.\n");
+		/* we do NOT need to free any sockets, because there were none... */
+        	free(socks);
+		return(NULL);
+	}
+
+	return(socks);
 }
 
 #endif /* #ifdef SYSLOG_INET */

@@ -256,8 +256,10 @@ thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds)
 	select(1, NULL, NULL, NULL, &tvSelectTimeout);
 	if(pThis->bShallStop)
 		iRet = RS_RET_TERMINATE_NOW;
+#if 0 /* TODO: remove once we know we do not need the thrdBlockTermination() call -- rgerhards, 2007.12.25 */
 	else
 		thrdBlockTermination(pThis);
+#endif
 	return iRet;
 }
 
