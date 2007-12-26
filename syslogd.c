@@ -311,19 +311,6 @@
 #endif
 
 
-/* IPv6 compatibility layer for older platforms
- * We need to handle a few things different if we are running
- * on an older platform which does not support all the glory
- * of IPv6. We try to limit toll on features and reliability,
- * but obviously it is better to run rsyslog on a platform that
- * supports everything...
- * rgerhards, 2007-06-22
- */
-#ifndef AI_NUMERICSERV
-#  define AI_NUMERICSERV 0
-#endif
-
-
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
 static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 static uchar	*pModDir = NULL; /* read-only after startup */

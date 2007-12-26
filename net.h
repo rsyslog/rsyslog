@@ -71,5 +71,18 @@ static inline size_t SALEN(struct sockaddr *sa) {
 
 rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN);
 
+/* IPv6 compatibility layer for older platforms
+ * We need to handle a few things different if we are running
+ * on an older platform which does not support all the glory
+ * of IPv6. We try to limit toll on features and reliability,
+ * but obviously it is better to run rsyslog on a platform that
+ * supports everything...
+ * rgerhards, 2007-06-22
+ */
+#ifndef AI_NUMERICSERV
+#  define AI_NUMERICSERV 0
+#endif
+
+
 #endif /* #ifdef SYSLOG_INET */
 #endif /* #ifndef INCLUDED_NET_H */
