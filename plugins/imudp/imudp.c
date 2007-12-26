@@ -44,6 +44,8 @@ TERM_SYNC_TYPE(eTermSync_NONE)
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
+static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
+					 * read-only after init(), but beware of restart! */
 
 typedef struct _instanceData {
 } instanceData;
@@ -81,13 +83,13 @@ CODESTARTrunInput
 
 		/* Add the UDP listen sockets to the list of read descriptors.
 		 */
-		if(finet != NULL && AcceptRemote) {
-                        for (i = 0; i < *finet; i++) {
-                                if (finet[i+1] != -1) {
+		if(udpLstnSocks != NULL && AcceptRemote) {
+                        for (i = 0; i < *udpLstnSocks; i++) {
+                                if (udpLstnSocks[i+1] != -1) {
 					if(Debug)
-						debugListenInfo(finet[i+1], "UDP");
-                                        FD_SET(finet[i+1], &readfds);
-					if(finet[i+1]>maxfds) maxfds=finet[i+1];
+						debugListenInfo(udpLstnSocks[i+1], "UDP");
+                                        FD_SET(udpLstnSocks[i+1], &readfds);
+					if(udpLstnSocks[i+1]>maxfds) maxfds=udpLstnSocks[i+1];
 				}
                         }
 		}
@@ -102,16 +104,16 @@ CODESTARTrunInput
 		/* wait for io to become ready */
 		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
 
-		if (finet != NULL && AcceptRemote) {
-		       for (i = 0; nfds && i < *finet; i++) {
-			       if (FD_ISSET(finet[i+1], &readfds)) {
+		if (udpLstnSocks != NULL && AcceptRemote) {
+		       for (i = 0; nfds && i < *udpLstnSocks; i++) {
+			       if (FD_ISSET(udpLstnSocks[i+1], &readfds)) {
 				       socklen = sizeof(frominet);
-				       l = recvfrom(finet[i+1], line, MAXLINE - 1, 0,
+				       l = recvfrom(udpLstnSocks[i+1], line, MAXLINE - 1, 0,
 						    (struct sockaddr *)&frominet, &socklen);
 				       if (l > 0) {
 					       if(cvthname(&frominet, fromHost, fromHostFQDN) == RS_RET_OK) {
 						       dbgprintf("Message from inetd socket: #%d, host: %s\n",
-							       finet[i+1], fromHost);
+							       udpLstnSocks[i+1], fromHost);
 						       /* Here we check if a host is permitted to send us
 							* syslog messages. If it isn't, we do not further
 							* process the message but log a warning (if we are
@@ -120,7 +122,7 @@ CODESTARTrunInput
 							*/
 						       if(isAllowedSender(pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
-							       printchopped((char*)fromHost, line, l,  finet[i+1], 1);
+							       printchopped((char*)fromHost, line, l,  udpLstnSocks[i+1], 1);
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(option_DisallowWarning) {
@@ -150,7 +152,9 @@ ENDrunInput
 /* initialize and return if will run or not */
 BEGINwillRun
 CODESTARTwillRun
-	/* first apply some config settings */
+	if((udpLstnSocks = create_udp_socket(NULL, (uchar*)LogPort, 1)) != NULL)
+		dbgprintf("Opened %d syslog UDP port(s).\n", *udpLstnSocks);
+
 ENDwillRun
 
 
@@ -162,6 +166,7 @@ dbgprintf("call clearAllowedSenders(0x%lx)\n", (unsigned long) pAllowedSenders_U
 		clearAllowedSenders (pAllowedSenders_UDP);
 		pAllowedSenders_UDP = NULL;
 	}
+	closeUDPListenSockets(udpLstnSocks);
 ENDafterRun
 
 

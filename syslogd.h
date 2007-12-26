@@ -77,7 +77,7 @@ extern int glblHadMemShortage; /* indicates if we had memory shortage some time 
 extern char LocalHostName[];
 extern int family;
 extern int NoHops;
-extern int *finet;
+extern char     *LogPort;    /* port number for INET connections */
 extern int send_to_all;
 extern int option_DisallowWarning;
 extern int Debug;

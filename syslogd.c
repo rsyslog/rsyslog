@@ -422,9 +422,7 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 static unsigned int Forwarding = 0;
 char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
-int	*finet = NULL;	/* Internet datagram sockets, first element is nbr of elements
-				 * read-only after init(), but beware of restart! */
-static char     *LogPort = "514";    /* port number for INET connections */
+char     *LogPort = "514";    /* port number for INET connections */
 static int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
@@ -2772,12 +2770,6 @@ die(int sig)
 	queueDelete(pMsgQueue); /* delete fifo here! */
 	pMsgQueue = NULL;
 	
-	/* now clean up the listener part */
-#ifdef SYSLOG_INET
-	/* Close the UDP inet socket. */
-	closeUDPListenSockets(finet);
-#endif
-
 	/* rger 2005-02-22
 	 * now clean up the in-memory structures. OK, the OS
 	 * would also take care of that, but if we do it
@@ -3570,24 +3562,6 @@ init(void)
 		rsCStrDestruct(pDfltProgNameCmp);
 		pDfltProgNameCmp = NULL;
 	}
-
-#ifdef SYSLOG_INET
-	/* I have moved initializing UDP sockets before the TCP sockets. This ensures
-	 * they are as soon ready for reception as possible. Of course, it is only a 
-	 * very small window of exposure, but it doesn't hurt to limit the message
-	 * loss risk to as low as possible - especially if it costs nothing...
-	 * rgerhards, 2007-06-28
-	 */
-	if(Forwarding || AcceptRemote) {
-		if (finet == NULL) {
-			if((finet = create_udp_socket(NULL, (uchar*)LogPort, 1)) != NULL)
-				dbgprintf("Opened %d syslog UDP port(s).\n", *finet);
-		}
-	} else {
-		/* this case can happen during HUP processing. */
-		closeUDPListenSockets(finet);
-	}
-#endif
 
 	/* create message queue */
 	pMsgQueue = queueInit();

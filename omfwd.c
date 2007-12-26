@@ -1,3 +1,4 @@
+// TODO: we currently leak the send socket!!! -- rgerhards, 2007-12-26
 /* omfwd.c
  * This is the implementation of the build-in forwarding output module.
  *
