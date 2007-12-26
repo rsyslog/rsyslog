@@ -2775,7 +2775,7 @@ die(int sig)
 	/* now clean up the listener part */
 #ifdef SYSLOG_INET
 	/* Close the UDP inet socket. */
-	closeUDPListenSockets();
+	closeUDPListenSockets(finet);
 #endif
 
 	/* rger 2005-02-22
@@ -3580,12 +3580,12 @@ init(void)
 	 */
 	if(Forwarding || AcceptRemote) {
 		if (finet == NULL) {
-			if((finet = create_udp_socket((uchar*)LogPort)) != NULL)
+			if((finet = create_udp_socket(NULL, (uchar*)LogPort, 1)) != NULL)
 				dbgprintf("Opened %d syslog UDP port(s).\n", *finet);
 		}
 	} else {
 		/* this case can happen during HUP processing. */
-		closeUDPListenSockets();
+		closeUDPListenSockets(finet);
 	}
 #endif
 

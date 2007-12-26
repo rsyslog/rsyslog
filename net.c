@@ -840,34 +840,42 @@ finalize_it:
 /* closes the UDP listen sockets (if they exist) and frees
  * all dynamically assigned memory. 
  */
-void closeUDPListenSockets()
+void closeUDPListenSockets(int *pSockArr)
 {
 	register int i;
 
 dbgprintf("in closeUDPListenSockets()\n");
-        if(finet != NULL) {
-	        for (i = 0; i < *finet; i++)
-	                close(finet[i+1]);
-		free(finet);
-		finet = NULL;
+	assert(pSockArr != NULL);
+        if(pSockArr != NULL) {
+	        for (i = 0; i < *pSockArr; i++)
+	                close(pSockArr[i+1]);
+		free(pSockArr);
+		pSockArr = NULL;
 	}
 }
 
 
 /* creates the UDP listen sockets
+ * hostname and/or LogPort may be NULL, but not both!
+ * bIsServer indicates if a server socket should be created
+ * 1 - server, 0 - client
  */
-int *create_udp_socket(uchar *LogPort)
+int *create_udp_socket(uchar *hostname, uchar *LogPort, int bIsServer)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
 
-	assert(LogPort != NULL);
+dbgprintf("create_udp_socket('%s', '%s', %d);\n", hostname, LogPort, bIsServer);
+	assert(!((LogPort == NULL) && (hostname == NULL)));
         memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+	if(bIsServer)
+		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+	else
+		hints.ai_flags = AI_NUMERICSERV;
         hints.ai_family = family;
         hints.ai_socktype = SOCK_DGRAM;
-        error = getaddrinfo(NULL, (char*) LogPort, &hints, &res);
+        error = getaddrinfo((char*) hostname, (char*) LogPort, &hints, &res);
         if(error) {
                logerror((char*) gai_strerror(error));
 	       logerror("UDP message reception disabled due to error logged in last message.\n");
@@ -891,7 +899,7 @@ int *create_udp_socket(uchar *LogPort)
         	if (*s < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
 				logerror("create_udp_socket(), socket");
-				/* it is debatable if PF_INET with EAFNOSUPPORT should
+				/* it is debateble if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
                         continue;
@@ -960,23 +968,25 @@ int *create_udp_socket(uchar *LogPort)
 			continue;
 		}
 
-		/* rgerhards, 2007-06-22: if we run on a kernel that does not support
-		 * the IPV6_V6ONLY socket option, we need to use a work-around. On such
-		 * systems the IPv6 socket does also accept IPv4 sockets. So an IPv4
-		 * socket can not listen on the same port as an IPv6 socket. The only
-		 * workaround is to ignore the "socket in use" error. This is what we
-		 * do if we have to.
-		 */
-	        if(     (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
-#		ifndef IPV6_V6ONLY
-		     && (errno != EADDRINUSE)
-#		endif
-	           ) {
-                        logerror("bind");
-                	close(*s);
-			*s = -1;
-                        continue;
-                }
+		if(bIsServer) {
+			/* rgerhards, 2007-06-22: if we run on a kernel that does not support
+			 * the IPV6_V6ONLY socket option, we need to use a work-around. On such
+			 * systems the IPv6 socket does also accept IPv4 sockets. So an IPv4
+			 * socket can not listen on the same port as an IPv6 socket. The only
+			 * workaround is to ignore the "socket in use" error. This is what we
+			 * do if we have to.
+			 */
+			if(     (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
+	#		ifndef IPV6_V6ONLY
+			     && (errno != EADDRINUSE)
+	#		endif
+			   ) {
+				logerror("bind");
+				close(*s);
+				*s = -1;
+				continue;
+			}
+		}
 
                 (*socks)++;
                 s++;

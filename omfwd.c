@@ -91,6 +91,7 @@ DEF_OMOD_STATIC_DATA
 typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
 	short	sock;			/* file descriptor */
+	int *pSockArray;		/* sockets to use for UDP */
 	enum { /* TODO: we shoud revisit these definitions */
 		eDestFORW,
 		eDestFORW_SUSP,
@@ -184,7 +185,7 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 	unsigned lsent = 0;
 	int bSendSuccess;
 
-	if(finet != NULL) {
+	if(pData->pSockArray != NULL) {
 		/* we need to track if we have success sending to the remote
 		 * peer. Success is indicated by at least one sendto() call
 		 * succeeding. We track this be bSendSuccess. We can not simply
@@ -195,8 +196,8 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 		 */
 		bSendSuccess = FALSE;
 		for (r = pData->f_addr; r; r = r->ai_next) {
-			for (i = 0; i < *finet; i++) {
-			       lsent = sendto(finet[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
+			for (i = 0; i < *pData->pSockArray; i++) {
+			       lsent = sendto(pData->pSockArray[i+1], msg, len, 0, r->ai_addr, r->ai_addrlen);
 				if (lsent == len) {
 					bSendSuccess = TRUE;
 					break;
@@ -219,6 +220,31 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 
 	return iRet;
 }
+
+/* Initialize UDP sockets (for sender)
+ * This is done once per selector line, if not yet initialized.
+ * TODO: Ipv4/v6 settings!
+ */
+static rsRetVal UDPSendCreateSocket(int **ppSockArray)
+{
+	DEFiRet;
+
+	assert(ppSockArray != NULL);
+#if 0
+dbgprintf("ppSockArray %lx, %lx\n", ppSockArray, *ppSockArray);
+	ppSockArray = (int *) malloc(sizeof(int) * 2);
+dbgprintf("ppSockArray %lx, %lx, %lx\n", ppSockArray, *ppSockArray, *ppSockArray[0]);
+	*ppSockArray[0] = 1;
+dbgprintf("ppSockArray %lx, %lx, %lx\n", ppSockArray, *ppSockArray, *ppSockArray[0]);
+	(*ppSockArray)[1] = socket(PF_INET, SOCK_DGRAM, 0);
+dbgprintf("UDPSendCreateSocket returns %d\n", *ppSockArray[1]);
+#endif
+
+//	*ppSockArray = create_udp_socket(pData->f_hname, NULL, 0));
+
+	return iRet;
+}
+
 
 /* CODE FOR SENDING TCP MESSAGES */
 
@@ -753,6 +779,18 @@ CODESTARTdoAction
 	case eDestFORW:
 		dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData),
 			 pData->protocol == FORW_UDP ? "udp" : "tcp");
+		/* with UDP, check if the socket is there and, if not, alloc
+ 		 * it. TODO: there should be a better place for that code.
+ 		 * rgerhards, 2007-12-26
+ 		 */
+		if(pData->protocol == FORW_UDP) {
+dbgprintf("We have a udp selector, send socket 0x%lx\n", (unsigned long) pData->pSockArray);
+			if(pData->pSockArray == NULL) {
+dbgprintf("UDP send socket not yet initialized, doing it now\n");
+				pData->pSockArray = create_udp_socket((uchar*)pData->f_hname, NULL, 0);
+	//			CHKiRet(UDPSendCreateSocket(&pData->pSockArray));
+			}
+		}
 		if ( 0) // TODO: think about this strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
 		/* what we need to do is get the hostname as an additonal string (during parseSe..). Then,
 		 * we can compare that string to LocalHostName. That way, we do not need to access the
