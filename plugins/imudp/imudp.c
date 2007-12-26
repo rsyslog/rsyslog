@@ -84,7 +84,7 @@ CODESTARTrunInput
 
 		/* Add the UDP listen sockets to the list of read descriptors.
 		 */
-		if(udpLstnSocks != NULL && AcceptRemote) {
+		if(udpLstnSocks != NULL) {
                         for (i = 0; i < *udpLstnSocks; i++) {
                                 if (udpLstnSocks[i+1] != -1) {
 					if(Debug)
@@ -105,7 +105,7 @@ CODESTARTrunInput
 		/* wait for io to become ready */
 		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
 
-		if (udpLstnSocks != NULL && AcceptRemote) {
+		if(udpLstnSocks != NULL) {
 		       for (i = 0; nfds && i < *udpLstnSocks; i++) {
 			       if (FD_ISSET(udpLstnSocks[i+1], &readfds)) {
 				       socklen = sizeof(frominet);
@@ -154,6 +154,7 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	PrintAllowedSenders(1); /* UDP */
+dbgprintf("pszLstPort: '%s'\n", pszLstnPort);
 	if((udpLstnSocks = create_udp_socket(NULL, (pszLstnPort == NULL) ? (uchar*) "514" : pszLstnPort, 1)) != NULL)
 		dbgprintf("Opened %d syslog UDP port(s).\n", *udpLstnSocks);
 #if 0
