@@ -1,4 +1,3 @@
-// TODO: we currently leak the send socket!!! -- rgerhards, 2007-12-26
 /* omfwd.c
  * This is the implementation of the build-in forwarding output module.
  *
@@ -166,6 +165,12 @@ CODESTARTfreeInstance
 		gss_base_service_name = NULL;
 	}
 #	endif
+
+	/* final cleanup */
+	if(pData->sock >= 0)
+		close(pData->sock);
+	if(pData->pSockArray != NULL)
+		closeUDPListenSockets(pData->pSockArray);
 ENDfreeInstance
 
 
@@ -221,31 +226,6 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 
 	return iRet;
 }
-
-/* Initialize UDP sockets (for sender)
- * This is done once per selector line, if not yet initialized.
- * TODO: Ipv4/v6 settings!
- */
-static rsRetVal UDPSendCreateSocket(int **ppSockArray)
-{
-	DEFiRet;
-
-	assert(ppSockArray != NULL);
-#if 0
-dbgprintf("ppSockArray %lx, %lx\n", ppSockArray, *ppSockArray);
-	ppSockArray = (int *) malloc(sizeof(int) * 2);
-dbgprintf("ppSockArray %lx, %lx, %lx\n", ppSockArray, *ppSockArray, *ppSockArray[0]);
-	*ppSockArray[0] = 1;
-dbgprintf("ppSockArray %lx, %lx, %lx\n", ppSockArray, *ppSockArray, *ppSockArray[0]);
-	(*ppSockArray)[1] = socket(PF_INET, SOCK_DGRAM, 0);
-dbgprintf("UDPSendCreateSocket returns %d\n", *ppSockArray[1]);
-#endif
-
-//	*ppSockArray = create_udp_socket(pData->f_hname, NULL, 0));
-
-	return iRet;
-}
-
 
 /* CODE FOR SENDING TCP MESSAGES */
 
