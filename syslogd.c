@@ -326,7 +326,7 @@ static int bGlblDone = 0;
 
 static int bParseHOSTNAMEandTAG = 1; /* global config var: should the hostname and tag be
                                       * parsed inside message - rgerhards, 2006-03-13 */
-int bFinished = 0;		/* used by termination signal handler, read-only except there
+static int bFinished = 0;	/* used by termination signal handler, read-only except there
 				 * is either 0 or the number of the signal that requested the
  				 * termination.
 				 */
