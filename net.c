@@ -850,7 +850,6 @@ dbgprintf("in closeUDPListenSockets()\n");
 	        for (i = 0; i < *pSockArr; i++)
 	                close(pSockArr[i+1]);
 		free(pSockArr);
-		pSockArr = NULL;
 	}
 }
 
