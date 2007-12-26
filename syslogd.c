@@ -422,12 +422,11 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 static unsigned int Forwarding = 0;
 char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
-char     *LogPort = "514";    /* port number for INET connections */
+//char     *LogPort = "514";    /* port number for INET connections */
 static int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
-int	AcceptRemote = 0;/* receive messages that come via UDP - read-only after startup */
 int	DisableDNS = 0; /* don't look up IP addresses of remote messages */
 char	**StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
@@ -3432,7 +3431,6 @@ init(void)
 	char cline[BUFSIZ];
 #endif
 	char bufStartUpMsg[512];
-	struct servent *sp;
 	struct sigaction sigAct;
 
 	thrdTerminateAll(); /* stop all running threads - TODO: reconsider location! */
@@ -3442,37 +3440,6 @@ init(void)
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
 	Forwarding = 0;
-
-	/* I was told by an IPv6 expert that calling getservbyname() seems to be
-	 * still valid, at least for the use case we have. So I re-enabled that
-	 * code. rgerhards, 2007-07-02
-	 */
-        if(!strcmp(LogPort, "0")) {
-                /* we shall use the default syslog/udp port, so let's
-                 * look it up.
-		 * NOTE: getservbyname() is not thread-safe, but this is OK as 
-		 * it is called only during init, in single-threading mode.
-                 */
-                sp = getservbyname("syslog", "udp");
-                if (sp == NULL) {
-                        errno = 0;
-                        logerror("Could not find syslog/udp port in /etc/services. "
-                                 "Now using IANA-assigned default of 514.");
-                        LogPort = "514";
-                } else {
-			/* we can dynamically allocate memory here and do NOT need
-			 * to care about freeing it because even though init() is
-			 * called on each restart, the LogPort can never again be
-			 * "0". So we will only once run into this part of the code
-			 * here. rgerhards, 2007-07-02
-			 * We save ourselfs the hassle of dynamic memory management
-			 * for the very same reason.
-			 */
-			static char defPort[8];
-			snprintf(defPort, sizeof(defPort), "%d", ntohs(sp->s_port));
-                        LogPort = defPort;
-		}
-        }
 
 	dbgprintf("rsyslog %s.\n", VERSION);
 	dbgprintf("Called init.\n");
@@ -4858,11 +4825,13 @@ int main(int argc, char **argv)
 		        break;
 		case 'r':		/* accept remote messages */
 #ifdef SYSLOG_INET
+#if 0
 			AcceptRemote = 1;
 			if(optarg == NULL)
 				LogPort = "0";
 			else
 				LogPort = optarg;
+#endif
 #else
 			fprintf(stderr, "rsyslogd: -r not valid - not compiled with network support");
 #endif

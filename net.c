@@ -855,18 +855,18 @@ dbgprintf("in closeUDPListenSockets()\n");
 
 
 /* creates the UDP listen sockets
- * hostname and/or LogPort may be NULL, but not both!
+ * hostname and/or pszPort may be NULL, but not both!
  * bIsServer indicates if a server socket should be created
  * 1 - server, 0 - client
  */
-int *create_udp_socket(uchar *hostname, uchar *LogPort, int bIsServer)
+int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
 
-dbgprintf("create_udp_socket('%s', '%s', %d);\n", hostname, LogPort, bIsServer);
-	assert(!((LogPort == NULL) && (hostname == NULL)));
+dbgprintf("create_udp_socket('%s', '%s', %d);\n", hostname, pszPort, bIsServer);
+	assert(!((pszPort == NULL) && (hostname == NULL)));
         memset(&hints, 0, sizeof(hints));
 	if(bIsServer)
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
@@ -874,7 +874,7 @@ dbgprintf("create_udp_socket('%s', '%s', %d);\n", hostname, LogPort, bIsServer);
 		hints.ai_flags = AI_NUMERICSERV;
         hints.ai_family = family;
         hints.ai_socktype = SOCK_DGRAM;
-        error = getaddrinfo((char*) hostname, (char*) LogPort, &hints, &res);
+        error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
         if(error) {
                logerror((char*) gai_strerror(error));
 	       logerror("UDP message reception disabled due to error logged in last message.\n");
