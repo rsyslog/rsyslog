@@ -23,6 +23,11 @@ options will return, but only if running in non-v3-native mode.</p>
 mark period. If you need a 20 minute mark period you need to</P>
 <P><b>$ModLoad immark # wherever this is<br>
 $MarkMessageInterval 1800 # 20 minutes</b></P>
+<h2>-r command line option</h2>
+<p>Is also no longer available. Use</p>
+<p><b>$ModLoad imudp<br>
+$UDPListenPort &lt;port&gt;</b></p>
+<p>config file directives.</p>
 <h2>klogd</h2>
 <P>klogd has (finally) been replaced by a loadable input module. To enable klogd 
 functionality, do</P>
