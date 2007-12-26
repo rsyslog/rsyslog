@@ -181,6 +181,9 @@ CODESTARTfreeInstance
 		gss_base_service_name = NULL;
 	}
 #	endif
+	/* final cleanup */
+	if(pData->sock >= 0)
+		close(pData->sock);
 ENDfreeInstance
 
 

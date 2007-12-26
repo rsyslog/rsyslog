@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 2.0.0 (rgerhards), 2007-12-26
 - increased portability for older platforms (AI_NUMERICSERV moved)
+- removed socket leak in omfwd.c
 ---------------------------------------------------------------------------
 Version 1.21.1 (rgerhards), 2007-12-23
 - small doc fix for $IncludeConfig
