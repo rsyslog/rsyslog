@@ -340,7 +340,7 @@ void PrintAllowedSenders(int iListToPrint)
 #endif
 	       );
 
-	printf("\nAllowed %s Senders:\n",
+	dbgprintf("Allowed %s Senders:\n",
 	       (iListToPrint == 1) ? "UDP" :
 #ifdef USE_GSSAPI
 	       (iListToPrint == 3) ? "GSS" :
@@ -353,16 +353,16 @@ void PrintAllowedSenders(int iListToPrint)
 #endif
 		pAllowedSenders_TCP;
 	if(pSender == NULL) {
-		printf("\tNo restrictions set.\n");
+		dbgprintf("\tNo restrictions set.\n");
 	} else {
 		while(pSender != NULL) {
 			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME))
-				printf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
+				dbgprintf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
 			else {
 				if(getnameinfo (pSender->allowedSender.addr.NetAddr,
 						     SALEN(pSender->allowedSender.addr.NetAddr),
 						     (char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
-					printf ("\t%s/%u\n", szIP, pSender->SignificantBits);
+					dbgprintf ("\t%s/%u\n", szIP, pSender->SignificantBits);
 				} else {
 					/* getnameinfo() failed - but as this is only a
 					 * debug function, we simply spit out an error and do

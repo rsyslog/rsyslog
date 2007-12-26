@@ -3276,16 +3276,6 @@ static void dbgPrintInitInfo(void)
 	if(bDebugPrintCfSysLineHandlerList)
 		dbgPrintCfSysLineHandlers();
 
-#ifdef	SYSLOG_INET
-	/* now the allowedSender lists: */
-	PrintAllowedSenders(1); /* UDP */
-	PrintAllowedSenders(2); /* TCP */
-#ifdef USE_GSSAPI
-	PrintAllowedSenders(3); /* GSS */
-#endif
-	printf("\n");
-#endif 	/* #ifdef SYSLOG_INET */
-
 	printf("Messages with malicious PTR DNS Records are %sdropped.\n",
 		bDropMalPTRMsgs	? "" : "not ");
 
@@ -3452,21 +3442,6 @@ init(void)
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
 	Forwarding = 0;
-
-#ifdef SYSLOG_INET
-	if (restart) {
-		if (pAllowedSenders_TCP != NULL) {
-			clearAllowedSenders (pAllowedSenders_TCP);
-			pAllowedSenders_TCP = NULL;
-		}
-#ifdef USE_GSSAPI
-		if (pAllowedSenders_GSS != NULL) {
-			clearAllowedSenders (pAllowedSenders_GSS);
-			pAllowedSenders_GSS = NULL;
-		}
-#endif
-	}
-#endif
 
 	/* I was told by an IPv6 expert that calling getservbyname() seems to be
 	 * still valid, at least for the use case we have. So I re-enabled that
@@ -4597,6 +4572,11 @@ mainloop(void)
  */
 static void checkPermissions()
 {
+#if 0
+	/* TODO: this function must either be redone or removed - now with the input modules,
+	 * there is no such simple check we can do. What we can check, however, is if there is
+	 * any input module active and terminate, if not. -- rgerhards, 2007-12-26
+	 */
 	/* we are not root */
 	if (geteuid() != 0)
 	{
@@ -4621,6 +4601,7 @@ static void checkPermissions()
 		}
 #endif
 	}
+#endif
 }
 
 

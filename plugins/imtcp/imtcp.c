@@ -198,6 +198,10 @@ BEGINwillRun
 CODESTARTwillRun
 	/* first apply some config settings */
 dbgprintf("imtcp: bEnableTCP %d\n", bEnableTCP);
+	PrintAllowedSenders(2); /* TCP */
+#ifdef USE_GSSAPI
+	PrintAllowedSenders(3); /* GSS */
+#endif
 	if (bEnableTCP) {
 		if(sockTCPLstn == NULL) {
 			/* even when doing a re-init, we do not shut down and
@@ -226,6 +230,18 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
+dbgprintf("call clearAllowedSenders(0x%lx)\n", (unsigned long) pAllowedSenders_TCP);
+	if (pAllowedSenders_TCP != NULL) {
+		clearAllowedSenders (pAllowedSenders_TCP);
+		pAllowedSenders_TCP = NULL;
+	}
+#ifdef USE_GSSAPI
+dbgprintf("call clearAllowedSenders(0x%lx)\n", (unsigned long) pAllowedSenders_GSS);
+	if (pAllowedSenders_GSS != NULL) {
+		clearAllowedSenders (pAllowedSenders_GSS);
+		pAllowedSenders_GSS = NULL;
+	}
+#endif
 ENDafterRun
 
 

@@ -152,6 +152,7 @@ ENDrunInput
 /* initialize and return if will run or not */
 BEGINwillRun
 CODESTARTwillRun
+	PrintAllowedSenders(1); /* UDP */
 	if((udpLstnSocks = create_udp_socket(NULL, (uchar*)LogPort, 1)) != NULL)
 		dbgprintf("Opened %d syslog UDP port(s).\n", *udpLstnSocks);
 
