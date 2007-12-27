@@ -67,7 +67,10 @@ development and quite unstable...). So you have been warned ;)</p>
 	<li><a href="rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
 	<li><a href="rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
 	<li>$SystemLogSocketName &lt;name-of-socket&gt; -- former -p option</li>
-	<li>$UDPListenPort &lt;port&gt; (imudp) -- former -r&lt;port&gt; option, default 514</li>
+	<li>$UDPServerAddress &lt;IP&gt; (imudp) -- local IP address (or name) the UDP 
+	listens should bind to</li>
+	<li>$UDPServerRun &lt;port&gt; (imudp) -- former -r&lt;port&gt; option, default 514, 
+	start UDP server on this port, &quot;*&quot; means all addresses</li>
 	<li><a href="rsconf1_umask.html">$UMASK</a></li>
 </ul>
 <h2>Basic Structure</h2>

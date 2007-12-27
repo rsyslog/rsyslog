@@ -24,10 +24,32 @@ mark period. If you need a 20 minute mark period you need to</P>
 <P><b>$ModLoad immark # wherever this is<br>
 $MarkMessageInterval 1800 # 20 minutes</b></P>
 <h2>-r command line option</h2>
-<p>Is also no longer available. Use</p>
+<p>Is also no longer available. Use the <b>$UDPSeverRun &lt;port&gt;</b> config file 
+directives. You can now also set the local address the server should listen to 
+via <b>$UDPServerAddress &lt;ip&gt;</b> config directive.</p>
+<p>The following example configures an UDP syslog server at the local address 
+192.0.2.1 on port 514:</p>
 <p><b>$ModLoad imudp<br>
-$UDPListenPort &lt;port&gt;</b></p>
-<p>config file directives.</p>
+$UDPSeverAddress 192.0.2.1 # this MUST be before the $UDPServerRun directive!<br>
+$UDPServerRun 514</b></p>
+<p>&quot;$UDPServerAddress *&quot; means listen on all local interfaces. This is the 
+default if no directive is specified.</p>
+<p>Please note that now multiple listeners are supported. For example, you can 
+do the following:</p>
+<p><b>$ModLoad imudp<br>
+$UDPSeverAddress 192.0.2.1 # this MUST be before the $UDPServerRun directive!<br>
+$UDPServerRun 514<br>
+$UDPSeverAddress * # all local interfaces<br>
+$UDPServerRun 1514</b></p>
+<p>These config file settings run two listeners: one at192.0.2.1:514 and one on 
+port 1514, which listens on all local interfaces.</p>
+<h2>Default port for UDP (and TCP) Servers</h2>
+<p>Please note that with pre-v3 rsyslogd, a service database lookup was made 
+when a UDP server was started and no port was configured. Only if that failed, 
+the IANA default of 514 was used. For TCP serves, this lookup was never done and 
+514 always used if no specific port was configured. For consitency, both TCP and 
+UDP now use port 514 as default. If a lookup is desired, you need to specify it 
+in the &quot;Run&quot; directive, e.g. &quot;<i>$UDPServerRun syslog</i>&quot;.</p>
 <h2>klogd</h2>
 <P>klogd has (finally) been replaced by a loadable input module. To enable klogd 
 functionality, do</P>
