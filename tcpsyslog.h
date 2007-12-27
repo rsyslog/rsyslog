@@ -25,7 +25,7 @@
 #define	TCPSYSLOG_H_INCLUDED 1
 
 #if defined(SYSLOG_INET) && defined(USE_GSSAPI)
-#include <gssapi.h>
+#include <gssapi/gssapi.h>
 #endif
 
 struct TCPSession {

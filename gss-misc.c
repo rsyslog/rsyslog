@@ -19,7 +19,7 @@
 #else
 #include <fcntl.h>
 #endif
-#include <gssapi.h>
+#include <gssapi/gssapi.h>
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

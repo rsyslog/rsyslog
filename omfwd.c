@@ -52,7 +52,7 @@
 #include <fcntl.h>
 #endif
 #ifdef USE_GSSAPI
-#include <gssapi.h>
+#include <gssapi/gssapi.h>
 #endif
 #include "syslogd.h"
 #include "syslogd-types.h"

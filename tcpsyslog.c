@@ -43,7 +43,7 @@
 #include <fcntl.h>
 #endif
 #if defined(SYSLOG_INET) && defined(USE_GSSAPI)
-#include <gssapi.h>
+#include <gssapi/gssapi.h>
 #endif
 #include "syslogd.h"
 #include "syslogd-types.h"

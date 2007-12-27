@@ -1,7 +1,7 @@
 #ifndef	GSS_MISC_H_INCLUDED
 #define	GSS_MISC_H_INCLUDED 1
 
-#include <gssapi.h>
+#include <gssapi/gssapi.h>
 
 int recv_token(int s, gss_buffer_t tok);
 int send_token(int s, gss_buffer_t tok);
