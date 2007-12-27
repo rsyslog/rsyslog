@@ -204,12 +204,6 @@ dbgprintf("imtcp: bEnableTCP %d\n", bEnableTCP);
 #endif
 	if (bEnableTCP) {
 		if(sockTCPLstn == NULL) {
-			/* even when doing a re-init, we do not shut down and
-			 * re-open the TCP socket. That would break existing TCP
-			 * session, which we do not desire. Should at some time arise
-			 * need to do that, I recommend controlling that via a
-			 * user-selectable option. rgerhards, 2007-06-21
-			 */
 #			ifdef USE_GSSAPI
 			if(bEnableTCP & ALLOWEDMETHOD_GSS) {
 				if(TCPSessGSSInit()) {
@@ -230,13 +224,11 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-dbgprintf("call clearAllowedSenders(0x%lx)\n", (unsigned long) pAllowedSenders_TCP);
 	if (pAllowedSenders_TCP != NULL) {
 		clearAllowedSenders (pAllowedSenders_TCP);
 		pAllowedSenders_TCP = NULL;
 	}
 #ifdef USE_GSSAPI
-dbgprintf("call clearAllowedSenders(0x%lx)\n", (unsigned long) pAllowedSenders_GSS);
 	if (pAllowedSenders_GSS != NULL) {
 		clearAllowedSenders (pAllowedSenders_GSS);
 		pAllowedSenders_GSS = NULL;
@@ -290,8 +282,6 @@ CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
-	//CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
-	//	NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
 #if defined(USE_GSSAPI)
 	CHKiRet(regCfSysLineHdlr((uchar *)"gsslistenservicename", 0, eCmdHdlrGetWord, NULL, &gss_listen_service_name, NULL));
 #endif

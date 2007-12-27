@@ -744,6 +744,7 @@ int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 
 
 #ifdef USE_GSSAPI
+/* returns 0 if all went OK, -1 if it failed */
 int TCPSessGSSInit(void)
 {
 	gss_buffer_desc name_buf;
@@ -775,6 +776,7 @@ int TCPSessGSSInit(void)
 }
 
 
+/* returns 0 if all went OK, -1 if it failed */
 int TCPSessGSSAccept(int fd)
 {
 	gss_buffer_desc send_tok, recv_tok;
@@ -937,6 +939,7 @@ int TCPSessGSSAccept(int fd)
 }
 
 
+/* returns: ? */
 int TCPSessGSSRecv(int iSess, void *buf, size_t buf_len)
 {
 	gss_buffer_desc xmit_buf, msg_buf;
