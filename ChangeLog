@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.0.0 (rgerhards), 2007-12-??
 - added ability to specify listen IP address for UDP syslog server
+- added ability to run multiple UDP listeners concurrently
 - license changed to GPLv3
 - first implementation of loadable input module system
 - mark messages are now provided by loadble module immark

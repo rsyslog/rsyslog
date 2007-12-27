@@ -46,13 +46,75 @@ TERM_SYNC_TYPE(eTermSync_NONE)
 DEF_IMOD_STATIC_DATA
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
-static uchar *pszLstnPort = NULL;
 static uchar *pszBindAddr = NULL;		/* IP to bind socket to */
 
 typedef struct _instanceData {
 } instanceData;
 
 /* config settings */
+
+
+/* This function is called when a new listener shall be added. It takes
+ * the configured parameters, tries to bind the socket and, if that
+ * succeeds, adds it to the list of existing listen sockets.
+ * rgerhards, 2007-12-27
+ */
+static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	DEFiRet;
+	uchar *bindAddr;
+	int *newSocks;
+	int *tmpSocks;
+	int iSrc, iDst;
+
+	/* check which address to bind to. We could do this more compact, but have not
+	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
+	 */
+	if(pszBindAddr == NULL)
+		bindAddr = NULL;
+	else if(pszBindAddr[0] == '*' && pszBindAddr[1] == '\0')
+		bindAddr = NULL;
+	else
+		bindAddr = pszBindAddr;
+
+	dbgprintf("Trying to open syslog UDP ports at %s:%s.\n",
+		  (bindAddr == NULL) ? (uchar*)"*" : bindAddr, pNewVal);
+
+	newSocks = create_udp_socket(bindAddr, (pNewVal == NULL) ? (uchar*) "514" : pNewVal, 1);
+	if(newSocks != NULL) {
+		/* we now need to add the new sockets to the existing set */
+		if(udpLstnSocks == NULL) {
+			/* esay, we can just replace it */
+			udpLstnSocks = newSocks;
+		} else {
+			/* we need to add them */
+			if((tmpSocks = malloc(sizeof(int) * 1 + newSocks[0] + udpLstnSocks[0])) == NULL) {
+				dbgprintf("out of memory trying to allocate udp listen socket array\n");
+				/* in this case, we discard the new sockets but continue with what we
+				 * already have
+				 */
+				free(newSocks);
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			} else {
+				/* ready to copy */
+				iDst = 1;
+				for(iSrc = 1 ; iSrc <= udpLstnSocks[0] ; ++iSrc)
+					tmpSocks[iDst++] = udpLstnSocks[iSrc];
+				for(iSrc = 1 ; iSrc <= newSocks[0] ; ++iSrc)
+					tmpSocks[iDst++] = newSocks[iSrc];
+				tmpSocks[0] = udpLstnSocks[0] + newSocks[0];
+				free(newSocks);
+				free(udpLstnSocks);
+				udpLstnSocks = tmpSocks;
+			}
+		}
+	}
+
+finalize_it:
+	free(pNewVal); /* in any case, this is no longer needed */
+
+	return iRet;
+}
 
 
 /* This function is called to gather input.
@@ -153,39 +215,25 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
-	uchar *bindAddr;
 CODESTARTwillRun
 	PrintAllowedSenders(1); /* UDP */
 
-	/* check which address to bind to. We could do this more compact, but have not
-	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
-	 */
-dbgprintf("pszBindAddr: '%s'\n", pszBindAddr);
-	if(pszBindAddr == NULL)
-		bindAddr = NULL;
-	else if(pszBindAddr[0] == '*' && pszBindAddr[1] == '\0')
-		bindAddr = NULL;
-	else
-		bindAddr = pszBindAddr;
 
-dbgprintf("bindAddr: '%s', pszLstPort: '%s'\n", bindAddr, pszLstnPort);
-	if((udpLstnSocks = create_udp_socket(bindAddr, (pszLstnPort == NULL) ? (uchar*) "514" : pszLstnPort, 1)) != NULL)
-		dbgprintf("Opened %d syslog UDP port(s).\n", *udpLstnSocks);
+	/* if we could not set up any listners, there is no point in running... */
+	if(udpLstnSocks == NULL)
+		iRet = RS_RET_NO_RUN;
 ENDwillRun
 
 
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-dbgprintf("call clearAllowedSenders(0x%lx)\n", (unsigned long) pAllowedSenders_UDP);
 	if (pAllowedSenders_UDP != NULL) {
 		clearAllowedSenders (pAllowedSenders_UDP);
 		pAllowedSenders_UDP = NULL;
 	}
 	if(udpLstnSocks != NULL)
 		closeUDPListenSockets(udpLstnSocks);
-	if(pszLstnPort != NULL)
-		free(pszLstnPort);
 ENDafterRun
 
 
@@ -211,13 +259,13 @@ ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	if(pszLstnPort != NULL) {
-		free(pszLstnPort);
-		pszLstnPort = NULL;
-	}
 	if(pszBindAddr != NULL) {
 		free(pszBindAddr);
 		pszBindAddr = NULL;
+	}
+	if(udpLstnSocks != NULL) {
+		closeUDPListenSockets(udpLstnSocks);
+		udpLstnSocks = NULL;
 	}
 	return RS_RET_OK;
 }
@@ -228,8 +276,8 @@ CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udplistenport", 0, eCmdHdlrGetWord,
-		NULL, &pszLstnPort, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserverrun", 0, eCmdHdlrGetWord,
+		addListner, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
 		NULL, &pszBindAddr, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
