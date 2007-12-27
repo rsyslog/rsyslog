@@ -47,6 +47,7 @@ DEF_IMOD_STATIC_DATA
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
 static uchar *pszLstnPort = NULL;
+static uchar *pszBindAddr = NULL;		/* IP to bind socket to */
 
 typedef struct _instanceData {
 } instanceData;
@@ -152,51 +153,24 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
+	uchar *bindAddr;
 CODESTARTwillRun
 	PrintAllowedSenders(1); /* UDP */
-dbgprintf("pszLstPort: '%s'\n", pszLstnPort);
-	if((udpLstnSocks = create_udp_socket(NULL, (pszLstnPort == NULL) ? (uchar*) "514" : pszLstnPort, 1)) != NULL)
+
+	/* check which address to bind to. We could do this more compact, but have not
+	 * done so in order to make the code more readable. -- rgerhards, 2007-12-27
+	 */
+dbgprintf("pszBindAddr: '%s'\n", pszBindAddr);
+	if(pszBindAddr == NULL)
+		bindAddr = NULL;
+	else if(pszBindAddr[0] == '*' && pszBindAddr[1] == '\0')
+		bindAddr = NULL;
+	else
+		bindAddr = pszBindAddr;
+
+dbgprintf("bindAddr: '%s', pszLstPort: '%s'\n", bindAddr, pszLstnPort);
+	if((udpLstnSocks = create_udp_socket(bindAddr, (pszLstnPort == NULL) ? (uchar*) "514" : pszLstnPort, 1)) != NULL)
 		dbgprintf("Opened %d syslog UDP port(s).\n", *udpLstnSocks);
-#if 0
-/* TODO: think if we need this code - so far, I simply use "syslog" as port name
- * if none is specified. That looks OK to me - but I do not remove that code here
- * so that we can think about it once again. Please note that the code here needs
- * to be adapted, I haven't done that because I came to the idea I do not need it...
- * rgerahrds, 2007-12-26
- */
-	struct servent *sp;
-	if(pszLstnPort == NULL) {
-		/* I was told by an IPv6 expert that calling getservbyname() seems to be
-		 * still valid, at least for the use case we have. So I re-enabled that
-		 * code. rgerhards, 2007-07-02
-		 */
-		/* we shall use the default syslog/udp port, so let's
-		 * look it up.
-		 * TODO: getservbyname() is not thread-safe, we need to replace it.
-		 */
-		sp = getservbyname("syslog", "udp");
-		if (sp == NULL) {
-			errno = 0;
-			logerror("Could not find syslog/udp port in /etc/services. "
-				 "Now using IANA-assigned default of 514.");
-			LogPort = "514";
-		} else {
-			/* we can dynamically allocate memory here and do NOT need
-			 * to care about freeing it because even though init() is
-			 * called on each restart, the LogPort can never again be
-			 * "0". So we will only once run into this part of the code
-			 * here. rgerhards, 2007-07-02
-			 * We save ourselfs the hassle of dynamic memory management
-			 * for the very same reason.
-			 */
-// we need to do dynamic memory alloc here!
-
-			snprintf(defPort, sizeof(defPort), "%d", ntohs(sp->s_port));
-			LogPort = defPort;
-		}
-	}
-#endif
-
 ENDwillRun
 
 
@@ -241,6 +215,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pszLstnPort);
 		pszLstnPort = NULL;
 	}
+	if(pszBindAddr != NULL) {
+		free(pszBindAddr);
+		pszBindAddr = NULL;
+	}
 	return RS_RET_OK;
 }
 
@@ -252,6 +230,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udplistenport", 0, eCmdHdlrGetWord,
 		NULL, &pszLstnPort, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
+		NULL, &pszBindAddr, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
