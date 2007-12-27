@@ -1345,8 +1345,8 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 		int ret;
 		iLenDefBuf = MAXLINE;
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
-		dbgprintf("Compressed message uncompressed with status %d, length: new %d, old %d.\n",
-		        ret, iLenDefBuf, len-1);
+		dbgprintf("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
+		        ret, (long) iLenDefBuf, len-1);
 		/* Now check if the uncompression worked. If not, there is not much we can do. In
 		 * that case, we log an error message but ignore the message itself. Storing the
 		 * compressed text is dangerous, as it contains control characters. So we do

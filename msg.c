@@ -1469,7 +1469,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				++iCurrFld;
 			}
 		}
-		dbgprintf("field requested %d, field found %d\n", pTpe->data.field.iToPos, iCurrFld);
+		dbgprintf("field requested %d, field found %d\n", pTpe->data.field.iToPos, (int) iCurrFld);
 		
 		if(iCurrFld == pTpe->data.field.iToPos) {
 			/* field found, now extract it */

@@ -49,7 +49,7 @@
 #define ADDDATE		0x004	/* add a date to the message */
 #define MARK		0x008	/* this message is a mark */
 
-void dbgprintf(char *, ...);
+void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
 void logerror(char *type);
 void logerrorSz(char *type, char *errMsg);
 void logerrorInt(char *type, int iErr);

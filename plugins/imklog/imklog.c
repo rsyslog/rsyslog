@@ -108,7 +108,7 @@ extern int ksyslog(int type, char *buf, int len);
 /* Write a message to the message queue.
  * returns -1 if it fails, something else otherwise
  */
-static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)// __attribute__((format(printf,2, 3)));
+static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 {
 	DEFiRet;
 	int iChars;

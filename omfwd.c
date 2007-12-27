@@ -305,7 +305,7 @@ static int TCPSendGSSInit(instanceData *pData)
 	strcpy(out_tok.value, base);
 	strcat(out_tok.value, "@");
 	strcat(out_tok.value, pData->f_hname);
-	dbgprintf("GSS-API service name: %s\n", out_tok.value);
+	dbgprintf("GSS-API service name: %s\n", (char*) out_tok.value);
 
 	tok_ptr = GSS_C_NO_BUFFER;
 	context = &pData->gss_context;
@@ -350,7 +350,7 @@ static int TCPSendGSSInit(instanceData *pData)
 				goto fail;
 
 		if (out_tok.length != 0) {
-			dbgprintf("GSS-API Sending init_sec_context token (length: %d)\n", out_tok.length);
+			dbgprintf("GSS-API Sending init_sec_context token (length: %ld)\n", (long) out_tok.length);
 			if (send_token(s, &out_tok) < 0) {
 				goto fail;
 			}
@@ -618,7 +618,7 @@ static int TCPSend(instanceData *pData, char *msg, size_t len)
 		} else {
 #		endif
 			lenSend = send(pData->sock, msg, len, 0);
-			dbgprintf("TCP sent %d bytes, requested %d, msg: '%s'\n", lenSend, len,
+			dbgprintf("TCP sent %d bytes, requested %ld, msg: '%s'\n", lenSend, (long) len,
 				  bIsCompressed ? "***compressed***" : msg);
 			if((unsigned)lenSend == len) {
 				/* all well */

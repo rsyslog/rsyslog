@@ -34,6 +34,7 @@
 #include <netdb.h>
 #include "rsyslog.h"
 #include "syslogd.h"
+#include "net.h"
 #include "cfsysline.h"
 #include "module-template.h"
 
@@ -46,7 +47,11 @@ TERM_SYNC_TYPE(eTermSync_NONE)
 DEF_IMOD_STATIC_DATA
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
-static uchar *pszBindAddr = NULL;		/* IP to bind socket to */
+static uchar *pszBindAddr = NULL;	/* IP to bind socket to */
+static uchar *pRcvBuf = NULL;		/* receive buffer (for a single packet). We use a global and alloc
+					 * it so that we can check available memory in willRun() and request
+					 * termination if we can not get it. -- rgerhards, 2007-12-27
+					 */
 
 typedef struct _instanceData {
 } instanceData;
@@ -128,7 +133,6 @@ BEGINrunInput
 	socklen_t socklen;
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
-	char line[MAXLINE +1];
 	ssize_t l;
 CODESTARTrunInput
 	/* this is an endless loop - it is terminated when the thread is
@@ -172,7 +176,7 @@ CODESTARTrunInput
 		       for (i = 0; nfds && i < *udpLstnSocks; i++) {
 			       if (FD_ISSET(udpLstnSocks[i+1], &readfds)) {
 				       socklen = sizeof(frominet);
-				       l = recvfrom(udpLstnSocks[i+1], line, MAXLINE - 1, 0,
+				       l = recvfrom(udpLstnSocks[i+1], (char*) pRcvBuf, MAXLINE - 1, 0,
 						    (struct sockaddr *)&frominet, &socklen);
 				       if (l > 0) {
 					       if(cvthname(&frominet, fromHost, fromHostFQDN) == RS_RET_OK) {
@@ -186,7 +190,7 @@ CODESTARTrunInput
 							*/
 						       if(isAllowedSender(pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
-							       printchopped((char*)fromHost, line, l,  udpLstnSocks[i+1], 1);
+							       printchopped((char*)fromHost, (char*) pRcvBuf, l,  udpLstnSocks[i+1], 1);
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(option_DisallowWarning) {
@@ -218,10 +222,14 @@ BEGINwillRun
 CODESTARTwillRun
 	PrintAllowedSenders(1); /* UDP */
 
+	if((pRcvBuf = malloc(MAXLINE * sizeof(char))) == NULL) {
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
 	/* if we could not set up any listners, there is no point in running... */
 	if(udpLstnSocks == NULL)
 		iRet = RS_RET_NO_RUN;
+finalize_it:
 ENDwillRun
 
 

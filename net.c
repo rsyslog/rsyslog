@@ -865,7 +865,6 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
         int error, maxs, *s, *socks, on = 1;
 	int sockflags;
 
-dbgprintf("create_udp_socket('%s', '%s', %d);\n", hostname, pszPort, bIsServer);
 	assert(!((pszPort == NULL) && (hostname == NULL)));
         memset(&hints, 0, sizeof(hints));
 	if(bIsServer)

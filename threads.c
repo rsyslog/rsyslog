@@ -79,7 +79,6 @@ static rsRetVal thrdConstruct(thrdInfo_t **ppThis)
 static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 {
 	assert(pThis != NULL);
-dbgprintf("thrdDestruct, pThis: %lx\n", pThis);
 
 	if(pThis->bIsActive == 1) {
 		thrdTerminate(pThis);
