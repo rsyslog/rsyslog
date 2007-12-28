@@ -122,18 +122,13 @@ static enum gss_mode_t {
 } gss_mode;
 #endif
 
-
-/* ----------------------------------------------------------------- *
- *             CODE THAT SHALL GO INTO ITS OWN MODULE                *
- * ----------------------------------------------------------------- */
-
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
  * rgerhards, 2007-06-28
  * We may change the implementation to try to lookup the port
  * if it is unspecified. So far, we use the IANA default auf 514.
  */
-static char *getFwdSyslogPt(instanceData *pData)
+char *getFwdSyslogPt(instanceData *pData)
 {
 	assert(pData != NULL);
 	if(pData->port == NULL)
@@ -141,146 +136,6 @@ static char *getFwdSyslogPt(instanceData *pData)
 	else
 		return(pData->port);
 }
-
-
-/* Build frame based on selected framing */
-static rsRetVal TCPSendBldFrame(instanceData *pData, char **pmsg, size_t *plen, int *pbMustBeFreed)
-{
-	DEFiRet;
-	TCPFRAMINGMODE framingToUse;
-	int bIsCompressed;
-	size_t len;
-	char *msg;
-	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
-
-	assert(plen != NULL);
-	assert(pbMustBeFreed != NULL);
-	assert(pmsg != NULL);
-
-	msg = *pmsg;
-	len = *plen;
-	bIsCompressed = *msg == 'z';	/* cache this, so that we can modify the message buffer */
-	/* select framing for this record. If we have a compressed record, we always need to
-	 * use octet counting because the data potentially contains all control characters
-	 * including LF.
-	 */
-	framingToUse = bIsCompressed ? TCP_FRAMING_OCTET_COUNTING : pData->tcp_framing;
-
-	/* now check if we need to add a line terminator. We need to
-	 * copy the string in memory in this case, this is probably
-	 * quicker than using writev and definitely quicker than doing
-	 * two socket calls.
-	 * rgerhards 2005-07-22
-	 *
-	 * Some messages already contain a \n character at the end
-	 * of the message. We append one only if we there is not
-	 * already one. This seems the best fit, though this also
-	 * means the message does not arrive unaltered at the final
-	 * destination. But in the spirit of legacy syslog, this is
-	 * probably the best to do...
-	 * rgerhards 2005-07-20
-	 */
-
-	/* Build frame based on selected framing */
-	if(framingToUse == TCP_FRAMING_OCTET_STUFFING) {
-		if((*(msg+len-1) != '\n')) {
-			/* in the malloc below, we need to add 2 to the length. The
-			 * reason is that we a) add one character and b) len does
-			 * not take care of the '\0' byte. Up until today, it was just
-			 * +1 , which caused rsyslogd to sometimes dump core.
-			 * I have added this comment so that the logic is not accidently
-			 * changed again. rgerhards, 2005-10-25
-			 */
-			if((buf = malloc((len + 2) * sizeof(char))) == NULL) {
-				/* extreme mem shortage, try to solve
-				 * as good as we can. No point in calling
-				 * any alarms, they might as well run out
-				 * of memory (the risk is very high, so we
-				 * do NOT risk that). If we have a message of
-				 * more than 1 byte (what I guess), we simply
-				 * overwrite the last character.
-				 * rgerhards 2005-07-22
-				 */
-				if(len > 1) {
-					*(msg+len-1) = '\n';
-				} else {
-					/* we simply can not do anything in
-					 * this case (its an error anyhow...).
-					 */
-				}
-			} else {
-				/* we got memory, so we can copy the message */
-				memcpy(buf, msg, len); /* do not copy '\0' */
-				*(buf+len) = '\n';
-				*(buf+len+1) = '\0';
-				msg = buf; /* use new one */
-				++len; /* care for the \n */
-			}
-		}
-	} else {
-		/* Octect-Counting
-		 * In this case, we need to always allocate a buffer. This is because
-		 * we need to put a header in front of the message text
-		 */
-		char szLenBuf[16];
-		int iLenBuf;
-
-		/* important: the printf-mask is "%d<sp>" because there must be a
-		 * space after the len!
-		 *//* The chairs of the IETF syslog-sec WG have announced that it is
-		 * consensus to do the octet count on the SYSLOG-MSG part only. I am
-		 * now changing the code to reflect this. Hopefully, it will not change
-		 * once again (there can no compatibility layer programmed for this).
-		 * To be on the save side, I just comment the code out. I mark these
-		 * comments with "IETF20061218".
-		 * rgerhards, 2006-12-19
-		 */
-		iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", (int) len);
-		/* IETF20061218 iLenBuf =
-		  snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len + iLenBuf);*/
-
-		if((buf = malloc((len + iLenBuf) * sizeof(char))) == NULL) {
-			/* we are out of memory. This is an extreme situation. We do not
-			 * call any alarm handlers because they most likely run out of mem,
-			 * too. We are brave enough to call debug output, though. Other than
-			 * that, there is nothing left to do. We can not sent the message (as
-			 * in case of the other framing, because the message is incomplete.
-			 * We could, however, send two chunks (header and text separate), but
-			 * that would cause a lot of complexity in the code. So we think it
-			 * is appropriate enough to just make sure we do not crash in this
-			 * very unlikely case. For this, it is justified just to loose
-			 * the message. Rgerhards, 2006-12-07
-			 */
-			 dbgprintf("Error: out of memory when building TCP octet-counted "
-				 "frame. Message is lost, trying to continue.\n");
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
-
-		 memcpy(buf, szLenBuf, iLenBuf); /* header */
-		 memcpy(buf + iLenBuf, msg, len); /* message */
-		 len += iLenBuf;	/* new message size */
-		 msg = buf;	/* set message buffer */
-	}
-
-	/* frame building complete, on to actual sending */
-
-	*plen = len;
-	if(buf == NULL) {
-		/* msg not modified */
-		*pbMustBeFreed = 0;
-	} else {
-		*pmsg = msg;
-		*pbMustBeFreed = 1;
-	}
-
-finalize_it:
-	return iRet;
-}
-
-/* ----------------------------------------------------------------- *
- *          END OF CODE THAT SHALL GO INTO ITS OWN MODULE            *
- * ----------------------------------------------------------------- */
-
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -449,14 +304,14 @@ static int TCPSendCreateSocket(instanceData *pData, struct addrinfo *addrDest)
  * It shall clean up whatever makes sense.
  * rgerhards, 2007-12-28
  */
-static rsRetVal TCPSendGSSPrepRetry(instanceData __attribute__((unused)) *pData)
+static rsRetVal TCPSendGSSPrepRetry(void __attribute__((unused)) *pData)
 {
 	/* in case of TCP/GSS, there is nothing to do */
 	return RS_RET_OK;
 }
 
 
-static rsRetVal TCPSendGSSInit(instanceData *pData)
+static rsRetVal TCPSendGSSInit(void *pvData)
 {
 	DEFiRet;
 	int s = -1;
@@ -466,8 +321,13 @@ static rsRetVal TCPSendGSSInit(instanceData *pData)
 	gss_buffer_t tok_ptr;
 	gss_name_t target_name;
 	gss_ctx_id_t *context;
+	instanceData *pData = (instanceData *) pvData;
 
 	assert(pData != NULL);
+
+	/* if the socket is already initialized, we are done */
+	if(pData->sock > 0)
+		ABORT_FINALIZE(RS_RET_OK);
 
 	base = (gss_base_service_name == NULL) ? "host" : gss_base_service_name;
 	out_tok.length = strlen(pData->f_hname) + strlen(base) + 2;
@@ -563,12 +423,13 @@ finalize_it:
 }
 
 
-static rsRetVal TCPSendGSSSend(instanceData *pData, char *msg, size_t len)
+static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
 {
 	int s;
 	gss_ctx_id_t *context;
 	OM_uint32 maj_stat, min_stat;
 	gss_buffer_desc in_buf, out_buf;
+	instanceData *pData = (instanceData *) pvData;
 
 	assert(pData != NULL);
 	assert(msg != NULL);
@@ -607,10 +468,11 @@ static rsRetVal TCPSendGSSSend(instanceData *pData, char *msg, size_t len)
 /* Send a frame via plain TCP protocol
  * rgerhards, 2007-12-28
  */
-static rsRetVal TCPSendFrame(instanceData *pData, char *msg, size_t len)
+static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
 {
 	DEFiRet;
 	ssize_t lenSend;
+	instanceData *pData = (instanceData *) pvData;
 
 	lenSend = send(pData->sock, msg, len, 0);
 	dbgprintf("TCP sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
@@ -645,8 +507,10 @@ static rsRetVal TCPSendFrame(instanceData *pData, char *msg, size_t len)
  * It shall clean up whatever makes sense.
  * rgerhards, 2007-12-28
  */
-static rsRetVal TCPSendPrepRetry(instanceData *pData)
+static rsRetVal TCPSendPrepRetry(void *pvData)
 {
+	instanceData *pData = (instanceData *) pvData;
+
 	assert(pData != NULL);
 	close(pData->sock);
 	pData->sock = -1;
@@ -657,88 +521,17 @@ static rsRetVal TCPSendPrepRetry(instanceData *pData)
 /* initialies everything so that TCPSend can work.
  * rgerhards, 2007-12-28
  */
-static rsRetVal TCPSendInit(instanceData *pData)
+static rsRetVal TCPSendInit(void *pvData)
 {
 	DEFiRet;
+	instanceData *pData = (instanceData *) pvData;
 
 	assert(pData != NULL);
-	if((pData->sock = TCPSendCreateSocket(pData, pData->f_addr)) <= 0)
-		iRet = RS_RET_TCP_SOCKCREATE_ERR;
-
-	return iRet;
-}
-
-
-/* Sends a TCP message. It is first checked if the
- * session is open and, if not, it is opened. Then the send
- * is tried. If it fails, one silent re-try is made. If the send
- * fails again, an error status (-1) is returned. If all goes well,
- * 0 is returned. The TCP session is NOT torn down.
- * For now, EAGAIN is ignored (causing message loss) - but it is
- * hard to do something intelligent in this case. With this
- * implementation here, we can not block and/or defer. Things are
- * probably a bit better when we move to liblogging. The alternative
- * would be to enhance the current select server with buffering and
- * write descriptors. This seems not justified, given the expected
- * short life span of this code (and the unlikeliness of this event).
- * rgerhards 2005-07-06
- * This function is now expected to stay. Libloging won't be used for
- * that purpose. I have added the param "len", because it is known by the
- * caller and so saves us some time. Also, it MUST be given because there
- * may be NULs inside msg so that we can not rely on strlen(). Please note
- * that the restrictions outlined above do not existin in multi-threaded
- * mode, which we assume will now be most often used. So there is no
- * real issue with the potential message loss in single-threaded builds.
- * rgerhards, 2006-11-30
- * 
- * In order to support compressed messages via TCP, we must support an
- * octet-counting based framing (LF may be part of the compressed message).
- * We are now supporting the same mode that is available in IETF I-D
- * syslog-transport-tls-05 (current at the time of this writing). This also
- * eases things when we go ahead and implement that framing. I have now made
- * available two cases where this framing is used: either by explitely
- * specifying it in the config file or implicitely when sending a compressed
- * message. In the later case, compressed and uncompressed messages within
- * the same session have different framings. If it is explicitely set to
- * octet-counting, only this framing mode is used within the session.
- * rgerhards, 2006-12-07
- */
-static int TCPSend(instanceData *pData, char *msg, size_t len,
-		   rsRetVal (*initFunc)(instanceData*),
-		   rsRetVal (*sendFunc)(instanceData*, char*, size_t),
-		   rsRetVal (*prepRetryFunc)(instanceData*))
-{
-	DEFiRet;
-	int bDone = 0;
-	int retry = 0;
-	int bMsgMustBeFreed = 0;/* must msg be freed at end of function? 0 - no, 1 - yes */
-
-	assert(pData != NULL);
-	assert(msg != NULL);
-	assert(len > 0);
-
-	CHKiRet(TCPSendBldFrame(pData, &msg, &len, &bMsgMustBeFreed));
-
-	while(!bDone) { /* loop is broken when send succeeds or error occurs */
-		if(pData->sock <= 0) {
-			/* we need to open the socket first */
-			CHKiRet(initFunc(pData));
-		}
-			
-		iRet = sendFunc(pData, msg, len);
-
-		if(iRet == RS_RET_OK || retry > 0) {
-			/* we are done - either we succeeded or the retry failed */
-			bDone = 1;
-		} else { /* OK, one retry */
-			++retry;
-			CHKiRet(prepRetryFunc(pData)); /* try to recover */
-		}
+	if(pData->sock <= 0) {
+		if((pData->sock = TCPSendCreateSocket(pData, pData->f_addr)) <= 0)
+			iRet = RS_RET_TCP_SOCKCREATE_ERR;
 	}
 
-finalize_it:
-	if(bMsgMustBeFreed)
-		free(msg);
 	return iRet;
 }
 
@@ -888,10 +681,10 @@ dbgprintf("UDP send socket not yet initialized, doing it now\n");
 				int ret;
 #				ifdef USE_GSSAPI
 				if(gss_mode != GSSMODE_NONE) {
-					ret = TCPSend(pData, psz, l, TCPSendGSSInit, TCPSendGSSSend, TCPSendGSSPrepRetry);
+					ret = TCPSend(pData, psz, l, pData->tcp_framing, TCPSendGSSInit, TCPSendGSSSend, TCPSendGSSPrepRetry);
 				} else
 #				endif
-					ret = TCPSend(pData, psz, l, TCPSendInit, TCPSendFrame, TCPSendPrepRetry);
+					ret = TCPSend(pData, psz, l, pData->tcp_framing, TCPSendInit, TCPSendFrame, TCPSendPrepRetry);
 				if(ret != 0) {
 					/* error! */
 					dbgprintf("error forwarding via tcp, suspending\n");
