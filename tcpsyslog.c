@@ -420,7 +420,9 @@ int TCPSessAccept(int fd)
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
 	char *pBuf;
+#ifdef USE_GSSAPI
 	char allowedMethods = 0;
+#endif
 
 	newConn = accept(fd, (struct sockaddr*) &addr, &addrlen);
 	if (newConn < 0) {
