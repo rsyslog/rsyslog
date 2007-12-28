@@ -48,9 +48,6 @@
 #include <zlib.h>
 #endif
 #include <pthread.h>
-#ifdef USE_GSSAPI
-#include <gssapi/gssapi.h>
-#endif
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -61,9 +58,6 @@
 #include "tcpsyslog.h"
 #include "cfsysline.h"
 #include "module-template.h"
-#ifdef USE_GSSAPI
-#include "gss-misc.h"
-#endif
 
 MODULE_TYPE_OUTPUT
 
@@ -107,20 +101,7 @@ typedef struct _instanceData {
 #	define	FORW_TCP 1
 	/* following fields for TCP-based delivery */
 	time_t	ttSuspend;	/* time selector was suspended */
-#	ifdef USE_GSSAPI
-	gss_ctx_id_t gss_context;
-	OM_uint32 gss_flags;
-#	endif
 } instanceData;
-
-#ifdef USE_GSSAPI
-static char *gss_base_service_name = NULL;
-static enum gss_mode_t {
-	GSSMODE_NONE,	/* GSSAPI is NOT support (aka "we use plain tcp") - the default */
-	GSSMODE_MIC,
-	GSSMODE_ENC
-} gss_mode;
-#endif
 
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
@@ -161,24 +142,6 @@ CODESTARTfreeInstance
 				free(pData->port);
 			break;
 	}
-#	ifdef USE_GSSAPI
-	if (gss_mode != GSSMODE_NONE) {
-		OM_uint32 maj_stat, min_stat;
-
-		if (pData->gss_context != GSS_C_NO_CONTEXT) {
-			maj_stat = gss_delete_sec_context(&min_stat, &pData->gss_context, GSS_C_NO_BUFFER);
-			if (maj_stat != GSS_S_COMPLETE)
-				display_status("deleting context", maj_stat, min_stat);
-		}
-	}
-	/* this is meant to be done when module is unloaded,
-	   but since this module is static...
-	*/
-	if (gss_base_service_name != NULL) {
-		free(gss_base_service_name);
-		gss_base_service_name = NULL;
-	}
-#	endif
 
 	/* final cleanup */
 	if(pData->sock >= 0)
@@ -242,172 +205,6 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 }
 
 /* CODE FOR SENDING TCP MESSAGES */
-
-
-#ifdef USE_GSSAPI
-/* This function is called immediately before a send retry is attempted.
- * It shall clean up whatever makes sense.
- * rgerhards, 2007-12-28
- */
-static rsRetVal TCPSendGSSPrepRetry(void __attribute__((unused)) *pData)
-{
-	/* in case of TCP/GSS, there is nothing to do */
-	return RS_RET_OK;
-}
-
-
-static rsRetVal TCPSendGSSInit(void *pvData)
-{
-	DEFiRet;
-	int s = -1;
-	char *base;
-	OM_uint32 maj_stat, min_stat, init_sec_min_stat, *sess_flags, ret_flags;
-	gss_buffer_desc out_tok, in_tok;
-	gss_buffer_t tok_ptr;
-	gss_name_t target_name;
-	gss_ctx_id_t *context;
-	instanceData *pData = (instanceData *) pvData;
-
-	assert(pData != NULL);
-
-	/* if the socket is already initialized, we are done */
-	if(pData->sock > 0)
-		ABORT_FINALIZE(RS_RET_OK);
-
-	base = (gss_base_service_name == NULL) ? "host" : gss_base_service_name;
-	out_tok.length = strlen(pData->f_hname) + strlen(base) + 2;
-	if ((out_tok.value = malloc(out_tok.length)) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-	strcpy(out_tok.value, base);
-	strcat(out_tok.value, "@");
-	strcat(out_tok.value, pData->f_hname);
-	dbgprintf("GSS-API service name: %s\n", (char*) out_tok.value);
-
-	tok_ptr = GSS_C_NO_BUFFER;
-	context = &pData->gss_context;
-	*context = GSS_C_NO_CONTEXT;
-
-	maj_stat = gss_import_name(&min_stat, &out_tok, GSS_C_NT_HOSTBASED_SERVICE, &target_name);
-	free(out_tok.value);
-	out_tok.value = NULL;
-	out_tok.length = 0;
-
-	if (maj_stat != GSS_S_COMPLETE) {
-		display_status("parsing name", maj_stat, min_stat);
-		goto fail;
-	}
-
-	sess_flags = &pData->gss_flags;
-	*sess_flags = GSS_C_MUTUAL_FLAG;
-	if (gss_mode == GSSMODE_MIC) {
-		*sess_flags |= GSS_C_INTEG_FLAG;
-	}
-	if (gss_mode == GSSMODE_ENC) {
-		*sess_flags |= GSS_C_CONF_FLAG;
-	}
-	dbgprintf("GSS-API requested context flags:\n");
-	display_ctx_flags(*sess_flags);
-
-	do {
-		maj_stat = gss_init_sec_context(&init_sec_min_stat, GSS_C_NO_CREDENTIAL, context,
-						target_name, GSS_C_NO_OID, *sess_flags, 0, NULL,
-						tok_ptr, NULL, &out_tok, &ret_flags, NULL);
-		if (tok_ptr != GSS_C_NO_BUFFER)
-			free(in_tok.value);
-
-		if (maj_stat != GSS_S_COMPLETE
-		    && maj_stat != GSS_S_CONTINUE_NEEDED) {
-			display_status("initializing context", maj_stat, init_sec_min_stat);
-			goto fail;
-		}
-
-		if (s == -1)
-			if ((s = pData->sock = TCPSendCreateSocket(pData->f_addr)) == -1)
-				goto fail;
-
-		if (out_tok.length != 0) {
-			dbgprintf("GSS-API Sending init_sec_context token (length: %ld)\n", (long) out_tok.length);
-			if (send_token(s, &out_tok) < 0) {
-				goto fail;
-			}
-		}
-		gss_release_buffer(&min_stat, &out_tok);
-
-		if (maj_stat == GSS_S_CONTINUE_NEEDED) {
-			dbgprintf("GSS-API Continue needed...\n");
-			if (recv_token(s, &in_tok) <= 0) {
-				goto fail;
-			}
-			tok_ptr = &in_tok;
-		}
-	} while (maj_stat == GSS_S_CONTINUE_NEEDED);
-
-	dbgprintf("GSS-API Provided context flags:\n");
-	*sess_flags = ret_flags;
-	display_ctx_flags(*sess_flags);
-
-	dbgprintf("GSS-API Context initialized\n");
-	gss_release_name(&min_stat, &target_name);
-
-finalize_it:
-	return iRet;
-
- fail:
-	logerror("GSS-API Context initialization failed\n");
-	gss_release_name(&min_stat, &target_name);
-	gss_release_buffer(&min_stat, &out_tok);
-	if (*context != GSS_C_NO_CONTEXT) {
-		gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
-		*context = GSS_C_NO_CONTEXT;
-	}
-	if (s != -1)
-		close(s);
-	pData->sock = -1;
-	return RS_RET_GSS_SENDINIT_ERROR;
-}
-
-
-static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
-{
-	int s;
-	gss_ctx_id_t *context;
-	OM_uint32 maj_stat, min_stat;
-	gss_buffer_desc in_buf, out_buf;
-	instanceData *pData = (instanceData *) pvData;
-
-	assert(pData != NULL);
-	assert(msg != NULL);
-	assert(len > 0);
-
-	s = pData->sock;
-	context = &pData->gss_context;
-	in_buf.value = msg;
-	in_buf.length = len;
-	maj_stat = gss_wrap(&min_stat, *context, (gss_mode == GSSMODE_ENC) ? 1 : 0, GSS_C_QOP_DEFAULT,
-			    &in_buf, NULL, &out_buf);
-	if (maj_stat != GSS_S_COMPLETE) {
-		display_status("wrapping message", maj_stat, min_stat);
-		goto fail;
-	}
-	
-	if (send_token(s, &out_buf) < 0) {
-		goto fail;
-	}
-	gss_release_buffer(&min_stat, &out_buf);
-
-	return RS_RET_OK;
-
- fail:
-	close(s);
-	pData->sock = -1;
-	gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
-	*context = GSS_C_NO_CONTEXT;
-	gss_release_buffer(&min_stat, &out_buf);
-	dbgprintf("message not (GSS/tcp)send");
-	return RS_RET_GSS_SEND_ERROR;
-}
-#endif /* #ifdef USE_GSSAPI */
 
 
 /* Send a frame via plain TCP protocol
@@ -557,11 +354,8 @@ CODESTARTdoAction
  		 * rgerhards, 2007-12-26
  		 */
 		if(pData->protocol == FORW_UDP) {
-dbgprintf("We have a udp selector, send socket 0x%lx\n", (unsigned long) pData->pSockArray);
 			if(pData->pSockArray == NULL) {
-dbgprintf("UDP send socket not yet initialized, doing it now\n");
 				pData->pSockArray = create_udp_socket((uchar*)pData->f_hname, NULL, 0);
-	//			CHKiRet(UDPSendCreateSocket(&pData->pSockArray));
 			}
 		}
 		if ( 0) // TODO: think about this strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
@@ -624,19 +418,13 @@ dbgprintf("UDP send socket not yet initialized, doing it now\n");
 			} else {
 				/* forward via TCP */
 				int ret;
-#				ifdef USE_GSSAPI
-				if(gss_mode != GSSMODE_NONE) {
-					ret = TCPSend(pData, psz, l, pData->tcp_framing, TCPSendGSSInit, TCPSendGSSSend, TCPSendGSSPrepRetry);
-				} else
-#				endif
-					ret = TCPSend(pData, psz, l, pData->tcp_framing, TCPSendInit, TCPSendFrame, TCPSendPrepRetry);
+				ret = TCPSend(pData, psz, l, pData->tcp_framing, TCPSendInit, TCPSendFrame, TCPSendPrepRetry);
 				if(ret != RS_RET_OK) {
 					/* error! */
 					dbgprintf("error forwarding via tcp, suspending\n");
 					pData->eDestState = eDestFORW_SUSP;
 					iRet = RS_RET_SUSPENDED;
 				}
-dbgprintf("forwarded\n");
 			}
 		}
 		break;
@@ -825,53 +613,10 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 ENDqueryEtryPt
 
 
-#ifdef USE_GSSAPI
-/* set a new GSSMODE based on config directive */
-static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
-{
-	if (!strcmp((char *) mode, "none")) {
-		gss_mode = GSSMODE_NONE;
-		free(mode);
-		dbgprintf("GSS-API gssmode set to GSSMODE_NONE\n");
-	} else if (!strcmp((char *) mode, "integrity")) {
-		gss_mode = GSSMODE_MIC;
-		free(mode);
-		dbgprintf("GSS-API gssmode set to GSSMODE_MIC\n");
-	} else if (!strcmp((char *) mode, "encryption")) {
-		gss_mode = GSSMODE_ENC;
-		free(mode);
-		dbgprintf("GSS-API gssmode set to GSSMODE_ENC\n");
-	} else {
-		logerrorSz("unknown gssmode parameter: %s", (char *) mode);
-		free(mode);
-		return RS_RET_ERR;
-	}
-
-	return RS_RET_OK;
-}
-
-
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	gss_mode = GSSMODE_NONE;
-	if (gss_base_service_name != NULL) {
-		free(gss_base_service_name);
-		gss_base_service_name = NULL;
-	}
-	return RS_RET_OK;
-}
-#endif /* #ifdef USE_GSSAPI */
-
-
 BEGINmodInit(Fwd)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
-#	ifdef xUSE_GSSAPI
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssforwardservicename", 0, eCmdHdlrGetWord, NULL, &gss_base_service_name, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssmode", 0, eCmdHdlrGetWord, setGSSMode, &gss_mode, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
-#	endif
 ENDmodInit
 
 #endif /* #ifdef SYSLOG_INET */
