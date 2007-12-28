@@ -80,6 +80,10 @@ if ENABLE_IMKLOGD
 SUBDIRS += plugins/imklog
 endif
 
+if ENABLE_GSSAPI
+SUBDIRS += plugins/omgssapi
+endif
+
 if ENABLE_MYSQL
 SUBDIRS += plugins/ommysql
 endif

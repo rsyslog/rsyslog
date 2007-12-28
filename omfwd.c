@@ -243,61 +243,6 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 
 /* CODE FOR SENDING TCP MESSAGES */
 
-/* Initialize TCP sockets (for sender)
- * This is done once per selector line, if not yet initialized.
- */
-static int TCPSendCreateSocket(instanceData *pData, struct addrinfo *addrDest)
-{
-	int fd;
-	struct addrinfo *r; 
-	
-	assert(pData != NULL);
-	
-	r = addrDest;
-
-	while(r != NULL) {
-		fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-		if (fd != -1) {
-			/* We can not allow the TCP sender to block syslogd, at least
-			 * not in a single-threaded design. That would cause rsyslogd to
-			 * loose input messages - which obviously also would affect
-			 * other selector lines, too. So we do set it to non-blocking and 
-			 * handle the situation ourselfs (by discarding messages). IF we run
-			 * dual-threaded, however, the situation is different: in this case,
-			 * the receivers and the selector line processing are only loosely
-			 * coupled via a memory buffer. Now, I think, we can afford the extra
-			 * wait time. Thus, we enable blocking mode for TCP if we compile with
-			 * pthreads. -- rgerhards, 2005-10-25
-			 * And now, we always run on multiple threads... -- rgerhards, 2007-12-20
-			 */
-			if (connect (fd, r->ai_addr, r->ai_addrlen) != 0) {
-				if(errno == EINPROGRESS) {
-					/* this is normal - will complete later select */
-					return fd;
-				} else {
-					char errStr[1024];
-					dbgprintf("create tcp connection failed, reason %s",
-						strerror_r(errno, errStr, sizeof(errStr)));
-				}
-
-			}
-			else {
-				return fd;
-			}
-			close(fd);
-		}
-		else {
-			char errStr[1024];
-			dbgprintf("couldn't create send socket, reason %s", strerror_r(errno, errStr, sizeof(errStr)));
-		}		
-		r = r->ai_next;
-	}
-
-	dbgprintf("no working socket could be obtained");
-
-	return -1;
-}
-
 
 #ifdef USE_GSSAPI
 /* This function is called immediately before a send retry is attempted.
@@ -378,7 +323,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 		}
 
 		if (s == -1)
-			if ((s = pData->sock = TCPSendCreateSocket(pData, pData->f_addr)) == -1)
+			if ((s = pData->sock = TCPSendCreateSocket(pData->f_addr)) == -1)
 				goto fail;
 
 		if (out_tok.length != 0) {
@@ -528,7 +473,7 @@ static rsRetVal TCPSendInit(void *pvData)
 
 	assert(pData != NULL);
 	if(pData->sock <= 0) {
-		if((pData->sock = TCPSendCreateSocket(pData, pData->f_addr)) <= 0)
+		if((pData->sock = TCPSendCreateSocket(pData->f_addr)) <= 0)
 			iRet = RS_RET_TCP_SOCKCREATE_ERR;
 	}
 
@@ -685,7 +630,7 @@ dbgprintf("UDP send socket not yet initialized, doing it now\n");
 				} else
 #				endif
 					ret = TCPSend(pData, psz, l, pData->tcp_framing, TCPSendInit, TCPSendFrame, TCPSendPrepRetry);
-				if(ret != 0) {
+				if(ret != RS_RET_OK) {
 					/* error! */
 					dbgprintf("error forwarding via tcp, suspending\n");
 					pData->eDestState = eDestFORW_SUSP;
@@ -922,7 +867,7 @@ BEGINmodInit(Fwd)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
-#	ifdef USE_GSSAPI
+#	ifdef xUSE_GSSAPI
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssforwardservicename", 0, eCmdHdlrGetWord, NULL, &gss_base_service_name, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssmode", 0, eCmdHdlrGetWord, setGSSMode, &gss_mode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));

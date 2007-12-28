@@ -25,9 +25,15 @@
 #ifndef	TCPSYSLOG_H_INCLUDED
 #define	TCPSYSLOG_H_INCLUDED 1
 
+#include <netdb.h>
 #if defined(SYSLOG_INET) && defined(USE_GSSAPI)
 #include <gssapi/gssapi.h>
 #endif
+
+typedef enum _TCPFRAMINGMODE {
+		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
+		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
+	} TCPFRAMINGMODE;
 
 struct TCPSession {
 	int sock;
@@ -75,6 +81,7 @@ void TCPSessGSSDeinit(void);
 #endif
 
 /* TCP Send support (shall go into its own module later) */
+int TCPSendCreateSocket(struct addrinfo *addrDest);
 int TCPSend(void *pData, char *msg, size_t len, TCPFRAMINGMODE rqdFraming,
 	    rsRetVal (*initFunc)(void*),
 	    rsRetVal (*sendFunc)(void*, char*, size_t),

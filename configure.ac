@@ -154,6 +154,7 @@ if test $want_gssapi_krb5 = yes; then
 		])
 	])
 fi
+AM_CONDITIONAL(ENABLE_GSSAPI, test x$want_gssapi_krb5 = xyes)
 
 # multithreading via pthreads
 AC_ARG_ENABLE(pthreads,
@@ -349,7 +350,7 @@ AC_SUBST(pgsql_cflags)
 AC_SUBST(pgsql_libs)
 
 
-AC_CONFIG_FILES([Makefile doc/Makefile plugins/imudp/Makefile plugins/imtcp/Makefile plugins/imuxsock/Makefile plugins/immark/Makefile plugins/imklog/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile plugins/imudp/Makefile plugins/imtcp/Makefile plugins/imuxsock/Makefile plugins/immark/Makefile plugins/imklog/Makefile plugins/omgssapi/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile])
 AC_OUTPUT
 
 echo "****************************************************"

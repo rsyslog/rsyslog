@@ -64,11 +64,6 @@ typedef struct _syslogCode {
 	int     c_val;
 } syslogCODE;
 
-typedef enum _TCPFRAMINGMODE {
-		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
-		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
-	} TCPFRAMINGMODE;
-
 /* values for host comparisons specified with host selector blocks
  * (+host, -host). rgerhards 2005-10-18.
  */

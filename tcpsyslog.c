@@ -1019,6 +1019,59 @@ void TCPSessGSSDeinit(void) {
  *          CODE THAT SHALL GO INTO ITS OWN MODULE  (SENDING)        *
  * ----------------------------------------------------------------- */
 
+/* Initialize TCP sockets (for sender)
+ * This is done once per selector line, if not yet initialized.
+ */
+int TCPSendCreateSocket(struct addrinfo *addrDest)
+{
+	int fd;
+	struct addrinfo *r; 
+	
+	r = addrDest;
+
+	while(r != NULL) {
+		fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+		if (fd != -1) {
+			/* We can not allow the TCP sender to block syslogd, at least
+			 * not in a single-threaded design. That would cause rsyslogd to
+			 * loose input messages - which obviously also would affect
+			 * other selector lines, too. So we do set it to non-blocking and 
+			 * handle the situation ourselfs (by discarding messages). IF we run
+			 * dual-threaded, however, the situation is different: in this case,
+			 * the receivers and the selector line processing are only loosely
+			 * coupled via a memory buffer. Now, I think, we can afford the extra
+			 * wait time. Thus, we enable blocking mode for TCP if we compile with
+			 * pthreads. -- rgerhards, 2005-10-25
+			 * And now, we always run on multiple threads... -- rgerhards, 2007-12-20
+			 */
+			if (connect (fd, r->ai_addr, r->ai_addrlen) != 0) {
+				if(errno == EINPROGRESS) {
+					/* this is normal - will complete later select */
+					return fd;
+				} else {
+					char errStr[1024];
+					dbgprintf("create tcp connection failed, reason %s",
+						strerror_r(errno, errStr, sizeof(errStr)));
+				}
+
+			}
+			else {
+				return fd;
+			}
+			close(fd);
+		}
+		else {
+			char errStr[1024];
+			dbgprintf("couldn't create send socket, reason %s", strerror_r(errno, errStr, sizeof(errStr)));
+		}		
+		r = r->ai_next;
+	}
+
+	dbgprintf("no working socket could be obtained");
+
+	return -1;
+}
+
 
 
 /* Build frame based on selected framing 
