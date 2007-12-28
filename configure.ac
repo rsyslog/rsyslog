@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[2.0.0],[rsyslog@lists.adiscon.com.])
+AC_INIT([rsyslog],[1.21.2],[rsyslog@lists.adiscon.com.])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADERS([config.h])
@@ -154,6 +154,7 @@ if test $want_gssapi_krb5 = yes; then
 		])
 	])
 fi
+AM_CONDITIONAL(ENABLE_GSSAPI, test x$want_gssapi_krb5 = xyes)
 
 # multithreading via pthreads
 AC_ARG_ENABLE(pthreads,
@@ -345,7 +346,7 @@ AC_SUBST(pgsql_libs)
 
 
 
-AC_CONFIG_FILES([Makefile doc/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile plugins/omgssapi/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile])
 AC_OUTPUT
 
 echo "****************************************************"

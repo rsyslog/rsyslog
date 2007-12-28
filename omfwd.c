@@ -51,9 +51,6 @@
 #else
 #include <fcntl.h>
 #endif
-#ifdef USE_GSSAPI
-#include <gssapi/gssapi.h>
-#endif
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -64,9 +61,6 @@
 #include "tcpsyslog.h"
 #include "cfsysline.h"
 #include "module-template.h"
-#ifdef USE_GSSAPI
-#include "gss-misc.h"
-#endif
 
 #ifdef SYSLOG_INET
 #define INET_SUSPEND_TIME 60		/* equal to 1 minute 
@@ -117,20 +111,7 @@ typedef struct _instanceData {
 #	ifdef USE_PTHREADS
 	pthread_mutex_t mtxTCPSend;
 #	endif
-#	ifdef USE_GSSAPI
-	gss_ctx_id_t gss_context;
-	OM_uint32 gss_flags;
-#	endif
 } instanceData;
-
-#ifdef USE_GSSAPI
-static char *gss_base_service_name = NULL;
-static enum gss_mode_t {
-	GSSMODE_NONE,
-	GSSMODE_MIC,
-	GSSMODE_ENC
-} gss_mode;
-#endif
 
 
 BEGINcreateInstance
@@ -163,24 +144,6 @@ CODESTARTfreeInstance
 		pthread_mutex_destroy(&pData->mtxTCPSend);
 	}
 #	endif
-#	ifdef USE_GSSAPI
-	if (gss_mode != GSSMODE_NONE) {
-		OM_uint32 maj_stat, min_stat;
-
-		if (pData->gss_context != GSS_C_NO_CONTEXT) {
-			maj_stat = gss_delete_sec_context(&min_stat, &pData->gss_context, GSS_C_NO_BUFFER);
-			if (maj_stat != GSS_S_COMPLETE)
-				display_status("deleting context", maj_stat, min_stat);
-		}
-	}
-	/* this is meant to be done when module is unloaded,
-	   but since this module is static...
-	*/
-	if (gss_base_service_name != NULL) {
-		free(gss_base_service_name);
-		gss_base_service_name = NULL;
-	}
-#	endif
 	/* final cleanup */
 	if(pData->sock >= 0)
 		close(pData->sock);
@@ -194,7 +157,7 @@ ENDdbgPrintInstInfo
 
 /* CODE FOR SENDING TCP MESSAGES */
 
-/* get send status
+/* set send status
  * rgerhards, 2005-10-24
  */
 static void TCPSendSetStatus(instanceData *pData, enum TCPSendStatus iNewState)
@@ -216,7 +179,7 @@ static void TCPSendSetStatus(instanceData *pData, enum TCPSendStatus iNewState)
 }
 
 
-/* set send status
+/* get send status
  * rgerhards, 2005-10-24
  */
 static enum TCPSendStatus TCPSendGetStatus(instanceData *pData)
@@ -238,504 +201,6 @@ static enum TCPSendStatus TCPSendGetStatus(instanceData *pData)
 }
 
 
-/* Initialize TCP sockets (for sender)
- * This is done once per selector line, if not yet initialized.
- */
-static int TCPSendCreateSocket(instanceData *pData, struct addrinfo *addrDest)
-{
-	int fd;
-	struct addrinfo *r; 
-	
-	assert(pData != NULL);
-	
-	r = addrDest;
-
-	while(r != NULL) {
-		fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-		if (fd != -1) {
-			/* We can not allow the TCP sender to block syslogd, at least
-			 * not in a single-threaded design. That would cause rsyslogd to
-			 * loose input messages - which obviously also would affect
-			 * other selector lines, too. So we do set it to non-blocking and 
-			 * handle the situation ourselfs (by discarding messages). IF we run
-			 * dual-threaded, however, the situation is different: in this case,
-			 * the receivers and the selector line processing are only loosely
-			 * coupled via a memory buffer. Now, I think, we can afford the extra
-			 * wait time. Thus, we enable blocking mode for TCP if we compile with
-			 * pthreads.
-			 * rgerhards, 2005-10-25
-			 */
-#	ifndef USE_PTHREADS
-			/* set to nonblocking - rgerhards 2005-07-20 */
-			fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
-#	endif		
-			if (connect (fd, r->ai_addr, r->ai_addrlen) != 0) {
-				if(errno == EINPROGRESS) {
-					/* this is normal - will complete during select */
-					TCPSendSetStatus(pData, TCP_SEND_CONNECTING);
-					return fd;
-				} else {
-					char errStr[1024];
-					dbgprintf("create tcp connection failed, reason %s",
-						strerror_r(errno, errStr, sizeof(errStr)));
-				}
-
-			}
-			else {
-				TCPSendSetStatus(pData, TCP_SEND_READY);
-				return fd;
-			}
-			close(fd);
-		}
-		else {
-			char errStr[1024];
-			dbgprintf("couldn't create send socket, reason %s", strerror_r(errno, errStr, sizeof(errStr)));
-		}		
-		r = r->ai_next;
-	}
-
-	dbgprintf("no working socket could be obtained");
-
-	return -1;
-}
-
-
-#ifdef USE_GSSAPI
-static int TCPSendGSSInit(instanceData *pData)
-{
-	int s = -1;
-	char *base;
-	OM_uint32 maj_stat, min_stat, init_sec_min_stat, *sess_flags, ret_flags;
-	gss_buffer_desc out_tok, in_tok;
-	gss_buffer_t tok_ptr;
-	gss_name_t target_name;
-	gss_ctx_id_t *context;
-
-	assert(pData != NULL);
-
-	base = (gss_base_service_name == NULL) ? "host" : gss_base_service_name;
-	out_tok.length = strlen(pData->f_hname) + strlen(base) + 2;
-	if ((out_tok.value = malloc(out_tok.length)) == NULL)
-		return -1;
-	strcpy(out_tok.value, base);
-	strcat(out_tok.value, "@");
-	strcat(out_tok.value, pData->f_hname);
-	dbgprintf("GSS-API service name: %s\n", out_tok.value);
-
-	tok_ptr = GSS_C_NO_BUFFER;
-	context = &pData->gss_context;
-	*context = GSS_C_NO_CONTEXT;
-
-	maj_stat = gss_import_name(&min_stat, &out_tok, GSS_C_NT_HOSTBASED_SERVICE, &target_name);
-	free(out_tok.value);
-	out_tok.value = NULL;
-	out_tok.length = 0;
-
-	if (maj_stat != GSS_S_COMPLETE) {
-		display_status("parsing name", maj_stat, min_stat);
-		goto fail;
-	}
-
-	sess_flags = &pData->gss_flags;
-	*sess_flags = GSS_C_MUTUAL_FLAG;
-	if (gss_mode == GSSMODE_MIC) {
-		*sess_flags |= GSS_C_INTEG_FLAG;
-	}
-	if (gss_mode == GSSMODE_ENC) {
-		*sess_flags |= GSS_C_CONF_FLAG;
-	}
-	dbgprintf("GSS-API requested context flags:\n");
-	display_ctx_flags(*sess_flags);
-
-	do {
-		maj_stat = gss_init_sec_context(&init_sec_min_stat, GSS_C_NO_CREDENTIAL, context,
-						target_name, GSS_C_NO_OID, *sess_flags, 0, NULL,
-						tok_ptr, NULL, &out_tok, &ret_flags, NULL);
-		if (tok_ptr != GSS_C_NO_BUFFER)
-			free(in_tok.value);
-
-		if (maj_stat != GSS_S_COMPLETE
-		    && maj_stat != GSS_S_CONTINUE_NEEDED) {
-			display_status("initializing context", maj_stat, init_sec_min_stat);
-			goto fail;
-		}
-
-		if (s == -1)
-			if ((s = pData->sock = TCPSendCreateSocket(pData, pData->f_addr)) == -1)
-				goto fail;
-
-		if (out_tok.length != 0) {
-			dbgprintf("GSS-API Sending init_sec_context token (length: %d)\n", out_tok.length);
-			if (send_token(s, &out_tok) < 0) {
-				goto fail;
-			}
-		}
-		gss_release_buffer(&min_stat, &out_tok);
-
-		if (maj_stat == GSS_S_CONTINUE_NEEDED) {
-			dbgprintf("GSS-API Continue needed...\n");
-			if (recv_token(s, &in_tok) <= 0) {
-				goto fail;
-			}
-			tok_ptr = &in_tok;
-		}
-	} while (maj_stat == GSS_S_CONTINUE_NEEDED);
-
-	dbgprintf("GSS-API Provided context flags:\n");
-	*sess_flags = ret_flags;
-	display_ctx_flags(*sess_flags);
-
-	dbgprintf("GSS-API Context initialized\n");
-	gss_release_name(&min_stat, &target_name);
-
-	return 0;
-
- fail:
-	logerror("GSS-API Context initialization failed\n");
-	gss_release_name(&min_stat, &target_name);
-	gss_release_buffer(&min_stat, &out_tok);
-	if (*context != GSS_C_NO_CONTEXT) {
-		gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
-		*context = GSS_C_NO_CONTEXT;
-	}
-	if (s != -1)
-		close(s);
-	pData->sock = -1;
-	return -1;
-}
-
-
-static int TCPSendGSSSend(instanceData *pData, char *msg, size_t len)
-{
-	int s;
-	gss_ctx_id_t *context;
-	OM_uint32 maj_stat, min_stat;
-	gss_buffer_desc in_buf, out_buf;
-
-	assert(pData != NULL);
-	assert(msg != NULL);
-	assert(len > 0);
-
-	s = pData->sock;
-	context = &pData->gss_context;
-	in_buf.value = msg;
-	in_buf.length = len;
-	maj_stat = gss_wrap(&min_stat, *context, (gss_mode == GSSMODE_ENC) ? 1 : 0, GSS_C_QOP_DEFAULT,
-			    &in_buf, NULL, &out_buf);
-	if (maj_stat != GSS_S_COMPLETE) {
-		display_status("wrapping message", maj_stat, min_stat);
-		goto fail;
-	}
-	
-	if (send_token(s, &out_buf) < 0) {
-		goto fail;
-	}
-	gss_release_buffer(&min_stat, &out_buf);
-
-	return 0;
-
- fail:
-	close(s);
-	pData->sock = -1;
-	TCPSendSetStatus(pData, TCP_SEND_NOTCONNECTED);
-	gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
-	*context = GSS_C_NO_CONTEXT;
-	gss_release_buffer(&min_stat, &out_buf);
-	return -1;
-}
-#endif /* #ifdef USE_GSSAPI */
-
-
-/* Sends a TCP message. It is first checked if the
- * session is open and, if not, it is opened. Then the send
- * is tried. If it fails, one silent re-try is made. If the send
- * fails again, an error status (-1) is returned. If all goes well,
- * 0 is returned. The TCP session is NOT torn down.
- * For now, EAGAIN is ignored (causing message loss) - but it is
- * hard to do something intelligent in this case. With this
- * implementation here, we can not block and/or defer. Things are
- * probably a bit better when we move to liblogging. The alternative
- * would be to enhance the current select server with buffering and
- * write descriptors. This seems not justified, given the expected
- * short life span of this code (and the unlikeliness of this event).
- * rgerhards 2005-07-06
- * This function is now expected to stay. Libloging won't be used for
- * that purpose. I have added the param "len", because it is known by the
- * caller and so safes us some time. Also, it MUST be given because there
- * may be NULs inside msg so that we can not rely on strlen(). Please note
- * that the restrictions outlined above do not existin in multi-threaded
- * mode, which we assume will now be most often used. So there is no
- * real issue with the potential message loss in single-threaded builds.
- * rgerhards, 2006-11-30
- * 
- * In order to support compressed messages via TCP, we must support an
- * octet-counting based framing (LF may be part of the compressed message).
- * We are now supporting the same mode that is available in IETF I-D
- * syslog-transport-tls-05 (current at the time of this writing). This also
- * eases things when we go ahead and implement that framing. I have now made
- * available two cases where this framing is used: either by explitely
- * specifying it in the config file or implicitely when sending a compressed
- * message. In the later case, compressed and uncompressed messages within
- * the same session have different framings. If it is explicitely set to
- * octet-counting, only this framing mode is used within the session.
- * rgerhards, 2006-12-07
- */
-static int TCPSend(instanceData *pData, char *msg, size_t len)
-{
-	int retry = 0;
-	int done = 0;
-	int bIsCompressed;
-	int lenSend;
-	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
-	enum TCPSendStatus eState;
-	TCPFRAMINGMODE framingToUse;
-
-	assert(pData != NULL);
-	assert(msg != NULL);
-	assert(len > 0);
-
-	bIsCompressed = *msg == 'z';	/* cache this, so that we can modify the message buffer */
-	/* select framing for this record. If we have a compressed record, we always need to
-	 * use octet counting because the data potentially contains all control characters
-	 * including LF.
-	 */
-	framingToUse = bIsCompressed ? TCP_FRAMING_OCTET_COUNTING : pData->tcp_framing;
-
-	do { /* try to send message */
-		if(pData->sock <= 0) {
-			/* we need to open the socket first */
-#			ifdef USE_GSSAPI
-			if(gss_mode != GSSMODE_NONE) {
-				if(TCPSendGSSInit(pData) != 0)
-					return -1;
-			} else
-#			endif
-				if((pData->sock = TCPSendCreateSocket(pData, pData->f_addr)) <= 0)
-					return -1;
-		}
-
-		eState = TCPSendGetStatus(pData); /* cache info */
-
-		if(eState == TCP_SEND_CONNECTING) {
-			/* In this case, we save the buffer. If we have a
-			 * system with few messages, that hopefully prevents
-			 * message loss at all. However, we make no further attempts,
-			 * just the first message is saved. So we only try this
-			 * if there is not yet a saved message present.
-			 * rgerhards 2005-07-20
-			 */
-			if(pData->savedMsg == NULL) {
-				pData->savedMsg = malloc(len * sizeof(char));
-				if(pData->savedMsg == NULL)
-					return 0; /* nothing we can do... */
-				memcpy(pData->savedMsg, msg, len);
-				pData->savedMsgLen = len;
-			}
-			return 0;
-		} else if(eState != TCP_SEND_READY)
-			/* This here is debatable. For the time being, we
-			 * accept the loss of a single message (e.g. during
-			 * connection setup in favour of not messing with
-			 * wait time and timeouts. The reason is that such
-			 * things might otherwise cost us considerable message
-			 * loss on the receiving side (even at a timeout set
-			 * to just 1 second).  - rgerhards 2005-07-20
-			 */
-			return 0;
-
-		/* now check if we need to add a line terminator. We need to
-		 * copy the string in memory in this case, this is probably
-		 * quicker than using writev and definitely quicker than doing
-		 * two socket calls.
-		 * rgerhards 2005-07-22
-		 *//*
-		 * Some messages already contain a \n character at the end
-		 * of the message. We append one only if we there is not
-		 * already one. This seems the best fit, though this also
-		 * means the message does not arrive unaltered at the final
-		 * destination. But in the spirit of legacy syslog, this is
-		 * probably the best to do...
-		 * rgerhards 2005-07-20
-		 */
-
-		/* Build frame based on selected framing */
-		if(framingToUse == TCP_FRAMING_OCTET_STUFFING) {
-			if((*(msg+len-1) != '\n')) {
-				if(buf != NULL)
-					free(buf);
-				/* in the malloc below, we need to add 2 to the length. The
-				 * reason is that we a) add one character and b) len does
-				 * not take care of the '\0' byte. Up until today, it was just
-				 * +1 , which caused rsyslogd to sometimes dump core.
-				 * I have added this comment so that the logic is not accidently
-				 * changed again. rgerhards, 2005-10-25
-				 */
-				if((buf = malloc((len + 2) * sizeof(char))) == NULL) {
-					/* extreme mem shortage, try to solve
-					 * as good as we can. No point in calling
-					 * any alarms, they might as well run out
-					 * of memory (the risk is very high, so we
-					 * do NOT risk that). If we have a message of
-					 * more than 1 byte (what I guess), we simply
-					 * overwrite the last character.
-					 * rgerhards 2005-07-22
-					 */
-					if(len > 1) {
-						*(msg+len-1) = '\n';
-					} else {
-						/* we simply can not do anything in
-						 * this case (its an error anyhow...).
-						 */
-					}
-				} else {
-					/* we got memory, so we can copy the message */
-					memcpy(buf, msg, len); /* do not copy '\0' */
-					*(buf+len) = '\n';
-					*(buf+len+1) = '\0';
-					msg = buf; /* use new one */
-					++len; /* care for the \n */
-				}
-			}
-		} else {
-			/* Octect-Counting
-			 * In this case, we need to always allocate a buffer. This is because
-			 * we need to put a header in front of the message text
-			 */
-			char szLenBuf[16];
-			int iLenBuf;
-
-			/* important: the printf-mask is "%d<sp>" because there must be a
-			 * space after the len!
-			 *//* The chairs of the IETF syslog-sec WG have announced that it is
-			 * consensus to do the octet count on the SYSLOG-MSG part only. I am
-			 * now changing the code to reflect this. Hopefully, it will not change
-			 * once again (there can no compatibility layer programmed for this).
-			 * To be on the save side, I just comment the code out. I mark these
-			 * comments with "IETF20061218".
-			 * rgerhards, 2006-12-19
-			 */
-			iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", (int) len);
-			/* IETF20061218 iLenBuf =
-			  snprintf(szLenBuf, sizeof(szLenBuf)/sizeof(char), "%d ", len + iLenBuf);*/
-
-			if((buf = malloc((len + iLenBuf) * sizeof(char))) == NULL) {
-			 	/* we are out of memory. This is an extreme situation. We do not
-				 * call any alarm handlers because they most likely run out of mem,
-				 * too. We are brave enough to call debug output, though. Other than
-				 * that, there is nothing left to do. We can not sent the message (as
-				 * in case of the other framing, because the message is incomplete.
-				 * We could, however, send two chunks (header and text separate), but
-				 * that would cause a lot of complexity in the code. So we think it
-				 * is appropriate enough to just make sure we do not crash in this
-				 * very unlikely case. For this, it is justified just to loose
-				 * the message. Rgerhards, 2006-12-07
-				 */
-				 dbgprintf("Error: out of memory when building TCP octet-counted "
-				         "frame. Message is lost, trying to continue.\n");
-				return 0;
-			}
-
-			 memcpy(buf, szLenBuf, iLenBuf); /* header */
-			 memcpy(buf + iLenBuf, msg, len); /* message */
-			 len += iLenBuf;	/* new message size */
-			 msg = buf;	/* set message buffer */
-		}
-
-		/* frame building complete, on to actual sending */
-#		ifdef USE_GSSAPI
-		if(gss_mode != GSSMODE_NONE) {
-			if(TCPSendGSSSend(pData, msg, len) == 0) {
-				if(buf != NULL) {
-					free(buf);
-				}
-				return 0;
-			} else {
-				if(retry == 0) {
-					++retry;
-					/* try to recover */
-					continue;
-				} else {
-					if(buf != NULL)
-						free(buf);
-					dbgprintf("message not (tcp)send");
-					return -1;
-				}
-			}
-		} else {
-#		endif
-			lenSend = send(pData->sock, msg, len, 0);
-			dbgprintf("TCP sent %d bytes, requested %d, msg: '%s'\n", lenSend, len,
-				  bIsCompressed ? "***compressed***" : msg);
-			if((unsigned)lenSend == len) {
-				/* all well */
-				if(buf != NULL) {
-					free(buf);
-				}
-				return 0;
-			} else if(lenSend != -1) {
-				/* no real error, could "just" not send everything... 
-				 * For the time being, we ignore this...
-				 * rgerhards, 2005-10-25
-				 */
-				dbgprintf("message not completely (tcp)send, ignoring %d\n", lenSend);
-#			if USE_PTHREADS
-				usleep(1000); /* experimental - might be benefitial in this situation */
-#			endif
-				if(buf != NULL)
-					free(buf);
-				return 0;
-			}
-
-			switch(errno) {
-			case EMSGSIZE:
-				dbgprintf("message not (tcp)send, too large\n");
-				/* This is not a real error, so it is not flagged as one */
-				if(buf != NULL)
-					free(buf);
-				return 0;
-				break;
-			case EINPROGRESS:
-			case EAGAIN:
-				dbgprintf("message not (tcp)send, would block\n");
-#			if USE_PTHREADS
-				usleep(1000); /* experimental - might be benefitial in this situation */
-#			endif
-				/* we loose this message, but that's better than loosing
-				 * all ;)
-				 */
-				/* This is not a real error, so it is not flagged as one */
-				if(buf != NULL)
-					free(buf);
-				return 0;
-				break;
-			default:
-				dbgprintf("message not (tcp)send");
-				break;
-			}
-	
-			if(retry == 0) {
-				++retry;
-				/* try to recover */
-				close(pData->sock);
-				TCPSendSetStatus(pData, TCP_SEND_NOTCONNECTED);
-				pData->sock = -1;
-			} else {
-				if(buf != NULL)
-					free(buf);
-				return -1;
-			}
-#		ifdef USE_GSSAPI
-		}
-#		endif
-	} while(!done); /* warning: do ... while() */
-	/*NOT REACHED*/
-
-	if(buf != NULL)
-		free(buf);
-	return -1; /* only to avoid compiler warning! */
-}
-
-
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
  * rgerhards, 2007-06-28
@@ -750,6 +215,77 @@ static char *getFwdSyslogPt(instanceData *pData)
 	else
 		return(pData->port);
 }
+
+/* Send a frame via plain TCP protocol
+ * rgerhards, 2007-12-28
+ */
+static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
+{
+	DEFiRet;
+	ssize_t lenSend;
+	instanceData *pData = (instanceData *) pvData;
+
+	lenSend = send(pData->sock, msg, len, 0);
+	dbgprintf("TCP sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
+
+	if(lenSend == -1) {
+		/* we have an error case - check what we can live with */
+		switch(errno) {
+		case EMSGSIZE:
+			dbgprintf("message not (tcp)send, too large\n");
+			/* This is not a real error, so it is not flagged as one */
+			break;
+		default:
+			dbgprintf("message not (tcp)send");
+			iRet = RS_RET_TCP_SEND_ERROR;
+			break;
+		}
+	} else if(lenSend != (ssize_t) len) {
+		/* no real error, could "just" not send everything... 
+		 * For the time being, we ignore this...
+		 * rgerhards, 2005-10-25
+		 */
+		dbgprintf("message not completely (tcp)send, ignoring %ld\n", lenSend);
+		usleep(1000); /* experimental - might be benefitial in this situation */
+		/* TODO: we need to revisit this code -- rgerhards, 2007-12-28 */
+	}
+
+	return iRet;
+}
+
+
+/* This function is called immediately before a send retry is attempted.
+ * It shall clean up whatever makes sense.
+ * rgerhards, 2007-12-28
+ */
+static rsRetVal TCPSendPrepRetry(void *pvData)
+{
+	instanceData *pData = (instanceData *) pvData;
+
+	assert(pData != NULL);
+	close(pData->sock);
+	pData->sock = -1;
+	return RS_RET_OK;
+}
+
+
+/* initialies everything so that TCPSend can work.
+ * rgerhards, 2007-12-28
+ */
+static rsRetVal TCPSendInit(void *pvData)
+{
+	DEFiRet;
+	instanceData *pData = (instanceData *) pvData;
+
+	assert(pData != NULL);
+	if(pData->sock <= 0) {
+		if((pData->sock = TCPSendCreateSocket(pData->f_addr)) <= 0)
+			iRet = RS_RET_TCP_SOCKCREATE_ERR;
+	}
+
+	return iRet;
+}
+
 
 
 /* try to resume connection if it is not ready
@@ -917,8 +453,9 @@ CODESTARTdoAction
 					}
 				}
 			} else {
-				/* forward via TCP */
-				if(TCPSend(pData, psz, l) != 0) {
+				int ret;
+				ret = TCPSend(pData, psz, l, pData->tcp_framing, TCPSendInit, TCPSendFrame, TCPSendPrepRetry);
+				if(ret != RS_RET_OK) {
 					/* error! */
 					dbgprintf("error forwarding via tcp, suspending\n");
 					pData->eDestState = eDestFORW_SUSP;
@@ -1110,8 +647,8 @@ CODESTARTonSelectReadyWrite
 	TCPSendSetStatus(pData, TCP_SEND_READY);
 	/* Send stored message (if any) */
 	if(pData->savedMsg != NULL) {
-		if(TCPSend(pData, pData->savedMsg,
-			   pData->savedMsgLen) != 0) {
+		if(TCPSend(pData, pData->savedMsg, pData->savedMsgLen, pData->tcp_framing,
+			   TCPSendInit, TCPSendFrame, TCPSendPrepRetry) != RS_RET_OK) {
 			/* error! */
 			pData->eDestState = eDestFORW_SUSP;
 			errno = 0;
@@ -1145,52 +682,10 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 ENDqueryEtryPt
 
 
-#ifdef USE_GSSAPI
-static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
-{
-	if (!strcmp((char *) mode, "none")) {
-		gss_mode = GSSMODE_NONE;
-		free(mode);
-		dbgprintf("GSS-API gssmode set to GSSMODE_NONE\n");
-	} else if (!strcmp((char *) mode, "integrity")) {
-		gss_mode = GSSMODE_MIC;
-		free(mode);
-		dbgprintf("GSS-API gssmode set to GSSMODE_MIC\n");
-	} else if (!strcmp((char *) mode, "encryption")) {
-		gss_mode = GSSMODE_ENC;
-		free(mode);
-		dbgprintf("GSS-API gssmode set to GSSMODE_ENC\n");
-	} else {
-		logerrorSz("unknown gssmode parameter: %s", (char *) mode);
-		free(mode);
-		return RS_RET_ERR;
-	}
-
-	return RS_RET_OK;
-}
-
-
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	gss_mode = GSSMODE_NONE;
-	if (gss_base_service_name != NULL) {
-		free(gss_base_service_name);
-		gss_base_service_name = NULL;
-	}
-	return RS_RET_OK;
-}
-#endif /* #ifdef USE_GSSAPI */
-
-
 BEGINmodInit(Fwd)
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
-#	ifdef USE_GSSAPI
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssforwardservicename", 0, eCmdHdlrGetWord, NULL, &gss_base_service_name, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssmode", 0, eCmdHdlrGetWord, setGSSMode, &gss_mode, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
-#	endif
 ENDmodInit
 
 #endif /* #ifdef SYSLOG_INET */

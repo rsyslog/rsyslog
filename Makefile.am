@@ -83,6 +83,11 @@ EXTRA_DIST = \
 
 SUBDIRS = doc
 
+
+if ENABLE_GSSAPI
+SUBDIRS += plugins/omgssapi
+endif
+
 if ENABLE_MYSQL
 SUBDIRS += plugins/ommysql
 endif

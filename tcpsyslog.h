@@ -73,6 +73,12 @@ void TCPSessGSSClose(int sess);
 void TCPSessGSSDeinit(void);
 #endif
 
+/* TCP Send support (shall go into its own module later) */
+int TCPSendCreateSocket(struct addrinfo *addrDest);
+int TCPSend(void *pData, char *msg, size_t len, TCPFRAMINGMODE rqdFraming,
+	    rsRetVal (*initFunc)(void*),
+	    rsRetVal (*sendFunc)(void*, char*, size_t),
+	    rsRetVal (*prepRetryFunc)(void*));
 #endif /* #ifndef TCPSYSLOG_H_INCLUDED */
 /*
  * vi:set ai:
