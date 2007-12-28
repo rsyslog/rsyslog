@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 1.21.2 (rgerhards), 2007-12-29
+Version 1.21.2 (rgerhards), 2007-12-28
 - created a gss-api output module. This keeps GSS-API code and
   TCP/UDP code separated. It is also important for forward-
   compatibility with v3. Please note that this change breaks compatibility
