@@ -89,6 +89,10 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ADDRESS_UNKNOWN = -2020, /**< an address is unknown - not necessarily an error */
 	RS_RET_MALICIOUS_ENTITY = -2021, /**< there is an malicious entity involved */
 	RS_RET_NO_KERNEL_LOGSRC = -2022, /**< no source for kernel logs can be obtained */
+	RS_RET_TCP_SEND_ERROR = -2023, /**< error during TCP send process */
+	RS_RET_GSS_SEND_ERROR = -2024, /**< error during GSS (via TCP) send process */
+	RS_RET_TCP_SOCKCREATE_ERR = -2025, /**< error during creation of TCP socket */
+	RS_RET_GSS_SENDINIT_ERROR = -2024, /**< error during GSS (via TCP) send initialization process */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */

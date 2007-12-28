@@ -144,27 +144,27 @@ static char *getFwdSyslogPt(instanceData *pData)
 
 
 /* Build frame based on selected framing */
-static rsRetVal TCPSendBldFrame(instanceData *pData, char **pmsg, size_t *plen, int *pbMustBeFreed, int *pbIsCompressed)
+static rsRetVal TCPSendBldFrame(instanceData *pData, char **pmsg, size_t *plen, int *pbMustBeFreed)
 {
 	DEFiRet;
 	TCPFRAMINGMODE framingToUse;
+	int bIsCompressed;
 	size_t len;
 	char *msg;
 	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
 
 	assert(plen != NULL);
-	assert(pbIsCompressed != NULL);
 	assert(pbMustBeFreed != NULL);
 	assert(pmsg != NULL);
 
 	msg = *pmsg;
 	len = *plen;
-	*pbIsCompressed = *msg == 'z';	/* cache this, so that we can modify the message buffer */
+	bIsCompressed = *msg == 'z';	/* cache this, so that we can modify the message buffer */
 	/* select framing for this record. If we have a compressed record, we always need to
 	 * use octet counting because the data potentially contains all control characters
 	 * including LF.
 	 */
-	framingToUse = *pbIsCompressed ? TCP_FRAMING_OCTET_COUNTING : pData->tcp_framing;
+	framingToUse = bIsCompressed ? TCP_FRAMING_OCTET_COUNTING : pData->tcp_framing;
 
 	/* now check if we need to add a line terminator. We need to
 	 * copy the string in memory in this case, this is probably
@@ -445,8 +445,20 @@ static int TCPSendCreateSocket(instanceData *pData, struct addrinfo *addrDest)
 
 
 #ifdef USE_GSSAPI
-static int TCPSendGSSInit(instanceData *pData)
+/* This function is called immediately before a send retry is attempted.
+ * It shall clean up whatever makes sense.
+ * rgerhards, 2007-12-28
+ */
+static rsRetVal TCPSendGSSPrepRetry(instanceData __attribute__((unused)) *pData)
 {
+	/* in case of TCP/GSS, there is nothing to do */
+	return RS_RET_OK;
+}
+
+
+static rsRetVal TCPSendGSSInit(instanceData *pData)
+{
+	DEFiRet;
 	int s = -1;
 	char *base;
 	OM_uint32 maj_stat, min_stat, init_sec_min_stat, *sess_flags, ret_flags;
@@ -459,8 +471,9 @@ static int TCPSendGSSInit(instanceData *pData)
 
 	base = (gss_base_service_name == NULL) ? "host" : gss_base_service_name;
 	out_tok.length = strlen(pData->f_hname) + strlen(base) + 2;
-	if ((out_tok.value = malloc(out_tok.length)) == NULL)
-		return -1;
+	if ((out_tok.value = malloc(out_tok.length)) == NULL) {
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 	strcpy(out_tok.value, base);
 	strcat(out_tok.value, "@");
 	strcat(out_tok.value, pData->f_hname);
@@ -532,7 +545,8 @@ static int TCPSendGSSInit(instanceData *pData)
 	dbgprintf("GSS-API Context initialized\n");
 	gss_release_name(&min_stat, &target_name);
 
-	return 0;
+finalize_it:
+	return iRet;
 
  fail:
 	logerror("GSS-API Context initialization failed\n");
@@ -545,11 +559,11 @@ static int TCPSendGSSInit(instanceData *pData)
 	if (s != -1)
 		close(s);
 	pData->sock = -1;
-	return -1;
+	return RS_RET_GSS_SENDINIT_ERROR;
 }
 
 
-static int TCPSendGSSSend(instanceData *pData, char *msg, size_t len)
+static rsRetVal TCPSendGSSSend(instanceData *pData, char *msg, size_t len)
 {
 	int s;
 	gss_ctx_id_t *context;
@@ -576,7 +590,7 @@ static int TCPSendGSSSend(instanceData *pData, char *msg, size_t len)
 	}
 	gss_release_buffer(&min_stat, &out_buf);
 
-	return 0;
+	return RS_RET_OK;
 
  fail:
 	close(s);
@@ -584,9 +598,75 @@ static int TCPSendGSSSend(instanceData *pData, char *msg, size_t len)
 	gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
 	*context = GSS_C_NO_CONTEXT;
 	gss_release_buffer(&min_stat, &out_buf);
-	return -1;
+	dbgprintf("message not (GSS/tcp)send");
+	return RS_RET_GSS_SEND_ERROR;
 }
 #endif /* #ifdef USE_GSSAPI */
+
+
+/* Send a frame via plain TCP protocol
+ * rgerhards, 2007-12-28
+ */
+static rsRetVal TCPSendFrame(instanceData *pData, char *msg, size_t len)
+{
+	DEFiRet;
+	ssize_t lenSend;
+
+	lenSend = send(pData->sock, msg, len, 0);
+	dbgprintf("TCP sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
+
+	if(lenSend == -1) {
+		/* we have an error case - check what we can live with */
+		switch(errno) {
+		case EMSGSIZE:
+			dbgprintf("message not (tcp)send, too large\n");
+			/* This is not a real error, so it is not flagged as one */
+			break;
+		default:
+			dbgprintf("message not (tcp)send");
+			iRet = RS_RET_TCP_SEND_ERROR;
+			break;
+		}
+	} else if(lenSend != (ssize_t) len) {
+		/* no real error, could "just" not send everything... 
+		 * For the time being, we ignore this...
+		 * rgerhards, 2005-10-25
+		 */
+		dbgprintf("message not completely (tcp)send, ignoring %ld\n", lenSend);
+		usleep(1000); /* experimental - might be benefitial in this situation */
+		/* TODO: we need to revisit this code -- rgerhards, 2007-12-28 */
+	}
+
+	return iRet;
+}
+
+
+/* This function is called immediately before a send retry is attempted.
+ * It shall clean up whatever makes sense.
+ * rgerhards, 2007-12-28
+ */
+static rsRetVal TCPSendPrepRetry(instanceData *pData)
+{
+	assert(pData != NULL);
+	close(pData->sock);
+	pData->sock = -1;
+	return RS_RET_OK;
+}
+
+
+/* initialies everything so that TCPSend can work.
+ * rgerhards, 2007-12-28
+ */
+static rsRetVal TCPSendInit(instanceData *pData)
+{
+	DEFiRet;
+
+	assert(pData != NULL);
+	if((pData->sock = TCPSendCreateSocket(pData, pData->f_addr)) <= 0)
+		iRet = RS_RET_TCP_SOCKCREATE_ERR;
+
+	return iRet;
+}
 
 
 /* Sends a TCP message. It is first checked if the
@@ -623,109 +703,43 @@ static int TCPSendGSSSend(instanceData *pData, char *msg, size_t len)
  * octet-counting, only this framing mode is used within the session.
  * rgerhards, 2006-12-07
  */
-static int TCPSend(instanceData *pData, char *msg, size_t len)
+static int TCPSend(instanceData *pData, char *msg, size_t len,
+		   rsRetVal (*initFunc)(instanceData*),
+		   rsRetVal (*sendFunc)(instanceData*, char*, size_t),
+		   rsRetVal (*prepRetryFunc)(instanceData*))
 {
 	DEFiRet;
+	int bDone = 0;
 	int retry = 0;
-	int bIsCompressed;
-	int lenSend;
 	int bMsgMustBeFreed = 0;/* must msg be freed at end of function? 0 - no, 1 - yes */
 
 	assert(pData != NULL);
 	assert(msg != NULL);
 	assert(len > 0);
 
-	iRet = TCPSendBldFrame(pData, &msg, &len, &bMsgMustBeFreed, &bIsCompressed);
-	if(iRet != RS_RET_OK)
-		return -1;	/* TODO: change this code */
+	CHKiRet(TCPSendBldFrame(pData, &msg, &len, &bMsgMustBeFreed));
 
-	while(1) { /* loop is broken when send succeeds or error occurs */
+	while(!bDone) { /* loop is broken when send succeeds or error occurs */
 		if(pData->sock <= 0) {
 			/* we need to open the socket first */
-#			ifdef USE_GSSAPI
-			if(gss_mode != GSSMODE_NONE) {
-				if(TCPSendGSSInit(pData) != 0)
-					return -1;
-			} else
-#			endif
-				if((pData->sock = TCPSendCreateSocket(pData, pData->f_addr)) <= 0)
-					return -1;
+			CHKiRet(initFunc(pData));
 		}
 			
-#		ifdef USE_GSSAPI
-		if(gss_mode != GSSMODE_NONE) {
-			if(TCPSendGSSSend(pData, msg, len) == 0) {
-				if(bMsgMustBeFreed) {
-					free(msg);
-				}
-				return 0;
-			} else {
-				if(retry == 0) {
-					++retry;
-					/* try to recover */
-					continue;
-				} else {
-					if(bMsgMustBeFreed)
-						free(msg);
-					dbgprintf("message not (tcp)send");
-					return -1;
-				}
-			}
-		} else {
-#		endif
-			lenSend = send(pData->sock, msg, len, 0);
-			dbgprintf("TCP sent %d bytes, requested %ld, msg: '%s'\n", lenSend, (long) len,
-				  bIsCompressed ? "***compressed***" : msg);
-			if((unsigned)lenSend == len) {
-				/* all well */
-				if(bMsgMustBeFreed) {
-					free(msg);
-				}
-				return 0;
-			} else if(lenSend != -1) {
-				/* no real error, could "just" not send everything... 
-				 * For the time being, we ignore this...
-				 * rgerhards, 2005-10-25
-				 */
-				dbgprintf("message not completely (tcp)send, ignoring %d\n", lenSend);
-				usleep(1000); /* experimental - might be benefitial in this situation */
-				if(bMsgMustBeFreed)
-					free(msg);
-				return 0;
-			}
+		iRet = sendFunc(pData, msg, len);
 
-			switch(errno) {
-			case EMSGSIZE:
-				dbgprintf("message not (tcp)send, too large\n");
-				/* This is not a real error, so it is not flagged as one */
-				if(bMsgMustBeFreed)
-					free(msg);
-				return 0;
-				break;
-			default:
-				dbgprintf("message not (tcp)send");
-				break;
-			}
-	
-			if(retry == 0) {
-				++retry;
-				/* try to recover */
-				close(pData->sock);
-				pData->sock = -1;
-			} else {
-				if(bMsgMustBeFreed)
-					free(msg);
-				return -1;
-			}
-#		ifdef USE_GSSAPI
+		if(iRet == RS_RET_OK || retry > 0) {
+			/* we are done - either we succeeded or the retry failed */
+			bDone = 1;
+		} else { /* OK, one retry */
+			++retry;
+			CHKiRet(prepRetryFunc(pData)); /* try to recover */
 		}
-#		endif
 	}
-	/*NOT REACHED*/
 
+finalize_it:
 	if(bMsgMustBeFreed)
 		free(msg);
-	return -1; /* only to avoid compiler warning! */
+	return iRet;
 }
 
 
@@ -871,7 +885,14 @@ dbgprintf("UDP send socket not yet initialized, doing it now\n");
 				CHKiRet(UDPSend(pData, psz, l));
 			} else {
 				/* forward via TCP */
-				if(TCPSend(pData, psz, l) != 0) {
+				int ret;
+#				ifdef USE_GSSAPI
+				if(gss_mode != GSSMODE_NONE) {
+					ret = TCPSend(pData, psz, l, TCPSendGSSInit, TCPSendGSSSend, TCPSendGSSPrepRetry);
+				} else
+#				endif
+					ret = TCPSend(pData, psz, l, TCPSendInit, TCPSendFrame, TCPSendPrepRetry);
+				if(ret != 0) {
 					/* error! */
 					dbgprintf("error forwarding via tcp, suspending\n");
 					pData->eDestState = eDestFORW_SUSP;
