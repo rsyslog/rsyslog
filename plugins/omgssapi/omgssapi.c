@@ -89,9 +89,6 @@ typedef struct _instanceData {
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
 	TCPFRAMINGMODE tcp_framing;
-#	define	FORW_UDP 0
-#	define	FORW_TCP 1
-	/* following fields for TCP-based delivery */
 	time_t	ttSuspend;	/* time selector was suspended */
 	gss_ctx_id_t gss_context;
 	OM_uint32 gss_flags;
@@ -623,7 +620,7 @@ ENDparseSelectorAct
 
 BEGINneedUDPSocket
 CODESTARTneedUDPSocket
-	iRet = RS_RET_TRUE;
+	iRet = RS_RET_FALSE;
 ENDneedUDPSocket
 
 

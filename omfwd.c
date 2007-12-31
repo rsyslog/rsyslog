@@ -417,7 +417,7 @@ CODESTARTdoAction
 				CHKiRet(UDPSend(pData, psz, l));
 			} else {
 				/* forward via TCP */
-				int ret;
+				rsRetVal ret;
 				ret = TCPSend(pData, psz, l, pData->tcp_framing, TCPSendInit, TCPSendFrame, TCPSendPrepRetry);
 				if(ret != RS_RET_OK) {
 					/* error! */

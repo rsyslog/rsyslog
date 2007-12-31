@@ -98,7 +98,7 @@ BEGINdbgPrintInstInfo
 	register int i;
 CODESTARTdbgPrintInstInfo
 	for (i = 0; i < MAXUNAMES && *pData->uname[i]; i++)
-		printf("%s, ", pData->uname[i]);
+		dbgprintf("%s, ", pData->uname[i]);
 ENDdbgPrintInstInfo
 
 
