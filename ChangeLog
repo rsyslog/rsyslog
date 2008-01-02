@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 2.0.0 STABLE (rgerhards), 2008-01-02
+- re-release of 1.21.2 as STABLE with no modifications except some
+  doc updates
+---------------------------------------------------------------------------
 Version 1.21.2 (rgerhards), 2007-12-28
 - created a gss-api output module. This keeps GSS-API code and
   TCP/UDP code separated. It is also important for forward-
