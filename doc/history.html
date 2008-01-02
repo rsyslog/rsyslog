@@ -90,12 +90,21 @@ extremely hard to find segfault bug. It happens on very rare occasions only and
 never in lab. We are hunting this bug for month now, but still could not get 
 hold of it. Unfortunately, this also affects the new features schedule. It makes 
 limited sense to implement new features if problems with existing ones are not 
-really understood.<p><b>December 2008</b> showed the appearance of a postgres 
+really understood.<p><b>December 2007</b> showed the appearance of a postgres 
 output module, contributed by sur5r. With 1.20.0, December is also the first 
-time since the bughunt that we introduce other new features. It has been deciced 
+time since the bug hunt that we introduce other new features. It has been decided 
 that we carefully will add features in order to not affect the overall project 
-by these rare bugs. Still, the bughunt is top priortiy, but we need to have more 
-data to analyse.<p>Be sure to visit Rainer's <a href="http://rgerhards.blogspot.com/">syslog blog</a>
+by these rare bugs. Still, the bug hunt is top priority, but we need to have more 
+data to analyze. At then end of December, it looked like the bug was found (a 
+race condition), but further confirmation from the field is required before 
+declaring victory. December also brings the initial development on <b>rsyslog v3</b>, 
+resulting in loadable input modules, now running on a separate thread each.<p>On
+<b>January, 2nd 2008</b>, rsyslog 1.21.2 is re-released as rsyslog v2.0.0 
+stable. This is a major milestone as far as the stable build is concerned. v3 is 
+not yet officially announced. Other than the stable v2 build, v3 will not be 
+backwards compatibile (including missing compatibility to stock sysklogd) for 
+quite a while. Config file changes are required and some command line options do 
+no longer work due to the new design.<p>Be sure to visit Rainer's <a href="http://rgerhards.blogspot.com/">syslog blog</a>
 to get some more insight into the development and futures of rsyslog and syslog in general. 
 Don't be shy to post to either the blog or the
 <a href="http://www.rsyslog.com/PNphpBB2.phtml">rsyslog forums</a>.</p>

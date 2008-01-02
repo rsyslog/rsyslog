@@ -1,54 +1,124 @@
 <html>
+
 <head>
+
 <title>rsyslog documentation</title>
+
 </head>
+
 <body>
+
 <h1>RSyslog - Documentation</h1>
+
 <p><b><a href="http://www.rsyslog.com/">Rsyslog</a> is an enhanced syslogd
-supporting, among others, <a href="rsyslog_mysql.html">MySQL</a>, PostgreSQL, <a href="http://wiki.rsyslog.com/index.php/FailoverSyslogServer">failover log destinations</a>, syslog/tcp, 
+
+supporting, among others, <a href="rsyslog_mysql.html">MySQL</a>, 
+PostgreSQL, 
+<a href="http://wiki.rsyslog.com/index.php/FailoverSyslogServer">failover log 
+destinations</a>, syslog/tcp, 
+
 fine grain output format control, and the ability to filter on any message part.</b>
+
 It is quite compatible to stock 
+
 sysklogd and can be used as a drop-in replacement. Its <a href="features.html">
+
 advanced features</a> make it suitable for enterprise-class, 
+
 <a href="rsyslog_stunnel.html">encryption protected syslog</a>
+
 relay chains while at the same time being very easy to setup 
+
 for the novice user.</p>
+
 <p><b>Visit the <i> <a href="status.html">rsyslog status page</a></i></b> to obtain current
+
 version information and ports. <b>If you like rsyslog, you might want to lend us 
+
 a helping hand. </b>It doesn't require a lot of time - even a single mouse click 
+
 helps. Learn <a href="how2help.html">how to help the rsyslog project</a>.</p>
+
 <p><b>Follow the links below for the</b></p>
+
 <ul>
+
 <li><a href="man_rsyslogd.html">rsyslogd man page</a>
-<li><a href="rsyslog_conf.html">configuration file syntax (rsyslog.conf)</a><li><a href="property_replacer.html">property replacer, an important core component</a><li>a commented <a href="sample.conf.html">sample rsyslog.conf</a>
-<li><a href="bugs.html">rsyslog bug list</a><li><a href="rsyslog_packages.html">rsyslog packages</a><li><a href="generic_design.html">backgrounder on generic syslog application design</a><li><a href="contributors.html">contributor &quot;Hall of Fame&quot;</a><li><a href="modules.html">description of rsyslog modules</a></ul>
+
+<li><a href="rsyslog_conf.html">configuration file syntax (rsyslog.conf)</a><li>
+<a href="property_replacer.html">property replacer, an important core component</a><li>a commented <a href="sample.conf.html">sample rsyslog.conf</a>
+
+<li><a href="bugs.html">rsyslog bug list</a><li><a href="rsyslog_packages.html">
+rsyslog packages</a><li><a href="generic_design.html">backgrounder on generic 
+syslog application design</a><!-- re-enable when updated <li><a href="contributors.html">contributor &quot;Hall 
+of Fame&quot;</a> --><li><a href="modules.html">description of rsyslog modules</a></ul>
+
 <p><b>We have some in-depth papers on</b></p>
+
 <ul>
-	<li><a href="install.html">installing rsyslog</a></li>	<li><a href="ipv6.html">rsyslog and IPv6</a> (which is fully supported)</li>
+
+	<li><a href="install.html">installing rsyslog</a></li>
+	<li><a href="ipv6.html">rsyslog and IPv6</a> (which is fully supported)</li>
+
 	<li><a href="rsyslog_stunnel.html">ssl-encrypting syslog with stunnel</a></li>
+
 	<li><a href="rsyslog_mysql.html">writing syslog messages to MySQL</a></li>
-	<li><a href="rsyslog_php_syslog_ng.html">using php-syslog-ng with rsyslog</a></li>	<li><a href="rsyslog_recording_pri.html">recording the syslog priority 	(severity and facility) to the log file</a></li>	<li><a href="http://www.rsyslog.com/Article19.phtml">preserving syslog 	sender over NAT</a> (online only)</li>
+
+	<li><a href="rsyslog_php_syslog_ng.html">using php-syslog-ng with rsyslog</a></li>
+	<li><a href="rsyslog_recording_pri.html">recording the syslog priority 
+	(severity and facility) to the log file</a></li>
+	<li><a href="http://www.rsyslog.com/Article19.phtml">preserving syslog 
+	sender over NAT</a> (online only)</li>
+
 </ul>
+
 <p>Also, there is an article from Dennis Olvany on 
+
 <a href="rsyslog084-freebsd5.4.txt">Syslog-to-SQL with rsyslog-0.8.4 on FreeBSD 5.4</a> 
+
 (which unfortunately is a bit outdated now).</p>
+
 <p>Our <a href="history.html">rsyslog history</a> page is for you if you would like to learn a little more
-on why there is an rsyslog at all. If you are interested why you should care about rsyslog at all, you may want to read Rainer's essay on &quot;<a href="http://rgerhards.blogspot.com/2007/08/why-does-world-need-another-syslogd.html">why the world needs another syslogd</a>&quot;.</p>
+
+on why there is an rsyslog at all. If you are interested why you should care 
+about rsyslog at all, you may want to read Rainer's essay on &quot;<a href="http://rgerhards.blogspot.com/2007/08/why-does-world-need-another-syslogd.html">why 
+the world needs another syslogd</a>&quot;.</p>
+
 <p>Documentation is added continuously. Please note that the documentation here
+
 matches only the current version of rsyslog. If you use an older version, be sure
+
 to use the doc that came with it.</p>
+
 <p><b>You can also browse the following online resources:</b></p>
+
 <ul>
-<li>the <a href="http://wiki.rsyslog.com/">rsyslog wiki</a>, a community resource</li>
+
+<li>the <a href="http://wiki.rsyslog.com/">rsyslog wiki</a>, a community 
+resource</li>
+
 <li><a href="http://www.rsyslog.com/module-Static_Docs-view-f-manual.html.phtml">rsyslog online documentation</a></li>
+
 <li><a href="http://www.rsyslog.com/Topic3.phtml">rsyslog FAQ</a></li>
+
 <li><a href="http://www.rsyslog.com/PNphpBB2.phtml">rsyslog discussion forum</a></li>
+
 <li><a href="http://www.rsyslog.com/Topic4.phtml">rsyslog change log</a></li>
+
 <li><a href="http://www.monitorware.com/en/syslog-enabled-products/">syslog device configuration guide</a> (off-site)</li>
+
 </ul>
+
 <p>And don't forget about the <a href="http://lists.adiscon.net/mailman/listinfo/rsyslog">rsyslog mailing list</a>. 
+
 If you are interested in the &quot;backstage&quot;, you may find
+
 <a href="http://www.gerhards.net/rainer">Rainer</a>'s
-<a href="http://rgerhards.blogspot.com/">blog</a> an interesting read (filter on syslog and rsyslog tags).</p>
+
+<a href="http://rgerhards.blogspot.com/">blog</a> an interesting read (filter on 
+syslog and rsyslog tags).</p>
+
 </body>
+
 </html>
+

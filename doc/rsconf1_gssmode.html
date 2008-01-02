@@ -5,13 +5,12 @@
 <body>
 <h2>$GssMode</h2>
 <p><b>Type:</b> global configuration directive</p>
-<p><b>Default:</b> none</p>
+<p><b>Default:</b> encryption</p>
+<p><b>Provided by:</b> <i>omgssapi</i></p>
 <p><b>Description:</b></p>
-<p>Specifies GSS-API mode to use, which can be "none" - GSS-API
- is disabled, "integrity" - clients are authenticated and
- messages are checked for integrity, "encryption" - same as
- "integrity", but messages are also encrypted if both sides support it.
-<p><b>Sample:</b></p>
+<p>Specifies GSS-API mode to use, which can be "<b>integrity</b>" - clients are authenticated and
+ messages are checked for integrity, "<b>encryption</b>" - same as
+ "integrity", but messages are also encrypted if both sides support it.<p><b>Sample:</b></p>
 <p><code><b>$GssMode Encryption</b></code></p>
 
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
