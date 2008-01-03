@@ -528,7 +528,6 @@ static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Faci
 /* up to the next comment, prototypes that should be removed by reordering */
 /* Function prototypes. */
 static char **crunch_list(char *list);
-static void printline(char *hname, char *msg, int iSource);
 static rsRetVal fprintlog(action_t *pAction);
 static void reapchild();
 static void debug_switch();
@@ -1229,6 +1228,77 @@ void untty(void)
 #endif
 
 
+/* Take a raw input line, decode the message, and print the message
+ * on the appropriate log files.
+ * rgerhards 2004-11-08: Please note
+ * that this function does only a partial decoding. At best, it splits 
+ * the PRI part. No further decode happens. The rest is done in 
+ * logmsg().
+ * Added the iSource parameter so that we know if we have to parse
+ * HOSTNAME or not. rgerhards 2004-11-16.
+ * changed parameter iSource to bParseHost. For details, see comment in
+ * printchopped(). rgerhards 2005-10-06
+ */
+void printline(char *hname, char *msg, int bParseHost)
+{
+	register char *p;
+	int pri;
+	msg_t *pMsg;
+
+	/* Now it is time to create the message object (rgerhards)
+	*/
+	if((pMsg = MsgConstruct()) == NULL){
+		/* rgerhards, 2007-06-21: if we can not get memory, we discard this
+		 * message but continue to run (in the hope that things improve)
+		 */
+		glblHadMemShortage = 1;
+		dbgprintf("Memory shortage in printline(): Could not construct Msg object.\n");
+		return;
+	}
+	MsgSetRawMsg(pMsg, msg);
+	
+	pMsg->bParseHOSTNAME  = bParseHost;
+	/* test for special codes */
+	pri = DEFUPRI;
+	p = msg;
+	if (*p == '<') {
+		pri = 0;
+		while (isdigit((int) *++p))
+		{
+		   pri = 10 * pri + (*p - '0');
+		}
+		if (*p == '>')
+			++p;
+	}
+	if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
+		pri = DEFUPRI;
+	pMsg->iFacility = LOG_FAC(pri);
+	pMsg->iSeverity = LOG_PRI(pri);
+
+	/* Now we look at the HOSTNAME. That is a bit complicated...
+	 * If we have a locally received message, it does NOT
+	 * contain any hostname information in the message itself.
+	 * As such, the HOSTNAME is the same as the system that
+	 * the message was received from (that, for obvious reasons,
+	 * being the local host).  rgerhards 2004-11-16
+	 */
+	if(bParseHost == 0)
+		MsgSetHOSTNAME(pMsg, hname);
+	MsgSetRcvFrom(pMsg, hname);
+
+	/* rgerhards 2004-11-19: well, well... we've now seen that we
+	 * have the "hostname problem" also with the traditional Unix
+	 * message. As we like to emulate it, we need to add the hostname
+	 * to it.
+	 */
+	if(MsgSetUxTradMsg(pMsg, p) != 0) return;
+
+	logmsg(pri, pMsg, SYNC_FILE);
+
+	return;
+}
+
+
 /* rgerhards, 2006-11-30: I have greatly changed this function. Formerly,
  * it tried to reassemble multi-part messages, which is a legacy stock
  * sysklogd concept. In essence, that was that messages not ending with
@@ -1402,76 +1472,6 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 
 	/* typically, we should end up here! */
 	printline(hname, tmpline, bParseHost);
-
-	return;
-}
-
-/* Take a raw input line, decode the message, and print the message
- * on the appropriate log files.
- * rgerhards 2004-11-08: Please note
- * that this function does only a partial decoding. At best, it splits 
- * the PRI part. No further decode happens. The rest is done in 
- * logmsg().
- * Added the iSource parameter so that we know if we have to parse
- * HOSTNAME or not. rgerhards 2004-11-16.
- * changed parameter iSource to bParseHost. For details, see comment in
- * printchopped(). rgerhards 2005-10-06
- */
-void printline(char *hname, char *msg, int bParseHost)
-{
-	register char *p;
-	int pri;
-	msg_t *pMsg;
-
-	/* Now it is time to create the message object (rgerhards)
-	*/
-	if((pMsg = MsgConstruct()) == NULL){
-		/* rgerhards, 2007-06-21: if we can not get memory, we discard this
-		 * message but continue to run (in the hope that things improve)
-		 */
-		glblHadMemShortage = 1;
-		dbgprintf("Memory shortage in printline(): Could not construct Msg object.\n");
-		return;
-	}
-	MsgSetRawMsg(pMsg, msg);
-	
-	pMsg->bParseHOSTNAME  = bParseHost;
-	/* test for special codes */
-	pri = DEFUPRI;
-	p = msg;
-	if (*p == '<') {
-		pri = 0;
-		while (isdigit((int) *++p))
-		{
-		   pri = 10 * pri + (*p - '0');
-		}
-		if (*p == '>')
-			++p;
-	}
-	if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
-		pri = DEFUPRI;
-	pMsg->iFacility = LOG_FAC(pri);
-	pMsg->iSeverity = LOG_PRI(pri);
-
-	/* Now we look at the HOSTNAME. That is a bit complicated...
-	 * If we have a locally received message, it does NOT
-	 * contain any hostname information in the message itself.
-	 * As such, the HOSTNAME is the same as the system that
-	 * the message was received from (that, for obvious reasons,
-	 * being the local host).  rgerhards 2004-11-16
-	 */
-	if(bParseHost == 0)
-		MsgSetHOSTNAME(pMsg, hname);
-	MsgSetRcvFrom(pMsg, hname);
-
-	/* rgerhards 2004-11-19: well, well... we've now seen that we
-	 * have the "hostname problem" also with the traditional Unix
-	 * message. As we like to emulate it, we need to add the hostname
-	 * to it.
-	 */
-	if(MsgSetUxTradMsg(pMsg, p) != 0) return;
-
-	logmsg(pri, pMsg, SYNC_FILE);
 
 	return;
 }
@@ -1799,7 +1799,6 @@ finalize_it:
 /* Process (consume) a received message. Calls the actions configured.
  * Can some time later run in its own thread. To aid this, the calling
  * parameters should be reduced to just pMsg.
- * See comment dated 2005-10-13 in logmsg() on multithreading.
  * rgerhards, 2005-10-13
  */
 static void processMsg(msg_t *pMsg)
@@ -1858,34 +1857,6 @@ msgConsumer(void *pUsr)
 	MsgDestruct(pMsg);
 
 	return RS_RET_OK;
-}
-
-
-/* This method enqueues a message into the the message buffer. It also
- * the worker thread, so that the message will be processed.
- * See comment dated 2005-10-13 in logmsg() on multithreading.
- * rgerhards, 2005-10-24
- */
-static void enqueueMsg(msg_t *pMsg)
-{
-	DEFiRet;
-
-	assert(pMsg != NULL);
-
-	if(Initialized == 0) {
-		/* queue is not yet initialized, happens e.g.
-		 * during startup and restart. rgerhards, 2005-10-25
-		 * TODO: check if that really still can happen! rgerhards, 2008-01-03
-		 */
-		 dbgprintf("enqueueMsg: not yet running on multiple threads\n");
-		 processMsg(pMsg);
-	} else {
-		/* "normal" mode, queue initialized */
-		CHKiRet_Hdlr(queueEnqObj(pMsgQueue, (void*) pMsg)) {
-			/* if we have an error return, the pMsg was not destructed */
-			MsgDestruct(pMsg);
-		}
-	}
 }
 
 
@@ -2283,6 +2254,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 void
 logmsg(int pri, msg_t *pMsg, int flags)
 {
+	DEFiRet;
 	char *msg;
 	char PRItext[20];
 
@@ -2353,7 +2325,10 @@ logmsg(int pri, msg_t *pMsg, int flags)
 	 */
 	
 	pMsg->msgFlags = flags;
-	enqueueMsg(pMsg);
+	CHKiRet_Hdlr(queueEnqObj(pMsgQueue, (void*) pMsg)) {
+		/* if we have an error return, the pMsg was not destructed */
+		MsgDestruct(pMsg);
+	}
 }
 
 
