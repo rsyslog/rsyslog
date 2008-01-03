@@ -26,14 +26,20 @@
 
 /* queue types */
 typedef enum {
-	QUEUETYPE_FIXED_ARRAY,	/* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
-	QUEUETYPE_LINKEDLIST,	/* linked list used as buffer, lower fixed memory overhead but slower */
+	QUEUETYPE_FIXED_ARRAY,/* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
+	QUEUETYPE_LINKEDLIST,/* linked list used as buffer, lower fixed memory overhead but slower */
 } queueType_t;
 
 /* the queue object */
-typedef struct {
+typedef struct queue_s {
 	queueType_t	qType;
 	int	iMaxQueueSize;	/* how large can the queue grow? */
+	/* type-specific handlers (set during construction) */
+	rsRetVal (*qConstruct)(struct queue_s *pThis);
+	rsRetVal (*qDestruct)(struct queue_s *pThis);
+	rsRetVal (*qAdd)(struct queue_s *pThis, void *pUsr);
+	rsRetVal (*qDel)(struct queue_s *pThis, void **ppUsr);
+	/* end type-specific handler */
 	/* synchronization variables */
 	pthread_mutex_t *mut;
 	pthread_cond_t *notFull, *notEmpty;
