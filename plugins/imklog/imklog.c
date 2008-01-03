@@ -285,7 +285,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 	if ( (kmsg = open(_PATH_KLOG, O_RDONLY)) < 0 )
 	{
 		char sz[512];
-		snprintf(sz, sizeof(sz), "rklogd: Cannot open proc file system, %d - %s.\n", errno, strerror(errno));
+		snprintf(sz, sizeof(sz), "imklog: Cannot open proc file system, %d - %s.\n", errno, strerror(errno));
 		logmsgInternal(LOG_SYSLOG|LOG_ERR, sz, ADDDATE);
 		ksyslog(7, NULL, 0); /* TODO: check this, implement more */
 		return(none);
@@ -568,7 +568,7 @@ static void LogKernelLine(void)
 		char sz[512];
 		if(errno == EINTR)
 			return;
-		snprintf(sz, sizeof(sz), "rklogd: Error return from sys_sycall: %d - %s\n", errno, strerror(errno));
+		snprintf(sz, sizeof(sz), "imklog: Error return from sys_sycall: %d - %s\n", errno, strerror(errno));
 		logmsgInternal(LOG_SYSLOG|LOG_ERR, sz, ADDDATE);
 	}
 	else
