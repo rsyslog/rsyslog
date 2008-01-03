@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.0.0 (rgerhards), 2007-12-??
+Version 3.10.0 (rgerhards), 2008-01-??
 - added ability to specify listen IP address for UDP syslog server
 - added ability to run multiple UDP listeners concurrently
 - license changed to GPLv3
@@ -11,6 +11,39 @@ Version 3.0.0 (rgerhards), 2007-12-??
   up and down at the appropriate times
 - enhanced $IncludeConfig directive to support wildcard characters
   (thanks to Michael Biebl)
+- all inputs are now implemented as loadable plugins
+- enhanced threading model: each input module now runs on its own thread
+- enhanced message queue which now supports different queueing methods
+- added a large number of new configuration directives for the new
+  input modules
+- ability to bind UDP listeners to specific local interfaces/ports and
+  ability to run multiple of them concurrently
+---------------------------------------------------------------------------
+Version 2.0.0 STABLE (rgerhards), 2008-01-02
+- re-release of 1.21.2 as STABLE with no modifications except some
+  doc updates
+---------------------------------------------------------------------------
+Version 1.21.2 (rgerhards), 2007-12-28
+- created a gss-api output module. This keeps GSS-API code and
+  TCP/UDP code separated. It is also important for forward-
+  compatibility with v3. Please note that this change breaks compatibility
+  with config files created for 1.21.0 and 1.21.1 - this was considered
+  acceptable.
+- fixed an error in forwarding retry code (could lead to message corruption
+  but surfaced very seldom)
+- increased portability for older platforms (AI_NUMERICSERV moved)
+- removed socket leak in omfwd.c
+- cross-platform patch for GSS-API compile problem on some platforms
+  thanks to darix for the patch!
+---------------------------------------------------------------------------
+Version 1.21.1 (rgerhards), 2007-12-23
+- small doc fix for $IncludeConfig
+- fixed a bug in llDestroy()
+- bugfix: fixing memory leak when message queue is full and during
+  parsing. Thanks to varmojfekoj for the patch.
+- bugfix: when compiled without network support, unix sockets were
+  not properply closed
+- bugfix: memory leak in cfsysline.c/doGetWord() fixed
 ---------------------------------------------------------------------------
 Version 1.21.0 (rgerhards), 2007-12-19
 - GSS-API support for syslog/TCP connections was added. Thanks to
