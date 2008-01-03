@@ -34,50 +34,72 @@
 #include "queue.h"
 
 /* static data */
-int iMainMsgQueueSize;
-msgQueue *pMsgQueue = NULL;
 
 /* methods */
 
-/* queue functions (may be migrated to some other file...)
- */
-
-
-msgQueue *queueInit (void)
+/* Constructor for the queue object */
+rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize)
 {
-	msgQueue *q;
+	DEFiRet;
+	queue_t *pThis;
 
-	q = (msgQueue *)malloc(sizeof(msgQueue));
-	if (q == NULL) return (NULL);
-	if((q->pbuf = malloc(sizeof(void *) * iMainMsgQueueSize)) == NULL) {
-		free(q);
-		return NULL;
+	assert(ppThis != NULL);
+dbgprintf("queueConstruct in \n");
+
+	if((pThis = (queue_t *)malloc(sizeof(queue_t))) == NULL) {
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
-	q->empty = 1;
-	q->full = 0;
-	q->head = 0;
-	q->tail = 0;
-	q->mut = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
-	pthread_mutex_init (q->mut, NULL);
-	q->notFull = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
-	pthread_cond_init (q->notFull, NULL);
-	q->notEmpty = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
-	pthread_cond_init (q->notEmpty, NULL);
+	/* we have an object, so let's fill the properties */
+	pThis->iMaxQueueSize = iMaxQueueSize;
+	pThis->empty = 1;
+	pThis->full = 0;
+	pThis->mut = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
+	pthread_mutex_init (pThis->mut, NULL);
+	pThis->notFull = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
+	pthread_cond_init (pThis->notFull, NULL);
+	pThis->notEmpty = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
+	pthread_cond_init (pThis->notEmpty, NULL);
+	pThis->qType = qType;
+
+	/* type-specific initialization */
+	if((pThis->tVars.farray.pBuf = malloc(sizeof(void *) * pThis->iMaxQueueSize)) == NULL) {
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+
+	pThis->tVars.farray.head = 0;
+	pThis->tVars.farray.tail = 0;
 	
-	return (q);
+finalize_it:
+	if(iRet == RS_RET_OK) {
+		*ppThis = pThis;
+	} else {
+		if(pThis != NULL)
+			free(pThis);
+	}
+
+	return iRet;
 }
 
-void queueDelete (msgQueue *q)
+
+/* destructor for the queue object */
+rsRetVal queueDestruct(queue_t *pThis)
 {
-	pthread_mutex_destroy (q->mut);
-	free (q->mut);
-	pthread_cond_destroy (q->notFull);
-	free (q->notFull);
-	pthread_cond_destroy (q->notEmpty);
-	free (q->notEmpty);
-	free(q->pbuf);
-	free (q);
+	DEFiRet;
+
+dbgprintf("queueDestruct\n");
+	assert(pThis != NULL);
+	pthread_mutex_destroy (pThis->mut);
+	free (pThis->mut);
+	pthread_cond_destroy (pThis->notFull);
+	free (pThis->notFull);
+	pthread_cond_destroy (pThis->notEmpty);
+	free (pThis->notEmpty);
+	/* type-specific destructor */
+	free(pThis->tVars.farray.pBuf);
+	free (pThis);
+
+	return iRet;
 }
 
 
@@ -96,31 +118,37 @@ void queueDelete (msgQueue *q)
  * NOTE: this comment does not really apply - the callers handle the mutex, so it
  * *is* guarded.
  */
-void queueAdd (msgQueue *q, void* in)
+rsRetVal queueAdd(queue_t *pThis, void* in)
 {
-	q->pbuf[q->tail] = in;
-	q->tail++;
-	if (q->tail == iMainMsgQueueSize)
-		q->tail = 0;
-	if (q->tail == q->head)
-		q->full = 1;
-	q->empty = 0;
+	DEFiRet;
 
-	return;
+dbgprintf("queueAdd\n");
+	pThis->tVars.farray.pBuf[pThis->tVars.farray.tail] = in;
+	pThis->tVars.farray.tail++;
+	if (pThis->tVars.farray.tail == pThis->iMaxQueueSize)
+		pThis->tVars.farray.tail = 0;
+	if (pThis->tVars.farray.tail == pThis->tVars.farray.head)
+		pThis->full = 1;
+	pThis->empty = 0;
+
+	return iRet;
 }
 
-void queueDel(msgQueue *q, void **out)
+rsRetVal queueDel(queue_t *pThis, void **out)
 {
-	*out = (void*) q->pbuf[q->head];
+	DEFiRet;
 
-	q->head++;
-	if (q->head == iMainMsgQueueSize)
-		q->head = 0;
-	if (q->head == q->tail)
-		q->empty = 1;
-	q->full = 0;
+dbgprintf("queueDel\n");
+	*out = (void*) pThis->tVars.farray.pBuf[pThis->tVars.farray.head];
 
-	return;
+	pThis->tVars.farray.head++;
+	if (pThis->tVars.farray.head == pThis->iMaxQueueSize)
+		pThis->tVars.farray.head = 0;
+	if (pThis->tVars.farray.head == pThis->tVars.farray.tail)
+		pThis->empty = 1;
+	pThis->full = 0;
+
+	return iRet;
 }
 
 /*

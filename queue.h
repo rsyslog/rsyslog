@@ -28,13 +28,12 @@
 typedef enum {
 	QUEUETYPE_FIXED_ARRAY,	/* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
 	QUEUETYPE_LINKEDLIST,	/* linked list used as buffer, lower fixed memory overhead but slower */
-} queueTypes_t;
+} queueType_t;
 
 /* the queue object */
 typedef struct {
-	queueTypes_t	qType;
-	int	iMaxQueSize;	/* how large can the queue grow? */
-	void** pUsr;		/* the queued user data structure */
+	queueType_t	qType;
+	int	iMaxQueueSize;	/* how large can the queue grow? */
 	/* synchronization variables */
 	pthread_mutex_t *mut;
 	pthread_cond_t *notFull, *notEmpty;
@@ -43,29 +42,16 @@ typedef struct {
 	union {			/* different data elements based on queue type (qType) */
 		struct {
 			long head, tail;
+			void** pBuf;		/* the queued user data structure */
 		} farray;
 	} tVars;
 } queue_t;
 
-/* this is the first approach to a queue, this time with static
- * memory.
- */
-typedef struct {
-	void** pbuf;
-	long head, tail;
-	int full, empty;
-	pthread_mutex_t *mut;
-	pthread_cond_t *notFull, *notEmpty;
-} msgQueue;
 
 /* prototypes */
-msgQueue *queueInit (void);
-void queueDelete (msgQueue *q);
-void queueAdd (msgQueue *q, void* in);
-void queueDel (msgQueue *q, void **out);
-
-/* go-away's */
-extern int iMainMsgQueueSize;
-extern msgQueue *pMsgQueue;
+rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize);
+rsRetVal queueDestruct(queue_t *pThis);
+rsRetVal queueAdd(queue_t *pThis, void* in);
+rsRetVal queueDel(queue_t *pThis, void **out);
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

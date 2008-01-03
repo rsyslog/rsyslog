@@ -447,6 +447,9 @@ static int     Initialized = 0; /* set when we have initialized ourselves
 
 extern	int errno;
 
+queue_t *pMsgQueue = NULL;	/* the main message queue */
+int iMainMsgQueueSize;		/* size of the main message queue above */
+
 
 /* This structure represents the files that will have log
  * copies printed.
@@ -1930,7 +1933,7 @@ static void startWorker(void)
 static void *
 singleWorker()
 {
-	msgQueue *fifo = pMsgQueue;
+	queue_t *fifo = pMsgQueue;
 	msg_t *pMsg;
 	sigset_t sigSet;
 
@@ -1980,7 +1983,7 @@ singleWorker()
 static void enqueueMsg(msg_t *pMsg)
 {
 	int iRet;
-	msgQueue *fifo = pMsgQueue;
+	queue_t *fifo = pMsgQueue;
 	struct timespec t;
 
 	assert(pMsg != NULL);
@@ -2767,7 +2770,7 @@ die(int sig)
 	freeSelectors();
 
 	/* Worker threads are stopped by freeSelectors() */
-	queueDelete(pMsgQueue); /* delete fifo here! */
+	queueDestruct(pMsgQueue); /* delete fifo here! */
 	pMsgQueue = NULL;
 	
 	/* rger 2005-02-22
@@ -3459,7 +3462,7 @@ init(void)
 
 	if(pMsgQueue != NULL) {
 		dbgprintf("deleting message queue\n");
-		queueDelete(pMsgQueue); /* delete fifo here! */
+		queueDestruct(pMsgQueue); /* delete fifo here! */
 		pMsgQueue = NULL;
 	}
 	
@@ -3507,10 +3510,9 @@ init(void)
 	}
 
 	/* create message queue */
-	pMsgQueue = queueInit();
-	if(pMsgQueue == NULL) {
-		errno = 0; /* no queue is fatal, we need to give up in that case... */
-		fprintf(stderr, "fatal error: could not create message queue - rsyslogd can not run!\n");
+	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, QUEUETYPE_FIXED_ARRAY, iMainMsgQueueSize)) {
+		/* no queue is fatal, we need to give up in that case... */
+		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
 
