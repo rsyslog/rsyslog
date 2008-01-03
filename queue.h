@@ -31,9 +31,16 @@ typedef enum {
 	QUEUETYPE_LINKEDLIST,/* linked list used as buffer, lower fixed memory overhead but slower */
 } queueType_t;
 
+/* list member definition for linked list types of queues: */
+typedef struct qLinkedList_S {
+	struct qLinkedList_S *pNext;
+	void *pUsr;
+} qLinkedList_t;
+
 /* the queue object */
 typedef struct queue_s {
 	queueType_t	qType;
+	int	iQueueSize;	/* Current number of elements in the queue */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
 	pthread_t thrdWorker;	/* ID of the worker thread associated with this queue */
 	int	bDoRun;		/* 1 - run queue, 0 - shutdown of queue requested */
@@ -54,6 +61,10 @@ typedef struct queue_s {
 			long head, tail;
 			void** pBuf;		/* the queued user data structure */
 		} farray;
+		struct {
+			qLinkedList_t *pRoot;
+			qLinkedList_t *pLast;
+		} linklist;
 	} tVars;
 } queue_t;
 
