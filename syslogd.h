@@ -83,5 +83,6 @@ extern char **StripDomains;
 extern char *LocalDomain;
 extern int bDropMalPTRMsgs;
 extern char	ctty[];
+extern uchar *pszSpoolDirectory;
 
 #endif /* #ifndef SYSLOGD_H_INCLUDED */

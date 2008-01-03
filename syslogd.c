@@ -383,6 +383,7 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 				 * 0 - suppress duplicate messages
 				 * 1 - do NOT suppress duplicate messages
 				 */
+uchar *pszSpoolDirectory = NULL;/* name of rsyslog's spool directory (without trailing slash) */
 /* end global config file state variables */
 
 static unsigned int Forwarding = 0;
@@ -504,6 +505,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
 	bDropMalPTRMsgs = 0;
 	if(pModDir != NULL) {
+		free(pModDir);
+		pModDir = NULL;
+	}
+	if(pszSpoolDirectory != NULL) {
 		free(pModDir);
 		pModDir = NULL;
 	}
@@ -3066,41 +3071,41 @@ static void dbgPrintInitInfo(void)
 	int iSelNbr = 1;
 	int i;
 
-	printf("\nActive selectors:\n");
+	dbgprintf("\nActive selectors:\n");
 	for (f = Files; f != NULL ; f = f->f_next) {
-		printf("Selector %d:\n", iSelNbr++);
+		dbgprintf("Selector %d:\n", iSelNbr++);
 		if(f->pCSProgNameComp != NULL)
-			printf("tag: '%s'\n", rsCStrGetSzStrNoNULL(f->pCSProgNameComp));
+			dbgprintf("tag: '%s'\n", rsCStrGetSzStrNoNULL(f->pCSProgNameComp));
 		if(f->eHostnameCmpMode != HN_NO_COMP)
-			printf("hostname: %s '%s'\n",
+			dbgprintf("hostname: %s '%s'\n",
 				f->eHostnameCmpMode == HN_COMP_MATCH ?
 					"only" : "allbut",
 				rsCStrGetSzStrNoNULL(f->pCSHostnameComp));
 		if(f->f_filter_type == FILTER_PRI) {
 			for (i = 0; i <= LOG_NFACILITIES; i++)
 				if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
-					printf(" X ");
+					dbgprintf(" X ");
 				else
-					printf("%2X ", f->f_filterData.f_pmask[i]);
+					dbgprintf("%2X ", f->f_filterData.f_pmask[i]);
 		} else {
-			printf("PROPERTY-BASED Filter:\n");
-			printf("\tProperty.: '%s'\n",
+			dbgprintf("PROPERTY-BASED Filter:\n");
+			dbgprintf("\tProperty.: '%s'\n",
 			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSPropName));
-			printf("\tOperation: ");
+			dbgprintf("\tOperation: ");
 			if(f->f_filterData.prop.isNegated)
-				printf("NOT ");
-			printf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
-			printf("\tValue....: '%s'\n",
+				dbgprintf("NOT ");
+			dbgprintf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
+			dbgprintf("\tValue....: '%s'\n",
 			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue));
-			printf("\tAction...: ");
+			dbgprintf("\tAction...: ");
 		}
 
-		printf("\nActions:\n");
+		dbgprintf("\nActions:\n");
 		llExecFunc(&f->llActList, dbgPrintInitInfoAction, NULL); /* actions */
 
-		printf("\n");
+		dbgprintf("\n");
 	}
-	printf("\n");
+	dbgprintf("\n");
 	if(bDebugPrintTemplateList)
 		tplPrintList();
 	if(bDebugPrintModuleList)
@@ -3110,17 +3115,18 @@ static void dbgPrintInitInfo(void)
 	if(bDebugPrintCfSysLineHandlerList)
 		dbgPrintCfSysLineHandlers();
 
-	printf("Messages with malicious PTR DNS Records are %sdropped.\n",
+	dbgprintf("Messages with malicious PTR DNS Records are %sdropped.\n",
 		bDropMalPTRMsgs	? "" : "not ");
 
-	printf("Control characters are %sreplaced upon reception.\n",
+	dbgprintf("Control characters are %sreplaced upon reception.\n",
 			bEscapeCCOnRcv? "" : "not ");
 
 	if(bEscapeCCOnRcv)
-		printf("Control character escape sequence prefix is '%c'.\n",
+		dbgprintf("Control character escape sequence prefix is '%c'.\n",
 			cCCEscapeChar);
 
-	printf("Main queue size %d messages.\n", iMainMsgQueueSize);
+	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
+	dbgprintf("Spool Directory: '%s'.\n", pszSpoolDirectory);
 }
 
 
@@ -4465,6 +4471,7 @@ static rsRetVal loadBuildInModules(void)
 	 * is that rsyslog will terminate if we can not register our built-in config commands.
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
+	CHKiRet(regCfSysLineHdlr((uchar *)"spooldirectory", 0, eCmdHdlrGetWord, NULL, &pszSpoolDirectory, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
