@@ -384,6 +384,7 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 				 * 1 - do NOT suppress duplicate messages
 				 */
 uchar *pszSpoolDirectory = NULL;/* name of rsyslog's spool directory (without trailing slash) */
+uchar *pszMainMsgQFilePrefix = NULL;/* prefix for the main message queue file */
 /* end global config file state variables */
 
 static unsigned int Forwarding = 0;
@@ -509,8 +510,12 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		pModDir = NULL;
 	}
 	if(pszSpoolDirectory != NULL) {
-		free(pModDir);
-		pModDir = NULL;
+		free(pszSpoolDirectory);
+		pszSpoolDirectory = NULL;
+	}
+	if(pszMainMsgQFilePrefix != NULL) {
+		free(pszMainMsgQFilePrefix);
+		pszMainMsgQFilePrefix = NULL;
 	}
 	iMainMsgQueueSize = 10000;
 	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
@@ -4472,6 +4477,7 @@ static rsRetVal loadBuildInModules(void)
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"spooldirectory", 0, eCmdHdlrGetWord, NULL, &pszSpoolDirectory, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefileprefix", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFilePrefix, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
