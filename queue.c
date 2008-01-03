@@ -85,9 +85,6 @@ rsRetVal qAddFixedArray(queue_t *pThis, void* in)
 	pThis->tVars.farray.tail++;
 	if (pThis->tVars.farray.tail == pThis->iMaxQueueSize)
 		pThis->tVars.farray.tail = 0;
-	if (pThis->tVars.farray.tail == pThis->tVars.farray.head)
-		pThis->full = 1;
-	pThis->empty = 0;
 
 	return iRet;
 }
@@ -102,9 +99,6 @@ rsRetVal qDelFixedArray(queue_t *pThis, void **out)
 	pThis->tVars.farray.head++;
 	if (pThis->tVars.farray.head == pThis->iMaxQueueSize)
 		pThis->tVars.farray.head = 0;
-	if (pThis->tVars.farray.head == pThis->tVars.farray.tail)
-		pThis->empty = 1;
-	pThis->full = 0;
 
 	return iRet;
 }
@@ -199,10 +193,6 @@ queueAdd(queue_t *pThis, void *pUsr)
 
 	++pThis->iQueueSize;
 
-	if(pThis->iQueueSize >= pThis->iMaxQueueSize)
-		pThis->full = 1;
-	pThis->empty = 0;
-
 	dbgprintf("Queue 0x%lx: entry added, size now %d entries\n", (unsigned long) pThis, pThis->iQueueSize);
 
 finalize_it:
@@ -219,10 +209,6 @@ queueDel(queue_t *pThis, void *pUsr)
 	assert(pThis != NULL);
 	CHKiRet(pThis->qDel(pThis, pUsr));
 	--pThis->iQueueSize;
-
-	if(pThis->iQueueSize == 0)
-		pThis->empty = 1;
-	pThis->full = 0;
 
 	dbgprintf("Queue 0x%lx: entry deleted, size now %d entries\n", (unsigned long) pThis, pThis->iQueueSize);
 
@@ -253,13 +239,13 @@ queueWorker(void *arg)
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
-	while(pThis->bDoRun || !pThis->empty) {
+	while(pThis->bDoRun || !pThis->iQueueSize == 0) {
 		pthread_mutex_lock(pThis->mut);
-		while (pThis->empty && pThis->bDoRun) {
+		while (pThis->iQueueSize == 0 && pThis->bDoRun) {
 			dbgprintf("queueWorker: queue 0x%lx EMPTY, waiting for next message.\n", (unsigned long) pThis);
 			pthread_cond_wait (pThis->notEmpty, pThis->mut);
 		}
-		if(!pThis->empty) {
+		if(pThis->iQueueSize > 0) {
 			/* dequeue element (still protected from mutex) */
 			queueDel(pThis, &pUsr);
 			pthread_mutex_unlock(pThis->mut);
@@ -271,7 +257,7 @@ queueWorker(void *arg)
 			pthread_mutex_unlock(pThis->mut);
 		}
 		
-		if(Debug && !pThis->bDoRun && !pThis->empty)
+		if(Debug && !pThis->bDoRun && pThis->iQueueSize > 0)
 			dbgprintf("Worker 0x%lx does not yet terminate because it still has messages to process.\n",
 				 (unsigned long) pThis);
 	}
@@ -298,8 +284,6 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, 
 	pThis->iQueueSize = 0;
 	pThis->iMaxQueueSize = iMaxQueueSize;
 	pThis->pConsumer = pConsumer;
-	pThis->empty = 1;
-	pThis->full = 0;
 	pThis->mut = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
 	pthread_mutex_init (pThis->mut, NULL);
 	pThis->notFull = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
@@ -396,7 +380,7 @@ queueEnqObj(queue_t *pThis, void *pUsr)
 
 	pthread_mutex_lock(pThis->mut);
 		
-	while(pThis->full) {
+	while(pThis->iQueueSize >= pThis->iMaxQueueSize) {
 		dbgprintf("enqueueMsg: queue 0x%lx FULL.\n", (unsigned long) pThis);
 		
 		clock_gettime (CLOCK_REALTIME, &t);

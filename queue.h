@@ -54,7 +54,6 @@ typedef struct queue_s {
 	/* synchronization variables */
 	pthread_mutex_t *mut;
 	pthread_cond_t *notFull, *notEmpty;
-	int full, empty;
 	/* end sync variables */
 	union {			/* different data elements based on queue type (qType) */
 		struct {
