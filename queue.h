@@ -23,6 +23,7 @@
 #ifndef QUEUE_H_INCLUDED
 #define QUEUE_H_INCLUDED
 
+#include <pthread.h>
 
 /* queue types */
 typedef enum {
@@ -34,6 +35,9 @@ typedef enum {
 typedef struct queue_s {
 	queueType_t	qType;
 	int	iMaxQueueSize;	/* how large can the queue grow? */
+	pthread_t thrdWorker;	/* ID of the worker thread associated with this queue */
+	int	bDoRun;		/* 1 - run queue, 0 - shutdown of queue requested */
+	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dequeued messages */
 	/* type-specific handlers (set during construction) */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	rsRetVal (*qDestruct)(struct queue_s *pThis);
@@ -55,9 +59,8 @@ typedef struct queue_s {
 
 
 /* prototypes */
-rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize);
+rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
 rsRetVal queueDestruct(queue_t *pThis);
-rsRetVal queueAdd(queue_t *pThis, void* in);
-rsRetVal queueDel(queue_t *pThis, void **out);
+rsRetVal queueEnqObj(queue_t *pThis, void *pUsr);
 
 #endif /* #ifndef QUEUE_H_INCLUDED */
