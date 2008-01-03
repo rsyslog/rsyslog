@@ -36,8 +36,8 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 	this important? why?</a>)<li>very 	experimental and volatile support for <a href="syslog-protocol.html">syslog-protocol</a> 	compliant messages (it is volatile because standardization is currently 	underway and this is a proof-of-concept implementation to aid this effort)<li>
 	experimental support for syslog-transport-tls based framing on syslog/tcp 
 	connections<li>
-	a copy of klogd.c has been included under the name of rklogd for those Linux 
-	systems that need one. So rsyslog is a full replacement for the sysklogd 
+	the sysklogd's klogd functionality is implemented as the <i>imklog</i> input 
+	plug-in. So rsyslog is a full replacement for the sysklogd 
 	package<li>
 	support for IPv6<li>
 	ability to control repeated line reduction (&quot;last message repeated n times&quot;) 
