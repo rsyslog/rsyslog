@@ -638,21 +638,21 @@ ENDqueryEtryPt
 /* set a new GSSMODE based on config directive */
 static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
 {
+	DEFiRet;
+
 	if (!strcmp((char *) mode, "integrity")) {
 		gss_mode = GSSMODE_MIC;
-		free(mode);
 		dbgprintf("GSS-API gssmode set to GSSMODE_MIC\n");
 	} else if (!strcmp((char *) mode, "encryption")) {
 		gss_mode = GSSMODE_ENC;
-		free(mode);
 		dbgprintf("GSS-API gssmode set to GSSMODE_ENC\n");
 	} else {
 		logerrorSz("unknown gssmode parameter: %s", (char *) mode);
-		free(mode);
-		return RS_RET_ERR;
+		iRet = RS_RET_INVALID_PARAMS;
 	}
+	free(mode);
 
-	return RS_RET_OK;
+	return iRet;
 }
 
 
