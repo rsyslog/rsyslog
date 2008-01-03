@@ -7,7 +7,7 @@
  * \date    2003-09-09
  *          Coding begun.
  *
- * Copyright 2003-2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -235,6 +235,55 @@ void skipWhiteSpace(uchar **pp)
 	while(*p && isspace((int) *p))
 		++p;
 	*pp = p;
+}
+
+
+/* generate a file name from four parts:
+ * <directory name>/<prefix>-<number>.<type>
+ * If number is negative, it is not used. If any of the strings is
+ * NULL, an empty string is used instead. Length must be provided.
+ * rgerhards, 2008-01-03
+ */
+rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName,
+ 		     uchar *pPrefix, size_t lenPrefix, long lNum, uchar *pType, size_t lenType)
+{
+	DEFiRet;
+	uchar *pName;
+	uchar *pNameWork;
+	size_t lenName;
+	uchar szBuf[128];	/* buffer for number */
+	size_t lenBuf;
+
+	if(lNum < 0) {
+		szBuf[0] = '\0';
+		lenBuf = 0;
+	} else {
+		lenBuf = snprintf((char*)szBuf, sizeof(szBuf), "-%ld", lNum);
+	}
+
+	lenName = lenDirName + 1 + lenPrefix + lenBuf + 1 + lenType + 1; /* last +1 for \0 char! */
+	if((pName = malloc(sizeof(uchar) * lenName)) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	
+	/* got memory, now construct string */
+	memcpy(pName, pDirName, lenDirName);
+	pNameWork = pName + lenDirName;
+	*pNameWork++ = '/';
+	memcpy(pNameWork, pPrefix, lenPrefix);
+	pNameWork += lenPrefix;
+	if(lenBuf > 0) {
+		memcpy(pNameWork, szBuf, lenBuf);
+		pNameWork += lenBuf;
+	}
+	*pNameWork++ = '.';
+	memcpy(pNameWork, pType, lenType);
+	pNameWork += lenType;
+	*pNameWork = '\0';
+
+	*ppName = pName;
+
+finalize_it:
+	return iRet;
 }
 
 

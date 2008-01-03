@@ -4205,6 +4205,9 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 	} else if (!strcasecmp((char *) pszType, "linkedlist")) {
 		MainMsgQueType = QUEUETYPE_LINKEDLIST;
 		dbgprintf("main message queue type set to LINKEDLIST\n");
+	} else if (!strcasecmp((char *) pszType, "disk")) {
+		MainMsgQueType = QUEUETYPE_DISK;
+		dbgprintf("main message queue type set to DISK\n");
 	} else {
 		logerrorSz("unknown mainmessagequeuetype parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;

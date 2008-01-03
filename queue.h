@@ -28,7 +28,8 @@
 /* queue types */
 typedef enum {
 	QUEUETYPE_FIXED_ARRAY = 0,/* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
-	QUEUETYPE_LINKEDLIST = 1 /* linked list used as buffer, lower fixed memory overhead but slower */
+	QUEUETYPE_LINKEDLIST = 1, /* linked list used as buffer, lower fixed memory overhead but slower */
+	QUEUETYPE_DISK = 2 	  /* disk files used as buffer */
 } queueType_t;
 
 /* list member definition for linked list types of queues: */
@@ -64,6 +65,18 @@ typedef struct queue_s {
 			qLinkedList_t *pRoot;
 			qLinkedList_t *pLast;
 		} linklist;
+		struct {
+			rsRetVal (*serializer)(uchar **ppOutBuf, size_t *lenBuf, void *pUsr);
+			rsRetVal (*deSerializer)(void *ppUsr, uchar *ppBuf, size_t lenBuf);
+			uchar *pszSpoolDir;
+			size_t lenSpoolDir;
+			uchar *pszFilePrefix;
+			size_t lenFilePrefix;
+			int iCurrFileNum;	/* number of file currently processed */
+			int fd;		/* current file descriptor */
+			long iWritePos; /* next write position offset */
+			long iReadPos;	/* next read position offset */
+		} disk;
 	} tVars;
 } queue_t;
 
