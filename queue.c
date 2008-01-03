@@ -314,7 +314,8 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, 
 	/* now fire up the worker thread */
 	pThis->bDoRun = 1; /* we are NOT done (else worker would immediately terminate) */
 	i = pthread_create(&pThis->thrdWorker, NULL, queueWorker, (void*) pThis);
-	dbgprintf("Worker thread for queue 0x%lx started with state %d.\n", (unsigned long) pThis, i);
+	dbgprintf("Worker thread for queue 0x%lx, type %d started with state %d.\n",
+		  (unsigned long) pThis, (int) qType, i);
 	
 finalize_it:
 	if(iRet == RS_RET_OK) {

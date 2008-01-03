@@ -411,8 +411,10 @@ static int     Initialized = 0; /* set when we have initialized ourselves
 
 extern	int errno;
 
-queue_t *pMsgQueue = NULL;	/* the main message queue */
-int iMainMsgQueueSize;		/* size of the main message queue above */
+/* main message queue and its configuration parameters */
+static queue_t *pMsgQueue = NULL;				/* the main message queue */
+static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
+static queueType_t MainMsgQueType = QUEUETYPE_FIXED_ARRAY;	/* type of the main message queue above */
 
 
 /* This structure represents the files that will have log
@@ -506,6 +508,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		pModDir = NULL;
 	}
 	iMainMsgQueueSize = 10000;
+	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 
 	return RS_RET_OK;
 }
@@ -3339,8 +3342,7 @@ init(void)
 	}
 
 	/* create message queue */
-	//CHKiRet_Hdlr(queueConstruct(&pMsgQueue, QUEUETYPE_FIXED_ARRAY, iMainMsgQueueSize, msgConsumer)) {
-	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, QUEUETYPE_LINKEDLIST, iMainMsgQueueSize, msgConsumer)) {
+	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueSize, msgConsumer)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
@@ -4179,6 +4181,29 @@ static rsRetVal cfline(uchar *line, selector_t **pfCurr)
 }
 
 
+/* set the main message queue mode
+ * rgerhards, 2008-01-03
+ */
+static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *pszType)
+{
+	DEFiRet;
+
+	if (!strcasecmp((char *) pszType, "fixedarray")) {
+		MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+		dbgprintf("main message queue type set to FIXED_ARRAY\n");
+	} else if (!strcasecmp((char *) pszType, "linkedlist")) {
+		MainMsgQueType = QUEUETYPE_LINKEDLIST;
+		dbgprintf("main message queue type set to LINKEDLIST\n");
+	} else {
+		logerrorSz("unknown mainmessagequeuetype parameter: %s", (char *) pszType);
+		iRet = RS_RET_INVALID_PARAMS;
+	}
+	free(pszType); /* no longer needed */
+
+	return iRet;
+}
+
+
 /*  Decode a symbolic name to a numeric value
  */
 int decode(uchar *name, struct code *codetab)
@@ -4441,6 +4466,7 @@ static rsRetVal loadBuildInModules(void)
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));

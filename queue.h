@@ -27,8 +27,8 @@
 
 /* queue types */
 typedef enum {
-	QUEUETYPE_FIXED_ARRAY,/* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
-	QUEUETYPE_LINKEDLIST,/* linked list used as buffer, lower fixed memory overhead but slower */
+	QUEUETYPE_FIXED_ARRAY = 0,/* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
+	QUEUETYPE_LINKEDLIST = 1 /* linked list used as buffer, lower fixed memory overhead but slower */
 } queueType_t;
 
 /* list member definition for linked list types of queues: */
