@@ -41,17 +41,6 @@ typedef struct thrdInfo {
 	pthread_t thrdID;
 } thrdInfo_t;
 
-/* this is the first approach to a queue, this time with static
- * memory.
- */
-typedef struct {
-	void** pbuf;
-	long head, tail;
-	int full, empty;
-	pthread_mutex_t *mut;
-	pthread_cond_t *notFull, *notEmpty;
-} msgQueue;
-
 /* prototypes */
 rsRetVal thrdExit(void);
 rsRetVal thrdInit(void);
@@ -59,15 +48,6 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
 rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSyncType, rsRetVal(*afterRun)(thrdInfo_t *));
 rsRetVal thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds);
-msgQueue *queueInit (void);
-void queueDelete (msgQueue *q);
-void queueAdd (msgQueue *q, void* in);
-void queueDel (msgQueue *q, void **out);
-
-/* go-away's */
-extern int iMainMsgQueueSize;
-extern msgQueue *pMsgQueue;
-
 
 /* macros (replace inline functions) */
 /*TODO: remove these macros once we now we can live without -- rgerhards, 2007-12-20
