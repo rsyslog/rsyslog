@@ -84,5 +84,6 @@ typedef struct queue_s {
 rsRetVal queueDestruct(queue_t *pThis);
 rsRetVal queueEnqObj(queue_t *pThis, void *pUsr);
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
+rsRetVal queueStart(queue_t *pThis);
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

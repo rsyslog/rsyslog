@@ -235,7 +235,7 @@ rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 
 	assert(pThis != NULL);
 	dbgprintf("writing to file %d\n", pThis->tVars.disk.fd);
-	CHKiRet((objSerialize(pUsr))(pBuf, &lenBuf, pUsr)); // TODO: hier weiter machen!
+	CHKiRet((objSerialize(pUsr))(pUsr, pBuf, &lenBuf)); // TODO: hier weiter machen!
 	i = write(pThis->tVars.disk.fd, "entry\n", 6);
 	dbgprintf("write wrote %d bytes, errno: %d, err %s\n", i, errno, strerror(errno));
 
@@ -360,12 +360,15 @@ queueWorker(void *arg)
 	pthread_exit(0);
 }
 
-/* Constructor for the queue object */
+/* Constructor for the queue object
+ * This constructs the data structure, but does not yet start the queue. That
+ * is done by queueStart(). The reason is that we want to give the caller a chance
+ * to modify some parameters before the queue is actually started.
+ */
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*))
 {
 	DEFiRet;
 	queue_t *pThis;
-	int i;
 
 	assert(ppThis != NULL);
 	assert(pConsumer != NULL);
@@ -411,12 +414,6 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, 
 	/* call type-specific constructor */
 	CHKiRet(pThis->qConstruct(pThis));
 
-	/* now fire up the worker thread */
-	pThis->bDoRun = 1; /* we are NOT done (else worker would immediately terminate) */
-	i = pthread_create(&pThis->thrdWorker, NULL, queueWorker, (void*) pThis);
-	dbgprintf("Worker thread for queue 0x%lx, type %d started with state %d.\n",
-		  (unsigned long) pThis, (int) qType, i);
-	
 finalize_it:
 	if(iRet == RS_RET_OK) {
 		*ppThis = pThis;
@@ -428,6 +425,22 @@ finalize_it:
 	return iRet;
 }
 
+
+/* start up the queue - it must have been constructed and parameters defined
+ * before.
+ */
+rsRetVal queueStart(queue_t *pThis)
+{
+	int i;
+
+	/* fire up the worker thread */
+	pThis->bDoRun = 1; /* we are NOT done (else worker would immediately terminate) */
+	i = pthread_create(&pThis->thrdWorker, NULL, queueWorker, (void*) pThis);
+	dbgprintf("Worker thread for queue 0x%lx, type %d started with state %d.\n",
+		  (unsigned long) pThis, (int) pThis->qType, i);
+
+	return RS_RET_OK;
+}
 
 /* destructor for the queue object */
 rsRetVal queueDestruct(queue_t *pThis)

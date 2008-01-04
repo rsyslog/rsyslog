@@ -286,10 +286,9 @@ msg_t* MsgDup(msg_t* pOld)
  * is a so slow operation that recration of the caches does not count.
  * rgerhards, 2008-01-03
  */
-rsRetVal MsgSerialize(uchar **ppOutBuf, size_t *pLenBuf, void *pUsr)
+static rsRetVal MsgSerialize(msg_t *pThis, uchar **ppOutBuf, size_t *pLenBuf)
 {
 	DEFiRet;
-	msg_t* pThis = pUsr;
 	rsCStrObj *pCStr;
 
 dbgprintf("MsgSerialize in\n");

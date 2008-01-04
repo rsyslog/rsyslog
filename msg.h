@@ -109,7 +109,6 @@ typedef struct msg msg_t;	/* new name */
 PROTOTYPEObjClassInit(Msg);
 char* getProgramName(msg_t*);
 msg_t* MsgConstruct(void);
-rsRetVal MsgSerialize(uchar **ppOutBuf, size_t *pLenBuf, void *pUsr);
 rsRetVal MsgDestruct(msg_t * pM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);

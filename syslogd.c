@@ -2268,7 +2268,6 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 void
 logmsg(int pri, msg_t *pMsg, int flags)
 {
-	DEFiRet;
 	char *msg;
 	char PRItext[20];
 
@@ -3354,6 +3353,11 @@ init(void)
 	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueSize, msgConsumer)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
+		exit(1);
+	}
+	CHKiRet_Hdlr(queueStart(pMsgQueue)) {
+		/* no queue is fatal, we need to give up in that case... */
+		fprintf(stderr, "fatal error %d: could not start message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
 
