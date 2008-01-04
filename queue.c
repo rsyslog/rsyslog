@@ -202,7 +202,7 @@ rsRetVal qConstructDisk(queue_t *pThis)
 	CHKiRet(genFileName(&pszFile, pThis->tVars.disk.pszSpoolDir, pThis->tVars.disk.lenSpoolDir,
  		     	    (uchar*) "mainq", 5, 1, (uchar*) "qf", 2));
 
-	dbgprintf("Queue 0x%lx: opening file '%s'\n", pThis, pszFile);
+	dbgprintf("Queue 0x%lx: opening file '%s'\n", (unsigned long) pThis, pszFile);
 
 	pThis->tVars.disk.fd = open((char*)pszFile, O_RDWR|O_CREAT, 0600);
 	dbgprintf("opened file %d\n", pThis->tVars.disk.fd);
@@ -235,7 +235,8 @@ rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 
 	assert(pThis != NULL);
 	dbgprintf("writing to file %d\n", pThis->tVars.disk.fd);
-	CHKiRet(pThis->serializer(pBuf, &lenBuf, pUsr)); // TODO: hier weiter machen!
+dbgprintf("objInfo: %lx\n", (unsigned long)pUsr);
+	CHKiRet((objSerialize(pUsr))(pBuf, &lenBuf, pUsr)); // TODO: hier weiter machen!
 	i = write(pThis->tVars.disk.fd, "entry\n", 6);
 	dbgprintf("write wrote %d bytes, errno: %d, err %s\n", i, errno, strerror(errno));
 
@@ -357,10 +358,7 @@ queueWorker(void *arg)
 }
 
 /* Constructor for the queue object */
-rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*),
-	rsRetVal (*serializer)(uchar **ppOutBuf, size_t *lenBuf, void *pUsr),
-	rsRetVal (*deSerializer)(void *ppUsr, uchar *ppBuf, size_t lenBuf)
-	)
+rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*))
 {
 	DEFiRet;
 	queue_t *pThis;
@@ -384,8 +382,6 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, 
 	pThis->notEmpty = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
 	pthread_cond_init (pThis->notEmpty, NULL);
 	pThis->qType = qType;
-	pThis->serializer = serializer;
-	pThis->deSerializer = deSerializer;
 
 	/* set type-specific handlers */
 	switch(qType) {

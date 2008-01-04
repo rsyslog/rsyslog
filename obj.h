@@ -44,7 +44,7 @@ typedef enum {	/* IDs of base methods supported by all objects - used for jump t
 typedef struct objInfo_s {
 	objID_t	objID;	
 	uchar *pszName;
-	rsRetVal (*objMethods[OBJ_NUM_METHODS])(void *pThis);
+	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
 } objInfo_t;
 
 typedef struct obj {	/* the dummy struct that each derived class can be casted to */
@@ -57,7 +57,8 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 #define BEGINobjInstance objInfo_t *pObjInfo
 /* must be called in Constructor: */
 #define objConstructSetObjInfo(pThis) ((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ;
-#define objDestruct(pThis) ((objInfo_t*) (pThis)->objMethods[objMethod_DESTRUCT])
+#define objDestruct(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DESTRUCT])
+#define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
 /* class initializer */
 #define PROTOTYPEObjClassInit(objName) rsRetVal objName##ClassInit(void)
 #define BEGINObjClassInit(objName) \

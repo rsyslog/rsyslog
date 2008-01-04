@@ -290,6 +290,7 @@ rsRetVal MsgSerialize(uchar **ppOutBuf, size_t *pLenBuf, void *pUsr)
 	msg_t* pThis = pUsr;
 	rsCStrObj *pCStr;
 
+dbgprintf("MsgSerialize in\n");
 	assert(ppOutBuf != NULL);
 	assert(pLenBuf != NULL);
 	assert(pThis != NULL);
@@ -1933,6 +1934,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
  */
 BEGINObjClassInit(Msg)
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
+printf("MSgSerialize pointer: %lx\n", (unsigned long) MsgSerialize);
+printf("Msg objInfo: %lx\n", pObjInfoOBJ );
 ENDObjClassInit
 
 /*
