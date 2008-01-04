@@ -135,11 +135,9 @@ msg_t* MsgConstruct(void)
 rsRetVal MsgDestruct(msg_t * pM)
 {
 	assert(pM != NULL);
-	 dbgprintf("MsgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); 
 	/* DEV Debugging only ! dbgprintf("MsgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); */
 	if(--pM->iRefCount == 0)
 	{
-		dbgprintf("MsgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pM); 
 		/* DEV Debugging Only! dbgprintf("MsgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pM); */
 		if(pM->pszUxTradMsg != NULL)
 			free(pM->pszUxTradMsg);

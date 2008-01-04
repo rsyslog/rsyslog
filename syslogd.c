@@ -1868,6 +1868,7 @@ msgConsumer(void *pUsr)
 	assert(pMsg != NULL);
 
 	processMsg(pMsg);
+	MsgDestruct(pMsg);
 
 	return RS_RET_OK;
 }
@@ -2339,12 +2340,6 @@ logmsg(int pri, msg_t *pMsg, int flags)
 	
 	pMsg->msgFlags = flags;
 	queueEnqObj(pMsgQueue, (void*) pMsg);
-#if 0
-	CHKiRet_Hdlr(queueEnqObj(pMsgQueue, (void*) pMsg)) {
-		/* if we have an error return, the pMsg was not destructed */
-		MsgDestruct(pMsg);
-	}
-#endif
 }
 
 

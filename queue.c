@@ -343,11 +343,6 @@ queueWorker(void *arg)
 				if(iRetLocal != RS_RET_OK)
 					dbgprintf("Queue 0x%lx: Consumer returned iRet %d\n",
 					          (unsigned long) pThis, iRetLocal);
-dbgprintf("QUEUE: consumer done\n");
-				iRetLocal = objDestruct(pUsr);
-				if(iRetLocal != RS_RET_OK)
-					dbgprintf("Queue 0x%lx: Destructor returned iRet %d\n",
-					          (unsigned long) pThis, iRetLocal);
 			} else {
 				dbgprintf("Queue 0x%lx: error %d dequeueing element - ignoring, but strange things "
 				          "may happen\n", (unsigned long) pThis, iRet);
