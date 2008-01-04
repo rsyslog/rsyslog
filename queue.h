@@ -51,6 +51,12 @@ typedef struct queue_s {
 	rsRetVal (*qDestruct)(struct queue_s *pThis);
 	rsRetVal (*qAdd)(struct queue_s *pThis, void *pUsr);
 	rsRetVal (*qDel)(struct queue_s *pThis, void **ppUsr);
+	/* the following two are currently only required for disk queuing, but
+	 * we keep them global because we otherwise needed to change the interface
+	 * too much.
+	 */
+	rsRetVal (*serializer)(uchar **ppOutBuf, size_t *lenBuf, void *pUsr);
+	rsRetVal (*deSerializer)(void *ppUsr, uchar *ppBuf, size_t lenBuf);
 	/* end type-specific handler */
 	/* synchronization variables */
 	pthread_mutex_t *mut;
@@ -66,8 +72,6 @@ typedef struct queue_s {
 			qLinkedList_t *pLast;
 		} linklist;
 		struct {
-			rsRetVal (*serializer)(uchar **ppOutBuf, size_t *lenBuf, void *pUsr);
-			rsRetVal (*deSerializer)(void *ppUsr, uchar *ppBuf, size_t lenBuf);
 			uchar *pszSpoolDir;
 			size_t lenSpoolDir;
 			uchar *pszFilePrefix;
@@ -82,8 +86,11 @@ typedef struct queue_s {
 
 
 /* prototypes */
-rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
 rsRetVal queueDestruct(queue_t *pThis);
 rsRetVal queueEnqObj(queue_t *pThis, void *pUsr);
+rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*),
+	rsRetVal (*serializer)(uchar **ppOutBuf, size_t *lenBuf, void *pUsr),
+	rsRetVal (*deSerializer)(void *ppUsr, uchar *ppBuf, size_t lenBuf)
+	);
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

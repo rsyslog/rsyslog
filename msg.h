@@ -25,6 +25,7 @@
 #ifndef	MSG_H_INCLUDED
 #define	MSG_H_INCLUDED 1
 
+#include "obj.h"
 #include "syslogd-types.h"
 #include "template.h"
 
@@ -44,6 +45,7 @@
  * called each time a "copy" is stored somewhere.
  */
 struct msg {
+	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	int	iRefCount;	/* reference counter (0 = unused) */
 	short	iSyslogVers;	/* version of syslog protocol
 				 * 0 - RFC 3164
@@ -104,8 +106,10 @@ typedef struct msg msg_t;	/* new name */
 
 /* function prototypes
  */
+PROTOTYPEObjClassInit(Msg);
 char* getProgramName(msg_t*);
 msg_t* MsgConstruct(void);
+rsRetVal MsgSerialize(uchar **ppOutBuf, size_t *pLenBuf, void *pUsr);
 void MsgDestruct(msg_t * pM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);

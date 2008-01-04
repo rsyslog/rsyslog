@@ -3353,7 +3353,7 @@ init(void)
 	}
 
 	/* create message queue */
-	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueSize, msgConsumer)) {
+	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueSize, msgConsumer, MsgSerialize, NULL)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
@@ -4608,11 +4608,27 @@ static void mainThread()
 }
 
 
+/* Method to initialize all global classes.
+ * rgerhards, 2008-01-04
+ */
+static rsRetVal InitGlobalClasses(void)
+{
+	DEFiRet;
+
+	CHKiRet(MsgClassInit());
+
+finalize_it:
+	return iRet;
+}
+
+
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
  */
 int main(int argc, char **argv)
 {	
+	DEFiRet;
+
 	register int i;
 	register char *p;
 	int num_fds;
@@ -4626,6 +4642,8 @@ int main(int argc, char **argv)
 	mtrace(); /* this is a debug aid for leak detection - either remove
 	           * or put in conditional compilation. 2005-01-18 RGerhards */
 #endif
+
+	CHKiRet(InitGlobalClasses());
 
 	ppid = getpid();
 
@@ -4883,6 +4901,11 @@ int main(int argc, char **argv)
 	die(bFinished);
 	
 	thrdExit();
+
+finalize_it:
+	if(iRet != RS_RET_OK)
+		fprintf(stderr, "rsyslogd run failed with error %d.\n", iRet);
+
 	return 0;
 }
 

@@ -14,6 +14,7 @@ Version 3.10.0 (rgerhards), 2008-01-??
 - all inputs are now implemented as loadable plugins
 - enhanced threading model: each input module now runs on its own thread
 - enhanced message queue which now supports different queueing methods
+  (among others, this can be used for performance fine-tuning)
 - added a large number of new configuration directives for the new
   input modules
 - ability to bind UDP listeners to specific local interfaces/ports and

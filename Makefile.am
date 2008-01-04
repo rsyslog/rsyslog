@@ -27,6 +27,8 @@ rsyslogd_SOURCES = \
 	sync.h \
 	net.c \
 	net.h \
+	obj.c \
+	obj.h \
 	msg.c \
 	msg.h \
 	expr.c \

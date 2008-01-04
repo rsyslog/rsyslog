@@ -230,9 +230,12 @@ rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 {
 	DEFiRet;
 	int i;
+	long lenBuf;
+	uchar *pBuf;
 
 	assert(pThis != NULL);
 	dbgprintf("writing to file %d\n", pThis->tVars.disk.fd);
+	CHKiRet(pThis->serializer(pBuf, &lenBuf, pUsr)); // TODO: hier weiter machen!
 	i = write(pThis->tVars.disk.fd, "entry\n", 6);
 	dbgprintf("write wrote %d bytes, errno: %d, err %s\n", i, errno, strerror(errno));
 
@@ -354,7 +357,10 @@ queueWorker(void *arg)
 }
 
 /* Constructor for the queue object */
-rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*))
+rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*),
+	rsRetVal (*serializer)(uchar **ppOutBuf, size_t *lenBuf, void *pUsr),
+	rsRetVal (*deSerializer)(void *ppUsr, uchar *ppBuf, size_t lenBuf)
+	)
 {
 	DEFiRet;
 	queue_t *pThis;
@@ -378,6 +384,8 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, 
 	pThis->notEmpty = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
 	pthread_cond_init (pThis->notEmpty, NULL);
 	pThis->qType = qType;
+	pThis->serializer = serializer;
+	pThis->deSerializer = deSerializer;
 
 	/* set type-specific handlers */
 	switch(qType) {

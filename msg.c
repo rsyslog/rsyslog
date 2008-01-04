@@ -41,6 +41,8 @@
 #include "template.h"
 #include "msg.h"
 
+DEFobjStaticHelpers
+
 static syslogCODE rs_prioritynames[] =
   {
     { "alert", LOG_ALERT },
@@ -118,6 +120,7 @@ msg_t* MsgConstruct(void)
 		pM->iSeverity = -1;
 		pM->iFacility = -1;
 		getCurrTime(&(pM->tRcvdAt));
+		objConstructSetObjInfo(pM);
 	}
 
 	/* DEV debugging only! dbgprintf("MsgConstruct\t0x%x, ref 1\n", (int)pM);*/
@@ -269,6 +272,61 @@ msg_t* MsgDup(msg_t* pOld)
 }
 #undef tmpCOPYSZ
 #undef tmpCOPYCSTR
+
+
+/* This method serializes a message object. That means the whole
+ * object is modified into text form. That text form is suitable for
+ * later reconstruction of the object by calling MsgDeSerialize().
+ * The most common use case for this method is the creation of an
+ * on-disk representation of the message object.
+ * We do not serialize the cache properties. We re-create them when needed.
+ * This saves us a lot of memory. Performance is no concern, as serializing
+ * is a so slow operation that recration of the caches does not count.
+ * rgerhards, 2008-01-03
+ */
+rsRetVal MsgSerialize(uchar **ppOutBuf, size_t *pLenBuf, void *pUsr)
+{
+	DEFiRet;
+	msg_t* pThis = pUsr;
+	rsCStrObj *pCStr;
+
+	assert(ppOutBuf != NULL);
+	assert(pLenBuf != NULL);
+	assert(pThis != NULL);
+
+	if((pCStr = rsCStrConstruct()) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) "$MSG v1\n"));
+
+/*
+	if(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\') != RS_RET_OK)
+
+	pNew->iSyslogVers = pOld->iSyslogVers;
+	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
+	pNew->iSeverity = pOld->iSeverity;
+	pNew->iFacility = pOld->iFacility;
+	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
+	pNew->msgFlags = pOld->msgFlags;
+	pNew->iProtocolVersion = pOld->iProtocolVersion;
+	memcpy(&pNew->tRcvdAt, &pOld->tRcvdAt, sizeof(struct syslogTime));
+	memcpy(&pNew->tTIMESTAMP, &pOld->tTIMESTAMP, sizeof(struct syslogTime));
+	tmpCOPYSZ(RawMsg);
+	tmpCOPYSZ(MSG);
+	tmpCOPYSZ(UxTradMsg);
+	tmpCOPYSZ(TAG);
+	tmpCOPYSZ(HOSTNAME);
+	tmpCOPYSZ(RcvFrom);
+
+	tmpCOPYCSTR(ProgName);
+	tmpCOPYCSTR(StrucData);
+	tmpCOPYCSTR(APPNAME);
+	tmpCOPYCSTR(PROCID);
+	tmpCOPYCSTR(MSGID);
+*/
+finalize_it:
+	return iRet;
+}
 
 
 /* Increment reference count - see description of the "msg"
@@ -1868,6 +1926,14 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	return(pRes);
 }
 
+
+/* Initialize the message class. Must be called as the very first method
+ * before anything else is called inside this class.
+ * rgerhards, 2008-01-04
+ */
+BEGINObjClassInit(Msg)
+	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
+ENDObjClassInit
 
 /*
  * vi:set ai:
