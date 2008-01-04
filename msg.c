@@ -132,13 +132,15 @@ msg_t* MsgConstruct(void)
 /* Destructor for a msg "object". Must be called to dispose
  * of a msg object.
  */
-void MsgDestruct(msg_t * pM)
+rsRetVal MsgDestruct(msg_t * pM)
 {
 	assert(pM != NULL);
-	/* DEV Debugging only ! dbgprintf("MsgDestruct\t0x%x, Ref now: %d\n", (int)pM, pM->iRefCount - 1); */
+	 dbgprintf("MsgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); 
+	/* DEV Debugging only ! dbgprintf("MsgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); */
 	if(--pM->iRefCount == 0)
 	{
-		/* DEV Debugging Only! dbgprintf("MsgDestruct\t0x%x, RefCount now 0, doing DESTROY\n", (int)pM); */
+		dbgprintf("MsgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pM); 
+		/* DEV Debugging Only! dbgprintf("MsgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pM); */
 		if(pM->pszUxTradMsg != NULL)
 			free(pM->pszUxTradMsg);
 		if(pM->pszRawMsg != NULL)
@@ -189,6 +191,8 @@ void MsgDestruct(msg_t * pM)
 			rsCStrDestruct(pM->pCSMSGID);
 		free(pM);
 	}
+
+	return RS_RET_OK;
 }
 
 
@@ -1934,8 +1938,6 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
  */
 BEGINObjClassInit(Msg)
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
-printf("MSgSerialize pointer: %lx\n", (unsigned long) MsgSerialize);
-printf("Msg objInfo: %lx\n", pObjInfoOBJ );
 ENDObjClassInit
 
 /*

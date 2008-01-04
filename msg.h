@@ -110,7 +110,7 @@ PROTOTYPEObjClassInit(Msg);
 char* getProgramName(msg_t*);
 msg_t* MsgConstruct(void);
 rsRetVal MsgSerialize(uchar **ppOutBuf, size_t *pLenBuf, void *pUsr);
-void MsgDestruct(msg_t * pM);
+rsRetVal MsgDestruct(msg_t * pM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);
 void setProtocolVersion(msg_t *pM, int iNewVersion);

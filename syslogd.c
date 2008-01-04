@@ -1858,6 +1858,7 @@ static void processMsg(msg_t *pMsg)
  * NOTE: Having more than one worker requires guarding of some
  * message object structures and potentially others - need to be checked
  * before we support multiple worker threads on the message queue.
+ * Please note: the message object is destructed by the queue itself!
  */
 static rsRetVal
 msgConsumer(void *pUsr)
@@ -1867,7 +1868,6 @@ msgConsumer(void *pUsr)
 	assert(pMsg != NULL);
 
 	processMsg(pMsg);
-	MsgDestruct(pMsg);
 
 	return RS_RET_OK;
 }
@@ -2338,10 +2338,13 @@ logmsg(int pri, msg_t *pMsg, int flags)
 	 */
 	
 	pMsg->msgFlags = flags;
+	queueEnqObj(pMsgQueue, (void*) pMsg);
+#if 0
 	CHKiRet_Hdlr(queueEnqObj(pMsgQueue, (void*) pMsg)) {
 		/* if we have an error return, the pMsg was not destructed */
 		MsgDestruct(pMsg);
 	}
+#endif
 }
 
 

@@ -70,7 +70,8 @@ rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, rsR
 	pThis->pszName = pszName;
 	pThis->objID = objID;
 
-	for(i = 0 ; i < OBJ_NUM_METHODS ; ++i) {
+	pThis->objMethods[0] = pDestruct;
+	for(i = 1 ; i < OBJ_NUM_METHODS ; ++i) {
 		pThis->objMethods[i] = objInfoNotImplementedDummy;
 	}
 
