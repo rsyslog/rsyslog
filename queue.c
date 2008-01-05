@@ -1,3 +1,6 @@
+// TODO: peekmsg() on first entry, with new/inprogress/deleted entry, destruction in 
+// call consumer state. Facilitates retaining messages in queue until action could
+// be called!
 /* queue.c
  *
  * This file implements the queue object and its several queueing methods.
@@ -404,13 +407,15 @@ queueWorker(void *arg)
  * is done by queueStart(). The reason is that we want to give the caller a chance
  * to modify some parameters before the queue is actually started.
  */
-rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*))
+rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
+		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*))
 {
 	DEFiRet;
 	queue_t *pThis;
 
 	assert(ppThis != NULL);
 	assert(pConsumer != NULL);
+	assert(iWorkerThreads >= 0);
 
 	if((pThis = (queue_t *)calloc(1, sizeof(queue_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -426,6 +431,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, 
 	pthread_cond_init (pThis->notFull, NULL);
 	pThis->notEmpty = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
 	pthread_cond_init (pThis->notEmpty, NULL);
+	pThis->iNumWorkerThreads = iWorkerThreads;
 	pThis->qType = qType;
 
 	/* set type-specific handlers */
@@ -476,36 +482,48 @@ finalize_it:
  */
 rsRetVal queueStart(queue_t *pThis)
 {
+	DEFiRet;
+	int iState;
 	int i;
 
 	if(pThis->qType != QUEUETYPE_DIRECT) {
+		if((pThis->pWorkerThreads = calloc(pThis->iNumWorkerThreads, sizeof(pthread_t))) == NULL)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
 		/* fire up the worker thread */
 		pThis->bDoRun = 1; /* we are NOT done (else worker would immediately terminate) */
-		i = pthread_create(&pThis->thrdWorker, NULL, queueWorker, (void*) pThis);
-		dbgprintf("Worker thread for queue 0x%lx, type %d started with state %d.\n",
-			  (unsigned long) pThis, (int) pThis->qType, i);
+		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+			iState = pthread_create(&(pThis->pWorkerThreads[i]), NULL, queueWorker, (void*) pThis);
+			dbgprintf("Worker thread %d for queue 0x%lx, type %d started with state %d.\n",
+				  i, (unsigned long) pThis, (int) pThis->qType, iState);
+		}
 	}
 
-	return RS_RET_OK;
+finalize_it:
+	return iRet;
 }
 
 /* destructor for the queue object */
 rsRetVal queueDestruct(queue_t *pThis)
 {
 	DEFiRet;
+	int i;
 
 	assert(pThis != NULL);
 
-	if(pThis->qType != QUEUETYPE_DIRECT) {
+	if(pThis->pWorkerThreads != NULL) {
 		/* first stop the worker thread */
 		dbgprintf("Initiating worker thread shutdown sequence for queue 0x%lx...\n", (unsigned long) pThis);
 		pThis->bDoRun = 0;
-		/* It's actually not "not empty" below but awaking the worker. The worker
-		 * then finds out that it shall terminate and does so.
+		/* It's actually not "not empty" below but awaking the workers. They
+		 * then find out that they shall terminate and do so.
 		 */
-		pthread_cond_signal(pThis->notEmpty);
-		pthread_join(pThis->thrdWorker, NULL);
-		dbgprintf("Worker thread for queue 0x%lx terminated.\n", (unsigned long) pThis);
+		pthread_cond_broadcast(pThis->notEmpty);
+		/* end then wait for all worker threads to terminate */
+		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+			pthread_join(pThis->pWorkerThreads[i], NULL);
+		}
+		dbgprintf("Worker threads for queue 0x%lx terminated.\n", (unsigned long) pThis);
 	}
 
 	/* ... then free resources */
@@ -561,7 +579,7 @@ queueEnqObj(queue_t *pThis, void *pUsr)
 
 finalize_it:
 	/* now activate the worker thread */
-	if(pThis->qType != QUEUETYPE_DIRECT) {
+	if(pThis->pWorkerThreads != NULL) {
 		pthread_mutex_unlock(pThis->mut);
 		i = pthread_cond_signal(pThis->notEmpty);
 		dbgprintf("Queue 0x%lx: EnqueueMsg signaled condition (%d)\n", (unsigned long) pThis, i);

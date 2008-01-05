@@ -45,7 +45,8 @@ typedef struct queue_s {
 	queueType_t	qType;
 	int	iQueueSize;	/* Current number of elements in the queue */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
-	pthread_t thrdWorker;	/* ID of the worker thread associated with this queue */
+	int 	iNumWorkerThreads;/* number of worker threads to use */
+	pthread_t *pWorkerThreads;/* array with ID of the worker thread(s) associated with this queue */
 	int	bDoRun;		/* 1 - run queue, 0 - shutdown of queue requested */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dequeued messages */
 	/* type-specific handlers (set during construction) */
@@ -84,7 +85,8 @@ typedef struct queue_s {
 /* prototypes */
 rsRetVal queueDestruct(queue_t *pThis);
 rsRetVal queueEnqObj(queue_t *pThis, void *pUsr);
-rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
 rsRetVal queueStart(queue_t *pThis);
+rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
+		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

@@ -420,6 +420,7 @@ extern	int errno;
 /* main message queue and its configuration parameters */
 static queue_t *pMsgQueue = NULL;				/* the main message queue */
 static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
+static int iMainMsgQueueNumWorkers = 1;				/* number of worker threads for the mm queue above */
 static queueType_t MainMsgQueType = QUEUETYPE_FIXED_ARRAY;	/* type of the main message queue above */
 
 
@@ -522,6 +523,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		pszMainMsgQFilePrefix = NULL;
 	}
 	iMainMsgQueueSize = 10000;
+	iMainMsgQueueNumWorkers = 1;
 	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 
 	return RS_RET_OK;
@@ -3134,6 +3136,7 @@ static void dbgPrintInitInfo(void)
 			cCCEscapeChar);
 
 	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
+	dbgprintf("Main queue worker threads: %d\n", iMainMsgQueueNumWorkers);
 	dbgprintf("Spool Directory: '%s'.\n", pszSpoolDirectory);
 }
 
@@ -3355,14 +3358,19 @@ init(void)
 		pDfltProgNameCmp = NULL;
 	}
 
+	/* some checks */
+	if(iMainMsgQueueNumWorkers < 1) {
+		logerror("$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
+		iMainMsgQueueNumWorkers = 1;
+	}
+
 	/* switch the message object to threaded operation, if necessary */
-	// TODO: add check for nbr of workers once we have that!
-	if(MainMsgQueType == QUEUETYPE_DIRECT) {
+	if(MainMsgQueType == QUEUETYPE_DIRECT || iMainMsgQueueNumWorkers > 1) {
 		MsgEnableThreadSafety();
 	}
 
 	/* create message queue */
-	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueSize, msgConsumer)) {
+	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueNumWorkers, iMainMsgQueueSize, msgConsumer)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
@@ -4501,6 +4509,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefileprefix", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFilePrefix, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iMainMsgQueueNumWorkers, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));
