@@ -2338,6 +2338,7 @@ logmsg(int pri, msg_t *pMsg, int flags)
 	 */
 	
 	pMsg->msgFlags = flags;
+	MsgPrepareEnqueue(pMsg);
 	queueEnqObj(pMsgQueue, (void*) pMsg);
 }
 
@@ -3348,6 +3349,10 @@ init(void)
 		rsCStrDestruct(pDfltProgNameCmp);
 		pDfltProgNameCmp = NULL;
 	}
+
+	/* switch the message object to threaded operation, if necessary */
+	// TODO: handle the "if" part above ;)
+	MsgEnableThreadSafety();
 
 	/* create message queue */
 	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueSize, msgConsumer)) {

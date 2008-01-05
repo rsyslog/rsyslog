@@ -460,12 +460,12 @@ rsRetVal queueDestruct(queue_t *pThis)
 	dbgprintf("Worker thread for queue 0x%lx terminated.\n", (unsigned long) pThis);
 
 	/* ... then free resources */
-	pthread_mutex_destroy (pThis->mut);
-	free (pThis->mut);
-	pthread_cond_destroy (pThis->notFull);
-	free (pThis->notFull);
-	pthread_cond_destroy (pThis->notEmpty);
-	free (pThis->notEmpty);
+	pthread_mutex_destroy(pThis->mut);
+	free(pThis->mut);
+	pthread_cond_destroy(pThis->notFull);
+	free(pThis->notFull);
+	pthread_cond_destroy(pThis->notEmpty);
+	free(pThis->notEmpty);
 	/* type-specific destructor */
 	iRet = pThis->qDestruct(pThis);
 

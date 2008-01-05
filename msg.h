@@ -25,6 +25,7 @@
 #ifndef	MSG_H_INCLUDED
 #define	MSG_H_INCLUDED 1
 
+#include <pthread.h>
 #include "obj.h"
 #include "syslogd-types.h"
 #include "template.h"
@@ -46,6 +47,8 @@
  */
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
+	pthread_mutexattr_t mutAttr;
+	pthread_mutex_t mut;
 	int	iRefCount;	/* reference counter (0 = unused) */
 	short	iSyslogVers;	/* version of syslog protocol
 				 * 0 - RFC 3164
@@ -128,7 +131,6 @@ char *getSeverityStr(msg_t *pM);
 char *getFacility(msg_t *pM);
 char *getFacilityStr(msg_t *pM);
 rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
-int getAPPNAMELen(msg_t *pM);
 char *getAPPNAME(msg_t *pM);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
 int getPROCIDLen(msg_t *pM);
@@ -155,6 +157,16 @@ char *getMSGID(msg_t *pM);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  rsCStrObj *pCSPropName, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
+rsRetVal MsgEnableThreadSafety(void);
+
+/* The MsgPrepareEnqueue() function is a macro for performance reasons.
+ * It needs one global variable to work. This is acceptable, as it gains
+ * us quite some performance and is fully abstracted using this header file.
+ * The important thing is that no other module is permitted to actually
+ * access that global variable! -- rgerhards, 2008-01-05
+ */
+extern void (*funcMsgPrepareEnqueue)(msg_t *pMsg);
+#define MsgPrepareEnqueue(pMsg) funcMsgPrepareEnqueue(pMsg)
 
 #endif /* #ifndef MSG_H_INCLUDED */
 /*
