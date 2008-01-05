@@ -21,10 +21,6 @@ AC_CANONICAL_HOST
 
 case "${host}" in
   *-*-linux*)
-    # This feature indicates if klogd functionality
-    # should be integrated. If it is switched off, klogd
-    # is still compiled, but it is an empty shell.
-    AC_DEFINE([FEATURE_KLOGD], [1], [Description])
   ;;
   *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
     AC_DEFINE([BSD], [1], [Description])
@@ -203,9 +199,6 @@ AC_ARG_ENABLE(klogd,
          esac],
         [enable_klogd="yes"]
 )
-if test "$enable_klogd" = "yes"; then
-        AC_DEFINE(FEATURE_KLOGD, 1, [klogd functionality is integrated.])
-fi
 AM_CONDITIONAL(ENABLE_IMKLOGD, test x$enable_klogd = xyes)
 
 #

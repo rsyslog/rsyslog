@@ -28,10 +28,6 @@
  */
 #include "config.h"
 
-#ifdef __FreeBSD__
-#define	BSD
-#endif
-
 #include "rsyslog.h"
 #include <stdio.h>
 #include <unistd.h>

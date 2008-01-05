@@ -58,10 +58,6 @@
 #include "config.h"
 #include "rsyslog.h"
 
-#ifdef __FreeBSD__
-#define	BSD
-#endif
-
 /* change the following setting to e.g. 32768 if you would like to
  * support large message sizes for IHE (32k is the current maximum
  * needed for IHE). I was initially tempted to increase it to 32k,
