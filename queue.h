@@ -30,7 +30,8 @@
 typedef enum {
 	QUEUETYPE_FIXED_ARRAY = 0,/* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
 	QUEUETYPE_LINKEDLIST = 1, /* linked list used as buffer, lower fixed memory overhead but slower */
-	QUEUETYPE_DISK = 2 	  /* disk files used as buffer */
+	QUEUETYPE_DISK = 2, 	  /* disk files used as buffer */
+	QUEUETYPE_DIRECT = 3 	  /* no queuing happens, consumer is directly called */
 } queueType_t;
 
 /* list member definition for linked list types of queues: */

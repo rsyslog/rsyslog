@@ -410,6 +410,10 @@ static int     Initialized = 0; /* set when we have initialized ourselves
                                  * such a case.
 				 * read-only after startup, but modified during restart
                                  */
+static int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
+				 * If the main queue is either not yet ready or not running in 
+				 * queueing mode (mode DIRECT!), then this is set to 0.
+				 */
 
 extern	int errno;
 
@@ -1531,7 +1535,7 @@ logmsgInternal(int pri, char *msg, int flags)
 	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	flags |= INTERNAL_MSG;
 
-	if(Initialized == 0) { /* not yet in queued mode */
+	if(bHaveMainQueue == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pri, pMsg, flags);
 	} else {
 		/* we have the queue, so we can simply provide the 
@@ -3046,6 +3050,7 @@ static void freeSelectors(void)
 		/* Reflect the deletion of the selectors linked list. */
 		Files = NULL;
 		Initialized = 0;
+		bHaveMainQueue = 0;
 	}
 }
 
@@ -3351,8 +3356,10 @@ init(void)
 	}
 
 	/* switch the message object to threaded operation, if necessary */
-	// TODO: handle the "if" part above ;)
-	MsgEnableThreadSafety();
+	// TODO: add check for nbr of workers once we have that!
+	if(MainMsgQueType == QUEUETYPE_DIRECT) {
+		MsgEnableThreadSafety();
+	}
 
 	/* create message queue */
 	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueSize, msgConsumer)) {
@@ -3367,6 +3374,7 @@ init(void)
 	}
 
 	Initialized = 1;
+	bHaveMainQueue = (MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
 
 	/* the output part and the queue is now ready to run. So it is a good time
 	 * to start the inputs. Please note that the net code above should be
@@ -4215,6 +4223,9 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 	} else if (!strcasecmp((char *) pszType, "disk")) {
 		MainMsgQueType = QUEUETYPE_DISK;
 		dbgprintf("main message queue type set to DISK\n");
+	} else if (!strcasecmp((char *) pszType, "direct")) {
+		MainMsgQueType = QUEUETYPE_DIRECT;
+		dbgprintf("main message queue type set to DIRECT (no queueing at all)\n");
 	} else {
 		logerrorSz("unknown mainmessagequeuetype parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
