@@ -185,7 +185,7 @@ rsRetVal rsCStrAppendStr(rsCStrObj *pThis, uchar* psz)
 }
 
 
-rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i)
+rsRetVal rsCStrAppendInt(rsCStrObj *pThis, long i)
 {
 	rsRetVal iRet;
 	uchar szBuf[32];

@@ -238,15 +238,15 @@ rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 
 	assert(pThis != NULL);
 	dbgprintf("writing to file %d\n", pThis->tVars.disk.fd);
-	CHKiRet((objSerialize(pUsr))(pUsr, pBuf, &lenBuf)); // TODO: hier weiter machen!
-	i = write(pThis->tVars.disk.fd, "entry\n", 6);
+	CHKiRet((objSerialize(pUsr))(pUsr, &pBuf, &lenBuf)); // TODO: hier weiter machen!
+	i = write(pThis->tVars.disk.fd, pBuf, strlen((char*) pBuf));
 	dbgprintf("write wrote %d bytes, errno: %d, err %s\n", i, errno, strerror(errno));
 
 finalize_it:
 	return iRet;
 }
 
-rsRetVal qDelDisk(queue_t *pThis, void **ppUsr)
+rsRetVal qDelDisk(queue_t __attribute__((unused)) *pThis, void __attribute__((unused)) **ppUsr)
 {
 	DEFiRet;
 

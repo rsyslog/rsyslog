@@ -32,6 +32,7 @@
 #include <assert.h>
 
 #include "rsyslog.h"
+#include "srUtils.h"
 #include "obj.h"
 
 /* static data */
@@ -55,7 +56,7 @@ static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
  * objects, thus it is in the parameter list.
  * pszName must point to constant pool memory. It is never freed.
  */
-rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, rsRetVal (*pDestruct)(void *))
+rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pDestruct)(void *))
 {
 	DEFiRet;
 	int i;
@@ -68,6 +69,7 @@ rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, rsR
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	pThis->pszName = pszName;
+	pThis->iObjVers = iObjVers;
 	pThis->objID = objID;
 
 	pThis->objMethods[0] = pDestruct;
@@ -92,6 +94,125 @@ rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pH
 
 	return RS_RET_OK;
 }
+
+
+/* --------------- object serializiation / deserialization support --------------- */
+
+/* begin serialization of an object
+ */
+rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj)
+{
+	DEFiRet;
+	rsCStrObj *pCStr;
+
+	assert(ppCStr != NULL);
+	assert(pObj != NULL);
+
+	if((pCStr = rsCStrConstruct()) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	/* cookie-char */
+	CHKiRet(rsCStrAppendChar(pCStr, '$'));
+	/* serializer version (so far always 1) */
+	CHKiRet(rsCStrAppendChar(pCStr, '1'));
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+
+	/* object Name */
+	CHKiRet(rsCStrAppendStr(pCStr, objGetName(pObj)));
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	/* object version */
+	CHKiRet(rsCStrAppendInt(pCStr, objGetVersion(pObj)));
+
+	/* record trailer */
+	CHKiRet(rsCStrAppendChar(pCStr, '\n'));
+
+	*ppCStr = pCStr;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* append a property
+ */
+rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr)
+{
+	DEFiRet;
+	uchar *pszBuf;
+	size_t lenBuf;
+	uchar szBuf[64];
+
+	assert(pCStr != NULL);
+	assert(pszPropName != NULL);
+
+	/* if we have no user pointer, there is no need to write this property.
+	 * TODO: think if that's the righ point of view
+	 * rgerhards, 2008-01-06
+	 */
+	if(pUsr == NULL)
+		ABORT_FINALIZE(RS_RET_OK);
+
+	switch(propType) {
+		case PROPTYPE_PSZ:
+			pszBuf = (uchar*) pUsr;
+			lenBuf = strlen((char*) pszBuf);
+			break;
+		case PROPTYPE_SHORT:
+			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((short*) pUsr)));
+			pszBuf = szBuf;
+			lenBuf = strlen((char*) szBuf);
+			break;
+		case PROPTYPE_INT:
+			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((int*) pUsr)));
+			pszBuf = szBuf;
+			lenBuf = strlen((char*) szBuf);
+			break;
+	}
+
+	/* name */
+	CHKiRet(rsCStrAppendStr(pCStr, pszPropName));
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	/* type */
+	CHKiRet(rsCStrAppendInt(pCStr, (int) propType));
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	/* length */
+	CHKiRet(rsCStrAppendInt(pCStr, lenBuf));
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+
+	/* data */
+	CHKiRet(rsCStrAppendStrWithLen(pCStr, (uchar*) pszBuf, lenBuf));
+
+	/* trailer */
+	CHKiRet(rsCStrAppendChar(pCStr, '\n'));
+
+finalize_it:
+	return iRet;
+}
+
+
+/* end serialization of an object. The caller receives a
+ * standard C string, which he must free when no longer needed.
+ */
+rsRetVal objEndSerialize(rsCStrObj *pCStr, uchar **ppSz)
+{
+	DEFiRet;
+	assert(pCStr != NULL);
+
+	assert(pCStr != NULL);
+	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) ".EndObj.\n"));
+	CHKiRet(rsCStrFinish(pCStr));
+	CHKiRet(rsCStrConvSzStrAndDestruct(pCStr, ppSz, 0));
+
+	pCStr = NULL;
+
+finalize_it:
+	if(pCStr != NULL)
+		rsCStrDestruct(pCStr);
+
+	return iRet;
+}
+
+/* --------------- end object serializiation / deserialization support --------------- */
 
 /*
  * vi:set ai:

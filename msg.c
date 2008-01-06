@@ -391,29 +391,35 @@ dbgprintf("MsgSerialize in\n");
 	assert(pLenBuf != NULL);
 	assert(pThis != NULL);
 
-	if((pCStr = rsCStrConstruct()) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
-	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) "$MSG v1\n"));
+#	define mySerializeINT(propName) \
+		CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_SHORT, (void*) &pThis->propName));
+	CHKiRet(objBeginSerialize(&pCStr, (obj_t*) pThis));
+dbgprintf("syslog vers: %d, bparsehost: %d, sever %d\n", pThis->iSyslogVers, pThis->bParseHOSTNAME, pThis->iSeverity);
+	mySerializeINT(iSyslogVers);
+	mySerializeINT(bParseHOSTNAME);
+	mySerializeINT(iSeverity);
+
+	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszRawMsg", PROPTYPE_PSZ, (void*) pThis->pszRawMsg));
+	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszMSG", PROPTYPE_PSZ, (void*) pThis->pszMSG));
+	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszUxTradMsg", PROPTYPE_PSZ, (void*) pThis->pszUxTradMsg));
+	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszTAG", PROPTYPE_PSZ, (void*) pThis->pszTAG));
+	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszHOSTNAME", PROPTYPE_PSZ, (void*) pThis->pszHOSTNAME));
+	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszRcvFrom", PROPTYPE_PSZ, (void*) pThis->pszRcvFrom));
+	//CHKiRet(objSerializeProp(pCStr, (uchar*) "psz", PROPTYPE_PSZ, (void*) pThis->psz));
+	CHKiRet(objEndSerialize(pCStr, ppOutBuf));
+	pCStr = NULL;
+#	undef	mySerialize
 
 /*
 	if(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\') != RS_RET_OK)
 
-	pNew->iSyslogVers = pOld->iSyslogVers;
-	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
-	pNew->iSeverity = pOld->iSeverity;
 	pNew->iFacility = pOld->iFacility;
 	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
 	pNew->msgFlags = pOld->msgFlags;
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	memcpy(&pNew->tRcvdAt, &pOld->tRcvdAt, sizeof(struct syslogTime));
 	memcpy(&pNew->tTIMESTAMP, &pOld->tTIMESTAMP, sizeof(struct syslogTime));
-	tmpCOPYSZ(RawMsg);
-	tmpCOPYSZ(MSG);
-	tmpCOPYSZ(UxTradMsg);
-	tmpCOPYSZ(TAG);
-	tmpCOPYSZ(HOSTNAME);
-	tmpCOPYSZ(RcvFrom);
 
 	tmpCOPYCSTR(ProgName);
 	tmpCOPYCSTR(StrucData);
@@ -422,6 +428,9 @@ dbgprintf("MsgSerialize in\n");
 	tmpCOPYCSTR(MSGID);
 */
 finalize_it:
+	if(pCStr != NULL)
+		rsCStrDestruct(pCStr);
+	
 	return iRet;
 }
 
@@ -2087,7 +2096,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
  * before anything else is called inside this class.
  * rgerhards, 2008-01-04
  */
-BEGINObjClassInit(Msg)
+BEGINObjClassInit(Msg, 1)
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
 	/* initially, we have no need to lock message objects */
 	funcLock = MsgLockingDummy;

@@ -123,7 +123,7 @@ void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement);
  * Append an integer to the string. No special formatting is
  * done.
  */
-rsRetVal rsCStrAppendInt(rsCStrObj *pThis, int i);
+rsRetVal rsCStrAppendInt(rsCStrObj *pThis, long i);
 
 
 uchar*  rsCStrGetSzStr(rsCStrObj *pThis);

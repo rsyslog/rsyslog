@@ -26,6 +26,17 @@
 #ifndef OBJ_H_INCLUDED
 #define OBJ_H_INCLUDED
 
+#include "stringbuf.h"
+
+/* property types */
+typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc() */
+	PROPTYPE_PSZ = 1,
+	PROPTYPE_SHORT = 2,
+	PROPTYPE_INT = 3,
+	PROPTYPE_LONG = 4
+} propertyType_t;
+
+/* object Types */
 typedef enum {	/* IDs of known object "types/classes" */
 	objNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
 	objMsg = 1
@@ -43,6 +54,7 @@ typedef enum {	/* IDs of base methods supported by all objects - used for jump t
 
 typedef struct objInfo_s {
 	objID_t	objID;	
+	int iObjVers;
 	uchar *pszName;
 	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
 } objInfo_t;
@@ -55,17 +67,19 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 /* macros */
 #define DEFobjStaticHelpers static objInfo_t *pObjInfoOBJ = NULL;
 #define BEGINobjInstance objInfo_t *pObjInfo
+#define objGetName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
+#define objGetVersion(pThis) (((obj_t*) (pThis))->pObjInfo->iObjVers)
 /* must be called in Constructor: */
 #define objConstructSetObjInfo(pThis) ((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ;
 #define objDestruct(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DESTRUCT])(pThis)
 #define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
 /* class initializer */
 #define PROTOTYPEObjClassInit(objName) rsRetVal objName##ClassInit(void)
-#define BEGINObjClassInit(objName) \
+#define BEGINObjClassInit(objName, objVers) \
 rsRetVal objName##ClassInit(void) \
 { \
 	DEFiRet; \
-	CHKiRet(objInfoConstruct(&pObjInfoOBJ, obj##objName, (uchar*) #objName, (rsRetVal (*)(void*))objName##Destruct)); 
+	CHKiRet(objInfoConstruct(&pObjInfoOBJ, obj##objName, (uchar*) #objName, objVers, (rsRetVal (*)(void*))objName##Destruct)); 
 
 #define ENDObjClassInit \
 finalize_it: \
@@ -77,7 +91,11 @@ finalize_it: \
 
 
 /* prototypes */
-rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, rsRetVal (*pDestruct)(void *));
+rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pDestruct)(void *));
 rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
+rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj);
+rsRetVal objSerializePsz(rsCStrObj *pCStr, uchar *psz, size_t len);
+rsRetVal objEndSerialize(rsCStrObj *pCStr, uchar **ppSz);
+rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr);
 
 #endif /* #ifndef OBJ_H_INCLUDED */
