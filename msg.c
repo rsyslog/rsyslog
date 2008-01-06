@@ -380,15 +380,12 @@ msg_t* MsgDup(msg_t* pOld)
  * during msg construction - and never again used later.
  * rgerhards, 2008-01-03
  */
-static rsRetVal MsgSerialize(msg_t *pThis, uchar **ppOutBuf, size_t *pLenBuf)
+static rsRetVal MsgSerialize(msg_t *pThis, rsCStrObj **ppCStr)
 {
 	DEFiRet;
 	rsCStrObj *pCStr;
 
-	assert(ppOutBuf != NULL);
-	assert(pLenBuf != NULL);
-	assert(pThis != NULL);
-
+	assert(ppCStr != NULL);
 
 	CHKiRet(objBeginSerialize(&pCStr, (obj_t*) pThis));
 	objSerializeSCALAR(iProtocolVersion, SHORT);
@@ -411,11 +408,11 @@ static rsRetVal MsgSerialize(msg_t *pThis, uchar **ppOutBuf, size_t *pLenBuf)
 	objSerializePTR(pCSPROCID, CSTR);
 	objSerializePTR(pCSMSGID, CSTR);
 
-	CHKiRet(objEndSerialize(pCStr, ppOutBuf));
-	pCStr = NULL;
+	CHKiRet(objEndSerialize((&pCStr), (obj_t*) pThis));
+	*ppCStr = pCStr;
 
 finalize_it:
-	if(pCStr != NULL)
+	if(iRet != RS_RET_OK && pCStr != NULL)
 		rsCStrDestruct(pCStr);
 	
 	return iRet;

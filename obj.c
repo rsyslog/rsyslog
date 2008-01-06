@@ -100,35 +100,20 @@ rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pH
 
 /* --------------- object serializiation / deserialization support --------------- */
 
-/* begin serialization of an object
+/* begin serialization of an object - this is a very simple hook. It once wrote the wrapper,
+ * now it only constructs the string object. We still leave it in here so that we may utilize
+ * it in the future (it is a nice abstraction).
+ * rgerhards, 2008-01-06
  */
 rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj)
 {
 	DEFiRet;
-	rsCStrObj *pCStr;
 
 	assert(ppCStr != NULL);
 	assert(pObj != NULL);
 
-	if((pCStr = rsCStrConstruct()) == NULL)
+	if((*ppCStr = rsCStrConstruct()) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
-	/* cookie-char */
-	CHKiRet(rsCStrAppendChar(pCStr, '$'));
-	/* serializer version (so far always 1) */
-	CHKiRet(rsCStrAppendChar(pCStr, '1'));
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
-
-	/* object Name */
-	CHKiRet(rsCStrAppendStr(pCStr, objGetName(pObj)));
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
-	/* object version */
-	CHKiRet(rsCStrAppendInt(pCStr, objGetVersion(pObj)));
-
-	/* record trailer */
-	CHKiRet(rsCStrAppendChar(pCStr, '\n'));
-
-	*ppCStr = pCStr;
 
 finalize_it:
 	return iRet;
@@ -152,7 +137,6 @@ rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t p
 	 * rgerhards, 2008-01-06
 	 */
 	if(pUsr == NULL) {
-dbgprintf("ptr is NULL\n");
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
@@ -178,7 +162,7 @@ dbgprintf("ptr is NULL\n");
 			break;
 		case PROPTYPE_CSTR:
 			pszBuf = rsCStrGetSzStrNoNULL((rsCStrObj *) pUsr);
-			lenBuf = strlen((char*) pszBuf);
+			lenBuf = rsCStrLen((rsCStrObj*) pUsr);
 			break;
 		case PROPTYPE_SYSLOGTIME:
 			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%d %d %d %d %d %d %d %d %d %c %d %d",
@@ -221,25 +205,65 @@ finalize_it:
 }
 
 
+static rsRetVal objSerializeHeader(rsCStrObj **ppCStr, obj_t *pObj, rsCStrObj *pCSObjString)
+{
+	DEFiRet;
+	rsCStrObj *pCStr;
+
+	assert(ppCStr != NULL);
+	assert(pObj != NULL);
+
+	if((pCStr = rsCStrConstruct()) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	/* object cookie and serializer version (so far always 1) */
+	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) "$Obj1"));
+
+	/* object type, version and string length */
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	CHKiRet(rsCStrAppendInt(pCStr, objGetObjID(pObj)));
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	CHKiRet(rsCStrAppendInt(pCStr, objGetVersion(pObj)));
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	CHKiRet(rsCStrAppendInt(pCStr, rsCStrLen(pCSObjString)));
+
+	/* and finally we write the object name - this is primarily meant for
+	 * human readers. The idea is that it can be easily skipped when reading
+	 * the object back in
+	 */
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	CHKiRet(rsCStrAppendStr(pCStr, objGetName(pObj)));
+	/* record trailer */
+	CHKiRet(rsCStrAppendChar(pCStr, '\n'));
+
+	*ppCStr = pCStr;
+
+finalize_it:
+	return iRet;
+}
+
+
 /* end serialization of an object. The caller receives a
  * standard C string, which he must free when no longer needed.
  */
-rsRetVal objEndSerialize(rsCStrObj *pCStr, uchar **ppSz)
+rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj)
 {
 	DEFiRet;
-	assert(pCStr != NULL);
+	rsCStrObj *pCStr = NULL;
 
-	assert(pCStr != NULL);
-	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) ".EndObj.\n"));
+	assert(ppCStr != NULL);
+	CHKiRet(objSerializeHeader(&pCStr, pObj, *ppCStr));
+
+	CHKiRet(rsCStrAppendStrWithLen(pCStr, rsCStrGetBufBeg(*ppCStr), rsCStrLen(*ppCStr)));
+	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) ".\n"));
 	CHKiRet(rsCStrFinish(pCStr));
-	CHKiRet(rsCStrConvSzStrAndDestruct(pCStr, ppSz, 0));
 
-	pCStr = NULL;
+	rsCStrDestruct(*ppCStr);
+	*ppCStr = pCStr;
 
 finalize_it:
-	if(pCStr != NULL)
+	if(iRet != RS_RET_OK && pCStr != NULL)
 		rsCStrDestruct(pCStr);
-
 	return iRet;
 }
 

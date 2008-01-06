@@ -40,6 +40,7 @@
 #include "rsyslog.h"
 #include "syslogd.h"
 #include "queue.h"
+#include "stringbuf.h"
 #include "srUtils.h"
 
 /* static data */
@@ -233,13 +234,12 @@ rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 {
 	DEFiRet;
 	int i;
-	long lenBuf;
-	uchar *pBuf;
+	rsCStrObj *pCStr;
 
 	assert(pThis != NULL);
 	dbgprintf("writing to file %d\n", pThis->tVars.disk.fd);
-	CHKiRet((objSerialize(pUsr))(pUsr, &pBuf, &lenBuf)); // TODO: hier weiter machen!
-	i = write(pThis->tVars.disk.fd, pBuf, strlen((char*) pBuf));
+	CHKiRet((objSerialize(pUsr))(pUsr, &pCStr)); // TODO: hier weiter machen!
+	i = write(pThis->tVars.disk.fd, rsCStrGetBufBeg(pCStr), rsCStrLen(pCStr));
 	dbgprintf("write wrote %d bytes, errno: %d, err %s\n", i, errno, strerror(errno));
 
 finalize_it:

@@ -38,7 +38,7 @@ typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc(
 	PROPTYPE_SYSLOGTIME = 6
 } propertyType_t;
 
-/* object Types */
+/* object Types/IDs */
 typedef enum {	/* IDs of known object "types/classes" */
 	objNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
 	objMsg = 1
@@ -74,6 +74,7 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 #define DEFobjStaticHelpers static objInfo_t *pObjInfoOBJ = NULL;
 #define BEGINobjInstance objInfo_t *pObjInfo
 #define objGetName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
+#define objGetObjID(pThis) (((obj_t*) (pThis))->pObjInfo->objID)
 #define objGetVersion(pThis) (((obj_t*) (pThis))->pObjInfo->iObjVers)
 /* must be called in Constructor: */
 #define objConstructSetObjInfo(pThis) ((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ;
@@ -101,7 +102,7 @@ rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int
 rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
 rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj);
 rsRetVal objSerializePsz(rsCStrObj *pCStr, uchar *psz, size_t len);
-rsRetVal objEndSerialize(rsCStrObj *pCStr, uchar **ppSz);
+rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj);
 rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr);
 
 #endif /* #ifndef OBJ_H_INCLUDED */
