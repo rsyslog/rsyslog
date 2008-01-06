@@ -50,9 +50,6 @@ struct msg {
 	pthread_mutexattr_t mutAttr;
 	pthread_mutex_t mut;
 	int	iRefCount;	/* reference counter (0 = unused) */
-	short	iSyslogVers;	/* version of syslog protocol
-				 * 0 - RFC 3164
-				 * 1 - RFC draft-protocol-08 */
 	short	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,
@@ -87,7 +84,7 @@ struct msg {
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
 	uchar	*pszRcvFrom;	/* System message was received from */
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
-	int	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
+	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
 	rsCStrObj *pCSProgName;	/* the (BSD) program name */
 	rsCStrObj *pCSStrucData;/* STRUCTURED-DATA */
 	rsCStrObj *pCSAPPNAME;	/* APP-NAME */

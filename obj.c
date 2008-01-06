@@ -27,11 +27,13 @@
  */
 #include "config.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
 #include "rsyslog.h"
+#include "syslogd-types.h"
 #include "srUtils.h"
 #include "obj.h"
 
@@ -149,8 +151,10 @@ rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t p
 	 * TODO: think if that's the righ point of view
 	 * rgerhards, 2008-01-06
 	 */
-	if(pUsr == NULL)
+	if(pUsr == NULL) {
+dbgprintf("ptr is NULL\n");
 		ABORT_FINALIZE(RS_RET_OK);
+	}
 
 	switch(propType) {
 		case PROPTYPE_PSZ:
@@ -166,6 +170,33 @@ rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t p
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((int*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = strlen((char*) szBuf);
+			break;
+		case PROPTYPE_LONG:
+			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), *((long*) pUsr)));
+			pszBuf = szBuf;
+			lenBuf = strlen((char*) szBuf);
+			break;
+		case PROPTYPE_CSTR:
+			pszBuf = rsCStrGetSzStrNoNULL((rsCStrObj *) pUsr);
+			lenBuf = strlen((char*) pszBuf);
+			break;
+		case PROPTYPE_SYSLOGTIME:
+			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%d %d %d %d %d %d %d %d %d %c %d %d",
+					  ((struct syslogTime*)pUsr)->timeType,
+					  ((struct syslogTime*)pUsr)->year,
+					  ((struct syslogTime*)pUsr)->month,
+					  ((struct syslogTime*)pUsr)->day,
+					  ((struct syslogTime*)pUsr)->hour,
+					  ((struct syslogTime*)pUsr)->minute,
+					  ((struct syslogTime*)pUsr)->second,
+					  ((struct syslogTime*)pUsr)->secfrac,
+					  ((struct syslogTime*)pUsr)->secfracPrecision,
+					  ((struct syslogTime*)pUsr)->OffsetMode,
+					  ((struct syslogTime*)pUsr)->OffsetHour,
+					  ((struct syslogTime*)pUsr)->OffsetMinute);
+			if(lenBuf > sizeof(szBuf) - 1)
+				ABORT_FINALIZE(RS_RET_PROVIDED_BUFFER_TOO_SMALL);
+			pszBuf = szBuf;
 			break;
 	}
 

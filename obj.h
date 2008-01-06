@@ -33,7 +33,9 @@ typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc(
 	PROPTYPE_PSZ = 1,
 	PROPTYPE_SHORT = 2,
 	PROPTYPE_INT = 3,
-	PROPTYPE_LONG = 4
+	PROPTYPE_LONG = 4,
+	PROPTYPE_CSTR = 5,
+	PROPTYPE_SYSLOGTIME = 6
 } propertyType_t;
 
 /* object Types */
@@ -65,6 +67,10 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 
 
 /* macros */
+#define objSerializeSCALAR(propName, propType) \
+	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
+#define objSerializePTR(propName, propType) \
+	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
 #define DEFobjStaticHelpers static objInfo_t *pObjInfoOBJ = NULL;
 #define BEGINobjInstance objInfo_t *pObjInfo
 #define objGetName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)

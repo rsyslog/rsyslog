@@ -210,7 +210,6 @@ msg_t* MsgConstruct(void)
 	if((pM = calloc(1, sizeof(msg_t))) != NULL)
 	{ /* initialize members that are non-zero */
 		pM->iRefCount = 1;
-		pM->iSyslogVers = -1;
 		pM->iSeverity = -1;
 		pM->iFacility = -1;
 		getCurrTime(&(pM->tRcvdAt));
@@ -334,8 +333,6 @@ msg_t* MsgDup(msg_t* pOld)
 
 	/* now copy the message properties */
 	pNew->iRefCount = 1;
-	pNew->iSyslogVers = pOld->iSyslogVers;
-	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
 	pNew->iSeverity = pOld->iSeverity;
 	pNew->iFacility = pOld->iFacility;
 	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
@@ -378,7 +375,9 @@ msg_t* MsgDup(msg_t* pOld)
  * on-disk representation of the message object.
  * We do not serialize the cache properties. We re-create them when needed.
  * This saves us a lot of memory. Performance is no concern, as serializing
- * is a so slow operation that recration of the caches does not count.
+ * is a so slow operation that recration of the caches does not count. Also,
+ * we do not serialize bParseHOSTNAME, as this is only a helper variable
+ * during msg construction - and never again used later.
  * rgerhards, 2008-01-03
  */
 static rsRetVal MsgSerialize(msg_t *pThis, uchar **ppOutBuf, size_t *pLenBuf)
@@ -386,47 +385,35 @@ static rsRetVal MsgSerialize(msg_t *pThis, uchar **ppOutBuf, size_t *pLenBuf)
 	DEFiRet;
 	rsCStrObj *pCStr;
 
-dbgprintf("MsgSerialize in\n");
 	assert(ppOutBuf != NULL);
 	assert(pLenBuf != NULL);
 	assert(pThis != NULL);
 
 
-#	define mySerializeINT(propName) \
-		CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_SHORT, (void*) &pThis->propName));
 	CHKiRet(objBeginSerialize(&pCStr, (obj_t*) pThis));
-dbgprintf("syslog vers: %d, bparsehost: %d, sever %d\n", pThis->iSyslogVers, pThis->bParseHOSTNAME, pThis->iSeverity);
-	mySerializeINT(iSyslogVers);
-	mySerializeINT(bParseHOSTNAME);
-	mySerializeINT(iSeverity);
+	objSerializeSCALAR(iProtocolVersion, SHORT);
+	objSerializeSCALAR(iSeverity, SHORT);
+	objSerializeSCALAR(iFacility, SHORT);
+	objSerializeSCALAR(msgFlags, INT);
+	objSerializeSCALAR(tRcvdAt, SYSLOGTIME);
+	objSerializeSCALAR(tTIMESTAMP, SYSLOGTIME);
 
-	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszRawMsg", PROPTYPE_PSZ, (void*) pThis->pszRawMsg));
-	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszMSG", PROPTYPE_PSZ, (void*) pThis->pszMSG));
-	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszUxTradMsg", PROPTYPE_PSZ, (void*) pThis->pszUxTradMsg));
-	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszTAG", PROPTYPE_PSZ, (void*) pThis->pszTAG));
-	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszHOSTNAME", PROPTYPE_PSZ, (void*) pThis->pszHOSTNAME));
-	CHKiRet(objSerializeProp(pCStr, (uchar*) "pszRcvFrom", PROPTYPE_PSZ, (void*) pThis->pszRcvFrom));
-	//CHKiRet(objSerializeProp(pCStr, (uchar*) "psz", PROPTYPE_PSZ, (void*) pThis->psz));
+	objSerializePTR(pszRawMsg, PSZ);
+	objSerializePTR(pszMSG, PSZ);
+	objSerializePTR(pszUxTradMsg, PSZ);
+	objSerializePTR(pszTAG, PSZ);
+	objSerializePTR(pszHOSTNAME, PSZ);
+	objSerializePTR(pszRcvFrom, PSZ);
+
+	objSerializePTR(pCSProgName, CSTR);
+	objSerializePTR(pCSStrucData, CSTR);
+	objSerializePTR(pCSAPPNAME, CSTR);
+	objSerializePTR(pCSPROCID, CSTR);
+	objSerializePTR(pCSMSGID, CSTR);
+
 	CHKiRet(objEndSerialize(pCStr, ppOutBuf));
 	pCStr = NULL;
-#	undef	mySerialize
 
-/*
-	if(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\') != RS_RET_OK)
-
-	pNew->iFacility = pOld->iFacility;
-	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
-	pNew->msgFlags = pOld->msgFlags;
-	pNew->iProtocolVersion = pOld->iProtocolVersion;
-	memcpy(&pNew->tRcvdAt, &pOld->tRcvdAt, sizeof(struct syslogTime));
-	memcpy(&pNew->tTIMESTAMP, &pOld->tTIMESTAMP, sizeof(struct syslogTime));
-
-	tmpCOPYCSTR(ProgName);
-	tmpCOPYCSTR(StrucData);
-	tmpCOPYCSTR(APPNAME);
-	tmpCOPYCSTR(PROCID);
-	tmpCOPYCSTR(MSGID);
-*/
 finalize_it:
 	if(pCStr != NULL)
 		rsCStrDestruct(pCStr);
