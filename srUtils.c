@@ -58,11 +58,11 @@
  * public members                                                    *
  * ################################################################# */
 
-rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv)
+rsRetVal srUtilItoA(char *pBuf, int iLenBuf, long iToConv)
 {
 	int i;
 	int bIsNegative;
-	char szBuf[32];	/* sufficiently large for my lifespan and those of my children... ;) */
+	char szBuf[64];	/* sufficiently large for my lifespan and those of my children... ;) */
 
 	assert(pBuf != NULL);
 	assert(iLenBuf > 1);	/* This is actually an app error and as thus checked for... */
@@ -79,9 +79,10 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv)
 	i = 0;
 	do
 	{
-		szBuf[i] = iToConv % 10 + '0';
+		szBuf[i++] = iToConv % 10 + '0';
 		iToConv /= 10;
 	} while(iToConv > 0);	/* warning: do...while()! */
+	--i; /* undo last increment - we were pointing at NEXT location */
 
 	/* make sure we are within bounds... */
 	if(i + 2 > iLenBuf)	/* +2 because: a) i starts at zero! b) the \0 byte */

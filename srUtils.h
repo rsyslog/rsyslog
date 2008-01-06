@@ -44,7 +44,7 @@
  *
  * \param iToConv The integer to be converted.
  */
-rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv);
+rsRetVal srUtilItoA(char *pBuf, int iLenBuf, long iToConv);
 
 /**
  * A method to duplicate a string for which the length is known.
