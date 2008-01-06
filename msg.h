@@ -65,7 +65,7 @@ struct msg {
 	int iLenSeverity;	/* ... and its length. */
  	uchar *pszSeverityStr;   /* severity name... */
  	int iLenSeverityStr;    /* ... and its length. */
-	int	iFacility;	/* Facility code (up to 2^32-1) */
+	short	iFacility;	/* Facility code 0 .. 23*/
 	uchar *pszFacility;	/* Facility as string... */
 	int iLenFacility;	/* ... and its length. */
  	uchar *pszFacilityStr;   /* facility name... */
