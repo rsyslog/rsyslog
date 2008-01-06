@@ -78,9 +78,10 @@ rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int iToConv)
 	i = 0;
 	do
 	{
-		szBuf[i] = iToConv % 10 + '0';
+		szBuf[i++] = iToConv % 10 + '0';
 		iToConv /= 10;
 	} while(iToConv > 0);	/* warning: do...while()! */
+	--i; /* undo last increment - we were pointing at NEXT location */
 
 	/* make sure we are within bounds... */
 	if(i + 2 > iLenBuf)	/* +2 because: a) i starts at zero! b) the \0 byte */
