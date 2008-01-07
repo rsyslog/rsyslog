@@ -35,7 +35,11 @@ typedef struct {
 	int fd;		/* the file descriptor, -1 if closed */
 	int iCurrFileNum;/* current file number (NOT descriptor, but the number in the file name!) */
 	int iCurrOffs;	/* current offset */
+	uchar *pIOBuf;	/* io Buffer */
+	int iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
+	int iBufPtr;	/* pointer into current buffer */
 } queueFileDescription_t;
+#define qFILE_IOBUF_SIZE 4096 /* size of the IO buffer */
 
 
 /* queue types */

@@ -94,6 +94,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_TCP_SOCKCREATE_ERR = -2025, /**< error during creation of TCP socket */
 	RS_RET_GSS_SENDINIT_ERROR = -2024, /**< error during GSS (via TCP) send initialization process */
 	RS_RET_QUEUE_FULL = -2025, /**< queue is full, operation could not be completed */
+	RS_RET_EOF = -2026, /**< end of file reached, not necessarily an error */
+	RS_RET_IO_ERROR = -2027, /**< some kind of IO error happened */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */
