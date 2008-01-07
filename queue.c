@@ -271,6 +271,7 @@ static rsRetVal qDiskReadChar(queueFileDescription_t *pFile, uchar *pC)
 	assert(pFile != NULL);
 	assert(pC != NULL);
 
+dbgprintf("qDiskRead index %d, max %d\n", pFile->iBufPtr, pFile->iBufPtrMax);
 	if(pFile->pIOBuf == NULL) { /* TODO: maybe we should move that to file open... */
 		if((pFile->pIOBuf = (uchar*) malloc(sizeof(uchar) * qFILE_IOBUF_SIZE )) == NULL)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -287,7 +288,7 @@ static rsRetVal qDiskReadChar(queueFileDescription_t *pFile, uchar *pC)
 	if(pFile->iBufPtr >= pFile->iBufPtrMax) {
 		/* read */
 		pFile->iBufPtrMax = read(pFile->fd, pFile->pIOBuf, qFILE_IOBUF_SIZE);
-		dbgprintf("Read %d bytes from file %d\n", pFile->iBufPtrMax, pFile->fd);
+		dbgprintf("qDiskReadChar read %d bytes from file %d\n", pFile->iBufPtrMax, pFile->fd);
 		if(pFile->iBufPtrMax == 0)
 			ABORT_FINALIZE(RS_RET_EOF);
 		else if(pFile->iBufPtrMax < 0)
@@ -443,11 +444,20 @@ static rsRetVal qDelDisk(queue_t *pThis, void **ppUsr)
 		CHKiRet(qDiskOpenFile(pThis, &pThis->tVars.disk.fRead, O_RDONLY, 0600)); // TODO: open modes!
 
 	/* de-serialize object from file */
+retry:
 	serialStore.pUsr = &pThis->tVars.disk.fRead;
 	serialStore.funcGetChar = (rsRetVal (*)(void*, uchar*)) qDiskReadChar;
 	serialStore.funcUngetChar = (rsRetVal (*)(void*, uchar)) qDiskUnreadChar;
-	CHKiRet(objDeserialize((void*) &pMsg, objMsg, &serialStore));
+	iRet= objDeserialize((void*) &pMsg, objMsg, &serialStore);
 
+	if(iRet == RS_RET_OK)
+		;
+	else if(iRet == RS_RET_EOF) {
+dbgprintf("EOF!\n");
+		CHKiRet(qDiskNextFile(pThis, &pThis->tVars.disk.fRead));
+		goto retry;
+	} else
+		FINALIZE;
 	/* switch to next file when EOF is reached. We may also delete the last file in that case.
 	pThis->tVars.disk.fWrite.iCurrOffs += iWritten;
 	if(pThis->tVars.disk.fWrite.iCurrOffs >= pThis->tVars.disk.iMaxFileSize)

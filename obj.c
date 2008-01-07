@@ -534,6 +534,8 @@ dbgprintf("good propline loop exit\n");
 
 	CHKiRet(objDeserializeTrailer(pSerStore)); /* do trailer checks */
 
+// TODO: call constuction finalizer!
+//
 	*((obj_t**) ppObj) = pObj;
 
 finalize_it:
