@@ -1,10 +1,10 @@
----------------------------------------------------------------------------
-Version 3.10.0 (rgerhards), 2008-01-07
+﻿Version 3.10.0 (rgerhards), 2008-01-07
+- implemented input module interface and initial input modules
+- enhanced threading for input modules (each on its own thread now)
 - ability to bind UDP listeners to specific local interfaces/ports and
   ability to run multiple of them concurrently
-- added ability to run multiple UDP listeners concurrently
+- added ability to specify listen IP address for UDP syslog server
 - license changed to GPLv3
-- first implementation of loadable input module system
 - mark messages are now provided by loadble module immark
 - rklogd is no longer provided. Its functionality has now been taken over
   by imklog, a loadable input module. This offers a much better integration
