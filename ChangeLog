@@ -1,4 +1,5 @@
-﻿Version 3.10.0 (rgerhards), 2008-01-07
+---------------------------------------------------------------------------
+Version 3.10.0 (rgerhards), 2008-01-07
 - implemented input module interface and initial input modules
 - enhanced threading for input modules (each on its own thread now)
 - ability to bind UDP listeners to specific local interfaces/ports and
