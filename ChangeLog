@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
-Version 3.10.0 (rgerhards), 2008-01-??
-- added ability to specify listen IP address for UDP syslog server
+Version 3.10.0 (rgerhards), 2008-01-07
+- ability to bind UDP listeners to specific local interfaces/ports and
+  ability to run multiple of them concurrently
 - added ability to run multiple UDP listeners concurrently
 - license changed to GPLv3
 - first implementation of loadable input module system
@@ -17,8 +18,11 @@ Version 3.10.0 (rgerhards), 2008-01-??
   (among others, this can be used for performance fine-tuning)
 - added a large number of new configuration directives for the new
   input modules
-- ability to bind UDP listeners to specific local interfaces/ports and
-  ability to run multiple of them concurrently
+- enhanced multi-threading utilizing a worker thread pool for the
+  main message queue
+- compilation without pthreads is no longer supported
+- much cleaner code due to new objects and removal of single-threading
+  mode
 ---------------------------------------------------------------------------
 Version 2.0.0 STABLE (rgerhards), 2008-01-02
 - re-release of 1.21.2 as STABLE with no modifications except some
