@@ -190,10 +190,75 @@ rsRetVal qDelLinkedList(queue_t *pThis, void **ppUsr)
 
 /* -------------------- disk  -------------------- */
 
+/* first, disk-queue internal utility functions */
+
+
+/* open a queue file */
+rsRetVal qDiskOpenFile(queue_t *pThis, queueFileDescription_t *pFile, int flags, mode_t mode)
+{
+	DEFiRet;
+	uchar *pszFile = NULL;
+
+	assert(pThis != NULL);
+	assert(pFile != NULL);
+	/* now open the write file */
+	CHKiRet(genFileName(&pszFile, pThis->tVars.disk.pszSpoolDir, pThis->tVars.disk.lenSpoolDir,
+ 		     	    (uchar*) "mainq", 5, pFile->iCurrFileNum, (uchar*) "qf", 2));
+
+	pFile->fd = open((char*)pszFile, flags, mode); // TODO: open modes!
+	pFile->iCurrOffs = 0;
+
+	dbgprintf("Queue 0x%lx: opened file '%s' for %d as %d\n", (unsigned long) pThis, pszFile, flags, pFile->fd);
+
+finalize_it:
+	if(pszFile != NULL)
+		free(pszFile);	/* no longer needed in any case (just for open) */
+
+	return iRet;
+}
+
+
+/* close a queue file */
+rsRetVal qDiskCloseFile(queue_t *pThis, queueFileDescription_t *pFile)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+	assert(pFile != NULL);
+	dbgprintf("Queue 0x%lx: closing file %d\n", (unsigned long) pThis, pFile->fd);
+
+	close(pFile->fd); // TODO: error check
+	pFile->fd = -1;
+
+	return iRet;
+}
+
+
+/* switch to next queue file */
+rsRetVal qDiskNextFile(queue_t *pThis, queueFileDescription_t *pFile)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+	assert(pFile != NULL);
+	CHKiRet(qDiskCloseFile(pThis, pFile));
+
+	/* we do modulo 1,000,000 so that the file number is always at most 6 digits. If we have a million
+	 * or more queue files, something is awfully wrong and it is OK if we run into problems in that
+	 * situation ;) -- rgerhards, 2008-01-09
+	 */
+	pFile->iCurrFileNum = (pFile->iCurrFileNum + 1) % 1000000;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* now come the disk mode queue driver functions */
+
 rsRetVal qConstructDisk(queue_t *pThis)
 {
 	DEFiRet;
-	uchar *pszFile;
 
 	assert(pThis != NULL);
 
@@ -201,20 +266,17 @@ rsRetVal qConstructDisk(queue_t *pThis)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	pThis->tVars.disk.lenSpoolDir = strlen((char*)pThis->tVars.disk.pszSpoolDir);
+	pThis->tVars.disk.iMaxFileSize = 1024; // TODO: configurable!
 
-	/* now open the file */
-	CHKiRet(genFileName(&pszFile, pThis->tVars.disk.pszSpoolDir, pThis->tVars.disk.lenSpoolDir,
- 		     	    (uchar*) "mainq", 5, 1, (uchar*) "qf", 2));
+	pThis->tVars.disk.fWrite.iCurrFileNum = 1;
+	pThis->tVars.disk.fWrite.iCurrOffs = 0;
+	pThis->tVars.disk.fWrite.fd = -1;
 
-	dbgprintf("Queue 0x%lx: opening file '%s'\n", (unsigned long) pThis, pszFile);
-
-	pThis->tVars.disk.fd = open((char*)pszFile, O_RDWR|O_CREAT, 0600);
-	dbgprintf("opened file %d\n", pThis->tVars.disk.fd);
+	pThis->tVars.disk.fRead.iCurrFileNum = 1;
+	pThis->tVars.disk.fRead.fd = -1;
+	pThis->tVars.disk.fWrite.iCurrOffs = 0;
 
 finalize_it:
-	if(pThis->tVars.disk.pszSpoolDir != NULL)
-		free(pThis->tVars.disk.pszSpoolDir);
-
 	return iRet;
 }
 
@@ -225,7 +287,13 @@ rsRetVal qDestructDisk(queue_t *pThis)
 	
 	assert(pThis != NULL);
 	
-	close(pThis->tVars.disk.fd);
+	if(pThis->tVars.disk.fWrite.fd != -1)
+		qDiskCloseFile(pThis, &pThis->tVars.disk.fWrite);
+	if(pThis->tVars.disk.fRead.fd != -1)
+		qDiskCloseFile(pThis, &pThis->tVars.disk.fRead);
+
+	if(pThis->tVars.disk.pszSpoolDir != NULL)
+		free(pThis->tVars.disk.pszSpoolDir);
 
 	return iRet;
 }
@@ -233,14 +301,23 @@ rsRetVal qDestructDisk(queue_t *pThis)
 rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 {
 	DEFiRet;
-	int i;
+	int iWritten;
 	rsCStrObj *pCStr;
 
 	assert(pThis != NULL);
-	dbgprintf("writing to file %d\n", pThis->tVars.disk.fd);
-	CHKiRet((objSerialize(pUsr))(pUsr, &pCStr)); // TODO: hier weiter machen!
-	i = write(pThis->tVars.disk.fd, rsCStrGetBufBeg(pCStr), rsCStrLen(pCStr));
-	dbgprintf("write wrote %d bytes, errno: %d, err %s\n", i, errno, strerror(errno));
+
+	if(pThis->tVars.disk.fWrite.fd == -1)
+		CHKiRet(qDiskOpenFile(pThis, &pThis->tVars.disk.fWrite, O_RDWR|O_CREAT, 0600)); // TODO: open modes!
+
+	CHKiRet((objSerialize(pUsr))(pUsr, &pCStr));
+	iWritten = write(pThis->tVars.disk.fWrite.fd, rsCStrGetBufBeg(pCStr), rsCStrLen(pCStr));
+	dbgprintf("Queue 0x%lx: write wrote %d bytes, errno: %d, err %s\n", (unsigned long) pThis,
+	          iWritten, errno, strerror(errno));
+	/* TODO: handle error case -- rgerhards, 2008-01-07 */
+
+	pThis->tVars.disk.fWrite.iCurrOffs += iWritten;
+	if(pThis->tVars.disk.fWrite.iCurrOffs >= pThis->tVars.disk.iMaxFileSize)
+		CHKiRet(qDiskNextFile(pThis, &pThis->tVars.disk.fWrite));
 
 finalize_it:
 	return iRet;
@@ -250,8 +327,22 @@ rsRetVal qDelDisk(queue_t __attribute__((unused)) *pThis, void __attribute__((un
 {
 	DEFiRet;
 
+	assert(pThis != NULL);
+
+	if(pThis->tVars.disk.fRead.fd == -1)
+		CHKiRet(qDiskOpenFile(pThis, &pThis->tVars.disk.fRead, O_RDONLY, 0600)); // TODO: open modes!
+
+	/* read here */
+	/* de-serialize here */
+
+	/* switch to next file when EOF is reached. We may also delete the last file in that case.
+	pThis->tVars.disk.fWrite.iCurrOffs += iWritten;
+	if(pThis->tVars.disk.fWrite.iCurrOffs >= pThis->tVars.disk.iMaxFileSize)
+		CHKiRet(qDiskNextFile(pThis, &pThis->tVars.disk.fWrite));
+		*/
 	iRet = RS_RET_ERR;
 
+finalize_it:
 	return iRet;
 }
 
@@ -434,7 +525,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	pThis->iNumWorkerThreads = iWorkerThreads;
 	pThis->qType = qType;
 
-	/* set type-specific handlers */
+	/* set type-specific handlers and other very type-specific things (we can not totally hide it...) */
 	switch(qType) {
 		case QUEUETYPE_FIXED_ARRAY:
 			pThis->qConstruct = qConstructFixedArray;
@@ -453,6 +544,8 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 			pThis->qDestruct = qDestructDisk;
 			pThis->qAdd = qAddDisk;
 			pThis->qDel = qDelDisk;
+			/* special handling */
+			pThis->iNumWorkerThreads = 1; /* we need exactly one worker */
 			break;
 		case QUEUETYPE_DIRECT:
 			pThis->qConstruct = qConstructDirect;

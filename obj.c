@@ -131,8 +131,8 @@ finalize_it:
 rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr)
 {
 	DEFiRet;
-	uchar *pszBuf;
-	size_t lenBuf;
+	uchar *pszBuf = NULL;
+	size_t lenBuf = 0;
 	uchar szBuf[64];
 
 	assert(pCStr != NULL);

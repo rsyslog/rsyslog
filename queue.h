@@ -26,6 +26,18 @@
 #include <pthread.h>
 #include "obj.h"
 
+/* some information about disk files used by the queue. In the long term, we may
+ * export this settings to a separate file module - or not (if they are too
+ * queue-specific. I just thought I mention it here so that everyone is aware
+ * of this possibility. -- rgerhards, 2008-01-07
+ */
+typedef struct {
+	int fd;		/* the file descriptor, -1 if closed */
+	int iCurrFileNum;/* current file number (NOT descriptor, but the number in the file name!) */
+	int iCurrOffs;	/* current offset */
+} queueFileDescription_t;
+
+
 /* queue types */
 typedef enum {
 	QUEUETYPE_FIXED_ARRAY = 0,/* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
@@ -73,10 +85,10 @@ typedef struct queue_s {
 			size_t lenSpoolDir;
 			uchar *pszFilePrefix;
 			size_t lenFilePrefix;
-			int iCurrFileNum;	/* number of file currently processed */
-			int fd;		/* current file descriptor */
-			long iWritePos; /* next write position offset */
-			long iReadPos;	/* next read position offset */
+			int iNumberFiles;	/* how many files make up the queue? */
+			int iMaxFileSize;	/* max size for a single queue file */
+			queueFileDescription_t fWrite; /* current file to be written */
+			queueFileDescription_t fRead;  /* current file to be read */
 		} disk;
 	} tVars;
 } queue_t;

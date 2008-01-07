@@ -168,7 +168,6 @@ static rsRetVal rsCStrExtendBuf(rsCStrObj *pThis, size_t iMinNeeded)
 	}
 	iNewSize += pThis->iBufSize; /* add current size */
 
-dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize);
 	/* and then allocate and copy over */
 	/* DEV debugging only: dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize); */
 	if((pNewBuf = (uchar*) malloc(iNewSize * sizeof(uchar))) == NULL)
