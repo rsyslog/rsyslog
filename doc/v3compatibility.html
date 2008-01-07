@@ -14,6 +14,21 @@ both in regard to sysklogd and rsyslog v1 and v2.</P>
 be resolved, so be sure to check back often. Also, comments and suggestions are 
 appreciated. Feedback right in time can now have a big impact on the route we 
 take ;)</P>
+<h2>inputs</h2>
+<p>With v2 and below, inputs were automatically started together with rsyslog. 
+In v3, inputs are optional! They come in the form of plug-in modules.
+<font color="#FF0000"><b>At least one input module must be loaded to make 
+rsyslog do any useful work.</b></font> The config file directives doc briefly 
+lists which config statements are available by which modules.</p>
+<p>It is suggested that input modules be loaded in the top part of the config 
+file. Here is an example, also highlighting the most important modules:</p>
+<p><b>$ModLoad immark&nbsp;&nbsp; # provides --MARK-- message capability<br>
+$ModLoad imudp&nbsp; # provides UDP syslog reception<br>
+$ModLoad imtcp&nbsp; # provides TCP syslog reception and GSS-API (if compiled to 
+support it)<br>
+$ModLoad imuxsock # provides support for local system logging (e.g. via logger 
+command)<br>
+$ModLoad imklog # provides kernel logging support (previously done by rklogd)</b></p>
 <h2>command line options</h2>
 <p>A number of command line options have been removed. New config file 
 directives have been added for them. Once we implement compatibiltiy mode, these 
@@ -59,6 +74,10 @@ rsyslog.conf. That set of configuration directives is to be expanded. So far, we
 support:</P>
 <P>$klogSymbolsTwice [on/off]<br>
 $DebugPrintKernelSymbols [on/off] # spits *a lot* of messages at startup</P>
+<h2>Queue Modes for the Main Message Queue</h2>
+<p>Either &quot;FixedArray&quot; or &quot;LinkedList&quot; is recommended. &quot;Direct&quot; is available, 
+but should not be used except for a very good reason (&quot;Direct&quot; disables queueing 
+and will potentially lead to message loss on the input side).</p>
 <h1>TODO List</h1>
 <P>I have decided to move the todo list for v3 also into this document. After 
 all, it is kind of a compatibility issue ;) But, more seriously, I think this is 
