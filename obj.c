@@ -102,10 +102,14 @@ rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pH
 
 /* begin serialization of an object - this is a very simple hook. It once wrote the wrapper,
  * now it only constructs the string object. We still leave it in here so that we may utilize
- * it in the future (it is a nice abstraction).
+ * it in the future (it is a nice abstraction). iExpcectedObjSize is an optimization setting.
+ * It must contain the size (in characters) that the calling object expects the string 
+ * representation to grow to. Specifying a bit too large size doesn't hurt. A too-small size
+ * does not cause any malfunction, but results in more often memory copies than necessary. So
+ * the caller is advised to be conservative in guessing. Binary multiples are recommended.
  * rgerhards, 2008-01-06
  */
-rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj)
+rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj, size_t iExpectedObjSize)
 {
 	DEFiRet;
 
@@ -114,6 +118,8 @@ rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj)
 
 	if((*ppCStr = rsCStrConstruct()) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	rsCStrSetAllocIncrement(*ppCStr, iExpectedObjSize);
 
 finalize_it:
 	return iRet;
@@ -205,7 +211,7 @@ finalize_it:
 }
 
 
-static rsRetVal objSerializeHeader(rsCStrObj **ppCStr, obj_t *pObj, rsCStrObj *pCSObjString)
+static rsRetVal objSerializeHeader(rsCStrObj **ppCStr, obj_t *pObj, rsCStrObj *pCSObjString, size_t iAllocIncrement)
 {
 	DEFiRet;
 	rsCStrObj *pCStr;
@@ -215,6 +221,7 @@ static rsRetVal objSerializeHeader(rsCStrObj **ppCStr, obj_t *pObj, rsCStrObj *p
 
 	if((pCStr = rsCStrConstruct()) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	rsCStrSetAllocIncrement(pCStr, iAllocIncrement);
 
 	/* object cookie and serializer version (so far always 1) */
 	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) "$Obj1"));
@@ -252,7 +259,7 @@ rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj)
 	rsCStrObj *pCStr = NULL;
 
 	assert(ppCStr != NULL);
-	CHKiRet(objSerializeHeader(&pCStr, pObj, *ppCStr));
+	CHKiRet(objSerializeHeader(&pCStr, pObj, *ppCStr, rsCStrGetAllocIncrement(*ppCStr)));
 
 	CHKiRet(rsCStrAppendStrWithLen(pCStr, rsCStrGetBufBeg(*ppCStr), rsCStrLen(*ppCStr)));
 	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) ".\n"));

@@ -118,6 +118,7 @@ rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, uchar* psz, size_t iStrLen);
  *       if you are very well aware why you are doing it ;)
  */
 void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement);
+#define rsCStrGetAllocIncrement(pThis) ((pThis)->iAllocIncrement)
 
 /**
  * Append an integer to the string. No special formatting is

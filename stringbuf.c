@@ -141,36 +141,73 @@ void rsCStrDestruct(rsCStrObj *pThis)
 }
 
 
+/* extend the string buffer if its size is insufficient.
+ * Param iMinNeeded is the minumum free space needed. If it is larger
+ * than the default alloc increment, space for at least this amount is
+ * allocated. In practice, a bit more is allocated because we envision that
+ * some more characters may be added after these.
+ * rgerhards, 2008-01-07
+ */
+static rsRetVal rsCStrExtendBuf(rsCStrObj *pThis, size_t iMinNeeded)
+{
+	DEFiRet;
+	uchar *pNewBuf;
+	size_t iNewSize;
+
+	/* first compute the new size needed */
+	if(iMinNeeded > pThis->iAllocIncrement) {
+		/* we allocate "n" iAllocIncrements. Usually, that should
+		 * leave some room after the absolutely needed one. It also
+		 * reduces memory fragmentation. Note that all of this are
+		 * integer operations (very important to understand what is
+		 * going on)! Parenthesis are for better readibility.
+		 */
+		iNewSize = ((iMinNeeded / pThis->iAllocIncrement) + 1) * pThis->iAllocIncrement;
+	} else {
+		iNewSize = pThis->iBufSize + pThis->iAllocIncrement;
+	}
+	iNewSize += pThis->iBufSize; /* add current size */
+
+dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize);
+	/* and then allocate and copy over */
+	/* DEV debugging only: dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize); */
+	if((pNewBuf = (uchar*) malloc(iNewSize * sizeof(uchar))) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	memcpy(pNewBuf, pThis->pBuf, pThis->iBufSize);
+	pThis->iBufSize = iNewSize;
+	if(pThis->pBuf != NULL) {
+		free(pThis->pBuf);
+	}
+	pThis->pBuf = pNewBuf;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* append a string of known length. In this case, we make sure we do at most
+ * one additional memory allocation.
+ * I optimized this function to use memcpy(), among others. Consider it a
+ * rewrite (which may be good to know in case of bugs) -- rgerhards, 2008-01-07
+ */
 rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, uchar* psz, size_t iStrLen)
 {
 	rsRetVal iRet;
-	int iOldAllocInc;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(psz != NULL);
 
-	/* we first check if the to-be-added string is larger than the
-	 * alloc increment. If so, we temporarily increase the alloc
-	 * increment to the length of the string. This will ensure that
-	 * one string copy will be needed at most. As this is a very
-	 * costly operation, it outweights the cost of the strlen((char*)) and
-	 * related stuff - at least I think so.
-	 * rgerhards 2005-09-22
-	 */
-	/* We save the current alloc increment in any case, so we can just
-	 * overwrite it below, this is faster than any if-construct.
-	 */
-	iOldAllocInc = pThis->iAllocIncrement;
-	if(iStrLen > pThis->iAllocIncrement) {
-		pThis->iAllocIncrement = iStrLen;
+	/* does the string fit? */
+	if(pThis->iStrLen + iStrLen > pThis->iBufSize) {  
+		CHKiRet(rsCStrExtendBuf(pThis, iStrLen)); /* need more memory! */
 	}
 
-	while(*psz)
-		if((iRet = rsCStrAppendChar(pThis, *psz++)) != RS_RET_OK)
-			return iRet;
+	/* ok, now we always have sufficient continues memory to do a memcpy() */
+	memcpy(pThis->pBuf + pThis->iStrLen, psz, iStrLen);
+	pThis->iStrLen += iStrLen;
 
-	pThis->iAllocIncrement = iOldAllocInc; /* restore */
-	return RS_RET_OK;
+finalize_it:
+	return iRet;
 }
 
 
@@ -181,7 +218,7 @@ rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, uchar* psz, size_t iStrLen)
  */
 rsRetVal rsCStrAppendStr(rsCStrObj *pThis, uchar* psz)
 {
-	return rsCStrAppendStrWithLen(pThis, psz, strlen((char*)(char*) psz));
+	return rsCStrAppendStrWithLen(pThis, psz, strlen((char*) psz));
 }
 
 
@@ -201,20 +238,12 @@ rsRetVal rsCStrAppendInt(rsCStrObj *pThis, long i)
 
 rsRetVal rsCStrAppendChar(rsCStrObj *pThis, uchar c)
 {
-	uchar* pNewBuf;
+	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	if(pThis->iStrLen >= pThis->iBufSize)
-	{  /* need more memory! */
-		if((pNewBuf = (uchar*) malloc((pThis->iBufSize + pThis->iAllocIncrement) * sizeof(uchar))) == NULL)
-			return RS_RET_OUT_OF_MEMORY;
-		memcpy(pNewBuf, pThis->pBuf, pThis->iBufSize);
-		pThis->iBufSize += pThis->iAllocIncrement;
-		if(pThis->pBuf != NULL) {
-			free(pThis->pBuf);
-		}
-		pThis->pBuf = pNewBuf;
+	if(pThis->iStrLen >= pThis->iBufSize) {  
+		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
 	}
 
 	/* ok, when we reach this, we have sufficient memory */
@@ -226,7 +255,8 @@ rsRetVal rsCStrAppendChar(rsCStrObj *pThis, uchar c)
 		pThis->pszBuf = NULL;
 	}
 
-	return RS_RET_OK;
+finalize_it:
+	return iRet;
 }
 
 

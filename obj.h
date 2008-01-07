@@ -100,7 +100,7 @@ finalize_it: \
 /* prototypes */
 rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pDestruct)(void *));
 rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
-rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj);
+rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj, size_t iExpectedObjSize);
 rsRetVal objSerializePsz(rsCStrObj *pCStr, uchar *psz, size_t len);
 rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj);
 rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr);
