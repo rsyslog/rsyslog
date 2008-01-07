@@ -38,6 +38,7 @@
 #include "obj.h"
 
 /* static data */
+static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
 
 /* methods */
 
@@ -275,6 +276,37 @@ finalize_it:
 }
 
 /* --------------- end object serializiation / deserialization support --------------- */
+
+/* register a classe's info pointer, so that we can reference it later, if needed to
+ * (e.g. for de-serialization support).
+ * rgerhards, 2008-01-07
+ */
+rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo)
+{
+	DEFiRet;
+
+	assert(pInfo != NULL);
+	if(oID < 1 || oID > OBJ_NUM_IDS)
+		ABORT_FINALIZE(RS_RET_INVALID_OID);
+	
+	arrObjInfo[oID] = pInfo;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* initialize our own class */
+rsRetVal objClassInit(void)
+{
+	int i;
+
+	for(i = 0 ; i < OBJ_NUM_IDS ; ++i) {
+		arrObjInfo[i] = NULL;
+	}
+
+	return RS_RET_OK;
+}
 
 /*
  * vi:set ai:

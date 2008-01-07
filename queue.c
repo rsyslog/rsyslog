@@ -266,7 +266,6 @@ finalize_it:
 static rsRetVal qDiskReadChar(queueFileDescription_t *pFile, uchar *pC)
 {
 	DEFiRet;
-	uchar c;
 	
 	assert(pFile != NULL);
 	assert(pC != NULL);

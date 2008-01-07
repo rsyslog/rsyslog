@@ -2087,7 +2087,7 @@ BEGINObjClassInit(Msg, 1)
 	funcUnlock = MsgLockingDummy;
 	funcDeleteMutex = MsgLockingDummy;
 	funcMsgPrepareEnqueue = MsgLockingDummy;
-ENDObjClassInit
+ENDObjClassInit(Msg)
 
 /*
  * vi:set ai:

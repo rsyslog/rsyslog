@@ -4638,6 +4638,7 @@ static rsRetVal InitGlobalClasses(void)
 {
 	DEFiRet;
 
+	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizere called! */
 	CHKiRet(MsgClassInit());
 
 finalize_it:

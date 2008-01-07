@@ -43,6 +43,7 @@ typedef enum {	/* IDs of known object "types/classes" */
 	objNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
 	objMsg = 1
 } objID_t;	
+#define OBJ_NUM_IDS 2
 
 typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
 		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04
@@ -88,7 +89,8 @@ rsRetVal objName##ClassInit(void) \
 	DEFiRet; \
 	CHKiRet(objInfoConstruct(&pObjInfoOBJ, obj##objName, (uchar*) #objName, objVers, (rsRetVal (*)(void*))objName##Destruct)); 
 
-#define ENDObjClassInit \
+#define ENDObjClassInit(objName) \
+	objRegisterObj(obj##objName, pObjInfoOBJ); \
 finalize_it: \
 	return iRet; \
 }
@@ -104,5 +106,7 @@ rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj, size_t iExpectedObjS
 rsRetVal objSerializePsz(rsCStrObj *pCStr, uchar *psz, size_t len);
 rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj);
 rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr);
+rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo);
+PROTOTYPEObjClassInit(obj);
 
 #endif /* #ifndef OBJ_H_INCLUDED */
