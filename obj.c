@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include "rsyslog.h"
@@ -39,6 +40,13 @@
 
 /* static data */
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
+
+/* some defines */
+
+/* cookies for serialized lines */
+#define COOKIE_OBJLINE  '<'
+#define COOKIE_PROPLINE '+'
+#define COOKIE_ENDLINE  '>'
 
 /* methods */
 
@@ -55,11 +63,12 @@ static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
 
 /* construct an object Info object. Each class shall do this on init. The
  * resulting object shall be cached during the lifetime of the class and each
- * object shall receive a reference. A constructor MUST be provided for all
- * objects, thus it is in the parameter list.
+ * object shall receive a reference. A constructor and destructor MUST be provided for all
+ * objects, thus they are in the parameter list.
  * pszName must point to constant pool memory. It is never freed.
  */
-rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pDestruct)(void *))
+rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers,
+                          rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *))
 {
 	DEFiRet;
 	int i;
@@ -75,8 +84,9 @@ rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int
 	pThis->iObjVers = iObjVers;
 	pThis->objID = objID;
 
-	pThis->objMethods[0] = pDestruct;
-	for(i = 1 ; i < OBJ_NUM_METHODS ; ++i) {
+	pThis->objMethods[0] = pConstruct;
+	pThis->objMethods[1] = pDestruct;
+	for(i = 2 ; i < OBJ_NUM_METHODS ; ++i) {
 		pThis->objMethods[i] = objInfoNotImplementedDummy;
 	}
 
@@ -191,6 +201,8 @@ rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t p
 			break;
 	}
 
+	/* cookie */
+	CHKiRet(rsCStrAppendChar(pCStr, COOKIE_PROPLINE));
 	/* name */
 	CHKiRet(rsCStrAppendStr(pCStr, pszPropName));
 	CHKiRet(rsCStrAppendChar(pCStr, ':'));
@@ -205,6 +217,7 @@ rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t p
 	CHKiRet(rsCStrAppendStrWithLen(pCStr, (uchar*) pszBuf, lenBuf));
 
 	/* trailer */
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
 	CHKiRet(rsCStrAppendChar(pCStr, '\n'));
 
 finalize_it:
@@ -225,7 +238,8 @@ static rsRetVal objSerializeHeader(rsCStrObj **ppCStr, obj_t *pObj, rsCStrObj *p
 	rsCStrSetAllocIncrement(pCStr, iAllocIncrement);
 
 	/* object cookie and serializer version (so far always 1) */
-	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) "$Obj1"));
+	CHKiRet(rsCStrAppendChar(pCStr, COOKIE_OBJLINE));
+	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) "Obj1"));
 
 	/* object type, version and string length */
 	CHKiRet(rsCStrAppendChar(pCStr, ':'));
@@ -242,6 +256,7 @@ static rsRetVal objSerializeHeader(rsCStrObj **ppCStr, obj_t *pObj, rsCStrObj *p
 	CHKiRet(rsCStrAppendChar(pCStr, ':'));
 	CHKiRet(rsCStrAppendStr(pCStr, objGetName(pObj)));
 	/* record trailer */
+	CHKiRet(rsCStrAppendChar(pCStr, ':'));
 	CHKiRet(rsCStrAppendChar(pCStr, '\n'));
 
 	*ppCStr = pCStr;
@@ -263,7 +278,8 @@ rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj)
 	CHKiRet(objSerializeHeader(&pCStr, pObj, *ppCStr, rsCStrGetAllocIncrement(*ppCStr)));
 
 	CHKiRet(rsCStrAppendStrWithLen(pCStr, rsCStrGetBufBeg(*ppCStr), rsCStrLen(*ppCStr)));
-	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) ".\n"));
+	CHKiRet(rsCStrAppendChar(pCStr, COOKIE_ENDLINE));
+	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) "EndObj\n\n"));
 	CHKiRet(rsCStrFinish(pCStr));
 
 	rsCStrDestruct(*ppCStr);
@@ -274,6 +290,258 @@ finalize_it:
 		rsCStrDestruct(pCStr);
 	return iRet;
 }
+
+
+/* define a helper to make code below a bit cleaner (and quicker to write) */
+#define NEXTC CHKiRet(serialStoreGetChar(pSerStore, &c))//;dbgprintf("c: %c\n", c);
+
+/* de-serialize an (long) integer */
+static rsRetVal objDeserializeLong(long *pInt, serialStore_t *pSerStore)
+{
+	DEFiRet;
+	int i;
+	uchar c;
+
+	assert(pInt != NULL);
+
+	NEXTC;
+	i = 0;
+	while(isdigit(c)) {
+		i = i * 10 + c - '0';
+		NEXTC;
+	}
+
+	if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
+
+	*pInt = i;
+finalize_it:
+	return iRet;
+}
+
+
+/* de-serialize a string, length must be provided */
+static rsRetVal objDeserializeStr(rsCStrObj **ppCStr, int iLen, serialStore_t *pSerStore)
+{
+	DEFiRet;
+	int i;
+	uchar c;
+	rsCStrObj *pCStr = NULL;
+
+	assert(ppCStr != NULL);
+	assert(iLen > 0);
+
+	if((pCStr = rsCStrConstruct()) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	NEXTC;
+dbgprintf("deserializestring, c: %c (%x)\n", c, c);
+	for(i = 0 ; i < iLen ; ++i) {
+		CHKiRet(rsCStrAppendChar(pCStr, c));
+		NEXTC;
+	}
+	CHKiRet(rsCStrFinish(pCStr));
+
+	/* check terminator */
+	if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
+
+	*ppCStr = pCStr;
+
+finalize_it:
+	if(iRet != RS_RET_OK && pCStr != NULL)
+		rsCStrDestruct(pCStr);
+
+	return iRet;
+}
+
+
+/* de-serialize an object header
+ * rgerhards, 2008-01-07
+ */
+static rsRetVal objDeserializeHeader(objID_t *poID, int* poVers, serialStore_t *pSerStore)
+{
+	DEFiRet;
+	long ioID;
+	long oVers;
+	uchar c;
+
+	assert(poID != NULL);
+	assert(poVers != NULL);
+
+	/* check header cookie */
+	NEXTC; if(c != COOKIE_OBJLINE) ABORT_FINALIZE(RS_RET_INVALID_HEADER);
+	NEXTC; if(c != 'O') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
+	NEXTC; if(c != 'b') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
+	NEXTC; if(c != 'j') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
+	NEXTC; if(c != '1') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
+	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
+
+	/* object type and version and string length */
+	CHKiRet(objDeserializeLong(&ioID, pSerStore));
+	CHKiRet(objDeserializeLong(&oVers, pSerStore));
+
+	if(ioID < 1 || ioID >= OBJ_NUM_IDS)
+		ABORT_FINALIZE(RS_RET_INVALID_OID);
+
+	/* and now we skip over the rest until the delemiting \n */
+	NEXTC;
+	while(c != '\n')
+		NEXTC;
+
+	*poID = (objID_t) ioID;
+	*poVers = oVers;
+
+finalize_it:
+dbgprintf("DeserializeHeader oid: %ld, vers: %ld, iRet: %d\n", ioID, oVers, iRet);
+	return iRet;
+}
+
+
+/* Deserialize a single property. Pointer must be positioned at begin of line. Whole line
+ * up until the \n is read.
+ */
+static rsRetVal objDeserializeProperty(property_t *pProp, serialStore_t *pSerStore)
+{
+	DEFiRet;
+	long i;
+	long iLen;
+	uchar c;
+
+	assert(pProp != NULL);
+
+	/* check cookie */
+	NEXTC;
+	if(c != COOKIE_PROPLINE) {
+		/* oops, we've read one char that does not belong to use - unget it first */
+		CHKiRet(serialStoreUngetChar(pSerStore, c));
+		ABORT_FINALIZE(RS_RET_NO_PROPLINE);
+	}
+
+	/* get the property name first */
+	if((pProp->pcsName = rsCStrConstruct()) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	NEXTC;
+	while(c != ':') {
+		CHKiRet(rsCStrAppendChar(pProp->pcsName, c));
+		NEXTC;
+	}
+	CHKiRet(rsCStrFinish(pProp->pcsName));
+
+	/* property type */
+	CHKiRet(objDeserializeLong(&i, pSerStore));
+	pProp->propType = i;
+
+	/* size (needed for strings) */
+	CHKiRet(objDeserializeLong(&iLen, pSerStore));
+
+	/* we now need to deserialize the value */
+dbgprintf("deserialized property name '%s', type %d, size %ld, c: %c\n", rsCStrGetSzStrNoNULL(pProp->pcsName), pProp->propType, iLen, c);
+	switch(pProp->propType) {
+		case PROPTYPE_PSZ:
+			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pSerStore));
+			break;
+		case PROPTYPE_SHORT:
+			CHKiRet(objDeserializeLong(&i, pSerStore));
+			pProp->val.vShort = i;
+			break;
+		case PROPTYPE_INT:
+			CHKiRet(objDeserializeLong(&i, pSerStore));
+			pProp->val.vInt = i;
+			break;
+		case PROPTYPE_LONG:
+			CHKiRet(objDeserializeLong(&pProp->val.vLong, pSerStore));
+			break;
+		case PROPTYPE_CSTR:
+			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pSerStore));
+			break;
+		case PROPTYPE_SYSLOGTIME:
+			/* dummy */ NEXTC; while(c != ':') NEXTC;
+			break;
+	}
+
+	/* we should now be at the end of the line. So the next char must be \n */
+	NEXTC;
+	if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_PROPFRAME);
+
+finalize_it:
+	return iRet;
+}
+
+
+/* de-serialize an object trailer. This does not get any data but checks if the
+ * format is ok.
+ * rgerhards, 2008-01-07
+ */
+static rsRetVal objDeserializeTrailer(serialStore_t *pSerStore)
+{
+	DEFiRet;
+	uchar c;
+
+	/* check header cookie */
+	NEXTC; if(c != COOKIE_ENDLINE) ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
+	NEXTC; if(c != 'E')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
+	NEXTC; if(c != 'n')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
+	NEXTC; if(c != 'd')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
+	NEXTC; if(c != 'O')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
+	NEXTC; if(c != 'b')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
+	NEXTC; if(c != 'j')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
+	NEXTC; if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
+	NEXTC; if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
+
+dbgprintf("obj trailer OK\n");
+finalize_it:
+	return iRet;
+}
+
+
+/* De-Serialize an object.
+ * Params: Pointer to object Pointer (pObj) (like a obj_t**, but can not do that due to compiler warning)
+ * expected object ID (to check against)
+ * Function that returns the next character from the serialized object (from file, memory, whatever)
+ * Pointer to be passed to the function
+ * The caller must destruct the created object.
+ * rgerhards, 2008-01-07
+ */
+rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, serialStore_t *pSerStore)
+{
+	DEFiRet;
+	obj_t *pObj = NULL;
+	property_t propBuf;
+	objID_t oID = 0; /* this assignment is just to supress a compiler warning - this saddens me */
+	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
+
+	assert(ppObj != NULL);
+	assert(objTypeExpected > 0 && objTypeExpected < OBJ_NUM_IDS);
+	assert(pSerStore != NULL);
+
+	CHKiRet(objDeserializeHeader(&oID, &oVers, pSerStore));
+
+	if(oID != objTypeExpected)
+		ABORT_FINALIZE(RS_RET_INVALID_OID);
+	CHKiRet(arrObjInfo[oID]->objMethods[objMethod_CONSTRUCT](&pObj));
+
+	/* we got the object, now we need to fill the properties */
+	iRet = objDeserializeProperty(&propBuf, pSerStore);
+	while(iRet == RS_RET_OK) {
+		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_SETPROPERTY](pObj, &propBuf));
+		iRet = objDeserializeProperty(&propBuf, pSerStore);
+	}
+	rsCStrDestruct(propBuf.pcsName); /* todo: a destructor would be nice here... -- rger, 2008-01-07 */
+
+	if(iRet != RS_RET_NO_PROPLINE)
+		FINALIZE;
+dbgprintf("good propline loop exit\n");
+
+	CHKiRet(objDeserializeTrailer(pSerStore)); /* do trailer checks */
+
+	*((obj_t**) ppObj) = pObj;
+
+finalize_it:
+	return iRet;
+}
+
+#undef NEXTC /* undef helper macro */
+
 
 /* --------------- end object serializiation / deserialization support --------------- */
 

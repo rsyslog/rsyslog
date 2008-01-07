@@ -1254,22 +1254,16 @@ void untty(void)
  * changed parameter iSource to bParseHost. For details, see comment in
  * printchopped(). rgerhards 2005-10-06
  */
-void printline(char *hname, char *msg, int bParseHost)
+rsRetVal printline(char *hname, char *msg, int bParseHost)
 {
+	DEFiRet;
 	register char *p;
 	int pri;
 	msg_t *pMsg;
 
 	/* Now it is time to create the message object (rgerhards)
 	*/
-	if((pMsg = MsgConstruct()) == NULL){
-		/* rgerhards, 2007-06-21: if we can not get memory, we discard this
-		 * message but continue to run (in the hope that things improve)
-		 */
-		glblHadMemShortage = 1;
-		dbgprintf("Memory shortage in printline(): Could not construct Msg object.\n");
-		return;
-	}
+	CHKiRet(MsgConstruct(&pMsg));
 	MsgSetRawMsg(pMsg, msg);
 	
 	pMsg->bParseHOSTNAME  = bParseHost;
@@ -1306,11 +1300,13 @@ void printline(char *hname, char *msg, int bParseHost)
 	 * message. As we like to emulate it, we need to add the hostname
 	 * to it.
 	 */
-	if(MsgSetUxTradMsg(pMsg, p) != 0) return;
+	if(MsgSetUxTradMsg(pMsg, p) != 0)
+		ABORT_FINALIZE(RS_RET_ERR);
 
 	logmsg(pri, pMsg, SYNC_FILE);
 
-	return;
+finalize_it:
+	return iRet;
 }
 
 
@@ -1500,29 +1496,13 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
  * function here probably is only an interim solution and that we need to
  * think on the best way to do this.
  */
-void
+rsRetVal
 logmsgInternal(int pri, char *msg, int flags)
 {
+	DEFiRet;
 	msg_t *pMsg;
 
-	if((pMsg = MsgConstruct()) == NULL){
-		/* rgerhards 2004-11-09: calling panic might not be the
-		 * brightest idea - however, it is the best I currently have
-		 * (think a bit more about this).
-		 * rgehards, 2007-06-21: I have now thought a bit more about
-		 * it. If we are so low on memory, there is few we can do. calling
-		 * panic so far only write a debug line - this is seomthing we keep.
-		 * Other than that, however, we ignore the error and hope that 
-		 * memory shortage will be resolved while we continue to run. In any
-		 * case, there is no valid point in aborting the syslogd for this
-		 * reason - that would be counter-productive. So we ignore the
-		 * to be logged message.
-		 */
-		glblHadMemShortage = 1;
-		dbgprintf("Memory shortage in logmsgInternal: could not construct Msg object.\n");
-		return;
-	}
-
+	CHKiRet(MsgConstruct(&pMsg));
 	MsgSetUxTradMsg(pMsg, msg);
 	MsgSetRawMsg(pMsg, msg);
 	MsgSetHOSTNAME(pMsg, LocalHostName);
@@ -1541,6 +1521,8 @@ logmsgInternal(int pri, char *msg, int flags)
 		 */
 		logmsg(pri, pMsg, flags);
 	}
+finalize_it:
+	return iRet;
 }
 
 /* This functions looks at the given message and checks if it matches the

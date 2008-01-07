@@ -49,7 +49,6 @@
 #define ADDDATE		0x004	/* add a date to the message */
 #define MARK		0x008	/* this message is a mark */
 
-void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
 void logerror(char *type);
 void logerrorSz(char *type, char *errMsg);
 void logerrorInt(char *type, int iErr);
@@ -68,7 +67,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 /* the following prototypes should go away once we have an input
  * module interface -- rgerhards, 2007-12-12
  */
-void logmsgInternal(int pri, char *msg, int flags);
+rsRetVal logmsgInternal(int pri, char *msg, int flags);
 void logmsg(int pri, msg_t *pMsg, int flags);
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */
 extern char LocalHostName[];

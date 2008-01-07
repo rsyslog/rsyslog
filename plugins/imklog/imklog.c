@@ -131,14 +131,7 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 
 	/* here we must create our message object and supply it to the message queue
 	 */
-	if((pMsg = MsgConstruct()) == NULL){
-		/* There is not much we can do in this case - we discard the message
-		 * then.
-		 */
-		dbgprintf("Memory shortage in imklogd: could not construct Msg object.\n");
-		return RS_RET_OUT_OF_MEMORY;
-	}
-
+	CHKiRet(MsgConstruct(&pMsg));
 	MsgSetUxTradMsg(pMsg, msgBuf);
 	MsgSetRawMsg(pMsg, msgBuf);
 	MsgSetMSG(pMsg, (msgBuf + iLen));
@@ -152,6 +145,7 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 	/* provide message to the queue engine */
 	logmsg(iPRI, pMsg, INTERNAL_MSG);
 
+finalize_it:
 	return iRet;
 }
 

@@ -38,6 +38,19 @@ typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc(
 	PROPTYPE_SYSLOGTIME = 6
 } propertyType_t;
 
+typedef struct {
+	rsCStrObj *pcsName;
+	propertyType_t propType;
+	union {
+		short vShort;
+		int vInt;
+		long vLong;
+		rsCStrObj *vpCStr; /* used for both rsCStr and psz */
+		struct syslogTime vSyslogTime;
+
+	} val;
+} property_t;
+
 /* object Types/IDs */
 typedef enum {	/* IDs of known object "types/classes" */
 	objNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
@@ -48,12 +61,14 @@ typedef enum {	/* IDs of known object "types/classes" */
 typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
 		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04
 		 */
-	objMethod_DESTRUCT = 0,
-	objMethod_SERIALIZE = 1,
-	objMethod_DESERIALIZE = 2,
-	objMethod_DEBUGPRINT = 3
+	objMethod_CONSTRUCT = 0,
+	objMethod_DESTRUCT = 1,
+	objMethod_SERIALIZE = 2,
+	objMethod_DESERIALIZE = 3,
+	objMethod_SETPROPERTY = 4,
+	objMethod_DEBUGPRINT = 5
 } objMethod_t;
-#define OBJ_NUM_METHODS 4	/* must be updated to contain the max number of methods supported */
+#define OBJ_NUM_METHODS 6	/* must be updated to contain the max number of methods supported */
 
 typedef struct objInfo_s {
 	objID_t	objID;	
@@ -65,6 +80,18 @@ typedef struct objInfo_s {
 typedef struct obj {	/* the dummy struct that each derived class can be casted to */
 	objInfo_t *pObjInfo;
 } obj_t;
+
+/* the following structure is used for deserialization. It defines a serial storage with a single
+ * ungetc() capability. This should probably become its own object some time. -- rgerhards, 2008-01-07
+ */
+typedef struct serialStore_s {
+	void *pUsr;	/* Pointer to some user data */
+	/* methods */
+	rsRetVal (*funcGetChar)(void*, uchar*);
+	rsRetVal (*funcUngetChar)(void*, uchar);
+} serialStore_t;
+#define serialStoreGetChar(pThis, c) (pThis->funcGetChar(pThis->pUsr, c))
+#define serialStoreUngetChar(pThis, c) (pThis->funcUngetChar(pThis->pUsr, c))
 
 
 /* macros */
@@ -87,7 +114,8 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 rsRetVal objName##ClassInit(void) \
 { \
 	DEFiRet; \
-	CHKiRet(objInfoConstruct(&pObjInfoOBJ, obj##objName, (uchar*) #objName, objVers, (rsRetVal (*)(void*))objName##Destruct)); 
+	CHKiRet(objInfoConstruct(&pObjInfoOBJ, obj##objName, (uchar*) #objName, objVers, \
+	                         (rsRetVal (*)(void*))objName##Construct,  (rsRetVal (*)(void*))objName##Destruct)); 
 
 #define ENDObjClassInit(objName) \
 	objRegisterObj(obj##objName, pObjInfoOBJ); \
@@ -100,13 +128,14 @@ finalize_it: \
 
 
 /* prototypes */
-rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pDestruct)(void *));
+rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *));
 rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
 rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj, size_t iExpectedObjSize);
 rsRetVal objSerializePsz(rsCStrObj *pCStr, uchar *psz, size_t len);
 rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj);
 rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr);
 rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo);
+rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, serialStore_t *pSerStore);
 PROTOTYPEObjClassInit(obj);
 
 #endif /* #ifndef OBJ_H_INCLUDED */

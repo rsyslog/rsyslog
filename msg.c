@@ -38,6 +38,7 @@
 #include <ctype.h>
 #include "syslogd.h"
 #include "srUtils.h"
+#include "stringbuf.h"
 #include "template.h"
 #include "msg.h"
 
@@ -203,22 +204,28 @@ rsRetVal MsgEnableThreadSafety(void)
  * An object constructed via this function should only be destroyed
  * via "MsgDestruct()".
  */
-msg_t* MsgConstruct(void)
+rsRetVal MsgConstruct(msg_t **ppThis)
 {
+	DEFiRet;
 	msg_t *pM;
 
-	if((pM = calloc(1, sizeof(msg_t))) != NULL)
-	{ /* initialize members that are non-zero */
-		pM->iRefCount = 1;
-		pM->iSeverity = -1;
-		pM->iFacility = -1;
-		getCurrTime(&(pM->tRcvdAt));
-		objConstructSetObjInfo(pM);
-	}
+	assert(ppThis != NULL);
+	if((pM = calloc(1, sizeof(msg_t))) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	/* initialize members that are non-zero */
+	pM->iRefCount = 1;
+	pM->iSeverity = -1;
+	pM->iFacility = -1;
+	getCurrTime(&(pM->tRcvdAt));
+	objConstructSetObjInfo(pM);
 
 	/* DEV debugging only! dbgprintf("MsgConstruct\t0x%x, ref 1\n", (int)pM);*/
 
-	return(pM);
+	*ppThis = pM;
+
+finalize_it:
+	return iRet;
 }
 
 
@@ -2076,12 +2083,52 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 }
 
 
+/* This function can be used as a generic way to set properties.
+ * We have to handle a lot of legacy, so our return value is not always
+ * 100% correct (called functions do not always provide one, should
+ * change over time).
+ * rgerhards, 2008-01-07
+ */
+#define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
+rsRetVal MsgSetProperty(msg_t *pThis, property_t *pProp)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+	assert(pProp != NULL);
+
+ 	if(isProp("iProtocolVersion")) {
+		setProtocolVersion(pThis, pProp->val.vShort);
+ 	} else if(isProp("iSeverity")) {
+		pThis->iSeverity = pProp->val.vShort;
+ 	} else if(isProp("iFacility")) {
+		pThis->iFacility = pProp->val.vShort;
+ 	} else if(isProp("msgFlags")) {
+		pThis->msgFlags = pProp->val.vInt;
+	} else if(isProp("pszRawMsg")) {
+		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pszMSG")) {
+		MsgSetMSG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pszTAG")) {
+		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pszHOSTNAME")) {
+		MsgSetHOSTNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pszUxTradMsg")) {
+		MsgSetUxTradMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	}
+
+	return iRet;
+}
+#undef	isProp
+
+
 /* Initialize the message class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-04
  */
 BEGINObjClassInit(Msg, 1)
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
+	OBJSetMethodHandler(objMethod_SETPROPERTY, MsgSetProperty);
 	/* initially, we have no need to lock message objects */
 	funcLock = MsgLockingDummy;
 	funcUnlock = MsgLockingDummy;

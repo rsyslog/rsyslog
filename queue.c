@@ -42,6 +42,7 @@
 #include "queue.h"
 #include "stringbuf.h"
 #include "srUtils.h"
+#include "obj.h"
 
 /* static data */
 
@@ -275,6 +276,12 @@ static rsRetVal qDiskReadChar(queueFileDescription_t *pFile, uchar *pC)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		pFile->iBufPtrMax = 0; /* results in immediate read request */
 	}
+
+	if(pFile->iUngetC != -1) {	/* do we have an "unread" char that we need to provide? */
+		*pC = pFile->iUngetC;
+		pFile->iUngetC = -1;
+		ABORT_FINALIZE(RS_RET_OK);
+	}
 	
 	/* do we need to obtain a new buffer */
 	if(pFile->iBufPtr >= pFile->iBufPtrMax) {
@@ -295,6 +302,26 @@ finalize_it:
 	return iRet;
 }
 
+
+/* unget a single character just like ungetc(). As with that call, there is only a single
+ * character buffering capability.
+ * rgerhards, 2008-01-07
+ */
+static rsRetVal qDiskUnreadChar(queueFileDescription_t *pFile, uchar c)
+{
+	assert(pFile != NULL);
+	assert(pFile->iUngetC == -1);
+	pFile->iUngetC = c;
+
+	return RS_RET_OK;
+}
+
+#if 0
+/* we have commented out the code below because we would like to preserve it. It 
+ * is currently not needed, but may be useful if we implemented a bufferred file
+ * class.
+ * rgerhards, 2008-01-07
+ */
 /* read a line from a queue file. A line is terminated by LF. The LF is read, but it
  * is not returned in the buffer (it is discared). The caller is responsible for
  * destruction of the returned CStr object!
@@ -328,6 +355,7 @@ finalize_it:
 	return iRet;
 }
 
+#endif /* #if 0 - saved code */
 
 /*** end buffered read functions for queue files ***/
 
@@ -349,10 +377,12 @@ static rsRetVal qConstructDisk(queue_t *pThis)
 	pThis->tVars.disk.fWrite.iCurrFileNum = 1;
 	pThis->tVars.disk.fWrite.iCurrOffs = 0;
 	pThis->tVars.disk.fWrite.fd = -1;
+	pThis->tVars.disk.fWrite.iUngetC = -1;
 
 	pThis->tVars.disk.fRead.iCurrFileNum = 1;
 	pThis->tVars.disk.fRead.fd = -1;
-	pThis->tVars.disk.fWrite.iCurrOffs = 0;
+	pThis->tVars.disk.fRead.iCurrOffs = 0;
+	pThis->tVars.disk.fRead.iUngetC = -1;
 
 finalize_it:
 	return iRet;
@@ -401,29 +431,31 @@ finalize_it:
 	return iRet;
 }
 
-static rsRetVal qDelDisk(queue_t __attribute__((unused)) *pThis, void __attribute__((unused)) **ppUsr)
+static rsRetVal qDelDisk(queue_t *pThis, void **ppUsr)
 {
 	DEFiRet;
+	msg_t *pMsg = NULL;
+	serialStore_t serialStore;
 
 	assert(pThis != NULL);
 
 	if(pThis->tVars.disk.fRead.fd == -1)
 		CHKiRet(qDiskOpenFile(pThis, &pThis->tVars.disk.fRead, O_RDONLY, 0600)); // TODO: open modes!
 
-	/* read here */
-	rsCStrObj *pCStr = NULL;
-	CHKiRet(qDiskReadLine(&pThis->tVars.disk.fRead, &pCStr));
-	dbgprintf("qDelDisk read line '%s'\n", rsCStrGetSzStr(pCStr));
-	rsCStrDestruct(pCStr);
-	/* de-serialize here */
+	/* de-serialize object from file */
+	serialStore.pUsr = &pThis->tVars.disk.fRead;
+	serialStore.funcGetChar = (rsRetVal (*)(void*, uchar*)) qDiskReadChar;
+	serialStore.funcUngetChar = (rsRetVal (*)(void*, uchar)) qDiskUnreadChar;
+	CHKiRet(objDeserialize((void*) &pMsg, objMsg, &serialStore));
 
 	/* switch to next file when EOF is reached. We may also delete the last file in that case.
 	pThis->tVars.disk.fWrite.iCurrOffs += iWritten;
 	if(pThis->tVars.disk.fWrite.iCurrOffs >= pThis->tVars.disk.iMaxFileSize)
 		CHKiRet(qDiskNextFile(pThis, &pThis->tVars.disk.fWrite));
 		*/
+dbgprintf("got object %lx\n", (unsigned long) pMsg);
 
-	iRet = RS_RET_ERR;
+	*ppUsr = (void*) pMsg;
 
 finalize_it:
 	return iRet;

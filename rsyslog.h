@@ -97,6 +97,12 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_EOF = -2026, /**< end of file reached, not necessarily an error */
 	RS_RET_IO_ERROR = -2027, /**< some kind of IO error happened */
 	RS_RET_INVALID_OID = -2028, /**< invalid object ID */
+	RS_RET_INVALID_HEADER = -2029, /**< invalid header */
+	RS_RET_INVALID_HEADER_VERS = -2030, /**< invalid header version */
+	RS_RET_INVALID_DELIMITER = -2031, /**< invalid delimiter, e.g. between params */
+	RS_RET_INVALID_PROPFRAME = -2032, /**< invalid framing in serialized property */
+	RS_RET_NO_PROPLINE = -2033, /**< line is not a property line */
+	RS_RET_INVALID_TRAILER = -2034, /**< invalid trailer */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */
@@ -174,6 +180,9 @@ typedef unsigned char uchar;
 #ifndef __GNUC__
 #  define  __attribute__(x)  /*NOTHING*/
 #endif
+
+/* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
+void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
 
 #endif /* multi-include protection */
 /*
