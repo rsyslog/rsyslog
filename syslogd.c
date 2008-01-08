@@ -4278,14 +4278,17 @@ dbgprintf(char *fmt, ...)
 	 * rgerhards, 2007-06-15
 	 */
 	if(bWasNL) {
-		fprintf(stdout, "%8.8x: ", (unsigned int) pthread_self());
+		//fprintf(stdout, "%8.8x: ", (unsigned int) pthread_self());
+		fprintf(stderr, "%8.8x: ", (unsigned int) pthread_self());
 	}
 	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? TRUE : FALSE;
 	va_start(ap, fmt);
-	vfprintf(stdout, fmt, ap);
+	//vfprintf(stdout, fmt, ap);
+	vfprintf(stderr, fmt, ap);
 	va_end(ap);
 
-	fflush(stdout);
+	fflush(stderr);
+	//fflush(stdout);
 	return;
 }
 

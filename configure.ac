@@ -270,6 +270,26 @@ if test "$enable_debug" = "no"; then
         AC_DEFINE(NDEBUG, 1, [Defined if debug mode is disabled.])
 fi
 
+# mudflap
+AC_ARG_ENABLE(mudflap,
+        [AS_HELP_STRING([--enable-mudflap],[Enable mudflap @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mudflap="yes" ;;
+          no) enable_mudflap="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mudflap) ;;
+         esac],
+        [enable_mudflap="no"]
+)
+if test "$enable_mudflap" = "yes"; then
+	  # is there any way to just change the -O option in default CFLAGS? -- rgerhards, 2008-01-08
+	  CFLAGS="-O1 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+          mudflap_libs="-lmudflapth"
+          mudflap_cflags="-fmudflapth"
+          AC_SUBST(mudflap_libs)
+          AC_SUBST(mudflap_cflags)
+        ],
+fi
+
 
 
 # MySQL support
@@ -369,4 +389,5 @@ echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
+echo "Mudflap enabled:                          $enable_mudflap"
 
