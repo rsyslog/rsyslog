@@ -40,6 +40,7 @@ typedef struct {
 	int iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
 	int iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
+	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 } queueFileDescription_t;
 #define qFILE_IOBUF_SIZE 4096 /* size of the IO buffer */
 

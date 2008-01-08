@@ -2,6 +2,8 @@
 Version 3.10.1 (rgerhards), 2008-01-??
 - performance-optimized string class, should bring an overall improvement
 - fixed a memory leak in imudp -- thanks to varmojfekoj for the patch
+- fixed a race condition that could lead to a rsyslogd hang when during
+  HUP or termination
 ---------------------------------------------------------------------------
 Version 3.10.0 (rgerhards), 2008-01-07
 - implemented input module interface and initial input modules

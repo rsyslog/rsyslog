@@ -2592,7 +2592,7 @@ die(int sig)
 	char buf[256];
 
 	if (sig) {
-		dbgprintf(" exiting on signal %d\n", sig);
+		dbgprintf("exiting on signal %d\n", sig);
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\"]" " exiting on signal %d.",
@@ -2602,15 +2602,19 @@ die(int sig)
 	}
 	
 	/* close the inputs */
+	dbgprintf("Terminating input threads...\n");
 	thrdTerminateAll(); /* TODO: inputs only, please */
 
 	/* drain queue and stop worker thread */
+	dbgprintf("Terminating main queue...\n");
 	queueDestruct(pMsgQueue);
 	pMsgQueue = NULL;
 	
 	/* Free ressources and close connections */
+	dbgprintf("Terminating outputs...\n");
 	freeSelectors();
 
+	dbgprintf("all primary multi-thread sources have been terminated - now doing aux cleanp\n");
 	/* rger 2005-02-22
 	 * now clean up the in-memory structures. OK, the OS
 	 * would also take care of that, but if we do it
@@ -3361,6 +3365,7 @@ init(void)
 
 	Initialized = 1;
 	bHaveMainQueue = (MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
+	dbgprintf("Main processing queue is initialized and running\n");
 
 	/* the output part and the queue is now ready to run. So it is a good time
 	 * to start the inputs. Please note that the net code above should be
@@ -4398,7 +4403,7 @@ mainloop(void)
 
 		if(restart) {
 			dbgprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
-			/* worker thread is stopped as part of init() */
+			/* main queue is stopped as part of init() */
 			init();
 			restart = 0;
 			continue;
@@ -4824,9 +4829,9 @@ int main(int argc, char **argv)
 	dbgprintf("Compatibility Mode: %d\n", iCompatibilityMode);
 
 	/* tuck my process id away */
-	if ( !Debug )
+	if (1) // !Debug )
 	{
-		dbgprintf("Writing pidfile.\n");
+		dbgprintf("Writing pidfile %s.\n", PidFile);
 		if (!check_pid(PidFile))
 		{
 			if (!write_pid(PidFile))

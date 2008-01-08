@@ -2122,6 +2122,18 @@ rsRetVal MsgSetProperty(msg_t *pThis, property_t *pProp)
 #undef	isProp
 
 
+/* This is a construction finalizer that must be called after all properties
+ * have been set. It does some final work on the message object. After this
+ * is done, the object is considered ready for full processing.
+ * rgerhards, 2008-07-08
+ */
+static rsRetVal MsgConstructFinalizer(msg_t *pThis)
+{
+	MsgPrepareEnqueue(pThis);
+	return RS_RET_OK;
+}
+
+
 /* Initialize the message class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-04
@@ -2129,6 +2141,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, property_t *pProp)
 BEGINObjClassInit(Msg, 1)
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, MsgSetProperty);
+	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, MsgConstructFinalizer);
 	/* initially, we have no need to lock message objects */
 	funcLock = MsgLockingDummy;
 	funcUnlock = MsgLockingDummy;
