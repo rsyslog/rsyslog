@@ -334,7 +334,6 @@ static rsRetVal objDeserializeStr(rsCStrObj **ppCStr, int iLen, serialStore_t *p
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	NEXTC;
-dbgprintf("deserializestring, c: %c (%x)\n", c, c);
 	for(i = 0 ; i < iLen ; ++i) {
 		CHKiRet(rsCStrAppendChar(pCStr, c));
 		NEXTC;
@@ -435,7 +434,7 @@ static rsRetVal objDeserializeProperty(property_t *pProp, serialStore_t *pSerSto
 	CHKiRet(objDeserializeLong(&iLen, pSerStore));
 
 	/* we now need to deserialize the value */
-dbgprintf("deserialized property name '%s', type %d, size %ld, c: %c\n", rsCStrGetSzStrNoNULL(pProp->pcsName), pProp->propType, iLen, c);
+//dbgprintf("deserialized property name '%s', type %d, size %ld, c: %c\n", rsCStrGetSzStrNoNULL(pProp->pcsName), pProp->propType, iLen, c);
 	switch(pProp->propType) {
 		case PROPTYPE_PSZ:
 			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pSerStore));

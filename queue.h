@@ -33,6 +33,7 @@
  */
 typedef struct {
 	int fd;		/* the file descriptor, -1 if closed */
+	uchar *pszFileName; /* name of current file (if open) */
 	int iCurrFileNum;/* current file number (NOT descriptor, but the number in the file name!) */
 	int iCurrOffs;	/* current offset */
 	uchar *pIOBuf;	/* io Buffer */
