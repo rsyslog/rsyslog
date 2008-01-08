@@ -53,7 +53,18 @@ the rsyslogd and the man pages to the relevant directories.</p>
 <p>In this step, you tell rsyslogd what to do with received messages. If you are 
 upgrading from stock syslogd, /etc/syslog.conf is probably a good starting 
 point. Rsyslogd understands stock syslogd syntax, so you can simply copy over 
-/etc/syslog.conf to /etc/rsyslog.conf. Then, edit rsyslog.conf for any 
+/etc/syslog.conf to /etc/rsyslog.conf. Note since version 3 rsyslog requires 
+to load plug-in modules to perform useful work (more about 
+<a href="v3compatibility.html">compatibilty notes v3</a>). To load the most common plug-ins,
+add the following to the top of rsyslog.conf:</p>
+<p>
+$ModLoad immark   # provides --MARK-- message capability
+$ModLoad imudp  # provides UDP syslog reception
+$ModLoad imtcp  # provides TCP syslog reception and GSS-API (if compiled to support it)
+$ModLoad imuxsock # provides support for local system logging (e.g. via logger command)
+$ModLoad imklog # provides kernel logging support (previously done by rklogd)
+</p>
+Change rsyslog.conf for any further
 enhancements you would like to see. For example, you can add database writing as 
 outlined in the paper &quot;<a href="rsyslog_mysql.html">Writing syslog Data to MySQL</a>&quot; 
 (remember you need to enable MySQL support during step 2 if you want to do 
