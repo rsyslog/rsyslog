@@ -741,6 +741,7 @@ rsRetVal queueDestruct(queue_t *pThis)
 		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 			pthread_join(pThis->pWorkerThreads[i], NULL);
 		}
+		free(pThis->pWorkerThreads);
 		dbgprintf("Worker threads for queue 0x%lx terminated.\n", (unsigned long) pThis);
 	}
 

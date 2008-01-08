@@ -222,13 +222,13 @@ BEGINwillRun
 CODESTARTwillRun
 	PrintAllowedSenders(1); /* UDP */
 
+	/* if we could not set up any listners, there is no point in running... */
+	if(udpLstnSocks == NULL)
+		ABORT_FINALIZE(RS_RET_NO_RUN);
+
 	if((pRcvBuf = malloc(MAXLINE * sizeof(char))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-
-	/* if we could not set up any listners, there is no point in running... */
-	if(udpLstnSocks == NULL)
-		iRet = RS_RET_NO_RUN;
 finalize_it:
 ENDwillRun
 
@@ -242,6 +242,8 @@ CODESTARTafterRun
 	}
 	if(udpLstnSocks != NULL)
 		closeUDPListenSockets(udpLstnSocks);
+	if(pRcvBuf != NULL)
+		free(pRcvBuf);
 ENDafterRun
 
 
