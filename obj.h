@@ -46,7 +46,7 @@ typedef struct {
 		int vInt;
 		long vLong;
 		rsCStrObj *vpCStr; /* used for both rsCStr and psz */
-		struct syslogTime vSyslogTime;
+		syslogTime_t vSyslogTime;
 
 	} val;
 } property_t;

@@ -94,6 +94,7 @@ struct syslogTime {
 	 * OffsetMode to know the direction.
 	 */
 };
+typedef struct syslogTime syslogTime_t;
 
 #ifdef SYSLOG_INET
 struct AllowedSenders {

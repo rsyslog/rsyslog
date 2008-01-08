@@ -188,20 +188,19 @@ rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t p
 			lenBuf = rsCStrLen((rsCStrObj*) pUsr);
 			break;
 		case PROPTYPE_SYSLOGTIME:
-			//lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%d:%d:%d:%d:%d:%d:%d:%d:%d:%c:%d:%d",
-			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%d %d %d %d %d %d %d %d %d %c %d %d",
-					  ((struct syslogTime*)pUsr)->timeType,
-					  ((struct syslogTime*)pUsr)->year,
-					  ((struct syslogTime*)pUsr)->month,
-					  ((struct syslogTime*)pUsr)->day,
-					  ((struct syslogTime*)pUsr)->hour,
-					  ((struct syslogTime*)pUsr)->minute,
-					  ((struct syslogTime*)pUsr)->second,
-					  ((struct syslogTime*)pUsr)->secfrac,
-					  ((struct syslogTime*)pUsr)->secfracPrecision,
-					  ((struct syslogTime*)pUsr)->OffsetMode,
-					  ((struct syslogTime*)pUsr)->OffsetHour,
-					  ((struct syslogTime*)pUsr)->OffsetMinute);
+			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%d:%d:%d:%d:%d:%d:%d:%d:%d:%c:%d:%d",
+					  ((syslogTime_t*)pUsr)->timeType,
+					  ((syslogTime_t*)pUsr)->year,
+					  ((syslogTime_t*)pUsr)->month,
+					  ((syslogTime_t*)pUsr)->day,
+					  ((syslogTime_t*)pUsr)->hour,
+					  ((syslogTime_t*)pUsr)->minute,
+					  ((syslogTime_t*)pUsr)->second,
+					  ((syslogTime_t*)pUsr)->secfrac,
+					  ((syslogTime_t*)pUsr)->secfracPrecision,
+					  ((syslogTime_t*)pUsr)->OffsetMode,
+					  ((syslogTime_t*)pUsr)->OffsetHour,
+					  ((syslogTime_t*)pUsr)->OffsetMinute);
 			if(lenBuf > sizeof(szBuf) - 1)
 				ABORT_FINALIZE(RS_RET_PROVIDED_BUFFER_TOO_SMALL);
 			pszBuf = szBuf;
@@ -362,6 +361,38 @@ finalize_it:
 }
 
 
+/* de-serialize a syslogTime -- rgerhards,2008-01-08 */
+#define	GETVAL(var)  \
+	CHKiRet(objDeserializeLong(&l, pSerStore)); \
+	pTime->var = l;
+static rsRetVal objDeserializeSyslogTime(syslogTime_t *pTime, serialStore_t *pSerStore)
+{
+	DEFiRet;
+	long l;
+	uchar c;
+
+	assert(pTime != NULL);
+
+	GETVAL(timeType);
+	GETVAL(year);
+	GETVAL(month);
+	GETVAL(day);
+	GETVAL(hour);
+	GETVAL(minute);
+	GETVAL(second);
+	GETVAL(secfrac);
+	GETVAL(secfracPrecision);
+	/* OffsetMode is a single character! */
+	NEXTC; pTime->OffsetMode = c;
+	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
+	GETVAL(OffsetHour);
+	GETVAL(OffsetMinute);
+
+finalize_it:
+	return iRet;
+}
+#undef GETVAL
+
 /* de-serialize an object header
  * rgerhards, 2008-01-07
  */
@@ -463,7 +494,7 @@ static rsRetVal objDeserializeProperty(property_t *pProp, serialStore_t *pSerSto
 			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pSerStore));
 			break;
 		case PROPTYPE_SYSLOGTIME:
-			/* dummy */ NEXTC; while(c != ':') NEXTC;
+			CHKiRet(objDeserializeSyslogTime(&pProp->val.vSyslogTime, pSerStore));
 			break;
 	}
 
