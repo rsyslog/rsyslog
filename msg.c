@@ -409,7 +409,6 @@ static rsRetVal MsgSerialize(msg_t *pThis, rsCStrObj **ppCStr)
 	objSerializePTR(pszHOSTNAME, PSZ);
 	objSerializePTR(pszRcvFrom, PSZ);
 
-	objSerializePTR(pCSProgName, CSTR);
 	objSerializePTR(pCSStrucData, CSTR);
 	objSerializePTR(pCSAPPNAME, CSTR);
 	objSerializePTR(pCSPROCID, CSTR);
@@ -914,18 +913,15 @@ rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME)
 {
 	DEFiRet;
 	assert(pMsg != NULL);
-	//MsgLock(pMsg);
 	if(pMsg->pCSAPPNAME == NULL) {
 		/* we need to obtain the object first */
 		if((pMsg->pCSAPPNAME = rsCStrConstruct()) == NULL) {
-	//		MsgUnlock(pMsg);
 			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
 		}
 		rsCStrSetAllocIncrement(pMsg->pCSAPPNAME, 128);
 	}
 	/* if we reach this point, we have the object */
 	iRet = rsCStrSetSzStr(pMsg->pCSAPPNAME, (uchar*) pszAPPNAME);
-	//MsgUnlock(pMsg);
 
 	return iRet;
 }
@@ -2109,12 +2105,26 @@ rsRetVal MsgSetProperty(msg_t *pThis, property_t *pProp)
 		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
 	} else if(isProp("pszMSG")) {
 		MsgSetMSG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
-	} else if(isProp("pszTAG")) {
-		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
-	} else if(isProp("pszHOSTNAME")) {
-		MsgSetHOSTNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
 	} else if(isProp("pszUxTradMsg")) {
 		MsgSetUxTradMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pszTAG")) {
+		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pszRcvFrom")) {
+		MsgSetHOSTNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pszHOSTNAME")) {
+		MsgSetRcvFrom(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pCSStrucData")) {
+		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pCSAPPNAME")) {
+		MsgSetAPPNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pCSPROCID")) {
+		MsgSetPROCID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("pCSMSGID")) {
+		MsgSetMSGID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+	} else if(isProp("tRcvdAt")) {
+		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
+	} else if(isProp("tTIMESTAMP")) {
+		memcpy(&pThis->tTIMESTAMP, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	}
 
 	return iRet;

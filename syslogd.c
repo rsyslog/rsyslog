@@ -2614,7 +2614,7 @@ die(int sig)
 	dbgprintf("Terminating outputs...\n");
 	freeSelectors();
 
-	dbgprintf("all primary multi-thread sources have been terminated - now doing aux cleanp\n");
+	dbgprintf("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
 	/* rger 2005-02-22
 	 * now clean up the in-memory structures. OK, the OS
 	 * would also take care of that, but if we do it
