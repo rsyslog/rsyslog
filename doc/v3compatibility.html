@@ -22,13 +22,13 @@ rsyslog do any useful work.</b></font> The config file directives doc briefly
 lists which config statements are available by which modules.</p>
 <p>It is suggested that input modules be loaded in the top part of the config 
 file. Here is an example, also highlighting the most important modules:</p>
-<p><b>$ModLoad immark&nbsp;&nbsp; # provides --MARK-- message capability<br>
-$ModLoad imudp&nbsp; # provides UDP syslog reception<br>
-$ModLoad imtcp&nbsp; # provides TCP syslog reception and GSS-API (if compiled to 
-support it)<br>
-$ModLoad imuxsock # provides support for local system logging (e.g. via logger 
-command)<br>
-$ModLoad imklog # provides kernel logging support (previously done by rklogd)</b></p>
+<p><b>$ModLoad immark.so&nbsp; # provides --MARK-- message capability<br>
+$ModLoad imudp.so&nbsp; # provides UDP syslog reception<br>
+$ModLoad imtcp.so&nbsp; # provides TCP syslog reception and GSS-API (if compiled 
+to support it)<br>
+$ModLoad imuxsock.so # provides support for local system logging (e.g. via 
+logger command)<br>
+$ModLoad imklog.so # provides kernel logging support (previously done by rklogd)</b></p>
 <h2>command line options</h2>
 <p>A number of command line options have been removed. New config file 
 directives have been added for them. Once we implement compatibiltiy mode, these 
@@ -36,7 +36,7 @@ options will return, but only if running in non-v3-native mode.</p>
 <h2>-m command line option</h2>
 <P>The -m command line option is ignored for the time being. There is no default 
 mark period. If you need a 20 minute mark period you need to</P>
-<P><b>$ModLoad immark # wherever this is<br>
+<P><b>$ModLoad immark.so&nbsp; # wherever this is<br>
 $MarkMessageInterval 1800 # 20 minutes</b></P>
 <h2>-r command line option</h2>
 <p>Is also no longer available. Use the <b>$UDPSeverRun &lt;port&gt;</b> config file 
@@ -44,14 +44,14 @@ directives. You can now also set the local address the server should listen to
 via <b>$UDPServerAddress &lt;ip&gt;</b> config directive.</p>
 <p>The following example configures an UDP syslog server at the local address 
 192.0.2.1 on port 514:</p>
-<p><b>$ModLoad imudp<br>
+<p><b>$ModLoad imudp.so<br>
 $UDPSeverAddress 192.0.2.1 # this MUST be before the $UDPServerRun directive!<br>
 $UDPServerRun 514</b></p>
 <p>&quot;$UDPServerAddress *&quot; means listen on all local interfaces. This is the 
 default if no directive is specified.</p>
 <p>Please note that now multiple listeners are supported. For example, you can 
 do the following:</p>
-<p><b>$ModLoad imudp<br>
+<p><b>$ModLoad imudp.so<br>
 $UDPSeverAddress 192.0.2.1 # this MUST be before the $UDPServerRun directive!<br>
 $UDPServerRun 514<br>
 $UDPSeverAddress * # all local interfaces<br>
@@ -68,7 +68,7 @@ in the &quot;Run&quot; directive, e.g. &quot;<i>$UDPServerRun syslog</i>&quot;.<
 <h2>klogd</h2>
 <P>klogd has (finally) been replaced by a loadable input module. To enable klogd 
 functionality, do</P>
-<P><b>$ModLoad imklog</b></P>
+<P><b>$ModLoad imklog.so</b></P>
 <P>A limited set of klogd command line settings is now supported via 
 rsyslog.conf. That set of configuration directives is to be expanded. So far, we 
 support:</P>
