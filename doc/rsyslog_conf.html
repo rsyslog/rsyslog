@@ -61,7 +61,8 @@ development and quite unstable...). So you have been warned ;)</p>
 	<li>$klogSymbolsTwice (imklog) [on/<b>off</b>] -- former klogd -s option</li>
 	<li>$MainMsgQueueFilePrefix &lt;name&gt;</li>
 	<li><a href="rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
-	<li>$MainMsgQueueType [<b>FixedArray</b>/LinkedList/Direct]</li>
+	<li>$MainMsgQueueMaxFileSize &lt;size_nbr&gt;, default 1m</li>
+	<li>$MainMsgQueueType [<b>FixedArray</b>/LinkedList/Direct/Disk]</li>
 	<li>$MainMsgQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
 	recommended 1</li>
 	<li><a href="rsconf1_markmessageperiod.html">$MarkMessagePeriod</a> (immark)</li>
@@ -78,6 +79,11 @@ development and quite unstable...). So you have been warned ;)</p>
 	start UDP server on this port, &quot;*&quot; means all addresses</li>
 	<li><a href="rsconf1_umask.html">$UMASK</a></li>
 </ul>
+<p><b>Where &lt;size_nbr&gt; is specified above,</b> modifiers can be used after the 
+number part. For example, 1k means 1024. Supported are k(ilo), m(ega), g(iga), 
+t(era), p(eta) and e(xa). Lower case letters refer to the traditional binary 
+defintion (e.g. 1m equals 1,048,576) whereas upper case letters refer to their 
+new 1000-based definition (e.g 1M equals 1,000,000).</p>
 <h2>Basic Structure</h2>
 <p>Rsyslog supports standard sysklogd's configuration file format and extends 
 it. So in general, you can take a &quot;normal&quot; syslog.conf and use it together with 
