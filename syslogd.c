@@ -3360,9 +3360,21 @@ init(void)
 		exit(1);
 	}
 	/* ... set some properties ... */
-	CHKiRet_Hdlr(queueSetMaxFileSize(pMsgQueue, iMainMsgQueMaxFileSize)) {
-		logerrorInt("Invalid $MainMsgQueueMaxFileSize, error %d. Ignored, running with default setting", iRet);
+#	define setQPROP(func, directive, data) \
+	CHKiRet_Hdlr(func(pMsgQueue, data)) { \
+		logerrorInt("Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
+#	define setQPROPstr(func, directive, data) \
+	CHKiRet_Hdlr(func(pMsgQueue, data, strlen((char*) data))) { \
+		logerrorInt("Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+	}
+
+	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
+	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFilePrefix",
+		    (pszMainMsgQFilePrefix == NULL ? (uchar*) "mainq" : pszMainMsgQFilePrefix));
+
+#	undef setQPROP
+#	undef setQPROPstr
 
 	/* ... and finally start the queue! */
 	CHKiRet_Hdlr(queueStart(pMsgQueue)) {

@@ -111,6 +111,7 @@ rsRetVal queueDestruct(queue_t *pThis);
 rsRetVal queueEnqObj(queue_t *pThis, void *pUsr);
 rsRetVal queueStart(queue_t *pThis);
 rsRetVal queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize);
+rsRetVal queueSetFilePrefix(queue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
 
