@@ -37,6 +37,7 @@
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "obj.h"
+#include "stream.h"
 
 /* static data */
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
@@ -301,10 +302,10 @@ finalize_it:
 
 
 /* define a helper to make code below a bit cleaner (and quicker to write) */
-#define NEXTC CHKiRet(serialStoreGetChar(pSerStore, &c))//;dbgprintf("c: %c\n", c);
+#define NEXTC CHKiRet(strmReadChar(pStrm, &c))//;dbgprintf("c: %c\n", c);
 
 /* de-serialize an (long) integer */
-static rsRetVal objDeserializeLong(long *pInt, serialStore_t *pSerStore)
+static rsRetVal objDeserializeLong(long *pInt, strm_t *pStrm)
 {
 	DEFiRet;
 	int i;
@@ -328,7 +329,7 @@ finalize_it:
 
 
 /* de-serialize a string, length must be provided */
-static rsRetVal objDeserializeStr(rsCStrObj **ppCStr, int iLen, serialStore_t *pSerStore)
+static rsRetVal objDeserializeStr(rsCStrObj **ppCStr, int iLen, strm_t *pStrm)
 {
 	DEFiRet;
 	int i;
@@ -363,9 +364,9 @@ finalize_it:
 
 /* de-serialize a syslogTime -- rgerhards,2008-01-08 */
 #define	GETVAL(var)  \
-	CHKiRet(objDeserializeLong(&l, pSerStore)); \
+	CHKiRet(objDeserializeLong(&l, pStrm)); \
 	pTime->var = l;
-static rsRetVal objDeserializeSyslogTime(syslogTime_t *pTime, serialStore_t *pSerStore)
+static rsRetVal objDeserializeSyslogTime(syslogTime_t *pTime, strm_t *pStrm)
 {
 	DEFiRet;
 	long l;
@@ -396,7 +397,7 @@ finalize_it:
 /* de-serialize an object header
  * rgerhards, 2008-01-07
  */
-static rsRetVal objDeserializeHeader(objID_t *poID, int* poVers, serialStore_t *pSerStore)
+static rsRetVal objDeserializeHeader(objID_t *poID, int* poVers, strm_t *pStrm)
 {
 	DEFiRet;
 	long ioID;
@@ -415,8 +416,8 @@ static rsRetVal objDeserializeHeader(objID_t *poID, int* poVers, serialStore_t *
 	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
 
 	/* object type and version and string length */
-	CHKiRet(objDeserializeLong(&ioID, pSerStore));
-	CHKiRet(objDeserializeLong(&oVers, pSerStore));
+	CHKiRet(objDeserializeLong(&ioID, pStrm));
+	CHKiRet(objDeserializeLong(&oVers, pStrm));
 
 	if(ioID < 1 || ioID >= OBJ_NUM_IDS)
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
@@ -438,7 +439,7 @@ dbgprintf("DeserializeHeader oid: %ld, vers: %ld, iRet: %d\n", ioID, oVers, iRet
 /* Deserialize a single property. Pointer must be positioned at begin of line. Whole line
  * up until the \n is read.
  */
-static rsRetVal objDeserializeProperty(property_t *pProp, serialStore_t *pSerStore)
+static rsRetVal objDeserializeProperty(property_t *pProp, strm_t *pStrm)
 {
 	DEFiRet;
 	long i;
@@ -451,7 +452,7 @@ static rsRetVal objDeserializeProperty(property_t *pProp, serialStore_t *pSerSto
 	NEXTC;
 	if(c != COOKIE_PROPLINE) {
 		/* oops, we've read one char that does not belong to use - unget it first */
-		CHKiRet(serialStoreUngetChar(pSerStore, c));
+		CHKiRet(strmUnreadChar(pStrm, c));
 		ABORT_FINALIZE(RS_RET_NO_PROPLINE);
 	}
 
@@ -467,34 +468,34 @@ static rsRetVal objDeserializeProperty(property_t *pProp, serialStore_t *pSerSto
 	CHKiRet(rsCStrFinish(pProp->pcsName));
 
 	/* property type */
-	CHKiRet(objDeserializeLong(&i, pSerStore));
+	CHKiRet(objDeserializeLong(&i, pStrm));
 	pProp->propType = i;
 
 	/* size (needed for strings) */
-	CHKiRet(objDeserializeLong(&iLen, pSerStore));
+	CHKiRet(objDeserializeLong(&iLen, pStrm));
 
 	/* we now need to deserialize the value */
 //dbgprintf("deserialized property name '%s', type %d, size %ld, c: %c\n", rsCStrGetSzStrNoNULL(pProp->pcsName), pProp->propType, iLen, c);
 	switch(pProp->propType) {
 		case PROPTYPE_PSZ:
-			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pSerStore));
+			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pStrm));
 			break;
 		case PROPTYPE_SHORT:
-			CHKiRet(objDeserializeLong(&i, pSerStore));
+			CHKiRet(objDeserializeLong(&i, pStrm));
 			pProp->val.vShort = i;
 			break;
 		case PROPTYPE_INT:
-			CHKiRet(objDeserializeLong(&i, pSerStore));
+			CHKiRet(objDeserializeLong(&i, pStrm));
 			pProp->val.vInt = i;
 			break;
 		case PROPTYPE_LONG:
-			CHKiRet(objDeserializeLong(&pProp->val.vLong, pSerStore));
+			CHKiRet(objDeserializeLong(&pProp->val.vLong, pStrm));
 			break;
 		case PROPTYPE_CSTR:
-			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pSerStore));
+			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pStrm));
 			break;
 		case PROPTYPE_SYSLOGTIME:
-			CHKiRet(objDeserializeSyslogTime(&pProp->val.vSyslogTime, pSerStore));
+			CHKiRet(objDeserializeSyslogTime(&pProp->val.vSyslogTime, pStrm));
 			break;
 	}
 
@@ -511,7 +512,7 @@ finalize_it:
  * format is ok.
  * rgerhards, 2008-01-07
  */
-static rsRetVal objDeserializeTrailer(serialStore_t *pSerStore)
+static rsRetVal objDeserializeTrailer(strm_t *pStrm)
 {
 	DEFiRet;
 	uchar c;
@@ -542,14 +543,14 @@ finalize_it:
  * looks like a valid object or end of store.
  * rgerhards, 2008-01-07
  */
-static rsRetVal objDeserializeTryRecover(serialStore_t *pSerStore)
+static rsRetVal objDeserializeTryRecover(strm_t *pStrm)
 {
 	DEFiRet;
 	uchar c;
 	int bWasNL;
 	int bRun;
 
-	assert(pSerStore != NULL);
+	assert(pStrm != NULL);
 	bRun = 1;
 	bWasNL = 0;
 
@@ -565,7 +566,7 @@ static rsRetVal objDeserializeTryRecover(serialStore_t *pSerStore)
 		}
 	}
 
-	CHKiRet(serialStoreUngetChar(pSerStore, c));
+	CHKiRet(strmUnreadChar(pStrm, c));
 
 finalize_it:
 	dbgprintf("deserializer has possibly been able to re-sync and recover, state %d\n", iRet);
@@ -581,7 +582,7 @@ finalize_it:
  * The caller must destruct the created object.
  * rgerhards, 2008-01-07
  */
-rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, serialStore_t *pSerStore)
+rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -592,7 +593,7 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, serialStore_t *pSe
 
 	assert(ppObj != NULL);
 	assert(objTypeExpected > 0 && objTypeExpected < OBJ_NUM_IDS);
-	assert(pSerStore != NULL);
+	assert(pStrm != NULL);
 
 	/* we de-serialize the header. if all goes well, we are happy. However, if
 	 * we experience a problem, we try to recover. We do this by skipping to
@@ -602,10 +603,10 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, serialStore_t *pSe
 	 * rgerhards, 2008-07-08
 	 */
 	do {
-		iRetLocal = objDeserializeHeader(&oID, &oVers, pSerStore);
+		iRetLocal = objDeserializeHeader(&oID, &oVers, pStrm);
 		if(iRetLocal != RS_RET_OK) {
 			dbgprintf("objDeserialize error %d during header processing - trying to recover\n", iRetLocal);
-			CHKiRet(objDeserializeTryRecover(pSerStore));
+			CHKiRet(objDeserializeTryRecover(pStrm));
 		}
 	} while(iRetLocal != RS_RET_OK);
 
@@ -614,17 +615,17 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, serialStore_t *pSe
 	CHKiRet(arrObjInfo[oID]->objMethods[objMethod_CONSTRUCT](&pObj));
 
 	/* we got the object, now we need to fill the properties */
-	iRet = objDeserializeProperty(&propBuf, pSerStore);
+	iRet = objDeserializeProperty(&propBuf, pStrm);
 	while(iRet == RS_RET_OK) {
 		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_SETPROPERTY](pObj, &propBuf));
-		iRet = objDeserializeProperty(&propBuf, pSerStore);
+		iRet = objDeserializeProperty(&propBuf, pStrm);
 	}
 	rsCStrDestruct(propBuf.pcsName); /* todo: a destructor would be nice here... -- rger, 2008-01-07 */
 
 	if(iRet != RS_RET_NO_PROPLINE)
 		FINALIZE;
 
-	CHKiRet(objDeserializeTrailer(pSerStore)); /* do trailer checks */
+	CHKiRet(objDeserializeTrailer(pStrm)); /* do trailer checks */
 
 	/* we have a valid object, let's finalize our work and return */
 	if(objInfoIsImplemented(arrObjInfo[oID], objMethod_CONSTRUCTION_FINALIZER))

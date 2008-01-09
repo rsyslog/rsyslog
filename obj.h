@@ -44,128 +44,8 @@
 #ifndef OBJ_H_INCLUDED
 #define OBJ_H_INCLUDED
 
-#include "stringbuf.h"
-
-/* property types */
-typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc() */
-	PROPTYPE_PSZ = 1,
-	PROPTYPE_SHORT = 2,
-	PROPTYPE_INT = 3,
-	PROPTYPE_LONG = 4,
-	PROPTYPE_CSTR = 5,
-	PROPTYPE_SYSLOGTIME = 6
-} propertyType_t;
-
-typedef struct {
-	rsCStrObj *pcsName;
-	propertyType_t propType;
-	union {
-		short vShort;
-		int vInt;
-		long vLong;
-		rsCStrObj *vpCStr; /* used for both rsCStr and psz */
-		syslogTime_t vSyslogTime;
-
-	} val;
-} property_t;
-
-/* object Types/IDs */
-typedef enum {	/* IDs of known object "types/classes" */
-	OBJNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
-	OBJMsg = 1,
-	OBJstrm = 2
-} objID_t;	
-#define OBJ_NUM_IDS 3
-
-typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
-		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04
-		 */
-	objMethod_CONSTRUCT = 0,
-	objMethod_DESTRUCT = 1,
-	objMethod_SERIALIZE = 2,
-	objMethod_DESERIALIZE = 3,
-	objMethod_SETPROPERTY = 4,
-	objMethod_CONSTRUCTION_FINALIZER = 5,
-	objMethod_DEBUGPRINT = 6
-} objMethod_t;
-#define OBJ_NUM_METHODS 7	/* must be updated to contain the max number of methods supported */
-
-typedef struct objInfo_s {
-	objID_t	objID;	
-	int iObjVers;
-	uchar *pszName;
-	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
-} objInfo_t;
-
-typedef struct obj {	/* the dummy struct that each derived class can be casted to */
-	objInfo_t *pObjInfo;
-} obj_t;
-
-/* the following structure is used for deserialization. It defines a serial storage with a single
- * ungetc() capability. This should probably become its own object some time. -- rgerhards, 2008-01-07
- */
-typedef struct serialStore_s {
-	void *pUsr;	/* Pointer to some user data */
-	/* methods */
-	rsRetVal (*funcGetChar)(void*, uchar*);
-	rsRetVal (*funcUngetChar)(void*, uchar);
-} serialStore_t;
-#define serialStoreGetChar(pThis, c) (pThis->funcGetChar(pThis->pUsr, c))
-#define serialStoreUngetChar(pThis, c) (pThis->funcUngetChar(pThis->pUsr, c))
-
-
-/* macros */
-/* the following one is a helper that prevents us from writing the
- * ever-same code at the end of Construct()
- */
-#define OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP \
-	if(iRet == RS_RET_OK) { \
-		*ppThis = pThis; \
-	} else { \
-		if(pThis != NULL) \
-			free(pThis); \
-	}
-
-#define DEFpropSetMeth(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
-	{ \
-		pThis->prop = pVal; \
-		return RS_RET_OK; \
-	}
-#define PROTOTYPEpropSetMeth(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)
-
-#define objSerializeSCALAR(propName, propType) \
-	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
-#define objSerializePTR(propName, propType) \
-	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
-#define DEFobjStaticHelpers static objInfo_t *pObjInfoOBJ = NULL;
-#define BEGINobjInstance objInfo_t *pObjInfo
-#define objGetName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
-#define objGetObjID(pThis) (((obj_t*) (pThis))->pObjInfo->objID)
-#define objGetVersion(pThis) (((obj_t*) (pThis))->pObjInfo->iObjVers)
-/* must be called in Constructor: */
-#define objConstructSetObjInfo(pThis) ((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ;
-#define objDestruct(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DESTRUCT])(pThis)
-#define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
-/* class initializer */
-#define PROTOTYPEObjClassInit(objName) rsRetVal objName##ClassInit(void)
-#define BEGINObjClassInit(objName, objVers) \
-rsRetVal objName##ClassInit(void) \
-{ \
-	DEFiRet; \
-	CHKiRet(objInfoConstruct(&pObjInfoOBJ, OBJ##objName, (uchar*) #objName, objVers, \
-	                         (rsRetVal (*)(void*))objName##Construct,  (rsRetVal (*)(void*))objName##Destruct)); 
-
-#define ENDObjClassInit(objName) \
-	objRegisterObj(OBJ##objName, pObjInfoOBJ); \
-finalize_it: \
-	return iRet; \
-}
-
-#define OBJSetMethodHandler(methodID, pHdlr) \
-	CHKiRet(objInfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)(void*)) pHdlr))
-
+#include "obj-types.h"
+#include "stream.h"
 
 /* prototypes */
 rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *));
@@ -175,7 +55,7 @@ rsRetVal objSerializePsz(rsCStrObj *pCStr, uchar *psz, size_t len);
 rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj);
 rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr);
 rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo);
-rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, serialStore_t *pSerStore);
+rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pSerStore);
 PROTOTYPEObjClassInit(obj);
 
 #endif /* #ifndef OBJ_H_INCLUDED */

@@ -196,10 +196,12 @@ static rsRetVal qConstructDisk(queue_t *pThis)
 	assert(pThis != NULL);
 
 	CHKiRet(strmConstruct(&pThis->tVars.disk.pWrite));
+	CHKiRet(strmSetDir(pThis->tVars.disk.pWrite, pszSpoolDirectory, strlen((char*)pszSpoolDirectory)));
 	CHKiRet(strmConstructFinalize(pThis->tVars.disk.pWrite));
 
 	CHKiRet(strmConstruct(&pThis->tVars.disk.pRead));
 	CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
+	CHKiRet(strmSetDir(pThis->tVars.disk.pRead, pszSpoolDirectory, strlen((char*)pszSpoolDirectory)));
 	CHKiRet(strmConstructFinalize(pThis->tVars.disk.pRead));
 
 finalize_it:
@@ -240,39 +242,7 @@ finalize_it:
 
 static rsRetVal qDelDisk(queue_t *pThis, void **ppUsr)
 {
-	DEFiRet;
-	msg_t *pMsg = NULL;
-	serialStore_t serialStore;
-	int bRun;
-
-	assert(pThis != NULL);
-
-	/* de-serialize object from file
-	 * We need to try at least twice because we may run into EOF and need
-	 * to switch files.
-	 */
-	serialStore.pUsr = pThis->tVars.disk.pRead;
-	serialStore.funcGetChar = (rsRetVal (*)(void*, uchar*)) strmReadChar;
-	serialStore.funcUngetChar = (rsRetVal (*)(void*, uchar)) strmUnreadChar;
-	bRun = 1;
-	while(bRun) {
-		/* first check if we need to (re)open the file (we may have switched to a new one!) */
-		CHKiRet(strmOpenFile(pThis->tVars.disk.pRead, O_RDONLY, 0600)); // TODO: open modes!
-
-		iRet = objDeserialize((void*) &pMsg, OBJMsg, &serialStore);
-		if(iRet == RS_RET_OK)
-			bRun = 0; /* we are done */
-		else if(iRet == RS_RET_EOF) {
-			dbgprintf("Queue 0x%lx: EOF on file %d\n", (unsigned long) pThis, pThis->tVars.disk.pRead->fd);
-			CHKiRet(strmNextFile(pThis->tVars.disk.pRead));
-		} else
-			FINALIZE;
-	}
-
-	*ppUsr = (void*) pMsg;
-
-finalize_it:
-	return iRet;
+	return objDeserialize(ppUsr, OBJMsg, pThis->tVars.disk.pRead);
 }
 
 /* -------------------- direct (no queueing) -------------------- */
@@ -602,6 +572,8 @@ queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize)
 	}
 
 	pThis->iMaxFileSize = iMaxFileSize;
+// TODO: check queue mode! also in other places!!!
+	CHKiRet(strmSetiMaxFileSize(pThis->tVars.disk.pWrite, iMaxFileSize));
 
 finalize_it:
 	return iRet;

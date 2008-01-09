@@ -117,6 +117,7 @@ rsRetVal strmNextFile(strm_t *pThis)
 {
 	DEFiRet;
 
+dbgprintf("strmNextFile in\n");
 	assert(pThis != NULL);
 	CHKiRet(strmCloseFile(pThis));
 
@@ -127,6 +128,7 @@ rsRetVal strmNextFile(strm_t *pThis)
 	pThis->iCurrFNum = (pThis->iCurrFNum + 1) % 1000000;
 
 finalize_it:
+dbgprintf("strmNextFile out %d\n", iRet);
 	return iRet;
 }
 
@@ -143,6 +145,7 @@ finalize_it:
 rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 {
 	DEFiRet;
+	int bRun;
 	
 	assert(pThis != NULL);
 	assert(pC != NULL);
@@ -162,13 +165,22 @@ rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	
 	/* do we need to obtain a new buffer */
 	if(pThis->iBufPtr >= pThis->iBufPtrMax) {
-		/* read */
-		pThis->iBufPtrMax = read(pThis->fd, pThis->pIOBuf, STRM_IOBUF_SIZE);
-		dbgprintf("strmReadChar read %d bytes from file %d\n", pThis->iBufPtrMax, pThis->fd);
-		if(pThis->iBufPtrMax == 0)
-			ABORT_FINALIZE(RS_RET_EOF);
-		else if(pThis->iBufPtrMax < 0)
-			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		/* We need to try read at least twice because we may run into EOF and need to switch files. */
+		bRun = 1;
+		while(bRun) {
+			/* first check if we need to (re)open the file (we may have switched to a new one!) */
+			CHKiRet(strmOpenFile(pThis, O_RDONLY, 0600)); // TODO: open modes!
+			pThis->iBufPtrMax = read(pThis->fd, pThis->pIOBuf, STRM_IOBUF_SIZE);
+			dbgprintf("strmReadChar read %d bytes from file %d\n", pThis->iBufPtrMax, pThis->fd);
+			if(pThis->iBufPtrMax == 0) {
+// TODO: only when single file! ABORT_FINALIZE(RS_RET_EOF);
+				dbgprintf("Stream 0x%lx: EOF on file %d\n", (unsigned long) pThis, pThis->fd);
+				CHKiRet(strmNextFile(pThis));
+			} else if(pThis->iBufPtrMax < 0)
+				ABORT_FINALIZE(RS_RET_IO_ERROR);
+			else
+				bRun = 0;	/* exit loop */
+		}
 		/* if we reach this point, we had a good read */
 		pThis->iBufPtr = 0;
 	}
@@ -316,8 +328,11 @@ dbgprintf("strmWrite()\n");
 	/* TODO: handle error case -- rgerhards, 2008-01-07 */
 
 	pThis->iCurrOffs += iWritten;
-	if(pThis->iCurrOffs >= pThis->iMaxFileSize)
+	if(pThis->iCurrOffs >= pThis->iMaxFileSize) {
+		dbgprintf("Stream 0x%lx: max file size %ld reached for %d, now %ld - starting new file\n",
+			  (unsigned long) pThis, (long) pThis->iMaxFileSize, pThis->fd, (long) pThis->iCurrOffs);
 		CHKiRet(strmNextFile(pThis));
+	}
 
 finalize_it:
 	return iRet;
@@ -327,6 +342,7 @@ finalize_it:
 /* property set methods */
 /* simple ones first */
 DEFpropSetMeth(strm, bDeleteOnClose, int)
+DEFpropSetMeth(strm, iMaxFileSize, int)
 
 /* set the stream's file prefix
  * The passed-in string is duplicated. So if the caller does not need
@@ -349,6 +365,33 @@ strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
 
 	memcpy(pThis->pszFilePrefix, pszPrefix, iLenPrefix + 1); /* always think about the \0! */
 	pThis->lenFilePrefix = iLenPrefix;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* set the stream's directory
+ * The passed-in string is duplicated. So if the caller does not need
+ * it any longer, it must free it.
+ * rgerhards, 2008-01-09
+ */
+rsRetVal
+strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+	assert(pszDir != NULL);
+	
+	if(iLenDir < 1)
+		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
+
+	if((pThis->pszDir = malloc(sizeof(uchar) * iLenDir + 1)) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	memcpy(pThis->pszDir, pszDir, iLenDir + 1); /* always think about the \0! */
+	pThis->lenDir = iLenDir;
 
 finalize_it:
 	return iRet;

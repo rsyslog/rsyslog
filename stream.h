@@ -43,7 +43,7 @@
 #define STREAM_H_INCLUDED
 
 #include <pthread.h>
-#include "obj.h"
+#include "obj-types.h"
 #include "stream.h"
 
 /* stream types */
@@ -52,7 +52,7 @@ typedef enum {
 } strmType_t;
 
 /* The strm_t data structure */
-typedef struct {
+typedef struct strm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	strmType_t sType;
 	int fd;		/* the file descriptor, -1 if closed */
@@ -86,7 +86,9 @@ rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
 rsRetVal strmNextFile(strm_t *pThis);
 rsRetVal strmOpenFile(strm_t *pThis, int flags, mode_t mode);
 rsRetVal strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+rsRetVal strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir);
 PROTOTYPEObjClassInit(strm);
 PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
+PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);
 
 #endif /* #ifndef STREAM_H_INCLUDED */
