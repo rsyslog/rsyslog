@@ -78,6 +78,18 @@ typedef struct queue_s {
 	pthread_mutex_t *mut;
 	pthread_cond_t *notFull, *notEmpty;
 	/* end sync variables */
+	/* the following variables are always present, because they
+	 * are not only used for the "disk" queueing mode but also for
+	 * any other queueing mode if it is set to "disk assisted".
+	 * rgerhards, 2008-01-09
+	 */
+	uchar *pszSpoolDir;
+	size_t lenSpoolDir;
+	uchar *pszFilePrefix;
+	size_t lenFilePrefix;
+	int iNumberFiles;	/* how many files make up the queue? */
+	size_t iMaxFileSize;	/* max size for a single queue file */
+	/* now follow queueing mode specific data elements */
 	union {			/* different data elements based on queue type (qType) */
 		struct {
 			long head, tail;
@@ -88,12 +100,6 @@ typedef struct queue_s {
 			qLinkedList_t *pLast;
 		} linklist;
 		struct {
-			uchar *pszSpoolDir;
-			size_t lenSpoolDir;
-			uchar *pszFilePrefix;
-			size_t lenFilePrefix;
-			int iNumberFiles;	/* how many files make up the queue? */
-			size_t iMaxFileSize;	/* max size for a single queue file */
 			queueFileDescription_t fWrite; /* current file to be written */
 			queueFileDescription_t fRead;  /* current file to be read */
 		} disk;
