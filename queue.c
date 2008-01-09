@@ -380,7 +380,7 @@ static rsRetVal qConstructDisk(queue_t *pThis)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	pThis->tVars.disk.lenSpoolDir = strlen((char*)pThis->tVars.disk.pszSpoolDir);
-	pThis->tVars.disk.iMaxFileSize = 10240000; //1024 * 3; // TODO: configurable!
+	pThis->tVars.disk.iMaxFileSize = 1024 * 1024; /* default is 1 MiB */
 
 	pThis->tVars.disk.fWrite.iCurrFileNum = 1;
 	pThis->tVars.disk.fWrite.iCurrOffs = 0;
@@ -712,6 +712,11 @@ rsRetVal queueStart(queue_t *pThis)
 	int iState;
 	int i;
 
+	assert(pThis != NULL);
+
+	dbgprintf("Queue 0x%lx: type %d, maxFileSz %ld starting\n", (unsigned long) pThis, pThis->qType,
+		   pThis->tVars.disk.iMaxFileSize);
+
 	if(pThis->qType != QUEUETYPE_DIRECT) {
 		if((pThis->pWorkerThreads = calloc(pThis->iNumWorkerThreads, sizeof(pthread_t))) == NULL)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -720,8 +725,8 @@ rsRetVal queueStart(queue_t *pThis)
 		pThis->bDoRun = 1; /* we are NOT done (else worker would immediately terminate) */
 		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 			iState = pthread_create(&(pThis->pWorkerThreads[i]), NULL, queueWorker, (void*) pThis);
-			dbgprintf("Worker thread %d for queue 0x%lx, type %d started with state %d.\n",
-				  i, (unsigned long) pThis, (int) pThis->qType, iState);
+			dbgprintf("Queue 0x%lx: Worker thread %x, index %d started with state %d.\n",
+				  (unsigned long) pThis, (unsigned) pThis->pWorkerThreads[i], i, iState);
 		}
 	}
 
@@ -766,6 +771,27 @@ rsRetVal queueDestruct(queue_t *pThis)
 	/* and finally delete the queue objet itself */
 	free(pThis);
 
+	return iRet;
+}
+
+
+/* set the queue's maximum file size
+ * rgerhards, 2008-01-09
+ */
+rsRetVal
+queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize)
+{
+	DEFiRet;
+
+	assert(pThis != 0);
+	
+	if(iMaxFileSize < 1024) {
+		ABORT_FINALIZE(RS_RET_VALUE_TOO_LOW);
+	}
+
+	pThis->tVars.disk.iMaxFileSize = iMaxFileSize;
+
+finalize_it:
 	return iRet;
 }
 

@@ -381,6 +381,7 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 				 */
 uchar *pszSpoolDirectory = NULL;/* name of rsyslog's spool directory (without trailing slash) */
 uchar *pszMainMsgQFilePrefix = NULL;/* prefix for the main message queue file */
+size_t iMainMsgQueMaxFileSize = 1024*1024;
 /* end global config file state variables */
 
 static unsigned int Forwarding = 0;
@@ -519,6 +520,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		pszMainMsgQFilePrefix = NULL;
 	}
 	iMainMsgQueueSize = 10000;
+	iMainMsgQueMaxFileSize = 1024 * 1024;
 	iMainMsgQueueNumWorkers = 1;
 	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 
@@ -3357,6 +3359,12 @@ init(void)
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
+	/* ... set some properties ... */
+	CHKiRet_Hdlr(queueSetMaxFileSize(pMsgQueue, iMainMsgQueMaxFileSize)) {
+		logerrorInt("Invalid $MainMsgQueueMaxFileSize, error %d. Ignored, running with default setting", iRet);
+	}
+
+	/* ... and finally start the queue! */
 	CHKiRet_Hdlr(queueStart(pMsgQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not start message queue - rsyslogd can not run!\n", iRet);
@@ -4278,17 +4286,17 @@ dbgprintf(char *fmt, ...)
 	 * rgerhards, 2007-06-15
 	 */
 	if(bWasNL) {
-		//fprintf(stdout, "%8.8x: ", (unsigned int) pthread_self());
-		fprintf(stderr, "%8.8x: ", (unsigned int) pthread_self());
+		fprintf(stdout, "%8.8x: ", (unsigned int) pthread_self());
+		//fprintf(stderr, "%8.8x: ", (unsigned int) pthread_self());
 	}
 	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? TRUE : FALSE;
 	va_start(ap, fmt);
-	//vfprintf(stdout, fmt, ap);
-	vfprintf(stderr, fmt, ap);
+	vfprintf(stdout, fmt, ap);
+	//vfprintf(stderr, fmt, ap);
 	va_end(ap);
 
-	fflush(stderr);
-	//fflush(stdout);
+	//fflush(stderr);
+	fflush(stdout);
 	return;
 }
 
@@ -4496,6 +4504,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iMainMsgQueueNumWorkers, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));

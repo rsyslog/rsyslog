@@ -35,6 +35,7 @@ typedef enum cslCmdHdlrType {
 	eCmdHdlrBinary,
 	eCmdHdlrFileCreateMode,
 	eCmdHdlrInt,
+	eCmdHdlrSize,
 	eCmdHdlrGetChar,
 	eCmdHdlrGetWord
 } ecslCmdHdrlType;

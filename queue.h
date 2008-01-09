@@ -35,7 +35,7 @@ typedef struct {
 	int fd;		/* the file descriptor, -1 if closed */
 	uchar *pszFileName; /* name of current file (if open) */
 	int iCurrFileNum;/* current file number (NOT descriptor, but the number in the file name!) */
-	int iCurrOffs;	/* current offset */
+	size_t iCurrOffs;/* current offset */
 	uchar *pIOBuf;	/* io Buffer */
 	int iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
 	int iBufPtr;	/* pointer into current buffer */
@@ -93,7 +93,7 @@ typedef struct queue_s {
 			uchar *pszFilePrefix;
 			size_t lenFilePrefix;
 			int iNumberFiles;	/* how many files make up the queue? */
-			int iMaxFileSize;	/* max size for a single queue file */
+			size_t iMaxFileSize;	/* max size for a single queue file */
 			queueFileDescription_t fWrite; /* current file to be written */
 			queueFileDescription_t fRead;  /* current file to be read */
 		} disk;
@@ -104,6 +104,7 @@ typedef struct queue_s {
 rsRetVal queueDestruct(queue_t *pThis);
 rsRetVal queueEnqObj(queue_t *pThis, void *pUsr);
 rsRetVal queueStart(queue_t *pThis);
+rsRetVal queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize);
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
 

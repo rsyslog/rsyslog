@@ -96,17 +96,20 @@ finalize_it:
 }
 
 
-/* Parse a number from the configuration line.
- * rgerhards, 2007-07-31
+/* Parse a number from the configuration line. This functions just parses
+ * the number and does NOT call any handlers or set any values. It is just
+ * for INTERNAL USE by other parse functions!
+ * rgerhards, 2008-01-08
  */
-static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+static rsRetVal parseIntVal(uchar **pp, size_t *pVal)
 {
 	uchar *p;
 	DEFiRet;
-	int i;	
+	size_t i;	
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
+	assert(pVal != NULL);
 	
 	skipWhiteSpace(pp); /* skip over any whitespace */
 	p = *pp;
@@ -121,15 +124,89 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	for(i = 0 ; *p && isdigit((int) *p) ; ++p)
 		i = i * 10 + *p - '0';
 
+	*pVal = i;
+	*pp = p;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* Parse a number from the configuration line.
+ * rgerhards, 2007-07-31
+ */
+static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+{
+	uchar *p;
+	DEFiRet;
+	size_t i;	
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	
+	CHKiRet(parseIntVal(pp, &i));
+	p = *pp;
+
 	if(pSetHdlr == NULL) {
 		/* we should set value directly to var */
-		*((int*)pVal) = i;
+		*((int*)pVal) = (int) i;
+	} else {
+		/* we set value via a set function */
+		CHKiRet(pSetHdlr(pVal, (int) i));
+	}
+
+	*pp = p;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* Parse a size from the configuration line. This is basically an integer
+ * syntax, but modifiers may be added after the integer (e.g. 1k to mean
+ * 1024). The size must immediately follow the number. Note that the
+ * param value must be size_t!
+ * rgerhards, 2008-01-09
+ */
+static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+{
+	DEFiRet;
+	size_t i;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	
+	CHKiRet(parseIntVal(pp, &i));
+
+	/* we now check if the next character is one of our known modifiers.
+	 * If so, we accept it as such. If not, we leave it alone. tera and
+	 * above does not make any sense as that is above a 32-bit int value.
+	 */
+	switch(**pp) {
+		/* traditional binary-based definitions */
+		case 'k': i *= 1024; ++(*pp); break;
+		case 'm': i *= 1024 * 1024; ++(*pp); break;
+		case 'g': i *= 1024 * 1024 * 1024; ++(*pp); break;
+		case 't': i *= (size_t) 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* tera */
+		case 'p': i *= (size_t) 1024 * 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* peta */
+		case 'e': i *= (size_t) 1024 * 1024 * 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* exa */
+		/* and now the "new" 1000-based definitions */
+		case 'K': i *= 1000; ++(*pp); break;
+		case 'M': i *= 10000; ++(*pp); break;
+		case 'G': i *= 100000; ++(*pp); break;
+		case 'T': i *= 1000000; ++(*pp); break; /* tera */
+		case 'P': i *= 10000000; ++(*pp); break; /* peta */
+		case 'E': i *= 100000000; ++(*pp); break; /* exa */
+	}
+
+	/* done */
+	if(pSetHdlr == NULL) {
+		/* we should set value directly to var */
+		*((size_t*)pVal) = i;
 	} else {
 		/* we set value via a set function */
 		CHKiRet(pSetHdlr(pVal, i));
 	}
-
-	*pp = p;
 
 finalize_it:
 	return iRet;
@@ -509,6 +586,9 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 		break;
 	case eCmdHdlrInt:
 		pHdlr = doGetInt;
+		break;
+	case eCmdHdlrSize:
+		pHdlr = doGetSize;
 		break;
 	case eCmdHdlrGetChar:
 		pHdlr = doGetChar;
