@@ -21,6 +21,8 @@ rsyslogd_SOURCES = \
 	liblogging-stub.h \
 	threads.c \
 	threads.h \
+	stream.c \
+	stream.h \
 	queue.c \
 	queue.h \
 	sync.c \

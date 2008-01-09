@@ -176,6 +176,7 @@
 #include "omdiscard.h"
 #include "threads.h"
 #include "queue.h"
+#include "stream.h"
 
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
@@ -4651,6 +4652,7 @@ static rsRetVal InitGlobalClasses(void)
 
 	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizere called! */
 	CHKiRet(MsgClassInit());
+	CHKiRet(strmClassInit());
 
 finalize_it:
 	return iRet;

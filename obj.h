@@ -3,6 +3,24 @@
  * This module relies heavily on preprocessor macros in order to
  * provide fast execution time AND ease of use.
  *
+ * Each object that uses this base class MUST provide a constructor with
+ * the following interface:
+ *
+ * Destruct(pThis);
+ *
+ * A constructor is not necessary (except for some features, e.g. de-serialization).
+ * If it is provided, it is a three-part constructor (to handle all cases with a
+ * generic interface):
+ *
+ * Construct(&pThis);
+ * SetProperty(pThis, property_t *);
+ * ConstructFinalize(pThis);
+ *
+ * SetProperty() and ConstructFinalize() may also be called on an object
+ * instance which has been Construct()'ed outside of this module.
+ *
+ * pThis always references to a pointer of the object.
+ *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
@@ -53,10 +71,11 @@ typedef struct {
 
 /* object Types/IDs */
 typedef enum {	/* IDs of known object "types/classes" */
-	objNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
-	objMsg = 1
+	OBJNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
+	OBJMsg = 1,
+	OBJstrm = 2
 } objID_t;	
-#define OBJ_NUM_IDS 2
+#define OBJ_NUM_IDS 3
 
 typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
 		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04
@@ -96,6 +115,16 @@ typedef struct serialStore_s {
 
 
 /* macros */
+/* the following one is a helper that prevents us from writing the
+ * ever-same code at the end of Construct()
+ */
+#define OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP \
+	if(iRet == RS_RET_OK) { \
+		*ppThis = pThis; \
+	} else { \
+		if(pThis != NULL) \
+			free(pThis); \
+	}
 #define objSerializeSCALAR(propName, propType) \
 	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
 #define objSerializePTR(propName, propType) \
@@ -115,11 +144,11 @@ typedef struct serialStore_s {
 rsRetVal objName##ClassInit(void) \
 { \
 	DEFiRet; \
-	CHKiRet(objInfoConstruct(&pObjInfoOBJ, obj##objName, (uchar*) #objName, objVers, \
+	CHKiRet(objInfoConstruct(&pObjInfoOBJ, OBJ##objName, (uchar*) #objName, objVers, \
 	                         (rsRetVal (*)(void*))objName##Construct,  (rsRetVal (*)(void*))objName##Destruct)); 
 
 #define ENDObjClassInit(objName) \
-	objRegisterObj(obj##objName, pObjInfoOBJ); \
+	objRegisterObj(OBJ##objName, pObjInfoOBJ); \
 finalize_it: \
 	return iRet; \
 }

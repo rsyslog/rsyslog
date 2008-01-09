@@ -1,4 +1,3 @@
-#include <stdio.h>
 // TODO: peekmsg() on first entry, with new/inprogress/deleted entry, destruction in 
 // call consumer state. Facilitates retaining messages in queue until action could
 // be called!
@@ -460,7 +459,7 @@ static rsRetVal qDelDisk(queue_t *pThis, void **ppUsr)
 		if(pThis->tVars.disk.fRead.fd == -1)
 			CHKiRet(qDiskOpenFile(pThis, &pThis->tVars.disk.fRead, O_RDONLY, 0600)); // TODO: open modes!
 
-		iRet = objDeserialize((void*) &pMsg, objMsg, &serialStore);
+		iRet = objDeserialize((void*) &pMsg, OBJMsg, &serialStore);
 		if(iRet == RS_RET_OK)
 			bRun = 0; /* we are done */
 		else if(iRet == RS_RET_EOF) {
@@ -696,13 +695,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	CHKiRet(pThis->qConstruct(pThis));
 
 finalize_it:
-	if(iRet == RS_RET_OK) {
-		*ppThis = pThis;
-	} else {
-		if(pThis != NULL)
-			free(pThis);
-	}
-
+	OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP
 	return iRet;
 }
 
