@@ -25,6 +25,7 @@
 
 #include <pthread.h>
 #include "obj.h"
+#include "stream.h"
 
 /* some information about disk files used by the queue. In the long term, we may
  * export this settings to a separate file module - or not (if they are too
@@ -100,8 +101,8 @@ typedef struct queue_s {
 			qLinkedList_t *pLast;
 		} linklist;
 		struct {
-			queueFileDescription_t fWrite; /* current file to be written */
-			queueFileDescription_t fRead;  /* current file to be read */
+			strm_t *pWrite; /* current file to be written */
+			strm_t *pRead;  /* current file to be read */
 		} disk;
 	} tVars;
 } queue_t;

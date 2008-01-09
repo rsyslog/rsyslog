@@ -125,6 +125,16 @@ typedef struct serialStore_s {
 		if(pThis != NULL) \
 			free(pThis); \
 	}
+
+#define DEFpropSetMeth(obj, prop, dataType)\
+	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
+	{ \
+		pThis->prop = pVal; \
+		return RS_RET_OK; \
+	}
+#define PROTOTYPEpropSetMeth(obj, prop, dataType)\
+	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)
+
 #define objSerializeSCALAR(propName, propType) \
 	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
 #define objSerializePTR(propName, propType) \

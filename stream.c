@@ -56,12 +56,18 @@ DEFobjStaticHelpers
  * strm instance object.
  */
 
-/* open a strm file */
-static rsRetVal strmOpenFile(strm_t *pThis, int flags, mode_t mode)
+/* open a strm file
+ * It is OK to call this function when the stream is already open. In that
+ * case, it returns immediately with RS_RET_OK
+ */
+rsRetVal strmOpenFile(strm_t *pThis, int flags, mode_t mode)
 {
 	DEFiRet;
 
 	assert(pThis != NULL);
+
+	if(pThis->fd != -1)
+		ABORT_FINALIZE(RS_RET_OK);
 
 	if(pThis->pszFilePrefix == NULL)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
@@ -107,7 +113,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 
 
 /* switch to next strm file */
-static rsRetVal strmNextFile(strm_t *pThis)
+rsRetVal strmNextFile(strm_t *pThis)
 {
 	DEFiRet;
 
@@ -134,14 +140,14 @@ finalize_it:
  * NOTE: needs to be enhanced to support sticking with a strm entry (if not
  * deleted).
  */
-static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
+rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 {
 	DEFiRet;
 	
 	assert(pThis != NULL);
 	assert(pC != NULL);
 
-//dbgprintf("strmRead index %d, max %d\n", pThis->iBufPtr, pThis->iBufPtrMax);
+	/* DEV debug only: dbgprintf("strmRead index %d, max %d\n", pThis->iBufPtr, pThis->iBufPtrMax); */
 	if(pThis->pIOBuf == NULL) { /* TODO: maybe we should move that to file open... */
 		if((pThis->pIOBuf = (uchar*) malloc(sizeof(uchar) * STRM_IOBUF_SIZE )) == NULL)
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -178,7 +184,7 @@ finalize_it:
  * character buffering capability.
  * rgerhards, 2008-01-07
  */
-static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
+rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
 {
 	assert(pThis != NULL);
 	assert(pThis->iUngetC == -1);
@@ -240,6 +246,7 @@ rsRetVal strmConstruct(strm_t **ppThis)
 {
 	DEFiRet;
 	strm_t *pThis;
+dbgprintf("strmConstruct\n");
 
 	assert(ppThis != NULL);
 
@@ -291,11 +298,12 @@ rsRetVal strmDestruct(strm_t *pThis)
 
 /* write memory buffer to a stream object
  */
-static rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
+rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 {
 	DEFiRet;
 	int iWritten;
 
+dbgprintf("strmWrite()\n");
 	assert(pThis != NULL);
 	assert(pBuf != NULL);
 
@@ -316,6 +324,35 @@ finalize_it:
 }
 
 
+/* property set methods */
+/* simple ones first */
+DEFpropSetMeth(strm, bDeleteOnClose, int)
+
+/* set the stream's file prefix
+ * The passed-in string is duplicated. So if the caller does not need
+ * it any longer, it must free it.
+ * rgerhards, 2008-01-09
+ */
+rsRetVal
+strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+	assert(pszPrefix != NULL);
+	
+	if(iLenPrefix < 1)
+		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
+
+	if((pThis->pszFilePrefix = malloc(sizeof(uchar) * iLenPrefix + 1)) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	memcpy(pThis->pszFilePrefix, pszPrefix, iLenPrefix + 1); /* always think about the \0! */
+	pThis->lenFilePrefix = iLenPrefix;
+
+finalize_it:
+	return iRet;
+}
 
 
 /* Initialize the stream class. Must be called as the very first method

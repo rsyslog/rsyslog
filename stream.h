@@ -75,9 +75,18 @@ typedef struct {
 #define STRM_IOBUF_SIZE 4096 /* size of the IO buffer */
 
 /* prototypes */
+rsRetVal strmConstruct(strm_t **ppThis);
+rsRetVal strmConstructFinalize(strm_t __attribute__((unused)) *pThis);
 rsRetVal strmDestruct(strm_t *pThis);
 rsRetVal strmSetMaxFileSize(strm_t *pThis, size_t iMaxFileSize);
 rsRetVal strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+rsRetVal strmReadChar(strm_t *pThis, uchar *pC);
+rsRetVal strmUnreadChar(strm_t *pThis, uchar c);
+rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
+rsRetVal strmNextFile(strm_t *pThis);
+rsRetVal strmOpenFile(strm_t *pThis, int flags, mode_t mode);
+rsRetVal strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 PROTOTYPEObjClassInit(strm);
+PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
 
 #endif /* #ifndef STREAM_H_INCLUDED */
