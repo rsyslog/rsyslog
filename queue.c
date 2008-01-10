@@ -205,12 +205,14 @@ static rsRetVal qConstructDisk(queue_t *pThis)
 	CHKiRet(strmConstruct(&pThis->tVars.disk.pWrite));
 	CHKiRet(strmSetDir(pThis->tVars.disk.pWrite, pszSpoolDirectory, strlen((char*)pszSpoolDirectory)));
 	CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
+	CHKiRet(strmSettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
 	CHKiRet(strmConstructFinalize(pThis->tVars.disk.pWrite));
 
 	CHKiRet(strmConstruct(&pThis->tVars.disk.pRead));
 	CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
 	CHKiRet(strmSetDir(pThis->tVars.disk.pRead, pszSpoolDirectory, strlen((char*)pszSpoolDirectory)));
 	CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pRead, 10000000));
+	CHKiRet(strmSettOperationsMode(pThis->tVars.disk.pRead, STREAMMODE_READ));
 	CHKiRet(strmConstructFinalize(pThis->tVars.disk.pRead));
 
 finalize_it:
@@ -240,10 +242,11 @@ static rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 
 	assert(pThis != NULL);
 
-	CHKiRet(strmOpenFile(pThis->tVars.disk.pWrite, O_RDWR|O_CREAT|O_TRUNC, 0600)); // TODO: open modes!
+	//CHKiRet(strmOpenFile(pThis->tVars.disk.pWrite, O_RDWR|O_CREAT|O_TRUNC, 0600)); // TODO: open modes!
 
 	CHKiRet((objSerialize(pUsr))(pUsr, &pCStr));
 	CHKiRet(strmWrite(pThis->tVars.disk.pWrite, rsCStrGetBufBeg(pCStr), rsCStrLen(pCStr)));
+	CHKiRet(strmFlush(pThis->tVars.disk.pWrite));
 
 finalize_it:
 	return iRet;

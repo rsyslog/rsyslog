@@ -52,6 +52,12 @@ typedef enum {
 	STREAMTYPE_FILE = 0
 } strmType_t;
 
+typedef enum {
+	STREAMMMODE_INVALID = 0,
+	STREAMMODE_READ = 1,
+	STREAMMODE_WRITE = 2
+} strmMode_t;
+
 /* The strm_t data structure */
 typedef struct strm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
@@ -63,8 +69,11 @@ typedef struct strm_s {
 	int lenDir;
 	uchar *pszFilePrefix; /* prefix for generated filenames */
 	int lenFilePrefix;
+	strmMode_t tOperationsMode;
+	mode_t tOpenMode;
 	size_t iCurrOffs;/* current offset */
 	uchar *pIOBuf;	/* io Buffer */
+	size_t	sIOBufSize;/* size of IO buffer */
 	int iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
 	int iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
@@ -74,7 +83,6 @@ typedef struct strm_s {
 	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
-	size_t	sIOBufSize;/* size of IO buffer */
 } strm_t;
 
 /* prototypes */
@@ -87,13 +95,16 @@ rsRetVal strmReadChar(strm_t *pThis, uchar *pC);
 rsRetVal strmUnreadChar(strm_t *pThis, uchar c);
 rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
 rsRetVal strmNextFile(strm_t *pThis);
-rsRetVal strmOpenFile(strm_t *pThis, int flags, mode_t mode);
+//rsRetVal strmOpenFile(strm_t *pThis, int flags, mode_t mode);
 rsRetVal strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir);
+rsRetVal strmFlush(strm_t *pThis);
 PROTOTYPEObjClassInit(strm);
 PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
 PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);
 PROTOTYPEpropSetMeth(strm, iMaxFiles, int);
 PROTOTYPEpropSetMeth(strm, iFileNumDigits, int);
+PROTOTYPEpropSetMeth(strm, tOperationsMode, int);
+PROTOTYPEpropSetMeth(strm, tOpenMode, mode_t);
 
 #endif /* #ifndef STREAM_H_INCLUDED */
