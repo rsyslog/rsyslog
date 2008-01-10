@@ -79,7 +79,7 @@ finalize_it:
 	*ppThis = pThis;
 
 	return iRet;
-};
+}
 
 
 /* add a message to the linked list

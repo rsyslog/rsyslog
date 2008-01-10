@@ -142,13 +142,13 @@ enum rsObjectID
 				 *   invalid object pointer!
 				 */
 	OIDrsInvalid = 0,	/**< value created by calloc(), so do not use ;) */
-	/* The 0xEFCD is a debug aid. It helps us find object IDs in memory
-	 * dumps (on X86, this is CDEF in the dump ;)
+	/* The 0x3412 is a debug aid. It helps us find object IDs in memory
+	 * dumps (on X86, this is 1234 in the dump ;)
 	 * If you are on an embedded device and you would like to save space
 	 * make them 1 byte only.
 	 */
-	OIDrsCStr = 0xEFCD0001,
-	OIDrsPars = 0xEFCD0002
+	OIDrsCStr = 0x34120001,
+	OIDrsPars = 0x34120002
 };
 typedef enum rsObjectID rsObjID;
 

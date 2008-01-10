@@ -490,8 +490,8 @@ finalize_it:
 DEFpropSetMeth(strm, bDeleteOnClose, int)
 DEFpropSetMeth(strm, iMaxFileSize, int)
 DEFpropSetMeth(strm, iFileNumDigits, int)
-DEFpropSetMeth(strm, tOperationsMode, int);
-DEFpropSetMeth(strm, tOpenMode, mode_t);
+DEFpropSetMeth(strm, tOperationsMode, int)
+DEFpropSetMeth(strm, tOpenMode, mode_t)
 
 rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {

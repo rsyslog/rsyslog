@@ -30,7 +30,7 @@
  * SYNC_OBJ_TOOL_INIT must be called upon of object construction and
  * SUNC_OBJ_TOOL_EXIT must be called upon object destruction
  */
-#define SYNC_OBJ_TOOL pthread_mutex_t *Sync_mut;
+#define SYNC_OBJ_TOOL pthread_mutex_t *Sync_mut
 #define SYNC_OBJ_TOOL_INIT(x) SyncObjInit(&((x)->Sync_mut))
 #define SYNC_OBJ_TOOL_EXIT(x) SyncObjExit(&((x)->Sync_mut))
 
