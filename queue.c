@@ -238,15 +238,16 @@ static rsRetVal qDestructDisk(queue_t *pThis)
 static rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 {
 	DEFiRet;
-	rsCStrObj *pCStr;
 
 	assert(pThis != NULL);
 
-	//CHKiRet(strmOpenFile(pThis->tVars.disk.pWrite, O_RDWR|O_CREAT|O_TRUNC, 0600)); // TODO: open modes!
-
+	CHKiRet((objSerialize(pUsr))(pUsr, pThis->tVars.disk.pWrite));
+	CHKiRet(strmFlush(pThis->tVars.disk.pWrite));
+#if 0
+	//rsCStrObj *pCStr;
 	CHKiRet((objSerialize(pUsr))(pUsr, &pCStr));
 	CHKiRet(strmWrite(pThis->tVars.disk.pWrite, rsCStrGetBufBeg(pCStr), rsCStrLen(pCStr)));
-	CHKiRet(strmFlush(pThis->tVars.disk.pWrite));
+#endif
 
 finalize_it:
 	return iRet;

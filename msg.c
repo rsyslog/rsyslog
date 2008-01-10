@@ -387,40 +387,36 @@ msg_t* MsgDup(msg_t* pOld)
  * during msg construction - and never again used later.
  * rgerhards, 2008-01-03
  */
-static rsRetVal MsgSerialize(msg_t *pThis, rsCStrObj **ppCStr)
+static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 {
 	DEFiRet;
-	rsCStrObj *pCStr;
 
-	assert(ppCStr != NULL);
+	assert(pThis != NULL);
+	assert(pStrm != NULL);
 
-	CHKiRet(objBeginSerialize(&pCStr, (obj_t*) pThis, 1024));
-	objSerializeSCALAR(iProtocolVersion, SHORT);
-	objSerializeSCALAR(iSeverity, SHORT);
-	objSerializeSCALAR(iFacility, SHORT);
-	objSerializeSCALAR(msgFlags, INT);
-	objSerializeSCALAR(tRcvdAt, SYSLOGTIME);
-	objSerializeSCALAR(tTIMESTAMP, SYSLOGTIME);
+	CHKiRet(objBeginSerialize(pStrm, (obj_t*) pThis));
+	objSerializeSCALAR(pStrm, iProtocolVersion, SHORT);
+	objSerializeSCALAR(pStrm, iSeverity, SHORT);
+	objSerializeSCALAR(pStrm, iFacility, SHORT);
+	objSerializeSCALAR(pStrm, msgFlags, INT);
+	objSerializeSCALAR(pStrm, tRcvdAt, SYSLOGTIME);
+	objSerializeSCALAR(pStrm, tTIMESTAMP, SYSLOGTIME);
 
-	objSerializePTR(pszRawMsg, PSZ);
-	objSerializePTR(pszMSG, PSZ);
-	objSerializePTR(pszUxTradMsg, PSZ);
-	objSerializePTR(pszTAG, PSZ);
-	objSerializePTR(pszHOSTNAME, PSZ);
-	objSerializePTR(pszRcvFrom, PSZ);
+	objSerializePTR(pStrm, pszRawMsg, PSZ);
+	objSerializePTR(pStrm, pszMSG, PSZ);
+	objSerializePTR(pStrm, pszUxTradMsg, PSZ);
+	objSerializePTR(pStrm, pszTAG, PSZ);
+	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
+	objSerializePTR(pStrm, pszRcvFrom, PSZ);
 
-	objSerializePTR(pCSStrucData, CSTR);
-	objSerializePTR(pCSAPPNAME, CSTR);
-	objSerializePTR(pCSPROCID, CSTR);
-	objSerializePTR(pCSMSGID, CSTR);
+	objSerializePTR(pStrm, pCSStrucData, CSTR);
+	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
+	objSerializePTR(pStrm, pCSPROCID, CSTR);
+	objSerializePTR(pStrm, pCSMSGID, CSTR);
 
-	CHKiRet(objEndSerialize((&pCStr), (obj_t*) pThis));
-	*ppCStr = pCStr;
+	CHKiRet(objEndSerialize(pStrm, (obj_t*) pThis));
 
 finalize_it:
-	if(iRet != RS_RET_OK && pCStr != NULL)
-		rsCStrDestruct(pCStr);
-	
 	return iRet;
 }
 

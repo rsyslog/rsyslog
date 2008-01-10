@@ -59,10 +59,10 @@
 			free(pThis); \
 	}
 
-#define objSerializeSCALAR(propName, propType) \
-	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
-#define objSerializePTR(propName, propType) \
-	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
+#define objSerializeSCALAR(strm, propName, propType) \
+	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
+#define objSerializePTR(strm, propName, propType) \
+	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
 #define DEFobjStaticHelpers static objInfo_t *pObjInfoOBJ = NULL;
 #define objGetName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
 #define objGetObjID(pThis) (((obj_t*) (pThis))->pObjInfo->objID)
@@ -78,10 +78,9 @@
 /* prototypes */
 rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *));
 rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
-rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj, size_t iExpectedObjSize);
-rsRetVal objSerializePsz(rsCStrObj *pCStr, uchar *psz, size_t len);
-rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj);
-rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr);
+rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj);
+rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t propType, void *pUsr);
+rsRetVal objEndSerialize(strm_t *pStrm, obj_t *pObj);
 rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo);
 rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pSerStore);
 PROTOTYPEObjClassInit(obj);

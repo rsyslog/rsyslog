@@ -118,6 +118,38 @@ rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pH
 
 /* --------------- object serializiation / deserialization support --------------- */
 
+
+/* serialize the header of an object */
+static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj)
+{
+	DEFiRet;
+
+	assert(pStrm != NULL);
+	assert(pObj != NULL);
+
+	/* object cookie and serializer version (so far always 1) */
+	CHKiRet(strmWriteChar(pStrm, COOKIE_OBJLINE));
+	CHKiRet(strmWrite(pStrm, (uchar*) "Obj1", sizeof("Obj1") - 1));
+
+	/* object type, version and string length */
+	CHKiRet(strmWriteChar(pStrm, ':'));
+	CHKiRet(strmWriteLong(pStrm, objGetObjID(pObj)));
+	CHKiRet(strmWriteChar(pStrm, ':'));
+	CHKiRet(strmWriteLong(pStrm, objGetVersion(pObj)));
+
+	/* and finally we write the object name - this is primarily meant for
+	 * human readers. The idea is that it can be easily skipped when reading
+	 * the object back in
+	 */
+	CHKiRet(strmWriteChar(pStrm, ':'));
+	CHKiRet(strmWrite(pStrm, objGetName(pObj), strlen((char*)objGetName(pObj))));
+	/* record trailer */
+	CHKiRet(strmWriteChar(pStrm, ':'));
+	CHKiRet(strmWriteChar(pStrm, '\n'));
+
+finalize_it:
+	return iRet;
+}
 /* begin serialization of an object - this is a very simple hook. It once wrote the wrapper,
  * now it only constructs the string object. We still leave it in here so that we may utilize
  * it in the future (it is a nice abstraction). iExpcectedObjSize is an optimization setting.
@@ -127,17 +159,15 @@ rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pH
  * the caller is advised to be conservative in guessing. Binary multiples are recommended.
  * rgerhards, 2008-01-06
  */
-rsRetVal objBeginSerialize(rsCStrObj **ppCStr, obj_t *pObj, size_t iExpectedObjSize)
+rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj)
 {
 	DEFiRet;
 
-	assert(ppCStr != NULL);
+	assert(pStrm != NULL);
 	assert(pObj != NULL);
-
-	if((*ppCStr = rsCStrConstruct()) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
-	rsCStrSetAllocIncrement(*ppCStr, iExpectedObjSize);
+	
+	CHKiRet(strmRecordBegin(pStrm));
+	CHKiRet(objSerializeHeader(pStrm, pObj));
 
 finalize_it:
 	return iRet;
@@ -146,14 +176,14 @@ finalize_it:
 
 /* append a property
  */
-rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t propType, void *pUsr)
+rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t propType, void *pUsr)
 {
 	DEFiRet;
 	uchar *pszBuf = NULL;
 	size_t lenBuf = 0;
 	uchar szBuf[64];
 
-	assert(pCStr != NULL);
+	assert(pStrm != NULL);
 	assert(pszPropName != NULL);
 
 	/* if we have no user pointer, there is no need to write this property.
@@ -209,64 +239,23 @@ rsRetVal objSerializeProp(rsCStrObj *pCStr, uchar *pszPropName, propertyType_t p
 	}
 
 	/* cookie */
-	CHKiRet(rsCStrAppendChar(pCStr, COOKIE_PROPLINE));
+	CHKiRet(strmWriteChar(pStrm, COOKIE_PROPLINE));
 	/* name */
-	CHKiRet(rsCStrAppendStr(pCStr, pszPropName));
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	CHKiRet(strmWrite(pStrm, pszPropName, strlen((char*)pszPropName)));
+	CHKiRet(strmWriteChar(pStrm, ':'));
 	/* type */
-	CHKiRet(rsCStrAppendInt(pCStr, (int) propType));
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	CHKiRet(strmWriteLong(pStrm, (int) propType));
+	CHKiRet(strmWriteChar(pStrm, ':'));
 	/* length */
-	CHKiRet(rsCStrAppendInt(pCStr, lenBuf));
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
+	CHKiRet(strmWriteLong(pStrm, lenBuf));
+	CHKiRet(strmWriteChar(pStrm, ':'));
 
 	/* data */
-	CHKiRet(rsCStrAppendStrWithLen(pCStr, (uchar*) pszBuf, lenBuf));
+	CHKiRet(strmWrite(pStrm, (uchar*) pszBuf, lenBuf));
 
 	/* trailer */
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
-	CHKiRet(rsCStrAppendChar(pCStr, '\n'));
-
-finalize_it:
-	return iRet;
-}
-
-
-static rsRetVal objSerializeHeader(rsCStrObj **ppCStr, obj_t *pObj, rsCStrObj *pCSObjString, size_t iAllocIncrement)
-{
-	DEFiRet;
-	rsCStrObj *pCStr;
-
-	assert(ppCStr != NULL);
-	assert(pObj != NULL);
-
-	if((pCStr = rsCStrConstruct()) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	rsCStrSetAllocIncrement(pCStr, iAllocIncrement);
-
-	/* object cookie and serializer version (so far always 1) */
-	CHKiRet(rsCStrAppendChar(pCStr, COOKIE_OBJLINE));
-	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) "Obj1"));
-
-	/* object type, version and string length */
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
-	CHKiRet(rsCStrAppendInt(pCStr, objGetObjID(pObj)));
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
-	CHKiRet(rsCStrAppendInt(pCStr, objGetVersion(pObj)));
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
-	CHKiRet(rsCStrAppendInt(pCStr, rsCStrLen(pCSObjString)));
-
-	/* and finally we write the object name - this is primarily meant for
-	 * human readers. The idea is that it can be easily skipped when reading
-	 * the object back in
-	 */
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
-	CHKiRet(rsCStrAppendStr(pCStr, objGetName(pObj)));
-	/* record trailer */
-	CHKiRet(rsCStrAppendChar(pCStr, ':'));
-	CHKiRet(rsCStrAppendChar(pCStr, '\n'));
-
-	*ppCStr = pCStr;
+	CHKiRet(strmWriteChar(pStrm, ':'));
+	CHKiRet(strmWriteChar(pStrm, '\n'));
 
 finalize_it:
 	return iRet;
@@ -276,27 +265,20 @@ finalize_it:
 /* end serialization of an object. The caller receives a
  * standard C string, which he must free when no longer needed.
  */
-rsRetVal objEndSerialize(rsCStrObj **ppCStr, obj_t *pObj)
+rsRetVal objEndSerialize(strm_t *pStrm, obj_t *pObj)
 {
 	DEFiRet;
-	rsCStrObj *pCStr = NULL;
 
-	assert(ppCStr != NULL);
-	CHKiRet(objSerializeHeader(&pCStr, pObj, *ppCStr, rsCStrGetAllocIncrement(*ppCStr)));
+	assert(pStrm != NULL);
 
-	CHKiRet(rsCStrAppendStrWithLen(pCStr, rsCStrGetBufBeg(*ppCStr), rsCStrLen(*ppCStr)));
-	CHKiRet(rsCStrAppendChar(pCStr, COOKIE_ENDLINE));
-	CHKiRet(rsCStrAppendStr(pCStr, (uchar*) "EndObj\n"));
-	CHKiRet(rsCStrAppendChar(pCStr, COOKIE_BLANKLINE));
-	CHKiRet(rsCStrAppendChar(pCStr, '\n'));
-	CHKiRet(rsCStrFinish(pCStr));
+	CHKiRet(strmWriteChar(pStrm, COOKIE_ENDLINE));
+	CHKiRet(strmWrite(pStrm, (uchar*) "End\n", sizeof("END\n") - 1));
+	CHKiRet(strmWriteChar(pStrm, COOKIE_BLANKLINE));
+	CHKiRet(strmWriteChar(pStrm, '\n'));
 
-	rsCStrDestruct(*ppCStr);
-	*ppCStr = pCStr;
+	CHKiRet(strmRecordEnd(pStrm));
 
 finalize_it:
-	if(iRet != RS_RET_OK && pCStr != NULL)
-		rsCStrDestruct(pCStr);
 	return iRet;
 }
 
@@ -415,7 +397,7 @@ static rsRetVal objDeserializeHeader(objID_t *poID, int* poVers, strm_t *pStrm)
 	NEXTC; if(c != '1') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
 	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
 
-	/* object type and version and string length */
+	/* object type and version */
 	CHKiRet(objDeserializeLong(&ioID, pStrm));
 	CHKiRet(objDeserializeLong(&oVers, pStrm));
 
@@ -522,9 +504,6 @@ static rsRetVal objDeserializeTrailer(strm_t *pStrm)
 	NEXTC; if(c != 'E')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
 	NEXTC; if(c != 'n')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
 	NEXTC; if(c != 'd')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
-	NEXTC; if(c != 'O')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
-	NEXTC; if(c != 'b')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
-	NEXTC; if(c != 'j')  ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
 	NEXTC; if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
 	NEXTC; if(c != COOKIE_BLANKLINE) ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
 	NEXTC; if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
