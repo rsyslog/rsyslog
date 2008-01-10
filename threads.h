@@ -43,11 +43,5 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 rsRetVal thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds);
 
 /* macros (replace inline functions) */
-/*TODO: remove these macros once we now we can live without -- rgerhards, 2007-12-20
- * #define thrdBlockTermination(pThis) {dbgprintf("lock mutex\n"); pthread_mutex_lock((pThis)->mutTermOK)  ;}
- * #define thrdUnblockTermination(pThis) {dbgprintf("unlock mutex\n"); pthread_mutex_unlock((pThis)->mutTermOK)  ;}
- */
-#define thrdBlockTermination(pThis)
-#define thrdUnblockTermination(pThis)
 
 #endif /* #ifndef THREADS_H_INCLUDED */

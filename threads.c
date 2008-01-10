@@ -229,17 +229,9 @@ thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds)
 	assert(pThis != NULL);
 	tvSelectTimeout.tv_sec = iSeconds;
 	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
-	thrdUnblockTermination(pThis);
-	/* there may be a race condition if pthread_kill() is called after unblock but
-	 * before the select() is setup. TODO: check and re-eval -- rgerhards, 2007-12-20
-	 */
 	select(1, NULL, NULL, NULL, &tvSelectTimeout);
 	if(pThis->bShallStop)
 		iRet = RS_RET_TERMINATE_NOW;
-#if 0 /* TODO: remove once we know we do not need the thrdBlockTermination() call -- rgerhards, 2007.12.25 */
-	else
-		thrdBlockTermination(pThis);
-#endif
 	return iRet;
 }
 

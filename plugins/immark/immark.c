@@ -67,7 +67,6 @@ typedef struct _instanceData {
  */
 BEGINrunInput
 CODESTARTrunInput
-	thrdBlockTermination(pThrd);
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.

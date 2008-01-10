@@ -60,14 +60,27 @@ typedef struct qLinkedList_S {
 	void *pUsr;
 } qLinkedList_t;
 
+typedef enum {
+	eWRKTHRDCMD_RUN,
+	eWRKTHRDCMD_SHUTDOWN,
+	eWRKTHRDCMD_SHUTDOWN_IMMEDIATE,
+	eWRKTHRDCMD_TERMINATED	/* granted, that's more a state than a cmd - thread is dead... */
+} qWrkCmd_t;	/* commands for queue worker threads */
+
+typedef struct qWrkThrd_s {
+	pthread_t thrdID;  /* thread ID */
+	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
+} qWrkThrd_t;	/* type for queue worker threads */
+
 /* the queue object */
 typedef struct queue_s {
 	queueType_t	qType;
 	int	iQueueSize;	/* Current number of elements in the queue */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
 	int 	iNumWorkerThreads;/* number of worker threads to use */
-	pthread_t *pWorkerThreads;/* array with ID of the worker thread(s) associated with this queue */
+	qWrkThrd_t *pWrkThrds;/* array with control structure for the worker thread(s) associated with this queue */
 	int	bDoRun;		/* 1 - run queue, 0 - shutdown of queue requested */
+	int	bImmediateShutdown;/* on shutdown, drain the queue --> 0 / do NOT drain the queue --> 1 */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dequeued messages */
 	/* type-specific handlers (set during construction) */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);

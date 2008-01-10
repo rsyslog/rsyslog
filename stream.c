@@ -122,7 +122,6 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 		pThis->pszCurrFName = NULL;
 	}
 
-dbgprintf("exit strmCloseFile, fd: %d\n", pThis->fd);
 	return iRet;
 }
 
@@ -135,7 +134,6 @@ strmNextFile(strm_t *pThis)
 {
 	DEFiRet;
 
-dbgprintf("strmNextFile, old num %d\n", pThis->iCurrFNum);
 	assert(pThis != NULL);
 	assert(pThis->iMaxFiles != 0);
 	assert(pThis->fd != -1);
@@ -582,7 +580,6 @@ rsRetVal strmRecordBegin(strm_t *pThis)
 	assert(pThis != NULL);
 	assert(pThis->bInRecord == 0);
 	pThis->bInRecord = 1;
-dbgprintf("strmRecordBegin set \n");
 	return RS_RET_OK;
 }
 
@@ -592,10 +589,8 @@ rsRetVal strmRecordEnd(strm_t *pThis)
 	assert(pThis != NULL);
 	assert(pThis->bInRecord == 1);
 
-dbgprintf("strmRecordEnd in %d\n", iRet);
 	pThis->bInRecord = 0;
 	iRet = strmCheckNextOutputFile(pThis); /* check if we need to switch files */
-dbgprintf("strmRecordEnd out %d\n", iRet);
 
 	return iRet;
 }
