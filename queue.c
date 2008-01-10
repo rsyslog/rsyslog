@@ -189,6 +189,13 @@ static rsRetVal qDelLinkedList(queue_t *pThis, void **ppUsr)
 
 /* -------------------- disk  -------------------- */
 
+/* disk queue constructor.
+ * Note that we use a file limit of 10,000,000 files. That number should never pose a
+ * problem. If so, I guess the user has a design issue... But of course, the code can
+ * always be changed (though it would probably be more appropriate to increase the
+ * allowed file size at this point - that should be a config setting...
+ * rgerhards, 2008-01-10
+ */
 static rsRetVal qConstructDisk(queue_t *pThis)
 {
 	DEFiRet;
@@ -197,11 +204,13 @@ static rsRetVal qConstructDisk(queue_t *pThis)
 
 	CHKiRet(strmConstruct(&pThis->tVars.disk.pWrite));
 	CHKiRet(strmSetDir(pThis->tVars.disk.pWrite, pszSpoolDirectory, strlen((char*)pszSpoolDirectory)));
+	CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
 	CHKiRet(strmConstructFinalize(pThis->tVars.disk.pWrite));
 
 	CHKiRet(strmConstruct(&pThis->tVars.disk.pRead));
 	CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
 	CHKiRet(strmSetDir(pThis->tVars.disk.pRead, pszSpoolDirectory, strlen((char*)pszSpoolDirectory)));
+	CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pRead, 10000000));
 	CHKiRet(strmConstructFinalize(pThis->tVars.disk.pRead));
 
 finalize_it:

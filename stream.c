@@ -73,7 +73,7 @@ rsRetVal strmOpenFile(strm_t *pThis, int flags, mode_t mode)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
 	CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
- 		     	    pThis->pszFilePrefix, pThis->lenFilePrefix, pThis->iCurrFNum, (uchar*) "qf", 2));
+ 		     	    pThis->pszFilePrefix, pThis->lenFilePrefix, pThis->iCurrFNum));
 
 	pThis->fd = open((char*)pThis->pszCurrFName, flags, mode); // TODO: open modes!
 	pThis->iCurrOffs = 0;
@@ -112,20 +112,24 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 }
 
 
-/* switch to next strm file */
+/* switch to next strm file
+ * This method must only be called if we are in a multi-file mode!
+ */
 rsRetVal strmNextFile(strm_t *pThis)
 {
 	DEFiRet;
 
 dbgprintf("strmNextFile in\n");
 	assert(pThis != NULL);
+	assert(pThis->iMaxFiles != 0);
+
 	CHKiRet(strmCloseFile(pThis));
 
 	/* we do modulo 1,000,000 so that the file number is always at most 6 digits. If we have a million
 	 * or more strm files, something is awfully wrong and it is OK if we run into problems in that
 	 * situation ;) -- rgerhards, 2008-01-09
 	 */
-	pThis->iCurrFNum = (pThis->iCurrFNum + 1) % 1000000;
+	pThis->iCurrFNum = (pThis->iCurrFNum + 1) % pThis->iMaxFiles;
 
 finalize_it:
 dbgprintf("strmNextFile out %d\n", iRet);
@@ -173,9 +177,14 @@ rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 			pThis->iBufPtrMax = read(pThis->fd, pThis->pIOBuf, STRM_IOBUF_SIZE);
 			dbgprintf("strmReadChar read %d bytes from file %d\n", pThis->iBufPtrMax, pThis->fd);
 			if(pThis->iBufPtrMax == 0) {
-// TODO: only when single file! ABORT_FINALIZE(RS_RET_EOF);
-				dbgprintf("Stream 0x%lx: EOF on file %d\n", (unsigned long) pThis, pThis->fd);
-				CHKiRet(strmNextFile(pThis));
+				if(pThis->iMaxFiles == 0)
+					ABORT_FINALIZE(RS_RET_EOF);
+				else {
+					/* we have multiple files and need to switch to the next one */
+					/* TODO: think about emulating EOF in this case (not yet needed) */
+					dbgprintf("Stream 0x%lx: EOF on file %d\n", (unsigned long) pThis, pThis->fd);
+					CHKiRet(strmNextFile(pThis));
+				}
 			} else if(pThis->iBufPtrMax < 0)
 				ABORT_FINALIZE(RS_RET_IO_ERROR);
 			else
@@ -343,6 +352,7 @@ finalize_it:
 /* simple ones first */
 DEFpropSetMeth(strm, bDeleteOnClose, int)
 DEFpropSetMeth(strm, iMaxFileSize, int)
+DEFpropSetMeth(strm, iMaxFiles, int)
 
 /* set the stream's file prefix
  * The passed-in string is duplicated. So if the caller does not need

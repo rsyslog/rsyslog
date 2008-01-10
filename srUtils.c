@@ -240,13 +240,12 @@ void skipWhiteSpace(uchar **pp)
 
 
 /* generate a file name from four parts:
- * <directory name>/<prefix>-<number>.<type>
+ * <directory name>/<name>.<number>
  * If number is negative, it is not used. If any of the strings is
  * NULL, an empty string is used instead. Length must be provided.
  * rgerhards, 2008-01-03
  */
-rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName,
- 		     uchar *pPrefix, size_t lenPrefix, long lNum, uchar *pType, size_t lenType)
+rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName, size_t lenFName, long lNum)
 {
 	DEFiRet;
 	uchar *pName;
@@ -259,10 +258,10 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName,
 		szBuf[0] = '\0';
 		lenBuf = 0;
 	} else {
-		lenBuf = snprintf((char*)szBuf, sizeof(szBuf), "-%ld", lNum);
+		lenBuf = snprintf((char*)szBuf, sizeof(szBuf), ".%ld", lNum);
 	}
 
-	lenName = lenDirName + 1 + lenPrefix + lenBuf + 1 + lenType + 1; /* last +1 for \0 char! */
+	lenName = lenDirName + 1 + lenName + lenBuf + 1; /* last +1 for \0 char! */
 	if((pName = malloc(sizeof(uchar) * lenName)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	
@@ -270,15 +269,12 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName,
 	memcpy(pName, pDirName, lenDirName);
 	pNameWork = pName + lenDirName;
 	*pNameWork++ = '/';
-	memcpy(pNameWork, pPrefix, lenPrefix);
-	pNameWork += lenPrefix;
+	memcpy(pNameWork, pFName, lenFName);
+	pNameWork += lenFName;
 	if(lenBuf > 0) {
 		memcpy(pNameWork, szBuf, lenBuf);
 		pNameWork += lenBuf;
 	}
-	*pNameWork++ = '.';
-	memcpy(pNameWork, pType, lenType);
-	pNameWork += lenType;
 	*pNameWork = '\0';
 
 	*ppName = pName;

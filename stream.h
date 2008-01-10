@@ -71,6 +71,7 @@ typedef struct strm_s {
 	int iModeOpenOS;
 	size_t iMaxFileSize;/* maximum size a file may grow to */
 	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
+	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 } strm_t;
 #define STRM_IOBUF_SIZE 4096 /* size of the IO buffer */
 
@@ -90,5 +91,6 @@ rsRetVal strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir);
 PROTOTYPEObjClassInit(strm);
 PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
 PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);
+PROTOTYPEpropSetMeth(strm, iMaxFiles, int);
 
 #endif /* #ifndef STREAM_H_INCLUDED */
