@@ -44,6 +44,7 @@
 
 #include <pthread.h>
 #include "obj-types.h"
+#include "glbl.h"
 #include "stream.h"
 
 /* stream types */
@@ -72,8 +73,9 @@ typedef struct strm_s {
 	size_t iMaxFileSize;/* maximum size a file may grow to */
 	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
+	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
+	size_t	sIOBufSize;/* size of IO buffer */
 } strm_t;
-#define STRM_IOBUF_SIZE 4096 /* size of the IO buffer */
 
 /* prototypes */
 rsRetVal strmConstruct(strm_t **ppThis);
@@ -92,5 +94,6 @@ PROTOTYPEObjClassInit(strm);
 PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
 PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);
 PROTOTYPEpropSetMeth(strm, iMaxFiles, int);
+PROTOTYPEpropSetMeth(strm, iFileNumDigits, int);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

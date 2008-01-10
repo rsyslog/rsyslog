@@ -47,6 +47,34 @@
 #include "obj-types.h"
 #include "stream.h"
 
+/* macros */
+/* the following one is a helper that prevents us from writing the
+ * ever-same code at the end of Construct()
+ */
+#define OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP \
+	if(iRet == RS_RET_OK) { \
+		*ppThis = pThis; \
+	} else { \
+		if(pThis != NULL) \
+			free(pThis); \
+	}
+
+#define objSerializeSCALAR(propName, propType) \
+	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
+#define objSerializePTR(propName, propType) \
+	CHKiRet(objSerializeProp(pCStr, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
+#define DEFobjStaticHelpers static objInfo_t *pObjInfoOBJ = NULL;
+#define objGetName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
+#define objGetObjID(pThis) (((obj_t*) (pThis))->pObjInfo->objID)
+#define objGetVersion(pThis) (((obj_t*) (pThis))->pObjInfo->iObjVers)
+/* must be called in Constructor: */
+#define objConstructSetObjInfo(pThis) ((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ;
+#define objDestruct(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DESTRUCT])(pThis)
+#define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
+
+#define OBJSetMethodHandler(methodID, pHdlr) \
+	CHKiRet(objInfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)(void*)) pHdlr))
+
 /* prototypes */
 rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *));
 rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));

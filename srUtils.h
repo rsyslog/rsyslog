@@ -64,5 +64,7 @@ int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode, uid_t uid, gi
 
 int execProg(uchar *program, int wait, uchar *arg);
 void skipWhiteSpace(uchar **pp);
-rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pName, size_t lenName, long lNum);
+rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
+		     size_t lenFName, long lNum, int lNumDigits);
+int getNumberDigits(long lNum);
 #endif

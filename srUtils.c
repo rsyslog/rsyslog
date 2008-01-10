@@ -243,25 +243,35 @@ void skipWhiteSpace(uchar **pp)
  * <directory name>/<name>.<number>
  * If number is negative, it is not used. If any of the strings is
  * NULL, an empty string is used instead. Length must be provided.
+ * lNumDigits is the minimum number of digits that lNum should have. This
+ * is to pretty-print the file name, e.g. lNum = 3, lNumDigits= 4 will
+ * result in "0003" being used inside the file name. Set lNumDigits to 0
+ * to use as few space as possible.
  * rgerhards, 2008-01-03
  */
-rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName, size_t lenFName, long lNum)
+rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
+		     size_t lenFName, long lNum, int lNumDigits)
 {
 	DEFiRet;
 	uchar *pName;
 	uchar *pNameWork;
 	size_t lenName;
 	uchar szBuf[128];	/* buffer for number */
+	char szFmtBuf[32];	/* buffer for snprintf format */
 	size_t lenBuf;
 
 	if(lNum < 0) {
 		szBuf[0] = '\0';
 		lenBuf = 0;
 	} else {
-		lenBuf = snprintf((char*)szBuf, sizeof(szBuf), ".%ld", lNum);
+		if(lNumDigits > 0) {
+			snprintf(szFmtBuf, sizeof(szFmtBuf), ".%%0%dld", lNumDigits);
+			lenBuf = snprintf((char*)szBuf, sizeof(szBuf), szFmtBuf, lNum);
+		} else
+			lenBuf = snprintf((char*)szBuf, sizeof(szBuf), ".%ld", lNum);
 	}
 
-	lenName = lenDirName + 1 + lenName + lenBuf + 1; /* last +1 for \0 char! */
+	lenName = lenDirName + 1 + lenFName + lenBuf + 1; /* last +1 for \0 char! */
 	if((pName = malloc(sizeof(uchar) * lenName)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	
@@ -281,6 +291,23 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 
 finalize_it:
 	return iRet;
+}
+
+/* get the number of digits required to represent a given number. We use an
+ * iterative approach as we do not like to draw in the floating point
+ * library just for log(). -- rgerhards, 2008-01-10
+ */
+int getNumberDigits(long lNum)
+{
+	int iDig;
+
+	if(lNum == 0)
+		iDig = 1;
+	else
+		for(iDig = 0 ; lNum != 0 ; ++iDig)
+			lNum /= 10;
+
+	return iDig;
 }
 
 

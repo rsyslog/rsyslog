@@ -72,8 +72,14 @@ rsRetVal strmOpenFile(strm_t *pThis, int flags, mode_t mode)
 	if(pThis->pszFilePrefix == NULL)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
+	if(pThis->pIOBuf == NULL) { /* allocate our io buffer in case we have not yet */
+		if((pThis->pIOBuf = (uchar*) malloc(sizeof(uchar) * pThis->sIOBufSize)) == NULL)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		pThis->iBufPtrMax = 0; /* results in immediate read request */
+	}
+
 	CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
- 		     	    pThis->pszFilePrefix, pThis->lenFilePrefix, pThis->iCurrFNum));
+ 		     	    pThis->pszFilePrefix, pThis->lenFilePrefix, pThis->iCurrFNum, pThis->iFileNumDigits));
 
 	pThis->fd = open((char*)pThis->pszCurrFName, flags, mode); // TODO: open modes!
 	pThis->iCurrOffs = 0;
@@ -155,12 +161,6 @@ rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 	assert(pC != NULL);
 
 	/* DEV debug only: dbgprintf("strmRead index %d, max %d\n", pThis->iBufPtr, pThis->iBufPtrMax); */
-	if(pThis->pIOBuf == NULL) { /* TODO: maybe we should move that to file open... */
-		if((pThis->pIOBuf = (uchar*) malloc(sizeof(uchar) * STRM_IOBUF_SIZE )) == NULL)
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		pThis->iBufPtrMax = 0; /* results in immediate read request */
-	}
-
 	if(pThis->iUngetC != -1) {	/* do we have an "unread" char that we need to provide? */
 		*pC = pThis->iUngetC;
 		pThis->iUngetC = -1;
@@ -174,7 +174,7 @@ rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 		while(bRun) {
 			/* first check if we need to (re)open the file (we may have switched to a new one!) */
 			CHKiRet(strmOpenFile(pThis, O_RDONLY, 0600)); // TODO: open modes!
-			pThis->iBufPtrMax = read(pThis->fd, pThis->pIOBuf, STRM_IOBUF_SIZE);
+			pThis->iBufPtrMax = read(pThis->fd, pThis->pIOBuf, pThis->sIOBufSize);
 			dbgprintf("strmReadChar read %d bytes from file %d\n", pThis->iBufPtrMax, pThis->fd);
 			if(pThis->iBufPtrMax == 0) {
 				if(pThis->iMaxFiles == 0)
@@ -261,30 +261,15 @@ finalize_it:
 /* --------------- end type-specific handlers -------------------- */
 
 
-/* Constructor for the strm object
+/* Standard-Constructor for the strm object
  */
-rsRetVal strmConstruct(strm_t **ppThis)
-{
-	DEFiRet;
-	strm_t *pThis;
-dbgprintf("strmConstruct\n");
-
-	assert(ppThis != NULL);
-
-	if((pThis = (strm_t *)calloc(1, sizeof(strm_t))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-
-	/* we have an object, so let's fill all properties that must not be 0 (we did calloc()!) */
+BEGINobjConstruct(strm)
 	pThis->iCurrFNum = 1;
 	pThis->fd = -1;
 	pThis->iUngetC = -1;
 	pThis->sType = STREAMTYPE_FILE;
-
-finalize_it:
-	OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP
-	return iRet;
-}
+	pThis->sIOBufSize = glblGetIOBufSize();
+ENDobjConstruct(strm)
 
 
 /* ConstructionFinalizer - currently provided just to comply to the interface
@@ -352,7 +337,15 @@ finalize_it:
 /* simple ones first */
 DEFpropSetMeth(strm, bDeleteOnClose, int)
 DEFpropSetMeth(strm, iMaxFileSize, int)
-DEFpropSetMeth(strm, iMaxFiles, int)
+DEFpropSetMeth(strm, iFileNumDigits, int)
+
+rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
+{
+	pThis->iMaxFiles = iNewVal;
+	pThis->iFileNumDigits = getNumberDigits(iNewVal);
+	return RS_RET_OK;
+}
+
 
 /* set the stream's file prefix
  * The passed-in string is duplicated. So if the caller does not need

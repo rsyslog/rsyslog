@@ -5,6 +5,7 @@ rfc3195d_SOURCES = rfc3195d.c rsyslog.h
 rsyslogd_SOURCES = \
 	syslogd.c \
 	syslogd.h \
+	glbl.h \
 	pidfile.c \
 	pidfile.h \
 	template.c \
@@ -31,6 +32,7 @@ rsyslogd_SOURCES = \
 	net.h \
 	obj.c \
 	obj.h \
+	obj-types.h \
 	msg.c \
 	msg.h \
 	expr.c \

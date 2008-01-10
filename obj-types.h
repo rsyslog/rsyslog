@@ -113,5 +113,35 @@ finalize_it: \
 	return iRet; \
 }
 
+/* this defines both the constructor and initializer
+ * rgerhards, 2008-01-10
+ */
+#define BEGINobjConstruct(obj) \
+	rsRetVal obj##Initialize(obj##_t *pThis) \
+	{ \
+		DEFiRet;
+
+#define ENDobjConstruct(obj) \
+		/* use finalize_it: before calling the macro (if you need it)! */ \
+		return iRet; \
+	} \
+	rsRetVal obj##Construct(obj##_t **ppThis) \
+	{ \
+		DEFiRet; \
+		obj##_t *pThis; \
+	 \
+		assert(ppThis != NULL); \
+	 \
+		if((pThis = (obj##_t *)calloc(1, sizeof(obj##_t))) == NULL) { \
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY); \
+		} \
+	 \
+		obj##Initialize(pThis); \
+	 \
+	finalize_it: \
+		OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP \
+		return iRet; \
+	} 
+
 
 #endif /* #ifndef OBJ_TYPES_H_INCLUDED */
