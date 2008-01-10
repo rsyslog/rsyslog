@@ -59,6 +59,8 @@
 			free(pThis); \
 	}
 
+#define objSerializeSCALAR_VAR(strm, propName, propType, var) \
+	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &var));
 #define objSerializeSCALAR(strm, propName, propType) \
 	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
 #define objSerializePTR(strm, propName, propType) \

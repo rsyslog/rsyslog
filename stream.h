@@ -64,20 +64,17 @@ typedef struct strm_s {
 	strmType_t sType;
 	/* descriptive properties */
 	int iCurrFNum;/* current file number (NOT descriptor, but the number in the file name!) */
-	uchar *pszDir; /* Directory */
-	int lenDir;
-	uchar *pszFilePrefix; /* prefix for generated filenames */
+	uchar *pszFName; /* prefix for generated filenames */
 	int lenFilePrefix;
 	strmMode_t tOperationsMode;
 	mode_t tOpenMode;
-	size_t	sIOBufSize;/* size of IO buffer */
-	int iFlagsOpenOS;
-	int iModeOpenOS;
 	size_t iMaxFileSize;/* maximum size a file may grow to */
-	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
 	/* dynamic properties, valid only during file open, not to be persistet */
+	size_t	sIOBufSize;/* size of IO buffer */
+	uchar *pszDir; /* Directory */
+	int lenDir;
 	int fd;		/* the file descriptor, -1 if closed */
 	size_t iCurrOffs;/* current offset */
 	uchar *pszCurrFName; /* name of current file (if open) */
@@ -86,6 +83,7 @@ typedef struct strm_s {
 	size_t iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
 	int bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
+	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 } strm_t;
 
 /* prototypes */
@@ -104,6 +102,7 @@ rsRetVal strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir);
 rsRetVal strmFlush(strm_t *pThis);
 rsRetVal strmRecordBegin(strm_t *pThis);
 rsRetVal strmRecordEnd(strm_t *pThis);
+rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm);
 PROTOTYPEObjClassInit(strm);
 PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
 PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);

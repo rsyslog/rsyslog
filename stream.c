@@ -71,11 +71,11 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	if(pThis->fd != -1)
 		ABORT_FINALIZE(RS_RET_OK);
 
-	if(pThis->pszFilePrefix == NULL)
+	if(pThis->pszFName == NULL)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
 	CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
- 		     	    pThis->pszFilePrefix, pThis->lenFilePrefix, pThis->iCurrFNum, pThis->iFileNumDigits));
+ 		     	    pThis->pszFName, pThis->lenFilePrefix, pThis->iCurrFNum, pThis->iFileNumDigits));
 
 	/* compute which flags we need to provide to open */
 	if(pThis->tOperationsMode == STREAMMODE_READ)
@@ -517,10 +517,10 @@ strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
 	if(iLenPrefix < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
-	if((pThis->pszFilePrefix = malloc(sizeof(uchar) * iLenPrefix + 1)) == NULL)
+	if((pThis->pszFName = malloc(sizeof(uchar) * iLenPrefix + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
-	memcpy(pThis->pszFilePrefix, pszPrefix, iLenPrefix + 1); /* always think about the \0! */
+	memcpy(pThis->pszFName, pszPrefix, iLenPrefix + 1); /* always think about the \0! */
 	pThis->lenFilePrefix = iLenPrefix;
 
 finalize_it:
@@ -602,16 +602,56 @@ dbgprintf("strmRecordEnd out %d\n", iRet);
 /* end stream record support functions */
 
 
+/* This method serializes a stream object. That means the whole
+ * object is modified into text form. That text form is suitable for
+ * later reconstruction of the object.
+ * The most common use case for this method is the creation of an
+ * on-disk representation of the message object.
+ * We do not serialize the dynamic properties. 
+ * rgerhards, 2008-01-10
+ */
+rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
+{
+	DEFiRet;
+	int i;
+	long l;
+
+	assert(pThis != NULL);
+	assert(pStrm != NULL);
+
+	CHKiRet(objBeginSerialize(pStrm, (obj_t*) pThis));
+
+	i = pThis->sType;
+	objSerializeSCALAR_VAR(pStrm, sType, INT, i);
+	objSerializeSCALAR(pStrm, iCurrFNum, INT);
+	objSerializePTR(pStrm, pszFName, PSZ);
+	i = pThis->tOperationsMode;
+	objSerializeSCALAR_VAR(pStrm, tOperationsMode, INT, i);
+	i = pThis->tOpenMode;
+	objSerializeSCALAR_VAR(pStrm, tOpenMode, INT, i);
+	i = (long) pThis->iMaxFileSize;
+	objSerializeSCALAR_VAR(pStrm, iMaxFileSize, LONG, l);
+	objSerializeSCALAR(pStrm, iMaxFiles, INT);
+	objSerializeSCALAR(pStrm, iFileNumDigits, INT);
+
+	CHKiRet(objEndSerialize(pStrm));
+
+finalize_it:
+	return iRet;
+}
+
 
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09
  */
 BEGINObjClassInit(strm, 1)
-	//OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
+	OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
 	//OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strmConstructFinalize);
 ENDObjClassInit(strm)
+
+
 /*
  * vi:set ai:
  */

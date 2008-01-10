@@ -243,11 +243,6 @@ static rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 
 	CHKiRet((objSerialize(pUsr))(pUsr, pThis->tVars.disk.pWrite));
 	CHKiRet(strmFlush(pThis->tVars.disk.pWrite));
-#if 0
-	//rsCStrObj *pCStr;
-	CHKiRet((objSerialize(pUsr))(pUsr, &pCStr));
-	CHKiRet(strmWrite(pThis->tVars.disk.pWrite, rsCStrGetBufBeg(pCStr), rsCStrLen(pCStr)));
-#endif
 
 finalize_it:
 	return iRet;
