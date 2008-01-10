@@ -1,15 +1,18 @@
 ---------------------------------------------------------------------------
 Version 3.10.1 (rgerhards), 2008-01-10
-- performance-optimized string class, should bring an overall improvement
-- fixed a memory leak in imudp -- thanks to varmojfekoj for the patch
-- fixed a race condition that could lead to a rsyslogd hang when during
-  HUP or termination
-- done some doc updates
 - implemented the "disk" queue mode. However, it currently is of very
   limited use, because it does not support persistence over rsyslogd
   runs. So when rsyslogd is stopped, the queue is drained just as with
   the in-memory queue modes. Persistent queues will be a feature of
   the next release.
+- performance-optimized string class, should bring an overall improvement
+- fixed a memory leak in imudp -- thanks to varmojfekoj for the patch
+- fixed a race condition that could lead to a rsyslogd hang when during
+  HUP or termination
+- done some doc updates
+- added $WorkDirectory config directive
+- added $MainMsgQueueFileName config directive
+- added $MainMsgQueueMaxFileSize config directive
 ---------------------------------------------------------------------------
 Version 3.10.0 (rgerhards), 2008-01-07
 - implemented input module interface and initial input modules
