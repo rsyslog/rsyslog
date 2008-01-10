@@ -38,7 +38,6 @@
 #include "tcpsyslog.h"
 
 MODULE_TYPE_INPUT
-TERM_SYNC_TYPE(eTermSync_NONE)
 
 /* defines */
 

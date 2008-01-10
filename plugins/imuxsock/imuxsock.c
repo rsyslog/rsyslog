@@ -40,7 +40,6 @@
 #include "module-template.h"
 
 MODULE_TYPE_INPUT
-TERM_SYNC_TYPE(eTermSync_NONE)
 
 /* defines */
 #define MAXFUNIX	20

@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 3.10.2 (rgerhards), 2008-01-1?
+- fixed a bug that caused a segfault on startup when no $WorkDir directive
+  was specified in rsyslog.conf
+---------------------------------------------------------------------------
 Version 3.10.1 (rgerhards), 2008-01-10
 - implemented the "disk" queue mode. However, it currently is of very
   limited use, because it does not support persistence over rsyslogd

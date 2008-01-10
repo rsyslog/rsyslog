@@ -42,7 +42,6 @@
 #include "module-template.h"
 
 MODULE_TYPE_INPUT
-TERM_SYNC_TYPE(eTermSync_SIGNAL)
 
 /* defines */
 #define DEFAULT_MARK_PERIOD (20 * 60)

@@ -24,15 +24,8 @@
 #define THREADS_H_INCLUDED
 
 
-/* type of sync tools for terminating the thread */
-typedef enum eTermSyncType {
-	eTermSync_NONE = 0,	/* no cleanup necessary, just cancel thread */
-	eTermSync_SIGNAL	/* termination via pthread_kill() */
-} eTermSyncType_t;
-
 /* the thread object */
 typedef struct thrdInfo {
-	eTermSyncType_t	eTermTool;
 	pthread_mutex_t *mutTermOK;	/* Is it ok to terminate that thread now? */
 	int bIsActive;		/* Is thread running? */
 	int bShallStop;		/* set to 1 if the thread should be stopped ? */
@@ -46,7 +39,7 @@ rsRetVal thrdExit(void);
 rsRetVal thrdInit(void);
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSyncType, rsRetVal(*afterRun)(thrdInfo_t *));
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *));
 rsRetVal thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds);
 
 /* macros (replace inline functions) */

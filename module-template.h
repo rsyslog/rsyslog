@@ -334,8 +334,6 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	CODEqueryEtryPt_STD_MOD_QUERIES \
 	else if(!strcmp((char*) name, "runInput")) {\
 		*pEtryPoint = runInput;\
-	} else if(!strcmp((char*) name, "getTermSyncType")) {\
-		*pEtryPoint = modGetTermSyncType;\
 	} else if(!strcmp((char*) name, "willRun")) {\
 		*pEtryPoint = willRun;\
 	} else if(!strcmp((char*) name, "afterRun")) {\
@@ -470,16 +468,6 @@ static rsRetVal afterRun(void)\
 	return iRet;\
 }
 
-
-/* method to return which termination sync method is used by this module.
- */
-#define TERM_SYNC_TYPE(x) \
-static rsRetVal modGetTermSyncType(eTermSyncType_t *pTermSync)\
-{\
-	assert(pTermSync != NULL); \
-	*pTermSync = (x);\
-	return RS_RET_OK;\
-}
 
 /*
  * vi:set ai:

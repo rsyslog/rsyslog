@@ -420,13 +420,16 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	assert(pConsumer != NULL);
 	assert(iWorkerThreads >= 0);
 
+dbgprintf("queueConstruct 0\n");
 	if((pThis = (queue_t *)calloc(1, sizeof(queue_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
+dbgprintf("queueConstruct 0a\n");
 
 	/* we have an object, so let's fill the properties */
 	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glblGetWorkDir())) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+dbgprintf("queueConstruct 1\n");
 
 	pThis->lenSpoolDir = strlen((char*)pThis->pszSpoolDir);
 	pThis->iMaxFileSize = 1024 * 1024; /* default is 1 MiB */
@@ -444,6 +447,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	pThis->pszFilePrefix = NULL;
 	pThis->qType = qType;
 
+dbgprintf("queueConstruct 2\n");
 	/* set type-specific handlers and other very type-specific things (we can not totally hide it...) */
 	switch(qType) {
 		case QUEUETYPE_FIXED_ARRAY:
@@ -474,11 +478,14 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 			break;
 	}
 
+dbgprintf("queueConstruct 3\n");
 	/* call type-specific constructor */
 	CHKiRet(pThis->qConstruct(pThis));
 
 finalize_it:
+dbgprintf("queueConstruct 4\n");
 	OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP
+dbgprintf("queueConstruct 5\n");
 	return iRet;
 }
 
@@ -564,8 +571,10 @@ rsRetVal
 queueSetFilePrefix(queue_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
 {
 	DEFiRet;
-	CHKiRet(strmSetFilePrefix(pThis->tVars.disk.pWrite, pszPrefix, iLenPrefix));
-	CHKiRet(strmSetFilePrefix(pThis->tVars.disk.pRead,  pszPrefix, iLenPrefix));
+	if(pThis->qType == QUEUETYPE_DISK) {
+		CHKiRet(strmSetFilePrefix(pThis->tVars.disk.pWrite, pszPrefix, iLenPrefix));
+		CHKiRet(strmSetFilePrefix(pThis->tVars.disk.pRead,  pszPrefix, iLenPrefix));
+	}
 finalize_it:
 	return iRet;
 }
@@ -585,8 +594,8 @@ queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize)
 	}
 
 	pThis->iMaxFileSize = iMaxFileSize;
-// TODO: check queue mode! also in other places!!!
-	CHKiRet(strmSetiMaxFileSize(pThis->tVars.disk.pWrite, iMaxFileSize));
+	if(pThis->qType == QUEUETYPE_DISK)
+		CHKiRet(strmSetiMaxFileSize(pThis->tVars.disk.pWrite, iMaxFileSize));
 
 finalize_it:
 	return iRet;

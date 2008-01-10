@@ -86,29 +86,15 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 }
 
 
-/* terminate a thread gracefully. It's termination sync state is taken into
- * account.
+/* terminate a thread gracefully.
  */
 rsRetVal thrdTerminate(thrdInfo_t *pThis)
 {
 	assert(pThis != NULL);
 	
-dbgprintf("Terminate thread %lx via method %d\n", pThis->thrdID, pThis->eTermTool);
-	if(pThis->eTermTool == eTermSync_SIGNAL) {
-		/* we first wait for the thread to reach a point in execution where it
-		 * is safe to terminate it.
-		 * TODO: TIMEOUT!
-		 */
-		pthread_mutex_lock(pThis->mutTermOK);
-		pThis->bShallStop = 1;	/* request termination */
-		pthread_kill(pThis->thrdID, SIGUSR2); /* get thread out ouf blocking calls */
-		pthread_join(pThis->thrdID, NULL);
-		pthread_mutex_unlock(pThis->mutTermOK);	 /* cleanup... */
-		/* TODO: TIMEOUT! */
-	} else if(pThis->eTermTool == eTermSync_NONE) {
-		pthread_cancel(pThis->thrdID);
-		pthread_join(pThis->thrdID, NULL); /* wait for cancel to complete */
-	}
+dbgprintf("Terminate thread %lx\n", pThis->thrdID);
+	pthread_cancel(pThis->thrdID);
+	pthread_join(pThis->thrdID, NULL); /* wait for cancel to complete */
 	pThis->bIsActive = 0;
 
 	/* call cleanup function, if any */
@@ -164,7 +150,7 @@ static void* thrdStarter(void *arg)
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSyncType, rsRetVal(*afterRun)(thrdInfo_t *))
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *))
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -173,7 +159,6 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), eTermSyncType_t eTermSync
 	assert(thrdMain != NULL);
 
 	CHKiRet(thrdConstruct(&pThis));
-	pThis->eTermTool = eTermSync_NONE; // eTermSyncType; TODO: review
 	pThis->bIsActive = 1;
 	pThis->pUsrThrdMain = thrdMain;
 	pThis->pAfterRun = afterRun;

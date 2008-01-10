@@ -3244,7 +3244,7 @@ startInputModules(void)
 	while(pMod != NULL) {
 		if((iRet = pMod->mod.im.willRun()) == RS_RET_OK) {
 			/* activate here */
-			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.eTermSyncType, pMod->mod.im.afterRun);
+			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun);
 		} else {
 			dbgprintf("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
 		}
@@ -3349,6 +3349,12 @@ init(void)
 		iMainMsgQueueNumWorkers = 1;
 	}
 
+	if(MainMsgQueType == QUEUETYPE_DISK && pszWorkDir == NULL) {
+		fprintf(stderr, "No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
+			        "Using 'FixedArray' instead.\n");
+		MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+	}
+
 	/* switch the message object to threaded operation, if necessary */
 	if(MainMsgQueType == QUEUETYPE_DIRECT || iMainMsgQueueNumWorkers > 1) {
 		MsgEnableThreadSafety();
@@ -3360,6 +3366,7 @@ init(void)
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
+dbgprintf("queue 1 \n");
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
 	CHKiRet_Hdlr(func(pMsgQueue, data)) { \
@@ -3371,18 +3378,21 @@ init(void)
 	}
 
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
-	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFilePrefix",
+dbgprintf("queue 2 \n");
+	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName",
 		    (pszMainMsgQFName == NULL ? (uchar*) "mainq" : pszMainMsgQFName));
 
 #	undef setQPROP
 #	undef setQPROPstr
 
+dbgprintf("try start queue \n");
 	/* ... and finally start the queue! */
 	CHKiRet_Hdlr(queueStart(pMsgQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not start message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
+dbgprintf("queue running\n");
 
 	Initialized = 1;
 	bHaveMainQueue = (MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
@@ -3395,6 +3405,7 @@ init(void)
 	 */
 	startInputModules();
 
+dbgprintf("inputs running\n");
 	if(Debug) {
 		dbgPrintInitInfo();
 	}

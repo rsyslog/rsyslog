@@ -75,7 +75,6 @@ typedef struct moduleInfo {
 	/* TODO: pass pointer to msg submit function to IM  rger, 2007-12-14 */
 	union	{
 		struct {/* data for input modules */
-			eTermSyncType_t eTermSyncType;
 			rsRetVal (*runInput)(thrdInfo_t*);	/* function to gather input and submit to queue */
 			rsRetVal (*willRun)(void); 		/* function to gather input and submit to queue */
 			rsRetVal (*afterRun)(thrdInfo_t*);	/* function to gather input and submit to queue */
