@@ -265,7 +265,7 @@ finalize_it:
 /* end serialization of an object. The caller receives a
  * standard C string, which he must free when no longer needed.
  */
-rsRetVal objEndSerialize(strm_t *pStrm, obj_t *pObj)
+rsRetVal objEndSerialize(strm_t *pStrm)
 {
 	DEFiRet;
 

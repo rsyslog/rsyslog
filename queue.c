@@ -203,14 +203,14 @@ static rsRetVal qConstructDisk(queue_t *pThis)
 	assert(pThis != NULL);
 
 	CHKiRet(strmConstruct(&pThis->tVars.disk.pWrite));
-	CHKiRet(strmSetDir(pThis->tVars.disk.pWrite, pszSpoolDirectory, strlen((char*)pszSpoolDirectory)));
+	CHKiRet(strmSetDir(pThis->tVars.disk.pWrite, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
 	CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
 	CHKiRet(strmSettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
 	CHKiRet(strmConstructFinalize(pThis->tVars.disk.pWrite));
 
 	CHKiRet(strmConstruct(&pThis->tVars.disk.pRead));
 	CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
-	CHKiRet(strmSetDir(pThis->tVars.disk.pRead, pszSpoolDirectory, strlen((char*)pszSpoolDirectory)));
+	CHKiRet(strmSetDir(pThis->tVars.disk.pRead, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
 	CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pRead, 10000000));
 	CHKiRet(strmSettOperationsMode(pThis->tVars.disk.pRead, STREAMMODE_READ));
 	CHKiRet(strmConstructFinalize(pThis->tVars.disk.pRead));
@@ -425,7 +425,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	}
 
 	/* we have an object, so let's fill the properties */
-	if((pThis->pszSpoolDir = (uchar*) strdup((char*)pszSpoolDirectory)) == NULL)
+	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glblGetWorkDir())) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	pThis->lenSpoolDir = strlen((char*)pThis->pszSpoolDir);

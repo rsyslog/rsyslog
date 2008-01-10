@@ -380,8 +380,8 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 				 * 0 - suppress duplicate messages
 				 * 1 - do NOT suppress duplicate messages
 				 */
-uchar *pszSpoolDirectory = NULL;/* name of rsyslog's spool directory (without trailing slash) */
-uchar *pszMainMsgQFilePrefix = NULL;/* prefix for the main message queue file */
+uchar *pszWorkDir = NULL;/* name of rsyslog's spool directory (without trailing slash) */
+uchar *pszMainMsgQFName = NULL;/* prefix for the main message queue file */
 size_t iMainMsgQueMaxFileSize = 1024*1024;
 /* end global config file state variables */
 
@@ -512,13 +512,13 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pModDir);
 		pModDir = NULL;
 	}
-	if(pszSpoolDirectory != NULL) {
-		free(pszSpoolDirectory);
-		pszSpoolDirectory = NULL;
+	if(pszWorkDir != NULL) {
+		free(pszWorkDir);
+		pszWorkDir = NULL;
 	}
-	if(pszMainMsgQFilePrefix != NULL) {
-		free(pszMainMsgQFilePrefix);
-		pszMainMsgQFilePrefix = NULL;
+	if(pszMainMsgQFName != NULL) {
+		free(pszMainMsgQFName);
+		pszMainMsgQFName = NULL;
 	}
 	iMainMsgQueueSize = 10000;
 	iMainMsgQueMaxFileSize = 1024 * 1024;
@@ -3122,7 +3122,7 @@ static void dbgPrintInitInfo(void)
 
 	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
 	dbgprintf("Main queue worker threads: %d\n", iMainMsgQueueNumWorkers);
-	dbgprintf("Spool Directory: '%s'.\n", pszSpoolDirectory);
+	dbgprintf("Spool Directory: '%s'.\n", pszWorkDir);
 }
 
 
@@ -3372,7 +3372,7 @@ init(void)
 
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
 	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFilePrefix",
-		    (pszMainMsgQFilePrefix == NULL ? (uchar*) "mainq" : pszMainMsgQFilePrefix));
+		    (pszMainMsgQFName == NULL ? (uchar*) "mainq" : pszMainMsgQFName));
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -4512,8 +4512,8 @@ static rsRetVal loadBuildInModules(void)
 	 * is that rsyslog will terminate if we can not register our built-in config commands.
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
-	CHKiRet(regCfSysLineHdlr((uchar *)"spooldirectory", 0, eCmdHdlrGetWord, NULL, &pszSpoolDirectory, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefileprefix", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFilePrefix, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iMainMsgQueueNumWorkers, NULL));

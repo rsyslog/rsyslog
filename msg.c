@@ -414,7 +414,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
 
-	CHKiRet(objEndSerialize(pStrm, (obj_t*) pThis));
+	CHKiRet(objEndSerialize(pStrm));
 
 finalize_it:
 	return iRet;
