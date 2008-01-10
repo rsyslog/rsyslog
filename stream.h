@@ -83,6 +83,7 @@ typedef struct strm_s {
 	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
+	int bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
 } strm_t;
 
 /* prototypes */

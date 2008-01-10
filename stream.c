@@ -132,25 +132,23 @@ rsRetVal strmNextFile(strm_t *pThis)
 {
 	DEFiRet;
 
-dbgprintf("strmNextFile in\n");
 	assert(pThis != NULL);
 	assert(pThis->iMaxFiles != 0);
 
 	CHKiRet(strmCloseFile(pThis));
 
-	/* we do modulo 1,000,000 so that the file number is always at most 6 digits. If we have a million
-	 * or more strm files, something is awfully wrong and it is OK if we run into problems in that
-	 * situation ;) -- rgerhards, 2008-01-09
+	/* we do modulo operation to ensure we obej the iMaxFile property. This will always
+	 * result in a file number lower than iMaxFile, so it if wraps, the name is back to
+	 * 0, which results in the first file being overwritten. Not desired for queues, so
+	 * make sure their iMaxFiles is large enough. But it is well-desired for other
+	 * use cases, e.g. a circular output log file. -- rgerhards, 2008-01-10
 	 */
 	pThis->iCurrFNum = (pThis->iCurrFNum + 1) % pThis->iMaxFiles;
 
 finalize_it:
-dbgprintf("strmNextFile out %d\n", iRet);
 	return iRet;
 }
 
-
-/*** buffered read functions for strm files ***/
 
 /* logically "read" a character from a file. What actually happens is that
  * data is taken from the buffer. Only if the buffer is full, data is read 
@@ -225,8 +223,8 @@ rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
 #if 0
 /* we have commented out the code below because we would like to preserve it. It 
  * is currently not needed, but may be useful if we implemented a bufferred file
- * class.
- * rgerhards, 2008-01-07
+ * class. NOTE: YOU MUST REVIEW THIS CODE BEFORE ACTIVATION. It may be pretty 
+ * outdated! -- rgerhards, 2008-01-10
  */
 /* read a line from a strm file. A line is terminated by LF. The LF is read, but it
  * is not returned in the buffer (it is discared). The caller is responsible for
@@ -262,11 +260,6 @@ finalize_it:
 }
 
 #endif /* #if 0 - saved code */
-
-/*** end buffered read functions for strm files ***/
-
-
-/* --------------- end type-specific handlers -------------------- */
 
 
 /* Standard-Constructor for the strm object
@@ -321,6 +314,24 @@ rsRetVal strmDestruct(strm_t *pThis)
 	return iRet;
 }
 
+
+/* check if we need to open a new file (in output mode only).
+ * The decision is based on file size AND record delimition state.
+ */
+static rsRetVal strmCheckNextOutputFile(strm_t *pThis)
+{
+	DEFiRet;
+
+	if(pThis->iCurrOffs >= pThis->iMaxFileSize) {
+		dbgprintf("Stream 0x%lx: max file size %ld reached for %d, now %ld - starting new file\n",
+			  (unsigned long) pThis, (long) pThis->iMaxFileSize, pThis->fd, (long) pThis->iCurrOffs);
+		CHKiRet(strmNextFile(pThis));
+	}
+
+finalize_it:
+	return iRet;
+}
+
 /* write memory buffer to a stream object.
  */
 static rsRetVal strmWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
@@ -341,11 +352,7 @@ dbgprintf("strmWriteInternal()\n");
 	/* TODO: handle error case -- rgerhards, 2008-01-07 */
 
 	pThis->iCurrOffs += iWritten;
-	if(pThis->iCurrOffs >= pThis->iMaxFileSize) {
-		dbgprintf("Stream 0x%lx: max file size %ld reached for %d, now %ld - starting new file\n",
-			  (unsigned long) pThis, (long) pThis->iMaxFileSize, pThis->fd, (long) pThis->iCurrOffs);
-		CHKiRet(strmNextFile(pThis));
-	}
+	CHKiRet(strmCheckNextOutputFile(pThis));
 
 finalize_it:
 	return iRet;
@@ -475,6 +482,51 @@ strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
 finalize_it:
 	return iRet;
 }
+
+
+/* support for data records
+ * The stream class is able to write to multiple files. However, there are
+ * situation (actually quite common), where a single data record should not
+ * be split across files. This may be problematic if multiple stream write
+ * calls are used to create the record. To support that, we provide the
+ * bInRecord status variable. If it is set, no file spliting occurs. Once
+ * it is set to 0, a check is done if a split is necessary and it then
+ * happens. For a record-oriented caller, the proper sequence is:
+ *
+ * strmRecordBegin()
+ * strmWrite...()
+ * strmRecordEnd()
+ *
+ * Please note that records do not affect the writing of output buffers. They
+ * are always written when full. The only thing affected is circular files
+ * creation. So it is safe to write large records.
+ *
+ * IMPORTANT: RecordBegin() can not be nested! It is a programming error
+ * if RecordBegin() is called while already in a record!
+ *
+ * rgerhards, 2008-01-10
+ */
+rsRetVal strmRecordBegin(strm_t *pThis)
+{
+	assert(pThis != NULL);
+	assert(pThis->bInRecord == 0);
+	pThis->bInRecord = 1;
+	return RS_RET_OK;
+}
+
+rsRetVal strmRecordEnd(strm_t *pThis)
+{
+	DEFiRet;
+	assert(pThis != NULL);
+	assert(pThis->bInRecord == 1);
+
+	pThis->bInRecord = 0;
+	iRet = strmCheckNextOutputFile(pThis); /* check if we need to switch files */
+
+	return iRet;
+}
+/* end stream record support functions */
+
 
 
 /* Initialize the stream class. Must be called as the very first method
