@@ -72,6 +72,7 @@
 /* the next macro MUST be called in Constructors: */
 #ifndef NDEBUG /* this means if debug... */
 #	define objConstructSetObjInfo(pThis) \
+		assert(pThis->pObjInfo == NULL); \
 		((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ; \
 		((obj_t*) (pThis))->iObjCooCKiE = 0xBADEFEE
 #else

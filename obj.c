@@ -89,6 +89,7 @@ rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int
 
 	pThis->pszName = pszName;
 	pThis->iObjVers = iObjVers;
+fprintf(stderr, "objid %d set for %s\n", objID, pszName);
 	pThis->objID = objID;
 
 	pThis->objMethods[0] = pConstruct;
@@ -109,7 +110,6 @@ rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pH
 {
 	assert(pThis != NULL);
 	assert(objMethod > 0 && objMethod < OBJ_NUM_METHODS);
-
 	pThis->objMethods[objMethod] = pHandler;
 
 	return RS_RET_OK;
@@ -164,6 +164,7 @@ rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj)
 {
 	DEFiRet;
 
+dbgprintf("objBeginSerialize obj type: %x\n", objGetObjID(pStrm));
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_assert(pObj);
 	
@@ -212,6 +213,7 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t prop
 	assert(pszPropName != NULL);
 
 	/*dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n", pStrm, pszPropName, propType, pUsr);*/
+	dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n", pStrm, pszPropName, propType, pUsr);
 	/* if we have no user pointer, there is no need to write this property.
 	 * TODO: think if that's the righ point of view
 	 * rgerhards, 2008-01-06
@@ -586,13 +588,14 @@ finalize_it:
  * of the trailer. Header must already have been processed.
  * rgerhards, 2008-01-11
  */
-rsRetVal objDeserializeProperties(obj_t *pObj, objID_t oID, strm_t *pStrm)
+static rsRetVal objDeserializeProperties(obj_t *pObj, objID_t oID, strm_t *pStrm)
 {
 	DEFiRet;
 	property_t propBuf;
 
 	ISOBJ_assert(pObj);
 	ISOBJ_TYPE_assert(pStrm, strm);
+	assert(oID > 0 && oID < OBJ_NUM_IDS);
 
 	iRet = objDeserializeProperty(&propBuf, pStrm);
 	while(iRet == RS_RET_OK) {
@@ -627,7 +630,7 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm)
 
 	assert(ppObj != NULL);
 	assert(objTypeExpected > 0 && objTypeExpected < OBJ_NUM_IDS);
-	assert(pStrm != NULL);
+	ISOBJ_TYPE_assert(pStrm, strm);
 
 	/* we de-serialize the header. if all goes well, we are happy. However, if
 	 * we experience a problem, we try to recover. We do this by skipping to
@@ -660,6 +663,50 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm)
 finalize_it:
 	return iRet;
 }
+
+
+/* De-Serialize an object, but treat it as property bag.
+ * rgerhards, 2008-01-11
+ */
+rsRetVal objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
+{
+	DEFiRet;
+	rsRetVal iRetLocal;
+	objID_t oID = 0; /* this assignment is just to supress a compiler warning - this saddens me */
+	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
+
+dbgprintf("objDese...AsPropBag 0\n");
+	ISOBJ_assert(pObj);
+dbgprintf("objDese...AsPropBag 0a\n");
+	ISOBJ_TYPE_assert(pStrm, strm);
+dbgprintf("objDese...AsPropBag 1\n");
+
+	/* we de-serialize the header. if all goes well, we are happy. However, if
+	 * we experience a problem, we try to recover. We do this by skipping to
+	 * the next object header. This is defined via the line-start cookies. In
+	 * worst case, we exhaust the queue, but then we receive EOF return state
+	 * from objDeserializeTryRecover(), what will cause us to ultimately give up.
+	 * rgerhards, 2008-07-08
+	 */
+	do {
+		iRetLocal = objDeserializeHeader((uchar*) "Obj", &oID, &oVers, pStrm);
+		if(iRetLocal != RS_RET_OK) {
+			dbgprintf("objDeserializeObjAsPropBag error %d during header - trying to recover\n", iRetLocal);
+			CHKiRet(objDeserializeTryRecover(pStrm));
+		}
+	} while(iRetLocal != RS_RET_OK);
+
+dbgprintf("objDese...AsPropBag 2\n");
+	if(oID != objGetObjID(pObj))
+		ABORT_FINALIZE(RS_RET_INVALID_OID);
+
+	/* we got the object, now we need to fill the properties */
+	CHKiRet(objDeserializeProperties(pObj, oID, pStrm));
+
+finalize_it:
+	return iRet;
+}
+
 
 
 /* De-Serialize an object property bag. As a property bag contains only partial properties,
@@ -719,6 +766,7 @@ rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo)
 	DEFiRet;
 
 	assert(pInfo != NULL);
+	assert(arrObjInfo[oID] == NULL);
 	if(oID < 1 || oID > OBJ_NUM_IDS)
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 

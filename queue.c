@@ -479,6 +479,68 @@ queueWorker(void *arg)
 	pthread_exit(0);
 }
 
+
+/* This method checks if there is any persistent information on the
+ * queue and, if so, tries to load it. This method can only legally be
+ * called from the destructor (I moved it out from there to keep the
+ * Constructor code somewhat smaller). -- rgerhards, 2008-01-11
+ */
+static rsRetVal 
+queueTryLoadPersistedInfo(queue_t *pThis)
+{
+	DEFiRet;
+	strm_t *psQIF = NULL;
+	uchar pszQIFNam[MAXFNAME];
+	size_t lenQIFNam;
+	struct stat stat_buf;
+
+	ISOBJ_TYPE_assert(pThis, queue);
+
+	/* Construct file name */
+	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
+			     (char*) glblGetWorkDir(), (char*)pThis->pszFilePrefix);
+
+	/* check if the file exists */
+dbgprintf("stat '%s'\n", pszQIFNam);
+	if(stat((char*) pszQIFNam, &stat_buf) == -1) {
+		if(errno == ENOENT) {
+			dbgprintf("Queue 0x%lx: clean startup, no .qi file found\n", queueGetID(pThis));
+			ABORT_FINALIZE(RS_RET_OK);
+		} else {
+			dbgprintf("Queue 0x%lx: error %d trying to access .qi file\n", queueGetID(pThis), errno);
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+	}
+
+	/* If we reach this point, we have a .qi file */
+
+	CHKiRet(strmConstruct(&psQIF));
+	CHKiRet(strmSetDir(psQIF, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
+	CHKiRet(strmSettOperationsMode(psQIF, STREAMMODE_READ));
+	CHKiRet(strmSetsType(psQIF, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strmSetFName(psQIF, pszQIFNam, lenQIFNam));
+	CHKiRet(strmConstructFinalize(psQIF));
+
+	/* first, we try to read the property bag for ourselfs */
+	CHKiRet(objDeserializePropBag((obj_t*) pThis, psQIF));
+	
+	/* and now the stream objects (some order as when persisted!) */
+	CHKiRet(objDeserializeObjAsPropBag(pThis->tVars.disk.pWrite, psQIF));
+	CHKiRet(objDeserializeObjAsPropBag(pThis->tVars.disk.pRead, psQIF));
+
+finalize_it:
+	if(psQIF != NULL)
+		strmDestruct(psQIF);
+
+	if(iRet != RS_RET_OK) {
+		dbgprintf("Queue 0x%lx: error %d reading .qi file - can not start queue\n",
+			  queueGetID(pThis), iRet);
+	}
+
+	return iRet;
+}
+
+
 /* Constructor for the queue object
  * This constructs the data structure, but does not yet start the queue. That
  * is done by queueStart(). The reason is that we want to give the caller a chance
@@ -561,13 +623,16 @@ finalize_it:
 /* start up the queue - it must have been constructed and parameters defined
  * before.
  */
-rsRetVal queueStart(queue_t *pThis)
+rsRetVal queueStart(queue_t *pThis) /* this is the ConstructionFinalizer */
 {
 	DEFiRet;
 	int iState;
 	int i;
 
 	assert(pThis != NULL);
+
+	/* and now check if there is some persistent information that needs to be read in */
+	CHKiRet(queueTryLoadPersistedInfo(pThis));
 
 	dbgprintf("Queue 0x%lx: type %d, maxFileSz %ld starting\n", (unsigned long) pThis, pThis->qType,
 		   pThis->iMaxFileSize);
@@ -650,10 +715,12 @@ static rsRetVal queuePersist(queue_t *pThis)
 	objSerializeSCALAR_VAR(psQIF, qType, INT, i);
 	objSerializeSCALAR(psQIF, iQueueSize, INT);
 	CHKiRet(objEndSerialize(psQIF));
+dbgprintf("queue serial 1\n");
 
 	/* this is disk specific and must be moved to a function */
 	CHKiRet(strmSerialize(pThis->tVars.disk.pWrite, psQIF));
 	CHKiRet(strmSerialize(pThis->tVars.disk.pRead, psQIF));
+dbgprintf("queue serial 2\n");
 	
 	/* persist queue object itself */
 
@@ -852,7 +919,7 @@ BEGINObjClassInit(queue, 1)
 	//OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, queueSetProperty);
 	//OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strmConstructFinalize);
-ENDObjClassInit(strm)
+ENDObjClassInit(queue)
 
 /*
  * vi:set ai:

@@ -88,6 +88,15 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		iFlags = O_WRONLY | O_TRUNC | O_CREAT | O_APPEND;
 
 	pThis->fd = open((char*)pThis->pszCurrFName, iFlags, pThis->tOpenMode);
+	if(pThis->fd == -1) {
+		int ierrnoSave = errno;
+		dbgprintf("Stream 0x%lx: open error %d\n", (unsigned long) pThis, errno);
+		if(ierrnoSave == ENOENT)
+			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+		else
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
 	pThis->iCurrOffs = 0;
 
 	dbgprintf("Stream 0x%lx: opened file '%s' for %s (0x%x) as %d\n", (unsigned long) pThis,
@@ -621,28 +630,39 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	int i;
 	long l;
 
-	assert(pThis != NULL);
-	assert(pStrm != NULL);
+	ISOBJ_TYPE_assert(pThis, strm);
+	ISOBJ_TYPE_assert(pStrm, strm);
 
+dbgprintf("strmSerialize 1\n");
 	CHKiRet(objBeginSerialize(pStrm, (obj_t*) pThis));
 
-	i = pThis->sType;
-	objSerializeSCALAR_VAR(pStrm, sType, INT, i);
+dbgprintf("strmSerialize 2\n");
 	objSerializeSCALAR(pStrm, iCurrFNum, INT);
 	objSerializePTR(pStrm, pszFName, PSZ);
-	i = pThis->tOperationsMode;
-	objSerializeSCALAR_VAR(pStrm, tOperationsMode, INT, i);
-	i = pThis->tOpenMode;
-	objSerializeSCALAR_VAR(pStrm, tOpenMode, INT, i);
-	l = (long) pThis->iMaxFileSize;
-	objSerializeSCALAR_VAR(pStrm, iMaxFileSize, LONG, l);
 	objSerializeSCALAR(pStrm, iMaxFiles, INT);
 	objSerializeSCALAR(pStrm, iFileNumDigits, INT);
 	objSerializeSCALAR(pStrm, bDeleteOnClose, INT);
 
+	i = pThis->sType;
+	objSerializeSCALAR_VAR(pStrm, sType, INT, i);
+
+	i = pThis->tOperationsMode;
+	objSerializeSCALAR_VAR(pStrm, tOperationsMode, INT, i);
+
+	i = pThis->tOpenMode;
+	objSerializeSCALAR_VAR(pStrm, tOpenMode, INT, i);
+
+	l = (long) pThis->iCurrOffs;
+	objSerializeSCALAR_VAR(pStrm, iCurrOffs, LONG, l);
+
+	// TODO: really serialize?
+	//l = (long) pThis->iMaxFileSize;
+	//objSerializeSCALAR_VAR(pStrm, iMaxFileSize, LONG, l);
+
 	CHKiRet(objEndSerialize(pStrm));
 
 finalize_it:
+dbgprintf("strmSerialize out %d\n", iRet);
 	return iRet;
 }
 
@@ -656,7 +676,7 @@ rsRetVal strmSetProperty(strm_t *pThis, property_t *pProp)
 {
 	DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, Msg);
+	ISOBJ_TYPE_assert(pThis, strm);
 	assert(pProp != NULL);
 
  	if(isProp("sType")) {
@@ -669,6 +689,8 @@ rsRetVal strmSetProperty(strm_t *pThis, property_t *pProp)
 		CHKiRet(strmSettOperationsMode(pThis, pProp->val.vInt));
  	} else if(isProp("tOpenMode")) {
 		CHKiRet(strmSettOpenMode(pThis, pProp->val.vInt));
+ 	} else if(isProp("iCurrOffs")) {
+		pThis->iCurrOffs = pProp->val.vLong;
  	} else if(isProp("iMaxFileSize")) {
 		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.vLong));
  	} else if(isProp("iMaxFiles")) {

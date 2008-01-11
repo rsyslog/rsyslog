@@ -73,12 +73,12 @@ typedef struct strm_s {
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
 	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
+	size_t iCurrOffs;/* current offset */
 	/* dynamic properties, valid only during file open, not to be persistet */
 	size_t	sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
 	int lenDir;
 	int fd;		/* the file descriptor, -1 if closed */
-	size_t iCurrOffs;/* current offset */
 	uchar *pszCurrFName; /* name of current file (if open) */
 	uchar *pIOBuf;	/* io Buffer */
 	size_t iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */

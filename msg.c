@@ -394,7 +394,9 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	assert(pThis != NULL);
 	assert(pStrm != NULL);
 
+dbgprintf("MsgSerialize\n");
 	CHKiRet(objBeginSerialize(pStrm, (obj_t*) pThis));
+dbgprintf("post MsgSerialize\n");
 	objSerializeSCALAR(pStrm, iProtocolVersion, SHORT);
 	objSerializeSCALAR(pStrm, iSeverity, SHORT);
 	objSerializeSCALAR(pStrm, iFacility, SHORT);

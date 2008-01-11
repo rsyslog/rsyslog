@@ -107,6 +107,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FILE_PREFIX_MISSING = -2036, /**< a required file prefix (parameter?) is missing */
 	RS_RET_INVALID_HEADER_RECTYPE = -2037, /**< invalid record type in header or invalid header */
 	RS_RET_QTYPE_MISMATCH = -2038, /**< different qType when reading back a property type */
+	RS_RET_NO_FILE_ACCESS = -2039, /**< covers EACCES error on file open() */
+	RS_RET_FILE_NOT_FOUND = -2040, /**< file not found */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */
