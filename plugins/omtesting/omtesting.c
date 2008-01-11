@@ -97,6 +97,7 @@ CODESTARTdoAction
 	tvSelectTimeout.tv_sec = pData->iWaitSeconds;
 	tvSelectTimeout.tv_usec = pData->iWaitUSeconds; /* milli seconds */
 	select(0, NULL, NULL, NULL, &tvSelectTimeout);
+	//dbgprintf(":omtesting: end doAction(), iRet %d\n", iRet);
 ENDdoAction
 
 

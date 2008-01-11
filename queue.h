@@ -69,7 +69,7 @@ typedef enum {
 
 typedef struct qWrkThrd_s {
 	pthread_t thrdID;  /* thread ID */
-	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
+	volatile qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
 } qWrkThrd_t;	/* type for queue worker threads */
 
 /* the queue object */
@@ -79,7 +79,6 @@ typedef struct queue_s {
 	int	iMaxQueueSize;	/* how large can the queue grow? */
 	int 	iNumWorkerThreads;/* number of worker threads to use */
 	qWrkThrd_t *pWrkThrds;/* array with control structure for the worker thread(s) associated with this queue */
-	int	bDoRun;		/* 1 - run queue, 0 - shutdown of queue requested */
 	int	bImmediateShutdown;/* on shutdown, drain the queue --> 0 / do NOT drain the queue --> 1 */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dequeued messages */
 	/* type-specific handlers (set during construction) */

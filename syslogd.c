@@ -552,7 +552,7 @@ static void debug_switch();
 static rsRetVal cfline(uchar *line, selector_t **pfCurr);
 static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
-static void die(int sig);
+//static void die(int sig);
 static void freeSelectors(void);
 static rsRetVal processConfFile(uchar *pConfFile);
 static rsRetVal selectorAddList(selector_t *f);
@@ -2594,8 +2594,26 @@ die(int sig)
 {
 	char buf[256];
 
+	dbgprintf("exiting on signal %d\n", sig);
+
+	/* IMPORTANT: we should close the inputs first, and THEN send our termination
+	 * message. If we do it the other way around, logmsgInternal() may block on
+	 * a full queue and the inputs still fill up that queue. Depending on the
+	 * scheduling order, we may end up with logmsgInternal being held for a quite
+	 * long time. When the inputs are terminated first, that should not happen
+	 * because the queue is drained in parallel. The situation could only become
+	 * an issue with extremely long running actions in a queue full environment.
+	 * However, such actions are at least considered poorly written, if not
+	 * outright wrong. So we do not care about this very remote problem.
+	 * rgerhards, 2008-01-11
+	 */
+
+	/* close the inputs */
+	dbgprintf("Terminating input threads...\n");
+	thrdTerminateAll(); /* TODO: inputs only, please */
+
+	/* and THEN send the termination log message (see long comment above) */
 	if (sig) {
-		dbgprintf("exiting on signal %d\n", sig);
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\"]" " exiting on signal %d.",
@@ -2604,16 +2622,14 @@ die(int sig)
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, ADDDATE);
 	}
 	
-	/* close the inputs */
-	dbgprintf("Terminating input threads...\n");
-	thrdTerminateAll(); /* TODO: inputs only, please */
-
-	/* drain queue and stop worker thread */
+	/* drain queue (if configured so) and stop main queue worker thread pool */
 	dbgprintf("Terminating main queue...\n");
 	queueDestruct(pMsgQueue);
 	pMsgQueue = NULL;
 	
-	/* Free ressources and close connections */
+	/* Free ressources and close connections. This includes flushing any remaining
+	 * repeated msgs.
+	 */
 	dbgprintf("Terminating outputs...\n");
 	freeSelectors();
 
@@ -2649,7 +2665,6 @@ die(int sig)
 	 * modules. As such, they are not yet cleared.
 	 */
 	unregCfSysLineHdlrs();
-
 
 	/* clean up auxiliary data */
 	if(pModDir != NULL)
@@ -3270,7 +3285,7 @@ init(void)
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
 
-	thrdTerminateAll(); /* stop all running threads - TODO: reconsider location! */
+	thrdTerminateAll(); /* stop all running input threads - TODO: reconsider location! */
 
 	/* initialize some static variables */
 	pDfltHostnameCmp = NULL;
@@ -3366,7 +3381,6 @@ init(void)
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
-dbgprintf("queue 1 \n");
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
 	CHKiRet_Hdlr(func(pMsgQueue, data)) { \
@@ -3378,21 +3392,18 @@ dbgprintf("queue 1 \n");
 	}
 
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
-dbgprintf("queue 2 \n");
 	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName",
 		    (pszMainMsgQFName == NULL ? (uchar*) "mainq" : pszMainMsgQFName));
 
 #	undef setQPROP
 #	undef setQPROPstr
 
-dbgprintf("try start queue \n");
 	/* ... and finally start the queue! */
 	CHKiRet_Hdlr(queueStart(pMsgQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not start message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
-dbgprintf("queue running\n");
 
 	Initialized = 1;
 	bHaveMainQueue = (MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
@@ -3405,7 +3416,6 @@ dbgprintf("queue running\n");
 	 */
 	startInputModules();
 
-dbgprintf("inputs running\n");
 	if(Debug) {
 		dbgPrintInitInfo();
 	}
@@ -4427,12 +4437,29 @@ mainloop(void)
 		tvSelectTimeout.tv_sec = TIMERINTVL;
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
+		if(bFinished)
+			break;	/* exit as quickly as possible - see long comment below */
 
 		/* If we received a HUP signal, we call doFlushRptdMsgs() a bit early. This
  		 * doesn't matter, because doFlushRptdMsgs() checks timestamps. What may happen,
  		 * however, is that the too-early call may lead to a bit too-late output
  		 * of "last message repeated n times" messages. But that is quite acceptable.
  		 * rgerhards, 2007-12-21
+		 * ... and just to explain, we flush here because that is exactly what the mainloop
+		 * shall do - provide a periodic interval in which not-yet-flushed messages will
+		 * be flushed. Be careful, there is a potential race condition: doFlushRptdMsgs()
+		 * needs to aquire a lock on the action objects. If, however, long-running consumers
+		 * cause the main queue worker threads to lock them for a long time, we may receive
+		 * a starvation condition, resulting in the mainloop being held on lock for an extended
+		 * period of time. That, in turn, could lead to unresponsiveness to termination
+		 * requests. It is especially important that the bFinished flag is checked before
+		 * doFlushRptdMsgs() is called (I know because I ran into that situation). I am
+		 * not yet sure if the remaining probability window of a termination-related
+		 * problem is large enough to justify changing the code - I would consider it
+		 * extremely unlikely that the problem ever occurs in practice. Fixing it would
+		 * require not only a lot of effort but would cost considerable performance. So
+		 * for the time being, I think the remaining risk can be accepted.
+		 * rgerhards, 2008-01-10
  		 */
 		doFlushRptdMsgs();
 
