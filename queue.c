@@ -345,7 +345,6 @@ static rsRetVal queueShutdownWorkers(queue_t *pThis)
 	int i;
 	qWrkCmd_t tShutdownCmd;
 
-pThis->bImmediateShutdown = 1; /*testing */
 	assert(pThis != NULL);
 
 	/* select shutdown mode */
@@ -415,7 +414,6 @@ queueWorker(void *arg)
 	/* now we have our identity, on to real processing */
 	while(pThis->pWrkThrds[iMyThrdIndx].tCurrCmd == eWRKTHRDCMD_RUN
 	      || (pThis->pWrkThrds[iMyThrdIndx].tCurrCmd == eWRKTHRDCMD_SHUTDOWN && pThis->iQueueSize > 0)) {
-dbgprintf("worker %d runs, cmd %d\n", iMyThrdIndx, pThis->pWrkThrds[iMyThrdIndx].tCurrCmd);
 		pthread_mutex_lock(pThis->mut);
 		while (pThis->iQueueSize == 0 && pThis->pWrkThrds[iMyThrdIndx].tCurrCmd == eWRKTHRDCMD_RUN) {
 			dbgprintf("Queue 0x%lx/w%d: queue EMPTY, waiting for next message.\n",
@@ -492,16 +490,13 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	assert(pConsumer != NULL);
 	assert(iWorkerThreads >= 0);
 
-dbgprintf("queueConstruct 0\n");
 	if((pThis = (queue_t *)calloc(1, sizeof(queue_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
-dbgprintf("queueConstruct 0a\n");
 
 	/* we have an object, so let's fill the properties */
 	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glblGetWorkDir())) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-dbgprintf("queueConstruct 1\n");
 
 	pThis->lenSpoolDir = strlen((char*)pThis->pszSpoolDir);
 	pThis->iMaxFileSize = 1024 * 1024; /* default is 1 MiB */
@@ -519,7 +514,6 @@ dbgprintf("queueConstruct 1\n");
 	pThis->pszFilePrefix = NULL;
 	pThis->qType = qType;
 
-dbgprintf("queueConstruct 2\n");
 	/* set type-specific handlers and other very type-specific things (we can not totally hide it...) */
 	switch(qType) {
 		case QUEUETYPE_FIXED_ARRAY:
@@ -550,14 +544,11 @@ dbgprintf("queueConstruct 2\n");
 			break;
 	}
 
-dbgprintf("queueConstruct 3\n");
 	/* call type-specific constructor */
 	CHKiRet(pThis->qConstruct(pThis));
 
 finalize_it:
-dbgprintf("queueConstruct 4\n");
 	OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP
-dbgprintf("queueConstruct 5\n");
 	return iRet;
 }
 
@@ -718,6 +709,10 @@ finalize_it:
 
 	return iRet;
 }
+
+/* some simple object access methods */
+DEFpropSetMeth(queue, bImmediateShutdown, int);
+
 /*
  * vi:set ai:
  */

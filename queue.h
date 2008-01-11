@@ -127,5 +127,6 @@ rsRetVal queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize);
 rsRetVal queueSetFilePrefix(queue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
+PROTOTYPEpropSetMeth(queue, bImmediateShutdown, int);
 
 #endif /* #ifndef QUEUE_H_INCLUDED */
