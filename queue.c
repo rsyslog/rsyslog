@@ -818,13 +818,39 @@ finalize_it:
 DEFpropSetMeth(queue, bImmediateShutdown, int);
 
 
+/* This function can be used as a generic way to set properties. Only the subset
+ * of properties required to read persisted property bags is supported. This
+ * functions shall only be called by the property bag reader, thus it is static.
+ * rgerhards, 2008-01-11
+ */
+#define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
+static rsRetVal queueSetProperty(queue_t *pThis, property_t *pProp)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, queue);
+	assert(pProp != NULL);
+
+ 	if(isProp("iQueueSize")) {
+		pThis->iQueueSize = pProp->val.vInt;
+ 	} else if(isProp("qType")) {
+		if(pThis->qType != pProp->val.vLong)
+			ABORT_FINALIZE(RS_RET_QTYPE_MISMATCH);
+	}
+
+finalize_it:
+	return iRet;
+}
+#undef	isProp
+
+
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09
  */
 BEGINObjClassInit(queue, 1)
 	//OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
-	//OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);
+	OBJSetMethodHandler(objMethod_SETPROPERTY, queueSetProperty);
 	//OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strmConstructFinalize);
 ENDObjClassInit(strm)
 

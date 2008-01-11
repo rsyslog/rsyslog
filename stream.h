@@ -72,6 +72,7 @@ typedef struct strm_s {
 	size_t iMaxFileSize;/* maximum size a file may grow to */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
+	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	/* dynamic properties, valid only during file open, not to be persistet */
 	size_t	sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
@@ -84,7 +85,6 @@ typedef struct strm_s {
 	size_t iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
 	int bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
-	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 } strm_t;
 
 /* prototypes */

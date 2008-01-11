@@ -638,6 +638,7 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR_VAR(pStrm, iMaxFileSize, LONG, l);
 	objSerializeSCALAR(pStrm, iMaxFiles, INT);
 	objSerializeSCALAR(pStrm, iFileNumDigits, INT);
+	objSerializeSCALAR(pStrm, bDeleteOnClose, INT);
 
 	CHKiRet(objEndSerialize(pStrm));
 
@@ -646,13 +647,50 @@ finalize_it:
 }
 
 
+
+/* This function can be used as a generic way to set properties.
+ * rgerhards, 2008-01-11
+ */
+#define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
+rsRetVal strmSetProperty(strm_t *pThis, property_t *pProp)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, Msg);
+	assert(pProp != NULL);
+
+ 	if(isProp("sType")) {
+		CHKiRet(strmSetsType(pThis, (strmType_t) pProp->val.vInt));
+ 	} else if(isProp("iCurrFNum")) {
+		pThis->iCurrFNum = pProp->val.vInt;
+ 	} else if(isProp("pszFName")) {
+		CHKiRet(strmSetFName(pThis, rsCStrGetSzStrNoNULL(pProp->val.vpCStr), rsCStrLen(pProp->val.vpCStr)));
+ 	} else if(isProp("tOperationsMode")) {
+		CHKiRet(strmSettOperationsMode(pThis, pProp->val.vInt));
+ 	} else if(isProp("tOpenMode")) {
+		CHKiRet(strmSettOpenMode(pThis, pProp->val.vInt));
+ 	} else if(isProp("iMaxFileSize")) {
+		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.vLong));
+ 	} else if(isProp("iMaxFiles")) {
+		CHKiRet(strmSetiMaxFiles(pThis, pProp->val.vInt));
+ 	} else if(isProp("iFileNumDigits")) {
+		CHKiRet(strmSetiFileNumDigits(pThis, pProp->val.vInt));
+ 	} else if(isProp("bDeleteOnClose")) {
+		CHKiRet(strmSetiFileNumDigits(pThis, pProp->val.vInt));
+	}
+
+finalize_it:
+	return iRet;
+}
+#undef	isProp
+
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09
  */
 BEGINObjClassInit(strm, 1)
 	OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
-	//OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);
+	OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strmConstructFinalize);
 ENDObjClassInit(strm)
 

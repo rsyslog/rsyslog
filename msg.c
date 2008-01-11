@@ -2086,7 +2086,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, property_t *pProp)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ISOBJ_TYPE_assert(pThis, Msg);
 	assert(pProp != NULL);
 
  	if(isProp("iProtocolVersion")) {
