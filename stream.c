@@ -47,7 +47,6 @@
 /* static data */
 DEFobjStaticHelpers
 
-
 /* methods */
 
 /* first, we define type-specific handlers. The provide a generic functionality,
@@ -74,8 +73,13 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	if(pThis->pszFName == NULL)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
-	CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
- 		     	    pThis->pszFName, pThis->lenFilePrefix, pThis->iCurrFNum, pThis->iFileNumDigits));
+	if(pThis->sType == STREAMTYPE_FILE_CIRCULAR) {
+		CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
+				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum, pThis->iFileNumDigits));
+	} else {
+		if((pThis->pszCurrFName = (uchar*) strdup((char*) pThis->pszFName)) == NULL)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
 
 	/* compute which flags we need to provide to open */
 	if(pThis->tOperationsMode == STREAMMODE_READ)
@@ -274,7 +278,7 @@ BEGINobjConstruct(strm)
 	pThis->iCurrFNum = 1;
 	pThis->fd = -1;
 	pThis->iUngetC = -1;
-	pThis->sType = STREAMTYPE_FILE;
+	pThis->sType = STREAMTYPE_FILE_SINGLE;
 	pThis->sIOBufSize = glblGetIOBufSize();
 	pThis->tOpenMode = 0600;
 ENDobjConstruct(strm)
@@ -305,7 +309,10 @@ rsRetVal strmDestruct(strm_t *pThis)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ISOBJ_TYPE_assert(pThis, strm);
+
+	if(pThis->tOperationsMode == STREAMMODE_WRITE && pThis->iBufPtr > 0)
+		strmFlush(pThis);
 
 	/* ... then free resources */
 	if(pThis->fd != -1)
@@ -362,8 +369,8 @@ static rsRetVal strmWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 		CHKiRet(strmOpenFile(pThis));
 
 	iWritten = write(pThis->fd, pBuf, lenBuf);
-	dbgprintf("Stream 0x%lx: write wrote %d bytes, errno: %d, err %s\n", (unsigned long) pThis,
-	          iWritten, errno, strerror(errno));
+	dbgprintf("Stream 0x%lx: write wrote %d bytes to file %d, errno: %d, err %s\n", (unsigned long) pThis,
+	          iWritten, pThis->fd, errno, strerror(errno));
 	/* TODO: handle error case -- rgerhards, 2008-01-07 */
 
 	/* Now indicate buffer empty again. We do this in any case, because there
@@ -376,7 +383,9 @@ static rsRetVal strmWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	 */
 	pThis->iBufPtr = 0;
 	pThis->iCurrOffs += iWritten;
-	CHKiRet(strmCheckNextOutputFile(pThis));
+
+	if(pThis->sType == STREAMTYPE_FILE_CIRCULAR)
+		CHKiRet(strmCheckNextOutputFile(pThis));
 
 finalize_it:
 	pThis->iBufPtr = 0; /* see comment above */
@@ -490,6 +499,7 @@ DEFpropSetMeth(strm, iMaxFileSize, int)
 DEFpropSetMeth(strm, iFileNumDigits, int)
 DEFpropSetMeth(strm, tOperationsMode, int)
 DEFpropSetMeth(strm, tOpenMode, mode_t)
+DEFpropSetMeth(strm, sType, strmType_t);
 
 rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {
@@ -505,21 +515,21 @@ rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
  * rgerhards, 2008-01-09
  */
 rsRetVal
-strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
+strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
 {
 	DEFiRet;
 
 	assert(pThis != NULL);
-	assert(pszPrefix != NULL);
+	assert(pszName != NULL);
 	
-	if(iLenPrefix < 1)
+	if(iLenName < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
-	if((pThis->pszFName = malloc(sizeof(uchar) * iLenPrefix + 1)) == NULL)
+	if((pThis->pszFName = malloc(sizeof(uchar) * iLenName + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
-	memcpy(pThis->pszFName, pszPrefix, iLenPrefix + 1); /* always think about the \0! */
-	pThis->lenFilePrefix = iLenPrefix;
+	memcpy(pThis->pszFName, pszName, iLenName + 1); /* always think about the \0! */
+	pThis->lenFName = iLenName;
 
 finalize_it:
 	return iRet;
@@ -616,6 +626,7 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 
 	CHKiRet(objBeginSerialize(pStrm, (obj_t*) pThis));
 
+dbgprintf("strmSerialize in %p\n", pThis);
 	i = pThis->sType;
 	objSerializeSCALAR_VAR(pStrm, sType, INT, i);
 	objSerializeSCALAR(pStrm, iCurrFNum, INT);
@@ -624,7 +635,8 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR_VAR(pStrm, tOperationsMode, INT, i);
 	i = pThis->tOpenMode;
 	objSerializeSCALAR_VAR(pStrm, tOpenMode, INT, i);
-	i = (long) pThis->iMaxFileSize;
+	l = (long) pThis->iMaxFileSize;
+dbgprintf("max file size %ld, l: %ld\n", pThis->iMaxFileSize, l);
 	objSerializeSCALAR_VAR(pStrm, iMaxFileSize, LONG, l);
 	objSerializeSCALAR(pStrm, iMaxFiles, INT);
 	objSerializeSCALAR(pStrm, iFileNumDigits, INT);
@@ -632,6 +644,7 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	CHKiRet(objEndSerialize(pStrm));
 
 finalize_it:
+dbgprintf("strmSerialize out, iret %d\n", iRet);
 	return iRet;
 }
 

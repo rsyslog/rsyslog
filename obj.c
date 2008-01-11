@@ -125,7 +125,7 @@ static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj)
 	DEFiRet;
 
 	assert(pStrm != NULL);
-	assert(pObj != NULL);
+	ISOBJ_assert(pObj);
 
 	/* object cookie and serializer version (so far always 1) */
 	CHKiRet(strmWriteChar(pStrm, COOKIE_OBJLINE));
@@ -186,6 +186,7 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t prop
 	assert(pStrm != NULL);
 	assert(pszPropName != NULL);
 
+	dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n", pStrm, pszPropName, propType, pUsr);
 	/* if we have no user pointer, there is no need to write this property.
 	 * TODO: think if that's the righ point of view
 	 * rgerhards, 2008-01-06
@@ -193,6 +194,8 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t prop
 	if(pUsr == NULL) {
 		ABORT_FINALIZE(RS_RET_OK);
 	}
+
+	/* TODO: use the stream functions for data conversion here - should be quicker */
 
 	switch(propType) {
 		case PROPTYPE_PSZ:
@@ -413,7 +416,6 @@ static rsRetVal objDeserializeHeader(objID_t *poID, int* poVers, strm_t *pStrm)
 	*poVers = oVers;
 
 finalize_it:
-dbgprintf("DeserializeHeader oid: %ld, vers: %ld, iRet: %d\n", ioID, oVers, iRet);
 	return iRet;
 }
 
@@ -632,7 +634,7 @@ rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo)
 	assert(pInfo != NULL);
 	if(oID < 1 || oID > OBJ_NUM_IDS)
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
-	
+
 	arrObjInfo[oID] = pInfo;
 
 finalize_it:

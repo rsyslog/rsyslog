@@ -49,7 +49,8 @@
 
 /* stream types */
 typedef enum {
-	STREAMTYPE_FILE = 0
+	STREAMTYPE_FILE_SINGLE = 0,
+	STREAMTYPE_FILE_CIRCULAR = 1
 } strmType_t;
 
 typedef enum {
@@ -65,7 +66,7 @@ typedef struct strm_s {
 	/* descriptive properties */
 	int iCurrFNum;/* current file number (NOT descriptor, but the number in the file name!) */
 	uchar *pszFName; /* prefix for generated filenames */
-	int lenFilePrefix;
+	int lenFName;
 	strmMode_t tOperationsMode;
 	mode_t tOpenMode;
 	size_t iMaxFileSize;/* maximum size a file may grow to */
@@ -91,13 +92,13 @@ rsRetVal strmConstruct(strm_t **ppThis);
 rsRetVal strmConstructFinalize(strm_t __attribute__((unused)) *pThis);
 rsRetVal strmDestruct(strm_t *pThis);
 rsRetVal strmSetMaxFileSize(strm_t *pThis, size_t iMaxFileSize);
-rsRetVal strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+rsRetVal strmSetFileName(strm_t *pThis, uchar *pszName, size_t iLenName);
 rsRetVal strmReadChar(strm_t *pThis, uchar *pC);
 rsRetVal strmUnreadChar(strm_t *pThis, uchar c);
 rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
 rsRetVal strmWriteChar(strm_t *pThis, uchar c);
 rsRetVal strmWriteLong(strm_t *pThis, long i);
-rsRetVal strmSetFilePrefix(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+rsRetVal strmSetFName(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir);
 rsRetVal strmFlush(strm_t *pThis);
 rsRetVal strmRecordBegin(strm_t *pThis);
@@ -110,5 +111,6 @@ PROTOTYPEpropSetMeth(strm, iMaxFiles, int);
 PROTOTYPEpropSetMeth(strm, iFileNumDigits, int);
 PROTOTYPEpropSetMeth(strm, tOperationsMode, int);
 PROTOTYPEpropSetMeth(strm, tOpenMode, mode_t);
+PROTOTYPEpropSetMeth(strm, sType, strmType_t);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

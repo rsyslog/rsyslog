@@ -69,8 +69,14 @@
 #define objGetName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
 #define objGetObjID(pThis) (((obj_t*) (pThis))->pObjInfo->objID)
 #define objGetVersion(pThis) (((obj_t*) (pThis))->pObjInfo->iObjVers)
-/* must be called in Constructor: */
-#define objConstructSetObjInfo(pThis) ((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ;
+/* the next macro MUST be called in Constructors: */
+#ifndef NDEBUG /* this means if debug... */
+#	define objConstructSetObjInfo(pThis) \
+		((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ; \
+		((obj_t*) (pThis))->iObjCooCKiE = 0xBADEFEE
+#else
+#	define objConstructSetObjInfo(pThis) ((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ
+#endif
 #define objDestruct(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DESTRUCT])(pThis)
 #define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
 

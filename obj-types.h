@@ -83,12 +83,34 @@ typedef struct objInfo_s {
 
 typedef struct obj {	/* the dummy struct that each derived class can be casted to */
 	objInfo_t *pObjInfo;
+#ifndef NDEBUG /* this means if debug... */
+	unsigned int iObjCooCKiE; /* must always be 0xBADEFEE for a valid object */
+#endif
 } obj_t;
 
 /* macros which must be gloablly-visible (because they are used during definition of
  * other objects.
  */
-#define BEGINobjInstance objInfo_t *pObjInfo
+#ifndef NDEBUG /* this means if debug... */
+#	define BEGINobjInstance \
+		objInfo_t *pObjInfo; \
+		unsigned int iObjCooCKiE; /* prevent name conflict, thus the strange name */ 
+#	define ISOBJ_assert(pObj) \
+		{ \
+		assert(pObj != NULL); \
+		assert((unsigned) pObj->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+		}
+#	define ISOBJ_TYPE_assert(pObj, objType) \
+		{ \
+		assert(pObj != NULL); \
+		assert((unsigned) pObj->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+		assert(objGetObjID(pObj) == OBJ##objType); \
+		}
+#else /* non-debug mode, no checks but much faster */
+#	define BEGINobjInstance objInfo_t *pObjInfo; 
+#	define ISOBJ_TYPE_assert(pObj, objType)
+#	define ISOBJ_assert(pObj, objType)
+#endif
 
 #define DEFpropSetMeth(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
@@ -135,6 +157,7 @@ finalize_it: \
 		if((pThis = (obj##_t *)calloc(1, sizeof(obj##_t))) == NULL) { \
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY); \
 		} \
+		objConstructSetObjInfo(pThis); \
 	 \
 		obj##Initialize(pThis); \
 	 \

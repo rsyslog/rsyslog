@@ -69,7 +69,7 @@ typedef enum {
 
 typedef struct qWrkThrd_s {
 	pthread_t thrdID;  /* thread ID */
-	volatile qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
+	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
 } qWrkThrd_t;	/* type for queue worker threads */
 
 /* the queue object */
@@ -128,5 +128,6 @@ rsRetVal queueSetFilePrefix(queue_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
 PROTOTYPEpropSetMeth(queue, bImmediateShutdown, int);
+#define queueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */
