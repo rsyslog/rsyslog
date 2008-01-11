@@ -92,6 +92,7 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t prop
 rsRetVal objEndSerialize(strm_t *pStrm);
 rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo);
 rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pSerStore);
+rsRetVal objDeserializePropBag(obj_t *pObj, strm_t *pStrm);
 PROTOTYPEObjClassInit(obj);
 
 #endif /* #ifndef OBJ_H_INCLUDED */

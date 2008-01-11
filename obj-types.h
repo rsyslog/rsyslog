@@ -58,9 +58,9 @@ typedef enum {	/* IDs of known object "types/classes" */
 	OBJNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
 	OBJMsg = 1,
 	OBJstrm = 2,
-	OBJqueue = 3
+	OBJqueue = 3	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
 } objID_t;	
-#define OBJ_NUM_IDS 3
+#define OBJ_NUM_IDS 4
 
 typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
 		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04

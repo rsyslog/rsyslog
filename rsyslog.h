@@ -105,6 +105,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVALID_TRAILER = -2034, /**< invalid trailer */
 	RS_RET_VALUE_TOO_LOW = -2035, /**< a provided value is too low */
 	RS_RET_FILE_PREFIX_MISSING = -2036, /**< a required file prefix (parameter?) is missing */
+	RS_RET_INVALID_HEADER_RECTYPE = -2037, /**< invalid record type in header or invalid header */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */

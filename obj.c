@@ -407,7 +407,7 @@ finalize_it:
 /* de-serialize an object header
  * rgerhards, 2008-01-07
  */
-static rsRetVal objDeserializeHeader(objID_t *poID, int* poVers, strm_t *pStrm)
+static rsRetVal objDeserializeHeader(uchar *pszRecType, objID_t *poID, int* poVers, strm_t *pStrm)
 {
 	DEFiRet;
 	long ioID;
@@ -416,12 +416,13 @@ static rsRetVal objDeserializeHeader(objID_t *poID, int* poVers, strm_t *pStrm)
 
 	assert(poID != NULL);
 	assert(poVers != NULL);
+	assert(!strcmp((char*) pszRecType, "Obj") || !strcmp((char*) pszRecType, "OPB"));
 
 	/* check header cookie */
 	NEXTC; if(c != COOKIE_OBJLINE) ABORT_FINALIZE(RS_RET_INVALID_HEADER);
-	NEXTC; if(c != 'O') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
-	NEXTC; if(c != 'b') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
-	NEXTC; if(c != 'j') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
+	NEXTC; if(c != pszRecType[0]) ABORT_FINALIZE(RS_RET_INVALID_HEADER_RECTYPE);
+	NEXTC; if(c != pszRecType[1]) ABORT_FINALIZE(RS_RET_INVALID_HEADER_RECTYPE);
+	NEXTC; if(c != pszRecType[2]) ABORT_FINALIZE(RS_RET_INVALID_HEADER_RECTYPE);
 	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
 	NEXTC; if(c != '1') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
 	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
@@ -581,11 +582,38 @@ finalize_it:
 }
 
 
+/* De-serialize the properties of an object. This includes processing
+ * of the trailer. Header must already have been processed.
+ * rgerhards, 2008-01-11
+ */
+rsRetVal objDeserializeProperties(obj_t *pObj, objID_t oID, strm_t *pStrm)
+{
+	DEFiRet;
+	property_t propBuf;
+
+	ISOBJ_assert(pObj);
+	ISOBJ_TYPE_assert(pStrm, strm);
+
+	iRet = objDeserializeProperty(&propBuf, pStrm);
+	while(iRet == RS_RET_OK) {
+		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_SETPROPERTY](pObj, &propBuf));
+		iRet = objDeserializeProperty(&propBuf, pStrm);
+	}
+	rsCStrDestruct(propBuf.pcsName); /* todo: a destructor would be nice here... -- rger, 2008-01-07 */
+	// TODO: do we have a mem leak for the other CStr in this struct?
+
+	if(iRet != RS_RET_NO_PROPLINE)
+		FINALIZE;
+
+	CHKiRet(objDeserializeTrailer(pStrm)); /* do trailer checks */
+finalize_it:
+	return iRet;
+}
+
+
 /* De-Serialize an object.
  * Params: Pointer to object Pointer (pObj) (like a obj_t**, but can not do that due to compiler warning)
  * expected object ID (to check against)
- * Function that returns the next character from the serialized object (from file, memory, whatever)
- * Pointer to be passed to the function
  * The caller must destruct the created object.
  * rgerhards, 2008-01-07
  */
@@ -594,7 +622,6 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm)
 	DEFiRet;
 	rsRetVal iRetLocal;
 	obj_t *pObj = NULL;
-	property_t propBuf;
 	objID_t oID = 0; /* this assignment is just to supress a compiler warning - this saddens me */
 	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
 
@@ -610,7 +637,7 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm)
 	 * rgerhards, 2008-07-08
 	 */
 	do {
-		iRetLocal = objDeserializeHeader(&oID, &oVers, pStrm);
+		iRetLocal = objDeserializeHeader((uchar*) "Obj", &oID, &oVers, pStrm);
 		if(iRetLocal != RS_RET_OK) {
 			dbgprintf("objDeserialize error %d during header processing - trying to recover\n", iRetLocal);
 			CHKiRet(objDeserializeTryRecover(pStrm));
@@ -622,23 +649,57 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm)
 	CHKiRet(arrObjInfo[oID]->objMethods[objMethod_CONSTRUCT](&pObj));
 
 	/* we got the object, now we need to fill the properties */
-	iRet = objDeserializeProperty(&propBuf, pStrm);
-	while(iRet == RS_RET_OK) {
-		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_SETPROPERTY](pObj, &propBuf));
-		iRet = objDeserializeProperty(&propBuf, pStrm);
-	}
-	rsCStrDestruct(propBuf.pcsName); /* todo: a destructor would be nice here... -- rger, 2008-01-07 */
-
-	if(iRet != RS_RET_NO_PROPLINE)
-		FINALIZE;
-
-	CHKiRet(objDeserializeTrailer(pStrm)); /* do trailer checks */
+	CHKiRet(objDeserializeProperties(pObj, oID, pStrm));
 
 	/* we have a valid object, let's finalize our work and return */
 	if(objInfoIsImplemented(arrObjInfo[oID], objMethod_CONSTRUCTION_FINALIZER))
 		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_CONSTRUCTION_FINALIZER](pObj));
 
 	*((obj_t**) ppObj) = pObj;
+
+finalize_it:
+	return iRet;
+}
+
+
+/* De-Serialize an object property bag. As a property bag contains only partial properties,
+ * it is not instanciable. Thus, the caller must provide a pointer of an already-instanciated
+ * object of the correct type.
+ * Params: Pointer to object (pObj)
+ * Pointer to be passed to the function
+ * The caller must destruct the created object.
+ * rgerhards, 2008-01-07
+ */
+rsRetVal objDeserializePropBag(obj_t *pObj, strm_t *pStrm)
+{
+	DEFiRet;
+	rsRetVal iRetLocal;
+	objID_t oID = 0; /* this assignment is just to supress a compiler warning - this saddens me */
+	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
+
+	ISOBJ_assert(pObj);
+	ISOBJ_TYPE_assert(pStrm, strm);
+
+	/* we de-serialize the header. if all goes well, we are happy. However, if
+	 * we experience a problem, we try to recover. We do this by skipping to
+	 * the next object header. This is defined via the line-start cookies. In
+	 * worst case, we exhaust the queue, but then we receive EOF return state
+	 * from objDeserializeTryRecover(), what will cause us to ultimately give up.
+	 * rgerhards, 2008-07-08
+	 */
+	do {
+		iRetLocal = objDeserializeHeader((uchar*) "OPB", &oID, &oVers, pStrm);
+		if(iRetLocal != RS_RET_OK) {
+			dbgprintf("objDeserializePropBag error %d during header - trying to recover\n", iRetLocal);
+			CHKiRet(objDeserializeTryRecover(pStrm));
+		}
+	} while(iRetLocal != RS_RET_OK);
+
+	if(oID != objGetObjID(pObj))
+		ABORT_FINALIZE(RS_RET_INVALID_OID);
+
+	/* we got the object, now we need to fill the properties */
+	CHKiRet(objDeserializeProperties(pObj, oID, pStrm));
 
 finalize_it:
 	return iRet;

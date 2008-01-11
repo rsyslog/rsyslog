@@ -646,8 +646,6 @@ static rsRetVal queuePersist(queue_t *pThis)
 	 * we know when somebody has changed the queue type... -- rgerhards, 2008-01-11
 	 */
 	CHKiRet(objBeginSerializePropBag(psQIF, (obj_t*) pThis));
-	i = 2; /* we serialize the number of properties, so that we know when we read the propbag */
-	objSerializeSCALAR_VAR(psQIF, NumberPropertyBagRecrods, INT, i);
 	i = pThis->qType;
 	objSerializeSCALAR_VAR(psQIF, qType, INT, i);
 	objSerializeSCALAR(psQIF, iQueueSize, INT);
