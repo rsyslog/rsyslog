@@ -211,7 +211,7 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t prop
 	assert(pStrm != NULL);
 	assert(pszPropName != NULL);
 
-	dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n", pStrm, pszPropName, propType, pUsr);
+	/*dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n", pStrm, pszPropName, propType, pUsr);*/
 	/* if we have no user pointer, there is no need to write this property.
 	 * TODO: think if that's the righ point of view
 	 * rgerhards, 2008-01-06

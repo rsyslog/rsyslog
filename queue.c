@@ -619,10 +619,14 @@ static rsRetVal queuePersist(queue_t *pThis)
 	strm_t *psQIF; /* Queue Info File */
 	uchar pszQIFNam[MAXFNAME];
 	size_t lenQIFNam;
+	int i;
 
 	assert(pThis != NULL);
 	if(pThis->iQueueSize == 0)
 		FINALIZE; /* nothing left to do, so be happy */
+
+	if(pThis->qType != QUEUETYPE_DISK)
+		ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED); /* TODO: later... */
 
 	dbgprintf("Queue 0x%lx: persisting queue to disk, %d entries...\n", queueGetID(pThis), pThis->iQueueSize);
 	/* Construct file name */
@@ -635,8 +639,18 @@ static rsRetVal queuePersist(queue_t *pThis)
 	CHKiRet(strmSetFName(psQIF, pszQIFNam, lenQIFNam));
 	CHKiRet(strmConstructFinalize(psQIF));
 
-	/* first, write the property bag for ourselfs */
+	/* first, write the property bag for ourselfs
+	 * And, surprisingly enough, we currently need to persist only the size of the
+	 * queue. All the rest is re-created with then-current config parameters when the
+	 * queue is re-created. Well, we'll also save the current queue type, just so that
+	 * we know when somebody has changed the queue type... -- rgerhards, 2008-01-11
+	 */
 	CHKiRet(objBeginSerializePropBag(psQIF, (obj_t*) pThis));
+	i = 2; /* we serialize the number of properties, so that we know when we read the propbag */
+	objSerializeSCALAR_VAR(psQIF, NumberPropertyBagRecrods, INT, i);
+	i = pThis->qType;
+	objSerializeSCALAR_VAR(psQIF, qType, INT, i);
+	objSerializeSCALAR(psQIF, iQueueSize, INT);
 	CHKiRet(objEndSerialize(psQIF));
 
 	/* this is disk specific and must be moved to a function */

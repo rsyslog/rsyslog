@@ -311,7 +311,7 @@ rsRetVal strmDestruct(strm_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, strm);
 
-	if(pThis->tOperationsMode == STREAMMODE_WRITE && pThis->iBufPtr > 0)
+	if(pThis->tOperationsMode == STREAMMODE_WRITE)
 		strmFlush(pThis);
 
 	/* ... then free resources */
@@ -626,7 +626,6 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 
 	CHKiRet(objBeginSerialize(pStrm, (obj_t*) pThis));
 
-dbgprintf("strmSerialize in %p\n", pThis);
 	i = pThis->sType;
 	objSerializeSCALAR_VAR(pStrm, sType, INT, i);
 	objSerializeSCALAR(pStrm, iCurrFNum, INT);
@@ -636,7 +635,6 @@ dbgprintf("strmSerialize in %p\n", pThis);
 	i = pThis->tOpenMode;
 	objSerializeSCALAR_VAR(pStrm, tOpenMode, INT, i);
 	l = (long) pThis->iMaxFileSize;
-dbgprintf("max file size %ld, l: %ld\n", pThis->iMaxFileSize, l);
 	objSerializeSCALAR_VAR(pStrm, iMaxFileSize, LONG, l);
 	objSerializeSCALAR(pStrm, iMaxFiles, INT);
 	objSerializeSCALAR(pStrm, iFileNumDigits, INT);
@@ -644,7 +642,6 @@ dbgprintf("max file size %ld, l: %ld\n", pThis->iMaxFileSize, l);
 	CHKiRet(objEndSerialize(pStrm));
 
 finalize_it:
-dbgprintf("strmSerialize out, iret %d\n", iRet);
 	return iRet;
 }
 
