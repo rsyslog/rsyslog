@@ -119,17 +119,22 @@ rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pH
 /* --------------- object serializiation / deserialization support --------------- */
 
 
-/* serialize the header of an object */
-static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj)
+/* serialize the header of an object
+ * pszRecType must be either "Obj" (Object) or "OPB" (Object Property Bag)
+ */
+static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj, uchar *pszRecType)
 {
 	DEFiRet;
 
-	assert(pStrm != NULL);
+	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_assert(pObj);
+	assert(!strcmp((char*) pszRecType, "Obj") || !strcmp((char*) pszRecType, "OPB"));
 
 	/* object cookie and serializer version (so far always 1) */
 	CHKiRet(strmWriteChar(pStrm, COOKIE_OBJLINE));
-	CHKiRet(strmWrite(pStrm, (uchar*) "Obj1", sizeof("Obj1") - 1));
+	CHKiRet(strmWrite(pStrm, (uchar*) pszRecType, 3)); /* record types are always 3 octets */
+	CHKiRet(strmWriteChar(pStrm, ':'));
+	CHKiRet(strmWriteChar(pStrm, '1'));
 
 	/* object type, version and string length */
 	CHKiRet(strmWriteChar(pStrm, ':'));
@@ -150,24 +155,44 @@ static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj)
 finalize_it:
 	return iRet;
 }
-/* begin serialization of an object - this is a very simple hook. It once wrote the wrapper,
- * now it only constructs the string object. We still leave it in here so that we may utilize
- * it in the future (it is a nice abstraction). iExpcectedObjSize is an optimization setting.
- * It must contain the size (in characters) that the calling object expects the string 
- * representation to grow to. Specifying a bit too large size doesn't hurt. A too-small size
- * does not cause any malfunction, but results in more often memory copies than necessary. So
- * the caller is advised to be conservative in guessing. Binary multiples are recommended.
+
+
+/* begin serialization of an object
  * rgerhards, 2008-01-06
  */
 rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj)
 {
 	DEFiRet;
 
-	assert(pStrm != NULL);
-	assert(pObj != NULL);
+	ISOBJ_TYPE_assert(pStrm, strm);
+	ISOBJ_assert(pObj);
 	
 	CHKiRet(strmRecordBegin(pStrm));
-	CHKiRet(objSerializeHeader(pStrm, pObj));
+	CHKiRet(objSerializeHeader(pStrm, pObj, (uchar*) "Obj"));
+
+finalize_it:
+	return iRet;
+}
+	
+
+/* begin serialization of an object's property bag
+ * Note: a property bag is used to serialize some of an objects
+ * properties, but not necessarily all. A good example is the queue
+ * object, which at some stage needs to serialize a number of its 
+ * properties, but not the queue data itself. From the object point
+ * of view, a property bag can not be used to re-instantiate an object.
+ * Otherwise, the serialization is exactly the same.
+ * rgerhards, 2008-01-11
+ */
+rsRetVal objBeginSerializePropBag(strm_t *pStrm, obj_t *pObj)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pStrm, strm);
+	ISOBJ_assert(pObj);
+	
+	CHKiRet(strmRecordBegin(pStrm));
+	CHKiRet(objSerializeHeader(pStrm, pObj, (uchar*) "OPB"));
 
 finalize_it:
 	return iRet;
@@ -397,6 +422,7 @@ static rsRetVal objDeserializeHeader(objID_t *poID, int* poVers, strm_t *pStrm)
 	NEXTC; if(c != 'O') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
 	NEXTC; if(c != 'b') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
 	NEXTC; if(c != 'j') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
+	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_HEADER);
 	NEXTC; if(c != '1') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
 	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
 

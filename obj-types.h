@@ -57,7 +57,8 @@ typedef struct {
 typedef enum {	/* IDs of known object "types/classes" */
 	OBJNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
 	OBJMsg = 1,
-	OBJstrm = 2
+	OBJstrm = 2,
+	OBJqueue = 3
 } objID_t;	
 #define OBJ_NUM_IDS 3
 

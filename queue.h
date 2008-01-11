@@ -74,6 +74,7 @@ typedef struct qWrkThrd_s {
 
 /* the queue object */
 typedef struct queue_s {
+	BEGINobjInstance;
 	queueType_t	qType;
 	int	iQueueSize;	/* Current number of elements in the queue */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
@@ -127,6 +128,7 @@ rsRetVal queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize);
 rsRetVal queueSetFilePrefix(queue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
+PROTOTYPEObjClassInit(queue);
 PROTOTYPEpropSetMeth(queue, bImmediateShutdown, int);
 #define queueGetID(pThis) ((unsigned long) pThis)
 

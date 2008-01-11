@@ -46,6 +46,7 @@
 #include "obj.h"
 
 /* static data */
+DEFobjStaticHelpers
 
 /* methods */
 
@@ -498,6 +499,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	}
 
 	/* we have an object, so let's fill the properties */
+	objConstructSetObjInfo(pThis);
 	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glblGetWorkDir())) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
@@ -632,6 +634,10 @@ static rsRetVal queuePersist(queue_t *pThis)
 	CHKiRet(strmSetsType(psQIF, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strmSetFName(psQIF, pszQIFNam, lenQIFNam));
 	CHKiRet(strmConstructFinalize(psQIF));
+
+	/* first, write the property bag for ourselfs */
+	CHKiRet(objBeginSerializePropBag(psQIF, (obj_t*) pThis));
+	CHKiRet(objEndSerialize(psQIF));
 
 	/* this is disk specific and must be moved to a function */
 	CHKiRet(strmSerialize(pThis->tVars.disk.pWrite, psQIF));
@@ -798,6 +804,17 @@ finalize_it:
 
 /* some simple object access methods */
 DEFpropSetMeth(queue, bImmediateShutdown, int);
+
+
+/* Initialize the stream class. Must be called as the very first method
+ * before anything else is called inside this class.
+ * rgerhards, 2008-01-09
+ */
+BEGINObjClassInit(queue, 1)
+	//OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
+	//OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);
+	//OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strmConstructFinalize);
+ENDObjClassInit(strm)
 
 /*
  * vi:set ai:
