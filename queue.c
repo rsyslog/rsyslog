@@ -749,8 +749,6 @@ static rsRetVal queuePersist(queue_t *pThis)
 	size_t lenQIFNam;
 
 	assert(pThis != NULL);
-	if(pThis->qType != QUEUETYPE_DISK)
-		ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED); /* TODO: later... */
 
 	dbgprintf("Queue 0x%lx: persisting queue to disk, %d entries...\n", queueGetID(pThis), pThis->iQueueSize);
 	/* Construct file name */
@@ -765,6 +763,9 @@ static rsRetVal queuePersist(queue_t *pThis)
 		CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
 		FINALIZE; /* nothing left to do, so be happy */
 	}
+
+	if(pThis->qType != QUEUETYPE_DISK)
+		ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED); /* TODO: later... */
 
 	CHKiRet(strmConstruct(&psQIF));
 	CHKiRet(strmSetDir(psQIF, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
@@ -816,9 +817,7 @@ rsRetVal queueChkPersist(queue_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, queue);
 
-dbgprintf("chkPersist: PersUpdCnt %d, UpdsSincePers %d\n", pThis->iPersistUpdCnt, pThis->iUpdsSincePersist);
 	if(pThis->iPersistUpdCnt && ++pThis->iUpdsSincePersist >= pThis->iPersistUpdCnt) {
-dbgprintf("persistintg queue info!\n");
 		queuePersist(pThis);
 		pThis->iUpdsSincePersist = 0;
 	}
@@ -841,11 +840,9 @@ rsRetVal queueDestruct(queue_t *pThis)
 		pThis->pWrkThrds = NULL;
 	}
 
-	/* now check if we need to persist the queue */
-	if(pThis->bImmediateShutdown) {
-		CHKiRet_Hdlr(queuePersist(pThis)) {
-			dbgprintf("Queue 0x%lx: error %d persisting queue - data lost!\n", (unsigned long) pThis, iRet);
-		}
+	/* persist the queue (we always do that - queuePersits() does cleanup it the queue is empty) */
+	CHKiRet_Hdlr(queuePersist(pThis)) {
+		dbgprintf("Queue 0x%lx: error %d persisting queue - data lost!\n", (unsigned long) pThis, iRet);
 	}
 
 	/* ... then free resources */

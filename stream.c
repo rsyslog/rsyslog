@@ -1,3 +1,4 @@
+//TODO: O_TRUC mode!
 /* The serial stream class.
  *
  * A serial stream provides serial data access. In theory, serial streams
