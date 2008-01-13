@@ -3400,7 +3400,7 @@ init(void)
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
 	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName",
 		    (pszMainMsgQFName == NULL ? (uchar*) "mainq" : pszMainMsgQFName));
-	setQPROP(queueSetiPersistUpdCnt, "$MainMsgQueuePersistUpdateCount", iMainMsgQPersistUpdCnt);
+	setQPROP(queueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -4562,7 +4562,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueimmediateshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQImmediateShutdown, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuepersistupdatecount", 0, eCmdHdlrInt, NULL, &iMainMsgQPersistUpdCnt, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &iMainMsgQPersistUpdCnt, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iMainMsgQueueNumWorkers, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL));

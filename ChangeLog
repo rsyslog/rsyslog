@@ -1,8 +1,13 @@
 ---------------------------------------------------------------------------
 Version 3.10.2 (rgerhards), 2008-01-1?
+- added the ability to keep stop rsyslogd without the need to drain
+  the main message queue. In disk queue mode, rsyslog continues to
+  run from the point where it stopped. In case of a system failure, it
+  continues to process messages from the last checkpoint.
 - fixed a bug that caused a segfault on startup when no $WorkDir directive
   was specified in rsyslog.conf
 - added $MainMsgQueueImmediateShutdown config directive
+- added $MainMsgQueueCheckpointInterval config file directive
 ---------------------------------------------------------------------------
 Version 3.10.1 (rgerhards), 2008-01-10
 - implemented the "disk" queue mode. However, it currently is of very
