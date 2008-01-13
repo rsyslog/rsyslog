@@ -48,6 +48,9 @@
 /* static data */
 DEFobjStaticHelpers
 
+/* forward-definitions */
+rsRetVal queueChkPersist(queue_t *pThis);
+
 /* methods */
 
 /* first, we define type-specific handlers. The provide a generic functionality,
@@ -550,6 +553,7 @@ queueWorker(void *arg)
 		if(pThis->iQueueSize > 0) {
 			/* dequeue element (still protected from mutex) */
 			iRet = queueDel(pThis, &pUsr);
+			queueChkPersist(pThis); // when we support peek(), we must do this down after the del!
 			pthread_mutex_unlock(pThis->mut);
 			pthread_cond_signal (pThis->notFull);
 			/* do actual processing (the lengthy part, runs in parallel)
@@ -743,7 +747,6 @@ static rsRetVal queuePersist(queue_t *pThis)
 	strm_t *psQIF = NULL;; /* Queue Info File */
 	uchar pszQIFNam[MAXFNAME];
 	size_t lenQIFNam;
-	int i;
 
 	assert(pThis != NULL);
 	if(pThis->qType != QUEUETYPE_DISK)
@@ -758,6 +761,8 @@ static rsRetVal queuePersist(queue_t *pThis)
 			unlink((char*)pszQIFNam);
 			pThis->bNeedDelQIF = 0;
 		}
+		/* indicate spool file needs to be deleted */
+		CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
 		FINALIZE; /* nothing left to do, so be happy */
 	}
 
@@ -775,8 +780,6 @@ static rsRetVal queuePersist(queue_t *pThis)
 	 * we know when somebody has changed the queue type... -- rgerhards, 2008-01-11
 	 */
 	CHKiRet(objBeginSerializePropBag(psQIF, (obj_t*) pThis));
-	i = pThis->qType;
-	objSerializeSCALAR_VAR(psQIF, qType, INT, i);
 	objSerializeSCALAR(psQIF, iQueueSize, INT);
 	CHKiRet(objEndSerialize(psQIF));
 
@@ -786,12 +789,39 @@ static rsRetVal queuePersist(queue_t *pThis)
 	
 	/* persist queue object itself */
 
-	/* tell the input file object that it must not delete the file on close */
+	/* tell the input file object that it must not delete the file on close if the queue is non-empty */
 	CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 0));
+
+	/* we have persisted the queue object. So whenever it comes to an empty queue,
+	 * we need to delete the QIF. Thus, we indicte that need.
+	 */
+	pThis->bNeedDelQIF = 1;
 
 finalize_it:
 	if(psQIF != NULL)
 		strmDestruct(psQIF);
+
+	return iRet;
+}
+
+
+/* check if we need to persist the current queue info. If an
+ * error occurs, thus should be ignored by caller (but we still
+ * abide to our regular call interface)...
+ * rgerhards, 2008-01-13
+ */
+rsRetVal queueChkPersist(queue_t *pThis)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, queue);
+
+dbgprintf("chkPersist: PersUpdCnt %d, UpdsSincePers %d\n", pThis->iPersistUpdCnt, pThis->iUpdsSincePersist);
+	if(pThis->iPersistUpdCnt && ++pThis->iUpdsSincePersist >= pThis->iPersistUpdCnt) {
+dbgprintf("persistintg queue info!\n");
+		queuePersist(pThis);
+		pThis->iUpdsSincePersist = 0;
+	}
 
 	return iRet;
 }
@@ -922,6 +952,7 @@ queueEnqObj(queue_t *pThis, void *pUsr)
 		}
 	}
 	CHKiRet(queueAdd(pThis, pUsr));
+	queueChkPersist(pThis);
 
 finalize_it:
 	/* now activate the worker thread */
@@ -938,6 +969,16 @@ finalize_it:
 
 /* some simple object access methods */
 DEFpropSetMeth(queue, bImmediateShutdown, int);
+DEFpropSetMeth(queue, iPersistUpdCnt, int);
+#if 0
+rsRetVal queueSetiPersistUpdCnt(queue_t *pThis, int pVal)
+{ 
+	dbgprintf("queueSetiPersistUpdCnt(), val %d\n", pVal);
+	pThis->iPersistUpdCnt = pVal; 
+dbgprintf("queSetiPersist..(): PersUpdCnt %d, UpdsSincePers %d\n", pThis->iPersistUpdCnt, pThis->iUpdsSincePersist);
+	return RS_RET_OK; 
+}
+#endif
 
 
 /* This function can be used as a generic way to set properties. Only the subset

@@ -421,6 +421,7 @@ static queueType_t MainMsgQueType = QUEUETYPE_FIXED_ARRAY;	/* type of the main m
 static uchar *pszMainMsgQFName = NULL;				/* prefix for the main message queue file */
 static size_t iMainMsgQueMaxFileSize = 1024*1024;
 static int bMainMsgQImmediateShutdown = 0;			/* shut down the queue immediately? */
+static int iMainMsgQPersistUpdCnt = 0;				/* persist queue info every n updates */
 
 
 /* This structure represents the files that will have log
@@ -525,6 +526,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQueMaxFileSize = 1024 * 1024;
 	iMainMsgQueueNumWorkers = 1;
 	bMainMsgQImmediateShutdown = 0;
+	iMainMsgQPersistUpdCnt = 0;
 	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 
 	return RS_RET_OK;
@@ -3138,8 +3140,8 @@ static void dbgPrintInitInfo(void)
 			cCCEscapeChar);
 
 	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
-	dbgprintf("Main queue worker threads: %d, ImmediateShutdown: %d\n",
-		  iMainMsgQueueNumWorkers, bMainMsgQImmediateShutdown);
+	dbgprintf("Main queue worker threads: %d, ImmediateShutdown: %d, Perists every %d updates.\n",
+		  iMainMsgQueueNumWorkers, bMainMsgQImmediateShutdown, iMainMsgQPersistUpdCnt);
 	dbgprintf("Work Directory: '%s'.\n", pszWorkDir);
 }
 
@@ -3398,6 +3400,7 @@ init(void)
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
 	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName",
 		    (pszMainMsgQFName == NULL ? (uchar*) "mainq" : pszMainMsgQFName));
+	setQPROP(queueSetiPersistUpdCnt, "$MainMsgQueuePersistUpdateCount", iMainMsgQPersistUpdCnt);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -4559,6 +4562,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueimmediateshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQImmediateShutdown, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuepersistupdatecount", 0, eCmdHdlrInt, NULL, &iMainMsgQPersistUpdCnt, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iMainMsgQueueNumWorkers, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL));
