@@ -81,6 +81,8 @@ typedef struct queue_s {
 	int 	iNumWorkerThreads;/* number of worker threads to use */
 	qWrkThrd_t *pWrkThrds;/* array with control structure for the worker thread(s) associated with this queue */
 	int	bImmediateShutdown;/* on shutdown, drain the queue --> 0 / do NOT drain the queue --> 1 */
+	//int	bNeedPersist;	/* does the queue need to be persisted on disk (updated since last persist?) */
+	int	bNeedDelQIF;	/* does the QIF file need to be deleted when queue becomes empty? */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dequeued messages */
 	/* type-specific handlers (set during construction) */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);

@@ -213,7 +213,6 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t prop
 	assert(pszPropName != NULL);
 
 	/*dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n", pStrm, pszPropName, propType, pUsr);*/
-	dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n", pStrm, pszPropName, propType, pUsr);
 	/* if we have no user pointer, there is no need to write this property.
 	 * TODO: think if that's the righ point of view
 	 * rgerhards, 2008-01-06
@@ -620,7 +619,7 @@ finalize_it:
  * The caller must destruct the created object.
  * rgerhards, 2008-01-07
  */
-rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm)
+rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -654,6 +653,12 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm)
 	/* we got the object, now we need to fill the properties */
 	CHKiRet(objDeserializeProperties(pObj, oID, pStrm));
 
+	/* check if we need to call a fixup function that modifies the object
+	 * before it is finalized. -- rgerhards, 2008-01-13
+	 */
+	if(fFixup != NULL)
+		CHKiRet(fFixup(pObj, pUsr));
+
 	/* we have a valid object, let's finalize our work and return */
 	if(objInfoIsImplemented(arrObjInfo[oID], objMethod_CONSTRUCTION_FINALIZER))
 		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_CONSTRUCTION_FINALIZER](pObj));
@@ -661,6 +666,9 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm)
 	*((obj_t**) ppObj) = pObj;
 
 finalize_it:
+	if(iRet != RS_RET_OK && pObj != NULL)
+		free(pObj); // TODO: check if we can call destructor 2008-01-13 rger
+
 	return iRet;
 }
 

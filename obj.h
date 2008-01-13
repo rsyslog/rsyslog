@@ -92,7 +92,7 @@ rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj);
 rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t propType, void *pUsr);
 rsRetVal objEndSerialize(strm_t *pStrm);
 rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo);
-rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pSerStore);
+rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);
 rsRetVal objDeserializePropBag(obj_t *pObj, strm_t *pStrm);
 PROTOTYPEObjClassInit(obj);
 

@@ -3403,6 +3403,7 @@ init(void)
 #	undef setQPROPstr
 
 	/* ... and finally start the queue! */
+Initialized = 1;
 	CHKiRet_Hdlr(queueStart(pMsgQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not start message queue - rsyslogd can not run!\n", iRet);

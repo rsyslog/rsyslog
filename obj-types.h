@@ -116,6 +116,7 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 #define DEFpropSetMeth(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
 	{ \
+		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
 		pThis->prop = pVal; \
 		return RS_RET_OK; \
 	}
