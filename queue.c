@@ -1060,9 +1060,10 @@ queueEnqObj(queue_t *pThis, void *pUsr)
 	 * thread is canceled (most important use case is input module termination).
 	 * rgerhards, 2008-01-08
 	 */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	if(pThis->pWrkThrds != NULL)
+	if(pThis->pWrkThrds != NULL) {
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 		pthread_mutex_lock(pThis->mut);
+	}
 		
 	while(pThis->iQueueSize >= pThis->iMaxQueueSize) {
 		dbgprintf("Queue 0x%lx: enqueueMsg: queue FULL - waiting to drain.\n", (unsigned long) pThis);
@@ -1083,9 +1084,9 @@ finalize_it:
 		pthread_mutex_unlock(pThis->mut);
 		i = pthread_cond_signal(pThis->notEmpty);
 		dbgprintf("Queue 0x%lx: EnqueueMsg signaled condition (%d)\n", (unsigned long) pThis, i);
+		pthread_setcancelstate(iCancelStateSave, NULL);
 	}
 
-	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	return iRet;
 }
