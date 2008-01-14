@@ -4657,7 +4657,7 @@ static void mainThread()
 	pTmp = template_StdUsrMsgFmt;
 	tplAddLine(" StdUsrMsgFmt", &pTmp);
 	pTmp = template_StdDBFmt;
-	tplLastStaticInit(tplAddLine(" StdDBFmt", &pTmp));
+	tplAddLine(tplAddLine(" StdDBFmt", &pTmp));
         pTmp = template_StdPgSQLFmt;
         tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
 
