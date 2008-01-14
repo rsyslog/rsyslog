@@ -81,7 +81,6 @@ typedef struct queue_s {
 	int 	iNumWorkerThreads;/* number of worker threads to use */
 	int 	iCurNumWrkThrd;/* current number of active worker threads */
 	qWrkThrd_t *pWrkThrds;/* array with control structure for the worker thread(s) associated with this queue */
-	int	bImmediateShutdown;/* on shutdown, drain the queue --> 0 / do NOT drain the queue --> 1 */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
 	int	bNeedDelQIF;	/* does the QIF file need to be deleted when queue becomes empty? */
@@ -137,7 +136,6 @@ rsRetVal queueSetFilePrefix(queue_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
 PROTOTYPEObjClassInit(queue);
-PROTOTYPEpropSetMeth(queue, bImmediateShutdown, int);
 PROTOTYPEpropSetMeth(queue, iPersistUpdCnt, int);
 PROTOTYPEpropSetMeth(queue, toQShutdown, long);
 PROTOTYPEpropSetMeth(queue, toActShutdown, long);

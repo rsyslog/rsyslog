@@ -1091,7 +1091,6 @@ finalize_it:
 }
 
 /* some simple object access methods */
-DEFpropSetMeth(queue, bImmediateShutdown, int);
 DEFpropSetMeth(queue, iPersistUpdCnt, int);
 DEFpropSetMeth(queue, toQShutdown, long);
 DEFpropSetMeth(queue, toActShutdown, long);
