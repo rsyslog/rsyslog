@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 2.0.1 STABLE (rgerhards), 2008-01-??
+- fixed a bug in integer conversion - but this function was never called,
+  so it is not really a useful bug fix ;)
+- fixed a bug with standard template definitions (not a big deal) - thanks
+  to varmojfekoj for spotting it
+---------------------------------------------------------------------------
 Version 2.0.0 STABLE (rgerhards), 2008-01-02
 - re-release of 1.21.2 as STABLE with no modifications except some
   doc updates
