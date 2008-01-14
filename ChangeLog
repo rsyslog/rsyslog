@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 3.10.3 (rgerhards), 2008-01-14
+- fixed a bug with standard template definitions (not a big deal) - thanks
+  to varmojfekoj for spotting it
+---------------------------------------------------------------------------
 Version 3.10.2 (rgerhards), 2008-01-14
 - added the ability to keep stop rsyslogd without the need to drain
   the main message queue. In disk queue mode, rsyslog continues to
