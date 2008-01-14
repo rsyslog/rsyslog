@@ -87,8 +87,9 @@ dbgprintf("strmOpenFile actual open %p, iFileNumDigits: %d\n", pThis, pThis->iFi
 	if(pThis->tOperationsMode == STREAMMODE_READ)
 		iFlags = O_RDONLY;
 	else
-		//iFlags = O_WRONLY | O_TRUNC | O_CREAT | O_APPEND;
 		iFlags = O_WRONLY | O_CREAT;
+
+	iFlags |= pThis->iAddtlOpenFlags;
 
 	pThis->fd = open((char*)pThis->pszCurrFName, iFlags, pThis->tOpenMode);
 	if(pThis->fd == -1) {
@@ -388,8 +389,8 @@ static rsRetVal strmWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 		CHKiRet(strmOpenFile(pThis));
 
 	iWritten = write(pThis->fd, pBuf, lenBuf);
-	dbgprintf("Stream 0x%lx: write wrote %d bytes to file %d, errno: %d, err %s\n", (unsigned long) pThis,
-	          iWritten, pThis->fd, errno, strerror(errno));
+	dbgprintf("Stream 0x%lx: write wrote %d bytes to file %d, errno: %d\n", (unsigned long) pThis,
+	          iWritten, pThis->fd, errno);
 	/* TODO: handle error case -- rgerhards, 2008-01-07 */
 
 	/* Now indicate buffer empty again. We do this in any case, because there
@@ -564,8 +565,20 @@ rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {
 	pThis->iMaxFiles = iNewVal;
 	pThis->iFileNumDigits = getNumberDigits(iNewVal);
-dbgprintf("strmSetiMaxFiles %p val %d, digits %d\n", pThis, iNewVal, pThis->iFileNumDigits);
 	return RS_RET_OK;
+}
+
+rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal)
+{
+	DEFiRet;
+
+	if(iNewVal & O_APPEND)
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+
+	pThis->iAddtlOpenFlags = iNewVal;
+
+finalize_it:
+	return iRet;
 }
 
 
@@ -703,10 +716,6 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 
 	l = (long) pThis->iCurrOffs;
 	objSerializeSCALAR_VAR(pStrm, iCurrOffs, LONG, l);
-
-	// TODO: really serialize?
-	//l = (long) pThis->iMaxFileSize;
-	//objSerializeSCALAR_VAR(pStrm, iMaxFileSize, LONG, l);
 
 	CHKiRet(objEndSerialize(pStrm));
 

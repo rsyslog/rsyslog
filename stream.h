@@ -69,6 +69,7 @@ typedef struct strm_s {
 	int lenFName;
 	strmMode_t tOperationsMode;
 	mode_t tOpenMode;
+	int iAddtlOpenFlags; /* can be used to specifiy additional (compatible!) open flags */
 	size_t iMaxFileSize;/* maximum size a file may grow to */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
@@ -95,7 +96,6 @@ rsRetVal strmSetMaxFileSize(strm_t *pThis, size_t iMaxFileSize);
 rsRetVal strmSetFileName(strm_t *pThis, uchar *pszName, size_t iLenName);
 rsRetVal strmReadChar(strm_t *pThis, uchar *pC);
 rsRetVal strmUnreadChar(strm_t *pThis, uchar c);
-//rsRetVal strmSeek(strm_t *pThis, off_t offs);
 rsRetVal strmSeekCurrOffs(strm_t *pThis);
 rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
 rsRetVal strmWriteChar(strm_t *pThis, uchar c);
@@ -106,6 +106,7 @@ rsRetVal strmFlush(strm_t *pThis);
 rsRetVal strmRecordBegin(strm_t *pThis);
 rsRetVal strmRecordEnd(strm_t *pThis);
 rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm);
+rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal);
 PROTOTYPEObjClassInit(strm);
 PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
 PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);

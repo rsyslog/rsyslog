@@ -85,6 +85,9 @@ typedef struct queue_s {
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
 	int	bNeedDelQIF;	/* does the QIF file need to be deleted when queue becomes empty? */
+	int	toQShutdown;	/* timeout for regular queue shutdown in ms */
+	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
+	int	toEnq;		/* enqueue timeout */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dequeued messages */
 	/* type-specific handlers (set during construction) */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
@@ -136,6 +139,9 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 PROTOTYPEObjClassInit(queue);
 PROTOTYPEpropSetMeth(queue, bImmediateShutdown, int);
 PROTOTYPEpropSetMeth(queue, iPersistUpdCnt, int);
+PROTOTYPEpropSetMeth(queue, toQShutdown, long);
+PROTOTYPEpropSetMeth(queue, toActShutdown, long);
+PROTOTYPEpropSetMeth(queue, toEnq, long);
 #define queueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

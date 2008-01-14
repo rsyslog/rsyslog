@@ -409,8 +409,10 @@ static int iMainMsgQueueNumWorkers = 1;				/* number of worker threads for the m
 static queueType_t MainMsgQueType = QUEUETYPE_FIXED_ARRAY;	/* type of the main message queue above */
 static uchar *pszMainMsgQFName = NULL;				/* prefix for the main message queue file */
 static size_t iMainMsgQueMaxFileSize = 1024*1024;
-static int bMainMsgQImmediateShutdown = 0;			/* shut down the queue immediately? */
 static int iMainMsgQPersistUpdCnt = 0;				/* persist queue info every n updates */
+static int iMainMsgQtoQShutdown = 0;				/* queue shutdown */ 
+static int iMainMsgQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
+static int iMainMsgQtoEnq = 2000;				/* timeout for queue enque */ 
 
 
 /* This structure represents the files that will have log
@@ -514,8 +516,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQueueSize = 10000;
 	iMainMsgQueMaxFileSize = 1024 * 1024;
 	iMainMsgQueueNumWorkers = 1;
-	bMainMsgQImmediateShutdown = 0;
 	iMainMsgQPersistUpdCnt = 0;
+	iMainMsgQtoQShutdown = 0;
+	iMainMsgQtoActShutdown = 1000;
+	iMainMsgQtoEnq = 2000;
 	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 
 	return RS_RET_OK;
@@ -1649,12 +1653,23 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 }
 
 
+/* cancellation cleanup handler - frees the action mutex
+ * rgerhards, 2008-01-14
+ */
+static void callActionMutClean(void *arg)
+{
+	assert(arg != NULL);
+	pthread_mutex_unlock((pthread_mutex_t*) arg);
+}
+
+
 /* call the configured action. Does all necessary housekeeping.
  * rgerhards, 2007-08-01
  */
 static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 {
 	DEFiRet;
+	int iCancelStateSave;
 
 	assert(pMsg != NULL);
 	assert(pAction != NULL);
@@ -1664,7 +1679,10 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
          * become important when we (possibly) have multiple worker threads.
  	 * rgerhards, 2007-12-11
  	 */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	LockObj(pAction);
+	pthread_cleanup_push(callActionMutClean, pAction->Sync_mut);
+	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	/* first, we need to check if this is a disabled
 	 * entry. If so, we must not further process it.
@@ -1730,7 +1748,10 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 	}
 
 finalize_it:
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	UnlockObj(pAction);
+	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
+	pthread_setcancelstate(iCancelStateSave, NULL);
 	return iRet;
 }
 
@@ -3098,8 +3119,10 @@ static void dbgPrintInitInfo(void)
 			cCCEscapeChar);
 
 	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
-	dbgprintf("Main queue worker threads: %d, ImmediateShutdown: %d, Perists every %d updates.\n",
-		  iMainMsgQueueNumWorkers, bMainMsgQImmediateShutdown, iMainMsgQPersistUpdCnt);
+	dbgprintf("Main queue worker threads: %d, Perists every %d updates.\n",
+		  iMainMsgQueueNumWorkers, iMainMsgQPersistUpdCnt);
+	dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
+		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
 	dbgprintf("Work Directory: '%s'.\n", pszWorkDir);
 }
 
@@ -3354,11 +3377,13 @@ init(void)
 		logerrorInt("Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
-	setQPROP(queueSetbImmediateShutdown, "$MainMsgQueueImmediateShutdown", bMainMsgQImmediateShutdown);
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
 	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName",
 		    (pszMainMsgQFName == NULL ? (uchar*) "mainq" : pszMainMsgQFName));
 	setQPROP(queueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
+	setQPROP(queueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
+	setQPROP(queueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", iMainMsgQtoActShutdown);
+	setQPROP(queueSettoEnq, "$MainMsgQueueTimeoutEnqueue", iMainMsgQtoEnq);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -4267,6 +4292,7 @@ extern void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
 void
 dbgprintf(char *fmt, ...)
 {
+	static pthread_t ptLastThrdID = 0;
 	static int bWasNL = FALSE;
 	va_list ap;
 
@@ -4283,6 +4309,14 @@ dbgprintf(char *fmt, ...)
 	 * pretty well.
 	 * rgerhards, 2007-06-15
 	 */
+	if(ptLastThrdID != pthread_self()) {
+		if(!bWasNL) {
+			fprintf(stdout, "\n");
+			bWasNL = 1;
+		}
+		ptLastThrdID = pthread_self();
+	}
+
 	if(bWasNL) {
 		fprintf(stdout, "%8.8x: ", (unsigned int) pthread_self());
 		//fprintf(stderr, "%8.8x: ", (unsigned int) pthread_self());
@@ -4517,10 +4551,12 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueimmediateshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQImmediateShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &iMainMsgQPersistUpdCnt, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iMainMsgQueueNumWorkers, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL, &iMainMsgQtoQShutdown, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutactioncompletion", 0, eCmdHdlrInt, NULL, &iMainMsgQtoActShutdown, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutenqueue", 0, eCmdHdlrInt, NULL, &iMainMsgQtoEnq, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));

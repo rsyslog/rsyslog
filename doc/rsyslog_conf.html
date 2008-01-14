@@ -64,6 +64,9 @@ development and quite unstable...). So you have been warned ;)</p>
 	<li>$MainMsgQueueImmediateShutdown [on/<b>off</b>]</li>
 	<li><a href="rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
 	<li>$MainMsgQueueMaxFileSize &lt;size_nbr&gt;, default 1m</li>
+	<li>$MainMsgQueueTimeoutActionCompletion &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 1000, 0 means immediate!]</li>
+	<li>$MainMsgQueueTimeoutEnqueue &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite]</li>
+	<li>$MainMsgQueueTimeoutShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 0 (indefinite)]</li>
 	<li>$MainMsgQueueType [<b>FixedArray</b>/LinkedList/Direct/Disk]</li>
 	<li>$MainMsgQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
 	recommended 1</li>
