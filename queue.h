@@ -104,6 +104,9 @@ typedef struct queue_s {
 	pthread_mutex_t *mut;
 	pthread_cond_t *notFull, *notEmpty;
 	pthread_cond_t condThrdTrm;/* signalled when threads terminate */
+	pthread_cond_t *condSignalOnEmpty;/* caller-provided condition to be signalled when queue is empty (DA mode!) */
+	pthread_mutex_t *mutSignalOnEmpty; /* and its associated mutex */
+	int bSignalOnEmpty;		/* signal caller when queue is empty via xxxSignalOnEmpty cond/mut */
 	/* end sync variables */
 	/* the following variables are always present, because they
 	 * are not only used for the "disk" queueing mode but also for
@@ -118,6 +121,8 @@ typedef struct queue_s {
 	size_t iMaxFileSize;	/* max size for a single queue file */
 	int bIsDA;		/* is this queue disk assisted? */
 	int bRunsDA;		/* is this queue actually *running* disk assisted? */
+	pthread_mutex_t mutDA;	/* mutex for low water mark algo */
+	pthread_cond_t condDA;	/* and its matching condition */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
 	/* now follow queueing mode specific data elements */
 	union {			/* different data elements based on queue type (qType) */
