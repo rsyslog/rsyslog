@@ -8,7 +8,7 @@ Version 3.10.2 (rgerhards), 2008-01-14
   was specified in rsyslog.conf
 - provided more fine-grain control over shutdown timeouts and added a
   way to specify the enqueue timeout when the main message queue is full
-- implemetned $MainMsgQueueCheckpointInterval config directive
+- implemented $MainMsgQueueCheckpointInterval config directive
 - implemented $MainMsgQueueTimeoutActionCompletion config directive
 - implemented $MainMsgQueueTimeoutEnqueue config directive
 - implemented $MainMsgQueueTimeoutShutdown config directive
