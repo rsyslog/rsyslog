@@ -61,10 +61,12 @@ typedef struct qLinkedList_S {
 } qLinkedList_t;
 
 typedef enum {
-	eWRKTHRDCMD_RUN,
-	eWRKTHRDCMD_SHUTDOWN,
-	eWRKTHRDCMD_SHUTDOWN_IMMEDIATE,
-	eWRKTHRDCMD_TERMINATED	/* granted, that's more a state than a cmd - thread is dead... */
+	eWRKTHRDCMD_NEVER_RAN = 0,	/* granted, that's more a state than a cmd - thread is dead... */
+	eWRKTHRDCMD_TERMINATED = 1,	/* granted, that's more a state than a cmd - thread is dead... */
+	/* ALL active states MUST be numerically higher than eWRKTHRDCMD_TERMINATED and NONE must be lower! */
+	eWRKTHRDCMD_RUN = 2,
+	eWRKTHRDCMD_SHUTDOWN = 3,
+	eWRKTHRDCMD_SHUTDOWN_IMMEDIATE = 4
 } qWrkCmd_t;	/* commands for queue worker threads */
 
 typedef struct qWrkThrd_s {
@@ -114,6 +116,9 @@ typedef struct queue_s {
 	size_t lenFilePrefix;
 	int iNumberFiles;	/* how many files make up the queue? */
 	size_t iMaxFileSize;	/* max size for a single queue file */
+	int bIsDA;		/* is this queue disk assisted? */
+	int bRunsDA;		/* is this queue actually *running* disk assisted? */
+	struct queue_s *pqDA;	/* queue for disk-assisted modes */
 	/* now follow queueing mode specific data elements */
 	union {			/* different data elements based on queue type (qType) */
 		struct {

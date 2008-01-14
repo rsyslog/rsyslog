@@ -3361,10 +3361,18 @@ init(void)
 		iMainMsgQueueNumWorkers = 1;
 	}
 
-	if(MainMsgQueType == QUEUETYPE_DISK && pszWorkDir == NULL) {
-		fprintf(stderr, "No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
-			        "Using 'FixedArray' instead.\n");
-		MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+	if(MainMsgQueType == QUEUETYPE_DISK) {
+		errno = 0;	/* for logerror! */
+		if(pszWorkDir == NULL) {
+			logerror("No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
+				 "Using 'FixedArray' instead.\n");
+			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+		}
+		if(pszMainMsgQFName == NULL) {
+			logerror("No $MainMsgQueueFileName specified - can not run main message queue in "
+				 "'disk' mode. Using 'FixedArray' instead.\n");
+			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+		}
 	}
 
 	/* switch the message object to threaded operation, if necessary */
@@ -3384,13 +3392,12 @@ init(void)
 		logerrorInt("Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 #	define setQPROPstr(func, directive, data) \
-	CHKiRet_Hdlr(func(pMsgQueue, data, strlen((char*) data))) { \
+	CHKiRet_Hdlr(func(pMsgQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
 		logerrorInt("Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
-	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName",
-		    (pszMainMsgQFName == NULL ? (uchar*) "mainq" : pszMainMsgQFName));
+	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName", pszMainMsgQFName);
 	setQPROP(queueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
 	setQPROP(queueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
 	setQPROP(queueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", iMainMsgQtoActShutdown);

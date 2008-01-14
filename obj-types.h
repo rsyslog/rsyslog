@@ -99,8 +99,8 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 		unsigned int iObjCooCKiE; /* prevent name conflict, thus the strange name */ 
 #	define ISOBJ_assert(pObj) \
 		{ \
-		assert(pObj != NULL); \
-		assert((unsigned) pObj->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+		assert((pObj) != NULL); \
+		assert((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		}
 #	define ISOBJ_TYPE_assert(pObj, objType) \
 		{ \

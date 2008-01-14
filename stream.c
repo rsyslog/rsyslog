@@ -71,7 +71,6 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	if(pThis->fd != -1)
 		ABORT_FINALIZE(RS_RET_OK);
 
-dbgprintf("strmOpenFile actual open %p, iFileNumDigits: %d\n", pThis, pThis->iFileNumDigits);
 	if(pThis->pszFName == NULL)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
