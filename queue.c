@@ -85,6 +85,9 @@ static rsRetVal qConstructFixedArray(queue_t *pThis)
 
 	assert(pThis != NULL);
 
+	if(pThis->iMaxQueueSize == 0)
+		ABORT_FINALIZE(RS_RET_QSIZE_ZERO);
+
 	if((pThis->tVars.farray.pBuf = malloc(sizeof(void *) * pThis->iMaxQueueSize)) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -680,7 +683,7 @@ queueWorker(void *arg)
 			 */
 			if(iRet == RS_RET_OK) {
 				/* do a quick check if we need to drain the queue */
-				if(pThis->iQueueSize >= pThis->iDiscardMrk) {
+				if(pThis->iDiscardMrk > 0 && pThis->iQueueSize >= pThis->iDiscardMrk) {
 					iRetLocal = objGetSeverity(pUsr, &iSeverity);
 					if(iRetLocal == RS_RET_OK && iSeverity >= pThis->iDiscardSeverity) {
 						dbgprintf("Queue 0x%lx/w%d: dequeue/queue nearly full (%d entries), "
@@ -1077,7 +1080,7 @@ queueEnqObj(queue_t *pThis, void *pUsr)
 		pthread_mutex_lock(pThis->mut);
 	}
 
-	if(pThis->iQueueSize >= pThis->iDiscardMrk) {
+	if(pThis->iDiscardMrk > 0 && pThis->iQueueSize >= pThis->iDiscardMrk) {
 		iRetLocal = objGetSeverity(pUsr, &iSeverity);
 		if(iRetLocal == RS_RET_OK && iSeverity >= pThis->iDiscardSeverity) {
 			dbgprintf("Queue 0x%lx: queue nearly full (%d entries), discarded severity %d message\n",
@@ -1092,7 +1095,7 @@ queueEnqObj(queue_t *pThis, void *pUsr)
 	}
 
 		
-	while(pThis->iQueueSize >= pThis->iMaxQueueSize) {
+	while(pThis->iMaxQueueSize > 0 && pThis->iQueueSize >= pThis->iMaxQueueSize) {
 		dbgprintf("Queue 0x%lx: enqueueMsg: queue FULL - waiting to drain.\n", queueGetID(pThis));
 		queueTimeoutComp(&t, pThis->toEnq);
 		if(pthread_cond_timedwait (pThis->notFull,
