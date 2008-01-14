@@ -83,6 +83,10 @@ typedef struct queue_s {
 	qWrkThrd_t *pWrkThrds;/* array with control structure for the worker thread(s) associated with this queue */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
+	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
+	int	iLowWtrMrk;	/* low water mark for disk-assisted memory queues */
+	int	iDiscardMrk;	/* if the queue is above this mark, low-severity messages are discarded */
+	int	iDiscardSeverity;/* messages of this severity above are discarded on too-full queue */
 	int	bNeedDelQIF;	/* does the QIF file need to be deleted when queue becomes empty? */
 	int	toQShutdown;	/* timeout for regular queue shutdown in ms */
 	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
@@ -140,6 +144,10 @@ PROTOTYPEpropSetMeth(queue, iPersistUpdCnt, int);
 PROTOTYPEpropSetMeth(queue, toQShutdown, long);
 PROTOTYPEpropSetMeth(queue, toActShutdown, long);
 PROTOTYPEpropSetMeth(queue, toEnq, long);
+PROTOTYPEpropSetMeth(queue, iHighWtrMrk, int);
+PROTOTYPEpropSetMeth(queue, iLowWtrMrk, int);
+PROTOTYPEpropSetMeth(queue, iDiscardMrk, int);
+PROTOTYPEpropSetMeth(queue, iDiscardSeverity, int);
 #define queueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

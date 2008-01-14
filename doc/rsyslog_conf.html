@@ -60,9 +60,13 @@ development and quite unstable...). So you have been warned ;)</p>
 	-2 option</li>
 	<li>$klogSymbolsTwice (imklog) [on/<b>off</b>] -- former klogd -s option</li>
 	<li>$MainMsgQueueCheckpointInterval &lt;number&gt;</li>
+	<li>$MainMsgQueueDiscardMark &lt;number&gt; [default 9750]</li>
+	<li>$MainMsgQueueDiscardSeverity &lt;number&gt; [*numerical* severity! default 4 (warning)]</li>
 	<li>$MainMsgQueueFileName &lt;name&gt;</li>
+	<li>$MainMsgQueueHighWaterMark &lt;number&gt; [default 8000]</li>
 	<li>$MainMsgQueueImmediateShutdown [on/<b>off</b>]</li>
 	<li><a href="rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
+	<li>$MainMsgQueueLowWaterMark &lt;number&gt; [default 2000]</li>
 	<li>$MainMsgQueueMaxFileSize &lt;size_nbr&gt;, default 1m</li>
 	<li>$MainMsgQueueTimeoutActionCompletion &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 1000, 0 means immediate!]</li>
 	<li>$MainMsgQueueTimeoutEnqueue &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite]</li>

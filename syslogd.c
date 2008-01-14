@@ -1,3 +1,4 @@
+// TODO: $MainMsgQueueDiscardSeverity must accept textual severities!
 /**
  * \brief This is the main file of the rsyslogd daemon.
  *
@@ -405,6 +406,10 @@ extern	int errno;
 /* main message queue and its configuration parameters */
 static queue_t *pMsgQueue = NULL;				/* the main message queue */
 static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
+static int iMainMsgQHighWtrMark = 8000;				/* high water mark for disk-assisted queues */
+static int iMainMsgQLowWtrMark = 2000;				/* low water mark for disk-assisted queues */
+static int iMainMsgQDiscardMark = 9750;				/* begin to discard messages */
+static int iMainMsgQDiscardSeverity = 4;			/* discard warning and above */
 static int iMainMsgQueueNumWorkers = 1;				/* number of worker threads for the mm queue above */
 static queueType_t MainMsgQueType = QUEUETYPE_FIXED_ARRAY;	/* type of the main message queue above */
 static uchar *pszMainMsgQFName = NULL;				/* prefix for the main message queue file */
@@ -514,6 +519,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		pszMainMsgQFName = NULL;
 	}
 	iMainMsgQueueSize = 10000;
+	iMainMsgQHighWtrMark = 8000;
+	iMainMsgQLowWtrMark = 2000;
+	iMainMsgQDiscardMark = 9750;
+	iMainMsgQDiscardSeverity = 4;
 	iMainMsgQueMaxFileSize = 1024 * 1024;
 	iMainMsgQueueNumWorkers = 1;
 	iMainMsgQPersistUpdCnt = 0;
@@ -3123,6 +3132,8 @@ static void dbgPrintInitInfo(void)
 		  iMainMsgQueueNumWorkers, iMainMsgQPersistUpdCnt);
 	dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
 		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
+	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
+		   iMainMsgQHighWtrMark, iMainMsgQLowWtrMark, iMainMsgQDiscardMark, iMainMsgQDiscardSeverity);
 	dbgprintf("Work Directory: '%s'.\n", pszWorkDir);
 }
 
@@ -3384,6 +3395,10 @@ init(void)
 	setQPROP(queueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
 	setQPROP(queueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", iMainMsgQtoActShutdown);
 	setQPROP(queueSettoEnq, "$MainMsgQueueTimeoutEnqueue", iMainMsgQtoEnq);
+	setQPROP(queueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", iMainMsgQHighWtrMark);
+	setQPROP(queueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", iMainMsgQLowWtrMark);
+	setQPROP(queueSetiDiscardMrk, "$MainMsgQueueDiscardMark", iMainMsgQDiscardMark);
+	setQPROP(queueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -4551,6 +4566,10 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuelowwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQLowWtrMark, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardmark", 0, eCmdHdlrInt, NULL, &iMainMsgQDiscardMark, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardseverity", 0, eCmdHdlrInt, NULL, &iMainMsgQDiscardSeverity, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &iMainMsgQPersistUpdCnt, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iMainMsgQueueNumWorkers, NULL));

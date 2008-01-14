@@ -1095,6 +1095,10 @@ DEFpropSetMeth(queue, iPersistUpdCnt, int);
 DEFpropSetMeth(queue, toQShutdown, long);
 DEFpropSetMeth(queue, toActShutdown, long);
 DEFpropSetMeth(queue, toEnq, long);
+DEFpropSetMeth(queue, iHighWtrMrk, int);
+DEFpropSetMeth(queue, iLowWtrMrk, int);
+DEFpropSetMeth(queue, iDiscardMrk, int);
+DEFpropSetMeth(queue, iDiscardSeverity, int);
 
 
 /* This function can be used as a generic way to set properties. Only the subset

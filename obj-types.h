@@ -71,9 +71,10 @@ typedef enum {	/* IDs of base methods supported by all objects - used for jump t
 	objMethod_DESERIALIZE = 3,
 	objMethod_SETPROPERTY = 4,
 	objMethod_CONSTRUCTION_FINALIZER = 5,
-	objMethod_DEBUGPRINT = 6
+	objMethod_GETSEVERITY = 6,
+	objMethod_DEBUGPRINT = 7
 } objMethod_t;
-#define OBJ_NUM_METHODS 7	/* must be updated to contain the max number of methods supported */
+#define OBJ_NUM_METHODS 8	/* must be updated to contain the max number of methods supported */
 
 typedef struct objInfo_s {
 	objID_t	objID;	
