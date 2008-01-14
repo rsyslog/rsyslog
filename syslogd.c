@@ -408,7 +408,7 @@ static queue_t *pMsgQueue = NULL;				/* the main message queue */
 static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
 static int iMainMsgQHighWtrMark = 8000;				/* high water mark for disk-assisted queues */
 static int iMainMsgQLowWtrMark = 2000;				/* low water mark for disk-assisted queues */
-static int iMainMsgQDiscardMark = 9750;				/* begin to discard messages */
+static int iMainMsgQDiscardMark = 9800;				/* begin to discard messages */
 static int iMainMsgQDiscardSeverity = 4;			/* discard warning and above */
 static int iMainMsgQueueNumWorkers = 1;				/* number of worker threads for the mm queue above */
 static queueType_t MainMsgQueType = QUEUETYPE_FIXED_ARRAY;	/* type of the main message queue above */
@@ -521,7 +521,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQueueSize = 10000;
 	iMainMsgQHighWtrMark = 8000;
 	iMainMsgQLowWtrMark = 2000;
-	iMainMsgQDiscardMark = 9750;
+	iMainMsgQDiscardMark = 9800;
 	iMainMsgQDiscardSeverity = 4;
 	iMainMsgQueMaxFileSize = 1024 * 1024;
 	iMainMsgQueueNumWorkers = 1;

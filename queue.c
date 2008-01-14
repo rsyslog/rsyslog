@@ -627,6 +627,8 @@ queueWorker(void *arg)
 	sigset_t sigSet;
 	int iMyThrdIndx;	/* index for this thread in queue thread table */
 	int iCancelStateSave;
+	int iSeverity;
+	rsRetVal iRetLocal;
 
 	assert(pThis != NULL);
 
@@ -677,15 +679,23 @@ queueWorker(void *arg)
 			 * rgerhards, 2008-01-03
 			 */
 			if(iRet == RS_RET_OK) {
-				rsRetVal iRetLocal;
-				dbgprintf("Queue 0x%lx/w%d: worker executes consumer...\n",
-				           queueGetID(pThis), iMyThrdIndx);
-				iRetLocal = pThis->pConsumer(pUsr);
-				dbgprintf("Queue 0x%lx/w%d: worker: consumer returnd %d\n",
-				           queueGetID(pThis), iMyThrdIndx, iRetLocal);
-				if(iRetLocal != RS_RET_OK)
-					dbgprintf("Queue 0x%lx/w%d: Consumer returned iRet %d\n",
-					          (unsigned long) pThis, iMyThrdIndx, iRetLocal);
+				/* do a quick check if we need to drain the queue */
+				if(pThis->iQueueSize >= pThis->iDiscardMrk) {
+					iRetLocal = objGetSeverity(pUsr, &iSeverity);
+					if(iRetLocal == RS_RET_OK && iSeverity >= pThis->iDiscardSeverity) {
+						dbgprintf("Queue 0x%lx/w%d: dequeue/queue nearly full (%d entries), "
+							  "discarded severity %d message\n",
+							  queueGetID(pThis), iMyThrdIndx, pThis->iQueueSize, iSeverity);
+						objDestruct(pUsr);
+					}
+				} else {
+					dbgprintf("Queue 0x%lx/w%d: worker executes consumer...\n",
+						   queueGetID(pThis), iMyThrdIndx);
+					iRetLocal = pThis->pConsumer(pUsr);
+					if(iRetLocal != RS_RET_OK)
+						dbgprintf("Queue 0x%lx/w%d: Consumer returned iRet %d\n",
+							  queueGetID(pThis), iMyThrdIndx, iRetLocal);
+				}
 			} else {
 				dbgprintf("Queue 0x%lx/w%d: error %d dequeueing element - ignoring, but strange things "
 				          "may happen\n", queueGetID(pThis), iMyThrdIndx, iRet);
