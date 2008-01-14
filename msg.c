@@ -2142,6 +2142,20 @@ static rsRetVal MsgConstructFinalizer(msg_t *pThis)
 }
 
 
+/* get the severity - this is an entry point that
+ * satisfies the base object class getSeverity semantics.
+ * rgerhards, 2008-01-14
+ */
+static rsRetVal
+MsgGetSeverity(obj_t *pThis, int *piSeverity)
+{
+	ISOBJ_TYPE_assert(pThis, Msg);
+	assert(piSeverity != NULL);
+	*piSeverity = ((msg_t*) pThis)->iSeverity;
+	return RS_RET_OK;
+}
+
+
 /* Initialize the message class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-04
@@ -2150,6 +2164,7 @@ BEGINObjClassInit(Msg, 1)
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, MsgSetProperty);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, MsgConstructFinalizer);
+	OBJSetMethodHandler(objMethod_GETSEVERITY, MsgGetSeverity);
 	/* initially, we have no need to lock message objects */
 	funcLock = MsgLockingDummy;
 	funcUnlock = MsgLockingDummy;

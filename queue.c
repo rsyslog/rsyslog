@@ -1051,6 +1051,8 @@ queueEnqObj(queue_t *pThis, void *pUsr)
 	int iCancelStateSave;
 	int i;
 	struct timespec t;
+	int iSeverity = 8;
+	rsRetVal iRetLocal;
 
 	assert(pThis != NULL);
 
@@ -1064,13 +1066,28 @@ queueEnqObj(queue_t *pThis, void *pUsr)
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 		pthread_mutex_lock(pThis->mut);
 	}
+
+	if(pThis->iQueueSize >= pThis->iDiscardMrk) {
+		iRetLocal = objGetSeverity(pUsr, &iSeverity);
+		if(iRetLocal == RS_RET_OK && iSeverity >= pThis->iDiscardSeverity) {
+			dbgprintf("Queue 0x%lx: queue nearly full (%d entries), discarded severity %d message\n",
+				  queueGetID(pThis), pThis->iQueueSize, iSeverity);
+			objDestruct(pUsr);
+			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
+		} else {
+			dbgprintf("Queue 0x%lx: queue nearly full (%d entries), but could not drop msg "
+				  "(iRet: %d, severity %d)\n", queueGetID(pThis), pThis->iQueueSize,
+				  iRetLocal, iSeverity);
+		}
+	}
+
 		
 	while(pThis->iQueueSize >= pThis->iMaxQueueSize) {
-		dbgprintf("Queue 0x%lx: enqueueMsg: queue FULL - waiting to drain.\n", (unsigned long) pThis);
+		dbgprintf("Queue 0x%lx: enqueueMsg: queue FULL - waiting to drain.\n", queueGetID(pThis));
 		queueTimeoutComp(&t, pThis->toEnq);
 		if(pthread_cond_timedwait (pThis->notFull,
 					   pThis->mut, &t) != 0) {
-			dbgprintf("Queue 0x%lx: enqueueMsg: cond timeout, dropping message!\n", (unsigned long) pThis);
+			dbgprintf("Queue 0x%lx: enqueueMsg: cond timeout, dropping message!\n", queueGetID(pThis));
 			objDestruct(pUsr);
 			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
 		}
