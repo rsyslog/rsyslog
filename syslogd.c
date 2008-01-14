@@ -395,17 +395,6 @@ char	**StripDomains = NULL;/* these domains may be stripped before writing logs 
 char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 int	NoHops = 1;	/* Can we bounce syslog messages through an
 				   intermediate host.  Read-only after startup */
-static int     Initialized = 0; /* set when we have initialized ourselves
-                                 * rgerhards 2004-11-09: and by initialized, we mean that
-                                 * the configuration file could be properly read AND the
-                                 * syslog/udp port could be obtained (the later is debatable).
-                                 * It is mainly a setting used for emergency logging: if
-                                 * something really goes wild, we can not do as indicated in
-                                 * the log file, but we still log messages to the system
-                                 * console. This is probably the best that can be done in
-                                 * such a case.
-				 * read-only after startup, but modified during restart
-                                 */
 static int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
 				 * If the main queue is either not yet ready or not running in 
 				 * queueing mode (mode DIRECT!), then this is set to 0.
@@ -1660,23 +1649,6 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 }
 
 
-/* doEmergencyLoggin()
- * ... does exactly do that. It logs messages when the subsystem has not yet
- * been initialized. This almost always happens during initial startup or
- * during HUPing.  -- rgerhards, 2007-07-25
- * rgerhards, 2007-08-03: as of now, this can normally no longer happen. All
- * startup messages are now buffered until the system is ready to run. I leave
- * this minimal implementation here in in the very remote case that it might
- * be needed in the future or due to a program bug. Do *not* excpect this
- * code to be called.
- */
-static void doEmergencyLogging(msg_t *pMsg)
-{
-	assert(pMsg != NULL);
-	fprintf(stderr, "rsyslog: %s\n", pMsg->pszMSG);
-}
-
-
 /* call the configured action. Does all necessary housekeeping.
  * rgerhards, 2007-08-01
  */
@@ -1801,11 +1773,10 @@ finalize_it:
 
 
 /* Process (consume) a received message. Calls the actions configured.
- * Can some time later run in its own thread. To aid this, the calling
- * parameters should be reduced to just pMsg.
  * rgerhards, 2005-10-13
  */
-static void processMsg(msg_t *pMsg)
+static void
+processMsg(msg_t *pMsg)
 {
 	selector_t *f;
 	int bContinue;
@@ -1814,22 +1785,10 @@ static void processMsg(msg_t *pMsg)
 	assert(pMsg != NULL);
 
 	/* log the message to the particular outputs */
-	if (!Initialized) {
-		doEmergencyLogging(pMsg);
-		return;
-	}
 
 	bContinue = 1;
 	for (f = Files; f != NULL && bContinue ; f = f->f_next) {
-		/* This is actually the "filter logic". Looks like we need
-		 * to improve it a little for complex selector line conditions. We
-		 * won't do that for now, but at least we now know where
-		 * to look at.
-		 * 2005-09-09 rgerhards
-		 * ok, we are now ready to move to something more advanced. Because
-		 * of this, I am moving the actual decision code to outside this function.
-		 * 2005-09-19 rgerhards
-		 */
+		/* first check the filters... */
 		if(!shouldProcessThisMessage(f, pMsg)) {
 			continue;
 		}
@@ -3055,7 +3014,6 @@ static void freeSelectors(void)
 
 		/* Reflect the deletion of the selectors linked list. */
 		Files = NULL;
-		Initialized = 0;
 		bHaveMainQueue = 0;
 	}
 }
@@ -3406,14 +3364,12 @@ init(void)
 #	undef setQPROPstr
 
 	/* ... and finally start the queue! */
-Initialized = 1;
 	CHKiRet_Hdlr(queueStart(pMsgQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not start message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
 
-	Initialized = 1;
 	bHaveMainQueue = (MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
 	dbgprintf("Main processing queue is initialized and running\n");
 
