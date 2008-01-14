@@ -79,6 +79,7 @@ typedef struct queue_s {
 	int	iQueueSize;	/* Current number of elements in the queue */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
 	int 	iNumWorkerThreads;/* number of worker threads to use */
+	int 	iCurNumWrkThrd;/* current number of active worker threads */
 	qWrkThrd_t *pWrkThrds;/* array with control structure for the worker thread(s) associated with this queue */
 	int	bImmediateShutdown;/* on shutdown, drain the queue --> 0 / do NOT drain the queue --> 1 */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
@@ -94,6 +95,7 @@ typedef struct queue_s {
 	/* synchronization variables */
 	pthread_mutex_t *mut;
 	pthread_cond_t *notFull, *notEmpty;
+	pthread_cond_t condThrdTrm;/* signalled when threads terminate */
 	/* end sync variables */
 	/* the following variables are always present, because they
 	 * are not only used for the "disk" queueing mode but also for

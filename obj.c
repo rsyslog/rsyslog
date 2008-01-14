@@ -89,7 +89,6 @@ rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int
 
 	pThis->pszName = pszName;
 	pThis->iObjVers = iObjVers;
-fprintf(stderr, "objid %d set for %s\n", objID, pszName);
 	pThis->objID = objID;
 
 	pThis->objMethods[0] = pConstruct;
