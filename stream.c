@@ -121,7 +121,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 
 	assert(pThis != NULL);
 	assert(pThis->fd != -1);
-	dbgprintf("Stream 0x%lx: closing file %d\n", (unsigned long) pThis, pThis->fd);
+	dbgprintf("Stream 0x%lx: file %d closing\n", (unsigned long) pThis, pThis->fd);
 
 	if(pThis->tOperationsMode == STREAMMODE_WRITE)
 		strmFlush(pThis);
@@ -201,15 +201,15 @@ rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 			/* first check if we need to (re)open the file (we may have switched to a new one!) */
 			CHKiRet(strmOpenFile(pThis));
 			iLenRead = read(pThis->fd, pThis->pIOBuf, pThis->sIOBufSize);
-			dbgprintf("Stream 0x%lx: read %ld bytes from file %d\n", (unsigned long) pThis,
-				  iLenRead, pThis->fd);
+			dbgprintf("Stream 0x%lx: file %d read %ld bytes\n", (unsigned long) pThis,
+				  pThis->fd, iLenRead);
 			if(iLenRead == 0) {
 				if(pThis->iMaxFiles == 0)
 					ABORT_FINALIZE(RS_RET_EOF);
 				else {
 					/* we have multiple files and need to switch to the next one */
 					/* TODO: think about emulating EOF in this case (not yet needed) */
-					dbgprintf("Stream 0x%lx: EOF on file %d\n", (unsigned long) pThis, pThis->fd);
+					dbgprintf("Stream 0x%lx: file %d EOF\n", (unsigned long) pThis, pThis->fd);
 					CHKiRet(strmNextFile(pThis));
 				}
 			} else if(iLenRead < 0)
@@ -388,7 +388,7 @@ static rsRetVal strmWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 		CHKiRet(strmOpenFile(pThis));
 
 	iWritten = write(pThis->fd, pBuf, lenBuf);
-	dbgprintf("Stream 0x%lx: write wrote %d bytes to file %d, errno: %d\n", (unsigned long) pThis,
+	dbgprintf("Stream 0x%lx: file %d write wrote %d bytes, errno: %d\n", (unsigned long) pThis,
 	          iWritten, pThis->fd, errno);
 	/* TODO: handle error case -- rgerhards, 2008-01-07 */
 
@@ -422,7 +422,7 @@ rsRetVal strmFlush(strm_t *pThis)
 	DEFiRet;
 
 	assert(pThis != NULL);
-	dbgprintf("Stream 0x%lx: flush file %d, buflen %ld\n", (unsigned long) pThis, pThis->fd, pThis->iBufPtr);
+	dbgprintf("Stream 0x%lx: file %d flush, buflen %ld\n", (unsigned long) pThis, pThis->fd, pThis->iBufPtr);
 
 	if(pThis->tOperationsMode == STREAMMODE_WRITE && pThis->iBufPtr > 0) {
 		iRet = strmWriteInternal(pThis, pThis->pIOBuf, pThis->iBufPtr);
@@ -447,7 +447,7 @@ static rsRetVal strmSeek(strm_t *pThis, off_t offs)
 	else
 		strmFlush(pThis);
 	int i;
-	dbgprintf("Stream 0x%lx: seek file %d, pos %ld\n", (unsigned long) pThis, pThis->fd, offs);
+	dbgprintf("Stream 0x%lx: file %d seek, pos %ld\n", (unsigned long) pThis, pThis->fd, offs);
 	i = lseek(pThis->fd, offs, SEEK_SET); // TODO: check error!
 dbgprintf("seek(%d, %ld): %d\n", pThis->fd, offs, i);
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */

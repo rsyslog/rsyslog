@@ -66,7 +66,8 @@ typedef enum {
 	/* ALL active states MUST be numerically higher than eWRKTHRDCMD_TERMINATED and NONE must be lower! */
 	eWRKTHRDCMD_RUN = 2,
 	eWRKTHRDCMD_SHUTDOWN = 3,
-	eWRKTHRDCMD_SHUTDOWN_IMMEDIATE = 4
+	eWRKTHRDCMD_SHUTDOWN_IMMEDIATE = 4,
+	eWRKTHRDCMD_TURN_OFF_DA_MODE = 5
 } qWrkCmd_t;	/* commands for queue worker threads */
 
 typedef struct qWrkThrd_s {
@@ -86,6 +87,7 @@ typedef struct queue_s {
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
 	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
+	int	bWasBelowHighWtr;/* when running in DA mode: queue was below high wtr mrk at least once */
 	int	iLowWtrMrk;	/* low water mark for disk-assisted memory queues */
 	int	iDiscardMrk;	/* if the queue is above this mark, low-severity messages are discarded */
 	int	iDiscardSeverity;/* messages of this severity above are discarded on too-full queue */
@@ -107,6 +109,7 @@ typedef struct queue_s {
 	pthread_cond_t *condSignalOnEmpty;/* caller-provided condition to be signalled when queue is empty (DA mode!) */
 	pthread_mutex_t *mutSignalOnEmpty; /* and its associated mutex */
 	int bSignalOnEmpty;		/* signal caller when queue is empty via xxxSignalOnEmpty cond/mut */
+	int bThrdStateChanged;		/* at least one thread state has changed if 1 */
 	/* end sync variables */
 	/* the following variables are always present, because they
 	 * are not only used for the "disk" queueing mode but also for
