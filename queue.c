@@ -1,5 +1,4 @@
 // TODO: do an if(debug) in dbgrintf - performanc ein release build!
-// TODO: remove bIsDA?
 // TODO: peekmsg() on first entry, with new/inprogress/deleted entry, destruction in 
 // call consumer state. Facilitates retaining messages in queue until action could
 // be called!
@@ -649,6 +648,45 @@ queueLoadPersStrmInfoFixup(strm_t *pStrm, queue_t *pThis)
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_TYPE_assert(pThis, queue);
 	CHKiRet(strmSetDir(pStrm, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
+finalize_it:
+	return iRet;
+}
+
+
+/* This method checks if we have a QIF file for the current queue (no matter of
+ * queue mode). Returns RS_RET_OK if we have a QIF file or an error status otherwise.
+ * rgerhards, 2008-01-15
+ */
+static rsRetVal 
+queueHaveQIF(queue_t *pThis)
+{
+	DEFiRet;
+	uchar pszQIFNam[MAXFNAME];
+	size_t lenQIFNam;
+	struct stat stat_buf;
+
+	ISOBJ_TYPE_assert(pThis, queue);
+
+	if(pThis->pszFilePrefix == NULL)
+		ABORT_FINALIZE(RS_RET_ERR); // TODO: change code!
+
+	/* Construct file name */
+	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
+			     (char*) glblGetWorkDir(), (char*)pThis->pszFilePrefix);
+
+	/* check if the file exists */
+dbgprintf("stat HaveQIF '%s'\n", pszQIFNam);
+	if(stat((char*) pszQIFNam, &stat_buf) == -1) {
+		if(errno == ENOENT) {
+			dbgprintf("Queue 0x%lx: no .qi file found\n", queueGetID(pThis));
+			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+		} else {
+			dbgprintf("Queue 0x%lx: error %d trying to access .qi file\n", queueGetID(pThis), errno);
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+	}
+	/* If we reach this point, we have a .qi file */
+
 finalize_it:
 	return iRet;
 }
@@ -1308,6 +1346,7 @@ rsRetVal queueStart(queue_t *pThis) /* this is the ConstructionFinalizer */
 {
 	DEFiRet;
 	int i;
+	rsRetVal iRetLocal;
 
 	assert(pThis != NULL);
 
@@ -1330,6 +1369,28 @@ rsRetVal queueStart(queue_t *pThis) /* this is the ConstructionFinalizer */
 		}
 	}
 
+	if(pThis->bIsDA) {
+		/* If we are disk-assisted, we need to check if there is a QIF file
+		 * which we need to load. -- rgerhards, 2008-01-15
+		 */
+		iRetLocal = queueHaveQIF(pThis);
+dbgprintf("HaveQIF %d\n", iRet);
+		if(iRetLocal == RS_RET_OK) {
+dbgprintf("need to restore disk queue\n");
+	// code below to function!
+	/* if we reach this point, we are NOT currently running in DA mode.
+	 * TODO: split this function, I think that would make the code easier
+	 * to read. -- rgerhards, 2008-10-15
+	 */
+	dbgprintf("Queue 0x%lx: on-disk queue present, needs to be reloaded\n",
+		  queueGetID(pThis));
+
+	pThis->qRunsDA = QRUNS_DA_INIT; /* indicate we now run in DA mode - this is reset by the DA worker if it fails */
+
+	/* now we must start our DA worker thread - it does the rest of the initialization */
+	CHKiRet(queueStrtWrkThrd(pThis, 0));
+		}
+	}
 finalize_it:
 	return iRet;
 }
