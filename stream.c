@@ -389,7 +389,7 @@ static rsRetVal strmWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 
 	iWritten = write(pThis->fd, pBuf, lenBuf);
 	dbgprintf("Stream 0x%lx: file %d write wrote %d bytes, errno: %d\n", (unsigned long) pThis,
-	          iWritten, pThis->fd, errno);
+	          pThis->fd, iWritten, errno);
 	/* TODO: handle error case -- rgerhards, 2008-01-07 */
 
 	/* Now indicate buffer empty again. We do this in any case, because there

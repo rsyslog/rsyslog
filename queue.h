@@ -66,8 +66,7 @@ typedef enum {
 	/* ALL active states MUST be numerically higher than eWRKTHRDCMD_TERMINATED and NONE must be lower! */
 	eWRKTHRDCMD_RUN = 2,
 	eWRKTHRDCMD_SHUTDOWN = 3,
-	eWRKTHRDCMD_SHUTDOWN_IMMEDIATE = 4,
-	eWRKTHRDCMD_TURN_OFF_DA_MODE = 5
+	eWRKTHRDCMD_SHUTDOWN_IMMEDIATE = 4
 } qWrkCmd_t;	/* commands for queue worker threads */
 
 typedef struct qWrkThrd_s {
@@ -87,7 +86,7 @@ typedef struct queue_s {
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
 	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
-	int	bWasBelowHighWtr;/* when running in DA mode: queue was below high wtr mrk at least once */
+	//int	bWasBelowHighWtr;/* when running in DA mode: queue was below high wtr mrk at least once */
 	int	iLowWtrMrk;	/* low water mark for disk-assisted memory queues */
 	int	iDiscardMrk;	/* if the queue is above this mark, low-severity messages are discarded */
 	int	iDiscardSeverity;/* messages of this severity above are discarded on too-full queue */
@@ -123,7 +122,11 @@ typedef struct queue_s {
 	int iNumberFiles;	/* how many files make up the queue? */
 	size_t iMaxFileSize;	/* max size for a single queue file */
 	int bIsDA;		/* is this queue disk assisted? */
-	int bRunsDA;		/* is this queue actually *running* disk assisted? */
+	enum {
+		QRUNS_REGULAR,
+		QRUNS_DA_INIT,
+		QRUNS_DA
+	} qRunsDA;		/* is this queue actually *running* disk assisted? if so, which mode? */
 	pthread_mutex_t mutDA;	/* mutex for low water mark algo */
 	pthread_cond_t condDA;	/* and its matching condition */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
