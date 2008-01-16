@@ -111,7 +111,7 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 #else /* non-debug mode, no checks but much faster */
 #	define BEGINobjInstance objInfo_t *pObjInfo; 
 #	define ISOBJ_TYPE_assert(pObj, objType)
-#	define ISOBJ_assert(pObj, objType)
+#	define ISOBJ_assert(pObj)
 #endif
 
 #define DEFpropSetMeth(obj, prop, dataType)\
