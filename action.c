@@ -52,7 +52,7 @@ rsRetVal actionDestruct(action_t *pThis)
 		pThis->pMod->freeInstance(pThis->pModData);
 
 	if(pThis->f_pMsg != NULL)
-		MsgDestruct(pThis->f_pMsg);
+		MsgDestruct(&pThis->f_pMsg);
 
 	SYNC_OBJ_TOOL_EXIT(pThis);
 	if(pThis->ppTpl != NULL)

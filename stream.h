@@ -91,7 +91,7 @@ typedef struct strm_s {
 /* prototypes */
 rsRetVal strmConstruct(strm_t **ppThis);
 rsRetVal strmConstructFinalize(strm_t __attribute__((unused)) *pThis);
-rsRetVal strmDestruct(strm_t *pThis);
+rsRetVal strmDestruct(strm_t **ppThis);
 rsRetVal strmSetMaxFileSize(strm_t *pThis, size_t iMaxFileSize);
 rsRetVal strmSetFileName(strm_t *pThis, uchar *pszName, size_t iLenName);
 rsRetVal strmReadChar(strm_t *pThis, uchar *pC);

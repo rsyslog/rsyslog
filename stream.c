@@ -324,10 +324,13 @@ finalize_it:
 
 
 /* destructor for the strm object */
-rsRetVal strmDestruct(strm_t *pThis)
+rsRetVal strmDestruct(strm_t **ppThis)
 {
+	strm_t *pThis;
 	DEFiRet;
 
+	assert(ppThis != NULL);
+	pThis = *ppThis;
 	ISOBJ_TYPE_assert(pThis, strm);
 
 	if(pThis->tOperationsMode == STREAMMODE_WRITE)
@@ -342,6 +345,7 @@ rsRetVal strmDestruct(strm_t *pThis)
 
 	/* and finally delete the strm objet itself */
 	free(pThis);
+	*ppThis = NULL;
 
 	return iRet;
 }

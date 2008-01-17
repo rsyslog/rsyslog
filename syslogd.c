@@ -1729,7 +1729,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 		    pAction->f_prevcount, time(NULL) - pAction->f_time,
 		    repeatinterval[pAction->f_repeatcount]);
 		/* use current message, so we have the new timestamp (means we need to discard previous one) */
-		MsgDestruct(pAction->f_pMsg);
+		MsgDestruct(&pAction->f_pMsg);
 		pAction->f_pMsg = MsgAddRef(pMsg);
 		/* If domark would have logged this by now, flush it now (so we don't hold
 		 * isolated messages), but back off so we'll flush less often in the future.
@@ -1749,7 +1749,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 				/* we do not care about iRet above - I think it's right but if we have
 				 * some troubles, you know where to look at ;) -- rgerhards, 2007-08-01
 				 */
-			MsgDestruct(pAction->f_pMsg);
+			MsgDestruct(&pAction->f_pMsg);
 		}
 		pAction->f_pMsg = MsgAddRef(pMsg);
 		/* call the output driver */
@@ -1848,7 +1848,7 @@ msgConsumer(void *pUsr)
 	assert(pMsg != NULL);
 
 	processMsg(pMsg);
-	MsgDestruct(pMsg);
+	MsgDestruct(&pMsg);
 
 	return RS_RET_OK;
 }
@@ -2267,14 +2267,14 @@ logmsg(int pri, msg_t *pMsg, int flags)
 		dbgprintf("Message has syslog-protocol format.\n");
 		setProtocolVersion(pMsg, 1);
 		if(parseRFCSyslogMsg(pMsg, flags) == 1) {
-			MsgDestruct(pMsg);
+			MsgDestruct(&pMsg);
 			return;
 		}
 	} else { /* we have legacy syslog */
 		dbgprintf("Message has legacy syslog format.\n");
 		setProtocolVersion(pMsg, 0);
 		if(parseLegacySyslogMsg(pMsg, flags) == 1) {
-			MsgDestruct(pMsg);
+			MsgDestruct(&pMsg);
 			return;
 		}
 	}
@@ -2428,7 +2428,7 @@ finalize_it:
 		 * message object will be discarded by our callers, so this is nothing
 		 * of our business. rgerhards, 2007-07-10
 		 */
-		MsgDestruct(pAction->f_pMsg);
+		MsgDestruct(&pAction->f_pMsg);
 		pAction->f_pMsg = pMsgSave;	/* restore it */
 	}
 
@@ -2617,7 +2617,7 @@ die(int sig)
 	
 	/* drain queue (if configured so) and stop main queue worker thread pool */
 	dbgprintf("Terminating main queue...\n");
-	queueDestruct(pMsgQueue);
+	queueDestruct(&pMsgQueue);
 	pMsgQueue = NULL;
 	
 	/* Free ressources and close connections. This includes flushing any remaining
@@ -3296,7 +3296,7 @@ init(void)
 	/* delete the message queue, which also flushes all messages left over */
 	if(pMsgQueue != NULL) {
 		dbgprintf("deleting main message queue\n");
-		queueDestruct(pMsgQueue); /* delete pThis here! */
+		queueDestruct(&pMsgQueue); /* delete pThis here! */
 		pMsgQueue = NULL;
 	}
 

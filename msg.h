@@ -109,7 +109,7 @@ typedef struct msg msg_t;	/* new name */
 PROTOTYPEObjClassInit(Msg);
 char* getProgramName(msg_t*);
 rsRetVal MsgConstruct(msg_t **ppThis);
-rsRetVal MsgDestruct(msg_t * pM);
+rsRetVal MsgDestruct(msg_t **ppM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);
 void setProtocolVersion(msg_t *pM, int iNewVersion);

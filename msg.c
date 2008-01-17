@@ -232,8 +232,12 @@ finalize_it:
 /* Destructor for a msg "object". Must be called to dispose
  * of a msg object.
  */
-rsRetVal MsgDestruct(msg_t * pM)
-{
+rsRetVal MsgDestruct(msg_t **ppM)
+{ 
+	msg_t *pM;
+
+	assert(ppM != NULL);
+	pM = *ppM;
 	assert(pM != NULL);
 	/* DEV Debugging only ! dbgprintf("MsgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); */
 	if(--pM->iRefCount == 0)
@@ -289,6 +293,7 @@ rsRetVal MsgDestruct(msg_t * pM)
 			rsCStrDestruct(pM->pCSMSGID);
 		funcDeleteMutex(pM);
 		free(pM);
+		*ppM = NULL;
 	}
 
 	return RS_RET_OK;
@@ -302,7 +307,7 @@ rsRetVal MsgDestruct(msg_t * pM)
 #define tmpCOPYSZ(name) \
 	if(pOld->psz##name != NULL) { \
 		if((pNew->psz##name = srUtilStrDup(pOld->psz##name, pOld->iLen##name)) == NULL) {\
-			MsgDestruct(pNew);\
+			MsgDestruct(&pNew);\
 			return NULL;\
 		}\
 		pNew->iLen##name = pOld->iLen##name;\
@@ -315,7 +320,7 @@ rsRetVal MsgDestruct(msg_t * pM)
 #define tmpCOPYCSTR(name) \
 	if(pOld->pCS##name != NULL) {\
 		if(rsCStrConstructFromCStr(&(pNew->pCS##name), pOld->pCS##name) != RS_RET_OK) {\
-			MsgDestruct(pNew);\
+			MsgDestruct(&pNew);\
 			return NULL;\
 		}\
 	}

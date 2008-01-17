@@ -63,23 +63,31 @@ typedef struct qLinkedList_S {
 /* commands and states for worker threads. */
 typedef enum {
 	eWRKTHRD_STOPPED = 0,	/* worker thread is not running (either actually never ran or was shut down) */
-	eWRKTHRD_TERMINATED = 1,/* worker thread has shut down, but some finalzing is still needed */
+	eWRKTHRD_TERMINATING = 1,/* worker thread has shut down, but some finalzing is still needed */
 	/* ALL active states MUST be numerically higher than eWRKTHRD_TERMINATED and NONE must be lower! */
-	eWRKTHRD_RUN_INIT = 2,	/* worker thread is initializing, but not yet fully running */
-	eWRKTHRD_RUNNING = 3,	/* worker thread is up and running and shall continue to do so */
-	eWRKTHRD_SHUTDOWN = 4,	/* worker thread is running but shall terminate when queue is empty */
-	eWRKTHRD_SHUTDOWN_IMMEDIATE = 5/* worker thread is running but shall terminate even if queue is full */
+	eWRKTHRD_RUN_CREATED = 2,/* worker thread has been created, but not yet begun initialization (prob. not yet scheduled) */
+	eWRKTHRD_RUN_INIT = 3,	/* worker thread is initializing, but not yet fully running */
+	eWRKTHRD_RUNNING = 4,	/* worker thread is up and running and shall continue to do so */
+	eWRKTHRD_SHUTDOWN = 5,	/* worker thread is running but shall terminate when queue is empty */
+	eWRKTHRD_SHUTDOWN_IMMEDIATE = 6/* worker thread is running but shall terminate even if queue is full */
 } qWrkCmd_t;
 
 typedef struct qWrkThrd_s {
 	pthread_t thrdID;  /* thread ID */
 	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
+	obj_t *pUsr;		/* current user object being processed (or NULL if none) */
+	struct queue_s *pQueue; /* my queue (important if only the work thread instance is passed! */
+	int iThrd;	/* my worker thread array index */
+	pthread_cond_t condInitDone; /* signaled when the thread startup is done (once per thread existance) */
 } qWrkThrd_t;	/* type for queue worker threads */
 
 /* the queue object */
 typedef struct queue_s {
 	BEGINobjInstance;
 	queueType_t	qType;
+	int	bEnqOnly;	/* does queue run in enqueue-only mode (1) or not (0)? */
+	int	bSaveOnShutdown;/* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
+	int	bQueueStarted;	/* has queueStart() been called on this queue? 1-yes, 0-no */
 	int	iQueueSize;	/* Current number of elements in the queue */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
 	int 	iNumWorkerThreads;/* number of worker threads to use */
@@ -135,6 +143,7 @@ typedef struct queue_s {
 	pthread_mutex_t mutDA;	/* mutex for low water mark algo */
 	pthread_cond_t condDA;	/* and its matching condition */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
+	int	bDAEnqOnly;	/* EnqOnly setting for DA queue */
 	/* now follow queueing mode specific data elements */
 	union {			/* different data elements based on queue type (qType) */
 		struct {
@@ -152,8 +161,19 @@ typedef struct queue_s {
 	} tVars;
 } queue_t;
 
+/* some symbolic constants for easier reference */
+#define QUEUE_MODE_ENQDEQ 0
+#define QUEUE_MODE_ENQONLY 1
+
+/* the define below is an "eternal" timeout for the timeout settings which require a value.
+ * It is one day, which is not really eternal, but comes close to it if we think about
+ * rsyslog (e.g.: do you want to wait on shutdown for more than a day? ;))
+ * rgerhards, 2008-01-17
+ */
+#define QUEUE_TIMEOUT_ETERNAL 24 * 60 * 60 * 1000
+
 /* prototypes */
-rsRetVal queueDestruct(queue_t *pThis);
+rsRetVal queueDestruct(queue_t **ppThis);
 rsRetVal queueEnqObj(queue_t *pThis, void *pUsr);
 rsRetVal queueStart(queue_t *pThis);
 rsRetVal queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize);
