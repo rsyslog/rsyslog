@@ -128,7 +128,7 @@ typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 #define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
 /* macro below is used in conjunction with CHKiRet_Hdlr, else use ABORT_FINALIZE */
 #define FINALIZE goto finalize_it;
-#if 1 /* DEV debug: set to 1 to get a rough call trace -- rgerhards, 2008-01-13 */
+#if 0 /* DEV debug: set to 1 to get a rough call trace -- rgerhards, 2008-01-13 */
 #	define DEFiRet dbgprintf("Entering %s, line %d\n", __FILE__, __LINE__); rsRetVal iRet = RS_RET_OK
 #else
 #	define DEFiRet rsRetVal iRet = RS_RET_OK
