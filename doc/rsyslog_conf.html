@@ -237,8 +237,7 @@ In its current form, output channels primarily provide the ability to size-limit
 an output file. To do so, specify a maximum size. When this size is reached, 
 rsyslogd will execute the action-on-max-size command and then reopen the file 
 and retry. The command should be something like a 
-<a href="log_rotation_fix_size.html">log rotation script</a> or a 
-similar thing.</p>
+<a href="log_rotation_fix_size.html">log rotation script</a> or a similar thing.</p>
 <p>If there is no action-on-max-size command or the command did not resolve the 
 situation, the file is closed and never reopened by rsyslogd (except, of course, 
 by huping it). This logic was integrated when we first experienced severe issues 
