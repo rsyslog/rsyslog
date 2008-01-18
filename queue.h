@@ -79,6 +79,7 @@ typedef struct qWrkThrd_s {
 	struct queue_s *pQueue; /* my queue (important if only the work thread instance is passed! */
 	int iThrd;	/* my worker thread array index */
 	pthread_cond_t condInitDone; /* signaled when the thread startup is done (once per thread existance) */
+	pthread_mutex_t mut;
 } qWrkThrd_t;	/* type for queue worker threads */
 
 /* the queue object */
@@ -144,6 +145,7 @@ typedef struct queue_s {
 	pthread_mutex_t mutDA;	/* mutex for low water mark algo */
 	pthread_cond_t condDA;	/* and its matching condition */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
+	struct queue_s *pqParent;/* pointer to the parent (if this is a child queue) */
 	int	bDAEnqOnly;	/* EnqOnly setting for DA queue */
 	/* now follow queueing mode specific data elements */
 	union {			/* different data elements based on queue type (qType) */
