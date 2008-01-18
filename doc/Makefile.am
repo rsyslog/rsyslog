@@ -20,6 +20,10 @@ html_files = \
 	syslog-protocol.html \
 	version_naming.html \
 	contributors.html \
+	dev_queue.html \
+	queueWorkerLogic.dia \
+	queueWorkerLogic.jpg \
+	queueWorkerLogic_small.jpg \
 	rsconf1_actionexeconlyifpreviousissuspended.html \
 	rsconf1_actionresumeinterval.html \
 	rsconf1_allowedsender.html \

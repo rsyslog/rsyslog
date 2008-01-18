@@ -88,6 +88,7 @@ typedef struct queue_s {
 	int	bEnqOnly;	/* does queue run in enqueue-only mode (1) or not (0)? */
 	int	bSaveOnShutdown;/* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
 	int	bQueueStarted;	/* has queueStart() been called on this queue? 1-yes, 0-no */
+	int	bQueueInDestruction;/* 1 if queue is in destruction process, 0 otherwise */
 	int	iQueueSize;	/* Current number of elements in the queue */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
 	int 	iNumWorkerThreads;/* number of worker threads to use */
