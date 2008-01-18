@@ -40,7 +40,7 @@ queue is typically very fast. If that behaviour is not desired, it can be turned
 of via parameters. In that case, any remaining in-memory messages are lost.</p>
 <p>Due to the fact that when running DA two queues work closely together and 
 worker threads (including the DA worker) may shut down at any time (due to 
-timeout), processing synchronization and startup and shutdown are somewhat 
+timeout), processing synchronization and startup and shutdown is somewhat 
 complex. I'll outline the exact conditions and steps down here. I also do this 
 so that I know clearly what to develop to, so please be patient if the 
 information is a bit too in-depth ;)</p>
@@ -107,13 +107,14 @@ worker thread that detects it is empty (empty queue detection always happens at
 the consumer side and must so). That would lead to the DA queue worker thread to 
 initiate DA queue destruction which in turn would lead to that very same thread 
 being canceled (because workers must shut down before the queue can be 
-destructed). Obviously, this is not place where it can be done. As such, the 
-process that enqueues messages must destruct the queue - and that is the primary 
-queue's DA worker thread.</p>
+destructed). Obviously, this does not work out (and I didn't even mention the 
+other issues - so let's forget about it). As such, the thread that enqueues 
+messages must destruct the queue - and that is the primary queue's DA worker 
+thread.</p>
 <p>There are some subleties due to thread synchronization and the fact that the 
-no DA consumer may be running (in a <b>case-2 startup</b>). So it is not trivial 
-to reliably change the queue back from DA run mode to regular run mode. The 
-priority is a clean switch. We accept the fact that there may be situations 
+DA consumer may not be running (in a <b>case-2 startup</b>). So it is not 
+trivial to reliably change the queue back from DA run mode to regular run mode. 
+The priority is a clean switch. We accept the fact that there may be situations 
 where we cleanly shut down DA run mode, just to re-enable it with the very next 
 message being enqueued. While unlikely, this will happen from time to time and 
 is considered perfectly legal. We can't predict the future and it would 
@@ -125,12 +126,12 @@ most probably even lead to worse performance under regular conditions).</p>
 	DA queue empty</li>
 	<li>at the regular pthread_cond_wait() on an empty primary queue</li>
 </ol>
-<p>Case 2 is very unlikely, but may happen (see info above on a case 2 startup).</p>
+<p>Case 2 is unlikely, but may happen (see info above on a case 2 startup).</p>
 <p><b>The DA worker may also not wait at all,</b> because it is actively 
 executing and shuffeling messages between the queues. In that case, however, the 
-program code passes both of the 2 wait cases but simply does not wait.</p>
-<p><b>Finally, the DA worker may be inactive </b>(again, a case-2 startup). In 
-that case no work(er) at all is executed. Most importantly, without the DA 
+program flow passes both of the two wait conditions but simply does not wait.</p>
+<p><b>Finally, the DA worker may be inactive </b>(again, with a case-2 startup). 
+In that case no work(er) at all is executed. Most importantly, without the DA 
 worker being active, nobody will ever detect the need to change back to regular 
 mode. If we have this situation, the very next message enqueued will cause the 
 switch, because then the DA run mode shutdown criteria is met. However, it may 
@@ -155,8 +156,26 @@ any wait condition</b>.</p>
 called concurrently from multiple initiators. <b>To prevent a race, it must be 
 guarded by the queue mutex </b>and return without any action (and no error 
 code!) if the DA worker is already initiated.</p>
-<p>&nbsp;</p>
-<p>And now let's consider <b>the case of primary queue destruction. </b>During 
+<p>All other cases can be handled by checking the termination criteria 
+immediately at the start of the worker and then once again for each run. The 
+logic follows this simplified flow diagram:</p>
+<p align="center"><a href="queueWorkerLogic.jpg">
+<img border="0" src="queueWorkerLogic_small.jpg" width="625" height="593"></a></p>
+<p>Some of the more subtle aspects of worker processing (e.g. enqueue thread 
+signaling and other fine things) have been left out in order to get the big 
+picture. What is called &quot;check DA mode switchback...&quot; right after &quot;worker init&quot; 
+is actually a check for the worker's termination criteria. Typically, <b>the 
+worker termination criteria is a shutdown request</b>. However, <b>for a DA 
+worker, termination is also requested if the queue size is below the high water 
+mark AND the DA queue is empty</b>. There is also a third termination criteria 
+and it is not even on the chart: that is the inactivity timeout, which exists in 
+all modes. Note that while the inactivity timeout shuts down a thread, it 
+logically does not terminate the worker pool (or DA worker): workers are 
+restarted on an as-needed basis. However, inactivity timeouts are very important 
+because they require us to restart workers in some situations where we may 
+expect a running one. So always keep them on your mind.</p>
+<h2>Queue Destruction</h2>
+<p>Now let's consider <b>the case of primary queue destruction. </b>During 
 destruction, our primary focus is on loosing as few messages as possible. If the 
 queue is not DA-enabled, there is nothing but the configured timeouts to handle 
 that situation. However, with a DA-enabled queue there are more options.</p>
