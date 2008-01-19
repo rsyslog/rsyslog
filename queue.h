@@ -117,7 +117,7 @@ typedef struct queue_s {
 	/* synchronization variables */
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
 	pthread_mutex_t *mut; /* mutex for enqueing and dequeueing messages */
-	pthread_cond_t *notFull, *notEmpty;
+	pthread_cond_t notFull, notEmpty;
 	pthread_cond_t condThrdTrm;/* signalled when threads terminate */
 	pthread_cond_t *condSignalOnEmpty;/* caller-provided condition to be signalled when queue is empty (DA mode!) */
 	pthread_mutex_t *mutSignalOnEmpty; /* and its associated mutex */
