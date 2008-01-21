@@ -7,6 +7,10 @@
 <p>This page reflects the status as of 2008-01-17. The documentation is still incomplete.
 Target audience is developers and users who would like to get an in-depth understanding of
 queues as used in <a href="http://www.rsyslog.com/">rsyslog</a>.</p>
+<p><b>Please note that this document is outdated and does not longer reflect the 
+specifics of the queue object. However, I have decided to leave it in the doc 
+set, as the overall picture provided still is quite OK. I intend to update this 
+document somewhat later when I have reached the &quot;store-and-forward&quot; milestone.</b></p>
 <h1>Some definitions</h1>
 <p>A queue is DA-enabled if it is configured to use disk-assisted mode when 
 there is need to. A queue is in DA mode (or DA run mode), when it actually runs 
@@ -160,7 +164,7 @@ code!) if the DA worker is already initiated.</p>
 immediately at the start of the worker and then once again for each run. The 
 logic follows this simplified flow diagram:</p>
 <p align="center"><a href="queueWorkerLogic.jpg">
-<img border="0" src="queueWorkerLogic_small.jpg" width="625" height="593"></a></p>
+<img border="0" src="queueWorkerLogic_small.jpg" width="431" height="605"></a></p>
 <p>Some of the more subtle aspects of worker processing (e.g. enqueue thread 
 signaling and other fine things) have been left out in order to get the big 
 picture. What is called &quot;check DA mode switchback...&quot; right after &quot;worker init&quot; 
@@ -175,13 +179,13 @@ restarted on an as-needed basis. However, inactivity timeouts are very important
 because they require us to restart workers in some situations where we may 
 expect a running one. So always keep them on your mind.</p>
 <h2>Queue Destruction</h2>
-<p>Now let's consider <b>the case of primary queue destruction. </b>During 
-destruction, our primary focus is on loosing as few messages as possible. If the 
+<p>Now let's consider <b>the case of destruction of the primary queue. </b>During 
+destruction, our focus is on loosing as few messages as possible. If the 
 queue is not DA-enabled, there is nothing but the configured timeouts to handle 
 that situation. However, with a DA-enabled queue there are more options.</p>
 <p>If the queue is DA-enabled, it may be <i>configured to persist messages to 
 disk before it is terminated</i>. In that case, loss of messages never occurs 
-(at the price of a potentially lenghty shutdown). Even if that setting is not 
+(at the price of a potentially lengthy shutdown). Even if that setting is not 
 applied, the queue should drain as many messages as possible to the disk. For 
 that reason, it makes no sense to wait on a low water mark. Also, if the queue 
 is already in DA run mode, it does not make any sense to switch back to regular 
@@ -200,14 +204,14 @@ to disk (and they may cause a case 3 DA run mode initiation). Please note that
 once the primary queue has been drained, the DA queue's worker will 
 automatically switch back to regular (non-DA) run mode. <b>It must be ensured 
 that no worker cancellation occurs during that switchback</b>. Please note that 
-the queue may not swich back to regular run mode if it is not <i>configured to 
+the queue may not switch back to regular run mode if it is not <i>configured to 
 persist messages to disk before it is terminated</i>. In order to apply the new 
 parameters, <b>worker threads must be awakened.</b> Remember we may not be in DA 
-run mode at this stage. In that case, the regular workers must be awakend, which 
+run mode at this stage. In that case, the regular workers must be awakened, which 
 then will switch to DA run mode. No worker may be active, in that case one must 
-be initiated. If in DA run mode and the DA worker is incactive, the&nbsp; &quot;<i>DA 
+be initiated. If in DA run mode and the DA worker is inactive, the&nbsp; &quot;<i>DA 
 worker startup initiation</i>&quot; must be called to activate it. That routine 
-ensures only one DA worker ist started even with multiple concurrent callers - 
+ensures only one DA worker is started even with multiple concurrent callers - 
 this may be the case here. The DA queue's worker may have requested DA worker 
 startup in order to terminate on empty queue (which will probably not be honored 
 as we have changed the low water mark).</p>
@@ -221,8 +225,9 @@ to initialize (to apply new parameter settings), the probability for this race
 condition is extremely high, especially on single-CPU systems.</p>
 <p>After all workers have been shut down (or cancelled), the queue may still be 
 in DA run mode. If so, this must be terminated, which now can simply be done by 
-destructing the DA queue object.</p>
-<p>Finanlly, the queue is mostly shut down and ready to be actually destructed. 
+destructing the DA queue object. This is not a real switchback to regular run 
+mode, but that doesn't matter because the queue object will soon be gone away.</p>
+<p>Finally, the queue is mostly shut down and ready to be actually destructed. 
 As a last try, the queuePersists() entry point is called. It is used to persists 
 a non-DA-enabled queue in whatever way is possible for that queue. There may be 
 no implementation for the specific queue type. Please note that this is not just 
