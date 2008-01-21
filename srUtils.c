@@ -311,6 +311,36 @@ int getNumberDigits(long lNum)
 }
 
 
+/* compute an absolute time timeout suitable for calls to pthread_cond_timedwait()
+ * rgerhards, 2008-01-14
+ */
+rsRetVal
+timeoutComp(struct timespec *pt, int iTimeout)
+{
+	assert(pt != NULL);
+	/* compute timeout */
+	clock_gettime(CLOCK_REALTIME, pt);
+	pt->tv_nsec += (iTimeout % 1000) * 1000000; /* think INTEGER arithmetic! */
+	if(pt->tv_nsec > 999999999) { /* overrun? */
+		pt->tv_nsec -= 1000000000;
+		++pt->tv_sec;
+	}
+	pt->tv_sec += iTimeout / 1000;
+	return RS_RET_OK; /* so far, this is static... */
+}
+
+
+/* cancellation cleanup handler - frees provided mutex
+ * rgerhards, 2008-01-14
+ */
+void
+mutexCancelCleanup(void *arg)
+{
+	assert(arg != NULL);
+	d_pthread_mutex_unlock((pthread_mutex_t*) arg);
+}
+
+
 /*
  * vi:set ai:
  */

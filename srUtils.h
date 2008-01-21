@@ -61,10 +61,45 @@ unsigned char *srUtilStrDup(unsigned char *pOld, size_t len);
  * added 2007-07-17 by rgerhards
  */
 int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode, uid_t uid, gid_t gid, int bFailOnChown);
-
 int execProg(uchar *program, int wait, uchar *arg);
 void skipWhiteSpace(uchar **pp);
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
 		     size_t lenFName, long lNum, int lNumDigits);
 int getNumberDigits(long lNum);
+rsRetVal timeoutComp(struct timespec *pt, int iTimeout);
+void mutexCancelCleanup(void *arg);
+
+/* mutex operations */
+/* some macros to cancel-safe lock a mutex (it will automatically be released
+ * when the thread is cancelled. This needs to be done as macros because
+ * pthread_cleanup_push sometimes is a macro that can not be used inside a function.
+ * It's a bit ugly, but works well... rgerhards, 2008-01-20
+ */
+#define	DEFVARS_mutex_cancelsafeLock int iCancelStateSave
+#define mutex_cancelsafe_lock(mut) \
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave); \
+		d_pthread_mutex_lock(mut); \
+		pthread_cleanup_push(mutexCancelCleanup, mut); \
+		pthread_setcancelstate(iCancelStateSave, NULL);
+#define mutex_cancelsafe_unlock(mut) pthread_cleanup_pop(1)
+
+/* some useful constants */
+#define MUTEX_ALREADY_LOCKED	0
+#define LOCK_MUTEX		1
+#define DEFVARS_mutexProtection\
+	int iCancelStateSave; \
+	int bLockedOpIsLocked
+#define BEGIN_MTX_PROTECTED_OPERATIONS(mut, bMustLock) \
+	if(bMustLock == LOCK_MUTEX) { \
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave); \
+		d_pthread_mutex_lock(mut); \
+		bLockedOpIsLocked = 1; \
+	} else { \
+		bLockedOpIsLocked = 0; \
+	}
+#define END_MTX_PROTECTED_OPERATIONS(mut) \
+	if(bLockedOpIsLocked) { \
+		d_pthread_mutex_unlock(mut); \
+		pthread_setcancelstate(iCancelStateSave, NULL); \
+	}
 #endif
