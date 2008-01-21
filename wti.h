@@ -34,7 +34,6 @@ typedef struct wti_s {
 	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
 	obj_t *pUsr;		/* current user object being processed (or NULL if none) */
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
-	int toShutdown;	/* shutdown timeout, used when idle */
 	pthread_cond_t condInitDone; /* signaled when the thread startup is done (once per thread existance) */
 	pthread_mutex_t mut;
 	uchar *pszDbgHdr;	/* header string for debug messages */
@@ -47,9 +46,9 @@ typedef struct wti_s {
 rsRetVal wtiConstruct(wti_t **ppThis);
 rsRetVal wtiConstructFinalize(wti_t *pThis);
 rsRetVal wtiDestruct(wti_t **ppThis);
+rsRetVal wtiWorker(wti_t *pThis);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
-PROTOTYPEpropSetMeth(wti, toShutdown, int);
 #define wtiGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef WTI_H_INCLUDED */
