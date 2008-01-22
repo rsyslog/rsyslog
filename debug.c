@@ -39,6 +39,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>
+#include <assert.h>
 
 #include "rsyslog.h"
 #include "debug.h"
@@ -46,6 +47,82 @@
 /* static data (some time to be replaced) */
 int	Debug;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
+
+static FILE *stddbg;
+
+typedef struct dbgCallStack_s {
+	pthread_t thrd;
+	const char* callStack[100000];
+	int stackPtr;
+	struct dbgCallStack_s *pNext;
+	struct dbgCallStack_s *pPrev;
+} dbgCallStack_t;
+static dbgCallStack_t *dbgCallStackListRoot = NULL;
+static dbgCallStack_t *dbgCallStackListLast = NULL;
+static pthread_mutex_t mutCallStack = PTHREAD_MUTEX_INITIALIZER;
+
+static pthread_key_t keyCallStack;
+
+/* destructor for a call stack object */
+static void dbgCallStackDestruct(void *arg)
+{
+	dbgCallStack_t *pStack = (dbgCallStack_t*) arg;
+
+	dbgprintf("destructor for debug call stack %p called\n", pStack);
+	if(pStack->pPrev != NULL)
+		pStack->pPrev->pNext = pStack->pNext;
+	if(pStack->pNext != NULL)
+		pStack->pNext->pPrev = pStack->pPrev;
+	if(pStack == dbgCallStackListRoot)
+		dbgCallStackListRoot = pStack->pNext;
+	if(pStack == dbgCallStackListLast)
+		dbgCallStackListLast = pStack->pNext;
+	free(pStack);
+}
+
+
+/* print a thread's call stack
+ */
+static void dbgCallStackPrint(dbgCallStack_t *pStack)
+{
+	int i;
+
+	/* TODO: mutex guard! */
+	dbgprintf("\nRecorded Call Order for Thread 0x%lx (%p):\n", (unsigned long) pStack->thrd, pStack);
+	for(i = 0 ; i < pStack->stackPtr ; i++) {
+		dbgprintf("%s()\n", pStack->callStack[i]);
+	}
+	dbgprintf("NOTE: not all calls may have been recorded.\n");
+}
+
+
+/* get ptr to call stack - if none exists, create a new stack
+ */
+static dbgCallStack_t *dbgGetCallStack(void)
+{
+	dbgCallStack_t *pStack;
+
+	pthread_mutex_lock(&mutCallStack);
+	if((pStack = pthread_getspecific(keyCallStack)) == NULL) {
+		/* construct object */
+		pStack = calloc(1, sizeof(dbgCallStack_t));
+		pStack->thrd = pthread_self();
+		(void) pthread_setspecific(keyCallStack, pStack);
+fprintf(stdout, "dbgGetCallStack Create thrd %lx, pstack %p, thrd %lx\n", (unsigned long) pthread_self(), pStack, pStack->thrd);
+		if(dbgCallStackListRoot == NULL) {
+			dbgCallStackListRoot = pStack;
+			dbgCallStackListLast = pStack;
+		} else {
+			pStack->pPrev = dbgCallStackListLast;
+			dbgCallStackListLast->pNext = pStack;
+			dbgCallStackListLast = pStack;
+		}
+	}
+	pthread_mutex_unlock(&mutCallStack);
+	return pStack;
+}
+
+
 
 /* handler for SIGSEGV - MUST terminiate the app, but does so in a somewhat 
  * more meaningful way.
@@ -56,6 +133,7 @@ sigsegvHdlr(int signum)
 {
 	struct sigaction sigAct;
 	char *signame;
+	dbgCallStack_t *pStack;
 
 	if(signum == SIGSEGV) {
 		signame = " (SIGSEGV)";
@@ -63,9 +141,14 @@ sigsegvHdlr(int signum)
 		signame = "";
 	}
 
-	fprintf(stderr, "Signal %d%s occured, execution must be terminated %d.\n", signum, signame, SIGSEGV);
-	fflush(stderr);
+	dbgprintf("Signal %d%s occured, execution must be terminated %d.\n", signum, signame, SIGSEGV);
 
+	/* stack info */
+	for(pStack = dbgCallStackListRoot ; pStack != NULL ; pStack = pStack->pNext) {
+		dbgCallStackPrint(pStack);
+	}
+
+	fflush(stddbg);
 	/* re-instantiate original handler ... */
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -73,11 +156,11 @@ sigsegvHdlr(int signum)
 	sigaction(SIGSEGV, &sigAct, NULL);
 
 	/* and call it */
-	int i= raise(signum);
-	printf("raise returns %d, errno %d: %s\n", i, errno, strerror(errno));
+	int ir = raise(signum);
+	printf("raise returns %d, errno %d: %s\n", ir, errno, strerror(errno));
 
 	/* we should never arrive here - but we provide some code just in case... */
-	fprintf(stderr, "sigsegvHdlr: oops, returned from raise(), doing exit(), something really wrong...\n");
+	dbgprintf("sigsegvHdlr: oops, returned from raise(), doing exit(), something really wrong...\n");
 	exit(1);
 }
 
@@ -105,29 +188,64 @@ dbgprintf(char *fmt, ...)
 	 */
 	if(ptLastThrdID != pthread_self()) {
 		if(!bWasNL) {
-			fprintf(stdout, "\n");
+			fprintf(stddbg, "\n");
 			bWasNL = 1;
 		}
 		ptLastThrdID = pthread_self();
 	}
 
 	if(bWasNL) {
-		fprintf(stdout, "%8.8x: ", (unsigned int) pthread_self());
-		//fprintf(stderr, "%8.8x: ", (unsigned int) pthread_self());
+		fprintf(stddbg, "%8.8x: ", (unsigned int) pthread_self());
 	}
 	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? 1 : 0;
 	va_start(ap, fmt);
-	vfprintf(stdout, fmt, ap);
-	//vfprintf(stderr, fmt, ap);
+	vfprintf(stddbg, fmt, ap);
 	va_end(ap);
 
-	//fflush(stderr);
-	fflush(stdout);
+	fflush(stddbg);
 	return;
 }
 
-/* */
 
+/* handler called when a function is entered
+ */
+void dbgEntrFunc(char* file, int line, const char* func)
+{
+	dbgCallStack_t *pStack = dbgGetCallStack();
+
+	dbgprintf("%s:%d: %s: enter\n", file, line, func);
+	pStack->callStack[pStack->stackPtr++] = func;
+	dbgprintf("stack %d\n", pStack->stackPtr);
+	assert(pStack->stackPtr < (int) (sizeof(pStack->callStack) / sizeof(const char*)));
+	
+}
+
+
+/* handler called when a function is exited
+ */
+void dbgExitFunc(char* file, int line, const char* func)
+{
+	dbgCallStack_t *pStack = dbgGetCallStack();
+
+	dbgprintf("%s:%d: %s: exit\n", file, line, func);
+	pStack->stackPtr--;
+	assert(pStack->stackPtr > 0);
+}
+
+rsRetVal dbgClassInit(void)
+{
+	stddbg = stdout;
+	(void) pthread_key_create(&keyCallStack, dbgCallStackDestruct);
+	return RS_RET_OK;
+}
+
+
+rsRetVal dbgClassExit(void)
+{
+	pthread_key_delete(keyCallStack);
+	//(void) pthread_key_create(&keyCallStack, dbgCallStackDestructor);
+	return RS_RET_OK;
+}
 /*
  * vi:set ai:
  */

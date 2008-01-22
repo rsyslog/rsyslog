@@ -30,7 +30,26 @@ extern int Debug;		/* debug flag  - read-only after startup */
 extern int debugging_on;	 /* read-only, except on sig USR1 */
 
 /* prototypes */
+rsRetVal dbgClassInit(void);
 void sigsegvHdlr(int signum);
 void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
+void dbgEntrFunc(char* file, int line, const char* func);
+void dbgExitFunc(char* file, int line, const char* func);
+
+/* macros */
+#if 1 /* DEV debug: set to 1 to get a rough call trace -- rgerhards, 2008-01-13 */
+#	define BEGINfunc dbgEntrFunc(__FILE__, __LINE__, __func__);
+#	define ENDfunc dbgExitFunc(__FILE__, __LINE__, __func__);
+#else
+#	define BEGINfunc
+#	define ENDfunc
+#endif
+#if 1 /* DEV debug: set to 1 to enable -- rgerhards, 2008-01-13 */
+#	define RUNLOG  dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__)
+#	define RUNLOG_VAR(fmt, x) dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
+#else
+#	define RUNLOG
+#	define RUNLOG_VAR(x)
+#endif
 
 #endif /* #ifndef DEBUG_H_INCLUDED */
