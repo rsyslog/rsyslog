@@ -99,3 +99,7 @@ endif
 if ENABLE_PGSQL
 SUBDIRS += plugins/ompgsql
 endif
+
+if ENABLE_SNMP
+SUBDIRS += plugins/omsnmp
+endif

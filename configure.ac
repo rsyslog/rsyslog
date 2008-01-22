@@ -329,6 +329,7 @@ AM_CONDITIONAL(ENABLE_MYSQL, test x$enable_mysql = xyes)
 AC_SUBST(mysql_cflags)
 AC_SUBST(mysql_libs)
 
+
 # PostgreSQL support
 AC_ARG_ENABLE(pgsql,
         [AS_HELP_STRING([--enable-pgsql],[Enable PostgreSQL database support @<:@default=no@:>@])],
@@ -363,6 +364,43 @@ AC_SUBST(pgsql_cflags)
 AC_SUBST(pgsql_libs)
 
 
+# SNMP support
+AC_ARG_ENABLE(snmp,
+        [AS_HELP_STRING([--enable-snmp],[Enable SNMP support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_snmp="yes" ;;
+          no) enable_snmp="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-snmp) ;;
+         esac],
+        [enable_snmp=no]
+)
+#if test "x$enable_snmp" = "xyes"; then
+# I think we can delete that part -- rgerhards, 2008-01-22
+#  AC_CHECK_PROG(
+#    [HAVE_PGSQL_CONFIG],
+#    [pg_config],
+#    [yes],,,
+#  )
+#  if test "x${HAVE_PGSQL_CONFIG}" != "xyes"; then
+#    AC_MSG_FAILURE([pg_config not found in PATH])
+#  fi
+# END to-be-deleted
+# here must go the check for netsnmp
+#  AC_CHECK_LIB(
+#    [pq],
+#    [PQconnectdb],
+#    [snmp_cflags=""
+#     snmp_libs=""
+#    ],
+#    [AC_MSG_FAILURE([netsnmp library is missing])],
+#    [-L`pg_config --libdir`]
+#  )
+#fi
+AM_CONDITIONAL(ENABLE_SNMP, test x$enable_snmp = xyes)
+AC_SUBST(snmp_cflags)
+AC_SUBST(snmp_libs)
+
+
 AC_CONFIG_FILES([Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
@@ -373,7 +411,8 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
-		plugins/ompgsql/Makefile])
+		plugins/ompgsql/Makefile \
+		plugins/omsnmp/Makefile])
 AC_OUTPUT
 
 echo "****************************************************"
@@ -385,6 +424,7 @@ echo "Regular expressions support enabled:      $enable_regexp"
 echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"
 echo "PostgreSQL support enabled:               $enable_pgsql"
+echo "SNMP support enabled:                     $enable_snmp"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"

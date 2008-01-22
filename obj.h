@@ -86,7 +86,7 @@
 	CHKiRet(objInfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)(void*)) pHdlr))
 
 /* debug aides */
-#if 1
+#if 0
 #define d_pthread_mutex_lock(x)   {dbgprintf("mutex %p   lock %s, %s(), line %d\n", (void*)x, __FILE__, __func__, __LINE__); \
 				   pthread_mutex_lock(x); \
                                    if(1)dbgprintf("mutex %p   lock aquired %s, %s(), line %d\n",(void*)x, __FILE__, __func__, __LINE__); \
