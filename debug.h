@@ -43,6 +43,7 @@ int dbgMutexLock(pthread_mutex_t *pmut, const char *file, const char* func, int 
 void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
 int dbgEntrFunc(char* file, int line, const char* func);
 void dbgExitFunc(int iStackPtrRestore, char* file, int line, const char* func);
+void dbgSetThrdName(uchar *pszName);
 
 /* macros */
 #if 1 /* DEV debug: set to 1 to get a rough call trace -- rgerhards, 2008-01-13 */

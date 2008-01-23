@@ -64,17 +64,23 @@ static dbgMutLog_t *dbgMutLogListRoot = NULL;
 static dbgMutLog_t *dbgMutLogListLast = NULL;
 static pthread_mutex_t mutMutLog = PTHREAD_MUTEX_INITIALIZER;
 
+
+/* the structure below was originally just the thread's call stack, but it has
+ * a bit evolved over time. So we have now ended up with the fact that it 
+ * all debug info we know about the thread.
+ */
 typedef struct dbgCallStack_s {
 	pthread_t thrd;
-	const char* callStack[1000];
-	const char* callStackFile[5000];
+	const char* callStack[500];
+	const char* callStackFile[500];
 	int stackPtr;
 	int stackPtrMax;
+	char *pszThrdName;
 	struct dbgCallStack_s *pNext;
 	struct dbgCallStack_s *pPrev;
-} dbgCallStack_t;
-static dbgCallStack_t *dbgCallStackListRoot = NULL;
-static dbgCallStack_t *dbgCallStackListLast = NULL;
+} dbgThrdInfo_t;
+static dbgThrdInfo_t *dbgCallStackListRoot = NULL;
+static dbgThrdInfo_t *dbgCallStackListLast = NULL;
 static pthread_mutex_t mutCallStack = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_mutex_t mutdbgprintf = PTHREAD_MUTEX_INITIALIZER;
@@ -96,20 +102,16 @@ static pthread_key_t keyCallStack;
 		dbg##type##ListRoot = pThis->pNext; \
 	if(pThis == dbg##type##ListLast) \
 		dbg##type##ListLast = pThis->pPrev; \
-dbgprintf("DLL del %s entry %p plast %p\n", #type, pThis, dbg##type##ListLast); \
 	free(pThis);
 
 #define DLL_Add(type, pThis) \
-dbgprintf("DLL add %s entry %p\n", #type, pThis); \
 		if(dbg##type##ListRoot == NULL) { \
-dbgprintf("DLL_add %s Root NULL\n", #type); \
 			dbg##type##ListRoot = pThis; \
 			dbg##type##ListLast = pThis; \
 		} else { \
 			pThis->pPrev = dbg##type##ListLast; \
 			dbg##type##ListLast->pNext = pThis; \
 			dbg##type##ListLast = pThis; \
-dbgprintf("DLL_add %s Root NON-NULL, pThis %p, prev %p\n", #type, pThis, pThis->pPrev); \
 		}
 
 /* we need to do our own mutex cancel cleanup handler as it shall not
@@ -141,18 +143,14 @@ dbgMutLog_t *dbgMutLogAddEntry(pthread_mutex_t *pmut, short mutexOp, const char 
 	pLog = calloc(1, sizeof(dbgMutLog_t));
 	assert(pLog != NULL);
 
-dbgprintf("mutexlockaddEntry 1\n");
 	/* fill data members */
 	pLog->mut = pmut;
 	pLog->thrd = pthread_self();
 	pLog->mutexOp = mutexOp;
 	pLog->file = file;
 	pLog->ln = line;
-dbgprintf("mutexlockaddEntry 2\n");
 
-dbgprintf("mutex %p: op %d\n", pLog, pLog->mutexOp);
 	DLL_Add(MutLog, pLog);
-dbgprintf("mutexlockaddEntry 3, entry %p added\n", pLog);
 
 	return pLog;
 }
@@ -186,8 +184,6 @@ static void dbgMutLogPrintOne(dbgMutLog_t *pLog)
 			strmutop = buf;
 			break;
 	}
-	dbgprintf("mutex 0x%lx is being %s by code at %s:%d, thread 0x%lx\n", (unsigned long) pLog->mut, strmutop, pLog->file, pLog->ln,
-		  (unsigned long) pLog->thrd);
 }
 
 /* print the complete mutex log */
@@ -212,11 +208,8 @@ dbgMutLog_t *dbgMutLogFindSpecific(pthread_mutex_t *pmut, short mutop, const cha
 	dbgMutLog_t *pLog;
 	pthread_t mythrd = pthread_self();
 	
-dbgprintf("reqeusted to search for op %d\n", mutop);
 	pLog = dbgMutLogListLast;
 	while(pLog != NULL) {
-dbgprintf("FindSpecific %p: mut %p == %p, thrd %lx == %lx, op %d == %d, ln %d == %d, file '%s' = '%s'\n", pLog,
-		 pLog->mut, pmut, pLog->thrd, mythrd, pLog->mutexOp, mutop, pLog->ln, line, pLog->file, file);
 
 		if(   pLog->mut == pmut && pLog->thrd == mythrd && pLog->mutexOp == mutop
 		   && ((file == NULL) || !strcmp(pLog->file, file))  && ((line == -1) || (pLog->ln == line)))
@@ -294,9 +287,7 @@ static void dbgMutexLockLog(pthread_mutex_t *pmut, const char *file, const char*
 	dbgMutLog_t *pLog;
 
 	pthread_mutex_lock(&mutMutLog);
-dbgprintf("mutexlocklog 1, serach for op %d\n", MUTOP_LOCKWAIT);
 	pLog = dbgMutLogFindSpecific(pmut, MUTOP_LOCKWAIT, file, line);
-dbgprintf("mutexlocklog 2, found %p\n", pLog);
 	assert(pLog != NULL);
 	dbgMutLogDelEntry(pLog);
 	pLog = dbgMutLogAddEntry(pmut, MUTOP_LOCK, file, line);
@@ -320,12 +311,10 @@ static void dbgMutexUnlockLog(pthread_mutex_t *pmut, const char *file, const cha
 
 int dbgMutexLock(pthread_mutex_t *pmut, const char *file, const char* func, int line)
 {
-dbgprintf("---> dbgMutexlock\n");
 	int ret;
 	dbgMutexPreLockLog(pmut, file, func, line);
 	ret = pthread_mutex_lock(pmut);
 
-dbgprintf("--->   lock ret %d: %s\n", ret, strerror(errno));
 	dbgMutexLockLog(pmut, file, func, line);
 	return ret;
 }
@@ -333,7 +322,6 @@ dbgprintf("--->   lock ret %d: %s\n", ret, strerror(errno));
 
 int dbgMutexUnlock(pthread_mutex_t *pmut, const char *file, const char* func, int line)
 {
-dbgprintf("---> dbgMutexUnlock\n");
 	int ret;
 	dbgMutexUnlockLog(pmut, file, func, line);
 	ret = pthread_mutex_unlock(pmut);
@@ -345,7 +333,6 @@ dbgprintf("---> dbgMutexUnlock\n");
 int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const char *file, const char* func, int line)
 {
 	int ret;
-dbgprintf("---> dbCondWait\n");
 	dbgMutexUnlockLog(pmut, file, func, line);
 	dbgMutexPreLockLog(pmut, file, func, line);
 	ret = pthread_cond_wait(cond, pmut);
@@ -358,7 +345,6 @@ int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct t
 		     const char *file, const char* func, int line)
 {
 	int ret;
-dbgprintf("---> dbCondTimedWait\n");
 	dbgMutexUnlockLog(pmut, file, func, line);
 	dbgMutexPreLockLog(pmut, file, func, line);
 	ret = pthread_cond_timedwait(cond, pmut, abstime);
@@ -369,30 +355,106 @@ dbgprintf("---> dbCondTimedWait\n");
 
 /* ------------------------- end mutex tracking code ------------------------- */ 
 
-/* ------------------------- call stack tracking code ------------------------- */ 
+/* ------------------------- thread tracking code ------------------------- */ 
+
+/* get ptr to call stack - if none exists, create a new stack
+ */
+static dbgThrdInfo_t *dbgGetThrdInfo(void)
+{
+	dbgThrdInfo_t *pThrd;
+
+	pthread_mutex_lock(&mutCallStack);
+	if((pThrd = pthread_getspecific(keyCallStack)) == NULL) {
+		/* construct object */
+		pThrd = calloc(1, sizeof(dbgThrdInfo_t));
+		pThrd->thrd = pthread_self();
+		(void) pthread_setspecific(keyCallStack, pThrd);
+fprintf(stdout, "dbgGetThrdInfo Create thrd %lx, pstack %p, thrd %lx\n", (unsigned long) pthread_self(), pThrd, pThrd->thrd);
+		DLL_Add(CallStack, pThrd);
+	}
+	pthread_mutex_unlock(&mutCallStack);
+	return pThrd;
+}
+
+
+
+/* find a specific thread ID. It must be present, else something is wrong
+ */
+static inline dbgThrdInfo_t *dbgFindThrd(pthread_t thrd)
+{
+	dbgThrdInfo_t *pThrd;
+
+	for(pThrd = dbgCallStackListRoot ; pThrd != NULL ; pThrd = pThrd->pNext) {
+		if(pThrd->thrd == thrd)
+			break;
+	}
+	return pThrd;
+}
+
+
+/* build a string with the thread name. If none is set, the thread ID is
+ * used instead. Caller must provide buffer space. If bIncludeNumID is set
+ * to 1, the numerical ID is always included.
+ * rgerhards 2008-01-23
+ */
+static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bIncludeNumID)
+{
+	dbgThrdInfo_t *pThrd;
+
+	assert(pszBuf != NULL);
+
+	pThrd = dbgFindThrd(thrd);
+
+	if(pThrd == 0 || pThrd->pszThrdName == NULL) {
+		/* no thread name, use numeric value  */
+		snprintf(pszBuf, lenBuf, "%lx", thrd);
+	} else {
+		if(bIncludeNumID) {
+			snprintf(pszBuf, lenBuf, "%s (%lx)", pThrd->pszThrdName, thrd);
+		} else {
+			snprintf(pszBuf, lenBuf, "%s", pThrd->pszThrdName);
+		}
+	}
+
+}
+
+
+/* set a name for the current thread. The caller provided string is duplicated.
+ */
+void dbgSetThrdName(uchar *pszName)
+{
+	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
+	if(pThrd->pszThrdName != NULL)
+		free(pThrd->pszThrdName);
+	pThrd->pszThrdName = strdup((char*)pszName);
+}
+
 
 /* destructor for a call stack object */
 static void dbgCallStackDestruct(void *arg)
 {
-	dbgCallStack_t *pStack = (dbgCallStack_t*) arg;
+	dbgThrdInfo_t *pThrd = (dbgThrdInfo_t*) arg;
 
-	dbgprintf("destructor for debug call stack %p called\n", pStack);
-	DLL_Del(CallStack, pStack);
+	dbgprintf("destructor for debug call stack %p called\n", pThrd);
+	DLL_Del(CallStack, pThrd);
 }
 
 
 /* print a thread's call stack
  */
-static void dbgCallStackPrint(dbgCallStack_t *pStack)
+static void dbgCallStackPrint(dbgThrdInfo_t *pThrd)
 {
 	int i;
+	char pszThrdName[64];
 
 	pthread_mutex_lock(&mutCallStack);
-	dbgprintf("\nRecorded Call Order for Thread 0x%lx (%p):\n", (unsigned long) pStack->thrd, pStack);
-	for(i = 0 ; i < pStack->stackPtr ; i++) {
-		dbgprintf("%d, %s:%s\n", i, pStack->callStackFile[i], pStack->callStack[i]);
+	dbgGetThrdName(pszThrdName, sizeof(pszThrdName), pThrd->thrd, 1);
+	dbgprintf("\n");
+	dbgprintf("Recorded Call Order for Thread '%s':\n", pszThrdName);
+	for(i = 0 ; i < pThrd->stackPtr ; i++) {
+		dbgprintf("%d, %s:%s\n", i, pThrd->callStackFile[i], pThrd->callStack[i]);
 	}
-	dbgprintf("NOTE: not all calls may have been recorded, highest nested calls %d.\n", pStack->stackPtrMax);
+	dbgprintf("NOTE: not all calls may have been recorded, highest number of nested calls %d.\n", pThrd->stackPtrMax);
 	pthread_mutex_unlock(&mutCallStack);
 }
 
@@ -400,33 +462,12 @@ static void dbgCallStackPrint(dbgCallStack_t *pStack)
  */
 static void dbgCallStackPrintAll(void)
 {
-	dbgCallStack_t *pStack;
+	dbgThrdInfo_t *pThrd;
 	/* stack info */
-	for(pStack = dbgCallStackListRoot ; pStack != NULL ; pStack = pStack->pNext) {
-		dbgCallStackPrint(pStack);
+	for(pThrd = dbgCallStackListRoot ; pThrd != NULL ; pThrd = pThrd->pNext) {
+		dbgCallStackPrint(pThrd);
 	}
 }
-
-
-/* get ptr to call stack - if none exists, create a new stack
- */
-static dbgCallStack_t *dbgGetCallStack(void)
-{
-	dbgCallStack_t *pStack;
-
-	pthread_mutex_lock(&mutCallStack);
-	if((pStack = pthread_getspecific(keyCallStack)) == NULL) {
-		/* construct object */
-		pStack = calloc(1, sizeof(dbgCallStack_t));
-		pStack->thrd = pthread_self();
-		(void) pthread_setspecific(keyCallStack, pStack);
-fprintf(stdout, "dbgGetCallStack Create thrd %lx, pstack %p, thrd %lx\n", (unsigned long) pthread_self(), pStack, pStack->thrd);
-		DLL_Add(CallStack, pStack);
-	}
-	pthread_mutex_unlock(&mutCallStack);
-	return pStack;
-}
-
 
 
 /* handler for SIGSEGV - MUST terminiate the app, but does so in a somewhat 
@@ -473,6 +514,7 @@ dbgprintf(char *fmt, ...)
 	static pthread_t ptLastThrdID = 0;
 	static int bWasNL = 0;
 	va_list ap;
+	static char pszThrdName[64]; /* 64 is to be on the safe side, anything over 20 is bad... */
 
 	if(!(Debug && debugging_on))
 		return;
@@ -496,10 +538,11 @@ dbgprintf(char *fmt, ...)
 			bWasNL = 1;
 		}
 		ptLastThrdID = pthread_self();
+		dbgGetThrdName(pszThrdName, sizeof(pszThrdName), ptLastThrdID, 0);
 	}
 
 	if(bWasNL) {
-		fprintf(stddbg, "%8.8x: ", (unsigned int) pthread_self());
+		fprintf(stddbg, "%s: ", pszThrdName);
 	}
 	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? 1 : 0;
 	va_start(ap, fmt);
@@ -516,16 +559,20 @@ dbgprintf(char *fmt, ...)
 int dbgEntrFunc(char* file, int line, const char* func)
 {
 	int iStackPtr;
-	dbgCallStack_t *pStack = dbgGetCallStack();
+	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
 
 	if(bLogFuncFlow)
 		dbgprintf("%s:%d: %s: enter\n", file, line, func);
-	iStackPtr = pStack->stackPtr++;
-	if(pStack->stackPtr > pStack->stackPtrMax)
-		pStack->stackPtrMax = pStack->stackPtr;
-	pStack->callStackFile[iStackPtr] = file;
-	pStack->callStack[iStackPtr] = func;
-	assert(pStack->stackPtr < (int) (sizeof(pStack->callStack) / sizeof(const char*)));
+	if(pThrd->stackPtr >= (int) (sizeof(pThrd->callStack) / sizeof(const char*))) {
+		dbgprintf("%s:%d: %s: debug module: call stack for this thread full, suspending call tracking\n", file, line, func);
+		iStackPtr = pThrd->stackPtr;
+	} else {
+		iStackPtr = pThrd->stackPtr++;
+		if(pThrd->stackPtr > pThrd->stackPtrMax)
+			pThrd->stackPtrMax = pThrd->stackPtr;
+		pThrd->callStackFile[iStackPtr] = file;
+		pThrd->callStack[iStackPtr] = func;
+	}
 	
 	return iStackPtr;
 }
@@ -535,16 +582,16 @@ int dbgEntrFunc(char* file, int line, const char* func)
  */
 void dbgExitFunc(int iStackPtrRestore, char* file, int line, const char* func)
 {
-	dbgCallStack_t *pStack = dbgGetCallStack();
+	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
 
 	assert(iStackPtrRestore >= 0);
 
 	if(bLogFuncFlow)
 		dbgprintf("%s:%d: %s: exit\n", file, line, func);
-	pStack->stackPtr = iStackPtrRestore;
-	if(pStack->stackPtr < 0) {
+	pThrd->stackPtr = iStackPtrRestore;
+	if(pThrd->stackPtr < 0) {
 		dbgprintf("Stack pointer for thread %lx below 0 - resetting (some RETiRet still wrong!)\n", pthread_self());
-		pStack->stackPtr = 0;
+		pThrd->stackPtr = 0;
 	}
 }
 
@@ -563,6 +610,7 @@ rsRetVal dbgClassInit(void)
 {
 	struct sigaction sigAct;
 	
+	(void) pthread_key_create(&keyCallStack, dbgCallStackDestruct); /* MUST be the first action done! */
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = sigusr2Hdlr;
@@ -570,7 +618,7 @@ rsRetVal dbgClassInit(void)
 	sigaction(SIGUSR1, &sigAct, NULL);
 
 	stddbg = stdout;
-	(void) pthread_key_create(&keyCallStack, dbgCallStackDestruct);
+	dbgSetThrdName((uchar*)"main thread");
 	return RS_RET_OK;
 }
 
