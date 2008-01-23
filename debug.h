@@ -25,13 +25,21 @@
 #ifndef DEBUG_H_INCLUDED
 #define DEBUG_H_INCLUDED
 
+#include <pthread.h>
+
 /* external static data elements (some time to be replaced) */
 extern int Debug;		/* debug flag  - read-only after startup */
 extern int debugging_on;	 /* read-only, except on sig USR1 */
 
 /* prototypes */
 rsRetVal dbgClassInit(void);
+rsRetVal dbgClassExit(void);
 void sigsegvHdlr(int signum);
+int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime,
+		     const char *file, const char* func, int line);
+int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *mutex, const char *file, const char* func, int line);
+int dbgMutexUnlock(pthread_mutex_t *pmut, const char *file, const char* func, int line);
+int dbgMutexLock(pthread_mutex_t *pmut, const char *file, const char* func, int line);
 void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
 void dbgEntrFunc(char* file, int line, const char* func);
 void dbgExitFunc(char* file, int line, const char* func);
@@ -52,4 +60,22 @@ void dbgExitFunc(char* file, int line, const char* func);
 #	define RUNLOG_VAR(x)
 #endif
 
+/* mutex operations */
+#define MUTOP_LOCKWAIT		1
+#define MUTOP_LOCK		2
+#define MUTOP_UNLOCK		3
+
+
+/* debug aides */
+#if 1
+#define d_pthread_mutex_lock(x)     dbgMutexLock(x, __FILE__, __func__, __LINE__)
+#define d_pthread_mutex_unlock(x)   dbgMutexLock(x, __FILE__, __func__, __LINE__)
+#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, __FILE__, __func__, __LINE__)
+#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, __FILE__, __func__, __LINE__)
+#else
+#define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
+#define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
+#define d_pthread_cond_wait(cond, mut)   pthread_cond_wait(cond, mut)
+#define d_pthread_cond_timedwait(cond, mut, to)   pthread_cond_timedwait(cond, mut, to)
+#endif
 #endif /* #ifndef DEBUG_H_INCLUDED */
