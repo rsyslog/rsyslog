@@ -41,19 +41,19 @@ int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *mutex, const char *file, 
 int dbgMutexUnlock(pthread_mutex_t *pmut, const char *file, const char* func, int line);
 int dbgMutexLock(pthread_mutex_t *pmut, const char *file, const char* func, int line);
 void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
-void dbgEntrFunc(char* file, int line, const char* func);
-void dbgExitFunc(char* file, int line, const char* func);
+int dbgEntrFunc(char* file, int line, const char* func);
+void dbgExitFunc(int iStackPtrRestore, char* file, int line, const char* func);
 
 /* macros */
 #if 1 /* DEV debug: set to 1 to get a rough call trace -- rgerhards, 2008-01-13 */
-#	define BEGINfunc dbgEntrFunc(__FILE__, __LINE__, __func__);
-#	define ENDfunc dbgExitFunc(__FILE__, __LINE__, __func__);
+#	define BEGINfunc int dbgCALLStaCK_POP_POINT = dbgEntrFunc(__FILE__, __LINE__, __func__);
+#	define ENDfunc dbgExitFunc(dbgCALLStaCK_POP_POINT, __FILE__, __LINE__, __func__);
 #else
 #	define BEGINfunc
 #	define ENDfunc
 #endif
 #if 1 /* DEV debug: set to 1 to enable -- rgerhards, 2008-01-13 */
-#	define RUNLOG  dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__)
+#	define RUNLOG dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__)
 #	define RUNLOG_VAR(fmt, x) dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
 #else
 #	define RUNLOG
@@ -69,7 +69,7 @@ void dbgExitFunc(char* file, int line, const char* func);
 /* debug aides */
 #if 1
 #define d_pthread_mutex_lock(x)     dbgMutexLock(x, __FILE__, __func__, __LINE__)
-#define d_pthread_mutex_unlock(x)   dbgMutexLock(x, __FILE__, __func__, __LINE__)
+#define d_pthread_mutex_unlock(x)   dbgMutexUnlock(x, __FILE__, __func__, __LINE__)
 #define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, __FILE__, __func__, __LINE__)
 #define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, __FILE__, __func__, __LINE__)
 #else

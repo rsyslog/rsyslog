@@ -66,8 +66,10 @@ static pthread_mutex_t mutMutLog = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct dbgCallStack_s {
 	pthread_t thrd;
-	const char* callStack[5000];
+	const char* callStack[1000];
+	const char* callStackFile[5000];
 	int stackPtr;
+	int stackPtrMax;
 	struct dbgCallStack_s *pNext;
 	struct dbgCallStack_s *pPrev;
 } dbgCallStack_t;
@@ -165,8 +167,45 @@ void dbgMutLogDelEntry(dbgMutLog_t *pLog)
 }
 
 
+/* print a single mutex log entry */
+static void dbgMutLogPrintOne(dbgMutLog_t *pLog)
+{
+	char *strmutop;
+	char buf[64];
+
+	assert(pLog != NULL);
+	switch(pLog->mutexOp) {
+		case MUTOP_LOCKWAIT:
+			strmutop = "waited on";
+			break;
+		case MUTOP_LOCK:
+			strmutop = "owned";
+			break;
+		default:
+			snprintf(buf, sizeof(buf)/sizeof(char), "unknown state %d - should not happen!", pLog->mutexOp);
+			strmutop = buf;
+			break;
+	}
+	dbgprintf("mutex 0x%lx is being %s by code at %s:%d, thread 0x%lx\n", (unsigned long) pLog->mut, strmutop, pLog->file, pLog->ln,
+		  (unsigned long) pLog->thrd);
+}
+
+/* print the complete mutex log */
+static void dbgMutLogPrintAll(void)
+{
+	dbgMutLog_t *pLog;
+
+	dbgprintf("Mutex log for all known mutex operations:\n");
+	for(pLog = dbgMutLogListRoot ; pLog != NULL ; pLog = pLog->pNext)
+		dbgMutLogPrintOne(pLog);
+	
+}
+
+
 /* find the last log entry for that specific mutex object. Is used to delete
  * a thread's own requests. Searches occur from the back.
+ * file and line are optional. If they are NULL and -1, they are ignored. This is
+ * important for the unlock case.
  */
 dbgMutLog_t *dbgMutLogFindSpecific(pthread_mutex_t *pmut, short mutop, const char *file, int line)
 {
@@ -180,7 +219,7 @@ dbgprintf("FindSpecific %p: mut %p == %p, thrd %lx == %lx, op %d == %d, ln %d ==
 		 pLog->mut, pmut, pLog->thrd, mythrd, pLog->mutexOp, mutop, pLog->ln, line, pLog->file, file);
 
 		if(   pLog->mut == pmut && pLog->thrd == mythrd && pLog->mutexOp == mutop
-		   && !strcmp(pLog->file, file) && pLog->ln == line)
+		   && ((file == NULL) || !strcmp(pLog->file, file))  && ((line == -1) || (pLog->ln == line)))
 			break;
 		pLog = pLog->pPrev;
 	}
@@ -244,7 +283,7 @@ static void dbgMutexPreLockLog(pthread_mutex_t *pmut, const char *file, const ch
 		pszHolder = pszBuf;
 	}
 
-	dbgprintf("mutex %p pre lock %s, %s(), line %d, holder: %s\n", (void*)pmut, file, func, line, pszHolder);
+	dbgprintf("%s:%d:%s: mutex %p waiting on lock, held by %s\n", file, line, func, (void*)pmut, pszHolder);
 	pthread_mutex_unlock(&mutMutLog);
 }
 
@@ -260,10 +299,9 @@ dbgprintf("mutexlocklog 1, serach for op %d\n", MUTOP_LOCKWAIT);
 dbgprintf("mutexlocklog 2, found %p\n", pLog);
 	assert(pLog != NULL);
 	dbgMutLogDelEntry(pLog);
-dbgprintf("mutexlocklog 3\n");
 	pLog = dbgMutLogAddEntry(pmut, MUTOP_LOCK, file, line);
 	pthread_mutex_unlock(&mutMutLog);
-	dbgprintf("mutex %p aquired %s, %s(), line %d\n", (void*)pmut, file, func, line);
+	dbgprintf("%s:%d:%s: mutex %p aquired\n", file, line, func, (void*)pmut); 
 }
 
 /* if we unlock, we just remove the lock aquired entry from the log list */
@@ -272,11 +310,11 @@ static void dbgMutexUnlockLog(pthread_mutex_t *pmut, const char *file, const cha
 	dbgMutLog_t *pLog;
 
 	pthread_mutex_lock(&mutMutLog);
-	pLog = dbgMutLogFindSpecific(pmut, MUTOP_LOCK, file, line);
+	pLog = dbgMutLogFindSpecific(pmut, MUTOP_LOCK, NULL, -1);
 	assert(pLog != NULL);
 	dbgMutLogDelEntry(pLog);
 	pthread_mutex_unlock(&mutMutLog);
-	dbgprintf("mutex %p UNlock %s, %s(), line %d\n", (void*)pmut, file, func, line);
+	dbgprintf("%s:%d:%s: mutex %p UNlocked\n", file, line, func, (void*)pmut);
 }
 
 
@@ -352,9 +390,9 @@ static void dbgCallStackPrint(dbgCallStack_t *pStack)
 	pthread_mutex_lock(&mutCallStack);
 	dbgprintf("\nRecorded Call Order for Thread 0x%lx (%p):\n", (unsigned long) pStack->thrd, pStack);
 	for(i = 0 ; i < pStack->stackPtr ; i++) {
-		dbgprintf("%s()\n", pStack->callStack[i]);
+		dbgprintf("%d, %s:%s\n", i, pStack->callStackFile[i], pStack->callStack[i]);
 	}
-	dbgprintf("NOTE: not all calls may have been recorded.\n");
+	dbgprintf("NOTE: not all calls may have been recorded, highest nested calls %d.\n", pStack->stackPtrMax);
 	pthread_mutex_unlock(&mutCallStack);
 }
 
@@ -475,28 +513,39 @@ dbgprintf(char *fmt, ...)
 
 /* handler called when a function is entered
  */
-void dbgEntrFunc(char* file, int line, const char* func)
+int dbgEntrFunc(char* file, int line, const char* func)
 {
+	int iStackPtr;
 	dbgCallStack_t *pStack = dbgGetCallStack();
 
 	if(bLogFuncFlow)
 		dbgprintf("%s:%d: %s: enter\n", file, line, func);
-	pStack->callStack[pStack->stackPtr++] = func;
+	iStackPtr = pStack->stackPtr++;
+	if(pStack->stackPtr > pStack->stackPtrMax)
+		pStack->stackPtrMax = pStack->stackPtr;
+	pStack->callStackFile[iStackPtr] = file;
+	pStack->callStack[iStackPtr] = func;
 	assert(pStack->stackPtr < (int) (sizeof(pStack->callStack) / sizeof(const char*)));
 	
+	return iStackPtr;
 }
 
 
 /* handler called when a function is exited
  */
-void dbgExitFunc(char* file, int line, const char* func)
+void dbgExitFunc(int iStackPtrRestore, char* file, int line, const char* func)
 {
 	dbgCallStack_t *pStack = dbgGetCallStack();
 
+	assert(iStackPtrRestore >= 0);
+
 	if(bLogFuncFlow)
 		dbgprintf("%s:%d: %s: exit\n", file, line, func);
-	pStack->stackPtr--;
-	assert(pStack->stackPtr > 0);
+	pStack->stackPtr = iStackPtrRestore;
+	if(pStack->stackPtr < 0) {
+		dbgprintf("Stack pointer for thread %lx below 0 - resetting (some RETiRet still wrong!)\n", pthread_self());
+		pStack->stackPtr = 0;
+	}
 }
 
 
@@ -506,6 +555,7 @@ static void sigusr2Hdlr(int __attribute__((unused)) signum)
 {
 	dbgprintf("SIGUSR2 received, dumping debug information\n");
 	dbgCallStackPrintAll();
+	dbgMutLogPrintAll();
 }
 
 
