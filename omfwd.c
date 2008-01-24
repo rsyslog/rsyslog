@@ -201,7 +201,7 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 		}
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 /* CODE FOR SENDING TCP MESSAGES */
@@ -241,7 +241,7 @@ static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
 		/* TODO: we need to revisit this code -- rgerhards, 2007-12-28 */
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -274,7 +274,7 @@ static rsRetVal TCPSendInit(void *pvData)
 			iRet = RS_RET_TCP_SOCKCREATE_ERR;
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -322,7 +322,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		break;
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 

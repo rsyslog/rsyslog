@@ -112,6 +112,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_TIMED_OUT = -2041, /**< timeout occured (not necessarily an error) */
 	RS_RET_QSIZE_ZERO = -2042, /**< queue size is zero where this is not supported */
 	RS_RET_ALREADY_STARTING = -2043, /**< something (a thread?) is already starting - not necessarily an error */
+	RS_RET_NO_MORE_THREADS = -2044, /**< no more threads available, not necessarily an error */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */
@@ -128,11 +129,9 @@ typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 #define CHKiRet_Hdlr(code) if((iRet = code) != RS_RET_OK)
 /* macro below is used in conjunction with CHKiRet_Hdlr, else use ABORT_FINALIZE */
 #define FINALIZE goto finalize_it;
-#if 0 /* DEV debug: set to 1 to get a rough call trace -- rgerhards, 2008-01-13 */
-#	define DEFiRet dbgprintf("Entering %s, line %d\n", __FILE__, __LINE__); rsRetVal iRet = RS_RET_OK
-#else
-#	define DEFiRet rsRetVal iRet = RS_RET_OK
-#endif
+#define DEFiRet BEGINfunc rsRetVal iRet = RS_RET_OK
+#define RETiRet do{ ENDfunc return iRet; }while(0)
+
 #define ABORT_FINALIZE(errCode)			\
 	do {					\
 		iRet = errCode;			\
@@ -196,6 +195,8 @@ typedef unsigned char uchar;
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
+
+#include "debug.h"
 
 #endif /* multi-include protection */
 /*

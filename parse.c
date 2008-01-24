@@ -179,7 +179,7 @@ rsRetVal parsInt(rsParsObj *pThis, int* pInt)
 rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
 {
 	register unsigned char *pC;
-	rsRetVal iRet;
+	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
@@ -203,7 +203,7 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
 		iRet = RS_RET_NOT_FOUND;
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 /* Skip whitespace. Often used to trim parsable entries.
@@ -243,12 +243,12 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bT
 {
 	register unsigned char *pC;
 	rsCStrObj *pCStr;
-	rsRetVal iRet;
+	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
 	if((pCStr = rsCStrConstruct()) == NULL)
-		return RS_RET_OUT_OF_MEMORY;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	if(bTrimLeading)
 		parsSkipWhitespace(pThis);
@@ -274,20 +274,21 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bT
 	 */
 	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
 		rsCStrDestruct (pCStr);
-		return(iRet);
+		FINALIZE;
 	}
 
 	if(bTrimTrailing) {
 		if((iRet = rsCStrTrimTrailingWhiteSpace(pCStr)) 
 		   != RS_RET_OK) {
 			rsCStrDestruct (pCStr);
-			return iRet;
+			FINALIZE;
 		}
 	}
 
 	/* done! */
 	*ppCStr = pCStr;
-	return RS_RET_OK;
+finalize_it:
+	RETiRet;
 }
 
 /* Parse a quoted string ("-some-data") from the given position.
@@ -309,17 +310,17 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 {
 	register unsigned char *pC;
 	rsCStrObj *pCStr;
-	rsRetVal iRet;
+	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
 	if((iRet = parsSkipAfterChar(pThis, '"')) != RS_RET_OK)
-		return iRet;
+		FINALIZE;
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
 	/* OK, we most probably can obtain a value... */
 	if((pCStr = rsCStrConstruct()) == NULL)
-		return RS_RET_OUT_OF_MEMORY;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
 		if(*pC == '"') {
@@ -334,13 +335,13 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 				 */
 				if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
 					rsCStrDestruct (pCStr);
-					return(iRet);
+					FINALIZE;
 				}
 			}
 		} else { /* regular character */
 			if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
 				rsCStrDestruct (pCStr);
-				return(iRet);
+				FINALIZE;
 			}
 		}
 		++pThis->iCurrPos;
@@ -352,18 +353,19 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 	} else {
 		/* error - improperly quoted string! */
 		rsCStrDestruct (pCStr);
-		return RS_RET_MISSING_TRAIL_QUOTE;
+		ABORT_FINALIZE(RS_RET_MISSING_TRAIL_QUOTE);
 	}
 
 	/* We got the string, let's finish it...  */
 	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
 		rsCStrDestruct (pCStr);
-		return(iRet);
+		FINALIZE;
 	}
 
 	/* done! */
 	*ppCStr = pCStr;
-	return RS_RET_OK;
+finalize_it:
+	RETiRet;
 }
 
 /* 
@@ -382,7 +384,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	uchar *pszTmp;
 	struct addrinfo hints, *res = NULL;
 	rsCStrObj *pCStr;
-	rsRetVal iRet;
+	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 	assert(pIP != NULL);
@@ -401,7 +403,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	      && *pC != '/' && *pC != ',' && !isspace((int)*pC)) {
 		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
 			rsCStrDestruct (pCStr);
-			return(iRet);
+			FINALIZE;
 		}
 		++pThis->iCurrPos;
 		++pC;
@@ -410,7 +412,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	/* We got the string, let's finish it...  */
 	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
 		rsCStrDestruct (pCStr);
-		return(iRet);
+		FINALIZE;
 	}
 
 	/* now we have the string and must check/convert it to
@@ -424,7 +426,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		pszTmp = (uchar*)strchr ((char*)pszIP, ']');
 		if (pszTmp == NULL) {
 			free (pszIP);
-			return RS_RET_INVALID_IP;
+			ABORT_FINALIZE(RS_RET_INVALID_IP);
 		}
 		*pszTmp = '\0';
 
@@ -449,7 +451,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		default:
 			free (pszIP);
 			free (*pIP);
-			return RS_RET_ERR;
+			ABORT_FINALIZE(RS_RET_ERR);
 		}
 		
 		if(*pC == '/') {
@@ -458,7 +460,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			if((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
 				free (pszIP);
 				free (*pIP);
-				return(iRet);
+				FINALIZE;
 			}
 			/* we need to refresh pointer (changed by parsInt()) */
 			pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
@@ -488,7 +490,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 		default:
 			free (pszIP);
 			free (*pIP);
-			return RS_RET_ERR;
+			ABORT_FINALIZE(RS_RET_ERR);
 		}
 			
 		if(*pC == '/') {
@@ -497,7 +499,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 			if((iRet = parsInt(pThis, pBits)) != RS_RET_OK) {
 				free (pszIP);
 				free (*pIP);
-				return(iRet);
+				FINALIZE;
 			}
 			/* we need to refresh pointer (changed by parsInt()) */
 			pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
@@ -518,7 +520,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	iRet = RS_RET_OK;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 #endif  /* #ifdef SYSLOG_INET */
 

@@ -180,7 +180,7 @@ static rsRetVal rsCStrExtendBuf(rsCStrObj *pThis, size_t iMinNeeded)
 	pThis->pBuf = pNewBuf;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -191,7 +191,7 @@ finalize_it:
  */
 rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, uchar* psz, size_t iStrLen)
 {
-	rsRetVal iRet;
+	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(psz != NULL);
@@ -206,7 +206,7 @@ rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, uchar* psz, size_t iStrLen)
 	pThis->iStrLen += iStrLen;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -223,15 +223,16 @@ rsRetVal rsCStrAppendStr(rsCStrObj *pThis, uchar* psz)
 
 rsRetVal rsCStrAppendInt(rsCStrObj *pThis, long i)
 {
-	rsRetVal iRet;
+	DEFiRet;
 	uchar szBuf[32];
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	if((iRet = srUtilItoA((char*) szBuf, sizeof(szBuf), i)) != RS_RET_OK)
-		return iRet;
+	CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), i));
 
-	return rsCStrAppendStr(pThis, szBuf);
+	iRet = rsCStrAppendStr(pThis, szBuf);
+finalize_it:
+	RETiRet;
 }
 
 
@@ -255,7 +256,7 @@ rsRetVal rsCStrAppendChar(rsCStrObj *pThis, uchar c)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -420,7 +421,7 @@ finalize_it:
 		free(pThis->pBuf);
 	RSFREEOBJ(pThis);
 	
-	return(iRet);
+	RETiRet;
 }
 
 
@@ -625,10 +626,12 @@ int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
 int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz)
 {
     regex_t preq;
+    BEGINfunc
     regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), 0);
-    int iRet = regexec(&preq, (char*) psz, 0, NULL, 0);
+    int ret = regexec(&preq, (char*) psz, 0, NULL, 0);
     regfree(&preq);
-    return iRet;
+    ENDfunc
+    return ret;
 }
 
 /* compare a rsCStr object with a classical sz string.  This function
@@ -654,6 +657,7 @@ int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz)
  */
 int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, size_t iOffset, uchar *psz, size_t iLenSz)
 {
+	BEGINfunc
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(iOffset < pCS1->iStrLen);
 	assert(psz != NULL);
@@ -662,9 +666,10 @@ int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, size_t iOffset, uchar *psz, size_t iLe
 		/* we are using iLenSz below, because the lengths
 		 * are equal and iLenSz is faster to access
 		 */
-		if(iLenSz == 0)
+		if(iLenSz == 0) {
 			return 0; /* zero-sized strings are equal ;) */
-		else {  /* we now have two non-empty strings of equal
+			ENDfunc
+		} else {  /* we now have two non-empty strings of equal
 			 * length, so we need to actually check if they
 			 * are equal.
 			 */
@@ -675,10 +680,13 @@ int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, size_t iOffset, uchar *psz, size_t iLe
 			}
 			/* if we arrive here, the strings are equal */
 			return 0;
+			ENDfunc
 		}
 	}
-	else
+	else {
 		return pCS1->iStrLen - iOffset - iLenSz;
+		ENDfunc
+	}
 }
 
 

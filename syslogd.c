@@ -178,6 +178,8 @@
 #include "threads.h"
 #include "queue.h"
 #include "stream.h"
+#include "wti.h"
+#include "wtp.h"
 
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
@@ -259,7 +261,6 @@ char	ctty[] = _PATH_CONSOLE;	/* this is read-only; used by omfile -- TODO: remov
 
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
-static int debugging_on = 0; /* read-only, except on sig USR1 */
 static int restart = 0; /* do restart (config read) - multithread safe */
 
 int glblHadMemShortage = 0; /* indicates if we had memory shortage some time during the run */
@@ -368,7 +369,6 @@ static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
 					   as compatible to sysklogd as possible. */
-int	Debug;		/* debug flag  - read-only after startup */
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
@@ -558,7 +558,6 @@ static void debug_switch();
 static rsRetVal cfline(uchar *line, selector_t **pfCurr);
 static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
-//static void die(int sig);
 static void freeSelectors(void);
 static rsRetVal processConfFile(uchar *pConfFile);
 static rsRetVal selectorAddList(selector_t *f);
@@ -1157,7 +1156,7 @@ finalize_it:
 		}
 	}
 	*ppThis = pThis;
-	return iRet;
+	RETiRet;
 }
 
 
@@ -1315,7 +1314,7 @@ rsRetVal printline(char *hname, char *msg, int bParseHost)
 	logmsg(pri, pMsg, SYNC_FILE);
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -1531,7 +1530,7 @@ logmsgInternal(int pri, char *msg, int flags)
 		logmsg(pri, pMsg, flags);
 	}
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 /* This functions looks at the given message and checks if it matches the
@@ -1761,7 +1760,7 @@ finalize_it:
 	UnlockObj(pAction);
 	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
 	pthread_setcancelstate(iCancelStateSave, NULL);
-	return iRet;
+	RETiRet;
 }
 
 
@@ -1798,7 +1797,7 @@ DEFFUNC_llExecFunc(processMsgDoActions)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -1812,6 +1811,7 @@ processMsg(msg_t *pMsg)
 	int bContinue;
 	processMsgDoActions_t DoActData;
 
+	BEGINfunc
 	assert(pMsg != NULL);
 
 	/* log the message to the particular outputs */
@@ -1829,6 +1829,7 @@ processMsg(msg_t *pMsg)
 		if(llExecFunc(&f->llActList, processMsgDoActions, (void*)&DoActData) == RS_RET_DISCARDMSG)
 			bContinue = 0;
 	}
+	ENDfunc
 }
 
 
@@ -1843,6 +1844,7 @@ processMsg(msg_t *pMsg)
 static rsRetVal
 msgConsumer(void *pUsr)
 {
+	DEFiRet;
 	msg_t *pMsg = (msg_t*) pUsr;
 
 	assert(pMsg != NULL);
@@ -1850,7 +1852,7 @@ msgConsumer(void *pUsr)
 	processMsg(pMsg);
 	MsgDestruct(&pMsg);
 
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
@@ -2251,6 +2253,7 @@ logmsg(int pri, msg_t *pMsg, int flags)
 	char *msg;
 	char PRItext[20];
 
+	BEGINfunc
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	msg = (char*) pMsg->pszUxTradMsg;
@@ -2320,6 +2323,7 @@ logmsg(int pri, msg_t *pMsg, int flags)
 	pMsg->msgFlags = flags;
 	MsgPrepareEnqueue(pMsg);
 	queueEnqObj(pMsgQueue, (void*) pMsg);
+	ENDfunc
 }
 
 
@@ -2432,7 +2436,7 @@ finalize_it:
 		pAction->f_pMsg = pMsgSave;	/* restore it */
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -2545,6 +2549,7 @@ void logerror(char *type)
 	char buf[1024];
 	char errStr[1024];
 
+	BEGINfunc
 	dbgprintf("Called logerr, msg: %s\n", type);
 
 	if (errno == 0)
@@ -2556,6 +2561,7 @@ void logerror(char *type)
 	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
 	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, ADDDATE);
+	ENDfunc
 	return;
 }
 
@@ -2569,7 +2575,12 @@ void logerror(char *type)
  */
 static void doDie(int sig)
 {
+	static int iRetries = 0; /* debug aid */
 	dbgprintf("DoDie called.\n");
+	if(iRetries++ == 4) {
+		dbgprintf("DoDie called 5 times - unconditional exit\n");
+		exit(1);
+	}
 	bFinished = sig;
 }
 
@@ -2663,6 +2674,9 @@ die(int sig)
 	if(pModDir != NULL)
 		free(pModDir);
 
+	/* exit classes... */
+	dbgClassExit();
+
 	dbgprintf("Clean shutdown completed, bye.\n");
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
@@ -2747,7 +2761,7 @@ finalize_it:
 	if(pDir != NULL)
 		closedir(pDir);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -2797,7 +2811,7 @@ static rsRetVal doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	globfree(&cfgFiles);
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -2873,7 +2887,7 @@ static rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 /* parse and interpret a $-config line that starts with
@@ -2933,7 +2947,7 @@ static rsRetVal doNameLine(uchar **pp, void* pVal)
 	*pp = p;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -2995,7 +3009,7 @@ rsRetVal cfsysline(uchar *p)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -3059,7 +3073,7 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
 	iRet = actionDbgPrint((action_t*) pData);
 	printf("\n");
 
-	return iRet;
+	RETiRet;
 }
 
 /* print debug information as part of init(). This pretty much
@@ -3235,7 +3249,7 @@ finalize_it:
 		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
 			iRet, pConfFile, errStr);
 	}
-	return iRet;
+	RETiRet;
 }
 
 
@@ -3263,6 +3277,7 @@ startInputModules(void)
 	pMod = modGetNxtType(pMod, eMOD_IN);
 	}
 
+	ENDfunc
 	return RS_RET_OK; /* intentional: we do not care about module errors */
 }
 
@@ -3448,6 +3463,7 @@ init(void)
 	sigaction(SIGHUP, &sigAct, NULL);
 
 	dbgprintf(" (re)started.\n");
+	ENDfunc
 }
 
 
@@ -3510,7 +3526,7 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 finalize_it:
 	*pp = p;
 
-	return iRet;
+	RETiRet;
 }
 
 /* Helper to cfline(). Parses a file name up until the first
@@ -3540,7 +3556,7 @@ rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pO
 
 	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, (uchar*) " TradFmt");
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -3999,7 +4015,7 @@ finalize_it:
 			actionDestruct(pAction);
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -4037,7 +4053,7 @@ static rsRetVal cflineDoFilter(uchar **pp, selector_t *f)
 			return(iRet);
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -4087,7 +4103,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	}
 
 	*ppAction = pAction;
-	return iRet;
+	RETiRet;
 }
 
 
@@ -4105,7 +4121,7 @@ DEFFUNC_llExecFunc(selectorAddListCheckActionsChecker)
 		Forwarding++;
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 /* loop through a list of actions and perform necessary checks and
@@ -4123,7 +4139,7 @@ static rsRetVal selectorAddListCheckActions(selector_t *f)
 	CHKiRet(llExecFunc(&f->llActList, selectorAddListCheckActionsChecker, NULL));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -4174,7 +4190,7 @@ static rsRetVal selectorAddList(selector_t *f)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -4215,7 +4231,7 @@ static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 
 finalize_it:
 	*pfCurr = fCurr;
-	return iRet;
+	RETiRet;
 }
 
 
@@ -4249,7 +4265,7 @@ static rsRetVal cfline(uchar *line, selector_t **pfCurr)
 			break;
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -4278,7 +4294,7 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 	}
 	free(pszType); /* no longer needed */
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -4312,49 +4328,6 @@ int decode(uchar *name, struct code *codetab)
 	return (-1);
 }
 
-extern void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
-void
-dbgprintf(char *fmt, ...)
-{
-	static pthread_t ptLastThrdID = 0;
-	static int bWasNL = FALSE;
-	va_list ap;
-
-	if ( !(Debug && debugging_on) )
-		return;
-	
-	/* The bWasNL handler does not really work. It works if no thread
-	 * switching occurs during non-NL messages. Else, things are messed
-	 * up. Anyhow, it works well enough to provide useful help during
-	 * getting this up and running. It is questionable if the extra effort
-	 * is worth fixing it, giving the limited appliability.
-	 * rgerhards, 2005-10-25
-	 * I have decided that it is not worth fixing it - especially as it works
-	 * pretty well.
-	 * rgerhards, 2007-06-15
-	 */
-	if(ptLastThrdID != pthread_self()) {
-		if(!bWasNL) {
-			fprintf(stdout, "\n");
-			bWasNL = 1;
-		}
-		ptLastThrdID = pthread_self();
-	}
-
-	if(bWasNL) {
-		fprintf(stdout, "%8.8x: ", (unsigned int) pthread_self());
-		//fprintf(stderr, "%8.8x: ", (unsigned int) pthread_self());
-	}
-	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? TRUE : FALSE;
-	va_start(ap, fmt);
-	vfprintf(stdout, fmt, ap);
-	//vfprintf(stderr, fmt, ap);
-	va_end(ap);
-
-	//fflush(stderr);
-	fflush(stdout);
-	return;
-}
 
 
 /*
@@ -4448,6 +4421,7 @@ mainloop(void)
 {
 	struct timeval tvSelectTimeout;
 
+	BEGINfunc
 	while(!bFinished){
 		/* first check if we have any internal messages queued and spit them out */
 		/* TODO: do we need this any longer? I doubt it, but let's care about it
@@ -4493,6 +4467,7 @@ mainloop(void)
 			continue;
 		}
 	}
+	ENDfunc
 }
 
 /* If user is not root, prints warnings or even exits 
@@ -4542,16 +4517,20 @@ static rsRetVal loadBuildInModules(void)
 {
 	DEFiRet;
 
-	if((iRet = doModInit(modInitFile, (uchar*) "builtin-file", NULL)) != RS_RET_OK)
-		return iRet;
+	if((iRet = doModInit(modInitFile, (uchar*) "builtin-file", NULL)) != RS_RET_OK) {
+		RETiRet;
+	}
 #ifdef SYSLOG_INET
-	if((iRet = doModInit(modInitFwd, (uchar*) "builtin-fwd", NULL)) != RS_RET_OK)
-		return iRet;
+	if((iRet = doModInit(modInitFwd, (uchar*) "builtin-fwd", NULL)) != RS_RET_OK) {
+		RETiRet;
+	}
 #endif
-	if((iRet = doModInit(modInitShell, (uchar*) "builtin-shell", NULL)) != RS_RET_OK)
-		return iRet;
-	if((iRet = doModInit(modInitDiscard, (uchar*) "builtin-discard", NULL)) != RS_RET_OK)
-		return iRet;
+	if((iRet = doModInit(modInitShell, (uchar*) "builtin-shell", NULL)) != RS_RET_OK) {
+		RETiRet;
+	}
+	if((iRet = doModInit(modInitDiscard, (uchar*) "builtin-discard", NULL)) != RS_RET_OK) {
+		RETiRet;
+	}
 
 	/* dirty, but this must be for the time being: the usrmsg module must always be
 	 * loaded as last module. This is because it processes any time of action selector.
@@ -4563,7 +4542,7 @@ static rsRetVal loadBuildInModules(void)
 	 *   [a-zA-Z0-9_.]
 	 */
 	if((iRet = doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL)) != RS_RET_OK)
-		return iRet;
+		RETiRet;
 
 	/* ok, initialization of the command handler probably does not 100% belong right in
 	 * this space here. However, with the current design, this is actually quite a good
@@ -4607,7 +4586,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -4708,6 +4687,7 @@ static void mainThread()
 	 */
 
 	mainloop();
+	ENDfunc
 }
 
 
@@ -4719,13 +4699,18 @@ static rsRetVal InitGlobalClasses(void)
 	DEFiRet;
 
 	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizere called! */
+fprintf(stdout, " calling dbgClassInit\n");
+	//CHKiRet(dbgClassInit());
 	CHKiRet(MsgClassInit());
 	CHKiRet(strmClassInit());
+	CHKiRet(wtiClassInit());
+	CHKiRet(wtpClassInit());
 	CHKiRet(queueClassInit());
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
+
 
 
 /* This is the main entry point into rsyslogd. Over time, we should try to
@@ -4733,6 +4718,7 @@ finalize_it:
  */
 int main(int argc, char **argv)
 {	
+dbgClassInit();
 	DEFiRet;
 
 	register int i;
@@ -4987,6 +4973,8 @@ int main(int argc, char **argv)
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
 
+	sigAct.sa_handler = sigsegvHdlr;
+	sigaction(SIGSEGV, &sigAct, NULL);
 	sigAct.sa_handler = doDie;
 	sigaction(SIGTERM, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? doDie : SIG_IGN;
@@ -4995,7 +4983,8 @@ int main(int argc, char **argv)
 	sigAct.sa_handler = reapchild;
 	sigaction(SIGCHLD, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
-	sigaction(SIGUSR1, &sigAct, NULL);
+// TODO: use signal 2
+	//sigaction(SIGUSR1, &sigAct, NULL);
 	sigAct.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sigAct, NULL);
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
@@ -5012,6 +5001,7 @@ finalize_it:
 	if(iRet != RS_RET_OK)
 		fprintf(stderr, "rsyslogd run failed with error %d.\n", iRet);
 
+	ENDfunc
 	return 0;
 }
 

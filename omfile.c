@@ -172,7 +172,7 @@ rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 	iDynaFileCacheSize = iNewVal;
 	dbgprintf("DynaFileCacheSize changed to %d.\n", iNewVal);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -218,7 +218,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 			 "outchannel '%s' not found - ignoring action line",
 			 szBuf);
 		logerror(errMsg);
-		return RS_RET_NOT_FOUND;
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	/* check if there is a file name in the outchannel... */
@@ -229,7 +229,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 			 "outchannel '%s' has no file name template - ignoring action line",
 			 szBuf);
 		logerror(errMsg);
-		return RS_RET_ERR;
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* OK, we finally got a correct template. So let's use it... */
@@ -242,7 +242,8 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 
 	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, (uchar*) " TradFmt");
 
-	return(iRet);
+finalize_it:
+	RETiRet;
 }
 
 
@@ -516,7 +517,7 @@ static rsRetVal writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pDa
 	 */
 	if(pData->bDynamicName) {
 		if(prepareDynFile(pData, ppString[1], iMsgOpts) != 0)
-			return RS_RET_ERR;
+			ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* create the message based on format specified */
@@ -541,7 +542,7 @@ again:
 					 pData->f_fname, (long long) pData->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
 				logerror(errMsg);
-				return RS_RET_DISABLE_ACTION;
+				ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
 					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation",
@@ -558,14 +559,14 @@ again:
 		/* If a named pipe is full, just ignore it for now
 		   - mrn 24 May 96 */
 		if (pData->fileType == eTypePIPE && e == EAGAIN)
-			return RS_RET_OK;
+			ABORT_FINALIZE(RS_RET_OK);
 
 		/* If the filesystem is filled up, just ignore
 		 * it for now and continue writing when possible
 		 * based on patch for sysklogd by Martin Schulze on 2007-05-24
 		 */
 		if (pData->fileType == eTypeFILE && e == ENOSPC)
-			return RS_RET_OK;
+			ABORT_FINALIZE(RS_RET_OK);
 
 		(void) close(pData->fd);
 		/*
@@ -593,7 +594,9 @@ again:
 		}
 	} else if (pData->bSyncFile)
 		fsync(pData->fd);
-	return(iRet);
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -638,12 +641,15 @@ CODESTARTparseSelectorAct
 	 * the code further changes.  -- rgerhards, 2007-07-25
 	 */
 	if(*p == '$' || *p == '?' || *p == '|' || *p == '/' || *p == '-') {
-		if((iRet = createInstance(&pData)) != RS_RET_OK)
-			return iRet;
+		if((iRet = createInstance(&pData)) != RS_RET_OK) {
+			ENDfunc
+			return iRet; /* this can not use RET_iRet! */
+		}
 	} else {
 		/* this is not clean, but we need it for the time being
 		 * TODO: remove when cleaning up modularization 
 		 */
+		ENDfunc
 		return RS_RET_CONFLINE_UNPROCESSED;
 	}
 

@@ -32,7 +32,7 @@ typedef struct wti_s {
 	BEGINobjInstance;
 	pthread_t thrdID;  /* thread ID */
 	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
-	obj_t *pUsr;		/* current user object being processed (or NULL if none) */
+	obj_t *pUsrp;		/* pointer to an object meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
 	pthread_cond_t condInitDone; /* signaled when the thread startup is done (once per thread existance) */
 	pthread_mutex_t mut;
@@ -47,8 +47,13 @@ rsRetVal wtiConstruct(wti_t **ppThis);
 rsRetVal wtiConstructFinalize(wti_t *pThis);
 rsRetVal wtiDestruct(wti_t **ppThis);
 rsRetVal wtiWorker(wti_t *pThis);
+rsRetVal wtiProcessThrdChanges(wti_t *pThis, int bLockMutex);
+rsRetVal wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg);
+rsRetVal wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex);
+rsRetVal wtiJoinThrd(wti_t *pThis);
+qWrkCmd_t wtiGetState(wti_t *pThis, int bLockMutex);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
-#define wtiGetID(pThis) ((unsigned long) pThis)
+PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 
 #endif /* #ifndef WTI_H_INCLUDED */

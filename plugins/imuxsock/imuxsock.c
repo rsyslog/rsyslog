@@ -170,12 +170,11 @@ static rsRetVal readSocket(int fd, int bParseHost)
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		strerror_r(errno, errStr, sizeof(errStr));
-		dbgprintf("UNIX socket error: %d = %s.\n", \
-			errno, errStr);
+		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
 		logerror("recvfrom UNIX");
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -228,7 +227,7 @@ CODESTARTrunInput
 		}
 	}
 
-	return iRet;
+	RETiRet;
 ENDrunInput
 
 
@@ -247,7 +246,7 @@ CODESTARTwillRun
 			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", funixn[i], funix[i]);
 	}
 
-	return RS_RET_OK;
+	RETiRet;
 ENDwillRun
 
 

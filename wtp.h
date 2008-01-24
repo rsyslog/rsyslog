@@ -67,12 +67,13 @@ typedef struct wtp_s {
 	void *pUsr;		/* pointer to user object */
 	pthread_mutex_t *pmutUsr;
 	pthread_cond_t *pcondBusy; /* condition the user will signal "busy again, keep runing" on (awakes worker) */
-	rsRetVal (*pfChkStopWrkr)(void *, int);
-	rsRetVal (*pfIsIdle)(void *, int);
-	rsRetVal (*pfDoWork)(void *, int);
-	rsRetVal (*pfOnShutdownAdvise)(void *, int);
-	rsRetVal (*pfOnIdle)(void *, int);
-	rsRetVal (*pfOnWorkerCancel)(void *);
+	rsRetVal (*pfChkStopWrkr)(void *pUsr, int);
+	rsRetVal (*pfIsIdle)(void *pUsr, int);
+	rsRetVal (*pfDoWork)(void *pUsr, void *pWti, int);
+	rsRetVal (*pfOnIdle)(void *pUsr, int);
+	rsRetVal (*pfOnWorkerCancel)(void *pUsr, void*pWti);
+	rsRetVal (*pfOnWorkerStartup)(void *pUsr);
+	rsRetVal (*pfOnWorkerShutdown)(void *pUsr);
 	/* end user objects */
 	uchar *pszDbgHdr;	/* header string for debug messages */
 } wtp_t;
@@ -89,9 +90,25 @@ rsRetVal wtpProcessThrdChanges(wtp_t *pThis);
 rsRetVal wtpSetInactivityGuard(wtp_t *pThis, int bNewState, int bLockMutex);
 rsRetVal wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex);
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState);
+rsRetVal wtpWakeupWrkr(wtp_t *pThis);
+rsRetVal wtpWakeupAllWrkr(wtp_t *pThis);
+rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, long iTimeout);
+rsRetVal wtpCancelAll(wtp_t *pThis);
+rsRetVal wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg);
+rsRetVal wtpSignalWrkrTermination(wtp_t *pWtp);
 PROTOTYPEObjClassInit(wtp);
+PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
+PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int));
+PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int));
+PROTOTYPEpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int));
+PROTOTYPEpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*,void*));
+PROTOTYPEpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*));
+PROTOTYPEpropSetMethFP(wtp, pfOnWorkerShutdown, rsRetVal(*pVal)(void*));
 PROTOTYPEpropSetMeth(wtp, toWrkShutdown, long);
 PROTOTYPEpropSetMeth(wtp, wtpState, wtpState_t);
-#define wtpGetID(pThis) ((unsigned long) pThis)
+PROTOTYPEpropSetMeth(wtp, iMaxWorkerThreads, int);
+PROTOTYPEpropSetMeth(wtp, pUsr, void*);
+PROTOTYPEpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t);
+PROTOTYPEpropSetMethPTR(wtp, pcondBusy, pthread_cond_t);
 
 #endif /* #ifndef WTP_H_INCLUDED */

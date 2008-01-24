@@ -100,12 +100,13 @@ static rsRetVal createInstance(instanceData **ppData)\
 #define CODESTARTcreateInstance \
 	if((pData = calloc(1, sizeof(instanceData))) == NULL) {\
 		*ppData = NULL;\
+		ENDfunc \
 		return RS_RET_OUT_OF_MEMORY;\
 	}
 
 #define ENDcreateInstance \
 	*ppData = pData;\
-	return iRet;\
+	RETiRet;\
 }
 
 /* freeInstance()
@@ -129,7 +130,7 @@ static rsRetVal freeInstance(void* pModData)\
 #define ENDfreeInstance \
 	if(pData != NULL)\
 		free(pData); /* we need to free this in any case */\
-	return iRet;\
+	RETiRet;\
 }
 
 /* isCompatibleWithFeature()
@@ -137,12 +138,13 @@ static rsRetVal freeInstance(void* pModData)\
 #define BEGINisCompatibleWithFeature \
 static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eFeat)\
 {\
-	rsRetVal iRet = RS_RET_INCOMPATIBLE;
+	rsRetVal iRet = RS_RET_INCOMPATIBLE; \
+	BEGINfunc
 
 #define CODESTARTisCompatibleWithFeature
 
 #define ENDisCompatibleWithFeature \
-	return iRet;\
+	RETiRet;\
 }
 
 /* doAction()
@@ -156,7 +158,7 @@ static rsRetVal doAction(uchar __attribute__((unused)) **ppString, unsigned __at
 	/* ppString may be NULL if the output module requested no strings */
 
 #define ENDdoAction \
-	return iRet;\
+	RETiRet;\
 }
 
 
@@ -174,7 +176,7 @@ static rsRetVal dbgPrintInstInfo(void *pModData)\
 	pData = (instanceData*) pModData;
 
 #define ENDdbgPrintInstInfo \
-	return iRet;\
+	RETiRet;\
 }
 
 
@@ -189,13 +191,14 @@ static rsRetVal dbgPrintInstInfo(void *pModData)\
 static rsRetVal needUDPSocket(void *pModData)\
 {\
 	rsRetVal iRet = RS_RET_FALSE;\
-	instanceData *pData = NULL;
+	instanceData *pData = NULL; \
+	BEGINfunc
 
 #define CODESTARTneedUDPSocket \
 	pData = (instanceData*) pModData;
 
 #define ENDneedUDPSocket \
-	return iRet;\
+	RETiRet;\
 }
 
 
@@ -245,7 +248,7 @@ finalize_it:\
 	}
 
 #define ENDparseSelectorAct \
-	return iRet;\
+	RETiRet;\
 }
 
 
@@ -267,7 +270,7 @@ static rsRetVal tryResume(instanceData __attribute__((unused)) *pData)\
 	assert(pData != NULL);
 
 #define ENDtryResume \
-	return iRet;\
+	RETiRet;\
 }
 
 
@@ -281,14 +284,16 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	DEFiRet;
 
 #define CODESTARTqueryEtryPt \
-	if((name == NULL) || (pEtryPoint == NULL))\
+	if((name == NULL) || (pEtryPoint == NULL)) {\
+		ENDfunc \
 		return RS_RET_PARAM_ERROR;\
+	} \
 	*pEtryPoint = NULL;
 
 #define ENDqueryEtryPt \
 	if(iRet == RS_RET_OK)\
 		iRet = (*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;\
-	return iRet;\
+	RETiRet;\
 }
 
 /* the following definition is the standard block for queryEtryPt for all types
@@ -372,13 +377,15 @@ rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ip
 
 #define CODESTARTmodInit \
 	assert(pHostQueryEtryPt != NULL);\
-	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL))\
-		return RS_RET_PARAM_ERROR;
+	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL)) {\
+		ENDfunc \
+		return RS_RET_PARAM_ERROR; \
+	}
 
 #define ENDmodInit \
 finalize_it:\
 	*pQueryEtryPt = queryEtryPt;\
-	return iRet;\
+	RETiRet;\
 }
 
 
@@ -408,7 +415,7 @@ static rsRetVal modExit(void)\
 #define CODESTARTmodExit 
 
 #define ENDmodExit \
-	return iRet;\
+	RETiRet;\
 }
 
 
@@ -423,10 +430,11 @@ static rsRetVal runInput(thrdInfo_t __attribute__((unused)) *pThrd)\
 {\
 	DEFiRet;
 
-#define CODESTARTrunInput 
+#define CODESTARTrunInput \
+	dbgSetThrdName((uchar*)__FILE__); /* we need to provide something better later */
 
 #define ENDrunInput \
-	return iRet;\
+	RETiRet;\
 }
 
 
@@ -446,7 +454,7 @@ static rsRetVal willRun(void)\
 #define CODESTARTwillRun 
 
 #define ENDwillRun \
-	return iRet;\
+	RETiRet;\
 }
 
 
@@ -465,7 +473,7 @@ static rsRetVal afterRun(void)\
 #define CODESTARTafterRun 
 
 #define ENDafterRun \
-	return iRet;\
+	RETiRet;\
 }
 
 

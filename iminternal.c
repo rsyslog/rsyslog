@@ -53,7 +53,7 @@ static rsRetVal iminternalDestruct(iminternal_t *pThis)
 
 	free(pThis);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -78,7 +78,7 @@ finalize_it:
 
 	*ppThis = pThis;
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -111,7 +111,7 @@ finalize_it:
 			iminternalDestruct(pThis);
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -142,7 +142,7 @@ rsRetVal iminternalRemoveMsg(int *pPri, msg_t **ppMsg, int *pFlags)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 /* tell the caller if we have any messages ready for processing.
@@ -166,7 +166,7 @@ rsRetVal modInitIminternal(void)
 
 	iRet = llInit(&llMsgs, iminternalDestruct, NULL, NULL);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -182,7 +182,7 @@ rsRetVal modExitIminternal(void)
 
 	iRet = llDestroy(&llMsgs);
 
-	return iRet;
+	RETiRet;
 }
 
 /*

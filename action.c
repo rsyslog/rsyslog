@@ -84,7 +84,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 
 finalize_it:
 	*ppThis = pThis;
-	return iRet;
+	RETiRet;
 }
 
 
@@ -97,7 +97,7 @@ static rsRetVal actionResume(action_t *pThis)
 	assert(pThis != NULL);
 	pThis->bSuspended = 0;
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -121,7 +121,7 @@ rsRetVal actionSuspend(action_t *pThis)
 	pThis->ttResumeRtry = time(NULL) + pThis->iResumeInterval;
 	pThis->iNbrResRtry = 0; /* tell that we did not yet retry to resume */
 
-	return iRet;
+	RETiRet;
 }
 
 /* try to resume an action -- rgerhards, 2007-08-02
@@ -162,7 +162,7 @@ rsRetVal actionTryResume(action_t *pThis)
 	dbgprintf("actionTryResume: iRet: %d, next retry (if applicable): %u [now %u]\n",
 		iRet, (unsigned) pThis->ttResumeRtry, (unsigned) ttNow);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -187,7 +187,7 @@ rsRetVal actionDbgPrint(action_t *pThis)
 	printf("\tExec only when previous is suspended: %d\n", pThis->bExecWhenPrevSusp);
 	printf("\n");
 
-	return iRet;
+	RETiRet;
 }
 
 

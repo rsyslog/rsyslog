@@ -25,26 +25,8 @@
 
 #include <pthread.h>
 #include "obj.h"
+#include "wtp.h"
 #include "stream.h"
-
-/* some information about disk files used by the queue. In the long term, we may
- * export this settings to a separate file module - or not (if they are too
- * queue-specific. I just thought I mention it here so that everyone is aware
- * of this possibility. -- rgerhards, 2008-01-07
- */
-typedef struct {
-	int fd;		/* the file descriptor, -1 if closed */
-	uchar *pszFileName; /* name of current file (if open) */
-	int iCurrFileNum;/* current file number (NOT descriptor, but the number in the file name!) */
-	size_t iCurrOffs;/* current offset */
-	uchar *pIOBuf;	/* io Buffer */
-	int iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
-	int iBufPtr;	/* pointer into current buffer */
-	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
-	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
-} queueFileDescription_t;
-#define qFILE_IOBUF_SIZE 4096 /* size of the IO buffer */
-
 
 /* queue types */
 typedef enum {
@@ -60,17 +42,6 @@ typedef struct qLinkedList_S {
 	void *pUsr;
 } qLinkedList_t;
 
-/* commands and states for worker threads. */
-typedef enum {
-	eWRKTHRD_STOPPED = 0,	/* worker thread is not running (either actually never ran or was shut down) */
-	eWRKTHRD_TERMINATING = 1,/* worker thread has shut down, but some finalzing is still needed */
-	/* ALL active states MUST be numerically higher than eWRKTHRD_TERMINATED and NONE must be lower! */
-	eWRKTHRD_RUN_CREATED = 2,/* worker thread has been created, but not yet begun initialization (prob. not yet scheduled) */
-	eWRKTHRD_RUN_INIT = 3,	/* worker thread is initializing, but not yet fully running */
-	eWRKTHRD_RUNNING = 4,	/* worker thread is up and running and shall continue to do so */
-	eWRKTHRD_SHUTDOWN = 5,	/* worker thread is running but shall terminate when queue is empty */
-	eWRKTHRD_SHUTDOWN_IMMEDIATE = 6/* worker thread is running but shall terminate even if queue is full */
-} qWrkCmd_t;
 
 typedef struct qWrkThrd_s {
 	pthread_t thrdID;  /* thread ID */
@@ -95,7 +66,8 @@ typedef struct queue_s {
 	int 	iNumWorkerThreads;/* number of worker threads to use */
 	int 	iCurNumWrkThrd;/* current number of active worker threads */
 	int	iMinMsgsPerWrkr;/* minimum nbr of msgs per worker thread, if more, a new worker is started until max wrkrs */
-	qWrkThrd_t *pWrkThrds;/* array with control structure for the worker thread(s) associated with this queue */
+	wtp_t	*pWtpDA;
+	wtp_t	*pWtpReg;
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
 	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
@@ -138,11 +110,7 @@ typedef struct queue_s {
 	int iNumberFiles;	/* how many files make up the queue? */
 	size_t iMaxFileSize;	/* max size for a single queue file */
 	int bIsDA;		/* is this queue disk assisted? */
-	enum {
-		QRUNS_REGULAR,
-		QRUNS_DA_INIT,
-		QRUNS_DA
-	} qRunsDA;		/* is this queue actually *running* disk assisted? if so, which mode? */
+	int bRunsDA;		/* is this queue actually *running* disk assisted? */
 	pthread_mutex_t mutDA;	/* mutex for low water mark algo */
 	pthread_cond_t condDA;	/* and its matching condition */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */

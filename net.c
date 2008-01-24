@@ -214,7 +214,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			 */
 			logerrorInt("Internal error caused AllowedSender to be ignored, AF = %d",
 				    iAllow->addr.NetAddr->sa_family);
-			return RS_RET_ERR;
+			ABORT_FINALIZE(RS_RET_ERR);
 		}
 		/* OK, entry constructed, now lets add it to the ACL list */
 		iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
@@ -222,7 +222,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 		/* we need to process a hostname ACL */
 		if (DisableDNS) {
 			logerror ("Ignoring hostname based ACLs because DNS is disabled.");
-			return RS_RET_OK;
+			ABORT_FINALIZE(RS_RET_OK);
 		}
 		
 		if (!strchr (iAllow->addr.HostWildcard, '*') &&
@@ -246,10 +246,11 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 				
 				if (ACLAddHostnameOnFail) {
 				        logerrorSz("Adding hostname \"%s\" to ACL as a wildcard entry.", iAllow->addr.HostWildcard);
-				        return AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
+				        iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
+					FINALIZE;
 				} else {
 				        logerrorSz("Hostname \"%s\" WON\'T be added to ACL.", iAllow->addr.HostWildcard);
-				        return RS_RET_NOENTRY;
+				        ABORT_FINALIZE(RS_RET_NOENTRY);
 				}
 			}
 			
@@ -260,13 +261,13 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					allowIP.flags = 0;
 					if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
 						glblHadMemShortage = 1;
-						return RS_RET_OUT_OF_MEMORY;
+						ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 					}
 					memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
 					
 					if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP, iSignificantBits))
 						!= RS_RET_OK)
-						return(iRet);
+						FINALIZE;
 					break;
 				case AF_INET6: /* IPv6 - but need to check if it is a v6-mapped IPv4 */
 					if(IN6_IS_ADDR_V4MAPPED (&SIN6(res->ai_addr)->sin6_addr)) {
@@ -277,7 +278,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						if((allowIP.addr.NetAddr = malloc(sizeof(struct sockaddr_in)))
 						    == NULL) {
 							glblHadMemShortage = 1;
-							return RS_RET_OUT_OF_MEMORY;
+							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
 						SIN(allowIP.addr.NetAddr)->sin_family = AF_INET;
 #ifdef HAVE_STRUCT_SOCKADDR_SA_LEN    
@@ -291,7 +292,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
 								iSignificantBits))
 							!= RS_RET_OK)
-							return(iRet);
+							FINALIZE;
 					} else {
 						/* finally add IPv6 */
 						
@@ -299,14 +300,14 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						allowIP.flags = 0;
 						if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
 							glblHadMemShortage = 1;
-							return RS_RET_OUT_OF_MEMORY;
+							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
 						memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
 						
 						if((iRet = AddAllowedSenderEntry(ppRoot, ppLast, &allowIP,
 								iSignificantBits))
 							!= RS_RET_OK)
-							return(iRet);
+							FINALIZE;
 					}
 					break;
 				}
@@ -321,7 +322,8 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 		}
 	}
 
-	return iRet;
+finalize_it:
+	RETiRet;
 }
 
 
@@ -700,7 +702,7 @@ rsRetVal gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
         }
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -833,7 +835,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 

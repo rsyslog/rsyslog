@@ -143,6 +143,7 @@ static void* thrdStarter(void *arg)
 	iRet = pThis->pUsrThrdMain(pThis);
 
 	dbgprintf("thrdStarter: usrThrdMain 0x%lx returned with iRet %d, exiting now.\n", (unsigned long) pThis->thrdID, iRet);
+	ENDfunc
 	pthread_exit(0);
 }
 
@@ -166,7 +167,7 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -195,7 +196,7 @@ rsRetVal thrdInit(void)
 	sigAct.sa_handler = sigusr2Dummy;
 	sigaction(SIGUSR2, &sigAct, NULL);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -208,7 +209,7 @@ rsRetVal thrdExit(void)
 
 	iRet = llDestroy(&llThrds);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -232,7 +233,7 @@ thrdSleep(thrdInfo_t *pThis, int iSeconds, int iuSeconds)
 	select(1, NULL, NULL, NULL, &tvSelectTimeout);
 	if(pThis->bShallStop)
 		iRet = RS_RET_TERMINATE_NOW;
-	return iRet;
+	RETiRet;
 }
 
 

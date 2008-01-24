@@ -92,7 +92,7 @@ rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 	
 abort_it:
 	*ppThis = pThis;
-	return iRet;
+	RETiRet;
 }
 
 /* set a template name and option to the object. Index must be given. The pTplName must be

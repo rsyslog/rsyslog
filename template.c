@@ -132,7 +132,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 finalize_it:
 	*ppSz = (iRet == RS_RET_OK) ? pVal : NULL;
 
-	return iRet;
+	RETiRet;
 }
 
 /* Helper to doSQLEscape. This is called if doSQLEscape

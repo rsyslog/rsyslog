@@ -5,6 +5,8 @@ rfc3195d_SOURCES = rfc3195d.c rsyslog.h
 rsyslogd_SOURCES = \
 	syslogd.c \
 	syslogd.h \
+	debug.c \
+	debug.h \
 	glbl.h \
 	pidfile.c \
 	pidfile.h \
@@ -24,6 +26,10 @@ rsyslogd_SOURCES = \
 	threads.h \
 	stream.c \
 	stream.h \
+	wtp.c \
+	wtp.h \
+	wti.c \
+	wti.h \
 	queue.c \
 	queue.h \
 	sync.c \

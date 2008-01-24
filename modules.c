@@ -1,6 +1,6 @@
 /* modules.c
  * This is the implementation of syslogd modules object.
- * This object handles plug-ins and buil-in modules of all kind.
+ * This object handles plug-ins and build-in modules of all kind.
  *
  * File begun on 2007-07-22 by RGerhards
  *
@@ -99,7 +99,7 @@ rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 
 	if(iRet == RS_RET_OK)
 		iRet = (*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
-	return iRet;
+	RETiRet;
 }
 
 
@@ -204,7 +204,7 @@ static rsRetVal modPrepareUnload(modInfo_t *pThis)
 	/* END DEVEL */
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -288,7 +288,7 @@ finalize_it:
 			moduleDestruct(pNew);
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 /* Print loaded modules. This is more or less a 
@@ -348,7 +348,7 @@ rsRetVal modUnloadAndDestructAll(void)
 		moduleDestruct(pModPrev);
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -374,7 +374,7 @@ rsRetVal modUnloadAndDestructDynamic(void)
 		}
 	}
 
-	return iRet;
+	RETiRet;
 }
 /* vi:set ai:
  */

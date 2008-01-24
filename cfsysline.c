@@ -74,7 +74,7 @@ static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -92,7 +92,7 @@ static rsRetVal doCustomHdlr(uchar **pp, rsRetVal (*pSetHdlr)(uchar**, void*), v
 	CHKiRet(pSetHdlr(pp, pVal));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -128,7 +128,7 @@ static rsRetVal parseIntVal(uchar **pp, size_t *pVal)
 	*pp = p;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -158,7 +158,7 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	*pp = p;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -209,7 +209,7 @@ static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -270,7 +270,7 @@ static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t),
 	*pp = p;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -347,7 +347,7 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -389,7 +389,7 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -420,7 +420,7 @@ static rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int),
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -481,7 +481,7 @@ finalize_it:
 			rsCStrDestruct(pStrB);
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -514,7 +514,7 @@ static rsRetVal cslchConstruct(cslCmdHdlr_t **ppThis)
 
 finalize_it:
 	*ppThis = pThis;
-	return iRet;
+	RETiRet;
 }
 
 /* destructor for linked list keys. As we do not use any dynamic memory,
@@ -606,7 +606,7 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 	CHKiRet(pHdlr(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -655,7 +655,7 @@ static rsRetVal cslcConstruct(cslCmd_t **ppThis, int bChainingPermitted)
 
 finalize_it:
 	*ppThis = pThis;
-	return iRet;
+	RETiRet;
 }
 
 
@@ -678,7 +678,7 @@ finalize_it:
 			cslchDestruct(pCmdHdlr);
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -692,7 +692,7 @@ rsRetVal cfsyslineInit(void)
 	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct, strcasecmp));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -740,7 +740,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -774,7 +774,7 @@ DEFFUNC_llExecFunc(unregHdlrsHeadExec)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 /* unregister and destroy cfSysLineHandlers for a specific owner. This method is
  * most importantly used before unloading a loadable module providing some handlers.
@@ -790,7 +790,7 @@ rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie)
 	 */
 	iRet = llExecFunc(&llCmdList, unregHdlrsHeadExec, pOwnerCookie);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -844,7 +844,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 		iRet = iRetLL;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 

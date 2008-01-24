@@ -107,7 +107,7 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		  iFlags, pThis->fd);
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -138,7 +138,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 		pThis->pszCurrFName = NULL;
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -165,7 +165,7 @@ strmNextFile(strm_t *pThis)
 	pThis->iCurrFNum = (pThis->iCurrFNum + 1) % pThis->iMaxFiles;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -228,7 +228,7 @@ rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 //dbgprintf("ReadChar: read %c, offset %d\n", *pC, pThis->iCurrOffs);
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -285,7 +285,7 @@ finalize_it:
 	if(iRet != RS_RET_OK && pCStr != NULL)
 		rsCStrDestruct(pCStr);
 
-	return iRet;
+	RETiRet;
 }
 
 #endif /* #if 0 - saved code */
@@ -293,13 +293,13 @@ finalize_it:
 
 /* Standard-Constructor for the strm object
  */
-BEGINobjConstruct(strm)
+BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro! */
 	pThis->iCurrFNum = 1;
 	pThis->fd = -1;
 	pThis->iUngetC = -1;
 	pThis->sType = STREAMTYPE_FILE_SINGLE;
 	pThis->sIOBufSize = glblGetIOBufSize();
-	pThis->tOpenMode = 0600;
+	pThis->tOpenMode = 0600; /* TODO: make configurable */
 ENDobjConstruct(strm)
 
 
@@ -319,7 +319,7 @@ rsRetVal strmConstructFinalize(strm_t *pThis)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -347,7 +347,7 @@ rsRetVal strmDestruct(strm_t **ppThis)
 	free(pThis);
 	*ppThis = NULL;
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -370,7 +370,7 @@ static rsRetVal strmCheckNextOutputFile(strm_t *pThis)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 /* write memory buffer to a stream object.
@@ -413,7 +413,7 @@ static rsRetVal strmWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 finalize_it:
 	pThis->iBufPtr = 0; /* see comment above */
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -432,7 +432,7 @@ rsRetVal strmFlush(strm_t *pThis)
 		iRet = strmWriteInternal(pThis, pThis->pIOBuf, pThis->iBufPtr);
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -457,7 +457,7 @@ dbgprintf("seek(%d, %ld): %d\n", pThis->fd, offs, i);
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */
 	pThis->iBufPtr = 0; /* buffer invalidated */
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -471,7 +471,7 @@ rsRetVal strmSeekCurrOffs(strm_t *pThis)
 	ISOBJ_TYPE_assert(pThis, strm);
 
 	iRet = strmSeek(pThis, pThis->iCurrOffs);
-	return iRet;
+	RETiRet;
 }
 
 
@@ -492,7 +492,7 @@ rsRetVal strmWriteChar(strm_t *pThis, uchar c)
 	pThis->iBufPtr++;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -508,7 +508,7 @@ rsRetVal strmWriteLong(strm_t *pThis, long i)
 	CHKiRet(strmWrite(pThis, szBuf, strlen((char*)szBuf)));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -551,7 +551,7 @@ rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -581,7 +581,7 @@ rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal)
 	pThis->iAddtlOpenFlags = iNewVal;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -608,7 +608,7 @@ strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
 	pThis->lenFName = iLenName;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -635,7 +635,7 @@ strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
 	pThis->lenDir = iLenDir;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -678,7 +678,7 @@ rsRetVal strmRecordEnd(strm_t *pThis)
 	pThis->bInRecord = 0;
 	iRet = strmCheckNextOutputFile(pThis); /* check if we need to switch files */
 
-	return iRet;
+	RETiRet;
 }
 /* end stream record support functions */
 
@@ -723,7 +723,7 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	CHKiRet(objEndSerialize(pStrm));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -763,7 +763,7 @@ rsRetVal strmSetProperty(strm_t *pThis, property_t *pProp)
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 #undef	isProp
 

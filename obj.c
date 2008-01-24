@@ -100,7 +100,7 @@ rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int
 	*ppThis = pThis;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -152,7 +152,7 @@ static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj, uchar *pszRecType
 	CHKiRet(strmWriteChar(pStrm, '\n'));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -171,7 +171,7 @@ dbgprintf("objBeginSerialize obj type: %x\n", objGetObjID(pStrm));
 	CHKiRet(objSerializeHeader(pStrm, pObj, (uchar*) "Obj"));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 	
 
@@ -195,7 +195,7 @@ rsRetVal objBeginSerializePropBag(strm_t *pStrm, obj_t *pObj)
 	CHKiRet(objSerializeHeader(pStrm, pObj, (uchar*) "OPB"));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -286,7 +286,7 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t prop
 	CHKiRet(strmWriteChar(pStrm, '\n'));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -307,7 +307,7 @@ rsRetVal objEndSerialize(strm_t *pStrm)
 	CHKiRet(strmRecordEnd(pStrm));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -334,7 +334,7 @@ static rsRetVal objDeserializeLong(long *pInt, strm_t *pStrm)
 
 	*pInt = i;
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -368,7 +368,7 @@ finalize_it:
 	if(iRet != RS_RET_OK && pCStr != NULL)
 		rsCStrDestruct(pCStr);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -400,7 +400,7 @@ static rsRetVal objDeserializeSyslogTime(syslogTime_t *pTime, strm_t *pStrm)
 	GETVAL(OffsetMinute);
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 #undef GETVAL
 
@@ -443,7 +443,7 @@ static rsRetVal objDeserializeHeader(uchar *pszRecType, objID_t *poID, int* poVe
 	*poVers = oVers;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -515,7 +515,7 @@ static rsRetVal objDeserializeProperty(property_t *pProp, strm_t *pStrm)
 	if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_PROPFRAME);
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -538,7 +538,7 @@ static rsRetVal objDeserializeTrailer(strm_t *pStrm)
 	NEXTC; if(c != '\n') ABORT_FINALIZE(RS_RET_INVALID_TRAILER);
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -578,7 +578,7 @@ static rsRetVal objDeserializeTryRecover(strm_t *pStrm)
 
 finalize_it:
 	dbgprintf("deserializer has possibly been able to re-sync and recover, state %d\n", iRet);
-	return iRet;
+	RETiRet;
 }
 
 
@@ -608,7 +608,7 @@ static rsRetVal objDeserializeProperties(obj_t *pObj, objID_t oID, strm_t *pStrm
 
 	CHKiRet(objDeserializeTrailer(pStrm)); /* do trailer checks */
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -668,7 +668,7 @@ finalize_it:
 	if(iRet != RS_RET_OK && pObj != NULL)
 		free(pObj); // TODO: check if we can call destructor 2008-01-13 rger
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -711,7 +711,7 @@ dbgprintf("objDese...AsPropBag 2\n");
 	CHKiRet(objDeserializeProperties(pObj, oID, pStrm));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -756,7 +756,7 @@ rsRetVal objDeserializePropBag(obj_t *pObj, strm_t *pStrm)
 	CHKiRet(objDeserializeProperties(pObj, oID, pStrm));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 #undef NEXTC /* undef helper macro */
@@ -780,7 +780,7 @@ rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo)
 	arrObjInfo[oID] = pInfo;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 

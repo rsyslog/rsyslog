@@ -58,9 +58,11 @@ typedef enum {	/* IDs of known object "types/classes" */
 	OBJNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
 	OBJMsg = 1,
 	OBJstrm = 2,
-	OBJqueue = 3	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
+	OBJwtp = 3,
+	OBJwti = 4,
+	OBJqueue = 5	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
 } objID_t;	
-#define OBJ_NUM_IDS 4
+#define OBJ_NUM_IDS 6
 
 typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
 		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04
@@ -114,6 +116,31 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 #	define ISOBJ_assert(pObj)
 #endif
 
+#define DEFpropSetMethPTR(obj, prop, dataType)\
+	rsRetVal obj##Set##prop(obj##_t *pThis, dataType *pVal)\
+	{ \
+		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
+		pThis->prop = pVal; \
+		return RS_RET_OK; \
+	}
+#define PROTOTYPEpropSetMethPTR(obj, prop, dataType)\
+	rsRetVal obj##Set##prop(obj##_t *pThis, dataType*)
+#define DEFpropSetMeth(obj, prop, dataType)\
+	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
+	{ \
+		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
+		pThis->prop = pVal; \
+		return RS_RET_OK; \
+	}
+#define DEFpropSetMethFP(obj, prop, dataType)\
+	rsRetVal obj##Set##prop(obj##_t *pThis, dataType)\
+	{ \
+		/* DEV debug: dbgprintf("%sSet%s()\n", #obj, #prop); */\
+		pThis->prop = pVal; \
+		return RS_RET_OK; \
+	}
+#define PROTOTYPEpropSetMethFP(obj, prop, dataType)\
+	rsRetVal obj##Set##prop(obj##_t *pThis, dataType)
 #define DEFpropSetMeth(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
 	{ \
@@ -135,7 +162,7 @@ rsRetVal objName##ClassInit(void) \
 #define ENDObjClassInit(objName) \
 	objRegisterObj(OBJ##objName, pObjInfoOBJ); \
 finalize_it: \
-	return iRet; \
+	RETiRet; \
 }
 
 /* this defines both the constructor and initializer
@@ -148,7 +175,7 @@ finalize_it: \
 
 #define ENDobjConstruct(obj) \
 		/* use finalize_it: before calling the macro (if you need it)! */ \
-		return iRet; \
+		RETiRet; \
 	} \
 	rsRetVal obj##Construct(obj##_t **ppThis) \
 	{ \
@@ -166,8 +193,9 @@ finalize_it: \
 	 \
 	finalize_it: \
 		OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP \
-		return iRet; \
+		RETiRet; \
 	} 
+
 
 
 #endif /* #ifndef OBJ_TYPES_H_INCLUDED */

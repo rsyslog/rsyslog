@@ -289,11 +289,6 @@ dbgMutLog_t *dbgMutLogAddEntry(pthread_mutex_t *pmut, short mutexOp, dbgFuncDB_t
 	pLog->pFuncDB = pFuncDB;
 
 	DLL_Add(MutLog, pLog);
-//RUNLOG_VAR("%p", pLog);
-//RUNLOG_VAR("%p", dbgMutLogListRoot);
-//RUNLOG_VAR("%p", dbgMutLogListLast);
-//RUNLOG_VAR("%p", pLog->pNext);
-//RUNLOG_VAR("%p", pLog->pPrev);
 
 	return pLog;
 }
@@ -520,7 +515,6 @@ int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct t
 	dbgprintf("%s:%d:%s: mutex %p waiting on condition %p (with timeout)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func,
 		  (void*)pmut, (void*)cond);
 	ret = pthread_cond_timedwait(cond, pmut, abstime);
-RUNLOG;
 	dbgMutexLockLog(pmut, pFuncDB, ln);
 	return ret;
 }

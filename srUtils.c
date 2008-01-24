@@ -291,7 +291,7 @@ rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *
 	*ppName = pName;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 /* get the number of digits required to represent a given number. We use an
@@ -337,8 +337,10 @@ timeoutComp(struct timespec *pt, int iTimeout)
 void
 mutexCancelCleanup(void *arg)
 {
+	BEGINfunc
 	assert(arg != NULL);
 	d_pthread_mutex_unlock((pthread_mutex_t*) arg);
+	ENDfunc
 }
 
 

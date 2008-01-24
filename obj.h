@@ -85,20 +85,6 @@
 #define OBJSetMethodHandler(methodID, pHdlr) \
 	CHKiRet(objInfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)(void*)) pHdlr))
 
-/* debug aides */
-#if 0
-#define d_pthread_mutex_lock(x)   {dbgprintf("mutex %p   lock %s, %s(), line %d\n", (void*)x, __FILE__, __func__, __LINE__); \
-				   pthread_mutex_lock(x); \
-                                   if(1)dbgprintf("mutex %p   lock aquired %s, %s(), line %d\n",(void*)x, __FILE__, __func__, __LINE__); \
-				  }
-#define d_pthread_mutex_unlock(x) {dbgprintf("mutex %p UNlock %s, %s(), line %d\n", (void*)x ,__FILE__, __func__, __LINE__);\
-				   pthread_mutex_unlock(x); \
-                                   if(1)dbgprintf("mutex %p UNlock done %s, %s(), line %d\n", (void*)x, __FILE__, __func__, __LINE__); \
-				  }
-#else
-#define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
-#define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
-#endif
 /* prototypes */
 rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *));
 rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));

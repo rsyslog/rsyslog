@@ -225,7 +225,7 @@ rsRetVal MsgConstruct(msg_t **ppThis)
 	*ppThis = pM;
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -422,7 +422,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	CHKiRet(objEndSerialize(pStrm));
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -457,7 +457,7 @@ msg_t *MsgAddRef(msg_t *pM)
 static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 {
 	register int i;
-	int iRet;
+	DEFiRet;
 
 	assert(pM != NULL);
 	if(pM->pCSPROCID != NULL)
@@ -480,8 +480,9 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 		return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
 	rsCStrSetAllocIncrement(pM->pCSPROCID, 16);
 	while((i < pM->iLenTAG) && (pM->pszTAG[i] != ']')) {
-		if((iRet = rsCStrAppendChar(pM->pCSPROCID, pM->pszTAG[i])) != RS_RET_OK)
-			return iRet;
+		if((iRet = rsCStrAppendChar(pM->pCSPROCID, pM->pszTAG[i])) != RS_RET_OK) {
+			RETiRet;
+		}
 		++i;
 	}
 
@@ -497,10 +498,11 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 	}
 
 	/* OK, finaally we could obtain a PROCID. So let's use it ;) */
-	if((iRet = rsCStrFinish(pM->pCSPROCID)) != RS_RET_OK)
-		return iRet;
+	if((iRet = rsCStrFinish(pM->pCSPROCID)) != RS_RET_OK) {
+		RETiRet;
+	}
 
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
@@ -523,7 +525,7 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 static rsRetVal aquireProgramName(msg_t *pM)
 {
 	register int i;
-	int iRet;
+	DEFiRet;
 
 	assert(pM != NULL);
 	if(pM->pCSProgName == NULL) {
@@ -538,13 +540,15 @@ static rsRetVal aquireProgramName(msg_t *pM)
 		      && (pM->pszTAG[i] != '\0') && (pM->pszTAG[i] != ':')
 		      && (pM->pszTAG[i] != '[')  && (pM->pszTAG[i] != '/')
 		    ; ++i) {
-			if((iRet = rsCStrAppendChar(pM->pCSProgName, pM->pszTAG[i])) != RS_RET_OK)
-				return iRet;
+			if((iRet = rsCStrAppendChar(pM->pCSProgName, pM->pszTAG[i])) != RS_RET_OK) {
+				RETiRet;
+			}
 		}
-		if((iRet = rsCStrFinish(pM->pCSProgName)) != RS_RET_OK)
-			return iRet;
+		if((iRet = rsCStrFinish(pM->pCSProgName)) != RS_RET_OK) {
+			RETiRet;
+		}
 	}
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
@@ -924,7 +928,7 @@ rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME)
 	/* if we reach this point, we have the object */
 	iRet = rsCStrSetSzStr(pMsg->pCSAPPNAME, (uchar*) pszAPPNAME);
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -2128,7 +2132,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, property_t *pProp)
 		memcpy(&pThis->tTIMESTAMP, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	}
 
-	return iRet;
+	RETiRet;
 }
 #undef	isProp
 

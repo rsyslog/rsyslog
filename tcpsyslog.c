@@ -1220,7 +1220,7 @@ static rsRetVal TCPSendBldFrame(TCPFRAMINGMODE rqdFraming, char **pmsg, size_t *
 	}
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 
@@ -1282,7 +1282,7 @@ int TCPSend(void *pData, char *msg, size_t len, TCPFRAMINGMODE rqdFraming,
 finalize_it:
 	if(bMsgMustBeFreed)
 		free(msg);
-	return iRet;
+	RETiRet;
 }
 
 
