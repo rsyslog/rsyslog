@@ -40,9 +40,10 @@ extern int debugging_on;	 /* read-only, except on sig USR1 */
  * rgerhards, 2008-01-24
  */
 typedef struct dbgFuncDBmutInfoEntry_s {
-	pthread_mutex_t mut;
+	pthread_mutex_t *pmut;
 	int lockLn; /* line where it was locked (inside our func): -1 means mutex is not locked */
-	unsigned long lIteration; /* iteration of this function that locked the mutex */
+	pthread_t thrd; /* thrd where the mutex was locked */
+	unsigned long lInvocation; /* invocation (unique during program run!) of this function that locked the mutex */
 } dbgFuncDBmutInfoEntry_t;
 typedef struct dbgFuncDB_s {
 	unsigned magic;
@@ -69,10 +70,10 @@ rsRetVal dbgClassInit(void);
 rsRetVal dbgClassExit(void);
 void sigsegvHdlr(int signum);
 void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
-int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB);
-int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB);
-int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB);
-int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncDB);
+int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int lnB);
+int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int lnB);
+int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int lnB);
+int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncD, int lnB);
 int dbgEntrFunc(dbgFuncDB_t *pFuncDB);
 void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore);
 void dbgSetThrdName(uchar *pszName);
@@ -102,10 +103,10 @@ void dbgPrintAllDebugInfo(void);
 
 /* debug aides */
 #if 1
-#define d_pthread_mutex_lock(x)     dbgMutexLock(x, &dbgFuncDB)
-#define d_pthread_mutex_unlock(x)   dbgMutexUnlock(x, &dbgFuncDB)
-#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, &dbgFuncDB)
-#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, &dbgFuncDB)
+#define d_pthread_mutex_lock(x)     dbgMutexLock(x, &dbgFuncDB, __LINE__)
+#define d_pthread_mutex_unlock(x)   dbgMutexUnlock(x, &dbgFuncDB, __LINE__)
+#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, &dbgFuncDB, __LINE__)
+#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, &dbgFuncDB, __LINE__)
 #else
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
 #define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
