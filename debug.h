@@ -31,24 +31,57 @@
 extern int Debug;		/* debug flag  - read-only after startup */
 extern int debugging_on;	 /* read-only, except on sig USR1 */
 
+/* data types */
+
+/* the function database. It is used as a static var inside each function. That provides
+ * us the fast access to it that we need to make the instrumentation work. It's address
+ * also serves as a unique function identifier and can be used inside other structures
+ * to refer to the function (e.g. for pretty-printing names).
+ * rgerhards, 2008-01-24
+ */
+typedef struct dbgFuncDBmutInfoEntry_s {
+	pthread_mutex_t mut;
+	int lockLn; /* line where it was locked (inside our func): -1 means mutex is not locked */
+	unsigned long lIteration; /* iteration of this function that locked the mutex */
+} dbgFuncDBmutInfoEntry_t;
+typedef struct dbgFuncDB_s {
+	unsigned magic;
+	unsigned long nTimesCalled;
+	const char *func;
+	const char *file;
+	int line;
+	dbgFuncDBmutInfoEntry_t mutInfo[5];
+	/* remember to update the initializer if you add anything or change the order! */
+} dbgFuncDB_t;
+#define dbgFUNCDB_MAGIC 0xA1B2C3D4
+#define dbgFuncDB_t_INITIALIZER \
+	{ \
+	.magic = dbgFUNCDB_MAGIC,\
+	.nTimesCalled = 0,\
+	.func = __func__, \
+	.file = __FILE__, \
+	.line = __LINE__ \
+	}
+
+
 /* prototypes */
 rsRetVal dbgClassInit(void);
 rsRetVal dbgClassExit(void);
 void sigsegvHdlr(int signum);
-int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime,
-		     const char *file, const char* func, int line);
-int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *mutex, const char *file, const char* func, int line);
-int dbgMutexUnlock(pthread_mutex_t *pmut, const char *file, const char* func, int line);
-int dbgMutexLock(pthread_mutex_t *pmut, const char *file, const char* func, int line);
 void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
-int dbgEntrFunc(char* file, int line, const char* func);
-void dbgExitFunc(int iStackPtrRestore, char* file, int line, const char* func);
+int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB);
+int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB);
+int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB);
+int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncDB);
+int dbgEntrFunc(dbgFuncDB_t *pFuncDB);
+void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore);
 void dbgSetThrdName(uchar *pszName);
+void dbgPrintAllDebugInfo(void);
 
 /* macros */
 #if 1 /* DEV debug: set to 1 to get a rough call trace -- rgerhards, 2008-01-13 */
-#	define BEGINfunc int dbgCALLStaCK_POP_POINT = dbgEntrFunc(__FILE__, __LINE__, __func__);
-#	define ENDfunc dbgExitFunc(dbgCALLStaCK_POP_POINT, __FILE__, __LINE__, __func__);
+#	define BEGINfunc static dbgFuncDB_t dbgFuncDB=dbgFuncDB_t_INITIALIZER; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&dbgFuncDB);
+#	define ENDfunc dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT);
 #else
 #	define BEGINfunc
 #	define ENDfunc
@@ -69,10 +102,10 @@ void dbgSetThrdName(uchar *pszName);
 
 /* debug aides */
 #if 1
-#define d_pthread_mutex_lock(x)     dbgMutexLock(x, __FILE__, __func__, __LINE__)
-#define d_pthread_mutex_unlock(x)   dbgMutexUnlock(x, __FILE__, __func__, __LINE__)
-#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, __FILE__, __func__, __LINE__)
-#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, __FILE__, __func__, __LINE__)
+#define d_pthread_mutex_lock(x)     dbgMutexLock(x, &dbgFuncDB)
+#define d_pthread_mutex_unlock(x)   dbgMutexUnlock(x, &dbgFuncDB)
+#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, &dbgFuncDB)
+#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, &dbgFuncDB)
 #else
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
 #define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
