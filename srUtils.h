@@ -89,14 +89,12 @@ void mutexCancelCleanup(void *arg);
 #define LOCK_MUTEX		1
 #define DEFVARS_mutexProtection\
 	int iCancelStateSave; \
-	int bLockedOpIsLocked
+	int bLockedOpIsLocked=0
 #define BEGIN_MTX_PROTECTED_OPERATIONS(mut, bMustLock) \
 	if(bMustLock == LOCK_MUTEX) { \
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave); \
 		d_pthread_mutex_lock(mut); \
 		bLockedOpIsLocked = 1; \
-	} else { \
-		bLockedOpIsLocked = 0; \
 	}
 #define END_MTX_PROTECTED_OPERATIONS(mut) \
 	if(bLockedOpIsLocked) { \

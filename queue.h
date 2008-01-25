@@ -90,7 +90,8 @@ typedef struct queue_s {
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
 	pthread_mutex_t *mut; /* mutex for enqueing and dequeueing messages */
 	pthread_cond_t notFull, notEmpty;
-	pthread_cond_t condThrdTrm;/* signalled when threads terminate */
+	pthread_cond_t condDAReady;/* signalled when the DA queue is fully initialized and ready for processing */
+	pthread_cond_t condThrdTrm;/* signalled when threads terminate */ // TODO: no longer used?
 	pthread_cond_t *condSignalOnEmpty;/* caller-provided condition to be signalled when queue is empty (DA mode!) */
 	pthread_mutex_t *mutSignalOnEmpty; /* and its associated mutex */
 	pthread_cond_t *condSignalOnEmpty2;/* another condition to be signalled on empty */
@@ -112,7 +113,7 @@ typedef struct queue_s {
 	int bIsDA;		/* is this queue disk assisted? */
 	int bRunsDA;		/* is this queue actually *running* disk assisted? */
 	pthread_mutex_t mutDA;	/* mutex for low water mark algo */
-	pthread_cond_t condDA;	/* and its matching condition */
+	pthread_cond_t condDA;	/* and its matching condition */ // TODO: no longer needed!
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
 	struct queue_s *pqParent;/* pointer to the parent (if this is a child queue) */
 	int	bDAEnqOnly;	/* EnqOnly setting for DA queue */

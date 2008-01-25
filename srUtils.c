@@ -354,9 +354,9 @@ timeoutVal(struct timespec *pt)
 			iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000;
 		}
 	} else {
-		iTimeout = pt->tv_sec - t.tv_nsec;
-		iTimeout += 1000 - (pt->tv_nsec / 1000);
-		iTimeout += t.tv_nsec / 1000;
+		iTimeout = (pt->tv_sec - t.tv_sec) * 1000;
+		iTimeout += 1000 - (pt->tv_nsec / 1000000);
+		iTimeout += t.tv_nsec / 1000000;
 	}
 
 	return iTimeout;

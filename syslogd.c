@@ -2577,6 +2577,7 @@ static void doDie(int sig)
 {
 	static int iRetries = 0; /* debug aid */
 	dbgprintf("DoDie called.\n");
+	dbgPrintAllDebugInfo();
 	if(iRetries++ == 4) {
 		dbgprintf("DoDie called 5 times - unconditional exit\n");
 		exit(1);

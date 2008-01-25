@@ -100,16 +100,21 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 		objInfo_t *pObjInfo; \
 		unsigned int iObjCooCKiE; /* prevent name conflict, thus the strange name */ 
 #	define ISOBJ_assert(pObj) \
-		{ \
+		do { \
+		if(pObj == NULL) dbgPrintAllDebugInfo(); \
 		assert((pObj) != NULL); \
+		if(((obj_t*)(pObj))->iObjCooCKiE != (unsigned) 0xBADEFEE) dbgPrintAllDebugInfo(); \
 		assert((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
-		}
+		} while(0);
 #	define ISOBJ_TYPE_assert(pObj, objType) \
-		{ \
+		do { \
+		if(pObj == NULL) dbgPrintAllDebugInfo(); \
 		assert(pObj != NULL); \
+		if(((obj_t*)(pObj))->iObjCooCKiE != (unsigned) 0xBADEFEE) dbgPrintAllDebugInfo(); \
 		assert((unsigned) pObj->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+		if(objGetObjID(pObj) != OBJ##objType) dbgPrintAllDebugInfo(); \
 		assert(objGetObjID(pObj) == OBJ##objType); \
-		}
+		} while(0);
 #else /* non-debug mode, no checks but much faster */
 #	define BEGINobjInstance objInfo_t *pObjInfo; 
 #	define ISOBJ_TYPE_assert(pObj, objType)

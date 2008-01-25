@@ -108,6 +108,7 @@ PROTOTYPEpropSetMeth(wtp, toWrkShutdown, long);
 PROTOTYPEpropSetMeth(wtp, wtpState, wtpState_t);
 PROTOTYPEpropSetMeth(wtp, iMaxWorkerThreads, int);
 PROTOTYPEpropSetMeth(wtp, pUsr, void*);
+PROTOTYPEpropSetMeth(wtp, iNumWorkerThreads, int);
 PROTOTYPEpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t);
 PROTOTYPEpropSetMethPTR(wtp, pcondBusy, pthread_cond_t);
 
