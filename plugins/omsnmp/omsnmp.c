@@ -113,23 +113,23 @@ CODE_STD_STRING_REQUESTparseSelectorAct(0)
 	} else {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
-dbgprintf("0\n");	
 
 	/* ok, if we reach this point, we have something for us */
 	if((iRet = createInstance(&pData)) != RS_RET_OK)
 		goto finalize_it;
 
-dbgprintf("1\n");	
-
-		ABORT_FINALIZE( RS_RET_CONFLINE_UNPROCESSED );// RS_RET_PARAM_ERROR );
-dbgprintf("2\n");	
-
 	/* Failsave */
-	if (pszTarget == NULL)
-		ABORT_FINALIZE( RS_RET_CONFLINE_UNPROCESSED );// RS_RET_PARAM_ERROR );
+	if (pszTarget == NULL) {
+		/* due to a problem in the framework, we can not return an error code
+		 * right now, so we need to use a (useless) default.
+		 */
+		/* TODO: re-enable when rsyslogd supports it: ABORT_FINALIZE( RS_RET_PARAM_ERROR ); */
+		strncpy( (char*) pData->szTarget, "127.0.0.1", sizeof( pData->szTarget -1 ) );
+	} else {
 
 	/* Copy Target */
 	strncpy( (char*) pData->szTarget, (char*) pszTarget, sizeof( pData->szTarget -1 ) );
+	}
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
