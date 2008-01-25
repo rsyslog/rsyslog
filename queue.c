@@ -307,6 +307,7 @@ queueInitDA(queue_t *pThis, int bEnqOnly, int bLockMutex)
 		CHKiRet(wtpSetpmutUsr		(pThis->pWtpDA, pThis->mut));
 		CHKiRet(wtpSetpcondBusy		(pThis->pWtpDA, &pThis->notEmpty));
 		CHKiRet(wtpSetiNumWorkerThreads	(pThis->pWtpDA, 1));
+		CHKiRet(wtpSettoWrkShutdown	(pThis->pWtpDA, pThis->toWrkShutdown));
 		CHKiRet(wtpSetpUsr		(pThis->pWtpDA, pThis));
 		CHKiRet(wtpConstructFinalize	(pThis->pWtpDA));
 	}
@@ -1324,6 +1325,7 @@ dbgprintf("Queue %p: post mutexes, mut %p\n", pThis, pThis->mut);
 	CHKiRet(wtpSetpmutUsr		(pThis->pWtpReg, pThis->mut));
 	CHKiRet(wtpSetpcondBusy		(pThis->pWtpReg, &pThis->notEmpty));
 	CHKiRet(wtpSetiNumWorkerThreads	(pThis->pWtpReg, pThis->iNumWorkerThreads));
+	CHKiRet(wtpSettoWrkShutdown	(pThis->pWtpReg, pThis->toWrkShutdown));
 	CHKiRet(wtpSetpUsr		(pThis->pWtpReg, pThis));
 	CHKiRet(wtpConstructFinalize	(pThis->pWtpReg));
 

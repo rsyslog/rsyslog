@@ -419,6 +419,7 @@ dbgprintf("%s: start worker run, queue cmd currently %d\n", wtiGetDbgHdr(pThis),
 				d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
 			} else {
 				timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
+dbgprintf("timeout value is %ld\n", timeoutVal(&t));
 				if(d_pthread_cond_timedwait(pWtp->pcondBusy, pWtp->pmutUsr, &t) != 0) {
 					dbgprintf("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
 					bInactivityTOOccured = 1; /* indicate we had a timeout */
