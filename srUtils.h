@@ -66,7 +66,8 @@ void skipWhiteSpace(uchar **pp);
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
 		     size_t lenFName, long lNum, int lNumDigits);
 int getNumberDigits(long lNum);
-rsRetVal timeoutComp(struct timespec *pt, int iTimeout);
+rsRetVal timeoutComp(struct timespec *pt, long iTimeout);
+long timeoutVal(struct timespec *pt);
 void mutexCancelCleanup(void *arg);
 
 /* mutex operations */

@@ -55,6 +55,7 @@ static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logge
 static char *pszAltDbgFileName = "/home/rger/proj/rsyslog/log"; /* if set, debug output is *also* sent to here */
 static FILE *altdbg;	/* and the handle for alternate debug output */
 static FILE *stddbg;
+static dbgFuncDB_t pCurrFunc;
 
 
 /* list of all known FuncDBs. We use a special list, because it must only be single-linked. As
@@ -653,7 +654,7 @@ sigsegvHdlr(int signum)
 		signame = "";
 	}
 
-	dbgprintf("Signal %d%s occured, execution must be terminated %d.\n", signum, signame, SIGSEGV);
+	dbgprintf("\n\n\n\nSignal %d%s occured, execution must be terminated %d.\n\n\n\n", signum, signame, SIGSEGV);
 
 	dbgCallStackPrintAll();
 

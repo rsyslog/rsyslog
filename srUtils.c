@@ -316,7 +316,7 @@ int getNumberDigits(long lNum)
  * rgerhards, 2008-01-14
  */
 rsRetVal
-timeoutComp(struct timespec *pt, int iTimeout)
+timeoutComp(struct timespec *pt, long iTimeout)
 {
 	assert(pt != NULL);
 	/* compute timeout */
@@ -328,6 +328,38 @@ timeoutComp(struct timespec *pt, int iTimeout)
 	}
 	pt->tv_sec += iTimeout / 1000;
 	return RS_RET_OK; /* so far, this is static... */
+}
+
+
+/* This function is kind of the reverse of timeoutComp() - it takes an absolute
+ * timeout value and computes how far this is in the future. If the value is already
+ * in the past, 0 is returned. The return value is in ms.
+ * rgerhards, 2008-01-25
+ */
+long
+timeoutVal(struct timespec *pt)
+{
+	struct timespec t;
+	long iTimeout;
+
+	assert(pt != NULL);
+	/* compute timeout */
+	clock_gettime(CLOCK_REALTIME, &t);
+	if(pt->tv_sec < t.tv_sec) {
+		iTimeout = 0; /* in the past! */
+	} else if(pt->tv_sec == t.tv_sec) {
+		if(pt->tv_nsec < t.tv_nsec) {
+			iTimeout = 0; /* in the past! */
+		} else {
+			iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000;
+		}
+	} else {
+		iTimeout = pt->tv_sec - t.tv_nsec;
+		iTimeout += 1000 - (pt->tv_nsec / 1000);
+		iTimeout += t.tv_nsec / 1000;
+	}
+
+	return iTimeout;
 }
 
 

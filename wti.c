@@ -159,6 +159,16 @@ rsRetVal wtiDestruct(wti_t **ppThis)
 	/* we can not be canceled, that would have a myriad of side-effects */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 
+	/* if we reach this point, we must make sure the associated worker has terminated. It is
+	 * the callers duty to make sure the worker has already terminated.
+	 * TODO: is it *really* the caller's duty? ...mmmhhhh.... smells bad... rgerhards, 2008-01-25
+	 */
+	wtiProcessThrdChanges(pThis, LOCK_MUTEX); /* process state change one last time */
+
+	d_pthread_mutex_lock(&pThis->mut);
+	assert(wtiGetState(pThis, MUTEX_ALREADY_LOCKED) <= eWRKTHRD_TERMINATING); // I knew it smelled bad...
+	d_pthread_mutex_unlock(&pThis->mut);
+
 	/* actual destruction */
 	pthread_cond_destroy(&pThis->condInitDone);
 	pthread_mutex_destroy(&pThis->mut);
@@ -166,7 +176,7 @@ rsRetVal wtiDestruct(wti_t **ppThis)
 	if(pThis->pszDbgHdr != NULL)
 		free(pThis->pszDbgHdr);
 
-	/* and finally delete the queue objet itself */
+	/* and finally delete the wti object itself */
 	free(pThis);
 	*ppThis = NULL;
 
