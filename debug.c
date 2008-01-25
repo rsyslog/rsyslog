@@ -6,6 +6,11 @@
  * 
  * File begun on 2008-01-22 by RGerhards
  *
+ * Some functions are controlled by environment variables:
+ *
+ * RSYSLOG_DEBUGLOG		* if set, a debug log file is written
+ * 				to that location
+ *
  * There is some in-depth documentation available in doc/dev_queue.html
  * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
  * if you are getting aquainted to the object.
@@ -54,8 +59,8 @@ static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to t
 static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bPrintMutexAction = 0; /* shall mutex calls be printed to the debug log? */
 static int bPrintTime = 1;	/* print a timestamp together with debug message */
-static char *pszAltDbgFileName = "/home/rger/proj/rsyslog/log"; /* if set, debug output is *also* sent to here */
-static FILE *altdbg;	/* and the handle for alternate debug output */
+static char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
+static FILE *altdbg = NULL;	/* and the handle for alternate debug output */
 static FILE *stddbg;
 //static dbgFuncDB_t pCurrFunc;
 
@@ -748,10 +753,10 @@ dbgprintf(char *fmt, ...)
 	if(altdbg != NULL) fprintf(altdbg, "%s", pszWriteBuf);
 	*/
 	fwrite(pszWriteBuf, lenWriteBuf, 1, stddbg);
-	fwrite(pszWriteBuf, lenWriteBuf, 1, altdbg);
+	if(altdbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, altdbg);
 
 	fflush(stddbg);
-	fflush(altdbg);
+	if(altdbg != NULL) fflush(altdbg);
 	pthread_cleanup_pop(1);
 }
 
@@ -863,6 +868,9 @@ rsRetVal dbgClassInit(void)
 	sigAct.sa_handler = sigusr2Hdlr;
 	//sigaction(SIGUSR2, &sigAct, NULL);
 	sigaction(SIGUSR1, &sigAct, NULL);
+
+	pszAltDbgFileName = getenv("RSYSLOG_DEBUGLOG");
+printf("dbg fl: %s\n", pszAltDbgFileName);
 
 	stddbg = stdout;
 	if(pszAltDbgFileName != NULL) {
