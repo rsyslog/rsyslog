@@ -167,6 +167,7 @@ PROTOTYPEpropSetMeth(queue, iLowWtrMrk, int);
 PROTOTYPEpropSetMeth(queue, iDiscardMrk, int);
 PROTOTYPEpropSetMeth(queue, iDiscardSeverity, int);
 PROTOTYPEpropSetMeth(queue, iMinMsgsPerWrkr, int);
+PROTOTYPEpropSetMeth(queue, bSaveOnShutdown, int);
 #define queueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

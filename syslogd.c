@@ -3424,6 +3424,7 @@ init(void)
 	setQPROP(queueSetiDiscardMrk, "$MainMsgQueueDiscardMark", iMainMsgQDiscardMark);
 	setQPROP(queueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
 	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100); // TODO: implement config directive!
+	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1); // TODO: implement config directive!
 
 #	undef setQPROP
 #	undef setQPROPstr
