@@ -659,7 +659,6 @@ static void dbgCallStackPrintAll(void)
 void
 sigsegvHdlr(int signum)
 {
-	struct sigaction sigAct;
 	char *signame;
 
 	if(signum == SIGSEGV) {
@@ -670,22 +669,15 @@ sigsegvHdlr(int signum)
 
 	dbgprintf("\n\n\n\nSignal %d%s occured, execution must be terminated %d.\n\n\n\n", signum, signame, SIGSEGV);
 
-	dbgCallStackPrintAll();
+	dbgPrintAllDebugInfo();
 
 	fflush(stddbg);
-	/* re-instantiate original handler ... */
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = SIG_DFL;
-	sigaction(SIGSEGV, &sigAct, NULL);
 
-	/* and call it */
-	int ir = raise(signum);
-	printf("raise returns %d, errno %d: %s\n", ir, errno, strerror(errno));
-
-	/* we should never arrive here - but we provide some code just in case... */
-	dbgprintf("sigsegvHdlr: oops, returned from raise(), doing exit(), something really wrong...\n");
-	exit(1);
+	/* and finally abort... */
+	/* TODO: think about restarting rsyslog in this case: may be a good idea,
+	 * but may also be a very bad one (restart loops!)
+	 */
+	abort();
 }
 
 
