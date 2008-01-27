@@ -110,8 +110,6 @@ wtpConstructFinalize(wtp_t *pThis)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
-RUNLOG_VAR("%d", i);
-RUNLOG_VAR("%p", pThis->pWrkr[i]);
 		CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
 		pWti = pThis->pWrkr[i];
 		lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%s/w%d", wtpGetDbgHdr(pThis), i);
