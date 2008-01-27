@@ -96,6 +96,7 @@ rsRetVal wtpCancelAll(wtp_t *pThis);
 rsRetVal wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg);
 rsRetVal wtpSignalWrkrTermination(wtp_t *pWtp);
 rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout);
+int wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex);
 PROTOTYPEObjClassInit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int));

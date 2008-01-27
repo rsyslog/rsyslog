@@ -286,7 +286,6 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 		
 RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 	/* and wait for their termination */
-dbgprintf("%s: waiting for mutex %p\n", wtpGetDbgHdr(pThis), &pThis->mut);
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pThis->mut);
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mut);
@@ -580,6 +579,30 @@ DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int));
 DEFpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*, void*));
 DEFpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*));
 DEFpropSetMethFP(wtp, pfOnWorkerShutdown, rsRetVal(*pVal)(void*));
+
+
+/* return the current number of worker threads.
+ * TODO: atomic operation would bring a nice performance
+ * enhancemcent
+ * rgerhards, 2008-01-27
+ */
+int
+wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex)
+{
+	DEFVARS_mutexProtection;
+	int iNumWrkr;
+
+	BEGINfunc
+	ISOBJ_TYPE_assert(pThis, wtp);
+
+	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
+	iNumWrkr = pThis->iCurNumWrkThrd;
+	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+
+RUNLOG_VAR("%d", iNumWrkr);
+	ENDfunc
+	return iNumWrkr;
+}
 
 
 /* set the debug header message
