@@ -321,16 +321,11 @@ timeoutComp(struct timespec *pt, long iTimeout)
 	assert(pt != NULL);
 	/* compute timeout */
 	clock_gettime(CLOCK_REALTIME, pt);
-RUNLOG_VAR("%ld", pt->tv_nsec);
 	pt->tv_nsec += (iTimeout % 1000) * 1000000; /* think INTEGER arithmetic! */
-RUNLOG_VAR("%ld", pt->tv_nsec);
 	if(pt->tv_nsec > 999999999) { /* overrun? */
-RUNLOG;
 		pt->tv_nsec -= 1000000000;
 	}
-RUNLOG_VAR("%ld", pt->tv_sec);
 	pt->tv_sec += iTimeout / 1000;
-RUNLOG_VAR("%ld", pt->tv_sec);
 	return RS_RET_OK; /* so far, this is static... */
 }
 
@@ -349,19 +344,8 @@ timeoutVal(struct timespec *pt)
 	assert(pt != NULL);
 	/* compute timeout */
 	clock_gettime(CLOCK_REALTIME, &t);
-	if(pt->tv_sec < t.tv_sec) {
-		iTimeout = 0; /* in the past! */
-	} else if(pt->tv_sec == t.tv_sec) {
-		if(pt->tv_nsec < t.tv_nsec) {
-			iTimeout = 0; /* in the past! */
-		} else {
-			iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000;
-		}
-	} else {
-		iTimeout = (pt->tv_sec - t.tv_sec) * 1000;
-		iTimeout += 1000 - (pt->tv_nsec / 1000000);
-		iTimeout += t.tv_nsec / 1000000;
-	}
+	iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000;
+	iTimeout += (pt->tv_sec - t.tv_sec) * 1000;
 
 	return iTimeout;
 }
