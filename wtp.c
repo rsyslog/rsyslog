@@ -352,9 +352,11 @@ wtpCancelAll(wtp_t *pThis)
 	/* process any pending thread requests so that we know who actually is still running */
 	wtpProcessThrdChanges(pThis);
 
-	/* first tell the workers our request */
+RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
+	/* go through all workers and cancel those that are active */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		// TODO: mutex lock!
+RUNLOG_VAR("%d", pThis->pWrkr[i]->tCurrCmd);
 		if(pThis->pWrkr[i]->tCurrCmd >= eWRKTHRD_TERMINATING) {
 			dbgprintf("%s: canceling worker thread %d\n", wtpGetDbgHdr(pThis), i);
 			pthread_cancel(pThis->pWrkr[i]->thrdID);
