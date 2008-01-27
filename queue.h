@@ -92,9 +92,9 @@ typedef struct queue_s {
 	pthread_cond_t notFull, notEmpty;
 	pthread_cond_t condDAReady;/* signalled when the DA queue is fully initialized and ready for processing */
 	pthread_cond_t condThrdTrm;/* signalled when threads terminate */ // TODO: no longer used?
-	pthread_cond_t *condSignalOnEmpty;/* caller-provided condition to be signalled when queue is empty (DA mode!) */
-	pthread_mutex_t *mutSignalOnEmpty; /* and its associated mutex */
-	pthread_cond_t *condSignalOnEmpty2;/* another condition to be signalled on empty */
+	//pthread_cond_t *condSignalOnEmpty;/* caller-provided condition to be signalled when queue is empty (DA mode!) */
+	//pthread_mutex_t *mutSignalOnEmpty; /* and its associated mutex */
+	//pthread_cond_t *condSignalOnEmpty2;/* another condition to be signalled on empty */
 	//int bSignalOnEmpty;		/* signal caller when queue is empty via xxxSignalOnEmpty cond/mut,
 					 //  0  = do not, 1 = signal only condSignalOnEmpty, 2 = signal both condSig..*/ // TODO: no longer needed?
 

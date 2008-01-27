@@ -350,11 +350,11 @@ wtpCancelAll(wtp_t *pThis)
 	/* process any pending thread requests so that we know who actually is still running */
 	wtpProcessThrdChanges(pThis);
 
-RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
+//RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 	/* go through all workers and cancel those that are active */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		// TODO: mutex lock!
-RUNLOG_VAR("%d", pThis->pWrkr[i]->tCurrCmd);
+//RUNLOG_VAR("%d", pThis->pWrkr[i]->tCurrCmd);
 		if(pThis->pWrkr[i]->tCurrCmd >= eWRKTHRD_TERMINATING) {
 			dbgprintf("%s: canceling worker thread %d\n", wtpGetDbgHdr(pThis), i);
 			pthread_cancel(pThis->pWrkr[i]->thrdID);
@@ -483,8 +483,6 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 
 	pThis->iCurNumWrkThrd++;
-dbgPrintAllDebugInfo();
-RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 
 	/* find free spot in thread table. If we find at least one worker that is in initialization,
 	 * we do NOT start a new one. Let's give the other one a chance, first.

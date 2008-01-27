@@ -197,17 +197,13 @@ rsRetVal wtiDestruct(wti_t **ppThis)
 	wtiProcessThrdChanges(pThis, LOCK_MUTEX); /* process state change one last time */
 
 	d_pthread_mutex_lock(&pThis->mut);
-RUNLOG_VAR("%d", pThis->tCurrCmd);
 	if(wtiGetState(pThis, MUTEX_ALREADY_LOCKED) != eWRKTHRD_STOPPED) {
 		dbgprintf("%s: WARNING: worker %p shall be destructed but is still running (might be OK) - joining it\n",
 			  wtiGetDbgHdr(pThis), pThis);
 		/* let's hope the caller actually instructed it to shutdown... */
 		pthread_cond_wait(&pThis->condExitDone, &pThis->mut);
-RUNLOG;
 		wtiJoinThrd(pThis);
-RUNLOG;
 	}
-RUNLOG;
 	d_pthread_mutex_unlock(&pThis->mut);
 
 	/* actual destruction */
@@ -267,13 +263,11 @@ wtiJoinThrd(wti_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
-	dbgprintf("wti: waiting for worker %s termination, current state %d\n", wtiGetDbgHdr(pThis), pThis->tCurrCmd);
+	dbgprintf("waiting for worker %s termination, current state %d\n", wtiGetDbgHdr(pThis), pThis->tCurrCmd);
 	pthread_join(pThis->thrdID, NULL);
-RUNLOG;
 	wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED); /* back to virgin... */
-RUNLOG_VAR("%p", pThis->thrdID);
 	pThis->thrdID = 0; /* invalidate the thread ID so that we do not accidently find reused ones */
-	dbgprintf("wti: worker %s has stopped\n", wtiGetDbgHdr(pThis));
+	dbgprintf("worker %s has stopped\n", wtiGetDbgHdr(pThis));
 
 	RETiRet;
 }
