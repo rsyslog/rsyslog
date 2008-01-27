@@ -963,17 +963,33 @@ RUNLOG;
 	BEGIN_MTX_PROTECTED_OPERATIONS(pThis->mut, LOCK_MUTEX);	/* some workers may be running in parallel! */
 RUNLOG_VAR("%d", pThis->iQueueSize);
 	//old: if(pThis->iQueueSize > 0) {
-	if(wtpGetCurNumWrkr(pThis->pWtpReg, LOCK_MUTEX) > 0) {
-		END_MTX_PROTECTED_OPERATIONS(pThis->mut);
+	if(pThis->iQueueSize > 0) {
 		timeoutComp(&tTimeout, pThis->toActShutdown);
-		iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
-		if(iRetLocal == RS_RET_TIMED_OUT) {
-			dbgprintf("Queue 0x%lx: immediate shutdown timed out on primary queue (this is acceptable and "
-				  "triggers cancellation)\n", queueGetID(pThis));
-		} else if(iRetLocal != RS_RET_OK) {
-			dbgprintf("Queue 0x%lx: unexpected iRet state %d after trying immediate shutdown of the primary queue "
-				  "in disk save mode. Continuing, but results are unpredictable\n",
-				  queueGetID(pThis), iRetLocal);
+		if(wtpGetCurNumWrkr(pThis->pWtpReg, LOCK_MUTEX) > 0) {
+			END_MTX_PROTECTED_OPERATIONS(pThis->mut);
+			iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
+			if(iRetLocal == RS_RET_TIMED_OUT) {
+				dbgprintf("Queue 0x%lx: immediate shutdown timed out on primary queue (this is acceptable and "
+					  "triggers cancellation)\n", queueGetID(pThis));
+			} else if(iRetLocal != RS_RET_OK) {
+				dbgprintf("Queue 0x%lx: unexpected iRet state %d after trying immediate shutdown of the primary queue "
+					  "in disk save mode. Continuing, but results are unpredictable\n",
+					  queueGetID(pThis), iRetLocal);
+			}
+			BEGIN_MTX_PROTECTED_OPERATIONS(pThis->mut, LOCK_MUTEX);	/* some workers may be running in parallel! */
+		}
+		if(wtpGetCurNumWrkr(pThis->pWtpDA, LOCK_MUTEX) > 0) {
+			/* and now the same for the DA queue */
+			END_MTX_PROTECTED_OPERATIONS(pThis->mut);
+			iRetLocal = wtpShutdownAll(pThis->pWtpDA, wtpState_SHUTDOWN_IMMEDIATE, &tTimeout);
+			if(iRetLocal == RS_RET_TIMED_OUT) {
+				dbgprintf("Queue 0x%lx: immediate shutdown timed out on DA queue (this is acceptable and "
+					  "triggers cancellation)\n", queueGetID(pThis));
+			} else if(iRetLocal != RS_RET_OK) {
+				dbgprintf("Queue 0x%lx: unexpected iRet state %d after trying immediate shutdown of the DA queue "
+					  "in disk save mode. Continuing, but results are unpredictable\n",
+					  queueGetID(pThis), iRetLocal);
+			}
 		}
 	} else {
 		END_MTX_PROTECTED_OPERATIONS(pThis->mut);
@@ -1370,9 +1386,16 @@ queueRegOnWrkrShutdown(queue_t *pThis)
 	if(pThis->pqParent != NULL) {
 RUNLOG_VAR("%p", pThis->pqParent);
 RUNLOG_VAR("%p", pThis->pqParent->pWtpDA);
-		assert(pThis->pqParent->pWtpDA != NULL);
-		pThis->pqParent->bChildIsDone = 1; /* indicate we are done */
-		wtpAdviseMaxWorkers(pThis->pqParent->pWtpDA, 1); /* reactivate DA worker (always 1) */
+		if(pThis->pqParent->pWtpDA == NULL) {
+			/* this can happen if we are not set to save on an eternal timeout. We
+			 * log a warning but otherwise do nothing
+			 */
+			dbgprintf("Queue 0x%lx: warning: pThis->pqParent->pWtpDA is NULL (this may be OK if the parent is not set to "
+			          " bSaveOnShutdown\n", queueGetID(pThis));
+		} else {
+			pThis->pqParent->bChildIsDone = 1; /* indicate we are done */
+			wtpAdviseMaxWorkers(pThis->pqParent->pWtpDA, 1); /* reactivate DA worker (always 1) */
+		}
 	}
 
 	RETiRet;
@@ -1611,7 +1634,8 @@ rsRetVal queueDestruct(queue_t **ppThis)
 	pThis->bQueueInDestruction = 1; /* indicate we are in destruction (modifies some behaviour) */
 
 	/* shut down all workers (handles *all* of the persistence logic) */
-	if(!pThis->bEnqOnly) /* in enque-only mode, we have no worker pool! */
+	//if(!pThis->bEnqOnly) /* in enque-only mode, we have no worker pool! */
+	if(!pThis->bEnqOnly && pThis->pqParent == NULL) /* in enque-only mode, we have no worker pool! */
 		queueShutdownWorkers(pThis);
 RUNLOG;
 

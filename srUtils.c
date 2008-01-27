@@ -344,8 +344,17 @@ timeoutVal(struct timespec *pt)
 	assert(pt != NULL);
 	/* compute timeout */
 	clock_gettime(CLOCK_REALTIME, &t);
-	iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000;
+RUNLOG_VAR("%ld", pt->tv_sec);
+RUNLOG_VAR("%ld", t.tv_sec);
+RUNLOG_VAR("%ld", pt->tv_nsec);
+RUNLOG_VAR("%ld", t.tv_nsec);
+	iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000000;
+RUNLOG_VAR("%ld", iTimeout);
 	iTimeout += (pt->tv_sec - t.tv_sec) * 1000;
+RUNLOG_VAR("%ld", iTimeout);
+
+	if(iTimeout < 0)
+		iTimeout = 0;
 
 	return iTimeout;
 }

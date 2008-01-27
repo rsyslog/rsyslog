@@ -726,8 +726,8 @@ dbgprintf(char *fmt, ...)
 	if(bWasNL) {
 		if(bPrintTime) {
 			clock_gettime(CLOCK_REALTIME, &t);
-			fprintf(stddbg, "%4.4ld.%9.9ld:", t.tv_sec % 1000, t.tv_nsec);
-			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", t.tv_sec % 1000, t.tv_nsec);
+			fprintf(stddbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
+			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
 		}
 		fprintf(stddbg, "%s: ", pszThrdName);
 		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
