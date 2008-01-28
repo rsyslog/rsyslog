@@ -1,4 +1,3 @@
-// TODO: $MainMsgQueueDiscardSeverity must accept textual severities!
 /**
  * \brief This is the main file of the rsyslogd daemon.
  *
@@ -3229,7 +3228,7 @@ static rsRetVal processConfFile(uchar *pConfFile)
 		}  else
 			cline = cbuf;
 #endif
-		*++p = '\0'; // TODO: check this
+		*++p = '\0'; /* TODO: check this */
 
 		/* we now have the complete line, and are positioned at the first non-whitespace
 		 * character. So let's process it
@@ -4720,8 +4719,6 @@ static rsRetVal InitGlobalClasses(void)
 	DEFiRet;
 
 	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizere called! */
-fprintf(stdout, " calling dbgClassInit\n");
-	//CHKiRet(dbgClassInit());
 	CHKiRet(MsgClassInit());
 	CHKiRet(strmClassInit());
 	CHKiRet(wtiClassInit());
@@ -4931,23 +4928,20 @@ dbgClassInit();
 	dbgprintf("Compatibility Mode: %d\n", iCompatibilityMode);
 
 	/* tuck my process id away */
-	if (1) // !Debug )
+	dbgprintf("Writing pidfile %s.\n", PidFile);
+	if (!check_pid(PidFile))
 	{
-		dbgprintf("Writing pidfile %s.\n", PidFile);
-		if (!check_pid(PidFile))
+		if (!write_pid(PidFile))
 		{
-			if (!write_pid(PidFile))
-			{
-				fputs("Can't write pid.\n", stderr);
-				exit(1); /* exit during startup - questionable */
-			}
-		}
-		else
-		{
-			fputs("Pidfile (and pid) already exist.\n", stderr);
+			fputs("Can't write pid.\n", stderr);
 			exit(1); /* exit during startup - questionable */
 		}
-	} /* if ( !Debug ) */
+	}
+	else
+	{
+		fputs("Pidfile (and pid) already exist.\n", stderr);
+		exit(1); /* exit during startup - questionable */
+	}
 	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
 
 
@@ -5004,8 +4998,8 @@ dbgClassInit();
 	sigAct.sa_handler = reapchild;
 	sigaction(SIGCHLD, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
-// TODO: use signal 2
-	//sigaction(SIGUSR1, &sigAct, NULL);
+	/* TODO: use signal 2 */
+	/*sigaction(SIGUSR1, &sigAct, NULL);*/
 	sigAct.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sigAct, NULL);
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
