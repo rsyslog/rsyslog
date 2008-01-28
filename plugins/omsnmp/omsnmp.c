@@ -58,9 +58,12 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 
 static uchar* pszTarget = NULL;
+/* note using an unsigned for a port number is not a good idea from an IPv6 point of view */
+static int iPort = 0;
 
 typedef struct _instanceData {
 	uchar	szTarget[MAXHOSTNAMELEN+1];	/* IP or hostname of Snmp Target*/ 
+	int iPort;
 
 } instanceData;
 
@@ -130,6 +133,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(0)
 	/* Copy Target */
 	strncpy( (char*) pData->szTarget, (char*) pszTarget, sizeof( pData->szTarget -1 ) );
 	}
+	pThis->iPort = iPort;
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -146,6 +150,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	if (pszTarget != NULL)
 		free(pszTarget);
 	pszTarget = NULL;
+	iPort = 0;
 
 	return RS_RET_OK;
 }
@@ -169,6 +174,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionsnmptarget", 0, eCmdHdlrGetWord, NULL, &pszTarget, STD_LOADABLE_MODULE_ID));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsnmptargetport", 0, eCmdHdlrInt, NULL, &iPort, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*
