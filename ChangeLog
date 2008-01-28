@@ -3,6 +3,10 @@ Version 3.10.3 (rgerhards), 2008-01-14
 - fixed a bug with standard template definitions (not a big deal) - thanks
   to varmojfekoj for spotting it
 - run-time instrumentation added
+- implemented disk-assisted queue mode, which enables on-demand disk
+  spooling if the queue's in-memory queue is exhausted
+- implemented a dynamic worker thread pool for processing incoming
+  messages; workers are started and shut down as need arises
 - implemented the $MainMsgQueueSaveOnShutdown config directive
 - implemented the $MainMsgQueueWorkerThreadMinimumMessages config directive
 - implemented the $MainMsgQueueTimeoutWorkerThreadShutdown config directive

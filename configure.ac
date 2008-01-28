@@ -388,28 +388,20 @@ AC_ARG_ENABLE(snmp,
          esac],
         [enable_snmp=no]
 )
-#if test "x$enable_snmp" = "xyes"; then
-# I think we can delete that part -- rgerhards, 2008-01-22
-#  AC_CHECK_PROG(
-#    [HAVE_PGSQL_CONFIG],
-#    [pg_config],
-#    [yes],,,
-#  )
-#  if test "x${HAVE_PGSQL_CONFIG}" != "xyes"; then
-#    AC_MSG_FAILURE([pg_config not found in PATH])
-#  fi
-# END to-be-deleted
-# here must go the check for netsnmp
-#  AC_CHECK_LIB(
-#    [pq],
-#    [PQconnectdb],
-#    [snmp_cflags=""
-#     snmp_libs=""
-#    ],
-#    [AC_MSG_FAILURE([netsnmp library is missing])],
-#    [-L`pg_config --libdir`]
-#  )
-#fi
+if test "x$enable_snmp" = "xyes"; then
+  AC_CHECK_HEADERS(
+    [net-snmp/net-snmp-config.h],,
+    [AC_MSG_FAILURE([Net-SNMP is missing])]
+  )
+  AC_CHECK_LIB(
+    [netsnmp],
+    [snmp_timeout],
+    [snmp_cflags=""
+     snmp_libs="-lnetsnmp"
+    ],
+    [AC_MSG_FAILURE([Net-SNMP library is missing])]
+  )
+fi
 AM_CONDITIONAL(ENABLE_SNMP, test x$enable_snmp = xyes)
 AC_SUBST(snmp_cflags)
 AC_SUBST(snmp_libs)
