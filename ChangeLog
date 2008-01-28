@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.10.3 (rgerhards), 2008-01-14
+Version 3.10.3 (rgerhards), 2008-01-28
 - fixed a bug with standard template definitions (not a big deal) - thanks
   to varmojfekoj for spotting it
 - run-time instrumentation added

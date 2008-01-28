@@ -79,7 +79,7 @@ $ModLoad imuxsock.so # local message reception
 $WorkDirectory /home/rger/proj/rsyslog/spool # default location for work (spool) files
 $MainMsgQueueFileName mainq # set file name, also enables disk mode
 
-*.* :ommysql:
+*.*       :ommysql:hostname,dbname,userid,password;
 </textarea>
 <p>Note that you can modify a lot of queue performance parameters, but the above
 config will get you going with default values. If you consider using this on a real
