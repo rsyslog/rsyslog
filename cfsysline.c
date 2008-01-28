@@ -875,7 +875,7 @@ void dbgPrintCfSysLineHandlers(void)
 		}
 	}
 	printf("\n");
-
+	ENDfunc
 }
 
 /*

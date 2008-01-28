@@ -36,10 +36,12 @@
 #include "action.h"
 #include "modules.h"
 #include "sync.h"
+#include "srUtils.h"
 
 
 /* object static data (once for all instances) */
 static int glbliActionResumeInterval = 30;
+int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
 
 /* destructs an action descriptor object
  * rgerhards, 2007-08-01
@@ -80,6 +82,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	}
 
 	pThis->iResumeInterval = glbliActionResumeInterval;
+	pThis->iResumeRetryCount = glbliActionResumeRetryCount;
 	SYNC_OBJ_TOOL_INIT(pThis);
 
 finalize_it:
@@ -186,6 +189,69 @@ rsRetVal actionDbgPrint(action_t *pThis)
 	printf("\tDisabled: %d\n", !pThis->bEnabled);
 	printf("\tExec only when previous is suspended: %d\n", pThis->bExecWhenPrevSusp);
 	printf("\n");
+
+	RETiRet;
+}
+
+
+/* call the DoAction output plugin entry point
+ * rgerhards, 2008-01-28
+ */
+rsRetVal
+actionCallDoAction(action_t *pAction)
+{
+	DEFiRet;
+	int iRetries;
+	int i;
+	int iSleepPeriod;
+
+	assert(pAction != NULL);
+
+	/* here we must loop to process all requested strings */
+	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+		CHKiRet(tplToString(pAction->ppTpl[i], pAction->f_pMsg, &pAction->ppMsgs[i]));
+	}
+
+	iRetries = 0;
+	do {
+RUNLOG_STR("going into do_action call loop");
+RUNLOG_VAR("%d", iRetries);
+		/* call configured action */
+		iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData);
+RUNLOG_VAR("%d", iRet);
+		if(iRet == RS_RET_SUSPENDED) {
+			/* ok, this calls for our retry logic... */
+			++iRetries;
+			iSleepPeriod = pAction->iResumeInterval;
+RUNLOG_VAR("%d", iSleepPeriod);
+			srSleep(iSleepPeriod, 0);
+		} else {
+			break; /* we are done in any case */
+		}
+	} while(pAction->iResumeRetryCount == -1 || iRetries < pAction->iResumeRetryCount); /* do...while! */
+RUNLOG_STR("out of retry loop");
+
+	if(iRet == RS_RET_DISABLE_ACTION) {
+		dbgprintf("Action requested to be disabled, done that.\n");
+		pAction->bEnabled = 0; /* that's it... */
+	}
+
+	if(iRet == RS_RET_SUSPENDED) {
+		dbgprintf("Action requested to be suspended, done that.\n");
+		actionSuspend(pAction);
+	}
+
+	if(iRet == RS_RET_OK)
+		pAction->f_prevcount = 0; /* message processed, so we start a new cycle */
+
+finalize_it:
+	/* cleanup */
+	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+		if(pAction->ppMsgs[i] != NULL) {
+			free(pAction->ppMsgs[i]);
+			pAction->ppMsgs[i] = NULL;
+		}
+	}
 
 	RETiRet;
 }

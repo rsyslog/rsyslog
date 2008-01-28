@@ -107,9 +107,12 @@ void dbgPrintAllDebugInfo(void);
 #	define RUNLOG dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__); dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__)
 #	define RUNLOG_VAR(fmt, x) dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
 	 		          dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
+#	define RUNLOG_STR(str)    dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
+				  dbgprintf("%s:%d: %s: %s\n", __FILE__, __LINE__, __func__, str)
 #else
 #	define RUNLOG
 #	define RUNLOG_VAR(fmt, x)
+#	define RUNLOG_STR(str)
 #endif
 
 /* mutex operations */

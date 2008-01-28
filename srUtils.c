@@ -373,6 +373,22 @@ mutexCancelCleanup(void *arg)
 }
 
 
+/* rsSleep() - a fairly portable way to to sleep. It 
+ * will wake up when
+ * a) the wake-time is over
+ * rgerhards, 2008-01-28
+ */
+void
+srSleep(int iSeconds, int iuSeconds)
+{
+	struct timeval tvSelectTimeout;
+
+	BEGINfunc
+	tvSelectTimeout.tv_sec = iSeconds;
+	tvSelectTimeout.tv_usec = iuSeconds; /* micro seconds */
+	select(0, NULL, NULL, NULL, &tvSelectTimeout);
+	ENDfunc
+}
 /*
  * vi:set ai:
  */

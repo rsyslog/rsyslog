@@ -28,6 +28,13 @@
 #include "syslogd-types.h"
 #include "sync.h"
 
+/* external data - this is to be removed when we change the action
+ * object interface (will happen some time..., at latest when the
+ * config file format is changed). -- rgerhards, 2008-01-28
+ */
+extern int glbliActionResumeRetryCount;
+
+
 /* the following struct defines the action object data structure
  */
 struct action_s {
@@ -37,6 +44,7 @@ struct action_s {
 	short	bSuspended;	/* is the related action temporarily suspended? */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
 	int	iResumeInterval;/* resume interval for this action */
+	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */
 	int	iNbrResRtry;	/* number of retries since last suspend */
 	struct moduleInfo *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
@@ -65,6 +73,7 @@ rsRetVal actionTryResume(action_t *pThis);
 rsRetVal actionSuspend(action_t *pThis);
 rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
+rsRetVal actionCallDoAction(action_t *pAction);
 
 #if 1
 #define actionIsSuspended(pThis) ((pThis)->bSuspended == 1)

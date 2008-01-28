@@ -535,6 +535,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQWrkMinMsgs = 100;
 	bMainMsgQSaveOnShutdown = 1;
 	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+	glbliActionResumeRetryCount = 0;
 
 	return RS_RET_OK;
 }
@@ -2351,7 +2352,6 @@ fprintlog(action_t *pAction)
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
 	DEFiRet;
-	int i;
 
 	pMsgSave = NULL;	/* indicate message poiner not saved */
 	/* first check if this is a regular message or the repeation of
@@ -2371,10 +2371,7 @@ fprintlog(action_t *pAction)
 		if((pMsg = MsgDup(pAction->f_pMsg)) == NULL) {
 			/* it failed - nothing we can do against it... */
 			dbgprintf("Message duplication failed, dropping repeat message.\n");
-			return RS_RET_ERR;
-			/* This return is OK. The finalizer frees strings, which are not
-			 * yet allocated. So we can not use the finalizer.
-			 */
+			ABORT_FINALIZE(RS_RET_ERR);
 		}
 
 		/* We now need to update the other message properties.
@@ -2397,36 +2394,9 @@ fprintlog(action_t *pAction)
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's execute it. -- rgerhards, 2007-07-24
 	 */
-	/* here we must loop to process all requested strings */
-
-	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		CHKiRet(tplToString(pAction->ppTpl[i], pAction->f_pMsg, &pAction->ppMsgs[i]));
-	}
-	/* call configured action */
-	iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData);
-
-	if(iRet == RS_RET_DISABLE_ACTION) {
-		dbgprintf("Action requested to be disabled, done that.\n");
-		pAction->bEnabled = 0; /* that's it... */
-	}
-
-	if(iRet == RS_RET_SUSPENDED) {
-		dbgprintf("Action requested to be suspended, done that.\n");
-		actionSuspend(pAction);
-	}
-
-	if(iRet == RS_RET_OK)
-		pAction->f_prevcount = 0; /* message processed, so we start a new cycle */
+	iRet = actionCallDoAction(pAction);
 
 finalize_it:
-	/* cleanup */
-	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		if(pAction->ppMsgs[i] != NULL) {
-			free(pAction->ppMsgs[i]);
-			pAction->ppMsgs[i] = NULL;
-		}
-	}
-
 	if(pMsgSave != NULL) {
 		/* we had saved the original message pointer. That was
 		 * done because we needed to create a temporary one
@@ -3158,6 +3128,8 @@ static void dbgPrintInitInfo(void)
 	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
 		   iMainMsgQHighWtrMark, iMainMsgQLowWtrMark, iMainMsgQDiscardMark, iMainMsgQDiscardSeverity);
 	/* TODO: add
+	iActionRetryCount = 0;
+	iActionRetryInterval = 30000;
 	static int iMainMsgQtoWrkShutdown = 60000;
 	static int iMainMsgQtoWrkMinMsgs = 100;	
 	static int iMainMsgQbSaveOnShutdown = 1;
@@ -4570,6 +4542,7 @@ static rsRetVal loadBuildInModules(void)
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &glbliActionResumeRetryCount, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL));

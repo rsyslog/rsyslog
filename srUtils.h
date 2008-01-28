@@ -69,6 +69,7 @@ int getNumberDigits(long lNum);
 rsRetVal timeoutComp(struct timespec *pt, long iTimeout);
 long timeoutVal(struct timespec *pt);
 void mutexCancelCleanup(void *arg);
+void srSleep(int iSeconds, int iuSeconds);
 
 /* mutex operations */
 /* some macros to cancel-safe lock a mutex (it will automatically be released
