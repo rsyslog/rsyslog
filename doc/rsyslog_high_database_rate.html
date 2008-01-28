@@ -72,15 +72,19 @@ restarts, so even a reboot of the system will not cause any message loss.</p>
 disk queue and then configure your action. There is nothing else to do. With the 
 following simple config file, you log anything you receive to a MySQL database 
 and have buffering applied automatically.</p>
-<textarea rows="11" cols="80">
-$ModLoad ommysql.so # load the output driver (use ompgsql.so for PostgreSQL)
+<textarea rows="11" cols="80">$ModLoad ommysql.so # load the output driver (use ompgsql.so for PostgreSQL)
 $ModLoad imudp.so # network reception
 $ModLoad imuxsock.so # local message reception
-$MainMessage
+
+$WorkDirectory /home/rger/proj/rsyslog/spool # default location for work (spool) files
+$MainMsgQueueFileName mainq # set file name, also enables disk mode
 
 *.* :ommysql:
 </textarea>
-<p>&nbsp;</p>
+<p>Note that you can modify a lot of queue performance parameters, but the above
+config will get you going with default values. If you consider using this on a real
+busy server, it is strongly recommended to invest some time in setting the tuning
+parameters to appropriate values.</p>
 
 <h3>Feedback requested</h3>
 
