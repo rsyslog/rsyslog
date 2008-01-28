@@ -71,9 +71,12 @@ development and quite unstable...). So you have been warned ;)</p>
 	<li>$MainMsgQueueTimeoutActionCompletion &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 1000, 0 means immediate!]</li>
 	<li>$MainMsgQueueTimeoutEnqueue &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite]</li>
 	<li>$MainMsgQueueTimeoutShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 0 (indefinite)]</li>
+	<li>$MainMsgQueueTimeoutWorkerThreadShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)]</li>
 	<li>$MainMsgQueueType [<b>FixedArray</b>/LinkedList/Direct/Disk]</li>
+	<li>$MainMsgQueueSaveOnShutdown (imklog)&nbsp; [on/<b>off</b>] -- former klogd 
 	<li>$MainMsgQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
 	recommended 1</li>
+	<li>$MainMsgQueueWorkerThreadMinumumMessages &lt;number&gt;, default 100</li>
 	<li><a href="rsconf1_markmessageperiod.html">$MarkMessagePeriod</a> (immark)</li>
 	<li><a href="rsconf1_moddir.html">$ModDir</a></li>
 	<li><a href="rsconf1_modload.html">$ModLoad</a></li>
