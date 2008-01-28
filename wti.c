@@ -143,39 +143,6 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 }
 
 
-#if 0
-/* check if the worker shall shutdown (1 = yes, 0 = no)
- * TODO: check if we can use atomic operations to enhance performance
- * Note: there may be two mutexes locked, the bLockUsrMutex is the one in our "user"
- * (e.g. the queue clas)
- * rgerhards, 2008-01-24
- * TODO: we can optimize this via function pointers, as the code is only called during
- * termination. So we can call the function via ptr in wtiWorker () and change that pointer
- * to this function here upon shutdown.
- */
-static inline rsRetVal
-wtiChkStopWrkr(wti_t *pThis, wtp_t *pWtp, int bLockMutex, int bLockUsrMutex)
-{
-	DEFiRet;
-	DEFVARS_mutexProtection;
-
-	ISOBJ_TYPE_assert(pThis, wti);
-
-	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut);
-	if(pThis->bShutdownRqtd) {
-		END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
-		iRet = RS_RET_TERMINATE_NOW;
-	} else {
-		/* regular case */
-		END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
-		iRet = wtpChkStopWrkr(pWtp, bLockMutex, bLockUsrMutex);
-	}
-
-	RETiRet;
-}
-#endif
-
-
 /* Destructor */
 rsRetVal wtiDestruct(wti_t **ppThis)
 {
@@ -328,7 +295,7 @@ wtiWorkerCancelCleanup(void *arg)
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pWtp->mut);
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
-	// TODO: sync access!
+	/* TODO: sync access? I currently think it is NOT needed -- rgerhards, 2008-01-28 */
 	pWtp->bThrdStateChanged = 1; /* indicate change, so harverster will be called */
 
 	d_pthread_mutex_unlock(&pWtp->mut);
@@ -393,7 +360,6 @@ dbgprintf("%s: start worker run, queue cmd currently %d\n", wtiGetDbgHdr(pThis),
 
 		if(  (bInactivityTOOccured && pWtp->pfIsIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED))
 		   || wtpChkStopWrkr(pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED)) {
-		   //|| wtiChkStopWrkr(pThis, pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED)) {
 			END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
 			break; /* end worker thread run */
 		}
@@ -413,7 +379,6 @@ dbgprintf("%s: start worker run, queue cmd currently %d\n", wtiGetDbgHdr(pThis),
 				d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
 			} else {
 				timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
-dbgprintf("timeout value is %ld\n", timeoutVal(&t));
 				if(d_pthread_cond_timedwait(pWtp->pcondBusy, pWtp->pmutUsr, &t) != 0) {
 					dbgprintf("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
 					bInactivityTOOccured = 1; /* indicate we had a timeout */
@@ -427,11 +392,6 @@ dbgprintf("timeout value is %ld\n", timeoutVal(&t));
 		/* if we reach this point, we have a non-empty queue (and are still protected by mutex) */
 		dbgprintf("%s: calling consumer\n", wtiGetDbgHdr(pThis));
 		pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
-
-		/* TODO: move this above into one of the chck Term functions */
-		//if(Debug && (qWrkrGetState(pWrkrInst) == eWRKTHRD_SHUTDOWN) && pThis->iQueueSize > 0)
-		//	dbgprintf("%s: worker does not yet terminate because it still has "
-		//		  " %d messages to process.\n", wtiGetDbgHdr(pThis), pThis->iQueueSize);
 	}
 
 	/* indicate termination */
@@ -441,22 +401,7 @@ dbgprintf("timeout value is %ld\n", timeoutVal(&t));
 
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
 
-	// TODO: I think we no longer need that - but check!
-#if 0
-	/* if we ever need finalize_it, here would be the place for it! */
-	if(qWrkrGetState(pWrkrInst) == eWRKTHRD_SHUTDOWN ||
-	   qWrkrGetState(pWrkrInst) == eWRKTHRD_SHUTDOWN_IMMEDIATE ||
-	   qWrkrGetState(pWrkrInst) == eWRKTHRD_RUN_INIT ||
-	   qWrkrGetState(pWrkrInst) == eWRKTHRD_RUN_CREATED) {
-	   	/* in shutdown case, we need to flag termination. All other commands
-		 * have a meaning to the thread harvester, so we can not overwrite them
-		 */
-dbgprintf("%s: setting termination state\n", wtiGetDbgHdr(pThis));
-		wtiSetState(pWrkrInst, eWRKTHRD_TERMINATING, 0);
-	}
-#else
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
-#endif
 	pWtp->bThrdStateChanged = 1; /* indicate change, so harverster will be called */
 	d_pthread_mutex_unlock(&pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);

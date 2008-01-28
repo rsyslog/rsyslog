@@ -173,11 +173,12 @@ wtpWakeupWrkr(wtp_t *pThis)
 {
 	DEFiRet;
 
-	// TODO; mutex?
+	/* TODO; mutex? I think not needed, as we do not need predictable exec order -- rgerhards, 2008-01-28 */
 	ISOBJ_TYPE_assert(pThis, wtp);
 	pthread_cond_signal(pThis->pcondBusy);
 	RETiRet;
 }
+
 /* wake up all worker threads.
  * rgerhards, 2008-01-16
  */
@@ -187,7 +188,6 @@ wtpWakeupAllWrkr(wtp_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wtp);
-	// TODO; mutex?
 	pthread_cond_broadcast(pThis->pcondBusy);
 	RETiRet;
 }
@@ -228,7 +228,7 @@ wtpSetState(wtp_t *pThis, wtpState_t iNewState)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 	pThis->wtpState = iNewState;
-	// TODO: must wakeup workers?
+	/* TODO: must wakeup workers? seen to be not needed -- rgerhards, 2008-01-28 */
 
 	RETiRet;
 }
@@ -321,14 +321,19 @@ RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 rsRetVal wtpSignalWrkrTermination(wtp_t *pThis)
 {
 	DEFiRet;
-	//TODO: mutex or not mutex, that's the question ;)DEFVARS_mutexProtection;
+	/* I leave the mutex code here out as it give as deadlocks. I think it is not really
+	 * needed and we are on the safe side. I leave this comment in if practice proves us
+	 * wrong. The whole thing should be removed after half a your or year if we see there
+	 * actually is no issue (or revisit it from a theoretical POV).
+	 * rgerhards, 2008-01-28
+	 */
+	/*TODO: mutex or not mutex, that's the question ;)DEFVARS_mutexProtection;*/
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	//BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);
-dbgprintf("signaling thread termination, cond %p\n", &pThis->condThrdTrm);
+	/*BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, LOCK_MUTEX);*/
 	pthread_cond_signal(&pThis->condThrdTrm); /* activate anyone waiting on thread shutdown */
-	//END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
+	/*END_MTX_PROTECTED_OPERATIONS(&pThis->mut);*/
 	RETiRet;
 }
 
@@ -342,18 +347,16 @@ wtpCancelAll(wtp_t *pThis)
 	DEFiRet;
 	int i;
 	int numCancelled = 0;
-	// TODO: mutex?? // TODO: cancellation in wti!
+	/* TODO: mutex?? TODO: cancellation in wti (but OK as is [though ugly form an isolation POV]!) */
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
 	/* process any pending thread requests so that we know who actually is still running */
 	wtpProcessThrdChanges(pThis);
 
-//RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 	/* go through all workers and cancel those that are active */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
-		// TODO: mutex lock!
-//RUNLOG_VAR("%d", pThis->pWrkr[i]->tCurrCmd);
+		/* TODO: mutex lock!*/
 		if(pThis->pWrkr[i]->tCurrCmd >= eWRKTHRD_TERMINATING) {
 			dbgprintf("%s: canceling worker thread %d\n", wtpGetDbgHdr(pThis), i);
 			pthread_cancel(pThis->pWrkr[i]->thrdID);
@@ -430,13 +433,11 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 	pthread_cleanup_push(wtpWrkrExecCancelCleanup, pThis);
 
-	// TODO: review code below - if still needed (setState yes!)? 
 	/* finally change to RUNNING state. We need to check if we actually should still run,
 	 * because someone may have requested us to shut down even before we got a chance to do
 	 * our init. That would be a bad race... -- rgerhards, 2008-01-16
 	 */
-	//if(qWrkrGetState(pWrkrInst) == eWRKTHRD_RUN_INIT)
-		wtiSetState(pWti, eWRKTHRD_RUNNING, 0, MUTEX_ALREADY_LOCKED); /* we are running now! */
+	wtiSetState(pWti, eWRKTHRD_RUNNING, 0, MUTEX_ALREADY_LOCKED); /* we are running now! */
 
 	do {
 		END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
@@ -600,7 +601,6 @@ wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex)
 	iNumWrkr = pThis->iCurNumWrkThrd;
 	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
 
-RUNLOG_VAR("%d", iNumWrkr);
 	ENDfunc
 	return iNumWrkr;
 }

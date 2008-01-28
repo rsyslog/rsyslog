@@ -107,7 +107,6 @@ typedef struct queue_s {
 	size_t iMaxFileSize;	/* max size for a single queue file */
 	int bIsDA;		/* is this queue disk assisted? */
 	int bRunsDA;		/* is this queue actually *running* disk assisted? */
-	pthread_mutex_t mutDA;	/* mutex for low water mark algo */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
 	struct queue_s *pqParent;/* pointer to the parent (if this is a child queue) */
 	int	bDAEnqOnly;	/* EnqOnly setting for DA queue */
