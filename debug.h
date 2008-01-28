@@ -104,8 +104,9 @@ void dbgPrintAllDebugInfo(void);
 #	define ENDfunc
 #endif
 #if 1 /* DEV debug: set to 1 to enable -- rgerhards, 2008-01-13 */
-#	define RUNLOG dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__)
-#	define RUNLOG_VAR(fmt, x) dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
+#	define RUNLOG dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__); dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__)
+#	define RUNLOG_VAR(fmt, x) dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
+	 		          dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
 #else
 #	define RUNLOG
 #	define RUNLOG_VAR(x)
