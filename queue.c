@@ -753,7 +753,7 @@ static rsRetVal qAddDirect(queue_t *pThis, void* pUsr)
 	assert(pThis != NULL);
 
 	/* calling the consumer is quite different here than it is from a worker thread */
-	iRetLocal = pThis->pConsumer(pUsr);
+	iRetLocal = pThis->pConsumer(pThis->pUsr, pUsr);
 	if(iRetLocal != RS_RET_OK)
 		dbgprintf("Queue 0x%lx: Consumer returned iRet %d\n",
 			  queueGetID(pThis), iRetLocal);
@@ -1047,7 +1047,7 @@ RUNLOG_VAR("%d", pThis->toQShutdown);
  * to modify some parameters before the queue is actually started.
  */
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
-		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*))
+		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,void*))
 {
 	DEFiRet;
 	queue_t *pThis;
@@ -1240,7 +1240,7 @@ queueConsumerReg(queue_t *pThis, wti_t *pWti, int iCancelStateSave)
 	ISOBJ_TYPE_assert(pWti, wti);
 
 	CHKiRet(queueDequeueConsumable(pThis, pWti, iCancelStateSave));
-	CHKiRet(pThis->pConsumer(pWti->pUsrp));
+	CHKiRet(pThis->pConsumer(pThis->pUsr, pWti->pUsrp));
 
 finalize_it:
 dbgprintf("Queue %p: regular consumer returns %d\n", pThis, iRet);
@@ -1877,6 +1877,7 @@ DEFpropSetMeth(queue, iDiscardSeverity, int);
 DEFpropSetMeth(queue, bIsDA, int);
 DEFpropSetMeth(queue, iMinMsgsPerWrkr, int);
 DEFpropSetMeth(queue, bSaveOnShutdown, int);
+DEFpropSetMeth(queue, pUsr, void*);
 
 
 /* This function can be used as a generic way to set properties. Only the subset

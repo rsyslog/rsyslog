@@ -27,6 +27,7 @@
 
 #include "syslogd-types.h"
 #include "sync.h"
+#include "queue.h"
 
 /* external data - this is to be removed when we change the action
  * object interface (will happen some time..., at latest when the
@@ -60,6 +61,7 @@ struct action_s {
 				 * content later). This is preserved after the message has been
 				 * processed - it is also used to detect duplicates.
 				 */
+	queue_t *pQueue;	/* action queue */
 	SYNC_OBJ_TOOL;		/* required for mutex support */
 };
 typedef struct action_s action_t;
@@ -68,12 +70,14 @@ typedef struct action_s action_t;
 /* function prototypes
  */
 rsRetVal actionConstruct(action_t **ppThis);
+rsRetVal actionConstructFinalize(action_t *pThis);
 rsRetVal actionDestruct(action_t *pThis);
+rsRetVal actionAddCfSysLineHdrl(void);
 rsRetVal actionTryResume(action_t *pThis);
 rsRetVal actionSuspend(action_t *pThis);
 rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
-rsRetVal actionCallDoAction(action_t *pAction);
+rsRetVal actionDoAction(action_t *pAction);
 
 #if 1
 #define actionIsSuspended(pThis) ((pThis)->bSuspended == 1)

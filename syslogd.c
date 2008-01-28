@@ -1848,7 +1848,7 @@ processMsg(msg_t *pMsg)
  * Please note: the message object is destructed by the queue itself!
  */
 static rsRetVal
-msgConsumer(void *pUsr)
+msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
 {
 	DEFiRet;
 	msg_t *pMsg = (msg_t*) pUsr;
@@ -2394,7 +2394,7 @@ fprintlog(action_t *pAction)
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's execute it. -- rgerhards, 2007-07-24
 	 */
-	iRet = actionCallDoAction(pAction);
+	iRet = actionDoAction(pAction);
 
 finalize_it:
 	if(pMsgSave != NULL) {
@@ -3993,6 +3993,10 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 	if(bSuspended)
 		actionSuspend(pAction);
 
+	CHKiRet(actionConstructFinalize(pAction));
+	
+	/* TODO: if we exit here, we have a memory leak... */
+
 	*ppAction = pAction; /* finally store the action pointer */
 
 finalize_it:
@@ -4558,11 +4562,11 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutworkerthreadshutdown", 0, eCmdHdlrInt, NULL, &iMainMsgQtoWrkShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreadminimummessages", 0, eCmdHdlrInt, NULL, &iMainMsgQWrkMinMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQSaveOnShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQSaveOnShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
@@ -4578,6 +4582,11 @@ static rsRetVal loadBuildInModules(void)
 		 NULL, &bDebugPrintCfSysLineHandlerList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
+
+	/* now add other modules handlers (we should work on that to be able to do it in ClassInit(), but so far
+	 * that is not possible). -- rgerhards, 2008-01-28
+	 */
+	CHKiRet(actionAddCfSysLineHdrl());
 
 finalize_it:
 	RETiRet;
@@ -4713,9 +4722,8 @@ finalize_it:
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
  */
-int main(int argc, char **argv)
+int realMain(int argc, char **argv)
 {	
-dbgClassInit();
 	DEFiRet;
 
 	register int i;
@@ -4997,6 +5005,18 @@ finalize_it:
 
 	ENDfunc
 	return 0;
+}
+
+
+/* This is the main entry point into rsyslogd. This must be a function in its own
+ * right in order to intialize the debug system in a portable way (otherwise we would
+ * need to have a statement before variable definitions.
+ * rgerhards, 20080-01-28
+ */
+int main(int argc, char **argv)
+{	
+	dbgClassInit();
+	return realMain(argc, argv);
 }
 
 

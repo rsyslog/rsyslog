@@ -1,6 +1,22 @@
 ---------------------------------------------------------------------------
 Version 3.10.4 (rgerhards), 2008-01-??
 - implemented the $ActionResumeRetryCount config directive
+- added $ActionQueueFilename config directive
+- added $ActionQueueSize config directive
+- added $ActionQueueHighWaterMark config directive
+- added $ActionQueueLowWaterMark config directive
+- added $ActionQueueDiscardMark config directive
+- added $ActionQueueDiscardSeverity config directive
+- added $ActionQueueCheckpointInterval config directive
+- added $ActionQueueType config directive
+- added $ActionQueueWorkerThreads config directive
+- added $ActionQueueTimeoutshutdown config directive
+- added $ActionQueueTimeoutActionCompletion config directive
+- added $ActionQueueTimeoutenQueue config directive
+- added $ActionQueueTimeoutworkerThreadShutdown config directive
+- added $ActionQueueWorkerThreadMinimumMessages config directive
+- added $ActionQueueMaxFileSize config directive
+- added $ActionQueueSaveonShutdown config directive
 ---------------------------------------------------------------------------
 Version 3.10.3 (rgerhards), 2008-01-28
 - fixed a bug with standard template definitions (not a big deal) - thanks

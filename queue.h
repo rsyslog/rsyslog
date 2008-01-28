@@ -68,6 +68,7 @@ typedef struct queue_s {
 	int	iMinMsgsPerWrkr;/* minimum nbr of msgs per worker thread, if more, a new worker is started until max wrkrs */
 	wtp_t	*pWtpDA;
 	wtp_t	*pWtpReg;
+	void	*pUsr;		/* a global, user-supplied pointer. Is passed back to consumer. */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
 	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
@@ -79,7 +80,12 @@ typedef struct queue_s {
 	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
 	int	toEnq;		/* enqueue timeout */
-	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dequeued messages */
+	rsRetVal (*pConsumer)(void *,void*); /* user-supplied consumer function for dequeued messages */
+	/* calling interface for pConsumer: arg1 is the global user pointer from this structure, arg2 is the
+	 * user pointer that was dequeued (actual sample: for actions, arg1 is the pAction and arg2 is pointer
+	 * to message)
+	 * rgerhards, 2008-01-28
+	 */
 	/* type-specific handlers (set during construction) */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	rsRetVal (*qDestruct)(struct queue_s *pThis);
@@ -148,7 +154,7 @@ rsRetVal queueStart(queue_t *pThis);
 rsRetVal queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize);
 rsRetVal queueSetFilePrefix(queue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
-		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*));
+		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,void*));
 PROTOTYPEObjClassInit(queue);
 PROTOTYPEpropSetMeth(queue, iPersistUpdCnt, int);
 PROTOTYPEpropSetMeth(queue, toQShutdown, long);
@@ -161,6 +167,7 @@ PROTOTYPEpropSetMeth(queue, iDiscardMrk, int);
 PROTOTYPEpropSetMeth(queue, iDiscardSeverity, int);
 PROTOTYPEpropSetMeth(queue, iMinMsgsPerWrkr, int);
 PROTOTYPEpropSetMeth(queue, bSaveOnShutdown, int);
+PROTOTYPEpropSetMeth(queue, pUsr, void*);
 #define queueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */
