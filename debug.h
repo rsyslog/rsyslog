@@ -96,20 +96,20 @@ void dbgSetThrdName(uchar *pszName);
 void dbgPrintAllDebugInfo(void);
 
 /* macros */
-#if 1 /* DEV debug: set to 1 to get a rough call trace -- rgerhards, 2008-01-13 */
+#ifdef RTINST
 #	define BEGINfunc static dbgFuncDB_t dbgFuncDB=dbgFuncDB_t_INITIALIZER; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&dbgFuncDB,__LINE__);
 #	define ENDfunc dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT);
 #else
 #	define BEGINfunc
 #	define ENDfunc
 #endif
-#if 1 /* DEV debug: set to 1 to enable -- rgerhards, 2008-01-13 */
+#ifdef RTINST
 #	define RUNLOG dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__); dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__)
 #	define RUNLOG_VAR(fmt, x) dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__);\
 	 		          dbgprintf("%s:%d: %s: var '%s'[%s]: " fmt "\n", __FILE__, __LINE__, __func__, #x, fmt, x)
 #else
 #	define RUNLOG
-#	define RUNLOG_VAR(x)
+#	define RUNLOG_VAR(fmt, x)
 #endif
 
 /* mutex operations */
@@ -119,7 +119,7 @@ void dbgPrintAllDebugInfo(void);
 
 
 /* debug aides */
-#if 1
+#ifdef RTINST
 #define d_pthread_mutex_lock(x)      dbgMutexLock(x, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )

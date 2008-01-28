@@ -1321,10 +1321,6 @@ queueChkStopWrkrDA(queue_t *pThis)
 static int
 queueChkStopWrkrReg(queue_t *pThis)
 {
-	BEGINfunc
-	int bStopWrkr = pThis->bEnqOnly || pThis->bRunsDA || (pThis->pqParent != NULL && pThis->iQueueSize == 0);
-RUNLOG_VAR("%d", bStopWrkr);
-	ENDfunc
 	return pThis->bEnqOnly || pThis->bRunsDA || (pThis->pqParent != NULL && pThis->iQueueSize == 0);
 }
 

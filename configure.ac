@@ -270,6 +270,20 @@ if test "$enable_debug" = "no"; then
         AC_DEFINE(NDEBUG, 1, [Defined if debug mode is disabled.])
 fi
 
+# runtime instrumentation
+AC_ARG_ENABLE(rtinst,
+        [AS_HELP_STRING([--enable-rtinst],[Enable runtime instrumentation mode @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_rtinst="yes" ;;
+          no) enable_rtinst="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-rtinst) ;;
+         esac],
+        [enable_rtinst="no"]
+)
+if test "$enable_rtinst" = "yes"; then
+        AC_DEFINE(RTINST, 1, [Defined if runtime instrumentation mode is enabled.])
+fi
+
 # mudflap
 AC_ARG_ENABLE(mudflap,
         [AS_HELP_STRING([--enable-mudflap],[Enable mudflap @<:@default=no@:>@])],
@@ -429,5 +443,6 @@ echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
+echo "Runtime Instrumentation enabled:          $enable_rtinst"
 echo "Mudflap enabled:                          $enable_mudflap"
 

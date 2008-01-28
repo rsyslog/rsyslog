@@ -2659,7 +2659,7 @@ die(int sig)
 	/* de-init some modules */
 	modExitIminternal();
 
-	dbgPrintAllDebugInfo(); /* this is the last spot where this can be done - below output modules are unloaded! */
+	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
 	
 	/* TODO: this would also be the right place to de-init the builtin output modules. We
 	 * do not currently do that, because the module interface does not allow for
@@ -2682,10 +2682,11 @@ die(int sig)
 	if(pModDir != NULL)
 		free(pModDir);
 
-	/* exit classes... */
+	dbgprintf("Clean shutdown completed, bye\n");
+
+	/* exit classes... This MUST be after the dbgprintf (because it de-inits the debug system!) */
 	dbgClassExit();
 
-	dbgprintf("Clean shutdown completed, bye.\n");
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 
@@ -4632,14 +4633,19 @@ static void printVersion(void)
 	printf("\tFEATURE_NETZIP (message compression):\tNo\n");
 #endif
 #if defined(SYSLOG_INET) && defined(USE_GSSAPI)
-	printf("\tFEATURE_GSSAPI (GSSAPI Kerberos 5 support):\tYes\n");
+	printf("\tGSSAPI Kerberos 5 support:\t\tYes\n");
 #else
-	printf("\tFEATURE_GSSAPI (GSSAPI Kerberos 5 support):\tNo\n");
+	printf("\tGSSAPI Kerberos 5 support:\t\tNo\n");
 #endif
 #ifndef	NDEBUG
 	printf("\tFEATURE_DEBUG (debug build, slow code):\tYes\n");
 #else
 	printf("\tFEATURE_DEBUG (debug build, slow code):\tNo\n");
+#endif
+#ifdef	RTINST
+	printf("\tRuntime Instrumentation (slow code):\tYes\n");
+#else
+	printf("\tRuntime Instrumentation (slow code):\tNo\n");
 #endif
 	printf("\nSee http://www.rsyslog.com for more information.\n");
 }
