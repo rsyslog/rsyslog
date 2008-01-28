@@ -46,7 +46,7 @@ typedef struct qLinkedList_S {
 typedef struct qWrkThrd_s {
 	pthread_t thrdID;  /* thread ID */
 	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
-	obj_t *pUsr;		/* current user object being processed (or NULL if none) */
+	obj_t *pUsr;        /* current user object being processed (or NULL if none) */
 	struct queue_s *pQueue; /* my queue (important if only the work thread instance is passed! */
 	int iThrd;	/* my worker thread array index */
 	pthread_cond_t condInitDone; /* signaled when the thread startup is done (once per thread existance) */
@@ -91,13 +91,6 @@ typedef struct queue_s {
 	pthread_mutex_t *mut; /* mutex for enqueing and dequeueing messages */
 	pthread_cond_t notFull, notEmpty;
 	pthread_cond_t condDAReady;/* signalled when the DA queue is fully initialized and ready for processing */
-	pthread_cond_t condThrdTrm;/* signalled when threads terminate */ // TODO: no longer used?
-	//pthread_cond_t *condSignalOnEmpty;/* caller-provided condition to be signalled when queue is empty (DA mode!) */
-	//pthread_mutex_t *mutSignalOnEmpty; /* and its associated mutex */
-	//pthread_cond_t *condSignalOnEmpty2;/* another condition to be signalled on empty */
-	//int bSignalOnEmpty;		/* signal caller when queue is empty via xxxSignalOnEmpty cond/mut,
-					 //  0  = do not, 1 = signal only condSignalOnEmpty, 2 = signal both condSig..*/ // TODO: no longer needed?
-
 	int bChildIsDone;		/* set to 1 when the child DA queue has finished processing, 0 otherwise */
 	int bThrdStateChanged;		/* at least one thread state has changed if 1 */
 	/* end sync variables */
@@ -115,7 +108,6 @@ typedef struct queue_s {
 	int bIsDA;		/* is this queue disk assisted? */
 	int bRunsDA;		/* is this queue actually *running* disk assisted? */
 	pthread_mutex_t mutDA;	/* mutex for low water mark algo */
-	pthread_cond_t condDA;	/* and its matching condition */ // TODO: no longer needed!
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
 	struct queue_s *pqParent;/* pointer to the parent (if this is a child queue) */
 	int	bDAEnqOnly;	/* EnqOnly setting for DA queue */

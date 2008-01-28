@@ -3,6 +3,9 @@ Version 3.10.3 (rgerhards), 2008-01-14
 - fixed a bug with standard template definitions (not a big deal) - thanks
   to varmojfekoj for spotting it
 - run-time instrumentation added
+- implemented the $MainMsgQueueSaveOnShutdown config directive
+- implemented the $MainMsgQueueWorkerThreadMinimumMessages config directive
+- implemented the $MainMsgQueueTimeoutWorkerThreadShutdown config directive
 ---------------------------------------------------------------------------
 Version 3.10.2 (rgerhards), 2008-01-14
 - added the ability to keep stop rsyslogd without the need to drain

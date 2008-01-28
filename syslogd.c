@@ -2637,7 +2637,7 @@ die(int sig)
 	dbgprintf("Terminating main queue...\n");
 	queueDestruct(&pMsgQueue);
 	pMsgQueue = NULL;
-	
+
 	/* Free ressources and close connections. This includes flushing any remaining
 	 * repeated msgs.
 	 */
@@ -2660,6 +2660,8 @@ die(int sig)
 	/* de-init some modules */
 	modExitIminternal();
 
+	dbgPrintAllDebugInfo(); /* this is the last spot where this can be done - below output modules are unloaded! */
+	
 	/* TODO: this would also be the right place to de-init the builtin output modules. We
 	 * do not currently do that, because the module interface does not allow for
 	 * it. This will come some time later (it's essential with loadable modules).

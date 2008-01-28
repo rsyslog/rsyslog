@@ -393,13 +393,14 @@ wtpWrkrExecCancelCleanup(void *arg)
 {
 	wtp_t *pThis = (wtp_t*) arg;
 
+	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, wtp);
 	pThis->iCurNumWrkThrd--;
 RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 	wtpSignalWrkrTermination(pThis);
 
 	dbgprintf("%s: thread CANCELED with %d workers running.\n", wtpGetDbgHdr(pThis), pThis->iCurNumWrkThrd);
-
+	ENDfunc
 }
 
 
