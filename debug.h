@@ -64,24 +64,40 @@ typedef struct dbgFuncDB_s {
 	.line = __LINE__ \
 	}
 
+/* the structure below was originally just the thread's call stack, but it has
+ * a bit evolved over time. So we have now ended up with the fact that it 
+ * all debug info we know about the thread.
+ */
+typedef struct dbgCallStack_s {
+	pthread_t thrd;
+	dbgFuncDB_t *callStack[500];
+	int lastLine[500]; /* last line where code execution was seen */
+	int stackPtr;
+	int stackPtrMax;
+	char *pszThrdName;
+	struct dbgCallStack_s *pNext;
+	struct dbgCallStack_s *pPrev;
+} dbgThrdInfo_t;
+
 
 /* prototypes */
 rsRetVal dbgClassInit(void);
 rsRetVal dbgClassExit(void);
 void sigsegvHdlr(int signum);
 void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
-int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int lnB);
-int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int lnB);
-int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int lnB);
-int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncD, int lnB);
-int dbgEntrFunc(dbgFuncDB_t *pFuncDB);
+int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
+int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
+int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
+int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
+int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line);
 void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore);
+void dbgSetExecLocation(int iStackPtr, int line);
 void dbgSetThrdName(uchar *pszName);
 void dbgPrintAllDebugInfo(void);
 
 /* macros */
 #if 1 /* DEV debug: set to 1 to get a rough call trace -- rgerhards, 2008-01-13 */
-#	define BEGINfunc static dbgFuncDB_t dbgFuncDB=dbgFuncDB_t_INITIALIZER; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&dbgFuncDB);
+#	define BEGINfunc static dbgFuncDB_t dbgFuncDB=dbgFuncDB_t_INITIALIZER; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&dbgFuncDB,__LINE__);
 #	define ENDfunc dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT);
 #else
 #	define BEGINfunc
@@ -103,10 +119,10 @@ void dbgPrintAllDebugInfo(void);
 
 /* debug aides */
 #if 1
-#define d_pthread_mutex_lock(x)     dbgMutexLock(x, &dbgFuncDB, __LINE__)
-#define d_pthread_mutex_unlock(x)   dbgMutexUnlock(x, &dbgFuncDB, __LINE__)
-#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, &dbgFuncDB, __LINE__)
-#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, &dbgFuncDB, __LINE__)
+#define d_pthread_mutex_lock(x)      dbgMutexLock(x, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #else
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
 #define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)

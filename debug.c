@@ -51,6 +51,7 @@
 
 /* forward definitions */
 static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bIncludeNumID);
+static dbgThrdInfo_t *dbgGetThrdInfo(void);
 
 /* static data (some time to be replaced) */
 int	Debug;		/* debug flag  - read-only after startup */
@@ -92,19 +93,6 @@ static dbgMutLog_t *dbgMutLogListLast = NULL;
 static pthread_mutex_t mutMutLog = PTHREAD_MUTEX_INITIALIZER;
 
 
-/* the structure below was originally just the thread's call stack, but it has
- * a bit evolved over time. So we have now ended up with the fact that it 
- * all debug info we know about the thread.
- */
-typedef struct dbgCallStack_s {
-	pthread_t thrd;
-	dbgFuncDB_t *callStack[500];
-	int stackPtr;
-	int stackPtrMax;
-	char *pszThrdName;
-	struct dbgCallStack_s *pNext;
-	struct dbgCallStack_s *pPrev;
-} dbgThrdInfo_t;
 static dbgThrdInfo_t *dbgCallStackListRoot = NULL;
 static dbgThrdInfo_t *dbgCallStackListLast = NULL;
 static pthread_mutex_t mutCallStack = PTHREAD_MUTEX_INITIALIZER;
@@ -147,6 +135,17 @@ static pthread_key_t keyCallStack;
 static void dbgMutexCancelCleanupHdlr(void *pmut)
 {
 	pthread_mutex_unlock((pthread_mutex_t*) pmut);
+}
+
+
+/* handler to update the last execution location seen
+ * rgerhards, 2008-01-28
+ */
+static inline void
+dbgRecordExecLocation(int iStackPtr, int line)
+{
+	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
+	pThrd->lastLine[iStackPtr] = line;
 }
 
 
@@ -482,10 +481,11 @@ static inline void dbgMutexUnlockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB
 
 
 /* wrapper for pthread_mutex_lock() */
-int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
+int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 {
 	int ret;
 
+	dbgRecordExecLocation(iStackPtr, ln);
 	dbgMutexPreLockLog(pmut, pFuncDB, ln);
 	ret = pthread_mutex_lock(pmut);
 	if(ret == 0) {
@@ -500,9 +500,10 @@ int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 
 
 /* wrapper for pthread_mutex_unlock() */
-int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
+int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 {
 	int ret;
+	dbgRecordExecLocation(iStackPtr, ln);
 	dbgMutexUnlockLog(pmut, pFuncDB, ln);
 	ret = pthread_mutex_unlock(pmut);
 	return ret;
@@ -510,9 +511,10 @@ int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
 
 
 /* wrapper for pthread_cond_wait() */
-int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln)
+int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 {
 	int ret;
+	dbgRecordExecLocation(iStackPtr, ln);
 	dbgMutexUnlockLog(pmut, pFuncDB, ln);
 	dbgprintf("%s:%d:%s: mutex %p waiting on condition %p\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, (void*)pmut, (void*)cond);
 	dbgMutexPreLockLog(pmut, pFuncDB, ln);
@@ -522,9 +524,10 @@ int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
 
 
 /* wrapper for pthread_cond_timedwait() */
-int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncDB, int ln)
+int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 {
 	int ret;
+	dbgRecordExecLocation(iStackPtr, ln);
 	dbgMutexUnlockLog(pmut, pFuncDB, ln);
 	dbgMutexPreLockLog(pmut, pFuncDB, ln);
 	dbgprintf("%s:%d:%s: mutex %p waiting on condition %p (with timeout)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func,
@@ -633,7 +636,7 @@ static void dbgCallStackPrint(dbgThrdInfo_t *pThrd)
 	dbgprintf("\n");
 	dbgprintf("Recorded Call Order for Thread '%s':\n", pszThrdName);
 	for(i = 0 ; i < pThrd->stackPtr ; i++) {
-		dbgprintf("%d: %s:%s\n", i, pThrd->callStack[i]->func, pThrd->callStack[i]->file);
+		dbgprintf("%d: %s:%d:%s:\n", i, pThrd->callStack[i]->file, pThrd->lastLine[i], pThrd->callStack[i]->func);
 	}
 	dbgprintf("maximum number of nested calls for this thread: %d.\n", pThrd->stackPtrMax);
 	dbgprintf("NOTE: not all calls may have been recorded, code does not currently guarantee that!\n");
@@ -760,7 +763,7 @@ ENDfunc
 
 /* handler called when a function is entered
  */
-int dbgEntrFunc(dbgFuncDB_t *pFuncDB)
+int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line)
 {
 	int iStackPtr;
 	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
@@ -805,6 +808,7 @@ int dbgEntrFunc(dbgFuncDB_t *pFuncDB)
 		if(pThrd->stackPtr > pThrd->stackPtrMax)
 			pThrd->stackPtrMax = pThrd->stackPtr;
 		pThrd->callStack[iStackPtr] = pFuncDB;
+		pThrd->lastLine[iStackPtr] = line;
 	}
 	
 	return iStackPtr;
@@ -829,6 +833,16 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore)
 		dbgprintf("Stack pointer for thread %lx below 0 - resetting (some RETiRet still wrong!)\n", pthread_self());
 		pThrd->stackPtr = 0;
 	}
+}
+
+
+/* externally-callable handler to record the last exec location. We use a different function
+ * so that the internal one can be inline.
+ */
+void
+dbgSetExecLocation(int iStackPtr, int line)
+{
+	dbgRecordExecLocation(iStackPtr, line);
 }
 
 
