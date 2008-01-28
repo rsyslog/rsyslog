@@ -16,7 +16,10 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
  <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a><li>
 	native support for writing to Postgres databases<li>support for (plain) tcp 
 	based syslog - much better reliability<li>support for sending and receiving 
-	compressed syslog messages<li>ability to configure backup syslog/database 
+	compressed syslog messages<li>support for on-demand on-disk spooling of 
+	messages that can not be processed fast enough (a great feature for
+	<a href="rsyslog_high_database_rate.html">writing massive amounts of syslog 
+	messages to a database</a>)<li>ability to configure backup syslog/database 
 	servers - if the primary fails, control is switched to a prioritized list of 
 	backups<li>support for receiving messages via 	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">	RFC 3195</a> delivery<li>ability to generate file names and directories (log targets) 
 	dynamically, based on many different properties<li>control of log output format, 
@@ -32,8 +35,9 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 	messages<li>control of whether the local hostname or the hostname of the
  origin of the data is shown as the hostname in the output<li>ability to 
 	preserve the original hostname in NAT environments and relay chains
-	<li>ability to limit the allowed network senders<li>powerful BSD-style 	hostname and program name blocks for easy multi-host support<li>	multi-threaded (<a href="http://rgerhards.blogspot.com/2007/08/why-is-rsyslog-multi-threaded-and-is-it.html">is 
-	this important? why?</a>)<li>very 	experimental and volatile support for <a href="syslog-protocol.html">syslog-protocol</a> 	compliant messages (it is volatile because standardization is currently 	underway and this is a proof-of-concept implementation to aid this effort)<li>
+	<li>ability to limit the allowed network senders<li>powerful BSD-style 	hostname and program name blocks for easy multi-host support<li>	massively	multi-threaded with dynamic work thread pools that start up and shut 
+	themselves down on an as-needed basis (great for high log volume on 
+	multicore machines)<li>very 	experimental and volatile support for <a href="syslog-protocol.html">syslog-protocol</a> 	compliant messages (it is volatile because standardization is currently 	underway and this is a proof-of-concept implementation to aid this effort)<li>
 	experimental support for syslog-transport-tls based framing on syslog/tcp 
 	connections<li>
 	the sysklogd's klogd functionality is implemented as the <i>imklog</i> input 
@@ -46,7 +50,8 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 	directories. Includes are specified in the main configuration file<li>
 	supports multiple actions per selector/filter condition<li>
 	MySQL and Postgres SQL functionality as a dynamically loadable plug-in<li>
-	modular design for outputs - easily extensible</ul>
+	modular design for inputs and outputs - easily extensible via custom plugins<li>
+	an easy-to-write to plugin interface</ul>
 <p>&nbsp;</p>
 <h2>Upcoming Features</h2>
 <p>The list below is something like a repository of ideas we'd like to 
