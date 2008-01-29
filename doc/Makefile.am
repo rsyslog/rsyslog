@@ -13,6 +13,7 @@ html_files = \
 	rsyslog_conf.html \
 	rsyslog_mysql.html \
 	rsyslog_packages.html \
+	rsyslog_high_database_rate.html \
 	rsyslog_php_syslog_ng.html \
 	rsyslog_recording_pri.html \
 	rsyslog_stunnel.html \
@@ -21,6 +22,7 @@ html_files = \
 	version_naming.html \
 	contributors.html \
 	dev_queue.html \
+	queues.html \
 	queueWorkerLogic.dia \
 	queueWorkerLogic.jpg \
 	queueWorkerLogic_small.jpg \
