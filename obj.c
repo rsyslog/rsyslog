@@ -616,7 +616,9 @@ finalize_it:
 
 /* De-Serialize an object.
  * Params: Pointer to object Pointer (pObj) (like a obj_t**, but can not do that due to compiler warning)
- * expected object ID (to check against)
+ * expected object ID (to check against), a fixup function that can modify the object before it is finalized
+ * and a user pointer that is to be passed to that function in addition to the object. The fixup function
+ * pointer may be NULL, in which case none is called.
  * The caller must destruct the created object.
  * rgerhards, 2008-01-07
  */

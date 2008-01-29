@@ -74,6 +74,7 @@ following simple config file, you log anything you receive to a MySQL database
 and have buffering applied automatically.</p>
 <textarea rows="11" cols="80">$ModLoad ommysql.so # load the output driver (use ompgsql.so for PostgreSQL)
 $ModLoad imudp.so # network reception
+$UDPServerRun 514 # start a udp server at port 514
 $ModLoad imuxsock.so # local message reception
 
 $WorkDirectory /rsyslog/work # default location for work (spool) files

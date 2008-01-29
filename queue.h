@@ -116,6 +116,12 @@ typedef struct queue_s {
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
 	struct queue_s *pqParent;/* pointer to the parent (if this is a child queue) */
 	int	bDAEnqOnly;	/* EnqOnly setting for DA queue */
+	/* some data elements for the queueUngetObj() functionality. This list should always be short
+	 * and is always kept in memory
+	 */
+	qLinkedList_t *pUngetRoot;
+	qLinkedList_t *pUngetLast;
+	int iUngottenObjs;	/* number of objects currently in the "ungotten" list */
 	/* now follow queueing mode specific data elements */
 	union {			/* different data elements based on queue type (qType) */
 		struct {
