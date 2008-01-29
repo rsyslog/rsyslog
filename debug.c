@@ -48,6 +48,7 @@
 
 #include "rsyslog.h"
 #include "debug.h"
+#include "obj.h"
 
 /* forward definitions */
 static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bIncludeNumID);
@@ -684,7 +685,91 @@ sigsegvHdlr(int signum)
 }
 
 
-/* print some debug output */
+/* print some debug output when an object is given
+ * This is mostly a copy of dbgprintf, but I do not know how to combine it
+ * into a single function as we have variable arguments and I don't know how to call
+ * from one vararg function into another. I don't dig in this, it is OK for the
+ * time being. -- rgerhards, 2008-01-29
+ */
+void
+dbgoprint(obj_t *pObj, char *fmt, ...)
+{
+	static pthread_t ptLastThrdID = 0;
+	static int bWasNL = 0;
+	va_list ap;
+	static char pszThrdName[64]; /* 64 is to be on the safe side, anything over 20 is bad... */
+	static char pszWriteBuf[1024];
+	size_t lenWriteBuf;
+	struct timespec t;
+
+	if(!(Debug && debugging_on))
+		return;
+	
+	pthread_mutex_lock(&mutdbgprintf);
+	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprintf);
+
+	/* The bWasNL handler does not really work. It works if no thread
+	 * switching occurs during non-NL messages. Else, things are messed
+	 * up. Anyhow, it works well enough to provide useful help during
+	 * getting this up and running. It is questionable if the extra effort
+	 * is worth fixing it, giving the limited appliability.
+	 * rgerhards, 2005-10-25
+	 * I have decided that it is not worth fixing it - especially as it works
+	 * pretty well.
+	 * rgerhards, 2007-06-15
+	 */
+	if(ptLastThrdID != pthread_self()) {
+		if(!bWasNL) {
+			fprintf(stddbg, "\n");
+			if(altdbg != NULL) fprintf(altdbg, "\n");
+			bWasNL = 1;
+		}
+		ptLastThrdID = pthread_self();
+	}
+
+	/* do not cache the thread name, as the caller might have changed it
+	 * TODO: optimized, invalidate cache when new name is set
+	 */
+	dbgGetThrdName(pszThrdName, sizeof(pszThrdName), ptLastThrdID, 0);
+
+	if(bWasNL) {
+		if(bPrintTime) {
+			clock_gettime(CLOCK_REALTIME, &t);
+			fprintf(stddbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
+			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
+		}
+		fprintf(stddbg, "%s: ", pszThrdName);
+		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
+		/* print object name header if we have an object */
+		if(pObj != NULL) {
+			fprintf(stddbg, "%s: ", objGetName(pObj));
+			if(altdbg != NULL) fprintf(altdbg, "%s: ", objGetName(pObj));
+		}
+	}
+	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? 1 : 0;
+	va_start(ap, fmt);
+	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
+	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
+		/* if our buffer was too small, we simply truncate. TODO: maybe something better? */
+		lenWriteBuf--;
+	}
+	va_end(ap);
+	/*
+	fprintf(stddbg, "%s", pszWriteBuf);
+	if(altdbg != NULL) fprintf(altdbg, "%s", pszWriteBuf);
+	*/
+	fwrite(pszWriteBuf, lenWriteBuf, 1, stddbg);
+	if(altdbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, altdbg);
+
+	fflush(stddbg);
+	if(altdbg != NULL) fflush(altdbg);
+	pthread_cleanup_pop(1);
+}
+
+
+/* print some debug output when no object is given
+ * WARNING: duplicate code, see dbgoprin above!
+ */
 void
 dbgprintf(char *fmt, ...)
 {

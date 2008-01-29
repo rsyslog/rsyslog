@@ -1,3 +1,5 @@
+// TODO: we need to be called when the derived object is destructed!!!!
+
 /* obj.c
  *
  * This file implements a generic object "class". All other classes can
@@ -146,7 +148,7 @@ static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj, uchar *pszRecType
 	 * the object back in
 	 */
 	CHKiRet(strmWriteChar(pStrm, ':'));
-	CHKiRet(strmWrite(pStrm, objGetName(pObj), strlen((char*)objGetName(pObj))));
+	CHKiRet(strmWrite(pStrm, objGetClassName(pObj), strlen((char*)objGetClassName(pObj))));
 	/* record trailer */
 	CHKiRet(strmWriteChar(pStrm, ':'));
 	CHKiRet(strmWriteChar(pStrm, '\n'));
@@ -763,6 +765,64 @@ finalize_it:
 
 
 /* --------------- end object serializiation / deserialization support --------------- */
+
+
+/* set the object (instance) name
+ * rgerhards, 2008-01-29
+ * TODO: change the naming to a rsCStr obj! (faster)
+ */
+rsRetVal
+objSetName(obj_t *pThis, uchar *pszName)
+{
+	DEFiRet;
+
+	if(pThis->pszName != NULL)
+		free(pThis->pszName);
+
+	pThis->pszName = (uchar*) strdup((char*) pszName);
+
+	if(pThis->pszName == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* get the object (instance) name
+ * Note that we use a non-standard calling convention. Thus function must never
+ * fail, else we run into real big problems. So it must make sure that at least someting
+ * is returned.
+ * rgerhards, 2008-01-30
+ */
+uchar *
+objGetName(obj_t *pThis)
+{
+	uchar *ret;
+	uchar szName[128];
+
+	BEGINfunc
+	ISOBJ_assert(pThis);
+
+	if(pThis->pszName == NULL) {
+		snprintf((char*)szName, sizeof(szName)/sizeof(uchar), "%s %p", objGetClassName(pThis), pThis);
+		objSetName(pThis, szName);
+		/* looks strange, but we NEED to re-check because if there was an
+		 * error in objSetName(), the pointer may still be NULL
+		 */
+		if(pThis->pszName == NULL) {
+			ret = objGetClassName(pThis);
+		} else {
+			ret = pThis->pszName;
+		}
+	} else {
+		ret = pThis->pszName;
+	}
+
+	ENDfunc
+	return ret;
+}
+
 
 /* register a classe's info pointer, so that we can reference it later, if needed to
  * (e.g. for de-serialization support).

@@ -1661,16 +1661,6 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 }
 
 
-/* cancellation cleanup handler - frees the action mutex
- * rgerhards, 2008-01-14
- */
-static void callActionMutClean(void *arg)
-{
-	assert(arg != NULL);
-	pthread_mutex_unlock((pthread_mutex_t*) arg);
-}
-
-
 /* helper to processMsg(), used to call the configured actions. It is
  * executed from within llExecFunc() of the action list.
  * rgerhards, 2007-08-02
@@ -3211,6 +3201,9 @@ init(void)
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
 	}
+	/* name our main queue object (it's not fatal if it fails...) */
+	objSetName((obj_t*) pMsgQueue, (uchar*) "main queue");
+
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
 	CHKiRet_Hdlr(func(pMsgQueue, data)) { \

@@ -616,7 +616,6 @@ wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg)
 {
 	DEFiRet;
 
-dbgprintf("objID: %d\n", pThis->pObjInfo->objID);
 	ISOBJ_TYPE_assert(pThis, wtp);
 	assert(pszMsg != NULL);
 	

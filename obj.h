@@ -66,13 +66,13 @@
 #define objSerializePTR(strm, propName, propType) \
 	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
 #define DEFobjStaticHelpers static objInfo_t *pObjInfoOBJ = NULL;
-#define objGetName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
+#define objGetClassName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
 #define objGetObjID(pThis) (((obj_t*) (pThis))->pObjInfo->objID)
 #define objGetVersion(pThis) (((obj_t*) (pThis))->pObjInfo->iObjVers)
 /* the next macro MUST be called in Constructors: */
 #ifndef NDEBUG /* this means if debug... */
 #	define objConstructSetObjInfo(pThis) \
-		assert(pThis->pObjInfo == NULL); \
+		ASSERT(((obj_t*) (pThis))->pObjInfo == NULL); \
 		((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ; \
 		((obj_t*) (pThis))->iObjCooCKiE = 0xBADEFEE
 #else
@@ -95,6 +95,8 @@ rsRetVal objEndSerialize(strm_t *pStrm);
 rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo);
 rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);
 rsRetVal objDeserializePropBag(obj_t *pObj, strm_t *pStrm);
+rsRetVal objSetName(obj_t *pThis, uchar *pszName);
+uchar * objGetName(obj_t *pThis);
 PROTOTYPEObjClassInit(obj);
 
 #endif /* #ifndef OBJ_H_INCLUDED */

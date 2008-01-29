@@ -29,11 +29,7 @@
 #define OBJ_TYPES_H_INCLUDED
 
 #include "stringbuf.h"
-
-/* base object data, present in all objects */
-typedef struct objData_s {
-	uchar *pName;
-} objData_t;
+#include "syslogd-types.h"
 
 /* property types */
 typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc() */
@@ -90,23 +86,22 @@ typedef struct objInfo_s {
 	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
 } objInfo_t;
 
-/* TODO: move obj_t at front of struct */
+
 typedef struct obj {	/* the dummy struct that each derived class can be casted to */
 	objInfo_t *pObjInfo;
 #ifndef NDEBUG /* this means if debug... */
-	objData_t objData;
 	unsigned int iObjCooCKiE; /* must always be 0xBADEFEE for a valid object */
 #endif
+	uchar *pszName;		/* the name of *this* specific object instance */
 } obj_t;
+
 
 /* macros which must be gloablly-visible (because they are used during definition of
  * other objects.
  */
 #ifndef NDEBUG /* this means if debug... */
 #	define BEGINobjInstance \
-		objInfo_t *pObjInfo; \
-		objData_t objData; \
-		unsigned int iObjCooCKiE; /* prevent name conflict, thus the strange name */ 
+		obj_t objData;
 #	define ISOBJ_assert(pObj) \
 		do { \
 		ASSERT((pObj) != NULL); \
@@ -115,11 +110,11 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 #	define ISOBJ_TYPE_assert(pObj, objType) \
 		do { \
 		ASSERT(pObj != NULL); \
-		ASSERT((unsigned) pObj->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+		ASSERT((unsigned) ((obj_t*) (pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		ASSERT(objGetObjID(pObj) == OBJ##objType); \
 		} while(0);
 #else /* non-debug mode, no checks but much faster */
-#	define BEGINobjInstance objInfo_t *pObjInfo; objData_t objData;
+#	define BEGINobjInstance objInfo_t *objData.pObjInfo; objData_t objData;
 #	define ISOBJ_TYPE_assert(pObj, objType)
 #	define ISOBJ_assert(pObj)
 #endif

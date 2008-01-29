@@ -27,7 +27,6 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h"
-#include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -36,6 +35,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include "rsyslog.h"
 #include "syslogd.h"
 #include "srUtils.h"
 #include "stringbuf.h"

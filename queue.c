@@ -1106,9 +1106,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	}
 
 finalize_it:
-RUNLOG_VAR("%x", pThis->iObjCooCKiE );
 	OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP
-RUNLOG_VAR("%x", pThis->iObjCooCKiE );
 	RETiRet;
 }
 
@@ -1422,26 +1420,25 @@ rsRetVal queueStart(queue_t *pThis) /* this is the ConstructionFinalizer */
 	 * influenced by properties which might have been set after queueConstruct ()
 	 */
 	if(pThis->pqParent == NULL) {
-dbgprintf("Queue %p: no parent, alloc mutex\n", pThis);
 		pThis->mut = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
 		pthread_mutex_init(pThis->mut, NULL);
 	} else {
 		/* child queue, we need to use parent's mutex */
+		dbgoprint((obj_t*) pThis, "I am a child\n");
 		pThis->mut = pThis->pqParent->mut;
-dbgprintf("Queue %p: I am child, use mutex %p\n", pThis, pThis->pqParent->mut);
 	}
 
 	pthread_mutex_init(&pThis->mutThrdMgmt, NULL);
 	pthread_cond_init (&pThis->condDAReady, NULL);
 	pthread_cond_init (&pThis->notFull, NULL);
 	pthread_cond_init (&pThis->notEmpty, NULL);
-dbgprintf("Queue %p: post mutexes, mut %p\n", pThis, pThis->mut);
 
 	/* call type-specific constructor */
 	CHKiRet(pThis->qConstruct(pThis)); /* this also sets bIsDA */
 
-	dbgprintf("Queue 0x%lx: type %d, enq-only %d, disk assisted %d, maxFileSz %ld, qsize %d starting\n", queueGetID(pThis),
-		  pThis->qType, pThis->bEnqOnly, pThis->bIsDA, pThis->iMaxFileSize, pThis->iQueueSize);
+	dbgoprint((obj_t*) pThis, "type %d, enq-only %d, disk assisted %d, maxFileSz %ld, qsize %d, child %d starting\n",
+		  pThis->qType, pThis->bEnqOnly, pThis->bIsDA, pThis->iMaxFileSize,
+		  pThis->iQueueSize, pThis->pqParent == NULL ? 0 : 1);
 
 	if(pThis->qType == QUEUETYPE_DIRECT)
 		FINALIZE;	/* with direct queues, we are already finished... */

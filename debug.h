@@ -26,6 +26,7 @@
 #define DEBUG_H_INCLUDED
 
 #include <pthread.h>
+#include "obj-types.h"
 
 /* external static data elements (some time to be replaced) */
 extern int Debug;		/* debug flag  - read-only after startup */
@@ -84,7 +85,8 @@ typedef struct dbgCallStack_s {
 rsRetVal dbgClassInit(void);
 rsRetVal dbgClassExit(void);
 void sigsegvHdlr(int signum);
-void dbgprintf(char *fmt, ...) __attribute__((format(printf,1, 2)));
+void dbgoprint(obj_t *pObj, char *fmt, ...) __attribute__((format(printf, 2, 3)));
+void dbgprintf(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
