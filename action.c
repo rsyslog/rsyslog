@@ -77,6 +77,41 @@ static int iActionNbr = 0;
 
 /* ------------------------------ methods ------------------------------ */ 
 
+/* resets action queue parameters to their default values. This happens
+ * after each action has been created in order to prevent any wild defaults
+ * to be used. It is somewhat against the original spirit of the config file
+ * reader, but I think it is a good thing to do.
+ * rgerhards, 2008-01-29
+ */
+static rsRetVal
+actionResetQueueParams(void)
+{
+	DEFiRet;
+
+	ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
+	iActionQueueSize = 10000;			/* size of the main message queue above */
+	iActionQHighWtrMark = 8000;			/* high water mark for disk-assisted queues */
+	iActionQLowWtrMark = 2000;			/* low water mark for disk-assisted queues */
+	iActionQDiscardMark = 9800;			/* begin to discard messages */
+	iActionQDiscardSeverity = 4;			/* discard warning and above */
+	iActionQueueNumWorkers = 1;			/* number of worker threads for the mm queue above */
+	iActionQueMaxFileSize = 1024*1024;
+	iActionQPersistUpdCnt = 0;			/* persist queue info every n updates */
+	iActionQtoQShutdown = 0;			/* queue shutdown */ 
+	iActionQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
+	iActionQtoEnq = 2000;				/* timeout for queue enque */ 
+	iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
+	iActionQWrkMinMsgs = 100;			/* minimum messages per worker needed to start a new one */
+	bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
+
+	if(pszActionQFName != NULL)
+		free(pszActionQFName);
+	pszActionQFName = NULL;				/* prefix for the main message queue file */
+
+	RETiRet;
+}
+
+
 /* destructs an action descriptor object
  * rgerhards, 2007-08-01
  */
@@ -178,6 +213,9 @@ RUNLOG_VAR("%d", ActionQueType);
 
 	CHKiRet(queueStart(pThis->pQueue));
 	dbgprintf("Action %p: queue %p created\n", pThis, pThis->pQueue);
+	
+	/* and now reset the queue params (see comment in its function header!) */
+	actionResetQueueParams();
 
 finalize_it:
 	RETiRet;
