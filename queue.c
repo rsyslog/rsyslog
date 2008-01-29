@@ -198,6 +198,7 @@ static rsRetVal
 queueStartDA(queue_t *pThis)
 {
 	DEFiRet;
+	uchar pszDAQName[128];
 
 	ISOBJ_TYPE_assert(pThis, queue);
 
@@ -206,6 +207,10 @@ queueStartDA(queue_t *pThis)
 
 	/* create message queue */
 	CHKiRet(queueConstruct(&pThis->pqDA, QUEUETYPE_DISK , 1, 0, pThis->pConsumer));
+
+	/* give it a name */
+	snprintf((char*) pszDAQName, sizeof(pszDAQName)/sizeof(uchar), "%s[DA]", objGetName((obj_t*) pThis));
+	objSetName((obj_t*) pThis->pqDA, pszDAQName);
 
 	/* as the created queue is the same object class, we take the
 	 * liberty to access its properties directly.
@@ -286,7 +291,7 @@ queueInitDA(queue_t *pThis, int bEnqOnly, int bLockMutex)
 	 * rgerhards, 2008-01-24
 	 */
 	if(pThis->pWtpDA == NULL) {
-		lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "Queue 0x%lx:DA", (unsigned long) pThis);
+		lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%s:DA", objGetName((obj_t*) pThis));
 		CHKiRet(wtpConstruct		(&pThis->pWtpDA));
 		CHKiRet(wtpSetDbgHdr		(pThis->pWtpDA, pszBuf, lenBuf));
 		CHKiRet(wtpSetpfChkStopWrkr	(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, int)) queueChkStopWrkrDA));
@@ -1413,7 +1418,7 @@ rsRetVal queueStart(queue_t *pThis) /* this is the ConstructionFinalizer */
 	/* create worker thread pools for regular operation. The DA pool is created on an as-needed
 	 * basis, which potentially means never under most circumstances.
 	 */
-	lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "Queue 0x%lx:Reg", (unsigned long) pThis);
+	lenBuf = snprintf((char*)pszBuf, sizeof(pszBuf), "%s:Reg", objGetName((obj_t*) pThis));
 	CHKiRet(wtpConstruct		(&pThis->pWtpReg));
 	CHKiRet(wtpSetDbgHdr		(pThis->pWtpReg, pszBuf, lenBuf));
 	CHKiRet(wtpSetpfChkStopWrkr	(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, int)) queueChkStopWrkrReg));

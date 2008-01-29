@@ -67,6 +67,16 @@ static int iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdow
 static int iActionQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int bActionQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
 
+/* the counter below counts actions created. It is used to obtain unique IDs for the action. They
+ * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
+ * to have during one instance of an rsyslogd run. For example, I use them to name actions when there
+ * is no better name available. Note that I do NOT recover previous numbers on HUP - we simply keep
+ * counting. -- rgerhards, 2008-01-29
+ */
+static int iActionNbr = 0;
+
+/* ------------------------------ methods ------------------------------ */ 
+
 /* destructs an action descriptor object
  * rgerhards, 2007-08-01
  */
@@ -109,6 +119,9 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->iResumeRetryCount = glbliActionResumeRetryCount;
 	SYNC_OBJ_TOOL_INIT(pThis);
 
+	/* indicate we have a new action */
+	++iActionNbr;
+
 finalize_it:
 	*ppThis = pThis;
 	RETiRet;
@@ -121,13 +134,17 @@ rsRetVal
 actionConstructFinalize(action_t *pThis)
 {
 	DEFiRet;
+	uchar pszQName[64]; /* friendly name of our queue */
 
 	ASSERT(pThis != NULL);
+
+	/* find a name for our queue */
+	snprintf((char*) pszQName, sizeof(pszQName)/sizeof(uchar), "action %d queue", iActionNbr);
 
 	/* create queue */
 RUNLOG_VAR("%d", ActionQueType);
 	CHKiRet(queueConstruct(&pThis->pQueue, ActionQueType, 1, 10, (rsRetVal (*)(void*,void*))actionCallDoAction));
-
+	objSetName((obj_t*) pThis->pQueue, pszQName);
 
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
