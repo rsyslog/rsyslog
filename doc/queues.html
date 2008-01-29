@@ -1,0 +1,79 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Language" content="de">
+<title>Understanding rsyslog queues</title>
+</head>
+
+<body>
+
+<h1>Understanding rsyslog Queues</h1>
+<p>Rsyslog uses queues whenever two activities need to be losely coupled. With a 
+queue, one part of the system &quot;produces&quot; something while another part &quot;consumes&quot; 
+this something. The &quot;something&quot; is most often syslog messages, but queues may 
+also be used for other purposes.</p>
+<p>The most prominent example is the main message queue. Whenever rsyslog 
+receives a message (e.g. locally, via UDP, TCP or in whatever else way), it 
+places these messages into the main message queue. Later, it is dequeued by the 
+rule processor, which then evaluates which actions are to be carried out. In 
+front of each action, there is also a queue, which potentially de-couples the 
+filter processing from the actual action (e.g. writing to file, database or 
+forwarding to another host).</p>
+<h1>Queue Modes</h1>
+<p>Rsyslog supports different queue modes, some with submodes. Each of them has 
+specific advantages and disadvantages. Selecting the right queue mode is quite 
+important when tuning rsyslogd.</p>
+<h2>Direct Queues</h2>
+<p>Direct queues are <b>non</b>-queueing queues. A queue in direct mode does 
+neither queue nor bufer any of the queue elements but rather passes the element 
+directly (and immediately) from the producer to the consumer.This sounds strange, 
+but there is a good reason for this queue type.</p>
+<p>Direct mode queues allow to use queues generically, even in places where 
+queing is not always desired. A good example is the queue in front of output 
+actions. While it makes perfect sense to buffer forwarding actions or database 
+writes, it makes only limited sense to build up a queue in front of simple local 
+file writes. Yet, rsyslog still has a queue in front of every action. So for 
+file writes, the queue mode can simply be set to &quot;direct&quot;, in which case no 
+queueing happens.</p>
+<p>Please note that a direct queue also is the only queue type that passes back 
+the execution return code (sucess/failure) from the consumer to the producer. 
+This, for example, is needed for the backup action logic. Consequently, backup 
+actions require the to-be-checked action to use a &quot;direct&quot; mode queue.</p>
+<h2>Disk Queues</h2>
+<p>Disk queues use disk drives for buffering. The important fact is that the 
+always use the disk and do not buffer anything in memory. Thus, the queue is 
+ultra-reliable, but by far the slowest mode. For regular use cases, this queue 
+mode is not recommended. It is useful if log data is so important that it must 
+not be lost, even in extreme cases.</p>
+<p>Please note, however, that the disk queue by default does not update its 
+bookkeeping structures every time it writes to disk. This is for performance 
+reasons. In the event of failure, data will still be lost (except when manually 
+is mangled with the file structures). However, disk queues can be set to write 
+bookkeeping information on checkpoints (every n records), so that this can be 
+made ultra-reliable, too. If the checkpoint interval is set to one, no data can 
+be lost, but the queue is exceptionally slow.</p>
+<h2>In-Memory Queues</h2>
+<p>In-memory queue mode is what most people have on their mind when they think 
+about computing queues. Here, the enqueued data elements are held in memory. 
+Consequently, in-memory queues are very fast. But of course, they do not survive 
+any program or operating system abort (what usually is tolerable and unlikely). 
+Be sure to use an UPS if you use in-memory mode and your log data is important 
+to you. Note that even in-memory queues may hold data for an infinite amount of 
+time if e.g. an output destination system is down and there is no reason to move 
+the data out of memory (lying around in memory for an extended period of time is 
+NOT a reason). Pure in-memory queues can't even store queue elements anywhere 
+else than in core memory.</p>
+<p>If a disk queue name is defined for in-memory queues, they automatically 
+become &quot;disk-assisted&quot; (DA). In that mode, data is written to disk (and read 
+back) on a per-needed basis. Actually, the regular memory queue (called the 
+&quot;primary queue&quot;) and a disk queue (called the &quot;DA queue&quot;) work in tandem in this 
+mode. Most importantly, the disk queue is activated if the primary queue is full 
+or needs to be persisted on shutdown. Disk-assisted queues combine the 
+advantages of pure memory queues with those from pure disk queues. Under normal 
+operations, they are very fast and messages will never touch the disk. But if 
+there is need to, an unlimited amount of messages can be buffered (actually 
+limited by free space) and data can be persisted between rsyslogd runs.</p>
+
+</body>
+
+</html>
