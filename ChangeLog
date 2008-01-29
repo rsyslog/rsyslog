@@ -17,6 +17,8 @@ Version 3.10.4 (rgerhards), 2008-01-??
 - added $ActionQueueWorkerThreadMinimumMessages config directive
 - added $ActionQueueMaxFileSize config directive
 - added $ActionQueueSaveonShutdown config directive
+- bugfix: added forgotten docs to package
+- improved debugging support
 ---------------------------------------------------------------------------
 Version 3.10.3 (rgerhards), 2008-01-28
 - fixed a bug with standard template definitions (not a big deal) - thanks

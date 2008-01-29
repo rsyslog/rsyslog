@@ -88,6 +88,7 @@ rsRetVal actionWriteToAction(action_t *pAction);
 inline int actionIsSuspended(action_t *pThis)
 {
 	int i;
+	ASSERT(pThis != NULL);
 	i =  pThis->bSuspended == 1;
 	dbgprintf("in IsSuspend(), returns %d\n", i);
 	return i;

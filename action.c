@@ -84,6 +84,8 @@ rsRetVal actionDestruct(action_t *pThis)
 {
 	ASSERT(pThis != NULL);
 
+	queueDestruct(&pThis->pQueue);
+
 	if(pThis->pMod != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
 
@@ -308,14 +310,16 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 RUNLOG_STR("going into do_action call loop");
 RUNLOG_VAR("%d", iRetries);
 		/* first check if we are suspended and, if so, retry */
+		ASSERT(pAction != NULL);
 		if(actionIsSuspended(pAction)) {
 dbgprintf("action %p is suspended\n", pAction);
 			iRet = actionTryResume(pAction);
 		}
 
 		if(iRet == RS_RET_OK) {
+RUNLOG_STR("calling configured action\n");
 			/* call configured action */
-			iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData);
+			iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pMsg->msgFlags, pAction->pModData);
 		}
 
 RUNLOG_VAR("%d", iRet);

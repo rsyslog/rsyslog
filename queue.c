@@ -217,6 +217,7 @@ queueStartDA(queue_t *pThis)
 	 */
 	pThis->pqDA->pqParent = pThis;
 
+	CHKiRet(queueSetpUsr(pThis->pqDA, pThis->pUsr));
 	CHKiRet(queueSetMaxFileSize(pThis->pqDA, pThis->iMaxFileSize));
 	CHKiRet(queueSetFilePrefix(pThis->pqDA, pThis->pszFilePrefix, pThis->lenFilePrefix));
 	CHKiRet(queueSetiPersistUpdCnt(pThis->pqDA, pThis->iPersistUpdCnt));
