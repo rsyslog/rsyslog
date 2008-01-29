@@ -60,7 +60,9 @@ SyncObjExit(pthread_mutex_t **mut)
 void
 lockObj(pthread_mutex_t *mut)
 {
-	pthread_mutex_lock(mut);
+	BEGINfunc
+	d_pthread_mutex_lock(mut);
+	ENDfunc
 }
 
 /* unlock an object. The synchronization tool (mutex) must be passed in.
@@ -68,6 +70,8 @@ lockObj(pthread_mutex_t *mut)
 void
 unlockObj(pthread_mutex_t *mut)
 {
-	pthread_mutex_unlock(mut);
+	BEGINfunc
+	d_pthread_mutex_unlock(mut);
+	ENDfunc
 }
 #endif /* #ifndef NDEBUG */

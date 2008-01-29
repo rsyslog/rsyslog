@@ -145,7 +145,7 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 	logmsg(iPRI, pMsg, INTERNAL_MSG);
 
 finalize_it:
-	return iRet;
+	RETiRet;
 }
 
 /* And now the same with variable arguments */
@@ -211,7 +211,7 @@ rsRetVal Syslog(int priority, char *fmt, ...)
 		va_end(ap);
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -623,7 +623,7 @@ CODESTARTrunInput
 				break;
 		}
 	}
-	return iRet;
+	RETiRet;
 ENDrunInput
 
 

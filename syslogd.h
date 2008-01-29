@@ -81,6 +81,19 @@ extern int DisableDNS;
 extern char **StripDomains;
 extern char *LocalDomain;
 extern int bDropMalPTRMsgs;
-extern char	ctty[];
+extern char ctty[];
+extern int MarkInterval;
+
+/* Intervals at which we flush out "message repeated" messages,
+ * in seconds after previous message is logged.  After each flush,
+ * we move to the next interval until we reach the largest.
+ * TODO: move this to action object!
+ */
+extern int repeatinterval[2];
+#define	MAXREPEAT ((int)((sizeof(repeatinterval) / sizeof(repeatinterval[0])) - 1))
+#define	REPEATTIME(f)	((f)->f_time + repeatinterval[(f)->f_repeatcount])
+#define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \
+				 (f)->f_repeatcount = MAXREPEAT; \
+			}
 
 #endif /* #ifndef SYSLOGD_H_INCLUDED */

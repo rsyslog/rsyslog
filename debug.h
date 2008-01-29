@@ -99,9 +99,11 @@ void dbgPrintAllDebugInfo(void);
 #ifdef RTINST
 #	define BEGINfunc static dbgFuncDB_t dbgFuncDB=dbgFuncDB_t_INITIALIZER; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&dbgFuncDB,__LINE__);
 #	define ENDfunc dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT);
+#	define ASSERT(x) do { if(!(x)) dbgPrintAllDebugInfo(); assert(x); } while(0);
 #else
 #	define BEGINfunc
 #	define ENDfunc
+#	define ASSERT(x)
 #endif
 #ifdef RTINST
 #	define RUNLOG dbgSetExecLocation(dbgCALLStaCK_POP_POINT, __LINE__); dbgprintf("%s:%d: %s: log point\n", __FILE__, __LINE__, __func__)

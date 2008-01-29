@@ -72,7 +72,7 @@ static int bActionQSaveOnShutdown = 1;				/* save queue on shutdown (when DA ena
  */
 rsRetVal actionDestruct(action_t *pThis)
 {
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	if(pThis->pMod != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
@@ -99,7 +99,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	DEFiRet;
 	action_t *pThis;
 
-	assert(ppThis != NULL);
+	ASSERT(ppThis != NULL);
 	
 	if((pThis = (action_t*) calloc(1, sizeof(action_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -122,10 +122,13 @@ actionConstructFinalize(action_t *pThis)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	/* create queue */
+RUNLOG_VAR("%d", ActionQueType);
 	CHKiRet(queueConstruct(&pThis->pQueue, ActionQueType, 1, 10, (rsRetVal (*)(void*,void*))actionCallDoAction));
+RUNLOG_VAR("%p", pThis->pQueue);
+RUNLOG_VAR("%x", pThis->pQueue->iObjCooCKiE );
 
 
 	/* ... set some properties ... */
@@ -170,7 +173,7 @@ static rsRetVal actionResume(action_t *pThis)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 	pThis->bSuspended = 0;
 
 	RETiRet;
@@ -192,7 +195,7 @@ rsRetVal actionSuspend(action_t *pThis)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 	pThis->bSuspended = 1;
 	pThis->ttResumeRtry = time(NULL) + pThis->iResumeInterval;
 	pThis->iNbrResRtry = 0; /* tell that we did not yet retry to resume */
@@ -209,7 +212,7 @@ rsRetVal actionTryResume(action_t *pThis)
 	DEFiRet;
 	time_t ttNow;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	ttNow = time(NULL); /* do the system call just once */
 
@@ -274,7 +277,9 @@ rsRetVal
 actionDoAction(action_t *pAction)
 {
 	DEFiRet;
-	iRet = queueEnqObj(pAction->pQueue, (void*) pAction->f_pMsg);
+RUNLOG_VAR("%p", pAction->f_pMsg);
+	ISOBJ_TYPE_assert(pAction->f_pMsg, Msg);
+	iRet = queueEnqObj(pAction->pQueue, (void*) MsgAddRef(pAction->f_pMsg));
 	RETiRet;
 }
 
@@ -290,7 +295,7 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 	int i;
 	int iSleepPeriod;
 
-	assert(pAction != NULL);
+	ASSERT(pAction != NULL);
 
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
@@ -370,6 +375,185 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
 	RETiRet;
 }
 
+
+/* rgerhards 2004-11-09: fprintlog() is the actual driver for
+ * the output channel. It receives the channel description (f) as
+ * well as the message and outputs them according to the channel
+ * semantics. The message is typically already contained in the
+ * channel save buffer (f->f_prevline). This is not only the case
+ * when a message was already repeated but also when a new message
+ * arrived.
+ * rgerhards 2007-08-01: interface changed to use action_t
+ * rgerhards, 2007-12-11: please note: THIS METHOD MUST ONLY BE
+ * CALLED AFTER THE CALLER HAS LOCKED THE pAction OBJECT! We do
+ * not do this here. Failing to do so results in all kinds of
+ * "interesting" problems!
+ * RGERHARDS, 2008-01-29:
+ * This is now the action caller and has been renamed.
+ */
+rsRetVal
+actionWriteToAction(action_t *pAction)
+{
+	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
+				   it in case it needs to be updated (e.g. repeated msgs) */
+	DEFiRet;
+
+	pMsgSave = NULL;	/* indicate message poiner not saved */
+	/* first check if this is a regular message or the repeation of
+	 * a previous message. If so, we need to change the message text
+	 * to "last message repeated n times" and then go ahead and write
+	 * it. Please note that we can not modify the message object, because
+	 * that would update it in other selectors as well. As such, we first
+	 * need to create a local copy of the message, which we than can update.
+	 * rgerhards, 2007-07-10
+	 */
+	if(pAction->f_prevcount > 1) {
+		msg_t *pMsg;
+		uchar szRepMsg[64];
+		snprintf((char*)szRepMsg, sizeof(szRepMsg), "last message repeated %d times",
+		    pAction->f_prevcount);
+
+		if((pMsg = MsgDup(pAction->f_pMsg)) == NULL) {
+			/* it failed - nothing we can do against it... */
+			dbgprintf("Message duplication failed, dropping repeat message.\n");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+
+		/* We now need to update the other message properties.
+		 * ... RAWMSG is a problem ... Please note that digital
+		 * signatures inside the message are also invalidated.
+		 */
+		getCurrTime(&(pMsg->tRcvdAt));
+		getCurrTime(&(pMsg->tTIMESTAMP));
+		MsgSetMSG(pMsg, (char*)szRepMsg);
+		MsgSetRawMsg(pMsg, (char*)szRepMsg);
+
+		pMsgSave = pAction->f_pMsg;	/* save message pointer for later restoration */
+		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
+	}
+
+	dbgprintf("Called action, logging to %s", modGetStateName(pAction->pMod));
+
+	time(&pAction->f_time); /* we need this for message repeation processing */
+
+	/* When we reach this point, we have a valid, non-disabled action.
+	 * So let's execute it. -- rgerhards, 2007-07-24
+	 */
+	iRet = actionDoAction(pAction);
+
+finalize_it:
+	if(pMsgSave != NULL) {
+		/* we had saved the original message pointer. That was
+		 * done because we needed to create a temporary one
+		 * (most often for "message repeated n time" handling). If so,
+		 * we need to restore the original one now, so that procesing
+		 * can continue as normal. We also need to discard the temporary
+		 * one, as we do not like memory leaks ;) Please note that the original
+		 * message object will be discarded by our callers, so this is nothing
+		 * of our business. rgerhards, 2007-07-10
+		 */
+		MsgDestruct(&pAction->f_pMsg);
+		pAction->f_pMsg = pMsgSave;	/* restore it */
+	}
+
+	RETiRet;
+}
+
+
+
+
+
+/* call the configured action. Does all necessary housekeeping.
+ * rgerhards, 2007-08-01
+ */
+rsRetVal
+actionCallAction(action_t *pAction, msg_t *pMsg)
+{
+	DEFiRet;
+	int iCancelStateSave;
+
+	ISOBJ_TYPE_assert(pMsg, Msg);
+	ASSERT(pAction != NULL);
+
+	/* Make sure nodbody else modifies/uses this action object. Right now, this
+         * is important because of "message repeated n times" processing and potentially
+	 * multiple worker threads. -- rgerhards, 2007-12-11
+ 	 */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	LockObj(pAction);
+	pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
+	pthread_setcancelstate(iCancelStateSave, NULL);
+
+	/* first, we need to check if this is a disabled
+	 * entry. If so, we must not further process it.
+	 * rgerhards 2005-09-26
+	 * In the future, disabled modules may be re-probed from time
+	 * to time. They are in a perfectly legal state, except that the
+	 * doAction method indicated that it wanted to be disabled - but
+	 * we do not consider this is a solution for eternity... So we
+	 * should check from time to time if affairs have improved.
+	 * rgerhards, 2007-07-24
+	 */
+	if(pAction->bEnabled == 0) {
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+	if(actionIsSuspended(pAction)) {
+		CHKiRet(actionTryResume(pAction));
+	}
+
+	/* don't output marks to recently written files */
+	if ((pMsg->msgFlags & MARK) && (time(NULL) - pAction->f_time) < MarkInterval / 2) {
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+	/* suppress duplicate messages
+	 */
+	if ((pAction->f_ReduceRepeated == 1) && pAction->f_pMsg != NULL &&
+	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(pAction->f_pMsg) &&
+	    !strcmp(getMSG(pMsg), getMSG(pAction->f_pMsg)) &&
+	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(pAction->f_pMsg)) &&
+	    !strcmp(getPROCID(pMsg), getPROCID(pAction->f_pMsg)) &&
+	    !strcmp(getAPPNAME(pMsg), getAPPNAME(pAction->f_pMsg))) {
+		pAction->f_prevcount++;
+		dbgprintf("msg repeated %d times, %ld sec of %d.\n",
+		    pAction->f_prevcount, time(NULL) - pAction->f_time,
+		    repeatinterval[pAction->f_repeatcount]);
+		/* use current message, so we have the new timestamp (means we need to discard previous one) */
+		MsgDestruct(&pAction->f_pMsg);
+		pAction->f_pMsg = MsgAddRef(pMsg);
+		/* If domark would have logged this by now, flush it now (so we don't hold
+		 * isolated messages), but back off so we'll flush less often in the future.
+		 */
+		if(time(NULL) > REPEATTIME(pAction)) {
+			iRet = actionWriteToAction(pAction);
+			BACKOFF(pAction);
+		}
+	} else {
+		/* new message, save it */
+		/* first check if we have a previous message stored
+		 * if so, emit and then discard it first
+		 */
+		if(pAction->f_pMsg != NULL) {
+			if(pAction->f_prevcount > 0)
+				actionWriteToAction(pAction);
+				/* we do not care about iRet above - I think it's right but if we have
+				 * some troubles, you know where to look at ;) -- rgerhards, 2007-08-01
+				 */
+			MsgDestruct(&pAction->f_pMsg);
+		}
+		pAction->f_pMsg = MsgAddRef(pMsg);
+		/* call the output driver */
+		iRet = actionWriteToAction(pAction);
+	}
+
+finalize_it:
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	UnlockObj(pAction);
+	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
+	pthread_setcancelstate(iCancelStateSave, NULL);
+	RETiRet;
+}
 
 
 /* add our cfsysline handlers

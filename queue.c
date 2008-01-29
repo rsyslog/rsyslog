@@ -115,7 +115,7 @@ queueTurnOffDAMode(queue_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, queue);
-	assert(pThis->bRunsDA);
+	ASSERT(pThis->bRunsDA);
 
 	/* at this point, we need a fully initialized DA queue. So if it isn't, we finally need
 	 * to wait for its startup... -- rgerhards, 2008-01-25
@@ -386,7 +386,7 @@ static rsRetVal qConstructFixedArray(queue_t *pThis)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	if(pThis->iMaxQueueSize == 0)
 		ABORT_FINALIZE(RS_RET_QSIZE_ZERO);
@@ -409,7 +409,7 @@ static rsRetVal qDestructFixedArray(queue_t *pThis)
 {
 	DEFiRet;
 	
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	if(pThis->tVars.farray.pBuf != NULL)
 		free(pThis->tVars.farray.pBuf);
@@ -421,7 +421,7 @@ static rsRetVal qAddFixedArray(queue_t *pThis, void* in)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 	pThis->tVars.farray.pBuf[pThis->tVars.farray.tail] = in;
 	pThis->tVars.farray.tail++;
 	if (pThis->tVars.farray.tail == pThis->iMaxQueueSize)
@@ -434,7 +434,7 @@ static rsRetVal qDelFixedArray(queue_t *pThis, void **out)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 	*out = (void*) pThis->tVars.farray.pBuf[pThis->tVars.farray.head];
 
 	pThis->tVars.farray.head++;
@@ -450,7 +450,7 @@ static rsRetVal qConstructLinkedList(queue_t *pThis)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	pThis->tVars.linklist.pRoot = 0;
 	pThis->tVars.linklist.pLast = 0;
@@ -479,7 +479,7 @@ static rsRetVal qAddLinkedList(queue_t *pThis, void* pUsr)
 	DEFiRet;
 	qLinkedList_t *pEntry;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 	if((pEntry = (qLinkedList_t*) malloc(sizeof(qLinkedList_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -503,8 +503,8 @@ static rsRetVal qDelLinkedList(queue_t *pThis, void **ppUsr)
 	DEFiRet;
 	qLinkedList_t *pEntry;
 
-	assert(pThis != NULL);
-	assert(pThis->tVars.linklist.pRoot != NULL);
+	ASSERT(pThis != NULL);
+	ASSERT(pThis->tVars.linklist.pRoot != NULL);
 	
 	pEntry = pThis->tVars.linklist.pRoot;
 	*ppUsr = pEntry->pUsr;
@@ -654,7 +654,7 @@ static rsRetVal qConstructDisk(queue_t *pThis)
 	DEFiRet;
 	int bRestarted = 0;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	/* and now check if there is some persistent information that needs to be read in */
 	iRet = queueTryLoadPersistedInfo(pThis);
@@ -704,7 +704,7 @@ static rsRetVal qDestructDisk(queue_t *pThis)
 {
 	DEFiRet;
 	
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 	
 	strmDestruct(&pThis->tVars.disk.pWrite);
 	strmDestruct(&pThis->tVars.disk.pRead);
@@ -719,7 +719,7 @@ static rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	CHKiRet((objSerialize(pUsr))(pUsr, pThis->tVars.disk.pWrite));
 	CHKiRet(strmFlush(pThis->tVars.disk.pWrite));
@@ -750,7 +750,7 @@ static rsRetVal qAddDirect(queue_t *pThis, void* pUsr)
 	DEFiRet;
 	rsRetVal iRetLocal;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	/* calling the consumer is quite different here than it is from a worker thread */
 	iRetLocal = pThis->pConsumer(pThis->pUsr, pUsr);
@@ -781,7 +781,7 @@ queueAdd(queue_t *pThis, void *pUsr)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 	CHKiRet(pThis->qAdd(pThis, pUsr));
 
 	++pThis->iQueueSize;
@@ -799,7 +799,7 @@ queueDel(queue_t *pThis, void *pUsr)
 {
 	DEFiRet;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	/* we do NOT abort if we encounter an error, because otherwise the queue
 	 * will not be decremented, what will most probably result in an endless loop.
@@ -835,7 +835,7 @@ static rsRetVal queueShutdownWorkers(queue_t *pThis)
 	rsRetVal iRetLocal;
 
 	ISOBJ_TYPE_assert(pThis, queue);
-	assert(pThis->pqParent == NULL); /* detect invalid calling sequence */
+	ASSERT(pThis->pqParent == NULL); /* detect invalid calling sequence */
 
 	dbgprintf("Queue 0x%lx: initiating worker thread shutdown sequence\n", queueGetID(pThis));
 
@@ -1052,9 +1052,9 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	DEFiRet;
 	queue_t *pThis;
 
-	assert(ppThis != NULL);
-	assert(pConsumer != NULL);
-	assert(iWorkerThreads >= 0);
+	ASSERT(ppThis != NULL);
+	ASSERT(pConsumer != NULL);
+	ASSERT(iWorkerThreads >= 0);
 
 	if((pThis = (queue_t *)calloc(1, sizeof(queue_t))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -1106,7 +1106,9 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 	}
 
 finalize_it:
+RUNLOG_VAR("%x", pThis->iObjCooCKiE );
 	OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP
+RUNLOG_VAR("%x", pThis->iObjCooCKiE );
 	RETiRet;
 }
 
@@ -1159,6 +1161,7 @@ static int queueChkDiscardMsg(queue_t *pThis, int iQueueSize, int bRunsDA, void 
 	int iSeverity;
 
 	ISOBJ_TYPE_assert(pThis, queue);
+RUNLOG_VAR("%p", pUsr);
 	ISOBJ_assert(pUsr);
 
 	if(pThis->iDiscardMrk > 0 && iQueueSize >= pThis->iDiscardMrk && bRunsDA == 0) {
@@ -1363,7 +1366,7 @@ queueRegOnWrkrShutdown(queue_t *pThis)
 	if(pThis->pqParent != NULL) {
 RUNLOG_VAR("%p", pThis->pqParent);
 RUNLOG_VAR("%p", pThis->pqParent->pWtpDA);
-	assert(pThis->pqParent->pWtpDA != NULL);
+	ASSERT(pThis->pqParent->pWtpDA != NULL);
 	pThis->pqParent->bChildIsDone = 1; /* indicate we are done */
 	wtpAdviseMaxWorkers(pThis->pqParent->pWtpDA, 1); /* reactivate DA worker (always 1) */
 #if 0
@@ -1413,7 +1416,7 @@ rsRetVal queueStart(queue_t *pThis) /* this is the ConstructionFinalizer */
 	uchar pszBuf[64];
 	size_t lenBuf;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	/* finalize some initializations that could not yet be done because it is
 	 * influenced by properties which might have been set after queueConstruct ()
@@ -1519,7 +1522,7 @@ static rsRetVal queuePersist(queue_t *pThis)
 	uchar pszQIFNam[MAXFNAME];
 	size_t lenQIFNam;
 
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 
 	if(pThis->qType != QUEUETYPE_DISK) {
 		if(pThis->iQueueSize > 0) {
@@ -1614,7 +1617,7 @@ rsRetVal queueDestruct(queue_t **ppThis)
 	DEFiRet;
 	queue_t *pThis;
 
-	assert(ppThis != NULL);
+	ASSERT(ppThis != NULL);
 	pThis = *ppThis;
 	ISOBJ_TYPE_assert(pThis, queue);
 
@@ -1891,7 +1894,7 @@ static rsRetVal queueSetProperty(queue_t *pThis, property_t *pProp)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, queue);
-	assert(pProp != NULL);
+	ASSERT(pProp != NULL);
 
  	if(isProp("iQueueSize")) {
 		pThis->iQueueSize = pProp->val.vInt;

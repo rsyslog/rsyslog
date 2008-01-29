@@ -117,7 +117,7 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 finalize_it:
 	free(pNewVal); /* in any case, this is no longer needed */
 
-	return iRet;
+	RETiRet;
 }
 
 

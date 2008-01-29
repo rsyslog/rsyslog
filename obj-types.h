@@ -30,6 +30,11 @@
 
 #include "stringbuf.h"
 
+/* base object data, present in all objects */
+typedef struct objData_s {
+	uchar *pName;
+} objData_t;
+
 /* property types */
 typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc() */
 	PROPTYPE_PSZ = 1,
@@ -85,9 +90,11 @@ typedef struct objInfo_s {
 	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
 } objInfo_t;
 
+/* TODO: move obj_t at front of struct */
 typedef struct obj {	/* the dummy struct that each derived class can be casted to */
 	objInfo_t *pObjInfo;
 #ifndef NDEBUG /* this means if debug... */
+	objData_t objData;
 	unsigned int iObjCooCKiE; /* must always be 0xBADEFEE for a valid object */
 #endif
 } obj_t;
@@ -98,25 +105,21 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 #ifndef NDEBUG /* this means if debug... */
 #	define BEGINobjInstance \
 		objInfo_t *pObjInfo; \
+		objData_t objData; \
 		unsigned int iObjCooCKiE; /* prevent name conflict, thus the strange name */ 
 #	define ISOBJ_assert(pObj) \
 		do { \
-		if(pObj == NULL) dbgPrintAllDebugInfo(); \
-		assert((pObj) != NULL); \
-		if(((obj_t*)(pObj))->iObjCooCKiE != (unsigned) 0xBADEFEE) dbgPrintAllDebugInfo(); \
-		assert((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+		ASSERT((pObj) != NULL); \
+		ASSERT((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		} while(0);
 #	define ISOBJ_TYPE_assert(pObj, objType) \
 		do { \
-		if(pObj == NULL) dbgPrintAllDebugInfo(); \
-		assert(pObj != NULL); \
-		if(((obj_t*)(pObj))->iObjCooCKiE != (unsigned) 0xBADEFEE) dbgPrintAllDebugInfo(); \
-		assert((unsigned) pObj->iObjCooCKiE == (unsigned) 0xBADEFEE); \
-		if(objGetObjID(pObj) != OBJ##objType) dbgPrintAllDebugInfo(); \
-		assert(objGetObjID(pObj) == OBJ##objType); \
+		ASSERT(pObj != NULL); \
+		ASSERT((unsigned) pObj->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+		ASSERT(objGetObjID(pObj) == OBJ##objType); \
 		} while(0);
 #else /* non-debug mode, no checks but much faster */
-#	define BEGINobjInstance objInfo_t *pObjInfo; 
+#	define BEGINobjInstance objInfo_t *pObjInfo; objData_t objData;
 #	define ISOBJ_TYPE_assert(pObj, objType)
 #	define ISOBJ_assert(pObj)
 #endif

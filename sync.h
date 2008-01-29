@@ -39,8 +39,8 @@
  * are better to trace in the stackframe.
  */
 #ifdef	NDEBUG
-#define LockObj(x) pthread_mutex_lock((x)->Sync_mut)
-#define UnlockObj(x) pthread_mutex_unlock((x)->Sync_mut)
+#define LockObj(x) d_pthread_mutex_lock((x)->Sync_mut)
+#define UnlockObj(x) d_pthread_mutex_unlock((x)->Sync_mut)
 #else
 #define LockObj(x) lockObj((x)->Sync_mut)
 #define UnlockObj(x) unlockObj((x)->Sync_mut)
