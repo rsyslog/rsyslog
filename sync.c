@@ -53,25 +53,3 @@ SyncObjExit(pthread_mutex_t **mut)
 		*mut = NULL;
 	}
 }
-
-#ifndef	NDEBUG
-/* lock an object. The synchronization tool (mutex) must be passed in.
- */
-void
-lockObj(pthread_mutex_t *mut)
-{
-	BEGINfunc
-	d_pthread_mutex_lock(mut);
-	ENDfunc
-}
-
-/* unlock an object. The synchronization tool (mutex) must be passed in.
- */
-void
-unlockObj(pthread_mutex_t *mut)
-{
-	BEGINfunc
-	d_pthread_mutex_unlock(mut);
-	ENDfunc
-}
-#endif /* #ifndef NDEBUG */

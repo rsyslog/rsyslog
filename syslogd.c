@@ -2259,6 +2259,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 
 	assert(pAction != NULL);
 	
+	BEGINfunc
 	LockObj(pAction);
 	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
 		dbgprintf("flush %s: repeated %d times, %d sec.\n",
@@ -2269,6 +2270,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	}
 	UnlockObj(pAction);
 
+	ENDfunc
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
 

@@ -127,8 +127,6 @@ actionConstructFinalize(action_t *pThis)
 	/* create queue */
 RUNLOG_VAR("%d", ActionQueType);
 	CHKiRet(queueConstruct(&pThis->pQueue, ActionQueType, 1, 10, (rsRetVal (*)(void*,void*))actionCallDoAction));
-RUNLOG_VAR("%p", pThis->pQueue);
-RUNLOG_VAR("%x", pThis->pQueue->iObjCooCKiE );
 
 
 	/* ... set some properties ... */
@@ -270,20 +268,6 @@ rsRetVal actionDbgPrint(action_t *pThis)
 }
 
 
-/* schedule the message for processing
- * rgerhards, 2008-01-28
- */
-rsRetVal
-actionDoAction(action_t *pAction)
-{
-	DEFiRet;
-RUNLOG_VAR("%p", pAction->f_pMsg);
-	ISOBJ_TYPE_assert(pAction->f_pMsg, Msg);
-	iRet = queueEnqObj(pAction->pQueue, (void*) MsgAddRef(pAction->f_pMsg));
-	RETiRet;
-}
-
-
 /* call the DoAction output plugin entry point
  * rgerhards, 2008-01-28
  */
@@ -306,8 +290,17 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 	do {
 RUNLOG_STR("going into do_action call loop");
 RUNLOG_VAR("%d", iRetries);
-		/* call configured action */
-		iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData);
+		/* first check if we are suspended and, if so, retry */
+		if(actionIsSuspended(pAction)) {
+dbgprintf("action %p is suspended\n", pAction);
+			iRet = actionTryResume(pAction);
+		}
+
+		if(iRet == RS_RET_OK) {
+			/* call configured action */
+			iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pAction->f_pMsg->msgFlags, pAction->pModData);
+		}
+
 RUNLOG_VAR("%d", iRet);
 		if(iRet == RS_RET_SUSPENDED) {
 			/* ok, this calls for our retry logic... */
@@ -342,6 +335,7 @@ finalize_it:
 			pAction->ppMsgs[i] = NULL;
 		}
 	}
+	MsgDestruct(&pMsg); /* we are now finished with the message */
 
 	RETiRet;
 }
@@ -437,9 +431,9 @@ actionWriteToAction(action_t *pAction)
 	time(&pAction->f_time); /* we need this for message repeation processing */
 
 	/* When we reach this point, we have a valid, non-disabled action.
-	 * So let's execute it. -- rgerhards, 2007-07-24
+	 * So let's enqueue our message for execution. -- rgerhards, 2007-07-24
 	 */
-	iRet = actionDoAction(pAction);
+	iRet = queueEnqObj(pAction->pQueue, (void*) MsgAddRef(pAction->f_pMsg));
 
 finalize_it:
 	if(pMsgSave != NULL) {
@@ -458,9 +452,6 @@ finalize_it:
 
 	RETiRet;
 }
-
-
-
 
 
 /* call the configured action. Does all necessary housekeeping.
@@ -496,10 +487,6 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 	 */
 	if(pAction->bEnabled == 0) {
 		ABORT_FINALIZE(RS_RET_OK);
-	}
-
-	if(actionIsSuspended(pAction)) {
-		CHKiRet(actionTryResume(pAction));
 	}
 
 	/* don't output marks to recently written files */
