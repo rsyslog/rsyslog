@@ -101,7 +101,7 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
  */
 #ifndef NDEBUG /* this means if debug... */
 #	define BEGINobjInstance \
-		obj_t objData;
+		obj_t objData
 #	define ISOBJ_assert(pObj) \
 		do { \
 		ASSERT((pObj) != NULL); \
@@ -114,7 +114,7 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 		ASSERT(objGetObjID(pObj) == OBJ##objType); \
 		} while(0);
 #else /* non-debug mode, no checks but much faster */
-#	define BEGINobjInstance objInfo_t *objData.pObjInfo; objData_t objData;
+#	define BEGINobjInstance obj_t objData
 #	define ISOBJ_TYPE_assert(pObj, objType)
 #	define ISOBJ_assert(pObj)
 #endif
