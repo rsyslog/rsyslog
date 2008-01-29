@@ -76,8 +76,8 @@ and have buffering applied automatically.</p>
 $ModLoad imudp.so # network reception
 $ModLoad imuxsock.so # local message reception
 
-$WorkDirectory /home/rger/proj/rsyslog/spool # default location for work (spool) files
-$MainMsgQueueFileName mainq # set file name, also enables disk mode
+$WorkDirectory /rsyslog/work # default location for work (spool) files
+$MainMsgQueueFileName mainq  # set file name, also enables disk mode
 
 *.*       :ommysql:hostname,dbname,userid,password;
 </textarea>
