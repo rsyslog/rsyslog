@@ -59,7 +59,7 @@ int	Debug;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
 static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logged to the debug log? */
-static int bPrintMutexAction = 1; /* shall mutex calls be printed to the debug log? */
+static int bPrintMutexAction = 0; /* shall mutex calls be printed to the debug log? */
 static int bPrintTime = 1;	/* print a timestamp together with debug message */
 static char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
 static FILE *altdbg = NULL;	/* and the handle for alternate debug output */
