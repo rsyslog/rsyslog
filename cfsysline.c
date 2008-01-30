@@ -129,8 +129,11 @@ static rsRetVal parseIntVal(uchar **pp, size_t *pVal)
 	}
 
 	/* pull value */
-	for(i = 0 ; *p && isdigit((int) *p) ; ++p)
-		i = i * 10 + *p - '0';
+	for(i = 0 ; *p && (isdigit((int) *p) || *p == '.' || *p == ',')  ; ++p) {
+		if(isdigit((int) *p)) {
+			i = i * 10 + *p - '0';
+		}
+	}
 
 	if(bWasNegative)
 		i *= -1;

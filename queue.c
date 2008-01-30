@@ -235,6 +235,7 @@ queueStartDA(queue_t *pThis)
 	pThis->pqDA->pqParent = pThis;
 
 	CHKiRet(queueSetpUsr(pThis->pqDA, pThis->pUsr));
+	CHKiRet(queueSetiDeqSlowdown(pThis->pqDA, pThis->iDeqSlowdown));
 	CHKiRet(queueSetMaxFileSize(pThis->pqDA, pThis->iMaxFileSize));
 	CHKiRet(queueSetFilePrefix(pThis->pqDA, pThis->pszFilePrefix, pThis->lenFilePrefix));
 	CHKiRet(queueSetiPersistUpdCnt(pThis->pqDA, pThis->iPersistUpdCnt));
@@ -1379,6 +1380,15 @@ queueConsumerReg(queue_t *pThis, wti_t *pWti, int iCancelStateSave)
 	CHKiRet(queueDequeueConsumable(pThis, pWti, iCancelStateSave));
 	CHKiRet(pThis->pConsumer(pThis->pUsr, pWti->pUsrp));
 
+	/* we now need to check if we should deliberately delay processing a bit
+	 * and, if so, do that. -- rgerhards, 2008-01-30
+	 */
+	if(pThis->iDeqSlowdown) {
+		dbgoprint((obj_t*) pThis, "sleeping %d microseconds as requested by config params\n",
+			  pThis->iDeqSlowdown);
+		srSleep(pThis->iDeqSlowdown / 1000000, pThis->iDeqSlowdown % 1000000);
+	}
+
 finalize_it:
 	dbgoprint((obj_t*) pThis, "regular consumer returns %d\n", iRet);
 	RETiRet;
@@ -1985,6 +1995,7 @@ DEFpropSetMeth(queue, bIsDA, int);
 DEFpropSetMeth(queue, iMinMsgsPerWrkr, int);
 DEFpropSetMeth(queue, bSaveOnShutdown, int);
 DEFpropSetMeth(queue, pUsr, void*);
+DEFpropSetMeth(queue, iDeqSlowdown, int);
 
 
 /* This function can be used as a generic way to set properties. Only the subset

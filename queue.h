@@ -80,6 +80,9 @@ typedef struct queue_s {
 	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
 	int	toEnq;		/* enqueue timeout */
+	/* rate limiting settings (will be expanded */
+	int	iDeqSlowdown; /* slow down dequeue by specified nbr of microseconds */
+	/* end rate limiting */
 	rsRetVal (*pConsumer)(void *,void*); /* user-supplied consumer function for dequeued messages */
 	/* calling interface for pConsumer: arg1 is the global user pointer from this structure, arg2 is the
 	 * user pointer that was dequeued (actual sample: for actions, arg1 is the pAction and arg2 is pointer
@@ -174,6 +177,7 @@ PROTOTYPEpropSetMeth(queue, iDiscardSeverity, int);
 PROTOTYPEpropSetMeth(queue, iMinMsgsPerWrkr, int);
 PROTOTYPEpropSetMeth(queue, bSaveOnShutdown, int);
 PROTOTYPEpropSetMeth(queue, pUsr, void*);
+PROTOTYPEpropSetMeth(queue, iDeqSlowdown, int);
 #define queueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

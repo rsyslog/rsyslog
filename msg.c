@@ -328,8 +328,8 @@ msg_t* MsgDup(msg_t* pOld)
 
 	assert(pOld != NULL);
 
-	if((pNew = (msg_t*) calloc(1, sizeof(msg_t))) == NULL) {
-		glblHadMemShortage = 1;
+	BEGINfunc
+	if(msgConstruct(&pNew) != RS_RET_OK) {
 		return NULL;
 	}
 
@@ -364,6 +364,7 @@ msg_t* MsgDup(msg_t* pOld)
 	 * if they are needed once again. So we let them re-create if needed.
 	 */
 
+	ENDfunc
 	return pNew;
 }
 #undef tmpCOPYSZ

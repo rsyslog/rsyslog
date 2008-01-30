@@ -414,6 +414,7 @@ static int iMainMsgQtoActShutdown = 1000;			/* action shutdown (in phase 2) */
 static int iMainMsgQtoEnq = 2000;				/* timeout for queue enque */ 
 static int iMainMsgQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
 static int iMainMsgQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
+static int iMainMsgQDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
 static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
 
 
@@ -528,6 +529,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQtoEnq = 2000;
 	iMainMsgQtoWrkShutdown = 60000;
 	iMainMsgQWrkMinMsgs = 100;
+	iMainMsgQDeqSlowdown = 0;
 	bMainMsgQSaveOnShutdown = 1;
 	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 	glbliActionResumeRetryCount = 0;
@@ -3227,6 +3229,7 @@ init(void)
 	setQPROP(queueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
 	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
 	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
+	setQPROP(queueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", iMainMsgQDeqSlowdown);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -4368,6 +4371,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutactioncompletion", 0, eCmdHdlrInt, NULL, &iMainMsgQtoActShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutenqueue", 0, eCmdHdlrInt, NULL, &iMainMsgQtoEnq, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutworkerthreadshutdown", 0, eCmdHdlrInt, NULL, &iMainMsgQtoWrkShutdown, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &iMainMsgQDeqSlowdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreadminimummessages", 0, eCmdHdlrInt, NULL, &iMainMsgQWrkMinMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQSaveOnShutdown, NULL));
