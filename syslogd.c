@@ -3758,12 +3758,6 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template pointer array */
 		if((pAction->ppTpl = calloc(pAction->iNumTpls, sizeof(struct template *))) == NULL) {
-			glblHadMemShortage = 1;
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
-		/* and now the array for doAction() message pointers */
-		if((pAction->ppMsgs = calloc(pAction->iNumTpls, sizeof(uchar *))) == NULL) {
-			glblHadMemShortage = 1;
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 	}

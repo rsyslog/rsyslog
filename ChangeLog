@@ -25,6 +25,9 @@ Version 3.11.0 (rgerhards), 2008-01-??
   guaranteed delivery of messages (if the output supports it, of course)
 - fixed bug in output module interface, see
   http://sourceforge.net/tracker/index.php?func=detail&aid=1881008&group_id=123448&atid=696552
+- changed the ommysql output plugin so that the (lengthy) connection
+  initialization now takes place in message processing. This works much
+  better with the new queued action mode (fast startup)
 ---------------------------------------------------------------------------
 Version 3.10.3 (rgerhards), 2008-01-28
 - fixed a bug with standard template definitions (not a big deal) - thanks

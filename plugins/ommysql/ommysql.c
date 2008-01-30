@@ -78,7 +78,7 @@ ENDisCompatibleWithFeature
  */
 static void closeMySQL(instanceData *pData)
 {
-	assert(pData != NULL);
+	ASSERT(pData != NULL);
 
 	if(pData->f_hmysql != NULL) {	/* just to be on the safe side... */
 		mysql_server_end();
@@ -113,7 +113,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 	char errMsg[512];
 	unsigned uMySQLErrno;
 
-	assert(pData != NULL);
+	ASSERT(pData != NULL);
 
 	/* output log message */
 	errno = 0;
@@ -143,8 +143,8 @@ static rsRetVal initMySQL(instanceData *pData, int bSilent)
 {
 	DEFiRet;
 
-	assert(pData != NULL);
-	assert(pData->f_hmysql == NULL);
+	ASSERT(pData != NULL);
+	ASSERT(pData->f_hmysql == NULL);
 
 	pData->f_hmysql = mysql_init(NULL);
 	if(pData->f_hmysql == NULL) {
@@ -160,7 +160,7 @@ static rsRetVal initMySQL(instanceData *pData, int bSilent)
 		}
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -172,8 +172,13 @@ rsRetVal writeMySQL(uchar *psz, instanceData *pData)
 {
 	DEFiRet;
 
-	assert(psz != NULL);
-	assert(pData != NULL);
+	ASSERT(psz != NULL);
+	ASSERT(pData != NULL);
+
+	/* see if we are ready to proceed */
+	if(pData->f_hmysql == NULL) {
+		CHKiRet(initMySQL(pData, 0));
+	}
 
 	/* try insert */
 	if(mysql_query(pData->f_hmysql, (char*)psz)) {
@@ -193,7 +198,7 @@ finalize_it:
 		pData->uLastMySQLErrno = 0; /* reset error for error supression */
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -273,7 +278,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		logerror("Trouble with MySQL connection properties. -MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
-		CHKiRet(initMySQL(pData, 0));
+		pData->f_hmysql = NULL; /* initialize, but connect only on first message (important for queued mode!) */
 	}
 
 CODE_STD_FINALIZERparseSelectorAct

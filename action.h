@@ -55,14 +55,13 @@ struct action_s {
 	int	iNumTpls;	/* number of array entries for template element below */
 	struct template **ppTpl;/* array of template to use - strings must be passed to doAction
 				 * in this order. */
-
-	uchar **ppMsgs;		/* array of message pointers for doAction */
 	struct msg* f_pMsg;	/* pointer to the message (this will replace the other vars with msg
 				 * content later). This is preserved after the message has been
 				 * processed - it is also used to detect duplicates.
 				 */
 	queue_t *pQueue;	/* action queue */
 	SYNC_OBJ_TOOL;		/* required for mutex support */
+	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
 };
 typedef struct action_s action_t;
 
