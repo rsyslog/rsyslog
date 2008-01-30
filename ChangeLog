@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.11.0 (rgerhards), 2008-01-??
 - implemented the $ActionResumeRetryCount config directive
+- implemented simple output rate limiting
 - added $ActionQueueFilename config directive
 - added $ActionQueueSize config directive
 - added $ActionQueueHighWaterMark config directive
@@ -17,6 +18,8 @@ Version 3.11.0 (rgerhards), 2008-01-??
 - added $ActionQueueWorkerThreadMinimumMessages config directive
 - added $ActionQueueMaxFileSize config directive
 - added $ActionQueueSaveonShutdown config directive
+- addded $ActionQueueDequeueSlowdown config directive
+- addded $MainMsgQueueDequeueSlowdown config directive
 - bugfix: added forgotten docs to package
 - improved debugging support
 - fixed a bug that caused $MainMsgQueueCheckpointInterval to work incorrectly
