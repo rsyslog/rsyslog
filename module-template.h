@@ -243,8 +243,9 @@ finalize_it:\
 			OMSRdestruct(*ppOMSR);\
 			*ppOMSR = NULL;\
 		}\
-		if(pData != NULL)\
-			freeInstance(&pData);\
+		if(pData != NULL) {\
+			freeInstance(pData);\
+		} \
 	}
 
 #define ENDparseSelectorAct \

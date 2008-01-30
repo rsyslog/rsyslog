@@ -19,6 +19,12 @@ Version 3.11.0 (rgerhards), 2008-01-??
 - added $ActionQueueSaveonShutdown config directive
 - bugfix: added forgotten docs to package
 - improved debugging support
+- fixed a bug that caused $MainMsgQueueCheckpointInterval to work incorrectly
+- when a long-running action needs to be cancelled on shutdown, the message
+  that was processed by it is now preserved. This finishes support for
+  guaranteed delivery of messages (if the output supports it, of course)
+- fixed bug in output module interface, see
+  http://sourceforge.net/tracker/index.php?func=detail&aid=1881008&group_id=123448&atid=696552
 ---------------------------------------------------------------------------
 Version 3.10.3 (rgerhards), 2008-01-28
 - fixed a bug with standard template definitions (not a big deal) - thanks
