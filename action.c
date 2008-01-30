@@ -125,7 +125,7 @@ rsRetVal actionDestruct(action_t *pThis)
 		pThis->pMod->freeInstance(pThis->pModData);
 
 	if(pThis->f_pMsg != NULL)
-		MsgDestruct(&pThis->f_pMsg);
+		msgDestruct(&pThis->f_pMsg);
 
 	SYNC_OBJ_TOOL_EXIT(pThis);
 	if(pThis->ppTpl != NULL)
@@ -394,7 +394,7 @@ finalize_it:
 			pAction->ppMsgs[i] = NULL;
 		}
 	}
-	MsgDestruct(&pMsg); /* we are now finished with the message */
+	msgDestruct(&pMsg); /* we are now finished with the message */
 
 	RETiRet;
 }
@@ -505,7 +505,7 @@ finalize_it:
 		 * message object will be discarded by our callers, so this is nothing
 		 * of our business. rgerhards, 2007-07-10
 		 */
-		MsgDestruct(&pAction->f_pMsg);
+		msgDestruct(&pAction->f_pMsg);
 		pAction->f_pMsg = pMsgSave;	/* restore it */
 	}
 
@@ -522,7 +522,7 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 	DEFiRet;
 	int iCancelStateSave;
 
-	ISOBJ_TYPE_assert(pMsg, Msg);
+	ISOBJ_TYPE_assert(pMsg, msg);
 	ASSERT(pAction != NULL);
 
 	/* Make sure nodbody else modifies/uses this action object. Right now, this
@@ -566,7 +566,7 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 		    pAction->f_prevcount, time(NULL) - pAction->f_time,
 		    repeatinterval[pAction->f_repeatcount]);
 		/* use current message, so we have the new timestamp (means we need to discard previous one) */
-		MsgDestruct(&pAction->f_pMsg);
+		msgDestruct(&pAction->f_pMsg);
 		pAction->f_pMsg = MsgAddRef(pMsg);
 		/* If domark would have logged this by now, flush it now (so we don't hold
 		 * isolated messages), but back off so we'll flush less often in the future.
@@ -586,7 +586,7 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 				/* we do not care about iRet above - I think it's right but if we have
 				 * some troubles, you know where to look at ;) -- rgerhards, 2007-08-01
 				 */
-			MsgDestruct(&pAction->f_pMsg);
+			msgDestruct(&pAction->f_pMsg);
 		}
 		pAction->f_pMsg = MsgAddRef(pMsg);
 		/* call the output driver */

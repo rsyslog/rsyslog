@@ -1271,7 +1271,7 @@ rsRetVal printline(char *hname, char *msg, int bParseHost)
 
 	/* Now it is time to create the message object (rgerhards)
 	*/
-	CHKiRet(MsgConstruct(&pMsg));
+	CHKiRet(msgConstruct(&pMsg));
 	MsgSetRawMsg(pMsg, msg);
 	
 	pMsg->bParseHOSTNAME  = bParseHost;
@@ -1510,7 +1510,7 @@ logmsgInternal(int pri, char *msg, int flags)
 	DEFiRet;
 	msg_t *pMsg;
 
-	CHKiRet(MsgConstruct(&pMsg));
+	CHKiRet(msgConstruct(&pMsg));
 	MsgSetUxTradMsg(pMsg, msg);
 	MsgSetRawMsg(pMsg, msg);
 	MsgSetHOSTNAME(pMsg, LocalHostName);
@@ -1747,7 +1747,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
 	assert(pMsg != NULL);
 
 	processMsg(pMsg);
-	MsgDestruct(&pMsg);
+	msgDestruct(&pMsg);
 
 	RETiRet;
 }
@@ -2167,14 +2167,14 @@ logmsg(int pri, msg_t *pMsg, int flags)
 		dbgprintf("Message has syslog-protocol format.\n");
 		setProtocolVersion(pMsg, 1);
 		if(parseRFCSyslogMsg(pMsg, flags) == 1) {
-			MsgDestruct(&pMsg);
+			msgDestruct(&pMsg);
 			return;
 		}
 	} else { /* we have legacy syslog */
 		dbgprintf("Message has legacy syslog format.\n");
 		setProtocolVersion(pMsg, 0);
 		if(parseLegacySyslogMsg(pMsg, flags) == 1) {
-			MsgDestruct(&pMsg);
+			msgDestruct(&pMsg);
 			return;
 		}
 	}
@@ -4521,7 +4521,7 @@ static rsRetVal InitGlobalClasses(void)
 	DEFiRet;
 
 	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizere called! */
-	CHKiRet(MsgClassInit());
+	CHKiRet(msgClassInit());
 	CHKiRet(strmClassInit());
 	CHKiRet(wtiClassInit());
 	CHKiRet(wtpClassInit());

@@ -116,6 +116,21 @@ rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pH
 	return RS_RET_OK;
 }
 
+/* destruct the base object properties.
+ * rgerhards, 2008-01-29
+ */
+rsRetVal
+objDestructObjSelf(obj_t *pThis)
+{
+	DEFiRet;
+
+	ISOBJ_assert(pThis);
+	if(pThis->pszName != NULL)
+		free(pThis->pszName);
+
+	RETiRet;
+}
+
 
 /* --------------- object serializiation / deserialization support --------------- */
 

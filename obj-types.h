@@ -57,7 +57,7 @@ typedef struct {
 /* object Types/IDs */
 typedef enum {	/* IDs of known object "types/classes" */
 	OBJNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
-	OBJMsg = 1,
+	OBJmsg = 1,
 	OBJstrm = 2,
 	OBJwtp = 3,
 	OBJwti = 4,
@@ -168,6 +168,7 @@ finalize_it: \
 	RETiRet; \
 }
 
+
 /* this defines both the constructor and initializer
  * rgerhards, 2008-01-10
  */
@@ -185,7 +186,7 @@ finalize_it: \
 		DEFiRet; \
 		obj##_t *pThis; \
 	 \
-		assert(ppThis != NULL); \
+		ASSERT(ppThis != NULL); \
 	 \
 		if((pThis = (obj##_t *)calloc(1, sizeof(obj##_t))) == NULL) { \
 			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY); \
@@ -193,9 +194,54 @@ finalize_it: \
 		objConstructSetObjInfo(pThis); \
 	 \
 		obj##Initialize(pThis); \
-	 \
+	\
 	finalize_it: \
 		OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP \
+		RETiRet; \
+	} 
+
+
+/* this defines the destructor. The important point is that the base object
+ * destructor is called. The upper-level class shall destruct all of its
+ * properties, but not the instance itself. This is freed here by the 
+ * framework (we need an intact pointer because we need to free the
+ * obj_t structures inside it). A pointer to the object pointer must be
+ * parse, because it is re-set to NULL (this, for example, is important in
+ * cancellation handlers). The object pointer is always named pThis.
+ * The object is always freed, even if there is some error while
+ * Cancellation is blocked during destructors, as this could have fatal
+ * side-effects. However, this also means the upper-level object should
+ * not perform any lenghty processing.
+ * IMPORTANT: if the upper level object requires some situations where the
+ * object shall not be destructed (e.g. via reference counting), then
+ * it shall set pThis to NULL, which prevents destruction of the
+ * object.
+ * processing.
+ * rgerhards, 2008-01-30
+ */
+#define BEGINobjDestruct(obj) \
+	rsRetVal obj##Destruct(obj##_t **ppThis) \
+	{ \
+		DEFiRet; \
+		int iCancelStateSave; \
+		obj##_t *pThis; 
+
+#define CODESTARTobjDestruct(obj) \
+		ASSERT(ppThis != NULL); \
+		pThis = *ppThis; \
+		ISOBJ_TYPE_assert(pThis, obj); \
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+
+#define ENDobjDestruct(obj) \
+	 	goto finalize_it; /* prevent compiler warning ;) */ \
+	 	/* no more code here! */ \
+	finalize_it: \
+		if(pThis != NULL) { \
+			objDestructObjSelf((obj_t*) pThis); \
+			free(pThis); \
+			*ppThis = NULL; \
+		} \
+		pthread_setcancelstate(iCancelStateSave, NULL); \
 		RETiRet; \
 	} 
 

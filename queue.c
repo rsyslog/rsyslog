@@ -684,7 +684,7 @@ RUNLOG_VAR("%d", iUngottenObjs);
 	while(iUngottenObjs > 0) {
 RUNLOG_VAR("%d", iUngottenObjs);
 		/* fill the queue from disk */
-		CHKiRet(objDeserialize((void*) &pUsr, OBJMsg, psQIF, NULL, NULL));
+		CHKiRet(objDeserialize((void*) &pUsr, OBJmsg, psQIF, NULL, NULL));
 		queueUngetObj(pThis, pUsr, MUTEX_ALREADY_LOCKED);
 		--iUngottenObjs; /* one less */
 	}
@@ -803,7 +803,7 @@ finalize_it:
 
 static rsRetVal qDelDisk(queue_t *pThis, void **ppUsr)
 {
-	return objDeserialize(ppUsr, OBJMsg, pThis->tVars.disk.pRead, NULL, NULL);
+	return objDeserialize(ppUsr, OBJmsg, pThis->tVars.disk.pRead, NULL, NULL);
 }
 
 /* -------------------- direct (no queueing) -------------------- */
@@ -1219,7 +1219,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 			pThis->qConstruct = qConstructLinkedList;
 			pThis->qDestruct = qDestructLinkedList;
 			pThis->qAdd = qAddLinkedList;
-			pThis->qDel = qDelLinkedList;
+			pThis->qDel = (rsRetVal (*)(queue_t*,void**)) qDelLinkedList;
 			break;
 		case QUEUETYPE_DISK:
 			pThis->qConstruct = qConstructDisk;
@@ -1728,15 +1728,8 @@ rsRetVal queueChkPersist(queue_t *pThis)
 
 
 /* destructor for the queue object */
-rsRetVal queueDestruct(queue_t **ppThis)
-{
-	DEFiRet;
-	queue_t *pThis;
-
-	ASSERT(ppThis != NULL);
-	pThis = *ppThis;
-	ISOBJ_TYPE_assert(pThis, queue);
-
+BEGINobjDestruct(queue) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(queue)
 	pThis->bQueueInDestruction = 1; /* indicate we are in destruction (modifies some behaviour) */
 
 	/* shut down all workers (handles *all* of the persistence logic)
@@ -1758,7 +1751,6 @@ rsRetVal queueDestruct(queue_t **ppThis)
 	if(pThis->qType != QUEUETYPE_DIRECT && pThis->pWtpReg != NULL) {
 		wtpDestruct(&pThis->pWtpReg);
 	}
-RUNLOG;
 
 	/* Now check if we actually have a DA queue and, if so, destruct it.
 	 * Note that the wtp must be destructed first, it may be in cancel cleanup handler
@@ -1766,16 +1758,12 @@ RUNLOG;
 	 * data (re-queueing case). So we need to destruct the wtp first, which will make 
 	 * sure all workers have terminated.
 	 */
-RUNLOG_VAR("%p", pThis->pWtpDA);
 	if(pThis->pWtpDA != NULL) {
-RUNLOG;
 		wtpDestruct(&pThis->pWtpDA);
-RUNLOG_VAR("%p", pThis->pqDA);
 	}
 	if(pThis->pqDA != NULL) {
 		queueDestruct(&pThis->pqDA);
 	}
-RUNLOG;
 
 	/* persist the queue (we always do that - queuePersits() does cleanup if the queue is empty)
 	 * This handler is most important for disk queues, it will finally persist the necessary
@@ -1804,13 +1792,7 @@ RUNLOG;
 
 	if(pThis->pszFilePrefix != NULL)
 		free(pThis->pszFilePrefix);
-
-	/* and finally delete the queue objet itself */
-	free(pThis);
-	*ppThis = NULL;
-
-	RETiRet;
-}
+ENDobjDestruct(queue)
 
 
 /* set the queue's file prefix

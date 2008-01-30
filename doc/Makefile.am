@@ -10,6 +10,7 @@ html_files = \
 	man_rsyslogd.html \
 	modules.html \
 	property_replacer.html \
+	rsyslog_ng_comparison.html \
 	rsyslog_conf.html \
 	rsyslog_mysql.html \
 	rsyslog_packages.html \

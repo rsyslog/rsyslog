@@ -49,7 +49,7 @@ static rsRetVal iminternalDestruct(iminternal_t *pThis)
 	assert(pThis != NULL);
 
 	if(pThis->pMsg != NULL)
-		MsgDestruct(&pThis->pMsg);
+		msgDestruct(&pThis->pMsg);
 
 	free(pThis);
 

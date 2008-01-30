@@ -106,10 +106,10 @@ typedef struct msg msg_t;	/* new name */
 
 /* function prototypes
  */
-PROTOTYPEObjClassInit(Msg);
+PROTOTYPEObjClassInit(msg);
 char* getProgramName(msg_t*);
-rsRetVal MsgConstruct(msg_t **ppThis);
-rsRetVal MsgDestruct(msg_t **ppM);
+rsRetVal msgConstruct(msg_t **ppThis);
+rsRetVal msgDestruct(msg_t **ppM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);
 void setProtocolVersion(msg_t *pM, int iNewVersion);

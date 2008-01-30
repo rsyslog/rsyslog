@@ -324,15 +324,8 @@ finalize_it:
 
 
 /* destructor for the strm object */
-rsRetVal strmDestruct(strm_t **ppThis)
-{
-	strm_t *pThis;
-	DEFiRet;
-
-	assert(ppThis != NULL);
-	pThis = *ppThis;
-	ISOBJ_TYPE_assert(pThis, strm);
-
+BEGINobjDestruct(strm) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(strm)
 	if(pThis->tOperationsMode == STREAMMODE_WRITE)
 		strmFlush(pThis);
 
@@ -342,13 +335,7 @@ rsRetVal strmDestruct(strm_t **ppThis)
 
 	if(pThis->pszDir != NULL)
 		free(pThis->pszDir);
-
-	/* and finally delete the strm objet itself */
-	free(pThis);
-	*ppThis = NULL;
-
-	RETiRet;
-}
+ENDobjDestruct(strm)
 
 
 /* check if we need to open a new file (in output mode only).

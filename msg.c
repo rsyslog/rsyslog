@@ -202,9 +202,9 @@ rsRetVal MsgEnableThreadSafety(void)
 /* "Constructor" for a msg "object". Returns a pointer to
  * the new object or NULL if no such object could be allocated.
  * An object constructed via this function should only be destroyed
- * via "MsgDestruct()".
+ * via "msgDestruct()".
  */
-rsRetVal MsgConstruct(msg_t **ppThis)
+rsRetVal msgConstruct(msg_t **ppThis)
 {
 	DEFiRet;
 	msg_t *pM;
@@ -220,7 +220,7 @@ rsRetVal MsgConstruct(msg_t **ppThis)
 	getCurrTime(&(pM->tRcvdAt));
 	objConstructSetObjInfo(pM);
 
-	/* DEV debugging only! dbgprintf("MsgConstruct\t0x%x, ref 1\n", (int)pM);*/
+	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
 
 	*ppThis = pM;
 
@@ -229,75 +229,65 @@ finalize_it:
 }
 
 
-/* Destructor for a msg "object". Must be called to dispose
- * of a msg object.
- */
-rsRetVal MsgDestruct(msg_t **ppM)
-{ 
-	msg_t *pM;
-
-	assert(ppM != NULL);
-	pM = *ppM;
-	assert(pM != NULL);
-	/* DEV Debugging only ! dbgprintf("MsgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); */
-	if(--pM->iRefCount == 0)
+BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(msg)
+	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); */
+	if(--pThis->iRefCount == 0)
 	{
-		/* DEV Debugging Only! dbgprintf("MsgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pM); */
-		if(pM->pszUxTradMsg != NULL)
-			free(pM->pszUxTradMsg);
-		if(pM->pszRawMsg != NULL)
-			free(pM->pszRawMsg);
-		if(pM->pszTAG != NULL)
-			free(pM->pszTAG);
-		if(pM->pszHOSTNAME != NULL)
-			free(pM->pszHOSTNAME);
-		if(pM->pszRcvFrom != NULL)
-			free(pM->pszRcvFrom);
-		if(pM->pszMSG != NULL)
-			free(pM->pszMSG);
-		if(pM->pszFacility != NULL)
-			free(pM->pszFacility);
-		if(pM->pszFacilityStr != NULL)
-			free(pM->pszFacilityStr);
-		if(pM->pszSeverity != NULL)
-			free(pM->pszSeverity);
-		if(pM->pszSeverityStr != NULL)
-			free(pM->pszSeverityStr);
-		if(pM->pszRcvdAt3164 != NULL)
-			free(pM->pszRcvdAt3164);
-		if(pM->pszRcvdAt3339 != NULL)
-			free(pM->pszRcvdAt3339);
-		if(pM->pszRcvdAt_MySQL != NULL)
-			free(pM->pszRcvdAt_MySQL);
-		if(pM->pszRcvdAt_PgSQL != NULL)
-			free(pM->pszRcvdAt_PgSQL);
-		if(pM->pszTIMESTAMP3164 != NULL)
-			free(pM->pszTIMESTAMP3164);
-		if(pM->pszTIMESTAMP3339 != NULL)
-			free(pM->pszTIMESTAMP3339);
-		if(pM->pszTIMESTAMP_MySQL != NULL)
-			free(pM->pszTIMESTAMP_MySQL);
-		if(pM->pszTIMESTAMP_PgSQL != NULL)
-			free(pM->pszTIMESTAMP_PgSQL);
-		if(pM->pszPRI != NULL)
-			free(pM->pszPRI);
-		if(pM->pCSProgName != NULL)
-			rsCStrDestruct(pM->pCSProgName);
-		if(pM->pCSStrucData != NULL)
-			rsCStrDestruct(pM->pCSStrucData);
-		if(pM->pCSAPPNAME != NULL)
-			rsCStrDestruct(pM->pCSAPPNAME);
-		if(pM->pCSPROCID != NULL)
-			rsCStrDestruct(pM->pCSPROCID);
-		if(pM->pCSMSGID != NULL)
-			rsCStrDestruct(pM->pCSMSGID);
-		funcDeleteMutex(pM);
-		free(pM);
-		*ppM = NULL;
+		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
+		if(pThis->pszUxTradMsg != NULL)
+			free(pThis->pszUxTradMsg);
+		if(pThis->pszRawMsg != NULL)
+			free(pThis->pszRawMsg);
+		if(pThis->pszTAG != NULL)
+			free(pThis->pszTAG);
+		if(pThis->pszHOSTNAME != NULL)
+			free(pThis->pszHOSTNAME);
+		if(pThis->pszRcvFrom != NULL)
+			free(pThis->pszRcvFrom);
+		if(pThis->pszMSG != NULL)
+			free(pThis->pszMSG);
+		if(pThis->pszFacility != NULL)
+			free(pThis->pszFacility);
+		if(pThis->pszFacilityStr != NULL)
+			free(pThis->pszFacilityStr);
+		if(pThis->pszSeverity != NULL)
+			free(pThis->pszSeverity);
+		if(pThis->pszSeverityStr != NULL)
+			free(pThis->pszSeverityStr);
+		if(pThis->pszRcvdAt3164 != NULL)
+			free(pThis->pszRcvdAt3164);
+		if(pThis->pszRcvdAt3339 != NULL)
+			free(pThis->pszRcvdAt3339);
+		if(pThis->pszRcvdAt_MySQL != NULL)
+			free(pThis->pszRcvdAt_MySQL);
+		if(pThis->pszRcvdAt_PgSQL != NULL)
+			free(pThis->pszRcvdAt_PgSQL);
+		if(pThis->pszTIMESTAMP3164 != NULL)
+			free(pThis->pszTIMESTAMP3164);
+		if(pThis->pszTIMESTAMP3339 != NULL)
+			free(pThis->pszTIMESTAMP3339);
+		if(pThis->pszTIMESTAMP_MySQL != NULL)
+			free(pThis->pszTIMESTAMP_MySQL);
+		if(pThis->pszTIMESTAMP_PgSQL != NULL)
+			free(pThis->pszTIMESTAMP_PgSQL);
+		if(pThis->pszPRI != NULL)
+			free(pThis->pszPRI);
+		if(pThis->pCSProgName != NULL)
+			rsCStrDestruct(pThis->pCSProgName);
+		if(pThis->pCSStrucData != NULL)
+			rsCStrDestruct(pThis->pCSStrucData);
+		if(pThis->pCSAPPNAME != NULL)
+			rsCStrDestruct(pThis->pCSAPPNAME);
+		if(pThis->pCSPROCID != NULL)
+			rsCStrDestruct(pThis->pCSPROCID);
+		if(pThis->pCSMSGID != NULL)
+			rsCStrDestruct(pThis->pCSMSGID);
+		funcDeleteMutex(pThis);
+	} else {
+		pThis = NULL; /* tell framework not to destructing the object! */
 	}
-
-	return RS_RET_OK;
-}
+ENDobjDestruct(msg)
 
 
 /* The macros below are used in MsgDup(). I use macros
@@ -307,7 +297,7 @@ rsRetVal MsgDestruct(msg_t **ppM)
 #define tmpCOPYSZ(name) \
 	if(pOld->psz##name != NULL) { \
 		if((pNew->psz##name = srUtilStrDup(pOld->psz##name, pOld->iLen##name)) == NULL) {\
-			MsgDestruct(&pNew);\
+			msgDestruct(&pNew);\
 			return NULL;\
 		}\
 		pNew->iLen##name = pOld->iLen##name;\
@@ -320,7 +310,7 @@ rsRetVal MsgDestruct(msg_t **ppM)
 #define tmpCOPYCSTR(name) \
 	if(pOld->pCS##name != NULL) {\
 		if(rsCStrConstructFromCStr(&(pNew->pCS##name), pOld->pCS##name) != RS_RET_OK) {\
-			MsgDestruct(&pNew);\
+			msgDestruct(&pNew);\
 			return NULL;\
 		}\
 	}
@@ -2095,7 +2085,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, property_t *pProp)
 {
 	DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, Msg);
+	ISOBJ_TYPE_assert(pThis, msg);
 	assert(pProp != NULL);
 
  	if(isProp("iProtocolVersion")) {
@@ -2142,7 +2132,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, property_t *pProp)
  * is done, the object is considered ready for full processing.
  * rgerhards, 2008-07-08
  */
-static rsRetVal MsgConstructFinalizer(msg_t *pThis)
+static rsRetVal msgConstructFinalizer(msg_t *pThis)
 {
 	MsgPrepareEnqueue(pThis);
 	return RS_RET_OK;
@@ -2156,7 +2146,7 @@ static rsRetVal MsgConstructFinalizer(msg_t *pThis)
 static rsRetVal
 MsgGetSeverity(obj_t *pThis, int *piSeverity)
 {
-	ISOBJ_TYPE_assert(pThis, Msg);
+	ISOBJ_TYPE_assert(pThis, msg);
 	assert(piSeverity != NULL);
 	*piSeverity = ((msg_t*) pThis)->iSeverity;
 	return RS_RET_OK;
@@ -2167,17 +2157,17 @@ MsgGetSeverity(obj_t *pThis, int *piSeverity)
  * before anything else is called inside this class.
  * rgerhards, 2008-01-04
  */
-BEGINObjClassInit(Msg, 1)
+BEGINObjClassInit(msg, 1)
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, MsgSetProperty);
-	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, MsgConstructFinalizer);
+	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, msgConstructFinalizer);
 	OBJSetMethodHandler(objMethod_GETSEVERITY, MsgGetSeverity);
 	/* initially, we have no need to lock message objects */
 	funcLock = MsgLockingDummy;
 	funcUnlock = MsgLockingDummy;
 	funcDeleteMutex = MsgLockingDummy;
 	funcMsgPrepareEnqueue = MsgLockingDummy;
-ENDObjClassInit(Msg)
+ENDObjClassInit(msg)
 
 /*
  * vi:set ai:

@@ -144,19 +144,8 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 
 
 /* Destructor */
-rsRetVal wtiDestruct(wti_t **ppThis)
-{
-	DEFiRet;
-	wti_t *pThis;
-	int iCancelStateSave;
-
-	assert(ppThis != NULL);
-	pThis = *ppThis;
-	ISOBJ_TYPE_assert(pThis, wti);
-
-	/* we can not be canceled, that would have a myriad of side-effects */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-
+BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(wti)
 	/* if we reach this point, we must make sure the associated worker has terminated. It is
 	 * the callers duty to make sure the worker already knows it shall terminate.
 	 * TODO: is it *really* the caller's duty? ...mmmhhhh.... smells bad... rgerhards, 2008-01-25
@@ -180,16 +169,7 @@ rsRetVal wtiDestruct(wti_t **ppThis)
 
 	if(pThis->pszDbgHdr != NULL)
 		free(pThis->pszDbgHdr);
-
-	/* and finally delete the wti object itself */
-	free(pThis);
-	*ppThis = NULL;
-
-	/* back to normal */
-	pthread_setcancelstate(iCancelStateSave, NULL);
-
-	RETiRet;
-}
+ENDobjDestruct(wti)
 
 
 /* Standard-Constructor for the wti object

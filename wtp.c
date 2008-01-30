@@ -125,21 +125,9 @@ finalize_it:
 
 
 /* Destructor */
-rsRetVal
-wtpDestruct(wtp_t **ppThis)
-{
-	DEFiRet;
-	wtp_t *pThis;
-	int iCancelStateSave;
+BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODESTART macros! */
 	int i;
-
-	assert(ppThis != NULL);
-	pThis = *ppThis;
-	ISOBJ_TYPE_assert(pThis, wtp);
-
-	/* we can not be canceled, that would have a myriad of side-effects */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-
+CODESTARTobjDestruct(wtp)
 	/* destruct workers */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i)
 		wtiDestruct(&pThis->pWrkr[i]);
@@ -153,16 +141,7 @@ wtpDestruct(wtp_t **ppThis)
 
 	if(pThis->pszDbgHdr != NULL)
 		free(pThis->pszDbgHdr);
-
-	/* and finally delete the queue objet itself */
-	free(pThis);
-	*ppThis = NULL;
-
-	/* back to normal */
-	pthread_setcancelstate(iCancelStateSave, NULL);
-
-	RETiRet;
-}
+ENDobjDestruct(wtp)
 
 
 /* wake up at least one worker thread.

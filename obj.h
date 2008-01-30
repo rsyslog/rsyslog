@@ -87,6 +87,7 @@
 
 /* prototypes */
 rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *));
+rsRetVal objDestructObjSelf(obj_t *pThis);
 rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
 rsRetVal objBeginSerializePropBag(strm_t *pStrm, obj_t *pObj);
 rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj);
