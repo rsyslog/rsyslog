@@ -188,7 +188,7 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 					int eno = errno;
 					char errStr[1024];
 					dbgprintf("sendto() error: %d = %s.\n",
-						eno, strerror_r(eno, errStr, sizeof(errStr)));
+						eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
 				}
 			}
 			if (lsent == len && !send_to_all)

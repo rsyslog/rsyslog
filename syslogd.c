@@ -2341,7 +2341,7 @@ void logerror(char *type)
 	if (errno == 0)
 		snprintf(buf, sizeof(buf), "%s", type);
 	else {
-		strerror_r(errno, errStr, sizeof(errStr));
+		rs_strerror_r(errno, errStr, sizeof(errStr));
 		snprintf(buf, sizeof(buf), "%s: %s", type, errStr);
 	}
 	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
@@ -3045,7 +3045,7 @@ finalize_it:
 		if(fCurr != NULL)
 			selectorDestruct(fCurr);
 
-		strerror_r(errno, errStr, sizeof(errStr));
+		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
 			iRet, pConfFile, errStr);
 	}
@@ -4131,6 +4131,20 @@ int decode(uchar *name, struct code *codetab)
 	return (-1);
 }
 
+
+
+char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
+#ifdef STRERROR_R_CHAR_P
+	char *p = strerror_r(errnum, buf, buflen);
+	if (p != buf) {
+		strncpy(buf, p, buflen);
+		buf[buflen - 1] = '\0';
+	}
+#else
+	strerror_r(errnum, buf, buflen);
+#endif
+	return buf;
+}
 
 
 /*
