@@ -39,6 +39,21 @@
 #include <fcntl.h>
 #endif
 
+
+static char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
+#ifdef STRERROR_R_CHAR_P
+	char *p = strerror_r(errnum, buf, buflen);
+	if (p != buf) {
+		strncpy(buf, p, buflen);
+		buf[buflen - 1] = '\0';
+	}
+#else
+	strerror_r(errnum, buf, buflen);
+#endif
+	return buf;
+}
+
+
 /* read_pid
  *
  * Reads the specified pidfile and returns the read pid.
@@ -120,7 +135,7 @@ int write_pid (char *pidfile)
   pid = getpid();
   if (!fprintf(f,"%d\n", pid)) {
       char errStr[1024];
-      strerror_r(errno, errStr, sizeof(errStr));
+      rs_strerror_r(errno, errStr, sizeof(errStr));
       printf("Can't write pid , %s.\n", errStr);
       close(fd);
       return 0;
@@ -130,7 +145,7 @@ int write_pid (char *pidfile)
 #ifndef	__sun
   if (flock(fd, LOCK_UN) == -1) {
       char errStr[1024];
-      strerror_r(errno, errStr, sizeof(errStr));
+      rs_strerror_r(errno, errStr, sizeof(errStr));
       printf("Can't unlock pidfile %s, %s.\n", pidfile, errStr);
       close(fd);
       return 0;
