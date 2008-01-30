@@ -67,6 +67,7 @@ static int iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdow
 static int iActionQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int bActionQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
 static int iActionQueueDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
+static size_t iActionQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
 
 /* the counter below counts actions created. It is used to obtain unique IDs for the action. They
  * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
@@ -105,6 +106,7 @@ actionResetQueueParams(void)
 	iActionQWrkMinMsgs = 100;			/* minimum messages per worker needed to start a new one */
 	bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
 	iActionQueueDeqSlowdown = 0;
+	iActionQueMaxDiskSpace = 0;
 
 	if(pszActionQFName != NULL)
 		free(pszActionQFName);
@@ -200,6 +202,7 @@ actionConstructFinalize(action_t *pThis)
 	}
 
 	queueSetpUsr(pThis->pQueue, pThis);
+	setQPROP(queueSetsizeOnDiskMax, "$ActionQueueMaxDiskSpace", iActionQueMaxDiskSpace);
 	setQPROP(queueSetMaxFileSize, "$ActionQueueFileSize", iActionQueMaxFileSize);
 	setQPROPstr(queueSetFilePrefix, "$ActionQueueFileName", pszActionQFName);
 	setQPROP(queueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", iActionQPersistUpdCnt);
@@ -217,6 +220,9 @@ actionConstructFinalize(action_t *pThis)
 
 #	undef setQPROP
 #	undef setQPROPstr
+
+	dbgoprint((obj_t*) pThis->pQueue, "save on shutdown %d, max disk space allowed %ld\n",
+		   bActionQSaveOnShutdown, iActionQueMaxDiskSpace);
 
 	CHKiRet(queueStart(pThis->pQueue));
 	dbgprintf("Action %p: queue %p created\n", pThis, pThis->pQueue);
@@ -635,6 +641,7 @@ actionAddCfSysLineHdrl(void)
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszActionQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesize", 0, eCmdHdlrInt, NULL, &iActionQueueSize, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iActionQueMaxDiskSpace, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iActionQHighWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuelowwatermark", 0, eCmdHdlrInt, NULL, &iActionQLowWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardmark", 0, eCmdHdlrInt, NULL, &iActionQDiscardMark, NULL));

@@ -114,6 +114,7 @@ typedef struct queue_s {
 	size_t lenFilePrefix;
 	int iNumberFiles;	/* how many files make up the queue? */
 	size_t iMaxFileSize;	/* max size for a single queue file */
+	size_t sizeOnDiskMax; /* maximum size on disk allowed */
 	int bIsDA;		/* is this queue disk assisted? */
 	int bRunsDA;		/* is this queue actually *running* disk assisted? */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
@@ -136,6 +137,8 @@ typedef struct queue_s {
 			qLinkedList_t *pLast;
 		} linklist;
 		struct {
+			size_t sizeOnDisk; /* current amount of disk space used */
+			size_t bytesRead;  /* number of bytes read from current (undeleted!) file */
 			strm_t *pWrite; /* current file to be written */
 			strm_t *pRead;  /* current file to be read */
 		} disk;
@@ -178,6 +181,7 @@ PROTOTYPEpropSetMeth(queue, iMinMsgsPerWrkr, int);
 PROTOTYPEpropSetMeth(queue, bSaveOnShutdown, int);
 PROTOTYPEpropSetMeth(queue, pUsr, void*);
 PROTOTYPEpropSetMeth(queue, iDeqSlowdown, int);
+PROTOTYPEpropSetMeth(queue, sizeOnDiskMax, long);
 #define queueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

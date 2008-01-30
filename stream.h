@@ -107,6 +107,7 @@ rsRetVal strmRecordBegin(strm_t *pThis);
 rsRetVal strmRecordEnd(strm_t *pThis);
 rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm);
 rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal);
+rsRetVal strmGetCurrOffset(strm_t *pThis, size_t *pOffs);
 PROTOTYPEObjClassInit(strm);
 PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
 PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);

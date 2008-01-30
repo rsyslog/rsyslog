@@ -416,6 +416,7 @@ static int iMainMsgQtoWrkShutdown = 60000;			/* timeout for worker thread shutdo
 static int iMainMsgQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int iMainMsgQDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
 static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
+static size_t iMainMsgQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
 
 
 /* This structure represents the files that will have log
@@ -532,6 +533,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQDeqSlowdown = 0;
 	bMainMsgQSaveOnShutdown = 1;
 	MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
+	iMainMsgQueMaxDiskSpace = 0;
 	glbliActionResumeRetryCount = 0;
 
 	return RS_RET_OK;
@@ -2940,12 +2942,15 @@ static void dbgPrintInitInfo(void)
 		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
 	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
 		   iMainMsgQHighWtrMark, iMainMsgQLowWtrMark, iMainMsgQDiscardMark, iMainMsgQDiscardSeverity);
+	dbgprintf("Main queue save on shutdown %d, max disk space allowed %ld\n",
+		   bMainMsgQSaveOnShutdown, iMainMsgQueMaxDiskSpace);
 	/* TODO: add
 	iActionRetryCount = 0;
 	iActionRetryInterval = 30000;
 	static int iMainMsgQtoWrkShutdown = 60000;
 	static int iMainMsgQtoWrkMinMsgs = 100;	
 	static int iMainMsgQbSaveOnShutdown = 1;
+	iMainMsgQueMaxDiskSpace = 0;
 	setQPROP(queueSettoWrkShutdown, "$MainMsgQueueTimeoutWorkerThreadShutdown", 5000);
 	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
 	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
@@ -3217,6 +3222,7 @@ init(void)
 	}
 
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
+	setQPROP(queueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", iMainMsgQueMaxDiskSpace);
 	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName", pszMainMsgQFName);
 	setQPROP(queueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
 	setQPROP(queueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
@@ -4374,6 +4380,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &iMainMsgQDeqSlowdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreadminimummessages", 0, eCmdHdlrInt, NULL, &iMainMsgQWrkMinMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxDiskSpace, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQSaveOnShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));
