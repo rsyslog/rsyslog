@@ -120,6 +120,7 @@ char *getFwdSyslogPt(instanceData *pData)
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->sock = -1;
 ENDcreateInstance
 
 
@@ -269,8 +270,8 @@ static rsRetVal TCPSendInit(void *pvData)
 	instanceData *pData = (instanceData *) pvData;
 
 	assert(pData != NULL);
-	if(pData->sock <= 0) {
-		if((pData->sock = TCPSendCreateSocket(pData->f_addr)) <= 0)
+	if(pData->sock < 0) {
+		if((pData->sock = TCPSendCreateSocket(pData->f_addr)) < 0)
 			iRet = RS_RET_TCP_SOCKCREATE_ERR;
 	}
 

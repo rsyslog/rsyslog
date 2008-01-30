@@ -361,6 +361,7 @@ static void prepareFile(instanceData *pData, uchar *newFileName)
 		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 				pData->fCreateMode);
 	} else {
+		pData->fd = -1;
 		/* file does not exist, create it (and eventually parent directories */
 		if(pData->bCreateDirs) {
 			/* we fist need to create parent dirs if they are missing
@@ -602,6 +603,7 @@ finalize_it:
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->fd = -1;
 ENDcreateInstance
 
 
