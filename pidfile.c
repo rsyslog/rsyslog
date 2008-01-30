@@ -23,7 +23,6 @@
 
 
 #include "rsyslog.h"
-#include "syslogd.h"
 
 /*
  * Sat Aug 19 13:24:33 MET DST 1995: Martin Schulze
