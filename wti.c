@@ -321,6 +321,7 @@ wtiWorker(wti_t *pThis)
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
 	dbgSetThrdName(pThis->pszDbgHdr);
+	pThis->pUsrp = NULL;
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);
