@@ -34,6 +34,24 @@ development and quite unstable...). So you have been warned ;)</p>
 it is usually well-choosen and applicable in most cases.</p>
 <ul>
 	<li><a href="rsconf1_actionexeconlyifpreviousissuspended.html">$ActionExecOnlyIfPreviousIsSuspended</a></li>
+	<li>$ActionQueueCheckpointInterval &lt;number&gt;</li>
+	<li>$ActionQueueDiscardMark &lt;number&gt; [default 9750]</li>
+	<li>$ActionQueueDiscardSeverity &lt;number&gt; [*numerical* severity! default 4 (warning)]</li>
+	<li>$ActionQueueFileName &lt;name&gt;</li>
+	<li>$ActionQueueHighWaterMark &lt;number&gt; [default 8000]</li>
+	<li>$ActionQueueImmediateShutdown [on/<b>off</b>]</li>
+	<li>$ActionQueueSize &lt;number&gt;</li>
+	<li>$ActionQueueLowWaterMark &lt;number&gt; [default 2000]</li>
+	<li>$ActionQueueMaxFileSize &lt;size_nbr&gt;, default 1m</li>
+	<li>$ActionQueueTimeoutActionCompletion &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 1000, 0 means immediate!]</li>
+	<li>$ActionQueueTimeoutEnqueue &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite]</li>
+	<li>$ActionQueueTimeoutShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 0 (indefinite)]</li>
+	<li>$ActionQueueTimeoutWorkerThreadShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)]</li>
+	<li>$ActionQueueType [FixedArray/LinkedList/<b>Direct</b>/Disk]</li>
+	<li>$ActionQueueSaveOnShutdown&nbsp; [on/<b>off</b>] 
+	<li>$ActionQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
+	recommended 1</li>
+	<li>$ActionQueueWorkerThreadMinumumMessages &lt;number&gt;, default 100</li>
 	<li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
 	<li>$AddUnixListenSocket &lt;name-of-socket&gt; adds additional unix socket, 
 	default none -- former -a option</li>
@@ -77,7 +95,7 @@ it is usually well-choosen and applicable in most cases.</p>
 	<li>$MainMsgQueueTimeoutShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 0 (indefinite)]</li>
 	<li>$MainMsgQueueTimeoutWorkerThreadShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)]</li>
 	<li>$MainMsgQueueType [<b>FixedArray</b>/LinkedList/Direct/Disk]</li>
-	<li>$MainMsgQueueSaveOnShutdown (imklog)&nbsp; [on/<b>off</b>] -- former klogd 
+	<li>$MainMsgQueueSaveOnShutdown&nbsp; [on/<b>off</b>] 
 	<li>$MainMsgQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
 	recommended 1</li>
 	<li>$MainMsgQueueWorkerThreadMinumumMessages &lt;number&gt;, default 100</li>
