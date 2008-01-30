@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.10.4 (rgerhards), 2008-01-??
+Version 3.11.0 (rgerhards), 2008-01-??
 - implemented the $ActionResumeRetryCount config directive
 - added $ActionQueueFilename config directive
 - added $ActionQueueSize config directive
