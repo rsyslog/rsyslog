@@ -4132,21 +4132,6 @@ int decode(uchar *name, struct code *codetab)
 }
 
 
-
-char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
-#ifdef STRERROR_R_CHAR_P
-	char *p = strerror_r(errnum, buf, buflen);
-	if (p != buf) {
-		strncpy(buf, p, buflen);
-		buf[buflen - 1] = '\0';
-	}
-#else
-	strerror_r(errnum, buf, buflen);
-#endif
-	return buf;
-}
-
-
 /*
  * The following function is resposible for handling a SIGHUP signal.  Since
  * we are now doing mallocs/free as part of init we had better not being

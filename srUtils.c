@@ -389,6 +389,37 @@ srSleep(int iSeconds, int iuSeconds)
 	select(0, NULL, NULL, NULL, &tvSelectTimeout);
 	ENDfunc
 }
+
+
+/* From varmojfekoj's mail on why he provided rs_strerror_r():
+ * There are two problems with strerror_r():
+ * I see you've rewritten some of the code which calls it to use only
+ * the supplied buffer; unfortunately the GNU implementation sometimes
+ * doesn't use the buffer at all and returns a pointer to some
+ * immutable string instead, as noted in the man page.
+ *
+ * The other problem is that on some systems strerror_r() has a return
+ * type of int.
+ *
+ * So I've written a wrapper function rs_strerror_r(), which should
+ * take care of all this and be used instead.
+ *
+ * Added 2008-01-30
+ */
+char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
+#ifdef STRERROR_R_CHAR_P
+	char *p = strerror_r(errnum, buf, buflen);
+	if (p != buf) {
+		strncpy(buf, p, buflen);
+		buf[buflen - 1] = '\0';
+	}
+#else
+	strerror_r(errnum, buf, buflen);
+#endif
+	return buf;
+}
+
+
 /*
  * vi:set ai:
  */

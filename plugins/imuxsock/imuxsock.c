@@ -38,6 +38,7 @@
 #include "syslogd.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "srUtils.h"
 
 MODULE_TYPE_INPUT
 
@@ -169,7 +170,7 @@ static rsRetVal readSocket(int fd, int bParseHost)
 		printchopped(LocalHostName, line, iRcvd,  fd, bParseHost);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
-		strerror_r(errno, errStr, sizeof(errStr));
+		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
 		logerror("recvfrom UNIX");
 	}

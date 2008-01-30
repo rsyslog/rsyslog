@@ -37,6 +37,7 @@
 #include "net.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "srUtils.h"
 
 MODULE_TYPE_INPUT
 
@@ -200,7 +201,7 @@ CODESTARTrunInput
 					       }
 				       } else if (l < 0 && errno != EINTR && errno != EAGAIN) {
 						char errStr[1024];
-						strerror_r(errno, errStr, sizeof(errStr));
+						rs_strerror_r(errno, errStr, sizeof(errStr));
 						dbgprintf("INET socket error: %d = %s.\n", errno, errStr);
 						       logerror("recvfrom inet");
 						       /* should be harmless */

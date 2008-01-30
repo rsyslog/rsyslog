@@ -53,6 +53,7 @@
 #include "syslogd-types.h"
 #include "net.h"
 #include "parse.h"
+#include "srUtils.h"
 
 /* support for defining allowed TCP and UDP senders. We use the same
  * structure to implement this (a linked list), but we define two different

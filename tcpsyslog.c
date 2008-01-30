@@ -53,6 +53,7 @@
 #include "gss-misc.h"
 #endif
 #include "tcpsyslog.h"
+#include "srUtils.h"
 /********************************************************************
  *                    ###  SYSLOG/TCP CODE ###
  * This is code for syslog/tcp. This code would belong to a separate

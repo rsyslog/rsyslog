@@ -70,6 +70,7 @@ rsRetVal timeoutComp(struct timespec *pt, long iTimeout);
 long timeoutVal(struct timespec *pt);
 void mutexCancelCleanup(void *arg);
 void srSleep(int iSeconds, int iuSeconds);
+char *rs_strerror_r(int errnum, char *buf, size_t buflen);
 
 /* mutex operations */
 /* some macros to cancel-safe lock a mutex (it will automatically be released
