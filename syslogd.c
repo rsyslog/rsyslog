@@ -3435,6 +3435,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 		}
 
 		if (pri < 0) {
+dbgPrintAllDebugInfo();
 			snprintf((char*) xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
 			logerror((char*) xbuf);
 			return RS_RET_ERR;

@@ -103,9 +103,10 @@ finalize_it:
  */
 static rsRetVal parseIntVal(uchar **pp, size_t *pVal)
 {
-	uchar *p;
 	DEFiRet;
+	uchar *p;
 	size_t i;	
+	int bWasNegative;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -113,6 +114,13 @@ static rsRetVal parseIntVal(uchar **pp, size_t *pVal)
 	
 	skipWhiteSpace(pp); /* skip over any whitespace */
 	p = *pp;
+
+	if(*p == '-') {
+		bWasNegative = 1;
+		++p; /* eat it */
+	} else {
+		bWasNegative = 0;
+	}
 
 	if(!isdigit((int) *p)) {
 		errno = 0;
@@ -123,6 +131,9 @@ static rsRetVal parseIntVal(uchar **pp, size_t *pVal)
 	/* pull value */
 	for(i = 0 ; *p && isdigit((int) *p) ; ++p)
 		i = i * 10 + *p - '0';
+
+	if(bWasNegative)
+		i *= -1;
 
 	*pVal = i;
 	*pp = p;

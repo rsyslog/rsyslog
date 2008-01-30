@@ -345,10 +345,19 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 
 	iRetries = 0;
 	do {
-RUNLOG_STR("going into do_action call loop");
+RUNLOG_VAR("%d", iRet);
+		/* on first invocation, this if should never be true. We just put it at the top
+		 * of the loop so that processing (and code) is simplified. This code is actually
+		 * triggered on the 2nd+ invocation. -- rgerhards, 2008-01-30
+		 */
+		if(iRet == RS_RET_SUSPENDED) {
+			/* ok, this calls for our retry logic... */
+			++iRetries;
+			iSleepPeriod = pAction->iResumeInterval;
+			srSleep(iSleepPeriod, 0);
+		}
 RUNLOG_VAR("%d", iRetries);
 		/* first check if we are suspended and, if so, retry */
-		ASSERT(pAction != NULL);
 		if(actionIsSuspended(pAction)) {
 dbgprintf("action %p is suspended\n", pAction);
 			iRet = actionTryResume(pAction);
@@ -360,17 +369,8 @@ RUNLOG_STR("calling configured action\n");
 			iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pMsg->msgFlags, pAction->pModData);
 		}
 
-RUNLOG_VAR("%d", iRet);
-		if(iRet == RS_RET_SUSPENDED) {
-			/* ok, this calls for our retry logic... */
-			++iRetries;
-			iSleepPeriod = pAction->iResumeInterval;
-RUNLOG_VAR("%d", iSleepPeriod);
-			srSleep(iSleepPeriod, 0);
-		} else {
-			break; /* we are done in any case */
-		}
-	} while(pAction->iResumeRetryCount == -1 || iRetries < pAction->iResumeRetryCount); /* do...while! */
+RUNLOG_VAR("%d", pAction->iResumeRetryCount);
+	} while(iRet == RS_RET_SUSPENDED && (pAction->iResumeRetryCount == -1 || iRetries < pAction->iResumeRetryCount)); /* do...while! */
 RUNLOG_STR("out of retry loop");
 
 	if(iRet == RS_RET_DISABLE_ACTION) {
