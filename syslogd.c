@@ -3563,7 +3563,7 @@ void logerror(char *type)
 	if (errno == 0)
 		snprintf(buf, sizeof(buf), "%s", type);
 	else {
-		strerror_r(errno, errStr, sizeof(errStr));
+		rs_strerror_r(errno, errStr, sizeof(errStr));
 		snprintf(buf, sizeof(buf), "%s: %s", type, errStr);
 	}
 	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
@@ -4349,7 +4349,7 @@ finalize_it:
 		if(fCurr != NULL)
 			selectorDestruct(fCurr);
 
-		strerror_r(errno, errStr, sizeof(errStr));
+		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
 			iRet, pConfFile, errStr);
 	}
@@ -5466,6 +5466,20 @@ void dbgprintf(char *fmt, ...)
 }
 
 
+char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
+#ifdef STRERROR_R_CHAR_P
+	char *p = strerror_r(errnum, buf, buflen);
+	if (p != buf) {
+		strncpy(buf, p, buflen);
+		buf[buflen - 1] = '\0';
+	}
+#else
+	strerror_r(errnum, buf, buflen);
+#endif
+	return buf;
+}
+
+
 /*
  * The following function is resposible for handling a SIGHUP signal.  Since
  * we are now doing mallocs/free as part of init we had better not being
@@ -5727,7 +5741,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 				printchopped(LocalHostName, line, iRcvd,  fd, funixParseHost[i]);
 			} else if (iRcvd < 0 && errno != EINTR) {
 				char errStr[1024];
-				strerror_r(errno, errStr, sizeof(errStr));
+				rs_strerror_r(errno, errStr, sizeof(errStr));
 				dbgprintf("UNIX socket error: %d = %s.\n", \
 					errno, errStr);
 				logerror("recvfrom UNIX");
@@ -5768,7 +5782,7 @@ static rsRetVal processSelectAfter(int maxfds, int nfds, fd_set *pReadfds, fd_se
 				       }
 			       } else if (l < 0 && errno != EINTR && errno != EAGAIN) {
 					char errStr[1024];
-					strerror_r(errno, errStr, sizeof(errStr));
+					rs_strerror_r(errno, errStr, sizeof(errStr));
 					dbgprintf("INET socket error: %d = %s.\n", errno, errStr);
 					       logerror("recvfrom inet");
 					       /* should be harmless */

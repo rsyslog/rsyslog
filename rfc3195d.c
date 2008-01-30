@@ -96,7 +96,7 @@ static void openlog()
 		if(LogFile < 0) {
 			char errStr[1024];
 			printf("error opening '%s': %s\n", 
-			       pPathLogname, strerror_r(errno, errStr, sizeof(errStr)));
+			       pPathLogname, rs_strerror_r(errno, errStr, sizeof(errStr)));
 		}
 	}
 	if (LogFile != -1 && !connected &&
@@ -106,7 +106,7 @@ static void openlog()
 	else {
 		char errStr[1024];
 		printf("error connecting '%s': %s\n", 
-		       pPathLogname, strerror_r(errno, errStr, sizeof(errStr)));
+		       pPathLogname, rs_strerror_r(errno, errStr, sizeof(errStr)));
 	}
 }
 
@@ -162,7 +162,7 @@ void OnReceive(srAPIObj* pAPI, srSLMGObj* pSLMG)
 			if(nWritten < 0) {
 				/* error, recover! */
 				char errStr[1024];
-				printf("error writing to domain socket: %s\r\n", strerror_r(errno, errStr, sizeof(errStr)));
+				printf("error writing to domain socket: %s\r\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
 				closelog();
 			} else {
 				/* prepare for (potential) next write */

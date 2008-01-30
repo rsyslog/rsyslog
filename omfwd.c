@@ -441,7 +441,7 @@ CODESTARTdoAction
 								int eno = errno;
 								char errStr[1024];
 								dbgprintf("sendto() error: %d = %s.\n",
-									eno, strerror_r(eno, errStr, sizeof(errStr)));
+									eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
 							}
 		                                }
 						if (lsent == l && !send_to_all)

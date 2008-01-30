@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 2.0.2 STABLE (rgerhards), 2008-02-??
+- fixed a bug that could cause invalid string handling via strerror_r
+  varmojfekoj provided the patch - many thanks!
+---------------------------------------------------------------------------
 Version 2.0.1 STABLE (rgerhards), 2008-01-24
 - fixed a bug in integer conversion - but this function was never called,
   so it is not really a useful bug fix ;)
