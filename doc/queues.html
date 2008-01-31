@@ -292,7 +292,9 @@ cancelled and the queue is brought down.</p>
 parameter can be set to &quot;on&quot;. This requires either a disk or disk-assisted 
 queue. If set, rsyslogd ensures that any queue elements are saved to disk before 
 it terminates. This includes data elements there were begun being processed by 
-workers that needed to be cancelled due to too-long processing.</p>
+workers that needed to be cancelled due to too-long processing. For a large 
+queue, this operation may be lengthy. No timeout applies to a required shutdown 
+save.</p>
 <h1>Where are Queues Used?</h1>
 <p>&nbsp;Currently, queues are used for the main message queue and for the 
 actions.</p>
@@ -304,7 +306,20 @@ message queue.</p>
 <p>There are multiple action queues, one for each configured action. By default, 
 these queues operate in direct (non-queueing) mode. Action queues are fully 
 configurable and thus can be changed to whatever is best for the given use case.</p>
-<p>Future versions of rsyslog will utilize queues at other places, too.</p>
+<p>Future versions of rsyslog will most probably utilize queues at other places, 
+too.</p>
+<p>Whereever &quot;<i>&lt;object&gt;</i>&quot;&nbsp; was used above in the config file 
+statements, substitute &quot;<i>&lt;object&gt;</i>&quot; with either &quot;MainMsg&quot; or &quot;Action&quot;. The 
+former will set main message queue paremeters, the later parameters for the next 
+action that will be created. Action queue parameters can not be modified once 
+the action has been specified. For example, to tell the main message queue to 
+save its content on shutdown, use <i>$MainMsgQueueSaveOnShutdown on</i>&quot;.</p>
+<p>If the same parameter is specified multiple times before a queue is created, 
+the last one specified takes precedence. The main message queue is created after 
+parsing the config file and all of its potential includes. An action queue is 
+created each time an action selector is specified. Action queue parameters are 
+reset to default after an action queue has been created (to provide a clean 
+environment for the next action).</p>
 <p>Not all queues necessarily support the full set of queue configuration 
 parameters, because not all are applicable. For example, in current output 
 module design, actions do not support multi-threading. Consequently, the number 
