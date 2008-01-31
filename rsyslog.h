@@ -43,6 +43,11 @@
 #	define _FILE_OFFSET_BITS 64
 #endif
 
+
+/* some universal 64 bit define... */
+typedef long long int64;
+typedef long long unsigned uint64;
+
 /* The error codes below are orginally "borrowed" from
  * liblogging. As such, we reserve values up to -2999
  * just in case we need to borrow something more ;)

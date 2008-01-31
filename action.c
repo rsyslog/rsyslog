@@ -58,7 +58,7 @@ static int iActionQDiscardMark = 9800;				/* begin to discard messages */
 static int iActionQDiscardSeverity = 4;				/* discard warning and above */
 static int iActionQueueNumWorkers = 1;				/* number of worker threads for the mm queue above */
 static uchar *pszActionQFName = NULL;				/* prefix for the main message queue file */
-static size_t iActionQueMaxFileSize = 1024*1024;
+static int64 iActionQueMaxFileSize = 1024*1024;
 static int iActionQPersistUpdCnt = 0;				/* persist queue info every n updates */
 static int iActionQtoQShutdown = 0;				/* queue shutdown */ 
 static int iActionQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
@@ -67,7 +67,7 @@ static int iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdow
 static int iActionQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int bActionQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
 static int iActionQueueDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
-static size_t iActionQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
+static int64 iActionQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
 
 /* the counter below counts actions created. It is used to obtain unique IDs for the action. They
  * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
@@ -223,9 +223,9 @@ actionConstructFinalize(action_t *pThis)
 #	undef setQPROP
 #	undef setQPROPstr
 
-	/*dbgoprint((obj_t*) pThis->pQueue, "save on shutdown %d, max disk space allowed %ld\n",
+	dbgoprint((obj_t*) pThis->pQueue, "save on shutdown %d, max disk space allowed %lld\n",
 		   bActionQSaveOnShutdown, iActionQueMaxDiskSpace);
- 	*/
+ 	
 
 	CHKiRet(queueStart(pThis->pQueue));
 	dbgprintf("Action %p: queue %p created\n", pThis, pThis->pQueue);

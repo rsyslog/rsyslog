@@ -760,7 +760,7 @@ finalize_it:
  * file circulation. A caller must deal with that. -- rgerhards, 2008-01-30
  */
 rsRetVal
-strmGetCurrOffset(strm_t *pThis, size_t *pOffs)
+strmGetCurrOffset(strm_t *pThis, int64 *pOffs)
 {
 	DEFiRet;
 

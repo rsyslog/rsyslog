@@ -101,11 +101,11 @@ finalize_it:
  * for INTERNAL USE by other parse functions!
  * rgerhards, 2008-01-08
  */
-static rsRetVal parseIntVal(uchar **pp, size_t *pVal)
+static rsRetVal parseIntVal(uchar **pp, int64 *pVal)
 {
 	DEFiRet;
 	uchar *p;
-	size_t i;	
+	int64 i;	
 	int bWasNegative;
 
 	assert(pp != NULL);
@@ -153,7 +153,7 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 {
 	uchar *p;
 	DEFiRet;
-	size_t i;	
+	int64 i;	
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -179,13 +179,13 @@ finalize_it:
 /* Parse a size from the configuration line. This is basically an integer
  * syntax, but modifiers may be added after the integer (e.g. 1k to mean
  * 1024). The size must immediately follow the number. Note that the
- * param value must be size_t!
+ * param value must be int64!
  * rgerhards, 2008-01-09
  */
 static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
 {
 	DEFiRet;
-	size_t i;
+	int64 i;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -201,9 +201,9 @@ static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 		case 'k': i *= 1024; ++(*pp); break;
 		case 'm': i *= 1024 * 1024; ++(*pp); break;
 		case 'g': i *= 1024 * 1024 * 1024; ++(*pp); break;
-		case 't': i *= (size_t) 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* tera */
-		case 'p': i *= (size_t) 1024 * 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* peta */
-		case 'e': i *= (size_t) 1024 * 1024 * 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* exa */
+		case 't': i *= (int64) 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* tera */
+		case 'p': i *= (int64) 1024 * 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* peta */
+		case 'e': i *= (int64) 1024 * 1024 * 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* exa */
 		/* and now the "new" 1000-based definitions */
 		case 'K': i *= 1000; ++(*pp); break;
 		case 'M': i *= 10000; ++(*pp); break;
@@ -216,7 +216,7 @@ static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 	/* done */
 	if(pSetHdlr == NULL) {
 		/* we should set value directly to var */
-		*((size_t*)pVal) = i;
+		*((int64*)pVal) = i;
 	} else {
 		/* we set value via a set function */
 		CHKiRet(pSetHdlr(pVal, i));

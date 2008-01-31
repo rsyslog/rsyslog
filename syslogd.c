@@ -407,7 +407,7 @@ static int iMainMsgQDiscardSeverity = 4;			/* discard warning and above */
 static int iMainMsgQueueNumWorkers = 1;				/* number of worker threads for the mm queue above */
 static queueType_t MainMsgQueType = QUEUETYPE_FIXED_ARRAY;	/* type of the main message queue above */
 static uchar *pszMainMsgQFName = NULL;				/* prefix for the main message queue file */
-static size_t iMainMsgQueMaxFileSize = 1024*1024;
+static int64 iMainMsgQueMaxFileSize = 1024*1024;
 static int iMainMsgQPersistUpdCnt = 0;				/* persist queue info every n updates */
 static int iMainMsgQtoQShutdown = 0;				/* queue shutdown */ 
 static int iMainMsgQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
@@ -416,7 +416,7 @@ static int iMainMsgQtoWrkShutdown = 60000;			/* timeout for worker thread shutdo
 static int iMainMsgQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int iMainMsgQDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
 static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
-static size_t iMainMsgQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
+static int64 iMainMsgQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
 
 
 /* This structure represents the files that will have log
@@ -2942,7 +2942,7 @@ static void dbgPrintInitInfo(void)
 		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
 	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
 		   iMainMsgQHighWtrMark, iMainMsgQLowWtrMark, iMainMsgQDiscardMark, iMainMsgQDiscardSeverity);
-	dbgprintf("Main queue save on shutdown %d, max disk space allowed %ld\n",
+	dbgprintf("Main queue save on shutdown %d, max disk space allowed %lld\n",
 		   bMainMsgQSaveOnShutdown, iMainMsgQueMaxDiskSpace);
 	/* TODO: add
 	iActionRetryCount = 0;

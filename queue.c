@@ -818,8 +818,8 @@ static rsRetVal qDestructDisk(queue_t *pThis)
 static rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 {
 	DEFiRet;
-	size_t offsIn;
-	size_t offsOut;
+	int64 offsIn;
+	int64 offsOut;
 
 	ASSERT(pThis != NULL);
 
@@ -839,7 +839,7 @@ static rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 
 	pThis->tVars.disk.sizeOnDisk += offsIn;
 
-	dbgoprint((obj_t*) pThis, "write wrote %ld octets to disk, queue disk size now %ld octets\n", offsIn, pThis->tVars.disk.sizeOnDisk);
+	dbgoprint((obj_t*) pThis, "write wrote %lld octets to disk, queue disk size now %lld octets\n", offsIn, pThis->tVars.disk.sizeOnDisk);
 
 finalize_it:
 	RETiRet;
@@ -849,8 +849,8 @@ static rsRetVal qDelDisk(queue_t *pThis, void **ppUsr)
 {
 	DEFiRet;
 
-	size_t offsIn;
-	size_t offsOut;
+	int64 offsIn;
+	int64 offsOut;
 
 	CHKiRet(strmGetCurrOffset(pThis->tVars.disk.pRead, &offsIn));
 	CHKiRet(objDeserialize(ppUsr, OBJmsg, pThis->tVars.disk.pRead, NULL, NULL));
@@ -866,7 +866,7 @@ static rsRetVal qDelDisk(queue_t *pThis, void **ppUsr)
 	} else {
 		pThis->tVars.disk.sizeOnDisk -= pThis->tVars.disk.bytesRead;
 		pThis->tVars.disk.bytesRead = offsOut;
-		dbgoprint((obj_t*) pThis, "a file has been deleted, now %ld octets disk space used\n", pThis->tVars.disk.sizeOnDisk);
+		dbgoprint((obj_t*) pThis, "a file has been deleted, now %lld octets disk space used\n", pThis->tVars.disk.sizeOnDisk);
 		/* awake possibly waiting enq process */
 		pthread_cond_signal(&pThis->notFull); /* we hold the mutex while we are in here! */
 	}
@@ -1622,7 +1622,7 @@ rsRetVal queueStart(queue_t *pThis) /* this is the ConstructionFinalizer */
 	/* call type-specific constructor */
 	CHKiRet(pThis->qConstruct(pThis)); /* this also sets bIsDA */
 
-	dbgoprint((obj_t*) pThis, "type %d, enq-only %d, disk assisted %d, maxFileSz %ld, qsize %d, child %d starting\n",
+	dbgoprint((obj_t*) pThis, "type %d, enq-only %d, disk assisted %d, maxFileSz %lld, qsize %d, child %d starting\n",
 		  pThis->qType, pThis->bEnqOnly, pThis->bIsDA, pThis->iMaxFileSize,
 		  queueGetOverallQueueSize(pThis), pThis->pqParent == NULL ? 0 : 1);
 

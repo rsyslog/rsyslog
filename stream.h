@@ -70,11 +70,11 @@ typedef struct strm_s {
 	strmMode_t tOperationsMode;
 	mode_t tOpenMode;
 	int iAddtlOpenFlags; /* can be used to specifiy additional (compatible!) open flags */
-	size_t iMaxFileSize;/* maximum size a file may grow to */
+	int64 iMaxFileSize;/* maximum size a file may grow to */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
 	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
-	size_t iCurrOffs;/* current offset */
+	int64 iCurrOffs;/* current offset */
 	/* dynamic properties, valid only during file open, not to be persistet */
 	size_t	sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
@@ -92,7 +92,7 @@ typedef struct strm_s {
 rsRetVal strmConstruct(strm_t **ppThis);
 rsRetVal strmConstructFinalize(strm_t __attribute__((unused)) *pThis);
 rsRetVal strmDestruct(strm_t **ppThis);
-rsRetVal strmSetMaxFileSize(strm_t *pThis, size_t iMaxFileSize);
+rsRetVal strmSetMaxFileSize(strm_t *pThis, int64 iMaxFileSize);
 rsRetVal strmSetFileName(strm_t *pThis, uchar *pszName, size_t iLenName);
 rsRetVal strmReadChar(strm_t *pThis, uchar *pC);
 rsRetVal strmUnreadChar(strm_t *pThis, uchar c);
@@ -107,7 +107,7 @@ rsRetVal strmRecordBegin(strm_t *pThis);
 rsRetVal strmRecordEnd(strm_t *pThis);
 rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm);
 rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal);
-rsRetVal strmGetCurrOffset(strm_t *pThis, size_t *pOffs);
+rsRetVal strmGetCurrOffset(strm_t *pThis, int64 *pOffs);
 PROTOTYPEObjClassInit(strm);
 PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
 PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);

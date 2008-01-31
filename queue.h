@@ -113,8 +113,8 @@ typedef struct queue_s {
 	uchar *pszFilePrefix;
 	size_t lenFilePrefix;
 	int iNumberFiles;	/* how many files make up the queue? */
-	size_t iMaxFileSize;	/* max size for a single queue file */
-	size_t sizeOnDiskMax; /* maximum size on disk allowed */
+	int64 iMaxFileSize;	/* max size for a single queue file */
+	int64 sizeOnDiskMax;    /* maximum size on disk allowed */
 	int bIsDA;		/* is this queue disk assisted? */
 	int bRunsDA;		/* is this queue actually *running* disk assisted? */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
@@ -137,8 +137,8 @@ typedef struct queue_s {
 			qLinkedList_t *pLast;
 		} linklist;
 		struct {
-			size_t sizeOnDisk; /* current amount of disk space used */
-			size_t bytesRead;  /* number of bytes read from current (undeleted!) file */
+			int64 sizeOnDisk; /* current amount of disk space used */
+			int64 bytesRead;  /* number of bytes read from current (undeleted!) file */
 			strm_t *pWrite; /* current file to be written */
 			strm_t *pRead;  /* current file to be read */
 		} disk;
