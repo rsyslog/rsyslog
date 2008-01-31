@@ -223,8 +223,9 @@ actionConstructFinalize(action_t *pThis)
 #	undef setQPROP
 #	undef setQPROPstr
 
-	dbgoprint((obj_t*) pThis->pQueue, "save on shutdown %d, max disk space allowed %ld\n",
+	/*dbgoprint((obj_t*) pThis->pQueue, "save on shutdown %d, max disk space allowed %ld\n",
 		   bActionQSaveOnShutdown, iActionQueMaxDiskSpace);
+ 	*/
 
 	CHKiRet(queueStart(pThis->pQueue));
 	dbgprintf("Action %p: queue %p created\n", pThis, pThis->pQueue);
@@ -397,6 +398,10 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 		if(bCallAction) {
 			/* call configured action */
 			iRet = pAction->pMod->mod.om.doAction(ppMsgs, pMsg->msgFlags, pAction->pModData);
+			if(iRet == RS_RET_SUSPENDED) {
+				dbgprintf("Action requested to be suspended, done that.\n");
+				actionSuspend(pAction);
+			}
 		}
 
 	} while(iRet == RS_RET_SUSPENDED && (pAction->iResumeRetryCount == -1 || iRetries < pAction->iResumeRetryCount)); /* do...while! */
@@ -405,11 +410,6 @@ RUNLOG_STR("out of retry loop");
 	if(iRet == RS_RET_DISABLE_ACTION) {
 		dbgprintf("Action requested to be disabled, done that.\n");
 		pAction->bEnabled = 0; /* that's it... */
-	}
-
-	if(iRet == RS_RET_SUSPENDED) {
-		dbgprintf("Action requested to be suspended, done that.\n");
-		actionSuspend(pAction);
 	}
 
 	pthread_cleanup_pop(1); /* unlock mutex */
