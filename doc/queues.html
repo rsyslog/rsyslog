@@ -48,8 +48,29 @@ always use the disk and do not buffer anything in memory. Thus, the queue is
 ultra-reliable, but by far the slowest mode. For regular use cases, this queue 
 mode is not recommended. It is useful if log data is so important that it must 
 not be lost, even in extreme cases.</p>
+<p>When a disk queue is written, it is done in chunks. Each chunk receives its 
+individual file. Files are named with a prefix (set via the &quot;<i>$&lt;object&gt;QueueFilename</i>&quot; 
+config directive) and followed by a 7-digit number (starting at one and 
+incremented for each file). Chunks are 10mb by default, a different size can be 
+set via the&quot;<i>$&lt;object&gt;QueueMaxFileSize</i>&quot; config directive. Note that 
+the size limit is not a sharp one: rsyslog always writes one complete queue 
+entry, even if it violates the size limit. So chunks are actually a little but 
+(usually less than 1k) larger then the configured size. Each chunk also has a 
+different size for the same reason. If you observe different chunk sizes, you 
+can relax: this is not a problem.</p>
+<p>Writing in chunks is used so that processed data can quickly be deleted and 
+is free for other uses - while at the same time keeping no artificial upper 
+limit on disk space used. If a disk quota is set (instructions further below), 
+be sure that the quota/chunk size allows at least two chunks to be written. 
+Rsyslog currently does not check that and will fail miserably if a single chunk 
+is over the quota.</p>
+<p>Creating new chunks costs performance but provides quicker ability to free 
+disk space. The 10mb default is considered a good compromise between these two. 
+However, it may make sense to adapt these settings to local policies. For 
+example, if a disk queue is written on a dedicated 200gb disk, it may make sense 
+to use a 2gb (or even larger) chunk size.</p>
 <p>Please note, however, that the disk queue by default does not update its 
-bookkeeping structures every time it writes to disk. This is for performance 
+housekeeping structures every time it writes to disk. This is for performance 
 reasons. In the event of failure, data will still be lost (except when manually 
 is mangled with the file structures). However, disk queues can be set to write 
 bookkeeping information on checkpoints (every n records), so that this can be 
