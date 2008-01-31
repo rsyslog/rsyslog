@@ -57,7 +57,7 @@ static dbgThrdInfo_t *dbgGetThrdInfo(void);
 /* static data (some time to be replaced) */
 int	Debug;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
-static int bLogFuncFlow = 1; /* shall the function entry and exit be logged to the debug log? */
+static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bPrintMutexAction = 0; /* shall mutex calls be printed to the debug log? */
 static int bPrintTime = 1;	/* print a timestamp together with debug message */
@@ -99,6 +99,7 @@ static dbgThrdInfo_t *dbgCallStackListLast = NULL;
 static pthread_mutex_t mutCallStack = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_mutex_t mutdbgprintf = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutdbgoprint = PTHREAD_MUTEX_INITIALIZER;
 
 static pthread_key_t keyCallStack;
 
@@ -705,10 +706,8 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 	if(!(Debug && debugging_on))
 		return;
 	
-#if 0
-	pthread_mutex_lock(&mutdbgprintf);
-	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprintf);
-#endif
+	pthread_mutex_lock(&mutdbgoprint);
+	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgoprint);
 
 	/* The bWasNL handler does not really work. It works if no thread
 	 * switching occurs during non-NL messages. Else, things are messed
@@ -765,9 +764,7 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 
 	fflush(stddbg);
 	if(altdbg != NULL) fflush(altdbg);
-#if 0
 	pthread_cleanup_pop(1);
-#endif
 }
 
 
