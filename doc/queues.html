@@ -8,7 +8,7 @@
 <body>
 
 <h1>Understanding rsyslog Queues</h1>
-<p>Rsyslog uses queues whenever two activities need to be losely coupled. With a 
+<p>Rsyslog uses queues whenever two activities need to be loosely coupled. With a 
 queue, one part of the system &quot;produces&quot; something while another part &quot;consumes&quot; 
 this something. The &quot;something&quot; is most often syslog messages, but queues may 
 also be used for other purposes.</p>
@@ -25,19 +25,19 @@ specific advantages and disadvantages. Selecting the right queue mode is quite
 important when tuning rsyslogd. The queue mode (aka &quot;type&quot;) is set via the &quot;<i>$&lt;object&gt;QueueType</i>&quot; 
 config directive.</p>
 <h2>Direct Queues</h2>
-<p>Direct queues are <b>non</b>-queueing queues. A queue in direct mode does 
-neither queue nor bufer any of the queue elements but rather passes the element 
-directly (and immediately) from the producer to the consumer.This sounds strange, 
+<p>Direct queues are <b>non</b>-queuing queues. A queue in direct mode does 
+neither queue nor buffer any of the queue elements but rather passes the element 
+directly (and immediately) from the producer to the consumer. This sounds strange, 
 but there is a good reason for this queue type.</p>
 <p>Direct mode queues allow to use queues generically, even in places where 
-queing is not always desired. A good example is the queue in front of output 
+queuing is not always desired. A good example is the queue in front of output 
 actions. While it makes perfect sense to buffer forwarding actions or database 
 writes, it makes only limited sense to build up a queue in front of simple local 
 file writes. Yet, rsyslog still has a queue in front of every action. So for 
 file writes, the queue mode can simply be set to &quot;direct&quot;, in which case no 
-queueing happens.</p>
+queuing happens.</p>
 <p>Please note that a direct queue also is the only queue type that passes back 
-the execution return code (sucess/failure) from the consumer to the producer. 
+the execution return code (success/failure) from the consumer to the producer. 
 This, for example, is needed for the backup action logic. Consequently, backup 
 actions require the to-be-checked action to use a &quot;direct&quot; mode queue.</p>
 <p>To create a direct queue, use the &quot;<i>$&lt;object&gt;QueueType Direct</i>&quot; config 
@@ -94,9 +94,10 @@ permitting, it could be limited to e.g. 200,000 elements which would take up
 only memory if in use. A FixedArray queue may have a too large static memory 
 footprint in such cases.</p>
 <p><b>In general, it is advised to use LinkedList mode if in doubt</b>. The 
-processing overhead compared to FixedArray is low and may be outwaight by the 
-reduction in memory use. Paging in most-often-unused pointer array pages can be 
-much slower than dynamically allocating them.</p>
+processing overhead compared to FixedArray is low and may be
+<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+outweigh </span>by the reduction in memory use. Paging in most-often-unused 
+pointer array pages can be much slower than dynamically allocating them.</p>
 <p>To create an in-memory queue, use the &quot;<i>$&lt;object&gt;QueueType LinkedList</i>&quot; 
 or&nbsp; &quot;<i>$&lt;object&gt;QueueType FixedArray</i>&quot; config directive.</p>
 <h3>Disk-Assisted Memory Queues</h3>
@@ -118,13 +119,13 @@ parameters can be set. From the user's point of view, think of a DA queue like a
 there is some specific handling for this case, so it is actually much like a 
 single object].</p>
 <p>DA queues are typically used to de-couple potentially long-running and 
-unreliable actions (to make them reliable). For example, it is recommened to use 
-a disk-assisted linked list in-memory queue in front of each database and &quot;send 
-via tcp&quot; action. Doing so makes these actions reliable and de-couples their 
-potential low execution speed from the rest of your rules (e.g. the local file 
-writes). There is a howto on <a href="rsyslog_high_database_rate.html">massive 
-database inserts</a> which nicely describes this use case. It may even be a good 
-read if you do not intend to use databases.</p>
+unreliable actions (to make them reliable). For example, it is recommended to 
+use a disk-assisted linked list in-memory queue in front of each database and 
+&quot;send via tcp&quot; action. Doing so makes these actions reliable and de-couples 
+their potential low execution speed from the rest of your rules (e.g. the local 
+file writes). There is a howto on <a href="rsyslog_high_database_rate.html">
+massive database inserts</a> which nicely describes this use case. It may even 
+be a good read if you do not intend to use databases.</p>
 <p>With DA queues, we do not simply write out everything to disk and then run as 
 a disk queue once the in-memory queue is full. A much smarter algorithm is used, 
 which involves a &quot;high watermark&quot; and a &quot;low watermark&quot;. Both specify numbers of 
@@ -184,7 +185,7 @@ threads. Worker threads carry out the action to be performed on the data
 elements enqueued. As an actual sample, the main message queue's worker task is 
 to apply filter logic to each incoming message and enqueue them to the relevant 
 output queues (actions).</p>
-<p>Worker threads are started and stopped on an as-needed bassis. On a system 
+<p>Worker threads are started and stopped on an as-needed basis. On a system 
 without activity, there may be no worker at all running. One is automatically 
 started when a message comes in. Similarily, additional workers are started if 
 the queue grows above a specific size. The &quot;<i>$&lt;object&gt;QueueWorkerThreadMinimumMessages</i>&quot;&nbsp; 
@@ -216,7 +217,7 @@ front of the queue.</p>
 <p>The discard watermark is a last resort setting. It should be set sufficiently 
 high, but low enough to allow for large message burst. Please note that it take 
 effect immediately and thus shows effect promptly - but that doesn't help if the 
-burst mainly consits of high-priority messages...</p>
+burst mainly consist of high-priority messages...</p>
 <p>The discard watermark is set via the &quot;<i>$&lt;object&gt;QueueDiscardMark</i>&quot; 
 directive. The priority of messages to be discarded is set via &quot;<i>$&lt;object&gt;QueueDiscardSeverity</i>&quot;. 
 Please note that as of now, this directive does not accept textual severity, so 
@@ -238,26 +239,30 @@ higher than the queue size.</p>
 <p>An interesting application is with disk-assisted queues: if the discard 
 watermark is set lower than the high watermark, message discarding will start 
 before the queue becomes disk-assisted. This may be a good thing if you would 
-like to switch to disk-assisted mode only in cases where it is absolutelty 
+like to switch to disk-assisted mode only in cases where it is absolutely 
 unavoidable and you prefer to discard less important messages first.</p>
 <h1>Filled-Up Queues</h1>
 <p>If the queue has either reached its configured maximum number of entries or 
 disk space, it is finally full. If so, rsyslogd throttles the data element 
 submitter. If that, for example, is a reliable input (TCP, local log socket), 
-that will slow down the message originator which is a good resulotion for this 
-scenario.</p>
-<p>During throtteling, a disk-assisted queue continues to write to disk and 
+that will slow down the message originator which is a good
+<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+resolution </span>for this scenario.</p>
+<p>During
+<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+throtteling</span>, a disk-assisted queue continues to write to disk and 
 messages are also discarded based on severity as well as regular dequeuing and 
 processing continues. So chances are good the situation will be resolved by 
 simply throttling. Note, though, that throtteling is highly undesirable for 
 unreliable sources, like UDP message reception. So it is not a good thing to run 
 into throtteling mode at all.</p>
-<p>We can not hold processing infenitely, not even when throtteling. For 
-example, throtteling the local log socket too long would cause the system at 
-whole come to a standstill. To prevent this, rsyslogd times out after a 
-configured period (&quot;<i>$&lt;object&gt;QueueTimeoutEnqueue</i>&quot;, specified in 
-milliseconds) if no space becomes available. As a last resort, it then discards 
-the newly arrived message.</p>
+<p>We can not hold processing
+<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+infinitely</span>, not even when throtteling. For example, throtteling the local 
+log socket too long would cause the system at whole come to a standstill. To 
+prevent this, rsyslogd times out after a configured period (&quot;<i>$&lt;object&gt;QueueTimeoutEnqueue</i>&quot;, 
+specified in milliseconds) if no space becomes available. As a last resort, it 
+then discards the newly arrived message.</p>
 <p>If you do not like throtteling, set the timeout to 0 - the message will then 
 immediately be discarded. If you use a high timeout, be sure you know what you 
 do. If a high main message queue enqueue timeout is set, it can lead to 
@@ -273,10 +278,11 @@ DequeueSlowdown delay of 1,000 microseconds on a UDP send action ensures that no
 more than 1,000 messages can be sent within a second (actually less, as there is 
 also some time needed for the processing itself). </p>
 <h2>Terminating Queues</h2>
-<p>Terminating a process sounds easy, but can be complex. Terminting a running 
-queue is in fact the most complex operation a queue object can perform. You 
-don't see that from a user's point of view, but its quite hard work for the 
-developer to do everything in the right order.</p>
+<p>Terminating a process sounds easy, but can be complex.
+<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+Terminating </span>a running queue is in fact the most complex operation a queue 
+object can perform. You don't see that from a user's point of view, but its 
+quite hard work for the developer to do everything in the right order.</p>
 <p>The complexity arises when the queue has still data enqueued when it 
 finishes. Rsyslog tries to preserve as much of it as possible. As a first 
 measure, there is a regular queue time out (&quot;<i>$&lt;object&gt;QueueTimeoutShutdown</i>&quot;, 
@@ -308,12 +314,16 @@ these queues operate in direct (non-queueing) mode. Action queues are fully
 configurable and thus can be changed to whatever is best for the given use case.</p>
 <p>Future versions of rsyslog will most probably utilize queues at other places, 
 too.</p>
-<p>Whereever &quot;<i>&lt;object&gt;</i>&quot;&nbsp; was used above in the config file 
+<p>
+<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+Wherever </span>&quot;<i>&lt;object&gt;</i>&quot;&nbsp; was used above in the config file 
 statements, substitute &quot;<i>&lt;object&gt;</i>&quot; with either &quot;MainMsg&quot; or &quot;Action&quot;. The 
-former will set main message queue paremeters, the later parameters for the next 
-action that will be created. Action queue parameters can not be modified once 
-the action has been specified. For example, to tell the main message queue to 
-save its content on shutdown, use <i>$MainMsgQueueSaveOnShutdown on</i>&quot;.</p>
+former will set main message queue
+<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+parameters</span>, the later parameters for the next action that will be 
+created. Action queue parameters can not be modified once the action has been 
+specified. For example, to tell the main message queue to save its content on 
+shutdown, use <i>$MainMsgQueueSaveOnShutdown on</i>&quot;.</p>
 <p>If the same parameter is specified multiple times before a queue is created, 
 the last one specified takes precedence. The main message queue is created after 
 parsing the config file and all of its potential includes. An action queue is 
