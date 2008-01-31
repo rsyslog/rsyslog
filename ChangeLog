@@ -1,7 +1,11 @@
 ---------------------------------------------------------------------------
-Version 3.11.0 (rgerhards), 2008-01-??
+Version 3.11.0 (rgerhards), 2008-01-31
+- implemented queued actions
+- implemented simple rate limiting for actions
+- implemented deliberate discarding of lower priority messages over higher
+  priority ones when a queue runs out of space
+- implemented disk quotas for disk queues
 - implemented the $ActionResumeRetryCount config directive
-- implemented simple output rate limiting
 - added $ActionQueueFilename config directive
 - added $ActionQueueSize config directive
 - added $ActionQueueHighWaterMark config directive
@@ -33,6 +37,7 @@ Version 3.11.0 (rgerhards), 2008-01-??
   better with the new queued action mode (fast startup)
 - fixed a bug that caused a potential hang in file and fwd output module
   varmojfekoj provided the patch - many thanks!
+- bugfixed stream class offset handling on 32bit platforms
 ---------------------------------------------------------------------------
 Version 3.10.3 (rgerhards), 2008-01-28
 - fixed a bug with standard template definitions (not a big deal) - thanks

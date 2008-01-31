@@ -29,12 +29,15 @@ them are in bold. A more in-depth description will appear as implementation
 progresses. Directives may change during that process, we will NOT try hard to 
 maintain backwards compatibility (after all, v3 is still very early in 
 development and quite unstable...). So you have been warned ;)</p>
-<p>Be sure to read information about <a href="queues.html">queues in rsyslog</a> 
+<p><b>Be sure to read information about <a href="queues.html">queues in rsyslog</a></b> 
 - many parameter settings modify queue parameters. If in doubt, use the default, 
-it is usually well-choosen and applicable in most cases.</p>
+it is usually well-chosen and applicable in most cases.</p>
 <ul>
 	<li><a href="rsconf1_actionexeconlyifpreviousissuspended.html">$ActionExecOnlyIfPreviousIsSuspended</a></li>
 	<li>$ActionQueueCheckpointInterval &lt;number&gt;</li>
+	<li>$ActionQueueDequeueSlowdown &lt;number&gt; [number is timeout in <i>
+	micro</i>seconds (1000000us is 1sec!), default 0 (no delay). Simple 
+	rate-limiting!]</li>
 	<li>$ActionQueueDiscardMark &lt;number&gt; [default 9750]</li>
 	<li>$ActionQueueDiscardSeverity &lt;number&gt; [*numerical* severity! default 4 (warning)]</li>
 	<li>$ActionQueueFileName &lt;name&gt;</li>
@@ -46,7 +49,7 @@ it is usually well-choosen and applicable in most cases.</p>
 	<li>$ActionQueueTimeoutActionCompletion &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 1000, 0 means immediate!]</li>
 	<li>$ActionQueueTimeoutEnqueue &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite]</li>
 	<li>$ActionQueueTimeoutShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 0 (indefinite)]</li>
-	<li>$ActionQueueTimeoutWorkerThreadShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)]</li>
+	<li>$ActionQueueWorkerTimeoutThreadShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)]</li>
 	<li>$ActionQueueType [FixedArray/LinkedList/<b>Direct</b>/Disk]</li>
 	<li>$ActionQueueSaveOnShutdown&nbsp; [on/<b>off</b>] 
 	<li>$ActionQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
@@ -82,6 +85,9 @@ it is usually well-choosen and applicable in most cases.</p>
 	-2 option</li>
 	<li>$klogSymbolsTwice (imklog) [on/<b>off</b>] -- former klogd -s option</li>
 	<li>$MainMsgQueueCheckpointInterval &lt;number&gt;</li>
+	<li>$MainMsgQueueDequeueSlowdown &lt;number&gt; [number is timeout in <i>
+	micro</i>seconds (1000000us is 1sec!), default 0 (no delay). Simple 
+	rate-limiting!]</li>
 	<li>$MainMsgQueueDiscardMark &lt;number&gt; [default 9750]</li>
 	<li>$MainMsgQueueDiscardSeverity &lt;number&gt; [*numerical* severity! default 4 (warning)]</li>
 	<li>$MainMsgQueueFileName &lt;name&gt;</li>
@@ -93,7 +99,7 @@ it is usually well-choosen and applicable in most cases.</p>
 	<li>$MainMsgQueueTimeoutActionCompletion &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 1000, 0 means immediate!]</li>
 	<li>$MainMsgQueueTimeoutEnqueue &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite]</li>
 	<li>$MainMsgQueueTimeoutShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 0 (indefinite)]</li>
-	<li>$MainMsgQueueTimeoutWorkerThreadShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)]</li>
+	<li>$MainMsgQueueWorkerTimeoutThreadShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)]</li>
 	<li>$MainMsgQueueType [<b>FixedArray</b>/LinkedList/Direct/Disk]</li>
 	<li>$MainMsgQueueSaveOnShutdown&nbsp; [on/<b>off</b>] 
 	<li>$MainMsgQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
@@ -118,6 +124,10 @@ number part. For example, 1k means 1024. Supported are k(ilo), m(ega), g(iga),
 t(era), p(eta) and e(xa). Lower case letters refer to the traditional binary 
 defintion (e.g. 1m equals 1,048,576) whereas upper case letters refer to their 
 new 1000-based definition (e.g 1M equals 1,000,000).</p>
+<p>Numbers may include '.' and ',' for readability. So you can for example 
+specify either &quot;1000&quot; or &quot;1,000&quot; with the same result. Please note that rsyslogd 
+simply ignores the punctuation. Form it's point of view, &quot;1,,0.0.,.,0&quot; also has 
+the value 1000. </p>
 <h2>Basic Structure</h2>
 <p>Rsyslog supports standard sysklogd's configuration file format and extends 
 it. So in general, you can take a &quot;normal&quot; syslog.conf and use it together with 
