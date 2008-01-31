@@ -51,9 +51,9 @@ int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be r
 
 /* main message queue and its configuration parameters */
 static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
-static int iActionQueueSize = 10000;				/* size of the main message queue above */
-static int iActionQHighWtrMark = 8000;				/* high water mark for disk-assisted queues */
-static int iActionQLowWtrMark = 2000;				/* low water mark for disk-assisted queues */
+static int iActionQueueSize = 1000;				/* size of the main message queue above */
+static int iActionQHighWtrMark = 800;				/* high water mark for disk-assisted queues */
+static int iActionQLowWtrMark = 200;				/* low water mark for disk-assisted queues */
 static int iActionQDiscardMark = 9800;				/* begin to discard messages */
 static int iActionQDiscardSeverity = 4;				/* discard warning and above */
 static int iActionQueueNumWorkers = 1;				/* number of worker threads for the mm queue above */
@@ -91,9 +91,9 @@ actionResetQueueParams(void)
 	DEFiRet;
 
 	ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
-	iActionQueueSize = 10000;			/* size of the main message queue above */
-	iActionQHighWtrMark = 8000;			/* high water mark for disk-assisted queues */
-	iActionQLowWtrMark = 2000;			/* low water mark for disk-assisted queues */
+	iActionQueueSize = 1000;			/* size of the main message queue above */
+	iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
+	iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
 	iActionQDiscardMark = 9800;			/* begin to discard messages */
 	iActionQDiscardSeverity = 4;			/* discard warning and above */
 	iActionQueueNumWorkers = 1;			/* number of worker threads for the mm queue above */
@@ -107,6 +107,8 @@ actionResetQueueParams(void)
 	bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
 	iActionQueueDeqSlowdown = 0;
 	iActionQueMaxDiskSpace = 0;
+
+	glbliActionResumeRetryCount = 0;		/* I guess it is smart to reset this one, too */
 
 	if(pszActionQFName != NULL)
 		free(pszActionQFName);
@@ -208,7 +210,7 @@ actionConstructFinalize(action_t *pThis)
 	setQPROP(queueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", iActionQPersistUpdCnt);
 	setQPROP(queueSettoQShutdown, "$ActionQueueTimeoutShutdown", iActionQtoQShutdown );
 	setQPROP(queueSettoActShutdown, "$ActionQueueTimeoutActionCompletion", iActionQtoActShutdown);
-	setQPROP(queueSettoWrkShutdown, "$ActionQueueTimeoutWorkerThreadShutdown", iActionQtoWrkShutdown);
+	setQPROP(queueSettoWrkShutdown, "$ActionQueueWorkerTimeoutThreadShutdown", iActionQtoWrkShutdown);
 	setQPROP(queueSettoEnq, "$ActionQueueTimeoutEnqueue", iActionQtoEnq);
 	setQPROP(queueSetiHighWtrMrk, "$ActionQueueHighWaterMark", iActionQHighWtrMark);
 	setQPROP(queueSetiLowWtrMrk, "$ActionQueueLowWaterMark", iActionQLowWtrMark);
@@ -652,7 +654,7 @@ actionAddCfSysLineHdrl(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL, &iActionQtoQShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutactioncompletion", 0, eCmdHdlrInt, NULL, &iActionQtoActShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutenqueue", 0, eCmdHdlrInt, NULL, &iActionQtoEnq, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutworkerthreadshutdown", 0, eCmdHdlrInt, NULL, &iActionQtoWrkShutdown, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkertimeoutthreadshutdown", 0, eCmdHdlrInt, NULL, &iActionQtoWrkShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreadminimummessages", 0, eCmdHdlrInt, NULL, &iActionQWrkMinMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iActionQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bActionQSaveOnShutdown, NULL));
