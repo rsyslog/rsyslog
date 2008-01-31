@@ -181,7 +181,7 @@ PROTOTYPEpropSetMeth(queue, iMinMsgsPerWrkr, int);
 PROTOTYPEpropSetMeth(queue, bSaveOnShutdown, int);
 PROTOTYPEpropSetMeth(queue, pUsr, void*);
 PROTOTYPEpropSetMeth(queue, iDeqSlowdown, int);
-PROTOTYPEpropSetMeth(queue, sizeOnDiskMax, long);
+PROTOTYPEpropSetMeth(queue, sizeOnDiskMax, int64);
 #define queueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

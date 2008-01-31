@@ -2056,7 +2056,7 @@ DEFpropSetMeth(queue, iMinMsgsPerWrkr, int);
 DEFpropSetMeth(queue, bSaveOnShutdown, int);
 DEFpropSetMeth(queue, pUsr, void*);
 DEFpropSetMeth(queue, iDeqSlowdown, int);
-DEFpropSetMeth(queue, sizeOnDiskMax, long);
+DEFpropSetMeth(queue, sizeOnDiskMax, int64);
 
 
 /* This function can be used as a generic way to set properties. Only the subset
