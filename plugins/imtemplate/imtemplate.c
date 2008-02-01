@@ -252,8 +252,58 @@ CODESTARTrunInput
 		 * 
 		 * There are several ways how a message can be enqueued. This part of the
 		 * interface is currently underspecified. Have a look at the function definitions
-		 * in syslogd.c (sorry, folks...). Some ways are:
-		 *     printchopped((char*)fromHost, (char*) pRcvBuf, l,  udpLstnSocks[i+1], 1);
+		 * in syslogd.c (sorry, folks...).
+		 *
+		 * If you received a full syslog message that must be decoded by a message
+		 * parser, printchopped() is the way to go. It's not just a funny name
+		 * but also a quite some legacy. Consequently, its interface is, ummm, not
+		 * well designed.
+		 *     printchopped((char*)fromHost, (char*) pRcvBuf, lenRcvd,  fd, bParseHost);
+		 *     fromHost
+		 *     	 is the host that we received the message from (a string)
+		 *     pRcvBuf
+		 *     	 is the received (to-be-decoded) message
+		 *     lenRcvd
+		 *       is the length of the received message. Please note that pRcvBuf is
+		 *       NOT a standard C-string. Most importantly it is NOT expected to be
+		 *       \0-terminated. Thus the lenght is vitally imporant (if it is wrong,
+		 *       rsyslogd will probably segfault).
+		 *     fd
+		 *       is the file descriptor that the message was received from. It is
+		 *       purely used for displaying purposes. If you don't have a file
+		 *       descriptor, simply provide the value 0.
+		 *     bParseHost
+		 *       is a boolean (0-no, 1-yes). It tells the parser whether or not
+		 *       a hostname should be parsed from the message. This is important
+		 *       for sources that are known not to provide a hostname.
+		 *
+		 * Another, more elaborate, way is to create the message object ourselves and
+		 * pass it to the rule engine. That way is more appropriate if the message 
+		 * does not need to be parsed, for example when reading text (log) files. In that way,
+		 * we can set the message properties as of our liking. This is how it works:
+		 *
+		msg_t *pMsg;
+		CHKiRet(msgConstruct(&pMsg));
+		MsgSetUxTradMsg(pMsg, msg);
+		MsgSetRawMsg(pMsg, msg);
+		MsgSetHOSTNAME(pMsg, LocalHostName);
+		MsgSetTAG(pMsg, "rsyslogd:");
+		pMsg->iFacility = LOG_FAC(pri);
+		pMsg->iSeverity = LOG_PRI(pri);
+		pMsg->bParseHOSTNAME = 0;
+		getCurrTime(&(pMsg->tTIMESTAMP)); / * use the current time! * /
+		flags |= INTERNAL_MSG;
+		logmsg(pri, pMsg, flags); / * some time, CHKiRet() will work here, too [today NOT!] * /
+		 * 
+		 * Note that UxTradMsg is a wild construct. For the time being, set it to
+		 * the raw message text. I am hard thinking at dropping that beast at all...
+		 *
+		 * This example probably does not set all message properties (but the ones
+		 * that are of practical importance). If you need all, check msg.h. Use
+		 * method access functions whereever possible, unfortunately not all structure
+		 * members are currently exposed in that clean way - so you sometimes need
+		 * to access them directly (it goes without saying that we will fix that
+		 * over time ;)).
 		 */
 
 	/* ------------------------------------------------------------------------------------------ *
