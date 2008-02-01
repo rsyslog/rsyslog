@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 3.11.1 (rgerhards), 2008-02-??
+- applied documentation fix by Michael Biebl -- many thanks!
+---------------------------------------------------------------------------
 Version 3.11.0 (rgerhards), 2008-01-31
 - implemented queued actions
 - implemented simple rate limiting for actions

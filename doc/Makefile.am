@@ -6,12 +6,14 @@ html_files = \
 	how2help.html \
 	install.html \
 	ipv6.html \
+	log_rotation_fix_size.html \
 	manual.html \
 	man_rsyslogd.html \
 	modules.html \
 	property_replacer.html \
 	rsyslog_ng_comparison.html \
 	rsyslog_conf.html \
+	rsyslog-example.conf \
 	rsyslog_mysql.html \
 	rsyslog_packages.html \
 	rsyslog_high_database_rate.html \
@@ -45,12 +47,17 @@ html_files = \
 	rsconf1_filecreatemode.html \
 	rsconf1_filegroup.html \
 	rsconf1_fileowner.html \
+	rsconf1_gssforwardservicename.html \
+	rsconf1_gsslistenservicename.html \
+	rsconf1_gssmode.html \
 	rsconf1_includeconfig.html \
 	rsconf1_mainmsgqueuesize.html \
+	rsconf1_markmessageperiod.html \
 	rsconf1_modload.html \
 	rsconf1_moddir.html \
 	rsconf1_repeatedmsgreduction.html \
 	rsconf1_resetconfigvariables.html \
-	rsconf1_umask.html
+	rsconf1_umask.html \
+	v3compatibility.html
 
 EXTRA_DIST = $(html_files)
