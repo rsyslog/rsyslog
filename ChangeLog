@@ -1,6 +1,9 @@
 ---------------------------------------------------------------------------
 Version 3.11.1 (rgerhards), 2008-02-??
+- added input-plugin interface specification in form of a (copy) template
+  input module
 - applied documentation fix by Michael Biebl -- many thanks!
+- bugfix: immark did not have MARK flags set...
 ---------------------------------------------------------------------------
 Version 3.11.0 (rgerhards), 2008-01-31
 - implemented queued actions
