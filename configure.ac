@@ -411,6 +411,26 @@ AC_SUBST(snmp_libs)
 # settings for the template input module; copy and modify this code
 # if you intend to add your own module. Be sure to replace imtemplate
 # by the actual name of your module.
+AC_ARG_ENABLE(imfile,
+        [AS_HELP_STRING([--enable-imfile],[file input module enabled @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imfile="yes" ;;
+          no) enable_imfile="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imfile) ;;
+         esac],
+        [enable_imfile=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
+
+AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
+# end of copy template - be sure to serach for imtemplate to find everything!
+# settings for the template input module; copy and modify this code
+# if you intend to add your own module. Be sure to replace imtemplate
+# by the actual name of your module.
 AC_ARG_ENABLE(imtemplate,
         [AS_HELP_STRING([--enable-imtemplate],[Compiles imtemplate template module @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -436,6 +456,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
+		plugins/imfile/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -453,6 +474,7 @@ echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"
 echo "PostgreSQL support enabled:               $enable_pgsql"
 echo "SNMP support enabled:                     $enable_snmp"
+echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"

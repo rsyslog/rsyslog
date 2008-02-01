@@ -114,3 +114,7 @@ endif
 if ENABLE_IMTEMPLATE
 SUBDIRS += plugins/imtemplate
 endif
+
+if ENABLE_IMFILE
+SUBDIRS += plugins/imfile
+endif
