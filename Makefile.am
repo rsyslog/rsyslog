@@ -84,6 +84,7 @@ EXTRA_DIST = \
 	freebsd/rsyslogd \
 	slackware/rc.rsyslogd \
 	contrib/README \
+	rsyslog.conf \
 	$(man_MANS)
 
 SUBDIRS = doc
