@@ -962,7 +962,6 @@ rsRetVal dbgClassInit(void)
 	sigaction(SIGUSR1, &sigAct, NULL);
 
 	pszAltDbgFileName = getenv("RSYSLOG_DEBUGLOG");
-printf("dbg fl: %s\n", pszAltDbgFileName);
 
 	stddbg = stdout;
 	if(pszAltDbgFileName != NULL) {

@@ -109,3 +109,7 @@ endif
 if ENABLE_SNMP
 SUBDIRS += plugins/omsnmp
 endif
+
+if ENABLE_IMTEMPLATE
+SUBDIRS += plugins/imtemplate
+endif

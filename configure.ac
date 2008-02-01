@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.11.0],[rsyslog@lists.adiscon.com.])
+AC_INIT([rsyslog],[3.11.1],[rsyslog@lists.adiscon.com.])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADERS([config.h])
@@ -408,6 +408,26 @@ AC_SUBST(snmp_cflags)
 AC_SUBST(snmp_libs)
 
 
+# settings for the template input module; copy and modify this code
+# if you intend to add your own module. Be sure to replace imtemplate
+# by the actual name of your module.
+AC_ARG_ENABLE(imtemplate,
+        [AS_HELP_STRING([--enable-imtemplate],[Compiles imtemplate template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_imtemplate="yes" ;;
+          no) enable_imtemplate="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imtemplate) ;;
+         esac],
+        [enable_imtemplate=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
+# end of copy template - be sure to serach for imtemplate to find everything!
+
+
 AC_CONFIG_FILES([Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
@@ -415,6 +435,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imuxsock/Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
+		plugins/imtemplate/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -432,6 +453,7 @@ echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"
 echo "PostgreSQL support enabled:               $enable_pgsql"
 echo "SNMP support enabled:                     $enable_snmp"
+echo "input template module will be compiled:   $enable_imtemplate"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"

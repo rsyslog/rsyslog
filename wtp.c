@@ -263,7 +263,6 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	 */
 	wtpProcessThrdChanges(pThis);
 		
-RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 	/* and wait for their termination */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pThis->mut);
@@ -271,7 +270,6 @@ RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 	bTimedOut = 0;
 	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
-RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 		dbgprintf("%s: waiting %ldms on worker thread termination, %d still running\n",
 			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout), pThis->iCurNumWrkThrd);
 
