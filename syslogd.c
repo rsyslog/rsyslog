@@ -3113,7 +3113,9 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			 */
 			if(*p2parse == ':') {
 				bTAGCharDetected = 1;
-				++p2parse;
+				/* We will move hostname to tag, so preserve ':' (otherwise we 
+				 * will needlessly change the message format) */
+				*pWork++ = *p2parse++; 
 			} else if(*p2parse == ' ')
 				++p2parse;
 			*pWork = '\0';
