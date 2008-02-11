@@ -138,36 +138,12 @@ ENDtryResume
 /* 
 *	Helper function - not used yet!
 */
+/* NOT NEEDED AT ALL 
 static int snmp_input_sender(int operation, netsnmp_session * session, int reqid, netsnmp_pdu *pdu, void *magic)
 {
-	//nothing todo yet!
-    return 1;
+   return 1;
 }
-
-/* 
-*	Helper function for parsing and converting dns/ip addresses into in_addr_t structs
 */
-static in_addr_t omsnmp_parse_address(char* address)
-{
-    in_addr_t       addr;
-    struct sockaddr_in saddr;
-    struct hostent *hp;
-
-    if ((addr = inet_addr(address)) != -1)
-        return addr;
-    hp = gethostbyname(address);
-    if (hp == NULL)
-	{
-		dbgprintf("parse_address failed\n");
-        return NULL;
-    } 
-	else 
-	{
-        memcpy( &saddr.sin_addr, hp->h_addr_list[0], hp->h_length);
-/*		memcpy( &server_addr.sin_addr.s_addr,hostInfo->h_addr_list[0], hostInfo->h_length);*/
-        return saddr.sin_addr.s_addr;
-    }
-}
 
 static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 {
@@ -175,7 +151,6 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 
 	netsnmp_session session, *ss;
 	netsnmp_pdu    *pdu = NULL;
-	in_addr_t      *pdu_in_addr_t;
 	oid             enterpriseoid[MAX_OID_LEN];
 	size_t          enterpriseoidlen = MAX_OID_LEN;
 	oid				oidSyslogMessage[MAX_OID_LEN];
@@ -191,7 +166,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 
 	snmp_sess_init(&session);
 	session.version = pData->iSNMPVersion; /* Sample SNMP_VERSION_1; */
-	session.callback = snmp_input_sender;
+	session.callback = NULL; /* NOT NEEDED */
 	session.callback_magic = NULL;
 	session.peername = (char*) pData->szTargetAndPort;
 	
@@ -214,11 +189,8 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	if (session.version == SNMP_VERSION_1) 
 	{
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP);
-		pdu_in_addr_t = (in_addr_t *) pdu->agent_addr;
 
 		/* Set enterprise */
-
-		/* TODO! */
 		if (!snmp_parse_oid( (char*) pData->szEnterpriseOID, &enterpriseoid, &enterpriseoidlen ))
 		{
 			strErr = snmp_api_errstring(snmp_errno);
@@ -233,16 +205,13 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		memcpy(pdu->enterprise, enterpriseoid, enterpriseoidlen * sizeof(oid));
 		pdu->enterprise_length = enterpriseoidlen;
 
-		/* Set Source Agent */
-		*pdu_in_addr_t = omsnmp_parse_address( (char*)pData->szTarget );
-
-		/* Set Traptype TODO */
+		/* Set Traptype */
 		pdu->trap_type = pData->iTrapType; 
 		
-		/* Set SpecificType TODO */
+		/* Set SpecificType */
 		pdu->specific_type = pData->iSpecificType;
 
-		//--- Set Updtime
+		/* Set Updtime */
 		pdu->time = get_uptime();
 	}
 	/* If SNMP Version2c is configured !*/
@@ -251,10 +220,10 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		long sysuptime;
 		char csysuptime[20];
 		
-		//Create PDU
+		/* Create PDU */
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP2);
 		
-		//Set uptime
+		/* Set uptime */
 		sysuptime = get_uptime();
 		sprintf(csysuptime, "%ld", sysuptime);
 		trap = csysuptime;
@@ -276,7 +245,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	/* SET TRAP PARAMETER for SyslogMessage! */
 /*	dbgprintf( "omsnmp_sendsnmp: SyslogMessage '%s'\n", psz );*/
 
-	// First create new OID object
+	/* First create new OID object */
 	if (snmp_parse_oid( (char*) pData->szSyslogMessageOID, &oidSyslogMessage, &oLen))
 	{
 		int iErrCode = snmp_add_var(pdu, &oidSyslogMessage, oLen, 's', (char*) psz);
