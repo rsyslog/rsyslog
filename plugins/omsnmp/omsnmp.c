@@ -156,8 +156,8 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	oid				oidSyslogMessage[MAX_OID_LEN];
 	size_t			oLen = MAX_OID_LEN;
 	int             status;
-	char           *trap = NULL; /* obselte , *specific = NULL, *description = NULL, *agent = NULL; */
-	char		   *strErr = NULL;
+	char           *trap = NULL;
+	const char	*strErr = NULL;
 
 	assert(psz != NULL);
 	dbgprintf( "omsnmp_sendsnmp: ENTER - Target = '%s' on Port = '%d' syslogmessage = '%s'\n", pData->szTarget, pData->iPort, (char*)psz);
@@ -191,7 +191,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP);
 
 		/* Set enterprise */
-		if (!snmp_parse_oid( (char*) pData->szEnterpriseOID, &enterpriseoid, &enterpriseoidlen ))
+		if (!snmp_parse_oid( (char*) pData->szEnterpriseOID, enterpriseoid, &enterpriseoidlen ))
 		{
 			strErr = snmp_api_errstring(snmp_errno);
 			dbgprintf("omsnmp_sendsnmp: Parsing EnterpriseOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
@@ -246,9 +246,9 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 /*	dbgprintf( "omsnmp_sendsnmp: SyslogMessage '%s'\n", psz );*/
 
 	/* First create new OID object */
-	if (snmp_parse_oid( (char*) pData->szSyslogMessageOID, &oidSyslogMessage, &oLen))
+	if (snmp_parse_oid( (char*) pData->szSyslogMessageOID, oidSyslogMessage, &oLen))
 	{
-		int iErrCode = snmp_add_var(pdu, &oidSyslogMessage, oLen, 's', (char*) psz);
+		int iErrCode = snmp_add_var(pdu, oidSyslogMessage, oLen, 's', (char*) psz);
 		if (iErrCode)
 		{
 			const char *str = snmp_api_errstring(iErrCode);
