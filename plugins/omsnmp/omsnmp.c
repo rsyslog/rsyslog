@@ -247,16 +247,14 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		
 		/* Debug Output! */
 		logerrorVar( "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
-		/* TODO! CLEANUP */
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	else	/* Reset pdu Pointer, already cleaned */
-		pdu = NULL;
 
 finalize_it:
-	if(pdu != NULL) {
-		snmp_free_pdu(pdu);
-		dbgprintf( "omsnmp_sendsnmp: called snmp_free_pdu - manually freeing memory for pdu\n");
+	if(iRet != RS_RET_OK) {
+		if(pdu != NULL) {
+			snmp_free_pdu(pdu);
+		}
 	}
 
 	if(ss != NULL) {
@@ -278,11 +276,6 @@ CODESTARTdoAction
 
 /*	dbgprintf("omsnmp: Sending SNMP Trap to '%s' on Port '%d'\n", pData->szTarget, pData->iPort); */
 	iRet = omsnmp_sendsnmp(pData, ppString[0]);
-	if (iRet == RS_RET_ERR)
-	{
-		/* TODO: CLEANUP! */
-		ABORT_FINALIZE(RS_RET_SUSPENDED);
-	}
 finalize_it:
 ENDdoAction
 
