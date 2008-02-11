@@ -82,15 +82,15 @@ static int iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;/*Default is SNMP_TRAP_ENTER
 
 typedef struct _instanceData {
 	uchar	szTransport[OMSNMP_MAXTRANSPORLENGTH+1];	/* Transport - Can be udp, tcp, udp6, tcp6 and other types supported by NET-SNMP */ 
-	uchar	szTarget[MAXHOSTNAMELEN+1];					/* IP/hostname of Snmp Target*/ 
-	uchar	szTargetAndPort[MAXHOSTNAMELEN+1];			/* IP/hostname + Port,needed format for SNMP LIB */ 
+	uchar	szTarget[MAXHOSTNAMELEN+1];			/* IP/hostname of Snmp Target*/ 
+	uchar	szTargetAndPort[MAXHOSTNAMELEN+1];		/* IP/hostname + Port,needed format for SNMP LIB */ 
 	uchar	szCommunity[OMSNMP_MAXCOMMUNITYLENGHT+1];	/* Snmp Community */ 
 	uchar	szEnterpriseOID[OMSNMP_MAXOIDLENGHT+1];		/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */ 
 	uchar	szSyslogMessageOID[OMSNMP_MAXOIDLENGHT+1];	/* Snmp OID used for the Syslog Message - default is 1.3.6.1.4.1 - .iso.org.dod.internet.private.enterprises */ 
-	int iPort;											/* Target Port */
-	int iSNMPVersion;									/* SNMP Version to use */
-	int iTrapType;										/* Snmp TrapType or GenericType */
-	int iSpecificType;									/* Snmp Specific Type */
+	int iPort;						/* Target Port */
+	int iSNMPVersion;					/* SNMP Version to use */
+	int iTrapType;						/* Snmp TrapType or GenericType */
+	int iSpecificType;					/* Snmp Specific Type */
 } instanceData;
 
 BEGINcreateInstance
@@ -160,7 +160,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	{
 		/*TODO diagnose snmp_open errors with the input netsnmp_session pointer */
 		logerrorVar("omsnmp_sendsnmp: snmp_open to host '%s' on Port '%d' failed\n", pData->szTarget, pData->iPort);
-        return RS_RET_FALSE;
+        	ABORT_FINALIZE(RS_RET_ERR);
 	}
 	
 	/* If SNMP Version1 is configured !*/
@@ -174,10 +174,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 			strErr = snmp_api_errstring(snmp_errno);
 			logerrorVar("omsnmp_sendsnmp: Parsing EnterpriseOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 			
-			/* CLEANUP */
-			snmp_free_pdu(pdu);
-
-			return RS_RET_FALSE;
+			ABORT_FINALIZE(RS_RET_ERR);
 		}
 		pdu->enterprise = (oid *) malloc(enterpriseoidlen * sizeof(oid));
 		memcpy(pdu->enterprise, enterpriseoid, enterpriseoidlen * sizeof(oid));
@@ -212,7 +209,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		{
 			strErr = snmp_api_errstring(snmp_errno);
 			logerrorVar("omsnmp_sendsnmp: Adding trap OID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
-			ABORT_FINALIZE(RS_RET_FALSE);
+			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
 
@@ -227,7 +224,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		{
 			const char *str = snmp_api_errstring(iErrCode);
 			logerrorVar( "omsnmp_sendsnmp: Invalid SyslogMessage OID, error code '%d' - '%s'\n", iErrCode, str );
-			ABORT_FINALIZE(RS_RET_FALSE);
+			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	}
 	else
@@ -235,7 +232,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		strErr = snmp_api_errstring(snmp_errno);
 		logerrorVar("omsnmp_sendsnmp: Parsing SyslogMessageOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 
-		ABORT_FINALIZE(RS_RET_FALSE);
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	/* Send the TRAP */
@@ -251,18 +248,17 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		/* Debug Output! */
 		logerrorVar( "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
 		/* TODO! CLEANUP */
-		ABORT_FINALIZE(RS_RET_FALSE);
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pdu != NULL) {
-			snmp_free_pdu(pdu);
-		}
+	if(pdu != NULL) {
+		snmp_free_pdu(pdu);
 	}
 
-	if(ss != NULL)
+	if(ss != NULL) {
 		snmp_close(ss);
+	}
 
 	dbgprintf( "omsnmp_sendsnmp: LEAVE\n");
 	RETiRet;
@@ -274,12 +270,12 @@ CODESTARTdoAction
 	/* Abort if the STRING is not set, should never happen */
 	if (ppString[0] == NULL)
 	{
-		ABORT_FINALIZE(RS_RET_TRUE);
+		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
 /*	dbgprintf("omsnmp: Sending SNMP Trap to '%s' on Port '%d'\n", pData->szTarget, pData->iPort); */
 	iRet = omsnmp_sendsnmp(pData, ppString[0]);
-	if (iRet == RS_RET_FALSE)
+	if (iRet == RS_RET_ERR)
 	{
 		/* TODO: CLEANUP! */
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -309,7 +305,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* ok, if we reach this point, we have something for us */
 	if((iRet = createInstance(&pData)) != RS_RET_OK)
-		goto finalize_it;
+		FINALIZE;
 
 	/* Check Transport */
 	if (pszTransport == NULL) {
@@ -318,20 +314,16 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		 */
 		strncpy( (char*) pData->szTransport, "udp", sizeof("udp") );
 	} else {
-	/* Copy Transport */
-	strncpy( (char*) pData->szTransport, (char*) pszTransport, strlen((char*) pszTransport) );
+		/* Copy Transport */
+		strncpy( (char*) pData->szTransport, (char*) pszTransport, strlen((char*) pszTransport) );
 	}
 
 	/* Check Target */
 	if (pszTarget == NULL) {
-		/* due to a problem in the framework, we can not return an error code
-		 * right now, so we need to use a (useless) default.
-		 */
-		/* TODO: re-enable when rsyslogd supports it: ABORT_FINALIZE( RS_RET_PARAM_ERROR ); */
-		strncpy( (char*) pData->szTarget, "127.0.0.1", sizeof("127.0.0.1") );
+		ABORT_FINALIZE( RS_RET_PARAM_ERROR );
 	} else {
-	/* Copy Target */
-	strncpy( (char*) pData->szTarget, (char*) pszTarget, strlen((char*) pszTarget) );
+		/* Copy Target */
+		strncpy( (char*) pData->szTarget, (char*) pszTarget, strlen((char*) pszTarget) );
 	}
 
 	/* Copy Community */
@@ -343,7 +335,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* Copy Enterprise OID */
 	if (pszEnterpriseOID == NULL)	/* Failsave */
 		strncpy( (char*) pData->szEnterpriseOID, "1.3.6.1.4.1.3.1.1", sizeof("1.3.6.1.4.1.3.1.1") );
-	else						/* Copy Target */
+	else		/* Copy Target */
 		strncpy( (char*) pData->szEnterpriseOID, (char*) pszEnterpriseOID, strlen((char*) pszEnterpriseOID) );
 
 	/* Copy SyslogMessage OID */
@@ -412,6 +404,8 @@ ENDneedUDPSocket
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
+	DEFiRet;
+
 	if (pszTarget != NULL)
 		free(pszTarget);
 	pszTarget = NULL;
@@ -433,7 +427,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iSpecificType = 0;
 	iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
 
-	return RS_RET_OK;
+	RETiRet;
 }
 
 

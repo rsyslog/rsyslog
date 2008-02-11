@@ -57,8 +57,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NOT_IMPLEMENTED = -7,	/**< implementation is missing (probably internal error or lazyness ;)) */
 	RS_RET_OUT_OF_MEMORY = -6,	/**< memory allocation failed */
 	RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50,/**< the caller provided a buffer, but the called function sees the size of this buffer is too small - operation not carried out */
-	RS_RET_TRUE = -1,
-	RS_RET_FALSE = -2,
+	RS_RET_TRUE = -1,		/**< to indicate a true state (can be used as TRUE, legacy) */
+	RS_RET_FALSE = -2,		/**< to indicate a false state (can be used as FALSE, legacy) */
 	RS_RET_ERR = -3000,	/**< generic failure */
 	RS_TRUNCAT_TOO_LARGE = -3001, /**< truncation operation where too many chars should be truncated */
 	RS_RET_FOUND_AT_STRING_END = -3002, /**< some value found, but at the last pos of string */
