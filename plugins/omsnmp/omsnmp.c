@@ -250,10 +250,13 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		/* TODO! CLEANUP */
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+	else	/* Reset pdu Pointer, already cleaned */
+		pdu = NULL;
 
 finalize_it:
 	if(pdu != NULL) {
 		snmp_free_pdu(pdu);
+		dbgprintf( "omsnmp_sendsnmp: called snmp_free_pdu - manually freeing memory for pdu\n");
 	}
 
 	if(ss != NULL) {
