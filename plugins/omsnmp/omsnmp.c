@@ -181,7 +181,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	if (ss == NULL) 
 	{
 		/*TODO diagnose snmp_open errors with the input netsnmp_session pointer */
-		dbgprintf("omsnmp_sendsnmp: snmp_open to host '%s' on Port '%d' failed\n", pData->szTarget, pData->iPort);
+		logerrorVar("omsnmp_sendsnmp: snmp_open to host '%s' on Port '%d' failed\n", pData->szTarget, pData->iPort);
         return RS_RET_FALSE;
 	}
 	
@@ -194,7 +194,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		if (!snmp_parse_oid( (char*) pData->szEnterpriseOID, enterpriseoid, &enterpriseoidlen ))
 		{
 			strErr = snmp_api_errstring(snmp_errno);
-			dbgprintf("omsnmp_sendsnmp: Parsing EnterpriseOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
+			logerrorVar("omsnmp_sendsnmp: Parsing EnterpriseOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 			
 			/* CLEANUP */
 			snmp_free_pdu(pdu);
@@ -233,7 +233,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		if ( snmp_add_var(pdu, objid_snmptrap, sizeof(objid_snmptrap) / sizeof(oid), 'o', (char*) pData->szSyslogMessageOID ) != 0)
 		{
 			strErr = snmp_api_errstring(snmp_errno);
-			dbgprintf("omsnmp_sendsnmp: Adding trap OID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
+			logerrorVar("omsnmp_sendsnmp: Adding trap OID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 			
 			/* CLEANUP */
 			snmp_free_pdu(pdu);
@@ -252,7 +252,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		if (iErrCode)
 		{
 			const char *str = snmp_api_errstring(iErrCode);
-			dbgprintf( "omsnmp_sendsnmp: Invalid SyslogMessage OID, error code '%d' - '%s'\n", iErrCode, str );
+			logerrorVar( "omsnmp_sendsnmp: Invalid SyslogMessage OID, error code '%d' - '%s'\n", iErrCode, str );
 
 			/* CLEANUP */
 			snmp_free_pdu(pdu);
@@ -263,7 +263,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	else
 	{
 		strErr = snmp_api_errstring(snmp_errno);
-		dbgprintf("omsnmp_sendsnmp: Parsing SyslogMessageOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
+		logerrorVar("omsnmp_sendsnmp: Parsing SyslogMessageOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 
 		/* CLEANUP */
 		snmp_free_pdu(pdu);
@@ -282,7 +282,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 			iErrorCode = session.s_snmp_errno;
 		
 		/* Debug Output! */
-		dbgprintf( "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
+		logerrorVar( "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
 
 		/* Important we must free the PDU! */
 		snmp_free_pdu(pdu);

@@ -2334,6 +2334,32 @@ void logerrorInt(char *type, int errCode)
 	return;
 }
 
+/*
+ * Error Output with variable number of parameters. 
+ * This functions works pretty much like dbgprintf, 
+ * except it logs an error. 
+ */
+void logerrorVar(char *fmt, ...)
+{
+	va_list ap;
+	char buf[1024];
+	size_t lenBuf;
+	
+	/* Format parameters */
+	va_start(ap, fmt);
+	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
+	if(lenBuf >= sizeof(buf)) {
+		/* if our buffer was too small, we simply truncate. */
+		lenBuf--;
+	}
+	va_end(ap);
+	
+	/* Log the error now */
+	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
+	logerror(buf);
+	return;
+}
+
 /* Print syslogd errors some place.
  */
 void logerror(char *type)
