@@ -276,13 +276,8 @@ will be reread and the
 .BR rsyslog (3)
 facility is started again.
 .TP
-.B SIGTERM
+.B SIGTERM "," SIGINT "," SIGQUIT
 .B Rsyslogd
-will die.
-.TP
-.BR SIGINT ", " SIGQUIT
-If debugging is enabled these are ignored, otherwise 
-.B rsyslogd
 will die.
 .TP
 .B SIGUSR1

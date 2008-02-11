@@ -12,6 +12,7 @@ Version 2.0.2 STABLE (rgerhards), 2008-02-??
   pointing out this problem.
 - bugfix: trailing ":" of tag was lost while parsing legacy syslog messages
   without timestamp - thanks to Anders Blomdell for providing a patch!
+- bugfix (doc): misspelled config directive, invalid signal info
 ---------------------------------------------------------------------------
 Version 2.0.1 STABLE (rgerhards), 2008-01-24
 - fixed a bug in integer conversion - but this function was never called,
