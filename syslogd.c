@@ -2360,6 +2360,7 @@ void logerrorVar(char *fmt, ...)
 	return;
 }
 
+
 /* Print syslogd errors some place.
  */
 void logerror(char *type)

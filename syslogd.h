@@ -50,6 +50,8 @@
 #define MARK		0x008	/* this message is a mark */
 
 void logerror(char *type);
+void logerrorVar(char *fmt, ...) __attribute__((format(printf, 1, 2)));
+/* the following two are legacy and should be replaced over time */
 void logerrorSz(char *type, char *errMsg);
 void logerrorInt(char *type, int iErr);
 
