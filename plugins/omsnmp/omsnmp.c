@@ -123,17 +123,6 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
-
-/* 
-*	Helper function - not used yet!
-*/
-/* NOT NEEDED AT ALL 
-static int snmp_input_sender(int operation, netsnmp_session * session, int reqid, netsnmp_pdu *pdu, void *magic)
-{
-   return 1;
-}
-*/
-
 static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 {
 	DEFiRet;
@@ -214,7 +203,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		
 		/* Set uptime */
 		sysuptime = get_uptime();
-		sprintf(csysuptime, "%ld", sysuptime);
+		snprintf( csysuptime, sizeof(csysuptime) , "%ld", sysuptime);
 		trap = csysuptime;
 		snmp_add_var(pdu, objid_sysuptime, sizeof(objid_sysuptime) / sizeof(oid), 't', trap);
 
@@ -401,7 +390,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->iTrapType = iTrapType;
 
 	/* Create string for session peername! */
-	sprintf( (char*) pData->szTargetAndPort, "%s:%s:%d", pData->szTransport, pData->szTarget, pData->iPort );
+	snprintf( (char*) pData->szTargetAndPort, sizeof(pData->szTargetAndPort) / sizeof(char), "%s:%s:%d", pData->szTransport, pData->szTarget, pData->iPort );
 	
 	/* Print Debug info */
 	dbgprintf("SNMPTransport: %s\n", pData->szTransport);
