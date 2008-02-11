@@ -5898,6 +5898,7 @@ static void mainloop(void)
 	int i;
 	int maxfds;
 	int nfds;
+	int errnoSave;
 #ifdef  SYSLOG_INET
 	selectHelperWriteFDSInfo_t writeFDSInfo;
 	fd_set writefds;
@@ -6036,6 +6037,7 @@ static void mainloop(void)
 #endif
 		nfds = select(maxfds+1, (fd_set *) &readfds, MAIN_SELECT_WRITEFDS,
 				  (fd_set *) NULL, MAIN_SELECT_TIMEVAL);
+		errnoSave = errno; /* save errno for later reference */
 
 		if(bRequestDoMark) {
 			domark();
@@ -6056,6 +6058,7 @@ static void mainloop(void)
 			continue;
 		}
 
+		errno = errnoSave; /* restore errno to state right after select (which is what we need) -- rgerhards, 2008-02-11 */
 		processSelectAfter(maxfds, nfds, &readfds, MAIN_SELECT_WRITEFDS);
 
 #undef MAIN_SELECT_TIMEVAL 
