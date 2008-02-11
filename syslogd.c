@@ -2492,9 +2492,11 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 		if(pAction->f_pMsg != NULL) {
 			if(pAction->f_prevcount > 0)
 				CHKiRet(fprintlog(pAction));
-				/* we do not care about iRet above - I think it's right but if we have
-				 * some troubles, you know where to look at ;) -- rgerhards, 2007-08-01
-				 */
+			/* if we run into trouble (most importantly a suspended
+			 * action), we keep the old message (by virtue of not
+			 * destructing it) and discard the new one (done
+			 * automatically when we return.
+			 */
 			MsgDestruct(pAction->f_pMsg);
 		}
 		pAction->f_pMsg = MsgAddRef(pMsg);
