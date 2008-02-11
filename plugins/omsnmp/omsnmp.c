@@ -450,7 +450,23 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	if (pszTarget != NULL)
 		free(pszTarget);
 	pszTarget = NULL;
+	
+	if (pszCommunity != NULL)
+		free(pszCommunity);
+	pszCommunity = NULL;
+	
+	if (pszEnterpriseOID != NULL)
+		free(pszEnterpriseOID);
+	pszEnterpriseOID = NULL;
+
+	if (pszSyslogMessageOID != NULL)
+		free(pszSyslogMessageOID);
+	pszSyslogMessageOID = NULL;
+
 	iPort = 0;
+	iSNMPVersion = 1;
+	iSpecificType = 0;
+	iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;
 
 	return RS_RET_OK;
 }
@@ -460,6 +476,12 @@ BEGINmodExit
 CODESTARTmodExit
 if (pszTarget != NULL)
 	free(pszTarget);	
+if (pszCommunity != NULL)
+	free(pszCommunity);
+if (pszEnterpriseOID != NULL)
+	free(pszEnterpriseOID);
+if (pszSyslogMessageOID != NULL)
+	free(pszSyslogMessageOID);
 ENDmodExit
 
 
