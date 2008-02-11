@@ -3605,7 +3605,7 @@ static void die(int sig)
 		dbgprintf(" exiting on signal %d\n", sig);
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\"]" " exiting on signal %d.",
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
 		 (int) myPid, sig);
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, ADDDATE);
@@ -4576,7 +4576,7 @@ static void init(void)
 	 */
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\"][x-configInfo udpReception=\"%s\" " \
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"][x-configInfo udpReception=\"%s\" " \
 		 "udpPort=\"%s\" tcpReception=\"%s\" tcpPort=\"%s\"]" \
 		 " restart",
 		 (int) myPid,
