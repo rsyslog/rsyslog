@@ -20,6 +20,21 @@ obvious reasons, <a href="features.html">enhanced features</a> require a
 different config file syntax, rsyslogd should be able to work with a standard 
 syslog.conf file. This is especially useful while you are migrating from syslogd 
 to rsyslogd.</p>
+<h2>Modules</h2>
+<p>Rsyslog has a modular design. Consequently, there is a growing number of 
+modules. Here is the entry point to their documentation and what they do (list 
+is currently not complete)</p>
+<ul>
+	<li><a href="omsnmp.html">omsnmp</a> - SNMP trap output module</li>
+	<li>ommysql - output module for MySQL</li>
+	<li>ompgsql - output module for PostgreSQL</li>
+	<li>imfile - [in development] input module for text files</li>
+	<li>imklog - kernel logging</li>
+</ul>
+<p>Please note that each module provides configuration directives, which are NOT 
+necessarily being listed below. Also remember, that a modules configuration 
+directive (and functionality) is only available if it has been loaded (using 
+$ModLoad).</p>
 <h2>Global Directives</h2>
 <p>All global directives need to be specified on a line by their own and must 
 start with a dollar-sign. Here is a list in alphabetical order. Follow links for 
