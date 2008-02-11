@@ -2491,7 +2491,7 @@ static rsRetVal callAction(msg_t *pMsg, action_t *pAction)
 		 */
 		if(pAction->f_pMsg != NULL) {
 			if(pAction->f_prevcount > 0)
-				fprintlog(pAction);
+				CHKiRet(fprintlog(pAction));
 				/* we do not care about iRet above - I think it's right but if we have
 				 * some troubles, you know where to look at ;) -- rgerhards, 2007-08-01
 				 */
@@ -3437,9 +3437,15 @@ DEFFUNC_llExecFunc(domarkActions)
 		dbgprintf("flush %s: repeated %d times, %d sec.\n",
 		    modGetStateName(pAction->pMod), pAction->f_prevcount,
 		    repeatinterval[pAction->f_repeatcount]);
+		if(actionIsSuspended(pAction) &&
+		   (actionTryResume(pAction) != RS_RET_OK)) {
+			goto finalize_it;
+		}
 		fprintlog(pAction);
 		BACKOFF(pAction);
 	}
+
+finalize_it:
 	UnlockObj(pAction);
 
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
@@ -4109,9 +4115,14 @@ DEFFUNC_llExecFunc(freeSelectorsActions)
 
 	/* flush any pending output */
 	if(pAction->f_prevcount) {
+		if(actionIsSuspended(pAction) &&
+		   (actionTryResume(pAction) != RS_RET_OK)) {
+			goto finalize_it;
+		}
 		fprintlog(pAction);
 	}
 
+finalize_it:
 	return RS_RET_OK; /* never fails ;) */
 }
 
