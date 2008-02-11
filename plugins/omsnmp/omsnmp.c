@@ -255,7 +255,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	}
 
 finalize_it:
-	if(iRet != RS_RET_OK)= {
+	if(iRet != RS_RET_OK) {
 		if(pdu != NULL) {
 			snmp_free_pdu(pdu);
 		}
