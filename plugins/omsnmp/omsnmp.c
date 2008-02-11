@@ -212,11 +212,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		{
 			strErr = snmp_api_errstring(snmp_errno);
 			logerrorVar("omsnmp_sendsnmp: Adding trap OID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
-			
-			/* CLEANUP */
-			snmp_free_pdu(pdu);
-
-			return RS_RET_FALSE;
+			ABORT_FINALIZE(RS_RET_FALSE);
 		}
 	}
 
@@ -231,11 +227,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		{
 			const char *str = snmp_api_errstring(iErrCode);
 			logerrorVar( "omsnmp_sendsnmp: Invalid SyslogMessage OID, error code '%d' - '%s'\n", iErrCode, str );
-
-			/* CLEANUP */
-			snmp_free_pdu(pdu);
-
-			return RS_RET_FALSE;
+			ABORT_FINALIZE(RS_RET_FALSE);
 		}
 	}
 	else
@@ -243,10 +235,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		strErr = snmp_api_errstring(snmp_errno);
 		logerrorVar("omsnmp_sendsnmp: Parsing SyslogMessageOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 
-		/* CLEANUP */
-		snmp_free_pdu(pdu);
-
-		return RS_RET_FALSE;
+		ABORT_FINALIZE(RS_RET_FALSE);
 	}
 
 	/* Send the TRAP */
@@ -261,21 +250,19 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		
 		/* Debug Output! */
 		logerrorVar( "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
-
-		/* Important we must free the PDU! */
-		snmp_free_pdu(pdu);
-
-		/* Close SNMP Session */
-		snmp_close(ss);
-
 		/* TODO! CLEANUP */
-		return RS_RET_FALSE;
+		ABORT_FINALIZE(RS_RET_FALSE);
 	}
-	else
-	{
-		/* Just Close SNMP Session */
+
+finalize_it:
+	if(iRet != RS_RET_OK)= {
+		if(pdu != NULL) {
+			snmp_free_pdu(pdu);
+		}
+	}
+
+	if(ss != NULL)
 		snmp_close(ss);
-	}
 
 	dbgprintf( "omsnmp_sendsnmp: LEAVE\n");
 	RETiRet;
