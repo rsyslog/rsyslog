@@ -82,15 +82,17 @@ static int iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;/*Default is SNMP_TRAP_ENTER
 
 typedef struct _instanceData {
 	uchar	szTransport[OMSNMP_MAXTRANSPORLENGTH+1];	/* Transport - Can be udp, tcp, udp6, tcp6 and other types supported by NET-SNMP */ 
-	uchar	szTarget[MAXHOSTNAMELEN+1];			/* IP/hostname of Snmp Target*/ 
-	uchar	szTargetAndPort[MAXHOSTNAMELEN+1];		/* IP/hostname + Port,needed format for SNMP LIB */ 
+	uchar	szTarget[MAXHOSTNAMELEN+1];					/* IP/hostname of Snmp Target*/ 
+	uchar	szTargetAndPort[MAXHOSTNAMELEN+1];			/* IP/hostname + Port,needed format for SNMP LIB */ 
 	uchar	szCommunity[OMSNMP_MAXCOMMUNITYLENGHT+1];	/* Snmp Community */ 
 	uchar	szEnterpriseOID[OMSNMP_MAXOIDLENGHT+1];		/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */ 
 	uchar	szSyslogMessageOID[OMSNMP_MAXOIDLENGHT+1];	/* Snmp OID used for the Syslog Message - default is 1.3.6.1.4.1 - .iso.org.dod.internet.private.enterprises */ 
-	int iPort;						/* Target Port */
-	int iSNMPVersion;					/* SNMP Version to use */
-	int iTrapType;						/* Snmp TrapType or GenericType */
-	int iSpecificType;					/* Snmp Specific Type */
+	int iPort;											/* Target Port */
+	int iSNMPVersion;									/* SNMP Version to use */
+	int iTrapType;										/* Snmp TrapType or GenericType */
+	int iSpecificType;									/* Snmp Specific Type */
+
+	netsnmp_session *snmpsession;						/* Holds to SNMP Session, NULL if not initialized */
 } instanceData;
 
 BEGINcreateInstance
@@ -118,32 +120,41 @@ CODESTARTisCompatibleWithFeature
 	/* we are not compatible with repeated msg reduction feature, so do not allow it */
 ENDisCompatibleWithFeature
 
-
-BEGINtryResume
-CODESTARTtryResume
-ENDtryResume
-
-static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
+/* Exit SNMP Session
+ * alorbach, 2008-02-12
+ */
+static rsRetVal omsnmp_exitSession(instanceData *pData)
 {
 	DEFiRet;
 
-	netsnmp_session session, *ss;
-	netsnmp_pdu    *pdu = NULL;
-	oid             enterpriseoid[MAX_OID_LEN];
-	size_t          enterpriseoidlen = MAX_OID_LEN;
-	oid		oidSyslogMessage[MAX_OID_LEN];
-	size_t		oLen = MAX_OID_LEN;
-	int             status;
-	char            *trap = NULL;
-	const char	*strErr = NULL;
+	if(pData->snmpsession != NULL) {
+		dbgprintf( "omsnmp_exitSession: Clearing Session to '%s' on Port = '%d'\n", pData->szTarget, pData->iPort);
+		snmp_close(pData->snmpsession);
+		pData->snmpsession = NULL;
+	}
 
-	assert(psz != NULL);
-	dbgprintf( "omsnmp_sendsnmp: ENTER - Target = '%s' on Port = '%d' syslogmessage = '%s'\n", pData->szTarget, pData->iPort, (char*)psz);
+	RETiRet;
+}
+
+/* Init SNMP Session
+ * alorbach, 2008-02-12
+ */
+static rsRetVal omsnmp_initSession(instanceData *pData)
+{
+	DEFiRet;
+	
+	/* should not happen, but if session is not cleared yet - we do it now! */
+	if (pData->snmpsession != NULL)
+		omsnmp_exitSession(pData);
+
+	netsnmp_session session;
+
+	dbgprintf( "omsnmp_initSession: ENTER - Target = '%s' on Port = '%d'\n", pData->szTarget, pData->iPort);
 
 	putenv(strdup("POSIXLY_CORRECT=1"));
-
+	
 	snmp_sess_init(&session);
-	session.version = pData->iSNMPVersion; /* Sample SNMP_VERSION_1; */
+	session.version = pData->iSNMPVersion;
 	session.callback = NULL; /* NOT NEEDED */
 	session.callback_magic = NULL;
 	session.peername = (char*) pData->szTargetAndPort;
@@ -155,16 +166,50 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		session.community_len = strlen((char*) pData->szCommunity);
 	}
 
-	ss = snmp_open(&session);
-	if (ss == NULL) 
+	pData->snmpsession = snmp_open(&session);
+	if (pData->snmpsession == NULL) 
 	{
-		/*TODO diagnose snmp_open errors with the input netsnmp_session pointer */
-		logerrorVar("omsnmp_sendsnmp: snmp_open to host '%s' on Port '%d' failed\n", pData->szTarget, pData->iPort);
-        	ABORT_FINALIZE(RS_RET_ERR);
+		logerrorVar("omsnmp_initSession: snmp_open to host '%s' on Port '%d' failed\n", pData->szTarget, pData->iPort);
+        /* Stay suspended */
+		iRet = RS_RET_SUSPENDED;
+	}
+	else
+	{
+		/* Report success */
+		iRet = RS_RET_OK; 
+	}
+
+	RETiRet;
+}
+
+static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
+{
+	DEFiRet;
+
+	netsnmp_pdu    *pdu = NULL;
+	oid             enterpriseoid[MAX_OID_LEN];
+	size_t          enterpriseoidlen = MAX_OID_LEN;
+	oid				oidSyslogMessage[MAX_OID_LEN];
+	size_t			oLen = MAX_OID_LEN;
+	int             status;
+	char            *trap = NULL;
+	const char		*strErr = NULL;
+
+	/* Init SNMP Session if necessary */
+	if (pData->snmpsession == NULL)
+	{
+		iRet = omsnmp_initSession(pData);
+		if (iRet != RS_RET_OK) {
+			ABORT_FINALIZE(iRet); /* This will most likely return RS_RET_SUSPENDED */
+		}
 	}
 	
+	/* String should not be NULL */
+	assert(psz != NULL);
+	dbgprintf( "omsnmp_sendsnmp: ENTER - Syslogmessage = '%s'\n", (char*)psz);
+
 	/* If SNMP Version1 is configured !*/
-	if (session.version == SNMP_VERSION_1) 
+	if ( pData->snmpsession->version == SNMP_VERSION_1) 
 	{
 		pdu = snmp_pdu_create(SNMP_MSG_TRAP);
 
@@ -174,7 +219,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 			strErr = snmp_api_errstring(snmp_errno);
 			logerrorVar("omsnmp_sendsnmp: Parsing EnterpriseOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 			
-			ABORT_FINALIZE(RS_RET_ERR);
+			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
 		pdu->enterprise = (oid *) malloc(enterpriseoidlen * sizeof(oid));
 		memcpy(pdu->enterprise, enterpriseoid, enterpriseoidlen * sizeof(oid));
@@ -190,7 +235,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		pdu->time = get_uptime();
 	}
 	/* If SNMP Version2c is configured !*/
-	else if (session.version == SNMP_VERSION_2c) 
+	else if (pData->snmpsession->version == SNMP_VERSION_2c) 
 	{
 		long sysuptime;
 		char csysuptime[20];
@@ -209,7 +254,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		{
 			strErr = snmp_api_errstring(snmp_errno);
 			logerrorVar("omsnmp_sendsnmp: Adding trap OID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
-			ABORT_FINALIZE(RS_RET_ERR);
+			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
 	}
 
@@ -224,7 +269,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		{
 			const char *str = snmp_api_errstring(iErrCode);
 			logerrorVar( "omsnmp_sendsnmp: Invalid SyslogMessage OID, error code '%d' - '%s'\n", iErrCode, str );
-			ABORT_FINALIZE(RS_RET_ERR);
+			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
 	}
 	else
@@ -232,22 +277,21 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		strErr = snmp_api_errstring(snmp_errno);
 		logerrorVar("omsnmp_sendsnmp: Parsing SyslogMessageOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 	}
 
 	/* Send the TRAP */
-	status = snmp_send(ss, pdu) == 0;
+	status = snmp_send(pData->snmpsession, pdu) == 0;
 	if (status)
 	{
-		int iErrorCode = 0;
-		if (ss->s_snmp_errno != 0)
-			iErrorCode = ss->s_snmp_errno;
-		else
-			iErrorCode = session.s_snmp_errno;
-		
 		/* Debug Output! */
+		int iErrorCode = pData->snmpsession->s_snmp_errno;
 		logerrorVar( "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
-		ABORT_FINALIZE(RS_RET_ERR);
+
+		/* Clear Session */
+		omsnmp_exitSession(pData);
+
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
 finalize_it:
@@ -257,14 +301,14 @@ finalize_it:
 		}
 	}
 
-	if(ss != NULL) {
-		snmp_close(ss);
-	}
-
 	dbgprintf( "omsnmp_sendsnmp: LEAVE\n");
 	RETiRet;
 }
 
+BEGINtryResume
+CODESTARTtryResume
+	iRet = omsnmp_initSession(pData);
+ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
@@ -273,17 +317,16 @@ CODESTARTdoAction
 	{
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
-
-/*	dbgprintf("omsnmp: Sending SNMP Trap to '%s' on Port '%d'\n", pData->szTarget, pData->iPort); */
+	
+	/* This will generate and send the SNMP Trap */
 	iRet = omsnmp_sendsnmp(pData, ppString[0]);
 finalize_it:
 ENDdoAction
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	/* we do not have instance data, so we do not need to
-	 * do anything here. -- rgerhards, 2007-07-25
-	 */
+	/* free snmp Session here */
+	omsnmp_exitSession(pData);
 ENDfreeInstance
 
 
@@ -388,6 +431,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* Set some defaults in the NetSNMP library */
 	netsnmp_ds_set_int(NETSNMP_DS_LIBRARY_ID, NETSNMP_DS_LIB_DEFAULT_PORT, pData->iPort );
 
+	/* Init Session Pointer */
+	pData->snmpsession = NULL;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
