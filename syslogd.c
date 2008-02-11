@@ -2411,7 +2411,7 @@ die(int sig)
 	if (sig) {
 		(void) snprintf(buf, sizeof(buf) / sizeof(char),
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\"]" " exiting on signal %d.",
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
 		 (int) myPid, sig);
 		errno = 0;
 		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, ADDDATE);
@@ -3266,7 +3266,7 @@ init(void)
 	 */
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\"] restart",
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] restart",
 		 (int) myPid);
 	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, ADDDATE);
 
