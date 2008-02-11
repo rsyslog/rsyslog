@@ -1,17 +1,6 @@
 /* omsnmp.c
  *
- * This module sends an snmp trap. More text will come here soon ^^
- *
- * This module will become part of the CVS and the rsyslog project because I think
- * it is a generally useful debugging, testing and development aid for everyone
- * involved with rsyslog.
- *
- * CURRENT SUPPORTED COMMANDS:
- *
- * :omsnmp:sleep <seconds> <milliseconds>
- *
- * Must be specified exactly as above. Keep in mind milliseconds are a millionth
- * of a second!
+ * This module sends an snmp trap.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -153,10 +142,10 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	netsnmp_pdu    *pdu = NULL;
 	oid             enterpriseoid[MAX_OID_LEN];
 	size_t          enterpriseoidlen = MAX_OID_LEN;
-	oid				oidSyslogMessage[MAX_OID_LEN];
-	size_t			oLen = MAX_OID_LEN;
+	oid		oidSyslogMessage[MAX_OID_LEN];
+	size_t		oLen = MAX_OID_LEN;
 	int             status;
-	char           *trap = NULL;
+	char            *trap = NULL;
 	const char	*strErr = NULL;
 
 	assert(psz != NULL);
@@ -474,14 +463,14 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodExit
 CODESTARTmodExit
-if (pszTarget != NULL)
-	free(pszTarget);	
-if (pszCommunity != NULL)
-	free(pszCommunity);
-if (pszEnterpriseOID != NULL)
-	free(pszEnterpriseOID);
-if (pszSyslogMessageOID != NULL)
-	free(pszSyslogMessageOID);
+	if (pszTarget != NULL)
+		free(pszTarget);	
+	if (pszCommunity != NULL)
+		free(pszCommunity);
+	if (pszEnterpriseOID != NULL)
+		free(pszEnterpriseOID);
+	if (pszSyslogMessageOID != NULL)
+		free(pszSyslogMessageOID);
 ENDmodExit
 
 
