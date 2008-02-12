@@ -16,6 +16,7 @@ Version 2.0.2 STABLE (rgerhards), 2008-02-12
 - applied some doc fixes from Michel Biebl and cleaned up some no longer
   needed files suggested by him
 - cleaned up stringbuf.c to fix an annoyance reported by Anders Blomdell
+- fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
 ---------------------------------------------------------------------------
 Version 2.0.1 STABLE (rgerhards), 2008-01-24
 - fixed a bug in integer conversion - but this function was never called,
