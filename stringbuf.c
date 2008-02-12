@@ -380,28 +380,6 @@ finalize_it:
 rsRetVal  rsCStrFinish(rsCStrObj __attribute__((unused)) *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-
-#	if STRINGBUF_TRIM_ALLOCSIZE == 1
-	/* in this mode, we need to trim the string. To do
-	 * so, we must allocate a new buffer of the exact 
-	 * string size, and then copy the old one over. 
-	 * This new buffer is then to be returned.
-	 */
-	if((pRetBuf = malloc((pThis->iBufSize) * sizeof(uchar))) == NULL)
-	{	/* OK, in this case we use the previous buffer. At least
-		 * we have it ;)
-		 */
-	}
-	else
-	{	/* got the new buffer, so let's use it */
-		uchar* pBuf;
-		memcpy(pBuf, pThis->pBuf, pThis->iBufPtr + 1);
-		pThis->pBuf = pBuf;
-	}
-#	else
-	/* here, we need to do ... nothing ;)
-	 */
-#	endif
 	return RS_RET_OK;
 }
 
