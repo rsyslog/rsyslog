@@ -547,6 +547,21 @@ int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct t
 
 /* ------------------------- end mutex tracking code ------------------------- */ 
 
+
+/* ------------------------- malloc/free tracking code ------------------------- */ 
+
+/* wrapper for free() */
+void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
+{
+	dbgRecordExecLocation(iStackPtr, ln);
+	dbgprintf("%s:%d:%s: free %p\n", pFuncDB->file,
+		  ln, pFuncDB->func, (void*) pMem);
+	free(pMem);
+}
+
+
+/* ------------------------- end malloc/free tracking code ------------------------- */ 
+
 /* ------------------------- thread tracking code ------------------------- */ 
 
 /* get ptr to call stack - if none exists, create a new stack
@@ -670,16 +685,29 @@ void
 sigsegvHdlr(int signum)
 {
 	char *signame;
+	struct sigaction sigAct;
 
+	/* first, restore the default abort handler */
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = SIG_DFL;
+	sigaction(SIGABRT, &sigAct, NULL);
+
+	/* then do our actual processing */
 	if(signum == SIGSEGV) {
 		signame = " (SIGSEGV)";
+	} else if(signum == SIGABRT) {
+		signame = " (SIGABRT)";
 	} else {
 		signame = "";
 	}
 
-	dbgprintf("\n\n\n\nSignal %d%s occured, execution must be terminated %d.\n\n\n\n", signum, signame, SIGSEGV);
+	dbgprintf("\n\n\n\nSignal %d%s occured, execution must be terminated.\n\n\n\n", signum, signame);
 
 	dbgPrintAllDebugInfo();
+
+	dbgprintf("If the call trace is empty, you may want to ./configure --enable-rtinst\n");
+	dbgprintf("\n\nTo submit bug reports, visit http://www.rsyslog.com/bugs\n\n");
 
 	fflush(stddbg);
 

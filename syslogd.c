@@ -4827,6 +4827,8 @@ int realMain(int argc, char **argv)
 
 	sigAct.sa_handler = sigsegvHdlr;
 	sigaction(SIGSEGV, &sigAct, NULL);
+sigAct.sa_handler = sigsegvHdlr;
+sigaction(SIGABRT, &sigAct, NULL);
 	sigAct.sa_handler = doDie;
 	sigaction(SIGTERM, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? doDie : SIG_IGN;

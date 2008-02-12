@@ -111,7 +111,7 @@ actionResetQueueParams(void)
 	glbliActionResumeRetryCount = 0;		/* I guess it is smart to reset this one, too */
 
 	if(pszActionQFName != NULL)
-		free(pszActionQFName);
+		d_free(pszActionQFName);
 	pszActionQFName = NULL;				/* prefix for the main message queue file */
 
 	RETiRet;
@@ -123,6 +123,7 @@ actionResetQueueParams(void)
  */
 rsRetVal actionDestruct(action_t *pThis)
 {
+	DEFiRet;
 	ASSERT(pThis != NULL);
 
 	queueDestruct(&pThis->pQueue);
@@ -136,10 +137,10 @@ rsRetVal actionDestruct(action_t *pThis)
 	SYNC_OBJ_TOOL_EXIT(pThis);
 	pthread_mutex_destroy(&pThis->mutActExec);
 	if(pThis->ppTpl != NULL)
-		free(pThis->ppTpl);
-	free(pThis);
+		d_free(pThis->ppTpl);
+	d_free(pThis);
 	
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
@@ -366,6 +367,11 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(ppMsgs[i])));
 	}
+for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+RUNLOG_VAR("%d", i);
+RUNLOG_VAR("%s", ppMsgs[i]);
+RUNLOG_VAR("%p", &ppMsgs[i]);
+}
 	iRetries = 0;
 	/* We now must guard the output module against execution by multiple threads. The
 	 * plugin interface specifies that output modules must not be thread-safe (except
@@ -402,6 +408,11 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 				dbgprintf("Action requested to be suspended, done that.\n");
 				actionSuspend(pAction);
 			}
+for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+RUNLOG_VAR("%d", i);
+RUNLOG_VAR("%s", ppMsgs[i]);
+RUNLOG_VAR("%p", &ppMsgs[i]);
+}
 		}
 
 	} while(iRet == RS_RET_SUSPENDED && (pAction->iResumeRetryCount == -1 || iRetries < pAction->iResumeRetryCount)); /* do...while! */
@@ -417,10 +428,10 @@ finalize_it:
 	/* cleanup */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		if(ppMsgs[i] != NULL) {
-			free(ppMsgs[i]);
+			d_free(ppMsgs[i]);
 		}
-		free(ppMsgs);
 	}
+	d_free(ppMsgs);
 	msgDestruct(&pMsg); /* we are now finished with the message */
 
 	RETiRet;
@@ -450,7 +461,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
 		logerrorSz("unknown actionqueue parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
-	free(pszType); /* no longer needed */
+	d_free(pszType); /* no longer needed */
 
 	RETiRet;
 }

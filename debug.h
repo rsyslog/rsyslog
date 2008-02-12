@@ -91,6 +91,7 @@ int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackP
 int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
+void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr);
 int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line);
 void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore);
 void dbgSetExecLocation(int iStackPtr, int line);
@@ -131,10 +132,12 @@ void dbgPrintAllDebugInfo(void);
 #define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_free(x)      dbgFree(x, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #else
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
 #define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
 #define d_pthread_cond_wait(cond, mut)   pthread_cond_wait(cond, mut)
 #define d_pthread_cond_timedwait(cond, mut, to)   pthread_cond_timedwait(cond, mut, to)
+#define d_free(x)      free(x)
 #endif
 #endif /* #ifndef DEBUG_H_INCLUDED */

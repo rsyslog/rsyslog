@@ -259,7 +259,7 @@ int resolveFileSizeLimit(instanceData *pData)
 	uchar *pCmd;
 	uchar *p;
 	off_t actualFileSize;
-	assert(pData != NULL);
+	ASSERT(pData != NULL);
 
 	if(pData->f_sizeLimitCmd == NULL)
 		return 1; /* nothing we can do in this case... */
@@ -309,14 +309,16 @@ int resolveFileSizeLimit(instanceData *pData)
  * as the index of the to-be-deleted entry. This index may
  * point to an unallocated entry, in whcih case the
  * function immediately returns. Parameter bFreeEntry is 1
- * if the entry should be free()ed and 0 if not.
+ * if the entry should be d_free()ed and 0 if not.
  */
 static void dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 {
-	assert(pCache != NULL);
+	ASSERT(pCache != NULL);
+
+	BEGINfunc;
 
 	if(pCache[iEntry] == NULL)
-		return;
+		FINALIZE;
 
 	dbgprintf("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
 		pCache[iEntry]->pName == NULL ? "[OPEN FAILED]" : (char*)pCache[iEntry]->pName);
@@ -326,14 +328,17 @@ static void dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int b
 	 */
 	if(pCache[iEntry]->pName != NULL) {
 		close(pCache[iEntry]->fd);
-		free(pCache[iEntry]->pName);
+		d_free(pCache[iEntry]->pName);
 		pCache[iEntry]->pName = NULL;
 	}
 
 	if(bFreeEntry) {
-		free(pCache[iEntry]);
+		d_free(pCache[iEntry]);
 		pCache[iEntry] = NULL;
 	}
+
+finalize_it:
+	ENDfunc;
 }
 
 
@@ -342,13 +347,15 @@ static void dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int b
 static void dynaFileFreeCache(instanceData *pData)
 {
 	register int i;
-	assert(pData != NULL);
+	ASSERT(pData != NULL);
 
+	BEGINfunc;
 	for(i = 0 ; i < pData->iCurrCacheSize ; ++i) {
 		dynaFileDelCacheEntry(pData->dynCache, i, 1);
 	}
 
-	free(pData->dynCache);
+	d_free(pData->dynCache);
+	ENDfunc;
 }
 
 
@@ -413,8 +420,8 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	int iFirstFree;
 	dynaFileCacheEntry **pCache;
 
-	assert(pData != NULL);
-	assert(newFileName != NULL);
+	ASSERT(pData != NULL);
+	ASSERT(newFileName != NULL);
 
 	pCache = pData->dynCache;
 
@@ -511,7 +518,7 @@ static rsRetVal writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pDa
 	off_t actualFileSize;
 	DEFiRet;
 
-	assert(pData != NULL);
+	ASSERT(pData != NULL);
 
 	/* first check if we have a dynamic file name and, if so,
 	 * check if it still is ok or a new file needs to be created
