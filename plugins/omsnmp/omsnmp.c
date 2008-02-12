@@ -142,12 +142,11 @@ static rsRetVal omsnmp_exitSession(instanceData *pData)
 static rsRetVal omsnmp_initSession(instanceData *pData)
 {
 	DEFiRet;
+	netsnmp_session session;
 	
 	/* should not happen, but if session is not cleared yet - we do it now! */
 	if (pData->snmpsession != NULL)
 		omsnmp_exitSession(pData);
-
-	netsnmp_session session;
 
 	dbgprintf( "omsnmp_initSession: ENTER - Target = '%s' on Port = '%d'\n", pData->szTarget, pData->iPort);
 
@@ -167,16 +166,10 @@ static rsRetVal omsnmp_initSession(instanceData *pData)
 	}
 
 	pData->snmpsession = snmp_open(&session);
-	if (pData->snmpsession == NULL) 
-	{
+	if (pData->snmpsession == NULL) {
 		logerrorVar("omsnmp_initSession: snmp_open to host '%s' on Port '%d' failed\n", pData->szTarget, pData->iPort);
-        /* Stay suspended */
+		/* Stay suspended */
 		iRet = RS_RET_SUSPENDED;
-	}
-	else
-	{
-		/* Report success */
-		iRet = RS_RET_OK; 
 	}
 
 	RETiRet;
@@ -196,16 +189,12 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	const char		*strErr = NULL;
 
 	/* Init SNMP Session if necessary */
-	if (pData->snmpsession == NULL)
-	{
-		iRet = omsnmp_initSession(pData);
-		if (iRet != RS_RET_OK) {
-			ABORT_FINALIZE(iRet); /* This will most likely return RS_RET_SUSPENDED */
-		}
+	if (pData->snmpsession == NULL) {
+		CHKiRet(omsnmp_initSession(pData));
 	}
 	
 	/* String should not be NULL */
-	assert(psz != NULL);
+	ASSERT(psz != NULL);
 	dbgprintf( "omsnmp_sendsnmp: ENTER - Syslogmessage = '%s'\n", (char*)psz);
 
 	/* If SNMP Version1 is configured !*/
@@ -304,6 +293,7 @@ finalize_it:
 	dbgprintf( "omsnmp_sendsnmp: LEAVE\n");
 	RETiRet;
 }
+
 
 BEGINtryResume
 CODESTARTtryResume
