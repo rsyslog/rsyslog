@@ -427,31 +427,49 @@ finalize_it:
 
 rsRetVal  rsCStrFinish(rsCStrObj __attribute__((unused)) *pThis)
 {
+	DEFiRet;
+#	if STRINGBUF_TRIM_ALLOCSIZE == 1
+	uchar* pBuf;
+#	endif
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
 #	if STRINGBUF_TRIM_ALLOCSIZE == 1
+	/* WARNING
+	 * STRINGBUF_TRIM_ALLOCSIZE can, in theory, be used to trim
+	 * memory buffers. This part of the code was inherited from
+	 * liblogging (where it is used in a different context) but
+	 * never put to use in rsyslog. The reason is that it is hardly
+	 * imaginable where the extra performance cost is worth the save
+	 * in memory alloc. Then Anders Blomdel rightfully pointed out that
+	 * the code does not work at all - and nobody even know that it
+	 * probably shouldn't. Rather than removing, I deciced to somewhat
+	 * fix the code, so that this feature may be enabled if somebody
+	 * really has a need for it. Be warned, however, that I NEVER
+	 * tested the fix. So if you intend to use this feature, you must
+	 * do full testing before you rely on it. -- rgerhards, 2008-02-12
+	 */
+
 	/* in this mode, we need to trim the string. To do
 	 * so, we must allocate a new buffer of the exact 
 	 * string size, and then copy the old one over. 
-	 * This new buffer is then to be returned.
 	 */
-	if((pRetBuf = malloc((pThis->iBufSize) * sizeof(uchar))) == NULL)
+	if((pBuf = malloc((pThis->iStrLen) * sizeof(uchar))) == NULL)
 	{	/* OK, in this case we use the previous buffer. At least
 		 * we have it ;)
 		 */
 	}
 	else
 	{	/* got the new buffer, so let's use it */
-		uchar* pBuf;
-		memcpy(pBuf, pThis->pBuf, pThis->iBufPtr + 1);
+		memcpy(pBuf, pThis->pBuf, pThis->iStrLen);
 		pThis->pBuf = pBuf;
 	}
 #	else
 	/* here, we need to do ... nothing ;)
 	 */
 #	endif
-	return RS_RET_OK;
+	RETiRet;
 }
+
 
 void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement)
 {
