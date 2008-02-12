@@ -147,6 +147,14 @@ int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz);
 	int rsCStrLen(rsCStrObj *pThis);
 #endif
 
+#if STRINGBUF_TRIM_ALLOCSIZE != 1
+/* This is the normal case (see comment in rsCStrFinish!). In those cases, the function
+ * simply needs to do nothing, so that we can save us the function call.
+ * rgerhards, 2008-02-12
+ */
+#define rsCStrFinish(pThis) RS_RET_OK
+#endif
+
 #define rsCStrGetBufBeg(x) ((x)->pBuf)
 
 #endif /* single include */

@@ -9,6 +9,11 @@ Version 3.11.1 (rgerhards), 2008-02-??
   they run rsyslog ;))
 - bugfix: trailing ":" of tag was lost while parsing legacy syslog messages
   without timestamp - thanks to Anders Blomdell for providing a patch!
+- fixed a bug in stringbuf.c related to STRINGBUF_TRIM_ALLOCSIZE, which
+  wasn't supposed to be used with rsyslog. Put a warning message up that
+  tells this feature is not tested and probably not worth the effort.
+  Thanks to Anders Blomdell fro bringing this to our attention
+- somewhat improved performance of string buffers
 ---------------------------------------------------------------------------
 Version 3.11.0 (rgerhards), 2008-01-31
 - implemented queued actions

@@ -425,15 +425,11 @@ finalize_it:
 }
 
 
-rsRetVal  rsCStrFinish(rsCStrObj __attribute__((unused)) *pThis)
-{
-	DEFiRet;
-#	if STRINGBUF_TRIM_ALLOCSIZE == 1
-	uchar* pBuf;
-#	endif
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-
-#	if STRINGBUF_TRIM_ALLOCSIZE == 1
+#if STRINGBUF_TRIM_ALLOCSIZE == 1
+	/* Only in this mode, we need to trim the string. To do
+	 * so, we must allocate a new buffer of the exact 
+	 * string size, and then copy the old one over. 
+	 */
 	/* WARNING
 	 * STRINGBUF_TRIM_ALLOCSIZE can, in theory, be used to trim
 	 * memory buffers. This part of the code was inherited from
@@ -448,11 +444,12 @@ rsRetVal  rsCStrFinish(rsCStrObj __attribute__((unused)) *pThis)
 	 * tested the fix. So if you intend to use this feature, you must
 	 * do full testing before you rely on it. -- rgerhards, 2008-02-12
 	 */
+rsRetVal  rsCStrFinish(rsCStrObj __attribute__((unused)) *pThis)
+{
+	DEFiRet;
+	uchar* pBuf;
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	/* in this mode, we need to trim the string. To do
-	 * so, we must allocate a new buffer of the exact 
-	 * string size, and then copy the old one over. 
-	 */
 	if((pBuf = malloc((pThis->iStrLen) * sizeof(uchar))) == NULL)
 	{	/* OK, in this case we use the previous buffer. At least
 		 * we have it ;)
@@ -463,12 +460,10 @@ rsRetVal  rsCStrFinish(rsCStrObj __attribute__((unused)) *pThis)
 		memcpy(pBuf, pThis->pBuf, pThis->iStrLen);
 		pThis->pBuf = pBuf;
 	}
-#	else
-	/* here, we need to do ... nothing ;)
-	 */
-#	endif
+
 	RETiRet;
 }
+#endif 	/* #if STRINGBUF_TRIM_ALLOCSIZE == 1 */
 
 
 void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement)
