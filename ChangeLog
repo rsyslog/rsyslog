@@ -22,6 +22,7 @@ Version 3.11.1 (rgerhards), 2008-02-12
 - improved abort diagnostic handler
 - some initial effort for malloc/free runtime debugging support
 - bugfix: using dynafile actions caused rsyslogd abort
+- fixed minor man errors thanks to Michael Biebl
 ---------------------------------------------------------------------------
 Version 3.11.0 (rgerhards), 2008-01-31
 - implemented queued actions
