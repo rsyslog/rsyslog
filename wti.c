@@ -330,7 +330,6 @@ wtiWorker(wti_t *pThis)
 
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
-dbgprintf("%s: start worker run, queue cmd currently %d\n", wtiGetDbgHdr(pThis), pThis->tCurrCmd);
 		/* process any pending thread requests */
 		wtpProcessThrdChanges(pWtp);
 		pthread_testcancel(); /* see big comment in function header */
@@ -352,10 +351,7 @@ dbgprintf("%s: start worker run, queue cmd currently %d\n", wtiGetDbgHdr(pThis),
 			dbgprintf("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
 			pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
 
-			dbgprintf("%s: pre condwait ->notEmpty, worker shutdown %d\n",
-				  wtiGetDbgHdr(pThis), pThis->pWtp->toWrkShutdown); // DEL
 			if(pWtp->toWrkShutdown == -1) {
-				dbgprintf("worker never times out!\n"); // DEL
 				/* never shut down any started worker */
 				d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
 			} else {
@@ -365,13 +361,11 @@ dbgprintf("%s: start worker run, queue cmd currently %d\n", wtiGetDbgHdr(pThis),
 					bInactivityTOOccured = 1; /* indicate we had a timeout */
 				}
 			}
-			dbgprintf("%s: post condwait ->Busy or timeout\n", wtiGetDbgHdr(pThis)); // DEL
 			END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
 			continue; /* request next iteration */
 		}
 
 		/* if we reach this point, we have a non-empty queue (and are still protected by mutex) */
-		dbgprintf("%s: calling consumer\n", wtiGetDbgHdr(pThis));
 		pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
 	}
 

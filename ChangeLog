@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 3.11.1 (rgerhards), 2008-02-??
+Version 3.11.1 (rgerhards), 2008-02-12
+- SNMP trap sender added thanks to Andre Lorbach (omsnmp)
 - added input-plugin interface specification in form of a (copy) template
   input module
 - applied documentation fix by Michael Biebl -- many thanks!

@@ -1069,7 +1069,6 @@ static rsRetVal queueShutdownWorkers(queue_t *pThis)
 	/* first calculate absolute timeout - we need the absolute value here, because we need to coordinate
 	 * shutdown of both the regular and DA queue on *the same* timeout.
 	 */
-RUNLOG_VAR("%d", pThis->toQShutdown);
 	timeoutComp(&tTimeout, pThis->toQShutdown);
 	dbgoprint((obj_t*) pThis, "trying shutdown of regular workers\n");
 	iRetLocal = wtpShutdownAll(pThis->pWtpReg, wtpState_SHUTDOWN, &tTimeout);
@@ -1439,7 +1438,6 @@ queueConsumerReg(queue_t *pThis, wti_t *pWti, int iCancelStateSave)
 	}
 
 finalize_it:
-	dbgoprint((obj_t*) pThis, "regular consumer returns %d\n", iRet);
 	RETiRet;
 }
 
@@ -1560,8 +1558,6 @@ queueRegOnWrkrShutdown(queue_t *pThis)
 	ISOBJ_TYPE_assert(pThis, queue);
 
 	if(pThis->pqParent != NULL) {
-RUNLOG_VAR("%p", pThis->pqParent);
-RUNLOG_VAR("%p", pThis->pqParent->pWtpDA);
 	ASSERT(pThis->pqParent->pWtpDA != NULL);
 	pThis->pqParent->bChildIsDone = 1; /* indicate we are done */
 	wtpAdviseMaxWorkers(pThis->pqParent->pWtpDA, 1); /* reactivate DA worker (always 1) */
@@ -1649,16 +1645,13 @@ rsRetVal queueStart(queue_t *pThis) /* this is the ConstructionFinalizer */
 	CHKiRet(wtpConstructFinalize	(pThis->pWtpReg));
 
 	/* initialize worker thread instances */
-RUNLOG_VAR("%d", pThis->bIsDA);
 	if(pThis->bIsDA) {
 		/* If we are disk-assisted, we need to check if there is a QIF file
 		 * which we need to load. -- rgerhards, 2008-01-15
 		 */
 		iRetLocal = queueHaveQIF(pThis);
-RUNLOG_VAR("%d", iRetLocal);
 		if(iRetLocal == RS_RET_OK) {
 			dbgoprint((obj_t*) pThis, "on-disk queue present, needs to be reloaded\n");
-RUNLOG;
 			queueInitDA(pThis, QUEUE_MODE_ENQDEQ, LOCK_MUTEX); /* initiate DA mode */
 			bInitialized = 1; /* we are done */
 		} else {
@@ -1668,7 +1661,6 @@ RUNLOG;
 		}
 	}
 
-RUNLOG_VAR("%d", bInitialized);
 	if(!bInitialized) {
 		dbgoprint((obj_t*) pThis, "queue starts up without (loading) any DA disk state (this is normal for the DA "
 			  "queue itself!)\n");
@@ -1934,7 +1926,6 @@ queueEnqObj(queue_t *pThis, void *pUsr)
 
 	ISOBJ_TYPE_assert(pThis, queue);
 
-RUNLOG_VAR("%d", pThis->bRunsDA);
 	/* Please note that this function is not cancel-safe and consequently
 	 * sets the calling thread's cancelibility state to PTHREAD_CANCEL_DISABLE
 	 * during its execution. If that is not done, race conditions occur if the

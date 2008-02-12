@@ -518,7 +518,10 @@ int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
 	int ret;
 	dbgRecordExecLocation(iStackPtr, ln);
 	dbgMutexUnlockLog(pmut, pFuncDB, ln);
-	dbgprintf("%s:%d:%s: mutex %p waiting on condition %p\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, (void*)pmut, (void*)cond);
+	if(bPrintMutexAction) {
+		dbgprintf("%s:%d:%s: mutex %p waiting on condition %p\n", pFuncDB->file, pFuncDB->line,
+			  pFuncDB->func, (void*)pmut, (void*)cond);
+	}
 	dbgMutexPreLockLog(pmut, pFuncDB, ln);
 	ret = pthread_cond_wait(cond, pmut);
 	return ret;
@@ -532,8 +535,10 @@ int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct t
 	dbgRecordExecLocation(iStackPtr, ln);
 	dbgMutexUnlockLog(pmut, pFuncDB, ln);
 	dbgMutexPreLockLog(pmut, pFuncDB, ln);
-	dbgprintf("%s:%d:%s: mutex %p waiting on condition %p (with timeout)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func,
-		  (void*)pmut, (void*)cond);
+	if(bPrintMutexAction) {
+		dbgprintf("%s:%d:%s: mutex %p waiting on condition %p (with timeout)\n", pFuncDB->file,
+			  pFuncDB->line, pFuncDB->func, (void*)pmut, (void*)cond);
+	}
 	ret = pthread_cond_timedwait(cond, pmut, abstime);
 	dbgMutexLockLog(pmut, pFuncDB, ln);
 	return ret;
