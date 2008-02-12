@@ -20,7 +20,7 @@ html_files = \
 	syslog-protocol.html \
 	version_naming.html \
 	contributors.html \
-	rsconf1_actionexeconlyifpreviousissuspended.html \
+	rsconf1_actionexeconlywhenpreviousissuspended.html \
 	rsconf1_actionresumeinterval.html \
 	rsconf1_allowedsender.html \
 	rsconf1_controlcharacterescapeprefix.html \
