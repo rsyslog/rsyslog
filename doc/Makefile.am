@@ -11,6 +11,7 @@ html_files = \
 	modules.html \
 	property_replacer.html \
 	rsyslog_conf.html \
+	rsyslog-example.conf \
 	rsyslog_mysql.html \
 	rsyslog_packages.html \
 	rsyslog_php_syslog_ng.html \
@@ -38,6 +39,9 @@ html_files = \
 	rsconf1_filecreatemode.html \
 	rsconf1_filegroup.html \
 	rsconf1_fileowner.html \
+	rsconf1_gssforwardservicename.html \
+	rsconf1_gsslistenservicename.html \
+	rsconf1_gssmode.html \
 	rsconf1_includeconfig.html \
 	rsconf1_mainmsgqueuesize.html \
 	rsconf1_modload.html \
