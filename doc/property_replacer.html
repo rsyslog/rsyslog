@@ -125,14 +125,29 @@ are defined:</p>
 <tr><td><b>date-mysql</b></td><td>format as mysql date</td></tr>
 <tr><td><b>date-rfc3164</b></td><td>format as RFC 3164 date</td></tr>
 <tr><td><b>date-rfc3339</b></td><td>format as RFC 3339 date</td></tr>
-<tr><td><b>escape-cc</b></td><td>replace control characters (ASCII value 127 and 
-	values less then 32) with an escape sequence. The sequnce is &quot;#&lt;charval&gt;&quot; 
+<tr>
+	<td><b>escape-cc</b></td><td>replace control characters (ASCII value 127 and 
+	values less then 32) with an escape sequence. The sequence is &quot;#&lt;charval&gt;&quot; 
 	where charval is the 3-digit decimal value of the control character. For 
-	example, a tabulator would be replaced by &quot;#009&quot;.</td></tr>
-<tr><td><b>space-cc</b></td><td>replace control characters by spaces</td></tr>
-<tr><td><b>drop-cc</b></td><td>drop control characters - the resulting string 
+	example, a tabulator would be replaced by &quot;#009&quot;.<br>
+	Note: using this option requires that
+	<a href="../../rsyslog/doc/rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a> 
+	is set to off.</td>
+</tr>
+<tr>
+	<td><b>space-cc</b></td><td>replace control characters by spaces<br>
+	Note: using this option requires that
+	<a href="../../rsyslog/doc/rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a> 
+	is set to off.</td>
+</tr>
+<tr>
+	<td><b>drop-cc</b></td><td>drop control characters - the resulting string 
 	will neither contain control characters, escape sequences nor any other 
-	replacement character like space.</td></tr>
+	replacement character like space.<br>
+	Note: using this option requires that
+	<a href="../../rsyslog/doc/rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a> 
+	is set to off.</td>
+</tr>
 </table>
 
 <h2>Further Links</h2>
