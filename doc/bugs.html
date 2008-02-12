@@ -4,37 +4,14 @@
 </head>
 <body>
 <h1>rsyslog bugs and annoyances</h1>
-<p><b>This page lists the known bugs rsyslog has to offer.</b> Please note that 
-we also have a
-<a href="http://sourceforge.net/tracker/?atid=696552&group_id=123448&func=browse">
-bug tracker at sourceforge.net</a>. This list here contains more architectural 
-things while the bug tracker most often lists things that you will actually 
-experience. Please be sure to visit the bug tracker in addition to this list 
-here.</p>
-<p>This list has last been updated on 2007-07-30 by
+<p><b>This page lists the known bugs rsyslog has to offer.</b>&nbsp; It lists 
+old and esoteric bugs. A live list of bugs is contained in our bugzilla. <b>
+<font color="#FF0000">Please visit </font><a href="http://www.rsyslog.com/bugs">
+<font color="#FF0000">http://www.rsyslog.com/bugs</font></a></b> to see what we 
+have. There, you can also open your own bug report if you think you found one.</p>
+<p>This list has last been updated on 2008-02-12 by
 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer Gerhards</a>.</p>
 <h1>rsyslogd</h1>
-<h2>stability in multithreaded mode</h2>
-<p>We have some reports that rsyslogd, if compiled with multi-threading enabled, 
-segfaults in some environments. We are actively looking at fixing this issue, 
-but as it does not occur in our lab environment, that unfortunately takes some 
-time. If you experience a segfault, please report it. As a work-around, you can 
-compile rsyslog without multi-threading:</p>
-<p>./configure --disable-pthreads<br>
-make clean<br>
-make<br>
-make install</p>
-<p>This somewhat reduces the ability to handle large message bursts, but even in 
-single-threaded mode rsyslogd offers great performance (just think that stock 
-sysklogd has always been using a single thread, only).</p>
-<h2>forwarding remotely received messages</h2>
-<p>Sysklogd does not forward remotely received messages to other network 
-destination except when the -h option is given. This code is currently defunct. 
-No matter if -h is specified or not, messages are ALWAYS forwarded. It is 
-currently under review if the sysklogd's functionality is actually needed. 
-Please see my
-<a href="http://rgerhards.blogspot.com/2007/07/on-syslogd-h-option.html">blog 
-post on this topic</a> for further detail.</p>
 <h2>EQUALLY-NAMED TEMPLATES</h2>
 <p>If multiple templates with the SAME name are created, all but the
    first definition is IGNORED. So you can NOT (yet) replace a
@@ -46,10 +23,6 @@ names...).</p>
 <p>This format is actually not 100% compatible with stock syslogd - the
    date is missing. Will be fixed soon and can also be fixed just via
    the proper template. Anyone up for this? ;)</p>
-<h2>SIGPIPE HANDLING</h2>
-<p>Currently, SIGPIPE is ignored. This is necessary to handle broken TCP
-  connections. We should further look into this issue and see which other
-  ways exist to handle the situation.</p>
 <h2>MULTIPLE INSTANCES</h2>
 <p>If multiple instances are running on a single machine, the one with
   the -r switch must start first. Also, UDP-based syslog forwarding between the 
