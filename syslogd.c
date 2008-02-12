@@ -368,7 +368,7 @@ static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list i
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
 int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
-static int 	bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
+static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 static int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 static int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
 static int	logEveryMsg = 0;/* no repeat message processing  - read-only after startup
