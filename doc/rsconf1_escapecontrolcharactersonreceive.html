@@ -14,6 +14,11 @@
 	(like Japanese, Chinese and Korean)</li>
 	<li>turning on this option destroys digital signatures if such exists inside 
 	the message</li>
+	<li>if turned on, the drop-cc, space-cc and escape-cc
+	<a href="property_replacer.html">property replacer</a> options do not work 
+	as expected because control characters are already removed upon message 
+	reception. If you intend to use these property replacer options, you must 
+	turn off $EscapeControlCharactersOnReceive.</li>
 </ul>
 <p><b>Sample:</b></p>
 <p><code><b>$EscapeControlCharactersOnReceive on</b></code></p>
