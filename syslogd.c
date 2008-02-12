@@ -4220,8 +4220,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 		DstSize--;
 	}
 	/* check if the Dst buffer was to small */
-	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0')
-	{ 
+	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') { 
 		dbgprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
 	}	
