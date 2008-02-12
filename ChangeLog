@@ -16,6 +16,9 @@ Version 3.11.1 (rgerhards), 2008-02-12
   Thanks to Anders Blomdell fro bringing this to our attention
 - somewhat improved performance of string buffers
 - fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
+- bugfix: setting for $EscapeCopntrolCharactersOnReceive was not 
+  properly initialized
+- clarified usage of space-cc property replacer option
 ---------------------------------------------------------------------------
 Version 3.11.0 (rgerhards), 2008-01-31
 - implemented queued actions

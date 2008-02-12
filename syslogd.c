@@ -1645,12 +1645,12 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 			iRet = (iRet == 1) ?  0 : 1;
 
 		if(Debug) {
-			printf("Filter: check for property '%s' (value '%s') ",
+			dbgprintf("Filter: check for property '%s' (value '%s') ",
 			        rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSPropName),
 			        pszPropVal);
 			if(f->f_filterData.prop.isNegated)
-				printf("NOT ");
-			printf("%s '%s': %s\n",
+				dbgprintf("NOT ");
+			dbgprintf("%s '%s': %s\n",
 			       getFIOPName(f->f_filterData.prop.operation),
 			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue),
 			       iRet ? "TRUE" : "FALSE");
@@ -2893,7 +2893,7 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
 {
 	DEFiRet;
 	iRet = actionDbgPrint((action_t*) pData);
-	printf("\n");
+	dbgprintf("\n");
 
 	RETiRet;
 }

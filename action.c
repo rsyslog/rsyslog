@@ -520,6 +520,7 @@ actionWriteToAction(action_t *pAction)
 	 * So let's enqueue our message for execution. -- rgerhards, 2007-07-24
 	 */
 	iRet = queueEnqObj(pAction->pQueue, (void*) MsgAddRef(pAction->f_pMsg));
+RUNLOG_VAR("%d", iRet);
 
 	if(iRet == RS_RET_OK)
 		pAction->f_prevcount = 0; /* message processed, so we start a new cycle */

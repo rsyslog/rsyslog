@@ -890,19 +890,16 @@ static rsRetVal qDestructDirect(queue_t __attribute__((unused)) *pThis)
 static rsRetVal qAddDirect(queue_t *pThis, void* pUsr)
 {
 	DEFiRet;
-	rsRetVal iRetLocal;
 
 	ASSERT(pThis != NULL);
 
 	/* calling the consumer is quite different here than it is from a worker thread */
-	iRetLocal = pThis->pConsumer(pThis->pUsr, pUsr);
-	if(iRetLocal != RS_RET_OK) {
-		dbgoprint((obj_t*) pThis, "Consumer returned iRet %d\n", iRetLocal);
-	}
-	--pThis->iQueueSize; /* this is kind of a hack, but its the smartest thing we can do given
-			      * the somewhat astonishing fact that this queue type does not actually
-			      * queue anything ;)
-			      */
+	/* we need to provide the consumer's return value back to the caller because in direct
+	 * mode the consumer probably has a lot to convey (which get's lost in the other modes
+	 * because they are asynchronous. But direct mode is deliberately synchronous.
+	 * rgerhards, 2008-02-12
+	 */
+	iRet = pThis->pConsumer(pThis->pUsr, pUsr);
 
 	RETiRet;
 }
@@ -963,18 +960,24 @@ queueGetUngottenObj(queue_t *pThis, obj_t **ppUsr)
 }
 
 
-/* generic code to add a queue entry */
+/* generic code to add a queue entry
+ * We use some specific code to most efficiently support direct mode
+ * queues. This is justified in spite of the gain and the need to do some
+ * things truely different. -- rgerhards, 2008-02-12
+ */
 static rsRetVal
 queueAdd(queue_t *pThis, void *pUsr)
 {
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
+
 	CHKiRet(pThis->qAdd(pThis, pUsr));
 
-	++pThis->iQueueSize;
-
-	dbgoprint((obj_t*) pThis, "entry added, size now %d entries\n", pThis->iQueueSize);
+	if(pThis->qType != QUEUETYPE_DIRECT) {
+		++pThis->iQueueSize;
+		dbgoprint((obj_t*) pThis, "entry added, size now %d entries\n", pThis->iQueueSize);
+	}
 
 finalize_it:
 	RETiRet;

@@ -71,6 +71,7 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
+	dbgprintf("\n");
 	iRet = RS_RET_DISCARDMSG;
 ENDdoAction
 
