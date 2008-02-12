@@ -53,36 +53,12 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 <p>The list below is something like a repository of ideas we'd like to 
 implement. Features on this list are typically NOT scheduled for immediate 
 inclusion. We maintain a
-<a href="http://sourceforge.net/tracker/?group_id=123448&atid=696555">feature 
-request tracker at sourceforge.net</a>. This tracker has things typically within 
+<a href="http://bugzilla.adiscon.com/rsyslog-feature.html">feature 
+request tracker at our bugzilla</a>. This tracker has things typically within 
 reach of implementation. Users are encouraged to submit feature requests there 
-(or via our forums). If we like them but they look quite long-lived (aka &quot;not 
-soon to be implemented&quot;), they will possibly be migrated to this list here and 
-at some time moved back to the sourceforge tracker.</p>
-<ul>
- <li>create a plug-in-interface - we are very close to this. A neat interface is 
-	already used internally for output modules and the MySQL module already 
-	works as a plug-in. However, no interface definition is yet formally 
-	published.<li>implement native email-functionality in 
-	selector (probably best done as a plug-in)<li>port it to more *nix variants 
-	(eg AIX and HP UX) - this needs volunteers with access to those machines and 
-	knowledge<li>provide an on-disk queue for syslog messages; should be 
-	combined with reliable delivery to the next hop<li>support for native SSL enryption of plain tcp syslog sessions. This will 
-	most probably happen based on syslog-transport-tls.<li>even more enhanced multi-threading, 
-	with a message queue for each action (when implementing this, search 
-	for CHECKMULTIQUEUE comments in the source - they already contain hints of 
-	what to look at). Some detail information on this can already be found in
-	<a href="http://rgerhards.blogspot.com/2007/08/syslog-worker-pools-future-hardware-and.html">
-	Rainer's blog</a>.<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
-	partly added. So far, this seems sufficient so that there is no urgent need 
-	to do pcre<li>support for	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - this is currently unlikely to happen, because there is no real 
-	demand for it. Any work on RFC 3195 has been suspend until we see some real 
-	interest in it.&nbsp; It is probably much better to use TCP-based syslog, 
-	which is interoperable with a large number of applications. You may also 
-	read my blog post on the future of liblogging, which contains interesting 
-	information about the
-	<a href="http://rgerhards.blogspot.com/2007/09/where-is-liblogging-heading-to.html">
-	future of RFC 3195 in rsyslog</a>.</ul>
+(or via our forums). <b>Please note that rsyslog v2 is feature-complete. New 
+features will be implemented in the v3 branch only. </b>Version 3 already has a 
+number of very exciting additional features.</p>
 <p>To see when each feature was added, see the
 <a href="http://www.rsyslog.com/Topic4.phtml">rsyslog change log</a> (online 
 only).</p>
