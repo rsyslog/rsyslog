@@ -14,6 +14,7 @@ Version 3.11.1 (rgerhards), 2008-02-??
   tells this feature is not tested and probably not worth the effort.
   Thanks to Anders Blomdell fro bringing this to our attention
 - somewhat improved performance of string buffers
+- fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
 ---------------------------------------------------------------------------
 Version 3.11.0 (rgerhards), 2008-01-31
 - implemented queued actions

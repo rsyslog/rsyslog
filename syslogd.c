@@ -4206,17 +4206,21 @@ void sighup_handler()
  * \param DstSize	Maximum numbers of characters to store.
  * \param cSep		Separator char.
  * \ret int		Returns 0 if no error occured.
+ *
+ * rgerhards, 2008-02-12: some notes are due... I will once again fix this function, this time
+ * so that it treats ' ' as a request for whitespace. But in general, the function and its callers
+ * should be changed over time, this is not really very good code...
  */
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 {
 	uchar *pSrc = *ppSrc;
 	int iErr = 0; /* 0 = no error, >0 = error */
-	while(*pSrc != cSep && *pSrc != '\n' && *pSrc != '\0' && DstSize>1) {
+	while((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0' && DstSize>1) {
 		*pDst++ = *(pSrc)++;
 		DstSize--;
 	}
 	/* check if the Dst buffer was to small */
-	if (*pSrc != cSep && *pSrc != '\n' && *pSrc != '\0')
+	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0')
 	{ 
 		dbgprintf("in getSubString, error Src buffer > Dst buffer\n");
 		iErr = 1;
