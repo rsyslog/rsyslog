@@ -293,7 +293,7 @@ CODESTARTrunInput
 		pMsg->bParseHOSTNAME = 0;
 		getCurrTime(&(pMsg->tTIMESTAMP)); / * use the current time! * /
 		flags |= INTERNAL_MSG;
-		logmsg(pri, pMsg, flags); / * some time, CHKiRet() will work here, too [today NOT!] * /
+		logmsg(pMsg, flags); / * some time, CHKiRet() will work here, too [today NOT!] * /
 		 * 
 		 * Note that UxTradMsg is a wild construct. For the time being, set it to
 		 * the raw message text. I am hard thinking at dropping that beast at all...
