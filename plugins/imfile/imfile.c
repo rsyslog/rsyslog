@@ -25,11 +25,13 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 #include "config.h" /* this is for autotools and always must be the first include */
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>		/* do NOT remove: will soon be done by the module generation macros */
+#include <fcntl.h>		/* do NOT remove: will soon be done by the module generation macros */
 #include "rsyslog.h"		/* error codes etc... */
 #include "syslogd.h"
 #include "cfsysline.h"		/* access to config file objects */
@@ -106,33 +108,83 @@ finalize_it:
 }
 
 
-/* poll a file, need to check file rollover etc. open file if not open */
-static rsRetVal pollFile(fileInfo_t *pThis)
+/* try to open a file. This involves checking if there is a status file and,
+ * if so, reading it in. Processing continues from the last know location.
+ */
+static rsRetVal
+openFile(fileInfo_t *pThis)
 {
 	DEFiRet;
-	rsCStrObj *pCStr;
-	int bAllNewLinesRead; /* set to 1 if all new lines are read */
+	strm_t *psSF = NULL;
+	uchar pszSFNam[MAXFNAME];
+	size_t lenSFNam;
+	struct stat stat_buf;
 
-	if(pThis->pStrm == NULL) {
-		/* open file */
+	/* Construct file name */
+	lenSFNam = snprintf((char*)pszSFNam, sizeof(pszSFNam) / sizeof(uchar), "%s/%s",
+			     (char*) glblGetWorkDir(), (char*)pThis->pszStateFile);
+
+	/* check if the file exists */
+	if(stat((char*) pszSFNam, &stat_buf) == -1) {
+		if(errno == ENOENT) {
+			dbgoprint((obj_t*) pThis, "clean startup, no .si file found\n");
+			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+		} else {
+			dbgoprint((obj_t*) pThis, "error %d trying to access .si file\n", errno);
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+	}
+
+	/* If we reach this point, we have a .si file */
+
+	CHKiRet(strmConstruct(&psSF));
+	CHKiRet(strmSettOperationsMode(psSF, STREAMMODE_READ));
+	CHKiRet(strmSetsType(psSF, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strmSetFName(psSF, pszSFNam, lenSFNam));
+	CHKiRet(strmConstructFinalize(psSF));
+
+	/* read back in the object */
+	CHKiRet(objDeserialize(&pThis->pStrm, OBJstrm, psSF, NULL, pThis));
+
+	CHKiRet(strmSeekCurrOffs(pThis->pStrm));
+
+	/* OK, we could successfully read the file, so we now can request that it be
+	 * deleted when we are done with the persisted information.
+	 */
+	// TODO: do we need this functionality? psSF->bNeedDelSF = 1;
+
+finalize_it:
+	if(psSF != NULL)
+		strmDestruct(&psSF);
+
+	if(iRet != RS_RET_OK) {
+		dbgoprint((obj_t*) pThis, "error %d reading .si file - can not read persisted info (not necessarily an error)\n", iRet);
 		CHKiRet(strmConstruct(&pThis->pStrm));
 		CHKiRet(strmSettOperationsMode(pThis->pStrm, STREAMMODE_READ));
 		CHKiRet(strmSetsType(pThis->pStrm, STREAMTYPE_FILE_MONITOR));
 		CHKiRet(strmSetFName(pThis->pStrm, pThis->pszFileName, strlen((char*) pThis->pszFileName)));
 		CHKiRet(strmConstructFinalize(pThis->pStrm));
-		/* move to offset */
 	}
 
-	bAllNewLinesRead = 0;
-	while(!bAllNewLinesRead) {
-		/* do read file, put pointer to file line in pszLine */
+	RETiRet;
+}
+
+
+/* poll a file, need to check file rollover etc. open file if not open */
+static rsRetVal pollFile(fileInfo_t *pThis)
+{
+	DEFiRet;
+	rsCStrObj *pCStr;
+
+	if(pThis->pStrm == NULL) {
+		CHKiRet(openFile(pThis)); /* open file */
+	}
+
+	/* loop below will be exited when strmReadLine() returns EOF */
+	while(1) {
 		CHKiRet(strmReadLine(pThis->pStrm, &pCStr));
-
-		/* do the magic ;) */
-		CHKiRet(enqLine(pThis, pCStr));
+		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 	}
-
-	/* save the offset back to structure! */
 
 finalize_it:
 	RETiRet;
@@ -232,6 +284,39 @@ finalize_it:
 ENDwillRun
 
 
+
+/* This function persists information for a specific file being monitored.
+ * To do so, it simply persists the stream object. We do NOT abort on error
+ * iRet as that makes matters worse (at least we can try persisting the others...).
+ * rgerhards, 2008-02-13
+ */
+static rsRetVal
+persistStrmState(fileInfo_t *pInfo)
+{
+	DEFiRet;
+	strm_t *psSF = NULL; /* state file (stream) */
+
+	ASSERT(pInfo != NULL);
+
+dbgprintf("persistStrmState: dir %s, file %s\n", glblGetWorkDir(), pInfo->pszStateFile);
+	/* TODO: create a function persistObj in obj.c? */
+	CHKiRet(strmConstruct(&psSF));
+	CHKiRet(strmSetDir(psSF, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
+	CHKiRet(strmSettOperationsMode(psSF, STREAMMODE_WRITE));
+	CHKiRet(strmSetiAddtlOpenFlags(psSF, O_TRUNC));
+	CHKiRet(strmSetsType(psSF, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strmSetFName(psSF, pInfo->pszStateFile, strlen((char*) pInfo->pszStateFile)));
+	CHKiRet(strmConstructFinalize(psSF));
+
+	CHKiRet(strmSerialize(pInfo->pStrm, psSF));
+
+	CHKiRet(strmDestruct(&psSF));
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* This function is called by the framework after runInput() has been terminated. It
  * shall free any resources and prepare the module for unload.
  *
@@ -248,13 +333,16 @@ ENDwillRun
  * module-specific config directive.
  */
 BEGINafterRun
+	int i;
 CODESTARTafterRun
 	/* loop through file array and close everything that's open */
 
-	/* somehow persist the file arry information, at least the offset! Must be 
-	 * able to get back up an rolling even when the order of files inside the
-	 * array changes (think of config changes!).
+	/* persist file state information. We do NOT abort on error iRet as that makes
+	 * matters worse (at least we can try persisting the others...).
 	 */
+	for(i = 0 ; i < iFilPtr ; ++i) {
+		persistStrmState(&files[i]);
+	}
 ENDafterRun
 
 

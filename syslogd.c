@@ -2413,9 +2413,9 @@ void logerror(char *type)
 static void doDie(int sig)
 {
 	static int iRetries = 0; /* debug aid */
-	dbgprintf("DoDie called.\n");
+	printf("DoDie called.\n");
 	if(iRetries++ == 4) {
-		dbgprintf("DoDie called 5 times - unconditional exit\n");
+		printf("DoDie called 5 times - unconditional exit\n");
 		exit(1);
 	}
 	bFinished = sig;

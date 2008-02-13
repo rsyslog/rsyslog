@@ -696,7 +696,6 @@ queueTryLoadPersistedInfo(queue_t *pThis)
 	/* If we reach this point, we have a .qi file */
 
 	CHKiRet(strmConstruct(&psQIF));
-	CHKiRet(strmSetDir(psQIF, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
 	CHKiRet(strmSettOperationsMode(psQIF, STREAMMODE_READ));
 	CHKiRet(strmSetsType(psQIF, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strmSetFName(psQIF, pszQIFNam, lenQIFNam));
@@ -1710,9 +1709,10 @@ static rsRetVal queuePersist(queue_t *pThis, int bIsCheckpoint)
 	}
 
 	dbgoprint((obj_t*) pThis, "persisting queue to disk, %d entries...\n", queueGetOverallQueueSize(pThis));
+
 	/* Construct file name */
 	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-		             (char*) glblGetWorkDir(), (char*)pThis->pszFilePrefix);
+			     (char*) glblGetWorkDir(), (char*)pThis->pszFilePrefix);
 
 	if((bIsCheckpoint != QUEUE_CHECKPOINT) && (queueGetOverallQueueSize(pThis) == 0)) {
 		if(pThis->bNeedDelQIF) {
@@ -1725,7 +1725,6 @@ static rsRetVal queuePersist(queue_t *pThis, int bIsCheckpoint)
 	}
 
 	CHKiRet(strmConstruct(&psQIF));
-	CHKiRet(strmSetDir(psQIF, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
 	CHKiRet(strmSettOperationsMode(psQIF, STREAMMODE_WRITE));
 	CHKiRet(strmSetiAddtlOpenFlags(psQIF, O_TRUNC));
 	CHKiRet(strmSetsType(psQIF, STREAMTYPE_FILE_SINGLE));

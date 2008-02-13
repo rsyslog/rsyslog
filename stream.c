@@ -78,8 +78,14 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
 				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum, pThis->iFileNumDigits));
 	} else {
-		if((pThis->pszCurrFName = (uchar*) strdup((char*) pThis->pszFName)) == NULL)
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+RUNLOG_VAR("%s", pThis->pszDir);
+		if(pThis->pszDir == NULL) {
+			if((pThis->pszCurrFName = (uchar*) strdup((char*) pThis->pszFName)) == NULL)
+				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		} else {
+			CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
+					    pThis->pszFName, pThis->lenFName, -1, 0));
+		}
 	}
 
 	/* compute which flags we need to provide to open */
@@ -196,10 +202,8 @@ strmHandleEOFMonitor(strm_t *pThis)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 dbgoprint((obj_t*)pThis, "curr ino %d, new ino %d, curr offset %lld, new size %ld\n", statOpen.st_ino, statName.st_ino, pThis->iCurrOffs, statName.st_size);
 	if(statOpen.st_ino == statName.st_ino && pThis->iCurrOffs == statName.st_size) {
-RUNLOG_STR("EOF");
 		ABORT_FINALIZE(RS_RET_EOF);
 	} else {
-RUNLOG_STR("file change");
 		/* we had a file change! */
 		CHKiRet(strmCloseFile(pThis));
 		CHKiRet(strmOpenFile(pThis));
