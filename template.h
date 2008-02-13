@@ -107,6 +107,5 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz);
 void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */
-/*
- * vi:set ai:
+/* vim:set ai:
  */
