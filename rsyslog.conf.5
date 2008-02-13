@@ -17,7 +17,7 @@
 .\" along with this program; if not, write to the Free Software
 .\" Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111, USA.
 .\"
-.TH RSYSLOG.CONF 5 "04 September 2007" "Version 1.19.4" "Linux System Administration"
+.TH RSYSLOG.CONF 5 "12 February 2008" "Version 2.0.2" "Linux System Administration"
 .SH NAME
 rsyslog.conf \- rsyslogd(8) configuration file
 .SH DESCRIPTION
@@ -527,7 +527,7 @@ extract from a position until the end of the string, you can place a dollar-sign
 (e.g. %msg:10:$%, which will extract from position 10 to the end of the string).
 
 There is also support for 
-.Bregular expressions.
+.B regular expressions.
 To use them, you need to place a "R" into FromChar. 
 This tells rsyslog that a regular expression instead of position-based extraction is desired. The 
 actual regular expression 
