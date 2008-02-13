@@ -78,7 +78,6 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		CHKiRet(genFileName(&pThis->pszCurrFName, pThis->pszDir, pThis->lenDir,
 				    pThis->pszFName, pThis->lenFName, pThis->iCurrFNum, pThis->iFileNumDigits));
 	} else {
-RUNLOG_VAR("%s", pThis->pszDir);
 		if(pThis->pszDir == NULL) {
 			if((pThis->pszCurrFName = (uchar*) strdup((char*) pThis->pszFName)) == NULL)
 				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);

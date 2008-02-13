@@ -148,10 +148,10 @@ openFile(fileInfo_t *pThis)
 
 	CHKiRet(strmSeekCurrOffs(pThis->pStrm));
 
-	/* OK, we could successfully read the file, so we now can request that it be
-	 * deleted when we are done with the persisted information.
+	/* OK, we could successfully read the file, so we now can request that it be deleted.
+	 * If we need it again, it will be written on the next shutdown.
 	 */
-	// TODO: do we need this functionality? psSF->bNeedDelSF = 1;
+	psSF->bDeleteOnClose = 1;
 
 finalize_it:
 	if(psSF != NULL)
