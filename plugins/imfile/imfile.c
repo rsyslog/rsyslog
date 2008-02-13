@@ -101,7 +101,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, uchar *pLine)
 		pMsg->iSeverity = pInfo->iSeverity;
 		pMsg->bParseHOSTNAME = 0;
 		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
-		logmsg(pri, pMsg, flags); /* some time, CHKiRet() will work here, too [today NOT!] */
+		logmsg(pMsg, flags); /* some time, CHKiRet() will work here, too [today NOT!] */
 finalize_it:
 	RETiRet;
 }

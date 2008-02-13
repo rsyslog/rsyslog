@@ -142,7 +142,7 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 
 	/* provide message to the queue engine */
-	logmsg(iPRI, pMsg, INTERNAL_MSG);
+	logmsg(pMsg, INTERNAL_MSG);
 
 finalize_it:
 	RETiRet;

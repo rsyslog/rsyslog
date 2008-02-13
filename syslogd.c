@@ -1315,7 +1315,7 @@ rsRetVal printline(char *hname, char *msg, int bParseHost)
 	if(MsgSetUxTradMsg(pMsg, p) != 0)
 		ABORT_FINALIZE(RS_RET_ERR);
 
-	logmsg(pri, pMsg, SYNC_FILE);
+	logmsg(pMsg, SYNC_FILE);
 
 finalize_it:
 	RETiRet;
@@ -1531,7 +1531,7 @@ logmsgInternal(int pri, char *msg, int flags)
 		/* we have the queue, so we can simply provide the 
 		 * message to the queue engine.
 		 */
-		logmsg(pri, pMsg, flags);
+		logmsg(pMsg, flags);
 	}
 finalize_it:
 	RETiRet;
@@ -2151,18 +2151,15 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
  * circumstances given.
  */
 void
-logmsg(int pri, msg_t *pMsg, int flags)
+logmsg(msg_t *pMsg, int flags)
 {
 	char *msg;
-	char PRItext[20];
 
 	BEGINfunc
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	msg = (char*) pMsg->pszUxTradMsg;
-	dbgprintf("logmsg: %s, flags %x, from '%s', msg %s\n",
-	        textpri(PRItext, sizeof(PRItext) / sizeof(char), pri),
-		flags, getRcvFrom(pMsg), msg);
+	dbgprintf("logmsg: flags %x, from '%s', msg %s\n", flags, getRcvFrom(pMsg), msg);
 
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
 	 * a traditional syslog message or one formatted according to syslog-protocol.
@@ -4248,7 +4245,7 @@ static void processImInternal(void)
 	msg_t *pMsg;
 
 	while(iminternalRemoveMsg(&iPri, &pMsg, &iFlags) == RS_RET_OK) {
-		logmsg(iPri, pMsg, iFlags);
+		logmsg(pMsg, iFlags);
 	}
 }
 
