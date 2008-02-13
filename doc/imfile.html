@@ -1,0 +1,65 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en"><title>Text File Input Monitor</title>
+
+</head>
+
+<body>
+<h1>Text File Input Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; imfile</b></p>
+<p><b>Author: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>Provides the ability to convert any standard text file into
+a syslog message. A standard
+text file is a file consisting of printable characters with lines
+being&nbsp;delimited by LF.</p><p>The
+file is read line-by-line and any line read is passed to rsyslog's rule
+engine. The rule engine applies filter conditons and selects which
+actions needs to be carried out.</p><p>As new lines are written they
+are taken from the file and processed. Please note that this happens
+based on a polling interval and not immediately. The file monitor
+support file rotation. To fully work, rsyslogd must run while the file
+is rotated. Then, any remaining lines from the old file are read and
+processed and when done with that, the new file is being processed from
+the beginning. If rsyslogd is stopped during rotation, the new file is
+read, but any not-yet-reported lines from the previous file can no
+longer be obtained.</p><p>When rsyslogd is stopped while monitoring a
+text file, it records the last processed location and continues to work
+from there upon restart. So no data is lost during a restart (except,
+as noted above, if the file is rotated just in this very moment).</p><p>Currently,
+the file must have a fixed name and location (directory). It is planned
+to add support for dynamically generating file names in the future.</p><p>Multiple files may be monitored by specifying $InputRunFileMonitor multiple times.
+</p>
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li><strong>$InputFileName&nbsp;/path/to/file</strong><br>
+The file being monitored. So far, this must be an absolute name (no macros or templates)</li><li><span style="font-weight: bold;">$InputFileTag tag:</span><br>The
+tag to be used for messages that originate from this file. If you would
+like to see the colon after the tag, you need to specify it here (as
+shown above).</li><li><span style="font-weight: bold;">$InputFileStateFile &lt;name-of-state-file&gt;</span><br>Rsyslog
+must keep track of which parts of the to be monitored file it already
+processed. This is done in the state file. This file always is created
+in the rsyslog working directory (configurable via $WorkDirectory). Be
+careful to use unique names for different files being monitored. If
+there are duplicates, all sorts of "interesting" things may happen.
+Rsyslog currently does not check if a name is specified multiple times.</li><li><span style="font-weight: bold;">$InputRunFileMonitor</span><br>This <span style="font-weight: bold;">activates</span> the current monitor. It has no parameters. If you forget this directive, no file monitoring will take place.
+</li></ul><b>Caveats/Known Bugs:</b>
+<p><b>Sample:</b></p>
+<p>The following sample monitors a single file.<br></p>
+<textarea rows="10" cols="60">
+ModLoad imfile.so
+$InputFileName /path/to/file
+$InputFileTag tag:
+$InputFileStateFile file-in-workdir to keep status in
+$InputRunFileMonitor </textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>

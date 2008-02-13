@@ -25,6 +25,8 @@ html_files = \
 	version_naming.html \
 	contributors.html \
 	dev_queue.html \
+	omsnmp.html \
+	imfile.html \
 	queues.html \
 	queueWorkerLogic.dia \
 	queueWorkerLogic.jpg \

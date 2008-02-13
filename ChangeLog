@@ -2,6 +2,7 @@
 Version 3.11.2 (rgerhards), 2008-02-??
 - removed some left-over unnecessary dbgprintf's (cluttered screen,
   cosmetic)
+- doc bugfix: html documentation for omsnmp was missing
 ---------------------------------------------------------------------------
 Version 3.11.1 (rgerhards), 2008-02-12
 - SNMP trap sender added thanks to Andre Lorbach (omsnmp)
