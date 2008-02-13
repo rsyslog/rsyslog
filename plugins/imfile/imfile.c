@@ -117,7 +117,7 @@ static rsRetVal pollFile(fileInfo_t *pThis)
 		/* open file */
 		CHKiRet(strmConstruct(&pThis->pStrm));
 		CHKiRet(strmSettOperationsMode(pThis->pStrm, STREAMMODE_READ));
-		CHKiRet(strmSetsType(pThis->pStrm, STREAMTYPE_FILE_SINGLE));
+		CHKiRet(strmSetsType(pThis->pStrm, STREAMTYPE_FILE_MONITOR));
 		CHKiRet(strmSetFName(pThis->pStrm, pThis->pszFileName, strlen((char*) pThis->pszFileName)));
 		CHKiRet(strmConstructFinalize(pThis->pStrm));
 		/* move to offset */
@@ -200,7 +200,7 @@ CODESTARTrunInput
 		pollFile(&files[i]);
 	}
 
-	srSleep(1,0);
+	srSleep(3, 0);
 
 	/* ------------------------------------------------------------------------------------------ *
 	 * DO NOT TOUCH the following code - it will soon be part of the module generation macros!    */
@@ -328,9 +328,12 @@ RUNLOG_VAR("%d", iFilPtr);
 		pThis = &files[iFilPtr];
 		++iFilPtr;
 		/* TODO: check for strdup() NULL return */
-		pThis->pszFileName = (uchar*) strdup((char*) pszFileName);
-		pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
-		pThis->pszStateFile = (uchar*) strdup((char*) pszStateFile);
+		if(pszFileName != NULL)
+			pThis->pszFileName = (uchar*) strdup((char*) pszFileName);
+		if(pszFileTag != NULL)
+			pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
+		if(pszStateFile != NULL)
+			pThis->pszStateFile = (uchar*) strdup((char*) pszStateFile);
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
 		pThis->offsLast = 0;

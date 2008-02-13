@@ -49,8 +49,9 @@
 
 /* stream types */
 typedef enum {
-	STREAMTYPE_FILE_SINGLE = 0,
-	STREAMTYPE_FILE_CIRCULAR = 1
+	STREAMTYPE_FILE_SINGLE = 0,	/**< read a single file */
+	STREAMTYPE_FILE_CIRCULAR = 1,	/**< circular files */
+	STREAMTYPE_FILE_MONITOR = 2	/**< monitor a (third-party) file */
 } strmType_t;
 
 typedef enum {
