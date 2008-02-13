@@ -367,11 +367,6 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(ppMsgs[i])));
 	}
-for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-RUNLOG_VAR("%d", i);
-RUNLOG_VAR("%s", ppMsgs[i]);
-RUNLOG_VAR("%p", &ppMsgs[i]);
-}
 	iRetries = 0;
 	/* We now must guard the output module against execution by multiple threads. The
 	 * plugin interface specifies that output modules must not be thread-safe (except
@@ -408,11 +403,6 @@ RUNLOG_VAR("%p", &ppMsgs[i]);
 				dbgprintf("Action requested to be suspended, done that.\n");
 				actionSuspend(pAction);
 			}
-for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-RUNLOG_VAR("%d", i);
-RUNLOG_VAR("%s", ppMsgs[i]);
-RUNLOG_VAR("%p", &ppMsgs[i]);
-}
 		}
 
 	} while(iRet == RS_RET_SUSPENDED && (pAction->iResumeRetryCount == -1 || iRetries < pAction->iResumeRetryCount)); /* do...while! */
