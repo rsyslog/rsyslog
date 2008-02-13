@@ -37,6 +37,8 @@
 
 #include "config.h"
 
+#include <assert.h>
+
 #include "rsyslog.h"
 #include "template.h"
 #include "stringbuf.h"
@@ -85,7 +87,7 @@ exprEval(expr_t *pThis, msg_t *pMsg)
 {
 	DEFiRet;
 	
-	ISOBJ_TYPE_assert(pThis, expr);
+	//ISOBJ_TYPE_assert(pThis, expr);
 
 	RETiRet;
 }
@@ -106,7 +108,7 @@ exprGetStr(expr_t *pThis, rsCStrObj **ppStr)
 {
 	DEFiRet;
 	
-	ISOBJ_TYPE_assert(pThis, expr);
+	//ISOBJ_TYPE_assert(pThis, expr);
 	ASSERT(ppStr != NULL);
 
 	RETiRet;
