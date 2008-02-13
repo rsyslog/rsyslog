@@ -36,6 +36,7 @@
 #include "module-template.h"	/* generic module interface code - very important, read it! */
 #include "srUtils.h"		/* some utility functions */
 #include "msg.h"
+#include "stream.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 
@@ -49,7 +50,6 @@ DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
  * prefix in order not to conflict with other modules or rsyslogd itself (also see comment
  * at file header).
  */
-/* static int imtemplateWhateverVar = 0; */
 
 typedef struct fileInfo_s {
 	uchar *pszFileName;
@@ -58,7 +58,7 @@ typedef struct fileInfo_s {
 	int64 offsLast; /* offset last read from */
 	int iFacility;
 	int iSeverity;
-	int fd; /*its file descriptor (-1 if closed) */
+	strm_t *pStrm;	/* its stream (NULL if not assigned) */
 } fileInfo_t;
 
 
@@ -85,23 +85,22 @@ typedef struct _instanceData {
 
 /* enqueue the read file line as a message
  */
-static rsRetVal enqLine(fileInfo_t *pInfo, uchar *pLine)
+static rsRetVal enqLine(fileInfo_t *pInfo, rsCStrObj *cstrLine)
 {
 		DEFiRet;
 		msg_t *pMsg;
-		int flags = 0;
-		int pri;
 
 		CHKiRet(msgConstruct(&pMsg));
-		MsgSetUxTradMsg(pMsg, (char*)pLine);
-		MsgSetRawMsg(pMsg, (char*)pLine);
+		MsgSetUxTradMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
+		MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
+		MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 		MsgSetHOSTNAME(pMsg, LocalHostName);
 		MsgSetTAG(pMsg, (char*)pInfo->pszTag);
 		pMsg->iFacility = pInfo->iFacility;
 		pMsg->iSeverity = pInfo->iSeverity;
 		pMsg->bParseHOSTNAME = 0;
 		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
-		logmsg(pMsg, flags); /* some time, CHKiRet() will work here, too [today NOT!] */
+		CHKiRet(submitMsg(pMsg));
 finalize_it:
 	RETiRet;
 }
@@ -111,20 +110,26 @@ finalize_it:
 static rsRetVal pollFile(fileInfo_t *pThis)
 {
 	DEFiRet;
-	uchar *pszLine;	
+	rsCStrObj *pCStr;
 	int bAllNewLinesRead; /* set to 1 if all new lines are read */
 
-	if(pThis->fd == -1) {
+	if(pThis->pStrm == NULL) {
 		/* open file */
+		CHKiRet(strmConstruct(&pThis->pStrm));
+		CHKiRet(strmSettOperationsMode(pThis->pStrm, STREAMMODE_READ));
+		CHKiRet(strmSetsType(pThis->pStrm, STREAMTYPE_FILE_SINGLE));
+		CHKiRet(strmSetFName(pThis->pStrm, pThis->pszFileName, strlen((char*) pThis->pszFileName)));
+		CHKiRet(strmConstructFinalize(pThis->pStrm));
 		/* move to offset */
 	}
 
 	bAllNewLinesRead = 0;
 	while(!bAllNewLinesRead) {
 		/* do read file, put pointer to file line in pszLine */
+		CHKiRet(strmReadLine(pThis->pStrm, &pCStr));
 
 		/* do the magic ;) */
-		CHKiRet(enqLine(pThis, pszLine));
+		CHKiRet(enqLine(pThis, pCStr));
 	}
 
 	/* save the offset back to structure! */
@@ -243,7 +248,6 @@ ENDwillRun
  * module-specific config directive.
  */
 BEGINafterRun
-	/* place any variables needed here */
 CODESTARTafterRun
 	/* loop through file array and close everything that's open */
 
@@ -314,16 +318,19 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 /* add a new monitor */
-static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
+static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar __attribute__((unused)) *pNewVal)
 {
 	DEFiRet;
 	fileInfo_t *pThis;
 
+RUNLOG_VAR("%d", iFilPtr);
 	if(iFilPtr < MAX_INPUT_FILES) {
 		pThis = &files[iFilPtr];
 		++iFilPtr;
+		/* TODO: check for strdup() NULL return */
 		pThis->pszFileName = (uchar*) strdup((char*) pszFileName);
 		pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
+		pThis->pszStateFile = (uchar*) strdup((char*) pszStateFile);
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
 		pThis->offsLast = 0;

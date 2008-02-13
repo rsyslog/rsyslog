@@ -2131,6 +2131,27 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 }
 
 
+/* submit a fully created message to the main message queue. The message is
+ * fully processed and parsed, so no parsing at all happens. This is primarily
+ * a hook to prevent the need for callers to know about the main message queue
+ * (which may change in the future as we will probably have multiple rule
+ * sets and thus queues...).
+ * rgerhards, 2008-02-13
+ */
+rsRetVal
+submitMsg(msg_t *pMsg)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pMsg, msg);
+	
+	MsgPrepareEnqueue(pMsg);
+	queueEnqObj(pMsgQueue, (void*) pMsg);
+
+	RETiRet;
+}
+
+
 /*
  * Log a message to the appropriate log files, users, etc. based on
  * the priority.
@@ -4869,6 +4890,5 @@ int main(int argc, char **argv)
 }
 
 
-/*
- * vi:set ai:
+/* vim:set ai:
  */

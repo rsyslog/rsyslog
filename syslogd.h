@@ -71,6 +71,7 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
  */
 rsRetVal logmsgInternal(int pri, char *msg, int flags);
 void logmsg(msg_t *pMsg, int flags);
+rsRetVal submitMsg(msg_t *pMsg);
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */
 extern char LocalHostName[];
 extern int family;

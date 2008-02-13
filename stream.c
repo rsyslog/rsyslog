@@ -249,18 +249,14 @@ rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
 	return RS_RET_OK;
 }
 
-#if 0
-/* we have commented out the code below because we would like to preserve it. It 
- * is currently not needed, but may be useful if we implemented a bufferred file
- * class. NOTE: YOU MUST REVIEW THIS CODE BEFORE ACTIVATION. It may be pretty 
- * outdated! -- rgerhards, 2008-01-10
- */
+
 /* read a line from a strm file. A line is terminated by LF. The LF is read, but it
  * is not returned in the buffer (it is discared). The caller is responsible for
  * destruction of the returned CStr object!
  * rgerhards, 2008-01-07
  */
-static rsRetVal strmReadLine(strm_t *pThis, rsCStrObj **ppCStr)
+rsRetVal
+strmReadLine(strm_t *pThis, rsCStrObj **ppCStr)
 {
 	DEFiRet;
 	uchar c;
@@ -287,8 +283,6 @@ finalize_it:
 
 	RETiRet;
 }
-
-#endif /* #if 0 - saved code */
 
 
 /* Standard-Constructor for the strm object

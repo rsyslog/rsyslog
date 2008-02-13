@@ -58,6 +58,7 @@ static dbgThrdInfo_t *dbgGetThrdInfo(void);
 int	Debug;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
 static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to the debug log? */
+static int bLogAllocFree = 0; /* shall calls to (m/c)alloc and free be logged to the debug log? */
 static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bPrintMutexAction = 0; /* shall mutex calls be printed to the debug log? */
 static int bPrintTime = 1;	/* print a timestamp together with debug message */
@@ -554,8 +555,9 @@ int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct t
 void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr)
 {
 	dbgRecordExecLocation(iStackPtr, ln);
-	dbgprintf("%s:%d:%s: free %p\n", pFuncDB->file,
-		  ln, pFuncDB->func, (void*) pMem);
+	if(bLogAllocFree) {
+		dbgprintf("%s:%d:%s: free %p\n", pFuncDB->file, ln, pFuncDB->func, (void*) pMem);
+	}
 	free(pMem);
 }
 
