@@ -252,7 +252,6 @@ CODESTARTrunInput
 		pollFile(&files[i]);
 	}
 
-RUNLOG_VAR("%d", iPollInterval);
 	/* Note: the 10ns additional wait is vitally important. It guards rsyslog against totally
 	 * hogging the CPU if the users selects a polling interval of 0 seconds. It doesn't hurt any
 	 * other valid scenario. So do not remove. -- rgerhards, 2008-02-14
@@ -303,7 +302,6 @@ persistStrmState(fileInfo_t *pInfo)
 
 	ASSERT(pInfo != NULL);
 
-dbgprintf("persistStrmState: dir %s, file %s\n", glblGetWorkDir(), pInfo->pszStateFile);
 	/* TODO: create a function persistObj in obj.c? */
 	CHKiRet(strmConstruct(&psSF));
 	CHKiRet(strmSetDir(psSF, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
@@ -324,29 +322,16 @@ finalize_it:
 
 /* This function is called by the framework after runInput() has been terminated. It
  * shall free any resources and prepare the module for unload.
- *
- * So it is important that runInput() keeps track of what needs to be cleaned up.
- * Objects to think about are files (must be closed), network connections, threads (must
- * be stopped and joined) and memory (must be freed). Of course, there are a myriad
- * of other things, so use your own judgement what you need to do.
- *
- * Another important chore of this function is to persist whatever state the module
- * needs to persist. Unfortunately, there is currently no standard way of doing that.
- * Future version of the module interface will probably support it, but that doesn't
- * help you right at the moment. In general, it is suggested that anything that needs
- * to be persisted is saved in a file, whose name and location is passed in by a
- * module-specific config directive.
  */
 BEGINafterRun
 	int i;
 CODESTARTafterRun
-	/* loop through file array and close everything that's open */
-
-	/* persist file state information. We do NOT abort on error iRet as that makes
+	/* Close files and persist file state information. We do NOT abort on error iRet as that makes
 	 * matters worse (at least we can try persisting the others...).
 	 */
 	for(i = 0 ; i < iFilPtr ; ++i) {
 		persistStrmState(&files[i]);
+		strmDestruct(&(files[i].pStrm));
 	}
 ENDafterRun
 
@@ -404,8 +389,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 	/* set defaults... */
 	iPollInterval = 10;
-	iFacility = 12; /* see RFC 3164 for values */
-	iSeverity = 4;
+	iFacility = 16; /* local0, as of RFC 3164 */
+	iSeverity = 5;  /* notice, as of rfc 3164 */
 
 	RETiRet;
 }
@@ -419,20 +404,40 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar __attribute
 
 	if(iFilPtr < MAX_INPUT_FILES) {
 		pThis = &files[iFilPtr];
-		++iFilPtr;
 		/* TODO: check for strdup() NULL return */
-		if(pszFileName != NULL)
+		if(pszFileName == NULL) {
+			logerror("imfile error: no file name given, file monitor can not be created");
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		} else {
 			pThis->pszFileName = (uchar*) strdup((char*) pszFileName);
-		if(pszFileTag != NULL)
+		}
+
+		if(pszFileTag != NULL) {
+			logerror("imfile error: no tag value given , file monitor can not be created");
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		} else {
 			pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
-		if(pszStateFile != NULL)
+		}
+
+		if(pszStateFile != NULL) {
+			logerror("imfile error: not state file name given, file monitor can not be created");
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		} else {
 			pThis->pszStateFile = (uchar*) strdup((char*) pszStateFile);
+		}
+
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
 		pThis->offsLast = 0;
 	} else {
 		logerror("Too many file monitors configured - ignoring this one");
+		ABORT_FINALIZE(RS_RET_OUT_OF_DESRIPTORS);
 	}
+
+finalize_it:
+	if(iRet == RS_RET_OK)
+		++iFilPtr;	/* we got a new file to monitor */
+
 	RETiRet;
 }
 

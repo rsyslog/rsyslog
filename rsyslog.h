@@ -119,6 +119,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ALREADY_STARTING = -2043, /**< something (a thread?) is already starting - not necessarily an error */
 	RS_RET_NO_MORE_THREADS = -2044, /**< no more threads available, not necessarily an error */
 	RS_RET_NO_FILEPREFIX = -2045, /**< file prefix is not specified where one is needed */
+	RS_RET_CONFIG_ERROR = -2046, /**< there is a problem with the user-provided config settigs */
+	RS_RET_OUT_OF_DESRIPTORS = -2047, /**< a descriptor table's space has been exhausted */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */
