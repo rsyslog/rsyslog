@@ -68,6 +68,7 @@ typedef struct fileInfo_s {
 static uchar *pszFileName = NULL;
 static uchar *pszFileTag = NULL;
 static uchar *pszStateFile = NULL;
+static int iPollInterval = 10;	/* number of seconds to sleep when there was no file activity */
 static int iFacility;
 static int iSeverity;
 
@@ -127,10 +128,10 @@ openFile(fileInfo_t *pThis)
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
 		if(errno == ENOENT) {
-			dbgoprint((obj_t*) pThis, "clean startup, no .si file found\n");
+			/* currently no object! dbgoprint((obj_t*) pThis, "clean startup, no .si file found\n"); */
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		} else {
-			dbgoprint((obj_t*) pThis, "error %d trying to access .si file\n", errno);
+			/* currently no object! dbgoprint((obj_t*) pThis, "error %d trying to access .si file\n", errno); */
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
 	}
@@ -158,7 +159,6 @@ finalize_it:
 		strmDestruct(&psSF);
 
 	if(iRet != RS_RET_OK) {
-		dbgoprint((obj_t*) pThis, "error %d reading .si file - can not read persisted info (not necessarily an error)\n", iRet);
 		CHKiRet(strmConstruct(&pThis->pStrm));
 		CHKiRet(strmSettOperationsMode(pThis->pStrm, STREAMMODE_READ));
 		CHKiRet(strmSetsType(pThis->pStrm, STREAMTYPE_FILE_MONITOR));
@@ -252,7 +252,12 @@ CODESTARTrunInput
 		pollFile(&files[i]);
 	}
 
-	srSleep(3, 0);
+RUNLOG_VAR("%d", iPollInterval);
+	/* Note: the 10ns additional wait is vitally important. It guards rsyslog against totally
+	 * hogging the CPU if the users selects a polling interval of 0 seconds. It doesn't hurt any
+	 * other valid scenario. So do not remove. -- rgerhards, 2008-02-14
+	 */
+	srSleep(iPollInterval, 10);
 
 	/* ------------------------------------------------------------------------------------------ *
 	 * DO NOT TOUCH the following code - it will soon be part of the module generation macros!    */
@@ -398,6 +403,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 	/* set defaults... */
+	iPollInterval = 10;
 	iFacility = 12; /* see RFC 3164 for values */
 	iSeverity = 4;
 
@@ -411,7 +417,6 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar __attribute
 	DEFiRet;
 	fileInfo_t *pThis;
 
-RUNLOG_VAR("%d", iFilPtr);
 	if(iFilPtr < MAX_INPUT_FILES) {
 		pThis = &files[iFilPtr];
 		++iFilPtr;
@@ -453,9 +458,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 	 /* use numerical values as of RFC 3164 for the time being... */
 	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileseverity", 0, eCmdHdlrInt,
 	  	NULL, &iSeverity, STD_LOADABLE_MODULE_ID));
-	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilesfacility", 0, eCmdHdlrInt,
+	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilefacility", 0, eCmdHdlrInt,
 	  	NULL, &iFacility, STD_LOADABLE_MODULE_ID));
-	/* things missing, e.g. polling intervall... */
+	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepollinterval", 0, eCmdHdlrInt,
+	  	NULL, &iPollInterval, STD_LOADABLE_MODULE_ID));
 	/* that command ads a new file! */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrunfilemonitor", 0, eCmdHdlrGetWord,
 		addMonitor, NULL, STD_LOADABLE_MODULE_ID));

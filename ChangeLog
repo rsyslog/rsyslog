@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.11.2 (rgerhards), 2008-02-??
+- added the capability to monitor text files and process their content
+  as syslog messages (including forwarding)
 - removed some left-over unnecessary dbgprintf's (cluttered screen,
   cosmetic)
 - doc bugfix: html documentation for omsnmp was missing
