@@ -389,25 +389,20 @@ AC_ARG_ENABLE(libdbi,
          esac],
         [enable_libdbi=no]
 )
-#if test "x$enable_libdbi" = "xyes"; then
-#  AC_CHECK_PROG(
-#    [HAVE_PGSQL_CONFIG],
-#    [pg_config],
-#    [yes],,,
-#  )
-#  if test "x${HAVE_PGSQL_CONFIG}" != "xyes"; then
-#    AC_MSG_FAILURE([pg_config not found in PATH])
-#  fi
-#  AC_CHECK_LIB(
-#    [pq],
-#    [PQconnectdb],
-#    [pgsql_cflags="-I`pg_config --includedir`"
-#     pgsql_libs="`pg_config --libdir` -lpq"
-#    ],
-#    [AC_MSG_FAILURE([PgSQL library is missing])],
-#    [-L`pg_config --libdir`]
-#  )
-#fi
+if test "x$enable_libdbi" = "xyes"; then
+  AC_CHECK_HEADERS(
+    [dbi/dbi.h],,
+    [AC_MSG_FAILURE([libdbi is missing])]
+  )
+  AC_CHECK_LIB(
+    [dbi],
+    [dbi_initialize],
+    [libdbi_cflags=""
+     libdbi_libs="-ldbi"
+    ],
+    [AC_MSG_FAILURE([libdbi library is missing])]
+  )
+fi
 AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(libdbi_cflags)
 AC_SUBST(libdbi_libs)

@@ -237,9 +237,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
-		goto finalize_it;
-
+	CHKiRet(createInstance(&pData));
 
 	/* rger 2004-10-28: added support for MySQL
 	 * >server,dbname,userid,password

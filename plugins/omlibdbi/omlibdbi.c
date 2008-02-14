@@ -35,13 +35,14 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
-#include <mysql/mysql.h>
-#include <mysql/errmsg.h>
+#include <dbi/dbi.h>
 #include "syslogd.h"
 #include "syslogd-types.h"
+#include "cfsysline.h"
 #include "srUtils.h"
 #include "template.h"
 #include "module-template.h"
+#include "debug.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -50,13 +51,22 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	MYSQL	*f_hmysql;		/* handle to MySQL */
-	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
-	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
-	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
-	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
-	unsigned uLastMySQLErrno;	/* last errno returned by MySQL or 0 if all is well */
+	dbi_conn conn;		/* handle to MySQL */
+	uchar *drvrName;	/* driver to use */
+	uchar *host;		/* host to connect to */
+	uchar *usrName;		/* user name for connect */
+	uchar *pwd;		/* password for connect */
+	uchar *dbName;		/* database to use */
+	unsigned uLastDBErrno;	/* last errno returned by MySQL or 0 if all is well */
 } instanceData;
+
+
+/* config settings */
+static uchar *drvrName = NULL;	/* driver to use */
+static uchar *host = NULL;	/* host to connect to */
+static uchar *usrName = NULL;	/* user name for connect */
+static uchar *pwd = NULL;	/* password for connect */
+static uchar *dbName = NULL;	/* database to use */
 
 
 BEGINcreateInstance
@@ -66,29 +76,26 @@ ENDcreateInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+	/* we do not like repeated message reduction inside the database */
 ENDisCompatibleWithFeature
 
 
 /* The following function is responsible for closing a
- * MySQL connection.
- * Initially added 2004-10-28
+ * database connection.
  */
-static void closeMySQL(instanceData *pData)
+static void closeConn(instanceData *pData)
 {
 	ASSERT(pData != NULL);
 
-	if(pData->f_hmysql != NULL) {	/* just to be on the safe side... */
-		mysql_server_end();
-		mysql_close(pData->f_hmysql);	
-		pData->f_hmysql = NULL;
+	if(pData->conn != NULL) {	/* just to be on the safe side... */
+		dbi_conn_close(pData->conn);
+		pData->conn = NULL;
 	}
 }
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	closeMySQL(pData);
+	closeConn(pData);
 ENDfreeInstance
 
 
@@ -107,54 +114,60 @@ ENDdbgPrintInstInfo
  * We check if we have a valid MySQL handle. If not, we simply
  * report an error, but can not be specific. RGerhards, 2007-01-30
  */
-static void reportDBError(instanceData *pData, int bSilent)
+static void
+reportDBError(instanceData *pData, int bSilent)
 {
-	char errMsg[512];
-	unsigned uMySQLErrno;
+	unsigned uDBErrno;
+	char errMsg[1024];
+	const char *pszDbiErr;
 
+	BEGINfunc
 	ASSERT(pData != NULL);
 
 	/* output log message */
 	errno = 0;
-	if(pData->f_hmysql == NULL) {
-		logerror("unknown DB error occured - could not obtain MySQL handle");
-	} else { /* we can ask mysql for the error description... */
-		uMySQLErrno = mysql_errno(pData->f_hmysql);
-		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", uMySQLErrno,
-			mysql_error(pData->f_hmysql));
-		if(bSilent || uMySQLErrno == pData->uLastMySQLErrno)
+	if(pData->conn == NULL) {
+		logerror("unknown DB error occured - could not obtain connection handle");
+	} else { /* we can ask dbi for the error description... */
+		uDBErrno = dbi_conn_error(pData->conn, &pszDbiErr);
+		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", uDBErrno, pszDbiErr);
+		if(bSilent || uDBErrno == pData->uLastDBErrno)
 			dbgprintf("mysql, DBError(silent): %s\n", errMsg);
 		else {
-			pData->uLastMySQLErrno = uMySQLErrno;
+			pData->uLastDBErrno = uDBErrno;
 			logerror(errMsg);
 		}
 	}
 		
-	return;
+	ENDfunc
 }
 
 
-/* The following function is responsible for initializing a
- * MySQL connection.
- * Initially added 2004-10-28 mmeckelein
+/* The following function is responsible for initializing a connection
  */
-static rsRetVal initMySQL(instanceData *pData, int bSilent)
+static rsRetVal initConn(instanceData *pData, int bSilent)
 {
 	DEFiRet;
 
 	ASSERT(pData != NULL);
-	ASSERT(pData->f_hmysql == NULL);
+	ASSERT(pData->conn == NULL);
 
-	pData->f_hmysql = mysql_init(NULL);
-	if(pData->f_hmysql == NULL) {
-		logerror("can not initialize MySQL handle");
+	dbi_initialize(NULL);
+	pData->conn = dbi_conn_new((char*)pData->drvrName);
+	if(pData->conn == NULL) {
+		logerror("can not initialize libdbi connection");
 		iRet = RS_RET_SUSPENDED;
 	} else { /* we could get the handle, now on with work... */
+RUNLOG_STR("trying dbi connect");
 		/* Connect to database */
-		if(mysql_real_connect(pData->f_hmysql, pData->f_dbsrv, pData->f_dbuid,
-				      pData->f_dbpwd, pData->f_dbname, 0, NULL, 0) == NULL) {
+		dbi_conn_set_option(pData->conn, "host",     (char*) pData->host);
+		dbi_conn_set_option(pData->conn, "username", (char*) pData->usrName);
+		dbi_conn_set_option(pData->conn, "dbname",   (char*) pData->dbName);
+		if(pData->pwd != NULL)
+			dbi_conn_set_option(pData->conn, "password", (char*) pData->pwd);
+		if(dbi_conn_connect(pData->conn) < 0) {
 			reportDBError(pData, bSilent);
-			closeMySQL(pData); /* ignore any error we may get */
+			closeConn(pData); /* ignore any error we may get */
 			iRet = RS_RET_SUSPENDED;
 		}
 	}
@@ -167,35 +180,39 @@ static rsRetVal initMySQL(instanceData *pData, int bSilent)
  * to an established MySQL session.
  * Initially added 2004-10-28 mmeckelein
  */
-rsRetVal writeMySQL(uchar *psz, instanceData *pData)
+rsRetVal writeDB(uchar *psz, instanceData *pData)
 {
 	DEFiRet;
+	dbi_result dbiRes = NULL;
 
 	ASSERT(psz != NULL);
 	ASSERT(pData != NULL);
 
 	/* see if we are ready to proceed */
-	if(pData->f_hmysql == NULL) {
-		CHKiRet(initMySQL(pData, 0));
+	if(pData->conn == NULL) {
+		CHKiRet(initConn(pData, 0));
 	}
 
 	/* try insert */
-	if(mysql_query(pData->f_hmysql, (char*)psz)) {
+	if((dbiRes = dbi_conn_query(pData->conn, (const char*)psz)) == NULL) {
 		/* error occured, try to re-init connection and retry */
-		closeMySQL(pData); /* close the current handle */
-		CHKiRet(initMySQL(pData, 0)); /* try to re-open */
-		if(mysql_query(pData->f_hmysql, (char*)psz)) { /* re-try insert */
+		closeConn(pData); /* close the current handle */
+		CHKiRet(initConn(pData, 0)); /* try to re-open */
+		if((dbiRes = dbi_conn_query(pData->conn, (const char*)psz)) == NULL) { /* re-try insert */
 			/* we failed, giving up for now */
 			reportDBError(pData, 0);
-			closeMySQL(pData); /* free ressources */
+			closeConn(pData); /* free ressources */
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 	}
 
 finalize_it:
 	if(iRet == RS_RET_OK) {
-		pData->uLastMySQLErrno = 0; /* reset error for error supression */
+		pData->uLastDBErrno = 0; /* reset error for error supression */
 	}
+
+	if(dbiRes != NULL)
+		dbi_result_free(dbiRes);
 
 	RETiRet;
 }
@@ -203,82 +220,41 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
-	if(pData->f_hmysql == NULL) {
-		iRet = initMySQL(pData, 1);
+	if(pData->conn == NULL) {
+		iRet = initConn(pData, 1);
 	}
 ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
 	dbgprintf("\n");
-	iRet = writeMySQL(ppString[0], pData);
+	iRet = writeDB(ppString[0], pData);
 ENDdoAction
 
 
 BEGINparseSelectorAct
-	int iMySQLPropErr = 0;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us
-	 * The first test [*p == '>'] can be skipped if a module shall only
-	 * support the newer slection syntax [:modname:]. This is in fact
-	 * recommended for new modules. Please note that over time this part
-	 * will be handled by rsyslogd itself, but for the time being it is
-	 * a good compromise to do it at the module level.
-	 * rgerhards, 2007-10-15
-	 */
-	if(*p == '>') {
-		p++; /* eat '>' '*/
-	} else if(!strncmp((char*) p, ":ommysql:", sizeof(":ommysql:") - 1)) {
-		p += sizeof(":ommysql:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
+	if(!strncmp((char*) p, ":omlibdbi:", sizeof(":omlibdbi:") - 1)) {
+		p += sizeof(":omlibdbi:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
 	} else {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
+	FINALIZE;
 	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
-		goto finalize_it;
+	CHKiRet(createInstance(&pData));
 
+	/* no create the instance based on what we currently have */
+	if((pData->drvrName = (uchar*) strdup((char*)drvrName)) == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if((pData->host     = (uchar*) strdup((char*)host))     == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if((pData->usrName  = (uchar*) strdup((char*)usrName))  == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if((pData->dbName   = (uchar*) strdup((char*)dbName))   == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if(pData->pwd != NULL)
+		if((pData->pwd = (uchar*) strdup((char*)""))    == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
-	/* rger 2004-10-28: added support for MySQL
-	 * >server,dbname,userid,password
-	 * Now we read the MySQL connection properties 
-	 * and verify that the properties are valid.
-	 */
-	if(getSubString(&p, pData->f_dbsrv, MAXHOSTNAMELEN+1, ','))
-		iMySQLPropErr++;
-	if(*pData->f_dbsrv == '\0')
-		iMySQLPropErr++;
-	if(getSubString(&p, pData->f_dbname, _DB_MAXDBLEN+1, ','))
-		iMySQLPropErr++;
-	if(*pData->f_dbname == '\0')
-		iMySQLPropErr++;
-	if(getSubString(&p, pData->f_dbuid, _DB_MAXUNAMELEN+1, ','))
-		iMySQLPropErr++;
-	if(*pData->f_dbuid == '\0')
-		iMySQLPropErr++;
-	if(getSubString(&p, pData->f_dbpwd, _DB_MAXPWDLEN+1, ';'))
-		iMySQLPropErr++;
-	/* now check for template
-	 * We specify that the SQL option must be present in the template.
-	 * This is for your own protection (prevent sql injection).
-	 */
-	if(*(p-1) == ';')
-		--p;	/* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
-			 *       is clean enough for the time being -- rgerhards, 2007-07-30
-			 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
-	
-	/* If we detect invalid properties, we disable logging, 
-	 * because right properties are vital at this place.  
-	 * Retries make no sense. 
-	 */
-	if (iMySQLPropErr) { 
-		logerror("Trouble with MySQL connection properties. -MySQL logging disabled");
-		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-	} else {
-		pData->f_hmysql = NULL; /* initialize, but connect only on first message (important for queued mode!) */
-	}
+RUNLOG;
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -295,11 +271,52 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 ENDqueryEtryPt
 
 
+/* Reset config variables for this module to default values.
+ */
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	DEFiRet;
+
+	if(drvrName != NULL) {
+		free(drvrName);
+		drvrName = NULL;
+	}
+
+	if(host != NULL) {
+		free(host);
+		host = NULL;
+	}
+
+	if(usrName != NULL) {
+		free(usrName);
+		usrName = NULL;
+	}
+
+	if(pwd != NULL) {
+		free(pwd);
+		pwd = NULL;
+	}
+
+	if(dbName != NULL) {
+		free(dbName);
+		dbName = NULL;
+	}
+
+	RETiRet;
+}
+
+
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &drvrName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbihost", 0, eCmdHdlrGetWord, NULL, &host, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbiusername", 0, eCmdHdlrGetWord, NULL, &usrName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbipassword", 0, eCmdHdlrGetWord, NULL, &pwd, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidbname", 0, eCmdHdlrGetWord, NULL, &dbName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/*
- * vi:set ai:
+
+/* vim:set ai:
  */

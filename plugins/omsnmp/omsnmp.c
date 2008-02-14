@@ -323,9 +323,6 @@ ENDfreeInstance
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* code here is quick and dirty - if you like, clean it up. But keep
-	 * in mind it is just a testing aid ;) -- rgerhards, 2007-12-31
-	 */
 	if(!strncmp((char*) p, ":omsnmp:", sizeof(":omsnmp:") - 1)) {
 		p += sizeof(":omsnmp:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
 	} else {
