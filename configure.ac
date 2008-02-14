@@ -379,6 +379,40 @@ AC_SUBST(pgsql_cflags)
 AC_SUBST(pgsql_libs)
 
 
+# libdbi support
+AC_ARG_ENABLE(libdbi,
+        [AS_HELP_STRING([--enable-libdbi],[Enable libdbi database support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_libdbi="yes" ;;
+          no) enable_libdbi="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libdbi) ;;
+         esac],
+        [enable_libdbi=no]
+)
+#if test "x$enable_libdbi" = "xyes"; then
+#  AC_CHECK_PROG(
+#    [HAVE_PGSQL_CONFIG],
+#    [pg_config],
+#    [yes],,,
+#  )
+#  if test "x${HAVE_PGSQL_CONFIG}" != "xyes"; then
+#    AC_MSG_FAILURE([pg_config not found in PATH])
+#  fi
+#  AC_CHECK_LIB(
+#    [pq],
+#    [PQconnectdb],
+#    [pgsql_cflags="-I`pg_config --includedir`"
+#     pgsql_libs="`pg_config --libdir` -lpq"
+#    ],
+#    [AC_MSG_FAILURE([PgSQL library is missing])],
+#    [-L`pg_config --libdir`]
+#  )
+#fi
+AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
+AC_SUBST(libdbi_cflags)
+AC_SUBST(libdbi_libs)
+
+
 # SNMP support
 AC_ARG_ENABLE(snmp,
         [AS_HELP_STRING([--enable-snmp],[Enable SNMP support @<:@default=no@:>@])],
@@ -461,6 +495,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
 		plugins/ompgsql/Makefile \
+		plugins/omlibdbi/Makefile \
 		plugins/omsnmp/Makefile])
 AC_OUTPUT
 
@@ -472,6 +507,7 @@ echo "Klogd functionality enabled:              $enable_klogd"
 echo "Regular expressions support enabled:      $enable_regexp"
 echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"
+echo "libdbi support enabled:                   $enable_libdbi"
 echo "PostgreSQL support enabled:               $enable_pgsql"
 echo "SNMP support enabled:                     $enable_snmp"
 echo "file input module enabled:                $enable_imfile"

@@ -103,6 +103,10 @@ if ENABLE_MYSQL
 SUBDIRS += plugins/ommysql
 endif
 
+if ENABLE_OMLIBDBI
+SUBDIRS += plugins/omlibdbi
+endif
+
 if ENABLE_PGSQL
 SUBDIRS += plugins/ompgsql
 endif
