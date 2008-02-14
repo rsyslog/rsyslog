@@ -62,8 +62,8 @@ static uchar *pszFileName = NULL;
 static uchar *pszFileTag = NULL;
 static uchar *pszStateFile = NULL;
 static int iPollInterval = 10;	/* number of seconds to sleep when there was no file activity */
-static int iFacility;
-static int iSeverity;
+static int iFacility = 128; /* local0 */
+static int iSeverity = 5;  /* notice, as of rfc 3164 */
 
 static int iFilPtr = 0;		/* number of files to be monitored; pointer to next free spot during config */
 #define MAX_INPUT_FILES 100
@@ -90,8 +90,8 @@ static rsRetVal enqLine(fileInfo_t *pInfo, rsCStrObj *cstrLine)
 		MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 		MsgSetHOSTNAME(pMsg, LocalHostName);
 		MsgSetTAG(pMsg, (char*)pInfo->pszTag);
-		pMsg->iFacility = pInfo->iFacility;
-		pMsg->iSeverity = pInfo->iSeverity;
+		pMsg->iFacility = LOG_FAC(pInfo->iFacility);
+		pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
 		pMsg->bParseHOSTNAME = 0;
 		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 		CHKiRet(submitMsg(pMsg));
@@ -394,7 +394,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 	/* set defaults... */
 	iPollInterval = 10;
-	iFacility = 16; /* local0, as of RFC 3164 */
+	iFacility = 128; /* local0 */
 	iSeverity = 5;  /* notice, as of rfc 3164 */
 
 	RETiRet;
@@ -438,6 +438,8 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar __attribute
 		ABORT_FINALIZE(RS_RET_OUT_OF_DESRIPTORS);
 	}
 
+	CHKiRet(resetConfigVariables((uchar*) "dummy", (void*) pThis)); /* values are both dummies */
+
 finalize_it:
 	if(iRet == RS_RET_OK)
 		++iFilPtr;	/* we got a new file to monitor */
@@ -464,10 +466,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	  	NULL, &pszFileTag, STD_LOADABLE_MODULE_ID));
 	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilestatefile", 0, eCmdHdlrGetWord,
 	  	NULL, &pszStateFile, STD_LOADABLE_MODULE_ID));
-	 /* use numerical values as of RFC 3164 for the time being... */
-	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileseverity", 0, eCmdHdlrInt,
+	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileseverity", 0, eCmdHdlrSeverity,
 	  	NULL, &iSeverity, STD_LOADABLE_MODULE_ID));
-	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilefacility", 0, eCmdHdlrInt,
+	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilefacility", 0, eCmdHdlrFacility,
 	  	NULL, &iFacility, STD_LOADABLE_MODULE_ID));
 	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepollinterval", 0, eCmdHdlrInt,
 	  	NULL, &iPollInterval, STD_LOADABLE_MODULE_ID));
@@ -477,6 +478,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/*
- * vim:set ai:
+/* vim:set ai:
  */

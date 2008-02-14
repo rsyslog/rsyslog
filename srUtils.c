@@ -50,7 +50,7 @@
 /* here we host some syslog specific names. There currently is no better place
  * to do it, but over here is also not ideal... -- rgerhards, 2008-02-14
  */
-struct code	syslogPriNames[] = {
+syslogName_t	syslogPriNames[] = {
 	{"alert",	LOG_ALERT},
 	{"crit",	LOG_CRIT},
 	{"debug",	LOG_DEBUG},
@@ -67,7 +67,7 @@ struct code	syslogPriNames[] = {
 	{NULL,		-1}
 };
 
-struct code	syslogFacNames[] = {
+syslogName_t	syslogFacNames[] = {
 	{"auth",         LOG_AUTH},
 	{"authpriv",     LOG_AUTHPRIV},
 	{"cron",         LOG_CRON},
@@ -470,9 +470,9 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
 
 /*  Decode a symbolic name to a numeric value
  */
-int decodeSyslogName(uchar *name, struct code *codetab)
+int decodeSyslogName(uchar *name, syslogName_t *codetab)
 {
-	register struct code *c;
+	register syslogName_t *c;
 	register uchar *p;
 	uchar buf[80];
 

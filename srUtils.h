@@ -34,13 +34,13 @@
 #define TABLE_ALLPRI    0xFF    /* Value to indicate all priorities in f_pmask */
 #define	LOG_MARK	LOG_MAKEPRI(LOG_NFACILITIES, 0)	/* mark "facility" */
 
-struct code {
+typedef struct syslogName_s {
 	char	*c_name;
 	int	c_val;
-};
+} syslogName_t;
 
-extern struct code syslogPriNames[];
-extern struct code syslogFacNames[];
+extern syslogName_t syslogPriNames[];
+extern syslogName_t syslogFacNames[];
 
 /**
  * A reimplementation of itoa(), as this is not available
@@ -86,7 +86,7 @@ long timeoutVal(struct timespec *pt);
 void mutexCancelCleanup(void *arg);
 void srSleep(int iSeconds, int iuSeconds);
 char *rs_strerror_r(int errnum, char *buf, size_t buflen);
-int decodeSyslogName(uchar *name, struct code *codetab);
+int decodeSyslogName(uchar *name, syslogName_t *codetab);
 
 /* mutex operations */
 /* some macros to cancel-safe lock a mutex (it will automatically be released

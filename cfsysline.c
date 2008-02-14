@@ -438,7 +438,40 @@ finalize_it:
 }
 
 
-/* Parse and a word config line option. A word is a consequitive
+/* parse a whitespace-delimited word from the provided string. This is a
+ * helper function for a number of syntaxes. The parsed value is returned
+ * in ppStrB (which must be provided by caller).
+ * rgerhards, 2008-02-14
+ */
+static rsRetVal
+getWord(uchar **pp, rsCStrObj **ppStrB)
+{
+	DEFiRet;
+	uchar *p;
+
+	ASSERT(pp != NULL);
+	ASSERT(*pp != NULL);
+	ASSERT(*ppStrB != NULL);
+
+	if((*ppStrB = rsCStrConstruct()) == NULL) 
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	/* parse out the word */
+	p = *pp;
+
+	while(*p && !isspace((int) *p)) {
+		CHKiRet(rsCStrAppendChar(*ppStrB, *p++));
+	}
+	CHKiRet(rsCStrFinish(*ppStrB));
+
+	*pp = p;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Parse and a word config line option. A word is a consequtive
  * sequence of non-whitespace characters. pVal must be
  * a pointer to a string which is to receive the option
  * value. The returned string must be freed by the caller.
@@ -455,23 +488,12 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 {
 	DEFiRet;
 	rsCStrObj *pStrB;
-	uchar *p;
 	uchar *pNewVal;
 
-	assert(pp != NULL);
-	assert(*pp != NULL);
+	ASSERT(pp != NULL);
+	ASSERT(*pp != NULL);
 
-	if((pStrB = rsCStrConstruct()) == NULL) 
-		return RS_RET_OUT_OF_MEMORY;
-
-	/* parse out the word */
-	p = *pp;
-
-	while(*p && !isspace((int) *p)) {
-		CHKiRet(rsCStrAppendChar(pStrB, *p++));
-	}
-	CHKiRet(rsCStrFinish(pStrB));
-
+	CHKiRet(getWord(pp, &pStrB));
 	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &pNewVal, 0));
 	pStrB = NULL;
 
@@ -486,7 +508,6 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 		CHKiRet(pSetHdlr(pVal, pNewVal));
 	}
 
-	*pp = p;
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 finalize_it:
@@ -499,6 +520,66 @@ finalize_it:
 }
 
 
+/* parse a syslog name from the string. This is the generic code that is
+ * called by the facility/severity functions. Note that we do not check the
+ * validity of numerical values, something that should probably change over
+ * time (TODO). -- rgerhards, 2008-02-14
+ */
+static rsRetVal
+doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal, syslogName_t *pNameTable)
+{
+	DEFiRet;
+	rsCStrObj *pStrB;
+	int iNewVal;
+
+	ASSERT(pp != NULL);
+	ASSERT(*pp != NULL);
+
+	CHKiRet(getWord(pp, &pStrB)); /* get word */
+	iNewVal = decodeSyslogName(rsCStrGetSzStr(pStrB), pNameTable);
+
+	if(pSetHdlr == NULL) {
+		/* we should set value directly to var */
+		*((int*)pVal) = iNewVal; /* set new one */
+	} else {
+		/* we set value via a set function */
+		CHKiRet(pSetHdlr(pVal, iNewVal));
+	}
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+
+finalize_it:
+	if(pStrB != NULL)
+		rsCStrDestruct(pStrB);
+
+	RETiRet;
+}
+
+
+/* Implements the facility syntax.
+ * rgerhards, 2008-02-14
+ */
+static rsRetVal
+doFacility(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
+{
+	DEFiRet;
+	iRet = doSyslogName(pp, pSetHdlr, pVal, syslogFacNames);
+	RETiRet;
+}
+
+
+/* Implements the severity syntax.
+ * rgerhards, 2008-02-14
+ */
+static rsRetVal
+doSeverity(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal)
+{
+	DEFiRet;
+	iRet = doSyslogName(pp, pSetHdlr, pVal, syslogPriNames);
+	RETiRet;
+}
+
+
 /* --------------- END functions for handling canned syntaxes --------------- */
 
 /* destructor for cslCmdHdlr
@@ -507,7 +588,7 @@ finalize_it:
  */
 static rsRetVal cslchDestruct(void *pThis)
 {
-	assert(pThis != NULL);
+	ASSERT(pThis != NULL);
 	free(pThis);
 	
 	return RS_RET_OK;
@@ -606,6 +687,12 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 		break;
 	case eCmdHdlrGetChar:
 		pHdlr = doGetChar;
+		break;
+	case eCmdHdlrFacility:
+		pHdlr = doFacility;
+		break;
+	case eCmdHdlrSeverity:
+		pHdlr = doSeverity;
 		break;
 	case eCmdHdlrGetWord:
 		pHdlr = doGetWord;
@@ -892,6 +979,5 @@ void dbgPrintCfSysLineHandlers(void)
 	ENDfunc
 }
 
-/*
- * vi:set ai:
+/* vim:set ai:
  */

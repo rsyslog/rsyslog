@@ -37,6 +37,8 @@ typedef enum cslCmdHdlrType {
 	eCmdHdlrInt,
 	eCmdHdlrSize,
 	eCmdHdlrGetChar,
+	eCmdHdlrFacility,
+	eCmdHdlrSeverity,
 	eCmdHdlrGetWord
 } ecslCmdHdrlType;
 

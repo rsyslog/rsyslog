@@ -54,6 +54,16 @@ $WorkDirectory). Be careful to use unique names for different files
 being monitored. If there are duplicates, all sorts of "interesting"
 things may happen. Rsyslog currently does not check if a name is
 specified multiple times.</li>
+<li><span style="font-weight: bold;">$InputFileFacility
+facility</span><br>
+The syslog facility to be assigned to lines read. Can be specified in
+textual form (e.g. "local0", "local1", ...) or as numbers (e.g. 128 for
+"local0"). Textual form is suggested. <span style="font-weight: bold;">Default</span> &nbsp;is "local0".<span style="font-weight: bold;"></span></li>
+<li><span style="font-weight: bold;">$InputFileSeverity</span><br>
+The
+syslog severity to be assigned to lines read. Can be specified in
+textual form (e.g. "info", "warning", ...) or as numbers (e.g. 4 for
+"info"). Textual form is suggested. <span style="font-weight: bold;">Default</span> is "notice".</li>
 <li><span style="font-weight: bold;">$InputRunFileMonitor</span><br>
 This <span style="font-weight: bold;">activates</span>
 the current monitor. It has no parameters. If you forget this
@@ -61,7 +71,8 @@ directive, no file monitoring will take place.</li>
 <li><span style="font-weight: bold;">$InputFilePollInterval
 seconds</span><br>
 This is a global setting. It specifies how often files are to be polled
-for new data. The time specified is in seconds. The <span style="font-weight: bold;">default value</span> is 10 seconds. Please note that future
+for new data. The time specified is in seconds. The <span style="font-weight: bold;">default value</span> is 10
+seconds. Please note that future
 releases of imfile may support per-file polling intervals, but
 currently this is not the case. If multiple $InputFilePollInterval
 statements are present in rsyslog.conf, only the last one is used.<br>
@@ -83,7 +94,9 @@ the source needs to be patched. See define MAX_INPUT_FILES in imfile.c
 <p>The following sample monitors two files. If you need just one,
 remove the second one. If you need more, add them according to the
 sample ;). This code must be placed in /etc/rsyslog.conf (or wherever
-your distro puts rsyslog's config files).<br>
+your distro puts rsyslog's config files). Note that only commands
+actually needed need to be specified. The second file uses less
+commands and uses defaults instead.<br>
 </p>
 <textarea rows="15" cols="60">$ModLoad imfile.so #
 needs to be done just once
@@ -91,6 +104,8 @@ needs to be done just once
 $InputFileName /path/to/file1
 $InputFileTag tag1:
 $InputFileStateFile stat-file1
+$InputFileSeverity error
+$InputFileFacility local7
 $InputRunFileMonitor
 # File 2
 $InputFileName /path/to/file2

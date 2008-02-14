@@ -102,7 +102,6 @@
  * once the situation has been resolved.
  */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
-#define DEFSPRI		(LOG_KERN|LOG_CRIT)
 #define TIMERINTVL	30		/* interval for checking flush, mark */
 
 #define CONT_LINE	1		/* Allow continuation lines */
