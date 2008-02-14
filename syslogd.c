@@ -264,11 +264,6 @@ static int restart = 0; /* do restart (config read) - multithread safe */
 
 int glblHadMemShortage = 0; /* indicates if we had memory shortage some time during the run */
 
-#define INTERNAL_NOPRI	0x10	/* the "no priority" priority */
-#define TABLE_NOPRI	0	/* Value to indicate no priority in f_pmask */
-#define TABLE_ALLPRI    0xFF    /* Value to indicate all priorities in f_pmask */
-#define	LOG_MARK	LOG_MAKEPRI(LOG_NFACILITIES, 0)	/* mark "facility" */
-
 /* definitions used for doNameLine to differentiate between different command types
  * (with otherwise identical code). This is a left-over from the previous config
  * system. It stays, because it is still useful. So do not wonder why it looks
@@ -305,56 +300,6 @@ int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
 struct	filed *Files = NULL; /* read-only after init() (but beware of sigusr1!) */
-
-struct code {
-	char	*c_name;
-	int	c_val;
-};
-
-static struct code	PriNames[] = {
-	{"alert",	LOG_ALERT},
-	{"crit",	LOG_CRIT},
-	{"debug",	LOG_DEBUG},
-	{"emerg",	LOG_EMERG},
-	{"err",		LOG_ERR},
-	{"error",	LOG_ERR},		/* DEPRECATED */
-	{"info",	LOG_INFO},
-	{"none",	INTERNAL_NOPRI},	/* INTERNAL */
-	{"notice",	LOG_NOTICE},
-	{"panic",	LOG_EMERG},		/* DEPRECATED */
-	{"warn",	LOG_WARNING},		/* DEPRECATED */
-	{"warning",	LOG_WARNING},
-	{"*",		TABLE_ALLPRI},
-	{NULL,		-1}
-};
-
-static struct code	FacNames[] = {
-	{"auth",         LOG_AUTH},
-	{"authpriv",     LOG_AUTHPRIV},
-	{"cron",         LOG_CRON},
-	{"daemon",       LOG_DAEMON},
-	{"kern",         LOG_KERN},
-	{"lpr",          LOG_LPR},
-	{"mail",         LOG_MAIL},
-	{"mark",         LOG_MARK},		/* INTERNAL */
-	{"news",         LOG_NEWS},
-	{"security",     LOG_AUTH},		/* DEPRECATED */
-	{"syslog",       LOG_SYSLOG},
-	{"user",         LOG_USER},
-	{"uucp",         LOG_UUCP},
-#if defined(LOG_FTP)
-	{"ftp",          LOG_FTP},
-#endif
-	{"local0",       LOG_LOCAL0},
-	{"local1",       LOG_LOCAL1},
-	{"local2",       LOG_LOCAL2},
-	{"local3",       LOG_LOCAL3},
-	{"local4",       LOG_LOCAL4},
-	{"local5",       LOG_LOCAL5},
-	{"local6",       LOG_LOCAL6},
-	{"local7",       LOG_LOCAL7},
-	{NULL,           -1},
-};
 
 static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
 
@@ -560,7 +505,6 @@ static char **crunch_list(char *list);
 static void reapchild();
 static void debug_switch();
 static rsRetVal cfline(uchar *line, selector_t **pfCurr);
-static int decode(uchar *name, struct code *codetab);
 static void sighup_handler();
 static void freeSelectors(void);
 static rsRetVal processConfFile(uchar *pConfFile);
@@ -3482,11 +3426,11 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 		if ( *buf == '=' )
 		{
 			singlpri = 1;
-			pri = decode(&buf[1], PriNames);
+			pri = decodeSyslogName(&buf[1], syslogPriNames);
 		}
 		else {
 		        singlpri = 0;
-			pri = decode(buf, PriNames);
+			pri = decodeSyslogName(buf, syslogPriNames);
 		}
 
 		if (pri < 0) {
@@ -3535,7 +3479,7 @@ dbgPrintAllDebugInfo();
 					}
 				}
 			} else {
-				i = decode(buf, FacNames);
+				i = decodeSyslogName(buf, syslogFacNames);
 				if (i < 0) {
 
 					snprintf((char*) xbuf, sizeof(xbuf), "unknown facility name \"%s\"", buf);
@@ -4153,37 +4097,6 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 	free(pszType); /* no longer needed */
 
 	RETiRet;
-}
-
-
-/*  Decode a symbolic name to a numeric value
- */
-int decode(uchar *name, struct code *codetab)
-{
-	register struct code *c;
-	register uchar *p;
-	uchar buf[80];
-
-	assert(name != NULL);
-	assert(codetab != NULL);
-
-	dbgprintf("symbolic name: %s", name);
-	if (isdigit((int) *name))
-	{
-		dbgprintf("\n");
-		return (atoi((char*) name));
-	}
-	strncpy((char*) buf, (char*) name, 79);
-	for (p = buf; *p; p++)
-		if (isupper((int) *p))
-			*p = tolower((int) *p);
-	for (c = codetab; c->c_name; c++)
-		if (!strcmp((char*) buf, (char*) c->c_name))
-		{
-			dbgprintf(" ==> %d\n", c->c_val);
-			return (c->c_val);
-		}
-	return (-1);
 }
 
 

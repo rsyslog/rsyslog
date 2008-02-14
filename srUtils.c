@@ -47,6 +47,54 @@
 #include "obj.h"
 
 
+/* here we host some syslog specific names. There currently is no better place
+ * to do it, but over here is also not ideal... -- rgerhards, 2008-02-14
+ */
+struct code	syslogPriNames[] = {
+	{"alert",	LOG_ALERT},
+	{"crit",	LOG_CRIT},
+	{"debug",	LOG_DEBUG},
+	{"emerg",	LOG_EMERG},
+	{"err",		LOG_ERR},
+	{"error",	LOG_ERR},		/* DEPRECATED */
+	{"info",	LOG_INFO},
+	{"none",	INTERNAL_NOPRI},	/* INTERNAL */
+	{"notice",	LOG_NOTICE},
+	{"panic",	LOG_EMERG},		/* DEPRECATED */
+	{"warn",	LOG_WARNING},		/* DEPRECATED */
+	{"warning",	LOG_WARNING},
+	{"*",		TABLE_ALLPRI},
+	{NULL,		-1}
+};
+
+struct code	syslogFacNames[] = {
+	{"auth",         LOG_AUTH},
+	{"authpriv",     LOG_AUTHPRIV},
+	{"cron",         LOG_CRON},
+	{"daemon",       LOG_DAEMON},
+	{"kern",         LOG_KERN},
+	{"lpr",          LOG_LPR},
+	{"mail",         LOG_MAIL},
+	{"mark",         LOG_MARK},		/* INTERNAL */
+	{"news",         LOG_NEWS},
+	{"security",     LOG_AUTH},		/* DEPRECATED */
+	{"syslog",       LOG_SYSLOG},
+	{"user",         LOG_USER},
+	{"uucp",         LOG_UUCP},
+#if defined(LOG_FTP)
+	{"ftp",          LOG_FTP},
+#endif
+	{"local0",       LOG_LOCAL0},
+	{"local1",       LOG_LOCAL1},
+	{"local2",       LOG_LOCAL2},
+	{"local3",       LOG_LOCAL3},
+	{"local4",       LOG_LOCAL4},
+	{"local5",       LOG_LOCAL5},
+	{"local6",       LOG_LOCAL6},
+	{"local7",       LOG_LOCAL7},
+	{NULL,           -1},
+};
+
 /* ################################################################# *
  * private members                                                   *
  * ################################################################# */
@@ -420,6 +468,36 @@ char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
 }
 
 
-/*
- * vi:set ai:
+/*  Decode a symbolic name to a numeric value
+ */
+int decodeSyslogName(uchar *name, struct code *codetab)
+{
+	register struct code *c;
+	register uchar *p;
+	uchar buf[80];
+
+	ASSERT(name != NULL);
+	ASSERT(codetab != NULL);
+
+	dbgprintf("symbolic name: %s", name);
+	if (isdigit((int) *name))
+	{
+		dbgprintf("\n");
+		return (atoi((char*) name));
+	}
+	strncpy((char*) buf, (char*) name, 79);
+	for (p = buf; *p; p++)
+		if (isupper((int) *p))
+			*p = tolower((int) *p);
+	for (c = codetab; c->c_name; c++)
+		if (!strcmp((char*) buf, (char*) c->c_name))
+		{
+			dbgprintf(" ==> %d\n", c->c_val);
+			return (c->c_val);
+		}
+	return (-1);
+}
+
+
+/* vim:set ai:
  */
