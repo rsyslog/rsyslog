@@ -323,7 +323,8 @@ ENDrunInput
  * input shall run or not. The idea is that if some config settings (or similiar things)
  * are not OK, the input can tell rsyslog it will not execute. To do so, return
  * RS_RET_NO_RUN or a specific error code. If RS_RET_OK is returned, rsyslog will
- * proceed and call the runInput() entry point.
+ * proceed and call the runInput() entry point. If you do not return anything
+ * specific, RS_RET_OK is automatically returned (as in all functions).
  */
 BEGINwillRun
 	/* place any variables needed here */

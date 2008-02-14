@@ -199,7 +199,7 @@ strmHandleEOFMonitor(strm_t *pThis)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
-dbgoprint((obj_t*)pThis, "curr ino %d, new ino %d, curr offset %lld, new size %ld\n", statOpen.st_ino, statName.st_ino, pThis->iCurrOffs, statName.st_size);
+//dbgoprint((obj_t*)pThis, "curr ino %d, new ino %d, curr offset %lld, new size %ld\n", statOpen.st_ino, statName.st_ino, pThis->iCurrOffs, statName.st_size);
 	if(statOpen.st_ino == statName.st_ino && pThis->iCurrOffs == statName.st_size) {
 		ABORT_FINALIZE(RS_RET_EOF);
 	} else {

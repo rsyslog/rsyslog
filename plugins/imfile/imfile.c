@@ -30,8 +30,8 @@
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pthread.h>		/* do NOT remove: will soon be done by the module generation macros */
-#include <fcntl.h>		/* do NOT remove: will soon be done by the module generation macros */
 #include "rsyslog.h"		/* error codes etc... */
 #include "syslogd.h"
 #include "cfsysline.h"		/* access to config file objects */
@@ -47,17 +47,10 @@ MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 /* Module static data */
 DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
 
-/* Here, define whatever static data is needed. Is it suggested that static variables only are
- * used (not externally visible). If you need externally visible variables, make sure you use a
- * prefix in order not to conflict with other modules or rsyslogd itself (also see comment
- * at file header).
- */
-
 typedef struct fileInfo_s {
 	uchar *pszFileName;
 	uchar *pszTag;
 	uchar *pszStateFile; /* file in which state between runs is to be stored */
-	int64 offsLast; /* offset last read from */
 	int iFacility;
 	int iSeverity;
 	strm_t *pStrm;	/* its stream (NULL if not assigned) */
@@ -72,7 +65,7 @@ static int iPollInterval = 10;	/* number of seconds to sleep when there was no f
 static int iFacility;
 static int iSeverity;
 
-static int iFilPtr = 0;
+static int iFilPtr = 0;		/* number of files to be monitored; pointer to next free spot during config */
 #define MAX_INPUT_FILES 100
 static fileInfo_t files[MAX_INPUT_FILES];
 
@@ -82,8 +75,6 @@ static fileInfo_t files[MAX_INPUT_FILES];
  */
 typedef struct _instanceData {
 } instanceData;
-
-/* config settings */
 
 
 /* enqueue the read file line as a message
@@ -171,10 +162,12 @@ finalize_it:
 
 
 /* poll a file, need to check file rollover etc. open file if not open */
-static rsRetVal pollFile(fileInfo_t *pThis)
+static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 {
 	DEFiRet;
 	rsCStrObj *pCStr;
+
+	ASSERT(pbHadFileData != NULL);
 
 	if(pThis->pStrm == NULL) {
 		CHKiRet(openFile(pThis)); /* open file */
@@ -183,6 +176,7 @@ static rsRetVal pollFile(fileInfo_t *pThis)
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(1) {
 		CHKiRet(strmReadLine(pThis->pStrm, &pCStr));
+		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 	}
 
@@ -230,16 +224,24 @@ inputModuleCleanup(void __attribute__((unused)) *arg)
  * so would end module processing and rsyslog would NOT reschedule the module. If
  * you exit from this function, you violate the interface specification!
  *
- * So how is it terminated? When it is time to terminate, rsyslog actually cancels
- * the threads. This may sound scary, but is not. There is a cancel cleanup handler
- * defined (the function directly above). See comments there for specifics.
- *
- * runInput is always called on a single thread. If the module neees multiple threads,
- * it is free to create them. HOWEVER, it must make sure that any threads created
- * are killed and joined in the cancel cleanup handler.
+ * We go through all files and remember if at least one had data. If so, we do
+ * another run (until no data was present in any file). Then we sleep for
+ * PollInterval seconds and restart the whole process. This ensures that as
+ * long as there is some data present, it will be processed at the fastest
+ * possible pace - probably important for busy systmes. If we monitor just a
+ * single file, the algorithm is slightly modified. In that case, the sleep
+ * hapens immediately. The idea here is that if we have just one file, we
+ * returned from the file processer because that file had no additional data.
+ * So even if we found some lines, it is highly unlikely to find a new one
+ * just now. Trying it would result in a performance-costly additional try
+ * which in the very, very vast majority of cases will never find any new
+ * lines. 
+ * On spamming the main queue: keep in mind that it will automatically rate-limit
+ * ourselfes if we begin to overrun it. So we really do not need to care here.
  */
 BEGINrunInput
 	int i;
+	int bHadFileData; /* were there at least one file with data during this run? */
 CODESTARTrunInput
 	/* ------------------------------------------------------------------------------------------ *
 	 * DO NOT TOUCH the following code - it will soon be part of the module generation macros!    */
@@ -248,11 +250,14 @@ CODESTARTrunInput
 	/* END no-touch zone                                                                          *
 	 * ------------------------------------------------------------------------------------------ */
 
-	for(i = 0 ; i < iFilPtr ; ++i) {
-		pollFile(&files[i]);
-	}
+	do {
+		bHadFileData = 0;
+		for(i = 0 ; i < iFilPtr ; ++i) {
+			pollFile(&files[i], &bHadFileData);
+		}
+	} while(iFilPtr > 1 && bHadFileData == 1); /* waring: do...while()! */
 
-	/* Note: the 10ns additional wait is vitally important. It guards rsyslog against totally
+	/* Note: the additional 10ns wait is vitally important. It guards rsyslog against totally
 	 * hogging the CPU if the users selects a polling interval of 0 seconds. It doesn't hurt any
 	 * other valid scenario. So do not remove. -- rgerhards, 2008-02-14
 	 */
@@ -412,14 +417,14 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar __attribute
 			pThis->pszFileName = (uchar*) strdup((char*) pszFileName);
 		}
 
-		if(pszFileTag != NULL) {
+		if(pszFileTag == NULL) {
 			logerror("imfile error: no tag value given , file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
 		}
 
-		if(pszStateFile != NULL) {
+		if(pszStateFile == NULL) {
 			logerror("imfile error: not state file name given, file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
@@ -428,7 +433,6 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar __attribute
 
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
-		pThis->offsLast = 0;
 	} else {
 		logerror("Too many file monitors configured - ignoring this one");
 		ABORT_FINALIZE(RS_RET_OUT_OF_DESRIPTORS);
