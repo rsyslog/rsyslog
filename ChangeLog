@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.11.2 (rgerhards), 2008-02-??
+Version 3.11.2 (rgerhards), 2008-02-15
 - added the capability to monitor text files and process their content
   as syslog messages (including forwarding)
 - added support for libdbi, a database abstraction layer. rsyslog now

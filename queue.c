@@ -613,7 +613,7 @@ static rsRetVal qDelLinkedList(queue_t *pThis, obj_t **ppUsr)
 
 
 static rsRetVal
-queueLoadPersStrmInfoFixup(strm_t *pStrm, queue_t *pThis)
+queueLoadPersStrmInfoFixup(strm_t *pStrm, queue_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pStrm, strm);
