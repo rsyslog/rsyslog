@@ -8,7 +8,8 @@
 <p>We have often been asked abut a comparison sheet between
 rsyslog and syslog-ng. Unfortunately, I do not know much about
 syslog-ng, I did not even use it once. Also, there seems to be no
-comprehensive feature sheet available for syslog-ng. So I started this
+comprehensive feature sheet available for syslog-ng (that recently changed, see 
+below). So I started this
 comparison, but it probably is not complete. For sure, I miss some
 syslog-ng features. This is not an attempt to let rsyslog shine more
 than it should. I just used the <a href="features.html">rsyslog
@@ -118,7 +119,7 @@ program name blocks for easy multi-host support</td>
 <td valign="top">massively multi-threaded for
 tomorrow's multi-core machines</td>
 <td valign="top">yes</td>
-<td valign="top">?</td>
+<td valign="top">no (only multithreaded with database destinations)</td>
 </tr>
 <tr>
 <td valign="top">ability to control repeated line
@@ -133,10 +134,10 @@ within other config files</td>
 <td valign="top">no</td>
 </tr>
 <tr>
-<td valign="top">ability to include all config files
+<td valign="top" height="25">ability to include all config files
 existing in a specific directory</td>
-<td valign="top">yes</td>
-<td valign="top">no</td>
+<td valign="top" height="25">yes</td>
+<td valign="top" height="25">no</td>
 </tr>
 <tr>
 <td valign="top">supports multiple actions per
@@ -337,6 +338,11 @@ Supported Database Outputs<br>
 argument why it is good to have another strong syslogd besides syslog-ng</b>.
 You may want to read it at my blog at "<a href="http://rgerhards.blogspot.com/2007/08/why-does-world-need-another-syslogd.html">Why
 does the world need another syslogd?</a>".</p>
-<p>This document is current as of 2008-02-11 and definitely
+<p>Balabit, the vendor of syslog-ng, has just recently done a feature sheet. I 
+have not yet been able to fully work through it. In the mean time, you may want 
+to read it in parallel. It is available at
+<a href="http://www.balabit.com/network-security/syslog-ng/features/detailed/">
+Balabit's site</a>.</p>
+<p>This document is current as of 2008-02-15 and definitely
 incomplete (I did not yet manage to complete it!).</p>
 </body></html>
