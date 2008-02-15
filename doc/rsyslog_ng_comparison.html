@@ -25,17 +25,6 @@ comparison sheet, so please don't be shy ;)</p>
 <td valign="top"><b>syslog-ng</b></td>
 </tr>
 <tr>
-<td valign="top">support for (plain) tcp based syslog</td>
-<td valign="top">yes</td>
-<td valign="top">yes</td>
-</tr>
-<tr>
-<td valign="top">support for sending and receiving
-compressed syslog messages</td>
-<td valign="top">yes</td>
-<td valign="top">I think "no"</td>
-</tr>
-<tr>
 <td valign="top">support for on-demand on-disk
 spooling of messages</td>
 <td valign="top">yes</td>
@@ -44,13 +33,6 @@ spooling of messages</td>
 <tr>
 <td valign="top">ability to configure backup
 syslog/database servers </td>
-<td valign="top">yes</td>
-<td valign="top">no</td>
-</tr>
-<tr>
-<td valign="top">support for receiving messages via
-reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC
-3195</a> delivery</td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
 </tr>
@@ -85,24 +67,16 @@ contents and work with substrings</td>
 <td valign="top">yes</td>
 </tr>
 <tr>
-<td valign="top">support for file size limitation
+<td valign="top">support for log file size limitation
 and automatic rollover command execution</td>
 <td valign="top">yes</td>
 <td valign="top">yes (?)</td>
 </tr>
 <tr>
 <td valign="top">support for running multiple
-rsyslogd instances on a single machine</td>
+syslogd instances on a single machine</td>
 <td valign="top">yes</td>
 <td valign="top">? (but I think yes)</td>
-</tr>
-<tr>
-<td valign="top">support for <a href="rsyslog_stunnel.html">ssl-protected
-syslog</a> </td>
-<td valign="top"><a href="rsyslog_stunnel.html">via
-stunnel</a></td>
-<td valign="top">via stunnel<br>
-paid edition natively</td>
 </tr>
 <tr>
 <td valign="top">ability to filter on any part of
@@ -135,18 +109,6 @@ continously running program</td>
 <td valign="top">yes</td>
 </tr>
 <tr>
-<td valign="top">ability to preserve the original
-hostname in NAT environments and relay chains</td>
-<td valign="top">yes</td>
-<td valign="top">yes (think so)</td>
-</tr>
-<tr>
-<td valign="top">ability to limit the allowed
-network senders (syslog ACLs)</td>
-<td valign="top">yes</td>
-<td valign="top">yes (?)</td>
-</tr>
-<tr>
 <td valign="top">powerful BSD-style hostname and
 program name blocks for easy multi-host support</td>
 <td valign="top">yes</td>
@@ -159,23 +121,6 @@ tomorrow's multi-core machines</td>
 <td valign="top">?</td>
 </tr>
 <tr>
-<td valign="top">support for IETF's new
-syslog-protocol draft</td>
-<td valign="top">yes</td>
-<td valign="top">no</td>
-</tr>
-<tr>
-<td valign="top">support for syslog-transport-tls
-based framing on syslog/tcp connections</td>
-<td valign="top">yes</td>
-<td valign="top">no (?)</td>
-</tr>
-<tr>
-<td valign="top">support for IPv6</td>
-<td valign="top">yes</td>
-<td valign="top">yes</td>
-</tr>
-<tr>
 <td valign="top">ability to control repeated line
 reduction ("last message repeated n times") on a per selector-line basis</td>
 <td valign="top">yes</td>
@@ -185,13 +130,13 @@ reduction ("last message repeated n times") on a per selector-line basis</td>
 <td valign="top">ability to include config file from
 within other config files</td>
 <td valign="top">yes</td>
-<td valign="top">no (?)</td>
+<td valign="top">no</td>
 </tr>
 <tr>
 <td valign="top">ability to include all config files
 existing in a specific directory</td>
 <td valign="top">yes</td>
-<td valign="top">no (?)</td>
+<td valign="top">no</td>
 </tr>
 <tr>
 <td valign="top">supports multiple actions per
@@ -218,11 +163,6 @@ ugly</td>
 <td valign="top">clean but not backwards compatible</td>
 </tr>
 <tr>
-<td valign="top">support for GSS-API</td>
-<td valign="top">yes</td>
-<td valign="top">?</td>
-</tr>
-<tr>
 <td valign="top">web interface</td>
 <td valign="top"><a href="http://www.phplogcon.org">phpLogCon</a><br>
 [also works with <a href="http://freshmeat.net/projects/php-syslog-ng/">
@@ -246,11 +186,11 @@ php-syslog-ng</a></td>
 <td valign="top">discard low-priority messages under
 system stress</td>
 <td valign="top">yes</td>
-<td valign="top">?</td>
+<td valign="top">no (?)</td>
 </tr>
 <tr>
 <td height="43" valign="top">flow control
-(slow down message recpetion when system is busy)</td>
+(slow down message reception when system is busy)</td>
 <td height="43" valign="top">limited (TCP
 Window, delay on queue full)</td>
 <td height="43" valign="top">yes (limited,
@@ -273,12 +213,6 @@ repeated n times" generation</td>
 <td valign="top">no (?)</td>
 </tr>
 <tr>
-<td valign="top">on the wire (zlib) message
-compression</td>
-<td valign="top">yes</td>
-<td valign="top">no (?)</td>
-</tr>
-<tr>
 <td valign="top">license</td>
 <td valign="top">GPLv3 (GPLv2 for v2 branch)</td>
 <td valign="top">GPL (paid edition is closed source)</td>
@@ -295,18 +229,94 @@ Solaris</td>
 <td valign="top">yes</td>
 </tr>
 <tr>
-<td valign="top">native ability to send SNMP traps</td>
-<td valign="top">yes</td>
-<td valign="top">?</td>
-</tr>
-<tr>
 <td valign="top">? (probably many I do no know
 off...)</td>
 <td valign="top">no</td>
 <td valign="top">yes</td>
 </tr>
 <tr>
-<td valign="top"><span style="font-weight: bold;">Supported Database Outputs</span></td>
+<td valign="top"><b><br>
+Network (Protocol) Support<br>
+&nbsp;</b></td>
+<td valign="top">&nbsp;</td>
+<td valign="top">&nbsp;</td>
+</tr>
+
+<tr>
+<td valign="top">support for (plain) tcp based syslog</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top">support for GSS-API</td>
+<td valign="top">yes</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">ability to limit the allowed
+network senders (syslog ACLs)</td>
+<td valign="top">yes</td>
+<td valign="top">yes (?)</td>
+</tr>
+<tr>
+<td valign="top">support for syslog-transport-tls
+based framing on syslog/tcp connections</td>
+<td valign="top">yes</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">udp syslog</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+
+<tr>
+<td valign="top">on the wire (zlib) message
+compression</td>
+<td valign="top">yes</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">support for receiving messages via
+reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC
+3195</a> delivery</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top">support for <a href="rsyslog_stunnel.html">ssl-protected
+syslog</a> </td>
+<td valign="top"><a href="rsyslog_stunnel.html">via
+stunnel</a></td>
+<td valign="top">via stunnel<br>
+paid edition natively</td>
+</tr>
+<tr>
+<td valign="top">support for IETF's new
+syslog-protocol draft</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top">support for IPv6</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top">native ability to send SNMP traps</td>
+<td valign="top">yes</td>
+<td valign="top">?</td>
+</tr>
+<tr>
+<td valign="top">ability to preserve the original
+hostname in NAT environments and relay chains</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top"><span style="font-weight: bold;"><br>
+Supported Database Outputs<br>
+&nbsp;</span></td>
 <td valign="top"></td>
 <td valign="top"></td>
 </tr>
