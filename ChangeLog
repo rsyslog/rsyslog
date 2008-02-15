@@ -2,6 +2,16 @@
 Version 3.11.2 (rgerhards), 2008-02-??
 - added the capability to monitor text files and process their content
   as syslog messages (including forwarding)
+- added support for libdbi, a database abstraction layer. rsyslog now
+  also supports the following databases via dbi drivers:
+  * Firebird/Interbase
+  * FreeTDS (access to MS SQL Server and Sybase)
+  * SQLite/SQLite3
+  * Ingres (experimental)
+  * mSQL (experimental)
+  * Oracle (experimental)
+  Additional drivers may be provided by the libdbi-drivers project, which
+  can be used by rsyslog as soon as they become available.
 - removed some left-over unnecessary dbgprintf's (cluttered screen,
   cosmetic)
 - doc bugfix: html documentation for omsnmp was missing

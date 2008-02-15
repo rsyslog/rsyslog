@@ -4,6 +4,10 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
+ * This depends on libdbi being present with the proper settings. Older
+ * versions do not necessarily have them. Please visit this bug tracker
+ * for details: http://bugzilla.adiscon.com/show_bug.cgi?id=31
+ *
  * File begun on 2008-02-14 by RGerhards (extracted from syslogd.c)
  *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
@@ -156,17 +160,15 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 	// TODO: add config setting for driver directory
 	iDrvrsLoaded = dbi_initialize(NULL);
 	if(iDrvrsLoaded == 0) {
-		logerror("libdbi error: no dbi drivers present on this system - suspending. Install drivers!");
+		logerror("libdbi error: libdbi or libdbi drivers not present on this system - suspending.");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-RUNLOG_VAR("%s", pData->drvrName);
 	pData->conn = dbi_conn_new((char*)pData->drvrName);
 	if(pData->conn == NULL) {
 		logerror("can not initialize libdbi connection");
 		iRet = RS_RET_SUSPENDED;
 	} else { /* we could get the handle, now on with work... */
-RUNLOG_STR("trying dbi connect");
 		/* Connect to database */
 		dbi_conn_set_option(pData->conn, "host",     (char*) pData->host);
 		dbi_conn_set_option(pData->conn, "username", (char*) pData->usrName);
@@ -187,7 +189,6 @@ finalize_it:
 
 /* The following function writes the current log entry
  * to an established MySQL session.
- * Initially added 2004-10-28 mmeckelein
  */
 rsRetVal writeDB(uchar *psz, instanceData *pData)
 {
