@@ -1,13 +1,10 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta http-equiv="Content-Language" content="de"><title>rsyslog vs. syslog-ng - a comparison</title>
-
-</head>
-
+<meta content="de" http-equiv="Content-Language"><title>rsyslog vs. syslog-ng - a comparison</title></head>
 <body>
 <h1>rsyslog vs. syslog-ng</h1>
 <p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
-(2008-01-29)</i></small></p>
+(2008-02-15)</i></small></p>
 <p>We have often been asked abut a comparison sheet between
 rsyslog and syslog-ng. Unfortunately, I do not know much about
 syslog-ng, I did not even use it once. Also, there seems to be no
@@ -26,18 +23,6 @@ comparison sheet, so please don't be shy ;)</p>
 <td valign="top"><b>Feature</b></td>
 <td valign="top"><b>rsyslog</b></td>
 <td valign="top"><b>syslog-ng</b></td>
-</tr>
-<tr>
-<td valign="top">native support for <a href="http://www.rsyslog.com/doc-rsyslog_mysql.html">writing
-to MySQL databases</a></td>
-<td valign="top">yes</td>
-<td valign="top">paid edition only</td>
-</tr>
-<tr>
-<td valign="top">native support for writing to
-Postgres databases</td>
-<td valign="top">yes</td>
-<td valign="top">paid edition only</td>
 </tr>
 <tr>
 <td valign="top">support for (plain) tcp based syslog</td>
@@ -250,16 +235,8 @@ php-syslog-ng</a></td>
 <td valign="top">yes</td>
 <td valign="top">yes</td>
 </tr>
-<tr>
-<td valign="top">native support for Oracle databases</td>
-<td valign="top">no</td>
-<td valign="top">paid edition only</td>
-</tr>
-<tr>
-<td valign="top">native support for SQLite databases</td>
-<td valign="top">no</td>
-<td valign="top">paid edition only</td>
-</tr>
+
+
 <tr>
 <td valign="top">rate-limiting output actions</td>
 <td valign="top">yes</td>
@@ -328,7 +305,23 @@ off...)</td>
 <td valign="top">no</td>
 <td valign="top">yes</td>
 </tr>
-</tbody>
+<tr>
+<td valign="top"><span style="font-weight: bold;">Supported Database Outputs</span></td>
+<td valign="top"></td>
+<td valign="top"></td>
+</tr>
+
+<tr>
+<td valign="top">MySQL</td>
+<td valign="top"><a href="rsyslog_mysql.html">yes</a> (ommysql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">paid edition only</td>
+</tr>
+<tr>
+<td valign="top">PostgreSQL</td>
+<td valign="top">yes (ompgsql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">paid edition only</td>
+</tr>
+<tr><td valign="top">Oracle</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">paid edition only</td></tr><tr><td valign="top">SQLite</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">paid edition only</td></tr><tr><td valign="top">Microsoft SQL (Open TDS)</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Sybase (Open TDS)</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Firebird/Interbase</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Ingres</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">mSQL</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr></tbody>
 </table>
 <p>Based on a discussion I had, I also wrote about the <b>political
 argument why it is good to have another strong syslogd besides syslog-ng</b>.

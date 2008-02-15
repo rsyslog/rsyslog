@@ -53,19 +53,21 @@ MODULE_TYPE_OUTPUT
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
+static int bDbiInitialized = 0;	/* dbi_initialize() can only be called one - this keeps track of it */
 
 typedef struct _instanceData {
-	dbi_conn conn;		/* handle to MySQL */
+	dbi_conn conn;		/* handle to database */
 	uchar *drvrName;	/* driver to use */
 	uchar *host;		/* host to connect to */
 	uchar *usrName;		/* user name for connect */
 	uchar *pwd;		/* password for connect */
 	uchar *dbName;		/* database to use */
-	unsigned uLastDBErrno;	/* last errno returned by MySQL or 0 if all is well */
+	unsigned uLastDBErrno;	/* last errno returned by libdbi or 0 if all is well */
 } instanceData;
 
 
 /* config settings */
+static uchar *dbiDrvrDir = NULL;/* global: where do the dbi drivers reside? */
 static uchar *drvrName = NULL;	/* driver to use */
 static uchar *host = NULL;	/* host to connect to */
 static uchar *usrName = NULL;	/* user name for connect */
@@ -115,7 +117,7 @@ ENDdbgPrintInstInfo
 
 
 /* log a database error with descriptive message.
- * We check if we have a valid MySQL handle. If not, we simply
+ * We check if we have a valid database handle. If not, we simply
  * report an error, but can not be specific. RGerhards, 2007-01-30
  */
 static void
@@ -136,7 +138,7 @@ reportDBError(instanceData *pData, int bSilent)
 		uDBErrno = dbi_conn_error(pData->conn, &pszDbiErr);
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", uDBErrno, pszDbiErr);
 		if(bSilent || uDBErrno == pData->uLastDBErrno)
-			dbgprintf("mysql, DBError(silent): %s\n", errMsg);
+			dbgprintf("libdbi, DBError(silent): %s\n", errMsg);
 		else {
 			pData->uLastDBErrno = uDBErrno;
 			logerror(errMsg);
@@ -157,11 +159,17 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 	ASSERT(pData != NULL);
 	ASSERT(pData->conn == NULL);
 
-	// TODO: add config setting for driver directory
-	iDrvrsLoaded = dbi_initialize(NULL);
-	if(iDrvrsLoaded == 0) {
-		logerror("libdbi error: libdbi or libdbi drivers not present on this system - suspending.");
-		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	if(bDbiInitialized == 0) {
+		/* we need to init libdbi first */
+		iDrvrsLoaded = dbi_initialize((char*) dbiDrvrDir);
+		if(iDrvrsLoaded == 0) {
+			logerror("libdbi error: libdbi or libdbi drivers not present on this system - suspending.");
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		} else if(iDrvrsLoaded < 0) {
+			logerror("libdbi error: libdbi could not be initialized - suspending.");
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
+		bDbiInitialized = 1; /* we are done for the rest of our existence... */
 	}
 
 	pData->conn = dbi_conn_new((char*)pData->drvrName);
@@ -188,7 +196,7 @@ finalize_it:
 
 
 /* The following function writes the current log entry
- * to an established MySQL session.
+ * to an established database connection.
  */
 rsRetVal writeDB(uchar *psz, instanceData *pData)
 {
@@ -255,15 +263,25 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(createInstance(&pData));
 
 	/* no create the instance based on what we currently have */
+	if(drvrName == NULL) {
+		logerror("omlibdbi: no db driver name given - action can not be created");
+		ABORT_FINALIZE(RS_RET_NO_DRIVERNAME);
+	}
+
 	if((pData->drvrName = (uchar*) strdup((char*)drvrName)) == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	if((pData->host     = (uchar*) strdup((char*)host))     == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	if((pData->usrName  = (uchar*) strdup((char*)usrName))  == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	if((pData->dbName   = (uchar*) strdup((char*)dbName))   == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	if(pData->pwd != NULL)
-		if((pData->pwd = (uchar*) strdup((char*)""))    == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	/* NULL values are supported because drivers have different needs.
+	 * They will err out on connect. -- rgerhards, 2008-02-15
+	 */
+	if(host    != NULL)
+		if((pData->host     = (uchar*) strdup((char*)host))     == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if(usrName != NULL)
+		if((pData->usrName  = (uchar*) strdup((char*)usrName))  == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if(dbName  != NULL)
+		if((pData->dbName   = (uchar*) strdup((char*)dbName))   == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if(pwd     != NULL)
+		if((pData->pwd      = (uchar*) strdup((char*)""))       == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
-RUNLOG;
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -271,6 +289,10 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
+	/* if we initialized libdbi, we now need to cleanup */
+	if(bDbiInitialized) {
+		dbi_shutdown();
+	}
 ENDmodExit
 
 
@@ -285,6 +307,11 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
+
+	if(dbiDrvrDir != NULL) {
+		free(dbiDrvrDir);
+		dbiDrvrDir = NULL;
+	}
 
 	if(drvrName != NULL) {
 		free(drvrName);
@@ -319,6 +346,7 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &dbiDrvrDir, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &drvrName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbihost", 0, eCmdHdlrGetWord, NULL, &host, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbiusername", 0, eCmdHdlrGetWord, NULL, &usrName, STD_LOADABLE_MODULE_ID));

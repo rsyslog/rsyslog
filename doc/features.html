@@ -1,7 +1,6 @@
-<html>
-<head>
-<title>rsyslog features</title>
-</head>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>rsyslog features</title></head>
 <body>
 <h1>RSyslog - Features</h1>
 <p><b>This page lists both current features as well as those being considered 
@@ -13,46 +12,55 @@ is going on, you can also subscribe to the <a href="http://lists.adiscon.net/mai
 <h2>Current Features</h2>
 <ul>
 
- <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a><li>
-	native support for writing to Postgres databases<li>support for (plain) tcp 
-	based syslog - much better reliability<li>support for sending and receiving 
-	compressed syslog messages<li>support for on-demand on-disk spooling of 
+ <li>native support for <a href="rsyslog_mysql.html">writing to MySQL databases</a></li><li>
+	native support for writing to Postgres databases</li><li>direct support for Firebird/Interbase,
+OpenTDS (MS SQL, Sybase), SQLLite, Ingres, Oracle, and mSQL via libdbi,
+a database abstraction layer (almost as good as native)</li><li>support for (plain) tcp 
+	based syslog - much better reliability</li><li>support for sending and receiving 
+	compressed syslog messages</li><li>support for on-demand on-disk spooling of 
 	messages that can not be processed fast enough (a great feature for
 	<a href="rsyslog_high_database_rate.html">writing massive amounts of syslog 
-	messages to a database</a>)<li>ability to configure backup syslog/database 
+	messages to a database</a>)</li><li>ability to monitor text files and convert their contents into syslog messages (one per line)</li><li>ability to configure backup syslog/database 
 	servers - if the primary fails, control is switched to a prioritized list of 
-	backups<li>support for receiving messages via 	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">	RFC 3195</a> delivery<li>ability to generate file names and directories (log targets) 
-	dynamically, based on many different properties<li>control of log output format, 
-	including ability to present channel and priority as visible log data<li>good timestamp format control; at a minimum, ISO 8601/RFC 3339
- second-resolution UTC zone<li>ability to reformat message contents and work with substrings<li>support for 
-	log files larger than 2gb<li>support for file size limitation and automatic 
-	rollover command execution<li>support for running multiple rsyslogd 
-	instances on a single machine<li>support for <a href="rsyslog_stunnel.html">
-	ssl-protected syslog</a> (via stunnel)<li>ability to filter on any part of 
-	the message, not just facility and severity<li>ability to use regular 
-	expressions in filters<li>support for discarding 
-	messages based on filters<li>ability to execute shell scripts on received 
-	messages<li>control of whether the local hostname or the hostname of the
- origin of the data is shown as the hostname in the output<li>ability to 
+	backups</li><li>support for receiving messages via 
+	reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">
+	RFC 3195</a> delivery</li><li>ability to generate file names and directories (log targets) 
+	dynamically, based on many different properties</li><li>control of log output format, 
+	including ability to present channel and priority as visible log data</li><li>good timestamp format control; at a minimum, ISO 8601/RFC 3339
+ second-resolution UTC zone</li><li>ability to reformat message contents and work with substrings</li><li>support for 
+	log files larger than 2gb</li><li>support for file size limitation and automatic 
+	rollover command execution</li><li>support for running multiple rsyslogd 
+	instances on a single machine</li><li>support for <a href="rsyslog_stunnel.html">
+	ssl-protected syslog</a> (via stunnel)</li><li>ability to filter on any part of 
+	the message, not just facility and severity</li><li>ability to use regular 
+	expressions in filters</li><li>support for discarding 
+	messages based on filters</li><li>ability to execute shell scripts on received 
+	messages</li><li>control of whether the local hostname or the hostname of the
+ origin of the data is shown as the hostname in the output</li><li>ability to 
 	preserve the original hostname in NAT environments and relay chains
-	<li>ability to limit the allowed network senders<li>powerful BSD-style 	hostname and program name blocks for easy multi-host support<li>	massively	multi-threaded with dynamic work thread pools that start up and shut 
+	</li><li>ability to limit the allowed network senders</li><li>powerful BSD-style 
+	hostname and program name blocks for easy multi-host support</li><li>
+	massively
+	multi-threaded with dynamic work thread pools that start up and shut 
 	themselves down on an as-needed basis (great for high log volume on 
-	multicore machines)<li>very 	experimental and volatile support for <a href="syslog-protocol.html">syslog-protocol</a> 	compliant messages (it is volatile because standardization is currently 	underway and this is a proof-of-concept implementation to aid this effort)<li>
+	multicore machines)</li><li>very 
+	experimental and volatile support for <a href="syslog-protocol.html">syslog-protocol</a> 	compliant messages (it is volatile because standardization is currently 
+	underway and this is a proof-of-concept implementation to aid this effort)</li><li>
 	experimental support for syslog-transport-tls based framing on syslog/tcp 
-	connections<li>
+	connections</li><li>
 	the sysklogd's klogd functionality is implemented as the <i>imklog</i> input 
 	plug-in. So rsyslog is a full replacement for the sysklogd 
-	package<li>
-	support for IPv6<li>
-	ability to control repeated line reduction (&quot;last message repeated n times&quot;) 
-	on a per selector-line basis<li>
+	package</li><li>
+	support for IPv6</li><li>
+	ability to control repeated line reduction ("last message repeated n times") 
+	on a per selector-line basis</li><li>
 	supports sub-configuration files, which can be automatically read from 
-	directories. Includes are specified in the main configuration file<li>
-	supports multiple actions per selector/filter condition<li>
-	MySQL and Postgres SQL functionality as a dynamically loadable plug-in<li>
-	modular design for inputs and outputs - easily extensible via custom plugins<li>
-	an easy-to-write to plugin interface<li>
-	ability to send SNMP trap messages</ul>
+	directories. Includes are specified in the main configuration file</li><li>
+	supports multiple actions per selector/filter condition</li><li>
+	MySQL and Postgres SQL functionality as a dynamically loadable plug-in</li><li>
+	modular design for inputs and outputs - easily extensible via custom plugins</li><li>
+	an easy-to-write to plugin interface</li><li>
+	ability to send SNMP trap messages</li></ul>
 <p>&nbsp;</p>
 <h2>Upcoming Features</h2>
 <p>The list below is something like a repository of ideas we'd like to 
@@ -61,32 +69,27 @@ inclusion. We maintain a
 <a href="http://bugzilla.adiscon.com/rsyslog-feature.html">feature 
 request tracker at our bugzilla</a>. This tracker has things typically within 
 reach of implementation. Users are encouraged to submit feature requests there 
-(or via our forums). If we like them but they look quite long-lived (aka &quot;not 
-soon to be implemented&quot;), they will possibly be migrated to this list here and 
+(or via our forums). If we like them but they look quite long-lived (aka "not 
+soon to be implemented"), they will possibly be migrated to this list here and 
 at some time moved back to the sourceforge tracker.</p>
 <ul>
 	<li>implement native email-functionality in 
-	selector (probably best done as a plug-in)<li>port it to more *nix variants 
+	selector (probably best done as a plug-in)</li><li>port it to more *nix variants 
 	(eg AIX and HP UX) - this needs volunteers with access to those machines and 
 	knowledge
-	<li>support for native SSL enryption of plain tcp syslog sessions. This will 
-	most probably happen based on syslog-transport-tls.<li>even more enhanced multi-threading, 
-	with a message queue for each action (when implementing this, search 
-	for CHECKMULTIQUEUE comments in the source - they already contain hints of 
-	what to look at). Some detail information on this can already be found in
-	<a href="http://rgerhards.blogspot.com/2007/08/syslog-worker-pools-future-hardware-and.html">
-	Rainer's blog</a>.<li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
+	</li><li>support for native SSL enryption of plain tcp syslog sessions. This will 
+	most probably happen based on syslog-transport-tls.</li><li>pcre filtering - maybe (depending on feedback)&nbsp; - simple regex already 
 	partly added. So far, this seems sufficient so that there is no urgent need 
-	to do pcre<li>support for	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - this is currently unlikely to happen, because there is no real 
+	to do pcre</li><li>support for
+	<a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC 3195</a> 	as a sender - this is currently unlikely to happen, because there is no real 
 	demand for it. Any work on RFC 3195 has been suspend until we see some real 
 	interest in it.&nbsp; It is probably much better to use TCP-based syslog, 
 	which is interoperable with a large number of applications. You may also 
 	read my blog post on the future of liblogging, which contains interesting 
 	information about the
 	<a href="http://rgerhards.blogspot.com/2007/09/where-is-liblogging-heading-to.html">
-	future of RFC 3195 in rsyslog</a>.</ul>
+	future of RFC 3195 in rsyslog</a>.</li></ul>
 <p>To see when each feature was added, see the
 <a href="http://www.rsyslog.com/Topic4.phtml">rsyslog change log</a> (online 
 only).</p>
-</body>
-</html>
+</body></html>

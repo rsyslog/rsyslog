@@ -1,7 +1,6 @@
-<html>
-<head>
-<title>rsyslog.conf file</title>
-</head>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<title>rsyslog.conf file</title></head>
 <body>
 <h1>rsyslog.conf configuration file</h1>
 <p><b>This document is currently being enhanced. Please pardon its current 
@@ -25,10 +24,10 @@ to rsyslogd.</p>
 modules. Here is the entry point to their documentation and what they do (list 
 is currently not complete)</p>
 <ul>
-	<li><a href="omsnmp.html">omsnmp</a> - SNMP trap output module</li>
+	<li><a href="omsnmp.html">omsnmp</a> - SNMP trap output module</li><li>omgss - output module for GSS-enabled syslog</li>
 	<li>ommysql - output module for MySQL</li>
 	<li>ompgsql - output module for PostgreSQL</li>
-	<li>imfile - [in development] input module for text files</li>
+	<li><a href="omlibdbi.html">omlibdbi</a> - generic database output module (Firebird/Interbase, MS SQL, Sybase, SQLLite, Ingres, Oracle, mSQL)</li><li><a href="imfile.html">imfile</a> -&nbsp; input module for text files</li><li>imudp - udp syslog message input</li><li>imtcp - input plugin for plain tcp and GSS-enable syslog</li><li>immark - support for mark messages</li>
 	<li>imklog - kernel logging</li>
 </ul>
 <p>Please note that each module provides configuration directives, which are NOT 
@@ -67,7 +66,7 @@ it is usually well-chosen and applicable in most cases.</p>
 	<li>$ActionQueueWorkerTimeoutThreadShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)]</li>
 	<li>$ActionQueueType [FixedArray/LinkedList/<b>Direct</b>/Disk]</li>
 	<li>$ActionQueueSaveOnShutdown&nbsp; [on/<b>off</b>] 
-	<li>$ActionQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
+	</li><li>$ActionQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
 	recommended 1</li>
 	<li>$ActionQueueWorkerThreadMinumumMessages &lt;number&gt;, default 100</li>
 	<li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
@@ -111,13 +110,15 @@ it is usually well-chosen and applicable in most cases.</p>
 	<li><a href="rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
 	<li>$MainMsgQueueLowWaterMark &lt;number&gt; [default 2000]</li>
 	<li>$MainMsgQueueMaxFileSize &lt;size_nbr&gt;, default 1m</li>
-	<li>$MainMsgQueueTimeoutActionCompletion &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 1000, 0 means immediate!]</li>
+	<li>$MainMsgQueueTimeoutActionCompletion
+&lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default
+1000, 0 means immediate!]</li>
 	<li>$MainMsgQueueTimeoutEnqueue &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 2000, 0 means indefinite]</li>
 	<li>$MainMsgQueueTimeoutShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 0 (indefinite)]</li>
 	<li>$MainMsgQueueWorkerTimeoutThreadShutdown &lt;number&gt; [number is timeout in ms (1000ms is 1sec!), default 60000 (1 minute)]</li>
 	<li>$MainMsgQueueType [<b>FixedArray</b>/LinkedList/Direct/Disk]</li>
 	<li>$MainMsgQueueSaveOnShutdown&nbsp; [on/<b>off</b>] 
-	<li>$MainMsgQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
+	</li><li>$MainMsgQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, 
 	recommended 1</li>
 	<li>$MainMsgQueueWorkerThreadMinumumMessages &lt;number&gt;, default 100</li>
 	<li><a href="rsconf1_markmessageperiod.html">$MarkMessagePeriod</a> (immark)</li>
@@ -131,7 +132,7 @@ it is usually well-chosen and applicable in most cases.</p>
 	<li>$UDPServerAddress &lt;IP&gt; (imudp) -- local IP address (or name) the UDP 
 	listens should bind to</li>
 	<li>$UDPServerRun &lt;port&gt; (imudp) -- former -r&lt;port&gt; option, default 514, 
-	start UDP server on this port, &quot;*&quot; means all addresses</li>
+	start UDP server on this port, "*" means all addresses</li>
 	<li><a href="rsconf1_umask.html">$UMASK</a></li>
 </ul>
 <p><b>Where &lt;size_nbr&gt; is specified above,</b> modifiers can be used after the 
@@ -140,45 +141,47 @@ t(era), p(eta) and e(xa). Lower case letters refer to the traditional binary
 defintion (e.g. 1m equals 1,048,576) whereas upper case letters refer to their 
 new 1000-based definition (e.g 1M equals 1,000,000).</p>
 <p>Numbers may include '.' and ',' for readability. So you can for example 
-specify either &quot;1000&quot; or &quot;1,000&quot; with the same result. Please note that rsyslogd 
-simply ignores the punctuation. Form it's point of view, &quot;1,,0.0.,.,0&quot; also has 
+specify either "1000" or "1,000" with the same result. Please note that rsyslogd 
+simply ignores the punctuation. Form it's point of view, "1,,0.0.,.,0" also has 
 the value 1000. </p>
 <h2>Basic Structure</h2>
 <p>Rsyslog supports standard sysklogd's configuration file format and extends 
-it. So in general, you can take a &quot;normal&quot; syslog.conf and use it together with 
+it. So in general, you can take a "normal" syslog.conf and use it together with 
 rsyslogd. It will understand everything. However, to use most of rsyslogd's 
-unique features, you need to add extended configuration directives.<p>Rsyslogd 
+unique features, you need to add extended configuration directives.</p><p>Rsyslogd 
 supports the classical, selector-based rule lines. They are still at the heart 
 of it and all actions are initiated via rule lines. A rule lines is any line not 
 starting with a $ or the comment sign (#). Lines starting with $ carry 
-rsyslog-specific directives.<p>Every rule line consists of two fields, a selector field and an action field. 
+rsyslog-specific directives.</p><p>Every rule line consists of two fields, a selector field and an action field. 
 These two fields are separated by one or more spaces or tabs. The selector field 
 specifies a pattern of facilities and priorities belonging to the specified 
 action.<br>
 <br>
-Lines starting with a hash mark (&quot;#'') and empty lines are ignored.
+Lines starting with a hash mark ("#'') and empty lines are ignored.
 
-<h2>Templates</h2>
-<p>Templates are a key feature of rsyslog. They allow to specify any format a user 
-might want. They are also used for dynamic file name generation. Every output in rsyslog uses templates - this holds true for files, 
-user messages and so on. The database writer expects its template to be a proper 
-SQL statement - so this is highly customizable too. You might ask how does all 
-of this work when no templates at all are specified. Good question ;) The answer 
-is simple, though. Templates compatible with the stock syslogd formats are 
-hardcoded into rsyslogd. So if no template is specified, we use one of these 
-hardcoded templates. Search for &quot;template_&quot; in syslogd.c and you will find the 
+</p><h2>Templates</h2>
+<p>Templates are a key feature of rsyslog. They allow to specify any
+format a user might want. They are also used for dynamic file name
+generation. Every output in rsyslog uses templates - this holds true
+for files, user messages and so on. The database writer expects its
+template to be a proper SQL statement - so this is highly customizable
+too. You might ask how does all of this work when no templates at all
+are specified. Good question ;) The answer is simple, though. Templates
+compatible with the stock syslogd formats are hardcoded into rsyslogd.
+So if no template is specified, we use one of these hardcoded
+templates. Search for "template_" in syslogd.c and you will find the
 hardcoded ones.</p>
 <p>A template consists of a template directive, a name, the actual template text 
 and optional options. A sample is:</p>
-<blockquote><code>$template MyTemplateName,&quot;\7Text %property% some more text\n&quot;,&lt;options&gt;</code></blockquote>
-<p>The &quot;$template&quot; is the template directive. It tells rsyslog that this line 
-contains a template. &quot;MyTemplateName&quot; is the template name. All
+<blockquote><code>$template MyTemplateName,"\7Text %property% some more text\n",&lt;options&gt;</code></blockquote>
+<p>The "$template" is the template directive. It tells rsyslog that this line 
+contains a template. "MyTemplateName" is the template name. All
 other config lines refer to this name. The text within quotes is the actual 
 template text. The backslash is an escape character, much as it is in C. It does 
-all these &quot;cool&quot; things. For example, \7 rings the bell (this is an ASCII 
+all these "cool" things. For example, \7 rings the bell (this is an ASCII 
 value), \n is a new line. C programmers and perl coders have the advantage of 
 knowing this, but the set in rsyslog is a bit restricted currently.
-<p>
+</p><p>
 All text in the template is used literally, except for things within percent 
 signs. These are properties and allow you access to the contents of the syslog 
 message. Properties are accessed via the property replacer (nice name, huh) and 
@@ -193,13 +196,13 @@ SINGLE property, only (and not the whole template).<br>
 <br>
 Template options are case-insensitive. Currently defined are: </p>
 <p><b>sql</b> - format the string suitable for a SQL statement in MySQL format. This will 
-replace single quotes (&quot;'&quot;) and the backslash character by their 
-backslash-escaped counterpart (&quot;\'&quot; and &quot;\\&quot;) inside each field. Please note 
+replace single quotes ("'") and the backslash character by their 
+backslash-escaped counterpart ("\'" and "\\") inside each field. Please note 
 that in MySQL configuration, the <code class="literal">NO_BACKSLASH_ESCAPES</code> 
 mode must be turned off for this format to work (this is the default).</p>
 <p><b>stdsql</b> - format the string suitable for a SQL statement that is to be 
 sent to a standards-compliant sql server. This will 
-replace single quotes (&quot;'&quot;) by two single quotes (&quot;''&quot;) inside each field. 
+replace single quotes ("'") by two single quotes ("''") inside each field. 
 You must use stdsql together with MySQL if in MySQL configuration the
 <code class="literal">NO_BACKSLASH_ESCAPES</code> is turned on.</p>
 <p>Either the <b>sql</b> or <b>stdsql</b>&nbsp; 
@@ -228,7 +231,7 @@ vulnerable to SQL injection. <br>
 To escape:<br>
 % = \%<br>
 \ = \\ --&gt; '\' is used to escape (as in C)<br>
-$template TraditionalFormat,%timegenerated% %HOSTNAME% %syslogtag%%msg%\n&quot;<br>
+$template TraditionalFormat,%timegenerated% %HOSTNAME% %syslogtag%%msg%\n"<br>
 <br>
 Properties can be accessed by the <a href="property_replacer.html">property replacer</a> 
 (see there for details).</p>
@@ -236,9 +239,9 @@ Properties can be accessed by the <a href="property_replacer.html">property repl
 selector lines with dynamic file names.</b> For example, if you would like to 
 split syslog messages from different hosts to different files (one per host), 
 you can define the following template:</p>
-<blockquote><code>$template DynFile,&quot;/var/log/system-%HOSTNAME%.log&quot;</code></blockquote>
+<blockquote><code>$template DynFile,"/var/log/system-%HOSTNAME%.log"</code></blockquote>
 <p>This template can then be used when defining an output selector line. It will 
-result in something like &quot;/var/log/system-localhost.log&quot;</p>
+result in something like "/var/log/system-localhost.log"</p>
 <h2>Output Channels</h2>
 <p>Output Channels are a new concept first introduced in rsyslog 0.9.0. <b>As of this 
 writing, it is most likely that they will be replaced by something different in 
@@ -248,7 +251,7 @@ to a later release.<br>
 <br>
 The idea behind output channel definitions is that it shall provide an umbrella 
 for any type of output that the user might want. In essence,<br>
-this is the &quot;file&quot; part of selector lines (and this is why we are not sure 
+this is the "file" part of selector lines (and this is why we are not sure 
 output channel syntax will stay after the next review). There is a<br>
 difference, though: selector channels both have filter conditions (currently 
 facility and severity) as well as the output destination. Output channels define 
@@ -277,7 +280,7 @@ the current release, setting it 1k lower than you expected is helpful. The
 max-size must always be specified in bytes - there are no special symbols (like 
 1k, 1m,...) at this point of development.<br>
 <br>
-Keep in mind that $outchannel just defines a channel with &quot;name&quot;. It does not 
+Keep in mind that $outchannel just defines a channel with "name". It does not 
 activate it. To do so, you must use a selector line (see below). That selector 
 line includes the channel name plus an $ sign in front of it. A sample might be:<br>
 <br>
@@ -297,34 +300,34 @@ been fixed to support files larger 2gb, but obviously only on file systems and
 operating system versions that do so. So it can still make sense to enforce a 
 2gb file size limit.</p>
 <h2>Filter Conditions</h2>
-<p>Rsyslog offers two different types &quot;filter conditions&quot;:</p>
+<p>Rsyslog offers two different types "filter conditions":</p>
 <ul>
-	<li>&quot;traditional&quot; severity and facility based selectors</li>
+	<li>"traditional" severity and facility based selectors</li>
 	<li>property-based filters</li>
 </ul>
 <h3>Blocks</h3>
 <p>Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each block of lines 
 is separated from the previous block by a program or hostname specification. A 
 block will only log messages corresponding to the most recent program and 
-hostname specifications given. Thus, a block which selects ‘ppp’ as the program, 
-directly followed by a block that selects messages from the hostname ‘dialhost’, 
+hostname specifications given. Thus, a block which selects &#8216;ppp&#8217; as the program, 
+directly followed by a block that selects messages from the hostname &#8216;dialhost&#8217;, 
 then the second block will only log messages from the ppp program on dialhost.
 </p>
-<p>A program specification is a line beginning with ‘!prog’ and the following 
+<p>A program specification is a line beginning with &#8216;!prog&#8217; and the following 
 blocks will be associated with calls to syslog from that specific program. A 
-program specification for ‘foo’ will also match any message logged by the kernel 
-with the prefix ‘foo: ’. Alternatively, a program specification ‘-foo’ causes the 
+program specification for &#8216;foo&#8217; will also match any message logged by the kernel 
+with the prefix &#8216;foo: &#8217;. Alternatively, a program specification &#8216;-foo&#8217; causes the 
 following blocks to be applied to messages from any program but the one specified. 
 
-A hostname specification of the form ‘+hostname’ and 
+A hostname specification of the form &#8216;+hostname&#8217; and 
 the following blocks will be applied to messages received from the specified 
-hostname. Alternatively, a hostname specification ‘-hostname’ causes the 
+hostname. Alternatively, a hostname specification &#8216;-hostname&#8217; causes the 
 following blocks to be applied to messages from any host but the one specified. 
 
-If the hostname is given as ‘@’, the local hostname will be used. (NOT YET 
+If the hostname is given as &#8216;@&#8217;, the local hostname will be used. (NOT YET 
 IMPLEMENTED) A program or hostname specification may be reset by giving the 
-program or hostname as ‘*’.</p>
-<p>Please note that the &quot;#!prog&quot;, &quot;#+hostname&quot; and &quot;#-hostname&quot; syntax available 
+program or hostname as &#8216;*&#8217;.</p>
+<p>Please note that the "#!prog", "#+hostname" and "#-hostname" syntax available 
 in BSD syslogd is not supported by rsyslogd. By default, no hostname or program 
 is set.</p>
 <h3>Selectors</h3>
@@ -383,19 +386,19 @@ rsyslogd that it is the new filter type. The colon must be followed by the
 property name, a comma, the name of the compare operation to carry out, another 
 comma and then the value to compare against. This value must be quoted. There 
 can be spaces and tabs between the commas. Property names and compare operations 
-are case-sensitive, so &quot;msg&quot; works, while &quot;MSG&quot; is an invalid property name. In 
+are case-sensitive, so "msg" works, while "MSG" is an invalid property name. In 
 brief, the syntax is as follows:</p>
-<p><code><b>:property, [!]compare-operation, &quot;value&quot;</b></code></p>
+<p><code><b>:property, [!]compare-operation, "value"</b></code></p>
 <p>The following <b>compare-operations</b> are currently supported:</p>
-<table border="1" width="100%" id="table1">
-	<tr>
+<table id="table1" border="1" width="100%">
+	<tbody><tr>
 		<td>contains</td>
 		<td>Checks if the string provided in value is contained in the property. 
 		There must be an exact match, wildcards are not supported.</td>
 	</tr>
 	<tr>
 		<td>isequal</td>
-		<td>Compares the &quot;value&quot; string provided and the property contents. 
+		<td>Compares the "value" string provided and the property contents. 
 		These two values must be exactly equal to match. The difference to 
 		contains is that contains searches for the value anywhere inside the 
 		property value, whereas all characters must be identical for isequal. As 
@@ -405,64 +408,64 @@ brief, the syntax is as follows:</p>
 	<tr>
 		<td>startswith</td>
 		<td>Checks if the value is found exactly at the beginning of the 
-		property value. For example, if you search for &quot;val&quot; with<p><code><b>:msg, 
-		startswith, &quot;val&quot;</b></code></p>
-		<p>it will be a match if msg contains &quot;values are in this message&quot; but 
-		it won't match if the msg contains &quot;There are values in this message&quot; 
-		(in the later case, contains would match). Please note that &quot;startswith&quot; 
+		property value. For example, if you search for "val" with<p><code><b>:msg, 
+		startswith, "val"</b></code></p>
+		<p>it will be a match if msg contains "values are in this message" but 
+		it won't match if the msg contains "There are values in this message" 
+		(in the later case, contains would match). Please note that "startswith" 
 		is by far faster than regular expressions. So even once they are 
-		implemented, it can make very much sense (performance-wise) to use &quot;startswith&quot;.</td>
+		implemented, it can make very much sense (performance-wise) to use "startswith".</p></td>
 	</tr>
 	<tr>
 		<td>regex</td>
 		<td>Compares the property against the provided regular expression.</td>
 	</tr>
-</table>
+</tbody></table>
 <p>You can use the bang-character (!) immediately in front of a 
 compare-operation, the outcome of this operation is negated. For example, if msg 
-contains &quot;This is an informative message&quot;, the following sample would not match:</p>
-<p><code><b>:msg, contains, &quot;error&quot;</b></code></p>
+contains "This is an informative message", the following sample would not match:</p>
+<p><code><b>:msg, contains, "error"</b></code></p>
 <p>but this one matches:</p>
-<p><code><b>:msg, !contains, &quot;error&quot;</b></code></p>
+<p><code><b>:msg, !contains, "error"</b></code></p>
 <p>Using negation can be useful if you would like to do some generic processing 
 but exclude some specific events. You can use the discard action in conjunction 
 with that. A sample would be:</p>
 <p><code><b>*.* /var/log/allmsgs-including-informational.log<br>
-:msg, contains, &quot;informational&quot;&nbsp; <font color="#FF0000" size="4">~</font>
+:msg, contains, "informational"&nbsp; <font color="#ff0000" size="4">~</font>
 <br>*.* /var/log/allmsgs-but-informational.log</b></code></p>
 <p>Do not overlook the red tilde in line 2! In this sample, all messages are 
 written to the file allmsgs-including-informational.log. Then, all messages 
-containing the string &quot;informational&quot; are discarded. That means the config file 
-lines below the &quot;discard line&quot; (number 2 in our sample) will not be applied to 
+containing the string "informational" are discarded. That means the config file 
+lines below the "discard line" (number 2 in our sample) will not be applied to 
 this message. Then, all remaining lines will also be written to the file 
 allmsgs-but-informational.log.</p>
 <p><b>Value</b> is a quoted string. It supports some escape sequences:</p>
-<p>\&quot; - the quote character (e.g. &quot;String with \&quot;Quotes\&quot;&quot;)<br>
-\\ - the backslash character (e.g. &quot;C:\\tmp&quot;)</p>
+<p>\" - the quote character (e.g. "String with \"Quotes\"")<br>
+\\ - the backslash character (e.g. "C:\\tmp")</p>
 <p>Escape sequences always start with a backslash. Additional escape sequences 
 might be added in the future. Backslash characters <b>must</b> be escaped. Any 
 other sequence then those outlined above is invalid and may lead to 
 unpredictable results.</p>
-<p>Probably, &quot;msg&quot; is the most prominent use case of property based filters. It 
+<p>Probably, "msg" is the most prominent use case of property based filters. It 
 is the actual message text. If you would like to filter based on some message 
 content (e.g. the presence of a specific code), this can be done easily by:</p>
-<p><code><b>:msg, contains, &quot;ID-4711&quot;</b></code></p>
-<p>This filter will match when the message contains the string &quot;ID-4711&quot;. Please 
-note that the comparison is case-sensitive, so it would not match if &quot;id-4711&quot; 
+<p><code><b>:msg, contains, "ID-4711"</b></code></p>
+<p>This filter will match when the message contains the string "ID-4711". Please 
+note that the comparison is case-sensitive, so it would not match if "id-4711" 
 would be contained in the message.</p>
 <p>Getting property-based filters right can sometimes be challenging. In order 
 to help you do it with as minimal effort as possible, rsyslogd spits out debug 
 information for all property-based filters during their evaluation. To enable 
-this, run rsyslogd in foreground and specify the &quot;-d&quot; option.</p>
+this, run rsyslogd in foreground and specify the "-d" option.</p>
 <p>Boolean operations inside property based filters (like 'message contains 
-&quot;ID17&quot; or message contains &quot;ID18&quot;') are currently not supported 
-(except for &quot;not&quot; as outlined above). Please note 
+"ID17" or message contains "ID18"') are currently not supported 
+(except for "not" as outlined above). Please note 
 that while it is possible to query facility and severity via property-based filters, 
 it is far more advisable to use classic selectors (see above) for those 
 cases.</p>
 <h2>ACTIONS</h2>
 <p>The action field of a rule describes what to do with the message. In general, 
-message content is written to a kind of &quot;logfile&quot;. But also other actions might 
+message content is written to a kind of "logfile". But also other actions might 
 be done, like writing to a database table or forwarding to another host.<br>
 <br>
 Templates can be used with all actions. If used, the specified template is used 
@@ -492,7 +495,7 @@ directive compared to the otherwise-equal config directives below:</p>
 <p>&nbsp;</p>
 <h3>Regular File</h3>
 <p>Typically messages are logged to real files. The file has to be specified with 
-full pathname, beginning with a slash &quot;/''.<br>
+full pathname, beginning with a slash "/''.<br>
 <br>
 You may prefix each entry with the minus ``-'' sign to omit syncing the file 
 after every logging. Note that you might lose information if the system crashes 
@@ -501,7 +504,7 @@ performance, especially if you run programs that use
 logging in a very verbose manner.</p>
 <p>If your system is connected to a reliable UPS and you receive lots of log 
 data (e.g. firewall logs), it might be a very good idea to turn of
-syncing by specifying the &quot;-&quot; in front of the file name. </p>
+syncing by specifying the "-" in front of the file name. </p>
 <p><b>The filename can be either static </b>(always the same) or <b>dynamic</b> 
 (different based on message received). The later is useful if you would 
 automatically split messages into different files based on some message 
@@ -510,8 +513,8 @@ into different files based on the host that sent them. With dynamic file names,
 everything is automatic and you do not need any filters. </p>
 <p>It works via the template system. First, you define a template for the file 
 name. An example can be seen above in the description of template. We will use 
-the &quot;DynFile&quot; template defined there. Dynamic filenames are indicated by 
-specifying a questions mark &quot;?&quot; instead of a slash, followed by the template 
+the "DynFile" template defined there. Dynamic filenames are indicated by 
+specifying a questions mark "?" instead of a slash, followed by the template 
 name. Thus, the selector line for our dynamic file name would look as follows:</p>
 <blockquote>
 <code>*.* ?DynFile</code>
@@ -551,24 +554,24 @@ all other machines will log remotely to that. This tears down<br>
 administration needs.<br>
 <br>
 <b>Please note that this version of rsyslogd by default does NOT forward messages 
-it has received from the network to another host. Specify the &quot;-h&quot; option to enable this.</b></p>
-<p>To forward messages to another host, prepend the hostname with the at sign (&quot;@&quot;).&nbsp; 
+it has received from the network to another host. Specify the "-h" option to enable this.</b></p>
+<p>To forward messages to another host, prepend the hostname with the at sign ("@").&nbsp; 
 A single at sign means that messages will be forwarded via UDP protocol (the 
-standard for syslog). If you prepend two at signs (&quot;@@&quot;), the messages will be 
+standard for syslog). If you prepend two at signs ("@@"), the messages will be 
 transmitted via TCP. Please note that plain TCP based syslog is not officially 
 standardized, but most major syslogds support it (e.g. syslog-ng or WinSyslog). 
 The forwarding action indicator (at-sign) can be followed by one or more options. 
 If they are given, they must be immediately (without a space) following the 
 final at sign and be enclosed in parenthesis. The individual options must be 
 separated by commas. The following options are right now defined:</p>
-<table border="1" width="100%" id="table2">
-	<tr>
+<table id="table2" border="1" width="100%">
+	<tbody><tr>
 		<td>
-		<p align="center"><b>z&lt;number&gt;</b></td>
+		<p align="center"><b>z&lt;number&gt;</b></p></td>
 		<td>Enable zlib-compression for the message. The &lt;number&gt; is the 
 		compression level. It can be 1 (lowest gain, lowest CPU overhead) to 9 (maximum 
 		compression, highest CPU overhead). The level can also be 0, which means 
-		&quot;no compression&quot;. If given, the &quot;z&quot; option is ignored. So this does not 
+		"no compression". If given, the "z" option is ignored. So this does not 
 		make an awful lot of sense. There is hardly a difference between level 1 
 		and 9 for typical syslog messages. You can expect a compression gain 
 		between 0% and 30% for typical messages. Very chatty messages may 
@@ -582,15 +585,15 @@ separated by commas. The following options are right now defined:</p>
 		receiver CPU cycles for decompression. It also prevents small message to 
 		actually become larger in compressed form.<p><b>Please note that when a 
 		TCP transport is used, compression will also turn on 
-		syslog-transport-tls framing. See the &quot;o&quot; option for important 
+		syslog-transport-tls framing. See the "o" option for important 
 		information on the implications.</b></p>
 		<p>Compressed messages are automatically detected and decompressed by 
 		the receiver. There is nothing that needs to be configured on the 
-		receiver side.</td>
+		receiver side.</p></td>
 	</tr>
 	<tr>
 		<td>
-		<p align="center"><b>o</b></td>
+		<p align="center"><b>o</b></p></td>
 		<td><b>This option is experimental. Use at your own risk and only if you 
 		know why you need it! If in doubt, do NOT turn it on.</b><p>This option 
 		is only valid for plain TCP based transports. It selects a different 
@@ -611,9 +614,9 @@ separated by commas. The following options are right now defined:</p>
 		<p>The most important implication is that compressed syslog messages via 
 		TCP must be considered with care. Unfortunately, it is technically 
 		impossible to transfer compressed records over traditional syslog plain 
-		tcp transports, so you are left with two evil choices...</td>
+		tcp transports, so you are left with two evil choices...</p></td>
 	</tr>
-</table>
+</tbody></table>
 <p><br>
 The hostname may be followed by a colon and the destination port.</p>
 <p>The following is an example selector line with forwarding:</p>
@@ -628,33 +631,33 @@ compressed.</p>
 format, which is the default forwarding template in rsyslog. As such, you will 
 experience duplicate hostnames if rsyslog is the sender and sysklogd is the 
 receiver. The fix is simple: you need to use a different template. Use that one:</p>
-<p class="MsoPlainText">$template sysklogd,&quot;&lt;%PRI%&gt;%TIMESTAMP% 
-%syslogtag%%msg%\&quot;&quot;<br>
+<p class="MsoPlainText">$template sysklogd,"&lt;%PRI%&gt;%TIMESTAMP% 
+%syslogtag%%msg%\""<br>
 *.* @192.168.0.1;sysklogd</p>
 <h3>List of Users</h3>
 <p>Usually critical messages are also directed to ``root'' on that machine. You can 
 specify a list of users that shall get the message by simply writing the login. 
-You may specify more than one user by separating them with commas (&quot;,''). If 
+You may specify more than one user by separating them with commas (",''). If 
 they're logged in they get the message. Don't think a mail would be sent, that 
 might be too late.</p>
 <h3>Everyone logged on</h3>
 <p>Emergency messages often go to all users currently online to notify them that 
 something strange is happening with the system. To specify this wall(1)-feature 
-use an asterisk (&quot;*'').</p>
+use an asterisk ("*'').</p>
 <h3>Call Plugin</h3>
 <p>This is a generic way to call an output plugin. The plugin must support this 
 functionality. Actual parameters depend on the module, so see the module's doc 
 on what to supply. The general syntax is as follows:</p>
 <p>:modname:params;template</p>
 <p>Currently, the ommysql database output module supports this syntax (in 
-addtion to the &quot;&gt;&quot; syntax it traditionally supported). For ommysql, the module 
-name is &quot;ommysql&quot; and the params are the traditional ones. The ;template part is 
+addtion to the "&gt;" syntax it traditionally supported). For ommysql, the module 
+name is "ommysql" and the params are the traditional ones. The ;template part is 
 not module specific, it is generic rsyslog functionality available to all 
 modules.</p>
 <p>As an example, the ommysql module may be called as follows:</p>
 <p>:ommysql:dbhost,dbname,dbuser,dbpassword;dbtemplate</p>
-<p>For details, please see the &quot;Database Table&quot; section of this documentation.</p>
-<p>Note: as of this writing, the &quot;:modname:&quot; part is hardcoded into the module. 
+<p>For details, please see the "Database Table" section of this documentation.</p>
+<p>Note: as of this writing, the ":modname:" part is hardcoded into the module. 
 So the name to use is not necessarily the name the module's plugin file is 
 called.</p>
 <h3>Database Table</h3>
@@ -666,7 +669,7 @@ came with the rsyslog package. You can also<br>
 use any other schema of your liking - you just need to define a proper template 
 and assign this template to the action.<br>
 <br>
-The database writer is called by specifying a greater-then sign (&quot;&gt;&quot;) in front 
+The database writer is called by specifying a greater-then sign ("&gt;") in front 
 of the database connect information. Immediately after that<br>
 sign the database host name must be given, a comma, the database name, another 
 comma, the database user, a comma and then the user's password. If a specific 
@@ -684,7 +687,7 @@ doing at the the beginning of the config file).</p>
 <p>If the discard action is carried out, the received message is immediately 
 discarded. No further processing of it occurs. Discard has primarily been added 
 to filter out messages before carrying on any further processing. For obvious 
-reasons, the results of &quot;discard&quot; are depending on where in the configuration 
+reasons, the results of "discard" are depending on where in the configuration 
 file it is being used. Please note that once a message has been discarded there 
 is no way to retrieve it in later configuration file lines.</p>
 <p>Discard can be highly effective if you want to filter out some annoying 
@@ -700,7 +703,7 @@ all...).</p>
 <h3>Output Channel</h3>
 <p>Binds an output channel definition (see there for details) to this action. 
 Output channel actions must start with a $-sign, e.g. if you would like to bind 
-your output channel definition &quot;mychannel&quot; to the action, use &quot;$mychannel&quot;. 
+your output channel definition "mychannel" to the action, use "$mychannel". 
 Output channels support template definitions like all all other actions.</p>
 <h3>Shell Execute</h3>
 <p>This executes a program in a subshell. The program is passed the 
@@ -721,21 +724,21 @@ terminates. Thus, a program error in it (e.g. an infinite loop) can actually
 disable rsyslog. Even without that, during the programs run-time no messages are 
 processed by rsyslog. As the IP stacks buffers are quickly overflowed, this 
 bears an increased risk of message loss. You must be aware of these implications. 
-Even though they are severe, there are several cases where the &quot;shell execute&quot; 
+Even though they are severe, there are several cases where the "shell execute" 
 action is very useful. This is the reason why we have included it in its current 
 form. To mitigate its risks, always a) test your program thoroughly, b) make 
 sure its runtime is as short as possible (if it requires a longer run-time, you 
 might want to spawn your own sub-shell asynchronously), c) apply proper 
 firewalling so that only known senders can send syslog messages to rsyslog. 
 Point c) is especially important: if rsyslog is accepting message from any hosts, 
-chances are much higher that an attacker might try to exploit the &quot;shell execute&quot; 
+chances are much higher that an attacker might try to exploit the "shell execute" 
 action.</p>
 <h2>TEMPLATE NAME</h2>
 <p>Every ACTION can be followed by a template name. If so, that template is used 
 for message formatting. If no name is given, a hard-coded default template is 
 used for the action. There can only be one template name for each given action. 
 The default template is specific to each action. For a description of what a 
-template is and what you can do with it, see &quot;TEMPLATES&quot; at the top of this 
+template is and what you can do with it, see "TEMPLATES" at the top of this 
 document.</p>
 <h2>EXAMPLES</h2>
 <p>Below are example for templates and selector lines. I hope they are 
@@ -745,27 +748,27 @@ self-explanatory. If not, please see www.monitorware.com/rsyslog/ for advise.</p
 NOT actually be split across multiple lines.<br>
 <br>
 A template that resembles traditional syslogd file output:<br>
-$template TraditionalFormat,&quot;%timegenerated% %HOSTNAME%<br>
-%syslogtag%%msg:::drop-last-lf%\n&quot;<br>
+$template TraditionalFormat,"%timegenerated% %HOSTNAME%<br>
+%syslogtag%%msg:::drop-last-lf%\n"<br>
 <br>
 A template that tells you a little more about the message:<br>
-$template precise,&quot;%syslogpriority%,%syslogfacility%,%timegenerated%,%HOSTNAME%,<br>
-%syslogtag%,%msg%\n&quot;<br>
+$template precise,"%syslogpriority%,%syslogfacility%,%timegenerated%,%HOSTNAME%,<br>
+%syslogtag%,%msg%\n"<br>
 <br>
 A template for RFC 3164 format:<br>
-$template RFC3164fmt,&quot;&lt;%PRI%&gt;%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%&quot;<br>
+$template RFC3164fmt,"&lt;%PRI%&gt;%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%"<br>
 <br>
 A template for the format traditonally used for user messages:<br>
-$template usermsg,&quot; XXXX%syslogtag%%msg%\n\r&quot;<br>
+$template usermsg," XXXX%syslogtag%%msg%\n\r"<br>
 <br>
 And a template with the traditonal wall-message format:<br>
-$template wallmsg,&quot;\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated%<br>
+$template wallmsg,"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated%<br>
 <br>
 A template that can be used for the database write (please note the SQL<br>
 template option)<br>
-$template MySQLInsert,&quot;insert iut, message, receivedat values<br>
+$template MySQLInsert,"insert iut, message, receivedat values<br>
 ('%iut%', '%msg:::UPPERCASE%', '%timegenerated:::date-mysql%')<br>
-into systemevents\r\n&quot;, SQL<br>
+into systemevents\r\n", SQL<br>
 <br>
 The following template emulates <a href="http://www.winsyslog.com/en/">WinSyslog</a> 
 format (it's an <a href="http://www.adiscon.com/en/">Adiscon</a> format, you do 
@@ -774,10 +777,10 @@ different parts out of the date stamps. What happens is that the date stamp is
 split into the actual date and time and the these two are combined with just a 
 comma in between them.<br>
 <br>
-$template WinSyslogFmt,&quot;%HOSTNAME%,%timegenerated:1:10:date-rfc3339%,<br>
+$template WinSyslogFmt,"%HOSTNAME%,%timegenerated:1:10:date-rfc3339%,<br>
 %timegenerated:12:19:date-rfc3339%,%timegenerated:1:10:date-rfc3339%,<br>
 %timegenerated:12:19:date-rfc3339%,%syslogfacility%,%syslogpriority%,<br>
-%syslogtag%%msg%\n&quot;</p>
+%syslogtag%%msg%\n"</p>
 <h3>SELECTOR LINES</h3>
 <p># Store critical stuff in critical<br>
 #<br>
@@ -913,13 +916,13 @@ sons. If you would like to do that, it's quite easy:<br>
 <br>
 *.* &gt;dbhost,dbname,dbuser,dbpassword;dbtemplate<br>
 <br>
-This rule writes all message to the database &quot;dbname&quot; hosted on &quot;dbhost&quot;. The 
-login is done with user &quot;dbuser&quot; and password &quot;dbpassword&quot;. The actual table 
+This rule writes all message to the database "dbname" hosted on "dbhost". The 
+login is done with user "dbuser" and password "dbpassword". The actual table 
 that is updated is specified within the template (which contains the insert 
-statement). The template is called &quot;dbtemplate&quot; in this case.</p>
-<p>:msg,contains,&quot;error&quot; @errorServer</p>
-<p>This rule forwards all messages that contain the word &quot;error&quot; in the msg part 
-to the server &quot;errorServer&quot;. Forwarding is via UDP. Please note the colon in 
+statement). The template is called "dbtemplate" in this case.</p>
+<p>:msg,contains,"error" @errorServer</p>
+<p>This rule forwards all messages that contain the word "error" in the msg part 
+to the server "errorServer". Forwarding is via UDP. Please note the colon in 
 fron</p>
 <h2>CONFIGURATION FILE SYNTAX DIFFERENCES</h2>
 <p>Rsyslogd uses a slightly different syntax for its configuration file than the 
@@ -935,5 +938,4 @@ When compared to syslogd from sysklogd package, rsyslogd offers additional
 defining such features is available 
 in rsyslogd, only.<br>
 &nbsp;</p>
-</body>
-</html>
+</body></html>

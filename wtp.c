@@ -376,7 +376,6 @@ wtpWrkrExecCancelCleanup(void *arg)
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, wtp);
 	pThis->iCurNumWrkThrd--;
-RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 	wtpSignalWrkrTermination(pThis);
 
 	dbgprintf("%s: thread CANCELED with %d workers running.\n", wtpGetDbgHdr(pThis), pThis->iCurNumWrkThrd);
@@ -431,7 +430,6 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 
 	pthread_cleanup_pop(0);
 	pThis->iCurNumWrkThrd--;
-RUNLOG_VAR("%d", pThis->iCurNumWrkThrd);
 	wtpSignalWrkrTermination(pThis);
 
 	dbgprintf("%s: Worker thread %lx, terminated, num workers now %d\n",

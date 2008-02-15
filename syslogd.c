@@ -3753,7 +3753,6 @@ rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStr
 	 * does not request any templates. This sounds unlikely, but an actual example is
 	 * the discard action, which does not require a string. -- rgerhards, 2007-07-30
 	 */
-RUNLOG_VAR("%d", pAction->iNumTpls);
 	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template pointer array */
 		if((pAction->ppTpl = calloc(pAction->iNumTpls, sizeof(struct template *))) == NULL) {
@@ -3767,7 +3766,6 @@ RUNLOG_VAR("%d", pAction->iNumTpls);
 		 * template (Hint: templates MUST be defined before they are
 		 * used!)
 		 */
-RUNLOG_VAR("%s", pTplName);
 		if((pAction->ppTpl[i] = tplFind((char*)pTplName, strlen((char*)pTplName))) == NULL) {
 			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
 				 " Could not find template '%s' - action disabled\n",

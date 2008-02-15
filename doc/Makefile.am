@@ -26,6 +26,7 @@ html_files = \
 	contributors.html \
 	dev_queue.html \
 	omsnmp.html \
+	omlibdbi.html \
 	imfile.html \
 	queues.html \
 	queueWorkerLogic.dia \
