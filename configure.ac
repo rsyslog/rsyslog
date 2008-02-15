@@ -398,7 +398,7 @@ if test "x$enable_libdbi" = "xyes"; then
     [dbi],
     [dbi_initialize],
     [libdbi_cflags=""
-     libdbi_libs="-lm -ldl -ldbi"
+     libdbi_libs="-ldbi"
     ],
     [AC_MSG_FAILURE([libdbi library is missing])]
   )

@@ -153,22 +153,12 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 	ASSERT(pData != NULL);
 	ASSERT(pData->conn == NULL);
 
+	// TODO: add config setting for driver directory
 	iDrvrsLoaded = dbi_initialize(NULL);
-	//iDrvrsLoaded = dbi_initialize("/usr/lib64/dbd/");
-RUNLOG_VAR("%d", iDrvrsLoaded);
 	if(iDrvrsLoaded == 0) {
 		logerror("libdbi error: no dbi drivers present on this system - suspending. Install drivers!");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
-
-	// debug drivers
-	dbi_driver drvr;
-	drvr = NULL;
-	do {
-RUNLOG;
-		drvr = dbi_driver_list(drvr);
-		dbgprintf("driver: '%s'\n", dbi_driver_get_name(drvr));
-	} while(drvr != NULL);
 
 RUNLOG_VAR("%s", pData->drvrName);
 	pData->conn = dbi_conn_new((char*)pData->drvrName);
