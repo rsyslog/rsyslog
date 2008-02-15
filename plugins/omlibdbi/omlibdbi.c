@@ -148,11 +148,29 @@ reportDBError(instanceData *pData, int bSilent)
 static rsRetVal initConn(instanceData *pData, int bSilent)
 {
 	DEFiRet;
+	int iDrvrsLoaded;
 
 	ASSERT(pData != NULL);
 	ASSERT(pData->conn == NULL);
 
-	dbi_initialize(NULL);
+	iDrvrsLoaded = dbi_initialize(NULL);
+	//iDrvrsLoaded = dbi_initialize("/usr/lib64/dbd/");
+RUNLOG_VAR("%d", iDrvrsLoaded);
+	if(iDrvrsLoaded == 0) {
+		logerror("libdbi error: no dbi drivers present on this system - suspending. Install drivers!");
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
+
+	// debug drivers
+	dbi_driver drvr;
+	drvr = NULL;
+	do {
+RUNLOG;
+		drvr = dbi_driver_list(drvr);
+		dbgprintf("driver: '%s'\n", dbi_driver_get_name(drvr));
+	} while(drvr != NULL);
+
+RUNLOG_VAR("%s", pData->drvrName);
 	pData->conn = dbi_conn_new((char*)pData->drvrName);
 	if(pData->conn == NULL) {
 		logerror("can not initialize libdbi connection");
@@ -172,6 +190,7 @@ RUNLOG_STR("trying dbi connect");
 		}
 	}
 
+finalize_it:
 	RETiRet;
 }
 
@@ -241,7 +260,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 	}
 
-	FINALIZE;
 	/* ok, if we reach this point, we have something for us */
 	CHKiRet(createInstance(&pData));
 
