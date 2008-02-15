@@ -13,7 +13,7 @@ below). So I started this
 comparison, but it probably is not complete. For sure, I miss some
 syslog-ng features. This is not an attempt to let rsyslog shine more
 than it should. I just used the <a href="features.html">rsyslog
-feature sheet</a> as a staring point, simply because it was
+feature sheet</a> as a starting point, simply because it was
 available. If you would like to add anything to the chart, or correct
 it, please simply <a href="mailto:rgerhards@adiscon.com">drop
 me a line</a>. I would love to see a real honest and up-to-date
@@ -134,10 +134,10 @@ within other config files</td>
 <td valign="top">no</td>
 </tr>
 <tr>
-<td valign="top" height="25">ability to include all config files
+<td height="25" valign="top">ability to include all config files
 existing in a specific directory</td>
-<td valign="top" height="25">yes</td>
-<td valign="top" height="25">no</td>
+<td height="25" valign="top">yes</td>
+<td height="25" valign="top">no</td>
 </tr>
 <tr>
 <td valign="top">supports multiple actions per
@@ -148,7 +148,7 @@ selector/filter condition</td>
 <tr>
 <td valign="top">plug-in interface</td>
 <td valign="top">yes</td>
-<td valign="top">no (?)</td>
+<td valign="top">no</td>
 </tr>
 <tr>
 <td valign="top">Windows Event Log gatherer</td>
@@ -229,12 +229,7 @@ Solaris</td>
 <td valign="top">no</td>
 <td valign="top">yes</td>
 </tr>
-<tr>
-<td valign="top">? (probably many I do no know
-off...)</td>
-<td valign="top">no</td>
-<td valign="top">yes</td>
-</tr>
+
 <tr>
 <td valign="top"><b><br>
 Network (Protocol) Support<br>
@@ -324,15 +319,15 @@ Supported Database Outputs<br>
 
 <tr>
 <td valign="top">MySQL</td>
-<td valign="top"><a href="rsyslog_mysql.html">yes</a> (ommysql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
-<td valign="top">paid edition only</td>
+<td valign="top"><a href="rsyslog_mysql.html">yes</a> (native ommysql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">yes (via libdibi)</td>
 </tr>
 <tr>
 <td valign="top">PostgreSQL</td>
-<td valign="top">yes (ompgsql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
-<td valign="top">paid edition only</td>
+<td valign="top">yes (native ompgsql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">yes (via libdibi)</td>
 </tr>
-<tr><td valign="top">Oracle</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">paid edition only</td></tr><tr><td valign="top">SQLite</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">paid edition only</td></tr><tr><td valign="top">Microsoft SQL (Open TDS)</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Sybase (Open TDS)</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Firebird/Interbase</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Ingres</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">mSQL</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr></tbody>
+<tr><td valign="top">Oracle</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">yes (via libdibi)</td></tr><tr><td valign="top">SQLite</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">yes (via libdibi)</td></tr><tr><td valign="top">Microsoft SQL (Open TDS)</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Sybase (Open TDS)</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Firebird/Interbase</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Ingres</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">mSQL</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr></tbody>
 </table>
 <p>Based on a discussion I had, I also wrote about the <b>political
 argument why it is good to have another strong syslogd besides syslog-ng</b>.
