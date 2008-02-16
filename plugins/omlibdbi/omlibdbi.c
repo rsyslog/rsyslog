@@ -48,6 +48,11 @@
 #include "module-template.h"
 #include "debug.h"
 
+/* this is a temporary setting to select either the old- or new-style libdbi
+ * calls. -- rgerhards, 2008-02-16
+ */
+#define USE_DBI_R_CALLS 0
+
 MODULE_TYPE_OUTPUT
 
 /* internal structures
@@ -73,6 +78,9 @@ static uchar *host = NULL;	/* host to connect to */
 static uchar *usrName = NULL;	/* user name for connect */
 static uchar *pwd = NULL;	/* password for connect */
 static uchar *dbName = NULL;	/* database to use */
+#if USE_DBI_R_CALLS == 1
+static dbi_inst dbiInst;
+#endif
 
 
 BEGINcreateInstance
@@ -161,7 +169,11 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 
 	if(bDbiInitialized == 0) {
 		/* we need to init libdbi first */
+#		if USE_DBI_R_CALLS == 1
+		iDrvrsLoaded = dbi_initialize_r((char*) dbiDrvrDir, &dbiInst);
+#		else
 		iDrvrsLoaded = dbi_initialize((char*) dbiDrvrDir);
+#		endif
 		if(iDrvrsLoaded == 0) {
 			logerror("libdbi error: libdbi or libdbi drivers not present on this system - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -172,7 +184,11 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		bDbiInitialized = 1; /* we are done for the rest of our existence... */
 	}
 
+#	if USE_DBI_R_CALLS == 1
+	pData->conn = dbi_conn_new_r((char*)pData->drvrName, dbiInst);
+#	else
 	pData->conn = dbi_conn_new((char*)pData->drvrName);
+#	endif
 	if(pData->conn == NULL) {
 		logerror("can not initialize libdbi connection");
 		iRet = RS_RET_SUSPENDED;
@@ -291,7 +307,11 @@ BEGINmodExit
 CODESTARTmodExit
 	/* if we initialized libdbi, we now need to cleanup */
 	if(bDbiInitialized) {
+#		if USE_DBI_R_CALLS == 1
+		dbi_shutdown_r(dbiInst);
+#		else
 		dbi_shutdown();
+#		endif
 	}
 ENDmodExit
 
