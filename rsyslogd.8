@@ -1,7 +1,7 @@
 .\" Copyright 2004-2005 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "11 December 2008" "Version 1.20.1 (devel)" "Linux System Administration"
+.TH RSYSLOGD 8 "16 February 2008" "Version 3.11.3 (devel)" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -239,8 +239,15 @@ using the following:
 kill -SIGNAL `cat /var/run/rsyslogd.pid`
 .fi
 .PP
+Note that -SIGNAL must be replaced with the actual signal
+you are trying to send, e.g. with SIGHUP. So it then becomes:
+.IP
+.nf
+kill -SIGHUP `cat /var/run/rsyslogd.pid`
+.fi
+.PP
 .TP
-.B SIGHUP
+.B HUP
 This lets
 .B rsyslogd
 perform a re-initialization.  All open files are closed, the
@@ -565,12 +572,4 @@ Adiscon GmbH
 Grossrinderfeld, Germany
 .TP
 rgerhards@adiscon.com
-
-.TP
-Michael Meckelein
-.TP
-Adiscon GmbH
-.TP
-mmeckelein@adiscon.com
 .PD
-.zZ
