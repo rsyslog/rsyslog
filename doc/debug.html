@@ -1,0 +1,39 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en"><title>Debug Support</title>
+
+</head>
+<body>
+<h1>Debug Support</h1>
+<p>
+Rsyslog provides a number of debug aids. Some of them are activated by
+adding the --enable-rtinst ./configure option ("rtinst" means runtime
+instrumentation). Turning debugging on obviously costs some performance
+(in some cases considerable).
+</p>
+<p>This is document is just being created and thus terse.</p>
+<p style="font-weight: bold;">Signals supported</p>
+<p>SIGUSR1 - turns debug messages on and off (expect this signal
+to go away over time)</p>
+<p>SIGUSR2 - outputs debug information (including active threads
+and a call stack) for the state when SIGUSR2 was received. This is a
+one-time output. Can be sent as often as the user likes.</p>
+<p style="font-weight: bold;">Environment Variables</p>
+<p>Environment variables set several debug settings. This is
+intended to become the primary way to configure debugging support.
+Currently are defined:</p>
+<ul>
+<li>RSYSLOG_DEBUGLOG="/path/to/debuglog/" - writes (allmost)
+all debug message to the specified log file in addition to stdout. Some
+system messages (e.g. segfault or abort message) are not written to the
+file as we can not capture them.</li>
+</ul>
+<p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright&nbsp;© 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>
