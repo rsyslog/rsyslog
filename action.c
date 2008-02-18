@@ -126,7 +126,9 @@ rsRetVal actionDestruct(action_t *pThis)
 	DEFiRet;
 	ASSERT(pThis != NULL);
 
-	queueDestruct(&pThis->pQueue);
+	if(pThis->pQueue != NULL) {
+		queueDestruct(&pThis->pQueue);
+	}
 
 	if(pThis->pMod != NULL)
 		pThis->pMod->freeInstance(pThis->pModData);
