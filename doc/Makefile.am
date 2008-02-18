@@ -1,5 +1,6 @@
 html_files = \
 	bugs.html \
+	debug.html \
 	features.html \
 	generic_design.html \
 	history.html \
