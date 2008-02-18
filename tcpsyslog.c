@@ -564,8 +564,8 @@ void TCPSessPrepareClose(int iTCPSess)
 		 * this case.
 		 */
 		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		printchopped(pTCPSessions[iTCPSess].fromHost, pTCPSessions[iTCPSess].msg,
-			     pTCPSessions[iTCPSess].iMsg, pTCPSessions[iTCPSess].sock, 1);
+		parseAndSubmitMessage(pTCPSessions[iTCPSess].fromHost, pTCPSessions[iTCPSess].msg,
+			              pTCPSessions[iTCPSess].iMsg, MSG_PARSE_HOSTNAME);
 		pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
 	}
 }
@@ -703,8 +703,7 @@ int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			/* emergency, we now need to flush, no matter if
 			 * we are at end of message or not...
 			 */
-			printchopped(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg,
-			 	     pTCPSessions[iTCPSess].sock, 1);
+			parseAndSubmitMessage(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME);
 			iMsg = 0;
 			/* we might think if it is better to ignore the rest of the
 		 	 * message than to treat it as a new one. Maybe this is a good
@@ -715,8 +714,7 @@ int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 
 		if(*pData == '\n' &&
 		   pTCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
-			printchopped(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg,
-				     pTCPSessions[iTCPSess].sock, 1);
+			parseAndSubmitMessage(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME);
 			iMsg = 0;
 			pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
 			++pData;
@@ -730,8 +728,7 @@ int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
 			pTCPSessions[iTCPSess].iOctetsRemain--;
 			if(pTCPSessions[iTCPSess].iOctetsRemain < 1) {
 				/* we have end of frame! */
-				printchopped(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg,
-					     pTCPSessions[iTCPSess].sock, 1);
+				parseAndSubmitMessage(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME);
 				iMsg = 0;
 				pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
 			}

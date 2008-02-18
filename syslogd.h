@@ -55,7 +55,9 @@ void logerrorVar(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void logerrorSz(char *type, char *errMsg);
 void logerrorInt(char *type, int iErr);
 
-void printchopped(char *hname, char *msg, int len, int fd, int iSourceType);
+#define MSG_PARSE_HOSTNAME 1
+#define MSG_DONT_PARSE_HOSTNAME 0
+rsRetVal parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost);
 int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost);
 void getCurrTime(struct syslogTime *t);
 int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst);

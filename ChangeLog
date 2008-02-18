@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.11.3 (rgerhards), 2008-02-??
+- slightly improved man pages for novice users
+- fixed a bug in imklog which lead to duplicate message content in
+  kernel logs
 ---------------------------------------------------------------------------
 Version 3.11.2 (rgerhards), 2008-02-15
 - added the capability to monitor text files and process their content

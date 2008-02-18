@@ -255,10 +255,10 @@ CODESTARTrunInput
 		 * in syslogd.c (sorry, folks...).
 		 *
 		 * If you received a full syslog message that must be decoded by a message
-		 * parser, printchopped() is the way to go. It's not just a funny name
+		 * parser, parseAndSubmitMessage() is the way to go. It's not just a funny name
 		 * but also a quite some legacy. Consequently, its interface is, ummm, not
 		 * well designed.
-		 *     printchopped((char*)fromHost, (char*) pRcvBuf, lenRcvd,  fd, bParseHost);
+		 *     parseAndSubmitMessage((char*)fromHost, (char*) pRcvBuf, lenRcvd, bParseHost);
 		 *     fromHost
 		 *     	 is the host that we received the message from (a string)
 		 *     pRcvBuf
@@ -268,14 +268,11 @@ CODESTARTrunInput
 		 *       NOT a standard C-string. Most importantly it is NOT expected to be
 		 *       \0-terminated. Thus the lenght is vitally imporant (if it is wrong,
 		 *       rsyslogd will probably segfault).
-		 *     fd
-		 *       is the file descriptor that the message was received from. It is
-		 *       purely used for displaying purposes. If you don't have a file
-		 *       descriptor, simply provide the value 0.
 		 *     bParseHost
 		 *       is a boolean (0-no, 1-yes). It tells the parser whether or not
 		 *       a hostname should be parsed from the message. This is important
 		 *       for sources that are known not to provide a hostname.
+		 *       Use define MSG_PARSE_HOSTNAME and MSG_DONT_PARSE_HOSTNAME
 		 *
 		 * Another, more elaborate, way is to create the message object ourselves and
 		 * pass it to the rule engine. That way is more appropriate if the message 

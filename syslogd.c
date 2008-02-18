@@ -1265,7 +1265,10 @@ finalize_it:
 }
 
 
-/* rgerhards, 2006-11-30: I have greatly changed this function. Formerly,
+/* This takes a received message that must be decoded and submits it to
+ * the main message queue. The function calls the necessary parser.
+ *
+ * rgerhards, 2006-11-30: I have greatly changed this function. Formerly,
  * it tried to reassemble multi-part messages, which is a legacy stock
  * sysklogd concept. In essence, that was that messages not ending with
  * \0 were glued together. As far as I can see, this is a sysklogd
@@ -1284,9 +1287,18 @@ finalize_it:
  * For rfc3195 support, we needed to modify the algo for host parsing, so we can
  * no longer rely just on the source (rfc3195d forwarded messages arrive via
  * unix domain sockets but contain the hostname). rgerhards, 2005-10-06
+ *
+ * rgerhards, 2008-02-18:
+ * This function was previously called "printchopped"() and has been renamed
+ * as part of the effort to create a clean internal message submission interface.
+ * It also has been adopted to our usual calling interface, but currently does
+ * not provide any useful return states. But we now have the hook and things can
+ * improve in the future. <-- TODO!
  */
-void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
+rsRetVal
+parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost)
 {
+	DEFiRet;
 	register int iMsg;
 	char *pMsg;
 	char *pData;
@@ -1300,8 +1312,6 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 	assert(hname != NULL);
 	assert(msg != NULL);
 	assert(len >= 0);
-
-	dbgprintf("Message length: %d, File descriptor: %d.\n", len, fd);
 
 	/* we first check if we have a NUL character at the very end of the
 	 * message. This seems to be a frequent problem with a number of senders.
@@ -1362,7 +1372,7 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 			logerrorInt("Uncompression of a message failed with return code %d "
 			            "- enable debug logging if you need further information. "
 				    "Message ignored.", ret);
-			return; /* unconditional exit, nothing left to do... */
+			FINALIZE; /* unconditional exit, nothing left to do... */
 		}
 		pData = deflateBuf;
 		pEnd = deflateBuf + iLenDefBuf;
@@ -1374,7 +1384,7 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 	if(len > 0 && *msg == 'z') {
 		logerror("Received a compressed message, but rsyslogd does not have compression "
 		         "support enabled. The message will be ignored.");
-		return;
+		FINALIZE;
 	}	
 #	endif /* ifdef USE_NETZIP */
 
@@ -1396,7 +1406,7 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 				 */
 				dbgprintf("internal error: iMsg > MAXLINE in printchopped()\n");
 			}
-			return; /* in this case, we are done... nothing left we can do */
+			FINALIZE; /* in this case, we are done... nothing left we can do */
 		}
 		if(*pData == '\0') { /* guard against \0 characters... */
 			/* changed to the sequence (somewhat) proposed in
@@ -1439,7 +1449,8 @@ void printchopped(char *hname, char *msg, int len, int fd, int bParseHost)
 	/* typically, we should end up here! */
 	printline(hname, tmpline, bParseHost);
 
-	return;
+finalize_it:
+	RETiRet;
 }
 
 /* rgerhards 2004-11-09: the following is a function that can be used

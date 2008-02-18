@@ -130,6 +130,8 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 
 	/* here we must create our message object and supply it to the message queue
 	 */
+	CHKiRet(parseAndSubmitMessage(LocalHostName, msgBuf, strlen(msgBuf), MSG_DONT_PARSE_HOSTNAME));
+#if 0
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetUxTradMsg(pMsg, msgBuf);
 	MsgSetRawMsg(pMsg, msgBuf);
@@ -143,6 +145,7 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 
 	/* provide message to the queue engine */
 	logmsg(pMsg, INTERNAL_MSG);
+#endif
 
 finalize_it:
 	RETiRet;

@@ -190,7 +190,7 @@ CODESTARTrunInput
 							*/
 						       if(isAllowedSender(pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
-							       printchopped((char*)fromHost, (char*) pRcvBuf, l,  udpLstnSocks[i+1], 1);
+							       parseAndSubmitMessage((char*)fromHost, (char*) pRcvBuf, l,  MSG_PARSE_HOSTNAME);
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(option_DisallowWarning) {
