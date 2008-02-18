@@ -402,6 +402,11 @@ if test "x$enable_libdbi" = "xyes"; then
     ],
     [AC_MSG_FAILURE([libdbi library is missing])]
   )
+  AC_CHECK_LIB(
+    [dbi],
+    [dbi_initialize_r],
+    [AC_DEFINE([HAVE_DBI_R], [1], [Define to 1 if libdbi supports the new plugin-safe interface])]
+  )
 fi
 AM_CONDITIONAL(ENABLE_OMLIBDBI, test x$enable_libdbi = xyes)
 AC_SUBST(libdbi_cflags)

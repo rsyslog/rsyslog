@@ -48,11 +48,6 @@
 #include "module-template.h"
 #include "debug.h"
 
-/* this is a temporary setting to select either the old- or new-style libdbi
- * calls. -- rgerhards, 2008-02-16
- */
-#define USE_DBI_R_CALLS 0
-
 MODULE_TYPE_OUTPUT
 
 /* internal structures
@@ -78,7 +73,7 @@ static uchar *host = NULL;	/* host to connect to */
 static uchar *usrName = NULL;	/* user name for connect */
 static uchar *pwd = NULL;	/* password for connect */
 static uchar *dbName = NULL;	/* database to use */
-#if USE_DBI_R_CALLS == 1
+#ifdef HAVE_DBI_R
 static dbi_inst dbiInst;
 #endif
 
@@ -169,7 +164,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 
 	if(bDbiInitialized == 0) {
 		/* we need to init libdbi first */
-#		if USE_DBI_R_CALLS == 1
+#		ifdef HAVE_DBI_R
 		iDrvrsLoaded = dbi_initialize_r((char*) dbiDrvrDir, &dbiInst);
 #		else
 		iDrvrsLoaded = dbi_initialize((char*) dbiDrvrDir);
@@ -184,7 +179,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		bDbiInitialized = 1; /* we are done for the rest of our existence... */
 	}
 
-#	if USE_DBI_R_CALLS == 1
+#	ifdef HAVE_DBI_R
 	pData->conn = dbi_conn_new_r((char*)pData->drvrName, dbiInst);
 #	else
 	pData->conn = dbi_conn_new((char*)pData->drvrName);
@@ -307,7 +302,7 @@ BEGINmodExit
 CODESTARTmodExit
 	/* if we initialized libdbi, we now need to cleanup */
 	if(bDbiInitialized) {
-#		if USE_DBI_R_CALLS == 1
+#		ifdef HAVE_DBI_R
 		dbi_shutdown_r(dbiInst);
 #		else
 		dbi_shutdown();

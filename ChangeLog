@@ -6,6 +6,8 @@ Version 3.11.3 (rgerhards), 2008-02-??
 - added support for better plugin handling in libdbi (we contributed
   a patch to do that, we just now need to wait for the next libdbi
   version)
+- bugfix: fixed abort when invalid template was provided to an action
+  bug http://bugzilla.adiscon.com/show_bug.cgi?id=4
 ---------------------------------------------------------------------------
 Version 3.11.2 (rgerhards), 2008-02-15
 - added the capability to monitor text files and process their content
