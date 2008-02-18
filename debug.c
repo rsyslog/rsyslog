@@ -988,13 +988,18 @@ static void sigusr2Hdlr(int __attribute__((unused)) signum)
 rsRetVal dbgClassInit(void)
 {
 	struct sigaction sigAct;
+	sigset_t sigSet;
 	
 	(void) pthread_key_create(&keyCallStack, dbgCallStackDestruct); /* MUST be the first action done! */
+
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = sigusr2Hdlr;
-	//sigaction(SIGUSR2, &sigAct, NULL);
-	sigaction(SIGUSR1, &sigAct, NULL);
+	sigaction(SIGUSR2, &sigAct, NULL);
+
+	sigemptyset(&sigSet);
+	sigaddset(&sigSet, SIGUSR2);
+	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
 
 	pszAltDbgFileName = getenv("RSYSLOG_DEBUGLOG");
 

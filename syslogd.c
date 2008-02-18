@@ -2264,8 +2264,13 @@ static void debug_switch()
 {
 	struct sigaction sigAct;
 
- 	dbgprintf("Switching debugging_on to %s\n", (debugging_on == 0) ? "true" : "false");
- 	debugging_on = (debugging_on == 0) ? 1 : 0;
+	if(debugging_on == 0) {
+		debugging_on = 1;
+		dbgprintf("Switching debugging_on to true\n");
+	} else {
+		dbgprintf("Switching debugging_on to false\n");
+		debugging_on = 0;
+	}
 	
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -4768,8 +4773,8 @@ int realMain(int argc, char **argv)
 
 	sigAct.sa_handler = sigsegvHdlr;
 	sigaction(SIGSEGV, &sigAct, NULL);
-sigAct.sa_handler = sigsegvHdlr;
-sigaction(SIGABRT, &sigAct, NULL);
+	sigAct.sa_handler = sigsegvHdlr;
+	sigaction(SIGABRT, &sigAct, NULL);
 	sigAct.sa_handler = doDie;
 	sigaction(SIGTERM, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? doDie : SIG_IGN;
@@ -4778,8 +4783,7 @@ sigaction(SIGABRT, &sigAct, NULL);
 	sigAct.sa_handler = reapchild;
 	sigaction(SIGCHLD, &sigAct, NULL);
 	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
-	/* TODO: use signal 2 */
-	/*sigaction(SIGUSR1, &sigAct, NULL);*/
+	sigaction(SIGUSR1, &sigAct, NULL);
 	sigAct.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sigAct, NULL);
 	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */

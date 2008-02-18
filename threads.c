@@ -1,7 +1,3 @@
-/* TODO: we should guard the individual thread actions with a mutex. Else, we may
- * run into race conditions on thread termination.
- */
-
 /* threads.c
  *
  * This file implements threading support helpers (and maybe the thread object)
@@ -128,13 +124,10 @@ static void* thrdStarter(void *arg)
 	assert(pThis != NULL);
 	assert(pThis->pUsrThrdMain != NULL);
 
-	/* block all signals except the one we need for graceful termination */
+	/* block all signalsi */
 	sigset_t sigSet;
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
-	sigemptyset(&sigSet);
-	sigaddset(&sigSet, SIGUSR2);
-	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
 
 	/* setup complete, we are now ready to execute the user code. We will not
 	 * regain control until the user code is finished, in which case we terminate
@@ -171,31 +164,13 @@ finalize_it:
 }
 
 
-/* This is a dummy handler. We user SIGUSR2 to interrupt blocking system calls
- * if we are in termination mode 1.
- */
-static void sigusr2Dummy(int __attribute__((unused)) sig)
-{
-	dbgprintf("sigusr2Dummy called!\n");
-}
-
-
 /* initialize the thread-support subsystem
  * must be called once at the start of the program
  */
 rsRetVal thrdInit(void)
 {
 	DEFiRet;
-	struct sigaction sigAct;
-
 	iRet = llInit(&llThrds, thrdDestruct, NULL, NULL);
-
-	/* set up our termination subsystem */
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = sigusr2Dummy;
-	sigaction(SIGUSR2, &sigAct, NULL);
-
 	RETiRet;
 }
 
