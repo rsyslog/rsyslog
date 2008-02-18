@@ -114,7 +114,6 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 	int iLen;
 	time_t tNow;
 	char msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
-	msg_t *pMsg;
 
 	assert(szFmt != NULL);
 
@@ -131,21 +130,6 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 	/* here we must create our message object and supply it to the message queue
 	 */
 	CHKiRet(parseAndSubmitMessage(LocalHostName, msgBuf, strlen(msgBuf), MSG_DONT_PARSE_HOSTNAME));
-#if 0
-	CHKiRet(msgConstruct(&pMsg));
-	MsgSetUxTradMsg(pMsg, msgBuf);
-	MsgSetRawMsg(pMsg, msgBuf);
-	MsgSetMSG(pMsg, (msgBuf + iLen));
-	MsgSetHOSTNAME(pMsg, LocalHostName);
-	MsgSetTAG(pMsg, "kernel:");
-	pMsg->iFacility = LOG_FAC(LOG_KERN);
-	pMsg->iSeverity = LOG_PRI(iPRI);
-	pMsg->bParseHOSTNAME = 0;
-	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
-
-	/* provide message to the queue engine */
-	logmsg(pMsg, INTERNAL_MSG);
-#endif
 
 finalize_it:
 	RETiRet;
