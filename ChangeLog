@@ -1,6 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.11.3 (rgerhards), 2008-02-??
-- slightly improved man pages for novice users
+Version 3.11.3 (rgerhards), 2008-02-18
 - fixed a bug in imklog which lead to duplicate message content in
   kernel logs
 - added support for better plugin handling in libdbi (we contributed
@@ -8,6 +7,10 @@ Version 3.11.3 (rgerhards), 2008-02-??
   version)
 - bugfix: fixed abort when invalid template was provided to an action
   bug http://bugzilla.adiscon.com/show_bug.cgi?id=4
+- re-instantiated SIGUSR1 function; added SIGUSR2 to generate debug
+  status output
+- added some documentation on runtime-debug settings
+- slightly improved man pages for novice users
 ---------------------------------------------------------------------------
 Version 3.11.2 (rgerhards), 2008-02-15
 - added the capability to monitor text files and process their content
