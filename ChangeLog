@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.12.0 (rgerhards), 2008-02-??
+---------------------------------------------------------------------------
 Version 3.11.3 (rgerhards), 2008-02-18
 - fixed a bug in imklog which lead to duplicate message content in
   kernel logs
