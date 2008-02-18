@@ -85,7 +85,7 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	dbgprintf("Trying to open syslog UDP ports at %s:%s.\n",
 		  (bindAddr == NULL) ? (uchar*)"*" : bindAddr, pNewVal);
 
-	newSocks = create_udp_socket(bindAddr, (pNewVal == NULL) ? (uchar*) "514" : pNewVal, 1);
+	newSocks = create_udp_socket(bindAddr, (pNewVal == NULL || *pNewVal == '\0') ? (uchar*) "514" : pNewVal, 1);
 	if(newSocks != NULL) {
 		/* we now need to add the new sockets to the existing set */
 		if(udpLstnSocks == NULL) {
