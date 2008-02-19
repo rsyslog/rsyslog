@@ -36,46 +36,43 @@
  */
 
 #include "config.h"
-
+#include <stdlib.h>
 #include <assert.h>
 
 #include "rsyslog.h"
 #include "template.h"
-#include "stringbuf.h"
+#include "expr.h"
 
-/* This is the syntax of an expression. I keep it as inline documentation
- * as this enhances the chance that it is updates should there be a change.
- *
- * expr = (simple-string / template-string / function / property) [* expr ]
- * simple-string = "'" chars "'"
- * template-string =  '"' template-as--1.19.11-and-below '"'
- *                   ; string as used in previous $template directive
- * function = function-name "(" expr ")"
- * property = [list of property names]
+/* static data */
+DEFobjStaticHelpers
+
+
+/* Standard-Constructor
  */
-/* a single expression node */
-typedef struct exprNode_s {
-} exprNode_t;
+BEGINobjConstruct(expr) /* be sure to specify the object type also in END macro! */
+ENDobjConstruct(expr)
 
 
-/* the expression object */
-typedef struct expr_s {
-	exprNode_t enodeRoot; /* the root node where evaluation starts */
-	/* a variant (or such) to hold the ultimate return value */
-	/* for the time being, we just use a string. That still provides us the
-	 * hooks for doing better later.
-	 */
-	rsCStrObj *cstrConst;
-} expr_t;
-
-
-/* the following three need to be implemented, I just provide some dummies for
- * now -- rgerhards, 2008-02-13
+/* ConstructionFinalizer
+ * rgerhards, 2008-01-09
  */
-static rsRetVal exprConstruct() { return RS_RET_OK; }
-static rsRetVal exprFinalize() { return RS_RET_OK; }
-static rsRetVal exprDestruct() { return RS_RET_OK; }
-//exprDestruct MUST free the cstrConst!
+rsRetVal exprConstructFinalize(strm_t *pThis)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, expr);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* destructor for the strm object */
+BEGINobjDestruct(expr) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(expr)
+	/* ... then free resources */
+ENDobjDestruct(expr)
+
 
 /* evaluate an expression and store the result. pMsg is optional, but if
  * it is not given, no message-based variables can be accessed. The expression
@@ -87,7 +84,7 @@ exprEval(expr_t *pThis, msg_t *pMsg)
 {
 	DEFiRet;
 	
-	//ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(pThis, expr);
 
 	RETiRet;
 }
@@ -108,7 +105,7 @@ exprGetStr(expr_t *pThis, rsCStrObj **ppStr)
 {
 	DEFiRet;
 	
-	//ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(pThis, expr);
 	ASSERT(ppStr != NULL);
 
 	RETiRet;
@@ -133,10 +130,7 @@ exprParseStr(expr_t **ppThis, uchar *p)
 
 	CHKiRet(exprConstruct(&pThis));
 
-	// TODO: use this method, but requires changing stringbuf.c: CHKiRet(rsCStrConstruct(&pThis->cstrConst));
-	if((pThis->cstrConst = rsCStrConstruct()) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+	CHKiRet(rsCStrConstruct(&pThis->cstrConst));
 
 	/* so far, we are a dummy - we just pull the first string and
 	 * ignore the rest...
@@ -155,7 +149,7 @@ exprParseStr(expr_t **ppThis, uchar *p)
 	/* we are done with it... */
 	CHKiRet(rsCStrFinish(pThis->cstrConst));
 
-	CHKiRet(exprFinalize(&pThis));
+	CHKiRet(exprConstructFinalize(&pThis));
 
 	/* we are successfully done, so store the result */
 	*ppThis = pThis;

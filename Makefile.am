@@ -42,6 +42,7 @@ rsyslogd_SOURCES = \
 	msg.c \
 	msg.h \
 	expr.c \
+	expr.h \
 	omshell.c \
 	omshell.h \
 	omusrmsg.c \

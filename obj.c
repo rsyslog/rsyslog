@@ -366,8 +366,7 @@ static rsRetVal objDeserializeStr(rsCStrObj **ppCStr, int iLen, strm_t *pStrm)
 	assert(ppCStr != NULL);
 	assert(iLen > 0);
 
-	if((pCStr = rsCStrConstruct()) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKiRet(rsCStrConstruct(&pCStr));
 
 	NEXTC;
 	for(i = 0 ; i < iLen ; ++i) {
@@ -485,8 +484,7 @@ static rsRetVal objDeserializeProperty(property_t *pProp, strm_t *pStrm)
 	}
 
 	/* get the property name first */
-	if((pProp->pcsName = rsCStrConstruct()) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKiRet(rsCStrConstruct(&pProp->pcsName));
 
 	NEXTC;
 	while(c != ':') {

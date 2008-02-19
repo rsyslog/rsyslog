@@ -105,7 +105,7 @@ static int get_Field(uchar **pp, uchar **pField)
 	skip_Comma((char**)pp);
 	p = *pp;
 
-	if((pStrB = rsCStrConstruct()) == NULL)
+	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
 		 return 1;
 	rsCStrSetAllocIncrement(pStrB, 32);
 
@@ -170,7 +170,7 @@ static inline int get_restOfLine(uchar **pp, uchar **pBuf)
 	skip_Comma((char**)pp);
 	p = *pp;
 
-	if((pStrB = rsCStrConstruct()) == NULL)
+	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
 		 return 1;
 	rsCStrSetAllocIncrement(pStrB, 32);
 

@@ -89,31 +89,31 @@ rsRetVal rsParsConstruct(rsParsObj **ppThis)
  */
 rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz)
 {
+	DEFiRet;
 	rsParsObj *pThis;
 	rsCStrObj *pCS;
-	rsRetVal iRet;
 
 	assert(ppThis != NULL);
 	assert(psz != NULL);
 
 	/* create string for parser */
-	if((iRet = rsCStrConstructFromszStr(&pCS, psz)) != RS_RET_OK)
-		return(iRet);
+	CHKiRet(rsCStrConstructFromszStr(&pCS, psz));
 
 	/* create parser */
 	if((iRet = rsParsConstruct(&pThis)) != RS_RET_OK) {
 		rsCStrDestruct (pCS);
-		return(iRet);
+		FINALIZE;
 	}
 
 	/* assign string to parser */
 	if((iRet = rsParsAssignString(pThis, pCS)) != RS_RET_OK) {
 		rsParsDestruct(pThis);
-		return(iRet);
+		FINALIZE;
 	}
-
 	*ppThis = pThis;
-	return RS_RET_OK;
+
+finalize_it:
+	RETiRet;
 }
 
 /**
@@ -241,14 +241,13 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
  */
 rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing)
 {
+	DEFiRet;
 	register unsigned char *pC;
 	rsCStrObj *pCStr;
-	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
-	if((pCStr = rsCStrConstruct()) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKiRet(rsCStrConstruct(&pCStr));
 
 	if(bTrimLeading)
 		parsSkipWhitespace(pThis);
@@ -259,7 +258,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bT
 	      && *pC != cDelim) {
 		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
 			rsCStrDestruct (pCStr);
-			return(iRet);
+			FINALIZE;
 		}
 		++pThis->iCurrPos;
 		++pC;
@@ -319,8 +318,7 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
 	/* OK, we most probably can obtain a value... */
-	if((pCStr = rsCStrConstruct()) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKiRet(rsCStrConstruct(&pCStr));
 
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
 		if(*pC == '"') {
@@ -390,8 +388,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	assert(pIP != NULL);
 	assert(pBits != NULL);
 
-	if((pCStr = rsCStrConstruct()) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKiRet(rsCStrConstruct(&pCStr));
 
 	parsSkipWhitespace(pThis);
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;

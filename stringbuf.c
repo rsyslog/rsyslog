@@ -50,12 +50,15 @@
  * ################################################################# */
 
 
-rsCStrObj *rsCStrConstruct(void)
+rsRetVal rsCStrConstruct(rsCStrObj **ppThis)
 {
+	DEFiRet;
 	rsCStrObj *pThis;
 
+	ASSERT(ppThis != NULL);
+
 	if((pThis = (rsCStrObj*) calloc(1, sizeof(rsCStrObj))) == NULL)
-		return NULL;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	rsSETOBJTYPE(pThis, OIDrsCStr);
 	pThis->pBuf = NULL;
@@ -63,33 +66,38 @@ rsCStrObj *rsCStrConstruct(void)
 	pThis->iBufSize = 0;
 	pThis->iStrLen = 0;
 	pThis->iAllocIncrement = RS_STRINGBUF_ALLOC_INCREMENT;
+	*ppThis = pThis;
 
-	return pThis;
+finalize_it:
+	RETiRet;
 }
+
 
 /* construct from sz string
  * rgerhards 2005-09-15
  */
 rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, uchar *sz)
 {
+	DEFiRet;
 	rsCStrObj *pThis;
 
 	assert(ppThis != NULL);
 
-	if((pThis = rsCStrConstruct()) == NULL)
-		return RS_RET_OUT_OF_MEMORY;
+	CHKiRet(rsCStrConstruct(&pThis));
 
 	pThis->iBufSize = pThis->iStrLen = strlen((char*)(char *) sz);
 	if((pThis->pBuf = (uchar*) malloc(sizeof(uchar) * pThis->iStrLen)) == NULL) {
 		RSFREEOBJ(pThis);
-		return RS_RET_OUT_OF_MEMORY;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
 	/* we do NOT need to copy the \0! */
 	memcpy(pThis->pBuf, sz, pThis->iStrLen);
 
 	*ppThis = pThis;
-	return RS_RET_OK;
+
+finalize_it:
+	RETiRet;
 }
 
 /* construct from CStr object. only the counted string is
@@ -98,25 +106,26 @@ rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, uchar *sz)
  */
 rsRetVal rsCStrConstructFromCStr(rsCStrObj **ppThis, rsCStrObj *pFrom)
 {
+	DEFiRet;
 	rsCStrObj *pThis;
 
 	assert(ppThis != NULL);
 	rsCHECKVALIDOBJECT(pFrom, OIDrsCStr);
 
-	if((pThis = rsCStrConstruct()) == NULL)
-		return RS_RET_OUT_OF_MEMORY;
+	CHKiRet(rsCStrConstruct(&pThis));
 
 	pThis->iBufSize = pThis->iStrLen = pFrom->iStrLen;
 	if((pThis->pBuf = (uchar*) malloc(sizeof(uchar) * pThis->iStrLen)) == NULL) {
 		RSFREEOBJ(pThis);
-		return RS_RET_OUT_OF_MEMORY;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
 	/* copy properties */
 	memcpy(pThis->pBuf, pFrom->pBuf, pThis->iStrLen);
 
 	*ppThis = pThis;
-	return RS_RET_OK;
+finalize_it:
+	RETiRet;
 }
 
 

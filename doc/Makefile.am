@@ -3,6 +3,7 @@ html_files = \
 	debug.html \
 	features.html \
 	generic_design.html \
+	expression.html \
 	history.html \
 	how2help.html \
 	install.html \

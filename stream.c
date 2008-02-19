@@ -357,8 +357,7 @@ strmReadLine(strm_t *pThis, rsCStrObj **ppCStr)
 	ASSERT(pThis != NULL);
 	ASSERT(ppCStr != NULL);
 
-	if((pCStr = rsCStrConstruct()) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKiRet(rsCStrConstruct(&pCStr));
 
 	/* now read the line */
 	CHKiRet(strmReadChar(pThis, &c));

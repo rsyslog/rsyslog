@@ -467,13 +467,10 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 	++i; /* skip '[' */
 
 	/* now obtain the PROCID string... */
-	if((pM->pCSPROCID = rsCStrConstruct()) == NULL) 
-		return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+	CHKiRet(rsCStrConstruct(&pM->pCSPROCID));
 	rsCStrSetAllocIncrement(pM->pCSPROCID, 16);
 	while((i < pM->iLenTAG) && (pM->pszTAG[i] != ']')) {
-		if((iRet = rsCStrAppendChar(pM->pCSPROCID, pM->pszTAG[i])) != RS_RET_OK) {
-			RETiRet;
-		}
+		CHKiRet(rsCStrAppendChar(pM->pCSPROCID, pM->pszTAG[i]));
 		++i;
 	}
 
@@ -485,14 +482,13 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 		 */
 		rsCStrDestruct(pM->pCSPROCID);
 		pM->pCSPROCID = NULL;
-		return RS_RET_OK;
+		FINALIZE;
 	}
 
 	/* OK, finaally we could obtain a PROCID. So let's use it ;) */
-	if((iRet = rsCStrFinish(pM->pCSPROCID)) != RS_RET_OK) {
-		RETiRet;
-	}
+	CHKiRet(rsCStrFinish(pM->pCSPROCID));
 
+finalize_it:
 	RETiRet;
 }
 
@@ -515,30 +511,26 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
  */
 static rsRetVal aquireProgramName(msg_t *pM)
 {
-	register int i;
 	DEFiRet;
+	register int i;
 
 	assert(pM != NULL);
 	if(pM->pCSProgName == NULL) {
 		/* ok, we do not yet have it. So let's parse the TAG
 		 * to obtain it.
 		 */
-		if((pM->pCSProgName = rsCStrConstruct()) == NULL) 
-			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+		CHKiRet(rsCStrConstruct(&pM->pCSProgName));
 		rsCStrSetAllocIncrement(pM->pCSProgName, 33);
 		for(  i = 0
 		    ; (i < pM->iLenTAG) && isprint((int) pM->pszTAG[i])
 		      && (pM->pszTAG[i] != '\0') && (pM->pszTAG[i] != ':')
 		      && (pM->pszTAG[i] != '[')  && (pM->pszTAG[i] != '/')
 		    ; ++i) {
-			if((iRet = rsCStrAppendChar(pM->pCSProgName, pM->pszTAG[i])) != RS_RET_OK) {
-				RETiRet;
-			}
+			CHKiRet(rsCStrAppendChar(pM->pCSProgName, pM->pszTAG[i]));
 		}
-		if((iRet = rsCStrFinish(pM->pCSProgName)) != RS_RET_OK) {
-			RETiRet;
-		}
+		CHKiRet(rsCStrFinish(pM->pCSProgName));
 	}
+finalize_it:
 	RETiRet;
 }
 
@@ -911,14 +903,13 @@ rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME)
 	assert(pMsg != NULL);
 	if(pMsg->pCSAPPNAME == NULL) {
 		/* we need to obtain the object first */
-		if((pMsg->pCSAPPNAME = rsCStrConstruct()) == NULL) {
-			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
-		}
+		CHKiRet(rsCStrConstruct(&pMsg->pCSAPPNAME));
 		rsCStrSetAllocIncrement(pMsg->pCSAPPNAME, 128);
 	}
 	/* if we reach this point, we have the object */
 	iRet = rsCStrSetSzStr(pMsg->pCSAPPNAME, (uchar*) pszAPPNAME);
 
+finalize_it:
 	RETiRet;
 }
 
@@ -941,15 +932,18 @@ char *getAPPNAME(msg_t *pM)
  */
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID)
 {
-	assert(pMsg != NULL);
+	DEFiRet;
+	ISOBJ_TYPE_assert(pMsg, msg);
 	if(pMsg->pCSPROCID == NULL) {
 		/* we need to obtain the object first */
-		if((pMsg->pCSPROCID = rsCStrConstruct()) == NULL) 
-			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+		CHKiRet(rsCStrConstruct(&pMsg->pCSPROCID));
 		rsCStrSetAllocIncrement(pMsg->pCSPROCID, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSPROCID, (uchar*) pszPROCID);
+	iRet = rsCStrSetSzStr(pMsg->pCSPROCID, (uchar*) pszPROCID);
+
+finalize_it:
+	RETiRet;
 }
 
 /* rgerhards, 2005-11-24
@@ -971,7 +965,7 @@ char *getPROCID(msg_t *pM)
 {
 	char* pszRet;
 
-	assert(pM != NULL);
+	ISOBJ_TYPE_assert(pM, msg);
 	MsgLock(pM);
 	if(pM->pCSPROCID == NULL)
 		aquirePROCIDFromTAG(pM);
@@ -985,15 +979,18 @@ char *getPROCID(msg_t *pM)
  */
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID)
 {
-	assert(pMsg != NULL);
+	DEFiRet;
+	ISOBJ_TYPE_assert(pMsg, msg);
 	if(pMsg->pCSMSGID == NULL) {
 		/* we need to obtain the object first */
-		if((pMsg->pCSMSGID = rsCStrConstruct()) == NULL) 
-			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+		CHKiRet(rsCStrConstruct(&pMsg->pCSMSGID));
 		rsCStrSetAllocIncrement(pMsg->pCSMSGID, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSMSGID, (uchar*) pszMSGID);
+	iRet = rsCStrSetSzStr(pMsg->pCSMSGID, (uchar*) pszMSGID);
+
+finalize_it:
+	RETiRet;
 }
 
 /* rgerhards, 2005-11-24
@@ -1148,15 +1145,18 @@ char *getRcvFrom(msg_t *pM)
  */
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData)
 {
-	assert(pMsg != NULL);
+	DEFiRet;
+	ISOBJ_TYPE_assert(pMsg, msg);
 	if(pMsg->pCSStrucData == NULL) {
 		/* we need to obtain the object first */
-		if((pMsg->pCSStrucData = rsCStrConstruct()) == NULL) 
-			return RS_RET_OBJ_CREATION_FAILED; /* best we can do... */
+		CHKiRet(rsCStrConstruct(&pMsg->pCSStrucData));
 		rsCStrSetAllocIncrement(pMsg->pCSStrucData, 128);
 	}
 	/* if we reach this point, we have the object */
-	return rsCStrSetSzStr(pMsg->pCSStrucData, (uchar*) pszStrucData);
+	iRet = rsCStrSetSzStr(pMsg->pCSStrucData, (uchar*) pszStrucData);
+
+finalize_it:
+	RETiRet;
 }
 
 /* get the length of the "STRUCTURED-DATA" sz string

@@ -78,10 +78,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 	 * free the obtained value (if requested). We continue this
 	 * loop until we got hold of all values.
 	 */
-	if((pCStr = rsCStrConstruct()) == NULL) {
-		dbgprintf("memory shortage, tplToString failed\n");
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+	CHKiRet(rsCStrConstruct(&pCStr));
 
 	pTpe = pTpl->pEntryRoot;
 	while(pTpe != NULL) {
@@ -209,7 +206,7 @@ void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int es
 
 	p = *pp;
 	iLen = *pLen;
-	if((pStrB = rsCStrConstruct()) == NULL) {
+	if(rsCStrConstruct(&pStrB) != RS_RET_OK) {
 		/* oops - no mem ... Do emergency... */
 		doSQLEmergencyEscape(p, escapeMode);
 		return;
@@ -323,7 +320,7 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 
 	p = *pp;
 
-	if((pStrB = rsCStrConstruct()) == NULL)
+	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
 		 return 1;
 	rsCStrSetAllocIncrement(pStrB, 32);
 	/* process the message and expand escapes
@@ -493,7 +490,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	p = (unsigned char*) *pp;
 
-	if((pStrB = rsCStrConstruct()) == NULL)
+	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
 		 return 1;
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {

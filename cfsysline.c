@@ -453,8 +453,7 @@ getWord(uchar **pp, rsCStrObj **ppStrB)
 	ASSERT(*pp != NULL);
 	ASSERT(*ppStrB != NULL);
 
-	if((*ppStrB = rsCStrConstruct()) == NULL) 
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKiRet(rsCStrConstruct(ppStrB));
 
 	/* parse out the word */
 	p = *pp;

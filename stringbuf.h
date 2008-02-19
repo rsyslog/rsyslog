@@ -55,7 +55,7 @@ typedef struct rsCStrObject rsCStrObj;
 /**
  * Construct a rsCStr object.
  */
-rsCStrObj *rsCStrConstruct(void);
+rsRetVal rsCStrConstruct(rsCStrObj **ppThis);
 rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, uchar *sz);
 rsRetVal rsCStrConstructFromCStr(rsCStrObj **ppThis, rsCStrObj *pFrom);
 

@@ -2032,7 +2032,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * the records: the code is currently clean, but we could optimize it! */
 		if(!bTAGCharDetected) {
 			uchar *pszTAG;
-			if((pStrB = rsCStrConstruct()) == NULL) 
+			if(rsCStrConstruct(&pStrB) != RS_RET_OK) 
 				return 1;
 			rsCStrSetAllocIncrement(pStrB, 33);
 			pWork = pBuf;
@@ -3323,7 +3323,7 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 		tplName = (uchar*) strdup((char*)dfltTplName);
 	} else {
 		/* template specified, pick it up */
-		if((pStrB = rsCStrConstruct()) == NULL) {
+		if(rsCStrConstruct(&pStrB) != RS_RET_OK) {
 			glblHadMemShortage = 1;
 			iRet = RS_RET_OUT_OF_MEMORY;
 			goto finalize_it;
