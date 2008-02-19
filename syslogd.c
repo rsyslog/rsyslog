@@ -117,7 +117,6 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
-#include <dlfcn.h>
 #include <assert.h>
 
 #include <sys/syslog.h>
@@ -139,10 +138,6 @@
 #include <sys/resource.h>
 #include <signal.h>
 
-//?#include <dirent.h>
-//?#include <glob.h>
-//?#include <sys/types.h>
-
 #if HAVE_PATHS_H
 #include <paths.h>
 #endif
@@ -159,7 +154,6 @@
 #include "outchannel.h"
 #include "syslogd.h"
 
-//?#include "parse.h"
 #include "msg.h"
 #include "modules.h"
 #include "action.h"

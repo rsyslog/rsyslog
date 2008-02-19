@@ -58,7 +58,7 @@ finalize_it:
 }
 
 
-/* destructor for the strm object */
+/* destructor for the expr object */
 BEGINobjDestruct(expr) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(expr)
 	/* ... then free resources */
