@@ -29,6 +29,7 @@ html_files = \
 	omsnmp.html \
 	omlibdbi.html \
 	imfile.html \
+	professional_support.html \
 	queues.html \
 	queueWorkerLogic.dia \
 	queueWorkerLogic.jpg \
