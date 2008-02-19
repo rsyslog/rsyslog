@@ -82,7 +82,6 @@ RUNLOG_STR("terminal");
 
 	switch(token.tok) {
 		case ctok_SIMPSTR:
-			//CHKiRet(simpstr(pThis, ctok));
 			break;
 		default:
 			ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);

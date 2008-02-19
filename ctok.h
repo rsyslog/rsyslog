@@ -51,7 +51,8 @@ typedef struct {
 		ctok_CMP_GT = 19,
 		ctok_CMP_LTEQ = 20,
 		ctok_CMP_GTEQ = 21,
-		ctok_NUMBER = 22
+		ctok_NUMBER = 22,
+		ctok_FUNCTION = 23
 	} tok;
 	rsCStrObj *pstrVal;
 	int64 intVal;

@@ -132,9 +132,9 @@ finalize_it:
 }
 
 
-#if 0
 /* get the next word from the input "stream" (currently just a in-memory
- * string...). A word is anything between whitespace. If the word is longer
+ * string...). A word is anything from the current location until the
+ * first non-alphanumeric character. If the word is longer
  * than the provided memory buffer, parsing terminates when buffer length
  * has been reached. A buffer of 128 bytes or more should always be by
  * far sufficient. -- rgerhards, 2008-02-19
@@ -152,18 +152,20 @@ ctokGetWordFromStream(ctok_t *pThis, uchar *pWordBuf, size_t lenWordBuf)
 	CHKiRet(ctokSkipWhitespaceFromStream(pThis));
 
 	CHKiRet(ctokGetCharFromStream(pThis, &c));
-	while(!isspace(c) && lenWordBuf > 1) {
-		*pWordBuf = c;
+	while(isalnum(c) && lenWordBuf > 1) {
+		*pWordBuf++ = c;
 		--lenWordBuf;
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 	}
 	*pWordBuf = '\0'; /* there is always space for this - see while() */
 
-dbgprintf("end ctokGetWorkFromStream, stream now '%s'\n", pThis->pp);
+	/* push back the char that we have read too much */
+	CHKiRet(ctokUngetCharFromStream(pThis, c));
+
+dbgprintf("end ctokGetWordFromStream, stream now '%s'\n", pThis->pp);
 finalize_it:
 	RETiRet;
 }
-#endif
 
 
 /* read in a constant number
@@ -330,6 +332,7 @@ ctokGetNextToken(ctok_t *pThis, ctok_token_t *pToken)
 {
 	DEFiRet;
 	uchar c;
+	uchar szWord[128];
 
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(pToken != NULL);
@@ -338,28 +341,6 @@ ctokGetNextToken(ctok_t *pThis, ctok_token_t *pToken)
 
 	CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
 	switch(c) {
-		case 'o':/* or */
-			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			pToken->tok = (c == 'r')? ctok_OR : ctok_INVALID;
-			break;
-		case 'a': /* and */
-			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			if(c == 'n') {
-				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-				pToken->tok = (c == 'd')? ctok_AND : ctok_INVALID;
-			} else {
-				pToken->tok = ctok_INVALID;
-			}
-			break;
-		case 'n': /* not */
-			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			if(c == 'o') {
-				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-				pToken->tok = (c == 't')? ctok_NOT : ctok_INVALID;
-			} else {
-				pToken->tok = ctok_INVALID;
-			}
-			break;
 		case '=': /* == */
 			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
 			pToken->tok = (c == '=')? ctok_CMP_EQ : ctok_INVALID;
@@ -421,11 +402,29 @@ ctokGetNextToken(ctok_t *pThis, ctok_token_t *pToken)
 			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 			break;
 		default:
+			CHKiRet(ctokUngetCharFromStream(pThis, c)); /* push back, we need it in any case */
 			if(isdigit(c)) {
-				CHKiRet(ctokUngetCharFromStream(pThis, c)); /* push back, we need this digit */
 				CHKiRet(ctokGetNumber(pThis, pToken));
-			} else {
-				pToken->tok = ctok_INVALID;
+			} else { /* now we check if we have a multi-char sequence */
+				CHKiRet(ctokGetWordFromStream(pThis, szWord, sizeof(szWord)/sizeof(uchar)));
+				if(!strcasecmp((char*)szWord, "and")) {
+					pToken->tok = ctok_AND;
+				} else if(!strcasecmp((char*)szWord, "or")) {
+					pToken->tok = ctok_OR;
+				} else if(!strcasecmp((char*)szWord, "not")) {
+					pToken->tok = ctok_NOT;
+				} else {
+					/* finally, we check if it is a function */
+					CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+					if(c == '(') {
+						/* push c back, higher level parser needs it */
+						CHKiRet(ctokUngetCharFromStream(pThis, c));
+						pToken->tok = ctok_FUNCTION;
+						// TODO: fill function name
+					} else { /* give up... */
+						pToken->tok = ctok_INVALID;
+					}
+				}
 			}
 			break;
 	}
