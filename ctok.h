@@ -25,6 +25,32 @@
 #include "obj.h"
 #include "stringbuf.h"
 
+/* the tokens... I use numbers below so that the tokens can be easier
+ * identified in debug output. */
+typedef enum {
+	ctok_INVALID = 0,
+	ctok_OR = 1,
+	ctok_AND = 2,
+	ctok_PLUS = 3,
+	ctok_MINUS = 4,
+	ctok_TIMES = 5,	 /* "*" */
+	ctok_DIV = 6,
+	ctok_MOD = 7,
+	ctok_NOT = 8,
+	ctok_RPAREN = 9,
+	ctok_LPAREN = 10,
+	ctok_COMMA = 11,
+	ctok_DOLLAR = 12,
+	ctok_QUOTE = 13,
+	ctok_DBL_QUOTE = 14,
+	ctok_CMP_EQ = 15,
+	ctok_CMP_NEQ = 16,
+	ctok_CMP_LT = 17,
+	ctok_CMP_GT = 18,
+	ctok_CMP_LTEQ = 19,
+	ctok_CMP_GTEQ = 20,
+} ctok_token_t;
+
 /* the ctokession object */
 typedef struct ctok_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
@@ -38,6 +64,7 @@ rsRetVal ctokConstruct(ctok_t **ppThis);
 rsRetVal ctokConstructFinalize(ctok_t __attribute__((unused)) *pThis);
 rsRetVal ctokDestruct(ctok_t **ppThis);
 rsRetVal ctokGetpp(ctok_t *pThis, uchar **pp);
+rsRetVal ctokGetNextToken(ctok_t *pThis, ctok_token_t *pToken);
 PROTOTYPEObjClassInit(ctok);
 PROTOTYPEpropSetMeth(ctok, pp, uchar*);
 

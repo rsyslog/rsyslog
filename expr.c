@@ -112,11 +112,15 @@ rsRetVal
 exprParse(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
+	ctok_token_t token;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
 
+	CHKiRet(ctokGetNextToken(ctok, &token));
+
 RUNLOG_STR("expr parser being called");
+finalize_it:
 	RETiRet;
 }
 
