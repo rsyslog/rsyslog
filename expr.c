@@ -6,16 +6,7 @@
  *
  * Module begun 2007-11-30 by Rainer Gerhards
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
- *
- * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- * W A R N I N G
- *
- * This module is not really existing. The current code has never been
- * tested or run. It is just some preparation for when we actually implement
- * this fuctionality!
- *
- * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -56,7 +47,7 @@ ENDobjConstruct(expr)
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-rsRetVal exprConstructFinalize(strm_t *pThis)
+rsRetVal exprConstructFinalize(expr_t *pThis)
 {
 	DEFiRet;
 
@@ -162,6 +153,15 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+/* Initialize the expr class. Must be called as the very first method
+ * before anything else is called inside this class.
+ * rgerhards, 2008-02-19
+ */
+BEGINObjClassInit(expr, 1) /* class, version */
+	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, exprConstructFinalize);
+ENDObjClassInit(expr)
 
 /* vi:set ai:
  */

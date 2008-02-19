@@ -1,0 +1,1085 @@
+/* The config file handler (not yet a real object)
+ *
+ * This file is based on an excerpt from syslogd.c, which dates back
+ * much later. I began the file on 2008-02-19 as part of the modularization
+ * effort. Over time, a clean abstration will become even more important
+ * because the config file handler will by dynamically be loaded and be
+ * kept in memory only as long as the config file is actually being 
+ * processed. Thereafter, it shall be unloaded. -- rgerhards
+ *
+ * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This file is part of rsyslog.
+ *
+ * Rsyslog is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Rsyslog is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ */
+
+#include "config.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <stddef.h>
+#include <string.h>
+#include <dlfcn.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <ctype.h>
+#include <assert.h>
+#include <dirent.h>
+#include <glob.h>
+#include <sys/types.h>
+
+#include "rsyslog.h"
+#include "syslogd.h"
+#include "parse.h"
+#include "action.h"
+#include "template.h"
+#include "cfsysline.h"
+#include "modules.h"
+#include "outchannel.h"
+#include "stringbuf.h"
+#include "conf.h"
+#include "stringbuf.h"
+#include "srUtils.h"
+
+/* static data */
+uchar	*pModDir = NULL; /* read-only after startup */
+
+/* The following global variables are used for building
+ * tag and host selector lines during startup and config reload.
+ * This is stored as a global variable pool because of its ease. It is
+ * also fairly compatible with multi-threading as the stratup code must
+ * be run in a single thread anyways. So there can be no race conditions. These
+ * variables are no longer used once the configuration has been loaded (except,
+ * of course, during a reload). rgerhards 2005-10-18
+ */
+EHostnameCmpMode eDfltHostnameCmpMode;
+rsCStrObj *pDfltHostnameCmp;
+rsCStrObj *pDfltProgNameCmp;
+
+
+/* process a directory and include all of its files into
+ * the current config file. There is no specific order of inclusion,
+ * files are included in the order they are read from the directory.
+ * The caller must have make sure that the provided parameter is
+ * indeed a directory.
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal doIncludeDirectory(uchar *pDirName)
+{
+	DEFiRet;
+	int iEntriesDone = 0;
+	DIR *pDir;
+	union {
+              struct dirent d;
+              char b[offsetof(struct dirent, d_name) + NAME_MAX + 1];
+	} u;
+	struct dirent *res;
+	size_t iDirNameLen;
+	size_t iFileNameLen;
+	uchar szFullFileName[MAXFNAME];
+
+	assert(pDirName != NULL);
+
+	if((pDir = opendir((char*) pDirName)) == NULL) {
+		logerror("error opening include directory");
+		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
+	}
+
+	/* prepare file name buffer */
+	iDirNameLen = strlen((char*) pDirName);
+	memcpy(szFullFileName, pDirName, iDirNameLen);
+
+	/* now read the directory */
+	iEntriesDone = 0;
+	while(readdir_r(pDir, &u.d, &res) == 0) {
+		if(res == NULL)
+			break; /* this also indicates end of directory */
+		if(res->d_type != DT_REG)
+			continue; /* we are not interested in special files */
+		if(res->d_name[0] == '.')
+			continue; /* these files we are also not interested in */
+		++iEntriesDone;
+		/* construct filename */
+		iFileNameLen = strlen(res->d_name);
+		if (iFileNameLen > NAME_MAX)
+			iFileNameLen = NAME_MAX;
+		memcpy(szFullFileName + iDirNameLen, res->d_name, iFileNameLen);
+		*(szFullFileName + iDirNameLen + iFileNameLen) = '\0';
+		dbgprintf("including file '%s'\n", szFullFileName);
+		processConfFile(szFullFileName);
+		/* we deliberately ignore the iRet of processConfFile() - this is because
+		 * failure to process one file does not mean all files will fail. By ignoring,
+		 * we retry with the next file, which is the best thing we can do. -- rgerhards, 2007-08-01
+		 */
+	}
+
+	if(iEntriesDone == 0) {
+		/* I just make it a debug output, because I can think of a lot of cases where it
+		 * makes sense not to have any files. E.g. a system maintainer may place a $Include
+		 * into the config file just in case, when additional modules be installed. When none
+		 * are installed, the directory will be empty, which is fine. -- rgerhards 2007-08-01
+		 */
+		dbgprintf("warning: the include directory contained no files - this may be ok.\n");
+	}
+
+finalize_it:
+	if(pDir != NULL)
+		closedir(pDir);
+
+	RETiRet;
+}
+
+
+/* process a $include config line. That type of line requires
+ * inclusion of another file.
+ * rgerhards, 2007-08-01
+ */
+rsRetVal
+doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
+{
+	DEFiRet;
+	char pattern[MAXFNAME];
+	uchar *cfgFile;
+	glob_t cfgFiles;
+	size_t i = 0;
+	struct stat fileInfo;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	if(getSubString(pp, (char*) pattern, sizeof(pattern) / sizeof(char), ' ')  != 0) {
+		logerror("could not extract group name");
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+
+	/* Use GLOB_MARK to append a trailing slash for directories.
+	 * Required by doIncludeDirectory().
+	 */
+	glob(pattern, GLOB_MARK, NULL, &cfgFiles);
+
+	for(i = 0; i < cfgFiles.gl_pathc; i++) {
+		cfgFile = (uchar*) cfgFiles.gl_pathv[i];
+
+		if(stat((char*) cfgFile, &fileInfo) != 0) 
+			continue; /* continue with the next file if we can't stat() the file */
+
+		if(S_ISREG(fileInfo.st_mode)) { /* config file */
+			dbgprintf("requested to include config file '%s'\n", cfgFile);
+			iRet = processConfFile(cfgFile);
+		} else if(S_ISDIR(fileInfo.st_mode)) { /* config directory */
+			dbgprintf("requested to include directory '%s'\n", cfgFile);
+			iRet = doIncludeDirectory(cfgFile);
+		} else { /* TODO: shall we handle symlinks or not? */
+			dbgprintf("warning: unable to process IncludeConfig directive '%s'\n", cfgFile);
+		}
+	}
+
+	globfree(&cfgFiles);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* process a $ModLoad config line.
+ * As of now, it is a dummy, that will later evolve into the
+ * loader for plug-ins.
+ * rgerhards, 2007-07-21
+ * varmojfekoj added support for dynamically loadable modules on 2007-08-13
+ * rgerhards, 2007-09-25: please note that the non-threadsafe function dlerror() is
+ * called below. This is ok because modules are currently only loaded during
+ * configuration file processing, which is executed on a single thread. Should we
+ * change that design at any stage (what is unlikely), we need to find a
+ * replacement.
+ */
+rsRetVal
+doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
+{
+	DEFiRet;
+	uchar szName[512];
+        uchar szPath[512];
+        uchar errMsg[1024];
+	uchar *pModName;
+        void *pModHdlr, *pModInit;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+
+	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
+		logerror("could not extract module name");
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+
+	/* this below is a quick and dirty hack to provide compatibility with the
+	 * $ModLoad MySQL forward compatibility statement. TODO: clean this up
+	 * For the time being, it is clean enough, it just needs to be done
+	 * differently when we have a full design for loadable plug-ins. For the
+	 * time being, we just mangle the names a bit.
+	 * rgerhards, 2007-08-14
+	 */
+	if(!strcmp((char*) szName, "MySQL"))
+		pModName = (uchar*) "ommysql.so";
+	else
+		pModName = szName;
+
+	dbgprintf("Requested to load module '%s'\n", szName);
+
+	if(*pModName == '/') {
+		*szPath = '\0';	/* we do not need to append the path - its already in the module name */
+	} else {
+		strncpy((char *) szPath, (pModDir == NULL) ? _PATH_MODDIR : (char*) pModDir, sizeof(szPath));
+	}
+	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen((char*) szPath) - 1);
+	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
+		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
+		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
+		logerror((char *) errMsg);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
+		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlsym: %s\n", szPath, dlerror());
+		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
+		logerror((char *) errMsg);
+		dlclose(pModHdlr);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK) {
+		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', rsyslog error %d\n", szPath, iRet);
+		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
+		logerror((char *) errMsg);
+		dlclose(pModHdlr);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	skipWhiteSpace(pp); /* skip over any whitespace */
+
+finalize_it:
+	RETiRet;
+}
+
+/* parse and interpret a $-config line that starts with
+ * a name (this is common code). It is parsed to the name
+ * and then the proper sub-function is called to handle
+ * the actual directive.
+ * rgerhards 2004-11-17
+ * rgerhards 2005-06-21: previously only for templates, now 
+ *    generalized.
+ */
+rsRetVal
+doNameLine(uchar **pp, void* pVal)
+{
+	DEFiRet;
+	uchar *p;
+	enum eDirective eDir;
+	char szName[128];
+
+	assert(pp != NULL);
+	p = *pp;
+	assert(p != NULL);
+
+	eDir = (enum eDirective) pVal;	/* this time, it actually is NOT a pointer! */
+
+	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
+		logerror("Invalid config line: could not extract name - line ignored");
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+	if(*p == ',')
+		++p; /* comma was eaten */
+	
+	/* we got the name - now we pass name & the rest of the string
+	 * to the subfunction. It makes no sense to do further
+	 * parsing here, as this is in close interaction with the
+	 * respective subsystem. rgerhards 2004-11-17
+	 */
+	
+	switch(eDir) {
+		case DIR_TEMPLATE: 
+			tplAddLine(szName, &p);
+			break;
+		case DIR_OUTCHANNEL: 
+			ochAddLine(szName, &p);
+			break;
+		case DIR_ALLOWEDSENDER: 
+			addAllowedSenderLine(szName, &p);
+			break;
+		default:/* we do this to avoid compiler warning - not all
+			 * enum values call this function, so an incomplete list
+			 * is quite ok (but then we should not run into this code,
+			 * so at least we log a debug warning).
+			 */
+			dbgprintf("INTERNAL ERROR: doNameLine() called with invalid eDir %d.\n",
+				eDir);
+			break;
+	}
+
+	*pp = p;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Parse and interpret a system-directive in the config line
+ * A system directive is one that starts with a "$" sign. It offers
+ * extended configuration parameters.
+ * 2004-11-17 rgerhards
+ */
+rsRetVal
+cfsysline(uchar *p)
+{
+	DEFiRet;
+	uchar szCmd[64];
+	uchar errMsg[128];	/* for dynamic error messages */
+
+	assert(p != NULL);
+	errno = 0;
+	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(uchar), ' ')  != 0) {
+		logerror("Invalid $-configline - could not extract command - line ignored\n");
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+
+	/* we now try and see if we can find the command in the registered
+	 * list of cfsysline handlers. -- rgerhards, 2007-07-31
+	 */
+	CHKiRet(processCfSysLineCommand(szCmd, &p));
+
+	/* now check if we have some extra characters left on the line - that
+	 * should not be the case. Whitespace is OK, but everything else should
+	 * trigger a warning (that may be an indication of undesired behaviour).
+	 * An exception, of course, are comments (starting with '#').
+	 * rgerhards, 2007-07-04
+	 */
+	skipWhiteSpace(&p);
+
+	if(*p && *p != '#') { /* we have a non-whitespace, so let's complain */
+		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
+		         "error: extra characters in config line ignored: '%s'", p);
+		errno = 0;
+		logerror((char*) errMsg);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+
+
+/* process a configuration file
+ * started with code from init() by rgerhards on 2007-07-31
+ */
+rsRetVal
+processConfFile(uchar *pConfFile)
+{
+	DEFiRet;
+	int iLnNbr = 0;
+	FILE *cf;
+	selector_t *fCurr = NULL;
+	uchar *p;
+	uchar cbuf[BUFSIZ];
+	uchar *cline;
+	assert(pConfFile != NULL);
+
+	if((cf = fopen((char*)pConfFile, "r")) == NULL) {
+		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
+	}
+
+	/* Now process the file.
+	 */
+	cline = cbuf;
+	while (fgets((char*)cline, sizeof(cbuf) - (cline - cbuf), cf) != NULL) {
+		++iLnNbr;
+		/* drop LF - TODO: make it better, replace fgets(), but its clean as it is */
+		if(cline[strlen((char*)cline)-1] == '\n') {
+			cline[strlen((char*)cline) -1] = '\0';
+		}
+		/* check for end-of-section, comments, strip off trailing
+		 * spaces and newline character.
+		 */
+		p = cline;
+		skipWhiteSpace(&p);
+		if (*p == '\0' || *p == '#')
+			continue;
+
+		strcpy((char*)cline, (char*)p);
+		for (p = (uchar*) strchr((char*)cline, '\0'); isspace((int) *--p););
+		if (*p == '\\') {
+			if ((p - cbuf) > BUFSIZ - 30) {
+				/* Oops the buffer is full - what now? */
+				cline = cbuf;
+			} else {
+				*p = 0;
+				cline = p;
+				continue;
+			}
+		}  else
+			cline = cbuf;
+		*++p = '\0'; /* TODO: check this */
+
+		/* we now have the complete line, and are positioned at the first non-whitespace
+		 * character. So let's process it
+		 */
+		if(cfline(cbuf, &fCurr) != RS_RET_OK) {
+			/* we log a message, but otherwise ignore the error. After all, the next
+			 * line can be correct.  -- rgerhards, 2007-08-02
+			 */
+			uchar szErrLoc[MAXFNAME + 64];
+			dbgprintf("config line NOT successfully processed\n");
+			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
+				 "%s, line %d", pConfFile, iLnNbr);
+			logerrorSz("the last error occured in %s", (char*)szErrLoc);
+		}
+	}
+
+	/* we probably have one selector left to be added - so let's do that now */
+	CHKiRet(selectorAddList(fCurr));
+
+	/* close the configuration file */
+	(void) fclose(cf);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		char errStr[1024];
+		if(fCurr != NULL)
+			selectorDestruct(fCurr);
+
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
+			iRet, pConfFile, errStr);
+	}
+	RETiRet;
+}
+
+
+/* Helper to cfline() and its helpers. Parses a template name
+ * from an "action" line. Must be called with the Line pointer
+ * pointing to the first character after the semicolon.
+ * rgerhards 2004-11-19
+ * changed function to work with OMSR. -- rgerhards, 2007-07-27
+ * the default template is to be used when no template is specified.
+ */
+rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName)
+{
+	uchar *p;
+	uchar *tplName;
+	DEFiRet;
+	rsCStrObj *pStrB;
+
+	assert(pp != NULL);
+	assert(*pp != NULL);
+	assert(pOMSR != NULL);
+
+	p =*pp;
+	/* a template must follow - search it and complain, if not found
+	 */
+	skipWhiteSpace(&p);
+	if(*p == ';')
+		++p; /* eat it */
+	else if(*p != '\0' && *p != '#') {
+		logerror("invalid character in selector line - ';template' expected");
+		iRet = RS_RET_ERR;
+		goto finalize_it;
+	}
+
+	skipWhiteSpace(&p); /* go to begin of template name */
+
+	if(*p == '\0') {
+		/* no template specified, use the default */
+		/* TODO: check NULL ptr */
+		tplName = (uchar*) strdup((char*)dfltTplName);
+	} else {
+		/* template specified, pick it up */
+		if(rsCStrConstruct(&pStrB) != RS_RET_OK) {
+			glblHadMemShortage = 1;
+			iRet = RS_RET_OUT_OF_MEMORY;
+			goto finalize_it;
+		}
+
+		/* now copy the string */
+		while(*p && *p != '#' && !isspace((int) *p)) {
+			CHKiRet(rsCStrAppendChar(pStrB, *p));
+			++p;
+		}
+		CHKiRet(rsCStrFinish(pStrB));
+		CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &tplName, 0));
+	}
+
+	iRet = OMSRsetEntry(pOMSR, iEntry, tplName, iTplOpts);
+	if(iRet != RS_RET_OK) goto finalize_it;
+
+finalize_it:
+	*pp = p;
+
+	RETiRet;
+}
+
+/* Helper to cfline(). Parses a file name up until the first
+ * comma and then looks for the template specifier. Tries
+ * to find that template.
+ * rgerhards 2004-11-18
+ * parameter pFileName must point to a buffer large enough
+ * to hold the largest possible filename.
+ * rgerhards, 2007-07-25
+ * updated to include OMSR pointer -- rgerhards, 2007-07-27
+ */
+rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts)
+{
+	register uchar *pName;
+	int i;
+	DEFiRet;
+
+	assert(pOMSR != NULL);
+
+	pName = pFileName;
+	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
+	while(*p && *p != ';' && i < MAXFNAME) {
+		*pName++ = *p++;
+		++i;
+	}
+	*pName = '\0';
+
+	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, (uchar*) " TradFmt");
+
+	RETiRet;
+}
+
+
+/*
+ * Helper to cfline(). This function takes the filter part of a traditional, PRI
+ * based line and decodes the PRIs given in the selector line. It processed the
+ * line up to the beginning of the action part. A pointer to that beginnig is
+ * passed back to the caller.
+ * rgerhards 2005-09-15
+ */
+static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f)
+{
+	uchar *p;
+	register uchar *q;
+	register int i, i2;
+	uchar *bp;
+	int pri;
+	int singlpri = 0;
+	int ignorepri = 0;
+	uchar buf[MAXLINE];
+	uchar xbuf[200];
+
+	assert(pline != NULL);
+	assert(*pline != NULL);
+	assert(f != NULL);
+
+	dbgprintf(" - traditional PRI filter\n");
+	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
+
+	f->f_filter_type = FILTER_PRI;
+	/* Note: file structure is pre-initialized to zero because it was
+	 * created with calloc()!
+	 */
+	for (i = 0; i <= LOG_NFACILITIES; i++) {
+		f->f_filterData.f_pmask[i] = TABLE_NOPRI;
+	}
+
+	/* scan through the list of selectors */
+	for (p = *pline; *p && *p != '\t' && *p != ' ';) {
+
+		/* find the end of this facility name list */
+		for (q = p; *q && *q != '\t' && *q++ != '.'; )
+			continue;
+
+		/* collect priority name */
+		for (bp = buf; *q && !strchr("\t ,;", *q); )
+			*bp++ = *q++;
+		*bp = '\0';
+
+		/* skip cruft */
+		while (strchr(",;", *q))
+			q++;
+
+		/* decode priority name */
+		if ( *buf == '!' ) {
+			ignorepri = 1;
+			for (bp=buf; *(bp+1); bp++)
+				*bp=*(bp+1);
+			*bp='\0';
+		}
+		else {
+			ignorepri = 0;
+		}
+		if ( *buf == '=' )
+		{
+			singlpri = 1;
+			pri = decodeSyslogName(&buf[1], syslogPriNames);
+		}
+		else {
+		        singlpri = 0;
+			pri = decodeSyslogName(buf, syslogPriNames);
+		}
+
+		if (pri < 0) {
+dbgPrintAllDebugInfo();
+			snprintf((char*) xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
+			logerror((char*) xbuf);
+			return RS_RET_ERR;
+		}
+
+		/* scan facilities */
+		while (*p && !strchr("\t .;", *p)) {
+			for (bp = buf; *p && !strchr("\t ,;.", *p); )
+				*bp++ = *p++;
+			*bp = '\0';
+			if (*buf == '*') {
+				for (i = 0; i <= LOG_NFACILITIES; i++) {
+					if ( pri == INTERNAL_NOPRI ) {
+						if ( ignorepri )
+							f->f_filterData.f_pmask[i] = TABLE_ALLPRI;
+						else
+							f->f_filterData.f_pmask[i] = TABLE_NOPRI;
+					}
+					else if ( singlpri ) {
+						if ( ignorepri )
+				  			f->f_filterData.f_pmask[i] &= ~(1<<pri);
+						else
+				  			f->f_filterData.f_pmask[i] |= (1<<pri);
+					}
+					else
+					{
+						if ( pri == TABLE_ALLPRI ) {
+							if ( ignorepri )
+								f->f_filterData.f_pmask[i] = TABLE_NOPRI;
+							else
+								f->f_filterData.f_pmask[i] = TABLE_ALLPRI;
+						}
+						else
+						{
+							if ( ignorepri )
+								for (i2= 0; i2 <= pri; ++i2)
+									f->f_filterData.f_pmask[i] &= ~(1<<i2);
+							else
+								for (i2= 0; i2 <= pri; ++i2)
+									f->f_filterData.f_pmask[i] |= (1<<i2);
+						}
+					}
+				}
+			} else {
+				i = decodeSyslogName(buf, syslogFacNames);
+				if (i < 0) {
+
+					snprintf((char*) xbuf, sizeof(xbuf), "unknown facility name \"%s\"", buf);
+					logerror((char*) xbuf);
+					return RS_RET_ERR;
+				}
+
+				if ( pri == INTERNAL_NOPRI ) {
+					if ( ignorepri )
+						f->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
+					else
+						f->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
+				} else if ( singlpri ) {
+					if ( ignorepri )
+						f->f_filterData.f_pmask[i >> 3] &= ~(1<<pri);
+					else
+						f->f_filterData.f_pmask[i >> 3] |= (1<<pri);
+				} else {
+					if ( pri == TABLE_ALLPRI ) {
+						if ( ignorepri )
+							f->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
+						else
+							f->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
+					} else {
+						if ( ignorepri )
+							for (i2= 0; i2 <= pri; ++i2)
+								f->f_filterData.f_pmask[i >> 3] &= ~(1<<i2);
+						else
+							for (i2= 0; i2 <= pri; ++i2)
+								f->f_filterData.f_pmask[i >> 3] |= (1<<i2);
+					}
+				}
+			}
+			while (*p == ',' || *p == ' ')
+				p++;
+		}
+
+		p = q;
+	}
+
+	/* skip to action part */
+	while (*p == '\t' || *p == ' ')
+		p++;
+
+	*pline = p;
+	return RS_RET_OK;
+}
+
+
+/*
+ * Helper to cfline(). This function takes the filter part of a property
+ * based filter and decodes it. It processes the line up to the beginning
+ * of the action part. A pointer to that beginnig is passed back to the caller.
+ * rgerhards 2005-09-15
+ */
+static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
+{
+	rsParsObj *pPars;
+	rsCStrObj *pCSCompOp;
+	rsRetVal iRet;
+	int iOffset; /* for compare operations */
+
+	assert(pline != NULL);
+	assert(*pline != NULL);
+	assert(f != NULL);
+
+	dbgprintf(" - property-based filter\n");
+	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
+
+	f->f_filter_type = FILTER_PROP;
+
+	/* create parser object starting with line string without leading colon */
+	if((iRet = rsParsConstructFromSz(&pPars, (*pline)+1)) != RS_RET_OK) {
+		logerrorInt("Error %d constructing parser object - ignoring selector", iRet);
+		return(iRet);
+	}
+
+	/* read property */
+	iRet = parsDelimCStr(pPars, &f->f_filterData.prop.pCSPropName, ',', 1, 1);
+	if(iRet != RS_RET_OK) {
+		logerrorInt("error %d parsing filter property - ignoring selector", iRet);
+		rsParsDestruct(pPars);
+		return(iRet);
+	}
+
+	/* read operation */
+	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1);
+	if(iRet != RS_RET_OK) {
+		logerrorInt("error %d compare operation property - ignoring selector", iRet);
+		rsParsDestruct(pPars);
+		return(iRet);
+	}
+
+	/* we now first check if the condition is to be negated. To do so, we first
+	 * must make sure we have at least one char in the param and then check the
+	 * first one.
+	 * rgerhards, 2005-09-26
+	 */
+	if(rsCStrLen(pCSCompOp) > 0) {
+		if(*rsCStrGetBufBeg(pCSCompOp) == '!') {
+			f->f_filterData.prop.isNegated = 1;
+			iOffset = 1; /* ignore '!' */
+		} else {
+			f->f_filterData.prop.isNegated = 0;
+			iOffset = 0;
+		}
+	} else {
+		f->f_filterData.prop.isNegated = 0;
+		iOffset = 0;
+	}
+
+	if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "contains", 8)) {
+		f->f_filterData.prop.operation = FIOP_CONTAINS;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "isequal", 7)) {
+		f->f_filterData.prop.operation = FIOP_ISEQUAL;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "startswith", 10)) {
+		f->f_filterData.prop.operation = FIOP_STARTSWITH;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
+		f->f_filterData.prop.operation = FIOP_REGEX;
+	} else {
+		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
+		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
+	}
+	rsCStrDestruct (pCSCompOp); /* no longer needed */
+
+	/* read compare value */
+	iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
+	if(iRet != RS_RET_OK) {
+		logerrorInt("error %d compare value property - ignoring selector", iRet);
+		rsParsDestruct(pPars);
+		return(iRet);
+	}
+
+	/* skip to action part */
+	if((iRet = parsSkipWhitespace(pPars)) != RS_RET_OK) {
+		logerrorInt("error %d skipping to action part - ignoring selector", iRet);
+		rsParsDestruct(pPars);
+		return(iRet);
+	}
+
+	/* cleanup */
+	*pline = *pline + rsParsGetParsePointer(pPars) + 1;
+		/* we are adding one for the skipped initial ":" */
+
+	return rsParsDestruct(pPars);
+}
+
+
+/*
+ * Helper to cfline(). This function interprets a BSD host selector line
+ * from the config file ("+/-hostname"). It stores it for further reference.
+ * rgerhards 2005-10-19
+ */
+static rsRetVal cflineProcessHostSelector(uchar **pline)
+{
+	rsRetVal iRet;
+
+	assert(pline != NULL);
+	assert(*pline != NULL);
+	assert(**pline == '-' || **pline == '+');
+
+	dbgprintf(" - host selector line\n");
+
+	/* check include/exclude setting */
+	if(**pline == '+') {
+		eDfltHostnameCmpMode = HN_COMP_MATCH;
+	} else { /* we do not check for '-', it must be, else we wouldn't be here */
+		eDfltHostnameCmpMode = HN_COMP_NOMATCH;
+	}
+	(*pline)++;	/* eat + or - */
+
+	/* the below is somewhat of a quick hack, but it is efficient (this is
+	 * why it is in here. "+*" resets the tag selector with BSD syslog. We mimic
+	 * this, too. As it is easy to check that condition, we do not fire up a
+	 * parser process, just make sure we do not address beyond our space.
+	 * Order of conditions in the if-statement is vital! rgerhards 2005-10-18
+	 */
+	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
+		dbgprintf("resetting BSD-like hostname filter\n");
+		eDfltHostnameCmpMode = HN_NO_COMP;
+		if(pDfltHostnameCmp != NULL) {
+			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, NULL)) != RS_RET_OK)
+				return(iRet);
+		}
+	} else {
+		dbgprintf("setting BSD-like hostname filter to '%s'\n", *pline);
+		if(pDfltHostnameCmp == NULL) {
+			/* create string for parser */
+			if((iRet = rsCStrConstructFromszStr(&pDfltHostnameCmp, *pline)) != RS_RET_OK)
+				return(iRet);
+		} else { /* string objects exists, just update... */
+			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, *pline)) != RS_RET_OK)
+				return(iRet);
+		}
+	}
+	return RS_RET_OK;
+}
+
+
+/*
+ * Helper to cfline(). This function interprets a BSD tag selector line
+ * from the config file ("!tagname"). It stores it for further reference.
+ * rgerhards 2005-10-18
+ */
+static rsRetVal cflineProcessTagSelector(uchar **pline)
+{
+	rsRetVal iRet;
+
+	assert(pline != NULL);
+	assert(*pline != NULL);
+	assert(**pline == '!');
+
+	dbgprintf(" - programname selector line\n");
+
+	(*pline)++;	/* eat '!' */
+
+	/* the below is somewhat of a quick hack, but it is efficient (this is
+	 * why it is in here. "!*" resets the tag selector with BSD syslog. We mimic
+	 * this, too. As it is easy to check that condition, we do not fire up a
+	 * parser process, just make sure we do not address beyond our space.
+	 * Order of conditions in the if-statement is vital! rgerhards 2005-10-18
+	 */
+	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
+		dbgprintf("resetting programname filter\n");
+		if(pDfltProgNameCmp != NULL) {
+			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, NULL)) != RS_RET_OK)
+				return(iRet);
+		}
+	} else {
+		dbgprintf("setting programname filter to '%s'\n", *pline);
+		if(pDfltProgNameCmp == NULL) {
+			/* create string for parser */
+			if((iRet = rsCStrConstructFromszStr(&pDfltProgNameCmp, *pline)) != RS_RET_OK)
+				return(iRet);
+		} else { /* string objects exists, just update... */
+			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, *pline)) != RS_RET_OK)
+				return(iRet);
+		}
+	}
+	return RS_RET_OK;
+}
+
+
+/* read the filter part of a configuration line and store the filter
+ * in the supplied selector_t
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal cflineDoFilter(uchar **pp, selector_t *f)
+{
+	DEFiRet;
+
+	assert(pp != NULL);
+	assert(f != NULL);
+
+	/* check which filter we need to pull... */
+	switch(**pp) {
+		case ':':
+			iRet = cflineProcessPropFilter(pp, f);
+			break;
+		default:
+			iRet = cflineProcessTradPRIFilter(pp, f);
+			break;
+	}
+
+	/* we now check if there are some global (BSD-style) filter conditions
+	 * and, if so, we copy them over. rgerhards, 2005-10-18
+	 */
+	if(pDfltProgNameCmp != NULL)
+		if((iRet = rsCStrConstructFromCStr(&(f->pCSProgNameComp), pDfltProgNameCmp)) != RS_RET_OK)
+			return(iRet);
+
+	if(eDfltHostnameCmpMode != HN_NO_COMP) {
+		f->eHostnameCmpMode = eDfltHostnameCmpMode;
+		if((iRet = rsCStrConstructFromCStr(&(f->pCSHostnameComp), pDfltHostnameCmp)) != RS_RET_OK)
+			return(iRet);
+	}
+
+	RETiRet;
+}
+
+
+/* process the action part of a selector line
+ * rgerhards, 2007-08-01
+ */
+static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
+{
+	DEFiRet;
+	modInfo_t *pMod;
+	omodStringRequest_t *pOMSR;
+	action_t *pAction;
+	void *pModData;
+
+	assert(p != NULL);
+	assert(ppAction != NULL);
+
+	/* loop through all modules and see if one picks up the line */
+	pMod = modGetNxtType(NULL, eMOD_OUT);
+	while(pMod != NULL) {
+		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
+		dbgprintf("tried selector action for %s: %d\n", modGetName(pMod), iRet);
+		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
+			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
+				/* now check if the module is compatible with select features */
+				if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
+					pAction->f_ReduceRepeated = bReduceRepeatMsgs;
+				else {
+					dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
+					pAction->f_ReduceRepeated = 0;
+				}
+				pAction->bEnabled = 1; /* action is enabled */
+			}
+			break;
+		}
+		else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
+			/* In this case, the module would have handled the config
+			 * line, but some error occured while doing so. This error should
+			 * already by reported by the module. We do not try any other
+			 * modules on this line, because we found the right one.
+			 * rgerhards, 2007-07-24
+			 */
+			dbgprintf("error %d parsing config line\n", (int) iRet);
+			break;
+		}
+		pMod = modGetNxtType(pMod, eMOD_OUT);
+	}
+
+	*ppAction = pAction;
+	RETiRet;
+}
+
+
+/* Process a configuration file line in traditional "filter selector" format
+ */
+static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
+{
+	DEFiRet;
+	action_t *pAction;
+	selector_t *fCurr;
+
+	assert(pfCurr != NULL);
+
+	fCurr = *pfCurr;
+
+	/* lines starting with '&' have no new filters and just add
+	 * new actions to the currently processed selector.
+	 */
+	if(*p == '&') {
+		++p; /* eat '&' */
+		skipWhiteSpace(&p); /* on to command */
+	} else {
+		/* we are finished with the current selector. So we now need to check
+		 * if it has any actions associated and, if so, link it to the linked
+		 * list. If it has nothing associated with it, we can simply discard
+		 * it. In any case, we create a fresh selector for our new filter.
+		 * We have one special case during initialization: then, the current
+		 * selector is NULL, which means we do not need to care about it at
+		 * all.  -- rgerhards, 2007-08-01
+		 */
+		CHKiRet(selectorAddList(fCurr));
+		CHKiRet(selectorConstruct(&fCurr)); /* create "fresh" selector */
+		CHKiRet(cflineDoFilter(&p, fCurr)); /* pull filters */
+	}
+
+	CHKiRet(cflineDoAction(&p, &pAction));
+	CHKiRet(llAppend(&fCurr->llActList,  NULL, (void*) pAction));
+
+finalize_it:
+	*pfCurr = fCurr;
+	RETiRet;
+}
+
+
+/* process a configuration line
+ * I re-did this functon because it was desperately time to do so
+ * rgerhards, 2007-08-01
+ */
+rsRetVal
+cfline(uchar *line, selector_t **pfCurr)
+{
+	DEFiRet;
+
+	assert(line != NULL);
+
+	dbgprintf("cfline: '%s'\n", line);
+
+	/* check type of line and call respective processing */
+	switch(*line) {
+		case '!':
+			iRet = cflineProcessTagSelector(&line);
+			break;
+		case '+':
+		case '-':
+			iRet = cflineProcessHostSelector(&line);
+			break;
+		case '$':
+			++line; /* eat '$' */
+			iRet = cfsysline(line);
+			break;
+		default:
+			iRet = cflineClassic(line, pfCurr);
+			break;
+	}
+
+	RETiRet;
+}
+
+
+/* vi:set ai:
+ */
