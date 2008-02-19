@@ -119,8 +119,6 @@
 #include <time.h>
 #include <assert.h>
 
-#include <sys/syslog.h>
-#include <sys/param.h>
 #ifdef	__sun
 #include <errno.h>
 #else
@@ -135,7 +133,6 @@
 # include <sys/timespec.h>
 #endif
 
-#include <sys/resource.h>
 #include <signal.h>
 
 #if HAVE_PATHS_H
