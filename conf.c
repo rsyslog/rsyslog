@@ -91,7 +91,7 @@ static rsRetVal doIncludeDirectory(uchar *pDirName)
 	size_t iFileNameLen;
 	uchar szFullFileName[MAXFNAME];
 
-	assert(pDirName != NULL);
+	ASSERT(pDirName != NULL);
 
 	if((pDir = opendir((char*) pDirName)) == NULL) {
 		logerror("error opening include directory");
@@ -157,8 +157,8 @@ doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	size_t i = 0;
 	struct stat fileInfo;
 
-	assert(pp != NULL);
-	assert(*pp != NULL);
+	ASSERT(pp != NULL);
+	ASSERT(*pp != NULL);
 
 	if(getSubString(pp, (char*) pattern, sizeof(pattern) / sizeof(char), ' ')  != 0) {
 		logerror("could not extract group name");
@@ -215,8 +215,8 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	uchar *pModName;
         void *pModHdlr, *pModInit;
 
-	assert(pp != NULL);
-	assert(*pp != NULL);
+	ASSERT(pp != NULL);
+	ASSERT(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
 		logerror("could not extract module name");
@@ -286,9 +286,9 @@ doNameLine(uchar **pp, void* pVal)
 	enum eDirective eDir;
 	char szName[128];
 
-	assert(pp != NULL);
+	ASSERT(pp != NULL);
 	p = *pp;
-	assert(p != NULL);
+	ASSERT(p != NULL);
 
 	eDir = (enum eDirective) pVal;	/* this time, it actually is NOT a pointer! */
 
@@ -344,7 +344,7 @@ cfsysline(uchar *p)
 	uchar szCmd[64];
 	uchar errMsg[128];	/* for dynamic error messages */
 
-	assert(p != NULL);
+	ASSERT(p != NULL);
 	errno = 0;
 	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(uchar), ' ')  != 0) {
 		logerror("Invalid $-configline - could not extract command - line ignored\n");
@@ -391,7 +391,7 @@ processConfFile(uchar *pConfFile)
 	uchar *p;
 	uchar cbuf[BUFSIZ];
 	uchar *cline;
-	assert(pConfFile != NULL);
+	ASSERT(pConfFile != NULL);
 
 	if((cf = fopen((char*)pConfFile, "r")) == NULL) {
 		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
@@ -478,9 +478,9 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 	DEFiRet;
 	rsCStrObj *pStrB;
 
-	assert(pp != NULL);
-	assert(*pp != NULL);
-	assert(pOMSR != NULL);
+	ASSERT(pp != NULL);
+	ASSERT(*pp != NULL);
+	ASSERT(pOMSR != NULL);
 
 	p =*pp;
 	/* a template must follow - search it and complain, if not found
@@ -541,7 +541,7 @@ rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pO
 	int i;
 	DEFiRet;
 
-	assert(pOMSR != NULL);
+	ASSERT(pOMSR != NULL);
 
 	pName = pFileName;
 	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
@@ -576,9 +576,9 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 	uchar buf[MAXLINE];
 	uchar xbuf[200];
 
-	assert(pline != NULL);
-	assert(*pline != NULL);
-	assert(f != NULL);
+	ASSERT(pline != NULL);
+	ASSERT(*pline != NULL);
+	ASSERT(f != NULL);
 
 	dbgprintf(" - traditional PRI filter\n");
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
@@ -723,8 +723,54 @@ dbgPrintAllDebugInfo();
 }
 
 
-/*
- * Helper to cfline(). This function takes the filter part of a property
+/* Helper to cfline(). This function processes an "if" type of filter,
+ * what essentially means it parses an expression. As usual, 
+ * It processes the line up to the beginning of the action part.
+ * A pointer to that beginnig is passed back to the caller.
+ * rgerhards 2008-01-19
+ */
+static rsRetVal cflineProcessIfFilter(uchar **pline, register selector_t *f)
+{
+	DEFiRet;
+	ctok_t *ctok;
+
+	ASSERT(pline != NULL);
+	ASSERT(*pline != NULL);
+	ASSERT(f != NULL);
+
+	dbgprintf(" - general expression-based filter\n");
+	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
+
+dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
+	f->f_filter_type = FILTER_EXPR;
+
+	/* if we come to over here, pline starts with "if ". We just skip that part. */
+	(*pline) += 3;
+
+	/* we first need a tokenizer... */
+	CHKiRet(ctokConstruct(&ctok));
+	CHKiRet(ctokSetpp(ctok, *pline));
+	CHKiRet(ctokConstructFinalize(ctok));
+
+	/* now construct our expression */
+	CHKiRet(exprConstruct(&f->f_filterData.f_expr));
+	CHKiRet(exprConstructFinalize(f->f_filterData.f_expr));
+
+	/* ready to go... */
+	CHKiRet(exprParse(f->f_filterData.f_expr, ctok));
+
+	/* we are back, so we now need to restore things */
+	CHKiRet(ctokGetpp(ctok, pline));
+
+	CHKiRet(ctokDestruct(&ctok));
+dbgprintf("end expression parser, pp %p ('%s')\n", *pline, *pline);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Helper to cfline(). This function takes the filter part of a property
  * based filter and decodes it. It processes the line up to the beginning
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
@@ -736,9 +782,9 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 	rsRetVal iRet;
 	int iOffset; /* for compare operations */
 
-	assert(pline != NULL);
-	assert(*pline != NULL);
-	assert(f != NULL);
+	ASSERT(pline != NULL);
+	ASSERT(*pline != NULL);
+	ASSERT(f != NULL);
 
 	dbgprintf(" - property-based filter\n");
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
@@ -831,9 +877,9 @@ static rsRetVal cflineProcessHostSelector(uchar **pline)
 {
 	rsRetVal iRet;
 
-	assert(pline != NULL);
-	assert(*pline != NULL);
-	assert(**pline == '-' || **pline == '+');
+	ASSERT(pline != NULL);
+	ASSERT(*pline != NULL);
+	ASSERT(**pline == '-' || **pline == '+');
 
 	dbgprintf(" - host selector line\n");
 
@@ -882,9 +928,9 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 {
 	rsRetVal iRet;
 
-	assert(pline != NULL);
-	assert(*pline != NULL);
-	assert(**pline == '!');
+	ASSERT(pline != NULL);
+	ASSERT(*pline != NULL);
+	ASSERT(**pline == '!');
 
 	dbgprintf(" - programname selector line\n");
 
@@ -925,32 +971,38 @@ static rsRetVal cflineDoFilter(uchar **pp, selector_t *f)
 {
 	DEFiRet;
 
-	assert(pp != NULL);
-	assert(f != NULL);
+	ASSERT(pp != NULL);
+	ASSERT(f != NULL);
 
 	/* check which filter we need to pull... */
 	switch(**pp) {
 		case ':':
-			iRet = cflineProcessPropFilter(pp, f);
+			CHKiRet(cflineProcessPropFilter(pp, f));
 			break;
+		case 'i': /* "if" filter? */
+			if(*(*pp+1) && (*(*pp+1) == 'f') && isspace(*(*pp+2))) {
+				CHKiRet(cflineProcessIfFilter(pp, f));
+				break;
+				}
+			/*FALLTHROUGH*/
 		default:
-			iRet = cflineProcessTradPRIFilter(pp, f);
+			CHKiRet(cflineProcessTradPRIFilter(pp, f));
 			break;
 	}
 
 	/* we now check if there are some global (BSD-style) filter conditions
 	 * and, if so, we copy them over. rgerhards, 2005-10-18
 	 */
-	if(pDfltProgNameCmp != NULL)
-		if((iRet = rsCStrConstructFromCStr(&(f->pCSProgNameComp), pDfltProgNameCmp)) != RS_RET_OK)
-			return(iRet);
+	if(pDfltProgNameCmp != NULL) {
+		CHKiRet(rsCStrConstructFromCStr(&(f->pCSProgNameComp), pDfltProgNameCmp));
+	}
 
 	if(eDfltHostnameCmpMode != HN_NO_COMP) {
 		f->eHostnameCmpMode = eDfltHostnameCmpMode;
-		if((iRet = rsCStrConstructFromCStr(&(f->pCSHostnameComp), pDfltHostnameCmp)) != RS_RET_OK)
-			return(iRet);
+		CHKiRet(rsCStrConstructFromCStr(&(f->pCSHostnameComp), pDfltHostnameCmp));
 	}
 
+finalize_it:
 	RETiRet;
 }
 
@@ -966,8 +1018,8 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	action_t *pAction;
 	void *pModData;
 
-	assert(p != NULL);
-	assert(ppAction != NULL);
+	ASSERT(p != NULL);
+	ASSERT(ppAction != NULL);
 
 	/* loop through all modules and see if one picks up the line */
 	pMod = modGetNxtType(NULL, eMOD_OUT);
@@ -1006,6 +1058,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 
 
 /* Process a configuration file line in traditional "filter selector" format
+ * or one that builds upon this format.
  */
 static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 {
@@ -1013,7 +1066,7 @@ static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 	action_t *pAction;
 	selector_t *fCurr;
 
-	assert(pfCurr != NULL);
+	ASSERT(pfCurr != NULL);
 
 	fCurr = *pfCurr;
 
@@ -1024,7 +1077,8 @@ static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 		++p; /* eat '&' */
 		skipWhiteSpace(&p); /* on to command */
 	} else {
-		/* we are finished with the current selector. So we now need to check
+		/* we are finished with the current selector (on previous line).
+		 * So we now need to check
 		 * if it has any actions associated and, if so, link it to the linked
 		 * list. If it has nothing associated with it, we can simply discard
 		 * it. In any case, we create a fresh selector for our new filter.
@@ -1055,7 +1109,7 @@ cfline(uchar *line, selector_t **pfCurr)
 {
 	DEFiRet;
 
-	assert(line != NULL);
+	ASSERT(line != NULL);
 
 	dbgprintf("cfline: '%s'\n", line);
 

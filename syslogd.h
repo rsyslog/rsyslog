@@ -27,6 +27,7 @@
 #include "template.h"
 #include "action.h"
 #include "linkedlist.h"
+#include "expr.h"
 
 #ifdef USE_NETZIP
 /* config param: minimum message size to try compression. The smaller
@@ -72,7 +73,8 @@ struct filed {
 	/* filter properties */
 	enum {
 		FILTER_PRI = 0,		/* traditional PRI based filer */
-		FILTER_PROP = 1		/* extended filter, property based */
+		FILTER_PROP = 1,	/* extended filter, property based */
+		FILTER_EXPR = 2		/* extended filter, expression based */
 	} f_filter_type;
 	EHostnameCmpMode eHostnameCmpMode;
 	rsCStrObj *pCSHostnameComp;	/* hostname to check */
@@ -91,6 +93,7 @@ struct filed {
 			rsCStrObj *pCSCompValue;	/* value to "compare" against */
 			char isNegated;			/* actually a boolean ;) */
 		} prop;
+		expr_t *f_expr;				/* expression object */
 	} f_filterData;
 
 	linkedList_t llActList;	/* list of configured actions */

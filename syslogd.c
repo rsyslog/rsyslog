@@ -168,6 +168,7 @@
 #include "wti.h"
 #include "wtp.h"
 #include "expr.h"
+#include "ctok.h"
 #include "conf.h"
 
 /* We define our own set of syslog defintions so that we
@@ -997,6 +998,9 @@ selectorDestruct(void *pVal)
 			rsCStrDestruct(pThis->f_filterData.prop.pCSPropName);
 		if(pThis->f_filterData.prop.pCSCompValue != NULL)
 			rsCStrDestruct(pThis->f_filterData.prop.pCSCompValue);
+	} else if(pThis->f_filter_type == FILTER_EXPR) {
+		if(pThis->f_filterData.f_expr != NULL)
+			exprDestruct(&pThis->f_filterData.f_expr);
 	}
 
 	llDestroy(&pThis->llActList);
@@ -3408,12 +3412,13 @@ static rsRetVal InitGlobalClasses(void)
 {
 	DEFiRet;
 
-	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizere called! */
+	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizer being called! */
 	CHKiRet(msgClassInit());
 	CHKiRet(strmClassInit());
 	CHKiRet(wtiClassInit());
 	CHKiRet(wtpClassInit());
 	CHKiRet(queueClassInit());
+	CHKiRet(ctokClassInit());
 	CHKiRet(exprClassInit());
 
 finalize_it:

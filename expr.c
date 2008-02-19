@@ -38,6 +38,8 @@
 DEFobjStaticHelpers
 
 
+/* ------------------------------ actual expr object functions ------------------------------ */
+
 /* Standard-Constructor
  */
 BEGINobjConstruct(expr) /* be sure to specify the object type also in END macro! */
@@ -68,7 +70,7 @@ ENDobjDestruct(expr)
 /* evaluate an expression and store the result. pMsg is optional, but if
  * it is not given, no message-based variables can be accessed. The expression
  * must previously have been created.
- * rgerhards, 2008-02-09
+ * rgerhards, 2008-02-09 (a rainy tenerife return flight day ;))
  */
 rsRetVal
 exprEval(expr_t *pThis, msg_t *pMsg)
@@ -89,7 +91,7 @@ exprEval(expr_t *pThis, msg_t *pMsg)
  * Also, it is assumed that most callers will hold their private expression. If it 
  * is not shared, the caller can count on the string to remain stable as long as it
  * does not reevaluate the expression (via exprEval or other means) or destruct it.
- * rgerhards, 2008-02-09
+ * rgerhards, 2008-02-09 (a rainy tenerife return flight day ;))
  */
 rsRetVal
 exprGetStr(expr_t *pThis, rsCStrObj **ppStr)
@@ -103,54 +105,18 @@ exprGetStr(expr_t *pThis, rsCStrObj **ppStr)
 }
 
 
-/* parse an expression from a string. The string MUST include the full expression. The
- * expression object is only created if there is no error during parsing.
- * The string is a standard C string. It must NOT contain anything else but the
- * expression. Most importantly, it must not contain any comments after the
- * expression.
- * rgerhards, 2008-02-09 (a rainy tenerife return flight day ;))
+/* parse an expression object based on a given tokenizer
+ * rgerhards, 2008-02-19
  */
 rsRetVal
-exprParseStr(expr_t **ppThis, uchar *p)
+exprParse(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
-	expr_t *pThis = NULL;
-	
-	ASSERT(ppThis != NULL);
-	ASSERT(p != NULL);
 
-	CHKiRet(exprConstruct(&pThis));
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(ctok, ctok);
 
-	CHKiRet(rsCStrConstruct(&pThis->cstrConst));
-
-	/* so far, we are a dummy - we just pull the first string and
-	 * ignore the rest...
-	 */
-	while(*p && *p != '"')
-		++p; /* find begin of string */
-	if(*p == '"')
-		++p;	/* eat it */
-
-	/* we got it, now copy over everything up until the end of the string */
-	while(*p && *p != '"') {
-		CHKiRet(rsCStrAppendChar(pThis->cstrConst, *p));
-		++p;
-	}
-
-	/* we are done with it... */
-	CHKiRet(rsCStrFinish(pThis->cstrConst));
-
-	CHKiRet(exprConstructFinalize(&pThis));
-
-	/* we are successfully done, so store the result */
-	*ppThis = pThis;
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
-			exprDestruct(pThis);
-	}
-
+RUNLOG_STR("expr parser being called");
 	RETiRet;
 }
 

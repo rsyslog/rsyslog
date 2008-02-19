@@ -62,9 +62,10 @@ typedef enum {	/* IDs of known object "types/classes" */
 	OBJwtp = 3,
 	OBJwti = 4,
 	OBJqueue = 5,
-	OBJexpr = 6	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
+	OBJctok = 6,
+	OBJexpr = 7	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
 } objID_t;	
-#define OBJ_NUM_IDS 7
+#define OBJ_NUM_IDS 8
 
 typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
 		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04

@@ -64,6 +64,7 @@ html_files = \
 	rsconf1_repeatedmsgreduction.html \
 	rsconf1_resetconfigvariables.html \
 	rsconf1_umask.html \
-	v3compatibility.html
+	v3compatibility.html \
+	src/classes.dia
 
 EXTRA_DIST = $(html_files)
