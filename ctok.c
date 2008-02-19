@@ -132,6 +132,7 @@ finalize_it:
 }
 
 
+#if 0
 /* get the next word from the input "stream" (currently just a in-memory
  * string...). A word is anything between whitespace. If the word is longer
  * than the provided memory buffer, parsing terminates when buffer length
@@ -162,75 +163,162 @@ dbgprintf("end ctokGetWorkFromStream, stream now '%s'\n", pThis->pp);
 finalize_it:
 	RETiRet;
 }
+#endif
 
 
-#if 0
-/* Get the next token from the input stream. This parses the next token and
- * ignores any whitespace in between. End of stream is communicated via iRet.
+/* read in a constant number
+ * This is the "number" ABNF element
  * rgerhards, 2008-02-19
  */
-rsRetVal
-ctokGetNextToken(ctok_t *pThis, ctok_token_t *pToken)
+static rsRetVal
+ctokGetNumber(ctok_t *pThis, ctok_token_t *pToken)
 {
 	DEFiRet;
-	uchar pszWord[128];
+	int64 n; /* the parsed number */
+	uchar c;
+	int valC;
+	int iBase;
 
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(pToken != NULL);
 
-	CHKiRet(ctokGetWordFromStream(pThis, pszWord, sizeof(pszWord)/sizeof(uchar)));
+	pToken->tok = ctok_NUMBER;
 
-	/* now recognize words... */
-	if(strcasecmp((char*)pszWord, "or")) {
-		*pToken = ctok_OR;
-	} else if(strcasecmp((char*)pszWord, "and")) {
-		*pToken = ctok_AND;
-	} else if(strcasecmp((char*)pszWord, "+")) {
-		*pToken = ctok_PLUS;
-	} else if(strcasecmp((char*)pszWord, "-")) {
-		*pToken = ctok_MINUS;
-	} else if(strcasecmp((char*)pszWord, "*")) {
-		*pToken = ctok_TIMES;
-	} else if(strcasecmp((char*)pszWord, "/")) {
-		*pToken = ctok_DIV;
-	} else if(strcasecmp((char*)pszWord, "%")) {
-		*pToken = ctok_MOD;
-	} else if(strcasecmp((char*)pszWord, "not")) {
-		*pToken = ctok_NOT;
-	} else if(strcasecmp((char*)pszWord, "(")) {
-		*pToken = ctok_LPAREN;
-	} else if(strcasecmp((char*)pszWord, ")")) {
-		*pToken = ctok_RPAREN;
-	} else if(strcasecmp((char*)pszWord, ",")) {
-		*pToken = ctok_COMMA;
-	} else if(strcasecmp((char*)pszWord, "$")) {
-		*pToken = ctok_DOLLAR;
-	} else if(strcasecmp((char*)pszWord, "'")) {
-		*pToken = ctok_QUOTE;
-	} else if(strcasecmp((char*)pszWord, "\"")) {
-		*pToken = ctok_DBL_QUOTE;
-	} else if(strcasecmp((char*)pszWord, "==")) {
-		*pToken = ctok_CMP_EQ;
-	} else if(strcasecmp((char*)pszWord, "!=")) {
-		*pToken = ctok_CMP_NEQ;
-	} else if(strcasecmp((char*)pszWord, "<>")) { /* an alias for the non-C folks... */
-		*pToken = ctok_CMP_NEQ;
-	} else if(strcasecmp((char*)pszWord, "<")) {
-		*pToken = ctok_CMP_LT;
-	} else if(strcasecmp((char*)pszWord, ">")) {
-		*pToken = ctok_CMP_GT;
-	} else if(strcasecmp((char*)pszWord, "<=")) {
-		*pToken = ctok_CMP_LTEQ;
-	} else if(strcasecmp((char*)pszWord, ">=")) {
-		*pToken = ctok_CMP_GTEQ;
+	CHKiRet(ctokGetCharFromStream(pThis, &c));
+	if(c == '0') { /* octal? */
+		CHKiRet(ctokGetCharFromStream(pThis, &c));
+		if(c == 'x') { /* nope, hex! */
+			CHKiRet(ctokGetCharFromStream(pThis, &c));
+			c = tolower(c);
+			iBase = 16;
+		} else {
+			iBase = 8;
+		}
+	} else {
+		iBase = 10;
 	}
+		
+	n = 0;
+	/* this loop is quite simple, a variable name is terminated by whitespace. */
+	while(isdigit(c) || (c >= 'a' && c <= 'f')) {
+		if(isdigit(c)) {
+			valC = c - '0';
+		} else {
+			valC = c - 'a' + 10;
+		}
+		
+		if(valC >= iBase) {
+			if(iBase == 8) {
+				ABORT_FINALIZE(RS_RET_INVALID_OCTAL_DIGIT);
+			} else {
+				ABORT_FINALIZE(RS_RET_INVALID_HEX_DIGIT);
+			}
+		}
+		/* we now have the next value and know it is right */
+		n = n * iBase + valC;
+		CHKiRet(ctokGetCharFromStream(pThis, &c));
+		c = tolower(c);
+	}
+	pToken->intVal = n;
 
-RUNLOG_VAR("%d", *pToken);
+dbgprintf("number, number is: '%lld'\n", pToken->intVal);
 
 finalize_it:
 	RETiRet;
 }
-#endif
+
+
+/* read in a variable
+ * This covers both msgvar and sysvar from the ABNF.
+ * rgerhards, 2008-02-19
+ */
+static rsRetVal
+ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
+{
+	DEFiRet;
+	uchar c;
+
+	ISOBJ_TYPE_assert(pThis, ctok);
+	ASSERT(pToken != NULL);
+
+	CHKiRet(ctokGetCharFromStream(pThis, &c));
+
+	if(c == '$') { /* second dollar, we have a system variable */
+		pToken->tok = ctok_SYSVAR;
+		CHKiRet(ctokGetCharFromStream(pThis, &c)); /* "eat" it... */
+	} else {
+		pToken->tok = ctok_MSGVAR;
+	}
+
+	CHKiRet(rsCStrConstruct(&pToken->pstrVal));
+	/* this loop is quite simple, a variable name is terminated by whitespace. */
+	while(!isspace(c)) {
+		CHKiRet(rsCStrAppendChar(pToken->pstrVal, tolower(c)));
+		CHKiRet(ctokGetCharFromStream(pThis, &c));
+	}
+	CHKiRet(rsCStrFinish(pStrB));
+
+dbgprintf("var, var is: '%s'\n", rsCStrGetSzStr(pToken->pstrVal));
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pToken->pstrVal != NULL) {
+			rsCStrDestruct(pToken->pstrVal);
+			pToken->pstrVal = NULL;
+		}
+	}
+
+	RETiRet;
+}
+
+
+/* read in a simple string (simpstr in ABNF)
+ * rgerhards, 2008-02-19
+ */
+static rsRetVal
+ctokGetSimpStr(ctok_t *pThis, ctok_token_t *pToken)
+{
+	DEFiRet;
+	uchar c;
+	int bInEsc = 0;
+
+	ISOBJ_TYPE_assert(pThis, ctok);
+	ASSERT(pToken != NULL);
+
+	pToken->tok = ctok_SIMPSTR;
+
+	CHKiRet(rsCStrConstruct(&pToken->pstrVal));
+	CHKiRet(ctokGetCharFromStream(pThis, &c));
+	/* while we are in escape mode (had a backslash), no sequence
+	 * terminates the loop. If outside, it is terminated by a single quote.
+	 */
+	while(bInEsc || c != '\'') {
+		if(bInEsc) {
+			CHKiRet(rsCStrAppendChar(pToken->pstrVal, c));
+			bInEsc = 0;
+		} else {
+			if(c == '\\') {
+				bInEsc = 1;
+			} else {
+				CHKiRet(rsCStrAppendChar(pToken->pstrVal, c));
+			}
+		}
+		CHKiRet(ctokGetCharFromStream(pThis, &c));
+	}
+	CHKiRet(rsCStrFinish(pStrB));
+
+dbgprintf("simpstr, str is: '%s'\n", rsCStrGetSzStr(pToken->pstrVal));
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pToken->pstrVal != NULL) {
+			rsCStrDestruct(pToken->pstrVal);
+			pToken->pstrVal = NULL;
+		}
+	}
+
+	RETiRet;
+}
 
 
 /* Get the next token from the input stream. This parses the next token and
@@ -252,91 +340,97 @@ ctokGetNextToken(ctok_t *pThis, ctok_token_t *pToken)
 	switch(c) {
 		case 'o':/* or */
 			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			*pToken = (c == 'r')? ctok_OR : ctok_INVALID;
+			pToken->tok = (c == 'r')? ctok_OR : ctok_INVALID;
 			break;
 		case 'a': /* and */
 			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
 			if(c == 'n') {
 				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-				*pToken = (c == 'd')? ctok_AND : ctok_INVALID;
+				pToken->tok = (c == 'd')? ctok_AND : ctok_INVALID;
 			} else {
-				*pToken = ctok_INVALID;
+				pToken->tok = ctok_INVALID;
 			}
 			break;
 		case 'n': /* not */
 			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
 			if(c == 'o') {
 				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-				*pToken = (c == 't')? ctok_NOT : ctok_INVALID;
+				pToken->tok = (c == 't')? ctok_NOT : ctok_INVALID;
 			} else {
-				*pToken = ctok_INVALID;
+				pToken->tok = ctok_INVALID;
 			}
 			break;
 		case '=': /* == */
 			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			*pToken = (c == '=')? ctok_CMP_EQ : ctok_INVALID;
+			pToken->tok = (c == '=')? ctok_CMP_EQ : ctok_INVALID;
 			break;
 		case '!': /* != */
 			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			*pToken = (c == '=')? ctok_CMP_NEQ : ctok_INVALID;
+			pToken->tok = (c == '=')? ctok_CMP_NEQ : ctok_INVALID;
 			break;
 		case '<': /* <, <=, <> */
 			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
 			if(c == '=') {
-				*pToken = ctok_CMP_LTEQ;
+				pToken->tok = ctok_CMP_LTEQ;
 			} else if(c == '>') {
-				*pToken = ctok_CMP_NEQ;
+				pToken->tok = ctok_CMP_NEQ;
 			} else {
-				*pToken = ctok_CMP_LT;
+				pToken->tok = ctok_CMP_LT;
 			}
 			break;
 		case '>': /* >, >= */
 			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
 			if(c == '=') {
-				*pToken = ctok_CMP_GTEQ;
+				pToken->tok = ctok_CMP_GTEQ;
 			} else {
-				*pToken = ctok_CMP_GT;
+				pToken->tok = ctok_CMP_GT;
 			}
 			break;
 		case '+':
-			*pToken = ctok_PLUS;
+			pToken->tok = ctok_PLUS;
 			break;
 		case '-':
-			*pToken = ctok_MINUS;
+			pToken->tok = ctok_MINUS;
 			break;
 		case '*':
-			*pToken = ctok_TIMES;
+			pToken->tok = ctok_TIMES;
 			break;
 		case '/':
-			*pToken = ctok_DIV;
+			pToken->tok = ctok_DIV;
 			break;
 		case '%':
-			*pToken = ctok_MOD;
+			pToken->tok = ctok_MOD;
 			break;
 		case '(':
-			*pToken = ctok_LPAREN;
+			pToken->tok = ctok_LPAREN;
 			break;
 		case ')':
-			*pToken = ctok_RPAREN;
+			pToken->tok = ctok_RPAREN;
 			break;
 		case ',':
-			*pToken = ctok_COMMA;
+			pToken->tok = ctok_COMMA;
 			break;
 		case '$':
-			*pToken = ctok_DOLLAR;
+			CHKiRet(ctokGetVar(pThis, pToken));
 			break;
-		case '\'':
-			*pToken = ctok_QUOTE;
+		case '\'': /* simple string, this is somewhat more elaborate */
+			CHKiRet(ctokGetSimpStr(pThis, pToken));
 			break;
 		case '"':
-			*pToken = ctok_DBL_QUOTE;
+			/* TODO: template string parser */
+			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 			break;
 		default:
-			*pToken = ctok_INVALID;
+			if(isdigit(c)) {
+				CHKiRet(ctokUngetCharFromStream(pThis, c)); /* push back, we need this digit */
+				CHKiRet(ctokGetNumber(pThis, pToken));
+			} else {
+				pToken->tok = ctok_INVALID;
+			}
 			break;
 	}
 
-RUNLOG_VAR("%d", *pToken);
+RUNLOG_VAR("%d", pToken->tok);
 
 finalize_it:
 	RETiRet;

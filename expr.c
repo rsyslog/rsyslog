@@ -38,6 +38,159 @@
 DEFobjStaticHelpers
 
 
+/* ------------------------------ parser functions ------------------------------ */
+/* the following functions implement the parser. They are all static. For
+ * simplicity, the function names match their ABNF definition. The ABNF is defined
+ * in the doc set. See file expression.html for details. I do *not* reproduce it
+ * here in an effort to keep both files in sync.
+ * 
+ * All functions receive the current expression object as parameter as well as the
+ * current tokenizer.
+ *
+ * rgerhards, 2008-02-19
+ */
+
+#if 0
+static rsRetVal
+template(expr_t *pThis, ctok_t *ctok)
+{
+	DEFiRet;
+RUNLOG_STR("");
+
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(ctok, ctok);
+
+
+finalize_it:
+	RETiRet;
+}
+#endif
+
+
+
+static rsRetVal
+terminal(expr_t *pThis, ctok_t *ctok)
+{
+	DEFiRet;
+	ctok_token_t token;
+RUNLOG_STR("terminal");
+
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(ctok, ctok);
+
+	CHKiRet(ctokGetNextToken(ctok, &token));
+
+	switch(token.tok) {
+		case ctok_SIMPSTR:
+			//CHKiRet(simpstr(pThis, ctok));
+			break;
+		default:
+			ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
+			break;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+factor(expr_t *pThis, ctok_t *ctok)
+{
+	DEFiRet;
+RUNLOG_STR("factor");
+
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(ctok, ctok);
+
+	CHKiRet(terminal(pThis, ctok));
+
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
+term(expr_t *pThis, ctok_t *ctok)
+{
+	DEFiRet;
+RUNLOG_STR("term");
+
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(ctok, ctok);
+
+	CHKiRet(factor(pThis, ctok));
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+val(expr_t *pThis, ctok_t *ctok)
+{
+	DEFiRet;
+RUNLOG_STR("val");
+
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(ctok, ctok);
+
+	CHKiRet(term(pThis, ctok));
+
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
+e_cmp(expr_t *pThis, ctok_t *ctok)
+{
+	DEFiRet;
+RUNLOG_STR("e_cmp");
+
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(ctok, ctok);
+
+	CHKiRet(val(pThis, ctok));
+
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
+e_and(expr_t *pThis, ctok_t *ctok)
+{
+	DEFiRet;
+RUNLOG_STR("e_and");
+
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(ctok, ctok);
+
+	CHKiRet(e_cmp(pThis, ctok));
+
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
+expr(expr_t *pThis, ctok_t *ctok)
+{
+	DEFiRet;
+RUNLOG_STR("expr");
+
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(ctok, ctok);
+
+	CHKiRet(e_and(pThis, ctok));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* ------------------------------ end parser functions ------------------------------ */
+
+
 /* ------------------------------ actual expr object functions ------------------------------ */
 
 /* Standard-Constructor
@@ -112,12 +265,11 @@ rsRetVal
 exprParse(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
-	ctok_token_t token;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
 
-	CHKiRet(ctokGetNextToken(ctok, &token));
+	CHKiRet(expr(pThis, ctok));
 
 RUNLOG_STR("expr parser being called");
 finalize_it:

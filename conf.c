@@ -766,6 +766,10 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 dbgprintf("end expression parser, pp %p ('%s')\n", *pline, *pline);
 
 finalize_it:
+	if(iRet == RS_RET_SYNTAX_ERROR) {
+		logerror("syntax error in expression");
+	}
+
 	RETiRet;
 }
 

@@ -175,7 +175,7 @@ finalize_it: \
  * rgerhards, 2008-01-10
  */
 #define BEGINobjConstruct(obj) \
-	rsRetVal obj##Initialize(obj##_t *pThis) \
+	rsRetVal obj##Initialize(obj##_t __attribute__((unused)) *pThis) \
 	{ \
 		DEFiRet;
 

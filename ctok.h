@@ -27,28 +27,34 @@
 
 /* the tokens... I use numbers below so that the tokens can be easier
  * identified in debug output. */
-typedef enum {
-	ctok_INVALID = 0,
-	ctok_OR = 1,
-	ctok_AND = 2,
-	ctok_PLUS = 3,
-	ctok_MINUS = 4,
-	ctok_TIMES = 5,	 /* "*" */
-	ctok_DIV = 6,
-	ctok_MOD = 7,
-	ctok_NOT = 8,
-	ctok_RPAREN = 9,
-	ctok_LPAREN = 10,
-	ctok_COMMA = 11,
-	ctok_DOLLAR = 12,
-	ctok_QUOTE = 13,
-	ctok_DBL_QUOTE = 14,
-	ctok_CMP_EQ = 15,
-	ctok_CMP_NEQ = 16,
-	ctok_CMP_LT = 17,
-	ctok_CMP_GT = 18,
-	ctok_CMP_LTEQ = 19,
-	ctok_CMP_GTEQ = 20,
+typedef struct {
+	enum {
+		ctok_INVALID = 0,
+		ctok_OR = 1,
+		ctok_AND = 2,
+		ctok_PLUS = 3,
+		ctok_MINUS = 4,
+		ctok_TIMES = 5,	 /* "*" */
+		ctok_DIV = 6,
+		ctok_MOD = 7,
+		ctok_NOT = 8,
+		ctok_RPAREN = 9,
+		ctok_LPAREN = 10,
+		ctok_COMMA = 11,
+		ctok_SYSVAR = 12,
+		ctok_MSGVAR = 13,
+		ctok_SIMPSTR = 14,
+		ctok_TPLSTR = 15,
+		ctok_CMP_EQ = 16,
+		ctok_CMP_NEQ = 17,
+		ctok_CMP_LT = 18,
+		ctok_CMP_GT = 19,
+		ctok_CMP_LTEQ = 20,
+		ctok_CMP_GTEQ = 21,
+		ctok_NUMBER = 22
+	} tok;
+	rsCStrObj *pstrVal;
+	int64 intVal;
 } ctok_token_t;
 
 /* the ctokession object */
