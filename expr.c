@@ -50,12 +50,14 @@ DEFobjStaticHelpers
  * rgerhards, 2008-02-19
  */
 
+/* forward definiton - thanks to recursive ABNF, we can not avoid at least one ;) */
+static rsRetVal expr(expr_t *pThis, ctok_t *ctok);
+
 #if 0
 static rsRetVal
 template(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
-RUNLOG_STR("");
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
@@ -73,7 +75,6 @@ terminal(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
 	ctok_token_t *pToken;
-RUNLOG_STR("terminal");
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
@@ -82,8 +83,33 @@ RUNLOG_STR("terminal");
 
 	switch(pToken->tok) {
 		case ctok_SIMPSTR:
+			dbgoprint((obj_t*) pThis, "simpstr\n");
+			break;
+		case ctok_NUMBER:
+			dbgoprint((obj_t*) pThis, "number\n");
+			break;
+		case ctok_FUNCTION:
+			dbgoprint((obj_t*) pThis, "function\n");
+			break;
+		case ctok_MSGVAR:
+			dbgoprint((obj_t*) pThis, "MSGVAR\n");
+			break;
+		case ctok_SYSVAR:
+			dbgoprint((obj_t*) pThis, "SYSVAR\n");
+			break;
+		case ctok_LPAREN:
+			dbgoprint((obj_t*) pThis, "expr\n");
+			CHKiRet(ctok_tokenDestruct(&pToken)); /* "eat" processed token */
+			CHKiRet(expr(pThis, ctok));
+			CHKiRet(ctokGetToken(ctok, &pToken)); /* get next one */
+			if(pToken->tok != ctok_RPAREN)
+				ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
+			CHKiRet(ctok_tokenDestruct(&pToken)); /* "eat" processed token */
+			dbgoprint((obj_t*) pThis, "end expr, rparen eaten\n");
+			/* fill structure */
 			break;
 		default:
+			dbgoprint((obj_t*) pThis, "invalid token %d\n", pToken->tok);
 			ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 			break;
 	}
@@ -96,11 +122,21 @@ static rsRetVal
 factor(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
-RUNLOG_STR("factor");
+	ctok_token_t *pToken;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
 
+	CHKiRet(ctokGetToken(ctok, &pToken));
+	if(pToken->tok == ctok_NOT) {
+		/* TODO: fill structure */
+		dbgprintf("not\n");
+		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
+		CHKiRet(ctokGetToken(ctok, &pToken)); /* get next one */
+	} else {
+		/* we could not process the token, so push it back */
+		CHKiRet(ctokUngetToken(ctok, pToken));
+	}
 	CHKiRet(terminal(pThis, ctok));
 
 finalize_it:
@@ -112,7 +148,6 @@ static rsRetVal
 term(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
-RUNLOG_STR("term");
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
@@ -128,7 +163,6 @@ val(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
 	ctok_token_t *pToken;
-RUNLOG_STR("val");
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
@@ -155,12 +189,25 @@ static rsRetVal
 e_cmp(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
-RUNLOG_STR("e_cmp");
+	ctok_token_t *pToken;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
 
 	CHKiRet(val(pThis, ctok));
+
+ 	/* 0*1(cmp_op val) part */
+	CHKiRet(ctokGetToken(ctok, &pToken));
+	if(ctok_tokenIsCmpOp(pToken)) {
+		dbgoprint((obj_t*) pThis, "cmp\n");
+		/* fill structure */
+		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
+		CHKiRet(val(pThis, ctok));
+	} else {
+		/* we could not process the token, so push it back */
+		CHKiRet(ctokUngetToken(ctok, pToken));
+	}
+
 
 finalize_it:
 	RETiRet;
@@ -171,12 +218,27 @@ static rsRetVal
 e_and(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
-RUNLOG_STR("e_and");
+	ctok_token_t *pToken;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
 
 	CHKiRet(e_cmp(pThis, ctok));
+
+ 	/* *("and" e_cmp) part */
+	CHKiRet(ctokGetToken(ctok, &pToken));
+	while(pToken->tok == ctok_AND) {
+		dbgoprint((obj_t*) pThis, "and\n");
+		/* fill structure */
+		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
+		CHKiRet(e_cmp(pThis, ctok));
+		CHKiRet(ctokGetToken(ctok, &pToken));
+	}
+
+	/* unget the token that made us exit the loop - it's obviously not one
+	 * we can process.
+	 */
+	CHKiRet(ctokUngetToken(ctok, pToken)); 
 
 finalize_it:
 	RETiRet;
@@ -187,12 +249,27 @@ static rsRetVal
 expr(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
-RUNLOG_STR("expr");
+	ctok_token_t *pToken;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
 
 	CHKiRet(e_and(pThis, ctok));
+
+ 	/* *("or" e_and) part */
+	CHKiRet(ctokGetToken(ctok, &pToken));
+	while(pToken->tok == ctok_OR) {
+		/* fill structure */
+		dbgoprint((obj_t*) pThis, "found OR\n");
+		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
+		CHKiRet(e_and(pThis, ctok));
+		CHKiRet(ctokGetToken(ctok, &pToken));
+	}
+
+	/* unget the token that made us exit the loop - it's obviously not one
+	 * we can process.
+	 */
+	CHKiRet(ctokUngetToken(ctok, pToken)); 
 
 finalize_it:
 	RETiRet;
@@ -281,8 +358,8 @@ exprParse(expr_t *pThis, ctok_t *ctok)
 	ISOBJ_TYPE_assert(ctok, ctok);
 
 	CHKiRet(expr(pThis, ctok));
+	dbgoprint((obj_t*) pThis, "successfully parsed/created expression\n");
 
-RUNLOG_STR("expr parser being called");
 finalize_it:
 	RETiRet;
 }

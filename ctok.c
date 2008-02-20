@@ -95,7 +95,8 @@ ctokGetCharFromStream(ctok_t *pThis, uchar *pc)
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(pc != NULL);
 
-	if(*pThis->pp == '\0') {
+	/* end of string or begin of comment terminates the "stream" */
+	if(*pThis->pp == '\0' || *pThis->pp == '#') {
 		ABORT_FINALIZE(RS_RET_EOS);
 	} else {
 		*pc = *pThis->pp;
@@ -359,7 +360,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 	uchar szWord[128];
 
 	ISOBJ_TYPE_assert(pThis, ctok);
-	ASSERT(pToken != NULL);
+	ASSERT(ppToken != NULL);
 
 	/* first check if we have an ungotten token and, if so, provide that
 	 * one back (without any parsing). -- rgerhards, 2008-02-20
@@ -450,6 +451,8 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 					pToken->tok = ctok_OR;
 				} else if(!strcasecmp((char*)szWord, "not")) {
 					pToken->tok = ctok_NOT;
+				} else if(!strcasecmp((char*)szWord, "then")) {
+					pToken->tok = ctok_THEN;
 				} else {
 					/* finally, we check if it is a function */
 					CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */

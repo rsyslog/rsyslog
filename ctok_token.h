@@ -46,18 +46,22 @@ typedef struct {
 		ctok_MSGVAR = 13,
 		ctok_SIMPSTR = 14,
 		ctok_TPLSTR = 15,
-		ctok_CMP_EQ = 16,
-		ctok_CMP_NEQ = 17,
-		ctok_CMP_LT = 18,
-		ctok_CMP_GT = 19,
-		ctok_CMP_LTEQ = 20,
-		ctok_CMP_GTEQ = 21,
-		ctok_NUMBER = 22,
-		ctok_FUNCTION = 23
+		ctok_NUMBER = 16,
+		ctok_FUNCTION = 17,
+		ctok_THEN = 18,
+		ctok_CMP_EQ = 100, /* all compare operations must be in a row */
+		ctok_CMP_NEQ = 101,
+		ctok_CMP_LT = 102,
+		ctok_CMP_GT = 103,
+		ctok_CMP_LTEQ = 104,
+		ctok_CMP_GTEQ = 105, /* end compare operations */
 	} tok;
 	rsCStrObj *pstrVal;
 	int64 intVal;
 } ctok_token_t;
+
+/* defines to handle compare operation tokens in a single if... */
+#define ctok_tokenIsCmpOp(x) ((x)->tok >= ctok_CMP_EQ && (x)->tok <= ctok_CMP_GTEQ)
 
 
 /* prototypes */

@@ -733,6 +733,7 @@ static rsRetVal cflineProcessIfFilter(uchar **pline, register selector_t *f)
 {
 	DEFiRet;
 	ctok_t *ctok;
+	ctok_token_t *pToken;
 
 	ASSERT(pline != NULL);
 	ASSERT(*pline != NULL);
@@ -759,11 +760,19 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	/* ready to go... */
 	CHKiRet(exprParse(f->f_filterData.f_expr, ctok));
 
-	/* we are back, so we now need to restore things */
-	CHKiRet(ctokGetpp(ctok, pline));
+	/* we now need to parse off the "then" - and note an error if it is
+	 * missing...
+	 */
+	CHKiRet(ctokGetToken(ctok, &pToken));
+	if(pToken->tok != ctok_THEN) {
+		ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
+	}
 
+	/* we are done, so we now need to restore things */
+	CHKiRet(ctokGetpp(ctok, pline));
 	CHKiRet(ctokDestruct(&ctok));
-dbgprintf("end expression parser, pp %p ('%s')\n", *pline, *pline);
+
+dbgprintf("expression parser successfully ended, pp %p ('%s')\n", *pline, *pline);
 
 finalize_it:
 	if(iRet == RS_RET_SYNTAX_ERROR) {
