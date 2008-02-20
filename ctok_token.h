@@ -26,7 +26,10 @@
 #include "stringbuf.h"
 
 /* the tokens... I use numbers below so that the tokens can be easier
- * identified in debug output. */
+ * identified in debug output. These ID's are also partly resused as opcodes.
+ * As such, they should be kept below 1,000 so that they do not interfer
+ * with the rest of the opcodes.
+ */
 typedef struct {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	enum {
@@ -54,7 +57,9 @@ typedef struct {
 		ctok_CMP_LT = 102,
 		ctok_CMP_GT = 103,
 		ctok_CMP_LTEQ = 104,
-		ctok_CMP_GTEQ = 105, /* end compare operations */
+		ctok_CMP_CONTAINS = 105,
+		ctok_CMP_STARTSWITH = 106,
+		ctok_CMP_GTEQ = 107, /* end compare operations */
 	} tok;
 	rsCStrObj *pstrVal;
 	int64 intVal;

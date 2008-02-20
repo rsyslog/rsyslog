@@ -22,10 +22,33 @@
 #ifndef INCLUDED_VMOP_H
 #define INCLUDED_VMOP_H
 
+#include "ctok_token.h"
+
 /* machine instructions types */
 typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc() */
 	opcode_INVALID = 0,
-	opcode_PUSH = 1
+	/* for simplicity of debugging and reading dumps, we use the same IDs
+	 * that the tokenizer uses where this applicable.
+	 */
+	opcode_OR    = ctok_OR,
+	opcode_AND   = ctok_AND,
+	opcode_PLUS  = ctok_PLUS,
+	opcode_MINUS = ctok_MINUS,
+	opcode_TIMES = ctok_TIMES,	 /* "*" */
+	opcode_DIV   = ctok_DIV,
+	opcode_MOD   = ctok_MOD,
+	opcode_NOT   = ctok_NOT,
+	opcode_CMP_EQ         = ctok_CMP_EQ, /* all compare operations must be in a row */
+	opcode_CMP_NEQ        = ctok_CMP_NEQ,
+	opcode_CMP_LT         = ctok_CMP_LT,
+	opcode_CMP_GT         = ctok_CMP_GT,
+	opcode_CMP_LTEQ       = ctok_CMP_LTEQ,
+	opcode_CMP_CONTAINS   = ctok_CMP_CONTAINS,
+	opcode_CMP_STARTSWITH = ctok_CMP_STARTSWITH,
+	opcode_CMP_GTEQ       = ctok_CMP_GTEQ, /* end compare operations */
+	/* here we start our own codes */
+	opcode_PUSH  = 1000,	 /* requires var operand */
+	opcode_POP   = 1001,	 /* requires var operand to receive result */
 } opcode_t;
 
 /* the vmop object */

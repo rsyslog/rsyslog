@@ -484,6 +484,10 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 						pToken->tok = ctok_OR;
 					} else if(!strcasecmp((char*)szWord, "not")) {
 						pToken->tok = ctok_NOT;
+					} else if(!strcasecmp((char*)szWord, "contains")) {
+						pToken->tok = ctok_CMP_CONTAINS;
+					} else if(!strcasecmp((char*)szWord, "startswith")) {
+						pToken->tok = ctok_CMP_STARTSWITH;
 					} else if(!strcasecmp((char*)szWord, "then")) {
 						pToken->tok = ctok_THEN;
 					} else {
