@@ -1,16 +1,14 @@
-<html>
-
-<head>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
 <meta http-equiv="Content-Language" content="de">
-<title>Understanding rsyslog queues</title>
-</head>
+<title>Understanding rsyslog queues</title></head>
 
 <body>
 
 <h1>Understanding rsyslog Queues</h1>
 <p>Rsyslog uses queues whenever two activities need to be loosely coupled. With a 
-queue, one part of the system &quot;produces&quot; something while another part &quot;consumes&quot; 
-this something. The &quot;something&quot; is most often syslog messages, but queues may 
+queue, one part of the system "produces" something while another part "consumes" 
+this something. The "something" is most often syslog messages, but queues may 
 also be used for other purposes.</p>
 <p>The most prominent example is the main message queue. Whenever rsyslog 
 receives a message (e.g. locally, via UDP, TCP or in whatever else way), it 
@@ -22,7 +20,7 @@ forwarding to another host).</p>
 <h1>Queue Modes</h1>
 <p>Rsyslog supports different queue modes, some with submodes. Each of them has 
 specific advantages and disadvantages. Selecting the right queue mode is quite 
-important when tuning rsyslogd. The queue mode (aka &quot;type&quot;) is set via the &quot;<i>$&lt;object&gt;QueueType</i>&quot; 
+important when tuning rsyslogd. The queue mode (aka "type") is set via the "<i>$&lt;object&gt;QueueType</i>" 
 config directive.</p>
 <h2>Direct Queues</h2>
 <p>Direct queues are <b>non</b>-queuing queues. A queue in direct mode does 
@@ -34,13 +32,13 @@ queuing is not always desired. A good example is the queue in front of output
 actions. While it makes perfect sense to buffer forwarding actions or database 
 writes, it makes only limited sense to build up a queue in front of simple local 
 file writes. Yet, rsyslog still has a queue in front of every action. So for 
-file writes, the queue mode can simply be set to &quot;direct&quot;, in which case no 
+file writes, the queue mode can simply be set to "direct", in which case no 
 queuing happens.</p>
 <p>Please note that a direct queue also is the only queue type that passes back 
 the execution return code (success/failure) from the consumer to the producer. 
 This, for example, is needed for the backup action logic. Consequently, backup 
-actions require the to-be-checked action to use a &quot;direct&quot; mode queue.</p>
-<p>To create a direct queue, use the &quot;<i>$&lt;object&gt;QueueType Direct</i>&quot; config 
+actions require the to-be-checked action to use a "direct" mode queue.</p>
+<p>To create a direct queue, use the "<i>$&lt;object&gt;QueueType Direct</i>" config 
 directive.</p>
 <h2>Disk Queues</h2>
 <p>Disk queues use disk drives for buffering. The important fact is that the 
@@ -49,10 +47,10 @@ ultra-reliable, but by far the slowest mode. For regular use cases, this queue
 mode is not recommended. It is useful if log data is so important that it must 
 not be lost, even in extreme cases.</p>
 <p>When a disk queue is written, it is done in chunks. Each chunk receives its 
-individual file. Files are named with a prefix (set via the &quot;<i>$&lt;object&gt;QueueFilename</i>&quot; 
+individual file. Files are named with a prefix (set via the "<i>$&lt;object&gt;QueueFilename</i>" 
 config directive) and followed by a 7-digit number (starting at one and 
 incremented for each file). Chunks are 10mb by default, a different size can be 
-set via the&quot;<i>$&lt;object&gt;QueueMaxFileSize</i>&quot; config directive. Note that 
+set via the"<i>$&lt;object&gt;QueueMaxFileSize</i>" config directive. Note that 
 the size limit is not a sharp one: rsyslog always writes one complete queue 
 entry, even if it violates the size limit. So chunks are actually a little but 
 (usually less than 1k) larger then the configured size. Each chunk also has a 
@@ -79,8 +77,8 @@ be lost, but the queue is exceptionally slow.</p>
 <p>Each queue can be placed on a different disk for best performance and/or 
 isolation. This is currently selected by specifying different <i>$WorkDirectory</i> 
 config directives before the queue creation statement.</p>
-<p>To create a disk queue, use the &quot;<i>$&lt;object&gt;QueueType Disk</i>&quot; config 
-directive. Checkpoint intervals can be specified via &quot;<i>$&lt;object&gt;QueueCheckpointInterval</i>&quot;, 
+<p>To create a disk queue, use the "<i>$&lt;object&gt;QueueType Disk</i>" config 
+directive. Checkpoint intervals can be specified via "<i>$&lt;object&gt;QueueCheckpointInterval</i>", 
 with 0 meaning no checkpoints. </p>
 <h2>In-Memory Queues</h2>
 <p>In-memory queue mode is what most people have on their mind when they think 
@@ -116,18 +114,18 @@ only memory if in use. A FixedArray queue may have a too large static memory
 footprint in such cases.</p>
 <p><b>In general, it is advised to use LinkedList mode if in doubt</b>. The 
 processing overhead compared to FixedArray is low and may be
-<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
 outweigh </span>by the reduction in memory use. Paging in most-often-unused 
 pointer array pages can be much slower than dynamically allocating them.</p>
-<p>To create an in-memory queue, use the &quot;<i>$&lt;object&gt;QueueType LinkedList</i>&quot; 
-or&nbsp; &quot;<i>$&lt;object&gt;QueueType FixedArray</i>&quot; config directive.</p>
+<p>To create an in-memory queue, use the "<i>$&lt;object&gt;QueueType LinkedList</i>" 
+or&nbsp; "<i>$&lt;object&gt;QueueType FixedArray</i>" config directive.</p>
 <h3>Disk-Assisted Memory Queues</h3>
 <p>If a disk queue name is defined for in-memory queues (via <i>
 $&lt;object&gt;QueueFileName</i>), they automatically 
-become &quot;disk-assisted&quot; (DA). In that mode, data is written to disk (and read 
+become "disk-assisted" (DA). In that mode, data is written to disk (and read 
 back) on an as-needed basis.</p>
 <p>Actually, the regular memory queue (called the 
-&quot;primary queue&quot;) and a disk queue (called the &quot;DA queue&quot;) work in tandem in this 
+"primary queue") and a disk queue (called the "DA queue") work in tandem in this 
 mode. Most importantly, the disk queue is activated if the primary queue is full 
 or needs to be persisted on shutdown. Disk-assisted queues combine the 
 advantages of pure memory queues with those of&nbsp; pure disk queues. Under normal 
@@ -136,20 +134,20 @@ there is need to, an unlimited amount of messages can be buffered (actually
 limited by free disk space only) and data can be persisted between rsyslogd runs.</p>
 <p>With a DA-queue, both disk-specific and in-memory specific configuration 
 parameters can be set. From the user's point of view, think of a DA queue like a 
-&quot;super-queue&quot; which does all within a single queue [from the code perspective, 
+"super-queue" which does all within a single queue [from the code perspective, 
 there is some specific handling for this case, so it is actually much like a 
 single object].</p>
 <p>DA queues are typically used to de-couple potentially long-running and 
 unreliable actions (to make them reliable). For example, it is recommended to 
 use a disk-assisted linked list in-memory queue in front of each database and 
-&quot;send via tcp&quot; action. Doing so makes these actions reliable and de-couples 
+"send via tcp" action. Doing so makes these actions reliable and de-couples 
 their potential low execution speed from the rest of your rules (e.g. the local 
 file writes). There is a howto on <a href="rsyslog_high_database_rate.html">
 massive database inserts</a> which nicely describes this use case. It may even 
 be a good read if you do not intend to use databases.</p>
 <p>With DA queues, we do not simply write out everything to disk and then run as 
 a disk queue once the in-memory queue is full. A much smarter algorithm is used, 
-which involves a &quot;high watermark&quot; and a &quot;low watermark&quot;. Both specify numbers of 
+which involves a "high watermark" and a "low watermark". Both specify numbers of 
 queued items. If the queue size reaches high watermark elements, the queue 
 begins to write data elements to disk. It does so until it reaches the low water 
 mark elements. At this point, it stops writing until either high water mark is 
@@ -165,28 +163,28 @@ and writing to them is a lengthy operation. It is too lengthy to e.g. block
 receiving UDP messages. Doing so would result in message loss. Thus, the queue 
 initiates DA mode, but still is able to receive messages and enqueue them - as 
 long as the maximum queue size is not reached. The number of elements between 
-the high water mark and the maximum queue size serves as this &quot;emergency 
-buffer&quot;. Size it according to your needs, if traffic is very bursty you will 
+the high water mark and the maximum queue size serves as this "emergency 
+buffer". Size it according to your needs, if traffic is very bursty you will 
 probably need a large buffer here. Keep in mind, though, that under normal 
 operations these queue elements will probably never be used. Setting the high 
 water mark too low will cause disk-assistance to be turned on more often than 
 actually needed.</p>
-<p>The water marks can be set via the &quot;<i>$&lt;object&gt;QueueHighWatermark</i>&quot; and&nbsp; 
-&quot;<i>$&lt;object&gt;QueueHighWatermark</i>&quot; configuration file directives. Note that 
+<p>The water marks can be set via the "<i>$&lt;object&gt;QueueHighWatermark</i>" and&nbsp; 
+"<i>$&lt;object&gt;QueueHighWatermark</i>" configuration file directives. Note that 
 these are actual numbers, not precentages. Be sure they make sense (also in 
-respect to &quot;<i>$&lt;object&gt;QueueSize</i>&quot;), as rsyslodg does currently not perform 
+respect to "<i>$&lt;object&gt;QueueSize</i>"), as rsyslodg does currently not perform 
 any checks on the numbers provided. It is easy to screw up the system here (yes, 
 a feature enhancement request is filed ;)).</p>
 <h1>Limiting the Queue Size</h1>
 <p>All queues, including disk queues, have a limit of the number of elements 
-they can enqueue. This is set via the &quot;<i>$&lt;object&gt;QueueSize</i>&quot; config 
+they can enqueue. This is set via the "<i>$&lt;object&gt;QueueSize</i>" config 
 parameter. Note that the size is specified in number of enqueued elements, not 
 their actual memory size. Memory size limits can not be set. A conservative 
 assumption is that a single syslog messages takes up 512 bytes on average 
 (in-memory, NOT on the wire, this *is* a difference).</p>
 <p>Disk assisted queues are special in that they do <b>not</b> have any size 
 limit. The enqueue an unlimited amount of elements. To prevent running out of 
-space, disk and disk-assisted queues can be size-limited via the &quot;<i>$&lt;object&gt;QueueMaxDiskSpace</i>&quot; 
+space, disk and disk-assisted queues can be size-limited via the "<i>$&lt;object&gt;QueueMaxDiskSpace</i>" 
 configuration parameter. If it is not set, the limit is only available free 
 space (and reaching this limit is currently not very gracefully handled, so 
 avoid running into it!). If a limit is set, the queue can not grow larger than 
@@ -201,7 +199,7 @@ dedicate a whole disk to rsyslog. That way, you prevent it from running out of
 space (future version will have an auto-size-limit logic, that then kicks in in 
 such situations).</p>
 <h1>Worker Thread Pools</h1>
-<p>Each queue (except in &quot;direct&quot; mode) has an associated pool of worker 
+<p>Each queue (except in "direct" mode) has an associated pool of worker 
 threads. Worker threads carry out the action to be performed on the data 
 elements enqueued. As an actual sample, the main message queue's worker task is 
 to apply filter logic to each incoming message and enqueue them to the relevant 
@@ -209,7 +207,7 @@ output queues (actions).</p>
 <p>Worker threads are started and stopped on an as-needed basis. On a system 
 without activity, there may be no worker at all running. One is automatically 
 started when a message comes in. Similarily, additional workers are started if 
-the queue grows above a specific size. The &quot;<i>$&lt;object&gt;QueueWorkerThreadMinimumMessages</i>&quot;&nbsp; 
+the queue grows above a specific size. The "<i>$&lt;object&gt;QueueWorkerThreadMinimumMessages</i>"&nbsp; 
 config parameter controls worker startup. If it is set to the minimum number of 
 elements that must be enqueued in order to justify a new worker startup. For 
 example, let's assume it is set to 100. As long as no more than 100 messages are 
@@ -218,20 +216,20 @@ a new worker thread is automatically started. Similarily, a third worker will be
 started when there are at least 300 messages, a forth when reaching 400 and so 
 on.</p>
 <p>It, however, does not make sense to have too many worker threads running in 
-parall. Thus, the upper limit ca be set via &quot;<i>$&lt;object&gt;QueueMaxWorkerThreads</i>&quot;. 
+parall. Thus, the upper limit ca be set via "<i>$&lt;object&gt;QueueMaxWorkerThreads</i>". 
 If it, for example, is set to four, no more than four workers will ever be 
 started, no matter how many elements are enqueued. </p>
 <p>Worker threads that have been started are kept running until an inactivity 
-timeout happens. The timeout can be set via &quot;<i>$&lt;object&gt;QueueWorkerTimeoutShutdown</i>&quot; 
+timeout happens. The timeout can be set via "<i>$&lt;object&gt;QueueWorkerTimeoutShutdown</i>" 
 and is specified in milliseconds. If you do not like to keep the workers 
 running, simply set it to 0, which means immediate timeout and thus immediate 
 shutdown. But consider that creating threads involves some overhead, and this is 
 why we keep them running.</p>
 <h2>Discarding Messages</h2>
-<p>If the queue reaches the so called &quot;discard watermark&quot; (a number of queued 
+<p>If the queue reaches the so called "discard watermark" (a number of queued 
 elements), less important messages can automatically be discarded. This is in an 
 effort to save queue space for more important messages, which you even less like 
-to loose. Please note that whenever there are more than &quot;discard watermark&quot; 
+to loose. Please note that whenever there are more than "discard watermark" 
 messages, both newly incoming as well as already enqueued low-priority messages 
 are discarded. The algorithm discards messages newly coming in and those at the 
 front of the queue.</p>
@@ -239,21 +237,12 @@ front of the queue.</p>
 high, but low enough to allow for large message burst. Please note that it take 
 effect immediately and thus shows effect promptly - but that doesn't help if the 
 burst mainly consist of high-priority messages...</p>
-<p>The discard watermark is set via the &quot;<i>$&lt;object&gt;QueueDiscardMark</i>&quot; 
-directive. The priority of messages to be discarded is set via &quot;<i>$&lt;object&gt;QueueDiscardSeverity</i>&quot;. 
-Please note that as of now, this directive does not accept textual severity, so 
-a number according to the following table must be chosen (from RFC 3164):</p>
-<pre>        Numerical         Severity
-          Code
-
-           0       Emergency: system is unusable
-           1       Alert: action must be taken immediately
-           2       Critical: critical conditions
-           3       Error: error conditions
-           4       Warning: warning conditions
-           5       Notice: normal but significant condition
-           6       Informational: informational messages
-           7       Debug: debug-level messages</pre>
+<p>The discard watermark is set via the "<i>$&lt;object&gt;QueueDiscardMark</i>" 
+directive. The priority of messages to be discarded is set via "<i>$&lt;object&gt;QueueDiscardSeverity</i>".
+This directive accepts both the usual textual severity as well as a
+numerical one. To understand it, you must be aware of the numerical
+severity values. They are defined in RFC 3164:</p>
+<pre>        Numerical         Severity<br>          Code<br><br>           0       Emergency: system is unusable<br>           1       Alert: action must be taken immediately<br>           2       Critical: critical conditions<br>           3       Error: error conditions<br>           4       Warning: warning conditions<br>           5       Notice: normal but significant condition<br>           6       Informational: informational messages<br>           7       Debug: debug-level messages</pre>
 <p>Anything of the specified severity and (numerically) above it is discarded. 
 To turn message discarding off, simply specify the discard watermark to be 
 higher than the queue size.</p>
@@ -267,10 +256,10 @@ unavoidable and you prefer to discard less important messages first.</p>
 disk space, it is finally full. If so, rsyslogd throttles the data element 
 submitter. If that, for example, is a reliable input (TCP, local log socket), 
 that will slow down the message originator which is a good
-<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
 resolution </span>for this scenario.</p>
 <p>During
-<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
 throtteling</span>, a disk-assisted queue continues to write to disk and 
 messages are also discarded based on severity as well as regular dequeuing and 
 processing continues. So chances are good the situation will be resolved by 
@@ -278,10 +267,10 @@ simply throttling. Note, though, that throtteling is highly undesirable for
 unreliable sources, like UDP message reception. So it is not a good thing to run 
 into throtteling mode at all.</p>
 <p>We can not hold processing
-<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
 infinitely</span>, not even when throtteling. For example, throtteling the local 
 log socket too long would cause the system at whole come to a standstill. To 
-prevent this, rsyslogd times out after a configured period (&quot;<i>$&lt;object&gt;QueueTimeoutEnqueue</i>&quot;, 
+prevent this, rsyslogd times out after a configured period ("<i>$&lt;object&gt;QueueTimeoutEnqueue</i>", 
 specified in milliseconds) if no space becomes available. As a last resort, it 
 then discards the newly arrived message.</p>
 <p>If you do not like throtteling, set the timeout to 0 - the message will then 
@@ -292,7 +281,7 @@ action queues.</p>
 <h2>Rate Limiting</h2>
 <p>Rate limiting provides a way to prevent rsyslogd from processing things too 
 fast. It can, for example, prevent overruning a receiver system.</p>
-<p>Currently, there are only limited rate-limiting features available. The &quot;<i>$&lt;object&gt;QueueDequeueSlowdown</i>&quot;&nbsp; 
+<p>Currently, there are only limited rate-limiting features available. The "<i>$&lt;object&gt;QueueDequeueSlowdown</i>"&nbsp; 
 directive allows to specify how long (in microseconds) dequeueing should be 
 delayed. While simple, it still is powerful. For example, using a 
 DequeueSlowdown delay of 1,000 microseconds on a UDP send action ensures that no 
@@ -300,23 +289,23 @@ more than 1,000 messages can be sent within a second (actually less, as there is
 also some time needed for the processing itself). </p>
 <h2>Terminating Queues</h2>
 <p>Terminating a process sounds easy, but can be complex.
-<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
 Terminating </span>a running queue is in fact the most complex operation a queue 
 object can perform. You don't see that from a user's point of view, but its 
 quite hard work for the developer to do everything in the right order.</p>
 <p>The complexity arises when the queue has still data enqueued when it 
 finishes. Rsyslog tries to preserve as much of it as possible. As a first 
-measure, there is a regular queue time out (&quot;<i>$&lt;object&gt;QueueTimeoutShutdown</i>&quot;, 
+measure, there is a regular queue time out ("<i>$&lt;object&gt;QueueTimeoutShutdown</i>", 
 specified in milliseconds): the queue workers are given that time period to 
 finish processing the queue.</p>
 <p>If after that period there is still data in the queue, workers are instructed 
 to finish the current data element and then terminate. This essentially means 
-any other data is lost. There is another timeout (&quot;<i>$&lt;object&gt;QueueTimeoutActionCompletion</i>&quot;, 
+any other data is lost. There is another timeout ("<i>$&lt;object&gt;QueueTimeoutActionCompletion</i>", 
 also specified in milliseconds) that specifies how long the workers have to 
 finish the current element. If that timeout expires, any remaining workers are 
 cancelled and the queue is brought down.</p>
-<p>If you do not like to lose data on shutdown, the &quot;<i>$&lt;object&gt;QueueSaveOnShutdown</i>&quot; 
-parameter can be set to &quot;on&quot;. This requires either a disk or disk-assisted 
+<p>If you do not like to lose data on shutdown, the "<i>$&lt;object&gt;QueueSaveOnShutdown</i>" 
+parameter can be set to "on". This requires either a disk or disk-assisted 
 queue. If set, rsyslogd ensures that any queue elements are saved to disk before 
 it terminates. This includes data elements there were begun being processed by 
 workers that needed to be cancelled due to too-long processing. For a large 
@@ -336,15 +325,15 @@ configurable and thus can be changed to whatever is best for the given use case.
 <p>Future versions of rsyslog will most probably utilize queues at other places, 
 too.</p>
 <p>
-<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
-Wherever </span>&quot;<i>&lt;object&gt;</i>&quot;&nbsp; was used above in the config file 
-statements, substitute &quot;<i>&lt;object&gt;</i>&quot; with either &quot;MainMsg&quot; or &quot;Action&quot;. The 
+<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
+Wherever </span>"<i>&lt;object&gt;</i>"&nbsp; was used above in the config file 
+statements, substitute "<i>&lt;object&gt;</i>" with either "MainMsg" or "Action". The 
 former will set main message queue
-<span lang="EN-US" style="font-size: 12.0pt; line-height: 115%; font-family: 'Times New Roman',serif">
+<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
 parameters</span>, the later parameters for the next action that will be 
 created. Action queue parameters can not be modified once the action has been 
 specified. For example, to tell the main message queue to save its content on 
-shutdown, use <i>$MainMsgQueueSaveOnShutdown on</i>&quot;.</p>
+shutdown, use <i>$MainMsgQueueSaveOnShutdown on</i>".</p>
 <p>If the same parameter is specified multiple times before a queue is created, 
 the last one specified takes precedence. The main message queue is created after 
 parsing the config file and all of its potential includes. An action queue is 
@@ -356,6 +345,4 @@ parameters, because not all are applicable. For example, in current output
 module design, actions do not support multi-threading. Consequently, the number 
 of worker threads is fixed to one for action queues and can not be changed.</p>
 
-</body>
-
-</html>
+</body></html>

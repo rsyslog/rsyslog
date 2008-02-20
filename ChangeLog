@@ -4,6 +4,8 @@ Version 3.12.0 (rgerhards), 2008-02-??
   Biebl for bringing this to my attention
 - some internal cleanup on the stringbuf object calling interface
 - general code cleanup and further modularization
+- $MainMessageQueueDiscardSeverity can now also handle textual severities
+  (previously only integers)
 ---------------------------------------------------------------------------
 Version 3.11.3 (rgerhards), 2008-02-18
 - fixed a bug in imklog which lead to duplicate message content in
