@@ -45,6 +45,8 @@ rsyslogd_SOURCES = \
 	expr.h \
 	ctok.c \
 	ctok.h \
+	ctok_token.c \
+	ctok_token.h \
 	conf.c \
 	conf.h \
 	omshell.c \

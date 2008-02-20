@@ -323,19 +323,56 @@ finalize_it:
 }
 
 
-/* Get the next token from the input stream. This parses the next token and
+/* Unget a token. The token ungotten will be returned the next time
+ * ctokGetToken() is called. Only one token can be ungotten at a time.
+ * If a second token is ungotten, the first is lost. This is considered
+ * a programming error.
+ * rgerhards, 2008-02-20
+ */
+rsRetVal
+ctokUngetToken(ctok_t *pThis, ctok_token_t *pToken)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, ctok);
+	ASSERT(pToken != NULL);
+	ASSERT(pThis->pUngotToken == NULL);
+
+	pThis->pUngotToken = pToken;
+
+	RETiRet;
+}
+
+
+/* Get the *next* token from the input stream. This parses the next token and
  * ignores any whitespace in between. End of stream is communicated via iRet.
+ * The returned token must either be destructed by the caller OR being passed
+ * back to ctokUngetToken().
  * rgerhards, 2008-02-19
  */
 rsRetVal
-ctokGetNextToken(ctok_t *pThis, ctok_token_t *pToken)
+ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 {
 	DEFiRet;
+	ctok_token_t *pToken;
 	uchar c;
 	uchar szWord[128];
 
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(pToken != NULL);
+
+	/* first check if we have an ungotten token and, if so, provide that
+	 * one back (without any parsing). -- rgerhards, 2008-02-20
+	 */
+	if(pThis->pUngotToken != NULL) {
+		*ppToken = pThis->pUngotToken;
+		pThis->pUngotToken = NULL;
+		FINALIZE;
+	}
+
+	/* setup the stage - create our token */
+	CHKiRet(ctok_tokenConstruct(&pToken));
+	CHKiRet(ctok_tokenConstructFinalize(pToken));
 
 	CHKiRet(ctokSkipWhitespaceFromStream(pThis));
 
@@ -429,9 +466,15 @@ ctokGetNextToken(ctok_t *pThis, ctok_token_t *pToken)
 			break;
 	}
 
+	*ppToken = pToken;
 RUNLOG_VAR("%d", pToken->tok);
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pToken != NULL)
+			ctok_tokenDestruct(&pToken);
+	}
+
 	RETiRet;
 }
 

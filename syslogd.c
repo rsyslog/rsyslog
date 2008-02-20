@@ -3418,6 +3418,7 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(wtiClassInit());
 	CHKiRet(wtpClassInit());
 	CHKiRet(queueClassInit());
+	CHKiRet(ctok_tokenClassInit());
 	CHKiRet(ctokClassInit());
 	CHKiRet(exprClassInit());
 

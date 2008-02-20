@@ -72,15 +72,15 @@ static rsRetVal
 terminal(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
-	ctok_token_t token;
+	ctok_token_t *pToken;
 RUNLOG_STR("terminal");
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
 
-	CHKiRet(ctokGetNextToken(ctok, &token));
+	CHKiRet(ctokGetToken(ctok, &pToken));
 
-	switch(token.tok) {
+	switch(pToken->tok) {
 		case ctok_SIMPSTR:
 			break;
 		default:
@@ -127,10 +127,22 @@ static rsRetVal
 val(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
+	ctok_token_t *pToken;
 RUNLOG_STR("val");
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
+
+	CHKiRet(ctokGetToken(ctok, &pToken));
+	if(pToken->tok == ctok_PLUS || pToken->tok == ctok_MINUS) {
+		/* TODO: fill structure */
+		dbgprintf("plus/minus\n");
+		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
+		CHKiRet(ctokGetToken(ctok, &pToken)); /* get next one */
+	} else {
+		/* we could not process the token, so push it back */
+		CHKiRet(ctokUngetToken(ctok, pToken));
+	}
 
 	CHKiRet(term(pThis, ctok));
 
@@ -207,7 +219,6 @@ rsRetVal exprConstructFinalize(expr_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, expr);
 
-finalize_it:
 	RETiRet;
 }
 
@@ -230,6 +241,7 @@ exprEval(expr_t *pThis, msg_t *pMsg)
 	DEFiRet;
 	
 	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(pMsg, msg);
 
 	RETiRet;
 }
