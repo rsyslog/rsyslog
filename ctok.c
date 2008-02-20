@@ -345,6 +345,30 @@ ctokUngetToken(ctok_t *pThis, ctok_token_t *pToken)
 }
 
 
+/* skip an inine comment (just like a C-comment) 
+ * rgerhards, 2008-02-20
+ */
+static rsRetVal
+ctokSkipInlineComment(ctok_t *pThis)
+{
+	DEFiRet;
+	uchar c;
+	int bHadAsterisk = 0;
+
+	ISOBJ_TYPE_assert(pThis, ctok);
+
+	CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+	while(!(bHadAsterisk && c == '/')) {
+		bHadAsterisk = (c == '*') ? 1 : 0;
+		CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read next */
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+
 /* Get the *next* token from the input stream. This parses the next token and
  * ignores any whitespace in between. End of stream is communicated via iRet.
  * The returned token must either be destructed by the caller OR being passed
@@ -358,6 +382,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 	ctok_token_t *pToken;
 	uchar c;
 	uchar szWord[128];
+	int bRetry = 0; /* retry parse? Only needed for inline comments... */
 
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(ppToken != NULL);
@@ -375,99 +400,110 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 	CHKiRet(ctok_tokenConstruct(&pToken));
 	CHKiRet(ctok_tokenConstructFinalize(pToken));
 
-	CHKiRet(ctokSkipWhitespaceFromStream(pThis));
-
-	CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-	switch(c) {
-		case '=': /* == */
-			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			pToken->tok = (c == '=')? ctok_CMP_EQ : ctok_INVALID;
-			break;
-		case '!': /* != */
-			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			pToken->tok = (c == '=')? ctok_CMP_NEQ : ctok_INVALID;
-			break;
-		case '<': /* <, <=, <> */
-			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			if(c == '=') {
-				pToken->tok = ctok_CMP_LTEQ;
-			} else if(c == '>') {
-				pToken->tok = ctok_CMP_NEQ;
-			} else {
-				pToken->tok = ctok_CMP_LT;
-			}
-			break;
-		case '>': /* >, >= */
-			CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-			if(c == '=') {
-				pToken->tok = ctok_CMP_GTEQ;
-			} else {
-				pToken->tok = ctok_CMP_GT;
-			}
-			break;
-		case '+':
-			pToken->tok = ctok_PLUS;
-			break;
-		case '-':
-			pToken->tok = ctok_MINUS;
-			break;
-		case '*':
-			pToken->tok = ctok_TIMES;
-			break;
-		case '/':
-			pToken->tok = ctok_DIV;
-			break;
-		case '%':
-			pToken->tok = ctok_MOD;
-			break;
-		case '(':
-			pToken->tok = ctok_LPAREN;
-			break;
-		case ')':
-			pToken->tok = ctok_RPAREN;
-			break;
-		case ',':
-			pToken->tok = ctok_COMMA;
-			break;
-		case '$':
-			CHKiRet(ctokGetVar(pThis, pToken));
-			break;
-		case '\'': /* simple string, this is somewhat more elaborate */
-			CHKiRet(ctokGetSimpStr(pThis, pToken));
-			break;
-		case '"':
-			/* TODO: template string parser */
-			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
-			break;
-		default:
-			CHKiRet(ctokUngetCharFromStream(pThis, c)); /* push back, we need it in any case */
-			if(isdigit(c)) {
-				CHKiRet(ctokGetNumber(pThis, pToken));
-			} else { /* now we check if we have a multi-char sequence */
-				CHKiRet(ctokGetWordFromStream(pThis, szWord, sizeof(szWord)/sizeof(uchar)));
-				if(!strcasecmp((char*)szWord, "and")) {
-					pToken->tok = ctok_AND;
-				} else if(!strcasecmp((char*)szWord, "or")) {
-					pToken->tok = ctok_OR;
-				} else if(!strcasecmp((char*)szWord, "not")) {
-					pToken->tok = ctok_NOT;
-				} else if(!strcasecmp((char*)szWord, "then")) {
-					pToken->tok = ctok_THEN;
+	/* find the next token. We may loop when we have inline comments */
+	do {
+		bRetry = 0;
+		CHKiRet(ctokSkipWhitespaceFromStream(pThis));
+		CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+		switch(c) {
+			case '=': /* == */
+				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+				pToken->tok = (c == '=')? ctok_CMP_EQ : ctok_INVALID;
+				break;
+			case '!': /* != */
+				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+				pToken->tok = (c == '=')? ctok_CMP_NEQ : ctok_INVALID;
+				break;
+			case '<': /* <, <=, <> */
+				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+				if(c == '=') {
+					pToken->tok = ctok_CMP_LTEQ;
+				} else if(c == '>') {
+					pToken->tok = ctok_CMP_NEQ;
 				} else {
-					/* finally, we check if it is a function */
-					CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
-					if(c == '(') {
-						/* push c back, higher level parser needs it */
-						CHKiRet(ctokUngetCharFromStream(pThis, c));
-						pToken->tok = ctok_FUNCTION;
-						// TODO: fill function name
-					} else { /* give up... */
-						pToken->tok = ctok_INVALID;
+					pToken->tok = ctok_CMP_LT;
+				}
+				break;
+			case '>': /* >, >= */
+				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+				if(c == '=') {
+					pToken->tok = ctok_CMP_GTEQ;
+				} else {
+					pToken->tok = ctok_CMP_GT;
+				}
+				break;
+			case '+':
+				pToken->tok = ctok_PLUS;
+				break;
+			case '-':
+				pToken->tok = ctok_MINUS;
+				break;
+			case '*':
+				pToken->tok = ctok_TIMES;
+				break;
+			case '/': /* /, /.* ... *./ (comments, mungled here for obvious reasons...) */
+				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+				if(c == '*') {
+					/* we have a comment and need to skip it */
+					ctokSkipInlineComment(pThis);
+					bRetry = 1;
+				} else {
+					CHKiRet(ctokUngetCharFromStream(pThis, c)); /* put back, not processed */
+				}
+				pToken->tok = ctok_DIV;
+				break;
+			case '%':
+				pToken->tok = ctok_MOD;
+				break;
+			case '(':
+				pToken->tok = ctok_LPAREN;
+				break;
+			case ')':
+				pToken->tok = ctok_RPAREN;
+				break;
+			case ',':
+				pToken->tok = ctok_COMMA;
+				break;
+			case '$':
+				CHKiRet(ctokGetVar(pThis, pToken));
+				break;
+			case '\'': /* simple string, this is somewhat more elaborate */
+				CHKiRet(ctokGetSimpStr(pThis, pToken));
+				break;
+			case '"':
+				/* TODO: template string parser */
+				ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+				break;
+			default:
+				CHKiRet(ctokUngetCharFromStream(pThis, c)); /* push back, we need it in any case */
+				if(isdigit(c)) {
+					CHKiRet(ctokGetNumber(pThis, pToken));
+				} else { /* now we check if we have a multi-char sequence */
+					CHKiRet(ctokGetWordFromStream(pThis, szWord, sizeof(szWord)/sizeof(uchar)));
+					if(!strcasecmp((char*)szWord, "and")) {
+						pToken->tok = ctok_AND;
+					} else if(!strcasecmp((char*)szWord, "or")) {
+						pToken->tok = ctok_OR;
+					} else if(!strcasecmp((char*)szWord, "not")) {
+						pToken->tok = ctok_NOT;
+					} else if(!strcasecmp((char*)szWord, "then")) {
+						pToken->tok = ctok_THEN;
+					} else {
+						/* finally, we check if it is a function */
+						CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+						if(c == '(') {
+							/* push c back, higher level parser needs it */
+							CHKiRet(ctokUngetCharFromStream(pThis, c));
+							pToken->tok = ctok_FUNCTION;
+							// TODO: fill function name
+						} else { /* give up... */
+							pToken->tok = ctok_INVALID;
+						}
 					}
 				}
-			}
-			break;
-	}
+				break;
+		}
+	} while(bRetry); /* warning: do ... while()! */
 
 	*ppToken = pToken;
 RUNLOG_VAR("%d", pToken->tok);
