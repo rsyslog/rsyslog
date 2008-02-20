@@ -5,6 +5,8 @@ rfc3195d_SOURCES = rfc3195d.c rsyslog.h
 rsyslogd_SOURCES = \
 	syslogd.c \
 	syslogd.h \
+	vmop.c \
+	vmop.h \
 	debug.c \
 	debug.h \
 	glbl.h \

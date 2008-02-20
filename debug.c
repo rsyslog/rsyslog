@@ -57,7 +57,7 @@ static dbgThrdInfo_t *dbgGetThrdInfo(void);
 /* static data (some time to be replaced) */
 int	Debug;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
-static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to the debug log? */
+static int bLogFuncFlow = 1; /* shall the function entry and exit be logged to the debug log? */
 static int bLogAllocFree = 0; /* shall calls to (m/c)alloc and free be logged to the debug log? */
 static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bPrintMutexAction = 0; /* shall mutex calls be printed to the debug log? */
@@ -930,7 +930,7 @@ int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line)
 	/* when we reach this point, we have a fully-initialized FuncDB! */
 
 	//if(bLogFuncFlow) /* quick debug hack...  select the best for you! */
-	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "expr.c")) /* quick debug hack... select the best for you! */
+	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "omlibdbi.c")) /* quick debug hack... select the best for you! */
 		dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
 	if(pThrd->stackPtr >= (int) (sizeof(pThrd->callStack) / sizeof(dbgFuncDB_t*))) {
 		dbgprintf("%s:%d: %s: debug module: call stack for this thread full, suspending call tracking\n",
@@ -960,7 +960,7 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore)
 
 	dbgFuncDBPrintActiveMutexes(pFuncDB, "WARNING: mutex still owned by us as we exit function, mutex: ", pthread_self());
 	//if(bLogFuncFlow) /* quick debug hack... select the best for you! */
-	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "expr.c")) /* quick debug hack... select the best for you! */
+	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "omlibdbi.c")) /* quick debug hack... select the best for you! */
 		dbgprintf("%s:%d: %s: exit\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
 	pThrd->stackPtr = iStackPtrRestore;
 	if(pThrd->stackPtr < 0) {
