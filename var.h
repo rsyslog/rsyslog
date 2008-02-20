@@ -22,9 +22,11 @@
 #ifndef INCLUDED_VAR_H
 #define INCLUDED_VAR_H
 
+#include "stringbuf.h"
 
 /* data types */
-typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc() */
+typedef enum {
+	VARTYPE_NONE = 0, /* currently no value set */
 	VARTYPE_PSZ = 1,
 	VARTYPE_SHORT = 2,
 	VARTYPE_INT = 3,
@@ -53,6 +55,8 @@ typedef struct var_s {
 rsRetVal varConstruct(var_t **ppThis);
 rsRetVal varConstructFinalize(var_t __attribute__((unused)) *pThis);
 rsRetVal varDestruct(var_t **ppThis);
+rsRetVal varSetString(var_t *pThis, rsCStrObj *pCStr);
 PROTOTYPEObjClassInit(var);
+PROTOTYPEObjDebugPrint(var);
 
 #endif /* #ifndef INCLUDED_VAR_H */

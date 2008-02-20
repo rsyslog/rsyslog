@@ -58,10 +58,15 @@ CODESTARTobjDestruct(vmop)
 ENDobjDestruct(vmop)
 
 
-/* destructor for the vmop object */
+/* DebugPrint support for the vmop object */
 BEGINobjDebugPrint(vmop) /* be sure to specify the object type also in END and CODESTART macros! */
+	uchar *pOpcodeName;
 CODESTARTobjDebugPrint(vmop)
-	dbgoprint((obj_t*) pThis, "operation: %d, next %p\n", (int) pThis->opcode, pThis->pNext);
+	vmopOpcode2Str(pThis, &pOpcodeName);
+	dbgoprint((obj_t*) pThis, "opcode: %d\t(%s), next %p, var in next line\n", (int) pThis->opcode, pOpcodeName,
+		  pThis->pNext);
+	if(pThis->operand.pVar != NULL)
+		varDebugPrint(pThis->operand.pVar);
 ENDobjDebugPrint(vmop)
 
 
@@ -88,6 +93,84 @@ vmopSetOpcode(vmop_t *pThis, opcode_t opcode)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, vmop);
 	pThis->opcode = opcode;
+	RETiRet;
+}
+
+
+/* a way to turn an opcode into a readable string
+ */
+rsRetVal
+vmopOpcode2Str(vmop_t *pThis, uchar **ppName)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, vmop);
+
+	switch(pThis->opcode) {
+		case opcode_OR:
+			*ppName = (uchar*) "or";
+			break;
+		case opcode_AND:
+			*ppName = (uchar*) "and";
+			break;
+		case opcode_PLUS:
+			*ppName = (uchar*) "+";
+			break;
+		case opcode_MINUS:
+			*ppName = (uchar*) "-";
+			break;
+		case opcode_TIMES:
+			*ppName = (uchar*) "*";
+			break;
+		case opcode_DIV:
+			*ppName = (uchar*) "/";
+			break;
+		case opcode_MOD:
+			*ppName = (uchar*) "%";
+			break;
+		case opcode_NOT:
+			*ppName = (uchar*) "not";
+			break;
+		case opcode_CMP_EQ:
+			*ppName = (uchar*) "==";
+			break;
+		case opcode_CMP_NEQ:
+			*ppName = (uchar*) "!=";
+			break;
+		case opcode_CMP_LT:
+			*ppName = (uchar*) "<";
+			break;
+		case opcode_CMP_GT:
+			*ppName = (uchar*) ">";
+			break;
+		case opcode_CMP_LTEQ:
+			*ppName = (uchar*) "<=";
+			break;
+		case opcode_CMP_CONTAINS:
+			*ppName = (uchar*) "contains";
+			break;
+		case opcode_CMP_STARTSWITH:
+			*ppName = (uchar*) "startswith";
+			break;
+		case opcode_CMP_GTEQ:
+			*ppName = (uchar*) ">=";
+			break;
+		case opcode_PUSHSYSVAR:
+			*ppName = (uchar*) "PUSHSYSVAR";
+			break;
+		case opcode_PUSHMSGVAR:
+			*ppName = (uchar*) "PUSHMSGVAR";
+			break;
+		case opcode_PUSHCONSTANT:
+			*ppName = (uchar*) "PUSHCONSTANT";
+			break;
+		case opcode_POP:
+			*ppName = (uchar*) "";
+			break;
+		default:
+			*ppName = (uchar*) "INVALID opcode";
+			break;
+	}
+
 	RETiRet;
 }
 

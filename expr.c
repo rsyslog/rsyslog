@@ -59,6 +59,8 @@ terminal(expr_t *pThis, ctok_t *ctok)
 {
 	DEFiRet;
 	ctok_token_t *pToken;
+	var_t *pVar;
+	rsCStrObj *pCStr;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
@@ -67,11 +69,17 @@ terminal(expr_t *pThis, ctok_t *ctok)
 
 	switch(pToken->tok) {
 		case ctok_SIMPSTR:
+			CHKiRet(varConstruct(&pVar));
+			CHKiRet(varConstructFinalize(pVar));
+			CHKiRet(ctok_tokenUnlinkCStr(pToken, &pCStr));
+			CHKiRet(varSetString(pVar, pCStr));
 			dbgoprint((obj_t*) pThis, "simpstr\n");
+			CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, pVar)); /* add to program */
 			// push val
 			break;
 		case ctok_NUMBER:
 			dbgoprint((obj_t*) pThis, "number\n");
+			CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, NULL)); /* add to program */
 			// push val
 			break;
 		case ctok_FUNCTION:
@@ -81,10 +89,12 @@ terminal(expr_t *pThis, ctok_t *ctok)
 			break;
 		case ctok_MSGVAR:
 			dbgoprint((obj_t*) pThis, "MSGVAR\n");
+			CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_PUSHMSGVAR, NULL)); /* add to program */
 			// push val
 			break;
 		case ctok_SYSVAR:
 			dbgoprint((obj_t*) pThis, "SYSVAR\n");
+			CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_PUSHSYSVAR, NULL)); /* add to program */
 			// push val
 			break;
 		case ctok_LPAREN:
@@ -96,7 +106,6 @@ terminal(expr_t *pThis, ctok_t *ctok)
 				ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 			CHKiRet(ctok_tokenDestruct(&pToken)); /* "eat" processed token */
 			dbgoprint((obj_t*) pThis, "end expr, rparen eaten\n");
-			/* fill structure */
 			break;
 		default:
 			dbgoprint((obj_t*) pThis, "invalid token %d\n", pToken->tok);

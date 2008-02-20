@@ -73,6 +73,7 @@ typedef struct {
 rsRetVal ctok_tokenConstruct(ctok_token_t **ppThis);
 rsRetVal ctok_tokenConstructFinalize(ctok_token_t __attribute__((unused)) *pThis);
 rsRetVal ctok_tokenDestruct(ctok_token_t **ppThis);
+rsRetVal ctok_tokenUnlinkCStr(ctok_token_t *pThis, rsCStrObj **ppCStr);
 PROTOTYPEObjClassInit(ctok_token);
 
 #endif /* #ifndef INCLUDED_CTOK_TOKEN_H */

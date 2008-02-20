@@ -47,9 +47,12 @@ typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc(
 	opcode_CMP_STARTSWITH = ctok_CMP_STARTSWITH,
 	opcode_CMP_GTEQ       = ctok_CMP_GTEQ, /* end compare operations */
 	/* here we start our own codes */
-	opcode_PUSH  = 1000,	 /* requires var operand */
-	opcode_POP   = 1001,	 /* requires var operand to receive result */
+	opcode_POP          = 1000,	 /* requires var operand to receive result */
+	opcode_PUSHSYSVAR   = 1001,	 /* requires var operand */
+	opcode_PUSHMSGVAR   = 1002,	 /* requires var operand */
+	opcode_PUSHCONSTANT = 1003,	 /* requires var operand */
 } opcode_t;
+
 
 /* the vmop object */
 typedef struct vmop_s {
@@ -69,6 +72,7 @@ rsRetVal vmopConstructFinalize(vmop_t __attribute__((unused)) *pThis);
 rsRetVal vmopDestruct(vmop_t **ppThis);
 rsRetVal vmopSetOpcode(vmop_t *pThis, opcode_t opcode);
 rsRetVal vmopSetVar(vmop_t *pThis, var_t *pVar);
+rsRetVal vmopOpcode2Str(vmop_t *pThis, uchar **ppName);
 PROTOTYPEObjClassInit(vmop);
 PROTOTYPEObjDebugPrint(vmop);
 

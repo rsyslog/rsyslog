@@ -71,12 +71,61 @@ CODESTARTobjDestruct(var)
 ENDobjDestruct(var)
 
 
+/* DebugPrint support for the var object */
+BEGINobjDebugPrint(var) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDebugPrint(var)
+	switch(pThis->varType) {
+		case VARTYPE_CSTR:
+			dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStr(pThis->val.vpCStr));
+			break;
+		default:
+			dbgoprint((obj_t*) pThis, "type %d currently not suppored in debug output\n", pThis->varType);
+			break;
+	}
+ENDobjDebugPrint(var)
+
+
+/* free the current values (destructs objects if necessary)
+ */
+static rsRetVal
+varUnsetValues(var_t *pThis)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, var);
+	if(pThis->varType == VARTYPE_CSTR)
+		rsCStrDestruct(&pThis->val.vpCStr);
+
+	pThis->varType = VARTYPE_NONE;
+
+	RETiRet;
+}
+
+
+/* set a string value
+ */
+rsRetVal
+varSetString(var_t *pThis, rsCStrObj *pCStr)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, var);
+
+	CHKiRet(varUnsetValues(pThis));
+	pThis->varType = VARTYPE_CSTR;
+	pThis->val.vpCStr = pCStr;
+
+finalize_it:
+	RETiRet;
+}
+
 
 /* Initialize the var class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(var, 1) /* class, version */
+	OBJSetMethodHandler(objMethod_DEBUGPRINT, varDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, varConstructFinalize);
 ENDObjClassInit(var)
 

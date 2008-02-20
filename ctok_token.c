@@ -61,6 +61,24 @@ CODESTARTobjDestruct(ctok_token)
 ENDobjDestruct(ctok_token)
 
 
+/* get the rsCStrObj from the token, but do not destruct it. This is meant to
+ * be used by a caller who passes on the string to some other function. The
+ * caller is responsible for destructing it.
+ * rgerhards, 2008-02-20
+ */
+rsRetVal
+ctok_tokenUnlinkCStr(ctok_token_t *pThis, rsCStrObj **ppCStr)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, ctok_token);
+	ASSERT(ppCStr != NULL);
+
+	*ppCStr = pThis->pstrVal;
+	pThis->pstrVal = NULL;
+
+	RETiRet;
+}
 
 BEGINObjClassInit(ctok_token, 1) /* class, version */
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, ctok_tokenConstructFinalize);
