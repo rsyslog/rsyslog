@@ -381,7 +381,7 @@ static rsRetVal objDeserializeStr(rsCStrObj **ppCStr, int iLen, strm_t *pStrm)
 
 finalize_it:
 	if(iRet != RS_RET_OK && pCStr != NULL)
-		rsCStrDestruct(pCStr);
+		rsCStrDestruct(&pCStr);
 
 	RETiRet;
 }

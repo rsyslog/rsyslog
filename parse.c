@@ -58,7 +58,7 @@ rsRetVal rsParsDestruct(rsParsObj *pThis)
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
 	if(pThis->pCStr != NULL)
-		rsCStrDestruct (pThis->pCStr);
+		rsCStrDestruct(&pThis->pCStr);
 	RSFREEOBJ(pThis);
 	return RS_RET_OK;
 }
@@ -101,7 +101,7 @@ rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz)
 
 	/* create parser */
 	if((iRet = rsParsConstruct(&pThis)) != RS_RET_OK) {
-		rsCStrDestruct (pCS);
+		rsCStrDestruct(&pCS);
 		FINALIZE;
 	}
 
@@ -257,7 +257,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bT
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
 	      && *pC != cDelim) {
 		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-			rsCStrDestruct (pCStr);
+			rsCStrDestruct(&pCStr);
 			FINALIZE;
 		}
 		++pThis->iCurrPos;
@@ -272,14 +272,14 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bT
 	 * remove anything at its end.
 	 */
 	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
-		rsCStrDestruct (pCStr);
+		rsCStrDestruct (&pCStr);
 		FINALIZE;
 	}
 
 	if(bTrimTrailing) {
 		if((iRet = rsCStrTrimTrailingWhiteSpace(pCStr)) 
 		   != RS_RET_OK) {
-			rsCStrDestruct (pCStr);
+			rsCStrDestruct (&pCStr);
 			FINALIZE;
 		}
 	}
@@ -332,13 +332,13 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 				 * we might later introduce other things, like \007!
 				 */
 				if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-					rsCStrDestruct (pCStr);
+					rsCStrDestruct(&pCStr);
 					FINALIZE;
 				}
 			}
 		} else { /* regular character */
 			if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-				rsCStrDestruct (pCStr);
+				rsCStrDestruct (&pCStr);
 				FINALIZE;
 			}
 		}
@@ -350,13 +350,13 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
 		++pThis->iCurrPos; /* 'eat' trailing quote */
 	} else {
 		/* error - improperly quoted string! */
-		rsCStrDestruct (pCStr);
+		rsCStrDestruct (&pCStr);
 		ABORT_FINALIZE(RS_RET_MISSING_TRAIL_QUOTE);
 	}
 
 	/* We got the string, let's finish it...  */
 	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
-		rsCStrDestruct (pCStr);
+		rsCStrDestruct (&pCStr);
 		FINALIZE;
 	}
 
@@ -399,7 +399,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
 	      && *pC != '/' && *pC != ',' && !isspace((int)*pC)) {
 		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-			rsCStrDestruct (pCStr);
+			rsCStrDestruct (&pCStr);
 			FINALIZE;
 		}
 		++pThis->iCurrPos;
@@ -408,7 +408,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	
 	/* We got the string, let's finish it...  */
 	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
-		rsCStrDestruct (pCStr);
+		rsCStrDestruct (&pCStr);
 		FINALIZE;
 	}
 

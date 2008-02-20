@@ -89,7 +89,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 							 ) {
 				dbgprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
-				rsCStrDestruct(pCStr);
+				rsCStrDestruct(&pCStr);
 				FINALIZE;
 			}
 		} else 	if(pTpe->eEntryType == FIELD) {
@@ -109,7 +109,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 			CHKiRet_Hdlr(rsCStrAppendStrWithLen(pCStr, (uchar*) pVal, iLenVal)) {
 				dbgprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
-				rsCStrDestruct(pCStr);
+				rsCStrDestruct(&pCStr);
 				if(bMustBeFreed)
 					free(pVal);
 				FINALIZE;
@@ -216,21 +216,21 @@ void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int es
 		if(*p == '\'') {
 			if(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\') != RS_RET_OK) {
 				doSQLEmergencyEscape(*pp, escapeMode);
-				rsCStrDestruct(pStrB);
+				rsCStrDestruct(&pStrB);
 				return;
 				}
 			iLen++;	/* reflect the extra character */
 		} else if((escapeMode == 1) && (*p == '\\')) {
 			if(rsCStrAppendChar(pStrB, '\\') != RS_RET_OK) {
 				doSQLEmergencyEscape(*pp, escapeMode);
-				rsCStrDestruct(pStrB);
+				rsCStrDestruct(&pStrB);
 				return;
 				}
 			iLen++;	/* reflect the extra character */
 		}
 		if(rsCStrAppendChar(pStrB, *p) != RS_RET_OK) {
 			doSQLEmergencyEscape(*pp, escapeMode);
-			rsCStrDestruct(pStrB);
+			rsCStrDestruct(&pStrB);
 			return;
 		}
 		++p;

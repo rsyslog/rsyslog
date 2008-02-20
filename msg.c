@@ -274,15 +274,15 @@ CODESTARTobjDestruct(msg)
 		if(pThis->pszPRI != NULL)
 			free(pThis->pszPRI);
 		if(pThis->pCSProgName != NULL)
-			rsCStrDestruct(pThis->pCSProgName);
+			rsCStrDestruct(&pThis->pCSProgName);
 		if(pThis->pCSStrucData != NULL)
-			rsCStrDestruct(pThis->pCSStrucData);
+			rsCStrDestruct(&pThis->pCSStrucData);
 		if(pThis->pCSAPPNAME != NULL)
-			rsCStrDestruct(pThis->pCSAPPNAME);
+			rsCStrDestruct(&pThis->pCSAPPNAME);
 		if(pThis->pCSPROCID != NULL)
-			rsCStrDestruct(pThis->pCSPROCID);
+			rsCStrDestruct(&pThis->pCSPROCID);
 		if(pThis->pCSMSGID != NULL)
-			rsCStrDestruct(pThis->pCSMSGID);
+			rsCStrDestruct(&pThis->pCSMSGID);
 		funcDeleteMutex(pThis);
 	} else {
 		pThis = NULL; /* tell framework not to destructing the object! */
@@ -480,8 +480,7 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 		 * the buffer and simply return. Note that this is NOT an error
 		 * case!
 		 */
-		rsCStrDestruct(pM->pCSPROCID);
-		pM->pCSPROCID = NULL;
+		rsCStrDestruct(&pM->pCSPROCID);
 		FINALIZE;
 	}
 

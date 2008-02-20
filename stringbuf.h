@@ -62,7 +62,7 @@ rsRetVal rsCStrConstructFromCStr(rsCStrObj **ppThis, rsCStrObj *pFrom);
 /**
  * Destruct the string buffer object.
  */
-void rsCStrDestruct(rsCStrObj *pThis);
+void rsCStrDestruct(rsCStrObj **ppThis);
 
 /**
  * Append a character to an existing string. If necessary, the

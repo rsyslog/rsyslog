@@ -129,14 +129,19 @@ finalize_it:
 }
 
 
-void rsCStrDestruct(rsCStrObj *pThis)
+void rsCStrDestruct(rsCStrObj **ppThis)
 {
+	rsCStrObj *pThis = *ppThis;
+
 	/* rgerhards 2005-10-19: The free of pBuf was contained in conditional compilation.
 	 * The code was only compiled if STRINGBUF_TRIM_ALLOCSIZE was set to 1. I honestly
 	 * do not know why it was so, I think it was an artifact. Anyhow, I have changed this
 	 * now. Should there any issue occur, this comment hopefully will shed some light 
 	 * on what happened. I re-verified, and this function has never before been called
 	 * by anyone. So changing it can have no impact for obvious reasons...
+	 *
+	 * rgerhards, 2008-02-20: I changed the interface to the new calling conventions, where
+	 * the destructor receives a pointer to the object, so that it can set it to NULL.
 	 */
 	if(pThis->pBuf != NULL) {
 		free(pThis->pBuf);
@@ -147,6 +152,7 @@ void rsCStrDestruct(rsCStrObj *pThis)
 	}
 
 	RSFREEOBJ(pThis);
+	*ppThis = NULL;
 }
 
 

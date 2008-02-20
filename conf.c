@@ -856,7 +856,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 		logerrorSz("error: invalid compare operation '%s' - ignoring selector",
 		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
 	}
-	rsCStrDestruct (pCSCompOp); /* no longer needed */
+	rsCStrDestruct(&pCSCompOp); /* no longer needed */
 
 	/* read compare value */
 	iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);

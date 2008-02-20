@@ -266,8 +266,7 @@ dbgprintf("var, var is: '%s'\n", rsCStrGetSzStr(pToken->pstrVal));
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pToken->pstrVal != NULL) {
-			rsCStrDestruct(pToken->pstrVal);
-			pToken->pstrVal = NULL;
+			rsCStrDestruct(&pToken->pstrVal);
 		}
 	}
 
@@ -315,8 +314,7 @@ dbgprintf("simpstr, str is: '%s'\n", rsCStrGetSzStr(pToken->pstrVal));
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pToken->pstrVal != NULL) {
-			rsCStrDestruct(pToken->pstrVal);
-			pToken->pstrVal = NULL;
+			rsCStrDestruct(&pToken->pstrVal);
 		}
 	}
 

@@ -989,15 +989,15 @@ selectorDestruct(void *pVal)
 	assert(pThis != NULL);
 
 	if(pThis->pCSHostnameComp != NULL)
-		rsCStrDestruct(pThis->pCSHostnameComp);
+		rsCStrDestruct(&pThis->pCSHostnameComp);
 	if(pThis->pCSProgNameComp != NULL)
-		rsCStrDestruct(pThis->pCSProgNameComp);
+		rsCStrDestruct(&pThis->pCSProgNameComp);
 
 	if(pThis->f_filter_type == FILTER_PROP) {
 		if(pThis->f_filterData.prop.pCSPropName != NULL)
-			rsCStrDestruct(pThis->f_filterData.prop.pCSPropName);
+			rsCStrDestruct(&pThis->f_filterData.prop.pCSPropName);
 		if(pThis->f_filterData.prop.pCSCompValue != NULL)
-			rsCStrDestruct(pThis->f_filterData.prop.pCSCompValue);
+			rsCStrDestruct(&pThis->f_filterData.prop.pCSCompValue);
 	} else if(pThis->f_filter_type == FILTER_EXPR) {
 		if(pThis->f_filterData.f_expr != NULL)
 			exprDestruct(&pThis->f_filterData.f_expr);
@@ -2697,13 +2697,11 @@ init(void)
 	 * free some objects that were just needed for loading it. rgerhards 2005-10-19
 	 */
 	if(pDfltHostnameCmp != NULL) {
-		rsCStrDestruct(pDfltHostnameCmp);
-		pDfltHostnameCmp = NULL;
+		rsCStrDestruct(&pDfltHostnameCmp);
 	}
 
 	if(pDfltProgNameCmp != NULL) {
-		rsCStrDestruct(pDfltProgNameCmp);
-		pDfltProgNameCmp = NULL;
+		rsCStrDestruct(&pDfltProgNameCmp);
 	}
 
 	/* some checks */

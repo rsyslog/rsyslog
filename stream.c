@@ -370,7 +370,7 @@ strmReadLine(strm_t *pThis, rsCStrObj **ppCStr)
 
 finalize_it:
 	if(iRet != RS_RET_OK && pCStr != NULL)
-		rsCStrDestruct(pCStr);
+		rsCStrDestruct(&pCStr);
 
 	RETiRet;
 }

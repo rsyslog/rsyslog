@@ -512,7 +512,7 @@ static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pStrB != NULL)
-			rsCStrDestruct(pStrB);
+			rsCStrDestruct(&pStrB);
 	}
 
 	RETiRet;
@@ -549,7 +549,7 @@ doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal, syslogNam
 
 finalize_it:
 	if(pStrB != NULL)
-		rsCStrDestruct(pStrB);
+		rsCStrDestruct(&pStrB);
 
 	RETiRet;
 }

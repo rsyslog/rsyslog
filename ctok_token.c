@@ -56,7 +56,7 @@ rsRetVal ctok_tokenConstructFinalize(ctok_token_t __attribute__((unused)) *pThis
 BEGINobjDestruct(ctok_token) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(ctok_token)
 	if(pThis->pstrVal != NULL) {
-		rsCStrDestruct(pThis->pstrVal);
+		rsCStrDestruct(&pThis->pstrVal);
 	}
 ENDobjDestruct(ctok_token)
 
