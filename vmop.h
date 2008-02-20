@@ -59,6 +59,7 @@ typedef struct vmop_s {
 		var_t *pVar;
 		/* TODO: add function pointer */
 	} operand;
+	struct vmop_s *pNext; /* next operation or NULL, if end of program (logically this belongs to vmprg) */
 } vmop_t;
 
 

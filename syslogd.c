@@ -171,6 +171,7 @@
 #include "ctok.h"
 #include "conf.h"
 #include "vmop.h"
+#include "vmprg.h"
 
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
@@ -3418,6 +3419,7 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(wtpClassInit());
 	CHKiRet(queueClassInit());
 	CHKiRet(vmopClassInit());
+	CHKiRet(vmprgClassInit());
 	CHKiRet(varClassInit());
 	CHKiRet(ctok_tokenClassInit());
 	CHKiRet(ctokClassInit());
