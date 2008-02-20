@@ -2058,7 +2058,7 @@ DEFpropSetMeth(queue, sizeOnDiskMax, int64);
  * rgerhards, 2008-01-11
  */
 #define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
-static rsRetVal queueSetProperty(queue_t *pThis, property_t *pProp)
+static rsRetVal queueSetProperty(queue_t *pThis, var_t *pProp)
 {
 	DEFiRet;
 

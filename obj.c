@@ -180,7 +180,6 @@ rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj)
 {
 	DEFiRet;
 
-dbgprintf("objBeginSerialize obj type: %x\n", objGetObjID(pStrm));
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_assert(pObj);
 	
@@ -218,14 +217,14 @@ finalize_it:
 
 /* append a property
  */
-rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t propType, void *pUsr)
+rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, varType_t propType, void *pUsr)
 {
 	DEFiRet;
 	uchar *pszBuf = NULL;
 	size_t lenBuf = 0;
 	uchar szBuf[64];
 
-	assert(pStrm != NULL);
+	ISOBJ_TYPE_assert(pStrm, strm);
 	assert(pszPropName != NULL);
 
 	/*dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n", pStrm, pszPropName, propType, pUsr);*/
@@ -240,30 +239,30 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t prop
 	/* TODO: use the stream functions for data conversion here - should be quicker */
 
 	switch(propType) {
-		case PROPTYPE_PSZ:
+		case VARTYPE_PSZ:
 			pszBuf = (uchar*) pUsr;
 			lenBuf = strlen((char*) pszBuf);
 			break;
-		case PROPTYPE_SHORT:
+		case VARTYPE_SHORT:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((short*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = strlen((char*) szBuf);
 			break;
-		case PROPTYPE_INT:
+		case VARTYPE_INT:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((int*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = strlen((char*) szBuf);
 			break;
-		case PROPTYPE_LONG:
+		case VARTYPE_LONG:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), *((long*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = strlen((char*) szBuf);
 			break;
-		case PROPTYPE_CSTR:
+		case VARTYPE_CSTR:
 			pszBuf = rsCStrGetSzStrNoNULL((rsCStrObj *) pUsr);
 			lenBuf = rsCStrLen((rsCStrObj*) pUsr);
 			break;
-		case PROPTYPE_SYSLOGTIME:
+		case VARTYPE_SYSLOGTIME:
 			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%d:%d:%d:%d:%d:%d:%d:%d:%d:%c:%d:%d",
 					  ((syslogTime_t*)pUsr)->timeType,
 					  ((syslogTime_t*)pUsr)->year,
@@ -466,7 +465,7 @@ finalize_it:
 /* Deserialize a single property. Pointer must be positioned at begin of line. Whole line
  * up until the \n is read.
  */
-static rsRetVal objDeserializeProperty(property_t *pProp, strm_t *pStrm)
+static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 {
 	DEFiRet;
 	long i;
@@ -495,32 +494,31 @@ static rsRetVal objDeserializeProperty(property_t *pProp, strm_t *pStrm)
 
 	/* property type */
 	CHKiRet(objDeserializeLong(&i, pStrm));
-	pProp->propType = i;
+	pProp->varType = i;
 
 	/* size (needed for strings) */
 	CHKiRet(objDeserializeLong(&iLen, pStrm));
 
 	/* we now need to deserialize the value */
-//dbgprintf("deserialized property name '%s', type %d, size %ld, c: %c\n", rsCStrGetSzStrNoNULL(pProp->pcsName), pProp->propType, iLen, c);
-	switch(pProp->propType) {
-		case PROPTYPE_PSZ:
+	switch(pProp->varType) {
+		case VARTYPE_PSZ:
 			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pStrm));
 			break;
-		case PROPTYPE_SHORT:
+		case VARTYPE_SHORT:
 			CHKiRet(objDeserializeLong(&i, pStrm));
 			pProp->val.vShort = i;
 			break;
-		case PROPTYPE_INT:
+		case VARTYPE_INT:
 			CHKiRet(objDeserializeLong(&i, pStrm));
 			pProp->val.vInt = i;
 			break;
-		case PROPTYPE_LONG:
+		case VARTYPE_LONG:
 			CHKiRet(objDeserializeLong(&pProp->val.vLong, pStrm));
 			break;
-		case PROPTYPE_CSTR:
+		case VARTYPE_CSTR:
 			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pStrm));
 			break;
-		case PROPTYPE_SYSLOGTIME:
+		case VARTYPE_SYSLOGTIME:
 			CHKiRet(objDeserializeSyslogTime(&pProp->val.vSyslogTime, pStrm));
 			break;
 	}
@@ -604,19 +602,21 @@ finalize_it:
 static rsRetVal objDeserializeProperties(obj_t *pObj, objID_t oID, strm_t *pStrm)
 {
 	DEFiRet;
-	property_t propBuf;
+	var_t *pVar;
 
 	ISOBJ_assert(pObj);
 	ISOBJ_TYPE_assert(pStrm, strm);
-	assert(oID > 0 && oID < OBJ_NUM_IDS);
+	ASSERT(oID > 0 && oID < OBJ_NUM_IDS);
 
-	iRet = objDeserializeProperty(&propBuf, pStrm);
+	CHKiRet(varConstruct(&pVar));
+	CHKiRet(varConstructFinalize(pVar));
+
+	iRet = objDeserializeProperty(pVar, pStrm);
 	while(iRet == RS_RET_OK) {
-		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_SETPROPERTY](pObj, &propBuf));
-		iRet = objDeserializeProperty(&propBuf, pStrm);
+		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_SETPROPERTY](pObj, pVar));
+		iRet = objDeserializeProperty(pVar, pStrm);
 	}
-	rsCStrDestruct(propBuf.pcsName); /* todo: a destructor would be nice here... -- rger, 2008-01-07 */
-	// TODO: do we have a mem leak for the other CStr in this struct?
+	varDestruct(&pVar);
 
 	if(iRet != RS_RET_NO_PROPLINE)
 		FINALIZE;
@@ -699,11 +699,8 @@ rsRetVal objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
 	objID_t oID = 0; /* this assignment is just to supress a compiler warning - this saddens me */
 	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
 
-dbgprintf("objDese...AsPropBag 0\n");
 	ISOBJ_assert(pObj);
-dbgprintf("objDese...AsPropBag 0a\n");
 	ISOBJ_TYPE_assert(pStrm, strm);
-dbgprintf("objDese...AsPropBag 1\n");
 
 	/* we de-serialize the header. if all goes well, we are happy. However, if
 	 * we experience a problem, we try to recover. We do this by skipping to
@@ -720,7 +717,6 @@ dbgprintf("objDese...AsPropBag 1\n");
 		}
 	} while(iRetLocal != RS_RET_OK);
 
-dbgprintf("objDese...AsPropBag 2\n");
 	if(oID != objGetObjID(pObj))
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 

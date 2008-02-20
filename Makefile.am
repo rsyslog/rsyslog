@@ -26,6 +26,8 @@ rsyslogd_SOURCES = \
 	threads.h \
 	stream.c \
 	stream.h \
+	var.c \
+	var.h \
 	wtp.c \
 	wtp.h \
 	wti.c \

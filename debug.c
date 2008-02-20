@@ -57,7 +57,7 @@ static dbgThrdInfo_t *dbgGetThrdInfo(void);
 /* static data (some time to be replaced) */
 int	Debug;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
-static int bLogFuncFlow = 1; /* shall the function entry and exit be logged to the debug log? */
+static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bLogAllocFree = 0; /* shall calls to (m/c)alloc and free be logged to the debug log? */
 static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bPrintMutexAction = 0; /* shall mutex calls be printed to the debug log? */

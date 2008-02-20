@@ -803,7 +803,7 @@ finalize_it:
  * rgerhards, 2008-01-11
  */
 #define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
-rsRetVal strmSetProperty(strm_t *pThis, property_t *pProp)
+rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 {
 	DEFiRet;
 

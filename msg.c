@@ -2082,7 +2082,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
  * rgerhards, 2008-01-07
  */
 #define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
-rsRetVal MsgSetProperty(msg_t *pThis, property_t *pProp)
+rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 {
 	DEFiRet;
 

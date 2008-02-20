@@ -31,29 +31,6 @@
 #include "stringbuf.h"
 #include "syslogd-types.h"
 
-/* property types */
-typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc() */
-	PROPTYPE_PSZ = 1,
-	PROPTYPE_SHORT = 2,
-	PROPTYPE_INT = 3,
-	PROPTYPE_LONG = 4,
-	PROPTYPE_CSTR = 5,
-	PROPTYPE_SYSLOGTIME = 6
-} propertyType_t;
-
-typedef struct {
-	rsCStrObj *pcsName;
-	propertyType_t propType;
-	union {
-		short vShort;
-		int vInt;
-		long vLong;
-		rsCStrObj *vpCStr; /* used for both rsCStr and psz */
-		syslogTime_t vSyslogTime;
-
-	} val;
-} property_t;
-
 /* object Types/IDs */
 typedef enum {	/* IDs of known object "types/classes" */
 	OBJNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
@@ -64,9 +41,10 @@ typedef enum {	/* IDs of known object "types/classes" */
 	OBJqueue = 5,
 	OBJctok = 6,
 	OBJctok_token = 7,
-	OBJexpr = 8	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
+	OBJvar = 8,
+	OBJexpr = 9	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
 } objID_t;	
-#define OBJ_NUM_IDS 9
+#define OBJ_NUM_IDS 10
 
 typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
 		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04

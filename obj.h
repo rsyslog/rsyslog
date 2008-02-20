@@ -45,6 +45,7 @@
 #define OBJ_H_INCLUDED
 
 #include "obj-types.h"
+#include "var.h"
 #include "stream.h"
 
 /* macros */
@@ -60,11 +61,11 @@
 	}
 
 #define objSerializeSCALAR_VAR(strm, propName, propType, var) \
-	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &var));
+	CHKiRet(objSerializeProp(strm, (uchar*) #propName, VARTYPE_##propType, (void*) &var));
 #define objSerializeSCALAR(strm, propName, propType) \
-	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
+	CHKiRet(objSerializeProp(strm, (uchar*) #propName, VARTYPE_##propType, (void*) &pThis->propName));
 #define objSerializePTR(strm, propName, propType) \
-	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
+	CHKiRet(objSerializeProp(strm, (uchar*) #propName, VARTYPE_##propType, (void*) pThis->propName));
 #define DEFobjStaticHelpers static objInfo_t *pObjInfoOBJ = NULL;
 #define objGetClassName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
 #define objGetObjID(pThis) (((obj_t*) (pThis))->pObjInfo->objID)
@@ -91,7 +92,7 @@ rsRetVal objDestructObjSelf(obj_t *pThis);
 rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
 rsRetVal objBeginSerializePropBag(strm_t *pStrm, obj_t *pObj);
 rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj);
-rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propertyType_t propType, void *pUsr);
+rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, varType_t propType, void *pUsr);
 rsRetVal objEndSerialize(strm_t *pStrm);
 rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo);
 rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);

@@ -53,22 +53,6 @@ DEFobjStaticHelpers
 /* forward definiton - thanks to recursive ABNF, we can not avoid at least one ;) */
 static rsRetVal expr(expr_t *pThis, ctok_t *ctok);
 
-#if 0
-static rsRetVal
-template(expr_t *pThis, ctok_t *ctok)
-{
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, expr);
-	ISOBJ_TYPE_assert(ctok, ctok);
-
-
-finalize_it:
-	RETiRet;
-}
-#endif
-
-
 
 static rsRetVal
 terminal(expr_t *pThis, ctok_t *ctok)
@@ -84,18 +68,24 @@ terminal(expr_t *pThis, ctok_t *ctok)
 	switch(pToken->tok) {
 		case ctok_SIMPSTR:
 			dbgoprint((obj_t*) pThis, "simpstr\n");
+			// push val
 			break;
 		case ctok_NUMBER:
 			dbgoprint((obj_t*) pThis, "number\n");
+			// push val
 			break;
 		case ctok_FUNCTION:
 			dbgoprint((obj_t*) pThis, "function\n");
+			// vm: call - well, need to implement that first
+			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 			break;
 		case ctok_MSGVAR:
 			dbgoprint((obj_t*) pThis, "MSGVAR\n");
+			// push val
 			break;
 		case ctok_SYSVAR:
 			dbgoprint((obj_t*) pThis, "SYSVAR\n");
+			// push val
 			break;
 		case ctok_LPAREN:
 			dbgoprint((obj_t*) pThis, "expr\n");
@@ -129,7 +119,6 @@ factor(expr_t *pThis, ctok_t *ctok)
 
 	CHKiRet(ctokGetToken(ctok, &pToken));
 	if(pToken->tok == ctok_NOT) {
-		/* TODO: fill structure */
 		dbgprintf("not\n");
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(ctokGetToken(ctok, &pToken)); /* get next one */
@@ -138,6 +127,7 @@ factor(expr_t *pThis, ctok_t *ctok)
 		CHKiRet(ctokUngetToken(ctok, pToken));
 	}
 	CHKiRet(terminal(pThis, ctok));
+	// vm: not
 
 finalize_it:
 	RETiRet;
@@ -153,6 +143,7 @@ term(expr_t *pThis, ctok_t *ctok)
 	ISOBJ_TYPE_assert(ctok, ctok);
 
 	CHKiRet(factor(pThis, ctok));
+	// vm: +/-
 
 finalize_it:
 	RETiRet;
@@ -169,7 +160,7 @@ val(expr_t *pThis, ctok_t *ctok)
 
 	CHKiRet(ctokGetToken(ctok, &pToken));
 	if(pToken->tok == ctok_PLUS || pToken->tok == ctok_MINUS) {
-		/* TODO: fill structure */
+		/* TODO: this must be a loop! */
 		dbgprintf("plus/minus\n");
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(ctokGetToken(ctok, &pToken)); /* get next one */
@@ -179,6 +170,7 @@ val(expr_t *pThis, ctok_t *ctok)
 	}
 
 	CHKiRet(term(pThis, ctok));
+	// vm: +/-
 
 finalize_it:
 	RETiRet;
@@ -203,6 +195,7 @@ e_cmp(expr_t *pThis, ctok_t *ctok)
 		/* fill structure */
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(val(pThis, ctok));
+		// vm: cmpop
 	} else {
 		/* we could not process the token, so push it back */
 		CHKiRet(ctokUngetToken(ctok, pToken));
@@ -232,6 +225,7 @@ e_and(expr_t *pThis, ctok_t *ctok)
 		/* fill structure */
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(e_cmp(pThis, ctok));
+		// VM: and
 		CHKiRet(ctokGetToken(ctok, &pToken));
 	}
 
@@ -263,6 +257,7 @@ expr(expr_t *pThis, ctok_t *ctok)
 		dbgoprint((obj_t*) pThis, "found OR\n");
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(e_and(pThis, ctok));
+		// VM: or
 		CHKiRet(ctokGetToken(ctok, &pToken));
 	}
 
