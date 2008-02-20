@@ -51,7 +51,9 @@ typedef struct vmprg_s {
 rsRetVal vmprgConstruct(vmprg_t **ppThis);
 rsRetVal vmprgConstructFinalize(vmprg_t __attribute__((unused)) *pThis);
 rsRetVal vmprgDestruct(vmprg_t **ppThis);
-rsRetVal addOperation(vmprg_t *pThis, vmop_t *pOp);
+rsRetVal vmprgAddOperation(vmprg_t *pThis, vmop_t *pOp);
+rsRetVal vmprgAddVarOperation(vmprg_t *pThis, opcode_t opcode, var_t *pVar);
 PROTOTYPEObjClassInit(vmprg);
+PROTOTYPEObjDebugPrint(vmprg);
 
 #endif /* #ifndef INCLUDED_VMPRG_H */

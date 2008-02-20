@@ -65,13 +65,53 @@ CODESTARTobjDestruct(vmprg)
 ENDobjDestruct(vmprg)
 
 
+/* destructor for the vmop object */
+BEGINobjDebugPrint(vmprg) /* be sure to specify the object type also in END and CODESTART macros! */
+	vmop_t *pOp;
+CODESTARTobjDebugPrint(vmprg)
+	dbgoprint((obj_t*) pThis, "program contents:\n");
+	for(pOp = pThis->vmopRoot ; pOp != NULL ; pOp = pOp->pNext) {
+		vmopDebugPrint(pOp);
+	}
+ENDobjDebugPrint(vmprg)
+
+
+/* this is a shortcut for high-level callers. It creates a new vmop, sets its
+ * parameters and adds it to the program - all in one big step. If there is no
+ * var associated with this operation, the caller can simply supply NULL as
+ * pVar.
+ */
+rsRetVal
+vmprgAddVarOperation(vmprg_t *pThis, opcode_t opcode, var_t *pVar)
+{
+	DEFiRet;
+	vmop_t *pOp;
+
+	ISOBJ_TYPE_assert(pThis, vmprg);
+
+	/* construct and fill vmop */
+	CHKiRet(vmopConstruct(&pOp));
+	CHKiRet(vmopConstructFinalize(pOp));
+	CHKiRet(vmopConstructFinalize(pOp));
+	CHKiRet(vmopSetOpcode(pOp, opcode));
+	if(pVar != NULL)
+		CHKiRet(vmopSetVar(pOp, pVar));
+
+	/* and add it to the program */
+	CHKiRet(vmprgAddOperation(pThis, pOp));
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* add an operation (instruction) to the end of the current program. This
  * function is expected to be called while creating the program, but never
  * again after this is done and it is being executed. Results are undefined if
  * it is called after execution.
  */
 rsRetVal
-addOperation(vmprg_t *pThis, vmop_t *pOp)
+vmprgAddOperation(vmprg_t *pThis, vmop_t *pOp)
 {
 	DEFiRet;
 
@@ -94,6 +134,7 @@ addOperation(vmprg_t *pThis, vmop_t *pOp)
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(vmprg, 1) /* class, version */
+	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmprgDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, vmprgConstructFinalize);
 ENDObjClassInit(vmprg)
 

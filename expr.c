@@ -163,6 +163,7 @@ val(expr_t *pThis, ctok_t *ctok)
 		/* TODO: this must be a loop! */
 		dbgprintf("plus/minus\n");
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
+		// vm: +/-???
 		CHKiRet(ctokGetToken(ctok, &pToken)); /* get next one */
 	} else {
 		/* we could not process the token, so push it back */
@@ -170,7 +171,6 @@ val(expr_t *pThis, ctok_t *ctok)
 	}
 
 	CHKiRet(term(pThis, ctok));
-	// vm: +/-
 
 finalize_it:
 	RETiRet;
@@ -192,10 +192,9 @@ e_cmp(expr_t *pThis, ctok_t *ctok)
 	CHKiRet(ctokGetToken(ctok, &pToken));
 	if(ctok_tokenIsCmpOp(pToken)) {
 		dbgoprint((obj_t*) pThis, "cmp\n");
-		/* fill structure */
-		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(val(pThis, ctok));
-		// vm: cmpop
+		CHKiRet(vmprgAddVarOperation(pThis->pVmprg, (opcode_t) pToken->tok, NULL)); /* add to program */
+		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 	} else {
 		/* we could not process the token, so push it back */
 		CHKiRet(ctokUngetToken(ctok, pToken));
@@ -225,7 +224,7 @@ e_and(expr_t *pThis, ctok_t *ctok)
 		/* fill structure */
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(e_cmp(pThis, ctok));
-		// VM: and
+		CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_AND, NULL)); /* add to program */
 		CHKiRet(ctokGetToken(ctok, &pToken));
 	}
 
@@ -257,7 +256,7 @@ expr(expr_t *pThis, ctok_t *ctok)
 		dbgoprint((obj_t*) pThis, "found OR\n");
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(e_and(pThis, ctok));
-		// VM: or
+		CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_OR, NULL)); /* add to program */
 		CHKiRet(ctokGetToken(ctok, &pToken));
 	}
 
@@ -298,7 +297,8 @@ rsRetVal exprConstructFinalize(expr_t *pThis)
 /* destructor for the expr object */
 BEGINobjDestruct(expr) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(expr)
-	/* ... then free resources */
+	if(pThis->pVmprg != NULL)
+		vmprgDestruct(&pThis->pVmprg);
 ENDobjDestruct(expr)
 
 
@@ -352,8 +352,14 @@ exprParse(expr_t *pThis, ctok_t *ctok)
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
 
+	/* first, we need to make sure we have a program where we can add to what we parse... */
+	CHKiRet(vmprgConstruct(&pThis->pVmprg));
+	CHKiRet(vmprgConstructFinalize(pThis->pVmprg));
+
+	/* happy parsing... */
 	CHKiRet(expr(pThis, ctok));
 	dbgoprint((obj_t*) pThis, "successfully parsed/created expression\n");
+vmprgDebugPrint(pThis->pVmprg);
 
 finalize_it:
 	RETiRet;

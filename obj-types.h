@@ -231,5 +231,25 @@ finalize_it: \
 	} 
 
 
+/* this defines the debug print entry point. DebugPrint is optional. If
+ * it is provided, the object should output some meaningful information
+ * via the debug system.
+ * rgerhards, 2008-02-20
+ */
+#define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
+#define BEGINobjDebugPrint(obj) \
+	rsRetVal obj##DebugPrint(obj##_t *pThis) \
+	{ \
+		DEFiRet; \
+
+#define CODESTARTobjDebugPrint(obj) \
+		ASSERT(pThis != NULL); \
+		ISOBJ_TYPE_assert(pThis, obj); \
+
+#define ENDobjDebugPrint(obj) \
+		RETiRet; \
+	} 
+
+
 
 #endif /* #ifndef OBJ_TYPES_H_INCLUDED */

@@ -58,6 +58,13 @@ CODESTARTobjDestruct(vmop)
 ENDobjDestruct(vmop)
 
 
+/* destructor for the vmop object */
+BEGINobjDebugPrint(vmop) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDebugPrint(vmop)
+	dbgoprint((obj_t*) pThis, "operation: %d, next %p\n", (int) pThis->opcode, pThis->pNext);
+ENDobjDebugPrint(vmop)
+
+
 /* set operand (variant case)
  * rgerhards, 2008-02-20
  */
@@ -90,6 +97,7 @@ vmopSetOpcode(vmop_t *pThis, opcode_t opcode)
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(vmop, 1) /* class, version */
+	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmopDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, vmopConstructFinalize);
 ENDObjClassInit(vmop)
 

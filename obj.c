@@ -1,5 +1,3 @@
-// TODO: we need to be called when the derived object is destructed!!!!
-
 /* obj.c
  *
  * This file implements a generic object "class". All other classes can

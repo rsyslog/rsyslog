@@ -70,5 +70,6 @@ rsRetVal vmopDestruct(vmop_t **ppThis);
 rsRetVal vmopSetOpcode(vmop_t *pThis, opcode_t opcode);
 rsRetVal vmopSetVar(vmop_t *pThis, var_t *pVar);
 PROTOTYPEObjClassInit(vmop);
+PROTOTYPEObjDebugPrint(vmop);
 
 #endif /* #ifndef INCLUDED_VMOP_H */
