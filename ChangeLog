@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.12.0 (rgerhards), 2008-02-??
+---------------------------------------------------------------------------
 Version 3.11.4 (rgerhards), 2008-02-21
 - bugfix: debug.html was missing from release tarball - thanks to Michael
   Biebl for bringing this to my attention
