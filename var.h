@@ -38,13 +38,13 @@ typedef enum {
 /* the var object */
 typedef struct var_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	rsCStrObj *pcsName;
+	cstr_t *pcsName;
 	varType_t varType;
 	union {
 		short vShort;
 		int vInt;
 		long vLong;
-		rsCStrObj *vpCStr; /* used for both rsCStr and psz */
+		cstr_t *vpCStr; /* used for both rsCStr and psz */
 		syslogTime_t vSyslogTime;
 
 	} val;
@@ -55,7 +55,7 @@ typedef struct var_s {
 rsRetVal varConstruct(var_t **ppThis);
 rsRetVal varConstructFinalize(var_t __attribute__((unused)) *pThis);
 rsRetVal varDestruct(var_t **ppThis);
-rsRetVal varSetString(var_t *pThis, rsCStrObj *pCStr);
+rsRetVal varSetString(var_t *pThis, cstr_t *pCStr);
 PROTOTYPEObjClassInit(var);
 PROTOTYPEObjDebugPrint(var);
 

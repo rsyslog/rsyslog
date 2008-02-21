@@ -1526,7 +1526,7 @@ static uchar *getNOW(eNOWType eNow)
  * rgerhards 2005-09-15
  */
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 rsCStrObj *pCSPropName, unsigned short *pbMustBeFreed)
+                 cstr_t *pCSPropName, unsigned short *pbMustBeFreed)
 {
 	uchar *pName;
 	char *pRes; /* result pointer */

@@ -56,7 +56,7 @@ struct rsParsObject
 #ifndef NDEBUG
 	rsObjID OID;			/**< object ID */
 #endif
-	rsCStrObj *pCStr;		/**< pointer to the string object we are parsing */
+	cstr_t *pCStr;		/**< pointer to the string object we are parsing */
 	int iCurrPos;			/**< current parsing position (char offset) */
 };
 typedef struct rsParsObject rsParsObj;
@@ -71,7 +71,7 @@ int rsParsGetParsePointer(rsParsObj *pThis);
  * Construct a rsPars object.
  */
 rsRetVal rsParsConstruct(rsParsObj **ppThis);
-rsRetVal rsParsAssignString(rsParsObj *pThis, rsCStrObj *pCStr);
+rsRetVal rsParsAssignString(rsParsObj *pThis, cstr_t *pCStr);
 
 /* parse an integer. The parse pointer is advanced */
 rsRetVal parsInt(rsParsObj *pThis, int* pInt);
@@ -91,10 +91,10 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis);
  * Output:
  * ppCStr Pointer to the parsed string
  */
-rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing);
+rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing);
 
 rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c);
-rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr);
+rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr);
 rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz);
 rsRetVal rsParsDestruct(rsParsObj *pThis);
 int parsIsAtEndOfParseString(rsParsObj *pThis);

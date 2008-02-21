@@ -96,7 +96,7 @@ static void skip_Comma(char **pp)
 static int get_Field(uchar **pp, uchar **pField)
 {
 	register uchar *p;
-	rsCStrObj *pStrB;
+	cstr_t *pStrB;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -161,7 +161,7 @@ static int get_off_t(uchar **pp, off_t *pOff_t)
 static inline int get_restOfLine(uchar **pp, uchar **pBuf)
 {
 	register uchar *p;
-	rsCStrObj *pStrB;
+	cstr_t *pStrB;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);

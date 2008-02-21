@@ -60,7 +60,7 @@ terminal(expr_t *pThis, ctok_t *ctok)
 	DEFiRet;
 	ctok_token_t *pToken;
 	var_t *pVar;
-	rsCStrObj *pCStr;
+	cstr_t *pCStr;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(ctok, ctok);
@@ -339,7 +339,7 @@ exprEval(expr_t *pThis, msg_t *pMsg)
  * rgerhards, 2008-02-09 (a rainy tenerife return flight day ;))
  */
 rsRetVal
-exprGetStr(expr_t *pThis, rsCStrObj **ppStr)
+exprGetStr(expr_t *pThis, cstr_t **ppStr)
 {
 	DEFiRet;
 	

@@ -40,7 +40,7 @@ rsRetVal processConfFile(uchar *pConfFile);
 /* TODO: remove them below (means move the config init code) -- rgerhards, 2008-02-19 */
 extern uchar *pModDir; /* read-only after startup */
 extern EHostnameCmpMode eDfltHostnameCmpMode;
-extern rsCStrObj *pDfltHostnameCmp;
-extern rsCStrObj *pDfltProgNameCmp;
+extern cstr_t *pDfltHostnameCmp;
+extern cstr_t *pDfltProgNameCmp;
 
 #endif /* #ifndef INCLUDED_CONF_H */

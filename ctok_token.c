@@ -61,13 +61,13 @@ CODESTARTobjDestruct(ctok_token)
 ENDobjDestruct(ctok_token)
 
 
-/* get the rsCStrObj from the token, but do not destruct it. This is meant to
+/* get the cstr_t from the token, but do not destruct it. This is meant to
  * be used by a caller who passes on the string to some other function. The
  * caller is responsible for destructing it.
  * rgerhards, 2008-02-20
  */
 rsRetVal
-ctok_tokenUnlinkCStr(ctok_token_t *pThis, rsCStrObj **ppCStr)
+ctok_tokenUnlinkCStr(ctok_token_t *pThis, cstr_t **ppCStr)
 {
 	DEFiRet;
 

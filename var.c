@@ -105,7 +105,7 @@ varUnsetValues(var_t *pThis)
 /* set a string value
  */
 rsRetVal
-varSetString(var_t *pThis, rsCStrObj *pCStr)
+varSetString(var_t *pThis, cstr_t *pCStr)
 {
 	DEFiRet;
 

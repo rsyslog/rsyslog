@@ -85,11 +85,11 @@ struct msg {
 	uchar	*pszRcvFrom;	/* System message was received from */
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
 	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
-	rsCStrObj *pCSProgName;	/* the (BSD) program name */
-	rsCStrObj *pCSStrucData;/* STRUCTURED-DATA */
-	rsCStrObj *pCSAPPNAME;	/* APP-NAME */
-	rsCStrObj *pCSPROCID;	/* PROCID */
-	rsCStrObj *pCSMSGID;	/* MSGID */
+	cstr_t *pCSProgName;	/* the (BSD) program name */
+	cstr_t *pCSStrucData;/* STRUCTURED-DATA */
+	cstr_t *pCSAPPNAME;	/* APP-NAME */
+	cstr_t *pCSPROCID;	/* PROCID */
+	cstr_t *pCSMSGID;	/* MSGID */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
 	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
@@ -152,7 +152,7 @@ void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg);
 void moveHOSTNAMEtoTAG(msg_t *pM);
 char *getMSGID(msg_t *pM);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 rsCStrObj *pCSPropName, unsigned short *pbMustBeFreed);
+                 cstr_t *pCSPropName, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal MsgEnableThreadSafety(void);
 

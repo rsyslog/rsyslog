@@ -64,7 +64,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 {
 	DEFiRet;
 	struct templateEntry *pTpe;
-	rsCStrObj *pCStr;
+	cstr_t *pCStr;
 	unsigned short bMustBeFreed;
 	uchar *pVal;
 	size_t iLenVal;
@@ -184,7 +184,7 @@ void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int es
 {
 	uchar *p;
 	int iLen;
-	rsCStrObj *pStrB;
+	cstr_t *pStrB;
 	uchar *pszGenerated;
 
 	assert(pp != NULL);
@@ -310,7 +310,7 @@ struct template* tplConstruct(void)
 static int do_Constant(unsigned char **pp, struct template *pTpl)
 {
 	register unsigned char *p;
-	rsCStrObj *pStrB;
+	cstr_t *pStrB;
 	struct templateEntry *pTpe;
 	int i;
 
@@ -473,7 +473,7 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 static int do_Parameter(unsigned char **pp, struct template *pTpl)
 {
 	unsigned char *p;
-	rsCStrObj *pStrB;
+	cstr_t *pStrB;
 	struct templateEntry *pTpe;
 	int iNum;	/* to compute numbers */
 

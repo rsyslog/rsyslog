@@ -97,7 +97,7 @@ rsRetVal strmSetMaxFileSize(strm_t *pThis, int64 iMaxFileSize);
 rsRetVal strmSetFileName(strm_t *pThis, uchar *pszName, size_t iLenName);
 rsRetVal strmReadChar(strm_t *pThis, uchar *pC);
 rsRetVal strmUnreadChar(strm_t *pThis, uchar c);
-rsRetVal strmReadLine(strm_t *pThis, rsCStrObj **ppCStr);
+rsRetVal strmReadLine(strm_t *pThis, cstr_t **ppCStr);
 rsRetVal strmSeekCurrOffs(strm_t *pThis);
 rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
 rsRetVal strmWriteChar(strm_t *pThis, uchar c);

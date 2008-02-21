@@ -50,14 +50,14 @@
  * ################################################################# */
 
 
-rsRetVal rsCStrConstruct(rsCStrObj **ppThis)
+rsRetVal rsCStrConstruct(cstr_t **ppThis)
 {
 	DEFiRet;
-	rsCStrObj *pThis;
+	cstr_t *pThis;
 
 	ASSERT(ppThis != NULL);
 
-	if((pThis = (rsCStrObj*) calloc(1, sizeof(rsCStrObj))) == NULL)
+	if((pThis = (cstr_t*) calloc(1, sizeof(cstr_t))) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	rsSETOBJTYPE(pThis, OIDrsCStr);
@@ -76,10 +76,10 @@ finalize_it:
 /* construct from sz string
  * rgerhards 2005-09-15
  */
-rsRetVal rsCStrConstructFromszStr(rsCStrObj **ppThis, uchar *sz)
+rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
 {
 	DEFiRet;
-	rsCStrObj *pThis;
+	cstr_t *pThis;
 
 	assert(ppThis != NULL);
 
@@ -104,10 +104,10 @@ finalize_it:
  * copied, not the szString.
  * rgerhards 2005-10-18
  */
-rsRetVal rsCStrConstructFromCStr(rsCStrObj **ppThis, rsCStrObj *pFrom)
+rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom)
 {
 	DEFiRet;
-	rsCStrObj *pThis;
+	cstr_t *pThis;
 
 	assert(ppThis != NULL);
 	rsCHECKVALIDOBJECT(pFrom, OIDrsCStr);
@@ -129,9 +129,9 @@ finalize_it:
 }
 
 
-void rsCStrDestruct(rsCStrObj **ppThis)
+void rsCStrDestruct(cstr_t **ppThis)
 {
-	rsCStrObj *pThis = *ppThis;
+	cstr_t *pThis = *ppThis;
 
 	/* rgerhards 2005-10-19: The free of pBuf was contained in conditional compilation.
 	 * The code was only compiled if STRINGBUF_TRIM_ALLOCSIZE was set to 1. I honestly
@@ -163,7 +163,7 @@ void rsCStrDestruct(rsCStrObj **ppThis)
  * some more characters may be added after these.
  * rgerhards, 2008-01-07
  */
-static rsRetVal rsCStrExtendBuf(rsCStrObj *pThis, size_t iMinNeeded)
+static rsRetVal rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
 {
 	DEFiRet;
 	uchar *pNewBuf;
@@ -204,7 +204,7 @@ finalize_it:
  * I optimized this function to use memcpy(), among others. Consider it a
  * rewrite (which may be good to know in case of bugs) -- rgerhards, 2008-01-07
  */
-rsRetVal rsCStrAppendStrWithLen(rsCStrObj *pThis, uchar* psz, size_t iStrLen)
+rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, uchar* psz, size_t iStrLen)
 {
 	DEFiRet;
 
@@ -230,13 +230,13 @@ finalize_it:
  * need to change existing code.
  * rgerhards, 2007-07-03
  */
-rsRetVal rsCStrAppendStr(rsCStrObj *pThis, uchar* psz)
+rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz)
 {
 	return rsCStrAppendStrWithLen(pThis, psz, strlen((char*) psz));
 }
 
 
-rsRetVal rsCStrAppendInt(rsCStrObj *pThis, long i)
+rsRetVal rsCStrAppendInt(cstr_t *pThis, long i)
 {
 	DEFiRet;
 	uchar szBuf[32];
@@ -251,7 +251,7 @@ finalize_it:
 }
 
 
-rsRetVal rsCStrAppendChar(rsCStrObj *pThis, uchar c)
+rsRetVal rsCStrAppendChar(cstr_t *pThis, uchar c)
 {
 	DEFiRet;
 
@@ -282,7 +282,7 @@ finalize_it:
  * not modified by this function.
  * rgerhards, 2005-10-18
  */
-rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, uchar *pszNew)
+rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
@@ -323,7 +323,7 @@ rsRetVal rsCStrSetSzStr(rsCStrObj *pThis, uchar *pszNew)
  * WARNING: The returned pointer MUST NOT be freed, as it may be
  *          obtained from that constant memory pool (in case of NULL!)
  */
-uchar*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis)
+uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	if(pThis->pBuf == NULL)
@@ -341,7 +341,7 @@ uchar*  rsCStrGetSzStrNoNULL(rsCStrObj *pThis)
  * rsCStrGetSzStrNoNULL() instead.
  * rgerhards, 2005-09-15
  */
-uchar*  rsCStrGetSzStr(rsCStrObj *pThis)
+uchar*  rsCStrGetSzStr(cstr_t *pThis)
 {
 	size_t i;
 
@@ -405,7 +405,7 @@ uchar*  rsCStrGetSzStr(rsCStrObj *pThis)
  * PLEASE NOTE: the caller must free the memory returned in ppSz in any case
  * (except, of course, if it is NULL).
  */
-rsRetVal rsCStrConvSzStrAndDestruct(rsCStrObj *pThis, uchar **ppSz, int bRetNULL)
+rsRetVal rsCStrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL)
 {
 	DEFiRet;
 	uchar* pRetBuf;
@@ -459,7 +459,7 @@ finalize_it:
 	 * tested the fix. So if you intend to use this feature, you must
 	 * do full testing before you rely on it. -- rgerhards, 2008-02-12
 	 */
-rsRetVal  rsCStrFinish(rsCStrObj __attribute__((unused)) *pThis)
+rsRetVal  rsCStrFinish(cstr_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	uchar* pBuf;
@@ -481,7 +481,7 @@ rsRetVal  rsCStrFinish(rsCStrObj __attribute__((unused)) *pThis)
 #endif 	/* #if STRINGBUF_TRIM_ALLOCSIZE == 1 */
 
 
-void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement)
+void rsCStrSetAllocIncrement(cstr_t *pThis, int iNewIncrement)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(iNewIncrement > 0);
@@ -497,7 +497,7 @@ void rsCStrSetAllocIncrement(rsCStrObj *pThis, int iNewIncrement)
  * This is due to performance reasons.
  */
 #ifndef NDEBUG
-int rsCStrLen(rsCStrObj *pThis)
+int rsCStrLen(cstr_t *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	return(pThis->iStrLen);
@@ -507,7 +507,7 @@ int rsCStrLen(rsCStrObj *pThis)
 /* Truncate characters from the end of the string.
  * rgerhards 2005-09-15
  */
-rsRetVal rsCStrTruncate(rsCStrObj *pThis, size_t nTrunc)
+rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
@@ -530,7 +530,7 @@ rsRetVal rsCStrTruncate(rsCStrObj *pThis, size_t nTrunc)
 
 /* Trim trailing whitespace from a given string
  */
-rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis)
+rsRetVal rsCStrTrimTrailingWhiteSpace(cstr_t *pThis)
 {
 	register int i;
 	register uchar *pC;
@@ -557,7 +557,7 @@ rsRetVal rsCStrTrimTrailingWhiteSpace(rsCStrObj *pThis)
  * in equal-size strings.
  * rgerhards, 2005-09-26
  */
-int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2)
+int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	rsCHECKVALIDOBJECT(pCS2, OIDrsCStr);
@@ -586,7 +586,7 @@ int rsCStrCStrCmp(rsCStrObj *pCS1, rsCStrObj *pCS2)
  * comparison operation. Maybe it also has other needs.
  * rgerhards 2005-10-19
  */
-int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
+int rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 {
 	register int i;
 	int iMax;
@@ -618,7 +618,7 @@ int rsCStrSzStrStartsWithCStr(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
 /* check if a CStr object starts with a sz-type string.
  * rgerhards 2005-09-26
  */
-int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
+int rsCStrStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 {
 	register size_t i;
 
@@ -651,7 +651,7 @@ int rsCStrStartsWithSzStr(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
  * rgerhards, 2007-07-16: bug is no real bug, because rsyslogd ensures there
  * never is a \0 *inside* a property string.
  */
-int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz)
+int rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz)
 {
     regex_t preq;
     BEGINfunc
@@ -683,7 +683,7 @@ int rsCStrSzStrMatchRegex(rsCStrObj *pCS1, uchar *psz)
  * program bug and will lead to unpredictable results and program aborts).
  * rgerhards 2005-09-26
  */
-int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, size_t iOffset, uchar *psz, size_t iLenSz)
+int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz)
 {
 	BEGINfunc
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
@@ -731,7 +731,7 @@ int rsCStrOffsetSzStrCmp(rsCStrObj *pCS1, size_t iOffset, uchar *psz, size_t iLe
  * The to sz string pointer must not be NULL!
  * rgerhards 2005-09-26
  */
-int rsCStrSzStrCmp(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
+int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(psz != NULL);
@@ -764,7 +764,7 @@ int rsCStrSzStrCmp(rsCStrObj *pCS1, uchar *psz, size_t iLenSz)
  * returned. Both parameters MUST be given (NULL is not allowed).
  * rgerhards 2005-09-19
  */
-int rsCStrLocateInSzStr(rsCStrObj *pThis, uchar *sz)
+int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz)
 {
 	int i;
 	int iMax;
@@ -809,7 +809,7 @@ int rsCStrLocateInSzStr(rsCStrObj *pThis, uchar *sz)
  *          some time later. However, it is not fully tested, so start with testing
  *          it before you put it to first use).
  */
-int rsCStrLocateSzStr(rsCStrObj *pThis, uchar *sz)
+int rsCStrLocateSzStr(cstr_t *pThis, uchar *sz)
 {
 	int iLenSz;
 	int i;

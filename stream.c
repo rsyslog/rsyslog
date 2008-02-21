@@ -348,11 +348,11 @@ rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * rgerhards, 2008-01-07
  */
 rsRetVal
-strmReadLine(strm_t *pThis, rsCStrObj **ppCStr)
+strmReadLine(strm_t *pThis, cstr_t **ppCStr)
 {
 	DEFiRet;
 	uchar c;
-	rsCStrObj *pCStr = NULL;
+	cstr_t *pCStr = NULL;
 
 	ASSERT(pThis != NULL);
 	ASSERT(ppCStr != NULL);

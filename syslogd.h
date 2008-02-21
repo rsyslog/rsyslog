@@ -77,12 +77,12 @@ struct filed {
 		FILTER_EXPR = 2		/* extended filter, expression based */
 	} f_filter_type;
 	EHostnameCmpMode eHostnameCmpMode;
-	rsCStrObj *pCSHostnameComp;	/* hostname to check */
-	rsCStrObj *pCSProgNameComp;	/* tag to check or NULL, if not to be checked */
+	cstr_t *pCSHostnameComp;	/* hostname to check */
+	cstr_t *pCSProgNameComp;	/* tag to check or NULL, if not to be checked */
 	union {
 		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
 		struct {
-			rsCStrObj *pCSPropName;
+			cstr_t *pCSPropName;
 			enum {
 				FIOP_NOP = 0,		/* do not use - No Operation */
 				FIOP_CONTAINS  = 1,	/* contains string? */
@@ -90,7 +90,7 @@ struct filed {
 				FIOP_STARTSWITH = 3,	/* starts with a string? */
  				FIOP_REGEX = 4		/* matches a regular expression? */
 			} operation;
-			rsCStrObj *pCSCompValue;	/* value to "compare" against */
+			cstr_t *pCSCompValue;	/* value to "compare" against */
 			char isNegated;			/* actually a boolean ;) */
 		} prop;
 		expr_t *f_expr;				/* expression object */

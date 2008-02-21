@@ -66,8 +66,8 @@ uchar	*pModDir = NULL; /* read-only after startup */
  * of course, during a reload). rgerhards 2005-10-18
  */
 EHostnameCmpMode eDfltHostnameCmpMode;
-rsCStrObj *pDfltHostnameCmp;
-rsCStrObj *pDfltProgNameCmp;
+cstr_t *pDfltHostnameCmp;
+cstr_t *pDfltProgNameCmp;
 
 
 /* process a directory and include all of its files into
@@ -476,7 +476,7 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 	uchar *p;
 	uchar *tplName;
 	DEFiRet;
-	rsCStrObj *pStrB;
+	cstr_t *pStrB;
 
 	ASSERT(pp != NULL);
 	ASSERT(*pp != NULL);
@@ -791,7 +791,7 @@ finalize_it:
 static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 {
 	rsParsObj *pPars;
-	rsCStrObj *pCSCompOp;
+	cstr_t *pCSCompOp;
 	rsRetVal iRet;
 	int iOffset; /* for compare operations */
 

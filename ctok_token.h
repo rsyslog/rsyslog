@@ -61,7 +61,7 @@ typedef struct {
 		ctok_CMP_STARTSWITH = 106,
 		ctok_CMP_GTEQ = 107, /* end compare operations */
 	} tok;
-	rsCStrObj *pstrVal;
+	cstr_t *pstrVal;
 	int64 intVal;
 } ctok_token_t;
 
@@ -73,7 +73,7 @@ typedef struct {
 rsRetVal ctok_tokenConstruct(ctok_token_t **ppThis);
 rsRetVal ctok_tokenConstructFinalize(ctok_token_t __attribute__((unused)) *pThis);
 rsRetVal ctok_tokenDestruct(ctok_token_t **ppThis);
-rsRetVal ctok_tokenUnlinkCStr(ctok_token_t *pThis, rsCStrObj **ppCStr);
+rsRetVal ctok_tokenUnlinkCStr(ctok_token_t *pThis, cstr_t **ppCStr);
 PROTOTYPEObjClassInit(ctok_token);
 
 #endif /* #ifndef INCLUDED_CTOK_TOKEN_H */

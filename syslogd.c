@@ -1857,7 +1857,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	char *p2parse;
 	char *pBuf;
 	char *pWork;
-	rsCStrObj *pStrB;
+	cstr_t *pStrB;
 	int iCnt;
 	int bTAGCharDetected;
 

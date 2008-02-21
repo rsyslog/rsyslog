@@ -444,7 +444,7 @@ finalize_it:
  * rgerhards, 2008-02-14
  */
 static rsRetVal
-getWord(uchar **pp, rsCStrObj **ppStrB)
+getWord(uchar **pp, cstr_t **ppStrB)
 {
 	DEFiRet;
 	uchar *p;
@@ -486,7 +486,7 @@ finalize_it:
 static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void *pVal)
 {
 	DEFiRet;
-	rsCStrObj *pStrB;
+	cstr_t *pStrB;
 	uchar *pNewVal;
 
 	ASSERT(pp != NULL);
@@ -528,7 +528,7 @@ static rsRetVal
 doSyslogName(uchar **pp, rsRetVal (*pSetHdlr)(void*, int), void *pVal, syslogName_t *pNameTable)
 {
 	DEFiRet;
-	rsCStrObj *pStrB;
+	cstr_t *pStrB;
 	int iNewVal;
 
 	ASSERT(pp != NULL);

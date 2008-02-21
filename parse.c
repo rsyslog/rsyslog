@@ -91,7 +91,7 @@ rsRetVal rsParsConstructFromSz(rsParsObj **ppThis, unsigned char *psz)
 {
 	DEFiRet;
 	rsParsObj *pThis;
-	rsCStrObj *pCS;
+	cstr_t *pCS;
 
 	assert(ppThis != NULL);
 	assert(psz != NULL);
@@ -119,7 +119,7 @@ finalize_it:
 /**
  * Assign the to-be-parsed string.
  */
-rsRetVal rsParsAssignString(rsParsObj *pThis, rsCStrObj *pCStr)
+rsRetVal rsParsAssignString(rsParsObj *pThis, cstr_t *pCStr)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 	rsCHECKVALIDOBJECT(pCStr, OIDrsCStr);
@@ -239,11 +239,11 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
  * Output:
  * ppCStr Pointer to the parsed string - must be freed by caller!
  */
-rsRetVal parsDelimCStr(rsParsObj *pThis, rsCStrObj **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing)
+rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing)
 {
 	DEFiRet;
 	register unsigned char *pC;
-	rsCStrObj *pCStr;
+	cstr_t *pCStr;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
@@ -305,10 +305,10 @@ finalize_it:
  *        does NOT include the quotes.
  * rgerhards, 2005-09-19
  */
-rsRetVal parsQuotedCStr(rsParsObj *pThis, rsCStrObj **ppCStr)
+rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 {
 	register unsigned char *pC;
-	rsCStrObj *pCStr;
+	cstr_t *pCStr;
 	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
@@ -381,7 +381,7 @@ rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 	uchar *pszIP;
 	uchar *pszTmp;
 	struct addrinfo hints, *res = NULL;
-	rsCStrObj *pCStr;
+	cstr_t *pCStr;
 	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);

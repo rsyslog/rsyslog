@@ -79,7 +79,7 @@ typedef struct _instanceData {
 
 /* enqueue the read file line as a message
  */
-static rsRetVal enqLine(fileInfo_t *pInfo, rsCStrObj *cstrLine)
+static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 {
 		DEFiRet;
 		msg_t *pMsg;
@@ -165,7 +165,7 @@ finalize_it:
 static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 {
 	DEFiRet;
-	rsCStrObj *pCStr;
+	cstr_t *pCStr;
 
 	ASSERT(pbHadFileData != NULL);
 

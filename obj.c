@@ -257,8 +257,8 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, varType_t propType,
 			lenBuf = strlen((char*) szBuf);
 			break;
 		case VARTYPE_CSTR:
-			pszBuf = rsCStrGetSzStrNoNULL((rsCStrObj *) pUsr);
-			lenBuf = rsCStrLen((rsCStrObj*) pUsr);
+			pszBuf = rsCStrGetSzStrNoNULL((cstr_t *) pUsr);
+			lenBuf = rsCStrLen((cstr_t*) pUsr);
 			break;
 		case VARTYPE_SYSLOGTIME:
 			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%d:%d:%d:%d:%d:%d:%d:%d:%d:%c:%d:%d",
@@ -353,12 +353,12 @@ finalize_it:
 
 
 /* de-serialize a string, length must be provided */
-static rsRetVal objDeserializeStr(rsCStrObj **ppCStr, int iLen, strm_t *pStrm)
+static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
 {
 	DEFiRet;
 	int i;
 	uchar c;
-	rsCStrObj *pCStr = NULL;
+	cstr_t *pCStr = NULL;
 
 	assert(ppCStr != NULL);
 	assert(iLen > 0);
