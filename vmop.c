@@ -168,7 +168,10 @@ vmopOpcode2Str(vmop_t *pThis, uchar **ppName)
 			*ppName = (uchar*) "PUSHCONSTANT";
 			break;
 		case opcode_POP:
-			*ppName = (uchar*) "";
+			*ppName = (uchar*) "POP";
+			break;
+		case opcode_UNARY_MINUS:
+			*ppName = (uchar*) "UNARY_MINUS";
 			break;
 		default:
 			*ppName = (uchar*) "INVALID opcode";

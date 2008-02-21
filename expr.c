@@ -62,13 +62,14 @@ static rsRetVal
 terminal(expr_t *pThis, ctok_t *tok)
 {
 	DEFiRet;
-	ctok_token_t *pToken;
+	ctok_token_t *pToken = NULL;
 	var_t *pVar;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(tok, ctok);
 
 	CHKiRet(ctok.GetToken(tok, &pToken));
+	/* note: pToken is destructed in finalize_it */
 
 	switch(pToken->tok) {
 		case ctok_SIMPSTR:
@@ -78,8 +79,8 @@ terminal(expr_t *pThis, ctok_t *tok)
 			break;
 		case ctok_NUMBER:
 			dbgoprint((obj_t*) pThis, "number\n");
-			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, NULL)); /* add to program */
-			// push val
+			CHKiRet(ctok_token.UnlinkVar(pToken, &pVar));
+			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, pVar)); /* add to program */
 			break;
 		case ctok_FUNCTION:
 			dbgoprint((obj_t*) pThis, "function\n");
@@ -88,13 +89,13 @@ terminal(expr_t *pThis, ctok_t *tok)
 			break;
 		case ctok_MSGVAR:
 			dbgoprint((obj_t*) pThis, "MSGVAR\n");
-			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHMSGVAR, NULL)); /* add to program */
-			// push val
+			CHKiRet(ctok_token.UnlinkVar(pToken, &pVar));
+			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHMSGVAR, pVar)); /* add to program */
 			break;
 		case ctok_SYSVAR:
 			dbgoprint((obj_t*) pThis, "SYSVAR\n");
-			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHSYSVAR, NULL)); /* add to program */
-			// push val
+			CHKiRet(ctok_token.UnlinkVar(pToken, &pVar));
+			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHSYSVAR, pVar)); /* add to program */
 			break;
 		case ctok_LPAREN:
 			dbgoprint((obj_t*) pThis, "expr\n");
@@ -103,8 +104,6 @@ terminal(expr_t *pThis, ctok_t *tok)
 			CHKiRet(ctok.GetToken(tok, &pToken)); /* get next one */
 			if(pToken->tok != ctok_RPAREN)
 				ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
-			CHKiRet(ctok_token.Destruct(&pToken)); /* "eat" processed token */
-			dbgoprint((obj_t*) pThis, "end expr, rparen eaten\n");
 			break;
 		default:
 			dbgoprint((obj_t*) pThis, "invalid token %d\n", pToken->tok);
@@ -113,6 +112,10 @@ terminal(expr_t *pThis, ctok_t *tok)
 	}
 
 finalize_it:
+	if(pToken != NULL) {
+		CHKiRet(ctok_token.Destruct(&pToken)); /* "eat" processed token */
+	}
+
 	RETiRet;
 }
 
@@ -121,6 +124,8 @@ factor(expr_t *pThis, ctok_t *tok)
 {
 	DEFiRet;
 	ctok_token_t *pToken;
+	int bWasNot;
+	int bWasUnaryMinus;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(tok, ctok);
@@ -128,14 +133,35 @@ factor(expr_t *pThis, ctok_t *tok)
 	CHKiRet(ctok.GetToken(tok, &pToken));
 	if(pToken->tok == ctok_NOT) {
 		dbgprintf("not\n");
+		bWasNot = 1;
 		CHKiRet(ctok_token.Destruct(&pToken)); /* no longer needed */
-		CHKiRet(ctok.GetToken(tok, &pToken)); /* get next one */
+		CHKiRet(ctok.GetToken(tok, &pToken)); /* get new one for next check */
 	} else {
+		bWasNot = 0;
+	}
+
+	if(pToken->tok == ctok_MINUS) {
+		dbgprintf("unary minus\n");
+		bWasUnaryMinus = 1;
+		CHKiRet(ctok_token.Destruct(&pToken)); /* no longer needed */
+	} else {
+		bWasUnaryMinus = 0;
 		/* we could not process the token, so push it back */
 		CHKiRet(ctok.UngetToken(tok, pToken));
 	}
+
 	CHKiRet(terminal(pThis, tok));
-	// vm: not
+
+	/* warning: the order if the two following ifs is important. Do not change them, this
+	 * would change the semantics of the expression!
+	 */
+	if(bWasUnaryMinus) {
+		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_UNARY_MINUS, NULL)); /* add to program */
+	}
+
+	if(bWasNot == 1) {
+		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_NOT, NULL)); /* add to program */
+	}
 
 finalize_it:
 	RETiRet;
@@ -146,12 +172,27 @@ static rsRetVal
 term(expr_t *pThis, ctok_t *tok)
 {
 	DEFiRet;
+	ctok_token_t *pToken;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(tok, ctok);
 
 	CHKiRet(factor(pThis, tok));
-	// vm: +/-
+
+ 	/* *(("*" / "/" / "%") factor) part */
+	CHKiRet(ctok.GetToken(tok, &pToken));
+	while(pToken->tok == ctok_TIMES || pToken->tok == ctok_DIV || pToken->tok == ctok_MOD) {
+		dbgoprint((obj_t*) pThis, "/,*,%%\n");
+		CHKiRet(factor(pThis, tok));
+		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, (opcode_t) pToken->tok, NULL)); /* add to program */
+		CHKiRet(ctok_token.Destruct(&pToken)); /* no longer needed */
+		CHKiRet(ctok.GetToken(tok, &pToken));
+	}
+
+	/* unget the token that made us exit the loop - it's obviously not one
+	 * we can process.
+	 */
+	CHKiRet(ctok.UngetToken(tok, pToken)); 
 
 finalize_it:
 	RETiRet;
@@ -166,19 +207,22 @@ val(expr_t *pThis, ctok_t *tok)
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(tok, ctok);
 
+	CHKiRet(term(pThis, tok));
+
+ 	/* *(("+" / "-") term) part */
 	CHKiRet(ctok.GetToken(tok, &pToken));
-	if(pToken->tok == ctok_PLUS || pToken->tok == ctok_MINUS) {
-		/* TODO: this must be a loop! */
-		dbgprintf("plus/minus\n");
+	while(pToken->tok == ctok_PLUS || pToken->tok == ctok_MINUS) {
+		dbgoprint((obj_t*) pThis, "+/-\n");
+		CHKiRet(term(pThis, tok));
+		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, (opcode_t) pToken->tok, NULL)); /* add to program */
 		CHKiRet(ctok_token.Destruct(&pToken)); /* no longer needed */
-		// vm: +/-???
-		CHKiRet(ctok.GetToken(tok, &pToken)); /* get next one */
-	} else {
-		/* we could not process the token, so push it back */
-		CHKiRet(ctok.UngetToken(tok, pToken));
+		CHKiRet(ctok.GetToken(tok, &pToken));
 	}
 
-	CHKiRet(term(pThis, tok));
+	/* unget the token that made us exit the loop - it's obviously not one
+	 * we can process.
+	 */
+	CHKiRet(ctok.UngetToken(tok, pToken)); 
 
 finalize_it:
 	RETiRet;
@@ -229,10 +273,9 @@ e_and(expr_t *pThis, ctok_t *tok)
 	CHKiRet(ctok.GetToken(tok, &pToken));
 	while(pToken->tok == ctok_AND) {
 		dbgoprint((obj_t*) pThis, "and\n");
-		/* fill structure */
-		CHKiRet(ctok_token.Destruct(&pToken)); /* no longer needed */
 		CHKiRet(e_cmp(pThis, tok));
 		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_AND, NULL)); /* add to program */
+		CHKiRet(ctok_token.Destruct(&pToken)); /* no longer needed */
 		CHKiRet(ctok.GetToken(tok, &pToken));
 	}
 
@@ -260,11 +303,10 @@ expr(expr_t *pThis, ctok_t *tok)
  	/* *("or" e_and) part */
 	CHKiRet(ctok.GetToken(tok, &pToken));
 	while(pToken->tok == ctok_OR) {
-		/* fill structure */
 		dbgoprint((obj_t*) pThis, "found OR\n");
-		CHKiRet(ctok_token.Destruct(&pToken)); /* no longer needed */
 		CHKiRet(e_and(pThis, tok));
 		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_OR, NULL)); /* add to program */
+		CHKiRet(ctok_token.Destruct(&pToken)); /* no longer needed */
 		CHKiRet(ctok.GetToken(tok, &pToken));
 	}
 

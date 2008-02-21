@@ -224,6 +224,10 @@ ctokGetNumber(ctok_t *pThis, ctok_token_t *pToken)
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 		c = tolower(c);
 	}
+
+	/* we need to unget the character that made the loop terminate */
+	CHKiRet(ctokUngetCharFromStream(pThis, c));
+
 	CHKiRet(var.SetInt64(pToken->pVar, n));
 
 dbgprintf("number, number is: '%lld'\n", n);
@@ -518,7 +522,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 	} while(bRetry); /* warning: do ... while()! */
 
 	*ppToken = pToken;
-RUNLOG_VAR("%d", pToken->tok);
+	dbgoprint((obj_t*) pToken, "token: %d\n", pToken->tok);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
