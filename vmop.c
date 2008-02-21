@@ -35,6 +35,9 @@
 DEFobjStaticHelpers
 
 
+/* forward definitions */
+static rsRetVal vmopOpcode2Str(vmop_t *pThis, uchar **ppName);
+
 /* Standard-Constructor
  */
 BEGINobjConstruct(vmop) /* be sure to specify the object type also in END macro! */
@@ -73,7 +76,7 @@ ENDobjDebugPrint(vmop)
 /* set operand (variant case)
  * rgerhards, 2008-02-20
  */
-rsRetVal
+static rsRetVal
 vmopSetVar(vmop_t *pThis, var_t *pVar)
 {
 	DEFiRet;
@@ -87,7 +90,7 @@ vmopSetVar(vmop_t *pThis, var_t *pVar)
 /* set operation
  * rgerhards, 2008-02-20
  */
-rsRetVal
+static rsRetVal
 vmopSetOpcode(vmop_t *pThis, opcode_t opcode)
 {
 	DEFiRet;
@@ -99,7 +102,7 @@ vmopSetOpcode(vmop_t *pThis, opcode_t opcode)
 
 /* a way to turn an opcode into a readable string
  */
-rsRetVal
+static rsRetVal
 vmopOpcode2Str(vmop_t *pThis, uchar **ppName)
 {
 	DEFiRet;
@@ -173,6 +176,34 @@ vmopOpcode2Str(vmop_t *pThis, uchar **ppName)
 
 	RETiRet;
 }
+
+
+/* queryInterface function
+ * rgerhards, 2008-02-21
+ */
+BEGINobjQueryInterface(vmop)
+CODESTARTobjQueryInterface(vmop)
+	if(pIf->ifVersion != vmopCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->oID = OBJvmop;
+
+	pIf->Construct = vmopConstruct;
+	pIf->ConstructFinalize = vmopConstructFinalize;
+	pIf->Destruct = vmopDestruct;
+	pIf->DebugPrint = vmopDebugPrint;
+	pIf->SetOpcode = vmopSetOpcode;
+	pIf->SetVar = vmopSetVar;
+	pIf->Opcode2Str = vmopOpcode2Str;
+finalize_it:
+ENDobjQueryInterface(vmop)
+
 
 
 /* Initialize the vmop class. Must be called as the very first method

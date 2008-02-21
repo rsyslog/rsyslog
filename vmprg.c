@@ -32,6 +32,7 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(vmop)
 
 
 /* Standard-Constructor
@@ -60,7 +61,7 @@ CODESTARTobjDestruct(vmprg)
 	for(pOp = pThis->vmopRoot ; pOp != NULL ; ) {
 		pTmp = pOp;
 		pOp = pOp->pNext;
-		vmopDestruct(&pTmp);
+		vmop.Destruct(&pTmp);
 	}
 ENDobjDestruct(vmprg)
 
@@ -71,7 +72,7 @@ BEGINobjDebugPrint(vmprg) /* be sure to specify the object type also in END and 
 CODESTARTobjDebugPrint(vmprg)
 	dbgoprint((obj_t*) pThis, "program contents:\n");
 	for(pOp = pThis->vmopRoot ; pOp != NULL ; pOp = pOp->pNext) {
-		vmopDebugPrint(pOp);
+		vmop.DebugPrint(pOp);
 	}
 ENDobjDebugPrint(vmprg)
 
@@ -90,12 +91,12 @@ vmprgAddVarOperation(vmprg_t *pThis, opcode_t opcode, var_t *pVar)
 	ISOBJ_TYPE_assert(pThis, vmprg);
 
 	/* construct and fill vmop */
-	CHKiRet(vmopConstruct(&pOp));
-	CHKiRet(vmopConstructFinalize(pOp));
-	CHKiRet(vmopConstructFinalize(pOp));
-	CHKiRet(vmopSetOpcode(pOp, opcode));
+	CHKiRet(vmop.Construct(&pOp));
+	CHKiRet(vmop.ConstructFinalize(pOp));
+	CHKiRet(vmop.ConstructFinalize(pOp));
+	CHKiRet(vmop.SetOpcode(pOp, opcode));
 	if(pVar != NULL)
-		CHKiRet(vmopSetVar(pOp, pVar));
+		CHKiRet(vmop.SetVar(pOp, pVar));
 
 	/* and add it to the program */
 	CHKiRet(vmprgAddOperation(pThis, pOp));
@@ -134,6 +135,11 @@ vmprgAddOperation(vmprg_t *pThis, vmop_t *pOp)
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(vmprg, 1) /* class, version */
+	/* request objects we use */
+	//objUse(vmop);
+	CHKiRet(vmopQueryInterface(&vmop));
+
+	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmprgDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, vmprgConstructFinalize);
 ENDObjClassInit(vmprg)

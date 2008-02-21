@@ -237,6 +237,7 @@ finalize_it: \
  * rgerhards, 2008-02-20
  */
 #define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
+#define INTERFACEObjDebugPrint(obj) rsRetVal (*DebugPrint)(obj##_t *pThis)
 #define BEGINobjDebugPrint(obj) \
 	rsRetVal obj##DebugPrint(obj##_t *pThis) \
 	{ \
@@ -250,6 +251,64 @@ finalize_it: \
 		RETiRet; \
 	} 
 
+/* ------------------------------ object loader system ------------------------------ *
+ * The following code is the early beginning of a dynamic object loader system. The 
+ * root idea is that all objects will become dynamically loadable libraries over time,
+ * which is necessary to get a clean plug-in interface where every plugin can access
+ * rsyslog's rich object model via simple and quite portable methods.
+ *
+ * To do so, each object defines one or more interfaces. They are essentially structures
+ * with function (method) pointers. Anyone interested in calling an object must first
+ * obtain the interface and can then call through it.
+ *
+ * The interface data type must always be called <obj>_if_t, as this is expected
+ * by the macros. Having consitent naming is also easier for the programmer. By default,
+ * macros create a static variable named like the object in each calling objects
+ * static data block.
+ *
+ * To facilitate moving to this system, I begin to implement some hooks, which
+ * allows to use interfaces today (when the rest of the infrastructure is not yet
+ * there). This is in the hope that it will ease migration to the full-fledged system
+ * once we are ready to work on that.
+ * rgerhards, 2008-02-21
+ */
+
+/* this defines the QueryInterface print entry point. Over time, it should be
+ * present in all objects.
+ */
+#define PROTOTYPEObjQueryInterface(obj) rsRetVal obj##QueryInterface(obj##_if_t *pThis)
+#define BEGINobjQueryInterface(obj) \
+	rsRetVal obj##QueryInterface(obj##_if_t *pIf) \
+	{ \
+		DEFiRet; \
+
+#define CODESTARTobjQueryInterface(obj) \
+		ASSERT(pIf != NULL);
+
+#define ENDobjQueryInterface(obj) \
+		RETiRet; \
+	} 
+/* the base data type for interfaces
+ * This MUST be in sync with the ifBEGIN macro
+ */
+typedef struct interface_s {
+	int ifVersion;	/* must be set to version requested */ 
+	objID_t oID;	/* our object ID (later dynamically assigned) */
+} interface_t;
+
+/* defines data that must always be present at the very begin of the interface structure */
+#define ifBEGIN \
+	int ifVersion;	/* must be set to version requested */ \
+	objID_t oID;	/* our object ID (later dynamically assigned) */
+
+
+/* use the following define some place in your static data (suggested right at
+ * the beginning
+ */
+#define DEFobjCurrIf(obj) \
+	obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION };
+ 
+/* ------------------------------ end object loader system ------------------------------ */
 
 
 #endif /* #ifndef OBJ_TYPES_H_INCLUDED */

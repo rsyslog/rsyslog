@@ -66,14 +66,22 @@ typedef struct vmop_s {
 } vmop_t;
 
 
-/* prototypes */
-rsRetVal vmopConstruct(vmop_t **ppThis);
-rsRetVal vmopConstructFinalize(vmop_t __attribute__((unused)) *pThis);
-rsRetVal vmopDestruct(vmop_t **ppThis);
-rsRetVal vmopSetOpcode(vmop_t *pThis, opcode_t opcode);
-rsRetVal vmopSetVar(vmop_t *pThis, var_t *pVar);
-rsRetVal vmopOpcode2Str(vmop_t *pThis, uchar **ppName);
+/* interfaces */
+typedef struct vmop_if_s {
+	ifBEGIN;		/* This MUST always be the first interface member */
+	INTERFACEObjDebugPrint(vmop);
+	rsRetVal (*Construct)(vmop_t **ppThis);
+	rsRetVal (*ConstructFinalize)(vmop_t __attribute__((unused)) *pThis);
+	rsRetVal (*Destruct)(vmop_t **ppThis);
+	rsRetVal (*SetOpcode)(vmop_t *pThis, opcode_t opcode);
+	rsRetVal (*SetVar)(vmop_t *pThis, var_t *pVar);
+	rsRetVal (*Opcode2Str)(vmop_t *pThis, uchar **ppName);
+} vmop_if_t;
+
+#define vmopCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
+/* the remaining prototypes */
 PROTOTYPEObjClassInit(vmop);
-PROTOTYPEObjDebugPrint(vmop);
+PROTOTYPEObjQueryInterface(vmop);
 
 #endif /* #ifndef INCLUDED_VMOP_H */
