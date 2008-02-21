@@ -40,18 +40,16 @@ typedef struct expr_s {
 
 
 /* interfaces */
-typedef struct expr_if_s {
-	ifBEGIN;		/* This MUST always be the first interface member */
+BEGINinterface(expr) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(expr);
 	rsRetVal (*Construct)(expr_t **ppThis);
 	rsRetVal (*ConstructFinalize)(expr_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(expr_t **ppThis);
 	rsRetVal (*Parse)(expr_t *pThis, ctok_t *ctok);
-} expr_if_t;
+ENDinterface(expr)
 #define exprCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 /* prototypes */
-PROTOTYPEObjClassInit(expr);
-PROTOTYPEObjQueryInterface(expr);
+PROTOTYPEObj(expr);
 
 #endif /* #ifndef INCLUDED_EXPR_H */

@@ -65,15 +65,20 @@ typedef struct {
 	int64 intVal;
 } ctok_token_t;
 
-/* defines to handle compare operation tokens in a single if... */
-#define ctok_tokenIsCmpOp(x) ((x)->tok >= ctok_CMP_EQ && (x)->tok <= ctok_CMP_GTEQ)
+
+/* interfaces */
+BEGINinterface(ctok_token) /* name must also be changed in ENDinterface macro! */
+	INTERFACEObjDebugPrint(ctok_token);
+	rsRetVal (*Construct)(ctok_token_t **ppThis);
+	rsRetVal (*ConstructFinalize)(ctok_token_t __attribute__((unused)) *pThis);
+	rsRetVal (*Destruct)(ctok_token_t **ppThis);
+	rsRetVal (*UnlinkCStr)(ctok_token_t *pThis, cstr_t **ppCStr);
+	int (*IsCmpOp)(ctok_token_t *pThis);
+ENDinterface(ctok_token)
+#define ctok_tokenCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
-rsRetVal ctok_tokenConstruct(ctok_token_t **ppThis);
-rsRetVal ctok_tokenConstructFinalize(ctok_token_t __attribute__((unused)) *pThis);
-rsRetVal ctok_tokenDestruct(ctok_token_t **ppThis);
-rsRetVal ctok_tokenUnlinkCStr(ctok_token_t *pThis, cstr_t **ppCStr);
-PROTOTYPEObjClassInit(ctok_token);
+PROTOTYPEObj(ctok_token);
 
 #endif /* #ifndef INCLUDED_CTOK_TOKEN_H */

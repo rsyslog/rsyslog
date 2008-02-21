@@ -138,6 +138,8 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 	}
 #define PROTOTYPEpropSetMeth(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)
+#define INTERFACEpropSetMeth(obj, prop, dataType)\
+	rsRetVal (*Set##prop)(obj##_t *pThis, dataType)
 /* class initializer */
 #define PROTOTYPEObjClassInit(objName) rsRetVal objName##ClassInit(void)
 #define BEGINObjClassInit(objName, objVers) \
@@ -288,6 +290,7 @@ finalize_it: \
 #define ENDobjQueryInterface(obj) \
 		RETiRet; \
 	} 
+
 /* the base data type for interfaces
  * This MUST be in sync with the ifBEGIN macro
  */
@@ -297,6 +300,15 @@ typedef struct interface_s {
 } interface_t;
 
 
+/* the following macros should be used to define interfaces inside the
+ * header files.
+ */
+#define BEGINinterface(obj) \
+	typedef struct obj##_if_s {\
+		ifBEGIN;		/* This MUST always be the first interface member */
+#define ENDinterface(obj) \
+	} obj##_if_t;
+	
 /* the following macro is used to get access to an object (not an instance,
  * just the class itself!). It must be called before any of the object's
  * methods can be accessed.
@@ -316,6 +328,12 @@ typedef struct interface_s {
 #define DEFobjCurrIf(obj) \
 	static obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION };
  
+/* define the prototypes for a class - when we use interfaces, we just have few
+ * functions that actually need to be non-static.
+ */
+#define PROTOTYPEObj(obj) \
+	PROTOTYPEObjClassInit(obj); \
+	PROTOTYPEObjQueryInterface(obj) \
 /* ------------------------------ end object loader system ------------------------------ */
 
 

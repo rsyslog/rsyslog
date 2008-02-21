@@ -102,8 +102,7 @@ varUnsetValues(var_t *pThis)
 }
 
 
-/* set a string value
- */
+/* set a string value */
 static rsRetVal
 varSetString(var_t *pThis, cstr_t *pCStr)
 {
@@ -114,6 +113,23 @@ varSetString(var_t *pThis, cstr_t *pCStr)
 	CHKiRet(varUnsetValues(pThis));
 	pThis->varType = VARTYPE_CSTR;
 	pThis->val.vpCStr = pCStr;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* set an int64 value */
+static rsRetVal
+varSetInt64(var_t *pThis, int64 iVal)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, var);
+
+	CHKiRet(varUnsetValues(pThis));
+	pThis->varType = VARTYPE_INT64;
+	pThis->val.vInt64 = iVal;
 
 finalize_it:
 	RETiRet;
@@ -140,6 +156,7 @@ CODESTARTobjQueryInterface(var)
 	pIf->ConstructFinalize = varConstructFinalize;
 	pIf->Destruct = varDestruct;
 	pIf->DebugPrint = varDebugPrint;
+	pIf->SetInt64 = varSetInt64;
 	pIf->SetString = varSetString;
 finalize_it:
 ENDobjQueryInterface(var)

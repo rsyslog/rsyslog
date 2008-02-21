@@ -35,14 +35,21 @@ typedef struct ctok_s {
 } ctok_t;
 
 
+/* interfaces */
+BEGINinterface(ctok) /* name must also be changed in ENDinterface macro! */
+	INTERFACEObjDebugPrint(ctok);
+	INTERFACEpropSetMeth(ctok, pp, uchar*);
+	rsRetVal (*Construct)(ctok_t **ppThis);
+	rsRetVal (*ConstructFinalize)(ctok_t __attribute__((unused)) *pThis);
+	rsRetVal (*Destruct)(ctok_t **ppThis);
+	rsRetVal (*Getpp)(ctok_t *pThis, uchar **pp);
+	rsRetVal (*GetToken)(ctok_t *pThis, ctok_token_t **ppToken);
+	rsRetVal (*UngetToken)(ctok_t *pThis, ctok_token_t *pToken);
+ENDinterface(ctok)
+#define ctokCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
+
 /* prototypes */
-rsRetVal ctokConstruct(ctok_t **ppThis);
-rsRetVal ctokConstructFinalize(ctok_t __attribute__((unused)) *pThis);
-rsRetVal ctokDestruct(ctok_t **ppThis);
-rsRetVal ctokGetpp(ctok_t *pThis, uchar **pp);
-rsRetVal ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken);
-rsRetVal ctokUngetToken(ctok_t *pThis, ctok_token_t *pToken);
-PROTOTYPEObjClassInit(ctok);
-PROTOTYPEpropSetMeth(ctok, pp, uchar*);
+PROTOTYPEObj(ctok);
 
 #endif /* #ifndef INCLUDED_CTOK_H */

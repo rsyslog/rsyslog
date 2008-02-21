@@ -67,8 +67,7 @@ typedef struct vmop_s {
 
 
 /* interfaces */
-typedef struct vmop_if_s {
-	ifBEGIN;		/* This MUST always be the first interface member */
+BEGINinterface(vmop) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(vmop);
 	rsRetVal (*Construct)(vmop_t **ppThis);
 	rsRetVal (*ConstructFinalize)(vmop_t __attribute__((unused)) *pThis);
@@ -76,11 +75,10 @@ typedef struct vmop_if_s {
 	rsRetVal (*SetOpcode)(vmop_t *pThis, opcode_t opcode);
 	rsRetVal (*SetVar)(vmop_t *pThis, var_t *pVar);
 	rsRetVal (*Opcode2Str)(vmop_t *pThis, uchar **ppName);
-} vmop_if_t;
+ENDinterface(vmop)
 #define vmopCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 /* the remaining prototypes */
-PROTOTYPEObjClassInit(vmop);
-PROTOTYPEObjQueryInterface(vmop);
+PROTOTYPEObj(vmop);
 
 #endif /* #ifndef INCLUDED_VMOP_H */

@@ -66,7 +66,7 @@ ENDobjDestruct(ctok_token)
  * caller is responsible for destructing it.
  * rgerhards, 2008-02-20
  */
-rsRetVal
+static rsRetVal
 ctok_tokenUnlinkCStr(ctok_token_t *pThis, cstr_t **ppCStr)
 {
 	DEFiRet;
@@ -79,6 +79,38 @@ ctok_tokenUnlinkCStr(ctok_token_t *pThis, cstr_t **ppCStr)
 
 	RETiRet;
 }
+
+
+/* tell the caller if the supplied token is a compare operation */
+static int ctok_tokenIsCmpOp(ctok_token_t *pThis)
+{
+	return(pThis->tok >= ctok_CMP_EQ && pThis->tok <= ctok_CMP_GTEQ);
+}
+
+/* queryInterface function
+ * rgerhards, 2008-02-21
+ */
+BEGINobjQueryInterface(ctok_token)
+CODESTARTobjQueryInterface(ctok_token)
+	if(pIf->ifVersion != ctok_tokenCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->oID = OBJctok_token;
+
+	pIf->Construct = ctok_tokenConstruct;
+	pIf->ConstructFinalize = ctok_tokenConstructFinalize;
+	pIf->Destruct = ctok_tokenDestruct;
+	pIf->UnlinkCStr = ctok_tokenUnlinkCStr;
+	pIf->IsCmpOp = ctok_tokenIsCmpOp;
+finalize_it:
+ENDobjQueryInterface(ctok_token)
+
 
 BEGINObjClassInit(ctok_token, 1) /* class, version */
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, ctok_tokenConstructFinalize);

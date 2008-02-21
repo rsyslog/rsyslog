@@ -31,8 +31,9 @@ typedef enum {
 	VARTYPE_SHORT = 2,
 	VARTYPE_INT = 3,
 	VARTYPE_LONG = 4,
-	VARTYPE_CSTR = 5,
-	VARTYPE_SYSLOGTIME = 6
+	VARTYPE_INT64 = 5,
+	VARTYPE_CSTR = 6,
+	VARTYPE_SYSLOGTIME = 7
 } varType_t;
 
 /* the var object */
@@ -44,6 +45,7 @@ typedef struct var_s {
 		short vShort;
 		int vInt;
 		long vLong;
+		int64 vInt64;
 		cstr_t *vpCStr; /* used for both rsCStr and psz */
 		syslogTime_t vSyslogTime;
 
@@ -52,19 +54,18 @@ typedef struct var_s {
 
 
 /* interfaces */
-typedef struct var_if_s {
-	ifBEGIN;		/* This MUST always be the first interface member */
+BEGINinterface(var) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(var);
 	rsRetVal (*Construct)(var_t **ppThis);
 	rsRetVal (*ConstructFinalize)(var_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(var_t **ppThis);
+	rsRetVal (*SetInt64)(var_t *pThis, int64 iVal);
 	rsRetVal (*SetString)(var_t *pThis, cstr_t *pCStr);
-} var_if_t;
-#define varCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+ENDinterface(var)
+#define varCURR_IF_VERSION 1 /* increment whenever you change the interface above! */
 
 
 /* prototypes */
-PROTOTYPEObjClassInit(var);
-PROTOTYPEObjQueryInterface(var);
+PROTOTYPEObj(var);
 
 #endif /* #ifndef INCLUDED_VAR_H */

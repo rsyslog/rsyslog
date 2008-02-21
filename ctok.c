@@ -40,6 +40,7 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(ctok_token)
 
 
 /* Standard-Constructor
@@ -328,7 +329,7 @@ finalize_it:
  * a programming error.
  * rgerhards, 2008-02-20
  */
-rsRetVal
+static rsRetVal
 ctokUngetToken(ctok_t *pThis, ctok_token_t *pToken)
 {
 	DEFiRet;
@@ -373,7 +374,7 @@ finalize_it:
  * back to ctokUngetToken().
  * rgerhards, 2008-02-19
  */
-rsRetVal
+static rsRetVal
 ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 {
 	DEFiRet;
@@ -395,8 +396,8 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 	}
 
 	/* setup the stage - create our token */
-	CHKiRet(ctok_tokenConstruct(&pToken));
-	CHKiRet(ctok_tokenConstructFinalize(pToken));
+	CHKiRet(ctok_token.Construct(&pToken));
+	CHKiRet(ctok_token.ConstructFinalize(pToken));
 
 	/* find the next token. We may loop when we have inline comments */
 	do {
@@ -513,7 +514,7 @@ RUNLOG_VAR("%d", pToken->tok);
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pToken != NULL)
-			ctok_tokenDestruct(&pToken);
+			ctok_token.Destruct(&pToken);
 	}
 
 	RETiRet;
@@ -528,7 +529,7 @@ DEFpropSetMeth(ctok, pp, uchar*)
  * partial parsing, so the rest must know where to start from...
  * rgerhards, 2008-02-19
  */
-rsRetVal
+static rsRetVal
 ctokGetpp(ctok_t *pThis, uchar **pp)
 {
 	DEFiRet;
@@ -537,7 +538,39 @@ ctokGetpp(ctok_t *pThis, uchar **pp)
 	RETiRet;
 }
 
+
+/* queryInterface function
+ * rgerhards, 2008-02-21
+ */
+BEGINobjQueryInterface(ctok)
+CODESTARTobjQueryInterface(ctok)
+	if(pIf->ifVersion != ctokCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->oID = OBJctok;
+
+	pIf->Construct = ctokConstruct;
+	pIf->ConstructFinalize = ctokConstructFinalize;
+	pIf->Destruct = ctokDestruct;
+	pIf->Getpp = ctokGetpp;
+	pIf->GetToken = ctokGetToken;
+	pIf->UngetToken = ctokUngetToken;
+	pIf->Setpp = ctokSetpp;
+finalize_it:
+ENDobjQueryInterface(ctok)
+
+
+
 BEGINObjClassInit(ctok, 1) /* class, version */
+	/* request objects we use */
+	CHKiRet(objUse(ctok_token));
+
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, ctokConstructFinalize);
 ENDObjClassInit(ctok)
 

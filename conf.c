@@ -56,6 +56,7 @@
 
 /* static data */
 DEFobjCurrIf(expr)
+DEFobjCurrIf(ctok)
 uchar	*pModDir = NULL; /* read-only after startup */
 
 /* The following global variables are used for building
@@ -733,7 +734,7 @@ dbgPrintAllDebugInfo();
 static rsRetVal cflineProcessIfFilter(uchar **pline, register selector_t *f)
 {
 	DEFiRet;
-	ctok_t *ctok;
+	ctok_t *tok;
 	ctok_token_t *pToken;
 
 	ASSERT(pline != NULL);
@@ -750,28 +751,28 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	(*pline) += 3;
 
 	/* we first need a tokenizer... */
-	CHKiRet(ctokConstruct(&ctok));
-	CHKiRet(ctokSetpp(ctok, *pline));
-	CHKiRet(ctokConstructFinalize(ctok));
+	CHKiRet(ctok.Construct(&tok));
+	CHKiRet(ctok.Setpp(tok, *pline));
+	CHKiRet(ctok.ConstructFinalize(tok));
 
 	/* now construct our expression */
 	CHKiRet(expr.Construct(&f->f_filterData.f_expr));
 	CHKiRet(expr.ConstructFinalize(f->f_filterData.f_expr));
 
 	/* ready to go... */
-	CHKiRet(expr.Parse(f->f_filterData.f_expr, ctok));
+	CHKiRet(expr.Parse(f->f_filterData.f_expr, tok));
 
 	/* we now need to parse off the "then" - and note an error if it is
 	 * missing...
 	 */
-	CHKiRet(ctokGetToken(ctok, &pToken));
+	CHKiRet(ctok.GetToken(tok, &pToken));
 	if(pToken->tok != ctok_THEN) {
 		ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 	}
 
 	/* we are done, so we now need to restore things */
-	CHKiRet(ctokGetpp(ctok, pline));
-	CHKiRet(ctokDestruct(&ctok));
+	CHKiRet(ctok.Getpp(tok, pline));
+	CHKiRet(ctok.Destruct(&tok));
 
 dbgprintf("expression parser successfully ended, pp %p ('%s')\n", *pline, *pline);
 
@@ -1155,6 +1156,8 @@ rsRetVal confClassInit(void)
 	DEFiRet;
 	/* request objects we use */
 	CHKiRet(objUse(expr));
+	CHKiRet(objUse(ctok));
+
 finalize_it:
 	RETiRet;
 }

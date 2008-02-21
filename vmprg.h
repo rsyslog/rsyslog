@@ -48,21 +48,18 @@ typedef struct vmprg_s {
 
 
 /* interfaces */
-typedef struct vmprg_if_s {
-	ifBEGIN;		/* This MUST always be the first interface member */
+BEGINinterface(vmprg) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(vmprg);
 	rsRetVal (*Construct)(vmprg_t **ppThis);
 	rsRetVal (*ConstructFinalize)(vmprg_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(vmprg_t **ppThis);
 	rsRetVal (*AddOperation)(vmprg_t *pThis, vmop_t *pOp);
 	rsRetVal (*AddVarOperation)(vmprg_t *pThis, opcode_t opcode, var_t *pVar);
-} vmprg_if_t;
-
+ENDinterface(vmprg)
 #define vmprgCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
-PROTOTYPEObjClassInit(vmprg);
-PROTOTYPEObjQueryInterface(vmprg);
+PROTOTYPEObj(vmprg);
 
 #endif /* #ifndef INCLUDED_VMPRG_H */
