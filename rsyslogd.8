@@ -240,10 +240,10 @@ kill -SIGNAL $(cat /var/run/syslogd.pid)
 .fi
 .PP
 Note that -SIGNAL must be replaced with the actual signal
-you are trying to send, e.g. with SIGHUP. So it then becomes:
+you are trying to send, e.g. with HUP. So it then becomes:
 .IP
 .nf
-kill -SIGHUP $(cat /var/run/syslogd.pid)
+kill -HUP $(cat /var/run/syslogd.pid)
 .fi
 .PP
 .TP
@@ -257,18 +257,18 @@ will be reread and the
 .BR rsyslog (3)
 facility is started again.
 .TP
-.B SIGTERM ", " SIGINT ", " SIGQUIT
+.B TERM ", " INT ", " QUIT
 .B Rsyslogd
 will die.
 .TP
-.B SIGUSR1
+.B USR1
 Switch debugging on/off.  This option can only be used if
 .B rsyslogd
 is started with the
 .B "\-d"
 debug option.
 .TP
-.B SIGCHLD
+.B CHLD
 Wait for childs if some were born, because of wall'ing messages.
 .LP
 .SH SUPPORT FOR REMOTE LOGGING
