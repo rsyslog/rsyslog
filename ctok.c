@@ -41,6 +41,7 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(ctok_token)
+DEFobjCurrIf(var)
 
 
 /* Standard-Constructor
@@ -223,9 +224,9 @@ ctokGetNumber(ctok_t *pThis, ctok_token_t *pToken)
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 		c = tolower(c);
 	}
-	pToken->intVal = n;
+	CHKiRet(var.SetInt64(pToken->pVar, n));
 
-dbgprintf("number, number is: '%lld'\n", pToken->intVal);
+dbgprintf("number, number is: '%lld'\n", n);
 
 finalize_it:
 	RETiRet;
@@ -241,6 +242,7 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 {
 	DEFiRet;
 	uchar c;
+	cstr_t *pstrVal;
 
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(pToken != NULL);
@@ -254,20 +256,23 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 		pToken->tok = ctok_MSGVAR;
 	}
 
-	CHKiRet(rsCStrConstruct(&pToken->pstrVal));
+	CHKiRet(rsCStrConstruct(&pstrVal));
 	/* this loop is quite simple, a variable name is terminated by whitespace. */
 	while(!isspace(c)) {
-		CHKiRet(rsCStrAppendChar(pToken->pstrVal, tolower(c)));
+		CHKiRet(rsCStrAppendChar(pstrVal, tolower(c)));
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 	}
 	CHKiRet(rsCStrFinish(pStrB));
 
-dbgprintf("var, var is: '%s'\n", rsCStrGetSzStr(pToken->pstrVal));
+dbgprintf("var, var is: '%s'\n", rsCStrGetSzStr(pstrVal));
+
+	CHKiRet(var.SetString(pToken->pVar, pstrVal));
+	pstrVal = NULL;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pToken->pstrVal != NULL) {
-			rsCStrDestruct(&pToken->pstrVal);
+		if(pstrVal != NULL) {
+			rsCStrDestruct(&pstrVal);
 		}
 	}
 
@@ -284,38 +289,42 @@ ctokGetSimpStr(ctok_t *pThis, ctok_token_t *pToken)
 	DEFiRet;
 	uchar c;
 	int bInEsc = 0;
+	cstr_t *pstrVal;
 
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(pToken != NULL);
 
 	pToken->tok = ctok_SIMPSTR;
 
-	CHKiRet(rsCStrConstruct(&pToken->pstrVal));
+	CHKiRet(rsCStrConstruct(&pstrVal));
 	CHKiRet(ctokGetCharFromStream(pThis, &c));
 	/* while we are in escape mode (had a backslash), no sequence
 	 * terminates the loop. If outside, it is terminated by a single quote.
 	 */
 	while(bInEsc || c != '\'') {
 		if(bInEsc) {
-			CHKiRet(rsCStrAppendChar(pToken->pstrVal, c));
+			CHKiRet(rsCStrAppendChar(pstrVal, c));
 			bInEsc = 0;
 		} else {
 			if(c == '\\') {
 				bInEsc = 1;
 			} else {
-				CHKiRet(rsCStrAppendChar(pToken->pstrVal, c));
+				CHKiRet(rsCStrAppendChar(pstrVal, c));
 			}
 		}
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 	}
 	CHKiRet(rsCStrFinish(pStrB));
 
-dbgprintf("simpstr, str is: '%s'\n", rsCStrGetSzStr(pToken->pstrVal));
+dbgprintf("simpstr, str is: '%s'\n", rsCStrGetSzStr(pstrVal));
+
+	CHKiRet(var.SetString(pToken->pVar, pstrVal));
+	pstrVal = NULL;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pToken->pstrVal != NULL) {
-			rsCStrDestruct(&pToken->pstrVal);
+		if(pstrVal != NULL) {
+			rsCStrDestruct(&pstrVal);
 		}
 	}
 
@@ -570,6 +579,7 @@ ENDobjQueryInterface(ctok)
 BEGINObjClassInit(ctok, 1) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(ctok_token));
+	CHKiRet(objUse(var));
 
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, ctokConstructFinalize);
 ENDObjClassInit(ctok)

@@ -64,7 +64,6 @@ terminal(expr_t *pThis, ctok_t *tok)
 	DEFiRet;
 	ctok_token_t *pToken;
 	var_t *pVar;
-	cstr_t *pCStr;
 
 	ISOBJ_TYPE_assert(pThis, expr);
 	ISOBJ_TYPE_assert(tok, ctok);
@@ -73,11 +72,8 @@ terminal(expr_t *pThis, ctok_t *tok)
 
 	switch(pToken->tok) {
 		case ctok_SIMPSTR:
-			CHKiRet(var.Construct(&pVar));
-			CHKiRet(var.ConstructFinalize(pVar));
-			CHKiRet(ctok_token.UnlinkCStr(pToken, &pCStr));
-			CHKiRet(var.SetString(pVar, pCStr));
 			dbgoprint((obj_t*) pThis, "simpstr\n");
+			CHKiRet(ctok_token.UnlinkVar(pToken, &pVar));
 			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, pVar)); /* add to program */
 			break;
 		case ctok_NUMBER:

@@ -102,7 +102,10 @@ varUnsetValues(var_t *pThis)
 }
 
 
-/* set a string value */
+/* set a string value 
+ * The caller hands over the string and must n longer use it after this method
+ * has been called.
+ */
 static rsRetVal
 varSetString(var_t *pThis, cstr_t *pCStr)
 {

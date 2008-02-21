@@ -34,11 +34,18 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(var)
 
 
 /* Standard-Constructor
  */
 BEGINobjConstruct(ctok_token) /* be sure to specify the object type also in END macro! */
+	/* TODO: we may optimize the code below and alloc var only if actually
+	 * needed (but we need it quite often)
+	 */
+	CHKiRet(var.Construct(&pThis->pVar));
+	CHKiRet(var.ConstructFinalize(pThis->pVar));
+finalize_it:
 ENDobjConstruct(ctok_token)
 
 
@@ -55,8 +62,8 @@ rsRetVal ctok_tokenConstructFinalize(ctok_token_t __attribute__((unused)) *pThis
 /* destructor for the ctok object */
 BEGINobjDestruct(ctok_token) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(ctok_token)
-	if(pThis->pstrVal != NULL) {
-		rsCStrDestruct(&pThis->pstrVal);
+	if(pThis->pVar != NULL) {
+		var.Destruct(&pThis->pVar);
 	}
 ENDobjDestruct(ctok_token)
 
@@ -67,15 +74,15 @@ ENDobjDestruct(ctok_token)
  * rgerhards, 2008-02-20
  */
 static rsRetVal
-ctok_tokenUnlinkCStr(ctok_token_t *pThis, cstr_t **ppCStr)
+ctok_tokenUnlinkVar(ctok_token_t *pThis, var_t **ppVar)
 {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, ctok_token);
-	ASSERT(ppCStr != NULL);
+	ASSERT(ppVar != NULL);
 
-	*ppCStr = pThis->pstrVal;
-	pThis->pstrVal = NULL;
+	*ppVar = pThis->pVar;
+	pThis->pVar = NULL;
 
 	RETiRet;
 }
@@ -106,13 +113,16 @@ CODESTARTobjQueryInterface(ctok_token)
 	pIf->Construct = ctok_tokenConstruct;
 	pIf->ConstructFinalize = ctok_tokenConstructFinalize;
 	pIf->Destruct = ctok_tokenDestruct;
-	pIf->UnlinkCStr = ctok_tokenUnlinkCStr;
+	pIf->UnlinkVar = ctok_tokenUnlinkVar;
 	pIf->IsCmpOp = ctok_tokenIsCmpOp;
 finalize_it:
 ENDobjQueryInterface(ctok_token)
 
 
 BEGINObjClassInit(ctok_token, 1) /* class, version */
+	/* request objects we use */
+	CHKiRet(objUse(var));
+
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, ctok_tokenConstructFinalize);
 ENDObjClassInit(ctok_token)
 

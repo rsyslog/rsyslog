@@ -23,7 +23,7 @@
 #define INCLUDED_CTOK_TOKEN_H
 
 #include "obj.h"
-#include "stringbuf.h"
+#include "var.h"
 
 /* the tokens... I use numbers below so that the tokens can be easier
  * identified in debug output. These ID's are also partly resused as opcodes.
@@ -61,8 +61,9 @@ typedef struct {
 		ctok_CMP_STARTSWITH = 106,
 		ctok_CMP_GTEQ = 107, /* end compare operations */
 	} tok;
-	cstr_t *pstrVal;
-	int64 intVal;
+	var_t *pVar;
+	//cstr_t *pstrVal;
+	//int64 intVal;
 } ctok_token_t;
 
 
@@ -72,7 +73,7 @@ BEGINinterface(ctok_token) /* name must also be changed in ENDinterface macro! *
 	rsRetVal (*Construct)(ctok_token_t **ppThis);
 	rsRetVal (*ConstructFinalize)(ctok_token_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(ctok_token_t **ppThis);
-	rsRetVal (*UnlinkCStr)(ctok_token_t *pThis, cstr_t **ppCStr);
+	rsRetVal (*UnlinkVar)(ctok_token_t *pThis, var_t **ppVar);
 	int (*IsCmpOp)(ctok_token_t *pThis);
 ENDinterface(ctok_token)
 #define ctok_tokenCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
