@@ -278,6 +278,9 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, varType_t propType,
 				ABORT_FINALIZE(RS_RET_PROVIDED_BUFFER_TOO_SMALL);
 			pszBuf = szBuf;
 			break;
+		default:
+			dbgprintf("invalid VARTYPE %d\n", propType);
+			break;
 	}
 
 	/* cookie */
@@ -518,6 +521,9 @@ static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 			break;
 		case VARTYPE_SYSLOGTIME:
 			CHKiRet(objDeserializeSyslogTime(&pProp->val.vSyslogTime, pStrm));
+			break;
+		default:
+			dbgprintf("invalid VARTYPE %d\n", pProp->varType);
 			break;
 	}
 

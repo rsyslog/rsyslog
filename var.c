@@ -48,7 +48,7 @@ ENDobjConstruct(var)
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-rsRetVal varConstructFinalize(var_t *pThis)
+rsRetVal varConstructFinalize(var_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 

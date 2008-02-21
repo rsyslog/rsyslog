@@ -44,7 +44,7 @@ ENDobjConstruct(vmop)
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-rsRetVal vmopConstructFinalize(vmop_t *pThis)
+rsRetVal vmopConstructFinalize(vmop_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, vmop);

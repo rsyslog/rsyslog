@@ -43,7 +43,7 @@ ENDobjConstruct(vmprg)
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-rsRetVal vmprgConstructFinalize(vmprg_t *pThis)
+rsRetVal vmprgConstructFinalize(vmprg_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, vmprg);

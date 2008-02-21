@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.12.0 (rgerhards), 2008-02-??
+Version 3.11.4 (rgerhards), 2008-02-21
 - bugfix: debug.html was missing from release tarball - thanks to Michael
   Biebl for bringing this to my attention
 - some internal cleanup on the stringbuf object calling interface
@@ -8,6 +8,7 @@ Version 3.12.0 (rgerhards), 2008-02-??
   (previously only integers)
 - bugfix: message object was not properly synchronized when the 
   main queue had a single thread and non-direct action queues were used
+- some documentation improvements
 ---------------------------------------------------------------------------
 Version 3.11.3 (rgerhards), 2008-02-18
 - fixed a bug in imklog which lead to duplicate message content in
