@@ -173,6 +173,10 @@
 #include "vmop.h"
 #include "vmprg.h"
 
+/* definitions for objects we access */
+DEFobjCurrIf(expr)
+
+
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
  * 2007-07-19 rgerhards
@@ -1002,7 +1006,7 @@ selectorDestruct(void *pVal)
 			rsCStrDestruct(&pThis->f_filterData.prop.pCSCompValue);
 	} else if(pThis->f_filter_type == FILTER_EXPR) {
 		if(pThis->f_filterData.f_expr != NULL)
-			exprDestruct(&pThis->f_filterData.f_expr);
+			expr.Destruct(&pThis->f_filterData.f_expr);
 	}
 
 	llDestroy(&pThis->llActList);
@@ -3413,6 +3417,10 @@ static rsRetVal InitGlobalClasses(void)
 	DEFiRet;
 
 	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizer being called! */
+	/* dummy "classes" */
+	CHKiRet(confClassInit());
+
+	/* real ones */
 	CHKiRet(msgClassInit());
 	CHKiRet(strmClassInit());
 	CHKiRet(wtiClassInit());
@@ -3424,6 +3432,9 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(ctok_tokenClassInit());
 	CHKiRet(ctokClassInit());
 	CHKiRet(exprClassInit());
+
+	/* request objects we use */
+	CHKiRet(objUse(expr));
 
 finalize_it:
 	RETiRet;

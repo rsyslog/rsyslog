@@ -39,11 +39,19 @@ typedef struct expr_s {
 } expr_t;
 
 
+/* interfaces */
+typedef struct expr_if_s {
+	ifBEGIN;		/* This MUST always be the first interface member */
+	INTERFACEObjDebugPrint(expr);
+	rsRetVal (*Construct)(expr_t **ppThis);
+	rsRetVal (*ConstructFinalize)(expr_t __attribute__((unused)) *pThis);
+	rsRetVal (*Destruct)(expr_t **ppThis);
+	rsRetVal (*Parse)(expr_t *pThis, ctok_t *ctok);
+} expr_if_t;
+#define exprCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
 /* prototypes */
-rsRetVal exprConstruct(expr_t **ppThis);
-rsRetVal exprConstructFinalize(expr_t __attribute__((unused)) *pThis);
-rsRetVal exprDestruct(expr_t **ppThis);
-rsRetVal exprParse(expr_t *pThis, ctok_t *ctok);
 PROTOTYPEObjClassInit(expr);
+PROTOTYPEObjQueryInterface(expr);
 
 #endif /* #ifndef INCLUDED_EXPR_H */

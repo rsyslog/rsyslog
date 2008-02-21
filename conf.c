@@ -55,6 +55,7 @@
 #include "srUtils.h"
 
 /* static data */
+DEFobjCurrIf(expr)
 uchar	*pModDir = NULL; /* read-only after startup */
 
 /* The following global variables are used for building
@@ -754,11 +755,11 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	CHKiRet(ctokConstructFinalize(ctok));
 
 	/* now construct our expression */
-	CHKiRet(exprConstruct(&f->f_filterData.f_expr));
-	CHKiRet(exprConstructFinalize(f->f_filterData.f_expr));
+	CHKiRet(expr.Construct(&f->f_filterData.f_expr));
+	CHKiRet(expr.ConstructFinalize(f->f_filterData.f_expr));
 
 	/* ready to go... */
-	CHKiRet(exprParse(f->f_filterData.f_expr, ctok));
+	CHKiRet(expr.Parse(f->f_filterData.f_expr, ctok));
 
 	/* we now need to parse off the "then" - and note an error if it is
 	 * missing...
@@ -1148,5 +1149,14 @@ cfline(uchar *line, selector_t **pfCurr)
 }
 
 
+/* "mimic" a real object - we are currently not one... */
+rsRetVal confClassInit(void)
+{
+	DEFiRet;
+	/* request objects we use */
+	CHKiRet(objUse(expr));
+finalize_it:
+	RETiRet;
+}
 /* vi:set ai:
  */

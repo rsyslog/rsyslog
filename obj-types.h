@@ -296,6 +296,14 @@ typedef struct interface_s {
 	objID_t oID;	/* our object ID (later dynamically assigned) */
 } interface_t;
 
+
+/* the following macro is used to get access to an object (not an instance,
+ * just the class itself!). It must be called before any of the object's
+ * methods can be accessed.
+ */
+#define objUse(obj) \
+	obj##QueryInterface(&obj)
+
 /* defines data that must always be present at the very begin of the interface structure */
 #define ifBEGIN \
 	int ifVersion;	/* must be set to version requested */ \
@@ -306,7 +314,7 @@ typedef struct interface_s {
  * the beginning
  */
 #define DEFobjCurrIf(obj) \
-	obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION };
+	static obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION };
  
 /* ------------------------------ end object loader system ------------------------------ */
 

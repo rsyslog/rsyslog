@@ -44,7 +44,8 @@ ENDobjConstruct(vmprg)
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-rsRetVal vmprgConstructFinalize(vmprg_t __attribute__((unused)) *pThis)
+static rsRetVal
+vmprgConstructFinalize(vmprg_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, vmprg);
@@ -77,12 +78,36 @@ CODESTARTobjDebugPrint(vmprg)
 ENDobjDebugPrint(vmprg)
 
 
+/* add an operation (instruction) to the end of the current program. This
+ * function is expected to be called while creating the program, but never
+ * again after this is done and it is being executed. Results are undefined if
+ * it is called after execution.
+ */
+static rsRetVal
+vmprgAddOperation(vmprg_t *pThis, vmop_t *pOp)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, vmprg);
+	ISOBJ_TYPE_assert(pOp, vmop);
+
+	if(pThis->vmopRoot == NULL) {
+		pThis->vmopRoot = pOp;
+	} else {
+		pThis->vmopLast->pNext = pOp;
+	}
+	pThis->vmopLast = pOp;
+
+	RETiRet;
+}
+
+
 /* this is a shortcut for high-level callers. It creates a new vmop, sets its
  * parameters and adds it to the program - all in one big step. If there is no
  * var associated with this operation, the caller can simply supply NULL as
  * pVar.
  */
-rsRetVal
+static rsRetVal
 vmprgAddVarOperation(vmprg_t *pThis, opcode_t opcode, var_t *pVar)
 {
 	DEFiRet;
@@ -106,28 +131,30 @@ finalize_it:
 }
 
 
-/* add an operation (instruction) to the end of the current program. This
- * function is expected to be called while creating the program, but never
- * again after this is done and it is being executed. Results are undefined if
- * it is called after execution.
+/* queryInterface function
+ * rgerhards, 2008-02-21
  */
-rsRetVal
-vmprgAddOperation(vmprg_t *pThis, vmop_t *pOp)
-{
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, vmprg);
-	ISOBJ_TYPE_assert(pOp, vmop);
-
-	if(pThis->vmopRoot == NULL) {
-		pThis->vmopRoot = pOp;
-	} else {
-		pThis->vmopLast->pNext = pOp;
+BEGINobjQueryInterface(vmprg)
+CODESTARTobjQueryInterface(vmprg)
+	if(pIf->ifVersion != vmprgCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
-	pThis->vmopLast = pOp;
 
-	RETiRet;
-}
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->oID = OBJvmprg;
+
+	pIf->Construct = vmprgConstruct;
+	pIf->ConstructFinalize = vmprgConstructFinalize;
+	pIf->Destruct = vmprgDestruct;
+	pIf->DebugPrint = vmprgDebugPrint;
+	pIf->AddOperation = vmprgAddOperation;
+	pIf->AddVarOperation = vmprgAddVarOperation;
+finalize_it:
+ENDobjQueryInterface(vmprg)
 
 
 /* Initialize the vmprg class. Must be called as the very first method
@@ -136,8 +163,7 @@ vmprgAddOperation(vmprg_t *pThis, vmop_t *pOp)
  */
 BEGINObjClassInit(vmprg, 1) /* class, version */
 	/* request objects we use */
-	//objUse(vmop);
-	CHKiRet(vmopQueryInterface(&vmop));
+	CHKiRet(objUse(vmop));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmprgDebugPrint);

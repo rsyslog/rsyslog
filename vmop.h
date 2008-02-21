@@ -77,7 +77,6 @@ typedef struct vmop_if_s {
 	rsRetVal (*SetVar)(vmop_t *pThis, var_t *pVar);
 	rsRetVal (*Opcode2Str)(vmop_t *pThis, uchar **ppName);
 } vmop_if_t;
-
 #define vmopCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 /* the remaining prototypes */

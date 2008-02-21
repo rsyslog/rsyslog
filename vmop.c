@@ -33,6 +33,7 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(var)
 
 
 /* forward definitions */
@@ -69,7 +70,7 @@ CODESTARTobjDebugPrint(vmop)
 	dbgoprint((obj_t*) pThis, "opcode: %d\t(%s), next %p, var in next line\n", (int) pThis->opcode, pOpcodeName,
 		  pThis->pNext);
 	if(pThis->operand.pVar != NULL)
-		varDebugPrint(pThis->operand.pVar);
+		var.DebugPrint(pThis->operand.pVar);
 ENDobjDebugPrint(vmop)
 
 
@@ -205,12 +206,14 @@ finalize_it:
 ENDobjQueryInterface(vmop)
 
 
-
 /* Initialize the vmop class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(vmop, 1) /* class, version */
+	/* request objects we use */
+	CHKiRet(objUse(var));
+
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmopDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, vmopConstructFinalize);
 ENDObjClassInit(vmop)

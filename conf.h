@@ -36,6 +36,7 @@ rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal);
 rsRetVal doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal);
 rsRetVal cfline(uchar *line, selector_t **pfCurr);
 rsRetVal processConfFile(uchar *pConfFile);
+rsRetVal confClassInit(void); /* TODO: make this a real object! */
 
 /* TODO: remove them below (means move the config init code) -- rgerhards, 2008-02-19 */
 extern uchar *pModDir; /* read-only after startup */

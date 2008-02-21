@@ -51,12 +51,20 @@ typedef struct var_s {
 } var_t;
 
 
+/* interfaces */
+typedef struct var_if_s {
+	ifBEGIN;		/* This MUST always be the first interface member */
+	INTERFACEObjDebugPrint(var);
+	rsRetVal (*Construct)(var_t **ppThis);
+	rsRetVal (*ConstructFinalize)(var_t __attribute__((unused)) *pThis);
+	rsRetVal (*Destruct)(var_t **ppThis);
+	rsRetVal (*SetString)(var_t *pThis, cstr_t *pCStr);
+} var_if_t;
+#define varCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
+
 /* prototypes */
-rsRetVal varConstruct(var_t **ppThis);
-rsRetVal varConstructFinalize(var_t __attribute__((unused)) *pThis);
-rsRetVal varDestruct(var_t **ppThis);
-rsRetVal varSetString(var_t *pThis, cstr_t *pCStr);
 PROTOTYPEObjClassInit(var);
-PROTOTYPEObjDebugPrint(var);
+PROTOTYPEObjQueryInterface(var);
 
 #endif /* #ifndef INCLUDED_VAR_H */

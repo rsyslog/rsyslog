@@ -47,13 +47,22 @@ typedef struct vmprg_s {
 } vmprg_t;
 
 
+/* interfaces */
+typedef struct vmprg_if_s {
+	ifBEGIN;		/* This MUST always be the first interface member */
+	INTERFACEObjDebugPrint(vmprg);
+	rsRetVal (*Construct)(vmprg_t **ppThis);
+	rsRetVal (*ConstructFinalize)(vmprg_t __attribute__((unused)) *pThis);
+	rsRetVal (*Destruct)(vmprg_t **ppThis);
+	rsRetVal (*AddOperation)(vmprg_t *pThis, vmop_t *pOp);
+	rsRetVal (*AddVarOperation)(vmprg_t *pThis, opcode_t opcode, var_t *pVar);
+} vmprg_if_t;
+
+#define vmprgCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
+
 /* prototypes */
-rsRetVal vmprgConstruct(vmprg_t **ppThis);
-rsRetVal vmprgConstructFinalize(vmprg_t __attribute__((unused)) *pThis);
-rsRetVal vmprgDestruct(vmprg_t **ppThis);
-rsRetVal vmprgAddOperation(vmprg_t *pThis, vmop_t *pOp);
-rsRetVal vmprgAddVarOperation(vmprg_t *pThis, opcode_t opcode, var_t *pVar);
 PROTOTYPEObjClassInit(vmprg);
-PROTOTYPEObjDebugPrint(vmprg);
+PROTOTYPEObjQueryInterface(vmprg);
 
 #endif /* #ifndef INCLUDED_VMPRG_H */

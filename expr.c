@@ -36,6 +36,8 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(vmprg)
+DEFobjCurrIf(var)
 
 
 /* ------------------------------ parser functions ------------------------------ */
@@ -69,17 +71,17 @@ terminal(expr_t *pThis, ctok_t *ctok)
 
 	switch(pToken->tok) {
 		case ctok_SIMPSTR:
-			CHKiRet(varConstruct(&pVar));
-			CHKiRet(varConstructFinalize(pVar));
+			CHKiRet(var.Construct(&pVar));
+			CHKiRet(var.ConstructFinalize(pVar));
 			CHKiRet(ctok_tokenUnlinkCStr(pToken, &pCStr));
-			CHKiRet(varSetString(pVar, pCStr));
+			CHKiRet(var.SetString(pVar, pCStr));
 			dbgoprint((obj_t*) pThis, "simpstr\n");
-			CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, pVar)); /* add to program */
+			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, pVar)); /* add to program */
 			// push val
 			break;
 		case ctok_NUMBER:
 			dbgoprint((obj_t*) pThis, "number\n");
-			CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, NULL)); /* add to program */
+			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, NULL)); /* add to program */
 			// push val
 			break;
 		case ctok_FUNCTION:
@@ -89,12 +91,12 @@ terminal(expr_t *pThis, ctok_t *ctok)
 			break;
 		case ctok_MSGVAR:
 			dbgoprint((obj_t*) pThis, "MSGVAR\n");
-			CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_PUSHMSGVAR, NULL)); /* add to program */
+			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHMSGVAR, NULL)); /* add to program */
 			// push val
 			break;
 		case ctok_SYSVAR:
 			dbgoprint((obj_t*) pThis, "SYSVAR\n");
-			CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_PUSHSYSVAR, NULL)); /* add to program */
+			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHSYSVAR, NULL)); /* add to program */
 			// push val
 			break;
 		case ctok_LPAREN:
@@ -202,7 +204,7 @@ e_cmp(expr_t *pThis, ctok_t *ctok)
 	if(ctok_tokenIsCmpOp(pToken)) {
 		dbgoprint((obj_t*) pThis, "cmp\n");
 		CHKiRet(val(pThis, ctok));
-		CHKiRet(vmprgAddVarOperation(pThis->pVmprg, (opcode_t) pToken->tok, NULL)); /* add to program */
+		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, (opcode_t) pToken->tok, NULL)); /* add to program */
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 	} else {
 		/* we could not process the token, so push it back */
@@ -233,7 +235,7 @@ e_and(expr_t *pThis, ctok_t *ctok)
 		/* fill structure */
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(e_cmp(pThis, ctok));
-		CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_AND, NULL)); /* add to program */
+		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_AND, NULL)); /* add to program */
 		CHKiRet(ctokGetToken(ctok, &pToken));
 	}
 
@@ -265,7 +267,7 @@ expr(expr_t *pThis, ctok_t *ctok)
 		dbgoprint((obj_t*) pThis, "found OR\n");
 		CHKiRet(ctok_tokenDestruct(&pToken)); /* no longer needed */
 		CHKiRet(e_and(pThis, ctok));
-		CHKiRet(vmprgAddVarOperation(pThis->pVmprg, opcode_OR, NULL)); /* add to program */
+		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_OR, NULL)); /* add to program */
 		CHKiRet(ctokGetToken(ctok, &pToken));
 	}
 
@@ -307,7 +309,7 @@ rsRetVal exprConstructFinalize(expr_t *pThis)
 BEGINobjDestruct(expr) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(expr)
 	if(pThis->pVmprg != NULL)
-		vmprgDestruct(&pThis->pVmprg);
+		vmprg.Destruct(&pThis->pVmprg);
 ENDobjDestruct(expr)
 
 
@@ -362,17 +364,41 @@ exprParse(expr_t *pThis, ctok_t *ctok)
 	ISOBJ_TYPE_assert(ctok, ctok);
 
 	/* first, we need to make sure we have a program where we can add to what we parse... */
-	CHKiRet(vmprgConstruct(&pThis->pVmprg));
-	CHKiRet(vmprgConstructFinalize(pThis->pVmprg));
+	CHKiRet(vmprg.Construct(&pThis->pVmprg));
+	CHKiRet(vmprg.ConstructFinalize(pThis->pVmprg));
 
 	/* happy parsing... */
 	CHKiRet(expr(pThis, ctok));
 	dbgoprint((obj_t*) pThis, "successfully parsed/created expression\n");
-vmprgDebugPrint(pThis->pVmprg);
+vmprg.DebugPrint(pThis->pVmprg);
 
 finalize_it:
 	RETiRet;
 }
+
+
+/* queryInterface function
+ * rgerhards, 2008-02-21
+ */
+BEGINobjQueryInterface(expr)
+CODESTARTobjQueryInterface(expr)
+	if(pIf->ifVersion != exprCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->oID = OBJexpr;
+
+	pIf->Construct = exprConstruct;
+	pIf->ConstructFinalize = exprConstructFinalize;
+	pIf->Destruct = exprDestruct;
+	pIf->Parse = exprParse;
+finalize_it:
+ENDobjQueryInterface(expr)
 
 
 /* Initialize the expr class. Must be called as the very first method
@@ -380,6 +406,10 @@ finalize_it:
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(expr, 1) /* class, version */
+	/* request objects we use */
+	CHKiRet(objUse(vmprg));
+	CHKiRet(objUse(var));
+
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, exprConstructFinalize);
 ENDObjClassInit(expr)
 

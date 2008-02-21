@@ -40,6 +40,7 @@
 #include "stream.h"
 
 /* static data */
+DEFobjCurrIf(var)
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
 
 /* some defines */
@@ -612,15 +613,15 @@ static rsRetVal objDeserializeProperties(obj_t *pObj, objID_t oID, strm_t *pStrm
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ASSERT(oID > 0 && oID < OBJ_NUM_IDS);
 
-	CHKiRet(varConstruct(&pVar));
-	CHKiRet(varConstructFinalize(pVar));
+	CHKiRet(var.Construct(&pVar));
+	CHKiRet(var.ConstructFinalize(pVar));
 
 	iRet = objDeserializeProperty(pVar, pStrm);
 	while(iRet == RS_RET_OK) {
 		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_SETPROPERTY](pObj, pVar));
 		iRet = objDeserializeProperty(pVar, pStrm);
 	}
-	varDestruct(&pVar);
+	var.Destruct(&pVar);
 
 	if(iRet != RS_RET_NO_PROPLINE)
 		FINALIZE;
@@ -860,15 +861,24 @@ finalize_it:
 
 
 /* initialize our own class */
-rsRetVal objClassInit(void)
+rsRetVal
+objClassInit(void)
 {
+	DEFiRet;
 	int i;
-
+	
+	/* first, initialize the object system itself. This must be done
+	 * before any other object is created.
+	 */
 	for(i = 0 ; i < OBJ_NUM_IDS ; ++i) {
 		arrObjInfo[i] = NULL;
 	}
 
-	return RS_RET_OK;
+	/* request objects we use */
+	CHKiRet(objUse(var));
+
+finalize_it:
+	RETiRet;
 }
 
 /*

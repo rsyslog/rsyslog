@@ -104,7 +104,7 @@ varUnsetValues(var_t *pThis)
 
 /* set a string value
  */
-rsRetVal
+static rsRetVal
 varSetString(var_t *pThis, cstr_t *pCStr)
 {
 	DEFiRet;
@@ -118,6 +118,31 @@ varSetString(var_t *pThis, cstr_t *pCStr)
 finalize_it:
 	RETiRet;
 }
+
+
+/* queryInterface function
+ * rgerhards, 2008-02-21
+ */
+BEGINobjQueryInterface(var)
+CODESTARTobjQueryInterface(var)
+	if(pIf->ifVersion != varCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->oID = OBJvar;
+
+	pIf->Construct = varConstruct;
+	pIf->ConstructFinalize = varConstructFinalize;
+	pIf->Destruct = varDestruct;
+	pIf->DebugPrint = varDebugPrint;
+	pIf->SetString = varSetString;
+finalize_it:
+ENDobjQueryInterface(var)
 
 
 /* Initialize the var class. Must be called as the very first method
