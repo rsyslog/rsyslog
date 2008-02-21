@@ -34,6 +34,8 @@ BEGINinterface(vmstk) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(vmstk_t **ppThis);
 	rsRetVal (*ConstructFinalize)(vmstk_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(vmstk_t **ppThis);
+	rsRetVal (*Push)(vmstk_t *pThis, var_t *pVar);
+	rsRetVal (*Pop)(vmstk_t *pThis, var_t **ppVar);
 ENDinterface(vmstk)
 #define vmstkCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

@@ -32,6 +32,7 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(var)
 
 
 /* Standard-Constructor
@@ -65,6 +66,34 @@ CODESTARTobjDebugPrint(vmstk)
 ENDobjDebugPrint(vmstk)
 
 
+/* push a value on the stack
+ */
+static rsRetVal
+push(vmstk_t *pThis, var_t *pVar)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, vmstk);
+	ISOBJ_TYPE_assert(pVar, var);
+
+	RETiRet;
+}
+
+
+/* pop a value from the stack
+ */
+static rsRetVal
+pop(vmstk_t *pThis, var_t **ppVar)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, vmstk);
+	assert(ppVar != NULL);
+
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -85,6 +114,8 @@ CODESTARTobjQueryInterface(vmstk)
 	pIf->ConstructFinalize = vmstkConstructFinalize;
 	pIf->Destruct = vmstkDestruct;
 	pIf->DebugPrint = vmstkDebugPrint;
+	pIf->Push = push;
+	pIf->Pop = pop;
 finalize_it:
 ENDobjQueryInterface(vmstk)
 
@@ -95,6 +126,7 @@ ENDobjQueryInterface(vmstk)
  */
 BEGINObjClassInit(vmstk, 1) /* class, version */
 	/* request objects we use */
+	CHKiRet(objUse(var));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmstkDebugPrint);
