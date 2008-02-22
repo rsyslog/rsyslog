@@ -61,6 +61,7 @@ BEGINinterface(var) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(var_t **ppThis);
 	rsRetVal (*SetInt64)(var_t *pThis, int64 iVal);
 	rsRetVal (*SetString)(var_t *pThis, cstr_t *pCStr);
+	rsRetVal (*ConvForOperation)(var_t *pThis, var_t *pOther);
 ENDinterface(var)
 #define varCURR_IF_VERSION 1 /* increment whenever you change the interface above! */
 

@@ -145,6 +145,88 @@ finalize_it:
 }
 
 
+/* This function is used to prepare two var_t objects for a common operation,
+ * e.g before they are added, multiplied or compared. The function looks at
+ * the data types of both operands and finds the best data type suitable for
+ * the operation (in respect to current types). Then, it converts those
+ * operands that need conversion. Please note that the passed-in var objects
+ * *are* modified and returned as new type. So do call this function only if
+ * you actually need the conversion.
+ *
+ * This is how the common data type is selected. Note that op1 and op2 are
+ * just the two operands, their order is irrelevant (this would just take up
+ * more table space - so string/number is the same thing as number/string).
+ *
+ * Common Types:
+ * op1		op2	operation data type
+ * string	string	string
+ * string	number	number if op1 can be converted to number, string else
+ * date		string  date if op1 can be converted to date, string else
+ * number	number  number
+ * date		number	string (maybe we can do better?)
+ * date		date	date
+ * none         n/a     error
+ *
+ * If a boolean value is required, we need to have a number inside the
+ * operand. If it is not, conversion rules to number apply. Once we
+ * have a number, things get easy: 0 is false, anything else is true.
+ * Please note that due to this conversion rules, "0" becomes false
+ * while "-4712" becomes true. Using a date as boolen is not a good
+ * idea. Depending on the ultimate conversion rules, it may always
+ * become true or false. As such, using dates as booleans is
+ * prohibited and the result defined to be undefined.
+ *
+ * rgerhards, 2008-02-22
+ */
+static rsRetVal
+ConvForOperation(var_t *pThis, var_t *pOther)
+{
+	DEFiRet;
+	varType_t commonType;
+
+	if(pThis->varType == VARTYPE_NONE || pOther->varType == VARTYPE_NONE)
+		ABORT_FINALIZE(RS_RET_INVALID_VAR);
+
+	switch(pThis->varType) {
+		case VARTYPE_NONE:
+			ABORT_FINALIZE(RS_RET_INVALID_VAR);
+			break;
+		// TODO: remove VARTYPE_PSZ?
+		// TODO: check need for SHORT/INT/LONG...
+		case VARTYPE_PSZ:
+		case VARTYPE_CSTR:
+			switch(pThis->varType) {
+				case VARTYPE_NONE:
+					ABORT_FINALIZE(RS_RET_INVALID_VAR);
+					break;
+				case VARTYPE_PSZ:
+				case VARTYPE_CSTR:
+					break;
+				case VARTYPE_SHORT:
+				case VARTYPE_INT:
+				case VARTYPE_LONG:
+				case VARTYPE_INT64:
+					break;
+				case VARTYPE_SYSLOGTIME:
+					ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+					break;
+			}
+			break;
+		case VARTYPE_SHORT:
+		case VARTYPE_INT:
+		case VARTYPE_LONG:
+		case VARTYPE_INT64:
+			break;
+		case VARTYPE_SYSLOGTIME:
+			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+			break;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -167,6 +249,7 @@ CODESTARTobjQueryInterface(var)
 	pIf->DebugPrint = varDebugPrint;
 	pIf->SetInt64 = varSetInt64;
 	pIf->SetString = varSetString;
+	pIf->ConvForOperation = ConvForOperation;
 finalize_it:
 ENDobjQueryInterface(var)
 
