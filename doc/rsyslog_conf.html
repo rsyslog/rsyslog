@@ -1,7 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>rsyslog.conf file</title>
-
-</head>
+<html><head><title>rsyslog.conf file</title></head>
 <body>
 <h1>rsyslog.conf configuration file</h1>
 <p><b>This document is currently being enhanced. Please
@@ -412,7 +410,7 @@ to filter based on priority and facility, you should do this with
 selector lines. They are <b>not</b> second-class citizens
 in rsyslog and offer the best performance for this job.</p>
 <p>The selector field itself again consists of two parts, a
-facility and a priority, separated by a period (``.''). Both parts are
+facility and a priority, separated by a period (".''). Both parts are
 case insensitive and can also be specified as decimal numbers, but
 don't do that, you have been warned. Both facilities and priorities are
 described in rsyslog(3). The names mentioned below correspond to the
@@ -426,39 +424,34 @@ not be used in applications. Anyway, you may want to specify and
 redirect these messages here. The facility specifies the subsystem that
 produced the message, i.e. all mail programs log with the mail facility
 (LOG_MAIL) if they log using syslog.<br>
-<br>
-Please note that the upcoming next syslog-RFC specifies many more
-facilities. Support for them will be added in a future version of
-rsyslog, which might require changes to existing configuration files.<br>
-<br>
-The priority is one of the following keywords, in ascending order:
+<br>The priority is one of the following keywords, in ascending order:
 debug, info, notice, warning, warn (same as warning), err, error (same
 as err), crit, alert, emerg, panic (same as emerg). The keywords error,
 warn and panic are deprecated and should not be used anymore. The
-priority defines the severity of the message<br>
+priority defines the severity of the message.<br>
 <br>
 The behavior of the original BSD syslogd is that all messages of the
 specified priority and higher are logged according to the given action.
 Rsyslogd behaves the same, but has some extensions.<br>
 <br>
 In addition to the above mentioned names the rsyslogd(8) understands
-the following extensions: An asterisk (``*'') stands for all facilities
+the following extensions: An asterisk ("*'') stands for all facilities
 or all priorities, depending on where it is used (before or after the
 period). The keyword none stands for no priority of the given facility.<br>
 <br>
 You can specify multiple facilities with the same priority pattern in
-one statement using the comma (``,'') operator. You may specify as much
+one statement using the comma (",'') operator. You may specify as much
 facilities as you want. Remember that only the facility part from such
 a statement is taken, a priority part would be skipped.</p>
 <p>Multiple selectors may be specified for a single action using
-the semicolon (``;'') separator. Remember that each selector in the
+the semicolon (";'') separator. Remember that each selector in the
 selector field is capable to overwrite the preceding ones. Using this
 behavior you can exclude some priorities from the pattern.</p>
 <p>Rsyslogd has a syntax extension to the original BSD source,
 that makes its use more intuitively. You may precede every priority
-with an equation sign (``='') to specify only this single priority and
+with an equation sign ("='') to specify only this single priority and
 not any of the above. You may also (both is valid, too) precede the
-priority with an exclamation mark (``!'') to ignore all that
+priority with an exclamation mark ("!'') to ignore all that
 priorities, either exact this one or this and any higher priority. If
 you use both extensions than the exclamation mark must occur before the
 equation sign, just use it intuitively.</p>
@@ -605,7 +598,7 @@ compared to the otherwise-equal config directives below:</p>
 <p>Typically messages are logged to real files. The file has to
 be specified with full pathname, beginning with a slash "/''.<br>
 <br>
-You may prefix each entry with the minus ``-'' sign to omit syncing the
+You may prefix each entry with the minus "-'' sign to omit syncing the
 file after every logging. Note that you might lose information if the
 system crashes right behind a write attempt. Nevertheless this might
 give you back some performance, especially if you run programs that use
@@ -651,7 +644,7 @@ file name:</p>
 <h3>Named Pipes</h3>
 <p>This version of rsyslogd(8) has support for logging output to
 named pipes (fifos). A fifo or named pipe can be used as a destination
-for log messages by prepending a pipe symbol (``|'') to the name of the
+for log messages by prepending a pipe symbol ("|'') to the name of the
 file. This is handy for debugging. Note that the fifo must be created
 with the mkfifo(1) command before rsyslogd(8) is started.</p>
 <h3>Terminal and Console</h3>
@@ -761,7 +754,7 @@ use a different template. Use that one:</p>
 sysklogd,"&lt;%PRI%&gt;%TIMESTAMP% %syslogtag%%msg%\""<br>
 *.* @192.168.0.1;sysklogd</p>
 <h3>List of Users</h3>
-<p>Usually critical messages are also directed to ``root'' on
+<p>Usually critical messages are also directed to "root'' on
 that machine. You can specify a list of users that shall get the
 message by simply writing the login. You may specify more than one user
 by separating them with commas (",''). If they're logged in they get
@@ -1019,8 +1012,7 @@ currently logged in users. This is the wall action.<br>
 *.alert root,rgerhards<br>
 <br>
 This rule directs all messages with a priority of alert or higher to
-the terminals of the operator, i.e. of the users ``root'' and
-``rgerhards'' if they're logged in.<br>
+the terminals of the operator, i.e. of the users "root'' and "rgerhards'' if they're logged in.<br>
 <br>
 <br>
 *.* @finlandia<br>
@@ -1072,7 +1064,7 @@ Please note the colon in fron</p>
 <p>Rsyslogd uses a slightly different syntax for its
 configuration file than the original BSD sources. Originally all
 messages of a specific priority and above were forwarded to the log
-file. The modifiers ``='', ``!'' and ``-'' were added to make rsyslogd
+file. The modifiers "='', "!'' and "-'' were added to make rsyslogd
 more flexible and to use it in a more intuitive manner.<br>
 <br>
 The original BSD syslogd doesn't understand spaces as separators
