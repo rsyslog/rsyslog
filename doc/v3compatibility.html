@@ -1,8 +1,8 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><title>Compatibility notes for rsyslog v3</title>
 
-<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto">
-</head><body>
+<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto"></head>
+<body>
 <h1>Compatibility notes for rsyslog v3</h1>
 <p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
 (2007-12-17)</i></small></p>
@@ -46,7 +46,8 @@ you need to</p>
 <p><b>$ModLoad immark.so&nbsp; # wherever this is<br>
 $MarkMessageInterval 1800 # 30 minutes</b></p>
 <h2>-r command line option</h2>
-<p>Is also no longer available. Use the <b>$UDPSeverRun
+<p>Is&nbsp; no longer available in native mode. However, it is
+understood in compatibility mode (if no -c option is given). Use the <b>$UDPSeverRun
 &lt;port&gt;</b> config file directives. You can now also
 set the local address the server should listen to via <b>$UDPServerAddress
 &lt;ip&gt;</b> config directive.</p>
@@ -99,23 +100,11 @@ forgotten. Remember that as of now, rsyslog v3 is in its early stage of
 development and so there definitely are some nits that will give you
 grief. This section here tells you what it is.</p>
 <h2>-c option</h2>
-<p>needs to be implemented. So far, only -c3 is supported.
-Everything else does not change anything but just provides a warning
-message. In short: there is no backwards compatibility yet.</p>
-<h2>Thread Termination</h2>
-<p>Thread termination in mode 1 needs to be looked at. I begin to
-think that it is OK if we simply cancel the thread, because we already
-have a different cleanup function. Otherwise, there is a potential for
-a race condition after we unblocked the TermOK mutex but before
-select() is entered. If the signal then occurs, we may have a problem.
-However, I would like to create the other input modules first so that I
-have more working experience with termination requirements. Again, I
-think this will lead to changes in thread termination.</p>
-<p>So far, this issue is resolved, but there is still some code
-present that needs to go away (right now disabled). I keep it in
-because I will make the final decision based on experience gained
-during creation of input modules.</p>
-<h2>Call Encapsulation</h2>
+<p>is at least partly implemented. To use the rsyslog v3 native
+interface, specify -c3. To use legacy mode (command line options!),
+either do not use -c at all or use -c&lt;vers&gt; where vers is the
+rsyslog version that it shall be compatible to. Use -c0 to be
+command-line compatible to sysklogd.</p><p>Note that at of this writing, there may still be some command line options not fully supported.</p><h2>Call Encapsulation</h2>
 <p>In an ideal world, the modules should call back only to some
 well-defined and specifically exported interface functions. Right now,
 we do not have an ideal world and the input modules make some calls
@@ -134,6 +123,7 @@ code to the modules, because now at least the majority of code is where
 it belongs to. But there are still a large number of global variables,
 cross-function calls and the like. This needs to be solved when we try
 to claim a real modular design. That's not an easy task, but, hey,
-aren't we up for that...? ;)</p>
+aren't we up for that...? ;) It is scheduled to be solved by the
+"rsyslog loader", for which some stage work has already been done.</p>
 <p>&nbsp;</p>
 </body></html>
