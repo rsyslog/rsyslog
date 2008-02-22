@@ -718,6 +718,37 @@ int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz
 }
 
 
+/* check if the string can be converted to a number. Returns 1 if that's possible
+ * and 0 otherwise.
+ */
+int rsCStrCanConvertToNumber(cstr_t *pStr)
+{
+	int i;
+	int ret = 1;
+
+	if(pStr->iStrLen == 0) {
+		/* can be converted to 0! (by convention) */
+		goto finalize_it;
+	}
+
+	/* we have a string, so let's check its syntax */
+	if(pStr->pBuf[0] == '+' || pStr->pBuf[0] == '-') {
+		i = 1; /* skip that char */
+	} else {
+		i = 0; /* start from the beginning */
+	}
+
+	while(i < pStr->iStrLen && isdigit(pStr->pBuf[i]))
+		++i;
+	
+	if(i < pStr->iStrLen) /* non-digits before end of string? */
+		ret = 0; /* than we can not convert */
+
+finalize_it:
+	return ret;
+}
+
+
 /* compare a rsCStr object with a classical sz string.
  * Just like rsCStrCStrCmp, just for a different data type.
  * There must not only the sz string but also its length be

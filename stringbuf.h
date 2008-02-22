@@ -138,6 +138,7 @@ int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz);
 int rsCStrStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz);
 int rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz);
 int rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz);
+int rsCStrCanConvertToNumber(cstr_t *pStr);
 
 /* now come inline-like functions */
 #ifdef NDEBUG

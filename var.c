@@ -142,6 +142,29 @@ finalize_it:
 }
 
 
+/* check if the provided object can be converted to a number. Uses
+ * non-standard calling conventions because it makes an awful lot of sense.
+ * Returns 1 if conversion is possibe and 0 if not. If 1 is returned, a
+ * conversion request on the unchanged object is guaranteed to succeed.
+ * rgerhards, 2008-02-22
+ */
+int canConvToNumber(var_t *pThis)
+{
+	int ret = 0;
+
+	BEGINfunc
+
+	if(pThis->varType == VARTYPE_NUMBER) {
+		ret = 1;
+	} else if(pThis->varType == VARTYPE_STR) {
+		ret = rsCStrCanConvertToNumber(pThis->val.pStr); // TODO: implement the same method in str_t object, then call that */
+	}
+
+	ENDfunc
+	return ret;
+}
+
+
 /* This function is used to prepare two var_t objects for a common operation,
  * e.g before they are added, multiplied or compared. The function looks at
  * the data types of both operands and finds the best data type suitable for
@@ -184,42 +207,48 @@ ConvForOperation(var_t *pThis, var_t *pOther)
 	if(pThis->varType == VARTYPE_NONE || pOther->varType == VARTYPE_NONE)
 		ABORT_FINALIZE(RS_RET_INVALID_VAR);
 
-#if 0
 	switch(pThis->varType) {
 		case VARTYPE_NONE:
 			ABORT_FINALIZE(RS_RET_INVALID_VAR);
 			break;
-		// TODO: remove VARTYPE_PSZ?
-		// TODO: check need for SHORT/INT/LONG...
-		case VARTYPE_PSZ:
-		case VARTYPE_CSTR:
-			switch(pThis->varType) {
+		case VARTYPE_STR:
+			switch(pOther->varType) {
 				case VARTYPE_NONE:
 					ABORT_FINALIZE(RS_RET_INVALID_VAR);
 					break;
-				case VARTYPE_PSZ:
-				case VARTYPE_CSTR:
+				case VARTYPE_STR:
+					commonType = VARTYPE_STR;
 					break;
-				case VARTYPE_SHORT:
-				case VARTYPE_INT:
-				case VARTYPE_LONG:
-				case VARTYPE_INT64:
+				case VARTYPE_NUMBER:
+					/* check if we can convert pThis to a number, if so use number format. */
+					commonType = canConvToNumber(pThis) ? VARTYPE_NUMBER : VARTYPE_STR;
 					break;
 				case VARTYPE_SYSLOGTIME:
 					ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 					break;
 			}
 			break;
-		case VARTYPE_SHORT:
-		case VARTYPE_INT:
-		case VARTYPE_LONG:
-		case VARTYPE_INT64:
+		case VARTYPE_NUMBER:
+			switch(pOther->varType) {
+				case VARTYPE_NONE:
+					ABORT_FINALIZE(RS_RET_INVALID_VAR);
+					break;
+				case VARTYPE_STR:
+					/* check if we can convert pOther to a number, if so use number format. */
+					commonType = canConvToNumber(pOther) ? VARTYPE_NUMBER : VARTYPE_STR;
+					break;
+				case VARTYPE_NUMBER:
+					commonType = VARTYPE_NUMBER;
+					break;
+				case VARTYPE_SYSLOGTIME:
+					ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+					break;
+			}
 			break;
 		case VARTYPE_SYSLOGTIME:
 			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 			break;
 	}
-#endif
 
 finalize_it:
 	RETiRet;
