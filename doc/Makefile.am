@@ -30,6 +30,8 @@ html_files = \
 	omsnmp.html \
 	omlibdbi.html \
 	imfile.html \
+	imtcp.html \
+	imgssapi.html \
 	professional_support.html \
 	queues.html \
 	queueWorkerLogic.dia \

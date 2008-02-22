@@ -36,7 +36,7 @@ SQLLite, Ingres, Oracle, mSQL)</li>
 <li><a href="imfile.html">imfile</a>
 -&nbsp; input module for text files</li>
 <li>imudp - udp syslog message input</li>
-<li>imtcp - input plugin for plain tcp and GSS-enable syslog</li>
+<li><a href="imtcp.html">imtcp</a> - input plugin for plain tcp syslog</li><li><a href="imgssapi.html">imgssapi</a> - input plugin for plain tcp and GSS-enable syslog</li>
 <li>immark - support for mark messages</li>
 <li>imklog - kernel logging</li>
 </ul>
@@ -1064,7 +1064,7 @@ Please note the colon in fron</p>
 <p>Rsyslogd uses a slightly different syntax for its
 configuration file than the original BSD sources. Originally all
 messages of a specific priority and above were forwarded to the log
-file. The modifiers "='', "!'' and "-'' were added to make rsyslogd
+file. The modifiers "='', "!'' and "!-'' were added to make rsyslogd
 more flexible and to use it in a more intuitive manner.<br>
 <br>
 The original BSD syslogd doesn't understand spaces as separators

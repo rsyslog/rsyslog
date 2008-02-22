@@ -1,9 +1,10 @@
 ---------------------------------------------------------------------------
-Version 3.12.0 (rgerhards), 2008-02-??
-- gssapi input can now be build separately from plain tcp input
-  thanks to varmojfekoj for the patch
+Version 3.11 5 (rgerhards), 2008-02-??
+- new imgssapi module, changed imtcp module - this enables to load/package
+  GSSAPI support separately - thanks to varmojfekoj for the patch
 - compatibility mode (the -c option series) is now at least partly
   completed - thanks to varmojfekoj for the patch
+- documentation for imgssapi and imtcp added
 - duplicate $ModLoad's for the same module are now detected and
   rejected -- thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------

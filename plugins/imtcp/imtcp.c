@@ -1287,7 +1287,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 #if defined(USE_GSSAPI)
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverrun", 0, eCmdHdlrGetWord,
 				   addGSSListener, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgsslistenservicename", 0, eCmdHdlrGetWord,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverservicename", 0, eCmdHdlrGetWord,
 				   NULL, &gss_listen_service_name, STD_LOADABLE_MODULE_ID));
 #endif
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,

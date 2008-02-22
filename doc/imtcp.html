@@ -1,0 +1,51 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en"><title>TCP Syslog Input Module</title>
+
+</head>
+<body>
+<h1>TCP Syslog Input Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; imtcp</b></p>
+<p><b>Author: </b>Rainer Gerhards
+&lt;rgerhards@adiscon.com&gt;</p>
+<p><b>Description</b>:</p>
+<p>Provides the ability to receive syslog messages via TCP.
+Encryption can be provided by using <a href="rsyslog_stunnel.html">stunnel</a>
+(an alternative is the use
+the&nbsp;<a href="imgssapi.html">imgssapi</a>
+modul).</p>
+<p>In the future, multiple receivers may be configured by
+specifying
+$InputTCPServerRun multiple times. This is not currently supported.
+</p>
+<p><b>Configuration Directives</b>:</p>
+<ul>
+<li>$InputTCPServerRun &lt;port&gt;<br>
+Starts a TCP server on selected port</li>
+<li>$InputTCPMaxSessions &lt;number&gt;<br>
+Sets the maximum number of sessions supported</li>
+</ul>
+<b>Caveats/Known Bugs:</b>
+<ul>
+<li>module always binds to all interfaces</li>
+<li>only a single listener can be bound</li>
+<li>can not be loaded together with <a href="imgssapi.html">imgssapi</a>
+(which includes the functionality of imtcp)</li>
+</ul>
+<p><b>Sample:</b></p>
+<p>This sets up a TCP server on port 514:<br>
+</p>
+<textarea rows="15" cols="60">$ModLoad imtcp.so #
+needs to be done just once
+$InputTCPServerRun 514
+</textarea>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>
