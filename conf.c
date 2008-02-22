@@ -215,6 +215,7 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
         uchar szPath[512];
         uchar errMsg[1024];
 	uchar *pModName, *pModNameBase;
+	uchar *pModNameDup;
         void *pModHdlr, *pModInit;
 	modInfo_t *pModInfo;
 
@@ -241,16 +242,20 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 
 	dbgprintf("Requested to load module '%s'\n", szName);
 
-	pModNameBase = (uchar *) basename(strdup((char *) pModName));
+	if((pModNameDup = (uchar *) strdup((char *) pModName)) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	pModNameBase = (uchar *) basename((char*)pModNameDup);
 	pModInfo = modGetNxt(NULL);
 	while(pModInfo != NULL) {
 		if(!strcmp((char *) pModNameBase, (char *) modGetName(pModInfo))) {
 			dbgprintf("Module '%s' already loaded\n", szName);
+			free(pModNameDup);
 			ABORT_FINALIZE(RS_RET_OK);
 		}
 		pModInfo = modGetNxt(pModInfo);
 	}
-	free(pModNameBase);
+	free(pModNameDup);
 
 	if(*pModName == '/') {
 		*szPath = '\0';	/* we do not need to append the path - its already in the module name */
@@ -641,7 +646,6 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 		}
 
 		if (pri < 0) {
-dbgPrintAllDebugInfo();
 			snprintf((char*) xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
 			logerror((char*) xbuf);
 			return RS_RET_ERR;
