@@ -214,8 +214,9 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	uchar szName[512];
         uchar szPath[512];
         uchar errMsg[1024];
-	uchar *pModName;
+	uchar *pModName, *pModNameBase;
         void *pModHdlr, *pModInit;
+	modInfo_t *pModInfo;
 
 	ASSERT(pp != NULL);
 	ASSERT(*pp != NULL);
@@ -224,6 +225,7 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 		logerror("could not extract module name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
+	skipWhiteSpace(pp); /* skip over any whitespace */
 
 	/* this below is a quick and dirty hack to provide compatibility with the
 	 * $ModLoad MySQL forward compatibility statement. TODO: clean this up
@@ -238,6 +240,17 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 		pModName = szName;
 
 	dbgprintf("Requested to load module '%s'\n", szName);
+
+	pModNameBase = (uchar *) basename(strdup((char *) pModName));
+	pModInfo = modGetNxt(NULL);
+	while(pModInfo != NULL) {
+		if(!strcmp((char *) pModNameBase, (char *) modGetName(pModInfo))) {
+			dbgprintf("Module '%s' already loaded\n", szName);
+			ABORT_FINALIZE(RS_RET_OK);
+		}
+		pModInfo = modGetNxt(pModInfo);
+	}
+	free(pModNameBase);
 
 	if(*pModName == '/') {
 		*szPath = '\0';	/* we do not need to append the path - its already in the module name */
@@ -265,8 +278,6 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-
-	skipWhiteSpace(pp); /* skip over any whitespace */
 
 finalize_it:
 	RETiRet;

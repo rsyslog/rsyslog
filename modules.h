@@ -91,6 +91,7 @@ typedef struct moduleInfo {
 
 /* prototypes */
 rsRetVal doModInit(rsRetVal (*modInit)(), uchar *name, void *pModHdlr);
+modInfo_t *modGetNxt(modInfo_t *pThis);
 modInfo_t *modGetNxtType(modInfo_t *pThis, eModType_t rqtdType);
 uchar *modGetName(modInfo_t *pThis);
 uchar *modGetStateName(modInfo_t *pThis);

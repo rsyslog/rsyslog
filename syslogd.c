@@ -118,6 +118,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <assert.h>
+#include <libgen.h>
 
 #ifdef	__sun
 #include <errno.h>
@@ -280,6 +281,12 @@ int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 struct	filed *Files = NULL; /* read-only after init() (but beware of sigusr1!) */
 
 static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
+
+typedef struct legacyOptsLL_s {
+	uchar *line;
+	struct legacyOptsLL_s *next;
+} legacyOptsLL_t;
+legacyOptsLL_t *pLegacyOptsLL = NULL;
 
 /* global variables for config file state */
 static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
@@ -2298,6 +2305,128 @@ void logerror(char *type)
 	return;
 }
 
+
+void legacyOptsEnq(uchar *line)
+{
+	legacyOptsLL_t *pNew;
+
+	pNew = malloc(sizeof(legacyOptsLL_t));
+	if(line == NULL)
+		pNew->line = NULL;
+	else
+		pNew->line = (uchar *) strdup((char *) line);
+	pNew->next = NULL;
+
+	if(pLegacyOptsLL == NULL)
+		pLegacyOptsLL = pNew;
+	else {
+		legacyOptsLL_t *pThis = pLegacyOptsLL;
+
+		while(pThis->next != NULL)
+			pThis = pThis->next;
+		pThis->next = pNew;
+	}
+}
+
+
+void legacyOptsFree(void)
+{
+	legacyOptsLL_t *pThis = pLegacyOptsLL, *pNext;
+
+	while(pThis != NULL) {
+		if(pThis->line != NULL)
+			free(pThis->line);
+		pNext = pThis->next;
+		free(pThis);
+		pThis = pNext;
+	}
+}
+
+
+void legacyOptsHook(void)
+{
+	legacyOptsLL_t *pThis = pLegacyOptsLL;
+
+	while(pThis != NULL) {
+		if(pThis->line != NULL)
+			cfsysline(pThis->line);
+		pThis = pThis->next;
+	}
+}
+
+
+void legacyOptsParseTCP(char ch, char *arg)
+{
+	register int i;
+	register char *pArg = arg;
+	static char conflict = '\0';
+
+	if((conflict == 'g' && ch == 't') || (conflict == 't' && ch == 'g')) {
+		fprintf(stderr, "rsyslog: If you want to use both -g and -t, use directives instead, -%c ignored.\n", ch);
+		return;
+	} else
+		conflict = ch;
+
+	/* extract port */
+	i = 0;
+	while(isdigit((int) *pArg))
+		i = i * 10 + *pArg++ - '0';
+
+	/* number of sessions */
+	if(*pArg == '\0' || *pArg == ',') {
+		if(ch == 't')
+			legacyOptsEnq((uchar *) "ModLoad imtcp.so");
+		else if(ch == 'g')
+			legacyOptsEnq((uchar *) "ModLoad imgssapi.so");
+
+		if(i >= 0 && i <= 65535) {
+			uchar line[30];
+
+			if(ch == 't') {
+				snprintf((char *) line, sizeof(line), "InputTCPServerRun %d", i);
+			} else if(ch == 'g') {
+				snprintf((char *) line, sizeof(line), "InputGSSServerRun %d", i);
+			}
+			legacyOptsEnq(line);
+		} else {
+			if(ch == 't') {
+				fprintf(stderr, "rsyslogd: Invalid TCP listen port %d - changed to 514.\n", i);
+				legacyOptsEnq((uchar *) "InputTCPServerRun 514");
+			} else if(ch == 'g') {
+				fprintf(stderr, "rsyslogd: Invalid GSS listen port %d - changed to 514.\n", i);
+				legacyOptsEnq((uchar *) "InputGSSServerRun 514");
+			}
+		}
+
+		if(*pArg == ',') {
+			++pArg;
+			while(isspace((int) *pArg))
+				++pArg;
+			while(isdigit((int) *pArg)) {
+				i = i * 10 + *pArg++ - '0';
+			}
+			if(i > 0) {
+				uchar line[30];
+
+				snprintf((char *) line, sizeof(line), "InputTCPMaxSessions %d", i);
+				legacyOptsEnq(line);
+			} else {
+				if(ch == 't') {
+					fprintf(stderr,	"rsyslogd: TCP session max configured "
+						"to %d [-t %s] - changing to 1.\n", i, arg);
+					legacyOptsEnq((uchar *) "InputTCPMaxSessions 1");
+				} else if (ch == 'g') {
+					fprintf(stderr,	"rsyslogd: GSS session max configured "
+						"to %d [-g %s] - changing to 1.\n", i, arg);
+					legacyOptsEnq((uchar *) "InputTCPMaxSessions 1");
+				}
+			}
+		}
+	} else
+		fprintf(stderr, "rsyslogd: Invalid -t %s command line option.\n", arg);
+}
+
+
 /* doDie() is a signal handler. If called, it sets the bFinished variable
  * to indicate the program should terminate. However, it does not terminate
  * it itself, because that causes issues with multi-threading. The actual
@@ -2408,6 +2537,7 @@ die(int sig)
 	/* clean up auxiliary data */
 	if(pModDir != NULL)
 		free(pModDir);
+	legacyOptsFree();
 
 	dbgprintf("Clean shutdown completed, bye\n");
 
@@ -2678,6 +2808,8 @@ init(void)
 	 * rgerhards, 2007-07-31
 	 */
 	cfsysline((uchar*)"ResetConfigVariables");
+
+	legacyOptsHook();
 
 	/* open the configuration file */
 	if((iRet = processConfFile(ConfFile)) != RS_RET_OK) {
@@ -3497,9 +3629,10 @@ int realMain(int argc, char **argv)
 			break;
 		case 'g':		/* enable tcp gssapi logging */
 #if defined(SYSLOG_INET) && defined(USE_GSSAPI)
-			if (!bEnableTCP)
-				configureTCPListen(optarg);
-			bEnableTCP |= ALLOWEDMETHOD_GSS;
+			if(iCompatibilityMode < 3) {
+				legacyOptsParseTCP(ch, optarg);
+			} else
+				fprintf(stderr,	"-g option only supported in compatibility modes 0 to 2 - ignored\n");
 #else
 			fprintf(stderr, "rsyslogd: -g not valid - not compiled with gssapi support");
 #endif
@@ -3542,9 +3675,20 @@ int realMain(int argc, char **argv)
 				LogPort = "0";
 			else
 				LogPort = optarg;
+#else
+			if(iCompatibilityMode < 3) {
+				uchar line[30];
+
+				legacyOptsEnq((uchar *) "ModLoad imudp.so");
+
+				snprintf((char *) line, sizeof(line), "UDPServerRun %s", optarg);
+				legacyOptsEnq(line);
+			} else
+				fprintf(stderr,
+					"-r option only supported in compatibility modes 0 to 2 - ignored\n");
 #endif
 #else
-			fprintf(stderr, "rsyslogd: -r not valid - not compiled with network support");
+			fprintf(stderr, "rsyslogd: -r not valid - not compiled with network support\n");
 #endif
 			break;
 		case 's':
@@ -3557,11 +3701,12 @@ int realMain(int argc, char **argv)
 			break;
 		case 't':		/* enable tcp logging */
 #ifdef SYSLOG_INET
-			if (!bEnableTCP)
-				configureTCPListen(optarg);
-			bEnableTCP |= ALLOWEDMETHOD_TCP;
+			if(iCompatibilityMode < 3) {
+				legacyOptsParseTCP(ch, optarg);
+			} else
+				fprintf(stderr,	"-t option only supported in compatibility modes 0 to 2 - ignored\n");
 #else
-			fprintf(stderr, "rsyslogd: -t not valid - not compiled with network support");
+			fprintf(stderr, "rsyslogd: -t not valid - not compiled with network support\n");
 #endif
 			break;
 		case 'u':		/* misc user settings */

@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 3.12.0 (rgerhards), 2008-02-??
+- gssapi input can now be build separately from plain tcp input
+  thanks to varmojfekoj for the patch
+- an initial attempt at compatibility mode settings
+  thanks to varmojfekoj for the patch
+- duplicate $ModLoad's for the same module are now detected and
+  rejected -- thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 3.11.4 (rgerhards), 2008-02-21
 - bugfix: debug.html was missing from release tarball - thanks to Michael
