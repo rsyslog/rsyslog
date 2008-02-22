@@ -128,6 +128,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVALID_OCTAL_DIGIT = -2052, /**< invalid octal digit during parsing */
 	RS_RET_INVALID_HEX_DIGIT = -2053, /**< invalid hex digit during parsing */
 	RS_RET_INTERFACE_NOT_SUPPORTED = -2054, /**< interface not supported */
+	RS_RET_OUT_OF_STACKSPACE = -2055, /**< a stack data structure is exhausted and can not be grown */
+	RS_RET_STACK_EMPTY = -2056, /**< a pop was requested on a stack, but the stack was already empty */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */

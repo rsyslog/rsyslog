@@ -66,7 +66,9 @@ CODESTARTobjDebugPrint(vmstk)
 ENDobjDebugPrint(vmstk)
 
 
-/* push a value on the stack
+/* push a value on the stack. The provided pVar is now owned
+ * by the stack. If the user intends to continue use it, it
+ * must be duplicated.
  */
 static rsRetVal
 push(vmstk_t *pThis, var_t *pVar)
@@ -76,11 +78,18 @@ push(vmstk_t *pThis, var_t *pVar)
 	ISOBJ_TYPE_assert(pThis, vmstk);
 	ISOBJ_TYPE_assert(pVar, var);
 
+	if(pThis->iStkPtr >= VMSTK_SIZE)
+		ABORT_FINALIZE(RS_RET_OUT_OF_STACKSPACE);
+
+	pThis->vStk[pThis->iStkPtr++] = pVar;
+
+finalize_it:
 	RETiRet;
 }
 
 
 /* pop a value from the stack
+ * The user is responsible for destructing the ppVar returned.
  */
 static rsRetVal
 pop(vmstk_t *pThis, var_t **ppVar)
@@ -90,6 +99,12 @@ pop(vmstk_t *pThis, var_t **ppVar)
 	ISOBJ_TYPE_assert(pThis, vmstk);
 	assert(ppVar != NULL);
 
+	if(pThis->iStkPtr == 0)
+		ABORT_FINALIZE(RS_RET_STACK_EMPTY);
+
+	*ppVar = pThis->vStk[pThis->iStkPtr--];
+
+finalize_it:
 	RETiRet;
 }
 
