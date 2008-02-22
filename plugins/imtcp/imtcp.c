@@ -25,7 +25,14 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+
 #include "config.h"
+#ifdef FORCE_NO_GSS
+  #ifdef USE_GSSAPI
+    #undef USE_GSSAPI
+  #endif
+#endif
+
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
