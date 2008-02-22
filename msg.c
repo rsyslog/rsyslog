@@ -2089,33 +2089,33 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	assert(pProp != NULL);
 
  	if(isProp("iProtocolVersion")) {
-		setProtocolVersion(pThis, pProp->val.vShort);
+		setProtocolVersion(pThis, pProp->val.num);
  	} else if(isProp("iSeverity")) {
-		pThis->iSeverity = pProp->val.vShort;
+		pThis->iSeverity = pProp->val.num;
  	} else if(isProp("iFacility")) {
-		pThis->iFacility = pProp->val.vShort;
+		pThis->iFacility = pProp->val.num;
  	} else if(isProp("msgFlags")) {
-		pThis->msgFlags = pProp->val.vInt;
+		pThis->msgFlags = pProp->val.num;
 	} else if(isProp("pszRawMsg")) {
-		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszMSG")) {
-		MsgSetMSG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetMSG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszUxTradMsg")) {
-		MsgSetUxTradMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetUxTradMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszTAG")) {
-		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszRcvFrom")) {
-		MsgSetHOSTNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetHOSTNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszHOSTNAME")) {
-		MsgSetRcvFrom(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetRcvFrom(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSStrucData")) {
-		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSAPPNAME")) {
-		MsgSetAPPNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetAPPNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSPROCID")) {
-		MsgSetPROCID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetPROCID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSMSGID")) {
-		MsgSetMSGID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.vpCStr));
+		MsgSetMSGID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("tRcvdAt")) {
 		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	} else if(isProp("tTIMESTAMP")) {

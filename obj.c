@@ -216,12 +216,13 @@ finalize_it:
 
 /* append a property
  */
-rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, varType_t propType, void *pUsr)
+rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr)
 {
 	DEFiRet;
 	uchar *pszBuf = NULL;
 	size_t lenBuf = 0;
 	uchar szBuf[64];
+	varType_t vType = VARTYPE_NONE;
 
 	ISOBJ_TYPE_assert(pStrm, strm);
 	assert(pszPropName != NULL);
@@ -238,30 +239,35 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, varType_t propType,
 	/* TODO: use the stream functions for data conversion here - should be quicker */
 
 	switch(propType) {
-		case VARTYPE_PSZ:
+		case PROPTYPE_PSZ:
 			pszBuf = (uchar*) pUsr;
 			lenBuf = strlen((char*) pszBuf);
+			vType = VARTYPE_STR;
 			break;
-		case VARTYPE_SHORT:
+		case PROPTYPE_SHORT:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((short*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = strlen((char*) szBuf);
+			vType = VARTYPE_NUMBER;
 			break;
-		case VARTYPE_INT:
+		case PROPTYPE_INT:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((int*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = strlen((char*) szBuf);
+			vType = VARTYPE_NUMBER;
 			break;
-		case VARTYPE_LONG:
+		case PROPTYPE_LONG:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), *((long*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = strlen((char*) szBuf);
+			vType = VARTYPE_NUMBER;
 			break;
-		case VARTYPE_CSTR:
+		case PROPTYPE_CSTR:
 			pszBuf = rsCStrGetSzStrNoNULL((cstr_t *) pUsr);
 			lenBuf = rsCStrLen((cstr_t*) pUsr);
+			vType = VARTYPE_STR;
 			break;
-		case VARTYPE_SYSLOGTIME:
+		case PROPTYPE_SYSLOGTIME:
 			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%d:%d:%d:%d:%d:%d:%d:%d:%d:%c:%d:%d",
 					  ((syslogTime_t*)pUsr)->timeType,
 					  ((syslogTime_t*)pUsr)->year,
@@ -277,6 +283,7 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, varType_t propType,
 					  ((syslogTime_t*)pUsr)->OffsetMinute);
 			if(lenBuf > sizeof(szBuf) - 1)
 				ABORT_FINALIZE(RS_RET_PROVIDED_BUFFER_TOO_SMALL);
+			vType = VARTYPE_SYSLOGTIME;
 			pszBuf = szBuf;
 			break;
 		default:
@@ -290,7 +297,7 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, varType_t propType,
 	CHKiRet(strmWrite(pStrm, pszPropName, strlen((char*)pszPropName)));
 	CHKiRet(strmWriteChar(pStrm, ':'));
 	/* type */
-	CHKiRet(strmWriteLong(pStrm, (int) propType));
+	CHKiRet(strmWriteLong(pStrm, (int) vType));
 	CHKiRet(strmWriteChar(pStrm, ':'));
 	/* length */
 	CHKiRet(strmWriteLong(pStrm, lenBuf));
@@ -333,13 +340,13 @@ finalize_it:
 #define NEXTC CHKiRet(strmReadChar(pStrm, &c))//;dbgprintf("c: %c\n", c);
 
 /* de-serialize an (long) integer */
-static rsRetVal objDeserializeLong(long *pInt, strm_t *pStrm)
+static rsRetVal objDeserializeNumber(number_t *pNum, strm_t *pStrm)
 {
 	DEFiRet;
-	int i;
+	number_t i;
 	uchar c;
 
-	assert(pInt != NULL);
+	assert(pNum != NULL);
 
 	NEXTC;
 	i = 0;
@@ -350,7 +357,7 @@ static rsRetVal objDeserializeLong(long *pInt, strm_t *pStrm)
 
 	if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
 
-	*pInt = i;
+	*pNum = i;
 finalize_it:
 	RETiRet;
 }
@@ -391,12 +398,12 @@ finalize_it:
 
 /* de-serialize a syslogTime -- rgerhards,2008-01-08 */
 #define	GETVAL(var)  \
-	CHKiRet(objDeserializeLong(&l, pStrm)); \
+	CHKiRet(objDeserializeNumber(&l, pStrm)); \
 	pTime->var = l;
 static rsRetVal objDeserializeSyslogTime(syslogTime_t *pTime, strm_t *pStrm)
 {
 	DEFiRet;
-	long l;
+	number_t l;
 	uchar c;
 
 	assert(pTime != NULL);
@@ -427,8 +434,8 @@ finalize_it:
 static rsRetVal objDeserializeHeader(uchar *pszRecType, objID_t *poID, int* poVers, strm_t *pStrm)
 {
 	DEFiRet;
-	long ioID;
-	long oVers;
+	number_t ioID;
+	number_t oVers;
 	uchar c;
 
 	assert(poID != NULL);
@@ -445,8 +452,8 @@ static rsRetVal objDeserializeHeader(uchar *pszRecType, objID_t *poID, int* poVe
 	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
 
 	/* object type and version */
-	CHKiRet(objDeserializeLong(&ioID, pStrm));
-	CHKiRet(objDeserializeLong(&oVers, pStrm));
+	CHKiRet(objDeserializeNumber(&ioID, pStrm));
+	CHKiRet(objDeserializeNumber(&oVers, pStrm));
 
 	if(ioID < 1 || ioID >= OBJ_NUM_IDS)
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
@@ -470,8 +477,8 @@ finalize_it:
 static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 {
 	DEFiRet;
-	long i;
-	long iLen;
+	number_t i;
+	number_t iLen;
 	uchar c;
 
 	assert(pProp != NULL);
@@ -495,30 +502,19 @@ static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 	CHKiRet(rsCStrFinish(pProp->pcsName));
 
 	/* property type */
-	CHKiRet(objDeserializeLong(&i, pStrm));
+	CHKiRet(objDeserializeNumber(&i, pStrm));
 	pProp->varType = i;
 
 	/* size (needed for strings) */
-	CHKiRet(objDeserializeLong(&iLen, pStrm));
+	CHKiRet(objDeserializeNumber(&iLen, pStrm));
 
 	/* we now need to deserialize the value */
 	switch(pProp->varType) {
-		case VARTYPE_PSZ:
-			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pStrm));
+		case VARTYPE_STR:
+			CHKiRet(objDeserializeStr(&pProp->val.pStr, iLen, pStrm));
 			break;
-		case VARTYPE_SHORT:
-			CHKiRet(objDeserializeLong(&i, pStrm));
-			pProp->val.vShort = i;
-			break;
-		case VARTYPE_INT:
-			CHKiRet(objDeserializeLong(&i, pStrm));
-			pProp->val.vInt = i;
-			break;
-		case VARTYPE_LONG:
-			CHKiRet(objDeserializeLong(&pProp->val.vLong, pStrm));
-			break;
-		case VARTYPE_CSTR:
-			CHKiRet(objDeserializeStr(&pProp->val.vpCStr, iLen, pStrm));
+		case VARTYPE_NUMBER:
+			CHKiRet(objDeserializeNumber(&pProp->val.num, pStrm));
 			break;
 		case VARTYPE_SYSLOGTIME:
 			CHKiRet(objDeserializeSyslogTime(&pProp->val.vSyslogTime, pStrm));

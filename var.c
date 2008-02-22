@@ -63,9 +63,9 @@ BEGINobjDestruct(var) /* be sure to specify the object type also in END and CODE
 CODESTARTobjDestruct(var)
 	if(pThis->pcsName != NULL)
 		d_free(pThis->pcsName);
-	if(pThis->varType == VARTYPE_CSTR) {
-		if(pThis->val.vpCStr != NULL)
-			d_free(pThis->val.vpCStr);
+	if(pThis->varType == VARTYPE_STR) {
+		if(pThis->val.pStr != NULL)
+			d_free(pThis->val.pStr);
 	}
 
 ENDobjDestruct(var)
@@ -75,14 +75,11 @@ ENDobjDestruct(var)
 BEGINobjDebugPrint(var) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDebugPrint(var)
 	switch(pThis->varType) {
-		case VARTYPE_CSTR:
-			dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStr(pThis->val.vpCStr));
+		case VARTYPE_STR:
+			dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStr(pThis->val.pStr));
 			break;
-		case VARTYPE_INT64:
-			dbgoprint((obj_t*) pThis, "type: int64, val %lld\n", pThis->val.vInt64);
-			break;
-		case VARTYPE_INT:
-			dbgoprint((obj_t*) pThis, "type: int64, val %d\n", pThis->val.vInt);
+		case VARTYPE_NUMBER:
+			dbgoprint((obj_t*) pThis, "type: int64, val %lld\n", pThis->val.num);
 			break;
 		default:
 			dbgoprint((obj_t*) pThis, "type %d currently not suppored in debug output\n", pThis->varType);
@@ -99,8 +96,8 @@ varUnsetValues(var_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, var);
-	if(pThis->varType == VARTYPE_CSTR)
-		rsCStrDestruct(&pThis->val.vpCStr);
+	if(pThis->varType == VARTYPE_STR)
+		rsCStrDestruct(&pThis->val.pStr);
 
 	pThis->varType = VARTYPE_NONE;
 
@@ -113,15 +110,15 @@ varUnsetValues(var_t *pThis)
  * has been called.
  */
 static rsRetVal
-varSetString(var_t *pThis, cstr_t *pCStr)
+varSetString(var_t *pThis, cstr_t *pStr)
 {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, var);
 
 	CHKiRet(varUnsetValues(pThis));
-	pThis->varType = VARTYPE_CSTR;
-	pThis->val.vpCStr = pCStr;
+	pThis->varType = VARTYPE_STR;
+	pThis->val.pStr = pStr;
 
 finalize_it:
 	RETiRet;
@@ -130,15 +127,15 @@ finalize_it:
 
 /* set an int64 value */
 static rsRetVal
-varSetInt64(var_t *pThis, int64 iVal)
+varSetNumber(var_t *pThis, number_t iVal)
 {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, var);
 
 	CHKiRet(varUnsetValues(pThis));
-	pThis->varType = VARTYPE_INT64;
-	pThis->val.vInt64 = iVal;
+	pThis->varType = VARTYPE_NUMBER;
+	pThis->val.num = iVal;
 
 finalize_it:
 	RETiRet;
@@ -187,6 +184,7 @@ ConvForOperation(var_t *pThis, var_t *pOther)
 	if(pThis->varType == VARTYPE_NONE || pOther->varType == VARTYPE_NONE)
 		ABORT_FINALIZE(RS_RET_INVALID_VAR);
 
+#if 0
 	switch(pThis->varType) {
 		case VARTYPE_NONE:
 			ABORT_FINALIZE(RS_RET_INVALID_VAR);
@@ -221,6 +219,7 @@ ConvForOperation(var_t *pThis, var_t *pOther)
 			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 			break;
 	}
+#endif
 
 finalize_it:
 	RETiRet;
@@ -247,7 +246,7 @@ CODESTARTobjQueryInterface(var)
 	pIf->ConstructFinalize = varConstructFinalize;
 	pIf->Destruct = varDestruct;
 	pIf->DebugPrint = varDebugPrint;
-	pIf->SetInt64 = varSetInt64;
+	pIf->SetNumber = varSetNumber;
 	pIf->SetString = varSetString;
 	pIf->ConvForOperation = ConvForOperation;
 finalize_it:

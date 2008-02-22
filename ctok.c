@@ -179,7 +179,7 @@ static rsRetVal
 ctokGetNumber(ctok_t *pThis, ctok_token_t *pToken)
 {
 	DEFiRet;
-	int64 n; /* the parsed number */
+	number_t n; /* the parsed number */
 	uchar c;
 	int valC;
 	int iBase;
@@ -228,7 +228,7 @@ ctokGetNumber(ctok_t *pThis, ctok_token_t *pToken)
 	/* we need to unget the character that made the loop terminate */
 	CHKiRet(ctokUngetCharFromStream(pThis, c));
 
-	CHKiRet(var.SetInt64(pToken->pVar, n));
+	CHKiRet(var.SetNumber(pToken->pVar, n));
 
 dbgprintf("number, number is: '%lld'\n", n);
 

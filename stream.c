@@ -811,25 +811,25 @@ rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 	ASSERT(pProp != NULL);
 
  	if(isProp("sType")) {
-		CHKiRet(strmSetsType(pThis, (strmType_t) pProp->val.vInt));
+		CHKiRet(strmSetsType(pThis, (strmType_t) pProp->val.num));
  	} else if(isProp("iCurrFNum")) {
-		pThis->iCurrFNum = pProp->val.vInt;
+		pThis->iCurrFNum = pProp->val.num;
  	} else if(isProp("pszFName")) {
-		CHKiRet(strmSetFName(pThis, rsCStrGetSzStrNoNULL(pProp->val.vpCStr), rsCStrLen(pProp->val.vpCStr)));
+		CHKiRet(strmSetFName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr)));
  	} else if(isProp("tOperationsMode")) {
-		CHKiRet(strmSettOperationsMode(pThis, pProp->val.vInt));
+		CHKiRet(strmSettOperationsMode(pThis, pProp->val.num));
  	} else if(isProp("tOpenMode")) {
-		CHKiRet(strmSettOpenMode(pThis, pProp->val.vInt));
+		CHKiRet(strmSettOpenMode(pThis, pProp->val.num));
  	} else if(isProp("iCurrOffs")) {
-		pThis->iCurrOffs = pProp->val.vLong;
+		pThis->iCurrOffs = pProp->val.num;
  	} else if(isProp("iMaxFileSize")) {
-		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.vLong));
+		CHKiRet(strmSetiMaxFileSize(pThis, pProp->val.num));
  	} else if(isProp("iMaxFiles")) {
-		CHKiRet(strmSetiMaxFiles(pThis, pProp->val.vInt));
+		CHKiRet(strmSetiMaxFiles(pThis, pProp->val.num));
  	} else if(isProp("iFileNumDigits")) {
-		CHKiRet(strmSetiFileNumDigits(pThis, pProp->val.vInt));
+		CHKiRet(strmSetiFileNumDigits(pThis, pProp->val.num));
  	} else if(isProp("bDeleteOnClose")) {
-		CHKiRet(strmSetbDeleteOnClose(pThis, pProp->val.vInt));
+		CHKiRet(strmSetbDeleteOnClose(pThis, pProp->val.num));
 	}
 
 finalize_it:

@@ -27,14 +27,12 @@
 /* data types */
 typedef enum {
 	VARTYPE_NONE = 0, /* currently no value set */
-	VARTYPE_PSZ = 1,
-	VARTYPE_SHORT = 2,
-	VARTYPE_INT = 3,
-	VARTYPE_LONG = 4,
-	VARTYPE_INT64 = 5,
-	VARTYPE_CSTR = 6,
-	VARTYPE_SYSLOGTIME = 7
+	VARTYPE_STR = 1,
+	VARTYPE_NUMBER = 2,
+	VARTYPE_SYSLOGTIME = 3
 } varType_t;
+
+typedef int64 number_t; /* type to use for numbers */
 
 /* the var object */
 typedef struct var_s {
@@ -42,11 +40,8 @@ typedef struct var_s {
 	cstr_t *pcsName;
 	varType_t varType;
 	union {
-		short vShort;
-		int vInt;
-		long vLong;
-		int64 vInt64;
-		cstr_t *vpCStr; /* used for both rsCStr and psz */
+		number_t num;
+		cstr_t *pStr;
 		syslogTime_t vSyslogTime;
 
 	} val;
@@ -59,7 +54,7 @@ BEGINinterface(var) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(var_t **ppThis);
 	rsRetVal (*ConstructFinalize)(var_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(var_t **ppThis);
-	rsRetVal (*SetInt64)(var_t *pThis, int64 iVal);
+	rsRetVal (*SetNumber)(var_t *pThis, number_t iVal);
 	rsRetVal (*SetString)(var_t *pThis, cstr_t *pCStr);
 	rsRetVal (*ConvForOperation)(var_t *pThis, var_t *pOther);
 ENDinterface(var)

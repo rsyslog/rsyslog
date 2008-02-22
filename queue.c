@@ -2066,15 +2066,15 @@ static rsRetVal queueSetProperty(queue_t *pThis, var_t *pProp)
 	ASSERT(pProp != NULL);
 
  	if(isProp("iQueueSize")) {
-		pThis->iQueueSize = pProp->val.vInt;
+		pThis->iQueueSize = pProp->val.num;
  	} else if(isProp("iUngottenObjs")) {
-		pThis->iUngottenObjs = pProp->val.vInt;
+		pThis->iUngottenObjs = pProp->val.num;
  	} else if(isProp("tVars.disk.sizeOnDisk")) {
-		pThis->tVars.disk.sizeOnDisk = pProp->val.vLong;
+		pThis->tVars.disk.sizeOnDisk = pProp->val.num;
  	} else if(isProp("tVars.disk.bytesRead")) {
-		pThis->tVars.disk.bytesRead = pProp->val.vLong;
+		pThis->tVars.disk.bytesRead = pProp->val.num;
  	} else if(isProp("qType")) {
-		if(pThis->qType != pProp->val.vLong)
+		if(pThis->qType != pProp->val.num)
 			ABORT_FINALIZE(RS_RET_QTYPE_MISMATCH);
 	}
 

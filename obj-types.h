@@ -31,6 +31,19 @@
 #include "stringbuf.h"
 #include "syslogd-types.h"
 
+/* property types for obj[De]Serialize() */
+typedef enum {
+	PROPTYPE_NONE = 0, /* currently no value set */
+	PROPTYPE_PSZ = 1,
+	PROPTYPE_SHORT = 2,
+	PROPTYPE_INT = 3,
+	PROPTYPE_LONG = 4,
+	PROPTYPE_INT64 = 5,
+	PROPTYPE_CSTR = 6,
+	PROPTYPE_SYSLOGTIME = 7
+} propType_t;
+
+
 /* object Types/IDs */
 typedef enum {	/* IDs of known object "types/classes" */
 	OBJNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
