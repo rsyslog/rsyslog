@@ -3669,13 +3669,6 @@ int realMain(int argc, char **argv)
 		        break;
 		case 'r':		/* accept remote messages */
 #ifdef SYSLOG_INET
-#if 0
-			AcceptRemote = 1;
-			if(optarg == NULL)
-				LogPort = "0";
-			else
-				LogPort = optarg;
-#else
 			if(iCompatibilityMode < 3) {
 				uchar line[30];
 
@@ -3686,7 +3679,6 @@ int realMain(int argc, char **argv)
 			} else
 				fprintf(stderr,
 					"-r option only supported in compatibility modes 0 to 2 - ignored\n");
-#endif
 #else
 			fprintf(stderr, "rsyslogd: -r not valid - not compiled with network support\n");
 #endif
