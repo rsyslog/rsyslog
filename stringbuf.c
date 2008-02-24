@@ -718,34 +718,100 @@ int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz
 }
 
 
-/* check if the string can be converted to a number. Returns 1 if that's possible
- * and 0 otherwise.
+/* Converts a string to a number. If the string dos not contain a number, 
+ * RS_RET_NOT_A_NUMBER is returned and the contents of pNumber is undefined.
+ * If all goes well, pNumber contains the number that the string was converted
+ * to.
  */
-int rsCStrCanConvertToNumber(cstr_t *pStr)
+rsRetVal
+rsCStrConvertToNumber(cstr_t *pStr, number_t *pNumber)
 {
-	int i;
-	int ret = 1;
+	DEFiRet;
+	number_t n;
+	int bIsNegative;
+	size_t i;
+
+	ASSERT(pStr != NULL);
+	ASSERT(pNumber != NULL);
 
 	if(pStr->iStrLen == 0) {
 		/* can be converted to 0! (by convention) */
-		goto finalize_it;
+		pNumber = 0;
+		FINALIZE;
+	}
+
+	/* first skip whitespace (if present) */
+	for(i = 0 ; i < pStr->iStrLen && isspace(pStr->pBuf[i]) ; ++i) {
+		/*DO NOTHING*/
 	}
 
 	/* we have a string, so let's check its syntax */
-	if(pStr->pBuf[0] == '+' || pStr->pBuf[0] == '-') {
-		i = 1; /* skip that char */
+	if(pStr->pBuf[i] == '+') {
+		++i; /* skip that char */
+		bIsNegative = 0;
+	} else if(pStr->pBuf[0] == '-') {
+		++i; /* skip that char */
+		bIsNegative = 1;
 	} else {
-		i = 0; /* start from the beginning */
+		bIsNegative = 0;
 	}
 
-	while(i < pStr->iStrLen && isdigit(pStr->pBuf[i]))
+	/* TODO: octal? hex? */
+	n = 0;
+	while(i < pStr->iStrLen && isdigit(pStr->pBuf[i])) {
+		n = n * 10 + pStr->pBuf[i] * 10;
 		++i;
+	}
 	
 	if(i < pStr->iStrLen) /* non-digits before end of string? */
-		ret = 0; /* than we can not convert */
+		ABORT_FINALIZE(RS_RET_NOT_A_NUMBER);
+
+	if(bIsNegative)
+		n *= -1;
+
+	/* we got it, so return the number */
+	*pNumber = n;
 
 finalize_it:
-	return ret;
+	RETiRet;
+}
+
+
+/* Converts a string to a boolen. First tries to convert to a number. If
+ * that succeeds, we are done (number is then used as boolean value). If
+ * that fails, we look if the string is "yes" or "true". If so, a value
+ * of 1 is returned. In all other cases, a value of 0 is returned. Please
+ * note that we do not have a specific boolean type, so we return a number.
+ * so, these are 
+ * RS_RET_NOT_A_NUMBER is returned and the contents of pNumber is undefined.
+ * If all goes well, pNumber contains the number that the string was converted
+ * to.
+ */
+rsRetVal
+rsCStrConvertToBool(cstr_t *pStr, number_t *pBool)
+{
+	DEFiRet;
+
+	ASSERT(pStr != NULL);
+	ASSERT(pBool != NULL);
+
+	iRet = rsCStrConvertToNumber(pStr, pBool);
+
+	if(iRet != RS_RET_NOT_A_NUMBER) {
+		FINALIZE; /* in any case, we have nothing left to do */
+	}
+
+	/* TODO: maybe we can do better than strcasecmp ;) -- overhead! */
+	if(!strcasecmp((char*)rsCStrGetSzStr(pStr), "true")) {
+		*pBool = 1;
+	} else if(!strcasecmp((char*)rsCStrGetSzStr(pStr), "yes")) {
+		*pBool = 1;
+	} else {
+		*pBool = 0;
+	}
+
+finalize_it:
+	RETiRet;
 }
 
 

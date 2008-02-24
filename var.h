@@ -32,8 +32,6 @@ typedef enum {
 	VARTYPE_SYSLOGTIME = 3
 } varType_t;
 
-typedef int64 number_t; /* type to use for numbers */
-
 /* the var object */
 typedef struct var_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */

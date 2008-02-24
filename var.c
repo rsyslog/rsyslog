@@ -148,21 +148,48 @@ finalize_it:
  * conversion request on the unchanged object is guaranteed to succeed.
  * rgerhards, 2008-02-22
  */
-int canConvToNumber(var_t *pThis)
+rsRetVal
+ConvToNumber(var_t *pThis)
 {
-	int ret = 0;
-
-	BEGINfunc
+	DEFiRet;
+	number_t n;
 
 	if(pThis->varType == VARTYPE_NUMBER) {
-		ret = 1;
+		FINALIZE;
 	} else if(pThis->varType == VARTYPE_STR) {
-		ret = rsCStrCanConvertToNumber(pThis->val.pStr); // TODO: implement the same method in str_t object, then call that */
+		CHKiRet(rsCStrConvertToNumber(pThis->val.pStr, &n));
+		pThis->val.num = n;
+		pThis->varType = VARTYPE_NUMBER;
 	}
 
-	ENDfunc
-	return ret;
+finalize_it:
+	RETiRet;
 }
+
+
+/* convert the provided var to type string. This is always possible
+ * (except, of course, for things like out of memory...)
+ * TODO: finish implementation!!!!!!!!!
+ * rgerhards, 2008-02-24
+ */
+rsRetVal
+ConvToString(var_t *pThis)
+{
+	DEFiRet;
+
+	if(pThis->varType == VARTYPE_STR) {
+		FINALIZE;
+	} else if(pThis->varType == VARTYPE_NUMBER) {
+		//CHKiRet(rsCStrConvertToNumber(pThis->val.pStr, &n));
+		//pThis->val.num = n;
+		// TODO: ADD CODE!!!!
+		pThis->varType = VARTYPE_STR;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
 
 
 /* This function is used to prepare two var_t objects for a common operation,
@@ -217,11 +244,16 @@ ConvForOperation(var_t *pThis, var_t *pOther)
 					ABORT_FINALIZE(RS_RET_INVALID_VAR);
 					break;
 				case VARTYPE_STR:
-					commonType = VARTYPE_STR;
+					/* two strings, we are all set */
 					break;
 				case VARTYPE_NUMBER:
 					/* check if we can convert pThis to a number, if so use number format. */
-					commonType = canConvToNumber(pThis) ? VARTYPE_NUMBER : VARTYPE_STR;
+					iRet = ConvToNumber(pThis);
+					if(iRet != RS_RET_NOT_A_NUMBER) {
+						CHKiRet(ConvToString(pOther));
+					} else {
+						FINALIZE; /* OK or error */
+					}
 					break;
 				case VARTYPE_SYSLOGTIME:
 					ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
@@ -234,8 +266,12 @@ ConvForOperation(var_t *pThis, var_t *pOther)
 					ABORT_FINALIZE(RS_RET_INVALID_VAR);
 					break;
 				case VARTYPE_STR:
-					/* check if we can convert pOther to a number, if so use number format. */
-					commonType = canConvToNumber(pOther) ? VARTYPE_NUMBER : VARTYPE_STR;
+					iRet = ConvToNumber(pOther);
+					if(iRet != RS_RET_NOT_A_NUMBER) {
+						CHKiRet(ConvToString(pThis));
+					} else {
+						FINALIZE; /* OK or error */
+					}
 					break;
 				case VARTYPE_NUMBER:
 					commonType = VARTYPE_NUMBER;
