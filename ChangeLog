@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.11 5 (rgerhards), 2008-02-??
+Version 3.11 5 (rgerhards), 2008-02-25
 - new imgssapi module, changed imtcp module - this enables to load/package
   GSSAPI support separately - thanks to varmojfekoj for the patch
 - compatibility mode (the -c option series) is now at least partly
