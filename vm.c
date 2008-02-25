@@ -82,7 +82,7 @@ BOOLOP(AND, &&)
 
 
 /* code generator for numerical operations */
-#define BOOLOP(name, OPERATION) \
+#define NUMOP(name, OPERATION) \
 BEGINop(name) /* remember to set the instruction also in the ENDop macro! */ \
 	var_t *operand1; \
 	var_t *operand2; \
@@ -90,15 +90,14 @@ CODESTARTop(name) \
 	vmstk.PopNumber(pThis->pStk, &operand1); \
 	vmstk.PopNumber(pThis->pStk, &operand2); \
 	operand1->val.num = operand1->val.num OPERATION operand2->val.num; \
-RUNLOG_VAR("%lld", operand1->val.num); \
 	vmstk.Push(pThis->pStk, operand1); /* result */ \
 	var.Destruct(&operand2); /* no longer needed */ \
 ENDop(name)
-BOOLOP(PLUS,   +)
-BOOLOP(MINUS,  -)
-BOOLOP(TIMES,  *)
-BOOLOP(DIV,    /)
-BOOLOP(MOD,    %)
+NUMOP(PLUS,   +)
+NUMOP(MINUS,  -)
+NUMOP(TIMES,  *)
+NUMOP(DIV,    /)
+NUMOP(MOD,    %)
 #undef BOOLOP
 
 

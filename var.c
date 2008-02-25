@@ -178,10 +178,7 @@ finalize_it:
 }
 
 
-/* check if the provided object can be converted to a number. Uses
- * non-standard calling conventions because it makes an awful lot of sense.
- * Returns 1 if conversion is possibe and 0 if not. If 1 is returned, a
- * conversion request on the unchanged object is guaranteed to succeed.
+/* Change the provided object to be of type number.
  * rgerhards, 2008-02-22
  */
 rsRetVal
@@ -193,7 +190,13 @@ ConvToNumber(var_t *pThis)
 	if(pThis->varType == VARTYPE_NUMBER) {
 		FINALIZE;
 	} else if(pThis->varType == VARTYPE_STR) {
-		CHKiRet(rsCStrConvertToNumber(pThis->val.pStr, &n));
+		iRet = rsCStrConvertToNumber(pThis->val.pStr, &n);
+		if(iRet == RS_RET_NOT_A_NUMBER) {
+			n = 0; /* TODO: isn't it better to pass the error? */
+		} else if (iRet != RS_RET_OK) {
+			FINALIZE;
+		}
+	
 		pThis->val.num = n;
 		pThis->varType = VARTYPE_NUMBER;
 	}
