@@ -28,7 +28,7 @@
  */
 #include "config.h"
 
-#include "rsyslog.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
+#include "rsyslog.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -39,7 +39,7 @@
 #include <assert.h>
 #include <sys/wait.h>
 #include <ctype.h>
-#include "liblogging-stub.h"	/* THIS IS A MODIFICATION FOR RSYSLOG! 2004-11-18 rgerards */
+#include "liblogging-stub.h"
 #define TRUE 1
 #define FALSE 0
 #include "srUtils.h"
@@ -392,14 +392,8 @@ timeoutVal(struct timespec *pt)
 	assert(pt != NULL);
 	/* compute timeout */
 	clock_gettime(CLOCK_REALTIME, &t);
-//RUNLOG_VAR("%ld", pt->tv_sec);
-//RUNLOG_VAR("%ld", t.tv_sec);
-//RUNLOG_VAR("%ld", pt->tv_nsec);
-//RUNLOG_VAR("%ld", t.tv_nsec);
 	iTimeout = (pt->tv_nsec - t.tv_nsec) / 1000000;
-//RUNLOG_VAR("%ld", iTimeout);
 	iTimeout += (pt->tv_sec - t.tv_sec) * 1000;
-//RUNLOG_VAR("%ld", iTimeout);
 
 	if(iTimeout < 0)
 		iTimeout = 0;

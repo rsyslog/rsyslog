@@ -109,6 +109,57 @@ finalize_it:
 }
 
 
+/* pop a boolean value from the stack
+ * The user is responsible for destructing the ppVar returned.
+ */
+static rsRetVal
+popBool(vmstk_t *pThis, var_t **ppVar)
+{
+	DEFiRet;
+
+	/* assertions are done in pop(), we do not duplicate here */
+	CHKiRet(pop(pThis, ppVar));
+	CHKiRet(var.ConvToBool(*ppVar));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* pop a number value from the stack
+ * The user is responsible for destructing the ppVar returned.
+ */
+static rsRetVal
+popNumber(vmstk_t *pThis, var_t **ppVar)
+{
+	DEFiRet;
+
+	/* assertions are done in pop(), we do not duplicate here */
+	CHKiRet(pop(pThis, ppVar));
+	CHKiRet(var.ConvToNumber(*ppVar));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* pop a number value from the stack
+ * The user is responsible for destructing the ppVar returned.
+ */
+static rsRetVal
+popString(vmstk_t *pThis, var_t **ppVar)
+{
+	DEFiRet;
+
+	/* assertions are done in pop(), we do not duplicate here */
+	CHKiRet(pop(pThis, ppVar));
+	CHKiRet(var.ConvToString(*ppVar));
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -131,6 +182,10 @@ CODESTARTobjQueryInterface(vmstk)
 	pIf->DebugPrint = vmstkDebugPrint;
 	pIf->Push = push;
 	pIf->Pop = pop;
+	pIf->PopBool = popBool;
+	pIf->PopNumber = popNumber;
+	pIf->PopString = popString;
+
 finalize_it:
 ENDobjQueryInterface(vmstk)
 

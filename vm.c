@@ -33,56 +33,60 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(vmstk)
+DEFobjCurrIf(var)
 
 
 /* ------------------------------ instruction set implementation ------------------------------ *
  * The following functions implement the VM's instruction set.
  */
 #define BEGINop(instruction) \
-	static rsRetVal op##instruction(vm_t *pThis, vmop_t *pOp) \
+	static rsRetVal op##instruction(vm_t *pThis, __attribute__((unused)) vmop_t *pOp) \
 	{ \
 		DEFiRet;
 
 #define CODESTARTop(instruction) \
-		ISOBJ_TYPE_assert(pThis, vm); \
-		ISOBJ_TYPE_assert(pOp, vmop);
+		ISOBJ_TYPE_assert(pThis, vm);
 
 #define ENDop(instruction) \
 		RETiRet; \
 	}
 
+/* code generator for boolean operations */
+#define BOOLOP(name, OPERATION) \
+BEGINop(name) /* remember to set the instruction also in the ENDop macro! */ \
+	var_t *operand1; \
+	var_t *operand2; \
+	vmstk.PopBool(pThis->pStk, &operand1); \
+	vmstk.PopBool(pThis->pStk, &operand2); \
+	if(operand1->val.num OPERATION operand2->val.num) { \
+		CHKiRet(var.SetNumber(operand1, 1)); \
+	} else { \
+		CHKiRet(var.SetNumber(operand1, 0)); \
+	} \
+	vmstk.Push(pThis->pStk, operand1); /* result */ \
+	var.Destruct(&operand2); /* no longer needed */ \
+finalize_it: \
+ENDop(name)
+
+BOOLOP(OR,  ||)
+BOOLOP(AND, &&)
+
+#undef BOOLOP
+#if 0
 BEGINop(OR) /* remember to set the instruction also in the ENDop macro! */
 	// var_t *pVar[2];
 	var_t *operand1;
 	var_t *operand2;
 CODESTARTop(OR)
-	// Pop(2, &pVar); --> should also do the conversion outlined below
-	vmstk.Pop(pThis->pStk, &operand1);
-	vmstk.Pop(pThis->pStk, &operand2);
-	// TODO: implement
-	/* We must check data types and find out on which data type the
-	 * operation needs to be performed. This may result in some data types
-	 * being converted.
-	 *
-	 * Current school of thought:
-	 * op1		op2	operation data type
-	 * string	string	string
-	 * string	number	number if op1 can be converted to number, string else
-	 * date		string  date if op1 can be converted to date, string else
-	 * number	number  number
-	 * date		number	string (maybe we can do better?)
-	 * date		date	date
-	 *
-	 * If a boolean value is required, we need to have a number inside the
-	 * operand. If it is not, conversion rules to number apply. Once we
-	 * have a number, things get easy: 0 is false, anything else is true.
-	 * Please note that due to this conversion rules, "0" becomes false
-	 * while "-4712" becomes true. Using a date as boolen is not a good
-	 * idea. Depending on the ultimate conversion rules, it may always
-	 * become true or false. As such, using dates as booleans is
-	 * prohibited and the result defined to be undefined.
-	 */
+	vmstk.PopBool(pThis->pStk, &operand1);
+	vmstk.PopBool(pThis->pStk, &operand2);
+	if(operand1->val.num || operand2->val.num) {
+		CHKiRet(var.SetNumber(operand1, 1));
+	} else {
+		CHKiRet(var.SetNumber(operand1, 0));
+	}
 	vmstk.Push(pThis->pStk, operand1); /* result */
+	var.Destruct(operand2); /* no longer needed */
 ENDop(OR)
 
 BEGINop(AND) /* remember to set the instruction also in the ENDop macro! */
@@ -94,6 +98,7 @@ CODESTARTop(AND)
 	// TODO: implement
 	vmstk.Push(pThis->pStk, operand1); /* result */
 ENDop(AND)
+#endif
 
 BEGINop(POP) /* remember to set the instruction also in the ENDop macro! */
 CODESTARTop(POP)
@@ -211,6 +216,7 @@ ENDobjQueryInterface(vm)
 BEGINObjClassInit(vm, 1) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(vmstk));
+	CHKiRet(objUse(var));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmDebugPrint);

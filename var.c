@@ -33,6 +33,7 @@
 
 #include "rsyslog.h"
 #include "obj.h"
+#include "srUtils.h"
 #include "var.h"
 
 /* static data */
@@ -176,13 +177,13 @@ rsRetVal
 ConvToString(var_t *pThis)
 {
 	DEFiRet;
+	uchar szNumBuf[64];
 
 	if(pThis->varType == VARTYPE_STR) {
 		FINALIZE;
 	} else if(pThis->varType == VARTYPE_NUMBER) {
-		//CHKiRet(rsCStrConvertToNumber(pThis->val.pStr, &n));
-		//pThis->val.num = n;
-		// TODO: ADD CODE!!!!
+		CHKiRet(srUtilItoA((char*)szNumBuf, sizeof(szNumBuf)/sizeof(uchar), pThis->val.num));
+		CHKiRet(rsCStrConstructFromszStr(&pThis->val.pStr, szNumBuf));
 		pThis->varType = VARTYPE_STR;
 	}
 
@@ -191,9 +192,32 @@ finalize_it:
 }
 
 
+/* convert (if necessary) the value to a boolean. In essence, this means the
+ * value must be a number, but in case of a string special logic is used as
+ * some string-values may represent a boolean (e.g. "true").
+ * rgerhards, 2008-02-25
+ */
+rsRetVal
+ConvToBool(var_t *pThis)
+{
+	DEFiRet;
+	number_t n;
+
+	if(pThis->varType == VARTYPE_NUMBER) {
+		FINALIZE;
+	} else if(pThis->varType == VARTYPE_STR) {
+		CHKiRet(rsCStrConvertToBool(pThis->val.pStr, &n));
+		pThis->val.num = n;
+		pThis->varType = VARTYPE_NUMBER;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
 
 /* This function is used to prepare two var_t objects for a common operation,
- * e.g before they are added, multiplied or compared. The function looks at
+ * e.g before they are added, compared. The function looks at
  * the data types of both operands and finds the best data type suitable for
  * the operation (in respect to current types). Then, it converts those
  * operands that need conversion. Please note that the passed-in var objects
@@ -229,7 +253,6 @@ static rsRetVal
 ConvForOperation(var_t *pThis, var_t *pOther)
 {
 	DEFiRet;
-	varType_t commonType;
 
 	if(pThis->varType == VARTYPE_NONE || pOther->varType == VARTYPE_NONE)
 		ABORT_FINALIZE(RS_RET_INVALID_VAR);
@@ -244,7 +267,7 @@ ConvForOperation(var_t *pThis, var_t *pOther)
 					ABORT_FINALIZE(RS_RET_INVALID_VAR);
 					break;
 				case VARTYPE_STR:
-					/* two strings, we are all set */
+					FINALIZE; /* two strings, we are all set */
 					break;
 				case VARTYPE_NUMBER:
 					/* check if we can convert pThis to a number, if so use number format. */
@@ -274,7 +297,7 @@ ConvForOperation(var_t *pThis, var_t *pOther)
 					}
 					break;
 				case VARTYPE_NUMBER:
-					commonType = VARTYPE_NUMBER;
+					FINALIZE; /* two numbers, so we are all set */
 					break;
 				case VARTYPE_SYSLOGTIME:
 					ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
@@ -314,6 +337,9 @@ CODESTARTobjQueryInterface(var)
 	pIf->SetNumber = varSetNumber;
 	pIf->SetString = varSetString;
 	pIf->ConvForOperation = ConvForOperation;
+	pIf->ConvToNumber = ConvToNumber;
+	pIf->ConvToBool = ConvToBool;
+	pIf->ConvToString = ConvToString;
 finalize_it:
 ENDobjQueryInterface(var)
 
