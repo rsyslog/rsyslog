@@ -178,6 +178,7 @@
 
 /* definitions for objects we access */
 DEFobjCurrIf(expr)
+DEFobjCurrIf(vm)
 
 
 /* We define our own set of syslog defintions so that we
@@ -1444,12 +1445,17 @@ finalize_it:
  * decision code to grow more complex over time AND logmsg() is already
  * a very lengthy function, I thought a separate function is more appropriate.
  * 2005-09-19 rgerhards
+ * 2008-02-25 rgerhards: changed interface, now utilizes iRet, bProcessMsg
+ * returns is message should be procesed.
  */
-int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
+static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProcessMsg)
 {
+	DEFiRet;
 	unsigned short pbMustBeFreed;
 	char *pszPropVal;
-	int iRet = 0;
+	int bRet = 0;
+	vm_t *pVM;
+	var_t *pResult;
 
 	assert(f != NULL);
 	assert(pMsg != NULL);
@@ -1467,14 +1473,14 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 			/* not equal, so we are already done... */
 			dbgprintf("hostname filter '+%s' does not match '%s'\n", 
 				rsCStrGetSzStrNoNULL(f->pCSHostnameComp), getHOSTNAME(pMsg));
-			return 0;
+			FINALIZE;
 		}
 	} else { /* must be -hostname */
 		if(!rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
 			/* not equal, so we are already done... */
 			dbgprintf("hostname filter '-%s' does not match '%s'\n", 
 				rsCStrGetSzStrNoNULL(f->pCSHostnameComp), getHOSTNAME(pMsg));
-			return 0;
+			FINALIZE;
 		}
 	}
 	
@@ -1495,7 +1501,7 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 			/* not equal or inverted selection, so we are already done... */
 			dbgprintf("programname filter '%s' does not match '%s'\n", 
 				rsCStrGetSzStrNoNULL(f->pCSProgNameComp), getProgramName(pMsg));
-			return 0;
+			FINALIZE;
 		}
 	}
 	
@@ -1505,9 +1511,18 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 		/* skip messages that are incorrect priority */
 		if ( (f->f_filterData.f_pmask[pMsg->iFacility] == TABLE_NOPRI) || \
 		    ((f->f_filterData.f_pmask[pMsg->iFacility] & (1<<pMsg->iSeverity)) == 0) )
-			iRet = 0;
+			bRet = 0;
 		else
-			iRet = 1;
+			bRet = 1;
+	} else if(f->f_filter_type == FILTER_EXPR) {
+		CHKiRet(vm.Construct(&pVM));
+		CHKiRet(vm.ConstructFinalize(pVM));
+		CHKiRet(vm.SetMsg(pVM, pMsg));
+		CHKiRet(vm.ExecProg(pVM, f->f_filterData.f_expr->pVmprg));
+		CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
+		dbgprintf("result of expression evaluation: %lld\n", pResult->val.num);
+		CHKiRet(vm.Destruct(&pVM));
+		bRet = (pResult->val.num) ? 1 : 0;
 	} else {
 		assert(f->f_filter_type == FILTER_PROP); /* assert() just in case... */
 		pszPropVal = MsgGetProp(pMsg, NULL, f->f_filterData.prop.pCSPropName, &pbMustBeFreed);
@@ -1516,33 +1531,33 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 		switch(f->f_filterData.prop.operation ) {
 		case FIOP_CONTAINS:
 			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, (uchar*) pszPropVal) != -1)
-				iRet = 1;
+				bRet = 1;
 			break;
 		case FIOP_ISEQUAL:
 			if(rsCStrSzStrCmp(f->f_filterData.prop.pCSCompValue,
 					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
-				iRet = 1; /* process message! */
+				bRet = 1; /* process message! */
 			break;
 		case FIOP_STARTSWITH:
 			if(rsCStrSzStrStartsWithCStr(f->f_filterData.prop.pCSCompValue,
 					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
-				iRet = 1; /* process message! */
+				bRet = 1; /* process message! */
 			break;
 		case FIOP_REGEX:
 			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
 					  (unsigned char*) pszPropVal) == 0)
-				iRet = 1;
+				bRet = 1;
 			break;
 		default:
 			/* here, it handles NOP (for performance reasons) */
 			assert(f->f_filterData.prop.operation == FIOP_NOP);
-			iRet = 1; /* as good as any other default ;) */
+			bRet = 1; /* as good as any other default ;) */
 			break;
 		}
 
 		/* now check if the value must be negated */
 		if(f->f_filterData.prop.isNegated)
-			iRet = (iRet == 1) ?  0 : 1;
+			bRet = (bRet == 1) ?  0 : 1;
 
 		if(Debug) {
 			dbgprintf("Filter: check for property '%s' (value '%s') ",
@@ -1553,7 +1568,7 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 			dbgprintf("%s '%s': %s\n",
 			       getFIOPName(f->f_filterData.prop.operation),
 			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue),
-			       iRet ? "TRUE" : "FALSE");
+			       bRet ? "TRUE" : "FALSE");
 		}
 
 		/* cleanup */
@@ -1561,7 +1576,9 @@ int shouldProcessThisMessage(selector_t *f, msg_t *pMsg)
 			free(pszPropVal);
 	}
 
-	return(iRet);
+finalize_it:
+	*bProcessMsg = bRet;
+	RETiRet;
 }
 
 
@@ -1610,7 +1627,9 @@ processMsg(msg_t *pMsg)
 {
 	selector_t *f;
 	int bContinue;
+	int bProcessMsg;
 	processMsgDoActions_t DoActData;
+	rsRetVal iRet;
 
 	BEGINfunc
 	assert(pMsg != NULL);
@@ -1620,7 +1639,8 @@ processMsg(msg_t *pMsg)
 	bContinue = 1;
 	for (f = Files; f != NULL && bContinue ; f = f->f_next) {
 		/* first check the filters... */
-		if(!shouldProcessThisMessage(f, pMsg)) {
+		iRet = shouldProcessThisMessage(f, pMsg, &bProcessMsg);
+		if(!bProcessMsg) {
 			continue;
 		}
 
@@ -2669,6 +2689,8 @@ static void dbgPrintInitInfo(void)
 					dbgprintf(" X ");
 				else
 					dbgprintf("%2X ", f->f_filterData.f_pmask[i]);
+		} else if(f->f_filter_type == FILTER_EXPR) {
+			dbgprintf("EXPRESSION-BASED Filter: can currently not be displayed");
 		} else {
 			dbgprintf("PROPERTY-BASED Filter:\n");
 			dbgprintf("\tProperty.: '%s'\n",
@@ -3571,6 +3593,7 @@ static rsRetVal InitGlobalClasses(void)
 
 	/* request objects we use */
 	CHKiRet(objUse(expr));
+	CHKiRet(objUse(vm));
 
 finalize_it:
 	RETiRet;

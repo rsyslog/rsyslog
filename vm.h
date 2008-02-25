@@ -32,6 +32,7 @@
 #ifndef INCLUDED_VM_H
 #define INCLUDED_VM_H
 
+#include "msg.h"
 #include "vmstk.h"
 #include "vmprg.h"
 
@@ -39,6 +40,7 @@
 typedef struct vm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	vmstk_t *pStk;		/* The stack */
+	msg_t *pMsg;		/* the current message (or NULL, if we have none) */
 } vm_t;
 
 
@@ -50,6 +52,8 @@ BEGINinterface(vm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(vm_t **ppThis);
 	rsRetVal (*ExecProg)(vm_t *pThis, vmprg_t *pProg);
 	rsRetVal (*PopBoolFromStack)(vm_t *pThis, var_t **ppVar); /* there are a few cases where we need this... */
+	rsRetVal (*PopVarFromStack)(vm_t *pThis, var_t **ppVar); /* there are a few cases where we need this... */
+	rsRetVal (*SetMsg)(vm_t *pThis, msg_t *pMsg); /* there are a few cases where we need this... */
 ENDinterface(vm)
 #define vmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

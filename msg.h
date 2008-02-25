@@ -22,6 +22,8 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+#include "template.h" /* this is a quirk, but these two are too interdependant... */
+
 #ifndef	MSG_H_INCLUDED
 #define	MSG_H_INCLUDED 1
 
@@ -154,6 +156,7 @@ char *getMSGID(msg_t *pM);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  cstr_t *pCSPropName, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
+rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
 
 /* The MsgPrepareEnqueue() function is a macro for performance reasons.

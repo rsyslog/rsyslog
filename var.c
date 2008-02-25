@@ -89,6 +89,41 @@ CODESTARTobjDebugPrint(var)
 ENDobjDebugPrint(var)
 
 
+/* duplicates a var instance
+ * rgerhards, 2008-02-25
+ */
+static rsRetVal
+Duplicate(var_t *pThis, var_t **ppNew)
+{
+	DEFiRet;
+	var_t *pNew = NULL;
+	cstr_t *pstr;
+
+	ISOBJ_TYPE_assert(pThis, var);
+	assert(ppNew != NULL);
+
+	CHKiRet(varConstruct(&pNew));
+	CHKiRet(varConstructFinalize(pNew));
+
+	/* we have the object, now copy value */
+	pNew->varType = pThis->varType;
+	if(pThis->varType == VARTYPE_NUMBER) {
+		pNew->val.num = pThis->val.num;
+	} else if(pThis->varType == VARTYPE_STR) {
+		CHKiRet(rsCStrConstructFromCStr(&pstr, pThis->val.pStr));
+		pNew->val.pStr = pstr;
+	}
+
+	*ppNew = pNew;
+
+finalize_it:
+	if(iRet != RS_RET_OK && pNew != NULL)
+		varDestruct(&pNew);
+
+	RETiRet;
+}
+
+
 /* free the current values (destructs objects if necessary)
  */
 static rsRetVal
@@ -340,6 +375,7 @@ CODESTARTobjQueryInterface(var)
 	pIf->ConvToNumber = ConvToNumber;
 	pIf->ConvToBool = ConvToBool;
 	pIf->ConvToString = ConvToString;
+	pIf->Duplicate = Duplicate;
 finalize_it:
 ENDobjQueryInterface(var)
 

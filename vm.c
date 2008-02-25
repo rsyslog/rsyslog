@@ -219,9 +219,39 @@ ENDop(UNARY_MINUS)
 
 
 BEGINop(PUSHCONSTANT) /* remember to set the instruction also in the ENDop macro! */
+	var_t *pVarDup;   /* we need to duplicate the var, as we need to hand it over */
 CODESTARTop(PUSHCONSTANT)
-	vmstk.Push(pThis->pStk, pOp->operand.pVar);
+	CHKiRet(var.Duplicate(pOp->operand.pVar, &pVarDup));
+	vmstk.Push(pThis->pStk, pVarDup);
+finalize_it:
 ENDop(PUSHCONSTANT)
+
+
+BEGINop(PUSHMSGVAR) /* remember to set the instruction also in the ENDop macro! */
+	var_t *pVal; /* the value to push */
+	cstr_t *pstrVal;
+CODESTARTop(PUSHMSGVAR)
+	if(pThis->pMsg == NULL) {
+		/* TODO: flag an error message! As a work-around, we permit
+		 * execution to continue here with an empty string
+		 */
+		/* TODO: create a method in var to create a string var? */
+		CHKiRet(var.Construct(&pVal));
+		CHKiRet(var.ConstructFinalize(pVal));
+		CHKiRet(rsCStrConstructFromszStr(&pstrVal, (uchar*)""));
+		CHKiRet(var.SetString(pVal, pstrVal));
+	} else {
+		/* we have a message, so pull value from there */
+var.DebugPrint(pOp->operand.pVar);
+		CHKiRet(msgGetMsgVar(pThis->pMsg, pOp->operand.pVar->val.pStr, &pVal));
+	}
+
+	/* if we reach this point, we have a valid pVal and can push it */
+	vmstk.Push(pThis->pStk, pVal);
+RUNLOG_STR("msgvar:");
+var.DebugPrint(pVal);
+finalize_it:
+ENDop(PUSHMSGVAR)
 
 
 /* ------------------------------ end instruction set implementation ------------------------------ */
@@ -292,6 +322,7 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 			// TODO: implement: doOP(CMP_STARTSWITH);
 			doOP(NOT);
 			doOP(PUSHCONSTANT);
+			doOP(PUSHMSGVAR);
 			doOP(PLUS);
 			doOP(MINUS);
 			doOP(TIMES);
@@ -317,6 +348,41 @@ finalize_it:
 }
 
 
+/* Set the current message object for the VM. It *is* valid to set a
+ * NULL message object, what simply means there is none. Message
+ * objects are properly reference counted.
+ */
+static rsRetVal
+SetMsg(vm_t *pThis, msg_t *pMsg)
+{
+	DEFiRet;
+	if(pThis->pMsg != NULL) {
+		msgDestruct(&pThis->pMsg);
+	}
+
+	if(pMsg != NULL) {
+		pThis->pMsg = MsgAddRef(pMsg);
+	}
+
+	RETiRet;
+}
+
+
+/* Pop a var from the stack and return it to caller. The variable type is not
+ * changed, it is taken from the stack as is. This functionality is
+ * partly needed. We may (or may not ;)) be able to remove it once we have
+ * full RainerScript support. -- rgerhards, 2008-02-25
+ */
+static rsRetVal
+PopVarFromStack(vm_t *pThis, var_t **ppVar)
+{
+	DEFiRet;
+	CHKiRet(vmstk.Pop(pThis->pStk, ppVar));
+finalize_it:
+	RETiRet;
+}
+
+
 /* Pop a boolean from the stack and return it to caller. This functionality is
  * partly needed. We may (or may not ;)) be able to remove it once we have
  * full RainerScript support. -- rgerhards, 2008-02-25
@@ -325,12 +391,11 @@ static rsRetVal
 PopBoolFromStack(vm_t *pThis, var_t **ppVar)
 {
 	DEFiRet;
-
 	CHKiRet(vmstk.PopBool(pThis->pStk, ppVar));
-
 finalize_it:
 	RETiRet;
 }
+
 
 /* queryInterface function
  * rgerhards, 2008-02-21
@@ -354,6 +419,8 @@ CODESTARTobjQueryInterface(vm)
 	pIf->DebugPrint = vmDebugPrint;
 	pIf->ExecProg = execProg;
 	pIf->PopBoolFromStack = PopBoolFromStack;
+	pIf->PopVarFromStack = PopVarFromStack;
+	pIf->SetMsg = SetMsg;
 finalize_it:
 ENDobjQueryInterface(vm)
 

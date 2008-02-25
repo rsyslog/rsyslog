@@ -102,7 +102,8 @@ void dbgPrintAllDebugInfo(void);
 #ifdef RTINST
 #	define BEGINfunc static dbgFuncDB_t dbgFuncDB=dbgFuncDB_t_INITIALIZER; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&dbgFuncDB,__LINE__);
 #	define ENDfunc dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT);
-#	define ASSERT(x) do { if(!(x)) dbgPrintAllDebugInfo(); assert(x); } while(0);
+// #	define ASSERT(x) do { if(!(x)) dbgPrintAllDebugInfo(); assert(x); } while(0);
+#	define ASSERT(x) assert(x)
 #else
 #	define BEGINfunc
 #	define ENDfunc

@@ -59,6 +59,7 @@ DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
 #include "vm.h"
 DEFobjCurrIf(vm) // TODO: remove, testing aid! rgerhards, 2008-02-25
+DEFobjCurrIf(var) // TODO: remove, testing aid! rgerhards, 2008-02-25
 
 uchar	*pModDir = NULL; /* read-only after startup */
 
@@ -792,6 +793,12 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	CHKiRet(ctok.Getpp(tok, pline));
 	CHKiRet(ctok.Destruct(&tok));
 
+	/* we now need to skip whitespace to the action part, else we confuse
+	 * the legacy rsyslog conf parser. -- rgerhards, 2008-02-25
+	 */
+	while(isspace(**pline))
+		++(*pline);
+
 dbgprintf("expression parser successfully ended, pp %p ('%s')\n", *pline, *pline);
 
 /* debug aid, try to exec - just now for testing the vm... -- rgerhards, 2008-02-25 */
@@ -801,8 +808,9 @@ CHKiRet(vm.Construct(&pVM));
 CHKiRet(vm.ConstructFinalize(pVM));
 
 CHKiRet(vm.ExecProg(pVM, f->f_filterData.f_expr->pVmprg));
-CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
-dbgprintf("result of expression run: %lld\n", pResult->val.num);
+CHKiRet(vm.PopVarFromStack(pVM, &pResult));
+dbgprintf("result of expression run:\n");
+var.DebugPrint(pResult);
 
 CHKiRet(vm.Destruct(&pVM));
 /* ...end testing aid... */
@@ -1191,6 +1199,7 @@ rsRetVal confClassInit(void)
 	CHKiRet(objUse(expr));
 	CHKiRet(objUse(ctok));
 	CHKiRet(objUse(vm)); // TODO: remove, testing aid! rgerhards, 2008-02-25
+	CHKiRet(objUse(var)); // TODO: remove, testing aid! rgerhards, 2008-02-25
 
 finalize_it:
 	RETiRet;

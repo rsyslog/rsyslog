@@ -41,8 +41,11 @@
 #include "stringbuf.h"
 #include "template.h"
 #include "msg.h"
+#include "var.h"
 
+/* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(var)
 
 static syslogCODE rs_prioritynames[] =
   {
@@ -2074,6 +2077,46 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 }
 
 
+/* The returns a message variable suitable for use with RainerScript. Most importantly, this means
+ * that the value is returned in a var_t object. The var_t is constructed inside this function and
+ * MUST be freed by the caller.
+ * rgerhards, 2008-02-25
+ */
+rsRetVal
+msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
+{
+	DEFiRet;
+	var_t *pVar;
+	uchar *pszProp = NULL;
+	cstr_t *pstrProp;
+	unsigned short bMustBeFreed = 0;
+
+	ISOBJ_TYPE_assert(pThis, msg);
+	ASSERT(pstrPropName != NULL);
+	ASSERT(ppVar != NULL);
+
+	/* make sure we have a var_t instance */
+	CHKiRet(var.Construct(&pVar));
+	CHKiRet(var.ConstructFinalize(pVar));
+
+	/* always call MsgGetProp() without a template specifier */
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, pstrPropName, &bMustBeFreed);
+
+	/* now create a string object out of it and hand that over to the var */
+	CHKiRet(rsCStrConstructFromszStr(&pstrProp, pszProp));
+	CHKiRet(var.SetString(pVar, pstrProp));
+
+	/* finally store var */
+	*ppVar = pVar;
+
+finalize_it:
+	if(bMustBeFreed)
+		free(pszProp);
+
+	RETiRet;
+}
+
+
 /* This function can be used as a generic way to set properties.
  * We have to handle a lot of legacy, so our return value is not always
  * 100% correct (called functions do not always provide one, should
@@ -2158,6 +2201,10 @@ MsgGetSeverity(obj_t *pThis, int *piSeverity)
  * rgerhards, 2008-01-04
  */
 BEGINObjClassInit(msg, 1)
+	/* request objects we use */
+	CHKiRet(objUse(var));
+
+	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, MsgSetProperty);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, msgConstructFinalizer);
