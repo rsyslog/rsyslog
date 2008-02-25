@@ -140,6 +140,7 @@ int rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz);
 int rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz);
 rsRetVal rsCStrConvertToNumber(cstr_t *pStr, number_t *pNumber);
 rsRetVal rsCStrConvertToBool(cstr_t *pStr, number_t *pBool);
+rsRetVal rsCStrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
 /* now come inline-like functions */
 #ifdef NDEBUG

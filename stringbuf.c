@@ -236,6 +236,15 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz)
 }
 
 
+/* append the contents of one cstr_t object to another
+ * rgerhards, 2008-02-25
+ */
+rsRetVal rsCStrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend)
+{
+	return rsCStrAppendStrWithLen(pThis, pstrAppend->pBuf, pstrAppend->iStrLen);
+}
+
+
 rsRetVal rsCStrAppendInt(cstr_t *pThis, long i)
 {
 	DEFiRet;

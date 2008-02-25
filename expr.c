@@ -211,8 +211,8 @@ val(expr_t *pThis, ctok_t *tok)
 
  	/* *(("+" / "-") term) part */
 	CHKiRet(ctok.GetToken(tok, &pToken));
-	while(pToken->tok == ctok_PLUS || pToken->tok == ctok_MINUS) {
-		dbgoprint((obj_t*) pThis, "+/-\n");
+	while(pToken->tok == ctok_PLUS || pToken->tok == ctok_MINUS || pToken->tok == ctok_STRADD) {
+		dbgoprint((obj_t*) pThis, "+/-/&\n");
 		CHKiRet(term(pThis, tok));
 		CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, (opcode_t) pToken->tok, NULL)); /* add to program */
 		CHKiRet(ctok_token.Destruct(&pToken)); /* no longer needed */

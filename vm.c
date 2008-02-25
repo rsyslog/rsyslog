@@ -205,6 +205,21 @@ ENDop(CMP_CONTAINS)
 
 /* end comare operations that work on strings, only */
 
+BEGINop(STRADD) /* remember to set the instruction also in the ENDop macro! */
+	var_t *operand1;
+	var_t *operand2;
+CODESTARTop(STRADD)
+	vmstk.PopString(pThis->pStk, &operand2);
+	vmstk.PopString(pThis->pStk, &operand1);
+
+	CHKiRet(rsCStrAppendCStr(operand1->val.pStr, operand2->val.pStr));
+
+	/* we have a result, so let's push it */
+	vmstk.Push(pThis->pStk, operand1);
+	var.Destruct(&operand2); /* no longer needed */
+finalize_it:
+ENDop(STRADD)
+
 BEGINop(NOT) /* remember to set the instruction also in the ENDop macro! */
 	var_t *operand;
 CODESTARTop(NOT)
@@ -332,6 +347,7 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 			doOP(PUSHCONSTANT);
 			doOP(PUSHMSGVAR);
 			doOP(PUSHSYSVAR);
+			doOP(STRADD);
 			doOP(PLUS);
 			doOP(MINUS);
 			doOP(TIMES);

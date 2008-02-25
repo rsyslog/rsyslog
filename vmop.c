@@ -173,6 +173,9 @@ vmopOpcode2Str(vmop_t *pThis, uchar **ppName)
 		case opcode_UNARY_MINUS:
 			*ppName = (uchar*) "UNARY_MINUS";
 			break;
+		case opcode_STRADD:
+			*ppName = (uchar*) "STRADD";
+			break;
 		default:
 			*ppName = (uchar*) "INVALID opcode";
 			break;

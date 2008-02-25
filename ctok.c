@@ -476,6 +476,9 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 			case ',':
 				pToken->tok = ctok_COMMA;
 				break;
+			case '&':
+				pToken->tok = ctok_STRADD;
+				break;
 			case '$':
 				CHKiRet(ctokGetVar(pThis, pToken));
 				break;

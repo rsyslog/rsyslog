@@ -32,6 +32,7 @@ typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc(
 	 */
 	opcode_OR    = ctok_OR,
 	opcode_AND   = ctok_AND,
+	opcode_STRADD= ctok_STRADD,
 	opcode_PLUS  = ctok_PLUS,
 	opcode_MINUS = ctok_MINUS,
 	opcode_TIMES = ctok_TIMES,	 /* "*" */
