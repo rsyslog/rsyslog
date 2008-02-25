@@ -29,12 +29,14 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "vm.h"
+#include "sysvar.h"
 #include "stringbuf.h"
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(vmstk)
 DEFobjCurrIf(var)
+DEFobjCurrIf(sysvar)
 
 
 /* ------------------------------ instruction set implementation ------------------------------ *
@@ -242,16 +244,22 @@ CODESTARTop(PUSHMSGVAR)
 		CHKiRet(var.SetString(pVal, pstrVal));
 	} else {
 		/* we have a message, so pull value from there */
-var.DebugPrint(pOp->operand.pVar);
 		CHKiRet(msgGetMsgVar(pThis->pMsg, pOp->operand.pVar->val.pStr, &pVal));
 	}
 
 	/* if we reach this point, we have a valid pVal and can push it */
 	vmstk.Push(pThis->pStk, pVal);
-RUNLOG_STR("msgvar:");
-var.DebugPrint(pVal);
 finalize_it:
 ENDop(PUSHMSGVAR)
+
+
+BEGINop(PUSHSYSVAR) /* remember to set the instruction also in the ENDop macro! */
+	var_t *pVal; /* the value to push */
+CODESTARTop(PUSHSYSVAR)
+	CHKiRet(sysvar.GetVar(pOp->operand.pVar->val.pStr, &pVal));
+	vmstk.Push(pThis->pStk, pVal);
+finalize_it:
+ENDop(PUSHSYSVAR)
 
 
 /* ------------------------------ end instruction set implementation ------------------------------ */
@@ -323,6 +331,7 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 			doOP(NOT);
 			doOP(PUSHCONSTANT);
 			doOP(PUSHMSGVAR);
+			doOP(PUSHSYSVAR);
 			doOP(PLUS);
 			doOP(MINUS);
 			doOP(TIMES);
@@ -433,6 +442,7 @@ BEGINObjClassInit(vm, 1) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(vmstk));
 	CHKiRet(objUse(var));
+	CHKiRet(objUse(sysvar));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmDebugPrint);

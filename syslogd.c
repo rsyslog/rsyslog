@@ -175,6 +175,7 @@
 #include "vmstk.h"
 #include "vm.h"
 #include "vmprg.h"
+#include "sysvar.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(expr)
@@ -3586,6 +3587,7 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(vmClassInit());
 	CHKiRet(vmopClassInit());
 	CHKiRet(vmprgClassInit());
+	CHKiRet(sysvarClassInit());
 	CHKiRet(varClassInit());
 	CHKiRet(ctok_tokenClassInit());
 	CHKiRet(ctokClassInit());

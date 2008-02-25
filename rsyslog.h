@@ -134,6 +134,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVALID_VMOP = -2057, /**< invalid virtual machine instruction */
 	RS_RET_INVALID_VAR = -2058, /**< a var_t or its content is unsuitable, eg. VARTYPE_NONE */
 	RS_RET_NOT_A_NUMBER = -2059, /**< e.g. conversion impossible because the string is not a number */
+
+	/* RainerScript error messages (range 1000.. 1999) */
+	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
+
+	/* some generic error/status codes */
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */
