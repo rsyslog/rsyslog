@@ -44,6 +44,7 @@ BEGINinterface(vmstk) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*PopBool)(vmstk_t *pThis, var_t **ppVar);
 	rsRetVal (*PopNumber)(vmstk_t *pThis, var_t **ppVar);
 	rsRetVal (*PopString)(vmstk_t *pThis, var_t **ppVar);
+	rsRetVal (*Pop2CommOp)(vmstk_t *pThis, var_t **ppVar1, var_t **ppVar2);
 ENDinterface(vmstk)
 #define vmstkCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

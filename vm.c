@@ -29,6 +29,7 @@
 #include "rsyslog.h"
 #include "obj.h"
 #include "vm.h"
+#include "stringbuf.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -56,6 +57,7 @@ DEFobjCurrIf(var)
 BEGINop(name) /* remember to set the instruction also in the ENDop macro! */ \
 	var_t *operand1; \
 	var_t *operand2; \
+CODESTARTop(name) \
 	vmstk.PopBool(pThis->pStk, &operand1); \
 	vmstk.PopBool(pThis->pStk, &operand2); \
 	if(operand1->val.num OPERATION operand2->val.num) { \
@@ -67,38 +69,114 @@ BEGINop(name) /* remember to set the instruction also in the ENDop macro! */ \
 	var.Destruct(&operand2); /* no longer needed */ \
 finalize_it: \
 ENDop(name)
-
 BOOLOP(OR,  ||)
 BOOLOP(AND, &&)
-
 #undef BOOLOP
-#if 0
-BEGINop(OR) /* remember to set the instruction also in the ENDop macro! */
-	// var_t *pVar[2];
-	var_t *operand1;
-	var_t *operand2;
-CODESTARTop(OR)
-	vmstk.PopBool(pThis->pStk, &operand1);
-	vmstk.PopBool(pThis->pStk, &operand2);
-	if(operand1->val.num || operand2->val.num) {
-		CHKiRet(var.SetNumber(operand1, 1));
-	} else {
-		CHKiRet(var.SetNumber(operand1, 0));
-	}
-	vmstk.Push(pThis->pStk, operand1); /* result */
-	var.Destruct(operand2); /* no longer needed */
-ENDop(OR)
 
-BEGINop(AND) /* remember to set the instruction also in the ENDop macro! */
+
+/* code generator for compare operations */
+#define BEGINCMPOP(name) \
+BEGINop(name) \
+	var_t *operand1; \
+	var_t *operand2; \
+	int bRes; \
+CODESTARTop(name) \
+	CHKiRet(vmstk.Pop2CommOp(pThis->pStk, &operand1, &operand2)); \
+	/* data types are equal (so we look only at operand1), but we must \
+	 * check which type we have to deal with... \
+	 */ \
+	switch(operand1->varType) {
+#define ENDCMPOP(name) \
+		default: \
+			bRes = 0; /* we do not abort just so that we have a value. TODO: reconsider */ \
+			break; \
+	} \
+ \
+	/* we have a result, so let's push it */ \
+	var.SetNumber(operand1, bRes); \
+	vmstk.Push(pThis->pStk, operand1); /* result */ \
+	var.Destruct(&operand2); /* no longer needed */ \
+finalize_it: \
+ENDop(name)
+
+BEGINCMPOP(CMP_EQ) /* remember to change the name also in the END macro! */
+	case VARTYPE_NUMBER:
+		bRes = operand1->val.num == operand2->val.num;
+		break;
+	case VARTYPE_STR:
+		bRes = !rsCStrCStrCmp(operand1->val.pStr, operand2->val.pStr);
+		break;
+ENDCMPOP(CMP_EQ)
+
+BEGINCMPOP(CMP_NEQ) /* remember to change the name also in the END macro! */
+	case VARTYPE_NUMBER:
+		bRes = operand1->val.num != operand2->val.num;
+		break;
+	case VARTYPE_STR:
+		bRes = rsCStrCStrCmp(operand1->val.pStr, operand2->val.pStr);
+		break;
+ENDCMPOP(CMP_EQ)
+
+BEGINCMPOP(CMP_LT) /* remember to change the name also in the END macro! */
+	case VARTYPE_NUMBER:
+		bRes = operand1->val.num < operand2->val.num;
+		break;
+	case VARTYPE_STR:
+		bRes = rsCStrCStrCmp(operand1->val.pStr, operand2->val.pStr) < 0;
+		break;
+ENDCMPOP(CMP_LT)
+
+BEGINCMPOP(CMP_GT) /* remember to change the name also in the END macro! */
+	case VARTYPE_NUMBER:
+		bRes = operand1->val.num > operand2->val.num;
+		break;
+	case VARTYPE_STR:
+		bRes = rsCStrCStrCmp(operand1->val.pStr, operand2->val.pStr) > 0;
+		break;
+ENDCMPOP(CMP_GT)
+
+BEGINCMPOP(CMP_LTEQ) /* remember to change the name also in the END macro! */
+	case VARTYPE_NUMBER:
+		bRes = operand1->val.num <= operand2->val.num;
+		break;
+	case VARTYPE_STR:
+		bRes = rsCStrCStrCmp(operand1->val.pStr, operand2->val.pStr) <= 0;
+		break;
+ENDCMPOP(CMP_LTEQ)
+
+BEGINCMPOP(CMP_GTEQ) /* remember to change the name also in the END macro! */
+	case VARTYPE_NUMBER:
+		bRes = operand1->val.num >= operand2->val.num;
+		break;
+	case VARTYPE_STR:
+		bRes = rsCStrCStrCmp(operand1->val.pStr, operand2->val.pStr) >= 0;
+		break;
+ENDCMPOP(CMP_GTEQ)
+
+#undef BEGINCMPOP
+#undef ENDCMPOP
+/* end regular compare operations */
+
+/* comare operations that work on strings, only */
+BEGINop(CMP_CONTAINS) /* remember to set the instruction also in the ENDop macro! */
 	var_t *operand1;
 	var_t *operand2;
-CODESTARTop(AND)
-	vmstk.Pop(pThis->pStk, &operand1);
-	vmstk.Pop(pThis->pStk, &operand2);
-	// TODO: implement
+	int bRes;
+CODESTARTop(CMP_CONTAINS)
+	/* operand2 is on top of stack, so needs to be popped first */
+	vmstk.PopString(pThis->pStk, &operand2);
+	vmstk.PopString(pThis->pStk, &operand1);
+	/* TODO: extend cstr class so that it supports location of cstr inside cstr */
+	bRes = (rsCStrLocateInSzStr(operand2->val.pStr, rsCStrGetSzStr(operand1->val.pStr)) == -1) ? 0 : 1;
+
+	/* we have a result, so let's push it */
+	var.SetNumber(operand1, bRes);
 	vmstk.Push(pThis->pStk, operand1); /* result */
-ENDop(AND)
-#endif
+	var.Destruct(&operand2); /* no longer needed */
+ENDop(CMP_CONTAINS)
+
+/* end comare operations that work on strings, only */
+
 
 BEGINop(POP) /* remember to set the instruction also in the ENDop macro! */
 CODESTARTop(POP)
@@ -162,6 +240,14 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 		switch(pCurrOp->opcode) {
 			doOP(OR);
 			doOP(AND);
+			doOP(CMP_EQ);
+			doOP(CMP_NEQ);
+			doOP(CMP_LT);
+			doOP(CMP_GT);
+			doOP(CMP_LTEQ);
+			doOP(CMP_GTEQ);
+			doOP(CMP_CONTAINS);
+			// TODO: implement: doOP(CMP_STARTSWITH);
 			doOP(POP);
 			doOP(PUSHCONSTANT);
 			default:

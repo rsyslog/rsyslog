@@ -160,6 +160,31 @@ finalize_it:
 }
 
 
+/* pop two variables for a common operation, e.g. a compare. When this
+ * functions returns, both variables have the same type, but the type
+ * is not set to anything specific.
+ * The user is responsible for destructing the ppVar's returned.
+ * A quick note on the name: it means pop 2 variable for a common
+ * opertion - just in case you wonder (I don't really like the name,
+ * but I didn't come up with a better one...).
+ * rgerhards, 2008-02-25
+ */
+static rsRetVal
+pop2CommOp(vmstk_t *pThis, var_t **ppVar1, var_t **ppVar2)
+{
+	DEFiRet;
+
+	/* assertions are done in pop(), we do not duplicate here */
+	/* operand two must be popped first, because it is at the top of stack */
+	CHKiRet(pop(pThis, ppVar2));
+	CHKiRet(pop(pThis, ppVar1));
+	CHKiRet(var.ConvForOperation(*ppVar1, *ppVar2));
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -185,6 +210,7 @@ CODESTARTobjQueryInterface(vmstk)
 	pIf->PopBool = popBool;
 	pIf->PopNumber = popNumber;
 	pIf->PopString = popString;
+	pIf->Pop2CommOp = pop2CommOp;
 
 finalize_it:
 ENDobjQueryInterface(vmstk)
