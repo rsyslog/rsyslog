@@ -49,6 +49,7 @@ BEGINinterface(vm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(vm_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(vm_t **ppThis);
 	rsRetVal (*ExecProg)(vm_t *pThis, vmprg_t *pProg);
+	rsRetVal (*PopBoolFromStack)(vm_t *pThis, var_t **ppVar); /* there are a few cases where we need this... */
 ENDinterface(vm)
 #define vmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

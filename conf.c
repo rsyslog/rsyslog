@@ -57,6 +57,9 @@
 /* static data */
 DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
+#include "vm.h"
+DEFobjCurrIf(vm) // TODO: remove, testing aid! rgerhards, 2008-02-25
+
 uchar	*pModDir = NULL; /* read-only after startup */
 
 /* The following global variables are used for building
@@ -791,7 +794,22 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 
 dbgprintf("expression parser successfully ended, pp %p ('%s')\n", *pline, *pline);
 
+/* debug aid, try to exec - just now for testing the vm... -- rgerhards, 2008-02-25 */
+vm_t *pVM;
+var_t *pResult;
+CHKiRet(vm.Construct(&pVM));
+CHKiRet(vm.ConstructFinalize(pVM));
+
+CHKiRet(vm.ExecProg(pVM, f->f_filterData.f_expr->pVmprg));
+CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
+dbgprintf("result of expression run: %lld\n", pResult->val.num);
+
+CHKiRet(vm.Destruct(&pVM));
+/* ...end testing aid... */
+
+
 finalize_it:
+RUNLOG_VAR("%d", iRet);
 	if(iRet == RS_RET_SYNTAX_ERROR) {
 		logerror("syntax error in expression");
 	}
@@ -1172,6 +1190,7 @@ rsRetVal confClassInit(void)
 	/* request objects we use */
 	CHKiRet(objUse(expr));
 	CHKiRet(objUse(ctok));
+	CHKiRet(objUse(vm)); // TODO: remove, testing aid! rgerhards, 2008-02-25
 
 finalize_it:
 	RETiRet;

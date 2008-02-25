@@ -48,6 +48,11 @@ DEFobjCurrIf(var)
 #define CODESTARTop(instruction) \
 		ISOBJ_TYPE_assert(pThis, vm);
 
+#define PUSHRESULTop(operand, res) \
+	/* we have a result, so let's push it */ \
+	var.SetNumber(operand, res); \
+	vmstk.Push(pThis->pStk, operand); /* result */
+
 #define ENDop(instruction) \
 		RETiRet; \
 	}
@@ -74,12 +79,33 @@ BOOLOP(AND, &&)
 #undef BOOLOP
 
 
+/* code generator for numerical operations */
+#define BOOLOP(name, OPERATION) \
+BEGINop(name) /* remember to set the instruction also in the ENDop macro! */ \
+	var_t *operand1; \
+	var_t *operand2; \
+CODESTARTop(name) \
+	vmstk.PopNumber(pThis->pStk, &operand1); \
+	vmstk.PopNumber(pThis->pStk, &operand2); \
+	operand1->val.num = operand1->val.num OPERATION operand2->val.num; \
+RUNLOG_VAR("%lld", operand1->val.num); \
+	vmstk.Push(pThis->pStk, operand1); /* result */ \
+	var.Destruct(&operand2); /* no longer needed */ \
+ENDop(name)
+BOOLOP(PLUS,   +)
+BOOLOP(MINUS,  -)
+BOOLOP(TIMES,  *)
+BOOLOP(DIV,    /)
+BOOLOP(MOD,    %)
+#undef BOOLOP
+
+
 /* code generator for compare operations */
 #define BEGINCMPOP(name) \
 BEGINop(name) \
 	var_t *operand1; \
 	var_t *operand2; \
-	int bRes; \
+	number_t bRes; \
 CODESTARTop(name) \
 	CHKiRet(vmstk.Pop2CommOp(pThis->pStk, &operand1, &operand2)); \
 	/* data types are equal (so we look only at operand1), but we must \
@@ -93,6 +119,7 @@ CODESTARTop(name) \
 	} \
  \
 	/* we have a result, so let's push it */ \
+RUNLOG_VAR("%lld", bRes); \
 	var.SetNumber(operand1, bRes); \
 	vmstk.Push(pThis->pStk, operand1); /* result */ \
 	var.Destruct(&operand2); /* no longer needed */ \
@@ -170,18 +197,26 @@ CODESTARTop(CMP_CONTAINS)
 	bRes = (rsCStrLocateInSzStr(operand2->val.pStr, rsCStrGetSzStr(operand1->val.pStr)) == -1) ? 0 : 1;
 
 	/* we have a result, so let's push it */
-	var.SetNumber(operand1, bRes);
-	vmstk.Push(pThis->pStk, operand1); /* result */
+	PUSHRESULTop(operand1, bRes);
 	var.Destruct(&operand2); /* no longer needed */
 ENDop(CMP_CONTAINS)
 
 /* end comare operations that work on strings, only */
 
+BEGINop(NOT) /* remember to set the instruction also in the ENDop macro! */
+	var_t *operand;
+CODESTARTop(NOT)
+	vmstk.PopBool(pThis->pStk, &operand);
+	PUSHRESULTop(operand, !operand->val.num);
+ENDop(NOT)
 
-BEGINop(POP) /* remember to set the instruction also in the ENDop macro! */
-CODESTARTop(POP)
-/* TODO: implement */
-ENDop(POP)
+BEGINop(UNARY_MINUS) /* remember to set the instruction also in the ENDop macro! */
+	var_t *operand;
+CODESTARTop(UNARY_MINUS)
+	vmstk.PopNumber(pThis->pStk, &operand);
+	PUSHRESULTop(operand, -operand->val.num);
+ENDop(UNARY_MINUS)
+
 
 BEGINop(PUSHCONSTANT) /* remember to set the instruction also in the ENDop macro! */
 CODESTARTop(PUSHCONSTANT)
@@ -206,6 +241,11 @@ vmConstructFinalize(vm_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, vm);
+	
+	CHKiRet(vmstk.Construct(&pThis->pStk));
+	CHKiRet(vmstk.ConstructFinalize(pThis->pStk));
+
+finalize_it:
 	RETiRet;
 }
 
@@ -213,6 +253,8 @@ vmConstructFinalize(vm_t __attribute__((unused)) *pThis)
 /* destructor for the vm object */
 BEGINobjDestruct(vm) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(vm)
+	if(pThis->pStk != NULL)
+		vmstk.Destruct(&pThis->pStk);
 ENDobjDestruct(vm)
 
 
@@ -248,8 +290,14 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 			doOP(CMP_GTEQ);
 			doOP(CMP_CONTAINS);
 			// TODO: implement: doOP(CMP_STARTSWITH);
-			doOP(POP);
+			doOP(NOT);
 			doOP(PUSHCONSTANT);
+			doOP(PLUS);
+			doOP(MINUS);
+			doOP(TIMES);
+			doOP(DIV);
+			doOP(MOD);
+			doOP(UNARY_MINUS);
 			default:
 				ABORT_FINALIZE(RS_RET_INVALID_VMOP);
 				dbgoprint((obj_t*) pThis, "invalid instruction %d in vmprg\n", pCurrOp->opcode);
@@ -269,6 +317,20 @@ finalize_it:
 }
 
 
+/* Pop a boolean from the stack and return it to caller. This functionality is
+ * partly needed. We may (or may not ;)) be able to remove it once we have
+ * full RainerScript support. -- rgerhards, 2008-02-25
+ */
+static rsRetVal
+PopBoolFromStack(vm_t *pThis, var_t **ppVar)
+{
+	DEFiRet;
+
+	CHKiRet(vmstk.PopBool(pThis->pStk, ppVar));
+
+finalize_it:
+	RETiRet;
+}
 
 /* queryInterface function
  * rgerhards, 2008-02-21
@@ -291,6 +353,7 @@ CODESTARTobjQueryInterface(vm)
 	pIf->Destruct = vmDestruct;
 	pIf->DebugPrint = vmDebugPrint;
 	pIf->ExecProg = execProg;
+	pIf->PopBoolFromStack = PopBoolFromStack;
 finalize_it:
 ENDobjQueryInterface(vm)
 

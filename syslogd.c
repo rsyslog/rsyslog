@@ -172,6 +172,8 @@
 #include "ctok.h"
 #include "conf.h"
 #include "vmop.h"
+#include "vmstk.h"
+#include "vm.h"
 #include "vmprg.h"
 
 /* definitions for objects we access */
@@ -3558,6 +3560,8 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(wtiClassInit());
 	CHKiRet(wtpClassInit());
 	CHKiRet(queueClassInit());
+	CHKiRet(vmstkClassInit());
+	CHKiRet(vmClassInit());
 	CHKiRet(vmopClassInit());
 	CHKiRet(vmprgClassInit());
 	CHKiRet(varClassInit());

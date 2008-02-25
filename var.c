@@ -80,7 +80,7 @@ CODESTARTobjDebugPrint(var)
 			dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStr(pThis->val.pStr));
 			break;
 		case VARTYPE_NUMBER:
-			dbgoprint((obj_t*) pThis, "type: int64, val %lld\n", pThis->val.num);
+			dbgoprint((obj_t*) pThis, "type: number, val %lld\n", pThis->val.num);
 			break;
 		default:
 			dbgoprint((obj_t*) pThis, "type %d currently not suppored in debug output\n", pThis->varType);

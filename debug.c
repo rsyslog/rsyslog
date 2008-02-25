@@ -930,7 +930,8 @@ int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line)
 	/* when we reach this point, we have a fully-initialized FuncDB! */
 
 	//if(bLogFuncFlow) /* quick debug hack...  select the best for you! */
-	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "expr.c")) /* quick debug hack... select the best for you! */
+	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "vm.c")) /* quick debug hack... select the best for you! */
+	//if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "expr.c")) /* quick debug hack... select the best for you! */
 		dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
 	if(pThrd->stackPtr >= (int) (sizeof(pThrd->callStack) / sizeof(dbgFuncDB_t*))) {
 		dbgprintf("%s:%d: %s: debug module: call stack for this thread full, suspending call tracking\n",
@@ -960,7 +961,8 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore)
 
 	dbgFuncDBPrintActiveMutexes(pFuncDB, "WARNING: mutex still owned by us as we exit function, mutex: ", pthread_self());
 	//if(bLogFuncFlow) /* quick debug hack... select the best for you! */
-	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "expr.c")) /* quick debug hack... select the best for you! */
+	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "vm.c")) /* quick debug hack... select the best for you! */
+	//if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "expr.c")) /* quick debug hack... select the best for you! */
 		dbgprintf("%s:%d: %s: exit\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
 	pThrd->stackPtr = iStackPtrRestore;
 	if(pThrd->stackPtr < 0) {

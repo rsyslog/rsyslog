@@ -89,6 +89,8 @@ finalize_it:
 
 
 /* pop a value from the stack
+ * IMPORTANT: the stack pointer always points to the NEXT FREE entry. So in
+ * order to pop, we must access the element one below the stack pointer.
  * The user is responsible for destructing the ppVar returned.
  */
 static rsRetVal
@@ -97,12 +99,12 @@ pop(vmstk_t *pThis, var_t **ppVar)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, vmstk);
-	assert(ppVar != NULL);
+	ASSERT(ppVar != NULL);
 
 	if(pThis->iStkPtr == 0)
 		ABORT_FINALIZE(RS_RET_STACK_EMPTY);
 
-	*ppVar = pThis->vStk[pThis->iStkPtr--];
+	*ppVar = pThis->vStk[--pThis->iStkPtr];
 
 finalize_it:
 	RETiRet;
