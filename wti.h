@@ -53,6 +53,7 @@ rsRetVal wtiProcessThrdChanges(wti_t *pThis, int bLockMutex);
 rsRetVal wtiSetDbgHdr(wti_t *pThis, uchar *pszMsg, size_t lenMsg);
 rsRetVal wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex);
 rsRetVal wtiJoinThrd(wti_t *pThis);
+rsRetVal wtiCancelThrd(wti_t *pThis);
 qWrkCmd_t wtiGetState(wti_t *pThis, int bLockMutex);
 PROTOTYPEObjClassInit(wti);
 PROTOTYPEpropSetMeth(wti, pszDbgHdr, uchar*);
