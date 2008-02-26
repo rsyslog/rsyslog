@@ -6,8 +6,7 @@
 <body>
 <h1>GSSAPI Syslog Input Module</h1>
 <p><b>Module Name:&nbsp;&nbsp;&nbsp; imtcp</b></p>
-<p><b>Author: </b>varmojfekoj
-&lt;email address here? which?&gt;</p>
+<p><b>Author: </b>varmojfekoj</p>
 <p><b>Description</b>:</p>
 <p>Provides the ability to receive syslog messages from the
 network protected via Kerberos 5 encryption and authentication. This
@@ -20,8 +19,9 @@ Starts a GSSAPI server on selected port - note that this runs
 independently from the TCP server.</li>
 <li>InputGSSServerServiceName &lt;name&gt;<br>
 The service name to use for the GSS server.</li>
-<li>$InputTCPServerRun &lt;port&gt;<br>
-Starts a TCP server on selected port</li>
+<li>$InputGSSServerPermitPlainTCP on|<span style="font-weight: bold;">off</span><br>
+Permits the server to receive plain tcp syslog (without GSS) on the
+same port</li>
 <li>$InputTCPMaxSessions &lt;number&gt;<br>
 Sets the maximum number of sessions supported</li>
 </ul>
@@ -37,13 +37,12 @@ probably&nbsp;need &nbsp;to be changed in the future when that
 change happens.</li>
 </ul>
 <p><b>Sample:</b></p>
-<p>This sets up a TCP server on port 514 and a GSSAPI protected
-syslog server at port 1514:<br>
+<p>This sets up a GSS server on port 1514 that also permits to
+receive plain tcp syslog messages (on the same port):<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imtcp.so #
-needs to be done just once
-$InputTCPServerRun 514
+<textarea rows="15" cols="60">$ModLoad imtcp.so # needs to be done just once
 $InputGSSServerRun 1514
+$InputGSSServerPermitPlainTCP on
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>

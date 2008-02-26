@@ -202,6 +202,23 @@ CODESTARTop(CMP_CONTAINS)
 	var.Destruct(&operand2); /* no longer needed */
 ENDop(CMP_CONTAINS)
 
+BEGINop(CMP_STARTSWITH) /* remember to set the instruction also in the ENDop macro! */
+	var_t *operand1;
+	var_t *operand2;
+	int bRes;
+CODESTARTop(CMP_STARTSWITH)
+	/* operand2 is on top of stack, so needs to be popped first */
+	vmstk.PopString(pThis->pStk, &operand2);
+	vmstk.PopString(pThis->pStk, &operand1);
+	/* TODO: extend cstr class so that it supports location of cstr inside cstr */
+	bRes = (rsCStrStartsWithSzStr(operand1->val.pStr, rsCStrGetSzStr(operand2->val.pStr),
+		rsCStrLen(operand2->val.pStr)) == 0) ? 1 : 0;
+
+	/* we have a result, so let's push it */
+	PUSHRESULTop(operand1, bRes);
+	var.Destruct(&operand2); /* no longer needed */
+ENDop(CMP_STARTSWITH)
+
 /* end comare operations that work on strings, only */
 
 BEGINop(STRADD) /* remember to set the instruction also in the ENDop macro! */
@@ -341,7 +358,7 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 			doOP(CMP_LTEQ);
 			doOP(CMP_GTEQ);
 			doOP(CMP_CONTAINS);
-			// TODO: implement: doOP(CMP_STARTSWITH);
+			doOP(CMP_STARTSWITH);
 			doOP(NOT);
 			doOP(PUSHCONSTANT);
 			doOP(PUSHMSGVAR);

@@ -590,9 +590,12 @@ int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2)
 }
 
 
-/* check if a sz-type string start with a CStr object. This function
+/* check if a sz-type string starts with a CStr object. This function
  * is initially written to support the "startswith" property-filter
  * comparison operation. Maybe it also has other needs.
+ * This functions is modelled after the strcmp() series, thus a
+ * return value of 0 indicates that the string starts with the
+ * sequence while -1 indicates it does not!
  * rgerhards 2005-10-19
  */
 int rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
@@ -625,6 +628,9 @@ int rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 
 
 /* check if a CStr object starts with a sz-type string.
+ * This functions is modelled after the strcmp() series, thus a
+ * return value of 0 indicates that the string starts with the
+ * sequence while -1 indicates it does not!
  * rgerhards 2005-09-26
  */
 int rsCStrStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
