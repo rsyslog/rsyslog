@@ -348,33 +348,69 @@ rsRetVal modUnloadAndDestructAll(void)
 		moduleDestruct(pModPrev);
 	}
 
+	/* indicate list is now empty */
+	pLoadedModules = NULL;
+	pLoadedModulesLast = NULL;
+
 	RETiRet;
 }
 
 
+/* unlink and destroy a module. The caller must provide a pointer to the module
+ * itself as well as one to its immediate predecessor.
+ * rgerhards, 2008-02-26
+ */
+static rsRetVal
+modUnlinkAndDestroy(modInfo_t *pThis, modInfo_t *pPrev)
+{
+	DEFiRet;
+
+	/* we need to unlink the module before we can destruct it -- rgerhards, 2008-02-26 */
+	if(pPrev == NULL) {
+		/* module is root, so we need to set a new root */
+		pLoadedModules = pThis->pNext;
+	} else {
+		pPrev->pNext = pThis->pNext;
+	}
+
+	/* check if we need to update the "last" pointer */
+	if(pLoadedModulesLast == pThis) {
+		pLoadedModulesLast = pPrev;
+	}
+
+	/* finally, we are ready for the module to go away... */
+	dbgprintf("Unloading module %s\n", modGetName(pThis));
+	modPrepareUnload(pThis);
+	moduleDestruct(pThis);
+
+	RETiRet;
+}
+
+
+/* unload dynamically loaded modules
+ */
 rsRetVal modUnloadAndDestructDynamic(void)
 {
 	DEFiRet;
 	modInfo_t *pMod;
-	modInfo_t *pModPrev;
+	modInfo_t *pModCurr; /* module currently being processed */
+	modInfo_t *pModPrev; /* last module in active linked list */
 
-	pLoadedModulesLast = NULL;
-
+	pModPrev = NULL; /* we do not yet have a previous module */
 	pMod = modGetNxt(NULL);
 	while(pMod != NULL) {
-		pModPrev = pMod;
-		pMod = modGetNxt(pModPrev); /* get next */
+		pModCurr = pMod;
+		pMod = modGetNxt(pModCurr); /* get next */
 		/* now we can destroy the previous module */
-		if(pModPrev->eLinkType != eMOD_LINK_STATIC) {
-			dbgprintf("Unloading module %s\n", modGetName(pModPrev));
-			modPrepareUnload(pModPrev);
-			moduleDestruct(pModPrev);
+		if(pModCurr->eLinkType != eMOD_LINK_STATIC) {
+			modUnlinkAndDestroy(pModCurr, pModPrev);
 		} else {
-			pLoadedModulesLast = pModPrev;
+			pModPrev = pModCurr; /* don't delete, so this is the new prev ptr */
 		}
 	}
 
 	RETiRet;
 }
+
 /* vi:set ai:
  */

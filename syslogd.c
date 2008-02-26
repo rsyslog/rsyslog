@@ -2464,7 +2464,7 @@ static void doDie(int sig)
 	printf("DoDie called.\n");
 	if(iRetries++ == 4) {
 		printf("DoDie called 5 times - unconditional exit\n");
-		exit(1);
+		abort();
 	}
 	bFinished = sig;
 }
