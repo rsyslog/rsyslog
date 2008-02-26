@@ -119,7 +119,7 @@ SUBDIRS += plugins/imklog
 endif
 
 if ENABLE_GSSAPI
-SUBDIRS += plugins/omgssapi
+SUBDIRS += plugins/omgssapi plugins/imgssapi
 endif
 
 if ENABLE_MYSQL

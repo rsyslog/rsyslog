@@ -1,7 +1,10 @@
 ---------------------------------------------------------------------------
-Version 3.12.0 (rgerhards), 2008-02-??
+Version 3.11.6 (rgerhards), 2008-02-??
 - bugfix: gssapi libraries were still linked to rsyslog core, what should
   no longer be necessary. Applied fix by Michael Biebl to solve this.
+- enabled imgssapi to be loaded side-by-side with imtcp
+- added InputGSSServerPermitPlainTCP config directive
+- split imgssapi source code somewhat from imtcp
 - applied patch from varmojfekoj to fix an issue with compatibility 
   mode and default module directories (many thanks!):
   I've also noticed a bug in the compatibility code; the problem is that 
