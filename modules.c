@@ -125,7 +125,8 @@ uchar *modGetName(modInfo_t *pThis)
 
 /* Add a module to the loaded module linked list
  */
-static inline void addModToList(modInfo_t *pThis)
+static inline void
+addModToList(modInfo_t *pThis)
 {
 	assert(pThis != NULL);
 
@@ -192,16 +193,9 @@ static rsRetVal modPrepareUnload(modInfo_t *pThis)
 
 	assert(pThis != NULL);
 
-	/* WARNING - the current code does NOT work and causes an abort - this is acceptable right now
-	 * as I am DEVELOPING the working code and will NOT release until it is there. If you use a
-	 * CVS snapshot, be aware of this limitation. For now, you can just remove everything up to
-	 * (but not including) the END DEVEL comment. That will do the trick. rgerhards, 2007-11-21
-	 */
 	CHKiRet(pThis->modGetID(&pModCookie));
 	pThis->modExit(); /* tell the module to get ready for unload */
 	CHKiRet(unregCfSysLineHdlrs4Owner(pModCookie));
-
-	/* END DEVEL */
 
 finalize_it:
 	RETiRet;
@@ -266,7 +260,7 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"needUDPSocket", &pNew->needUDPSocket));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume));
 			break;
-		case eMOD_FILTER:
+		case eMOD_LIB:
 			break;
 	}
 
@@ -312,8 +306,8 @@ void modPrintList(void)
 		case eMOD_IN:
 			dbgprintf("input");
 			break;
-		case eMOD_FILTER:
-			dbgprintf("filter");
+		case eMOD_LIB:
+			dbgprintf("library");
 			break;
 		}
 		dbgprintf(" module.\n");

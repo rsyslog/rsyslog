@@ -37,7 +37,7 @@
 typedef enum eModType_ {
 	eMOD_IN,	/* input module */
 	eMOD_OUT,	/* output module */
-	eMOD_FILTER	/* filter module (not know yet if we will once have such at all...) */
+	eMOD_LIB	/* library module - this module provides one or many interfaces */
 } eModType_t;
 
 /* how is this module linked? */
