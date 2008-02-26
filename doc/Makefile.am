@@ -38,6 +38,7 @@ html_files = \
 	queueWorkerLogic.jpg \
 	queueWorkerLogic_small.jpg \
 	rainerscript.html \
+	rscript_abnf.html \
 	rsconf1_actionexeconlywhenpreviousissuspended.html \
 	rsconf1_actionresumeinterval.html \
 	rsconf1_allowedsender.html \
