@@ -378,6 +378,18 @@ rsRetVal modUnloadAndDestructDynamic(void)
 		}
 	}
 
+	/* Note: the last modules pNext pointer is now invalid
+	 * (except if the last module was not touched, what is highly
+	 * unlikely. We simply fix this be setting it to NULL. After all, 
+	 * it is the last module ;). This bug had some severe effects in
+	 * v3, but none in v2 because in v2 the list was never again
+	 * traversed before a new one was added. But even in v2 it may cause
+	 * a segfault if the number of loaded modules changed between HUPs.
+	 * rgerhards, 2008-02-26
+	 */
+	if(pLoadedModulesLast != NULL)
+		pLoadedModulesLast->pNext = NULL;
+
 	return iRet;
 }
 /*
