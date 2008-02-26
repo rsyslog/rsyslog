@@ -97,14 +97,14 @@ struct TCPSession {
 };
 
 static int iTCPSessMax = TCPSESS_MAX_DEFAULT;	/* actual number of sessions */
-char *TCPLstnPort = "0"; /* read-only after startup */
-int bEnableTCP = 0; /* read-only after startup */
-int  *sockTCPLstn = NULL; /* read-only after startup, modified by restart */
-struct TCPSession *pTCPSessions;
+static char *TCPLstnPort = "0"; /* read-only after startup */
+static int bEnableTCP = 0; /* read-only after startup */
+static int  *sockTCPLstn = NULL; /* read-only after startup, modified by restart */
+static struct TCPSession *pTCPSessions;
 /* The thread-safeness of the sesion table is doubtful */
 #ifdef USE_GSSAPI
 static gss_cred_id_t gss_server_creds = GSS_C_NO_CREDENTIAL;
-char *gss_listen_service_name = NULL;
+static char *gss_listen_service_name = NULL;
 #endif
 
 /* config settings */
