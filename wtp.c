@@ -511,7 +511,6 @@ wtpAdviseMaxWorkers(wtp_t *pThis, int nMaxWrkr)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-dbgprintf("%s: wtpAdviseMaxWorker with %d called, currNum %d, max %d\n", wtpGetDbgHdr(pThis), nMaxWrkr, pThis->iCurNumWrkThrd, pThis->iNumWorkerThreads);
 	if(nMaxWrkr == 0)
 		FINALIZE;
 
