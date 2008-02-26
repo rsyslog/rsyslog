@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.12.0 (rgerhards), 2008-02-??
+- bugfix: gssapi libraries were still linked to rsyslog core, what should
+  no longer be necessary. Applied fix by Michael Biebl to solve this.
 ---------------------------------------------------------------------------
 Version 3.11.5 (rgerhards), 2008-02-25
 - new imgssapi module, changed imtcp module - this enables to load/package

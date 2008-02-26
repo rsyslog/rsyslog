@@ -85,13 +85,17 @@ rsyslogd_SOURCES = \
 	iminternal.c \
 	iminternal.h \
 	action.c \
-	action.h \
-	gss-misc.c \
-	gss-misc.h
+	action.h
 
 rsyslogd_CPPFLAGS =  $(mudflap_cflags) -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
-rsyslogd_LDADD = $(mudflap_libs) $(zlib_libs) $(pthreads_libs) $(gss_libs) $(dl_libs) $(rt_libs)
+rsyslogd_LDADD = $(mudflap_libs) $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
+
+if ENABLE_GSSAPI
+noinst_LTLIBRARIES = libgssapi-misc.la
+libgssapi_misc_la_SOURCES = gss-misc.c gss-misc.h
+libgssapi_misc_la_LIBADD = $(gss_libs)
+endif
 
 man_MANS = rfc3195d.8 rsyslogd.8 rsyslog.conf.5 
 
@@ -106,7 +110,7 @@ EXTRA_DIST = \
 	rsyslog.conf \
 	$(man_MANS)
 
-SUBDIRS = doc
+SUBDIRS = . doc
 
 SUBDIRS += plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
