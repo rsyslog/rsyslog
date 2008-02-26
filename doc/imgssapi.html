@@ -10,8 +10,7 @@
 <p><b>Description</b>:</p>
 <p>Provides the ability to receive syslog messages from the
 network protected via Kerberos 5 encryption and authentication. This
-module also contains the functionality found in <a href="imtcp.html">imtcp</a>,
-which can not be used if imgssapi is used.</p>
+module also accept plain tcp syslog messages on the same port if configured to do so. If you need just plain tcp, use&nbsp; <a href="imtcp.html">imtcp</a> instead.</p>
 <p><b>Configuration Directives</b>:</p>
 <ul>
 <li>InputGSSServerRun &lt;port&gt;<br>
@@ -22,19 +21,14 @@ The service name to use for the GSS server.</li>
 <li>$InputGSSServerPermitPlainTCP on|<span style="font-weight: bold;">off</span><br>
 Permits the server to receive plain tcp syslog (without GSS) on the
 same port</li>
-<li>$InputTCPMaxSessions &lt;number&gt;<br>
+<li>$InputGSSServerMaxSessions &lt;number&gt;<br>
 Sets the maximum number of sessions supported</li>
 </ul>
 <b>Caveats/Known Bugs:</b>
 <ul>
 <li>module always binds to all interfaces</li>
-<li>only a single listener can be bound (one each for GSS and
-plain TCP)</li>
-<li>duplicates <a href="imtcp.html">imtcp</a>
-functionality and thus conflicts with it. This will change in the
-future. Unfortunately, that also means that&nbsp;your config files
-probably&nbsp;need &nbsp;to be changed in the future when that
-change happens.</li>
+<li>only a single listener can be bound</li>
+
 </ul>
 <p><b>Sample:</b></p>
 <p>This sets up a GSS server on port 1514 that also permits to
