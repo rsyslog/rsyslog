@@ -2,6 +2,15 @@
 Version 3.12.0 (rgerhards), 2008-02-??
 - bugfix: gssapi libraries were still linked to rsyslog core, what should
   no longer be necessary. Applied fix by Michael Biebl to solve this.
+- applied patch from varmojfekoj to fix an issue with compatibility 
+  mode and default module directories (many thanks!):
+  I've also noticed a bug in the compatibility code; the problem is that 
+  options are parsed before configuration file so options which need a 
+  module to be loaded will currently ignore any $moddir directive. This 
+  can be fixed by moving legacyOptsHook() after config file parsing. 
+  (see the attached patch) This goes against the logical order of 
+  processing, but the legacy options are only few and it doesn't seem to 
+  be a problem.
 ---------------------------------------------------------------------------
 Version 3.11.5 (rgerhards), 2008-02-25
 - new imgssapi module, changed imtcp module - this enables to load/package

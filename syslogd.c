@@ -2834,8 +2834,6 @@ init(void)
 	 */
 	cfsysline((uchar*)"ResetConfigVariables");
 
-	legacyOptsHook();
-
 	/* open the configuration file */
 	if((iRet = processConfFile(ConfFile)) != RS_RET_OK) {
 		/* rgerhards: this code is executed to set defaults when the
@@ -2855,6 +2853,8 @@ init(void)
 		}
 		selectorAddList(f);
 	}
+
+	legacyOptsHook();
 
 	/* we are now done with reading the configuration. This is the right time to
 	 * free some objects that were just needed for loading it. rgerhards 2005-10-19
