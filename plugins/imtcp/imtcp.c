@@ -918,7 +918,6 @@ CODESTARTwillRun
 
 	/* first apply some config settings */
 #endif
-dbgprintf("imtcp: bEnableTCP %d\n", bEnableTCP);
 	PrintAllowedSenders(2); /* TCP */
 #ifdef USE_GSSAPI
 	PrintAllowedSenders(3); /* GSS */
@@ -986,15 +985,10 @@ CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 ENDqueryEtryPt
 
+
+#ifndef USE_GSSAPI
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-#if defined(USE_GSSAPI)
-	if (gss_listen_service_name != NULL) {
-		free(gss_listen_service_name);
-		gss_listen_service_name = NULL;
-	}
-	bPermitPlainTcp = 0;
-#endif
 	return RS_RET_OK;
 }
 
@@ -1004,22 +998,14 @@ CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
-#if defined(USE_GSSAPI)
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"permitplaintcp", 0, eCmdHdlrBinary,
-				   NULL, bPermitPlainTcp, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverrun", 0, eCmdHdlrGetWord,
-				   addGSSListener, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverservicename", 0, eCmdHdlrGetWord,
-				   NULL, &gss_listen_service_name, STD_LOADABLE_MODULE_ID));
-#else
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverrun", 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpmaxsessions", 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
-#endif
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/*
- * vi:set ai:
+#endif
+
+/* vim:set ai:
  */

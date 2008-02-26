@@ -110,7 +110,10 @@ int TCPSessGSSInit(void)
 }
 
 
-/* returns 0 if all went OK, -1 if it failed */
+/* returns 0 if all went OK, -1 if it failed 
+ * Calls TCPSessAccept() and then tries to guess if the connection uses
+ * gssapi.
+ */
 int TCPSessGSSAccept(int fd)
 {
 	gss_buffer_desc send_tok, recv_tok;
@@ -273,7 +276,9 @@ int TCPSessGSSAccept(int fd)
 }
 
 
-/* returns: ? */
+/* returns: ? 
+ * Replaces recv() for gssapi connections.
+ */
 int TCPSessGSSRecv(int iSess, void *buf, size_t buf_len)
 {
 	gss_buffer_desc xmit_buf, msg_buf;
@@ -311,6 +316,9 @@ int TCPSessGSSRecv(int iSess, void *buf, size_t buf_len)
 }
 
 
+/* Takes care of cleaning up gssapi stuff and then calls
+ * TCPSessClose().
+ */
 void TCPSessGSSClose(int iSess) {
 	OM_uint32 maj_stat, min_stat;
 	gss_ctx_id_t *context;
@@ -333,6 +341,7 @@ void TCPSessGSSClose(int iSess) {
 }
 
 
+/* Counterpart of TCPSessGSSInit() */
 void TCPSessGSSDeinit(void) {
 	OM_uint32 maj_stat, min_stat;
 
@@ -341,3 +350,32 @@ void TCPSessGSSDeinit(void) {
 		display_status("releasing credentials", maj_stat, min_stat);
 }
 
+
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	if (gss_listen_service_name != NULL) {
+		free(gss_listen_service_name);
+		gss_listen_service_name = NULL;
+	}
+	bPermitPlainTcp = 0;
+	return RS_RET_OK;
+}
+
+
+BEGINmodInit()
+CODESTARTmodInit
+	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+CODEmodInit_QueryRegCFSLineHdlr
+	/* register config file handlers */
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"permitplaintcp", 0, eCmdHdlrBinary,
+				   NULL, bPermitPlainTcp, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverrun", 0, eCmdHdlrGetWord,
+				   addGSSListener, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverservicename", 0, eCmdHdlrGetWord,
+				   NULL, &gss_listen_service_name, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
+		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+ENDmodInit
+
+/* vim:set ai:
+ */
