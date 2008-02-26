@@ -368,7 +368,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"permitplaintcp", 0, eCmdHdlrBinary,
-				   NULL, bPermitPlainTcp, STD_LOADABLE_MODULE_ID));
+				   NULL, &bPermitPlainTcp, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverrun", 0, eCmdHdlrGetWord,
 				   addGSSListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverservicename", 0, eCmdHdlrGetWord,
