@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.11.6 (rgerhards), 2008-02-??
+Version 3.11.6 (rgerhards), 2008-02-27
 - bugfix: gssapi libraries were still linked to rsyslog core, what should
   no longer be necessary. Applied fix by Michael Biebl to solve this.
 - enabled imgssapi to be loaded side-by-side with imtcp
@@ -9,7 +9,7 @@ Version 3.11.6 (rgerhards), 2008-02-??
   invalid pointer if dequeue failed
 - bugfix: rsyslogd segfaulted on second SIGHUP
   tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=38
-- improved stability of queuee engine
+- improved stability of queue engine
 - bugfix: queue disk file were not properly persisted when 
   immediately after closing an output file rsyslog was stopped
   or huped (the new output file open must NOT have happend at
