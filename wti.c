@@ -405,11 +405,9 @@ wtiWorker(wti_t *pThis)
 
 	/* indicate termination */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-// TODO: this deadlocks with wtiProcessThrdChanges(), where it waits on the thread to join (on US TO JOIN!!!)
 	d_pthread_mutex_lock(&pThis->mut);
 	pthread_cleanup_pop(0); /* remove cleanup handler */
 
-RUNLOG_VAR("%p", pWtp->pUsr);
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
 
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);

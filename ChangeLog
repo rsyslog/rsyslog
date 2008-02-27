@@ -5,8 +5,11 @@ Version 3.11.6 (rgerhards), 2008-02-??
 - enabled imgssapi to be loaded side-by-side with imtcp
 - added InputGSSServerPermitPlainTCP config directive
 - split imgssapi source code somewhat from imtcp
+- bugfix: queue cancel cleanup handler could be called with
+  invalid pointer if dequeue failed
 - bugfix: rsyslogd segfaulted on second SIGHUP
   tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=38
+- improved stability of queuee engine
 - applied patch from varmojfekoj to fix an issue with compatibility 
   mode and default module directories (many thanks!):
   I've also noticed a bug in the compatibility code; the problem is that 

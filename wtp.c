@@ -323,8 +323,6 @@ wtpCancelAll(wtp_t *pThis)
 {
 	DEFiRet;
 	int i;
-	int numCancelled = 0;
-	/* TODO: mutex?? TODO: cancellation in wti (but OK as is [though ugly form an isolation POV]!) */
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
@@ -335,10 +333,8 @@ wtpCancelAll(wtp_t *pThis)
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		dbgprintf("%s: try canceling worker thread %d\n", wtpGetDbgHdr(pThis), i);
 		wtiCancelThrd(pThis->pWrkr[i]);
-RUNLOG;
 	}
 
-	dbgprintf("%s: cancelled %d worker threads\n", wtpGetDbgHdr(pThis), numCancelled);
 	RETiRet;
 }
 

@@ -263,7 +263,6 @@ queueStartDA(queue_t *pThis)
 		CHKiRet(queueSettoQShutdown(pThis->pqDA, 1));
 	}
 
-dbgoprint((obj_t*) pThis, "queueStartDA pre start\n");
 	iRet = queueStart(pThis->pqDA);
 	/* file not found is expected, that means it is no previous QIF available */
 	if(iRet != RS_RET_OK && iRet != RS_RET_FILE_NOT_FOUND)
@@ -1385,7 +1384,18 @@ queueDequeueConsumable(queue_t *pThis, wti_t *pWti, int iCancelStateSave)
 	queueChkPersist(pThis);
 	iQueueSize = queueGetOverallQueueSize(pThis); /* cache this for after mutex release */
 	bRunsDA = pThis->bRunsDA; /* cache this for after mutex release */
-	pWti->pUsrp = pUsr; /* save it for the cancel cleanup handler */
+
+	/* We now need to save the user pointer for the cancel cleanup handler, BUT ONLY
+	 * if we could successfully obtain a user pointer. Otherwise, we would bring the
+	 * cancel cleanup handler into big troubles (and we did ;)). Note that we can
+	 * NOT set the variable further below, as this may lead to an object leak. We 
+	 * may get cancelled before we reach that part of the code, so the only 
+	 * solution is to do it here. -- rgerhards, 2008-02-27
+	 */
+	if(iRet == RS_RET_OK) {
+		pWti->pUsrp = pUsr;
+	}
+
 	d_pthread_mutex_unlock(pThis->mut);
 	pthread_cond_signal(&pThis->notFull);
 	pthread_setcancelstate(iCancelStateSave, NULL);
@@ -1561,9 +1571,6 @@ queueRegOnWrkrShutdown(queue_t *pThis)
 	ISOBJ_TYPE_assert(pThis, queue);
 
 	if(pThis->pqParent != NULL) {
-RUNLOG_VAR("%p", pThis->pqParent->pWtpDA);
-if(pThis->pqParent->pWtpDA == NULL)
-	FINALIZE;
 		ASSERT(pThis->pqParent->pWtpDA != NULL);
 		pThis->pqParent->bChildIsDone = 1; /* indicate we are done */
 		wtpAdviseMaxWorkers(pThis->pqParent->pWtpDA, 1); /* reactivate DA worker (always 1) */
