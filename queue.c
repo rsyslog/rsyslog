@@ -1188,19 +1188,6 @@ static rsRetVal queueShutdownWorkers(queue_t *pThis)
 	}
 
 
-	/* TODO:
-	 * If we cancelled some regular workers above, we need to think about where any "ungotten()" pUsr
-	 * data elements need to go to. We need to make sure they are persisted. But this will be kept open
-	 * until we finally code that part of the logic. 
-	 * To provide an early idea: the ungetObj() call should be a pointer. If running DA, it shall point
-	 * to the DA queues ungetObj() and if we are running regular, it should point to the parent queues. The
-	 * idea behind that logic is that if something is to be ungotten, it should normally go back to the top
-	 * of the queue, which in that case is inside the DA queue... - but that idea needs to be verified once
-	 * we reached that point.
-	 * rgerhards, 2008-01-27
-	 */
-
-
 	/* TODO: think: do we really need to do this here? Can't it happen on DA queue destruction? If we 
 	 * disable it, we get an assertion... I think this is OK, as we need to have a certain order and
 	 * canceling the DA workers here ensures that order. But in any instant, we may have a look at this
