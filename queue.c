@@ -1549,6 +1549,13 @@ queueIsIdleReg(queue_t *pThis)
  * we are the DA (child) queue, that means the DA queue is empty. In that case, we
  * need to signal the parent queue's DA worker, so that it can terminate DA mode.
  * rgerhards, 2008-01-26
+ * rgerhards, 2008-02-27: HOWEVER, in a shutdown condition, it may be that the parent's worker thread pool
+ * has already been terminated and destructed. This *is* a legal condition and happens
+ * from time to time in practice. So we need to signal only if there still is a
+ * parent DA worker queue. Please keep in mind that the the parent's DA worker
+ * pool is DIFFERENT from our (DA queue) regular worker pool. So when the parent's
+ * pWtpDA is destructed, there can still be some of our (DAq/wtp) threads be running.
+ * I am telling this, because I, too, always get confused by those...
  */
 static rsRetVal
 queueRegOnWrkrShutdown(queue_t *pThis)
@@ -1558,9 +1565,10 @@ queueRegOnWrkrShutdown(queue_t *pThis)
 	ISOBJ_TYPE_assert(pThis, queue);
 
 	if(pThis->pqParent != NULL) {
-		ASSERT(pThis->pqParent->pWtpDA != NULL);
 		pThis->pqParent->bChildIsDone = 1; /* indicate we are done */
-		wtpAdviseMaxWorkers(pThis->pqParent->pWtpDA, 1); /* reactivate DA worker (always 1) */
+		if(pThis->pqParent->pWtpDA != NULL) { /* see comment in function header from 2008-02-27 */
+			wtpAdviseMaxWorkers(pThis->pqParent->pWtpDA, 1); /* reactivate DA worker (always 1) */
+		}
 	}
 
 	RETiRet;
@@ -1824,10 +1832,14 @@ CODESTARTobjDestruct(queue)
 	 * Note that the wtp must be destructed first, it may be in cancel cleanup handler
 	 * *right now* and actually *need* to access the queue object to persist some final
 	 * data (re-queueing case). So we need to destruct the wtp first, which will make 
-	 * sure all workers have terminated.
+	 * sure all workers have terminated. Please note that this also generates a situation
+	 * where it is possible that the DA queue has a parent pointer but the parent has
+	 * no WtpDA associated with it - which is perfectly legal thanks to this code here.
 	 */
 	if(pThis->pWtpDA != NULL) {
+RUNLOG_STR("wtpDA is being destructed\n");
 		wtpDestruct(&pThis->pWtpDA);
+RUNLOG_STR("wtpDA is being destructed - done\n");
 	}
 	if(pThis->pqDA != NULL) {
 		queueDestruct(&pThis->pqDA);

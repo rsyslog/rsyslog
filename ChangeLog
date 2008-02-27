@@ -17,6 +17,11 @@ Version 3.11.6 (rgerhards), 2008-02-??
   which could cause several problems to the engine (unpredictable
   results). This situation should have happened only in very
   rare cases. tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=40
+- bugfix: during queue shutdown, an assert invalidly triggered when
+  the primary queue's DA worker was terminated while the DA queue's
+  regular worker was still executing. This could result in a segfault
+  during shutdown.
+  tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=41
 - bugfix: imfile could abort under extreme stress conditions
   (when it was terminated before it could open all of its
   to be monitored files)
