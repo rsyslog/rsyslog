@@ -133,7 +133,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_STACK_EMPTY = -2056, /**< a pop was requested on a stack, but the stack was already empty */
 	RS_RET_INVALID_VMOP = -2057, /**< invalid virtual machine instruction */
 	RS_RET_INVALID_VAR = -2058, /**< a var_t or its content is unsuitable, eg. VARTYPE_NONE */
-	RS_RET_NOT_A_NUMBER = -2059, /**< e.g. conversion impossible because the string is not a number */
+	RS_RET_INVALID_NUMBER = -2059, /**< number invalid during parsing */
+	RS_RET_NOT_A_NUMBER = -2060, /**< e.g. conversion impossible because the string is not a number */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

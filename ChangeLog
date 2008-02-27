@@ -34,6 +34,7 @@ Version 3.11.6 (rgerhards), 2008-02-??
   (see the attached patch) This goes against the logical order of 
   processing, but the legacy options are only few and it doesn't seem to 
   be a problem.
+- bugfix: object property deserializer did not handle negative numbers
 ---------------------------------------------------------------------------
 Version 3.11.5 (rgerhards), 2008-02-25
 - new imgssapi module, changed imtcp module - this enables to load/package

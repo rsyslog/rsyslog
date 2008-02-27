@@ -339,16 +339,27 @@ finalize_it:
 /* define a helper to make code below a bit cleaner (and quicker to write) */
 #define NEXTC CHKiRet(strmReadChar(pStrm, &c))//;dbgprintf("c: %c\n", c);
 
-/* de-serialize an (long) integer */
+/* de-serialize a number */
 static rsRetVal objDeserializeNumber(number_t *pNum, strm_t *pStrm)
 {
 	DEFiRet;
 	number_t i;
+	int bIsNegative;
 	uchar c;
 
 	assert(pNum != NULL);
 
 	NEXTC;
+	if(c == '-') {
+		bIsNegative = 1;
+		NEXTC;
+	} else {
+		bIsNegative = 0;
+	}
+
+	/* we check this so that we get more meaningful error codes */
+	if(!isdigit(c)) ABORT_FINALIZE(RS_RET_INVALID_NUMBER);
+
 	i = 0;
 	while(isdigit(c)) {
 		i = i * 10 + c - '0';
@@ -356,6 +367,9 @@ static rsRetVal objDeserializeNumber(number_t *pNum, strm_t *pStrm)
 	}
 
 	if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
+
+	if(bIsNegative)
+		i *= -1;
 
 	*pNum = i;
 finalize_it:
