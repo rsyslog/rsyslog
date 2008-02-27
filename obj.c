@@ -262,6 +262,12 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType
 			lenBuf = strlen((char*) szBuf);
 			vType = VARTYPE_NUMBER;
 			break;
+		case PROPTYPE_INT64:
+			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), *((int64*) pUsr)));
+			pszBuf = szBuf;
+			lenBuf = strlen((char*) szBuf);
+			vType = VARTYPE_NUMBER;
+			break;
 		case PROPTYPE_CSTR:
 			pszBuf = rsCStrGetSzStrNoNULL((cstr_t *) pUsr);
 			lenBuf = rsCStrLen((cstr_t*) pUsr);
@@ -287,7 +293,7 @@ rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType
 			pszBuf = szBuf;
 			break;
 		default:
-			dbgprintf("invalid VARTYPE %d\n", propType);
+			dbgprintf("invalid PROPTYPE %d\n", propType);
 			break;
 	}
 

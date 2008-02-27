@@ -22,6 +22,11 @@ Version 3.11.6 (rgerhards), 2008-02-??
   regular worker was still executing. This could result in a segfault
   during shutdown.
   tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=41
+- bugfix: queue properties sizeOnDisk, bytesRead were persisted to 
+  disk with wrong data type (long instead of int64) - could cause
+  problems on 32 bit machines
+- bugfix: queue aborted when it was shut down, DA-enabled, DA mode
+  was just initiated but not fully initialized (a race condition)
 - bugfix: imfile could abort under extreme stress conditions
   (when it was terminated before it could open all of its
   to be monitored files)

@@ -464,7 +464,7 @@ static rsRetVal strmWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 		CHKiRet(strmOpenFile(pThis));
 
 	iWritten = write(pThis->fd, pBuf, lenBuf);
-	dbgoprint((obj_t*) pThis, "file %d write wrote %d bytes, errno: %d\n", pThis->fd, iWritten, errno);
+	dbgoprint((obj_t*) pThis, "file %d write wrote %d bytes\n", pThis->fd, iWritten);
 	/* TODO: handle error case -- rgerhards, 2008-01-07 */
 
 	/* Now indicate buffer empty again. We do this in any case, because there
@@ -477,6 +477,9 @@ static rsRetVal strmWriteInternal(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	 */
 	pThis->iBufPtr = 0;
 	pThis->iCurrOffs += iWritten;
+	/* update user counter, if provided */
+	if(pThis->pUsrWCntr != NULL)
+		*pThis->pUsrWCntr += iWritten;
 
 	if(pThis->sType == STREAMTYPE_FILE_CIRCULAR)
 		CHKiRet(strmCheckNextOutputFile(pThis));
@@ -793,6 +796,31 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	CHKiRet(objEndSerialize(pStrm));
 
 finalize_it:
+	RETiRet;
+}
+
+
+
+/* set a user write-counter. This counter is initialized to zero and
+ * receives the number of bytes written. It is accurate only after a
+ * flush(). This hook is provided as a means to control disk size usage.
+ * The pointer must be valid at all times (so if it is on the stack, be sure
+ * to remove it when you exit the function). Pointers are removed by
+ * calling strmSetWCntr() with a NULL param. Only one pointer is settable,
+ * any new set overwrites the previous one.
+ * rgerhards, 2008-02-27
+ */
+rsRetVal
+strmSetWCntr(strm_t *pThis, number_t *pWCnt)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, strm);
+
+	if(pWCnt != NULL)
+		*pWCnt = 0;
+	pThis->pUsrWCntr = pWCnt;
+
 	RETiRet;
 }
 

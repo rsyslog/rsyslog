@@ -76,6 +76,7 @@ typedef struct strm_s {
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
 	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	int64 iCurrOffs;/* current offset */
+	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since the last CntrSet() */
 	/* dynamic properties, valid only during file open, not to be persistet */
 	size_t	sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
@@ -110,6 +111,7 @@ rsRetVal strmRecordEnd(strm_t *pThis);
 rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm);
 rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal);
 rsRetVal strmGetCurrOffset(strm_t *pThis, int64 *pOffs);
+rsRetVal strmSetWCntr(strm_t *pThis, number_t *pWCnt);
 PROTOTYPEObjClassInit(strm);
 PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
 PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);
