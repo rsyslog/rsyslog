@@ -10,6 +10,16 @@ Version 3.11.6 (rgerhards), 2008-02-??
 - bugfix: rsyslogd segfaulted on second SIGHUP
   tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=38
 - improved stability of queuee engine
+- bugfix: queue disk file were not properly persisted when 
+  immediately after closing an output file rsyslog was stopped
+  or huped (the new output file open must NOT have happend at
+  that point) - this lead to a sparse and invalid queue file
+  which could cause several problems to the engine (unpredictable
+  results). This situation should have happened only in very
+  rare cases. tracker: http://bugzilla.adiscon.com/show_bug.cgi?id=40
+- bugfix: imfile could abort under extreme stress conditions
+  (when it was terminated before it could open all of its
+  to be monitored files)
 - applied patch from varmojfekoj to fix an issue with compatibility 
   mode and default module directories (many thanks!):
   I've also noticed a bug in the compatibility code; the problem is that 

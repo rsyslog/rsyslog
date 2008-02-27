@@ -1576,7 +1576,6 @@ queueRegOnWrkrShutdown(queue_t *pThis)
 		wtpAdviseMaxWorkers(pThis->pqParent->pWtpDA, 1); /* reactivate DA worker (always 1) */
 	}
 
-finalize_it:
 	RETiRet;
 }
 

@@ -137,6 +137,7 @@ static rsRetVal strmCloseFile(strm_t *pThis)
 		unlink((char*) pThis->pszCurrFName); // TODO: check returncode
 	}
 
+	pThis->iCurrOffs = 0;	/* we are back at begin of file */
 	if(pThis->pszCurrFName != NULL) {
 		free(pThis->pszCurrFName);	/* no longer needed in any case (just for open) */
 		pThis->pszCurrFName = NULL;
@@ -199,7 +200,6 @@ strmHandleEOFMonitor(strm_t *pThis)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
-//dbgoprint((obj_t*)pThis, "curr ino %d, new ino %d, curr offset %lld, new size %ld\n", statOpen.st_ino, statName.st_ino, pThis->iCurrOffs, statName.st_size);
 	if(statOpen.st_ino == statName.st_ino && pThis->iCurrOffs == statName.st_size) {
 		ABORT_FINALIZE(RS_RET_EOF);
 	} else {

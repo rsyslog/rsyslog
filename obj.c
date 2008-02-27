@@ -460,8 +460,9 @@ static rsRetVal objDeserializeHeader(uchar *pszRecType, objID_t *poID, int* poVe
 
 	/* and now we skip over the rest until the delemiting \n */
 	NEXTC;
-	while(c != '\n')
+	while(c != '\n') {
 		NEXTC;
+	}
 
 	*poID = (objID_t) ioID;
 	*poVers = oVers;
@@ -659,6 +660,7 @@ rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsR
 		iRetLocal = objDeserializeHeader((uchar*) "Obj", &oID, &oVers, pStrm);
 		if(iRetLocal != RS_RET_OK) {
 			dbgprintf("objDeserialize error %d during header processing - trying to recover\n", iRetLocal);
+abort();
 			CHKiRet(objDeserializeTryRecover(pStrm));
 		}
 	} while(iRetLocal != RS_RET_OK);
