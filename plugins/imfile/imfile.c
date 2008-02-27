@@ -332,11 +332,15 @@ BEGINafterRun
 	int i;
 CODESTARTafterRun
 	/* Close files and persist file state information. We do NOT abort on error iRet as that makes
-	 * matters worse (at least we can try persisting the others...).
+	 * matters worse (at least we can try persisting the others...). Please note that, under stress
+	 * conditions, it may happen that we are terminated before we actuall could open all streams. So
+	 * before we change anything, we need to make sure the stream was open.
 	 */
 	for(i = 0 ; i < iFilPtr ; ++i) {
-		persistStrmState(&files[i]);
-		strmDestruct(&(files[i].pStrm));
+		if(files[i].pStrm != NULL) { /* stream open? */
+			persistStrmState(&files[i]);
+			strmDestruct(&(files[i].pStrm));
+		}
 	}
 ENDafterRun
 
