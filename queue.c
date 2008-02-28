@@ -933,7 +933,7 @@ queueUngetObj(queue_t *pThis, obj_t *pUsr, int bLockMutex)
 	DEFVARS_mutexProtection;
 
 	ISOBJ_TYPE_assert(pThis, queue);
-	ISOBJ_assert(pUsr);
+	ISOBJ_assert(pUsr); /* TODO: we aborted right at this place at least once -- race? 2008-02-28 */
 
 	dbgoprint((obj_t*) pThis, "ungetting user object %s\n", objGetName(pUsr));
 	BEGIN_MTX_PROTECTED_OPERATIONS(pThis->mut, bLockMutex);

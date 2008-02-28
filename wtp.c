@@ -464,7 +464,6 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 		}
 	}
 
-dbgprintf("%s: after thrd search: i %d, max %d\n", wtpGetDbgHdr(pThis), i, pThis->iNumWorkerThreads);
 	if(i == pThis->iNumWorkerThreads)
 		ABORT_FINALIZE(RS_RET_NO_MORE_THREADS);
 

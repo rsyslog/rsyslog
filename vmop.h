@@ -39,21 +39,23 @@ typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc(
 	opcode_DIV   = ctok_DIV,
 	opcode_MOD   = ctok_MOD,
 	opcode_NOT   = ctok_NOT,
-	opcode_CMP_EQ         = ctok_CMP_EQ, /* all compare operations must be in a row */
-	opcode_CMP_NEQ        = ctok_CMP_NEQ,
-	opcode_CMP_LT         = ctok_CMP_LT,
-	opcode_CMP_GT         = ctok_CMP_GT,
-	opcode_CMP_LTEQ       = ctok_CMP_LTEQ,
-	opcode_CMP_CONTAINS   = ctok_CMP_CONTAINS,
-	opcode_CMP_STARTSWITH = ctok_CMP_STARTSWITH,
-	opcode_CMP_GTEQ       = ctok_CMP_GTEQ, /* end compare operations */
+	opcode_CMP_EQ          = ctok_CMP_EQ, /* all compare operations must be in a row */
+	opcode_CMP_NEQ         = ctok_CMP_NEQ,
+	opcode_CMP_LT          = ctok_CMP_LT,
+	opcode_CMP_GT          = ctok_CMP_GT,
+	opcode_CMP_LTEQ        = ctok_CMP_LTEQ,
+	opcode_CMP_CONTAINS    = ctok_CMP_CONTAINS,
+	opcode_CMP_STARTSWITH  = ctok_CMP_STARTSWITH,
+	opcode_CMP_CONTAINSI   = ctok_CMP_CONTAINSI,
+	opcode_CMP_STARTSWITHI = ctok_CMP_STARTSWITHI,
+	opcode_CMP_GTEQ        = ctok_CMP_GTEQ, /* end compare operations */
 	/* here we start our own codes */
-	opcode_POP          = 1000,	 /* requires var operand to receive result */
-	opcode_PUSHSYSVAR   = 1001,	 /* requires var operand */
-	opcode_PUSHMSGVAR   = 1002,	 /* requires var operand */
-	opcode_PUSHCONSTANT = 1003,	 /* requires var operand */
-	opcode_UNARY_MINUS  = 1010,
-	opcode_END_PROG     = 1011
+	opcode_POP             = 1000,	 /* requires var operand to receive result */
+	opcode_PUSHSYSVAR      = 1001,	 /* requires var operand */
+	opcode_PUSHMSGVAR      = 1002,	 /* requires var operand */
+	opcode_PUSHCONSTANT    = 1003,	 /* requires var operand */
+	opcode_UNARY_MINUS     = 1010,
+	opcode_END_PROG        = 1011
 } opcode_t;
 
 

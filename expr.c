@@ -326,6 +326,7 @@ finalize_it:
 /* ------------------------------ actual expr object functions ------------------------------ */
 
 /* Standard-Constructor
+ * rgerhards, 2008-02-09 (a rainy Tenerife return flight day ;))
  */
 BEGINobjConstruct(expr) /* be sure to specify the object type also in END macro! */
 ENDobjConstruct(expr)
@@ -350,45 +351,6 @@ CODESTARTobjDestruct(expr)
 	if(pThis->pVmprg != NULL)
 		vmprg.Destruct(&pThis->pVmprg);
 ENDobjDestruct(expr)
-
-
-/* evaluate an expression and store the result. pMsg is optional, but if
- * it is not given, no message-based variables can be accessed. The expression
- * must previously have been created.
- * rgerhards, 2008-02-09 (a rainy tenerife return flight day ;))
- */
-rsRetVal
-exprEval(expr_t *pThis, msg_t *pMsg)
-{
-	DEFiRet;
-	
-	ISOBJ_TYPE_assert(pThis, expr);
-	ISOBJ_TYPE_assert(pMsg, msg);
-
-	RETiRet;
-}
-
-
-/* returns the expression result as a string. The string is read-only and valid
- * only as long as the expression exists and is not newly evaluated. If the caller
- * needs to access it for an extended period of time, it must copy it. This is a
- * performance optimization, as most expression results are expected to be used
- * only for a brief period. In such cases, it saves us the need to copy the string.
- * Also, it is assumed that most callers will hold their private expression. If it 
- * is not shared, the caller can count on the string to remain stable as long as it
- * does not reevaluate the expression (via exprEval or other means) or destruct it.
- * rgerhards, 2008-02-09 (a rainy tenerife return flight day ;))
- */
-rsRetVal
-exprGetStr(expr_t *pThis, cstr_t **ppStr)
-{
-	DEFiRet;
-	
-	ISOBJ_TYPE_assert(pThis, expr);
-	ASSERT(ppStr != NULL);
-
-	RETiRet;
-}
 
 
 /* parse an expression object based on a given tokenizer

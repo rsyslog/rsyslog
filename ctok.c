@@ -155,7 +155,7 @@ ctokGetWordFromStream(ctok_t *pThis, uchar *pWordBuf, size_t lenWordBuf)
 	CHKiRet(ctokSkipWhitespaceFromStream(pThis));
 
 	CHKiRet(ctokGetCharFromStream(pThis, &c));
-	while(isalnum(c) && lenWordBuf > 1) {
+	while((isalnum(c) || c == '_' || c == '-') && lenWordBuf > 1) {
 		*pWordBuf++ = c;
 		--lenWordBuf;
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
@@ -503,8 +503,12 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 						pToken->tok = ctok_NOT;
 					} else if(!strcasecmp((char*)szWord, "contains")) {
 						pToken->tok = ctok_CMP_CONTAINS;
+					} else if(!strcasecmp((char*)szWord, "contains_i")) {
+						pToken->tok = ctok_CMP_CONTAINSI;
 					} else if(!strcasecmp((char*)szWord, "startswith")) {
 						pToken->tok = ctok_CMP_STARTSWITH;
+					} else if(!strcasecmp((char*)szWord, "startswith_i")) {
+						pToken->tok = ctok_CMP_STARTSWITHI;
 					} else if(!strcasecmp((char*)szWord, "then")) {
 						pToken->tok = ctok_THEN;
 					} else {

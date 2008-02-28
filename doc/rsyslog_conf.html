@@ -1,5 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>rsyslog.conf file</title></head>
+<html><head><title>rsyslog.conf file</title>
+
+</head>
 <body>
 <h1>rsyslog.conf configuration file</h1>
 <p><b>This document is currently being enhanced. Please
@@ -36,7 +38,10 @@ SQLLite, Ingres, Oracle, mSQL)</li>
 <li><a href="imfile.html">imfile</a>
 -&nbsp; input module for text files</li>
 <li>imudp - udp syslog message input</li>
-<li><a href="imtcp.html">imtcp</a> - input plugin for plain tcp syslog</li><li><a href="imgssapi.html">imgssapi</a> - input plugin for plain tcp and GSS-enable syslog</li>
+<li><a href="imtcp.html">imtcp</a> - input
+plugin for plain tcp syslog</li>
+<li><a href="imgssapi.html">imgssapi</a> -
+input plugin for plain tcp and GSS-enable syslog</li>
 <li>immark - support for mark messages</li>
 <li>imklog - kernel logging</li>
 </ul>
@@ -371,10 +376,12 @@ been fixed to support files larger 2gb, but obviously only on file
 systems and operating system versions that do so. So it can still make
 sense to enforce a 2gb file size limit.</p>
 <h2>Filter Conditions</h2>
-<p>Rsyslog offers two different types "filter conditions":</p>
+<p>Rsyslog offers four different types "filter conditions":</p>
 <ul>
+<li>BSD-style blocks</li>
 <li>"traditional" severity and facility based selectors</li>
 <li>property-based filters</li>
+<li>expression-based filters</li>
 </ul>
 <h3>Blocks</h3>
 <p>Rsyslogd supports BSD-style blocks inside rsyslog.conf. Each
@@ -424,7 +431,8 @@ not be used in applications. Anyway, you may want to specify and
 redirect these messages here. The facility specifies the subsystem that
 produced the message, i.e. all mail programs log with the mail facility
 (LOG_MAIL) if they log using syslog.<br>
-<br>The priority is one of the following keywords, in ascending order:
+<br>
+The priority is one of the following keywords, in ascending order:
 debug, info, notice, warning, warn (same as warning), err, error (same
 as err), crit, alert, emerg, panic (same as emerg). The keywords error,
 warn and panic are deprecated and should not be used anymore. The
@@ -560,7 +568,66 @@ it is possible to query facility and severity via property-based
 filters, it is far more advisable to use classic selectors (see above)
 for those cases.</p>
 <h3>Expression-Based Filters</h3>
-So far, please see <a href="expression.h">expressions</a>.
+Expression based filters allow
+filtering on arbitrary complex expressions, which can include boolean,
+arithmetic and string operations. Expression filters will evolve into a
+full configuration scripting language. Unfortunately, their syntax will
+slightly change during that process. So if you use them now, you need
+to be prepared to change your configuration files some time later.
+However, we try to implement the scripting facility as soon as possible
+(also in respect to stage work needed). So the window of exposure is
+probably not too long.<br>
+<br>
+Expression based filters are indicated by the keyword "if" in column 1
+of a new line. They have this format:<br>
+<br>
+if expr then action-part-of-selector-line<br>
+<br>
+"If" and "then" are fixed keywords that mus be present. "expr" is a
+(potentially quite complex) expression. So the <a href="expression.h">expression documentation</a> for
+details. "action-part-of-selector-line" is an action, just as you know
+it (e.g. "/var/log/logfile" to write to that file).<br>
+<br>
+A few quick samples:<br>
+<br>
+<code>
+*.* /var/log/file1 # the traditional way<br>
+if $msg contains 'error' /var/log/errlog # the expression-based way<br>
+</code>
+<br>
+Right now, you need to specify numerical values if you would like to
+check for facilities and severity. These can be found in <a href="http://www.ietf.org/rfc/rfc3164.txt">RFC 3164</a>.
+If you don't like that, you can of course also use the textual property
+- just be sure to use the right one. As expression support is enhanced,
+this will change. For example, if you would like to filter on message
+that have facility local0, start with "DEVNAME" and have either
+"error1" or "error0" in their message content, you could use the
+following filter:<br>
+<br>
+<code>
+if $syslogfacility-text == 'local0' and $msg
+startswith 'DEVNAME' and ($msg contains 'error1' or $msg contains
+'error0') then /var/log/somelog<br>
+</code>
+<br>
+Please note that the above <span style="font-weight: bold;">must
+all be on one line</span>! And if you would like to store all
+messages except those that contain "error1" or "error0", you just need
+to add a "not":<br>
+<br>
+<code>
+if $syslogfacility-text == 'local0' and $msg
+startswith 'DEVNAME' and <span style="font-weight: bold;">not</span>
+($msg contains 'error1' or $msg contains
+'error0') then /var/log/somelog<br>
+</code>
+<br>If you would like to do case-insensitive comparisons, use
+"contains_i" instead of "contains" and "startswith_i" instead of
+"startswith".<br><br>Note that regular expressions are currently NOT
+supported in expression-based filters. These will be added later when
+function support is added to the expression engine (the reason is that
+regular expressions will be a separate loadable module, which requires
+some more prequisites before it can be implemented).<br>
 <h2>ACTIONS</h2>
 <p>The action field of a rule describes what to do with the
 message. In general, message content is written to a kind of "logfile".
@@ -1012,7 +1079,8 @@ currently logged in users. This is the wall action.<br>
 *.alert root,rgerhards<br>
 <br>
 This rule directs all messages with a priority of alert or higher to
-the terminals of the operator, i.e. of the users "root'' and "rgerhards'' if they're logged in.<br>
+the terminals of the operator, i.e. of the users "root'' and
+"rgerhards'' if they're logged in.<br>
 <br>
 <br>
 *.* @finlandia<br>

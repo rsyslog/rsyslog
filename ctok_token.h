@@ -60,7 +60,9 @@ typedef struct {
 		ctok_CMP_LTEQ = 104,
 		ctok_CMP_CONTAINS = 105,
 		ctok_CMP_STARTSWITH = 106,
-		ctok_CMP_GTEQ = 107, /* end compare operations */
+		ctok_CMP_CONTAINSI = 107,
+		ctok_CMP_STARTSWITHI = 108,
+		ctok_CMP_GTEQ = 109, /* end compare operations */
 	} tok;
 	var_t *pVar;
 	//cstr_t *pstrVal;

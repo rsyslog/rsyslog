@@ -659,6 +659,37 @@ int rsCStrStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 		return -1; /* pCS1 is less then psz */
 }
 
+
+/* The same as rsCStrStartsWithSzStr(), but does a case-insensitive
+ * comparison. TODO: consolidate the two.
+ * rgerhards 2008-02-28
+ */
+int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
+{
+	register size_t i;
+
+	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+	assert(psz != NULL);
+	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
+	if(pCS1->iStrLen >= iLenSz) {
+		/* we are using iLenSz below, because we need to check
+		 * iLenSz characters at maximum (start with!)
+		 */
+		if(iLenSz == 0)
+			return 0; /* yes, it starts with a zero-sized string ;) */
+		else {  /* we now have something to compare, so let's do it... */
+			for(i = 0 ; i < iLenSz ; ++i) {
+				if(tolower(pCS1->pBuf[i]) != tolower(psz[i]))
+					return tolower(pCS1->pBuf[i]) - tolower(psz[i]);
+			}
+			/* if we arrive here, the string actually starts with psz */
+			return 0;
+		}
+	}
+	else
+		return -1; /* pCS1 is less then psz */
+}
+
 /* check if a CStr object matches a regex.
  * msamia@redhat.com 2007-07-12
  * @return returns 0 if matched
@@ -900,6 +931,46 @@ int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz)
 		uchar *pComp = sz + i;
 		for(iCheck = 0 ; iCheck < pThis->iStrLen ; ++iCheck)
 			if(*(pComp + iCheck) != *(pThis->pBuf + iCheck))
+				break;
+		if(iCheck == pThis->iStrLen)
+			bFound = 1; /* found! - else it wouldn't be equal */
+		else
+			++i; /* on to the next try */
+	}
+
+	return(bFound ? i : -1);
+}
+
+
+/* This is the same as rsCStrLocateInSzStr(), but does a case-insensitve
+ * comparison.
+ * TODO: over time, consolidate the two.
+ * rgerhards, 2008-02-28
+ */
+int rsCStrCaseInsensitiveLocateInSzStr(cstr_t *pThis, uchar *sz)
+{
+	int i;
+	int iMax;
+	int bFound;
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	assert(sz != NULL);
+	
+	if(pThis->iStrLen == 0)
+		return 0;
+	
+	/* compute the largest index where a match could occur - after all,
+	 * the to-be-located string must be able to be present in the 
+	 * searched string (it needs its size ;)).
+	 */
+	iMax = strlen((char*)sz) - pThis->iStrLen;
+
+	bFound = 0;
+	i = 0;
+	while(i  <= iMax && !bFound) {
+		size_t iCheck;
+		uchar *pComp = sz + i;
+		for(iCheck = 0 ; iCheck < pThis->iStrLen ; ++iCheck)
+			if(tolower(*(pComp + iCheck)) != tolower(*(pThis->pBuf + iCheck)))
 				break;
 		if(iCheck == pThis->iStrLen)
 			bFound = 1; /* found! - else it wouldn't be equal */
