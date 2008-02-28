@@ -1,15 +1,17 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta content="de" http-equiv="Content-Language"><title>rsyslog vs. syslog-ng - a comparison</title></head>
+<meta content="de" http-equiv="Content-Language"><title>rsyslog vs. syslog-ng - a comparison</title>
+
+</head>
 <body>
 <h1>rsyslog vs. syslog-ng</h1>
 <p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
-(2008-02-15)</i></small></p>
+(2008-02-28)</i></small></p>
 <p>We have often been asked about a comparison sheet between
 rsyslog and syslog-ng. Unfortunately, I do not know much about
 syslog-ng, I did not even use it once. Also, there seems to be no
-comprehensive feature sheet available for syslog-ng (that recently changed, see 
-below). So I started this
+comprehensive feature sheet available for syslog-ng (that recently
+changed, see below). So I started this
 comparison, but it probably is not complete. For sure, I miss some
 syslog-ng features. This is not an attempt to let rsyslog shine more
 than it should. I just used the <a href="features.html">rsyslog
@@ -25,6 +27,260 @@ comparison sheet, so please don't be shy ;)</p>
 <td valign="top"><b>rsyslog</b></td>
 <td valign="top"><b>syslog-ng</b></td>
 </tr>
+
+
+<tr>
+<td colspan="3" valign="top"><br><b>Input Sources</b><br></td>
+</tr>
+<td valign="top">UNIX domain socket</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">UDP</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">TCP</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">RFC 3195/BEEP</td>
+<td valign="top">yes (needs separate build process)</td>
+<td valign="top">no<td>
+</tr>
+<tr>
+<td valign="top">kernel log</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">file</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">mark message generator as an optional input</td>
+<td valign="top">yes</td>
+<td valign="top">no (?)<td>
+</tr>
+<tr>
+<td valign="top">Windows Event Log</td>
+<td valign="top">via <a href="http://www.eventreporter.com">EventReporter</a>
+or <a href="http://www.mwagent.com">MonitorWare Agent</a>
+(both commercial software)</td>
+<td valign="top">via separate Windows agent, paid edition only</td>
+</tr>
+
+
+<tr>
+<td colspan="3" valign="top"><b><br>Network (Protocol) Support</b><br></td>
+</tr>
+<tr>
+<td valign="top">support for (plain) tcp based syslog</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top">support for GSS-API</td>
+<td valign="top">yes</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">ability to limit the allowed
+network senders (syslog ACLs)</td>
+<td valign="top">yes</td>
+<td valign="top">yes (?)</td>
+</tr>
+<tr>
+<td valign="top">support for syslog-transport-tls
+based framing on syslog/tcp connections</td>
+<td valign="top">yes</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">udp syslog</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top">on the wire (zlib) message
+compression</td>
+<td valign="top">yes</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">support for receiving messages via
+reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC
+3195</a> delivery</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top">support for <a href="rsyslog_stunnel.html">ssl-protected
+syslog</a> </td>
+<td valign="top"><a href="rsyslog_stunnel.html">via
+stunnel</a></td>
+<td valign="top">via stunnel<br>
+paid edition natively</td>
+</tr>
+<tr>
+<td valign="top">support for IETF's new
+syslog-protocol draft</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top">support for IPv6</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top">native ability to send SNMP traps</td>
+<td valign="top">yes</td>
+<td valign="top">?</td>
+</tr>
+<tr>
+<td valign="top">ability to preserve the original
+hostname in NAT environments and relay chains</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+
+
+<tr>
+<td colspan="3" valign="top"><br><b>Message Filtering</b><br></td>
+</tr>
+<td valign="top">Filtering for syslog facility and priority</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">Filtering for hostname</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">Filtering for application</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">Filtering for message contents</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">Filtering for sending IP address</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">ability to filter on any other message
+field  not mentioned above
+(including substrings and the like)</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td>support for complex filters, using full boolean algebra
+with and/or/not operators and parenthesis</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Support for reusable filters: specify a filter once and
+use it in multiple selector lines</td>
+<td>no</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>support for arbritrary complex arithmetic and string
+expressions inside filters</td>
+<td>yes</td>
+<td>no</td>
+</tr>
+<tr>
+<td valign="top">ability to use regular expressions
+in filters</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top">support for discarding messages
+based on filters</td>
+<td valign="top">yes</td>
+<td valign="top">yes<td>
+</tr>
+<tr>
+<td valign="top">powerful BSD-style hostname and
+program name blocks for easy multi-host support</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+
+
+<tr>
+<td colspan="3" valign="top"><br><b>Supported Database Outputs</b><br></td>
+</tr>
+<tr>
+<td valign="top">MySQL</td>
+<td valign="top"><a href="rsyslog_mysql.html">yes</a>
+(native ommysql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">yes (via libdibi)</td>
+</tr>
+<tr>
+<td valign="top">PostgreSQL</td>
+<td valign="top">yes (native ompgsql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">yes (via libdibi)</td>
+</tr>
+<tr>
+<td valign="top">Oracle</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">yes (via libdibi)</td>
+</tr>
+<tr>
+<td valign="top">SQLite</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">yes (via libdibi)</td>
+</tr>
+<tr>
+<td valign="top">Microsoft SQL (Open TDS)</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">Sybase (Open TDS)</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">Firebird/Interbase</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">Ingres</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">no (?)</td>
+</tr>
+<tr>
+<td valign="top">mSQL</td>
+<td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
+<td valign="top">no (?)</td>
+</tr>
+
+
+<tr>
+<td colspan="3" valign="top"><br><b>Enterprise Features</b><br></td>
+</tr>
 <tr>
 <td valign="top">support for on-demand on-disk
 spooling of messages</td>
@@ -32,11 +288,88 @@ spooling of messages</td>
 <td valign="top">paid edition only</td>
 </tr>
 <tr>
+<td valign="top">ability to limit disk space used
+by spool files</td>
+<td valign="top">yes</td>
+<td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top">each action can use its own, independant
+set of spool files</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top">different sets of spool files can
+be placed on different disk</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
 <td valign="top">ability to configure backup
 syslog/database servers </td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
 </tr>
+<tr>
+<td>Professional Support</td>
+<td><a href="professional_support.html">yes</a></td>
+<td>yes</td>
+</tr>
+
+
+<tr>
+<td colspan="3" valign="top"><br><b>Config File</b><br></td>
+</tr>
+<tr>
+<td valign="top">config file format</td>
+<td valign="top">compatible to legacy syslogd but
+ugly</td>
+<td valign="top">clean but not backwards compatible</td>
+</tr>
+<tr>
+<td valign="top">ability to include config file from
+within other config files</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td height="25" valign="top">ability to
+include all config files
+existing in a specific directory</td>
+<td height="25" valign="top">yes</td>
+<td height="25" valign="top">no</td>
+</tr>
+
+
+
+<tr>
+<td colspan="3" valign="top"><br><b>Extensibility</b><br></td>
+</tr>
+<tr>
+<td valign="top">Functionality split in separately loadable
+modules</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top">Support for third-party input plugins</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+</tr>
+<td valign="top">Support for third-party output plugins</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+
+
+
+<tr>
+<td colspan="3" valign="top"><br><b>Other Features</b><br></td>
+</tr>
+<tr>
 <tr>
 <td valign="top">ability to generate file names and
 directories (log targets) dynamically</td>
@@ -53,7 +386,7 @@ including ability to present channel and priority as visible log data</td>
 <td valign="top">good timestamp format control; at a
 minimum, ISO 8601/RFC 3339 second-resolution UTC zone</td>
 <td valign="top">yes</td>
-<td valign="top">? (I guess so)</td>
+<td valign="top">yes</td>
 </tr>
 <tr>
 <td valign="top">ability to reformat message
@@ -68,34 +401,17 @@ contents and work with substrings</td>
 <td valign="top">yes</td>
 </tr>
 <tr>
-<td valign="top">support for log file size limitation
+<td valign="top">support for log file size
+limitation
 and automatic rollover command execution</td>
 <td valign="top">yes</td>
-<td valign="top">yes (?)</td>
+<td valign="top">yes</td>
 </tr>
 <tr>
 <td valign="top">support for running multiple
 syslogd instances on a single machine</td>
 <td valign="top">yes</td>
 <td valign="top">? (but I think yes)</td>
-</tr>
-<tr>
-<td valign="top">ability to filter on any part of
-the message, not just facility and severity</td>
-<td valign="top">yes</td>
-<td valign="top">yes</td>
-</tr>
-<tr>
-<td valign="top">ability to use regular expressions
-in filters</td>
-<td valign="top">yes</td>
-<td valign="top">yes</td>
-</tr>
-<tr>
-<td valign="top">support for discarding messages
-based on filters</td>
-<td valign="top">yes</td>
-<td valign="top">?</td>
 </tr>
 <tr>
 <td valign="top">ability to execute shell scripts on
@@ -110,16 +426,11 @@ continously running program</td>
 <td valign="top">yes</td>
 </tr>
 <tr>
-<td valign="top">powerful BSD-style hostname and
-program name blocks for easy multi-host support</td>
-<td valign="top">yes</td>
-<td valign="top">no</td>
-</tr>
-<tr>
 <td valign="top">massively multi-threaded for
 tomorrow's multi-core machines</td>
 <td valign="top">yes</td>
-<td valign="top">no (only multithreaded with database destinations)</td>
+<td valign="top">no (only multithreaded with
+database destinations)</td>
 </tr>
 <tr>
 <td valign="top">ability to control repeated line
@@ -128,40 +439,10 @@ reduction ("last message repeated n times") on a per selector-line basis</td>
 <td valign="top">yes (?)</td>
 </tr>
 <tr>
-<td valign="top">ability to include config file from
-within other config files</td>
-<td valign="top">yes</td>
-<td valign="top">no</td>
-</tr>
-<tr>
-<td height="25" valign="top">ability to include all config files
-existing in a specific directory</td>
-<td height="25" valign="top">yes</td>
-<td height="25" valign="top">no</td>
-</tr>
-<tr>
 <td valign="top">supports multiple actions per
 selector/filter condition</td>
 <td valign="top">yes</td>
-<td valign="top">?</td>
-</tr>
-<tr>
-<td valign="top">plug-in interface</td>
-<td valign="top">yes</td>
-<td valign="top">no</td>
-</tr>
-<tr>
-<td valign="top">Windows Event Log gatherer</td>
-<td valign="top">via <a href="http://www.eventreporter.com">EventReporter</a>
-or <a href="http://www.mwagent.com">MonitorWare Agent</a>
-(both commercial software)</td>
-<td valign="top">via Windows agent, paid edition only</td>
-</tr>
-<tr>
-<td valign="top">config file format</td>
-<td valign="top">compatible to legacy syslogd but
-ugly</td>
-<td valign="top">clean but not backwards compatible</td>
+<td valign="top">yes<td>
 </tr>
 <tr>
 <td valign="top">web interface</td>
@@ -176,8 +457,6 @@ php-syslog-ng</a></td>
 <td valign="top">yes</td>
 <td valign="top">yes</td>
 </tr>
-
-
 <tr>
 <td valign="top">rate-limiting output actions</td>
 <td valign="top">yes</td>
@@ -230,114 +509,27 @@ Solaris</td>
 <td valign="top">yes</td>
 </tr>
 
-<tr><td>Professional Support</td><td><a href="professional_support.html">yes</a></td><td>yes</td></tr><tr>
-<td valign="top"><b><br>
-Network (Protocol) Support<br>
-&nbsp;</b></td>
-<td valign="top">&nbsp;</td>
-<td valign="top">&nbsp;</td>
-</tr>
 
-<tr>
-<td valign="top">support for (plain) tcp based syslog</td>
-<td valign="top">yes</td>
-<td valign="top">yes</td>
-</tr>
-<tr>
-<td valign="top">support for GSS-API</td>
-<td valign="top">yes</td>
-<td valign="top">no (?)</td>
-</tr>
-<tr>
-<td valign="top">ability to limit the allowed
-network senders (syslog ACLs)</td>
-<td valign="top">yes</td>
-<td valign="top">yes (?)</td>
-</tr>
-<tr>
-<td valign="top">support for syslog-transport-tls
-based framing on syslog/tcp connections</td>
-<td valign="top">yes</td>
-<td valign="top">no (?)</td>
-</tr>
-<tr>
-<td valign="top">udp syslog</td>
-<td valign="top">yes</td>
-<td valign="top">yes</td>
-</tr>
-
-<tr>
-<td valign="top">on the wire (zlib) message
-compression</td>
-<td valign="top">yes</td>
-<td valign="top">no (?)</td>
-</tr>
-<tr>
-<td valign="top">support for receiving messages via
-reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC
-3195</a> delivery</td>
-<td valign="top">yes</td>
-<td valign="top">no</td>
-</tr>
-<tr>
-<td valign="top">support for <a href="rsyslog_stunnel.html">ssl-protected
-syslog</a> </td>
-<td valign="top"><a href="rsyslog_stunnel.html">via
-stunnel</a></td>
-<td valign="top">via stunnel<br>
-paid edition natively</td>
-</tr>
-<tr>
-<td valign="top">support for IETF's new
-syslog-protocol draft</td>
-<td valign="top">yes</td>
-<td valign="top">no</td>
-</tr>
-<tr>
-<td valign="top">support for IPv6</td>
-<td valign="top">yes</td>
-<td valign="top">yes</td>
-</tr>
-<tr>
-<td valign="top">native ability to send SNMP traps</td>
-<td valign="top">yes</td>
-<td valign="top">?</td>
-</tr>
-<tr>
-<td valign="top">ability to preserve the original
-hostname in NAT environments and relay chains</td>
-<td valign="top">yes</td>
-<td valign="top">yes</td>
-</tr>
-<tr>
-<td valign="top"><span style="font-weight: bold;"><br>
-Supported Database Outputs<br>
-&nbsp;</span></td>
-<td valign="top"></td>
-<td valign="top"></td>
-</tr>
-
-<tr>
-<td valign="top">MySQL</td>
-<td valign="top"><a href="rsyslog_mysql.html">yes</a> (native ommysql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
-<td valign="top">yes (via libdibi)</td>
-</tr>
-<tr>
-<td valign="top">PostgreSQL</td>
-<td valign="top">yes (native ompgsql,&nbsp;<a href="omlibdbi.html">omlibdbi</a>)</td>
-<td valign="top">yes (via libdibi)</td>
-</tr>
-<tr><td valign="top">Oracle</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">yes (via libdibi)</td></tr><tr><td valign="top">SQLite</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">yes (via libdibi)</td></tr><tr><td valign="top">Microsoft SQL (Open TDS)</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Sybase (Open TDS)</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Firebird/Interbase</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">Ingres</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr><tr><td valign="top">mSQL</td><td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td><td valign="top">no (?)</td></tr></tbody>
+</tbody>
 </table>
+<p>While the <span style="font-weight: bold;">rsyslog</span>
+project was initiated in 2004, it <span style="font-weight: bold;">is
+build on the main author's (Rainer Gerhards) 12+ years of
+logging&nbsp;experience</span>. Rainer, for example, also
+wrote the first <a href="http://www.winsyslog.com/Common/en/News/WinSyslog-1996-03-31.php">Windows
+syslog server</a> in early 1996 and invented the <a href="http://www.eventreporter.com/Common/en/News/EvntSLog-1997-03-23.php">eventlog-to-syslog</a>
+class of applications in early 1997. He did custom logging development
+and consulting even before he wrote these products. Rsyslog draws on
+that vast experience and sometimes even on the code.</p>
 <p>Based on a discussion I had, I also wrote about the <b>political
 argument why it is good to have another strong syslogd besides syslog-ng</b>.
 You may want to read it at my blog at "<a href="http://rgerhards.blogspot.com/2007/08/why-does-world-need-another-syslogd.html">Why
 does the world need another syslogd?</a>".</p>
-<p>Balabit, the vendor of syslog-ng, has just recently done a feature sheet. I 
-have not yet been able to fully work through it. In the mean time, you may want 
-to read it in parallel. It is available at
-<a href="http://www.balabit.com/network-security/syslog-ng/features/detailed/">
-Balabit's site</a>.</p>
-<p>This document is current as of 2008-02-15 and definitely
+<p>Balabit, the vendor of syslog-ng, has just recently done a
+feature sheet. I have not yet been able to fully work through it. In
+the mean time, you may want to read it in parallel. It is available at
+<a href="http://www.balabit.com/network-security/syslog-ng/features/detailed/">Balabit's
+site</a>.</p>
+<p>This document is current as of 2008-02-28 and definitely
 incomplete (I did not yet manage to complete it!).</p>
 </body></html>
