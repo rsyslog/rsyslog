@@ -1133,7 +1133,25 @@ dbgGetRuntimeOptions(void)
 	if((pszOpts = (uchar*) getenv("RSYSLOG_DEBUG")) != NULL) {
 		/* we have options set, so let's process them */
 		while(dbgGetRTOptNamVal(&pszOpts, &optname, &optval)) {
-			if(!strcasecmp((char*)optname, "logfuncflow")) {
+			if(!strcasecmp((char*)optname, "help")) {
+				fprintf(stderr,
+					"rsyslogd runtime debug support - help requested, rsyslog terminates\n\n"
+					"environment variables:\n"
+					"addional logfile: export RSYSLOG_DEBUGFILE=\"/path/to/file\"\n"
+					"to set: export RSYSLOG_DEBUG=\"cmd cmd cmd\"\n\n"
+					"Commands are (all case-insensitive):\n"
+					"help (this list, terminates rsyslogd\n"
+					"LogFuncFlow\n"
+					"LogAllocFree (very partly implemented)\n"
+					"PrintFuncDB\n"
+					"PrintMutexAction\n"
+					"PrintAllDebugInfoOnExit (not yet implemented)\n"
+					"NoLogTimestamp\n"
+					"Nostdoout\n"
+					"filetrace=file (may be provided multiple times)\n"
+					"\nSee debug.html in your doc set or http://www.rsyslog.com for details\n");
+				exit(1);
+			} else if(!strcasecmp((char*)optname, "logfuncflow")) {
 				bLogFuncFlow = 1;
 			} else if(!strcasecmp((char*)optname, "logallocfree")) {
 				bLogAllocFree = 1;

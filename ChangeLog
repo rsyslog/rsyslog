@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.12.1 (rgerhards), 2008-0?-??
+- improved debugging support; debug runtime options can now be set via
+  an environment variable
 - bugfix: removed debugging code that I forgot to remove before releasing
   3.12.0 (does not cause harm and happened only during startup)
 ---------------------------------------------------------------------------
