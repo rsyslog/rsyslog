@@ -1,21 +1,25 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><title>Writing syslog Data to MySQL</title>
 
-<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto">
-</head><body>
+<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto"></head>
+<body>
 <h1>Writing syslog messages to MySQL</h1>
 <p><small><i>Written by <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
-Gerhards</a> (2005-08-02)</i></small></p>
+Gerhards</a> (2008-02-28)</i></small></p>
 <h2>Abstract</h2>
 <p><i><b>In this paper, I describe how to write
 <a href="http://www.monitorware.com/en/topics/syslog/">syslog</a>
 messages to a <a href="http://www.mysql.com">MySQL</a>
 database.</b> Having syslog messages in a database is often
 handy, especially when you intend to set up a front-end for viewing
-them. This paper describes an approach with <a href="http://www.rsyslog.com/">rsyslogd</a>, an
+them. This paper describes an approach with <a href="http://www.rsyslog.com/">rsyslogd</a>,
+an
 alternative enhanced syslog daemon natively supporting MySQL. I
 describe the components needed to be installed and how to configure
-them.</i></p>
+them. Please note that as of this writing, rsyslog supports a variety
+of databases. While this guide is still MySQL-focussed, you
+can&nbsp;probably use it together with other ones too. You just need to
+modify a few settings.</i></p>
 <h2>Background</h2>
 <p>In many cases, syslog data is simply written to text files.
 This approach has some advantages, most notably it is very fast and
@@ -78,7 +82,12 @@ a basic understanding of how to handle it.</p>
 from the
 <a href="http://www.rsyslog.com/">rsyslog site</a>.
 Make sure that you disable stock syslogd, otherwise you will experience
-some difficulties.</p>
+some difficulties. On some distributions &nbsp;(Fedora 8 and above, for
+example), rsyslog may already by the default syslogd, in which case you
+obviously do not need to do anything specific. For many others, there
+are prebuild packages available. If you use either, please make sure
+that you have the required database plugins for your database
+available. It usually is a separate package and typically <span style="font-weight: bold;">not</span> installed by default.</p>
 <p>It is important to understand how rsyslogd talks to the
 database. In rsyslogd, there is the concept of "templates". Basically,
 a template is a string that includes some replacement characters, which
@@ -128,19 +137,20 @@ functionality, MySQL must be enabled in the config file BEFORE the
 first database table action is
 used. This is done by placing the</p>
 <blockquote>
-<p><code>$ModLoad MySQL</code></p>
+<p><code>$ModLoad ommysql.so</code></p>
 </blockquote>
-<p>directive at the begining of /etc/rsyslog.conf</p>
+<p>directive at the begining of /etc/rsyslog.conf. For other databases, use their plugin name (e.g. ompgsql.so).</p>
 <p>Next, we need to tell rsyslogd to write data to the database.
 As we use the default schema, we do NOT need to define a template for
 this. We can use the hardcoded one (rsyslogd handles the proper
 template linking). So all we need to do is add a simple selector line
 to /etc/rsyslog.conf:</p>
 <blockquote>
-<p><code>*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&gt;database-server,database-name,database-userid,database-password</code></p>
+<p><code>*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :ommysql:database-server,database-name,database-userid,database-password</code></p>
 </blockquote>
-<p>In many cases, MySQL will run on the local machine. In this
+<p>Again, other databases have other selector names, e.g. ":ompgsql:"
+instead of ":ommysql:". See the output plugin's documentation for
+details.</p><p>In many cases, MySQL will run on the local machine. In this
 case, you can simply use "127.0.0.1" for <i>database-server</i>.
 This can be especially advisable, if you do not need to expose MySQL to
 any process outside of the local machine. In this case, you can simply
@@ -162,8 +172,7 @@ such a password is NOT a good idea...). If your MySQL database is on
 the local machine, your rsyslog.conf line might look like in this
 sample:</p>
 <blockquote>
-<p><code>*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&gt;127.0.0.1,syslog,syslogwriter,topsecret</code></p>
+<p><code>*.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; :ommysql:127.0.0.1,syslog,syslogwriter,topsecret</code></p>
 </blockquote>
 <p>Save rsyslog.conf, restart rsyslogd - and you should see
 syslog messages being stored in the "systemevents" table!</p>
@@ -175,8 +184,7 @@ can apply normal selector-line filtering. If, for example, you are only
 interested in messages from the mail subsystem, you can use the
 following selector line:</p>
 <blockquote>
-<p><code>mail.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&gt;127.0.0.1,syslog,syslogwriter,topsecret</code></p>
+<p><code>mail.*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><code>:ommysql:</code><code>127.0.0.1,syslog,syslogwriter,topsecret</code></p>
 </blockquote>
 <p>Review the <a href="rsyslog_conf.html">rsyslog.conf</a>
 documentation for details on selector lines and their filtering.</p>
@@ -238,7 +246,8 @@ Gerhards</a> * removed demo site - was torn down because too
 expensive for usage count</li>
 <li>2008-02-21 * <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
 Gerhards</a> * updated reliability section, can now be done with
-on-demand disk queues</li>
+on-demand disk queues</li><li>2008-02-28 * <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> * added info on other databases, updated syntax to more recent one</li>
 </ul>
 <h2>Copyright</h2>
 <p>Copyright (c) 2005-2008
