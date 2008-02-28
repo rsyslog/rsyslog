@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.12.0 (rgerhards), 2008-02-28
+- added full expression support for filters; filters can now contain
+  arbitrary complex boolean, string and arithmetic expressions
 ---------------------------------------------------------------------------
 Version 3.11.6 (rgerhards), 2008-02-27
 - bugfix: gssapi libraries were still linked to rsyslog core, what should
