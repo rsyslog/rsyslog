@@ -44,6 +44,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>
+#include <ctype.h>
 #include <assert.h>
 
 #include "rsyslog.h"
@@ -62,6 +63,7 @@ static int bLogAllocFree = 0; /* shall calls to (m/c)alloc and free be logged to
 static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bPrintMutexAction = 0; /* shall mutex calls be printed to the debug log? */
 static int bPrintTime = 1;	/* print a timestamp together with debug message */
+static int bPrintAllDebugOnExit = 0;
 static char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
 static FILE *altdbg = NULL;	/* and the handle for alternate debug output */
 static FILE *stddbg;
@@ -711,7 +713,7 @@ sigsegvHdlr(int signum)
 	dbgprintf("If the call trace is empty, you may want to ./configure --enable-rtinst\n");
 	dbgprintf("\n\nTo submit bug reports, visit http://www.rsyslog.com/bugs\n\n");
 
-	fflush(stddbg);
+	if(stddbg != NULL) fflush(stddbg);
 
 	/* and finally abort... */
 	/* TODO: think about restarting rsyslog in this case: may be a good idea,
@@ -767,7 +769,7 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 	 */
 	if(ptLastThrdID != pthread_self()) {
 		if(!bWasNL) {
-			fprintf(stddbg, "\n");
+			if(stddbg != NULL) fprintf(stddbg, "\n");
 			if(altdbg != NULL) fprintf(altdbg, "\n");
 			bWasNL = 1;
 		}
@@ -782,14 +784,14 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 	if(bWasNL) {
 		if(bPrintTime) {
 			clock_gettime(CLOCK_REALTIME, &t);
-			fprintf(stddbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
+			if(stddbg != NULL) fprintf(stddbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
 			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
 		}
-		fprintf(stddbg, "%s: ", pszThrdName);
+		if(stddbg != NULL) fprintf(stddbg, "%s: ", pszThrdName);
 		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
 		/* print object name header if we have an object */
 		if(pObj != NULL) {
-			fprintf(stddbg, "%s: ", objGetName(pObj));
+			if(stddbg != NULL) fprintf(stddbg, "%s: ", objGetName(pObj));
 			if(altdbg != NULL) fprintf(altdbg, "%s: ", objGetName(pObj));
 		}
 	}
@@ -802,13 +804,13 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 	}
 	va_end(ap);
 	/*
-	fprintf(stddbg, "%s", pszWriteBuf);
+	if(stddbg != NULL) fprintf(stddbg, "%s", pszWriteBuf);
 	if(altdbg != NULL) fprintf(altdbg, "%s", pszWriteBuf);
 	*/
-	fwrite(pszWriteBuf, lenWriteBuf, 1, stddbg);
+	if(stddbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, stddbg);
 	if(altdbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, altdbg);
 
-	fflush(stddbg);
+	if(stddbg != NULL) fflush(stddbg);
 	if(altdbg != NULL) fflush(altdbg);
 	pthread_cleanup_pop(1);
 }
@@ -846,7 +848,7 @@ dbgprintf(char *fmt, ...)
 	 */
 	if(ptLastThrdID != pthread_self()) {
 		if(!bWasNL) {
-			fprintf(stddbg, "\n");
+			if(stddbg != NULL) fprintf(stddbg, "\n");
 			if(altdbg != NULL) fprintf(altdbg, "\n");
 			bWasNL = 1;
 		}
@@ -861,10 +863,10 @@ dbgprintf(char *fmt, ...)
 	if(bWasNL) {
 		if(bPrintTime) {
 			clock_gettime(CLOCK_REALTIME, &t);
-			fprintf(stddbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
+			if(stddbg != NULL) fprintf(stddbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
 			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
 		}
-		fprintf(stddbg, "%s: ", pszThrdName);
+		if(stddbg != NULL) fprintf(stddbg, "%s: ", pszThrdName);
 		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
 	}
 	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? 1 : 0;
@@ -876,13 +878,13 @@ dbgprintf(char *fmt, ...)
 	}
 	va_end(ap);
 	/*
-	fprintf(stddbg, "%s", pszWriteBuf);
+	if(stddbg != NULL) fprintf(stddbg, "%s", pszWriteBuf);
 	if(altdbg != NULL) fprintf(altdbg, "%s", pszWriteBuf);
 	*/
-	fwrite(pszWriteBuf, lenWriteBuf, 1, stddbg);
+	if(stddbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, stddbg);
 	if(altdbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, altdbg);
 
-	fflush(stddbg);
+	if(stddbg != NULL) fflush(stddbg);
 	if(altdbg != NULL) fflush(altdbg);
 	pthread_cleanup_pop(1);
 }
@@ -1005,6 +1007,100 @@ static void sigusr2Hdlr(int __attribute__((unused)) signum)
 	dbgPrintAllDebugInfo();
 }
 
+/* support system to set debug options at runtime */
+
+
+/* parse a param/value pair from the current location of the
+ * option string. Returns 1 if an option was found, 0 
+ * otherwise. 0 means there are NO MORE options to be
+ * processed. -- rgerhards, 2008-02-28
+ */
+static int
+dbgGetRTOptNamVal(uchar **ppszOpt, uchar **ppOptName, uchar **ppOptVal)
+{
+	int bRet = 0;
+	uchar *p;
+	size_t i;
+	static uchar optname[128]; /* not thread- or reentrant-safe, but that      */
+	static uchar optval[1024]; /* doesn't matter (called only once at startup) */
+
+	assert(ppszOpt != NULL);
+	assert(*ppszOpt != NULL);
+
+	p = *ppszOpt;
+	/* skip whitespace */
+	while(*p && isspace(*p))
+		++p;
+
+	/* name - up until '=' or whitespace */
+	i = 0;
+	while(i < (sizeof(optname)/sizeof(uchar) - 1) && *p && *p != '=' && !isspace(*p)) {
+		optname[i++] = *p++;
+	}
+
+	if(i > 0) {
+		bRet = 1;
+		optname[i] = '\0';
+		if(*p == '=') {
+			/* we have a value, get it */
+			++p;
+			i = 0;
+			while(i < (sizeof(optval)/sizeof(uchar) - 1) && *p && !isspace(*p)) {
+				optval[i++] = *p++;
+			}
+			optval[i] = '\0';
+		}
+	}
+
+	/* done */
+	*ppszOpt = p;
+	*ppOptName = optname;
+	*ppOptVal = optval;
+	return bRet;
+}
+
+
+/* read in the runtime options
+ * rgerhards, 2008-02-28
+ */
+static void
+dbgGetRuntimeOptions(void)
+{
+	uchar *pszOpts;
+	uchar *optval;
+	uchar *optname;
+
+	/* set some defaults */
+	stddbg = stdout;
+
+	if((pszOpts = (uchar*) getenv("RSYSLOG_DEBUG")) != NULL) {
+		/* we have options set, so let's process them */
+		while(dbgGetRTOptNamVal(&pszOpts, &optname, &optval)) {
+//TODO: remove			printf("option %s val %s found\n", optname, optval);
+			if(!strcasecmp((char*)optname, "logfuncflow")) {
+				bLogFuncFlow = 1;
+			} else if(!strcasecmp((char*)optname, "logallocfree")) {
+				bLogAllocFree = 1;
+			} else if(!strcasecmp((char*)optname, "printfuncdb")) {
+				bPrintFuncDBOnExit = 1;
+			} else if(!strcasecmp((char*)optname, "printmutexaction")) {
+				bPrintMutexAction = 1;
+			} else if(!strcasecmp((char*)optname, "printalldebuginfoonexit")) {
+				bPrintAllDebugOnExit = 1;
+			} else if(!strcasecmp((char*)optname, "nologtimestamp")) {
+				bPrintTime = 0;
+			} else if(!strcasecmp((char*)optname, "nostdout")) {
+				stddbg = NULL;
+			} else {
+				fprintf(stderr, "Error: invalid debug option '%s', value '%s'\n",
+					optval, optname);
+				exit(1);
+			}
+		}
+	}
+}
+
+/* end support system to set debug options at runtime */
 
 rsRetVal dbgClassInit(void)
 {
@@ -1022,9 +1118,9 @@ rsRetVal dbgClassInit(void)
 	sigaddset(&sigSet, SIGUSR2);
 	pthread_sigmask(SIG_UNBLOCK, &sigSet, NULL);
 
+	dbgGetRuntimeOptions(); /* init debug system from environment */
 	pszAltDbgFileName = getenv("RSYSLOG_DEBUGLOG");
 
-	stddbg = stdout;
 	if(pszAltDbgFileName != NULL) {
 		/* we have a secondary file, so let's open it) */
 		if((altdbg = fopen(pszAltDbgFileName, "w")) == NULL) {
@@ -1040,6 +1136,12 @@ rsRetVal dbgClassInit(void)
 rsRetVal dbgClassExit(void)
 {
 	pthread_key_delete(keyCallStack);
+
+	/* TODO: implement, this conflicts with module unloads!
+	if(bPrintAllDebugOnExit)
+		dbgPrintAllDebugInfo();
+	*/
+
 	if(altdbg != NULL)
 		fclose(altdbg);
 	return RS_RET_OK;

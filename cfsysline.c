@@ -960,21 +960,21 @@ void dbgPrintCfSysLineHandlers(void)
 	linkedListCookie_t llCookieCmdHdlr;
 	uchar *pKey;
 
-	printf("\nSytem Line Configuration Commands:\n");
+	dbgprintf("Sytem Line Configuration Commands:\n");
 	llCookieCmd = NULL;
 	while((iRet = llGetNextElt(&llCmdList, &llCookieCmd, (void*)&pCmd)) == RS_RET_OK) {
 		llGetKey(llCookieCmd, (void*) &pKey); /* TODO: using the cookie is NOT clean! */
-		printf("\tCommand '%s':\n", pKey);
+		dbgprintf("\tCommand '%s':\n", pKey);
 		llCookieCmdHdlr = NULL;
 		while((iRet = llGetNextElt(&pCmd->llCmdHdlrs, &llCookieCmdHdlr, (void*)&pCmdHdlr)) == RS_RET_OK) {
-			printf("\t\ttype : %d\n", pCmdHdlr->eType);
-			printf("\t\tpData: 0x%lx\n", (unsigned long) pCmdHdlr->pData);
-			printf("\t\tHdlr : 0x%lx\n", (unsigned long) pCmdHdlr->cslCmdHdlr);
-			printf("\t\tOwner: 0x%lx\n", (unsigned long) llCookieCmdHdlr->pKey);
-			printf("\n");
+			dbgprintf("\t\ttype : %d\n", pCmdHdlr->eType);
+			dbgprintf("\t\tpData: 0x%lx\n", (unsigned long) pCmdHdlr->pData);
+			dbgprintf("\t\tHdlr : 0x%lx\n", (unsigned long) pCmdHdlr->cslCmdHdlr);
+			dbgprintf("\t\tOwner: 0x%lx\n", (unsigned long) llCookieCmdHdlr->pKey);
+			dbgprintf("\n");
 		}
 	}
-	printf("\n");
+	dbgprintf("\n");
 	ENDfunc
 }
 

@@ -1,8 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta http-equiv="Content-Language" content="en"><title>Debug Support</title>
-
-</head>
+<meta http-equiv="Content-Language" content="en"><title>Debug Support</title></head>
 <body>
 <h1>Debug Support</h1>
 <p>
@@ -19,14 +17,14 @@ to go away over time)</p>
 and a call stack) for the state when SIGUSR2 was received. This is a
 one-time output. Can be sent as often as the user likes.</p>
 <p style="font-weight: bold;">Environment Variables</p>
-<p>Environment variables set several debug settings. This is
-intended to become the primary way to configure debugging support.
-Currently are defined:</p>
-<ul>
-<li>RSYSLOG_DEBUGLOG="/path/to/debuglog/" - writes (allmost)
+<p>There are two environment variables that set several debug settings. The "RSYSLOG_DEBUGLOG" (sample: &nbsp;RSYSLOG_DEBUGLOG="/path/to/debuglog/")
+writes (allmost)
 all debug message to the specified log file in addition to stdout. Some
 system messages (e.g. segfault or abort message) are not written to the
-file as we can not capture them.</li>
+file as we can not capture them. Runtime debug support is controlled by
+"RSYSLOG_DEBUG". It contains an option string with the following
+options possible (all are case insensitive):</p><ul><li><span style="font-weight: bold;">LogFuncFlow</span> - print out the logical flow of functions (entering and exiting them)</li><li><span style="font-weight: bold;">PrintFuncDB</span> - print the content of the debug function database whenever debug information is printed (e.g. abort case)!</li><li><span style="font-weight: bold;">PrintAllDebugInfoOnExit</span> - print all debug information immediately before rsyslogd exits (<span style="font-weight: bold; font-style: italic;">currently not implemented!</span>)</li><li><span style="font-weight: bold;">PrintMutexAction</span> - print mutex action as it happens. Useful for finding deadlocks and such.</li><li><span style="font-weight: bold;">NoLogTimeStamp</span> - do not prefix log lines with a timestamp (default is to do that).</li><li><span style="font-weight: bold;">NoStdOut</span> - do not emit debug messages to stdout. If RSYSLOG_DEBUGLOG is not set, this means no messages will be displayed at all.</li></ul>
+<ul>
 </ul>
 <p>[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the

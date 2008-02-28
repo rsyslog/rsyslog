@@ -334,19 +334,19 @@ rsRetVal actionDbgPrint(action_t *pThis)
 {
 	DEFiRet;
 
-	printf("%s: ", modGetStateName(pThis->pMod));
+	dbgprintf("%s: ", modGetStateName(pThis->pMod));
 	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
-	printf("\n\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
-	printf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
-	printf("\tResume Interval: %d\n", pThis->iResumeInterval);
-	printf("\tSuspended: %d", pThis->bSuspended);
+	dbgprintf("\n\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
+	dbgprintf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
+	dbgprintf("\tResume Interval: %d\n", pThis->iResumeInterval);
+	dbgprintf("\tSuspended: %d", pThis->bSuspended);
 	if(pThis->bSuspended) {
-		printf(" next retry: %u, number retries: %d", (unsigned) pThis->ttResumeRtry, pThis->iNbrResRtry);
+		dbgprintf(" next retry: %u, number retries: %d", (unsigned) pThis->ttResumeRtry, pThis->iNbrResRtry);
 	}
-	printf("\n");
-	printf("\tDisabled: %d\n", !pThis->bEnabled);
-	printf("\tExec only when previous is suspended: %d\n", pThis->bExecWhenPrevSusp);
-	printf("\n");
+	dbgprintf("\n");
+	dbgprintf("\tDisabled: %d\n", !pThis->bEnabled);
+	dbgprintf("\tExec only when previous is suspended: %d\n", pThis->bExecWhenPrevSusp);
+	dbgprintf("\n");
 
 	RETiRet;
 }
