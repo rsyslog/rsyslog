@@ -799,23 +799,6 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	while(isspace(**pline))
 		++(*pline);
 
-dbgprintf("expression parser successfully ended, pp %p ('%s')\n", *pline, *pline);
-
-/* debug aid, try to exec - just now for testing the vm... -- rgerhards, 2008-02-25 */
-vm_t *pVM;
-var_t *pResult;
-CHKiRet(vm.Construct(&pVM));
-CHKiRet(vm.ConstructFinalize(pVM));
-
-CHKiRet(vm.ExecProg(pVM, f->f_filterData.f_expr->pVmprg));
-CHKiRet(vm.PopVarFromStack(pVM, &pResult));
-dbgprintf("result of expression run:\n");
-var.DebugPrint(pResult);
-
-CHKiRet(vm.Destruct(&pVM));
-/* ...end testing aid... */
-
-
 finalize_it:
 RUNLOG_VAR("%d", iRet);
 	if(iRet == RS_RET_SYNTAX_ERROR) {
