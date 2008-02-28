@@ -8,12 +8,10 @@
  *
  * Some functions are controlled by environment variables:
  *
- * RSYSLOG_DEBUGLOG		* if set, a debug log file is written
- * 				to that location
+ * RSYSLOG_DEBUGLOG	if set, a debug log file is written to that location
+ * RSYSLOG_DEBUG	specific debug options
  *
- * There is some in-depth documentation available in doc/dev_queue.html
- * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
- * if you are getting aquainted to the object.
+ * For details, visit doc/debug.html
  *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *
@@ -51,9 +49,6 @@
 #include "debug.h"
 #include "obj.h"
 
-/* forward definitions */
-static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bIncludeNumID);
-static dbgThrdInfo_t *dbgGetThrdInfo(void);
 
 /* static data (some time to be replaced) */
 int	Debug;		/* debug flag  - read-only after startup */
@@ -67,7 +62,22 @@ static int bPrintAllDebugOnExit = 0;
 static char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
 static FILE *altdbg = NULL;	/* and the handle for alternate debug output */
 static FILE *stddbg;
-//static dbgFuncDB_t pCurrFunc;
+
+/* list of files/objects that should be printed */
+typedef struct dbgPrintName_s {
+	uchar *pName;
+	struct dbgPrintName_s *pNext;
+} dbgPrintName_t;
+
+
+/* forward definitions */
+static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bIncludeNumID);
+static dbgThrdInfo_t *dbgGetThrdInfo(void);
+static int dbgPrintNameIsInList(const uchar *pName, dbgPrintName_t *pRoot);
+
+
+/* This lists are single-linked and members are added at the top */
+static dbgPrintName_t *printNameFileRoot = NULL;
 
 
 /* list of all known FuncDBs. We use a special list, because it must only be single-linked. As
@@ -272,7 +282,6 @@ static inline void dbgFuncDBRemoveMutexLock(dbgFuncDB_t *pFuncDB, pthread_mutex_
 	if((pMutInfo = dbgFuncDBGetMutexInfo(pFuncDB, pmut)) != NULL) {
 		pMutInfo->lockLn = -1;
 	}
-//dbgprintf("dbgFuncDB mutex to be removed %p, ptr found %p, lockLn %d\n", pmut, pMutInfo, (pMutInfo == 0) ? 123456789 : pMutInfo->lockLn);
 }
 
 
@@ -496,8 +505,8 @@ int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB, int ln, int iStack
 	if(ret == 0) {
 		dbgMutexLockLog(pmut, pFuncDB, ln);
 	} else {
-		dbgprintf("%s:%d:%s: ERROR: pthread_mutex_lock() for mutex %p failed with error %d (%s)\n",
-			  pFuncDB->file, ln, pFuncDB->func, (void*)pmut, ret, strerror(errno)); // TODO: remove strerror!"!!
+		dbgprintf("%s:%d:%s: ERROR: pthread_mutex_lock() for mutex %p failed with error %d\n",
+			  pFuncDB->file, ln, pFuncDB->func, (void*)pmut, ret);
 	}
 
 	return ret;
@@ -931,12 +940,7 @@ int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line)
 
 	/* when we reach this point, we have a fully-initialized FuncDB! */
 
-	//if(bLogFuncFlow) /* quick debug hack...  select the best for you! */
-	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "vm.c")) /* quick debug hack... select the best for you! */
-	//if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "expr.c")) /* quick debug hack... select the best for you! */
-	//if(bLogFuncFlow && (!strcmp((char*)pFuncDB->file, "wti.c")
-	                    //||!strcmp((char*)pFuncDB->file, "wtp.c")
-	                    //||!strcmp((char*)pFuncDB->file, "queue.c"))) /* quick debug hack... select the best for you! */
+	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot))
 		dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
 	if(pThrd->stackPtr >= (int) (sizeof(pThrd->callStack) / sizeof(dbgFuncDB_t*))) {
 		dbgprintf("%s:%d: %s: debug module: call stack for this thread full, suspending call tracking\n",
@@ -965,12 +969,7 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore)
 	assert(pFuncDB->magic == dbgFUNCDB_MAGIC);
 
 	dbgFuncDBPrintActiveMutexes(pFuncDB, "WARNING: mutex still owned by us as we exit function, mutex: ", pthread_self());
-	//if(bLogFuncFlow) /* quick debug hack... select the best for you! */
-	if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "vm.c")) /* quick debug hack... select the best for you! */
-	//if(bLogFuncFlow && !strcmp((char*)pFuncDB->file, "expr.c")) /* quick debug hack... select the best for you! */
-	//if(bLogFuncFlow && (!strcmp((char*)pFuncDB->file, "wti.c")
-	                    //||!strcmp((char*)pFuncDB->file, "wtp.c")
-	                    //||!strcmp((char*)pFuncDB->file, "queue.c"))) /* quick debug hack... select the best for you! */
+	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot))
 		dbgprintf("%s:%d: %s: exit\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
 	pThrd->stackPtr = iStackPtrRestore;
 	if(pThrd->stackPtr < 0) {
@@ -1027,6 +1026,10 @@ dbgGetRTOptNamVal(uchar **ppszOpt, uchar **ppOptName, uchar **ppOptVal)
 	assert(ppszOpt != NULL);
 	assert(*ppszOpt != NULL);
 
+	/* make sure we have some initial values */
+	optname[0] = '\0';
+	optval[0] = '\0';
+
 	p = *ppszOpt;
 	/* skip whitespace */
 	while(*p && isspace(*p))
@@ -1060,6 +1063,60 @@ dbgGetRTOptNamVal(uchar **ppszOpt, uchar **ppOptName, uchar **ppOptVal)
 }
 
 
+/* create new PrintName list entry and add it to list (they will never
+ * be removed. -- rgerhards, 2008-02-28
+ */
+static void 
+dbgPrintNameAdd(uchar *pName, dbgPrintName_t **ppRoot)
+{
+	dbgPrintName_t *pEntry;
+
+	if((pEntry = calloc(1, sizeof(dbgPrintName_t))) == NULL) {
+		fprintf(stderr, "ERROR: out of memory during debug setup\n");
+		exit(1);
+	}
+
+	if((pEntry->pName = (uchar*) strdup((char*) pName)) == NULL) {
+		fprintf(stderr, "ERROR: out of memory during debug setup\n");
+		exit(1);
+	}
+
+	if(*ppRoot != NULL) {
+		pEntry->pNext = *ppRoot; /* we enqueue at the front */
+	}
+	*ppRoot = pEntry;
+
+printf("Name %s added to %p\n", pName, *ppRoot);
+}
+
+
+/* check if name is in a printName list - returns 1 if so, 0 otherwise.
+ * There is one special handling: if the root pointer is NULL, the function
+ * always returns 1. This is because when no name is set, output shall be
+ * unrestricted.
+ * rgerhards, 2008-02-28
+ */
+static int
+dbgPrintNameIsInList(const uchar *pName, dbgPrintName_t *pRoot)
+{
+	int bFound = 0;
+	dbgPrintName_t *pEntry = pRoot;
+
+	if(pRoot == NULL)
+		bFound = 1;
+
+	while(pEntry != NULL && !bFound) {
+		if(!strcasecmp((char*)pEntry->pName, (char*)pName)) {
+			bFound = 1;
+		} else {
+			pEntry = pEntry->pNext;
+		}
+	}
+
+	return bFound;
+}
+
+
 /* read in the runtime options
  * rgerhards, 2008-02-28
  */
@@ -1076,7 +1133,6 @@ dbgGetRuntimeOptions(void)
 	if((pszOpts = (uchar*) getenv("RSYSLOG_DEBUG")) != NULL) {
 		/* we have options set, so let's process them */
 		while(dbgGetRTOptNamVal(&pszOpts, &optname, &optval)) {
-//TODO: remove			printf("option %s val %s found\n", optname, optval);
 			if(!strcasecmp((char*)optname, "logfuncflow")) {
 				bLogFuncFlow = 1;
 			} else if(!strcasecmp((char*)optname, "logallocfree")) {
@@ -1091,6 +1147,15 @@ dbgGetRuntimeOptions(void)
 				bPrintTime = 0;
 			} else if(!strcasecmp((char*)optname, "nostdout")) {
 				stddbg = NULL;
+			} else if(!strcasecmp((char*)optname, "filetrace")) {
+				if(*optval == '\0') {
+					fprintf(stderr, "Error: logfile debug option requires filename, "
+						"e.g. \"logfile=debug.c\"\n");
+					exit(1);
+				} else {
+					/* create new entry and add it to list */
+					dbgPrintNameAdd(optval, &printNameFileRoot);
+				}
 			} else {
 				fprintf(stderr, "Error: invalid debug option '%s', value '%s'\n",
 					optval, optname);
