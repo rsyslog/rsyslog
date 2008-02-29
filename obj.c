@@ -1044,7 +1044,7 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 static rsRetVal
-UseObj(uchar *pObjName, uchar *pObjFile, interface_t **ppIf)
+UseObj(uchar *pObjName, uchar *pObjFile, interface_t *ppIf)
 {
 	DEFiRet;
 	cstr_t *pStr = NULL;

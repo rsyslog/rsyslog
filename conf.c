@@ -58,9 +58,6 @@
 DEFobjCurrIf(obj)
 DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
-#include "vm.h"
-DEFobjCurrIf(vm) // TODO: remove, testing aid! rgerhards, 2008-02-25
-DEFobjCurrIf(var) // TODO: remove, testing aid! rgerhards, 2008-02-25
 
 uchar	*pModDir = NULL; /* read-only after startup */
 
@@ -1186,8 +1183,6 @@ rsRetVal confClassInit(void)
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 	CHKiRet(objUse(expr, CORE_COMPONENT));
 	CHKiRet(objUse(ctok, CORE_COMPONENT));
-	CHKiRet(objUse(vm, CORE_COMPONENT)); // TODO: remove, testing aid! rgerhards, 2008-02-25
-	CHKiRet(objUse(var, CORE_COMPONENT)); // TODO: remove, testing aid! rgerhards, 2008-02-25
 
 finalize_it:
 	RETiRet;
