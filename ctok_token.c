@@ -119,7 +119,7 @@ finalize_it:
 ENDobjQueryInterface(ctok_token)
 
 
-BEGINObjClassInit(ctok_token, 1) /* class, version */
+BEGINObjClassInit(ctok_token, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(var));
 

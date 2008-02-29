@@ -608,7 +608,8 @@ finalize_it:
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09
  */
-BEGINObjClassInit(wtp, 1)
+BEGINObjClassInit(wtp, 1, OBJ_IS_CORE_MODULE)
+	/* request objects we use */
 ENDObjClassInit(wtp)
 
 /*

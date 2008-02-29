@@ -41,11 +41,11 @@
 #include "cfsysline.h"
 #include "srUtils.h"
 
-
 /* forward definitions */
 rsRetVal actionCallDoAction(action_t *pAction, msg_t *pMsg);
 
 /* object static data (once for all instances) */
+DEFobjStaticHelpers
 static int glbliActionResumeInterval = 30;
 int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
 
@@ -202,7 +202,7 @@ actionConstructFinalize(action_t *pThis)
 	 * spec. -- rgerhards, 2008-01-30
 	 */
 	CHKiRet(queueConstruct(&pThis->pQueue, ActionQueType, 1, iActionQueueSize, (rsRetVal (*)(void*,void*))actionCallDoAction));
-	objSetName((obj_t*) pThis->pQueue, pszQName);
+	obj.SetName((obj_t*) pThis->pQueue, pszQName);
 
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
@@ -675,6 +675,18 @@ finalize_it:
 }
 
 
-/*
- * vi:set ai:
+/* TODO: we are not yet a real object, the ClassInit here just looks like it is..
+ */
+rsRetVal actionClassInit(void)
+{
+	DEFiRet;
+	/* request objects we use */
+	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* vi:set ai:
  */

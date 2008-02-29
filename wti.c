@@ -457,7 +457,8 @@ finalize_it:
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09
  */
-BEGINObjClassInit(wti, 1) /* one is the object version (most important for persisting) */
+BEGINObjClassInit(wti, 1, OBJ_IS_CORE_MODULE) /* one is the object version (most important for persisting) */
+	/* request objects we use */
 ENDObjClassInit(wti)
 
 /*

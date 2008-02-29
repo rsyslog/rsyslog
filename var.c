@@ -387,7 +387,10 @@ ENDobjQueryInterface(var)
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
-BEGINObjClassInit(var, 1) /* class, version */
+BEGINObjClassInit(var, 1, OBJ_IS_CORE_MODULE) /* class, version */
+	/* request objects we use */
+
+	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, varDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, varConstructFinalize);
 ENDObjClassInit(var)

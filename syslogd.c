@@ -178,6 +178,7 @@
 #include "sysvar.h"
 
 /* definitions for objects we access */
+DEFobjCurrIf(obj)
 DEFobjCurrIf(expr)
 DEFobjCurrIf(vm)
 
@@ -2900,7 +2901,7 @@ init(void)
 		exit(1);
 	}
 	/* name our main queue object (it's not fatal if it fails...) */
-	objSetName((obj_t*) pMsgQueue, (uchar*) "main queue");
+	obj.SetName((obj_t*) pMsgQueue, (uchar*) "main queue");
 
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
@@ -3577,6 +3578,7 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizer being called! */
 	/* dummy "classes" */
 	CHKiRet(confClassInit());
+	CHKiRet(actionClassInit());
 
 	/* real ones */
 	CHKiRet(msgClassInit());
@@ -3595,6 +3597,7 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(exprClassInit());
 
 	/* request objects we use */
+	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 	CHKiRet(objUse(expr));
 	CHKiRet(objUse(vm));
 

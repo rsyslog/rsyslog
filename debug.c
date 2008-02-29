@@ -51,7 +51,8 @@
 
 
 /* static data (some time to be replaced) */
-int	Debug;		/* debug flag  - read-only after startup */
+DEFobjCurrIf(obj)
+int Debug;		/* debug flag  - read-only after startup */
 int debugging_on = 0;	 /* read-only, except on sig USR1 */
 static int bLogFuncFlow = 0; /* shall the function entry and exit be logged to the debug log? */
 static int bLogAllocFree = 0; /* shall calls to (m/c)alloc and free be logged to the debug log? */
@@ -800,8 +801,8 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
 		/* print object name header if we have an object */
 		if(pObj != NULL) {
-			if(stddbg != NULL) fprintf(stddbg, "%s: ", objGetName(pObj));
-			if(altdbg != NULL) fprintf(altdbg, "%s: ", objGetName(pObj));
+			if(stddbg != NULL) fprintf(stddbg, "%s: ", obj.GetName(pObj));
+			if(altdbg != NULL) fprintf(altdbg, "%s: ", obj.GetName(pObj));
 		}
 	}
 	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? 1 : 0;
@@ -1183,14 +1184,24 @@ dbgGetRuntimeOptions(void)
 	}
 }
 
+
 /* end support system to set debug options at runtime */
 
 rsRetVal dbgClassInit(void)
 {
+	DEFiRet;
+
 	struct sigaction sigAct;
 	sigset_t sigSet;
 	
 	(void) pthread_key_create(&keyCallStack, dbgCallStackDestruct); /* MUST be the first action done! */
+
+
+	/* while we try not to use any of the real rsyslog code (to avoid infinite loops), we
+	 * need to have the ability to query object names. Thus, we need to obtain a pointer to
+	 * the object interface. -- rgerhards, 2008-02-29
+	 */
+	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -1212,7 +1223,9 @@ rsRetVal dbgClassInit(void)
 	}
 
 	dbgSetThrdName((uchar*)"main thread");
-	return RS_RET_OK;
+
+finalize_it:
+	RETiRet;
 }
 
 

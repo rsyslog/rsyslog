@@ -186,7 +186,7 @@ ENDobjQueryInterface(sysvar)
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
-BEGINObjClassInit(sysvar, 1) /* class, version */
+BEGINObjClassInit(sysvar, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(var));
 

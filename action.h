@@ -79,6 +79,7 @@ rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);
 rsRetVal actionCallAction(action_t *pAction, msg_t *pMsg);
 rsRetVal actionWriteToAction(action_t *pAction);
+rsRetVal actionClassInit(void);
 
 #if 1
 #define actionIsSuspended(pThis) ((pThis)->bSuspended == 1)

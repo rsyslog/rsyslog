@@ -3,6 +3,41 @@
  * This file implements a generic object "class". All other classes can
  * use the service of this base class here to include auto-destruction and
  * other capabilities in a generic manner.
+ *
+ * As of 2008-02-29, I (rgerhards) am adding support for dynamically loadable
+ * objects. In essence, each object will soon be available via its interface,
+ * only. Before any object's code is accessed (including global static methods),
+ * the caller needs to obtain an object interface. To do so, it needs to provide
+ * the object name and the file where the object is expected to reside in. A
+ * file may not be given, in which case the object is expected to reside in
+ * the rsyslog core. The caller than receives an interface pointer which can
+ * be utilized to access all the object's methods. This method enables rsyslog
+ * to load library modules on demand. In order to keep overhead low, callers
+ * should request object interface only once in the object Init function and
+ * free them when they exit. The only exception is when a caller needs to
+ * access an object only conditional, in which case a pointer to its interface
+ * shall be aquired as need first arises but still be released only on exit
+ * or when there definitely is no further need. The whole idea is to limit
+ * the very performance-intense act of dynamically loading an objects library.
+ * Of course, it is possible to violate this suggestion, but than you should
+ * have very good reasoning to do so.
+ *
+ * Please note that there is one trick we need to do. Each object queries
+ * the object interfaces and it does so via objUse(). objUse, however, is
+ * part of the obj object's interface (implemented via the file you are
+ * just reading). So in order to obtain a pointer to objUse, we need to
+ * call it - obviously not possible. One solution would be that objUse is
+ * hardcoded into all callers. That, however, would bring us into slight
+ * trouble with actually dynamically loaded modules, as we should NOT
+ * rely on the OS loader to resolve symbols back to the caller (this
+ * is a feature not universally available and highly importable). Of course,
+ * we can solve this with a pHostQueryEtryPoint() call. It still sounds
+ * somewhat unnatural to call a regular interface function via a special
+ * method. So what we do instead is define a special function called
+ * objGetObjInterface() which delivers our own interface. That function
+ * than will be defined global and be queriable via pHostQueryEtryPoint().
+ * I agree, technically this is much the same, but from an architecture
+ * point of view it looks cleaner (at least to me).
  * 
  * File begun on 2008-01-04 by RGerhards
  *
@@ -75,8 +110,9 @@ static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
  * objects, thus they are in the parameter list.
  * pszName must point to constant pool memory. It is never freed.
  */
-rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers,
-                          rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *))
+static rsRetVal
+InfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers,
+                 rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *))
 {
 	DEFiRet;
 	int i;
@@ -106,7 +142,8 @@ finalize_it:
 
 
 /* set a method handler */
-rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*))
+static rsRetVal
+InfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*))
 {
 	assert(pThis != NULL);
 	assert(objMethod > 0 && objMethod < OBJ_NUM_METHODS);
@@ -118,8 +155,8 @@ rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pH
 /* destruct the base object properties.
  * rgerhards, 2008-01-29
  */
-rsRetVal
-objDestructObjSelf(obj_t *pThis)
+static rsRetVal
+DestructObjSelf(obj_t *pThis)
 {
 	DEFiRet;
 
@@ -175,7 +212,8 @@ finalize_it:
 /* begin serialization of an object
  * rgerhards, 2008-01-06
  */
-rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj)
+static rsRetVal
+BeginSerialize(strm_t *pStrm, obj_t *pObj)
 {
 	DEFiRet;
 
@@ -199,7 +237,8 @@ finalize_it:
  * Otherwise, the serialization is exactly the same.
  * rgerhards, 2008-01-11
  */
-rsRetVal objBeginSerializePropBag(strm_t *pStrm, obj_t *pObj)
+static rsRetVal
+BeginSerializePropBag(strm_t *pStrm, obj_t *pObj)
 {
 	DEFiRet;
 
@@ -216,7 +255,8 @@ finalize_it:
 
 /* append a property
  */
-rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr)
+static rsRetVal
+SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr)
 {
 	DEFiRet;
 	uchar *pszBuf = NULL;
@@ -324,7 +364,8 @@ finalize_it:
 /* end serialization of an object. The caller receives a
  * standard C string, which he must free when no longer needed.
  */
-rsRetVal objEndSerialize(strm_t *pStrm)
+static rsRetVal
+EndSerialize(strm_t *pStrm)
 {
 	DEFiRet;
 
@@ -657,7 +698,8 @@ finalize_it:
  * The caller must destruct the created object.
  * rgerhards, 2008-01-07
  */
-rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr)
+static rsRetVal
+Deserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -715,7 +757,8 @@ finalize_it:
 /* De-Serialize an object, but treat it as property bag.
  * rgerhards, 2008-01-11
  */
-rsRetVal objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
+rsRetVal
+objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -760,7 +803,8 @@ finalize_it:
  * The caller must destruct the created object.
  * rgerhards, 2008-01-07
  */
-rsRetVal objDeserializePropBag(obj_t *pObj, strm_t *pStrm)
+static rsRetVal
+DeserializePropBag(obj_t *pObj, strm_t *pStrm)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -805,8 +849,8 @@ finalize_it:
  * rgerhards, 2008-01-29
  * TODO: change the naming to a rsCStr obj! (faster)
  */
-rsRetVal
-objSetName(obj_t *pThis, uchar *pszName)
+static rsRetVal
+SetName(obj_t *pThis, uchar *pszName)
 {
 	DEFiRet;
 
@@ -829,8 +873,8 @@ finalize_it:
  * is returned.
  * rgerhards, 2008-01-30
  */
-uchar *
-objGetName(obj_t *pThis)
+static uchar *
+GetName(obj_t *pThis)
 {
 	uchar *ret;
 	uchar szName[128];
@@ -840,7 +884,7 @@ objGetName(obj_t *pThis)
 
 	if(pThis->pszName == NULL) {
 		snprintf((char*)szName, sizeof(szName)/sizeof(uchar), "%s %p", objGetClassName(pThis), pThis);
-		objSetName(pThis, szName);
+		SetName(pThis, szName);
 		/* looks strange, but we NEED to re-check because if there was an
 		 * error in objSetName(), the pointer may still be NULL
 		 */
@@ -862,7 +906,8 @@ objGetName(obj_t *pThis)
  * (e.g. for de-serialization support).
  * rgerhards, 2008-01-07
  */
-rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo)
+static rsRetVal
+RegisterObj(objID_t oID, objInfo_t *pInfo)
 {
 	DEFiRet;
 
@@ -874,6 +919,55 @@ rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo)
 	arrObjInfo[oID] = pInfo;
 
 finalize_it:
+	RETiRet;
+}
+
+
+/* queryInterface function
+ * rgerhards, 2008-02-29
+ */
+BEGINobjQueryInterface(obj)
+CODESTARTobjQueryInterface(obj)
+	if(pIf->ifVersion != objCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->oID = OBJobj;
+
+	pIf->InfoConstruct = InfoConstruct;
+	pIf->DestructObjSelf = DestructObjSelf;
+	pIf->BeginSerializePropBag = BeginSerializePropBag;
+	pIf->InfoSetMethod = InfoSetMethod;
+	pIf->BeginSerialize = BeginSerialize;
+	pIf->SerializeProp = SerializeProp;
+	pIf->EndSerialize = EndSerialize;
+	pIf->RegisterObj = RegisterObj;
+	pIf->Deserialize = Deserialize;
+	pIf->DeserializePropBag = DeserializePropBag;
+	pIf->SetName = SetName;
+	pIf->GetName = GetName;
+finalize_it:
+ENDobjQueryInterface(obj)
+
+
+/* This function returns a pointer to our own interface. It is used as the
+ * hook that every object (including dynamically loaded ones) can use to
+ * obtain a pointer to our interface which than can be used to obtain
+ * pointers to any other interface in the system. This function must be
+ * externally visible because of its special nature.
+ * rgerhards, 2008-02-29 [nice - will have that date the next time in 4 years ;)]
+ */
+rsRetVal
+objGetObjInterface(obj_if_t *pIf)
+{
+	DEFiRet;
+	assert(pIf != NULL);
+	objQueryInterface(pIf);
 	RETiRet;
 }
 

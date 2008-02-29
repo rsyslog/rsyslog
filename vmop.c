@@ -216,7 +216,7 @@ ENDobjQueryInterface(vmop)
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
-BEGINObjClassInit(vmop, 1) /* class, version */
+BEGINObjClassInit(vmop, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(var));
 

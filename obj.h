@@ -61,12 +61,16 @@
 	}
 
 #define objSerializeSCALAR_VAR(strm, propName, propType, var) \
-	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &var));
+	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &var));
 #define objSerializeSCALAR(strm, propName, propType) \
-	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
+	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
 #define objSerializePTR(strm, propName, propType) \
-	CHKiRet(objSerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
-#define DEFobjStaticHelpers static objInfo_t *pObjInfoOBJ = NULL;
+	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
+#define DEFobjStaticHelpers \
+	static objInfo_t *pObjInfoOBJ = NULL; \
+	DEFobjCurrIf(obj)
+
+
 #define objGetClassName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
 #define objGetObjID(pThis) (((obj_t*) (pThis))->pObjInfo->objID)
 #define objGetVersion(pThis) (((obj_t*) (pThis))->pObjInfo->iObjVers)
@@ -85,21 +89,33 @@
 #define objDebugPrint(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DEBUGPRINT])(pThis)
 
 #define OBJSetMethodHandler(methodID, pHdlr) \
-	CHKiRet(objInfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)(void*)) pHdlr))
+	CHKiRet(obj.InfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)(void*)) pHdlr))
+
+/* interfaces */
+BEGINinterface(obj) /* name must also be changed in ENDinterface macro! */
+	rsRetVal (*UseObj)(uchar *pObjName, uchar *pObjFile, interface_t **ppIf);
+	rsRetVal (*InfoConstruct)(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers,
+		                  rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *));
+	rsRetVal (*DestructObjSelf)(obj_t *pThis);
+	rsRetVal (*BeginSerializePropBag)(strm_t *pStrm, obj_t *pObj);
+	rsRetVal (*InfoSetMethod)(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
+	rsRetVal (*BeginSerialize)(strm_t *pStrm, obj_t *pObj);
+	rsRetVal (*SerializeProp)(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr);
+	rsRetVal (*EndSerialize)(strm_t *pStrm);
+	rsRetVal (*RegisterObj)(objID_t oID, objInfo_t *pInfo);
+	rsRetVal (*Deserialize)(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);
+	rsRetVal (*DeserializePropBag)(obj_t *pObj, strm_t *pStrm);
+	rsRetVal (*SetName)(obj_t *pThis, uchar *pszName);
+	uchar *  (*GetName)(obj_t *pThis);
+ENDinterface(obj)
+#define objCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
 
 /* prototypes */
-rsRetVal objInfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers, rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *));
-rsRetVal objDestructObjSelf(obj_t *pThis);
-rsRetVal objInfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
-rsRetVal objBeginSerializePropBag(strm_t *pStrm, obj_t *pObj);
-rsRetVal objBeginSerialize(strm_t *pStrm, obj_t *pObj);
-rsRetVal objSerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr);
-rsRetVal objEndSerialize(strm_t *pStrm);
-rsRetVal objRegisterObj(objID_t oID, objInfo_t *pInfo);
-rsRetVal objDeserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);
-rsRetVal objDeserializePropBag(obj_t *pObj, strm_t *pStrm);
-rsRetVal objSetName(obj_t *pThis, uchar *pszName);
-uchar * objGetName(obj_t *pThis);
+/* the following define *is* necessary, because it provides the root way of obtaining
+ * interfaces (at some place we need to start our query...
+ */
+rsRetVal objGetObjInterface(obj_if_t *pIf);
 PROTOTYPEObjClassInit(obj);
 
 #endif /* #ifndef OBJ_H_INCLUDED */

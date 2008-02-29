@@ -60,9 +60,10 @@ typedef enum {	/* IDs of known object "types/classes" */
 	OBJvm = 11,
 	OBJsysvar = 12,
 	OBJvmstk = 13,
-	OBJexpr = 14	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
+	OBJobj = 14,	/* the base object itself - somewhat tricky, but required... */
+	OBJexpr = 15	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
 } objID_t;	
-#define OBJ_NUM_IDS 15
+#define OBJ_NUM_IDS 16
 
 typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
 		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04
@@ -156,15 +157,24 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 	rsRetVal (*Set##prop)(obj##_t *pThis, dataType)
 /* class initializer */
 #define PROTOTYPEObjClassInit(objName) rsRetVal objName##ClassInit(void)
-#define BEGINObjClassInit(objName, objVers) \
+/* below: objName must be the object name (e.g. vm, strm, ...) and ISCORE must be
+ * 1 if the module is a statically linked core module and 0 if it is a
+ * dynamically loaded one. -- rgerhards, 2008-02-29
+ */
+#define OBJ_IS_CORE_MODULE 1
+#define OBJ_IS_LOADABLE_MODULE 0
+#define BEGINObjClassInit(objName, objVers, objType) \
 rsRetVal objName##ClassInit(void) \
 { \
 	DEFiRet; \
-	CHKiRet(objInfoConstruct(&pObjInfoOBJ, OBJ##objName, (uchar*) #objName, objVers, \
+	if(objType == OBJ_IS_CORE_MODULE) { \
+		CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
+	} \
+	CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, OBJ##objName, (uchar*) #objName, objVers, \
 	                         (rsRetVal (*)(void*))objName##Construct,  (rsRetVal (*)(void*))objName##Destruct)); 
 
 #define ENDObjClassInit(objName) \
-	objRegisterObj(OBJ##objName, pObjInfoOBJ); \
+	obj.RegisterObj(OBJ##objName, pObjInfoOBJ); \
 finalize_it: \
 	RETiRet; \
 }
@@ -220,25 +230,25 @@ finalize_it: \
  * processing.
  * rgerhards, 2008-01-30
  */
-#define BEGINobjDestruct(obj) \
-	rsRetVal obj##Destruct(obj##_t **ppThis) \
+#define BEGINobjDestruct(OBJ) \
+	rsRetVal OBJ##Destruct(OBJ##_t **ppThis) \
 	{ \
 		DEFiRet; \
 		int iCancelStateSave; \
-		obj##_t *pThis; 
+		OBJ##_t *pThis; 
 
-#define CODESTARTobjDestruct(obj) \
+#define CODESTARTobjDestruct(OBJ) \
 		ASSERT(ppThis != NULL); \
 		pThis = *ppThis; \
-		ISOBJ_TYPE_assert(pThis, obj); \
+		ISOBJ_TYPE_assert(pThis, OBJ); \
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 
-#define ENDobjDestruct(obj) \
+#define ENDobjDestruct(OBJ) \
 	 	goto finalize_it; /* prevent compiler warning ;) */ \
 	 	/* no more code here! */ \
 	finalize_it: \
 		if(pThis != NULL) { \
-			objDestructObjSelf((obj_t*) pThis); \
+			obj.DestructObjSelf((obj_t*) pThis); \
 			free(pThis); \
 			*ppThis = NULL; \
 		} \

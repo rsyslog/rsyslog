@@ -393,7 +393,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	assert(pThis != NULL);
 	assert(pStrm != NULL);
 
-	CHKiRet(objBeginSerialize(pStrm, (obj_t*) pThis));
+	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 	objSerializeSCALAR(pStrm, iProtocolVersion, SHORT);
 	objSerializeSCALAR(pStrm, iSeverity, SHORT);
 	objSerializeSCALAR(pStrm, iFacility, SHORT);
@@ -413,7 +413,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pCSPROCID, CSTR);
 	objSerializePTR(pStrm, pCSMSGID, CSTR);
 
-	CHKiRet(objEndSerialize(pStrm));
+	CHKiRet(obj.EndSerialize(pStrm));
 
 finalize_it:
 	RETiRet;
@@ -2200,7 +2200,7 @@ MsgGetSeverity(obj_t *pThis, int *piSeverity)
  * before anything else is called inside this class.
  * rgerhards, 2008-01-04
  */
-BEGINObjClassInit(msg, 1)
+BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
 	CHKiRet(objUse(var));
 

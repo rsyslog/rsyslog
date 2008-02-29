@@ -587,7 +587,7 @@ ENDobjQueryInterface(ctok)
 
 
 
-BEGINObjClassInit(ctok, 1) /* class, version */
+BEGINObjClassInit(ctok, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(ctok_token));
 	CHKiRet(objUse(var));

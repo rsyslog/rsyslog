@@ -774,7 +774,7 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	ISOBJ_TYPE_assert(pStrm, strm);
 
 	strmFlush(pThis);
-	CHKiRet(objBeginSerialize(pStrm, (obj_t*) pThis));
+	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 
 	objSerializeSCALAR(pStrm, iCurrFNum, INT);
 	objSerializePTR(pStrm, pszFName, PSZ);
@@ -793,7 +793,7 @@ rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 	l = (long) pThis->iCurrOffs;
 	objSerializeSCALAR_VAR(pStrm, iCurrOffs, LONG, l);
 
-	CHKiRet(objEndSerialize(pStrm));
+	CHKiRet(obj.EndSerialize(pStrm));
 
 finalize_it:
 	RETiRet;
@@ -888,7 +888,9 @@ strmGetCurrOffset(strm_t *pThis, int64 *pOffs)
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09
  */
-BEGINObjClassInit(strm, 1)
+BEGINObjClassInit(strm, 1, OBJ_IS_CORE_MODULE)
+	/* request objects we use */
+
 	OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strmConstructFinalize);
