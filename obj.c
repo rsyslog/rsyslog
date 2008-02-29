@@ -133,7 +133,6 @@ InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
 	objInfo_t *pThis;
 
 	assert(ppThis != NULL);
-	assert(pDestruct != NULL);
 
 	if((pThis = calloc(1, sizeof(objInfo_t))) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -143,7 +142,6 @@ InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
 	pThis->pszName = (uchar*)strdup((char*)pszID); /* it's OK if we have NULL ptr, GetName() will deal with that! */
 	pThis->iObjVers = iObjVers;
 	pThis->QueryIF = pQueryIF;
-	//xxxpThis->objID = objID;
 
 	pThis->objMethods[0] = pConstruct;
 	pThis->objMethods[1] = pDestruct;
@@ -994,6 +992,7 @@ finalize_it:
 	} else {
 		dbgprintf("caller requested object '%s', not found (iRet %d)\n", rsCStrGetSzStr(pstrOID), iRet);
 	}
+dbgPrintAllDebugInfo();
 
 	RETiRet;
 }
@@ -1034,6 +1033,10 @@ RegisterObj(uchar *pszObjName, objInfo_t *pInfo)
 	dbgprintf("object '%s' successfully registered with index %d, qIF %p\n", pszObjName, i, pInfo->QueryIF);
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		logerrorVar("registering object '%s' failed with error code %d", pszObjName, iRet);
+	}
+
 	RETiRet;
 }
 
@@ -1120,7 +1123,14 @@ objGetObjInterface(obj_if_t *pIf)
 }
 
 
-/* initialize our own class */
+/* initialize our own class 
+ * Please note that this also initializes those classes that we rely on.
+ * Though this is a bit dirty, we need to do it - otherwise we can't get
+ * around that bootstrap problem. We need to face the fact the the obj 
+ * class is a little different from the rest of the system, as it provides
+ * the core class loader functionality.
+ * rgerhards, 2008-02-29
+ */
 rsRetVal
 objClassInit(void)
 {
@@ -1136,7 +1146,9 @@ objClassInit(void)
 
 	/* request objects we use */
 	CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */
-CHKiRet(varClassInit());
+
+	/* init classes we use (limit to as few as possible!) */
+	CHKiRet(varClassInit());
 	CHKiRet(objUse(var, CORE_COMPONENT));
 
 finalize_it:

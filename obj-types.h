@@ -166,7 +166,8 @@ rsRetVal objName##ClassInit(void) \
 		CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
 	} \
 	CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar*) #objName, objVers, \
-	                         (rsRetVal (*)(void*))objName##Construct,  (rsRetVal (*)(void*))objName##Destruct,\
+	                         (rsRetVal (*)(void*))objName##Construct,\
+				 (rsRetVal (*)(void*))objName##Destruct,\
 				 (rsRetVal (*)(interface_t*))objName##QueryInterface)); 
 
 #define ENDObjClassInit(objName) \
@@ -175,6 +176,26 @@ finalize_it: \
 	RETiRet; \
 }
 
+/* ... and now the same for abstract classes.
+ * TODO: consolidate the two -- rgerhards, 2008-02-29
+ */
+#define BEGINAbstractObjClassInit(objName, objVers, objType) \
+rsRetVal objName##ClassInit(void) \
+{ \
+	DEFiRet; \
+	if(objType == OBJ_IS_CORE_MODULE) { \
+		CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
+	} \
+	CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar*) #objName, objVers, \
+	                         NULL,\
+				 NULL,\
+				 (rsRetVal (*)(interface_t*))objName##QueryInterface)); 
+
+#define ENDObjClassInit(objName) \
+	iRet = obj.RegisterObj((uchar*)#objName, pObjInfoOBJ); \
+finalize_it: \
+	RETiRet; \
+}
 
 /* this defines both the constructor and initializer
  * rgerhards, 2008-01-10
@@ -345,8 +366,8 @@ finalize_it: \
  * functions that actually need to be non-static.
  */
 #define PROTOTYPEObj(obj) \
-	PROTOTYPEObjClassInit(obj); \
-	//PROTOTYPEObjQueryInterface(obj)
+	PROTOTYPEObjClassInit(obj);
+
 /* ------------------------------ end object loader system ------------------------------ */
 
 

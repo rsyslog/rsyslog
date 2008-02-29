@@ -179,6 +179,7 @@
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
+DEFobjCurrIf(conf)
 DEFobjCurrIf(expr)
 DEFobjCurrIf(vm)
 
@@ -2374,7 +2375,7 @@ void legacyOptsHook(void)
 
 	while(pThis != NULL) {
 		if(pThis->line != NULL)
-			cfsysline(pThis->line);
+			conf.cfsysline(pThis->line);
 		pThis = pThis->next;
 	}
 }
@@ -2834,10 +2835,10 @@ init(void)
 	 * think about the whole situation when we implement loadable plugins.
 	 * rgerhards, 2007-07-31
 	 */
-	cfsysline((uchar*)"ResetConfigVariables");
+	conf.cfsysline((uchar*)"ResetConfigVariables");
 
 	/* open the configuration file */
-	if((iRet = processConfFile(ConfFile)) != RS_RET_OK) {
+	if((iRet = conf.processConfFile(ConfFile)) != RS_RET_OK) {
 		/* rgerhards: this code is executed to set defaults when the
 		 * config file could not be opened. We might think about
 		 * abandoning the run in this case - but this, too, is not
@@ -2847,11 +2848,11 @@ init(void)
 		selector_t *f = NULL;
 		char szTTYNameBuf[_POSIX_TTY_NAME_MAX+1]; /* +1 for NULL character */
 		dbgprintf("primary config file could not be opened - using emergency definitions.\n");
-		cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
-		cfline((uchar*)"*.PANIC\t*", &f);
+		conf.cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
+		conf.cfline((uchar*)"*.PANIC\t*", &f);
 		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
 			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
-			cfline((uchar*)cbuf, &f);
+			conf.cfline((uchar*)cbuf, &f);
 		}
 		selectorAddList(f);
 	}
@@ -3439,11 +3440,11 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_TEMPLATE, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_OUTCHANNEL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler, doNameLine, (void*)DIR_ALLOWEDSENDER, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, doModLoad, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler, doIncludeLine, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_TEMPLATE, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_ALLOWEDSENDER, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, conf.doModLoad, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler, conf.doIncludeLine, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode, setUmask, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintTemplateList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintModuleList, NULL));
@@ -3584,7 +3585,6 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(wtpClassInit());
 	CHKiRet(queueClassInit());
 	CHKiRet(vmstkClassInit());
-	//TODO: currently done in objClassInit CHKiRet(varClassInit());
 	CHKiRet(sysvarClassInit());
 	CHKiRet(vmClassInit());
 	CHKiRet(vmopClassInit());
@@ -3592,15 +3592,16 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(ctok_tokenClassInit());
 	CHKiRet(ctokClassInit());
 	CHKiRet(exprClassInit());
+	CHKiRet(confClassInit());
 
 	/* dummy "classes" */
-	CHKiRet(confClassInit());
 	CHKiRet(actionClassInit());
 
 	/* request objects we use */
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-	CHKiRet(obj.UseObj((uchar*)"expr", NULL, (void*) &expr));
-	CHKiRet(obj.UseObj((uchar*)"vm", NULL, (void*) &vm));
+	CHKiRet(objUse(conf, CORE_COMPONENT));
+	CHKiRet(objUse(expr, CORE_COMPONENT));
+	CHKiRet(objUse(vm,   CORE_COMPONENT));
 
 finalize_it:
 	RETiRet;

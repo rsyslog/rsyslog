@@ -54,8 +54,14 @@
 #include "stringbuf.h"
 #include "srUtils.h"
 
+
+/* forward definitions */
+static rsRetVal cfline(uchar *line, selector_t **pfCurr);
+static rsRetVal processConfFile(uchar *pConfFile);
+
+
 /* static data */
-DEFobjCurrIf(obj)
+DEFobjStaticHelpers
 DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
 
@@ -401,7 +407,7 @@ finalize_it:
 /* process a configuration file
  * started with code from init() by rgerhards on 2007-07-31
  */
-rsRetVal
+static rsRetVal
 processConfFile(uchar *pConfFile)
 {
 	DEFiRet;
@@ -1141,7 +1147,7 @@ finalize_it:
  * I re-did this functon because it was desperately time to do so
  * rgerhards, 2007-08-01
  */
-rsRetVal
+static rsRetVal
 cfline(uchar *line, selector_t **pfCurr)
 {
 	DEFiRet;
@@ -1172,20 +1178,41 @@ cfline(uchar *line, selector_t **pfCurr)
 }
 
 
-/* dummy */
-//static rsRetVal confQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+/* queryInterface function
+ * rgerhards, 2008-02-29
+ */
+BEGINobjQueryInterface(conf)
+CODESTARTobjQueryInterface(conf)
+	if(pIf->ifVersion != confCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
 
-/* "mimic" a real object - we are currently not one... */
-rsRetVal confClassInit(void)
-{
-	DEFiRet;
-	/* request objects we use */
-	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-	CHKiRet(objUse(expr, CORE_COMPONENT));
-	CHKiRet(objUse(ctok, CORE_COMPONENT));
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->doNameLine = doNameLine;
+	pIf->cfsysline = cfsysline;
+	pIf->doModLoad = doModLoad;
+	pIf->doIncludeLine = doIncludeLine;
+	pIf->cfline = cfline;
+	pIf->processConfFile = processConfFile;
 
 finalize_it:
-	RETiRet;
-}
+ENDobjQueryInterface(conf)
+
+
+
+/* Initialize our class. Must be called as the very first method
+ * before anything else is called inside this class.
+ * rgerhards, 2008-02-29
+ */
+BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
+	/* request objects we use */
+	CHKiRet(objUse(expr, CORE_COMPONENT));
+	CHKiRet(objUse(ctok, CORE_COMPONENT));
+ENDObjClassInit(conf)
+
 /* vi:set ai:
  */

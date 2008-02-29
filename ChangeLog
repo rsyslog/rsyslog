@@ -5,6 +5,7 @@ Version 3.12.1 (rgerhards), 2008-0?-??
   an environment variable
 - bugfix: removed debugging code that I forgot to remove before releasing
   3.12.0 (does not cause harm and happened only during startup)
+- internal code improvements (more code converted into classes)
 ---------------------------------------------------------------------------
 Version 3.12.0 (rgerhards), 2008-02-28
 - added full expression support for filters; filters can now contain
