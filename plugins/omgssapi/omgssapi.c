@@ -274,7 +274,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 	gss_release_name(&min_stat, &target_name);
 
 finalize_it:
-	return iRet;
+	RETiRet;
 
  fail:
 	logerror("GSS-API Context initialization failed\n");
@@ -287,7 +287,7 @@ finalize_it:
 	if (s != -1)
 		close(s);
 	pData->sock = -1;
-	return RS_RET_GSS_SENDINIT_ERROR;
+	ABORT_FINALIZE(RS_RET_GSS_SENDINIT_ERROR);
 }
 
 
@@ -376,7 +376,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		break;
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -652,7 +652,7 @@ static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
 	}
 	free(mode);
 
-	return iRet;
+	RETiRet;
 }
 
 
