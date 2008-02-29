@@ -1,11 +1,14 @@
 /* modules.h
- * Definition for build-in and plug-ins module handler.
  *
- * The following definitions are to be used for modularization. Currently,
- * the code is NOT complete. I am just adding pieces to it as I
- * go along in designing the interface.
- * rgerhards, 2007-07-19
+ * Definition for build-in and plug-ins module handler. This file is the base
+ * for all dynamically loadable module support. In theory, in v3 all modules
+ * are dynamically loaded, in practice we currently do have a few build-in
+ * once. This may become removed.
  *
+ * The loader keeps track of what is loaded. For library modules, it is also
+ * used to find objects (libraries) and to obtain the queryInterface function
+ * for them. A reference count is maintened for libraries, so that they are
+ * unloaded only when nobody still accesses them.
  *
  * File begun on 2007-07-22 by RGerhards
  *
@@ -85,6 +88,8 @@ typedef struct moduleInfo {
 			rsRetVal (*doAction)(uchar**, unsigned, void*);
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
 		} om;
+		struct { /* data for library modules */
+		} fm;
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */
 } modInfo_t;
