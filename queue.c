@@ -728,15 +728,15 @@ queueTryLoadPersistedInfo(queue_t *pThis)
 
 	while(iUngottenObjs > 0) {
 		/* fill the queue from disk */
-		CHKiRet(obj.Deserialize((void*) &pUsr, OBJmsg, psQIF, NULL, NULL));
+		CHKiRet(obj.Deserialize((void*) &pUsr, (uchar*)"msg", psQIF, NULL, NULL));
 		queueUngetObj(pThis, pUsr, MUTEX_ALREADY_LOCKED);
 		--iUngottenObjs; /* one less */
 	}
 
 	/* and now the stream objects (some order as when persisted!) */
-	CHKiRet(obj.Deserialize(&pThis->tVars.disk.pWrite, OBJstrm, psQIF,
+	CHKiRet(obj.Deserialize(&pThis->tVars.disk.pWrite, (uchar*) "strm", psQIF,
 			       (rsRetVal(*)(obj_t*,void*))queueLoadPersStrmInfoFixup, pThis));
-	CHKiRet(obj.Deserialize(&pThis->tVars.disk.pRead, OBJstrm, psQIF,
+	CHKiRet(obj.Deserialize(&pThis->tVars.disk.pRead, (uchar*) "strm", psQIF,
 			       (rsRetVal(*)(obj_t*,void*))queueLoadPersStrmInfoFixup, pThis));
 
 	CHKiRet(strmSeekCurrOffs(pThis->tVars.disk.pWrite));
@@ -861,7 +861,7 @@ static rsRetVal qDelDisk(queue_t *pThis, void **ppUsr)
 	int64 offsOut;
 
 	CHKiRet(strmGetCurrOffset(pThis->tVars.disk.pRead, &offsIn));
-	CHKiRet(obj.Deserialize(ppUsr, OBJmsg, pThis->tVars.disk.pRead, NULL, NULL));
+	CHKiRet(obj.Deserialize(ppUsr, (uchar*) "msg", pThis->tVars.disk.pRead, NULL, NULL));
 	CHKiRet(strmGetCurrOffset(pThis->tVars.disk.pRead, &offsOut));
 
 	/* This time it is a bit tricky: we free disk space only upon file deletion. So we need
@@ -2106,6 +2106,10 @@ finalize_it:
 	RETiRet;
 }
 #undef	isProp
+
+/* dummy */
+rsRetVal queueQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09

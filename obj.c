@@ -39,6 +39,13 @@
  * I agree, technically this is much the same, but from an architecture
  * point of view it looks cleaner (at least to me).
  * 
+ * Please note that there is another egg-hen problem: we use a linked list,
+ * which is provided by the linkedList object. However, we need to
+ * initialize the linked list before we can provide the UseObj()
+ * functionality. That, in turn, would probably be required by the 
+ * linkedList object. So the solution is to use a backdoor just to
+ * init the linked list and from then on use the usual interfaces.
+ *
  * File begun on 2008-01-04 by RGerhards
  *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
@@ -68,6 +75,9 @@
 #include <ctype.h>
 #include <assert.h>
 
+/* how many objects are supported by rsyslogd? */
+#define OBJ_NUM_IDS 100 //TODO 16 were currently in use 2008-02-29
+
 #include "rsyslog.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -75,16 +85,19 @@
 #include "stream.h"
 
 /* static data */
+DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some macros! */
 DEFobjCurrIf(var)
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
 
-/* some defines */
 
 /* cookies for serialized lines */
 #define COOKIE_OBJLINE   '<'
 #define COOKIE_PROPLINE  '+'
 #define COOKIE_ENDLINE   '>'
 #define COOKIE_BLANKLINE '.'
+
+/* forward definitions */
+static rsRetVal FindObjInfo(cstr_t *pszObjName, objInfo_t **ppInfo);
 
 /* methods */
 
@@ -108,11 +121,12 @@ static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
  * resulting object shall be cached during the lifetime of the class and each
  * object shall receive a reference. A constructor and destructor MUST be provided for all
  * objects, thus they are in the parameter list.
- * pszName must point to constant pool memory. It is never freed.
+ * pszID is the identifying object name and must point to constant pool memory. It is never freed.
  */
 static rsRetVal
-InfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers,
-                 rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *))
+InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
+              rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *),
+	      rsRetVal (*pQueryIF)(interface_t*))
 {
 	DEFiRet;
 	int i;
@@ -124,9 +138,12 @@ InfoConstruct(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers,
 	if((pThis = calloc(1, sizeof(objInfo_t))) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
-	pThis->pszName = pszName;
+	pThis->pszID = pszID;
+	pThis->lenID = strlen((char*)pszID);
+	pThis->pszName = (uchar*)strdup((char*)pszID); /* it's OK if we have NULL ptr, GetName() will deal with that! */
 	pThis->iObjVers = iObjVers;
-	pThis->objID = objID;
+	pThis->QueryIF = pQueryIF;
+	//xxxpThis->objID = objID;
 
 	pThis->objMethods[0] = pConstruct;
 	pThis->objMethods[1] = pDestruct;
@@ -190,16 +207,10 @@ static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj, uchar *pszRecType
 
 	/* object type, version and string length */
 	CHKiRet(strmWriteChar(pStrm, ':'));
-	CHKiRet(strmWriteLong(pStrm, objGetObjID(pObj)));
+	CHKiRet(strmWrite(pStrm, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID));
 	CHKiRet(strmWriteChar(pStrm, ':'));
 	CHKiRet(strmWriteLong(pStrm, objGetVersion(pObj)));
 
-	/* and finally we write the object name - this is primarily meant for
-	 * human readers. The idea is that it can be easily skipped when reading
-	 * the object back in
-	 */
-	CHKiRet(strmWriteChar(pStrm, ':'));
-	CHKiRet(strmWrite(pStrm, objGetClassName(pObj), strlen((char*)objGetClassName(pObj))));
 	/* record trailer */
 	CHKiRet(strmWriteChar(pStrm, ':'));
 	CHKiRet(strmWriteChar(pStrm, '\n'));
@@ -386,6 +397,40 @@ finalize_it:
 /* define a helper to make code below a bit cleaner (and quicker to write) */
 #define NEXTC CHKiRet(strmReadChar(pStrm, &c))//;dbgprintf("c: %c\n", c);
 
+
+/* de-serialize an embedded, non-octect-counted string. This is useful
+ * for deserializing the object name inside the header. The string is
+ * terminated by the first occurence of the ':' character.
+ * rgerhards, 2008-02-29
+ */
+static rsRetVal
+objDeserializeEmbedStr(cstr_t **ppStr, strm_t *pStrm)
+{
+	DEFiRet;
+	uchar c;
+	cstr_t *pStr = NULL;
+
+	assert(ppStr != NULL);
+
+	CHKiRet(rsCStrConstruct(&pStr));
+
+	NEXTC;
+	while(c != ':') {
+		CHKiRet(rsCStrAppendChar(pStr, c));
+		NEXTC;
+	}
+	CHKiRet(rsCStrFinish(pStr));
+
+	*ppStr = pStr;
+
+finalize_it:
+	if(iRet != RS_RET_OK && pStr != NULL)
+		rsCStrDestruct(&pStr);
+
+	RETiRet;
+}
+
+
 /* de-serialize a number */
 static rsRetVal objDeserializeNumber(number_t *pNum, strm_t *pStrm)
 {
@@ -492,14 +537,13 @@ finalize_it:
 /* de-serialize an object header
  * rgerhards, 2008-01-07
  */
-static rsRetVal objDeserializeHeader(uchar *pszRecType, objID_t *poID, int* poVers, strm_t *pStrm)
+static rsRetVal objDeserializeHeader(uchar *pszRecType, cstr_t **ppstrID, int* poVers, strm_t *pStrm)
 {
 	DEFiRet;
-	number_t ioID;
 	number_t oVers;
 	uchar c;
 
-	assert(poID != NULL);
+	assert(ppstrID != NULL);
 	assert(poVers != NULL);
 	assert(!strcmp((char*) pszRecType, "Obj") || !strcmp((char*) pszRecType, "OPB"));
 
@@ -513,11 +557,8 @@ static rsRetVal objDeserializeHeader(uchar *pszRecType, objID_t *poID, int* poVe
 	NEXTC; if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_HEADER_VERS);
 
 	/* object type and version */
-	CHKiRet(objDeserializeNumber(&ioID, pStrm));
+	CHKiRet(objDeserializeEmbedStr(ppstrID, pStrm));
 	CHKiRet(objDeserializeNumber(&oVers, pStrm));
-
-	if(ioID < 1 || ioID >= OBJ_NUM_IDS)
-		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
 	/* and now we skip over the rest until the delemiting \n */
 	NEXTC;
@@ -525,7 +566,6 @@ static rsRetVal objDeserializeHeader(uchar *pszRecType, objID_t *poID, int* poVe
 		NEXTC;
 	}
 
-	*poID = (objID_t) ioID;
 	*poVers = oVers;
 
 finalize_it:
@@ -662,21 +702,21 @@ finalize_it:
  * of the trailer. Header must already have been processed.
  * rgerhards, 2008-01-11
  */
-static rsRetVal objDeserializeProperties(obj_t *pObj, objID_t oID, strm_t *pStrm)
+static rsRetVal objDeserializeProperties(obj_t *pObj, objInfo_t *pObjInfo, strm_t *pStrm)
 {
 	DEFiRet;
 	var_t *pVar;
 
 	ISOBJ_assert(pObj);
 	ISOBJ_TYPE_assert(pStrm, strm);
-	ASSERT(oID > 0 && oID < OBJ_NUM_IDS);
+	ASSERT(pObjInfo != NULL);
 
 	CHKiRet(var.Construct(&pVar));
 	CHKiRet(var.ConstructFinalize(pVar));
 
 	iRet = objDeserializeProperty(pVar, pStrm);
 	while(iRet == RS_RET_OK) {
-		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_SETPROPERTY](pObj, pVar));
+		CHKiRet(pObjInfo->objMethods[objMethod_SETPROPERTY](pObj, pVar));
 		iRet = objDeserializeProperty(pVar, pStrm);
 	}
 	var.Destruct(&pVar);
@@ -699,16 +739,17 @@ finalize_it:
  * rgerhards, 2008-01-07
  */
 static rsRetVal
-Deserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr)
+Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
 	obj_t *pObj = NULL;
-	objID_t oID = 0; /* this assignment is just to supress a compiler warning - this saddens me */
 	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
+	cstr_t *pstrID = NULL;
+	objInfo_t *pObjInfo;
 
 	assert(ppObj != NULL);
-	assert(objTypeExpected > 0 && objTypeExpected < OBJ_NUM_IDS);
+	assert(pszTypeExpected != NULL);
 	ISOBJ_TYPE_assert(pStrm, strm);
 
 	/* we de-serialize the header. if all goes well, we are happy. However, if
@@ -719,20 +760,22 @@ Deserialize(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFix
 	 * rgerhards, 2008-07-08
 	 */
 	do {
-		iRetLocal = objDeserializeHeader((uchar*) "Obj", &oID, &oVers, pStrm);
+		iRetLocal = objDeserializeHeader((uchar*) "Obj", &pstrID, &oVers, pStrm);
 		if(iRetLocal != RS_RET_OK) {
 			dbgprintf("objDeserialize error %d during header processing - trying to recover\n", iRetLocal);
-abort();
 			CHKiRet(objDeserializeTryRecover(pStrm));
 		}
 	} while(iRetLocal != RS_RET_OK);
 
-	if(oID != objTypeExpected)
+	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, strlen((char*)pszTypeExpected))) // TODO: optimize strlen() - caller shall provide
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
-	CHKiRet(arrObjInfo[oID]->objMethods[objMethod_CONSTRUCT](&pObj));
+
+	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
+
+	CHKiRet(pObjInfo->objMethods[objMethod_CONSTRUCT](&pObj));
 
 	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, oID, pStrm));
+	CHKiRet(objDeserializeProperties(pObj, pObjInfo, pStrm));
 
 	/* check if we need to call a fixup function that modifies the object
 	 * before it is finalized. -- rgerhards, 2008-01-13
@@ -741,14 +784,17 @@ abort();
 		CHKiRet(fFixup(pObj, pUsr));
 
 	/* we have a valid object, let's finalize our work and return */
-	if(objInfoIsImplemented(arrObjInfo[oID], objMethod_CONSTRUCTION_FINALIZER))
-		CHKiRet(arrObjInfo[oID]->objMethods[objMethod_CONSTRUCTION_FINALIZER](pObj));
+	if(objInfoIsImplemented(pObjInfo, objMethod_CONSTRUCTION_FINALIZER))
+		CHKiRet(pObjInfo->objMethods[objMethod_CONSTRUCTION_FINALIZER](pObj));
 
 	*((obj_t**) ppObj) = pObj;
 
 finalize_it:
 	if(iRet != RS_RET_OK && pObj != NULL)
 		free(pObj); // TODO: check if we can call destructor 2008-01-13 rger
+
+	if(pstrID != NULL)
+		rsCStrDestruct(&pstrID);
 
 	RETiRet;
 }
@@ -762,8 +808,9 @@ objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
-	objID_t oID = 0; /* this assignment is just to supress a compiler warning - this saddens me */
+	cstr_t *pstrID = NULL;
 	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
+	objInfo_t *pObjInfo;
 
 	ISOBJ_assert(pObj);
 	ISOBJ_TYPE_assert(pStrm, strm);
@@ -776,20 +823,25 @@ objDeserializeObjAsPropBag(obj_t *pObj, strm_t *pStrm)
 	 * rgerhards, 2008-07-08
 	 */
 	do {
-		iRetLocal = objDeserializeHeader((uchar*) "Obj", &oID, &oVers, pStrm);
+		iRetLocal = objDeserializeHeader((uchar*) "Obj", &pstrID, &oVers, pStrm);
 		if(iRetLocal != RS_RET_OK) {
 			dbgprintf("objDeserializeObjAsPropBag error %d during header - trying to recover\n", iRetLocal);
 			CHKiRet(objDeserializeTryRecover(pStrm));
 		}
 	} while(iRetLocal != RS_RET_OK);
 
-	if(oID != objGetObjID(pObj))
+	if(rsCStrSzStrCmp(pstrID, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID))
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
+	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
+
 	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, oID, pStrm));
+	CHKiRet(objDeserializeProperties(pObj, pObjInfo, pStrm));
 
 finalize_it:
+	if(pstrID != NULL)
+		rsCStrDestruct(&pstrID);
+
 	RETiRet;
 }
 
@@ -808,8 +860,9 @@ DeserializePropBag(obj_t *pObj, strm_t *pStrm)
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
-	objID_t oID = 0; /* this assignment is just to supress a compiler warning - this saddens me */
-	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
+	cstr_t *pstrID = NULL;
+	int oVers;
+	objInfo_t *pObjInfo;
 
 	ISOBJ_assert(pObj);
 	ISOBJ_TYPE_assert(pStrm, strm);
@@ -822,20 +875,25 @@ DeserializePropBag(obj_t *pObj, strm_t *pStrm)
 	 * rgerhards, 2008-07-08
 	 */
 	do {
-		iRetLocal = objDeserializeHeader((uchar*) "OPB", &oID, &oVers, pStrm);
+		iRetLocal = objDeserializeHeader((uchar*) "OPB", &pstrID, &oVers, pStrm);
 		if(iRetLocal != RS_RET_OK) {
 			dbgprintf("objDeserializePropBag error %d during header - trying to recover\n", iRetLocal);
 			CHKiRet(objDeserializeTryRecover(pStrm));
 		}
 	} while(iRetLocal != RS_RET_OK);
 
-	if(oID != objGetObjID(pObj))
+	if(rsCStrSzStrCmp(pstrID, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID))
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
+	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
+
 	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, oID, pStrm));
+	CHKiRet(objDeserializeProperties(pObj, pObjInfo, pStrm));
 
 finalize_it:
+	if(pstrID != NULL)
+		rsCStrDestruct(&pstrID);
+
 	RETiRet;
 }
 
@@ -902,23 +960,112 @@ GetName(obj_t *pThis)
 }
 
 
-/* register a classe's info pointer, so that we can reference it later, if needed to
- * (e.g. for de-serialization support).
- * rgerhards, 2008-01-07
+/* Find the objInfo object for the current object
+ * rgerhards, 2008-02-29
  */
 static rsRetVal
-RegisterObj(objID_t oID, objInfo_t *pInfo)
+FindObjInfo(cstr_t *pstrOID, objInfo_t **ppInfo)
 {
 	DEFiRet;
+	int bFound;
+	int i;
 
-	assert(pInfo != NULL);
-	assert(arrObjInfo[oID] == NULL);
-	if(oID < 1 || oID > OBJ_NUM_IDS)
-		ABORT_FINALIZE(RS_RET_INVALID_OID);
+	assert(pstrOID != NULL);
+	assert(ppInfo != NULL);
 
-	arrObjInfo[oID] = pInfo;
+	bFound = 0;
+	i = 0;
+	while(!bFound && i < OBJ_NUM_IDS && arrObjInfo[i] != NULL) {
+		if(!rsCStrSzStrCmp(pstrOID, arrObjInfo[i]->pszID, arrObjInfo[i]->lenID)) {
+			bFound = 1;
+			break;
+		}
+		++i;
+	}
+
+	if(!bFound)
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+
+	*ppInfo = arrObjInfo[i];
 
 finalize_it:
+	if(iRet == RS_RET_OK) {
+		dbgprintf("caller requested object '%s', found at index %d\n", (*ppInfo)->pszID, i);
+	} else {
+		dbgprintf("caller requested object '%s', not found (iRet %d)\n", rsCStrGetSzStr(pstrOID), iRet);
+	}
+
+	RETiRet;
+}
+
+
+/* register a classes' info pointer, so that we can reference it later, if needed to
+ * (e.g. for de-serialization support).
+ * rgerhards, 2008-01-07
+ * In this function, we look for a free space in the object table. While we do so, we
+ * also detect if the same object has already been registered, which is not valid.
+ * rgerhards, 2008-02-29
+ */
+static rsRetVal
+RegisterObj(uchar *pszObjName, objInfo_t *pInfo)
+{
+	DEFiRet;
+	int bFound;
+	int i;
+
+	assert(pszObjName != NULL);
+	assert(pInfo != NULL);
+
+	bFound = 0;
+	i = 0;
+	while(!bFound && i < OBJ_NUM_IDS && arrObjInfo[i] != NULL) {
+		if(   arrObjInfo[i] != NULL
+		   && !strcmp((char*)arrObjInfo[i]->pszID, (char*)pszObjName)) {
+			bFound = 1;
+			break;
+		}
+		++i;
+	}
+
+	if(bFound)           ABORT_FINALIZE(RS_RET_OBJ_ALREADY_REGISTERED);
+	if(i >= OBJ_NUM_IDS) ABORT_FINALIZE(RS_RET_OBJ_REGISTRY_OUT_OF_SPACE);
+
+	arrObjInfo[i] = pInfo;
+	dbgprintf("object '%s' successfully registered with index %d, qIF %p\n", pszObjName, i, pInfo->QueryIF);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* This function shall be called by anyone who would like to use an object. It will
+ * try to locate the object, load it into memory if not already present and return
+ * a pointer to the objects interface.
+ * rgerhards, 2008-02-29
+ */
+static rsRetVal
+UseObj(uchar *pObjName, uchar *pObjFile, interface_t **ppIf)
+{
+	DEFiRet;
+	cstr_t *pStr = NULL;
+	objInfo_t *pObjInfo;
+
+	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
+	iRet =FindObjInfo(pStr, &pObjInfo);
+
+	if(iRet == RS_RET_NOT_FOUND) {
+		/* in this case, we need to see if we can dynamically load the object */
+		FINALIZE; /* TODO: implement */
+	} else if(iRet != RS_RET_OK) {
+		FINALIZE; /* give up */
+	}
+
+	pObjInfo->QueryIF(ppIf);
+
+finalize_it:
+	if(pStr != NULL)
+		rsCStrDestruct(&pStr);
+
 	RETiRet;
 }
 
@@ -937,8 +1084,9 @@ CODESTARTobjQueryInterface(obj)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->oID = OBJobj;
+	//xxxpIf->oID = OBJobj;
 
+	pIf->UseObj = UseObj;
 	pIf->InfoConstruct = InfoConstruct;
 	pIf->DestructObjSelf = DestructObjSelf;
 	pIf->BeginSerializePropBag = BeginSerializePropBag;
@@ -987,12 +1135,13 @@ objClassInit(void)
 	}
 
 	/* request objects we use */
-	CHKiRet(objUse(var));
+	CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */
+CHKiRet(varClassInit());
+	CHKiRet(objUse(var, CORE_COMPONENT));
 
 finalize_it:
 	RETiRet;
 }
 
-/*
- * vi:set ai:
+/* vi:set ai:
  */

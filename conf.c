@@ -55,6 +55,7 @@
 #include "srUtils.h"
 
 /* static data */
+DEFobjCurrIf(obj)
 DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
 #include "vm.h"
@@ -1174,15 +1175,19 @@ cfline(uchar *line, selector_t **pfCurr)
 }
 
 
+/* dummy */
+//static rsRetVal confQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+
 /* "mimic" a real object - we are currently not one... */
 rsRetVal confClassInit(void)
 {
 	DEFiRet;
 	/* request objects we use */
-	CHKiRet(objUse(expr));
-	CHKiRet(objUse(ctok));
-	CHKiRet(objUse(vm)); // TODO: remove, testing aid! rgerhards, 2008-02-25
-	CHKiRet(objUse(var)); // TODO: remove, testing aid! rgerhards, 2008-02-25
+	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
+	CHKiRet(objUse(expr, CORE_COMPONENT));
+	CHKiRet(objUse(ctok, CORE_COMPONENT));
+	CHKiRet(objUse(vm, CORE_COMPONENT)); // TODO: remove, testing aid! rgerhards, 2008-02-25
+	CHKiRet(objUse(var, CORE_COMPONENT)); // TODO: remove, testing aid! rgerhards, 2008-02-25
 
 finalize_it:
 	RETiRet;

@@ -504,7 +504,7 @@ CODESTARTobjQueryInterface(vm)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->oID = OBJvm;
+	//xxxpIf->oID = OBJvm;
 
 	pIf->Construct = vmConstruct;
 	pIf->ConstructFinalize = vmConstructFinalize;
@@ -524,9 +524,9 @@ ENDobjQueryInterface(vm)
  */
 BEGINObjClassInit(vm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(vmstk));
-	CHKiRet(objUse(var));
-	CHKiRet(objUse(sysvar));
+	CHKiRet(objUse(vmstk, CORE_COMPONENT));
+	CHKiRet(objUse(var, CORE_COMPONENT));
+	CHKiRet(objUse(sysvar, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmDebugPrint);

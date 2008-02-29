@@ -604,6 +604,9 @@ finalize_it:
 	RETiRet;
 }
 
+/* dummy */
+rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09

@@ -199,7 +199,7 @@ CODESTARTobjQueryInterface(vmop)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->oID = OBJvmop;
+	//xxxpIf->oID = OBJvmop;
 
 	pIf->Construct = vmopConstruct;
 	pIf->ConstructFinalize = vmopConstructFinalize;
@@ -218,7 +218,7 @@ ENDobjQueryInterface(vmop)
  */
 BEGINObjClassInit(vmop, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(var));
+	CHKiRet(objUse(var, CORE_COMPONENT));
 
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmopDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, vmopConstructFinalize);

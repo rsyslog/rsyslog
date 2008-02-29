@@ -3576,9 +3576,6 @@ static rsRetVal InitGlobalClasses(void)
 	DEFiRet;
 
 	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizer being called! */
-	/* dummy "classes" */
-	CHKiRet(confClassInit());
-	CHKiRet(actionClassInit());
 
 	/* real ones */
 	CHKiRet(msgClassInit());
@@ -3587,19 +3584,23 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(wtpClassInit());
 	CHKiRet(queueClassInit());
 	CHKiRet(vmstkClassInit());
+	//TODO: currently done in objClassInit CHKiRet(varClassInit());
+	CHKiRet(sysvarClassInit());
 	CHKiRet(vmClassInit());
 	CHKiRet(vmopClassInit());
 	CHKiRet(vmprgClassInit());
-	CHKiRet(sysvarClassInit());
-	CHKiRet(varClassInit());
 	CHKiRet(ctok_tokenClassInit());
 	CHKiRet(ctokClassInit());
 	CHKiRet(exprClassInit());
 
+	/* dummy "classes" */
+	CHKiRet(confClassInit());
+	CHKiRet(actionClassInit());
+
 	/* request objects we use */
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-	CHKiRet(objUse(expr));
-	CHKiRet(objUse(vm));
+	CHKiRet(obj.UseObj((uchar*)"expr", NULL, (void*) &expr));
+	CHKiRet(obj.UseObj((uchar*)"vm", NULL, (void*) &vm));
 
 finalize_it:
 	RETiRet;

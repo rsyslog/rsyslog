@@ -43,30 +43,10 @@ typedef enum {
 	PROPTYPE_SYSLOGTIME = 7
 } propType_t;
 
-
-/* object Types/IDs */
-typedef enum {	/* IDs of known object "types/classes" */
-	OBJNull = 0,	/* no valid object (we do not start at zero so we can detect calloc()) */
-	OBJmsg = 1,
-	OBJstrm = 2,
-	OBJwtp = 3,
-	OBJwti = 4,
-	OBJqueue = 5,
-	OBJctok = 6,
-	OBJctok_token = 7,
-	OBJvar = 8,
-	OBJvmop = 9,
-	OBJvmprg = 10,
-	OBJvm = 11,
-	OBJsysvar = 12,
-	OBJvmstk = 13,
-	OBJobj = 14,	/* the base object itself - somewhat tricky, but required... */
-	OBJexpr = 15	/* remeber to UPDATE OBJ_NUM_IDS (below) if you add one! */
-} objID_t;	
-#define OBJ_NUM_IDS 16
+typedef unsigned objID_t;
 
 typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
-		 * they must start at zero and be incremented. -- rgerahrds, 2008-01-04
+		 * they must start at zero and be incremented. -- rgerhards, 2008-01-04
 		 */
 	objMethod_CONSTRUCT = 0,
 	objMethod_DESTRUCT = 1,
@@ -79,11 +59,25 @@ typedef enum {	/* IDs of base methods supported by all objects - used for jump t
 } objMethod_t;
 #define OBJ_NUM_METHODS 8	/* must be updated to contain the max number of methods supported */
 
+
+/* the base data type for interfaces
+ * This MUST be in sync with the ifBEGIN macro
+ */
+typedef struct interface_s {
+	int ifVersion;	/* must be set to version requested */ 
+	//xxxobjID_t oID;	/* our object ID (later dynamically assigned) */
+} interface_t;
+
+
 typedef struct objInfo_s {
-	objID_t	objID;	
+objID_t	objID;	
+	uchar *pszID; /* the object ID as a string */
+	size_t lenID; /* length of the ID string */
 	int iObjVers;
 	uchar *pszName;
 	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
+	// TODO: the queryInterface pointer should probably be added here
+	rsRetVal (*QueryIF)(interface_t*);
 } objInfo_t;
 
 
@@ -100,6 +94,7 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
  * other objects.
  */
 #ifndef NDEBUG /* this means if debug... */
+#include <string.h>
 #	define BEGINobjInstance \
 		obj_t objData
 #	define ISOBJ_assert(pObj) \
@@ -111,7 +106,7 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 		do { \
 		ASSERT(pObj != NULL); \
 		ASSERT((unsigned) ((obj_t*) (pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
-		ASSERT(objGetObjID(pObj) == OBJ##objType); \
+		ASSERT(!strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)); \
 		} while(0);
 #else /* non-debug mode, no checks but much faster */
 #	define BEGINobjInstance obj_t objData
@@ -170,11 +165,12 @@ rsRetVal objName##ClassInit(void) \
 	if(objType == OBJ_IS_CORE_MODULE) { \
 		CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
 	} \
-	CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, OBJ##objName, (uchar*) #objName, objVers, \
-	                         (rsRetVal (*)(void*))objName##Construct,  (rsRetVal (*)(void*))objName##Destruct)); 
+	CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar*) #objName, objVers, \
+	                         (rsRetVal (*)(void*))objName##Construct,  (rsRetVal (*)(void*))objName##Destruct,\
+				 (rsRetVal (*)(interface_t*))objName##QueryInterface)); 
 
 #define ENDObjClassInit(objName) \
-	obj.RegisterObj(OBJ##objName, pObjInfoOBJ); \
+	iRet = obj.RegisterObj((uchar*)#objName, pObjInfoOBJ); \
 finalize_it: \
 	RETiRet; \
 }
@@ -302,7 +298,7 @@ finalize_it: \
 /* this defines the QueryInterface print entry point. Over time, it should be
  * present in all objects.
  */
-#define PROTOTYPEObjQueryInterface(obj) rsRetVal obj##QueryInterface(obj##_if_t *pThis)
+//#define PROTOTYPEObjQueryInterface(obj) rsRetVal obj##QueryInterface(obj##_if_t *pThis)
 #define BEGINobjQueryInterface(obj) \
 	rsRetVal obj##QueryInterface(obj##_if_t *pIf) \
 	{ \
@@ -314,14 +310,6 @@ finalize_it: \
 #define ENDobjQueryInterface(obj) \
 		RETiRet; \
 	} 
-
-/* the base data type for interfaces
- * This MUST be in sync with the ifBEGIN macro
- */
-typedef struct interface_s {
-	int ifVersion;	/* must be set to version requested */ 
-	objID_t oID;	/* our object ID (later dynamically assigned) */
-} interface_t;
 
 
 /* the following macros should be used to define interfaces inside the
@@ -337,8 +325,9 @@ typedef struct interface_s {
  * just the class itself!). It must be called before any of the object's
  * methods can be accessed.
  */
-#define objUse(obj) \
-	obj##QueryInterface(&obj)
+#define CORE_COMPONENT NULL /* use this to indicate this is a core component */
+#define objUse(objName, FILENAME) \
+	obj.UseObj((uchar*)#objName, (uchar*)FILENAME, (void*) &objName)
 
 /* defines data that must always be present at the very begin of the interface structure */
 #define ifBEGIN \
@@ -357,7 +346,7 @@ typedef struct interface_s {
  */
 #define PROTOTYPEObj(obj) \
 	PROTOTYPEObjClassInit(obj); \
-	PROTOTYPEObjQueryInterface(obj) \
+	//PROTOTYPEObjQueryInterface(obj)
 /* ------------------------------ end object loader system ------------------------------ */
 
 

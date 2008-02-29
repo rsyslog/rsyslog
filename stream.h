@@ -90,6 +90,12 @@ typedef struct strm_s {
 	int bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
 } strm_t;
 
+/* interfaces */
+BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
+ENDinterface(strm)
+#define strmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
+
 /* prototypes */
 rsRetVal strmConstruct(strm_t **ppThis);
 rsRetVal strmConstructFinalize(strm_t __attribute__((unused)) *pThis);

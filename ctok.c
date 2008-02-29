@@ -573,7 +573,7 @@ CODESTARTobjQueryInterface(ctok)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->oID = OBJctok;
+	//xxxpIf->oID = OBJctok;
 
 	pIf->Construct = ctokConstruct;
 	pIf->ConstructFinalize = ctokConstructFinalize;
@@ -589,8 +589,8 @@ ENDobjQueryInterface(ctok)
 
 BEGINObjClassInit(ctok, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(ctok_token));
-	CHKiRet(objUse(var));
+	CHKiRet(objUse(ctok_token, CORE_COMPONENT));
+	CHKiRet(objUse(var, CORE_COMPONENT));
 
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, ctokConstructFinalize);
 ENDObjClassInit(ctok)

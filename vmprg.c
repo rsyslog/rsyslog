@@ -145,7 +145,7 @@ CODESTARTobjQueryInterface(vmprg)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->oID = OBJvmprg;
+	//xxxpIf->oID = OBJvmprg;
 
 	pIf->Construct = vmprgConstruct;
 	pIf->ConstructFinalize = vmprgConstructFinalize;
@@ -163,7 +163,7 @@ ENDobjQueryInterface(vmprg)
  */
 BEGINObjClassInit(vmprg, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(vmop));
+	CHKiRet(objUse(vmop, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, vmprgDebugPrint);

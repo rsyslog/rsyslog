@@ -366,7 +366,7 @@ CODESTARTobjQueryInterface(var)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->oID = OBJvar;
+	//xxxpIf->oID = OBJvar;
 
 	pIf->Construct = varConstruct;
 	pIf->ConstructFinalize = varConstructFinalize;

@@ -2196,13 +2196,16 @@ MsgGetSeverity(obj_t *pThis, int *piSeverity)
 }
 
 
+/* dummy */
+rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+
 /* Initialize the message class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-04
  */
 BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
-	CHKiRet(objUse(var));
+	CHKiRet(objUse(var, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);

@@ -884,6 +884,26 @@ strmGetCurrOffset(strm_t *pThis, int64 *pOffs)
 }
 
 
+/* queryInterface function
+ * rgerhards, 2008-02-29
+ */
+BEGINobjQueryInterface(strm)
+CODESTARTobjQueryInterface(strm)
+	if(pIf->ifVersion != strmCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	//xxxpIf->oID = OBJvm;
+
+finalize_it:
+ENDobjQueryInterface(strm)
+
+
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09

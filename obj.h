@@ -71,8 +71,7 @@
 	DEFobjCurrIf(obj)
 
 
-#define objGetClassName(pThis) (((obj_t*) (pThis))->pObjInfo->pszName)
-#define objGetObjID(pThis) (((obj_t*) (pThis))->pObjInfo->objID)
+#define objGetClassName(pThis) (((obj_t*) (pThis))->pObjInfo->pszID)
 #define objGetVersion(pThis) (((obj_t*) (pThis))->pObjInfo->iObjVers)
 /* the next macro MUST be called in Constructors: */
 #ifndef NDEBUG /* this means if debug... */
@@ -94,16 +93,17 @@
 /* interfaces */
 BEGINinterface(obj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*UseObj)(uchar *pObjName, uchar *pObjFile, interface_t **ppIf);
-	rsRetVal (*InfoConstruct)(objInfo_t **ppThis, objID_t objID, uchar *pszName, int iObjVers,
-		                  rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *));
+	rsRetVal (*InfoConstruct)(objInfo_t **ppThis, uchar *pszID, int iObjVers,
+		                  rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *),
+	      			  rsRetVal (*pQueryIF)(interface_t*));
 	rsRetVal (*DestructObjSelf)(obj_t *pThis);
 	rsRetVal (*BeginSerializePropBag)(strm_t *pStrm, obj_t *pObj);
 	rsRetVal (*InfoSetMethod)(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
 	rsRetVal (*BeginSerialize)(strm_t *pStrm, obj_t *pObj);
 	rsRetVal (*SerializeProp)(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr);
 	rsRetVal (*EndSerialize)(strm_t *pStrm);
-	rsRetVal (*RegisterObj)(objID_t oID, objInfo_t *pInfo);
-	rsRetVal (*Deserialize)(void *ppObj, objID_t objTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);
+	rsRetVal (*RegisterObj)(uchar *pszObjName, objInfo_t *pInfo);
+	rsRetVal (*Deserialize)(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);
 	rsRetVal (*DeserializePropBag)(obj_t *pObj, strm_t *pStrm);
 	rsRetVal (*SetName)(obj_t *pThis, uchar *pszName);
 	uchar *  (*GetName)(obj_t *pThis);

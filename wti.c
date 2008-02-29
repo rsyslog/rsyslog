@@ -453,6 +453,10 @@ finalize_it:
 }
 
 
+/* dummy */
+rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
+
+
 /* Initialize the wti class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09

@@ -392,7 +392,7 @@ CODESTARTobjQueryInterface(expr)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->oID = OBJexpr;
+	//xxxpIf->oID = OBJexpr;
 
 	pIf->Construct = exprConstruct;
 	pIf->ConstructFinalize = exprConstructFinalize;
@@ -408,10 +408,10 @@ ENDobjQueryInterface(expr)
  */
 BEGINObjClassInit(expr, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	CHKiRet(objUse(vmprg));
-	CHKiRet(objUse(var));
-	CHKiRet(objUse(ctok_token));
-	CHKiRet(objUse(ctok));
+	CHKiRet(objUse(vmprg, CORE_COMPONENT));
+	CHKiRet(objUse(var, CORE_COMPONENT));
+	CHKiRet(objUse(ctok_token, CORE_COMPONENT));
+	CHKiRet(objUse(ctok, CORE_COMPONENT));
 
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, exprConstructFinalize);
 ENDObjClassInit(expr)

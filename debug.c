@@ -1152,6 +1152,12 @@ dbgGetRuntimeOptions(void)
 					"filetrace=file (may be provided multiple times)\n"
 					"\nSee debug.html in your doc set or http://www.rsyslog.com for details\n");
 				exit(1);
+			} else if(!strcasecmp((char*)optname, "debug")) {
+				/* this is earlier in the process than the -d option, as such it
+				 * allows us to spit out debug messages from the very beginning.
+				 */
+				Debug = 1;
+				debugging_on = 1;
 			} else if(!strcasecmp((char*)optname, "logfuncflow")) {
 				bLogFuncFlow = 1;
 			} else if(!strcasecmp((char*)optname, "logallocfree")) {
@@ -1176,9 +1182,8 @@ dbgGetRuntimeOptions(void)
 					dbgPrintNameAdd(optval, &printNameFileRoot);
 				}
 			} else {
-				fprintf(stderr, "Error: invalid debug option '%s', value '%s'\n",
+				fprintf(stderr, "Error: invalid debug option '%s', value '%s' - ignored\n",
 					optval, optname);
-				exit(1);
 			}
 		}
 	}
