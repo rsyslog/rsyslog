@@ -60,6 +60,7 @@ static int bPrintFuncDBOnExit = 0; /* shall the function entry and exit be logge
 static int bPrintMutexAction = 0; /* shall mutex calls be printed to the debug log? */
 static int bPrintTime = 1;	/* print a timestamp together with debug message */
 static int bPrintAllDebugOnExit = 0;
+static int bAbortTrace = 1;	/* print a trace after SIGABRT or SIGSEGV */
 static char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
 static FILE *altdbg = NULL;	/* and the handle for alternate debug output */
 static FILE *stddbg;
@@ -718,12 +719,15 @@ sigsegvHdlr(int signum)
 
 	dbgprintf("\n\n\n\nSignal %d%s occured, execution must be terminated.\n\n\n\n", signum, signame);
 
-	dbgPrintAllDebugInfo();
+	if(bAbortTrace) {
+		dbgPrintAllDebugInfo();
+		dbgprintf("If the call trace is empty, you may want to ./configure --enable-rtinst\n");
+		dbgprintf("\n\nTo submit bug reports, visit http://www.rsyslog.com/bugs\n\n");
+	}
 
-	dbgprintf("If the call trace is empty, you may want to ./configure --enable-rtinst\n");
 	dbgprintf("\n\nTo submit bug reports, visit http://www.rsyslog.com/bugs\n\n");
-
 	if(stddbg != NULL) fflush(stddbg);
+	if(altdbg != NULL) fflush(altdbg);
 
 	/* and finally abort... */
 	/* TODO: think about restarting rsyslog in this case: may be a good idea,
@@ -1172,6 +1176,8 @@ dbgGetRuntimeOptions(void)
 				bPrintTime = 0;
 			} else if(!strcasecmp((char*)optname, "nostdout")) {
 				stddbg = NULL;
+			} else if(!strcasecmp((char*)optname, "noaborttrace")) {
+				bAbortTrace = 0;
 			} else if(!strcasecmp((char*)optname, "filetrace")) {
 				if(*optval == '\0') {
 					fprintf(stderr, "Error: logfile debug option requires filename, "

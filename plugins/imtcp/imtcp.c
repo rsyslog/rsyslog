@@ -1,9 +1,6 @@
 /* imtcp.c
  * This is the implementation of the TCP input module.
  *
- * NOTE: read comments in module-template.h to understand how this file
- *       works!
- *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
  * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
@@ -27,12 +24,6 @@
  */
 
 #include "config.h"
-#ifdef FORCE_NO_GSS
-  #ifdef USE_GSSAPI
-    #undef USE_GSSAPI
-  #endif
-#endif
-
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
@@ -52,856 +43,112 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "net.h"
-#include "srUtils.h"
+#include "tcpsrv.h"
 
 MODULE_TYPE_INPUT
 
-/* defines */
-#ifdef USE_GSSAPI
-#define ALLOWEDMETHOD_GSS 2
-#endif
-#define ALLOWEDMETHOD_TCP 1
-
-#define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
+/* static data */
+DEF_IMOD_STATIC_DATA
+DEFobjCurrIf(obj)
+DEFobjCurrIf(tcpsrv)
+DEFobjCurrIf(tcps_sess)
 
 /* Module static data */
-DEF_IMOD_STATIC_DATA
 
 typedef struct _instanceData {
 } instanceData;
 
-typedef enum _TCPFRAMINGMODE {
-		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
-		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
-	} TCPFRAMINGMODE;
-
-struct TCPSession {
-	int sock;
-	int iMsg; /* index of next char to store in msg */
-	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
-	int iOctetsRemain;	/* Number of Octets remaining in message */
-	TCPFRAMINGMODE eFraming;
-	char msg[MAXLINE+1];
-	char *fromHost;
-#ifdef USE_GSSAPI
-	OM_uint32 gss_flags;
-	gss_ctx_id_t gss_context;
-	char allowedMethods;
-#endif
-};
-
-static int iTCPSessMax = TCPSESS_MAX_DEFAULT;	/* actual number of sessions */
-static char *TCPLstnPort = "0"; /* read-only after startup */
-static int bEnableTCP = 0; /* read-only after startup */
-static int  *sockTCPLstn = NULL; /* read-only after startup, modified by restart */
-static struct TCPSession *pTCPSessions;
-/* The thread-safeness of the sesion table is doubtful */
+static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
 
 /* config settings */
+static int iTCPSessMax = 200; /* max number of sessions */
+static char *TCPLstnPort = "0"; /* read-only after startup */
 
 
-/* code to free all sockets within a socket table.
- * A socket table is a descriptor table where the zero
- * element has the count of elements. This is used for
- * listening sockets. The socket table itself is also
- * freed.
- * A POINTER to this structure must be provided, thus
- * double indirection!
- * rgerhards, 2007-06-28
- */
-static void freeAllSockets(int **socks)
+/* callbacks */
+/* this shall go into a specific ACL module! */
+static int
+isPermittedHost(struct sockaddr *addr, char *fromHostFQDN)
 {
-	assert(socks != NULL);
-	assert(*socks != NULL);
-	while(**socks) {
-		dbgprintf("Closing socket %d.\n", (*socks)[**socks]);
-		close((*socks)[**socks]);
-		(**socks)--;
-	}
-	free(*socks);
-	socks = NULL;
+	return isAllowedSender(pAllowedSenders_TCP, addr, fromHostFQDN);
 }
 
 
-/* configure TCP listener settings. This is called during command
- * line parsing. The argument following -t is supplied as an argument.
- * The format of this argument is
- * "<port-to-use>, <nbr-of-sessions>"
- * Typically, there is no whitespace between port and session number.
- * (but it may be...).
- * NOTE: you can not use dbgprintf() in here - the dbgprintf() system is
- * not yet initilized when this function is called.
- * rgerhards, 2007-06-21
- * We can also not use logerror(), as that system is also not yet
- * initialized... rgerhards, 2007-06-28
- */
-void configureTCPListen(char *cOptarg)
+static rsRetVal
+onSessAccept(tcpsrv_t *pThis, int fd)
 {
-	register int i;
-	register char *pArg = cOptarg;
+	DEFiRet;
 
-	assert(cOptarg != NULL);
-
-	/* extract port */
-	i = 0;
-	while(isdigit((int) *pArg)) {
-		i = i * 10 + *pArg++ - '0';
-	}
-
-	if( i >= 0 && i <= 65535) {
-		TCPLstnPort = cOptarg;
-	} else {
-		logerrorSz("Invalid TCP listen port %s - changed to 514.\n", cOptarg);
-		TCPLstnPort = "514";
-	}
+	tcpsrv.SessAccept(pThis, fd);
+	RETiRet;
 }
 
 
-void configureTCPListenSessMax(char *cOptarg)
+static int
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
 {
-	register int i;
-	register char *pArg = cOptarg;
+	int state;
+	assert(pSess != NULL);
 
-	assert(cOptarg != NULL);
+	state = recv(pSess->sock, buf, lenBuf, 0);
+	return state;
+}
 
-	/* number of sessions */
-	i = 0;
-	while(isdigit((int) *pArg)) {
-		i = i * 10 + *pArg++ - '0';
-	}
+static rsRetVal
+onRegularClose(tcps_sess_t *pSess)
+{
+	DEFiRet;
+	assert(pSess != NULL);
 
-	if(i > 0)
-		iTCPSessMax = i;
-	else {
-		/* too small, need to adjust */
-		logerrorSz("TCP session max configured to %s - changing to 1.\n", cOptarg);
-		iTCPSessMax = 1;
-	}
+	/* process any incomplete frames left over */
+	tcps_sess.PrepareClose(pSess);
+	/* Session closed */
+	tcps_sess.Close(pSess);
+	RETiRet;
 }
 
 
-/* Initialize the session table
- * returns 0 if OK, somewhat else otherwise
- */
-static int TCPSessInit(void)
+static rsRetVal
+onErrClose(tcps_sess_t *pSess)
 {
-	register int i;
+	DEFiRet;
+	assert(pSess != NULL);
 
-	assert(pTCPSessions == NULL);
-	dbgprintf("Allocating buffer for %d TCP sessions.\n", iTCPSessMax);
-	if((pTCPSessions = (struct TCPSession *) malloc(sizeof(struct TCPSession) * iTCPSessMax))
-	    == NULL) {
-		dbgprintf("Error: TCPSessInit() could not alloc memory for TCP session table.\n");
-		return(1);
-	}
-
-	for(i = 0 ; i < iTCPSessMax ; ++i) {
-		pTCPSessions[i].sock = -1; /* no sock */
-		pTCPSessions[i].iMsg = 0; /* just make sure... */
-		pTCPSessions[i].bAtStrtOfFram = 1; /* indicate frame header expected */
-		pTCPSessions[i].eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
-#ifdef USE_GSSAPI
-		pTCPSessions[i].gss_flags = 0;
-		pTCPSessions[i].gss_context = GSS_C_NO_CONTEXT;
-		pTCPSessions[i].allowedMethods = 0;
-#endif
-	}
-	return(0);
+	tcps_sess.Close(pSess);
+	RETiRet;
 }
 
-
-/* find a free spot in the session table. If the table
- * is full, -1 is returned, else the index of the free
- * entry (0 or higher).
- */
-static int TCPSessFindFreeSpot(void)
-{
-	register int i;
-
-	for(i = 0 ; i < iTCPSessMax ; ++i) {
-		if(pTCPSessions[i].sock == -1)
-			break;
-	}
-
-	return((i < iTCPSessMax) ? i : -1);
-}
+/* ------------------------------ end callbacks ------------------------------ */
 
 
-/* Get the next session index. Free session tables entries are
- * skipped. This function is provided the index of the last
- * session entry, or -1 if no previous entry was obtained. It
- * returns the index of the next session or -1, if there is no
- * further entry in the table. Please note that the initial call
- * might as well return -1, if there is no session at all in the
- * session table.
- */
-int TCPSessGetNxtSess(int iCurr)
-{
-	register int i;
-
-	for(i = iCurr + 1 ; i < iTCPSessMax ; ++i)
-		if(pTCPSessions[i].sock != -1)
-			break;
-
-	return((i < iTCPSessMax) ? i : -1);
-}
-
-
-/* De-Initialize TCP listner sockets.
- * This function deinitializes everything, including freeing the
- * session table. No TCP listen receive operations are permitted
- * unless the subsystem is reinitialized.
- * rgerhards, 2007-06-21
- */
-void deinit_tcp_listener(void)
-{
-	int iTCPSess;
-
-	assert(pTCPSessions != NULL);
-	/* close all TCP connections! */
-	iTCPSess = TCPSessGetNxtSess(-1);
-	while(iTCPSess != -1) {
-		int fd;
-		fd = pTCPSessions[iTCPSess].sock;
-		dbgprintf("Closing TCP Session %d\n", fd);
-		close(fd);
-		free(pTCPSessions[iTCPSess].fromHost);
-#ifdef USE_GSSAPI
-		if(bEnableTCP & ALLOWEDMETHOD_GSS) {
-			OM_uint32 maj_stat, min_stat;
-			maj_stat = gss_delete_sec_context(&min_stat, &pTCPSessions[iTCPSess].gss_context, GSS_C_NO_BUFFER);
-			if (maj_stat != GSS_S_COMPLETE)
-				display_status("deleting context", maj_stat, min_stat);
-		}
-#endif
-		/* now get next... */
-		iTCPSess = TCPSessGetNxtSess(iTCPSess);
-	}
-	
-	/* we are done with the session table - so get rid of it...
-	*/
-	free(pTCPSessions);
-	pTCPSessions = NULL; /* just to make sure... */
-
-	/* finally close the listen sockets themselfs */
-	freeAllSockets(&sockTCPLstn);
-}
-
-
-/* Initialize TCP sockets (for listener)
- * This function returns either NULL (which means it failed) or 
- * a pointer to an array of file descriptiors. If the pointer is
- * returned, the zeroest element [0] contains the count of valid
- * descriptors. The descriptors themself follow in range
- * [1] ... [num-descriptors]. It is guaranteed that each of these
- * descriptors is valid, at least when this function returns.
- * Please note that technically the array may be larger than the number
- * of valid pointers stored in it. The memory overhead is minimal, so
- * we do not bother to re-allocate an array of the exact size. Logically,
- * the array still contains the exactly correct number of descriptors.
- */
-int *create_tcp_socket(void)
-{
-        struct addrinfo hints, *res, *r;
-        int error, maxs, *s, *socks, on = 1;
-
-	if(!strcmp(TCPLstnPort, "0"))
-		TCPLstnPort = "514";
-		/* use default - we can not do service db update, because there is
-		 * no IANA-assignment for syslog/tcp. In the long term, we might
-		 * re-use RFC 3195 port of 601, but that would probably break to
-		 * many existing configurations.
-		 * rgerhards, 2007-06-28
-		 */
-	dbgprintf("creating tcp socket on port %s\n", TCPLstnPort);
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-        hints.ai_family = family;
-        hints.ai_socktype = SOCK_STREAM;
-
-        error = getaddrinfo(NULL, TCPLstnPort, &hints, &res);
-        if(error) {
-               logerror((char*) gai_strerror(error));
-	       return NULL;
-	}
-
-        /* Count max number of sockets we may open */
-        for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
-		/* EMPTY */;
-        socks = malloc((maxs+1) * sizeof(int));
-        if (socks == NULL) {
-               logerror("couldn't allocate memory for TCP listen sockets, suspending TCP message reception.");
-               freeaddrinfo(res);
-               return NULL;
-        }
-
-        *socks = 0;   /* num of sockets counter at start of array */
-        s = socks + 1;
-	for (r = res; r != NULL ; r = r->ai_next) {
-               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-        	if (*s < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
-				logerror("create_udp_socket(), socket");
-				/* it is debatable if PF_INET with EAFNOSUPPORT should
-				 * also be ignored...
-				 */
-                        continue;
-                }
-
-#ifdef IPV6_V6ONLY
-                if (r->ai_family == AF_INET6) {
-                	int iOn = 1;
-			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&iOn, sizeof (iOn)) < 0) {
-			logerror("TCP setsockopt");
-			close(*s);
-			*s = -1;
-			continue;
-                	}
-                }
-#endif
-       		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
-			       (char *) &on, sizeof(on)) < 0 ) {
-			logerror("TCP setsockopt(REUSEADDR)");
-                        close(*s);
-			*s = -1;
-			continue;
-		}
-
-		/* We need to enable BSD compatibility. Otherwise an attacker
-		 * could flood our log files by sending us tons of ICMP errors.
-		 */
-#ifndef BSD	
-		if (should_use_so_bsdcompat()) {
-			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
-					(char *) &on, sizeof(on)) < 0) {
-				logerror("TCP setsockopt(BSDCOMPAT)");
-                                close(*s);
-				*s = -1;
-				continue;
-			}
-		}
-#endif
-
-	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
-#ifndef IPV6_V6ONLY
-		     && (errno != EADDRINUSE)
-#endif
-	           ) {
-                        logerror("TCP bind");
-                	close(*s);
-			*s = -1;
-                        continue;
-                }
-
-		if( listen(*s,iTCPSessMax / 10 + 5) < 0) {
-			/* If the listen fails, it most probably fails because we ask
-			 * for a too-large backlog. So in this case we first set back
-			 * to a fixed, reasonable, limit that should work. Only if
-			 * that fails, too, we give up.
-			 */
-			logerrorInt("listen with a backlog of %d failed - retrying with default of 32.",
-				    iTCPSessMax / 10 + 5);
-			if(listen(*s, 32) < 0) {
-				logerror("TCP listen, suspending tcp inet");
-	                	close(*s);
-				*s = -1;
-               		        continue;
-			}
-		}
-
-		(*socks)++;
-		s++;
-	}
-
-        if(res != NULL)
-               freeaddrinfo(res);
-
-	if(Debug && *socks != maxs)
-		dbgprintf("We could initialize %d TCP listen sockets out of %d we received "
-		 	"- this may or may not be an error indication.\n", *socks, maxs);
-
-        if(*socks == 0) {
-		logerror("No TCP listen socket could successfully be initialized, "
-			 "message reception via TCP disabled.\n");
-        	free(socks);
-		return(NULL);
-	}
-
-	/* OK, we had success. Now it is also time to
-	 * initialize our connections
-	 */
-	if(TCPSessInit() != 0) {
-		/* OK, we are in some trouble - we could not initialize the
-		 * session table, so we can not continue. We need to free all
-		 * we have assigned so far, because we can not really use it...
-		 */
-		logerror("Could not initialize TCP session table, suspending TCP message reception.");
-		freeAllSockets(&socks); /* prevent a socket leak */
-		return(NULL);
-	}
-
-	return(socks);
-}
-
-
-/* Accept new TCP connection; make entry in session table. If there
- * is no more space left in the connection table, the new TCP
- * connection is immediately dropped.
- */
-int TCPSessAccept(int fd)
-{
-	int newConn;
-	int iSess;
-	struct sockaddr_storage addr;
-	socklen_t addrlen = sizeof(struct sockaddr_storage);
-	size_t lenHostName;
-	uchar fromHost[NI_MAXHOST];
-	uchar fromHostFQDN[NI_MAXHOST];
-	char *pBuf;
-#ifdef USE_GSSAPI
-	char allowedMethods = 0;
-#endif
-
-	newConn = accept(fd, (struct sockaddr*) &addr, &addrlen);
-	if (newConn < 0) {
-		logerror("tcp accept, ignoring error and connection request");
-		return -1;
-	}
-
-	/* Add to session list */
-	iSess = TCPSessFindFreeSpot();
-	if(iSess == -1) {
-		errno = 0;
-		logerror("too many tcp sessions - dropping incoming request");
-		close(newConn);
-		return -1;
-	}
-
-	/* OK, we have a "good" index... */
-	/* get the host name */
-	if(cvthname(&addr, fromHost, fromHostFQDN) != RS_RET_OK) {
-		/* we seem to have something malicous - at least we
-		 * are now told to discard the connection request.
-		 * Error message has been generated by cvthname.
-		 */
-		close (newConn);
-		return -1;
-	}
-
-	/* Here we check if a host is permitted to send us
-	 * syslog messages. If it isn't, we do not further
-	 * process the message but log a warning (if we are
-	 * configured to do this).
-	 * rgerhards, 2005-09-26
-	 */
-#ifdef USE_GSSAPI
-	if((bEnableTCP & ALLOWEDMETHOD_TCP) &&
-	   isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, (char*)fromHostFQDN))
-		allowedMethods |= ALLOWEDMETHOD_TCP;
-	if((bEnableTCP & ALLOWEDMETHOD_GSS) &&
-	   isAllowedSender(pAllowedSenders_GSS, (struct sockaddr *)&addr, (char*)fromHostFQDN))
-		allowedMethods |= ALLOWEDMETHOD_GSS;
-	if(allowedMethods)
-		pTCPSessions[iSess].allowedMethods = allowedMethods;
-	else
-#else
-	if(!isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, (char*)fromHostFQDN))
-#endif
-	{
-		dbgprintf("%s is not an allowed sender\n", (char *) fromHostFQDN);
-		if(option_DisallowWarning) {
-			errno = 0;
-			logerrorSz("TCP message from disallowed sender %s discarded",
-				   (char*)fromHost);
-		}
-		close(newConn);
-		return -1;
-	}
-
-	/* OK, we have an allowed sender, so let's continue */
-	lenHostName = strlen((char*)fromHost) + 1; /* for \0 byte */
-	if((pBuf = (char*) malloc(sizeof(char) * lenHostName)) == NULL) {
-		glblHadMemShortage = 1;
-		pTCPSessions[iSess].fromHost = "NO-MEMORY-FOR-HOSTNAME";
-	} else {
-		memcpy(pBuf, fromHost, lenHostName);
-		pTCPSessions[iSess].fromHost = pBuf;
-	}
-
-	pTCPSessions[iSess].sock = newConn;
-	pTCPSessions[iSess].iMsg = 0; /* init msg buffer! */
-	return iSess;
-}
-
-
-/* This should be called before a normal (non forced) close
- * of a TCP session. This function checks if there is any unprocessed
- * message left in the TCP stream. Such a message is probably a
- * fragement. If evrything goes well, we must be right at the
- * beginnig of a new frame without any data received from it. If
- * not, there is some kind of a framing error. I think I remember that
- * some legacy syslog/TCP implementations have non-LF terminated
- * messages at the end of the stream. For now, we allow this behaviour.
- * Later, it should probably become a configuration option.
- * rgerhards, 2006-12-07
- */
-void TCPSessPrepareClose(int iTCPSess)
-{
-	if(iTCPSess < 0 || iTCPSess > iTCPSessMax) {
-		errno = 0;
-		logerror("internal error, trying to close an invalid TCP session!");
-		return;
-	}
-	
-	if(pTCPSessions[iTCPSess].bAtStrtOfFram == 1) {
-		/* this is how it should be. There is no unprocessed
-		 * data left and such we have nothing to do. For simplicity
-		 * reasons, we immediately return in that case.
-		 */
-		 return;
-	}
-
-	/* we have some data left! */
-	if(pTCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_COUNTING) {
-		/* In this case, we have an invalid frame count and thus
-		 * generate an error message and discard the frame.
-		 */
-		logerrorInt("Incomplete frame at end of stream in session %d - "
-			    "ignoring extra data (a message may be lost).\n",
-			    pTCPSessions[iTCPSess].sock);
-		/* nothing more to do */
-	} else { /* here, we have traditional framing. Missing LF at the end
-		 * of message may occur. As such, we process the message in
-		 * this case.
-		 */
-		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		parseAndSubmitMessage(pTCPSessions[iTCPSess].fromHost, pTCPSessions[iTCPSess].msg,
-			              pTCPSessions[iTCPSess].iMsg, MSG_PARSE_HOSTNAME);
-		pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
-	}
-}
-
-
-/* Closes a TCP session and marks its slot in the session
- * table as unused. No attention is paid to the return code
- * of close, so potential-double closes are not detected.
- */
-void TCPSessClose(int iSess)
-{
-	if(iSess < 0 || iSess > iTCPSessMax) {
-		errno = 0;
-		logerror("internal error, trying to close an invalid TCP session!");
-		return;
-	}
-
-	close(pTCPSessions[iSess].sock);
-	pTCPSessions[iSess].sock = -1;
-	free(pTCPSessions[iSess].fromHost);
-	pTCPSessions[iSess].fromHost = NULL; /* not really needed, but... */
-}
-
-
-/* Processes the data received via a TCP session. If there
- * is no other way to handle it, data is discarded.
- * Input parameter data is the data received, iLen is its
- * len as returned from recv(). iLen must be 1 or more (that
- * is errors must be handled by caller!). iTCPSess must be
- * the index of the TCP session that received the data.
- * rgerhards 2005-07-04
- * Changed this functions interface. We now return a status of
- * what shall happen with the session. This is information for
- * the caller. If 1 is returned, the session should remain open
- * and additional data be accepted. If we return 0, the TCP
- * session is to be closed by the caller. This functionality is
- * needed in order to support framing errors, from which there
- * is no recovery possible other than session termination and
- * re-establishment. The need for this functionality thus is
- * primarily rooted in support for -transport-tls I-D framing.
- * rgerhards, 2006-12-07
- */
-int TCPSessDataRcvd(int iTCPSess, char *pData, int iLen)
-{
-	register int iMsg;
-	char *pMsg;
-	char *pEnd;
-	assert(pData != NULL);
-	assert(iLen > 0);
-	assert(iTCPSess >= 0);
-	assert(iTCPSess < iTCPSessMax);
-	assert(pTCPSessions[iTCPSess].sock != -1);
-
-	 /* We now copy the message to the session buffer. As
-	  * it looks, we need to do this in any case because
-	  * we might run into multiple messages inside a single
-	  * buffer. Of course, we could think about optimizations,
-	  * but as this code is to be replaced by liblogging, it
-	  * probably doesn't make so much sense...
-	  * rgerhards 2005-07-04
-	  *
-	  * Algo:
-	  * - copy message to buffer until the first LF is found
-	  * - printline() the buffer
-	  * - continue with copying
-	  */
-	iMsg = pTCPSessions[iTCPSess].iMsg; /* copy for speed */
-	pMsg = pTCPSessions[iTCPSess].msg; /* just a shortcut */
-	pEnd = pData + iLen; /* this is one off, which is intensional */
-
-	while(pData < pEnd) {
-		/* Check if we are at a new frame */
-		if(pTCPSessions[iTCPSess].bAtStrtOfFram) {
-			/* we need to look at the message and detect
-			 * the framing mode used
-			 *//*
-			 * Contrary to -transport-tls, we accept leading zeros in the message
-			 * length. We do this in the spirit of "Be liberal in what you accept,
-			 * and conservative in what you send". We expect that including leading
-			 * zeros could be a common coding error.
-			 * rgerhards, 2006-12-07
-			 * The chairs of the IETF syslog-sec WG have announced that it is
-			 * consensus to do the octet count on the SYSLOG-MSG part only. I am
-			 * now changing the code to reflect this. Hopefully, it will not change
-			 * once again (there can no compatibility layer programmed for this).
-			 * To be on the save side, I just comment the code out. I mark these
-			 * comments with "IETF20061218".
-			 * rgerhards, 2006-12-19
-			 */
-			if(isdigit((int) *pData)) {
-				int iCnt;	/* the frame count specified */
-				pTCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_COUNTING;
-				/* in this mode, we have OCTET-COUNT SP MSG - so we now need
-				 * to extract the OCTET-COUNT and the SP and then extract
-				 * the msg.
-				 */
-				iCnt = 0;
-				/* IETF20061218 int iNbrOctets = 0; / * number of octets already consumed */
-				while(isdigit((int) *pData)) {
-					iCnt = iCnt * 10 + *pData - '0';
-					/* IETF20061218 ++iNbrOctets; */
-					++pData;
-				}
-				dbgprintf("TCP Message with octet-counter, size %d.\n", iCnt);
-				if(*pData == ' ') {
-					++pData;	/* skip over SP */
-					/* IETF20061218 ++iNbrOctets; */
-				} else {
-					/* TODO: handle "invalid frame" case */
-					logerrorInt("Framing Error in received TCP message: "
-					            "delimiter is not SP but has ASCII value %d.\n",
-						    *pData);
-					return(0); /* unconditional error exit */
-				}
-				/* IETF20061218 pTCPSessions[iTCPSess].iOctetsRemain = iCnt - iNbrOctets; */
-				pTCPSessions[iTCPSess].iOctetsRemain = iCnt;
-				if(pTCPSessions[iTCPSess].iOctetsRemain < 1) {
-					/* TODO: handle the case where the octet count is 0 or negative! */
-					dbgprintf("Framing Error: invalid octet count\n");
-					logerrorInt("Framing Error in received TCP message: "
-					            "invalid octet count %d.\n",
-				 		    pTCPSessions[iTCPSess].iOctetsRemain);
-					return(0); /* unconditional error exit */
-				}
-			} else {
-				pTCPSessions[iTCPSess].eFraming = TCP_FRAMING_OCTET_STUFFING;
-				/* No need to do anything else here in this case */
-			}
-			pTCPSessions[iTCPSess].bAtStrtOfFram = 0; /* done frame header */
-		}
-	
-		/* now copy message until end of record */
-
-		if(iMsg >= MAXLINE) {
-			/* emergency, we now need to flush, no matter if
-			 * we are at end of message or not...
-			 */
-			parseAndSubmitMessage(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME);
-			iMsg = 0;
-			/* we might think if it is better to ignore the rest of the
-		 	 * message than to treat it as a new one. Maybe this is a good
-			 * candidate for a configuration parameter...
-			 * rgerhards, 2006-12-04
-			 */
-		}
-
-		if(*pData == '\n' &&
-		   pTCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
-			parseAndSubmitMessage(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME);
-			iMsg = 0;
-			pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
-			++pData;
-		} else {
-			/* IMPORTANT: here we copy the actual frame content to the message! */
-			*(pMsg + iMsg++) = *pData++;
-		}
-
-		if(pTCPSessions[iTCPSess].eFraming == TCP_FRAMING_OCTET_COUNTING) {
-			/* do we need to find end-of-frame via octet counting? */
-			pTCPSessions[iTCPSess].iOctetsRemain--;
-			if(pTCPSessions[iTCPSess].iOctetsRemain < 1) {
-				/* we have end of frame! */
-				parseAndSubmitMessage(pTCPSessions[iTCPSess].fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME);
-				iMsg = 0;
-				pTCPSessions[iTCPSess].bAtStrtOfFram = 1;
-			}
-		}
-	}
-
-	pTCPSessions[iTCPSess].iMsg = iMsg; /* persist value */
-
-	return(1);	/* successful return */
-}
-
-
-#ifndef USE_GSSAPI
 static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
-	if (!bEnableTCP)
-		configureTCPListen((char *) pNewVal);
-	bEnableTCP |= ALLOWEDMETHOD_TCP;
+	DEFiRet;
+	if(pOurTcpsrv == NULL) {
+		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
+		/* TODO: fill params! */
+		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
+		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
+		//CHKiRet(tcpsrv.SetCBOnListenDeinit(pOurTcpsrv, ));
+		CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
+		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
+		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
+		tcpsrv.configureTCPListen(pOurTcpsrv, (char *) pNewVal);
+		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
+	}
 
-	return RS_RET_OK;
+finalize_it:
+	RETiRet;
 }
-#endif
 
 /* This function is called to gather input.
  */
 BEGINrunInput
-	int maxfds;
-	int nfds;
-	int i;
-	int iTCPSess;
-	fd_set readfds;
 CODESTARTrunInput
-	/* this is an endless loop - it is terminated when the thread is
-	 * signalled to do so. This, however, is handled by the framework,
-	 * right into the sleep below.
+	/* TODO: we must be careful to start the listener here. Currently, tcpsrv.c seems to
+	 * do that in ConstructFinalize
 	 */
-	while(1) {
-		/* Add the Unix Domain Sockets to the list of read
-		 * descriptors.
-		 * rgerhards 2005-08-01: we must now check if there are
-		 * any local sockets to listen to at all. If the -o option
-		 * is given without -a, we do not need to listen at all..
-		 */
-	        maxfds = 0;
-	        FD_ZERO (&readfds);
-
-		/* Add the TCP listen sockets to the list of read descriptors.
-	    	 */
-		if(sockTCPLstn != NULL && *sockTCPLstn) {
-			for (i = 0; i < *sockTCPLstn; i++) {
-				/* The if() below is theoretically not needed, but I leave it in
-				 * so that a socket may become unsuable during execution. That
-				 * feature is not yet supported by the current code base.
-				 */
-				if (sockTCPLstn[i+1] != -1) {
-					if(Debug)
-						debugListenInfo(sockTCPLstn[i+1], "TCP");
-					FD_SET(sockTCPLstn[i+1], &readfds);
-					if(sockTCPLstn[i+1]>maxfds) maxfds=sockTCPLstn[i+1];
-				}
-			}
-			/* do the sessions */
-			iTCPSess = TCPSessGetNxtSess(-1);
-			while(iTCPSess != -1) {
-				int fdSess;
-				fdSess = pTCPSessions[iTCPSess].sock;
-				dbgprintf("Adding TCP Session %d\n", fdSess);
-				FD_SET(fdSess, &readfds);
-				if (fdSess>maxfds) maxfds=fdSess;
-				/* now get next... */
-				iTCPSess = TCPSessGetNxtSess(iTCPSess);
-			}
-		}
-
-		if(Debug) {
-			dbgprintf("--------imTCP calling select, active file descriptors (max %d): ", maxfds);
-			for (nfds = 0; nfds <= maxfds; ++nfds)
-				if ( FD_ISSET(nfds, &readfds) )
-					dbgprintf("%d ", nfds);
-			dbgprintf("\n");
-		}
-
-		/* wait for io to become ready */
-		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
-
-		for (i = 0; i < *sockTCPLstn; i++) {
-			if (FD_ISSET(sockTCPLstn[i+1], &readfds)) {
-				dbgprintf("New connect on TCP inetd socket: #%d\n", sockTCPLstn[i+1]);
-#				ifdef USE_GSSAPI
-				if(bEnableTCP & ALLOWEDMETHOD_GSS)
-					TCPSessGSSAccept(sockTCPLstn[i+1]);
-				else
-#				endif
-					TCPSessAccept(sockTCPLstn[i+1]);
-				--nfds; /* indicate we have processed one */
-			}
-		}
-
-		/* now check the sessions */
-		iTCPSess = TCPSessGetNxtSess(-1);
-		while(nfds && iTCPSess != -1) {
-			int fdSess;
-			int state;
-			fdSess = pTCPSessions[iTCPSess].sock;
-			if(FD_ISSET(fdSess, &readfds)) {
-				char buf[MAXLINE];
-				dbgprintf("tcp session socket with new data: #%d\n", fdSess);
-
-				/* Receive message */
-#				ifdef USE_GSSAPI
-				int allowedMethods = pTCPSessions[iTCPSess].allowedMethods;
-				if(allowedMethods & ALLOWEDMETHOD_GSS)
-					state = TCPSessGSSRecv(iTCPSess, buf, sizeof(buf));
-				else
-#				endif
-					state = recv(fdSess, buf, sizeof(buf), 0);
-				if(state == 0) {
-#					ifdef USE_GSSAPI
-					if(allowedMethods & ALLOWEDMETHOD_GSS)
-						TCPSessGSSClose(iTCPSess);
-					else {
-#					endif
-						/* process any incomplete frames left over */
-						TCPSessPrepareClose(iTCPSess);
-						/* Session closed */
-						TCPSessClose(iTCPSess);
-#					ifdef USE_GSSAPI
-					}
-#					endif
-				} else if(state == -1) {
-					logerrorInt("TCP session %d will be closed, error ignored\n",
-						    fdSess);
-#					ifdef USE_GSSAPI
-					if(allowedMethods & ALLOWEDMETHOD_GSS)
-						TCPSessGSSClose(iTCPSess);
-					else
-#					endif
-						TCPSessClose(iTCPSess);
-				} else {
-					/* valid data received, process it! */
-					if(TCPSessDataRcvd(iTCPSess, buf, state) == 0) {
-						/* in this case, something went awfully wrong.
-						 * We are instructed to terminate the session.
-						 */
-						logerrorInt("Tearing down TCP Session %d - see "
-							    "previous messages for reason(s)\n",
-							    iTCPSess);
-#						ifdef USE_GSSAPI
-						if(allowedMethods & ALLOWEDMETHOD_GSS)
-							TCPSessGSSClose(iTCPSess);
-						else
-#						endif
-							TCPSessClose(iTCPSess);
-					}
-				}
-				--nfds; /* indicate we have processed one */
-			}
-			iTCPSess = TCPSessGetNxtSess(iTCPSess);
-		}
-	}
-
+	iRet = tcpsrv.Run(pOurTcpsrv);
 	return iRet;
 ENDrunInput
 
@@ -909,35 +156,11 @@ ENDrunInput
 /* initialize and return if will run or not */
 BEGINwillRun
 CODESTARTwillRun
-#ifdef USE_GSSAPI
-	/* first check if we must support plain TCP, too. If so, set mode
-	 * accordingly. -- rgerhards, 2008-02-26
-	 */
-	if(bPermitPlainTcp)
-		bEnableTCP |= ALLOWEDMETHOD_TCP;
-
 	/* first apply some config settings */
-#endif
 	PrintAllowedSenders(2); /* TCP */
-#ifdef USE_GSSAPI
-	PrintAllowedSenders(3); /* GSS */
-#endif
-	if (bEnableTCP) {
-		if(sockTCPLstn == NULL) {
-#			ifdef USE_GSSAPI
-			if(bEnableTCP & ALLOWEDMETHOD_GSS) {
-				if(TCPSessGSSInit()) {
-					logerror("GSS-API initialization failed\n");
-					bEnableTCP &= ~(ALLOWEDMETHOD_GSS);
-				}
-			}
-			if(bEnableTCP)
-#			endif
-				if((sockTCPLstn = create_tcp_socket()) != NULL) {
-					dbgprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
-				}
-		}
-	}
+	if(pOurTcpsrv == NULL)
+		ABORT_FINALIZE(RS_RET_NO_RUN);
+finalize_it:
 ENDwillRun
 
 
@@ -948,13 +171,26 @@ CODESTARTafterRun
 		clearAllowedSenders (pAllowedSenders_TCP);
 		pAllowedSenders_TCP = NULL;
 	}
-#ifdef USE_GSSAPI
-	if (pAllowedSenders_GSS != NULL) {
-		clearAllowedSenders (pAllowedSenders_GSS);
-		pAllowedSenders_GSS = NULL;
-	}
-#endif
 ENDafterRun
+
+BEGINmodExit
+CODESTARTmodExit
+	iRet = tcpsrv.Destruct(&pOurTcpsrv);
+#if 0 // TODO: remove
+	/* Close the TCP inet socket. */
+	if(sockTCPLstn != NULL && *sockTCPLstn) {
+		deinit_tcp_listener();
+	}
+#endif 
+ENDmodExit
+
+
+static rsRetVal
+resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	iTCPSessMax = 200;
+	return RS_RET_OK;
+}
 
 
 BEGINfreeInstance
@@ -967,36 +203,22 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-BEGINmodExit
-CODESTARTmodExit
-	/* Close the TCP inet socket. */
-	if(sockTCPLstn != NULL && *sockTCPLstn) {
-		deinit_tcp_listener();
-	}
-#ifdef USE_GSSAPI
-	if(bEnableTCP & ALLOWEDMETHOD_GSS)
-		TCPSessGSSDeinit();
-#endif
-ENDmodExit
-
-
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
 ENDqueryEtryPt
 
 
-#ifndef USE_GSSAPI
-static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
-{
-	return RS_RET_OK;
-}
-
-
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
+	pOurTcpsrv = NULL;
+	/* request objects we use */
+CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */ // TODO: framework must do this
+	CHKiRet(objUse(tcps_sess, "tcps_sess"));
+	CHKiRet(objUse(tcpsrv, "tcpsrv"));
+
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverrun", 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
@@ -1005,7 +227,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-#endif
+
 
 /* vim:set ai:
  */

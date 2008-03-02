@@ -38,6 +38,7 @@
 #include "net.h"
 #include "srUtils.h"
 #include "gss-misc.h"
+#include "tcpsrv.h"
 
 /* some forward definitions - they may go away when we no longer include imtcp.c */
 static rsRetVal addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal);
@@ -48,30 +49,135 @@ void TCPSessGSSDeinit(void);
 int TCPSessGSSRecv(int iSess, void *buf, size_t buf_len);
 
 /* static data */
+DEFobjCurrIf(tcpsrv)
 static gss_cred_id_t gss_server_creds = GSS_C_NO_CREDENTIAL;
+
+typedef struct GSSTCPSession_s {
+	OM_uint32 gss_flags;
+	gss_ctx_id_t gss_context;
+	char allowedMethods;
+} GSSTCPSession_t;
+
 
 /* config variables */
 static char *gss_listen_service_name = NULL;
 static int bPermitPlainTcp = 0; /* plain tcp syslog allowed on GSSAPI port? */
 
-/* ################################################################################ *
- * #                      THE FOLLOWING LINE IS VITALLY IMPORTANT                 # *
- * #------------------------------------------------------------------------------# *
- * # It includes imtcp.c, which has many common code with this module. Over time, # *
- * # we will move this into separate clases, but for the time being it permits    # *
- * # use to use a somewhat clean build process and keep the files focussed.       # *
- * ################################################################################ */
 
-#include "../imtcp/imtcp.c"
+/* methods */
+/* callbacks */
+static rsRetVal onTCPSessInit(GSSTCPSession_t *pGSS)
+{
+	DEFiRet;
+	assert(pGSS != NULL)
+	pGSS->gss_flags = 0;
+	pGSS->gss_context = GSS_C_NO_CONTEXT;
+	pGSS->allowedMethods = 0;
+	RETiRet;
+}
 
-/* ################################################################################ *
- * #                                END IMPORTANT PART                            # *
- * ################################################################################ */
+
+static rsRetVal
+onListenDeinit(GSSTCPSession_t *pGSS)
+{
+	DEFiRet;
+	assert(pGSS != NULL)
+	if(bEnableTCP & ALLOWEDMETHOD_GSS) {
+		OM_uint32 maj_stat, min_stat;
+		maj_stat = gss_delete_sec_context(&min_stat, &pTCPSessions[iTCPSess].gss_context, GSS_C_NO_BUFFER);
+		if (maj_stat != GSS_S_COMPLETE)
+			display_status("deleting context", maj_stat, min_stat);
+	}
+	RETiRet;
+}
+
+
+static int
+isPermittedHost(TCPSession_t *pSess)
+{
+	char allowedMethods = 0;
+
+	assert(pSess != NULL);
+
+	if((bEnableTCP & ALLOWEDMETHOD_TCP) &&
+	   isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, (char*)fromHostFQDN))
+		allowedMethods |= ALLOWEDMETHOD_TCP;
+	if((bEnableTCP & ALLOWEDMETHOD_GSS) &&
+	   isAllowedSender(pAllowedSenders_GSS, (struct sockaddr *)&addr, (char*)fromHostFQDN))
+		allowedMethods |= ALLOWEDMETHOD_GSS;
+	if(allowedMethods)
+		pSess->allowedMethods = allowedMethods;
+	return allowedMethods;
+}
+
+static rsRetVal
+onTCPSessAccept(int fd)
+{
+	DEFiRet;
+	assert(pSess != NULL);
+
+	if(bEnableTCP & ALLOWEDMETHOD_GSS)
+		TCPSessGSSAccept(fd);
+	else
+		TCPSessAccept(fd);
+	RETiRet;
+}
+
+static rsRetVal
+onRegularClose(TCPSession_t *pSess)
+{
+	DEFiRet;
+	assert(pSess != NULL);
+
+
+	if(allowedMethods & ALLOWEDMETHOD_GSS)
+		TCPSessGSSClose(pSess);
+	else {
+		/* process any incomplete frames left over */
+		TCPSessPrepareClose(pSess);
+		/* Session closed */
+		TCPSessClose(pSess);
+	}
+	RETiRet;
+}
+
+
+static rsRetVal
+onErrClose(TCPSession_t *pSess)
+{
+	DEFiRet;
+	assert(pSess != NULL);
+
+	if(allowedMethods & ALLOWEDMETHOD_GSS)
+		TCPSessGSSClose(pSess);
+	else
+		TCPSessClose(pSess);
+	RETiRet;
+}
+
+
+
+static int pRcvData(TCPSession_t *pSess, char *buf, size_t lenBuf)
+{
+	int state;
+	int allowedMethods;
+	assert(pSess != NULL);
+
+	allowedMethods = pSess->allowedMethods;
+	if(allowedMethods & ALLOWEDMETHOD_GSS)
+		state = TCPSessGSSRecv(iTCPSess, buf, lenBuf);
+	else
+		state = recv(pSess->sock, buf, lenBuf, 0);
+	return state;
+}
+
+
+/* end callbacks */
 
 static rsRetVal addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	if (!bEnableTCP)
-		configureTCPListen((char *) pNewVal);
+		tcpsrv.configureTCPListen((char *) pNewVal);
 	bEnableTCP |= ALLOWEDMETHOD_GSS;
 
 	return RS_RET_OK;
@@ -362,10 +468,51 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 }
 
 
+/* This function is called to gather input.
+ */
+BEGINrunInput
+CODESTARTrunInput
+	iRet = tcpsrv.RunInput();
+	return iRet;
+ENDrunInput
+
+
+/* initialize and return if will run or not */
+BEGINwillRun
+CODESTARTwillRun
+	/* first check if we must support plain TCP, too. If so, set mode
+	 * accordingly. -- rgerhards, 2008-02-26
+	 */
+	if(bPermitPlainTcp)
+		bEnableTCP |= ALLOWEDMETHOD_TCP;
+
+	/* first apply some config settings */
+	PrintAllowedSenders(2); /* TCP */
+	PrintAllowedSenders(3); /* GSS */
+	if (bEnableTCP) {
+		if(sockTCPLstn == NULL) {
+			if(bEnableTCP & ALLOWEDMETHOD_GSS) {
+				if(TCPSessGSSInit()) {
+					logerror("GSS-API initialization failed\n");
+					bEnableTCP &= ~(ALLOWEDMETHOD_GSS);
+				}
+			}
+			// TODO: do we still need this here? I don't think
+			// so...
+			if(bEnableTCP)
+				if((sockTCPLstn = create_tcp_socket()) != NULL) {
+					dbgprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
+				}
+		}
+	}
+ENDwillRun
+
+
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"permitplaintcp", 0, eCmdHdlrBinary,
 				   NULL, &bPermitPlainTcp, STD_LOADABLE_MODULE_ID));

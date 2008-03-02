@@ -37,21 +37,11 @@ BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*doIncludeLine)(uchar **pp, __attribute__((unused)) void* pVal);
 	rsRetVal (*cfline)(uchar *line, selector_t **pfCurr);
 	rsRetVal (*processConfFile)(uchar *pConfFile);
-	//rsRetVal (*confClassInit)(void); /* TODO: make this a real object! */
 ENDinterface(conf)
 #define confCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
-#if 0
-rsRetVal doNameLine(uchar **pp, void* pVal);
-rsRetVal cfsysline(uchar *p);
-rsRetVal doModLoad(uchar **pp, __attribute__((unused)) void* pVal);
-rsRetVal doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal);
-rsRetVal cfline(uchar *line, selector_t **pfCurr);
-rsRetVal processConfFile(uchar *pConfFile);
-rsRetVal confClassInit(void); /* TODO: make this a real object! */
-#endif
 PROTOTYPEObj(conf);
 
 

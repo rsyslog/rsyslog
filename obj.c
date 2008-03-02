@@ -992,7 +992,6 @@ finalize_it:
 	} else {
 		dbgprintf("caller requested object '%s', not found (iRet %d)\n", rsCStrGetSzStr(pstrOID), iRet);
 	}
-dbgPrintAllDebugInfo();
 
 	RETiRet;
 }

@@ -54,7 +54,7 @@ static rsRetVal modGetType(eModType_t *modType) \
 
 #define MODULE_TYPE_INPUT MODULE_TYPE(eMOD_IN)
 #define MODULE_TYPE_OUTPUT MODULE_TYPE(eMOD_OUT)
-#define MODULE_TYPE_FILTER MODULE_TYPE(EMOD_FILTER)
+#define MODULE_TYPE_LIB MODULE_TYPE(EMOD_LIB)
 
 /* macro to define a unique module id. This must be able to fit in a void*. The
  * module id must be unique inside a running rsyslogd application. It is used to

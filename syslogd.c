@@ -3594,6 +3594,10 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(exprClassInit());
 	CHKiRet(confClassInit());
 
+/* testing aides */
+CHKiRet(tcps_sessClassInit());
+CHKiRet(tcpsrvClassInit());
+
 	/* dummy "classes" */
 	CHKiRet(actionClassInit());
 

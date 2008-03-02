@@ -3,6 +3,10 @@ sbin_PROGRAMS = rfc3195d rsyslogd
 rfc3195d_SOURCES = rfc3195d.c rsyslog.h
 
 rsyslogd_SOURCES = \
+	tcps_sess.c \
+	tcps_sess.h \
+	tcpsrv.c \
+	tcpsrv.h \
 	syslogd.c \
 	syslogd.h \
 	sysvar.c \
