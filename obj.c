@@ -176,8 +176,11 @@ DestructObjSelf(obj_t *pThis)
 	DEFiRet;
 
 	ISOBJ_assert(pThis);
-	if(pThis->pszName != NULL)
+	if(pThis->pszName != NULL) {
+RUNLOG_VAR("%p", pThis->pszName);
 		free(pThis->pszName);
+RUNLOG;
+	}
 
 	RETiRet;
 }
@@ -917,8 +920,10 @@ SetName(obj_t *pThis, uchar *pszName)
 
 	if(pThis->pszName == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+RUNLOG_VAR("%s", pThis->pszName);
 
 finalize_it:
+RUNLOG_VAR("%d", iRet);
 	RETiRet;
 }
 
@@ -949,6 +954,7 @@ GetName(obj_t *pThis)
 		} else {
 			ret = pThis->pszName;
 		}
+RUNLOG_VAR("%s", pThis->pszName);
 	} else {
 		ret = pThis->pszName;
 	}

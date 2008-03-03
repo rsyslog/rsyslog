@@ -78,7 +78,7 @@ static rsRetVal
 onSessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 {
 	DEFiRet;
-	tcpsrv.SessAccept(pThis, ppSess, fd);
+	iRet = tcpsrv.SessAccept(pThis, ppSess, fd);
 	RETiRet;
 }
 
@@ -183,13 +183,8 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
-	iRet = tcpsrv.Destruct(&pOurTcpsrv);
-#if 0 // TODO: remove
-	/* Close the TCP inet socket. */
-	if(sockTCPLstn != NULL && *sockTCPLstn) {
-		deinit_tcp_listener();
-	}
-#endif 
+	if(pOurTcpsrv != NULL)
+		iRet = tcpsrv.Destruct(&pOurTcpsrv);
 ENDmodExit
 
 
