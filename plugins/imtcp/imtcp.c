@@ -62,25 +62,32 @@ static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change fo
 
 /* config settings */
 static int iTCPSessMax = 200; /* max number of sessions */
-static char *TCPLstnPort = "0"; /* read-only after startup */
 
 
 /* callbacks */
 /* this shall go into a specific ACL module! */
 static int
-isPermittedHost(struct sockaddr *addr, char *fromHostFQDN)
+isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((unused)) *pUsrSrv,
+	        void __attribute__((unused)) *pUsrSess)
 {
 	return isAllowedSender(pAllowedSenders_TCP, addr, fromHostFQDN);
 }
 
 
 static rsRetVal
-onSessAccept(tcpsrv_t *pThis, int fd)
+onSessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 {
 	DEFiRet;
-
-	tcpsrv.SessAccept(pThis, fd);
+	tcpsrv.SessAccept(pThis, ppSess, fd);
 	RETiRet;
+}
+
+
+static int*
+doOpenLstnSocks(tcpsrv_t *pSrv)
+{
+	ISOBJ_TYPE_assert(pSrv, tcpsrv);
+	return tcpsrv.create_tcp_socket(pSrv);
 }
 
 
@@ -129,6 +136,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		/* TODO: fill params! */
 		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
 		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
+		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
 		//CHKiRet(tcpsrv.SetCBOnListenDeinit(pOurTcpsrv, ));
 		CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
@@ -149,7 +157,6 @@ CODESTARTrunInput
 	 * do that in ConstructFinalize
 	 */
 	iRet = tcpsrv.Run(pOurTcpsrv);
-	return iRet;
 ENDrunInput
 
 
@@ -172,6 +179,7 @@ CODESTARTafterRun
 		pAllowedSenders_TCP = NULL;
 	}
 ENDafterRun
+
 
 BEGINmodExit
 CODESTARTmodExit

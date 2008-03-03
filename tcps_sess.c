@@ -47,6 +47,7 @@
 #include "syslogd.h"
 #include "module-template.h"
 #include "net.h"
+#include "tcpsrv.h"
 #include "tcps_sess.h"
 #include "obj.h"
 
@@ -61,11 +62,6 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
 		pThis->iMsg = 0; /* just make sure... */
 		pThis->bAtStrtOfFram = 1; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
-		if(pThis->pOnTCPSessConstruct != NULL) {
-			// TODO: return value! Supply user pointer or whole
-			// object?
-			pThis->pOnTCPSessConstruct(pThis->pUsr);
-		}
 ENDobjConstruct(tcps_sess)
 
 
@@ -76,11 +72,11 @@ tcps_sessConstructFinalize(tcps_sess_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	if(pThis->pOnTCPSessConstructFinalize != NULL) {
-		// TODO: return value! Supply user pointer or whole
-		// object?
-		pThis->pOnTCPSessConstructFinalize(pThis->pUsr);
+	if(pThis->pSrv->OnSessConstructFinalize != NULL) {
+		CHKiRet(pThis->pSrv->OnSessConstructFinalize(&pThis->pUsr));
 	}
+
+finalize_it:
 	RETiRet;
 }
 
@@ -88,11 +84,13 @@ tcps_sessConstructFinalize(tcps_sess_t __attribute__((unused)) *pThis)
 /* destructor for the tcps_sess object */
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcps_sess)
-	if(pThis->pOnTCPSessDestruct != NULL) {
-		// TODO: return value! Supply user pointer or whole
-		// object?
-		pThis->pOnTCPSessDestruct(pThis->pUsr);
+	if(pThis->pSrv->pOnSessDestruct != NULL) {
+		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
+	/* now destruct our own properties */
+	if(pThis->fromHost != NULL)
+		free(pThis->fromHost);
+	close(pThis->sock);
 ENDobjDestruct(tcps_sess)
 
 
@@ -110,17 +108,14 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-RUNLOG_VAR("%p", pThis->fromHost);
 	if(pThis->fromHost != NULL) {
 		free(pThis->fromHost);
 		pThis->fromHost = NULL;
 	}
 	
-RUNLOG;
 	if((pThis->fromHost = strdup((char*)pszHost)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
-RUNLOG;
 finalize_it:
 	RETiRet;
 }
@@ -143,6 +138,26 @@ SetMsgIdx(tcps_sess_t *pThis, int idx)
 	RETiRet;
 }
 
+
+/* set out parent, the tcpsrv object */
+static rsRetVal
+SetTcpsrv(tcps_sess_t *pThis, tcpsrv_t *pSrv)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcps_sess);
+	ISOBJ_TYPE_assert(pSrv, tcpsrv);
+	pThis->pSrv = pSrv;
+	RETiRet;
+}
+
+
+static rsRetVal
+SetUsrP(tcps_sess_t *pThis, void *pUsr)
+{
+	DEFiRet;
+	pThis->pUsr = pUsr;
+	RETiRet;
+}
 
 
 /* This should be called before a normal (non forced) close
@@ -394,6 +409,8 @@ CODESTARTobjQueryInterface(tcps_sess)
 	pIf->Close = Close;
 	pIf->DataRcvd = DataRcvd;
 
+	pIf->SetUsrP = SetUsrP;
+	pIf->SetTcpsrv = SetTcpsrv;
 	pIf->SetHost = SetHost;
 	pIf->SetSock = SetSock;
 	pIf->SetMsgIdx = SetMsgIdx;

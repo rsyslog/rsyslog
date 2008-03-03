@@ -72,10 +72,6 @@ DEFobjStaticHelpers
 DEFobjCurrIf(conf)
 DEFobjCurrIf(tcps_sess)
 
-static char *TCPLstnPort = "0"; /* read-only after startup */
-static tcps_sess_t **pTCPSessions;
-/* The thread-safeness of the sesion table is doubtful */
-
 
 
 /* code to free all sockets within a socket table.
@@ -129,10 +125,10 @@ configureTCPListen(tcpsrv_t *pThis, char *cOptarg)
 	}
 
 	if( i >= 0 && i <= 65535) {
-		TCPLstnPort = cOptarg;
+		pThis->TCPLstnPort = cOptarg;
 	} else {
 		logerrorSz("Invalid TCP listen port %s - changed to 514.\n", cOptarg);
-		TCPLstnPort = "514";
+		pThis->TCPLstnPort = "514";
 	}
 }
 
@@ -172,10 +168,10 @@ TCPSessTblInit(tcpsrv_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	assert(pTCPSessions == NULL);
+	assert(pThis->pSessions == NULL);
 
 	dbgprintf("Allocating buffer for %d TCP sessions.\n", pThis->iSessMax);
-	if((pTCPSessions = (tcps_sess_t **) calloc(pThis->iSessMax, sizeof(tcps_sess_t *))) == NULL) {
+	if((pThis->pSessions = (tcps_sess_t **) calloc(pThis->iSessMax, sizeof(tcps_sess_t *))) == NULL) {
 		dbgprintf("Error: TCPSessInit() could not alloc memory for TCP session table.\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -197,7 +193,7 @@ TCPSessTblFindFreeSpot(tcpsrv_t *pThis)
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
 	for(i = 0 ; i < pThis->iSessMax ; ++i) {
-		if(pTCPSessions[i] == NULL)
+		if(pThis->pSessions[i] == NULL)
 			break;
 	}
 
@@ -220,7 +216,7 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i)
-		if(pTCPSessions[i] != NULL)
+		if(pThis->pSessions[i] != NULL)
 			break;
 
 	return((i < pThis->iSessMax) ? i : -1);
@@ -238,20 +234,20 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 	int iTCPSess;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	assert(pTCPSessions != NULL);
+	assert(pThis->pSessions != NULL);
 
 	/* close all TCP connections! */
 	iTCPSess = TCPSessGetNxtSess(pThis, -1);
 	while(iTCPSess != -1) {
-		tcps_sess.Destruct(&pTCPSessions[iTCPSess]);
+		tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 		/* now get next... */
 		iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 	}
 	
 	/* we are done with the session table - so get rid of it...
 	*/
-	free(pTCPSessions);
-	pTCPSessions = NULL; /* just to make sure... */
+	free(pThis->pSessions);
+	pThis->pSessions = NULL; /* just to make sure... */
 
 	/* finally close the listen sockets themselfs */
 	freeAllSockets(&pThis->pSocksLstn);
@@ -274,30 +270,28 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
-DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	if(!strcmp(TCPLstnPort, "0"))
-		TCPLstnPort = "514";
+	if(!strcmp(pThis->TCPLstnPort, "0"))
+		pThis->TCPLstnPort = "514";
 		/* use default - we can not do service db update, because there is
 		 * no IANA-assignment for syslog/tcp. In the long term, we might
 		 * re-use RFC 3195 port of 601, but that would probably break to
 		 * many existing configurations.
 		 * rgerhards, 2007-06-28
 		 */
-	dbgprintf("creating tcp socket on port %s\n", TCPLstnPort);
+	dbgprintf("creating tcp socket on port %s\n", pThis->TCPLstnPort);
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
         hints.ai_family = family;
         hints.ai_socktype = SOCK_STREAM;
 
-        error = getaddrinfo(NULL, TCPLstnPort, &hints, &res);
+        error = getaddrinfo(NULL, pThis->TCPLstnPort, &hints, &res);
         if(error) {
                logerror((char*) gai_strerror(error));
 	       return NULL;
 	}
-RUNLOG;
 
         /* Count max number of sockets we may open */
         for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
@@ -308,7 +302,6 @@ RUNLOG;
                freeaddrinfo(res);
                return NULL;
         }
-RUNLOG;
 
         *socks = 0;   /* num of sockets counter at start of array */
         s = socks + 1;
@@ -346,7 +339,6 @@ RUNLOG;
 		/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
-RUNLOG;
 #ifndef BSD	
 		if (should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
@@ -369,7 +361,6 @@ RUNLOG;
 			*s = -1;
                         continue;
                 }
-RUNLOG;
 
 		if( listen(*s,pThis->iSessMax / 10 + 5) < 0) {
 			/* If the listen fails, it most probably fails because we ask
@@ -390,7 +381,6 @@ RUNLOG;
 		(*socks)++;
 		s++;
 	}
-RUNLOG;
 
         if(res != NULL)
                freeaddrinfo(res);
@@ -406,7 +396,6 @@ RUNLOG;
 		return(NULL);
 	}
 
-RUNLOG;
 	/* OK, we had success. Now it is also time to
 	 * initialize our connections
 	 */
@@ -420,7 +409,6 @@ RUNLOG;
 		return(NULL);
 	}
 
-dbgprintf("TCP socket(s) successfully created.\n");
 	return(socks);
 }
 
@@ -428,9 +416,12 @@ dbgprintf("TCP socket(s) successfully created.\n");
 /* Accept new TCP connection; make entry in session table. If there
  * is no more space left in the connection table, the new TCP
  * connection is immediately dropped.
+ * ppSess has a pointer to the newly created session, if it succeds.
+ * If it does not succeed, no session is created and ppSess is
+ * undefined. -- rgerhards, 2008-03-02
  */
 static int
-SessAccept(tcpsrv_t *pThis, int fd)
+SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 {
 	DEFiRet;
 
@@ -456,7 +447,12 @@ SessAccept(tcpsrv_t *pThis, int fd)
 		logerror("too many tcp sessions - dropping incoming request");
 		close(newConn);
 		return -1;
+	} else {
+		/* we found a free spot and can construct our session object */
+		CHKiRet(tcps_sess.Construct(&pThis->pSessions[iSess]));
 	}
+
+	*ppSess = pThis->pSessions[iSess];
 
 	/* OK, we have a "good" index... */
 	/* get the host name */
@@ -475,7 +471,8 @@ SessAccept(tcpsrv_t *pThis, int fd)
 	 * configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN))
+	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN,
+				    pThis->pUsr, pThis->pSessions[iSess]->pUsr))
 	{
 		dbgprintf("%s is not an allowed sender\n", (char *) fromHostFQDN);
 		if(option_DisallowWarning) {
@@ -489,16 +486,19 @@ SessAccept(tcpsrv_t *pThis, int fd)
 
 	/* OK, we have an allowed sender, so let's continue */
 	/* we first need to construct a new session object */
-	CHKiRet(tcps_sess.Construct(&pTCPSessions[iSess]));
-	CHKiRet(tcps_sess.SetHost(pTCPSessions[iSess], fromHost));
-	CHKiRet(tcps_sess.SetSock(pTCPSessions[iSess], newConn));
-	CHKiRet(tcps_sess.SetMsgIdx(pTCPSessions[iSess], 0));
-	CHKiRet(tcps_sess.ConstructFinalize(pTCPSessions[iSess]));
+	CHKiRet(tcps_sess.SetTcpsrv(pThis->pSessions[iSess], pThis));
+	CHKiRet(tcps_sess.SetHost(pThis->pSessions[iSess], fromHost));
+	CHKiRet(tcps_sess.SetSock(pThis->pSessions[iSess], newConn));
+	CHKiRet(tcps_sess.SetMsgIdx(pThis->pSessions[iSess], 0));
+	CHKiRet(tcps_sess.ConstructFinalize(pThis->pSessions[iSess]));
 
 finalize_it:
 RUNLOG_VAR("%d", iRet);
-	if(iRet != RS_RET_OK)
+	if(iRet != RS_RET_OK) {
+		if(pThis->pSessions[iSess] != NULL)
+			tcps_sess.Destruct(&pThis->pSessions[iSess]);
 		iSess = -1; // TODO: change this to be fully iRet compliant ;)
+	}
 
 	ENDfunc
 	return iSess;
@@ -516,6 +516,7 @@ Run(tcpsrv_t *pThis)
 	int i;
 	int iTCPSess;
 	fd_set readfds;
+	tcps_sess_t *pNewSess;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -546,7 +547,7 @@ Run(tcpsrv_t *pThis)
 			iTCPSess = TCPSessGetNxtSess(pThis, -1);
 			while(iTCPSess != -1) {
 				int fdSess;
-				fdSess = pTCPSessions[iTCPSess]->sock; // TODO: NOT CLEAN!, use method
+				fdSess = pThis->pSessions[iTCPSess]->sock; // TODO: NOT CLEAN!, use method
 				dbgprintf("Adding TCP Session %d\n", fdSess);
 				FD_SET(fdSess, &readfds);
 				if (fdSess>maxfds) maxfds=fdSess;
@@ -570,7 +571,7 @@ Run(tcpsrv_t *pThis)
 		for (i = 0; i < *pThis->pSocksLstn; i++) {
 			if (FD_ISSET(pThis->pSocksLstn[i+1], &readfds)) {
 				dbgprintf("New connect on TCP inetd socket: #%d\n", pThis->pSocksLstn[i+1]);
-				pThis->pOnSessAccept(pThis, pThis->pSocksLstn[i+1]);
+				pThis->pOnSessAccept(pThis, &pNewSess, pThis->pSocksLstn[i+1]);
 				--nfds; /* indicate we have processed one */
 			}
 		}
@@ -580,31 +581,31 @@ Run(tcpsrv_t *pThis)
 		while(nfds && iTCPSess != -1) {
 			int fdSess;
 			int state;
-			fdSess = pTCPSessions[iTCPSess]->sock; // TODO: not clean, use method
+			fdSess = pThis->pSessions[iTCPSess]->sock; // TODO: not clean, use method
 			if(FD_ISSET(fdSess, &readfds)) {
 				char buf[MAXLINE];
 				dbgprintf("tcp session socket with new data: #%d\n", fdSess);
 
 				/* Receive message */
-				state = pThis->pRcvData(pTCPSessions[iTCPSess], buf, sizeof(buf));
+				state = pThis->pRcvData(pThis->pSessions[iTCPSess], buf, sizeof(buf));
 				if(state == 0) {
-					pThis->pOnRegularClose(pTCPSessions[iTCPSess]);
-					tcps_sess.Destruct(&pTCPSessions[iTCPSess]);
+					pThis->pOnRegularClose(pThis->pSessions[iTCPSess]);
+					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else if(state == -1) {
 					logerrorInt("TCP session %d will be closed, error ignored\n", fdSess);
-					pThis->pOnErrClose(pTCPSessions[iTCPSess]);
-					tcps_sess.Destruct(&pTCPSessions[iTCPSess]);
+					pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
+					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else {
 					/* valid data received, process it! */
-					if(tcps_sess.DataRcvd(pTCPSessions[iTCPSess], buf, state) == 0) {
+					if(tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, state) == 0) {
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
 						logerrorInt("Tearing down TCP Session %d - see "
 							    "previous messages for reason(s)\n",
 							    iTCPSess);
-						pThis->pOnErrClose(pTCPSessions[iTCPSess]);
-						tcps_sess.Destruct(&pTCPSessions[iTCPSess]);
+						pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
+						tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 					}
 				}
 				--nfds; /* indicate we have processed one */
@@ -634,7 +635,7 @@ tcpsrvConstructFinalize(tcpsrv_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	pThis->pSocksLstn = create_tcp_socket(pThis);
+	pThis->pSocksLstn = pThis->OpenLstnSocks(pThis);
 
 	RETiRet;
 }
@@ -643,6 +644,9 @@ tcpsrvConstructFinalize(tcpsrv_t __attribute__((unused)) *pThis)
 /* destructor for the tcpsrv object */
 BEGINobjDestruct(tcpsrv) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcpsrv)
+	if(pThis->OnDestruct != NULL)
+		pThis->OnDestruct(pThis->pUsr);
+
 	deinit_tcp_listener(pThis);
 ENDobjDestruct(tcpsrv)
 
@@ -654,7 +658,7 @@ ENDobjDebugPrint(tcpsrv)
 
 /* set functions */
 static rsRetVal
-SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN))
+SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void*, void*))
 {
 	DEFiRet;
 	pThis->pIsPermittedHost = pCB;
@@ -678,10 +682,34 @@ SetCBOnListenDeinit(tcpsrv_t *pThis, int (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*,int))
+SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t**, int))
 {
 	DEFiRet;
 	pThis->pOnSessAccept = pCB;
+	RETiRet;
+}
+
+static rsRetVal
+SetCBOnDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+{
+	DEFiRet;
+	pThis->OnDestruct = pCB;
+	RETiRet;
+}
+
+static rsRetVal
+SetCBOnSessConstructFinalize(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+{
+	DEFiRet;
+	pThis->OnSessConstructFinalize = pCB;
+	RETiRet;
+}
+
+static rsRetVal
+SetCBOnSessDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+{
+	DEFiRet;
+	pThis->pOnSessDestruct = pCB;
 	RETiRet;
 }
 
@@ -701,6 +729,22 @@ SetCBOnErrClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
 	RETiRet;
 }
 
+static rsRetVal
+SetCBOpenLstnSocks(tcpsrv_t *pThis, int* (*pCB)(tcpsrv_t*))
+{
+	DEFiRet;
+	pThis->OpenLstnSocks = pCB;
+	RETiRet;
+}
+
+static rsRetVal
+SetUsrP(tcpsrv_t *pThis, void *pUsr)
+{
+	DEFiRet;
+	pThis->pUsr = pUsr;
+	RETiRet;
+}
+
 
 
 /* queryInterface function
@@ -717,10 +761,6 @@ CODESTARTobjQueryInterface(tcpsrv)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//pIf->freeAllSockets = freeAllSockets;
-	//pIf->configureTCPListen = configureTCPListen;
-	//pIf->configureTCPListenSessMax = configureTCPListenSessMax;
-	//pIf->TCPSessAccept = TCPSessAccept;
 	pIf->DebugPrint = tcpsrvDebugPrint;
 	pIf->Construct = tcpsrvConstruct;
 	pIf->ConstructFinalize = tcpsrvConstructFinalize;
@@ -728,12 +768,18 @@ CODESTARTobjQueryInterface(tcpsrv)
 
 	pIf->SessAccept = SessAccept;
 	pIf->configureTCPListen = configureTCPListen;
+	pIf->create_tcp_socket = create_tcp_socket;
 	pIf->Run = Run;
 
+	pIf->SetUsrP = SetUsrP;
 	pIf->SetCBIsPermittedHost = SetCBIsPermittedHost;
+	pIf->SetCBOpenLstnSocks = SetCBOpenLstnSocks;
 	pIf->SetCBRcvData = SetCBRcvData;
 	pIf->SetCBOnListenDeinit = SetCBOnListenDeinit;
 	pIf->SetCBOnSessAccept = SetCBOnSessAccept;
+	pIf->SetCBOnSessConstructFinalize = SetCBOnSessConstructFinalize;
+	pIf->SetCBOnSessDestruct = SetCBOnSessDestruct;
+	pIf->SetCBOnDestruct = SetCBOnDestruct;
 	pIf->SetCBOnRegularClose = SetCBOnRegularClose;
 	pIf->SetCBOnErrClose = SetCBOnErrClose;
 

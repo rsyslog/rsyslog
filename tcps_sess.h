@@ -25,6 +25,9 @@
 
 #include "obj.h"
 
+/* a forward-definition, we are somewhat cyclic */
+struct tcpsrv_s;
+
 /* framing modes for TCP */
 typedef enum _TCPFRAMINGMODE {
 		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
@@ -34,6 +37,7 @@ typedef enum _TCPFRAMINGMODE {
 /* the tcps_sess object */
 typedef struct tcps_sess_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
+	struct tcpsrv_s *pSrv;	/* pointer back to my server (e.g. for callbacks) */
 	int sock;
 	int iMsg; /* index of next char to store in msg */
 	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
@@ -42,10 +46,6 @@ typedef struct tcps_sess_s {
 	char msg[MAXLINE+1];
 	char *fromHost;
 	void *pUsr;	/* a user-pointer */
-	/* callbacks */
-	rsRetVal (*pOnTCPSessConstruct)(void*);
-	rsRetVal (*pOnTCPSessConstructFinalize)(void*);
-	rsRetVal (*pOnTCPSessDestruct)(void*);
 } tcps_sess_t;
 
 
@@ -59,6 +59,8 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Close)(tcps_sess_t *pThis);
 	rsRetVal (*DataRcvd)(tcps_sess_t *pThis, char *pData, size_t iLen);
 	/* set methods */
+	rsRetVal (*SetTcpsrv)(tcps_sess_t *pThis, struct tcpsrv_s *pSrv);
+	rsRetVal (*SetUsrP)(tcps_sess_t*, void*);
 	rsRetVal (*SetHost)(tcps_sess_t *pThis, uchar*);
 	rsRetVal (*SetSock)(tcps_sess_t *pThis, int);
 	rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);

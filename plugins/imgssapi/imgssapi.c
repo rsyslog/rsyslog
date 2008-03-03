@@ -30,6 +30,20 @@
  */
 
 #include "config.h"
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <stdarg.h>
+#include <ctype.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#if HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
 #include <gssapi/gssapi.h>
 #include "rsyslog.h"
 #include "syslogd.h"
@@ -39,65 +53,115 @@
 #include "srUtils.h"
 #include "gss-misc.h"
 #include "tcpsrv.h"
+#include "tcps_sess.h"
+
+
+MODULE_TYPE_INPUT
+
+int bEnableTCP;
+
+/* defines */
+#define ALLOWEDMETHOD_GSS 2
+#define ALLOWEDMETHOD_TCP 1
+
 
 /* some forward definitions - they may go away when we no longer include imtcp.c */
 static rsRetVal addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal);
-int TCPSessGSSAccept(int fd);
-int TCPSessGSSInit(void);
-void TCPSessGSSClose(int iSess);
-void TCPSessGSSDeinit(void);
-int TCPSessGSSRecv(int iSess, void *buf, size_t buf_len);
+static int TCPSessGSSInit(void);
+static void TCPSessGSSClose(tcps_sess_t* pSess);
+static int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len);
+static rsRetVal onSessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd);
+static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd);
 
 /* static data */
+DEF_IMOD_STATIC_DATA
+DEFobjCurrIf(obj)
 DEFobjCurrIf(tcpsrv)
+DEFobjCurrIf(tcps_sess)
+
+typedef struct _instanceData {
+} instanceData;
+
+static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
 static gss_cred_id_t gss_server_creds = GSS_C_NO_CREDENTIAL;
 
-typedef struct GSSTCPSession_s {
+/* our usr structure for the tcpsrv object */
+typedef struct gsssrv_s {
+	char allowedMethods;
+} gsssrv_t;
+
+/* our usr structure for the session object */
+typedef struct gss_sess_s {
 	OM_uint32 gss_flags;
 	gss_ctx_id_t gss_context;
 	char allowedMethods;
-} GSSTCPSession_t;
+} gss_sess_t;
 
 
 /* config variables */
+static int iTCPSessMax = 200; /* max number of sessions */
 static char *gss_listen_service_name = NULL;
 static int bPermitPlainTcp = 0; /* plain tcp syslog allowed on GSSAPI port? */
 
 
 /* methods */
 /* callbacks */
-static rsRetVal onTCPSessInit(GSSTCPSession_t *pGSS)
+static rsRetVal OnSessConstructFinalize(void *ppUsr)
 {
 	DEFiRet;
-	assert(pGSS != NULL)
-	pGSS->gss_flags = 0;
-	pGSS->gss_context = GSS_C_NO_CONTEXT;
-	pGSS->allowedMethods = 0;
+	gss_sess_t **ppGSess = (gss_sess_t**) ppUsr;
+	gss_sess_t *pGSess;
+
+	assert(ppGSess != NULL);
+
+	if((pGSess = calloc(1, sizeof(gss_sess_t))) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	pGSess->gss_flags = 0;
+	pGSess->gss_context = GSS_C_NO_CONTEXT;
+	pGSess->allowedMethods = 0;
+
+	*ppGSess = pGSess;
+
+finalize_it:
 	RETiRet;
 }
 
 
 static rsRetVal
-onListenDeinit(GSSTCPSession_t *pGSS)
+OnSessDestruct(void *ppUsr)
 {
 	DEFiRet;
-	assert(pGSS != NULL)
-	if(bEnableTCP & ALLOWEDMETHOD_GSS) {
+	gss_sess_t **ppGSess = (gss_sess_t**) ppUsr;
+
+	assert(ppGSess != NULL);
+	assert(*ppGSess != NULL);
+
+	if((*ppGSess)->allowedMethods & ALLOWEDMETHOD_GSS) {
 		OM_uint32 maj_stat, min_stat;
-		maj_stat = gss_delete_sec_context(&min_stat, &pTCPSessions[iTCPSess].gss_context, GSS_C_NO_BUFFER);
+		maj_stat = gss_delete_sec_context(&min_stat, &(*ppGSess)->gss_context, GSS_C_NO_BUFFER);
 		if (maj_stat != GSS_S_COMPLETE)
 			display_status("deleting context", maj_stat, min_stat);
 	}
+
+	free(*ppGSess);
+	*ppGSess = NULL;
+
 	RETiRet;
 }
 
 
 static int
-isPermittedHost(TCPSession_t *pSess)
+isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void*pUsrSess)
 {
+	gsssrv_t *pGSrv;
+	gss_sess_t *pGSess;
 	char allowedMethods = 0;
 
-	assert(pSess != NULL);
+	assert(pUsrSrv != NULL);
+	assert(pUsrSess != NULL);
+	pGSrv = (gsssrv_t*) pUsrSrv;
+	pGSess = (gss_sess_t*) pUsrSess;
 
 	if((bEnableTCP & ALLOWEDMETHOD_TCP) &&
 	   isAllowedSender(pAllowedSenders_TCP, (struct sockaddr *)&addr, (char*)fromHostFQDN))
@@ -106,66 +170,113 @@ isPermittedHost(TCPSession_t *pSess)
 	   isAllowedSender(pAllowedSenders_GSS, (struct sockaddr *)&addr, (char*)fromHostFQDN))
 		allowedMethods |= ALLOWEDMETHOD_GSS;
 	if(allowedMethods)
-		pSess->allowedMethods = allowedMethods;
+		pGSess->allowedMethods = allowedMethods;
 	return allowedMethods;
 }
 
 static rsRetVal
-onTCPSessAccept(int fd)
+onSessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 {
 	DEFiRet;
-	assert(pSess != NULL);
+	gsssrv_t *pGSrv;
+	
+	pGSrv = (gsssrv_t*) pThis->pUsr;
 
-	if(bEnableTCP & ALLOWEDMETHOD_GSS)
-		TCPSessGSSAccept(fd);
+	if(pGSrv->allowedMethods & ALLOWEDMETHOD_GSS)
+		iRet = OnSessAcceptGSS(pThis, ppSess, fd);
 	else
-		TCPSessAccept(fd);
+		iRet = tcpsrv.SessAccept(pThis, ppSess, fd);
+
 	RETiRet;
 }
 
+
 static rsRetVal
-onRegularClose(TCPSession_t *pSess)
+onRegularClose(tcps_sess_t *pSess)
 {
 	DEFiRet;
+	gss_sess_t *pGSess;
+
 	assert(pSess != NULL);
+	assert(pSess->pUsr != NULL);
+	pGSess = (gss_sess_t*) pSess->pUsr;
 
-
-	if(allowedMethods & ALLOWEDMETHOD_GSS)
+	if(pGSess->allowedMethods & ALLOWEDMETHOD_GSS)
 		TCPSessGSSClose(pSess);
 	else {
 		/* process any incomplete frames left over */
-		TCPSessPrepareClose(pSess);
+		tcps_sess.PrepareClose(pSess);
 		/* Session closed */
-		TCPSessClose(pSess);
+		tcps_sess.Close(pSess);
 	}
 	RETiRet;
 }
 
 
 static rsRetVal
-onErrClose(TCPSession_t *pSess)
+onErrClose(tcps_sess_t *pSess)
 {
 	DEFiRet;
-	assert(pSess != NULL);
+	gss_sess_t *pGSess;
 
-	if(allowedMethods & ALLOWEDMETHOD_GSS)
+	assert(pSess != NULL);
+	assert(pSess->pUsr != NULL);
+	pGSess = (gss_sess_t*) pSess->pUsr;
+
+	if(pGSess->allowedMethods & ALLOWEDMETHOD_GSS)
 		TCPSessGSSClose(pSess);
 	else
-		TCPSessClose(pSess);
+		tcps_sess.Close(pSess);
+
 	RETiRet;
 }
 
 
+/* open the listen sockets */
+static int*
+doOpenLstnSocks(tcpsrv_t *pSrv)
+{
+	int *pRet;
+	gsssrv_t *pGSrv;
 
-static int pRcvData(TCPSession_t *pSess, char *buf, size_t lenBuf)
+	ISOBJ_TYPE_assert(pSrv, tcpsrv);
+	pGSrv = pSrv->pUsr;
+	assert(pGSrv != NULL);
+
+	/* first apply some config settings */
+	if(pGSrv->allowedMethods) {
+		if(pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) {
+			if(TCPSessGSSInit()) {
+				logerror("GSS-API initialization failed\n");
+				pGSrv->allowedMethods &= ~(ALLOWEDMETHOD_GSS);
+			}
+		}
+		if(pGSrv->allowedMethods) {
+			/* fallback to plain TCP */
+			if((pRet =  tcpsrv.create_tcp_socket(pSrv)) != NULL) {
+				dbgprintf("Opened %d syslog TCP port(s).\n", *pRet);
+			}
+		}
+	}
+
+	return pRet;
+}
+
+
+static int
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
 {
 	int state;
 	int allowedMethods;
-	assert(pSess != NULL);
+	gss_sess_t *pGSess;
 
-	allowedMethods = pSess->allowedMethods;
+	assert(pSess != NULL);
+	assert(pSess->pUsr != NULL);
+	pGSess = (gss_sess_t*) pSess->pUsr;
+
+	allowedMethods = pGSess->allowedMethods;
 	if(allowedMethods & ALLOWEDMETHOD_GSS)
-		state = TCPSessGSSRecv(iTCPSess, buf, lenBuf);
+		state = TCPSessGSSRecv(pSess, buf, lenBuf); //XXX
 	else
 		state = recv(pSess->sock, buf, lenBuf, 0);
 	return state;
@@ -174,18 +285,44 @@ static int pRcvData(TCPSession_t *pSess, char *buf, size_t lenBuf)
 
 /* end callbacks */
 
-static rsRetVal addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
+static rsRetVal
+addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
-	if (!bEnableTCP)
-		tcpsrv.configureTCPListen((char *) pNewVal);
-	bEnableTCP |= ALLOWEDMETHOD_GSS;
+	DEFiRet;
+	gsssrv_t *pGSrv;
 
-	return RS_RET_OK;
+	if(pOurTcpsrv == NULL) {
+		/* first create/init the gsssrv "object" */
+		if((pGSrv = calloc(1, sizeof(gsssrv_t))) == NULL)
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+		pGSrv->allowedMethods = ALLOWEDMETHOD_GSS;
+		if(bPermitPlainTcp)
+			pGSrv->allowedMethods |= ALLOWEDMETHOD_TCP;
+		/* gsssrv initialized */
+
+		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
+		CHKiRet(tcpsrv.SetUsrP(pOurTcpsrv, pGSrv));
+		CHKiRet(tcpsrv.SetCBOnSessConstructFinalize(pOurTcpsrv, OnSessConstructFinalize));
+		CHKiRet(tcpsrv.SetCBOnSessDestruct(pOurTcpsrv, OnSessDestruct));
+		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
+		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
+		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
+		//CHKiRet(tcpsrv.SetCBOnListenDeinit(pOurTcpsrv, ));
+		CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
+		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
+		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
+		tcpsrv.configureTCPListen(pOurTcpsrv, (char *) pNewVal);
+		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
+	}
+
+finalize_it:
+	RETiRet;
 }
 
 
 /* returns 0 if all went OK, -1 if it failed */
-int TCPSessGSSInit(void)
+static int TCPSessGSSInit(void)
 {
 	gss_buffer_desc name_buf;
 	gss_name_t server_name;
@@ -217,11 +354,13 @@ int TCPSessGSSInit(void)
 
 
 /* returns 0 if all went OK, -1 if it failed 
- * Calls TCPSessAccept() and then tries to guess if the connection uses
+ * Calls tcpsrv's SessAccept() and then tries to guess if the connection uses
  * gssapi.
  */
-int TCPSessGSSAccept(int fd)
+static rsRetVal
+OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 {
+	DEFiRet;
 	gss_buffer_desc send_tok, recv_tok;
 	gss_name_t client;
 	OM_uint32 maj_stat, min_stat, acc_sec_min_stat;
@@ -230,12 +369,19 @@ int TCPSessGSSAccept(int fd)
 	OM_uint32 *sess_flags;
 	int fdSess;
 	char allowedMethods;
+	gsssrv_t *pGSrv;
+	tcps_sess_t *pSess;
+	gss_sess_t *pGSess;
 
-	if ((iSess = TCPSessAccept(fd)) == -1)
-		return -1;
+	assert(ppSess != NULL);
 
-	allowedMethods = pTCPSessions[iSess].allowedMethods;
-	if (allowedMethods & ALLOWEDMETHOD_GSS) {
+	if((iSess = tcpsrv.SessAccept(pThis, &pSess, fd)) == -1)
+		ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
+
+	pGSrv = (gsssrv_t*) pThis->pUsr;
+	pGSess = (gss_sess_t*) pSess->pUsr;
+	allowedMethods = pGSrv->allowedMethods;
+	if(allowedMethods & ALLOWEDMETHOD_GSS) {
 		/* Buffer to store raw message in case that
 		 * gss authentication fails halfway through.
 		 */
@@ -244,7 +390,7 @@ int TCPSessGSSAccept(int fd)
 
 		dbgprintf("GSS-API Trying to accept TCP session %d\n", iSess);
 
-		fdSess = pTCPSessions[iSess].sock;
+		fdSess = pSess->sock; // TODO: method access!
 		if (allowedMethods & ALLOWEDMETHOD_TCP) {
 			int len;
 			fd_set  fds;
@@ -259,12 +405,14 @@ int TCPSessGSSAccept(int fd)
 			} while (ret < 0 && errno == EINTR);
 			if (ret < 0) {
 				logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
-				TCPSessClose(iSess);
-				return -1;
+				tcps_sess.Close(pSess);
+				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
+				// was: return -1;
 			} else if (ret == 0) {
 				dbgprintf("GSS-API Reverting to plain TCP\n");
-				pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_TCP;
-				return 0;
+				pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
+				ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
+				// was: return 0;
 			}
 
 			do {
@@ -274,20 +422,22 @@ int TCPSessGSSAccept(int fd)
 				if (ret == 0)
 					dbgprintf("GSS-API Connection closed by peer\n");
 				else
-					logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
-				TCPSessClose(iSess);
-				return -1;
+					logerrorInt("TCP(GSS) session %d will be closed, error ignored\n", iSess);
+				tcps_sess.Close(pSess);
+				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
+				// was: return -1;
 			}
 
 			if (ret < 4) {
 				dbgprintf("GSS-API Reverting to plain TCP\n");
-				pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_TCP;
-				return 0;
+				pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
+				ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
+				// was: return 0;
 			} else if (ret == 4) {
 				/* The client might has been interupted after sending
 				 * the data length (4B), give him another chance.
 				 */
-				sleep(1);
+				sleep(1); //  TODO: bad, bad, fix...
 				do {
 					ret = recv(fdSess, buf, sizeof (buf), MSG_PEEK);
 				} while (ret < 0 && errno == EINTR);
@@ -296,30 +446,34 @@ int TCPSessGSSAccept(int fd)
 						dbgprintf("GSS-API Connection closed by peer\n");
 					else
 						logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
-					TCPSessClose(iSess);
-					return -1;
+					tcps_sess.Close(pSess);
+					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
+					//was: return -1;
 				}
 			}
 
+			/* TODO: how does this work together with IPv6? Does it? */
 			len = ntohl((buf[0] << 24)
 				    | (buf[1] << 16)
 				    | (buf[2] << 8)
 				    | buf[3]);
 			if ((ret - 4) < len || len == 0) {
 				dbgprintf("GSS-API Reverting to plain TCP\n");
-				pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_TCP;
-				return 0;
+				pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
+				ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
+				// was: return 0;
 			}
 		}
 
-		context = &pTCPSessions[iSess].gss_context;
+		context = &pGSess->gss_context;
 		*context = GSS_C_NO_CONTEXT;
-		sess_flags = &pTCPSessions[iSess].gss_flags;
+		sess_flags = &pGSess->gss_flags;
 		do {
 			if (recv_token(fdSess, &recv_tok) <= 0) {
-				logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
-				TCPSessClose(iSess);
-				return -1;
+				logerrorVar("TCP session %d will be closed, error ignored\n", iSess);
+				tcps_sess.Close(pSess);
+				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
+				//was: return -1;
 			}
 			maj_stat = gss_accept_sec_context(&acc_sec_min_stat, context, gss_server_creds,
 							  &recv_tok, GSS_C_NO_CHANNEL_BINDINGS, &client,
@@ -328,8 +482,7 @@ int TCPSessGSSAccept(int fd)
 				free(recv_tok.value);
 				recv_tok.value = NULL;
 			}
-			if (maj_stat != GSS_S_COMPLETE
-			    && maj_stat != GSS_S_CONTINUE_NEEDED) {
+			if (maj_stat != GSS_S_COMPLETE && maj_stat != GSS_S_CONTINUE_NEEDED) {
 				gss_release_buffer(&min_stat, &send_tok);
 				if (*context != GSS_C_NO_CONTEXT)
 					gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
@@ -337,29 +490,32 @@ int TCPSessGSSAccept(int fd)
 				    (GSS_ROUTINE_ERROR(maj_stat) == GSS_S_DEFECTIVE_TOKEN)) {
 					dbgprintf("GSS-API Reverting to plain TCP\n");
 					dbgprintf("tcp session socket with new data: #%d\n", fdSess);
-					if(TCPSessDataRcvd(iSess, buf, ret) == 0) {
-						logerrorInt("Tearing down TCP Session %d - see "
+					if(tcps_sess.DataRcvd(pSess, buf, ret) == 0) {
+						logerrorVar("Tearing down TCP Session %d - see "
 							    "previous messages for reason(s)\n",
 							    iSess);
-						TCPSessClose(iSess);
-						return -1;
+						tcps_sess.Close(pSess);
+						ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
+						//was: return -1;
 					}
-					pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_TCP;
-					return 0;
+					pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
+					ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
+					// was: return 0;
 				}
-				display_status("accepting context", maj_stat,
-					       acc_sec_min_stat);
-				TCPSessClose(iSess);
-				return -1;
+				display_status("accepting context", maj_stat, acc_sec_min_stat);
+				tcps_sess.Close(pSess);
+				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
+				//was: return -1;
 			}
 			if (send_tok.length != 0) {
 				if (send_token(fdSess, &send_tok) < 0) {
 					gss_release_buffer(&min_stat, &send_tok);
-					logerrorInt("TCP session %d will be closed, error ignored\n", iSess);
+					logerrorVar("TCP session %d will be closed, error ignored\n", iSess);
 					if (*context != GSS_C_NO_CONTEXT)
 						gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
-					TCPSessClose(iSess);
-					return -1;
+					tcps_sess.Close(pSess);
+					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
+					//was: return -1;
 				}
 				gss_release_buffer(&min_stat, &send_tok);
 			}
@@ -375,17 +531,20 @@ int TCPSessGSSAccept(int fd)
 
 		dbgprintf("GSS-API Provided context flags:\n");
 		display_ctx_flags(*sess_flags);
-		pTCPSessions[iSess].allowedMethods = ALLOWEDMETHOD_GSS;
+		pGSess->allowedMethods = ALLOWEDMETHOD_GSS;
 	}
+	
+	*ppSess = pSess;
 
-	return 0;
+finalize_it:
+	RETiRet;
 }
 
 
 /* returns: ? 
  * Replaces recv() for gssapi connections.
  */
-int TCPSessGSSRecv(int iSess, void *buf, size_t buf_len)
+int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len)
 {
 	gss_buffer_desc xmit_buf, msg_buf;
 	gss_ctx_id_t *context;
@@ -393,17 +552,21 @@ int TCPSessGSSRecv(int iSess, void *buf, size_t buf_len)
 	int fdSess;
 	int     conf_state;
 	int state, len;
+	gss_sess_t *pGSess;
 
-	fdSess = pTCPSessions[iSess].sock;
+	assert(pSess->pUsr != NULL);
+	pGSess = (gss_sess_t*) pSess->pUsr;
+
+	fdSess = pSess->sock;
 	if ((state = recv_token(fdSess, &xmit_buf)) <= 0)
 		return state;
 
-	context = &pTCPSessions[iSess].gss_context;
+	context = &pGSess->gss_context;
 	maj_stat = gss_unwrap(&min_stat, *context, &xmit_buf, &msg_buf,
 			      &conf_state, (gss_qop_t *) NULL);
-	if (maj_stat != GSS_S_COMPLETE) {
+	if(maj_stat != GSS_S_COMPLETE) {
 		display_status("unsealing message", maj_stat, min_stat);
-		if (xmit_buf.value) {
+		if(xmit_buf.value) {
 			free(xmit_buf.value);
 			xmit_buf.value = 0;
 		}
@@ -425,36 +588,99 @@ int TCPSessGSSRecv(int iSess, void *buf, size_t buf_len)
 /* Takes care of cleaning up gssapi stuff and then calls
  * TCPSessClose().
  */
-void TCPSessGSSClose(int iSess) {
+void TCPSessGSSClose(tcps_sess_t* pSess)
+{
 	OM_uint32 maj_stat, min_stat;
 	gss_ctx_id_t *context;
+	gss_sess_t *pGSess;
 
-	if(iSess < 0 || iSess > iTCPSessMax) {
-		errno = 0;
-		logerror("internal error, trying to close an invalid TCP session!");
-		return;
-	}
+	assert(pSess->pUsr != NULL);
+	pGSess = (gss_sess_t*) pSess->pUsr;
 
-	context = &pTCPSessions[iSess].gss_context;
+	context = &pGSess->gss_context;
 	maj_stat = gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
 	if (maj_stat != GSS_S_COMPLETE)
 		display_status("deleting context", maj_stat, min_stat);
 	*context = GSS_C_NO_CONTEXT;
-	pTCPSessions[iSess].gss_flags = 0;
-	pTCPSessions[iSess].allowedMethods = 0;
+	pGSess->gss_flags = 0;
+	pGSess->allowedMethods = 0;
 
-	TCPSessClose(iSess);
+	tcps_sess.Close(pSess);
 }
 
 
-/* Counterpart of TCPSessGSSInit() */
-void TCPSessGSSDeinit(void) {
+/* Counterpart of TCPSessGSSInit(). This is called to exit the GSS system
+ * at all. It is a server-based session exit. 
+ */
+static rsRetVal
+TCPSessGSSDeinit(void)
+{
+	DEFiRet;
 	OM_uint32 maj_stat, min_stat;
 
 	maj_stat = gss_release_cred(&min_stat, &gss_server_creds);
 	if (maj_stat != GSS_S_COMPLETE)
 		display_status("releasing credentials", maj_stat, min_stat);
+	RETiRet;
 }
+
+/* This function is called to gather input.
+ */
+BEGINrunInput
+CODESTARTrunInput
+	iRet = tcpsrv.Run(pOurTcpsrv);
+ENDrunInput
+
+
+/* initialize and return if will run or not */
+BEGINwillRun
+CODESTARTwillRun
+	if(pOurTcpsrv == NULL)
+		ABORT_FINALIZE(RS_RET_NO_RUN);
+
+	PrintAllowedSenders(2); /* TCP */
+	PrintAllowedSenders(3); /* GSS */
+finalize_it:
+ENDwillRun
+
+
+
+BEGINmodExit
+CODESTARTmodExit
+	iRet = tcpsrv.Destruct(&pOurTcpsrv);
+	TCPSessGSSDeinit();
+ENDmodExit
+
+
+BEGINafterRun
+CODESTARTafterRun
+	/* do cleanup here */
+	if (pAllowedSenders_TCP != NULL) {
+		clearAllowedSenders (pAllowedSenders_TCP);
+		pAllowedSenders_TCP = NULL;
+	}
+	if (pAllowedSenders_GSS != NULL) {
+		clearAllowedSenders (pAllowedSenders_GSS);
+		pAllowedSenders_GSS = NULL;
+	}
+ENDafterRun
+
+
+
+BEGINfreeInstance
+CODESTARTfreeInstance
+ENDfreeInstance
+
+
+BEGINdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo
+ENDdbgPrintInstInfo
+
+
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_IMOD_QUERIES
+ENDqueryEtryPt
 
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
@@ -464,54 +690,21 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		gss_listen_service_name = NULL;
 	}
 	bPermitPlainTcp = 0;
+	iTCPSessMax = 200;
 	return RS_RET_OK;
 }
-
-
-/* This function is called to gather input.
- */
-BEGINrunInput
-CODESTARTrunInput
-	iRet = tcpsrv.RunInput();
-	return iRet;
-ENDrunInput
-
-
-/* initialize and return if will run or not */
-BEGINwillRun
-CODESTARTwillRun
-	/* first check if we must support plain TCP, too. If so, set mode
-	 * accordingly. -- rgerhards, 2008-02-26
-	 */
-	if(bPermitPlainTcp)
-		bEnableTCP |= ALLOWEDMETHOD_TCP;
-
-	/* first apply some config settings */
-	PrintAllowedSenders(2); /* TCP */
-	PrintAllowedSenders(3); /* GSS */
-	if (bEnableTCP) {
-		if(sockTCPLstn == NULL) {
-			if(bEnableTCP & ALLOWEDMETHOD_GSS) {
-				if(TCPSessGSSInit()) {
-					logerror("GSS-API initialization failed\n");
-					bEnableTCP &= ~(ALLOWEDMETHOD_GSS);
-				}
-			}
-			// TODO: do we still need this here? I don't think
-			// so...
-			if(bEnableTCP)
-				if((sockTCPLstn = create_tcp_socket()) != NULL) {
-					dbgprintf("Opened %d syslog TCP port(s).\n", *sockTCPLstn);
-				}
-		}
-	}
-ENDwillRun
 
 
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
 CODEmodInit_QueryRegCFSLineHdlr
+	pOurTcpsrv = NULL;
+	/* request objects we use */
+CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */ // TODO: framework must do this
+	CHKiRet(objUse(tcps_sess, "tcps_sess"));
+	CHKiRet(objUse(tcpsrv, "tcpsrv"));
+
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"permitplaintcp", 0, eCmdHdlrBinary,
