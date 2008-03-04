@@ -1,9 +1,7 @@
-﻿<html>
-
-<head>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
 <meta http-equiv="Content-Language" content="en">
-<title>SNMP Output Module</title>
-</head>
+<title>SNMP Output Module</title></head>
 
 <body>
 
@@ -13,8 +11,7 @@
 <p><b>Description</b>:</p>
 <p>Provides the ability to send syslog messages as an SNMPv1 &amp; v2c traps. By 
 default, SNMPv2c is preferred. The syslog message is wrapped into a OCTED 
-STRING variable, by default with the OID i.o.d.internet.private.enterprises. 
-This module uses the <a target="_blank" href="http://net-snmp.sourceforge.net/">
+STRING variable. This module uses the <a target="_blank" href="http://net-snmp.sourceforge.net/">
 NET-SNMP</a> library. In order to compile this module, you will need to have the
 <a target="_blank" href="http://net-snmp.sourceforge.net/">NET-SNMP</a> 
 developer (headers) package installed. </p>
@@ -25,7 +22,7 @@ developer (headers) package installed. </p>
 <p><b>Configuration Directives</b>:</p>
 <ul>
 	<li><strong>$actionsnmptransport </strong>(This parameter is optional, the 
-	default value is &quot;udp&quot;)<br>
+	default value is "udp")<br>
 	<br>
 	Defines the transport type you wish to use. Technically we can support all 
 	transport types which are supported by NET-SNMP. <br>
@@ -44,14 +41,14 @@ developer (headers) package installed. </p>
 	Example: <strong>$actionsnmptarget server.domain.xxx</strong><br>
 	</li>
 	<li><strong>$actionsnmptargetport </strong>(This parameter is optional, the 
-	default value is &quot;162&quot;)<br>
+	default value is "162")<br>
 	<br>
 	The port which will be used, common values are port 162 or 161. <br>
 	<br>
 	Example: <strong>$actionsnmptargetport 162</strong><br>
 	</li>
 	<li><strong>$actionsnmpversion </strong>(This parameter is optional, the 
-	default value is &quot;1&quot;)<br>
+	default value is "1")<br>
 	<br>
 	There can only be two choices for this parameter for now. <br>
 	0 means SNMPv1 will be used.<br>
@@ -61,18 +58,18 @@ developer (headers) package installed. </p>
 	Example: <strong>$actionsnmpversion 1</strong><br>
 	</li>
 	<li><strong>$actionsnmpcommunity </strong>(This parameter is optional, the 
-	default value is &quot;public&quot;)<br>
+	default value is "public")<br>
 	<br>
 	This sets the used SNMP Community.<br>
 	<br>
 	Example:<strong> $actionsnmpcommunity public</strong><br>
 	</li>
 	<li><strong>$actionsnmpsyslogmessageoid </strong>(This parameter is 
-	optional, the default value is &quot;1.3.6.1.4.1.9.9.41.2.0.1&quot; which means &quot;CISCO-SYSLOG-MIB::clogMessageGenerated&quot;)<br>
+	optional, the default value is "1.3.6.1.4.1.9.9.41.2.0.1" which means "CISCO-SYSLOG-MIB::clogMessageGenerated")<br>
 	<br>
-	This OID will be used as a variable, type &quot;OCTET STRING&quot;. This variable will 
-	contain the full syslog message including syslog header. I also recommend to 
-	use the default value here unless you require to use a different OID. <br>
+	This OID will be used as a variable, type "OCTET STRING". This variable will 
+	contain the full syslog message including syslog header. It is recommend to 
+	use the default value here unless a different OID is required. <br>
 	In order to decode this OID, you will need to have the CISCO-SYSLOG-MIB and 
 	CISCO-SMI mibs installed on the receiver side. Downloads of these mib files 
 	can be found here: <br>
@@ -81,14 +78,14 @@ developer (headers) package installed. </p>
 	<a href="http://www.oidview.com/mibs/9/CISCO-SMI.html">
 	http://www.oidview.com/mibs/9/CISCO-SMI.html</a><br>
 	<br>
-	We will add our own MIB definition in a later step here. For now, 
+	We will add our own MIB definition in a later stage. For now, 
 	CISCO-SYSLOG-MIB::clogMessageGenerated is a good choice. Thanks to the net-snmp 
 	mailinglist for the help and the recommendations ;).<br>
 	<br>
 	Example: <strong>$actionsnmpsyslogmessageoid 1.3.6.1.4.1.9.9.41.2.0.1</strong><br>
 	</li>
 	<li><strong>$actionsnmpenterpriseoid </strong>(This parameter is optional, 
-	the default value is &quot;1.3.6.1.4.1.3.1.1&quot; which means &quot;enterprises.cmu.1.1&quot;)<br>
+	the default value is "1.3.6.1.4.1.3.1.1" which means "enterprises.cmu.1.1")<br>
 	<br>
 	Customize this value if needed. I recommend to use the default value unless 
 	you require to use a different OID. <br>
@@ -98,7 +95,7 @@ developer (headers) package installed. </p>
 	Example: <strong>$actionsnmpenterpriseoid 1.3.6.1.4.1.3.1.1 </strong><br>
 	</li>
 	<li><strong>$actionsnmpspecifictype </strong>(This parameter is optional, 
-	the default value is &quot;0&quot;)<strong> </strong><br>
+	the default value is "0")<strong> </strong><br>
 	<br>
 	This is the specific trap number. This configuration parameter is used for
 	<strong>SNMPv1</strong> only. It has no effect if <strong>SNMPv2</strong> is 
@@ -107,7 +104,7 @@ developer (headers) package installed. </p>
 	Example: <strong>$actionsnmpspecifictype 0</strong><br>
 	</li>
 	<li><strong>$actionsnmptraptype</strong> (This parameter is optional, the 
-	default value is &quot;6&quot; which means SNMP_TRAP_ENTERPRISESPECIFIC) <br>
+	default value is "6" which means SNMP_TRAP_ENTERPRISESPECIFIC) <br>
 	<br>
 	There are only 7 Possible trap types defined which can be used here. These 
 	trap types are: <br>
@@ -127,7 +124,9 @@ developer (headers) package installed. </p>
 	</li>
 </ul>
 <p>&nbsp;</p>
-<p><b>Caveats/Known Bugs:</b></p>
+<p><b>Caveats/Known Bugs:</b></p><ul><li>currently, the module is
+depending on a CISCO MIB defintion. This will be changed in the future.
+So be prepared to update some of your receivers when this happens.</li></ul>
 <p><b>Sample:</b></p>
 <p>The following commands send every message as a snmp trap.</p>
 <textarea rows="10" cols="60">$ModLoad omsnmp.so
@@ -145,10 +144,8 @@ $actionsnmpcommunity public
 index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright © 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
 version 3 or higher.</font></p>
 
-</body>
-
-</html>
+</body></html>
