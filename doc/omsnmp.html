@@ -62,27 +62,49 @@ developer (headers) package installed. </p>
 	<br>
 	This sets the used SNMP Community.<br>
 	<br>
-	Example:<strong> $actionsnmpcommunity public</strong><br>
+	Example:<strong> $actionsnmpcommunity public<br>
+	</strong><br>
 	</li>
-	<li><strong>$actionsnmpsyslogmessageoid </strong>(This parameter is 
-	optional, the default value is "1.3.6.1.4.1.9.9.41.2.0.1" which means "CISCO-SYSLOG-MIB::clogMessageGenerated")<br>
+	<li><strong>$actionsnmptrapoid </strong>(This parameter is 
+	optional, the default value is "1.3.6.1.4.1.19406.1.2.1&quot; which means 
+	&quot;ADISCON-MONITORWARE-MIB::syslogtrap&quot;)<br>
+	This configuration parameter is used for <strong>SNMPv2</strong> only.<br>
 	<br>
-	This OID will be used as a variable, type "OCTET STRING". This variable will 
-	contain the full syslog message including syslog header. It is recommend to 
-	use the default value here unless a different OID is required. <br>
-	In order to decode this OID, you will need to have the CISCO-SYSLOG-MIB and 
-	CISCO-SMI mibs installed on the receiver side. Downloads of these mib files 
+	This is the OID which defines the trap-type, or notifcation-type rsyslog 
+	uses to send the trap. <br>
+	In order to decode this OID, you will need to have the 
+	ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver side. Downloads of these mib files 
 	can be found here: <br>
-	<a href="http://www.oidview.com/mibs/9/CISCO-SYSLOG-MIB.html">
-	http://www.oidview.com/mibs/9/CISCO-SYSLOG-MIB.html</a><br>
-	<a href="http://www.oidview.com/mibs/9/CISCO-SMI.html">
-	http://www.oidview.com/mibs/9/CISCO-SMI.html</a><br>
+	<a href="http://www.adiscon.org/download/ADISCON-MIB.txt">
+	http://www.adiscon.org/download/ADISCON-MIB.txt</a><br>
+	<a href="http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt">
+	http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt</a><br>
 	<br>
-	We will add our own MIB definition in a later stage. For now, 
-	CISCO-SYSLOG-MIB::clogMessageGenerated is a good choice. Thanks to the net-snmp 
+	Thanks to the net-snmp 
 	mailinglist for the help and the recommendations ;).<br>
 	<br>
-	Example: <strong>$actionsnmpsyslogmessageoid 1.3.6.1.4.1.9.9.41.2.0.1</strong><br>
+	Example: <strong>$actionsnmptrapoid 1.3.6.1.4.1.19406.1.2.1<br>
+	</strong>If you have this MIBS installed, you can also configured with the 
+	OID Name: <strong>$actionsnmptrapoid ADISCON-MONITORWARE-MIB::syslogtrap<br>
+	</strong>
+	</li>
+	<li><strong>$actionsnmpsyslogmessageoid </strong>(This parameter is 
+	optional, the default value is "1.3.6.1.4.1.19406.1.1.1&quot; which means 
+	&quot;ADISCON-MONITORWARE-MIB::syslogMsg&quot;)<br>
+	<br>
+	This OID will be used as a variable, type &quot;OCTET STRING&quot;. This variable will 
+	contain up to 255 characters of the original syslog message including syslog header. It is recommend to 
+	use the default OID. <br>
+	In order to decode this OID, you will need to have the 
+	ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver side. 
+	To download these custom mibs, see the description of <strong>$actionsnmptrapoid.
+	</strong><br>
+	<br>
+	Example: <strong>$actionsnmpsyslogmessageoid 1.3.6.1.4.1.19406.1.1.1<br>
+	</strong>If you have this MIBS installed, you can also configured with the 
+	OID Name: <strong>$actionsnmpsyslogmessageoid 
+	ADISCON-MONITORWARE-MIB::syslogMsg<br>
+	</strong><br>
 	</li>
 	<li><strong>$actionsnmpenterpriseoid </strong>(This parameter is optional, 
 	the default value is "1.3.6.1.4.1.3.1.1" which means "enterprises.cmu.1.1")<br>
@@ -92,7 +114,8 @@ developer (headers) package installed. </p>
 	This configuration parameter is used for <strong>SNMPv1</strong> only. It 
 	has no effect if <strong>SNMPv2</strong> is used. <br>
 	<br>
-	Example: <strong>$actionsnmpenterpriseoid 1.3.6.1.4.1.3.1.1 </strong><br>
+	Example: <strong>$actionsnmpenterpriseoid 1.3.6.1.4.1.3.1.1 <br>
+	</strong><br>
 	</li>
 	<li><strong>$actionsnmpspecifictype </strong>(This parameter is optional, 
 	the default value is "0")<strong> </strong><br>
@@ -101,7 +124,8 @@ developer (headers) package installed. </p>
 	<strong>SNMPv1</strong> only. It has no effect if <strong>SNMPv2</strong> is 
 	used. <br>
 	<br>
-	Example: <strong>$actionsnmpspecifictype 0</strong><br>
+	Example: <strong>$actionsnmpspecifictype 0<br>
+	</strong><br>
 	</li>
 	<li><strong>$actionsnmptraptype</strong> (This parameter is optional, the 
 	default value is "6" which means SNMP_TRAP_ENTERPRISESPECIFIC) <br>
@@ -124,9 +148,8 @@ developer (headers) package installed. </p>
 	</li>
 </ul>
 <p>&nbsp;</p>
-<p><b>Caveats/Known Bugs:</b></p><ul><li>currently, the module is
-depending on a CISCO MIB defintion. This will be changed in the future.
-So be prepared to update some of your receivers when this happens.</li></ul>
+<p><b>Caveats/Known Bugs:</b></p><ul><li>In order to decode the custom OIDs, you 
+	will need to have the adiscon mibs installed. </li></ul>
 <p><b>Sample:</b></p>
 <p>The following commands send every message as a snmp trap.</p>
 <textarea rows="10" cols="60">$ModLoad omsnmp.so

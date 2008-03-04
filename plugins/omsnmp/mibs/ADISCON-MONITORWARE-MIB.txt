@@ -1,0 +1,122 @@
+-- *****************************************************************
+-- ADISCON-MONITORWARE-MIB.txt:  Adiscon Monitorware message MIB file
+--
+-- March 2008, Andre Lorbach
+--
+-- Copyright (c) 2008 by Adiscon GmbH
+-- All rights reserved.
+-- *****************************************************************
+--
+-- This MIB defines traps and variables to wrap syslog messages into 
+-- snmp traps. 
+
+ADISCON-MONITORWARE-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+        enterprises,
+	MODULE-IDENTITY, OBJECT-TYPE, Integer32,
+	NOTIFICATION-TYPE       FROM SNMPv2-SMI,
+        adiscon			FROM ADISCON-MIB
+;
+
+monitorware MODULE-IDENTITY
+    LAST-UPDATED "200803040000Z"
+    ORGANIZATION "www.adiscon-com"
+    CONTACT-INFO    
+	 "postal:	Adiscon GmbH
+			Mozartstrasse 21
+			D-97950 Groﬂrinderfeld
+			Deutschland
+
+          email:    info@adiscon.com"
+    DESCRIPTION
+	"This MIB defines traps and variables to wrap syslog messages into snmp traps."
+    REVISION     "200803040000Z"
+    DESCRIPTION
+	"First draft"
+    ::= { adiscon 1 }
+
+-- Printable string, using the ISO 8859-1 character set.
+DisplayString ::= OCTET STRING (SIZE (0..255))
+--
+
+--
+-- top level structure
+--
+-- adiscon		OBJECT IDENTIFIER ::= { enterprises 19406 }
+monitorware		OBJECT IDENTIFIER ::= { adiscon 1 }
+monitorwarevars		OBJECT IDENTIFIER ::= { monitorware 1 }
+monitorwaretraps	OBJECT IDENTIFIER ::= { monitorware 2 }
+
+-- *****************************************************************
+-- Trap variables
+-- *****************************************************************
+
+syslogMsg OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Syslog Message, this will contain the full 
+	syslog message including the full syslog header"
+    ::= { monitorwarevars 1 }
+
+syslogSeverity OBJECT-TYPE
+    SYNTAX  INTEGER {
+                emergency	(0),
+                alert		(1),
+                critical	(2),
+                error		(3),
+                warning		(4),
+                notice		(5),
+                info		(6), 
+                debug		(7)
+            }
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Syslog severity(priority)."
+    ::= { monitorwarevars 2 }
+
+syslogFacility OBJECT-TYPE
+    SYNTAX  INTEGER {
+                kern	(0),
+                user	(1),
+                mail	(2),
+                daemon	(3),
+                auth	(4),
+                syslog	(5),
+                lpr	(6), 
+                news	(7), 
+                uucp	(8), 
+                cron	(9), 
+                local0	(16), 
+                local1	(17), 
+                local2	(18), 
+                local3	(19), 
+                local4	(20), 
+                local5	(21), 
+                local6	(22), 
+                local7	(23)
+            }
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Syslog facility."
+    ::= { monitorwarevars 3 }
+
+-- *****************************************************************
+-- Trap definitions
+-- *****************************************************************
+
+syslogtrap NOTIFICATION-TYPE
+	OBJECTS {	syslogMsg,
+			syslogSeverity,
+			syslogFacility
+	}
+	STATUS      current
+	DESCRIPTION
+        "Syslogmessage Trap from monitorware."
+::= { monitorwaretraps 1 }
+
+END
