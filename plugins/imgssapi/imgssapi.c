@@ -73,7 +73,6 @@ static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd);
 
 /* static data */
 DEF_IMOD_STATIC_DATA
-DEFobjCurrIf(obj)
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 
@@ -711,17 +710,15 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
-CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */ // TODO: framework must do this
 	CHKiRet(objUse(tcps_sess, "tcps_sess"));
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 	/* register config file handlers */
-dbgprintf("imgssapi starting up\n");
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverpermitplaintcp", 0, eCmdHdlrBinary,
 				   NULL, &bPermitPlainTcp, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverrun", 0, eCmdHdlrGetWord,

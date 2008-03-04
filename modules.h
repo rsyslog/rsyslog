@@ -37,6 +37,14 @@
 #include "objomsr.h"
 #include "threads.h"
 
+
+/* the following define defines the current version of the module interface.
+ * It can be used by any module which want's to simply prevent version conflicts
+ * and does not intend to do specific old-version emulations.
+ * rgerhards, 2008-03-04
+ */
+#define CURR_MOD_IF_VERSION 2
+
 typedef enum eModType_ {
 	eMOD_IN,	/* input module */
 	eMOD_OUT,	/* output module */

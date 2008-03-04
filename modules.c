@@ -95,10 +95,14 @@ rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 
 	if(!strcmp((char*) name, "regCfSysLineHdlr")) {
 		*pEtryPoint = regCfSysLineHdlr;
+	} else if(!strcmp((char*) name, "objGetObjInterface")) {
+		*pEtryPoint = objGetObjInterface;
+	} else {
+		*pEtryPoint = NULL; /* to  be on the safe side */
+		ABORT_FINALIZE(RS_RET_ENTRY_POINT_NOT_FOUND);
 	}
 
-	if(iRet == RS_RET_OK)
-		iRet = (*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;
+finalize_it:
 	RETiRet;
 }
 
@@ -224,9 +228,10 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 		ABORT_FINALIZE(iRet);
 	}
 
-	CHKiRet((*modInit)(1, &pNew->iIFVers, &pNew->modQueryEtryPt, queryHostEtryPt));
+RUNLOG_VAR("%p", queryHostEtryPt);
+	CHKiRet((*modInit)(CURR_MOD_IF_VERSION, &pNew->iIFVers, &pNew->modQueryEtryPt, queryHostEtryPt));
 
-	if(pNew->iIFVers != 1) {
+	if(pNew->iIFVers != CURR_MOD_IF_VERSION) {
 		ABORT_FINALIZE(RS_RET_MISSING_INTERFACE);
 	}
 

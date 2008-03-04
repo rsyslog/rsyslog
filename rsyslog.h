@@ -71,6 +71,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_OBJ_CREATION_FAILED = - 3008, /**< the creation of an object failed (no details available) */
 	RS_RET_PARAM_ERROR = -1000,	/**< invalid parameter in call to function */
 	RS_RET_MISSING_INTERFACE = -1001,/**< interface version mismatch, required missing */
+	RS_RET_INVALID_CORE_INTERFACE = -1002,/**< interface provided by host invalid, can not be used */
+	RS_RET_ENTRY_POINT_NOT_FOUND = -1003,/**< a requested entry point was not found */
 	/* return states for config file processing */
 	RS_RET_NONE = -2000,		/**< some value is not available - not necessarily an error */
 	RS_RET_CONFLINE_UNPROCESSED = -2001,/**< config line was not processed, pass to other module */

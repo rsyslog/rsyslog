@@ -136,7 +136,7 @@ openFile(fileInfo_t *pThis)
 	CHKiRet(strmConstructFinalize(psSF));
 
 	/* read back in the object */
-	CHKiRet(objDeserialize(&pThis->pStrm, OBJstrm, psSF, NULL, pThis));
+	CHKiRet(objDeserialize(&pThis->pStrm, "strm", psSF, NULL, pThis));
 
 	CHKiRet(strmSeekCurrOffs(pThis->pStrm));
 
@@ -462,19 +462,20 @@ finalize_it:
  */
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = 1; /* interface spec version this module is written to (currently always 1) */
+	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
+
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
 	  	NULL, &pszFileName, STD_LOADABLE_MODULE_ID));
-	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfiletag", 0, eCmdHdlrGetWord,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfiletag", 0, eCmdHdlrGetWord,
 	  	NULL, &pszFileTag, STD_LOADABLE_MODULE_ID));
-	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilestatefile", 0, eCmdHdlrGetWord,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilestatefile", 0, eCmdHdlrGetWord,
 	  	NULL, &pszStateFile, STD_LOADABLE_MODULE_ID));
-	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileseverity", 0, eCmdHdlrSeverity,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfileseverity", 0, eCmdHdlrSeverity,
 	  	NULL, &iSeverity, STD_LOADABLE_MODULE_ID));
-	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilefacility", 0, eCmdHdlrFacility,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilefacility", 0, eCmdHdlrFacility,
 	  	NULL, &iFacility, STD_LOADABLE_MODULE_ID));
-	 CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepollinterval", 0, eCmdHdlrInt,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilepollinterval", 0, eCmdHdlrInt,
 	  	NULL, &iPollInterval, STD_LOADABLE_MODULE_ID));
 	/* that command ads a new file! */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrunfilemonitor", 0, eCmdHdlrGetWord,

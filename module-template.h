@@ -33,7 +33,9 @@
 /* macro to define standard output-module static data members
  */
 #define DEF_MOD_STATIC_DATA \
+	DEFobjCurrIf(obj) \
 	static rsRetVal (*omsdRegCFSLineHdlr)();
+
 #define DEF_OMOD_STATIC_DATA \
 	DEF_MOD_STATIC_DATA
 #define DEF_IMOD_STATIC_DATA \
@@ -374,14 +376,18 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 #define BEGINmodInit(uniqName) \
 rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()))\
 {\
-	DEFiRet;
+	DEFiRet; \
+	rsRetVal (*pObjGetObjInterface)(obj_if_t *pIf);
 
 #define CODESTARTmodInit \
 	assert(pHostQueryEtryPt != NULL);\
-	if((pQueryEtryPt == NULL) || (ipIFVersProvided == NULL)) {\
+	iRet = pHostQueryEtryPt((uchar*)"objGetObjInterface", &pObjGetObjInterface); \
+	if((iRet != RS_RET_OK) || (pQueryEtryPt == NULL) || (ipIFVersProvided == NULL) || (pObjGetObjInterface == NULL)) { \
 		ENDfunc \
-		return RS_RET_PARAM_ERROR; \
-	}
+		return (iRet == RS_RET_OK) ? RS_RET_PARAM_ERROR : iRet; \
+	} \
+	/* now get the obj interface so that we can access other objects */ \
+	CHKiRet(pObjGetObjInterface(&obj));
 
 #define ENDmodInit \
 finalize_it:\

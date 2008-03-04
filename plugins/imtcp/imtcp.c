@@ -49,7 +49,6 @@ MODULE_TYPE_INPUT
 
 /* static data */
 DEF_IMOD_STATIC_DATA
-DEFobjCurrIf(obj)
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 
@@ -214,11 +213,10 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = 1; /* so far, we only support the initial definition */
+	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
-CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */ // TODO: framework must do this
 	CHKiRet(objUse(tcps_sess, "tcps_sess"));
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 
