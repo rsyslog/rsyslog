@@ -86,7 +86,12 @@ typedef struct _instanceData {
 	uchar	szTargetAndPort[MAXHOSTNAMELEN+1];			/* IP/hostname + Port,needed format for SNMP LIB */ 
 	uchar	szCommunity[OMSNMP_MAXCOMMUNITYLENGHT+1];	/* Snmp Community */ 
 	uchar	szEnterpriseOID[OMSNMP_MAXOIDLENGHT+1];		/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */ 
-	uchar	szSyslogMessageOID[OMSNMP_MAXOIDLENGHT+1];	/* Snmp OID used for the Syslog Message - default is 1.3.6.1.4.1 - .iso.org.dod.internet.private.enterprises */ 
+	uchar	szSyslogMessageOID[OMSNMP_MAXOIDLENGHT+1];	/* Snmp OID used for the Syslog Message - default is 1.3.6.1.4.1.9.9.41.2.0.1 - CISCO-SYSLOG-MIB::clogMessageGenerated 
+														*	You will need the CISCO-SYSLOG-MIB and CISCO-SMI mibs installed on the receiver side in order to decode this mib. 
+														*	Downloads of these mib files can be found here: 
+														*		http://www.oidview.com/mibs/9/CISCO-SYSLOG-MIB.html
+														*		http://www.oidview.com/mibs/9/CISCO-SMI.html
+														*/ 
 	int iPort;											/* Target Port */
 	int iSNMPVersion;									/* SNMP Version to use */
 	int iTrapType;										/* Snmp TrapType or GenericType */
@@ -366,7 +371,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* Copy SyslogMessage OID */
 	if (pszSyslogMessageOID == NULL)	/* Failsave */
-		strncpy( (char*) pData->szSyslogMessageOID, "1.3.6.1.6.3.1.1.4.3", sizeof("1.3.6.1.6.3.1.1.4.3") );
+		strncpy( (char*) pData->szSyslogMessageOID, "1.3.6.1.4.1.9.9.41.2.0.1", sizeof("1.3.6.1.4.1.9.9.41.2.0.1") );
 	else						/* Copy Target */
 		strncpy( (char*) pData->szSyslogMessageOID, (char*) pszSyslogMessageOID, strlen((char*) pszSyslogMessageOID) );
 
