@@ -68,13 +68,24 @@ developer (headers) package installed. </p>
 	Example:<strong> $actionsnmpcommunity public</strong><br>
 	</li>
 	<li><strong>$actionsnmpsyslogmessageoid </strong>(This parameter is 
-	optional, the default value is &quot;1.3.6.1.4.1&quot; which means &quot;i.o.d.internet.private.enterprises&quot;)<br>
+	optional, the default value is &quot;1.3.6.1.4.1.9.9.41.2.0.1&quot; which means &quot;CISCO-SYSLOG-MIB::clogMessageGenerated&quot;)<br>
 	<br>
 	This OID will be used as a variable, type &quot;OCTET STRING&quot;. This variable will 
 	contain the full syslog message including syslog header. I also recommend to 
 	use the default value here unless you require to use a different OID. <br>
+	In order to decode this OID, you will need to have the CISCO-SYSLOG-MIB and 
+	CISCO-SMI mibs installed on the receiver side. Downloads of these mib files 
+	can be found here: <br>
+	<a href="http://www.oidview.com/mibs/9/CISCO-SYSLOG-MIB.html">
+	http://www.oidview.com/mibs/9/CISCO-SYSLOG-MIB.html</a><br>
+	<a href="http://www.oidview.com/mibs/9/CISCO-SMI.html">
+	http://www.oidview.com/mibs/9/CISCO-SMI.html</a><br>
 	<br>
-	Example: <strong>$actionsnmpsyslogmessageoid 1.3.6.1.4.1</strong><br>
+	We will add our own MIB definition in a later step here. For now, 
+	CISCO-SYSLOG-MIB::clogMessageGenerated is a good choice. Thanks to the net-snmp 
+	mailinglist for the help and the recommendations ;).<br>
+	<br>
+	Example: <strong>$actionsnmpsyslogmessageoid 1.3.6.1.4.1.9.9.41.2.0.1</strong><br>
 	</li>
 	<li><strong>$actionsnmpenterpriseoid </strong>(This parameter is optional, 
 	the default value is &quot;1.3.6.1.4.1.3.1.1&quot; which means &quot;enterprises.cmu.1.1&quot;)<br>
