@@ -1,10 +1,10 @@
 /* imgssapi.c
  * This is the implementation of the GSSAPI input module.
  *
- * IMPORTANT: Currently this module does not really exist. It shares code
- * from imtcp, which has everything (controlled via preprocessor
- * defines). This file has been created in order to facilitate moving
- * gssapi into its real own module.
+ * Note: the root gssapi code was contributed by varmojfekoj and is most often
+ * maintened by him. I am just doing the plumbing around it (I event don't have a
+ * test lab for gssapi yet... ). I am very grateful for this useful code
+ * contribution -- rgerhards, 2008-03-05
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
