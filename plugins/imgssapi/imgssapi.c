@@ -139,7 +139,6 @@ OnSessDestruct(void *ppUsr)
 	assert(ppGSess != NULL);
 	if(*ppGSess == NULL)
 		FINALIZE;
-	//assert(*ppGSess != NULL);
 
 	if((*ppGSess)->allowedMethods & ALLOWEDMETHOD_GSS) {
 		OM_uint32 maj_stat, min_stat;
@@ -192,12 +191,9 @@ onSessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 	pGSrv = (gsssrv_t*) pThis->pUsr;
 
 	if(pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) {
-RUNLOG;
 		iRet = OnSessAcceptGSS(pThis, ppSess, fd);
 	} else {
-RUNLOG;
 		iRet = tcpsrv.SessAccept(pThis, ppSess, fd);
-RUNLOG_VAR("%d", (*ppSess)->sock);
 	}
 
 	RETiRet;
@@ -418,12 +414,10 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 				errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 				tcps_sess.Close(pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
-				// was: return -1;
 			} else if (ret == 0) {
 				dbgprintf("GSS-API Reverting to plain TCP\n");
 				pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
 				ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
-				// was: return 0;
 			}
 
 			do {
@@ -436,14 +430,12 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 					errmsg.LogError(NO_ERRCODE, "TCP(GSS) session %p will be closed, error ignored\n", pSess);
 				tcps_sess.Close(pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
-				// was: return -1;
 			}
 
 			if (ret < 4) {
 				dbgprintf("GSS-API Reverting to plain TCP\n");
 				pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
 				ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
-				// was: return 0;
 			} else if (ret == 4) {
 				/* The client might has been interupted after sending
 				 * the data length (4B), give him another chance.
@@ -459,7 +451,6 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 						errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 					tcps_sess.Close(pSess);
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
-					//was: return -1;
 				}
 			}
 
@@ -472,7 +463,6 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 				dbgprintf("GSS-API Reverting to plain TCP\n");
 				pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
 				ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
-				// was: return 0;
 			}
 		}
 
@@ -484,7 +474,6 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 				errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 				tcps_sess.Close(pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
-				//was: return -1;
 			}
 			maj_stat = gss_accept_sec_context(&acc_sec_min_stat, context, gss_server_creds,
 							  &recv_tok, GSS_C_NO_CHANNEL_BINDINGS, &client,
@@ -507,16 +496,13 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 							    pSess);
 						tcps_sess.Close(pSess);
 						ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
-						//was: return -1;
 					}
 					pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
 					ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
-					// was: return 0;
 				}
 				gssutil.display_status("accepting context", maj_stat, acc_sec_min_stat);
 				tcps_sess.Close(pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
-				//was: return -1;
 			}
 			if (send_tok.length != 0) {
 				if(gssutil.send_token(fdSess, &send_tok) < 0) {
@@ -526,7 +512,6 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 						gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
 					tcps_sess.Close(pSess);
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
-					//was: return -1;
 				}
 				gss_release_buffer(&min_stat, &send_tok);
 			}
