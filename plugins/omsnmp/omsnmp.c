@@ -90,7 +90,7 @@ typedef struct _instanceData {
 	uchar	szCommunity[OMSNMP_MAXCOMMUNITYLENGHT+1];	/* Snmp Community */ 
 	uchar	szEnterpriseOID[OMSNMP_MAXOIDLENGHT+1];		/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */ 
 	uchar	szSnmpTrapOID[OMSNMP_MAXOIDLENGHT+1];		/* Snmp Trap OID - default is (1.3.6.1.4.1.19406.1.2.1 = ADISCON-MONITORWARE-MIB::syslogtrap) */ 
-	uchar	szSyslogMessageOID[OMSNMP_MAXOIDLENGHT+1];	/* Snmp OID used for the Syslog Message - default is 1.3.6.1.4.1.19406.1.1.1 - ADISCON-MONITORWARE-MIB::syslogMsg
+	uchar	szSyslogMessageOID[OMSNMP_MAXOIDLENGHT+1];	/* Snmp OID used for the Syslog Message - default is 1.3.6.1.4.1.19406.1.1.2.1 - ADISCON-MONITORWARE-MIB::syslogMsg
 														*	You will need the ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver side in order to decode this mib. 
 														*	Downloads of these mib files can be found here: 
 														*		http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt
@@ -383,7 +383,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* Copy SyslogMessage OID */
 	if (pszSyslogMessageOID == NULL)	/* Failsave */
-		strncpy( (char*) pData->szSyslogMessageOID, "1.3.6.1.4.1.19406.1.1.1", sizeof("1.3.6.1.4.1.19406.1.1.1") );
+		strncpy( (char*) pData->szSyslogMessageOID, "1.3.6.1.4.1.19406.1.1.2.1", sizeof("1.3.6.1.4.1.19406.1.1.2.1") );
 	else						/* Copy Target */
 		strncpy( (char*) pData->szSyslogMessageOID, (char*) pszSyslogMessageOID, strlen((char*) pszSyslogMessageOID) );
 

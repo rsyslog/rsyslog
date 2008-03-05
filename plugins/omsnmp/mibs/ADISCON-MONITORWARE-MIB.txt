@@ -20,7 +20,7 @@ IMPORTS
 ;
 
 monitorware MODULE-IDENTITY
-    LAST-UPDATED "200803040000Z"
+    LAST-UPDATED "200803050000Z"
     ORGANIZATION "www.adiscon-com"
     CONTACT-INFO    
 	 "postal:	Adiscon GmbH
@@ -33,11 +33,15 @@ monitorware MODULE-IDENTITY
 	"This MIB defines traps and variables to wrap syslog messages into snmp traps."
     REVISION     "200803040000Z"
     DESCRIPTION
+	"Added a few new variables for the representation of MonitorWare properties. Also added a few new traps."
+    REVISION     "200803050000Z"
+    DESCRIPTION
 	"First draft"
     ::= { adiscon 1 }
 
 -- Printable string, using the ISO 8859-1 character set.
 DisplayString ::= OCTET STRING (SIZE (0..255))
+SmallString ::= OCTET STRING (SIZE (0..64))
 --
 
 --
@@ -47,6 +51,11 @@ DisplayString ::= OCTET STRING (SIZE (0..255))
 monitorware		OBJECT IDENTIFIER ::= { adiscon 1 }
 monitorwarevars		OBJECT IDENTIFIER ::= { monitorware 1 }
 monitorwaretraps	OBJECT IDENTIFIER ::= { monitorware 2 }
+genericvars		OBJECT IDENTIFIER ::= { monitorwarevars 1 }
+syslogvars		OBJECT IDENTIFIER ::= { monitorwarevars 2 }
+eventlogvars		OBJECT IDENTIFIER ::= { monitorwarevars 3 }
+filemonvars		OBJECT IDENTIFIER ::= { monitorwarevars 4 }
+ntservicemonvars	OBJECT IDENTIFIER ::= { monitorwarevars 5 }
 
 -- *****************************************************************
 -- Trap variables
@@ -59,7 +68,7 @@ syslogMsg OBJECT-TYPE
     DESCRIPTION
        "Syslog Message, this will contain the full 
 	syslog message including the full syslog header"
-    ::= { monitorwarevars 1 }
+    ::= { syslogvars 1 }
 
 syslogSeverity OBJECT-TYPE
     SYNTAX  INTEGER {
@@ -76,7 +85,8 @@ syslogSeverity OBJECT-TYPE
     STATUS      current
     DESCRIPTION
         "Syslog severity(priority)."
-    ::= { monitorwarevars 2 }
+    DEFVAL { 5 }
+    ::= { syslogvars 2 }
 
 syslogFacility OBJECT-TYPE
     SYNTAX  INTEGER {
@@ -103,7 +113,187 @@ syslogFacility OBJECT-TYPE
     STATUS      current
     DESCRIPTION
         "Syslog facility."
-    ::= { monitorwarevars 3 }
+    DEFVAL { 16 }
+    ::= { syslogvars 3 }
+
+syslogTag OBJECT-TYPE
+    SYNTAX  SmallString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Contains the SyslogTag Value."
+    ::= { syslogvars 4 }
+
+genCustomerID OBJECT-TYPE
+    SYNTAX      Integer32 (1..2147483647)
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Generic Property CustomerID."
+    ::= { genericvars 1 }
+
+genSystemID OBJECT-TYPE
+    SYNTAX      Integer32 (1..2147483647)
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Generic Property SystemID."
+    ::= { genericvars 2 }
+
+genSource OBJECT-TYPE
+    SYNTAX  SmallString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Generic Source Property."
+    ::= { genericvars 3 }
+
+genTimereported OBJECT-TYPE
+    SYNTAX  TimeTicks
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Timestamp of when the event was reported."
+    ::= { genericvars 4 }
+
+genTimegenerated OBJECT-TYPE
+    SYNTAX  TimeTicks
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Timestamp of when the event was generated."
+    ::= { genericvars 5 }
+
+genIut OBJECT-TYPE
+    SYNTAX  INTEGER {
+                Unknown			(0),
+                Syslog			(1),
+                Heartbeat		(2),
+		NTEventReport		(3),
+		SNMPTrap		(4),
+		FileMonitor		(5),
+		PingProbe		(8), 
+                PortProbe		(9), 
+                NTServiceMonitor	(10), 
+                DiskSpaceMonitor	(11), 
+                DBMonitor		(12), 
+                SerialMonitor		(13), 
+                CPUMonitor		(14), 
+                AliveMonRequest		(16), 
+                SMTPProbe		(17), 
+                FTPProbe		(18), 
+                HTTPProbe		(19), 
+                POP3Probe		(20), 
+                IMAPProbe		(21), 
+                NNTPProbe		(22), 
+                WEVTMONV2		(23), 
+                SMTPLISTENER		(24), 
+                SNMPMONITOR		(25), 
+                AliveMonECHO		(1999998)
+            }
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "InfoUnit TypeID, defines from which Source the event is derived from."
+    DEFVAL { 0 }
+    ::= { genericvars 6 }
+
+genMsg OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Generic Message for this event"
+    ::= { genericvars 7 }
+
+eventlogEventID OBJECT-TYPE
+    SYNTAX      Integer32 (1..2147483647)
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "EventID of the EventLog Entry"
+    ::= { eventlogvars 1 }
+
+eventlogEventType OBJECT-TYPE
+    SYNTAX  SmallString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "EventLog Type of the EventLog Entry (Like Application, Security or System)"
+    ::= { eventlogvars 2 }
+
+eventlogEventSource OBJECT-TYPE
+    SYNTAX  SmallString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "EventLog Source of the EventLog Entry"
+    ::= { eventlogvars 3 }
+
+eventlogEventCategoryID OBJECT-TYPE
+    SYNTAX      Integer32 (1..2147483647)
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+        "Event Category number of the EventLog Entry"
+    ::= { eventlogvars 4 }
+
+eventlogEventCategoryName OBJECT-TYPE
+    SYNTAX  SmallString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Event Category name of the EventLog Entry"
+    ::= { eventlogvars 5 }
+
+eventlogEventUser OBJECT-TYPE
+    SYNTAX  SmallString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Event User of the EventLog Entry"
+    ::= { eventlogvars 6 }
+
+filemonGenericFilename OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Generic Filename template used to create the filename"
+    ::= { filemonvars 1 }
+
+filemonGeneratedFilename OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Generated Filename, the source file of this event."
+    ::= { filemonvars 2 }
+
+filemonMsgseperator OBJECT-TYPE
+    SYNTAX  SmallString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "The message seperator which was used."
+    ::= { filemonvars 3 }
+
+ntserviceServiceName OBJECT-TYPE
+    SYNTAX  SmallString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Internal Name of the monitored service."
+    ::= { ntservicemonvars 1 }
+
+ntserviceServiceDisplayName OBJECT-TYPE
+    SYNTAX  DisplayString
+    MAX-ACCESS  accessible-for-notify
+    STATUS      current
+    DESCRIPTION
+       "Display Name of the monitored service."
+    ::= { ntservicemonvars 2 }
+
 
 -- *****************************************************************
 -- Trap definitions
@@ -116,7 +306,57 @@ syslogtrap NOTIFICATION-TYPE
 	}
 	STATUS      current
 	DESCRIPTION
-        "Syslogmessage Trap from monitorware."
+        "Syslogmessage Trap."
 ::= { monitorwaretraps 1 }
+
+monitorwaretrap NOTIFICATION-TYPE
+	OBJECTS {	genMsg,
+			genSource,
+			genTimegenerated,
+			genIut
+	}
+	STATUS      current
+	DESCRIPTION
+        "Generic Trap from monitorware events."
+::= { monitorwaretraps 2 }
+
+eventmontrap NOTIFICATION-TYPE
+	OBJECTS {	genMsg, 
+			genSource,
+			eventlogEventID,
+			eventlogEventType,
+			eventlogEventSource,
+			eventlogEventCategoryID,
+			eventlogEventCategoryName,
+			eventlogEventUser
+	}
+	STATUS      current
+	DESCRIPTION
+        "Trap generated by the EventLog Monitor."
+::= { monitorwaretraps 3 }
+
+filemontrap NOTIFICATION-TYPE
+	OBJECTS {	genMsg,
+			genSource,
+			genTimegenerated,
+			filemonGenericFilename,
+			filemonGeneratedFilename
+	}
+	STATUS      current
+	DESCRIPTION
+        "Trap generated by the FileMonitor."
+::= { monitorwaretraps 4 }
+
+ntservicetrap NOTIFICATION-TYPE
+	OBJECTS {	genMsg,
+			genSource,
+			genTimegenerated,
+			ntserviceServiceName,
+			ntserviceServiceDisplayName
+	}
+	STATUS      current
+	DESCRIPTION
+        "Trap generated by the NT Service Monitor."
+::= { monitorwaretraps 5 }
 
 END
