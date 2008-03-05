@@ -203,7 +203,6 @@ DEFobjCurrIf(errmsg)
 #endif
 #define INTERNAL_NOPRI  0x10    /* the "no priority" priority */
 #define LOG_FTP         (11<<3) /* ftp daemon */
-//#define INTERNAL_MARK   LOG_MAKEPRI((LOG_NFACILITIES<<3), 0)
 
 
 #ifndef UTMP_FILE
@@ -445,8 +444,7 @@ int option_DisallowWarning = 1;	/* complain if message from disallowed sender is
 
 /* hardcoded standard templates (used for defaults) */
 static uchar template_TraditionalFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
-static uchar template_WallFmt[] = "\"\r\nMessage from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
-// TODO: re-enable BEL! static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
+static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
 static uchar template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
 static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
 static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
@@ -1164,6 +1162,9 @@ void untty(void)
 				(void) ioctl(i, (int) TIOCNOTTY, (char *)0);
 #			else
 				/* TODO: we need to implement something for HP UX! -- rgerhards, 2008-03-04 */
+				/* actually, HP UX should have setsid, so the code directly above should
+				 * trigger. So the actual question is why it doesn't do that...
+				 */
 #			endif
 			(void) close(i);
 		}
@@ -3858,29 +3859,6 @@ int main(int argc, char **argv)
 	dbgClassInit();
 	return realMain(argc, argv);
 }
-
-
-
-/* TODO: remove the "compatibility layer" below once we are done with modularization
- * rgerhards, 2008-03-05
- */
-#if 0
-void logerror(char *msg)
-{
-	errmsg.LogError(NO_ERRCODE, "%s", msg);
-}
-
-void logerrorInt(char *msg, int i)
-{
-	errmsg.LogError(NO_ERRCODE, msg, i);
-}
-
-void logerrorSz(char *msg, char* str)
-{
-	errmsg.LogError(NO_ERRCODE, msg, str);
-}
-#endif
-
 
 /* vim:set ai:
  */
