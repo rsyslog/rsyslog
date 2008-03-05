@@ -41,12 +41,15 @@
 #include "cfsysline.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "datetime.h"
 
 /* forward definitions */
 rsRetVal actionCallDoAction(action_t *pAction, msg_t *pMsg);
 
 /* object static data (once for all instances) */
-DEFobjStaticHelpers
+/* TODO: make this an object! DEFobjStaticHelpers -- rgerhards, 2008-03-05 */
+DEFobjCurrIf(obj)
+DEFobjCurrIf(datetime)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 
@@ -521,8 +524,8 @@ actionWriteToAction(action_t *pAction)
 		 * ... RAWMSG is a problem ... Please note that digital
 		 * signatures inside the message are also invalidated.
 		 */
-		getCurrTime(&(pMsg->tRcvdAt));
-		getCurrTime(&(pMsg->tTIMESTAMP));
+		datetime.getCurrTime(&(pMsg->tRcvdAt));
+		datetime.getCurrTime(&(pMsg->tTIMESTAMP));
 		MsgSetMSG(pMsg, (char*)szRepMsg);
 		MsgSetRawMsg(pMsg, (char*)szRepMsg);
 
@@ -689,6 +692,7 @@ rsRetVal actionClassInit(void)
 	DEFiRet;
 	/* request objects we use */
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 

@@ -62,7 +62,7 @@ DEFobjCurrIf(errmsg)
  *
  * Obviously, all caller-provided pointers must not be NULL...
  */
-void getCurrTime(struct syslogTime *t)
+static void getCurrTime(struct syslogTime *t)
 {
 	struct timeval tp;
 	struct tm *tm;

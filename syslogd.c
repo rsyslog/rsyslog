@@ -913,7 +913,7 @@ logmsgInternal(int pri, char *msg, int flags)
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->bParseHOSTNAME = 0;
-	getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	flags |= INTERNAL_MSG;
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
@@ -1318,7 +1318,7 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	}
 
 	if (flags & ADDDATE) {
-		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+		datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	}
 
 	/* HOSTNAME */
@@ -1402,7 +1402,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	 * rgerhards 2004-12-03
 	 */
 	if(flags & ADDDATE) {
-		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+		datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	}
 
 	/* rgerhards, 2006-03-13: next, we parse the hostname and tag. But we 

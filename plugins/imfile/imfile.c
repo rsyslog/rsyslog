@@ -40,6 +40,7 @@
 #include "msg.h"
 #include "stream.h"
 #include "errmsg.h"
+#include "datetime.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 
@@ -48,6 +49,7 @@ MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 /* Module static data */
 DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(datetime)
 
 typedef struct fileInfo_s {
 	uchar *pszFileName;
@@ -88,7 +90,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 		pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 		pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
 		pMsg->bParseHOSTNAME = 0;
-		getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+		datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 		CHKiRet(submitMsg(pMsg));
 finalize_it:
 	RETiRet;
@@ -450,6 +452,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
 	  	NULL, &pszFileName, STD_LOADABLE_MODULE_ID));

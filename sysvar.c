@@ -34,10 +34,12 @@
 #include "obj.h"
 #include "stringbuf.h"
 #include "sysvar.h"
+#include "datetime.h"
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(var)
+DEFobjCurrIf(datetime)
 
 
 /* Standard-Constructor
@@ -81,7 +83,7 @@ getNOW(eNOWType eNow, cstr_t **ppStr)
 	uchar szBuf[16];
 	struct syslogTime t;
 
-	getCurrTime(&t);
+	datetime.getCurrTime(&t);
 	switch(eNow) {
 	case NOW_NOW:
 		snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
@@ -189,6 +191,7 @@ ENDobjQueryInterface(sysvar)
 BEGINObjClassInit(sysvar, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(var, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, sysvarConstructFinalize);
