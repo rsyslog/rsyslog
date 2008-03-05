@@ -204,7 +204,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
-	CHKiRet(objUse(tcps_sess, "tcpsrv.so"));
+	CHKiRet(objUse(tcps_sess, "tcpsrv"));
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 
 	/* register config file handlers */

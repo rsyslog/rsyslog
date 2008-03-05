@@ -436,6 +436,7 @@ Load(uchar *pModName)
         uchar errMsg[1024];
 	uchar *pModNameBase;
 	uchar *pModNameDup;
+	uchar *pExtension;
         void *pModHdlr, *pModInit;
 	modInfo_t *pModInfo;
 
@@ -457,12 +458,32 @@ Load(uchar *pModName)
 	}
 	free(pModNameDup);
 
+	/* now build our load module name */
 	if(*pModName == '/') {
 		*szPath = '\0';	/* we do not need to append the path - its already in the module name */
 	} else {
 		strncpy((char *) szPath, (pModDir == NULL) ? _PATH_MODDIR : (char*) pModDir, sizeof(szPath));
 	}
+
+	/* ... add actual name ... */
 	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen((char*) szPath) - 1);
+
+	/* now see if we have an extension and, if not, append ".so" */
+	for(pExtension = pModNameBase ; *pExtension && *pExtension != '.' ; ++pExtension)
+		/*DO NOTHING*/;
+	
+	if(*pExtension != '.') {
+		/* we do not have an extension and so need to add ".so"
+		 * TODO: I guess this is highly importable, so we should change the
+		 * algo over time... -- rgerhards, 2008-03-05
+		 */
+		/* ... so now add the extension */
+		strncat((char *) szPath, ".so", sizeof(szPath) - strlen((char*) szPath) - 1);
+	}
+
+
+	/* complete load path constructed, so ... GO! */
+	dbgprintf("loading module '%s'\n", szPath);
 	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
 		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
 		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';

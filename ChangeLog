@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.12.1 (rgerhards), 2008-03-??
+- changed module loader to automatically add ".so" suffix if not
+  specified (over time, this shall also ease portability of config
+  files)
 - bugfix: actions were not correctly retried; caused message loss
 - improved debugging support; debug runtime options can now be set via
   an environment variable
