@@ -129,7 +129,7 @@ openFile(fileInfo_t *pThis)
 	CHKiRet(strmConstructFinalize(psSF));
 
 	/* read back in the object */
-	CHKiRet(objDeserialize(&pThis->pStrm, "strm", psSF, NULL, pThis));
+	CHKiRet(obj.Deserialize(&pThis->pStrm, (uchar*) "strm", psSF, NULL, pThis));
 
 	CHKiRet(strmSeekCurrOffs(pThis->pStrm));
 
