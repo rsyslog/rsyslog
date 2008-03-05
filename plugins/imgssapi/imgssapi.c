@@ -448,7 +448,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 				/* The client might has been interupted after sending
 				 * the data length (4B), give him another chance.
 				 */
-				sleep(1); //  TODO: bad, bad, fix...
+				srSleep(1, 0);
 				do {
 					ret = recv(fdSess, buf, sizeof (buf), MSG_PEEK);
 				} while (ret < 0 && errno == EINTR);
