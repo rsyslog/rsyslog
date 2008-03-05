@@ -3,6 +3,8 @@ sbin_PROGRAMS = rfc3195d rsyslogd
 rfc3195d_SOURCES = rfc3195d.c rsyslog.h
 
 rsyslogd_SOURCES = \
+	datetime.c \
+	datetime.h \
 	errmsg.c \
 	errmsg.h \
 	syslogd.c \

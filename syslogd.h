@@ -119,11 +119,6 @@ typedef struct filed selector_t;	/* new type name */
 #define MSG_DONT_PARSE_HOSTNAME 0
 rsRetVal parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost);
 int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost);
-void getCurrTime(struct syslogTime *t);
-int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst);
-int formatTimestampToPgSQL(struct syslogTime *ts, char* pDst, size_t iLenDst);
-int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
-int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 void untty(void);
 rsRetVal selectorConstruct(selector_t **ppThis);
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);

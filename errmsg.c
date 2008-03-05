@@ -112,7 +112,6 @@ ENDobjQueryInterface(errmsg)
  */
 BEGINAbstractObjClassInit(errmsg, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-RUNLOG_STR("errmsg ClassInit is called!\n");
 
 	/* set our own handlers */
 ENDObjClassInit(errmsg)

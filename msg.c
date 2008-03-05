@@ -41,10 +41,12 @@
 #include "template.h"
 #include "msg.h"
 #include "var.h"
+#include "datetime.h"
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(var)
+DEFobjCurrIf(datetime)
 
 static syslogCODE rs_prioritynames[] =
   {
@@ -224,7 +226,7 @@ rsRetVal msgConstruct(msg_t **ppThis)
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
-	getCurrTime(&(pM->tRcvdAt));
+	datetime.getCurrTime(&(pM->tRcvdAt));
 	objConstructSetObjInfo(pM);
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
@@ -673,7 +675,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
+			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3164);
@@ -685,7 +687,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			formatTimestampToMySQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_MySQL, 15);
+			datetime.formatTimestampToMySQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_MySQL, 15);
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP_MySQL);
@@ -697,7 +699,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
                                 MsgUnlock(pM);
                                 return "";
                         }
-                        formatTimestampToPgSQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_PgSQL, 21);
+                        datetime.formatTimestampToPgSQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_PgSQL, 21);
                 }
                 MsgUnlock(pM);
                 return(pM->pszTIMESTAMP_PgSQL);
@@ -709,7 +711,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
+			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3164);
@@ -721,7 +723,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
 			}
-			formatTimestamp3339(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 33);
+			datetime.formatTimestamp3339(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 33);
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3339);
@@ -743,7 +745,7 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
+			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3164);
@@ -755,7 +757,7 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			formatTimestampToMySQL(&pM->tRcvdAt, pM->pszRcvdAt_MySQL, 15);
+			datetime.formatTimestampToMySQL(&pM->tRcvdAt, pM->pszRcvdAt_MySQL, 15);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt_MySQL);
@@ -767,7 +769,7 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
                                 MsgUnlock(pM);
                                 return "";
                         }
-                        formatTimestampToPgSQL(&pM->tRcvdAt, pM->pszRcvdAt_PgSQL, 21);
+                        datetime.formatTimestampToPgSQL(&pM->tRcvdAt, pM->pszRcvdAt_PgSQL, 21);
                 }
                 MsgUnlock(pM);
                 return(pM->pszRcvdAt_PgSQL);
@@ -779,7 +781,7 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 					MsgUnlock(pM);
 					return "";
 				}
-			formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
+			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3164);
@@ -791,7 +793,7 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			formatTimestamp3339(&pM->tRcvdAt, pM->pszRcvdAt3339, 33);
+			datetime.formatTimestamp3339(&pM->tRcvdAt, pM->pszRcvdAt3339, 33);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3339);
@@ -1468,7 +1470,7 @@ static uchar *getNOW(eNOWType eNow)
 		return NULL;
 	}
 
-	getCurrTime(&t);
+	datetime.getCurrTime(&t);
 	switch(eNow) {
 	case NOW_NOW:
 		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
@@ -2210,6 +2212,7 @@ rsRetVal msgQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
 	CHKiRet(objUse(var, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
