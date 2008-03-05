@@ -97,7 +97,10 @@ rsyslogd_LDFLAGS = -export-dynamic
 
 # now come the library plugins
 # TODO: how? build gssutil.la only if gssapi is supported rgerhards, 2008-03-05
-pkglib_LTLIBRARIES = tcpsrv.la gssutil.la
+pkglib_LTLIBRARIES = tcpsrv.la
+if ENABLE_GSSAPI
+pkglib_LTLIBRARIES += gssutil.la
+endif
 
 #
 # TCP (Stream) Server support
