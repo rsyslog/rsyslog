@@ -96,11 +96,7 @@ rsyslogd_LDADD = $(mudflap_libs) $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_l
 rsyslogd_LDFLAGS = -export-dynamic
 
 # now come the library plugins
-# TODO: how? build gssutil.la only if gssapi is supported rgerhards, 2008-03-05
 pkglib_LTLIBRARIES = tcpsrv.la
-if ENABLE_GSSAPI
-pkglib_LTLIBRARIES += gssutil.la
-endif
 
 #
 # TCP (Stream) Server support
@@ -118,6 +114,7 @@ tcpsrv_la_LIBADD =
 # gssapi support
 # 
 if ENABLE_GSSAPI
+pkglib_LTLIBRARIES += gssutil.la
 gssutil_la_SOURCES = gss-misc.c gss-misc.h
 gssutil_la_CPPFLAGS = $(pthreads_cflags) $(mudflap_cflags)
 gssutil_la_LDFLAGS = $(mudflap_libs) -module -avoid-version
