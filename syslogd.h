@@ -124,7 +124,6 @@ rsRetVal selectorConstruct(selector_t **ppThis);
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
 rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts);
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
-rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended);
 rsRetVal selectorDestruct(void *pVal);
 rsRetVal selectorAddList(selector_t *f);
 /* the following prototypes should go away once we have an input
@@ -148,6 +147,7 @@ extern int bDropMalPTRMsgs;
 extern char ctty[];
 extern int MarkInterval;
 extern int  bReduceRepeatMsgs;
+extern int bActExecWhenPrevSusp;
 
 /* Intervals at which we flush out "message repeated" messages,
  * in seconds after previous message is logged.  After each flush,

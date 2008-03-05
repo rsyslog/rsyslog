@@ -11,10 +11,10 @@
  * I would like to express my thanks to the developers of the sysklogd
  * package - without it, I would have had a much harder start...
  *
- * As of this writing (2008-01-03), there have been numerous changes to
- * the original package. Be very careful when you apply some of your
- * sysklogd knowledge to rsyslog.
- * 
+ * Please note that while rsyslog started from the sysklogd code base,
+ * it nowadays has almost nothing left in common with it. Allmost all
+ * parts of the code have been rewritten.
+ *
  * This Project was intiated and is maintained by
  * Rainer Gerhards <rgerhards@hq.adiscon.com>. See
  * AUTHORS to learn who helped make it become a reality.
@@ -85,21 +85,6 @@
  * I have increased the default message size to 2048 to be in sync
  * with recent IETF syslog standardization efforts.
  * rgerhards, 2006-11-30
- *
- * I have removed syslogdPanic(). That function was supposed to be used
- * for logging in low-memory conditons. Ever since it was introduced, it
- * was a wrapper for dbgprintf(). A more intelligent choice was hard to
- * find. After all, if we are short on memory, doing anything fance will
- * again cause memory problems. I have now modified the code so that
- * those elements for which we do not get memory are simply discarded.
- * That might be a single property like the TAG, but it might also be
- * a complete message. The overall goal of this code change is to keep
- * rsyslogd up and running, while we sacrifice some messages to reach
- * that goal. It also keeps the code cleaner. A real out of memory
- * condition is highly unlikely. If it happens, there will probably be
- * much more trouble on the system in question. Anyhow - rsyslogd will
- * most probably be able to survive it and carry on with processing
- * once the situation has been resolved.
  */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define TIMERINTVL	30		/* interval for checking flush, mark */
@@ -121,9 +106,9 @@
 #include <libgen.h>
 
 #ifdef	__sun
-#include <errno.h>
+#	include <errno.h>
 #else
-#include <sys/errno.h>
+#	include <sys/errno.h>
 #endif
 #include <sys/ioctl.h>
 #include <sys/wait.h>
@@ -313,7 +298,7 @@ int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during
 static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
-static int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
+int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
 static int	logEveryMsg = 0;/* no repeat message processing  - read-only after startup
 				 * 0 - suppress duplicate messages
 				 * 1 - do NOT suppress duplicate messages
@@ -1362,6 +1347,8 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	free(pBuf);
 	return 0; /* all ok */
 }
+
+
 /* parse a legay-formatted syslog message. This function returns
  * 0 if processing of the message shall continue and 1 if something
  * went wrong and this messe should be ignored. This function has been
@@ -2373,105 +2360,6 @@ init(void)
 
 	dbgprintf(" (re)started.\n");
 	ENDfunc
-}
-
-
-/* add an Action to the current selector
- * The pOMSR is freed, as it is not needed after this function.
- * Note: this function pulls global data that specifies action config state.
- * rgerhards, 2007-07-27
- */
-rsRetVal
-addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended)
-{
-	DEFiRet;
-	int i;
-	int iTplOpts;
-	uchar *pTplName;
-	action_t *pAction;
-	char errMsg[512];
-
-	assert(ppAction != NULL);
-	assert(pMod != NULL);
-	assert(pOMSR != NULL);
-	dbgprintf("Module %s processed this config line.\n", module.GetName(pMod));
-
-	CHKiRet(actionConstruct(&pAction)); /* create action object first */
-	pAction->pMod = pMod;
-	pAction->pModData = pModData;
-	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
-
-	/* check if we can obtain the template pointers - TODO: move to separat function? */
-	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);
-	assert(pAction->iNumTpls >= 0); /* only debug check because this "can not happen" */
-	/* please note: iNumTpls may validly be zero. This is the case if the module
-	 * does not request any templates. This sounds unlikely, but an actual example is
-	 * the discard action, which does not require a string. -- rgerhards, 2007-07-30
-	 */
-	if(pAction->iNumTpls > 0) {
-		/* we first need to create the template pointer array */
-		if((pAction->ppTpl = calloc(pAction->iNumTpls, sizeof(struct template *))) == NULL) {
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
-	}
-	
-	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		CHKiRet(OMSRgetEntry(pOMSR, i, &pTplName, &iTplOpts));
-		/* Ok, we got everything, so it now is time to look up the
-		 * template (Hint: templates MUST be defined before they are
-		 * used!)
-		 */
-		if((pAction->ppTpl[i] = tplFind((char*)pTplName, strlen((char*)pTplName))) == NULL) {
-			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
-				 " Could not find template '%s' - action disabled\n",
-				 pTplName);
-			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "%s", errMsg);
-			ABORT_FINALIZE(RS_RET_NOT_FOUND);
-		}
-		/* check required template options */
-		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
-		   && (pAction->ppTpl[i]->optFormatForSQL == 0)) {
-			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "Action disabled. To use this action, you have to specify "
-				"the SQL or stdSQL option in your template!\n");
-			ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
-		}
-
-		dbgprintf("template: '%s' assigned\n", pTplName);
-	}
-
-	pAction->pMod = pMod;
-	pAction->pModData = pModData;
-	/* now check if the module is compatible with select features */
-	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
-		pAction->f_ReduceRepeated = bReduceRepeatMsgs;
-	else {
-		dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
-		pAction->f_ReduceRepeated = 0;
-	}
-	pAction->bEnabled = 1; /* action is enabled */
-
-	if(bSuspended)
-		actionSuspend(pAction);
-
-	CHKiRet(actionConstructFinalize(pAction));
-	
-	/* TODO: if we exit here, we have a memory leak... */
-
-	*ppAction = pAction; /* finally store the action pointer */
-
-finalize_it:
-	if(iRet == RS_RET_OK)
-		iRet = OMSRdestruct(pOMSR);
-	else {
-		/* do not overwrite error state! */
-		OMSRdestruct(pOMSR);
-		if(pAction != NULL)
-			actionDestruct(pAction);
-	}
-
-	RETiRet;
 }
 
 

@@ -32,6 +32,7 @@
 #include <string.h>
 #include <strings.h>
 #include <time.h>
+#include <errno.h>
 
 #include "syslogd.h"
 #include "template.h"
@@ -681,6 +682,105 @@ actionAddCfSysLineHdrl(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &iActionQueueDeqSlowdown, NULL));
 	
 finalize_it:
+	RETiRet;
+}
+
+
+/* add an Action to the current selector
+ * The pOMSR is freed, as it is not needed after this function.
+ * Note: this function pulls global data that specifies action config state.
+ * rgerhards, 2007-07-27
+ */
+rsRetVal
+addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended)
+{
+	DEFiRet;
+	int i;
+	int iTplOpts;
+	uchar *pTplName;
+	action_t *pAction;
+	char errMsg[512];
+
+	assert(ppAction != NULL);
+	assert(pMod != NULL);
+	assert(pOMSR != NULL);
+	dbgprintf("Module %s processed this config line.\n", module.GetName(pMod));
+
+	CHKiRet(actionConstruct(&pAction)); /* create action object first */
+	pAction->pMod = pMod;
+	pAction->pModData = pModData;
+	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
+
+	/* check if we can obtain the template pointers - TODO: move to separate function? */
+	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);
+	assert(pAction->iNumTpls >= 0); /* only debug check because this "can not happen" */
+	/* please note: iNumTpls may validly be zero. This is the case if the module
+	 * does not request any templates. This sounds unlikely, but an actual example is
+	 * the discard action, which does not require a string. -- rgerhards, 2007-07-30
+	 */
+	if(pAction->iNumTpls > 0) {
+		/* we first need to create the template pointer array */
+		if((pAction->ppTpl = calloc(pAction->iNumTpls, sizeof(struct template *))) == NULL) {
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+	}
+	
+	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
+		CHKiRet(OMSRgetEntry(pOMSR, i, &pTplName, &iTplOpts));
+		/* Ok, we got everything, so it now is time to look up the
+		 * template (Hint: templates MUST be defined before they are
+		 * used!)
+		 */
+		if((pAction->ppTpl[i] = tplFind((char*)pTplName, strlen((char*)pTplName))) == NULL) {
+			snprintf(errMsg, sizeof(errMsg) / sizeof(char),
+				 " Could not find template '%s' - action disabled\n",
+				 pTplName);
+			errno = 0;
+			errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+			ABORT_FINALIZE(RS_RET_NOT_FOUND);
+		}
+		/* check required template options */
+		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
+		   && (pAction->ppTpl[i]->optFormatForSQL == 0)) {
+			errno = 0;
+			errmsg.LogError(NO_ERRCODE, "Action disabled. To use this action, you have to specify "
+				"the SQL or stdSQL option in your template!\n");
+			ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
+		}
+
+		dbgprintf("template: '%s' assigned\n", pTplName);
+	}
+
+	pAction->pMod = pMod;
+	pAction->pModData = pModData;
+	/* now check if the module is compatible with select features */
+	if(pMod->isCompatibleWithFeature(sFEATURERepeatedMsgReduction) == RS_RET_OK)
+		pAction->f_ReduceRepeated = bReduceRepeatMsgs;
+	else {
+		dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
+		pAction->f_ReduceRepeated = 0;
+	}
+	pAction->bEnabled = 1; /* action is enabled */
+
+	if(bSuspended)
+		actionSuspend(pAction);
+
+	CHKiRet(actionConstructFinalize(pAction));
+	
+	/* TODO: if we exit here, we have a memory leak... */
+
+	*ppAction = pAction; /* finally store the action pointer */
+
+finalize_it:
+	if(iRet == RS_RET_OK)
+		iRet = OMSRdestruct(pOMSR);
+	else {
+		/* do not overwrite error state! */
+		OMSRdestruct(pOMSR);
+		if(pAction != NULL)
+			actionDestruct(pAction);
+	}
+
 	RETiRet;
 }
 

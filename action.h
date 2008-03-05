@@ -80,6 +80,7 @@ rsRetVal actionDoAction(action_t *pAction);
 rsRetVal actionCallAction(action_t *pAction, msg_t *pMsg);
 rsRetVal actionWriteToAction(action_t *pAction);
 rsRetVal actionClassInit(void);
+rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended);
 
 #if 1
 #define actionIsSuspended(pThis) ((pThis)->bSuspended == 1)
