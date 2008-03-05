@@ -50,10 +50,12 @@
 #include "tcpsrv.h"
 #include "tcps_sess.h"
 #include "obj.h"
+#include "errmsg.h"
 
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(errmsg)
 
 /* Standard-Constructor
  */
@@ -196,7 +198,7 @@ PrepareClose(tcps_sess_t *pThis)
 		/* In this case, we have an invalid frame count and thus
 		 * generate an error message and discard the frame.
 		 */
-		logerrorInt("Incomplete frame at end of stream in session %d - "
+		errmsg.LogError(NO_ERRCODE, "Incomplete frame at end of stream in session %d - "
 			    "ignoring extra data (a message may be lost).\n",
 			    pThis->sock);
 		/* nothing more to do */
@@ -324,7 +326,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 					/* IETF20061218 ++iNbrOctets; */
 				} else {
 					/* TODO: handle "invalid frame" case */
-					logerrorInt("Framing Error in received TCP message: "
+					errmsg.LogError(NO_ERRCODE, "Framing Error in received TCP message: "
 					            "delimiter is not SP but has ASCII value %d.\n",
 						    *pData);
 					return(0); /* unconditional error exit */
@@ -334,7 +336,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 				if(pThis->iOctetsRemain < 1) {
 					/* TODO: handle the case where the octet count is 0 or negative! */
 					dbgprintf("Framing Error: invalid octet count\n");
-					logerrorInt("Framing Error in received TCP message: "
+					errmsg.LogError(NO_ERRCODE, "Framing Error in received TCP message: "
 					            "invalid octet count %d.\n",
 				 		    pThis->iOctetsRemain);
 					return(0); /* unconditional error exit */
@@ -427,11 +429,10 @@ ENDobjQueryInterface(tcps_sess)
  * before anything else is called inside this class.
  * rgerhards, 2008-02-29
  */
-//BEGINObjClassInit(tcps_sess, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 RUNLOG_STR("initializing tcps_sess class");
 	/* request objects we use */
-	//CHKiRet(objUse(expr, CORE_COMPONENT));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcps_sessDebugPrint);

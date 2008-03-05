@@ -52,12 +52,14 @@
 #include "omfile.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
 
 /* The following structure is a dynafile name cache entry.
  */
@@ -157,14 +159,14 @@ rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
 		errno = 0;
-		logerror((char*) errMsg);
+		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 1;
 	} else if(iNewVal > 10000) {
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "DynaFileCacheSize maximum is 10,000 (%d given), changed to 10,000.", iNewVal);
 		errno = 0;
-		logerror((char*) errMsg);
+		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 10000;
 	}
@@ -217,7 +219,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
 			 "outchannel '%s' not found - ignoring action line",
 			 szBuf);
-		logerror(errMsg);
+		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -228,7 +230,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
 			 "outchannel '%s' has no file name template - ignoring action line",
 			 szBuf);
-		logerror(errMsg);
+		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -492,7 +494,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 		if(iMsgOpts & INTERNAL_MSG)
 			dbgprintf("Could not open dynaFile, discarding message\n");
 		else
-			logerrorSz("Could not open dynamic file '%s' - discarding message", (char*)newFileName);
+			errmsg.LogError(NO_ERRCODE, "Could not open dynamic file '%s' - discarding message", (char*)newFileName);
 		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
 		pData->iCurrElt = -1;
 		return -1;
@@ -549,14 +551,14 @@ again:
 					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation",
 					 pData->f_fname, (long long) pData->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
-				logerror(errMsg);
+				errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 				ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
 					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation",
 					 pData->f_fname, (long long) pData->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
-				logerror(errMsg);
+				errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 			}
 		}
 	}
@@ -590,7 +592,7 @@ again:
 			pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
 			if (pData->fd < 0) {
 				iRet = RS_RET_DISABLE_ACTION;
-				logerror((char*) pData->f_fname);
+				errmsg.LogError(NO_ERRCODE, "%s", pData->f_fname);
 			} else {
 				untty();
 				goto again;
@@ -598,7 +600,7 @@ again:
 		} else {
 			iRet = RS_RET_DISABLE_ACTION;
 			errno = e;
-			logerror((char*) pData->f_fname);
+			errmsg.LogError(NO_ERRCODE, "%s", pData->f_fname);
 		}
 	} else if (pData->bSyncFile)
 		fsync(pData->fd);
@@ -763,7 +765,7 @@ CODESTARTparseSelectorAct
 	  	if ( pData->fd < 0 ){
 			pData->fd = -1;
 			dbgprintf("Error opening log file: %s\n", pData->f_fname);
-			logerror((char*) pData->f_fname);
+			errmsg.LogError(NO_ERRCODE, "%s", pData->f_fname);
 			break;
 		}
 		if (isatty(pData->fd)) {
@@ -815,6 +817,7 @@ BEGINmodInit(File)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &dirUID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", 0, eCmdHdlrGID, NULL, &dirGID, STD_LOADABLE_MODULE_ID));

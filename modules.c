@@ -41,13 +41,14 @@
 #include "syslogd.h"
 #include "cfsysline.h"
 #include "modules.h"
+#include "errmsg.h"
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(errmsg)
 
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
 static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
-static int bCfsyslineInitialized = 0;
 
 /* config settings */
 uchar	*pModDir = NULL; /* read-only after startup */
@@ -223,12 +224,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *
 	rsRetVal (*modGetType)(eModType_t *pType);
 
 	assert(modInit != NULL);
-
-	if(bCfsyslineInitialized == 0) {
-		/* we need to initialize the cfsysline subsystem first */
-		CHKiRet(cfsyslineInit());
-		bCfsyslineInitialized = 1;
-	}
 
 	if((iRet = moduleConstruct(&pNew)) != RS_RET_OK) {
 		pNew = NULL;
@@ -471,20 +466,20 @@ Load(uchar *pModName)
 	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
 		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
 		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
-		logerror((char *) errMsg);
+		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
 		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlsym: %s\n", szPath, dlerror());
 		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
-		logerror((char *) errMsg);
+		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK) {
 		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', rsyslog error %d\n", szPath, iRet);
 		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
-		logerror((char *) errMsg);
+		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -527,6 +522,7 @@ ENDobjQueryInterface(module)
  */
 BEGINAbstractObjClassInit(module, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDObjClassInit(module)
 
 /* vi:set ai:

@@ -28,7 +28,6 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -54,6 +53,7 @@
 #include "gss-misc.h"
 #include "tcpsrv.h"
 #include "tcps_sess.h"
+#include "errmsg.h"
 
 
 MODULE_TYPE_INPUT
@@ -75,6 +75,8 @@ static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd);
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
+DEFobjCurrIf(gssutil)
+DEFobjCurrIf(errmsg)
 
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
 static gss_cred_id_t gss_server_creds = GSS_C_NO_CREDENTIAL;
@@ -143,7 +145,7 @@ OnSessDestruct(void *ppUsr)
 		OM_uint32 maj_stat, min_stat;
 		maj_stat = gss_delete_sec_context(&min_stat, &(*ppGSess)->gss_context, GSS_C_NO_BUFFER);
 		if (maj_stat != GSS_S_COMPLETE)
-			display_status("deleting context", maj_stat, min_stat);
+			gssutil.display_status("deleting context", maj_stat, min_stat);
 	}
 
 	free(*ppGSess);
@@ -258,7 +260,7 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 	if(pGSrv->allowedMethods) {
 		if(pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) {
 			if(TCPSessGSSInit()) {
-				logerror("GSS-API initialization failed\n");
+				errmsg.LogError(NO_ERRCODE, "GSS-API initialization failed\n");
 				pGSrv->allowedMethods &= ~(ALLOWEDMETHOD_GSS);
 			}
 		}
@@ -345,7 +347,7 @@ static int TCPSessGSSInit(void)
 	name_buf.length = strlen(name_buf.value) + 1;
 	maj_stat = gss_import_name(&min_stat, &name_buf, GSS_C_NT_HOSTBASED_SERVICE, &server_name);
 	if (maj_stat != GSS_S_COMPLETE) {
-		display_status("importing name", maj_stat, min_stat);
+		gssutil.display_status("importing name", maj_stat, min_stat);
 		return -1;
 	}
 
@@ -353,7 +355,7 @@ static int TCPSessGSSInit(void)
 				    GSS_C_NULL_OID_SET, GSS_C_ACCEPT,
 				    &gss_server_creds, NULL, NULL);
 	if (maj_stat != GSS_S_COMPLETE) {
-		display_status("acquiring credentials", maj_stat, min_stat);
+		gssutil.display_status("acquiring credentials", maj_stat, min_stat);
 		return -1;
 	}
 
@@ -413,7 +415,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 				ret = select(fdSess + 1, &fds, NULL, NULL, &tv);
 			} while (ret < 0 && errno == EINTR);
 			if (ret < 0) {
-				logerrorVar("TCP session %p will be closed, error ignored\n", pSess);
+				errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 				tcps_sess.Close(pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 				// was: return -1;
@@ -431,7 +433,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 				if (ret == 0)
 					dbgprintf("GSS-API Connection closed by peer\n");
 				else
-					logerrorVar("TCP(GSS) session %p will be closed, error ignored\n", pSess);
+					errmsg.LogError(NO_ERRCODE, "TCP(GSS) session %p will be closed, error ignored\n", pSess);
 				tcps_sess.Close(pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 				// was: return -1;
@@ -454,7 +456,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 					if (ret == 0)
 						dbgprintf("GSS-API Connection closed by peer\n");
 					else
-						logerrorVar("TCP session %p will be closed, error ignored\n", pSess);
+						errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 					tcps_sess.Close(pSess);
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 					//was: return -1;
@@ -478,8 +480,8 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 		*context = GSS_C_NO_CONTEXT;
 		sess_flags = &pGSess->gss_flags;
 		do {
-			if (recv_token(fdSess, &recv_tok) <= 0) {
-				logerrorVar("TCP session %p will be closed, error ignored\n", pSess);
+			if (gssutil.recv_token(fdSess, &recv_tok) <= 0) {
+				errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 				tcps_sess.Close(pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 				//was: return -1;
@@ -500,7 +502,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 					dbgprintf("GSS-API Reverting to plain TCP\n");
 					dbgprintf("tcp session socket with new data: #%d\n", fdSess);
 					if(tcps_sess.DataRcvd(pSess, buf, ret) == 0) {
-						logerrorVar("Tearing down TCP Session %p - see "
+						errmsg.LogError(NO_ERRCODE, "Tearing down TCP Session %p - see "
 							    "previous messages for reason(s)\n",
 							    pSess);
 						tcps_sess.Close(pSess);
@@ -511,15 +513,15 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 					ABORT_FINALIZE(RS_RET_OK); // TODO: define good error codes
 					// was: return 0;
 				}
-				display_status("accepting context", maj_stat, acc_sec_min_stat);
+				gssutil.display_status("accepting context", maj_stat, acc_sec_min_stat);
 				tcps_sess.Close(pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 				//was: return -1;
 			}
 			if (send_tok.length != 0) {
-				if (send_token(fdSess, &send_tok) < 0) {
+				if(gssutil.send_token(fdSess, &send_tok) < 0) {
 					gss_release_buffer(&min_stat, &send_tok);
-					logerrorVar("TCP session %p will be closed, error ignored\n", pSess);
+					errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 					if (*context != GSS_C_NO_CONTEXT)
 						gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
 					tcps_sess.Close(pSess);
@@ -532,14 +534,14 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 
 		maj_stat = gss_display_name(&min_stat, client, &recv_tok, NULL);
 		if (maj_stat != GSS_S_COMPLETE)
-			display_status("displaying name", maj_stat, min_stat);
+			gssutil.display_status("displaying name", maj_stat, min_stat);
 		else
 			dbgprintf("GSS-API Accepted connection from: %s\n", (char*) recv_tok.value);
 		gss_release_name(&min_stat, &client);
 		gss_release_buffer(&min_stat, &recv_tok);
 
 		dbgprintf("GSS-API Provided context flags:\n");
-		display_ctx_flags(*sess_flags);
+		gssutil.display_ctx_flags(*sess_flags);
 		pGSess->allowedMethods = ALLOWEDMETHOD_GSS;
 	}
 	
@@ -567,14 +569,14 @@ int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len)
 	pGSess = (gss_sess_t*) pSess->pUsr;
 
 	fdSess = pSess->sock;
-	if ((state = recv_token(fdSess, &xmit_buf)) <= 0)
+	if ((state = gssutil.recv_token(fdSess, &xmit_buf)) <= 0)
 		return state;
 
 	context = &pGSess->gss_context;
 	maj_stat = gss_unwrap(&min_stat, *context, &xmit_buf, &msg_buf,
 			      &conf_state, (gss_qop_t *) NULL);
 	if(maj_stat != GSS_S_COMPLETE) {
-		display_status("unsealing message", maj_stat, min_stat);
+		gssutil.display_status("unsealing message", maj_stat, min_stat);
 		if(xmit_buf.value) {
 			free(xmit_buf.value);
 			xmit_buf.value = 0;
@@ -609,7 +611,7 @@ void TCPSessGSSClose(tcps_sess_t* pSess)
 	context = &pGSess->gss_context;
 	maj_stat = gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
 	if (maj_stat != GSS_S_COMPLETE)
-		display_status("deleting context", maj_stat, min_stat);
+		gssutil.display_status("deleting context", maj_stat, min_stat);
 	*context = GSS_C_NO_CONTEXT;
 	pGSess->gss_flags = 0;
 	pGSess->allowedMethods = 0;
@@ -629,7 +631,7 @@ TCPSessGSSDeinit(void)
 
 	maj_stat = gss_release_cred(&min_stat, &gss_server_creds);
 	if (maj_stat != GSS_S_COMPLETE)
-		display_status("releasing credentials", maj_stat, min_stat);
+		gssutil.display_status("releasing credentials", maj_stat, min_stat);
 	RETiRet;
 }
 
@@ -702,6 +704,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* request objects we use */
 	CHKiRet(objUse(tcps_sess, "tcpsrv.so"));
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
+	CHKiRet(objUse(gssutil, "gssutil"));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverpermitplaintcp", 0, eCmdHdlrBinary,

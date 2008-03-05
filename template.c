@@ -34,6 +34,12 @@
 #include "template.h"
 #include "msg.h"
 #include "syslogd.h"
+#include "obj.h"
+#include "errmsg.h"
+
+/* static data */
+DEFobjCurrIf(obj)
+DEFobjCurrIf(errmsg)
 
 static struct template *tplRoot = NULL;	/* the root of the template list */
 static struct template *tplLast = NULL;	/* points to the last element of the template list */
@@ -520,8 +526,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 			if (*p != ':') {
 				/* There is something more than an R , this is invalid ! */
 				/* Complain on extra characters */
-				logerrorSz
-				  ("error: invalid character in frompos after \"R\", property: '%%%s'",
+				errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"R\", property: '%%%s'",
 				    (char*) *pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
@@ -545,8 +550,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					pTpe->data.field.has_fields = 1;
 					if(!isdigit((int)*p)) {
 						/* complain and use default */
-						logerrorSz
-						  ("error: invalid character in frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
+						errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
 						    (char*) *pp);
 						pTpe->data.field.field_delim = 9;
 					} else {
@@ -554,8 +558,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 						while(isdigit((int)*p))
 							iNum = iNum * 10 + *p++ - '0';
 						if(iNum < 0 || iNum > 255) {
-							logerrorInt
-							  ("error: non-USASCII delimiter character value in template - using 9 (HT) as substitute", iNum);
+							errmsg.LogError(NO_ERRCODE, "error: non-USASCII delimiter character value %d in template - using 9 (HT) as substitute", iNum);
 							pTpe->data.field.field_delim = 9;
 						  } else {
 							pTpe->data.field.field_delim = iNum;
@@ -565,8 +568,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					/* invalid character after F, so we need to reject
 					 * this.
 					 */
-					logerrorSz
-					  ("error: invalid character in frompos after \"F\", property: '%%%s'",
+					errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"F\", property: '%%%s'",
 					    (char*) *pp);
 				}
 			} else {
@@ -1011,6 +1013,19 @@ int tplGetEntryCount(struct template *pTpl)
 	assert(pTpl != NULL);
 	return(pTpl->tpenElements);
 }
+
+/* our init function. TODO: remove once converted to a class
+ */
+rsRetVal templateInit()
+{
+	DEFiRet;
+	CHKiRet(objGetObjInterface(&obj));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+
+finalize_it:
+	RETiRet;
+}
+
 /*
  * vi:set ai:
  */

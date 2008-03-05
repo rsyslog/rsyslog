@@ -84,11 +84,13 @@
 #include "obj.h"
 #include "stream.h"
 #include "modules.h"
+#include "errmsg.h"
 
 /* static data */
 DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some macros! */
 DEFobjCurrIf(var)
 DEFobjCurrIf(module)
+DEFobjCurrIf(errmsg)
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
 
 
@@ -1036,7 +1038,8 @@ RegisterObj(uchar *pszObjName, objInfo_t *pInfo)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		logerrorVar("registering object '%s' failed with error code %d", pszObjName, iRet);
+RUNLOG_VAR("%p", errmsg.LogError);
+		errmsg.LogError(NO_ERRCODE, "registering object '%s' failed with error code %d", pszObjName, iRet);
 	}
 
 	RETiRet;
@@ -1154,10 +1157,16 @@ objClassInit(void)
 	CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */
 
 	/* init classes we use (limit to as few as possible!) */
+RUNLOG_VAR("%p", errmsg.LogError);
+	CHKiRet(errmsgClassInit());
+	CHKiRet(cfsyslineInit());
 	CHKiRet(varClassInit());
 	CHKiRet(moduleClassInit());
 	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
+RUNLOG_VAR("%p", errmsg.LogError);
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+RUNLOG_VAR("%p", errmsg.LogError);
 
 finalize_it:
 	RETiRet;

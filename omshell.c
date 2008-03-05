@@ -43,12 +43,14 @@
 #include "srUtils.h"
 #include "omshell.h"
 #include "module-template.h"
+#include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	uchar	progName[MAXFNAME]; /* program  to execute */
@@ -90,7 +92,7 @@ CODESTARTdoAction
 	 */
 	dbgprintf("\n");
 	if(execProg((uchar*) pData->progName, 1, ppString[0]) == 0)
-	 	logerrorSz("Executing program '%s' failed", (char*)pData->progName);
+	 	errmsg.LogError(NO_ERRCODE, "Executing program '%s' failed", (char*)pData->progName);
 ENDdoAction
 
 
@@ -142,6 +144,7 @@ BEGINmodInit(Shell)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 
 /*

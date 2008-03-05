@@ -54,6 +54,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "gss-misc.h"
+#include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -75,6 +76,8 @@ MODULE_TYPE_OUTPUT
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
+DEFobjCurrIf(gssutil)
 
 typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
@@ -144,7 +147,7 @@ CODESTARTfreeInstance
 	if (pData->gss_context != GSS_C_NO_CONTEXT) {
 		maj_stat = gss_delete_sec_context(&min_stat, &pData->gss_context, GSS_C_NO_BUFFER);
 		if (maj_stat != GSS_S_COMPLETE)
-			display_status("deleting context", maj_stat, min_stat);
+			gssutil.display_status("deleting context", maj_stat, min_stat);
 	}
 	/* this is meant to be done when module is unloaded,
 	   but since this module is static...
@@ -217,7 +220,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 	out_tok.length = 0;
 
 	if (maj_stat != GSS_S_COMPLETE) {
-		display_status("parsing name", maj_stat, min_stat);
+		gssutil.display_status("parsing name", maj_stat, min_stat);
 		goto fail;
 	}
 
@@ -230,7 +233,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 		*sess_flags |= GSS_C_CONF_FLAG;
 	}
 	dbgprintf("GSS-API requested context flags:\n");
-	display_ctx_flags(*sess_flags);
+	gssutil.display_ctx_flags(*sess_flags);
 
 	do {
 		maj_stat = gss_init_sec_context(&init_sec_min_stat, GSS_C_NO_CREDENTIAL, context,
@@ -241,7 +244,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 
 		if (maj_stat != GSS_S_COMPLETE
 		    && maj_stat != GSS_S_CONTINUE_NEEDED) {
-			display_status("initializing context", maj_stat, init_sec_min_stat);
+			gssutil.display_status("initializing context", maj_stat, init_sec_min_stat);
 			goto fail;
 		}
 
@@ -251,7 +254,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 
 		if (out_tok.length != 0) {
 			dbgprintf("GSS-API Sending init_sec_context token (length: %ld)\n", (long) out_tok.length);
-			if (send_token(s, &out_tok) < 0) {
+			if (gssutil.send_token(s, &out_tok) < 0) {
 				goto fail;
 			}
 		}
@@ -259,7 +262,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 
 		if (maj_stat == GSS_S_CONTINUE_NEEDED) {
 			dbgprintf("GSS-API Continue needed...\n");
-			if (recv_token(s, &in_tok) <= 0) {
+			if (gssutil.recv_token(s, &in_tok) <= 0) {
 				goto fail;
 			}
 			tok_ptr = &in_tok;
@@ -268,7 +271,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 
 	dbgprintf("GSS-API Provided context flags:\n");
 	*sess_flags = ret_flags;
-	display_ctx_flags(*sess_flags);
+	gssutil.display_ctx_flags(*sess_flags);
 
 	dbgprintf("GSS-API Context initialized\n");
 	gss_release_name(&min_stat, &target_name);
@@ -277,7 +280,7 @@ finalize_it:
 	RETiRet;
 
  fail:
-	logerror("GSS-API Context initialization failed\n");
+	errmsg.LogError(NO_ERRCODE, "GSS-API Context initialization failed\n");
 	gss_release_name(&min_stat, &target_name);
 	gss_release_buffer(&min_stat, &out_tok);
 	if (*context != GSS_C_NO_CONTEXT) {
@@ -310,11 +313,11 @@ static rsRetVal TCPSendGSSSend(void *pvData, char *msg, size_t len)
 	maj_stat = gss_wrap(&min_stat, *context, (gss_mode == GSSMODE_ENC) ? 1 : 0, GSS_C_QOP_DEFAULT,
 			    &in_buf, NULL, &out_buf);
 	if (maj_stat != GSS_S_COMPLETE) {
-		display_status("wrapping message", maj_stat, min_stat);
+		gssutil.display_status("wrapping message", maj_stat, min_stat);
 		goto fail;
 	}
 	
-	if (send_token(s, &out_buf) < 0) {
+	if (gssutil.send_token(s, &out_buf) < 0) {
 		goto fail;
 	}
 	gss_release_buffer(&min_stat, &out_buf);
@@ -511,12 +514,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 					++p; /* eat */
 					pData->compressionLevel = iLevel;
 				} else {
-					logerrorInt("Invalid compression level '%c' specified in "
+					errmsg.LogError(NO_ERRCODE, "Invalid compression level '%c' specified in "
 						 "forwardig action - NOT turning on compression.",
 						 *p);
 				}
 #					else
-				logerror("Compression requested, but rsyslogd is not compiled "
+				errmsg.LogError(NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
 					 "with compression support - request ignored.");
 #					endif /* #ifdef USE_NETZIP */
 			} else if(*p == 'o') { /* octet-couting based TCP framing? */
@@ -524,7 +527,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				/* no further options settable */
 				pData->tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
-				logerrorInt("Invalid option %c in forwarding action - ignoring.", *p);
+				errmsg.LogError(NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 				++p; /* eat invalid option */
 			}
 			/* the option processing is done. We now do a generic skip
@@ -540,7 +543,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* we probably have end of string - leave it for the rest
 			 * of the code to handle it (but warn the user)
 			 */
-			logerror("Option block not terminated in gssapi forward action.");
+			errmsg.LogError(NO_ERRCODE, "Option block not terminated in gssapi forward action.");
 	}
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06
@@ -558,7 +561,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* SKIP AND COUNT */;
 		pData->port = malloc(i + 1);
 		if(pData->port == NULL) {
-			logerror("Could not get memory to store syslog forwarding port, "
+			errmsg.LogError(NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");
 			/* we leave f_forw.port set to NULL, this is then handled by
 			 * getFwdSyslogPt().
@@ -576,7 +579,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			if(bErr == 0) { /* only 1 error msg! */
 				bErr = 1;
 				errno = 0;
-				logerror("invalid selector line (port), probably not doing "
+				errmsg.LogError(NO_ERRCODE, "invalid selector line (port), probably not doing "
 					 "what was intended");
 			}
 		}
@@ -647,7 +650,7 @@ static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
 		gss_mode = GSSMODE_ENC;
 		dbgprintf("GSS-API gssmode set to GSSMODE_ENC\n");
 	} else {
-		logerrorSz("unknown gssmode parameter: %s", (char *) mode);
+		errmsg.LogError(NO_ERRCODE, "unknown gssmode parameter: %s", (char *) mode);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	free(mode);
@@ -671,6 +674,9 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(gssutil, "gssutil"));
+
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssforwardservicename", 0, eCmdHdlrGetWord, NULL, &gss_base_service_name, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssmode", 0, eCmdHdlrGetWord, setGSSMode, &gss_mode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));

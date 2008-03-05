@@ -1,5 +1,26 @@
+/* gss-misc.c
+ * This is a miscellaneous helper class for gss-api features.
+ *
+ * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This file is part of rsyslog.
+ *
+ * Rsyslog is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Rsyslog is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ */
 #include "config.h"
-#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
 #include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -29,8 +50,15 @@
 #include "msg.h"
 #include "tcpsyslog.h"
 #include "module-template.h"
+#include "obj.h"
+#include "errmsg.h"
 #include "gss-misc.h"
 
+MODULE_TYPE_LIB
+
+/* static data */
+DEFobjStaticHelpers
+DEFobjCurrIf(errmsg)
 
 static void display_status_(char *m, OM_uint32 code, int type)
 {
@@ -40,13 +68,13 @@ static void display_status_(char *m, OM_uint32 code, int type)
 	do {
 		maj_stat = gss_display_status(&min_stat, code, type, GSS_C_NO_OID, &msg_ctx, &msg);
 		if (maj_stat != GSS_S_COMPLETE) {
-			logerrorSz("GSS-API error in gss_display_status called from <%s>\n", m);
+			errmsg.LogError(NO_ERRCODE, "GSS-API error in gss_display_status called from <%s>\n", m);
 			break;
 		} else {
 			char buf[1024];
 			snprintf(buf, sizeof(buf), "GSS-API error %s: %s\n", m, (char *) msg.value);
 			buf[sizeof(buf)/sizeof(char) - 1] = '\0';
-			logerror(buf);
+			errmsg.LogError(NO_ERRCODE, "%s", buf);
 		}
 		if (msg.length != 0)
 			gss_release_buffer(&min_stat, &msg);
@@ -54,14 +82,14 @@ static void display_status_(char *m, OM_uint32 code, int type)
 }
 
 
-void display_status(char *m, OM_uint32 maj_stat, OM_uint32 min_stat)
+static void display_status(char *m, OM_uint32 maj_stat, OM_uint32 min_stat)
 {
 	display_status_(m, maj_stat, GSS_C_GSS_CODE);
 	display_status_(m, min_stat, GSS_C_MECH_CODE);
 }
 
 
-void display_ctx_flags(OM_uint32 flags)
+static void display_ctx_flags(OM_uint32 flags)
 {
     if (flags & GSS_C_DELEG_FLAG)
 	dbgprintf("GSS_C_DELEG_FLAG\n");
@@ -128,7 +156,7 @@ static int write_all(int fd, char *buf, unsigned int nbyte)
 }
 
 
-int recv_token(int s, gss_buffer_t tok)
+static int recv_token(int s, gss_buffer_t tok)
 {
 	int ret;
 	unsigned char lenbuf[4];
@@ -136,12 +164,12 @@ int recv_token(int s, gss_buffer_t tok)
 
 	ret = read_all(s, (char *) lenbuf, 4);
 	if (ret < 0) {
-		logerror("GSS-API error reading token length");
+		errmsg.LogError(NO_ERRCODE, "GSS-API error reading token length");
 		return -1;
 	} else if (!ret) {
 		return 0;
 	} else if (ret != 4) {
-		logerror("GSS-API error reading token length");
+		errmsg.LogError(NO_ERRCODE, "GSS-API error reading token length");
 		return -1;
 	}
 
@@ -153,17 +181,17 @@ int recv_token(int s, gss_buffer_t tok)
 
 	tok->value = (char *) malloc(tok->length ? tok->length : 1);
 	if (tok->length && tok->value == NULL) {
-		logerror("Out of memory allocating token data\n");
+		errmsg.LogError(NO_ERRCODE, "Out of memory allocating token data\n");
 		return -1;
 	}
 
 	ret = read_all(s, (char *) tok->value, tok->length);
 	if (ret < 0) {
-		logerror("GSS-API error reading token data");
+		errmsg.LogError(NO_ERRCODE, "GSS-API error reading token data");
 		free(tok->value);
 		return -1;
 	} else if (ret != (int) tok->length) {
-		logerror("GSS-API error reading token data");
+		errmsg.LogError(NO_ERRCODE, "GSS-API error reading token data");
 		free(tok->value);
 		return -1;
 	}
@@ -172,7 +200,7 @@ int recv_token(int s, gss_buffer_t tok)
 }
 
 
-int send_token(int s, gss_buffer_t tok)
+static int send_token(int s, gss_buffer_t tok)
 {
 	int     ret;
 	unsigned char lenbuf[4];
@@ -188,23 +216,77 @@ int send_token(int s, gss_buffer_t tok)
 
 	ret = write_all(s, (char *) lenbuf, 4);
 	if (ret < 0) {
-		logerror("GSS-API error sending token length");
+		errmsg.LogError(NO_ERRCODE, "GSS-API error sending token length");
 		return -1;
 	} else if (ret != 4) {
-		logerror("GSS-API error sending token length");
+		errmsg.LogError(NO_ERRCODE, "GSS-API error sending token length");
 		return -1;
 	}
 
 	ret = write_all(s, tok->value, tok->length);
 	if (ret < 0) {
-		logerror("GSS-API error sending token data");
+		errmsg.LogError(NO_ERRCODE, "GSS-API error sending token data");
 		return -1;
 	} else if (ret != (int) tok->length) {
-		logerror("GSS-API error sending token data");
+		errmsg.LogError(NO_ERRCODE, "GSS-API error sending token data");
 		return -1;
 	}
 
 	return 0;
 }
 
-#endif /* #if defined(SYSLOG_INET) && defined(USE_GSSAPI) */
+
+/* queryInterface function
+ * rgerhards, 2008-02-29
+ */
+BEGINobjQueryInterface(gssutil)
+CODESTARTobjQueryInterface(gssutil)
+	if(pIf->ifVersion != gssutilCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->recv_token = recv_token;
+	pIf->send_token = send_token;
+	pIf->display_status = display_status;
+	pIf->display_ctx_flags = display_ctx_flags;
+
+finalize_it:
+ENDobjQueryInterface(gssutil)
+
+
+/* Initialize our class. Must be called as the very first method
+ * before anything else is called inside this class.
+ * rgerhards, 2008-02-29
+ */
+BEGINAbstractObjClassInit(gssutil, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
+	/* request objects we use */
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+ENDObjClassInit(gssutil)
+
+
+/* --------------- here now comes the plumbing that makes as a library module --------------- */
+
+
+BEGINmodExit
+CODESTARTmodExit
+ENDmodExit
+
+
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_LIB_QUERIES
+ENDqueryEtryPt
+
+
+BEGINmodInit()
+CODESTARTmodInit
+	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+
+	/* Initialize all classes that are in our module - this includes ourselfs */
+	CHKiRet(gssutilClassInit()); /* must be done after tcps_sess, as we use it */
+ENDmodInit

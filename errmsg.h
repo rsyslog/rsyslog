@@ -1,5 +1,4 @@
-/* Definitions for gssutil class. This implements a session of the
- * plain TCP server.
+/* The errmsg object. It is used to emit error message inside rsyslog.
  *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *
@@ -20,23 +19,27 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-#ifndef	GSS_MISC_H_INCLUDED
-#define	GSS_MISC_H_INCLUDED 1
+#ifndef INCLUDED_ERRMSG_H
+#define INCLUDED_ERRMSG_H
 
-#include <gssapi/gssapi.h>
-#include "obj.h"
+#include "errmsg.h"
+
+/* TODO: define error codes */
+#define NO_ERRCODE -1
+
+/* the errmsg object */
+typedef struct errmsg_s {
+} errmsg_t;
+
 
 /* interfaces */
-BEGINinterface(gssutil) /* name must also be changed in ENDinterface macro! */
-	int (*recv_token)(int s, gss_buffer_t tok);
-	int (*send_token)(int s, gss_buffer_t tok);
-	void (*display_status)(char *m, OM_uint32 maj_stat, OM_uint32 min_stat);
-	void (*display_ctx_flags)(OM_uint32 flags);
-ENDinterface(gssutil)
-#define gssutilCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+BEGINinterface(errmsg) /* name must also be changed in ENDinterface macro! */
+	void  __attribute__((format(printf, 2, 3))) (*LogError)(int iErrCode, char *pszErrFmt, ... );
+ENDinterface(errmsg)
+#define errmsgCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
-PROTOTYPEObj(gssutil);
+PROTOTYPEObj(errmsg);
 
-#endif /* #ifndef GSS_MISC_H_INCLUDED */
+#endif /* #ifndef INCLUDED_ERRMSG_H */

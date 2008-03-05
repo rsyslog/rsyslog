@@ -39,6 +39,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "srUtils.h"
+#include "errmsg.h"
 
 MODULE_TYPE_INPUT
 
@@ -60,6 +61,7 @@ MODULE_TYPE_INPUT
 #endif
 /* Module static data */
 DEF_IMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
 
 static int startIndexUxLocalSockets; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
@@ -142,7 +144,7 @@ static int create_unix_socket(const char *path)
 			   SUN_LEN(&sunx)) < 0 ||
 	    chmod(path, 0666) < 0) {
 		snprintf(line, sizeof(line), "cannot create %s", path);
-		logerror(line);
+		errmsg.LogError(NO_ERRCODE, "%s", line);
 		dbgprintf("cannot create %s (%d).\n", path, errno);
 		close(fd);
 		return -1;
@@ -169,7 +171,7 @@ static rsRetVal readSocket(int fd, int bParseHost)
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
-		logerror("recvfrom UNIX");
+		errmsg.LogError(NO_ERRCODE, "recvfrom UNIX");
 	}
 
 	RETiRet;
@@ -300,6 +302,8 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+
 	/* initialize funixn[] array */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
 		funixn[i] = NULL;

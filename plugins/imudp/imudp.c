@@ -38,6 +38,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "srUtils.h"
+#include "errmsg.h"
 
 MODULE_TYPE_INPUT
 
@@ -45,6 +46,7 @@ MODULE_TYPE_INPUT
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
 static uchar *pszBindAddr = NULL;	/* IP to bind socket to */
@@ -191,7 +193,7 @@ CODESTARTrunInput
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(option_DisallowWarning) {
-								       logerrorSz("UDP message from disallowed sender %s discarded",
+								       errmsg.LogError(NO_ERRCODE, "UDP message from disallowed sender %s discarded",
 										  (char*)fromHost);
 							       }	
 						       }
@@ -200,7 +202,7 @@ CODESTARTrunInput
 						char errStr[1024];
 						rs_strerror_r(errno, errStr, sizeof(errStr));
 						dbgprintf("INET socket error: %d = %s.\n", errno, errStr);
-						       logerror("recvfrom inet");
+						       errmsg.LogError(NO_ERRCODE, "recvfrom inet");
 						       /* should be harmless */
 						       sleep(1);
 					       }
@@ -272,6 +274,8 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserverrun", 0, eCmdHdlrGetWord,
 		addListner, NULL, STD_LOADABLE_MODULE_ID));

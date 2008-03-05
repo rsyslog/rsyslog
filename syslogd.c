@@ -179,6 +179,7 @@
 #include "vmstk.h"
 #include "vm.h"
 #include "vmprg.h"
+#include "errmsg.h"
 #include "sysvar.h"
 
 /* definitions for objects we access */
@@ -187,6 +188,7 @@ DEFobjCurrIf(conf)
 DEFobjCurrIf(expr)
 DEFobjCurrIf(vm)
 DEFobjCurrIf(module)
+DEFobjCurrIf(errmsg)
 
 
 /* We define our own set of syslog defintions so that we
@@ -1341,7 +1343,7 @@ parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost)
 		 * rgerhards, 2006-12-07
 		 */
 		if(ret != Z_OK) {
-			logerrorInt("Uncompression of a message failed with return code %d "
+			errmsg.LogError(NO_ERRCODE, "Uncompression of a message failed with return code %d "
 			            "- enable debug logging if you need further information. "
 				    "Message ignored.", ret);
 			FINALIZE; /* unconditional exit, nothing left to do... */
@@ -1354,7 +1356,7 @@ parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost)
 	 * tell the user we can not accept it.
 	 */
 	if(len > 0 && *msg == 'z') {
-		logerror("Received a compressed message, but rsyslogd does not have compression "
+		errmsg.LogError(NO_ERRCODE, "Received a compressed message, but rsyslogd does not have compression "
 		         "support enabled. The message will be ignored.");
 		FINALIZE;
 	}	
@@ -2270,89 +2272,6 @@ static void debug_switch()
 }
 
 
-/*
- * Add a string to error message and send it to logerror()
- * The error message is passed to snprintf() and must be
- * correctly formatted for it (containing a single %s param).
- * rgerhards 2005-09-19
- */
-void logerrorSz(char *type, char *errMsg)
-{
-	char buf[1024];
-
-	snprintf(buf, sizeof(buf), type, errMsg);
-	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
-	logerror(buf);
-	return;
-}
-
-/*
- * Add an integer to error message and send it to logerror()
- * The error message is passed to snprintf() and must be
- * correctly formatted for it (containing a single %d param).
- * rgerhards 2005-09-19
- */
-void logerrorInt(char *type, int errCode)
-{
-	char buf[1024];
-
-	snprintf(buf, sizeof(buf), type, errCode);
-	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
-	logerror(buf);
-	return;
-}
-
-/*
- * Error Output with variable number of parameters. 
- * This functions works pretty much like dbgprintf, 
- * except it logs an error. 
- */
-void logerrorVar(char *fmt, ...)
-{
-	va_list ap;
-	char buf[1024];
-	size_t lenBuf;
-	
-	/* Format parameters */
-	va_start(ap, fmt);
-	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(lenBuf >= sizeof(buf)) {
-		/* if our buffer was too small, we simply truncate. */
-		lenBuf--;
-	}
-	va_end(ap);
-	
-	/* Log the error now */
-	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
-	logerror(buf);
-	return;
-}
-
-
-/* Print syslogd errors some place.
- */
-void logerror(char *type)
-{
-	char buf[1024];
-	char errStr[1024];
-
-	BEGINfunc
-	dbgprintf("Called logerr, msg: %s\n", type);
-
-	if (errno == 0)
-		snprintf(buf, sizeof(buf), "%s", type);
-	else {
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		snprintf(buf, sizeof(buf), "%s: %s", type, errStr);
-	}
-	buf[sizeof(buf)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
-	errno = 0;
-	logmsgInternal(LOG_SYSLOG|LOG_ERR, buf, ADDDATE);
-	ENDfunc
-	return;
-}
-
-
 void legacyOptsEnq(uchar *line)
 {
 	legacyOptsLL_t *pNew;
@@ -2893,19 +2812,19 @@ init(void)
 
 	/* some checks */
 	if(iMainMsgQueueNumWorkers < 1) {
-		logerror("$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
+		errmsg.LogError(NO_ERRCODE, "$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
 		iMainMsgQueueNumWorkers = 1;
 	}
 
 	if(MainMsgQueType == QUEUETYPE_DISK) {
 		errno = 0;	/* for logerror! */
 		if(pszWorkDir == NULL) {
-			logerror("No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
+			errmsg.LogError(NO_ERRCODE, "No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
 				 "Using 'FixedArray' instead.\n");
 			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 		if(pszMainMsgQFName == NULL) {
-			logerror("No $MainMsgQueueFileName specified - can not run main message queue in "
+			errmsg.LogError(NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main message queue in "
 				 "'disk' mode. Using 'FixedArray' instead.\n");
 			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
@@ -2928,11 +2847,11 @@ init(void)
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
 	CHKiRet_Hdlr(func(pMsgQueue, data)) { \
-		logerrorInt("Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+		errmsg.LogError(NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 #	define setQPROPstr(func, directive, data) \
 	CHKiRet_Hdlr(func(pMsgQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-		logerrorInt("Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+		errmsg.LogError(NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
@@ -3044,14 +2963,14 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 				 " Could not find template '%s' - action disabled\n",
 				 pTplName);
 			errno = 0;
-			logerror(errMsg);
+			errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 			ABORT_FINALIZE(RS_RET_NOT_FOUND);
 		}
 		/* check required template options */
 		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
 		   && (pAction->ppTpl[i]->optFormatForSQL == 0)) {
 			errno = 0;
-			logerror("Action disabled. To use this action, you have to specify "
+			errmsg.LogError(NO_ERRCODE, "Action disabled. To use this action, you have to specify "
 				"the SQL or stdSQL option in your template!\n");
 			ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
 		}
@@ -3149,11 +3068,11 @@ selectorAddList(selector_t *f)
 	if(f != NULL) {
 		CHKiRet(llGetNumElts(&f->llActList, &iActionCnt));
 		if(iActionCnt == 0) {
-			logerror("warning: selector line without actions will be discarded");
+			errmsg.LogError(NO_ERRCODE, "warning: selector line without actions will be discarded");
 			selectorDestruct(f);
 		} else {
 			if((iRet = selectorAddListCheckActions(f)) != RS_RET_OK) {
-				logerror("selector line will be discarded due to error in action(s)");
+				errmsg.LogError(NO_ERRCODE, "selector line will be discarded due to error in action(s)");
 				selectorDestruct(f);
 				goto finalize_it;
 			}
@@ -3201,7 +3120,7 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 		MainMsgQueType = QUEUETYPE_DIRECT;
 		dbgprintf("main message queue type set to DIRECT (no queueing at all)\n");
 	} else {
-		logerrorSz("unknown mainmessagequeuetype parameter: %s", (char *) pszType);
+		errmsg.LogError(NO_ERRCODE, "unknown mainmessagequeuetype parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	free(pszType); /* no longer needed */
@@ -3615,12 +3534,10 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(exprClassInit());
 	CHKiRet(confClassInit());
 
-/* testing aides */
-//CHKiRet(tcps_sessClassInit());
-//CHKiRet(tcpsrvClassInit());
-
 	/* dummy "classes" */
 	CHKiRet(actionClassInit());
+	CHKiRet(NetInit());
+	CHKiRet(templateInit());
 
 	/* request objects we use */
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
@@ -3628,6 +3545,7 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(objUse(expr,   CORE_COMPONENT));
 	CHKiRet(objUse(vm,     CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 finalize_it:
 	RETiRet;
@@ -3940,6 +3858,28 @@ int main(int argc, char **argv)
 	dbgClassInit();
 	return realMain(argc, argv);
 }
+
+
+
+/* TODO: remove the "compatibility layer" below once we are done with modularization
+ * rgerhards, 2008-03-05
+ */
+#if 0
+void logerror(char *msg)
+{
+	errmsg.LogError(NO_ERRCODE, "%s", msg);
+}
+
+void logerrorInt(char *msg, int i)
+{
+	errmsg.LogError(NO_ERRCODE, msg, i);
+}
+
+void logerrorSz(char *msg, char* str)
+{
+	errmsg.LogError(NO_ERRCODE, msg, str);
+}
+#endif
 
 
 /* vim:set ai:

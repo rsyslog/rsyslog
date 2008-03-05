@@ -62,6 +62,7 @@
 #include "conf.h"
 #include "tcpsrv.h"
 #include "obj.h"
+#include "errmsg.h"
 
 MODULE_TYPE_LIB
 
@@ -72,6 +73,7 @@ MODULE_TYPE_LIB
 DEFobjStaticHelpers
 DEFobjCurrIf(conf)
 DEFobjCurrIf(tcps_sess)
+DEFobjCurrIf(errmsg)
 
 
 
@@ -107,7 +109,7 @@ static void freeAllSockets(int **socks)
  * NOTE: you can not use dbgprintf() in here - the dbgprintf() system is
  * not yet initilized when this function is called.
  * rgerhards, 2007-06-21
- * We can also not use logerror(), as that system is also not yet
+ * We can also not use errmsg.LogError(NO_ERRCODE, ), as that system is also not yet
  * initialized... rgerhards, 2007-06-28
  */
 static void
@@ -128,7 +130,7 @@ configureTCPListen(tcpsrv_t *pThis, char *cOptarg)
 	if( i >= 0 && i <= 65535) {
 		pThis->TCPLstnPort = cOptarg;
 	} else {
-		logerrorSz("Invalid TCP listen port %s - changed to 514.\n", cOptarg);
+		errmsg.LogError(NO_ERRCODE, "Invalid TCP listen port %s - changed to 514.\n", cOptarg);
 		pThis->TCPLstnPort = "514";
 	}
 }
@@ -153,7 +155,7 @@ configureTCPListenSessMax(char *cOptarg)
 		pThis->iSessMax = i;
 	else {
 		/* too small, need to adjust */
-		logerrorSz("TCP session max configured to %s - changing to 1.\n", cOptarg);
+		errmsg.LogError(NO_ERRCODE, "TCP session max configured to %s - changing to 1.\n", cOptarg);
 		pThis->iSessMax = 1;
 	}
 }
@@ -290,7 +292,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 
         error = getaddrinfo(NULL, pThis->TCPLstnPort, &hints, &res);
         if(error) {
-               logerror((char*) gai_strerror(error));
+               errmsg.LogError(NO_ERRCODE, "%s", gai_strerror(error));
 	       return NULL;
 	}
 
@@ -299,7 +301,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		/* EMPTY */;
         socks = malloc((maxs+1) * sizeof(int));
         if (socks == NULL) {
-               logerror("couldn't allocate memory for TCP listen sockets, suspending TCP message reception.");
+               errmsg.LogError(NO_ERRCODE, "couldn't allocate memory for TCP listen sockets, suspending TCP message reception.");
                freeaddrinfo(res);
                return NULL;
         }
@@ -310,7 +312,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
                *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         	if (*s < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
-				logerror("create_tcp_socket(), socket");
+				errmsg.LogError(NO_ERRCODE, "create_tcp_socket(), socket");
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
@@ -322,7 +324,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
                 	int iOn = 1;
 			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
 			      (char *)&iOn, sizeof (iOn)) < 0) {
-			logerror("TCP setsockopt");
+			errmsg.LogError(NO_ERRCODE, "TCP setsockopt");
 			close(*s);
 			*s = -1;
 			continue;
@@ -331,7 +333,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 #endif
        		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
 			       (char *) &on, sizeof(on)) < 0 ) {
-			logerror("TCP setsockopt(REUSEADDR)");
+			errmsg.LogError(NO_ERRCODE, "TCP setsockopt(REUSEADDR)");
                         close(*s);
 			*s = -1;
 			continue;
@@ -344,7 +346,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		if (should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
-				logerror("TCP setsockopt(BSDCOMPAT)");
+				errmsg.LogError(NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
                                 close(*s);
 				*s = -1;
 				continue;
@@ -357,7 +359,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		     && (errno != EADDRINUSE)
 #endif
 	           ) {
-                        logerror("TCP bind");
+                        errmsg.LogError(NO_ERRCODE, "TCP bind");
                 	close(*s);
 			*s = -1;
                         continue;
@@ -369,10 +371,10 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 			 * to a fixed, reasonable, limit that should work. Only if
 			 * that fails, too, we give up.
 			 */
-			logerrorInt("listen with a backlog of %d failed - retrying with default of 32.",
+			errmsg.LogError(NO_ERRCODE, "listen with a backlog of %d failed - retrying with default of 32.",
 				    pThis->iSessMax / 10 + 5);
 			if(listen(*s, 32) < 0) {
-				logerror("TCP listen, suspending tcp inet");
+				errmsg.LogError(NO_ERRCODE, "TCP listen, suspending tcp inet");
 	                	close(*s);
 				*s = -1;
                		        continue;
@@ -391,7 +393,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		 	"- this may or may not be an error indication.\n", *socks, maxs);
 
         if(*socks == 0) {
-		logerror("No TCP listen socket could successfully be initialized, "
+		errmsg.LogError(NO_ERRCODE, "No TCP listen socket could successfully be initialized, "
 			 "message reception via TCP disabled.\n");
         	free(socks);
 		return(NULL);
@@ -405,7 +407,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
 		 */
-		logerror("Could not initialize TCP session table, suspending TCP message reception.");
+		errmsg.LogError(NO_ERRCODE, "Could not initialize TCP session table, suspending TCP message reception.");
 		freeAllSockets(&socks); /* prevent a socket leak */
 		return(NULL);
 	}
@@ -438,7 +440,7 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 RUNLOG_VAR("%p", pThis->pUsr);
 	newConn = accept(fd, (struct sockaddr*) &addr, &addrlen);
 	if (newConn < 0) {
-		logerror("tcp accept, ignoring error and connection request");
+		errmsg.LogError(NO_ERRCODE, "tcp accept, ignoring error and connection request");
 		ABORT_FINALIZE(RS_RET_ERR); // TODO: better error code
 		//was: return -1;
 	}
@@ -447,7 +449,7 @@ RUNLOG_VAR("%p", pThis->pUsr);
 	iSess = TCPSessTblFindFreeSpot(pThis);
 	if(iSess == -1) {
 		errno = 0;
-		logerror("too many tcp sessions - dropping incoming request");
+		errmsg.LogError(NO_ERRCODE, "too many tcp sessions - dropping incoming request");
 		close(newConn);
 		ABORT_FINALIZE(RS_RET_ERR); // TODO: better error code
 		//was: return -1;
@@ -482,7 +484,7 @@ RUNLOG_VAR("%p", pThis->pUsr);
 		dbgprintf("%s is not an allowed sender\n", (char *) fromHostFQDN);
 		if(option_DisallowWarning) {
 			errno = 0;
-			logerrorSz("TCP message from disallowed sender %s discarded",
+			errmsg.LogError(NO_ERRCODE, "TCP message from disallowed sender %s discarded",
 				   (char*)fromHost);
 		}
 		close(newConn);
@@ -603,7 +605,7 @@ RUNLOG;
 					pThis->pOnRegularClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else if(state == -1) {
-					logerrorInt("TCP session %d will be closed, error ignored\n", fdSess);
+					errmsg.LogError(NO_ERRCODE, "TCP session %d will be closed, error ignored\n", fdSess);
 					pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else {
@@ -612,7 +614,7 @@ RUNLOG;
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
-						logerrorInt("Tearing down TCP Session %d - see "
+						errmsg.LogError(NO_ERRCODE, "Tearing down TCP Session %d - see "
 							    "previous messages for reason(s)\n",
 							    iTCPSess);
 						pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
@@ -836,6 +838,7 @@ CODESTARTmodInit
 	CHKiRet(tcpsrvClassInit()); /* must be done after tcps_sess, as we use it */
 
 	/* request objects we use */
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 
 /* vim:set ai:

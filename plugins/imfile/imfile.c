@@ -39,6 +39,7 @@
 #include "srUtils.h"		/* some utility functions */
 #include "msg.h"
 #include "stream.h"
+#include "errmsg.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 
@@ -46,6 +47,7 @@ MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
+DEFobjCurrIf(errmsg)
 
 typedef struct fileInfo_s {
 	uchar *pszFileName;
@@ -278,7 +280,7 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	if(iFilPtr == 0) {
-		logerror("No files configured to be monitored");
+		errmsg.LogError(NO_ERRCODE, "No files configured to be monitored");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 
@@ -398,21 +400,21 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar __attribute
 		pThis = &files[iFilPtr];
 		/* TODO: check for strdup() NULL return */
 		if(pszFileName == NULL) {
-			logerror("imfile error: no file name given, file monitor can not be created");
+			errmsg.LogError(NO_ERRCODE, "imfile error: no file name given, file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszFileName = (uchar*) strdup((char*) pszFileName);
 		}
 
 		if(pszFileTag == NULL) {
-			logerror("imfile error: no tag value given , file monitor can not be created");
+			errmsg.LogError(NO_ERRCODE, "imfile error: no tag value given , file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
 		}
 
 		if(pszStateFile == NULL) {
-			logerror("imfile error: not state file name given, file monitor can not be created");
+			errmsg.LogError(NO_ERRCODE, "imfile error: not state file name given, file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszStateFile = (uchar*) strdup((char*) pszStateFile);
@@ -421,7 +423,7 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar __attribute
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
 	} else {
-		logerror("Too many file monitors configured - ignoring this one");
+		errmsg.LogError(NO_ERRCODE, "Too many file monitors configured - ignoring this one");
 		ABORT_FINALIZE(RS_RET_OUT_OF_DESRIPTORS);
 	}
 
@@ -447,6 +449,7 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
 	  	NULL, &pszFileName, STD_LOADABLE_MODULE_ID));

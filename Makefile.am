@@ -3,6 +3,8 @@ sbin_PROGRAMS = rfc3195d rsyslogd
 rfc3195d_SOURCES = rfc3195d.c rsyslog.h
 
 rsyslogd_SOURCES = \
+	errmsg.c \
+	errmsg.h \
 	syslogd.c \
 	syslogd.h \
 	sysvar.c \
@@ -91,15 +93,13 @@ rsyslogd_CPPFLAGS =  $(mudflap_cflags) -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthrea
 rsyslogd_LDADD = $(mudflap_libs) $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 
-if ENABLE_GSSAPI
-noinst_LTLIBRARIES = libgssapi-misc.la
-libgssapi_misc_la_SOURCES = gss-misc.c gss-misc.h
-libgssapi_misc_la_LIBADD = $(gss_libs)
-endif
-
 # now come the library plugins
-pkglib_LTLIBRARIES = tcpsrv.la
+# TODO: how? build gssutil.la only if gssapi is supported rgerhards, 2008-03-05
+pkglib_LTLIBRARIES = tcpsrv.la gssutil.la
 
+#
+# TCP (Stream) Server support
+#
 tcpsrv_la_SOURCES = \
 	tcps_sess.c \
 	tcps_sess.h \
@@ -108,6 +108,16 @@ tcpsrv_la_SOURCES = \
 tcpsrv_la_CPPFLAGS = $(pthreads_cflags) $(mudflap_cflags)
 tcpsrv_la_LDFLAGS = $(mudflap_libs) -module -avoid-version
 tcpsrv_la_LIBADD = 
+
+#
+# gssapi support
+# 
+if ENABLE_GSSAPI
+gssutil_la_SOURCES = gss-misc.c gss-misc.h
+gssutil_la_CPPFLAGS = $(pthreads_cflags) $(mudflap_cflags)
+gssutil_la_LDFLAGS = $(mudflap_libs) -module -avoid-version
+gssutil_la_LIBADD = 
+endif
 
 man_MANS = rfc3195d.8 rsyslogd.8 rsyslog.conf.5 
 

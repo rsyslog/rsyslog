@@ -34,10 +34,15 @@
 
 #include "syslogd.h" /* TODO: when the module interface & library design is done, this should be able to go away */
 #include "cfsysline.h"
+#include "obj.h"
+#include "errmsg.h"
 #include "srUtils.h"
 
 
 /* static data */
+DEFobjCurrIf(obj)
+DEFobjCurrIf(errmsg)
+
 linkedList_t llCmdList; /* this is NOT a pointer - no typo here ;) */
 
 /* --------------- START functions for handling canned syntaxes --------------- */
@@ -60,7 +65,7 @@ static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 
 	/* if we are not at a '\0', we have our new char - no validity checks here... */
 	if(**pp == '\0') {
-		logerror("No character available");
+		errmsg.LogError(NO_ERRCODE, "No character available");
 		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
@@ -124,7 +129,7 @@ static rsRetVal parseIntVal(uchar **pp, int64 *pVal)
 
 	if(!isdigit((int) *p)) {
 		errno = 0;
-		logerror("invalid number");
+		errmsg.LogError(NO_ERRCODE, "invalid number");
 		ABORT_FINALIZE(RS_RET_INVALID_INT);
 	}
 
@@ -263,7 +268,7 @@ static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t),
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "value must be octal (e.g 0644).");
 		errno = 0;
-		logerror((char*) errMsg);
+		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 
@@ -308,7 +313,7 @@ static int doParseOnOffOption(uchar **pp)
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 	if(getSubString(pp, (char*) szOpt, sizeof(szOpt) / sizeof(uchar), ' ')  != 0) {
-		logerror("Invalid $-configline - could not extract on/off option");
+		errmsg.LogError(NO_ERRCODE, "Invalid $-configline - could not extract on/off option");
 		return -1;
 	}
 	
@@ -317,7 +322,7 @@ static int doParseOnOffOption(uchar **pp)
 	} else if(!strcmp((char*)szOpt, "off")) {
 		return 0;
 	} else {
-		logerrorSz("Option value must be on or off, but is '%s'", (char*)pOptStart);
+		errmsg.LogError(NO_ERRCODE, "Option value must be on or off, but is '%s'", (char*)pOptStart);
 		return -1;
 	}
 }
@@ -338,14 +343,14 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
-		logerror("could not extract group name");
+		errmsg.LogError(NO_ERRCODE, "could not extract group name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	getgrnam_r((char*)szName, &gBuf, stringBuf, sizeof(stringBuf), &pgBuf);
 
 	if(pgBuf == NULL) {
-		logerrorSz("ID for group '%s' could not be found or error", (char*)szName);
+		errmsg.LogError(NO_ERRCODE, "ID for group '%s' could not be found or error", (char*)szName);
 		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
@@ -380,14 +385,14 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
-		logerror("could not extract user name");
+		errmsg.LogError(NO_ERRCODE, "could not extract user name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	getpwnam_r((char*)szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
 
 	if(ppwBuf == NULL) {
-		logerrorSz("ID for user '%s' could not be found or error", (char*)szName);
+		errmsg.LogError(NO_ERRCODE, "ID for user '%s' could not be found or error", (char*)szName);
 		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
@@ -782,20 +787,6 @@ finalize_it:
 }
 
 
-/* function that initializes this module here. This is primarily a hook
- * for syslogd.
- */
-rsRetVal cfsyslineInit(void)
-{
-	DEFiRet;
-
-	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct, strcasecmp));
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* function that registers cfsysline handlers.
  * The supplied pCmdName is copied and a new buffer is allocated. This
  * buffer is automatically destroyed when the element is freed, the
@@ -912,7 +903,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pCmd);
 
 	if(iRet == RS_RET_NOT_FOUND) {
-		logerror("invalid or yet-unknown config file command - have you forgotten to load a module?");
+		errmsg.LogError(NO_ERRCODE, "invalid or yet-unknown config file command - have you forgotten to load a module?");
 	}
 
 	if(iRet != RS_RET_OK)
@@ -976,6 +967,21 @@ void dbgPrintCfSysLineHandlers(void)
 	}
 	dbgprintf("\n");
 	ENDfunc
+}
+
+
+/* our init function. TODO: remove once converted to a class
+ */
+rsRetVal cfsyslineInit()
+{
+	DEFiRet;
+	CHKiRet(objGetObjInterface(&obj));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+
+	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct, strcasecmp));
+
+finalize_it:
+	RETiRet;
 }
 
 /* vim:set ai:

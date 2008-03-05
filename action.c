@@ -40,6 +40,7 @@
 #include "sync.h"
 #include "cfsysline.h"
 #include "srUtils.h"
+#include "errmsg.h"
 
 /* forward definitions */
 rsRetVal actionCallDoAction(action_t *pAction, msg_t *pMsg);
@@ -47,6 +48,7 @@ rsRetVal actionCallDoAction(action_t *pAction, msg_t *pMsg);
 /* object static data (once for all instances) */
 DEFobjStaticHelpers
 DEFobjCurrIf(module)
+DEFobjCurrIf(errmsg)
 
 static int glbliActionResumeInterval = 30;
 int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
@@ -209,11 +211,11 @@ actionConstructFinalize(action_t *pThis)
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
 	CHKiRet_Hdlr(func(pThis->pQueue, data)) { \
-		logerrorInt("Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+		errmsg.LogError(NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 #	define setQPROPstr(func, directive, data) \
 	CHKiRet_Hdlr(func(pThis->pQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-		logerrorInt("Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+		errmsg.LogError(NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
 	queueSetpUsr(pThis->pQueue, pThis);
@@ -460,7 +462,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
 		ActionQueType = QUEUETYPE_DIRECT;
 		dbgprintf("action queue type set to DIRECT (no queueing at all)\n");
 	} else {
-		logerrorSz("unknown actionqueue parameter: %s", (char *) pszType);
+		errmsg.LogError(NO_ERRCODE, "unknown actionqueue parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	d_free(pszType); /* no longer needed */
@@ -685,6 +687,7 @@ rsRetVal actionClassInit(void)
 	/* request objects we use */
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 	CHKiRet(objUse(module, CORE_COMPONENT));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 finalize_it:
 	RETiRet;
