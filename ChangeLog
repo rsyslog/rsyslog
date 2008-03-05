@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.12.1 (rgerhards), 2008-03-??
+- bugfix: actions were not correctly retried; caused message loss
 - improved debugging support; debug runtime options can now be set via
   an environment variable
 - added library plugins, which can be automatically loaded

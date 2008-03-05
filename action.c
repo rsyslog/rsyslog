@@ -405,7 +405,10 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 		/* first check if we are suspended and, if so, retry */
 		if(actionIsSuspended(pAction)) {
 			iRet = actionTryResume(pAction);
-			bCallAction = 0;
+			if(iRet == RS_RET_OK)
+				bCallAction = 1;
+			else
+				bCallAction = 0;
 		} else {
 			bCallAction = 1;
 		}
