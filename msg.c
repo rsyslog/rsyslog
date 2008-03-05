@@ -31,7 +31,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #define SYSLOG_NAMES
-#include <sys/syslog.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
@@ -64,17 +63,22 @@ static syslogCODE rs_prioritynames[] =
     { NULL, -1 }
   };
 
+#ifndef LOG_AUTHPRIV
+#	define LOG_AUTHPRIV LOG_AUTH
+#endif
 static syslogCODE rs_facilitynames[] =
   {
     { "auth", LOG_AUTH },
     { "authpriv", LOG_AUTHPRIV },
     { "cron", LOG_CRON },
     { "daemon", LOG_DAEMON },
-    { "ftp", LOG_FTP },
+#if defined(LOG_FTP)
+	{"ftp",          LOG_FTP},
+#endif
     { "kern", LOG_KERN },
     { "lpr", LOG_LPR },
     { "mail", LOG_MAIL },
-    { "mark", INTERNAL_MARK },          /* INTERNAL */
+    //{ "mark", INTERNAL_MARK },          /* INTERNAL */
     { "news", LOG_NEWS },
     { "security", LOG_AUTH },           /* DEPRECATED */
     { "syslog", LOG_SYSLOG },

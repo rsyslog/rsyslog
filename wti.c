@@ -367,7 +367,9 @@ wtiWorker(wti_t *pThis)
 		/* process any pending thread requests */
 		wtpProcessThrdChanges(pWtp);
 		pthread_testcancel(); /* see big comment in function header */
+#		if !defined(__hpux) /* pthread_yield is missing there! */
 		pthread_yield(); /* see big comment in function header */
+#		endif
 
 		wtpSetInactivityGuard(pThis->pWtp, 0, LOCK_MUTEX); /* must be set before usr mutex is locked! */
 		BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);

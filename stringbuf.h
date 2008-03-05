@@ -72,11 +72,6 @@ void rsCStrDestruct(cstr_t **ppThis);
 rsRetVal rsCStrAppendChar(cstr_t *pThis, uchar c);
 
 /**
- * Finish the string buffer dynamic allocation.
- */
-rsRetVal rsCStrFinish(cstr_t *pThis);
-
-/**
  * Truncate "n" number of characters from the end of the
  * string. The buffer remains unchanged, just the
  * string length is manipulated. This is for performance
@@ -156,7 +151,12 @@ rsRetVal rsCStrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
  * simply needs to do nothing, so that we can save us the function call.
  * rgerhards, 2008-02-12
  */
-#define rsCStrFinish(pThis) RS_RET_OK
+#	define rsCStrFinish(pThis) RS_RET_OK
+#else
+	/**
+	 * Finish the string buffer dynamic allocation.
+	 */
+	rsRetVal rsCStrFinish(cstr_t *pThis);
 #endif
 
 #define rsCStrGetBufBeg(x) ((x)->pBuf)

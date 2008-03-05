@@ -49,6 +49,10 @@ typedef long long int64;
 typedef long long unsigned uint64;
 typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
 
+#ifdef __hpux
+typedef unsigned int u_int32_t; /* TODO: is this correct? */
+#endif
+
 /* The error codes below are orginally "borrowed" from
  * liblogging. As such, we reserve values up to -2999
  * just in case we need to borrow something more ;)

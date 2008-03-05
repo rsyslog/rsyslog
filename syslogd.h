@@ -29,6 +29,20 @@
 #include "linkedlist.h"
 #include "expr.h"
 
+/* portability: not all platforms have these defines, so we
+ * define them here if they are missing. -- rgerhards, 2008-03-04
+ */
+#ifndef LOG_MAKEPRI
+#	define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
+#endif
+#ifndef LOG_PRI
+#	define	LOG_PRI(p)	((p) & LOG_PRIMASK)
+#endif
+#ifndef LOG_FAC
+#	define	LOG_FAC(p)	(((p) & LOG_FACMASK) >> 3)
+#endif
+
+
 #ifdef USE_NETZIP
 /* config param: minimum message size to try compression. The smaller
  * the message, the less likely is any compression gain. We check for

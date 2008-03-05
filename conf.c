@@ -40,6 +40,9 @@
 #include <dirent.h>
 #include <glob.h>
 #include <sys/types.h>
+#ifdef HAVE_LIBGEN_H
+#	include <libgen.h>
+#endif
 
 #include "rsyslog.h"
 #include "syslogd.h"
@@ -117,8 +120,16 @@ static rsRetVal doIncludeDirectory(uchar *pDirName)
 	while(readdir_r(pDir, &u.d, &res) == 0) {
 		if(res == NULL)
 			break; /* this also indicates end of directory */
+#		ifdef DT_REG
+		/* TODO: find an alternate way to checking for special files if this is
+		 * not defined. This is currently a known problem on HP UX, but the work-
+		 * around is simple: do not create special files in that directory. So 
+		 * fixing this is actually not the most important thing on earth...
+		 * rgerhards, 2008-03-04
+		 */
 		if(res->d_type != DT_REG)
 			continue; /* we are not interested in special files */
+#		endif
 		if(res->d_name[0] == '.')
 			continue; /* these files we are also not interested in */
 		++iEntriesDone;

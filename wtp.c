@@ -476,7 +476,9 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 	/* we try to give the starting worker a little boost. It won't help much as we still
  	 * hold the queue's mutex, but at least it has a chance to start on a single-CPU system.
  	 */
+#	if !defined(__hpux) /* pthread_yield is missing there! */
 	pthread_yield();
+#	endif
 
 	/* indicate we just started a worker and would like to see it running */
 	wtpSetInactivityGuard(pThis, 1, MUTEX_ALREADY_LOCKED);

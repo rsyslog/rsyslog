@@ -472,7 +472,12 @@ static inline int MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr 
 	if(F_ISSET(pAllow->flags, ADDR_NAME)) {
 		dbgprintf("MaskCmp: host=\"%s\"; pattern=\"%s\"\n", pszFromHost, pAllow->addr.HostWildcard);
 		
-		return(fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE|FNM_CASEFOLD) == 0);
+#		if !defined(FNM_CASEFOLD)
+			/* TODO: I don't know if that then works, seen on HP UX, what I have not in lab... ;) */
+			return(fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE) == 0);
+#		else
+			return(fnmatch(pAllow->addr.HostWildcard, pszFromHost, FNM_NOESCAPE|FNM_CASEFOLD) == 0);
+#		endif
 	} else {/* We need to compare an IP address */
 		switch (pFrom->sa_family) {
 		case AF_INET:
@@ -573,11 +578,11 @@ int should_use_so_bsdcompat(void)
     static int so_bsdcompat_is_obsolete;
 
     if (!init_done) {
-	struct utsname utsname;
+	struct utsname myutsname;
 	unsigned int version, patchlevel;
 
 	init_done = 1;
-	if (uname(&utsname) < 0) {
+	if (uname(&myutsname) < 0) {
 		char errStr[1024];
 		dbgprintf("uname: %s\r\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
 		return 1;
@@ -585,9 +590,9 @@ int should_use_so_bsdcompat(void)
 	/* Format is <version>.<patchlevel>.<sublevel><extraversion>
 	   where the first three are unsigned integers and the last
 	   is an arbitrary string. We only care about the first two. */
-	if (sscanf(utsname.release, "%u.%u", &version, &patchlevel) != 2) {
+	if (sscanf(myutsname.release, "%u.%u", &version, &patchlevel) != 2) {
 	    dbgprintf("uname: unexpected release '%s'\r\n",
-		    utsname.release);
+		    myutsname.release);
 	    return 1;
 	}
 	/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5

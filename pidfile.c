@@ -111,7 +111,7 @@ int write_pid (char *pidfile)
   * 2006-02-16 rgerhards
   */
 
-#ifndef	__sun
+#if HAVE_FLOCK
   if (flock(fd, LOCK_EX|LOCK_NB) == -1) {
       fscanf(f, "%d", &pid);
       fclose(f);
@@ -130,7 +130,7 @@ int write_pid (char *pidfile)
   }
   fflush(f);
 
-#ifndef	__sun
+#if HAVE_FLOCK
   if (flock(fd, LOCK_UN) == -1) {
       char errStr[1024];
       rs_strerror_r(errno, errStr, sizeof(errStr));

@@ -59,6 +59,13 @@
 #include "omusrmsg.h"
 #include "module-template.h"
 
+
+/* portability: */
+#ifndef _PATH_DEV
+#	define _PATH_DEV	"/dev/"
+#endif
+
+
 MODULE_TYPE_OUTPUT
 
 /* internal structures

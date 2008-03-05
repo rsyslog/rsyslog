@@ -134,6 +134,10 @@
 # include <sys/timespec.h>
 #endif
 
+#if HAVE_SYS_STAT_H
+#	include <sys/stat.h>
+#endif
+
 #include <signal.h>
 
 #if HAVE_PATHS_H
@@ -194,12 +198,9 @@ DEFobjCurrIf(vm)
 #ifdef __sun
 #	define LOG_AUTHPRIV LOG_AUTH
 #endif
-#define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
-#define	LOG_PRI(p)	((p) & LOG_PRIMASK)
-#define	LOG_FAC(p)	(((p) & LOG_FACMASK) >> 3)
 #define INTERNAL_NOPRI  0x10    /* the "no priority" priority */
 #define LOG_FTP         (11<<3) /* ftp daemon */
-#define INTERNAL_MARK   LOG_MAKEPRI((LOG_NFACILITIES<<3), 0)
+//#define INTERNAL_MARK   LOG_MAKEPRI((LOG_NFACILITIES<<3), 0)
 
 
 #ifndef UTMP_FILE
@@ -223,30 +224,33 @@ DEFobjCurrIf(vm)
 #endif
 
 #if defined(SYSLOGD_PIDNAME)
-#undef _PATH_LOGPID
-#if defined(FSSTND)
-#ifdef BSD
-#define _PATH_VARRUN "/var/run/"
-#endif
-#ifdef __sun
-#define _PATH_VARRUN "/var/run/"
-#endif
-#define _PATH_LOGPID _PATH_VARRUN SYSLOGD_PIDNAME
+#	undef _PATH_LOGPID
+#	if defined(FSSTND)
+#		ifdef BSD
+#			define _PATH_VARRUN "/var/run/"
+#		endif
+#		if defined(__sun) || defined(__hpux)
+#			define _PATH_VARRUN "/var/run/"
+#		endif
+#		define _PATH_LOGPID _PATH_VARRUN SYSLOGD_PIDNAME
+#	else
+#		define _PATH_LOGPID "/etc/" SYSLOGD_PIDNAME
+#	endif
 #else
-#define _PATH_LOGPID "/etc/" SYSLOGD_PIDNAME
-#endif
-#else
-#ifndef _PATH_LOGPID
-#if defined(FSSTND)
-#define _PATH_LOGPID _PATH_VARRUN "rsyslogd.pid"
-#else
-#define _PATH_LOGPID "/etc/rsyslogd.pid"
-#endif
-#endif
+#	ifndef _PATH_LOGPID
+#		if defined(__sun) || defined(__hpux)
+#			define _PATH_VARRUN "/var/run/"
+#		endif
+#		if defined(FSSTND)
+#			define _PATH_LOGPID _PATH_VARRUN "rsyslogd.pid"
+#		else
+#			define _PATH_LOGPID "/etc/rsyslogd.pid"
+#		endif
+#	endif
 #endif
 
 #ifndef _PATH_DEV
-#define _PATH_DEV	"/dev/"
+#	define _PATH_DEV	"/dev/"
 #endif
 
 #ifndef _PATH_CONSOLE
@@ -948,9 +952,19 @@ void getCurrTime(struct syslogTime *t)
 	struct tm *tm;
 	struct tm tmBuf;
 	long lBias;
+#	if defined(__hpux)
+	struct timezone tz;
+#	endif
 
 	assert(t != NULL);
-	gettimeofday(&tp, NULL);
+#	if defined(__hpux)
+		/* TODO: check this: under HP UX, the tz information is actually valid
+		 * data. So we need to obtain and process it there.
+		 */
+		gettimeofday(&tp, &tz);
+#	else
+		gettimeofday(&tp, NULL);
+#	endif
 	tm = localtime_r((time_t*) &(tp.tv_sec), &tmBuf);
 
 	t->year = tm->tm_year + 1900;
@@ -967,6 +981,8 @@ void getCurrTime(struct syslogTime *t)
 		 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
 		 */
 		lBias = -(daylight ? altzone : timezone);
+#	elif defined(__hpux)
+		lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
 #	else
 		lBias = tm->tm_gmtoff;
 #	endif
@@ -1141,7 +1157,11 @@ void untty(void)
 	if ( !Debug ) {
 		i = open(_PATH_TTY, O_RDWR);
 		if (i >= 0) {
-			(void) ioctl(i, (int) TIOCNOTTY, (char *)0);
+#			if !defined(__hpux)
+				(void) ioctl(i, (int) TIOCNOTTY, (char *)0);
+#			else
+				/* TODO: we need to implement something for HP UX! -- rgerhards, 2008-03-04 */
+#			endif
 			(void) close(i);
 		}
 	}

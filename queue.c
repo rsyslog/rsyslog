@@ -37,6 +37,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/stat.h>	 /* required for HP UX */
 #include <errno.h>
 
 #include "rsyslog.h"

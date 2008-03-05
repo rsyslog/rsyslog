@@ -25,6 +25,7 @@
 
 #ifdef SYSLOG_INET
 #include <netinet/in.h>
+#include <sys/socket.h> /* this is needed on HP UX -- rgerhards, 2008-03-04 */
 
 #define   F_SET(where, flag) (where)|=(flag)
 #define F_ISSET(where, flag) ((where)&(flag))==(flag)

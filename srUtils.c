@@ -67,6 +67,9 @@ syslogName_t	syslogPriNames[] = {
 	{NULL,		-1}
 };
 
+#ifndef LOG_AUTHPRIV
+#	define LOG_AUTHPRIV LOG_AUTH
+#endif
 syslogName_t	syslogFacNames[] = {
 	{"auth",         LOG_AUTH},
 	{"authpriv",     LOG_AUTHPRIV},
@@ -449,15 +452,21 @@ srSleep(int iSeconds, int iuSeconds)
  * Added 2008-01-30
  */
 char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
-#ifdef STRERROR_R_CHAR_P
-	char *p = strerror_r(errnum, buf, buflen);
-	if (p != buf) {
-		strncpy(buf, p, buflen);
-		buf[buflen - 1] = '\0';
-	}
+#ifdef	__hpux
+	char *pszErr;
+	pszErr = strerror(errnum);
+	snprintf(buf, buflen, "%s", pszErr);
 #else
-	strerror_r(errnum, buf, buflen);
-#endif
+#	ifdef STRERROR_R_CHAR_P
+		char *p = strerror_r(errnum, buf, buflen);
+		if (p != buf) {
+			strncpy(buf, p, buflen);
+			buf[buflen - 1] = '\0';
+		}
+#	else
+		strerror_r(errnum, buf, buflen);
+#	endif
+#endif /* #ifdef __hpux */
 	return buf;
 }
 

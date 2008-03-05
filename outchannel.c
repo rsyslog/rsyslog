@@ -286,7 +286,7 @@ void ochPrintList(void)
 	while(pOch != NULL) {
 		dbgprintf("Outchannel: Name='%s'\n", pOch->pszName == NULL? "NULL" : pOch->pszName);
 		dbgprintf("\tFile Template: '%s'\n", pOch->pszFileTemplate == NULL ? "NULL" : (char*) pOch->pszFileTemplate);
-		dbgprintf("\tMax Size.....: %lu\n", pOch->uSizeLimit);
+		dbgprintf("\tMax Size.....: %lu\n", (long unsigned) pOch->uSizeLimit);
 		dbgprintf("\tOnSizeLimtCmd: '%s'\n", pOch->cmdOnSizeLimit == NULL ? "NULL" : (char*) pOch->cmdOnSizeLimit);
 		pOch = pOch->pNext; /* done, go next */
 	}

@@ -29,10 +29,13 @@
 
 
 /* syslog names */
+#ifndef LOG_MAKEPRI
+#	define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
+#endif
 #define INTERNAL_NOPRI	0x10	/* the "no priority" priority */
 #define TABLE_NOPRI	0	/* Value to indicate no priority in f_pmask */
 #define TABLE_ALLPRI    0xFF    /* Value to indicate all priorities in f_pmask */
-#define	LOG_MARK	LOG_MAKEPRI(LOG_NFACILITIES, 0)	/* mark "facility" */
+#define	LOG_MARK	LOG_MAKEPRI(LOG_NFACILITIES, 0) /* mark "facility" */
 
 typedef struct syslogName_s {
 	char	*c_name;
@@ -76,7 +79,7 @@ unsigned char *srUtilStrDup(unsigned char *pOld, size_t len);
  * added 2007-07-17 by rgerhards
  */
 int makeFileParentDirs(uchar *szFile, size_t lenFile, mode_t mode, uid_t uid, gid_t gid, int bFailOnChown);
-int execProg(uchar *program, int wait, uchar *arg);
+int execProg(uchar *program, int bWait, uchar *arg);
 void skipWhiteSpace(uchar **pp);
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
 		     size_t lenFName, long lNum, int lNumDigits);
