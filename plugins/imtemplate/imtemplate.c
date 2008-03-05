@@ -92,13 +92,6 @@ DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
  */
 /* static int imtemplateWhateverVar = 0; */
 
-/* instanceData must be defined to keep the framework happy, but it currently
- * is of no practical use. This may change in later revisions of the plugin
- * interface.
- */
-typedef struct _instanceData {
-} instanceData;
-
 /* config settings */
 
 
@@ -378,16 +371,6 @@ ENDafterRun
  * In general, they need to be present, but you do NOT need to provide
  * any code here.
  */
-BEGINfreeInstance
-CODESTARTfreeInstance
-ENDfreeInstance
-
-
-BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-ENDdbgPrintInstInfo
-
-
 BEGINmodExit
 CODESTARTmodExit
 ENDmodExit

@@ -69,13 +69,6 @@ static int iFilPtr = 0;		/* number of files to be monitored; pointer to next fre
 #define MAX_INPUT_FILES 100
 static fileInfo_t files[MAX_INPUT_FILES];
 
-/* instanceData must be defined to keep the framework happy, but it currently
- * is of no practical use. This may change in later revisions of the plugin
- * interface.
- */
-typedef struct _instanceData {
-} instanceData;
-
 
 /* enqueue the read file line as a message
  */
@@ -349,16 +342,6 @@ ENDafterRun
  * In general, they need to be present, but you do NOT need to provide
  * any code here.
  */
-BEGINfreeInstance
-CODESTARTfreeInstance
-ENDfreeInstance
-
-
-BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-ENDdbgPrintInstInfo
-
-
 BEGINmodExit
 CODESTARTmodExit
 ENDmodExit

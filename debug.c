@@ -965,7 +965,7 @@ int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line)
 
 /* handler called when a function is exited
  */
-void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore)
+void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 {
 	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
 
@@ -974,8 +974,12 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore)
 	assert(pFuncDB->magic == dbgFUNCDB_MAGIC);
 
 	dbgFuncDBPrintActiveMutexes(pFuncDB, "WARNING: mutex still owned by us as we exit function, mutex: ", pthread_self());
-	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot))
-		dbgprintf("%s:%d: %s: exit\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
+	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot)) {
+		if(iRet == RS_RET_NO_IRET)
+			dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
+		else 
+			dbgprintf("%s:%d: %s: exit: %d\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, iRet);
+	}
 	pThrd->stackPtr = iStackPtrRestore;
 	if(pThrd->stackPtr < 0) {
 		dbgprintf("Stack pointer for thread %lx below 0 - resetting (some RETiRet still wrong!)\n", pthread_self());

@@ -61,9 +61,6 @@ MODULE_TYPE_INPUT
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 
-typedef struct _instanceData {
-} instanceData;
-
 static int startIndexUxLocalSockets; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
@@ -271,16 +268,6 @@ CODESTARTafterRun
 	discardFunixn();
 	nfunix = 1;
 ENDafterRun
-
-
-BEGINfreeInstance
-CODESTARTfreeInstance
-ENDfreeInstance
-
-
-BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-ENDdbgPrintInstInfo
 
 
 BEGINmodExit

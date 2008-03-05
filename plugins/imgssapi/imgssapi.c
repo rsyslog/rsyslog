@@ -76,9 +76,6 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 
-typedef struct _instanceData {
-} instanceData;
-
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
 static gss_cred_id_t gss_server_creds = GSS_C_NO_CREDENTIAL;
 
@@ -679,17 +676,6 @@ CODESTARTafterRun
 ENDafterRun
 
 
-
-BEGINfreeInstance
-CODESTARTfreeInstance
-ENDfreeInstance
-
-
-BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-ENDdbgPrintInstInfo
-
-
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_IMOD_QUERIES
@@ -714,10 +700,9 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
-	CHKiRet(objUse(tcps_sess, "tcps_sess"));
+	CHKiRet(objUse(tcps_sess, "tcpsrv.so"));
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 
-	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverpermitplaintcp", 0, eCmdHdlrBinary,
 				   NULL, &bPermitPlainTcp, STD_LOADABLE_MODULE_ID));

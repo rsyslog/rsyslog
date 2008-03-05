@@ -186,6 +186,7 @@ DEFobjCurrIf(obj)
 DEFobjCurrIf(conf)
 DEFobjCurrIf(expr)
 DEFobjCurrIf(vm)
+DEFobjCurrIf(module)
 
 
 /* We define our own set of syslog defintions so that we
@@ -2221,7 +2222,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	LockObj(pAction);
 	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
 		dbgprintf("flush %s: repeated %d times, %d sec.\n",
-		    modGetStateName(pAction->pMod), pAction->f_prevcount,
+		    module.GetStateName(pAction->pMod), pAction->f_prevcount,
 		    repeatinterval[pAction->f_repeatcount]);
 		actionWriteToAction(pAction);
 		BACKOFF(pAction);
@@ -2573,7 +2574,7 @@ die(int sig)
 	 * init, so that modules are unloaded and reloaded on HUP to. Eventually it should go
 	 * into freeSelectors() - but that needs to be seen. -- rgerhards, 2007-08-09
 	 */
-	modUnloadAndDestructAll();
+	module.UnloadAndDestructAll();
 
 	/* the following line cleans up CfSysLineHandlers that were not based on loadable
 	 * modules. As such, they are not yet cleared.
@@ -2737,7 +2738,7 @@ static void dbgPrintInitInfo(void)
 	if(bDebugPrintTemplateList)
 		tplPrintList();
 	if(bDebugPrintModuleList)
-		modPrintList();
+		module.PrintList();
 	ochPrintList();
 
 	if(bDebugPrintCfSysLineHandlerList)
@@ -2790,7 +2791,7 @@ startInputModules(void)
 	modInfo_t *pMod;
 
 	/* loop through all modules and activate them (brr...) */
-	pMod = modGetNxtType(NULL, eMOD_IN);
+	pMod = module.GetNxtType(NULL, eMOD_IN);
 	while(pMod != NULL) {
 		if((iRet = pMod->mod.im.willRun()) == RS_RET_OK) {
 			/* activate here */
@@ -2798,7 +2799,7 @@ startInputModules(void)
 		} else {
 			dbgprintf("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
 		}
-	pMod = modGetNxtType(pMod, eMOD_IN);
+	pMod = module.GetNxtType(pMod, eMOD_IN);
 	}
 
 	ENDfunc
@@ -2842,7 +2843,7 @@ init(void)
 
 	/* Unload all non-static modules */
 	dbgprintf("Unloading non-static modules.\n");
-	modUnloadAndDestructDynamic();
+	module.UnloadAndDestructDynamic();
 
 	dbgprintf("Clearing templates.\n");
 	tplDeleteNew();
@@ -3011,7 +3012,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	assert(ppAction != NULL);
 	assert(pMod != NULL);
 	assert(pOMSR != NULL);
-	dbgprintf("Module %s processed this config line.\n", modGetName(pMod));
+	dbgprintf("Module %s processed this config line.\n", module.GetName(pMod));
 
 	CHKiRet(actionConstruct(&pAction)); /* create action object first */
 	pAction->pMod = pMod;
@@ -3399,18 +3400,18 @@ static rsRetVal loadBuildInModules(void)
 {
 	DEFiRet;
 
-	if((iRet = doModInit(modInitFile, (uchar*) "builtin-file", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitFile, (uchar*) "builtin-file", NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 #ifdef SYSLOG_INET
-	if((iRet = doModInit(modInitFwd, (uchar*) "builtin-fwd", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitFwd, (uchar*) "builtin-fwd", NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 #endif
-	if((iRet = doModInit(modInitShell, (uchar*) "builtin-shell", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitShell, (uchar*) "builtin-shell", NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
-	if((iRet = doModInit(modInitDiscard, (uchar*) "builtin-discard", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitDiscard, (uchar*) "builtin-discard", NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 
@@ -3423,7 +3424,7 @@ static rsRetVal loadBuildInModules(void)
 	 * User names now must begin with:
 	 *   [a-zA-Z0-9_.]
 	 */
-	if((iRet = doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL)) != RS_RET_OK)
+	if((iRet = module.doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL)) != RS_RET_OK)
 		RETiRet;
 
 	/* ok, initialization of the command handler probably does not 100% belong right in
@@ -3615,17 +3616,18 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(confClassInit());
 
 /* testing aides */
-CHKiRet(tcps_sessClassInit());
-CHKiRet(tcpsrvClassInit());
+//CHKiRet(tcps_sessClassInit());
+//CHKiRet(tcpsrvClassInit());
 
 	/* dummy "classes" */
 	CHKiRet(actionClassInit());
 
 	/* request objects we use */
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-	CHKiRet(objUse(conf, CORE_COMPONENT));
-	CHKiRet(objUse(expr, CORE_COMPONENT));
-	CHKiRet(objUse(vm,   CORE_COMPONENT));
+	CHKiRet(objUse(conf,   CORE_COMPONENT));
+	CHKiRet(objUse(expr,   CORE_COMPONENT));
+	CHKiRet(objUse(vm,     CORE_COMPONENT));
+	CHKiRet(objUse(module, CORE_COMPONENT));
 
 finalize_it:
 	RETiRet;

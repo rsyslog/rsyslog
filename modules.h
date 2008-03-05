@@ -102,15 +102,26 @@ typedef struct moduleInfo {
 	void *pModHdlr; /* handler to the dynamic library holding the module */
 } modInfo_t;
 
+/* interfaces */
+BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
+	modInfo_t *(*GetNxt)(modInfo_t *pThis);
+	modInfo_t *(*GetNxtType)(modInfo_t *pThis, eModType_t rqtdType);
+	uchar *(*GetName)(modInfo_t *pThis);
+	uchar *(*GetStateName)(modInfo_t *pThis);
+	void (*PrintList)(void);
+	rsRetVal (*UnloadAndDestructAll)(void);
+	rsRetVal (*UnloadAndDestructDynamic)(void);
+	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr);
+	rsRetVal (*Load)(uchar *name);
+ENDinterface(module)
+#define moduleCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
 /* prototypes */
-rsRetVal doModInit(rsRetVal (*modInit)(), uchar *name, void *pModHdlr);
-modInfo_t *modGetNxt(modInfo_t *pThis);
-modInfo_t *modGetNxtType(modInfo_t *pThis, eModType_t rqtdType);
-uchar *modGetName(modInfo_t *pThis);
-uchar *modGetStateName(modInfo_t *pThis);
-void modPrintList(void);
-rsRetVal modUnloadAndDestructAll(void);
-rsRetVal modUnloadAndDestructDynamic(void);
+PROTOTYPEObj(module);
+
+/* TODO: remove them below (means move the config init code) -- rgerhards, 2008-02-19 */
+extern uchar *pModDir; /* read-only after startup */
+
 
 #endif /* #ifndef MODULES_H_INCLUDED */
 /*

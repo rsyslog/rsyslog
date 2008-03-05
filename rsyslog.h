@@ -64,6 +64,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50,/**< the caller provided a buffer, but the called function sees the size of this buffer is too small - operation not carried out */
 	RS_RET_TRUE = -1,		/**< to indicate a true state (can be used as TRUE, legacy) */
 	RS_RET_FALSE = -2,		/**< to indicate a false state (can be used as FALSE, legacy) */
+	RS_RET_NO_IRET = -8,	/**< This is a trick for the debuging system - it means no iRet is provided  */
 	RS_RET_ERR = -3000,	/**< generic failure */
 	RS_TRUNCAT_TOO_LARGE = -3001, /**< truncation operation where too many chars should be truncated */
 	RS_RET_FOUND_AT_STRING_END = -3002, /**< some value found, but at the last pos of string */
@@ -77,6 +78,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MISSING_INTERFACE = -1001,/**< interface version mismatch, required missing */
 	RS_RET_INVALID_CORE_INTERFACE = -1002,/**< interface provided by host invalid, can not be used */
 	RS_RET_ENTRY_POINT_NOT_FOUND = -1003,/**< a requested entry point was not found */
+	RS_RET_MODULE_ENTRY_POINT_NOT_FOUND = -1004,/**< a entry point requested from a module was not present in it */
 	/* return states for config file processing */
 	RS_RET_NONE = -2000,		/**< some value is not available - not necessarily an error */
 	RS_RET_CONFLINE_UNPROCESSED = -2001,/**< config line was not processed, pass to other module */
@@ -166,7 +168,7 @@ typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 /* macro below is used in conjunction with CHKiRet_Hdlr, else use ABORT_FINALIZE */
 #define FINALIZE goto finalize_it;
 #define DEFiRet BEGINfunc rsRetVal iRet = RS_RET_OK
-#define RETiRet do{ ENDfunc return iRet; }while(0)
+#define RETiRet do{ ENDfuncIRet return iRet; }while(0)
 
 #define ABORT_FINALIZE(errCode)			\
 	do {					\

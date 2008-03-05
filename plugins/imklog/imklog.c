@@ -46,8 +46,6 @@ MODULE_TYPE_INPUT
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
-typedef struct _instanceData {
-} instanceData;
 
 /* configuration settings TODO: move to instance data? */
 int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
@@ -639,16 +637,6 @@ CODESTARTafterRun
 	if(logsrc != none)
 		CloseLogSrc();
 ENDafterRun
-
-
-BEGINfreeInstance
-CODESTARTfreeInstance
-ENDfreeInstance
-
-
-BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-ENDdbgPrintInstInfo
 
 
 BEGINmodExit

@@ -42,9 +42,15 @@
 #include "cfsysline.h"
 #include "modules.h"
 
+/* static data */
+DEFobjStaticHelpers
+
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
 static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 static int bCfsyslineInitialized = 0;
+
+/* config settings */
+uchar	*pModDir = NULL; /* read-only after startup */
 
 
 /* Construct a new module object
@@ -86,7 +92,7 @@ static void moduleDestruct(modInfo_t *pThis)
  * Please note that the implementation as a query interface allows to take
  * care of plug-in interface version differences. -- rgerhards, 2007-07-31
  */
-rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
+static rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 {
 	DEFiRet;
 
@@ -107,23 +113,23 @@ finalize_it:
 }
 
 
+/* get the name of a module
+ */
+static uchar *modGetName(modInfo_t *pThis)
+{
+	return((pThis->pszName == NULL) ? (uchar*) "" : pThis->pszName);
+}
+
+
 /* get the state-name of a module. The state name is its name
  * together with a short description of the module state (which
  * is pulled from the module itself.
  * rgerhards, 2007-07-24
  * TODO: the actual state name is not yet pulled
  */
-uchar *modGetStateName(modInfo_t *pThis)
+static uchar *modGetStateName(modInfo_t *pThis)
 {
 	return(modGetName(pThis));
-}
-
-
-/* get the name of a module
- */
-uchar *modGetName(modInfo_t *pThis)
-{
-	return((pThis->pszName == NULL) ? (uchar*) "" : pThis->pszName);
 }
 
 
@@ -151,7 +157,7 @@ addModToList(modInfo_t *pThis)
  * returned - then, the list is empty.
  * rgerhards, 2007-07-23
  */
-modInfo_t *modGetNxt(modInfo_t *pThis)
+static modInfo_t *GetNxt(modInfo_t *pThis)
 {
 	modInfo_t *pNew;
 
@@ -164,17 +170,17 @@ modInfo_t *modGetNxt(modInfo_t *pThis)
 }
 
 
-/* this function is like modGetNxt(), but it returns pointers to
+/* this function is like GetNxt(), but it returns pointers to
  * modules of specific type only. As we currently deal just with output modules,
  * it is a dummy, to be filled with real code later.
  * rgerhards, 2007-07-24
  */
-modInfo_t *modGetNxtType(modInfo_t *pThis, eModType_t rqtdType)
+static modInfo_t *GetNxtType(modInfo_t *pThis, eModType_t rqtdType)
 {
 	modInfo_t *pMod = pThis;
 
 	do {
-		pMod = modGetNxt(pMod);
+		pMod = GetNxt(pMod);
 	} while(!(pMod == NULL || pMod->eType == rqtdType)); /* warning: do ... while() */
 
 	return pMod;
@@ -209,7 +215,8 @@ finalize_it:
 /* Add an already-loaded module to the module linked list. This function does
  * everything needed to fully initialize the module.
  */
-rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *name, void *pModHdlr)
+static rsRetVal
+doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *name, void *pModHdlr)
 {
 	DEFiRet;
 	modInfo_t *pNew = NULL;
@@ -228,7 +235,6 @@ rsRetVal doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)())
 		ABORT_FINALIZE(iRet);
 	}
 
-RUNLOG_VAR("%p", queryHostEtryPt);
 	CHKiRet((*modInit)(CURR_MOD_IF_VERSION, &pNew->iIFVers, &pNew->modQueryEtryPt, queryHostEtryPt));
 
 	if(pNew->iIFVers != CURR_MOD_IF_VERSION) {
@@ -246,10 +252,8 @@ RUNLOG_VAR("%p", queryHostEtryPt);
 	 * rest of the data elements. First we load the interfaces common to all
 	 * module types.
 	 */
-	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"dbgPrintInstInfo", &pNew->dbgPrintInstInfo));
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"modGetID", &pNew->modGetID));
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"modExit", &pNew->modExit));
-	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance));
 
 	/* ... and now the module-specific interfaces */
 	switch(pNew->eType) {
@@ -259,6 +263,8 @@ RUNLOG_VAR("%p", queryHostEtryPt);
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"afterRun", &pNew->mod.im.afterRun));
 			break;
 		case eMOD_OUT:
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeInstance", &pNew->freeInstance));
+			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"dbgPrintInstInfo", &pNew->dbgPrintInstInfo));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"doAction", &pNew->mod.om.doAction));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature", &pNew->isCompatibleWithFeature));
@@ -281,7 +287,7 @@ RUNLOG_VAR("%p", queryHostEtryPt);
 	addModToList(pNew);
 
 finalize_it:
-
+RUNLOG_VAR("%d", iRet);
 	if(iRet != RS_RET_OK) {
 		if(pNew != NULL)
 			moduleDestruct(pNew);
@@ -295,11 +301,11 @@ finalize_it:
  * This only works if the dbgprintf() subsystem is initialized.
  * TODO: update for new input modules!
  */
-void modPrintList(void)
+static void modPrintList(void)
 {
 	modInfo_t *pMod;
 
-	pMod = modGetNxt(NULL);
+	pMod = GetNxt(NULL);
 	while(pMod != NULL) {
 		dbgprintf("Loaded Module: Name='%s', IFVersion=%d, ",
 			(char*) modGetName(pMod), pMod->iIFVers);
@@ -323,7 +329,7 @@ void modPrintList(void)
 		dbgprintf("\tdbgPrintInstInfo:   0x%lx\n", (unsigned long) pMod->dbgPrintInstInfo);
 		dbgprintf("\tfreeInstance:       0x%lx\n", (unsigned long) pMod->freeInstance);
 		dbgprintf("\n");
-		pMod = modGetNxt(pMod); /* done, go next */
+		pMod = GetNxt(pMod); /* done, go next */
 	}
 }
 
@@ -331,20 +337,25 @@ void modPrintList(void)
 /* unload all modules and free module linked list
  * rgerhards, 2007-08-09
  */
-rsRetVal modUnloadAndDestructAll(void)
+static rsRetVal modUnloadAndDestructAll(void)
 {
 	DEFiRet;
 	modInfo_t *pMod;
 	modInfo_t *pModPrev;
 
-	pMod = modGetNxt(NULL);
+	pMod = GetNxt(NULL);
 	while(pMod != NULL) {
 		pModPrev = pMod;
-		pMod = modGetNxt(pModPrev); /* get next */
-		/* now we can destroy the previous module */
-		dbgprintf("Unloading module %s\n", modGetName(pModPrev));
-		modPrepareUnload(pModPrev);
-		moduleDestruct(pModPrev);
+		pMod = GetNxt(pModPrev); /* get next */
+		/* TODO: library modules are currently never unloaded! */
+		if(pModPrev->eType == eMOD_LIB) {
+			dbgprintf("NOT unloading library module %s\n", modGetName(pModPrev));
+		} else {
+			/* now we can destroy the previous module */
+			dbgprintf("Unloading module %s\n", modGetName(pModPrev));
+			modPrepareUnload(pModPrev);
+			moduleDestruct(pModPrev);
+		}
 	}
 
 	/* indicate list is now empty */
@@ -388,7 +399,7 @@ modUnlinkAndDestroy(modInfo_t *pThis, modInfo_t *pPrev)
 
 /* unload dynamically loaded modules
  */
-rsRetVal modUnloadAndDestructDynamic(void)
+static rsRetVal modUnloadAndDestructDynamic(void)
 {
 	DEFiRet;
 	modInfo_t *pMod;
@@ -396,10 +407,10 @@ rsRetVal modUnloadAndDestructDynamic(void)
 	modInfo_t *pModPrev; /* last module in active linked list */
 
 	pModPrev = NULL; /* we do not yet have a previous module */
-	pMod = modGetNxt(NULL);
+	pMod = GetNxt(NULL);
 	while(pMod != NULL) {
 		pModCurr = pMod;
-		pMod = modGetNxt(pModCurr); /* get next */
+		pMod = GetNxt(pModCurr); /* get next */
 		/* now we can destroy the previous module */
 		if(pModCurr->eLinkType != eMOD_LINK_STATIC) {
 			modUnlinkAndDestroy(pModCurr, pModPrev);
@@ -410,6 +421,113 @@ rsRetVal modUnloadAndDestructDynamic(void)
 
 	RETiRet;
 }
+
+
+/* load a module and initialize it, based on doModLoad() from conf.c
+ * rgerhards, 2008-03-05
+ * varmojfekoj added support for dynamically loadable modules on 2007-08-13
+ * rgerhards, 2007-09-25: please note that the non-threadsafe function dlerror() is
+ * called below. This is ok because modules are currently only loaded during
+ * configuration file processing, which is executed on a single thread. Should we
+ * change that design at any stage (what is unlikely), we need to find a
+ * replacement.
+ */
+static rsRetVal
+Load(uchar *pModName)
+{
+	DEFiRet;
+	
+        uchar szPath[512];
+        uchar errMsg[1024];
+	uchar *pModNameBase;
+	uchar *pModNameDup;
+        void *pModHdlr, *pModInit;
+	modInfo_t *pModInfo;
+
+	assert(pModName != NULL);
+	dbgprintf("Requested to load module '%s'\n", pModName);
+
+	if((pModNameDup = (uchar *) strdup((char *) pModName)) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	pModNameBase = (uchar *) basename((char*)pModNameDup);
+	pModInfo = GetNxt(NULL);
+	while(pModInfo != NULL) {
+		if(!strcmp((char *) pModNameBase, (char *) modGetName(pModInfo))) {
+			dbgprintf("Module '%s' already loaded\n", pModName);
+			free(pModNameDup);
+			ABORT_FINALIZE(RS_RET_OK);
+		}
+		pModInfo = GetNxt(pModInfo);
+	}
+	free(pModNameDup);
+
+	if(*pModName == '/') {
+		*szPath = '\0';	/* we do not need to append the path - its already in the module name */
+	} else {
+		strncpy((char *) szPath, (pModDir == NULL) ? _PATH_MODDIR : (char*) pModDir, sizeof(szPath));
+	}
+	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen((char*) szPath) - 1);
+	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
+		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
+		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
+		logerror((char *) errMsg);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
+		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlsym: %s\n", szPath, dlerror());
+		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
+		logerror((char *) errMsg);
+		dlclose(pModHdlr);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK) {
+		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', rsyslog error %d\n", szPath, iRet);
+		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
+		logerror((char *) errMsg);
+		dlclose(pModHdlr);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* queryInterface function
+ * rgerhards, 2008-03-05
+ */
+BEGINobjQueryInterface(module)
+CODESTARTobjQueryInterface(module)
+	if(pIf->ifVersion != moduleCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->GetNxt = GetNxt;
+	pIf->GetNxtType = GetNxtType;
+	pIf->GetName = modGetName;
+	pIf->GetStateName = modGetStateName;
+	pIf->PrintList = modPrintList;
+	pIf->UnloadAndDestructAll = modUnloadAndDestructAll;
+	pIf->UnloadAndDestructDynamic = modUnloadAndDestructDynamic;
+	pIf->doModInit = doModInit;
+	pIf->Load = Load;
+finalize_it:
+ENDobjQueryInterface(module)
+
+
+/* Initialize our class. Must be called as the very first method
+ * before anything else is called inside this class.
+ * rgerhards, 2008-03-05
+ */
+BEGINAbstractObjClassInit(module, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
+	/* request objects we use */
+ENDObjClassInit(module)
 
 /* vi:set ai:
  */

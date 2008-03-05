@@ -53,9 +53,6 @@ static uchar *pRcvBuf = NULL;		/* receive buffer (for a single packet). We use a
 					 * termination if we can not get it. -- rgerhards, 2007-12-27
 					 */
 
-typedef struct _instanceData {
-} instanceData;
-
 /* config settings */
 
 
@@ -245,16 +242,6 @@ CODESTARTafterRun
 	if(pRcvBuf != NULL)
 		free(pRcvBuf);
 ENDafterRun
-
-
-BEGINfreeInstance
-CODESTARTfreeInstance
-ENDfreeInstance
-
-
-BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-ENDdbgPrintInstInfo
 
 
 BEGINmodExit

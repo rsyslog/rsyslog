@@ -56,7 +56,7 @@ static rsRetVal modGetType(eModType_t *modType) \
 
 #define MODULE_TYPE_INPUT MODULE_TYPE(eMOD_IN)
 #define MODULE_TYPE_OUTPUT MODULE_TYPE(eMOD_OUT)
-#define MODULE_TYPE_LIB MODULE_TYPE(EMOD_LIB)
+#define MODULE_TYPE_LIB MODULE_TYPE(eMOD_LIB)
 
 /* macro to define a unique module id. This must be able to fit in a void*. The
  * module id must be unique inside a running rsyslogd application. It is used to
@@ -295,7 +295,10 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 
 #define ENDqueryEtryPt \
 	if(iRet == RS_RET_OK)\
-		iRet = (*pEtryPoint == NULL) ? RS_RET_NOT_FOUND : RS_RET_OK;\
+		if(*pEtryPoint == NULL) { \
+			dbgprintf("entry point '%s' not present in module\n", name); \
+			iRet = RS_RET_MODULE_ENTRY_POINT_NOT_FOUND;\
+		} \
 	RETiRet;\
 }
 
@@ -304,11 +307,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * the module-type specific macros.
  */
 #define CODEqueryEtryPt_STD_MOD_QUERIES \
-	if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
-		*pEtryPoint = dbgPrintInstInfo;\
-	} else if(!strcmp((char*) name, "freeInstance")) {\
-		*pEtryPoint = freeInstance;\
-	} else if(!strcmp((char*) name, "modExit")) {\
+	if(!strcmp((char*) name, "modExit")) {\
 		*pEtryPoint = modExit;\
 	} else if(!strcmp((char*) name, "modGetID")) {\
 		*pEtryPoint = modGetID;\
@@ -324,6 +323,10 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	CODEqueryEtryPt_STD_MOD_QUERIES \
 	else if(!strcmp((char*) name, "doAction")) {\
 		*pEtryPoint = doAction;\
+	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
+		*pEtryPoint = dbgPrintInstInfo;\
+	} else if(!strcmp((char*) name, "freeInstance")) {\
+		*pEtryPoint = freeInstance;\
 	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
 		*pEtryPoint = parseSelectorAct;\
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
@@ -347,6 +350,13 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	} else if(!strcmp((char*) name, "afterRun")) {\
 		*pEtryPoint = afterRun;\
 	}
+
+/* the following definition is the standard block for queryEtryPt for LIBRARY
+ * modules. This can be used if no specific handling (e.g. to cover version
+ * differences) is needed.
+ */
+#define CODEqueryEtryPt_STD_LIB_QUERIES \
+	CODEqueryEtryPt_STD_MOD_QUERIES
 
 /* modInit()
  * This has an extra parameter, which is the specific name of the modInit

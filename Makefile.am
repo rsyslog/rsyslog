@@ -3,10 +3,6 @@ sbin_PROGRAMS = rfc3195d rsyslogd
 rfc3195d_SOURCES = rfc3195d.c rsyslog.h
 
 rsyslogd_SOURCES = \
-	tcps_sess.c \
-	tcps_sess.h \
-	tcpsrv.c \
-	tcpsrv.h \
 	syslogd.c \
 	syslogd.h \
 	sysvar.c \
@@ -100,6 +96,18 @@ noinst_LTLIBRARIES = libgssapi-misc.la
 libgssapi_misc_la_SOURCES = gss-misc.c gss-misc.h
 libgssapi_misc_la_LIBADD = $(gss_libs)
 endif
+
+# now come the library plugins
+pkglib_LTLIBRARIES = tcpsrv.la
+
+tcpsrv_la_SOURCES = \
+	tcps_sess.c \
+	tcps_sess.h \
+	tcpsrv.c \
+	tcpsrv.h
+tcpsrv_la_CPPFLAGS = $(pthreads_cflags) $(mudflap_cflags)
+tcpsrv_la_LDFLAGS = $(mudflap_libs) -module -avoid-version
+tcpsrv_la_LIBADD = 
 
 man_MANS = rfc3195d.8 rsyslogd.8 rsyslog.conf.5 
 

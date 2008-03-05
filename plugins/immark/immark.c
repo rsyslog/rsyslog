@@ -50,9 +50,6 @@ MODULE_TYPE_INPUT
 DEF_IMOD_STATIC_DATA
 static int iMarkMessagePeriod = DEFAULT_MARK_PERIOD;
 
-typedef struct _instanceData {
-} instanceData;
-
 /* This function is called to gather input. It must terminate only
  * a) on failure (iRet set accordingly)
  * b) on termination of the input module (as part of the unload process)
@@ -95,16 +92,6 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 ENDafterRun
-
-
-BEGINfreeInstance
-CODESTARTfreeInstance
-ENDfreeInstance
-
-
-BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-ENDdbgPrintInstInfo
 
 
 BEGINmodExit

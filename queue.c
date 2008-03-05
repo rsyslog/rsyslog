@@ -1557,11 +1557,15 @@ queueIsIdleDA(queue_t *pThis)
 static int
 queueIsIdleReg(queue_t *pThis)
 {
-	//return(queueGetOverallQueueSize(pThis) == 0 || (pThis->bRunsDA && queueGetOverallQueueSize(pThis) <= pThis->iLowWtrMrk));
+#if 0 /* enable for performance testing */
 	int ret;
 	ret = queueGetOverallQueueSize(pThis) == 0 || (pThis->bRunsDA && queueGetOverallQueueSize(pThis) <= pThis->iLowWtrMrk);
 	if(ret) fprintf(stderr, "queue is idle\n");
 	return ret;
+#else 
+	/* regular code! */
+	return(queueGetOverallQueueSize(pThis) == 0 || (pThis->bRunsDA && queueGetOverallQueueSize(pThis) <= pThis->iLowWtrMrk));
+#endif
 }
 
 

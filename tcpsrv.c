@@ -63,6 +63,7 @@
 #include "tcpsrv.h"
 #include "obj.h"
 
+MODULE_TYPE_LIB
 
 /* defines */
 #define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
@@ -801,8 +802,7 @@ ENDobjQueryInterface(tcpsrv)
  * before anything else is called inside this class.
  * rgerhards, 2008-02-29
  */
-//BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
-BEGINObjClassInit(tcpsrv, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
+BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
 	CHKiRet(objUse(tcps_sess, "tcps_sess"));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
@@ -813,6 +813,30 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE clas
 ENDObjClassInit(tcpsrv)
 
 
+/* --------------- here now comes the plumbing that makes as a library module --------------- */
+
+
+BEGINmodExit
+CODESTARTmodExit
+ENDmodExit
+
+
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_LIB_QUERIES
+ENDqueryEtryPt
+
+
+BEGINmodInit()
+CODESTARTmodInit
+	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+
+	/* Initialize all classes that are in our module - this includes ourselfs */
+	CHKiRet(tcps_sessClassInit());
+	CHKiRet(tcpsrvClassInit()); /* must be done after tcps_sess, as we use it */
+
+	/* request objects we use */
+ENDmodInit
 
 /* vim:set ai:
  */

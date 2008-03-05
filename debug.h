@@ -93,7 +93,7 @@ int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD
 int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr);
 int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line);
-void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore);
+void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet);
 void dbgSetExecLocation(int iStackPtr, int line);
 void dbgSetThrdName(uchar *pszName);
 void dbgPrintAllDebugInfo(void);
@@ -101,12 +101,13 @@ void dbgPrintAllDebugInfo(void);
 /* macros */
 #ifdef RTINST
 #	define BEGINfunc static dbgFuncDB_t dbgFuncDB=dbgFuncDB_t_INITIALIZER; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&dbgFuncDB,__LINE__);
-#	define ENDfunc dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT);
-// #	define ASSERT(x) do { if(!(x)) dbgPrintAllDebugInfo(); assert(x); } while(0);
+#	define ENDfunc dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT, RS_RET_NO_IRET);
+#	define ENDfuncIRet dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT, iRet);
 #	define ASSERT(x) assert(x)
 #else
 #	define BEGINfunc
 #	define ENDfunc
+#	define ENDfuncIRet
 #	define ASSERT(x)
 #endif
 #ifdef RTINST

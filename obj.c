@@ -76,17 +76,19 @@
 #include <assert.h>
 
 /* how many objects are supported by rsyslogd? */
-#define OBJ_NUM_IDS 100 //TODO 16 were currently in use 2008-02-29
+#define OBJ_NUM_IDS 100 /* TODO change to a linked list?  info: 16 were currently in use 2008-02-29 */
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "obj.h"
 #include "stream.h"
+#include "modules.h"
 
 /* static data */
 DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some macros! */
 DEFobjCurrIf(var)
+DEFobjCurrIf(module)
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
 
 
@@ -177,9 +179,7 @@ DestructObjSelf(obj_t *pThis)
 
 	ISOBJ_assert(pThis);
 	if(pThis->pszName != NULL) {
-RUNLOG_VAR("%p", pThis->pszName);
 		free(pThis->pszName);
-RUNLOG;
 	}
 
 	RETiRet;
@@ -920,10 +920,8 @@ SetName(obj_t *pThis, uchar *pszName)
 
 	if(pThis->pszName == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-RUNLOG_VAR("%s", pThis->pszName);
 
 finalize_it:
-RUNLOG_VAR("%d", iRet);
 	RETiRet;
 }
 
@@ -954,7 +952,6 @@ GetName(obj_t *pThis)
 		} else {
 			ret = pThis->pszName;
 		}
-RUNLOG_VAR("%s", pThis->pszName);
 	} else {
 		ret = pThis->pszName;
 	}
@@ -1059,11 +1056,17 @@ UseObj(uchar *pObjName, uchar *pObjFile, interface_t *ppIf)
 	objInfo_t *pObjInfo;
 
 	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
-	iRet =FindObjInfo(pStr, &pObjInfo);
+	iRet = FindObjInfo(pStr, &pObjInfo);
 
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* in this case, we need to see if we can dynamically load the object */
-		FINALIZE; /* TODO: implement */
+		if(pObjFile == NULL) {
+			FINALIZE; /* no chance, we have lost... */
+		} else {
+			CHKiRet(module.Load(pObjFile));
+			/* NOW, we must find it or we have a problem... */
+			CHKiRet(FindObjInfo(pStr, &pObjInfo));
+		}
 	} else if(iRet != RS_RET_OK) {
 		FINALIZE; /* give up */
 	}
@@ -1092,8 +1095,6 @@ CODESTARTobjQueryInterface(obj)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//xxxpIf->oID = OBJobj;
-
 	pIf->UseObj = UseObj;
 	pIf->InfoConstruct = InfoConstruct;
 	pIf->DestructObjSelf = DestructObjSelf;
@@ -1154,7 +1155,9 @@ objClassInit(void)
 
 	/* init classes we use (limit to as few as possible!) */
 	CHKiRet(varClassInit());
+	CHKiRet(moduleClassInit());
 	CHKiRet(objUse(var, CORE_COMPONENT));
+	CHKiRet(objUse(module, CORE_COMPONENT));
 
 finalize_it:
 	RETiRet;

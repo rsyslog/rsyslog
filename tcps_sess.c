@@ -429,6 +429,7 @@ ENDobjQueryInterface(tcps_sess)
  */
 //BEGINObjClassInit(tcps_sess, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
+RUNLOG_STR("initializing tcps_sess class");
 	/* request objects we use */
 	//CHKiRet(objUse(expr, CORE_COMPONENT));
 

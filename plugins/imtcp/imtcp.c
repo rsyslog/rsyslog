@@ -53,10 +53,6 @@ DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 
 /* Module static data */
-
-typedef struct _instanceData {
-} instanceData;
-
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
 
 /* config settings */
@@ -195,15 +191,6 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 }
 
 
-BEGINfreeInstance
-CODESTARTfreeInstance
-ENDfreeInstance
-
-
-BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
-ENDdbgPrintInstInfo
-
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
@@ -217,7 +204,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
-	CHKiRet(objUse(tcps_sess, "tcps_sess"));
+	CHKiRet(objUse(tcps_sess, "tcpsrv.so"));
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 
 	/* register config file handlers */

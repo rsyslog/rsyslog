@@ -46,6 +46,8 @@ rsRetVal actionCallDoAction(action_t *pAction, msg_t *pMsg);
 
 /* object static data (once for all instances) */
 DEFobjStaticHelpers
+DEFobjCurrIf(module)
+
 static int glbliActionResumeInterval = 30;
 int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
 
@@ -334,7 +336,7 @@ rsRetVal actionDbgPrint(action_t *pThis)
 {
 	DEFiRet;
 
-	dbgprintf("%s: ", modGetStateName(pThis->pMod));
+	dbgprintf("%s: ", module.GetStateName(pThis->pMod));
 	pThis->pMod->dbgPrintInstInfo(pThis->pModData);
 	dbgprintf("\n\tInstance data: 0x%lx\n", (unsigned long) pThis->pModData);
 	dbgprintf("\tRepeatedMsgReduction: %d\n", pThis->f_ReduceRepeated);
@@ -523,7 +525,7 @@ actionWriteToAction(action_t *pAction)
 		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
 	}
 
-	dbgprintf("Called action, logging to %s", modGetStateName(pAction->pMod));
+	dbgprintf("Called action, logging to %s", module.GetStateName(pAction->pMod));
 
 	time(&pAction->f_time); /* we need this for message repeation processing */
 
@@ -682,6 +684,7 @@ rsRetVal actionClassInit(void)
 	DEFiRet;
 	/* request objects we use */
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
+	CHKiRet(objUse(module, CORE_COMPONENT));
 
 finalize_it:
 	RETiRet;

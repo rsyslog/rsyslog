@@ -67,8 +67,7 @@ static rsRetVal processConfFile(uchar *pConfFile);
 DEFobjStaticHelpers
 DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
-
-uchar	*pModDir = NULL; /* read-only after startup */
+DEFobjCurrIf(module)
 
 /* The following global variables are used for building
  * tag and host selector lines during startup and config reload.
@@ -216,27 +215,13 @@ finalize_it:
 
 
 /* process a $ModLoad config line.
- * As of now, it is a dummy, that will later evolve into the
- * loader for plug-ins.
- * rgerhards, 2007-07-21
- * varmojfekoj added support for dynamically loadable modules on 2007-08-13
- * rgerhards, 2007-09-25: please note that the non-threadsafe function dlerror() is
- * called below. This is ok because modules are currently only loaded during
- * configuration file processing, which is executed on a single thread. Should we
- * change that design at any stage (what is unlikely), we need to find a
- * replacement.
  */
 rsRetVal
 doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 {
 	DEFiRet;
 	uchar szName[512];
-        uchar szPath[512];
-        uchar errMsg[1024];
-	uchar *pModName, *pModNameBase;
-	uchar *pModNameDup;
-        void *pModHdlr, *pModInit;
-	modInfo_t *pModInfo;
+	uchar *pModName;
 
 	ASSERT(pp != NULL);
 	ASSERT(*pp != NULL);
@@ -259,53 +244,12 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	else
 		pModName = szName;
 
-	dbgprintf("Requested to load module '%s'\n", szName);
-
-	if((pModNameDup = (uchar *) strdup((char *) pModName)) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
-	pModNameBase = (uchar *) basename((char*)pModNameDup);
-	pModInfo = modGetNxt(NULL);
-	while(pModInfo != NULL) {
-		if(!strcmp((char *) pModNameBase, (char *) modGetName(pModInfo))) {
-			dbgprintf("Module '%s' already loaded\n", szName);
-			free(pModNameDup);
-			ABORT_FINALIZE(RS_RET_OK);
-		}
-		pModInfo = modGetNxt(pModInfo);
-	}
-	free(pModNameDup);
-
-	if(*pModName == '/') {
-		*szPath = '\0';	/* we do not need to append the path - its already in the module name */
-	} else {
-		strncpy((char *) szPath, (pModDir == NULL) ? _PATH_MODDIR : (char*) pModDir, sizeof(szPath));
-	}
-	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen((char*) szPath) - 1);
-	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
-		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
-		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
-		logerror((char *) errMsg);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
-		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlsym: %s\n", szPath, dlerror());
-		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
-		logerror((char *) errMsg);
-		dlclose(pModHdlr);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK) {
-		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', rsyslog error %d\n", szPath, iRet);
-		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
-		logerror((char *) errMsg);
-		dlclose(pModHdlr);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
+	CHKiRet(module.Load(pModName));
 
 finalize_it:
 	RETiRet;
 }
+
 
 /* parse and interpret a $-config line that starts with
  * a name (this is common code). It is parsed to the name
@@ -1076,10 +1020,10 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	ASSERT(ppAction != NULL);
 
 	/* loop through all modules and see if one picks up the line */
-	pMod = modGetNxtType(NULL, eMOD_OUT);
+	pMod = module.GetNxtType(NULL, eMOD_OUT);
 	while(pMod != NULL) {
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
-		dbgprintf("tried selector action for %s: %d\n", modGetName(pMod), iRet);
+		dbgprintf("tried selector action for %s: %d\n", module.GetName(pMod), iRet);
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {
 			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, (iRet == RS_RET_SUSPENDED)? 1 : 0)) == RS_RET_OK) {
 				/* now check if the module is compatible with select features */
@@ -1103,7 +1047,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 			dbgprintf("error %d parsing config line\n", (int) iRet);
 			break;
 		}
-		pMod = modGetNxtType(pMod, eMOD_OUT);
+		pMod = module.GetNxtType(pMod, eMOD_OUT);
 	}
 
 	*ppAction = pAction;
@@ -1222,6 +1166,7 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	/* request objects we use */
 	CHKiRet(objUse(expr, CORE_COMPONENT));
 	CHKiRet(objUse(ctok, CORE_COMPONENT));
+	CHKiRet(objUse(module, CORE_COMPONENT));
 ENDObjClassInit(conf)
 
 /* vi:set ai:

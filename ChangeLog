@@ -1,11 +1,13 @@
 ---------------------------------------------------------------------------
----------------------------------------------------------------------------
-Version 3.12.1 (rgerhards), 2008-0?-??
+Version 3.12.1 (rgerhards), 2008-03-??
 - improved debugging support; debug runtime options can now be set via
   an environment variable
+- added library plugins, which can be automatically loaded
 - bugfix: removed debugging code that I forgot to remove before releasing
   3.12.0 (does not cause harm and happened only during startup)
+- added support for the MonitorWare syslog MIB to omsnmp
 - internal code improvements (more code converted into classes)
+- internal code reworking of the imtcp/imgssapi module
 ---------------------------------------------------------------------------
 Version 3.12.0 (rgerhards), 2008-02-28
 - added full expression support for filters; filters can now contain

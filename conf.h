@@ -46,7 +46,6 @@ PROTOTYPEObj(conf);
 
 
 /* TODO: remove them below (means move the config init code) -- rgerhards, 2008-02-19 */
-extern uchar *pModDir; /* read-only after startup */
 extern EHostnameCmpMode eDfltHostnameCmpMode;
 extern cstr_t *pDfltHostnameCmp;
 extern cstr_t *pDfltProgNameCmp;
