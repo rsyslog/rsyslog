@@ -118,7 +118,7 @@ pkglib_LTLIBRARIES += gssutil.la
 gssutil_la_SOURCES = gss-misc.c gss-misc.h
 gssutil_la_CPPFLAGS = $(pthreads_cflags)
 gssutil_la_LDFLAGS = -module -avoid-version
-gssutil_la_LIBADD = 
+gssutil_la_LIBADD = $(gss_libs)
 endif
 
 man_MANS = rfc3195d.8 rsyslogd.8 rsyslog.conf.5 
