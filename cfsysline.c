@@ -796,9 +796,9 @@ finalize_it:
 rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData,
 			  void *pOwnerCookie)
 {
+	DEFiRet;
 	cslCmd_t *pThis;
 	uchar *pMyCmdName;
-	DEFiRet;
 
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pThis);
 	if(iRet == RS_RET_NOT_FOUND) {

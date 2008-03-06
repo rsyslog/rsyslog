@@ -88,7 +88,6 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 {
 	assert(pThis != NULL);
 	
-dbgprintf("Terminate thread %lx\n", pThis->thrdID);
 	pthread_cancel(pThis->thrdID);
 	pthread_join(pThis->thrdID, NULL); /* wait for cancel to complete */
 	pThis->bIsActive = 0;

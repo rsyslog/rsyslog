@@ -729,7 +729,13 @@ void debugListenInfo(int fd, char *type)
 	struct sockaddr sa;
 	struct sockaddr_in *ipv4;
 	struct sockaddr_in6 *ipv6;
-	socklen_t saLen = sizeof(sa);
+/* TODO: do this below better -- autotools? */
+#if	defined(__hpux)
+#	define SOCKLEN_T int
+#else
+#	define SOCKLEN_T socklen_t
+#endif
+	SOCKLEN_T saLen = sizeof(sa);
 
 	if(getsockname(fd, &sa, &saLen) == 0) {
 		switch(sa.sa_family) {
@@ -948,7 +954,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 		/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
-#ifndef BSD	
+#if !defined(BSD) && !defined(__hpux)
 		if (should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
