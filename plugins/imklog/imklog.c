@@ -67,15 +67,19 @@ static int console_log_level = -1;
 #include <errno.h>
 #include <sys/fcntl.h>
 #include <sys/stat.h>
-#if !defined(__GLIBC__)
-#include <linux/time.h>
-#endif /* __GLIBC__ */
+
+#if HAVE_TIME_H
+#	include <time.h>
+#endif
+
 #include <stdarg.h>
 #include <paths.h>
 #include "ksyms.h"
 
 #define __LIBRARY__
-#include <linux/unistd.h>
+#include <unistd.h>
+
+
 #if !defined(__GLIBC__)
 # define __NR_ksyslog __NR_syslog
 _syscall3(int,ksyslog,int, type, char *, buf, int, len);
@@ -83,6 +87,8 @@ _syscall3(int,ksyslog,int, type, char *, buf, int, len);
 #include <sys/klog.h>
 #define ksyslog klogctl
 #endif
+
+
 
 #ifndef _PATH_KLOG
 #define _PATH_KLOG  "/proc/kmsg"

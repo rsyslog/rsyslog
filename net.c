@@ -729,13 +729,7 @@ void debugListenInfo(int fd, char *type)
 	struct sockaddr sa;
 	struct sockaddr_in *ipv4;
 	struct sockaddr_in6 *ipv6;
-/* TODO: do this below better -- autotools? */
-#if	defined(__hpux)
-#	define SOCKLEN_T int
-#else
-#	define SOCKLEN_T socklen_t
-#endif
-	SOCKLEN_T saLen = sizeof(sa);
+	socklen_t saLen = sizeof(sa);
 
 	if(getsockname(fd, &sa, &saLen) == 0) {
 		switch(sa.sa_family) {

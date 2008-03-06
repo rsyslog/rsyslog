@@ -51,6 +51,7 @@ typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf opt
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */
+typedef int socklen_t;
 #endif
 
 /* The error codes below are orginally "borrowed" from
