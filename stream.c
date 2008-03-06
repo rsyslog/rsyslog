@@ -501,7 +501,7 @@ rsRetVal strmFlush(strm_t *pThis)
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
-	dbgoprint((obj_t*) pThis, "file %d flush, buflen %ld\n", pThis->fd, pThis->iBufPtr);
+	dbgoprint((obj_t*) pThis, "file %d flush, buflen %ld\n", pThis->fd, (long) pThis->iBufPtr);
 
 	if(pThis->tOperationsMode == STREAMMODE_WRITE && pThis->iBufPtr > 0) {
 		iRet = strmWriteInternal(pThis, pThis->pIOBuf, pThis->iBufPtr);
@@ -526,7 +526,7 @@ static rsRetVal strmSeek(strm_t *pThis, off_t offs)
 	else
 		strmFlush(pThis);
 	int i;
-	dbgoprint((obj_t*) pThis, "file %d seek, pos %ld\n", pThis->fd, offs);
+	dbgoprint((obj_t*) pThis, "file %d seek, pos %ld\n", pThis->fd, (long) offs);
 	i = lseek(pThis->fd, offs, SEEK_SET); // TODO: check error!
 	pThis->iCurrOffs = offs; /* we are now at *this* offset */
 	pThis->iBufPtr = 0; /* buffer invalidated */

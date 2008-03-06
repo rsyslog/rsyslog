@@ -615,7 +615,7 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 	    !strcmp(getAPPNAME(pMsg), getAPPNAME(pAction->f_pMsg))) {
 		pAction->f_prevcount++;
 		dbgprintf("msg repeated %d times, %ld sec of %d.\n",
-		    pAction->f_prevcount, time(NULL) - pAction->f_time,
+		    pAction->f_prevcount, (long) time(NULL) - pAction->f_time,
 		    repeatinterval[pAction->f_repeatcount]);
 		/* use current message, so we have the new timestamp (means we need to discard previous one) */
 		msgDestruct(&pAction->f_pMsg);

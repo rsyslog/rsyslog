@@ -239,7 +239,7 @@ static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
 		 * For the time being, we ignore this...
 		 * rgerhards, 2005-10-25
 		 */
-		dbgprintf("message not completely (tcp)send, ignoring %ld\n", lenSend);
+		dbgprintf("message not completely (tcp)send, ignoring %ld\n", (long) lenSend);
 		usleep(1000); /* experimental - might be benefitial in this situation */
 		/* TODO: we need to revisit this code -- rgerhards, 2007-12-28 */
 	}

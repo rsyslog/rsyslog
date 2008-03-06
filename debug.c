@@ -798,8 +798,8 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 	if(bWasNL) {
 		if(bPrintTime) {
 			clock_gettime(CLOCK_REALTIME, &t);
-			if(stddbg != NULL) fprintf(stddbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
-			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
+			if(stddbg != NULL) fprintf(stddbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
+			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
 		}
 		if(stddbg != NULL) fprintf(stddbg, "%s: ", pszThrdName);
 		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
@@ -877,8 +877,8 @@ dbgprintf(char *fmt, ...)
 	if(bWasNL) {
 		if(bPrintTime) {
 			clock_gettime(CLOCK_REALTIME, &t);
-			if(stddbg != NULL) fprintf(stddbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
-			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", t.tv_sec % 10000, t.tv_nsec);
+			if(stddbg != NULL) fprintf(stddbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
+			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
 		}
 		if(stddbg != NULL) fprintf(stddbg, "%s: ", pszThrdName);
 		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
