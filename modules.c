@@ -407,12 +407,17 @@ static rsRetVal modUnloadAndDestructDynamic(void)
 		pModCurr = pMod;
 		pMod = GetNxt(pModCurr); /* get next */
 		/* now we can destroy the previous module */
-		if(pModCurr->eLinkType != eMOD_LINK_STATIC) {
-			modUnlinkAndDestroy(pModCurr, pModPrev);
+		/* TODO: library modules are currently never unloaded! */
+		if(pModCurr->eType == eMOD_LIB) {
+			dbgprintf("NOT unloading library module %s\n", modGetName(pModCurr));
 		} else {
-			pModPrev = pModCurr; /* don't delete, so this is the new prev ptr */
-		}
+			if(pModCurr->eLinkType != eMOD_LINK_STATIC) {
+				modUnlinkAndDestroy(pModCurr, pModPrev);
+			} else {
+				pModPrev = pModCurr; /* don't delete, so this is the new prev ptr */
+			}
 	}
+		}
 
 	RETiRet;
 }
