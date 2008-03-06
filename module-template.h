@@ -27,6 +27,7 @@
 #define	MODULE_TEMPLATE_H_INCLUDED 1
 
 #include "modules.h"
+#include "obj.h"
 #include "objomsr.h"
 #include "threads.h"
 

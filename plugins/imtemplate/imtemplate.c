@@ -227,22 +227,10 @@ CODESTARTrunInput
 		/* All rsyslog objects (see other modules, e.g. msg.c) are available
 		 * to your here. Some useful things are:
 		 * 
-		 * logerror("string");
-		 * 	logs an error message as syslogd
+		 * errmsg.LogError(NO_ERRCODE, format-string, ... params ...);
+		 * 	logs an error message as syslogd, just as printf, e.g.
+		 *         errmsg.LogError(NO_ERRCODE, "Error %d occured during %s", 1, "test");
 		 *
-		 * logerror("string with %s", uchar* ptr)
-		 * 	just like logerror, but with a variable pointer to a string
-		 *
-		 * The safe way to obtain a system error message is:
-		 *	char errStr[1024];   // 1024 is just a (relatively) safe bet...
-		 *	rs_strerror_r(errno, errStr, sizeof(errStr));
-		 * 	logerror("error occured: %s", errStr); // optional, of course...
-		 *
-		 * To log something to the debug log, simply use
-		 * 	dbgprintf("fmtstring %d, %s\n", 4711, "like in printf");
-		 *	Be sure to include a newline '\n' at the end of the message, else
-		 *	the debug log will become quite cluttered...
-		 * 
 		 * There are several ways how a message can be enqueued. This part of the
 		 * interface is currently underspecified. Have a look at the function definitions
 		 * in syslogd.c (sorry, folks...).

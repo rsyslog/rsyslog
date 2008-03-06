@@ -47,12 +47,14 @@
 #include "template.h"
 #include "module-template.h"
 #include "debug.h"
+#include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
 static int bDbiInitialized = 0;	/* dbi_initialize() can only be called one - this keeps track of it */
 
 typedef struct _instanceData {
@@ -136,7 +138,7 @@ reportDBError(instanceData *pData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if(pData->conn == NULL) {
-		logerror("unknown DB error occured - could not obtain connection handle");
+		errmsg.LogError(NO_ERRCODE, "unknown DB error occured - could not obtain connection handle");
 	} else { /* we can ask dbi for the error description... */
 		uDBErrno = dbi_conn_error(pData->conn, &pszDbiErr);
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", uDBErrno, pszDbiErr);
@@ -144,7 +146,7 @@ reportDBError(instanceData *pData, int bSilent)
 			dbgprintf("libdbi, DBError(silent): %s\n", errMsg);
 		else {
 			pData->uLastDBErrno = uDBErrno;
-			logerror(errMsg);
+			errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		}
 	}
 		
@@ -170,10 +172,10 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		iDrvrsLoaded = dbi_initialize((char*) dbiDrvrDir);
 #		endif
 		if(iDrvrsLoaded == 0) {
-			logerror("libdbi error: libdbi or libdbi drivers not present on this system - suspending.");
+			errmsg.LogError(NO_ERRCODE, "libdbi error: libdbi or libdbi drivers not present on this system - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		} else if(iDrvrsLoaded < 0) {
-			logerror("libdbi error: libdbi could not be initialized - suspending.");
+			errmsg.LogError(NO_ERRCODE, "libdbi error: libdbi could not be initialized - suspending.");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		bDbiInitialized = 1; /* we are done for the rest of our existence... */
@@ -185,7 +187,7 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 	pData->conn = dbi_conn_new((char*)pData->drvrName);
 #	endif
 	if(pData->conn == NULL) {
-		logerror("can not initialize libdbi connection");
+		errmsg.LogError(NO_ERRCODE, "can not initialize libdbi connection");
 		iRet = RS_RET_SUSPENDED;
 	} else { /* we could get the handle, now on with work... */
 		/* Connect to database */
@@ -275,7 +277,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* no create the instance based on what we currently have */
 	if(drvrName == NULL) {
-		logerror("omlibdbi: no db driver name given - action can not be created");
+		errmsg.LogError(NO_ERRCODE, "omlibdbi: no db driver name given - action can not be created");
 		ABORT_FINALIZE(RS_RET_NO_DRIVERNAME);
 	}
 
@@ -361,6 +363,7 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidriverdirectory", 0, eCmdHdlrGetWord, NULL, &dbiDrvrDir, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbidriver", 0, eCmdHdlrGetWord, NULL, &drvrName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionlibdbihost", 0, eCmdHdlrGetWord, NULL, &host, STD_LOADABLE_MODULE_ID));

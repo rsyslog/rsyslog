@@ -42,12 +42,14 @@
 #include "template.h"
 #include "ompgsql.h"
 #include "module-template.h"
+#include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	PGconn	*f_hpgsql;			/* handle to PgSQL */
@@ -116,7 +118,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if(pData->f_hpgsql == NULL) {
-		logerror("unknown DB error occured - could not obtain PgSQL handle");
+		errmsg.LogError(NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
 	} else { /* we can ask pgsql for the error description... */
 		ePgSQLStatus = PQstatus(pData->f_hpgsql);
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", ePgSQLStatus,
@@ -125,7 +127,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 			dbgprintf("pgsql, DBError(silent): %s\n", errMsg);
 		else {
 			pData->eLastPgSQLStatus = ePgSQLStatus;
-			logerror(errMsg);
+			errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 		}
 	}
 		
@@ -153,7 +155,7 @@ static rsRetVal initPgSQL(instanceData *pData, int bSilent)
 		iRet = RS_RET_SUSPENDED;
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -189,7 +191,7 @@ finalize_it:
 		pData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
 	}
 
-	return iRet;
+	RETiRet;
 }
 
 
@@ -267,7 +269,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Retries make no sense. 
 	 */
 	if (iPgSQLPropErr) { 
-		logerror("Trouble with PgSQL connection properties. -PgSQL logging disabled");
+		errmsg.LogError(NO_ERRCODE, "Trouble with PgSQL connection properties. -PgSQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
 		CHKiRet(initPgSQL(pData, 0));
@@ -291,6 +293,7 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 /*
  * vi:set ai:
