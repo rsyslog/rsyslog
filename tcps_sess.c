@@ -207,8 +207,7 @@ PrepareClose(tcps_sess_t *pThis)
 		 * this case.
 		 */
 		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		parseAndSubmitMessage(pThis->fromHost, pThis->msg,
-			              pThis->iMsg, MSG_PARSE_HOSTNAME);
+		parseAndSubmitMessage(pThis->fromHost, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
 		pThis->bAtStrtOfFram = 1;
 	}
 
@@ -354,7 +353,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 			/* emergency, we now need to flush, no matter if
 			 * we are at end of message or not...
 			 */
-			parseAndSubmitMessage(pThis->fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME);
+			parseAndSubmitMessage(pThis->fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
 			iMsg = 0;
 			/* we might think if it is better to ignore the rest of the
 		 	 * message than to treat it as a new one. Maybe this is a good
@@ -365,7 +364,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 
 		if(*pData == '\n' &&
 		   pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
-			parseAndSubmitMessage(pThis->fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME);
+			parseAndSubmitMessage(pThis->fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
 			iMsg = 0;
 			pThis->bAtStrtOfFram = 1;
 			++pData;
@@ -379,7 +378,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 			pThis->iOctetsRemain--;
 			if(pThis->iOctetsRemain < 1) {
 				/* we have end of frame! */
-				parseAndSubmitMessage(pThis->fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME);
+				parseAndSubmitMessage(pThis->fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
 				iMsg = 0;
 				pThis->bAtStrtOfFram = 1;
 			}

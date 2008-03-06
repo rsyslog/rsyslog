@@ -1,7 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>rsyslog.conf file</title>
-
-</head>
+<html><head><title>rsyslog.conf file</title></head>
 <body>
 <h1>rsyslog.conf configuration file</h1>
 <p><b>This document is currently being enhanced. Please
@@ -43,7 +41,7 @@ plugin for plain tcp syslog</li>
 <li><a href="imgssapi.html">imgssapi</a> -
 input plugin for plain tcp and GSS-enable syslog</li>
 <li>immark - support for mark messages</li>
-<li>imklog - kernel logging</li>
+<li>imklog - kernel logging</li><li><a href="imuxsock.html">imuxsock</a> - unix sockets, including the system log socket</li>
 </ul>
 <p>Please note that each module provides configuration
 directives, which are NOT necessarily being listed below. Also
@@ -100,10 +98,7 @@ default 60000 (1 minute)]</li>
 worker threads, default 1, recommended 1</li>
 <li>$ActionQueueWorkerThreadMinumumMessages
 &lt;number&gt;, default 100</li>
-<li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
-<li>$AddUnixListenSocket &lt;name-of-socket&gt; adds
-additional unix socket, default none -- former -a option</li>
-<li>$ActionResumeRetryCount &lt;number&gt; [default 0,
+<li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li><li>$ActionResumeRetryCount &lt;number&gt; [default 0,
 -1 means eternal]</li>
 <li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
 <li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
@@ -171,15 +166,11 @@ worker threads, default 1, recommended 1</li>
 (immark)</li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
-<li>$OmitLocalLogging (imuxsock) [on/<b>off</b>] --
-former -o option</li>
+
 <li><a href="rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
 <li><a href="rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
 <li>$WorkDirectory &lt;name&gt; (directory for spool
-and other work files)</li>
-<li>$SystemLogSocketName &lt;name-of-socket&gt; --
-former -p option</li>
-<li>$UDPServerAddress &lt;IP&gt; (imudp) -- local IP
+and other work files)</li><li>$UDPServerAddress &lt;IP&gt; (imudp) -- local IP
 address (or name) the UDP listens should bind to</li>
 <li>$UDPServerRun &lt;port&gt; (imudp) -- former
 -r&lt;port&gt; option, default 514, start UDP server on this

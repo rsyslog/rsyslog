@@ -628,8 +628,10 @@ void untty(void)
  * HOSTNAME or not. rgerhards 2004-11-16.
  * changed parameter iSource to bParseHost. For details, see comment in
  * printchopped(). rgerhards 2005-10-06
+ * rgerhards: 2008-03-06: added "flags" to allow an input module to specify
+ * flags, most importantly to request ignoring the messages' timestamp.
  */
-rsRetVal printline(char *hname, char *msg, int bParseHost)
+rsRetVal printline(char *hname, char *msg, int bParseHost, int flags)
 {
 	DEFiRet;
 	register char *p;
@@ -678,7 +680,7 @@ rsRetVal printline(char *hname, char *msg, int bParseHost)
 	if(MsgSetUxTradMsg(pMsg, p) != 0)
 		ABORT_FINALIZE(RS_RET_ERR);
 
-	logmsg(pMsg, SYNC_FILE);
+	logmsg(pMsg, flags | SYNC_FILE);
 
 finalize_it:
 	RETiRet;
@@ -716,7 +718,7 @@ finalize_it:
  * improve in the future. <-- TODO!
  */
 rsRetVal
-parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost)
+parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags)
 {
 	DEFiRet;
 	register int iMsg;
@@ -815,7 +817,7 @@ parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost)
 			 */
 			if(iMsg == MAXLINE) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, tmpline, bParseHost);
+				printline(hname, tmpline, bParseHost, flags);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -867,7 +869,7 @@ parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost)
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, tmpline, bParseHost);
+	printline(hname, tmpline, bParseHost, flags);
 
 finalize_it:
 	RETiRet;

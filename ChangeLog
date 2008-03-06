@@ -12,6 +12,15 @@ Version 3.12.1 (rgerhards), 2008-03-06
 - added support for the MonitorWare syslog MIB to omsnmp
 - internal code improvements (more code converted into classes)
 - internal code reworking of the imtcp/imgssapi module
+- added capability to ignore client-provided timestamp on unix sockets and
+  made this mode the default; this was needed, as some programs (e.g. sshd)
+  log with inconsistent timezone information, what messes up the local
+  logs (which by default don't even contain time zone information). This
+  seems to be consistent with what sysklogd did for the past four years.
+  Alternate behaviour may be desirable if gateway-like processes send
+  messages via the local log slot - in this case, it can be enabled
+  via the $InputUnixListenSocketIgnoreMsgTimestamp and
+  $SystemLogSocketIgnoreMsgTimestamp config directives
 ---------------------------------------------------------------------------
 Version 3.12.0 (rgerhards), 2008-02-28
 - added full expression support for filters; filters can now contain

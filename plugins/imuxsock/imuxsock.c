@@ -68,6 +68,7 @@ static int startIndexUxLocalSockets; /* process funix from that index on (used t
 				   * read-only after startup
 				   */
 static int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
+static int funixFlags[MAXFUNIX] = { ADDDATE, }; /* should parser parse host name?  read-only after startup */
 static uchar *funixn[MAXFUNIX] = { (uchar*) _PATH_LOG }; /* read-only after startup */
 static int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
 static int nfunix = 1; /* number of Unix sockets open / read-only after startup */
@@ -75,6 +76,20 @@ static int nfunix = 1; /* number of Unix sockets open / read-only after startup 
 /* config settings */
 static int bOmitLocalLogging = 0;
 static uchar *pLogSockName = NULL;
+static int bIgnoreTimestamp = 1; /* ignore timestamps present in the incoming message? */
+
+
+/* set the timestamp ignore / not ignore option for the system
+ * log socket. This must be done separtely, as it is not added via a command
+ * but present by default. -- rgerhards, 2008-03-06
+ */
+static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, int iNewVal)
+{
+	DEFiRet;
+RUNLOG_VAR("%d", iNewVal);
+	funixFlags[0] = iNewVal ? ADDDATE : NOFLAG;
+	RETiRet;
+}
 
 
 /* add an additional listen socket. Socket names are added
@@ -95,6 +110,7 @@ static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNe
 		else {
 			funixParseHost[nfunix] = 0;
 		}
+		funixFlags[nfunix] = bIgnoreTimestamp ? ADDDATE : NOFLAG;
 		funixn[nfunix++] = pNewVal;
 	}
 	else {
@@ -157,7 +173,7 @@ static int create_unix_socket(const char *path)
  * to receive and submits the message received for processing.
  * rgerhards, 2007-12-20
  */
-static rsRetVal readSocket(int fd, int bParseHost)
+static rsRetVal readSocket(int fd, int bParseHost, int flags)
 {
 	DEFiRet;
 	int iRcvd;
@@ -166,7 +182,7 @@ static rsRetVal readSocket(int fd, int bParseHost)
 	iRcvd = recv(fd, line, MAXLINE - 1, 0);
 	dbgprintf("Message from UNIX socket: #%d\n", fd);
 	if (iRcvd > 0) {
-		parseAndSubmitMessage(LocalHostName, line, iRcvd, bParseHost);
+		parseAndSubmitMessage(LocalHostName, line, iRcvd, bParseHost, flags);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -221,7 +237,7 @@ CODESTARTrunInput
 
 		for (i = 0; i < nfunix && nfds > 0; i++) {
 			if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
-				readSocket(fd, funixParseHost[i]);
+				readSocket(fd, funixParseHost[i], funixFlags[i]);
 				--nfds; /* indicate we have processed one */
 			}
 		}
@@ -292,6 +308,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 	discardFunixn();
 	nfunix = 1;
+	bIgnoreTimestamp = 1;
 
 	return RS_RET_OK;
 }
@@ -313,12 +330,22 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omitlocallogging", 0, eCmdHdlrBinary,
 		NULL, &bOmitLocalLogging, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
+		NULL, &bIgnoreTimestamp, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord,
 		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
 		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	/* the following one is a (dirty) trick: the system log socket is not added via
+	 * an "addUnixListenSocket" config format. As such, the timestamp can not be modified
+	 * via $InputUnixListenSocketIgnoreMsgTimestamp". So we need to add a special directive
+	 * for that. We should revisit all of that once we have the new config format...
+	 * rgerhards, 2008-03-06
+	 */
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketignoremsgtimestamp", 0, eCmdHdlrBinary,
+		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*
  * vi:set ai:
