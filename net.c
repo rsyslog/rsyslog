@@ -195,7 +195,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 		switch (iAllow->addr.NetAddr->sa_family) {
 		case AF_INET:
 			if((iSignificantBits < 1) || (iSignificantBits > 32)) {
-				errmsg.LogError(NO_ERRCODE, "Invalid bit number in IPv4 address - adjusted to 32",
+				errmsg.LogError(NO_ERRCODE, "Invalid number of bits (%d) in IPv4 address - adjusted to 32",
 					    (int)iSignificantBits);
 				iSignificantBits = 32;
 			}
@@ -204,7 +204,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			break;
 		case AF_INET6:
 			if((iSignificantBits < 1) || (iSignificantBits > 128)) {
-				errmsg.LogError(NO_ERRCODE, "Invalid bit number in IPv6 address - adjusted to 128",
+				errmsg.LogError(NO_ERRCODE, "Invalid number of bits (%d) in IPv6 address - adjusted to 128",
 					    iSignificantBits);
 				iSignificantBits = 128;
 			}

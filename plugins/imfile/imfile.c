@@ -32,6 +32,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>		/* do NOT remove: will soon be done by the module generation macros */
+#ifdef HAVE_SYS_STAT_H
+#	include <sys/stat.h>
+#endif
 #include "rsyslog.h"		/* error codes etc... */
 #include "syslogd.h"
 #include "cfsysline.h"		/* access to config file objects */

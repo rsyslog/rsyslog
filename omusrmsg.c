@@ -58,6 +58,7 @@
 #include "syslogd.h"
 #include "omusrmsg.h"
 #include "module-template.h"
+#include "errmsg.h"
 
 
 /* portability: */
@@ -71,6 +72,7 @@ MODULE_TYPE_OUTPUT
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	int bIsWall; /* 1- is wall, 0 - individual users */
@@ -128,7 +130,7 @@ void setutent(void)
 {
 	assert(BSD_uf == NULL);
 	if ((BSD_uf = fopen(_PATH_UTMP, "r")) == NULL) {
-		logerror(_PATH_UTMP);
+		errmsg.LogError(NO_ERRNO, "%s", _PATH_UTMP);
 		return;
 	}
 }
@@ -347,6 +349,7 @@ BEGINmodInit(UsrMsg)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 
 /*

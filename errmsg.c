@@ -49,7 +49,7 @@ DEFobjStaticHelpers
  * to check errno and, if so, how to do that in a clean way.
  */
 static void __attribute__((format(printf, 2, 3)))
-LogError(int iErrCode, char *fmt, ... )
+LogError(int __attribute__((unused)) iErrCode, char *fmt, ... )
 {
 	va_list ap;
 	char buf[1024];
