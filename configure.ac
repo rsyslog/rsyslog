@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.12.1],[rsyslog@lists.adiscon.com.])
+AC_INIT([rsyslog],[3.12.1],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADERS([config.h])
@@ -296,13 +296,9 @@ AC_ARG_ENABLE(mudflap,
         [enable_mudflap="no"]
 )
 if test "$enable_mudflap" = "yes"; then
-	  # is there any way to just change the -O option in default CFLAGS? -- rgerhards, 2008-01-08
-	  CFLAGS="-O1 -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-          mudflap_libs="-lmudflapth"
-          mudflap_cflags="-fmudflapth"
-          AC_SUBST(mudflap_libs)
-          AC_SUBST(mudflap_cflags)
-        ],
+        # is there any way to just change the -O option in default CFLAGS? -- rgerhards, 2008-01-08
+        CFLAGS="-fmudflapth $CFLAGS"
+        LIBS="-lmudflapth $LIBS"
 fi
 
 
@@ -368,7 +364,7 @@ if test "x$enable_pgsql" = "xyes"; then
     [pq],
     [PQconnectdb],
     [pgsql_cflags="-I`pg_config --includedir`"
-     pgsql_libs="`pg_config --libdir` -lpq"
+     pgsql_libs="-L`pg_config --libdir` -lpq"
     ],
     [AC_MSG_FAILURE([PgSQL library is missing])],
     [-L`pg_config --libdir`]

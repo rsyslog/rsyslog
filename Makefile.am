@@ -91,8 +91,8 @@ rsyslogd_SOURCES = \
 	action.c \
 	action.h
 
-rsyslogd_CPPFLAGS =  $(mudflap_cflags) -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
-rsyslogd_LDADD = $(mudflap_libs) $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
+rsyslogd_CPPFLAGS =  -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
+rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 
 # now come the library plugins
@@ -106,8 +106,8 @@ tcpsrv_la_SOURCES = \
 	tcps_sess.h \
 	tcpsrv.c \
 	tcpsrv.h
-tcpsrv_la_CPPFLAGS = $(pthreads_cflags) $(mudflap_cflags)
-tcpsrv_la_LDFLAGS = $(mudflap_libs) -module -avoid-version
+tcpsrv_la_CPPFLAGS = $(pthreads_cflags)
+tcpsrv_la_LDFLAGS = -module -avoid-version
 tcpsrv_la_LIBADD = 
 
 #
@@ -116,8 +116,8 @@ tcpsrv_la_LIBADD =
 if ENABLE_GSSAPI
 pkglib_LTLIBRARIES += gssutil.la
 gssutil_la_SOURCES = gss-misc.c gss-misc.h
-gssutil_la_CPPFLAGS = $(pthreads_cflags) $(mudflap_cflags)
-gssutil_la_LDFLAGS = $(mudflap_libs) -module -avoid-version
+gssutil_la_CPPFLAGS = $(pthreads_cflags)
+gssutil_la_LDFLAGS = -module -avoid-version
 gssutil_la_LIBADD = 
 endif
 
