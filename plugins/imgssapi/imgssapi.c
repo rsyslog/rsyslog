@@ -614,9 +614,11 @@ TCPSessGSSDeinit(void)
 	DEFiRet;
 	OM_uint32 maj_stat, min_stat;
 
-	maj_stat = gss_release_cred(&min_stat, &gss_server_creds);
-	if (maj_stat != GSS_S_COMPLETE)
-		gssutil.display_status("releasing credentials", maj_stat, min_stat);
+	if (gss_server_creds != GSS_C_NO_CREDENTIAL) {
+		maj_stat = gss_release_cred(&min_stat, &gss_server_creds);
+		if (maj_stat != GSS_S_COMPLETE)
+			gssutil.display_status("releasing credentials", maj_stat, min_stat);
+	}
 	RETiRet;
 }
 

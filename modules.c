@@ -461,7 +461,6 @@ Load(uchar *pModName)
 		}
 		pModInfo = GetNxt(pModInfo);
 	}
-	free(pModNameDup);
 
 	/* now build our load module name */
 	if(*pModName == '/') {
@@ -485,6 +484,7 @@ Load(uchar *pModName)
 		/* ... so now add the extension */
 		strncat((char *) szPath, ".so", sizeof(szPath) - strlen((char*) szPath) - 1);
 	}
+	free(pModNameDup);
 
 
 	/* complete load path constructed, so ... GO! */
