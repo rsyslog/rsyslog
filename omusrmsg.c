@@ -130,7 +130,7 @@ void setutent(void)
 {
 	assert(BSD_uf == NULL);
 	if ((BSD_uf = fopen(_PATH_UTMP, "r")) == NULL) {
-		errmsg.LogError(NO_ERRNO, "%s", _PATH_UTMP);
+		errmsg.LogError(NO_ERRCODE, "%s", _PATH_UTMP);
 		return;
 	}
 }
