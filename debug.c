@@ -93,7 +93,7 @@ typedef struct dbgFuncDBListEntry_s {
 } dbgFuncDBListEntry_t;
 dbgFuncDBListEntry_t *pFuncDBListRoot;
 
-static pthread_mutex_t mutFuncDBList = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutFuncDBList;
 
 typedef struct dbgMutLog_s {
 	struct dbgMutLog_s *pNext;
@@ -106,15 +106,15 @@ typedef struct dbgMutLog_s {
 } dbgMutLog_t;
 static dbgMutLog_t *dbgMutLogListRoot = NULL;
 static dbgMutLog_t *dbgMutLogListLast = NULL;
-static pthread_mutex_t mutMutLog = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutMutLog;
 
 
 static dbgThrdInfo_t *dbgCallStackListRoot = NULL;
 static dbgThrdInfo_t *dbgCallStackListLast = NULL;
-static pthread_mutex_t mutCallStack = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutCallStack;
 
-static pthread_mutex_t mutdbgprintf = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t mutdbgoprint = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutdbgprintf;
+static pthread_mutex_t mutdbgoprint;
 
 static pthread_key_t keyCallStack;
 
@@ -628,10 +628,10 @@ static void dbgGetThrdName(char *pszBuf, size_t lenBuf, pthread_t thrd, int bInc
 
 	if(pThrd == 0 || pThrd->pszThrdName == NULL) {
 		/* no thread name, use numeric value  */
-		snprintf(pszBuf, lenBuf, "%lx", thrd);
+		snprintf(pszBuf, lenBuf, "%lx", (long) thrd);
 	} else {
 		if(bIncludeNumID) {
-			snprintf(pszBuf, lenBuf, "%s (%lx)", pThrd->pszThrdName, thrd);
+			snprintf(pszBuf, lenBuf, "%s (%lx)", pThrd->pszThrdName, (long) thrd);
 		} else {
 			snprintf(pszBuf, lenBuf, "%s", pThrd->pszThrdName);
 		}
@@ -982,7 +982,7 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 	}
 	pThrd->stackPtr = iStackPtrRestore;
 	if(pThrd->stackPtr < 0) {
-		dbgprintf("Stack pointer for thread %lx below 0 - resetting (some RETiRet still wrong!)\n", pthread_self());
+		dbgprintf("Stack pointer for thread %lx below 0 - resetting (some RETiRet still wrong!)\n", (long) pthread_self());
 		pThrd->stackPtr = 0;
 	}
 }
@@ -1211,6 +1211,15 @@ rsRetVal dbgClassInit(void)
 	
 	(void) pthread_key_create(&keyCallStack, dbgCallStackDestruct); /* MUST be the first action done! */
 
+	/* we initialize all Mutexes with code, as some platforms seem to have
+	 * bugs in the static initializer macros. So better be on the safe side...
+	 * rgerhards, 2008-03-06
+	 */
+	pthread_mutex_init(&mutFuncDBList, NULL);
+	pthread_mutex_init(&mutMutLog, NULL);
+	pthread_mutex_init(&mutCallStack, NULL);
+	pthread_mutex_init(&mutdbgprintf, NULL);
+	pthread_mutex_init(&mutdbgoprint, NULL);
 
 	/* while we try not to use any of the real rsyslog code (to avoid infinite loops), we
 	 * need to have the ability to query object names. Thus, we need to obtain a pointer to
