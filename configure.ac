@@ -190,17 +190,17 @@ if test "x$enable_pthreads" != "xno"; then
   )
 fi
 
-# klogd
-AC_ARG_ENABLE(klogd,
-        [AS_HELP_STRING([--enable-klogd],[Integrated klogd functionality @<:@default=yes@:>@])],
+# klog
+AC_ARG_ENABLE(klog,
+        [AS_HELP_STRING([--enable-klog],[Integrated klog functionality @<:@default=yes@:>@])],
         [case "${enableval}" in
-         yes) enable_klogd="yes" ;;
-          no) enable_klogd="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-klogd) ;;
+         yes) enable_klog="yes" ;;
+          no) enable_klog="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-klog) ;;
          esac],
-        [enable_klogd="yes"]
+        [enable_klog="yes"]
 )
-AM_CONDITIONAL(ENABLE_IMKLOGD, test x$enable_klogd = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOGD, test x$enable_klog = xyes)
 
 #
 # SYSLOG_UNIXAF
@@ -500,7 +500,7 @@ echo "****************************************************"
 echo "rsyslog will be compiled with the following settings:"
 echo
 echo "Multithreading support enabled:           $enable_pthreads"
-echo "Klogd functionality enabled:              $enable_klogd"
+echo "Klog functionality enabled:               $enable_klog"
 echo "Regular expressions support enabled:      $enable_regexp"
 echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"
