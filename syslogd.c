@@ -347,8 +347,6 @@ static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA en
 static int64 iMainMsgQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
 
 
-
-
 /* support for simple textual representation of FIOP names
  * rgerhards, 2005-09-27
  */
