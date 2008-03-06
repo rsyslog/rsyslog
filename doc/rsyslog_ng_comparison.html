@@ -1,8 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta content="de" http-equiv="Content-Language"><title>rsyslog vs. syslog-ng - a comparison</title>
-
-</head>
+<meta content="de" http-equiv="Content-Language"><title>rsyslog vs. syslog-ng - a comparison</title></head>
 <body>
 <h1>rsyslog vs. syslog-ng</h1>
 <p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
@@ -32,40 +30,40 @@ comparison sheet, so please don't be shy ;)</p>
 <tr>
 <td colspan="3" valign="top"><br><b>Input Sources</b><br></td>
 </tr>
-<td valign="top">UNIX domain socket</td>
+<tr><td valign="top">UNIX domain socket</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">UDP</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">TCP</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">RFC 3195/BEEP</td>
 <td valign="top">yes (needs separate build process)</td>
-<td valign="top">no<td>
-</tr>
+<td valign="top">no</td><td>
+</td></tr>
 <tr>
 <td valign="top">kernel log</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">file</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">mark message generator as an optional input</td>
 <td valign="top">yes</td>
-<td valign="top">no (?)<td>
-</tr>
+<td valign="top">no (?)</td><td>
+</td></tr>
 <tr>
 <td valign="top">Windows Event Log</td>
 <td valign="top">via <a href="http://www.eventreporter.com">EventReporter</a>
@@ -153,30 +151,30 @@ hostname in NAT environments and relay chains</td>
 <tr>
 <td colspan="3" valign="top"><br><b>Message Filtering</b><br></td>
 </tr>
-<td valign="top">Filtering for syslog facility and priority</td>
+<tr><td valign="top">Filtering for syslog facility and priority</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">Filtering for hostname</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">Filtering for application</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">Filtering for message contents</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">Filtering for sending IP address</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">ability to filter on any other message
 field  not mentioned above
@@ -212,8 +210,8 @@ in filters</td>
 <td valign="top">support for discarding messages
 based on filters</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">powerful BSD-style hostname and
 program name blocks for easy multi-host support</td>
@@ -359,7 +357,7 @@ modules</td>
 </tr>
 <tr>
 </tr>
-<td valign="top">Support for third-party output plugins</td>
+<tr><td valign="top">Support for third-party output plugins</td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
 </tr>
@@ -370,7 +368,7 @@ modules</td>
 <td colspan="3" valign="top"><br><b>Other Features</b><br></td>
 </tr>
 <tr>
-<tr>
+</tr><tr>
 <td valign="top">ability to generate file names and
 directories (log targets) dynamically</td>
 <td valign="top">yes</td>
@@ -442,8 +440,8 @@ reduction ("last message repeated n times") on a per selector-line basis</td>
 <td valign="top">supports multiple actions per
 selector/filter condition</td>
 <td valign="top">yes</td>
-<td valign="top">yes<td>
-</tr>
+<td valign="top">yes</td><td>
+</td></tr>
 <tr>
 <td valign="top">web interface</td>
 <td valign="top"><a href="http://www.phplogcon.org">phpLogCon</a><br>
@@ -500,7 +498,7 @@ repeated n times" generation</td>
 <tr>
 <td valign="top">supported platforms</td>
 <td valign="top">Linux, BSD, anecdotical seen on
-Solaris</td>
+Solaris; compilation and basic testing done on HP UX</td>
 <td valign="top">many popular *nixes</td>
 </tr>
 <tr>

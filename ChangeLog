@@ -21,6 +21,9 @@ Version 3.12.1 (rgerhards), 2008-03-06
   messages via the local log slot - in this case, it can be enabled
   via the $InputUnixListenSocketIgnoreMsgTimestamp and
   $SystemLogSocketIgnoreMsgTimestamp config directives
+- added ability to compile on HP UX; verified that imudp worked on HP UX;
+  however, we are still in need of people trying out rsyslogd on HP UX,
+  so it can not yet be assumed it runs there
 ---------------------------------------------------------------------------
 Version 3.12.0 (rgerhards), 2008-02-28
 - added full expression support for filters; filters can now contain
