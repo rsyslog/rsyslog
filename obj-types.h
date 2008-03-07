@@ -65,7 +65,7 @@ typedef enum {	/* IDs of base methods supported by all objects - used for jump t
  */
 typedef struct interface_s {
 	int ifVersion;	/* must be set to version requested */ 
-	int ifIsLoaded; /* is the interface loaded? (0-no, 1-yes; if no, functions can NOT be called! */
+	int ifIsLoaded; /* is the interface loaded? (0-no, 1-yes, 2-load failed; if not 1, functions can NOT be called! */
 } interface_t;
 
 
@@ -351,14 +351,14 @@ finalize_it: \
 /* defines data that must always be present at the very begin of the interface structure */
 #define ifBEGIN \
 	int ifVersion;	/* must be set to version requested */ \
-	objID_t oID;	/* our object ID (later dynamically assigned) */
+	int ifIsLoaded; /* is the interface loaded? (0-no, 1-yes; if no, functions can NOT be called! */
 
 
 /* use the following define some place in your static data (suggested right at
  * the beginning
  */
 #define DEFobjCurrIf(obj) \
-	static obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION };
+	static obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION, .ifIsLoaded = 0 };
  
 /* define the prototypes for a class - when we use interfaces, we just have few
  * functions that actually need to be non-static.

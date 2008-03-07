@@ -80,6 +80,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVALID_CORE_INTERFACE = -1002,/**< interface provided by host invalid, can not be used */
 	RS_RET_ENTRY_POINT_NOT_FOUND = -1003,/**< a requested entry point was not found */
 	RS_RET_MODULE_ENTRY_POINT_NOT_FOUND = -1004,/**< a entry point requested from a module was not present in it */
+	RS_RET_OBJ_NOT_AVAILABLE = -1005,/**< something could not be completed because the required object is not available*/
+	RS_RET_LOAD_ERROR = -1006,/**< we had an error loading the object/interface and can not continue */
 	/* return states for config file processing */
 	RS_RET_NONE = -2000,		/**< some value is not available - not necessarily an error */
 	RS_RET_CONFLINE_UNPROCESSED = -2001,/**< config line was not processed, pass to other module */

@@ -2907,6 +2907,7 @@ static rsRetVal InitGlobalClasses(void)
 	/* dummy "classes" */
 	CHKiRet(actionClassInit());
 	CHKiRet(templateInit());
+	CHKiRet(strInit());
 
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	CHKiRet(objUse(net, "net"));

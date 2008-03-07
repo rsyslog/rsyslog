@@ -109,6 +109,7 @@ AC_ARG_ENABLE(regexp,
          esac],
         [enable_regexp=yes]
 )
+AM_CONDITIONAL(ENABLE_REGEXP, test x$enable_regexp = xyes)
 if test "$enable_regexp" = "yes"; then
         AC_DEFINE(FEATURE_REGEXP, 1, [Regular expressions support enabled.])
 fi

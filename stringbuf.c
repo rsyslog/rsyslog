@@ -33,17 +33,20 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/types.h>
-#include <regex.h>
 #include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
+#include "regexp.h"
+#include "obj.h"
 
 
 /* ################################################################# *
  * private members                                                   *
  * ################################################################# */
 
-
+/* static data */
+DEFobjCurrIf(obj)
+DEFobjCurrIf(regexp)
 
 /* ################################################################# *
  * public members                                                    *
@@ -696,17 +699,28 @@ int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
  * bug: doesn't work for CStr containing \0
  * rgerhards, 2007-07-16: bug is no real bug, because rsyslogd ensures there
  * never is a \0 *inside* a property string.
+ * Note that the function returns -1 if regexp functionality is not available.
+ * TODO: change calling interface! -- rgerhards, 2008-03-07
  */
 int rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz)
 {
-    regex_t preq;
-    BEGINfunc
-    regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), 0);
-    int ret = regexec(&preq, (char*) psz, 0, NULL, 0);
-    regfree(&preq);
-    ENDfunc
-    return ret;
+	regex_t preq;
+	int ret;
+
+	BEGINfunc
+
+	if(objUse(regexp, "regexp") == RS_RET_OK) {
+		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), 0);
+		ret = regexp.regexec(&preq, (char*) psz, 0, NULL, 0);
+		regexp.regfree(&preq);
+	} else {
+		ret = 1; /* simulate "not found" */
+	}
+
+	ENDfunc
+	return ret;
 }
+
 
 /* compare a rsCStr object with a classical sz string.  This function
  * is almost identical to rsCStrZsStrCmp(), but it also takes an offset
@@ -1030,6 +1044,18 @@ int rsCStrLocateSzStr(cstr_t *pThis, uchar *sz)
 	return(bFound ? i : -1);
 }
 #endif /* end comment out */
+
+
+/* our init function. TODO: remove once converted to a class
+ */
+rsRetVal strInit()
+{
+	DEFiRet;
+	CHKiRet(objGetObjInterface(&obj));
+
+finalize_it:
+	RETiRet;
+}
 
 
 /*

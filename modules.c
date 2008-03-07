@@ -486,7 +486,6 @@ Load(uchar *pModName)
 	}
 	free(pModNameDup);
 
-
 	/* complete load path constructed, so ... GO! */
 	dbgprintf("loading module '%s'\n", szPath);
 	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {

@@ -120,6 +120,17 @@ net_la_LIBADD =
 endif
 
 #
+# regular expression support
+# 
+if ENABLE_REGEXP
+pkglib_LTLIBRARIES += regexp.la
+regexp_la_SOURCES = regexp.c regexp.h
+regexp_la_CPPFLAGS = $(pthreads_cflags)
+regexp_la_LDFLAGS = -module -avoid-version
+regexp_la_LIBADD =
+endif
+
+#
 # gssapi support
 # 
 if ENABLE_GSSAPI

@@ -25,13 +25,8 @@
 #ifndef	TEMPLATE_H_INCLUDED
 #define	TEMPLATE_H_INCLUDED 1
 
-
+#include "regexp.h"
 #include "stringbuf.h"
-
-#ifdef FEATURE_REGEXP
-/* Include regular expressions */
-#include <regex.h>
-#endif
 
 struct template {
 	struct template *pNext;

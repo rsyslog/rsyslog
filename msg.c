@@ -42,11 +42,13 @@
 #include "msg.h"
 #include "var.h"
 #include "datetime.h"
+#include "regexp.h"
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(var)
 DEFobjCurrIf(datetime)
+DEFobjCurrIf(regexp)
 
 static syslogCODE rs_prioritynames[] =
   {
@@ -1765,40 +1767,55 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		if (pTpe->data.field.has_regex != 0) {
 			if (pTpe->data.field.has_regex == 2)
 				/* Could not compile regex before! */
-				return
-				    "**NO MATCH** **BAD REGULAR EXPRESSION**";
+				return "**NO MATCH** **BAD REGULAR EXPRESSION**";
 
-			dbgprintf("debug: String to match for regex is: %s\n",
-			        pRes);
+			dbgprintf("debug: String to match for regex is: %s\n", pRes);
 
-			if (0 != regexec(&pTpe->data.field.re, pRes, nmatch,
-				    pmatch, 0)) {
-				/* we got no match! */
-				return "**NO MATCH**";
-			} else {
-				/* Match! */
-				/* I need to malloc pB */
-				int iLenBuf;
-				char *pB;
+			if(objUse(regexp, "regexp") == RS_RET_OK) {
+				if (0 != regexp.regexec(&pTpe->data.field.re, pRes, nmatch,
+					    pmatch, 0)) {
+					/* we got no match! */
+					if (*pbMustBeFreed == 1) {
+						free(pRes);
+						*pbMustBeFreed = 0;
+					}
+					return "**NO MATCH**";
+				} else {
+					/* Match! */
+					/* I need to malloc pB */
+					int iLenBuf;
+					char *pB;
 
-				iLenBuf = pmatch[1].rm_eo - pmatch[1].rm_so;
-				pB = (char *) malloc((iLenBuf + 1) * sizeof(char));
+					iLenBuf = pmatch[1].rm_eo - pmatch[1].rm_so;
+					pB = (char *) malloc((iLenBuf + 1) * sizeof(char));
 
-				if (pB == NULL) {
+					if (pB == NULL) {
+						if (*pbMustBeFreed == 1)
+							free(pRes);
+						*pbMustBeFreed = 0;
+						return "**OUT OF MEMORY ALLOCATING pBuf**";
+					}
+
+					/* Lets copy the matched substring to the buffer */
+					memcpy(pB, pRes + pmatch[1].rm_so, iLenBuf);
+					pB[iLenBuf] = '\0';/* terminate string, did not happen before */
+
 					if (*pbMustBeFreed == 1)
 						free(pRes);
-					*pbMustBeFreed = 0;
-					return "**OUT OF MEMORY ALLOCATING pBuf**";
+					pRes = pB;
+					*pbMustBeFreed = 1;
 				}
-
-				/* Lets copy the matched substring to the buffer */
-				memcpy(pB, pRes + pmatch[1].rm_so, iLenBuf);
-				pB[iLenBuf] = '\0';/* terminate string, did not happen before */
-
-				if (*pbMustBeFreed == 1)
+			} else {
+				/* we could not load regular expression support. This is quite unexpected at
+				 * this stage of processing (after all, the config parser found it), but so
+				 * it is. We return an error in that case. -- rgerhards, 2008-03-07
+				 */
+				dbgprintf("could not get regexp object pointer, so regexp can not be evaluated\n");
+				if (*pbMustBeFreed == 1) {
 					free(pRes);
-				pRes = pB;
-				*pbMustBeFreed = 1;
+					*pbMustBeFreed = 0;
+				}
+				return "***REGEXP NOT AVAILABLE***";
 			}
 		}
 #endif /* #ifdef FEATURE_REGEXP */

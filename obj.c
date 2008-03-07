@@ -1052,7 +1052,7 @@ RUNLOG_VAR("%p", errmsg.LogError);
  * rgerhards, 2008-02-29
  */
 static rsRetVal
-UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *ppIf)
+UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 {
 	DEFiRet;
 	cstr_t *pStr = NULL;
@@ -1061,13 +1061,29 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *ppIf)
 	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
 	iRet = FindObjInfo(pStr, &pObjInfo);
 
-	dbgprintf("source file %s requests object '%s'\n", srcFile, pObjName);
+	dbgprintf("source file %s requests object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded);
+
+	if(pIf->ifIsLoaded == 1) {
+		ABORT_FINALIZE(RS_RET_OK); /* we are already set */
+	}
+	if(pIf->ifIsLoaded == 2) {
+		ABORT_FINALIZE(RS_RET_LOAD_ERROR); /* we had a load error and can not continue */
+	}
+
+	/* we must be careful that we do not enter in infinite loop if an error occurs during
+	 * loading a module. ModLoad emits an error message in such cases and that potentially
+	 * can trigger the same code here. So we initially set the module state to "load error"
+	 * and set it to "fully initialized" when the load succeeded. It's a bit hackish, but
+	 * looks like a good solution. -- rgerhards, 2008-03-07
+	 */
+	pIf->ifIsLoaded = 2;
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* in this case, we need to see if we can dynamically load the object */
 		if(pObjFile == NULL) {
 			FINALIZE; /* no chance, we have lost... */
 		} else {
 			CHKiRet(module.Load(pObjFile));
+			pIf->ifIsLoaded = 1; /* all went well! */
 			/* NOW, we must find it or we have a problem... */
 			CHKiRet(FindObjInfo(pStr, &pObjInfo));
 		}
@@ -1075,7 +1091,7 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *ppIf)
 		FINALIZE; /* give up */
 	}
 
-	pObjInfo->QueryIF(ppIf);
+	pObjInfo->QueryIF(pIf);
 
 finalize_it:
 	if(pStr != NULL)

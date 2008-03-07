@@ -40,6 +40,7 @@
 /* static data */
 DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(regexp)
 
 static struct template *tplRoot = NULL;	/* the root of the template list */
 static struct template *tplLast = NULL;	/* points to the last element of the template list */
@@ -482,6 +483,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	cstr_t *pStrB;
 	struct templateEntry *pTpe;
 	int iNum;	/* to compute numbers */
+	rsRetVal iRetLocal;
 
 #ifdef FEATURE_REGEXP
 	/* APR: variables for regex */
@@ -625,8 +627,17 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
-				if(regcomp(&(pTpe->data.field.re), (char*) regex_char, 0) != 0) {
-					dbgprintf("error: can not compile regex: '%s'\n", regex_char);
+				if((iRetLocal = objUse(regexp, "regexp")) == RS_RET_OK) {
+					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, 0) != 0) {
+						dbgprintf("error: can not compile regex: '%s'\n", regex_char);
+						pTpe->data.field.has_regex = 2;
+					}
+				} else {
+					/* regexp object could not be loaded */
+					dbgprintf("error %d trying to load regexp library - this may be desired and thus OK",
+						  iRetLocal);
+					errmsg.LogError(NO_ERRCODE, "regexp libraray could not be loaded (error %d), regexp"
+						       "ignored", iRetLocal);
 					pTpe->data.field.has_regex = 2;
 				}
 
@@ -664,7 +675,6 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 #endif /* #ifdef FEATURE_REGEXP */
 	}
 
-	/* TODO: add more sanity checks. For now, we do the bare minimum */
 	if((pTpe->data.field.has_fields == 0) && (pTpe->data.field.iToPos < pTpe->data.field.iFromPos)) {
 		iNum = pTpe->data.field.iToPos;
 		pTpe->data.field.iToPos = pTpe->data.field.iFromPos;
