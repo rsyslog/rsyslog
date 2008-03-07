@@ -627,7 +627,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
-				if((iRetLocal = objUse(regexp, "regexp")) == RS_RET_OK) {
+				if((iRetLocal = objUse(regexp, "lmregexp")) == RS_RET_OK) {
 					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, 0) != 0) {
 						dbgprintf("error: can not compile regex: '%s'\n", regex_char);
 						pTpe->data.field.has_regex = 2;

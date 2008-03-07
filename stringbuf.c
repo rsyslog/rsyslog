@@ -709,7 +709,7 @@ int rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz)
 
 	BEGINfunc
 
-	if(objUse(regexp, "regexp") == RS_RET_OK) {
+	if(objUse(regexp, "lmregexp") == RS_RET_OK) {
 		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), 0);
 		ret = regexp.regexec(&preq, (char*) psz, 0, NULL, 0);
 		regexp.regfree(&preq);

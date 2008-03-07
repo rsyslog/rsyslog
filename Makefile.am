@@ -123,11 +123,11 @@ endif
 # regular expression support
 # 
 if ENABLE_REGEXP
-pkglib_LTLIBRARIES += regexp.la
-regexp_la_SOURCES = regexp.c regexp.h
-regexp_la_CPPFLAGS = $(pthreads_cflags)
-regexp_la_LDFLAGS = -module -avoid-version
-regexp_la_LIBADD =
+pkglib_LTLIBRARIES += lmregexp.la
+lmregexp_la_SOURCES = regexp.c regexp.h
+lmregexp_la_CPPFLAGS = $(pthreads_cflags)
+lmregexp_la_LDFLAGS = -module -avoid-version
+lmregexp_la_LIBADD =
 endif
 
 #

@@ -505,7 +505,7 @@ once they are implemented, it can make very much sense
 </tr>
 <tr>
 <td>regex</td>
-<td>Compares the property against the provided regular
+<td>Compares the property against the provided POSIX regular
 expression.</td>
 </tr>
 </tbody>
@@ -547,7 +547,11 @@ code), this can be done easily by:</p>
 <p>This filter will match when the message contains the string
 "ID-4711". Please note that the comparison is case-sensitive, so it
 would not match if "id-4711" would be contained in the message.</p>
-<p>Getting property-based filters right can sometimes be
+<p><code><b>:msg, regex, "fatal .* error"</b></code></p>
+<p>This filter uses a POSIX regular expression. It matches when the
+string contains the words "fatal" and "error" with anything in between
+(e.g. "fatal net error" and "fatal lib error" but not "fatal error" as
+two spaces are required by the regular expression!).</p><p>Getting property-based filters right can sometimes be
 challenging. In order to help you do it with as minimal effort as
 possible, rsyslogd spits out debug information for all property-based
 filters during their evaluation. To enable this, run rsyslogd in

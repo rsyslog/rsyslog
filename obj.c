@@ -1058,8 +1058,6 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	cstr_t *pStr = NULL;
 	objInfo_t *pObjInfo;
 
-	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
-	iRet = FindObjInfo(pStr, &pObjInfo);
 
 	dbgprintf("source file %s requests object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded);
 
@@ -1077,13 +1075,15 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	 * looks like a good solution. -- rgerhards, 2008-03-07
 	 */
 	pIf->ifIsLoaded = 2;
+
+	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
+	iRet = FindObjInfo(pStr, &pObjInfo);
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* in this case, we need to see if we can dynamically load the object */
 		if(pObjFile == NULL) {
 			FINALIZE; /* no chance, we have lost... */
 		} else {
 			CHKiRet(module.Load(pObjFile));
-			pIf->ifIsLoaded = 1; /* all went well! */
 			/* NOW, we must find it or we have a problem... */
 			CHKiRet(FindObjInfo(pStr, &pObjInfo));
 		}
@@ -1091,7 +1091,8 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 		FINALIZE; /* give up */
 	}
 
-	pObjInfo->QueryIF(pIf);
+	CHKiRet(pObjInfo->QueryIF(pIf));
+	pIf->ifIsLoaded = 1; /* we are happy */
 
 finalize_it:
 	if(pStr != NULL)
