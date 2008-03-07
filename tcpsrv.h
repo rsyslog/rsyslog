@@ -78,5 +78,7 @@ ENDinterface(tcpsrv)
 /* prototypes */
 PROTOTYPEObj(tcpsrv);
 
+/* the name of our library binary */
+#define LM_TCPSRV_FILENAME "lmtcpsrv"
 
 #endif /* #ifndef INCLUDED_TCPSRV_H */

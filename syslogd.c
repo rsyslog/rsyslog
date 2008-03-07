@@ -2910,7 +2910,7 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(strInit());
 
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
-	CHKiRet(objUse(net, "net"));
+	CHKiRet(objUse(net, LM_NET_FILENAME));
 
 finalize_it:
 	RETiRet;

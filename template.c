@@ -627,7 +627,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
-				if((iRetLocal = objUse(regexp, "lmregexp")) == RS_RET_OK) {
+				if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
 					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, 0) != 0) {
 						dbgprintf("error: can not compile regex: '%s'\n", regex_char);
 						pTpe->data.field.has_regex = 2;
@@ -636,7 +636,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					/* regexp object could not be loaded */
 					dbgprintf("error %d trying to load regexp library - this may be desired and thus OK",
 						  iRetLocal);
-					errmsg.LogError(NO_ERRCODE, "regexp libraray could not be loaded (error %d), regexp"
+					errmsg.LogError(NO_ERRCODE, "regexp library could not be loaded (error %d), regexp"
 						       "ignored", iRetLocal);
 					pTpe->data.field.has_regex = 2;
 				}

@@ -39,4 +39,7 @@ ENDinterface(gssutil)
 /* prototypes */
 PROTOTYPEObj(gssutil);
 
+/* the name of our library binary */
+#define LM_GSSUTIL_FILENAME "lmgssutil"
+
 #endif /* #ifndef GSS_MISC_H_INCLUDED */

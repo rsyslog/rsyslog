@@ -1771,7 +1771,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 			dbgprintf("debug: String to match for regex is: %s\n", pRes);
 
-			if(objUse(regexp, "lmregexp") == RS_RET_OK) {
+			if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 				if (0 != regexp.regexec(&pTpe->data.field.re, pRes, nmatch,
 					    pmatch, 0)) {
 					/* we got no match! */

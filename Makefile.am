@@ -94,29 +94,29 @@ rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 
 # now come the library plugins
-pkglib_LTLIBRARIES = tcpsrv.la
+pkglib_LTLIBRARIES = lmtcpsrv.la
 
 #
 # TCP (Stream) Server support
 #
-tcpsrv_la_SOURCES = \
+lmtcpsrv_la_SOURCES = \
 	tcps_sess.c \
 	tcps_sess.h \
 	tcpsrv.c \
 	tcpsrv.h
-tcpsrv_la_CPPFLAGS = $(pthreads_cflags)
-tcpsrv_la_LDFLAGS = -module -avoid-version
-tcpsrv_la_LIBADD = 
+lmtcpsrv_la_CPPFLAGS = $(pthreads_cflags)
+lmtcpsrv_la_LDFLAGS = -module -avoid-version
+lmtcpsrv_la_LIBADD = 
 
 #
 # network support
 # 
 if ENABLE_INET
-pkglib_LTLIBRARIES += net.la
-net_la_SOURCES = net.c net.h
-net_la_CPPFLAGS = $(pthreads_cflags)
-net_la_LDFLAGS = -module -avoid-version
-net_la_LIBADD =
+pkglib_LTLIBRARIES += lmnet.la
+lmnet_la_SOURCES = net.c net.h
+lmnet_la_CPPFLAGS = $(pthreads_cflags)
+lmnet_la_LDFLAGS = -module -avoid-version
+lmnet_la_LIBADD =
 endif
 
 #
@@ -134,11 +134,11 @@ endif
 # gssapi support
 # 
 if ENABLE_GSSAPI
-pkglib_LTLIBRARIES += gssutil.la
-gssutil_la_SOURCES = gss-misc.c gss-misc.h
-gssutil_la_CPPFLAGS = $(pthreads_cflags)
-gssutil_la_LDFLAGS = -module -avoid-version
-gssutil_la_LIBADD = $(gss_libs)
+pkglib_LTLIBRARIES += lmgssutil.la
+lmgssutil_la_SOURCES = gss-misc.c gss-misc.h
+lmgssutil_la_CPPFLAGS = $(pthreads_cflags)
+lmgssutil_la_LDFLAGS = -module -avoid-version
+lmgssutil_la_LIBADD = $(gss_libs)
 endif
 
 man_MANS = rfc3195d.8 rsyslogd.8 rsyslog.conf.5 

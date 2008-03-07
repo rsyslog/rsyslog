@@ -114,5 +114,8 @@ ENDinterface(net)
 /* prototypes */
 PROTOTYPEObj(net);
 
+/* the name of our library binary */
+#define LM_NET_FILENAME "lmnet"
+
 #endif /* #ifdef SYSLOG_INET */
 #endif /* #ifndef INCLUDED_NET_H */

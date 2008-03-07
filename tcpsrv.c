@@ -837,7 +837,7 @@ CODESTARTmodInit
 
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(net, "net"));
+	CHKiRet(objUse(net, LM_NET_FILENAME));
 ENDmodInit
 
 /* vim:set ai:

@@ -205,9 +205,9 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
-	CHKiRet(objUse(net, "net"));
-	CHKiRet(objUse(tcps_sess, "tcpsrv"));
-	CHKiRet(objUse(tcpsrv, "tcpsrv"));
+	CHKiRet(objUse(net, LM_NET_FILENAME));
+	CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
+	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverrun", 0, eCmdHdlrGetWord,

@@ -39,4 +39,7 @@ ENDinterface(regexp)
 /* prototypes */
 PROTOTYPEObj(regexp);
 
+/* the name of our library binary */
+#define LM_REGEXP_FILENAME "lmregexp"
+
 #endif /* #ifndef INCLUDED_REGEXP_H */

@@ -690,11 +690,11 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
-	CHKiRet(objUse(tcps_sess, "tcpsrv"));
-	CHKiRet(objUse(tcpsrv, "tcpsrv"));
-	CHKiRet(objUse(gssutil, "gssutil"));
+	CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
+	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
+	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(net, "net"));
+	CHKiRet(objUse(net, LM_NET_FILENAME));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverpermitplaintcp", 0, eCmdHdlrBinary,

@@ -675,7 +675,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(gssutil, "gssutil"));
+	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssforwardservicename", 0, eCmdHdlrGetWord, NULL, &gss_base_service_name, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssmode", 0, eCmdHdlrGetWord, setGSSMode, &gss_mode, STD_LOADABLE_MODULE_ID));

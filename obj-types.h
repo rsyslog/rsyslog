@@ -345,6 +345,7 @@ finalize_it: \
  * methods can be accessed.
  */
 #define CORE_COMPONENT NULL /* use this to indicate this is a core component */
+#define DONT_LOAD_LIB NULL /* do not load a library to obtain object interface (currently same as CORE_COMPONENT) */
 #define objUse(objName, FILENAME) \
 	obj.UseObj(__FILE__, (uchar*)#objName, (uchar*)FILENAME, (void*) &objName)
 

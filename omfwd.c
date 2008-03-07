@@ -622,7 +622,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(net, "net"));
+	CHKiRet(objUse(net, LM_NET_FILENAME));
 ENDmodInit
 
 #endif /* #ifdef SYSLOG_INET */
