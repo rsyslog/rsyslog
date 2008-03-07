@@ -175,6 +175,7 @@ DEFobjCurrIf(expr)
 DEFobjCurrIf(vm)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(net) /* TODO: make go away! */
 
 
 /* We define our own set of syslog defintions so that we
@@ -898,6 +899,7 @@ logmsgInternal(int pri, char *msg, int flags)
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->bParseHOSTNAME = 0;
+RUNLOG_VAR("%p", datetime.getCurrTime);
 	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	flags |= INTERNAL_MSG;
 
@@ -1956,6 +1958,7 @@ die(int sig)
 	legacyOptsFree();
 
 	dbgprintf("Clean shutdown completed, bye\n");
+dbgprintf("hostenv %s\n", HOSTENV);
 
 	/* exit classes... This MUST be after the dbgprintf (because it de-inits the debug system!) */
 	dbgClassExit();
@@ -2868,9 +2871,21 @@ static rsRetVal InitGlobalClasses(void)
 	DEFiRet;
 
 	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizer being called! */
+	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
+	/* the following classes were intialized by objClassInit() */
+	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
+	CHKiRet(objUse(module,   CORE_COMPONENT));
 
-	/* real ones */
+	/* initialize and use classes. We must be very careful with the order of events. Some
+	 * classes use others and if we do not initialize them in the right order, we may end
+	 * up with an invalid call. The most important thing that can happen is that an error
+	 * is detected and needs to be logged, wich in turn requires a broader number of classes
+	 * to be available. The solution is that we take care in the order of calls AND use a
+	 * class immediately after it is initialized. And, of course, we load those classes
+	 * first that we use ourselfs... -- rgerhards, 2008-03-07
+	 */
 	CHKiRet(datetimeClassInit());
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(msgClassInit());
 	CHKiRet(strmClassInit());
 	CHKiRet(wtiClassInit());
@@ -2879,26 +2894,22 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(vmstkClassInit());
 	CHKiRet(sysvarClassInit());
 	CHKiRet(vmClassInit());
+	CHKiRet(objUse(vm,       CORE_COMPONENT));
 	CHKiRet(vmopClassInit());
 	CHKiRet(vmprgClassInit());
 	CHKiRet(ctok_tokenClassInit());
 	CHKiRet(ctokClassInit());
 	CHKiRet(exprClassInit());
+	CHKiRet(objUse(expr,     CORE_COMPONENT));
 	CHKiRet(confClassInit());
+	CHKiRet(objUse(conf,     CORE_COMPONENT));
 
 	/* dummy "classes" */
 	CHKiRet(actionClassInit());
-	CHKiRet(NetInit());
 	CHKiRet(templateInit());
 
-	/* request objects we use */
-	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	CHKiRet(objUse(conf,     CORE_COMPONENT));
-	CHKiRet(objUse(expr,     CORE_COMPONENT));
-	CHKiRet(objUse(vm,       CORE_COMPONENT));
-	CHKiRet(objUse(module,   CORE_COMPONENT));
-	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
+	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
+	CHKiRet(objUse(net, "net"));
 
 finalize_it:
 	RETiRet;
@@ -2936,7 +2947,7 @@ int realMain(int argc, char **argv)
 
 	/* END core initializations */
 
-	while ((ch = getopt(argc, argv, "46Ac:dehi:f:g:l:m:nqQr::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46Ac:dehi:f:g:l:m:M:nqQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -2990,14 +3001,17 @@ int realMain(int argc, char **argv)
 				fprintf(stderr,
 					"-m option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
+		case 'M': /* default module load path */
+			module.SetModDir((uchar*)optarg);
+			break;
 		case 'n':		/* don't fork */
 			NoFork = 1;
 			break;
 		case 'q':               /* add hostname if DNS resolving has failed */
-		        ACLAddHostnameOnFail = 1;
+		        *net.pACLAddHostnameOnFail = 1;
 		        break;
 		case 'Q':               /* dont resolve hostnames in ACL to IPs */
-		        ACLDontResolve = 1;
+		        *net.pACLDontResolve = 1;
 		        break;
 		case 'r':		/* accept remote messages */
 #ifdef SYSLOG_INET

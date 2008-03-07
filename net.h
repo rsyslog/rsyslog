@@ -35,9 +35,9 @@
 #define ADDR_PRI6 0x02 /* use IPv6 address prior to IPv4 when resolving */
 
 #ifdef BSD
-#ifndef _KERNEL
-#define s6_addr32 __u6_addr.__u6_addr32
-#endif
+#	ifndef _KERNEL
+#		define s6_addr32 __u6_addr.__u6_addr32
+#	endif
 #endif
 
 struct NetAddr {
@@ -59,6 +59,20 @@ struct NetAddr {
 #	define SO_BSDCOMPAT 0
 #endif
 
+
+/* IPv6 compatibility layer for older platforms
+ * We need to handle a few things different if we are running
+ * on an older platform which does not support all the glory
+ * of IPv6. We try to limit toll on features and reliability,
+ * but obviously it is better to run rsyslog on a platform that
+ * supports everything...
+ * rgerhards, 2007-06-22
+ */
+#ifndef AI_NUMERICSERV
+#  define AI_NUMERICSERV 0
+#endif
+
+
 #ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
 #define SALEN(sa) ((sa)->sa_len)
 #else
@@ -71,31 +85,43 @@ static inline size_t SALEN(struct sockaddr *sa) {
 }
 #endif
 
-rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN);
-/* things to go away after proper modularization */
-rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine);
-void PrintAllowedSenders(int iListToPrint);
-void clearAllowedSenders ();
-void debugListenInfo(int fd, char *type);
-int *create_udp_socket(uchar *hostname, uchar *LogPort, int bIsServer);
-void closeUDPListenSockets(int *finet);
+struct AllowedSenders {
+	struct NetAddr allowedSender; /* ip address allowed */
+	uint8_t SignificantBits;      /* defines how many bits should be discarded (eqiv to mask) */
+	struct AllowedSenders *pNext;
+};
 
+
+/* interfaces */
+BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
+	rsRetVal (*cvthname)(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN);
+	/* things to go away after proper modularization */
+	rsRetVal (*addAllowedSenderLine)(char* pName, uchar** ppRestOfConfLine);
+	void (*PrintAllowedSenders)(int iListToPrint);
+	void (*clearAllowedSenders) ();
+	void (*debugListenInfo)(int fd, char *type);
+	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer);
+	void (*closeUDPListenSockets)(int *finet);
+	/* data memebers - these should go away over time... TODO */
+	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
+	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
+	struct AllowedSenders *pAllowedSenders_UDP;
+	struct AllowedSenders *pAllowedSenders_TCP;
+	struct AllowedSenders *pAllowedSenders_GSS;
+ENDinterface(net)
+#define netCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
+/* prototypes */
+PROTOTYPEObj(net);
+
+
+
+#if 0
 extern int     ACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 extern int     ACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
 extern struct AllowedSenders *pAllowedSenders_UDP;
 extern struct AllowedSenders *pAllowedSenders_TCP;
 extern struct AllowedSenders *pAllowedSenders_GSS;
-
-/* IPv6 compatibility layer for older platforms
- * We need to handle a few things different if we are running
- * on an older platform which does not support all the glory
- * of IPv6. We try to limit toll on features and reliability,
- * but obviously it is better to run rsyslog on a platform that
- * supports everything...
- * rgerhards, 2007-06-22
- */
-#ifndef AI_NUMERICSERV
-#  define AI_NUMERICSERV 0
 #endif
 
 #endif /* #ifdef SYSLOG_INET */

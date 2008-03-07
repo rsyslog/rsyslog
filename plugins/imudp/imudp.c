@@ -47,6 +47,8 @@ MODULE_TYPE_INPUT
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(net)
+
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
 static uchar *pszBindAddr = NULL;	/* IP to bind socket to */
@@ -84,7 +86,7 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	dbgprintf("Trying to open syslog UDP ports at %s:%s.\n",
 		  (bindAddr == NULL) ? (uchar*)"*" : bindAddr, pNewVal);
 
-	newSocks = create_udp_socket(bindAddr, (pNewVal == NULL || *pNewVal == '\0') ? (uchar*) "514" : pNewVal, 1);
+	newSocks = net.create_udp_socket(bindAddr, (pNewVal == NULL || *pNewVal == '\0') ? (uchar*) "514" : pNewVal, 1);
 	if(newSocks != NULL) {
 		/* we now need to add the new sockets to the existing set */
 		if(udpLstnSocks == NULL) {
@@ -154,7 +156,7 @@ CODESTARTrunInput
                         for (i = 0; i < *udpLstnSocks; i++) {
                                 if (udpLstnSocks[i+1] != -1) {
 					if(Debug)
-						debugListenInfo(udpLstnSocks[i+1], "UDP");
+						net.debugListenInfo(udpLstnSocks[i+1], "UDP");
                                         FD_SET(udpLstnSocks[i+1], &readfds);
 					if(udpLstnSocks[i+1]>maxfds) maxfds=udpLstnSocks[i+1];
 				}
@@ -178,7 +180,7 @@ CODESTARTrunInput
 				       l = recvfrom(udpLstnSocks[i+1], (char*) pRcvBuf, MAXLINE - 1, 0,
 						    (struct sockaddr *)&frominet, &socklen);
 				       if (l > 0) {
-					       if(cvthname(&frominet, fromHost, fromHostFQDN) == RS_RET_OK) {
+					       if(net.cvthname(&frominet, fromHost, fromHostFQDN) == RS_RET_OK) {
 						       dbgprintf("Message from inetd socket: #%d, host: %s\n",
 							       udpLstnSocks[i+1], fromHost);
 						       /* Here we check if a host is permitted to send us
@@ -187,7 +189,7 @@ CODESTARTrunInput
 							* configured to do this).
 							* rgerhards, 2005-09-26
 							*/
-						       if(isAllowedSender(pAllowedSenders_UDP,
+						       if(isAllowedSender(net.pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
 							       parseAndSubmitMessage((char*)fromHost, (char*) pRcvBuf, l,
 							       MSG_PARSE_HOSTNAME, NOFLAG);
@@ -220,7 +222,7 @@ ENDrunInput
 /* initialize and return if will run or not */
 BEGINwillRun
 CODESTARTwillRun
-	PrintAllowedSenders(1); /* UDP */
+	net.PrintAllowedSenders(1); /* UDP */
 
 	/* if we could not set up any listners, there is no point in running... */
 	if(udpLstnSocks == NULL)
@@ -236,12 +238,12 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	if (pAllowedSenders_UDP != NULL) {
-		clearAllowedSenders (pAllowedSenders_UDP);
-		pAllowedSenders_UDP = NULL;
+	if (net.pAllowedSenders_UDP != NULL) {
+		net.clearAllowedSenders (net.pAllowedSenders_UDP);
+		net.pAllowedSenders_UDP = NULL;
 	}
 	if(udpLstnSocks != NULL)
-		closeUDPListenSockets(udpLstnSocks);
+		net.closeUDPListenSockets(udpLstnSocks);
 	if(pRcvBuf != NULL)
 		free(pRcvBuf);
 ENDafterRun
@@ -264,7 +266,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		pszBindAddr = NULL;
 	}
 	if(udpLstnSocks != NULL) {
-		closeUDPListenSockets(udpLstnSocks);
+		net.closeUDPListenSockets(udpLstnSocks);
 		udpLstnSocks = NULL;
 	}
 	return RS_RET_OK;
@@ -276,6 +278,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(net, "net"));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserverrun", 0, eCmdHdlrGetWord,

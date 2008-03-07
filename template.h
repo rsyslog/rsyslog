@@ -90,6 +90,16 @@ struct templateEntry {
 	} data;
 };
 
+
+/* interfaces */
+BEGINinterface(tpl) /* name must also be changed in ENDinterface macro! */
+ENDinterface(tpl)
+#define tplCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
+/* prototypes */
+PROTOTYPEObj(tpl);
+
+
 struct template* tplConstruct(void);
 struct template *tplAddLine(char* pName, unsigned char** pRestOfConfLine);
 struct template *tplFind(char *pName, int iLenName);

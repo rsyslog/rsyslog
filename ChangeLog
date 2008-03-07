@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.12.2 (rgerhards), 2008-03-??
+- added RSYSLOGD_MODDIR environment variable
+- added -M rsyslogd option (allows to specify module directory location)
+- converted net.c into a loadable library plugin
 ---------------------------------------------------------------------------
 Version 3.12.1 (rgerhards), 2008-03-06
 - added library plugins, which can be automatically loaded

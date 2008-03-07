@@ -70,6 +70,7 @@ DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(net)
 
 /* The following global variables are used for building
  * tag and host selector lines during startup and config reload.
@@ -296,7 +297,7 @@ doNameLine(uchar **pp, void* pVal)
 			ochAddLine(szName, &p);
 			break;
 		case DIR_ALLOWEDSENDER: 
-			addAllowedSenderLine(szName, &p);
+			net.addAllowedSenderLine(szName, &p);
 			break;
 		default:/* we do this to avoid compiler warning - not all
 			 * enum values call this function, so an incomplete list
@@ -1170,6 +1171,7 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(objUse(ctok, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(net, "net"));
 ENDObjClassInit(conf)
 
 /* vi:set ai:

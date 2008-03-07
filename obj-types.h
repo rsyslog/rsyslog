@@ -348,7 +348,7 @@ finalize_it: \
  */
 #define CORE_COMPONENT NULL /* use this to indicate this is a core component */
 #define objUse(objName, FILENAME) \
-	obj.UseObj((uchar*)#objName, (uchar*)FILENAME, (void*) &objName)
+	obj.UseObj(__FILE__, (uchar*)#objName, (uchar*)FILENAME, (void*) &objName)
 
 /* defines data that must always be present at the very begin of the interface structure */
 #define ifBEGIN \

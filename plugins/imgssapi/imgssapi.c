@@ -77,6 +77,7 @@ DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(gssutil)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(net)
 
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
 static gss_cred_id_t gss_server_creds = GSS_C_NO_CREDENTIAL;
@@ -171,10 +172,10 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void*p
 	pGSess = (gss_sess_t*) pUsrSess;
 
 	if((pGSrv->allowedMethods & ALLOWEDMETHOD_TCP) &&
-	   isAllowedSender(pAllowedSenders_TCP, addr, (char*)fromHostFQDN))
+	   isAllowedSender(net.pAllowedSenders_TCP, addr, (char*)fromHostFQDN))
 		allowedMethods |= ALLOWEDMETHOD_TCP;
 	if((pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) &&
-	   isAllowedSender(pAllowedSenders_GSS, addr, (char*)fromHostFQDN))
+	   isAllowedSender(net.pAllowedSenders_GSS, addr, (char*)fromHostFQDN))
 		allowedMethods |= ALLOWEDMETHOD_GSS;
 	if(allowedMethods && pGSess != NULL)
 		pGSess->allowedMethods = allowedMethods;
@@ -636,8 +637,8 @@ CODESTARTwillRun
 	if(pOurTcpsrv == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 
-	PrintAllowedSenders(2); /* TCP */
-	PrintAllowedSenders(3); /* GSS */
+	net.PrintAllowedSenders(2); /* TCP */
+	net.PrintAllowedSenders(3); /* GSS */
 finalize_it:
 ENDwillRun
 
@@ -654,13 +655,13 @@ ENDmodExit
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	if (pAllowedSenders_TCP != NULL) {
-		clearAllowedSenders (pAllowedSenders_TCP);
-		pAllowedSenders_TCP = NULL;
+	if (net.pAllowedSenders_TCP != NULL) {
+		net.clearAllowedSenders (net.pAllowedSenders_TCP);
+		net.pAllowedSenders_TCP = NULL;
 	}
-	if (pAllowedSenders_GSS != NULL) {
-		clearAllowedSenders (pAllowedSenders_GSS);
-		pAllowedSenders_GSS = NULL;
+	if (net.pAllowedSenders_GSS != NULL) {
+		net.clearAllowedSenders (net.pAllowedSenders_GSS);
+		net.pAllowedSenders_GSS = NULL;
 	}
 ENDafterRun
 
@@ -693,6 +694,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 	CHKiRet(objUse(gssutil, "gssutil"));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(net, "net"));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputgssserverpermitplaintcp", 0, eCmdHdlrBinary,

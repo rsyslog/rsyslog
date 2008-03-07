@@ -50,8 +50,6 @@ rsyslogd_SOURCES = \
 	queue.h \
 	sync.c \
 	sync.h \
-	net.c \
-	net.h \
 	obj.c \
 	obj.h \
 	obj-types.h \
@@ -109,6 +107,17 @@ tcpsrv_la_SOURCES = \
 tcpsrv_la_CPPFLAGS = $(pthreads_cflags)
 tcpsrv_la_LDFLAGS = -module -avoid-version
 tcpsrv_la_LIBADD = 
+
+#
+# network support
+# 
+if ENABLE_INET
+pkglib_LTLIBRARIES += net.la
+net_la_SOURCES = net.c net.h
+net_la_CPPFLAGS = $(pthreads_cflags)
+net_la_LDFLAGS = -module -avoid-version
+net_la_LIBADD =
+endif
 
 #
 # gssapi support

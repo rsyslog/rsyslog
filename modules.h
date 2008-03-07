@@ -113,6 +113,7 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*UnloadAndDestructDynamic)(void);
 	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr);
 	rsRetVal (*Load)(uchar *name);
+	rsRetVal (*SetModDir)(uchar *name);
 ENDinterface(module)
 #define moduleCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

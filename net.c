@@ -33,8 +33,6 @@
  */
 #include "config.h"
 
-#ifdef SYSLOG_INET
-
 #include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -51,14 +49,17 @@
 
 #include "syslogd.h"
 #include "syslogd-types.h"
-#include "net.h"
+#include "module-template.h"
 #include "parse.h"
 #include "srUtils.h"
 #include "obj.h"
 #include "errmsg.h"
+#include "net.h"
+
+MODULE_TYPE_LIB
 
 /* static data */
-DEFobjCurrIf(obj)
+DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 
 /* support for defining allowed TCP and UDP senders. We use the same
@@ -1023,19 +1024,64 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 }
 
 
-/* our init function. TODO: remove once converted to a class
+/* queryInterface function
+ * rgerhards, 2008-03-05
  */
-rsRetVal NetInit()
-{
-	DEFiRet;
-	CHKiRet(objGetObjInterface(&obj));
+BEGINobjQueryInterface(net)
+CODESTARTobjQueryInterface(net)
+	if(pIf->ifVersion != netCURR_IF_VERSION) { /* check for current version, increment on each change */
+		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+	}
+
+	/* ok, we have the right interface, so let's fill it
+	 * Please note that we may also do some backwards-compatibility
+	 * work here (if we can support an older interface version - that,
+	 * of course, also affects the "if" above).
+	 */
+	pIf->cvthname = cvthname;
+	/* things to go away after proper modularization */
+	pIf->addAllowedSenderLine = addAllowedSenderLine;
+	pIf->PrintAllowedSenders = PrintAllowedSenders;
+	pIf->clearAllowedSenders = clearAllowedSenders;
+	pIf->debugListenInfo = debugListenInfo;
+	pIf->create_udp_socket = create_udp_socket;
+	pIf->closeUDPListenSockets = closeUDPListenSockets;
+finalize_it:
+ENDobjQueryInterface(net)
+
+
+/* Initialize the net class. Must be called as the very first method
+ * before anything else is called inside this class.
+ * rgerhards, 2008-02-19
+ */
+BEGINAbstractObjClassInit(net, 1, OBJ_IS_CORE_MODULE) /* class, version */
+	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-finalize_it:
-	RETiRet;
-}
+	/* set our own handlers */
+ENDObjClassInit(net)
 
-#endif /* #ifdef SYSLOG_INET */
-/*
- * vi:set ai:
+
+/* --------------- here now comes the plumbing that makes as a library module --------------- */
+
+
+BEGINmodExit
+CODESTARTmodExit
+ENDmodExit
+
+
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_LIB_QUERIES
+ENDqueryEtryPt
+
+
+BEGINmodInit()
+CODESTARTmodInit
+	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+
+	/* Initialize all classes that are in our module - this includes ourselfs */
+	CHKiRet(netClassInit()); /* must be done after tcps_sess, as we use it */
+ENDmodInit
+/* vi:set ai:
  */

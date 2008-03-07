@@ -83,6 +83,7 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(net)
 
 typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
@@ -150,7 +151,7 @@ CODESTARTfreeInstance
 	if(pData->sock >= 0)
 		close(pData->sock);
 	if(pData->pSockArray != NULL)
-		closeUDPListenSockets(pData->pSockArray);
+		net.closeUDPListenSockets(pData->pSockArray);
 ENDfreeInstance
 
 
@@ -358,7 +359,7 @@ CODESTARTdoAction
  		 */
 		if(pData->protocol == FORW_UDP) {
 			if(pData->pSockArray == NULL) {
-				pData->pSockArray = create_udp_socket((uchar*)pData->f_hname, NULL, 0);
+				pData->pSockArray = net.create_udp_socket((uchar*)pData->f_hname, NULL, 0);
 			}
 		}
 		if ( 0) // TODO: think about this strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
@@ -621,6 +622,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(net, "net"));
 ENDmodInit
 
 #endif /* #ifdef SYSLOG_INET */

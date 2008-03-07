@@ -51,6 +51,7 @@ MODULE_TYPE_INPUT
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
+DEFobjCurrIf(net)
 
 /* Module static data */
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
@@ -65,7 +66,7 @@ static int
 isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((unused)) *pUsrSrv,
 	        void __attribute__((unused)) *pUsrSess)
 {
-	return isAllowedSender(pAllowedSenders_TCP, addr, fromHostFQDN);
+	return isAllowedSender(net.pAllowedSenders_TCP, addr, fromHostFQDN);
 }
 
 
@@ -159,7 +160,7 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	/* first apply some config settings */
-	PrintAllowedSenders(2); /* TCP */
+	net.PrintAllowedSenders(2); /* TCP */
 	if(pOurTcpsrv == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 finalize_it:
@@ -169,9 +170,9 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	if (pAllowedSenders_TCP != NULL) {
-		clearAllowedSenders (pAllowedSenders_TCP);
-		pAllowedSenders_TCP = NULL;
+	if(net.pAllowedSenders_TCP != NULL) {
+		net.clearAllowedSenders(net.pAllowedSenders_TCP);
+		net.pAllowedSenders_TCP = NULL;
 	}
 ENDafterRun
 
@@ -204,6 +205,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
+	CHKiRet(objUse(net, "net"));
 	CHKiRet(objUse(tcps_sess, "tcpsrv"));
 	CHKiRet(objUse(tcpsrv, "tcpsrv"));
 

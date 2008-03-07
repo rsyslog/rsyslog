@@ -515,6 +515,27 @@ finalize_it:
 }
 
 
+/* set the default module load directory. A NULL value may be provided, in
+ * which case any previous value is deleted but no new one set. The caller-provided
+ * string is duplicated. If it needs to be freed, that's the caller's duty.
+ * rgerhards, 2008-03-07
+ */
+static rsRetVal
+SetModDir(uchar *pszModDir)
+{
+	DEFiRet;
+
+	dbgprintf("setting default module load directory '%s'\n", pszModDir);
+	if(pModDir != NULL) {
+		free(pModDir);
+	}
+
+	pModDir = (uchar*) strdup((char*)pszModDir);
+
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
@@ -537,6 +558,7 @@ CODESTARTobjQueryInterface(module)
 	pIf->UnloadAndDestructAll = modUnloadAndDestructAll;
 	pIf->UnloadAndDestructDynamic = modUnloadAndDestructDynamic;
 	pIf->doModInit = doModInit;
+	pIf->SetModDir = SetModDir;
 	pIf->Load = Load;
 finalize_it:
 ENDobjQueryInterface(module)
@@ -547,6 +569,13 @@ ENDobjQueryInterface(module)
  * rgerhards, 2008-03-05
  */
 BEGINAbstractObjClassInit(module, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
+	uchar *pModPath;
+
+	/* use any module load path specified in the environment */
+	if((pModPath = (uchar*) getenv("RSYSLOG_MODDIR")) != NULL) {
+		SetModDir(pModPath);
+	}
+
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDObjClassInit(module)

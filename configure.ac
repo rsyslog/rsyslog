@@ -27,6 +27,8 @@ case "${host}" in
   ;;
 esac
 
+AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
+
 # Checks for libraries.
 save_LIBS=$LIBS
 LIBS=
@@ -232,6 +234,7 @@ AC_ARG_ENABLE(inet,
          esac],
         [enable_inet="yes"]
 )
+AM_CONDITIONAL(ENABLE_INET, test x$enable_inet = xyes)
 if test "$enable_inet" = "yes"; then
         AC_DEFINE(SYSLOG_INET, 1, [network support is integrated.])
 fi

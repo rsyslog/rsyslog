@@ -1052,7 +1052,7 @@ RUNLOG_VAR("%p", errmsg.LogError);
  * rgerhards, 2008-02-29
  */
 static rsRetVal
-UseObj(uchar *pObjName, uchar *pObjFile, interface_t *ppIf)
+UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *ppIf)
 {
 	DEFiRet;
 	cstr_t *pStr = NULL;
@@ -1061,6 +1061,7 @@ UseObj(uchar *pObjName, uchar *pObjFile, interface_t *ppIf)
 	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
 	iRet = FindObjInfo(pStr, &pObjInfo);
 
+	dbgprintf("source file %s requests object '%s'\n", srcFile, pObjName);
 	if(iRet == RS_RET_NOT_FOUND) {
 		/* in this case, we need to see if we can dynamically load the object */
 		if(pObjFile == NULL) {

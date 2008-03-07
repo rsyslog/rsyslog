@@ -27,7 +27,7 @@
 #define	SYSLOGD_TYPES_INCLUDED 1
 
 #include "stringbuf.h"
-#include "net.h"
+//#include "net.h"
 #include <sys/param.h>
 #if HAVE_SYSLOG_H
 #include <syslog.h>
@@ -97,14 +97,6 @@ struct syslogTime {
 	 */
 };
 typedef struct syslogTime syslogTime_t;
-
-#ifdef SYSLOG_INET
-struct AllowedSenders {
-	struct NetAddr allowedSender; /* ip address allowed */
-	uint8_t SignificantBits;      /* defines how many bits should be discarded (eqiv to mask) */
-	struct AllowedSenders *pNext;
-};
-#endif
 
 #endif /* #ifndef SYSLOGD_TYPES_INCLUDED */
 /*
