@@ -65,18 +65,16 @@ typedef enum {	/* IDs of base methods supported by all objects - used for jump t
  */
 typedef struct interface_s {
 	int ifVersion;	/* must be set to version requested */ 
-	//xxxobjID_t oID;	/* our object ID (later dynamically assigned) */
+	int ifIsLoaded; /* is the interface loaded? (0-no, 1-yes; if no, functions can NOT be called! */
 } interface_t;
 
 
 typedef struct objInfo_s {
-objID_t	objID;	
 	uchar *pszID; /* the object ID as a string */
 	size_t lenID; /* length of the ID string */
 	int iObjVers;
 	uchar *pszName;
 	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
-	// TODO: the queryInterface pointer should probably be added here
 	rsRetVal (*QueryIF)(interface_t*);
 } objInfo_t;
 
