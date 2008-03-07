@@ -97,7 +97,7 @@ static void freeAllSockets(int **socks)
 		(**socks)--;
 	}
 	free(*socks);
-	socks = NULL;
+	*socks = NULL;
 }
 
 
