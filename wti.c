@@ -303,7 +303,6 @@ wtiWorkerCancelCleanup(void *arg)
 	dbgprintf("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
 	
 	/* call user supplied handler (that one e.g. requeues the element) */
-RUNLOG_VAR("%p", pThis->pUsrp);
 	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->pUsrp);
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);

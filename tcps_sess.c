@@ -73,7 +73,6 @@ static rsRetVal
 tcps_sessConstructFinalize(tcps_sess_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
-RUNLOG_VAR("%p", pThis->objData.pszName);
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	if(pThis->pSrv->OnSessConstructFinalize != NULL) {
 		CHKiRet(pThis->pSrv->OnSessConstructFinalize(&pThis->pUsr));
@@ -87,7 +86,6 @@ finalize_it:
 /* destructor for the tcps_sess object */
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcps_sess)
-RUNLOG_VAR("%p", pThis->objData.pszName);
 	if(pThis->pSrv->pOnSessDestruct != NULL) {
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
@@ -111,7 +109,6 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-RUNLOG_VAR("%p", pThis->objData.pszName);
 
 	if(pThis->fromHost != NULL) {
 		free(pThis->fromHost);
@@ -149,11 +146,9 @@ static rsRetVal
 SetTcpsrv(tcps_sess_t *pThis, tcpsrv_t *pSrv)
 {
 	DEFiRet;
-RUNLOG_VAR("%p", pThis->objData.pszName);
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);
 	pThis->pSrv = pSrv;
-RUNLOG_VAR("%p", pThis->objData.pszName);
 	RETiRet;
 }
 
@@ -429,7 +424,6 @@ ENDobjQueryInterface(tcps_sess)
  * rgerhards, 2008-02-29
  */
 BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
-RUNLOG_STR("initializing tcps_sess class");
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 

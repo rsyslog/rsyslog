@@ -86,7 +86,6 @@ static int bIgnoreTimestamp = 1; /* ignore timestamps present in the incoming me
 static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	DEFiRet;
-RUNLOG_VAR("%d", iNewVal);
 	funixFlags[0] = iNewVal ? ADDDATE : NOFLAG;
 	RETiRet;
 }

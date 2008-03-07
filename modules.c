@@ -282,7 +282,6 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *
 	addModToList(pNew);
 
 finalize_it:
-RUNLOG_VAR("%d", iRet);
 	if(iRet != RS_RET_OK) {
 		if(pNew != NULL)
 			moduleDestruct(pNew);

@@ -899,7 +899,6 @@ logmsgInternal(int pri, char *msg, int flags)
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->bParseHOSTNAME = 0;
-RUNLOG_VAR("%p", datetime.getCurrTime);
 	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	flags |= INTERNAL_MSG;
 

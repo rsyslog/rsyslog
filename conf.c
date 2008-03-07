@@ -762,7 +762,6 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 		++(*pline);
 
 finalize_it:
-RUNLOG_VAR("%d", iRet);
 	if(iRet == RS_RET_SYNTAX_ERROR) {
 		errmsg.LogError(NO_ERRCODE, "syntax error in expression");
 	}

@@ -438,7 +438,6 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-RUNLOG_VAR("%p", pThis->pUsr);
 	newConn = accept(fd, (struct sockaddr*) &addr, &addrlen);
 	if (newConn < 0) {
 		errmsg.LogError(NO_ERRCODE, "tcp accept, ignoring error and connection request");
@@ -496,16 +495,13 @@ RUNLOG_VAR("%p", pThis->pUsr);
 	 * means we can finally fill in the session object.
 	 */
 	CHKiRet(tcps_sess.SetHost(pThis->pSessions[iSess], fromHost));
-RUNLOG_VAR("%d", newConn);
 	CHKiRet(tcps_sess.SetSock(pThis->pSessions[iSess], newConn));
 	CHKiRet(tcps_sess.SetMsgIdx(pThis->pSessions[iSess], 0));
 	CHKiRet(tcps_sess.ConstructFinalize(pThis->pSessions[iSess]));
 
 finalize_it:
-RUNLOG_VAR("%d", iRet);
 	if(iRet != RS_RET_OK) {
 		if(iSess != -1) {
-RUNLOG_VAR("%d", iSess);
 			if(pThis->pSessions[iSess] != NULL)
 				tcps_sess.Destruct(&pThis->pSessions[iSess]);
 		}
