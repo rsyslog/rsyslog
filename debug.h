@@ -49,8 +49,8 @@ typedef struct dbgFuncDBmutInfoEntry_s {
 typedef struct dbgFuncDB_s {
 	unsigned magic;
 	unsigned long nTimesCalled;
-	const char *func;
-	const char *file;
+	char *func;
+	char *file;
 	int line;
 	dbgFuncDBmutInfoEntry_t mutInfo[5];
 	/* remember to update the initializer if you add anything or change the order! */
@@ -92,7 +92,7 @@ int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStac
 int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 void dbgFree(void *pMem, dbgFuncDB_t *pFuncDB, int ln, int iStackPtr);
-int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line);
+int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int line);
 void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet);
 void dbgSetExecLocation(int iStackPtr, int line);
 void dbgSetThrdName(uchar *pszName);
@@ -100,9 +100,9 @@ void dbgPrintAllDebugInfo(void);
 
 /* macros */
 #ifdef RTINST
-#	define BEGINfunc static dbgFuncDB_t dbgFuncDB=dbgFuncDB_t_INITIALIZER; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&dbgFuncDB,__LINE__);
-#	define ENDfunc dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT, RS_RET_NO_IRET);
-#	define ENDfuncIRet dbgExitFunc(&dbgFuncDB, dbgCALLStaCK_POP_POINT, iRet);
+#	define BEGINfunc static dbgFuncDB_t *pdbgFuncDB; int dbgCALLStaCK_POP_POINT = dbgEntrFunc(&pdbgFuncDB, __FILE__, __func__, __LINE__);
+#	define ENDfunc dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, RS_RET_NO_IRET);
+#	define ENDfuncIRet dbgExitFunc(pdbgFuncDB, dbgCALLStaCK_POP_POINT, iRet);
 #	define ASSERT(x) assert(x)
 #else
 #	define BEGINfunc
@@ -130,11 +130,11 @@ void dbgPrintAllDebugInfo(void);
 
 /* debug aides */
 #ifdef RTINST
-#define d_pthread_mutex_lock(x)      dbgMutexLock(x, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
-#define d_free(x)      dbgFree(x, &dbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_mutex_lock(x)      dbgMutexLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_free(x)      dbgFree(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #else
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
 #define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)

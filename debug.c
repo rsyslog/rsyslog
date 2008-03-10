@@ -909,42 +909,86 @@ BEGINfunc
 ENDfunc
 }
 
-/* handler called when a function is entered
+/* handler called when a function is entered. This function creates a new
+ * funcDB on the heap if the passed-in pointer is NULL.
  */
-int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line)
+int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int line)
 {
 	int iStackPtr;
 	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
 	dbgFuncDBListEntry_t *pFuncDBListEntry;
 	unsigned int i;
+	dbgFuncDB_t *pFuncDB;
 
-	assert(pFuncDB != NULL);
-	assert(pFuncDB->magic == dbgFUNCDB_MAGIC);
+	assert(ppFuncDB != NULL);
+	assert(file != NULL);
+	assert(func != NULL);
+	pFuncDB = *ppFuncDB;
+	assert((pFuncDB == NULL) || (pFuncDB->magic == dbgFUNCDB_MAGIC));
 
-	if(pFuncDB->nTimesCalled++ == 0) {
-		/* dbgprintf("%s:%d:%s: called first time, initializing FuncDB\n", pFuncDB->file, pFuncDB->line, pFuncDB->func); */
-		/* this is the first time we see this function, so let's fully initialize the FuncDB. Note
-		 * that partial initialization already occured via the initializer, as far as this could be
-		 * done (all static values have been set).
+	if(pFuncDB == NULL) {
+		/* we do not yet have a funcDB and need to create a new one. We also add it
+		 * to the linked list of funcDBs. Please note that when a module is unloaded and
+		 * then reloaded again, we currently do not try to find its previous funcDB but
+		 * instead create a duplicate. While finding the past one is straightforward, it
+		 * opens up the question what to do with e.g. mutex data left in it. We do not
+		 * yet see any need to handle these questions, so duplicaton seems to be the right
+		 * thing to do. -- rgerhards, 2008-03-10
 		 */
-		for(i = 0 ; i < sizeof(pFuncDB->mutInfo)/sizeof(dbgFuncDBmutInfoEntry_t) ; ++i) {
-			pFuncDB->mutInfo[i].lockLn = -1; /* set to not Locked */
-		}
-		/* finally add element to list of FuncDBs */
+		/* dbgprintf("%s:%d:%s: called first time, initializing FuncDB\n", pFuncDB->file, pFuncDB->line, pFuncDB->func); */
+		/* get a new funcDB and add it to the list (all of this is protected by the mutex) */
 		pthread_mutex_lock(&mutFuncDBList);
 		if((pFuncDBListEntry = calloc(1, sizeof(dbgFuncDBListEntry_t))) == NULL) {
 			dbgprintf("Error %d allocating memory for FuncDB List entry, not adding\n", errno);
-			pFuncDB->nTimesCalled = 0; /* retry the next time (OK, quick, but acceptable...) */
+			pthread_mutex_unlock(&mutFuncDBList);
+			goto exit_it;
 		} else {
-			pFuncDBListEntry->pFuncDB = pFuncDB;
-			pFuncDBListEntry->pNext = pFuncDBListRoot;
-			pFuncDBListRoot = pFuncDBListEntry;
+			if((pFuncDB = calloc(1, sizeof(dbgFuncDB_t))) == NULL) {
+				dbgprintf("Error %d allocating memory for FuncDB, not adding\n", errno);
+				free(pFuncDBListEntry);
+				pthread_mutex_unlock(&mutFuncDBList);
+				goto exit_it;
+			} else {
+				pFuncDBListEntry->pFuncDB = pFuncDB;
+				pFuncDBListEntry->pNext = pFuncDBListRoot;
+				pFuncDBListRoot = pFuncDBListEntry;
+			}
 		}
+		/* now intialize the funcDB
+		 * note that we duplicate the strings, because the address provided may go away
+		 * if a loadable module is unloaded!
+		 */
+		pFuncDB->magic = dbgFUNCDB_MAGIC;
+		pFuncDB->file = strdup(file);
+		pFuncDB->func = strdup(func);
+		pFuncDB->line = line;
+		pFuncDB->nTimesCalled = 0;
+		for(i = 0 ; i < sizeof(pFuncDB->mutInfo)/sizeof(dbgFuncDBmutInfoEntry_t) ; ++i) {
+			pFuncDB->mutInfo[i].lockLn = -1; /* set to not Locked */
+		}
+
+		/* a round of safety checks... */
+		if(pFuncDB->file == NULL || pFuncDB->func == NULL) {
+			dbgprintf("Error %d allocating memory for FuncDB, not adding\n", errno);
+			/* do a little bit of cleanup */
+			if(pFuncDB->file != NULL)
+				free(pFuncDB->file);
+			if(pFuncDB->func != NULL)
+				free(pFuncDB->func);
+			free(pFuncDB);
+			free(pFuncDBListEntry);
+			pthread_mutex_unlock(&mutFuncDBList);
+			goto exit_it;
+		}
+
+		/* done mutex-protected operations */
 		pthread_mutex_unlock(&mutFuncDBList);
+
+		*ppFuncDB = pFuncDB; /* all went well, so we can update the caller */
 	}
 
 	/* when we reach this point, we have a fully-initialized FuncDB! */
-
+	pFuncDB->nTimesCalled++;
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot))
 		dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
 	if(pThrd->stackPtr >= (int) (sizeof(pThrd->callStack) / sizeof(dbgFuncDB_t*))) {
@@ -959,6 +1003,7 @@ int dbgEntrFunc(dbgFuncDB_t *pFuncDB, int line)
 		pThrd->lastLine[iStackPtr] = line;
 	}
 	
+exit_it:
 	return iStackPtr;
 }
 
@@ -1257,15 +1302,12 @@ rsRetVal dbgClassExit(void)
 {
 	pthread_key_delete(keyCallStack);
 
-	/* TODO: implement, this conflicts with module unloads!
 	if(bPrintAllDebugOnExit)
 		dbgPrintAllDebugInfo();
-	*/
 
 	if(altdbg != NULL)
 		fclose(altdbg);
 	return RS_RET_OK;
 }
-/*
- * vi:set ai:
+/* vi:set ai:
  */
