@@ -37,6 +37,7 @@
 
 #include "rsyslog.h"
 #include "obj.h"
+#include "modules.h"
 #include "datetime.h"
 #include "sysvar.h"
 #include "srUtils.h"

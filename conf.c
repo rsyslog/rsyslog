@@ -1160,6 +1160,20 @@ finalize_it:
 ENDobjQueryInterface(conf)
 
 
+/* exit our class
+ * rgerhards, 2008-03-11
+ */
+BEGINObjClassExit(conf, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(conf)
+	/* release objects we no longer need */
+	objRelease(expr, CORE_COMPONENT);
+	objRelease(ctok, CORE_COMPONENT);
+	objRelease(module, CORE_COMPONENT);
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(net, LM_NET_FILENAME);
+ENDObjClassExit(conf)
+
+
 /* Initialize our class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-29

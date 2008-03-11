@@ -546,7 +546,7 @@ static inline int MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr 
  * returns 1, if the sender is allowed, 0 otherwise.
  * rgerhards, 2005-09-26
  */
-int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost)
+static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost)
 {
 	struct AllowedSenders *pAllow;
 	
@@ -577,10 +577,11 @@ int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, c
  * It still needs to be a bit better adapted to rsyslog.
  * rgerhards 2005-09-19
  */
-#ifndef BSD
 #include <sys/utsname.h>
-int should_use_so_bsdcompat(void)
+static int
+should_use_so_bsdcompat(void)
 {
+#ifndef BSD
     static int init_done;
     static int so_bsdcompat_is_obsolete;
 
@@ -608,10 +609,10 @@ int should_use_so_bsdcompat(void)
 	    so_bsdcompat_is_obsolete = 1;
     }
     return !so_bsdcompat_is_obsolete;
-}
 #else	/* #ifndef BSD */
-#define should_use_so_bsdcompat() 1
+    return 1;
 #endif	/* #ifndef BSD */
+}
 #ifndef SO_BSDCOMPAT
 /* this shall prevent compiler errors due to undfined name */
 #define SO_BSDCOMPAT 0
@@ -1046,8 +1047,20 @@ CODESTARTobjQueryInterface(net)
 	pIf->debugListenInfo = debugListenInfo;
 	pIf->create_udp_socket = create_udp_socket;
 	pIf->closeUDPListenSockets = closeUDPListenSockets;
+	pIf->isAllowedSender = isAllowedSender;
+	pIf->should_use_so_bsdcompat = should_use_so_bsdcompat;
 finalize_it:
 ENDobjQueryInterface(net)
+
+
+/* exit our class
+ * rgerhards, 2008-03-10
+ */
+BEGINObjClassExit(net, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(net)
+	/* release objects we no longer need */
+	objRelease(errmsg, CORE_COMPONENT);
+ENDObjClassExit(net)
 
 
 /* Initialize the net class. Must be called as the very first method
@@ -1067,6 +1080,7 @@ ENDObjClassInit(net)
 
 BEGINmodExit
 CODESTARTmodExit
+	netClassExit();
 ENDmodExit
 
 
@@ -1081,7 +1095,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(netClassInit()); /* must be done after tcps_sess, as we use it */
+	CHKiRet(netClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
 /* vi:set ai:
  */

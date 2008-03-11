@@ -419,6 +419,16 @@ finalize_it:
 ENDobjQueryInterface(tcps_sess)
 
 
+/* exit our class
+ * rgerhards, 2008-03-10
+ */
+BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(tcps_sess)
+	/* release objects we no longer need */
+	objRelease(errmsg, CORE_COMPONENT);
+ENDObjClassExit(tcps_sess)
+
+
 /* Initialize our class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-29

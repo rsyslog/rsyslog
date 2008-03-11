@@ -66,7 +66,7 @@ static int
 isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((unused)) *pUsrSrv,
 	        void __attribute__((unused)) *pUsrSess)
 {
-	return isAllowedSender(net.pAllowedSenders_TCP, addr, fromHostFQDN);
+	return net.isAllowedSender(net.pAllowedSenders_TCP, addr, fromHostFQDN);
 }
 
 
@@ -181,6 +181,11 @@ BEGINmodExit
 CODESTARTmodExit
 	if(pOurTcpsrv != NULL)
 		iRet = tcpsrv.Destruct(&pOurTcpsrv);
+
+	/* release objects we used */
+	objRelease(net, LM_NET_FILENAME);
+	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
+	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
 ENDmodExit
 
 

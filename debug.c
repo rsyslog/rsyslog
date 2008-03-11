@@ -914,7 +914,7 @@ ENDfunc
  */
 int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int line)
 {
-	int iStackPtr;
+	int iStackPtr = 0; /* TODO: find some better default, this one hurts the least, but it is not clean */
 	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
 	dbgFuncDBListEntry_t *pFuncDBListEntry;
 	unsigned int i;

@@ -120,7 +120,6 @@ typedef struct filed selector_t;	/* new type name */
 #define MSG_DONT_PARSE_HOSTNAME 0
 rsRetVal parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags);
 #include "net.h" /* TODO: remove when you remoe isAllowedSender from here! */
-int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost);
 void untty(void);
 rsRetVal selectorConstruct(selector_t **ppThis);
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);

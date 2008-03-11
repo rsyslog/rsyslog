@@ -76,6 +76,7 @@ typedef struct objInfo_s {
 	uchar *pszName;
 	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
 	rsRetVal (*QueryIF)(interface_t*);
+	struct modInfo_s *pModInfo;
 } objInfo_t;
 
 
@@ -149,24 +150,24 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 #define INTERFACEpropSetMeth(obj, prop, dataType)\
 	rsRetVal (*Set##prop)(obj##_t *pThis, dataType)
 /* class initializer */
-#define PROTOTYPEObjClassInit(objName) rsRetVal objName##ClassInit(void)
+#define PROTOTYPEObjClassInit(objName) rsRetVal objName##ClassInit(struct modInfo_s*)
 /* below: objName must be the object name (e.g. vm, strm, ...) and ISCORE must be
  * 1 if the module is a statically linked core module and 0 if it is a
  * dynamically loaded one. -- rgerhards, 2008-02-29
  */
-#define OBJ_IS_CORE_MODULE 1
+#define OBJ_IS_CORE_MODULE 1 /* This should better be renamed to something like "OBJ_IS_NOT_LIBHEAD" or so... ;) */
 #define OBJ_IS_LOADABLE_MODULE 0
 #define BEGINObjClassInit(objName, objVers, objType) \
-rsRetVal objName##ClassInit(void) \
+rsRetVal objName##ClassInit(struct modInfo_s *pModInfo) \
 { \
 	DEFiRet; \
-	if(objType == OBJ_IS_CORE_MODULE) { \
+	if(objType == OBJ_IS_CORE_MODULE) { /* are we a core module? */ \
 		CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
 	} \
 	CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar*) #objName, objVers, \
 	                         (rsRetVal (*)(void*))objName##Construct,\
 				 (rsRetVal (*)(void*))objName##Destruct,\
-				 (rsRetVal (*)(interface_t*))objName##QueryInterface)); 
+				 (rsRetVal (*)(interface_t*))objName##QueryInterface, pModInfo)); \
 
 #define ENDObjClassInit(objName) \
 	iRet = obj.RegisterObj((uchar*)#objName, pObjInfoOBJ); \
@@ -178,20 +179,38 @@ finalize_it: \
  * TODO: consolidate the two -- rgerhards, 2008-02-29
  */
 #define BEGINAbstractObjClassInit(objName, objVers, objType) \
-rsRetVal objName##ClassInit(void) \
+rsRetVal objName##ClassInit(struct modInfo_s *pModInfo) \
 { \
 	DEFiRet; \
-	if(objType == OBJ_IS_CORE_MODULE) { \
+	if(objType == OBJ_IS_CORE_MODULE) { /* are we a core module? */ \
 		CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
 	} \
 	CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar*) #objName, objVers, \
 	                         NULL,\
 				 NULL,\
-				 (rsRetVal (*)(interface_t*))objName##QueryInterface)); 
+				 (rsRetVal (*)(interface_t*))objName##QueryInterface, pModInfo)); 
 
 #define ENDObjClassInit(objName) \
 	iRet = obj.RegisterObj((uchar*)#objName, pObjInfoOBJ); \
 finalize_it: \
+	RETiRet; \
+}
+
+
+/* now come the class exit. This is to be called immediately before the class is 
+ * unloaded (actual unload for plugins, program termination for core modules)
+ * gerhards, 2008-03-10
+ */
+#define PROTOTYPEObjClassExit(objName) rsRetVal objName##ClassExit(void)
+#define BEGINObjClassExit(objName, objType) \
+rsRetVal objName##ClassExit(void) \
+{ \
+	DEFiRet;
+
+#define CODESTARTObjClassExit(objName)
+
+#define ENDObjClassExit(objName) \
+	iRet = obj.UnregisterObj((uchar*)#objName, pObjInfoOBJ); \
 	RETiRet; \
 }
 
@@ -342,12 +361,23 @@ finalize_it: \
 	
 /* the following macro is used to get access to an object (not an instance,
  * just the class itself!). It must be called before any of the object's
- * methods can be accessed.
+ * methods can be accessed. The MYLIB part is the name of my library, or NULL if
+ * the caller is a core module. Using the right value here is important to get
+ * the reference counting correct (object accesses from the same library must
+ * not be counted because that would cause a library plugin to never unload, as
+ * its ClassExit() entry points are only called if no object is referenced, which
+ * would never happen as the library references itself.
+ * rgerhards, 2008-03-11
  */
 #define CORE_COMPONENT NULL /* use this to indicate this is a core component */
 #define DONT_LOAD_LIB NULL /* do not load a library to obtain object interface (currently same as CORE_COMPONENT) */
+/*#define objUse(objName, MYLIB, FILENAME) \
+	obj.UseObj(__FILE__, (uchar*)#objName, MYLIB, (uchar*)FILENAME, (void*) &objName)
+*/
 #define objUse(objName, FILENAME) \
 	obj.UseObj(__FILE__, (uchar*)#objName, (uchar*)FILENAME, (void*) &objName)
+#define objRelease(objName, FILENAME) \
+	obj.ReleaseObj(__FILE__, (uchar*)#objName, (uchar*) FILENAME, (void*) &objName)
 
 /* defines data that must always be present at the very begin of the interface structure */
 #define ifBEGIN \
@@ -359,15 +389,17 @@ finalize_it: \
  * the beginning
  */
 #define DEFobjCurrIf(obj) \
-	static obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION, .ifIsLoaded = 0 };
+		static obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION, .ifIsLoaded = 0 };
  
 /* define the prototypes for a class - when we use interfaces, we just have few
  * functions that actually need to be non-static.
  */
 #define PROTOTYPEObj(obj) \
-	PROTOTYPEObjClassInit(obj);
+	PROTOTYPEObjClassInit(obj); \
+	PROTOTYPEObjClassExit(obj);
 
 /* ------------------------------ end object loader system ------------------------------ */
 
 
+#include "modules.h"
 #endif /* #ifndef OBJ_TYPES_H_INCLUDED */

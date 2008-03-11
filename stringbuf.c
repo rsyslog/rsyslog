@@ -1046,6 +1046,17 @@ int rsCStrLocateSzStr(cstr_t *pThis, uchar *sz)
 #endif /* end comment out */
 
 
+/* our exit function. TODO: remove once converted to a class
+ * rgerhards, 2008-03-11
+ */
+rsRetVal strExit()
+{
+	DEFiRet;
+	objRelease(regexp, LM_REGEXP_FILENAME);
+	RETiRet;
+}
+
+
 /* our init function. TODO: remove once converted to a class
  */
 rsRetVal strInit()

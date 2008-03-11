@@ -934,7 +934,11 @@ queueUngetObj(queue_t *pThis, obj_t *pUsr, int bLockMutex)
 	DEFVARS_mutexProtection;
 
 	ISOBJ_TYPE_assert(pThis, queue);
-	ISOBJ_assert(pUsr); /* TODO: we aborted right at this place at least once -- race? 2008-02-28 */
+	ISOBJ_assert(pUsr); /* TODO: we aborted right at this place at least twice -- race? 2008-02-28, -03-10
+			       The second time I noticed it the queue was in destruction with NO worker threads
+			       running. The pUsr ptr was totally off and provided no clue what it may be pointing
+			       at (except that it looked like the static data pool). Both times, the abort happend
+			       inside an action queue */
 
 	dbgoprint((obj_t*) pThis, "ungetting user object %s\n", obj.GetName(pUsr));
 	BEGIN_MTX_PROTECTED_OPERATIONS(pThis->mut, bLockMutex);

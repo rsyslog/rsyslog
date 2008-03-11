@@ -82,6 +82,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MODULE_ENTRY_POINT_NOT_FOUND = -1004,/**< a entry point requested from a module was not present in it */
 	RS_RET_OBJ_NOT_AVAILABLE = -1005,/**< something could not be completed because the required object is not available*/
 	RS_RET_LOAD_ERROR = -1006,/**< we had an error loading the object/interface and can not continue */
+	RS_RET_MODULE_STILL_REFERENCED = -1007,/**< module could not be unloaded because it still is referenced by someone */
+	RS_RET_OBJ_UNKNOWN = -1008,/**< object is unknown where required */
+	RS_RET_OBJ_NOT_REGISTERED = -1009,/**< tried to unregister an object that is not registered */
 	/* return states for config file processing */
 	RS_RET_NONE = -2000,		/**< some value is not available - not necessarily an error */
 	RS_RET_CONFLINE_UNPROCESSED = -2001,/**< config line was not processed, pass to other module */

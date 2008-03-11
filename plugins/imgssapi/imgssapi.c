@@ -172,10 +172,10 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void*p
 	pGSess = (gss_sess_t*) pUsrSess;
 
 	if((pGSrv->allowedMethods & ALLOWEDMETHOD_TCP) &&
-	   isAllowedSender(net.pAllowedSenders_TCP, addr, (char*)fromHostFQDN))
+	   net.isAllowedSender(net.pAllowedSenders_TCP, addr, (char*)fromHostFQDN))
 		allowedMethods |= ALLOWEDMETHOD_TCP;
 	if((pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) &&
-	   isAllowedSender(net.pAllowedSenders_GSS, addr, (char*)fromHostFQDN))
+	   net.isAllowedSender(net.pAllowedSenders_GSS, addr, (char*)fromHostFQDN))
 		allowedMethods |= ALLOWEDMETHOD_GSS;
 	if(allowedMethods && pGSess != NULL)
 		pGSess->allowedMethods = allowedMethods;
@@ -649,6 +649,13 @@ CODESTARTmodExit
 	if(pOurTcpsrv != NULL)
 		iRet = tcpsrv.Destruct(&pOurTcpsrv);
 	TCPSessGSSDeinit();
+
+	/* release objects we used */
+	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
+	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
+	objRelease(gssutil, LM_GSSUTIL_FILENAME);
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
 
 

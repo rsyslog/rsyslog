@@ -92,10 +92,12 @@
 
 /* interfaces */
 BEGINinterface(obj) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*UseObj)(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *ppIf);
+	//rsRetVal (*UseObj)(char *srcFile, uchar *pObjName, uchar *pMyLib, uchar *pObjFile, interface_t *pIf);
+	rsRetVal (*UseObj)(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf);
+	rsRetVal (*ReleaseObj)(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf);
 	rsRetVal (*InfoConstruct)(objInfo_t **ppThis, uchar *pszID, int iObjVers,
 		                  rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *),
-	      			  rsRetVal (*pQueryIF)(interface_t*));
+	      			  rsRetVal (*pQueryIF)(interface_t*), modInfo_t*);
 	rsRetVal (*DestructObjSelf)(obj_t *pThis);
 	rsRetVal (*BeginSerializePropBag)(strm_t *pStrm, obj_t *pObj);
 	rsRetVal (*InfoSetMethod)(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*));
@@ -103,6 +105,7 @@ BEGINinterface(obj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SerializeProp)(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr);
 	rsRetVal (*EndSerialize)(strm_t *pStrm);
 	rsRetVal (*RegisterObj)(uchar *pszObjName, objInfo_t *pInfo);
+	rsRetVal (*UnregisterObj)(uchar *pszObjName, objInfo_t *pInfo);
 	rsRetVal (*Deserialize)(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);
 	rsRetVal (*DeserializePropBag)(obj_t *pObj, strm_t *pStrm);
 	rsRetVal (*SetName)(obj_t *pThis, uchar *pszName);
@@ -117,5 +120,6 @@ ENDinterface(obj)
  */
 rsRetVal objGetObjInterface(obj_if_t *pIf);
 PROTOTYPEObjClassInit(obj);
+PROTOTYPEObjClassExit(obj);
 
 #endif /* #ifndef OBJ_H_INCLUDED */

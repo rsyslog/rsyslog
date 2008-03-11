@@ -2,6 +2,13 @@
  * This is the implementation of syslogd modules object.
  * This object handles plug-ins and build-in modules of all kind.
  *
+ * Modules are reference-counted. Anyone who access a module must call
+ * Use() before any function is accessed and Release() when he is done.
+ * When the reference count reaches 0, rsyslog unloads the module (that
+ * may be changed in the future to cache modules). Rsyslog does NOT
+ * unload modules with a reference count > 0, even if the unload
+ * method is called!
+ *
  * File begun on 2007-07-22 by RGerhards
  *
  * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
@@ -54,6 +61,106 @@ static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 uchar	*pModDir = NULL; /* read-only after startup */
 
 
+#ifdef DEBUG
+/* we add some home-grown support to track our users (and detect who does not free us). In
+ * the long term, this should probably be migrated into debug.c (TODO). -- rgerhards, 2008-03-11
+ */
+
+/* add a user to the current list of users (always at the root) */
+static void
+modUsrAdd(modInfo_t *pThis, char *pszUsr)
+{
+	modUsr_t *pUsr;
+
+	BEGINfunc
+	if((pUsr = calloc(1, sizeof(modUsr_t))) == NULL)
+		goto finalize_it;
+
+	if((pUsr->pszFile = strdup(pszUsr)) == NULL) {
+		free(pUsr);
+		goto finalize_it;
+	}
+
+	if(pThis->pModUsrRoot != NULL) {
+		pUsr->pNext = pThis->pModUsrRoot;
+	}
+	pThis->pModUsrRoot = pUsr;
+
+finalize_it:
+	ENDfunc
+}
+
+
+/* remove a user from the current user list
+ * rgerhards, 2008-03-11
+ */
+static void
+modUsrDel(modInfo_t *pThis, char *pszUsr)
+{
+	modUsr_t *pUsr;
+	modUsr_t *pPrev = NULL;
+
+	for(pUsr = pThis->pModUsrRoot ; pUsr != NULL ; pUsr = pUsr->pNext) {
+		if(!strcmp(pUsr->pszFile, pszUsr))
+			break;
+		else
+			pPrev = pUsr;
+	}
+
+	if(pUsr == NULL) {
+		dbgprintf("oops - tried to delete user %s from module %s and it wasn't registered as one...\n",
+			  pszUsr, pThis->pszName);
+	} else {
+		if(pPrev == NULL) {
+			/* This was at the root! */
+			pThis->pModUsrRoot = pUsr->pNext;
+		} else {
+			pPrev->pNext = pUsr->pNext;
+		}
+		/* free ressources */
+		free(pUsr->pszFile);
+		free(pUsr);
+		pUsr = NULL; /* just to make sure... */
+	}
+}
+
+
+/* print a short list all all source files using the module in question
+ * rgerhards, 2008-03-11
+ */
+static void
+modUsrPrint(modInfo_t *pThis)
+{
+	modUsr_t *pUsr;
+
+	for(pUsr = pThis->pModUsrRoot ; pUsr != NULL ; pUsr = pUsr->pNext) {
+		dbgprintf("\tmodule %s is currently in use by file %s\n",
+			  pThis->pszName, pUsr->pszFile);
+	}
+}
+
+
+/* print all loaded modules and who is accessing them. This is primarily intended
+ * to be called at end of run to detect "module leaks" and who is causing them.
+ * rgerhards, 2008-03-11
+ */
+//static void
+void
+modUsrPrintAll(void)
+{
+	modInfo_t *pMod;
+
+	BEGINfunc
+	for(pMod = pLoadedModules ; pMod != NULL ; pMod = pMod->pNext) {
+		dbgprintf("printing users of loadable module %s, refcount %u, ptr %p, type %d\n", pMod->pszName, pMod->uRefCnt, pMod, pMod->eType);
+		modUsrPrint(pMod);
+	}
+	ENDfunc
+}
+
+#endif /* #ifdef DEBUG */
+
+
 /* Construct a new module object
  */
 static rsRetVal moduleConstruct(modInfo_t **pThis)
@@ -78,6 +185,7 @@ static rsRetVal moduleConstruct(modInfo_t **pThis)
  */
 static void moduleDestruct(modInfo_t *pThis)
 {
+	assert(pThis != NULL);
 	if(pThis->pszName != NULL)
 		free(pThis->pszName);
 	if(pThis->pModHdlr != NULL)
@@ -145,6 +253,7 @@ addModToList(modInfo_t *pThis)
 		pLoadedModules = pLoadedModulesLast = pThis;
 	} else {
 		/* there already exist entries */
+		pThis->pPrev = pLoadedModulesLast;
 		pLoadedModulesLast->pNext = pThis;
 		pLoadedModulesLast = pThis;
 	}
@@ -196,13 +305,22 @@ static modInfo_t *GetNxtType(modInfo_t *pThis, eModType_t rqtdType)
  * been destroyed. In the case of output modules, this happens when the
  * rule set is being destroyed. When we implement other module types, we
  * need to think how we handle it there (and if we have any instance data).
+ * rgerhards, 2008-03-10: reject unload request if the module has a reference
+ * count > 0.
  */
-static rsRetVal modPrepareUnload(modInfo_t *pThis)
+static rsRetVal
+modPrepareUnload(modInfo_t *pThis)
 {
 	DEFiRet;
 	void *pModCookie;
 
 	assert(pThis != NULL);
+
+	if(pThis->uRefCnt > 0) {
+		dbgprintf("rejecting unload of module '%s' because it has a refcount of %d\n",
+			  pThis->pszName, pThis->uRefCnt);
+		ABORT_FINALIZE(RS_RET_MODULE_STILL_REFERENCED);
+	}
 
 	CHKiRet(pThis->modGetID(&pModCookie));
 	pThis->modExit(); /* tell the module to get ready for unload */
@@ -217,7 +335,7 @@ finalize_it:
  * everything needed to fully initialize the module.
  */
 static rsRetVal
-doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *name, void *pModHdlr)
+doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*), uchar *name, void *pModHdlr)
 {
 	DEFiRet;
 	modInfo_t *pNew = NULL;
@@ -230,7 +348,7 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)()), uchar *
 		ABORT_FINALIZE(iRet);
 	}
 
-	CHKiRet((*modInit)(CURR_MOD_IF_VERSION, &pNew->iIFVers, &pNew->modQueryEtryPt, queryHostEtryPt));
+	CHKiRet((*modInit)(CURR_MOD_IF_VERSION, &pNew->iIFVers, &pNew->modQueryEtryPt, queryHostEtryPt, pNew));
 
 	if(pNew->iIFVers != CURR_MOD_IF_VERSION) {
 		ABORT_FINALIZE(RS_RET_MISSING_INTERFACE);
@@ -328,95 +446,71 @@ static void modPrintList(void)
 }
 
 
-/* unload all modules and free module linked list
- * rgerhards, 2007-08-09
- */
-static rsRetVal modUnloadAndDestructAll(void)
-{
-	DEFiRet;
-	modInfo_t *pMod;
-	modInfo_t *pModPrev;
-
-	pMod = GetNxt(NULL);
-	while(pMod != NULL) {
-		pModPrev = pMod;
-		pMod = GetNxt(pModPrev); /* get next */
-		/* TODO: library modules are currently never unloaded! */
-		if(pModPrev->eType == eMOD_LIB) {
-			dbgprintf("NOT unloading library module %s\n", modGetName(pModPrev));
-		} else {
-			/* now we can destroy the previous module */
-			dbgprintf("Unloading module %s\n", modGetName(pModPrev));
-			modPrepareUnload(pModPrev);
-			moduleDestruct(pModPrev);
-		}
-	}
-
-	/* indicate list is now empty */
-	pLoadedModules = NULL;
-	pLoadedModulesLast = NULL;
-
-	RETiRet;
-}
-
-
 /* unlink and destroy a module. The caller must provide a pointer to the module
  * itself as well as one to its immediate predecessor.
  * rgerhards, 2008-02-26
  */
 static rsRetVal
-modUnlinkAndDestroy(modInfo_t *pThis, modInfo_t *pPrev)
+modUnlinkAndDestroy(modInfo_t *pThis)
 {
 	DEFiRet;
 
+	/* first check if we are permitted to unload */
+	if(pThis->eType == eMOD_LIB) {
+		if(pThis->uRefCnt > 0) {
+			dbgprintf("module %s NOT unloaded because it still has a refcount of %u\n",
+				  pThis->pszName, pThis->uRefCnt);
+#			ifdef DEBUG
+			modUsrPrintAll();
+#			endif
+			ABORT_FINALIZE(RS_RET_MODULE_STILL_REFERENCED);
+		}
+	}
+
 	/* we need to unlink the module before we can destruct it -- rgerhards, 2008-02-26 */
-	if(pPrev == NULL) {
+	if(pThis->pPrev == NULL) {
 		/* module is root, so we need to set a new root */
 		pLoadedModules = pThis->pNext;
 	} else {
-		pPrev->pNext = pThis->pNext;
+		pThis->pPrev->pNext = pThis->pNext;
 	}
 
-	/* check if we need to update the "last" pointer */
-	if(pLoadedModulesLast == pThis) {
-		pLoadedModulesLast = pPrev;
+	if(pThis->pNext == NULL) {
+		pLoadedModulesLast = NULL;
+	} else {
+		pThis->pNext->pPrev = pThis->pPrev;
 	}
 
 	/* finally, we are ready for the module to go away... */
 	dbgprintf("Unloading module %s\n", modGetName(pThis));
-	modPrepareUnload(pThis);
+	CHKiRet(modPrepareUnload(pThis));
 	moduleDestruct(pThis);
 
+finalize_it:
 	RETiRet;
 }
 
 
-/* unload dynamically loaded modules
+/* unload all loaded modules of a specific type (use eMOD_ALL if you want to
+ * unload all module types). The unload happens only if the module is no longer
+ * referenced. So some modules may survive this call.
+ * rgerhards, 2008-03-11
  */
-static rsRetVal modUnloadAndDestructDynamic(void)
+static rsRetVal
+modUnloadAndDestructAll(eModLinkType_t modLinkTypesToUnload)
 {
 	DEFiRet;
 	modInfo_t *pMod;
 	modInfo_t *pModCurr; /* module currently being processed */
-	modInfo_t *pModPrev; /* last module in active linked list */
 
-	pModPrev = NULL; /* we do not yet have a previous module */
 	pMod = GetNxt(NULL);
 	while(pMod != NULL) {
 		pModCurr = pMod;
 		pMod = GetNxt(pModCurr); /* get next */
-		/* now we can destroy the previous module */
-		/* TODO: library modules are currently never unloaded! */
-		if(pModCurr->eType == eMOD_LIB) {
-			dbgprintf("NOT unloading library module %s\n", modGetName(pModCurr));
-		} else {
-			if(pModCurr->eLinkType != eMOD_LINK_STATIC) {
-				modUnlinkAndDestroy(pModCurr, pModPrev);
-			} else {
-				pModPrev = pModCurr; /* don't delete, so this is the new prev ptr */
-			}
-	}
+		if(modLinkTypesToUnload == eMOD_LINK_ALL || pModCurr->eLinkType == modLinkTypesToUnload) {
+			modUnlinkAndDestroy(pModCurr);
 		}
+	}
 
 	RETiRet;
 }
@@ -534,6 +628,79 @@ SetModDir(uchar *pszModDir)
 }
 
 
+/* Reference-Counting object access: add 1 to the current reference count. Must be
+ * called by anyone interested in using a module. -- rgerhards, 20080-03-10
+ */
+static rsRetVal
+Use(char *srcFile, modInfo_t *pThis)
+{
+	DEFiRet;
+
+	assert(pThis != NULL);
+	pThis->uRefCnt++;
+	dbgprintf("source file %s requested reference for module '%s', reference count now %u\n",
+		  srcFile, pThis->pszName, pThis->uRefCnt);
+
+#	ifdef DEBUG
+	modUsrAdd(pThis, srcFile);
+#	endif
+
+	RETiRet;
+
+}
+
+
+/* Reference-Counting object access: subract one from the current refcount. Must
+ * by called by anyone who no longer needs a module. If count reaches 0, the 
+ * module is unloaded. -- rgerhards, 20080-03-10
+ */
+static rsRetVal
+Release(char *srcFile, modInfo_t **ppThis)
+{
+	DEFiRet;
+	modInfo_t *pThis;
+
+	assert(ppThis != NULL);
+	pThis = *ppThis;
+	assert(pThis != NULL);
+	if(pThis->uRefCnt == 0) {
+		/* oops, we are already at 0? */
+		dbgprintf("internal error: module '%s' already has a refcount of 0 (released by %s)!\n",
+			  pThis->pszName, srcFile);
+	} else {
+		--pThis->uRefCnt;
+		dbgprintf("file %s released module '%s', reference count now %u\n",
+			  srcFile, pThis->pszName, pThis->uRefCnt);
+#		ifdef DEBUG
+		modUsrDel(pThis, srcFile);
+		modUsrPrint(pThis);
+#		endif
+	}
+
+	if(pThis->uRefCnt == 0) {
+		/* we have a zero refcount, so we must unload the module */
+		dbgprintf("module '%s' has zero reference count, unloading...\n", pThis->pszName);
+		modUnlinkAndDestroy(pThis);
+		*ppThis = NULL; /* nobody can access it any longer! */
+	}
+
+	RETiRet;
+
+}
+
+
+/* exit our class
+ * rgerhards, 2008-03-11
+ */
+BEGINObjClassExit(module, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(module)
+	/* release objects we no longer need */
+	objRelease(errmsg, CORE_COMPONENT);
+
+	modUsrPrintAll(); /* debug aid - TODO: integrate with debug.c, at least the settings! */
+ENDObjClassExit(module)
+
+
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
@@ -554,10 +721,11 @@ CODESTARTobjQueryInterface(module)
 	pIf->GetStateName = modGetStateName;
 	pIf->PrintList = modPrintList;
 	pIf->UnloadAndDestructAll = modUnloadAndDestructAll;
-	pIf->UnloadAndDestructDynamic = modUnloadAndDestructDynamic;
 	pIf->doModInit = doModInit;
 	pIf->SetModDir = SetModDir;
 	pIf->Load = Load;
+	pIf->Use = Use;
+	pIf->Release = Release;
 finalize_it:
 ENDobjQueryInterface(module)
 

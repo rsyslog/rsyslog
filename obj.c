@@ -130,7 +130,7 @@ static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
 static rsRetVal
 InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
               rsRetVal (*pConstruct)(void *), rsRetVal (*pDestruct)(void *),
-	      rsRetVal (*pQueryIF)(interface_t*))
+	      rsRetVal (*pQueryIF)(interface_t*), modInfo_t *pModInfo)
 {
 	DEFiRet;
 	int i;
@@ -146,6 +146,7 @@ InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
 	pThis->pszName = (uchar*)strdup((char*)pszID); /* it's OK if we have NULL ptr, GetName() will deal with that! */
 	pThis->iObjVers = iObjVers;
 	pThis->QueryIF = pQueryIF;
+	pThis->pModInfo = pModInfo;
 
 	pThis->objMethods[0] = pConstruct;
 	pThis->objMethods[1] = pDestruct;
@@ -156,6 +157,28 @@ InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
 	*ppThis = pThis;
 
 finalize_it:
+	RETiRet;
+}
+
+
+/* destruct the objInfo object - must be done only when no more instances exist.
+ * rgerhards, 2008-03-10
+ */
+static rsRetVal
+InfoDestruct(objInfo_t **ppThis)
+{
+	DEFiRet;
+	objInfo_t *pThis;
+
+	assert(ppThis != NULL);
+	pThis = *ppThis;
+	assert(pThis != NULL);
+
+	if(pThis->pszName != NULL)
+		free(pThis->pszName);
+	free(pThis);
+	*ppThis = NULL;
+
 	RETiRet;
 }
 
@@ -978,8 +1001,8 @@ FindObjInfo(cstr_t *pstrOID, objInfo_t **ppInfo)
 
 	bFound = 0;
 	i = 0;
-	while(!bFound && i < OBJ_NUM_IDS && arrObjInfo[i] != NULL) {
-		if(!rsCStrSzStrCmp(pstrOID, arrObjInfo[i]->pszID, arrObjInfo[i]->lenID)) {
+	while(!bFound && i < OBJ_NUM_IDS) {
+		if(arrObjInfo[i] != NULL && !rsCStrSzStrCmp(pstrOID, arrObjInfo[i]->pszID, arrObjInfo[i]->lenID)) {
 			bFound = 1;
 			break;
 		}
@@ -993,7 +1016,8 @@ FindObjInfo(cstr_t *pstrOID, objInfo_t **ppInfo)
 
 finalize_it:
 	if(iRet == RS_RET_OK) {
-		dbgprintf("caller requested object '%s', found at index %d\n", (*ppInfo)->pszID, i);
+		/* DEV DEBUG ONLY dbgprintf("caller requested object '%s', found at index %d\n", (*ppInfo)->pszID, i);*/
+		/*EMPTY BY INTENSION*/;
 	} else {
 		dbgprintf("caller requested object '%s', not found (iRet %d)\n", rsCStrGetSzStr(pstrOID), iRet);
 	}
@@ -1045,6 +1069,46 @@ finalize_it:
 }
 
 
+/* deregister a classes' info pointer, usually called because the class is unloaded.
+ * After deregistration, the class can no longer be accessed, except if it is reloaded.
+ * rgerhards, 2008-03-10
+ */
+static rsRetVal
+UnregisterObj(uchar *pszObjName, objInfo_t *pInfo)
+{
+	DEFiRet;
+	int bFound;
+	int i;
+
+	assert(pszObjName != NULL);
+	assert(pInfo != NULL);
+
+	bFound = 0;
+	i = 0;
+	while(!bFound && i < OBJ_NUM_IDS) {
+		if(   arrObjInfo[i] != NULL
+		   && !strcmp((char*)arrObjInfo[i]->pszID, (char*)pszObjName)) {
+			bFound = 1;
+			break;
+		}
+		++i;
+	}
+
+	if(!bFound)
+		ABORT_FINALIZE(RS_RET_OBJ_NOT_REGISTERED);
+
+	InfoDestruct(&arrObjInfo[i]);
+	dbgprintf("object '%s' successfully unregistered with index %d\n", pszObjName, i);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		dbgprintf("unregistering object '%s' failed with error code %d\n", pszObjName, iRet);
+	}
+
+	RETiRet;
+}
+
+
 /* This function shall be called by anyone who would like to use an object. It will
  * try to locate the object, load it into memory if not already present and return
  * a pointer to the objects interface.
@@ -1090,8 +1154,57 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 		FINALIZE; /* give up */
 	}
 
+	/* if we reach this point, we have a valid pObjInfo */
+	//if(pObjInfo->pModInfo != NULL) { /* NULL means core module */
+	if(pObjFile != NULL) { /* NULL means core module */
+		module.Use(srcFile, pObjInfo->pModInfo); /* increase refcount */
+	}
+
 	CHKiRet(pObjInfo->QueryIF(pIf));
 	pIf->ifIsLoaded = 1; /* we are happy */
+
+finalize_it:
+	if(pStr != NULL)
+		rsCStrDestruct(&pStr);
+
+	RETiRet;
+}
+
+
+/* This function shall be called when a caller is done with an object. Its primary
+ * purpose is to keep the reference count correct, which is highly important for
+ * modules residing in loadable modules.
+ * rgerhards, 2008-03-10
+ */
+static rsRetVal
+ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
+{
+	DEFiRet;
+	cstr_t *pStr = NULL;
+	objInfo_t *pObjInfo;
+
+
+	dbgprintf("source file %s requests object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded);
+
+	if(pObjFile == NULL)
+		FINALIZE; /* if it is not a lodable module, we do not need to do anything... */
+
+	if(pIf->ifIsLoaded == 0) {
+		ABORT_FINALIZE(RS_RET_OK); /* we are already set */ /* TODO: flag an error? */
+	}
+	if(pIf->ifIsLoaded == 2) {
+		pIf->ifIsLoaded = 0; /* clean up */
+		ABORT_FINALIZE(RS_RET_OK); /* we had a load error and can not continue */
+	}
+
+	CHKiRet(rsCStrConstructFromszStr(&pStr, pObjName));
+	CHKiRet(FindObjInfo(pStr, &pObjInfo));
+
+	/* if we reach this point, we have a valid pObjInfo */
+	//if(pObjInfo->pModInfo != NULL) { /* NULL means core module */
+	module.Release(srcFile, &pObjInfo->pModInfo); /* decrease refcount */
+
+	pIf->ifIsLoaded = 0; /* indicated "no longer valid" */
 
 finalize_it:
 	if(pStr != NULL)
@@ -1116,6 +1229,7 @@ CODESTARTobjQueryInterface(obj)
 	 * of course, also affects the "if" above).
 	 */
 	pIf->UseObj = UseObj;
+	pIf->ReleaseObj = ReleaseObj;
 	pIf->InfoConstruct = InfoConstruct;
 	pIf->DestructObjSelf = DestructObjSelf;
 	pIf->BeginSerializePropBag = BeginSerializePropBag;
@@ -1124,6 +1238,7 @@ CODESTARTobjQueryInterface(obj)
 	pIf->SerializeProp = SerializeProp;
 	pIf->EndSerialize = EndSerialize;
 	pIf->RegisterObj = RegisterObj;
+	pIf->UnregisterObj = UnregisterObj;
 	pIf->Deserialize = Deserialize;
 	pIf->DeserializePropBag = DeserializePropBag;
 	pIf->SetName = SetName;
@@ -1149,6 +1264,29 @@ objGetObjInterface(obj_if_t *pIf)
 }
 
 
+/* exit our class
+ * rgerhards, 2008-03-11
+ */
+rsRetVal
+objClassExit(void)
+{
+	DEFiRet;
+	/* release objects we no longer need */
+	objRelease(var, CORE_COMPONENT);
+	objRelease(module, CORE_COMPONENT);
+	objRelease(errmsg, CORE_COMPONENT);
+
+	/* TODO: implement the class exits! */
+#if 0
+	errmsgClassInit(pModInfo);
+	cfsyslineInit(pModInfo);
+	varClassInit(pModInfo);
+#endif
+	moduleClassExit();
+	RETiRet;
+}
+
+
 /* initialize our own class 
  * Please note that this also initializes those classes that we rely on.
  * Though this is a bit dirty, we need to do it - otherwise we can't get
@@ -1158,7 +1296,7 @@ objGetObjInterface(obj_if_t *pIf)
  * rgerhards, 2008-02-29
  */
 rsRetVal
-objClassInit(void)
+objClassInit(modInfo_t *pModInfo)
 {
 	DEFiRet;
 	int i;
@@ -1174,10 +1312,10 @@ objClassInit(void)
 	CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */
 
 	/* init classes we use (limit to as few as possible!) */
-	CHKiRet(errmsgClassInit());
-	CHKiRet(cfsyslineInit());
-	CHKiRet(varClassInit());
-	CHKiRet(moduleClassInit());
+	CHKiRet(errmsgClassInit(pModInfo));
+	CHKiRet(cfsyslineInit(pModInfo));
+	CHKiRet(varClassInit(pModInfo));
+	CHKiRet(moduleClassInit(pModInfo));
 	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));

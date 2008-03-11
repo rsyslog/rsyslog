@@ -48,12 +48,6 @@ struct NetAddr {
   } addr;
 };
 
-#ifndef BSD
-	int should_use_so_bsdcompat(void);
-#else
-#	define should_use_so_bsdcompat() 1
-#endif	/* #ifndef BSD */
-
 #ifndef SO_BSDCOMPAT
 	/* this shall prevent compiler errors due to undfined name */
 #	define SO_BSDCOMPAT 0
@@ -102,6 +96,8 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	void (*debugListenInfo)(int fd, char *type);
 	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer);
 	void (*closeUDPListenSockets)(int *finet);
+	int (*isAllowedSender)(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost);
+	int (*should_use_so_bsdcompat)(void);
 	/* data memebers - these should go away over time... TODO */
 	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */

@@ -344,7 +344,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
 #ifndef BSD	
-		if (should_use_so_bsdcompat()) {
+		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
 				errmsg.LogError(NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
@@ -794,13 +794,28 @@ finalize_it:
 ENDobjQueryInterface(tcpsrv)
 
 
+/* exit our class
+ * rgerhards, 2008-03-10
+ */
+BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(tcpsrv)
+	/* release objects we no longer need */
+	objRelease(tcps_sess, DONT_LOAD_LIB);
+	objRelease(conf, CORE_COMPONENT);
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(net, LM_NET_FILENAME);
+ENDObjClassExit(tcpsrv)
+
+
 /* Initialize our class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-29
  */
 BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
-	CHKiRet(objUse(tcps_sess, "tcps_sess"));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(net, LM_NET_FILENAME));
+	CHKiRet(objUse(tcps_sess, DONT_LOAD_LIB));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 
 	/* set our own handlers */
@@ -814,6 +829,9 @@ ENDObjClassInit(tcpsrv)
 
 BEGINmodExit
 CODESTARTmodExit
+	/* de-init in reverse order! */
+	tcpsrvClassExit();
+	tcps_sessClassExit();
 ENDmodExit
 
 
@@ -828,12 +846,8 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(tcps_sessClassInit());
-	CHKiRet(tcpsrvClassInit()); /* must be done after tcps_sess, as we use it */
-
-	/* request objects we use */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(net, LM_NET_FILENAME));
+	CHKiRet(tcps_sessClassInit(pModInfo));
+	CHKiRet(tcpsrvClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
 
 /* vim:set ai:

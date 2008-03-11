@@ -34,12 +34,15 @@
 /* macro to define standard output-module static data members
  */
 #define DEF_MOD_STATIC_DATA \
-	DEFobjCurrIf(obj) \
 	static rsRetVal (*omsdRegCFSLineHdlr)();
 
 #define DEF_OMOD_STATIC_DATA \
-	DEF_MOD_STATIC_DATA
+	DEF_MOD_STATIC_DATA \
+	DEFobjCurrIf(obj)
 #define DEF_IMOD_STATIC_DATA \
+	DEF_MOD_STATIC_DATA \
+	DEFobjCurrIf(obj)
+#define DEF_LMOD_STATIC_DATA \
 	DEF_MOD_STATIC_DATA
 
 
@@ -57,7 +60,9 @@ static rsRetVal modGetType(eModType_t *modType) \
 
 #define MODULE_TYPE_INPUT MODULE_TYPE(eMOD_IN)
 #define MODULE_TYPE_OUTPUT MODULE_TYPE(eMOD_OUT)
-#define MODULE_TYPE_LIB MODULE_TYPE(eMOD_LIB)
+#define MODULE_TYPE_LIB \
+	DEF_LMOD_STATIC_DATA \
+	MODULE_TYPE(eMOD_LIB)
 
 /* macro to define a unique module id. This must be able to fit in a void*. The
  * module id must be unique inside a running rsyslogd application. It is used to
@@ -385,7 +390,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * cached, left-in-memory copy of a previous incarnation.
  */
 #define BEGINmodInit(uniqName) \
-rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()))\
+rsRetVal modInit##uniqName(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t __attribute__((unused)) *pModInfo)\
 {\
 	DEFiRet; \
 	rsRetVal (*pObjGetObjInterface)(obj_if_t *pIf);

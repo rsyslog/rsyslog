@@ -42,8 +42,9 @@
  * It can be used by any module which want's to simply prevent version conflicts
  * and does not intend to do specific old-version emulations.
  * rgerhards, 2008-03-04
+ * version 3 adds modInfo_t ptr to call of modInit -- rgerhards, 2008-03-10
  */
-#define CURR_MOD_IF_VERSION 2
+#define CURR_MOD_IF_VERSION 3
 
 typedef enum eModType_ {
 	eMOD_IN,	/* input module */
@@ -51,19 +52,31 @@ typedef enum eModType_ {
 	eMOD_LIB	/* library module - this module provides one or many interfaces */
 } eModType_t;
 
+
+#ifdef DEBUG
+typedef struct modUsr_s {
+	struct modUsr_s *pNext;
+	char *pszFile;
+} modUsr_t;
+#endif
+
+
 /* how is this module linked? */
 typedef enum eModLinkType_ {
 	eMOD_LINK_STATIC,
 	eMOD_LINK_DYNAMIC_UNLOADED,	/* dynalink module, currently not loaded */
-	eMOD_LINK_DYNAMIC_LOADED	/* dynalink module, currently loaded */
+	eMOD_LINK_DYNAMIC_LOADED,	/* dynalink module, currently loaded */
+	eMOD_LINK_ALL			/* special: all linkage types, e.g. for unload */
 } eModLinkType_t;
 
-typedef struct moduleInfo {
-	struct moduleInfo *pNext;	/* support for creating a linked module list */
+typedef struct modInfo_s {
+	struct modInfo_s *pPrev;	/* support for creating a double linked module list */
+	struct modInfo_s *pNext;	/* support for creating a linked module list */
 	int		iIFVers;	/* Interface version of module */
 	eModType_t	eType;		/* type of this module */
 	eModLinkType_t	eLinkType;
 	uchar*		pszName;	/* printable module name, e.g. for dbgprintf */
+	unsigned	uRefCnt;	/* reference count for this module; 0 -> may be unloaded */
 	/* functions supported by all types of modules */
 	rsRetVal (*modInit)(int, int*, rsRetVal(**)());		/* initialize the module */
 		/* be sure to support version handshake! */
@@ -100,6 +113,12 @@ typedef struct moduleInfo {
 		} fm;
 	} mod;
 	void *pModHdlr; /* handler to the dynamic library holding the module */
+#	ifdef DEBUG
+	/* we add some home-grown support to track our users (and detect who does not free us). In
+	 * the long term, this should probably be migrated into debug.c (TODO). -- rgerhards, 2008-03-11
+	 */
+	modUsr_t *pModUsrRoot;
+#	endif
 } modInfo_t;
 
 /* interfaces */
@@ -108,9 +127,10 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	modInfo_t *(*GetNxtType)(modInfo_t *pThis, eModType_t rqtdType);
 	uchar *(*GetName)(modInfo_t *pThis);
 	uchar *(*GetStateName)(modInfo_t *pThis);
+	rsRetVal (*Use)(char *srcFile, modInfo_t *pThis);	/**< must be called before a module is used (ref counting) */
+	rsRetVal (*Release)(char *srcFile, modInfo_t **ppThis);	/**< release a module (ref counting) */
 	void (*PrintList)(void);
-	rsRetVal (*UnloadAndDestructAll)(void);
-	rsRetVal (*UnloadAndDestructDynamic)(void);
+	rsRetVal (*UnloadAndDestructAll)(eModLinkType_t modLinkTypesToUnload);
 	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr);
 	rsRetVal (*Load)(uchar *name);
 	rsRetVal (*SetModDir)(uchar *name);

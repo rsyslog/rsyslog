@@ -178,6 +178,9 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net) /* TODO: make go away! */
 
 
+/* forward definitions */
+static rsRetVal GlobalClassExit(void);
+
 /* We define our own set of syslog defintions so that we
  * do not need to rely on (possibly different) implementations.
  * 2007-07-19 rgerhards
@@ -1933,18 +1936,6 @@ die(int sig)
 	modExitIminternal();
 
 	/*dbgPrintAllDebugInfo(); / * this is the last spot where this can be done - below output modules are unloaded! */
-	
-	/* TODO: this would also be the right place to de-init the builtin output modules. We
-	 * do not currently do that, because the module interface does not allow for
-	 * it. This will come some time later (it's essential with loadable modules).
-	 * For the time being, this is a memory leak on exit, but as the process is
-	 * terminated, we do not really bother about it.
-	 * rgerhards, 2007-08-03
-	 * I have added some code now, but all that mod init/de-init should be moved to
-	 * init, so that modules are unloaded and reloaded on HUP to. Eventually it should go
-	 * into freeSelectors() - but that needs to be seen. -- rgerhards, 2007-08-09
-	 */
-	module.UnloadAndDestructAll();
 
 	/* the following line cleans up CfSysLineHandlers that were not based on loadable
 	 * modules. As such, they are not yet cleared.
@@ -1956,10 +1947,25 @@ die(int sig)
 		free(pModDir);
 	legacyOptsFree();
 
-	dbgprintf("Clean shutdown completed, bye\n");
-dbgprintf("hostenv %s\n", HOSTENV);
+	/* terminate the remaining classes */
+	GlobalClassExit();
 
-	/* exit classes... This MUST be after the dbgprintf (because it de-inits the debug system!) */
+	/* TODO: this would also be the right place to de-init the builtin output modules. We
+	 * do not currently do that, because the module interface does not allow for
+	 * it. This will come some time later (it's essential with loadable modules).
+	 * For the time being, this is a memory leak on exit, but as the process is
+	 * terminated, we do not really bother about it.
+	 * rgerhards, 2007-08-03
+	 * I have added some code now, but all that mod init/de-init should be moved to
+	 * init, so that modules are unloaded and reloaded on HUP to. Eventually it should go
+	 * into freeSelectors() - but that needs to be seen. -- rgerhards, 2007-08-09
+	 */
+	module.UnloadAndDestructAll(eMOD_LINK_ALL);
+
+dbgprintf("modules still loaded:\n");
+modUsrPrintAll();
+	dbgprintf("Clean shutdown completed, bye\n");
+	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
 	dbgClassExit();
 
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
@@ -2214,7 +2220,7 @@ init(void)
 
 	/* Unload all non-static modules */
 	dbgprintf("Unloading non-static modules.\n");
-	module.UnloadAndDestructDynamic();
+	module.UnloadAndDestructAll(eMOD_LINK_DYNAMIC_LOADED);
 
 	dbgprintf("Clearing templates.\n");
 	tplDeleteNew();
@@ -2865,11 +2871,12 @@ static void mainThread()
 /* Method to initialize all global classes.
  * rgerhards, 2008-01-04
  */
-static rsRetVal InitGlobalClasses(void)
+static rsRetVal
+InitGlobalClasses(void)
 {
 	DEFiRet;
 
-	CHKiRet(objClassInit()); /* *THIS* *MUST* always be the first class initilizer being called! */
+	CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initilizer being called! */
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
 	/* the following classes were intialized by objClassInit() */
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
@@ -2883,24 +2890,24 @@ static rsRetVal InitGlobalClasses(void)
 	 * class immediately after it is initialized. And, of course, we load those classes
 	 * first that we use ourselfs... -- rgerhards, 2008-03-07
 	 */
-	CHKiRet(datetimeClassInit());
+	CHKiRet(datetimeClassInit(NULL));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	CHKiRet(msgClassInit());
-	CHKiRet(strmClassInit());
-	CHKiRet(wtiClassInit());
-	CHKiRet(wtpClassInit());
-	CHKiRet(queueClassInit());
-	CHKiRet(vmstkClassInit());
-	CHKiRet(sysvarClassInit());
-	CHKiRet(vmClassInit());
+	CHKiRet(msgClassInit(NULL));
+	CHKiRet(strmClassInit(NULL));
+	CHKiRet(wtiClassInit(NULL));
+	CHKiRet(wtpClassInit(NULL));
+	CHKiRet(queueClassInit(NULL));
+	CHKiRet(vmstkClassInit(NULL));
+	CHKiRet(sysvarClassInit(NULL));
+	CHKiRet(vmClassInit(NULL));
 	CHKiRet(objUse(vm,       CORE_COMPONENT));
-	CHKiRet(vmopClassInit());
-	CHKiRet(vmprgClassInit());
-	CHKiRet(ctok_tokenClassInit());
-	CHKiRet(ctokClassInit());
-	CHKiRet(exprClassInit());
+	CHKiRet(vmopClassInit(NULL));
+	CHKiRet(vmprgClassInit(NULL));
+	CHKiRet(ctok_tokenClassInit(NULL));
+	CHKiRet(ctokClassInit(NULL));
+	CHKiRet(exprClassInit(NULL));
 	CHKiRet(objUse(expr,     CORE_COMPONENT));
-	CHKiRet(confClassInit());
+	CHKiRet(confClassInit(NULL));
 	CHKiRet(objUse(conf,     CORE_COMPONENT));
 
 	/* dummy "classes" */
@@ -2912,6 +2919,66 @@ static rsRetVal InitGlobalClasses(void)
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 
 finalize_it:
+	RETiRet;
+}
+
+
+/* Method to exit all global classes. We do not do any error checking here,
+ * because that wouldn't help us at all. So better try to deinit blindly
+ * as much as succeeds (which usually means everything will). We just must
+ * be careful to do the de-init in the opposite order of the init, because
+ * of the dependencies. However, its not as important this time, because
+ * we have reference counting.
+ * rgerhards, 2008-03-10
+ */
+static rsRetVal
+GlobalClassExit(void)
+{
+	DEFiRet;
+
+	/* first, release everything we used ourself */
+	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
+	objRelease(conf,     CORE_COMPONENT);
+	objRelease(expr,     CORE_COMPONENT);
+	objRelease(vm,       CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
+
+	/* TODO: implement the rest of the deinit */
+	confClassExit();
+#if 0
+	CHKiRet(datetimeClassInit(NULL));
+	CHKiRet(msgClassInit(NULL));
+	CHKiRet(strmClassInit(NULL));
+	CHKiRet(wtiClassInit(NULL));
+	CHKiRet(wtpClassInit(NULL));
+	CHKiRet(queueClassInit(NULL));
+	CHKiRet(vmstkClassInit(NULL));
+	CHKiRet(sysvarClassInit(NULL));
+	CHKiRet(vmClassInit(NULL));
+	CHKiRet(vmopClassInit(NULL));
+	CHKiRet(vmprgClassInit(NULL));
+	CHKiRet(ctok_tokenClassInit(NULL));
+	CHKiRet(ctokClassInit(NULL));
+	CHKiRet(exprClassInit(NULL));
+
+	/* dummy "classes" */
+	CHKiRet(actionClassInit());
+	CHKiRet(templateInit());
+#endif
+	/* dummy "classes */
+dbgprintf("pre strExit()\n");
+	strExit();
+dbgprintf("post strExit()\n");
+
+
+#if 0
+	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
+	/* the following classes were intialized by objClassInit() */
+	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
+	CHKiRet(objUse(module,   CORE_COMPONENT));
+#endif
+	objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
+
 	RETiRet;
 }
 

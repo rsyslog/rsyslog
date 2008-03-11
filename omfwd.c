@@ -608,6 +608,9 @@ ENDneedUDPSocket
 
 BEGINmodExit
 CODESTARTmodExit
+	/* release what we no longer need */
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
 
 

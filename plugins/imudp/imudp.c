@@ -189,7 +189,7 @@ CODESTARTrunInput
 							* configured to do this).
 							* rgerhards, 2005-09-26
 							*/
-						       if(isAllowedSender(net.pAllowedSenders_UDP,
+						       if(net.isAllowedSender(net.pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
 							       parseAndSubmitMessage((char*)fromHost, (char*) pRcvBuf, l,
 							       MSG_PARSE_HOSTNAME, NOFLAG);
@@ -251,6 +251,9 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	/* release what we no longer need */
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
 
 
