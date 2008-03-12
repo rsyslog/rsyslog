@@ -259,6 +259,16 @@ finalize_it:
 ENDobjQueryInterface(gssutil)
 
 
+/* exit our class
+ * rgerhards, 2008-03-10
+ */
+BEGINObjClassExit(gssutil, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(gssutil)
+	/* release objects we no longer need */
+	objRelease(errmsg, CORE_COMPONENT);
+ENDObjClassExit(gssutil)
+
+
 /* Initialize our class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-29
@@ -274,6 +284,7 @@ ENDObjClassInit(gssutil)
 
 BEGINmodExit
 CODESTARTmodExit
+	gssutilClassExit();
 ENDmodExit
 
 
