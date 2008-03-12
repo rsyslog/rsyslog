@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 2.0.3 STABLE (rgerhards), 2008-02-??
+Version 2.0.3 STABLE (rgerhards), 2008-03-12
 - bugfix: setting for $EscapeCopntrolCharactersOnReceive was not 
   properly initialized
 - bugfix: resolved potential segfault condition on HUP (extremely
