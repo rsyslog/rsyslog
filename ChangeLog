@@ -37,6 +37,9 @@ Version 3.12.1 (rgerhards), 2008-03-06
 - added ability to compile on HP UX; verified that imudp worked on HP UX;
   however, we are still in need of people trying out rsyslogd on HP UX,
   so it can not yet be assumed it runs there
+- improved session recovery when outbound tcp connection breaks, reduces
+  probability of message loss at the price of a highly unlikely potential
+  (single) message duplication
 ---------------------------------------------------------------------------
 Version 3.12.0 (rgerhards), 2008-02-28
 - added full expression support for filters; filters can now contain

@@ -33,6 +33,8 @@
 typedef struct tcpclt_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
 	TCPFRAMINGMODE tcp_framing;
+	char *prevMsg;
+	size_t lenPrevMsg;
 	/* session specific callbacks */
 	rsRetVal (*initFunc)(void*);
 	rsRetVal (*sendFunc)(void*, char*, size_t);

@@ -259,12 +259,13 @@ static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
  */
 static rsRetVal TCPSendPrepRetry(void *pvData)
 {
+	DEFiRet;
 	instanceData *pData = (instanceData *) pvData;
 
 	assert(pData != NULL);
 	close(pData->sock);
 	pData->sock = -1;
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
