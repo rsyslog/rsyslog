@@ -344,7 +344,8 @@ static void dynaFileFreeCache(instanceData *pData)
 		dynaFileDelCacheEntry(pData->dynCache, i, 1);
 	}
 
-	free(pData->dynCache);
+	if(pData->dynCache != NULL)
+		free(pData->dynCache);
 }
 
 
@@ -605,7 +606,7 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
-	} else 
+	} else if(pData->fd != -1)
 		close(pData->fd);
 ENDfreeInstance
 

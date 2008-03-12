@@ -260,7 +260,7 @@ finalize_it:\
 			*ppOMSR = NULL;\
 		}\
 		if(pData != NULL)\
-			freeInstance(&pData);\
+			freeInstance(pData);\
 	}
 
 #define ENDparseSelectorAct \

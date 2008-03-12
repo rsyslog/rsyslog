@@ -5220,6 +5220,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 	/* loop through all modules and see if one picks up the line */
 	pMod = omodGetNxt(NULL);
 	while(pMod != NULL) {
+		pOMSR = NULL;
 		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
 		dbgprintf("tried selector action for %s: %d\n", modGetName(pMod), iRet);
 		if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {

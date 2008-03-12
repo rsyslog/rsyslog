@@ -6,6 +6,8 @@ Version 2.0.3 STABLE (rgerhards), 2008-02-??
   unlikely to happen in practice), for details see tracker:
   http://bugzilla.adiscon.com/show_bug.cgi?id=38
 - improved the man pages a bit - thanks to Michael Biebl for the patch
+- bugfix: not properly initialized data could cause several segfaults if
+  there were errors in the config file - thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 2.0.2 STABLE (rgerhards), 2008-02-12
 - fixed a bug that could cause invalid string handling via strerror_r
