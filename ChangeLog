@@ -5,6 +5,12 @@ Version 3.12.2 (rgerhards), 2008-03-??
 - converted net.c into a loadable library plugin
 - bugfix: debug module now survives unload of loadable module when
   printing out function call data
+- bugfix: not properly initialized data could cause several segfaults if
+  there were errors in the config file - thanks to varmojfekoj for the patch
+- bugfix: rsyslogd segfaulted when imfile read an empty line - thanks
+  to Johnny Tan for an excellent bug report
+- implemented dynamic module unload capability (not visible to end user)
+- some more internal cleanup
 ---------------------------------------------------------------------------
 Version 3.12.1 (rgerhards), 2008-03-06
 - added library plugins, which can be automatically loaded

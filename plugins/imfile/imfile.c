@@ -81,20 +81,25 @@ static fileInfo_t files[MAX_INPUT_FILES];
  */
 static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 {
-		DEFiRet;
-		msg_t *pMsg;
+	DEFiRet;
+	msg_t *pMsg;
 
-		CHKiRet(msgConstruct(&pMsg));
-		MsgSetUxTradMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
-		MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
-		MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
-		MsgSetHOSTNAME(pMsg, LocalHostName);
-		MsgSetTAG(pMsg, (char*)pInfo->pszTag);
-		pMsg->iFacility = LOG_FAC(pInfo->iFacility);
-		pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
-		pMsg->bParseHOSTNAME = 0;
-		datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
-		CHKiRet(submitMsg(pMsg));
+	if(rsCStrLen(cstrLine) == 0) {
+		/* we do not process empty lines */
+		FINALIZE;
+	}
+
+	CHKiRet(msgConstruct(&pMsg));
+	MsgSetUxTradMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
+	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
+	MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
+	MsgSetHOSTNAME(pMsg, LocalHostName);
+	MsgSetTAG(pMsg, (char*)pInfo->pszTag);
+	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
+	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
+	pMsg->bParseHOSTNAME = 0;
+	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+	CHKiRet(submitMsg(pMsg));
 finalize_it:
 	RETiRet;
 }
