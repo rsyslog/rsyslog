@@ -56,6 +56,7 @@
 #include "template.h"
 #include "msg.h"
 #include "tcpsyslog.h"
+#include "tcpclt.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "errmsg.h"
@@ -63,19 +64,16 @@
 MODULE_TYPE_OUTPUT
 
 #ifdef SYSLOG_INET
-#define INET_SUSPEND_TIME 60		/* equal to 1 minute 
-					 * rgerhards, 2005-07-26: This was 3 minutes. As the
-					 * same timer is used for tcp based syslog, we have
-					 * reduced it. However, it might actually be worth
-					 * thinking about a buffered tcp sender, which would be 
-					 * a much better alternative. When that happens, this
-					 * time here can be re-adjusted to 3 minutes (or,
-					 * even better, made configurable).
-					 */
+#define INET_SUSPEND_TIME 60
+/* equal to 1 minute - TODO: see if we can get rid of this now that we have
+ * the retry intervals in the engine -- rgerhards, 2008-03-12
+ */
+
 #define INET_RETRY_MAX 30		/* maximum of retries for gethostbyname() */
 	/* was 10, changed to 30 because we reduced INET_SUSPEND_TIME by one third. So
 	 * this "fixes" some of implications of it (see comment on INET_SUSPEND_TIME).
 	 * rgerhards, 2005-07-26
+	 * TODO: this needs to be reviewed in spite of the new engine, too -- rgerhards, 2008-03-12
 	 */
 #endif
 
@@ -84,6 +82,7 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
+DEFobjCurrIf(tcpclt)
 
 typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
@@ -99,11 +98,11 @@ typedef struct _instanceData {
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
 	int protocol;
-	TCPFRAMINGMODE tcp_framing;
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
 	/* following fields for TCP-based delivery */
 	time_t	ttSuspend;	/* time selector was suspended */
+	tcpclt_t *pTCPClt;		/* our tcpclt object */
 } instanceData;
 
 /* get the syslog forward port from selector_t. The passed in
@@ -152,6 +151,11 @@ CODESTARTfreeInstance
 		close(pData->sock);
 	if(pData->pSockArray != NULL)
 		net.closeUDPListenSockets(pData->pSockArray);
+
+	if(pData->protocol == FORW_TCP) {
+		tcpclt.Destruct(&pData->pTCPClt);
+	}
+
 ENDfreeInstance
 
 
@@ -274,7 +278,7 @@ static rsRetVal TCPSendInit(void *pvData)
 
 	assert(pData != NULL);
 	if(pData->sock < 0) {
-		if((pData->sock = TCPSendCreateSocket(pData->f_addr)) < 0)
+		if((pData->sock = tcpclt.CreateSocket(pData->f_addr)) < 0)
 			iRet = RS_RET_TCP_SOCKCREATE_ERR;
 	}
 
@@ -422,7 +426,7 @@ CODESTARTdoAction
 			} else {
 				/* forward via TCP */
 				rsRetVal ret;
-				ret = TCPSend(pData, psz, l, pData->tcp_framing, TCPSendInit, TCPSendFrame, TCPSendPrepRetry);
+				ret = tcpclt.Send(pData->pTCPClt, pData, psz, l);
 				if(ret != RS_RET_OK) {
 					/* error! */
 					dbgprintf("error forwarding via tcp, suspending\n");
@@ -443,6 +447,7 @@ BEGINparseSelectorAct
         int error;
 	int bErr;
         struct addrinfo hints, *res;
+	TCPFRAMINGMODE tcp_framing;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*p == '@') {
@@ -494,7 +499,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				} else if(*p == 'o') { /* octet-couting based TCP framing? */
 					++p; /* eat */
 					/* no further options settable */
-					pData->tcp_framing = TCP_FRAMING_OCTET_COUNTING;
+					tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 				} else { /* invalid option! Just skip it... */
 					errmsg.LogError(NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 					++p; /* eat invalid option */
@@ -582,13 +587,22 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			pData->eDestState = eDestFORW;
 			pData->f_addr = res;
 		}
-
 		/*
 		 * Otherwise the host might be unknown due to an
 		 * inaccessible nameserver (perhaps on the same
 		 * host). We try to get the ip number later, like
 		 * FORW_SUSP.
 		 */
+		if(pData->protocol == FORW_TCP) {
+			/* create our tcpclt */
+			CHKiRet(tcpclt.Construct(&pData->pTCPClt));
+			/* and set callbacks */
+			CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendInit));
+			CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
+			CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
+			CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
+		}
+
 	} else {
 		iRet = RS_RET_CONFLINE_UNPROCESSED;
 	}
@@ -611,6 +625,7 @@ CODESTARTmodExit
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
+	objRelease(tcpclt, LM_TCPCLT_FILENAME);
 ENDmodExit
 
 
@@ -626,9 +641,9 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
+	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 ENDmodInit
 
 #endif /* #ifdef SYSLOG_INET */
-/*
- * vi:set ai:
+/* vim:set ai:
  */

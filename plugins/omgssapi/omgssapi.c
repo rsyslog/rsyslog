@@ -54,23 +54,21 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "gss-misc.h"
+#include "tcpclt.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
 
-#define INET_SUSPEND_TIME 60		/* equal to 1 minute 
-					 * rgerhards, 2005-07-26: This was 3 minutes. As the
-					 * same timer is used for tcp based syslog, we have
-					 * reduced it. However, it might actually be worth
-					 * thinking about a buffered tcp sender, which would be 
-					 * a much better alternative. When that happens, this
-					 * time here can be re-adjusted to 3 minutes (or,
-					 * even better, made configurable).
-					 */
+#define INET_SUSPEND_TIME 60
+/* equal to 1 minute - TODO: see if we can get rid of this now that we have
+ * the retry intervals in the engine -- rgerhards, 2008-03-12
+ */
+
 #define INET_RETRY_MAX 30		/* maximum of retries for gethostbyname() */
 	/* was 10, changed to 30 because we reduced INET_SUSPEND_TIME by one third. So
 	 * this "fixes" some of implications of it (see comment on INET_SUSPEND_TIME).
 	 * rgerhards, 2005-07-26
+	 * TODO: this needs to be reviewed in spite of the new engine, too -- rgerhards, 2008-03-12
 	 */
 
 /* internal structures
@@ -78,6 +76,7 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(gssutil)
+DEFobjCurrIf(tcpclt)
 
 typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
@@ -91,8 +90,8 @@ typedef struct _instanceData {
 	struct addrinfo *f_addr;
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
-	TCPFRAMINGMODE tcp_framing;
 	time_t	ttSuspend;	/* time selector was suspended */
+	tcpclt_t *pTCPClt;		/* our tcpclt object */
 	gss_ctx_id_t gss_context;
 	OM_uint32 gss_flags;
 } instanceData;
@@ -158,6 +157,7 @@ CODESTARTfreeInstance
 	}
 
 	/* final cleanup */
+	tcpclt.Destruct(&pData->pTCPClt);
 	if(pData->sock >= 0)
 		close(pData->sock);
 ENDfreeInstance
@@ -249,7 +249,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 		}
 
 		if (s == -1)
-			if ((s = pData->sock = TCPSendCreateSocket(pData->f_addr)) == -1)
+			if ((s = pData->sock = tcpclt.CreateSocket(pData->f_addr)) == -1)
 				goto fail;
 
 		if (out_tok.length != 0) {
@@ -448,7 +448,7 @@ CODESTARTdoAction
 		}
 #		endif
 
-		CHKiRet_Hdlr(TCPSend(pData, psz, l, pData->tcp_framing, TCPSendGSSInit, TCPSendGSSSend, TCPSendGSSPrepRetry)) {
+		CHKiRet_Hdlr(tcpclt.Send(pData->pTCPClt, pData, psz, l)) {
 			/* error! */
 			dbgprintf("error forwarding via tcp, suspending\n");
 			pData->eDestState = eDestFORW_SUSP;
@@ -465,6 +465,7 @@ BEGINparseSelectorAct
         int error;
 	int bErr;
         struct addrinfo hints, *res;
+	TCPFRAMINGMODE tcp_framing;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us
@@ -525,7 +526,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			} else if(*p == 'o') { /* octet-couting based TCP framing? */
 				++p; /* eat */
 				/* no further options settable */
-				pData->tcp_framing = TCP_FRAMING_OCTET_COUNTING;
+				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
 				errmsg.LogError(NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 				++p; /* eat invalid option */
@@ -614,6 +615,14 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->f_addr = res;
 	}
 
+	/* now create our tcpclt */
+	CHKiRet(tcpclt.Construct(&pData->pTCPClt));
+	/* and set callbacks */
+	CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendGSSInit));
+	CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendGSSSend));
+	CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendGSSPrepRetry));
+	CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
+
 	/* TODO: do we need to call freeInstance if we failed - this is a general question for
 	 * all output modules. I'll address it lates as the interface evolves. rgerhards, 2007-07-25
 	 */
@@ -629,6 +638,9 @@ ENDneedUDPSocket
 
 BEGINmodExit
 CODESTARTmodExit
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(gssutil, LM_GSSUTIL_FILENAME);
+	objRelease(tcpclt, LM_TCPCLT_FILENAME);
 ENDmodExit
 
 
@@ -676,6 +688,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
+	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssforwardservicename", 0, eCmdHdlrGetWord, NULL, &gss_base_service_name, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssmode", 0, eCmdHdlrGetWord, setGSSMode, &gss_mode, STD_LOADABLE_MODULE_ID));

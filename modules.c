@@ -484,7 +484,12 @@ modUnlinkAndDestroy(modInfo_t *pThis)
 	/* finally, we are ready for the module to go away... */
 	dbgprintf("Unloading module %s\n", modGetName(pThis));
 	CHKiRet(modPrepareUnload(pThis));
+modInfo_t *prev, *next;
+char *name = strdup(pThis->pszName);
+prev = pThis->pPrev; next = pThis->pNext;
 	moduleDestruct(pThis);
+dbgprintf("end unload, pThis %p (%s), prev %p, next %p\n", pThis, name, prev, next);
+free(name);
 
 finalize_it:
 	RETiRet;
@@ -511,6 +516,13 @@ modUnloadAndDestructAll(eModLinkType_t modLinkTypesToUnload)
 			modUnlinkAndDestroy(pModCurr);
 		}
 	}
+
+#	ifdef DEBUG
+		if(pLoadedModules != NULL) {
+			dbgprintf("modules still loaded after module.UnloadAndDestructAll:\n");
+			modUsrPrintAll();
+		}
+#	endif
 
 	RETiRet;
 }

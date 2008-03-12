@@ -625,13 +625,11 @@ Run(tcpsrv_t *pThis)
 }
 
 
-
-
 /* Standard-Constructor
  */
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
 	pThis->pSocksLstn = NULL;
-	pThis->iSessMax = 200; // TODO: useful default ;)
+	pThis->iSessMax = 200; /* TODO: useful default ;) */
 ENDobjConstruct(tcpsrv)
 
 
@@ -751,7 +749,6 @@ SetUsrP(tcpsrv_t *pThis, void *pUsr)
 	pThis->pUsr = pUsr;
 	RETiRet;
 }
-
 
 
 /* queryInterface function

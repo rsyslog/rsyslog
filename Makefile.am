@@ -94,10 +94,20 @@ rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 
 # now come the library plugins
-pkglib_LTLIBRARIES = lmtcpsrv.la
+pkglib_LTLIBRARIES = 
 
+if ENABLE_INET
+pkglib_LTLIBRARIES += lmnet.la lmtcpsrv.la lmtcpclt.la
 #
-# TCP (Stream) Server support
+# network support
+# 
+lmnet_la_SOURCES = net.c net.h
+lmnet_la_CPPFLAGS = $(pthreads_cflags)
+lmnet_la_LDFLAGS = -module -avoid-version
+lmnet_la_LIBADD =
+#
+#
+# TCP (stream) server support
 #
 lmtcpsrv_la_SOURCES = \
 	tcps_sess.c \
@@ -109,15 +119,16 @@ lmtcpsrv_la_LDFLAGS = -module -avoid-version
 lmtcpsrv_la_LIBADD = 
 
 #
-# network support
-# 
-if ENABLE_INET
-pkglib_LTLIBRARIES += lmnet.la
-lmnet_la_SOURCES = net.c net.h
-lmnet_la_CPPFLAGS = $(pthreads_cflags)
-lmnet_la_LDFLAGS = -module -avoid-version
-lmnet_la_LIBADD =
-endif
+# TCP (stream) client support
+#
+lmtcpclt_la_SOURCES = \
+	tcpclt.c \
+	tcpclt.h
+lmtcpclt_la_CPPFLAGS = $(pthreads_cflags)
+lmtcpclt_la_LDFLAGS = -module -avoid-version
+lmtcpclt_la_LIBADD = 
+
+endif # if ENABLE_INET
 
 #
 # regular expression support

@@ -1002,6 +1002,13 @@ FindObjInfo(cstr_t *pstrOID, objInfo_t **ppInfo)
 	bFound = 0;
 	i = 0;
 	while(!bFound && i < OBJ_NUM_IDS) {
+#if 0
+RUNLOG_VAR("%d", i);
+if(arrObjInfo[i] != NULL) {
+RUNLOG_VAR("%p", arrObjInfo[i]->pszID);
+RUNLOG_VAR("%s", arrObjInfo[i]->pszID);
+}
+#endif
 		if(arrObjInfo[i] != NULL && !rsCStrSzStrCmp(pstrOID, arrObjInfo[i]->pszID, arrObjInfo[i]->lenID)) {
 			bFound = 1;
 			break;

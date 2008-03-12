@@ -1962,8 +1962,6 @@ die(int sig)
 	 */
 	module.UnloadAndDestructAll(eMOD_LINK_ALL);
 
-dbgprintf("modules still loaded:\n");
-modUsrPrintAll();
 	dbgprintf("Clean shutdown completed, bye\n");
 	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
 	dbgClassExit();

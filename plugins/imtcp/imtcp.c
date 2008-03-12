@@ -129,11 +129,9 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	DEFiRet;
 	if(pOurTcpsrv == NULL) {
 		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
-		/* TODO: fill params! */
 		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
 		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
 		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
-		//CHKiRet(tcpsrv.SetCBOnListenDeinit(pOurTcpsrv, ));
 		CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
