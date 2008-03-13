@@ -81,6 +81,15 @@
  * LF             = %d10
  * SP             = %d32
  *
+ * RSP DATA CONTENT:
+ * RSP-HEADER     = RSP-CODE [SP HUMANMSG] LF [CMDDATA]
+ * RSP-CODE       = 200 / 500 ; 200 is ok, all the rest currently erros
+ * HUAMANMSG      = *OCTET ; a human-readble message without LF in it
+ * CMDDATA        = *OCTET ; semantics depend on original command
+ *
+ * DATALEN is the number of octets in DATA (so the frame length excluding the length
+ * of HEADER and TRAILER).
+ *
  * Note that TXNR montonically increases, but at some point latches. The requirement
  * is to have enough different number values to handle a complete window. This may be
  * used to optimize traffic a bit by using short numbers. E.g. transaction numbers
@@ -90,10 +99,9 @@
  *
  * Command "rsp"
  * Response to a client-issued command. The TXNR MUST match the client's command
- * TXN. The data part contains a response number, optionally followed by a space and
- * additional data (depending on the client's command).
+ * TXN. The data part contains RSP-HEADER as defined above. It is a response code,
+ * optionally followed by a space and additional data (depending on the client's command).
  *   Return state values are: 200 - OK, 500 - error
- *   TODO: formalize response packet
  *
  *
  * Command "init"
