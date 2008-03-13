@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.12.2],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[3.12.3],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADERS([config.h])
@@ -523,10 +523,12 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
 		plugins/imfile/Makefile \
+		plugins/imrelp/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
 		plugins/ompgsql/Makefile \
+		plugins/omrelp/Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/omsnmp/Makefile])
 AC_OUTPUT

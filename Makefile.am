@@ -152,6 +152,17 @@ lmgssutil_la_LDFLAGS = -module -avoid-version
 lmgssutil_la_LIBADD = $(gss_libs)
 endif
 
+#
+# relp support
+# 
+if ENABLE_RELP
+#pkglib_LTLIBRARIES += lmrelp.la
+#lmrelp_la_SOURCES = gss-misc.c gss-misc.h
+#lmrelp_la_CPPFLAGS = $(pthreads_cflags) $(relp_cflags)
+#lmrelp_la_LDFLAGS = -module -avoid-version
+#lmrelp_la_LIBADD = $(relp_libs)
+endif
+
 man_MANS = rfc3195d.8 rsyslogd.8 rsyslog.conf.5 
 
 EXTRA_DIST = \
@@ -175,6 +186,10 @@ endif
 
 if ENABLE_GSSAPI
 SUBDIRS += plugins/omgssapi plugins/imgssapi
+endif
+
+if ENABLE_RELP
+SUBDIRS += plugins/omrelp plugins/imrelp
 endif
 
 if ENABLE_MYSQL
