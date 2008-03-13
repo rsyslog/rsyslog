@@ -81,7 +81,6 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_FUNC_WAIT3
 AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r])
 
 
@@ -445,6 +444,35 @@ AC_SUBST(snmp_cflags)
 AC_SUBST(snmp_libs)
 
 
+# RELP support
+AC_ARG_ENABLE(relp,
+        [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_relp="yes" ;;
+          no) enable_relp="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-relp) ;;
+         esac],
+        [enable_relp=no]
+)
+if test "x$enable_relp" = "xyes"; then
+#  AC_CHECK_HEADERS(
+#    [net-relp/net-relp-config.h],,
+#    [AC_MSG_FAILURE([Net-RELP is missing])]
+#  )
+  AC_CHECK_LIB(
+    [relp],
+    [relpInit],
+    [relp_cflags=""
+     relp_libs="-lrelp"
+    ],
+    [AC_MSG_FAILURE([RELP library is missing])]
+  )
+fi
+AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
+AC_SUBST(relp_cflags)
+AC_SUBST(relp_libs)
+
+
 # settings for the template input module; copy and modify this code
 # if you intend to add your own module. Be sure to replace imtemplate
 # by the actual name of your module.
@@ -514,6 +542,7 @@ echo "MySql support enabled:                    $enable_mysql"
 echo "libdbi support enabled:                   $enable_libdbi"
 echo "PostgreSQL support enabled:               $enable_pgsql"
 echo "SNMP support enabled:                     $enable_snmp"
+echo "RELP support enabled:                     $enable_relp"
 echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
 echo "Large file support enabled:               $enable_largefile"
