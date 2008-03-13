@@ -2,7 +2,7 @@
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
- * This file is part of rsyslog.
+ * This file is part of librelp.
  *
  * Rsyslog is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
