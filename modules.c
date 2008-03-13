@@ -704,7 +704,9 @@ CODESTARTObjClassExit(module)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 
+#	ifdef DEBUG
 	modUsrPrintAll(); /* debug aid - TODO: integrate with debug.c, at least the settings! */
+#	endif
 ENDObjClassExit(module)
 
 
