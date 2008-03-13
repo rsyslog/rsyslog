@@ -455,10 +455,10 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-#  AC_CHECK_HEADERS(
-#    [net-relp/net-relp-config.h],,
-#    [AC_MSG_FAILURE([Net-RELP is missing])]
-#  )
+  AC_CHECK_HEADERS(
+    [relp.h],,
+    [AC_MSG_FAILURE([RELP library is missing (no headers)])]
+  )
   AC_CHECK_LIB(
     [relp],
     [relpInit],

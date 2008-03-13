@@ -156,11 +156,11 @@ endif
 # relp support
 # 
 if ENABLE_RELP
-#pkglib_LTLIBRARIES += lmrelp.la
-#lmrelp_la_SOURCES = gss-misc.c gss-misc.h
-#lmrelp_la_CPPFLAGS = $(pthreads_cflags) $(relp_cflags)
-#lmrelp_la_LDFLAGS = -module -avoid-version
-#lmrelp_la_LIBADD = $(relp_libs)
+pkglib_LTLIBRARIES += lmrelputil.la
+lmrelputil_la_SOURCES = relputil.c relputil.h
+lmrelputil_la_CPPFLAGS = $(pthreads_cflags) $(relp_cflags)
+lmrelputil_la_LDFLAGS = -module -avoid-version
+lmrelputil_la_LIBADD = $(relp_libs)
 endif
 
 man_MANS = rfc3195d.8 rsyslogd.8 rsyslog.conf.5 

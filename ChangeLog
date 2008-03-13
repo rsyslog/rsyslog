@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.12.3 (rgerhards), 2008-03-??
+- some more internal cleanup ;)
 ---------------------------------------------------------------------------
 Version 3.12.2 (rgerhards), 2008-03-13
 - added RSYSLOGD_MODDIR environment variable

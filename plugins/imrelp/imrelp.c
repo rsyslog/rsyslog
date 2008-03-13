@@ -1,9 +1,10 @@
-/* imtcp.c
- * This is the implementation of the TCP input module.
+/* imrelp.c
  *
- * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
+ * This is the implementation of the RELP input module.
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * File begun on 2008-03-13 by RGerhards
+ *
+ * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -35,9 +36,6 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#if HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
 #include "rsyslog.h"
 #include "syslogd.h"
 #include "cfsysline.h"
@@ -203,9 +201,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
 
 	/* register config file handlers */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverrun", 0, eCmdHdlrGetWord,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpserverrun", 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpmaxsessions", 0, eCmdHdlrInt,
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputrelpmaxsessions", 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
