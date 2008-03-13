@@ -95,7 +95,9 @@
  * used to optimize traffic a bit by using short numbers. E.g. transaction numbers
  * may (may!) be latched at 1000 (so the next TXNR after 999 will be 0).
  *
+ *
  * COMMAND SEMANTICS
+ *
  *
  * Command "rsp"
  * Response to a client-issued command. The TXNR MUST match the client's command
@@ -125,6 +127,24 @@
  * response to the "go" command, so the client must wait for it (and a negative response
  * means the connection is NOT usable).
  *
+ *
+ * OFFERS
+ *
+ * During session setup, "offers" are exchange between client and server. An "offer" describes
+ * a specific feature or operation mode. Always present must be the "relp_version" offer which
+ * tells the other side which version of relp is in use.
+ *
+ * ABNF for offer strings
+ *
+ * OFFER       = FEATURENAME [= VALUE] LF
+ * FEATURENAME = *32OCTET
+ * VALUE       = *255OCTET
+ *
+ * Currently defined values:
+ * FEATURENAME             VALUE
+ * relp_version            1 (this specification)
+ *
+ *
  * STATE DIAGRAMS
  * ... detailling some communications scenarios:
  *
@@ -132,7 +152,7 @@
  * C                                          S
  * cmd: "init", data: offer          -----> (selects supported offers)
  * (selects offers to use)           <----- cmd: "rsp", data "accepted offers"
- * cmd: "go", data: "offer to use"   -----> (initializes connection)
+ * cmd: "go", data: "offers to use"   -----> (initializes connection)
  *                                   <----- cmd: "rsp", data "200 OK" (or error)
  *
  *                 ... transmission channel is ready to use ....
