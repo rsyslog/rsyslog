@@ -3,7 +3,7 @@ DEBUG = -g
 
 #CFLAGS += $(DEBUG)
 
-pkglib_LTLIBRARIES = librelp.la
+lib_LTLIBRARIES = librelp.la
 
 librelp_la_SOURCES = \
 	relp.c
