@@ -11,6 +11,10 @@ Version 3.12.2 (rgerhards), 2008-03-??
   to Johnny Tan for an excellent bug report
 - implemented dynamic module unload capability (not visible to end user)
 - some more internal cleanup
+- bugfix: imgssapi segfaulted under some conditions; this fix is actually
+  not just a fix but a change in the object model. Thanks to varmojfekoj
+  for providing the bug report, an initial fix and lots of good discussion
+  that lead to where we finally ended up.
 ---------------------------------------------------------------------------
 Version 3.12.1 (rgerhards), 2008-03-06
 - added library plugins, which can be automatically loaded

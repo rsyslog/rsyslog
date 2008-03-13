@@ -42,7 +42,7 @@ typedef struct tcpsrv_s {
 	rsRetVal (*pOnRegularClose)(tcps_sess_t *pSess);
 	rsRetVal (*pOnErrClose)(tcps_sess_t *pSess);
 	/* session specific callbacks */
-	rsRetVal (*pOnSessAccept)(struct tcpsrv_s *, tcps_sess_t**, int fd);
+	rsRetVal (*pOnSessAccept)(struct tcpsrv_s *, tcps_sess_t*);
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
 } tcpsrv_t;
@@ -68,7 +68,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetCBOnRegularClose)(tcpsrv_t*, rsRetVal (*) (tcps_sess_t*));
 	rsRetVal (*SetCBOnErrClose)(tcpsrv_t*, rsRetVal (*) (tcps_sess_t*));
 	/* session specifics */
-	rsRetVal (*SetCBOnSessAccept)(tcpsrv_t*, rsRetVal (*) (tcpsrv_t*, tcps_sess_t**, int));
+	rsRetVal (*SetCBOnSessAccept)(tcpsrv_t*, rsRetVal (*) (tcpsrv_t*, tcps_sess_t*));
 	rsRetVal (*SetCBOnSessDestruct)(tcpsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetCBOnSessConstructFinalize)(tcpsrv_t*, rsRetVal (*) (void*));
 ENDinterface(tcpsrv)

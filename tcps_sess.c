@@ -57,6 +57,10 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 
+/* forward definitions */
+static rsRetVal Close(tcps_sess_t *pThis);
+
+
 /* Standard-Constructor
  */
 BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END macro! */
@@ -86,6 +90,9 @@ finalize_it:
 /* destructor for the tcps_sess object */
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcps_sess)
+	if(pThis->sock != -1)
+		Close(pThis);
+
 	if(pThis->pSrv->pOnSessDestruct != NULL) {
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
@@ -211,8 +218,8 @@ finalize_it:
 }
 
 
-/* Closes a TCP session and marks its slot in the session
- * table as unused. No attention is paid to the return code
+/* Closes a TCP session
+ * No attention is paid to the return code
  * of close, so potential-double closes are not detected.
  */
 static rsRetVal

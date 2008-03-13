@@ -70,15 +70,6 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((u
 }
 
 
-static rsRetVal
-onSessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
-{
-	DEFiRet;
-	iRet = tcpsrv.SessAccept(pThis, ppSess, fd);
-	RETiRet;
-}
-
-
 static int*
 doOpenLstnSocks(tcpsrv_t *pSrv)
 {
@@ -132,7 +123,6 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
 		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
 		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
-		CHKiRet(tcpsrv.SetCBOnSessAccept(pOurTcpsrv, onSessAccept));
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		tcpsrv.configureTCPListen(pOurTcpsrv, (char *) pNewVal);

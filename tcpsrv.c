@@ -422,13 +422,16 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
  * connection is immediately dropped.
  * ppSess has a pointer to the newly created session, if it succeds.
  * If it does not succeed, no session is created and ppSess is
- * undefined. -- rgerhards, 2008-03-02
+ * undefined. If the user has provided an OnSessAccept Callback,
+ * this one is executed immediately after creation of the 
+ * session object, so that it can do its own initializatin.
+ * rgerhards, 2008-03-02
  */
 static rsRetVal
 SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 {
 	DEFiRet;
-
+	tcps_sess_t *pSess;
 	int newConn;
 	int iSess = -1;
 	struct sockaddr_storage addr;
@@ -455,12 +458,9 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 		//was: return -1;
 	} else {
 		/* we found a free spot and can construct our session object */
-		CHKiRet(tcps_sess.Construct(ppSess));
-		CHKiRet(tcps_sess.SetTcpsrv(*ppSess, pThis));
+		CHKiRet(tcps_sess.Construct(&pSess));
+		CHKiRet(tcps_sess.SetTcpsrv(pSess, pThis));
 	}
-
-
-	pThis->pSessions[iSess] = *ppSess;
 
 	/* OK, we have a "good" index... */
 	/* get the host name */
@@ -494,10 +494,18 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 	/* OK, we have an allowed sender, so let's continue, what
 	 * means we can finally fill in the session object.
 	 */
-	CHKiRet(tcps_sess.SetHost(pThis->pSessions[iSess], fromHost));
-	CHKiRet(tcps_sess.SetSock(pThis->pSessions[iSess], newConn));
-	CHKiRet(tcps_sess.SetMsgIdx(pThis->pSessions[iSess], 0));
-	CHKiRet(tcps_sess.ConstructFinalize(pThis->pSessions[iSess]));
+	CHKiRet(tcps_sess.SetHost(pSess, fromHost));
+	CHKiRet(tcps_sess.SetSock(pSess, newConn));
+	CHKiRet(tcps_sess.SetMsgIdx(pSess, 0));
+	CHKiRet(tcps_sess.ConstructFinalize(pSess));
+
+	/* check if we need to call our callback */
+	if(pThis->pOnSessAccept != NULL) {
+		CHKiRet(pThis->pOnSessAccept(pThis, pSess));
+	}
+
+	*ppSess = pSess;
+	pThis->pSessions[iSess] = pSess;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -578,7 +586,8 @@ Run(tcpsrv_t *pThis)
 		for (i = 0; i < *pThis->pSocksLstn; i++) {
 			if (FD_ISSET(pThis->pSocksLstn[i+1], &readfds)) {
 				dbgprintf("New connect on TCP inetd socket: #%d\n", pThis->pSocksLstn[i+1]);
-				pThis->pOnSessAccept(pThis, &pNewSess, pThis->pSocksLstn[i+1]);
+				//pThis->pOnSessAccept(pThis, &pNewSess, pThis->pSocksLstn[i+1]);
+				SessAccept(pThis, &pNewSess, pThis->pSocksLstn[i+1]);
 				--nfds; /* indicate we have processed one */
 			}
 		}
@@ -687,7 +696,7 @@ SetCBOnListenDeinit(tcpsrv_t *pThis, int (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t**, int))
+SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t*))
 {
 	DEFiRet;
 	pThis->pOnSessAccept = pCB;
