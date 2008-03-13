@@ -2,6 +2,10 @@ Rainer Gerhards <rgerhards@adiscon.com>, Adiscon GmbH
 Michael Meckelein <mmeckelein@hq.adiscon.com>, Adiscon GmbH
 
 Contributors
+Michael Biebl
+ - helped continously with autotools
+ - provided numerous advise on how to do things under Linux
+ - provided excellent advise in many, many cases
 Andres Riancho (andres-dot-riancho-at-gmail-dot-com)
  (alias APR in code files)
  - supplied regexp functionality for the property replacer - a great feature.
@@ -10,3 +14,6 @@ Bjoern Kalkbrenner
  - provided code for the "execute shell script" action
 Peter Vrabec
  - provided IPv6-enabling code
+varmojfekoj
+ - helped with a variety of things and, most importantly, contributed
+   the gssapi functionality
