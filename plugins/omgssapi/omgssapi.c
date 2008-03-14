@@ -465,7 +465,7 @@ BEGINparseSelectorAct
         int error;
 	int bErr;
         struct addrinfo hints, *res;
-	TCPFRAMINGMODE tcp_framing;
+	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us
