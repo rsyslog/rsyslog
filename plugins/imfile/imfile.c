@@ -77,7 +77,8 @@ static int iFilPtr = 0;		/* number of files to be monitored; pointer to next fre
 static fileInfo_t files[MAX_INPUT_FILES];
 
 
-/* enqueue the read file line as a message
+/* enqueue the read file line as a message. The provided string is
+ * not freed - thuis must be done by the caller.
  */
 static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 {
@@ -171,7 +172,7 @@ finalize_it:
 static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 {
 	DEFiRet;
-	cstr_t *pCStr;
+	cstr_t *pCStr = NULL;
 
 	ASSERT(pbHadFileData != NULL);
 
@@ -184,9 +185,14 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 		CHKiRet(strmReadLine(pThis->pStrm, &pCStr));
 		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
+		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
 	}
 
 finalize_it:
+	if(pCStr != NULL) {
+		rsCStrDestruct(&pCStr);
+	}
+
 	RETiRet;
 }
 
