@@ -904,6 +904,25 @@ char *getFacilityStr(msg_t *pM)
 }
 
 
+/* set flow control state (if not called, the default - NO_DELAY - is used)
+ * This needs no locking because it is only done while the object is
+ * not fully constructed (which also means you must not call this
+ * method after the msg has been handed over to a queue).
+ * rgerhards, 2008-03-14
+ */
+rsRetVal
+MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl)
+{
+	DEFiRet;
+	assert(pMsg != NULL);
+	assert(eFlowCtl == eFLOWCTL_NO_DELAY || eFlowCtl == eFLOWCTL_LIGHT_DELAY || eFlowCtl == eFLOWCTL_FULL_DELAY);
+
+	pMsg->flowCtlType = eFlowCtl;
+
+	RETiRet;
+}
+
+
 /* rgerhards 2004-11-24: set APP-NAME in msg object
  * TODO: revisit msg locking code!
  */

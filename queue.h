@@ -74,6 +74,8 @@ typedef struct queue_s {
 	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
 	int	iLowWtrMrk;	/* low water mark for disk-assisted memory queues */
 	int	iDiscardMrk;	/* if the queue is above this mark, low-severity messages are discarded */
+	int	iFullDlyMrk;	/* if the queue is above this mark, FULL_DELAYable message are put on hold */
+	int	iLightDlyMrk;	/* if the queue is above this mark, LIGHT_DELAYable message are put on hold */
 	int	iDiscardSeverity;/* messages of this severity above are discarded on too-full queue */
 	int	bNeedDelQIF;	/* does the QIF file need to be deleted when queue becomes empty? */
 	int	toQShutdown;	/* timeout for regular queue shutdown in ms */
@@ -99,6 +101,8 @@ typedef struct queue_s {
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
 	pthread_mutex_t *mut; /* mutex for enqueing and dequeueing messages */
 	pthread_cond_t notFull, notEmpty;
+	pthread_cond_t belowFullDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
+	pthread_cond_t belowLightDlyWtrMrk; /* below eFLOWCTL_FULL_DELAY watermark */
 	pthread_cond_t condDAReady;/* signalled when the DA queue is fully initialized and ready for processing */
 	int bChildIsDone;		/* set to 1 when the child DA queue has finished processing, 0 otherwise */
 	int bThrdStateChanged;		/* at least one thread state has changed if 1 */
@@ -161,7 +165,7 @@ typedef struct queue_s {
 
 /* prototypes */
 rsRetVal queueDestruct(queue_t **ppThis);
-rsRetVal queueEnqObj(queue_t *pThis, void *pUsr);
+rsRetVal queueEnqObj(queue_t *pThis, flowControl_t flwCtlType, void *pUsr);
 rsRetVal queueStart(queue_t *pThis);
 rsRetVal queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize);
 rsRetVal queueSetFilePrefix(queue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);

@@ -1543,7 +1543,7 @@ submitMsg(msg_t *pMsg)
 	ISOBJ_TYPE_assert(pMsg, msg);
 	
 	MsgPrepareEnqueue(pMsg);
-	queueEnqObj(pMsgQueue, (void*) pMsg);
+	queueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
 
 	RETiRet;
 }
@@ -1640,7 +1640,7 @@ logmsg(msg_t *pMsg, int flags)
 	
 	pMsg->msgFlags = flags;
 	MsgPrepareEnqueue(pMsg);
-	queueEnqObj(pMsgQueue, (void*) pMsg);
+	queueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
 	ENDfunc
 }
 

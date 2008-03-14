@@ -90,6 +90,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	}
 
 	CHKiRet(msgConstruct(&pMsg));
+	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetUxTradMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));

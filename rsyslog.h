@@ -54,6 +54,16 @@ typedef unsigned int u_int32_t; /* TODO: is this correct? */
 typedef int socklen_t;
 #endif
 
+/* settings for flow control
+ * TODO: is there a better place for them? -- rgerhards, 2008-03-14
+ */
+typedef enum {
+	eFLOWCTL_NO_DELAY = 0,		/**< UDP and other non-delayable sources */
+	eFLOWCTL_LIGHT_DELAY = 1,	/**< some light delay possible, but no extended period of time */
+	eFLOWCTL_FULL_DELAY = 2	/**< delay possible for extended period of time */
+} flowControl_t;
+
+
 /* The error codes below are orginally "borrowed" from
  * liblogging. As such, we reserve values up to -2999
  * just in case we need to borrow something more ;)

@@ -59,6 +59,8 @@ struct msg {
 	    * sockets. All in all, the parser would need parse templates, that would
 	    * resolve all these issues... rgerhards, 2005-10-06
 	    */
+	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
+				        once data has entered the queue, this property is no longer needed. */
 	short	iSeverity;	/* the severity 0..7 */
 	uchar *pszSeverity;	/* severity as string... */
 	int iLenSeverity;	/* ... and its length. */
@@ -137,6 +139,7 @@ char *getPROCID(msg_t *pM);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
 void MsgAssignTAG(msg_t *pMsg, uchar *pBuf);
 void MsgSetTAG(msg_t *pMsg, char* pszTAG);
+rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 char *getTAG(msg_t *pM);
 int getHOSTNAMELen(msg_t *pM);
 char *getHOSTNAME(msg_t *pM);
