@@ -249,7 +249,6 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-dbgprintf("processDataRcvd char %c, state %d\n", c, pThis->inputState);
 	if(pThis->inputState == eAtStrtFram) {
 		if(isdigit((int) c)) {
 			pThis->inputState = eInOctetCnt;
@@ -275,6 +274,14 @@ dbgprintf("processDataRcvd char %c, state %d\n", c, pThis->inputState);
 				dbgprintf("Framing Error: invalid octet count\n");
 				errmsg.LogError(NO_ERRCODE, "Framing Error in received TCP message: "
 					    "invalid octet count %d.\n", pThis->iOctetsRemain);
+			} else if(pThis->iOctetsRemain > MAXLINE) {
+				/* while we can not do anything against it, we can at least log an indication
+				 * that something went wrong) -- rgerhards, 2008-03-14
+				 */
+				dbgprintf("truncating message with %d octets - MAXLINE is %d\n",
+					  pThis->iOctetsRemain, MAXLINE);
+				errmsg.LogError(NO_ERRCODE, "received oversize message: size is %d bytes, "
+					        "MAXLINE is %d, truncating...\n", pThis->iOctetsRemain, MAXLINE);
 			}
 			pThis->inputState = eInMsg;
 		}
@@ -297,8 +304,13 @@ dbgprintf("processDataRcvd char %c, state %d\n", c, pThis->inputState);
 			pThis->iMsg = 0;
 			pThis->inputState = eAtStrtFram;
 		} else {
-			/* IMPORTANT: here we copy the actual frame content to the message! */
-			*(pThis->msg + pThis->iMsg++) = c;
+			/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
+			 * If we have a message that is larger than MAXLINE, we truncate it. This is the best
+			 * we can do in light of what the engine supports. -- rgerhards, 2008-03-14
+			 */
+			if(pThis->iMsg < MAXLINE) {
+				*(pThis->msg + pThis->iMsg++) = c;
+			}
 		}
 
 		if(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
