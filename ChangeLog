@@ -11,6 +11,8 @@ Version 3.12.3 (rgerhards), 2008-03-??
   situations. If the header was split across two packet reads, it was invalidly
   processed, causing loss or modification of messages.
 - bugfix: memory leak in imfile
+- bugfix: duplicate public symbol in omfwd and omgssapi could lead to
+  segfault. thanks to varmojfekoj for the patch.
 - some more internal cleanup ;)
 ---------------------------------------------------------------------------
 Version 3.12.2 (rgerhards), 2008-03-13

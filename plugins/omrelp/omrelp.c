@@ -90,7 +90,7 @@ typedef struct _instanceData {
  * We may change the implementation to try to lookup the port
  * if it is unspecified. So far, we use the IANA default auf 514.
  */
-char *getFwdSyslogPt(instanceData *pData)
+static char *getFwdSyslogPt(instanceData *pData)
 {
 	assert(pData != NULL);
 	if(pData->port == NULL)
