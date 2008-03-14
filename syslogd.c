@@ -391,10 +391,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
 	bDropMalPTRMsgs = 0;
-	if(pModDir != NULL) {
-		free(pModDir);
-		pModDir = NULL;
-	}
 	if(pszWorkDir != NULL) {
 		free(pszWorkDir);
 		pszWorkDir = NULL;
