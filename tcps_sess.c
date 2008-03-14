@@ -237,6 +237,86 @@ Close(tcps_sess_t *pThis)
 }
 
 
+/* process the data received. As TCP is stream based, we need to process the
+ * data inside a state machine. The actual data received is passed in byte-by-byte
+ * from DataRcvd, and this function here compiles messages from them and submits
+ * the end result to the queue. Introducing this function fixes a long-term bug ;)
+ * rgerhards, 2008-03-14
+ */
+static rsRetVal
+processDataRcvd(tcps_sess_t *pThis, char c)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcps_sess);
+
+dbgprintf("processDataRcvd char %c, state %d\n", c, pThis->inputState);
+	if(pThis->inputState == eAtStrtFram) {
+		if(isdigit((int) c)) {
+			pThis->inputState = eInOctetCnt;
+			pThis->iOctetsRemain = 0;
+			pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
+		} else {
+			pThis->inputState = eInMsg;
+			pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
+		}
+	}
+
+	if(pThis->inputState == eInOctetCnt) {
+		if(isdigit(c)) {
+			pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
+		} else { /* done with the octet count, so this must be the SP terminator */
+			dbgprintf("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
+			if(c != ' ') {
+				errmsg.LogError(NO_ERRCODE, "Framing Error in received TCP message: "
+					    "delimiter is not SP but has ASCII value %d.\n", c);
+			}
+			if(pThis->iOctetsRemain < 1) {
+				/* TODO: handle the case where the octet count is 0! */
+				dbgprintf("Framing Error: invalid octet count\n");
+				errmsg.LogError(NO_ERRCODE, "Framing Error in received TCP message: "
+					    "invalid octet count %d.\n", pThis->iOctetsRemain);
+			}
+			pThis->inputState = eInMsg;
+		}
+	} else {
+		assert(pThis->inputState == eInMsg);
+		if(pThis->iMsg >= MAXLINE) {
+			/* emergency, we now need to flush, no matter if we are at end of message or not... */
+			dbgprintf("error: message received is larger than MAXLINE, we split it\n");
+			parseAndSubmitMessage(pThis->fromHost, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
+			pThis->iMsg = 0;
+			/* we might think if it is better to ignore the rest of the
+			 * message than to treat it as a new one. Maybe this is a good
+			 * candidate for a configuration parameter...
+			 * rgerhards, 2006-12-04
+			 */
+		}
+
+		if(c == '\n' && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
+			parseAndSubmitMessage(pThis->fromHost, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
+			pThis->iMsg = 0;
+			pThis->inputState = eAtStrtFram;
+		} else {
+			/* IMPORTANT: here we copy the actual frame content to the message! */
+			*(pThis->msg + pThis->iMsg++) = c;
+		}
+
+		if(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
+			/* do we need to find end-of-frame via octet counting? */
+			pThis->iOctetsRemain--;
+			if(pThis->iOctetsRemain < 1) {
+				/* we have end of frame! */
+				parseAndSubmitMessage(pThis->fromHost, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
+				pThis->iMsg = 0;
+				pThis->inputState = eAtStrtFram;
+			}
+		}
+	}
+
+	RETiRet;
+}
+
+
 /* Processes the data received via a TCP session. If there
  * is no other way to handle it, data is discarded.
  * Input parameter data is the data received, iLen is its
@@ -244,16 +324,6 @@ Close(tcps_sess_t *pThis)
  * is errors must be handled by caller!). iTCPSess must be
  * the index of the TCP session that received the data.
  * rgerhards 2005-07-04
- * Changed this functions interface. We now return a status of
- * what shall happen with the session. This is information for
- * the caller. If 1 is returned, the session should remain open
- * and additional data be accepted. If we return 0, the TCP
- * session is to be closed by the caller. This functionality is
- * needed in order to support framing errors, from which there
- * is no recovery possible other than session termination and
- * re-establishment. The need for this functionality thus is
- * primarily rooted in support for -transport-tls I-D framing.
- * rgerhards, 2006-12-07
  * And another change while generalizing. We now return either
  * RS_RET_OK, which means the session should be kept open
  * or anything else, which means it must be closed.
@@ -263,7 +333,6 @@ static rsRetVal
 DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 {
 	DEFiRet;
-	register int iMsg;
 	char *pMsg;
 	char *pEnd;
 
@@ -284,112 +353,14 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	  * - printline() the buffer
 	  * - continue with copying
 	  */
-	iMsg = pThis->iMsg; /* copy for speed */
 	pMsg = pThis->msg; /* just a shortcut */
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
-		/* Check if we are at a new frame */
-		if(pThis->bAtStrtOfFram) {
-			/* we need to look at the message and detect
-			 * the framing mode used
-			 *//*
-			 * Contrary to -transport-tls, we accept leading zeros in the message
-			 * length. We do this in the spirit of "Be liberal in what you accept,
-			 * and conservative in what you send". We expect that including leading
-			 * zeros could be a common coding error.
-			 * rgerhards, 2006-12-07
-			 * The chairs of the IETF syslog-sec WG have announced that it is
-			 * consensus to do the octet count on the SYSLOG-MSG part only. I am
-			 * now changing the code to reflect this. Hopefully, it will not change
-			 * once again (there can no compatibility layer programmed for this).
-			 * To be on the save side, I just comment the code out. I mark these
-			 * comments with "IETF20061218".
-			 * rgerhards, 2006-12-19
-			 */
-			if(isdigit((int) *pData)) {
-				int iCnt;	/* the frame count specified */
-				pThis->eFraming = TCP_FRAMING_OCTET_COUNTING;
-				/* in this mode, we have OCTET-COUNT SP MSG - so we now need
-				 * to extract the OCTET-COUNT and the SP and then extract
-				 * the msg.
-				 */
-				iCnt = 0;
-				/* IETF20061218 int iNbrOctets = 0; / * number of octets already consumed */
-				while(isdigit((int) *pData)) {
-					iCnt = iCnt * 10 + *pData - '0';
-					/* IETF20061218 ++iNbrOctets; */
-					++pData;
-				}
-				dbgprintf("TCP Message with octet-counter, size %d.\n", iCnt);
-				if(*pData == ' ') {
-					++pData;	/* skip over SP */
-					/* IETF20061218 ++iNbrOctets; */
-				} else {
-					/* TODO: handle "invalid frame" case */
-					errmsg.LogError(NO_ERRCODE, "Framing Error in received TCP message: "
-					            "delimiter is not SP but has ASCII value %d.\n",
-						    *pData);
-					return(0); /* unconditional error exit */
-				}
-				/* IETF20061218 pThis->iOctetsRemain = iCnt - iNbrOctets; */
-				pThis->iOctetsRemain = iCnt;
-				if(pThis->iOctetsRemain < 1) {
-					/* TODO: handle the case where the octet count is 0 or negative! */
-					dbgprintf("Framing Error: invalid octet count\n");
-					errmsg.LogError(NO_ERRCODE, "Framing Error in received TCP message: "
-					            "invalid octet count %d.\n",
-				 		    pThis->iOctetsRemain);
-					return(0); /* unconditional error exit */
-				}
-			} else {
-				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
-				/* No need to do anything else here in this case */
-			}
-			pThis->bAtStrtOfFram = 0; /* done frame header */
-		}
-	
-		/* now copy message until end of record */
-
-		if(iMsg >= MAXLINE) {
-			/* emergency, we now need to flush, no matter if
-			 * we are at end of message or not...
-			 */
-			parseAndSubmitMessage(pThis->fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
-			iMsg = 0;
-			/* we might think if it is better to ignore the rest of the
-		 	 * message than to treat it as a new one. Maybe this is a good
-			 * candidate for a configuration parameter...
-			 * rgerhards, 2006-12-04
-			 */
-		}
-
-		if(*pData == '\n' &&
-		   pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
-			parseAndSubmitMessage(pThis->fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
-			iMsg = 0;
-			pThis->bAtStrtOfFram = 1;
-			++pData;
-		} else {
-			/* IMPORTANT: here we copy the actual frame content to the message! */
-			*(pMsg + iMsg++) = *pData++;
-		}
-
-		if(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING) {
-			/* do we need to find end-of-frame via octet counting? */
-			pThis->iOctetsRemain--;
-			if(pThis->iOctetsRemain < 1) {
-				/* we have end of frame! */
-				parseAndSubmitMessage(pThis->fromHost, pMsg, iMsg, MSG_PARSE_HOSTNAME, NOFLAG);
-				iMsg = 0;
-				pThis->bAtStrtOfFram = 1;
-			}
-		}
+		CHKiRet(processDataRcvd(pThis, *pData++));
 	}
 
-	pThis->iMsg = iMsg; /* persist value */
-
-	return(1);	/* successful return */
+finalize_it:
 	RETiRet;
 }
 

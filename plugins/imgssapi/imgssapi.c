@@ -480,7 +480,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				    (GSS_ROUTINE_ERROR(maj_stat) == GSS_S_DEFECTIVE_TOKEN)) {
 					dbgprintf("GSS-API Reverting to plain TCP\n");
 					dbgprintf("tcp session socket with new data: #%d\n", fdSess);
-					if(tcps_sess.DataRcvd(pSess, buf, ret) == 0) {
+					if(tcps_sess.DataRcvd(pSess, buf, ret) != RS_RET_OK) {
 						errmsg.LogError(NO_ERRCODE, "Tearing down TCP Session %p - see "
 							    "previous messages for reason(s)\n", pSess);
 						ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes

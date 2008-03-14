@@ -934,7 +934,7 @@ queueUngetObj(queue_t *pThis, obj_t *pUsr, int bLockMutex)
 	DEFVARS_mutexProtection;
 
 	ISOBJ_TYPE_assert(pThis, queue);
-	ISOBJ_assert(pUsr); /* TODO: we aborted right at this place at least twice -- race? 2008-02-28, -03-10
+	ISOBJ_assert(pUsr); /* TODO: we aborted right at this place at least 3 times -- race? 2008-02-28, -03-10, -03-15
 			       The second time I noticed it the queue was in destruction with NO worker threads
 			       running. The pUsr ptr was totally off and provided no clue what it may be pointing
 			       at (except that it looked like the static data pool). Both times, the abort happend
@@ -2031,7 +2031,6 @@ queueEnqObj(queue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	 * result, that non-blockable sources like UDP syslog receive priority in the system.
 	 * It's a side effect, but a good one ;) -- rgerhards, 2008-03-14
 	 */
-dbgprintf("enqueueMsg: flowctl mode: %d, queue size %d, FullDlyMrk %d\n", flowCtlType, pThis->iQueueSize, pThis->iFullDlyMrk);
 	if(flowCtlType == eFLOWCTL_FULL_DELAY) {
 		while(pThis->iQueueSize >= pThis->iFullDlyMrk) {
 			dbgoprint((obj_t*) pThis, "enqueueMsg: FullDelay mark reached for full delayble message - blocking.\n");

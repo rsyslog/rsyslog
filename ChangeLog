@@ -5,6 +5,12 @@ Version 3.12.3 (rgerhards), 2008-03-??
 - bugfix: $ModDir should not be reset on $ResetConfig - this can cause a lot
   of confusion and there is no real good reason to do so. Also conflicts with
   the new -M option and environment setting.
+- bugfix: TCP and GSSAPI framing mode variable was uninitialized, leading to
+  wrong framing (caused, among others, interop problems)
+- bugfix: TCP (and GSSAPI) octet-counted frame did not work correctly in all
+  situations. If the header was split across two packet reads, it was invalidly
+  processed, causing loss or modification of messages.
+- bugfix: memory leak in imfile
 - some more internal cleanup ;)
 ---------------------------------------------------------------------------
 Version 3.12.2 (rgerhards), 2008-03-13

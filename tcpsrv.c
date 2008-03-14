@@ -612,13 +612,12 @@ Run(tcpsrv_t *pThis)
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else {
 					/* valid data received, process it! */
-					if(tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, state) == 0) {
+					if(tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, state) != RS_RET_OK) {
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
 						errmsg.LogError(NO_ERRCODE, "Tearing down TCP Session %d - see "
-							    "previous messages for reason(s)\n",
-							    iTCPSess);
+							    "previous messages for reason(s)\n", iTCPSess);
 						pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
 						tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 					}

@@ -152,6 +152,8 @@ static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
 
 	lenSend = send(pData->sock, msg, len, 0);
 	dbgprintf("TCP sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
+if(lenSend > 2000)
+	dbgprintf("TCP (msgoverflow) sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
 
 	if(lenSend == -1) {
 		/* we have an error case - check what we can live with */
@@ -500,10 +502,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendInit));
 	CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
 	CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
-	CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
+	CHKiRet(tcpclt.SetFraming(pData->pTCPClt, TCP_FRAMING_OCTET_COUNTING));
 
 	/* TODO: do we need to call freeInstance if we failed - this is a general question for
-	 * all output modules. I'll address it lates as the interface evolves. rgerhards, 2007-07-25
+	 * all output modules. I'll address it later as the interface evolves. rgerhards, 2007-07-25
 	 */
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct

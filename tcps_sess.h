@@ -41,6 +41,11 @@ typedef struct tcps_sess_s {
 	int sock;
 	int iMsg; /* index of next char to store in msg */
 	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
+	enum {
+		eAtStrtFram,
+		eInOctetCnt,
+		eInMsg
+	} inputState;		/* our current state */
 	int iOctetsRemain;	/* Number of Octets remaining in message */
 	TCPFRAMINGMODE eFraming;
 	char msg[MAXLINE+1];
