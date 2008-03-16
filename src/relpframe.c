@@ -49,7 +49,7 @@ relpFrameConstruct(relpFrame_t **ppThis)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
 
-	RELP_CORE_CONSTRUCTOR(pThis, Engine);
+	RELP_CORE_CONSTRUCTOR(pThis, Frame);
 	/* all other initialization is done by calloc */
 
 	*ppThis = pThis;
@@ -71,9 +71,7 @@ relpFrameDestruct(relpFrame_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Frame);
 
-	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
-
-	/* done with de-init work, now free engine object itself */
+	/* done with de-init work, now free object itself */
 	free(pThis);
 	*ppThis = NULL;
 
@@ -169,6 +167,74 @@ relpProcessOctetRcvd(relpFrame_t **pThis, relpOctet_t c)
 	*ppThis = pThis;
 
 finalize_it;
+	LEAVE_RELPFUNC;
+}
+
+
+/* set the TXNR inside a relp frame
+ * rgerhards, 2008-03-16
+ */
+relpRetVal
+relpFrameSetTxnr(relpFrame_t *pThis, int txnr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Frame);
+	if(txnr < 0 || txnr > 999999999)
+		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+
+	pThis->txnr = txnr;
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* set the command inside a relp frame. The caller-provided buffer
+ * is copied and NOT freed. This needs to be done by caller if
+ * desired.
+ * rgerhards, 2008-03-16
+ */
+relpRetVal
+relpFrameSetCmd(relpFrame_t *pThis, relpOctet_t *pCmd)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Frame);
+	if(pCmd == NULL || strlen(pCmd) > 32)
+		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+
+	strcpy(pThis->cmd, pCmd);
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* set the data part inside a relp frame. The caller-provided buffer
+ * is taken over if "bHandoverBuffer" is set to 1. In this case, the caller
+ * must no longer access (AND NOT FREE!) the buffer. If "bHandoverBuffer" is
+ * set to 0, it is copied and the caller is responsible for freeing the buffer.
+ * rgerhards, 2008-03-16
+ */
+relpRetVal
+relpFrameSetData(relpFrame_t *pThis, relpOctet_t *pData, int lenData, int bHandoverBuffer)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Frame);
+	if(pData == NULL)
+		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
+	
+	if(bHandoverBuffer) {
+		pThis->pData = pData;
+	} else {
+		/* we can not use the caller provided buffer and must copy it */
+		if((pThis->pData = malloc(lenData)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		memcpy(pThis->pData, pData, lenData);
+	}
+
+	pThis->lenData = lenData;
+
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 

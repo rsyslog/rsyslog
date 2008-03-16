@@ -42,7 +42,10 @@ typedef int relpRetVal;
 typedef enum relpObjID_e {
 	eRelpObj_Invalid = 0,	/**< invalid object, must be zero to detect unitilized value */
 	eRelpObj_Engine = 1,
-	eRelpObj_Frame = 2
+	eRelpObj_Sess = 2,
+	eRelpObj_Frame = 3,
+	eRelpObj_Clt = 4,
+	eRelpObj_Srv = 5
 } relpObjID_t;
 
 
@@ -89,6 +92,7 @@ typedef struct relpEngine_s {
 #define RELP_RET_OK		ERRCODE_BASE + 0	/**< everything went well, no error */
 #define RELP_RET_OUT_OF_MEMORY	ERRCODE_BASE + 1	/**< out of memory occured */
 #define RELP_RET_INVALID_FRAME	ERRCODE_BASE + 2	/**< relp frame received is invalid */
+#define RELP_RET_PARAM_ERROR	ERRCODE_BASE + 3	/**< an (API) calling parameer is in error */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -104,5 +108,9 @@ typedef struct relpEngine_s {
 		goto finalize_it;		\
 	} while (0)
 
+
+/* prototypes needed by library users */
+relpRetVal relpEngineConstruct(relpEngine_t **ppThis);
+relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
 
 #endif /* #ifndef RELP_H_INCLUDED */
