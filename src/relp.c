@@ -30,6 +30,9 @@
  * free software while at the same time obtaining some funding for further
  * development.
  */
+#include "config.h"
+#include <stdlib.h>
+#include "relp.h"
 
 
 /* DESCRIPTION OF THE RELP PROTOCOL
@@ -69,14 +72,16 @@
  * RELP FRAME
  * All relp transaction are carried out over a consistent framing.
  *
- * RELP-FRAME     =  HEADER DATA TRAILER
+ * RELP-FRAME     = HEADER DATA TRAILER
  * DATA           = *OCTET ; command-defined data
  * HEADER         = TXNR SP COMMAND SP DATALEN
  * TXNR           = NUMBER ; relp transaction number, monotonically increases
  * DATALEN        = NUMBER
- * COMMAND        = "init" / "go" / "msg" / "close" / "rsp"
+ * #old:COMMAND        = "init" / "go" / "msg" / "close" / "rsp" / "abort" ; max length = 32
+ * COMMAND        = 1*32ALPHA
  * TRAILER        = LF ; to detect framing errors and enhance human readibility
- * NUMBER         = 1*DIGIT
+ * ALPHA          = letter ; ('a'..'z', 'A'..'Z')
+ * NUMBER         = 1*9DIGIT
  * DIGIT          = %d48-57
  * LF             = %d10
  * SP             = %d32
@@ -168,6 +173,52 @@
  * (terminates session)              <----- cmd: "rsp", data OK/Error
  *                                          (terminates session)
  */
-int	relpInit(void)
+
+
+/** Construct a RELP engine instance
+ * This is the first thing that a caller must do before calling any
+ * RELP function. The relp engine must only destructed after all RELP
+ * operations have been finished.
+ */
+relpRetVal
+relpEngineConstruct(relpEngine_t **ppThis)
 {
+	relpEngine_t *pThis;
+
+	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
+	if((pThis = calloc(1, sizeof(relpEngine_t))) == NULL) {
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+
+	*ppThis = pThis;
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/** Destruct a RELP engine instance
+ * Should be called only a after all RELP functions have been terminated.
+ * Terminates librelp operations, no calls are permitted after engine 
+ * destruction.
+ */
+relpRetVal
+relpEngineDestruct(relpEngine_t **ppThis)
+{
+	relpEngine_t *pThis;
+
+	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
+	pThis = *ppThis;
+	RELPOBJ_assert(pThis, Engine);
+
+	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
+
+	/* done with de-init work, now free engine object itself */
+	free(pThis);
+	*ppThis = NULL;
+
+finalize_it:
+	LEAVE_RELPFUNC;
 }
