@@ -35,6 +35,7 @@
 
 /* define some of our types that a caller must know about */
 typedef unsigned char relpOctet_t;
+typedef int relpTxnr_t;
 typedef int relpRetVal;
 
 

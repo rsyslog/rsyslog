@@ -33,6 +33,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 #include "relp.h"
 #include "relpframe.h"
 
@@ -88,7 +89,7 @@ finalize_it:
  * rgerhards, 2008-03-16
  */
 relpRetVal
-relpProcessOctetRcvd(relpFrame_t **pThis, relpOctet_t c)
+relpProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c)
 {
 	relpFrame_t *pThis;
 
@@ -108,8 +109,9 @@ relpProcessOctetRcvd(relpFrame_t **pThis, relpOctet_t c)
 			if(isdigit(c)) {
 				if(pThis->iRcv++ == 9) { /* more than max permitted nbr of digits? */
 					ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
+				}
 				pThis->txnr = pThis->txnr * 10 + c - '0';
-			} if(c == ' '){ /* field terminator */
+			} if(c == ' ') { /* field terminator */
 				pThis->rcvState = eRelpFrameRcvState_IN_CMD;
 				pThis->iRcv = 0;
 			} else { /* oh, oh, invalid char! */
@@ -120,6 +122,7 @@ relpProcessOctetRcvd(relpFrame_t **pThis, relpOctet_t c)
 			if(isalpha(c)) {
 				if(pThis->iRcv == 32) { /* more than max permitted nbr of digits? */
 					ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
+				}
 				pThis->cmd[pThis->iRcv] = c;
 				++pThis->iRcv;
 			} else if(c == ' ') { /* field terminator */
@@ -134,8 +137,9 @@ relpProcessOctetRcvd(relpFrame_t **pThis, relpOctet_t c)
 			if(isdigit(c)) {
 				if(pThis->iRcv++ == 9) { /* more than max permitted nbr of digits? */
 					ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
+				}
 				pThis->lenData = pThis->lenData * 10 + c - '0';
-			} if(c == ' ') /* field terminator */
+			} if(c == ' ') { /* field terminator */
 				/* we now can assign the buffer for our data */
 				if((pThis->pData = malloc(pThis->lenData)) == NULL)
 					ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
@@ -143,6 +147,7 @@ relpProcessOctetRcvd(relpFrame_t **pThis, relpOctet_t c)
 				pThis->iRcv = 0;
 			} else { /* oh, oh, invalid char! */
 				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
+			}
 			break;
 		case eRelpFrameRcvState_IN_DATA:
 			if(pThis->iRcv < pThis->lenData) {
@@ -166,7 +171,7 @@ relpProcessOctetRcvd(relpFrame_t **pThis, relpOctet_t c)
 
 	*ppThis = pThis;
 
-finalize_it;
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 

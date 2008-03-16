@@ -33,12 +33,34 @@
 #ifndef RELPSESS_H_INCLUDED
 #define	RELPSESS_H_INCLUDED
 
+#include "relpframe.h"
+
+/* send buffer (after bein processed from frame) */
+typedef struct replSendbuf_s {
+	relpOctet_t *pBuf; /**< the buffer, as it can be put on the wire */
+	size_t lenBuf;
+	size_t bufPtr; /**< multi-purpose, e.g. tracks sent octets when multi-send
+	 	            send() calls are required. */
+} relpSendbuf_t;
+
+
+/* unacked msgs linked list */
+typedef struct replSessUnacked_s {
+	struct replSessUnacked_s *pNext;
+	struct replSessUnacked_s *pPrev;
+	relpTxnr_t txnr;	/**< txnr of unacked message */
+	relpSendbuf_t pSendbuf; /**< the unacked message */
+} replSessUnacked_t;
+
+
 /* the RELPSESS object 
  * rgerhards, 2008-03-16
  */
 typedef struct relpSess_s {
 	BEGIN_RELP_OBJ;
 	relpTxnr_t nxtTxnr;	/**< next txnr to be used for commands */
+	relpSendbuf_t *pCurrSendbuf; /**< the sendbuf that is currently being processed or NULL
+					   if we are ready to accept a new one. */
 } relpSess_t;
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

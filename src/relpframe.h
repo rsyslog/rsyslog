@@ -42,7 +42,7 @@ typedef enum relpFrameRcvStates_e {
 	eRelpFrameRcvState_IN_DATA = 4,
 	eRelpFrameRcvState_IN_TRAILER = 5,
 	eRelpFrameRcvState_FINISHED = 6	 /**< the frame is fully received and ready for processing */
-} relpFrameRcvStates_t;
+} relpFrameRcvState_t;
 
 
 /* the RELPFRAME object 
@@ -50,7 +50,7 @@ typedef enum relpFrameRcvStates_e {
  */
 typedef struct relpFrame_s {
 	BEGIN_RELP_OBJ;
-	relpFRameRcvState rcvState;
+	relpFrameRcvState_t rcvState;
 	int iRcv;		/**< a multi-purpose field index used during frame reception */
 	relpTxnr_t txnr;	/**< the current transaction (sequence) number */
 	relpOctet_t cmd[32+1];	/**< the current command (+1 for C string terminator) */
