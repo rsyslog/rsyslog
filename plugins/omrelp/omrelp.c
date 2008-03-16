@@ -40,9 +40,8 @@
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
-#ifdef USE_NETZIP
-#include <zlib.h>
-#endif
+#include <relp.h>
+#include <relpclt.h>
 #include <pthread.h>
 #include "syslogd.h"
 #include "syslogd-types.h"
@@ -66,6 +65,8 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 DEFobjCurrIf(tcpclt)
 
+static relpEngine_t *pRelpEngine;	/* our relp engine */
+
 typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
 	short	sock;			/* file descriptor */
@@ -81,7 +82,7 @@ typedef struct _instanceData {
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
 	/* following fields for TCP-based delivery */
-	tcpclt_t *pTCPClt;		/* our tcpclt object */
+	relpClt_t *pRelpClt;		/* relp client for this instance */
 } instanceData;
 
 /* get the syslog forward port from selector_t. The passed in
@@ -90,7 +91,7 @@ typedef struct _instanceData {
  * We may change the implementation to try to lookup the port
  * if it is unspecified. So far, we use the IANA default auf 514.
  */
-static char *getFwdSyslogPt(instanceData *pData)
+static char *getRelpPt(instanceData *pData)
 {
 	assert(pData != NULL);
 	if(pData->port == NULL)
@@ -131,7 +132,8 @@ CODESTARTfreeInstance
 	if(pData->pSockArray != NULL)
 		net.closeUDPListenSockets(pData->pSockArray);
 
-	tcpclt.Destruct(&pData->pTCPClt);
+	if(pData->pRelpClt != NULL)
+		relpCltDestruct(&pData->pRelpClt);
 
 ENDfreeInstance
 
@@ -144,16 +146,14 @@ ENDdbgPrintInstInfo
 
 /* Send a frame
  */
-static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
+static rsRetVal SendFrame(void *pvData, char *msg, size_t len)
 {
 	DEFiRet;
 	ssize_t lenSend;
 	instanceData *pData = (instanceData *) pvData;
 
 	lenSend = send(pData->sock, msg, len, 0);
-	dbgprintf("TCP sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
-if(lenSend > 2000)
-	dbgprintf("TCP (msgoverflow) sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
+	dbgprintf("omrelp sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
 
 	if(lenSend == -1) {
 		/* we have an error case - check what we can live with */
@@ -197,10 +197,10 @@ static rsRetVal TCPSendPrepRetry(void *pvData)
 }
 
 
-/* initialies everything so that TCPSend can work.
+/* open a connection to the remote peer (transport level)
  * rgerhards, 2007-12-28
  */
-static rsRetVal TCPSendInit(void *pvData)
+static rsRetVal openConn(void *pvData)
 {
 	DEFiRet;
 	instanceData *pData = (instanceData *) pvData;
@@ -242,8 +242,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = family;
 		hints.ai_socktype = SOCK_STREAM;
-		if((e = getaddrinfo(pData->f_hname,
-				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
+		if((e = getaddrinfo(pData->f_hname, getRelpPt(pData), &hints, &res)) == 0) {
 			dbgprintf("%s found, resuming.\n", pData->f_hname);
 			pData->f_addr = res;
 			pData->eDestState = eDestFORW;
@@ -283,64 +282,30 @@ CODESTARTdoAction
 		break;
 
 	case eDestFORW:
-		dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData), "tcp");
+		dbgprintf(" %s:%s/%s\n", pData->f_hname, getRelpPt(pData), "relp");
 		psz = (char*) ppString[0];
 		l = strlen((char*) psz);
+		/* TODO: think about handling oversize messages! */
 		if(l > MAXLINE)
 			l = MAXLINE;
 
-#		ifdef	USE_NETZIP
-
-	/* TODO: move all this ZLIB code into a library module! */
-
-		/* Check if we should compress and, if so, do it. We also
-		 * check if the message is large enough to justify compression.
-		 * The smaller the message, the less likely is a gain in compression.
-		 * To save CPU cycles, we do not try to compress very small messages.
-		 * What "very small" means needs to be configured. Currently, it is
-		 * hard-coded but this may be changed to a config parameter.
-		 * rgerhards, 2006-11-30
-		 */
-		if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
-			Bytef out[MAXLINE+MAXLINE/100+12] = "z";
-			uLongf destLen = sizeof(out) / sizeof(Bytef);
-			uLong srcLen = l;
-			int ret;
-			ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
-					srcLen, pData->compressionLevel);
-			dbgprintf("Compressing message, length was %d now %d, return state  %d.\n",
-				l, (int) destLen, ret);
-			if(ret != Z_OK) {
-				/* if we fail, we complain, but only in debug mode
-				 * Otherwise, we are silent. In any case, we ignore the
-				 * failed compression and just sent the uncompressed
-				 * data, which is still valid. So this is probably the
-				 * best course of action.
-				 * rgerhards, 2006-11-30
-				 */
-				dbgprintf("Compression failed, sending uncompressed message\n");
-			} else if(destLen+1 < l) {
-				/* only use compression if there is a gain in using it! */
-				dbgprintf("there is gain in compression, so we do it\n");
-				psz = (char*) out;
-				l = destLen + 1; /* take care for the "z" at message start! */
-			}
-			++destLen;
-		}
-#			endif
-
 		/* forward */
+#if 0 // new relp code:
+		relpRetVal relpRet;
+		relpSend(relpSess, pData, l);
+		if(relpRet != RELP_RET_OK) {
+#else
 		rsRetVal ret;
-		ret = tcpclt.Send(pData->pTCPClt, pData, psz, l);
+		//ret = tcpclt.Send(pData->pTCPClt, pData, psz, l);
 		if(ret != RS_RET_OK) {
+#endif
 			/* error! */
-			dbgprintf("error forwarding via tcp, suspending\n");
+			dbgprintf("error forwarding via relp, suspending\n");
 			pData->eDestState = eDestFORW_SUSP;
 			iRet = RS_RET_SUSPENDED;
 		}
 		break;
 	}
-finalize_it:
 ENDdoAction
 
 
@@ -442,7 +407,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			errmsg.LogError(NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");
 			/* we leave f_forw.port set to NULL, this is then handled by
-			 * getFwdSyslogPt().
+			 * getRelpPt().
 			 */
 		} else {
 			memcpy(pData->port, tmp, i);
@@ -483,7 +448,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	hints.ai_flags = AI_NUMERICSERV;
 	hints.ai_family = family;
 	hints.ai_socktype = SOCK_STREAM;
-	if( (error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
+	if( (error = getaddrinfo(pData->f_hname, getRelpPt(pData), &hints, &res)) != 0) {
 		pData->eDestState = eDestFORW_UNKN;
 	} else {
 		pData->eDestState = eDestFORW;
@@ -496,13 +461,14 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * FORW_SUSP.
 	 */
 
-	/* create our tcpclt */
-	CHKiRet(tcpclt.Construct(&pData->pTCPClt));
+	/* create our relp client  */
+	CHKiRet(relpCltConstruct(&pData->pRelpClt)); /* we use CHKiRet as librelp has a similar return value range */
 	/* and set callbacks */
-	CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendInit));
+#if 0 // TODO: the same for relp
+	CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, openConn));
 	CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
 	CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
-	CHKiRet(tcpclt.SetFraming(pData->pTCPClt, TCP_FRAMING_OCTET_COUNTING));
+#endif
 
 	/* TODO: do we need to call freeInstance if we failed - this is a general question for
 	 * all output modules. I'll address it later as the interface evolves. rgerhards, 2007-07-25
@@ -519,6 +485,8 @@ ENDneedUDPSocket
 
 BEGINmodExit
 CODESTARTmodExit
+	relpEngineDestruct(&pRelpEngine);
+
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
@@ -536,6 +504,10 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	/* create our relp engine */
+	CHKiRet(relpEngineConstruct(&pRelpEngine));
+
+	/* tell which objects we need */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
