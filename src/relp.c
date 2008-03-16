@@ -191,6 +191,8 @@ relpEngineConstruct(relpEngine_t **ppThis)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
 
+	RELP_CORE_CONSTRUCTOR(pThis, Engine);
+
 	*ppThis = pThis;
 
 finalize_it:

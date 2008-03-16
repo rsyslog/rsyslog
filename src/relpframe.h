@@ -1,4 +1,4 @@
-/* The REPLFRAME object.
+/* The RELPFRAME object.
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
@@ -30,18 +30,33 @@
  * free software while at the same time obtaining some funding for further
  * development.
  */
-#ifndef REPLFRAME_H_INCLUDED
-#define	REPLFRAME_H_INCLUDED
+#ifndef RELPFRAME_H_INCLUDED
+#define	RELPFRAME_H_INCLUDED
 
-/* the REPLFRAME object 
+/* state the relpframe may have during reception of messages */
+typedef enum relpFrameRcvStates_e {
+	eRelpFrameRcvState_BEGIN_FRAME = 0,
+	eRelpFrameRcvState_IN_TXNR = 1,
+	eRelpFrameRcvState_IN_CMD = 2,
+	eRelpFrameRcvState_IN_DATALEN = 3,
+	eRelpFrameRcvState_IN_DATA = 4,
+	eRelpFrameRcvState_IN_TRAILER = 5,
+	eRelpFrameRcvState_FINISHED = 6	 /**< the frame is fully received and ready for processing */
+} relpFrameRcvStates_t;
+
+
+/* the RELPFRAME object 
  * rgerhards, 2008-03-16
  */
 typedef struct relpFrame_s {
+	BEGIN_RELP_OBJ;
+	relpFRameRcvState rcvState;
+	int iRcv;		/**< a multi-purpose field index used during frame reception */
 	relpTxnr_t txnr;	/**< the current transaction (sequence) number */
-	relpOctet_t cmd[32];	/**< the current command */
+	relpOctet_t cmd[32+1];	/**< the current command (+1 for C string terminator) */
 	int lenData;		/**< length of data part of frame */
 	relpOctet_t *pData;	/**< frame data part */
 	
 } relpFrame_t;
 
-#endif /* #ifndef REPLFRAME_H_INCLUDED */
+#endif /* #ifndef RELPFRAME_H_INCLUDED */

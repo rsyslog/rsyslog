@@ -6,8 +6,11 @@ DEBUG = -g
 lib_LTLIBRARIES = librelp.la
 
 librelp_la_SOURCES = \
-	relp.c
-librelp_la_CPPFLAGS = $(pthreads_cflags)
+	relp.c \
+	relp.h
+	relpframe.c
+	relpframe.h
+librelp_la_CPPFLAGS =
 librelp_la_LIBADD = 
 
 include_HEADERS = \

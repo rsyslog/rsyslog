@@ -42,6 +42,7 @@ typedef int relpRetVal;
 typedef enum relpObjID_e {
 	eRelpObj_Invalid = 0,	/**< invalid object, must be zero to detect unitilized value */
 	eRelpObj_Engine = 1,
+	eRelpObj_Frame = 2
 } relpObjID_t;
 
 
@@ -50,6 +51,9 @@ typedef enum relpObjID_e {
  */
 #define BEGIN_RELP_OBJ relpObjID_t objID
 
+/* the core intializer to call on top of each constructure (right after the calloc) */
+#define RELP_CORE_CONSTRUCTOR(pObj, objType) \
+	(pObj)->objID = eRelpObj_##objType
 
 /* the RELP engine object 
  * Having a specific engine object enables multiple plugins to call the
@@ -84,6 +88,7 @@ typedef struct relpEngine_s {
 
 #define RELP_RET_OK		ERRCODE_BASE + 0	/**< everything went well, no error */
 #define RELP_RET_OUT_OF_MEMORY	ERRCODE_BASE + 1	/**< out of memory occured */
+#define RELP_RET_INVALID_FRAME	ERRCODE_BASE + 2	/**< relp frame received is invalid */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
