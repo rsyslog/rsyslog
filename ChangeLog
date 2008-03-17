@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.12.3 (rgerhards), 2008-03-??
+Version 3.12.3 (rgerhards), 2008-03-17
 - added advanced flow control for congestion cases (mode depending on message
   source and its capablity to be delayed without bad side effects)
 - bugfix: $ModDir should not be reset on $ResetConfig - this can cause a lot
@@ -13,6 +13,7 @@ Version 3.12.3 (rgerhards), 2008-03-??
 - bugfix: memory leak in imfile
 - bugfix: duplicate public symbol in omfwd and omgssapi could lead to
   segfault. thanks to varmojfekoj for the patch.
+- bugfix: rsyslogd aborted on sigup - thanks to varmojfekoj for the patch
 - some more internal cleanup ;)
 ---------------------------------------------------------------------------
 Version 3.12.2 (rgerhards), 2008-03-13
