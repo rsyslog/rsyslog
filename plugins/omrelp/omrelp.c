@@ -42,7 +42,6 @@
 #include <unistd.h>
 #include <relp.h>
 #include <relpclt.h>
-#include <pthread.h>
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -462,7 +461,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 */
 
 	/* create our relp client  */
-	CHKiRet(relpCltConstruct(&pData->pRelpClt)); /* we use CHKiRet as librelp has a similar return value range */
+	CHKiRet(relpCltConstruct(&pData->pRelpClt, pRelpEngine)); /* we use CHKiRet as librelp has a similar return value range */
 	/* and set callbacks */
 #if 0 // TODO: the same for relp
 	CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, openConn));
