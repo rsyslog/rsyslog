@@ -46,7 +46,9 @@ typedef enum relpObjID_e {
 	eRelpObj_Sess = 2,
 	eRelpObj_Frame = 3,
 	eRelpObj_Clt = 4,
-	eRelpObj_Srv = 5
+	eRelpObj_Srv = 5,
+	eRelpObj_Sendq = 6,
+	eRelpObj_Sendbuf = 7
 } relpObjID_t;
 
 

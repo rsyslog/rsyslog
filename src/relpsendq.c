@@ -1,4 +1,4 @@
-/* The RELPSESS object.
+/* The relp sendqueue object.
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
@@ -15,7 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with librelp.  If not, see <http://www.gnu.org/licenses/>.
+ * along with Librelp.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  *
@@ -30,39 +30,53 @@
  * free software while at the same time obtaining some funding for further
  * development.
  */
-#ifndef RELPSESS_H_INCLUDED
-#define	RELPSESS_H_INCLUDED
-
-#include "relpframe.h"
+#include "config.h"
+#include <stdlib.h>
+#include "relp.h"
 #include "relpsendq.h"
-#include "sendbuf.h"
-
-/* unacked msgs linked list */
-typedef struct replSessUnacked_s {
-	struct replSessUnacked_s *pNext;
-	struct replSessUnacked_s *pPrev;
-	relpTxnr_t txnr;	/**< txnr of unacked message */
-	relpSendbuf_t pSendbuf; /**< the unacked message */
-} replSessUnacked_t;
-
-/* relp session state */
-typedef enum relpSessState_e {
-	eRelpSessState_INVALID = 0,
-	eRelpSessState_PRE_INIT = 1,
-	eRelpSessState_PRE_GO = 2,
-	eRelpSessState_RUNNING = 3,
-	eRelpSessState_SHUTDOWN = 4
-} relpSessState_t;
 
 
-/* the RELPSESS object 
- * rgerhards, 2008-03-16
+/** Construct a RELP sendq instance
+ * This is the first thing that a caller must do before calling any
+ * RELP function. The relp sendq must only destructed after all RELP
+ * operations have been finished.
  */
-typedef struct relpSess_s {
-	BEGIN_RELP_OBJ;
-	relpTxnr_t nxtTxnr;	/**< next txnr to be used for commands */
-	relpSessState_t sessState; /**< state of our session */
-	relpSendq_t *pSendq; /**< our send queue */
-} relpSess_t;
+relpRetVal
+relpSendqConstruct(relpSendq_t **ppThis)
+{
+	relpSendq_t *pThis;
 
-#endif /* #ifndef RELPSESS_H_INCLUDED */
+	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
+	if((pThis = calloc(1, sizeof(relpSendq_t))) == NULL) {
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+
+	RELP_CORE_CONSTRUCTOR(pThis, Sendq);
+
+	*ppThis = pThis;
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/** Destruct a RELP sendq instance
+ */
+relpRetVal
+relpSendqDestruct(relpSendq_t **ppThis)
+{
+	relpSendq_t *pThis;
+
+	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
+	pThis = *ppThis;
+	RELPOBJ_assert(pThis, Engine);
+
+	/* done with de-init work, now free sendq object itself */
+	free(pThis);
+	*ppThis = NULL;
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}

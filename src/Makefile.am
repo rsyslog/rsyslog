@@ -12,11 +12,18 @@ librelp_la_SOURCES = \
 	relpsess.h \
 	relpframe.c \
 	relpframe.h \
+	relpsendq.c \
+	relpsendq.h \
+	sendbuf.c \
+	sendbuf.h \
 	relpclt.c \
-	relpclt.h
+	relpclt.h \
+	relpsrv.c \
+	relpsrv.h
 librelp_la_CPPFLAGS =
 librelp_la_LIBADD = 
 
 include_HEADERS = \
 	relp.h \
-	relpclt.h
+	relpclt.h \
+	relpsrv.h

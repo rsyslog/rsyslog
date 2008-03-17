@@ -1,4 +1,4 @@
-/* The RELPSESS object.
+/* The RELPSENDBUF object.
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
@@ -30,39 +30,23 @@
  * free software while at the same time obtaining some funding for further
  * development.
  */
-#ifndef RELPSESS_H_INCLUDED
-#define	RELPSESS_H_INCLUDED
+#ifndef RELPSENDBUF_H_INCLUDED
+#define	RELPSENDBUF_H_INCLUDED
 
-#include "relpframe.h"
-#include "relpsendq.h"
-#include "sendbuf.h"
-
-/* unacked msgs linked list */
-typedef struct replSessUnacked_s {
-	struct replSessUnacked_s *pNext;
-	struct replSessUnacked_s *pPrev;
-	relpTxnr_t txnr;	/**< txnr of unacked message */
-	relpSendbuf_t pSendbuf; /**< the unacked message */
-} replSessUnacked_t;
-
-/* relp session state */
-typedef enum relpSessState_e {
-	eRelpSessState_INVALID = 0,
-	eRelpSessState_PRE_INIT = 1,
-	eRelpSessState_PRE_GO = 2,
-	eRelpSessState_RUNNING = 3,
-	eRelpSessState_SHUTDOWN = 4
-} relpSessState_t;
-
-
-/* the RELPSESS object 
+/* the RELPSENDBUF object 
  * rgerhards, 2008-03-16
  */
-typedef struct relpSess_s {
+typedef struct relpSendbuf_s {
 	BEGIN_RELP_OBJ;
-	relpTxnr_t nxtTxnr;	/**< next txnr to be used for commands */
-	relpSessState_t sessState; /**< state of our session */
-	relpSendq_t *pSendq; /**< our send queue */
-} relpSess_t;
+	relpOctet_t *pData; /**< the buffer, as it can be put on the wire */
+	size_t lenData;
+	size_t bufPtr; /**< multi-purpose, e.g. tracks sent octets when multi-send
+	 	            send() calls are required. */
+} relpSendbuf_t;
 
-#endif /* #ifndef RELPSESS_H_INCLUDED */
+
+/* prototypes */
+relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis);
+relpRetVal relpSendbufDestruct(relpSendbuf_t **ppThis);
+
+#endif /* #ifndef RELPSENDBUF_H_INCLUDED */
