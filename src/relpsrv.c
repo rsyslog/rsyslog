@@ -33,6 +33,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
 #include "tcp.h"

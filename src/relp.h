@@ -71,7 +71,7 @@ typedef enum relpObjID_e {
 typedef struct relpEngSrvLst_s {
 	struct relpEngSrvLst_s *pPrev;
 	struct relpEngSrvLst_s *pNext;
-	struct replSrv_s *pSrv;
+	struct relpSrv_s *pSrv;
 } relpEngSrvLst_t;
 
 
@@ -79,7 +79,7 @@ typedef struct relpEngSrvLst_s {
 typedef struct relpEngSessLst_s {
 	struct relpEngSessLst_s *pPrev;
 	struct relpEngSessLst_s *pNext;
-	struct replSess_s *pSess;
+	struct relpSess_s *pSess;
 } relpEngSessLst_t;
 
 

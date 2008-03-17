@@ -47,6 +47,10 @@ typedef struct relpSrv_s {
 } relpSrv_t;
 
 
+/* macros for quick memeber access */
+#define relpSrvGetNumLstnSocks(pThis) (relpTcpGetNumSocks((pThis)->pTcp))
+#define relpSrvGetLstnSock(pThis, i)  (relpTcpGetSock((pThis)->pTcp, i))
+
 /* prototypes */
 relpRetVal relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpSrvDestruct(relpSrv_t **ppThis);

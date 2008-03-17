@@ -32,9 +32,12 @@
  */
 #include "config.h"
 #include <stdlib.h>
+#include <sys/select.h>
+#include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
 #include "relpsess.h"
+#include "dbllinklist.h"
 
 
 /* DESCRIPTION OF THE RELP PROTOCOL
@@ -185,15 +188,23 @@
 static relpRetVal
 relpEngineAddToSrvList(relpEngine_t *pThis, relpSrv_t *pSrv)
 {
+	relpEngSrvLst_t *pSrvLstEntry;
+
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	RELPOBJ_assert(pSrv, Srv);
 
+	if((pSrvLstEntry = calloc(1, sizeof(relpEngSrvLst_t))) == NULL)
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+
+	pSrvLstEntry->pSrv = pSrv;
+
 	pthread_mutex_lock(&pThis->mutSrvLst);
-	DLL_Add(pSrv, pThis->pSrvLstRoot, pThis->pSrvLstLast);
+	DLL_Add(pSrvLstEntry, pThis->pSrvLstRoot, pThis->pSrvLstLast);
 	++pThis->lenSrvLst;
 	pthread_mutex_unlock(&pThis->mutSrvLst);
 
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -205,15 +216,23 @@ relpEngineAddToSrvList(relpEngine_t *pThis, relpSrv_t *pSrv)
 static relpRetVal
 relpEngineAddToSess(relpEngine_t *pThis, relpSess_t *pSess)
 {
+	relpEngSessLst_t *pSessLstEntry;
+
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 	RELPOBJ_assert(pSess, Sess);
 
+	if((pSessLstEntry = calloc(1, sizeof(relpEngSessLst_t))) == NULL)
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+
+	pSessLstEntry->pSess = pSess;
+
 	pthread_mutex_lock(&pThis->mutSessLst);
-	DLL_Add(pSess, pThis->pSessLstRoot, pThis->pSessLstLast);
+	DLL_Add(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
 	++pThis->lenSessLst;
 	pthread_mutex_unlock(&pThis->mutSessLst);
 
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -274,6 +293,7 @@ finalize_it:
 }
 
 
+static void dbgprintDummy(char __attribute__((unused)) *fmt, ...) {}
 /* set a pointer to the debug function inside the engine. To reset a debug
  * function that already has been set, provide a NULL function pointer.
  * rgerhards, 2008-03-17
@@ -284,7 +304,7 @@ relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __at
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 
-	pThis->dbgprint = dbgprint;
+	pThis->dbgprint = (dbgprint == NULL) ? dbgprintDummy : dbgprint;
 	LEAVE_RELPFUNC;
 }
 
@@ -320,14 +340,67 @@ finalize_it:
  * Note that the engine MUST be running even if the caller intends to just SEND messages.
  * This is necessary because relp is a full-duplex protcol where acks and commands (e.g.
  * "abort" may be received at any time.
+ *
+ * This function is implemented as a select() server. I know that epoll() wold probably
+ * be much better, but I implement the first version as select() because of portability.
+ * Once everything has matured, we may begin to provide performance-optimized versions for
+ * the several flavours of enhanced OS APIs.
  * rgerhards, 2008-03-17
  */
 relpRetVal
 relpEngineRun(relpEngine_t *pThis)
 {
+	relpEngSrvLst_t *pSrvEtry;
+	int iSocks;
+	int sock;
+	int maxfds;
+	int nfds;
+	int i;
+	int iTCPSess;
+	fd_set readfds;
+
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
 
+	/* this is an endless loop - TODO: decide how to terminate */
+	while(1) {
+	        maxfds = 0;
+	        FD_ZERO (&readfds);
+
+		/* Add the listen sockets to the list of read descriptors.  */
+		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
+			for(iSocks = 0 ; iSocks < relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
+				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
+				FD_SET(sock, &readfds);
+				if(sock > maxfds) maxfds = sock;
+			}
+		}
+
+		/* now add all sessions */
+
+		if(pThis->dbgprint != dbgprintDummy) {
+			pThis->dbgprint("***<librelp> calling select, active file descriptors (max %d): ", maxfds);
+			for(nfds = 0; nfds <= maxfds; ++nfds)
+				if(FD_ISSET(nfds, &readfds))
+					dbgprintf("%d ", nfds);
+			pThis->dbgprint("\n");
+		}
+
+		/* wait for io to become ready */
+		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+	
+		/* and then start again with the servers (new connection request) */
+		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
+			for(iSocks = 0 ; iSocks < relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
+				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
+				if (FD_ISSET(sock, &readfds)) {
+					pThis->dbgprint("new connect on RELP socket #%d\n", sock);
+					/* TODO: session accept! */
+					--nfds; /* indicate we have processed one */
+				}
+			}
+		}
+	}
 
 	LEAVE_RELPFUNC;
 }

@@ -13,6 +13,8 @@ librelp_la_SOURCES = \
 	relpsess.h \
 	relpframe.c \
 	relpframe.h \
+	tcp.c \
+	tcp.h \
 	sendq.c \
 	sendq.h \
 	sendbuf.c \

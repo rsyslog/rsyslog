@@ -32,6 +32,14 @@
  */
 #include "config.h"
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <assert.h>
 #include "relp.h"
 #include "tcp.h"
 
@@ -54,6 +62,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine)
 
 	RELP_CORE_CONSTRUCTOR(pThis, Tcp);
 	pThis->pEngine = pEngine;
+	pThis->iSessMax = 500;	/* default max nbr of sessions - TODO: make configurable -- rgerhards, 2008-03-17*/
 
 	*ppThis = pThis;
 
@@ -107,12 +116,12 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	pLstnPt = (pLstnPort == NULL) ? RELP_DFTL_PORT : pLstnPort;
+	pLstnPt = (pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pLstnPort;
 	dbgprintf("creating relp tcp listen socket on port %s\n", pLstnPt);
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE;
-        hints.ai_family = family;
+        hints.ai_family = PF_UNSPEC; /* TODO: permit to configure IPv4/v6 only! */
         hints.ai_socktype = SOCK_STREAM;
 
         error = getaddrinfo(NULL, pLstnPt, &hints, &res);
@@ -155,9 +164,8 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
                 	}
                 }
 #endif
-       		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
-			       (char *) &on, sizeof(on)) < 0 ) {
-			errmsg.LogError(NO_ERRCODE, "TCP setsockopt(REUSEADDR)");
+       		if(setsockopt(*s, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
+			pThis->pEngine->dbgprint("error %d setting relp/tcp socket option\n", errno);
                         close(*s);
 			*s = -1;
 			continue;
@@ -201,7 +209,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
 			pThis->pEngine->dbgprint("listen with a backlog of %d failed - retrying with default of 32.",
 				    pThis->iSessMax / 10 + 5);
 			if(listen(*s, 32) < 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP listen, suspending tcp inet");
+				pThis->pEngine->dbgprint("relp listen error %d, suspending\n", errno);
 	                	close(*s);
 				*s = -1;
                		        continue;
@@ -220,12 +228,13 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
 		 	"- this may or may not be an error indication.\n", *pThis->socks, maxs);
 
         if(*pThis->socks == 0) {
-		errmsg.LogError(NO_ERRCODE, "No RELP TCP listen socket could successfully be initialized, "
+		pThis->pEngine->dbgprint("No RELP TCP listen socket could successfully be initialized, "
 			 "message reception via RELP disabled.\n");
         	free(pThis->socks);
 		ABORT_FINALIZE(RELP_RET_COULD_NOT_BIND);
 	}
 
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 
