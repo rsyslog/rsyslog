@@ -418,7 +418,7 @@ relpEngineRun(relpEngine_t *pThis)
 			pThis->dbgprint("***<librelp> calling select, active file descriptors (max %d): ", maxfds);
 			for(nfds = 0; nfds <= maxfds; ++nfds)
 				if(FD_ISSET(nfds, &readfds))
-					dbgprintf("%d ", nfds);
+					pThis->dbgprint("%d ", nfds);
 			pThis->dbgprint("\n");
 		}
 

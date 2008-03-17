@@ -160,7 +160,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
 	RELPOBJ_assert(pThis, Tcp);
 
 	pLstnPt = (pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pLstnPort;
-	dbgprintf("creating relp tcp listen socket on port %s\n", pLstnPt);
+	pThis->pEngine->dbgprint("creating relp tcp listen socket on port %s\n", pLstnPt);
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE;
@@ -267,7 +267,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
                freeaddrinfo(res);
 
 	if(*pThis->socks != maxs)
-		dbgprintf("We could initialize %d RELP TCP listen sockets out of %d we received "
+		pThis->pEngine->dbgprint("We could initialize %d RELP TCP listen sockets out of %d we received "
 		 	"- this may or may not be an error indication.\n", *pThis->socks, maxs);
 
         if(*pThis->socks == 0) {
