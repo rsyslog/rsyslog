@@ -42,6 +42,7 @@
  */
 typedef struct relpSendqe_s {
 	BEGIN_RELP_OBJ;
+	relpEngine_t *pEngine;
 	struct relpSendqe_s *pNext;
 	struct relpSendqe_s *pPrev;
 	relpSendbuf_t *pBuf; /* our send buffer */
@@ -53,6 +54,7 @@ typedef struct relpSendqe_s {
  */
 typedef struct relpSendq_s {
 	BEGIN_RELP_OBJ;
+	relpEngine_t *pEngine;
 	relpSendqe_t *pRoot;
 	relpSendqe_t *pLast;
 	pthread_mutex_t mut;
@@ -60,7 +62,7 @@ typedef struct relpSendq_s {
 
 
 /* prototypes */
-relpRetVal relpSendqConstruct(relpSendq_t **ppThis);
-relpRetVal relpSendqDestruct(relpSendq_t **ppThis);
+static relpRetVal relpSendqeConstruct(relpSendqe_t **ppThis, relpEngine_t *pEngine);
+relpRetVal relpSendqConstruct(relpSendq_t **ppThis, relpEngine_t *pEngine);
 
 #endif /* #ifndef RELPSENDQ_H_INCLUDED */

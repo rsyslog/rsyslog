@@ -57,10 +57,17 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	RELP_CORE_CONSTRUCTOR(pThis, Sess);
 	pThis->pEngine = pEngine;
 	pThis->pSrv = pSrv;
+	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
 
 	*ppThis = pThis;
 
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pThis != NULL) {
+			relpSessDestruct(&pThis);
+		}
+	}
+
 	LEAVE_RELPFUNC;
 }
 
@@ -77,6 +84,8 @@ relpSessDestruct(relpSess_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
 
+	if(pThis->pSendq != NULL)
+		relpSendqDestruct(&pThis->pSendq);
 	if(pThis->pTcp != NULL)
 		relpTcpDestruct(&pThis->pTcp);
 	/* done with de-init work, now free object itself */

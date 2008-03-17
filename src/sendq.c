@@ -46,7 +46,7 @@
  * operations have been finished.
  */
 static relpRetVal
-relpSendqeConstruct(relpSendqe_t **ppThis)
+relpSendqeConstruct(relpSendqe_t **ppThis, relpEngine_t *pEngine)
 {
 	relpSendqe_t *pThis;
 
@@ -57,6 +57,7 @@ relpSendqeConstruct(relpSendqe_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Sendqe);
+	pThis->pEngine = pEngine;
 
 	*ppThis = pThis;
 
@@ -96,7 +97,7 @@ finalize_it:
  * operations have been finished.
  */
 relpRetVal
-relpSendqConstruct(relpSendq_t **ppThis)
+relpSendqConstruct(relpSendq_t **ppThis, relpEngine_t *pEngine)
 {
 	relpSendq_t *pThis;
 
@@ -107,6 +108,7 @@ relpSendqConstruct(relpSendq_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Sendq);
+	pThis->pEngine = pEngine;
 	pthread_mutex_init(&pThis->mut, NULL);
 
 	*ppThis = pThis;
@@ -152,7 +154,7 @@ relpSendqAddBuf(relpSendq_t *pThis, relpSendbuf_t *pBuf)
 	RELPOBJ_assert(pThis, Sendq);
 	RELPOBJ_assert(pBuf, Sendbuf);
 
-	CHKRet(relpSendqeConstruct(&pEntry));
+	CHKRet(relpSendqeConstruct(&pEntry, pThis->pEngine));
 	pEntry->pBuf = pBuf;
 
 	pthread_mutex_lock(&pThis->mut);
