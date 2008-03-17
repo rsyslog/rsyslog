@@ -9,8 +9,6 @@ lib_LTLIBRARIES = librelp.la
 librelp_la_SOURCES = \
 	relp.c \
 	relp.h \
-	scinit.c \
-	scinit.h \
 	relpsess.c \
 	relpsess.h \
 	relpframe.c \
@@ -24,9 +22,10 @@ librelp_la_SOURCES = \
 	relpclt.c \
 	relpclt.h \
 	relpsrv.c \
-	relpsrv.h
-	relptcp.c \
-	relptcp.h \
+	relpsrv.h \
+	scgo.c \
+	scinit.c \
+	scinit.h \
 	dbllinklist.h \
 	cmdif.h
 librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS)

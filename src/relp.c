@@ -38,6 +38,7 @@
 #include "relpsrv.h"
 #include "relpframe.h"
 #include "relpsess.h"
+#include "cmdif.h"
 #include "dbllinklist.h"
 
 
@@ -83,7 +84,7 @@
  * HEADER         = TXNR SP COMMAND SP DATALEN
  * TXNR           = NUMBER ; relp transaction number, monotonically increases
  * DATALEN        = NUMBER
- * #old:COMMAND        = "init" / "go" / "msg" / "close" / "rsp" / "abort" ; max length = 32
+ * #old:COMMAND        = "init" / "go" / "syslog" / "close" / "rsp" / "abort" ; max length = 32
  * COMMAND        = 1*32ALPHA
  * TRAILER        = LF ; to detect framing errors and enhance human readibility
  * ALPHA          = letter ; ('a'..'z', 'A'..'Z')
@@ -170,8 +171,8 @@
  *
  * Message Transmission
  * C                                          S
- * cmd: "msg", data: msgtext         -----> (processes message)
- * (indicates msg as processed)      <----- cmd: "rsp", data OK/Error
+ * cmd: "syslog", data: syslogmsg    -----> (processes message)
+ * (indicates syslog as processed)   <----- cmd: "rsp", data OK/Error
  *
  * Session Termination
  * C                                          S
@@ -468,6 +469,14 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 }
 
 
+/* as a quick hack, we provide our command handler prototypes here
+ * right in front of the dispatcher. This saves us many otherwise-unneeded
+ * header files (and will go away if we make them dynamically loadable).
+ * rgerhards, 2008-03-17
+ */
+PROTOTYPEcommand(S, Go)
+PROTOTYPEcommand(S, Syslog)
+
 /* process an incoming command
  * This function receives a RELP frame and dispatches it to the correct
  * command handler. If the command is unknown, it responds with an error
@@ -479,7 +488,6 @@ relpRetVal
 relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame)
 {
 	ENTER_RELPFUNC;
-printf("relp oid %d\n", pThis->objID);
 	RELPOBJ_assert(pThis, Engine);
 	RELPOBJ_assert(pSess, Sess);
 	RELPOBJ_assert(pFrame, Frame);
@@ -492,7 +500,9 @@ printf("relp oid %d\n", pThis->objID);
 	if(!strcmp(pFrame->cmd, "init")) {
 		CHKRet(relpSCInit(pFrame, pSess));
 	} else if(!strcmp(pFrame->cmd, "go")) {
-		pThis->dbgprint("relp will be calling go command");
+		CHKRet(relpSCGo(pFrame, pSess));
+	} else if(!strcmp(pFrame->cmd, "syslog")) {
+		CHKRet(relpSCSyslog(pFrame, pSess));
 	} else {
 		pThis->dbgprint("invalid or not supported relp command '%s'\n", pFrame->cmd);
 		ABORT_FINALIZE(RELP_RET_INVALID_CMD);
