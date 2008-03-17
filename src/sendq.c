@@ -33,7 +33,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include "relp.h"
-#include "relpsendq.h"
+#include "sendq.h"
 
 
 /** Construct a RELP sendq instance

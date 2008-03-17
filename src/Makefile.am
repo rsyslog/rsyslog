@@ -12,8 +12,8 @@ librelp_la_SOURCES = \
 	relpsess.h \
 	relpframe.c \
 	relpframe.h \
-	relpsendq.c \
-	relpsendq.h \
+	sendq.c \
+	sendq.h \
 	sendbuf.c \
 	sendbuf.h \
 	relpclt.c \

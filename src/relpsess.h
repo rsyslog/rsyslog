@@ -34,7 +34,7 @@
 #define	RELPSESS_H_INCLUDED
 
 #include "relpframe.h"
-#include "relpsendq.h"
+#include "sendq.h"
 #include "sendbuf.h"
 
 /* unacked msgs linked list */
