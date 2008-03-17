@@ -92,7 +92,7 @@ finalize_it:
  * rgerhards, 2008-03-16
  */
 relpRetVal
-relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpEngine_t *pEngine)
+relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess)
 {
 	relpFrame_t *pThis;
 
@@ -106,7 +106,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpEngine_t *pEn
 	 * of a new frame. -- rgerhards, 2008-03-17
 	 */
 	if(pThis == NULL) {
-		CHKRet(relpFrameConstruct(&pThis, pEngine));
+		CHKRet(relpFrameConstruct(&pThis, pSess->pEngine));
 		pThis->rcvState = eRelpFrameRcvState_BEGIN_FRAME;
 	}
 
@@ -174,9 +174,9 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpEngine_t *pEn
 			if(c != '\n')
 				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 			pThis->rcvState = eRelpFrameRcvState_FINISHED;
-			/* TODO: submit frame to processor */
-			iRet = relpEngineDispatchFrame(pEngine, pThis);
-			/* do not abort, because we need to destruct the frame */
+			/* submit frame to processor */
+			iRet = relpEngineDispatchFrame(pSess->pEngine, pSess, pThis);
+			/* do not abort in any case, because we need to destruct the frame! */
 			relpFrameDestruct(&pThis);
 			break;
 		case eRelpFrameRcvState_FINISHED:

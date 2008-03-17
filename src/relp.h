@@ -179,7 +179,7 @@ relpRetVal relpEngineRun(relpEngine_t *pThis);
 
 #ifdef RELP_DO_INTERNAL_PROTOTYPES
 #	include "relpframe.h"
-	relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpFrame_t *pFrame);
+	relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame);
 #endif /* #ifdef RELP_DO_INTERNAL_PROTOTYPES */
 
 #endif /* #ifndef RELP_H_INCLUDED */

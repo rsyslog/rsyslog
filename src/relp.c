@@ -476,10 +476,12 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpEngineDispatchFrame(relpEngine_t *pThis, relpFrame_t *pFrame)
+relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame)
 {
 	ENTER_RELPFUNC;
+printf("relp oid %d\n", pThis->objID);
 	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pSess, Sess);
 	RELPOBJ_assert(pFrame, Frame);
 
 	pThis->dbgprint("relp engine is dispatching frame with command '%s'\n", pFrame->cmd);
@@ -488,7 +490,7 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpFrame_t *pFrame)
 	 * loaded and, when so, should come from a linked list. TODO -- rgerhards, 2008-03-17
 	 */
 	if(!strcmp(pFrame->cmd, "init")) {
-		pThis->dbgprint("relp will be calling init command");
+		CHKRet(relpSCInit(pFrame, pSess));
 	} else if(!strcmp(pFrame->cmd, "go")) {
 		pThis->dbgprint("relp will be calling go command");
 	} else {

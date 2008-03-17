@@ -1,4 +1,4 @@
-/* The RELPFRAME object.
+/* The command handler for server-based "init" (after reception)
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
@@ -15,7 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with librelp.  If not, see <http://www.gnu.org/licenses/>.
+ * along with Librelp.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  *
@@ -30,39 +30,17 @@
  * free software while at the same time obtaining some funding for further
  * development.
  */
-#ifndef RELPFRAME_H_INCLUDED
-#define	RELPFRAME_H_INCLUDED
+#include "config.h"
+#include <stdlib.h>
+#include <assert.h>
+#include "relp.h"
+#include "cmdif.h"
+#include "scinit.h"
 
-/* state the relpframe may have during reception of messages */
-typedef enum relpFrameRcvStates_e {
-	eRelpFrameRcvState_BEGIN_FRAME = 0,
-	eRelpFrameRcvState_IN_TXNR = 1,
-	eRelpFrameRcvState_IN_CMD = 2,
-	eRelpFrameRcvState_IN_DATALEN = 3,
-	eRelpFrameRcvState_IN_DATA = 4,
-	eRelpFrameRcvState_IN_TRAILER = 5,
-	eRelpFrameRcvState_FINISHED = 6	 /**< the frame is fully received and ready for processing */
-} relpFrameRcvState_t;
-
-
-/* the RELPFRAME object 
- * rgerhards, 2008-03-16
+/* process the "init" command
+ * rgerhards, 2008-03-17
  */
-typedef struct relpFrame_s {
-	BEGIN_RELP_OBJ;
-	relpEngine_t *pEngine;
-	relpFrameRcvState_t rcvState;
-	int iRcv;		/**< a multi-purpose field index used during frame reception */
-	relpTxnr_t txnr;	/**< the current transaction (sequence) number */
-	relpOctet_t cmd[32+1];	/**< the current command (+1 for C string terminator) */
-	int lenData;		/**< length of data part of frame */
-	relpOctet_t *pData;	/**< frame data part */
-	
-} relpFrame_t;
-
-#include "relpsess.h" /* this needs to be done after relpFrame_t is defined! */
-
-/* prototypes */
-relpRetVal relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess);
-
-#endif /* #ifndef RELPFRAME_H_INCLUDED */
+BEGINcommand(S, Init)
+	ENTER_RELPFUNC;
+	pSess->pEngine->dbgprint("in init command handler\n");
+ENDcommand

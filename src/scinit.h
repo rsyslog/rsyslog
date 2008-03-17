@@ -1,4 +1,4 @@
-/* The RELPFRAME object.
+/* Thre relp scinit command handler.
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
@@ -30,39 +30,10 @@
  * free software while at the same time obtaining some funding for further
  * development.
  */
-#ifndef RELPFRAME_H_INCLUDED
-#define	RELPFRAME_H_INCLUDED
-
-/* state the relpframe may have during reception of messages */
-typedef enum relpFrameRcvStates_e {
-	eRelpFrameRcvState_BEGIN_FRAME = 0,
-	eRelpFrameRcvState_IN_TXNR = 1,
-	eRelpFrameRcvState_IN_CMD = 2,
-	eRelpFrameRcvState_IN_DATALEN = 3,
-	eRelpFrameRcvState_IN_DATA = 4,
-	eRelpFrameRcvState_IN_TRAILER = 5,
-	eRelpFrameRcvState_FINISHED = 6	 /**< the frame is fully received and ready for processing */
-} relpFrameRcvState_t;
-
-
-/* the RELPFRAME object 
- * rgerhards, 2008-03-16
- */
-typedef struct relpFrame_s {
-	BEGIN_RELP_OBJ;
-	relpEngine_t *pEngine;
-	relpFrameRcvState_t rcvState;
-	int iRcv;		/**< a multi-purpose field index used during frame reception */
-	relpTxnr_t txnr;	/**< the current transaction (sequence) number */
-	relpOctet_t cmd[32+1];	/**< the current command (+1 for C string terminator) */
-	int lenData;		/**< length of data part of frame */
-	relpOctet_t *pData;	/**< frame data part */
-	
-} relpFrame_t;
-
-#include "relpsess.h" /* this needs to be done after relpFrame_t is defined! */
+#ifndef RELP_SCINIT_H_INCLUDED
+#define	RELP_SCINIT_H_INCLUDED
 
 /* prototypes */
-relpRetVal relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess);
+PROTOTYPEcommand(S, Init)
 
-#endif /* #ifndef RELPFRAME_H_INCLUDED */
+#endif /* #ifndef RELP_SCINIT_H_INCLUDED */

@@ -34,7 +34,6 @@
 #define	RELPSESS_H_INCLUDED
 
 #include "relpsrv.h"
-#include "relpframe.h"
 #include "sendq.h"
 #include "sendbuf.h"
 
@@ -64,7 +63,7 @@ typedef struct relpSess_s {
 	relpEngine_t *pEngine;
 	relpSrv_t *pSrv;	/**< the server we belong to */
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
-	relpFrame_t *pCurrRcvFrame; /**< the current receive frame (a buffer) */
+	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
 	relpTxnr_t nxtTxnr;	/**< next txnr to be used for commands */
 	relpSessState_t sessState; /**< state of our session */
 	relpSendq_t *pSendq; /**< our send queue */

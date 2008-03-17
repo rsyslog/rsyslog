@@ -36,6 +36,7 @@
 #include <assert.h>
 #include "relp.h"
 #include "relpsess.h"
+#include "relpframe.h"
 
 /** Construct a RELP sess instance
  */
@@ -46,6 +47,9 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
+	RELPOBJ_assert(pEngine, Engine);
+	RELPOBJ_assert(pSrv, Srv);
+
 	if((pThis = calloc(1, sizeof(relpSess_t))) == NULL) {
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
@@ -145,7 +149,7 @@ pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", lenBuf, rcvB
 	} else {
 		/* we have regular data, which we now can process */
 		for(i = 0 ; i < lenBuf ; ++i) {
-			CHKRet(relpFrameProcessOctetRcvd(&pThis->pCurrRcvFrame, rcvBuf[i], pThis->pEngine));
+			CHKRet(relpFrameProcessOctetRcvd(&pThis->pCurrRcvFrame, rcvBuf[i], pThis));
 		}
 	}
 
