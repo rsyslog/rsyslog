@@ -369,7 +369,7 @@ relpEngineRun(relpEngine_t *pThis)
 
 		/* Add the listen sockets to the list of read descriptors.  */
 		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
-			for(iSocks = 0 ; iSocks < relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
+			for(iSocks = 1 ; iSocks <= relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
 				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
 				FD_SET(sock, &readfds);
 				if(sock > maxfds) maxfds = sock;
@@ -388,14 +388,16 @@ relpEngineRun(relpEngine_t *pThis)
 
 		/* wait for io to become ready */
 		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 	
 		/* and then start again with the servers (new connection request) */
 		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
-			for(iSocks = 0 ; iSocks < relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
+			for(iSocks = 1 ; iSocks <= relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
 				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
 				if (FD_ISSET(sock, &readfds)) {
 					pThis->dbgprint("new connect on RELP socket #%d\n", sock);
-					/* TODO: session accept! */
+					relpSessAcceptAndConstruct(pSrvEtry->pSrv, sock);
+					/* TODO: check return code! */
 					--nfds; /* indicate we have processed one */
 				}
 			}

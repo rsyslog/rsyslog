@@ -33,6 +33,7 @@
 #ifndef RELPSESS_H_INCLUDED
 #define	RELPSESS_H_INCLUDED
 
+#include "relpsrv.h"
 #include "relpframe.h"
 #include "sendq.h"
 #include "sendbuf.h"
@@ -60,9 +61,17 @@ typedef enum relpSessState_e {
  */
 typedef struct relpSess_s {
 	BEGIN_RELP_OBJ;
+	relpEngine_t *pEngine;
+	relpSrv_t *pSrv;	/**< the server we belong to */
+	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	relpTxnr_t nxtTxnr;	/**< next txnr to be used for commands */
 	relpSessState_t sessState; /**< state of our session */
 	relpSendq_t *pSendq; /**< our send queue */
 } relpSess_t;
+
+/* prototypes */
+relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv);
+relpRetVal relpSessDestruct(relpSess_t **ppThis);
+relpRetVal relpSessAcceptAndConstruct(relpSrv_t *pSrv, int sock);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

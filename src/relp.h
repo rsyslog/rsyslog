@@ -132,12 +132,17 @@ typedef struct relpEngine_s {
 #	define ERRCODE_BASE 10000
 #endif
 
-#define RELP_RET_OK		ERRCODE_BASE + 0	/**< everything went well, no error */
+/* we may argue if RELP_RET_OK should also be relative to ERRCODE_BASE. I have deciced against it,
+ * because if it is 0, we can use it together with other project's iRet mechanisms, which is quite
+ * useful. -- rgerhards, 2008-03-17
+ */
+#define RELP_RET_OK		0			/**< everything went well, no error */
 #define RELP_RET_OUT_OF_MEMORY	ERRCODE_BASE + 1	/**< out of memory occured */
 #define RELP_RET_INVALID_FRAME	ERRCODE_BASE + 2	/**< relp frame received is invalid */
 #define RELP_RET_PARAM_ERROR	ERRCODE_BASE + 3	/**< an (API) calling parameer is in error */
 #define RELP_RET_INVALID_PORT	ERRCODE_BASE + 4	/**< invalid port value */
 #define RELP_RET_COULD_NOT_BIND	ERRCODE_BASE + 5	/**< could not bind socket, defunct */
+#define RELP_RET_ACCEPT_ERR	ERRCODE_BASE + 6	/**< error during accept() system call */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

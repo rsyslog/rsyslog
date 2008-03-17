@@ -40,7 +40,7 @@
 /** Construct a RELP sess instance
  */
 relpRetVal
-relpSessConstruct(relpSess_t **ppThis)
+relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 {
 	relpSess_t *pThis;
 
@@ -51,7 +51,8 @@ relpSessConstruct(relpSess_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Sess);
-	/* all other initialization is done by calloc */
+	pThis->pEngine = pEngine;
+	pThis->pSrv = pSrv;
 
 	*ppThis = pThis;
 
@@ -72,10 +73,45 @@ relpSessDestruct(relpSess_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
 
+	if(pThis->pTcp != NULL)
+		relpTcpDestruct(&pThis->pTcp);
 	/* done with de-init work, now free object itself */
 	free(pThis);
 	*ppThis = NULL;
 
 finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* This accepts a new session, and, if all goes well, constructs a new
+ * session object and adds it to the engine's list of sessions.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpSessAcceptAndConstruct(relpSrv_t *pSrv, int sock)
+{
+	relpSess_t *pThis;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pSrv, Srv);
+pSrv->pEngine->dbgprint("calling relp session accept on fd %d\n", sock);
+
+	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, pSrv));
+
+	CHKRet(relpTcpAcceptConnReq(&pThis->pTcp, sock, pThis->pEngine));
+
+	/* TODO: check hostname against ACL (callback?) */
+	/* TODO: check against max# sessions */
+
+// TODO: add to server list
+
+finalize_it:
+pSrv->pEngine->dbgprint("relp session accepted with state %d\n", iRet);
+	if(iRet != RELP_RET_OK) {
+		if(pThis != NULL)
+			relpSessDestruct(&pThis);
+	}
+
 	LEAVE_RELPFUNC;
 }

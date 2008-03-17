@@ -41,18 +41,20 @@
 typedef struct relpTcp_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
-	int *socks;	/**< the socket(s) we use for this connection, element 0 has nbr of socks */
+	int sock;	/**< the socket we use for regular, single-socket, operations */
+	int *socks;	/**< the socket(s) we use for listeners, element 0 has nbr of socks */
 	int iSessMax;	/**< maximum number of sessions permitted */
 } relpTcp_t;
 
 
 /* macros for quick memeber access */
 #define relpTcpGetNumSocks(pThis) ((pThis)->socks[0])
-#define relpTcpGetSocks(pThis, i) ((pThis)->socks[i])
+#define relpTcpGetSock(pThis, i)  ((pThis)->socks[i])
 
 /* prototypes */
 relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpTcpDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort);
+relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

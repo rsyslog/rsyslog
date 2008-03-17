@@ -61,6 +61,7 @@ relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Tcp);
+	pThis->sock = -1;
 	pThis->pEngine = pEngine;
 	pThis->iSessMax = 500;	/* default max nbr of sessions - TODO: make configurable -- rgerhards, 2008-03-17*/
 
@@ -86,6 +87,11 @@ relpTcpDestruct(relpTcp_t **ppThis)
 
 	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
 
+	if(pThis->sock != -1) {
+		close(pThis->sock);
+		pThis->sock = -1;
+	}
+
 	if(pThis->socks != NULL) {
 		/* if we have some sockets at this stage, we need to close them */
 		for(i = 1 ; i <= pThis->socks[0] ; ++i)
@@ -97,6 +103,41 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	*ppThis = NULL;
 
 finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* accept an incoming connection request, sock provides the socket on which we can
+ * accept the new session.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine)
+{
+	relpTcp_t *pThis;
+	struct sockaddr_storage addr;
+	socklen_t addrlen = sizeof(addr);
+	int iNewSock = -1;
+
+	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
+
+	iNewSock = accept(sock, (struct sockaddr*) &addr, &addrlen);
+	if(iNewSock < 0) {
+		ABORT_FINALIZE(RELP_RET_ACCEPT_ERR);
+	}
+
+	/* TODO: obtain hostname, normalize (callback?), save it */
+
+	CHKRet(relpTcpConstruct(&pThis, pEngine));
+	pThis->sock = iNewSock;
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(iNewSock >= 0)
+			close(iNewSock);
+	}
+
 	LEAVE_RELPFUNC;
 }
 

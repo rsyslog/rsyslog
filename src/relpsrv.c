@@ -77,7 +77,7 @@ relpSrvDestruct(relpSrv_t **ppThis)
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	pThis = *ppThis;
-	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pThis, Srv);
 
 	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
 
@@ -105,7 +105,7 @@ relpRetVal
 relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort)
 {
 	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pThis, Srv);
 
 	/* first free old value */
 	if(pThis->pLstnPort != NULL)
@@ -131,11 +131,18 @@ relpSrvRun(relpSrv_t *pThis)
 	relpTcp_t *pTcp;
 
 	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pThis, Srv);
 
 	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine));
 	CHKRet(relpTcpLstnInit(pTcp, pThis->pLstnPort));
 		
+	pThis->pTcp = pTcp;
+
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pThis->pTcp != NULL)
+			relpTcpDestruct(&pTcp);
+	}
+
 	LEAVE_RELPFUNC;
 }
