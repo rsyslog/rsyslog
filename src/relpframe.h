@@ -50,6 +50,7 @@ typedef enum relpFrameRcvStates_e {
  */
 typedef struct relpFrame_s {
 	BEGIN_RELP_OBJ;
+	relpEngine_t *pEngine;
 	relpFrameRcvState_t rcvState;
 	int iRcv;		/**< a multi-purpose field index used during frame reception */
 	relpTxnr_t txnr;	/**< the current transaction (sequence) number */
@@ -58,5 +59,8 @@ typedef struct relpFrame_s {
 	relpOctet_t *pData;	/**< frame data part */
 	
 } relpFrame_t;
+
+/* prototypes */
+relpRetVal relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpEngine_t *pEngine);
 
 #endif /* #ifndef RELPFRAME_H_INCLUDED */

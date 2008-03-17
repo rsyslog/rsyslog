@@ -132,6 +132,8 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine)
 	CHKRet(relpTcpConstruct(&pThis, pEngine));
 	pThis->sock = iNewSock;
 
+	*ppThis = pThis;
+
 finalize_it:
 	if(iRet != RELP_RET_OK) {
 		if(iNewSock >= 0)
@@ -279,3 +281,20 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+
+/* receive data from a tcp socket
+ * The lenBuf parameter must contain the max buffer size on entry and contains
+ * the number of octets read (or -1 in case of error) on exit.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+
+	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, 0);
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}

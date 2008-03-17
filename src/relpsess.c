@@ -89,22 +89,22 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpSessAcceptAndConstruct(relpSrv_t *pSrv, int sock)
+relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 {
 	relpSess_t *pThis;
 
 	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
 	RELPOBJ_assert(pSrv, Srv);
-pSrv->pEngine->dbgprint("calling relp session accept on fd %d\n", sock);
+	assert(sock >= 0);
 
 	CHKRet(relpSessConstruct(&pThis, pSrv->pEngine, pSrv));
-
 	CHKRet(relpTcpAcceptConnReq(&pThis->pTcp, sock, pThis->pEngine));
 
 	/* TODO: check hostname against ACL (callback?) */
 	/* TODO: check against max# sessions */
 
-// TODO: add to server list
+	*ppThis = pThis;
 
 finalize_it:
 pSrv->pEngine->dbgprint("relp session accepted with state %d\n", iRet);
@@ -112,6 +112,45 @@ pSrv->pEngine->dbgprint("relp session accepted with state %d\n", iRet);
 		if(pThis != NULL)
 			relpSessDestruct(&pThis);
 	}
+
+	LEAVE_RELPFUNC;
+}
+
+
+/* receive data from a socket
+ * The following function is called when the relp engine has detected
+ * that data is available on the socket. This function reads the available
+ * data and submits it for processing.
+ * rgerhads, 2008-03-17
+ */
+relpRetVal
+relpSessRcvData(relpSess_t *pThis)
+{
+	relpOctet_t rcvBuf[RELP_RCV_BUF_SIZE];
+	ssize_t lenBuf;
+	int i;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	lenBuf = RELP_RCV_BUF_SIZE;
+	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
+
+rcvBuf[lenBuf] = '\0';
+pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", lenBuf, rcvBuf);
+	if(lenBuf == 0) {
+		ABORT_FINALIZE(RELP_RET_SESSION_CLOSED);
+	} else if (lenBuf == -1) {
+		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+	} else {
+		/* we have regular data, which we now can process */
+		for(i = 0 ; i < lenBuf ; ++i) {
+			CHKRet(relpFrameProcessOctetRcvd(&pThis->pCurrRcvFrame, rcvBuf[i], pThis->pEngine));
+		}
+	}
+
+finalize_it:
+pThis->pEngine->dbgprint("end relpSessRcvData, iRet %d\n", iRet);
 
 	LEAVE_RELPFUNC;
 }

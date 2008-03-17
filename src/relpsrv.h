@@ -49,7 +49,7 @@ typedef struct relpSrv_s {
 
 /* macros for quick memeber access */
 #define relpSrvGetNumLstnSocks(pThis) (relpTcpGetNumSocks((pThis)->pTcp))
-#define relpSrvGetLstnSock(pThis, i)  (relpTcpGetSock((pThis)->pTcp, i))
+#define relpSrvGetLstnSock(pThis, i)  (relpTcpGetLstnSock((pThis)->pTcp, i))
 
 /* prototypes */
 relpRetVal relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine);

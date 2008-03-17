@@ -48,13 +48,15 @@ typedef struct relpTcp_s {
 
 
 /* macros for quick memeber access */
-#define relpTcpGetNumSocks(pThis) ((pThis)->socks[0])
-#define relpTcpGetSock(pThis, i)  ((pThis)->socks[i])
+#define relpTcpGetNumSocks(pThis)    ((pThis)->socks[0])
+#define relpTcpGetLstnSock(pThis, i) ((pThis)->socks[i])
+#define relpTcpGetSock(pThis)        ((pThis)->sock)
 
 /* prototypes */
 relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpTcpDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine);
+relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

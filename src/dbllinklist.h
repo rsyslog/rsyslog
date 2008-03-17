@@ -38,6 +38,8 @@
  * it must also define a root and last pointer. Please note that the
  * macros are NOT thread-safe. If you intend to use them in a threaed
  * environment, you must use proper synchronization.
+ * NOTE: the caller must free the unlinked object, this is NOT done
+ * in the macro!
  */
 #define DLL_Del(pThis, pRoot, pLast) \
 	if(pThis->pPrev != NULL) \
@@ -47,8 +49,7 @@
 	if(pThis == pRoot) \
 		pRoot = pThis->pNext; \
 	if(pThis == pLast) \
-		pLast = pThis->pPrev; \
-	free(pThis);
+		pLast = pThis->pPrev;
 
 /* elements are always added to the tail of the list */
 #define DLL_Add(pThis, pRoot, pLast) \

@@ -64,14 +64,19 @@ typedef struct relpSess_s {
 	relpEngine_t *pEngine;
 	relpSrv_t *pSrv;	/**< the server we belong to */
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
+	relpFrame_t *pCurrRcvFrame; /**< the current receive frame (a buffer) */
 	relpTxnr_t nxtTxnr;	/**< next txnr to be used for commands */
 	relpSessState_t sessState; /**< state of our session */
 	relpSendq_t *pSendq; /**< our send queue */
 } relpSess_t;
 
+/* macros for quick memeber access */
+#define relpSessGetSock(pThis)  (relpTcpGetSock((pThis)->pTcp))
+
 /* prototypes */
 relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv);
 relpRetVal relpSessDestruct(relpSess_t **ppThis);
-relpRetVal relpSessAcceptAndConstruct(relpSrv_t *pSrv, int sock);
+relpRetVal relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock);
+relpRetVal relpSessRcvData(relpSess_t *pThis);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

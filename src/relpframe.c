@@ -41,7 +41,7 @@
 /** Construct a RELP frame instance
  */
 relpRetVal
-relpFrameConstruct(relpFrame_t **ppThis)
+relpFrameConstruct(relpFrame_t **ppThis, relpEngine_t *pEngine)
 {
 	relpFrame_t *pThis;
 
@@ -52,7 +52,7 @@ relpFrameConstruct(relpFrame_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Frame);
-	/* all other initialization is done by calloc */
+	pThis->pEngine = pEngine;
 
 	*ppThis = pThis;
 
@@ -86,24 +86,33 @@ finalize_it:
  * This is a state machine. The transport driver needs to pass in octets received
  * one after the other. This function builds frames and submits them for processing
  * as need arises. Please note that the frame pointed to be ppThis may change during
- * processing.
+ * processing. It may be NULL after a frame has fully be processed. On Init, the 
+ * caller can pass in a NULL pointer.
  * rgerhards, 2008-03-16
  */
 relpRetVal
-relpProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c)
+relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpEngine_t *pEngine)
 {
 	relpFrame_t *pThis;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	pThis = *ppThis;
-	RELPOBJ_assert(pThis, Frame);
+
+	/* we allow NULL pointers, as we would not like to have unprocessed frame. 
+	 * Instead, a NULL frame pointer means that we have finished the previous frame
+	 * (or did never before receive one) and so this character must be the first
+	 * of a new frame. -- rgerhards, 2008-03-17
+	 */
+	if(pThis == NULL) {
+		CHKRet(relpFrameConstruct(&pThis, pEngine));
+		pThis->rcvState = eRelpFrameRcvState_BEGIN_FRAME;
+	}
 
 	switch(pThis->rcvState) {
 		case eRelpFrameRcvState_BEGIN_FRAME:
 			if(!isdigit(c))
 				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
-			CHKRet(relpFrameConstruct(&pThis));
 			pThis->rcvState = eRelpFrameRcvState_IN_TXNR;
 			/* FALLTHROUGH */
 		case eRelpFrameRcvState_IN_TXNR:
@@ -163,7 +172,7 @@ relpProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c)
 			if(c != '\n')
 				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 			/* TODO: submit frame to processor */
-			pThis->rcvState = eRelpFrameRcvState_BEGIN_FRAME; /* next frame ;) */
+			pThis = NULL;
 			break;
 		case eRelpFrameRcvState_FINISHED:
 			assert(0); /* this shall never happen */

@@ -236,6 +236,29 @@ finalize_it:
 	LEAVE_RELPFUNC;
 }
 
+
+/* Delete an entry from our session list. The session object is destructed.
+ * rgerhards, 2008-03-17
+ */
+static relpRetVal
+relpEngineDelSess(relpEngine_t *pThis, relpEngSessLst_t *pSessLstEntry)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	assert(pSessLstEntry != NULL);
+
+	pthread_mutex_lock(&pThis->mutSessLst);
+	DLL_Del(pSessLstEntry, pThis->pSessLstRoot, pThis->pSessLstLast);
+	--pThis->lenSessLst;
+	pthread_mutex_unlock(&pThis->mutSessLst);
+
+	relpSessDestruct(&pSessLstEntry->pSess);
+	free(pSessLstEntry);
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
 /* ------------------------------ end of internal functions ------------------------------ */
 
 /** Construct a RELP engine instance
@@ -351,6 +374,10 @@ relpRetVal
 relpEngineRun(relpEngine_t *pThis)
 {
 	relpEngSrvLst_t *pSrvEtry;
+	relpEngSessLst_t *pSessEtry;
+	relpEngSessLst_t *pSessEtryNext;
+	relpSess_t *pNewSess;
+	relpRetVal localRet;
 	int iSocks;
 	int sock;
 	int maxfds;
@@ -376,8 +403,16 @@ relpEngineRun(relpEngine_t *pThis)
 			}
 		}
 
-		/* now add all sessions */
+		/* Add all sessions for reception (they all have just one socket) */
+		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
+			sock = relpSessGetSock(pSessEtry->pSess);
+			FD_SET(sock, &readfds);
+			if(sock > maxfds) maxfds = sock;
+		}
 
+		/* TODO: add send sockets (if needed) */
+
+		/* done adding all sockets */
 		if(pThis->dbgprint != dbgprintDummy) {
 			pThis->dbgprint("***<librelp> calling select, active file descriptors (max %d): ", maxfds);
 			for(nfds = 0; nfds <= maxfds; ++nfds)
@@ -394,14 +429,38 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
 			for(iSocks = 1 ; iSocks <= relpSrvGetNumLstnSocks(pSrvEtry->pSrv) ; ++iSocks) {
 				sock = relpSrvGetLstnSock(pSrvEtry->pSrv, iSocks);
-				if (FD_ISSET(sock, &readfds)) {
+				if(FD_ISSET(sock, &readfds)) {
 					pThis->dbgprint("new connect on RELP socket #%d\n", sock);
-					relpSessAcceptAndConstruct(pSrvEtry->pSrv, sock);
-					/* TODO: check return code! */
+					localRet = relpSessAcceptAndConstruct(&pNewSess, pSrvEtry->pSrv, sock);
+					if(localRet == RELP_RET_OK) {
+						localRet = relpEngineAddToSess(pThis, pNewSess);
+					}
+					/* TODO: check localret, emit error msg! */
 					--nfds; /* indicate we have processed one */
 				}
 			}
 		}
+
+		/* now check if we have some data waiting for sessions */
+		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; ) {
+			pSessEtryNext = pSessEtry->pNext; /* we need to cache this as we may delete the entry! */
+			sock = relpSessGetSock(pSessEtry->pSess);
+			if(FD_ISSET(sock, &readfds)) {
+				localRet = relpSessRcvData(pSessEtry->pSess); /* errors are handled there */
+				/* if we had an error during processing, we must shut down the session. This
+				 * is part of the protocol specification: errors are recovered by aborting the
+				 * session, which may eventually be followed by a new connect.
+				 */
+				if(localRet != RELP_RET_OK) {
+					pThis->dbgprint("relp session %d iRet %d, tearing it down\n",
+						        sock, localRet);
+					relpEngineDelSess(pThis, pSessEtry);
+				}
+				--nfds; /* indicate we have processed one */
+			}
+			pSessEtry = pSessEtryNext;
+		}
+
 	}
 
 	LEAVE_RELPFUNC;
