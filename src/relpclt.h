@@ -38,11 +38,12 @@
  */
 typedef struct relpClt_s {
 	BEGIN_RELP_OBJ;
+	relpEngine_t *pEngine;
 } relpClt_t;
 
 
 /* prototypes */
-relpRetVal relpCltConstruct(relpClt_t **ppThis);
+relpRetVal relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpCltDestruct(relpClt_t **ppThis);
 
 #endif /* #ifndef RELPCLT_H_INCLUDED */

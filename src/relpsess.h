@@ -43,7 +43,7 @@ typedef struct replSessUnacked_s {
 	struct replSessUnacked_s *pPrev;
 	relpTxnr_t txnr;	/**< txnr of unacked message */
 	relpSendbuf_t pSendbuf; /**< the unacked message */
-} replSessUnacked_t;
+} relpSessUnacked_t;
 
 /* relp session state */
 typedef enum relpSessState_e {

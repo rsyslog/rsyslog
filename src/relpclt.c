@@ -42,7 +42,7 @@
  * operations have been finished.
  */
 relpRetVal
-relpCltConstruct(relpClt_t **ppThis)
+relpCltConstruct(relpClt_t **ppThis, relpEngine_t *pEngine)
 {
 	relpClt_t *pThis;
 
@@ -53,6 +53,7 @@ relpCltConstruct(relpClt_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Clt);
+	pThis->pEngine = pEngine;
 
 	*ppThis = pThis;
 

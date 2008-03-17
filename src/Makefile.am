@@ -1,5 +1,6 @@
 # Uncomment for debugging
 DEBUG = -g
+PTHREADS_CFLAGS = -pthread
 
 #CFLAGS += $(DEBUG)
 
@@ -20,7 +21,10 @@ librelp_la_SOURCES = \
 	relpclt.h \
 	relpsrv.c \
 	relpsrv.h
-librelp_la_CPPFLAGS =
+	relptcp.c \
+	relptcp.h \
+	dbllinklist.h
+librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS)
 librelp_la_LIBADD = 
 
 include_HEADERS = \

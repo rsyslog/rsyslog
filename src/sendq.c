@@ -34,6 +34,59 @@
 #include <stdlib.h>
 #include "relp.h"
 #include "sendq.h"
+#include "dbllinklist.h"
+
+
+/* handling for the sendq entries  */
+
+/** Construct a RELP sendq instance
+ * This is the first thing that a caller must do before calling any
+ * RELP function. The relp sendq must only destructed after all RELP
+ * operations have been finished.
+ */
+static relpRetVal
+relpSendqeConstruct(relpSendqe_t **ppThis)
+{
+	relpSendqe_t *pThis;
+
+	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
+	if((pThis = calloc(1, sizeof(relpSendqe_t))) == NULL) {
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+
+	RELP_CORE_CONSTRUCTOR(pThis, Sendqe);
+
+	*ppThis = pThis;
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/** Destruct a RELP sendq instance
+ */
+static relpRetVal
+relpSendqeDestruct(relpSendqe_t **ppThis)
+{
+	relpSendqe_t *pThis;
+
+	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
+	pThis = *ppThis;
+	RELPOBJ_assert(pThis, Sendqe);
+
+	/* done with de-init work, now free sendqe object itself */
+	free(pThis);
+	*ppThis = NULL;
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+
+/* handling for the sendq itself */
 
 
 /** Construct a RELP sendq instance
@@ -53,6 +106,7 @@ relpSendqConstruct(relpSendq_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Sendq);
+	pthread_mutex_init(&pThis->mut, NULL);
 
 	*ppThis = pThis;
 
@@ -71,11 +125,63 @@ relpSendqDestruct(relpSendq_t **ppThis)
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	pThis = *ppThis;
-	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pThis, Sendq);
 
+	pthread_mutex_destroy(&pThis->mut);
 	/* done with de-init work, now free sendq object itself */
 	free(pThis);
 	*ppThis = NULL;
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* add a sendbuffer to the queue
+ * the send buffer object is handed over, caller must no longer access it after
+ * it has been passed into here.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpSendqAddBuf(relpSendq_t *pThis, relpSendbuf_t *pBuf)
+{
+	relpSendqe_t *pEntry;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sendq);
+	RELPOBJ_assert(pBuf, Sendbuf);
+
+	CHKRet(relpSendqeConstruct(&pEntry));
+	pEntry->pBuf = pBuf;
+
+	pthread_mutex_lock(&pThis->mut);
+	DLL_Add(pEntry, pThis->pRoot, pThis->pLast);
+	pthread_mutex_unlock(&pThis->mut);
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* remove the sendbuffer at the top of the queue. The removed buffer is destructed.
+ * This must only be called if there is at least one send buffer inside the queue.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpSendqDelFirstBuf(relpSendq_t *pThis)
+{
+	relpSendqe_t *pEntry;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sendq);
+	RELPOBJ_assert(pThis->pRoot, Sendbuf);
+
+	pthread_mutex_lock(&pThis->mut);
+	pEntry = pThis->pRoot;
+	DLL_Del(pEntry, pThis->pRoot, pThis->pLast);
+	pthread_mutex_unlock(&pThis->mut);
+
+	CHKRet(relpSendqeDestruct(&pEntry));
 
 finalize_it:
 	LEAVE_RELPFUNC;

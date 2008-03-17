@@ -33,16 +33,24 @@
 #ifndef RELPSRV_H_INCLUDED
 #define	RELPSRV_H_INCLUDED
 
+#include "relp.h"
+#include "tcp.h"
+
 /* the RELPSRV object 
  * rgerhards, 2008-03-17
  */
 typedef struct relpSrv_s {
 	BEGIN_RELP_OBJ;
+	relpEngine_t *pEngine;
+	unsigned char *pLstnPort;
+	relpTcp_t *pTcp; /**< our tcp support object */
 } relpSrv_t;
 
 
 /* prototypes */
-relpRetVal relpSrvConstruct(relpSrv_t **ppThis);
+relpRetVal relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpSrvDestruct(relpSrv_t **ppThis);
+relpRetVal relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort);
+relpRetVal relpSrvRun(relpSrv_t *pThis);
 
 #endif /* #ifndef RELPSRV_H_INCLUDED */

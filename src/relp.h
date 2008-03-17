@@ -33,6 +33,9 @@
 #ifndef RELP_H_INCLUDED
 #define	RELP_H_INCLUDED
 
+#include <pthread.h>
+
+
 /* define some of our types that a caller must know about */
 typedef unsigned char relpOctet_t;
 typedef int relpTxnr_t;
@@ -48,7 +51,9 @@ typedef enum relpObjID_e {
 	eRelpObj_Clt = 4,
 	eRelpObj_Srv = 5,
 	eRelpObj_Sendq = 6,
-	eRelpObj_Sendbuf = 7
+	eRelpObj_Sendqe = 7,
+	eRelpObj_Sendbuf = 8,
+	eRelpObj_Tcp = 9
 } relpObjID_t;
 
 
@@ -61,6 +66,23 @@ typedef enum relpObjID_e {
 #define RELP_CORE_CONSTRUCTOR(pObj, objType) \
 	(pObj)->objID = eRelpObj_##objType
 
+
+/* a linked list entry for the list of relp servers (of this engine) */
+typedef struct relpEngSrvLst_s {
+	struct relpEngSrvLst_s *pPrev;
+	struct relpEngSrvLst_s *pNext;
+	struct replSrv_s *pSrv;
+} relpEngSrvLst_t;
+
+
+/* a linked list entry for the list of relp sessions (of this engine) */
+typedef struct relpEngSessLst_s {
+	struct relpEngSessLst_s *pPrev;
+	struct relpEngSessLst_s *pNext;
+	struct replSess_s *pSess;
+} relpEngSessLst_t;
+
+
 /* the RELP engine object 
  * Having a specific engine object enables multiple plugins to call the
  * RELP engine at the same time. The core idea of librelp is to have no
@@ -72,6 +94,19 @@ typedef enum relpObjID_e {
  */
 typedef struct relpEngine_s {
 	BEGIN_RELP_OBJ;
+	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
+	/* linked list of our servers */
+	relpEngSrvLst_t *pSrvLstRoot;
+	relpEngSrvLst_t *pSrvLstLast;
+	int lenSrvLst;
+	pthread_mutex_t mutSrvLst;
+
+	/* linked list of our sessions */
+	relpEngSessLst_t *pSessLstRoot;
+	relpEngSessLst_t *pSessLstLast;
+	int lenSessLst;
+	pthread_mutex_t mutSessLst;
 } relpEngine_t;
 
 
@@ -86,6 +121,11 @@ typedef struct relpEngine_s {
 #endif /* # ifdef NDEBUG */
 
 
+/* some defines that may also come from the config */
+#ifndef RELP_DFLT_PORT
+#	define RELP_DFLT_PORT 20514
+#endif
+
 /* now define our externally-visible error codes */
 #ifndef ERRCODE_BASE
 	/* provide a basis for error numbers if not configured */
@@ -96,6 +136,8 @@ typedef struct relpEngine_s {
 #define RELP_RET_OUT_OF_MEMORY	ERRCODE_BASE + 1	/**< out of memory occured */
 #define RELP_RET_INVALID_FRAME	ERRCODE_BASE + 2	/**< relp frame received is invalid */
 #define RELP_RET_PARAM_ERROR	ERRCODE_BASE + 3	/**< an (API) calling parameer is in error */
+#define RELP_RET_INVALID_PORT	ERRCODE_BASE + 4	/**< invalid port value */
+#define RELP_RET_COULD_NOT_BIND	ERRCODE_BASE + 5	/**< could not bind socket, defunct */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -115,5 +157,8 @@ typedef struct relpEngine_s {
 /* prototypes needed by library users */
 relpRetVal relpEngineConstruct(relpEngine_t **ppThis);
 relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
+relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
+relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
+relpRetVal relpEngineRun(relpEngine_t *pThis);
 
 #endif /* #ifndef RELP_H_INCLUDED */

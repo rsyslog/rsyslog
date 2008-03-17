@@ -32,8 +32,10 @@
  */
 #include "config.h"
 #include <stdlib.h>
+#include <string.h>
 #include "relp.h"
 #include "relpsrv.h"
+#include "tcp.h"
 
 
 /** Construct a RELP srv instance
@@ -42,7 +44,7 @@
  * operations have been finished.
  */
 relpRetVal
-relpSrvConstruct(relpSrv_t **ppThis)
+relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 {
 	relpSrv_t *pThis;
 
@@ -53,6 +55,9 @@ relpSrvConstruct(relpSrv_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Srv);
+	pThis->pEngine = pEngine;
+
+pEngine->dbgprint("relp server %p constructed\n", pThis);
 
 	*ppThis = pThis;
 
@@ -75,10 +80,61 @@ relpSrvDestruct(relpSrv_t **ppThis)
 
 	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
 
+	if(pThis->pTcp != NULL)
+		relpTcpDestruct(&pThis->pTcp);
+
+	if(pThis->pLstnPort != NULL)
+		free(pThis->pLstnPort);
+
 	/* done with de-init work, now free srv object itself */
 	free(pThis);
 	*ppThis = NULL;
 
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* set the listen port inside the relp server. If NULL is provided, the default port
+ * is used. The provided string is always copied, it is the caller's duty to
+ * free the passed-in string.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	/* first free old value */
+	if(pThis->pLstnPort != NULL)
+		free(pThis->pLstnPort);
+	pThis->pLstnPort = NULL;
+
+	if(pLstnPort != NULL) {
+		if((pThis->pLstnPort = strdup(pLstnPort)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+		
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* start a relp server - the server object must have all properties set
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpSrvRun(relpSrv_t *pThis)
+{
+	relpTcp_t *pTcp;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine));
+	CHKRet(relpTcpLstnInit(pTcp, pThis->pLstnPort));
+		
 finalize_it:
 	LEAVE_RELPFUNC;
 }

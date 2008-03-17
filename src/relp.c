@@ -33,6 +33,8 @@
 #include "config.h"
 #include <stdlib.h>
 #include "relp.h"
+#include "relpsrv.h"
+#include "relpsess.h"
 
 
 /* DESCRIPTION OF THE RELP PROTOCOL
@@ -174,6 +176,48 @@
  *                                          (terminates session)
  */
 
+/* ------------------------------ some internal functions ------------------------------ */
+
+/* add an entry to our server list. The server object is handed over and must
+ * no longer be accessed by the caller.
+ * rgerhards, 2008-03-17
+ */
+static relpRetVal
+relpEngineAddToSrvList(relpEngine_t *pThis, relpSrv_t *pSrv)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pSrv, Srv);
+
+	pthread_mutex_lock(&pThis->mutSrvLst);
+	DLL_Add(pSrv, pThis->pSrvLstRoot, pThis->pSrvLstLast);
+	++pThis->lenSrvLst;
+	pthread_mutex_unlock(&pThis->mutSrvLst);
+
+	LEAVE_RELPFUNC;
+}
+
+
+/* add an entry to our session list. The session object is handed over and must
+ * no longer be accessed by the caller.
+ * rgerhards, 2008-03-17
+ */
+static relpRetVal
+relpEngineAddToSess(relpEngine_t *pThis, relpSess_t *pSess)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pSess, Sess);
+
+	pthread_mutex_lock(&pThis->mutSessLst);
+	DLL_Add(pSess, pThis->pSessLstRoot, pThis->pSessLstLast);
+	++pThis->lenSessLst;
+	pthread_mutex_unlock(&pThis->mutSessLst);
+
+	LEAVE_RELPFUNC;
+}
+
+/* ------------------------------ end of internal functions ------------------------------ */
 
 /** Construct a RELP engine instance
  * This is the first thing that a caller must do before calling any
@@ -192,6 +236,8 @@ relpEngineConstruct(relpEngine_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Engine);
+	pthread_mutex_init(&pThis->mutSrvLst, NULL);
+	pthread_mutex_init(&pThis->mutSessLst, NULL);
 
 	*ppThis = pThis;
 
@@ -217,10 +263,71 @@ relpEngineDestruct(relpEngine_t **ppThis)
 
 	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
 
+	pthread_mutex_destroy(&pThis->mutSrvLst);
+	pthread_mutex_destroy(&pThis->mutSessLst);
 	/* done with de-init work, now free engine object itself */
 	free(pThis);
 	*ppThis = NULL;
 
 finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* set a pointer to the debug function inside the engine. To reset a debug
+ * function that already has been set, provide a NULL function pointer.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))))
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	pThis->dbgprint = dbgprint;
+	LEAVE_RELPFUNC;
+}
+
+
+/* add a relp listener to the engine. The listen port must be provided.
+ * The listen port may be NULL, in which case the default port is used.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort)
+{
+	relpSrv_t *pSrv;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	CHKRet(relpSrvConstruct(&pSrv, pThis));
+	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
+	CHKRet(relpSrvRun(pSrv));
+
+	/* all went well, so we can add the server to our server list */
+	CHKRet(relpEngineAddToSrvList(pThis, pSrv));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* The "Run" method starts the relp engine. Most importantly, this means the engine begins
+ * to read and write data to its peers. This method must be called on its own thread as it
+ * will not return until the engine is finished. Note that the engine itself may (or may
+ * not ;)) spawn additional threads. This is an implementation detail not to be card of by
+ * caller.
+ * Note that the engine MUST be running even if the caller intends to just SEND messages.
+ * This is necessary because relp is a full-duplex protcol where acks and commands (e.g.
+ * "abort" may be received at any time.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpEngineRun(relpEngine_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+
 	LEAVE_RELPFUNC;
 }

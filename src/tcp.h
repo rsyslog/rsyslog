@@ -1,4 +1,4 @@
-/* The RELPSENDQ object.
+/* The mapping for relp over TCP.
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
@@ -30,37 +30,24 @@
  * free software while at the same time obtaining some funding for further
  * development.
  */
-#ifndef RELPSENDQ_H_INCLUDED
-#define	RELPSENDQ_H_INCLUDED
+#ifndef RELPTCP_H_INCLUDED
+#define	RELPTCP_H_INCLUDED
 
-#include <pthread.h>
-#include "sendbuf.h"
+#include "relp.h"
 
-/* The relp sendq entry object.
- * This is a doubly-linked list
+/* the RELPTCP object 
  * rgerhards, 2008-03-16
  */
-typedef struct relpSendqe_s {
+typedef struct relpTcp_s {
 	BEGIN_RELP_OBJ;
-	struct relpSendqe_s *pNext;
-	struct relpSendqe_s *pPrev;
-	relpSendbuf_t *pBuf; /* our send buffer */
-} relpSendqe_t;
-
-/* the RELPSENDQ object 
- * This provides more or less just the root of the sendq entries.
- * rgerhards, 2008-03-16
- */
-typedef struct relpSendq_s {
-	BEGIN_RELP_OBJ;
-	relpSendqe_t *pRoot;
-	relpSendqe_t *pLast;
-	pthread_mutex_t mut;
-} relpSendq_t;
+	relpEngine_t *pEngine;
+	int *socks;	/* the socket(s) we use for this connection, element 0 has nbr of socks */
+} relpTcp_t;
 
 
 /* prototypes */
-relpRetVal relpSendqConstruct(relpSendq_t **ppThis);
-relpRetVal relpSendqDestruct(relpSendq_t **ppThis);
+relpRetVal relpTcpConstruct(relpTcp_t **ppThis, relpEngine_t *pEngine);
+relpRetVal relpTcpDestruct(relpTcp_t **ppThis);
+relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort);
 
-#endif /* #ifndef RELPSENDQ_H_INCLUDED */
+#endif /* #ifndef RELPTCP_H_INCLUDED */
