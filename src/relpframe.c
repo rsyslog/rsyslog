@@ -35,6 +35,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
+#define RELP_DO_INTERNAL_PROTOTYPES
 #include "relp.h"
 #include "relpframe.h"
 
@@ -121,7 +122,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpEngine_t *pEn
 					ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 				}
 				pThis->txnr = pThis->txnr * 10 + c - '0';
-			} if(c == ' ') { /* field terminator */
+			} else if(c == ' ') { /* field terminator */
 				pThis->rcvState = eRelpFrameRcvState_IN_CMD;
 				pThis->iRcv = 0;
 			} else { /* oh, oh, invalid char! */
@@ -149,7 +150,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpEngine_t *pEn
 					ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 				}
 				pThis->lenData = pThis->lenData * 10 + c - '0';
-			} if(c == ' ') { /* field terminator */
+			} else if(c == ' ') { /* field terminator */
 				/* we now can assign the buffer for our data */
 				if((pThis->pData = malloc(pThis->lenData)) == NULL)
 					ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
@@ -163,16 +164,20 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpEngine_t *pEn
 			if(pThis->iRcv < pThis->lenData) {
 				pThis->pData[pThis->iRcv] = c;
 				++pThis->iRcv;
+				break;
 			} else { /* end of data */
 				pThis->rcvState = eRelpFrameRcvState_IN_TRAILER;
 				pThis->iRcv = 0;
+				/*FALLTHROUGH*/
 			}
-			break;
 		case eRelpFrameRcvState_IN_TRAILER:
 			if(c != '\n')
 				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
+			pThis->rcvState = eRelpFrameRcvState_FINISHED;
 			/* TODO: submit frame to processor */
-			pThis = NULL;
+			iRet = relpEngineDispatchFrame(pEngine, pThis);
+			/* do not abort, because we need to destruct the frame */
+			relpFrameDestruct(&pThis);
 			break;
 		case eRelpFrameRcvState_FINISHED:
 			assert(0); /* this shall never happen */

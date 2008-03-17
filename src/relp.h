@@ -153,6 +153,7 @@ typedef struct relpEngine_s {
 #define RELP_RET_ACCEPT_ERR	ERRCODE_BASE + 6	/**< error during accept() system call */
 #define RELP_RET_SESSION_BROKEN	ERRCODE_BASE + 7	/**< the RELP session is broken */
 #define RELP_RET_SESSION_CLOSED	ERRCODE_BASE + 8	/**< the RELP session was closed (not an error) */
+#define RELP_RET_INVALID_CMD	ERRCODE_BASE + 9	/**< the command contained in a RELP frame was unknown */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -175,5 +176,10 @@ relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
 relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
 relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
+
+#ifdef RELP_DO_INTERNAL_PROTOTYPES
+#	include "relpframe.h"
+	relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpFrame_t *pFrame);
+#endif /* #ifdef RELP_DO_INTERNAL_PROTOTYPES */
 
 #endif /* #ifndef RELP_H_INCLUDED */

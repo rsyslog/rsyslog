@@ -36,6 +36,7 @@
 #include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
+#include "relpframe.h"
 #include "relpsess.h"
 #include "dbllinklist.h"
 
@@ -463,5 +464,38 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 
 	}
 
+	LEAVE_RELPFUNC;
+}
+
+
+/* process an incoming command
+ * This function receives a RELP frame and dispatches it to the correct
+ * command handler. If the command is unknown, it responds with an error
+ * return state but does not process anything. The frame is NOT destructed
+ * by this function - this must be done by the caller.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpEngineDispatchFrame(relpEngine_t *pThis, relpFrame_t *pFrame)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pFrame, Frame);
+
+	pThis->dbgprint("relp engine is dispatching frame with command '%s'\n", pFrame->cmd);
+
+	/* currently, we hardcode the commands. Over time, they may be dynamically 
+	 * loaded and, when so, should come from a linked list. TODO -- rgerhards, 2008-03-17
+	 */
+	if(!strcmp(pFrame->cmd, "init")) {
+		pThis->dbgprint("relp will be calling init command");
+	} else if(!strcmp(pFrame->cmd, "go")) {
+		pThis->dbgprint("relp will be calling go command");
+	} else {
+		pThis->dbgprint("invalid or not supported relp command '%s'\n", pFrame->cmd);
+		ABORT_FINALIZE(RELP_RET_INVALID_CMD);
+	}
+
+finalize_it:
 	LEAVE_RELPFUNC;
 }
