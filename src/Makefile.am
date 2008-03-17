@@ -23,6 +23,7 @@ librelp_la_SOURCES = \
 	relpclt.h \
 	relpsrv.c \
 	relpsrv.h \
+	scsyslog.c \
 	scgo.c \
 	scinit.c \
 	scinit.h \

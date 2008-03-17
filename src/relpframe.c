@@ -152,8 +152,10 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 				pThis->lenData = pThis->lenData * 10 + c - '0';
 			} else if(c == ' ') { /* field terminator */
 				/* we now can assign the buffer for our data */
-				if((pThis->pData = malloc(pThis->lenData)) == NULL)
-					ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+				if(pThis->lenData > 0) {
+					if((pThis->pData = malloc(pThis->lenData)) == NULL)
+						ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+				}
 				pThis->rcvState = eRelpFrameRcvState_IN_DATA;
 				pThis->iRcv = 0;
 			} else { /* oh, oh, invalid char! */
