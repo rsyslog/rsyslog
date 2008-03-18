@@ -44,27 +44,39 @@
 
 /* DESCRIPTION OF THE RELP PROTOCOL
  *
- * Relp uses a client-server model with fixed roles. The initiating part of the
+ * Relp uses a client-server model with (somehwat) fixed roles. The initiating part of the
  * connection is called the client, the listening part the server. In the state
  * diagrams below, C stand for client and S for server.
  *
- * Relp employs a command-response model, that is the client issues command to
+ * Relp employs a command-response model, that is the client issues commands to
  * which the server responds. To facilitate full-duplex communication, multiple
  * commands can be issued at the same time, thus multiple responses may be 
- * outstanding at a given time. The server may reply in any order. To conserve
+ * outstanding at a given time. The server may reply in any order. The server may
+ * also send a limited set of commands that are not responses (e.g. to abort a session). To conserve
  * ressources, the number of outstanding commands is limited by a window. Each
- * command is assigned a (relative) unique, monotonically increasing ID. Each
+ * command is assigned a (relative) unique, monotonically increasing ID (called the
+ * "transaction number" or txnr for short. Each
  * response must include that ID. New commands may only be issued if the new ID
  * is less than the oldes unresponded ID plus the window size. So a connection
  * stalls if the server does not respond to all requests. (TODO: evaluate if this
  * needs to be a hard requirement or if it is sufficient to just allow "n" outstanding
- * commands at a time).
+ * commands at a time). Seperate txnr counters are maintained for the sending
+ * and receiving side of sessions.
  *
  * A command and its response is called a relp transaction.
  *
  * If something goes really wrong, both the client and the server may terminate
  * the TCP connection at any time. Any outstanding commands are considered to
  * have been unsuccessful in this case.
+ *
+ * ERROR HANDLING
+ * If something goes wrong (e.g. invalid framing), the peer that detects the problem
+ * closes the underlying (TCP) connection. It may send an error/abort command, but
+ * MUST NOT wait for its response. The reasoning for this is that today's Internet is
+ * not a friendly place. Trying to gracefully resolve communications problems may
+ * lead to an attack vector. On the other hand, if the problem was of temporary nature,
+ * it may be cleared up by the connection reset and a new connect. So aborting errored
+ * connections is considered both secure as well as reasonable efficient.
  *
  * SENDING MESSAGES
  * Because it is so important, I'd like to point it specifically out: sending a
@@ -94,13 +106,17 @@
  * SP             = %d32
  *
  * RSP DATA CONTENT:
- * RSP-HEADER     = RSP-CODE [SP HUMANMSG] LF [CMDDATA]
+ * RSP-HEADER     = TXNR SP RSP-CODE [SP HUMANMSG] LF [CMDDATA]
  * RSP-CODE       = 200 / 500 ; 200 is ok, all the rest currently erros
  * HUAMANMSG      = *OCTET ; a human-readble message without LF in it
  * CMDDATA        = *OCTET ; semantics depend on original command
+ * TXNR is as in the relp frame, it is the TXNR of the frame being responded to.
  *
  * DATALEN is the number of octets in DATA (so the frame length excluding the length
- * of HEADER and TRAILER).
+ * of HEADER and TRAILER). Please note that the theoretical maximum (999,999,999 octets)
+ * is in (almost?) all cases unsuitable for actual message transfer. Thus, the actual
+ * maximum data length is negotiated during session setup. In relp version 1, it is
+ * always 128K. In later versions, it shall be operator-configurable.
  *
  * Note that TXNR montonically increases, but at some point latches. The requirement
  * is to have enough different number values to handle a complete window. This may be
@@ -179,6 +195,14 @@
  * cmd: "close", data: none?         -----> (processes termination request)
  * (terminates session)              <----- cmd: "rsp", data OK/Error
  *                                          (terminates session)
+ *
+ * SECURITY CONSIDERATIONS
+ *
+ * Window Size
+ * A very large window can be abused for denial of service attacks.
+ *
+ * Maximum DATALEN
+ * A too-large DATALEN can be absued for denial of service attacks.
  */
 
 /* ------------------------------ some internal functions ------------------------------ */

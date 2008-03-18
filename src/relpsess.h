@@ -64,7 +64,8 @@ typedef struct relpSess_s {
 	relpSrv_t *pSrv;	/**< the server we belong to */
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
-	relpTxnr_t nxtTxnr;	/**< next txnr to be used for commands */
+	relpTxnr_t txnrRcv;	/**< next txnr expected when receiving */
+	relpTxnr_t txnrSnd;	/**< next txnr to be used when sending */
 	relpSessState_t sessState; /**< state of our session */
 	relpSendq_t *pSendq; /**< our send queue */
 	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
