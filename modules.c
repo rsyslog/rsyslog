@@ -515,6 +515,10 @@ modUnloadAndDestructAll(eModLinkType_t modLinkTypesToUnload)
 			if(modUnlinkAndDestroy(&pModCurr) == RS_RET_MODULE_STILL_REFERENCED) {
 				pModCurr = GetNxt(pModCurr);
 			}
+			/* Note: if the module was successfully unloaded, it has updated the
+			 * pModCurr pointer to the next module. So we do NOT need to advance
+			 * to the next module on successful unload.
+			 */
 		} else {
 			pModCurr = GetNxt(pModCurr);
 		}
