@@ -93,7 +93,6 @@ relpSessDestruct(relpSess_t **ppThis)
 	free(pThis);
 	*ppThis = NULL;
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -151,7 +150,7 @@ relpSessRcvData(relpSess_t *pThis)
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 
 rcvBuf[lenBuf] = '\0';
-pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", lenBuf, rcvBuf);
+pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
 	if(lenBuf == 0) {
 		ABORT_FINALIZE(RELP_RET_SESSION_CLOSED);
 	} else if (lenBuf == -1) {

@@ -33,6 +33,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include <sys/select.h>
+#include <string.h>
 #include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
@@ -281,7 +282,6 @@ relpEngineDelSess(relpEngine_t *pThis, relpEngSessLst_t *pSessLstEntry)
 	relpSessDestruct(&pSessLstEntry->pSess);
 	free(pSessLstEntry);
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -337,7 +337,6 @@ relpEngineDestruct(relpEngine_t **ppThis)
 	free(pThis);
 	*ppThis = NULL;
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -408,8 +407,6 @@ relpEngineRun(relpEngine_t *pThis)
 	int sock;
 	int maxfds;
 	int nfds;
-	int i;
-	int iTCPSess;
 	fd_set readfds;
 
 	ENTER_RELPFUNC;
@@ -418,7 +415,7 @@ relpEngineRun(relpEngine_t *pThis)
 	/* this is an endless loop - TODO: decide how to terminate */
 	while(1) {
 	        maxfds = 0;
-	        FD_ZERO (&readfds);
+	        FD_ZERO(&readfds);
 
 		/* Add the listen sockets to the list of read descriptors.  */
 		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
@@ -498,6 +495,7 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
  * header files (and will go away if we make them dynamically loadable).
  * rgerhards, 2008-03-17
  */
+PROTOTYPEcommand(S, Init)
 PROTOTYPEcommand(S, Go)
 PROTOTYPEcommand(S, Syslog)
 
@@ -521,11 +519,11 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 	/* currently, we hardcode the commands. Over time, they may be dynamically 
 	 * loaded and, when so, should come from a linked list. TODO -- rgerhards, 2008-03-17
 	 */
-	if(!strcmp(pFrame->cmd, "init")) {
+	if(!strcmp((char*)pFrame->cmd, "init")) {
 		CHKRet(relpSCInit(pFrame, pSess));
-	} else if(!strcmp(pFrame->cmd, "go")) {
+	} else if(!strcmp((char*)pFrame->cmd, "go")) {
 		CHKRet(relpSCGo(pFrame, pSess));
-	} else if(!strcmp(pFrame->cmd, "syslog")) {
+	} else if(!strcmp((char*)pFrame->cmd, "syslog")) {
 		CHKRet(relpSCSyslog(pFrame, pSess));
 	} else {
 		pThis->dbgprint("invalid or not supported relp command '%s'\n", pFrame->cmd);

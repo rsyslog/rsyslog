@@ -62,7 +62,8 @@ typedef struct relpSendq_s {
 
 
 /* prototypes */
-static relpRetVal relpSendqeConstruct(relpSendqe_t **ppThis, relpEngine_t *pEngine);
+//static relpRetVal relpSendqeConstruct(relpSendqe_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpSendqConstruct(relpSendq_t **ppThis, relpEngine_t *pEngine);
+relpRetVal relpSendqDestruct(relpSendq_t **ppThis);
 
 #endif /* #ifndef RELPSENDQ_H_INCLUDED */

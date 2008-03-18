@@ -78,7 +78,6 @@ relpFrameDestruct(relpFrame_t **ppThis)
 	free(pThis);
 	*ppThis = NULL;
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -225,10 +224,10 @@ relpFrameSetCmd(relpFrame_t *pThis, relpOctet_t *pCmd)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Frame);
-	if(pCmd == NULL || strlen(pCmd) > 32)
+	if(pCmd == NULL || strlen((char*)pCmd) > 32)
 		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
 
-	strcpy(pThis->cmd, pCmd);
+	strcpy((char*)pThis->cmd, (char*)pCmd);
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -246,10 +245,10 @@ relpFrameSetData(relpFrame_t *pThis, relpOctet_t *pData, int lenData, int bHando
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Frame);
-	if(pData == NULL)
+	if(pData == NULL && lenData != 0)
 		ABORT_FINALIZE(RELP_RET_PARAM_ERROR);
 	
-	if(bHandoverBuffer) {
+	if(bHandoverBuffer || pData == NULL) {
 		pThis->pData = pData;
 	} else {
 		/* we can not use the caller provided buffer and must copy it */
@@ -263,4 +262,37 @@ relpFrameSetData(relpFrame_t *pThis, relpOctet_t *pData, int lenData, int bHando
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+
+
+/* create a frame based on the provided command code and data. The frame is
+ * meant to be consumed by sending it to the remote peer. A txnr is
+ * NOT assigned, as this happens late in the process during the actual
+ * send (only the send knows the right txnr to use). This actually is a
+ * shortcut for calling the individual functions.
+ * rgerhards, 2008-03-18
+ */
+relpRetVal
+relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
+			   relpOctet_t *pData, size_t lenData, int bHandoverBuffer)
+{
+	relpFrame_t *pThis;
+
+	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
+
+	CHKRet(relpFrameConstruct(&pThis, pEngine));
+	CHKRet(relpFrameSetCmd(pThis, pCmd));
+	CHKRet(relpFrameSetData(pThis, pData, lenData, bHandoverBuffer));
+
+	*ppThis = pThis;
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pThis != NULL)
+			relpFrameDestruct(&pThis);
+	}
+
+	LEAVE_RELPFUNC;
+}
+
 

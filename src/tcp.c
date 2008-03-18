@@ -102,7 +102,6 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	free(pThis);
 	*ppThis = NULL;
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -167,7 +166,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
         hints.ai_family = PF_UNSPEC; /* TODO: permit to configure IPv4/v6 only! */
         hints.ai_socktype = SOCK_STREAM;
 
-        error = getaddrinfo(NULL, pLstnPt, &hints, &res);
+        error = getaddrinfo(NULL, (char*) pLstnPt, &hints, &res);
         if(error) {
 		pThis->pEngine->dbgprint("error %d querying port '%s'\n", error, pLstnPt);
 		ABORT_FINALIZE(RELP_RET_INVALID_PORT);
@@ -295,6 +294,5 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 
 	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, 0);
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }

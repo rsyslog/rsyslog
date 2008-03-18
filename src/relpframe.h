@@ -52,10 +52,10 @@ typedef struct relpFrame_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	relpFrameRcvState_t rcvState;
-	int iRcv;		/**< a multi-purpose field index used during frame reception */
+	size_t iRcv;		/**< a multi-purpose field index used during frame reception */
 	relpTxnr_t txnr;	/**< the current transaction (sequence) number */
 	relpOctet_t cmd[32+1];	/**< the current command (+1 for C string terminator) */
-	int lenData;		/**< length of data part of frame */
+	size_t lenData;		/**< length of data part of frame */
 	relpOctet_t *pData;	/**< frame data part */
 	
 } relpFrame_t;
@@ -64,5 +64,7 @@ typedef struct relpFrame_s {
 
 /* prototypes */
 relpRetVal relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess);
+relpRetVal relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
+			  	      relpOctet_t *pData, size_t lenData, int bHandoverBuffer);
 
 #endif /* #ifndef RELPFRAME_H_INCLUDED */

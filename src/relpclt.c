@@ -81,6 +81,5 @@ relpCltDestruct(relpClt_t **ppThis)
 	free(pThis);
 	*ppThis = NULL;
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }

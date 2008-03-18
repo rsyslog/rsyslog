@@ -91,7 +91,6 @@ relpSrvDestruct(relpSrv_t **ppThis)
 	free(pThis);
 	*ppThis = NULL;
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -113,7 +112,7 @@ relpSrvSetLstnPort(relpSrv_t *pThis, unsigned char *pLstnPort)
 	pThis->pLstnPort = NULL;
 
 	if(pLstnPort != NULL) {
-		if((pThis->pLstnPort = strdup(pLstnPort)) == NULL)
+		if((pThis->pLstnPort = (unsigned char*) strdup((char*)pLstnPort)) == NULL)
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
 		

@@ -82,7 +82,6 @@ relpSendqeDestruct(relpSendqe_t **ppThis)
 	free(pThis);
 	*ppThis = NULL;
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -135,7 +134,6 @@ relpSendqDestruct(relpSendq_t **ppThis)
 	free(pThis);
 	*ppThis = NULL;
 
-finalize_it:
 	LEAVE_RELPFUNC;
 }
 
