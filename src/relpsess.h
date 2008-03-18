@@ -33,6 +33,8 @@
 #ifndef RELPSESS_H_INCLUDED
 #define	RELPSESS_H_INCLUDED
 
+#include <pthread.h>
+
 #include "relpsrv.h"
 #include "sendq.h"
 #include "sendbuf.h"
@@ -69,10 +71,13 @@ typedef struct relpSess_s {
 	relpSessState_t sessState; /**< state of our session */
 	relpSendq_t *pSendq; /**< our send queue */
 	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
+	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
 } relpSess_t;
 
 /* macros for quick memeber access */
 #define relpSessGetSock(pThis)  (relpTcpGetSock((pThis)->pTcp))
+
+#include "relpframe.h" /* this needs to be done after relpSess_t is defined! */
 
 /* prototypes */
 relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv);

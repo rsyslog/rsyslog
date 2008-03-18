@@ -59,6 +59,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->pSrv = pSrv;
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
+	pthread_mutex_init(&pThis->mutSend, NULL);
 
 	*ppThis = pThis;
 
@@ -89,6 +90,7 @@ relpSessDestruct(relpSess_t **ppThis)
 		relpSendqDestruct(&pThis->pSendq);
 	if(pThis->pTcp != NULL)
 		relpTcpDestruct(&pThis->pTcp);
+	pthread_mutex_destroy(&pThis->mutSend);
 	/* done with de-init work, now free object itself */
 	free(pThis);
 	*ppThis = NULL;
@@ -179,10 +181,30 @@ pThis->pEngine->dbgprint("end relpSessRcvData, iRet %d\n", iRet);
 relpRetVal
 relpSessSendFrame(relpSess_t *pThis, relpFrame_t *pFrame)
 {
+	relpOctet_t *pSendBuf = NULL;
+
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	RELPOBJ_assert(pFrame, Frame);
 
+	/* we must make sure that while we process the txnr, nobody else gets
+	 * into our way.
+	 */
+	pthread_mutex_lock(&pThis->mutSend);
+	CHKRet(relpFrameBuildMembufAndDestruct(pFrame, &pSendBuf, pThis->txnrSnd));
+	pThis->txnrSnd = (pThis->txnrSnd + 1) / 1000000000; /* txnr used up, so on to next one (latching!) */
+	pthread_mutex_unlock(&pThis->mutSend);
+
+	// TODO: send buffer!
+
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSendBuf != NULL)
+			free(pSendBuf);
+		/* the txnr is probably lost, but there is nothing we
+		 * can do against that..
+		 */
+	}
+
 	LEAVE_RELPFUNC;
 }

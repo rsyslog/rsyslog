@@ -327,11 +327,11 @@ relpFrameBuildMembufAndDestruct(relpFrame_t **ppThis, relpOctet_t **ppMembuf, re
 	RELPOBJ_assert(pThis, Frame);
 	assert(txnr < 1000000000);
 	
-	lenTxnr = snprintf(bufTxnr, sizeof(bufTxnr), "%d", txnr);
+	lenTxnr = snprintf(bufTxnr, sizeof(bufTxnr), "%d", (int) txnr);
 	if(lenTxnr > 9)
 		ABORT_FINALIZE(RELP_RET_INVALID_TXNR);
 
-	lenDatalen = snprintf(bufDatalen, sizeof(bufDatalen), "%d", pThis->lenData);
+	lenDatalen = snprintf(bufDatalen, sizeof(bufDatalen), "%d", (int) pThis->lenData);
 	if(lenDatalen > 9)
 		ABORT_FINALIZE(RELP_RET_INVALID_DATALEN);
 	
@@ -355,7 +355,7 @@ relpFrameBuildMembufAndDestruct(relpFrame_t **ppThis, relpOctet_t **ppMembuf, re
 
 	/* buffer completed, we no longer need the original frame */
 
-	CHKRET(relpFrameDestruct(ppThis));
+	CHKRet(relpFrameDestruct(ppThis));
 
 	*ppMembuf = pMembuf;
 
