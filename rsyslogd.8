@@ -21,7 +21,6 @@ rsyslogd \- reliable and extended syslogd
 .RB [ " \-g "
 .I port,max-nbr-of-sessions
 ]
-.RB [ " \-h " ] 
 .br
 .RB [ " \-i "
 .I pid file
@@ -156,12 +155,6 @@ Identical to -t except that every tcp connection is authenticated
 using gss-api (kerberos 5). Service name may be set using
 $GssListenServiceName or the default "host" will be used. Encryption
 can be used if specified by the client and supported by both sides.
-.TP
-.BI "\-h "
-By default rsyslogd will not forward messages it receives from remote hosts.
-Specifying this switch on the command line will cause the log daemon to
-forward any remote messages it receives to forwarding hosts which have been
-defined.
 .TP
 .BI "\-i " "pid file"
 Specify an alternative pid file instead of the default one.
