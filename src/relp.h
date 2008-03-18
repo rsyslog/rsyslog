@@ -125,6 +125,9 @@ typedef struct relpEngine_s {
 #ifndef RELP_DFLT_PORT
 #	define RELP_DFLT_PORT 20514
 #endif
+#ifndef RELP_DFLT_MAX_DATA_SIZE
+#	define RELP_DFLT_MAX_DATA_SIZE 128 * 1024 /* 128K should be sufficient for everything... */
+#endif
 
 /* set the default receive buffer size if none is externally configured
  * NOTE: do not define to less than 1.5K or you'll probably see a severe
@@ -154,6 +157,7 @@ typedef struct relpEngine_s {
 #define RELP_RET_SESSION_BROKEN	ERRCODE_BASE + 7	/**< the RELP session is broken */
 #define RELP_RET_SESSION_CLOSED	ERRCODE_BASE + 8	/**< the RELP session was closed (not an error) */
 #define RELP_RET_INVALID_CMD	ERRCODE_BASE + 9	/**< the command contained in a RELP frame was unknown */
+#define RELP_RET_DATA_TOO_LONG	ERRCODE_BASE + 10	/**< DATALEN exceeds permitted length */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

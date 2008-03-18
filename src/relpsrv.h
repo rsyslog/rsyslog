@@ -44,6 +44,7 @@ typedef struct relpSrv_s {
 	relpEngine_t *pEngine;
 	unsigned char *pLstnPort;
 	relpTcp_t *pTcp; /**< our tcp support object */
+	size_t maxDataSize;  /**< maximum size of a DATA element */
 } relpSrv_t;
 
 

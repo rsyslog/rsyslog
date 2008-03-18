@@ -156,6 +156,9 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 					if((pThis->pData = malloc(pThis->lenData)) == NULL)
 						ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 				}
+				if(pThis->lenData > pSess->maxDataSize) {
+					ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
+				}
 				pThis->rcvState = eRelpFrameRcvState_IN_DATA;
 				pThis->iRcv = 0;
 			} else { /* oh, oh, invalid char! */
@@ -189,6 +192,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 	*ppThis = pThis;
 
 finalize_it:
+pSess->pEngine->dbgprint("end relp frame construct, iRet %d\n", iRet);
 	LEAVE_RELPFUNC;
 }
 

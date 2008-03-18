@@ -57,6 +57,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	RELP_CORE_CONSTRUCTOR(pThis, Sess);
 	pThis->pEngine = pEngine;
 	pThis->pSrv = pSrv;
+	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
 
 	*ppThis = pThis;

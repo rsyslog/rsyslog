@@ -67,6 +67,7 @@ typedef struct relpSess_s {
 	relpTxnr_t nxtTxnr;	/**< next txnr to be used for commands */
 	relpSessState_t sessState; /**< state of our session */
 	relpSendq_t *pSendq; /**< our send queue */
+	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
 } relpSess_t;
 
 /* macros for quick memeber access */
