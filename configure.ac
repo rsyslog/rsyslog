@@ -461,7 +461,7 @@ if test "x$enable_relp" = "xyes"; then
   )
   AC_CHECK_LIB(
     [relp],
-    [relpInit],
+    [relpEngineConstruct],
     [relp_cflags=""
      relp_libs="-lrelp"
     ],
