@@ -32,6 +32,7 @@
  */
 #include "config.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
@@ -296,3 +297,73 @@ finalize_it:
 }
 
 
+/* create a memory buffer with a representation of this frame. This method
+ * is meant to be invoked immediately before sending a frame. So the txnr must
+ * be passed in, as it is at the top of the frame. The frame object itself
+ * is destructed by this function. Note that it should only be called
+ * from within a mutex-protected region that ensures the txnr remains
+ * consistent. So most probably the caller must be a function inside
+ * the sendbuf obj. The memory buffer is allocated inside this function
+ * and a pointer to it passed to the caller. The caller is responsible
+ * for freeing it. -- rgerhards, 2008-03-18
+ */
+relpRetVal
+relpFrameBuildMembufAndDestruct(relpFrame_t **ppThis, relpOctet_t **ppMembuf, relpTxnr_t txnr)
+{
+	relpFrame_t *pThis;
+	char bufTxnr[16];
+	size_t lenTxnr;
+	char bufDatalen[16];
+	size_t lenDatalen;
+	size_t lenCmd;
+	relpOctet_t *pMembuf = NULL;
+	relpOctet_t *ptrMembuf;
+	size_t lenMembuf;
+
+	ENTER_RELPFUNC;
+	assert(ppMembuf != NULL);
+	assert(ppThis != NULL);
+	pThis = *ppThis;
+	RELPOBJ_assert(pThis, Frame);
+	assert(txnr < 1000000000);
+	
+	lenTxnr = snprintf(bufTxnr, sizeof(bufTxnr), "%d", txnr);
+	if(lenTxnr > 9)
+		ABORT_FINALIZE(RELP_RET_INVALID_TXNR);
+
+	lenDatalen = snprintf(bufDatalen, sizeof(bufDatalen), "%d", pThis->lenData);
+	if(lenDatalen > 9)
+		ABORT_FINALIZE(RELP_RET_INVALID_DATALEN);
+	
+	lenCmd = strlen((char*) pThis->cmd);
+
+	/* we got everything, so now let's get our membuf */
+	lenMembuf = lenTxnr + 1 + lenCmd + 1 +
+		    lenDatalen + 1 +  pThis->lenData + 1; /* +1 for SP and TRAILER */
+        if((pMembuf = malloc(lenMembuf)) == NULL)
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+
+	ptrMembuf = pMembuf;
+	memcpy(ptrMembuf, bufTxnr, lenTxnr); ptrMembuf += lenTxnr;
+	*ptrMembuf++ = ' ';
+	memcpy(ptrMembuf, pThis->cmd, lenCmd); ptrMembuf += lenCmd;
+	*ptrMembuf++ = ' ';
+	memcpy(ptrMembuf, bufDatalen, lenDatalen); ptrMembuf += lenDatalen;
+	*ptrMembuf++ = ' ';
+	memcpy(ptrMembuf, pThis->pData, pThis->lenData); ptrMembuf += pThis->lenData;
+	*ptrMembuf = '\n';
+
+	/* buffer completed, we no longer need the original frame */
+
+	CHKRET(relpFrameDestruct(ppThis));
+
+	*ppMembuf = pMembuf;
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pMembuf != NULL)
+			free(pMembuf);
+	}
+
+	LEAVE_RELPFUNC;
+}

@@ -167,3 +167,22 @@ pThis->pEngine->dbgprint("end relpSessRcvData, iRet %d\n", iRet);
 
 	LEAVE_RELPFUNC;
 }
+
+
+/* Send a frame to the remote peer.
+ * This function sends a frame, which must be completely constructed, to the remote
+ * peer. It does not mangle with the frame, except that it adds the txnr, which is
+ * only known during the send. The caller-provided frame is destructed when
+ * this function returns (even in case of an error return).
+ * rgerhards, 2008-03-18
+ */
+relpRetVal
+relpSessSendFrame(relpSess_t *pThis, relpFrame_t *pFrame)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	RELPOBJ_assert(pFrame, Frame);
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}

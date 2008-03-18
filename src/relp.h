@@ -158,6 +158,8 @@ typedef struct relpEngine_s {
 #define RELP_RET_SESSION_CLOSED	ERRCODE_BASE + 8	/**< the RELP session was closed (not an error) */
 #define RELP_RET_INVALID_CMD	ERRCODE_BASE + 9	/**< the command contained in a RELP frame was unknown */
 #define RELP_RET_DATA_TOO_LONG	ERRCODE_BASE + 10	/**< DATALEN exceeds permitted length */
+#define RELP_RET_INVALID_TXNR	ERRCODE_BASE + 11	/**< a txnr is invalid (probably code error) */
+#define RELP_RET_INVALID_DATALEN ERRCODE_BASE + 12	/**< DATALEN field is invalid (probably code error) */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

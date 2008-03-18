@@ -79,5 +79,6 @@ relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv
 relpRetVal relpSessDestruct(relpSess_t **ppThis);
 relpRetVal relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock);
 relpRetVal relpSessRcvData(relpSess_t *pThis);
+relpRetVal relpSessSendFrame(relpSess_t *pThis, relpFrame_t *pFrame);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */
