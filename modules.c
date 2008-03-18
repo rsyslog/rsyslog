@@ -451,9 +451,14 @@ static void modPrintList(void)
  * rgerhards, 2008-02-26
  */
 static rsRetVal
-modUnlinkAndDestroy(modInfo_t *pThis)
+modUnlinkAndDestroy(modInfo_t **ppThis)
 {
 	DEFiRet;
+	modInfo_t *pThis;
+
+	assert(ppThis != NULL);
+	pThis = *ppThis;
+	assert(pThis != NULL);
 
 	/* first check if we are permitted to unload */
 	if(pThis->eType == eMOD_LIB) {
@@ -476,7 +481,7 @@ modUnlinkAndDestroy(modInfo_t *pThis)
 	}
 
 	if(pThis->pNext == NULL) {
-		pLoadedModulesLast = NULL;
+		pLoadedModulesLast = pThis->pPrev;
 	} else {
 		pThis->pNext->pPrev = pThis->pPrev;
 	}
@@ -484,6 +489,8 @@ modUnlinkAndDestroy(modInfo_t *pThis)
 	/* finally, we are ready for the module to go away... */
 	dbgprintf("Unloading module %s\n", modGetName(pThis));
 	CHKiRet(modPrepareUnload(pThis));
+	*ppThis = pThis->pNext;
+
 	moduleDestruct(pThis);
 
 finalize_it:
@@ -500,15 +507,16 @@ static rsRetVal
 modUnloadAndDestructAll(eModLinkType_t modLinkTypesToUnload)
 {
 	DEFiRet;
-	modInfo_t *pMod;
 	modInfo_t *pModCurr; /* module currently being processed */
 
-	pMod = GetNxt(NULL);
-	while(pMod != NULL) {
-		pModCurr = pMod;
-		pMod = GetNxt(pModCurr); /* get next */
+	pModCurr = GetNxt(NULL);
+	while(pModCurr != NULL) {
 		if(modLinkTypesToUnload == eMOD_LINK_ALL || pModCurr->eLinkType == modLinkTypesToUnload) {
-			modUnlinkAndDestroy(pModCurr);
+			if(modUnlinkAndDestroy(&pModCurr) == RS_RET_MODULE_STILL_REFERENCED) {
+				pModCurr = GetNxt(pModCurr);
+			}
+		} else {
+			pModCurr = GetNxt(pModCurr);
 		}
 	}
 
@@ -687,7 +695,7 @@ Release(char *srcFile, modInfo_t **ppThis)
 	if(pThis->uRefCnt == 0) {
 		/* we have a zero refcount, so we must unload the module */
 		dbgprintf("module '%s' has zero reference count, unloading...\n", pThis->pszName);
-		modUnlinkAndDestroy(pThis);
+		modUnlinkAndDestroy(&pThis);
 		*ppThis = NULL; /* nobody can access it any longer! */
 	}
 
