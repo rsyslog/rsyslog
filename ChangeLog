@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.12.4 (rgerhards), 2008-03-??
+---------------------------------------------------------------------------
 Version 3.12.3 (rgerhards), 2008-03-18
 - added advanced flow control for congestion cases (mode depending on message
   source and its capablity to be delayed without bad side effects)
