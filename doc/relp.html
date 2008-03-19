@@ -1,187 +1,253 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><title>RELP - The Reliable Event Logging Protocol
-(Specification)
-</title>
+(Specification)</title>
 
-</head><body>
+</head>
+<body>
 <h1>RELP - The Reliable Event Logging Protocol</h1>
 <p>This is the specification for the reliable event logging
 protocol, called "RELP".</p>
 <p>Version: 0.0.1<br>
-Date: &nbsp;2008-03-19<br>Author: <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a></p><p>Copyright (C) 2008 by Rainer Gerhards and Adiscon GmbH. Released under the terms of the GNU FDL.</p>
+Date: &nbsp;2008-03-19<br>
+Author: <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a></p>
+<p>Copyright (C) 2008 by Rainer Gerhards and Adiscon GmbH.
+Released under the terms of the GNU FDL.</p>
 <h2>DESCRIPTION OF THE RELP PROTOCOL</h2>
-<p>Relp uses a client-server model with (somewhat) fixed roles. The initiating part of the
-connection is called the client, the listening part the server. In the state
+<p>Relp uses a client-server model with (mostly fixed roles. The
+initiating part of the
+connection is called the client, the listening part the server. In the
+state
 diagrams below, C stand for client and S for server.
-<p>
-Relp employs a command-response model, that is the client issues commands to
-which the server responds. To facilitate full-duplex communication, multiple
-commands can be issued at the same time, thus multiple responses may be 
-outstanding at a given time. The server may reply in any order. The server may
-also send a limited set of commands that are not responses (e.g. to abort a session). To conserve
-ressources, the number of outstanding commands is limited by a window. Each
-command is assigned a (relative) unique, monotonically increasing ID (called the
+</p>
+<p>Relp employs a command-response model, that is the client
+issues commands to
+which the server responds. To facilitate full-duplex communication,
+multiple
+commands can be issued at the same time, thus multiple responses may be
+outstanding at a given time. The server may reply in any order. To
+conserve
+ressources, the number of outstanding commands is limited by a window.
+Each
+command is assigned a (relative) unique, monotonically increasing ID
+(called the
 "transaction number" or txnr for short. Each
-response must include that ID. New commands may only be issued if the new ID
-is less than the oldes unresponded ID plus the window size. So a connection
-stalls if the server does not respond to all requests. (TODO: evaluate if this
-needs to be a hard requirement or if it is sufficient to just allow "n" outstanding
-commands at a time). Seperate txnr counters are maintained for the sending
-and receiving side of sessions.
-<p>
-A command and its response is called a relp transaction.
-<p>
-If something goes really wrong, both the client and the server may terminate
-the TCP connection at any time. Any outstanding commands are considered to
-have been unsuccessful in this case.
-<p>
+response must include that ID. New commands may only be issued if the
+new ID
+is less than the oldest unresponded ID plus the window size. So a
+connection
+stalls if the server does not respond to all requests. (TODO: evaluate
+if this
+needs to be a hard requirement or if it is sufficient to just allow "n"
+outstanding
+commands at a time).&nbsp;</p>
+<p>There is one potential issue with this communications model:
+In it, the server is able to respond to the client only in form or a
+response package. It is not capable of issuing a command itself. During
+normal operations, this does not pose any problem. However, if the
+server is shut down, there is no way for it to tell the client of its
+shutdown intension, especially if the client does not send any data at
+that moment. The same situation arises when the server timeouts a
+sessions where the client has not sent any data for an extended period
+of time (this probably is a good thing to conserve server ressources).
+&nbsp;Of course, an obvious answer to that need is that the server
+simply closes the connection after having sent all responses (or all
+that it is still capable of). The client will notice the closed
+connection at latest when it tries to send new commands. However, it
+may be worth considering an alternate mode where the server can issue
+commands to the client. One potential way to do this would be to
+reserve a specific txnr (0, for example) for this use. That txnr is
+only to be used by the server and only to send "out-of-band" commands.
+These commands must not be acknowledged by the client, because that
+would complicate the protocol more than useful for this case. So
+out-of-band-commands have a "hint" status - they hint the client about
+something, but if they do not arrive at the client, nothing fatal
+should happen. The ultimate session closure indication would still be
+the tcp session close. [Please see the "High Latency Environment" use
+case below for some implications this hinting process may have].</p>
+<p>A command and its response is called a relp transaction. A
+response must always carry the same txnr as the original command.
+</p>
+<p>If something goes really wrong, both the client and the server
+may terminate
+the TCP connection at any time. Any outstanding commands are considered
+to
+have been unsuccessful in this case.</p>
 <h3>ERROR HANDLING</h3>
 <p>
-If something goes wrong (e.g. invalid framing), the peer that detects the problem
-closes the underlying (TCP) connection. It may send an error/abort command, but
-MUST NOT wait for its response. The reasoning for this is that today's Internet is
-not a friendly place. Trying to gracefully resolve communications problems may
-lead to an attack vector. On the other hand, if the problem was of temporary nature,
-it may be cleared up by the connection reset and a new connect. So aborting errored
-connections is considered both secure as well as reasonable efficient.
+If something goes wrong (e.g. invalid framing), the peer that detects
+the problem
+closes the underlying (TCP) connection. It may send an error/abort
+command, but
+MUST NOT wait for its response. The reasoning for this is that today's
+Internet is
+not a friendly place. Trying to gracefully resolve communications
+problems may
+lead to an attack vector. On the other hand, if the problem was of
+temporary nature,
+it may be cleared up by the connection reset and a new connect. So
+aborting errored
+connections is considered both secure as well as reasonable efficient.</p>
+<p>Note: the ability to send abort/error messages depends on the
+decision of out-of-band-hint-commands (see above).
+</p>
 <h3>SENDING MESSAGES</h3>
-Because it is so important, I'd like to point it specifically out: sending a
-message is "just" another RELP command. The reply to that command is the ACK/NAK
-for the message. So every message *is* acknowledged. RELP options indicate how
-"deep" this acknowledge is (one we have implemented that), in the most extreme
-case a RELP client may ask a RELP server to ack only after the message has been
-completely acted upon (e.g. successfully written to database) - but this is far
-away in the future. For now, keep in mind that message loss will always be detected
+Because it is so important, I'd like to point it specifically out:
+sending a
+message is "just" another RELP command. The reply to that command is
+the ACK/NAK
+for the message. So every message *is* acknowledged. RELP options
+indicate how
+"deep" this acknowledge is (once we have implemented that), in the most
+extreme
+case a RELP client may ask a RELP server to ack only after the message
+has been
+completely acted upon (e.g. successfully written to database) - but
+this is far
+away in the future. For now, keep in mind that message loss will always
+be detected
 because we have app-level acknowledgement.
 <h3>RELP FRAME</h3>
 All relp transaction are carried out over a consistent framing.
+<pre>RELP-FRAME = HEADER DATA TRAILER<br>DATA = *OCTET ; command-defined data<br>HEADER = TXNR SP COMMAND SP DATALEN<br>TXNR = NUMBER ; relp transaction number, monotonically increases, starts at 1<br>DATALEN = NUMBER<br>#old:COMMAND = "init" / "go" / "syslog" / "close" / "rsp" / "abort" ; max length = 32<br>COMMAND = 1*32ALPHA<br>TRAILER = LF ; to detect framing errors and enhance human readibility<br>ALPHA = letter ; ('a'..'z', 'A'..'Z')<br>NUMBER = 1*9DIGIT<br>DIGIT = %d48-57<br>LF = %d10<br>SP = %d32<br><br>RSP DATA CONTENT:<br>RSP-HEADER = TXNR SP RSP-CODE [SP HUMANMSG] LF [CMDDATA]<br>RSP-CODE = 200 / 500 ; 200 is ok, all the rest currently erros<br>HUAMANMSG = *OCTET ; a human-readble message without LF in it<br>CMDDATA = *OCTET ; semantics depend on original command<br>TXNR is as in the relp frame, it is the TXNR of the frame being responded to.<br></pre>
 <p>
-<pre>
-RELP-FRAME     = HEADER DATA TRAILER
-DATA           = *OCTET ; command-defined data
-HEADER         = TXNR SP COMMAND SP DATALEN
-TXNR           = NUMBER ; relp transaction number, monotonically increases
-DATALEN        = NUMBER
-#old:COMMAND        = "init" / "go" / "syslog" / "close" / "rsp" / "abort" ; max length = 32
-COMMAND        = 1*32ALPHA
-TRAILER        = LF ; to detect framing errors and enhance human readibility
-ALPHA          = letter ; ('a'..'z', 'A'..'Z')
-NUMBER         = 1*9DIGIT
-DIGIT          = %d48-57
-LF             = %d10
-SP             = %d32
-
-RSP DATA CONTENT:
-RSP-HEADER     = TXNR SP RSP-CODE [SP HUMANMSG] LF [CMDDATA]
-RSP-CODE       = 200 / 500 ; 200 is ok, all the rest currently erros
-HUAMANMSG      = *OCTET ; a human-readble message without LF in it
-CMDDATA        = *OCTET ; semantics depend on original command
-TXNR is as in the relp frame, it is the TXNR of the frame being responded to.
-</pre>
-<p>
-DATALEN is the number of octets in DATA (so the frame length excluding the length
-of HEADER and TRAILER). Please note that the theoretical maximum (999,999,999 octets)
-is in (almost?) all cases unsuitable for actual message transfer. Thus, the actual
-maximum data length is negotiated during session setup. In relp version 1, it is
+DATALEN is the number of octets in DATA (so the frame length excluding
+the length
+of HEADER and TRAILER). Please note that the theoretical maximum
+(999,999,999 octets)
+is in (almost?) all cases unsuitable for actual message transfer. Thus,
+the actual
+maximum data length is negotiated during session setup. In relp version
+1, it is
 always 128K. In later versions, it shall be operator-configurable.
-<p>
-Note that TXNR montonically increases, but at some point latches. The requirement
-is to have enough different number values to handle a complete window. This may be
-used to optimize traffic a bit by using short numbers. E.g. transaction numbers
-may (may!) be latched at 1000 (so the next TXNR after 999 will be 0).
-<p>
+</p>
+<p>TXNR 0 is reserved for future use and may not be used. A RELP
+connection start with TXNR 1. Note that TXNR montonically increases but
+is latched at 999,999,999. After that TXNR, the next TXNR is
+1.&nbsp;</p>
 <h3>COMMAND SEMANTICS</h3>
 <h4>Command "rsp"</h4>
-Response to a client-issued command. The TXNR MUST match the client's command
-TXN. The data part contains RSP-HEADER as defined above. It is a response code,
-optionally followed by a space and additional data (depending on the client's command).
-  Return state values are: 200 - OK, 500 - error
+Response to a client-issued command. The TXNR MUST match the client's
+command
+TXNR. The data part contains RSP-HEADER as defined above. It is a
+response code,
+optionally followed by a space and additional data (depending on the
+client's command). Return state values are: 200 - OK, 500 - error
 <h4>Command "init"</h4>
-Intializes a connection to the server. May include offers inside the data. Offers
+Intializes a connection to the server. Must include offers inside the
+data, at a minimum the "relp_version" offer. Offers
 provide information about services supported by the client.
-<p>
-When the server receives an init, it parses the offers, checks what it itself supports
-and provides those offers that it accepts in the "rsp". 
-<p>
-When the client receives the "rsp", it checks the servers offers and finally selects
-those that should be used during the session. Please note that this doesn't imply the
-client selects e.g. security strength. To require a specific security strength, the
-server must be configured to offer only those options back to the client that it is
-happy to accept. So the client can only select from those. As such, even though the
-client makes the final feature selection, the server is dictating what needs to be 
-used.
-<p>
-Once the client has made its selection, it sends back a "go" command to the server,
-which finally initializes the connection and makes it ready for transmission of other
-commands. Note that the connection is only ready AFTER the server has sent a positive
-response to the "go" command, so the client must wait for it (and a negative response
-means the connection is NOT usable).
-<p>
+<p>When the server receives an init, it parses the offers, checks
+what it itself supports
+and provides those offers that it accepts in the "rsp". The server may
+send a "rsp" with an empty offer part in case it doesn't like any of
+the offers. To establish a session, a "relp_version" offer MUST be
+included in the response. If it is not, the client MUST close the
+connection. </p>
+<p>When the client receives the "rsp", it checks the servers
+offers and finally selects
+those that should be used during the session. Please note that this
+doesn't imply the
+client selects e.g. security strength. To require a specific security
+strength, the
+server must be configured to offer only those options back to the
+client that it is
+happy to accept. So the client can only select from those. As such,
+even though the
+client makes the final feature selection, the server is dictating what
+needs to be used.
+</p>
+<p>Once the client has made its selection, it sends back a "go"
+command to the server,
+which finally initializes the connection and makes it ready for
+transmission of other
+commands. Note that the connection is only ready AFTER the server has
+sent a positive
+response to the "go" command, so the client must wait for it (and a
+negative response
+means the connection is NOT usable and must be closed by the client).</p>
 <h3>OFFERS</h3>
-During session setup, "offers" are exchange between client and server. An "offer" describes
-a specific feature or operation mode. Always present must be the "relp_version" offer which
+During session setup, "offers" are exchange between client and server.
+An "offer" describes
+a specific feature or operation mode. Always present must be the
+"relp_version" offer which
 tells the other side which version of relp is in use.
-<p>
-ABNF for offer strings
-<pre>
-OFFER       = FEATURENAME [= VALUE] LF
-FEATURENAME = *32OCTET
-VALUE       = *255OCTET
-
-Currently defined values:
-FEATURENAME             VALUE
-relp_version            1 (this specification)
-</pre>
+<p>ABNF for offer strings
+</p>
+<pre>OFFER = LF FEATURENAME [= VALUE]<br>FEATURENAME = *32OCTET<br>VALUE = *255OCTET<br><br>Currently defined values:<br>FEATURENAME VALUE<br>relp_version 1 (this specification)<br></pre>
 <p>
 STATE DIAGRAMS
 ... detailling some communications scenarios:
-<p>
-<pre>
-Session Startup:
-C                                          S
-cmd: "init", data: offer          -----> (selects supported offers)
-(selects offers to use)           <----- cmd: "rsp", data "accepted offers"
-cmd: "go", data: "offers to use"   -----> (initializes connection)
-                                  <----- cmd: "rsp", data "200 OK" (or error)
-
-                ... transmission channel is ready to use ....
-
-Message Transmission
-C                                          S
-cmd: "syslog", data: syslogmsg    -----> (processes message)
-(indicates syslog as processed)   <----- cmd: "rsp", data OK/Error
-
-Session Termination
-C                                          S
-cmd: "close", data: none?         -----> (processes termination request)
-(terminates session)              <----- cmd: "rsp", data OK/Error
-                                         (terminates session)
-</pre>
+</p>
+<p></p>
+<pre>Session Startup:<br>C S<br>cmd: "init", data: offer -----&gt; (selects supported offers)<br>(selects offers to use) &lt;----- cmd: "rsp", data "accepted offers"<br>cmd: "go", data: "offers to use" -----&gt; (initializes connection)<br> &lt;----- cmd: "rsp", data "200 OK" (or error)<br><br> ... transmission channel is ready to use ....<br><br>Message Transmission<br>C S<br>cmd: "syslog", data: syslogmsg -----&gt; (processes message)<br>(indicates syslog as processed) &lt;----- cmd: "rsp", data OK/Error<br><br>Session Termination<br>C S<br>cmd: "close", data: none? -----&gt; (processes termination request)<br>(terminates session) &lt;----- cmd: "rsp", data OK/Error<br> (terminates session)<br></pre>
 <h3>SECURITY CONSIDERATIONS</h3>
 <h4>Window Size</h4>
 A very large window can be abused for denial of service attacks.
 <h4>Maximum DATALEN</h4>
 A too-large DATALEN can be absued for denial of service attacks.
-<h2>Use Cases</h2>These uses cases are not really a part of the
+<h2>Use Cases</h2>
+These uses cases are not really a part of the
 specification. I have added them to provide some insight into
 implementation specifics. These use cases may be removed (or moved to
 another part of the doc set) some time in the future. In the mean time,
 the serve a valuable purpose when thinking about protocol features.
-<h3>High Latency Environment</h3>
-<p>We have a high latency environment that is otherwise quite reliable
-(satellite link). We have a high traffic load. To cover this, a large<br>transmission
+<h3>Server Session Closure with a Hibernated Client</h3>
+I define this use case in support of <a href="http://www.rsyslog.com">rsyslog</a> and other
+possible clients which try to reduce ressource consumption.<br>
+<br>
+Rsyslog utilizes highly threaded design, among others to take advantage of multicore-machines. On
+the other hand, it conserves resources by only running as many worker
+threads as actually needed. So if there is no traffic, it may even be
+running no workers at all. The RELP client will be implemented as an output
+plugin and will be executed on a worker thread. So in low-traffic
+cases, the RELP client kind of hibernates, maybe even for hours (if no
+new message is scheduled for transmission).
+<p>
+In this use case, I examine a typical scenario in a low-message volume
+case. Here, the client is asked to transmit a message every now and
+than, at a pace of at most one message every few seconds. It may also
+happen that no message is to be sent for several minutes or even hours.
+Such a scenario is not as extreme as it sounds - it may, for example,
+to be used for error notifications, which hopefully happen very
+infrequently.</p><p>In this scenario, the client sends a command, but
+will usually not receive an immediate response, because client
+processing is already terminated when the server sends the response
+packet. Thus, the tcp stacks receive buffer buffers the server's
+response until the client has another message to send. Then, the client
+first checks for any outstanding responses, processes them and then
+send the new message. It is expected that in this scenario, each client
+invokation will process the past response and send a new packet. The
+response to that packet will not be processed by the invocation that
+sent the command but by the next one. So we always have one outstanding
+response inside the OS buffers. Now consider the server is shutting
+down the connection due to timeout or due to the fact that it needs to
+shutdown itself (maybe even on an urgent case, like power failure - the
+point is it can not wait). On next client invokation, the client finds
+an outstanding response and processes it. Then, it tries to send a new
+command. That will fail, because the connection has been terminated.
+The usual session recovery logic is used to restablish the connection
+when the server is back online. The command in question is transferred
+after session re-establishment.</p><h3>High Latency Environment</h3>
+<p>We have a high latency environment that is otherwise quite
+reliable
+(satellite link). We have a high traffic load. To cover this, a large<br>
+transmission
 window has been selected (let's say 1000 messages). Now the client
-sends a burst of messages but then&nbsp; has nothing to do and falls
+sends a burst of messages but then&nbsp; has nothing to do and
+falls
 asleep. Then, the server starts sending acks. These acks are not taken
 off the wire by the client (as it is inactive - rsyslog case).
 Eventually, the tcp window fills. Thus the server can no longer send
 acks. This does not immediately pose any problems, as the server adds
-the ack frames to its internal send queue.</p><p>If the client comes
+the ack frames to its internal send queue.</p>
+<p>If the client comes
 out of hibernation, it receives all previous sent frames, freeing the
 server's tcp send window. Thus, the server can continue to send data
 from its send queue (and drain it). The client, having received the
 server's acks, will not stall because its own RELP window has been
-cleared by the acks.</p><p>The situation is&nbsp; more complicated if
+cleared by the acks.</p>
+<p>The situation is&nbsp; more complicated if
 the server intends to shut down while the client is in hibernation. To
 do so, the server usually sends a "adviseclose" command followed by a
 "close" command. However, neither of these commands can be sent because
@@ -193,7 +259,8 @@ anything left in the server's send queue will be lost in this case. As
 such, acks are potentially lost. This will lead to message duplication
 as the client assumes that the frames unacked at time of force-close
 where not processed (there is no other safe assumption). Consequently,
-the client will re-send these frames in the next session.</p><p>A cure
+the client will re-send these frames in the next session.</p>
+<p>A cure
 to this situation is to have the client concurrently listen to server
 requests, e.g. by running a receiver on a separate thread. The RELP
 protocol does not demand this behaviour. However, it can be used to
@@ -208,9 +275,11 @@ which the server can not send acks (but only in a magnitude of a few
 seconds at most). If the server intends to shutdown during such a
 period, a short timeout may enable it to avoid a fore-shutdown.
 However, there are still cases thinkable where a force shutdown may be
-required. These are deemed to be highly unlikely.</p><p>It is the
+required. These are deemed to be highly unlikely.</p>
+<p>It is the
 protocol implementer's choice if the slight less chance of a server
 force-shutdown justifies the addition of a background thread to a
 program that otherwise doesn't need one. From a protocol point of view,
 a force-shutdown is a valid operation. Also, while it causes potential
-message duplication, it can not cause message loss.</p></body></html>
+message duplication, it can not cause message loss.</p>
+</body></html>
