@@ -233,7 +233,7 @@ relpSessSendResponse(relpSess_t *pThis, unsigned char *pData, size_t lenData)
 	/* TODO: cancel-safety! */
 	pthread_mutex_lock(&pThis->mutSend);
 	CHKRet(relpFrameBuildSendbuf(&pSendbuf, pThis->txnrSnd, (unsigned char*)"rsp", 3,
-				     pData, lenData, pThis->pEngine));
+				     pData, lenData, pThis));
 	pThis->txnrSnd = (pThis->txnrSnd + 1) % 1000000000; /* txnr used up, so on to next one (latching!) */
 pThis->pEngine->dbgprint("SessSend new txnr %d\n", (int) pThis->txnrSnd);
 	/* now enqueue it to the sendq (which means "send it" ;)) */
@@ -249,5 +249,23 @@ finalize_it:
 		 */
 	}
 
+	LEAVE_RELPFUNC;
+}
+
+
+/* actually send to the remote peer
+ * This function takes data from the sendq and sends as much as
+ * possible to the remote peer.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpSessSndData(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	CHKRet(relpSendqSend(pThis->pSendq, pThis->pTcp));
+
+finalize_it:
 	LEAVE_RELPFUNC;
 }

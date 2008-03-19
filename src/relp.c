@@ -40,6 +40,7 @@
 #include "relpframe.h"
 #include "relpsess.h"
 #include "cmdif.h"
+#include "sendq.h"
 #include "dbllinklist.h"
 
 
@@ -408,6 +409,7 @@ relpEngineRun(relpEngine_t *pThis)
 	int maxfds;
 	int nfds;
 	fd_set readfds;
+	fd_set writefds;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
@@ -416,6 +418,7 @@ relpEngineRun(relpEngine_t *pThis)
 	while(1) {
 	        maxfds = 0;
 	        FD_ZERO(&readfds);
+	        FD_ZERO(&writefds);
 
 		/* Add the listen sockets to the list of read descriptors.  */
 		for(pSrvEtry = pThis->pSrvLstRoot ; pSrvEtry != NULL ; pSrvEtry = pSrvEtry->pNext) {
@@ -426,14 +429,16 @@ relpEngineRun(relpEngine_t *pThis)
 			}
 		}
 
-		/* Add all sessions for reception (they all have just one socket) */
+		/* Add all sessions for reception and sending (they all have just one socket) */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; pSessEtry = pSessEtry->pNext) {
 			sock = relpSessGetSock(pSessEtry->pSess);
 			FD_SET(sock, &readfds);
+			/* now check if a send request is outstanding and, if so, add it */
+			if(!relpSendqIsEmpty(pSessEtry->pSess->pSendq)) {
+				FD_SET(sock, &writefds);
+			}
 			if(sock > maxfds) maxfds = sock;
 		}
-
-		/* TODO: add send sockets (if needed) */
 
 		/* done adding all sockets */
 		if(pThis->dbgprint != dbgprintDummy) {
@@ -445,7 +450,7 @@ relpEngineRun(relpEngine_t *pThis)
 		}
 
 		/* wait for io to become ready */
-		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+		nfds = select(maxfds+1, (fd_set *) &readfds, &writefds, NULL, NULL);
 pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 	
 		/* and then start again with the servers (new connection request) */
@@ -464,10 +469,11 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 			}
 		}
 
-		/* now check if we have some data waiting for sessions */
+		/* now check if we have some action waiting for sessions */
 		for(pSessEtry = pThis->pSessLstRoot ; pSessEtry != NULL ; ) {
 			pSessEtryNext = pSessEtry->pNext; /* we need to cache this as we may delete the entry! */
 			sock = relpSessGetSock(pSessEtry->pSess);
+			/* read data waiting? */
 			if(FD_ISSET(sock, &readfds)) {
 				localRet = relpSessRcvData(pSessEtry->pSess); /* errors are handled there */
 				/* if we had an error during processing, we must shut down the session. This
@@ -481,6 +487,21 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 				}
 				--nfds; /* indicate we have processed one */
 			}
+			/* are we able to write? */
+			if(FD_ISSET(sock, &writefds)) {
+pThis->dbgprint("fd %d ready for writing\n", sock);
+				localRet = relpSessSndData(pSessEtry->pSess); /* errors are handled there */
+				/* if we had an error during processing, we must shut down the session. This
+				 * is part of the protocol specification: errors are recovered by aborting the
+				 * session, which may eventually be followed by a new connect.
+				 */
+				if(localRet != RELP_RET_OK) {
+					pThis->dbgprint("relp session %d iRet %d during send, tearing it down\n",
+						        sock, localRet);
+					relpEngineDelSess(pThis, pSessEtry);
+				}
+			}
+
 			pSessEtry = pSessEtryNext;
 		}
 

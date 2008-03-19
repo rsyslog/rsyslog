@@ -175,7 +175,7 @@ relpSendqDelFirstBuf(relpSendq_t *pThis)
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sendq);
-	RELPOBJ_assert(pThis->pRoot, Sendbuf);
+	RELPOBJ_assert(pThis->pRoot, Sendqe);
 
 	pthread_mutex_lock(&pThis->mut);
 	pEntry = pThis->pRoot;
@@ -183,6 +183,71 @@ relpSendqDelFirstBuf(relpSendq_t *pThis)
 	pthread_mutex_unlock(&pThis->mut);
 
 	CHKRet(relpSendqeDestruct(&pEntry));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* Returns if the sendq is empty (boolean true) or not (0).
+ * Note the differet calling conventions - no relpRetVal but the
+ * boolen value. This is much more convenient, especially as nothing
+ * can go wrong with this simply object access method.
+ * Note that we must lock the mutex because an add operation may
+ * be in progress concurrently (TODO: revisit this once we are done
+ * with the complete implementation, all these mutex operations may
+ * not really be necessary).
+ * rgerhards, 2008-03-19
+ */
+int
+relpSendqIsEmpty(relpSendq_t *pThis)
+{
+	int ret;
+
+	/* TODO: an atomic operation would also do nicely... */
+	pthread_mutex_lock(&pThis->mut);
+	ret = pThis->pRoot == NULL;
+	pthread_mutex_unlock(&pThis->mut);
+pThis->pEngine->dbgprint("relpSendqIsEmpty() returns %d\n", ret);
+	return ret;
+}
+
+
+/* Sends as much data from the top of the sendq as possible.
+ * This function tries to send as much data from the top of the queue
+ * as possible, destroying all sendbuf's that have been processed.
+ * TODO: chain non-"rsp" frames to the "toack" list!?!?
+ * It is an implementation detail if the function actually tries to send
+ * everything. Right now, it just processes a single sendbuf, but that
+ * may change. Please note that if a senbuf is too large to be sent in
+ * a single operation, a partial buffer may be sent.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpSendqSend(relpSendq_t *pThis, relpTcp_t *pTcp)
+{
+	relpSendqe_t *pEntry;
+	relpRetVal localRet;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sendq);
+	RELPOBJ_assert(pTcp,  Tcp);
+
+	pEntry = pThis->pRoot;
+	RELPOBJ_assert(pEntry, Sendqe);
+
+	// TODO: implement partial buffer sends, this here currently does not
+	// work under all circumstances! rgerhards, 2008-03-19
+	localRet = relpSendbufSend(pEntry->pBuf, pTcp);
+
+	if(localRet == RELP_RET_OK) {
+		/* in this case, the full buffer has been sent and we can
+		 * destruct the sendbuf.
+		 */
+		CHKRet(relpSendqDelFirstBuf(pThis));
+	} else if(localRet != RELP_RET_PARTIAL_WRITE) {
+		ABORT_FINALIZE(localRet);
+	}
 
 finalize_it:
 	LEAVE_RELPFUNC;

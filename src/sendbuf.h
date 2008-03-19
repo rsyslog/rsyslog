@@ -33,21 +33,24 @@
 #ifndef RELPSENDBUF_H_INCLUDED
 #define	RELPSENDBUF_H_INCLUDED
 
+#include "relpsess.h"
+
 /* the RELPSENDBUF object 
  * rgerhards, 2008-03-16
  */
-typedef struct relpSendbuf_s {
+struct relpSendbuf_s {
 	BEGIN_RELP_OBJ;
-	relpEngine_t *pEngine;
+	relpSess_t *pSess; /**< the session this buffer belongs to */
 	relpOctet_t *pData; /**< the buffer, as it can be put on the wire */
 	size_t lenData;
 	size_t bufPtr; /**< multi-purpose, e.g. tracks sent octets when multi-send
 	 	            send() calls are required. */
-} relpSendbuf_t;
+};
 
 
 /* prototypes */
-relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis, relpEngine_t *pEngine);
+relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis, relpSess_t *pSess);
 relpRetVal relpSendbufDestruct(relpSendbuf_t **ppThis);
+relpRetVal relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp);
 
 #endif /* #ifndef RELPSENDBUF_H_INCLUDED */

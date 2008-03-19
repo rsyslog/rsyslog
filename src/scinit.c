@@ -27,8 +27,7 @@
  * your copyright to Adiscon GmbH, Germany. This is necessary to permit the
  * dual-licensing set forth here. Our apologies for this inconvenience, but
  * we sincerely believe that the dual-licensing model helps us provide great
- * free software while at the same time obtaining some funding for further
- * development.
+ * free software while at the same time obtaining some development funding.
  */
 #include "config.h"
 #include <stdlib.h>
@@ -43,9 +42,11 @@
 BEGINcommand(S, Init)
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in init command handler\n");
+	static char buf[2500000] = "test long buf";
 
 	/* and send it... */
-	CHKRet(relpSessSendResponse(pSess, (unsigned char*) "relp_version=1", 14));
+	//CHKRet(relpSessSendResponse(pSess, (unsigned char*) "relp_version=1", 14));
+	CHKRet(relpSessSendResponse(pSess, (unsigned char*) buf, 2500000));
 
 finalize_it:
 ENDcommand

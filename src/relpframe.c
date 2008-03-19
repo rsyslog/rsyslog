@@ -311,7 +311,7 @@ finalize_it:
  */
 relpRetVal
 relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, size_t lenCmd,
-		      relpOctet_t *pData, size_t lenData, relpEngine_t *pEngine)
+		      relpOctet_t *pData, size_t lenData, relpSess_t *pSess)
 {
 	char bufTxnr[16];
 	size_t lenTxnr;
@@ -323,7 +323,7 @@ relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char 
 	ENTER_RELPFUNC;
 	assert(ppSendbuf != NULL);
 	
-	CHKRet(relpSendbufConstruct(&pSendbuf, pEngine));
+	CHKRet(relpSendbufConstruct(&pSendbuf, pSess));
 
 	lenTxnr = snprintf(bufTxnr, sizeof(bufTxnr), "%d", (int) txnr);
 	if(lenTxnr > 9)
@@ -349,7 +349,7 @@ relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char 
 	*ptrMembuf = '\n';
 
 	*ppSendbuf = pSendbuf; /* save new buffer */
-pEngine->dbgprint("sendbuf created, len %d, content: '%s'\n", (int) pSendbuf->lenData, pSendbuf->pData);
+pSess->pEngine->dbgprint("sendbuf created, len %d, content: '%s'\n", (int) pSendbuf->lenData, pSendbuf->pData);
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {

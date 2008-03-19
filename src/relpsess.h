@@ -36,15 +36,13 @@
 #include <pthread.h>
 
 #include "relpsrv.h"
-#include "sendq.h"
-#include "sendbuf.h"
 
 /* unacked msgs linked list */
 typedef struct replSessUnacked_s {
 	struct replSessUnacked_s *pNext;
 	struct replSessUnacked_s *pPrev;
 	relpTxnr_t txnr;	/**< txnr of unacked message */
-	relpSendbuf_t pSendbuf; /**< the unacked message */
+	struct relpSendbuf_s *pSendbuf; /**< the unacked message */
 } relpSessUnacked_t;
 
 /* relp session state */
@@ -60,7 +58,7 @@ typedef enum relpSessState_e {
 /* the RELPSESS object 
  * rgerhards, 2008-03-16
  */
-typedef struct relpSess_s {
+struct relpSess_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	relpSrv_t *pSrv;	/**< the server we belong to */
@@ -69,15 +67,17 @@ typedef struct relpSess_s {
 	relpTxnr_t txnrRcv;	/**< next txnr expected when receiving */
 	relpTxnr_t txnrSnd;	/**< next txnr to be used when sending */
 	relpSessState_t sessState; /**< state of our session */
-	relpSendq_t *pSendq; /**< our send queue */
+	struct relpSendq_s *pSendq; /**< our send queue */
 	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
 	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
-} relpSess_t;
+};
 
 /* macros for quick memeber access */
 #define relpSessGetSock(pThis)  (relpTcpGetSock((pThis)->pTcp))
 
 #include "relpframe.h" /* this needs to be done after relpSess_t is defined! */
+#include "sendbuf.h"
+#include "sendq.h"
 
 /* prototypes */
 relpRetVal relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv);
@@ -86,5 +86,6 @@ relpRetVal relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int 
 relpRetVal relpSessRcvData(relpSess_t *pThis);
 relpRetVal relpSessSendFrame(relpSess_t *pThis, relpFrame_t *pFrame);
 relpRetVal relpSessSendResponse(relpSess_t *pThis, unsigned char *pData, size_t lenData);
+relpRetVal relpSessSndData(relpSess_t *pThis);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

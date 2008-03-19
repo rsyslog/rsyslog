@@ -58,5 +58,6 @@ relpRetVal relpTcpDestruct(relpTcp_t **ppThis);
 relpRetVal relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine);
 relpRetVal relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf);
+relpRetVal relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf);
 
 #endif /* #ifndef RELPTCP_H_INCLUDED */

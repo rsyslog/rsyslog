@@ -65,5 +65,7 @@ typedef struct relpSendq_s {
 relpRetVal relpSendqConstruct(relpSendq_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpSendqDestruct(relpSendq_t **ppThis);
 relpRetVal relpSendqAddBuf(relpSendq_t *pThis, relpSendbuf_t *pBuf);
+relpRetVal relpSendqSend(relpSendq_t *pThis, relpTcp_t *pTcp);
+int relpSendqIsEmpty(relpSendq_t *pThis);
 
 #endif /* #ifndef RELPSENDQ_H_INCLUDED */

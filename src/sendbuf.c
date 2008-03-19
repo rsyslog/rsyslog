@@ -43,7 +43,7 @@
  * operations have been finished.
  */
 relpRetVal
-relpSendbufConstruct(relpSendbuf_t **ppThis, relpEngine_t *pEngine)
+relpSendbufConstruct(relpSendbuf_t **ppThis, relpSess_t *pSess)
 {
 	relpSendbuf_t *pThis;
 
@@ -54,7 +54,7 @@ relpSendbufConstruct(relpSendbuf_t **ppThis, relpEngine_t *pEngine)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Sendbuf);
-	pThis->pEngine = pEngine;
+	pThis->pSess = pSess;
 
 	*ppThis = pThis;
 
@@ -106,7 +106,35 @@ relpSendbufSetData(relpSendbuf_t *pThis, relpOctet_t *pData, size_t lenData)
 }
 
 
-/* try to send as much as possible from the send buffer
- * rgerhards, 20008-03-17
+/* Sends as much data from the send buffer as possible.
+ * This function tries to send as much data from the send buffer
+ * as possible.
+ * TODO: right now, it always tries to send the complete buffer. This needs to
+ * be changed!
+ * rgerhards, 2008-03-19
  */
-// TODO: implement?
+relpRetVal
+relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp)
+{
+	ssize_t lenToWrite;
+	ssize_t lenWritten;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sendbuf);
+	RELPOBJ_assert(pTcp,  Tcp);
+
+	// TODO: implement partial buffer sends, this here currently does not
+	// work under all circumstances! rgerhards, 2008-03-19
+	lenToWrite = pThis->lenData - pThis->bufPtr;
+	lenWritten = lenToWrite;
+pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
+
+	CHKRet(relpTcpSend(pTcp, pThis->pData + pThis->bufPtr, &lenWritten));
+
+	if(lenWritten != lenToWrite) {
+		pThis->bufPtr += lenWritten;
+		iRet = RELP_RET_PARTIAL_WRITE;
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}

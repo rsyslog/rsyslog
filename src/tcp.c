@@ -35,6 +35,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <string.h>
@@ -114,6 +115,7 @@ relpRetVal
 relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine)
 {
 	relpTcp_t *pThis;
+	int sockflags;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
 	int iNewSock = -1;
@@ -127,6 +129,19 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine)
 	}
 
 	/* TODO: obtain hostname, normalize (callback?), save it */
+
+	/* set the new socket to non-blocking IO */
+	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
+		sockflags |= O_NONBLOCK;
+		/* SETFL could fail too, so get it caught by the subsequent
+		 * error check.
+		 */
+		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
+	}
+	if(sockflags == -1) {
+		pThis->pEngine->dbgprint("error %d setting fcntl(O_NONBLOCK) on relp socket %d", errno, iNewSock);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
 
 	CHKRet(relpTcpConstruct(&pThis, pEngine));
 	pThis->sock = iNewSock;
@@ -153,6 +168,7 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, on = 1;
+	int sockflags;
 	unsigned char *pLstnPt;
 
 	ENTER_RELPFUNC;
@@ -212,6 +228,22 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
 			*s = -1;
 			continue;
 		}
+
+		/* We use non-blocking IO! */
+		if((sockflags = fcntl(*s, F_GETFL)) != -1) {
+			sockflags |= O_NONBLOCK;
+			/* SETFL could fail too, so get it caught by the subsequent
+			 * error check.
+			 */
+			sockflags = fcntl(*s, F_SETFL, sockflags);
+		}
+		if(sockflags == -1) {
+			pThis->pEngine->dbgprint("error %d setting fcntl(O_NONBLOCK) on relp socket", errno);
+                        close(*s);
+			*s = -1;
+			continue;
+		}
+
 
 #if 0 // Do we really (still) need this?
 
@@ -294,5 +326,41 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 
 	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, 0);
 
+	LEAVE_RELPFUNC;
+}
+
+
+/* send a buffer. On entry, pLenBuf contains the number of octets to
+ * write. On exit, it contains the number of octets actually written.
+ * If this number is lower than on entry, only a partial buffer has
+ * been written.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
+{
+	ssize_t written;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+
+	written = send(pThis->sock, pBuf, *pLenBuf, 0);
+	//written = send(pThis->sock, pBuf, *pLenBuf, MSG_DONTWAIT);
+
+	if(written == -1) {
+		switch(errno) {
+			case EAGAIN:
+			case EINTR:
+				/* this is fine, just retry... */
+				written = 0;
+				break;
+			default:
+				ABORT_FINALIZE(RELP_RET_IO_ERR);
+				break;
+		}
+	}
+
+	*pLenBuf = written;
+finalize_it:
+pThis->pEngine->dbgprint("tcpSend returns %d\n", (int) *pLenBuf);
 	LEAVE_RELPFUNC;
 }

@@ -41,6 +41,9 @@ typedef unsigned char relpOctet_t;
 typedef int relpTxnr_t;
 typedef int relpRetVal;
 
+/* our objects (forward definitions) */
+typedef struct relpSess_s relpSess_t;
+typedef struct relpSendbuf_s relpSendbuf_t;
 
 /* IDs of librelp objects */
 typedef enum relpObjID_e {
@@ -160,6 +163,8 @@ typedef struct relpEngine_s {
 #define RELP_RET_DATA_TOO_LONG	ERRCODE_BASE + 10	/**< DATALEN exceeds permitted length */
 #define RELP_RET_INVALID_TXNR	ERRCODE_BASE + 11	/**< a txnr is invalid (probably code error) */
 #define RELP_RET_INVALID_DATALEN ERRCODE_BASE + 12	/**< DATALEN field is invalid (probably code error) */
+#define RELP_RET_PARTIAL_WRITE  ERRCODE_BASE + 13	/**< only partial data written (state, not an error) */
+#define RELP_RET_IO_ERR         ERRCODE_BASE + 14	/**< IO error occured */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

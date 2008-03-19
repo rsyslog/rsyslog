@@ -33,6 +33,7 @@
 #ifndef RELPFRAME_H_INCLUDED
 #define	RELPFRAME_H_INCLUDED
 
+
 /* state the relpframe may have during reception of messages */
 typedef enum relpFrameRcvStates_e {
 	eRelpFrameRcvState_BEGIN_FRAME = 0,
@@ -61,11 +62,12 @@ typedef struct relpFrame_s {
 } relpFrame_t;
 
 #include "relpsess.h" /* this needs to be done after relpFrame_t is defined! */
+#include "sendbuf.h"
 
 /* prototypes */
 relpRetVal relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess);
 relpRetVal relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, size_t lenCmd,
-		      		 relpOctet_t *pData, size_t lenData, relpEngine_t *pEngine);
+		      		 relpOctet_t *pData, size_t lenData, relpSess_t *pSess);
 //relpRetVal relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
 //			  	      relpOctet_t *pData, size_t lenData, int bHandoverBuffer);
 
