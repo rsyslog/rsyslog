@@ -131,7 +131,7 @@ CODESTARTfreeInstance
 		net.closeUDPListenSockets(pData->pSockArray);
 
 	if(pData->pRelpClt != NULL)
-		relpCltDestruct(&pData->pRelpClt);
+		relpEngineCltDestruct(pRelpEngine, &pData->pRelpClt);
 
 ENDfreeInstance
 
@@ -140,43 +140,6 @@ BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	printf("%s", pData->f_hname);
 ENDdbgPrintInstInfo
-
-
-/* Send a frame
- */
-static rsRetVal SendFrame(void *pvData, char *msg, size_t len)
-{
-	DEFiRet;
-	ssize_t lenSend;
-	instanceData *pData = (instanceData *) pvData;
-
-	lenSend = send(pData->sock, msg, len, 0);
-	dbgprintf("omrelp sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
-
-	if(lenSend == -1) {
-		/* we have an error case - check what we can live with */
-		switch(errno) {
-		case EMSGSIZE:
-			dbgprintf("message not (tcp)send, too large\n");
-			/* This is not a real error, so it is not flagged as one */
-			break;
-		default:
-			dbgprintf("message not (tcp)send");
-			iRet = RS_RET_TCP_SEND_ERROR;
-			break;
-		}
-	} else if(lenSend != (ssize_t) len) {
-		/* no real error, could "just" not send everything... 
-		 * For the time being, we ignore this...
-		 * rgerhards, 2005-10-25
-		 */
-		dbgprintf("message not completely (tcp)send, ignoring %ld\n", (long) lenSend);
-		usleep(1000); /* experimental - might be benefitial in this situation */
-		/* TODO: we need to revisit this code -- rgerhards, 2007-12-28 */
-	}
-
-	RETiRet;
-}
 
 
 /* This function is called immediately before a send retry is attempted.
@@ -232,6 +195,8 @@ static rsRetVal doTryResume(instanceData *pData)
 	case eDestFORW_UNKN:
 		/* The remote address is not yet known and needs to be obtained */
 		dbgprintf(" %s\n", pData->f_hname);
+		relpCltConnect(pData->pRelpClt, family, pData->port, pData->f_hname);
+#if 0
 		memset(&hints, 0, sizeof(hints));
 		/* port must be numeric, because config file syntax requests this */
 		/* TODO: this code is a duplicate from cfline() - we should later create
@@ -247,6 +212,8 @@ static rsRetVal doTryResume(instanceData *pData)
 		} else {
 			iRet = RS_RET_SUSPENDED;
 		}
+#endif
+			pData->eDestState = eDestFORW;
 		break;
 	case eDestFORW:
 		/* rgerhards, 2007-09-11: this can not happen, but I've included it to
@@ -402,7 +369,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* SKIP AND COUNT */;
 		pData->port = malloc(i + 1);
 		if(pData->port == NULL) {
-			errmsg.LogError(NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
+			errmsg.LogError(NO_ERRCODE, "Could not get memory to store relp port, "
 				 "using default port, results may not be what you intend\n");
 			/* we leave f_forw.port set to NULL, this is then handled by
 			 * getRelpPt().
@@ -441,26 +408,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		goto finalize_it;
 
 	/* first set the pData->eDestState */
-	memset(&hints, 0, sizeof(hints));
-	/* port must be numeric, because config file syntax requests this */
-	hints.ai_flags = AI_NUMERICSERV;
-	hints.ai_family = family;
-	hints.ai_socktype = SOCK_STREAM;
-	if( (error = getaddrinfo(pData->f_hname, getRelpPt(pData), &hints, &res)) != 0) {
-		pData->eDestState = eDestFORW_UNKN;
-	} else {
-		pData->eDestState = eDestFORW;
-		pData->f_addr = res;
-	}
-	/*
-	 * Otherwise the host might be unknown due to an
-	 * inaccessible nameserver (perhaps on the same
-	 * host). We try to get the ip number later, like
-	 * FORW_SUSP.
-	 */
+	pData->eDestState = eDestFORW_UNKN;
 
 	/* create our relp client  */
-	CHKiRet(relpCltConstruct(&pData->pRelpClt, pRelpEngine)); /* we use CHKiRet as librelp has a similar return value range */
+	CHKiRet(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt)); /* we use CHKiRet as librelp has a similar return value range */
 	/* and set callbacks */
 #if 0 // TODO: the same for relp
 	CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, openConn));
@@ -504,6 +455,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	/* create our relp engine */
 	CHKiRet(relpEngineConstruct(&pRelpEngine));
+	CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
 
 	/* tell which objects we need */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
