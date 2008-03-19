@@ -37,5 +37,6 @@ AC_TYPE_SIGNAL
 #AC_CHECK_FUNCS([])
 
 AC_CONFIG_FILES([Makefile \
+		doc/Makefile \
 		src/Makefile])
 AC_OUTPUT

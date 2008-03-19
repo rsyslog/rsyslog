@@ -1,4 +1,4 @@
 # Uncomment to force gcc
 #CC=gcc
 
-SUBDIRS = src
+SUBDIRS = src doc
