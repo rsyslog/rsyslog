@@ -118,7 +118,7 @@ typedef struct filed selector_t;	/* new type name */
 
 #define MSG_PARSE_HOSTNAME 1
 #define MSG_DONT_PARSE_HOSTNAME 0
-rsRetVal parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags);
+rsRetVal parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType);
 #include "net.h" /* TODO: remove when you remoe isAllowedSender from here! */
 void untty(void);
 rsRetVal selectorConstruct(selector_t **ppThis);

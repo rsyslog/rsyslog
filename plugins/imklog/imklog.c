@@ -133,7 +133,7 @@ static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
 
 	/* here we must create our message object and supply it to the message queue
 	 */
-	CHKiRet(parseAndSubmitMessage(LocalHostName, msgBuf, strlen(msgBuf), MSG_DONT_PARSE_HOSTNAME, NOFLAG));
+	CHKiRet(parseAndSubmitMessage(LocalHostName, msgBuf, strlen(msgBuf), MSG_DONT_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY));
 
 finalize_it:
 	RETiRet;

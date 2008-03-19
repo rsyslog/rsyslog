@@ -630,8 +630,12 @@ void untty(void)
  * printchopped(). rgerhards 2005-10-06
  * rgerhards: 2008-03-06: added "flags" to allow an input module to specify
  * flags, most importantly to request ignoring the messages' timestamp.
+ *
+ * rgerhards, 2008-03-19:
+ * I added an additional calling parameter to permit specifying the flow
+ * control capability of the source.
  */
-rsRetVal printline(char *hname, char *msg, int bParseHost, int flags)
+rsRetVal printline(char *hname, char *msg, int bParseHost, int flags, flowControl_t flowCtlType)
 {
 	DEFiRet;
 	register char *p;
@@ -641,6 +645,7 @@ rsRetVal printline(char *hname, char *msg, int bParseHost, int flags)
 	/* Now it is time to create the message object (rgerhards)
 	*/
 	CHKiRet(msgConstruct(&pMsg));
+	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, msg);
 	
 	pMsg->bParseHOSTNAME  = bParseHost;
@@ -716,9 +721,13 @@ finalize_it:
  * It also has been adopted to our usual calling interface, but currently does
  * not provide any useful return states. But we now have the hook and things can
  * improve in the future. <-- TODO!
+ *
+ * rgerhards, 2008-03-19:
+ * I added an additional calling parameter to permit specifying the flow
+ * control capability of the source.
  */
 rsRetVal
-parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags)
+parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType)
 {
 	DEFiRet;
 	register int iMsg;
@@ -817,7 +826,7 @@ parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags
 			 */
 			if(iMsg == MAXLINE) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, tmpline, bParseHost, flags);
+				printline(hname, tmpline, bParseHost, flags, flowCtlType);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -869,7 +878,7 @@ parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, tmpline, bParseHost, flags);
+	printline(hname, tmpline, bParseHost, flags, flowCtlType);
 
 finalize_it:
 	RETiRet;
