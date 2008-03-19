@@ -456,7 +456,7 @@ AC_ARG_ENABLE(relp,
 )
 if test "x$enable_relp" = "xyes"; then
   AC_CHECK_HEADERS(
-    [relp.h],,
+    [librelp.h],,
     [AC_MSG_FAILURE([RELP library is missing (no headers)])]
   )
   AC_CHECK_LIB(
