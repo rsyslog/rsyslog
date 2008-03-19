@@ -219,7 +219,7 @@ pThis->pEngine->dbgprint("relpSendqIsEmpty() returns %d\n", ret);
  * TODO: chain non-"rsp" frames to the "toack" list!?!?
  * It is an implementation detail if the function actually tries to send
  * everything. Right now, it just processes a single sendbuf, but that
- * may change. Please note that if a senbuf is too large to be sent in
+ * may change. Please note that if a sendbuf is too large to be sent in
  * a single operation, a partial buffer may be sent.
  * rgerhards, 2008-03-19
  */
@@ -236,8 +236,6 @@ relpSendqSend(relpSendq_t *pThis, relpTcp_t *pTcp)
 	pEntry = pThis->pRoot;
 	RELPOBJ_assert(pEntry, Sendqe);
 
-	// TODO: implement partial buffer sends, this here currently does not
-	// work under all circumstances! rgerhards, 2008-03-19
 	localRet = relpSendbufSend(pEntry->pBuf, pTcp);
 
 	if(localRet == RELP_RET_OK) {

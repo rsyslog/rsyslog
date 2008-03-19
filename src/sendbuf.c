@@ -108,9 +108,8 @@ relpSendbufSetData(relpSendbuf_t *pThis, relpOctet_t *pData, size_t lenData)
 
 /* Sends as much data from the send buffer as possible.
  * This function tries to send as much data from the send buffer
- * as possible.
- * TODO: right now, it always tries to send the complete buffer. This needs to
- * be changed!
+ * as possible. For partial writes, the sendbuffer is updated to
+ * contain the correct "already written" count.
  * rgerhards, 2008-03-19
  */
 relpRetVal
@@ -122,8 +121,6 @@ relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp)
 	RELPOBJ_assert(pThis, Sendbuf);
 	RELPOBJ_assert(pTcp,  Tcp);
 
-	// TODO: implement partial buffer sends, this here currently does not
-	// work under all circumstances! rgerhards, 2008-03-19
 	lenToWrite = pThis->lenData - pThis->bufPtr;
 	lenWritten = lenToWrite;
 pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);

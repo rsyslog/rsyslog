@@ -7,6 +7,7 @@ PTHREADS_CFLAGS = -pthread
 lib_LTLIBRARIES = librelp.la
 
 librelp_la_SOURCES = \
+	librelp.h \
 	relp.c \
 	relp.h \
 	relpsess.c \
@@ -33,6 +34,6 @@ librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS)
 librelp_la_LIBADD = 
 
 include_HEADERS = \
-	relp.h \
+	librelp.h \
 	relpclt.h \
 	relpsrv.h

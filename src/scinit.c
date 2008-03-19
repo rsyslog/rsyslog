@@ -42,11 +42,9 @@
 BEGINcommand(S, Init)
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in init command handler\n");
-	static char buf[2500000] = "test long buf";
 
 	/* and send it... */
-	//CHKRet(relpSessSendResponse(pSess, (unsigned char*) "relp_version=1", 14));
-	CHKRet(relpSessSendResponse(pSess, (unsigned char*) buf, 2500000));
+	CHKRet(relpSessSendResponse(pSess, (unsigned char*) "relp_version=1", 14));
 
 finalize_it:
 ENDcommand

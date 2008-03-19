@@ -36,10 +36,10 @@
 /* the RELPCLT object 
  * rgerhards, 2008-03-16
  */
-typedef struct relpClt_s {
+struct relpClt_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
-} relpClt_t;
+};
 
 
 /* prototypes */

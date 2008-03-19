@@ -35,29 +35,7 @@
 
 #include <pthread.h>
 
-
-/* define some of our types that a caller must know about */
-typedef unsigned char relpOctet_t;
-typedef int relpTxnr_t;
-typedef int relpRetVal;
-
-/* our objects (forward definitions) */
-typedef struct relpSess_s relpSess_t;
-typedef struct relpSendbuf_s relpSendbuf_t;
-
-/* IDs of librelp objects */
-typedef enum relpObjID_e {
-	eRelpObj_Invalid = 0,	/**< invalid object, must be zero to detect unitilized value */
-	eRelpObj_Engine = 1,
-	eRelpObj_Sess = 2,
-	eRelpObj_Frame = 3,
-	eRelpObj_Clt = 4,
-	eRelpObj_Srv = 5,
-	eRelpObj_Sendq = 6,
-	eRelpObj_Sendqe = 7,
-	eRelpObj_Sendbuf = 8,
-	eRelpObj_Tcp = 9
-} relpObjID_t;
+#include "librelp.h"
 
 
 /* the following macro MUST be specified as the first member of each
@@ -95,7 +73,7 @@ typedef struct relpEngSessLst_s {
  * on shutdown.
  * rgerhards, 2008-03-16
  */
-typedef struct relpEngine_s {
+struct relpEngine_s {
 	BEGIN_RELP_OBJ;
 	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
@@ -110,7 +88,7 @@ typedef struct relpEngine_s {
 	relpEngSessLst_t *pSessLstLast;
 	int lenSessLst;
 	pthread_mutex_t mutSessLst;
-} relpEngine_t;
+};
 
 
 /* macro to assert we are dealing with the right relp object */
@@ -139,32 +117,6 @@ typedef struct relpEngine_s {
 #ifndef	RELP_RCV_BUF_SIZE
 #	define RELP_RCV_BUF_SIZE 32 * 1024 /* 32K */
 #endif
-
-/* now define our externally-visible error codes */
-#ifndef ERRCODE_BASE
-	/* provide a basis for error numbers if not configured */
-#	define ERRCODE_BASE 10000
-#endif
-
-/* we may argue if RELP_RET_OK should also be relative to ERRCODE_BASE. I have deciced against it,
- * because if it is 0, we can use it together with other project's iRet mechanisms, which is quite
- * useful. -- rgerhards, 2008-03-17
- */
-#define RELP_RET_OK		0			/**< everything went well, no error */
-#define RELP_RET_OUT_OF_MEMORY	ERRCODE_BASE + 1	/**< out of memory occured */
-#define RELP_RET_INVALID_FRAME	ERRCODE_BASE + 2	/**< relp frame received is invalid */
-#define RELP_RET_PARAM_ERROR	ERRCODE_BASE + 3	/**< an (API) calling parameer is in error */
-#define RELP_RET_INVALID_PORT	ERRCODE_BASE + 4	/**< invalid port value */
-#define RELP_RET_COULD_NOT_BIND	ERRCODE_BASE + 5	/**< could not bind socket, defunct */
-#define RELP_RET_ACCEPT_ERR	ERRCODE_BASE + 6	/**< error during accept() system call */
-#define RELP_RET_SESSION_BROKEN	ERRCODE_BASE + 7	/**< the RELP session is broken */
-#define RELP_RET_SESSION_CLOSED	ERRCODE_BASE + 8	/**< the RELP session was closed (not an error) */
-#define RELP_RET_INVALID_CMD	ERRCODE_BASE + 9	/**< the command contained in a RELP frame was unknown */
-#define RELP_RET_DATA_TOO_LONG	ERRCODE_BASE + 10	/**< DATALEN exceeds permitted length */
-#define RELP_RET_INVALID_TXNR	ERRCODE_BASE + 11	/**< a txnr is invalid (probably code error) */
-#define RELP_RET_INVALID_DATALEN ERRCODE_BASE + 12	/**< DATALEN field is invalid (probably code error) */
-#define RELP_RET_PARTIAL_WRITE  ERRCODE_BASE + 13	/**< only partial data written (state, not an error) */
-#define RELP_RET_IO_ERR         ERRCODE_BASE + 14	/**< IO error occured */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

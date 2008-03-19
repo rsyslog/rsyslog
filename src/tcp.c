@@ -344,7 +344,6 @@ relpTcpSend(relpTcp_t *pThis, relpOctet_t *pBuf, ssize_t *pLenBuf)
 	RELPOBJ_assert(pThis, Tcp);
 
 	written = send(pThis->sock, pBuf, *pLenBuf, 0);
-	//written = send(pThis->sock, pBuf, *pLenBuf, MSG_DONTWAIT);
 
 	if(written == -1) {
 		switch(errno) {
