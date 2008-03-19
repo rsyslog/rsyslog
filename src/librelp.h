@@ -46,6 +46,7 @@ typedef int relpRetVal;
 typedef struct relpEngine_s relpEngine_t;
 typedef struct relpClt_s relpClt_t;
 typedef struct relpSess_s relpSess_t;
+typedef struct relpFrame_s relpFrame_t;
 typedef struct relpSendbuf_s relpSendbuf_t;
 
 /* IDs of librelp objects */

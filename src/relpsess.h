@@ -64,8 +64,7 @@ struct relpSess_s {
 	relpSrv_t *pSrv;	/**< the server we belong to */
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
-	relpTxnr_t txnrRcv;	/**< next txnr expected when receiving */
-	relpTxnr_t txnrSnd;	/**< next txnr to be used when sending */
+	relpTxnr_t txnr;	/**< next txnr expected when receiving */
 	relpSessState_t sessState; /**< state of our session */
 	struct relpSendq_s *pSendq; /**< our send queue */
 	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
@@ -85,7 +84,7 @@ relpRetVal relpSessDestruct(relpSess_t **ppThis);
 relpRetVal relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock);
 relpRetVal relpSessRcvData(relpSess_t *pThis);
 relpRetVal relpSessSendFrame(relpSess_t *pThis, relpFrame_t *pFrame);
-relpRetVal relpSessSendResponse(relpSess_t *pThis, unsigned char *pData, size_t lenData);
+relpRetVal relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, size_t lenData);
 relpRetVal relpSessSndData(relpSess_t *pThis);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

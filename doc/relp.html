@@ -64,7 +64,7 @@ out-of-band-commands have a "hint" status - they hint the client about
 something, but if they do not arrive at the client, nothing fatal
 should happen. The ultimate session closure indication would still be
 the tcp session close. [Please see the "High Latency Environment" use
-case below for some implications this hinting process may have].</p>
+case below for some implications this hinting process may have].</p><p>For the time being, it has been decided that such out of band hints be not supported.</p>
 <p>A command and its response is called a relp transaction. A
 response must always carry the same txnr as the original command.
 </p>

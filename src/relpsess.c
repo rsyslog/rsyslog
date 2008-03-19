@@ -58,6 +58,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	RELP_CORE_CONSTRUCTOR(pThis, Sess);
 	pThis->pEngine = pEngine;
 	pThis->pSrv = pSrv;
+	pThis->txnr = 1; /* txnr start at 1 according to spec */
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
 	pthread_mutex_init(&pThis->mutSend, NULL);
@@ -218,35 +219,24 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpSessSendResponse(relpSess_t *pThis, unsigned char *pData, size_t lenData)
+relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, size_t lenData)
 {
 	relpSendbuf_t *pSendbuf;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-	/* we must make sure that while we process the txnr, nobody else gets
-	 * into our way. Plaese note that the protection must be extened all the
-	 * way down to enqueuing the sendbuf, because otherwise someone may get
-	 * before us into the sendq, which would violate txnr requirements.
-	 */
-	/* TODO: cancel-safety! */
-	pthread_mutex_lock(&pThis->mutSend);
-	CHKRet(relpFrameBuildSendbuf(&pSendbuf, pThis->txnrSnd, (unsigned char*)"rsp", 3,
+	CHKRet(relpFrameBuildSendbuf(&pSendbuf, txnr, (unsigned char*)"rsp", 3,
 				     pData, lenData, pThis));
-	pThis->txnrSnd = (pThis->txnrSnd + 1) % 1000000000; /* txnr used up, so on to next one (latching!) */
-pThis->pEngine->dbgprint("SessSend new txnr %d\n", (int) pThis->txnrSnd);
+	//pThis->txnr = relpEngineNextTXNR(pThis->txnr); /* txnr used up, so on to next one (latching!) */
+pThis->pEngine->dbgprint("SessSend for txnr %d\n", (int) txnr);
 	/* now enqueue it to the sendq (which means "send it" ;)) */
 	CHKRet(relpSendqAddBuf(pThis->pSendq, pSendbuf));
-	pthread_mutex_unlock(&pThis->mutSend);
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
 		if(pSendbuf != NULL)
 			relpSendbufDestruct(&pSendbuf);
-		/* the txnr is probably lost, but there is nothing we
-		 * can do against that..
-		 */
 	}
 
 	LEAVE_RELPFUNC;

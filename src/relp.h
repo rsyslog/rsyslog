@@ -118,6 +118,7 @@ struct relpEngine_s {
 #	define RELP_RCV_BUF_SIZE 32 * 1024 /* 32K */
 #endif
 
+
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
 /* macro below is to be used if we need our own handling, eg for cleanup */
@@ -133,16 +134,11 @@ struct relpEngine_s {
 	} while (0)
 
 
-/* prototypes needed by library users */
-relpRetVal relpEngineConstruct(relpEngine_t **ppThis);
-relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
-relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
-relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
-relpRetVal relpEngineRun(relpEngine_t *pThis);
+/* some macro-implemented functionality of the RELP engine */
+#define relpEngineNextTXNR(txnr) \
+	((txnr > 999999999) ? 1 : txnr + 1)
 
-#ifdef RELP_DO_INTERNAL_PROTOTYPES
-#	include "relpframe.h"
-	relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame);
-#endif /* #ifdef RELP_DO_INTERNAL_PROTOTYPES */
+/* prototypes needed by library itself (rest is in librelp.h) */
+relpRetVal relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFrame);
 
 #endif /* #ifndef RELP_H_INCLUDED */

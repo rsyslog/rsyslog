@@ -44,7 +44,7 @@ BEGINcommand(S, Init)
 	pSess->pEngine->dbgprint("in init command handler\n");
 
 	/* and send it... */
-	CHKRet(relpSessSendResponse(pSess, (unsigned char*) "relp_version=1", 14));
+	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "relp_version=1", 14));
 
 finalize_it:
 ENDcommand

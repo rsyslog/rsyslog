@@ -49,7 +49,7 @@ typedef enum relpFrameRcvStates_e {
 /* the RELPFRAME object 
  * rgerhards, 2008-03-16
  */
-typedef struct relpFrame_s {
+struct relpFrame_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	relpFrameRcvState_t rcvState;
@@ -59,7 +59,7 @@ typedef struct relpFrame_s {
 	size_t lenData;		/**< length of data part of frame */
 	relpOctet_t *pData;	/**< frame data part */
 	
-} relpFrame_t;
+};
 
 #include "relpsess.h" /* this needs to be done after relpFrame_t is defined! */
 #include "sendbuf.h"
