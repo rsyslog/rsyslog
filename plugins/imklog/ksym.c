@@ -269,6 +269,12 @@ extern int InitKsyms(char *mapfile)
 }
 
 
+extern void DeinitKsyms(void)
+{
+	FreeSymbols();
+}
+
+
 /**************************************************************************
  * Function:	FindSymbolFile
  *

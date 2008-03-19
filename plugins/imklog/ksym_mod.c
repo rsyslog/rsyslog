@@ -279,6 +279,12 @@ static int symsort(const void *p1, const void *p2)
 }
 
 
+extern void DeinitMsyms(void)
+{
+	FreeModules();
+}
+
+
 /**************************************************************************
  * Function:	FreeModules
  *

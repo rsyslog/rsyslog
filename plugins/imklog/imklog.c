@@ -642,6 +642,9 @@ CODESTARTafterRun
 	/* cleanup here */
 	if(logsrc != none)
 		CloseLogSrc();
+
+	DeinitKsyms();
+	DeinitMsyms();
 ENDafterRun
 
 

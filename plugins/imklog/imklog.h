@@ -33,7 +33,9 @@ extern int dbgPrintSymbols;
 
 /* prototypes */
 extern int InitKsyms(char *);
+extern void DeinitKsyms(void);
 extern int InitMsyms(void);
+extern void DeinitMsyms(void);
 extern char * ExpandKadds(char *, char *);
 extern void SetParanoiaLevel(int);
 extern void vsyslog(int pri, const char *fmt, va_list ap);

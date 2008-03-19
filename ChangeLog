@@ -2,6 +2,8 @@
 Version 3.12.4 (rgerhards), 2008-03-??
 - added flow control options to other input sources
 - bugfix/doc: removed no longer supported -h option from man page
+- bugfix: imklog leaked several hundered KB on each HUP. Thanks to
+  varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 3.12.3 (rgerhards), 2008-03-18
 - added advanced flow control for congestion cases (mode depending on message
