@@ -41,17 +41,11 @@
  * rgerhards, 2008-03-17
  */
 BEGINcommand(S, Init)
-	relpFrame_t *pRsp;
-
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in init command handler\n");
 
-	/* create our response frame */
-	CHKRet(relpFrameConstructWithData(&pRsp, pSess->pEngine, (unsigned char*) "rsp",
-		                          (unsigned char*) "test", 4, 0));
-
 	/* and send it... */
-	CHKRet(relpSessSendFrame(pSess, &pRsp));
+	CHKRet(relpSessSendResponse(pSess, (unsigned char*) "relp_version=1", 14));
 
 finalize_it:
 ENDcommand

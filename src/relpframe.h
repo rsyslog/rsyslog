@@ -64,7 +64,9 @@ typedef struct relpFrame_s {
 
 /* prototypes */
 relpRetVal relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess);
-relpRetVal relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
-			  	      relpOctet_t *pData, size_t lenData, int bHandoverBuffer);
+relpRetVal relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, size_t lenCmd,
+		      		 relpOctet_t *pData, size_t lenData, relpEngine_t *pEngine);
+//relpRetVal relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
+//			  	      relpOctet_t *pData, size_t lenData, int bHandoverBuffer);
 
 #endif /* #ifndef RELPFRAME_H_INCLUDED */

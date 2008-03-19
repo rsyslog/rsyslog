@@ -43,7 +43,7 @@
  * operations have been finished.
  */
 relpRetVal
-relpSendbufConstruct(relpSendbuf_t **ppThis)
+relpSendbufConstruct(relpSendbuf_t **ppThis, relpEngine_t *pEngine)
 {
 	relpSendbuf_t *pThis;
 
@@ -54,6 +54,7 @@ relpSendbufConstruct(relpSendbuf_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Sendbuf);
+	pThis->pEngine = pEngine;
 
 	*ppThis = pThis;
 

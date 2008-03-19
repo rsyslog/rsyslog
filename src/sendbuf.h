@@ -38,6 +38,7 @@
  */
 typedef struct relpSendbuf_s {
 	BEGIN_RELP_OBJ;
+	relpEngine_t *pEngine;
 	relpOctet_t *pData; /**< the buffer, as it can be put on the wire */
 	size_t lenData;
 	size_t bufPtr; /**< multi-purpose, e.g. tracks sent octets when multi-send
@@ -46,7 +47,7 @@ typedef struct relpSendbuf_s {
 
 
 /* prototypes */
-relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis);
+relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpSendbufDestruct(relpSendbuf_t **ppThis);
 
 #endif /* #ifndef RELPSENDBUF_H_INCLUDED */

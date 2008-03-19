@@ -192,7 +192,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 	*ppThis = pThis;
 
 finalize_it:
-pSess->pEngine->dbgprint("end relp frame construct, iRet %d\n", iRet);
+//pSess->pEngine->dbgprint("end relp frame construct, iRet %d\n", iRet);
 	LEAVE_RELPFUNC;
 }
 
@@ -297,6 +297,71 @@ finalize_it:
 }
 
 
+/* create a relpSendbuf_t with a valid relp frame. While this is a frame object
+ * function, it does not accept the frame object itself but rather the individual
+ * frame parameters. The reason is that we want to save the overhead of constructing
+ * and desructing a frame object in cases where the frame object itself is not
+ * needed (e.g. when sending a "rsp" frame). This method
+ * is meant to be invoked immediately before sending a frame. So the txnr must
+ * be passed in, as it is at the top of the frame. Note that it should only be called
+ * from within a mutex-protected region that ensures the txnr remains
+ * consistent. The sendbuf is allocated inside this function
+ * and a pointer to it passed to the caller. The caller is responsible
+ * for destructing it. -- rgerhards, 2008-03-19
+ */
+relpRetVal
+relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, size_t lenCmd,
+		      relpOctet_t *pData, size_t lenData, relpEngine_t *pEngine)
+{
+	char bufTxnr[16];
+	size_t lenTxnr;
+	char bufDatalen[16];
+	size_t lenDatalen;
+	relpSendbuf_t *pSendbuf = NULL;
+	relpOctet_t *ptrMembuf;
+
+	ENTER_RELPFUNC;
+	assert(ppSendbuf != NULL);
+	
+	CHKRet(relpSendbufConstruct(&pSendbuf, pEngine));
+
+	lenTxnr = snprintf(bufTxnr, sizeof(bufTxnr), "%d", (int) txnr);
+	if(lenTxnr > 9)
+		ABORT_FINALIZE(RELP_RET_INVALID_TXNR);
+
+	lenDatalen = snprintf(bufDatalen, sizeof(bufDatalen), "%d", (int) lenData);
+	if(lenDatalen > 9)
+		ABORT_FINALIZE(RELP_RET_INVALID_DATALEN);
+	
+	/* we got everything, so now let's get our membuf [+1 for SP's and TRAILER] */
+	pSendbuf->lenData = lenTxnr + 1 + lenCmd + 1 + lenDatalen + 1 +  lenData + 1;
+        if((pSendbuf->pData = malloc(pSendbuf->lenData)) == NULL)
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+
+	ptrMembuf = pSendbuf->pData;
+	memcpy(ptrMembuf, bufTxnr, lenTxnr); ptrMembuf += lenTxnr;
+	*ptrMembuf++ = ' ';
+	memcpy(ptrMembuf, pCmd, lenCmd); ptrMembuf += lenCmd;
+	*ptrMembuf++ = ' ';
+	memcpy(ptrMembuf, bufDatalen, lenDatalen); ptrMembuf += lenDatalen;
+	*ptrMembuf++ = ' ';
+	memcpy(ptrMembuf, pData, lenData); ptrMembuf += lenData;
+	*ptrMembuf = '\n';
+
+	*ppSendbuf = pSendbuf; /* save new buffer */
+pEngine->dbgprint("sendbuf created, len %d, content: '%s'\n", (int) pSendbuf->lenData, pSendbuf->pData);
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSendbuf != NULL)
+			relpSendbufDestruct(&pSendbuf);
+	}
+
+	LEAVE_RELPFUNC;
+}
+
+
+#if 0 // rgerhards, 2008-03-19: I think we do no longer need it, but keep it a bit...
 /* create a memory buffer with a representation of this frame. This method
  * is meant to be invoked immediately before sending a frame. So the txnr must
  * be passed in, as it is at the top of the frame. The frame object itself
@@ -367,3 +432,4 @@ finalize_it:
 
 	LEAVE_RELPFUNC;
 }
+#endif
