@@ -37,6 +37,7 @@
 #include <assert.h>
 #include "relp.h"
 #include "relpsrv.h"
+#include "relpclt.h"
 #include "relpframe.h"
 #include "relpsess.h"
 #include "cmdif.h"
@@ -383,10 +384,55 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 		CHKRet(relpSCGo(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "syslog")) {
 		CHKRet(relpSCSyslog(pFrame, pSess));
+	} else if(!strcmp((char*)pFrame->cmd, "rsp")) {
+		CHKRet(relpSCRsp(pFrame, pSess));
 	} else {
 		pThis->dbgprint("invalid or not supported relp command '%s'\n", pFrame->cmd);
 		ABORT_FINALIZE(RELP_RET_INVALID_CMD);
 	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* This relp engine function constructs a relp client and adds it to any
+ * necessary engine structures. As of now, there are no such structures to
+ * which it needs to be added, but that may change in the future. So librelp
+ * users should always call the client-generating functions inside the engine.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	assert(ppClt != NULL);
+
+	CHKRet(relpCltConstruct(ppClt, pThis));
+
+	pThis->dbgprint("relp engine create a new client (%p)\n", *ppClt);
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* Destruct a relp client inside the engine. Counterpart to
+ * relpEngineCltConstruct(), see comment there for details.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	assert(ppClt != NULL);
+	RELPOBJ_assert(*ppClt, Clt);
+
+	pThis->dbgprint("relp engine destructing a client (%p)\n", *ppClt);
+
+	CHKRet(relpCltDestruct(ppClt));
 
 finalize_it:
 	LEAVE_RELPFUNC;

@@ -315,7 +315,11 @@ finalize_it:
 
 /* receive data from a tcp socket
  * The lenBuf parameter must contain the max buffer size on entry and contains
- * the number of octets read (or -1 in case of error) on exit.
+ * the number of octets read (or -1 in case of error) on exit. This function
+ * never blocks, not even when called on a blocking socket. That is important
+ * for client sockets, which are set to block during send, but should not
+ * block when trying to read data. If *pLenBuf is -1, an error occured and
+ * errno holds the exact error cause.
  * rgerhards, 2008-03-17
  */
 relpRetVal
@@ -324,7 +328,7 @@ relpTcpRcv(relpTcp_t *pThis, relpOctet_t *pRcvBuf, ssize_t *pLenBuf)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, 0);
+	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
 
 	LEAVE_RELPFUNC;
 }
@@ -363,3 +367,48 @@ finalize_it:
 pThis->pEngine->dbgprint("tcpSend returns %d\n", (int) *pLenBuf);
 	LEAVE_RELPFUNC;
 }
+
+
+/* open a connection to a remote host (server).
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host)
+{
+	struct addrinfo *res;
+	struct addrinfo hints;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	assert(port != NULL);
+	assert(host != NULL);
+	assert(pThis->sock == -1);
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = family;
+	hints.ai_socktype = SOCK_STREAM;
+	if(getaddrinfo((char*)host, (char*)port, &hints, &res) != 0) {
+		pThis->pEngine->dbgprint("error %d in getaddrinfo\n", errno);
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+	
+	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+
+	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
+		ABORT_FINALIZE(RELP_RET_IO_ERR);
+	}
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pThis->sock != -1) {
+			close(pThis->sock);
+			pThis->sock = -1;
+		}
+	}
+
+	LEAVE_RELPFUNC;
+}
+
+

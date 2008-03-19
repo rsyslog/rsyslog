@@ -26,6 +26,7 @@ librelp_la_SOURCES = \
 	relpsrv.h \
 	scsyslog.c \
 	scgo.c \
+	scrsp.c \
 	scinit.c \
 	scinit.h \
 	dbllinklist.h \
@@ -33,7 +34,4 @@ librelp_la_SOURCES = \
 librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS)
 librelp_la_LIBADD = 
 
-include_HEADERS = \
-	librelp.h \
-	relpclt.h \
-	relpsrv.h
+include_HEADERS = librelp.h

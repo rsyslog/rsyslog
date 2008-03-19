@@ -1,4 +1,4 @@
-/* The RELPSENDBUF object.
+/* The command handler for the "rsp" command (done at the client).
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
@@ -15,7 +15,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with librelp.  If not, see <http://www.gnu.org/licenses/>.
+ * along with Librelp.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  *
@@ -30,28 +30,17 @@
  * free software while at the same time obtaining some funding for further
  * development.
  */
-#ifndef RELPSENDBUF_H_INCLUDED
-#define	RELPSENDBUF_H_INCLUDED
+#include "config.h"
+#include <stdlib.h>
+#include <assert.h>
+#include "relp.h"
+#include "cmdif.h"
+#include "scinit.h"
 
-#include "relpsess.h"
-
-/* the RELPSENDBUF object 
- * rgerhards, 2008-03-16
+/* process the "init" command
+ * rgerhards, 2008-03-17
  */
-struct relpSendbuf_s {
-	BEGIN_RELP_OBJ;
-	relpSess_t *pSess; /**< the session this buffer belongs to */
-	relpOctet_t *pData; /**< the buffer, as it can be put on the wire */
-	size_t lenData;
-	size_t bufPtr; /**< multi-purpose, e.g. tracks sent octets when multi-send
-	 	            send() calls are required. */
-};
-
-
-/* prototypes */
-relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis, relpSess_t *pSess);
-relpRetVal relpSendbufDestruct(relpSendbuf_t **ppThis);
-relpRetVal relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp);
-relpRetVal relpSendbufSendAll(relpSendbuf_t *pThis, relpTcp_t *pTcp);
-
-#endif /* #ifndef RELPSENDBUF_H_INCLUDED */
+BEGINcommand(S, Rsp)
+	ENTER_RELPFUNC;
+	pSess->pEngine->dbgprint("in rsp command handler\n");
+ENDcommand

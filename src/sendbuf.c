@@ -135,3 +135,38 @@ pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenD
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+
+
+/* This functions sends a complete sendbuf (a blocking call). It
+ * is intended for use by clients. Do NOT use it on servers as
+ * that will block other activity.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpSendbufSendAll(relpSendbuf_t *pThis, relpTcp_t *pTcp)
+{
+	ssize_t lenToWrite;
+	ssize_t lenWritten;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sendbuf);
+	RELPOBJ_assert(pTcp,  Tcp);
+
+	lenToWrite = pThis->lenData - pThis->bufPtr;
+	while(lenToWrite != 0) {
+		lenWritten = lenToWrite;
+pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
+		CHKRet(relpTcpSend(pTcp, pThis->pData + pThis->bufPtr, &lenWritten));
+
+		if(lenWritten == -1) {
+			ABORT_FINALIZE(RELP_RET_IO_ERR);
+		} else if(lenWritten == lenToWrite) {
+			lenToWrite = 0;
+		} else {
+			pThis->bufPtr += lenWritten;
+			lenToWrite = pThis->lenData - pThis->bufPtr;
+		}
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}

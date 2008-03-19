@@ -39,6 +39,10 @@
 struct relpClt_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
+	relpSess_t *pSess;	/**< our session (the one and only!) */
+	int protFamily;		/**< protocol family to connect over (IPv4, v6, ...) */
+	unsigned char *port;	/**< server port to connect to */
+	unsigned char *host;	/**< host(name) to connect to */
 };
 
 

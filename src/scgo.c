@@ -43,4 +43,9 @@
 BEGINcommand(S, Go)
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in go command handler\n");
+
+	/* and send it... */
+	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "relp_version=1", 14));
+
+finalize_it:
 ENDcommand

@@ -86,5 +86,8 @@ relpRetVal relpSessRcvData(relpSess_t *pThis);
 relpRetVal relpSessSendFrame(relpSess_t *pThis, relpFrame_t *pFrame);
 relpRetVal relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, size_t lenData);
 relpRetVal relpSessSndData(relpSess_t *pThis);
+relpRetVal relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
+		    	       unsigned char *pData, size_t lenData);
+relpRetVal relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

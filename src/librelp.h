@@ -113,5 +113,12 @@ relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
 relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
 relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
+relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
+relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
+
+
+/* exposed relp client functions */
+relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
+
 
 #endif /* #ifndef RELP_H_INCLUDED */

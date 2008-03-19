@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "relp.h"
+#include "relpsess.h"
 #include "relpclt.h"
 
 
@@ -73,13 +74,37 @@ relpCltDestruct(relpClt_t **ppThis)
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	pThis = *ppThis;
-	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pThis, Clt);
 
 	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
 
 	/* done with de-init work, now free clt object itself */
 	free(pThis);
 	*ppThis = NULL;
+
+	LEAVE_RELPFUNC;
+}
+
+
+/** open a relp session to a remote peer
+ * remote servers parameters must already have been set.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+
+	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, NULL));
+	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pThis->pSess != NULL) {
+			relpSessDestruct(&pThis->pSess);
+		}
+	}
 
 	LEAVE_RELPFUNC;
 }

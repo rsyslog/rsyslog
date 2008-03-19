@@ -34,12 +34,14 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
+#include <errno.h>
 #include "relp.h"
 #include "relpsess.h"
 #include "relpframe.h"
 #include "sendq.h"
 
 /** Construct a RELP sess instance
+ *  the pSrv parameter may be set to NULL if the session object is for a client.
  */
 relpRetVal
 relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
@@ -49,7 +51,6 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	RELPOBJ_assert(pEngine, Engine);
-	RELPOBJ_assert(pSrv, Srv);
 
 	if((pThis = calloc(1, sizeof(relpSess_t))) == NULL) {
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
@@ -138,7 +139,7 @@ pSrv->pEngine->dbgprint("relp session accepted with state %d\n", iRet);
  * The following function is called when the relp engine has detected
  * that data is available on the socket. This function reads the available
  * data and submits it for processing.
- * rgerhads, 2008-03-17
+ * rgerhards, 2008-03-17
  */
 relpRetVal
 relpSessRcvData(relpSess_t *pThis)
@@ -158,7 +159,8 @@ pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf
 	if(lenBuf == 0) {
 		ABORT_FINALIZE(RELP_RET_SESSION_CLOSED);
 	} else if (lenBuf == -1) {
-		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+		if(errno != EAGAIN)
+			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	} else {
 		/* we have regular data, which we now can process */
 		for(i = 0 ; i < lenBuf ; ++i) {
@@ -215,7 +217,7 @@ finalize_it:
 #endif
 
 
-/* Send a response to the remote peer.
+/* Send a response to the client.
  * rgerhards, 2008-03-19
  */
 relpRetVal
@@ -241,8 +243,6 @@ finalize_it:
 
 	LEAVE_RELPFUNC;
 }
-
-
 /* actually send to the remote peer
  * This function takes data from the sendq and sends as much as
  * possible to the remote peer.
@@ -259,3 +259,76 @@ relpSessSndData(relpSess_t *pThis)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+
+
+/* ------------------------------ client based code ------------------------------ */
+
+
+/* Connect to the server. All session parameters (like remote address) must
+ * already have been set.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host)
+{
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine));
+	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host));
+
+	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"init", 4, (unsigned char*)"relp_version=1", 14));
+
+	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"go", 2, (unsigned char*)"relp_version=1", 14));
+	
+	/* we are more or less finished, but need to wait for the (positive)
+	 * response on initial session setup.
+	 */
+	sleep(1);
+	CHKRet(relpSessRcvData(pThis));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* Send a command to the server.
+ * In client-mode, we run on a single thread. As such, we need to pull any currently
+ * existing server responses before we try to send our command.
+ * We do not need mutex protection as no other thread shares this session.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
+		    unsigned char *pData, size_t lenData)
+{
+	relpSendbuf_t *pSendbuf;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	/* first read any outstanding data and process the packets. This is important
+	 * because there may be responses which we need in order to get a send spot
+	 * within our window.
+	 */
+	CHKRet(relpSessRcvData(pThis));
+
+	/* then send our data */
+	CHKRet(relpFrameBuildSendbuf(&pSendbuf, pThis->txnr, pCmd, lenCmd, pData, lenData, pThis));
+	pThis->txnr = relpEngineNextTXNR(pThis->txnr); /* txnr used up, so on to next one (latching!) */
+pThis->pEngine->dbgprint("send command with txnr %d\n", (int) pThis->txnr);
+	/* now send it */
+pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData);
+	CHKRet(relpSendbufSendAll(pSendbuf, pThis->pTcp));
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSendbuf != NULL)
+			relpSendbufDestruct(&pSendbuf);
+	}
+
+	LEAVE_RELPFUNC;
+}
+
+
