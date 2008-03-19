@@ -700,7 +700,9 @@ Release(char *srcFile, modInfo_t **ppThis)
 		/* we have a zero refcount, so we must unload the module */
 		dbgprintf("module '%s' has zero reference count, unloading...\n", pThis->pszName);
 		modUnlinkAndDestroy(&pThis);
-		*ppThis = NULL; /* nobody can access it any longer! */
+		/* we must NOT do a *ppThis = NULL, because ppThis now points into freed memory!
+		 * If in doubt, see obj.c::ReleaseObj() for how we are called.
+		 */
 	}
 
 	RETiRet;
