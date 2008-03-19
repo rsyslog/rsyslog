@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
+#include <sys/select.h>
 #include <errno.h>
 #include "relp.h"
 #include "relpsess.h"
@@ -264,6 +265,32 @@ finalize_it:
 /* ------------------------------ client based code ------------------------------ */
 
 
+/* Wait for a response to a specifc TXNR. Blocks until it is received or a timeout
+ * occurs. This is for client-side processing.
+ * rgerhards, 2008-03-19
+ */
+static relpRetVal
+relpSessWaitRsp(relpSess_t *pThis, relpTxnr_t txnr)
+{
+	fd_set readfds;
+	int sock;
+	int nfds;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	sock = relpSessGetSock(pThis);
+	FD_ZERO(&readfds);
+	FD_SET(sock, &readfds);
+pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on fd %d\n", sock);
+	nfds = select(sock+1, (fd_set *) &readfds, NULL, NULL, NULL);
+pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d\n", nfds);
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
 /* Connect to the server. All session parameters (like remote address) must
  * already have been set.
  * rgerhards, 2008-03-19
@@ -279,13 +306,14 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host));
 
 	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"init", 4, (unsigned char*)"relp_version=1", 14));
+	CHKRet(relpSessWaitRsp(pThis, 1)); /* "init" always has txnr 1 */
 
 	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"go", 2, (unsigned char*)"relp_version=1", 14));
+	CHKRet(relpSessWaitRsp(pThis, 2)); /* and "go" always has txnr 2 */
 	
 	/* we are more or less finished, but need to wait for the (positive)
 	 * response on initial session setup.
 	 */
-	sleep(1);
 	CHKRet(relpSessRcvData(pThis));
 
 finalize_it:
