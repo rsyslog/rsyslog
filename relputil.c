@@ -29,7 +29,7 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
-#include <relp.h>
+#include <librelp.h>
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

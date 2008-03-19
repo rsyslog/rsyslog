@@ -36,7 +36,7 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <relp.h>
+#include <librelp.h>
 #include "rsyslog.h"
 #include "syslogd.h"
 #include "cfsysline.h"

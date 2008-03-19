@@ -40,8 +40,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
-#include <relp.h>
-#include <relpclt.h>
+#include <librelp.h>
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
