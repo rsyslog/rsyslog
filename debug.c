@@ -657,6 +657,10 @@ static void dbgCallStackDestruct(void *arg)
 	dbgThrdInfo_t *pThrd = (dbgThrdInfo_t*) arg;
 
 	dbgprintf("destructor for debug call stack %p called\n", pThrd);
+	if(pThrd->pszThrdName != NULL) {
+		free(pThrd->pszThrdName);
+	}
+
 	DLL_Del(CallStack, pThrd);
 }
 

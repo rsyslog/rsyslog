@@ -827,9 +827,6 @@ static rsRetVal qDestructDisk(queue_t *pThis)
 	strmDestruct(&pThis->tVars.disk.pWrite);
 	strmDestruct(&pThis->tVars.disk.pRead);
 
-	if(pThis->pszSpoolDir != NULL)
-		free(pThis->pszSpoolDir);
-
 	RETiRet;
 }
 
@@ -1926,6 +1923,9 @@ CODESTARTobjDestruct(queue)
 
 	if(pThis->pszFilePrefix != NULL)
 		free(pThis->pszFilePrefix);
+
+	if(pThis->pszSpoolDir != NULL)
+		free(pThis->pszSpoolDir);
 ENDobjDestruct(queue)
 
 

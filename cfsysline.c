@@ -487,6 +487,8 @@ finalize_it:
  * no custom handler is defined. If it is, the customer handler
  * must do the cleanup. I have checked and this was al also memory
  * leak with some code. Obviously, not a large one. -- rgerhards, 2007-12-20
+ * Just to clarify: if pVal is parsed to a custom handler, this handler
+ * is responsible for freeing pVal. -- rgerhards, 2008-03-20
  */
 static rsRetVal doGetWord(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void *pVal)
 {

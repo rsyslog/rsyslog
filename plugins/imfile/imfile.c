@@ -408,10 +408,12 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 /* add a new monitor */
-static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar __attribute__((unused)) *pNewVal)
+static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	DEFiRet;
 	fileInfo_t *pThis;
+
+	free(pNewVal); /* we do not need it, but we must free it! */
 
 	if(iFilPtr < MAX_INPUT_FILES) {
 		pThis = &files[iFilPtr];

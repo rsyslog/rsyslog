@@ -1872,6 +1872,23 @@ static void doDie(int sig)
 }
 
 
+/* This function frees all dynamically allocated memory for program termination.
+ * It must be called only immediately before exit(). It is primarily an aid
+ * for memory debuggers, which prevents cluttered outupt.
+ * rgerhards, 2008-03-20
+ */
+static void
+freeAllDynMemForTermination(void)
+{
+	if(pszWorkDir != NULL)
+		free(pszWorkDir);
+	if(pszMainMsgQFName != NULL)
+		free(pszMainMsgQFName);
+	if(pModDir != NULL)
+		free(pModDir);
+}
+
+
 /* die() is called when the program shall end. This typically only occurs
  * during sigterm or during the initialization. 
  * As die() is intended to shutdown rsyslogd, it is
@@ -1947,9 +1964,6 @@ die(int sig)
 	 */
 	unregCfSysLineHdlrs();
 
-	/* clean up auxiliary data */
-	if(pModDir != NULL)
-		free(pModDir);
 	legacyOptsFree();
 
 	/* terminate the remaining classes */
@@ -1971,6 +1985,12 @@ die(int sig)
 	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
 	dbgClassExit();
 
+	/* free all remaining memory blocks - this is not absolutely necessary, but helps
+	 * us keep memory debugger logs clean and this is in aid in developing. It doesn't
+	 * cost much time, so we do it always. -- rgerhards, 2008-03-20
+	 */
+	freeAllDynMemForTermination();
+	/* NO CODE HERE - feeelAllDynMemForTermination() must be the last thing before exit()! */
 	exit(0); /* "good" exit, this is the terminator function for rsyslog [die()] */
 }
 

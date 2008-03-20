@@ -110,8 +110,8 @@ static void freeAllSockets(int **socks)
  * NOTE: you can not use dbgprintf() in here - the dbgprintf() system is
  * not yet initilized when this function is called.
  * rgerhards, 2007-06-21
- * We can also not use errmsg.LogError(NO_ERRCODE, ), as that system is also not yet
- * initialized... rgerhards, 2007-06-28
+ * The port in cOptarg is handed over to us - the caller MUST NOT free it!
+ * rgerhards, 2008-03-20
  */
 static void
 configureTCPListen(tcpsrv_t *pThis, char *cOptarg)
@@ -128,11 +128,15 @@ configureTCPListen(tcpsrv_t *pThis, char *cOptarg)
 		i = i * 10 + *pArg++ - '0';
 	}
 
+	if(pThis->TCPLstnPort != NULL) {
+		free(pThis->TCPLstnPort);
+		pThis->TCPLstnPort = NULL;
+	}
+		
 	if( i >= 0 && i <= 65535) {
 		pThis->TCPLstnPort = cOptarg;
 	} else {
 		errmsg.LogError(NO_ERRCODE, "Invalid TCP listen port %s - changed to 514.\n", cOptarg);
-		pThis->TCPLstnPort = "514";
 	}
 }
 
@@ -253,6 +257,9 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 	free(pThis->pSessions);
 	pThis->pSessions = NULL; /* just to make sure... */
 
+	if(pThis->TCPLstnPort != NULL)
+		free(pThis->TCPLstnPort);
+
 	/* finally close the listen sockets themselfs */
 	freeAllSockets(&pThis->pSocksLstn);
 }
@@ -274,24 +281,27 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, *socks, on = 1;
+	char *TCPLstnPort;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
 	if(!strcmp(pThis->TCPLstnPort, "0"))
-		pThis->TCPLstnPort = "514";
+		TCPLstnPort = "514";
 		/* use default - we can not do service db update, because there is
 		 * no IANA-assignment for syslog/tcp. In the long term, we might
 		 * re-use RFC 3195 port of 601, but that would probably break to
 		 * many existing configurations.
 		 * rgerhards, 2007-06-28
 		 */
-	dbgprintf("creating tcp socket on port %s\n", pThis->TCPLstnPort);
+	else
+		TCPLstnPort = pThis->TCPLstnPort;
+	dbgprintf("creating tcp socket on port %s\n", TCPLstnPort);
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
         hints.ai_family = family;
         hints.ai_socktype = SOCK_STREAM;
 
-        error = getaddrinfo(NULL, pThis->TCPLstnPort, &hints, &res);
+        error = getaddrinfo(NULL, TCPLstnPort, &hints, &res);
         if(error) {
                errmsg.LogError(NO_ERRCODE, "%s", gai_strerror(error));
 	       return NULL;
