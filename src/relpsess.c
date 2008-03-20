@@ -35,7 +35,9 @@
 #include <ctype.h>
 #include <assert.h>
 #include <sys/select.h>
+#include <string.h>
 #include <errno.h>
+#include <time.h>
 #include "relp.h"
 #include "relpsess.h"
 #include "relpframe.h"
@@ -61,6 +63,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->pEngine = pEngine;
 	pThis->pSrv = pSrv;
 	pThis->txnr = 1; /* txnr start at 1 according to spec */
+	pThis->timeout = 10; /* TODO: make configurable */
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
 	pthread_mutex_init(&pThis->mutSend, NULL);
@@ -265,28 +268,79 @@ finalize_it:
 /* ------------------------------ client based code ------------------------------ */
 
 
-/* Wait for a response to a specifc TXNR. Blocks until it is received or a timeout
- * occurs. This is for client-side processing.
- * rgerhards, 2008-03-19
+/* Wait for a specific state of the relp session. This function blocks
+ * until the session is in that state, but runs a receive loop to get hold
+ * of server responses (because otherwise the state would probably never change ;)).
+ * If a timeout occurs, the session is considered broken and control returned to
+ * the caller. Caller must check if the session state has changed to "BROKEN" and
+ * in this case drop the session. The timeout value is in seconds. This function
+ * may be called if the session already has the desired state. In that case, it
+ * returns, but still tries to see if we received anything from the server. If so,
+ * this data is received. The suggested use is to call the function before any
+ * send operation, so that will keep our receive capability alive without
+ * resorting to multi-threading.
+ * rgerhards, 2008-03-20
  */
 static relpRetVal
-relpSessWaitRsp(relpSess_t *pThis, relpTxnr_t txnr)
+relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 {
 	fd_set readfds;
 	int sock;
 	int nfds;
+	struct timespec tCurr; /* current time */
+	struct timespec tTimeout; /* absolute timeout value */
+	struct timeval tvSelect;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-	sock = relpSessGetSock(pThis);
-	FD_ZERO(&readfds);
-	FD_SET(sock, &readfds);
-pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on fd %d\n", sock);
-	nfds = select(sock+1, (fd_set *) &readfds, NULL, NULL, NULL);
-pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d\n", nfds);
+	/* first read any outstanding data and process the packets. Note that this
+	 * call DOES NOT block.
+	 */
+	CHKRet(relpSessRcvData(pThis));
+
+	/* check if we are already in the desired state. If so, we can immediately
+	 * return. That saves us doing a costly clock call to set the timeout. As a
+	 * side-effect, the timeout is actually applied without the time needed for
+	 * above reception. I think is is OK, even a bit logical ;)
+	 */
+	if(pThis->sessState == stateExpected || pThis->sessState == eRelpSessState_BROKEN) {
+		FINALIZE;
+	}
+
+	/* ok, looks like we actually need to do a wait... */
+	clock_gettime(CLOCK_REALTIME, &tCurr);
+	memcpy(&tTimeout, &tCurr, sizeof(struct timespec));
+	tTimeout.tv_sec += timeout;
+
+	while(1) {
+		sock = relpSessGetSock(pThis);
+		tvSelect.tv_sec = tTimeout.tv_sec - tCurr.tv_sec;
+		tvSelect.tv_usec = (tTimeout.tv_nsec - tCurr.tv_nsec) / 1000000;
+		if(tvSelect.tv_usec < 0) {
+			tvSelect.tv_usec += 1000000;
+			tvSelect.tv_sec--;
+		}
+		if(tvSelect.tv_sec < 0) {
+			ABORT_FINALIZE(RELP_RET_TIMED_OUT);
+		}
+
+		FD_ZERO(&readfds);
+		FD_SET(sock, &readfds);
+pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on fd %d, timeout %d.%d\n", sock, (int) tvSelect.tv_sec, (int) tvSelect.tv_usec);
+		nfds = select(sock+1, (fd_set *) &readfds, NULL, NULL, &tvSelect);
+pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d, err %s\n", nfds, strerror(errno));
+		/* we don't check if we had a timeout - we give it one last chance */
+		CHKRet(relpSessRcvData(pThis));
+		if(pThis->sessState == stateExpected || pThis->sessState == eRelpSessState_BROKEN) {
+			FINALIZE;
+		}
+
+		clock_gettime(CLOCK_REALTIME, &tCurr);
+	}
 
 finalize_it:
+	/* TODO: flag session as broken on timeout? */
 	LEAVE_RELPFUNC;
 }
 
@@ -304,17 +358,13 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 
 	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine));
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host));
+	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
 
 	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"init", 4, (unsigned char*)"relp_version=1", 14));
-	CHKRet(relpSessWaitRsp(pThis, 1)); /* "init" always has txnr 1 */
+	relpSessSetSessState(pThis, eRelpSessState_INIT_CMD_SENT);
+	CHKRet(relpSessWaitState(pThis, eRelpSessState_INIT_RSP_RCVD, pThis->timeout));
 
-	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"go", 2, (unsigned char*)"relp_version=1", 14));
-	CHKRet(relpSessWaitRsp(pThis, 2)); /* and "go" always has txnr 2 */
-	
-	/* we are more or less finished, but need to wait for the (positive)
-	 * response on initial session setup.
-	 */
-	CHKRet(relpSessRcvData(pThis));
+	/* if we reach this point, we have a valid relp session */
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -344,8 +394,8 @@ relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 
 	/* then send our data */
 	CHKRet(relpFrameBuildSendbuf(&pSendbuf, pThis->txnr, pCmd, lenCmd, pData, lenData, pThis));
-	pThis->txnr = relpEngineNextTXNR(pThis->txnr); /* txnr used up, so on to next one (latching!) */
 pThis->pEngine->dbgprint("send command with txnr %d\n", (int) pThis->txnr);
+	pThis->txnr = relpEngineNextTXNR(pThis->txnr); /* txnr used up, so on to next one (latching!) */
 	/* now send it */
 pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData);
 	CHKRet(relpSendbufSendAll(pSendbuf, pThis->pTcp));

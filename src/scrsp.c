@@ -37,10 +37,16 @@
 #include "cmdif.h"
 #include "scinit.h"
 
-/* process the "init" command
+/* process a response
  * rgerhards, 2008-03-17
  */
 BEGINcommand(S, Rsp)
 	ENTER_RELPFUNC;
-	pSess->pEngine->dbgprint("in rsp command handler\n");
+	pSess->pEngine->dbgprint("in rsp command handler, txnr %d\n", pFrame->txnr);
+	if(pFrame->txnr == 1) {
+		// TODO: implement correctly! offers!!!!
+		relpSessSetSessState(pSess, eRelpSessState_INIT_RSP_RCVD);
+	} else {
+pSess->pEngine->dbgprint("txnr != 1, code missing for this case ;) \n");
+	}
 ENDcommand

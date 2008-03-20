@@ -47,11 +47,13 @@ typedef struct replSessUnacked_s {
 
 /* relp session state */
 typedef enum relpSessState_e {
-	eRelpSessState_INVALID = 0,
+	eRelpSessState_INVALID = 0, /**< should never be set for a live session (calloc non-init guard) */
 	eRelpSessState_PRE_INIT = 1,
-	eRelpSessState_PRE_GO = 2,
-	eRelpSessState_RUNNING = 3,
-	eRelpSessState_SHUTDOWN = 4
+	eRelpSessState_INIT_CMD_SENT = 2,
+	eRelpSessState_INIT_RSP_RCVD = 3,
+	eRelpSessState_READY_TO_SEND = 4,
+	eRelpSessState_FRAME_FULL = 5,
+	eRelpSessState_BROKEN = 6   /**< something went wrong, session must be dropped */
 } relpSessState_t;
 
 
@@ -61,18 +63,23 @@ typedef enum relpSessState_e {
 struct relpSess_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
-	relpSrv_t *pSrv;	/**< the server we belong to */
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
-	relpTxnr_t txnr;	/**< next txnr expected when receiving */
-	relpSessState_t sessState; /**< state of our session */
-	struct relpSendq_s *pSendq; /**< our send queue */
+	relpTxnr_t txnr;	/**< next txnr expected when receiving or to be used when sending */
 	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
 	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
+	/* properties needed for server operation */
+	relpSrv_t *pSrv;	/**< the server we belong to */
+	struct relpSendq_s *pSendq; /**< our send queue */
+	/* properties needed for client operation */
+	int timeout; /**< timeout after which session is to be considered broken */
+	relpSessState_t sessState; /**< state of our session */
 };
 
 /* macros for quick memeber access */
 #define relpSessGetSock(pThis)  (relpTcpGetSock((pThis)->pTcp))
+#define relpSessGetSessState(pThis) ((pThis)->sessState)
+#define relpSessSetSessState(pThis, state) ((pThis)->sessState = (state))
 
 #include "relpframe.h" /* this needs to be done after relpSess_t is defined! */
 #include "sendbuf.h"

@@ -375,7 +375,7 @@ pThis->pEngine->dbgprint("tcpSend returns %d\n", (int) *pLenBuf);
 relpRetVal
 relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char *host)
 {
-	struct addrinfo *res;
+	struct addrinfo *res = NULL;
 	struct addrinfo hints;
 
 	ENTER_RELPFUNC;
@@ -401,6 +401,9 @@ relpTcpConnect(relpTcp_t *pThis, int family, unsigned char *port, unsigned char 
 	}
 
 finalize_it:
+	if(res != NULL)
+               freeaddrinfo(res);
+		
 	if(iRet != RELP_RET_OK) {
 		if(pThis->sock != -1) {
 			close(pThis->sock);

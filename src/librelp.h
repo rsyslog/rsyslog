@@ -101,6 +101,7 @@ typedef enum relpObjID_e {
 #define RELP_RET_INVALID_DATALEN ERRCODE_BASE + 12	/**< DATALEN field is invalid (probably code error) */
 #define RELP_RET_PARTIAL_WRITE  ERRCODE_BASE + 13	/**< only partial data written (state, not an error) */
 #define RELP_RET_IO_ERR         ERRCODE_BASE + 14	/**< IO error occured */
+#define RELP_RET_TIMED_OUT      ERRCODE_BASE + 15	/**< timeout occured */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
