@@ -162,6 +162,8 @@ relpRetVal
 relpEngineDestruct(relpEngine_t **ppThis)
 {
 	relpEngine_t *pThis;
+	relpEngSrvLst_t *pSrvL, *pSrvLNxt;
+	relpEngSessLst_t *pSessL, *pSessLNxt;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
@@ -169,6 +171,20 @@ relpEngineDestruct(relpEngine_t **ppThis)
 	RELPOBJ_assert(pThis, Engine);
 
 	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
+
+	/* now destruct all currently existing sessions */
+	for(pSessL = pThis->pSessLstRoot ; pSessL != NULL ; pSessL = pSessLNxt) {
+		pSessLNxt = pSessL->pNext;
+		relpSessDestruct(&pSessL->pSess);
+		free(pSessL);
+	}
+
+	/* and now all existing servers... */
+	for(pSrvL = pThis->pSrvLstRoot ; pSrvL != NULL ; pSrvL = pSrvLNxt) {
+		pSrvLNxt = pSrvL->pNext;
+		relpSrvDestruct(&pSrvL->pSrv);
+		free(pSrvL);
+	}
 
 	pthread_mutex_destroy(&pThis->mutSrvLst);
 	pthread_mutex_destroy(&pThis->mutSessLst);
@@ -357,6 +373,7 @@ pThis->dbgprint("fd %d ready for writing\n", sock);
 PROTOTYPEcommand(S, Init)
 PROTOTYPEcommand(S, Go)
 PROTOTYPEcommand(S, Syslog)
+PROTOTYPEcommand(S, Rsp)
 
 /* process an incoming command
  * This function receives a RELP frame and dispatches it to the correct
