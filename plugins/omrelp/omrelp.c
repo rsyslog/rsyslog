@@ -196,24 +196,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		/* The remote address is not yet known and needs to be obtained */
 		dbgprintf(" %s\n", pData->f_hname);
 		relpCltConnect(pData->pRelpClt, family, pData->port, pData->f_hname);
-#if 0
-		memset(&hints, 0, sizeof(hints));
-		/* port must be numeric, because config file syntax requests this */
-		/* TODO: this code is a duplicate from cfline() - we should later create
-		 * a common function.
-		 */
-		hints.ai_flags = AI_NUMERICSERV;
-		hints.ai_family = family;
-		hints.ai_socktype = SOCK_STREAM;
-		if((e = getaddrinfo(pData->f_hname, getRelpPt(pData), &hints, &res)) == 0) {
-			dbgprintf("%s found, resuming.\n", pData->f_hname);
-			pData->f_addr = res;
-			pData->eDestState = eDestFORW;
-		} else {
-			iRet = RS_RET_SUSPENDED;
-		}
-#endif
-			pData->eDestState = eDestFORW;
+		pData->eDestState = eDestFORW;
 		break;
 	case eDestFORW:
 		/* rgerhards, 2007-09-11: this can not happen, but I've included it to
@@ -235,6 +218,7 @@ BEGINdoAction
 	char *psz; /* temporary buffering */
 	register unsigned l;
 CODESTARTdoAction
+RUNLOG_VAR("%d", pData->eDestState);
 	switch (pData->eDestState) {
 	case eDestFORW_SUSP:
 		dbgprintf("internal error in omrelp.c, eDestFORW_SUSP in doAction()!\n");
@@ -255,15 +239,11 @@ CODESTARTdoAction
 			l = MAXLINE;
 
 		/* forward */
-#if 0 // new relp code:
-		relpRetVal relpRet;
-		relpSend(relpSess, pData, l);
-		if(relpRet != RELP_RET_OK) {
-#else
-		rsRetVal ret;
-		//ret = tcpclt.Send(pData->pTCPClt, pData, psz, l);
+		relpRetVal ret;
+RUNLOG;
+		ret = relpCltSendSyslog(pData->pRelpClt, psz, l);
+RUNLOG_VAR("%d", ret);
 		if(ret != RS_RET_OK) {
-#endif
 			/* error! */
 			dbgprintf("error forwarding via relp, suspending\n");
 			pData->eDestState = eDestFORW_SUSP;
@@ -407,17 +387,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	   != RS_RET_OK)
 		goto finalize_it;
 
-	/* first set the pData->eDestState */
-	pData->eDestState = eDestFORW_UNKN;
-
 	/* create our relp client  */
 	CHKiRet(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt)); /* we use CHKiRet as librelp has a similar return value range */
-	/* and set callbacks */
-#if 0 // TODO: the same for relp
-	CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, openConn));
-	CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
-	CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
-#endif
+	/* first set the pData->eDestState */
+	pData->eDestState = eDestFORW_UNKN;
+	doTryResume(pData);
 
 	/* TODO: do we need to call freeInstance if we failed - this is a general question for
 	 * all output modules. I'll address it later as the interface evolves. rgerhards, 2007-07-25
