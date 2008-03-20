@@ -124,6 +124,8 @@ static rsRetVal addListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 
 	CHKiRet(relpEngineAddListner(pRelpEngine, pNewVal));
 
+	free(pNewVal); /* we do no longer need it */
+
 finalize_it:
 	RETiRet;
 }
