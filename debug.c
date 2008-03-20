@@ -1304,6 +1304,7 @@ finalize_it:
 
 rsRetVal dbgClassExit(void)
 {
+	dbgFuncDBListEntry_t *pFuncDBListEtry, *pToDel;
 	pthread_key_delete(keyCallStack);
 
 	if(bPrintAllDebugOnExit)
@@ -1311,6 +1312,18 @@ rsRetVal dbgClassExit(void)
 
 	if(altdbg != NULL)
 		fclose(altdbg);
+
+	/* now free all of our memory to make the memory debugger happy... */
+	pFuncDBListEtry = pFuncDBListRoot;
+	while(pFuncDBListEtry != NULL) {
+		pToDel = pFuncDBListEtry;
+		pFuncDBListEtry = pFuncDBListEtry->pNext;
+		free(pToDel->pFuncDB->file);
+		free(pToDel->pFuncDB->func);
+		free(pToDel->pFuncDB);
+		free(pToDel);
+	}
+
 	return RS_RET_OK;
 }
 /* vi:set ai:
