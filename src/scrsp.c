@@ -51,7 +51,6 @@ BEGINcommand(S, Rsp)
 		CHKRet(pSendbuf->rspHdlr(pSess));
 	}
 
-pSess->pEngine->dbgprint("destructing sendbuf %p\n", pSendbuf);
 	CHKRet(relpSendbufDestruct(&pSendbuf));
 
 finalize_it:

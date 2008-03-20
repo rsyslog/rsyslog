@@ -45,4 +45,10 @@
 BEGINcommand(S, Syslog)
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in 'syslog' command handler\n");
+
+	// TODO: implement
+
+	/* send response */
+	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "200 OK", 6));
+finalize_it:
 ENDcommand

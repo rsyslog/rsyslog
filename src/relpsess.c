@@ -551,6 +551,9 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	CHKRet(relpSessWaitState(pThis, eRelpSessState_INIT_RSP_RCVD, pThis->timeout));
 
 	/* if we reach this point, we have a valid relp session */
+	// The line below is just a rough test...
+	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"syslog", 4, (unsigned char*)"<1>Test: Msg", 12,
+				      NULL));
 
 finalize_it:
 	LEAVE_RELPFUNC;
