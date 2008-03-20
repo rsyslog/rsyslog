@@ -67,7 +67,7 @@ struct relpFrame_s {
 /* prototypes */
 relpRetVal relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess);
 relpRetVal relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, size_t lenCmd,
-		      		 relpOctet_t *pData, size_t lenData, relpSess_t *pSess);
+		      relpOctet_t *pData, size_t lenData, relpSess_t *pSess, relpRetVal (*rspHdlr)(relpSess_t*));
 //relpRetVal relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
 //			  	      relpOctet_t *pData, size_t lenData, int bHandoverBuffer);
 

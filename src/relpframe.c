@@ -75,6 +75,9 @@ relpFrameDestruct(relpFrame_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Frame);
 
+	if(pThis->pData != NULL)
+		free(pThis->pData);
+
 	/* done with de-init work, now free object itself */
 	free(pThis);
 	*ppThis = NULL;
@@ -311,7 +314,7 @@ finalize_it:
  */
 relpRetVal
 relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, size_t lenCmd,
-		      relpOctet_t *pData, size_t lenData, relpSess_t *pSess)
+		      relpOctet_t *pData, size_t lenData, relpSess_t *pSess, relpRetVal (*rspHdlr)(relpSess_t*))
 {
 	char bufTxnr[16];
 	size_t lenTxnr;
@@ -324,6 +327,8 @@ relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char 
 	assert(ppSendbuf != NULL);
 	
 	CHKRet(relpSendbufConstruct(&pSendbuf, pSess));
+	pSendbuf->txnr = txnr;
+	pSendbuf->rspHdlr = rspHdlr;
 
 	lenTxnr = snprintf(bufTxnr, sizeof(bufTxnr), "%d", (int) txnr);
 	if(lenTxnr > 9)

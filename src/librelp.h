@@ -102,6 +102,7 @@ typedef enum relpObjID_e {
 #define RELP_RET_PARTIAL_WRITE  ERRCODE_BASE + 13	/**< only partial data written (state, not an error) */
 #define RELP_RET_IO_ERR         ERRCODE_BASE + 14	/**< IO error occured */
 #define RELP_RET_TIMED_OUT      ERRCODE_BASE + 15	/**< timeout occured */
+#define RELP_RET_NOT_FOUND      ERRCODE_BASE + 16	/**< searched entity not found */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

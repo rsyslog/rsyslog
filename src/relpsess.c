@@ -42,6 +42,7 @@
 #include "relpsess.h"
 #include "relpframe.h"
 #include "sendq.h"
+#include "dbllinklist.h"
 
 /** Construct a RELP sess instance
  *  the pSrv parameter may be set to NULL if the session object is for a client.
@@ -64,6 +65,7 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->pSrv = pSrv;
 	pThis->txnr = 1; /* txnr start at 1 according to spec */
 	pThis->timeout = 10; /* TODO: make configurable */
+	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE; /* TODO: make configurable */
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
 	pthread_mutex_init(&pThis->mutSend, NULL);
@@ -162,9 +164,11 @@ rcvBuf[lenBuf] = '\0';
 pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
 	if(lenBuf == 0) {
 		ABORT_FINALIZE(RELP_RET_SESSION_CLOSED);
-	} else if (lenBuf == -1) {
-		if(errno != EAGAIN)
+	} else if ((int) lenBuf == -1) { /* I don't know why we need to cast to int, but we must... */
+		if(errno != EAGAIN) {
+			pThis->pEngine->dbgprint("errno %d during relp session read data\n", errno);
 			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+		}
 	} else {
 		/* we have regular data, which we now can process */
 		for(i = 0 ; i < lenBuf ; ++i) {
@@ -233,7 +237,7 @@ relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, s
 	RELPOBJ_assert(pThis, Sess);
 
 	CHKRet(relpFrameBuildSendbuf(&pSendbuf, txnr, (unsigned char*)"rsp", 3,
-				     pData, lenData, pThis));
+				     pData, lenData, pThis, NULL));
 	//pThis->txnr = relpEngineNextTXNR(pThis->txnr); /* txnr used up, so on to next one (latching!) */
 pThis->pEngine->dbgprint("SessSend for txnr %d\n", (int) txnr);
 	/* now enqueue it to the sendq (which means "send it" ;)) */
@@ -266,6 +270,108 @@ finalize_it:
 
 
 /* ------------------------------ client based code ------------------------------ */
+
+
+/* add an entry to our unacked frame list. The sendbuf object is handed over and must
+ * no longer be accessed by the caller.
+ * NOTE: we do not need mutex locks. This changes when we have a background transfer
+ * thread (which we currently do not have).
+ * rgerhards, 2008-03-20
+ */
+relpRetVal
+relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
+{
+	relpSessUnacked_t *pUnackedLstEntry;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	RELPOBJ_assert(pSendbuf, Sendbuf);
+
+	if((pUnackedLstEntry = calloc(1, sizeof(relpSessUnacked_t))) == NULL)
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+
+	pUnackedLstEntry->pSendbuf = pSendbuf;
+
+	DLL_Add(pUnackedLstEntry, pThis->pUnackedLstRoot, pThis->pUnackedLstLast);
+	++pThis->lenUnackedLst;
+
+	if(pThis->lenUnackedLst == pThis->sizeWindow) {
+		/* in theory, we would need to check if the session is initialized, as
+		 * we would mess up session state in that case. However, as the init
+		 * process is just one frame, we can never run into the situation that
+		 * the window is exhausted during init, so we do not check it.
+		 */
+		relpSessSetSessState(pThis, eRelpSessState_WINDOW_FULL);
+	}
+pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n", pThis, pThis->lenUnackedLst, pThis->sessState);
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* Delete an entry from our unacked list. The list entry is destructed, but
+ * the sendbuf not.
+ * rgerhards, 2008-03-20
+ */
+static relpRetVal
+relpSessDelUnacked(relpSess_t *pThis, relpSessUnacked_t *pUnackedLstEntry)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	assert(pUnackedLstEntry != NULL);
+
+	DLL_Del(pUnackedLstEntry, pThis->pUnackedLstRoot, pThis->pUnackedLstLast);
+	--pThis->lenUnackedLst;
+
+	if(   pThis->lenUnackedLst < pThis->sizeWindow
+	   && relpSessGetSessState(pThis) == eRelpSessState_WINDOW_FULL) {
+		/* here, we need to check if we had WINDOW_FULL condition. The reason is that
+		 * we otherwise mess up the session init handling - contrary to ...AddUnacked(),
+		 * we run into the situation of a session state change on init. So we
+		 * need to make sure it works.
+		 */
+		relpSessSetSessState(pThis, eRelpSessState_READY_TO_SEND);
+	}
+
+	free(pUnackedLstEntry);
+
+pThis->pEngine->dbgprint("DEL sess %p unacked %d, sessState %d\n", pThis, pThis->lenUnackedLst, pThis->sessState);
+	LEAVE_RELPFUNC;
+}
+
+
+/* find an entry in the unacked list and provide it to the caller. The entry is handed
+ * over to the caller and removed from the queue of unacked entries. It is the caller's
+ * duty to destruct the sendbuf when it is done with it.
+ * rgerhards, 20080-03-20
+ */
+relpRetVal
+relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr)
+{
+	relpSessUnacked_t *pUnackedEtry;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	assert(ppSendbuf != NULL);
+	
+	for(  pUnackedEtry = pThis->pUnackedLstRoot
+	    ; pUnackedEtry != NULL && pUnackedEtry->pSendbuf->txnr != txnr
+	    ; pUnackedEtry = pUnackedEtry->pNext)
+	   	/*JUST SKIP*/;
+
+pThis->pEngine->dbgprint("relpSessGetUnacked 1\n");
+	if(pUnackedEtry == NULL)
+		ABORT_FINALIZE(RELP_RET_NOT_FOUND);
+
+pThis->pEngine->dbgprint("relpSessGetUnacked 2\n");
+	*ppSendbuf = pUnackedEtry->pSendbuf;
+	relpSessDelUnacked(pThis, pUnackedEtry);
+pThis->pEngine->dbgprint("relpSessGetUnacked 3\n");
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
 
 
 /* Wait for a specific state of the relp session. This function blocks
@@ -345,6 +451,85 @@ finalize_it:
 }
 
 
+/* Send a command to the server.
+ * This is a "raw" send function that just sends the command but does not
+ * care about the receive loop or session state. This has been put into its
+ * own function as some functionality (most importantly session init!) requires
+ * handling that is other than the regular command/response mode.
+ * rgerhards, 2008-03-19
+ */
+static relpRetVal
+relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
+		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*))
+{
+	relpSendbuf_t *pSendbuf;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	CHKRet(relpFrameBuildSendbuf(&pSendbuf, pThis->txnr, pCmd, lenCmd, pData, lenData, pThis, rspHdlr));
+pThis->pEngine->dbgprint("send command with txnr %d\n", (int) pThis->txnr);
+	pThis->txnr = relpEngineNextTXNR(pThis->txnr);
+	/* now send it */
+pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData);
+	CHKRet(relpSendbufSendAll(pSendbuf, pThis));
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pSendbuf != NULL)
+			relpSendbufDestruct(&pSendbuf);
+	}
+
+	LEAVE_RELPFUNC;
+}
+
+
+/* Send a command to the server.
+ * The is the "regular" function which ensures that server messages are received
+ * and messages are only sent when we have space left in our window. This function
+ * must only be called after the session is fully initialized. Calling it before
+ * initialization is finished will probably hang the client.
+ * rgerhards, 2008-03-19
+ */
+relpRetVal
+relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
+		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*))
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	/* this both reads server responses as well as makes sure we have space left
+	 * in our window. We provide a nearly eternal timeout (3 minutes). If we are not
+	 * ready to send in that period, something is awfully wrong. TODO: we may want
+	 * to make this timeout configurable, but I don't think it is a priority.
+	 */
+	CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 180));
+
+	/* then send our data */
+	CHKRet(relpSessRawSendCommand(pThis, pCmd, lenCmd, pData, lenData, rspHdlr));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* callback when the "init" command has been processed
+ * rgerhars, 2008-03-20
+ */
+static relpRetVal
+relpSessCBrspInit(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	// TODO: process offers!
+	relpSessSetSessState(pThis, eRelpSessState_INIT_RSP_RCVD);
+pThis->pEngine->dbgprint("CBrsp, setting state INIT_RSP_RCVD\n");
+
+	LEAVE_RELPFUNC;
+}
+
+
 /* Connect to the server. All session parameters (like remote address) must
  * already have been set.
  * rgerhards, 2008-03-19
@@ -360,7 +545,8 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host));
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
 
-	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"init", 4, (unsigned char*)"relp_version=1", 14));
+	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"init", 4, (unsigned char*)"relp_version=0", 14,
+				      relpSessCBrspInit));
 	relpSessSetSessState(pThis, eRelpSessState_INIT_CMD_SENT);
 	CHKRet(relpSessWaitState(pThis, eRelpSessState_INIT_RSP_RCVD, pThis->timeout));
 
@@ -369,44 +555,3 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 finalize_it:
 	LEAVE_RELPFUNC;
 }
-
-
-/* Send a command to the server.
- * In client-mode, we run on a single thread. As such, we need to pull any currently
- * existing server responses before we try to send our command.
- * We do not need mutex protection as no other thread shares this session.
- * rgerhards, 2008-03-19
- */
-relpRetVal
-relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
-		    unsigned char *pData, size_t lenData)
-{
-	relpSendbuf_t *pSendbuf;
-
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Sess);
-
-	/* first read any outstanding data and process the packets. This is important
-	 * because there may be responses which we need in order to get a send spot
-	 * within our window.
-	 */
-	CHKRet(relpSessRcvData(pThis));
-
-	/* then send our data */
-	CHKRet(relpFrameBuildSendbuf(&pSendbuf, pThis->txnr, pCmd, lenCmd, pData, lenData, pThis));
-pThis->pEngine->dbgprint("send command with txnr %d\n", (int) pThis->txnr);
-	pThis->txnr = relpEngineNextTXNR(pThis->txnr); /* txnr used up, so on to next one (latching!) */
-	/* now send it */
-pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData);
-	CHKRet(relpSendbufSendAll(pSendbuf, pThis->pTcp));
-
-finalize_it:
-	if(iRet != RELP_RET_OK) {
-		if(pSendbuf != NULL)
-			relpSendbufDestruct(&pSendbuf);
-	}
-
-	LEAVE_RELPFUNC;
-}
-
-

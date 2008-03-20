@@ -42,6 +42,8 @@ struct relpSendbuf_s {
 	BEGIN_RELP_OBJ;
 	relpSess_t *pSess; /**< the session this buffer belongs to */
 	relpOctet_t *pData; /**< the buffer, as it can be put on the wire */
+	relpTxnr_t txnr; /**< our txnr in native form */
+	relpRetVal (*rspHdlr)(relpSess_t*); /**< callback when response arrived */
 	size_t lenData;
 	size_t bufPtr; /**< multi-purpose, e.g. tracks sent octets when multi-send
 	 	            send() calls are required. */
@@ -52,6 +54,6 @@ struct relpSendbuf_s {
 relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis, relpSess_t *pSess);
 relpRetVal relpSendbufDestruct(relpSendbuf_t **ppThis);
 relpRetVal relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp);
-relpRetVal relpSendbufSendAll(relpSendbuf_t *pThis, relpTcp_t *pTcp);
+relpRetVal relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess);
 
 #endif /* #ifndef RELPSENDBUF_H_INCLUDED */

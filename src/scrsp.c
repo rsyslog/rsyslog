@@ -41,12 +41,18 @@
  * rgerhards, 2008-03-17
  */
 BEGINcommand(S, Rsp)
+	relpSendbuf_t *pSendbuf;
+
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in rsp command handler, txnr %d\n", pFrame->txnr);
-	if(pFrame->txnr == 1) {
-		// TODO: implement correctly! offers!!!!
-		relpSessSetSessState(pSess, eRelpSessState_INIT_RSP_RCVD);
-	} else {
-pSess->pEngine->dbgprint("txnr != 1, code missing for this case ;) \n");
+	CHKRet(relpSessGetUnacked(pSess, &pSendbuf, pFrame->txnr));
+
+	if(pSendbuf->rspHdlr != NULL) {
+		CHKRet(pSendbuf->rspHdlr(pSess));
 	}
+
+pSess->pEngine->dbgprint("destructing sendbuf %p\n", pSendbuf);
+	CHKRet(relpSendbufDestruct(&pSendbuf));
+
+finalize_it:
 ENDcommand

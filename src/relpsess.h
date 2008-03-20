@@ -41,7 +41,6 @@
 typedef struct replSessUnacked_s {
 	struct replSessUnacked_s *pNext;
 	struct replSessUnacked_s *pPrev;
-	relpTxnr_t txnr;	/**< txnr of unacked message */
 	struct relpSendbuf_s *pSendbuf; /**< the unacked message */
 } relpSessUnacked_t;
 
@@ -52,7 +51,7 @@ typedef enum relpSessState_e {
 	eRelpSessState_INIT_CMD_SENT = 2,
 	eRelpSessState_INIT_RSP_RCVD = 3,
 	eRelpSessState_READY_TO_SEND = 4,
-	eRelpSessState_FRAME_FULL = 5,
+	eRelpSessState_WINDOW_FULL = 5,
 	eRelpSessState_BROKEN = 6   /**< something went wrong, session must be dropped */
 } relpSessState_t;
 
@@ -68,12 +67,19 @@ struct relpSess_s {
 	relpTxnr_t txnr;	/**< next txnr expected when receiving or to be used when sending */
 	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
 	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
+
 	/* properties needed for server operation */
 	relpSrv_t *pSrv;	/**< the server we belong to */
 	struct relpSendq_s *pSendq; /**< our send queue */
+
 	/* properties needed for client operation */
+	int sizeWindow;	/**< size of our app-level communications window */
 	int timeout; /**< timeout after which session is to be considered broken */
 	relpSessState_t sessState; /**< state of our session */
+	/* linked list of frames with outstanding "rsp" */
+	relpSessUnacked_t *pUnackedLstRoot;
+	relpSessUnacked_t *pUnackedLstLast;
+	int lenUnackedLst;
 };
 
 /* macros for quick memeber access */
@@ -94,7 +100,9 @@ relpRetVal relpSessSendFrame(relpSess_t *pThis, relpFrame_t *pFrame);
 relpRetVal relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, size_t lenData);
 relpRetVal relpSessSndData(relpSess_t *pThis);
 relpRetVal relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
-		    	       unsigned char *pData, size_t lenData);
+		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*));
 relpRetVal relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
+relpRetVal relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf);
+relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

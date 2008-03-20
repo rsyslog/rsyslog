@@ -73,9 +73,11 @@ relpSendbufDestruct(relpSendbuf_t **ppThis)
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
 	pThis = *ppThis;
-	RELPOBJ_assert(pThis, Engine);
+	RELPOBJ_assert(pThis, Sendbuf);
+pThis->pSess->pEngine->dbgprint("in destructor: sendbuf %p\n", pThis);
 
-	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
+	if(pThis->pData != NULL)
+		free(pThis->pData);
 
 	/* done with de-init work, now free sendbuf object itself */
 	free(pThis);
@@ -143,19 +145,19 @@ finalize_it:
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpSendbufSendAll(relpSendbuf_t *pThis, relpTcp_t *pTcp)
+relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess)
 {
 	ssize_t lenToWrite;
 	ssize_t lenWritten;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sendbuf);
-	RELPOBJ_assert(pTcp,  Tcp);
+	RELPOBJ_assert(pSess,  Sess);
 
 	lenToWrite = pThis->lenData - pThis->bufPtr;
 	while(lenToWrite != 0) {
 		lenWritten = lenToWrite;
-pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
-		CHKRet(relpTcpSend(pTcp, pThis->pData + pThis->bufPtr, &lenWritten));
+pSess->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
+		CHKRet(relpTcpSend(pSess->pTcp, pThis->pData + pThis->bufPtr, &lenWritten));
 
 		if(lenWritten == -1) {
 			ABORT_FINALIZE(RELP_RET_IO_ERR);
@@ -165,6 +167,14 @@ pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenD
 			pThis->bufPtr += lenWritten;
 			lenToWrite = pThis->lenData - pThis->bufPtr;
 		}
+	}
+
+	/* ok, we now have sent the full buf. So we now need to add it to the unacked list, so that
+	 * we know what to do when the "rsp" packet comes in. -- rgerhards, 2008-03-20
+	 */
+	if((iRet = relpSessAddUnacked(pSess, pThis)) != RELP_RET_OK) {
+		relpSendbufDestruct(&pThis);
+		FINALIZE;
 	}
 
 finalize_it:
