@@ -76,7 +76,8 @@ relpCltDestruct(relpClt_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Clt);
 
-	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
+	if(pThis->pSess != NULL)
+		relpSessDestruct(&pThis->pSess);
 
 	/* done with de-init work, now free clt object itself */
 	free(pThis);
@@ -106,5 +107,24 @@ finalize_it:
 		}
 	}
 
+	LEAVE_RELPFUNC;
+}
+
+
+/* Send a syslog message through RELP. The session must be established.
+ * The provided message buffer is not touched by this function. The caller
+ * must free it if it is no longer needed.
+ * rgerhards, 2008-03-20
+ */
+relpRetVal
+relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg)
+{
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt); /* TODO: less drastic check, we are called from external! */
+
+	CHKRet(relpSessSendCommand(pThis->pSess, (unsigned char*)"syslog", 6, pMsg, lenMsg, NULL));
+
+finalize_it:
 	LEAVE_RELPFUNC;
 }

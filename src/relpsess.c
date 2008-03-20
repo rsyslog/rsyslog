@@ -156,6 +156,7 @@ relpSessRcvData(relpSess_t *pThis)
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
+memset(rcvBuf, 0, RELP_RCV_BUF_SIZE);
 
 	lenBuf = RELP_RCV_BUF_SIZE;
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
@@ -360,14 +361,11 @@ relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr
 	    ; pUnackedEtry = pUnackedEtry->pNext)
 	   	/*JUST SKIP*/;
 
-pThis->pEngine->dbgprint("relpSessGetUnacked 1\n");
 	if(pUnackedEtry == NULL)
 		ABORT_FINALIZE(RELP_RET_NOT_FOUND);
 
-pThis->pEngine->dbgprint("relpSessGetUnacked 2\n");
 	*ppSendbuf = pUnackedEtry->pSendbuf;
 	relpSessDelUnacked(pThis, pUnackedEtry);
-pThis->pEngine->dbgprint("relpSessGetUnacked 3\n");
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -551,9 +549,10 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	CHKRet(relpSessWaitState(pThis, eRelpSessState_INIT_RSP_RCVD, pThis->timeout));
 
 	/* if we reach this point, we have a valid relp session */
+	relpSessSetSessState(pThis, eRelpSessState_READY_TO_SEND); /* indicate session startup */
+
 	// The line below is just a rough test...
-	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"syslog", 4, (unsigned char*)"<1>Test: Msg", 12,
-				      NULL));
+	//CHKRet(relpSessSendCommand(pThis, (unsigned char*)"syslog", 6, (unsigned char*)"<1>Test: Msg 001", 15, NULL));
 
 finalize_it:
 	LEAVE_RELPFUNC;

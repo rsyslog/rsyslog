@@ -121,6 +121,7 @@ relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
+relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg);
 
 
 #endif /* #ifndef RELP_H_INCLUDED */
