@@ -375,6 +375,7 @@ processConfFile(uchar *pConfFile)
 	uchar *p;
 	uchar cbuf[BUFSIZ];
 	uchar *cline;
+	int i;
 	ASSERT(pConfFile != NULL);
 
 	if((cf = fopen((char*)pConfFile, "r")) == NULL) {
@@ -398,8 +399,19 @@ processConfFile(uchar *pConfFile)
 		if (*p == '\0' || *p == '#')
 			continue;
 
-		strcpy((char*)cline, (char*)p);
-		for (p = (uchar*) strchr((char*)cline, '\0'); isspace((int) *--p););
+		/* we now need to copy the characters to the begin of line. As this overlaps,
+		 * we can not use strcpy(). -- rgerhards, 2008-03-20
+		 * TODO: review the code at whole - this is highly suspect (but will go away
+		 * once we do the rest of RainerScript).
+		 */
+		/* was: strcpy((char*)cline, (char*)p); */
+		for( i = 0 ; p[i] != '\0' ; ++i) {
+			cline[i] = p[i];
+		}
+		cline[i] = '\0';
+
+		for (p = (uchar*) strchr((char*)cline, '\0'); isspace((int) *--p);)
+			/*EMPTY*/;
 		if (*p == '\\') {
 			if ((p - cbuf) > BUFSIZ - 30) {
 				/* Oops the buffer is full - what now? */

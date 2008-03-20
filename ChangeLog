@@ -7,6 +7,7 @@ Version 3.12.4 (rgerhards), 2008-03-??
 - bugfix: potential segfault on module unload. Thanks to varmojfekoj for
   the patch
 - bugfix: fixed some minor memory leaks
+- bugfix: some slightly invalid memory accesses
 ---------------------------------------------------------------------------
 Version 3.12.3 (rgerhards), 2008-03-18
 - added advanced flow control for congestion cases (mode depending on message

@@ -456,7 +456,7 @@ getWord(uchar **pp, cstr_t **ppStrB)
 
 	ASSERT(pp != NULL);
 	ASSERT(*pp != NULL);
-	ASSERT(*ppStrB != NULL);
+	ASSERT(ppStrB != NULL);
 
 	CHKiRet(rsCStrConstruct(ppStrB));
 
