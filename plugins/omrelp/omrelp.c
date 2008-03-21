@@ -54,10 +54,6 @@ static relpEngine_t *pRelpEngine;	/* our relp engine */
 
 typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
-	enum { /* TODO: we shoud revisit these definitions */
-		eDestFORW,
-		eDestFORW_UNKN
-	} eDestState;
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
 	int bIsConnected; /* currently connected to server? 0 - no, 1 - yes */
@@ -250,9 +246,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		if(pData->port == NULL) {
 			errmsg.LogError(NO_ERRCODE, "Could not get memory to store relp port, "
 				 "using default port, results may not be what you intend\n");
-			/* we leave f_forw.port set to NULL, this is then handled by
-			 * getRelpPt().
-			 */
+			/* we leave f_forw.port set to NULL, this is then handled by getRelpPt() */
 		} else {
 			memcpy(pData->port, tmp, i);
 			*(pData->port + i) = '\0';
