@@ -216,10 +216,7 @@ pThis->pEngine->dbgprint("relpSendqIsEmpty() returns %d\n", ret);
 /* Sends as much data from the top of the sendq as possible.
  * This function tries to send as much data from the top of the queue
  * as possible, destroying all sendbuf's that have been processed.
- * TODO: chain non-"rsp" frames to the "toack" list!?!?
- * It is an implementation detail if the function actually tries to send
- * everything. Right now, it just processes a single sendbuf, but that
- * may change. Please note that if a sendbuf is too large to be sent in
+ * Please note that if a sendbuf is too large to be sent in
  * a single operation, a partial buffer may be sent.
  * rgerhards, 2008-03-19
  */
@@ -234,17 +231,19 @@ relpSendqSend(relpSendq_t *pThis, relpTcp_t *pTcp)
 	RELPOBJ_assert(pTcp,  Tcp);
 
 	pEntry = pThis->pRoot;
-	RELPOBJ_assert(pEntry, Sendqe);
 
-	localRet = relpSendbufSend(pEntry->pBuf, pTcp);
-
-	if(localRet == RELP_RET_OK) {
-		/* in this case, the full buffer has been sent and we can
-		 * destruct the sendbuf.
-		 */
-		CHKRet(relpSendqDelFirstBuf(pThis));
-	} else if(localRet != RELP_RET_PARTIAL_WRITE) {
-		ABORT_FINALIZE(localRet);
+	while(pEntry != NULL) {
+		RELPOBJ_assert(pEntry, Sendqe);
+		localRet = relpSendbufSend(pEntry->pBuf, pTcp);
+		if(localRet == RELP_RET_OK) {
+			/* in this case, the full buffer has been sent and we can
+			 * destruct the sendbuf.
+			 */
+			CHKRet(relpSendqDelFirstBuf(pThis));
+			pEntry = pThis->pRoot; /* as we deleted from the root, the is our next entry */
+		} else if(localRet != RELP_RET_PARTIAL_WRITE) {
+			ABORT_FINALIZE(localRet);
+		}
 	}
 
 finalize_it:
