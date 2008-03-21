@@ -32,24 +32,13 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <fnmatch.h>
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
-#include <unistd.h>
 #include <librelp.h>
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
-#include "net.h"
-#include "omfwd.h"
-#include "template.h"
-#include "msg.h"
-#include "tcpsyslog.h"
-#include "tcpclt.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "errmsg.h"
@@ -60,26 +49,18 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(net)
-DEFobjCurrIf(tcpclt)
 
 static relpEngine_t *pRelpEngine;	/* our relp engine */
 
 typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
-	short	sock;			/* file descriptor */
-	int *pSockArray;		/* sockets to use for UDP */
 	enum { /* TODO: we shoud revisit these definitions */
 		eDestFORW,
 		eDestFORW_SUSP,
 		eDestFORW_UNKN
 	} eDestState;
-	struct addrinfo *f_addr;
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
-#	define	FORW_UDP 0
-#	define	FORW_TCP 1
-	/* following fields for TCP-based delivery */
 	relpClt_t *pRelpClt;		/* relp client for this instance */
 } instanceData;
 
@@ -100,7 +81,6 @@ static char *getRelpPt(instanceData *pData)
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->sock = -1;
 ENDcreateInstance
 
 
@@ -113,23 +93,10 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	switch (pData->eDestState) {
-		case eDestFORW:
-		case eDestFORW_SUSP:
-			freeaddrinfo(pData->f_addr);
-			/* fall through */
-		case eDestFORW_UNKN:
-			if(pData->port != NULL)
-				free(pData->port);
-			break;
-	}
+	if(pData->port != NULL)
+		free(pData->port);
 
 	/* final cleanup */
-	if(pData->sock >= 0)
-		close(pData->sock);
-	if(pData->pSockArray != NULL)
-		net.closeUDPListenSockets(pData->pSockArray);
-
 	if(pData->pRelpClt != NULL)
 		relpEngineCltDestruct(pRelpEngine, &pData->pRelpClt);
 
@@ -138,7 +105,7 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	printf("%s", pData->f_hname);
+	printf("RELP/%s", pData->f_hname);
 ENDdbgPrintInstInfo
 
 
@@ -152,8 +119,6 @@ static rsRetVal TCPSendPrepRetry(void *pvData)
 	instanceData *pData = (instanceData *) pvData;
 
 	assert(pData != NULL);
-	close(pData->sock);
-	pData->sock = -1;
 	RETiRet;
 }
 
@@ -240,7 +205,6 @@ BEGINparseSelectorAct
 	uchar *q;
 	int i;
 	int bErr;
-	TCPFRAMINGMODE tcp_framing;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":omrelp:", sizeof(":omrelp:") - 1)) {
@@ -290,10 +254,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				errmsg.LogError(NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
 					 "with compression support - request ignored.");
 #					endif /* #ifdef USE_NETZIP */
-			} else if(*p == 'o') { /* octet-couting based TCP framing? */
-				++p; /* eat */
-				/* no further options settable */
-				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
 				errmsg.LogError(NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 				++p; /* eat invalid option */
@@ -363,12 +323,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		strcpy(pData->f_hname, (char*) q);
 
 	/* process template */
-	if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " StdFwdFmt"))
-	   != RS_RET_OK)
-		goto finalize_it;
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " StdFwdFmt"));
 
 	/* create our relp client  */
 	CHKiRet(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt)); /* we use CHKiRet as librelp has a similar return value range */
+
 	/* first set the pData->eDestState */
 	pData->eDestState = eDestFORW_UNKN;
 	doTryResume(pData);
@@ -392,8 +351,6 @@ CODESTARTmodExit
 
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(net, LM_NET_FILENAME);
-	objRelease(tcpclt, LM_TCPCLT_FILENAME);
 ENDmodExit
 
 
@@ -413,8 +370,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* tell which objects we need */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(net, LM_NET_FILENAME));
-	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 ENDmodInit
 
 /* vim:set ai:
