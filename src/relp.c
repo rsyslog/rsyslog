@@ -212,7 +212,6 @@ relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __at
 }
 
 
-
 /* a dummy for callbacks not set by the caller */
 static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *pMsg,
 					size_t __attribute__((unused)) lenMsg)
@@ -389,9 +388,12 @@ pThis->dbgprint("fd %d ready for writing\n", sock);
  * header files (and will go away if we make them dynamically loadable).
  * rgerhards, 2008-03-17
  */
+/* core (protocol) commands */
 PROTOTYPEcommand(S, Init)
-PROTOTYPEcommand(S, Syslog)
+PROTOTYPEcommand(S, Close)
 PROTOTYPEcommand(S, Rsp)
+/* extension commands */
+PROTOTYPEcommand(S, Syslog)
 
 /* process an incoming command
  * This function receives a RELP frame and dispatches it to the correct
@@ -415,6 +417,8 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 	 */
 	if(!strcmp((char*)pFrame->cmd, "open")) {
 		CHKRet(relpSCInit(pFrame, pSess));
+	} else if(!strcmp((char*)pFrame->cmd, "close")) {
+		CHKRet(relpSCClose(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "syslog")) {
 		CHKRet(relpSCSyslog(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "rsp")) {

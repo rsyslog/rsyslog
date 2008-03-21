@@ -44,6 +44,10 @@
 #include "sendq.h"
 #include "dbllinklist.h"
 
+/* forward definitions */
+static relpRetVal relpSessDisconnect(relpSess_t *pThis);
+
+
 /** Construct a RELP sess instance
  *  the pSrv parameter may be set to NULL if the session object is for a client.
  */
@@ -94,6 +98,10 @@ relpSessDestruct(relpSess_t **ppThis)
 	assert(ppThis != NULL);
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
+
+	if(pThis->sessState != eRelpSessState_DISCONNECTED) {
+		relpSessDisconnect(pThis);
+	}
 
 	if(pThis->pSendq != NULL)
 		relpSendqDestruct(&pThis->pSendq);
@@ -549,8 +557,54 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	/* if we reach this point, we have a valid relp session */
 	relpSessSetSessState(pThis, eRelpSessState_READY_TO_SEND); /* indicate session startup */
 
-	// The line below is just a rough test...
-	//CHKRet(relpSessSendCommand(pThis, (unsigned char*)"syslog", 6, (unsigned char*)"<1>Test: Msg 001", 15, NULL));
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* callback when the "close" command has been processed
+ * rgerhars, 2008-03-21
+ */
+static relpRetVal
+relpSessCBrspClose(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	relpSessSetSessState(pThis, eRelpSessState_CLOSE_RSP_RCVD);
+pThis->pEngine->dbgprint("CBrspClose, setting state CLOSE_RSP_RCVD\n");
+
+	LEAVE_RELPFUNC;
+}
+
+
+/* Disconnect from the server. After disconnect, the session object
+ * is destructed.
+ * rgerhards, 2008-03-21
+ */
+static relpRetVal
+relpSessDisconnect(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+pThis->pEngine->dbgprint("SessDisconnect enter, sessState %d\n", pThis->sessState);
+	/* first wait to be permitted to send, this time a bit more impatient (after all,
+	 * we may be terminated if we take too long). We do not care about the return state.
+	 * Even if we are outside of the window, we still send the close request, because
+	 * everything else is even worse. So let's try to be polite...
+	 */
+	relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 1);
+
+pThis->pEngine->dbgprint("SessDisconnect 10, sessState %d\n", pThis->sessState);
+	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"close", 5, (unsigned char*)"", 0,
+				      relpSessCBrspClose));
+	relpSessSetSessState(pThis, eRelpSessState_CLOSE_CMD_SENT);
+pThis->pEngine->dbgprint("SessDisconnect 20, sessState %d\n", pThis->sessState);
+	CHKRet(relpSessWaitState(pThis, eRelpSessState_CLOSE_RSP_RCVD, pThis->timeout));
+pThis->pEngine->dbgprint("SessDisconnect 30, sessState %d\n", pThis->sessState);
+
+	relpSessSetSessState(pThis, eRelpSessState_DISCONNECTED); /* indicate session startup */
 
 finalize_it:
 	LEAVE_RELPFUNC;

@@ -52,7 +52,10 @@ typedef enum relpSessState_e {
 	eRelpSessState_INIT_RSP_RCVD = 3,
 	eRelpSessState_READY_TO_SEND = 4,
 	eRelpSessState_WINDOW_FULL = 5,
-	eRelpSessState_BROKEN = 6   /**< something went wrong, session must be dropped */
+	eRelpSessState_CLOSE_CMD_SENT = 6, /* once we are in a close state, we can not send any  */
+	eRelpSessState_CLOSE_RSP_RCVD = 7, /* other commands */
+	eRelpSessState_DISCONNECTED = 8,  /* session is disconnected and must be destructed */
+	eRelpSessState_BROKEN = 9   /**< something went wrong, session must be dropped */
 } relpSessState_t;
 
 
