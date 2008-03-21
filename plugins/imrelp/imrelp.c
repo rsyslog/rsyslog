@@ -81,7 +81,7 @@ static relpRetVal
 onSyslogRcv(uchar *pMsg, size_t lenMsg)
 {
 	DEFiRet;
-	parseAndSubmitMessage("TODO:HOSTNAME", pMsg, lenMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+	parseAndSubmitMessage("TODO:HOSTNAME", (char*)pMsg, lenMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
 
 	RETiRet;
 }
@@ -96,7 +96,7 @@ static rsRetVal addListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
-		CHKiRet(relpEngineSetSyslogRcv(pRelpEngine, dbgprintf));
+		CHKiRet(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
 	}
 
 	CHKiRet(relpEngineAddListner(pRelpEngine, pNewVal));
