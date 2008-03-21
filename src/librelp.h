@@ -119,7 +119,7 @@ relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
-relpRetVal relpEngineSetSyslogCallback(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, size_t));
+relpRetVal relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, size_t));
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);

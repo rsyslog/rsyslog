@@ -222,7 +222,7 @@ static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *p
  * not implemented dummy.
  */
 relpRetVal
-relpEngineSetSyslogCallback(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, size_t))
+relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, size_t))
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
