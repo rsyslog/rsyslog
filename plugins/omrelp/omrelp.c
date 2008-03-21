@@ -56,11 +56,11 @@ typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
 	enum { /* TODO: we shoud revisit these definitions */
 		eDestFORW,
-		eDestFORW_SUSP,
 		eDestFORW_UNKN
 	} eDestState;
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
+	int bIsConnected; /* currently connected to server? 0 - no, 1 - yes */
 	relpClt_t *pRelpClt;		/* relp client for this instance */
 } instanceData;
 
@@ -109,46 +109,15 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-/* This function is called immediately before a send retry is attempted.
- * It shall clean up whatever makes sense.
- * rgerhards, 2007-12-28
+/* try to connect to server
+ * rgerhards, 2008-03-21
  */
-static rsRetVal TCPSendPrepRetry(void *pvData)
-{
-	DEFiRet;
-	instanceData *pData = (instanceData *) pvData;
-
-	assert(pData != NULL);
-	RETiRet;
-}
-
-
-/* try to resume connection if it is not ready
- * rgerhards, 2007-08-02
- */
-static rsRetVal doTryResume(instanceData *pData)
+static rsRetVal doConnect(instanceData *pData)
 {
 	DEFiRet;
 
-	switch (pData->eDestState) {
-	case eDestFORW_SUSP:
-		iRet = RS_RET_OK; /* the actual check happens during doAction() only */
-		pData->eDestState = eDestFORW;
-		break;
-		
-	case eDestFORW_UNKN:
-		/* The remote address is not yet known and needs to be obtained */
-		dbgprintf(" %s\n", pData->f_hname);
-		iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
-		if(iRet == RELP_RET_OK)
-			pData->eDestState = eDestFORW;
-		break;
-	case eDestFORW:
-		/* rgerhards, 2007-09-11: this can not happen, but I've included it to
-		 * a) make the compiler happy, b) detect any logic errors */
-		assert(0);
-		break;
-	}
+	iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
+	pData->bIsConnected = (iRet == RELP_RET_OK) ? 1 : 0;
 
 	RETiRet;
 }
@@ -156,48 +125,38 @@ static rsRetVal doTryResume(instanceData *pData)
 
 BEGINtryResume
 CODESTARTtryResume
-	iRet = doTryResume(pData);
+	iRet = doConnect(pData);
 ENDtryResume
 
+
 BEGINdoAction
-	char *psz; /* temporary buffering */
-	register unsigned l;
+	uchar *pMsg; /* temporary buffering */
+	size_t lenMsg;
+	relpRetVal ret;
 CODESTARTdoAction
-RUNLOG_VAR("%d", pData->eDestState);
-	switch (pData->eDestState) {
-	case eDestFORW_SUSP:
-		dbgprintf("internal error in omrelp.c, eDestFORW_SUSP in doAction()!\n");
-		iRet = RS_RET_SUSPENDED;
-		break;
-		
-	case eDestFORW_UNKN:
-		dbgprintf("doAction eDestFORW_UNKN\n");
-		iRet = doTryResume(pData);
-		if(iRet == RS_RET_OK)
-			pData->eDestState = eDestFORW;
-		break;
+	dbgprintf(" %s:%s/RELP\n", pData->f_hname, getRelpPt(pData));
 
-	case eDestFORW:
-		dbgprintf(" %s:%s/%s\n", pData->f_hname, getRelpPt(pData), "relp");
-		psz = (char*) ppString[0];
-		l = strlen((char*) psz);
-		/* TODO: think about handling oversize messages! */
-		if(l > MAXLINE)
-			l = MAXLINE;
-
-		/* forward */
-		relpRetVal ret;
-RUNLOG;
-		ret = relpCltSendSyslog(pData->pRelpClt, (uchar*) psz, l);
-RUNLOG_VAR("%d", ret);
-		if(ret != RS_RET_OK) {
-			/* error! */
-			dbgprintf("error forwarding via relp, suspending\n");
-			pData->eDestState = eDestFORW_SUSP;
-			iRet = RS_RET_SUSPENDED;
-		}
-		break;
+	if(!pData->bIsConnected) {
+		CHKiRet(doConnect(pData));
 	}
+
+	pMsg = ppString[0];
+	lenMsg = strlen((char*) pMsg); /* TODO: don't we get this? */
+
+	/* TODO: think about handling oversize messages! */
+	if(lenMsg > MAXLINE)
+		lenMsg = MAXLINE;
+
+	/* forward */
+	ret = relpCltSendSyslog(pData->pRelpClt, (uchar*) pMsg, lenMsg);
+RUNLOG_VAR("%d", ret);
+	if(ret != RS_RET_OK) {
+		/* error! */
+		dbgprintf("error forwarding via relp, suspending\n");
+		iRet = RS_RET_SUSPENDED;
+	}
+
+finalize_it:
 ENDdoAction
 
 
@@ -327,10 +286,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* create our relp client  */
 	CHKiRet(relpEngineCltConstruct(pRelpEngine, &pData->pRelpClt)); /* we use CHKiRet as librelp has a similar return value range */
-
-	/* first set the pData->eDestState */
-	pData->eDestState = eDestFORW_UNKN;
-	doTryResume(pData);
 
 	/* TODO: do we need to call freeInstance if we failed - this is a general question for
 	 * all output modules. I'll address it later as the interface evolves. rgerhards, 2007-07-25
