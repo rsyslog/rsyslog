@@ -99,7 +99,8 @@ relpSessDestruct(relpSess_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
 
-	if(pThis->sessState != eRelpSessState_DISCONNECTED) {
+	if(   pThis->sessState != eRelpSessState_INVALID /* this is the case if we are a server */
+	   && pThis->sessState != eRelpSessState_DISCONNECTED) {
 		relpSessDisconnect(pThis);
 	}
 
