@@ -93,6 +93,8 @@ relpRetVal
 relpSessDestruct(relpSess_t **ppThis)
 {
 	relpSess_t *pThis;
+	relpSessUnacked_t *pUnacked;
+	relpSessUnacked_t *pUnackedToDel;
 
 	ENTER_RELPFUNC;
 	assert(ppThis != NULL);
@@ -108,6 +110,17 @@ relpSessDestruct(relpSess_t **ppThis)
 		relpSendqDestruct(&pThis->pSendq);
 	if(pThis->pTcp != NULL)
 		relpTcpDestruct(&pThis->pTcp);
+
+	/* unacked list */
+	for(pUnacked = pThis->pUnackedLstRoot ; pUnacked != NULL ; ) {
+		pUnackedToDel = pUnacked;
+		pUnacked = pUnacked->pNext;
+pThis->pEngine->dbgprint("relpSessionDestruct Unacked %p, sendbuf %p\n", pUnackedToDel, pUnackedToDel->pSendbuf);
+		relpSendbufDestruct(&pUnackedToDel->pSendbuf);
+		free(pUnackedToDel);
+	}
+
+
 	pthread_mutex_destroy(&pThis->mutSend);
 	/* done with de-init work, now free object itself */
 	free(pThis);
