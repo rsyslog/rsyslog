@@ -212,6 +212,25 @@ relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __at
 }
 
 
+
+/* a dummy for callbacks not set by the caller */
+static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *pMsg,
+					size_t __attribute__((unused)) lenMsg)
+{ return RELP_RET_NOT_IMPLEMENTED;
+}
+/* set the syslog receive callback. If NULL is provided, it is set to the
+ * not implemented dummy.
+ */
+relpRetVal
+relpEngineSetSyslogCallback(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, size_t))
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	pThis->onSyslogRcv = (pCB == NULL) ? relpSrvSyslogRcvDummy : pCB;
+	LEAVE_RELPFUNC;
+}
+
 /* add a relp listener to the engine. The listen port must be provided.
  * The listen port may be NULL, in which case the default port is used.
  * rgerhards, 2008-03-17

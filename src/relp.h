@@ -76,6 +76,7 @@ typedef struct relpEngSessLst_s {
 struct relpEngine_s {
 	BEGIN_RELP_OBJ;
 	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2)));
+	relpRetVal (*onSyslogRcv)(unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
 
 	/* linked list of our servers */
 	relpEngSrvLst_t *pSrvLstRoot;

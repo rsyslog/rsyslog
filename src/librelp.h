@@ -45,6 +45,7 @@ typedef int relpRetVal;
 /* our objects (forward definitions) */
 typedef struct relpEngine_s relpEngine_t;
 typedef struct relpClt_s relpClt_t;
+typedef struct relpSrv_s relpSrv_t;
 typedef struct relpSess_s relpSess_t;
 typedef struct relpFrame_s relpFrame_t;
 typedef struct relpSendbuf_s relpSendbuf_t;
@@ -103,6 +104,7 @@ typedef enum relpObjID_e {
 #define RELP_RET_IO_ERR         ERRCODE_BASE + 14	/**< IO error occured */
 #define RELP_RET_TIMED_OUT      ERRCODE_BASE + 15	/**< timeout occured */
 #define RELP_RET_NOT_FOUND      ERRCODE_BASE + 16	/**< searched entity not found */
+#define RELP_RET_NOT_IMPLEMENTED ERRCODE_BASE + 17	/**< functionality not implemented */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -117,7 +119,7 @@ relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
-
+relpRetVal relpEngineSetSyslogCallback(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, size_t));
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);

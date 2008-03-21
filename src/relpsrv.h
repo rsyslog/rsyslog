@@ -39,13 +39,13 @@
 /* the RELPSRV object 
  * rgerhards, 2008-03-17
  */
-typedef struct relpSrv_s {
+struct relpSrv_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	unsigned char *pLstnPort;
 	relpTcp_t *pTcp; /**< our tcp support object */
 	size_t maxDataSize;  /**< maximum size of a DATA element */
-} relpSrv_t;
+};
 
 
 /* macros for quick memeber access */
