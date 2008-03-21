@@ -126,5 +126,10 @@ relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg)
 	CHKRet(relpSessSendCommand(pThis->pSess, (unsigned char*)"syslog", 6, pMsg, lenMsg, NULL));
 
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		/* if something went wrong, we need to close the session */
+		relpSessDestruct(&pThis->pSess);
+	}
+
 	LEAVE_RELPFUNC;
 }

@@ -102,7 +102,8 @@ relpSessDestruct(relpSess_t **ppThis)
 	RELPOBJ_assert(pThis, Sess);
 
 	if(   pThis->sessState != eRelpSessState_INVALID /* this is the case if we are a server */
-	   && pThis->sessState != eRelpSessState_DISCONNECTED) {
+	   && pThis->sessState != eRelpSessState_DISCONNECTED
+	   && pThis->sessState != eRelpSessState_BROKEN) {
 		relpSessDisconnect(pThis);
 	}
 
@@ -206,48 +207,6 @@ pThis->pEngine->dbgprint("end relpSessRcvData, iRet %d\n", iRet);
 }
 
 
-#if 0 // maybe delete it...
-/* Send a frame to the remote peer.
- * This function sends a frame, which must be completely constructed, to the remote
- * peer. It does not mangle with the frame, except that it adds the txnr, which is
- * only known during the send. The caller-provided frame is destructed when
- * this function returns (even in case of an error return).
- * rgerhards, 2008-03-18
- * TODO: do we still need this function? or can we delete it? rgerhards, 2008-03-19
- */
-relpRetVal
-relpSessSendFrame(relpSess_t *pThis, relpFrame_t *pFrame)
-{
-	relpOctet_t *pSendBuf = NULL;
-
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Sess);
-	RELPOBJ_assert(pFrame, Frame);
-
-	/* we must make sure that while we process the txnr, nobody else gets
-	 * into our way.
-	 */
-	pthread_mutex_lock(&pThis->mutSend);
-	CHKRet(relpFrameBuildMembufAndDestruct(pFrame, &pSendBuf, pThis->txnrSnd));
-	pThis->txnrSnd = (pThis->txnrSnd + 1) / 1000000000; /* txnr used up, so on to next one (latching!) */
-	pthread_mutex_unlock(&pThis->mutSend);
-
-	// TODO: send buffer!
-
-finalize_it:
-	if(iRet != RELP_RET_OK) {
-		if(pSendBuf != NULL)
-			free(pSendBuf);
-		/* the txnr is probably lost, but there is nothing we
-		 * can do against that..
-		 */
-	}
-
-	LEAVE_RELPFUNC;
-}
-#endif
-
-
 /* Send a response to the client.
  * rgerhards, 2008-03-19
  */
@@ -266,6 +225,11 @@ relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, s
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
+		if(iRet == RELP_RET_IO_ERR) {
+			pThis->pEngine->dbgprint("relp session %p is broken, io error\n", pThis);
+			pThis->sessState = eRelpSessState_BROKEN;
+			}
+
 		if(pSendbuf != NULL)
 			relpSendbufDestruct(&pSendbuf);
 	}
