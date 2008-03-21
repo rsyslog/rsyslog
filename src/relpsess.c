@@ -239,10 +239,8 @@ relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, s
 
 	CHKRet(relpFrameBuildSendbuf(&pSendbuf, txnr, (unsigned char*)"rsp", 3,
 				     pData, lenData, pThis, NULL));
-	//pThis->txnr = relpEngineNextTXNR(pThis->txnr); /* txnr used up, so on to next one (latching!) */
-pThis->pEngine->dbgprint("SessSend for txnr %d\n", (int) txnr);
 	/* now enqueue it to the sendq (which means "send it" ;)) */
-	CHKRet(relpSendqAddBuf(pThis->pSendq, pSendbuf));
+	CHKRet(relpSendqAddBuf(pThis->pSendq, pSendbuf, pThis->pTcp));
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {

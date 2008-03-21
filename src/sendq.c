@@ -144,13 +144,14 @@ relpSendqDestruct(relpSendq_t **ppThis)
  * rgerhards, 2008-03-17
  */
 relpRetVal
-relpSendqAddBuf(relpSendq_t *pThis, relpSendbuf_t *pBuf)
+relpSendqAddBuf(relpSendq_t *pThis, relpSendbuf_t *pBuf, relpTcp_t *pTcp)
 {
 	relpSendqe_t *pEntry;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sendq);
 	RELPOBJ_assert(pBuf, Sendbuf);
+	RELPOBJ_assert(pTcp, Tcp);
 
 	CHKRet(relpSendqeConstruct(&pEntry, pThis->pEngine));
 	pEntry->pBuf = pBuf;
@@ -158,6 +159,14 @@ relpSendqAddBuf(relpSendq_t *pThis, relpSendbuf_t *pBuf)
 	pthread_mutex_lock(&pThis->mut);
 	DLL_Add(pEntry, pThis->pRoot, pThis->pLast);
 	pthread_mutex_unlock(&pThis->mut);
+
+	/* we now try to send it. We always have non-blocking sockets in the server
+	 * so it doesn't hurt if that's not possible. But if it is, we save ourselvs
+	 * one round of select() (and this is assumed to be the regular case!)
+	 */
+	iRet = relpSendqSend(pThis, pTcp);
+	if(iRet == RELP_RET_PARTIAL_WRITE)
+		iRet = RELP_RET_OK; /* this code is well ok! */
 
 finalize_it:
 	LEAVE_RELPFUNC;
