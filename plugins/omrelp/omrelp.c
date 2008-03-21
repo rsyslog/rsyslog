@@ -195,8 +195,9 @@ static rsRetVal doTryResume(instanceData *pData)
 	case eDestFORW_UNKN:
 		/* The remote address is not yet known and needs to be obtained */
 		dbgprintf(" %s\n", pData->f_hname);
-		relpCltConnect(pData->pRelpClt, family, pData->port, pData->f_hname);
-		pData->eDestState = eDestFORW;
+		iRet = relpCltConnect(pData->pRelpClt, family, pData->port, pData->f_hname);
+		if(iRet = RELP_RET_OK)
+			pData->eDestState = eDestFORW;
 		break;
 	case eDestFORW:
 		/* rgerhards, 2007-09-11: this can not happen, but I've included it to
@@ -228,6 +229,8 @@ RUNLOG_VAR("%d", pData->eDestState);
 	case eDestFORW_UNKN:
 		dbgprintf("doAction eDestFORW_UNKN\n");
 		iRet = doTryResume(pData);
+		if(iRet == RS_RET_OK)
+			pData->eDestState = eDestFORW;
 		break;
 
 	case eDestFORW:
