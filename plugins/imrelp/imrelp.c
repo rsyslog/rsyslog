@@ -57,8 +57,8 @@ static relpEngine_t *pRelpEngine;	/* our relp engine */
 static int iTCPSessMax = 200; /* max number of sessions */
 
 
+/* ------------------------------ callbacks ------------------------------ */
 #if 0
-/* callbacks */
 /* this shall go into a specific ACL module! */
 static int
 isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((unused)) *pUsrSrv,
@@ -67,51 +67,27 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((u
 	return net.isAllowedSender(net.pAllowedSenders_TCP, addr, fromHostFQDN);
 }
 
+#endif // #if 0
 
-static int*
-doOpenLstnSocks(tcpsrv_t *pSrv)
-{
-	ISOBJ_TYPE_assert(pSrv, tcpsrv);
-	return tcpsrv.create_tcp_socket(pSrv);
-}
-
-
-static int
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
-{
-	int state;
-	assert(pSess != NULL);
-
-	state = recv(pSess->sock, buf, lenBuf, 0);
-	return state;
-}
-
-static rsRetVal
-onRegularClose(tcps_sess_t *pSess)
+/* callback for receiving syslog messages. This function is invoked from the
+ * RELP engine when a syslog message arrived. It must return a relpRetVal,
+ * with anything else but RELP_RET_OK terminating the relp session. Please note
+ * that RELP_RE_OK is equal to RS_RET_OK and the other libRELP error codes
+ * are different from our rsRetVal. So we can simply use our own iRet system
+ * to fulfill the requirement.
+ * rgerhards, 2008-03-21
+ */
+static relpRetVal
+onSyslogRcv(uchar *pMsg, size_t lenMsg)
 {
 	DEFiRet;
-	assert(pSess != NULL);
+	parseAndSubmitMessage("TODO:HOSTNAME", pMsg, lenMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
 
-	/* process any incomplete frames left over */
-	tcps_sess.PrepareClose(pSess);
-	/* Session closed */
-	tcps_sess.Close(pSess);
 	RETiRet;
 }
 
-
-static rsRetVal
-onErrClose(tcps_sess_t *pSess)
-{
-	DEFiRet;
-	assert(pSess != NULL);
-
-	tcps_sess.Close(pSess);
-	RETiRet;
-}
 
 /* ------------------------------ end callbacks ------------------------------ */
-#endif // #if 0
 
 
 static rsRetVal addListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
@@ -120,6 +96,7 @@ static rsRetVal addListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+		CHKiRet(relpEngineSetSyslogRcv(pRelpEngine, dbgprintf));
 	}
 
 	CHKiRet(relpEngineAddListner(pRelpEngine, pNewVal));

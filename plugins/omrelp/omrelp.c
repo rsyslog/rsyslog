@@ -158,33 +158,12 @@ static rsRetVal TCPSendPrepRetry(void *pvData)
 }
 
 
-/* open a connection to the remote peer (transport level)
- * rgerhards, 2007-12-28
- */
-static rsRetVal openConn(void *pvData)
-{
-	DEFiRet;
-	instanceData *pData = (instanceData *) pvData;
-
-	assert(pData != NULL);
-	if(pData->sock < 0) {
-		if((pData->sock = tcpclt.CreateSocket(pData->f_addr)) < 0)
-			iRet = RS_RET_TCP_SOCKCREATE_ERR;
-	}
-
-	RETiRet;
-}
-
-
 /* try to resume connection if it is not ready
  * rgerhards, 2007-08-02
  */
 static rsRetVal doTryResume(instanceData *pData)
 {
 	DEFiRet;
-	struct addrinfo *res;
-	struct addrinfo hints;
-	unsigned e;
 
 	switch (pData->eDestState) {
 	case eDestFORW_SUSP:
@@ -195,8 +174,8 @@ static rsRetVal doTryResume(instanceData *pData)
 	case eDestFORW_UNKN:
 		/* The remote address is not yet known and needs to be obtained */
 		dbgprintf(" %s\n", pData->f_hname);
-		iRet = relpCltConnect(pData->pRelpClt, family, pData->port, pData->f_hname);
-		if(iRet = RELP_RET_OK)
+		iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
+		if(iRet == RELP_RET_OK)
 			pData->eDestState = eDestFORW;
 		break;
 	case eDestFORW:
@@ -244,7 +223,7 @@ RUNLOG_VAR("%d", pData->eDestState);
 		/* forward */
 		relpRetVal ret;
 RUNLOG;
-		ret = relpCltSendSyslog(pData->pRelpClt, psz, l);
+		ret = relpCltSendSyslog(pData->pRelpClt, (uchar*) psz, l);
 RUNLOG_VAR("%d", ret);
 		if(ret != RS_RET_OK) {
 			/* error! */
@@ -260,9 +239,7 @@ ENDdoAction
 BEGINparseSelectorAct
 	uchar *q;
 	int i;
-        int error;
 	int bErr;
-        struct addrinfo hints, *res;
 	TCPFRAMINGMODE tcp_framing;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
