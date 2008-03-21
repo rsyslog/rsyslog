@@ -109,7 +109,7 @@ be detected
 because we have app-level acknowledgement.
 <h3>RELP FRAME</h3>
 All relp transaction are carried out over a consistent framing.
-<pre>RELP-FRAME = HEADER DATA TRAILER<br>DATA = *OCTET ; command-defined data<br>HEADER = TXNR SP COMMAND SP DATALEN<br>TXNR = NUMBER ; relp transaction number, monotonically increases, starts at 1<br>DATALEN = NUMBER<br>#old:COMMAND = "init" / "go" / "syslog" / "close" / "rsp" / "abort" ; max length = 32<br>COMMAND = 1*32ALPHA<br>TRAILER = LF ; to detect framing errors and enhance human readibility<br>ALPHA = letter ; ('a'..'z', 'A'..'Z')<br>NUMBER = 1*9DIGIT<br>DIGIT = %d48-57<br>LF = %d10<br>SP = %d32<br><br>RSP DATA CONTENT:<br>RSP-HEADER = TXNR SP RSP-CODE [SP HUMANMSG] LF [CMDDATA]<br>RSP-CODE = 200 / 500 ; 200 is ok, all the rest currently erros<br>HUAMANMSG = *OCTET ; a human-readble message without LF in it<br>CMDDATA = *OCTET ; semantics depend on original command<br>TXNR is as in the relp frame, it is the TXNR of the frame being responded to.<br></pre>
+<pre>RELP-FRAME = HEADER DATA TRAILER<br>DATA = *OCTET ; command-defined data<br>HEADER = TXNR SP COMMAND SP DATALEN<br>TXNR = NUMBER ; relp transaction number, monotonically increases, starts at 1<br>DATALEN = NUMBER<br>#old:COMMAND = "open" / "syslog" / "close" / "rsp" / "abort" ; max length = 32<br>COMMAND = 1*32ALPHA<br>TRAILER = LF ; to detect framing errors and enhance human readibility<br>ALPHA = letter ; ('a'..'z', 'A'..'Z')<br>NUMBER = 1*9DIGIT<br>DIGIT = %d48-57<br>LF = %d10<br>SP = %d32<br><br>RSP DATA CONTENT:<br>RSP-HEADER = TXNR SP RSP-CODE [SP HUMANMSG] LF [CMDDATA]<br>RSP-CODE = 200 / 500 ; 200 is ok, all the rest currently erros<br>HUAMANMSG = *OCTET ; a human-readble message without LF in it<br>CMDDATA = *OCTET ; semantics depend on original command<br>TXNR is as in the relp frame, it is the TXNR of the frame being responded to.<br></pre>
 <p>
 DATALEN is the number of octets in DATA (so the frame length excluding
 the length
@@ -133,11 +133,11 @@ TXNR. The data part contains RSP-HEADER as defined above. It is a
 response code,
 optionally followed by a space and additional data (depending on the
 client's command). Return state values are: 200 - OK, 500 - error
-<h4>Command "init"</h4>
-Intializes a connection to the server. Must include offers inside the
+<h4>Command "open"</h4>
+Opens a connection to the server. Must include offers inside the
 data, at a minimum the "relp_version" offer. Offers
 provide information about services supported by the client.
-<p>When the server receives an init, it parses the offers, checks
+<p>When the server receives an open, it parses the offers, checks
 what it itself supports
 and provides those offers that it accepts in the "rsp". The server may
 send a "rsp" with an empty offer part in case it doesn't like any of
@@ -157,15 +157,7 @@ even though the
 client makes the final feature selection, the server is dictating what
 needs to be used.
 </p>
-<p>Once the client has made its selection, it sends back a "go"
-command to the server,
-which finally initializes the connection and makes it ready for
-transmission of other
-commands. Note that the connection is only ready AFTER the server has
-sent a positive
-response to the "go" command, so the client must wait for it (and a
-negative response
-means the connection is NOT usable and must be closed by the client).</p>
+<p>Note that the connection is only ready AFTER the client has received&nbsp;the "open" response.</p>
 <h3>OFFERS</h3>
 During session setup, "offers" are exchange between client and server.
 An "offer" describes
@@ -179,8 +171,8 @@ tells the other side which version of relp is in use.
 STATE DIAGRAMS
 ... detailling some communications scenarios:
 </p>
-<p></p>
-<pre>Session Startup:<br>C S<br>cmd: "init", data: offer -----&gt; (selects supported offers)<br>(selects offers to use) &lt;----- cmd: "rsp", data "accepted offers"<br>cmd: "go", data: "offers to use" -----&gt; (initializes connection)<br> &lt;----- cmd: "rsp", data "200 OK" (or error)<br><br> ... transmission channel is ready to use ....<br><br>Message Transmission<br>C S<br>cmd: "syslog", data: syslogmsg -----&gt; (processes message)<br>(indicates syslog as processed) &lt;----- cmd: "rsp", data OK/Error<br><br>Session Termination<br>C S<br>cmd: "close", data: none? -----&gt; (processes termination request)<br>(terminates session) &lt;----- cmd: "rsp", data OK/Error<br> (terminates session)<br></pre>
+
+<pre>Session Startup:<br>C S<br>cmd: "open", data: offer -----&gt; (selects supported offers)<br>(selects offers to use) &lt;----- cmd: "rsp", data "accepted offers"<br><br> ... transmission channel is ready to use ....<br><br>Message Transmission<br>C S<br>cmd: "syslog", data: syslogmsg -----&gt; (processes message)<br>(indicates syslog as processed) &lt;----- cmd: "rsp", data OK/Error<br><br>Session Termination<br>C S<br>cmd: "close", data: none? -----&gt; (processes termination request)<br>(terminates session) &lt;----- cmd: "rsp", data OK/Error<br> (terminates session)<br></pre>
 <h3>SECURITY CONSIDERATIONS</h3>
 <h4>Window Size</h4>
 A very large window can be abused for denial of service attacks.

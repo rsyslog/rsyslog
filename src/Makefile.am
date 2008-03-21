@@ -25,10 +25,8 @@ librelp_la_SOURCES = \
 	relpsrv.c \
 	relpsrv.h \
 	scsyslog.c \
-	scgo.c \
 	scrsp.c \
-	scinit.c \
-	scinit.h \
+	copen.c \
 	dbllinklist.h \
 	cmdif.h
 librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS)

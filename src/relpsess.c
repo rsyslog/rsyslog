@@ -511,7 +511,7 @@ finalize_it:
 }
 
 
-/* callback when the "init" command has been processed
+/* callback when the "open" command has been processed
  * rgerhars, 2008-03-20
  */
 static relpRetVal
@@ -543,7 +543,7 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host));
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
 
-	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"init", 4, (unsigned char*)"relp_version=0", 14,
+	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"open", 4, (unsigned char*)"relp_version=0", 14,
 				      relpSessCBrspInit));
 	relpSessSetSessState(pThis, eRelpSessState_INIT_CMD_SENT);
 	CHKRet(relpSessWaitState(pThis, eRelpSessState_INIT_RSP_RCVD, pThis->timeout));

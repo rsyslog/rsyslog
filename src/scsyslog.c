@@ -37,9 +37,8 @@
 #include <assert.h>
 #include "relp.h"
 #include "cmdif.h"
-#include "scinit.h"
 
-/* process the "init" command
+/* process the command
  * rgerhards, 2008-03-17
  */
 BEGINcommand(S, Syslog)

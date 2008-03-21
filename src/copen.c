@@ -1,4 +1,4 @@
-/* The command handler for server-based "init" (after reception)
+/* The command handler for server-based "open" (after reception)
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
@@ -34,14 +34,13 @@
 #include <assert.h>
 #include "relp.h"
 #include "cmdif.h"
-#include "scinit.h"
 
-/* process the "init" command
+/* process the "open" command
  * rgerhards, 2008-03-17
  */
 BEGINcommand(S, Init)
 	ENTER_RELPFUNC;
-	pSess->pEngine->dbgprint("in init command handler\n");
+	pSess->pEngine->dbgprint("in open command handler\n");
 
 	/* and send it... */
 	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "relp_version=0", 14));

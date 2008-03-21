@@ -35,7 +35,6 @@
 #include <assert.h>
 #include "relp.h"
 #include "cmdif.h"
-#include "scinit.h"
 
 /* process a response
  * rgerhards, 2008-03-17

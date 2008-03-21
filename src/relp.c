@@ -371,7 +371,6 @@ pThis->dbgprint("fd %d ready for writing\n", sock);
  * rgerhards, 2008-03-17
  */
 PROTOTYPEcommand(S, Init)
-PROTOTYPEcommand(S, Go)
 PROTOTYPEcommand(S, Syslog)
 PROTOTYPEcommand(S, Rsp)
 
@@ -395,10 +394,8 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 	/* currently, we hardcode the commands. Over time, they may be dynamically 
 	 * loaded and, when so, should come from a linked list. TODO -- rgerhards, 2008-03-17
 	 */
-	if(!strcmp((char*)pFrame->cmd, "init")) {
+	if(!strcmp((char*)pFrame->cmd, "open")) {
 		CHKRet(relpSCInit(pFrame, pSess));
-	} else if(!strcmp((char*)pFrame->cmd, "go")) {
-		CHKRet(relpSCGo(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "syslog")) {
 		CHKRet(relpSCSyslog(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "rsp")) {
