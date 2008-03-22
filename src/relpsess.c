@@ -46,6 +46,7 @@
 
 /* forward definitions */
 static relpRetVal relpSessDisconnect(relpSess_t *pThis);
+relpRetVal relpSessTryReestablish(relpSess_t *pThis);
 
 
 /** Construct a RELP sess instance
@@ -120,6 +121,10 @@ pThis->pEngine->dbgprint("relpSessionDestruct Unacked %p, sendbuf %p\n", pUnacke
 		free(pUnackedToDel);
 	}
 
+	if(pThis->srvPort != NULL)
+		free(pThis->srvPort);
+	if(pThis->srvAddr != NULL)
+		free(pThis->srvAddr);
 
 	pthread_mutex_destroy(&pThis->mutSend);
 	/* done with de-init work, now free object itself */
@@ -183,17 +188,20 @@ memset(rcvBuf, 0, RELP_RCV_BUF_SIZE);
 	lenBuf = RELP_RCV_BUF_SIZE;
 	CHKRet(relpTcpRcv(pThis->pTcp, rcvBuf, &lenBuf));
 
-rcvBuf[lenBuf] = '\0';
 pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
 	if(lenBuf == 0) {
-		pThis->sessState = eRelpSessState_DISCONNECTED;
-		ABORT_FINALIZE(RELP_RET_SESSION_CLOSED);
+		pThis->pEngine->dbgprint("server closed relp session %p, session broken\n", pThis);
+		/* even though we had a "normal" close, it is unexpected at this
+		 * stage. Consequently, we consider the session to be broken, because
+		 * the recovery action is the same no matter how it is broken.
+		 */
+		pThis->sessState = eRelpSessState_BROKEN;
+		FINALIZE; /* a broken session is NO error return - the caller handles that */
 	} else if ((int) lenBuf == -1) { /* I don't know why we need to cast to int, but we must... */
 		if(errno != EAGAIN) {
-			pThis->pEngine->dbgprint("errno %d during relp session read, session broken\n", errno);
+			pThis->pEngine->dbgprint("errno %d during relp session %p, session broken\n", errno,pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
-#warning "TODO: relp session broken?"
-			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+		FINALIZE; /* a broken session is NO error return - the caller handles that */
 		}
 	} else {
 		/* we have regular data, which we now can process */
@@ -204,7 +212,6 @@ pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf
 
 finalize_it:
 pThis->pEngine->dbgprint("end relpSessRcvData, iRet %d, session state %d\n", iRet, pThis->sessState);
-
 	LEAVE_RELPFUNC;
 }
 
@@ -430,7 +437,11 @@ pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d, err %s\n", nf
 	}
 
 finalize_it:
-	/* TODO: flag session as broken on timeout? */
+	if(iRet == RELP_RET_TIMED_OUT) {
+		/* the session is broken! */
+		pThis->sessState = eRelpSessState_BROKEN;
+	}
+
 	LEAVE_RELPFUNC;
 }
 
@@ -499,8 +510,44 @@ relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	 */
 	CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 180));
 
+	/* re-try once if automatic retry mode is set */
+#warning "code missing - auto retry mode"
+	if(1 && pThis->sessState == eRelpSessState_BROKEN) {
+		CHKRet(relpSessTryReestablish(pThis));
+	}
+
 	/* then send our data */
 	CHKRet(relpSessRawSendCommand(pThis, pCmd, lenCmd, pData, lenData, rspHdlr));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* Try to restablish a broken session. A single try is made and the result
+ * reported back. RELP_RET_OK if we could get a new session, a RELP error state
+ * otherwise (e.g. RELP_RET_SESSION_BROKEN, but could also be a more precise
+ * error code). If the session can be re-established, any unsent frames are
+ * resent. The function returns only after that happened.
+ * rgerhards, 2008-03-22
+ */
+relpRetVal
+relpSessTryReestablish(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	assert(pThis->sessState = eRelpSessState_BROKEN);
+
+	CHKRet(relpTcpDestruct(&pThis->pTcp));
+	CHKRet(relpSessConnect(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr));
+	/* if we reach this point, we could re-establish the session. We now
+	 * need to resend any unacked data.
+	 */
+	if(pThis->pUnackedLstRoot != NULL) {
+		pThis->pEngine->dbgprint("relp session %p reestablished, now resending unacked data\n", pThis);
+#warning "quick incomplete hack"
+		CHKRet(relpSendbufSendAll(pThis->pUnackedLstRoot->pSendbuf, pThis));
+	}
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -534,6 +581,14 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
+
+	if(pThis->srvAddr == NULL) { /* initial connect, need to save params */
+		pThis->protFamily = protFamily;
+		if((pThis->srvPort = (unsigned char*) strdup((char*)port)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+		if((pThis->srvAddr = (unsigned char*) strdup((char*)host)) == NULL)
+			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
 
 	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine));
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host));

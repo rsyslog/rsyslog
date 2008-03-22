@@ -70,6 +70,11 @@ struct relpSess_s {
 	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
 	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
 
+	/* connection parameters -- save for auto-reconnect case */
+	int protFamily;
+	unsigned char *srvPort;
+	unsigned char *srvAddr;
+
 	/* properties needed for server operation */
 	relpSrv_t *pSrv;	/**< the server we belong to */
 	struct relpSendq_s *pSendq; /**< our send queue */
