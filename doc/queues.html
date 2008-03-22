@@ -2,7 +2,6 @@
 <html><head>
 <meta http-equiv="Content-Language" content="de">
 <title>Understanding rsyslog queues</title></head>
-
 <body>
 
 <h1>Understanding rsyslog Queues</h1>
@@ -17,7 +16,7 @@ rule processor, which then evaluates which actions are to be carried out. In
 front of each action, there is also a queue, which potentially de-couples the 
 filter processing from the actual action (e.g. writing to file, database or 
 forwarding to another host).</p>
-<h1>Queue Modes</h1>
+<h1>iQueue Modes</h1>
 <p>Rsyslog supports different queue modes, some with submodes. Each of them has 
 specific advantages and disadvantages. Selecting the right queue mode is quite 
 important when tuning rsyslogd. The queue mode (aka "type") is set via the "<i>$&lt;object&gt;QueueType</i>" 
@@ -243,9 +242,12 @@ This directive accepts both the usual textual severity as well as a
 numerical one. To understand it, you must be aware of the numerical
 severity values. They are defined in RFC 3164:</p>
 <pre>        Numerical         Severity<br>          Code<br><br>           0       Emergency: system is unusable<br>           1       Alert: action must be taken immediately<br>           2       Critical: critical conditions<br>           3       Error: error conditions<br>           4       Warning: warning conditions<br>           5       Notice: normal but significant condition<br>           6       Informational: informational messages<br>           7       Debug: debug-level messages</pre>
-<p>Anything of the specified severity and (numerically) above it is discarded. 
-To turn message discarding off, simply specify the discard watermark to be 
-higher than the queue size.</p>
+<p>Anything of the specified severity and (numerically) above it is
+discarded. To turn message discarding off, simply specify the discard
+watermark to be higher than the queue size. An alternative is to
+specify the numerical value 8 as DiscardSeverity. This is also the
+default setting to prevent unintentional message loss. So if you would
+like to use message discarding, you need to set" <i>$&lt;object&gt;QueueDiscardSeverity</i>" to an actual value.</p>
 <p>An interesting application is with disk-assisted queues: if the discard 
 watermark is set lower than the high watermark, message discarding will start 
 before the queue becomes disk-assisted. This may be a good thing if you would 

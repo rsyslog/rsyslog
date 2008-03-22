@@ -8,6 +8,8 @@ Version 3.12.4 (rgerhards), 2008-03-??
   the patch
 - bugfix: fixed some minor memory leaks
 - bugfix: some slightly invalid memory accesses
+- changed queue's discard severities default value to 8 (do not discard)
+  to prevent unintentional message loss
 ---------------------------------------------------------------------------
 Version 3.12.3 (rgerhards), 2008-03-18
 - added advanced flow control for congestion cases (mode depending on message
