@@ -87,7 +87,24 @@ via rsyslog.conf. That set of configuration directives is to be
 expanded. So far, we support:</p>
 <p>$klogSymbolsTwice [on/off]<br>
 $DebugPrintKernelSymbols [on/off] # spits *a lot* of messages at startup</p>
-<h2>Queue Modes for the Main Message Queue</h2>
+<h2>Output File Syncing</h2>Rsyslogd tries to keep as compatible to
+stock syslogd as possible. As such, it retained stock syslogd's default
+of syncing every file write if not specified otherwise (by placing a
+dash in front of the output file name). While this was a useful feature
+in past days where hardware was much less reliable and UPS seldom, this
+no longer is useful in today's worl. Instead, the syncing is a high
+performace hit. With it, rsyslogd writes files around 50 *times* slower
+than without it. It also affects overall system performance due to the
+high IO activity. In rsyslog v3, syncing has been turned off by
+default. This is done via a specific configuration directive
+"$ActionFileEnableSync on/off" which is off by default. So even if
+rsyslogd finds sync selector lines, it ignores them by default. In
+order to enable file syncing, the administrator must specify
+"$ActionFileEnableSync on" at the top of rsyslog.conf. This ensures
+that syncing only happens in those installations where the
+administrator actually wanted that (performance-intense) feature. In
+the fast majority of cases (if not all), this dramatically increases
+rsyslogd performance without any negative effects.<h2>Queue Modes for the Main Message Queue</h2>
 <p>Either "FixedArray" or "LinkedList" is recommended. "Direct"
 is available, but should not be used except for a very good reason
 ("Direct" disables queueing and will potentially lead to message loss

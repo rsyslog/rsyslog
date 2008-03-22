@@ -12,7 +12,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -81,6 +81,7 @@ static uid_t	fileGID;	/* GID to be used for newly created files */
 static uid_t	dirUID;		/* UID to be used for newly created directories */
 static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
+static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 /* end globals for default values */
 
 typedef struct _instanceData {
@@ -603,8 +604,9 @@ again:
 			errno = e;
 			errmsg.LogError(NO_ERRCODE, "%s", pData->f_fname);
 		}
-	} else if (pData->bSyncFile)
+	} else if (pData->bSyncFile) {
 		fsync(pData->fd);
+	}
 
 finalize_it:
 	RETiRet;
@@ -660,11 +662,12 @@ CODESTARTparseSelectorAct
 		return RS_RET_CONFLINE_UNPROCESSED;
 	}
 
-	if (*p == '-') {
+	if(*p == '-') {
 		pData->bSyncFile = 0;
 		p++;
-	} else
-		pData->bSyncFile = 1;
+	} else {
+		pData->bSyncFile = bEnableSync ? 1 : 0;
+	}
 
 	pData->f_sizeLimit = 0; /* default value, use outchannels to configure! */
 
@@ -793,6 +796,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	fCreateMode = 0644;
 	fDirCreateMode = 0644;
 	bCreateDirs = 1;
+	bEnableSync = 0;
 
 	return RS_RET_OK;
 }
@@ -823,6 +827,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"filecreatemode", 0, eCmdHdlrFileCreateMode, NULL, &fCreateMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"createdirs", 0, eCmdHdlrBinary, NULL, &bCreateDirs, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &bFailOnChown, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &bEnableSync, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*
