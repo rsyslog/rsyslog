@@ -101,8 +101,7 @@ relpSessDestruct(relpSess_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
 
-	if(   pThis->sessState != eRelpSessState_INVALID /* this is the case if we are a server */
-	   && pThis->sessState != eRelpSessState_DISCONNECTED
+	if(   pThis->sessState != eRelpSessState_DISCONNECTED
 	   && pThis->sessState != eRelpSessState_BROKEN) {
 		relpSessDisconnect(pThis);
 	}
@@ -187,10 +186,13 @@ memset(rcvBuf, 0, RELP_RCV_BUF_SIZE);
 rcvBuf[lenBuf] = '\0';
 pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf, rcvBuf);
 	if(lenBuf == 0) {
+		pThis->sessState = eRelpSessState_DISCONNECTED;
 		ABORT_FINALIZE(RELP_RET_SESSION_CLOSED);
 	} else if ((int) lenBuf == -1) { /* I don't know why we need to cast to int, but we must... */
 		if(errno != EAGAIN) {
-			pThis->pEngine->dbgprint("errno %d during relp session read data\n", errno);
+			pThis->pEngine->dbgprint("errno %d during relp session read, session broken\n", errno);
+			pThis->sessState = eRelpSessState_BROKEN;
+#warning "TODO: relp session broken?"
 			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 		}
 	} else {
@@ -201,7 +203,7 @@ pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf
 	}
 
 finalize_it:
-pThis->pEngine->dbgprint("end relpSessRcvData, iRet %d\n", iRet);
+pThis->pEngine->dbgprint("end relpSessRcvData, iRet %d, session state %d\n", iRet, pThis->sessState);
 
 	LEAVE_RELPFUNC;
 }
@@ -454,13 +456,23 @@ pThis->pEngine->dbgprint("send command with txnr %d\n", (int) pThis->txnr);
 	pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 	/* now send it */
 pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData);
-	CHKRet(relpSendbufSendAll(pSendbuf, pThis));
+	iRet = relpSendbufSendAll(pSendbuf, pThis);
+
+pThis->pEngine->dbgprint("SendbufSendAll iRet %d\n", iRet);
+	if(iRet == RELP_RET_IO_ERR) {
+		pThis->pEngine->dbgprint("relp session %p flagged as broken, IO error\n", pThis);
+		pThis->sessState = eRelpSessState_BROKEN;
+		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+	}
 
 finalize_it:
+#warning "TODO: How to handle sendbuf in this case?"
+#if 0
 	if(iRet != RELP_RET_OK) {
 		if(pSendbuf != NULL)
 			relpSendbufDestruct(&pSendbuf);
 	}
+#endif
 
 	LEAVE_RELPFUNC;
 }

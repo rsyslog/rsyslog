@@ -46,7 +46,7 @@ typedef struct replSessUnacked_s {
 
 /* relp session state */
 typedef enum relpSessState_e {
-	eRelpSessState_INVALID = 0, /**< should never be set for a live session (calloc non-init guard) */
+	eRelpSessState_DISCONNECTED = 0,  /* session is disconnected and must be destructed */
 	eRelpSessState_PRE_INIT = 1,
 	eRelpSessState_INIT_CMD_SENT = 2,
 	eRelpSessState_INIT_RSP_RCVD = 3,
@@ -54,7 +54,6 @@ typedef enum relpSessState_e {
 	eRelpSessState_WINDOW_FULL = 5,
 	eRelpSessState_CLOSE_CMD_SENT = 6, /* once we are in a close state, we can not send any  */
 	eRelpSessState_CLOSE_RSP_RCVD = 7, /* other commands */
-	eRelpSessState_DISCONNECTED = 8,  /* session is disconnected and must be destructed */
 	eRelpSessState_BROKEN = 9   /**< something went wrong, session must be dropped */
 } relpSessState_t;
 
