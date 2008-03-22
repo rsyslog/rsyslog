@@ -100,11 +100,6 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
-BEGINneedUDPSocket
-CODESTARTneedUDPSocket
-ENDneedUDPSocket
-
-
 BEGINmodExit
 CODESTARTmodExit
 ENDmodExit

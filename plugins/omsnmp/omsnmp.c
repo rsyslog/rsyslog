@@ -442,10 +442,6 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
-BEGINneedUDPSocket
-CODESTARTneedUDPSocket
-ENDneedUDPSocket
-
 /* Reset config variables for this module to default values.
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)

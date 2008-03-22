@@ -95,11 +95,6 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
-BEGINneedUDPSocket
-CODESTARTneedUDPSocket
-ENDneedUDPSocket
-
-
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	/* nothing special here */

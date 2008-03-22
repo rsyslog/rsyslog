@@ -43,8 +43,9 @@
  * and does not intend to do specific old-version emulations.
  * rgerhards, 2008-03-04
  * version 3 adds modInfo_t ptr to call of modInit -- rgerhards, 2008-03-10
+ * version 4 removes needUDPSocket OM callback -- rgerhards, 2008-03-22
  */
-#define CURR_MOD_IF_VERSION 3
+#define CURR_MOD_IF_VERSION 4
 
 typedef enum eModType_ {
 	eMOD_IN,	/* input module */
@@ -83,7 +84,6 @@ typedef struct modInfo_s {
 	rsRetVal (*modQueryEtryPt)(uchar *name, rsRetVal (**EtryPoint)()); /* query entry point addresses */
 	rsRetVal (*isCompatibleWithFeature)(syslogFeature);
 	rsRetVal (*freeInstance)(void*);/* called before termination or module unload */
-	rsRetVal (*needUDPSocket)(void*);/* called when fd is writeable after select() */
 	rsRetVal (*dbgPrintInstInfo)(void*);/* called before termination or module unload */
 	rsRetVal (*tryResume)(void*);/* called to see if module actin can be resumed now */
 	rsRetVal (*modExit)(void);		/* called before termination or module unload */

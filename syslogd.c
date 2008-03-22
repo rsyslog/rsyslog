@@ -310,7 +310,6 @@ static int	logEveryMsg = 0;/* no repeat message processing  - read-only after st
 uchar *pszWorkDir = NULL;/* name of rsyslog's spool directory (without trailing slash) */
 /* end global config file state variables */
 
-static unsigned int Forwarding = 0;
 char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
@@ -2224,7 +2223,6 @@ init(void)
 	pDfltHostnameCmp = NULL;
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
-	Forwarding = 0;
 
 	dbgprintf("rsyslog %s.\n", VERSION);
 	dbgprintf("Called init.\n");
@@ -2394,42 +2392,6 @@ init(void)
 }
 
 
-/* helper to selectorAddListCheckActions()
- * This is the fucntion to be executed by llExecFunc
- */
-DEFFUNC_llExecFunc(selectorAddListCheckActionsChecker)
-{
-	DEFiRet;
-	action_t *pAction = (action_t *) pData;
-
-	assert(pAction != NULL);
-
-	if(pAction->pMod->needUDPSocket(pAction->pModData) == RS_RET_TRUE) {
-		Forwarding++;
-	}
-
-	RETiRet;
-}
-
-/* loop through a list of actions and perform necessary checks and
- * housekeeping. This function must only be called when the owning
- * selector_t looks valid and is not likely to be discarded. However,
- * if we do not return RS_RET_OK, the caller MUST discard the
- * owning selector_t. -- rgerhards, 2007-08-02
-*/
-static rsRetVal selectorAddListCheckActions(selector_t *f)
-{
-	DEFiRet;
-
-	assert(f != NULL);
-
-	CHKiRet(llExecFunc(&f->llActList, selectorAddListCheckActionsChecker, NULL));
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* add a completely-processed selector (after config line parsing) to
  * the linked list of selectors. We now need to check
  * if it has any actions associated and, if so, link it to the linked
@@ -2453,11 +2415,6 @@ selectorAddList(selector_t *f)
 			errmsg.LogError(NO_ERRCODE, "warning: selector line without actions will be discarded");
 			selectorDestruct(f);
 		} else {
-			if((iRet = selectorAddListCheckActions(f)) != RS_RET_OK) {
-				errmsg.LogError(NO_ERRCODE, "selector line will be discarded due to error in action(s)");
-				selectorDestruct(f);
-				goto finalize_it;
-			}
 			/* successfully created an entry */
 			dbgprintf("selector line successfully processed\n");
 			/* TODO: we should use the linked list class for the selector list, else we need to add globals

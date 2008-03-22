@@ -626,11 +626,6 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 
-BEGINneedUDPSocket
-CODESTARTneedUDPSocket
-ENDneedUDPSocket
-
-
 BEGINtryResume
 CODESTARTtryResume
 ENDtryResume

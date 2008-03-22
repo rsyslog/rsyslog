@@ -10,6 +10,8 @@ Version 3.12.4 (rgerhards), 2008-03-??
 - bugfix: some slightly invalid memory accesses
 - changed queue's discard severities default value to 8 (do not discard)
   to prevent unintentional message loss
+- removed a now-longer needed callback from the output module 
+  interface. Results in reducing code complexity.
 ---------------------------------------------------------------------------
 Version 3.12.3 (rgerhards), 2008-03-18
 - added advanced flow control for congestion cases (mode depending on message

@@ -598,12 +598,6 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
-BEGINneedUDPSocket
-CODESTARTneedUDPSocket
-	iRet = RS_RET_TRUE;
-ENDneedUDPSocket
-
-
 BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */

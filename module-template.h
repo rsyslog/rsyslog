@@ -188,28 +188,6 @@ static rsRetVal dbgPrintInstInfo(void *pModData)\
 }
 
 
-/* needUDPSocket()
- * Talks back to syslogd if the global UDP syslog socket is needed for
- * sending. Returns 0 if not, 1 if needed. This interface hopefully goes
- * away at some time, because it is kind of a hack. However, currently
- * there is no way around it, so we need to support it.
- * rgerhards, 2007-07-26
- */
-#define BEGINneedUDPSocket \
-static rsRetVal needUDPSocket(void *pModData)\
-{\
-	rsRetVal iRet = RS_RET_FALSE;\
-	instanceData *pData = NULL; \
-	BEGINfunc
-
-#define CODESTARTneedUDPSocket \
-	pData = (instanceData*) pModData;
-
-#define ENDneedUDPSocket \
-	RETiRet;\
-}
-
-
 /* parseSelectorAct()
  * Extra comments:
  * try to process a selector action line. Checks if the action
@@ -337,8 +315,6 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = parseSelectorAct;\
 	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
 		*pEtryPoint = isCompatibleWithFeature;\
-	} else if(!strcmp((char*) name, "needUDPSocket")) {\
-		*pEtryPoint = needUDPSocket;\
 	} else if(!strcmp((char*) name, "tryResume")) {\
 		*pEtryPoint = tryResume;\
 	}
