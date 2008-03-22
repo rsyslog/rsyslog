@@ -902,6 +902,7 @@ logmsgInternal(int pri, char *msg, int flags)
 	MsgSetUxTradMsg(pMsg, msg);
 	MsgSetRawMsg(pMsg, msg);
 	MsgSetHOSTNAME(pMsg, LocalHostName);
+	MsgSetRcvFrom(pMsg, LocalHostName);
 	MsgSetTAG(pMsg, "rsyslogd:");
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);

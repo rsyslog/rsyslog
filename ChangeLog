@@ -12,6 +12,7 @@ Version 3.12.4 (rgerhards), 2008-03-??
   to prevent unintentional message loss
 - removed a now-longer needed callback from the output module 
   interface. Results in reducing code complexity.
+- bugfix: internally generated messages had "FROMHOST" property not set
 ---------------------------------------------------------------------------
 Version 3.12.3 (rgerhards), 2008-03-18
 - added advanced flow control for congestion cases (mode depending on message
@@ -30,6 +31,19 @@ Version 3.12.3 (rgerhards), 2008-03-18
 - bugfix: rsyslogd aborted on sigup - thanks to varmojfekoj for the patch
 - some more internal cleanup ;)
 - begun relp modules, but these are not functional yet
+- Greatly enhanced rsyslogd's file write performance by disabling
+  file syncing capability of output modules by default. This
+  feature is usually not required, not useful and an extreme performance
+  hit (both to rsyslogd as well as the system at large). Unfortunately,
+  most users enable it by default, because it was most intuitive to enable
+  it in plain old sysklogd syslog.conf format. There is now a new config
+  setting which must be enabled in order to support syncing. By default it
+  is off. So even if the old-format config lines request syncing, it is
+  not done unless explicitely enabled. I am sure this is a very useful
+  change and not a risk at all. I need to think if I undo it under
+  compatibility mode, but currently this does not happen (I fear a lot of
+  lazy users will run rsyslogd in compatibility mode, again bringing up
+  this performance problem...).
 ---------------------------------------------------------------------------
 Version 3.12.2 (rgerhards), 2008-03-13
 - added RSYSLOGD_MODDIR environment variable
