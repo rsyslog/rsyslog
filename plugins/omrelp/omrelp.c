@@ -53,7 +53,7 @@ DEFobjCurrIf(errmsg)
 static relpEngine_t *pRelpEngine;	/* our relp engine */
 
 typedef struct _instanceData {
-	char	f_hname[MAXHOSTNAMELEN+1];
+	char f_hname[MAXHOSTNAMELEN+1];
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
 	int bInitialConnect; /* is this the initial connection request of our module? (0-no, 1-yes) */
@@ -116,7 +116,8 @@ static rsRetVal doConnect(instanceData *pData)
 
 	if(pData->bInitialConnect) {
 		iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
-		pData->bInitialConnect = 0;
+		if(iRet == RELP_RET_OK)
+			pData->bInitialConnect = 0;
 	} else {
 		iRet = relpCltReconnect(pData->pRelpClt);
 	}
