@@ -153,19 +153,31 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 					ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 				}
 				pThis->lenData = pThis->lenData * 10 + c - '0';
-			} else if(c == ' ') { /* field terminator */
-				/* we now can assign the buffer for our data */
-				if(pThis->lenData > 0) {
-					if((pThis->pData = malloc(pThis->lenData)) == NULL)
-						ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+			} else {
+				/* first check if we have no data, in which case
+				 * we need to continue with the trailer check and skip
+				 * the (non-present) data part. -- rgerhards, 2008-03-23
+				 */
+				if(pThis->lenData == 0) {
+					pThis->rcvState = eRelpFrameRcvState_IN_TRAILER;
+					pThis->iRcv = 0;
+					goto do_trailer; /* not very clean, but... */
 				}
-				if(pThis->lenData > pSess->maxDataSize) {
-					ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
+				/* ok, we have data, so now let's do the usual checks... */
+				if(c == ' ') { /* field terminator */
+					/* we now can assign the buffer for our data */
+					if(pThis->lenData > 0) {
+						if((pThis->pData = malloc(pThis->lenData)) == NULL)
+							ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+					}
+					if(pThis->lenData > pSess->maxDataSize) {
+						ABORT_FINALIZE(RELP_RET_DATA_TOO_LONG);
+					}
+					pThis->rcvState = eRelpFrameRcvState_IN_DATA;
+					pThis->iRcv = 0;
+				} else { /* oh, oh, invalid char! */
+					ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 				}
-				pThis->rcvState = eRelpFrameRcvState_IN_DATA;
-				pThis->iRcv = 0;
-			} else { /* oh, oh, invalid char! */
-				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 			}
 			break;
 		case eRelpFrameRcvState_IN_DATA:
@@ -179,6 +191,7 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 				/*FALLTHROUGH*/
 			}
 		case eRelpFrameRcvState_IN_TRAILER:
+		do_trailer:
 			if(c != '\n')
 				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 			pThis->rcvState = eRelpFrameRcvState_FINISHED;
@@ -349,8 +362,11 @@ relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char 
 	memcpy(ptrMembuf, pCmd, lenCmd); ptrMembuf += lenCmd;
 	*ptrMembuf++ = ' ';
 	memcpy(ptrMembuf, bufDatalen, lenDatalen); ptrMembuf += lenDatalen;
-	*ptrMembuf++ = ' ';
-	memcpy(ptrMembuf, pData, lenData); ptrMembuf += lenData;
+	if(lenData > 0) {
+		/* a data part (and its SP-delemiter) is only written if there is data... */
+		*ptrMembuf++ = ' ';
+		memcpy(ptrMembuf, pData, lenData); ptrMembuf += lenData;
+	}
 	*ptrMembuf = '\n';
 
 	*ppSendbuf = pSendbuf; /* save new buffer */
