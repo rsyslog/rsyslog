@@ -590,6 +590,10 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 			ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
 
+	/* (re-)init some counters */
+	pThis->txnr = 1;
+	pThis->sessType = eRelpSess_Client;	/* indicate we have a client session */
+
 	CHKRet(relpTcpConstruct(&pThis->pTcp, pThis->pEngine));
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host));
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);

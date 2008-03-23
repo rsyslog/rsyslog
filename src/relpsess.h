@@ -57,6 +57,10 @@ typedef enum relpSessState_e {
 	eRelpSessState_BROKEN = 9   /**< something went wrong, session must be dropped */
 } relpSessState_t;
 
+typedef enum relpSessType_e {
+	eRelpSess_Server = 0,
+	eRelpSess_Client = 1
+} relpSessType_t; /* what type of session are we? */
 
 /* the RELPSESS object 
  * rgerhards, 2008-03-16
@@ -64,6 +68,7 @@ typedef enum relpSessState_e {
 struct relpSess_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
+	relpSessType_t sessType;	/**< session type: 0 - server, 1 - client */
 	relpTcp_t *pTcp;	/**< our sockt to the remote peer */
 	struct relpFrame_s *pCurrRcvFrame; /**< the current receive frame (a buffer) */
 	relpTxnr_t txnr;	/**< next txnr expected when receiving or to be used when sending */
