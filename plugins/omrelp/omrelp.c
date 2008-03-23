@@ -56,6 +56,7 @@ typedef struct _instanceData {
 	char	f_hname[MAXHOSTNAMELEN+1];
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
+	int bInitialConnect; /* is this the initial connection request of our module? (0-no, 1-yes) */
 	int bIsConnected; /* currently connected to server? 0 - no, 1 - yes */
 	relpClt_t *pRelpClt;		/* relp client for this instance */
 } instanceData;
@@ -77,6 +78,7 @@ static char *getRelpPt(instanceData *pData)
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	pData->bInitialConnect = 1;
 ENDcreateInstance
 
 
@@ -112,11 +114,19 @@ static rsRetVal doConnect(instanceData *pData)
 {
 	DEFiRet;
 
-	iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
-	pData->bIsConnected = (iRet == RELP_RET_OK) ? 1 : 0;
+	if(pData->bInitialConnect) {
+		iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
+		pData->bInitialConnect = 0;
+	} else {
+		iRet = relpCltReconnect(pData->pRelpClt);
+	}
 
-	if(iRet != RELP_RET_OK)
+	if(iRet == RELP_RET_OK) {
+		pData->bIsConnected = 1;
+	} else {
+		pData->bIsConnected = 0;
 		iRet = RS_RET_SUSPENDED;
+	}
 
 	RETiRet;
 }
