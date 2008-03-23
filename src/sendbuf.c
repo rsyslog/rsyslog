@@ -127,7 +127,7 @@ relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp)
 	lenWritten = lenToWrite;
 pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
 
-	CHKRet(relpTcpSend(pTcp, pThis->pData + pThis->bufPtr, &lenWritten));
+	CHKRet(relpTcpSend(pTcp, pThis->pData + (9 - pThis->lenTxnr) + pThis->bufPtr, &lenWritten));
 
 	if(lenWritten != lenToWrite) {
 		pThis->bufPtr += lenWritten;
@@ -157,7 +157,7 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess)
 	while(lenToWrite != 0) {
 		lenWritten = lenToWrite;
 pSess->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
-		CHKRet(relpTcpSend(pSess->pTcp, pThis->pData + pThis->bufPtr, &lenWritten));
+		CHKRet(relpTcpSend(pSess->pTcp, pThis->pData + (9 - pThis->lenTxnr) + pThis->bufPtr, &lenWritten));
 
 		if(lenWritten == -1) {
 			ABORT_FINALIZE(RELP_RET_IO_ERR);

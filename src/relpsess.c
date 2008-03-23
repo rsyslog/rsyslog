@@ -466,7 +466,7 @@ relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 pThis->pEngine->dbgprint("send command with txnr %d\n", (int) pThis->txnr);
 	pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 	/* now send it */
-pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData);
+pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 	iRet = relpSendbufSendAll(pSendbuf, pThis);
 
 pThis->pEngine->dbgprint("SendbufSendAll iRet %d\n", iRet);
@@ -541,11 +541,14 @@ relpSessTryReestablish(relpSess_t *pThis)
 	CHKRet(relpTcpDestruct(&pThis->pTcp));
 	CHKRet(relpSessConnect(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr));
 	/* if we reach this point, we could re-establish the session. We now
-	 * need to resend any unacked data.
+	 * need to resend any unacked data. Note that we need to patch in new txnr's
+	 * into the existing frames.
 	 */
 	if(pThis->pUnackedLstRoot != NULL) {
 		pThis->pEngine->dbgprint("relp session %p reestablished, now resending unacked data\n", pThis);
 #warning "quick incomplete hack"
+		CHKRet(relpFrameRewriteTxnr(pThis->pUnackedLstRoot->pSendbuf, pThis->txnr));
+		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 		CHKRet(relpSendbufSendAll(pThis->pUnackedLstRoot->pSendbuf, pThis));
 	}
 

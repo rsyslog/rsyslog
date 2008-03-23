@@ -323,6 +323,41 @@ finalize_it:
 }
 
 
+/* Update an already-existing Sendbuf with a new txnr. This function is needed
+ * during recovery of failed connections where a queue of unsent messages
+ * exists.
+ * rgerhards, 2008-03-23
+ */
+relpRetVal
+relpFrameRewriteTxnr(relpSendbuf_t *pSendbuf, relpTxnr_t txnr)
+{
+	char bufTxnr[16];
+	size_t lenTxnr;
+	relpOctet_t *ptrMembuf;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pSendbuf, Sendbuf);
+	
+	pSendbuf->txnr = txnr;
+
+	lenTxnr = snprintf(bufTxnr, sizeof(bufTxnr), "%d", (int) txnr);
+	if(lenTxnr > 9)
+		ABORT_FINALIZE(RELP_RET_INVALID_TXNR);
+
+	/* we have always enough space inside the frame to patch in the new
+	 * txnr - it was reserved during initial frame creation. So now patch it...
+	 */
+	ptrMembuf = pSendbuf->pData + 9 - lenTxnr; /* set ptr to start of area we intend to write to */
+	pSendbuf->lenTxnr = lenTxnr;
+	memcpy(ptrMembuf, bufTxnr, lenTxnr); ptrMembuf += lenTxnr;
+
+	/* the rest of the frame remains unchanged */
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
 /* create a relpSendbuf_t with a valid relp frame. While this is a frame object
  * function, it does not accept the frame object itself but rather the individual
  * frame parameters. The reason is that we want to save the overhead of constructing
@@ -361,17 +396,24 @@ relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char 
 	if(lenDatalen > 9)
 		ABORT_FINALIZE(RELP_RET_INVALID_DATALEN);
 	
-	/* we got everything, so now let's get our membuf [+1 for SP's and TRAILER] */
+	/* we got everything, so now let's get our membuf [+1 for SP's and TRAILER]
+	 * We do a trick in our calculation: we always assign 9 bytes for the txnr, even
+	 * though it may be less than that. The reason is that on a sessin recovery case,
+	 * we can put another, potentially longer, txnr into the frame. This saves us from
+	 * copying the while frame just to adjust the txnr. -- rgerhards, 2008-03-23
+	 */
 	pSendbuf->lenData = lenTxnr + 1 + lenCmd + 1 + lenDatalen + 1;
 	if(lenData > 0)
 		pSendbuf->lenData += 1 + lenData;
 
-if((pSendbuf->pData = malloc(pSendbuf->lenData + 1)) == NULL)
-       // if((pSendbuf->pData = malloc(pSendbuf->lenData)) == NULL)
+if((pSendbuf->pData = malloc(pSendbuf->lenData + (9 - lenTxnr) + 1)) == NULL)
+       // remove +1 above (for debugging only!)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 pSess->pEngine->dbgprint("sendbuf lenData %d, pData: %p\n", (int) pSendbuf->lenData, pSendbuf->pData);
 
-	ptrMembuf = pSendbuf->pData;
+	ptrMembuf = pSendbuf->pData + 9 - lenTxnr; /* set ptr to start of area we intend to write to */
+	pSendbuf->lenTxnr = lenTxnr;
+
 	memcpy(ptrMembuf, bufTxnr, lenTxnr); ptrMembuf += lenTxnr;
 	*ptrMembuf++ = ' ';
 	memcpy(ptrMembuf, pCmd, lenCmd); ptrMembuf += lenCmd;
@@ -388,7 +430,6 @@ pSess->pEngine->dbgprint("sendbuf end, ptrMembuf %p\n", ptrMembuf);
 *++ptrMembuf = '\0'; /* just for  the dbgprint below */
 
 	*ppSendbuf = pSendbuf; /* save new buffer */
-pSess->pEngine->dbgprint("sendbuf created, len %d, content: '%s'\n", (int) pSendbuf->lenData, pSendbuf->pData);
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {

@@ -45,6 +45,7 @@ struct relpSendbuf_s {
 	relpTxnr_t txnr; /**< our txnr in native form */
 	relpRetVal (*rspHdlr)(relpSess_t*); /**< callback when response arrived */
 	size_t lenData;
+	size_t lenTxnr;	/**< length of txnr - actual send buffer starts at offset (9 - lenTxnr)! */
 	size_t bufPtr; /**< multi-purpose, e.g. tracks sent octets when multi-send
 	 	            send() calls are required. */
 };
