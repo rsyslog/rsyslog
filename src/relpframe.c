@@ -196,8 +196,16 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 			pThis->rcvState = eRelpFrameRcvState_FINISHED;
 			/* submit frame to processor */
-			iRet = relpEngineDispatchFrame(pSess->pEngine, pSess, pThis);
-			/* do not abort in any case, because we need to destruct the frame! */
+pSess->pEngine->dbgprint("got a frame to construct, it's txnr %d, expected txnr %d\n", pThis->txnr, pSess->txnr);
+			/* NOTE: do not abort in any case, because we need to destruct the frame! */
+			if(pThis->txnr != 0) {
+				if(pThis->txnr != pSess->txnr)  {
+					iRet = RELP_RET_INVALID_TXNR;
+				} else {
+					pSess->txnr = relpEngineNextTXNR(pSess->txnr);
+					iRet = relpEngineDispatchFrame(pSess->pEngine, pSess, pThis);
+				}
+			}
 			relpFrameDestruct(&pThis);
 			break;
 		case eRelpFrameRcvState_FINISHED:
