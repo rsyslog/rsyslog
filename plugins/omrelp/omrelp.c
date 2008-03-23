@@ -115,6 +115,9 @@ static rsRetVal doConnect(instanceData *pData)
 	iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
 	pData->bIsConnected = (iRet == RELP_RET_OK) ? 1 : 0;
 
+	if(iRet != RELP_RET_OK)
+		iRet = RS_RET_SUSPENDED;
+
 	RETiRet;
 }
 
@@ -146,7 +149,7 @@ CODESTARTdoAction
 	/* forward */
 	ret = relpCltSendSyslog(pData->pRelpClt, (uchar*) pMsg, lenMsg);
 RUNLOG_VAR("%d", ret);
-	if(ret != RS_RET_OK) {
+	if(ret != RELP_RET_OK) {
 		/* error! */
 		dbgprintf("error forwarding via relp, suspending\n");
 		iRet = RS_RET_SUSPENDED;
