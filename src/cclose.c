@@ -45,5 +45,7 @@ BEGINcommand(S, Close)
 	/* and send it... */
 	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "", 0));
 
+	iRet = RELP_RET_SESSION_CLOSED; /* indicate close condition */
+
 finalize_it:
 ENDcommand

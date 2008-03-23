@@ -46,6 +46,7 @@ BEGINcommand(S, Syslog)
 	pSess->pEngine->dbgprint("in 'syslog' command handler\n");
 
 	// TODO: implement
+pSess->pEngine->dbgprint("onSyslogRcv %p\n", pSess->pEngine->onSyslogRcv);
 	iRet = pSess->pEngine->onSyslogRcv(pFrame->pData, pFrame->lenData);
 
 	/* send response */
