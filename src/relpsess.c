@@ -463,13 +463,11 @@ relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	RELPOBJ_assert(pThis, Sess);
 
 	CHKRet(relpFrameBuildSendbuf(&pSendbuf, pThis->txnr, pCmd, lenCmd, pData, lenData, pThis, rspHdlr));
-pThis->pEngine->dbgprint("send command with txnr %d\n", (int) pThis->txnr);
 	pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 	/* now send it */
 pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
 	iRet = relpSendbufSendAll(pSendbuf, pThis);
 
-pThis->pEngine->dbgprint("SendbufSendAll iRet %d\n", iRet);
 	if(iRet == RELP_RET_IO_ERR) {
 		pThis->pEngine->dbgprint("relp session %p flagged as broken, IO error\n", pThis);
 		pThis->sessState = eRelpSessState_BROKEN;
@@ -477,14 +475,6 @@ pThis->pEngine->dbgprint("SendbufSendAll iRet %d\n", iRet);
 	}
 
 finalize_it:
-#warning "TODO: How to handle sendbuf in this case?"
-#if 0
-	if(iRet != RELP_RET_OK) {
-		if(pSendbuf != NULL)
-			relpSendbufDestruct(&pSendbuf);
-	}
-#endif
-
 	LEAVE_RELPFUNC;
 }
 
@@ -546,7 +536,6 @@ relpSessTryReestablish(relpSess_t *pThis)
 	 */
 	if(pThis->pUnackedLstRoot != NULL) {
 		pThis->pEngine->dbgprint("relp session %p reestablished, now resending unacked data\n", pThis);
-#warning "quick incomplete hack"
 		CHKRet(relpFrameRewriteTxnr(pThis->pUnackedLstRoot->pSendbuf, pThis->txnr));
 		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 		CHKRet(relpSendbufSendAll(pThis->pUnackedLstRoot->pSendbuf, pThis));
@@ -648,13 +637,10 @@ pThis->pEngine->dbgprint("SessDisconnect enter, sessState %d\n", pThis->sessStat
 	 */
 	relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 1);
 
-pThis->pEngine->dbgprint("SessDisconnect 10, sessState %d\n", pThis->sessState);
 	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"close", 5, (unsigned char*)"", 0,
 				      relpSessCBrspClose));
 	relpSessSetSessState(pThis, eRelpSessState_CLOSE_CMD_SENT);
-pThis->pEngine->dbgprint("SessDisconnect 20, sessState %d\n", pThis->sessState);
 	CHKRet(relpSessWaitState(pThis, eRelpSessState_CLOSE_RSP_RCVD, pThis->timeout));
-pThis->pEngine->dbgprint("SessDisconnect 30, sessState %d\n", pThis->sessState);
 
 	relpSessSetSessState(pThis, eRelpSessState_DISCONNECTED); /* indicate session startup */
 

@@ -124,6 +124,7 @@ relpRetVal relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigne
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
 relpRetVal relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg);
+relpRetVal relpCltReconnect(relpClt_t *pThis);
 
 
 #endif /* #ifndef RELP_H_INCLUDED */

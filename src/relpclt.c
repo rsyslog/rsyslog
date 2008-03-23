@@ -111,6 +111,26 @@ finalize_it:
 }
 
 
+/** Try to reconnect a broken session to the remote
+ * server. The main difference to relpCltConnect() is that the
+ * session object is already existing and session parameters (like
+ * remote host) can not be changed.
+ * rgerhards, 2008-03-23
+ */
+relpRetVal
+relpCltReconnect(relpClt_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+	RELPOBJ_assert(pThis->pSess, Sess);
+
+	CHKRet(relpSessTryReestablish(pThis->pSess));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
 /* Send a syslog message through RELP. The session must be established.
  * The provided message buffer is not touched by this function. The caller
  * must free it if it is no longer needed.
@@ -126,10 +146,5 @@ relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg)
 	CHKRet(relpSessSendCommand(pThis->pSess, (unsigned char*)"syslog", 6, pMsg, lenMsg, NULL));
 
 finalize_it:
-	if(iRet != RELP_RET_OK) {
-		/* if something went wrong, we need to close the session */
-		relpSessDestruct(&pThis->pSess);
-	}
-
 	LEAVE_RELPFUNC;
 }

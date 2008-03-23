@@ -116,5 +116,6 @@ relpRetVal relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t le
 relpRetVal relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
 relpRetVal relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf);
 relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr);
+relpRetVal relpSessTryReestablish(relpSess_t *pThis);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */
