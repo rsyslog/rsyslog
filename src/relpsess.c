@@ -197,12 +197,12 @@ pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf
 		 * the recovery action is the same no matter how it is broken.
 		 */
 		pThis->sessState = eRelpSessState_BROKEN;
-		FINALIZE; /* a broken session is NO error return - the caller handles that */
+		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 	} else if ((int) lenBuf == -1) { /* I don't know why we need to cast to int, but we must... */
 		if(errno != EAGAIN) {
 			pThis->pEngine->dbgprint("errno %d during relp session %p, session broken\n", errno,pThis);
 			pThis->sessState = eRelpSessState_BROKEN;
-		FINALIZE; /* a broken session is NO error return - the caller handles that */
+			ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
 		}
 	} else {
 		/* we have regular data, which we now can process */
@@ -388,6 +388,7 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 	struct timespec tCurr; /* current time */
 	struct timespec tTimeout; /* absolute timeout value */
 	struct timeval tvSelect;
+	relpRetVal localRet;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -395,7 +396,9 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 	/* first read any outstanding data and process the packets. Note that this
 	 * call DOES NOT block.
 	 */
-	CHKRet(relpSessRcvData(pThis));
+	localRet = relpSessRcvData(pThis);
+	if(localRet != RELP_RET_OK && localRet != RELP_RET_SESSION_BROKEN)
+		ABORT_FINALIZE(localRet);
 
 	/* check if we are already in the desired state. If so, we can immediately
 	 * return. That saves us doing a costly clock call to set the timeout. As a
