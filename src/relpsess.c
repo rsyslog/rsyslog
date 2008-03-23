@@ -524,6 +524,8 @@ finalize_it:
 relpRetVal
 relpSessTryReestablish(relpSess_t *pThis)
 {
+	relpSessUnacked_t *pUnackedEtry;
+
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	assert(pThis->sessState = eRelpSessState_BROKEN);
@@ -534,11 +536,15 @@ relpSessTryReestablish(relpSess_t *pThis)
 	 * need to resend any unacked data. Note that we need to patch in new txnr's
 	 * into the existing frames.
 	 */
-	if(pThis->pUnackedLstRoot != NULL) {
+	pUnackedEtry = pThis->pUnackedLstRoot;
+	if(pUnackedEtry != NULL)
 		pThis->pEngine->dbgprint("relp session %p reestablished, now resending unacked data\n", pThis);
-		CHKRet(relpFrameRewriteTxnr(pThis->pUnackedLstRoot->pSendbuf, pThis->txnr));
+	if(pUnackedEtry != NULL) {
+pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9 - pUnackedEtry->pSendbuf->lenTxnr);
+		CHKRet(relpFrameRewriteTxnr(pUnackedEtry->pSendbuf, pThis->txnr));
 		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
-		CHKRet(relpSendbufSendAll(pThis->pUnackedLstRoot->pSendbuf, pThis));
+		CHKRet(relpSendbufSendAll(pUnackedEtry->pSendbuf, pThis));
+		pUnackedEtry = pUnackedEtry->pNext;
 	}
 
 finalize_it:
