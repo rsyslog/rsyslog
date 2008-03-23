@@ -352,9 +352,14 @@ relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char 
 		ABORT_FINALIZE(RELP_RET_INVALID_DATALEN);
 	
 	/* we got everything, so now let's get our membuf [+1 for SP's and TRAILER] */
-	pSendbuf->lenData = lenTxnr + 1 + lenCmd + 1 + lenDatalen + 1 +  lenData + 1;
-        if((pSendbuf->pData = malloc(pSendbuf->lenData)) == NULL)
+	pSendbuf->lenData = lenTxnr + 1 + lenCmd + 1 + lenDatalen + 1;
+	if(lenData > 0)
+		pSendbuf->lenData += 1 + lenData;
+
+if((pSendbuf->pData = malloc(pSendbuf->lenData + 1)) == NULL)
+       // if((pSendbuf->pData = malloc(pSendbuf->lenData)) == NULL)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+pSess->pEngine->dbgprint("sendbuf lenData %d, pData: %p\n", (int) pSendbuf->lenData, pSendbuf->pData);
 
 	ptrMembuf = pSendbuf->pData;
 	memcpy(ptrMembuf, bufTxnr, lenTxnr); ptrMembuf += lenTxnr;
@@ -367,7 +372,10 @@ relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char 
 		*ptrMembuf++ = ' ';
 		memcpy(ptrMembuf, pData, lenData); ptrMembuf += lenData;
 	}
+pSess->pEngine->dbgprint("sendbuf end, ptrMembuf %p\n", ptrMembuf);
+
 	*ptrMembuf = '\n';
+*++ptrMembuf = '\0'; /* just for  the dbgprint below */
 
 	*ppSendbuf = pSendbuf; /* save new buffer */
 pSess->pEngine->dbgprint("sendbuf created, len %d, content: '%s'\n", (int) pSendbuf->lenData, pSendbuf->pData);
