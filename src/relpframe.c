@@ -347,6 +347,7 @@ relpFrameRewriteTxnr(relpSendbuf_t *pSendbuf, relpTxnr_t txnr)
 	 * txnr - it was reserved during initial frame creation. So now patch it...
 	 */
 	ptrMembuf = pSendbuf->pData + 9 - lenTxnr; /* set ptr to start of area we intend to write to */
+	pSendbuf->lenData = pSendbuf->lenData - pSendbuf->lenTxnr + lenTxnr;
 	pSendbuf->lenTxnr = lenTxnr;
 	memcpy(ptrMembuf, bufTxnr, lenTxnr); ptrMembuf += lenTxnr;
 
