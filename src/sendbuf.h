@@ -55,6 +55,6 @@ struct relpSendbuf_s {
 relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis, relpSess_t *pSess);
 relpRetVal relpSendbufDestruct(relpSendbuf_t **ppThis);
 relpRetVal relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp);
-relpRetVal relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess);
+relpRetVal relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked);
 
 #endif /* #ifndef RELPSENDBUF_H_INCLUDED */

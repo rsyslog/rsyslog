@@ -196,7 +196,6 @@ relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess
 				ABORT_FINALIZE(RELP_RET_INVALID_FRAME);
 			pThis->rcvState = eRelpFrameRcvState_FINISHED;
 			/* submit frame to processor */
-pSess->pEngine->dbgprint("got a frame to construct, it's txnr %d, expected txnr %d\n", pThis->txnr, pSess->txnr);
 			/* NOTE: do not abort in any case, because we need to destruct the frame! */
 			if(pThis->txnr != 0 && pSess->sessType == eRelpSess_Server) {
 				if(pThis->txnr != pSess->txnr)  {

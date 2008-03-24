@@ -107,6 +107,32 @@ relpTcpDestruct(relpTcp_t **ppThis)
 }
 
 
+/* abort a tcp connection. This is much like relpTcpDestruct(), but tries
+ * to discard any unsent data. -- rgerhards, 2008-03-24
+ */
+relpRetVal
+relpTcpAbortDestruct(relpTcp_t **ppThis)
+{
+	struct linger ling;
+
+	ENTER_RELPFUNC;
+	assert(ppThis != NULL);
+	RELPOBJ_assert((*ppThis), Tcp);
+
+	if((*ppThis)->sock != -1) {
+		ling.l_onoff = 1;
+		ling.l_linger = 0;
+       		if(setsockopt((*ppThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0 ) {
+			(*ppThis)->pEngine->dbgprint("could net set SO_LINGER, errno %d\n", errno);
+		}
+	}
+
+	iRet = relpTcpDestruct(ppThis);
+
+	LEAVE_RELPFUNC;
+}
+
+
 /* accept an incoming connection request, sock provides the socket on which we can
  * accept the new session.
  * rgerhards, 2008-03-17

@@ -141,11 +141,14 @@ finalize_it:
 
 /* This functions sends a complete sendbuf (a blocking call). It
  * is intended for use by clients. Do NOT use it on servers as
- * that will block other activity.
+ * that will block other activity. bAddToUnacked specifies if the
+ * sendbuf should be linked to the unacked list (if 1). If it is 0
+ * this shall NOT happen. Mode 0 is used for session reestablishment,
+ * when the unacked list needs to be retransmitted.
  * rgerhards, 2008-03-19
  */
 relpRetVal
-relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess)
+relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 {
 	ssize_t lenToWrite;
 	ssize_t lenWritten;
@@ -172,10 +175,27 @@ pSess->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->len
 	/* ok, we now have sent the full buf. So we now need to add it to the unacked list, so that
 	 * we know what to do when the "rsp" packet comes in. -- rgerhards, 2008-03-20
 	 */
-	if((iRet = relpSessAddUnacked(pSess, pThis)) != RELP_RET_OK) {
-		relpSendbufDestruct(&pThis);
-		FINALIZE;
+	if(bAddToUnacked) {
+		if((iRet = relpSessAddUnacked(pSess, pThis)) != RELP_RET_OK) {
+			relpSendbufDestruct(&pThis);
+			FINALIZE;
+		}
+pSess->pEngine->dbgprint("sendbuf added to unacked list\n");
+#if 0
+{
+	relpSessUnacked_t *pUnackedEtry;
+	pUnackedEtry = pThis->pUnackedLstRoot;
+	if(pUnackedEtry != NULL) {
+pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9 - pUnackedEtry->pSendbuf->lenTxnr);
+		CHKRet(relpFrameRewriteTxnr(pUnackedEtry->pSendbuf, pThis->txnr));
+		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
+		CHKRet(relpSendbufSendAll(pUnackedEtry->pSendbuf, pThis, 0));
+		pUnackedEtry = pUnackedEtry->pNext;
 	}
+}
+#endif
+	}
+else pSess->pEngine->dbgprint("sendbuf NOT added to unacked list\n");
 
 finalize_it:
 	LEAVE_RELPFUNC;

@@ -112,6 +112,7 @@ struct relpEngine_s {
 #endif
 #ifndef RELP_DFLT_WINDOW_SIZE
 #	define RELP_DFLT_WINDOW_SIZE 16 /* 16 unacked frames should be fairly good in most cases */
+#	define RELP_DFLT_WINDOW_SIZE 2 /* 16 unacked frames should be fairly good in most cases */
 #endif
 
 /* set the default receive buffer size if none is externally configured

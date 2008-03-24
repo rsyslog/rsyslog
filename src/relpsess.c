@@ -102,6 +102,7 @@ relpSessDestruct(relpSess_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
 
+pThis->pEngine->dbgprint("relpSessionDestruct %p\n", pThis);
 	if(   pThis->sessState != eRelpSessState_DISCONNECTED
 	   && pThis->sessState != eRelpSessState_BROKEN) {
 		relpSessDisconnect(pThis);
@@ -429,6 +430,7 @@ pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on fd %d, timeout %d.
 pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d, err %s\n", nfds, strerror(errno));
 		/* we don't check if we had a timeout - we give it one last chance */
 		CHKRet(relpSessRcvData(pThis));
+pThis->pEngine->dbgprint("iRet after relpSessRcvData %d\n", iRet);
 		if(pThis->sessState == stateExpected || pThis->sessState == eRelpSessState_BROKEN) {
 			FINALIZE;
 		}
@@ -437,6 +439,7 @@ pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d, err %s\n", nf
 	}
 
 finalize_it:
+pThis->pEngine->dbgprint("relpSessWaitState returns%d\n", iRet);
 	if(iRet == RELP_RET_TIMED_OUT) {
 		/* the session is broken! */
 		pThis->sessState = eRelpSessState_BROKEN;
@@ -466,7 +469,7 @@ relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	pThis->txnr = relpEngineNextTXNR(pThis->txnr);
 	/* now send it */
 pThis->pEngine->dbgprint("frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
-	iRet = relpSendbufSendAll(pSendbuf, pThis);
+	iRet = relpSendbufSendAll(pSendbuf, pThis, 1);
 
 	if(iRet == RELP_RET_IO_ERR) {
 		pThis->pEngine->dbgprint("relp session %p flagged as broken, IO error\n", pThis);
@@ -498,14 +501,18 @@ relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	 * ready to send in that period, something is awfully wrong. TODO: we may want
 	 * to make this timeout configurable, but I don't think it is a priority.
 	 */
-	CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 180));
+	CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 2));
+	//CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 180));
 
 	/* re-try once if automatic retry mode is set */
 #warning "code missing - auto retry mode"
+pThis->pEngine->dbgprint("send command relp sess state %d\n", pThis->sessState);
 	if(1 && pThis->sessState == eRelpSessState_BROKEN) {
+pThis->pEngine->dbgprint("SendCommand does auto-retry\n");
 		CHKRet(relpSessTryReestablish(pThis));
 	}
 
+pThis->pEngine->dbgprint("sendcommand ready to send, relp sess state %d\n", pThis->sessState);
 	/* then send our data */
 	CHKRet(relpSessRawSendCommand(pThis, pCmd, lenCmd, pData, lenData, rspHdlr));
 
@@ -530,24 +537,28 @@ relpSessTryReestablish(relpSess_t *pThis)
 	RELPOBJ_assert(pThis, Sess);
 	assert(pThis->sessState = eRelpSessState_BROKEN);
 
-	CHKRet(relpTcpDestruct(&pThis->pTcp));
+	CHKRet(relpTcpAbortDestruct(&pThis->pTcp));
 	CHKRet(relpSessConnect(pThis, pThis->protFamily, pThis->srvPort, pThis->srvAddr));
 	/* if we reach this point, we could re-establish the session. We now
 	 * need to resend any unacked data. Note that we need to patch in new txnr's
-	 * into the existing frames.
+	 * into the existing frames. We need to do a special send command, as the usual
+	 * one would maintain the unacked list, what we can not do right now (because
+	 * it is not to be modified.
 	 */
 	pUnackedEtry = pThis->pUnackedLstRoot;
 	if(pUnackedEtry != NULL)
-		pThis->pEngine->dbgprint("relp session %p reestablished, now resending unacked data\n", pThis);
-	if(pUnackedEtry != NULL) {
+		pThis->pEngine->dbgprint("relp session %p reestablished, now resending %d unacked frames\n",
+					  pThis, pThis->lenUnackedLst);
+	while(pUnackedEtry != NULL) {
 pThis->pEngine->dbgprint("resending frame '%s'\n", pUnackedEtry->pSendbuf->pData + 9 - pUnackedEtry->pSendbuf->lenTxnr);
 		CHKRet(relpFrameRewriteTxnr(pUnackedEtry->pSendbuf, pThis->txnr));
 		pThis->txnr = relpEngineNextTXNR(pThis->txnr);
-		CHKRet(relpSendbufSendAll(pUnackedEtry->pSendbuf, pThis));
+		CHKRet(relpSendbufSendAll(pUnackedEtry->pSendbuf, pThis, 0));
 		pUnackedEtry = pUnackedEtry->pNext;
 	}
 
 finalize_it:
+pThis->pEngine->dbgprint("after TryReestablish, sess state %d\n", pThis->sessState);
 	LEAVE_RELPFUNC;
 }
 
