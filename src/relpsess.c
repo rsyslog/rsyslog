@@ -180,7 +180,7 @@ relpSessRcvData(relpSess_t *pThis)
 {
 	relpOctet_t rcvBuf[RELP_RCV_BUF_SIZE];
 	ssize_t lenBuf;
-	int i;
+	ssize_t i;
 
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -207,12 +207,13 @@ pThis->pEngine->dbgprint("relp session read %d octets, buf '%s'\n", (int) lenBuf
 	} else {
 		/* we have regular data, which we now can process */
 		for(i = 0 ; i < lenBuf ; ++i) {
+//pThis->pEngine->dbgprint("lenbuf %d, i %d, c '%c', %2.2x\n", (int) lenBuf, (int) i, rcvBuf[i], rcvBuf[i]);
 			CHKRet(relpFrameProcessOctetRcvd(&pThis->pCurrRcvFrame, rcvBuf[i], pThis));
 		}
 	}
 
 finalize_it:
-pThis->pEngine->dbgprint("end relpSessRcvData, iRet %d, session state %d\n", iRet, pThis->sessState);
+//pThis->pEngine->dbgprint("end relpSessRcvData, iRet %d, session state %d\n", iRet, pThis->sessState);
 	LEAVE_RELPFUNC;
 }
 
