@@ -32,15 +32,7 @@ Each
 command is assigned a (relative) unique, monotonically increasing ID
 (called the
 "transaction number" or txnr for short. Each
-response must include that ID. New commands may only be issued if the
-new ID
-is less than the oldest unresponded ID plus the window size. So a
-connection
-stalls if the server does not respond to all requests. (TODO: evaluate
-if this
-needs to be a hard requirement or if it is sufficient to just allow "n"
-outstanding
-commands at a time).&nbsp;</p>
+response must include that ID. Responses must be sent by the server in the exact same order as commands where received.</p>
 <p>There is one potential issue with this communications model:
 In it, the server is able to respond to the client only in form or a
 response package. It is not capable of issuing a command itself. During
@@ -77,8 +69,7 @@ have been unsuccessful in this case.</p>
 <p>
 If something goes wrong (e.g. invalid framing), the peer that detects
 the problem
-closes the underlying (TCP) connection. It may send an error/abort
-command, but
+closes the underlying (TCP) connection. It may send an error/abort hint, but
 MUST NOT wait for its response. The reasoning for this is that today's
 Internet is
 not a friendly place. Trying to gracefully resolve communications
@@ -121,13 +112,16 @@ maximum data length is negotiated during session setup. In relp version
 1, it is
 always 128K. In later versions, it shall be operator-configurable.
 </p>
-<p>TXNR 0 is reserved for future use and may not be used. A RELP
+<p>TXNR 0 is reserved for hint commands. A RELP
 connection start with TXNR 1. Note that TXNR montonically increases but
 is latched at 999,999,999. After that TXNR, the next TXNR is
 1.&nbsp;</p>
-<h3>COMMAND SEMANTICS</h3>
-<h4>Command "rsp"</h4>
-Response to a client-issued command. The TXNR MUST match the client's
+<h3>COMMAND SEMANTICS</h3>Command can be either regular commands or
+hints. Regular commands are responded to by a rsp package. They are
+transmitted on txnrs of 1 or above. Hints are commands that are not
+being responded. They are always transmitted with a txnr of zero.
+Regular commands can only be issued by the client. Hints can be issued
+both by the client and the server.<br><h4>"Command" "rsp"</h4>This is not a real command but a response to a client-issued command. The TXNR MUST match the client's
 command
 TXNR. The data part contains RSP-HEADER as defined above. It is a
 response code,
@@ -158,6 +152,12 @@ client makes the final feature selection, the server is dictating what
 needs to be used.
 </p>
 <p>Note that the connection is only ready AFTER the client has received&nbsp;the "open" response.</p>
+<h4>Command "syslog"</h4>This command is used to transmit a syslog
+message, which (in syslog message format) is contained within the
+commands data portion.<h4>Command "close"</h4>Closes a connection to
+the server. Once the client has sent a "close" command, it must not
+transmit any other command over the session. When the server's rsp
+answer is received, the client must close the connection.
 <h3>OFFERS</h3>
 During session setup, "offers" are exchange between client and server.
 An "offer" describes
