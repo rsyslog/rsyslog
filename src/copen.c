@@ -43,7 +43,7 @@ BEGINcommand(S, Init)
 	pSess->pEngine->dbgprint("in open command handler\n");
 
 	/* and send it... */
-	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "relp_version=0", 14));
+	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "200 OK\nrelp_version=0", 21));
 
 finalize_it:
 ENDcommand

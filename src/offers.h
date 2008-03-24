@@ -1,4 +1,4 @@
-/* The RELPSENDBUF object.
+/* Support functionality for sending and receiving offers.
  *
  * Copyright 2008 by Rainer Gerhards and Adiscon GmbH.
  *
@@ -30,32 +30,50 @@
  * free software while at the same time obtaining some funding for further
  * development.
  */
-#ifndef RELPSENDBUF_H_INCLUDED
-#define	RELPSENDBUF_H_INCLUDED
+#ifndef RELPOFFERS_H_INCLUDED
+#define	RELPOFFERS_H_INCLUDED
 
-#include "relpsess.h"
+#include "relp.h"
 
-/* the RELPSENDBUF object 
- * rgerhards, 2008-03-16
+/* relp offer parameters
+ * rgerhards, 2008-03-24
  */
-struct relpSendbuf_s {
+typedef struct relpOfferValue_s {
 	BEGIN_RELP_OBJ;
-	relpSess_t *pSess; /**< the session this buffer belongs to */
-	relpOctet_t *pData; /**< the buffer, as it can be put on the wire */
-	relpTxnr_t txnr; /**< our txnr in native form */
-	relpRetVal (*rspHdlr)(relpSess_t*, relpFrame_t*); /**< callback when response arrived */
-	size_t lenData;
-	size_t lenTxnr;	/**< length of txnr - actual send buffer starts at offset (9 - lenTxnr)! */
-	size_t bufPtr; /**< multi-purpose, tracks sent octets when multi-send
-	 	            send() calls are required and tracks consumption of response
-			    buffer in a rsp frame. */
-};
+	relpEngine_t *pEngine;
+	struct relpOfferValue_s *pNext;
+	unsigned char szVal[255+1];
+	int intVal; /* -1 if no integer is set, else this is an unsigened value! */
+} relpOfferValue_t;
+
+
+/* the RELPOFFER object 
+ * rgerhards, 2008-03-24
+ */
+typedef struct relpOffer_s {
+	BEGIN_RELP_OBJ;
+	relpEngine_t *pEngine;
+	struct relpOffer_s *pNext;
+	relpOfferValue_t *pValueRoot;
+	unsigned char szName[32+1];
+} relpOffer_t;
+
+
+/* The list of relpoffers.
+ * rgerhards, 2008-03-24
+ */
+typedef struct relpOffers_s {
+	BEGIN_RELP_OBJ;
+	relpEngine_t *pEngine;
+	relpOffer_t *pRoot;
+} relpOffers_t;
 
 
 /* prototypes */
-relpRetVal relpSendbufConstruct(relpSendbuf_t **ppThis, relpSess_t *pSess);
-relpRetVal relpSendbufDestruct(relpSendbuf_t **ppThis);
-relpRetVal relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp);
-relpRetVal relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked);
+relpRetVal relpOffersConstruct(relpOffers_t **ppThis, relpEngine_t *pEngine);
+relpRetVal relpOffersDestruct(relpOffers_t **ppThis);
+relpRetVal relpOfferValueAdd(unsigned char *pszVal, relpOffer_t *pOffer);
+relpRetVal relpOfferAdd(relpOffer_t **ppThis, unsigned char *pszName, relpOffers_t *pOffers);
+relpRetVal relpOffersToString(relpOffers_t *pThis, unsigned char **ppszOffers, size_t *plenStr);
 
-#endif /* #ifndef RELPSENDBUF_H_INCLUDED */
+#endif /* #ifndef RELPOFFERS_H_INCLUDED */

@@ -61,7 +61,10 @@ typedef enum relpObjID_e {
 	eRelpObj_Sendq = 6,
 	eRelpObj_Sendqe = 7,
 	eRelpObj_Sendbuf = 8,
-	eRelpObj_Tcp = 9
+	eRelpObj_Tcp = 9,
+	eRelpObj_Offers = 10,
+	eRelpObj_Offer = 11,
+	eRelpObj_OfferValue = 12
 } relpObjID_t;
 
 
@@ -105,6 +108,9 @@ typedef enum relpObjID_e {
 #define RELP_RET_TIMED_OUT      RELPERR_BASE + 15	/**< timeout occured */
 #define RELP_RET_NOT_FOUND      RELPERR_BASE + 16	/**< searched entity not found */
 #define RELP_RET_NOT_IMPLEMENTED RELPERR_BASE + 17	/**< functionality not implemented */
+#define RELP_RET_INVALID_RSPHDR RELPERR_BASE + 18	/**< "rsp" packet header is invalid */
+#define RELP_RET_END_OF_DATA    RELPERR_BASE + 19	/**< no more data available */
+#define RELP_RET_RSP_STATE_ERR	RELPERR_BASE + 20	/**< error status in relp rsp frame */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it

@@ -42,6 +42,7 @@
 #include "relpsess.h"
 #include "relpframe.h"
 #include "sendq.h"
+#include "offers.h"
 #include "dbllinklist.h"
 
 /* forward definitions */
@@ -465,7 +466,7 @@ pThis->pEngine->dbgprint("relpSessWaitState returns%d\n", iRet);
  */
 static relpRetVal
 relpSessRawSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
-		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*))
+		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*,relpFrame_t*))
 {
 	relpSendbuf_t *pSendbuf;
 
@@ -498,7 +499,7 @@ finalize_it:
  */
 relpRetVal
 relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
-		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*))
+		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*,relpFrame_t*))
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
@@ -574,10 +575,11 @@ pThis->pEngine->dbgprint("after TryReestablish, sess state %d\n", pThis->sessSta
  * rgerhars, 2008-03-20
  */
 static relpRetVal
-relpSessCBrspInit(relpSess_t *pThis)
+relpSessCBrspOpen(relpSess_t *pThis, relpFrame_t *pFrame)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
+	RELPOBJ_assert(pFrame, Frame);
 
 	// TODO: process offers!
 	relpSessSetSessState(pThis, eRelpSessState_INIT_RSP_RCVD);
@@ -594,7 +596,10 @@ pThis->pEngine->dbgprint("CBrsp, setting state INIT_RSP_RCVD\n");
 relpRetVal
 relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host)
 {
-
+	relpOffers_t *pOffers;
+	relpOffer_t *pOffer;
+	unsigned char *pszOffers = NULL;
+	size_t lenOffers;
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
@@ -614,8 +619,18 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	CHKRet(relpTcpConnect(pThis->pTcp, protFamily, port, host));
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
 
-	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"open", 4, (unsigned char*)"relp_version=0", 14,
-				      relpSessCBrspInit));
+	/* create offers */
+	CHKRet(relpOffersConstruct(&pOffers, pThis->pEngine));
+	CHKRet(relpOfferAdd(&pOffer, (unsigned char*)"relp_version", pOffers));
+	CHKRet(relpOfferValueAdd((unsigned char*)"0", pOffer));
+	CHKRet(relpOfferAdd(&pOffer, (unsigned char*)"commands", pOffers));
+	CHKRet(relpOfferValueAdd((unsigned char*)"syslog", pOffer));
+	CHKRet(relpOfferValueAdd((unsigned char*)"close", pOffer));
+	CHKRet(relpOffersToString(pOffers, &pszOffers, &lenOffers));
+	CHKRet(relpOffersDestruct(&pOffers));
+
+	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"open", 4, pszOffers, lenOffers,
+				      relpSessCBrspOpen));
 	relpSessSetSessState(pThis, eRelpSessState_INIT_CMD_SENT);
 	CHKRet(relpSessWaitState(pThis, eRelpSessState_INIT_RSP_RCVD, pThis->timeout));
 
@@ -623,6 +638,9 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	relpSessSetSessState(pThis, eRelpSessState_READY_TO_SEND); /* indicate session startup */
 
 finalize_it:
+	if(pszOffers != NULL)
+		free(pszOffers);
+
 	LEAVE_RELPFUNC;
 }
 
@@ -631,7 +649,7 @@ finalize_it:
  * rgerhars, 2008-03-21
  */
 static relpRetVal
-relpSessCBrspClose(relpSess_t *pThis)
+relpSessCBrspClose(relpSess_t *pThis, relpFrame_t __attribute__((unused)) *pFrame)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);

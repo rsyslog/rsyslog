@@ -372,7 +372,8 @@ finalize_it:
  */
 relpRetVal
 relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, size_t lenCmd,
-		      relpOctet_t *pData, size_t lenData, relpSess_t *pSess, relpRetVal (*rspHdlr)(relpSess_t*))
+		      relpOctet_t *pData, size_t lenData, relpSess_t *pSess,
+		      relpRetVal (*rspHdlr)(relpSess_t*, relpFrame_t*))
 {
 	char bufTxnr[16];
 	size_t lenTxnr;
@@ -436,6 +437,25 @@ finalize_it:
 		if(pSendbuf != NULL)
 			relpSendbufDestruct(&pSendbuf);
 	}
+
+	LEAVE_RELPFUNC;
+}
+
+
+/* return the next character from the framebuf or indicate end of buffer (-1).
+ * rgerhards, 2008-03-24
+ */
+relpRetVal
+relpFrameGetNextC(relpFrame_t *pThis, unsigned char *pC)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Frame);
+	assert(pC != NULL);
+
+	if(pThis->idxData >= pThis->lenData)
+		iRet = RELP_RET_END_OF_DATA;
+	else
+		*pC = pThis->pData[pThis->idxData++];
 
 	LEAVE_RELPFUNC;
 }

@@ -126,8 +126,7 @@ command
 TXNR. The data part contains RSP-HEADER as defined above. It is a
 response code,
 optionally followed by a space and additional data (depending on the
-client's command). Return state values are: 200 - OK, 500 - error
-<h4>Command "open"</h4>
+client's command). Return state values are: 200 - OK, 500 - error.<br><br>The ABNF for a "rsp"'s &nbsp;data portion is as follows:<br><pre>RSPDATA = STATUS SP HUMAN-TEXT [LF DATA]<br>STATUS = 3DIGIT<br>HUMAN-TEXT = *80ALPHA<br>DATA = 1*OCTET<br></pre><h4>Command "open"</h4>
 Opens a connection to the server. Must include offers inside the
 data, at a minimum the "relp_version" offer. Offers
 provide information about services supported by the client.
@@ -166,7 +165,7 @@ a specific feature or operation mode. Always present must be the
 tells the other side which version of relp is in use.
 <p>ABNF for offer strings
 </p>
-<pre>OFFER = LF FEATURENAME [= VALUE]<br>FEATURENAME = *32OCTET<br>VALUE = *255OCTET<br><br>Currently defined values:<br>FEATURENAME VALUE<br>relp_version 1 (this specification)<br></pre>
+<pre>OFFER = LF FEATURENAME ["=" VALUE *("," VALUE)]<br>FEATURENAME = *32OCTET<br>VALUE = *255OCTET<br><br>Currently defined values:<br>FEATURENAME VALUE<br>relp_version 1 (this specification)<br></pre>
 <p>
 STATE DIAGRAMS
 ... detailling some communications scenarios:

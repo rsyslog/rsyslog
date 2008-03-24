@@ -112,7 +112,7 @@ relpRetVal relpSessSendFrame(relpSess_t *pThis, relpFrame_t *pFrame);
 relpRetVal relpSessSendResponse(relpSess_t *pThis, relpTxnr_t txnr, unsigned char *pData, size_t lenData);
 relpRetVal relpSessSndData(relpSess_t *pThis);
 relpRetVal relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
-		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*));
+		    unsigned char *pData, size_t lenData, relpRetVal (*rspHdlr)(relpSess_t*,relpFrame_t*));
 relpRetVal relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
 relpRetVal relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf);
 relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr);

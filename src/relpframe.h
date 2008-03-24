@@ -58,7 +58,7 @@ struct relpFrame_s {
 	relpOctet_t cmd[32+1];	/**< the current command (+1 for C string terminator) */
 	size_t lenData;		/**< length of data part of frame */
 	relpOctet_t *pData;	/**< frame data part */
-	
+	size_t idxData;		/**< keeps track of processed chars when reading pData bytewise */
 };
 
 #include "relpsess.h" /* this needs to be done after relpFrame_t is defined! */
@@ -67,9 +67,9 @@ struct relpFrame_s {
 /* prototypes */
 relpRetVal relpFrameProcessOctetRcvd(relpFrame_t **ppThis, relpOctet_t c, relpSess_t *pSess);
 relpRetVal relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char *pCmd, size_t lenCmd,
-		      relpOctet_t *pData, size_t lenData, relpSess_t *pSess, relpRetVal (*rspHdlr)(relpSess_t*));
+	   relpOctet_t *pData, size_t lenData, relpSess_t *pSess, relpRetVal (*rspHdlr)(relpSess_t*,relpFrame_t*));
 relpRetVal relpFrameRewriteTxnr(relpSendbuf_t *pSendbuf, relpTxnr_t txnr);
-//relpRetVal relpFrameConstructWithData(relpFrame_t **ppThis, relpEngine_t *pEngine, unsigned char *pCmd,
-//			  	      relpOctet_t *pData, size_t lenData, int bHandoverBuffer);
+relpRetVal relpFrameGetNextC(relpFrame_t *pThis, unsigned char *pC);
+
 
 #endif /* #ifndef RELPFRAME_H_INCLUDED */

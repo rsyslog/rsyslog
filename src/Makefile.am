@@ -20,6 +20,8 @@ librelp_la_SOURCES = \
 	sendq.h \
 	sendbuf.c \
 	sendbuf.h \
+	offers.c \
+	offers.h \
 	relpclt.c \
 	relpclt.h \
 	relpsrv.c \
