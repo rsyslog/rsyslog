@@ -291,13 +291,16 @@ relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf)
 	DLL_Add(pUnackedLstEntry, pThis->pUnackedLstRoot, pThis->pUnackedLstLast);
 	++pThis->lenUnackedLst;
 
-	if(pThis->lenUnackedLst == pThis->sizeWindow) {
+	if(pThis->lenUnackedLst >= pThis->sizeWindow) {
 		/* in theory, we would need to check if the session is initialized, as
 		 * we would mess up session state in that case. However, as the init
 		 * process is just one frame, we can never run into the situation that
 		 * the window is exhausted during init, so we do not check it.
 		 */
 		relpSessSetSessState(pThis, eRelpSessState_WINDOW_FULL);
+		if(pThis->lenUnackedLst >= pThis->sizeWindow)
+			pThis->pEngine->dbgprint("Warning: exceeding window size, max %d, curr %d\n",
+						 pThis->lenUnackedLst, pThis->sizeWindow);
 	}
 pThis->pEngine->dbgprint("ADD sess %p unacked %d, sessState %d\n", pThis, pThis->lenUnackedLst, pThis->sessState);
 

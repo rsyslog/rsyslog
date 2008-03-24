@@ -111,8 +111,8 @@ struct relpEngine_s {
 #	define RELP_DFLT_MAX_DATA_SIZE 128 * 1024 /* 128K should be sufficient for everything... */
 #endif
 #ifndef RELP_DFLT_WINDOW_SIZE
-#	define RELP_DFLT_WINDOW_SIZE 16 /* 16 unacked frames should be fairly good in most cases */
-#	define RELP_DFLT_WINDOW_SIZE 2 /* 16 unacked frames should be fairly good in most cases */
+#	define RELP_DFLT_WINDOW_SIZE 128 /* 128 unacked frames should be fairly good in most cases */
+//#	define RELP_DFLT_WINDOW_SIZE 2 /* 16 unacked frames should be fairly good in most cases */
 #endif
 
 /* set the default receive buffer size if none is externally configured
