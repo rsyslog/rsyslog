@@ -64,6 +64,15 @@ typedef struct relpEngSessLst_s {
 } relpEngSessLst_t;
 
 
+enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/request? */
+	eRelpCmdState_Unset = 0, /**< calloc default, not desired, not forbidden */
+	eRelpCmdState_Forbidden = 1, /**< command is not permitted to be used */
+	eRelpCmdState_Desired = 2, /**< client/server intends to use this feature */
+	eRelpCmdState_Enabled = 3, /**< feature can be used (set during open handshake) */
+	eRelpCmdState_Disabled = 4  /**< feature can NOT be used (set during open handshake) */
+}; /* what type of session are we? */
+
+
 /* the RELP engine object 
  * Having a specific engine object enables multiple plugins to call the
  * RELP engine at the same time. The core idea of librelp is to have no
@@ -78,6 +87,9 @@ struct relpEngine_s {
 	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 	relpRetVal (*onSyslogRcv)(unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
 	int protocolVersion; /**< version of the relp protocol supported by this engine */
+
+	/* default for enabled commands */
+	relpCmdEnaState_t stateCmdSyslog;
 
 	/* linked list of our servers */
 	relpEngSrvLst_t *pSrvLstRoot;

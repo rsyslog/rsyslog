@@ -62,14 +62,6 @@ typedef enum relpSessType_e {
 	eRelpSess_Client = 1
 } relpSessType_t; /* what type of session are we? */
 
-typedef enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/request? */
-	eRelpCmdState_Unset = 0, /**< calloc default, not desired, not forbidden */
-	eRelpCmdState_Forbidden = 1, /**< command is not permitted to be used */
-	eRelpCmdState_Desired = 2, /**< client/server intends to use this feature */
-	eRelpCmdState_Enabled = 3, /**< feature can be used (set during open handshake) */
-	eRelpCmdState_Disabled = 4  /**< feature can NOT be used (set during open handshake) */
-} relpCmdEnaState_t; /* what type of session are we? */
-
 
 /* the RELPSESS object 
  * rgerhards, 2008-03-16
@@ -99,6 +91,7 @@ struct relpSess_s {
 	struct relpSendq_s *pSendq; /**< our send queue */
 
 	/* properties needed for client operation */
+	int bAutoRetry;	/**< automatically try (once) to reestablish a broken session? */
 	int sizeWindow;	/**< size of our app-level communications window */
 	int timeout; /**< timeout after which session is to be considered broken */
 	relpSessState_t sessState; /**< state of our session */

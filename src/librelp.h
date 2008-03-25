@@ -51,6 +51,7 @@ typedef struct relpFrame_s relpFrame_t;
 typedef struct relpSendbuf_s relpSendbuf_t;
 typedef struct relpOffers_s relpOffers_t;
 typedef struct relpOffer_s relpOffer_t;
+typedef enum relpCmdEnaState_e relpCmdEnaState_t;
 
 /* IDs of librelp objects */
 typedef enum relpObjID_e {

@@ -156,6 +156,8 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 
 	/* TODO: check hostname against ACL (callback?) */
 	/* TODO: check against max# sessions */
+#warning need to provide real command-enabling code!
+	CHKRet(relpSessSetEnableCmd(pThis, (unsigned char*) "syslog", eRelpCmdState_Desired));
 
 	*ppThis = pThis;
 
@@ -509,19 +511,21 @@ relpSessSendCommand(relpSess_t *pThis, unsigned char *pCmd, size_t lenCmd,
 	 * ready to send in that period, something is awfully wrong. TODO: we may want
 	 * to make this timeout configurable, but I don't think it is a priority.
 	 */
-	CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 2));
-	//CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 180));
+	//CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 2));
+	CHKRet(relpSessWaitState(pThis, eRelpSessState_READY_TO_SEND, 180));
 
 	/* re-try once if automatic retry mode is set */
-#warning "code missing - auto retry mode"
 pThis->pEngine->dbgprint("send command relp sess state %d\n", pThis->sessState);
-	if(1 && pThis->sessState == eRelpSessState_BROKEN) {
+	if(pThis->bAutoRetry && pThis->sessState == eRelpSessState_BROKEN) {
 pThis->pEngine->dbgprint("SendCommand does auto-retry\n");
 		CHKRet(relpSessTryReestablish(pThis));
 	}
 
 pThis->pEngine->dbgprint("sendcommand ready to send, relp sess state %d\n", pThis->sessState);
 	/* then send our data */
+	if(pThis->sessState == eRelpSessState_BROKEN)
+		ABORT_FINALIZE(RELP_RET_SESSION_BROKEN);
+
 	CHKRet(relpSessRawSendCommand(pThis, pCmd, lenCmd, pData, lenData, rspHdlr));
 
 finalize_it:
@@ -798,9 +802,8 @@ relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers)
 
 	CHKRet(relpOffersConstruct(&pOffers, pThis->pEngine));
 
-	/* now do the supported commands. Note that a command state of -1 is
-	 * "pending enabled", but not selected. We must NOT offer commands in that
-	 * state. So we must not only do a boolean check but rather one against 1.
+	/* now do the supported commands. Note that we must only send commands that
+	 * are explicitely enabled or desired.
 	 */
 pThis->pEngine->dbgprint("ConstructOffers syslog cmd state: %d\n", pThis->stateCmdSyslog);
 	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "commands", pOffers));

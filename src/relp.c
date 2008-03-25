@@ -477,6 +477,26 @@ finalize_it:
 }
 
 
+#warning need to implement this!!!
+#if 0
+/** flag a command as desired for the engine.
+ * rgerhards, 2008-03-25
+ */
+relpRetVal
+relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pCmd, eRelpCmdState_t state)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	assert(pCmd != NULL);
+
+	CHKRet(relpSessSetEnableCmd(pThis->pSess, (unsigned char*) "syslog", eRelpCmdState_Desired));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+#endif
+
+
 /* return a version string for librelp. This is also meant to be used during
  * a configure library entry point check.
  * rgerhards, 2008-03-25
