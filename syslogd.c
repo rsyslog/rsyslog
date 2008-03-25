@@ -1495,7 +1495,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			}
 			if (iCnt == 32) {
                             while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
-                                *p2parse++;
+                                ++p2parse;
                             }
                         }
 			if(*p2parse == ':') {
