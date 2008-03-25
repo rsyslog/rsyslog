@@ -38,6 +38,7 @@
 #include <assert.h>
 #include "librelp.h"
 #include "relp.h"
+#include "relpframe.h"
 #include "offers.h"
 
 
@@ -339,38 +340,69 @@ finalize_it:
 }
 
 
-#if 0 // CODE WE (HOPEFULY) CAN USE...
-/* read the response header. The frame's pData read pointer is moved to the
- * first byte of the response data buffer (if any).
- * rgerhards, 2008-03-24
+/* construct an offers list from the offers contained in a frame. The frame's
+ * Read Next pointer must be positioned at the first character of the offer.
+ * rgerhards, 2008-03-25
  */
-static relpRetVal
-readRspHdr(relpFrame_t *pFrame, int *pCode, unsigned char *pText)
+relpRetVal
+relpOffersConstructFromFrame(relpOffers_t **ppOffers, relpFrame_t *pFrame)
 {
-	int iText;
-	unsigned char c;
+	relpOffers_t *pOffers = NULL;
+	relpOffer_t *pOffer;
 	relpRetVal localRet;
+	unsigned char c;
+	size_t iName;
+	size_t iVal;
+	unsigned char szFeatNam[RELP_MAX_OFFER_FEATURENAME+1];
+	unsigned char szFeatVal[RELP_MAX_OFFER_FEATUREVALUE+1];
 
 	ENTER_RELPFUNC;
+	assert(ppOffers != NULL);
+	RELPOBJ_assert(pFrame, Frame);
 
-	/* now come the message. It is terminated after 80 chars or when an LF
-	 * is found (the LF is the delemiter to response data) or there is no
-	 * more data.
-	 */
-	for(iText = 0 ; iText < 80 ; ++iText) {
-		localRet = relpFrameGetNextC(pFrame, &c);
-		if(localRet == RELP_RET_END_OF_DATA)
-			break;
-		else if(localRet != RELP_RET_OK)
-			ABORT_FINALIZE(localRet);
-		if(c == '\n')
-			break;
-		/* we got a regular char which we need to copy */
-		pText[iText] = c;
+	CHKRet(relpOffersConstruct(&pOffers, pFrame->pEngine));
+
+	/* now process the command data */
+
+	localRet = relpFrameGetNextC(pFrame, &c);
+	while(localRet == RELP_RET_OK) {
+		/* command name */
+		iName = 0;
+		while(iName < RELP_MAX_OFFER_FEATURENAME && c != '=' && localRet == RELP_RET_OK) {
+			szFeatNam[iName++] = c;
+			localRet = relpFrameGetNextC(pFrame, &c);
+		}
+		szFeatNam[iName] = '\0'; /* space is reserved for this! */
+		CHKRet(relpOfferAdd(&pOffer, szFeatNam, pOffers));
+
+		/* and now process the values (if any) */
+		while(localRet == RELP_RET_OK && c != '\n') {
+			localRet = relpFrameGetNextC(pFrame, &c); /* eat the "=" or "," */
+			iVal = 0;
+			while(   iVal < RELP_MAX_OFFER_FEATUREVALUE && localRet == RELP_RET_OK
+			      && c != ',' && c != '\n' ) {
+				szFeatVal[iVal++] = c;
+				localRet = relpFrameGetNextC(pFrame, &c);
+			}
+			szFeatVal[iVal] = '\0'; /* space is reserved for this */
+			CHKRet(relpOfferValueAdd(szFeatVal, 0, pOffer));
+		}
+
+		if(localRet == RELP_RET_OK && c == '\n')
+			localRet = relpFrameGetNextC(pFrame, &c); /* eat '\n' */
+
 	}
-	pText[iText] = '\0'; /* make it a C-string */
+
+	if(localRet != RELP_RET_END_OF_DATA)
+		ABORT_FINALIZE(localRet);
+
+	*ppOffers = pOffers;
 
 finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pOffers != NULL)
+			relpOffersDestruct(&pOffers);
+	}
+
 	LEAVE_RELPFUNC;
 }
-#endif

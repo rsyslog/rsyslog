@@ -47,7 +47,7 @@
 
 /* forward definitions */
 static relpRetVal relpSessDisconnect(relpSess_t *pThis);
-relpRetVal relpSessTryReestablish(relpSess_t *pThis);
+static relpRetVal relpSessFixCmdStates(relpSess_t *pThis);
 
 
 /** Construct a RELP sess instance
@@ -73,9 +73,6 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->timeout = 10; /* TODO: make configurable */
 	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE; /* TODO: make configurable */
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
-
-	/* set all commands to pending enabled state */
-	pThis->bEnabledCmdSyslog = -1;
 
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
 	pthread_mutex_init(&pThis->mutSend, NULL);
@@ -107,7 +104,6 @@ relpSessDestruct(relpSess_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
 
-pThis->pEngine->dbgprint("relpSessionDestruct %p\n", pThis);
 	if(   pThis->sessState != eRelpSessState_DISCONNECTED
 	   && pThis->sessState != eRelpSessState_BROKEN) {
 		relpSessDisconnect(pThis);
@@ -576,19 +572,78 @@ pThis->pEngine->dbgprint("after TryReestablish, sess state %d\n", pThis->sessSta
 
 
 /* callback when the "open" command has been processed
- * rgerhars, 2008-03-20
+ * Most importantly, this function needs to check if we are 
+ * compatible with the server-provided offers and terminate if
+ * not. If we are, we must set our own parameters to match the
+ * server-provided ones. Please note that the offer processing here
+ * is the last and final. So the ultimate decision is made and if we
+ * are unhappy with something that we can not ignore, we must
+ * terminate with an error status.
+ * In such cases, we flag the session as broken, as theoretically
+ * it is possible to fix it by restarting the server with a set
+ * of different parameters. The question remains, though, if that's
+ * the smartest route to take...
+ * Note that offer-processing is very similiar to offer-processing
+ * at the server end (copen.c). We may be able to combine some of
+ * it in the future (or may not, depending on the subtly different
+ * needs both parts have. For now I leave this to a ... TODO ;)).
+ * rgerhards, 2008-03-25
  */
 static relpRetVal
 relpSessCBrspOpen(relpSess_t *pThis, relpFrame_t *pFrame)
 {
+	relpEngine_t *pEngine;
+	relpOffers_t *pOffers;
+	relpOffer_t *pOffer;
+	relpOfferValue_t *pOfferVal;
+
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	RELPOBJ_assert(pFrame, Frame);
+	pEngine = pThis->pEngine;
 
-	// TODO: process offers!
+	/* first get the offers list from the server response */
+	CHKRet(relpOffersConstructFromFrame(&pOffers, pFrame));
+
+	/* we loop through the offers and set session parameters. If we find
+	 * something truely unacceptable, we break the session.
+	 */
+	for(pOffer = pOffers->pRoot ; pOffer != NULL ; pOffer = pOffer->pNext) {
+		pEngine->dbgprint("processing server offer '%s'\n", pOffer->szName);
+		if(!strcmp((char*)pOffer->szName, "relp_version")) {
+			if(pOffer->pValueRoot == NULL)
+				ABORT_FINALIZE(RELP_RET_INVALID_OFFER);
+			if(pOffer->pValueRoot->intVal == -1)
+				ABORT_FINALIZE(RELP_RET_INVALID_OFFER);
+			if(pOffer->pValueRoot->intVal > pEngine->protocolVersion)
+				ABORT_FINALIZE(RELP_RET_INCOMPAT_OFFERS);
+			/* Once we support multiple versions, we may need to check what we
+			 * are compatible with. For now, we accept anything, because there is
+			 * nothing else yet ;)
+			 */
+			relpSessSetProtocolVersion(pThis, pOffer->pValueRoot->intVal);
+		} else if(!strcmp((char*)pOffer->szName, "commands")) {
+			for(pOfferVal = pOffer->pValueRoot ; pOfferVal != NULL ; pOfferVal = pOfferVal->pNext) {
+				/* we do not care about return code in this case */
+				relpSessSetEnableCmd(pThis, pOfferVal->szVal, eRelpCmdState_Enabled);
+				pEngine->dbgprint("enabled command '%s'\n", pOfferVal->szVal);
+			}
+		} else if(!strcmp((char*)pOffer->szName, "relp_software")) {
+			/* we know this parameter, but we do not do anything
+			 * with it -- this may change if we need to emulate
+			 * something based on known bad relp software behaviour.
+			 */
+		} else {
+			/* if we do not know an offer name, we ignore it - in this
+			 * case, we may simply not support it (but the client does and
+			 * must now live without it...)
+			 */
+			pEngine->dbgprint("ignoring unknown server offer '%s'\n", pOffer->szName);
+		}
+	}
 	relpSessSetSessState(pThis, eRelpSessState_INIT_RSP_RCVD);
-pThis->pEngine->dbgprint("CBrsp, setting state INIT_RSP_RCVD\n");
 
+finalize_it:
 	LEAVE_RELPFUNC;
 }
 
@@ -606,6 +661,7 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
+	CHKRet(relpSessFixCmdStates(pThis));
 	if(pThis->srvAddr == NULL) { /* initial connect, need to save params */
 		pThis->protFamily = protFamily;
 		if((pThis->srvPort = (unsigned char*) strdup((char*)port)) == NULL)
@@ -702,21 +758,23 @@ relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion)
 }
 
 
-/* Enable or disable a command.
+/* Enable or disable a command. Note that a command can not be enabled once
+ * it has been set to forbidden! There will be no error return state in this
+ * case.
  * rgerhards, 2008-03-25
  */
 relpRetVal
-relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, int bEnabled)
+relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 	assert(pszCmd != NULL);
 
 	if(!strcmp((char*)pszCmd, "syslog")) {
-		pThis->bEnabledCmdSyslog = bEnabled;
+		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
+			pThis->stateCmdSyslog = stateCmd;
 	} else {
-		pThis->pEngine->dbgprint("tried to %s unknown command '%s'\n",
-					 bEnabled ? "enable" : "disable", pszCmd);
+		pThis->pEngine->dbgprint("tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
 		ABORT_FINALIZE(RELP_RET_UNKNOWN_CMD);
 	}
 
@@ -744,8 +802,9 @@ relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers)
 	 * "pending enabled", but not selected. We must NOT offer commands in that
 	 * state. So we must not only do a boolean check but rather one against 1.
 	 */
+pThis->pEngine->dbgprint("ConstructOffers syslog cmd state: %d\n", pThis->stateCmdSyslog);
 	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "commands", pOffers));
-	if(pThis->bEnabledCmdSyslog == 1)
+	if(pThis->stateCmdSyslog == eRelpCmdState_Enabled || pThis->stateCmdSyslog == eRelpCmdState_Desired)
 		CHKRet(relpOfferValueAdd((unsigned char*)"syslog", 0, pOffer));
 
 	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "relp_software", pOffers));
@@ -771,6 +830,28 @@ finalize_it:
 }
 
 
+/* Convert unknown cmd state to forbidden.
+ * This function mut be called after all command states have been set. Those
+ * that have not expressively been set to desired or forbidden or now changed to
+ * forbidden, so that they may not be selected by a peer.
+ * rgerhards, 2008-03-25
+ */
+static relpRetVal
+relpSessFixCmdStates(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+pThis->pEngine->dbgprint("fixCmdStates, cmd state pre %d\n", pThis->stateCmdSyslog);
+	if(pThis->stateCmdSyslog == eRelpCmdState_Unset)
+		pThis->stateCmdSyslog = eRelpCmdState_Forbidden;
+pThis->pEngine->dbgprint("fixCmdStates, cmd state post %d\n", pThis->stateCmdSyslog);
+
+	LEAVE_RELPFUNC;
+}
+
+
+
 /* ------------------------------ command handlers ------------------------------ */
 
 
@@ -784,7 +865,7 @@ relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-	if(pThis->bEnabledCmdSyslog != 1)
+	if(pThis->stateCmdSyslog != eRelpCmdState_Enabled)
 		ABORT_FINALIZE(RELP_RET_CMD_DISABLED);
 
 	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"syslog", 6, pMsg, lenMsg, NULL));

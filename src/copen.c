@@ -38,77 +38,6 @@
 #include "cmdif.h"
 
 
-/* construct an offers list from the offers contained in the open command.
- * rgerhards, 2008-03-25
- */
-static relpRetVal
-getCltOffers(relpOffers_t **ppOffers, relpFrame_t *pFrame)
-{
-	relpOffers_t *pOffers = NULL;
-	relpOffer_t *pOffer;
-	relpRetVal localRet;
-	unsigned char c;
-	size_t iName;
-	size_t iVal;
-	unsigned char szFeatNam[RELP_MAX_OFFER_FEATURENAME+1];
-	unsigned char szFeatVal[RELP_MAX_OFFER_FEATUREVALUE+1];
-
-	ENTER_RELPFUNC;
-	assert(ppOffers != NULL);
-	RELPOBJ_assert(pFrame, Frame);
-
-	CHKRet(relpOffersConstruct(&pOffers, pFrame->pEngine));
-
-	/* now process the command data */
-
-	localRet = relpFrameGetNextC(pFrame, &c);
-	while(localRet == RELP_RET_OK) {
-pFrame->pEngine->dbgprint("getCltOffer mainloop in, c %c\n", c);
-		/* command name */
-		iName = 0;
-		while(iName < RELP_MAX_OFFER_FEATURENAME && c != '=' && localRet == RELP_RET_OK) {
-			szFeatNam[iName++] = c;
-			localRet = relpFrameGetNextC(pFrame, &c);
-		}
-		szFeatNam[iName] = '\0'; /* space is reserved for this! */
-pFrame->pEngine->dbgprint("getCltOffer FeatNam '%s'\n", szFeatNam);
-		CHKRet(relpOfferAdd(&pOffer, szFeatNam, pOffers));
-
-		/* and now process the values (if any) */
-		while(localRet == RELP_RET_OK && c != '\n') {
-			localRet = relpFrameGetNextC(pFrame, &c); /* eat the "=" or "," */
-			iVal = 0;
-			while(   iVal < RELP_MAX_OFFER_FEATUREVALUE && localRet == RELP_RET_OK
-			      && c != ',' && c != '\n' ) {
-				szFeatVal[iVal++] = c;
-				localRet = relpFrameGetNextC(pFrame, &c);
-			}
-			szFeatVal[iVal] = '\0'; /* space is reserved for this */
-pFrame->pEngine->dbgprint("getCltOffer FeatVal '%s'\n", szFeatVal);
-			CHKRet(relpOfferValueAdd(szFeatVal, 0, pOffer));
-		}
-
-		if(localRet == RELP_RET_OK && c == '\n')
-			localRet = relpFrameGetNextC(pFrame, &c); /* eat '\n' */
-
-	}
-
-	if(localRet != RELP_RET_END_OF_DATA)
-		ABORT_FINALIZE(localRet);
-
-	*ppOffers = pOffers;
-
-finalize_it:
-pFrame->pEngine->dbgprint("end getCltOffers, iRet %d\n", iRet);
-	if(iRet != RELP_RET_OK) {
-		if(pOffers != NULL)
-			relpOffersDestruct(&pOffers);
-	}
-
-	LEAVE_RELPFUNC;
-}
-
-
 /* Select which offers to use during a session. This takes the client offers
  * and constructs a new server offers object based on it. This new object
  * contains only what we support (and require, so we may actually add
@@ -132,10 +61,8 @@ selectOffers(relpSess_t *pSess, relpOffers_t *pCltOffers, relpOffers_t **ppSrvOf
 	for(pOffer = pCltOffers->pRoot ; pOffer != NULL ; pOffer = pOffer->pNext) {
 		pEngine->dbgprint("processing client offer '%s'\n", pOffer->szName);
 		if(!strcmp((char*)pOffer->szName, "relp_version")) {
-pEngine->dbgprint("relp_version ValRoot %p \n", pOffer->pValueRoot);
 			if(pOffer->pValueRoot == NULL)
 				ABORT_FINALIZE(RELP_RET_INVALID_OFFER);
-pEngine->dbgprint("relp_version Value %d \n", pOffer->pValueRoot->intVal);
 			if(pOffer->pValueRoot->intVal == -1)
 				ABORT_FINALIZE(RELP_RET_INVALID_OFFER);
 			if(pOffer->pValueRoot->intVal > pEngine->protocolVersion)
@@ -147,6 +74,11 @@ pEngine->dbgprint("relp_version Value %d \n", pOffer->pValueRoot->intVal);
 				/* we do not care about return code in this case */
 				relpSessSetEnableCmd(pSess, pOfferVal->szVal, 1);
 			}
+		} else if(!strcmp((char*)pOffer->szName, "relp_software")) {
+			/* we know this parameter, but we do not do anything
+			 * with it -- this may change if we need to emulate
+			 * something based on known bad relp software behaviour.
+			 */
 		} else {
 			/* if we do not know an offer name, we ignore it - in this
 			 * case, we may simply not support it (but the client does and
@@ -180,7 +112,7 @@ BEGINcommand(S, Init)
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in open command handler\n");
 
-	CHKRet(getCltOffers(&pCltOffers, pFrame));
+	CHKRet(relpOffersConstructFromFrame(&pCltOffers, pFrame));
 	CHKRet(selectOffers(pSess, pCltOffers, &pSrvOffers));
 
 	/* we got our offers together, so we now can send the response */

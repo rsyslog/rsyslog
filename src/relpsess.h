@@ -62,6 +62,15 @@ typedef enum relpSessType_e {
 	eRelpSess_Client = 1
 } relpSessType_t; /* what type of session are we? */
 
+typedef enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/request? */
+	eRelpCmdState_Unset = 0, /**< calloc default, not desired, not forbidden */
+	eRelpCmdState_Forbidden = 1, /**< command is not permitted to be used */
+	eRelpCmdState_Desired = 2, /**< client/server intends to use this feature */
+	eRelpCmdState_Enabled = 3, /**< feature can be used (set during open handshake) */
+	eRelpCmdState_Disabled = 4  /**< feature can NOT be used (set during open handshake) */
+} relpCmdEnaState_t; /* what type of session are we? */
+
+
 /* the RELPSESS object 
  * rgerhards, 2008-03-16
  */
@@ -77,12 +86,8 @@ struct relpSess_s {
 
 	/* connection parameters */
 	int protocolVersion; /* relp protocol version in use in this session */
-	/* flags for commands supported in this session. They all have three states:
-	 * -1 means the command is not yet enabled or disabled, 0 means it is disabled
-	 *  and 1 means it is enabled. Final decision is made during the "open"
-	 *  negotiation.
-	 */
-	int bEnabledCmdSyslog;
+	/* Status of commands as supported in this session. */
+	relpCmdEnaState_t stateCmdSyslog;
 
 	/* save the following for auto-reconnect case */
 	int protFamily;
@@ -128,7 +133,7 @@ relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relp
 relpRetVal relpSessTryReestablish(relpSess_t *pThis);
 relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
 relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
-relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, int bEnabled);
 relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
+relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

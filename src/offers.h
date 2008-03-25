@@ -76,6 +76,7 @@ struct relpOffers_s {
 /* prototypes */
 relpRetVal relpOffersConstruct(relpOffers_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpOffersDestruct(relpOffers_t **ppThis);
+relpRetVal relpOffersConstructFromFrame(relpOffers_t **ppOffers, relpFrame_t *pFrame);
 relpRetVal relpOfferValueAdd(unsigned char *pszVal, int intVal, relpOffer_t *pOffer);
 relpRetVal relpOfferAdd(relpOffer_t **ppThis, unsigned char *pszName, relpOffers_t *pOffers);
 relpRetVal relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
