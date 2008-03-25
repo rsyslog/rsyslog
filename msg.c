@@ -1243,7 +1243,7 @@ char *textpri(char *pRes, size_t pResLen, int pri)
  * can not allocate memory, it returns a NULL pointer.
  * Added 2007-07-10 rgerhards
  */
-typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_MINUTE } eNOWType;
+typedef enum ENOWType { NOW_NOW, NOW_YEAR, NOW_MONTH, NOW_DAY, NOW_HOUR, NOW_HHOUR, NOW_QHOUR, NOW_MINUTE } eNOWType;
 #define tmpBUFSIZE 16	/* size of formatting buffer */
 static uchar *getNOW(eNOWType eNow)
 {
@@ -1271,6 +1271,12 @@ static uchar *getNOW(eNOWType eNow)
 		break;
 	case NOW_HOUR:
 		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour);
+		break;
+	case NOW_HHOUR:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour / 30);
+		break;
+	case NOW_QHOUR:
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour / 15);
 		break;
 	case NOW_MINUTE:
 		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute);
@@ -1421,6 +1427,16 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
 	} else if(!strcmp((char*) pName, "$HOUR")) {
 		if((pRes = (char*) getNOW(NOW_HOUR)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp((char*) pName, "$HHOUR")) {
+		if((pRes = (char*) getNOW(NOW_HHOUR)) == NULL) {
+			return "***OUT OF MEMORY***";
+		} else
+			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp((char*) pName, "$QHOUR")) {
+		if((pRes = (char*) getNOW(NOW_QHOUR)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */

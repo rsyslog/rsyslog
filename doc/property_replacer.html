@@ -71,6 +71,18 @@ only seconds)</td></tr>
 <tr><td><b>$DAY</b></td><td>The current day of the month (2-digit)</td></tr>
 <tr><td><b>$HOUR</b></td><td>The current hour in military (24 hour) time 
 	(2-digit)</td></tr>
+<tr>
+<td><b>$HHOUR</b></td>
+<td>The current half hour we are in. From minute 0 to 29,
+this is always 0 while
+from 30 to 59 it is always 1.</td>
+</tr>
+<tr>
+<td><b>$QHOUR</b></td>
+<td>The current quarter hour we are in. Much like $HHOUR, but values
+range from 0 to 3 (for the four quater hours that are in each hour)</td>
+</tr>
+<tr>
 <tr><td><b>$MINUTE</b></td><td>The current minute (2-digit)</td></tr>
 </table>
 <p>Properties starting with a $-sign are so-called system properties. These do 
