@@ -466,7 +466,7 @@ if test "x$enable_relp" = "xyes"; then
 #    [relp],
 #    [relpEngineGetVersion],
 #    [relp_cflags=""
-#     relp_libs="-lrelp"
+     relp_libs="-lrelp"
 #    ],
 #    [AC_MSG_FAILURE([RELP library is missing])]
 #  )
