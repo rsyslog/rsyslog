@@ -35,6 +35,10 @@
 
 #include "relp.h"
 
+/* some max sizes, these are defined in the RELP spec! */
+#define RELP_MAX_OFFER_FEATURENAME 32
+#define RELP_MAX_OFFER_FEATUREVALUE 255
+
 /* relp offer parameters
  * rgerhards, 2008-03-24
  */
@@ -42,7 +46,7 @@ typedef struct relpOfferValue_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	struct relpOfferValue_s *pNext;
-	unsigned char szVal[255+1];
+	unsigned char szVal[RELP_MAX_OFFER_FEATUREVALUE+1];
 	int intVal; /* -1 if no integer is set, else this is an unsigened value! */
 } relpOfferValue_t;
 
@@ -50,30 +54,31 @@ typedef struct relpOfferValue_s {
 /* the RELPOFFER object 
  * rgerhards, 2008-03-24
  */
-typedef struct relpOffer_s {
+struct relpOffer_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	struct relpOffer_s *pNext;
 	relpOfferValue_t *pValueRoot;
-	unsigned char szName[32+1];
-} relpOffer_t;
+	unsigned char szName[RELP_MAX_OFFER_FEATURENAME+1];
+};
 
 
 /* The list of relpoffers.
  * rgerhards, 2008-03-24
  */
-typedef struct relpOffers_s {
+struct relpOffers_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
 	relpOffer_t *pRoot;
-} relpOffers_t;
+};
 
 
 /* prototypes */
 relpRetVal relpOffersConstruct(relpOffers_t **ppThis, relpEngine_t *pEngine);
 relpRetVal relpOffersDestruct(relpOffers_t **ppThis);
-relpRetVal relpOfferValueAdd(unsigned char *pszVal, relpOffer_t *pOffer);
+relpRetVal relpOfferValueAdd(unsigned char *pszVal, int intVal, relpOffer_t *pOffer);
 relpRetVal relpOfferAdd(relpOffer_t **ppThis, unsigned char *pszName, relpOffers_t *pOffers);
-relpRetVal relpOffersToString(relpOffers_t *pThis, unsigned char **ppszOffers, size_t *plenStr);
+relpRetVal relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
+		   	      unsigned char **ppszOffers, size_t *plenStr);
 
 #endif /* #ifndef RELPOFFERS_H_INCLUDED */

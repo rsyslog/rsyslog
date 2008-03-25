@@ -75,7 +75,16 @@ struct relpSess_s {
 	size_t maxDataSize;  /**< maximum size of a DATA element (TODO: set after handshake on connect) */
 	pthread_mutex_t mutSend; /**< mutex for send operation (make sure txnr is correct) */
 
-	/* connection parameters -- save for auto-reconnect case */
+	/* connection parameters */
+	int protocolVersion; /* relp protocol version in use in this session */
+	/* flags for commands supported in this session. They all have three states:
+	 * -1 means the command is not yet enabled or disabled, 0 means it is disabled
+	 *  and 1 means it is enabled. Final decision is made during the "open"
+	 *  negotiation.
+	 */
+	int bEnabledCmdSyslog;
+
+	/* save the following for auto-reconnect case */
 	int protFamily;
 	unsigned char *srvPort;
 	unsigned char *srvAddr;
@@ -117,5 +126,8 @@ relpRetVal relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *por
 relpRetVal relpSessAddUnacked(relpSess_t *pThis, relpSendbuf_t *pSendbuf);
 relpRetVal relpSessGetUnacked(relpSess_t *pThis, relpSendbuf_t **ppSendbuf, relpTxnr_t txnr);
 relpRetVal relpSessTryReestablish(relpSess_t *pThis);
+relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
+relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
+relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, int bEnabled);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

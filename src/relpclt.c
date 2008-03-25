@@ -98,6 +98,10 @@ relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned c
 	RELPOBJ_assert(pThis, Clt);
 
 	CHKRet(relpSessConstruct(&pThis->pSess, pThis->pEngine, NULL));
+
+	/* TODO: move enabling of features into its own function */
+	CHKRet(relpSessSetEnableCmd(pThis->pSess, (unsigned char*) "syslog", 1));
+
 	CHKRet(relpSessConnect(pThis->pSess, protFamily, port, host));
 
 finalize_it:

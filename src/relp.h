@@ -77,6 +77,7 @@ struct relpEngine_s {
 	BEGIN_RELP_OBJ;
 	void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 	relpRetVal (*onSyslogRcv)(unsigned char *pMsg, size_t lenMsg); /**< callback for "syslog" cmd */
+	int protocolVersion; /**< version of the relp protocol supported by this engine */
 
 	/* linked list of our servers */
 	relpEngSrvLst_t *pSrvLstRoot;
@@ -102,6 +103,8 @@ struct relpEngine_s {
 
 #endif /* # ifdef NDEBUG */
 
+
+#define RELP_CURR_PROTOCOL_VERSION 0
 
 /* some defines that may also come from the config */
 #ifndef RELP_DFLT_PORT

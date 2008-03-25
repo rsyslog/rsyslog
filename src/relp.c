@@ -143,6 +143,7 @@ relpEngineConstruct(relpEngine_t **ppThis)
 	}
 
 	RELP_CORE_CONSTRUCTOR(pThis, Engine);
+	pThis->protocolVersion = RELP_CURR_PROTOCOL_VERSION;
 	pthread_mutex_init(&pThis->mutSrvLst, NULL);
 	pthread_mutex_init(&pThis->mutSessLst, NULL);
 

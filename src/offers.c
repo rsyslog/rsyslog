@@ -31,6 +31,7 @@
  * development.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
@@ -195,36 +196,43 @@ relpOffersDestruct(relpOffers_t **ppThis)
 
 /* Construct a offer value with pszVal and add it to the offer value
  * list. This function also checks if the value is an integer and, if so,
- * sets the integer value.
+ * sets the integer value. If no string pointer is provided, the integer
+ * value is added. The integer is ignored if a string pointer is present.
  * rgerhards, 2008-03-24
  */
 relpRetVal
-relpOfferValueAdd(unsigned char *pszVal, relpOffer_t *pOffer)
+relpOfferValueAdd(unsigned char *pszVal, int intVal, relpOffer_t *pOffer)
 {
 	relpOfferValue_t *pThis = NULL;
 	int i;
-	int intVal;
+	int Val;
 
 	ENTER_RELPFUNC;
-	assert(pszVal != NULL);
 	RELPOBJ_assert(pOffer, Offer);
 
-	/* check if we have an integer */
-	intVal = 0;
-	i = 0;
-	while(pszVal[i]) {
-		if(isdigit(pszVal[i]))
-			intVal = intVal * 10 + pszVal[i] - '0';
-		else
-			break;
-		++i;
-	}
-	if(pszVal[i] != '\0')
-		intVal = -1; /* no (unsigned!) integer! */
-
 	CHKRet(relpOfferValueConstruct(&pThis, pOffer->pEngine));
-	strncpy((char*)pThis->szVal, (char*)pszVal, sizeof(pThis->szVal));
-	pThis->intVal = intVal;
+
+	/* check which value we need to use */
+	if(pszVal == NULL) {
+		snprintf((char*)pThis->szVal, sizeof(pThis->szVal), "%d", intVal);
+		pThis->intVal = intVal;
+	} else {
+		strncpy((char*)pThis->szVal, (char*)pszVal, sizeof(pThis->szVal));
+		/* check if the string actually is an integer... */
+		Val = 0;
+		i = 0;
+		while(pszVal[i]) {
+			if(isdigit(pszVal[i]))
+				Val = Val * 10 + pszVal[i] - '0';
+			else
+				break;
+			++i;
+		}
+		if(pszVal[i] != '\0')
+			Val = -1; /* no (unsigned!) integer! */
+		pThis->intVal = Val;
+	}
+
 	pThis->pNext = pOffer->pValueRoot;
 	pOffer->pValueRoot = pThis;
 
@@ -273,11 +281,15 @@ finalize_it:
 /* create as string with the complete offers. The string is dynamically
  * allocated and passed to the caller. The caller is responsible for
  * freeing it. This function always allocates a sufficientla large
- * string (TODO: ensure that!)
+ * string (TODO: ensure that!). A string my be prepended to the offers
+ * block (this is for rsp status). If that is not desired, the param
+ * must be NULL, in which case its length is simply ignored (suggest to use
+ * 0 in that case).
  * rgerhards, 2008-03-24
  */
 relpRetVal
-relpOffersToString(relpOffers_t *pThis, unsigned char **ppszOffers, size_t *plenStr)
+relpOffersToString(relpOffers_t *pThis, unsigned char *pszHdr, size_t lenHdr,
+		   unsigned char **ppszOffers, size_t *plenStr)
 {
 	unsigned char *pszOffers = NULL;
 	size_t iStr;
@@ -292,7 +304,14 @@ relpOffersToString(relpOffers_t *pThis, unsigned char **ppszOffers, size_t *plen
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
 	}
 
-	iStr = 0;
+	/* check if we need to prepend anything */
+	if(pszHdr == NULL) {
+		iStr = 0; /* no, start at the beginning */
+	} else {
+		memcpy((char*)pszOffers, (char*)pszHdr, lenHdr);
+		iStr = lenHdr;
+	}
+
 	for(pOffer = pThis->pRoot ; pOffer != NULL ; pOffer = pOffer->pNext) {
 		strcpy((char*)pszOffers+iStr, (char*)pOffer->szName);
 		iStr += strlen((char*)pOffer->szName);

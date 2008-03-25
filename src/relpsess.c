@@ -73,6 +73,10 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	pThis->timeout = 10; /* TODO: make configurable */
 	pThis->sizeWindow = RELP_DFLT_WINDOW_SIZE; /* TODO: make configurable */
 	pThis->maxDataSize = RELP_DFLT_MAX_DATA_SIZE;
+
+	/* set all commands to pending enabled state */
+	pThis->bEnabledCmdSyslog = -1;
+
 	CHKRet(relpSendqConstruct(&pThis->pSendq, pThis->pEngine));
 	pthread_mutex_init(&pThis->mutSend, NULL);
 
@@ -597,7 +601,6 @@ relpRetVal
 relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned char *host)
 {
 	relpOffers_t *pOffers;
-	relpOffer_t *pOffer;
 	unsigned char *pszOffers = NULL;
 	size_t lenOffers;
 	ENTER_RELPFUNC;
@@ -620,12 +623,8 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	relpSessSetSessState(pThis, eRelpSessState_PRE_INIT);
 
 	/* create offers */
-	CHKRet(relpOffersConstruct(&pOffers, pThis->pEngine));
-	CHKRet(relpOfferAdd(&pOffer, (unsigned char*)"commands", pOffers));
-	CHKRet(relpOfferValueAdd((unsigned char*)"syslog", pOffer));
-	CHKRet(relpOfferAdd(&pOffer, (unsigned char*)"relp_version", pOffers));
-	CHKRet(relpOfferValueAdd((unsigned char*)"0", pOffer));
-	CHKRet(relpOffersToString(pOffers, &pszOffers, &lenOffers));
+	CHKRet(relpSessConstructOffers(pThis, &pOffers));
+	CHKRet(relpOffersToString(pOffers, NULL, 0, &pszOffers, &lenOffers));
 	CHKRet(relpOffersDestruct(&pOffers));
 
 	CHKRet(relpSessRawSendCommand(pThis, (unsigned char*)"open", 4, pszOffers, lenOffers,
@@ -686,5 +685,82 @@ pThis->pEngine->dbgprint("SessDisconnect enter, sessState %d\n", pThis->sessStat
 	relpSessSetSessState(pThis, eRelpSessState_DISCONNECTED); /* indicate session startup */
 
 finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* set the protocol version to be used by this session
+ * rgerhards, 2008-03-25
+ */
+relpRetVal
+relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	pThis->protocolVersion = protocolVersion;
+	LEAVE_RELPFUNC;
+}
+
+
+/* Enable or disable a command.
+ * rgerhards, 2008-03-25
+ */
+relpRetVal
+relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, int bEnabled)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	assert(pszCmd != NULL);
+
+	if(!strcmp((char*)pszCmd, "syslog")) {
+		pThis->bEnabledCmdSyslog = bEnabled;
+	} else {
+		pThis->pEngine->dbgprint("tried to %s unknown command '%s'\n",
+					 bEnabled ? "enable" : "disable", pszCmd);
+		ABORT_FINALIZE(RELP_RET_UNKNOWN_CMD);
+	}
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* create an offers object based on the current session parameters we have.
+ * rgerhards, 2008-03-25
+ */
+relpRetVal
+relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers)
+{
+	relpOffers_t *pOffers;
+	relpOffer_t *pOffer;
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+	assert(ppOffers != NULL);
+
+	CHKRet(relpOffersConstruct(&pOffers, pThis->pEngine));
+
+	/* now do the supported commands. Note that a command state of -1 is
+	 * "pending enabled", but not selected. We must NOT offer commands in that
+	 * state. So we must not only do a boolean check but rather one against 1.
+	 */
+	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "commands", pOffers));
+	if(pThis->bEnabledCmdSyslog == 1)
+		CHKRet(relpOfferValueAdd((unsigned char*)"syslog", 0, pOffer));
+
+	/* just for cosmetic reasons: do relp_version last, so that it shows up
+	 * at the top of the string.
+	 */
+	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "relp_version", pOffers));
+	CHKRet(relpOfferValueAdd(NULL, pThis->protocolVersion, pOffer));
+
+	*ppOffers = pOffers;
+
+finalize_it:
+	if(iRet != RELP_RET_OK) {
+		if(pOffers != NULL)
+			relpOffersDestruct(&pOffers);
+	}
+
 	LEAVE_RELPFUNC;
 }

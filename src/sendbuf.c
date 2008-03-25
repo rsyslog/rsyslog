@@ -125,7 +125,7 @@ relpSendbufSend(relpSendbuf_t *pThis, relpTcp_t *pTcp)
 
 	lenToWrite = pThis->lenData - pThis->bufPtr;
 	lenWritten = lenToWrite;
-pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
+//pTcp->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
 
 	CHKRet(relpTcpSend(pTcp, pThis->pData + (9 - pThis->lenTxnr) + pThis->bufPtr, &lenWritten));
 
@@ -159,7 +159,7 @@ relpSendbufSendAll(relpSendbuf_t *pThis, relpSess_t *pSess, int bAddToUnacked)
 	lenToWrite = pThis->lenData - pThis->bufPtr;
 	while(lenToWrite != 0) {
 		lenWritten = lenToWrite;
-pSess->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
+//pSess->pEngine->dbgprint("sendbuf len %d, still to write %d\n", (int) pThis->lenData, (int) lenToWrite);
 		CHKRet(relpTcpSend(pSess->pTcp, pThis->pData + (9 - pThis->lenTxnr) + pThis->bufPtr, &lenWritten));
 
 		if(lenWritten == -1) {

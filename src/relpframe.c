@@ -36,7 +36,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <assert.h>
-#define RELP_DO_INTERNAL_PROTOTYPES
 #include "relp.h"
 #include "relpframe.h"
 
@@ -410,7 +409,6 @@ relpFrameBuildSendbuf(relpSendbuf_t **ppSendbuf, relpTxnr_t txnr, unsigned char 
 if((pSendbuf->pData = malloc(pSendbuf->lenData + (9 - lenTxnr) + 1)) == NULL)
        // remove +1 above (for debugging only!)
 		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
-pSess->pEngine->dbgprint("sendbuf lenData %d, pData: %p\n", (int) pSendbuf->lenData, pSendbuf->pData);
 
 	ptrMembuf = pSendbuf->pData + 9 - lenTxnr; /* set ptr to start of area we intend to write to */
 	pSendbuf->lenTxnr = lenTxnr;
