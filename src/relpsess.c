@@ -750,7 +750,8 @@ relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers)
 
 	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "relp_software", pOffers));
 	CHKRet(relpOfferValueAdd((unsigned char*) "http://librelp.adiscon.com", pThis->protocolVersion, pOffer));
-	CHKRet(relpOfferValueAdd((unsigned char*) ("librelp-" VERSION), pThis->protocolVersion, pOffer));
+	CHKRet(relpOfferValueAdd((unsigned char*) VERSION, pThis->protocolVersion, pOffer));
+	CHKRet(relpOfferValueAdd((unsigned char*) "librelp", pThis->protocolVersion, pOffer));
 
 	/* just for cosmetic reasons: do relp_version last, so that it shows up
 	 * at the top of the string.
