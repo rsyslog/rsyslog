@@ -748,6 +748,10 @@ relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers)
 	if(pThis->bEnabledCmdSyslog == 1)
 		CHKRet(relpOfferValueAdd((unsigned char*)"syslog", 0, pOffer));
 
+	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "relp_software", pOffers));
+	CHKRet(relpOfferValueAdd((unsigned char*) "http://librelp.adiscon.com", pThis->protocolVersion, pOffer));
+	CHKRet(relpOfferValueAdd((unsigned char*) ("librelp-" VERSION), pThis->protocolVersion, pOffer));
+
 	/* just for cosmetic reasons: do relp_version last, so that it shows up
 	 * at the top of the string.
 	 */
@@ -777,7 +781,7 @@ relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg)
 {
 
 	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Clt);
+	RELPOBJ_assert(pThis, Sess);
 
 	if(pThis->bEnabledCmdSyslog != 1)
 		ABORT_FINALIZE(RELP_RET_CMD_DISABLED);

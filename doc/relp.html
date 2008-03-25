@@ -32,7 +32,8 @@ Each
 command is assigned a (relative) unique, monotonically increasing ID
 (called the
 "transaction number" or txnr for short. Each
-response must include that ID. Responses must be sent by the server in the exact same order as commands where received.</p>
+response must include that ID. Responses must be sent by the server in
+the exact same order as commands where received.</p>
 <p>There is one potential issue with this communications model:
 In it, the server is able to respond to the client only in form or a
 response package. It is not capable of issuing a command itself. During
@@ -56,7 +57,9 @@ out-of-band-commands have a "hint" status - they hint the client about
 something, but if they do not arrive at the client, nothing fatal
 should happen. The ultimate session closure indication would still be
 the tcp session close. [Please see the "High Latency Environment" use
-case below for some implications this hinting process may have].</p><p>For the time being, it has been decided that such out of band hints be not supported.</p>
+case below for some implications this hinting process may have].</p>
+<p>For the time being, it has been decided that such out of band
+hints be not supported.</p>
 <p>A command and its response is called a relp transaction. A
 response must always carry the same txnr as the original command.
 </p>
@@ -69,7 +72,8 @@ have been unsuccessful in this case.</p>
 <p>
 If something goes wrong (e.g. invalid framing), the peer that detects
 the problem
-closes the underlying (TCP) connection. It may send an error/abort hint, but
+closes the underlying (TCP) connection. It may send an error/abort
+hint, but
 MUST NOT wait for its response. The reasoning for this is that today's
 Internet is
 not a friendly place. Trying to gracefully resolve communications
@@ -116,17 +120,24 @@ always 128K. In later versions, it shall be operator-configurable.
 connection start with TXNR 1. Note that TXNR montonically increases but
 is latched at 999,999,999. After that TXNR, the next TXNR is
 1.&nbsp;</p>
-<h3>COMMAND SEMANTICS</h3>Command can be either regular commands or
-hints. Regular commands are responded to by a rsp package. They are
-transmitted on txnrs of 1 or above. Hints are commands that are not
-being responded. They are always transmitted with a txnr of zero.
-Regular commands can only be issued by the client. Hints can be issued
-both by the client and the server.<br><h4>"Command" "rsp"</h4>This is not a real command but a response to a client-issued command. The TXNR MUST match the client's
+<h3>COMMAND SEMANTICS</h3>
+Command can be either regular commands or hints. Regular commands are
+responded to by a rsp package. They are transmitted on txnrs of 1 or
+above. Hints are commands that are not being responded. They are always
+transmitted with a txnr of zero. Regular commands can only be issued by
+the client. Hints can be issued both by the client and the server.<br>
+<h4>"Command" "rsp"</h4>
+This is not a real command but a response to a client-issued command.
+The TXNR MUST match the client's
 command
 TXNR. The data part contains RSP-HEADER as defined above. It is a
 response code,
 optionally followed by a space and additional data (depending on the
-client's command). Return state values are: 200 - OK, 500 - error.<br><br>The ABNF for a "rsp"'s &nbsp;data portion is as follows:<br><pre>RSPDATA = STATUS SP HUMAN-TEXT [LF DATA]<br>STATUS = 3DIGIT<br>HUMAN-TEXT = *80ALPHA<br>DATA = 1*OCTET<br></pre><h4>Command "open"</h4>
+client's command). Return state values are: 200 - OK, 500 - error.<br>
+<br>
+The ABNF for a "rsp"'s &nbsp;data portion is as follows:<br>
+<pre>RSPDATA = STATUS SP HUMAN-TEXT [LF DATA]<br>STATUS = 3DIGIT<br>HUMAN-TEXT = *80ALPHA<br>DATA = 1*OCTET<br></pre>
+<h4>Command "open"</h4>
 Opens a connection to the server. Must include offers inside the
 data, at a minimum the "relp_version" offer. Offers
 provide information about services supported by the client.
@@ -150,13 +161,16 @@ even though the
 client makes the final feature selection, the server is dictating what
 needs to be used.
 </p>
-<p>Note that the connection is only ready AFTER the client has received&nbsp;the "open" response.</p>
-<h4>Command "syslog"</h4>This command is used to transmit a syslog
-message, which (in syslog message format) is contained within the
-commands data portion.<h4>Command "close"</h4>Closes a connection to
-the server. Once the client has sent a "close" command, it must not
-transmit any other command over the session. When the server's rsp
-answer is received, the client must close the connection.
+<p>Note that the connection is only ready AFTER the client has
+received&nbsp;the "open" response.</p>
+<h4>Command "syslog"</h4>
+This command is used to transmit a syslog message, which (in syslog
+message format) is contained within the commands data portion.
+<h4>Command "close"</h4>
+Closes a connection to the server. Once the client has sent a "close"
+command, it must not transmit any other command over the session. When
+the server's rsp answer is received, the client must close the
+connection.
 <h3>OFFERS</h3>
 During session setup, "offers" are exchange between client and server.
 An "offer" describes
@@ -166,11 +180,39 @@ tells the other side which version of relp is in use.
 <p>ABNF for offer strings
 </p>
 <pre>OFFER = LF FEATURENAME ["=" VALUE *("," VALUE)]<br>FEATURENAME = *32OCTET<br>VALUE = *255OCTET<br><br>Currently defined values:<br>FEATURENAME VALUE<br>relp_version 1 (this specification)<br></pre>
-<p>
-STATE DIAGRAMS
-... detailling some communications scenarios:
+<h4>relp_version</h4>
+<p>This offer describes the protocol version. It MUST be provided
+in the
+open command. It has one parameter, the numerical version id. The
+intial version is 1. There also exists an experimental version 0, which
+shall not be used in practice.
 </p>
-
+<h4>commands</h4>
+<p>This offer describes which commands are supported by the remote
+peer. Command that must be specified to drive the RELP protocol itself
+(e.g. "open", "close", "rsp") MUST NOT be specified. Optional commands
+must be specified. There may be multiple commands specified.</p><p>Sample: commands=syslog,eventlog (eventlog is a hypothetical, not yet known command).</p><p>Please
+note that new commands may be specified outside of the relp
+specification. Also note that if the server response does not include
+the command the client is interested in, this command MUST NOT be used.
+The client may then either resort to another, less featured supported
+command or may terminate the relp connection.
+</p>
+<h4>relp_software</h4>
+<p>This offer describes the software (library) that is processing
+the relp
+protocol. It is an optional offer. The idea is that when each peer
+knows which software on the other peer is handling the protocol, it may
+be able to work-around some known software issues. The "relp_software"
+has two parameters, the first one being the name of the software as it
+calls itself, the second one the version as it calls itself and the
+third one being an URL where information about this software may be
+found. It is suggested that all three parameters are given, but only
+the first one MUST actually be provided.
+</p>
+<h3>STATE DIAGRAMS</h3>
+<p>... detailling some communications scenarios:
+</p>
 <pre>Session Startup:<br>C S<br>cmd: "open", data: offer -----&gt; (selects supported offers)<br>(selects offers to use) &lt;----- cmd: "rsp", data "accepted offers"<br><br> ... transmission channel is ready to use ....<br><br>Message Transmission<br>C S<br>cmd: "syslog", data: syslogmsg -----&gt; (processes message)<br>(indicates syslog as processed) &lt;----- cmd: "rsp", data OK/Error<br><br>Session Termination<br>C S<br>cmd: "close", data: none? -----&gt; (processes termination request)<br>(terminates session) &lt;----- cmd: "rsp", data OK/Error<br> (terminates session)<br></pre>
 <h3>SECURITY CONSIDERATIONS</h3>
 <h4>Window Size</h4>
@@ -187,39 +229,42 @@ the serve a valuable purpose when thinking about protocol features.
 I define this use case in support of <a href="http://www.rsyslog.com">rsyslog</a> and other
 possible clients which try to reduce ressource consumption.<br>
 <br>
-Rsyslog utilizes highly threaded design, among others to take advantage of multicore-machines. On
+Rsyslog utilizes highly threaded design, among others to take advantage
+of multicore-machines. On
 the other hand, it conserves resources by only running as many worker
 threads as actually needed. So if there is no traffic, it may even be
-running no workers at all. The RELP client will be implemented as an output
+running no workers at all. The RELP client will be implemented as an
+output
 plugin and will be executed on a worker thread. So in low-traffic
 cases, the RELP client kind of hibernates, maybe even for hours (if no
 new message is scheduled for transmission).
-<p>
-In this use case, I examine a typical scenario in a low-message volume
-case. Here, the client is asked to transmit a message every now and
-than, at a pace of at most one message every few seconds. It may also
-happen that no message is to be sent for several minutes or even hours.
-Such a scenario is not as extreme as it sounds - it may, for example,
-to be used for error notifications, which hopefully happen very
-infrequently.</p><p>In this scenario, the client sends a command, but
-will usually not receive an immediate response, because client
-processing is already terminated when the server sends the response
-packet. Thus, the tcp stacks receive buffer buffers the server's
-response until the client has another message to send. Then, the client
-first checks for any outstanding responses, processes them and then
-send the new message. It is expected that in this scenario, each client
-invokation will process the past response and send a new packet. The
-response to that packet will not be processed by the invocation that
-sent the command but by the next one. So we always have one outstanding
-response inside the OS buffers. Now consider the server is shutting
-down the connection due to timeout or due to the fact that it needs to
-shutdown itself (maybe even on an urgent case, like power failure - the
-point is it can not wait). On next client invokation, the client finds
-an outstanding response and processes it. Then, it tries to send a new
-command. That will fail, because the connection has been terminated.
-The usual session recovery logic is used to restablish the connection
-when the server is back online. The command in question is transferred
-after session re-establishment.</p><h3>High Latency Environment</h3>
+<p>In this use case, I examine a typical scenario in a
+low-message volume case. Here, the client is asked to transmit a
+message every now and than, at a pace of at most one message every few
+seconds. It may also happen that no message is to be sent for several
+minutes or even hours. Such a scenario is not as extreme as it sounds -
+it may, for example, to be used for error notifications, which
+hopefully happen very infrequently.</p>
+<p>In this scenario, the client sends a command, but will usually
+not receive an immediate response, because client processing is already
+terminated when the server sends the response packet. Thus, the tcp
+stacks receive buffer buffers the server's response until the client
+has another message to send. Then, the client first checks for any
+outstanding responses, processes them and then send the new message. It
+is expected that in this scenario, each client invokation will process
+the past response and send a new packet. The response to that packet
+will not be processed by the invocation that sent the command but by
+the next one. So we always have one outstanding response inside the OS
+buffers. Now consider the server is shutting down the connection due to
+timeout or due to the fact that it needs to shutdown itself (maybe even
+on an urgent case, like power failure - the point is it can not wait).
+On next client invokation, the client finds an outstanding response and
+processes it. Then, it tries to send a new command. That will fail,
+because the connection has been terminated. The usual session recovery
+logic is used to restablish the connection when the server is back
+online. The command in question is transferred after session
+re-establishment.</p>
+<h3>High Latency Environment</h3>
 <p>We have a high latency environment that is otherwise quite
 reliable
 (satellite link). We have a high traffic load. To cover this, a large<br>
@@ -272,5 +317,10 @@ protocol implementer's choice if the slight less chance of a server
 force-shutdown justifies the addition of a background thread to a
 program that otherwise doesn't need one. From a protocol point of view,
 a force-shutdown is a valid operation. Also, while it causes potential
-message duplication, it can not cause message loss.</p><h2>Feedback and Discussion</h2><p>Feedback on this document and the RELP protocol is appreciated. The <a href="http://lists.adiscon.net/mailman/listinfo/relp">RELP mailing list</a> is probably a good place to provide it. Questions are also happily accepted.</p>
+message duplication, it can not cause message loss.</p>
+<h2>Feedback and Discussion</h2>
+<p>Feedback on this document and the RELP protocol is
+appreciated. The <a href="http://lists.adiscon.net/mailman/listinfo/relp">RELP
+mailing list</a> is probably a good place to provide it.
+Questions are also happily accepted.</p>
 </body></html>
