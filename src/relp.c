@@ -474,3 +474,17 @@ relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt)
 finalize_it:
 	LEAVE_RELPFUNC;
 }
+
+
+/* return a version string for librelp. This is also meant to be used during
+ * a configure library entry point check.
+ * rgerhards, 2008-03-25
+ */
+const char *relpEngineGetVersion(void)
+{
+#	ifdef DEBUG
+		return VERSION "(debug mode)";
+#	else
+		return VERSION;
+#	endif
+}

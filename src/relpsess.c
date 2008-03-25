@@ -621,11 +621,10 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 
 	/* create offers */
 	CHKRet(relpOffersConstruct(&pOffers, pThis->pEngine));
-	CHKRet(relpOfferAdd(&pOffer, (unsigned char*)"relp_version", pOffers));
-	CHKRet(relpOfferValueAdd((unsigned char*)"0", pOffer));
 	CHKRet(relpOfferAdd(&pOffer, (unsigned char*)"commands", pOffers));
 	CHKRet(relpOfferValueAdd((unsigned char*)"syslog", pOffer));
-	CHKRet(relpOfferValueAdd((unsigned char*)"close", pOffer));
+	CHKRet(relpOfferAdd(&pOffer, (unsigned char*)"relp_version", pOffers));
+	CHKRet(relpOfferValueAdd((unsigned char*)"0", pOffer));
 	CHKRet(relpOffersToString(pOffers, &pszOffers, &lenOffers));
 	CHKRet(relpOffersDestruct(&pOffers));
 

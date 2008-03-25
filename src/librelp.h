@@ -118,6 +118,7 @@ typedef enum relpObjID_e {
 #define CHKRet_Hdlr(code) if((iRet = code) != RELP_RET_OK)
 
 /* prototypes needed by library users */
+const char *relpEngineGetVersion(void); /* use this entry point for configure check */
 relpRetVal relpEngineConstruct(relpEngine_t **ppThis);
 relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
 relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
