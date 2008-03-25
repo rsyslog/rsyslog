@@ -3159,6 +3159,11 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 				rsCStrAppendChar(pStrB, *p2parse++);
 				++iCnt;
 			}
+			if (iCnt == 32) {
+                            while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
+                                ++p2parse;
+                            }
+                        }
 			if(*p2parse == ':') {
 				++p2parse; 
 				rsCStrAppendChar(pStrB, ':');
