@@ -13,6 +13,8 @@ Version 3.12.4 (rgerhards), 2008-03-??
 - removed a now-longer needed callback from the output module 
   interface. Results in reducing code complexity.
 - bugfix: internally generated messages had "FROMHOST" property not set
+- added $HHOUR and $QHOUR system properties - can be used for half- and
+  quarter-hour logfile rotation
 ---------------------------------------------------------------------------
 Version 3.12.3 (rgerhards), 2008-03-18
 - added advanced flow control for congestion cases (mode depending on message

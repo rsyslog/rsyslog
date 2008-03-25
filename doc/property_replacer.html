@@ -1,157 +1,291 @@
-<html>
-<head>
-<title>The Rsyslogd Property Replacer</title>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>The Rsyslogd Property Replacer</title>
+
 </head>
 <body>
 <h1>The Property Replacer</h1>
-<p><b>The property replacer is a core component in rsyslogd's output system.</b> 
-A syslog message has a number of well-defined properties (see below). Each of 
-this properties can be accessed <b>and</b> manipulated by the property replacer. 
-With it, it is easy to use only part of a property value or manipulate the value, 
-e.g. by converting all characters to lower case.</p>
+<p><b>The property replacer is a core component in
+rsyslogd's output system.</b> A syslog message has a number of
+well-defined properties (see below). Each of this properties can be
+accessed <b>and</b> manipulated by the property replacer.
+With it, it is easy to use only part of a property value or manipulate
+the value, e.g. by converting all characters to lower case.</p>
 <h1>Accessing Properties</h1>
-<p>Syslog message properties are used inside templates. They are accessed by putting them between percent signs. Properties can be modified by 
-the property replacer. The full syntax is as follows:</p>
+<p>Syslog message properties are used inside templates. They are
+accessed by putting them between percent signs. Properties can be
+modified by the property replacer. The full syntax is as follows:</p>
 <blockquote><b><code>%propname:fromChar:toChar:options%</code></b></blockquote>
 <h2>Available Properties</h2>
-<p><b><code>propname</code></b> is the name of the property to access. It is case-sensitive.
+<p><b><code>propname</code></b> is the
+name of the property to access. It is case-sensitive.
 Currently supported are:</p>
 <table>
-<tr><td><b>msg</b></td><td>the MSG part of the message (aka &quot;the message&quot; ;))</td></tr>
-<tr><td><b>rawmsg</b></td><td>the message excactly as it was received from the
-socket. Should be useful for debugging.</td></tr>
-<tr><td><b>UxTradMsg</b></td><td>will disappear soon - do NOT use!</td></tr>
-<tr><td><b>HOSTNAME</b></td><td>hostname from the message</td></tr>
-<tr><td><b>source</b></td><td>alias for HOSTNAME</td></tr>
-<tr><td><b>FROMHOST</b></td><td>hostname of the system the message was received 
-	from (in a relay chain, this is the system immediately in front of us and 
-	not necessarily the original sender)</td></tr>
-<tr><td><b>syslogtag</b></td><td>TAG from the message</td></tr>
-<tr><td><b>programname</b></td><td>the &quot;static&quot; part of the tag, as defined by
-BSD syslogd. For example, when TAG is "named[12345]", programname is "named".</td></tr>
-<tr><td><b>PRI</b></td><td>PRI part of the message - undecoded (single value)</td></tr>
-<tr><td><b>PRI-text</b></td><td>the PRI part of the message in a textual form 
-	(e.g. &quot;syslog.info&quot;)</td></tr>
-<tr><td><b>IUT</b></td><td>the monitorware InfoUnitType - used when talking
-to a <a href="http://www.monitorware.com">MonitorWare</a> backend (also for 
-	<a href="http://www.phplogcon.org/">phpLogCon</a>)</td></tr>
-<tr><td><b>syslogfacility</b></td><td>the facility from the message - in numerical form</td></tr>
+<tbody>
 <tr>
-	<td><b>syslogfacility-text</b></td><td>the facility from the message - in 
-	text form</td>
+<td><b>msg</b></td>
+<td>the MSG part of the message (aka "the message" ;))</td>
 </tr>
 <tr>
-	<td><b>syslogseverity</b></td><td>severity from the
-	message - in numerical form</td>
+<td><b>rawmsg</b></td>
+<td>the message excactly as it was received from the
+socket. Should be useful for debugging.</td>
 </tr>
-<tr><td><b>syslogseverity-text</b></td><td>severity from the
-	message - in text form</td></tr>
-<tr><td><b>syslogpriority</b></td><td>an alias for syslogseverity - included for 
-	historical reasons (be careful: it still is the severity, not PRI!)</td></tr>
-<tr><td><b>syslogpriority-text</b></td><td>an alias for syslogseverity-text</td></tr>
-<tr><td><b>timegenerated</b></td><td>timestamp when the message was RECEIVED. Always in
-	high resolution</td></tr>
-<tr><td><b>timereported</b></td><td>timestamp from the message. Resolution depends on
+<tr>
+<td><b>UxTradMsg</b></td>
+<td>will disappear soon - do NOT use!</td>
+</tr>
+<tr>
+<td><b>HOSTNAME</b></td>
+<td>hostname from the message</td>
+</tr>
+<tr>
+<td><b>source</b></td>
+<td>alias for HOSTNAME</td>
+</tr>
+<tr>
+<td><b>FROMHOST</b></td>
+<td>hostname of the system the message was received from
+(in a relay chain, this is the system immediately in front of us and
+not necessarily the original sender)</td>
+</tr>
+<tr>
+<td><b>syslogtag</b></td>
+<td>TAG from the message</td>
+</tr>
+<tr>
+<td><b>programname</b></td>
+<td>the "static" part of the tag, as defined by
+BSD syslogd. For example, when TAG is "named[12345]", programname is
+"named".</td>
+</tr>
+<tr>
+<td><b>PRI</b></td>
+<td>PRI part of the message - undecoded (single value)</td>
+</tr>
+<tr>
+<td><b>PRI-text</b></td>
+<td>the PRI part of the message in a textual form (e.g.
+"syslog.info")</td>
+</tr>
+<tr>
+<td><b>IUT</b></td>
+<td>the monitorware InfoUnitType - used when talking
+to a <a href="http://www.monitorware.com">MonitorWare</a>
+backend (also for <a href="http://www.phplogcon.org/">phpLogCon</a>)</td>
+</tr>
+<tr>
+<td><b>syslogfacility</b></td>
+<td>the facility from the message - in numerical form</td>
+</tr>
+<tr>
+<td><b>syslogfacility-text</b></td>
+<td>the facility from the message - in text form</td>
+</tr>
+<tr>
+<td><b>syslogseverity</b></td>
+<td>severity from the message - in numerical form</td>
+</tr>
+<tr>
+<td><b>syslogseverity-text</b></td>
+<td>severity from the message - in text form</td>
+</tr>
+<tr>
+<td><b>syslogpriority</b></td>
+<td>an alias for syslogseverity - included for historical
+reasons (be careful: it still is the severity, not PRI!)</td>
+</tr>
+<tr>
+<td><b>syslogpriority-text</b></td>
+<td>an alias for syslogseverity-text</td>
+</tr>
+<tr>
+<td><b>timegenerated</b></td>
+<td>timestamp when the message was RECEIVED. Always in high
+resolution</td>
+</tr>
+<tr>
+<td><b>timereported</b></td>
+<td>timestamp from the message. Resolution depends on
 what was provided in the message (in most cases,
-only seconds)</td></tr>
-<tr><td><b>TIMESTAMP</b></td><td>alias for timereported</td></tr>
-<tr><td><b>PROTOCOL-VERSION</b></td><td>The contents of the PROTCOL-VERSION 
-	field from IETF draft draft-ietf-syslog-protcol</td></tr>
-<tr><td><b>STRUCTURED-DATA</b></td><td>The contents of the STRUCTURED-DATA field 
-	from IETF draft draft-ietf-syslog-protocol</td></tr>
-<tr><td><b>APP-NAME</b></td><td>The contents of the APP-NAME field from IETF 
-	draft draft-ietf-syslog-protocol</td></tr>
-<tr><td><b>PROCID</b></td><td>The contents of the PROCID field from IETF draft 
-	draft-ietf-syslog-protocol</td></tr>
-<tr><td height="24"><b>MSGID</b></td><td height="24">The contents of the MSGID field from IETF draft 
-	draft-ietf-syslog-protocol</td></tr>
-<tr><td><b>$NOW</b></td><td>The current date stamp in the format YYYY-MM-DD</td></tr>
-<tr><td><b>$YEAR</b></td><td>The current year (4-digit)</td></tr>
-<tr><td><b>$MONTH</b></td><td>The current month (2-digit)</td></tr>
-<tr><td><b>$DAY</b></td><td>The current day of the month (2-digit)</td></tr>
-<tr><td><b>$HOUR</b></td><td>The current hour in military (24 hour) time 
-	(2-digit)</td></tr>
-<tr><td><b>$MINUTE</b></td><td>The current minute (2-digit)</td></tr>
+only seconds)</td>
+</tr>
+<tr>
+<td><b>TIMESTAMP</b></td>
+<td>alias for timereported</td>
+</tr>
+<tr>
+<td><b>PROTOCOL-VERSION</b></td>
+<td>The contents of the PROTCOL-VERSION field from IETF
+draft draft-ietf-syslog-protcol</td>
+</tr>
+<tr>
+<td><b>STRUCTURED-DATA</b></td>
+<td>The contents of the STRUCTURED-DATA field from IETF
+draft draft-ietf-syslog-protocol</td>
+</tr>
+<tr>
+<td><b>APP-NAME</b></td>
+<td>The contents of the APP-NAME field from IETF draft
+draft-ietf-syslog-protocol</td>
+</tr>
+<tr>
+<td><b>PROCID</b></td>
+<td>The contents of the PROCID field from IETF draft
+draft-ietf-syslog-protocol</td>
+</tr>
+<tr>
+<td height="24"><b>MSGID</b></td>
+<td height="24">The contents of the MSGID field from
+IETF draft draft-ietf-syslog-protocol</td>
+</tr>
+<tr>
+<td><b>$NOW</b></td>
+<td>The current date stamp in the format YYYY-MM-DD</td>
+</tr>
+<tr>
+<td><b>$YEAR</b></td>
+<td>The current year (4-digit)</td>
+</tr>
+<tr>
+<td><b>$MONTH</b></td>
+<td>The current month (2-digit)</td>
+</tr>
+<tr>
+<td><b>$DAY</b></td>
+<td>The current day of the month (2-digit)</td>
+</tr>
+<tr>
+<td><b>$HOUR</b></td>
+<td>The current hour in military (24 hour) time (2-digit)</td>
+</tr>
+<tr>
+<td><b>$HHOUR</b></td>
+<td>The current half hour we are in. From minute 0 to 29,
+this is always 0 while
+from 30 to 59 it is always 1.</td>
+</tr>
+<tr>
+<td><b>$QHOUR</b></td>
+<td>The current quarter hour we are in. Much like $HHOUR, but values
+range from 0 to 3 (for the four quater hours that are in each hour)</td>
+</tr>
+<tr>
+<td><b>$MINUTE</b></td>
+<td>The current minute (2-digit)</td>
+</tr>
+</tbody>
 </table>
-<p>Properties starting with a $-sign are so-called system properties. These do 
-NOT stem from the message but are rather internally-generated.</p>
+<p>Properties starting with a $-sign are so-called system
+properties. These do NOT stem from the message but are rather
+internally-generated.</p>
 <h2>Character Positions</h2>
-<p><b><code>FromChar</code></b> and <b><code>toChar</code></b> are used to build substrings. They specify the offset within 
-the string that should be copied. Offset counting starts at 1, so if you need to 
-obtain the first 2 characters of the message text, you can use this syntax: 
-&quot;%msg:1:2%&quot;. If you do not whish to specify from and to, but you want to specify 
-options, you still need to include the colons. For example, if you would like to 
-convert the full message text to lower case, use &quot;%msg:::lowercase%&quot;. 
-If you would like to extract from a position until the end of the string, you 
-can place a dollar-sign (&quot;$&quot;) in toChar (e.g. %msg:10:$%, which will extract 
-from position 10 to the end of the string).<p>
-There is also support for <b>regular expressions</b>. To use them, you need to 
-place a &quot;R&quot; into FromChar. This tells rsyslog that a regular expression instead 
-of position-based extraction is desired. The actual regular expression must then 
-be provided in toChar. The regular expression <b>must</b> be followed by the 
-string &quot;--end&quot;. It denotes the end of the regular expression and will not become 
-part of it. If you are using regular expressions, the property replacer will 
-return the part of the property text that matches the regular expression. An 
-example for a property replacer sequence with a regular expression is: &quot;%msg:R:.*Sev:. 
-\(.*\) \[.*--end%&quot;<br>
-<p>
-<b>Also, extraction can be done based on so-called &quot;fields&quot;</b>. To do so, place 
-a &quot;F&quot; into FromChar. A field in its current definition is anything 
-that is delimited by a delimiter character. The delimiter by default is TAB 
-(US-ASCII value 9). However, if can be changed to any other US-ASCII character 
-by specifying a comma and the <b>decimal</b> US-ASCII value of the delimiter immediately after the 
-&quot;F&quot;. For example, to use comma (&quot;,&quot;) as a delimiter, use this field specifier: 
-&quot;F,44&quot;.&nbsp; If your syslog data is delimited, 
-this is a quicker way to extract than via regular expressions (actually, a *much* 
-quicker way). Field counting starts at 1. Field zero is accepted, but will 
-always lead to a &quot;field not found&quot; error. The same happens if a field number 
-higher than the number of fields in the property is requested. The field number 
-must be placed in the &quot;ToChar&quot; parameter. An example where the 3rd field 
-(delimited by TAB) from 
-the msg property is extracted is as follows: &quot;%msg:F:3%&quot;. The same 
-example with semicolon as delimiter is &quot;%msg:F,59:3%&quot;.<p>
-Please note that the special characters &quot;F&quot; and &quot;R&quot; are case-sensitive. Only 
-upper case works, lower case will return an error. There are no white spaces 
-permitted inside the sequence (that will lead to error messages and will NOT 
-provide the intended result).<br>
+<p><b><code>FromChar</code></b> and <b><code>toChar</code></b>
+are used to build substrings. They specify the offset within the string
+that should be copied. Offset counting starts at 1, so if you need to
+obtain the first 2 characters of the message text, you can use this
+syntax: "%msg:1:2%". If you do not whish to specify from and to, but
+you want to specify options, you still need to include the colons. For
+example, if you would like to convert the full message text to lower
+case, use "%msg:::lowercase%". If you would like to extract from a
+position until the end of the string, you can place a dollar-sign ("$")
+in toChar (e.g. %msg:10:$%, which will extract from position 10 to the
+end of the string).</p>
+<p>There is also support for <b>regular expressions</b>.
+To use them, you need to place a "R" into FromChar. This tells rsyslog
+that a regular expression instead of position-based extraction is
+desired. The actual regular expression must then be provided in toChar.
+The regular expression <b>must</b> be followed by the
+string "--end". It denotes the end of the regular expression and will
+not become part of it. If you are using regular expressions, the
+property replacer will return the part of the property text that
+matches the regular expression. An example for a property replacer
+sequence with a regular expression is: "%msg:R:.*Sev:. \(.*\)
+\[.*--end%"<br>
+</p>
+<p><b>Also, extraction can be done based on so-called
+"fields"</b>. To do so, place a "F" into FromChar. A field in its
+current definition is anything that is delimited by a delimiter
+character. The delimiter by default is TAB (US-ASCII value 9). However,
+if can be changed to any other US-ASCII character by specifying a comma
+and the <b>decimal</b> US-ASCII value of the delimiter
+immediately after the "F". For example, to use comma (",") as a
+delimiter, use this field specifier: "F,44".&nbsp; If your syslog
+data is delimited, this is a quicker way to extract than via regular
+expressions (actually, a *much* quicker way). Field counting starts at
+1. Field zero is accepted, but will always lead to a "field not found"
+error. The same happens if a field number higher than the number of
+fields in the property is requested. The field number must be placed in
+the "ToChar" parameter. An example where the 3rd field (delimited by
+TAB) from the msg property is extracted is as follows: "%msg:F:3%". The
+same example with semicolon as delimiter is "%msg:F,59:3%".</p>
+<p>Please note that the special characters "F" and "R" are
+case-sensitive. Only upper case works, lower case will return an error.
+There are no white spaces permitted inside the sequence (that will lead
+to error messages and will NOT provide the intended result).<br>
+</p>
 <h2>Property Options</h2>
-<b><code>property options</code></b> are case-insensitive. Currently, the following options 
-are defined:</p>
+<b><code>property options</code></b> are
+case-insensitive. Currently, the following options are defined:
+<p></p>
 <table>
-<tr><td><b>uppercase</b></td><td>convert property to lowercase only</td></tr>
-<tr><td><b>lowercase</b></td><td>convert property text to uppercase only</td></tr>
-<tr><td><b>drop-last-lf</b></td><td>The last LF in the message (if any), is dropped.
-	Especially useful for PIX.</td></tr>
-<tr><td><b>date-mysql</b></td><td>format as mysql date</td></tr>
-<tr><td><b>date-rfc3164</b></td><td>format as RFC 3164 date</td></tr>
-<tr><td><b>date-rfc3339</b></td><td>format as RFC 3339 date</td></tr>
-<tr><td><b>escape-cc</b></td><td>replace control characters (ASCII value 127 and 
-	values less then 32) with an escape sequence. The sequnce is &quot;#&lt;charval&gt;&quot; 
-	where charval is the 3-digit decimal value of the control character. For 
-	example, a tabulator would be replaced by &quot;#009&quot;.<br>
-	Note: using this option requires that
-	<a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a> 
-	is set to off.</td></tr>
-<tr><td><b>space-cc</b></td><td>replace control characters by spaces<br>
-	Note: using this option requires that
-	<a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a> 
-	is set to off.</td></tr>
-<tr><td><b>drop-cc</b></td><td>drop control characters - the resulting string 
-	will neither contain control characters, escape sequences nor any other 
-	replacement character like space.<br>
-	Note: using this option requires that
-	<a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a> 
-	is set to off.</td></tr>
+<tbody>
+<tr>
+<td><b>uppercase</b></td>
+<td>convert property to lowercase only</td>
+</tr>
+<tr>
+<td><b>lowercase</b></td>
+<td>convert property text to uppercase only</td>
+</tr>
+<tr>
+<td><b>drop-last-lf</b></td>
+<td>The last LF in the message (if any), is dropped.
+Especially useful for PIX.</td>
+</tr>
+<tr>
+<td><b>date-mysql</b></td>
+<td>format as mysql date</td>
+</tr>
+<tr>
+<td><b>date-rfc3164</b></td>
+<td>format as RFC 3164 date</td>
+</tr>
+<tr>
+<td><b>date-rfc3339</b></td>
+<td>format as RFC 3339 date</td>
+</tr>
+<tr>
+<td><b>escape-cc</b></td>
+<td>replace control characters (ASCII value 127 and values
+less then 32) with an escape sequence. The sequnce is
+"#&lt;charval&gt;" where charval is the 3-digit decimal value
+of the control character. For example, a tabulator would be replaced by
+"#009".<br>
+Note: using this option requires that <a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a>
+is set to off.</td>
+</tr>
+<tr>
+<td><b>space-cc</b></td>
+<td>replace control characters by spaces<br>
+Note: using this option requires that <a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a>
+is set to off.</td>
+</tr>
+<tr>
+<td><b>drop-cc</b></td>
+<td>drop control characters - the resulting string will
+neither contain control characters, escape sequences nor any other
+replacement character like space.<br>
+Note: using this option requires that <a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a>
+is set to off.</td>
+</tr>
+</tbody>
 </table>
-
 <h2>Further Links</h2>
 <ul>
-	<li>Article on &quot;<a href="rsyslog_recording_pri.html">Recording the Priority of 
-	Syslog Messages</a>&quot; (describes use of templates to record severity and 
-	facility of a message)</li>
-	<li><a href="rsyslog_conf.html">Configuration file syntax</a>, this is where you 
-	actually use the property replacer.</li>
+<li>Article on "<a href="rsyslog_recording_pri.html">Recording
+the Priority of Syslog Messages</a>" (describes use of templates
+to record severity and facility of a message)</li>
+<li><a href="rsyslog_conf.html">Configuration file
+syntax</a>, this is where you actually use the property replacer.</li>
 </ul>
-
-</body>
-</html>
+</body></html>
