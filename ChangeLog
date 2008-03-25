@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.13.0 (rgerhards), 2008-03-??
+---------------------------------------------------------------------------
 Version 3.12.4 (rgerhards), 2008-03-25
 - Greatly enhanced rsyslogd's file write performance by disabling
   file syncing capability of output modules by default. This
