@@ -129,5 +129,6 @@ relpRetVal relpSessTryReestablish(relpSess_t *pThis);
 relpRetVal relpSessSetProtocolVersion(relpSess_t *pThis, int protocolVersion);
 relpRetVal relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers);
 relpRetVal relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, int bEnabled);
+relpRetVal relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg);
 
 #endif /* #ifndef RELPSESS_H_INCLUDED */

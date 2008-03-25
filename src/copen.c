@@ -78,7 +78,8 @@ pFrame->pEngine->dbgprint("getCltOffer FeatNam '%s'\n", szFeatNam);
 		while(localRet == RELP_RET_OK && c != '\n') {
 			localRet = relpFrameGetNextC(pFrame, &c); /* eat the "=" or "," */
 			iVal = 0;
-			while(iVal < RELP_MAX_OFFER_FEATUREVALUE && c != ',' && localRet == RELP_RET_OK) {
+			while(   iVal < RELP_MAX_OFFER_FEATUREVALUE && localRet == RELP_RET_OK
+			      && c != ',' && c != '\n' ) {
 				szFeatVal[iVal++] = c;
 				localRet = relpFrameGetNextC(pFrame, &c);
 			}
@@ -86,6 +87,9 @@ pFrame->pEngine->dbgprint("getCltOffer FeatNam '%s'\n", szFeatNam);
 pFrame->pEngine->dbgprint("getCltOffer FeatVal '%s'\n", szFeatVal);
 			CHKRet(relpOfferValueAdd(szFeatVal, 0, pOffer));
 		}
+
+		if(localRet == RELP_RET_OK && c == '\n')
+			localRet = relpFrameGetNextC(pFrame, &c); /* eat '\n' */
 
 	}
 
@@ -128,8 +132,10 @@ selectOffers(relpSess_t *pSess, relpOffers_t *pCltOffers, relpOffers_t **ppSrvOf
 	for(pOffer = pCltOffers->pRoot ; pOffer != NULL ; pOffer = pOffer->pNext) {
 		pEngine->dbgprint("processing client offer '%s'\n", pOffer->szName);
 		if(!strcmp((char*)pOffer->szName, "relp_version")) {
+pEngine->dbgprint("relp_version ValRoot %p \n", pOffer->pValueRoot);
 			if(pOffer->pValueRoot == NULL)
 				ABORT_FINALIZE(RELP_RET_INVALID_OFFER);
+pEngine->dbgprint("relp_version Value %d \n", pOffer->pValueRoot->intVal);
 			if(pOffer->pValueRoot->intVal == -1)
 				ABORT_FINALIZE(RELP_RET_INVALID_OFFER);
 			if(pOffer->pValueRoot->intVal > pEngine->protocolVersion)

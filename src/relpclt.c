@@ -145,9 +145,10 @@ relpCltSendSyslog(relpClt_t *pThis, unsigned char *pMsg, size_t lenMsg)
 {
 
 	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Clt); /* TODO: less drastic check, we are called from external! */
+	if(pThis == NULL || pThis->objID != eRelpObj_Clt)
+		ABORT_FINALIZE(RELP_RET_INVALID_HDL);
 
-	CHKRet(relpSessSendCommand(pThis->pSess, (unsigned char*)"syslog", 6, pMsg, lenMsg, NULL));
+	CHKRet(relpSessSendSyslog(pThis->pSess, pMsg, lenMsg));
 
 finalize_it:
 	LEAVE_RELPFUNC;

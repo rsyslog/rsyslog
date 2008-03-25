@@ -764,3 +764,26 @@ finalize_it:
 
 	LEAVE_RELPFUNC;
 }
+
+
+/* ------------------------------ command handlers ------------------------------ */
+
+
+/* Send a syslog command.
+ * rgerhards, 2008-03-25
+ */
+relpRetVal
+relpSessSendSyslog(relpSess_t *pThis, unsigned char *pMsg, size_t lenMsg)
+{
+
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Clt);
+
+	if(pThis->bEnabledCmdSyslog != 1)
+		ABORT_FINALIZE(RELP_RET_CMD_DISABLED);
+
+	CHKRet(relpSessSendCommand(pThis, (unsigned char*)"syslog", 6, pMsg, lenMsg, NULL));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}

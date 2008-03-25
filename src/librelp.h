@@ -116,6 +116,7 @@ typedef enum relpObjID_e {
 #define RELP_RET_INVALID_OFFER	RELPERR_BASE + 21	/**< invalid offer (e.g. malformed) during open */
 #define RELP_RET_UNKNOWN_CMD	RELPERR_BASE + 22	/**< command is unknown (e.g. not in this version) */
 #define RELP_RET_CMD_DISABLED	RELPERR_BASE + 23	/**< tried to use a cmd that is disabled in this session */
+#define RELP_RET_INVALID_HDL	RELPERR_BASE + 24;	/**< invalid object handle (pointer) provided by caller */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
