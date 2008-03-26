@@ -1509,10 +1509,10 @@ static uchar *getNOW(eNOWType eNow)
 		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour);
 		break;
 	case NOW_HHOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour / 30);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute / 30);
 		break;
 	case NOW_QHOUR:
-		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.hour / 15);
+		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute / 15);
 		break;
 	case NOW_MINUTE:
 		snprintf((char*) pBuf, tmpBUFSIZE, "%2.2d", t.minute);
