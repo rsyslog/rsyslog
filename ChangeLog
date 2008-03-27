@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 2.0.4 STABLE (rgerhards), 2008-03-??
+Version 2.0.4 STABLE (rgerhards), 2008-03-27
 - bugfix: internally generated messages had "FROMHOST" property not set
 - bugfix: continue parsing if tag is oversize (discard oversize part) - thanks
   to mclaughlin77@gmail.com for the patch
