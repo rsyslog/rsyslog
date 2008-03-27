@@ -96,6 +96,7 @@ static rsRetVal addListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	if(pRelpEngine == NULL) {
 		CHKiRet(relpEngineConstruct(&pRelpEngine));
 		CHKiRet(relpEngineSetDbgprint(pRelpEngine, dbgprintf));
+		CHKiRet(relpEngineSetEnableCmd(pRelpEngine, (uchar*) "syslog", eRelpCmdState_Desired));
 		CHKiRet(relpEngineSetSyslogRcv(pRelpEngine, onSyslogRcv));
 	}
 
