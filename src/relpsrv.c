@@ -57,6 +57,7 @@ relpSrvConstruct(relpSrv_t **ppThis, relpEngine_t *pEngine)
 
 	RELP_CORE_CONSTRUCTOR(pThis, Srv);
 	pThis->pEngine = pEngine;
+	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
 
 pEngine->dbgprint("relp server %p constructed\n", pThis);
 
@@ -78,8 +79,6 @@ relpSrvDestruct(relpSrv_t **ppThis)
 	assert(ppThis != NULL);
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Srv);
-
-	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
 
 	if(pThis->pTcp != NULL)
 		relpTcpDestruct(&pThis->pTcp);
@@ -143,5 +142,32 @@ finalize_it:
 			relpTcpDestruct(&pTcp);
 	}
 
+	LEAVE_RELPFUNC;
+}
+
+
+/* Enable or disable a command. Note that a command can not be enabled once
+ * it has been set to forbidden! There will be no error return state in this
+ * case.
+ * rgerhards, 2008-03-27
+ */
+relpRetVal
+relpSrvSetEnableCmd(relpSrv_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	assert(pszCmd != NULL);
+
+pThis->pEngine->dbgprint("SRV SetEnableCmd in syslog cmd state: %d\n", pThis->stateCmdSyslog);
+	if(!strcmp((char*)pszCmd, "syslog")) {
+		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
+			pThis->stateCmdSyslog = stateCmd;
+	} else {
+		pThis->pEngine->dbgprint("tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
+		ABORT_FINALIZE(RELP_RET_UNKNOWN_CMD);
+	}
+
+finalize_it:
+pThis->pEngine->dbgprint("SRV SetEnableCmd out syslog cmd state: %d, iRet %d\n", pThis->stateCmdSyslog, iRet);
 	LEAVE_RELPFUNC;
 }

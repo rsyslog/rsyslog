@@ -71,6 +71,14 @@ typedef enum relpObjID_e {
 } relpObjID_t;
 
 
+enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/request? */
+	eRelpCmdState_Unset = 0, /**< calloc default, not desired, not forbidden */
+	eRelpCmdState_Forbidden = 1, /**< command is not permitted to be used */
+	eRelpCmdState_Desired = 2, /**< client/server intends to use this feature */
+	eRelpCmdState_Enabled = 3, /**< feature can be used (set during open handshake) */
+	eRelpCmdState_Disabled = 4  /**< feature can NOT be used (set during open handshake) */
+};
+
 
 /* macro to assert we are dealing with the right relp object */
 #ifdef NDEBUG
@@ -126,7 +134,7 @@ typedef enum relpObjID_e {
 #define CHKRet_Hdlr(code) if((iRet = code) != RELP_RET_OK)
 
 /* prototypes needed by library users */
-const char *relpEngineGetVersion(void); /* use this entry point for configure check */
+char *relpEngineGetVersion(void); /* use this entry point for configure check */
 relpRetVal relpEngineConstruct(relpEngine_t **ppThis);
 relpRetVal relpEngineDestruct(relpEngine_t **ppThis);
 relpRetVal relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __attribute__((format(printf, 1, 2))));
@@ -135,6 +143,7 @@ relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, size_t));
+relpRetVal relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);

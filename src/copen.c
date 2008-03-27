@@ -71,8 +71,11 @@ selectOffers(relpSess_t *pSess, relpOffers_t *pCltOffers, relpOffers_t **ppSrvOf
 				relpSessSetProtocolVersion(pSess, pOffer->pValueRoot->intVal);
 		} else if(!strcmp((char*)pOffer->szName, "commands")) {
 			for(pOfferVal = pOffer->pValueRoot ; pOfferVal != NULL ; pOfferVal = pOfferVal->pNext) {
-				/* we do not care about return code in this case */
-				relpSessSetEnableCmd(pSess, pOfferVal->szVal, 1);
+pSess->pEngine->dbgprint("cmd syslog state in srv session: %d\n", pSess->stateCmdSyslog);
+				if(pSess->stateCmdSyslog == eRelpCmdState_Desired) {
+					/* we do not care about return code in this case */
+					relpSessSetEnableCmd(pSess, pOfferVal->szVal, eRelpCmdState_Enabled);
+				}
 			}
 		} else if(!strcmp((char*)pOffer->szName, "relp_software")) {
 			/* we know this parameter, but we do not do anything

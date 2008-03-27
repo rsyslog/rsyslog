@@ -157,7 +157,7 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 	/* TODO: check hostname against ACL (callback?) */
 	/* TODO: check against max# sessions */
 #warning need to provide real command-enabling code!
-	CHKRet(relpSessSetEnableCmd(pThis, (unsigned char*) "syslog", eRelpCmdState_Desired));
+	CHKRet(relpSessSetEnableCmd(pThis, (unsigned char*) "syslog", pSrv->stateCmdSyslog));
 
 	*ppThis = pThis;
 
@@ -774,6 +774,7 @@ relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t
 	RELPOBJ_assert(pThis, Sess);
 	assert(pszCmd != NULL);
 
+pThis->pEngine->dbgprint("SetEnableCmd in syslog cmd state: %d\n", pThis->stateCmdSyslog);
 	if(!strcmp((char*)pszCmd, "syslog")) {
 		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
 			pThis->stateCmdSyslog = stateCmd;
@@ -783,6 +784,7 @@ relpSessSetEnableCmd(relpSess_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t
 	}
 
 finalize_it:
+pThis->pEngine->dbgprint("SetEnableCmd out syslog cmd state: %d, iRet %d\n", pThis->stateCmdSyslog, iRet);
 	LEAVE_RELPFUNC;
 }
 
@@ -812,7 +814,7 @@ pThis->pEngine->dbgprint("ConstructOffers syslog cmd state: %d\n", pThis->stateC
 
 	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "relp_software", pOffers));
 	CHKRet(relpOfferValueAdd((unsigned char*) "http://librelp.adiscon.com", pThis->protocolVersion, pOffer));
-	CHKRet(relpOfferValueAdd((unsigned char*) VERSION, pThis->protocolVersion, pOffer));
+	CHKRet(relpOfferValueAdd((unsigned char*) relpEngineGetVersion(), pThis->protocolVersion, pOffer));
 	CHKRet(relpOfferValueAdd((unsigned char*) "librelp", pThis->protocolVersion, pOffer));
 
 	/* just for cosmetic reasons: do relp_version last, so that it shows up

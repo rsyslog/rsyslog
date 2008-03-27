@@ -45,6 +45,9 @@ struct relpSrv_s {
 	unsigned char *pLstnPort;
 	relpTcp_t *pTcp; /**< our tcp support object */
 	size_t maxDataSize;  /**< maximum size of a DATA element */
+
+	/* Status of commands as supported in this session. */
+	relpCmdEnaState_t stateCmdSyslog;
 };
 
 

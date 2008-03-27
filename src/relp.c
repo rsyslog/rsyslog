@@ -477,35 +477,42 @@ finalize_it:
 }
 
 
-#warning need to implement this!!!
-#if 0
-/** flag a command as desired for the engine.
- * rgerhards, 2008-03-25
- */
-relpRetVal
-relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pCmd, eRelpCmdState_t state)
-{
-	ENTER_RELPFUNC;
-	RELPOBJ_assert(pThis, Engine);
-	assert(pCmd != NULL);
-
-	CHKRet(relpSessSetEnableCmd(pThis->pSess, (unsigned char*) "syslog", eRelpCmdState_Desired));
-
-finalize_it:
-	LEAVE_RELPFUNC;
-}
-#endif
-
-
 /* return a version string for librelp. This is also meant to be used during
  * a configure library entry point check.
  * rgerhards, 2008-03-25
  */
-const char *relpEngineGetVersion(void)
+char *relpEngineGetVersion(void)
 {
 #	ifdef DEBUG
 		return VERSION "(debug mode)";
 #	else
 		return VERSION;
 #	endif
+}
+
+
+/* Enable or disable a command. Note that a command can not be enabled once
+ * it has been set to forbidden! There will be no error return state in this
+ * case.
+ * rgerhards, 2008-03-27
+ */
+relpRetVal
+relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+	assert(pszCmd != NULL);
+
+pThis->dbgprint("ENGINE SetEnableCmd in syslog cmd state: %d\n", pThis->stateCmdSyslog);
+	if(!strcmp((char*)pszCmd, "syslog")) {
+		if(pThis->stateCmdSyslog != eRelpCmdState_Forbidden)
+			pThis->stateCmdSyslog = stateCmd;
+	} else {
+		pThis->dbgprint("tried to set unknown command '%s' to %d\n", pszCmd, stateCmd);
+		ABORT_FINALIZE(RELP_RET_UNKNOWN_CMD);
+	}
+
+finalize_it:
+pThis->dbgprint("ENGINE SetEnableCmd out syslog cmd state: %d, iRet %d\n", pThis->stateCmdSyslog, iRet);
+	LEAVE_RELPFUNC;
 }

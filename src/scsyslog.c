@@ -45,8 +45,11 @@ BEGINcommand(S, Syslog)
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in 'syslog' command handler\n");
 
-	// TODO: implement
-pSess->pEngine->dbgprint("onSyslogRcv %p\n", pSess->pEngine->onSyslogRcv);
+	if(pSess->stateCmdSyslog != eRelpCmdState_Enabled) {
+		relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "500 command disabled", 20);
+		ABORT_FINALIZE(RELP_RET_CMD_DISABLED);
+	}
+
 	iRet = pSess->pEngine->onSyslogRcv(pFrame->pData, pFrame->lenData);
 
 	/* send response */
