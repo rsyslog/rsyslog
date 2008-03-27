@@ -423,7 +423,6 @@ if((pSendbuf->pData = malloc(pSendbuf->lenData + (9 - lenTxnr) + 1)) == NULL)
 		*ptrMembuf++ = ' ';
 		memcpy(ptrMembuf, pData, lenData); ptrMembuf += lenData;
 	}
-pSess->pEngine->dbgprint("sendbuf end, ptrMembuf %p\n", ptrMembuf);
 
 	*ptrMembuf = '\n';
 *++ptrMembuf = '\0'; /* just for  the dbgprint below */
