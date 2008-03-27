@@ -168,6 +168,17 @@ finalize_it:
 }
 
 
+/* The following is a cancel cleanup handler for strmReadLine(). It is necessary in case
+ * strmReadLine() is cancelled while processing the stream. -- rgerhards, 2008-03-27
+ */
+static void pollFileCancelCleanup(void *pArg)
+{
+	BEGINfunc;
+	cstr_t **ppCStr = (cstr_t**) pArg;
+	if(*ppCStr != NULL)
+		rsCStrDestruct(ppCStr);
+	ENDfunc;
+}
 /* poll a file, need to check file rollover etc. open file if not open */
 static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 {
@@ -180,6 +191,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 		CHKiRet(openFile(pThis)); /* open file */
 	}
 
+	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(1) {
 		CHKiRet(strmReadLine(pThis->pStrm, &pCStr));
@@ -187,6 +199,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
 	}
+	pthread_cleanup_pop(0);
 
 finalize_it:
 	if(pCStr != NULL) {
@@ -333,6 +346,9 @@ persistStrmState(fileInfo_t *pInfo)
 	CHKiRet(strmDestruct(&psSF));
 
 finalize_it:
+	if(psSF != NULL)
+		strmDestruct(&psSF);
+
 	RETiRet;
 }
 

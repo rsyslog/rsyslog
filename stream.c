@@ -345,33 +345,34 @@ rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
 
 /* read a line from a strm file. A line is terminated by LF. The LF is read, but it
  * is not returned in the buffer (it is discared). The caller is responsible for
- * destruction of the returned CStr object!
- * rgerhards, 2008-01-07
+ * destruction of the returned CStr object! -- rgerhards, 2008-01-07
+ * rgerhards, 2008-03-27: I now use the ppCStr directly, without any interim
+ * string pointer. The reason is that this function my be called by inputs, which
+ * are pthread_killed() upon termination. So if we use their native pointer, they
+ * can cleanup (but only then).
  */
 rsRetVal
 strmReadLine(strm_t *pThis, cstr_t **ppCStr)
 {
 	DEFiRet;
 	uchar c;
-	cstr_t *pCStr = NULL;
 
 	ASSERT(pThis != NULL);
 	ASSERT(ppCStr != NULL);
 
-	CHKiRet(rsCStrConstruct(&pCStr));
+	CHKiRet(rsCStrConstruct(ppCStr));
 
 	/* now read the line */
 	CHKiRet(strmReadChar(pThis, &c));
 	while(c != '\n') {
-		CHKiRet(rsCStrAppendChar(pCStr, c));
+		CHKiRet(rsCStrAppendChar(*ppCStr, c));
 		CHKiRet(strmReadChar(pThis, &c));
 	}
-	CHKiRet(rsCStrFinish(pCStr));
-	*ppCStr = pCStr;
+	CHKiRet(rsCStrFinish(*ppCStr));
 
 finalize_it:
-	if(iRet != RS_RET_OK && pCStr != NULL)
-		rsCStrDestruct(&pCStr);
+	if(iRet != RS_RET_OK && *ppCStr != NULL)
+		rsCStrDestruct(ppCStr);
 
 	RETiRet;
 }
@@ -421,6 +422,12 @@ CODESTARTobjDestruct(strm)
 
 	if(pThis->pszDir != NULL)
 		free(pThis->pszDir);
+	if(pThis->pIOBuf != NULL)
+		free(pThis->pIOBuf);
+	if(pThis->pszCurrFName != NULL)
+		free(pThis->pszCurrFName);
+	if(pThis->pszFName != NULL)
+		free(pThis->pszFName);
 ENDobjDestruct(strm)
 
 
@@ -674,6 +681,9 @@ strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
 	
 	if(iLenName < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
+
+	if(pThis->pszFName != NULL)
+		free(pThis->pszFName);
 
 	if((pThis->pszFName = malloc(sizeof(uchar) * iLenName + 1)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
