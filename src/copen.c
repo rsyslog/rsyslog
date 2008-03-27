@@ -30,6 +30,7 @@
  * free software while at the same time obtaining some development funding.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -72,7 +73,8 @@ selectOffers(relpSess_t *pSess, relpOffers_t *pCltOffers, relpOffers_t **ppSrvOf
 		} else if(!strcmp((char*)pOffer->szName, "commands")) {
 			for(pOfferVal = pOffer->pValueRoot ; pOfferVal != NULL ; pOfferVal = pOfferVal->pNext) {
 pSess->pEngine->dbgprint("cmd syslog state in srv session: %d\n", pSess->stateCmdSyslog);
-				if(pSess->stateCmdSyslog == eRelpCmdState_Desired) {
+				if(   pSess->stateCmdSyslog == eRelpCmdState_Desired
+				   || pSess->stateCmdSyslog == eRelpCmdState_Required) {
 					/* we do not care about return code in this case */
 					relpSessSetEnableCmd(pSess, pOfferVal->szVal, eRelpCmdState_Enabled);
 				}
@@ -91,10 +93,24 @@ pSess->pEngine->dbgprint("cmd syslog state in srv session: %d\n", pSess->stateCm
 		}
 	}
 
-	/* now we have processed the client offers, so now we can construct
+	/* now we have processed the client offers, so now we can check if it supports
+	 * everything that we required. A required feature is detected by the "Required"
+	 * state still being set. If the client would support it, it by now would have
+	 * changed to "Enabled". Also, while we are at it, we change those feature to
+	 * disabled which are still just "desired" - the client obviously had a different
+	 * desire and so we can not use them ;) -- rgerhards, 2008-03-27
+	 */
+	if(pSess->stateCmdSyslog == eRelpCmdState_Required) {
+		ABORT_FINALIZE(RELP_RET_RQD_FEAT_MISSING);
+	}
+	if(pSess->stateCmdSyslog == eRelpCmdState_Desired) {
+		CHKRet(relpSessSetEnableCmd(pSess, (unsigned char *)"syslog", eRelpCmdState_Disabled));
+	}
+
+	
+
+	/* We are happy with the client offers, so now we can construct
 	 * our own offers based on what is set in the session parameters.
-	 * TODO: move this to the session object? May also be used during
-	 * client connect...
 	 */
 	CHKRet(relpSessConstructOffers(pSess, ppSrvOffers));
 
@@ -111,6 +127,8 @@ BEGINcommand(S, Init)
 	relpOffers_t *pSrvOffers = NULL;
 	unsigned char *pszSrvOffers = NULL;
 	size_t lenSrvOffers;
+	char szErrMsg[80];
+	size_t lenErrMsg;
 
 	ENTER_RELPFUNC;
 	pSess->pEngine->dbgprint("in open command handler\n");
@@ -129,4 +147,16 @@ finalize_it:
 		relpOffersDestruct(&pCltOffers);
 	if(pSrvOffers != NULL)
 		relpOffersDestruct(&pSrvOffers);
+	
+	if(iRet != RELP_RET_OK) {
+		if(iRet == RELP_RET_RQD_FEAT_MISSING) {
+			strncpy(szErrMsg, "500 required command not supported by client", sizeof(szErrMsg));
+			lenErrMsg = 44;
+		} else {
+			lenErrMsg = snprintf(szErrMsg, sizeof(szErrMsg), "500 error %d on connect", iRet);
+		}
+		if(lenErrMsg > sizeof(szErrMsg))
+			lenErrMsg = 80; /* truncate */
+		relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*)szErrMsg, lenErrMsg);
+	}
 ENDcommand
