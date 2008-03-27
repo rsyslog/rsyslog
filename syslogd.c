@@ -89,9 +89,6 @@
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define TIMERINTVL	30		/* interval for checking flush, mark */
 
-#ifdef MTRACE
-#include <mcheck.h>
-#endif
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -303,10 +300,6 @@ static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape seq
 static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
-static int	logEveryMsg = 0;/* no repeat message processing  - read-only after startup
-				 * 0 - suppress duplicate messages
-				 * 1 - do NOT suppress duplicate messages
-				 */
 uchar *pszWorkDir = NULL;/* name of rsyslog's spool directory (without trailing slash) */
 /* end global config file state variables */
 
@@ -319,8 +312,6 @@ static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only aft
 int	DisableDNS = 0; /* don't look up IP addresses of remote messages */
 char	**StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
-int	NoHops = 1;	/* Can we bounce syslog messages through an
-				   intermediate host.  Read-only after startup */
 static int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
 				 * If the main queue is either not yet ready or not running in 
 				 * queueing mode (mode DIRECT!), then this is set to 0.
@@ -388,7 +379,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDebugPrintCfSysLineHandlerList = 1;
 	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
-	bReduceRepeatMsgs = (logEveryMsg == 1) ? 0 : 1;
+	bReduceRepeatMsgs = 0;
 	bDropMalPTRMsgs = 0;
 	if(pszWorkDir != NULL) {
 		free(pszWorkDir);
@@ -445,16 +436,12 @@ static void freeSelectors(void);
 static void processImInternal(void);
 
 
-
 static int usage(void)
 {
-	fprintf(stderr, "usage: rsyslogd [-46AdhqQvw] [-cversion] [-lhostlist] [-mmarkinterval] [-n] [-p path]\n" \
-		" [-s domainlist] [-r[port]] [-tport[,max-sessions]] [-gport[,max-sessions]] [-f conffile] [-i pidfile] [-x]\n\n");
-	fprintf(stderr, "The following options are deprecated and are provided\n"
- 		        "for compatibility reasons only:\n"
-			"-mmarkinterval\n\n"
-			"For further information see http://www.rsyslog.com/doc\n"
-	       );
+	fprintf(stderr, "usage: rsyslogd [-cversion] [-46AdnqQvwx] [-lhostlist] [-sdomainlist]\n"
+			"                [-fconffile] [-ipidfile]\n"
+			"To run rsyslogd in native mode, use \"rsyslogd -c3 <other options>\"\n\n"
+			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
 
@@ -1778,8 +1765,11 @@ void legacyOptsHook(void)
 	legacyOptsLL_t *pThis = pLegacyOptsLL;
 
 	while(pThis != NULL) {
-		if(pThis->line != NULL)
+		if(pThis->line != NULL) {
+			errmsg.LogError(NO_ERRCODE, "Warning: backward compatibility layer added to following "
+				        "directive to rsyslog.conf: %s", pThis->line);
 			conf.cfsysline(pThis->line);
+		}
 		pThis = pThis->next;
 	}
 }
@@ -1805,9 +1795,9 @@ void legacyOptsParseTCP(char ch, char *arg)
 	/* number of sessions */
 	if(*pArg == '\0' || *pArg == ',') {
 		if(ch == 't')
-			legacyOptsEnq((uchar *) "ModLoad imtcp.so");
+			legacyOptsEnq((uchar *) "ModLoad imtcp");
 		else if(ch == 'g')
-			legacyOptsEnq((uchar *) "ModLoad imgssapi.so");
+			legacyOptsEnq((uchar *) "ModLoad imgssapi");
 
 		if(i >= 0 && i <= 65535) {
 			uchar line[30];
@@ -1832,6 +1822,7 @@ void legacyOptsParseTCP(char ch, char *arg)
 			++pArg;
 			while(isspace((int) *pArg))
 				++pArg;
+			i = 0;
 			while(isdigit((int) *pArg)) {
 				i = i * 10 + *pArg++ - '0';
 			}
@@ -2794,9 +2785,10 @@ static void printVersion(void)
  */
 static void mainThread()
 {
-	DEFiRet;
+	BEGINfunc
 	uchar *pTmp;
 
+#if 0 // code moved back to main()
 	/* doing some core initializations */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
 		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
@@ -2809,6 +2801,7 @@ static void mainThread()
 			iRet);
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
+#endif
 
 	/* Note: signals MUST be processed by the thread this code is running in. The reason
 	 * is that we need to interrupt the select() system call. -- rgerhards, 2007-10-17
@@ -2985,13 +2978,25 @@ int realMain(int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	struct sigaction sigAct;
-
-#ifdef	MTRACE
-	mtrace(); /* this is a debug aid for leak detection - either remove
-	           * or put in conditional compilation. 2005-01-18 RGerhards */
-#endif
+	int bIsFirstOption = 1;
+	int bEOptionWasGiven = 0;
+	int bImUxSockLoaded = 0; /* already generated a $ModLoad imuxsock? */
+	uchar legacyConfLine[80];
 
 	CHKiRet(InitGlobalClasses());
+
+	/* doing some core initializations */
+	if((iRet = modInitIminternal()) != RS_RET_OK) {
+		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
+			iRet);
+		exit(1); /* "good" exit, leaving at init for fatal error */
+	}
+
+	if((iRet = loadBuildInModules()) != RS_RET_OK) {
+		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
+			iRet);
+		exit(1); /* "good" exit, leaving at init for fatal error */
+	}
 
 	ppid = getpid();
 
@@ -3011,14 +3016,32 @@ int realMain(int argc, char **argv)
                 case 'A':
                         send_to_all++;
                         break;
+                case 'a':
+			if(iCompatibilityMode < 3) {
+				if(!bImUxSockLoaded) {
+					legacyOptsEnq((uchar *) "ModLoad imuxsock");
+					bImUxSockLoaded = 1;
+				}
+				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "addunixlistensocket %s", optarg);
+				legacyOptsEnq(legacyConfLine);
+			} else {
+				fprintf(stderr, "error -a is no longer supported, use module imuxsock instead");
+			}
+                        break;
 		case 'c':		/* compatibility mode */
+			if(!bIsFirstOption) {
+				fprintf(stderr, "-c option MUST be specified as the first option - aborting...\n");
+				usage();
+				exit(1);
+			}
 			iCompatibilityMode = atoi(optarg);
 			break;
 		case 'd':		/* debug */
 			Debug = 1;
 			break;
 		case 'e':		/* log every message (no repeat message supression) */
-			logEveryMsg = 1;
+			fprintf(stderr, "note: -e option is no longer supported, every message is now logged by default\n");
+			bEOptionWasGiven = 1;
 			break;
 		case 'f':		/* configuration file */
 			ConfFile = (uchar*) optarg;
@@ -3034,23 +3057,26 @@ int realMain(int argc, char **argv)
 #endif
 			break;
 		case 'h':
-			NoHops = 0;
+			if(iCompatibilityMode < 3) {
+				errmsg.LogError(NO_ERRCODE, "WARNING: -h option is no longer supported - ignored");
+			} else {
+				usage(); /* for v3 and above, it simply is an error */
+			}
 			break;
 		case 'i':		/* pid file name */
 			PidFile = optarg;
 			break;
 		case 'l':
 			if (LocalHosts) {
-				fprintf (stderr, "rsyslogd: Only one -l argument allowed," \
-					"the first one is taken.\n");
+				fprintf (stderr, "rsyslogd: Only one -l argument allowed, the first one is taken.\n");
 			} else {
 				LocalHosts = crunch_list(optarg);
 			}
 			break;
 		case 'm':		/* mark interval */
-			if(iCompatibilityMode < 3)
+			if(iCompatibilityMode < 3) {
 				MarkInterval = atoi(optarg) * 60;
-			else
+			} else
 				fprintf(stderr,
 					"-m option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
@@ -3060,6 +3086,28 @@ int realMain(int argc, char **argv)
 		case 'n':		/* don't fork */
 			NoFork = 1;
 			break;
+                case 'o':
+			if(iCompatibilityMode < 3) {
+				if(!bImUxSockLoaded) {
+					legacyOptsEnq((uchar *) "ModLoad imuxsock");
+					bImUxSockLoaded = 1;
+				}
+				legacyOptsEnq((uchar *) "OmitLocaLogging");
+			} else {
+				fprintf(stderr, "error -o is no longer supported, use module imuxsock instead");
+			}
+                        break;
+                case 'p':
+			if(iCompatibilityMode < 3) {
+				if(!bImUxSockLoaded) {
+					legacyOptsEnq((uchar *) "ModLoad imuxsock");
+					bImUxSockLoaded = 1;
+				}
+				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "SystemLogSocketName %s", optarg);
+				legacyOptsEnq(legacyConfLine);
+			} else {
+				fprintf(stderr, "error -p is no longer supported, use module imuxsock instead");
+			}
 		case 'q':               /* add hostname if DNS resolving has failed */
 		        *net.pACLAddHostnameOnFail = 1;
 		        break;
@@ -3069,12 +3117,9 @@ int realMain(int argc, char **argv)
 		case 'r':		/* accept remote messages */
 #ifdef SYSLOG_INET
 			if(iCompatibilityMode < 3) {
-				uchar line[30];
-
-				legacyOptsEnq((uchar *) "ModLoad imudp.so");
-
-				snprintf((char *) line, sizeof(line), "UDPServerRun %s", optarg);
-				legacyOptsEnq(line);
+				legacyOptsEnq((uchar *) "ModLoad imudp");
+				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "UDPServerRun %s", optarg);
+				legacyOptsEnq(legacyConfLine);
 			} else
 				fprintf(stderr,
 					"-r option only supported in compatibility modes 0 to 2 - ignored\n");
@@ -3084,8 +3129,7 @@ int realMain(int argc, char **argv)
 			break;
 		case 's':
 			if (StripDomains) {
-				fprintf (stderr, "rsyslogd: Only one -s argument allowed," \
-					"the first one is taken.\n");
+				fprintf (stderr, "rsyslogd: Only one -s argument allowed, the first one is taken.\n");
 			} else {
 				StripDomains = crunch_list(optarg);
 			}
@@ -3117,6 +3161,7 @@ int realMain(int argc, char **argv)
 		default:
 			usage();
 		}
+		bIsFirstOption = 0; /* we already saw an option character */
 	}
 
 	if ((argc -= optind))
@@ -3126,7 +3171,25 @@ int realMain(int argc, char **argv)
 	 * rgerhards, 2007-12-19
 	 */
 	if(iCompatibilityMode < 3) {
-		fprintf(stderr, "Warning: compatibility modes < 3 are currently NOT supported - continuing...\n");
+		errmsg.LogError(NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
+		                            "generated config directives may interfer with your rsyslog.conf settings. "
+					    "We suggest upgrading your config and adding -c3 as the first "
+					    "rsyslogd option.");
+		if(MarkInterval > 0) {
+			legacyOptsEnq((uchar *) "ModLoad immark");
+			snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "MarkMessagePeriod %d", MarkInterval);
+			legacyOptsEnq(legacyConfLine);
+		}
+		if(!bImUxSockLoaded) {
+			legacyOptsEnq((uchar *) "ModLoad imuxsock");
+		}
+	}
+
+	if(bEOptionWasGiven && iCompatibilityMode < 3) {
+		errmsg.LogError(NO_ERRCODE, "WARNING: \"message repeated n times\" feature MUST be turned on in "
+					    "rsyslog.conf - CURRENTLY EVERY MESSAGE WILL BE LOGGED. Visit "
+					    "http://www.rsyslog.com/PNphpBB2-viewtopic-t-222.phtml to learn "
+					    "more and cast your vote if you want us to keep this feature.");
 	}
 
 	checkPermissions();
