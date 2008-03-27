@@ -78,6 +78,8 @@ relpSendqeDestruct(relpSendqe_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sendqe);
 
+	relpSendbufDestruct(&pThis->pBuf);
+
 	/* done with de-init work, now free sendqe object itself */
 	free(pThis);
 	*ppThis = NULL;
