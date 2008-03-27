@@ -4,6 +4,15 @@ Version 3.12.5 (rgerhards), 2008-03-??
 - bugfix: fixed memory leaks in stream class and imfile
 - bugfix: $ModDir did invalid bounds checking, potential overlow in
   dbgprintf() - thanks to varmojfekoj for the patch
+- changed default for "last message repeated n times", which is now
+  off by default
+- implemented backward compatibility commandline option parsing
+- bugfix: -t and -g legacy options max number of sessions had a wrong
+  and much too high value
+- automatically generated compatibility config lines are now also
+  logged so that a user can diagnose problems with them
+- added compatibility mode for -a, -o and -p options
+- MILESTONE: compatibility mode processing finished
 ---------------------------------------------------------------------------
 Version 3.12.4 (rgerhards), 2008-03-25
 - Greatly enhanced rsyslogd's file write performance by disabling
