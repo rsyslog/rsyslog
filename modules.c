@@ -554,8 +554,8 @@ Load(uchar *pModName)
 {
 	DEFiRet;
 	
-        uchar szPath[512];
-        uchar errMsg[1024];
+	size_t iPathLen;
+	uchar szPath[PATH_MAX];
 	uchar *pModNameBase;
 	uchar *pModNameDup;
 	uchar *pExtension;
@@ -582,12 +582,25 @@ Load(uchar *pModName)
 	/* now build our load module name */
 	if(*pModName == '/') {
 		*szPath = '\0';	/* we do not need to append the path - its already in the module name */
+		iPathLen = 0;
 	} else {
-		strncpy((char *) szPath, (pModDir == NULL) ? _PATH_MODDIR : (char*) pModDir, sizeof(szPath));
+		*szPath = '\0';
+		strncat((char *) szPath, (pModDir == NULL) ? _PATH_MODDIR : (char*) pModDir, sizeof(szPath) - 1);
+		iPathLen = strlen((char*) szPath);
+		if((szPath[iPathLen - 1] != '/')) {
+			if((iPathLen <= sizeof(szPath) - 2)) {
+				szPath[iPathLen++] = '/';
+				szPath[iPathLen] = '\0';
+			} else {
+				errmsg.LogError(NO_ERRCODE, "could not load module '%s', path too long\n", pModName);
+				free(pModNameDup);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+		}
 	}
 
 	/* ... add actual name ... */
-	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - strlen((char*) szPath) - 1);
+	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - iPathLen - 1);
 
 	/* now see if we have an extension and, if not, append ".so" */
 	for(pExtension = pModNameBase ; *pExtension && *pExtension != '.' ; ++pExtension)
@@ -600,28 +613,28 @@ Load(uchar *pModName)
 		 */
 		/* ... so now add the extension */
 		strncat((char *) szPath, ".so", sizeof(szPath) - strlen((char*) szPath) - 1);
+		iPathLen += 3;
 	}
 	free(pModNameDup);
+
+	if(iPathLen + strlen((char*) pModName) >= sizeof(szPath)) {
+		errmsg.LogError(NO_ERRCODE, "could not load module '%s', path too long\n", pModName);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 	/* complete load path constructed, so ... GO! */
 	dbgprintf("loading module '%s'\n", szPath);
 	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
-		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlopen: %s\n", szPath, dlerror());
-		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
-		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+		errmsg.LogError(NO_ERRCODE, "could not load module '%s', dlopen: %s\n", szPath, dlerror());
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
-		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', dlsym: %s\n", szPath, dlerror());
-		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
-		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+		errmsg.LogError(NO_ERRCODE, "could not load module '%s', dlsym: %s\n", szPath, dlerror());
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK) {
-		snprintf((char *) errMsg, sizeof(errMsg), "could not load module '%s', rsyslog error %d\n", szPath, iRet);
-		errMsg[sizeof(errMsg)/sizeof(uchar) - 1] = '\0';
-		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+		errmsg.LogError(NO_ERRCODE, "could not load module '%s', rsyslog error %d\n", szPath, iRet);
 		dlclose(pModHdlr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}

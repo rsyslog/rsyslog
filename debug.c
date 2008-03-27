@@ -818,7 +818,7 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
 		/* if our buffer was too small, we simply truncate. TODO: maybe something better? */
-		lenWriteBuf--;
+		lenWriteBuf = sizeof(pszWriteBuf) - 1;
 	}
 	va_end(ap);
 	/*
@@ -892,7 +892,7 @@ dbgprintf(char *fmt, ...)
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
 	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
 		/* if our buffer was too small, we simply truncate. TODO: maybe something better? */
-		lenWriteBuf--;
+		lenWriteBuf = sizeof(pszWriteBuf) - 1;
 	}
 	va_end(ap);
 	/*

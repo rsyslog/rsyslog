@@ -1,6 +1,9 @@
 ---------------------------------------------------------------------------
 Version 3.12.5 (rgerhards), 2008-03-??
 - bugfix: QHOUR and HHOUR properties were wrongly calculated
+- bugfix: fixed memory leaks in stream class and imfile
+- bugfix: $ModDir did invalid bounds checking, potential overlow in
+  dbgprintf() - thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 3.12.4 (rgerhards), 2008-03-25
 - Greatly enhanced rsyslogd's file write performance by disabling
