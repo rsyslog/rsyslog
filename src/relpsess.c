@@ -68,6 +68,9 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 
 	RELP_CORE_CONSTRUCTOR(pThis, Sess);
 	pThis->pEngine = pEngine;
+	/* use Engine's command enablement states as default */
+pThis->pEngine->dbgprint("sess construct, cmd state %d\n", pEngine->stateCmdSyslog);
+	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
 	pThis->pSrv = pSrv;
 	pThis->txnr = 1; /* txnr start at 1 according to spec */
 	pThis->timeout = 10; /* TODO: make configurable */
@@ -156,8 +159,6 @@ relpSessAcceptAndConstruct(relpSess_t **ppThis, relpSrv_t *pSrv, int sock)
 
 	/* TODO: check hostname against ACL (callback?) */
 	/* TODO: check against max# sessions */
-#warning need to provide real command-enabling code!
-	CHKRet(relpSessSetEnableCmd(pThis, (unsigned char*) "syslog", pSrv->stateCmdSyslog));
 
 	*ppThis = pThis;
 
@@ -437,7 +438,7 @@ relpSessWaitState(relpSess_t *pThis, relpSessState_t stateExpected, int timeout)
 		FD_SET(sock, &readfds);
 pThis->pEngine->dbgprint("relpSessWaitRsp waiting for data on fd %d, timeout %d.%d\n", sock, (int) tvSelect.tv_sec, (int) tvSelect.tv_usec);
 		nfds = select(sock+1, (fd_set *) &readfds, NULL, NULL, &tvSelect);
-pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d, err %s\n", nfds, strerror(errno));
+pThis->pEngine->dbgprint("relpSessWaitRsp select returns, nfds %d, errno %d\n", nfds, errno);
 		/* we don't check if we had a timeout - we give it one last chance */
 		CHKRet(relpSessRcvData(pThis));
 pThis->pEngine->dbgprint("iRet after relpSessRcvData %d\n", iRet);

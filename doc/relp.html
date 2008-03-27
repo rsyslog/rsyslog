@@ -163,14 +163,16 @@ needs to be used.
 </p>
 <p>Note that the connection is only ready AFTER the client has
 received&nbsp;the "open" response.</p>
-<h4>Command "syslog"</h4>
-This command is used to transmit a syslog message, which (in syslog
-message format) is contained within the commands data portion.
 <h4>Command "close"</h4>
 Closes a connection to the server. Once the client has sent a "close"
 command, it must not transmit any other command over the session. When
 the server's rsp answer is received, the client must close the
-connection.
+connection.<h4>Command "starttls"</h4>
+Does the same thing as ESMTP STARTTLS: switches the connection
+to TLS mode.
+<h4>Command "syslog"</h4>
+This command is used to transmit a syslog message, which (in syslog
+message format) is contained within the commands data portion.
 <h3>OFFERS</h3>
 During session setup, "offers" are exchange between client and server.
 An "offer" describes
@@ -188,15 +190,17 @@ intial version is 1. There also exists an experimental version 0, which
 shall not be used in practice.
 </p>
 <h4>commands</h4>
-<p>This offer describes which commands are supported by the remote
-peer. Command that must be specified to drive the RELP protocol itself
-(e.g. "open", "close", "rsp") MUST NOT be specified. Optional commands
-must be specified. There may be multiple commands specified.</p><p>Sample: commands=syslog,eventlog (eventlog is a hypothetical, not yet known command).</p><p>Please
-note that new commands may be specified outside of the relp
-specification. Also note that if the server response does not include
-the command the client is interested in, this command MUST NOT be used.
-The client may then either resort to another, less featured supported
-command or may terminate the relp connection.
+<p>This offer describes which commands are supported by the
+remote peer. Command that must be specified to drive the RELP protocol
+itself (e.g. "open", "close", "rsp") MUST NOT be specified. Optional
+commands must be specified. There may be multiple commands specified.</p>
+<p>Sample: commands=syslog,eventlog (eventlog is a hypothetical,
+not yet known command).</p>
+<p>Please note that new commands may be specified outside of the
+relp specification. Also note that if the server response does not
+include the command the client is interested in, this command MUST NOT
+be used. The client may then either resort to another, less featured
+supported command or may terminate the relp connection.
 </p>
 <h4>relp_software</h4>
 <p>This offer describes the software (library) that is processing
