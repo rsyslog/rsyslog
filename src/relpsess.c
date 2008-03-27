@@ -598,7 +598,7 @@ static relpRetVal
 relpSessCBrspOpen(relpSess_t *pThis, relpFrame_t *pFrame)
 {
 	relpEngine_t *pEngine;
-	relpOffers_t *pOffers;
+	relpOffers_t *pOffers = NULL;
 	relpOffer_t *pOffer;
 	relpOfferValue_t *pOfferVal;
 
@@ -649,6 +649,9 @@ relpSessCBrspOpen(relpSess_t *pThis, relpFrame_t *pFrame)
 	relpSessSetSessState(pThis, eRelpSessState_INIT_RSP_RCVD);
 
 finalize_it:
+	if(pOffers != NULL)
+		relpOffersDestruct(&pOffers);
+
 	LEAVE_RELPFUNC;
 }
 
