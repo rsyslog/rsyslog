@@ -384,8 +384,10 @@ relpOffersConstructFromFrame(relpOffers_t **ppOffers, relpFrame_t *pFrame)
 				szFeatVal[iVal++] = c;
 				localRet = relpFrameGetNextC(pFrame, &c);
 			}
-			szFeatVal[iVal] = '\0'; /* space is reserved for this */
-			CHKRet(relpOfferValueAdd(szFeatVal, 0, pOffer));
+			if(iVal > 0) { /* only set feature if one is actually given */
+				szFeatVal[iVal] = '\0'; /* space is reserved for this */
+				CHKRet(relpOfferValueAdd(szFeatVal, 0, pOffer));
+			}
 		}
 
 		if(localRet == RELP_RET_OK && c == '\n')
