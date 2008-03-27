@@ -351,73 +351,61 @@ CODESTARTdoAction
 				pData->pSockArray = net.create_udp_socket((uchar*)pData->f_hname, NULL, 0);
 			}
 		}
-		if ( 0) // TODO: think about this strcmp(getHOSTNAME(f->f_pMsg), LocalHostName) && NoHops )
-		/* what we need to do is get the hostname as an additonal string (during parseSe..). Then,
-		 * we can compare that string to LocalHostName. That way, we do not need to access the
-		 * msgobject, and everything is clean. The question remains, though, if that functionality
-		 * here actually makes sense or not. If we really need it, it might make more sense to compare
-		 * the target IP address to the IP addresses of the local machene - that is a far better way of
-		 * handling things than to relay on the error-prone hostname property.
-		 * rgerhards, 2007-07-27
-		 */
-			dbgprintf("Not sending message to remote.\n");
-		else {
-			pData->ttSuspend = time(NULL);
-			psz = (char*) ppString[0];
-			l = strlen((char*) psz);
-			if (l > MAXLINE)
-				l = MAXLINE;
+		pData->ttSuspend = time(NULL);
+		psz = (char*) ppString[0];
+		l = strlen((char*) psz);
+		if (l > MAXLINE)
+			l = MAXLINE;
 
 #			ifdef	USE_NETZIP
-			/* Check if we should compress and, if so, do it. We also
-			 * check if the message is large enough to justify compression.
-			 * The smaller the message, the less likely is a gain in compression.
-			 * To save CPU cycles, we do not try to compress very small messages.
-			 * What "very small" means needs to be configured. Currently, it is
-			 * hard-coded but this may be changed to a config parameter.
-			 * rgerhards, 2006-11-30
-			 */
-			if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
-				Bytef out[MAXLINE+MAXLINE/100+12] = "z";
-				uLongf destLen = sizeof(out) / sizeof(Bytef);
-				uLong srcLen = l;
-				int ret;
-				ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
-						srcLen, pData->compressionLevel);
-				dbgprintf("Compressing message, length was %d now %d, return state  %d.\n",
-					l, (int) destLen, ret);
-				if(ret != Z_OK) {
-					/* if we fail, we complain, but only in debug mode
-					 * Otherwise, we are silent. In any case, we ignore the
-					 * failed compression and just sent the uncompressed
-					 * data, which is still valid. So this is probably the
-					 * best course of action.
-					 * rgerhards, 2006-11-30
-					 */
-					dbgprintf("Compression failed, sending uncompressed message\n");
-				} else if(destLen+1 < l) {
-					/* only use compression if there is a gain in using it! */
-					dbgprintf("there is gain in compression, so we do it\n");
-					psz = (char*) out;
-					l = destLen + 1; /* take care for the "z" at message start! */
-				}
-				++destLen;
+		/* Check if we should compress and, if so, do it. We also
+		 * check if the message is large enough to justify compression.
+		 * The smaller the message, the less likely is a gain in compression.
+		 * To save CPU cycles, we do not try to compress very small messages.
+		 * What "very small" means needs to be configured. Currently, it is
+		 * hard-coded but this may be changed to a config parameter.
+		 * rgerhards, 2006-11-30
+		 */
+		if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
+			Bytef out[MAXLINE+MAXLINE/100+12] = "z";
+			uLongf destLen = sizeof(out) / sizeof(Bytef);
+			uLong srcLen = l;
+			int ret;
+			ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
+					srcLen, pData->compressionLevel);
+			dbgprintf("Compressing message, length was %d now %d, return state  %d.\n",
+				l, (int) destLen, ret);
+			if(ret != Z_OK) {
+				/* if we fail, we complain, but only in debug mode
+				 * Otherwise, we are silent. In any case, we ignore the
+				 * failed compression and just sent the uncompressed
+				 * data, which is still valid. So this is probably the
+				 * best course of action.
+				 * rgerhards, 2006-11-30
+				 */
+				dbgprintf("Compression failed, sending uncompressed message\n");
+			} else if(destLen+1 < l) {
+				/* only use compression if there is a gain in using it! */
+				dbgprintf("there is gain in compression, so we do it\n");
+				psz = (char*) out;
+				l = destLen + 1; /* take care for the "z" at message start! */
 			}
+			++destLen;
+		}
 #			endif
 
-			if(pData->protocol == FORW_UDP) {
-				/* forward via UDP */
-				CHKiRet(UDPSend(pData, psz, l));
-			} else {
-				/* forward via TCP */
-				rsRetVal ret;
-				ret = tcpclt.Send(pData->pTCPClt, pData, psz, l);
-				if(ret != RS_RET_OK) {
-					/* error! */
-					dbgprintf("error forwarding via tcp, suspending\n");
-					pData->eDestState = eDestFORW_SUSP;
-					iRet = RS_RET_SUSPENDED;
-				}
+		if(pData->protocol == FORW_UDP) {
+			/* forward via UDP */
+			CHKiRet(UDPSend(pData, psz, l));
+		} else {
+			/* forward via TCP */
+			rsRetVal ret;
+			ret = tcpclt.Send(pData->pTCPClt, pData, psz, l);
+			if(ret != RS_RET_OK) {
+				/* error! */
+				dbgprintf("error forwarding via tcp, suspending\n");
+				pData->eDestState = eDestFORW_SUSP;
+				iRet = RS_RET_SUSPENDED;
 			}
 		}
 		break;
