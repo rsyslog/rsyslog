@@ -450,7 +450,7 @@ pThis->pEngine->dbgprint("iRet after relpSessRcvData %d\n", iRet);
 	}
 
 finalize_it:
-pThis->pEngine->dbgprint("relpSessWaitState returns%d\n", iRet);
+pThis->pEngine->dbgprint("relpSessWaitState returns %d\n", iRet);
 	if(iRet == RELP_RET_TIMED_OUT) {
 		/* the session is broken! */
 		pThis->sessState = eRelpSessState_BROKEN;
@@ -653,6 +653,28 @@ finalize_it:
 }
 
 
+/* Check if the set of offers inclulded in our session is compatible with
+ * what we need. By now, all session parameters should be set to enabled. If
+ * there are some left as "Required", they are not supported by the server,
+ * in which case we can not open the session. -- rgerhards, 2008-03-27
+ */
+relpRetVal
+relpSessCltConnChkOffers(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	if(pThis->stateCmdSyslog == eRelpCmdState_Required)
+		ABORT_FINALIZE(RELP_RET_RQD_FEAT_MISSING);
+
+finalize_it:
+	if(iRet != RELP_RET_OK)
+		pThis->sessState = eRelpSessState_BROKEN;
+
+	LEAVE_RELPFUNC;
+}
+
+
 /* Connect to the server. All session parameters (like remote address) must
  * already have been set.
  * rgerhards, 2008-03-19
@@ -693,10 +715,18 @@ relpSessConnect(relpSess_t *pThis, int protFamily, unsigned char *port, unsigned
 	relpSessSetSessState(pThis, eRelpSessState_INIT_CMD_SENT);
 	CHKRet(relpSessWaitState(pThis, eRelpSessState_INIT_RSP_RCVD, pThis->timeout));
 
+	/* we now have received the server's response. Now is a good time to check if the offers
+	 * received back are compatible with what we need - and, if not, terminate the session...
+	 */
+pThis->pEngine->dbgprint("pre CltConnChkOffers %d\n", iRet);
+	CHKRet(relpSessCltConnChkOffers(pThis));
+	/* TODO: flag sesssion as broken if we did not succeed? */
+
 	/* if we reach this point, we have a valid relp session */
 	relpSessSetSessState(pThis, eRelpSessState_READY_TO_SEND); /* indicate session startup */
 
 finalize_it:
+pThis->pEngine->dbgprint("end relpSessConnect, iRet %d\n", iRet);
 	if(pszOffers != NULL)
 		free(pszOffers);
 
@@ -810,7 +840,9 @@ relpSessConstructOffers(relpSess_t *pThis, relpOffers_t **ppOffers)
 	 */
 pThis->pEngine->dbgprint("ConstructOffers syslog cmd state: %d\n", pThis->stateCmdSyslog);
 	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "commands", pOffers));
-	if(pThis->stateCmdSyslog == eRelpCmdState_Enabled || pThis->stateCmdSyslog == eRelpCmdState_Desired)
+	if(   pThis->stateCmdSyslog == eRelpCmdState_Enabled
+	   || pThis->stateCmdSyslog == eRelpCmdState_Desired
+	   || pThis->stateCmdSyslog == eRelpCmdState_Required)
 		CHKRet(relpOfferValueAdd((unsigned char*)"syslog", 0, pOffer));
 
 	CHKRet(relpOfferAdd(&pOffer, (unsigned char*) "relp_software", pOffers));
@@ -848,10 +880,8 @@ relpSessFixCmdStates(relpSess_t *pThis)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-pThis->pEngine->dbgprint("fixCmdStates, cmd state pre %d\n", pThis->stateCmdSyslog);
 	if(pThis->stateCmdSyslog == eRelpCmdState_Unset)
 		pThis->stateCmdSyslog = eRelpCmdState_Forbidden;
-pThis->pEngine->dbgprint("fixCmdStates, cmd state post %d\n", pThis->stateCmdSyslog);
 
 	LEAVE_RELPFUNC;
 }
