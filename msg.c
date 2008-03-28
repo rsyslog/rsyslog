@@ -1336,8 +1336,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 #ifdef	FEATURE_REGEXP
 	/* Variables necessary for regular expression matching */
-	size_t nmatch = 2;
-	regmatch_t pmatch[2];
+	size_t nmatch = 1;
+	regmatch_t pmatch[1];
 #endif
 
 	assert(pMsg != NULL);
@@ -1582,7 +1582,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				int iLenBuf;
 				char *pB;
 
-				iLenBuf = pmatch[1].rm_eo - pmatch[1].rm_so;
+				iLenBuf = pmatch[0].rm_eo - pmatch[0].rm_so;
 				pB = (char *) malloc((iLenBuf + 1) * sizeof(char));
 
 				if (pB == NULL) {
@@ -1593,7 +1593,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				}
 
 				/* Lets copy the matched substring to the buffer */
-				memcpy(pB, pRes + pmatch[1].rm_so, iLenBuf);
+				memcpy(pB, pRes + pmatch[0].rm_so, iLenBuf);
 				pB[iLenBuf] = '\0';/* terminate string, did not happen before */
 
 				if (*pbMustBeFreed == 1)
