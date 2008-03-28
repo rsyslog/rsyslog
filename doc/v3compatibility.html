@@ -1,8 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><title>Compatibility notes for rsyslog v3</title>
 
-<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto">
-</head>
+<meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto"></head>
 <body>
 <h1>Compatibility Notes for rsyslog v4</h1>
 <p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
@@ -52,8 +51,8 @@ informative message is logged. Please note that -h was never supported
 in v2, but was silently ignored. It disappeared some time ago in the
 final v1 builds. It can be replaced by applying proper filtering inside
 syslog.conf.</p>
-<h2>-c option</h2>
-<p>The -c option is new and tell rsyslogd about the desired
+<h2>-c option / Compatibility Mode</h2>
+<p>The -c option is new and tells rsyslogd about the desired
 backward compatibility mode. It must always be the first option on the
 command line, as it influences processing of the other options. To use
 the rsyslog v3 native
@@ -61,7 +60,16 @@ interface, specify -c3. To use compatibility mode&nbsp;,
 either do not use -c at all or use -c&lt;vers&gt; where vers is
 the
 rsyslog version that it shall be compatible to. Use -c0 to be
-command-line compatible to sysklogd.</p>
+command-line compatible to sysklogd.</p><p><span style="font-weight: bold;">Please note that rsyslogd issues warning messages if the -c3 command line option is not given.</span>
+This is to alert you that your are running in compatibility mode.
+Compatibility mode interfers with you rsyslog.conf commands and may
+cause some undesired side-effects. It is meant to be used with a plain
+old rsyslog.conf - if you use new features, things become messy. So the
+best advise is to work through this document, convert your options and
+config file and then use rsyslog in native mode. In order to aid you in
+this process, rsyslog logs every compatibility-mode config file
+directive it has generated. So you can simply copy them from your
+logfile and paste them to the config.</p>
 <h2>-e Option</h2>
 This option is no longer supported, as the "last message repeated n
 times" feature is now turned off by default. We changed this default
