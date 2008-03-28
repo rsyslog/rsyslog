@@ -398,7 +398,8 @@ tcpcltConstructFinalize(tcpclt_t __attribute__((unused)) *pThis)
 /* destructor for the tcpclt object */
 BEGINobjDestruct(tcpclt) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcpclt)
-
+	if(pThis->prevMsg != NULL)
+		free(pThis->prevMsg);
 ENDobjDestruct(tcpclt)
 
 
