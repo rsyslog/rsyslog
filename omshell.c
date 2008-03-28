@@ -113,7 +113,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
 		dbgprintf("exec\n");
 		++p;
-		iRet = cflineParseFileName(p, (uchar*) pData->progName, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS);
+		iRet = cflineParseFileName(p, (uchar*) pData->progName, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+			                   (uchar*)"RSYSLOG_TraditionalFileFormat");
 		break;
 	default:
 		iRet = RS_RET_CONFLINE_UNPROCESSED;

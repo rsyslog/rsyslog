@@ -53,23 +53,25 @@ in v2, but was silently ignored. It disappeared some time ago in the
 final v1 builds. It can be replaced by applying proper filtering inside
 syslog.conf.</p>
 <h2>-c option</h2>
-<p>The -c option is new and tell rsyslogd about the desired backward
-compatibility mode. It must always be the first option on the command
-line, as it influences processing of the other options. To use the
-rsyslog v3 native
+<p>The -c option is new and tell rsyslogd about the desired
+backward compatibility mode. It must always be the first option on the
+command line, as it influences processing of the other options. To use
+the rsyslog v3 native
 interface, specify -c4. To use compatibility mode&nbsp;,
 either do not use -c at all or use -c&lt;vers&gt; where vers is
 the
 rsyslog version that it shall be compatible to. Use -c0 to be
 command-line compatible to sysklogd.</p>
-<h2>-e Option</h2>This option is no longer supported, as the "last
-message repeated n times" feature is now turned off by default. We
-changed this default because this feature is causing a lot of trouble
-and we need to make it either go away or change the way it works. For
-more information, please see our dedicted <a href="http://www.rsyslog.com/PNphpBB2-viewtopic-p-1130.phtml">forum thread on "last message repeated n times"</a>.
-This thread also contains information on how to configure rsyslogd so
-that it continues to support this feature (as long as it is not totally
-removed).<h2>-m Option</h2>
+<h2>-e Option</h2>
+This option is no longer supported, as the "last message repeated n
+times" feature is now turned off by default. We changed this default
+because this feature is causing a lot of trouble and we need to make it
+either go away or change the way it works. For more information, please
+see our dedicted <a href="http://www.rsyslog.com/PNphpBB2-viewtopic-p-1130.phtml">forum
+thread on "last message repeated n times"</a>. This thread also
+contains information on how to configure rsyslogd so that it continues
+to support this feature (as long as it is not totally removed).
+<h2>-m Option</h2>
 <p>The -m command line option is emulated in compatibiltiy mode.
 To replace it, use the following config directives (compatibility mode
 auto-generates them):</p>
@@ -137,7 +139,28 @@ that syncing only happens in some installations where the administrator
 actually wanted that (performance-intense) feature. In the fast
 majority of cases (if not all), this dramatically increases rsyslogd
 performance without any negative effects.
-<h2>Queue Modes for the Main Message Queue</h2>
+<h2>Output File Format</h2>
+<p>Rsyslog supports high precision RFC 3339 timestamps and puts these into
+local log files by default. This is a departure from previous syslogd
+behaviour. We decided to sacrify some backward-compatibility in an
+effort to provide a better logging solution. Rsyslog has been
+supporting the high-precision timestamps for over three years as of
+this writing, but nobody used them because they were not default (one
+may also assume that most people didn't even know about them). Now, we
+are writing the great high-precision time stamps, which greatly aid in
+getting the right sequence of logging events. If you do not like that,
+you can easily turn them off by placing
+</p><p style="font-weight: bold;"><code>$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat</code>
+</p><p>right at the start of your rsyslog.conf. This will use the
+previous format. Please note that the name is case-sensitive and must
+be specificed exactly as shown above. Please also note that you can of
+course use any other format of your liking. To do so, simply specify
+the template to use or set a new default template via the
+$ActionFileDefaultTemplate directive. Keep in mind, though, that
+templates must be defined before they are used.</p><p>Keep in mind that
+when receiving messages from remote hosts, the timestamp is just as
+precise as the remote host provided it. In most cases, this means you
+will only a receive a standard timestamp with second precision.</p><p>Please note that the default forwarding format may also change in the future. </p><h2>Queue Modes for the Main Message Queue</h2>
 <p>Either "FixedArray" or "LinkedList" is recommended. "Direct"
 is available, but should not be used except for a very good reason
 ("Direct" disables queueing and will potentially lead to message loss

@@ -123,7 +123,7 @@ rsRetVal parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, 
 void untty(void);
 rsRetVal selectorConstruct(selector_t **ppThis);
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
-rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts);
+rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl);
 int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 rsRetVal selectorDestruct(void *pVal);
 rsRetVal selectorAddList(selector_t *f);

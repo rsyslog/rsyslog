@@ -417,7 +417,8 @@ int option_DisallowWarning = 1;	/* complain if message from disallowed sender is
 
 
 /* hardcoded standard templates (used for defaults) */
-static uchar template_TraditionalFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
+static uchar template_TraditionalFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
+static uchar template_FileFormat[] = "\"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
 static uchar template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
 static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
@@ -2811,8 +2812,10 @@ static void mainThread()
 	 * we use template names with a SP in front - these 
 	 * can NOT be generated via the configuration file
 	 */
-	pTmp = template_TraditionalFormat;
-	tplAddLine(" TradFmt", &pTmp);
+	pTmp = template_FileFormat; /* new format for files with high-precision stamp */
+	tplAddLine("RSYSLOG_FileFormat", &pTmp);
+	pTmp = template_TraditionalFileFormat;
+	tplAddLine("RSYSLOG_TraditionalFileFormat", &pTmp);
 	pTmp = template_WallFmt;
 	tplAddLine(" WallFmt", &pTmp);
 	pTmp = template_StdFwdFmt;

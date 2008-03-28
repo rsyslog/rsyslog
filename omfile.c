@@ -82,6 +82,7 @@ static uid_t	dirUID;		/* UID to be used for newly created directories */
 static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
+static uchar	*pszTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
 
 typedef struct _instanceData {
@@ -243,7 +244,9 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	 */
 	pData->f_sizeLimitCmd = (char*) pOch->cmdOnSizeLimit;
 
-	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, (uchar*) " TradFmt");
+RUNLOG_VAR("%p", pszTplName);
+	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts,
+				       (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName);
 
 finalize_it:
 	RETiRet;
@@ -696,7 +699,8 @@ CODESTARTparseSelectorAct
 		   */
 		CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		++p; /* eat '?' */
-		if((iRet = cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS))
+		if((iRet = cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName))
 		   != RS_RET_OK)
 			break;
 		/* "filename" is actually a template name, we need this as string 1. So let's add it
@@ -741,7 +745,8 @@ CODESTARTparseSelectorAct
 		 * to use is specified. So we need to scan for the first coma first
 		 * and then look at the rest of the line.
 		 */
-		if((iRet = cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS))
+		if((iRet = cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName))
 		   != RS_RET_OK)
 			break;
 
@@ -797,6 +802,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	fDirCreateMode = 0644;
 	bCreateDirs = 1;
 	bEnableSync = 0;
+	if(pszTplName != NULL) {
+		free(pszTplName);
+		pszTplName = NULL;
+	}
 
 	return RS_RET_OK;
 }
@@ -804,6 +813,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 BEGINmodExit
 CODESTARTmodExit
+	if(pszTplName != NULL)
+		free(pszTplName);
 ENDmodExit
 
 
@@ -829,6 +840,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"failonchownfailure", 0, eCmdHdlrBinary, NULL, &bFailOnChown, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionfileenablesync", 0, eCmdHdlrBinary, NULL, &bEnableSync, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionfiledefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
 ENDmodInit
 /*
  * vi:set ai:

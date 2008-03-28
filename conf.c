@@ -530,8 +530,10 @@ finalize_it:
  * to hold the largest possible filename.
  * rgerhards, 2007-07-25
  * updated to include OMSR pointer -- rgerhards, 2007-07-27
+ * updated to include template name -- rgerhards, 2008-03-28
  */
-rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts)
+rsRetVal
+cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl)
 {
 	register uchar *pName;
 	int i;
@@ -547,7 +549,7 @@ rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pO
 	}
 	*pName = '\0';
 
-	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, (uchar*) " TradFmt");
+	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, pszTpl);
 
 	RETiRet;
 }
