@@ -170,16 +170,17 @@ However, that would have broken almost all receivers, including earlier
 versions of rsyslog. To avoid this hassle, high-precision timestamps
 need to be explicitely enabled. To make this as painless as possible,
 rsyslog comes with a canned template that contains everything
-necessary. &nbsp;To enable high-precision timestamps, just use:</p><p style="font-weight: bold;"><code>$ActionForwardDefaultTemplate RSYSLOG_ForwardFileFormat # for plain TCP and UDP</code></p><p style="font-weight: bold;"><code>$ActionGSSForwardDefaultTemplate RSYSLOG_ForwardFileFormat # for GSS-API</code></p><p>And, of course, you can always set different forwarding formats by just specifying the right template.</p><p>If
+necessary. &nbsp;To enable high-precision timestamps, just use:</p><p style="font-weight: bold;"><code>$ActionForwardDefaultTemplate RSYSLOG_ForwardFormat # for plain TCP and UDP</code></p><p style="font-weight: bold;"><code>$ActionGSSForwardDefaultTemplate RSYSLOG_ForwardFormat # for GSS-API</code></p><p>And, of course, you can always set different forwarding formats by just specifying the right template.</p><p>If
 you are running in a system with only rsyslog 3.12.5 and above in the
 receiver roles, it is suggested to add one (or both) of the above
-statements to the top of your rsyslog.conf - that will enable you to
-use the best in timestamp support availble. Please note that when you
-use this format with other receivers, they will probably become pretty
-confused and not detect the timestamp at all. In earlier rsyslog
-versions, for example, that leads to duplication of timestamp and
-hostname fields and disables the detection of the orignal hostname in a
-relayed/NATed environment. So use the new format with care. </p><h2>Queue Modes for the Main Message Queue</h2>
+statements to the top of your rsyslog.conf (but after the $ModLoad's!)
+- that will enable you to use the best in timestamp support availble.
+Please note that when you use this format with other receivers, they
+will probably become pretty confused and not detect the timestamp at
+all. In earlier rsyslog versions, for example, that leads to
+duplication of timestamp and hostname fields and disables the detection
+of the orignal hostname in a relayed/NATed environment. So use the new
+format with care. </p><h2>Queue Modes for the Main Message Queue</h2>
 <p>Either "FixedArray" or "LinkedList" is recommended. "Direct"
 is available, but should not be used except for a very good reason
 ("Direct" disables queueing and will potentially lead to message loss

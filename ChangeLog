@@ -20,6 +20,7 @@ Version 3.12.5 (rgerhards), 2008-03-??
   syslog messages
 - added new $ActionForwardDefaultTemplate directive
 - added new $ActionGSSForwardDefaultTemplate directive
+- added build-in templates for easier configuration
 ---------------------------------------------------------------------------
 Version 3.12.4 (rgerhards), 2008-03-25
 - Greatly enhanced rsyslogd's file write performance by disabling

@@ -417,6 +417,7 @@ int option_DisallowWarning = 1;	/* complain if message from disallowed sender is
 
 
 /* hardcoded standard templates (used for defaults) */
+static uchar template_SyslogProtocol23Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n\"";
 static uchar template_TraditionalFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static uchar template_FileFormat[] = "\"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
@@ -2812,10 +2813,9 @@ static void mainThread()
 	 * is that we need to interrupt the select() system call. -- rgerhards, 2007-10-17
 	 */
 
-	/* initialize the default templates
-	 * we use template names with a SP in front - these 
-	 * can NOT be generated via the configuration file
-	 */
+	/* initialize the build-in templates */
+	pTmp = template_SyslogProtocol23Format;
+	tplAddLine("RSYSLOG_SyslogProtocol23Format", &pTmp);
 	pTmp = template_FileFormat; /* new format for files with high-precision stamp */
 	tplAddLine("RSYSLOG_FileFormat", &pTmp);
 	pTmp = template_TraditionalFileFormat;
