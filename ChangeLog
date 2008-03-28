@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.12.5 (rgerhards), 2008-03-??
+Version 3.12.5 (rgerhards), 2008-03-28
 - bugfix: QHOUR and HHOUR properties were wrongly calculated
 - bugfix: fixed memory leaks in stream class and imfile
 - bugfix: $ModDir did invalid bounds checking, potential overlow in
@@ -12,7 +12,7 @@ Version 3.12.5 (rgerhards), 2008-03-??
 - automatically generated compatibility config lines are now also
   logged so that a user can diagnose problems with them
 - added compatibility mode for -a, -o and -p options
-- MILESTONE: compatibility mode processing finished
+- compatibility mode processing finished
 - changed default file output format to include high-precision timestamps
 - added a buid-in template for previous syslogd file format
 - added new $ActionFileDefaultTemplate directive
@@ -21,6 +21,8 @@ Version 3.12.5 (rgerhards), 2008-03-??
 - added new $ActionForwardDefaultTemplate directive
 - added new $ActionGSSForwardDefaultTemplate directive
 - added build-in templates for easier configuration
+- bugfix: fixed small memory leak in tcpclt.c
+- bugfix: fixed small memory leak in template regular expressions
 ---------------------------------------------------------------------------
 Version 3.12.4 (rgerhards), 2008-03-25
 - Greatly enhanced rsyslogd's file write performance by disabling

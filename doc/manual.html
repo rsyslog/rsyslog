@@ -1,5 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>rsyslog documentation</title></head>
+<html><head><title>rsyslog documentation</title>
+
+</head>
 <body>
 <h1>RSyslog - Documentation</h1>
 <p><b><a href="http://www.rsyslog.com/">Rsyslog</a>
@@ -7,12 +9,15 @@ is an enhanced syslogd
 supporting, among others, <a href="rsyslog_mysql.html">MySQL</a>,
 PostgreSQL, <a href="http://wiki.rsyslog.com/index.php/FailoverSyslogServer">failover
 log destinations</a>, syslog/tcp, fine grain output format
-control, and the ability to filter on any message part.</b>
+control, high precision timestamps, queued operations and the ability to filter on any message
+part.</b>
 It is quite compatible to stock sysklogd and can be used as a drop-in
 replacement. Its <a href="features.html">
 advanced features</a> make it suitable for enterprise-class, <a href="rsyslog_stunnel.html">encryption protected syslog</a>
 relay chains while at the same time being very easy to setup for the
-novice user. And as we know what enterprise users really need, there is also <a href="professional_support.html">professional rsyslog support</a> available directly from the source!</p>
+novice user. And as we know what enterprise users really need, there is
+also <a href="professional_support.html">professional
+rsyslog support</a> available directly from the source!</p>
 <p><b>Visit the <i> <a href="status.html">rsyslog
 status page</a></i></b> to obtain current
 version information and ports. <b>If you like rsyslog, you might
@@ -20,23 +25,13 @@ want to lend us a helping hand. </b>It doesn't require a lot of
 time - even a single mouse click helps. Learn <a href="how2help.html">how to help the rsyslog project</a>.
 Due to popular demand, there is now a <a href="rsyslog_ng_comparison.html">side-by-side comparison
 between rsyslog and syslog-ng</a>.</p>
-<p><b><font color="#ff0000">Warning: rsyslog
-v3 is under active development and as of this writing has a number of
-backwards compatibility issues. </font>If you currently use v2,
-<font color="#ff0000"><a href="v3compatibility.html">be
-sure to read the rsyslog v3 compatibility document!</a></font>
-This also applies if you upgrade from stock sysklogd - you need to make
-some configuration file changes. </b><br>
-Documentation for 3.x is currently sparse. If you need assistance,
-please <a href="http://www.rsyslog.com/PNphpBB2.phtml">post
-in the rsyslog forums</a>!<br>
-<b><font color="#ff0000">If you do not like this,
-use a <a href="http://www.rsyslog.com/Downloads-req-viewsdownload-sid-1.phtml">stable
-branch release</a>!</font></b></p>
-<p><b>Follow the links below for the</b></p>
-<ul>
-<li><a href="man_rsyslogd.html">rsyslogd man page</a>
-(somewhat outdated)</li>
+<p>If you are upgrading from rsyslog v2 or stock sysklogd,
+<a href="v3compatibility.html">be
+sure to read the rsyslog v3 compatibility document!</a> It will work even
+if you do not read the doc, but doing so will definitely improve your experience.</p>
+<p><span style="font-weight: bold;"></span><b>Follow
+the links below for the</b><br></p><ul>
+
 <li><a href="rsyslog_conf.html">configuration file
 syntax (rsyslog.conf)</a></li>
 <li> <a href="property_replacer.html">property
@@ -50,7 +45,8 @@ packages</a></li>
 <li><a href="generic_design.html">backgrounder on
 generic syslog application design</a><!-- not good as it currently is ;) <li><a href="contributors.html">contributor &quot;Hall of Fame&quot;</a>--></li>
 <li><a href="modules.html">description of rsyslog
-modules</a></li>
+modules</a></li><li><a href="man_rsyslogd.html">rsyslogd man page</a>
+(heavily outdated)</li>
 </ul>
 <p><b>We have some in-depth papers on</b></p>
 <ul>
@@ -86,16 +82,16 @@ to use the doc that came with it.</p>
 <p><b>You can also browse the following online resources:</b></p>
 <ul>
 <li>the <a href="http://wiki.rsyslog.com/">rsyslog
-wiki</a>, a community resource</li>
+wiki</a>, a community resource which&nbsp;includes <a href="http://wiki.rsyslog.com/index.php/Configuration_Samples">rsyslog configuration examples</a></li>
 <li><a href="http://www.rsyslog.com/module-Static_Docs-view-f-manual.html.phtml">rsyslog
-online documentation</a></li>
-<li><a href="http://www.rsyslog.com/Topic3.phtml">rsyslog
-FAQ</a></li>
+online documentation (most current version only)</a></li>
+
 <li><a href="http://www.rsyslog.com/PNphpBB2.phtml">rsyslog
-discussion forum</a></li>
+discussion forum - use this for technical support</a></li>
 <li><a href="http://www.rsyslog.com/Topic4.phtml">rsyslog
 change log</a></li>
-<li><a href="http://www.monitorware.com/en/syslog-enabled-products/">syslog
+<li><a href="http://www.rsyslog.com/Topic3.phtml">rsyslog
+FAQ</a></li><li><a href="http://www.monitorware.com/en/syslog-enabled-products/">syslog
 device configuration guide</a> (off-site)</li>
 </ul>
 <p>And don't forget about the <a href="http://lists.adiscon.net/mailman/listinfo/rsyslog">rsyslog

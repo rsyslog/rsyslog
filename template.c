@@ -612,9 +612,8 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				longitud = regex_end - p;
 				/* Malloc for the regex string */
 				regex_char = (unsigned char *) malloc(longitud + 1);
-				if (regex_char == NULL) {
-					dbgprintf
-					    ("Could not allocate memory for template parameter!\n");
+				if(regex_char == NULL) {
+					dbgprintf("Could not allocate memory for template parameter!\n");
 					pTpe->data.field.has_regex = 0;
 					return 1;
 					/* TODO: RGer: check if we can recover better... (probably not) */
@@ -629,6 +628,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
 				if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+dbgprintf("compile data.field.re ptr: %p (pTpe %p)\n", (&(pTpe->data.field.re)), pTpe);
 					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, 0) != 0) {
 						dbgprintf("error: can not compile regex: '%s'\n", regex_char);
 						pTpe->data.field.has_regex = 2;
@@ -849,6 +849,8 @@ void tplDeleteAll(void)
 {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
+	rsRetVal iRetLocal;
+	BEGINfunc
 
 	pTpl = tplRoot;
 	while(pTpl != NULL) {
@@ -868,6 +870,12 @@ void tplDeleteAll(void)
 				free(pTpeDel->data.constant.pConstant);
 				break;
 			case FIELD:
+				/* check if we have a regexp and, if so, delete it */
+				if(pTpeDel->data.field.has_regex != 0) {
+					if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+						regexp.regfree(&(pTpeDel->data.field.re));
+					}
+				}
 				/*dbgprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
 				free(pTpeDel->data.field.pPropRepl);
 				break;
@@ -881,15 +889,20 @@ void tplDeleteAll(void)
 			free(pTplDel->pszName);
 		free(pTplDel);
 	}
+	ENDfunc
 }
 
+
 /* Destroy all templates obtained from conf file
- * preserving hadcoded ones. This is called from init().
+ * preserving hardcoded ones. This is called from init().
  */
 void tplDeleteNew(void)
 {
 	struct template *pTpl, *pTplDel;
 	struct templateEntry *pTpe, *pTpeDel;
+	rsRetVal iRetLocal;
+
+	BEGINfunc
 
 	if(tplRoot == NULL || tplLastStatic == NULL)
 		return;
@@ -914,6 +927,12 @@ void tplDeleteNew(void)
 				free(pTpeDel->data.constant.pConstant);
 				break;
 			case FIELD:
+				/* check if we have a regexp and, if so, delete it */
+				if(pTpeDel->data.field.has_regex != 0) {
+					if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
+						regexp.regfree(&(pTpeDel->data.field.re));
+					}
+				}
 				/*dbgprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
 				free(pTpeDel->data.field.pPropRepl);
 				break;
@@ -927,6 +946,7 @@ void tplDeleteNew(void)
 			free(pTplDel->pszName);
 		free(pTplDel);
 	}
+	ENDfunc
 }
 
 /* Store the pointer to the last hardcoded teplate */
