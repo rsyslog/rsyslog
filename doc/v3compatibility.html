@@ -15,7 +15,7 @@ specifying the -c option on the rsyslog command line. That will enable
 backwards-compatibility mode. However, please note that things may be
 suboptimal in backward compatibility mode, so the advise is to work
 through this document, update your rsyslog.conf, remove the no longer
-supported startup options and then add -c4 as the first option to the
+supported startup options and then add -c3 as the first option to the
 rsyslog command line. That will enable native mode.</p>
 <p>Please note that rsyslogd helps you during that process by
 logging appropriate messages about compatibility mode and
@@ -57,7 +57,7 @@ syslog.conf.</p>
 backward compatibility mode. It must always be the first option on the
 command line, as it influences processing of the other options. To use
 the rsyslog v3 native
-interface, specify -c4. To use compatibility mode&nbsp;,
+interface, specify -c3. To use compatibility mode&nbsp;,
 either do not use -c at all or use -c&lt;vers&gt; where vers is
 the
 rsyslog version that it shall be compatible to. Use -c0 to be
@@ -160,7 +160,26 @@ $ActionFileDefaultTemplate directive. Keep in mind, though, that
 templates must be defined before they are used.</p><p>Keep in mind that
 when receiving messages from remote hosts, the timestamp is just as
 precise as the remote host provided it. In most cases, this means you
-will only a receive a standard timestamp with second precision.</p><p>Please note that the default forwarding format may also change in the future. </p><h2>Queue Modes for the Main Message Queue</h2>
+will only a receive a standard timestamp with second precision. If
+rsyslog is running at the remote end, you can configure it to provide
+high-precision timestamps (see below).</p><h2>Forwarding Format</h2><p>When
+forwarding messages to remote syslog servers, rsyslogd by default uses
+the plain old syslog format with second-level resolution inside the
+timestamps. We could have made it emit high precision timestamps.
+However, that would have broken almost all receivers, including earlier
+versions of rsyslog. To avoid this hassle, high-precision timestamps
+need to be explicitely enabled. To make this as painless as possible,
+rsyslog comes with a canned template that contains everything
+necessary. &nbsp;To enable high-precision timestamps, just use:</p><p style="font-weight: bold;"><code>$ActionForwardDefaultTemplate RSYSLOG_ForwardFileFormat # for plain TCP and UDP</code></p><p style="font-weight: bold;"><code>$ActionGSSForwardDefaultTemplate RSYSLOG_ForwardFileFormat # for GSS-API</code></p><p>And, of course, you can always set different forwarding formats by just specifying the right template.</p><p>If
+you are running in a system with only rsyslog 3.12.5 and above in the
+receiver roles, it is suggested to add one (or both) of the above
+statements to the top of your rsyslog.conf - that will enable you to
+use the best in timestamp support availble. Please note that when you
+use this format with other receivers, they will probably become pretty
+confused and not detect the timestamp at all. In earlier rsyslog
+versions, for example, that leads to duplication of timestamp and
+hostname fields and disables the detection of the orignal hostname in a
+relayed/NATed environment. So use the new format with care. </p><h2>Queue Modes for the Main Message Queue</h2>
 <p>Either "FixedArray" or "LinkedList" is recommended. "Direct"
 is available, but should not be used except for a very good reason
 ("Direct" disables queueing and will potentially lead to message loss

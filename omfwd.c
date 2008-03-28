@@ -90,6 +90,10 @@ typedef struct _instanceData {
 	tcpclt_t *pTCPClt;		/* our tcpclt object */
 } instanceData;
 
+/* config data */
+static uchar	*pszTplName = NULL; /* name of the default template to use */
+
+
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
  * rgerhards, 2007-06-28
@@ -542,9 +546,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			strcpy(pData->f_hname, (char*) q);
 
 		/* process template */
-		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " StdFwdFmt"))
-		   != RS_RET_OK)
-			goto finalize_it;
+		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+		       		(pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : pszTplName));
 
 		/* first set the pData->eDestState */
 		memset(&hints, 0, sizeof(hints));
@@ -592,6 +595,11 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
+
+	if(pszTplName != NULL) {
+		free(pszTplName);
+		pszTplName = NULL;
+	}
 ENDmodExit
 
 
@@ -601,6 +609,20 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 ENDqueryEtryPt
 
 
+/* Reset config variables for this module to default values.
+ * rgerhards, 2008-03-28
+ */
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	if(pszTplName != NULL) {
+		free(pszTplName);
+		pszTplName = NULL;
+	}
+
+	return RS_RET_OK;
+}
+
+
 BEGINmodInit(Fwd)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
@@ -608,6 +630,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
+
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 #endif /* #ifdef SYSLOG_INET */

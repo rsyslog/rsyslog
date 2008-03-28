@@ -420,7 +420,8 @@ int option_DisallowWarning = 1;	/* complain if message from disallowed sender is
 static uchar template_TraditionalFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static uchar template_FileFormat[] = "\"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
-static uchar template_StdFwdFmt[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
+static uchar template_ForwardFormat[] = "\"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg%\"";
+static uchar template_TraditionalForwardFormat[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
 static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
 static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
 static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%, '%syslogtag%')\",STDSQL";
@@ -1372,9 +1373,12 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	assert(pMsg->pszUxTradMsg != NULL);
 	p2parse = (char*) pMsg->pszUxTradMsg;
 
-	/* Check to see if msg contains a timestamp
+	/* Check to see if msg contains a timestamp. We stary trying with a
+	 * high-precision one...
 	 */
-	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE)
+	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == TRUE)
+		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
+	else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE)
 		p2parse += 16;
 	else {
 		flags |= ADDDATE;
@@ -2818,8 +2822,10 @@ static void mainThread()
 	tplAddLine("RSYSLOG_TraditionalFileFormat", &pTmp);
 	pTmp = template_WallFmt;
 	tplAddLine(" WallFmt", &pTmp);
-	pTmp = template_StdFwdFmt;
-	tplAddLine(" StdFwdFmt", &pTmp);
+	pTmp = template_ForwardFormat;
+	tplAddLine("RSYSLOG_ForwardFormat", &pTmp);
+	pTmp = template_TraditionalForwardFormat;
+	tplAddLine("RSYSLOG_TraditionalForwardFormat", &pTmp);
 	pTmp = template_StdUsrMsgFmt;
 	tplAddLine(" StdUsrMsgFmt", &pTmp);
 	pTmp = template_StdDBFmt;

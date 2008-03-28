@@ -96,6 +96,8 @@ typedef struct _instanceData {
 	OM_uint32 gss_flags;
 } instanceData;
 
+/* config data */
+static uchar	*pszTplName = NULL; /* name of the default template to use */
 static char *gss_base_service_name = NULL;
 static enum gss_mode_t {
 	GSSMODE_MIC,
@@ -596,9 +598,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		strcpy(pData->f_hname, (char*) q);
 
 	/* process template */
-	if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " StdFwdFmt"))
-	   != RS_RET_OK)
-		goto finalize_it;
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+			(pszTplName == NULL) ? (uchar*)"RSYSLOG_TraditionalForwardFormat" : pszTplName));
 
 	/* first set the pData->eDestState */
 	memset(&hints, 0, sizeof(hints));
@@ -635,6 +636,11 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
+
+	if(pszTplName != NULL) {
+		free(pszTplName);
+		pszTplName = NULL;
+	}
 ENDmodExit
 
 
@@ -672,6 +678,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(gss_base_service_name);
 		gss_base_service_name = NULL;
 	}
+	if(pszTplName != NULL) {
+		free(pszTplName);
+		pszTplName = NULL;
+	}
 	return RS_RET_OK;
 }
 
@@ -686,6 +696,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssforwardservicename", 0, eCmdHdlrGetWord, NULL, &gss_base_service_name, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"gssmode", 0, eCmdHdlrGetWord, setGSSMode, &gss_mode, STD_LOADABLE_MODULE_ID));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actiongssforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 

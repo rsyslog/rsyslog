@@ -16,6 +16,10 @@ Version 3.12.5 (rgerhards), 2008-03-??
 - changed default file output format to include high-precision timestamps
 - added a buid-in template for previous syslogd file format
 - added new $ActionFileDefaultTemplate directive
+- added support for high-precision timestamps when receiving legacy
+  syslog messages
+- added new $ActionForwardDefaultTemplate directive
+- added new $ActionGSSForwardDefaultTemplate directive
 ---------------------------------------------------------------------------
 Version 3.12.4 (rgerhards), 2008-03-25
 - Greatly enhanced rsyslogd's file write performance by disabling
