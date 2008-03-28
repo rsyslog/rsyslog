@@ -1,5 +1,5 @@
 .\" rsyslog.conf - rsyslogd(8) configuration file
-.\" Copyright 2003-2007 Rainer Gerhards and Adiscon GmbH.
+.\" Copyright 2003-2008 Rainer Gerhards and Adiscon GmbH.
 .\" 
 .\" This file is part of the rsyslog  package, an enhanced system log daemon.
 .\" 
@@ -17,7 +17,7 @@
 .\" along with this program; if not, write to the Free Software
 .\" Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111, USA.
 .\"
-.TH RSYSLOG.CONF 5 "16 February 2008" "Version 3.11.3" "Linux System Administration"
+.TH RSYSLOG.CONF 5 "28 March 2008" "Version 3.12.5" "Linux System Administration"
 .SH NAME
 rsyslog.conf \- rsyslogd(8) configuration file
 .SH DESCRIPTION
@@ -30,6 +30,14 @@ for logging.  For special features see the
 .BR rsyslogd (8)
 manpage. Ryslog.conf is backward-compatible with sysklogd's syslog.conf file. So if you migrate
 from syklogd you can rename it and it should work.
+
+.B Note that this version of rsyslog ships with extensive documentation in html format.
+This is provided in the ./doc subdirectory and probably
+in a separate package if you installed rsyslog via a packaging system.
+To use rsyslog's advanced features, you
+.B need
+to look at the html documentation, because the man pages only cover
+basic aspects of operation.
 
 
 .SH BASIC STRUCTURE
@@ -91,11 +99,6 @@ To forward messages to another host, prepend the hostname with the at sign ("@")
 sign means that messages will be forwarded via UDP protocol (the standard for syslog). If you 
 prepend two at signs ("@@"), the messages will be transmitted via TCP. 
 
-Please note that this version of rsyslogd by default does NOT forward messages it has received 
-from the network to another host. Specify the "-h" option to enable this.
-
-Using the $GssMode directive TCP messages can be wrapped with GSS-API.
-
 .B Example:
 .RS
 *.* @192.168.0.1
@@ -103,6 +106,9 @@ Using the $GssMode directive TCP messages can be wrapped with GSS-API.
 .sp
 In the example above, messages are forwarded via UDP to the machine 192.168.0.1, the destination 
 port defaults to 514. 
+
+Please note that rsyslogd offers a variety of options in regarding to remote
+forwarding. For full details, please see the html documentation.
 
 .SS List of users
 Usually critical messages are also directed to ``root'' on that machine. You can specify a list 
@@ -115,29 +121,13 @@ Emergency messages often go to all users currently online to notify them that so
 is happening with the system. To specify this wall(1)-feature use an asterisk ('*').
 
 .SS Database table
-This allows logging of the message to a database table. Currently, only MySQL databases are
-supported. By default, a MonitorWare-compatible schema is required for this to work. You can 
+This allows logging of the message to a database table.
+By default, a MonitorWare-compatible schema is required for this to work. You can 
 create that schema with the createDB.SQL file that came with the rsyslog package. You can also
 use any other schema of your liking - you just need to define a proper template and assign this 
 template to the action.
 
-The database writer is called by specifying a greater-then sign ('>') in front of the database 
-connect information. Immediately after that sign the database host name must be given, a comma, 
-the database name, another comma, the database user, a comma and then the user's password. If 
-a specific template is to be used, a semicolon followed by the template name can follow the 
-connect information. 
-
-.B Example:
-.RS
->dbhost,dbname,dbuser,dbpassword;dbtemplate
-.RE
-
-.B Important: to use the database functionality, the MySQL output module must be loaded 
-in the config file BEFORE the first database table action is used. This is done by placing the
-.B $ModLoad 
-MySQL directive some place above the first use of the database write (we recommend doing at the 
-the beginning of the config file).
-.B You have to install the rsyslog-mysql package to get this module.
+See the html documentation for further details on database logging.
 
 .SS Discard
 If the discard action is carried out, the received message is immediately discarded. Discard 
@@ -173,11 +163,13 @@ The program-to-execute can be any valid executable. It receives the template str
 (argv[1]).
 
 .SH FILTER CONDITIONS
-Rsyslog offers two different types "filter conditions":
+Rsyslog offers three different types "filter conditions":
 .sp 0
    * "traditional" severity and facility based selectors
 .sp 0
    * property-based filters
+.sp 0
+   * expression-based filters
 .RE
 
 .SS Blocks
@@ -231,6 +223,10 @@ Checks if the value is found exactly at the beginning of the property value
 Compares the property against the provided regular expression.
 .RE
 
+.SS Expression-Based Filters
+See the html documentation for this feature.
+
+
 .SH TEMPLATES
 
 Every output in rsyslog uses templates - this holds true for files, user 
@@ -267,7 +263,7 @@ $template TraditionalFormat,%timegenerated% %HOSTNAME% %syslogtag%%msg%\n"
 
 Properties can be accessed by the property replacer (see there for details).
 
-.B Please note that as of 1.15.0, templates can also by used to generate selector lines with dynamic file names.
+.B Please note that templates can also by used to generate selector lines with dynamic file names.
 For example, if you would like to split syslog messages from different hosts 
 to different files (one per host), you can define the following template:
 
@@ -325,10 +321,6 @@ it - among others, it takes some toll on the processing time. Not much, but on
 a really busy system you might notice it ;)
 
 The default template for the write to database action has the sql option set. 
-As we currently support only MySQL and the sql option matches the default MySQL 
-configuration, this is a good choice. However, if you have turned on 
-NO_BACKSLASH_ESCAPES in your MySQL config, you need to supply a template with 
-the stdsql option. Otherwise you will become vulnerable to SQL injection. 
 
 .SS Template examples
 Please note that the samples are split across multiple lines. A template MUST 
@@ -388,7 +380,7 @@ NOTE 2: You have to have MySQL module installed to use this template.
 
 Output Channels are a new concept first introduced in rsyslog 0.9.0. As of this writing, 
 it is most likely that they will be replaced by something different in the future.
- So if you use them, be prepared to change you configuration file syntax when you upgrade 
+So if you use them, be prepared to change you configuration file syntax when you upgrade 
 to a later release.
 
 Output channels are defined via an $outchannel directive. It's syntax is as follows:
@@ -584,6 +576,17 @@ replace control characters by spaces
 drop-cc
 drop control characters - the resulting string will neither contain control characters, escape sequences nor any other replacement character like space.
 
+.SH QUEUED OPERATIONS
+Rsyslogd supports queued operations to handle offline outputs
+(like remote syslogd's or database servers being down). When running in
+queued mode, rsyslogd buffers messages to memory and optionally to disk
+(on an as-needed basis). Queues survive rsyslogd restarts.
+
+It is highly suggested to use remote forwarding and database writing
+in queued mode, only.
+
+To learn more about queued operations, see the html documentation.
+
 .SH FILES
 .PD 0
 .TP
@@ -600,7 +603,11 @@ The complete documentation can be found in the doc folder of the rsyslog distrib
 
 .RS
 .B    http://www.rsyslog.com/doc
+
 .RE
+Please note that the man page reflects only a subset of the configuration options. Be sure to read
+the html documentation for all features and details. This is especially vital if you plan to set
+up a more-then-extremely-simple system.
 
 .SH AUTHORS
 The

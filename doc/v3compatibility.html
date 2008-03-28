@@ -4,7 +4,7 @@
 <meta name="KEYWORDS" content="syslog, mysql, syslog to mysql, howto">
 </head>
 <body>
-<h1>Compatibility notes for rsyslog v3</h1>
+<h1>Compatibility Notes for rsyslog v4</h1>
 <p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
 (2008-03-28)</i></small></p>
 <p>Rsyslog aims to be a drop-in replacement for sysklogd.
@@ -15,7 +15,7 @@ specifying the -c option on the rsyslog command line. That will enable
 backwards-compatibility mode. However, please note that things may be
 suboptimal in backward compatibility mode, so the advise is to work
 through this document, update your rsyslog.conf, remove the no longer
-supported startup options and then add -c3 as the first option to the
+supported startup options and then add -c4 as the first option to the
 rsyslog command line. That will enable native mode.</p>
 <p>Please note that rsyslogd helps you during that process by
 logging appropriate messages about compatibility mode and
@@ -57,7 +57,7 @@ syslog.conf.</p>
 compatibility mode. It must always be the first option on the command
 line, as it influences processing of the other options. To use the
 rsyslog v3 native
-interface, specify -c3. To use compatibility mode&nbsp;,
+interface, specify -c4. To use compatibility mode&nbsp;,
 either do not use -c at all or use -c&lt;vers&gt; where vers is
 the
 rsyslog version that it shall be compatible to. Use -c0 to be
@@ -99,7 +99,7 @@ $UDPServerRun 514<br>
 $UDPSeverAddress * # all local interfaces<br>
 $UDPServerRun 1514</b></p>
 <p>These config file settings run two listeners: one
-at192.0.2.1:514 and one on port 1514, which listens on all local
+at 192.0.2.1:514 and one on port 1514, which listens on all local
 interfaces.</p>
 <h2>Default port for UDP (and TCP) Servers</h2>
 <p>Please note that with pre-v3 rsyslogd, a service database
