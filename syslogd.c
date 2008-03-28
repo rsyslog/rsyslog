@@ -3197,7 +3197,7 @@ int realMain(int argc, char **argv)
 	if(bEOptionWasGiven && iCompatibilityMode < 3) {
 		errmsg.LogError(NO_ERRCODE, "WARNING: \"message repeated n times\" feature MUST be turned on in "
 					    "rsyslog.conf - CURRENTLY EVERY MESSAGE WILL BE LOGGED. Visit "
-					    "http://www.rsyslog.com/PNphpBB2-viewtopic-t-222.phtml to learn "
+					    "http://www.rsyslog.com/rptdmsgreduction to learn "
 					    "more and cast your vote if you want us to keep this feature.");
 	}
 
