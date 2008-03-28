@@ -42,6 +42,7 @@ DEFobjCurrIf(obj)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(regexp)
 
+static int bFirstRegexpErrmsg = 1; /**< did we already do a "can't load regexp" error message? */
 static struct template *tplRoot = NULL;	/* the root of the template list */
 static struct template *tplLast = NULL;	/* points to the last element of the template list */
 static struct template *tplLastStatic = NULL; /* last static element of the template list */
@@ -636,8 +637,11 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					/* regexp object could not be loaded */
 					dbgprintf("error %d trying to load regexp library - this may be desired and thus OK",
 						  iRetLocal);
-					errmsg.LogError(NO_ERRCODE, "regexp library could not be loaded (error %d), regexp"
-						       "ignored", iRetLocal);
+					if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
+						bFirstRegexpErrmsg = 0;
+						errmsg.LogError(NO_ERRCODE, "regexp library could not be loaded (error %d), "
+								"regexp ignored", iRetLocal);
+					}
 					pTpe->data.field.has_regex = 2;
 				}
 
