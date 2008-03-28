@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include <regex.h>
+#include <string.h>
 #include <assert.h>
 
 #include "rsyslog.h"

@@ -1608,43 +1608,8 @@ logmsg(msg_t *pMsg, int flags)
 	}
 
 	/* ---------------------- END PARSING ---------------- */
-
-	/* rgerhards, 2005-10-13: if we consider going multi-threaded, this
-	 * is probably the best point to split between a producer and a consumer
-	 * thread. In general, with the first multi-threaded approach, we should
-	 * NOT try to do more than have a single producer and consumer, at least
-	 * if both are from the current code base. The issue is that this code
-	 * was definitely not written with reentrancy in mind and uses a lot of
-	 * global variables. So it is very dangerous to simply go ahead and multi
-	 * thread it. However, I think there is a clear distinction between
-	 * producer (where data is received) and consumer (where the actions are).
-	 * It should be fairly safe to create a single thread for each and run them
-	 * concurrently, thightly coupled via an in-memory queue. Even with this 
-	 * limited multithraeding, benefits are immediate: the lengthy actions
-	 * (database writes!) are de-coupled from the receivers, what should result
-	 * in less likely message loss (loss due to receiver overrun). It also allows
-	 * us to utilize 2-cpu systems, which will soon be common given the current
-	 * advances in multicore CPU hardware. So this is well worth trying.
-	 * Another plus of this two-thread-approach would be that it can easily be configured,
-	 * so if there are compatibility issues with the threading libs, we could simply
-	 * disable it (as a makefile feature).
-	 * There is one important thing to keep in mind when doing this basic
-	 * multithreading. The syslog/tcp message forwarder manipulates a structutre
-	 * that is used by the main thread, which actually sends the data. This
-	 * structure must be guarded by a mutex, else we will have race conditions and
-	 * some very bad things could happen.
-	 *
-	 * Additional consumer threads might be added relatively easy for new receivers,
-	 * e.g. if we decide to move RFC 3195 via liblogging natively into rsyslogd.
-	 *
-	 * To aid this functionality, I am moving the rest of the code (the actual
-	 * consumer) to its own method, now called "processMsg()".
-	 *
-	 * rgerhards, 2005-10-25: as of now, the dual-threading code is now in place.
-	 * It is an optional feature and even when enabled, rsyslogd will run single-threaded
-	 * if it gets any errors during thread creation.
-	 */
 	
+	/* now submit the message to the main queue - then we are done */
 	pMsg->msgFlags = flags;
 	MsgPrepareEnqueue(pMsg);
 	queueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
