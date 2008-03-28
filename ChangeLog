@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.12.6 (rgerhards), 2008-04-??
+---------------------------------------------------------------------------
 Version 3.12.5 (rgerhards), 2008-03-28
 - changed default for "last message repeated n times", which is now
   off by default
