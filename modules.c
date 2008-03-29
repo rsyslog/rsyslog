@@ -189,10 +189,10 @@ static void moduleDestruct(modInfo_t *pThis)
 	if(pThis->pszName != NULL)
 		free(pThis->pszName);
 	if(pThis->pModHdlr != NULL) {
-#	if	0
-		dlclose(pThis->pModHdlr);
+#	ifdef	VALGRIND
+#		warning "dlclose disabled for valgrind"
 #	else
-#		warning "dlclose disabled for valgrind, re-enable before release"
+		dlclose(pThis->pModHdlr);
 #	endif
 	}
 

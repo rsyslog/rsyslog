@@ -291,20 +291,18 @@ if test "$enable_rtinst" = "yes"; then
         AC_DEFINE(RTINST, 1, [Defined if runtime instrumentation mode is enabled.])
 fi
 
-# mudflap
-AC_ARG_ENABLE(mudflap,
-        [AS_HELP_STRING([--enable-mudflap],[Enable mudflap @<:@default=no@:>@])],
+# valgrind
+AC_ARG_ENABLE(valgrind,
+        [AS_HELP_STRING([--enable-valgrind],[Enable valgrind support settings @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_mudflap="yes" ;;
-          no) enable_mudflap="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mudflap) ;;
+         yes) enable_valgrind="yes" ;;
+          no) enable_valgrind="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-valgrind) ;;
          esac],
-        [enable_mudflap="no"]
+        [enable_valgrind="no"]
 )
-if test "$enable_mudflap" = "yes"; then
-        # is there any way to just change the -O option in default CFLAGS? -- rgerhards, 2008-01-08
-        CFLAGS="-fmudflapth $CFLAGS"
-        LIBS="-lmudflapth $LIBS"
+if test "$enable_valgrind" = "yes"; then
+        AC_DEFINE(VALGRIND, 1, [Defined if valgrind support settings are to be enabled (e.g. prevents dlclose()).])
 fi
 
 
@@ -555,5 +553,5 @@ echo "Networking support enabled:               $enable_inet"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
-echo "Mudflap enabled:                          $enable_mudflap"
+echo "valgrind support settings enabled:        $enable_valgrind"
 

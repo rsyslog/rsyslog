@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 3.12.6 (rgerhards), 2008-04-??
+- bugfix: accidently set debug option in 3.12.5 reset to production
+  This option prevented dlclose() to be called. It had no real bad effects,
+  as the modules were otherwise correctly deinitialized and dlopen()
+  supports multiple opens of the same module without any memory footprint.
+- removed --enable-mudflap, added --enable-valgrind ./configure setting
 ---------------------------------------------------------------------------
 Version 3.12.5 (rgerhards), 2008-03-28
 - changed default for "last message repeated n times", which is now
