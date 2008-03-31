@@ -87,7 +87,8 @@ rsyslogd_SOURCES = \
 	iminternal.c \
 	iminternal.h \
 	action.c \
-	action.h
+	action.h \
+	atomic.h
 
 rsyslogd_CPPFLAGS =  -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
 rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
