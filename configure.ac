@@ -413,6 +413,42 @@ AC_SUBST(libdbi_cflags)
 AC_SUBST(libdbi_libs)
 
 
+# openssl support
+AC_ARG_ENABLE(openssl,
+        [AS_HELP_STRING([--enable-openssl],[Enable openssl support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_openssl="yes" ;;
+          no) enable_openssl="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-openssl) ;;
+         esac],
+        [enable_openssl=no]
+)
+if test "x$enable_openssl" = "xyes"; then
+  AC_CHECK_HEADERS(
+    [openssl/ssl.h],,
+    [AC_MSG_FAILURE([openssl is missing])]
+  )
+  AC_CHECK_LIB(
+    [crypto],
+    [CRYPTO_new_ex_data],
+    [openssl_cflags=""
+     openssl_libs="-lcrypto"
+    ],
+    [AC_MSG_FAILURE([library 'crypto' is missing (needed for openssl)])]
+  )
+  AC_CHECK_LIB(
+    [ssl],
+    [SSL_library_init],
+    [ openssl_libs+="-lssl"
+    ],
+    [AC_MSG_FAILURE([library 'ssl' is missing (needed for openssl)])]
+  )
+fi
+AM_CONDITIONAL(ENABLE_OPENSSL, test x$enable_openssl = xyes)
+AC_SUBST(openssl_cflags)
+AC_SUBST(openssl_libs)
+
+
 # SNMP support
 AC_ARG_ENABLE(snmp,
         [AS_HELP_STRING([--enable-snmp],[Enable SNMP support @<:@default=no@:>@])],
@@ -599,6 +635,7 @@ echo "Networking support enabled:               $enable_inet"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
+echo "openssl enabled:                          $enable_openssl"
 echo "valgrind support settings enabled:        $enable_valgrind"
 echo "rsyslogd will be built:                   $enable_rsyslogd"
 
