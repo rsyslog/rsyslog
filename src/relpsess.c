@@ -107,17 +107,20 @@ relpSessDestruct(relpSess_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
 
-pThis->pEngine->dbgprint("destructing session with fd %d, pSrv %p\n", pThis->pTcp->sock, pThis->pSrv);
-	if(pThis->pSrv != NULL) {
-		relpSessSrvDoDisconnect(pThis);
-	} else {
-		/* we are at the client side of the connection */
-		if(   pThis->sessState != eRelpSessState_DISCONNECTED
-		   && pThis->sessState != eRelpSessState_BROKEN) {
-			relpSessCltDoDisconnect(pThis);
+	/* pTcp may be NULL if we run into the destructor due to an error that occured
+	 * during construction.
+	 */
+	if(pThis->pTcp != NULL) {
+		if(pThis->pSrv != NULL) {
+			relpSessSrvDoDisconnect(pThis);
+		} else {
+			/* we are at the client side of the connection */
+			if(   pThis->sessState != eRelpSessState_DISCONNECTED
+			   && pThis->sessState != eRelpSessState_BROKEN) {
+				relpSessCltDoDisconnect(pThis);
+			}
 		}
 	}
-
 
 	if(pThis->pSendq != NULL)
 		relpSendqDestruct(&pThis->pSendq);

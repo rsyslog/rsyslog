@@ -129,6 +129,9 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_INVALID_HDL	RELPERR_BASE + 24	/**< invalid object handle (pointer) provided by caller */
 #define RELP_RET_INCOMPAT_OFFERS RELPERR_BASE + 25	/**< client and server offers are incompatible */
 #define RELP_RET_RQD_FEAT_MISSING RELPERR_BASE + 26	/**< the remote peer does not support a feature required by us */
+#define RELP_RET_MALICIOUS_HNAME RELPERR_BASE + 27	/**< remote peer is trying malicious things with its hostname */
+#define RELP_RET_INVALID_HNAME	RELPERR_BASE + 28	/**< remote peer's hostname invalid or unobtainable */
+#define RELP_RET_ADDR_UNKNOWN 	RELPERR_BASE + 29	/**< remote peer's IP address could not be obtained */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -144,7 +147,8 @@ relpRetVal relpEngineAddListner(relpEngine_t *pThis, unsigned char *pLstnPort);
 relpRetVal relpEngineRun(relpEngine_t *pThis);
 relpRetVal relpEngineCltDestruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
-relpRetVal relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, size_t));
+relpRetVal relpEngineSetSyslogRcv(relpEngine_t *pThis,
+				  relpRetVal (*pCB)(unsigned char*, unsigned char*, unsigned char*, size_t));
 relpRetVal relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
 
 /* exposed relp client functions */

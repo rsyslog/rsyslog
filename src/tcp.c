@@ -31,6 +31,7 @@
  * development.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -97,6 +98,12 @@ relpTcpDestruct(relpTcp_t **ppThis)
 			close(pThis->socks[i]);
 		free(pThis->socks);
 	}
+
+	if(pThis->pRemHostIP != NULL)
+		free(pThis->pRemHostIP);
+	if(pThis->pRemHostName != NULL)
+		free(pThis->pRemHostName);
+
 	/* done with de-init work, now free tcp object itself */
 	free(pThis);
 	*ppThis = NULL;
@@ -121,7 +128,7 @@ relpTcpAbortDestruct(relpTcp_t **ppThis)
 		ling.l_onoff = 1;
 		ling.l_linger = 0;
        		if(setsockopt((*ppThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0 ) {
-			(*ppThis)->pEngine->dbgprint("could net set SO_LINGER, errno %d\n", errno);
+			(*ppThis)->pEngine->dbgprint("could not set SO_LINGER, errno %d\n", errno);
 		}
 	}
 
@@ -131,6 +138,99 @@ relpTcpAbortDestruct(relpTcp_t **ppThis)
 }
 
 
+#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
+#	define SALEN(sa) ((sa)->sa_len)
+#else
+static inline size_t SALEN(struct sockaddr *sa) {
+	switch (sa->sa_family) {
+	case AF_INET:  return (sizeof(struct sockaddr_in));
+	case AF_INET6: return (sizeof(struct sockaddr_in6));
+	default:       return 0;
+	}
+}
+#endif
+
+/* Set pRemHost based on the address provided. This is to be called upon accept()ing
+ * a connection request. It must be provided by the socket we received the
+ * message on as well as a NI_MAXHOST size large character buffer for the FQDN.
+ * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
+ * for some explanation of the code found below. If we detect a malicious
+ * hostname, we return RELP_RET_MALICIOUS_HNAME and let the caller decide
+ * on how to deal with that.
+ * rgerhards, 2008-03-31
+ */
+static relpRetVal
+relpTcpSetRemHost(relpTcp_t *pThis, struct sockaddr *pAddr)
+{
+	relpEngine_t *pEngine;
+	int error;
+	unsigned char szIP[NI_MAXHOST] = "";
+	unsigned char szHname[NI_MAXHOST] = "";
+	struct addrinfo hints, *res;
+	size_t len;
+	
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Tcp);
+	pEngine = pThis->pEngine;
+	assert(pAddr != NULL);
+
+        error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
+pEngine->dbgprint("getnameinfo returns %d\n", error);
+
+        if(error) {
+                pThis->pEngine->dbgprint("Malformed from address %s\n", gai_strerror(error));
+		strcpy((char*)szHname, "???");
+		strcpy((char*)szIP, "???");
+		ABORT_FINALIZE(RELP_RET_INVALID_HNAME);
+	}
+
+	if(!pEngine->bDisableDns) {
+		error = getnameinfo(pAddr, SALEN(pAddr), (char*)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
+		if(error == 0) {
+			memset (&hints, 0, sizeof (struct addrinfo));
+			hints.ai_flags = AI_NUMERICHOST;
+			hints.ai_socktype = SOCK_STREAM;
+			/* we now do a lookup once again. This one should fail,
+			 * because we should not have obtained a non-numeric address. If
+			 * we got a numeric one, someone messed with DNS!
+			 */
+			if(getaddrinfo((char*)szHname, NULL, &hints, &res) == 0) {
+				freeaddrinfo (res);
+				/* OK, we know we have evil, so let's indicate this to our caller */
+				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
+				pEngine->dbgprint("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
+				iRet = RELP_RET_MALICIOUS_HNAME;
+			}
+		} else {
+			strcpy((char*)szHname, (char*)szIP);
+		}
+	} else {
+		strcpy((char*)szHname, (char*)szIP);
+	}
+
+	/* We now have the names, so now let's allocate memory and store them permanently.
+	 * (side note: we may hold on to these values for quite a while, thus we trim their
+	 * memory consumption)
+	 */
+	len = strlen((char*)szIP) + 1; /* +1 for \0 byte */
+	if((pThis->pRemHostIP = malloc(len)) == NULL)
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	memcpy(pThis->pRemHostIP, szIP, len);
+
+	len = strlen((char*)szHname) + 1; /* +1 for \0 byte */
+	if((pThis->pRemHostName = malloc(len)) == NULL) {
+		free(pThis->pRemHostIP); /* prevent leak */
+		pThis->pRemHostIP = NULL;
+		ABORT_FINALIZE(RELP_RET_OUT_OF_MEMORY);
+	}
+	memcpy(pThis->pRemHostName, szHname, len);
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+
 /* accept an incoming connection request, sock provides the socket on which we can
  * accept the new session.
  * rgerhards, 2008-03-17
@@ -138,7 +238,7 @@ relpTcpAbortDestruct(relpTcp_t **ppThis)
 relpRetVal
 relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine)
 {
-	relpTcp_t *pThis;
+	relpTcp_t *pThis = NULL;
 	int sockflags;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
@@ -152,7 +252,12 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine)
 		ABORT_FINALIZE(RELP_RET_ACCEPT_ERR);
 	}
 
+	/* construct our object so that we can use it... */
+	CHKRet(relpTcpConstruct(&pThis, pEngine));
+
 	/* TODO: obtain hostname, normalize (callback?), save it */
+	CHKRet(relpTcpSetRemHost(pThis, (struct sockaddr*) &addr));
+pThis->pEngine->dbgprint("remote host is '%s', ip '%s'\n", pThis->pRemHostName, pThis->pRemHostIP);
 
 	/* set the new socket to non-blocking IO */
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
@@ -167,13 +272,15 @@ relpTcpAcceptConnReq(relpTcp_t **ppThis, int sock, relpEngine_t *pEngine)
 		ABORT_FINALIZE(RELP_RET_IO_ERR);
 	}
 
-	CHKRet(relpTcpConstruct(&pThis, pEngine));
 	pThis->sock = iNewSock;
 
 	*ppThis = pThis;
 
 finalize_it:
 	if(iRet != RELP_RET_OK) {
+		if(pThis != NULL)
+			relpTcpDestruct(&pThis);
+		/* the close may be redundant, but that doesn't hurt... */
 		if(iNewSock >= 0)
 			close(iNewSock);
 	}

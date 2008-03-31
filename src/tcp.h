@@ -41,6 +41,8 @@
 typedef struct relpTcp_s {
 	BEGIN_RELP_OBJ;
 	relpEngine_t *pEngine;
+	unsigned char *pRemHostIP; /**< IP address of remote peer (currently used in server mode, only) */
+	unsigned char *pRemHostName; /**< host name of remote peer (currently used in server mode, only) */
 	int sock;	/**< the socket we use for regular, single-socket, operations */
 	int *socks;	/**< the socket(s) we use for listeners, element 0 has nbr of socks */
 	int iSessMax;	/**< maximum number of sessions permitted */

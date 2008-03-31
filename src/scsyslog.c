@@ -50,7 +50,8 @@ BEGINcommand(S, Syslog)
 		ABORT_FINALIZE(RELP_RET_CMD_DISABLED);
 	}
 
-	iRet = pSess->pEngine->onSyslogRcv(pFrame->pData, pFrame->lenData);
+	 iRet = pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostName,
+	 				    pFrame->pData, pFrame->lenData);
 
 	/* send response */
 	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "200 OK", 6));

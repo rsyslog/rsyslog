@@ -212,15 +212,16 @@ relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __at
 
 
 /* a dummy for callbacks not set by the caller */
-static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *pMsg,
-					size_t __attribute__((unused)) lenMsg)
+static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *pHostName,
+	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
+	size_t __attribute__((unused)) lenMsg)
 { return RELP_RET_NOT_IMPLEMENTED;
 }
 /* set the syslog receive callback. If NULL is provided, it is set to the
  * not implemented dummy.
  */
 relpRetVal
-relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, size_t))
+relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, unsigned char*, unsigned char*, size_t))
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Engine);
@@ -331,8 +332,10 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 				if(FD_ISSET(sock, &readfds)) {
 					pThis->dbgprint("new connect on RELP socket #%d\n", sock);
 					localRet = relpSessAcceptAndConstruct(&pNewSess, pSrvEtry->pSrv, sock);
+pThis->dbgprint("relp accept session returns, iRet %d\n", localRet);
 					if(localRet == RELP_RET_OK) {
 						localRet = relpEngineAddToSess(pThis, pNewSess);
+//pThis->dbgprint("relp accept session returns, iRet %d\n", localRet);
 					}
 					/* TODO: check localret, emit error msg! */
 					--nfds; /* indicate we have processed one */
