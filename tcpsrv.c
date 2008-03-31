@@ -434,7 +434,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
  * If it does not succeed, no session is created and ppSess is
  * undefined. If the user has provided an OnSessAccept Callback,
  * this one is executed immediately after creation of the 
- * session object, so that it can do its own initializatin.
+ * session object, so that it can do its own initialization.
  * rgerhards, 2008-03-02
  */
 static rsRetVal
@@ -490,7 +490,9 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 	 * configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN, pThis->pUsr, (*ppSess)->pUsr)) {
+RUNLOG_VAR("%p", ppSess);
+RUNLOG_VAR("%p", pSess);
+	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		dbgprintf("%s is not an allowed sender\n", (char *) fromHostFQDN);
 		if(option_DisallowWarning) {
 			errno = 0;
@@ -596,6 +598,7 @@ Run(tcpsrv_t *pThis)
 		for (i = 0; i < *pThis->pSocksLstn; i++) {
 			if (FD_ISSET(pThis->pSocksLstn[i+1], &readfds)) {
 				dbgprintf("New connect on TCP inetd socket: #%d\n", pThis->pSocksLstn[i+1]);
+RUNLOG_VAR("%p", &pNewSess);
 				SessAccept(pThis, &pNewSess, pThis->pSocksLstn[i+1]);
 				--nfds; /* indicate we have processed one */
 			}
