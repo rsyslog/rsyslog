@@ -78,10 +78,11 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((u
  * rgerhards, 2008-03-21
  */
 static relpRetVal
-onSyslogRcv(uchar *pMsg, size_t lenMsg)
+onSyslogRcv(uchar *pHostname, uchar __attribute__((unused)) *pIP, uchar *pMsg, size_t lenMsg)
 {
 	DEFiRet;
-	parseAndSubmitMessage("TODO:HOSTNAME", (char*)pMsg, lenMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+	parseAndSubmitMessage((char*)pHostname, (char*)pMsg, lenMsg, MSG_PARSE_HOSTNAME,
+			      NOFLAG, eFLOWCTL_LIGHT_DELAY);
 
 	RETiRet;
 }
