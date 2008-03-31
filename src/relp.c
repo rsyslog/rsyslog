@@ -362,7 +362,6 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 			}
 			/* are we able to write? */
 			if(FD_ISSET(sock, &writefds)) {
-pThis->dbgprint("fd %d ready for writing\n", sock);
 				localRet = relpSessSndData(pSessEtry->pSess); /* errors are handled there */
 				/* if we had an error during processing, we must shut down the session. This
 				 * is part of the protocol specification: errors are recovered by aborting the
