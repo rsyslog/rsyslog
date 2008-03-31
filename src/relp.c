@@ -171,8 +171,6 @@ relpEngineDestruct(relpEngine_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Engine);
 
-	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
-
 	/* now destruct all currently existing sessions */
 	for(pSessL = pThis->pSessLstRoot ; pSessL != NULL ; pSessL = pSessLNxt) {
 		pSessLNxt = pSessL->pNext;

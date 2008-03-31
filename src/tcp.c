@@ -86,8 +86,6 @@ relpTcpDestruct(relpTcp_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Tcp);
 
-	/* TODO: check for pending operations -- rgerhards, 2008-03-16 */
-
 	if(pThis->sock != -1) {
 		close(pThis->sock);
 		pThis->sock = -1;
