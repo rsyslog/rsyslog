@@ -72,7 +72,7 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((u
 /* callback for receiving syslog messages. This function is invoked from the
  * RELP engine when a syslog message arrived. It must return a relpRetVal,
  * with anything else but RELP_RET_OK terminating the relp session. Please note
- * that RELP_RE_OK is equal to RS_RET_OK and the other libRELP error codes
+ * that RELP_RET_OK is equal to RS_RET_OK and the other libRELP error codes
  * are different from our rsRetVal. So we can simply use our own iRet system
  * to fulfill the requirement.
  * rgerhards, 2008-03-21

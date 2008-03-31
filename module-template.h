@@ -34,7 +34,7 @@
 /* macro to define standard output-module static data members
  */
 #define DEF_MOD_STATIC_DATA \
-	static rsRetVal (*omsdRegCFSLineHdlr)();
+	static __attribute__((unused)) rsRetVal (*omsdRegCFSLineHdlr)();
 
 #define DEF_OMOD_STATIC_DATA \
 	DEF_MOD_STATIC_DATA \
