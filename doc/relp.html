@@ -1,8 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>RELP - The Reliable Event Logging Protocol
-(Specification)</title>
-
-</head>
+<html><head><title>RELP - The Reliable Event Logging Protocol (Specification)</title></head>
 <body>
 <h1>RELP - The Reliable Event Logging Protocol</h1>
 <p>This is the specification for the reliable event logging
@@ -167,7 +164,19 @@ received&nbsp;the "open" response.</p>
 Closes a connection to the server. Once the client has sent a "close"
 command, it must not transmit any other command over the session. When
 the server's rsp answer is received, the client must close the
-connection.<h4>Command "starttls"</h4>
+connection.<br><h4>Hint Command "serverclose"</h4>This
+hint SHOULD be sent by the server before it closes a RELP connection.
+It advised the client that the server has closed the connection. The
+client SHOULD use this knowledge to close the connection on the
+client-side, too. Please note that this is a hint, and as such
+transferred with a TXNR of 0 and without any response from the client.
+Note that the client can not ask the server to defer closing of the
+connection. A client MUST correctly process a server-closed connection
+even if the server does not send a "serverclose" hint. In thus case, it
+must rely on the transport layer connection status. The primary utility
+of "serverclose" is to enable the client to quickly detect a
+server-closed connection, clean up ressources and go into termination
+(or recovery code).<h4>Command "starttls"</h4>
 Does the same thing as ESMTP STARTTLS: switches the connection
 to TLS mode.
 <h4>Command "syslog"</h4>

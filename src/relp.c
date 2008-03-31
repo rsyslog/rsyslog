@@ -391,6 +391,7 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 /* core (protocol) commands */
 PROTOTYPEcommand(S, Init)
 PROTOTYPEcommand(S, Close)
+PROTOTYPEcommand(C, Serverclose)
 PROTOTYPEcommand(S, Rsp)
 /* extension commands */
 PROTOTYPEcommand(S, Syslog)
@@ -419,6 +420,8 @@ relpEngineDispatchFrame(relpEngine_t *pThis, relpSess_t *pSess, relpFrame_t *pFr
 		CHKRet(relpSCInit(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "close")) {
 		CHKRet(relpSCClose(pFrame, pSess));
+	} else if(!strcmp((char*)pFrame->cmd, "serverclose")) {
+		CHKRet(relpCCServerclose(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "syslog")) {
 		CHKRet(relpSCSyslog(pFrame, pSess));
 	} else if(!strcmp((char*)pFrame->cmd, "rsp")) {

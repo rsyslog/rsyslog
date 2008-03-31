@@ -30,6 +30,7 @@ librelp_la_SOURCES = \
 	scrsp.c \
 	copen.c \
 	cclose.c \
+	cserverclose.c \
 	dbllinklist.h \
 	cmdif.h
 librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS)
