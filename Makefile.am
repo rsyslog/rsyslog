@@ -1,7 +1,8 @@
-sbin_PROGRAMS = rfc3195d rsyslogd
+#sbin_PROGRAMS = rfc3195d rsyslogd
+sbin_PROGRAMS =
 
-rfc3195d_SOURCES = rfc3195d.c rsyslog.h
-
+if ENABLE_RSYSLOGD
+sbin_PROGRAMS += rsyslogd
 rsyslogd_SOURCES = \
 	datetime.c \
 	datetime.h \
@@ -93,9 +94,17 @@ rsyslogd_SOURCES = \
 rsyslogd_CPPFLAGS =  -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
 rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
+endif # if ENABLE_RSYSLOGD
 
 # now come the library plugins
 pkglib_LTLIBRARIES = 
+
+if ENABLE_RFC3195
+# this does so far not work - a manual build is needed
+sbin_PROGRAMS += rfc3195d
+rfc3195d_SOURCES = rfc3195d.c rsyslog.h
+endif
+
 
 if ENABLE_INET
 pkglib_LTLIBRARIES += lmnet.la lmtcpsrv.la lmtcpclt.la

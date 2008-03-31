@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.12.6 (rgerhards), 2008-04-??
+Version 3.12.6 (rgerhards), 2008-03-31
 - bugfix: accidently set debug option in 3.12.5 reset to production
   This option prevented dlclose() to be called. It had no real bad effects,
   as the modules were otherwise correctly deinitialized and dlopen()
@@ -10,6 +10,9 @@ Version 3.12.6 (rgerhards), 2008-04-??
   threads to be correctly set
 - worked a bit on atomic memory operations to support problem-free
   threading (only at non-intrusive places)
+- added a --enable/disable-rsyslogd configure option so that
+  source-based packaging systems can build plugins without the need
+  to compile rsyslogd
 ---------------------------------------------------------------------------
 Version 3.12.5 (rgerhards), 2008-03-28
 - changed default for "last message repeated n times", which is now

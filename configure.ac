@@ -442,6 +442,19 @@ AC_SUBST(snmp_cflags)
 AC_SUBST(snmp_libs)
 
 
+# support for NOT building rsyslogd (useful for source-based packaging systems)
+AC_ARG_ENABLE(rsyslogd,
+        [AS_HELP_STRING([--enable-rsyslogd],[Build rsyslogd @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_rsyslogd="yes" ;;
+          no) enable_rsyslogd="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-rsyslogd) ;;
+         esac],
+        [enable_rsyslogd=no]
+)
+AM_CONDITIONAL(ENABLE_RSYSLOGD, test x$enable_rsyslogd = xyes)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -472,6 +485,39 @@ fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
 AC_SUBST(relp_cflags)
 AC_SUBST(relp_libs)
+
+
+# RFC 3195 support
+# WARNING: THIS IS NOT REALLY PRESENT YET - needs to be build manually!
+AC_ARG_ENABLE(rfc3195,
+        [AS_HELP_STRING([--enable-rfc3195],[Enable RFC3195 support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_rfc3195="yes" ;;
+          no) enable_rfc3195="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-rfc3195) ;;
+         esac],
+        [enable_rfc3195=no]
+)
+if test "x$enable_rfc3195" = "xyes"; then
+  AC_CHECK_HEADERS(
+    [librfc3195.h],,
+    [AC_MSG_FAILURE([RFC3195 library is missing (no headers)])]
+  )
+# I don't know how to tell that librfc3195 needs -lrt, so I disable
+# this check for now - the header check should work well enough...
+# rgerhards, 2008-03-25
+#  AC_CHECK_LIB(
+#    [rfc3195],
+#    [rfc3195EngineGetVersion],
+#    [rfc3195_cflags=""
+     rfc3195_libs="-lrfc3195"
+#    ],
+#    [AC_MSG_FAILURE([RFC3195 library is missing])]
+#  )
+fi
+AM_CONDITIONAL(ENABLE_RFC3195, test x$enable_rfc3195 = xyes)
+AC_SUBST(rfc3195_cflags)
+AC_SUBST(rfc3195_libs)
 
 
 # settings for the template input module; copy and modify this code
@@ -554,4 +600,5 @@ echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
 echo "valgrind support settings enabled:        $enable_valgrind"
+echo "rsyslogd will be built:                   $enable_rsyslogd"
 
