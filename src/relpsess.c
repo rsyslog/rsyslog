@@ -46,8 +46,9 @@
 #include "dbllinklist.h"
 
 /* forward definitions */
-static relpRetVal relpSessDisconnect(relpSess_t *pThis);
+static relpRetVal relpSessCltDoDisconnect(relpSess_t *pThis);
 static relpRetVal relpSessFixCmdStates(relpSess_t *pThis);
+static relpRetVal relpSessSrvDoDisconnect(relpSess_t *pThis);
 
 
 /** Construct a RELP sess instance
@@ -69,7 +70,6 @@ relpSessConstruct(relpSess_t **ppThis, relpEngine_t *pEngine, relpSrv_t *pSrv)
 	RELP_CORE_CONSTRUCTOR(pThis, Sess);
 	pThis->pEngine = pEngine;
 	/* use Engine's command enablement states as default */
-pThis->pEngine->dbgprint("sess construct, cmd state %d\n", pEngine->stateCmdSyslog);
 	pThis->stateCmdSyslog = pEngine->stateCmdSyslog;
 	pThis->pSrv = pSrv;
 	pThis->txnr = 1; /* txnr start at 1 according to spec */
@@ -107,10 +107,17 @@ relpSessDestruct(relpSess_t **ppThis)
 	pThis = *ppThis;
 	RELPOBJ_assert(pThis, Sess);
 
-	if(   pThis->sessState != eRelpSessState_DISCONNECTED
-	   && pThis->sessState != eRelpSessState_BROKEN) {
-		relpSessDisconnect(pThis);
+pThis->pEngine->dbgprint("destructing session with fd %d, pSrv %p\n", pThis->pTcp->sock, pThis->pSrv);
+	if(pThis->pSrv != NULL) {
+		relpSessSrvDoDisconnect(pThis);
+	} else {
+		/* we are at the client side of the connection */
+		if(   pThis->sessState != eRelpSessState_DISCONNECTED
+		   && pThis->sessState != eRelpSessState_BROKEN) {
+			relpSessCltDoDisconnect(pThis);
+		}
 	}
+
 
 	if(pThis->pSendq != NULL)
 		relpSendqDestruct(&pThis->pSendq);
@@ -121,7 +128,6 @@ relpSessDestruct(relpSess_t **ppThis)
 	for(pUnacked = pThis->pUnackedLstRoot ; pUnacked != NULL ; ) {
 		pUnackedToDel = pUnacked;
 		pUnacked = pUnacked->pNext;
-pThis->pEngine->dbgprint("relpSessionDestruct Unacked %p, sendbuf %p\n", pUnackedToDel, pUnackedToDel->pSendbuf);
 		relpSendbufDestruct(&pUnackedToDel->pSendbuf);
 		free(pUnackedToDel);
 	}
@@ -263,6 +269,58 @@ relpSessSndData(relpSess_t *pThis)
 	RELPOBJ_assert(pThis, Sess);
 
 	CHKRet(relpSendqSend(pThis->pSendq, pThis->pTcp));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* Send a command hint to the remote peer. This function works for the 
+ * server-side of the connection. A modified version must be used for the
+ * client side (because we have different ways of sending the data). We do
+ * not yet need the client side. If we do, way should think about a generic
+ * approach, eg by using function pointers for the send function.
+ * rgerhards, 2008-03-31
+ */
+static relpRetVal
+relpSessSrvSendHint(relpSess_t *pThis, unsigned char *pHint, size_t lenHint,
+		    unsigned char *pData, size_t lenData)
+{
+	relpSendbuf_t *pSendbuf;
+
+	ENTER_RELPFUNC;
+	assert(pHint != NULL);
+	assert(lenHint != 0);
+	RELPOBJ_assert(pThis, Sess);
+
+	CHKRet(relpFrameBuildSendbuf(&pSendbuf, 0, pHint, lenHint, pData, lenData, pThis, NULL));
+	/* now send it */
+pThis->pEngine->dbgprint("hint-frame to send: '%s'\n", pSendbuf->pData + (9 - pSendbuf->lenTxnr));
+	CHKRet(relpSendbufSend(pSendbuf, pThis->pTcp));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
+/* Disconnect from the client. After disconnect, the session object
+ * is destructed. This is the server-side disconnect and must be called
+ * for server sessions only.
+ * rgerhards, 2008-03-31
+ */
+static relpRetVal
+relpSessSrvDoDisconnect(relpSess_t *pThis)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Sess);
+
+	/* Try to hint the client that we are closing the session. If the hint does
+	 * not make it through to the client, that's ok, too. Then, it'll notice when it
+	 * tries to use the connection. In any case, it can handle that (but obviously its
+	 * better if the client is able to receive the hint, as this cleans up things a bit
+	 * faster).
+	 */
+	CHKRet(relpSessSrvSendHint(pThis, (unsigned char*)"serverclose", 11, (unsigned char*)"", 0));
 
 finalize_it:
 	LEAVE_RELPFUNC;
@@ -751,16 +809,16 @@ pThis->pEngine->dbgprint("CBrspClose, setting state CLOSE_RSP_RCVD\n");
 
 
 /* Disconnect from the server. After disconnect, the session object
- * is destructed.
+ * is destructed. This is the client-side disconnect and must be called
+ * for client sessions only.
  * rgerhards, 2008-03-21
  */
 static relpRetVal
-relpSessDisconnect(relpSess_t *pThis)
+relpSessCltDoDisconnect(relpSess_t *pThis)
 {
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Sess);
 
-pThis->pEngine->dbgprint("SessDisconnect enter, sessState %d\n", pThis->sessState);
 	/* first wait to be permitted to send, this time a bit more impatient (after all,
 	 * we may be terminated if we take too long). We do not care about the return state.
 	 * Even if we are outside of the window, we still send the close request, because
