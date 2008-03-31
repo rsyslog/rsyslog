@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 3.17.0 (rgerhards), 2008-04-??
+- FEATURE FOCUS for 3.17 is TLS over plain TCP syslog
+---------------------------------------------------------------------------
 Version 3.13.0-dev0 (rgerhards), 2008-03-31
 - bugfix: accidently set debug option in 3.12.5 reset to production
   This option prevented dlclose() to be called. It had no real bad effects,
