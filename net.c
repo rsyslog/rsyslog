@@ -631,8 +631,8 @@ should_use_so_bsdcompat(void)
  * we should abort. For this, the return value tells the caller if the
  * message should be processed (1) or discarded (0).
  */
-/* TODO: after the bughunt, make this function static - rgerhards, 2007-09-18 */
-rsRetVal gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
+static rsRetVal
+gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
 {
 	DEFiRet;
 	int error;
