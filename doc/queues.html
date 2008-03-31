@@ -16,7 +16,7 @@ rule processor, which then evaluates which actions are to be carried out. In
 front of each action, there is also a queue, which potentially de-couples the 
 filter processing from the actual action (e.g. writing to file, database or 
 forwarding to another host).</p>
-<h1>iQueue Modes</h1>
+<h1>Queue Modes</h1>
 <p>Rsyslog supports different queue modes, some with submodes. Each of them has 
 specific advantages and disadvantages. Selecting the right queue mode is quite 
 important when tuning rsyslogd. The queue mode (aka "type") is set via the "<i>$&lt;object&gt;QueueType</i>" 
@@ -215,7 +215,7 @@ a new worker thread is automatically started. Similarily, a third worker will be
 started when there are at least 300 messages, a forth when reaching 400 and so 
 on.</p>
 <p>It, however, does not make sense to have too many worker threads running in 
-parall. Thus, the upper limit ca be set via "<i>$&lt;object&gt;QueueMaxWorkerThreads</i>". 
+parall. Thus, the upper limit ca be set via "<i>$&lt;object&gt;QueueWorkerThreads</i>". 
 If it, for example, is set to four, no more than four workers will ever be 
 started, no matter how many elements are enqueued. </p>
 <p>Worker threads that have been started are kept running until an inactivity 
