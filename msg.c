@@ -43,6 +43,7 @@
 #include "var.h"
 #include "datetime.h"
 #include "regexp.h"
+#include "atomic.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -241,9 +242,15 @@ finalize_it:
 
 
 BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
+	int currRefCount;
 CODESTARTobjDestruct(msg)
 	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); */
-	if(--pThis->iRefCount == 0)
+#	ifdef DO_HAVE_ATOMICS
+		currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
+#	else
+		currRefCount = --pThis->iRefCount;
+# 	endif
+	if(currRefCount == 0)
 	{
 		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
 		if(pThis->pszUxTradMsg != NULL)
@@ -438,9 +445,13 @@ finalize_it:
 msg_t *MsgAddRef(msg_t *pM)
 {
 	assert(pM != NULL);
-	MsgLock(pM);
-	pM->iRefCount++;
-	MsgUnlock(pM);
+#	ifdef DO_HAVE_ATOMICS
+		ATOMIC_INC(pM->iRefCount);
+#	else
+		MsgLock(pM);
+		pM->iRefCount++;
+		MsgUnlock(pM);
+#	endif
 	/* DEV debugging only! dbgprintf("MsgAddRef\t0x%x done, Ref now: %d\n", (int)pM, pM->iRefCount);*/
 	return(pM);
 }

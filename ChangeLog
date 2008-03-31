@@ -6,6 +6,10 @@ Version 3.12.6 (rgerhards), 2008-04-??
   supports multiple opens of the same module without any memory footprint.
 - removed --enable-mudflap, added --enable-valgrind ./configure setting
 - bugfix: tcp receiver could segfault due to uninitialized variable
+- docfix: queue doc had a wrong directive name that prevented max worker
+  threads to be correctly set
+- worked a bit on atomic memory operations to support problem-free
+  threading (only at non-intrusive places)
 ---------------------------------------------------------------------------
 Version 3.12.5 (rgerhards), 2008-03-28
 - changed default for "last message repeated n times", which is now

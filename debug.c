@@ -660,7 +660,9 @@ static void dbgCallStackDestruct(void *arg)
 		free(pThrd->pszThrdName);
 	}
 
+ 	pthread_mutex_lock(&mutCallStack);
 	DLL_Del(CallStack, pThrd);
+ 	pthread_mutex_unlock(&mutCallStack);
 }
 
 

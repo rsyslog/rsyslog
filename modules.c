@@ -87,7 +87,7 @@ modUsrAdd(modInfo_t *pThis, char *pszUsr)
 	pThis->pModUsrRoot = pUsr;
 
 finalize_it:
-	ENDfunc
+	ENDfunc;
 }
 
 

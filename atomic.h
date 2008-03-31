@@ -6,6 +6,9 @@
  * because in the non-presence of them, we simply do it without atomicitiy.
  * Which, for word-aligned data types, usually (but only usually!) should work.
  *
+ * We are using the functions described in
+ * http:/gcc.gnu.org/onlinedocs/gcc/Atomic-Builtins.html
+ *
  * THESE MACROS MUST ONLY BE USED WITH WORD-SIZED DATA TYPES!
  *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
@@ -32,6 +35,9 @@
 #ifndef INCLUDED_ATOMIC_H
 #define INCLUDED_ATOMIC_H
 
-#define ATOMIC_INC(data) __sync_fetch_and_add(&data, 1);
+/* set the following to 1 if we have atomic operations (and #undef it otherwise) */
+#define DO_HAVE_ATOMICS 1
+#define ATOMIC_INC(data) ((void) __sync_fetch_and_add(&data, 1))
+#define ATOMIC_DEC_AND_FETCH(data) __sync_sub_and_fetch(&data, 1)
 
 #endif /* #ifndef INCLUDED_ATOMIC_H */
