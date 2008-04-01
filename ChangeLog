@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 3.15.0 (rgerhards), 2008-04-01
+- major new feature: imrelp/omrelp support reliable delivery of syslog
+  messages via the RELP protocol and librelp (http://www.librelp.com).
+  Plain tcp syslog, so far the best reliability solution, can lose
+  messages when something goes wrong or a peer goes down. With RELP,
+  this can no longer happen. See imrelp.html for more details.
 - bugfix: rsyslogd was no longer build by default; man pages are 
   only installed if corresponding option is selected. Thanks to
   Michael Biebl for pointing these problems out.
