@@ -1,6 +1,9 @@
 ---------------------------------------------------------------------------
 Version 3.17.0 (rgerhards), 2008-04-??
 - FEATURE FOCUS for 3.17 is TLS over plain TCP syslog
+- bugfix: rsyslogd was no longer build by default; man pages are 
+  only installed if corresponding option is selected. Thanks to
+  Michael Biebl for pointing these problems out.
 ---------------------------------------------------------------------------
 Version 3.13.0-dev0 (rgerhards), 2008-03-31
 - bugfix: accidently set debug option in 3.12.5 reset to production
