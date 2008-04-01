@@ -171,11 +171,11 @@ endif
 # relp support
 # 
 if ENABLE_RELP
-pkglib_LTLIBRARIES += lmrelputil.la
-lmrelputil_la_SOURCES = relputil.c relputil.h
-lmrelputil_la_CPPFLAGS = $(pthreads_cflags) $(relp_cflags)
-lmrelputil_la_LDFLAGS = -module -avoid-version
-lmrelputil_la_LIBADD = $(relp_libs)
+#pkglib_LTLIBRARIES += lmrelputil.la
+#lmrelputil_la_SOURCES = relputil.c relputil.h
+#lmrelputil_la_CPPFLAGS = $(pthreads_cflags) $(relp_cflags)
+#lmrelputil_la_LDFLAGS = -module -avoid-version
+#lmrelputil_la_LIBADD = $(relp_libs)
 endif
 
 EXTRA_DIST = \
