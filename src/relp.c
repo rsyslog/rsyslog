@@ -519,3 +519,23 @@ finalize_it:
 pThis->dbgprint("ENGINE SetEnableCmd out syslog cmd state: %d, iRet %d\n", pThis->stateCmdSyslog, iRet);
 	LEAVE_RELPFUNC;
 }
+
+
+/* Enable (1) or Disable (0) DNS hostname resolution when accepting a remote
+ * session. If disabled, the IP address will be used as the hostname.
+ * rgerhards, 2008-03-31
+ */
+relpRetVal
+relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	if(iMode != 0 && iMode != 1)
+		ABORT_FINALIZE(RELP_RET_INVALID_PARAM);
+
+	pThis->bEnableDns = iMode;
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}

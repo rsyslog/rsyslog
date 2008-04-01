@@ -81,7 +81,8 @@ struct relpEngine_s {
 	int protocolVersion; /**< version of the relp protocol supported by this engine */
 
 	/* Flags */
-	int bDisableDns; /**< disable DNS lookups 0 - no, 1 - yes */
+	int bEnableDns; /**< enabled DNS lookups 0 - no, 1 - yes */
+	int bAcceptSessFromMalDnsHost; /**< accept session from host with malicious DNS? (0-no, 1-yes) */
 
 	/* default for enabled commands */
 	relpCmdEnaState_t stateCmdSyslog;

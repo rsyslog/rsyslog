@@ -184,7 +184,7 @@ pEngine->dbgprint("getnameinfo returns %d\n", error);
 		ABORT_FINALIZE(RELP_RET_INVALID_HNAME);
 	}
 
-	if(!pEngine->bDisableDns) {
+	if(pEngine->bEnableDns) {
 		error = getnameinfo(pAddr, SALEN(pAddr), (char*)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 		if(error == 0) {
 			memset (&hints, 0, sizeof (struct addrinfo));

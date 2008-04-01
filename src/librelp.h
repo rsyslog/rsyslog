@@ -132,6 +132,7 @@ enum relpCmdEnaState_e { /* command enabled state - what are we permitted to do/
 #define RELP_RET_MALICIOUS_HNAME RELPERR_BASE + 27	/**< remote peer is trying malicious things with its hostname */
 #define RELP_RET_INVALID_HNAME	RELPERR_BASE + 28	/**< remote peer's hostname invalid or unobtainable */
 #define RELP_RET_ADDR_UNKNOWN 	RELPERR_BASE + 29	/**< remote peer's IP address could not be obtained */
+#define RELP_RET_INVALID_PARAM 	RELPERR_BASE + 30	/**< librelp API called with wrong parameter */
 
 /* some macros to work with librelp error codes */
 #define CHKRet(code) if((iRet = code) != RELP_RET_OK) goto finalize_it
@@ -150,6 +151,7 @@ relpRetVal relpEngineCltConstruct(relpEngine_t *pThis, relpClt_t **ppClt);
 relpRetVal relpEngineSetSyslogRcv(relpEngine_t *pThis,
 				  relpRetVal (*pCB)(unsigned char*, unsigned char*, unsigned char*, size_t));
 relpRetVal relpEngineSetEnableCmd(relpEngine_t *pThis, unsigned char *pszCmd, relpCmdEnaState_t stateCmd);
+relpRetVal relpEngineSetDnsLookupMode(relpEngine_t *pThis, int iMode);
 
 /* exposed relp client functions */
 relpRetVal relpCltConnect(relpClt_t *pThis, int protFamily, unsigned char *port, unsigned char *host);
