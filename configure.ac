@@ -450,7 +450,7 @@ AC_ARG_ENABLE(rsyslogd,
           no) enable_rsyslogd="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-rsyslogd) ;;
          esac],
-        [enable_rsyslogd=no]
+        [enable_rsyslogd=yes]
 )
 AM_CONDITIONAL(ENABLE_RSYSLOGD, test x$enable_rsyslogd = xyes)
 
