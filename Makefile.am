@@ -1,5 +1,6 @@
 #sbin_PROGRAMS = rfc3195d rsyslogd
 sbin_PROGRAMS =
+man_MANS = 
 
 if ENABLE_RSYSLOGD
 sbin_PROGRAMS += rsyslogd
@@ -94,6 +95,9 @@ rsyslogd_SOURCES = \
 rsyslogd_CPPFLAGS =  -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
 rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
+
+man_MANS += rsyslogd.8 rsyslog.conf.5 
+
 endif # if ENABLE_RSYSLOGD
 
 # now come the library plugins
@@ -103,6 +107,7 @@ if ENABLE_RFC3195
 # this does so far not work - a manual build is needed
 sbin_PROGRAMS += rfc3195d
 rfc3195d_SOURCES = rfc3195d.c rsyslog.h
+man_MANS += rfc3195d.8
 endif
 
 
@@ -172,8 +177,6 @@ lmrelputil_la_CPPFLAGS = $(pthreads_cflags) $(relp_cflags)
 lmrelputil_la_LDFLAGS = -module -avoid-version
 lmrelputil_la_LIBADD = $(relp_libs)
 endif
-
-man_MANS = rfc3195d.8 rsyslogd.8 rsyslog.conf.5 
 
 EXTRA_DIST = \
 	redhat/rsyslog.conf \
