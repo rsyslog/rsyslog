@@ -34,7 +34,6 @@ librelp_la_SOURCES = \
 	dbllinklist.h \
 	cmdif.h
 librelp_la_CPPFLAGS = $(PTHREADS_CFLAGS)
-librelp_la_LIBADD = 
-librelp_la_LDDADD = $(rt_libs)
+librelp_la_LIBADD = $(rt_libs)
 
 include_HEADERS = librelp.h
