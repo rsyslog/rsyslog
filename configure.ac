@@ -466,26 +466,11 @@ AC_ARG_ENABLE(relp,
         [enable_relp=no]
 )
 if test "x$enable_relp" = "xyes"; then
-  AC_CHECK_HEADERS(
-    [librelp.h],,
-    [AC_MSG_FAILURE([RELP library is missing (no headers)])]
-  )
-# I don't know how to tell that librelp needs -lrt, so I disable
-# this check for now - the header check should work well enough...
-# rgerhards, 2008-03-25
-#  AC_CHECK_LIB(
-#    [relp],
-#    [relpEngineGetVersion],
-#    [relp_cflags=""
-     relp_libs="-lrelp"
-#    ],
-#    [AC_MSG_FAILURE([RELP library is missing])]
-#  )
+	PKG_CHECK_MODULES(RELP, relp)
 fi
 AM_CONDITIONAL(ENABLE_RELP, test x$enable_relp = xyes)
-AC_SUBST(relp_cflags)
-AC_SUBST(relp_libs)
-
+AC_SUBST(RELP_CFLAGS)
+AC_SUBST(RELP_LIBS)
 
 # RFC 3195 support
 # WARNING: THIS IS NOT REALLY PRESENT YET - needs to be build manually!
