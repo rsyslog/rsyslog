@@ -167,17 +167,6 @@ lmgssutil_la_LDFLAGS = -module -avoid-version
 lmgssutil_la_LIBADD = $(gss_libs)
 endif
 
-#
-# relp support
-# 
-if ENABLE_RELP
-pkglib_LTLIBRARIES += lmrelputil.la
-lmrelputil_la_SOURCES = relputil.c relputil.h
-lmrelputil_la_CPPFLAGS = $(pthreads_cflags) $(RELP_CFLAGS)
-lmrelputil_la_LDFLAGS = -module -avoid-version
-lmrelputil_la_LIBADD = $(RELP_LIBS)
-endif
-
 EXTRA_DIST = \
 	redhat/rsyslog.conf \
 	redhat/rsyslog.init \
