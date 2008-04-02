@@ -1,6 +1,8 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta content="de" http-equiv="Content-Language"><title>rsyslog vs. syslog-ng - a comparison</title></head>
+<meta content="de" http-equiv="Content-Language"><title>rsyslog vs. syslog-ng - a comparison</title>
+
+</head>
 <body>
 <h1>rsyslog vs. syslog-ng</h1>
 <p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
@@ -25,56 +27,72 @@ comparison sheet, so please don't be shy ;)</p>
 <td valign="top"><b>rsyslog</b></td>
 <td valign="top"><b>syslog-ng</b></td>
 </tr>
-
-
 <tr>
-<td colspan="3" valign="top"><br><b>Input Sources</b><br></td>
+<td colspan="3" valign="top"><br>
+<b>Input Sources</b><br>
+</td>
 </tr>
-<tr><td valign="top">UNIX domain socket</td>
+<tr>
+<td valign="top">UNIX domain socket</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">UDP</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">TCP</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
+<tr>
+<td valign="top"><a href="http://www.librelp.com">RELP</a></td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">RFC 3195/BEEP</td>
 <td valign="top">yes (needs separate build process)</td>
-<td valign="top">no</td><td>
-</td></tr>
+<td valign="top">no</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">kernel log</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">file</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
-<tr>
-<td valign="top">mark message generator as an optional input</td>
 <td valign="top">yes</td>
-<td valign="top">no (?)</td><td>
-</td></tr>
+<td></td>
+</tr>
+<tr>
+<td valign="top">mark message generator as an
+optional input</td>
+<td valign="top">yes</td>
+<td valign="top">no (?)</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">Windows Event Log</td>
 <td valign="top">via <a href="http://www.eventreporter.com">EventReporter</a>
 or <a href="http://www.mwagent.com">MonitorWare Agent</a>
 (both commercial software)</td>
-<td valign="top">via separate Windows agent, paid edition only</td>
+<td valign="top">via separate Windows agent, paid
+edition only</td>
 </tr>
-
-
 <tr>
-<td colspan="3" valign="top"><b><br>Network (Protocol) Support</b><br></td>
+<td colspan="3" valign="top"><b><br>
+Network (Protocol) Support</b><br>
+</td>
 </tr>
 <tr>
 <td valign="top">support for (plain) tcp based syslog</td>
@@ -102,6 +120,11 @@ based framing on syslog/tcp connections</td>
 <td valign="top">udp syslog</td>
 <td valign="top">yes</td>
 <td valign="top">yes</td>
+</tr>
+<tr>
+<td valign="top">syslog over RELP<br>this is a truely reliable solution (plain tcp syslog can lose messages!)</td>
+<td valign="top">yes</td>
+<td valign="top">no</td>
 </tr>
 <tr>
 <td valign="top">on the wire (zlib) message
@@ -146,38 +169,46 @@ hostname in NAT environments and relay chains</td>
 <td valign="top">yes</td>
 <td valign="top">yes</td>
 </tr>
-
-
 <tr>
-<td colspan="3" valign="top"><br><b>Message Filtering</b><br></td>
+<td colspan="3" valign="top"><br>
+<b>Message Filtering</b><br>
+</td>
 </tr>
-<tr><td valign="top">Filtering for syslog facility and priority</td>
+<tr>
+<td valign="top">Filtering for syslog facility and
+priority</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">Filtering for hostname</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">Filtering for application</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">Filtering for message contents</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">Filtering for sending IP address</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
-<td valign="top">ability to filter on any other message
-field  not mentioned above
+<td valign="top">ability to filter on any other
+message
+field not mentioned above
 (including substrings and the like)</td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
@@ -210,8 +241,9 @@ in filters</td>
 <td valign="top">support for discarding messages
 based on filters</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">powerful BSD-style hostname and
 program name blocks for easy multi-host support</td>
@@ -223,10 +255,10 @@ program name blocks for easy multi-host support</td>
 <td></td>
 <td></td>
 </tr>
-
-
 <tr>
-<td colspan="3" valign="top"><br><b>Supported Database Outputs</b><br></td>
+<td colspan="3" valign="top"><br>
+<b>Supported Database Outputs</b><br>
+</td>
 </tr>
 <tr>
 <td valign="top">MySQL</td>
@@ -274,10 +306,10 @@ program name blocks for easy multi-host support</td>
 <td valign="top">yes (<a href="omlibdbi.html">omlibdbi</a>)</td>
 <td valign="top">no (?)</td>
 </tr>
-
-
 <tr>
-<td colspan="3" valign="top"><br><b>Enterprise Features</b><br></td>
+<td colspan="3" valign="top"><br>
+<b>Enterprise Features</b><br>
+</td>
 </tr>
 <tr>
 <td valign="top">support for on-demand on-disk
@@ -292,7 +324,8 @@ by spool files</td>
 <td valign="top">yes</td>
 </tr>
 <tr>
-<td valign="top">each action can use its own, independant
+<td valign="top">each action can use its own,
+independant
 set of spool files</td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
@@ -314,10 +347,10 @@ syslog/database servers </td>
 <td><a href="professional_support.html">yes</a></td>
 <td>yes</td>
 </tr>
-
-
 <tr>
-<td colspan="3" valign="top"><br><b>Config File</b><br></td>
+<td colspan="3" valign="top"><br>
+<b>Config File</b><br>
+</td>
 </tr>
 <tr>
 <td valign="top">config file format</td>
@@ -338,37 +371,40 @@ existing in a specific directory</td>
 <td height="25" valign="top">yes</td>
 <td height="25" valign="top">no</td>
 </tr>
-
-
-
 <tr>
-<td colspan="3" valign="top"><br><b>Extensibility</b><br></td>
+<td colspan="3" valign="top"><br>
+<b>Extensibility</b><br>
+</td>
 </tr>
 <tr>
-<td valign="top">Functionality split in separately loadable
+<td valign="top">Functionality split in separately
+loadable
 modules</td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
 </tr>
 <tr>
-<td valign="top">Support for third-party input plugins</td>
+<td valign="top">Support for third-party input
+plugins</td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
 </tr>
 <tr>
 </tr>
-<tr><td valign="top">Support for third-party output plugins</td>
+<tr>
+<td valign="top">Support for third-party output
+plugins</td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
 </tr>
-
-
-
 <tr>
-<td colspan="3" valign="top"><br><b>Other Features</b><br></td>
+<td colspan="3" valign="top"><br>
+<b>Other Features</b><br>
+</td>
 </tr>
 <tr>
-</tr><tr>
+</tr>
+<tr>
 <td valign="top">ability to generate file names and
 directories (log targets) dynamically</td>
 <td valign="top">yes</td>
@@ -440,8 +476,9 @@ reduction ("last message repeated n times") on a per selector-line basis</td>
 <td valign="top">supports multiple actions per
 selector/filter condition</td>
 <td valign="top">yes</td>
-<td valign="top">yes</td><td>
-</td></tr>
+<td valign="top">yes</td>
+<td></td>
+</tr>
 <tr>
 <td valign="top">web interface</td>
 <td valign="top"><a href="http://www.phplogcon.org">phpLogCon</a><br>
@@ -469,8 +506,11 @@ system stress</td>
 <tr>
 <td height="43" valign="top">flow control
 (slow down message reception when system is busy)</td>
-<td height="43" valign="top">yes (advanced, with multiple ways to slow down inputs depending on individual input capabilities, based on watermarks)</td>
-<td height="43" valign="top">yes (limited? "stops accepting messages")</td>
+<td height="43" valign="top">yes (advanced,
+with multiple ways to slow down inputs depending on individual input
+capabilities, based on watermarks)</td>
+<td height="43" valign="top">yes (limited?
+"stops accepting messages")</td>
 </tr>
 <tr>
 <td valign="top">rewriting messages</td>
@@ -504,8 +544,6 @@ Solaris; compilation and basic testing done on HP UX</td>
 <td valign="top">no</td>
 <td valign="top">yes</td>
 </tr>
-
-
 </tbody>
 </table>
 <p>While the <span style="font-weight: bold;">rsyslog</span>
