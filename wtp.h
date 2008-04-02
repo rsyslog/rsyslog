@@ -68,6 +68,7 @@ typedef struct wtp_s {
 	pthread_mutex_t *pmutUsr;
 	pthread_cond_t *pcondBusy; /* condition the user will signal "busy again, keep runing" on (awakes worker) */
 	rsRetVal (*pfChkStopWrkr)(void *pUsr, int);
+	rsRetVal (*pfRateLimiter)(void *pUsr);
 	rsRetVal (*pfIsIdle)(void *pUsr, int);
 	rsRetVal (*pfDoWork)(void *pUsr, void *pWti, int);
 	rsRetVal (*pfOnIdle)(void *pUsr, int);
