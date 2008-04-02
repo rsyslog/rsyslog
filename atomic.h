@@ -36,8 +36,15 @@
 #define INCLUDED_ATOMIC_H
 
 /* set the following to 1 if we have atomic operations (and #undef it otherwise) */
-#define DO_HAVE_ATOMICS 1
+/* #define DO_HAVE_ATOMICS 1 */
+/* for this release, we disable atomic calls because there seem to be some
+ * portability problems and we can not fix that without destabilizing the build.
+ * They simply came in too late. -- rgerhards, 2008-04-02
+ */
+/* make sure they are not used!
 #define ATOMIC_INC(data) ((void) __sync_fetch_and_add(&data, 1))
 #define ATOMIC_DEC_AND_FETCH(data) __sync_sub_and_fetch(&data, 1)
+*/
+#define ATOMIC_INC(data) (++(data))
 
 #endif /* #ifndef INCLUDED_ATOMIC_H */

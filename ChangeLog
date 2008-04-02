@@ -3,6 +3,8 @@ Version 3.14.0 (rgerhards), 2008-04-02
 - bugfix: rsyslogd was no longer build by default; man pages are 
   only installed if corresponding option is selected. Thanks to
   Michael Biebl for pointing these problems out.
+- disabled atomic operations for this stable build as it caused
+  platform problems
 ---------------------------------------------------------------------------
 Version 3.13.0-dev0 (rgerhards), 2008-03-31
 - bugfix: accidently set debug option in 3.12.5 reset to production
