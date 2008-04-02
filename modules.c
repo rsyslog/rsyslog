@@ -594,7 +594,7 @@ Load(uchar *pModName)
 			} else {
 				errmsg.LogError(NO_ERRCODE, "could not load module '%s', path too long\n", pModName);
 				free(pModNameDup);
-				ABORT_FINALIZE(RS_RET_ERR);
+				ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_PATHLEN);
 			}
 		}
 	}
@@ -619,24 +619,24 @@ Load(uchar *pModName)
 
 	if(iPathLen + strlen((char*) pModName) >= sizeof(szPath)) {
 		errmsg.LogError(NO_ERRCODE, "could not load module '%s', path too long\n", pModName);
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_PATHLEN);
 	}
 
 	/* complete load path constructed, so ... GO! */
 	dbgprintf("loading module '%s'\n", szPath);
 	if(!(pModHdlr = dlopen((char *) szPath, RTLD_NOW))) {
 		errmsg.LogError(NO_ERRCODE, "could not load module '%s', dlopen: %s\n", szPath, dlerror());
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_DLOPEN);
 	}
 	if(!(pModInit = dlsym(pModHdlr, "modInit"))) {
 		errmsg.LogError(NO_ERRCODE, "could not load module '%s', dlsym: %s\n", szPath, dlerror());
 		dlclose(pModHdlr);
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_NO_INIT);
 	}
 	if((iRet = doModInit(pModInit, (uchar*) pModName, pModHdlr)) != RS_RET_OK) {
 		errmsg.LogError(NO_ERRCODE, "could not load module '%s', rsyslog error %d\n", szPath, iRet);
 		dlclose(pModHdlr);
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_MODULE_LOAD_ERR_INIT_FAILED);
 	}
 
 finalize_it:
