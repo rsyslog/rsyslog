@@ -1,4 +1,4 @@
-# Uncomment to force gcc
-#CC=gcc
-
 SUBDIRS = src doc
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = relp.pc

@@ -64,6 +64,7 @@ fi
 
 
 AC_CONFIG_FILES([Makefile \
+		relp.pc \
 		doc/Makefile \
 		src/Makefile])
 AC_OUTPUT
