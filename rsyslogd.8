@@ -45,6 +45,8 @@ To use rsyslog's advanced features, you
 .B need
 to look at the html documentation, because the man pages only cover
 basic aspects of operation.
+.B For details and configuration examples, see the rsyslog.conf (5)
+.B man page and the online documentation at http://www.rsyslog.com/doc
 
 .BR Rsyslogd (8)
 is derived from the sysklogd package which in turn is derived from the
@@ -83,11 +85,11 @@ option, is read at startup.  Any lines that begin with the hash mark
 (``#'') and empty lines are ignored.  If an error occurs during parsing
 the error element is ignored. It is tried to parse the rest of the line.
 
-For details and configuration examples, see the
-.B rsyslog.conf (5)
-man page.
 .LP
 .SH OPTIONS
+.B Note that in version 3 of rsyslog a number of command line options
+.B have been deprecated and replaced with config file directives. The
+.B -c option controls the backward compatibility mode in use.
 .TP
 .BI "\-A"
 When sending UDP messages, there are potentially multiple pathes to
@@ -113,6 +115,28 @@ to listen to IPv6 addresses only.
 If neither -4 nor -6 is given,
 .B rsyslogd
 listens to all configured addresses of the system.
+.TP
+.BI "\-c " "version"
+Selects the desired backward compatibility mode. It must always be the
+first option on the command line, as it influences processing of the
+other options. To use the rsyslog v3 native interface, specify -c3. To
+use compatibility mode , either do not use -c at all or use
+-c<version> where 
+.IR version
+is the rsyslog version that it shall be
+compatible with. Using -c0 tells rsyslog to be command-line compatible
+to sysklogd, which is the default if -c is not given.
+.B Please note that rsyslogd issues warning messages if the -c3
+.B command line option is not given.
+This is to alert you that your are running in compatibility
+mode. Compatibility mode interfers with you rsyslog.conf commands and
+may cause some undesired side-effects. It is meant to be used with a
+plain old rsyslog.conf - if you use new features, things become
+messy. So the best advice is to work through this document, convert
+your options and config file and then use rsyslog in native mode. In
+order to aid you in this process, rsyslog logs every
+compatibility-mode config file directive it has generated. So you can
+simply copy them from your logfile and paste them to the config.
 .TP
 .B "\-d"
 Turns on debug mode.  Using this the daemon will not proceed a 
@@ -214,51 +238,6 @@ debug option.
 .B CHLD
 Wait for childs if some were born, because of wall'ing messages.
 .LP
-.SH SUPPORT FOR REMOTE LOGGING
-.B Rsyslogd
-provides network support to the syslogd facility.
-Network support means that messages can be forwarded from one node
-running rsyslogd to another node running rsyslogd (or a
-compatible syslog implementation).
-actually logged to a disk file.
-
-To enable this, proper configuration commands must
-be entered in rsyslog.conf. See the rsyslog.conf html
-documentation for details.
-
-The strategy is to have rsyslogd listen on a unix domain socket for
-locally generated log messages.  This behavior will allow rsyslogd to
-inter-operate with the syslog found in the standard C library.  At the
-same time rsyslogd listens on the standard syslog port for messages
-forwarded from other hosts.
-
-.SH OUTPUT TO DATABASES
-.B Rsyslogd
-has support for writing data to database tables. The exact specifics
-are described in the
-.B rsyslog.conf (5)
-html documentation. Be sure to read it if you plan to use database logging.
-
-.SH OUTPUT TO NAMED PIPES (FIFOs)
-.B Rsyslogd
-has support for logging output to named pipes
-(fifos).  A fifo or named pipe can be used as a destination for log
-messages by prepending a pipy symbol (``|'') to the name of the
-file.  This is handy for debugging.  Note that the fifo must be created
-with the mkfifo command before
-.B rsyslogd
-is started.
-.IP
-The following configuration file routes debug messages from the
-kernel to a fifo:
-.IP
-.nf
-	# Sample configuration to route kernel debugging
-	# messages ONLY to /usr/adm/debug which is a
-	# named pipe.
-	kern.=debug			|/usr/adm/debug
-.fi
-.LP
 .SH SECURITY THREATS
 There is the potential for the rsyslogd daemon to be
 used as a conduit for a denial of service attack.
@@ -314,6 +293,54 @@ The Unix domain socket to from where local syslog messages are read.
 .I /var/run/rsyslogd.pid
 The file containing the process id of 
 .BR rsyslogd .
+.TP
+.I prefix/lib/rsyslog
+Default directory for
+.B rsyslogd
+modules. The
+.I prefix
+is specified during compilation (e.g. /usr/local).
+.SH ENVIRONMENT
+.TP
+.B RSYSLOG_DEBUG
+Controls runtime debug support.It contains an option string with the
+following options possible (all are case insensitive):
+
+.RS
+.IP LogFuncFlow
+Print out the logical flow of functions (entering and exiting them)
+.IP FileTrace
+Ppecifies which files to trace LogFuncFlow. If not set (the
+default), a LogFuncFlow trace is provided for all files. Set to
+limit it to the files specified.FileTrace may be specified multiple
+times, one file each (e.g. export RSYSLOG_DEBUG="LogFuncFlow
+FileTrace=vm.c FileTrace=expr.c"
+.IP PrintFuncDB
+Print the content of the debug function database whenever debug
+information is printed (e.g. abort case)!
+.IP PrintAllDebugInfoOnExit
+Print all debug information immediately before rsyslogd exits
+(currently not implemented!)
+.IP PrintMutexAction
+Print mutex action as it happens. Useful for finding deadlocks and
+such.
+.IP NoLogTimeStamp
+Do not prefix log lines with a timestamp (default is to do that).
+.IP NoStdOut
+Do not emit debug messages to stdout. If RSYSLOG_DEBUGLOG is not
+set, this means no messages will be displayed at all.
+.IP Help
+Display a very short list of commands - hopefully a life saver if
+you can't access the documentation...
+.RE
+
+.TP
+.B RSYSLOG_DEBUGLOG
+If set, writes (allmost) all debug message to the specified log file
+in addition to stdout.
+.TP
+.B RSYSLOG_MODDIR
+Provides the default directory in which loadable modules reside.
 .PD
 .SH BUGS
 Please review the file BUGS for up-to-date information on known

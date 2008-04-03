@@ -17,7 +17,7 @@
 .\" along with this program; if not, write to the Free Software
 .\" Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111, USA.
 .\"
-.TH RSYSLOG.CONF 5 "02 April 2008" "Version 3.14.0" "Linux System Administration"
+.TH RSYSLOG.CONF 5 "03 April 2008" "Version 3.14.0" "Linux System Administration"
 .SH NAME
 rsyslog.conf \- rsyslogd(8) configuration file
 .SH DESCRIPTION
@@ -38,6 +38,66 @@ To use rsyslog's advanced features, you
 .B need
 to look at the html documentation, because the man pages only cover
 basic aspects of operation.
+
+
+.SH MODULES
+
+Rsyslog has a modular design. Consequently, there is a growing number
+of modules. See the html documentation for their full description.
+
+.TP
+.I omsnmp
+SNMP trap output module
+.TP
+.I omrelp
+RELP output module
+.TP
+.I omgssapi
+Output module for GSS-enabled syslog
+.TP
+.I ommysql
+Output module for MySQL
+.TP
+.I ompgsql
+Output module for PostgreSQL
+.TP
+.I omlibdbi
+Generic database output module (Firebird/Interbase, MS SQL, Sybase,
+SQLLite, Ingres, Oracle, mSQL)
+.TP
+.I imfile
+Input module for text files
+.TP
+.I imrelp
+RELP input module
+.TP
+.I imudp
+Input plugin for UDP syslog. Replaces the deprecated -r option. Can be
+used like this:
+.IP
+$ModLoad imudp
+.IP
+$InputUDPServerRun 514
+.TP
+.I imtcp
+Input plugin for plain TCP syslog. Replaces the deprecated -t
+option. Can be used like this:
+.IP
+$ModLoad imtcp
+.IP
+$InputTCPServerRun 514
+.TP
+.I imgssapi
+Input plugin for plain TCP and GSS-enable syslog
+.TP
+.I immark
+Dupport for mark messages
+.TP
+.I imklog
+Kernel logging
+.TP
+.I imuxsock
+Unix sockets, including the system log socket
 
 
 .SH BASIC STRUCTURE
