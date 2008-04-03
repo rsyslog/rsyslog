@@ -201,8 +201,6 @@ CODESTARTobjQueryInterface(vmstk)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//xxxpIf->oID = OBJvmstk;
-
 	pIf->Construct = vmstkConstruct;
 	pIf->ConstructFinalize = vmstkConstructFinalize;
 	pIf->Destruct = vmstkDestruct;

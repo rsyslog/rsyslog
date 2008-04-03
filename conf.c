@@ -68,6 +68,7 @@ static rsRetVal processConfFile(uchar *pConfFile);
 DEFobjStaticHelpers
 DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
+DEFobjCurrIf(ctok_token)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
@@ -762,8 +763,11 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	 */
 	CHKiRet(ctok.GetToken(tok, &pToken));
 	if(pToken->tok != ctok_THEN) {
+		ctok_token.Destruct(&pToken);
 		ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 	}
+
+	ctok_token.Destruct(&pToken); /* no longer needed */
 
 	/* we are done, so we now need to restore things */
 	CHKiRet(ctok.Getpp(tok, pline));
@@ -1183,6 +1187,7 @@ CODESTARTObjClassExit(conf)
 	/* release objects we no longer need */
 	objRelease(expr, CORE_COMPONENT);
 	objRelease(ctok, CORE_COMPONENT);
+	objRelease(ctok_token, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
@@ -1197,6 +1202,7 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	/* request objects we use */
 	CHKiRet(objUse(expr, CORE_COMPONENT));
 	CHKiRet(objUse(ctok, CORE_COMPONENT));
+	CHKiRet(objUse(ctok_token, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
