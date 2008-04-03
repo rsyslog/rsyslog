@@ -59,6 +59,12 @@ rsRetVal vmopConstructFinalize(vmop_t __attribute__((unused)) *pThis)
 /* destructor for the vmop object */
 BEGINobjDestruct(vmop) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(vmop)
+	if(   pThis->opcode == opcode_PUSHSYSVAR
+	   || pThis->opcode == opcode_PUSHMSGVAR
+	   || pThis->opcode == opcode_PUSHCONSTANT) {
+		if(pThis->operand.pVar != NULL)
+			var.Destruct(&pThis->operand.pVar);
+	}
 ENDobjDestruct(vmop)
 
 
