@@ -731,7 +731,7 @@ finalize_it:
 static rsRetVal objDeserializeProperties(obj_t *pObj, objInfo_t *pObjInfo, strm_t *pStrm)
 {
 	DEFiRet;
-	var_t *pVar;
+	var_t *pVar = NULL;
 
 	ISOBJ_assert(pObj);
 	ISOBJ_TYPE_assert(pStrm, strm);
@@ -743,15 +743,23 @@ static rsRetVal objDeserializeProperties(obj_t *pObj, objInfo_t *pObjInfo, strm_
 	iRet = objDeserializeProperty(pVar, pStrm);
 	while(iRet == RS_RET_OK) {
 		CHKiRet(pObjInfo->objMethods[objMethod_SETPROPERTY](pObj, pVar));
+		/* re-init var object - TODO: method of var! */
+		rsCStrDestruct(&pVar->pcsName); /* no longer needed */
+		if(pVar->varType == VARTYPE_STR) {
+			if(pVar->val.pStr != NULL)
+				rsCStrDestruct(&pVar->val.pStr);
+		}
 		iRet = objDeserializeProperty(pVar, pStrm);
 	}
-	var.Destruct(&pVar);
 
 	if(iRet != RS_RET_NO_PROPLINE)
 		FINALIZE;
 
 	CHKiRet(objDeserializeTrailer(pStrm)); /* do trailer checks */
 finalize_it:
+	if(pVar != NULL)
+		var.Destruct(&pVar);
+
 	RETiRet;
 }
 
