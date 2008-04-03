@@ -8,6 +8,7 @@ Version 3.17.0 (rgerhards), 2008-04-??
 - added the capability to specify a processing (actually dequeue)
   timeframe with queues - so things can be configured to be done
   at off-peak hours
+- bugfix: some memory leak when queue is runing in disk mode
 ---------------------------------------------------------------------------
 Version 3.15.1 (rgerhards), 2008-04-??
 - disabled atomic operations for the time being because they introduce some
