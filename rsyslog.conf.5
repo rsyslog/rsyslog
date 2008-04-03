@@ -49,9 +49,6 @@ of modules. See the html documentation for their full description.
 .I omsnmp
 SNMP trap output module
 .TP
-.I omrelp
-RELP output module
-.TP
 .I omgssapi
 Output module for GSS-enabled syslog
 .TP
@@ -67,9 +64,6 @@ SQLLite, Ingres, Oracle, mSQL)
 .TP
 .I imfile
 Input module for text files
-.TP
-.I imrelp
-RELP input module
 .TP
 .I imudp
 Input plugin for UDP syslog. Replaces the deprecated -r option. Can be
@@ -91,13 +85,24 @@ $InputTCPServerRun 514
 Input plugin for plain TCP and GSS-enable syslog
 .TP
 .I immark
-Dupport for mark messages
+Support for mark messages
 .TP
 .I imklog
-Kernel logging
+Kernel logging. To include kernel log messages, you need to do
+.IP
+$ModLoad imklog
+
+Please note that the klogd daemon is no longer necessary and consequently
+no longer provided by the rsyslog package.
 .TP
 .I imuxsock
-Unix sockets, including the system log socket
+Unix sockets, including the system log socket. You need to specify
+.IP
+$ModLoad imudp
+
+in order to receive log messages from local system processes. This
+config directive should only left out if you know exactly what you
+are doing.
 
 
 .SH BASIC STRUCTURE
@@ -142,7 +147,16 @@ beginning with a slash ('/').
 
 .B Example:
 .RS
-*.*     /var/log/traditionalfile.log;TraditionalFormat      # log to a file in the traditional format
+*.*     /var/log/traditionalfile.log;RSYSLOG_TraditionalFormat      # log to a file in the traditional format
+.RE
+
+Note: if you would like to use high-precision timestamps in your log files,
+just remove the ";RSYSLOG_TraditionalFormat". That will select the default
+template, which, if not changed, uses RFC 3339 timestamps.
+
+.B Example:
+.RS
+*.*     /var/log/file.log # log to a file with RFC3339 timestamps
 .RE
 
 .SS Named pipes
@@ -670,7 +684,6 @@ the html documentation for all features and details. This is especially vital if
 up a more-then-extremely-simple system.
 
 .SH AUTHORS
-The
 .B rsyslogd
 is taken from sysklogd sources, which have been heavily modified
 by Rainer Gerhards (rgerhards@adiscon.com) and others.
