@@ -63,12 +63,11 @@ rsRetVal varConstructFinalize(var_t __attribute__((unused)) *pThis)
 BEGINobjDestruct(var) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(var)
 	if(pThis->pcsName != NULL)
-		d_free(pThis->pcsName);
+		rsCStrDestruct(&pThis->pcsName);
 	if(pThis->varType == VARTYPE_STR) {
 		if(pThis->val.pStr != NULL)
-			d_free(pThis->val.pStr);
+			rsCStrDestruct(&pThis->val.pStr);
 	}
-
 ENDobjDestruct(var)
 
 
@@ -192,10 +191,16 @@ ConvToNumber(var_t *pThis)
 	} else if(pThis->varType == VARTYPE_STR) {
 		iRet = rsCStrConvertToNumber(pThis->val.pStr, &n);
 		if(iRet == RS_RET_NOT_A_NUMBER) {
-			n = 0; /* TODO: isn't it better to pass the error? */
+			n = 0;
+			iRet = RS_RET_OK; /* we accept this as part of the language definition */
 		} else if (iRet != RS_RET_OK) {
 			FINALIZE;
 		}
+
+		/* we need to destruct the string first, because string and number are
+		 * inside a union and share the memory area! -- rgerhards, 2008-04-03
+		 */
+		rsCStrDestruct(&pThis->val.pStr);
 	
 		pThis->val.num = n;
 		pThis->varType = VARTYPE_NUMBER;
@@ -244,7 +249,18 @@ ConvToBool(var_t *pThis)
 	if(pThis->varType == VARTYPE_NUMBER) {
 		FINALIZE;
 	} else if(pThis->varType == VARTYPE_STR) {
-		CHKiRet(rsCStrConvertToBool(pThis->val.pStr, &n));
+		iRet = rsCStrConvertToBool(pThis->val.pStr, &n);
+		if(iRet == RS_RET_NOT_A_NUMBER) {
+			n = 0;
+			iRet = RS_RET_OK; /* we accept this as part of the language definition */
+		} else if (iRet != RS_RET_OK) {
+			FINALIZE;
+		}
+
+		/* we need to destruct the string first, because string and number are
+		 * inside a union and share the memory area! -- rgerhards, 2008-04-03
+		 */
+		rsCStrDestruct(&pThis->val.pStr);
 		pThis->val.num = n;
 		pThis->varType = VARTYPE_NUMBER;
 	}
@@ -366,8 +382,6 @@ CODESTARTobjQueryInterface(var)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//xxxpIf->oID = OBJvar;
-
 	pIf->Construct = varConstruct;
 	pIf->ConstructFinalize = varConstructFinalize;
 	pIf->Destruct = varDestruct;

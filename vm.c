@@ -109,8 +109,6 @@ BEGINop(name) \
 	number_t bRes; \
 CODESTARTop(name) \
 	CHKiRet(vmstk.Pop2CommOp(pThis->pStk, &operand1, &operand2)); \
-var.DebugPrint(operand1); \
-var.DebugPrint(operand2); \
 	/* data types are equal (so we look only at operand1), but we must \
 	 * check which type we have to deal with... \
 	 */ \
@@ -122,7 +120,6 @@ var.DebugPrint(operand2); \
 	} \
  \
 	/* we have a result, so let's push it */ \
-RUNLOG_VAR("%lld", bRes); \
 	var.SetNumber(operand1, bRes); \
 	vmstk.Push(pThis->pStk, operand1); /* result */ \
 	var.Destruct(&operand2); /* no longer needed */ \
@@ -374,6 +371,8 @@ BEGINobjDestruct(vm) /* be sure to specify the object type also in END and CODES
 CODESTARTobjDestruct(vm)
 	if(pThis->pStk != NULL)
 		vmstk.Destruct(&pThis->pStk);
+	if(pThis->pMsg != NULL)
+		msgDestruct(&pThis->pMsg);
 ENDobjDestruct(vm)
 
 

@@ -170,6 +170,7 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(conf)
 DEFobjCurrIf(expr)
 DEFobjCurrIf(vm)
+DEFobjCurrIf(var)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net) /* TODO: make go away! */
@@ -928,8 +929,8 @@ static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProce
 	unsigned short pbMustBeFreed;
 	char *pszPropVal;
 	int bRet = 0;
-	vm_t *pVM;
-	var_t *pResult;
+	vm_t *pVM = NULL;
+	var_t *pResult = NULL;
 
 	assert(f != NULL);
 	assert(pMsg != NULL);
@@ -995,7 +996,7 @@ static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProce
 		CHKiRet(vm.ExecProg(pVM, f->f_filterData.f_expr->pVmprg));
 		CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
 		dbgprintf("result of expression evaluation: %lld\n", pResult->val.num);
-		CHKiRet(vm.Destruct(&pVM));
+		/* VM is destructed on function exit */
 		bRet = (pResult->val.num) ? 1 : 0;
 	} else {
 		assert(f->f_filter_type == FILTER_PROP); /* assert() just in case... */
@@ -1051,6 +1052,12 @@ static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProce
 	}
 
 finalize_it:
+	/* destruct in any case, not just on error, but it makes error handling much easier */
+	if(pVM != NULL) {
+		var.Destruct(&pResult);
+		vm.Destruct(&pVM);
+	}
+
 	*bProcessMsg = bRet;
 	RETiRet;
 }
@@ -2838,6 +2845,8 @@ InitGlobalClasses(void)
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	pErrObj = "module";
 	CHKiRet(objUse(module,   CORE_COMPONENT));
+	pErrObj = "var";
+	CHKiRet(objUse(var,      CORE_COMPONENT));
 
 	/* initialize and use classes. We must be very careful with the order of events. Some
 	 * classes use others and if we do not initialize them in the right order, we may end

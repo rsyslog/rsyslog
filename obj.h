@@ -92,7 +92,6 @@
 
 /* interfaces */
 BEGINinterface(obj) /* name must also be changed in ENDinterface macro! */
-	//rsRetVal (*UseObj)(char *srcFile, uchar *pObjName, uchar *pMyLib, uchar *pObjFile, interface_t *pIf);
 	rsRetVal (*UseObj)(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf);
 	rsRetVal (*ReleaseObj)(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf);
 	rsRetVal (*InfoConstruct)(objInfo_t **ppThis, uchar *pszID, int iObjVers,

@@ -2208,6 +2208,8 @@ finalize_it:
 
 /* some simple object access methods */
 DEFpropSetMeth(queue, iPersistUpdCnt, int);
+DEFpropSetMeth(queue, iDeqtWinFromHr, int);
+DEFpropSetMeth(queue, iDeqtWinToHr, int);
 DEFpropSetMeth(queue, toQShutdown, long);
 DEFpropSetMeth(queue, toActShutdown, long);
 DEFpropSetMeth(queue, toWrkShutdown, long);
