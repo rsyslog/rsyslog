@@ -9,6 +9,7 @@ Version 3.15.1 (rgerhards), 2008-04-??
   happens during startup)
 - bugfix: memory leaks in script engine
 - bugfix: $hostname and $fromhost in RainerScript did not work
+- bugfix: some memory leak when queue is runing in disk mode
 ---------------------------------------------------------------------------
 Version 3.15.0 (rgerhards), 2008-04-01
 - major new feature: imrelp/omrelp support reliable delivery of syslog
