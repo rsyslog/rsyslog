@@ -74,8 +74,10 @@ static int iActionQtoEnq = 2000;				/* timeout for queue enque */
 static int iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
 static int iActionQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int bActionQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
-static int iActionQueueDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
 static int64 iActionQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
+static int iActionQueueDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
+static int iActionQueueDeqtWinFromHr = 0;			/* hour begin of time frame when queue is to be dequeued */
+static int iActionQueueDeqtWinToHr = 25;			/* hour begin of time frame when queue is to be dequeued */
 
 /* the counter below counts actions created. It is used to obtain unique IDs for the action. They
  * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
@@ -113,8 +115,10 @@ actionResetQueueParams(void)
 	iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
 	iActionQWrkMinMsgs = 100;			/* minimum messages per worker needed to start a new one */
 	bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
-	iActionQueueDeqSlowdown = 0;
 	iActionQueMaxDiskSpace = 0;
+	iActionQueueDeqSlowdown = 0;
+	iActionQueueDeqtWinFromHr = 0;
+	iActionQueueDeqtWinToHr = 25;			/* 25 disables time windowed dequeuing */
 
 	glbliActionResumeRetryCount = 0;		/* I guess it is smart to reset this one, too */
 
@@ -237,7 +241,9 @@ actionConstructFinalize(action_t *pThis)
 	setQPROP(queueSetiDiscardSeverity, "$ActionQueueDiscardSeverity", iActionQDiscardSeverity);
 	setQPROP(queueSetiMinMsgsPerWrkr, "$ActionQueueWorkerThreadMinimumMessages", iActionQWrkMinMsgs);
 	setQPROP(queueSetbSaveOnShutdown, "$ActionQueueSaveOnShutdown", bActionQSaveOnShutdown);
-	setQPROP(queueSetiDeqSlowdown, "$ActionQueueDequeueSlowdown", iActionQueueDeqSlowdown);
+	setQPROP(queueSetiDeqSlowdown,    "$ActionQueueDequeueSlowdown", iActionQueueDeqSlowdown);
+	setQPROP(queueSetiDeqtWinFromHr,  "$ActionQueueDequeueTimeBegin", iActionQueueDeqtWinFromHr);
+	setQPROP(queueSetiDeqtWinToHr,    "$ActionQueueDequeueTimeEnd", iActionQueueDeqtWinToHr);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -680,6 +686,8 @@ actionAddCfSysLineHdrl(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iActionQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bActionQSaveOnShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &iActionQueueDeqSlowdown, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinFromHr, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinToHr, NULL));
 	
 finalize_it:
 	RETiRet;
@@ -799,7 +807,6 @@ rsRetVal actionClassInit(void)
 finalize_it:
 	RETiRet;
 }
-
 
 /* vi:set ai:
  */

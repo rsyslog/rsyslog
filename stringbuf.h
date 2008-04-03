@@ -121,6 +121,7 @@ void rsCStrSetAllocIncrement(cstr_t *pThis, int iNewIncrement);
 rsRetVal rsCStrAppendInt(cstr_t *pThis, long i);
 
 
+rsRetVal strExit(void); /* TODO: remove once we have a real object interface! */
 uchar*  rsCStrGetSzStr(cstr_t *pThis);
 uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis);
 rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew);

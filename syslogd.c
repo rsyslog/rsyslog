@@ -338,8 +338,10 @@ static int iMainMsgQtoEnq = 2000;				/* timeout for queue enque */
 static int iMainMsgQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
 static int iMainMsgQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int iMainMsgQDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
-static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
 static int64 iMainMsgQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
+static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
+static int iMainMsgQueueDeqtWinFromHr = 0;			/* hour begin of time frame when queue is to be dequeued */
+static int iMainMsgQueueDeqtWinToHr = 25;			/* hour begin of time frame when queue is to be dequeued */
 
 
 /* support for simple textual representation of FIOP names
@@ -2323,6 +2325,8 @@ init(void)
 	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
 	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
 	setQPROP(queueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", iMainMsgQDeqSlowdown);
+	setQPROP(queueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", iMainMsgQueueDeqtWinFromHr);
+	setQPROP(queueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", iMainMsgQueueDeqtWinToHr);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -2687,6 +2691,8 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxDiskSpace, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQSaveOnShutdown, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL, &iMainMsgQueueDeqtWinFromHr, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &iMainMsgQueueDeqtWinToHr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));
@@ -2765,21 +2771,6 @@ static void mainThread()
 {
 	BEGINfunc
 	uchar *pTmp;
-
-#if 0 // code moved back to main()
-	/* doing some core initializations */
-	if((iRet = modInitIminternal()) != RS_RET_OK) {
-		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
-			iRet);
-		exit(1); /* "good" exit, leaving at init for fatal error */
-	}
-
-	if((iRet = loadBuildInModules()) != RS_RET_OK) {
-		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
-			iRet);
-		exit(1); /* "good" exit, leaving at init for fatal error */
-	}
-#endif
 
 	/* Note: signals MUST be processed by the thread this code is running in. The reason
 	 * is that we need to interrupt the select() system call. -- rgerhards, 2007-10-17

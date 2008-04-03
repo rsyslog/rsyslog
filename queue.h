@@ -87,7 +87,7 @@ typedef struct queue_s {
 	/* end rate limiting */
 	/* dequeue time window settings (may also be expanded) */
 	int iDeqtWinFromHr;	/* begin of dequeue time window (hour only) */
-	int iDeqtWinToHr;	/* end of dequeue time window (hour only) */
+	int iDeqtWinToHr;	/* end of dequeue time window (hour only), set to 25 to disable deq window! */
 	/* note that begin and end have specific semantics. It is a big difference if we have
 	 * begin 4, end 22 or begin 22, end 4. In the later case, dequeuing will run from 10p,
 	 * throughout the night and stop at 4 in the morning. In the first case, it will start

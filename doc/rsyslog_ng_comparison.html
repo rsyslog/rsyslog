@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta content="de" http-equiv="Content-Language"><title>rsyslog vs. syslog-ng - a comparison</title>
+<meta http-equiv="Content-Language" content="de"><title>rsyslog vs. syslog-ng - a comparison</title>
 
 </head>
 <body>
@@ -122,7 +122,9 @@ based framing on syslog/tcp connections</td>
 <td valign="top">yes</td>
 </tr>
 <tr>
-<td valign="top">syslog over RELP<br>truly reliable message delivery (<a href="http://rgerhards.blogspot.com/2008/04/on-unreliability-of-plain-tcp-syslog.html">Why is plain tcp syslog not reliable?</a>)</td>
+<td valign="top">syslog over RELP<br>
+truly reliable message delivery (<a href="http://rgerhards.blogspot.com/2008/04/on-unreliability-of-plain-tcp-syslog.html">Why
+is plain tcp syslog not reliable?</a>)</td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
 </tr>
@@ -334,6 +336,13 @@ set of spool files</td>
 <td valign="top">different sets of spool files can
 be placed on different disk</td>
 <td valign="top">yes</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top">ability to process spooled
+messages only during a configured timeframe (e.g. process messages only
+during off-peak hours, during peak hours they are enqueued only)</td>
+<td valign="top"><a href="http://wiki.rsyslog.com/index.php/OffPeakHours">yes</a><br>(can independently be configured for the main queue and each action queue)</td>
 <td valign="top">no</td>
 </tr>
 <tr>
