@@ -184,6 +184,8 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,void*));
 PROTOTYPEObjClassInit(queue);
 PROTOTYPEpropSetMeth(queue, iPersistUpdCnt, int);
+PROTOTYPEpropSetMeth(queue, iDeqtWinFromHr, int);
+PROTOTYPEpropSetMeth(queue, iDeqtWinToHr, int);
 PROTOTYPEpropSetMeth(queue, toQShutdown, long);
 PROTOTYPEpropSetMeth(queue, toActShutdown, long);
 PROTOTYPEpropSetMeth(queue, toWrkShutdown, long);
