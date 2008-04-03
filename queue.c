@@ -2208,8 +2208,6 @@ rsRetVal queueQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINObjClassInit(queue, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
-DEFpropSetMeth(queue, iDeqtWinFromHr, int);
-DEFpropSetMeth(queue, iDeqtWinToHr, int);
 
 	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_SETPROPERTY, queueSetProperty);
