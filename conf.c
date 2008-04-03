@@ -816,7 +816,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 	}
 
 	/* read property */
-	iRet = parsDelimCStr(pPars, &f->f_filterData.prop.pCSPropName, ',', 1, 1);
+	iRet = parsDelimCStr(pPars, &f->f_filterData.prop.pCSPropName, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(NO_ERRCODE, "error %d parsing filter property - ignoring selector", iRet);
 		rsParsDestruct(pPars);
@@ -824,7 +824,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 	}
 
 	/* read operation */
-	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1);
+	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(NO_ERRCODE, "error %d compare operation property - ignoring selector", iRet);
 		rsParsDestruct(pPars);

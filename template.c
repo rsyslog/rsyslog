@@ -385,7 +385,6 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
 		/* OK, we are out of luck. Let's invalidate the
 		 * entry and that's it.
-		 * TODO: add panic message once we have a mechanism for this
 		 */
 		pTpe->eEntryType = UNDEFINED;
 		return 1;
@@ -510,7 +509,8 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	pTpe->eEntryType = FIELD;
 
 	while(*p && *p != '%' && *p != ':') {
-		rsCStrAppendChar(pStrB, *p++);
+		rsCStrAppendChar(pStrB, tolower(*p));
+		++p; /* do NOT do this in tolower()! */
 	}
 
 	/* got the name*/

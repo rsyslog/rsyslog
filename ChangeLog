@@ -2,6 +2,9 @@
 Version 3.17.0 (rgerhards), 2008-04-??
 - FEATURE FOCUS for 3.17 is TLS over plain TCP syslog
 - removed no longer needed file relptuil.c/.h
+- bugfix: memory leaks in script engine
+- properties are now case-insensitive everywhere (script, filters,
+  templates)
 ---------------------------------------------------------------------------
 Version 3.15.1 (rgerhards), 2008-04-??
 - disabled atomic operations for the time being because they introduce some

@@ -235,11 +235,12 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
  *   0 means "no", 1 "yes"
  *   - bTrimLeading
  *   - bTrimTrailing
+ *   - bConvLower - convert string to lower case?
  * 
  * Output:
  * ppCStr Pointer to the parsed string - must be freed by caller!
  */
-rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing)
+rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing, int bConvLower)
 {
 	DEFiRet;
 	register unsigned char *pC;
@@ -256,7 +257,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
 	      && *pC != cDelim) {
-		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
+		if((iRet = rsCStrAppendChar(pCStr, bConvLower ? tolower(*pC) : *pC)) != RS_RET_OK) {
 			rsCStrDestruct(&pCStr);
 			FINALIZE;
 		}

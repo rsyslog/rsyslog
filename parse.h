@@ -91,7 +91,7 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis);
  * Output:
  * ppCStr Pointer to the parsed string
  */
-rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing);
+rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing, int bConvLower);
 
 rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c);
 rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr);
