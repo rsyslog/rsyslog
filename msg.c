@@ -1606,9 +1606,11 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		pRes = getRawMsg(pMsg);
 	} else if(!strcmp((char*) pName, "UxTradMsg")) {
 		pRes = getUxTradMsg(pMsg);
-	} else if(!strcmp((char*) pName, "FROMHOST")) {
+	} else if(   !strcmp((char*) pName, "FROMHOST")
+		  || !strcmp((char*) pName, "fromhost")) {
 		pRes = getRcvFrom(pMsg);
 	} else if(!strcmp((char*) pName, "source")
+		  || !strcmp((char*) pName, "hostname")
 		  || !strcmp((char*) pName, "HOSTNAME")) {
 		pRes = getHOSTNAME(pMsg);
 	} else if(!strcmp((char*) pName, "syslogtag")) {
