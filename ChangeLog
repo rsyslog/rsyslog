@@ -9,6 +9,12 @@ Version 3.15.1 (rgerhards), 2008-04-??
   happens during startup)
 - bugfix: memory leaks in script engine
 - bugfix: $hostname and $fromhost in RainerScript did not work
+- We have removed the 32 character size limit (from RFC3164) on the
+  tag. This had bad effects on existing envrionments, as sysklogd didn't
+  obey it either (probably another bug in RFC3164...). We now receive
+  the full size, but will modify the outputs so that only 32 characters
+  max are used by default. If you need large tags in the output, you need
+  to provide custom templates.
 - bugfix: some memory leak when queue is runing in disk mode
 ---------------------------------------------------------------------------
 Version 3.15.0 (rgerhards), 2008-04-01
