@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.14.0 (rgerhards), 2008-04-02
+Version 3.14.0 (rgerhards), 2008-04-04
 - bugfix: rsyslogd was no longer build by default; man pages are 
   only installed if corresponding option is selected. Thanks to
   Michael Biebl for pointing these problems out.
@@ -9,6 +9,12 @@ Version 3.14.0 (rgerhards), 2008-04-02
 - bugfix: $hostname and $fromhost in RainerScript did not work
 - bugfix: some memory leak when queue is runing in disk mode
 - man pages improved thanks to varmofekoj and Peter Vrabec
+- We have removed the 32 character size limit (from RFC3164) on the
+  tag. This had bad effects on existing envrionments, as sysklogd didn't
+  obey it either (probably another bug in RFC3164...). We now receive
+  the full size, but will modify the outputs so that only 32 characters
+  max are used by default. If you need large tags in the output, you need
+  to provide custom templates.
 ---------------------------------------------------------------------------
 Version 3.13.0-dev0 (rgerhards), 2008-03-31
 - bugfix: accidently set debug option in 3.12.5 reset to production

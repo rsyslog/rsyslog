@@ -422,8 +422,8 @@ static uchar template_SyslogProtocol23Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-r
 static uchar template_TraditionalFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static uchar template_FileFormat[] = "\"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static uchar template_WallFmt[] = "\"\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n %syslogtag%%msg%\n\r\"";
-static uchar template_ForwardFormat[] = "\"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg%\"";
-static uchar template_TraditionalForwardFormat[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%%msg%\"";
+static uchar template_ForwardFormat[] = "\"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg%\"";
+static uchar template_TraditionalForwardFormat[] = "\"<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg%\"";
 static uchar template_StdUsrMsgFmt[] = "\" %syslogtag%%msg%\n\r\"";
 static uchar template_StdDBFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')\",SQL";
 static uchar template_StdPgSQLFmt[] = "\"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-pgsql%', '%timegenerated:::date-pgsql%', %iut%, '%syslogtag%')\",STDSQL";
@@ -1408,7 +1408,6 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	 * machine that we received the message from and the tag will be empty. This
 	 * is meant to be an interim solution, but for now it is in the code.
 	 */
-
 	if(bParseHOSTNAMEandTAG && !(flags & INTERNAL_MSG)) {
 		/* parse HOSTNAME - but only if this is network-received!
 		 * rger, 2005-11-14: we still have a problem with BSD messages. These messages
@@ -1466,16 +1465,18 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
 
-		/* now parse TAG - that should be present in message from
-		 * all sources.
+		/* now parse TAG - that should be present in message from all sources.
 		 * This code is somewhat not compliant with RFC 3164. As of 3164,
 		 * the TAG field is ended by any non-alphanumeric character. In
 		 * practice, however, the TAG often contains dashes and other things,
 		 * which would end the TAG. So it is not desirable. As such, we only
 		 * accept colon and SP to be terminators. Even there is a slight difference:
 		 * a colon is PART of the TAG, while a SP is NOT part of the tag
-		 * (it is CONTENT). Finally, we allow only up to 32 characters for
-		 * TAG, as it is specified in RFC 3164.
+		 * (it is CONTENT). Starting 2008-04-04, we have removed the 32 character
+		 * size limit (from RFC3164) on the tag. This had bad effects on existing
+		 * envrionments, as sysklogd didn't obey it either (probably another bug
+		 * in RFC3164...). We now receive the full size, but will modify the
+		 * outputs so that only 32 characters max are used by default.
 		 */
 		/* The following code in general is quick & dirty - I need to get
 		 * it going for a test, rgerhards 2004-11-16 */
@@ -1489,15 +1490,10 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			rsCStrSetAllocIncrement(pStrB, 33);
 			pWork = pBuf;
 			iCnt = 0;
-			while(*p2parse && *p2parse != ':' && *p2parse != ' ' && iCnt < 32) {
+			while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
 				rsCStrAppendChar(pStrB, *p2parse++);
 				++iCnt;
 			}
-			if (iCnt == 32) {
-                            while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
-                                ++p2parse;
-                            }
-                        }
 			if(*p2parse == ':') {
 				++p2parse; 
 				rsCStrAppendChar(pStrB, ':');
