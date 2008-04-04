@@ -3,6 +3,8 @@ Version 3.14.0 (rgerhards), 2008-04-04
 - bugfix: rsyslogd was no longer build by default; man pages are 
   only installed if corresponding option is selected. Thanks to
   Michael Biebl for pointing these problems out.
+- bugfix: zero-length strings were not supported in object
+  deserializer
 - disabled atomic operations for this stable build as it caused
   platform problems
 - bugfix: memory leaks in script engine

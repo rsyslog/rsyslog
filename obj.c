@@ -495,7 +495,7 @@ finalize_it:
 }
 
 
-/* de-serialize a string, length must be provided */
+/* de-serialize a string, length must be provided but may be 0 */
 static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
 {
 	DEFiRet;
@@ -504,7 +504,7 @@ static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
 	cstr_t *pCStr = NULL;
 
 	assert(ppCStr != NULL);
-	assert(iLen > 0);
+	assert(iLen >= 0);
 
 	CHKiRet(rsCStrConstruct(&pCStr));
 
