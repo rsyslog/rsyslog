@@ -23,6 +23,7 @@ Version 3.17.0 (rgerhards), 2008-04-??
   load path via -M only (not the environment) which makes it much
   easier to work with non-standard module library locations. Thanks
   to varmojfekoj for suggesting this change. Matches bugzilla bug 55.
+- bugfix: some messages were emited without hostname
 ---------------------------------------------------------------------------
 Version 3.15.1 (rgerhards), 2008-04-??
 - disabled atomic operations for the time being because they introduce some

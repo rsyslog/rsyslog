@@ -302,7 +302,7 @@ static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - n
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
 uchar *pszWorkDir = NULL;/* name of rsyslog's spool directory (without trailing slash) */
-extern uchar *glblModPath = NULL; /* module load path  - only used during initial init, only settable via -M command line option */
+uchar *glblModPath = NULL; /* module load path  - only used during initial init, only settable via -M command line option */
 /* end global config file state variables */
 
 char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
@@ -3157,6 +3157,49 @@ int realMain(int argc, char **argv)
 	}
 
 	/* doing some core initializations */
+
+	/* get our host and domain names - we need to do this early as we may emit
+	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
+	 */
+	gethostname(LocalHostName, sizeof(LocalHostName));
+	if((p = strchr(LocalHostName, '.'))) {
+		*p++ = '\0';
+		LocalDomain = p;
+	} else {
+		LocalDomain = "";
+
+		/* It's not clearly defined whether gethostname()
+		 * should return the simple hostname or the fqdn. A
+		 * good piece of software should be aware of both and
+		 * we want to distribute good software.  Joey
+		 *
+		 * Good software also always checks its return values...
+		 * If syslogd starts up before DNS is up & /etc/hosts
+		 * doesn't have LocalHostName listed, gethostbyname will
+		 * return NULL. 
+		 */
+		/* TODO: gethostbyname() is not thread-safe, but replacing it is
+		 * not urgent as we do not run on multiple threads here. rgerhards, 2007-09-25
+		 */
+		hent = gethostbyname(LocalHostName);
+		if(hent) {
+			snprintf(LocalHostName, sizeof(LocalHostName), "%s", hent->h_name);
+				
+			if ( (p = strchr(LocalHostName, '.')) )
+			{
+				*p++ = '\0';
+				LocalDomain = p;
+			}
+		}
+	}
+
+	/* Convert to lower case to recognize the correct domain laterly
+	 */
+	for (p = (char *)LocalDomain; *p ; p++)
+		if (isupper((int) *p))
+			*p = (char)tolower((int)*p);
+
+	/* initialize the objects */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
 		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
 			iRet);
@@ -3380,47 +3423,6 @@ dbgprintf("deque option %c, optarg '%s'\n", ch, arg);
 		exit(1); /* exit during startup - questionable */
 	}
 	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
-
-
-	gethostname(LocalHostName, sizeof(LocalHostName));
-	if ( (p = strchr(LocalHostName, '.')) ) {
-		*p++ = '\0';
-		LocalDomain = p;
-	}
-	else
-	{
-		LocalDomain = "";
-
-		/* It's not clearly defined whether gethostname()
-		 * should return the simple hostname or the fqdn. A
-		 * good piece of software should be aware of both and
-		 * we want to distribute good software.  Joey
-		 *
-		 * Good software also always checks its return values...
-		 * If syslogd starts up before DNS is up & /etc/hosts
-		 * doesn't have LocalHostName listed, gethostbyname will
-		 * return NULL. 
-		 */
-		/* TODO: gethostbyname() is not thread-safe, but replacing it is
-		 * not urgent as we do not run on multiple threads here. rgerhards, 2007-09-25
-		 */
-		hent = gethostbyname(LocalHostName);
-		if(hent) {
-			snprintf(LocalHostName, sizeof(LocalHostName), "%s", hent->h_name);
-				
-			if ( (p = strchr(LocalHostName, '.')) )
-			{
-				*p++ = '\0';
-				LocalDomain = p;
-			}
-		}
-	}
-
-	/* Convert to lower case to recognize the correct domain laterly
-	 */
-	for (p = (char *)LocalDomain; *p ; p++)
-		if (isupper((int) *p))
-			*p = (char)tolower((int)*p);
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
