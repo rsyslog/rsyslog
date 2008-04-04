@@ -3,6 +3,8 @@ Version 3.15.1 (rgerhards), 2008-04-??
 - disabled atomic operations for the time being because they introduce some
   cross-platform trouble - need to see how to fix this in the best 
   possible way
+- bugfix: zero-length strings were not supported in object
+  deserializer
 - added librelp check via PKG_CHECK thanks to Michael Biebl's patch
 - file relputil.c deleted, is not actually needed
 - added more meaningful error messages to rsyslogd (when some errors
