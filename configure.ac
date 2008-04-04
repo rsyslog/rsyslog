@@ -491,6 +491,19 @@ AC_ARG_ENABLE(rsyslogd,
 AM_CONDITIONAL(ENABLE_RSYSLOGD, test x$enable_rsyslogd = xyes)
 
 
+# Mail support (so far we do not need a library, but we need to turn this on and off)
+AC_ARG_ENABLE(mail,
+        [AS_HELP_STRING([--enable-mail],[Enable mail support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mail="yes" ;;
+          no) enable_mail="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mail) ;;
+         esac],
+        [enable_mail=no]
+)
+AM_CONDITIONAL(ENABLE_MAIL, test x$enable_mail = xyes)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -598,6 +611,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/ompgsql/Makefile \
 		plugins/omrelp/Makefile \
 		plugins/omlibdbi/Makefile \
+		plugins/ommail/Makefile \
 		plugins/omsnmp/Makefile])
 AC_OUTPUT
 
@@ -612,6 +626,7 @@ echo "MySql support enabled:                    $enable_mysql"
 echo "libdbi support enabled:                   $enable_libdbi"
 echo "PostgreSQL support enabled:               $enable_pgsql"
 echo "SNMP support enabled:                     $enable_snmp"
+echo "Mail support enabled:                     $enable_mail"
 echo "RELP support enabled:                     $enable_relp"
 echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
