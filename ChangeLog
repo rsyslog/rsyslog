@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.15.1 (rgerhards), 2008-04-??
+- bugfix: some messages were emited without hostname
 - disabled atomic operations for the time being because they introduce some
   cross-platform trouble - need to see how to fix this in the best 
   possible way
