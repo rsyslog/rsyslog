@@ -51,9 +51,11 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
-static uchar *pSrv;
-static uchar *pszFrom;
-static uchar *pszTo;
+static uchar *pszSrv = NULL;
+static uchar *pszSrvPort = NULL;
+static uchar *pszFrom = NULL;
+static uchar *pszTo = NULL;
+static uchar *pszSubject = NULL;
 
 typedef struct _instanceData {
 	int iMode;	/* 0 - smtp, 1 - sendmail */
@@ -269,6 +271,34 @@ finalize_it:
 	RETiRet;
 }
 
+/* read response from server
+ */
+static rsRetVal
+readResponse(instanceData *pData)
+{
+	DEFiRet;
+	char buf[128];
+	int i = 0;
+	char c;
+	
+	assert(pData != NULL);
+	
+	do {
+		CHKiRet(getRcvChar(pData, &c));
+		if(c == '\n')
+			break;
+		buf[i++] = c;
+	} while(1);
+
+	
+finalize_it:
+	buf[i] = '\0';
+
+dbgprintf("iRet %d, server response: %s\n", iRet, buf);
+
+	RETiRet;
+}
+
 
 /* send a message via SMTP
  * TODO: care about the result codes, we can't do it that blindly ;)
@@ -281,14 +311,52 @@ sendSMTP(instanceData *pData, uchar *body)
 	
 	assert(pData != NULL);
 
+	readResponse(pData);
+
 	CHKiRet(serverConnect(pData));
-	CHKiRet(Send(pData->md.smtp.sock, "HELO\r\n", 6));
-	CHKiRet(Send(pData->md.smtp.sock, "MAIL FROM: <rgerhards@adiscon.com>\r\n", sizeof("MAIL FROM: <rgerhards@adiscon.com>\r\n") - 1));
-	CHKiRet(Send(pData->md.smtp.sock, "RCPT TO: <rgerhards@adiscon.com>\r\n",   sizeof("RCPT TO: <rgerhards@adiscon.com>\r\n") - 1));
+
+	CHKiRet(Send(pData->md.smtp.sock, "HELO ", 5));
+	CHKiRet(Send(pData->md.smtp.sock, (char*)LocalHostName, strlen((char*)LocalHostName)));
+	CHKiRet(Send(pData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
+	readResponse(pData);
+
+	CHKiRet(Send(pData->md.smtp.sock, "MAIL FROM: <", sizeof("MAIL FROM: <") - 1));
+	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
+	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
+	readResponse(pData);
+
+	CHKiRet(Send(pData->md.smtp.sock, "RCPT TO: <",   sizeof("RCPT TO: <") - 1));
+	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszTo, strlen((char*)pData->md.smtp.pszTo)));
+	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
+	readResponse(pData);
+
 	CHKiRet(Send(pData->md.smtp.sock, "DATA\r\n",   sizeof("DATA\r\n") - 1));
-	CHKiRet(Send(pData->md.smtp.sock, body,   strlen((char*) body)));
+
+	/* now come the data part */
+	/* header */
+	CHKiRet(Send(pData->md.smtp.sock, "From: <", sizeof("From: <") - 1));
+	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
+	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
+
+	CHKiRet(Send(pData->md.smtp.sock, "To: <",   sizeof("To: <") - 1));
+	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszTo, strlen((char*)pData->md.smtp.pszTo)));
+	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
+
+	CHKiRet(Send(pData->md.smtp.sock, "Subject: ",   sizeof("Subject: ") - 1));
+	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszSubject, strlen((char*)pData->md.smtp.pszSubject)));
+	CHKiRet(Send(pData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
+
+	CHKiRet(Send(pData->md.smtp.sock, "\r\n",   sizeof("\r\n") - 1)); /* indicate end of header */
+
+	/* body */
+	CHKiRet(Send(pData->md.smtp.sock, (char*)body,   strlen((char*) body)));
+
+	/* end of data, back to envelope transaction */
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n.\r\n",   sizeof("\r\n.\r\n") - 1));
+	readResponse(pData);
+
 	CHKiRet(Send(pData->md.smtp.sock, "QUIT\r\n",   sizeof("QUIT\r\n") - 1));
+	readResponse(pData);
 
 	close(pData->md.smtp.sock);
 	pData->md.smtp.sock = -1;
@@ -353,12 +421,17 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if((iRet = createInstance(&pData)) != RS_RET_OK)
 		FINALIZE;
 
-	//pData->md.smtp.pszSrv = "172.19.2.10";
-	pData->md.smtp.pszSrv = "172.19.0.6";
-	pData->md.smtp.pszSrvPort = "25";
-	pData->md.smtp.pszFrom = "rgerhards@adiscon.com";
-	pData->md.smtp.pszTo = "rgerhards@adiscon.com";
-	pData->md.smtp.pszSubject = "rsyslog test message";
+	/* TODO: check strdup() result */
+	if(pszSrv != NULL)
+		pData->md.smtp.pszSrv = (uchar*) strdup((char*)pszSrv);
+	if(pszSrvPort != NULL)
+		pData->md.smtp.pszSrvPort = (uchar*) strdup((char*)pszSrvPort);
+	if(pszSrvPort != NULL)
+		pData->md.smtp.pszFrom = (uchar*) strdup((char*)pszFrom);
+	if(pszSrvPort != NULL)
+		pData->md.smtp.pszTo = (uchar*) strdup((char*)pszTo);
+	if(pszSrvPort != NULL)
+		pData->md.smtp.pszSubject = (uchar*) strdup((char*)pszSubject);
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_TraditionalForwardFormat"));
@@ -370,8 +443,41 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
+/* Free string config variables and reset them to NULL (not necessarily the default!) */
+static rsRetVal freeConfigVariables(void)
+{
+	DEFiRet;
+
+	if(pszSrv != NULL) {
+		free(pszSrv);
+		pszSrv = NULL;
+	}
+	if(pszSrvPort != NULL) {
+		free(pszSrvPort);
+		pszSrvPort = NULL;
+	}
+	if(pszFrom != NULL) {
+		free(pszFrom);
+		pszFrom = NULL;
+	}
+	if(pszTo != NULL) {
+		free(pszTo);
+		pszTo = NULL;
+	}
+	if(pszSubject != NULL) {
+		free(pszSubject);
+		pszSubject = NULL;
+	}
+	
+	RETiRet;
+}
+
+
 BEGINmodExit
 CODESTARTmodExit
+	/* cleanup our allocations */
+	freeConfigVariables();
+
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
@@ -383,12 +489,28 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 ENDqueryEtryPt
 
 
+/* Reset config variables for this module to default values.
+ */
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	DEFiRet;
+	iRet = freeConfigVariables();
+	RETiRet;
+}
+
+
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &pszSrv, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &pszSrvPort, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailfrom", 0, eCmdHdlrGetWord, NULL, &pszFrom, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailto", 0, eCmdHdlrGetWord, NULL, &pszTo, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsubject", 0, eCmdHdlrGetWord, NULL, &pszSubject, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vim:set ai:
