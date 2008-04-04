@@ -1053,10 +1053,11 @@ static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProce
 
 finalize_it:
 	/* destruct in any case, not just on error, but it makes error handling much easier */
-	if(pVM != NULL) {
-		var.Destruct(&pResult);
+	if(pVM != NULL)
 		vm.Destruct(&pVM);
-	}
+
+	if(pResult != NULL)
+		var.Destruct(&pResult);
 
 	*bProcessMsg = bRet;
 	RETiRet;
