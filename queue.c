@@ -1416,12 +1416,10 @@ queueDequeueConsumable(queue_t *pThis, wti_t *pWti, int iCancelStateSave)
 	 * on the nail [exact value]) -- rgerhards, 2008-03-14
 	 */
 	if(iQueueSize < pThis->iFullDlyMrk) {
-dbgoprint((obj_t*) pThis, "queue size %d below FullDlyMrk %d\n", iQueueSize, pThis->iFullDlyMrk);
 		pthread_cond_broadcast(&pThis->belowFullDlyWtrMrk);
 	}
 
 	if(iQueueSize < pThis->iLightDlyMrk) {
-dbgoprint((obj_t*) pThis, "queue size %d below LightDlyMrk %d\n", iQueueSize, pThis->iLightDlyMrk);
 		pthread_cond_broadcast(&pThis->belowLightDlyWtrMrk);
 	}
 
@@ -1455,9 +1453,9 @@ finalize_it:
 }
 
 
-/* The rate limiter - we only need one - do we? 
+/* The rate limiter
  *
-* Here we may wait if a dequeue time window is defined or if we are
+ * Here we may wait if a dequeue time window is defined or if we are
  * rate-limited. TODO: If we do so, we should also look into the
  * way new worker threads are spawned. Obviously, it doesn't make much
  * sense to spawn additional worker threads when none of them can do any
@@ -1506,13 +1504,11 @@ queueRateLimiter(queue_t *pThis)
 	dbgoprint((obj_t*) pThis, "entering rate limiter\n");
 
 	iDelay = 0;
-dbgprintf("deq win from %d to %d\n", pThis->iDeqtWinFromHr, pThis->iDeqtWinToHr);
 	if(pThis->iDeqtWinToHr != 25) { /* 25 means disabled */
 		/* time calls are expensive, so only do them when needed */
 		time(&tCurr);
 		localtime_r(&tCurr, &m);
 		iHrCurr = m.tm_hour;
-RUNLOG_VAR("%d", iHrCurr);
 
 		if(pThis->iDeqtWinToHr < pThis->iDeqtWinFromHr) {
 			if(iHrCurr < pThis->iDeqtWinToHr || iHrCurr > pThis->iDeqtWinFromHr) {
@@ -1550,7 +1546,6 @@ RUNLOG_VAR("%d", iHrCurr);
 		srSleep(iDelay, 0);
 	}
 
-	dbgoprint((obj_t*) pThis, "rate limiter returns with iRet %d\n", iRet);
 	RETiRet;
 }
 

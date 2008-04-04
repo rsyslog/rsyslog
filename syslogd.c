@@ -3193,11 +3193,9 @@ int realMain(int argc, char **argv)
 		}
 	}
 
-	/* Convert to lower case to recognize the correct domain laterly
-	 */
-	for (p = (char *)LocalDomain; *p ; p++)
-		if (isupper((int) *p))
-			*p = (char)tolower((int)*p);
+	/* Convert to lower case to recognize the correct domain laterly */
+	for (p = (char *)LocalDomain ; *p ; p++)
+		*p = (char)tolower((int)*p);
 
 	/* initialize the objects */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
@@ -3215,7 +3213,7 @@ int realMain(int argc, char **argv)
 	/* END core initializations - we now come back to carrying out command line options*/
 
 	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
-dbgprintf("deque option %c, optarg '%s'\n", ch, arg);
+		dbgprintf("deque option %c, optarg '%s'\n", ch, arg);
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
