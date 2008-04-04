@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.14.0 (rgerhards), 2008-04-04
+- bugfix: some messages were emited without hostname
 - bugfix: rsyslogd was no longer build by default; man pages are 
   only installed if corresponding option is selected. Thanks to
   Michael Biebl for pointing these problems out.
