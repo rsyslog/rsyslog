@@ -62,6 +62,7 @@ typedef struct _instanceData {
 			uchar *pszSrvPort;
 			uchar *pszFrom;
 			uchar *pszTo;
+			uchar *pszSubject;
 			int sock;	/* socket to this server (most important when we do multiple msgs per mail) */
 			} smtp;
 	} md;	/* mode-specific data */
@@ -70,7 +71,6 @@ typedef struct _instanceData {
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->bInitialConnect = 1;
 ENDcreateInstance
 
 
@@ -83,17 +83,18 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	if(pThis->iMode == 0) {
-		if(pThis->md.smtp.pszSrv != NULL)
-			free(pThis->md.smtp.pszSrv);
-		if(pThis->md.smtp.pszSrvPort != NULL)
-			free(pThis->md.smtp.pszSrvPort);
-		if(pThis->md.smtp.pszFrom != NULL)
-			free(pThis->md.smtp.pszFrom);
-		if(pThis->md.smtp.pszTo != NULL)
-			free(pThis->md.smtp.pszTo);
+	if(pData->iMode == 0) {
+		if(pData->md.smtp.pszSrv != NULL)
+			free(pData->md.smtp.pszSrv);
+		if(pData->md.smtp.pszSrvPort != NULL)
+			free(pData->md.smtp.pszSrvPort);
+		if(pData->md.smtp.pszFrom != NULL)
+			free(pData->md.smtp.pszFrom);
+		if(pData->md.smtp.pszTo != NULL)
+			free(pData->md.smtp.pszTo);
+		if(pData->md.smtp.pszSubject != NULL)
+			free(pData->md.smtp.pszSubject);
 	}
-
 ENDfreeInstance
 
 
@@ -103,27 +104,12 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-/* try to connect to server
- * rgerhards, 2008-03-21
+/* connect to server
+ * rgerhards, 2008-04-04
  */
 static rsRetVal doConnect(instanceData *pData)
 {
 	DEFiRet;
-
-	if(pData->bInitialConnect) {
-		iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
-		if(iRet == RELP_RET_OK)
-			pData->bInitialConnect = 0;
-	} else {
-		iRet = relpCltReconnect(pData->pRelpClt);
-	}
-
-	if(iRet == RELP_RET_OK) {
-		pData->bIsConnected = 1;
-	} else {
-		pData->bIsConnected = 0;
-		iRet = RS_RET_SUSPENDED;
-	}
 
 	RETiRet;
 }
@@ -136,29 +122,18 @@ ENDtryResume
 
 
 BEGINdoAction
-	uchar *pMsg; /* temporary buffering */
-	size_t lenMsg;
-	relpRetVal ret;
 CODESTARTdoAction
-	dbgprintf(" %s:%s/RELP\n", pData->f_hname, getRelpPt(pData));
+	dbgprintf(" Mail\n");
 
-	if(!pData->bIsConnected) {
-		CHKiRet(doConnect(pData));
-	}
-
-	pMsg = ppString[0];
-	lenMsg = strlen((char*) pMsg); /* TODO: don't we get this? */
-
-	/* TODO: think about handling oversize messages! */
-	if(lenMsg > MAXLINE)
-		lenMsg = MAXLINE;
+//	if(!pData->bIsConnected) {
+//		CHKiRet(doConnect(pData));
+//	}
 
 	/* forward */
-	ret = relpCltSendSyslog(pData->pRelpClt, (uchar*) pMsg, lenMsg);
-RUNLOG_VAR("%d", ret);
-	if(ret != RELP_RET_OK) {
+	iRet = sendSMTP(pData, ppString[0]);
+	if(iRet != RELP_RET_OK) {
 		/* error! */
-		dbgprintf("error forwarding via relp, suspending\n");
+		dbgprintf("error sending mail, suspending\n");
 		iRet = RS_RET_SUSPENDED;
 	}
 
@@ -167,9 +142,6 @@ ENDdoAction
 
 
 BEGINparseSelectorAct
-	uchar *q;
-	int i;
-	int bErr;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":ommail:", sizeof(":ommail:") - 1)) {
@@ -191,8 +163,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
-	relpEngineDestruct(&pRelpEngine);
-
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
