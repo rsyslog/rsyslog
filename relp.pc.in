@@ -6,5 +6,5 @@ includedir=@includedir@
 Name: relp
 Description: Reliable Event Logging Protocol (RELP) library
 Version: @VERSION@
-Libs: -L${libdir} @rt_libs@
+Libs: -L${libdir} -lrelp @rt_libs@
 Cflags: -I${includedir}
