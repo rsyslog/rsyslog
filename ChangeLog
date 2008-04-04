@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.14.0 (rgerhards), 2008-04-04
+Version 3.14.1 (rgerhards), 2008-04-04
 - bugfix: some messages were emited without hostname
 - bugfix: rsyslogd was no longer build by default; man pages are 
   only installed if corresponding option is selected. Thanks to
@@ -18,6 +18,11 @@ Version 3.14.0 (rgerhards), 2008-04-04
   the full size, but will modify the outputs so that only 32 characters
   max are used by default. If you need large tags in the output, you need
   to provide custom templates.
+---------------------------------------------------------------------------
+Version 3.14.0 (rgerhards), 2008-04-02
+An interim version was accidently released to the web. It was named 3.14.0.
+To avoid confusion, we have not assigned this version number to any
+official release. If you happen to use 3.14.0, please update to 3.14.1.
 ---------------------------------------------------------------------------
 Version 3.13.0-dev0 (rgerhards), 2008-03-31
 - bugfix: accidently set debug option in 3.12.5 reset to production
