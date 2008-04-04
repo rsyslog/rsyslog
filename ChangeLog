@@ -15,6 +15,12 @@ Version 3.17.0 (rgerhards), 2008-04-??
   the full size, but will modify the outputs so that only 32 characters
   max are used by default. If you need large tags in the output, you need
   to provide custom templates.
+- changed command line processing. -v, -M, -c options are now parsed
+  and processed before all other options. Inter-option dependencies
+  have been relieved. Among others, permits to specify intial module
+  load path via -M only (not the environment) which makes it much
+  easier to work with non-standard module library locations. Thanks
+  to varmojfekoj for suggesting this change. Matches bugzilla bug 55.
 ---------------------------------------------------------------------------
 Version 3.15.1 (rgerhards), 2008-04-??
 - disabled atomic operations for the time being because they introduce some

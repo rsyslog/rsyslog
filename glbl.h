@@ -33,6 +33,7 @@
 
 #define glblGetIOBufSize() 4096 /* size of the IO buffer, e.g. for strm class */
 
+extern uchar *glblModPath; /* module load path */
 extern uchar *pszWorkDir;
 #define glblGetWorkDir() (pszWorkDir == NULL ? (uchar*) "" : pszWorkDir)
 
