@@ -150,7 +150,6 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
  */
 void clearAllowedSenders (struct AllowedSenders *pAllow)
 {
-dbgprintf("clearAllowedSenders(0x%lx)\n", (unsigned long) pAllow);
 	if (pAllow != NULL) {
 		if (pAllow->pNext != NULL)
 			clearAllowedSenders (pAllow->pNext);
@@ -860,7 +859,6 @@ void closeUDPListenSockets(int *pSockArr)
 {
 	register int i;
 
-dbgprintf("in closeUDPListenSockets()\n");
 	assert(pSockArr != NULL);
         if(pSockArr != NULL) {
 	        for (i = 0; i < *pSockArr; i++)
