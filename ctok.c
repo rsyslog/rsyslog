@@ -165,7 +165,6 @@ ctokGetWordFromStream(ctok_t *pThis, uchar *pWordBuf, size_t lenWordBuf)
 	/* push back the char that we have read too much */
 	CHKiRet(ctokUngetCharFromStream(pThis, c));
 
-dbgprintf("end ctokGetWordFromStream, stream now '%s'\n", pThis->pp);
 finalize_it:
 	RETiRet;
 }
@@ -230,8 +229,6 @@ ctokGetNumber(ctok_t *pThis, ctok_token_t *pToken)
 
 	CHKiRet(var.SetNumber(pToken->pVar, n));
 
-dbgprintf("number, number is: '%lld'\n", n);
-
 finalize_it:
 	RETiRet;
 }
@@ -267,8 +264,6 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 	}
 	CHKiRet(rsCStrFinish(pStrB));
-
-dbgprintf("var, var is: '%s'\n", rsCStrGetSzStr(pstrVal));
 
 	CHKiRet(var.SetString(pToken->pVar, pstrVal));
 	pstrVal = NULL;
@@ -319,8 +314,6 @@ ctokGetSimpStr(ctok_t *pThis, ctok_token_t *pToken)
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 	}
 	CHKiRet(rsCStrFinish(pStrB));
-
-dbgprintf("simpstr, str is: '%s'\n", rsCStrGetSzStr(pstrVal));
 
 	CHKiRet(var.SetString(pToken->pVar, pstrVal));
 	pstrVal = NULL;
