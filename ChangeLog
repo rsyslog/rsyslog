@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.14.2 (rgerhards), 2008-04-??
 - bugfix: segfault with expression-based filters
+- some cleanup
 ---------------------------------------------------------------------------
 Version 3.14.1 (rgerhards), 2008-04-04
 - bugfix: some messages were emited without hostname
