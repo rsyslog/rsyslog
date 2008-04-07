@@ -168,6 +168,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MODULE_LOAD_ERR_NO_INIT = -2067, /**< module could not be loaded - init() missing */
 	RS_RET_MODULE_LOAD_ERR_INIT_FAILED = -2068, /**< module could not be loaded - init() failed */
 	RS_RET_NO_SOCKET = -2069, /**< socket could not be obtained or was not provided */
+	RS_RET_SMTP_ERROR = -2070, /**< error during SMTP transation */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

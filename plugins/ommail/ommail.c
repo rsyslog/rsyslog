@@ -152,45 +152,6 @@ finalize_it:
 }
 
 
-#if 0
-/* Initialize TCP socket (for sender), new socket is returned in 
- * pSock if all goes well.
- */
-static rsRetVal
-CreateSocket(struct addrinfo *addrDest, int *pSock)
-{
-	DEFiRet;
-	int fd;
-	struct addrinfo *r; 
-	char errStr[1024];
-	
-	r = addrDest;
-
-	while(r != NULL) {
-		fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-		if(fd != -1) {
-			if(connect(fd, r->ai_addr, r->ai_addrlen) != 0) {
-				dbgprintf("create tcp connection failed, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
-			} else {
-				*pSock = fd;
-				FINALIZE;
-			}
-			close(fd);
-		} else {
-			dbgprintf("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
-		}		
-		r = r->ai_next;
-	}
-
-	dbgprintf("no working socket could be obtained");
-	iRet = RS_RET_NO_SOCKET;
-
-finalize_it:
-	RETiRet;
-}
-#endif
-
-
 /* open a connection to the mail server
  * rgerhards, 2008-04-04
  */
@@ -253,8 +214,6 @@ Send(int sock, char *msg, size_t len)
 
 	do {
 		lenSend = send(sock, msg + offsBuf, len - offsBuf, 0);
-		dbgprintf("TCP sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
-
 		if(lenSend == -1) {
 			if(errno != EAGAIN) {
 				dbgprintf("message not (tcp)send, errno %d", errno);
@@ -271,31 +230,62 @@ finalize_it:
 	RETiRet;
 }
 
-/* read response from server
+
+/* read response line from server
  */
 static rsRetVal
-readResponse(instanceData *pData)
+readResponseLn(instanceData *pData, char *pLn, size_t lenLn)
 {
 	DEFiRet;
-	char buf[128];
-	int i = 0;
+	size_t i = 0;
 	char c;
 	
 	assert(pData != NULL);
+	assert(pLn != NULL);
 	
 	do {
 		CHKiRet(getRcvChar(pData, &c));
 		if(c == '\n')
 			break;
-		buf[i++] = c;
+		if(i < (lenLn - 1)) /* if line is too long, we simply discard the rest */
+			pLn[i++] = c;
 	} while(1);
+	pLn[i] = '\0';
+	dbgprintf("smtp server response: %s\n", pLn); /* do not remove, this is helpful in troubleshooting SMTP probs! */
 
+finalize_it:
+	RETiRet;
+}
+
+
+/* read numerical response code from server and compare it to requried response code.
+ * If they two don't match, return RS_RET_SMTP_ERROR.
+ * rgerhards, 2008-04-07
+ */
+static rsRetVal
+readResponse(instanceData *pData, int *piState, int iExpected)
+{
+	DEFiRet;
+	int bCont;
+	char buf[128];
+	
+	assert(pData != NULL);
+	assert(piState != NULL);
+	
+	bCont = 1;
+	do {
+		CHKiRet(readResponseLn(pData, buf, sizeof(buf)));
+		if(buf[3] != '-') { /* last or only response line? */
+			bCont = 0;
+			*piState = buf[0] - '0';
+			*piState = *piState * 10 + buf[1] - '0';
+			*piState = *piState * 10 + buf[2] - '0';
+			if(*piState != iExpected)
+				ABORT_FINALIZE(RS_RET_SMTP_ERROR);
+		}
+	} while(bCont);
 	
 finalize_it:
-	buf[i] = '\0';
-
-dbgprintf("iRet %d, server response: %s\n", iRet, buf);
-
 	RETiRet;
 }
 
@@ -308,29 +298,31 @@ static rsRetVal
 sendSMTP(instanceData *pData, uchar *body)
 {
 	DEFiRet;
+	int iState; /* SMTP state */
 	
 	assert(pData != NULL);
 
-	readResponse(pData);
 
 	CHKiRet(serverConnect(pData));
+	CHKiRet(readResponse(pData, &iState, 220));
 
 	CHKiRet(Send(pData->md.smtp.sock, "HELO ", 5));
 	CHKiRet(Send(pData->md.smtp.sock, (char*)LocalHostName, strlen((char*)LocalHostName)));
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
-	readResponse(pData);
+	CHKiRet(readResponse(pData, &iState, 250));
 
 	CHKiRet(Send(pData->md.smtp.sock, "MAIL FROM: <", sizeof("MAIL FROM: <") - 1));
 	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
 	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
-	readResponse(pData);
+	CHKiRet(readResponse(pData, &iState, 250));
 
 	CHKiRet(Send(pData->md.smtp.sock, "RCPT TO: <",   sizeof("RCPT TO: <") - 1));
 	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszTo, strlen((char*)pData->md.smtp.pszTo)));
 	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
-	readResponse(pData);
+	CHKiRet(readResponse(pData, &iState, 250));
 
 	CHKiRet(Send(pData->md.smtp.sock, "DATA\r\n",   sizeof("DATA\r\n") - 1));
+	CHKiRet(readResponse(pData, &iState, 354));
 
 	/* now come the data part */
 	/* header */
@@ -353,10 +345,10 @@ sendSMTP(instanceData *pData, uchar *body)
 
 	/* end of data, back to envelope transaction */
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n.\r\n",   sizeof("\r\n.\r\n") - 1));
-	readResponse(pData);
+	CHKiRet(readResponse(pData, &iState, 250));
 
 	CHKiRet(Send(pData->md.smtp.sock, "QUIT\r\n",   sizeof("QUIT\r\n") - 1));
-	readResponse(pData);
+	CHKiRet(readResponse(pData, &iState, 221));
 
 	close(pData->md.smtp.sock);
 	pData->md.smtp.sock = -1;
@@ -392,10 +384,6 @@ BEGINdoAction
 CODESTARTdoAction
 	dbgprintf(" Mail\n");
 
-//	if(!pData->bIsConnected) {
-//		CHKiRet(doConnect(pData));
-//	}
-
 	/* forward */
 	iRet = sendSMTP(pData, ppString[0]);
 	if(iRet != RS_RET_OK) {
@@ -403,8 +391,6 @@ CODESTARTdoAction
 		dbgprintf("error sending mail, suspending\n");
 		iRet = RS_RET_SUSPENDED;
 	}
-
-finalize_it:
 ENDdoAction
 
 
