@@ -2930,6 +2930,7 @@ GlobalClassExit(void)
 	objRelease(conf,     CORE_COMPONENT);
 	objRelease(expr,     CORE_COMPONENT);
 	objRelease(vm,       CORE_COMPONENT);
+	objRelease(var,      CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 
 	/* TODO: implement the rest of the deinit */
@@ -2955,10 +2956,7 @@ GlobalClassExit(void)
 	CHKiRet(templateInit());
 #endif
 	/* dummy "classes */
-dbgprintf("pre strExit()\n");
 	strExit();
-dbgprintf("post strExit()\n");
-
 
 #if 0
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
@@ -3032,7 +3030,6 @@ int realMain(int argc, char **argv)
 	for (p = (char *)LocalDomain; *p ; p++)
 		if (isupper((int) *p))
 			*p = (char)tolower((int)*p);
-
 
 	CHKiRet_Hdlr(InitGlobalClasses()) {
 		fprintf(stderr, "rsyslogd initializiation failed - global classes could not be initialized.\n"
