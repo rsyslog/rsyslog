@@ -193,8 +193,6 @@ CODESTARTop(CMP_CONTAINS)
 	/* operand2 is on top of stack, so needs to be popped first */
 	vmstk.PopString(pThis->pStk, &operand2);
 	vmstk.PopString(pThis->pStk, &operand1);
-var.DebugPrint(operand1); \
-var.DebugPrint(operand2); \
 	/* TODO: extend cstr class so that it supports location of cstr inside cstr */
 	bRes = (rsCStrLocateInSzStr(operand2->val.pStr, rsCStrGetSzStr(operand1->val.pStr)) == -1) ? 0 : 1;
 
@@ -233,8 +231,6 @@ CODESTARTop(CMP_STARTSWITH)
 	/* operand2 is on top of stack, so needs to be popped first */
 	vmstk.PopString(pThis->pStk, &operand2);
 	vmstk.PopString(pThis->pStk, &operand1);
-var.DebugPrint(operand1); \
-var.DebugPrint(operand2); \
 	/* TODO: extend cstr class so that it supports location of cstr inside cstr */
 	bRes = (rsCStrStartsWithSzStr(operand1->val.pStr, rsCStrGetSzStr(operand2->val.pStr),
 		rsCStrLen(operand2->val.pStr)) == 0) ? 1 : 0;
@@ -254,14 +250,11 @@ CODESTARTop(CMP_STARTSWITHI)
 	/* operand2 is on top of stack, so needs to be popped first */
 	vmstk.PopString(pThis->pStk, &operand2);
 	vmstk.PopString(pThis->pStk, &operand1);
-var.DebugPrint(operand1); \
-var.DebugPrint(operand2); \
 	/* TODO: extend cstr class so that it supports location of cstr inside cstr */
 	bRes = (rsCStrCaseInsensitveStartsWithSzStr(operand1->val.pStr, rsCStrGetSzStr(operand2->val.pStr),
 		rsCStrLen(operand2->val.pStr)) == 0) ? 1 : 0;
 
 	/* we have a result, so let's push it */
-RUNLOG_VAR("%lld", bRes); \
 	PUSHRESULTop(operand1, bRes);
 	var.Destruct(&operand2); /* no longer needed */
 ENDop(CMP_STARTSWITHI)
