@@ -1056,6 +1056,7 @@ finalize_it:
 	if(pVM != NULL)
 		vm.Destruct(&pVM);
 
+RUNLOG_VAR("%p", var);
 	if(pResult != NULL)
 		var.Destruct(&pResult);
 
@@ -2838,12 +2839,11 @@ InitGlobalClasses(void)
 	/* the following classes were intialized by objClassInit() */
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	CHKiRet(objUse(module,   CORE_COMPONENT));
+	CHKiRet(objUse(var,      CORE_COMPONENT));
 
 	/* initialize and use classes. We must be very careful with the order of events. Some
 	 * classes use others and if we do not initialize them in the right order, we may end
 	 * up with an invalid call. The most important thing that can happen is that an error
-	pErrObj = "var";
-	CHKiRet(objUse(var,      CORE_COMPONENT));
 	 * is detected and needs to be logged, wich in turn requires a broader number of classes
 	 * to be available. The solution is that we take care in the order of calls AND use a
 	 * class immediately after it is initialized. And, of course, we load those classes
