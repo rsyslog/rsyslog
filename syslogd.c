@@ -1056,7 +1056,6 @@ finalize_it:
 	if(pVM != NULL)
 		vm.Destruct(&pVM);
 
-RUNLOG_VAR("%p", var);
 	if(pResult != NULL)
 		var.Destruct(&pResult);
 
@@ -2900,6 +2899,7 @@ GlobalClassExit(void)
 	objRelease(conf,     CORE_COMPONENT);
 	objRelease(expr,     CORE_COMPONENT);
 	objRelease(vm,       CORE_COMPONENT);
+	objRelease(var,      CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 
 	/* TODO: implement the rest of the deinit */
@@ -2925,10 +2925,7 @@ GlobalClassExit(void)
 	CHKiRet(templateInit());
 #endif
 	/* dummy "classes */
-dbgprintf("pre strExit()\n");
 	strExit();
-dbgprintf("post strExit()\n");
-
 
 #if 0
 	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
