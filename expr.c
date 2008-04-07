@@ -371,7 +371,6 @@ exprParse(expr_t *pThis, ctok_t *tok)
 	/* happy parsing... */
 	CHKiRet(expr(pThis, tok));
 	dbgoprint((obj_t*) pThis, "successfully parsed/created expression\n");
-vmprg.DebugPrint(pThis->pVmprg);
 
 finalize_it:
 	RETiRet;
@@ -392,8 +391,6 @@ CODESTARTobjQueryInterface(expr)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//xxxpIf->oID = OBJexpr;
-
 	pIf->Construct = exprConstruct;
 	pIf->ConstructFinalize = exprConstructFinalize;
 	pIf->Destruct = exprDestruct;

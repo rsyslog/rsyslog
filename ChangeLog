@@ -10,7 +10,6 @@ Version 3.17.0 (rgerhards), 2008-04-??
 - added the capability to specify a processing (actually dequeue)
   timeframe with queues - so things can be configured to be done
   at off-peak hours
-- bugfix: some memory leak when queue is runing in disk mode
 - We have removed the 32 character size limit (from RFC3164) on the
   tag. This had bad effects on existing envrionments, as sysklogd didn't
   obey it either (probably another bug in RFC3164...). We now receive
@@ -26,13 +25,18 @@ Version 3.17.0 (rgerhards), 2008-04-??
 - bugfix: some messages were emited without hostname
 ---------------------------------------------------------------------------
 Version 3.15.1 (rgerhards), 2008-04-??
+- bugfix: some messages were emited without hostname
 - disabled atomic operations for the time being because they introduce some
   cross-platform trouble - need to see how to fix this in the best 
   possible way
+- bugfix: zero-length strings were not supported in object
+  deserializer
 - added librelp check via PKG_CHECK thanks to Michael Biebl's patch
 - file relputil.c deleted, is not actually needed
 - added more meaningful error messages to rsyslogd (when some errors
   happens during startup)
+- bugfix: memory leaks in script engine
+- bugfix: $hostname and $fromhost in RainerScript did not work
 ---------------------------------------------------------------------------
 Version 3.15.0 (rgerhards), 2008-04-01
 - major new feature: imrelp/omrelp support reliable delivery of syslog
@@ -43,6 +47,10 @@ Version 3.15.0 (rgerhards), 2008-04-01
 - bugfix: rsyslogd was no longer build by default; man pages are 
   only installed if corresponding option is selected. Thanks to
   Michael Biebl for pointing these problems out.
+---------------------------------------------------------------------------
+Version 3.14.2 (rgerhards), 2008-04-??
+- bugfix: segfault with expression-based filters
+- some cleanup
 ---------------------------------------------------------------------------
 Version 3.14.1 (rgerhards), 2008-04-04
 - bugfix: some messages were emited without hostname
@@ -63,6 +71,7 @@ Version 3.14.1 (rgerhards), 2008-04-04
   the full size, but will modify the outputs so that only 32 characters
   max are used by default. If you need large tags in the output, you need
   to provide custom templates.
+- bugfix: some memory leak when queue is runing in disk mode
 ---------------------------------------------------------------------------
 Version 3.14.0 (rgerhards), 2008-04-02
 An interim version was accidently released to the web. It was named 3.14.0.
