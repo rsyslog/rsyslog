@@ -24,6 +24,8 @@ Version 3.17.0 (rgerhards), 2008-04-08
   easier to work with non-standard module library locations. Thanks
   to varmojfekoj for suggesting this change. Matches bugzilla bug 55.
 - bugfix: some messages were emited without hostname
+Plus a number of bugfixes that were applied to v3-stable and beta
+branches (not mentioned here in detail).
 ---------------------------------------------------------------------------
 Version 3.15.1 (rgerhards), 2008-04-??
 - bugfix: some messages were emited without hostname
