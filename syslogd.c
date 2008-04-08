@@ -1741,6 +1741,7 @@ void legacyOptsHook(void)
 
 	while(pThis != NULL) {
 		if(pThis->line != NULL) {
+			errno = 0;
 			errmsg.LogError(NO_ERRCODE, "Warning: backward compatibility layer added to following "
 				        "directive to rsyslog.conf: %s", pThis->line);
 			conf.cfsysline(pThis->line);
@@ -3109,7 +3110,7 @@ int realMain(int argc, char **argv)
 					legacyOptsEnq((uchar *) "ModLoad imuxsock");
 					bImUxSockLoaded = 1;
 				}
-				legacyOptsEnq((uchar *) "OmitLocaLogging");
+				legacyOptsEnq((uchar *) "OmitLocalLogging");
 			} else {
 				fprintf(stderr, "error -o is no longer supported, use module imuxsock instead");
 			}

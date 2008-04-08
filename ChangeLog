@@ -11,6 +11,9 @@ Version 3.14.2 (rgerhards), 2008-04-??
 - bugfix: potential segfault in imklog when kernel is compiled without
   /proc/kallsyms and the file System.map is missing. Thanks to
   Andrea Morandi for pointing it out and suggesting a fix.
+- bugfixes, credits to varmojfekoj:
+  * reset errno before printing a warning message
+  * misspelled directive name in code processing legacy options
 ---------------------------------------------------------------------------
 Version 3.14.1 (rgerhards), 2008-04-04
 - bugfix: some messages were emited without hostname
