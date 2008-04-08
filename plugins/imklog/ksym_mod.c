@@ -86,6 +86,7 @@
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
@@ -97,8 +98,6 @@
 #include <linux/module.h>
 #else /* __GLIBC__ */
 #include "module.h"
-extern __off64_t lseek64 __P ((int __fd, __off64_t __offset, int __whence));
-extern int get_kernel_syms __P ((struct kernel_sym *__table));
 #endif /* __GLIBC__ */
 #include <stdarg.h>
 #include <paths.h>
@@ -108,42 +107,7 @@ extern int get_kernel_syms __P ((struct kernel_sym *__table));
 #include "imklog.h"
 #include "ksyms.h"
 
-
-#if !defined(__GLIBC__)
-/*
- * The following bit uses some kernel/library magic to product what
- * looks like a function call to user level code.  This function is
- * actually a system call in disguise.  The purpose of the getsyms
- * call is to return a current copy of the in-kernel symbol table.
- */
-#define __LIBRARY__
-#include <linux/unistd.h>
-#define __NR_getsyms __NR_get_kernel_syms
-_syscall1(int, getsyms, struct kernel_sym *, syms);
-#undef __LIBRARY__
-extern int getsyms(struct kernel_sym *);
-#else /* __GLIBC__ */
-#define getsyms get_kernel_syms
-#endif /* __GLIBC__ */
-
-/* Variables static to this module. */
-struct sym_table
-{
-	unsigned long value;
-	char *name;
-};
-
-struct Module
-{
-	struct sym_table *sym_array;
-	int num_syms;
-
-	char *name;
-	struct module module;
-#if LINUX_VERSION_CODE >= 0x20112
-	struct module_info module_info;
-#endif
-};
+#define KSYMS  "/proc/kallsyms"
 
 static int num_modules = 0;
 struct Module *sym_array_modules = (struct Module *) 0;
@@ -153,9 +117,12 @@ static int have_modules = 0;
 
 /* Function prototypes. */
 static void FreeModules(void);
-static int AddSymbol(struct Module *mp, unsigned long, char *);
-static int AddModule(unsigned long, char *);
+static int AddSymbol(const char *);
+struct Module *AddModule(const char *);
 static int symsort(const void *, const void *);
+
+/* Imported from ksym.c */
+extern int num_syms;
 
 
 /**************************************************************************
@@ -175,94 +142,74 @@ static int symsort(const void *, const void *);
  **************************************************************************/
 extern int InitMsyms(void)
 {
-	auto int	rtn,
-			tmp;
 
-	auto struct kernel_sym	*ksym_table,
-				*p;
+        auto int        rtn,
+                        tmp;
 
+        FILE *ksyms;
+
+        char buf[128];
+        char *p;
 
 	/* Initialize the kernel module symbol table. */
 	FreeModules();
 
+       ksyms = fopen(KSYMS, "r");
 
-	/*
-	 * The system call which returns the kernel symbol table has
-	 * essentialy two modes of operation.  Called with a null pointer
-	 * the system call returns the number of symbols defined in the
-	 * the table.
-	 *
-	 * The second mode of operation is to pass a valid pointer to
-	 * the call which will then load the current symbol table into
-	 * the memory provided.
-	 *
-	 * Returning the symbol table is essentially an all or nothing
-	 * proposition so we need to pre-allocate enough memory for the
-	 * complete table regardless of how many symbols we need.
-	 *
-	 * Bummer.
-	 */
-	if ( (rtn = getsyms((struct kernel_sym *) 0)) < 0 )
-	{
-		if ( errno == ENOSYS )
-			Syslog(LOG_INFO, "No module symbols loaded - "
-			       "kernel modules not enabled.\n");
-		else
-			Syslog(LOG_ERR, "Error loading kernel symbols " \
-			       "- %s\n", strerror(errno));
-		return(0);
-	}
-	dbgprintf("Loading kernel module symbols - Size of table: %d\n", rtn);
+        if ( ksyms == NULL )
+        {
+                if ( errno == ENOENT )
+                        Syslog(LOG_INFO, "No module symbols loaded - "
+                               "kernel modules not enabled.\n");
+                else
+                        Syslog(LOG_ERR, "Error loading kernel symbols " \
+                               "- %s\n", strerror(errno));
+                fclose(ksyms);
+                return(0);
+        }
 
-	ksym_table = (struct kernel_sym *) malloc(rtn * sizeof(struct kernel_sym));
-	if ( ksym_table == (struct kernel_sym *) 0 )
-	{
-		Syslog(LOG_WARNING, " Failed memory allocation for kernel symbol table.\n");
-		return(0);
-	}
-	if ( (rtn = getsyms(ksym_table)) < 0 )
-	{
-		Syslog(LOG_WARNING, "Error reading kernel symbols - %s\n", strerror(errno));
-		return(0);
-	}
+	dbgprintf("Loading kernel module symbols - Source: %s\n", KSYMS);
 
+        while ( fgets(buf, sizeof(buf), ksyms) != NULL )
+        {
+                if (num_syms > 0 && index(buf, '[') == NULL)
+                        continue;
 
-	/*
-	 * Build a symbol table compatible with the other one used by
-	 * klogd.
-	 */
-	tmp = rtn;
-	p = ksym_table;
-	while ( tmp-- )
-	{
- 		if ( !AddModule(p->value, p->name) )
-		{
-			Syslog(LOG_WARNING, "Error adding kernel module table entry.\n");
-			free(ksym_table);
-			return(0);
-		}
-		++p;
-	}
+                p = index(buf, ' ');
 
-	/* Sort the symbol tables in each module. */
-	for (rtn = tmp= 0; tmp < num_modules; ++tmp)
-	{
-		rtn += sym_array_modules[tmp].num_syms;
-		if ( sym_array_modules[tmp].num_syms < 2 )
-			continue;
-		qsort(sym_array_modules[tmp].sym_array, \
-		      sym_array_modules[tmp].num_syms, \
-		      sizeof(struct sym_table), symsort);
-	}
+                if ( p == NULL )
+                        continue;
 
-	if ( rtn == 0 )
-		Syslog(LOG_INFO, "No module symbols loaded.");
-	else
-		Syslog(LOG_INFO, "Loaded %d %s from %d module%s", rtn, \
-		       (rtn == 1) ? "symbol" : "symbols", \
-		       num_modules, (num_modules == 1) ? "." : "s.");
-	free(ksym_table);
-	return(1);
+                if ( buf[strlen(buf)-1] == '\n' )
+                        buf[strlen(buf)-1] = '\0';
+                /* overlong lines will be ignored above */
+
+                AddSymbol(buf);
+        }
+
+        fclose(ksyms);
+
+        have_modules = 1;
+
+        /* Sort the symbol tables in each module. */
+        for (rtn = tmp = 0; tmp < num_modules; ++tmp)
+        {
+                rtn += sym_array_modules[tmp].num_syms;
+                if ( sym_array_modules[tmp].num_syms < 2 )
+                        continue;
+                qsort(sym_array_modules[tmp].sym_array, \
+                      sym_array_modules[tmp].num_syms, \
+                      sizeof(struct sym_table), symsort);
+        }
+
+        if ( rtn == 0 )
+                Syslog(LOG_INFO, "No module symbols loaded.");
+        else
+                Syslog(LOG_INFO, "Loaded %d %s from %d module%s", rtn, \
+                       (rtn == 1) ? "symbol" : "symbols", \
+                       num_modules, (num_modules == 1) ? "." : "s.");
+
+        return(1);
 }
 
 
@@ -295,134 +242,100 @@ extern void DeinitMsyms(void)
  *
  * Return:	void
  **************************************************************************/
-static void FreeModules(void)
+static void FreeModules()
+
 {
-	auto int	nmods,
-			nsyms;
+        auto int        nmods,
+                        nsyms;
 
-	auto struct Module *mp;
-
-
-	/* Check to see if the module symbol tables need to be cleared. */
-	have_modules = 0;
-	if ( num_modules == 0 )
-		return;
+        auto struct Module *mp;
 
 
-	for (nmods= 0; nmods < num_modules; ++nmods)
-	{
-		mp = &sym_array_modules[nmods];
-		if ( mp->num_syms == 0 )
-			continue;
-	       
-		for (nsyms= 0; nsyms < mp->num_syms; ++nsyms)
-			free(mp->sym_array[nsyms].name);
-		free(mp->sym_array);
-	}
+        /* Check to see if the module symbol tables need to be cleared. */
+        have_modules = 0;
+        if ( num_modules == 0 )
+                return;
 
-	free(sym_array_modules);
-	sym_array_modules = (struct Module *) 0;
-	num_modules = 0;
-	return;
+        if ( sym_array_modules == NULL )
+                return;
+
+        for (nmods = 0; nmods < num_modules; ++nmods)
+        {
+                mp = &sym_array_modules[nmods];
+                if ( mp->num_syms == 0 )
+                        continue;
+
+                for (nsyms= 0; nsyms < mp->num_syms; ++nsyms)
+                        free(mp->sym_array[nsyms].name);
+                free(mp->sym_array);
+                if ( mp->name != NULL )
+                        free(mp->name);
+        }
+
+        free(sym_array_modules);
+        sym_array_modules = (struct Module *) 0;
+        num_modules = 0;
+        return;
 }
 
-
 /**************************************************************************
- * Function:	AddModule
- *
- * Purpose:	This function is responsible for adding a module to
- *		the list of currently loaded modules.
- *
- * Arguements:	(unsigned long) address, (char *) symbol
- *
- *		address:->	The address of the module.
- *
- *		symbol:->	The name of the module.
- *
- * Return:	int
- **************************************************************************/
-static int AddModule(unsigned long address, char *symbol)
+ *  * Function:    AddModule
+ *   *
+ *    * Purpose:     This function is responsible for adding a module to
+ *     *              the list of currently loaded modules.
+ *      *
+ *       * Arguments:   (const char *) module
+ *        *
+ *         *              module:->       The name of the module.
+ *          *
+ *           * Return:      struct Module *
+ *            **************************************************************************/
+
+struct Module *AddModule(module)
+
+     const char *module;
+
 {
-	auto int memfd;
-	auto struct Module *mp;
+        struct Module *mp;
 
+        if ( num_modules == 0 )
+        {
+                sym_array_modules = (struct Module *)malloc(sizeof(struct Module));
 
-	/* Return if we have loaded the modules. */
-	if ( have_modules )
-		return(1);
+                if ( sym_array_modules == NULL )
+                {
+                        Syslog(LOG_WARNING, "Cannot allocate Module array.\n");
+                        return NULL;
+                }
+                mp = sym_array_modules;
+        }
+        else
+        {
+                /* Allocate space for the module. */
+                mp = (struct Module *) \
+                        realloc(sym_array_modules, \
+                                (num_modules+1) * sizeof(struct Module));
 
-	/*
-	 * The following section of code is responsible for determining
-	 * whether or not we are done reading the list of modules.
-	 */
-	if ( symbol[0] == '#' )
-	{
+                if ( mp == NULL )
+                {
+                        Syslog(LOG_WARNING, "Cannot allocate Module array.\n");
+                        return NULL;
+                }
 
-		if ( symbol[1] == '\0' )
-		{
-			/*
-			 * A symbol which consists of a # sign only
-			 * signifies a a resident kernel segment.  When we
-			 * hit one of these we are done reading the
-			 * module list.
-			 */
-			have_modules = 1;
-			return(1);
-		}
-		/* Allocate space for the module. */
-		sym_array_modules = (struct Module *) \
-			realloc(sym_array_modules, \
-				(num_modules+1) * sizeof(struct Module));
-		if ( sym_array_modules == (struct Module *) 0 )
-		{
-			Syslog(LOG_WARNING, "Cannot allocate Module array.\n");
-			return(0);
-		}
-		mp = &sym_array_modules[num_modules];
+                sym_array_modules = mp;
+                mp = &sym_array_modules[num_modules];
+        }
 
-		if ( (memfd = open("/dev/kmem", O_RDONLY)) < 0 )
-		{
-			Syslog(LOG_WARNING, "Error opening /dev/kmem\n");
-			return(0);
-		}
-		if ( lseek64(memfd, address, SEEK_SET) < 0 )
-		{
-			Syslog(LOG_WARNING, "Error seeking in /dev/kmem\n");
-			Syslog(LOG_WARNING, "Symbol %s, value %08lx\n", symbol, 
- 			       (unsigned long) address);
-			return(0);
-		}
-		if ( read(memfd, \
-			  (char *)&sym_array_modules[num_modules].module,  \
-			  sizeof(struct module)) < 0 )
-		{
-			Syslog(LOG_WARNING, "Error reading module "
-			       "descriptor.\n");
-			return(0);
-		}
-		close(memfd);
+        num_modules++;
+        mp->sym_array = NULL;
+        mp->num_syms = 0;
 
-		/* Save the module name. */
-		mp->name = (char *) malloc(strlen(&symbol[1]) + 1);
-		if ( mp->name == (char *) 0 )
-			return(0);
-		strcpy(mp->name, &symbol[1]);
+        if ( module != NULL )
+                mp->name = strdup(module);
+        else
+                mp->name = NULL;
 
-		mp->num_syms = 0;
-		mp->sym_array = (struct sym_table *) 0;
-		++num_modules;
-		return(1);
-	}
-	else
-	{
-	    if (num_modules > 0)
-		mp = &sym_array_modules[num_modules - 1];
-	    else
-		mp = &sym_array_modules[0];
-		AddSymbol(mp, address, symbol);
-	}
-
-	return(1);
+        return mp;
 }
 
 
@@ -432,47 +345,83 @@ static int AddModule(unsigned long address, char *symbol)
  * Purpose:	This function is responsible for adding a symbol name
  *		and its address to the symbol table.
  *
- * Arguements:	(struct Module *) mp, (unsigned long) address, (char *) symbol
- *
- *		mp:->	A pointer to the module which the symbol is
- *			to be added to.
- *
- *		address:->	The address of the symbol.
- *
- *		symbol:->	The name of the symbol.
+ * Arguements:	const char *
  *
  * Return:	int
  *
  *		A boolean value is assumed.  True if the addition is
  *		successful.  False if not.
  **************************************************************************/
-static int AddSymbol(struct Module *mp, unsigned long address, char *symbol)
+static int AddSymbol(line)
+
+        const char *line;
+
 {
-	auto int tmp;
+        char *module;
+        unsigned long address;
+        char *p;
+        static char *lastmodule = NULL;
+        struct Module *mp;
 
-	/* Allocate space for the symbol table entry. */
-	mp->sym_array = (struct sym_table *) realloc(mp->sym_array, \
-        	(mp->num_syms+1) * sizeof(struct sym_table));
-	if ( mp->sym_array == (struct sym_table *) 0 )
-		return(0);
+        module = index(line, '[');
 
-	/* Then the space for the symbol. */
-	tmp = strlen(symbol);
-	tmp += (strlen(mp->name) + 1);
-	mp->sym_array[mp->num_syms].name = (char *) malloc(tmp + 1);
-	if ( mp->sym_array[mp->num_syms].name == (char *) 0 )
-		return(0);
-	memset(mp->sym_array[mp->num_syms].name, '\0', tmp + 1);
-	
-	/* Stuff interesting information into the module. */
-	mp->sym_array[mp->num_syms].value = address;
-	strcpy(mp->sym_array[mp->num_syms].name, mp->name);
-	strcat(mp->sym_array[mp->num_syms].name, ":");
-	strcat(mp->sym_array[mp->num_syms].name, symbol);
-	++mp->num_syms;
+        if ( module != NULL )
+        {
+                p = index(module, ']');
 
-	return(1);
+                if ( p != NULL )
+                        *p = '\0';
+
+                p = module++;
+
+                while ( isspace(*(--p)) );
+                *(++p) = '\0';
+        }
+
+        p = index(line, ' ');
+
+        if ( p == NULL )
+                return(0);
+
+        *p = '\0';
+
+        address  = strtoul(line, (char **) 0, 16);
+
+        p += 3;
+
+        if ( num_modules == 0 ||
+             ( lastmodule == NULL && module != NULL ) ||
+             ( module == NULL && lastmodule != NULL) ||
+             ( module != NULL && strcmp(module, lastmodule)))
+        {
+                mp = AddModule(module);
+
+                if ( mp == NULL )
+                        return(0);
+        }
+        else
+                mp = &sym_array_modules[num_modules-1];
+
+        lastmodule = mp->name;
+
+        /* Allocate space for the symbol table entry. */
+        mp->sym_array = (struct sym_table *) realloc(mp->sym_array, \
+                (mp->num_syms+1) * sizeof(struct sym_table));
+
+        if ( mp->sym_array == (struct sym_table *) 0 )
+                return(0);
+
+        mp->sym_array[mp->num_syms].name = strdup(p);
+        if ( mp->sym_array[mp->num_syms].name == (char *) 0 )
+                return(0);
+
+        /* Stuff interesting information into the module. */
+        mp->sym_array[mp->num_syms].value = address;
+        ++mp->num_syms;
+
+        return(1);
 }
+
 
 
 /**************************************************************************
@@ -494,103 +443,68 @@ static int AddSymbol(struct Module *mp, unsigned long address, char *symbol)
  *		If a match is found the pointer to the symbolic name most
  *		closely matching the address is returned.
  **************************************************************************/
-extern char * LookupModuleSymbol(unsigned long value, struct symbol *sym)
+extern char * LookupModuleSymbol(value, sym)
+
+        unsigned long value;
+
+        struct symbol *sym;
+
 {
-	auto int	nmod,
-			nsym;
-	auto struct sym_table *last;
-	auto struct Module *mp;
+        auto int        nmod,
+                        nsym;
+
+        auto struct sym_table *last;
+
+        auto struct Module *mp;
+
+        static char ret[100];
 
 
-	sym->size = 0;
-	sym->offset = 0;
-	if ( num_modules == 0 )
-		return((char *) 0);
-	
-	for(nmod= 0; nmod < num_modules; ++nmod)
-	{
-		mp = &sym_array_modules[nmod];
+        sym->size = 0;
+        sym->offset = 0;
+        if ( num_modules == 0 )
+                return((char *) 0);
 
-		/*
+        for (nmod = 0; nmod < num_modules; ++nmod)
+        {
+                mp = &sym_array_modules[nmod];
+
+                /*
 		 * Run through the list of symbols in this module and
-		 * see if the address can be resolved.
+                 * see if the address can be resolved.
 		 */
-		for(nsym= 1, last = &mp->sym_array[0];
-		    nsym < mp->num_syms;
-		    ++nsym)
-		{
-			if ( mp->sym_array[nsym].value > value )
-			{		
-				sym->offset = value - last->value;
-				sym->size = mp->sym_array[nsym].value - \
-					last->value;
-				return(last->name);
-			}
-			last = &mp->sym_array[nsym];
-		}
+                for(nsym = 1, last = &mp->sym_array[0];
+                    nsym < mp->num_syms;
+                    ++nsym)
+                {
+                        if ( mp->sym_array[nsym].value > value )
+                        {
+                           if ( sym->size == 0 ||
+                                 (value - last->value) < sym->offset ||
+                                 ( (sym->offset == (value - last->value)) &&
+                                   (mp->sym_array[nsym].value-last->value) < sym->size ) )
+                            {
+                                sym->offset = value - last->value;
+                                sym->size = mp->sym_array[nsym].value - \
+                                        last->value;
+                                ret[sizeof(ret)-1] = '\0';
+                                if ( mp->name == NULL )
+                                        snprintf(ret, sizeof(ret)-1,
+                                                 "%s", last->name);
+                                else
+                                        snprintf(ret, sizeof(ret)-1,
+                                                 "%s:%s", mp->name, last->name);
+                            }
+                            break;
+                        }
+                        last = &mp->sym_array[nsym];
+                }
+        }
 
-		/*
-		 * At this stage of the game we still cannot give up the
-		 * ghost.  There is the possibility that the address is
-		 * from a module which has no symbols registered with
-		 * the kernel.  The solution is to compare the address
-		 * against the starting address and extant of the module
-		 * If it is in this range we can at least return the
-		 * name of the module.
-		 */
-#if LINUX_VERSION_CODE < 0x20112
-		if ( (void *) value >= mp->module.addr &&
-		     (void *) value <= (mp->module.addr + \
-					mp->module.size * 4096) )
-#else
-		if ( value >= mp->module_info.addr &&
-		     value <= (mp->module_info.addr + \
-					mp->module.size * 4096) )
-#endif
-		{
-			/*
-			 * A special case needs to be checked for.  The above
-			 * conditional tells us that we are within the
-			 * extant of this module but symbol lookup has
-			 * failed.
-			 *
-			 * We need to check to see if any symbols have
-			 * been defined in this module.  If there have been
-			 * symbols defined the assumption must be made that
-			 * the faulting address lies somewhere beyond the
-			 * last symbol.  About the only thing we can do
-			 * at this point is use an offset from this
-			 * symbol.
-			 */
-			if ( mp->num_syms > 0 )
-			{
-				last = &mp->sym_array[mp->num_syms - 1];
-#if LINUX_VERSION_CODE < 0x20112
-				sym->size = (int) mp->module.addr + \
-					(mp->module.size * 4096) - value;
-#else
-				sym->size = (int) mp->module_info.addr + \
-					(mp->module.size * 4096) - value;
-#endif
-				sym->offset = value - last->value;
-				return(last->name);
-			}
+        if ( sym->size > 0 )
+                return(ret);
 
-			/*
-			 * There were no symbols defined for this module.
-			 * Return the module name and the offset of the
-			 * faulting address in the module.
-			 */
-			sym->size = mp->module.size * 4096;
-#if LINUX_VERSION_CODE < 0x20112
-			sym->offset = (void *) value - mp->module.addr;
-#else
-			sym->offset = value - mp->module_info.addr;
-#endif
-			return(mp->name);
-		}
-	}
-
-	/* It has been a hopeless exercise. */
-	return(NULL);
+        /* It has been a hopeless exercise. */
+        return((char *) 0);
 }
+			
