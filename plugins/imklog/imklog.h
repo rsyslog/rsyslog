@@ -42,6 +42,5 @@ extern void vsyslog(int pri, const char *fmt, va_list ap);
 rsRetVal Syslog(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 #endif /* #ifndef IMKLOG_H_INCLUDED */
-/*
- * vi:set ai:
+/* vi:set ai:
  */
