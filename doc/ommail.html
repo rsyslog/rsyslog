@@ -108,7 +108,7 @@ $ActionMailSubject mailSubject
 # make sure we receive a mail only once in six
 # hours (21,600 seconds ;))
 $ActionExecOnlyOnceEveryInterval 21600
-# the if ... then ... mailbody mus be on one line!
+# the if ... then ... mailBody mus be on one line!
 if $msg contains 'hard disk fatal failure' then :ommail:;mailBody
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
