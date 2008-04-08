@@ -36,20 +36,19 @@
 #include <unistd.h>
 #include <errno.h>
 #include <netdb.h>
+#include <time.h>
 #include <sys/socket.h>
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "cfsysline.h"
 #include "module-template.h"
-#include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
-DEFobjCurrIf(errmsg)
 
 static uchar *pszSrv = NULL;
 static uchar *pszSrvPort = NULL;
@@ -148,6 +147,24 @@ getRcvChar(instanceData *pData, char *pC)
 	*pC = pData->md.smtp.RcvBuf[pData->md.smtp.iRcvBuf++];
 
 finalize_it:
+	RETiRet;
+}
+
+
+/* close the mail server connection
+ * rgerhards, 2008-04-08
+ */
+static rsRetVal
+serverDisconnect(instanceData *pData)
+{
+	DEFiRet;
+	assert(pData != NULL);
+
+	if(pData->md.smtp.sock != -1) {
+		close(pData->md.smtp.sock);
+		pData->md.smtp.sock = -1;
+	}
+
 	RETiRet;
 }
 
@@ -275,6 +292,10 @@ readResponse(instanceData *pData, int *piState, int iExpected)
 	bCont = 1;
 	do {
 		CHKiRet(readResponseLn(pData, buf, sizeof(buf)));
+		/* note: the code below is not 100% clean as we may have received less than 4 characters.
+		 * However, as we have a fixed size this will not create a vulnerability. An error will
+		 * also most likely be generated, so it is quite acceptable IMHO -- rgerhards, 2008-04-08
+		 */
 		if(buf[3] != '-') { /* last or only response line? */
 			bCont = 0;
 			*piState = buf[0] - '0';
@@ -290,8 +311,25 @@ finalize_it:
 }
 
 
+/* create a timestamp suitable for use with the Date: SMTP body header
+ * rgerhards, 2008-04-08
+ */
+static void
+mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf)
+{
+	time_t tCurr;
+	struct tm tmCurr;
+	static const char szDay[][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+	static const char szMonth[][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+	time(&tCurr);
+	gmtime_r(&tCurr, &tmCurr);
+	snprintf((char*)pszBuf, lenBuf, "Date: %s, %2d %s %4d %2d:%02d:%02d UT\r\n", szDay[tmCurr.tm_wday], tmCurr.tm_mday,
+		 szMonth[tmCurr.tm_mon], tmCurr.tm_year, tmCurr.tm_hour, tmCurr.tm_min, tmCurr.tm_sec);
+}
+
+
 /* send a message via SMTP
- * TODO: care about the result codes, we can't do it that blindly ;)
  * rgerhards, 2008-04-04
  */
 static rsRetVal
@@ -299,9 +337,9 @@ sendSMTP(instanceData *pData, uchar *body)
 {
 	DEFiRet;
 	int iState; /* SMTP state */
+	uchar szDateBuf[64];
 	
 	assert(pData != NULL);
-
 
 	CHKiRet(serverConnect(pData));
 	CHKiRet(readResponse(pData, &iState, 220));
@@ -326,6 +364,9 @@ sendSMTP(instanceData *pData, uchar *body)
 
 	/* now come the data part */
 	/* header */
+	mkSMTPTimestamp(szDateBuf, sizeof(szDateBuf));
+	CHKiRet(Send(pData->md.smtp.sock, (char*)szDateBuf, strlen((char*)szDateBuf)));
+
 	CHKiRet(Send(pData->md.smtp.sock, "From: <", sizeof("From: <") - 1));
 	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
 	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
@@ -337,6 +378,8 @@ sendSMTP(instanceData *pData, uchar *body)
 	CHKiRet(Send(pData->md.smtp.sock, "Subject: ",   sizeof("Subject: ") - 1));
 	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszSubject, strlen((char*)pData->md.smtp.pszSubject)));
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
+
+	CHKiRet(Send(pData->md.smtp.sock, "X-Mailer: rsyslog-immail\r\n",   sizeof("x-mailer: rsyslog-immail\r\n") - 1));
 
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n",   sizeof("\r\n") - 1)); /* indicate end of header */
 
@@ -350,33 +393,32 @@ sendSMTP(instanceData *pData, uchar *body)
 	CHKiRet(Send(pData->md.smtp.sock, "QUIT\r\n",   sizeof("QUIT\r\n") - 1));
 	CHKiRet(readResponse(pData, &iState, 221));
 
-	close(pData->md.smtp.sock);
-	pData->md.smtp.sock = -1;
+	/* we are finished, a new connection is created for each request, so let's close it now */
+	CHKiRet(serverDisconnect(pData));
 	
 finalize_it:
 	RETiRet;
 }
 
 
-
-/* connect to server
- * rgerhards, 2008-04-04
+/* in tryResume we check if we can connect to the server in question. If that is OK,
+ * we close the connection without doing any actual SMTP transaction. It will be
+ * reopened during the actual send process. This may not be the best way to do it if
+ * there is a problem inside the SMTP transaction. However, we can't find that out without
+ * actually initiating something, and that would be bad. The logic here helps us
+ * correctly recover from an unreachable/down mail server, which is probably the majority
+ * of problem cases. For SMTP transaction problems, we will do lots of retries, but if it
+ * is a temporary problem, it will be fixed anyhow. So I consider this implementation to
+ * be clean enough, especially as I think other approaches have other weaknesses.
+ * rgerhards, 2008-04-08
  */
-static rsRetVal doConnect(instanceData *pData)
-{
-	DEFiRet;
-
-	iRet = serverConnect(pData);
-	if(iRet == RS_RET_IO_ERROR)
-		iRet = RS_RET_SUSPENDED;
-
-	RETiRet;
-}
-
-
 BEGINtryResume
 CODESTARTtryResume
-	iRet = doConnect(pData);
+	CHKiRet(serverConnect(pData));
+	CHKiRet(serverDisconnect(pData)); /* if we fail, we will never reach this line */
+finalize_it:
+	if(iRet == RS_RET_IO_ERROR)
+		iRet = RS_RET_SUSPENDED;
 ENDtryResume
 
 
@@ -421,10 +463,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_TraditionalForwardFormat"));
-
-	/* TODO: do we need to call freeInstance if we failed - this is a general question for
-	 * all output modules. I'll address it later as the interface evolves. rgerhards, 2007-07-25
-	 */
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -465,7 +503,6 @@ CODESTARTmodExit
 	freeConfigVariables();
 
 	/* release what we no longer need */
-	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -490,7 +527,8 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	/* so far: none */
+
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &pszSrv, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &pszSrvPort, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailfrom", 0, eCmdHdlrGetWord, NULL, &pszFrom, STD_LOADABLE_MODULE_ID));
