@@ -1,8 +1,10 @@
 /*
-    ksym_mod.c - functions for building symbol lookup tables for klogd
-    Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
-    Copyright (c) 1996 Enjellic Systems Development
-
+ *  ksym_mod.c - functions for building symbol lookup tables for klogd
+ *  Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
+ *  Copyright (c) 1996 Enjellic Systems Development
+ *  Copyright (c) 1998-2007 Martin Schulze <joey@infodrom.org>
+ *  Copyright (C) 2007-2008 Rainer Gerhards <rgerhards@adiscon.com>
+ *
  * This file is part of rsyslog.
  *
  * Rsyslog is free software: you can redistribute it and/or modify
@@ -145,9 +147,7 @@ extern int InitMsyms(void)
 
         auto int        rtn,
                         tmp;
-
         FILE *ksyms;
-
         char buf[128];
         char *p;
 
@@ -156,8 +156,7 @@ extern int InitMsyms(void)
 
        ksyms = fopen(KSYMS, "r");
 
-        if ( ksyms == NULL )
-        {
+        if ( ksyms == NULL ) {
                 if ( errno == ENOENT )
                         Syslog(LOG_INFO, "No module symbols loaded - "
                                "kernel modules not enabled.\n");
@@ -170,8 +169,7 @@ extern int InitMsyms(void)
 
 	dbgprintf("Loading kernel module symbols - Source: %s\n", KSYMS);
 
-        while ( fgets(buf, sizeof(buf), ksyms) != NULL )
-        {
+        while ( fgets(buf, sizeof(buf), ksyms) != NULL ) {
                 if (num_syms > 0 && index(buf, '[') == NULL)
                         continue;
 
@@ -187,13 +185,13 @@ extern int InitMsyms(void)
                 AddSymbol(buf);
         }
 
-        fclose(ksyms);
+	if(ksyms != NULL)
+		fclose(ksyms);
 
         have_modules = 1;
 
         /* Sort the symbol tables in each module. */
-        for (rtn = tmp = 0; tmp < num_modules; ++tmp)
-        {
+        for (rtn = tmp = 0; tmp < num_modules; ++tmp) {
                 rtn += sym_array_modules[tmp].num_syms;
                 if ( sym_array_modules[tmp].num_syms < 2 )
                         continue;
@@ -243,13 +241,10 @@ extern void DeinitMsyms(void)
  * Return:	void
  **************************************************************************/
 static void FreeModules()
-
 {
         auto int        nmods,
                         nsyms;
-
         auto struct Module *mp;
-
 
         /* Check to see if the module symbol tables need to be cleared. */
         have_modules = 0;
@@ -259,8 +254,7 @@ static void FreeModules()
         if ( sym_array_modules == NULL )
                 return;
 
-        for (nmods = 0; nmods < num_modules; ++nmods)
-        {
+        for (nmods = 0; nmods < num_modules; ++nmods) {
                 mp = &sym_array_modules[nmods];
                 if ( mp->num_syms == 0 )
                         continue;
@@ -278,28 +272,26 @@ static void FreeModules()
         return;
 }
 
+
 /**************************************************************************
- *  * Function:    AddModule
- *   *
- *    * Purpose:     This function is responsible for adding a module to
- *     *              the list of currently loaded modules.
- *      *
- *       * Arguments:   (const char *) module
- *        *
- *         *              module:->       The name of the module.
- *          *
- *           * Return:      struct Module *
- *            **************************************************************************/
+ * Function:    AddModule
+ *
+ * Purpose:     This function is responsible for adding a module to
+ *              the list of currently loaded modules.
+ *
+ * Arguments:   (const char *) module
+ *
+ *              module:->       The name of the module.
+ *
+ * Return:      struct Module *
+ **************************************************************************/
 
 struct Module *AddModule(module)
-
      const char *module;
-
 {
         struct Module *mp;
 
-        if ( num_modules == 0 )
-        {
+        if ( num_modules == 0 ) {
                 sym_array_modules = (struct Module *)malloc(sizeof(struct Module));
 
                 if ( sym_array_modules == NULL )
@@ -308,9 +300,7 @@ struct Module *AddModule(module)
                         return NULL;
                 }
                 mp = sym_array_modules;
-        }
-        else
-        {
+        } else {
                 /* Allocate space for the module. */
                 mp = (struct Module *) \
                         realloc(sym_array_modules, \
@@ -353,9 +343,7 @@ struct Module *AddModule(module)
  *		successful.  False if not.
  **************************************************************************/
 static int AddSymbol(line)
-
         const char *line;
-
 {
         char *module;
         unsigned long address;
@@ -365,16 +353,13 @@ static int AddSymbol(line)
 
         module = index(line, '[');
 
-        if ( module != NULL )
-        {
+        if ( module != NULL ) {
                 p = index(module, ']');
-
                 if ( p != NULL )
                         *p = '\0';
-
                 p = module++;
-
-                while ( isspace(*(--p)) );
+                while ( isspace(*(--p)) )
+			/*SKIP*/;
                 *(++p) = '\0';
         }
 
@@ -392,14 +377,12 @@ static int AddSymbol(line)
         if ( num_modules == 0 ||
              ( lastmodule == NULL && module != NULL ) ||
              ( module == NULL && lastmodule != NULL) ||
-             ( module != NULL && strcmp(module, lastmodule)))
-        {
+             ( module != NULL && strcmp(module, lastmodule))) {
                 mp = AddModule(module);
 
                 if ( mp == NULL )
                         return(0);
-        }
-        else
+        } else
                 mp = &sym_array_modules[num_modules-1];
 
         lastmodule = mp->name;
@@ -444,29 +427,21 @@ static int AddSymbol(line)
  *		closely matching the address is returned.
  **************************************************************************/
 extern char * LookupModuleSymbol(value, sym)
-
         unsigned long value;
-
         struct symbol *sym;
-
 {
         auto int        nmod,
                         nsym;
-
         auto struct sym_table *last;
-
         auto struct Module *mp;
-
         static char ret[100];
-
 
         sym->size = 0;
         sym->offset = 0;
         if ( num_modules == 0 )
                 return((char *) 0);
 
-        for (nmod = 0; nmod < num_modules; ++nmod)
-        {
+        for (nmod = 0; nmod < num_modules; ++nmod) {
                 mp = &sym_array_modules[nmod];
 
                 /*
@@ -475,8 +450,7 @@ extern char * LookupModuleSymbol(value, sym)
 		 */
                 for(nsym = 1, last = &mp->sym_array[0];
                     nsym < mp->num_syms;
-                    ++nsym)
-                {
+                    ++nsym) {
                         if ( mp->sym_array[nsym].value > value )
                         {
                            if ( sym->size == 0 ||
@@ -507,4 +481,3 @@ extern char * LookupModuleSymbol(value, sym)
         /* It has been a hopeless exercise. */
         return((char *) 0);
 }
-			
