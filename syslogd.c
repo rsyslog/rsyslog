@@ -3023,7 +3023,7 @@ int realMain(int argc, char **argv)
 
 	/* END core initializations */
 
-	while ((ch = getopt(argc, argv, "46Ac:dehi:f:g:l:m:M:nqQr::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nopqQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
