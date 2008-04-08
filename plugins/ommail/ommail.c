@@ -1,6 +1,12 @@
 /* ommail.c
  *
- * This is an implementation of a mail sending output module.
+ * This is an implementation of a mail sending output module. So far, we
+ * only support direct SMTP, that is talking to a SMTP server. In the long
+ * term, support for using sendmail should also be implemented. Please note
+ * that the SMTP protocol implementation is a very bare one. We support 
+ * RFC821/822 messages, without any authentication and any other nice
+ * features (no MIME, no nothing). It is assumed that proper firewalling
+ * and/or STMP server configuration is used together with this module.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -55,16 +61,18 @@ static uchar *pszSrvPort = NULL;
 static uchar *pszFrom = NULL;
 static uchar *pszTo = NULL;
 static uchar *pszSubject = NULL;
+static int bEnableBody = 1; /* should a mail body be generated? (set to 0 eg for SMS gateways) */
 
 typedef struct _instanceData {
 	int iMode;	/* 0 - smtp, 1 - sendmail */
+	int bHaveSubject; /* is a subject configured? (if so, it is the second string provided by rsyslog core) */
+	int bEnableBody; /* is a body configured? (if so, it is the second string provided by rsyslog core) */
 	union {
 		struct {
 			uchar *pszSrv;
 			uchar *pszSrvPort;
 			uchar *pszFrom;
 			uchar *pszTo;
-			uchar *pszSubject;
 			char RcvBuf[1024]; /* buffer for receiving server responses */
 			size_t lenRcvBuf;
 			size_t iRcvBuf;	/* current index into the rcvBuf (buf empty if iRcvBuf == lenRcvBuf) */
@@ -97,8 +105,6 @@ CODESTARTfreeInstance
 			free(pData->md.smtp.pszFrom);
 		if(pData->md.smtp.pszTo != NULL)
 			free(pData->md.smtp.pszTo);
-		if(pData->md.smtp.pszSubject != NULL)
-			free(pData->md.smtp.pszSubject);
 	}
 ENDfreeInstance
 
@@ -215,7 +221,6 @@ finalize_it:
 }
 
 
-
 /* send text to the server, blocking send */
 static rsRetVal
 Send(int sock, char *msg, size_t len)
@@ -242,6 +247,57 @@ Send(int sock, char *msg, size_t len)
 			FINALIZE;
 		}
 	} while(1);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* send body text to the server, blocking send
+ * The body is special in that we must escape a leading dot inside a line
+ */
+static rsRetVal
+bodySend(instanceData *pData, char *msg, size_t len)
+{
+	DEFiRet;
+	char szBuf[2048];
+	size_t iSrc;
+	size_t iBuf = 0;
+	int bHadCR = 0;
+	int bInStartOfLine = 1;
+
+	assert(pData != NULL);
+	assert(msg != NULL);
+
+	for(iSrc = 0 ; iSrc < len ; ++iSrc) {
+		if(iBuf >= sizeof(szBuf) - 1) { /* one is reserved for our extra dot */
+			CHKiRet(Send(pData->md.smtp.sock, szBuf, iBuf));
+			iBuf = 0;
+		}
+		szBuf[iBuf++] = msg[iSrc];
+		switch(msg[iSrc]) {
+			case '\r':
+				bHadCR = 1;
+				break;
+			case '\n':
+				if(bHadCR)
+					bInStartOfLine = 1;
+				bHadCR = 0;
+				break;
+			case '.':
+				if(bInStartOfLine)
+					szBuf[iBuf++] = '.'; /* space is always reserved for this! */
+				/*FALLTHROUGH*/
+			default:
+				bInStartOfLine = 0;
+				bHadCR = 0;
+				break;
+		}
+	}
+
+	if(iBuf > 0) { /* incomplete buffer to send (the *usual* case)? */
+		CHKiRet(Send(pData->md.smtp.sock, szBuf, iBuf));
+	}
 
 finalize_it:
 	RETiRet;
@@ -325,7 +381,7 @@ mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf)
 	time(&tCurr);
 	gmtime_r(&tCurr, &tmCurr);
 	snprintf((char*)pszBuf, lenBuf, "Date: %s, %2d %s %4d %2d:%02d:%02d UT\r\n", szDay[tmCurr.tm_wday], tmCurr.tm_mday,
-		 szMonth[tmCurr.tm_mon], tmCurr.tm_year, tmCurr.tm_hour, tmCurr.tm_min, tmCurr.tm_sec);
+		 szMonth[tmCurr.tm_mon], 1900 + tmCurr.tm_year, tmCurr.tm_hour, tmCurr.tm_min, tmCurr.tm_sec);
 }
 
 
@@ -333,7 +389,7 @@ mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf)
  * rgerhards, 2008-04-04
  */
 static rsRetVal
-sendSMTP(instanceData *pData, uchar *body)
+sendSMTP(instanceData *pData, uchar *body, uchar *subject)
 {
 	DEFiRet;
 	int iState; /* SMTP state */
@@ -376,7 +432,7 @@ sendSMTP(instanceData *pData, uchar *body)
 	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
 
 	CHKiRet(Send(pData->md.smtp.sock, "Subject: ",   sizeof("Subject: ") - 1));
-	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszSubject, strlen((char*)pData->md.smtp.pszSubject)));
+	CHKiRet(Send(pData->md.smtp.sock, (char*)subject, strlen((char*)subject)));
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
 
 	CHKiRet(Send(pData->md.smtp.sock, "X-Mailer: rsyslog-immail\r\n",   sizeof("x-mailer: rsyslog-immail\r\n") - 1));
@@ -384,7 +440,8 @@ sendSMTP(instanceData *pData, uchar *body)
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n",   sizeof("\r\n") - 1)); /* indicate end of header */
 
 	/* body */
-	CHKiRet(Send(pData->md.smtp.sock, (char*)body,   strlen((char*) body)));
+	if(pData->bEnableBody)
+		CHKiRet(bodySend(pData, (char*)body, strlen((char*) body)));
 
 	/* end of data, back to envelope transaction */
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n.\r\n",   sizeof("\r\n.\r\n") - 1));
@@ -427,7 +484,11 @@ CODESTARTdoAction
 	dbgprintf(" Mail\n");
 
 	/* forward */
-	iRet = sendSMTP(pData, ppString[0]);
+	if(pData->bHaveSubject)
+		iRet = sendSMTP(pData, ppString[0], ppString[1]);
+	else 
+		iRet = sendSMTP(pData, ppString[0], (uchar*)"message from rsyslog");
+		
 	if(iRet != RS_RET_OK) {
 		/* error! */
 		dbgprintf("error sending mail, suspending\n");
@@ -438,7 +499,6 @@ ENDdoAction
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":ommail:", sizeof(":ommail:") - 1)) {
 		p += sizeof(":ommail:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
 	} else {
@@ -450,19 +510,26 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		FINALIZE;
 
 	/* TODO: check strdup() result */
+	if(pszSubject == NULL) {
+		/* if no subject is configured, we need just one template string */
+		CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	} else {
+		CODE_STD_STRING_REQUESTparseSelectorAct(2)
+		pData->bHaveSubject = 1;
+		CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup((char*) pszSubject), OMSR_NO_RQD_TPL_OPTS));
+	}
 	if(pszSrv != NULL)
 		pData->md.smtp.pszSrv = (uchar*) strdup((char*)pszSrv);
 	if(pszSrvPort != NULL)
 		pData->md.smtp.pszSrvPort = (uchar*) strdup((char*)pszSrvPort);
-	if(pszSrvPort != NULL)
+	if(pszFrom != NULL)
 		pData->md.smtp.pszFrom = (uchar*) strdup((char*)pszFrom);
-	if(pszSrvPort != NULL)
+	if(pszTo != NULL)
 		pData->md.smtp.pszTo = (uchar*) strdup((char*)pszTo);
-	if(pszSrvPort != NULL)
-		pData->md.smtp.pszSubject = (uchar*) strdup((char*)pszSubject);
+	pData->bEnableBody = bEnableBody;
 
 	/* process template */
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_TraditionalForwardFormat"));
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_FileFormat"));
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -487,10 +554,6 @@ static rsRetVal freeConfigVariables(void)
 	if(pszTo != NULL) {
 		free(pszTo);
 		pszTo = NULL;
-	}
-	if(pszSubject != NULL) {
-		free(pszSubject);
-		pszSubject = NULL;
 	}
 	
 	RETiRet;
@@ -517,6 +580,7 @@ ENDqueryEtryPt
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	DEFiRet;
+	bEnableBody = 1;
 	iRet = freeConfigVariables();
 	RETiRet;
 }
@@ -534,6 +598,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailfrom", 0, eCmdHdlrGetWord, NULL, &pszFrom, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailto", 0, eCmdHdlrGetWord, NULL, &pszTo, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsubject", 0, eCmdHdlrGetWord, NULL, &pszSubject, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailenablebody", 0, eCmdHdlrBinary, NULL, &bEnableBody, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
