@@ -27,6 +27,10 @@ Version 3.14.2 (rgerhards), 2008-04-??
 - bugfix: segfault with expression-based filters
 - bugfix: omsnmp did not deref errmsg object on exit (no bad effects caused)
 - some cleanup
+- bugfix: imklog did not work well with kernel 2.6+. Thanks to Peter
+  Vrabec for patching it based on the development in sysklogd - and thanks
+  to the sysklogd project for upgrading klogd to support the new
+  functionality
 ---------------------------------------------------------------------------
 Version 3.14.1 (rgerhards), 2008-04-04
 - bugfix: some messages were emited without hostname
