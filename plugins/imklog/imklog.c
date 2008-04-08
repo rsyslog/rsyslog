@@ -1,14 +1,24 @@
-/* The kernel log input module for Linux. This file heavily
- * borrows from the klogd daemon provided by the sysklogd project.
- * Many thanks for this piece of software.
+/* The kernel log module.
+ *
+ * This is an abstracted module. As Linux and BSD kernel log is conceptually the
+ * same, we do not do different input plugins for them but use
+ * imklog in both cases, just with different "backend drivers" for
+ * the different platforms. This also enables a rsyslog.conf to
+ * be used on multiple platforms without the need to take care of
+ * what the kernel log is coming from.
+ *
+ * See platform-specific files (e.g. linux.c, bsd.c) in the plugin's
+ * working directory. For other systems with similar kernel logging
+ * functionality, no new input plugin shall be written but rather a
+ * driver be developed for imklog. Please note that imklog itself is
+ * mostly concerned with handling the interface. Any real action happens
+ * in the drivers, as things may be pretty different on different
+ * platforms.
  *
  * Please note that this file replaces the klogd daemon that was
  * also present in pre-v3 versions of rsyslog.
  *
- * I have begun to convert this to an input module on 2007-12-17.
- * IMPORTANT: more than a single instance is currently not supported. This
- * needs to be revisited once the config file and input module interface
- * supports multiple instances!
+ * Copyright (C) 2008 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -49,17 +59,17 @@ DEF_IMOD_STATIC_DATA
 
 /* configuration settings TODO: move to instance data? */
 int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
-static int symbols_twice = 0;
-static int use_syscall = 0;
-static int symbol_lookup = 1;
+int symbols_twice = 0;
+int use_syscall = 0;
+int symbol_lookup = 1;
 /* TODO: configuration for the following directives must be implemented. It 
  * was not done yet because we either do not yet have a config handler for
  * that type or I thought it was acceptable to push it to a later stage when
  * I gained more handson experience with the input module interface (and the
  * changes resulting from that). -- rgerhards, 2007-12-20
  */
-static char *symfile = NULL; 
-static int console_log_level = -1;
+char *symfile = NULL; 
+int console_log_level = -1;
 
 
 /* Includes. */
@@ -74,38 +84,10 @@ static int console_log_level = -1;
 
 #include <stdarg.h>
 #include <paths.h>
-#include "ksyms.h"
 
 #define __LIBRARY__
 #include <unistd.h>
 
-
-#if !defined(__GLIBC__)
-# define __NR_ksyslog __NR_syslog
-_syscall3(int,ksyslog,int, type, char *, buf, int, len);
-#else
-#include <sys/klog.h>
-#define ksyslog klogctl
-#endif
-
-
-
-#ifndef _PATH_KLOG
-#define _PATH_KLOG  "/proc/kmsg"
-#endif
-
-#define LOG_BUFFER_SIZE 4096
-#define LOG_LINE_LENGTH 1000
-
-static int	kmsg;
-static char	log_buffer[LOG_BUFFER_SIZE];
-
-static enum LOGSRC {none, proc, kernel} logsrc;
-
-
-
-/* Function prototypes. */
-extern int ksyslog(int type, char *buf, int len);
 
 
 /* Write a message to the message queue.
@@ -161,7 +143,7 @@ rsRetVal Syslog(int priority, char *fmt, ...)
 	char *argl;
 
 	/* Output using syslog. */
-	if (!strcmp(fmt, "%s")) {
+	if(!strcmp(fmt, "%s")) {
 		va_start(ap, fmt);
 		argl = va_arg(ap, char *);
 		if (argl[0] == '<' && argl[1] && argl[2] == '>') {
@@ -206,385 +188,6 @@ rsRetVal Syslog(int priority, char *fmt, ...)
 }
 
 
-static void CloseLogSrc(void)
-{
-	/* Turn on logging of messages to console, but only if we had the -c
-	 * option -- rgerhards, 2007-08-01
-	 */
-	if (console_log_level != -1)
-		ksyslog(7, NULL, 0);
-  
-        /* Shutdown the log sources. */
-	switch ( logsrc )
-	{
-	    case kernel:
-		ksyslog(0, 0, 0);
-		Syslog(LOG_INFO, "Kernel logging (ksyslog) stopped.");
-		break;
-            case proc:
-		close(kmsg);
-		Syslog(LOG_INFO, "Kernel logging (proc) stopped.");
-		break;
-	    case none:
-		break;
-	}
-
-	return;
-}
-
-
-static enum LOGSRC GetKernelLogSrc(void)
-{
-	auto struct stat sb;
-
-	/* Set level of kernel console messaging.. */
-	if (   (console_log_level != -1) &&
-	       (ksyslog(8, NULL, console_log_level) < 0) &&
-	     (errno == EINVAL) )
-	{
-		/*
-		 * An invalid arguement error probably indicates that
-		 * a pre-0.14 kernel is being run.  At this point we
-		 * issue an error message and simply shut-off console
-		 * logging completely.
-		 */
-		Syslog(LOG_WARNING, "Cannot set console log level - disabling "
-		       "console output.");
-	}
-
-	/*
-	 * First do a stat to determine whether or not the proc based
-	 * file system is available to get kernel messages from.
-	 */
-	if ( use_syscall ||
-	    ((stat(_PATH_KLOG, &sb) < 0) && (errno == ENOENT)) )
-	{
-	  	/* Initialize kernel logging. */
-	  	ksyslog(1, NULL, 0);
-		Syslog(LOG_INFO, "imklogd %s, log source = ksyslog "
-		       "started.", VERSION);
-		return(kernel);
-	}
-
-	if ( (kmsg = open(_PATH_KLOG, O_RDONLY)) < 0 )
-	{
-		char sz[512];
-		snprintf(sz, sizeof(sz), "imklog: Cannot open proc file system, %d - %s.\n", errno, strerror(errno));
-		logmsgInternal(LOG_SYSLOG|LOG_ERR, sz, ADDDATE);
-		ksyslog(7, NULL, 0); /* TODO: check this, implement more */
-		return(none);
-	}
-
-	Syslog(LOG_INFO, "imklog %s, log source = %s started.", \
-	       VERSION, _PATH_KLOG);
-	return(proc);
-}
-
-
-/*     Copy characters from ptr to line until a char in the delim
- *     string is encountered or until min( space, len ) chars have
- *     been copied.
- *
- *     Returns the actual number of chars copied.
- */
-static int copyin( char *line,      int space,
-                   const char *ptr, int len,
-                   const char *delim )
-{
-    auto int i;
-    auto int count;
-
-    count = len < space ? len : space;
-
-    for(i=0; i<count && !strchr(delim, *ptr); i++ ) {
-	*line++ = *ptr++;
-    }
-
-    return(i);
-}
-
-/*
- * Messages are separated by "\n".  Messages longer than
- * LOG_LINE_LENGTH are broken up.
- *
- * Kernel symbols show up in the input buffer as : "[<aaaaaa>]",
- * where "aaaaaa" is the address.  These are replaced with
- * "[symbolname+offset/size]" in the output line - symbolname,
- * offset, and size come from the kernel symbol table.
- *
- * If a kernel symbol happens to fall at the end of a message close
- * in length to LOG_LINE_LENGTH, the symbol will not be expanded.
- * (This should never happen, since the kernel should never generate
- * messages that long.
- *
- * To preserve the original addresses, lines containing kernel symbols
- * are output twice.  Once with the symbols converted and again with the
- * original text.  Just in case somebody wants to run their own Oops
- * analysis on the syslog, e.g. ksymoops.
- */
-static void LogLine(char *ptr, int len)
-{
-    enum parse_state_enum {
-        PARSING_TEXT,
-        PARSING_SYMSTART,      /* at < */
-        PARSING_SYMBOL,        
-        PARSING_SYMEND         /* at ] */
-    };
-
-    static char line_buff[LOG_LINE_LENGTH];
-
-    static char *line                        =line_buff;
-    static enum parse_state_enum parse_state = PARSING_TEXT;
-    static int space                         = sizeof(line_buff)-1;
-
-    static char *sym_start;            /* points at the '<' of a symbol */
-
-    auto   int delta = 0;              /* number of chars copied        */
-    auto   int symbols_expanded = 0;   /* 1 if symbols were expanded */
-    auto   int skip_symbol_lookup = 0; /* skip symbol lookup on this pass */
-    auto   char *save_ptr = ptr;       /* save start of input line */
-    auto   int save_len = len;         /* save length at start of input line */
-
-    while( len > 0 )
-    {
-        if( space == 0 )    /* line buffer is full */
-        {
-            /*
-            ** Line too long.  Start a new line.
-            */
-            *line = 0;   /* force null terminator */
-
-	    dbgprintf("Line buffer full:\n");
-       	    dbgprintf("\tLine: %s\n", line);
-
-            Syslog( LOG_INFO, "%s", line_buff );
-            line  = line_buff;
-            space = sizeof(line_buff)-1;
-            parse_state = PARSING_TEXT;
-	    symbols_expanded = 0;
-	    skip_symbol_lookup = 0;
-	    save_ptr = ptr;
-	    save_len = len;
-        }
-
-        switch( parse_state )
-        {
-        case PARSING_TEXT:
-               delta = copyin( line, space, ptr, len, "\n[" );
-               line  += delta;
-               ptr   += delta;
-               space -= delta;
-               len   -= delta;
-
-               if( space == 0 || len == 0 )
-               {
-		  break;  /* full line_buff or end of input buffer */
-               }
-
-               if( *ptr == '\0' )  /* zero byte */
-               {
-                  ptr++;	/* skip zero byte */
-                  space -= 1;
-                  len   -= 1;
-
-		  break;
-	       }
-
-               if( *ptr == '\n' )  /* newline */
-               {
-                  ptr++;	/* skip newline */
-                  space -= 1;
-                  len   -= 1;
-
-                  *line = 0;  /* force null terminator */
-	          Syslog( LOG_INFO, "%s", line_buff );
-                  line  = line_buff;
-                  space = sizeof(line_buff)-1;
-		  if (symbols_twice) {
-		      if (symbols_expanded) {
-			  /* reprint this line without symbol lookup */
-			  symbols_expanded = 0;
-			  skip_symbol_lookup = 1;
-			  ptr = save_ptr;
-			  len = save_len;
-		      }
-		      else
-		      {
-			  skip_symbol_lookup = 0;
-			  save_ptr = ptr;
-			  save_len = len;
-		      }
-		  }
-                  break;
-               }
-               if( *ptr == '[' )   /* possible kernel symbol */
-               {
-                  *line++ = *ptr++;
-                  space -= 1;
-                  len   -= 1;
-	          if (!skip_symbol_lookup)
-                     parse_state = PARSING_SYMSTART;      /* at < */
-                  break;
-               }
-               /* Now that line_buff is no longer fed to *printf as format
-                * string, '%'s are no longer "dangerous".
-		*/
-               break;
-        
-        case PARSING_SYMSTART:
-               if( *ptr != '<' )
-               {
-                  parse_state = PARSING_TEXT;        /* not a symbol */
-                  break;
-               }
-
-               /*
-               ** Save this character for now.  If this turns out to
-               ** be a valid symbol, this char will be replaced later.
-               ** If not, we'll just leave it there.
-               */
-
-               sym_start = line; /* this will point at the '<' */
-
-               *line++ = *ptr++;
-               space -= 1;
-               len   -= 1;
-               parse_state = PARSING_SYMBOL;     /* symbol... */
-               break;
-
-        case PARSING_SYMBOL:
-               delta = copyin( line, space, ptr, len, ">\n[" );
-               line  += delta;
-               ptr   += delta;
-               space -= delta;
-               len   -= delta;
-               if( space == 0 || len == 0 )
-               {
-                  break;  /* full line_buff or end of input buffer */
-               }
-               if( *ptr != '>' )
-               {
-                  parse_state = PARSING_TEXT;
-                  break;
-               }
-
-               *line++ = *ptr++;  /* copy the '>' */
-               space -= 1;
-               len   -= 1;
-
-               parse_state = PARSING_SYMEND;
-
-               break;
-
-        case PARSING_SYMEND:
-               if( *ptr != ']' )
-               {
-                  parse_state = PARSING_TEXT;        /* not a symbol */
-                  break;
-               }
-
-               /*
-               ** It's really a symbol!  Replace address with the
-               ** symbol text.
-               */
-           {
-	       auto int sym_space;
-
-	       unsigned long value;
-	       auto struct symbol sym;
-	       auto char *symbol;
-
-               *(line-1) = 0;    /* null terminate the address string */
-               value  = strtoul(sym_start+1, (char **) 0, 16);
-               *(line-1) = '>';  /* put back delim */
-
-               if ( !symbol_lookup || (symbol = LookupSymbol(value, &sym)) == (char *)0 )
-               {
-                  parse_state = PARSING_TEXT;
-                  break;
-               }
-
-               /*
-               ** verify there is room in the line buffer
-               */
-               sym_space = space + ( line - sym_start );
-               if( (unsigned) sym_space < strlen(symbol) + 30 ) /*(30 should be overkill)*/
-               {
-                  parse_state = PARSING_TEXT;  /* not enough space */
-                  break;
-               }
-
-               delta = sprintf( sym_start, "%s+%d/%d]",
-                                symbol, sym.offset, sym.size );
-
-               space = sym_space + delta;
-               line  = sym_start + delta;
-	       symbols_expanded = 1;
-           }
-               ptr++;
-               len--;
-               parse_state = PARSING_TEXT;
-               break;
-
-        default: /* Can't get here! */
-               parse_state = PARSING_TEXT;
-
-        }
-    }
-
-    return;
-}
-
-
-static void LogKernelLine(void)
-{
-	auto int rdcnt;
-
-	/*
-	 * Zero-fill the log buffer.  This should cure a multitude of
-	 * problems with klogd logging the tail end of the message buffer
-	 * which will contain old messages.  Then read the kernel log
-	 * messages into this fresh buffer.
-	 */
-	memset(log_buffer, '\0', sizeof(log_buffer));
-	if ( (rdcnt = ksyslog(2, log_buffer, sizeof(log_buffer)-1)) < 0 )
-	{
-		char sz[512];
-		if(errno == EINTR)
-			return;
-		snprintf(sz, sizeof(sz), "imklog: Error return from sys_sycall: %d - %s\n", errno, strerror(errno));
-		logmsgInternal(LOG_SYSLOG|LOG_ERR, sz, ADDDATE);
-	}
-	else
-		LogLine(log_buffer, rdcnt);
-	return;
-}
-
-
-static void LogProcLine(void)
-{
-	auto int rdcnt;
-
-	/*
-	 * Zero-fill the log buffer.  This should cure a multitude of
-	 * problems with klogd logging the tail end of the message buffer
-	 * which will contain old messages.  Then read the kernel messages
-	 * from the message pseudo-file into this fresh buffer.
-	 */
-	memset(log_buffer, '\0', sizeof(log_buffer));
-	if ( (rdcnt = read(kmsg, log_buffer, sizeof(log_buffer)-1)) < 0 )
-	{
-		if ( errno == EINTR )
-			return;
-		Syslog(LOG_ERR, "Cannot read proc file system: %d - %s.", errno, strerror(errno));
-	}
-	else
-		LogLine(log_buffer, rdcnt);
-
-	return;
-}
-
-
 BEGINrunInput
 CODESTARTrunInput
 	/* this is an endless loop - it is terminated when the thread is
@@ -592,59 +195,25 @@ CODESTARTrunInput
 	 * right into the sleep below.
 	 */
 	while(!pThrd->bShallStop) {
-		/* we do not need to handle the RS_RET_TERMINATE_NOW case any
-	   	 * special because we just need to terminate. This may be different
-	   	 * if a cleanup is needed. But for now, we can just use CHKiRet().
-	   	 * rgerhards, 2007-12-17
+		/* klogLogKMsg() waits for the next kernel message, obtains it
+                 * and then submits it to the rsyslog main queue.
+	   	 * rgerhards, 2008-04-09
 	   	 */
-		switch ( logsrc )
-		{
-			case kernel:
-	  			LogKernelLine();
-				break;
-			case proc:
-				LogProcLine();
-				break;
-		        case none:
-				/* TODO: We need to handle this case here somewhat more intelligent 
-	  			 * This is now at least partly done - code should never reach this point
-	  			 * as willRun() already checked for the "none" status -- rgerhards, 2007-12-17
-	  			 */
-				pause();
-				break;
-		}
+                CHKiRet(klogLogKMsg());
 	}
-	RETiRet;
+finalize_it:
 ENDrunInput
 
 
 BEGINwillRun
-	/* Initialize this module. If that fails, we tell the engine we don't like to run */
-	/* Determine where kernel logging information is to come from. */
-	logsrc = GetKernelLogSrc();
-	if(logsrc == none) {
-		iRet = RS_RET_NO_KERNEL_LOGSRC;
-	} else {
-		if (symbol_lookup) {
-			symbol_lookup  = (InitKsyms(symfile) == 1);
-			symbol_lookup |= InitMsyms();
-			if (symbol_lookup == 0) {
-				Syslog(LOG_WARNING, "cannot find any symbols, turning off symbol lookups\n");
-			}
-		}
-	}
 CODESTARTwillRun
+        iRet = klogWillRun();
 ENDwillRun
 
 
 BEGINafterRun
 CODESTARTafterRun
-	/* cleanup here */
-	if(logsrc != none)
-		CloseLogSrc();
-
-	DeinitKsyms();
-	DeinitMsyms();
+        iRet = klogAfterRun();
 ENDafterRun
 
 
@@ -678,11 +247,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrBinary, NULL, &use_syscall, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/*
- * Local variables:
- *  c-indent-level: 8
- *  c-basic-offset: 8
- *  tab-width: 8
- * End:
- * vi:set ai:
+/* vim:set ai:
  */

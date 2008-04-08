@@ -2,8 +2,10 @@
  * These are the definitions for the klog message generation module.
  *
  * File begun on 2007-12-17 by RGerhards
+ * Major change: 2008-04-09: switched to a driver interface for 
+ *     several platforms
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -28,7 +30,26 @@
 #include "rsyslog.h"
 #include "syslogd.h"
 
-/* global variables */
+/* interface to "drivers"
+ * the platform specific drivers must implement these entry points. Only one
+ * driver may be active at any given time, thus we simply rely on the linker
+ * to resolve the addresses.
+ * rgerhards, 2008-04-09
+ */
+rsRetVal klogLogKMsg(void);
+rsRetVal klogWillRun(void);
+rsRetVal klogAfterRun(void);
+
+/* the following data members may be accessed by the "drivers"
+ * I admit this is not the cleanest way to doing things, but I honestly
+ * believe it is appropriate for the job that needs to be done.
+ * rgerhards, 2008-04-09
+ */
+extern int symbols_twice;
+extern int use_syscall;
+extern int symbol_lookup;
+extern char *symfile; 
+extern int console_log_level;
 extern int dbgPrintSymbols;
 
 /* prototypes */

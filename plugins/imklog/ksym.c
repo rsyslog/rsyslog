@@ -296,7 +296,7 @@ static char *FindSymbolFile(void)
 			**mf = system_maps;
 
 	auto struct utsname utsname;
-	static char symfile[100];
+	static char mysymfile[100];
 
 	auto FILE *sym_file = (FILE *) 0;
 
@@ -309,19 +309,19 @@ static char *FindSymbolFile(void)
 	
 	for(mf = system_maps; *mf != (char *) 0 && file == (char *) 0; ++mf) {
  
-		snprintf(symfile, sizeof(symfile), "%s-%s", *mf, utsname.release);
-		dbgprintf("Trying %s.\n", symfile);
-		if ( (sym_file = fopen(symfile, "r")) != (FILE *) 0 ) {
-			if (CheckMapVersion(symfile) == 1)
-				file = symfile;
+		snprintf(mysymfile, sizeof(mysymfile), "%s-%s", *mf, utsname.release);
+		dbgprintf("Trying %s.\n", mysymfile);
+		if ( (sym_file = fopen(mysymfile, "r")) != (FILE *) 0 ) {
+			if (CheckMapVersion(mysymfile) == 1)
+				file = mysymfile;
 			fclose(sym_file);
 		}
 		if (sym_file == (FILE *) 0 || file == (char *) 0) {
-			sprintf (symfile, "%s", *mf);
-			dbgprintf("Trying %s.\n", symfile);
-			if ( (sym_file = fopen(symfile, "r")) != (FILE *) 0 ) {
-				if (CheckMapVersion(symfile) == 1)
-					file = symfile;
+			sprintf (mysymfile, "%s", *mf);
+			dbgprintf("Trying %s.\n", mysymfile);
+			if ( (sym_file = fopen(mysymfile, "r")) != (FILE *) 0 ) {
+				if (CheckMapVersion(mysymfile) == 1)
+					file = mysymfile;
 				fclose(sym_file);
 			}
 		}
