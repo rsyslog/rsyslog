@@ -504,6 +504,7 @@ actionWriteToAction(action_t *pAction)
 {
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
+	time_t now;
 	DEFiRet;
 
 	pMsgSave = NULL;	/* indicate message poiner not saved */
@@ -542,7 +543,20 @@ actionWriteToAction(action_t *pAction)
 
 	dbgprintf("Called action, logging to %s", module.GetStateName(pAction->pMod));
 
-	time(&pAction->f_time); /* we need this for message repeation processing */
+	time(&now); /* we need this for message repeation processing AND $ActionExecOnlyOnceEveryInterval */
+	/* now check if we need to drop the message because otherwise the action would be too
+	 * frequently called. -- rgerhards, 2008-04-08
+	 */
+	if(pAction->f_time != 0 && pAction->iSecsExecOnceInterval + pAction->tLastExec > now) {
+		/* in this case we need to discard the message - its not yet time to exec the action */
+		dbgprintf("action not yet ready again to be executed, onceInterval %d, tCurr %d, tNext %d\n",
+			  (int) pAction->iSecsExecOnceInterval, (int) now,
+			  (int) (pAction->iSecsExecOnceInterval + pAction->tLastExec));
+		FINALIZE;
+	}
+
+	pAction->tLastExec = now; /* we need this OnceInterval */
+	pAction->f_time = now; /* we need this for message repeation processing */
 
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's enqueue our message for execution. -- rgerhards, 2007-07-24
@@ -718,6 +732,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
 	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
+	pAction->iSecsExecOnceInterval = iActExecOnceInterval;
 
 	/* check if we can obtain the template pointers - TODO: move to separate function? */
 	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);

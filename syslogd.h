@@ -149,6 +149,7 @@ extern char ctty[];
 extern int MarkInterval;
 extern int  bReduceRepeatMsgs;
 extern int bActExecWhenPrevSusp;
+extern int iActExecOnceInterval;
 
 /* Intervals at which we flush out "message repeated" messages,
  * in seconds after previous message is logged.  After each flush,

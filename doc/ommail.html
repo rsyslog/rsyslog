@@ -25,7 +25,16 @@ is used and the mail body will be a syslog message just as if it were
 written to a file. It is expected that the users customizes both
 messages. In an effort to support cell phones (including SMS gateways),
 there is an option to turn off the body part at all. This is considered
-to be useful to send a short alert to a pager-like device.<span style="font-weight: bold;"></span>
+to be useful to send a short alert to a pager-like device.<br>
+<br>
+It is highly recommended to use the&nbsp; "<span style="font-weight: bold;">$ActionExecOnlyOnceEveryInterval
+&lt;seconds&gt;</span>" directive to limit the amount of
+mails that potentially be generated. With it, mails are sent at most in
+a &lt;seconds&gt; interval. This may be your life safer. And
+remember that an hour has 3,600 seconds, so if you would like to
+receive mails at most once every two hours, include a
+"$ActionExecOnlyOnceEveryInterval 7200" immediately before the ommail
+action. Messages sent more frequently are simpy discarded.<span style="font-weight: bold;"></span>
 <p><b>Configuration Directives</b>:</p>
 <ul>
 <li><span style="font-weight: bold;">$ActionMailSMTPServer</span><br>
@@ -84,15 +93,22 @@ disk fatal failure" is present inside a syslog message. The mail server
 at mail.example.net is used and the subject shall be "disk problem on
 &lt;hostname&gt;". Note how \r\n is included inside the body
 text
-to create line breaks.<br>
+to create line breaks. A message is sent at most once every 6 hours,
+any other messages are silently discarded (or, to be precise, not being
+forwarded - they are still being processed by the rest of the
+configuration file).<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad ommail
+<textarea rows="15" cols="80">$ModLoad ommail
 $ActionMailSMTPServer mail.example.net
 $ActionMailFrom rsyslog@example.net
 $ActionMailTo operator@example.net
 $template mailSubject,"disk problem on %hostname%"
 $template mailBody,"RSYSLOG Alert\r\nmsg='%msg%'"
 $ActionMailSubject mailSubject
+# make sure we receive a mail only once in six
+# hours (21,600 seconds ;))
+$ActionExecOnlyOnceEveryInterval 21600
+# the if ... then ... mailbody mus be on one line!
 if $msg contains 'hard disk fatal failure' then :ommail:;mailBody
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]

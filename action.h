@@ -39,8 +39,10 @@ extern int glbliActionResumeRetryCount;
 /* the following struct defines the action object data structure
  */
 struct action_s {
-	time_t	f_time;		/* time this was last written */
+	time_t	f_time;		/* used for "message repeated n times" - be careful, old, old code */
+	time_t	tLastExec;	/* time this action was last executed */
 	int	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
+	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
 	short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
 	short	bSuspended;	/* is the related action temporarily suspended? */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */

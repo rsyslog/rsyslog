@@ -2,6 +2,7 @@
 Version 3.17.0 (rgerhards), 2008-04-08
 - added native ability to send mail messages
 - removed no longer needed file relptuil.c/.h
+- added $ActionExecOnlyOnceEveryInterval config directive
 - bugfix: memory leaks in script engine
 - bugfix: zero-length strings were not supported in object
   deserializer
