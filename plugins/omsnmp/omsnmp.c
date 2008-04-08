@@ -489,6 +489,9 @@ CODESTARTmodExit
 		free(pszSnmpTrapOID);
 	if (pszSyslogMessageOID != NULL)
 		free(pszSyslogMessageOID);
+
+	/* release what we no longer need */
+	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
