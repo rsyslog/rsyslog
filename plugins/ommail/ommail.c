@@ -49,12 +49,14 @@
 #include "srUtils.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
 
 static uchar *pszSrv = NULL;
 static uchar *pszSrvPort = NULL;
@@ -183,15 +185,27 @@ serverConnect(instanceData *pData)
 {
 	struct addrinfo *res = NULL;
 	struct addrinfo hints;
+	char *smtpPort;
+	char *smtpSrv;
 	char errStr[1024];
 
 	DEFiRet;
 	assert(pData != NULL);
 
+	if(pData->md.smtp.pszSrv == NULL)
+		smtpSrv = "127.0.0.1";
+	else
+		smtpSrv = (char*)pData->md.smtp.pszSrv;
+
+	if(pData->md.smtp.pszSrvPort == NULL)
+		smtpPort = "25";
+	else
+		smtpPort = (char*)pData->md.smtp.pszSrvPort;
+
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC; /* TODO: make configurable! */
 	hints.ai_socktype = SOCK_STREAM;
-	if(getaddrinfo((char*)pData->md.smtp.pszSrv, (char*)pData->md.smtp.pszSrvPort, &hints, &res) != 0) {
+	if(getaddrinfo(smtpSrv, smtpPort, &hints, &res) != 0) {
 		dbgprintf("error %d in getaddrinfo\n", errno);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
@@ -510,6 +524,19 @@ CODESTARTparseSelectorAct
 		FINALIZE;
 
 	/* TODO: check strdup() result */
+
+	if(pszFrom == NULL) {
+		errmsg.LogError(NO_ERRCODE, "no sender address given - specify $ActionMailFrom");
+		ABORT_FINALIZE(RS_RET_MAIL_NO_FROM);
+	}
+	if(pszTo == NULL) {
+		errmsg.LogError(NO_ERRCODE, "no recipient address given - specify $ActionMailTo");
+		ABORT_FINALIZE(RS_RET_MAIL_NO_TO);
+	}
+
+	pData->md.smtp.pszFrom = (uchar*) strdup((char*)pszFrom);
+	pData->md.smtp.pszTo = (uchar*) strdup((char*)pszTo);
+
 	if(pszSubject == NULL) {
 		/* if no subject is configured, we need just one template string */
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
@@ -522,10 +549,6 @@ CODESTARTparseSelectorAct
 		pData->md.smtp.pszSrv = (uchar*) strdup((char*)pszSrv);
 	if(pszSrvPort != NULL)
 		pData->md.smtp.pszSrvPort = (uchar*) strdup((char*)pszSrvPort);
-	if(pszFrom != NULL)
-		pData->md.smtp.pszFrom = (uchar*) strdup((char*)pszFrom);
-	if(pszTo != NULL)
-		pData->md.smtp.pszTo = (uchar*) strdup((char*)pszTo);
 	pData->bEnableBody = bEnableBody;
 
 	/* process template */
@@ -566,6 +589,7 @@ CODESTARTmodExit
 	freeConfigVariables();
 
 	/* release what we no longer need */
+	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -591,7 +615,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */
-	/* so far: none */
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &pszSrv, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &pszSrvPort, STD_LOADABLE_MODULE_ID));

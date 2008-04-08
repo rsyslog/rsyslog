@@ -23,7 +23,7 @@ to MySQL databases</a></li>
 <li> native support for writing to Postgres databases</li>
 <li>direct support for Firebird/Interbase,
 OpenTDS (MS SQL, Sybase), SQLLite, Ingres, Oracle, and mSQL via libdbi,
-a database abstraction layer (almost as good as native)</li>
+a database abstraction layer (almost as good as native)</li><li>native support for <a href="ommail.html">sending mail messages</a> (first seen in 3.17.0)</li>
 <li>support for (plain) tcp based syslog - much better
 reliability</li>
 <li>support for sending and receiving compressed syslog messages</li>
@@ -35,7 +35,7 @@ into syslog messages (one per line)</li>
 <li>ability to configure backup syslog/database servers - if
 the primary fails, control is switched to a prioritized list of backups</li>
 <li>support for receiving messages via reliable <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">
-RFC 3195</a> delivery</li>
+RFC 3195</a> delivery (a bit clumpsy to build right now...)</li>
 <li>ability to generate file names and directories (log
 targets) dynamically, based on many different properties</li>
 <li>control of log output format, including ability to present
