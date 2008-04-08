@@ -120,16 +120,10 @@
 #include <syslog.h>
 #include "imklog.h"
 #include "ksyms.h"
+#include "module.h"
 
 
-/* Variables static to this module. */
-struct sym_table
-{
-	unsigned long value;
-	char *name;
-};
-
-static int num_syms = 0;
+int num_syms = 0;
 static int i_am_paranoid = 0;
 static char vstring[12];
 static struct sym_table *sym_array = (struct sym_table *) 0;
@@ -589,38 +583,65 @@ static int AddSymbol(unsigned long address, char *symbol)
  *		If a match is found the pointer to the symbolic name most
  *		closely matching the address is returned.
  **************************************************************************/
-char * LookupSymbol(unsigned long value, struct symbol *sym)
+char * LookupSymbol(value, sym)
+
+        unsigned long value;
+
+        struct symbol *sym;
+
 {
-	auto int lp;
-	auto char *last;
+        auto int lp;
 
-	if (!sym_array)
-		return((char *) 0);
+        auto char *last;
+        auto char *name;
 
-	last = sym_array[0].name;
-	sym->offset = 0;
-	sym->size = 0;
-	if ( value < sym_array[0].value )
-		return((char *) 0);
-	
-	for(lp= 0; lp <= num_syms; ++lp)
-	{
-		if ( sym_array[lp].value > value )
-		{		
-			sym->offset = value - sym_array[lp-1].value;
-			sym->size = sym_array[lp].value - \
-				sym_array[lp-1].value;
-			return(last);
-		}
-		last = sym_array[lp].name;
-	}
+        struct symbol ksym, msym;
 
-	if ( (last = LookupModuleSymbol(value, sym)) != (char *) 0 )
-		return(last);
+        if (!sym_array)
+                return((char *) 0);
 
-	return(NULL);
+        last = sym_array[0].name;
+        ksym.offset = 0;
+        ksym.size = 0;
+        if ( value < sym_array[0].value )
+                return((char *) 0);
+
+        for(lp = 0; lp <= num_syms; ++lp)
+        {
+                if ( sym_array[lp].value > value )
+                {
+                        ksym.offset = value - sym_array[lp-1].value;
+                        ksym.size = sym_array[lp].value - \
+                                sym_array[lp-1].value;
+                        break;
+                }
+                last = sym_array[lp].name;
+        }
+
+        name = LookupModuleSymbol(value, &msym);
+
+        if ( ksym.offset == 0 && msym.offset == 0 )
+        {
+                return((char *) 0);
+        }
+
+        if ( ksym.offset == 0 || msym.offset < 0 ||
+             (ksym.offset > 0 && ksym.offset < msym.offset) )
+        {
+                sym->offset = ksym.offset;
+                sym->size = ksym.size;
+                return(last);
+        }
+        else
+        {
+                sym->offset = msym.offset;
+                sym->size = msym.size;
+                return(name);
+        }
+
+
+        return((char *) 0);
 }
-
 
 /**************************************************************************
  * Function:	FreeSymbols
@@ -678,6 +699,9 @@ extern char *ExpandKadds(char *line, char *el)
 	char num[15];
 	auto unsigned long int value;
 	auto struct symbol sym;
+
+        sym.offset = 0;
+        sym.size = 0;
 
 	/*
 	 * This is as handy a place to put this as anyplace.
@@ -819,7 +843,7 @@ extern char *ExpandKadds(char *line, char *el)
 		{
 			--value;
 			++kp;
-			elp += sprintf(elp, "+%x/%d", sym.offset, sym.size);
+			elp += sprintf(elp, "+0x%x/0x%02x", sym.offset, sym.size);
 		}
 		strncat(elp, kp, value);
 		elp += value;
