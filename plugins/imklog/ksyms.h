@@ -1,10 +1,9 @@
-/*
-    ksym.h - Definitions for symbol table utilities.
-    Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
-    Copyright (c) 1996 Enjellic Systems Development
-
-    This file is part of the sysklogd package, a kernel and system log daemon.
-
+/*  ksym.h - Definitions for symbol table utilities.
+ *  Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
+ *  Copyright (c) 1996 Enjellic Systems Development
+ *  Copyright (c) 2004-7 Martin Schulze <joey@infodrom.org>
+ *  Copyright (c) 2007-2008 Rainer Gerhards <rgerhards@adiscon.com>
+ *
  * This file is part of rsyslog.
  *
  * Rsyslog is free software: you can redistribute it and/or modify
@@ -21,7 +20,7 @@
  * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
-*/
+ */
 
 /* Variables, structures and type definitions static to this module. */
 
