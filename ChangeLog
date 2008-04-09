@@ -16,6 +16,8 @@ Version 3.14.2 (rgerhards), 2008-04-??
   * misspelled directive name in code processing legacy options
 - bugfix: some legacy options not correctly interpreted - thanks to
   varmojfekoj for the patch
+- improved detection of modules being loaded more than once
+  thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 3.14.1 (rgerhards), 2008-04-04
 - bugfix: some messages were emited without hostname
