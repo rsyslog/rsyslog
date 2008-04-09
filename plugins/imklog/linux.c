@@ -154,8 +154,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 		return(none);
 	}
 
-	Syslog(LOG_INFO, "imklog %s, log source = %s started.", \
-	       VERSION, _PATH_KLOG);
+	Syslog(LOG_INFO, "imklog %s, log source = %s started.", VERSION, _PATH_KLOG);
 	return(proc);
 }
 

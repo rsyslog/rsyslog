@@ -64,21 +64,47 @@
  * the GPLv3+ as specified above.
  */
 
+#ifdef HAVE_CONFIG_H
+#	include "config.h"
+#endif
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
 
-/* open the kernel log  -- rger */
-static void openKLog(void)
+#include "rsyslog.h"
+#include "imklog.h"
+
+/* globals */
+static int	fklog = -1;	/* /dev/klog */
+
+#ifndef _PATH_KLOG
+#	define _PATH_KLOG "/dev/klog"
+#endif
+
+/* open the kernel log - will be called inside the willRun() imklog
+ * entry point. -- rgerhards, 20080-04-09
+ */
+rsRetVal
+klogWillRun(void)
 {
-	if ((fklog = open(_PATH_KLOG, O_RDONLY, 0)) >= 0)
-		if (fcntl(fklog, F_SETFL, O_NONBLOCK) < 0)
-			fklog = -1;
-	if (fklog < 0)
-		dprintf("can't open %s (%d)\n", _PATH_KLOG, errno);
+	DEFiRet;
+
+	fklog = open(_PATH_KLOG, O_RDONLY, 0);
+	if (fklog < 0) {
+		dbgprintf("can't open %s (%d)\n", _PATH_KLOG, errno);
+		iRet = RS_RET_ERR; // TODO: better error code
+	}
+
+	RETiRet;
 }
 
 
-static int	fklog = -1;	/* /dev/klog */
-/*
- * Read /dev/klog while data are available, split into lines.
+/* Read /dev/klog while data are available, split into lines.
+ * Contrary to standard BSD syslogd, we do a blocking read. We can
+ * afford this as imklog is running on its own threads. So if we have
+ * a single file, it really doesn't matter if we wait inside a 1-file
+ * select or the read() directly.
  */
 static void
 readklog(void)
@@ -88,12 +114,15 @@ readklog(void)
 
 	len = 0;
 	for (;;) {
+		dbgprintf("----------imklog waiting for kernel log line\n");
 		i = read(fklog, line + len, MAXLINE - 1 - len);
 		if (i > 0) {
 			line[i + len] = '\0';
 		} else {
 			if (i < 0 && errno != EINTR && errno != EAGAIN) {
-				logerror("klog");
+				Syslog(LOG_ERR,
+				       "imklog error %d reading kernel log - shutting down imklog",
+				       errno);
 				fklog = -1;
 			}
 			break;
@@ -101,51 +130,41 @@ readklog(void)
 
 		for (p = line; (q = strchr(p, '\n')) != NULL; p = q + 1) {
 			*q = '\0';
-			printsys(p);
+			Syslog(LOG_INFO, "%s", p);
 		}
 		len = strlen(p);
 		if (len >= MAXLINE - 1) {
-			printsys(p);
+			Syslog(LOG_INFO, "%s", p);
 			len = 0;
 		}
 		if (len > 0)
 			memmove(line, p, len + 1);
 	}
 	if (len > 0)
-		printsys(line);
+		Syslog(LOG_INFO, "%s", line);
 }
 
-/*
- * Take a raw input line from /dev/klog, format similar to syslog().
+
+/* to be called in the module's AfterRun entry point
+ * rgerhards, 2008-04-09
  */
-static void
-printsys(char *msg)
+rsRetVal klogAfterRun(void)
 {
-	char *p, *q;
-	long n;
-	int flags, isprintf, pri;
-
-	flags = ISKERNEL | SYNC_FILE | ADDDATE;	/* fsync after write */
-	p = msg;
-	pri = DEFSPRI;
-	isprintf = 1;
-	if (*p == '<') {
-		errno = 0;
-		n = strtol(p + 1, &q, 10);
-		if (*q == '>' && n >= 0 && n < INT_MAX && errno == 0) {
-			p = q + 1;
-			pri = n;
-			isprintf = 0;
-		}
-	}
-	/*
-	 * Kernel printf's and LOG_CONSOLE messages have been displayed
-	 * on the console already.
-	 */
-	if (isprintf || (pri & LOG_FACMASK) == LOG_CONSOLE)
-		flags |= IGN_CONS;
-	if (pri &~ (LOG_FACMASK|LOG_PRIMASK))
-		pri = DEFSPRI;
-	logmsg(pri, p, LocalHostName, flags);
+        DEFiRet;
+	if(fklog != -1)
+		close(fklog);
+        RETiRet;
 }
 
+
+
+/* to be called in the module's WillRun entry point, this is the main
+ * "message pull" mechanism.
+ * rgerhards, 2008-04-09
+ */
+rsRetVal klogLogKMsg(void)
+{
+        DEFiRet;
+	readklog();
+	RETiRet;
+}

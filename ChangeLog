@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.17.1 (rgerhards), 2008-04-??
+- implemented klogd functionality for BSD
 ---------------------------------------------------------------------------
 Version 3.17.0 (rgerhards), 2008-04-08
 - added native ability to send mail messages

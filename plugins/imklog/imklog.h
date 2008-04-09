@@ -59,7 +59,7 @@ extern int InitMsyms(void);
 extern void DeinitMsyms(void);
 extern char * ExpandKadds(char *, char *);
 extern void SetParanoiaLevel(int);
-extern void vsyslog(int pri, const char *fmt, va_list ap);
+//TODO: remove? extern void vsyslog(int pri, const char *fmt, va_list ap);
 rsRetVal Syslog(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 #endif /* #ifndef IMKLOG_H_INCLUDED */

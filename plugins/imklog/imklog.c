@@ -142,13 +142,12 @@ rsRetVal Syslog(int priority, char *fmt, ...)
 	va_list ap;
 	char *argl;
 
-	/* Output using syslog. */
+	/* Output using syslog */
 	if(!strcmp(fmt, "%s")) {
 		va_start(ap, fmt);
 		argl = va_arg(ap, char *);
-		if (argl[0] == '<' && argl[1] && argl[2] == '>') {
-			switch ( argl[1] )
-			{
+		if(argl[0] == '<' && argl[1] && argl[2] == '>') {
+			switch(argl[1]) {
 			case '0':
 				priority = LOG_EMERG;
 				break;
