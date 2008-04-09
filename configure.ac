@@ -23,7 +23,8 @@ case "${host}" in
   *-*-linux*)
   ;;
   *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
-    AC_DEFINE([OS_BSD], [1], [Description])
+    AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
+    os_bsd = "yes"
   ;;
 esac
 
@@ -202,7 +203,9 @@ AC_ARG_ENABLE(klog,
          esac],
         [enable_klog="yes"]
 )
-AM_CONDITIONAL(ENABLE_IMKLOGD, test x$enable_klog = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOGD,      test x$enable_klog = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOG_BSD,   test x$os_bsd = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_bsd = x)
 
 #
 # SYSLOG_UNIXAF
