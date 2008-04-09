@@ -554,26 +554,28 @@ Load(uchar *pModName)
 {
 	DEFiRet;
 	
-	size_t iPathLen;
+	size_t iPathLen, iModNameLen;
 	uchar szPath[PATH_MAX];
-	uchar *pModNameBase;
-	uchar *pModNameDup;
-	uchar *pExtension;
+	uchar *pModNameCmp;
+	int bHasExtension;
         void *pModHdlr, *pModInit;
 	modInfo_t *pModInfo;
 
 	assert(pModName != NULL);
 	dbgprintf("Requested to load module '%s'\n", pModName);
 
-	if((pModNameDup = (uchar *) strdup((char *) pModName)) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	iModNameLen = strlen((char *) pModName);
+	if(iModNameLen > 3 && !strcmp((char *) pModName + iModNameLen - 3, ".so")) {
+		iModNameLen -= 3;
+		bHasExtension = TRUE;
+	} else
+		bHasExtension = FALSE;
 
-	pModNameBase = (uchar *) basename((char*)pModNameDup);
 	pModInfo = GetNxt(NULL);
 	while(pModInfo != NULL) {
-		if(!strcmp((char *) pModNameBase, (char *) modGetName(pModInfo))) {
+		if(!strncmp((char *) pModName, (char *) (pModNameCmp = modGetName(pModInfo)), iModNameLen) &&
+		   (!*(pModNameCmp + iModNameLen) || !strcmp((char *) pModNameCmp + iModNameLen, ".so"))) {
 			dbgprintf("Module '%s' already loaded\n", pModName);
-			free(pModNameDup);
 			ABORT_FINALIZE(RS_RET_OK);
 		}
 		pModInfo = GetNxt(pModInfo);
@@ -593,7 +595,6 @@ Load(uchar *pModName)
 				szPath[iPathLen] = '\0';
 			} else {
 				errmsg.LogError(NO_ERRCODE, "could not load module '%s', path too long\n", pModName);
-				free(pModNameDup);
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 		}
@@ -603,10 +604,7 @@ Load(uchar *pModName)
 	strncat((char *) szPath, (char *) pModName, sizeof(szPath) - iPathLen - 1);
 
 	/* now see if we have an extension and, if not, append ".so" */
-	for(pExtension = pModNameBase ; *pExtension && *pExtension != '.' ; ++pExtension)
-		/*DO NOTHING*/;
-	
-	if(*pExtension != '.') {
+	if(!bHasExtension) {
 		/* we do not have an extension and so need to add ".so"
 		 * TODO: I guess this is highly importable, so we should change the
 		 * algo over time... -- rgerhards, 2008-03-05
@@ -615,7 +613,6 @@ Load(uchar *pModName)
 		strncat((char *) szPath, ".so", sizeof(szPath) - strlen((char*) szPath) - 1);
 		iPathLen += 3;
 	}
-	free(pModNameDup);
 
 	if(iPathLen + strlen((char*) pModName) >= sizeof(szPath)) {
 		errmsg.LogError(NO_ERRCODE, "could not load module '%s', path too long\n", pModName);
