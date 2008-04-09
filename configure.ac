@@ -21,6 +21,7 @@ AC_CANONICAL_HOST
 
 case "${host}" in
   *-*-linux*)
+    AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x = y)
   ;;
   *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
     AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
