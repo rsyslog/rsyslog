@@ -23,7 +23,7 @@ case "${host}" in
   *-*-linux*)
   ;;
   *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
-    AC_DEFINE([BSD], [1], [Description])
+    AC_DEFINE([OS_BSD], [1], [Description])
   ;;
 esac
 

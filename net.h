@@ -34,7 +34,7 @@
 #define ADDR_NAME 0x01 /* address is hostname wildcard) */
 #define ADDR_PRI6 0x02 /* use IPv6 address prior to IPv4 when resolving */
 
-#ifdef BSD
+#ifdef OS_BSD
 #	ifndef _KERNEL
 #		define s6_addr32 __u6_addr.__u6_addr32
 #	endif
