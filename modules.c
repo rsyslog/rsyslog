@@ -39,6 +39,9 @@
 #include <time.h>
 #include <assert.h>
 #include <errno.h>
+#ifdef	OS_BSD
+#	include "libgen.h"
+#endif
 
 #include <dlfcn.h> /* TODO: replace this with the libtools equivalent! */
 
