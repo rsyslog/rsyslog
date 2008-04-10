@@ -204,7 +204,7 @@ AC_ARG_ENABLE(klog,
          esac],
         [enable_klog="yes"]
 )
-AM_CONDITIONAL(ENABLE_IMKLOGD,      test x$enable_klog = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOG, test x$enable_klog = xyes)
 
 #
 # SYSLOG_UNIXAF

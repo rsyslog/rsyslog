@@ -182,7 +182,7 @@ SUBDIRS = . doc
 
 SUBDIRS += plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
-if ENABLE_IMKLOGD
+if ENABLE_IMKLOG
 SUBDIRS += plugins/imklog
 endif
 
