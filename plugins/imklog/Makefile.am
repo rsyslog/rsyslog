@@ -5,8 +5,9 @@ imklog_la_SOURCES = imklog.c imklog.h
 # select klog "driver"
 if ENABLE_IMKLOG_BSD
 imklog_la_SOURCES += bsd.c
-else 
-# we assume this now is Linux (yes, some help with the build system is appreciated ;))
+endif
+
+if ENABLE_IMKLOG_LINUX 
 imklog_la_SOURCES += linux.c module.h ksym.c ksyms.h ksym_mod.c
 endif
 

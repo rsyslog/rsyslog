@@ -21,11 +21,11 @@ AC_CANONICAL_HOST
 
 case "${host}" in
   *-*-linux*)
-    AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x = y)
+    os_type="linux"
   ;;
   *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
     AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
-    AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x = x)
+    os_type="bsd"
   ;;
 esac
 
@@ -205,6 +205,8 @@ AC_ARG_ENABLE(klog,
         [enable_klog="yes"]
 )
 AM_CONDITIONAL(ENABLE_IMKLOG, test x$enable_klog = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x$os_type = xbsd)
+AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_type = xlinux)
 
 #
 # SYSLOG_UNIXAF
@@ -621,7 +623,7 @@ echo "****************************************************"
 echo "rsyslog will be compiled with the following settings:"
 echo
 echo "Multithreading support enabled:           $enable_pthreads"
-echo "Klog functionality enabled:               $enable_klog"
+echo "Klog functionality enabled:               $enable_klog ($os_type)"
 echo "Regular expressions support enabled:      $enable_regexp"
 echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"
