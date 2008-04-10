@@ -7,7 +7,7 @@ if ENABLE_IMKLOG_BSD
 imklog_la_SOURCES += bsd.c
 endif
 
-if ENABLE_IMKLOG_LINUX 
+if ENABLE_IMKLOG_LINUX
 imklog_la_SOURCES += linux.c module.h ksym.c ksyms.h ksym_mod.c
 endif
 
