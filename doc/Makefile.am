@@ -18,7 +18,6 @@ html_files = \
 	rsyslog_recording_pri.html \
 	rsyslog_stunnel.html \
 	professional_support.html \
-	status.html \
 	syslog-protocol.html \
 	version_naming.html \
 	contributors.html \
