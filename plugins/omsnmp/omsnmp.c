@@ -74,32 +74,34 @@ static int iSpecificType = 0;
 static int iTrapType = SNMP_TRAP_ENTERPRISESPECIFIC;/*Default is SNMP_TRAP_ENTERPRISESPECIFIC */
 /* 
 			Possible Values
-	SNMP_TRAP_COLDSTART				(0)
-	SNMP_TRAP_WARMSTART				(1)
-	SNMP_TRAP_LINKDOWN				(2)
-	SNMP_TRAP_LINKUP				(3)
-	SNMP_TRAP_AUTHFAIL				(4)
-	SNMP_TRAP_EGPNEIGHBORLOSS		(5)
+	SNMP_TRAP_COLDSTART		(0)
+	SNMP_TRAP_WARMSTART		(1)
+	SNMP_TRAP_LINKDOWN		(2)
+	SNMP_TRAP_LINKUP		(3)
+	SNMP_TRAP_AUTHFAIL		(4)
+	SNMP_TRAP_EGPNEIGHBORLOSS	(5)
 	SNMP_TRAP_ENTERPRISESPECIFIC	(6)
 */
 
 typedef struct _instanceData {
 	uchar	szTransport[OMSNMP_MAXTRANSPORLENGTH+1];	/* Transport - Can be udp, tcp, udp6, tcp6 and other types supported by NET-SNMP */ 
-	uchar	szTarget[MAXHOSTNAMELEN+1];					/* IP/hostname of Snmp Target*/ 
-	uchar	szTargetAndPort[MAXHOSTNAMELEN+1];			/* IP/hostname + Port,needed format for SNMP LIB */ 
+	uchar	*szTarget;					/* IP/hostname of Snmp Target*/ 
+	uchar	*szTargetAndPort;				/* IP/hostname + Port,needed format for SNMP LIB */ 
 	uchar	szCommunity[OMSNMP_MAXCOMMUNITYLENGHT+1];	/* Snmp Community */ 
 	uchar	szEnterpriseOID[OMSNMP_MAXOIDLENGHT+1];		/* Snmp Enterprise OID - default is (1.3.6.1.4.1.3.1.1 = enterprises.cmu.1.1) */ 
 	uchar	szSnmpTrapOID[OMSNMP_MAXOIDLENGHT+1];		/* Snmp Trap OID - default is (1.3.6.1.4.1.19406.1.2.1 = ADISCON-MONITORWARE-MIB::syslogtrap) */ 
-	uchar	szSyslogMessageOID[OMSNMP_MAXOIDLENGHT+1];	/* Snmp OID used for the Syslog Message - default is 1.3.6.1.4.1.19406.1.1.2.1 - ADISCON-MONITORWARE-MIB::syslogMsg
-														*	You will need the ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver side in order to decode this mib. 
-														*	Downloads of these mib files can be found here: 
-														*		http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt
-														*		http://www.adiscon.org/download/ADISCON-MIB.txt
-														*/ 
-	int iPort;											/* Target Port */
-	int iSNMPVersion;									/* SNMP Version to use */
-	int iTrapType;										/* Snmp TrapType or GenericType */
-	int iSpecificType;									/* Snmp Specific Type */
+	uchar	szSyslogMessageOID[OMSNMP_MAXOIDLENGHT+1];	/* Snmp OID used for the Syslog Message:
+	        * default is 1.3.6.1.4.1.19406.1.1.2.1 - ADISCON-MONITORWARE-MIB::syslogMsg
+		* You will need the ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the receiver
+		* side in order to decode this mib. 
+		* Downloads of these mib files can be found here: 
+		*	http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt
+		*	http://www.adiscon.org/download/ADISCON-MIB.txt
+		*/ 
+	int iPort;						/* Target Port */
+	int iSNMPVersion;					/* SNMP Version to use */
+	int iTrapType;						/* Snmp TrapType or GenericType */
+	int iSpecificType;					/* Snmp Specific Type */
 
 	netsnmp_session *snmpsession;						/* Holds to SNMP Session, NULL if not initialized */
 } instanceData;
@@ -313,8 +315,7 @@ ENDtryResume
 BEGINdoAction
 CODESTARTdoAction
 	/* Abort if the STRING is not set, should never happen */
-	if (ppString[0] == NULL)
-	{
+	if (ppString[0] == NULL) {
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 	
@@ -327,10 +328,17 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	/* free snmp Session here */
 	omsnmp_exitSession(pData);
+
+	if(pData->szTarget != NULL)
+		free(pData->szTarget);
+	if(pData->szTargetAndPort != NULL)
+		free(pData->szTargetAndPort);
+
 ENDfreeInstance
 
 
 BEGINparseSelectorAct
+	uchar szTargetAndPort[MAXHOSTNAMELEN+128]; /* work buffer for specifying a full target and port string */
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":omsnmp:", sizeof(":omsnmp:") - 1)) {
@@ -359,7 +367,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		ABORT_FINALIZE( RS_RET_PARAM_ERROR );
 	} else {
 		/* Copy Target */
-		strncpy( (char*) pData->szTarget, (char*) pszTarget, strlen((char*) pszTarget) );
+		CHKmalloc(pData->szTarget = (uchar*) strdup((char*)pszTarget));
 	}
 
 	/* Copy Community */
@@ -412,7 +420,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		pData->iTrapType = iTrapType;
 
 	/* Create string for session peername! */
-	snprintf( (char*) pData->szTargetAndPort, sizeof(pData->szTargetAndPort) / sizeof(char), "%s:%s:%d", pData->szTransport, pData->szTarget, pData->iPort );
+	snprintf((char*)szTargetAndPort, sizeof(szTargetAndPort), "%s:%s:%d", pData->szTransport, pData->szTarget, pData->iPort);
+	CHKmalloc(pData->szTargetAndPort = (uchar*)strdup((char*)szTargetAndPort));
 	
 	/* Print Debug info */
 	dbgprintf("SNMPTransport: %s\n", pData->szTransport);
