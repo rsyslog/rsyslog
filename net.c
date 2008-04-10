@@ -852,6 +852,44 @@ finalize_it:
 }
 
 
+/* get the name of the local host. A pointer to a character pointer is passed
+ * in, which on exit points to the local hostname. This buffer is dynamically
+ * allocated and must be free()ed by the caller. If the functions returns an
+ * error, the pointer is NULL. This function is based on GNU/Hurd's localhostname
+ * function.
+ * rgerhards, 20080-04-10
+ */
+static rsRetVal
+getLocalHostname(uchar **ppName)
+{
+	DEFiRet;
+	uchar *buf = NULL;
+	size_t buf_len = 0;
+
+	assert(ppName != NULL);
+
+	do {
+		if(buf == NULL) {
+			buf_len = 128;        /* Initial guess */
+			CHKmalloc(buf = malloc(buf_len));
+		} else {
+			buf_len += buf_len;
+			CHKmalloc(buf = realloc (buf, buf_len));
+		}
+	} while((gethostname((char*)buf, buf_len) == 0 && !memchr (buf, '\0', buf_len)) || errno == ENAMETOOLONG);
+
+	*ppName = buf;
+	buf = NULL;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(buf != NULL)
+			free(buf);
+	}
+	RETiRet;
+}
+
+
 /* closes the UDP listen sockets (if they exist) and frees
  * all dynamically assigned memory. 
  */
@@ -1047,6 +1085,7 @@ CODESTARTobjQueryInterface(net)
 	pIf->closeUDPListenSockets = closeUDPListenSockets;
 	pIf->isAllowedSender = isAllowedSender;
 	pIf->should_use_so_bsdcompat = should_use_so_bsdcompat;
+	pIf->getLocalHostname = getLocalHostname;
 finalize_it:
 ENDobjQueryInterface(net)
 

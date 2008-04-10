@@ -306,7 +306,7 @@ uchar *pszWorkDir = NULL;/* name of rsyslog's spool directory (without trailing 
 uchar *glblModPath = NULL; /* module load path  - only used during initial init, only settable via -M command line option */
 /* end global config file state variables */
 
-char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
+uchar	*LocalHostName;/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
@@ -897,8 +897,8 @@ logmsgInternal(int pri, char *msg, int flags)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetUxTradMsg(pMsg, msg);
 	MsgSetRawMsg(pMsg, msg);
-	MsgSetHOSTNAME(pMsg, LocalHostName);
-	MsgSetRcvFrom(pMsg, LocalHostName);
+	MsgSetHOSTNAME(pMsg, (char*)LocalHostName);
+	MsgSetRcvFrom(pMsg, (char*)LocalHostName);
 	MsgSetTAG(pMsg, "rsyslogd:");
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
@@ -1863,6 +1863,8 @@ freeAllDynMemForTermination(void)
 		free(pszMainMsgQFName);
 	if(pModDir != NULL)
 		free(pModDir);
+	if(LocalHostName != NULL)
+		free(LocalHostName);
 }
 
 
@@ -3164,8 +3166,8 @@ int realMain(int argc, char **argv)
 	/* get our host and domain names - we need to do this early as we may emit
 	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
 	 */
-	gethostname(LocalHostName, sizeof(LocalHostName));
-	if((p = strchr(LocalHostName, '.'))) {
+	net.getLocalHostname(&LocalHostName);
+	if((p = strchr((char*)LocalHostName, '.'))) {
 		*p++ = '\0';
 		LocalDomain = p;
 	} else {
@@ -3184,17 +3186,19 @@ int realMain(int argc, char **argv)
 		/* TODO: gethostbyname() is not thread-safe, but replacing it is
 		 * not urgent as we do not run on multiple threads here. rgerhards, 2007-09-25
 		 */
-		hent = gethostbyname(LocalHostName);
+		hent = gethostbyname((char*)LocalHostName);
 		if(hent) {
-			snprintf(LocalHostName, sizeof(LocalHostName), "%s", hent->h_name);
+			free(LocalHostName);
+			CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
 				
-			if ( (p = strchr(LocalHostName, '.')) )
+			if((p = strchr((char*)LocalHostName, '.')))
 			{
 				*p++ = '\0';
 				LocalDomain = p;
 			}
 		}
 	}
+dbgprintf("LocalHostname: '%s'\n", LocalHostName);
 
 	/* Convert to lower case to recognize the correct domain laterly */
 	for (p = (char *)LocalDomain ; *p ; p++)

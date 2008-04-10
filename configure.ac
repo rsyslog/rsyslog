@@ -83,6 +83,22 @@ AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r])
 
+# Check for MAXHOSTNAMELEN
+AC_MSG_CHECKING(for MAXHOSTNAMELEN)
+AC_TRY_COMPILE([
+	#include <sys/param.h>
+	], [
+	return MAXHOSTNAMELEN;
+	]
+	,
+	AC_MSG_RESULT(yes)
+	,
+	# note: we use 1024 here, which should be far more than needed by any system. If that's too low, we simply
+	# life with the need to change it. Most of the code doesn't need it anyways, but there are a few places 
+	# where it actually is needed and it makes no sense to change them.
+	AC_DEFINE(MAXHOSTNAMELEN, 1024, [Define with a value if your <sys/param.h> does not define MAXHOSTNAMELEN])
+	AC_MSG_RESULT(no; defined as 64)
+)
 
 # Large file support
 AC_ARG_ENABLE(largefile,

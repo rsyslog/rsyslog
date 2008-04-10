@@ -71,7 +71,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(tcpclt)
 
 typedef struct _instanceData {
-	char	f_hname[MAXHOSTNAMELEN+1];
+	char	*f_hname;
 	short	sock;			/* file descriptor */
 	int *pSockArray;		/* sockets to use for UDP */
 	enum { /* TODO: we shoud revisit these definitions */
@@ -144,6 +144,9 @@ CODESTARTfreeInstance
 	if(pData->protocol == FORW_TCP) {
 		tcpclt.Destruct(&pData->pTCPClt);
 	}
+
+	if(pData->f_hname != NULL)
+		free(pData->f_hname);
 
 ENDfreeInstance
 
@@ -540,10 +543,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		/* TODO: make this if go away! */
 		if(*p == ';') {
 			*p = '\0'; /* trick to obtain hostname (later)! */
-			strcpy(pData->f_hname, (char*) q);
+			CHKmalloc(pData->f_hname = strdup((char*) q));
 			*p = ';';
-		} else
-			strcpy(pData->f_hname, (char*) q);
+		} else {
+			CHKmalloc(pData->f_hname = strdup((char*) q));
+		}
 
 		/* process template */
 		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
