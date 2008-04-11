@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.15.2 (rgerhards), 2008-04-??
+---------------------------------------------------------------------------
 Version 3.15.1 (rgerhards), 2008-04-11
 - bugfix: some messages were emited without hostname
 - disabled atomic operations for the time being because they introduce some
