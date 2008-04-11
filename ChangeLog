@@ -1,8 +1,9 @@
 ---------------------------------------------------------------------------
-Version 3.14.2 (rgerhards), 2008-04-??
+Version 3.14.3 (rgerhards), 2008-04-??
 - bugfix: omsnmp had a too-small sized buffer for hostname+port. This
   could not lead to a segfault, as snprintf() was used, but could cause
   some trouble with extensively long hostnames.
+- applied patch from Tiziano Müller to remove some compiler warnings
 ---------------------------------------------------------------------------
 Version 3.14.2 (rgerhards), 2008-04-09
 - bugfix: segfault with expression-based filters

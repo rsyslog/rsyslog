@@ -85,6 +85,7 @@
 #include "stream.h"
 #include "modules.h"
 #include "errmsg.h"
+#include "cfsysline.h"
 
 /* static data */
 DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some macros! */
@@ -1328,7 +1329,7 @@ objClassInit(modInfo_t *pModInfo)
 
 	/* init classes we use (limit to as few as possible!) */
 	CHKiRet(errmsgClassInit(pModInfo));
-	CHKiRet(cfsyslineInit(pModInfo));
+	CHKiRet(cfsyslineInit());
 	CHKiRet(varClassInit(pModInfo));
 	CHKiRet(moduleClassInit(pModInfo));
 	CHKiRet(objUse(var, CORE_COMPONENT));

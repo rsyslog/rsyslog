@@ -161,4 +161,7 @@ rsRetVal rsCStrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
 #define rsCStrGetBufBeg(x) ((x)->pBuf)
 
+rsRetVal strInit();
+rsRetVal strExit();
+
 #endif /* single include */
