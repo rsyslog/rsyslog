@@ -8,6 +8,10 @@ Version 3.17.1 (rgerhards), 2008-04-??
   RFC's on hostname length at all. The memory consumption is no issue, as
   there are only a handful of this buffers allocated *per run* -- that's
   also the main reason why we consider it not worth to be fixed any further.
+- enhanced legacy syslog parser to handle slightly malformed messages
+  (with a space in front of the timestamp) - at least HP procurve is
+  known to do that and I won't outrule that others also do it. The 
+  change looks quite unintrusive and so we added it to the parser.
 ---------------------------------------------------------------------------
 Version 3.17.0 (rgerhards), 2008-04-08
 - added native ability to send mail messages

@@ -1390,11 +1390,18 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	/* Check to see if msg contains a timestamp. We stary trying with a
 	 * high-precision one...
 	 */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == TRUE)
+	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE)
+	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE) {
 		p2parse += 16;
-	else {
+	} else if(*p2parse == ' ') { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse+1) == TRUE) {
+			/* indeed, we got it! */
+			p2parse += 17;
+		} else {
+			flags |= ADDDATE;
+		}
+	} else {
 		flags |= ADDDATE;
 	}
 
