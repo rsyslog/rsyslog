@@ -4,6 +4,7 @@ Version 3.14.3 (rgerhards), 2008-04-??
   could not lead to a segfault, as snprintf() was used, but could cause
   some trouble with extensively long hostnames.
 - applied patch from Tiziano Müller to remove some compiler warnings
+- added gssapi overview/howto thanks to Peter Vrabec
 ---------------------------------------------------------------------------
 Version 3.14.2 (rgerhards), 2008-04-09
 - bugfix: segfault with expression-based filters
