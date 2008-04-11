@@ -109,7 +109,7 @@ void tplLastStaticInit(struct template *tpl);
  * rgerhards, 2007-08-06
  */
 rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz);
-void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
+rsRetVal doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
 #endif /* #ifndef TEMPLATE_H_INCLUDED */
 /* vim:set ai:

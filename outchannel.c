@@ -91,12 +91,12 @@ static void skip_Comma(char **pp)
 /* helper to ochAddLine. Parses a comma-delimited field
  * The field is delimited by SP or comma. Leading whitespace
  * is "eaten" and does not become part of the field content.
- * returns: 0 - ok, 1 - failure
  */
-static int get_Field(uchar **pp, uchar **pField)
+static rsRetVal get_Field(uchar **pp, uchar **pField)
 {
+	DEFiRet;
 	register uchar *p;
-	cstr_t *pStrB;
+	cstr_t *pStrB = NULL;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -105,21 +105,25 @@ static int get_Field(uchar **pp, uchar **pField)
 	skip_Comma((char**)pp);
 	p = *pp;
 
-	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
-		 return 1;
+	CHKiRet(rsCStrConstruct(&pStrB));
 	rsCStrSetAllocIncrement(pStrB, 32);
 
 	/* copy the field */
 	while(*p && *p != ' ' && *p != ',') {
-		rsCStrAppendChar(pStrB, *p++);
+		CHKiRet(rsCStrAppendChar(pStrB, *p++));
 	}
 
 	*pp = p;
-	rsCStrFinish(pStrB);
-	if(rsCStrConvSzStrAndDestruct(pStrB, pField, 0) != RS_RET_OK)
-		return 1;
+	CHKiRet(rsCStrFinish(pStrB));
+	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, pField, 0));
 
-	return 0;
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pStrB != NULL)
+			rsCStrDestruct(&pStrB);
+	}
+
+	RETiRet;
 }
 
 
@@ -156,12 +160,12 @@ static int get_off_t(uchar **pp, off_t *pOff_t)
  * current position to the end of line and returns it
  * to the caller. Leading white space is removed, but
  * not trailing.
- * returns: 0 - ok, 1 - failure
  */
-static inline int get_restOfLine(uchar **pp, uchar **pBuf)
+static inline rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 {
+	DEFiRet;
 	register uchar *p;
-	cstr_t *pStrB;
+	cstr_t *pStrB = NULL;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
@@ -170,21 +174,25 @@ static inline int get_restOfLine(uchar **pp, uchar **pBuf)
 	skip_Comma((char**)pp);
 	p = *pp;
 
-	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
-		 return 1;
+	CHKiRet(rsCStrConstruct(&pStrB));
 	rsCStrSetAllocIncrement(pStrB, 32);
 
 	/* copy the field */
 	while(*p) {
-		rsCStrAppendChar(pStrB, *p++);
+		CHKiRet(rsCStrAppendChar(pStrB, *p++));
 	}
 
 	*pp = p;
-	rsCStrFinish(pStrB);
-	if(rsCStrConvSzStrAndDestruct(pStrB, pBuf, 0) != RS_RET_OK)
-		return 1;
+	CHKiRet(rsCStrFinish(pStrB));
+	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, pBuf, 0));
 
-	return 0;
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pStrB != NULL)
+			rsCStrDestruct(&pStrB);
+	}
+
+	RETiRet;
 }
 
 
@@ -291,6 +299,5 @@ void ochPrintList(void)
 		pOch = pOch->pNext; /* done, go next */
 	}
 }
-/*
- * vi:set ai:
+/* vi:set ai:
  */

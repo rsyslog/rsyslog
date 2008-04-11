@@ -181,7 +181,7 @@ static rsRetVal readSocket(int fd, int bParseHost, int flags)
 	iRcvd = recv(fd, line, MAXLINE - 1, 0);
 	dbgprintf("Message from UNIX socket: #%d\n", fd);
 	if (iRcvd > 0) {
-		parseAndSubmitMessage(LocalHostName, line, iRcvd, bParseHost, flags, eFLOWCTL_LIGHT_DELAY);
+		parseAndSubmitMessage((char*)LocalHostName, line, iRcvd, bParseHost, flags, eFLOWCTL_LIGHT_DELAY);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));

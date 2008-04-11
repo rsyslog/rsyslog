@@ -1089,14 +1089,13 @@ finalize_it:
  * rgerhards, 2008-03-10
  */
 static rsRetVal
-UnregisterObj(uchar *pszObjName, objInfo_t *pInfo)
+UnregisterObj(uchar *pszObjName)
 {
 	DEFiRet;
 	int bFound;
 	int i;
 
 	assert(pszObjName != NULL);
-	assert(pInfo != NULL);
 
 	bFound = 0;
 	i = 0;

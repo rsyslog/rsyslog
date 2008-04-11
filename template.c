@@ -188,11 +188,13 @@ static void doSQLEmergencyEscape(register uchar *p, int escapeMode)
  * new parameter escapeMode is 0 - standard sql, 1 - "smart" engines
  * 2005-09-22 rgerhards
  */
-void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode)
+rsRetVal
+doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode)
 {
+	DEFiRet;
 	uchar *p;
 	int iLen;
-	cstr_t *pStrB;
+	cstr_t *pStrB = NULL;
 	uchar *pszGenerated;
 
 	assert(pp != NULL);
@@ -210,44 +212,25 @@ void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int es
 	/* when we get out of the loop, we are either at the
 	 * string terminator or the first \'. */
 	if(*p == '\0')
-		return; /* nothing to do in this case! */
+		FINALIZE; /* nothing to do in this case! */
 
 	p = *pp;
 	iLen = *pLen;
-	if(rsCStrConstruct(&pStrB) != RS_RET_OK) {
-		/* oops - no mem ... Do emergency... */
-		doSQLEmergencyEscape(p, escapeMode);
-		return;
-	}
+	CHKiRet(rsCStrConstruct(&pStrB));
 	
 	while(*p) {
 		if(*p == '\'') {
-			if(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\') != RS_RET_OK) {
-				doSQLEmergencyEscape(*pp, escapeMode);
-				rsCStrDestruct(&pStrB);
-				return;
-				}
+			CHKiRet(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\'));
 			iLen++;	/* reflect the extra character */
 		} else if((escapeMode == 1) && (*p == '\\')) {
-			if(rsCStrAppendChar(pStrB, '\\') != RS_RET_OK) {
-				doSQLEmergencyEscape(*pp, escapeMode);
-				rsCStrDestruct(&pStrB);
-				return;
-				}
+			CHKiRet(rsCStrAppendChar(pStrB, '\\'));
 			iLen++;	/* reflect the extra character */
 		}
-		if(rsCStrAppendChar(pStrB, *p) != RS_RET_OK) {
-			doSQLEmergencyEscape(*pp, escapeMode);
-			rsCStrDestruct(&pStrB);
-			return;
-		}
+		CHKiRet(rsCStrAppendChar(pStrB, *p));
 		++p;
 	}
-	rsCStrFinish(pStrB);
-	if(rsCStrConvSzStrAndDestruct(pStrB, &pszGenerated, 0) != RS_RET_OK) {
-		doSQLEmergencyEscape(*pp, escapeMode);
-		return;
-	}
+	CHKiRet(rsCStrFinish(pStrB));
+	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &pszGenerated, 0));
 
 	if(*pbMustBeFreed)
 		free(*pp); /* discard previous value */
@@ -255,6 +238,15 @@ void doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int es
 	*pp = pszGenerated;
 	*pLen = iLen;
 	*pbMustBeFreed = 1;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		doSQLEmergencyEscape(*pp, escapeMode);
+		if(pStrB != NULL)
+			rsCStrDestruct(&pStrB);
+	}
+
+	RETiRet;
 }
 
 

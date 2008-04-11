@@ -3198,7 +3198,6 @@ int realMain(int argc, char **argv)
 			}
 		}
 	}
-dbgprintf("LocalHostname: '%s'\n", LocalHostName);
 
 	/* Convert to lower case to recognize the correct domain laterly */
 	for (p = (char *)LocalDomain ; *p ; p++)

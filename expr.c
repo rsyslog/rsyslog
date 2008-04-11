@@ -335,7 +335,7 @@ ENDobjConstruct(expr)
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-rsRetVal exprConstructFinalize(expr_t *pThis)
+rsRetVal exprConstructFinalize(expr_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 
