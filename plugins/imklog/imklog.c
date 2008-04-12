@@ -45,17 +45,23 @@
 #include <signal.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdarg.h>
+#include <paths.h>
+
 #include "syslogd.h"
 #include "cfsysline.h"
 #include "template.h"
+#include "obj.h"
 #include "msg.h"
 #include "module-template.h"
+#include "datetime.h"
 #include "imklog.h"
 
 MODULE_TYPE_INPUT
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
+DEFobjCurrIf(datetime)
 
 /* configuration settings TODO: move to instance data? */
 int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
@@ -82,58 +88,39 @@ int console_log_level = -1;
 #	include <time.h>
 #endif
 
-#include <stdarg.h>
-#include <paths.h>
-
 #define __LIBRARY__
 #include <unistd.h>
 
 
-
-/* Write a message to the message queue.
- * returns -1 if it fails, something else otherwise
+/* enqueue the the kernel message into the message queue.
+ * The provided msg string is not freed - thus must be done
+ * by the caller.
+ * rgerhards, 2008-04-12
  */
-static rsRetVal writeSyslogV(int iPRI, const char *szFmt, va_list va)
+static rsRetVal enqMsg(uchar *msg, int iFacility, int iSeverity)
 {
 	DEFiRet;
-	int iChars;
-	int iLen;
-	time_t tNow;
-	char msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
+	msg_t *pMsg;
 
-	assert(szFmt != NULL);
+	assert(msg != NULL);
 
-	/* build the message */
-	time(&tNow);
-	/* we can use sprintf safely below, because we know the size of the constants.
-	 * By doing so, we save some cpu cycles and code complexity (for unnecessary
-	 * error checking).
-	 */
-	iLen = sprintf(msgBuf, "<%d>%.15s kernel: ", iPRI, ctime(&tNow) + 4);
-
-	iChars = vsnprintf(msgBuf + iLen, sizeof(msgBuf) / sizeof(char) - iLen, szFmt, va);
-
-	/* here we must create our message object and supply it to the message queue
-	 */
-	CHKiRet(parseAndSubmitMessage(LocalHostName, msgBuf, strlen(msgBuf), MSG_DONT_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY));
+	CHKiRet(msgConstruct(&pMsg));
+	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
+	MsgSetUxTradMsg(pMsg, (char*)msg);
+	MsgSetRawMsg(pMsg, (char*)msg);
+	MsgSetMSG(pMsg, (char*)msg);
+	MsgSetHOSTNAME(pMsg, LocalHostName);
+	MsgSetTAG(pMsg, "kernel:");
+	pMsg->iFacility = LOG_FAC(iFacility);
+	pMsg->iSeverity = LOG_PRI(iSeverity);
+	pMsg->bParseHOSTNAME = 0;
+	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+	CHKiRet(submitMsg(pMsg));
 
 finalize_it:
 	RETiRet;
 }
 
-/* And now the same with variable arguments */
-static int writeSyslog(int iPRI, const char *szFmt, ...)
-{
-	int iRet;
-	va_list va;
-
-	assert(szFmt != NULL);
-	va_start(va, szFmt);
-	iRet = writeSyslogV(iPRI, szFmt, va);
-	va_end(va);
-
-	return(iRet);
-}
 
 rsRetVal Syslog(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
 rsRetVal Syslog(int priority, char *fmt, ...)
@@ -141,6 +128,7 @@ rsRetVal Syslog(int priority, char *fmt, ...)
 	DEFiRet;
 	va_list ap;
 	char *argl;
+	char msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
 
 	/* Output using syslog */
 	if(!strcmp(fmt, "%s")) {
@@ -175,12 +163,13 @@ rsRetVal Syslog(int priority, char *fmt, ...)
 			}
 			argl += 3;
 		}
-		iRet = writeSyslog(priority, fmt, argl);
+		iRet = enqMsg((uchar*)argl, LOG_KERN, priority);
 		va_end(ap);
 	} else {
 		va_start(ap, fmt);
-		iRet = writeSyslogV(priority, fmt, ap);
+		vsnprintf(msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
 		va_end(ap);
+		iRet = enqMsg((uchar*)msgBuf, LOG_KERN, priority);
 	}
 
 	RETiRet;
@@ -218,6 +207,8 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	/* release objects we used */
+	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -240,6 +231,8 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
+
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"debugprintkernelsymbols", 0, eCmdHdlrBinary, NULL, &dbgPrintSymbols, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrBinary, NULL, &symbol_lookup, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary, NULL, &symbols_twice, STD_LOADABLE_MODULE_ID));

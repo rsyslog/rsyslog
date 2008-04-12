@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.17.1 (rgerhards), 2008-04-??
 - implemented klogd functionality for BSD
+- implemented high precision timestamp for the kernel log. Thanks to
+  Michale Biebl for pointing out that the kernel log did not have them.
 ---------------------------------------------------------------------------
 Version 3.17.0 (rgerhards), 2008-04-08
 - added native ability to send mail messages
