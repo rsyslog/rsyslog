@@ -158,10 +158,10 @@ extern int InitMsyms(void)
 
         if ( ksyms == NULL ) {
                 if ( errno == ENOENT )
-                        Syslog(LOG_INFO, "No module symbols loaded - "
+                        imklogLogIntMsg(LOG_INFO, "No module symbols loaded - "
                                "kernel modules not enabled.\n");
                 else
-                        Syslog(LOG_ERR, "Error loading kernel symbols " \
+                        imklogLogIntMsg(LOG_ERR, "Error loading kernel symbols " \
                                "- %s\n", strerror(errno));
                 fclose(ksyms);
                 return(0);
@@ -201,9 +201,9 @@ extern int InitMsyms(void)
         }
 
         if ( rtn == 0 )
-                Syslog(LOG_INFO, "No module symbols loaded.");
+                imklogLogIntMsg(LOG_INFO, "No module symbols loaded.");
         else
-                Syslog(LOG_INFO, "Loaded %d %s from %d module%s", rtn, \
+                imklogLogIntMsg(LOG_INFO, "Loaded %d %s from %d module%s", rtn, \
                        (rtn == 1) ? "symbol" : "symbols", \
                        num_modules, (num_modules == 1) ? "." : "s.");
 
@@ -296,7 +296,7 @@ struct Module *AddModule(module)
 
                 if ( sym_array_modules == NULL )
                 {
-                        Syslog(LOG_WARNING, "Cannot allocate Module array.\n");
+                        imklogLogIntMsg(LOG_WARNING, "Cannot allocate Module array.\n");
                         return NULL;
                 }
                 mp = sym_array_modules;
@@ -308,7 +308,7 @@ struct Module *AddModule(module)
 
                 if ( mp == NULL )
                 {
-                        Syslog(LOG_WARNING, "Cannot allocate Module array.\n");
+                        imklogLogIntMsg(LOG_WARNING, "Cannot allocate Module array.\n");
                         return NULL;
                 }
 

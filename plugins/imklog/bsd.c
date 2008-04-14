@@ -121,7 +121,7 @@ readklog(void)
 			line[i + len] = '\0';
 		} else {
 			if (i < 0 && errno != EINTR && errno != EAGAIN) {
-				Syslog(LOG_ERR,
+				imklogLogIntMsg(LOG_ERR,
 				       "imklog error %d reading kernel log - shutting down imklog",
 				       errno);
 				fklog = -1;
@@ -131,18 +131,18 @@ readklog(void)
 
 		for (p = line; (q = strchr(p, '\n')) != NULL; p = q + 1) {
 			*q = '\0';
-			Syslog(LOG_INFO, "%s", p);
+			Syslog(LOG_INFO, p);
 		}
 		len = strlen(p);
 		if (len >= MAXLINE - 1) {
-			Syslog(LOG_INFO, "%s", p);
+			Syslog(LOG_INFO, p);
 			len = 0;
 		}
 		if (len > 0)
 			memmove(line, p, len + 1);
 	}
 	if (len > 0)
-		Syslog(LOG_INFO, "%s", line);
+		Syslog(LOG_INFO, line);
 }
 
 
@@ -168,4 +168,14 @@ rsRetVal klogLogKMsg(void)
         DEFiRet;
 	readklog();
 	RETiRet;
+}
+
+
+/* provide the (system-specific) default facility for internal messages
+ * rgerhards, 2008-04-14
+ */
+int
+klogFacilIntMsg(void)
+{
+	return LOG_SYSLOG;
 }

@@ -39,19 +39,14 @@
 */
 #include "config.h"
 #include "rsyslog.h"
-#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <signal.h>
 #include <string.h>
-#include <pthread.h>
 #include <stdarg.h>
-#include <paths.h>
 #include <ctype.h>
 
 #include "syslogd.h"
 #include "cfsysline.h"
-#include "template.h"
 #include "obj.h"
 #include "msg.h"
 #include "module-template.h"
@@ -70,6 +65,7 @@ int symbols_twice = 0;
 int use_syscall = 0;
 int symbol_lookup = 1;
 int bPermitNonKernel = 0; /* permit logging of messages not having LOG_KERN facility */
+int iFacilIntMsg; /* the facility to use for internal messages (set by driver) */
 /* TODO: configuration for the following directives must be implemented. It 
  * was not done yet because we either do not yet have a config handler for
  * that type or I thought it was acceptable to push it to a later stage when
@@ -80,31 +76,19 @@ char *symfile = NULL;
 int console_log_level = -1;
 
 
-/* Includes. */
-#include <unistd.h>
-#include <errno.h>
-#include <sys/fcntl.h>
-#include <sys/stat.h>
-
-#if HAVE_TIME_H
-#	include <time.h>
-#endif
-
-#define __LIBRARY__
-#include <unistd.h>
-
-
 /* enqueue the the kernel message into the message queue.
  * The provided msg string is not freed - thus must be done
  * by the caller.
  * rgerhards, 2008-04-12
  */
-static rsRetVal enqMsg(uchar *msg, int iFacility, int iSeverity)
+static rsRetVal
+enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 {
 	DEFiRet;
 	msg_t *pMsg;
 
 	assert(msg != NULL);
+	assert(pszTag != NULL);
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
@@ -112,7 +96,7 @@ static rsRetVal enqMsg(uchar *msg, int iFacility, int iSeverity)
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetMSG(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, LocalHostName);
-	MsgSetTAG(pMsg, "kernel:");
+	MsgSetTAG(pMsg, (char*)pszTag);
 	pMsg->iFacility = LOG_FAC(iFacility);
 	pMsg->iSeverity = LOG_PRI(iSeverity);
 	pMsg->bParseHOSTNAME = 0;
@@ -162,36 +146,47 @@ finalize_it:
 }
 
 
-rsRetVal Syslog(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
-rsRetVal Syslog(int priority, char *fmt, ...)
+/* log an imklog-internal message
+ * rgerhards, 2008-04-14
+ */
+rsRetVal imklogLogIntMsg(int priority, char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
 	uchar msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
 	uchar *pLogMsg;
+
+	va_start(ap, fmt);
+	vsnprintf((char*)msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
+	pLogMsg = msgBuf;
+	va_end(ap);
+
+	iRet = enqMsg((uchar*)pLogMsg, (uchar*) ((iFacilIntMsg == LOG_KERN) ? "kernel:" : "imklog:"),
+		      iFacilIntMsg, LOG_PRI(priority));
+
+	RETiRet;
+}
+
+
+/* log a kernel message 
+ * rgerhards, 2008-04-14
+ */
+rsRetVal Syslog(int priority, uchar *pMsg)
+{
+	DEFiRet;
 	rsRetVal localRet;
 
 	/* Output using syslog */
-	if(!strcmp(fmt, "%s")) {
-		va_start(ap, fmt);
-		pLogMsg = va_arg(ap, uchar *);
-		localRet = parsePRI(&pLogMsg, &priority);
-		if(localRet != RS_RET_INVALID_PRI && localRet != RS_RET_OK)
-			FINALIZE;
-		/* if we don't get the pri, we use whatever we were supplied */
-		va_end(ap);
-	} else { /* TODO: I think we can remove this once we pull in the errmsg object -- rgerhards, 2008-04-14 */
-		va_start(ap, fmt);
-		vsnprintf((char*)msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
-		pLogMsg = msgBuf;
-		va_end(ap);
-	}
+	localRet = parsePRI(&pMsg, &priority);
+	if(localRet != RS_RET_INVALID_PRI && localRet != RS_RET_OK)
+		FINALIZE;
+	/* if we don't get the pri, we use whatever we were supplied */
 
 	/* ignore non-kernel messages if not permitted */
 	if(bPermitNonKernel == 0 && LOG_FAC(priority) != LOG_KERN)
 		FINALIZE; /* silently ignore */
 
-	iRet = enqMsg((uchar*)pLogMsg, LOG_FAC(priority), LOG_PRI(priority));
+	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", LOG_FAC(priority), LOG_PRI(priority));
 
 finalize_it:
 	RETiRet;
@@ -246,6 +241,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	use_syscall = 0;
 	symfile = NULL;
 	symbol_lookup = 1;
+	bPermitNonKernel = 0;
+	iFacilIntMsg = klogFacilIntMsg();
 	return RS_RET_OK;
 }
 
@@ -255,11 +252,14 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
+	iFacilIntMsg = klogFacilIntMsg();
+
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"debugprintkernelsymbols", 0, eCmdHdlrBinary, NULL, &dbgPrintSymbols, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrBinary, NULL, &symbol_lookup, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary, NULL, &symbols_twice, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrBinary, NULL, &use_syscall, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpermitnonkernelfacility", 0, eCmdHdlrBinary, NULL, &bPermitNonKernel, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"kloginternalmsgfacility", 0, eCmdHdlrFacility, NULL, &iFacilIntMsg, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:

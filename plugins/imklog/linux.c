@@ -98,11 +98,11 @@ static void CloseLogSrc(void)
 	{
 	    case kernel:
 		ksyslog(0, 0, 0);
-		Syslog(LOG_INFO, "Kernel logging (ksyslog) stopped.");
+		imklogLogIntMsg(LOG_INFO, "Kernel logging (ksyslog) stopped.");
 		break;
             case proc:
 		close(kmsg);
-		Syslog(LOG_INFO, "Kernel logging (proc) stopped.");
+		imklogLogIntMsg(LOG_INFO, "Kernel logging (proc) stopped.");
 		break;
 	    case none:
 		break;
@@ -127,7 +127,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 		 * issue an error message and simply shut-off console
 		 * logging completely.
 		 */
-		Syslog(LOG_WARNING, "Cannot set console log level - disabling "
+		imklogLogIntMsg(LOG_WARNING, "Cannot set console log level - disabling "
 		       "console output.");
 	}
 
@@ -140,7 +140,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 	{
 	  	/* Initialize kernel logging. */
 	  	ksyslog(1, NULL, 0);
-		Syslog(LOG_INFO, "imklogd %s, log source = ksyslog "
+		imklogLogIntMsg(LOG_INFO, "imklogd %s, log source = ksyslog "
 		       "started.", VERSION);
 		return(kernel);
 	}
@@ -154,7 +154,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 		return(none);
 	}
 
-	Syslog(LOG_INFO, "imklog %s, log source = %s started.", VERSION, _PATH_KLOG);
+	imklogLogIntMsg(LOG_INFO, "imklog %s, log source = %s started.", VERSION, _PATH_KLOG);
 	return(proc);
 }
 
@@ -165,7 +165,7 @@ static enum LOGSRC GetKernelLogSrc(void)
  *
  *     Returns the actual number of chars copied.
  */
-static int copyin( char *line,      int space,
+static int copyin( uchar *line,      int space,
                    const char *ptr, int len,
                    const char *delim )
 {
@@ -209,13 +209,13 @@ static void LogLine(char *ptr, int len)
         PARSING_SYMEND         /* at ] */
     };
 
-    static char line_buff[LOG_LINE_LENGTH];
+    static uchar line_buff[LOG_LINE_LENGTH];
 
-    static char *line                        =line_buff;
+    static uchar *line =line_buff;
     static enum parse_state_enum parse_state = PARSING_TEXT;
-    static int space                         = sizeof(line_buff)-1;
+    static int space = sizeof(line_buff)-1;
 
-    static char *sym_start;            /* points at the '<' of a symbol */
+    static uchar *sym_start;            /* points at the '<' of a symbol */
 
     auto   int delta = 0;              /* number of chars copied        */
     auto   int symbols_expanded = 0;   /* 1 if symbols were expanded */
@@ -235,7 +235,7 @@ static void LogLine(char *ptr, int len)
 	    dbgprintf("Line buffer full:\n");
        	    dbgprintf("\tLine: %s\n", line);
 
-            Syslog( LOG_INFO, "%s", line_buff );
+            Syslog(LOG_INFO, line_buff);
             line  = line_buff;
             space = sizeof(line_buff)-1;
             parse_state = PARSING_TEXT;
@@ -248,7 +248,7 @@ static void LogLine(char *ptr, int len)
         switch( parse_state )
         {
         case PARSING_TEXT:
-               delta = copyin( line, space, ptr, len, "\n[" );
+               delta = copyin(line, space, ptr, len, "\n[" );
                line  += delta;
                ptr   += delta;
                space -= delta;
@@ -275,7 +275,7 @@ static void LogLine(char *ptr, int len)
                   len   -= 1;
 
                   *line = 0;  /* force null terminator */
-	          Syslog( LOG_INFO, "%s", line_buff );
+	          Syslog(LOG_INFO, line_buff);
                   line  = line_buff;
                   space = sizeof(line_buff)-1;
 		  if (symbols_twice) {
@@ -373,7 +373,7 @@ static void LogLine(char *ptr, int len)
 	       auto char *symbol;
 
                *(line-1) = 0;    /* null terminate the address string */
-               value  = strtoul(sym_start+1, (char **) 0, 16);
+               value  = strtoul((char*)(sym_start+1), (char **) 0, 16);
                *(line-1) = '>';  /* put back delim */
 
                if ( !symbol_lookup || (symbol = LookupSymbol(value, &sym)) == (char *)0 )
@@ -392,7 +392,8 @@ static void LogLine(char *ptr, int len)
                   break;
                }
 
-               delta = sprintf( sym_start, "%s+%d/%d]",
+	       // TODO: sprintf!!!!
+               delta = sprintf( (char*) sym_start, "%s+%d/%d]",
                                 symbol, sym.offset, sym.size );
 
                space = sym_space + delta;
@@ -453,7 +454,7 @@ static void LogProcLine(void)
 	if ( (rdcnt = read(kmsg, log_buffer, sizeof(log_buffer)-1)) < 0 ) {
 		if ( errno == EINTR )
 			return;
-		Syslog(LOG_ERR, "Cannot read proc file system: %d - %s.", errno, strerror(errno));
+		imklogLogIntMsg(LOG_ERR, "Cannot read proc file system: %d - %s.", errno, strerror(errno));
 	} else {
 		LogLine(log_buffer, rdcnt);
         }
@@ -503,7 +504,7 @@ rsRetVal klogWillRun(void)
 			symbol_lookup  = (InitKsyms(symfile) == 1);
 			symbol_lookup |= InitMsyms();
 			if (symbol_lookup == 0) {
-				Syslog(LOG_WARNING, "cannot find any symbols, turning off symbol lookups\n");
+				imklogLogIntMsg(LOG_WARNING, "cannot find any symbols, turning off symbol lookups\n");
 			}
 		}
 	}
@@ -527,6 +528,17 @@ rsRetVal klogAfterRun(void)
 
         RETiRet;
 }
+
+
+/* provide the (system-specific) default facility for internal messages
+ * rgerhards, 2008-04-14
+ */
+int
+klogFacilIntMsg(void)
+{
+	return LOG_KERN;
+}
+
 
 /* vi:set ai:
  */

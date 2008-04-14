@@ -39,6 +39,7 @@
 rsRetVal klogLogKMsg(void);
 rsRetVal klogWillRun(void);
 rsRetVal klogAfterRun(void);
+int klogFacilIntMsg(void);
 
 /* the following data members may be accessed by the "drivers"
  * I admit this is not the cleanest way to doing things, but I honestly
@@ -52,6 +53,10 @@ extern char *symfile;
 extern int console_log_level;
 extern int dbgPrintSymbols;
 
+/* the functions below may be called by the drivers */
+rsRetVal imklogLogIntMsg(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal Syslog(int priority, uchar *msg);
+
 /* prototypes */
 extern int InitKsyms(char *);
 extern void DeinitKsyms(void);
@@ -59,8 +64,6 @@ extern int InitMsyms(void);
 extern void DeinitMsyms(void);
 extern char * ExpandKadds(char *, char *);
 extern void SetParanoiaLevel(int);
-//TODO: remove? extern void vsyslog(int pri, const char *fmt, va_list ap);
-rsRetVal Syslog(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
 
 #endif /* #ifndef IMKLOG_H_INCLUDED */
 /* vi:set ai:
