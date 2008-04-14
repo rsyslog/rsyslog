@@ -84,7 +84,7 @@ static int	fklog = -1;	/* /dev/klog */
 #endif
 
 /* open the kernel log - will be called inside the willRun() imklog
- * entry point. -- rgerhards, 20080-04-09
+ * entry point. -- rgerhards, 2008-04-09
  */
 rsRetVal
 klogWillRun(void)

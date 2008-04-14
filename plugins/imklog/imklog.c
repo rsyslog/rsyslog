@@ -47,6 +47,7 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <paths.h>
+#include <ctype.h>
 
 #include "syslogd.h"
 #include "cfsysline.h"
@@ -68,6 +69,7 @@ int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
 int symbols_twice = 0;
 int use_syscall = 0;
 int symbol_lookup = 1;
+int bPermitNonKernel = 0; /* permit logging of messages not having LOG_KERN facility */
 /* TODO: configuration for the following directives must be implemented. It 
  * was not done yet because we either do not yet have a config handler for
  * that type or I thought it was acceptable to push it to a later stage when
@@ -121,57 +123,77 @@ finalize_it:
 	RETiRet;
 }
 
+/* parse the PRI from a kernel message. At least BSD seems to have
+ * non-kernel messages inside the kernel log...
+ * Expected format: "<pri>". piPri is only valid if the function 
+ * successfully returns. If there was a proper pri ppSz is advanced to the
+ * position right after ">".
+ * rgerhards, 2008-04-14
+ */
+static rsRetVal
+parsePRI(uchar **ppSz, int *piPri)
+{
+	DEFiRet;
+	int i;
+	uchar *pSz;
+
+	assert(ppSz != NULL);
+	pSz = *ppSz;
+	assert(pSz != NULL);
+	assert(piPri != NULL);
+
+	if(*pSz != '<' || !isdigit(*(pSz+1)))
+		ABORT_FINALIZE(RS_RET_INVALID_PRI);
+
+	++pSz;
+	i = 0;
+	while(isdigit(*pSz)) {
+		i = i * 10 + *pSz - '0';
+	}
+
+	if(*pSz != '>')
+		ABORT_FINALIZE(RS_RET_INVALID_PRI);
+
+	/* OK, we have a valid PRI */
+	*piPri = i;
+
+finalize_it:
+	RETiRet;
+}
+
 
 rsRetVal Syslog(int priority, char *fmt, ...) __attribute__((format(printf,2, 3)));
 rsRetVal Syslog(int priority, char *fmt, ...)
 {
 	DEFiRet;
 	va_list ap;
-	char *argl;
-	char msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
+	uchar msgBuf[2048]; /* we use the same size as sysklogd to remain compatible */
+	uchar *pLogMsg;
+	rsRetVal localRet;
 
 	/* Output using syslog */
 	if(!strcmp(fmt, "%s")) {
 		va_start(ap, fmt);
-		argl = va_arg(ap, char *);
-		if(argl[0] == '<' && argl[1] && argl[2] == '>') {
-			switch(argl[1]) {
-			case '0':
-				priority = LOG_EMERG;
-				break;
-			case '1':
-				priority = LOG_ALERT;
-				break;
-			case '2':
-				priority = LOG_CRIT;
-				break;
-			case '3':
-				priority = LOG_ERR;
-				break;
-			case '4':
-				priority = LOG_WARNING;
-				break;
-			case '5':
-				priority = LOG_NOTICE;
-				break;
-			case '6':
-				priority = LOG_INFO;
-				break;
-			case '7':
-			default:
-				priority = LOG_DEBUG;
-			}
-			argl += 3;
-		}
-		iRet = enqMsg((uchar*)argl, LOG_KERN, priority);
+		pLogMsg = va_arg(ap, uchar *);
+		localRet = parsePRI(&pLogMsg, &priority);
+		if(localRet != RS_RET_INVALID_PRI && localRet != RS_RET_OK)
+			FINALIZE;
+		/* if we don't get the pri, we use whatever we were supplied */
 		va_end(ap);
-	} else {
+	} else { /* TODO: I think we can remove this once we pull in the errmsg object -- rgerhards, 2008-04-14 */
 		va_start(ap, fmt);
-		vsnprintf(msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
+		vsnprintf((char*)msgBuf, sizeof(msgBuf) / sizeof(char), fmt, ap);
+		pLogMsg = msgBuf;
 		va_end(ap);
-		iRet = enqMsg((uchar*)msgBuf, LOG_KERN, priority);
 	}
 
+	/* ignore non-kernel messages if not permitted */
+	if(bPermitNonKernel == 0 && LOG_FAC(priority) != LOG_KERN)
+		FINALIZE; /* silently ignore */
+
+	iRet = enqMsg((uchar*)pLogMsg, LOG_FAC(priority), LOG_PRI(priority));
+
+finalize_it:
 	RETiRet;
 }
 
@@ -237,6 +259,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrBinary, NULL, &symbol_lookup, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary, NULL, &symbols_twice, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrBinary, NULL, &use_syscall, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpermitnonkernelfacility", 0, eCmdHdlrBinary, NULL, &bPermitNonKernel, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
