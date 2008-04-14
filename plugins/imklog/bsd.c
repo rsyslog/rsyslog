@@ -131,18 +131,18 @@ readklog(void)
 
 		for (p = line; (q = strchr(p, '\n')) != NULL; p = q + 1) {
 			*q = '\0';
-			Syslog(LOG_INFO, p);
+			Syslog(LOG_INFO, (uchar*) p);
 		}
 		len = strlen(p);
 		if (len >= MAXLINE - 1) {
-			Syslog(LOG_INFO, p);
+			Syslog(LOG_INFO, (uchar*)p);
 			len = 0;
 		}
 		if (len > 0)
 			memmove(line, p, len + 1);
 	}
 	if (len > 0)
-		Syslog(LOG_INFO, line);
+		Syslog(LOG_INFO, (uchar*)line);
 }
 
 
