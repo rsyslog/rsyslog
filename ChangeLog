@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.17.2 (rgerhards), 2008-04-??
+---------------------------------------------------------------------------
 Version 3.17.1 (rgerhards), 2008-04-15
 - removed dependency on MAXHOSTNAMELEN as much as it made sense.
   GNU/Hurd does not define it (because it has no limit), and we have taken
