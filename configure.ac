@@ -498,6 +498,23 @@ AC_SUBST(snmp_cflags)
 AC_SUBST(snmp_libs)
 
 
+# support for building the rsyslogd runtime
+AC_ARG_ENABLE(rsyslogrt,
+        [AS_HELP_STRING([--enable-rsyslogrt],[Build rsyslogrt @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_rsyslogrt="yes" ;;
+          no) enable_rsyslogrt="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-rsyslogrt) ;;
+         esac],
+        [enable_rsyslogrt=yes]
+)
+AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
+CFLAGS="-I$(top_srcdir)/runtime $CFLAGS$
+rsrt_libs=""
+AC_SUBST(rsrt_cflags)
+AC_SUBST(rsrt_libs)
+
+
 # support for NOT building rsyslogd (useful for source-based packaging systems)
 AC_ARG_ENABLE(rsyslogd,
         [AS_HELP_STRING([--enable-rsyslogd],[Build rsyslogd @<:@default=yes@:>@])],
@@ -615,6 +632,7 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 
 
 AC_CONFIG_FILES([Makefile \
+		runtime/Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
 		plugins/imtcp/Makefile \
@@ -657,5 +675,6 @@ echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
 echo "openssl enabled:                          $enable_openssl"
 echo "valgrind support settings enabled:        $enable_valgrind"
+echo "rsyslogd runtime will be built:           $enable_rsyslogrt"
 echo "rsyslogd will be built:                   $enable_rsyslogd"
 

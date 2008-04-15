@@ -48,8 +48,6 @@ rsyslogd_SOURCES = \
 	wtp.h \
 	wti.c \
 	wti.h \
-	queue.c \
-	queue.h \
 	sync.c \
 	sync.h \
 	obj.c \
@@ -93,7 +91,7 @@ rsyslogd_SOURCES = \
 	atomic.h
 
 rsyslogd_CPPFLAGS =  -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
-rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs)
+rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs) runtime/librsyslog.la
 rsyslogd_LDFLAGS = -export-dynamic
 
 man_MANS += rsyslogd.8 rsyslog.conf.5 
@@ -179,7 +177,7 @@ EXTRA_DIST = \
 	COPYING.LESSER \
 	$(man_MANS)
 
-SUBDIRS = . doc
+SUBDIRS = doc runtime .
 
 SUBDIRS += plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
