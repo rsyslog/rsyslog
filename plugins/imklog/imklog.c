@@ -95,7 +95,7 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetMSG(pMsg, (char*)msg);
-	MsgSetHOSTNAME(pMsg, LocalHostName);
+	MsgSetHOSTNAME(pMsg, (char*)LocalHostName);
 	MsgSetTAG(pMsg, (char*)pszTag);
 	pMsg->iFacility = LOG_FAC(iFacility);
 	pMsg->iSeverity = LOG_PRI(iSeverity);

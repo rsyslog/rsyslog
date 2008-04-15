@@ -33,7 +33,7 @@ html_files = \
 	imgssapi.html \
 	imrelp.html \
 	imuxsock.html \
-	imgklog.html \
+	imklog.html \
 	professional_support.html \
 	queues.html \
 	queueWorkerLogic.dia \

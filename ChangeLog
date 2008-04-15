@@ -14,11 +14,13 @@ Version 3.17.1 (rgerhards), 2008-04-15
   change looks quite unintrusive and so we added it to the parser.
 - implemented klogd functionality for BSD
 - implemented high precision timestamps for the kernel log. Thanks to
-  Michale Biebl for pointing out that the kernel log did not have them.
+  Michael Biebl for pointing out that the kernel log did not have them.
 - provided ability to discard non-kernel messages if they are present
   in the kernel log (seems to happen on BSD)
 - implemented $KLogInternalMsgFacility config directive
 - implemented $KLogPermitNonKernelFacility config directive
+Plus a number of bugfixes that were applied to v3-stable and beta
+branches (not mentioned here in detail).
 ---------------------------------------------------------------------------
 Version 3.17.0 (rgerhards), 2008-04-08
 - added native ability to send mail messages
