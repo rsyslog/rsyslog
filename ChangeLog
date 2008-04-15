@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.17.1 (rgerhards), 2008-04-??
+Version 3.17.1 (rgerhards), 2008-04-15
 - removed dependency on MAXHOSTNAMELEN as much as it made sense.
   GNU/Hurd does not define it (because it has no limit), and we have taken
   care for cases where it is undefined now. However, some very few places
@@ -12,6 +12,13 @@ Version 3.17.1 (rgerhards), 2008-04-??
   (with a space in front of the timestamp) - at least HP procurve is
   known to do that and I won't outrule that others also do it. The 
   change looks quite unintrusive and so we added it to the parser.
+- implemented klogd functionality for BSD
+- implemented high precision timestamps for the kernel log. Thanks to
+  Michale Biebl for pointing out that the kernel log did not have them.
+- provided ability to discard non-kernel messages if they are present
+  in the kernel log (seems to happen on BSD)
+- implemented $KLogInternalMsgFacility config directive
+- implemented $KLogPermitNonKernelFacility config directive
 ---------------------------------------------------------------------------
 Version 3.17.0 (rgerhards), 2008-04-08
 - added native ability to send mail messages

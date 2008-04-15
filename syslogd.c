@@ -216,7 +216,7 @@ static rsRetVal GlobalClassExit(void);
 #if defined(SYSLOGD_PIDNAME)
 #	undef _PATH_LOGPID
 #	if defined(FSSTND)
-#		ifdef BSD
+#		ifdef OS_BSD
 #			define _PATH_VARRUN "/var/run/"
 #		endif
 #		if defined(__sun) || defined(__hpux)

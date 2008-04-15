@@ -171,6 +171,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_SMTP_ERROR = -2070, /**< error during SMTP transation */
 	RS_RET_MAIL_NO_TO = -2071, /**< recipient for mail destination is missing */
 	RS_RET_MAIL_NO_FROM = -2072, /**< sender for mail destination is missing */
+	RS_RET_INVALID_PRI = -2073, /**< PRI value is invalid */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

@@ -327,7 +327,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
-#ifndef BSD	
+#ifndef OS_BSD	
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {

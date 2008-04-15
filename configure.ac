@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.17.1],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[3.17.1-bsd],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADERS([config.h])
@@ -21,9 +21,11 @@ AC_CANONICAL_HOST
 
 case "${host}" in
   *-*-linux*)
+    os_type="linux"
   ;;
   *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
-    AC_DEFINE([BSD], [1], [Description])
+    AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
+    os_type="bsd"
   ;;
 esac
 
@@ -218,7 +220,9 @@ AC_ARG_ENABLE(klog,
          esac],
         [enable_klog="yes"]
 )
-AM_CONDITIONAL(ENABLE_IMKLOGD, test x$enable_klog = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOG, test x$enable_klog = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x$os_type = xbsd)
+AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_type = xlinux)
 
 #
 # SYSLOG_UNIXAF
@@ -635,7 +639,7 @@ echo "****************************************************"
 echo "rsyslog will be compiled with the following settings:"
 echo
 echo "Multithreading support enabled:           $enable_pthreads"
-echo "Klog functionality enabled:               $enable_klog"
+echo "Klog functionality enabled:               $enable_klog ($os_type)"
 echo "Regular expressions support enabled:      $enable_regexp"
 echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"

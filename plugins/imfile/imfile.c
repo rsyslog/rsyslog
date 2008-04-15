@@ -379,6 +379,9 @@ ENDafterRun
  */
 BEGINmodExit
 CODESTARTmodExit
+	/* release objects we used */
+	objRelease(datetime, CORE_COMPONENT);
+	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 

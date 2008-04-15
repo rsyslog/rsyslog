@@ -580,7 +580,7 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *p
 static int
 should_use_so_bsdcompat(void)
 {
-#ifndef BSD
+#ifndef OS_BSD
     static int init_done;
     static int so_bsdcompat_is_obsolete;
 
@@ -608,9 +608,9 @@ should_use_so_bsdcompat(void)
 	    so_bsdcompat_is_obsolete = 1;
     }
     return !so_bsdcompat_is_obsolete;
-#else	/* #ifndef BSD */
+#else	/* #ifndef OS_BSD */
     return 1;
-#endif	/* #ifndef BSD */
+#endif	/* #ifndef OS_BSD */
 }
 #ifndef SO_BSDCOMPAT
 /* this shall prevent compiler errors due to undfined name */
@@ -986,7 +986,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 		/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
-#if !defined(BSD) && !defined(__hpux)
+#if !defined(OS_BSD) && !defined(__hpux)
 		if (should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
