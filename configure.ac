@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.17.1],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[3.17.2],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADERS([config.h])
@@ -553,25 +553,11 @@ AC_ARG_ENABLE(rfc3195,
         [enable_rfc3195=no]
 )
 if test "x$enable_rfc3195" = "xyes"; then
-  AC_CHECK_HEADERS(
-    [librfc3195.h],,
-    [AC_MSG_FAILURE([RFC3195 library is missing (no headers)])]
-  )
-# I don't know how to tell that librfc3195 needs -lrt, so I disable
-# this check for now - the header check should work well enough...
-# rgerhards, 2008-03-25
-#  AC_CHECK_LIB(
-#    [rfc3195],
-#    [rfc3195EngineGetVersion],
-#    [rfc3195_cflags=""
-     rfc3195_libs="-lrfc3195"
-#    ],
-#    [AC_MSG_FAILURE([RFC3195 library is missing])]
-#  )
+	PKG_CHECK_MODULES(LIBLOGGING, liblogging >= 0.7.0)
 fi
 AM_CONDITIONAL(ENABLE_RFC3195, test x$enable_rfc3195 = xyes)
-AC_SUBST(rfc3195_cflags)
-AC_SUBST(rfc3195_libs)
+AC_SUBST(RFC3195_CFLAGS)
+AC_SUBST(RFC3195_LIBS)
 
 
 # settings for the template input module; copy and modify this code
@@ -618,6 +604,7 @@ AC_CONFIG_FILES([Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
 		plugins/imtcp/Makefile \
+		plugins/im3195/Makefile \
 		plugins/imgssapi/Makefile \
 		plugins/imuxsock/Makefile \
 		plugins/immark/Makefile \

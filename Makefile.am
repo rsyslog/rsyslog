@@ -1,4 +1,3 @@
-#sbin_PROGRAMS = rfc3195d rsyslogd
 sbin_PROGRAMS =
 man_MANS = 
 
@@ -102,13 +101,6 @@ endif # if ENABLE_RSYSLOGD
 
 # now come the library plugins
 pkglib_LTLIBRARIES = 
-
-if ENABLE_RFC3195
-# this does so far not work - a manual build is needed
-sbin_PROGRAMS += rfc3195d
-rfc3195d_SOURCES = rfc3195d.c rsyslog.h
-man_MANS += rfc3195d.8
-endif
 
 
 if ENABLE_INET
@@ -221,4 +213,8 @@ endif
 
 if ENABLE_MAIL
 SUBDIRS += plugins/ommail
+endif
+
+if ENABLE_RFC3195
+SUBDIRS += plugins/im3195
 endif
