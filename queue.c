@@ -1,31 +1,32 @@
 /* queue.c
-*
-* This file implements the queue object and its several queueing methods.
-* 
-* File begun on 2008-01-03 by RGerhards
-*
-* There is some in-depth documentation available in doc/dev_queue.html
-* (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
-* if you are getting aquainted to the object.
-*
-* Copyright 2008 Rainer Gerhards and Adiscon GmbH.
-*
-* This file is part of rsyslog.
  *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * This file implements the queue object and its several queueing methods.
+ * 
+ * File begun on 2008-01-03 by RGerhards
+ *
+ * There is some in-depth documentation available in doc/dev_queue.html
+ * (and in the web doc set on http://www.rsyslog.com/doc). Be sure to read it
+ * if you are getting aquainted to the object.
+ *
+ * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This file is part of the rsyslog runtime library.
+ *
+ * The rsyslog runtime library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Rsyslog is distributed in the hope that it will be useful,
+ * The rsyslog runtime library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
 

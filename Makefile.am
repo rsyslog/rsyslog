@@ -182,6 +182,7 @@ EXTRA_DIST = \
 	slackware/rc.rsyslogd \
 	contrib/README \
 	rsyslog.conf \
+	COPYING.LESSER \
 	$(man_MANS)
 
 SUBDIRS = . doc
