@@ -677,6 +677,6 @@ echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
 echo "openssl enabled:                          $enable_openssl"
 echo "valgrind support settings enabled:        $enable_valgrind"
-echo "rsyslogd runtime will be built:           $enable_rsyslogrt"
+echo "rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "rsyslogd will be built:                   $enable_rsyslogd"
 

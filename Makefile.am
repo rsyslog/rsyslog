@@ -10,16 +10,6 @@ rsyslogd_SOURCES = \
 	errmsg.h \
 	syslogd.c \
 	syslogd.h \
-	sysvar.c \
-	sysvar.h \
-	vm.c \
-	vm.h \
-	vmstk.c \
-	vmstk.h \
-	vmprg.c \
-	vmprg.h \
-	vmop.c \
-	vmop.h \
 	debug.c \
 	debug.h \
 	glbl.h \
@@ -39,27 +29,11 @@ rsyslogd_SOURCES = \
 	liblogging-stub.h \
 	threads.c \
 	threads.h \
-	stream.c \
-	stream.h \
-	var.c \
-	var.h \
-	wtp.c \
-	wtp.h \
-	wti.c \
-	wti.h \
-	sync.c \
-	sync.h \
 	obj.c \
 	obj.h \
 	obj-types.h \
 	msg.c \
 	msg.h \
-	expr.c \
-	expr.h \
-	ctok.c \
-	ctok.h \
-	ctok_token.c \
-	ctok_token.h \
 	conf.c \
 	conf.h \
 	omshell.c \
@@ -141,17 +115,6 @@ lmtcpclt_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
 lmtcpclt_la_LIBADD = 
 
 endif # if ENABLE_INET
-
-#
-# regular expression support
-# 
-if ENABLE_REGEXP
-pkglib_LTLIBRARIES += lmregexp.la
-lmregexp_la_SOURCES = regexp.c regexp.h
-lmregexp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmregexp_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
-lmregexp_la_LIBADD =
-endif
 
 #
 # gssapi support
