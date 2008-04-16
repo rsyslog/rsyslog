@@ -248,9 +248,6 @@ static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on start
 /* mypid is read-only after the initial fork() */
 static int restart = 0; /* do restart (config read) - multithread safe */
 
-int glblHadMemShortage = 0; /* indicates if we had memory shortage some time during the run */
-
-
 static int bParseHOSTNAMEandTAG = 1; /* global config var: should the hostname and tag be
                                       * parsed inside message - rgerhards, 2006-03-13 */
 static int bFinished = 0;	/* used by termination signal handler, read-only except there
@@ -488,7 +485,6 @@ selectorConstruct(selector_t **ppThis)
 	assert(ppThis != NULL);
 	
 	if((pThis = (selector_t*) calloc(1, sizeof(selector_t))) == NULL) {
-		glblHadMemShortage = 1;
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	CHKiRet(llInit(&pThis->llActList, actionDestruct, NULL, NULL));
@@ -669,7 +665,7 @@ rsRetVal printline(char *hname, char *msg, int bParseHost, int flags, flowContro
 	if(MsgSetUxTradMsg(pMsg, p) != 0)
 		ABORT_FINALIZE(RS_RET_ERR);
 
-	logmsg(pMsg, flags | SYNC_FILE);
+	logmsg(pMsg, flags);
 
 finalize_it:
 	RETiRet;
@@ -1926,8 +1922,6 @@ die(int sig)
 	tplDeleteAll();
 
 	remove_pid(PidFile);
-	if(glblHadMemShortage)
-		dbgprintf("Had memory shortage at least once during the run.\n");
 
 	/* de-init some modules */
 	modExitIminternal();
@@ -2463,51 +2457,6 @@ void sighup_handler()
 	sigaction(SIGHUP, &sigAct, NULL);
 
 	return;
-}
-
-
-/**
- * getSubString
- *
- * Copy a string byte by byte until the occurrence  
- * of a given separator.
- *
- * \param ppSrc		Pointer to a pointer of the source array of characters. If a
-			separator detected the Pointer points to the next char after the
-			separator. Except if the end of the string is dedected ('\n'). 
-			Then it points to the terminator char. 
- * \param pDst		Pointer to the destination array of characters. Here the substing
-			will be stored.
- * \param DstSize	Maximum numbers of characters to store.
- * \param cSep		Separator char.
- * \ret int		Returns 0 if no error occured.
- *
- * rgerhards, 2008-02-12: some notes are due... I will once again fix this function, this time
- * so that it treats ' ' as a request for whitespace. But in general, the function and its callers
- * should be changed over time, this is not really very good code...
- */
-int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
-{
-	uchar *pSrc = *ppSrc;
-	int iErr = 0; /* 0 = no error, >0 = error */
-	while((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0' && DstSize>1) {
-		*pDst++ = *(pSrc)++;
-		DstSize--;
-	}
-	/* check if the Dst buffer was to small */
-	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') { 
-		dbgprintf("in getSubString, error Src buffer > Dst buffer\n");
-		iErr = 1;
-	}	
-	if (*pSrc == '\0' || *pSrc == '\n')
-		/* this line was missing, causing ppSrc to be invalid when it
-		 * was returned in case of end-of-string. rgerhards 2005-07-29
-		 */
-		*ppSrc = pSrc;
-	else
-		*ppSrc = pSrc+1;
-	*pDst = '\0';
-	return iErr;
 }
 
 

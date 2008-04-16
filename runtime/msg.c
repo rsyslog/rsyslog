@@ -685,7 +685,6 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3164 == NULL) {
 			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) {
-				glblHadMemShortage = 1;
 				MsgUnlock(pM);
 				return "";
 			}
@@ -697,7 +696,6 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP_MySQL == NULL) {
 			if((pM->pszTIMESTAMP_MySQL = malloc(15)) == NULL) {
-				glblHadMemShortage = 1;
 				MsgUnlock(pM);
 				return "";
 			}
@@ -709,7 +707,6 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
                 MsgLock(pM);
                 if(pM->pszTIMESTAMP_PgSQL == NULL) {
                         if((pM->pszTIMESTAMP_PgSQL = malloc(21)) == NULL) {
-                                glblHadMemShortage = 1;
                                 MsgUnlock(pM);
                                 return "";
                         }
@@ -721,7 +718,6 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3164 == NULL) {
 			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) {
-				glblHadMemShortage = 1;
 				MsgUnlock(pM);
 				return "";
 			}
@@ -733,7 +729,6 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3339 == NULL) {
 			if((pM->pszTIMESTAMP3339 = malloc(33)) == NULL) {
-				glblHadMemShortage = 1;
 				MsgUnlock(pM);
 				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
 			}
@@ -755,7 +750,6 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszRcvdAt3164 == NULL) {
 			if((pM->pszRcvdAt3164 = malloc(16)) == NULL) {
-				glblHadMemShortage = 1;
 				MsgUnlock(pM);
 				return "";
 			}
@@ -767,7 +761,6 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszRcvdAt_MySQL == NULL) {
 			if((pM->pszRcvdAt_MySQL = malloc(15)) == NULL) {
-				glblHadMemShortage = 1;
 				MsgUnlock(pM);
 				return "";
 			}
@@ -779,7 +772,6 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
                 MsgLock(pM);
                 if(pM->pszRcvdAt_PgSQL == NULL) {
                         if((pM->pszRcvdAt_PgSQL = malloc(21)) == NULL) {
-                                glblHadMemShortage = 1;
                                 MsgUnlock(pM);
                                 return "";
                         }
@@ -791,7 +783,6 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszRcvdAt3164 == NULL) {
 			if((pM->pszRcvdAt3164 = malloc(16)) == NULL) {
-					glblHadMemShortage = 1;
 					MsgUnlock(pM);
 					return "";
 				}
@@ -803,7 +794,6 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszRcvdAt3339 == NULL) {
 			if((pM->pszRcvdAt3339 = malloc(33)) == NULL) {
-				glblHadMemShortage = 1;
 				MsgUnlock(pM);
 				return "";
 			}
@@ -1499,7 +1489,6 @@ static uchar *getNOW(eNOWType eNow)
 	struct syslogTime t;
 
 	if((pBuf = (uchar*) malloc(sizeof(uchar) * tmpBUFSIZE)) == NULL) {
-		glblHadMemShortage = 1;
 		return NULL;
 	}
 

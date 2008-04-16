@@ -281,7 +281,6 @@ int resolveFileSizeLimit(instanceData *pData)
 	 */
 	if((pCmd = (uchar*)strdup((char*)pData->f_sizeLimitCmd)) == NULL) {
 		/* there is not much we can do - we make syslogd close the file in this case */
-		glblHadMemShortage = 1;
 		return 1;
 		}
 
@@ -481,7 +480,6 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 		/* we need to allocate memory for the cache structure */
 		pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry));
 		if(pCache[iFirstFree] == NULL) {
-			glblHadMemShortage = TRUE;
 			dbgprintf("prepareDynfile(): could not alloc mem, discarding this request\n");
 			return -1;
 		}

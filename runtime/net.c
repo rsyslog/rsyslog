@@ -131,7 +131,6 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 	assert(iAllow != NULL);
 
 	if((pEntry = (struct AllowedSenders*) calloc(1, sizeof(struct AllowedSenders))) == NULL) {
-		glblHadMemShortage = 1;
 		return RS_RET_OUT_OF_MEMORY; /* no options left :( */
 	}
 	
@@ -275,7 +274,6 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 					iSignificantBits = 32;
 					allowIP.flags = 0;
 					if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
-						glblHadMemShortage = 1;
 						ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 					}
 					memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);
@@ -292,7 +290,6 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						allowIP.flags = 0;
 						if((allowIP.addr.NetAddr = malloc(sizeof(struct sockaddr_in)))
 						    == NULL) {
-							glblHadMemShortage = 1;
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
 						SIN(allowIP.addr.NetAddr)->sin_family = AF_INET;
@@ -314,7 +311,6 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 						iSignificantBits = 128;
 						allowIP.flags = 0;
 						if((allowIP.addr.NetAddr = malloc(res->ai_addrlen)) == NULL) {
-							glblHadMemShortage = 1;
 							ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 						}
 						memcpy(allowIP.addr.NetAddr, res->ai_addr, res->ai_addrlen);

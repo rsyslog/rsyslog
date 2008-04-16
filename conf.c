@@ -505,7 +505,6 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 	} else {
 		/* template specified, pick it up */
 		if(rsCStrConstruct(&pStrB) != RS_RET_OK) {
-			glblHadMemShortage = 1;
 			iRet = RS_RET_OUT_OF_MEMORY;
 			goto finalize_it;
 		}

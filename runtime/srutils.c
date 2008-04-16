@@ -505,5 +505,51 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 }
 
 
+/**
+ * getSubString
+ *
+ * Copy a string byte by byte until the occurrence  
+ * of a given separator.
+ *
+ * \param ppSrc		Pointer to a pointer of the source array of characters. If a
+			separator detected the Pointer points to the next char after the
+			separator. Except if the end of the string is dedected ('\n'). 
+			Then it points to the terminator char. 
+ * \param pDst		Pointer to the destination array of characters. Here the substing
+			will be stored.
+ * \param DstSize	Maximum numbers of characters to store.
+ * \param cSep		Separator char.
+ * \ret int		Returns 0 if no error occured.
+ *
+ * rgerhards, 2008-02-12: some notes are due... I will once again fix this function, this time
+ * so that it treats ' ' as a request for whitespace. But in general, the function and its callers
+ * should be changed over time, this is not really very good code...
+ */
+int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
+{
+	uchar *pSrc = *ppSrc;
+	int iErr = 0; /* 0 = no error, >0 = error */
+	while((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0' && DstSize>1) {
+		*pDst++ = *(pSrc)++;
+		DstSize--;
+	}
+	/* check if the Dst buffer was to small */
+	if ((cSep == ' ' ? !isspace(*pSrc) : *pSrc != cSep) && *pSrc != '\n' && *pSrc != '\0') { 
+		dbgprintf("in getSubString, error Src buffer > Dst buffer\n");
+		iErr = 1;
+	}	
+	if (*pSrc == '\0' || *pSrc == '\n')
+		/* this line was missing, causing ppSrc to be invalid when it
+		 * was returned in case of end-of-string. rgerhards 2005-07-29
+		 */
+		*ppSrc = pSrc;
+	else
+		*ppSrc = pSrc+1;
+	*pDst = '\0';
+	return iErr;
+}
+
+
+
 /* vim:set ai:
  */
