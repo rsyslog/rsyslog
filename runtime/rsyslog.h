@@ -288,6 +288,7 @@ void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
 /* some runtime prototypes */
 rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(obj_if_t *pObjIF);
+int rsrtIsInit(void);
 
 #endif /* multi-include protection */
 /* vim:set ai:

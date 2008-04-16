@@ -292,7 +292,7 @@ uchar *pszWorkDir = NULL;/* name of rsyslog's spool directory (without trailing 
 uchar *glblModPath = NULL; /* module load path  - only used during initial init, only settable via -M command line option */
 /* end global config file state variables */
 
-uchar	*LocalHostName;/* our hostname  - read-only after startup */
+uchar	*LocalHostName = NULL;/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
@@ -882,8 +882,8 @@ logmsgInternal(int pri, char *msg, int flags)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetUxTradMsg(pMsg, msg);
 	MsgSetRawMsg(pMsg, msg);
-	MsgSetHOSTNAME(pMsg, (char*)LocalHostName);
-	MsgSetRcvFrom(pMsg, (char*)LocalHostName);
+	MsgSetHOSTNAME(pMsg, (LocalHostName == NULL) ? "[localhost]" : (char*)LocalHostName);
+	MsgSetRcvFrom(pMsg, (LocalHostName == NULL) ? "[localhost]" : (char*)LocalHostName);
 	MsgSetTAG(pMsg, "rsyslogd:");
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);

@@ -29,8 +29,8 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 
-#ifndef GLOBALS_H_INCLUDED
-#define GLOBALS_H_INCLUDED
+#ifndef GLBL_H_INCLUDED
+#define GLBL_H_INCLUDED
 
 #define glblGetIOBufSize() 4096 /* size of the IO buffer, e.g. for strm class */
 
@@ -38,4 +38,4 @@ extern uchar *glblModPath; /* module load path */
 extern uchar *pszWorkDir;
 #define glblGetWorkDir() (pszWorkDir == NULL ? (uchar*) "" : pszWorkDir)
 
-#endif /* #ifndef GLOBALS_H_INCLUDED */
+#endif /* #ifndef GLBL_H_INCLUDED */

@@ -83,7 +83,15 @@ LogError(int __attribute__((unused)) iErrCode, char *fmt, ... )
 	}
 	msg[sizeof(msg)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
-	logmsgInternal(LOG_SYSLOG|LOG_ERR, msg, ADDDATE);
+	
+	/* we must check if the runtime is initialized, because else we can NOT
+	 * submit internal errors. -- rgerhards, 2008-04-16
+	 * TODO: a better way is to set an error handler and check if it is NULL
+	 */
+	if(rsrtIsInit())
+		logmsgInternal(LOG_SYSLOG|LOG_ERR, msg, ADDDATE);
+	else
+		fprintf(stderr, "rsyslog runtime error: %s\n", msg);
 
 	ENDfunc
 }

@@ -162,5 +162,20 @@ rsrtExit(obj_if_t *pObjIF)
 }
 
 
+/* returns 0 if the rsyslog runtime is not initialized and another value
+ * if it is. This function is primarily meant to be used by runtime functions
+ * itself. However, it is safe to call it before initializing the runtime.
+ * Plugins should NOT rely on this function. The reason is that another caller
+ * may have already initialized it but deinits it before this plugin is done.
+ * So for plugins and like architectures, the right course of action is to
+ * call rsrtInit() and rsrtExit(), which can be called by multiple callers.
+ * rgerhards, 2008-04-16
+ */
+int rsrtIsInit(void)
+{
+	return iRefCount;
+}
+
+
 /* vim:set ai:
  */
