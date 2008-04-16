@@ -1074,7 +1074,7 @@ RegisterObj(uchar *pszObjName, objInfo_t *pInfo)
 	if(i >= OBJ_NUM_IDS) ABORT_FINALIZE(RS_RET_OBJ_REGISTRY_OUT_OF_SPACE);
 
 	arrObjInfo[i] = pInfo;
-	dbgprintf("object '%s' successfully registered with index %d, qIF %p\n", pszObjName, i, pInfo->QueryIF);
+	/* DEV debug only: dbgprintf("object '%s' successfully registered with index %d, qIF %p\n", pszObjName, i, pInfo->QueryIF); */
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1090,14 +1090,13 @@ finalize_it:
  * rgerhards, 2008-03-10
  */
 static rsRetVal
-UnregisterObj(uchar *pszObjName, objInfo_t *pInfo)
+UnregisterObj(uchar *pszObjName)
 {
 	DEFiRet;
 	int bFound;
 	int i;
 
 	assert(pszObjName != NULL);
-	assert(pInfo != NULL);
 
 	bFound = 0;
 	i = 0;
@@ -1114,7 +1113,7 @@ UnregisterObj(uchar *pszObjName, objInfo_t *pInfo)
 		ABORT_FINALIZE(RS_RET_OBJ_NOT_REGISTERED);
 
 	InfoDestruct(&arrObjInfo[i]);
-	dbgprintf("object '%s' successfully unregistered with index %d\n", pszObjName, i);
+	/* DEV debug only: dbgprintf("object '%s' successfully unregistered with index %d\n", pszObjName, i); */
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1138,7 +1137,7 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	objInfo_t *pObjInfo;
 
 
-	dbgprintf("source file %s requests object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded);
+	/* DEV debug only: dbgprintf("source file %s requests object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded); */
 
 	if(pIf->ifIsLoaded == 1) {
 		ABORT_FINALIZE(RS_RET_OK); /* we are already set */
@@ -1171,7 +1170,6 @@ UseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	}
 
 	/* if we reach this point, we have a valid pObjInfo */
-	//if(pObjInfo->pModInfo != NULL) { /* NULL means core module */
 	if(pObjFile != NULL) { /* NULL means core module */
 		module.Use(srcFile, pObjInfo->pModInfo); /* increase refcount */
 	}

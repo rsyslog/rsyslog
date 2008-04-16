@@ -580,7 +580,7 @@ static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *p
 static int
 should_use_so_bsdcompat(void)
 {
-#ifndef BSD
+#ifndef OS_BSD
     static int init_done;
     static int so_bsdcompat_is_obsolete;
 
@@ -608,9 +608,9 @@ should_use_so_bsdcompat(void)
 	    so_bsdcompat_is_obsolete = 1;
     }
     return !so_bsdcompat_is_obsolete;
-#else	/* #ifndef BSD */
+#else	/* #ifndef OS_BSD */
     return 1;
-#endif	/* #ifndef BSD */
+#endif	/* #ifndef OS_BSD */
 }
 #ifndef SO_BSDCOMPAT
 /* this shall prevent compiler errors due to undfined name */
@@ -852,6 +852,44 @@ finalize_it:
 }
 
 
+/* get the name of the local host. A pointer to a character pointer is passed
+ * in, which on exit points to the local hostname. This buffer is dynamically
+ * allocated and must be free()ed by the caller. If the functions returns an
+ * error, the pointer is NULL. This function is based on GNU/Hurd's localhostname
+ * function.
+ * rgerhards, 20080-04-10
+ */
+static rsRetVal
+getLocalHostname(uchar **ppName)
+{
+	DEFiRet;
+	uchar *buf = NULL;
+	size_t buf_len = 0;
+
+	assert(ppName != NULL);
+
+	do {
+		if(buf == NULL) {
+			buf_len = 128;        /* Initial guess */
+			CHKmalloc(buf = malloc(buf_len));
+		} else {
+			buf_len += buf_len;
+			CHKmalloc(buf = realloc (buf, buf_len));
+		}
+	} while((gethostname((char*)buf, buf_len) == 0 && !memchr (buf, '\0', buf_len)) || errno == ENAMETOOLONG);
+
+	*ppName = buf;
+	buf = NULL;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(buf != NULL)
+			free(buf);
+	}
+	RETiRet;
+}
+
+
 /* closes the UDP listen sockets (if they exist) and frees
  * all dynamically assigned memory. 
  */
@@ -948,7 +986,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 		/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
-#if !defined(BSD) && !defined(__hpux)
+#if !defined(OS_BSD) && !defined(__hpux)
 		if (should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
@@ -1047,6 +1085,7 @@ CODESTARTobjQueryInterface(net)
 	pIf->closeUDPListenSockets = closeUDPListenSockets;
 	pIf->isAllowedSender = isAllowedSender;
 	pIf->should_use_so_bsdcompat = should_use_so_bsdcompat;
+	pIf->getLocalHostname = getLocalHostname;
 finalize_it:
 ENDobjQueryInterface(net)
 

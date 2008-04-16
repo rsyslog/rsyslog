@@ -34,7 +34,7 @@
 #define ADDR_NAME 0x01 /* address is hostname wildcard) */
 #define ADDR_PRI6 0x02 /* use IPv6 address prior to IPv4 when resolving */
 
-#ifdef BSD
+#ifdef OS_BSD
 #	ifndef _KERNEL
 #		define s6_addr32 __u6_addr.__u6_addr32
 #	endif
@@ -97,6 +97,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer);
 	void (*closeUDPListenSockets)(int *finet);
 	int (*isAllowedSender)(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost);
+	rsRetVal (*getLocalHostname)(uchar**);
 	int (*should_use_so_bsdcompat)(void);
 	/* data memebers - these should go away over time... TODO */
 	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
@@ -105,7 +106,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	struct AllowedSenders *pAllowedSenders_TCP;
 	struct AllowedSenders *pAllowedSenders_GSS;
 ENDinterface(net)
-#define netCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

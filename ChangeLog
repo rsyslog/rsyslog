@@ -1,3 +1,56 @@
+Version 3.17.2 (rgerhards), 2008-04-??
+- this version is the new beta
+---------------------------------------------------------------------------
+Version 3.17.1 (rgerhards), 2008-04-15
+- removed dependency on MAXHOSTNAMELEN as much as it made sense.
+  GNU/Hurd does not define it (because it has no limit), and we have taken
+  care for cases where it is undefined now. However, some very few places
+  remain where IMHO it currently is not worth fixing the code. If it is
+  not defined, we have used a generous value of 1K, which is above IETF
+  RFC's on hostname length at all. The memory consumption is no issue, as
+  there are only a handful of this buffers allocated *per run* -- that's
+  also the main reason why we consider it not worth to be fixed any further.
+- enhanced legacy syslog parser to handle slightly malformed messages
+  (with a space in front of the timestamp) - at least HP procurve is
+  known to do that and I won't outrule that others also do it. The 
+  change looks quite unintrusive and so we added it to the parser.
+- implemented klogd functionality for BSD
+- implemented high precision timestamps for the kernel log. Thanks to
+  Michael Biebl for pointing out that the kernel log did not have them.
+- provided ability to discard non-kernel messages if they are present
+  in the kernel log (seems to happen on BSD)
+- implemented $KLogInternalMsgFacility config directive
+- implemented $KLogPermitNonKernelFacility config directive
+Plus a number of bugfixes that were applied to v3-stable and beta
+branches (not mentioned here in detail).
+---------------------------------------------------------------------------
+Version 3.17.0 (rgerhards), 2008-04-08
+- added native ability to send mail messages
+- removed no longer needed file relptuil.c/.h
+- added $ActionExecOnlyOnceEveryInterval config directive
+- bugfix: memory leaks in script engine
+- bugfix: zero-length strings were not supported in object
+  deserializer
+- properties are now case-insensitive everywhere (script, filters,
+  templates)
+- added the capability to specify a processing (actually dequeue)
+  timeframe with queues - so things can be configured to be done
+  at off-peak hours
+- We have removed the 32 character size limit (from RFC3164) on the
+  tag. This had bad effects on existing envrionments, as sysklogd didn't
+  obey it either (probably another bug in RFC3164...). We now receive
+  the full size, but will modify the outputs so that only 32 characters
+  max are used by default. If you need large tags in the output, you need
+  to provide custom templates.
+- changed command line processing. -v, -M, -c options are now parsed
+  and processed before all other options. Inter-option dependencies
+  have been relieved. Among others, permits to specify intial module
+  load path via -M only (not the environment) which makes it much
+  easier to work with non-standard module library locations. Thanks
+  to varmojfekoj for suggesting this change. Matches bugzilla bug 55.
+- bugfix: some messages were emited without hostname
+Plus a number of bugfixes that were applied to v3-stable and beta
+branches (not mentioned here in detail).
 ---------------------------------------------------------------------------
 Version 3.16.0 (rgerhards), 2008-04-??
 - new v3-stable (3.16.x) based on beta 3.15.x (RELP support)

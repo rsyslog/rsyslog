@@ -26,22 +26,30 @@ number of modules. Here is the entry point to their documentation and
 what they do (list is currently not complete)</p>
 <ul>
 <li><a href="omsnmp.html">omsnmp</a> - SNMP
-trap output module</li><li><a href="omrelp.html">omrelp</a> - RELP output module</li>
+trap output module</li>
+<li><a href="omrelp.html">omrelp</a> - RELP
+output module</li>
 <li>omgss - output module for GSS-enabled syslog</li>
 <li>ommysql - output module for MySQL</li>
 <li>ompgsql - output module for PostgreSQL</li>
 <li><a href="omlibdbi.html">omlibdbi</a> -
 generic database output module (Firebird/Interbase, MS SQL, Sybase,
 SQLLite, Ingres, Oracle, mSQL)</li>
+<li><a href="ommail.html">ommail</a> -
+permits rsyslog to alert folks by mail if something important happens</li>
 <li><a href="imfile.html">imfile</a>
--&nbsp; input module for text files</li><li><a href="imrelp.html">imrelp</a> - RELP input module</li>
+-&nbsp; input module for text files</li>
+<li><a href="imrelp.html">imrelp</a> - RELP
+input module</li>
 <li>imudp - udp syslog message input</li>
 <li><a href="imtcp.html">imtcp</a> - input
 plugin for plain tcp syslog</li>
 <li><a href="imgssapi.html">imgssapi</a> -
 input plugin for plain tcp and GSS-enable syslog</li>
 <li>immark - support for mark messages</li>
-<li>imklog - kernel logging</li><li><a href="imuxsock.html">imuxsock</a> - unix sockets, including the system log socket</li>
+<li><a href="imklog.html">imklog</a> - kernel logging</li>
+<li><a href="imuxsock.html">imuxsock</a> -
+unix sockets, including the system log socket</li>
 </ul>
 <p>Please note that each module provides configuration
 directives, which are NOT necessarily being listed below. Also
@@ -64,7 +72,19 @@ unstable...). So you have been warned ;)</p>
 many parameter settings modify queue parameters. If in doubt, use the
 default, it is usually well-chosen and applicable in most cases.</p>
 <ul>
-<li><a href="rsconf1_actionexeconlywhenpreviousissuspended.html">$ActionExecOnlyWhenPreviousIsSuspended</a></li><li>$ActionFileDefaultTemplate [templateName] - sets a new default template for file actions</li><li>$ActionFileEnableSync [on/<span style="font-weight: bold;">off</span>] - enables file syncing capability of omfile</li><li>$ActionForwardDefaultTemplate [templateName] - sets a new default template for UDP and plain TCP forwarding action</li><li>$ActionGSSForwardDefaultTemplate [templateName] - sets a new default template for GSS-API forwarding action</li>
+<li><a href="rsconf1_actionexeconlywhenpreviousissuspended.html">$ActionExecOnlyWhenPreviousIsSuspended</a></li>
+<li>$ActionExecOnlyOnceEveryInterval &lt;seconds&gt; -
+execute action only if the last execute is at last
+&lt;seconds&gt; seconds in the past (more info in <a href="ommail.html">ommail</a>,
+but may be used with any action)</li>
+<li>$ActionFileDefaultTemplate [templateName] - sets a new
+default template for file actions</li>
+<li>$ActionFileEnableSync [on/<span style="font-weight: bold;">off</span>] - enables file
+syncing capability of omfile</li>
+<li>$ActionForwardDefaultTemplate [templateName] - sets a new
+default template for UDP and plain TCP forwarding action</li>
+<li>$ActionGSSForwardDefaultTemplate [templateName] - sets a
+new default template for GSS-API forwarding action</li>
 <li>$ActionQueueCheckpointInterval &lt;number&gt;</li>
 <li>$ActionQueueDequeueSlowdown &lt;number&gt; [number
 is timeout in <i> micro</i>seconds (1000000us is 1sec!),
@@ -98,12 +118,13 @@ default 60000 (1 minute)]</li>
 worker threads, default 1, recommended 1</li>
 <li>$ActionQueueWorkerThreadMinumumMessages
 &lt;number&gt;, default 100</li>
-<li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li><li>$ActionResumeRetryCount &lt;number&gt; [default 0,
+<li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
+<li>$ActionResumeRetryCount &lt;number&gt; [default 0,
 -1 means eternal]</li>
 <li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
 <li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
 <li><a href="rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
-<li>$DebugPrintKernelSymbols (imklog) [on/<b>off</b>]</li>
+
 <li><a href="rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
 <li><a href="rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
 <li><a href="rsconf1_dircreatemode.html">$DirCreateMode</a></li>
@@ -120,14 +141,7 @@ worker threads, default 1, recommended 1</li>
 <li><a href="rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
 <li><a href="rsconf1_gsslistenservicename.html">$GssListenServiceName</a></li>
 <li><a href="rsconf1_gssmode.html">$GssMode</a></li>
-<li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li>
-<li>$klogSymbolLookup (imklog) [<b>on</b>/off] --
-former klogd -x option</li>
-<li>$klogUseSyscallInterface (imklog)&nbsp; [on/<b>off</b>]
--- former klogd -2 option</li>
-<li>$klogSymbolsTwice (imklog) [on/<b>off</b>] --
-former klogd -s option</li>
-<li>$MainMsgQueueCheckpointInterval &lt;number&gt;</li>
+<li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li><li>MainMsgQueueCheckpointInterval &lt;number&gt;</li>
 <li>$MainMsgQueueDequeueSlowdown &lt;number&gt; [number
 is timeout in <i> micro</i>seconds (1000000us is 1sec!),
 default 0 (no delay). Simple rate-limiting!]</li>
@@ -166,11 +180,11 @@ worker threads, default 1, recommended 1</li>
 (immark)</li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
-
 <li><a href="rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
 <li><a href="rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
 <li>$WorkDirectory &lt;name&gt; (directory for spool
-and other work files)</li><li>$UDPServerAddress &lt;IP&gt; (imudp) -- local IP
+and other work files)</li>
+<li>$UDPServerAddress &lt;IP&gt; (imudp) -- local IP
 address (or name) the UDP listens should bind to</li>
 <li>$UDPServerRun &lt;port&gt; (imudp) -- former
 -r&lt;port&gt; option, default 514, start UDP server on this
@@ -302,18 +316,29 @@ template:</p>
 DynFile,"/var/log/system-%HOSTNAME%.log"</code></blockquote>
 <p>This template can then be used when defining an output
 selector line. It will result in something like
-"/var/log/system-localhost.log"</p><p>Template
+"/var/log/system-localhost.log"</p>
+<p>Template
 names beginning with "RSYSLOG_" are reserved for rsyslog use. Do NOT
 use them if, otherwise you may receive a conflict in the future (and
 quite unpredictable behaviour). There is a small set of pre-defined
-templates that you can use without the need to define it:</p><ul><li><span style="font-weight: bold;">RSYSLOG_TraditionalFileFormat</span> - the "old style" default log file format with low-precision timestamps</li><li><span style="font-weight: bold;">RSYSLOG_FileFormat</span> - a modern-style logfile format similar to TraditionalFileFormat, buth with high-precision timestamps and timezone information</li><li><span style="font-weight: bold;">RSYSLOG_TraditionalForwardFormat</span>
+templates that you can use without the need to define it:</p>
+<ul>
+<li><span style="font-weight: bold;">RSYSLOG_TraditionalFileFormat</span>
+- the "old style" default log file format with low-precision timestamps</li>
+<li><span style="font-weight: bold;">RSYSLOG_FileFormat</span>
+- a modern-style logfile format similar to TraditionalFileFormat, buth
+with high-precision timestamps and timezone information</li>
+<li><span style="font-weight: bold;">RSYSLOG_TraditionalForwardFormat</span>
 - the traditional forwarding format with low-precision timestamps. Most
-useful if you send&nbsp;messages to other syslogd's or rsyslogd below
-version 3.12.5.</li><li><span style="font-weight: bold;">RSYSLOG_ForwardFormat</span>
+useful if you send&nbsp;messages to other syslogd's or rsyslogd
+below
+version 3.12.5.</li>
+<li><span style="font-weight: bold;">RSYSLOG_ForwardFormat</span>
 - a new high-precision forwarding format very similar to the
 traditional one, but with high-precision timestamps and timezone
 information. Recommended to be used when sending messages to rsyslog
-3.12.5 or above.</li><li><span style="font-weight: bold;">RSYSLOG_SyslogProtocol23Format</span>
+3.12.5 or above.</li>
+<li><span style="font-weight: bold;">RSYSLOG_SyslogProtocol23Format</span>
 - the format specified in IETF's internet-draft
 ietf-syslog-protocol-23, which is assumed to be come the new syslog
 standard RFC. This format includes several improvements. The rsyslog
@@ -321,7 +346,8 @@ message parser understands this format, so you can use it together with
 all relatively recent versions of rsyslog. Other syslogd's may get
 hopelessly confused if receiving that format, so check before you use
 it. Note that the format is unlikely to change when the final RFC comes
-out, but this may happen.</li></ul>
+out, but this may happen.</li>
+</ul>
 <h2>Output Channels</h2>
 <p>Output Channels are a new concept first introduced in rsyslog
 0.9.0. <b>As of this writing, it is most likely that they will
@@ -524,7 +550,8 @@ once they are implemented, it can make very much sense
 </tr>
 <tr>
 <td>regex</td>
-<td>Compares the property against the provided POSIX regular
+<td>Compares the property against the provided POSIX
+regular
 expression.</td>
 </tr>
 </tbody>
@@ -567,10 +594,12 @@ code), this can be done easily by:</p>
 "ID-4711". Please note that the comparison is case-sensitive, so it
 would not match if "id-4711" would be contained in the message.</p>
 <p><code><b>:msg, regex, "fatal .* error"</b></code></p>
-<p>This filter uses a POSIX regular expression. It matches when the
+<p>This filter uses a POSIX regular expression. It matches when
+the
 string contains the words "fatal" and "error" with anything in between
 (e.g. "fatal net error" and "fatal lib error" but not "fatal error" as
-two spaces are required by the regular expression!).</p><p>Getting property-based filters right can sometimes be
+two spaces are required by the regular expression!).</p>
+<p>Getting property-based filters right can sometimes be
 challenging. In order to help you do it with as minimal effort as
 possible, rsyslogd spits out debug information for all property-based
 filters during their evaluation. To enable this, run rsyslogd in
@@ -635,9 +664,12 @@ startswith 'DEVNAME' and <span style="font-weight: bold;">not</span>
 ($msg contains 'error1' or $msg contains
 'error0') then /var/log/somelog<br>
 </code>
-<br>If you would like to do case-insensitive comparisons, use
+<br>
+If you would like to do case-insensitive comparisons, use
 "contains_i" instead of "contains" and "startswith_i" instead of
-"startswith".<br><br>Note that regular expressions are currently NOT
+"startswith".<br>
+<br>
+Note that regular expressions are currently NOT
 supported in expression-based filters. These will be added later when
 function support is added to the expression engine (the reason is that
 regular expressions will be a separate loadable module, which requires

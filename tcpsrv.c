@@ -141,32 +141,6 @@ configureTCPListen(tcpsrv_t *pThis, char *cOptarg)
 }
 
 
-#if 0 // I think this is no longer needed
-static void
-configureTCPListenSessMax(char *cOptarg)
-{
-	register int i;
-	register char *pArg = cOptarg;
-
-	assert(cOptarg != NULL);
-
-	/* number of sessions */
-	i = 0;
-	while(isdigit((int) *pArg)) {
-		i = i * 10 + *pArg++ - '0';
-	}
-
-	if(i > 0)
-		pThis->iSessMax = i;
-	else {
-		/* too small, need to adjust */
-		errmsg.LogError(NO_ERRCODE, "TCP session max configured to %s - changing to 1.\n", cOptarg);
-		pThis->iSessMax = 1;
-	}
-}
-#endif
-
-
 /* Initialize the session table
  * returns 0 if OK, somewhat else otherwise
  */
@@ -353,7 +327,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
-#ifndef BSD	
+#ifndef OS_BSD	
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {

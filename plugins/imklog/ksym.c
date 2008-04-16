@@ -185,18 +185,18 @@ extern int InitKsyms(char *mapfile)
 	if ( mapfile != (char *) 0 ) {
 		if ( (sym_file = fopen(mapfile, "r")) == (FILE *) 0 )
 		{
-			Syslog(LOG_WARNING, "Cannot open map file: %s.", mapfile);
+			imklogLogIntMsg(LOG_WARNING, "Cannot open map file: %s.", mapfile);
 			return(0);
 		}
 	} else {
 		if ( (mapfile = FindSymbolFile()) == (char *) 0 ) {
-			Syslog(LOG_WARNING, "Cannot find map file.");
+			imklogLogIntMsg(LOG_WARNING, "Cannot find map file.");
 			dbgprintf("Cannot find map file.\n");
 			return(0);
 		}
 		
 		if ( (sym_file = fopen(mapfile, "r")) == (FILE *) 0 ) {
-			Syslog(LOG_WARNING, "Cannot open map file.");
+			imklogLogIntMsg(LOG_WARNING, "Cannot open map file.");
 			dbgprintf("Cannot open map file.\n");
 			return(0);
 		}
@@ -213,7 +213,7 @@ extern int InitKsyms(char *mapfile)
 	 */
 	while ( !feof(sym_file) ) {
 		if ( fscanf(sym_file, "%lx %c %s\n", &address, &type, sym) != 3 ) {
-			Syslog(LOG_ERR, "Error in symbol table input (#1).");
+			imklogLogIntMsg(LOG_ERR, "Error in symbol table input (#1).");
 			fclose(sym_file);
 			return(0);
 		}
@@ -221,7 +221,7 @@ extern int InitKsyms(char *mapfile)
 			dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
 
 		if ( AddSymbol(address, sym) == 0 ) {
-			Syslog(LOG_ERR, "Error adding symbol - %s.", sym);
+			imklogLogIntMsg(LOG_ERR, "Error adding symbol - %s.", sym);
 			fclose(sym_file);
 			return(0);
 		}
@@ -231,19 +231,19 @@ extern int InitKsyms(char *mapfile)
 	}
 	
 
-	Syslog(LOG_INFO, "Loaded %d symbols from %s.", num_syms, mapfile);
+	imklogLogIntMsg(LOG_INFO, "Loaded %d symbols from %s.", num_syms, mapfile);
 	switch(version) {
 	    case -1:
-		Syslog(LOG_WARNING, "Symbols do not match kernel version.");
+		imklogLogIntMsg(LOG_WARNING, "Symbols do not match kernel version.");
 		num_syms = 0;
 		break;
 
 	    case 0:
-		Syslog(LOG_WARNING, "Cannot verify that symbols match kernel version.");
+		imklogLogIntMsg(LOG_WARNING, "Cannot verify that symbols match kernel version.");
 		break;
 		
 	    case 1:
-		Syslog(LOG_INFO, "Symbols match kernel version %s.", vstring);
+		imklogLogIntMsg(LOG_INFO, "Symbols match kernel version %s.", vstring);
 		break;
 	}
 		
@@ -296,12 +296,12 @@ static char *FindSymbolFile(void)
 			**mf = system_maps;
 
 	auto struct utsname utsname;
-	static char symfile[100];
+	static char mysymfile[100];
 
 	auto FILE *sym_file = (FILE *) 0;
 
         if ( uname(&utsname) < 0 ) {
-                Syslog(LOG_ERR, "Cannot get kernel version information.");
+                imklogLogIntMsg(LOG_ERR, "Cannot get kernel version information.");
                 return(0);
         }
 
@@ -309,19 +309,19 @@ static char *FindSymbolFile(void)
 	
 	for(mf = system_maps; *mf != (char *) 0 && file == (char *) 0; ++mf) {
  
-		snprintf(symfile, sizeof(symfile), "%s-%s", *mf, utsname.release);
-		dbgprintf("Trying %s.\n", symfile);
-		if ( (sym_file = fopen(symfile, "r")) != (FILE *) 0 ) {
-			if (CheckMapVersion(symfile) == 1)
-				file = symfile;
+		snprintf(mysymfile, sizeof(mysymfile), "%s-%s", *mf, utsname.release);
+		dbgprintf("Trying %s.\n", mysymfile);
+		if ( (sym_file = fopen(mysymfile, "r")) != (FILE *) 0 ) {
+			if (CheckMapVersion(mysymfile) == 1)
+				file = mysymfile;
 			fclose(sym_file);
 		}
 		if (sym_file == (FILE *) 0 || file == (char *) 0) {
-			sprintf (symfile, "%s", *mf);
-			dbgprintf("Trying %s.\n", symfile);
-			if ( (sym_file = fopen(symfile, "r")) != (FILE *) 0 ) {
-				if (CheckMapVersion(symfile) == 1)
-					file = symfile;
+			sprintf (mysymfile, "%s", *mf);
+			dbgprintf("Trying %s.\n", mysymfile);
+			if ( (sym_file = fopen(mysymfile, "r")) != (FILE *) 0 ) {
+				if (CheckMapVersion(mysymfile) == 1)
+					file = mysymfile;
 				fclose(sym_file);
 			}
 		}
@@ -410,13 +410,13 @@ static int CheckVersion(char *version)
 	 * version level.
 	 */
 	if ( uname(&utsname) < 0 ) {
-		Syslog(LOG_ERR, "Cannot get kernel version information.");
+		imklogLogIntMsg(LOG_ERR, "Cannot get kernel version information.");
 		return(0);
 	}
 	dbgprintf("Comparing kernel %s with symbol table %s.\n", utsname.release, vstring);
 
 	if ( sscanf (utsname.release, "%d.%d.%d", &major, &minor, &patch) < 3 ) {
-		Syslog(LOG_ERR, "Kernel send bogus release string `%s'.", utsname.release);
+		imklogLogIntMsg(LOG_ERR, "Kernel send bogus release string `%s'.", utsname.release);
 		return(0);
 	}
 
@@ -470,12 +470,12 @@ static int CheckMapVersion(char *fname)
 		 * now need to search this file and look for version
 		 * information.
 		 */
-		Syslog(LOG_INFO, "Inspecting %s", fname);
+		imklogLogIntMsg(LOG_INFO, "Inspecting %s", fname);
 
 		version = 0;
 		while ( !feof(sym_file) && (version == 0) ) {
 			if ( fscanf(sym_file, "%lx %c %s\n", &address, &type, sym) != 3 ) {
-				Syslog(LOG_ERR, "Error in symbol table input (#2).");
+				imklogLogIntMsg(LOG_ERR, "Error in symbol table input (#2).");
 				fclose(sym_file);
 				return(0);
 			}
@@ -487,7 +487,7 @@ static int CheckMapVersion(char *fname)
 
 		switch ( version ) {
 		    case -1:
-			Syslog(LOG_ERR, "Symbol table has incorrect version number.\n");
+			imklogLogIntMsg(LOG_ERR, "Symbol table has incorrect version number.\n");
 			break;
 		    case 0:
 			dbgprintf("No version information found.\n");
@@ -684,7 +684,7 @@ extern char *ExpandKadds(char *line, char *el)
 	 */
 	if ( i_am_paranoid &&
 	     (strstr(line, "Oops:") != (char *) 0) && !InitMsyms() )
-		Syslog(LOG_WARNING, "Cannot load kernel module symbols.\n");
+		imklogLogIntMsg(LOG_WARNING, "Cannot load kernel module symbols.\n");
 	
 
 	/*

@@ -288,7 +288,17 @@ directive allows to specify how long (in microseconds) dequeueing should be
 delayed. While simple, it still is powerful. For example, using a 
 DequeueSlowdown delay of 1,000 microseconds on a UDP send action ensures that no 
 more than 1,000 messages can be sent within a second (actually less, as there is 
-also some time needed for the processing itself). </p>
+also some time needed for the processing itself).</p><h2>Processing Timeframes</h2><p>Queues
+can be set to dequeue (process) messages only during certain
+timeframes. This is useful if you, for example, would like to transfer
+the bulk of messages only during off-peak hours, e.g. when you have
+only limited bandwidth on the network path the the central server.</p><p>Currently,
+only a single timeframe is supported and, even worse, it can only be
+specified by the hour. It is not hard to extend rsyslog's capabilities
+in this regard - it was just not requested so far. So if you need more
+fine-grained control, let us know and we'll probably implement it.
+There are two configuration directives, both should be used together or
+results are unpredictable:" <i>$&lt;object&gt;QueueDequeueTimeBegin &lt;hour&gt;</i>" and&nbsp;"<i>$&lt;object&gt;QueueDequeueTimeEnd &lt;hour&gt;</i>". The hour parameter must be specified in 24-hour format (so 10pm is 22). A use case for this parameter can be found in the <a href="http://wiki.rsyslog.com/index.php/OffPeakHours">rsyslog wiki</a>. </p>
 <h2>Terminating Queues</h2>
 <p>Terminating a process sounds easy, but can be complex.
 <span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">

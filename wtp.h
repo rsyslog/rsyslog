@@ -69,6 +69,7 @@ typedef struct wtp_s {
 	pthread_mutex_t *pmutUsr;
 	pthread_cond_t *pcondBusy; /* condition the user will signal "busy again, keep runing" on (awakes worker) */
 	rsRetVal (*pfChkStopWrkr)(void *pUsr, int);
+	rsRetVal (*pfRateLimiter)(void *pUsr);
 	rsRetVal (*pfIsIdle)(void *pUsr, int);
 	rsRetVal (*pfDoWork)(void *pUsr, void *pWti, int);
 	rsRetVal (*pfOnIdle)(void *pUsr, int);
@@ -100,6 +101,7 @@ rsRetVal wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *
 int wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex);
 PROTOTYPEObjClassInit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
+PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));
 PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int));

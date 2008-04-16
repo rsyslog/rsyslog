@@ -1604,20 +1604,17 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		pRes = getMSG(pMsg);
 	} else if(!strcmp((char*) pName, "rawmsg")) {
 		pRes = getRawMsg(pMsg);
-	} else if(!strcmp((char*) pName, "UxTradMsg")) {
+	} else if(!strcmp((char*) pName, "uxtradmsg")) {
 		pRes = getUxTradMsg(pMsg);
-	} else if(   !strcmp((char*) pName, "FROMHOST")
-		  || !strcmp((char*) pName, "fromhost")) {
+	} else if(!strcmp((char*) pName, "fromhost")) {
 		pRes = getRcvFrom(pMsg);
-	} else if(!strcmp((char*) pName, "source")
-		  || !strcmp((char*) pName, "hostname")
-		  || !strcmp((char*) pName, "HOSTNAME")) {
+	} else if(!strcmp((char*) pName, "source") || !strcmp((char*) pName, "hostname")) {
 		pRes = getHOSTNAME(pMsg);
 	} else if(!strcmp((char*) pName, "syslogtag")) {
 		pRes = getTAG(pMsg);
-	} else if(!strcmp((char*) pName, "PRI")) {
+	} else if(!strcmp((char*) pName, "pri")) {
 		pRes = getPRI(pMsg);
-	} else if(!strcmp((char*) pName, "PRI-text")) {
+	} else if(!strcmp((char*) pName, "pri-text")) {
 		pBuf = malloc(20 * sizeof(char));
 		if(pBuf == NULL) {
 			*pbMustBeFreed = 0;
@@ -1639,57 +1636,57 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	} else if(!strcmp((char*) pName, "timegenerated")) {
 		pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp((char*) pName, "timereported")
-		  || !strcmp((char*) pName, "TIMESTAMP")) {
+		  || !strcmp((char*) pName, "timestamp")) {
 		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp((char*) pName, "programname")) {
 		pRes = getProgramName(pMsg);
-	} else if(!strcmp((char*) pName, "PROTOCOL-VERSION")) {
+	} else if(!strcmp((char*) pName, "protocol-version")) {
 		pRes = getProtocolVersionString(pMsg);
-	} else if(!strcmp((char*) pName, "STRUCTURED-DATA")) {
+	} else if(!strcmp((char*) pName, "structured-data")) {
 		pRes = getStructuredData(pMsg);
-	} else if(!strcmp((char*) pName, "APP-NAME")) {
+	} else if(!strcmp((char*) pName, "app-name")) {
 		pRes = getAPPNAME(pMsg);
-	} else if(!strcmp((char*) pName, "PROCID")) {
+	} else if(!strcmp((char*) pName, "procid")) {
 		pRes = getPROCID(pMsg);
-	} else if(!strcmp((char*) pName, "MSGID")) {
+	} else if(!strcmp((char*) pName, "msgid")) {
 		pRes = getMSGID(pMsg);
 	/* here start system properties (those, that do not relate to the message itself */
-	} else if(!strcmp((char*) pName, "$NOW")) {
+	} else if(!strcmp((char*) pName, "$now")) {
 		if((pRes = (char*) getNOW(NOW_NOW)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp((char*) pName, "$YEAR")) {
+	} else if(!strcmp((char*) pName, "$year")) {
 		if((pRes = (char*) getNOW(NOW_YEAR)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp((char*) pName, "$MONTH")) {
+	} else if(!strcmp((char*) pName, "$month")) {
 		if((pRes = (char*) getNOW(NOW_MONTH)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp((char*) pName, "$DAY")) {
+	} else if(!strcmp((char*) pName, "$day")) {
 		if((pRes = (char*) getNOW(NOW_DAY)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp((char*) pName, "$HOUR")) {
+	} else if(!strcmp((char*) pName, "$hour")) {
 		if((pRes = (char*) getNOW(NOW_HOUR)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp((char*) pName, "$HHOUR")) {
+	} else if(!strcmp((char*) pName, "$hhour")) {
 		if((pRes = (char*) getNOW(NOW_HHOUR)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp((char*) pName, "$QHOUR")) {
+	} else if(!strcmp((char*) pName, "$qhour")) {
 		if((pRes = (char*) getNOW(NOW_QHOUR)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
-	} else if(!strcmp((char*) pName, "$MINUTE")) {
+	} else if(!strcmp((char*) pName, "$minute")) {
 		if((pRes = (char*) getNOW(NOW_MINUTE)) == NULL) {
 			return "***OUT OF MEMORY***";
 		} else
@@ -1698,6 +1695,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		/* there is no point in continuing, we may even otherwise render the
 		 * error message unreadable. rgerhards, 2007-07-10
 		 */
+		dbgprintf("invalid property name: '%s'\n", pName);
 		return "**INVALID PROPERTY NAME**";
 	}
 

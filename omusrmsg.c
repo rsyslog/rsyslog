@@ -119,7 +119,7 @@ static void endtty()
  * BSD because they are not available there. We only emulate what we actually
  * need! rgerhards 2005-03-18
  */
-#ifdef BSD
+#ifdef OS_BSD
 static FILE *BSD_uf = NULL;
 void setutent(void)
 {
@@ -145,7 +145,7 @@ void endutent(void)
 	fclose(BSD_uf);
 	BSD_uf = NULL;
 }
-#endif
+#endif  /* #ifdef OS_BSD */
 
 
 /*
@@ -209,7 +209,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 			/* is this slot used? */
 			if (ut.ut_name[0] == '\0')
 				continue;
-#ifndef BSD
+#ifndef OS_BSD
 			if (ut.ut_type != USER_PROCESS)
 			        continue;
 #endif

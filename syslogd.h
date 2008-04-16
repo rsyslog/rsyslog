@@ -134,7 +134,7 @@ rsRetVal logmsgInternal(int pri, char *msg, int flags);
 void logmsg(msg_t *pMsg, int flags);
 rsRetVal submitMsg(msg_t *pMsg);
 extern int glblHadMemShortage; /* indicates if we had memory shortage some time during the run */
-extern char LocalHostName[];
+extern uchar *LocalHostName;
 extern int family;
 extern int NoHops;
 extern int send_to_all;
@@ -149,6 +149,7 @@ extern char ctty[];
 extern int MarkInterval;
 extern int  bReduceRepeatMsgs;
 extern int bActExecWhenPrevSusp;
+extern int iActExecOnceInterval;
 
 /* Intervals at which we flush out "message repeated" messages,
  * in seconds after previous message is logged.  After each flush,

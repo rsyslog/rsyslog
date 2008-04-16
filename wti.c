@@ -371,6 +371,14 @@ wtiWorker(wti_t *pThis)
 		pthread_yield(); /* see big comment in function header */
 #		endif
 
+		/* if we have a rate-limiter set for this worker pool, let's call it. Please
+		 * keep in mind that the rate-limiter may hold us for an extended period
+		 * of time. -- rgerhards, 2008-04-02
+		 */
+		if(pWtp->pfRateLimiter != NULL) {
+			pWtp->pfRateLimiter(pWtp->pUsr);
+		}
+		
 		wtpSetInactivityGuard(pThis->pWtp, 0, LOCK_MUTEX); /* must be set before usr mutex is locked! */
 		BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);
 

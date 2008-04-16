@@ -216,7 +216,7 @@ static rsRetVal GlobalClassExit(void);
 #if defined(SYSLOGD_PIDNAME)
 #	undef _PATH_LOGPID
 #	if defined(FSSTND)
-#		ifdef BSD
+#		ifdef OS_BSD
 #			define _PATH_VARRUN "/var/run/"
 #		endif
 #		if defined(__sun) || defined(__hpux)
@@ -301,10 +301,12 @@ static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape seq
 static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
+int	iActExecOnceInterval = 0; /* execute action once every nn seconds */
 uchar *pszWorkDir = NULL;/* name of rsyslog's spool directory (without trailing slash) */
+uchar *glblModPath = NULL; /* module load path  - only used during initial init, only settable via -M command line option */
 /* end global config file state variables */
 
-char	LocalHostName[MAXHOSTNAMELEN+1];/* our hostname  - read-only after startup */
+uchar	*LocalHostName;/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
@@ -338,8 +340,10 @@ static int iMainMsgQtoEnq = 2000;				/* timeout for queue enque */
 static int iMainMsgQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
 static int iMainMsgQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int iMainMsgQDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
-static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
 static int64 iMainMsgQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
+static int bMainMsgQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
+static int iMainMsgQueueDeqtWinFromHr = 0;			/* hour begin of time frame when queue is to be dequeued */
+static int iMainMsgQueueDeqtWinToHr = 25;			/* hour begin of time frame when queue is to be dequeued */
 
 
 /* support for simple textual representation of FIOP names
@@ -376,6 +380,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	cCCEscapeChar = '#';
 	bActExecWhenPrevSusp = 0;
+	iActExecOnceInterval = 0;
 	bDebugPrintTemplateList = 1;
 	bDebugPrintCfSysLineHandlerList = 1;
 	bDebugPrintModuleList = 1;
@@ -892,8 +897,8 @@ logmsgInternal(int pri, char *msg, int flags)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetUxTradMsg(pMsg, msg);
 	MsgSetRawMsg(pMsg, msg);
-	MsgSetHOSTNAME(pMsg, LocalHostName);
-	MsgSetRcvFrom(pMsg, LocalHostName);
+	MsgSetHOSTNAME(pMsg, (char*)LocalHostName);
+	MsgSetRcvFrom(pMsg, (char*)LocalHostName);
 	MsgSetTAG(pMsg, "rsyslogd:");
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
@@ -1385,11 +1390,18 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	/* Check to see if msg contains a timestamp. We stary trying with a
 	 * high-precision one...
 	 */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == TRUE)
+	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE)
+	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE) {
 		p2parse += 16;
-	else {
+	} else if(*p2parse == ' ') { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse+1) == TRUE) {
+			/* indeed, we got it! */
+			p2parse += 17;
+		} else {
+			flags |= ADDDATE;
+		}
+	} else {
 		flags |= ADDDATE;
 	}
 
@@ -1858,6 +1870,8 @@ freeAllDynMemForTermination(void)
 		free(pszMainMsgQFName);
 	if(pModDir != NULL)
 		free(pModDir);
+	if(LocalHostName != NULL)
+		free(LocalHostName);
 }
 
 
@@ -2197,8 +2211,7 @@ init(void)
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
 
-	dbgprintf("rsyslog %s.\n", VERSION);
-	dbgprintf("Called init.\n");
+	dbgprintf("rsyslog %s - called init()\n", VERSION);
 
 	/* delete the message queue, which also flushes all messages left over */
 	if(pMsgQueue != NULL) {
@@ -2321,6 +2334,8 @@ init(void)
 	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
 	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
 	setQPROP(queueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", iMainMsgQDeqSlowdown);
+	setQPROP(queueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", iMainMsgQueueDeqtWinFromHr);
+	setQPROP(queueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", iMainMsgQueueDeqtWinToHr);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -2685,8 +2700,11 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iMainMsgQueMaxDiskSpace, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bMainMsgQSaveOnShutdown, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL, &iMainMsgQueueDeqtWinFromHr, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &iMainMsgQueueDeqtWinToHr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgreduction", 0, eCmdHdlrBinary, NULL, &bReduceRepeatMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlywhenpreviousissuspended", 0, eCmdHdlrBinary, NULL, &bActExecWhenPrevSusp, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyonceeveryinterval", 0, eCmdHdlrInt, NULL, &iActExecOnceInterval, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
@@ -2764,21 +2782,6 @@ static void mainThread()
 	BEGINfunc
 	uchar *pTmp;
 
-#if 0 // code moved back to main()
-	/* doing some core initializations */
-	if((iRet = modInitIminternal()) != RS_RET_OK) {
-		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
-			iRet);
-		exit(1); /* "good" exit, leaving at init for fatal error */
-	}
-
-	if((iRet = loadBuildInModules()) != RS_RET_OK) {
-		fprintf(stderr, "fatal error: could not activate built-in modules. Error code %d.\n",
-			iRet);
-		exit(1); /* "good" exit, leaving at init for fatal error */
-	}
-#endif
-
 	/* Note: signals MUST be processed by the thread this code is running in. The reason
 	 * is that we need to interrupt the select() system call. -- rgerhards, 2007-10-17
 	 */
@@ -2803,7 +2806,6 @@ static void mainThread()
         pTmp = template_StdPgSQLFmt;
         tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
 
-	dbgprintf("Starting.\n");
 	init();
 	if(Debug) {
 		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
@@ -2820,6 +2822,7 @@ static void mainThread()
 	 * do the init() and then restart things.
 	 * rgerhards, 2005-10-24
 	 */
+	dbgprintf("initialization completed, transitioning to regular run mode\n");
 
 	mainloop();
 	ENDfunc
@@ -2971,6 +2974,72 @@ GlobalClassExit(void)
 }
 
 
+/* some support for command line option parsing. Any non-trivial options must be
+ * buffered until the complete command line has been parsed. This is necessary to
+ * prevent dependencies between the options. That, in turn, means we need to have
+ * something that is capable of buffering options and there values. The follwing
+ * functions handle that.
+ * rgerhards, 2008-04-04
+ */
+typedef struct bufOpt {
+	struct bufOpt *pNext;
+	char optchar;
+	char *arg;
+} bufOpt_t;
+static bufOpt_t *bufOptRoot = NULL;
+static bufOpt_t *bufOptLast = NULL;
+
+/* add option buffer */
+static rsRetVal
+bufOptAdd(char opt, char *arg)
+{
+	DEFiRet;
+	bufOpt_t *pBuf;
+
+	if((pBuf = malloc(sizeof(bufOpt_t))) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+
+	pBuf->optchar = opt;
+	pBuf->arg = arg;
+	pBuf->pNext = NULL;
+
+	if(bufOptLast == NULL) {
+		bufOptRoot = pBuf; /* then there is also no root! */
+	} else {
+		bufOptLast->pNext = pBuf;
+	}
+	bufOptLast = pBuf;
+
+finalize_it:
+	RETiRet;
+}
+
+
+
+/* remove option buffer from top of list, return values and destruct buffer itself.
+ * returns RS_RET_END_OF_LINKEDLIST when no more options are present.
+ * (we use int *opt instead of char *opt to keep consistent with getopt())
+ */
+static rsRetVal
+bufOptRemove(int *opt, char **arg)
+{
+	DEFiRet;
+	bufOpt_t *pBuf;
+
+	if(bufOptRoot == NULL)
+		ABORT_FINALIZE(RS_RET_END_OF_LINKEDLIST);
+	pBuf = bufOptRoot;
+
+	*opt = pBuf->optchar;
+	*arg = pBuf->arg;
+
+	bufOptRoot = pBuf->pNext;
+	free(pBuf);
+
+finalize_it:
+	RETiRet;
+}
+
 
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
@@ -2990,15 +3059,125 @@ int realMain(int argc, char **argv)
 	int bIsFirstOption = 1;
 	int bEOptionWasGiven = 0;
 	int bImUxSockLoaded = 0; /* already generated a $ModLoad imuxsock? */
+	char *arg;	/* for command line option processing */
 	uchar legacyConfLine[80];
 
-	gethostname(LocalHostName, sizeof(LocalHostName));
-	if ( (p = strchr(LocalHostName, '.')) ) {
+	/* first, parse the command line options. We do not carry out any actual work, just
+	 * see what we should do. This relieves us from certain anomalies and we can process
+	 * the parameters down below in the correct order. For example, we must know the
+	 * value of -M before we can do the init, but at the same time we need to have
+	 * the base classes init before we can process most of the options. Now, with the
+	 * split of functionality, this is no longer a problem. Thanks to varmofekoj for
+	 * suggesting this algo.
+	 * Note: where we just need to set some flags and can do so without knowledge
+	 * of other options, we do this during the inital option processing. With later
+	 * versions (if a dependency on -c option is introduced), we must move that code
+	 * to other places, but I think it is quite appropriate and saves code to do this
+	 * only when actually neeeded. 
+	 * rgerhards, 2008-04-04
+	 */
+	while ((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nopqQr::s:t:u:vwx")) != EOF) {
+		switch((char)ch) {
+                case '4':
+                case '6':
+                case 'A':
+                case 'a':
+		case 'f': /* configuration file */
+		case 'h':
+		case 'i': /* pid file name */
+		case 'l':
+		case 'm': /* mark interval */
+		case 'n': /* don't fork */
+                case 'o':
+                case 'p':
+		case 'q': /* add hostname if DNS resolving has failed */
+		case 'Q': /* dont resolve hostnames in ACL to IPs */
+		case 's':
+		case 'u': /* misc user settings */
+		case 'w': /* disable disallowed host warnigs */
+		case 'x': /* disable dns for remote messages */
+			CHKiRet(bufOptAdd(ch, optarg));
+			break;
+		case 'c':		/* compatibility mode */
+			if(!bIsFirstOption) {
+				fprintf(stderr, "-c option MUST be specified as the first option - aborting...\n");
+				usage();
+				exit(1);
+			}
+			iCompatibilityMode = atoi(optarg);
+			break;
+		case 'd': /* debug - must be handled now, so that debug is active during init! */
+			Debug = 1;
+			break;
+		case 'e':		/* log every message (no repeat message supression) */
+			fprintf(stderr, "note: -e option is no longer supported, every message is now logged by default\n");
+			bEOptionWasGiven = 1;
+			break;
+		case 'g':		/* enable tcp gssapi logging */
+#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
+			CHKiRet(bufOptAdd('g', optarg));
+#else
+			fprintf(stderr, "rsyslogd: -g not valid - not compiled with gssapi support");
+#endif
+			break;
+		case 'M': /* default module load path -- this MUST be carried out immediately! */
+			glblModPath = (uchar*) optarg;
+			break;
+		case 'r':		/* accept remote messages */
+#ifdef SYSLOG_INET
+			CHKiRet(bufOptAdd(ch, optarg));
+#else
+			fprintf(stderr, "rsyslogd: -r not valid - not compiled with network support\n");
+#endif
+			break;
+		case 't':		/* enable tcp logging */
+#ifdef SYSLOG_INET
+			CHKiRet(bufOptAdd(ch, optarg));
+#else
+			fprintf(stderr, "rsyslogd: -t not valid - not compiled with network support\n");
+#endif
+			break;
+		case 'v': /* MUST be carried out immediately! */
+			printVersion();
+			exit(0); /* exit for -v option - so this is a "good one" */
+		case '?':              
+		default:
+			usage();
+		}
+		bIsFirstOption = 0; /* we already saw an option character */
+	}
+
+	if ((argc -= optind))
+		usage();
+
+	dbgprintf("rsyslogd %s startup, compatibility mode %d, module path '%s'\n",
+		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath);
+
+	/* we are done with the initial option parsing and processing. Now we init the system. */
+
+	ppid = getpid();
+
+	if(chdir ("/") != 0)
+		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
+
+	CHKiRet_Hdlr(InitGlobalClasses()) {
+		fprintf(stderr, "rsyslogd initializiation failed - global classes could not be initialized.\n"
+				"Did you do a \"make install\"?\n"
+				"Suggested action: run rsyslogd with -d -n options to see what exactly "
+				"fails.\n");
+		FINALIZE;
+	}
+
+	/* doing some core initializations */
+
+	/* get our host and domain names - we need to do this early as we may emit
+	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
+	 */
+	net.getLocalHostname(&LocalHostName);
+	if((p = strchr((char*)LocalHostName, '.'))) {
 		*p++ = '\0';
 		LocalDomain = p;
-	}
-	else
-	{
+	} else {
 		LocalDomain = "";
 
 		/* It's not clearly defined whether gethostname()
@@ -3014,11 +3193,12 @@ int realMain(int argc, char **argv)
 		/* TODO: gethostbyname() is not thread-safe, but replacing it is
 		 * not urgent as we do not run on multiple threads here. rgerhards, 2007-09-25
 		 */
-		hent = gethostbyname(LocalHostName);
+		hent = gethostbyname((char*)LocalHostName);
 		if(hent) {
-			snprintf(LocalHostName, sizeof(LocalHostName), "%s", hent->h_name);
+			free(LocalHostName);
+			CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
 				
-			if ( (p = strchr(LocalHostName, '.')) )
+			if((p = strchr((char*)LocalHostName, '.')))
 			{
 				*p++ = '\0';
 				LocalDomain = p;
@@ -3026,21 +3206,11 @@ int realMain(int argc, char **argv)
 		}
 	}
 
-	/* Convert to lower case to recognize the correct domain laterly
-	 */
-	for (p = (char *)LocalDomain; *p ; p++)
-		if (isupper((int) *p))
-			*p = (char)tolower((int)*p);
+	/* Convert to lower case to recognize the correct domain laterly */
+	for (p = (char *)LocalDomain ; *p ; p++)
+		*p = (char)tolower((int)*p);
 
-	CHKiRet_Hdlr(InitGlobalClasses()) {
-		fprintf(stderr, "rsyslogd initializiation failed - global classes could not be initialized.\n"
-				"Did you do a \"make install\"?\n"
-				"Suggested action: run rsyslogd with -d -n options to see what exactly "
-				"fails.\n");
-		FINALIZE;
-	}
-
-	/* doing some core initializations */
+	/* initialize the objects */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
 		fprintf(stderr, "fatal error: could not initialize errbuf object (error code %d).\n",
 			iRet);
@@ -3053,14 +3223,10 @@ int realMain(int argc, char **argv)
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
 
-	ppid = getpid();
+	/* END core initializations - we now come back to carrying out command line options*/
 
-	if(chdir ("/") != 0)
-		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
-
-	/* END core initializations */
-
-	while ((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nopqQr::s:t:u:vwx")) != EOF) {
+	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
+		dbgprintf("deque option %c, optarg '%s'\n", ch, arg);
 		switch((char)ch) {
                 case '4':
 	                family = PF_INET;
@@ -3077,39 +3243,20 @@ int realMain(int argc, char **argv)
 					legacyOptsEnq((uchar *) "ModLoad imuxsock");
 					bImUxSockLoaded = 1;
 				}
-				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "addunixlistensocket %s", optarg);
+				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "addunixlistensocket %s", arg);
 				legacyOptsEnq(legacyConfLine);
 			} else {
 				fprintf(stderr, "error -a is no longer supported, use module imuxsock instead");
 			}
                         break;
-		case 'c':		/* compatibility mode */
-			if(!bIsFirstOption) {
-				fprintf(stderr, "-c option MUST be specified as the first option - aborting...\n");
-				usage();
-				exit(1);
-			}
-			iCompatibilityMode = atoi(optarg);
-			break;
-		case 'd':		/* debug */
-			Debug = 1;
-			break;
-		case 'e':		/* log every message (no repeat message supression) */
-			fprintf(stderr, "note: -e option is no longer supported, every message is now logged by default\n");
-			bEOptionWasGiven = 1;
-			break;
 		case 'f':		/* configuration file */
-			ConfFile = (uchar*) optarg;
+			ConfFile = (uchar*) arg;
 			break;
 		case 'g':		/* enable tcp gssapi logging */
-#if defined(SYSLOG_INET) && defined(USE_GSSAPI)
 			if(iCompatibilityMode < 3) {
-				legacyOptsParseTCP(ch, optarg);
+				legacyOptsParseTCP(ch, arg);
 			} else
 				fprintf(stderr,	"-g option only supported in compatibility modes 0 to 2 - ignored\n");
-#else
-			fprintf(stderr, "rsyslogd: -g not valid - not compiled with gssapi support");
-#endif
 			break;
 		case 'h':
 			if(iCompatibilityMode < 3) {
@@ -3119,24 +3266,21 @@ int realMain(int argc, char **argv)
 			}
 			break;
 		case 'i':		/* pid file name */
-			PidFile = optarg;
+			PidFile = arg;
 			break;
 		case 'l':
 			if (LocalHosts) {
 				fprintf (stderr, "rsyslogd: Only one -l argument allowed, the first one is taken.\n");
 			} else {
-				LocalHosts = crunch_list(optarg);
+				LocalHosts = crunch_list(arg);
 			}
 			break;
 		case 'm':		/* mark interval */
 			if(iCompatibilityMode < 3) {
-				MarkInterval = atoi(optarg) * 60;
+				MarkInterval = atoi(arg) * 60;
 			} else
 				fprintf(stderr,
 					"-m option only supported in compatibility modes 0 to 2 - ignored\n");
-			break;
-		case 'M': /* default module load path */
-			module.SetModDir((uchar*)optarg);
 			break;
 		case 'n':		/* don't fork */
 			NoFork = 1;
@@ -3158,7 +3302,7 @@ int realMain(int argc, char **argv)
 					legacyOptsEnq((uchar *) "ModLoad imuxsock");
 					bImUxSockLoaded = 1;
 				}
-				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "SystemLogSocketName %s", optarg);
+				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "SystemLogSocketName %s", arg);
 				legacyOptsEnq(legacyConfLine);
 			} else {
 				fprintf(stderr, "error -p is no longer supported, use module imuxsock instead");
@@ -3170,42 +3314,30 @@ int realMain(int argc, char **argv)
 		        *net.pACLDontResolve = 1;
 		        break;
 		case 'r':		/* accept remote messages */
-#ifdef SYSLOG_INET
 			if(iCompatibilityMode < 3) {
 				legacyOptsEnq((uchar *) "ModLoad imudp");
-				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "UDPServerRun %s", optarg);
+				snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "UDPServerRun %s", arg);
 				legacyOptsEnq(legacyConfLine);
 			} else
-				fprintf(stderr,
-					"-r option only supported in compatibility modes 0 to 2 - ignored\n");
-#else
-			fprintf(stderr, "rsyslogd: -r not valid - not compiled with network support\n");
-#endif
+				fprintf(stderr, "-r option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
 		case 's':
 			if (StripDomains) {
 				fprintf (stderr, "rsyslogd: Only one -s argument allowed, the first one is taken.\n");
 			} else {
-				StripDomains = crunch_list(optarg);
+				StripDomains = crunch_list(arg);
 			}
 			break;
 		case 't':		/* enable tcp logging */
-#ifdef SYSLOG_INET
 			if(iCompatibilityMode < 3) {
-				legacyOptsParseTCP(ch, optarg);
+				legacyOptsParseTCP(ch, arg);
 			} else
 				fprintf(stderr,	"-t option only supported in compatibility modes 0 to 2 - ignored\n");
-#else
-			fprintf(stderr, "rsyslogd: -t not valid - not compiled with network support\n");
-#endif
 			break;
 		case 'u':		/* misc user settings */
-			if(atoi(optarg) == 1)
+			if(atoi(arg) == 1)
 				bParseHOSTNAMEandTAG = 0;
 			break;
-		case 'v':
-			printVersion();
-			exit(0); /* exit for -v option - so this is a "good one" */
 		case 'w':		/* disable disallowed host warnigs */
 			option_DisallowWarning = 0;
 			break;
@@ -3216,15 +3348,12 @@ int realMain(int argc, char **argv)
 		default:
 			usage();
 		}
-		bIsFirstOption = 0; /* we already saw an option character */
 	}
 
-	if ((argc -= optind))
-		usage();
+	if(iRet != RS_RET_END_OF_LINKEDLIST)
+		FINALIZE;
 
-	/* TODO: this should go away at a reasonable stage of v3 development.
-	 * rgerhards, 2007-12-19
-	 */
+	/* process compatibility mode settings */
 	if(iCompatibilityMode < 3) {
 		errmsg.LogError(NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
 		                            "generated config directives may interfer with your rsyslog.conf settings. "
@@ -3250,7 +3379,7 @@ int realMain(int argc, char **argv)
 	checkPermissions();
 	thrdInit();
 
-	if ( !(Debug || NoFork) )
+	if( !(Debug || NoFork) )
 	{
 		dbgprintf("Checking pidfile.\n");
 		if (!check_pid(PidFile))
@@ -3288,8 +3417,6 @@ int realMain(int argc, char **argv)
 	}
 	else
 		debugging_on = 1;
-
-	dbgprintf("Compatibility Mode: %d\n", iCompatibilityMode);
 
 	/* tuck my process id away */
 	dbgprintf("Writing pidfile %s.\n", PidFile);

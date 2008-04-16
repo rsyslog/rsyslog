@@ -39,6 +39,9 @@
 #include <time.h>
 #include <assert.h>
 #include <errno.h>
+#ifdef	OS_BSD
+#	include "libgen.h"
+#endif
 
 #include <dlfcn.h> /* TODO: replace this with the libtools equivalent! */
 
@@ -778,6 +781,17 @@ BEGINAbstractObjClassInit(module, 1, OBJ_IS_CORE_MODULE) /* class, version - CHA
 	/* use any module load path specified in the environment */
 	if((pModPath = (uchar*) getenv("RSYSLOG_MODDIR")) != NULL) {
 		SetModDir(pModPath);
+	}
+
+	/* now check if another module path was set via the command line (-M)
+	 * if so, that overrides the environment. Please note that we must use
+	 * a global setting here because the command line parser can NOT call
+	 * into the module object, because it is not initialized at that point. So
+	 * instead a global setting is changed and we pick it up as soon as we
+	 * initialize -- rgerhards, 2008-04-04
+	 */
+	if(glblModPath != NULL) {
+		SetModDir(glblModPath);
 	}
 
 	/* request objects we use */

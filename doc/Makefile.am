@@ -31,6 +31,9 @@ html_files = \
 	imfile.html \
 	imtcp.html \
 	imgssapi.html \
+	imrelp.html \
+	imuxsock.html \
+	imklog.html \
 	professional_support.html \
 	queues.html \
 	queueWorkerLogic.dia \

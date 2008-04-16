@@ -83,9 +83,20 @@ typedef struct queue_s {
 	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
 	int	toEnq;		/* enqueue timeout */
-	/* rate limiting settings (will be expanded */
+	/* rate limiting settings (will be expanded) */
 	int	iDeqSlowdown; /* slow down dequeue by specified nbr of microseconds */
 	/* end rate limiting */
+	/* dequeue time window settings (may also be expanded) */
+	int iDeqtWinFromHr;	/* begin of dequeue time window (hour only) */
+	int iDeqtWinToHr;	/* end of dequeue time window (hour only), set to 25 to disable deq window! */
+	/* note that begin and end have specific semantics. It is a big difference if we have
+	 * begin 4, end 22 or begin 22, end 4. In the later case, dequeuing will run from 10p,
+	 * throughout the night and stop at 4 in the morning. In the first case, it will start
+	 * at 4am, run throughout the day, and stop at 10 in the evening! So far, not logic is
+	 * applied to detect user configuration errors (and tell me how should we detect what
+	 * the user really wanted...). -- rgerhards, 2008-04-02
+	 */
+	/* ane dequeue time window */
 	rsRetVal (*pConsumer)(void *,void*); /* user-supplied consumer function for dequeued messages */
 	/* calling interface for pConsumer: arg1 is the global user pointer from this structure, arg2 is the
 	 * user pointer that was dequeued (actual sample: for actions, arg1 is the pAction and arg2 is pointer
@@ -174,6 +185,8 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,void*));
 PROTOTYPEObjClassInit(queue);
 PROTOTYPEpropSetMeth(queue, iPersistUpdCnt, int);
+PROTOTYPEpropSetMeth(queue, iDeqtWinFromHr, int);
+PROTOTYPEpropSetMeth(queue, iDeqtWinToHr, int);
 PROTOTYPEpropSetMeth(queue, toQShutdown, long);
 PROTOTYPEpropSetMeth(queue, toActShutdown, long);
 PROTOTYPEpropSetMeth(queue, toWrkShutdown, long);

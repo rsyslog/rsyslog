@@ -104,13 +104,13 @@ BEGINinterface(obj) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SerializeProp)(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr);
 	rsRetVal (*EndSerialize)(strm_t *pStrm);
 	rsRetVal (*RegisterObj)(uchar *pszObjName, objInfo_t *pInfo);
-	rsRetVal (*UnregisterObj)(uchar *pszObjName, objInfo_t *pInfo);
+	rsRetVal (*UnregisterObj)(uchar *pszObjName);
 	rsRetVal (*Deserialize)(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixup)(obj_t*,void*), void *pUsr);
 	rsRetVal (*DeserializePropBag)(obj_t *pObj, strm_t *pStrm);
 	rsRetVal (*SetName)(obj_t *pThis, uchar *pszName);
 	uchar *  (*GetName)(obj_t *pThis);
 ENDinterface(obj)
-#define objCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define objCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

@@ -1,12 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head>
-<meta content="de" http-equiv="Content-Language"><title>rsyslog vs. syslog-ng - a comparison</title>
+<html><head><title>rsyslog vs. syslog-ng - a comparison</title>
 
 </head>
 <body>
 <h1>rsyslog vs. syslog-ng</h1>
 <p><small><i>Written by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a>
-(2008-02-28)</i></small></p>
+(2008-04-08)</i></small></p>
 <p>We have often been asked about a comparison sheet between
 rsyslog and syslog-ng. Unfortunately, I do not know much about
 syslog-ng, I did not even use it once. Also, there seems to be no
@@ -122,7 +121,9 @@ based framing on syslog/tcp connections</td>
 <td valign="top">yes</td>
 </tr>
 <tr>
-<td valign="top">syslog over RELP<br>this is a truely reliable solution (plain tcp syslog can lose messages!)</td>
+<td valign="top">syslog over RELP<br>
+truly reliable message delivery (<a href="http://rgerhards.blogspot.com/2008/04/on-unreliability-of-plain-tcp-syslog.html">Why
+is plain tcp syslog not reliable?</a>)</td>
 <td valign="top">yes</td>
 <td valign="top">no</td>
 </tr>
@@ -337,6 +338,15 @@ be placed on different disk</td>
 <td valign="top">no</td>
 </tr>
 <tr>
+<td valign="top">ability to process spooled
+messages only during a configured timeframe (e.g. process messages only
+during off-peak hours, during peak hours they are enqueued only)</td>
+<td valign="top"><a href="http://wiki.rsyslog.com/index.php/OffPeakHours">yes</a><br>
+(can independently be configured for the main queue and each action
+queue)</td>
+<td valign="top">no</td>
+</tr>
+<tr>
 <td valign="top">ability to configure backup
 syslog/database servers </td>
 <td valign="top">yes</td>
@@ -414,6 +424,10 @@ directories (log targets) dynamically</td>
 <td valign="top">control of log output format,
 including ability to present channel and priority as visible log data</td>
 <td valign="top">yes</td>
+<td valign="top">not sure...</td>
+</tr>
+<tr><td valign="top">native ability to send mail messages</td>
+<td valign="top">yes (<a href="ommail.html">ommail</a>, introduced in 3.17.0)</td>
 <td valign="top">not sure...</td>
 </tr>
 <tr>
@@ -564,6 +578,6 @@ feature sheet. I have not yet been able to fully work through it. In
 the mean time, you may want to read it in parallel. It is available at
 <a href="http://www.balabit.com/network-security/syslog-ng/features/detailed/">Balabit's
 site</a>.</p>
-<p>This document is current as of 2008-02-28 and definitely
+<p>This document is current as of 2008-04-08 and definitely
 incomplete (I did not yet manage to complete it!).</p>
 </body></html>

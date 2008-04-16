@@ -235,15 +235,16 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
  *   0 means "no", 1 "yes"
  *   - bTrimLeading
  *   - bTrimTrailing
+ *   - bConvLower - convert string to lower case?
  * 
  * Output:
  * ppCStr Pointer to the parsed string - must be freed by caller!
  */
-rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing)
+rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing, int bConvLower)
 {
 	DEFiRet;
 	register unsigned char *pC;
-	cstr_t *pCStr;
+	cstr_t *pCStr = NULL;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
@@ -254,12 +255,8 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)
-	      && *pC != cDelim) {
-		if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-			rsCStrDestruct(&pCStr);
-			FINALIZE;
-		}
+	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != cDelim) {
+		CHKiRet(rsCStrAppendChar(pCStr, bConvLower ? tolower(*pC) : *pC));
 		++pThis->iCurrPos;
 		++pC;
 	}
@@ -271,22 +268,21 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	/* We got the string, now take it and see if we need to
 	 * remove anything at its end.
 	 */
-	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
-		rsCStrDestruct (&pCStr);
-		FINALIZE;
-	}
+	CHKiRet(rsCStrFinish(pCStr));
 
 	if(bTrimTrailing) {
-		if((iRet = rsCStrTrimTrailingWhiteSpace(pCStr)) 
-		   != RS_RET_OK) {
-			rsCStrDestruct (&pCStr);
-			FINALIZE;
-		}
+		CHKiRet(rsCStrTrimTrailingWhiteSpace(pCStr));
 	}
 
 	/* done! */
 	*ppCStr = pCStr;
+
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pCStr != NULL)
+			rsCStrDestruct(&pCStr);
+	}
+
 	RETiRet;
 }
 
@@ -308,13 +304,12 @@ finalize_it:
 rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 {
 	register unsigned char *pC;
-	cstr_t *pCStr;
+	cstr_t *pCStr = NULL;
 	DEFiRet;
 
 	rsCHECKVALIDOBJECT(pThis, OIDrsPars);
 
-	if((iRet = parsSkipAfterChar(pThis, '"')) != RS_RET_OK)
-		FINALIZE;
+	CHKiRet(parsSkipAfterChar(pThis, '"'));
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
 	/* OK, we most probably can obtain a value... */
@@ -331,16 +326,10 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 				 * to the output buffer (but do not rely on this,
 				 * we might later introduce other things, like \007!
 				 */
-				if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-					rsCStrDestruct(&pCStr);
-					FINALIZE;
-				}
+				CHKiRet(rsCStrAppendChar(pCStr, *pC));
 			}
 		} else { /* regular character */
-			if((iRet = rsCStrAppendChar(pCStr, *pC)) != RS_RET_OK) {
-				rsCStrDestruct (&pCStr);
-				FINALIZE;
-			}
+			CHKiRet(rsCStrAppendChar(pCStr, *pC));
 		}
 		++pThis->iCurrPos;
 		++pC;
@@ -350,19 +339,22 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 		++pThis->iCurrPos; /* 'eat' trailing quote */
 	} else {
 		/* error - improperly quoted string! */
-		rsCStrDestruct (&pCStr);
+		rsCStrDestruct(&pCStr);
 		ABORT_FINALIZE(RS_RET_MISSING_TRAIL_QUOTE);
 	}
 
 	/* We got the string, let's finish it...  */
-	if((iRet = rsCStrFinish(pCStr)) != RS_RET_OK) {
-		rsCStrDestruct (&pCStr);
-		FINALIZE;
-	}
+	CHKiRet(rsCStrFinish(pCStr));
 
 	/* done! */
 	*ppCStr = pCStr;
+
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pCStr != NULL)
+			rsCStrDestruct(&pCStr);
+	}
+
 	RETiRet;
 }
 

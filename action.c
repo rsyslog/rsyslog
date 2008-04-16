@@ -74,8 +74,10 @@ static int iActionQtoEnq = 2000;				/* timeout for queue enque */
 static int iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
 static int iActionQWrkMinMsgs = 100;				/* minimum messages per worker needed to start a new one */
 static int bActionQSaveOnShutdown = 1;				/* save queue on shutdown (when DA enabled)? */
-static int iActionQueueDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
 static int64 iActionQueMaxDiskSpace = 0;			/* max disk space allocated 0 ==> unlimited */
+static int iActionQueueDeqSlowdown = 0;				/* dequeue slowdown (simple rate limiting) */
+static int iActionQueueDeqtWinFromHr = 0;			/* hour begin of time frame when queue is to be dequeued */
+static int iActionQueueDeqtWinToHr = 25;			/* hour begin of time frame when queue is to be dequeued */
 
 /* the counter below counts actions created. It is used to obtain unique IDs for the action. They
  * should not be relied on for any long-term activity (e.g. disk queue names!), but they are nice
@@ -113,8 +115,10 @@ actionResetQueueParams(void)
 	iActionQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
 	iActionQWrkMinMsgs = 100;			/* minimum messages per worker needed to start a new one */
 	bActionQSaveOnShutdown = 1;			/* save queue on shutdown (when DA enabled)? */
-	iActionQueueDeqSlowdown = 0;
 	iActionQueMaxDiskSpace = 0;
+	iActionQueueDeqSlowdown = 0;
+	iActionQueueDeqtWinFromHr = 0;
+	iActionQueueDeqtWinToHr = 25;			/* 25 disables time windowed dequeuing */
 
 	glbliActionResumeRetryCount = 0;		/* I guess it is smart to reset this one, too */
 
@@ -237,7 +241,9 @@ actionConstructFinalize(action_t *pThis)
 	setQPROP(queueSetiDiscardSeverity, "$ActionQueueDiscardSeverity", iActionQDiscardSeverity);
 	setQPROP(queueSetiMinMsgsPerWrkr, "$ActionQueueWorkerThreadMinimumMessages", iActionQWrkMinMsgs);
 	setQPROP(queueSetbSaveOnShutdown, "$ActionQueueSaveOnShutdown", bActionQSaveOnShutdown);
-	setQPROP(queueSetiDeqSlowdown, "$ActionQueueDequeueSlowdown", iActionQueueDeqSlowdown);
+	setQPROP(queueSetiDeqSlowdown,    "$ActionQueueDequeueSlowdown", iActionQueueDeqSlowdown);
+	setQPROP(queueSetiDeqtWinFromHr,  "$ActionQueueDequeueTimeBegin", iActionQueueDeqtWinFromHr);
+	setQPROP(queueSetiDeqtWinToHr,    "$ActionQueueDequeueTimeEnd", iActionQueueDeqtWinToHr);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -498,6 +504,7 @@ actionWriteToAction(action_t *pAction)
 {
 	msg_t *pMsgSave;	/* to save current message pointer, necessary to restore
 				   it in case it needs to be updated (e.g. repeated msgs) */
+	time_t now;
 	DEFiRet;
 
 	pMsgSave = NULL;	/* indicate message poiner not saved */
@@ -536,7 +543,20 @@ actionWriteToAction(action_t *pAction)
 
 	dbgprintf("Called action, logging to %s", module.GetStateName(pAction->pMod));
 
-	time(&pAction->f_time); /* we need this for message repeation processing */
+	time(&now); /* we need this for message repeation processing AND $ActionExecOnlyOnceEveryInterval */
+	/* now check if we need to drop the message because otherwise the action would be too
+	 * frequently called. -- rgerhards, 2008-04-08
+	 */
+	if(pAction->f_time != 0 && pAction->iSecsExecOnceInterval + pAction->tLastExec > now) {
+		/* in this case we need to discard the message - its not yet time to exec the action */
+		dbgprintf("action not yet ready again to be executed, onceInterval %d, tCurr %d, tNext %d\n",
+			  (int) pAction->iSecsExecOnceInterval, (int) now,
+			  (int) (pAction->iSecsExecOnceInterval + pAction->tLastExec));
+		FINALIZE;
+	}
+
+	pAction->tLastExec = now; /* we need this OnceInterval */
+	pAction->f_time = now; /* we need this for message repeation processing */
 
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's enqueue our message for execution. -- rgerhards, 2007-07-24
@@ -680,6 +700,8 @@ actionAddCfSysLineHdrl(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxfilesize", 0, eCmdHdlrSize, NULL, &iActionQueMaxFileSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesaveonshutdown", 0, eCmdHdlrBinary, NULL, &bActionQSaveOnShutdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &iActionQueueDeqSlowdown, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinFromHr, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinToHr, NULL));
 	
 finalize_it:
 	RETiRet;
@@ -710,6 +732,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	pAction->pMod = pMod;
 	pAction->pModData = pModData;
 	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
+	pAction->iSecsExecOnceInterval = iActExecOnceInterval;
 
 	/* check if we can obtain the template pointers - TODO: move to separate function? */
 	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);
@@ -799,7 +822,6 @@ rsRetVal actionClassInit(void)
 finalize_it:
 	RETiRet;
 }
-
 
 /* vi:set ai:
  */

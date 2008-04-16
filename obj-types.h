@@ -210,7 +210,7 @@ rsRetVal objName##ClassExit(void) \
 #define CODESTARTObjClassExit(objName)
 
 #define ENDObjClassExit(objName) \
-	iRet = obj.UnregisterObj((uchar*)#objName, pObjInfoOBJ); \
+	iRet = obj.UnregisterObj((uchar*)#objName); \
 	RETiRet; \
 }
 

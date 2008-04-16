@@ -1,7 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>The Rsyslogd Property Replacer</title>
-
-</head>
+<html><head><title>The Rsyslogd Property Replacer</title></head>
 <body>
 <h1>The Property Replacer</h1>
 <p><b>The property replacer is a core component in
@@ -17,7 +15,7 @@ modified by the property replacer. The full syntax is as follows:</p>
 <blockquote><b><code>%propname:fromChar:toChar:options%</code></b></blockquote>
 <h2>Available Properties</h2>
 <p><b><code>propname</code></b> is the
-name of the property to access. It is case-sensitive.
+name of the property to access. It is case-insensitive (prior to 3.17.0, they were case-senstive).
 Currently supported are:</p>
 <table>
 <tbody>
@@ -31,11 +29,11 @@ Currently supported are:</p>
 socket. Should be useful for debugging.</td>
 </tr>
 <tr>
-<td><b>UxTradMsg</b></td>
+<td><b>uxtradmsg</b></td>
 <td>will disappear soon - do NOT use!</td>
 </tr>
 <tr>
-<td><b>HOSTNAME</b></td>
+<td><b>hostname</b></td>
 <td>hostname from the message</td>
 </tr>
 <tr>
@@ -43,7 +41,7 @@ socket. Should be useful for debugging.</td>
 <td>alias for HOSTNAME</td>
 </tr>
 <tr>
-<td><b>FROMHOST</b></td>
+<td><b>fromhost</b></td>
 <td>hostname of the system the message was received from
 (in a relay chain, this is the system immediately in front of us and
 not necessarily the original sender)</td>
@@ -59,16 +57,16 @@ BSD syslogd. For example, when TAG is "named[12345]", programname is
 "named".</td>
 </tr>
 <tr>
-<td><b>PRI</b></td>
+<td><b>pri</b></td>
 <td>PRI part of the message - undecoded (single value)</td>
 </tr>
 <tr>
-<td><b>PRI-text</b></td>
+<td><b>pri-text</b></td>
 <td>the PRI part of the message in a textual form (e.g.
 "syslog.info")</td>
 </tr>
 <tr>
-<td><b>IUT</b></td>
+<td><span style="font-weight: bold;">iut</span></td>
 <td>the monitorware InfoUnitType - used when talking
 to a <a href="http://www.monitorware.com">MonitorWare</a>
 backend (also for <a href="http://www.phplogcon.org/">phpLogCon</a>)</td>
@@ -110,67 +108,67 @@ what was provided in the message (in most cases,
 only seconds)</td>
 </tr>
 <tr>
-<td><b>TIMESTAMP</b></td>
+<td><b>timestamp</b></td>
 <td>alias for timereported</td>
 </tr>
 <tr>
-<td><b>PROTOCOL-VERSION</b></td>
+<td><b>protocol-version</b></td>
 <td>The contents of the PROTCOL-VERSION field from IETF
 draft draft-ietf-syslog-protcol</td>
 </tr>
 <tr>
-<td><b>STRUCTURED-DATA</b></td>
+<td><b>structured-data</b></td>
 <td>The contents of the STRUCTURED-DATA field from IETF
 draft draft-ietf-syslog-protocol</td>
 </tr>
 <tr>
-<td><b>APP-NAME</b></td>
+<td><b>app-name</b></td>
 <td>The contents of the APP-NAME field from IETF draft
 draft-ietf-syslog-protocol</td>
 </tr>
 <tr>
-<td><b>PROCID</b></td>
+<td><b>procid</b></td>
 <td>The contents of the PROCID field from IETF draft
 draft-ietf-syslog-protocol</td>
 </tr>
 <tr>
-<td height="24"><b>MSGID</b></td>
+<td height="24"><b>msgid</b></td>
 <td height="24">The contents of the MSGID field from
 IETF draft draft-ietf-syslog-protocol</td>
 </tr>
 <tr>
-<td><b>$NOW</b></td>
+<td><b>$now</b></td>
 <td>The current date stamp in the format YYYY-MM-DD</td>
 </tr>
 <tr>
-<td><b>$YEAR</b></td>
+<td><b>$year</b></td>
 <td>The current year (4-digit)</td>
 </tr>
 <tr>
-<td><b>$MONTH</b></td>
+<td><b>$month</b></td>
 <td>The current month (2-digit)</td>
 </tr>
 <tr>
-<td><b>$DAY</b></td>
+<td><b>$day</b></td>
 <td>The current day of the month (2-digit)</td>
 </tr>
 <tr>
-<td><b>$HOUR</b></td>
+<td><b>$hour</b></td>
 <td>The current hour in military (24 hour) time (2-digit)</td>
 </tr>
 <tr>
-<td><b>$HHOUR</b></td>
+<td><b>$hhour</b></td>
 <td>The current half hour we are in. From minute 0 to 29,
 this is always 0 while
 from 30 to 59 it is always 1.</td>
 </tr>
 <tr>
-<td><b>$QHOUR</b></td>
+<td><b>$qhour</b></td>
 <td>The current quarter hour we are in. Much like $HHOUR, but values
 range from 0 to 3 (for the four quater hours that are in each hour)</td>
 </tr>
 <tr>
-<td><b>$MINUTE</b></td>
+<td><b>$minute</b></td>
 <td>The current minute (2-digit)</td>
 </tr>
 </tbody>
