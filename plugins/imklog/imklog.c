@@ -59,7 +59,7 @@ MODULE_TYPE_INPUT
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(datetime)
 
-/* configuration settings TODO: move to instance data? */
+/* configuration settings */
 int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
 int symbols_twice = 0;
 int use_syscall = 0;
