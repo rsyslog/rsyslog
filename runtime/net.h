@@ -27,6 +27,11 @@
 #include <netinet/in.h>
 #include <sys/socket.h> /* this is needed on HP UX -- rgerhards, 2008-03-04 */
 
+typedef enum _TCPFRAMINGMODE {
+		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
+		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
+	} TCPFRAMINGMODE;
+
 #define   F_SET(where, flag) (where)|=(flag)
 #define F_ISSET(where, flag) ((where)&(flag))==(flag)
 #define F_UNSET(where, flag) (where)&=~(flag)

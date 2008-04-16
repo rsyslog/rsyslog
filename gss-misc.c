@@ -48,7 +48,6 @@
 #include "omfwd.h"
 #include "template.h"
 #include "msg.h"
-#include "tcpsyslog.h"
 #include "module-template.h"
 #include "obj.h"
 #include "errmsg.h"

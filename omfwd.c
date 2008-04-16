@@ -55,7 +55,6 @@
 #include "omfwd.h"
 #include "template.h"
 #include "msg.h"
-#include "tcpsyslog.h"
 #include "tcpclt.h"
 #include "cfsysline.h"
 #include "module-template.h"

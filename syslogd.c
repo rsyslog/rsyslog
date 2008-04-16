@@ -129,6 +129,8 @@
 #include <zlib.h>
 #endif
 
+#include <netdb.h>
+
 #include "pidfile.h"
 #include "srUtils.h"
 #include "stringbuf.h"
@@ -140,7 +142,6 @@
 #include "msg.h"
 #include "modules.h"
 #include "action.h"
-#include "tcpsyslog.h"
 #include "iminternal.h"
 #include "cfsysline.h"
 #include "omshell.h"

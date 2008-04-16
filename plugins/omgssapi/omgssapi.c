@@ -50,7 +50,6 @@
 #include "omfwd.h"
 #include "template.h"
 #include "msg.h"
-#include "tcpsyslog.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "gss-misc.h"

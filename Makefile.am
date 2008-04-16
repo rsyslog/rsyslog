@@ -35,8 +35,6 @@ rsyslogd_SOURCES = \
 	template.h \
 	conf.c \
 	conf.h \
-	tcpsyslog.c \
-	tcpsyslog.h \
 	cfsysline.c \
 	cfsysline.h
 
