@@ -1,4 +1,3 @@
-#sbin_PROGRAMS = rfc3195d rsyslogd
 sbin_PROGRAMS =
 man_MANS = 
 
@@ -90,8 +89,8 @@ rsyslogd_SOURCES = \
 	action.h \
 	atomic.h
 
-rsyslogd_CPPFLAGS =  -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags)
-rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs) runtime/librsyslog.la
+rsyslogd_CPPFLAGS =  -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags) $(rsrt_cflags)
+rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs) $(rsrt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 
 man_MANS += rsyslogd.8 rsyslog.conf.5 
@@ -115,8 +114,8 @@ pkglib_LTLIBRARIES += lmnet.la lmtcpsrv.la lmtcpclt.la
 # network support
 # 
 lmnet_la_SOURCES = net.c net.h
-lmnet_la_CPPFLAGS = $(pthreads_cflags)
-lmnet_la_LDFLAGS = -module -avoid-version
+lmnet_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnet_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
 lmnet_la_LIBADD =
 #
 #

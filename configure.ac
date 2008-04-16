@@ -508,9 +508,11 @@ AC_ARG_ENABLE(rsyslogrt,
          esac],
         [enable_rsyslogrt=yes]
 )
+if test "x$enable_rsyslogrt" = "xyes"; then
+  rsrt_cflags="-I\$(top_srcdir)/runtime -I\$(top_srcdir)"
+  rsrt_libs="\$(top_builddir)/runtime/librsyslog.la"
+fi
 AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
-CFLAGS="-I$(top_srcdir)/runtime $CFLAGS$
-rsrt_libs=""
 AC_SUBST(rsrt_cflags)
 AC_SUBST(rsrt_libs)
 
