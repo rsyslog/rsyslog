@@ -1,3 +1,4 @@
+- implemented im3195, the RFC3195 input as a plugin
 ---------------------------------------------------------------------------
 Version 3.19.0 (rgerhards), 2008-04-??
 - begins new devel branch version
