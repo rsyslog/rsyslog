@@ -12,24 +12,32 @@
  * long term, but it is good to have it out of syslogd.c. Maybe this here is
  * an interim location ;)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
  *
- * This file is part of rsyslog.
+ * rgerhards, 2008-04-16: I changed this code to LGPL today. I carefully analyzed
+ * that it does not borrow code from the original sysklogd and that I have 
+ * permission to do so from all other contributors. My analysis found that all
+ * code from sysklogd has been superseeded by our own functionality, so it 
+ * is OK to move this file to LGPL. Some variable sysklogd variable names
+ * remain, but even this will change as the net object evolves.
  *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * This file is part of the rsyslog runtime library.
+ *
+ * The rsyslog runtime library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Rsyslog is distributed in the hope that it will be useful,
+ * The rsyslog runtime library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
 
@@ -792,9 +800,8 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 
 	/* if we reach this point, we obtained a non-numeric hostname and can now process it */
 
-	/* Convert to lower case, just like LocalDomain above
-	 */
-	for (p = pszHostFQDN ; *p ; p++)
+	/* Convert to lower case */
+	for(p = pszHostFQDN ; *p ; p++)
 		if (isupper((int) *p))
 			*p = tolower(*p);
 	
@@ -815,6 +822,9 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 		} else {
 			/* now check if we belong to any of the domain names that were specified
 			 * in the -s command line option. If so, remove and we are done.
+			 * TODO: this must go away! -- rgerhards, 2008-04-16
+			 * For proper modularization, this must be done different, e.g. via a
+			 * "to be stripped" property of *this* object itself.
 			 */
 			if (StripDomains) {
 				count=0;
@@ -833,6 +843,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 			 * door would be wide-open for all kinds of mixing up of hosts. Because of this,
 			 * you'll see comparison against the full string (pszHost) below. The termination
 			 * still occurs at *p, which points at the first dot after the hostname.
+			 * TODO: this must also go away - see comment above -- rgerhards, 2008-04-16
 			 */
 			if (LocalHosts) {
 				count=0;

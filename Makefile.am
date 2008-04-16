@@ -60,14 +60,7 @@ endif
 
 
 if ENABLE_INET
-pkglib_LTLIBRARIES += lmnet.la lmtcpsrv.la lmtcpclt.la
-#
-# network support
-# 
-lmnet_la_SOURCES = net.c net.h
-lmnet_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmnet_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
-lmnet_la_LIBADD =
+pkglib_LTLIBRARIES += lmtcpsrv.la lmtcpclt.la
 #
 #
 # TCP (stream) server support

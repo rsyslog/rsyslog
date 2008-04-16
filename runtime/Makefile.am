@@ -75,3 +75,14 @@ lmregexp_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
 lmregexp_la_LIBADD =
 endif
 
+if ENABLE_INET
+pkglib_LTLIBRARIES += lmnet.la
+#
+# network support
+# 
+lmnet_la_SOURCES = net.c net.h
+lmnet_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnet_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
+lmnet_la_LIBADD =
+
+endif # if ENABLE_INET
