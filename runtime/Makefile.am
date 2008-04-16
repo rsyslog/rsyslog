@@ -5,6 +5,7 @@ pkglib_LTLIBRARIES =
 #pkglib_LTLIBRARIES = librsyslog.la
 
 librsyslog_la_SOURCES = \
+	rsyslog.c \
 	rsyslog.h \
 	atomic.h \
 	syslogd-types.h \

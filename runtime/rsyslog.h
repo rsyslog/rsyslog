@@ -46,6 +46,7 @@
 
 /* define some base data types */
 typedef struct thrdInfo thrdInfo_t;
+typedef struct filed selector_t;	/* TODO: this so far resides in syslogd.c, think about modularization */
 
 /* some universal 64 bit define... */
 typedef long long int64;
@@ -266,6 +267,11 @@ typedef unsigned char uchar;
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
 
 #include "debug.h"
+#include "obj.h"
+
+/* some runtime prototypes */
+rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);
+rsRetVal rsrtExit(obj_if_t *pObjIF);
 
 #endif /* multi-include protection */
 /* vim:set ai:

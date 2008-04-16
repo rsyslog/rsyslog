@@ -1,3 +1,7 @@
+- split of a "runtime library" for rsyslog - this is not yet a clean
+  model, because some modularization is still outstanding. In theory,
+  this shall enable other utilities but rsyslogd to use the same
+  runtime
 ---------------------------------------------------------------------------
 Version 3.17.1 (rgerhards), 2008-04-15
 - removed dependency on MAXHOSTNAMELEN as much as it made sense.

@@ -152,15 +152,8 @@
 #include "threads.h"
 #include "queue.h"
 #include "stream.h"
-#include "wti.h"
-#include "wtp.h"
-#include "expr.h"
-#include "ctok.h"
 #include "conf.h"
-#include "vmop.h"
-#include "vmstk.h"
 #include "vm.h"
-#include "vmprg.h"
 #include "errmsg.h"
 #include "datetime.h"
 #include "sysvar.h"
@@ -2830,8 +2823,9 @@ static void mainThread()
 }
 
 
-/* Method to initialize all global classes.
+/* Method to initialize all global classes and use the objects that we need.
  * rgerhards, 2008-01-04
+ * rgerhards, 2008-04-16: the actual initialization is now carried out by the runtime
  */
 static rsRetVal
 InitGlobalClasses(void)
@@ -2839,67 +2833,31 @@ InitGlobalClasses(void)
 	DEFiRet;
 	char *pErrObj; /* tells us which object failed if that happens (useful for troubleshooting!) */
 
-	pErrObj = "obj";
-	CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initilizer being called! */
-	CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */
-	/* the following classes were intialized by objClassInit() */
+	/* Intialize the runtime system */
+	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
+	CHKiRet(rsrtInit(&pErrObj, &obj));
+
+	/* Now tell the system which classes we need ourselfs */
 	pErrObj = "errmsg";
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	pErrObj = "module";
 	CHKiRet(objUse(module,   CORE_COMPONENT));
 	pErrObj = "var";
 	CHKiRet(objUse(var,      CORE_COMPONENT));
-
-	/* initialize and use classes. We must be very careful with the order of events. Some
-	 * classes use others and if we do not initialize them in the right order, we may end
-	 * up with an invalid call. The most important thing that can happen is that an error
-	 * is detected and needs to be logged, wich in turn requires a broader number of classes
-	 * to be available. The solution is that we take care in the order of calls AND use a
-	 * class immediately after it is initialized. And, of course, we load those classes
-	 * first that we use ourselfs... -- rgerhards, 2008-03-07
-	 */
 	pErrObj = "datetime";
-	CHKiRet(datetimeClassInit(NULL));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	pErrObj = "msg";
-	CHKiRet(msgClassInit(NULL));
-	pErrObj = "str,";
-	CHKiRet(strmClassInit(NULL));
-	pErrObj = "wti";
-	CHKiRet(wtiClassInit(NULL));
-	pErrObj = "wtp";
-	CHKiRet(wtpClassInit(NULL));
-	pErrObj = "queue";
-	CHKiRet(queueClassInit(NULL));
-	pErrObj = "vmstk";
-	CHKiRet(vmstkClassInit(NULL));
-	pErrObj = "sysvar";
-	CHKiRet(sysvarClassInit(NULL));
 	pErrObj = "vm";
-	CHKiRet(vmClassInit(NULL));
 	CHKiRet(objUse(vm,       CORE_COMPONENT));
-	pErrObj = "vmop";
-	CHKiRet(vmopClassInit(NULL));
-	pErrObj = "vmprg";
-	CHKiRet(vmprgClassInit(NULL));
-	pErrObj = "ctok_token";
-	CHKiRet(ctok_tokenClassInit(NULL));
-	pErrObj = "ctok";
-	CHKiRet(ctokClassInit(NULL));
 	pErrObj = "expr";
-	CHKiRet(exprClassInit(NULL));
 	CHKiRet(objUse(expr,     CORE_COMPONENT));
 	pErrObj = "conf";
-	CHKiRet(confClassInit(NULL));
 	CHKiRet(objUse(conf,     CORE_COMPONENT));
 
-	/* dummy "classes" */
+	/* intialize some dummy classes that are not part of the runtime */
 	pErrObj = "action";
 	CHKiRet(actionClassInit());
 	pErrObj = "template";
 	CHKiRet(templateInit());
-	pErrObj = "str";
-	CHKiRet(strInit());
 
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	pErrObj = "net";
@@ -2939,7 +2897,6 @@ GlobalClassExit(void)
 	objRelease(datetime, CORE_COMPONENT);
 
 	/* TODO: implement the rest of the deinit */
-	confClassExit();
 #if 0
 	CHKiRet(datetimeClassInit(NULL));
 	CHKiRet(msgClassInit(NULL));
@@ -2969,7 +2926,7 @@ GlobalClassExit(void)
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	CHKiRet(objUse(module,   CORE_COMPONENT));
 #endif
-	objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
+	rsrtExit(&obj); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 
 	RETiRet;
 }

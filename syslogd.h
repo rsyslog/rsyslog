@@ -113,7 +113,6 @@ struct filed {
 
 	linkedList_t llActList;	/* list of configured actions */
 };
-typedef struct filed selector_t;	/* new type name */
 
 
 #define MSG_PARSE_HOSTNAME 1
