@@ -2,6 +2,7 @@
   model, because some modularization is still outstanding. In theory,
   this shall enable other utilities but rsyslogd to use the same
   runtime
+- changed directory structure, files are now better organized
 ---------------------------------------------------------------------------
 Version 3.17.1 (rgerhards), 2008-04-15
 - removed dependency on MAXHOSTNAMELEN as much as it made sense.

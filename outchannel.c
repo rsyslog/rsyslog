@@ -37,7 +37,7 @@
 #include <assert.h>
 #include "stringbuf.h"
 #include "outchannel.h"
-#include "syslogd.h"
+#include "dirty.h"
 
 static struct outchannel *ochRoot = NULL;	/* the root of the outchannel list */
 static struct outchannel *ochLast = NULL;	/* points to the last element of the outchannel list */

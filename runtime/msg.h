@@ -107,7 +107,6 @@ struct msg {
         char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
 	int msgFlags;		/* flags associated with this message */
 };
-typedef struct msg msg_t;	/* new name */
 
 /* function prototypes
  */

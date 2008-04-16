@@ -44,9 +44,25 @@
 #	define _FILE_OFFSET_BITS 64
 #endif
 
+/* portability: not all platforms have these defines, so we
+ * define them here if they are missing. -- rgerhards, 2008-03-04
+ */
+#ifndef LOG_MAKEPRI
+#	define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
+#endif
+#ifndef LOG_PRI
+#	define	LOG_PRI(p)	((p) & LOG_PRIMASK)
+#endif
+#ifndef LOG_FAC
+#	define	LOG_FAC(p)	(((p) & LOG_FACMASK) >> 3)
+#endif
+
+
 /* define some base data types */
 typedef struct thrdInfo thrdInfo_t;
 typedef struct filed selector_t;	/* TODO: this so far resides in syslogd.c, think about modularization */
+typedef struct NetAddr netAddr_t;
+typedef struct msg msg_t;
 
 /* some universal 64 bit define... */
 typedef long long int64;

@@ -33,7 +33,7 @@
 #include "syslogd-types.h"
 #include "template.h"
 #include "msg.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "obj.h"
 #include "errmsg.h"
 

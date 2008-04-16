@@ -101,24 +101,9 @@ int parsIsAtEndOfParseString(rsParsObj *pThis);
 int parsGetCurrentPosition(rsParsObj *pThis);
 char parsPeekAtCharAtParsPtr(rsParsObj *pThis);
 #ifdef SYSLOG_INET
-rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits);
-#endif
-
-#if 0 /* later! - but leave it in in case we need it some day... */
-/* Parse a property
- * This is a complex parsing routine. It parses an property
- * entry suitable for use in the property replacer. It is currently
- * just an idea if this should be a parser function.
- */
-parsRet parsProp(parseObj *pThis, ?? **pPropEtry);
+rsRetVal parsAddrWithBits(rsParsObj *pThis, netAddr_t **pIP, int *pBits);
 #endif
 
 #endif
-/*
- * Local variables:
- *  c-indent-level: 8
- *  c-basic-offset: 8
- *  tab-width: 8
- * End:
- * vi:set ai:
+/* vim:set ai:
  */

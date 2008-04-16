@@ -32,7 +32,7 @@
 #include <pwd.h>
 #include <grp.h>
 
-#include "syslogd.h" /* TODO: when the module interface & library design is done, this should be able to go away */
+#include "dirty.h" /* TODO: when the module interface & library design is done, this should be able to go away */
 #include "cfsysline.h"
 #include "obj.h"
 #include "errmsg.h"

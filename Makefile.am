@@ -1,52 +1,5 @@
 sbin_PROGRAMS =
 man_MANS = 
-
-if ENABLE_RSYSLOGD
-sbin_PROGRAMS += rsyslogd
-rsyslogd_SOURCES = \
-	syslogd.c \
-	syslogd.h \
-	omshell.c \
-	omshell.h \
-	omusrmsg.c \
-	omusrmsg.h \
-	omfwd.c \
-	omfwd.h \
-	omfile.c \
-	omfile.h \
-	omdiscard.c \
-	omdiscard.h \
-	iminternal.c \
-	iminternal.h \
-	pidfile.c \
-	pidfile.h \
-	\
-	action.c \
-	action.h \
-	threads.c \
-	threads.h \
-	\
-	parse.c \
-	parse.h \
-	\
-	outchannel.c \
-	outchannel.h \
-	template.c \
-	template.h \
-	conf.c \
-	conf.h \
-	cfsysline.c \
-	cfsysline.h
-
-rsyslogd_CPPFLAGS =  $(pthreads_cflags) $(rsrt_cflags)
-rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs) $(rsrt_libs)
-rsyslogd_LDFLAGS = -export-dynamic
-
-man_MANS += rsyslogd.8 rsyslog.conf.5 
-
-endif # if ENABLE_RSYSLOGD
-
-# now come the library plugins
 pkglib_LTLIBRARIES = 
 
 if ENABLE_RFC3195
@@ -110,6 +63,10 @@ EXTRA_DIST = \
 SUBDIRS = doc runtime .
 
 SUBDIRS += plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
+
+if ENABLE_RSYSLOGD
+SUBDIRS += tools
+endif
 
 if ENABLE_IMKLOG
 SUBDIRS += plugins/imklog

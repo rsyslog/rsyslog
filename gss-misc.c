@@ -41,11 +41,10 @@
 #include <fcntl.h>
 #endif
 #include <gssapi/gssapi.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"
-#include "omfwd.h"
 #include "template.h"
 #include "msg.h"
 #include "module-template.h"

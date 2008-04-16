@@ -4,7 +4,7 @@
 AC_PREREQ(2.61)
 AC_INIT([rsyslog],[3.17.1],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
-AC_CONFIG_SRCDIR([syslogd.c])
+AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_HEADERS([config.h])
 
 AC_GNU_SOURCE
@@ -635,6 +635,7 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
+		tools/Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
 		plugins/imtcp/Makefile \

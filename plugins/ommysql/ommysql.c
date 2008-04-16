@@ -37,7 +37,7 @@
 #include <time.h>
 #include <mysql/mysql.h>
 #include <mysql/errmsg.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"

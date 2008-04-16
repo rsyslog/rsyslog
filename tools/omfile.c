@@ -85,6 +85,7 @@ static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathn
 static uchar	*pszTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
 
+
 typedef struct _instanceData {
 	uchar	f_fname[MAXFNAME];/* file or template name (display only) */
 	short	fd;		  /* file descriptor for (current) file */
@@ -775,7 +776,7 @@ CODESTARTparseSelectorAct
 			pData->fileType = eTypeTTY;
 			untty();
 		}
-		if (strcmp((char*) p, ctty) == 0)
+		if (strcmp((char*) p, _PATH_CONSOLE) == 0)
 			pData->fileType = eTypeCONSOLE;
 		break;
 	default:

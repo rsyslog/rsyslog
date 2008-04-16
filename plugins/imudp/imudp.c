@@ -33,7 +33,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "net.h"
 #include "cfsysline.h"
 #include "module-template.h"

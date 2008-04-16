@@ -37,7 +37,7 @@
 #include <signal.h>
 #include <string.h>
 #include <pthread.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
 

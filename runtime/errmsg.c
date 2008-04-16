@@ -33,7 +33,7 @@
 #include <assert.h>
 
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "obj.h"
 #include "errmsg.h"
 #include "sysvar.h"

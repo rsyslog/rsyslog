@@ -33,7 +33,7 @@
 #include <assert.h>
 
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "linkedlist.h"
 #include "threads.h"
 

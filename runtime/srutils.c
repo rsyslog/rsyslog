@@ -44,7 +44,7 @@
 #define TRUE 1
 #define FALSE 0
 #include "srUtils.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "obj.h"
 
 

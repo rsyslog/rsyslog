@@ -55,7 +55,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "module-template.h"
 #include "parse.h"

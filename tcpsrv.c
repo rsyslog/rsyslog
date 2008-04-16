@@ -54,7 +54,7 @@
 #include <fcntl.h>
 #endif
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "net.h"

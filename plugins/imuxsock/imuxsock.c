@@ -35,11 +35,12 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/un.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "net.h"
 
 MODULE_TYPE_INPUT
 

@@ -49,7 +49,7 @@
 #include <unistd.h>
 #include <sys/file.h>
 
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "modules.h"
 #include "errmsg.h"

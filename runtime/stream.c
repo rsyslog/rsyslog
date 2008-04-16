@@ -41,7 +41,7 @@
 #include <errno.h>
 
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "obj.h"

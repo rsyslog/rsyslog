@@ -45,7 +45,8 @@
 #endif
 
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "syslogd.h" /* this actually *is* part of the syslogd! */
+#include "dirty.h"
 #include "parse.h"
 #include "action.h"
 #include "template.h"
@@ -57,6 +58,10 @@
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "net.h"
+#include "expr.h"
+#include "ctok.h"
+#include "ctok_token.h"
 
 
 /* forward definitions */
