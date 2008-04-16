@@ -563,6 +563,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
  * passed back to the caller.
  * rgerhards 2005-09-15
  */
+/* GPLv3 - stems back to sysklogd */
 static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f)
 {
 	uchar *p;

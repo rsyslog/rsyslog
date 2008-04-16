@@ -4,66 +4,43 @@ man_MANS =
 if ENABLE_RSYSLOGD
 sbin_PROGRAMS += rsyslogd
 rsyslogd_SOURCES = \
-	datetime.c \
-	datetime.h \
-	errmsg.c \
-	errmsg.h \
 	syslogd.c \
 	syslogd.h \
-	debug.c \
-	debug.h \
-	glbl.h \
-	pidfile.c \
-	pidfile.h \
-	template.c \
-	outchannel.c \
-	stringbuf.c \
-	stringbuf.h \
-	srUtils.c \
-	srUtils.h \
-	parse.c \
-	parse.h \
-	syslogd-types.h \
-	template.h \
-	outchannel.h \
-	liblogging-stub.h \
-	threads.c \
-	threads.h \
-	obj.c \
-	obj.h \
-	obj-types.h \
-	msg.c \
-	msg.h \
-	conf.c \
-	conf.h \
 	omshell.c \
 	omshell.h \
 	omusrmsg.c \
 	omusrmsg.h \
 	omfwd.c \
 	omfwd.h \
-	tcpsyslog.c \
-	tcpsyslog.h \
 	omfile.c \
 	omfile.h \
 	omdiscard.c \
 	omdiscard.h \
-	modules.c \
-	modules.h \
-	module-template.h \
-	objomsr.c \
-	objomsr.h \
-	cfsysline.c \
-	cfsysline.h \
-	linkedlist.c \
-	linkedlist.h \
 	iminternal.c \
 	iminternal.h \
+	pidfile.c \
+	pidfile.h \
+	\
 	action.c \
 	action.h \
-	atomic.h
+	threads.c \
+	threads.h \
+	\
+	parse.c \
+	parse.h \
+	\
+	outchannel.c \
+	outchannel.h \
+	template.c \
+	template.h \
+	conf.c \
+	conf.h \
+	tcpsyslog.c \
+	tcpsyslog.h \
+	cfsysline.c \
+	cfsysline.h
 
-rsyslogd_CPPFLAGS =  -D_PATH_MODDIR=\"$(pkglibdir)/\" $(pthreads_cflags) $(rsrt_cflags)
+rsyslogd_CPPFLAGS =  $(pthreads_cflags) $(rsrt_cflags)
 rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs) $(rsrt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 

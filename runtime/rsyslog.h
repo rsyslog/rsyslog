@@ -1,27 +1,28 @@
-/* Header file with global definitions for the whole
- * rsyslog project (including all subprojects like
- * rfc3195d).
+/* This is the header file for the rsyslog runtime. It must be included
+ * if someone intends to use the runtime.
+ *
  * Begun 2005-09-15 RGerhards
  *
- * Copyright (C) 2005 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2008 by Rainer Gerhards and Adiscon GmbH
  *
- * This file is part of rsyslog.
+ * This file is part of the rsyslog runtime library.
  *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * The rsyslog runtime library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Rsyslog is distributed in the hope that it will be useful,
+ * The rsyslog runtime library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
-*/
+ * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ */
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H
 
@@ -43,6 +44,8 @@
 #	define _FILE_OFFSET_BITS 64
 #endif
 
+/* define some base data types */
+typedef struct thrdInfo thrdInfo_t;
 
 /* some universal 64 bit define... */
 typedef long long int64;
@@ -265,6 +268,5 @@ void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
 #include "debug.h"
 
 #endif /* multi-include protection */
-/*
- * vi:set ai:
+/* vim:set ai:
  */

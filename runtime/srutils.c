@@ -9,26 +9,28 @@
  *
  * Copyright 2003-2008 Rainer Gerhards and Adiscon GmbH.
  *
- * This file is part of rsyslog.
+ * This file is part of the rsyslog runtime library.
  *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * The rsyslog runtime library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Rsyslog is distributed in the hope that it will be useful,
+ * The rsyslog runtime library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
 
 #include "rsyslog.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -39,7 +41,6 @@
 #include <assert.h>
 #include <sys/wait.h>
 #include <ctype.h>
-#include "liblogging-stub.h"
 #define TRUE 1
 #define FALSE 0
 #include "srUtils.h"
@@ -49,6 +50,8 @@
 
 /* here we host some syslog specific names. There currently is no better place
  * to do it, but over here is also not ideal... -- rgerhards, 2008-02-14
+ * rgerhards, 2008-04-16: note in LGPL move: the code tables below exist in
+ * the same way in BSD, so it is not a problem to move them from GPLv3 to LGPL.
  */
 syslogName_t	syslogPriNames[] = {
 	{"alert",	LOG_ALERT},
