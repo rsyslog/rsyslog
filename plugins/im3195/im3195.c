@@ -42,9 +42,9 @@
 #include <assert.h>
 #include "rsyslog.h"
 #include "syslogd.h"
-#include "liblogging.h"
-#include "srAPI.h"
-#include "syslogmessage.h"
+#include "liblogging/liblogging.h"
+#include "liblogging/srAPI.h"
+#include "liblogging/syslogmessage.h"
 #include "module-template.h"
 #include "cfsysline.h"
 #include "errmsg.h"
@@ -74,7 +74,7 @@ static srAPIObj* pAPI;
  * best solution, but real-world experience might tell us a
  * different truth ;)
  */
-void OnReceive(srAPIObj* __attribute__((unused)) pMyAPI, srSLMGObj* pSLMG)
+void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
 {
 	uchar *pszRawMsg;
 	uchar *fromHost = (uchar*) "[unset]"; /* TODO: get hostname */
