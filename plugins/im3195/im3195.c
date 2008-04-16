@@ -41,7 +41,7 @@
 #include <sys/errno.h>
 #include <assert.h>
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "liblogging/liblogging.h"
 #include "liblogging/srAPI.h"
 #include "liblogging/syslogmessage.h"

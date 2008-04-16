@@ -1,4 +1,3 @@
-- implemented im3195, the RFC3195 input as a plugin
 ---------------------------------------------------------------------------
 Version 3.19.0 (rgerhards), 2008-04-??
 - begins new devel branch version
@@ -7,6 +6,7 @@ Version 3.19.0 (rgerhards), 2008-04-??
   this shall enable other utilities but rsyslogd to use the same
   runtime
 - changed directory structure, files are now better organized
+- implemented im3195, the RFC3195 input as a plugin
 ---------------------------------------------------------------------------
 Version 3.17.2 (rgerhards), 2008-04-??
 - this version is the new beta
