@@ -1,0 +1,166 @@
+/* rsyslog.c - the main entry point into rsyslog's runtime library (RTL)
+ *
+ * This module contains all function which work on a RTL global level. It's
+ * name is abbreviated to "rsrt" (rsyslog runtime).
+ *
+ * Please note that the runtime library is plugin-safe. That is, it must be
+ * initialized by calling a global initialization function. However, that 
+ * function checks if the library is already initialized and, if so, does
+ * nothing except incrementing a refeence count. Similarly, the deinit
+ * function does nothing as long as there are still other users (which
+ * is tracked via the refcount). As such, it is safe to call init and
+ * exit multiple times, as long as this are always matching calls. This
+ * capability is needed for a plugin system, where one plugin never
+ * knows what the other did.
+ *
+ * The rsyslog runtime library is in general reentrant and thread-safe. There
+ * are some intentional exceptions (e.g. inside the msg object). These are
+ * documented. Any other threading and reentrency issue can be considered a bug.
+ *
+ * Module begun 2008-04-16 by Rainer Gerhards
+ *
+ * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ *
+ * This file is part of the rsyslog runtime library.
+ *
+ * The rsyslog runtime library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The rsyslog runtime library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ */
+#include "config.h"
+#include <stdlib.h>
+#include <assert.h>
+
+#include "rsyslog.h"
+#include "obj.h"
+#include "vm.h"
+#include "sysvar.h"
+#include "stringbuf.h"
+#include "wti.h"
+#include "wtp.h"
+#include "expr.h"
+#include "ctok.h"
+#include "vmop.h"
+#include "vmstk.h"
+#include "vmprg.h"
+#include "datetime.h"
+#include "queue.h"
+#include "conf.h"
+
+/* static data */
+static int iRefCount = 0; /* our refcount - it MUST exist only once inside a process (not thread)
+ 		             thus it is perfectly OK to use a static. MUST be initialized to 0! */
+
+/* globally initialze the runtime system
+ * NOTE: this is NOT thread safe and must not be called concurrently. If that
+ * ever poses a problem, we may use proper mutex calls - not considered needed yet.
+ * If ppErrObj is provided, it receives a char pointer to the name of the object that
+ * caused the problem (if one occured). The caller must never free this pointer. If
+ * ppErrObj is NULL, no such information will be provided. pObjIF is the pointer to
+ * the "obj" object interface, which may be used to query any other rsyslog objects.
+ * rgerhards, 2008-04-16
+ */
+rsRetVal
+rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
+{
+	DEFiRet;
+
+	if(iRefCount == 0) {
+		/* init runtime only if not yet done */
+		if(ppErrObj != NULL) *ppErrObj = "obj";
+		CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initilizer being called! */
+		CHKiRet(objGetObjInterface(pObjIF)); /* this provides the root pointer for all other queries */
+
+		/* initialize core classes. We must be very careful with the order of events. Some
+		 * classes use others and if we do not initialize them in the right order, we may end
+		 * up with an invalid call. The most important thing that can happen is that an error
+		 * is detected and needs to be logged, wich in turn requires a broader number of classes
+		 * to be available. The solution is that we take care in the order of calls AND use a
+		 * class immediately after it is initialized. And, of course, we load those classes
+		 * first that we use ourselfs... -- rgerhards, 2008-03-07
+		 */
+		if(ppErrObj != NULL) *ppErrObj = "datetime";
+		CHKiRet(datetimeClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "msg";
+		CHKiRet(msgClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "str,";
+		CHKiRet(strmClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "wti";
+		CHKiRet(wtiClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "wtp";
+		CHKiRet(wtpClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "queue";
+		CHKiRet(queueClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "vmstk";
+		CHKiRet(vmstkClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "sysvar";
+		CHKiRet(sysvarClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "vm";
+		CHKiRet(vmClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "vmop";
+		CHKiRet(vmopClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "vmprg";
+		CHKiRet(vmprgClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "ctok_token";
+		CHKiRet(ctok_tokenClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "ctok";
+		CHKiRet(ctokClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "expr";
+		CHKiRet(exprClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "conf";
+		CHKiRet(confClassInit(NULL));
+
+		/* dummy "classes" */
+		if(ppErrObj != NULL) *ppErrObj = "str";
+		CHKiRet(strInit());
+	}
+
+	++iRefCount;
+	dbgprintf("rsyslog runtime initialized, version %s, current users %d\n", VERSION, iRefCount);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* globally de-initialze the runtime system
+ * NOTE: this is NOT thread safe and must not be called concurrently. If that
+ * ever poses a problem, we may use proper mutex calls - not considered needed yet.
+ * This function must be provided with the caller's obj object pointer. This is
+ * automatically deinitialized by the runtime system.
+ * rgerhards, 2008-04-16
+ */
+rsRetVal
+rsrtExit(obj_if_t *pObjIF)
+{
+	DEFiRet;
+
+	if(iRefCount == 1) {
+		/* do actual de-init only if we are the last runtime user */
+		confClassExit();
+		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
+	}
+
+	--iRefCount;
+	/* TODO we must deinit this pointer! pObjIF = NULL; / * no longer exists for this caller */
+
+	dbgprintf("rsyslog runtime de-initialized, current users %d\n", iRefCount);
+
+	RETiRet;
+}
+
+
+/* vim:set ai:
+ */

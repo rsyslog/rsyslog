@@ -28,12 +28,6 @@
 /* a forward-definition, we are somewhat cyclic */
 struct tcpsrv_s;
 
-/* framing modes for TCP */
-typedef enum _TCPFRAMINGMODE {
-		TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
-		TCP_FRAMING_OCTET_COUNTING = 1  /* -transport-tls like octet count */
-	} TCPFRAMINGMODE;
-
 /* the tcps_sess object */
 typedef struct tcps_sess_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */

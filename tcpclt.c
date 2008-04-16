@@ -38,10 +38,9 @@
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "net.h"
-#include "tcpsyslog.h"
 #include "tcpclt.h"
 #include "module-template.h"
 #include "srUtils.h"

@@ -3,7 +3,7 @@
  *
  * begun 2005-09-15 rgerhards
  *
- * Copyright 2005
+ * Copyright 2005-2008
  *     Rainer Gerhards and Adiscon GmbH. All Rights Reserved.
  *
  * This file is part of rsyslog.

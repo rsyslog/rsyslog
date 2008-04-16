@@ -36,7 +36,7 @@
 #include <errno.h>
 #include <time.h>
 #include <libpq-fe.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"

@@ -45,7 +45,8 @@
 #endif
 
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "syslogd.h" /* this actually *is* part of the syslogd! */
+#include "dirty.h"
 #include "parse.h"
 #include "action.h"
 #include "template.h"
@@ -57,6 +58,10 @@
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "net.h"
+#include "expr.h"
+#include "ctok.h"
+#include "ctok_token.h"
 
 
 /* forward definitions */
@@ -500,7 +505,6 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 	} else {
 		/* template specified, pick it up */
 		if(rsCStrConstruct(&pStrB) != RS_RET_OK) {
-			glblHadMemShortage = 1;
 			iRet = RS_RET_OUT_OF_MEMORY;
 			goto finalize_it;
 		}
@@ -563,6 +567,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
  * passed back to the caller.
  * rgerhards 2005-09-15
  */
+/* GPLv3 - stems back to sysklogd */
 static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f)
 {
 	uchar *p;

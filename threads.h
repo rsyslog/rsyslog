@@ -23,16 +23,15 @@
 #ifndef THREADS_H_INCLUDED
 #define THREADS_H_INCLUDED
 
-
 /* the thread object */
-typedef struct thrdInfo {
+struct thrdInfo {
 	pthread_mutex_t *mutTermOK;	/* Is it ok to terminate that thread now? */
 	int bIsActive;		/* Is thread running? */
 	int bShallStop;		/* set to 1 if the thread should be stopped ? */
 	rsRetVal (*pUsrThrdMain)(struct thrdInfo*); /* user thread main to be called in new thread */
 	rsRetVal (*pAfterRun)(struct thrdInfo*);   /* cleanup function */
 	pthread_t thrdID;
-} thrdInfo_t;
+};
 
 /* prototypes */
 rsRetVal thrdExit(void);

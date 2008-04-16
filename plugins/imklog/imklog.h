@@ -28,7 +28,7 @@
 #define	IMKLOG_H_INCLUDED 1
 
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 
 /* interface to "drivers"
  * the platform specific drivers must implement these entry points. Only one

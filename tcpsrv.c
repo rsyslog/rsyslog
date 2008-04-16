@@ -54,7 +54,7 @@
 #include <fcntl.h>
 #endif
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "net.h"
@@ -572,7 +572,6 @@ Run(tcpsrv_t *pThis)
 		for (i = 0; i < *pThis->pSocksLstn; i++) {
 			if (FD_ISSET(pThis->pSocksLstn[i+1], &readfds)) {
 				dbgprintf("New connect on TCP inetd socket: #%d\n", pThis->pSocksLstn[i+1]);
-RUNLOG_VAR("%p", &pNewSess);
 				SessAccept(pThis, &pNewSess, pThis->pSocksLstn[i+1]);
 				--nfds; /* indicate we have processed one */
 			}

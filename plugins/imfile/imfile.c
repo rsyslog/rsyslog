@@ -36,7 +36,7 @@
 #	include <sys/stat.h>
 #endif
 #include "rsyslog.h"		/* error codes etc... */
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"		/* access to config file objects */
 #include "module-template.h"	/* generic module interface code - very important, read it! */
 #include "srUtils.h"		/* some utility functions */

@@ -44,7 +44,7 @@
 #include <netdb.h>
 #include <time.h>
 #include <sys/socket.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "cfsysline.h"

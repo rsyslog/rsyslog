@@ -45,7 +45,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "obj.h"
 #include "msg.h"

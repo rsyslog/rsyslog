@@ -34,7 +34,7 @@
 #include <time.h>
 #include <errno.h>
 
-#include "syslogd.h"
+#include "dirty.h"
 #include "template.h"
 #include "action.h"
 #include "modules.h"

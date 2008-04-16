@@ -32,7 +32,6 @@
 #include <signal.h>
 #include <string.h>
 #include <pthread.h>
-#include "syslogd.h"
 #include "cfsysline.h"
 #include "template.h"
 #include "msg.h"
