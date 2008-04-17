@@ -42,7 +42,6 @@ extern char **StripDomains;
 extern char *LocalDomain;
 extern char**LocalHosts;
 extern uchar *LocalHostName;
-extern int option_DisallowWarning;
 
 #define MSG_PARSE_HOSTNAME 1
 #define MSG_DONT_PARSE_HOSTNAME 0

@@ -397,10 +397,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 }
 
 
-
-int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
-
-
 /* hardcoded standard templates (used for defaults) */
 static uchar template_SyslogProtocol23Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n\"";
 static uchar template_TraditionalFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
@@ -3233,7 +3229,7 @@ int realMain(int argc, char **argv)
 				bParseHOSTNAMEandTAG = 0;
 			break;
 		case 'w':		/* disable disallowed host warnigs */
-			option_DisallowWarning = 0;
+			glbl.SetOption_DisallowWarning(0);
 			break;
 		case 'x':		/* disable dns for remote messages */
 			DisableDNS = 1;

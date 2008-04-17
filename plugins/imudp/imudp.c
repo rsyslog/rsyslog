@@ -39,6 +39,7 @@
 #include "module-template.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "glbl.h"
 
 MODULE_TYPE_INPUT
 
@@ -47,6 +48,7 @@ MODULE_TYPE_INPUT
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
@@ -195,7 +197,7 @@ CODESTARTrunInput
 							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY);
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
-							       if(option_DisallowWarning) {
+							       if(glbl.GetOption_DisallowWarning) {
 								       errmsg.LogError(NO_ERRCODE, "UDP message from disallowed sender %s discarded",
 										  (char*)fromHost);
 							       }	
@@ -253,6 +255,7 @@ BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
 
@@ -281,6 +284,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 
 	/* register config file handlers */

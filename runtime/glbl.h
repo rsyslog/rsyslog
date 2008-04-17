@@ -51,6 +51,8 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDefPFFamily)(int);
 	int (*GetDropMalPTRMsgs)(void);
 	rsRetVal (*SetDropMalPTRMsgs)(int);
+	int (*GetOption_DisallowWarning)(void);
+	rsRetVal (*SetOption_DisallowWarning)(int);
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
