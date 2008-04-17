@@ -82,6 +82,7 @@ SIMP_PROP(DisableDNS, bDisableDNS, int)
 SIMP_PROP(LocalDomain, LocalDomain, uchar*)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
+
 SIMP_PROP_SET(LocalHostName, LocalHostName, uchar*)
 
 #undef SIMP_PROP

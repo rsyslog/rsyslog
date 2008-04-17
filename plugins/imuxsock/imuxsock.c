@@ -103,8 +103,6 @@ static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, 
  */
 static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
-	char errStr[1024];
-
 	if(nfunix < MAXFUNIX) {
 		if(*pNewVal == ':') {
 			funixParseHost[nfunix] = 1;
@@ -116,9 +114,8 @@ static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNe
 		funixn[nfunix++] = pNewVal;
 	}
 	else {
-		snprintf(errStr, sizeof(errStr), "rsyslogd: Out of unix socket name descriptors, ignoring %s\n",
+		errmsg.LogError(NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
 			 pNewVal);
-		logmsgInternal(LOG_SYSLOG|LOG_ERR, errStr, ADDDATE);
 	}
 
 	return RS_RET_OK;

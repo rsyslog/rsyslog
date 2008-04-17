@@ -90,7 +90,6 @@ rsRetVal selectorAddList(selector_t *f);
 /* the following prototypes should go away once we have an input
  * module interface -- rgerhards, 2007-12-12
  */
-rsRetVal logmsgInternal(int pri, char *msg, int flags);
 void logmsg(msg_t *pMsg, int flags);
 extern int NoHops;
 extern int send_to_all;

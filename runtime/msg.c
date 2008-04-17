@@ -36,7 +36,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include "rsyslog.h"
-#include "dirty.h"
 #include "srUtils.h"
 #include "stringbuf.h"
 #include "template.h"

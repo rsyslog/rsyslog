@@ -56,6 +56,7 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -75,13 +76,32 @@
 #include "queue.h"
 #include "conf.h"
 #include "glbl.h"
+#include "errmsg.h"
+
+/* forward definitions */
+static rsRetVal dfltErrLogger(uchar *errMsg);
 
 /* globally visible static data - see comment in rsyslog.h for details */
 uchar *glblModPath; /* module load path */
+rsRetVal (*glblErrLogger)(uchar*) = dfltErrLogger; /* the error logger to use by the errmsg module */
 
 /* static data */
 static int iRefCount = 0; /* our refcount - it MUST exist only once inside a process (not thread)
  		             thus it is perfectly OK to use a static. MUST be initialized to 0! */
+
+/* This is the default instance of the error logger. It simply writes the message
+ * to stderr. It is expected that this is replaced by the runtime user very early
+ * during startup (at least if the default is unsuitable). However, we provide a
+ * default so that we can log errors during the intial phase, most importantly
+ * during initialization. -- rgerhards. 2008-04-17
+ */
+static rsRetVal dfltErrLogger(uchar *errMsg)
+{
+	DEFiRet;
+	fprintf(stderr, "rsyslog runtime error: %s\n", errMsg);
+	RETiRet;
+}
+
 
 /* globally initialze the runtime system
  * NOTE: this is NOT thread safe and must not be called concurrently. If that

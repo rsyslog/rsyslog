@@ -847,6 +847,19 @@ finalize_it:
 	RETiRet;
 }
 
+
+/* this is a special function used to submit an error message. This
+ * function is also passed to the runtime library as the generic error
+ * message handler. -- rgerhards, 2008-04-17
+ */
+rsRetVal
+submitErrMsg(uchar *msg)
+{
+	DEFiRet;
+	iRet = logmsgInternal(LOG_SYSLOG|LOG_ERR, msg, ADDDATE);
+	RETiRet;
+}
+
 /* rgerhards 2004-11-09: the following is a function that can be used
  * to log a message orginating from the syslogd itself. In sysklogd code,
  * this is done by simply calling logmsg(). However, logmsg() is changed in
@@ -857,14 +870,14 @@ finalize_it:
  * think on the best way to do this.
  */
 rsRetVal
-logmsgInternal(int pri, char *msg, int flags)
+logmsgInternal(int pri, uchar *msg, int flags)
 {
 	DEFiRet;
 	msg_t *pMsg;
 
 	CHKiRet(msgConstruct(&pMsg));
-	MsgSetUxTradMsg(pMsg, msg);
-	MsgSetRawMsg(pMsg, msg);
+	MsgSetUxTradMsg(pMsg, (char*)msg);
+	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetRcvFrom(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetTAG(pMsg, "rsyslogd:");
@@ -1877,7 +1890,7 @@ die(int sig)
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
 		 (int) myPid, sig);
 		errno = 0;
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, buf, ADDDATE);
+		logmsgInternal(LOG_SYSLOG|LOG_INFO, (uchar*)buf, ADDDATE);
 	}
 	
 	/* drain queue (if configured so) and stop main queue worker thread pool */
@@ -2330,7 +2343,7 @@ init(void)
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] restart",
 		 (int) myPid);
-	logmsgInternal(LOG_SYSLOG|LOG_INFO, bufStartUpMsg, ADDDATE);
+	logmsgInternal(LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, ADDDATE);
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);

@@ -33,7 +33,6 @@
 #include <assert.h>
 
 #include "rsyslog.h"
-#include "dirty.h"
 #include "obj.h"
 #include "errmsg.h"
 #include "sysvar.h"
@@ -84,14 +83,7 @@ LogError(int __attribute__((unused)) iErrCode, char *fmt, ... )
 	msg[sizeof(msg)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
 	
-	/* we must check if the runtime is initialized, because else we can NOT
-	 * submit internal errors. -- rgerhards, 2008-04-16
-	 * TODO: a better way is to set an error handler and check if it is NULL
-	 */
-	if(rsrtIsInit())
-		logmsgInternal(LOG_SYSLOG|LOG_ERR, msg, ADDDATE);
-	else
-		fprintf(stderr, "rsyslog runtime error: %s\n", msg);
+	glblErrLogger((uchar*)msg);
 
 	ENDfunc
 }
@@ -125,6 +117,13 @@ BEGINAbstractObjClassInit(errmsg, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* set our own handlers */
 ENDObjClassInit(errmsg)
+
+/* Exit the class.
+ * rgerhards, 2008-04-17
+ */
+BEGINObjClassExit(errmsg, OBJ_IS_CORE_MODULE) /* class, version */
+	/* release objects we no longer need */
+ENDObjClassExit(errmsg)
 
 /* vi:set ai:
  */

@@ -75,7 +75,7 @@ CODESTARTrunInput
 	   	 * rgerhards, 2007-12-17
 	   	 */
 		CHKiRet(thrdSleep(pThrd, iMarkMessagePeriod, 0)); /* seconds, micro seconds */
-		logmsgInternal(LOG_INFO, "-- MARK --", ADDDATE|MARK);
+		logmsgInternal(LOG_INFO, (uchar*)"-- MARK --", ADDDATE|MARK);
 	}
 finalize_it:
 	return iRet;

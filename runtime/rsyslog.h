@@ -59,12 +59,15 @@
 
 
 /* define some base data types */
+typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct thrdInfo thrdInfo_t;
 typedef struct filed selector_t;	/* TODO: this so far resides in syslogd.c, think about modularization */
 typedef struct NetAddr netAddr_t;
 typedef struct msg msg_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
+typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
+typedef rsRetVal (*errLogFunc_t)(uchar*); /* this is a trick to store a function ptr to a function returning a function ptr... */
 
 /* some universal 64 bit define... */
 typedef long long int64;
@@ -204,7 +207,6 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */
 	RS_RET_OK = 0			/**< operation successful */
 };
-typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 
 /* some helpful macros to work with srRetVals.
  * Be sure to call the to-be-returned variable always "iRet" and
@@ -269,9 +271,6 @@ typedef enum rsObjectID rsObjID;
 #define RSFREEOBJ(x) {(x)->OID = OIDrsFreed; free(x);}
 #endif
 
-/* get rid of the unhandy "unsigned char"
- */
-typedef unsigned char uchar;
 
 /* for the time being, we do our own portability handling here. It
  * looks like autotools either does not yet support checks for it, or
@@ -297,6 +296,7 @@ void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
  * add them. -- rgerhards, 2008-04-17
  */
 extern uchar *glblModPath; /* module load path */
+extern rsRetVal (*glblErrLogger)(uchar*);
 
 /* some runtime prototypes */
 rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);

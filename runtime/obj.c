@@ -1286,10 +1286,10 @@ objClassExit(void)
 
 	/* TODO: implement the class exits! */
 #if 0
-	errmsgClassInit(pModInfo);
 	cfsyslineInit(pModInfo);
 	varClassInit(pModInfo);
 #endif
+	errmsgClassExit();
 	moduleClassExit();
 	RETiRet;
 }
