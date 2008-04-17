@@ -12,6 +12,11 @@
  * to carry out its work (including, and most importantly, transport
  * drivers).
  *
+ * Work on this module begun 2008-04-17 by Rainer Gerhards. This code
+ * borrows from librelp's tcp.c/.h code. librelp is dual licensed and
+ * Rainer Gerhards and Adiscon GmbH have agreed to permit using the code
+ * under the terms of the GNU Lesser General Public License.
+ *
  * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
@@ -54,6 +59,7 @@
 #include "srUtils.h"
 #include "obj.h"
 #include "errmsg.h"
+#include "net.h"
 #include "netstrm.h"
 
 MODULE_TYPE_LIB
@@ -62,155 +68,464 @@ MODULE_TYPE_LIB
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(net)
 
+#define DFLT_PORT "514"
+#warning "urgent TODO: default port!"
 
-/* The following #ifdef sequence is a small compatibility 
- * layer. It tries to work around the different availality
- * levels of SO_BSDCOMPAT on linuxes...
- * I borrowed this code from
- *    http://www.erlang.org/ml-archive/erlang-questions/200307/msg00037.html
- * It still needs to be a bit better adapted to rsyslog.
- * rgerhards 2005-09-19
+/* Standard-Constructor
  */
-#include <sys/utsname.h>
-static int
-should_use_so_bsdcompat(void)
-{
-#ifndef OS_BSD
-    static int init_done;
-    static int so_bsdcompat_is_obsolete;
-
-    if (!init_done) {
-	struct utsname myutsname;
-	unsigned int version, patchlevel;
-
-	init_done = 1;
-	if (uname(&myutsname) < 0) {
-		char errStr[1024];
-		dbgprintf("uname: %s\r\n", rs_strerror_r(errno, errStr, sizeof(errStr)));
-		return 1;
-	}
-	/* Format is <version>.<patchlevel>.<sublevel><extraversion>
-	   where the first three are unsigned integers and the last
-	   is an arbitrary string. We only care about the first two. */
-	if (sscanf(myutsname.release, "%u.%u", &version, &patchlevel) != 2) {
-	    dbgprintf("uname: unexpected release '%s'\r\n",
-		    myutsname.release);
-	    return 1;
-	}
-	/* SO_BSCOMPAT is deprecated and triggers warnings in 2.5
-	   kernels. It is a no-op in 2.4 but not in 2.2 kernels. */
-	if (version > 2 || (version == 2 && patchlevel >= 5))
-	    so_bsdcompat_is_obsolete = 1;
-    }
-    return !so_bsdcompat_is_obsolete;
-#else	/* #ifndef OS_BSD */
-    return 1;
-#endif	/* #ifndef OS_BSD */
-}
-#ifndef SO_BSDCOMPAT
-/* this shall prevent compiler errors due to undfined name */
-#define SO_BSDCOMPAT 0
-#endif
+BEGINobjConstruct(netstrm) /* be sure to specify the object type also in END macro! */
+	pThis->sock = -1;
+	pThis->iSessMax = 500;	/* default max nbr of sessions -TODO:make configurable--rgerhards, 2008-04-17*/
+ENDobjConstruct(netstrm)
 
 
-/* get the hostname of the message source. This was originally in cvthname()
- * but has been moved out of it because of clarity and fuctional separation.
- * It must be provided by the socket we received the message on as well as
- * a NI_MAXHOST size large character buffer for the FQDN.
- *
- * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
- * for some explanation of the code found below. We do by default not
- * discard message where we detected malicouos DNS PTR records. However,
- * there is a user-configurabel option that will tell us if
- * we should abort. For this, the return value tells the caller if the
- * message should be processed (1) or discarded (0).
+/* ConstructionFinalizer
  */
 static rsRetVal
-gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
+netstrmConstructFinalize(netstrm_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	RETiRet;
+}
+
+
+/* destructor for the netstrm object */
+BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and CODESTART macros! */
+	int i;
+CODESTARTobjDestruct(netstrm)
+	if(pThis->sock != -1) {
+		close(pThis->sock);
+		pThis->sock = -1;
+	}
+
+	if(pThis->socks != NULL) {
+		/* if we have some sockets at this stage, we need to close them */
+		for(i = 1 ; i <= pThis->socks[0] ; ++i)
+			close(pThis->socks[i]);
+		free(pThis->socks);
+	}
+
+	if(pThis->pRemHostIP != NULL)
+		free(pThis->pRemHostIP);
+	if(pThis->pRemHostName != NULL)
+		free(pThis->pRemHostName);
+ENDobjDestruct(netstrm)
+
+
+/* abort a connection. This is much like Destruct(), but tries
+ * to discard any unsent data. -- rgerhards, 2008-03-24
+ */
+rsRetVal
+AbortDestruct(netstrm_t **ppThis)
+{
+	struct linger ling;
+
+	DEFiRet;
+	assert(ppThis != NULL);
+	ISOBJ_TYPE_assert((*ppThis), netstrm);
+
+	if((*ppThis)->sock != -1) {
+		ling.l_onoff = 1;
+		ling.l_linger = 0;
+       		if(setsockopt((*ppThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0 ) {
+			dbgprintf("could not set SO_LINGER, errno %d\n", errno);
+		}
+	}
+
+	iRet = netstrmDestruct(ppThis);
+
+	RETiRet;
+}
+
+
+/* Set pRemHost based on the address provided. This is to be called upon accept()ing
+ * a connection request. It must be provided by the socket we received the
+ * message on as well as a NI_MAXHOST size large character buffer for the FQDN.
+ * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
+ * for some explanation of the code found below. If we detect a malicious
+ * hostname, we return RS_RET_MALICIOUS_HNAME and let the caller decide
+ * on how to deal with that.
+ * rgerhards, 2008-03-31
+ */
+static rsRetVal
+SetRemHost(netstrm_t *pThis, struct sockaddr *pAddr)
+{
 	int error;
-	sigset_t omask, nmask;
-	char ip[NI_MAXHOST];
+	uchar szIP[NI_MAXHOST] = "";
+	uchar szHname[NI_MAXHOST] = "";
 	struct addrinfo hints, *res;
+	size_t len;
 	
-	assert(f != NULL);
-	assert(pszHostFQDN != NULL);
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	assert(pAddr != NULL);
 
-        error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *)f),
-			    ip, sizeof ip, NULL, 0, NI_NUMERICHOST);
+        error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
 
-        if (error) {
+        if(error) {
                 dbgprintf("Malformed from address %s\n", gai_strerror(error));
-		strcpy((char*) pszHostFQDN, "???");
-		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
+		strcpy((char*)szHname, "???");
+		strcpy((char*)szIP, "???");
+		ABORT_FINALIZE(RS_RET_INVALID_HNAME);
 	}
 
 	if(!glbl.GetDisableDNS()) {
-		sigemptyset(&nmask);
-		sigaddset(&nmask, SIGHUP);
-		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
-
-		error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *) f),
-				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
-		
-		if (error == 0) {
+		error = getnameinfo(pAddr, SALEN(pAddr), (char*)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
+		if(error == 0) {
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_flags = AI_NUMERICHOST;
 			hints.ai_socktype = SOCK_STREAM;
-
 			/* we now do a lookup once again. This one should fail,
 			 * because we should not have obtained a non-numeric address. If
 			 * we got a numeric one, someone messed with DNS!
 			 */
-			if (getaddrinfo ((char*)pszHostFQDN, NULL, &hints, &res) == 0) {
-				uchar szErrMsg[1024];
+			if(getaddrinfo((char*)szHname, NULL, &hints, &res) == 0) {
 				freeaddrinfo (res);
-				/* OK, we know we have evil. The question now is what to do about
-				 * it. One the one hand, the message might probably be intended
-				 * to harm us. On the other hand, losing the message may also harm us.
-				 * Thus, the behaviour is controlled by the $DropMsgsWithMaliciousDnsPTRRecords
-				 * option. If it tells us we should discard, we do so, else we proceed,
-				 * but log an error message together with it.
-				 * time being, we simply drop the name we obtained and use the IP - that one
-				 * is OK in any way. We do also log the error message. rgerhards, 2007-07-16
-		 		 */
-		 		if(glbl.GetDropMalPTRMsgs() == 1) {
-					snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
-						 "Malicious PTR record, message dropped "
-						 "IP = \"%s\" HOST = \"%s\"",
-						 ip, pszHostFQDN);
-					errmsg.LogError(NO_ERRCODE, "%s", szErrMsg);
-					pthread_sigmask(SIG_SETMASK, &omask, NULL);
-					ABORT_FINALIZE(RS_RET_MALICIOUS_ENTITY);
-				}
-
-				/* Please note: we deal with a malicous entry. Thus, we have crafted
-				 * the snprintf() below so that all text is in front of the entry - maybe
-				 * it contains characters that make the message unreadable
-				 * (OK, I admit this is more or less impossible, but I am paranoid...)
-				 * rgerhards, 2007-07-16
-				 */
-				snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
-					 "Malicious PTR record (message accepted, but used IP "
-					 "instead of PTR name: IP = \"%s\" HOST = \"%s\"",
-					 ip, pszHostFQDN);
-				errmsg.LogError(NO_ERRCODE, "%s", szErrMsg);
-
-				error = 1; /* that will trigger using IP address below. */
+				/* OK, we know we have evil, so let's indicate this to our caller */
+				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
+				dbgprintf("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
+				iRet = RS_RET_MALICIOUS_HNAME;
 			}
-		}		
-		pthread_sigmask(SIG_SETMASK, &omask, NULL);
+		} else {
+			strcpy((char*)szHname, (char*)szIP);
+		}
+	} else {
+		strcpy((char*)szHname, (char*)szIP);
 	}
 
-        if(error || glbl.GetDisableDNS()) {
-                dbgprintf("Host name for your address (%s) unknown\n", ip);
-		strcpy((char*) pszHostFQDN, ip);
-		ABORT_FINALIZE(RS_RET_ADDRESS_UNKNOWN);
-        }
+	/* We now have the names, so now let's allocate memory and store them permanently.
+	 * (side note: we may hold on to these values for quite a while, thus we trim their
+	 * memory consumption)
+	 */
+	len = strlen((char*)szIP) + 1; /* +1 for \0 byte */
+	if((pThis->pRemHostIP = malloc(len)) == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	memcpy(pThis->pRemHostIP, szIP, len);
+
+	len = strlen((char*)szHname) + 1; /* +1 for \0 byte */
+	if((pThis->pRemHostName = malloc(len)) == NULL) {
+		free(pThis->pRemHostIP); /* prevent leak */
+		pThis->pRemHostIP = NULL;
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	}
+	memcpy(pThis->pRemHostName, szHname, len);
 
 finalize_it:
+	RETiRet;
+}
+
+
+
+/* accept an incoming connection request, sock provides the socket on which we can
+ * accept the new session.
+ * rgerhards, 2008-03-17
+ */
+rsRetVal
+AcceptConnReq(netstrm_t **ppThis, int sock)
+{
+	netstrm_t *pThis = NULL;
+	int sockflags;
+	struct sockaddr_storage addr;
+	socklen_t addrlen = sizeof(addr);
+	int iNewSock = -1;
+
+	DEFiRet;
+	assert(ppThis != NULL);
+
+	iNewSock = accept(sock, (struct sockaddr*) &addr, &addrlen);
+	if(iNewSock < 0) {
+		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
+	}
+
+	/* construct our object so that we can use it... */
+	CHKiRet(netstrmConstruct(&pThis));
+
+	/* TODO: obtain hostname, normalize (callback?), save it */
+	CHKiRet(SetRemHost(pThis, (struct sockaddr*) &addr));
+
+	/* set the new socket to non-blocking IO */
+	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
+		sockflags |= O_NONBLOCK;
+		/* SETFL could fail too, so get it caught by the subsequent
+		 * error check.
+		 */
+		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
+	}
+	if(sockflags == -1) {
+		dbgprintf("error %d setting fcntl(O_NONBLOCK) on relp socket %d", errno, iNewSock);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	pThis->sock = iNewSock;
+
+	*ppThis = pThis;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis != NULL)
+			netstrmDestruct(&pThis);
+		/* the close may be redundant, but that doesn't hurt... */
+		if(iNewSock >= 0)
+			close(iNewSock);
+	}
+
+	RETiRet;
+}
+
+
+/* initialize the tcp socket for a listner
+ * pLstnPort is either a pointer to a port name or NULL, in which case the
+ * default is used.
+ * gerhards, 2008-03-17
+ */
+rsRetVal
+LstnInit(netstrm_t *pThis, uchar *pLstnPort)
+{
+        struct addrinfo hints, *res, *r;
+        int error, maxs, *s, on = 1;
+	int sockflags;
+	uchar *pLstnPt;
+
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+
+	pLstnPt = (pLstnPort == NULL) ? (uchar*) DFLT_PORT : pLstnPort;
+	dbgprintf("creating relp tcp listen socket on port %s\n", pLstnPt);
+
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_flags = AI_PASSIVE;
+        hints.ai_family = PF_UNSPEC; /* TODO: permit to configure IPv4/v6 only! */
+        hints.ai_socktype = SOCK_STREAM;
+
+        error = getaddrinfo(NULL, (char*) pLstnPt, &hints, &res);
+        if(error) {
+		dbgprintf("error %d querying port '%s'\n", error, pLstnPt);
+		ABORT_FINALIZE(RS_RET_INVALID_PORT);
+	}
+
+        /* Count max number of sockets we may open */
+        for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
+		/* EMPTY */;
+        pThis->socks = malloc((maxs+1) * sizeof(int));
+        if (pThis->socks == NULL) {
+               dbgprintf("couldn't allocate memory for TCP listen sockets, suspending RELP message reception.");
+               freeaddrinfo(res);
+               ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+
+        *pThis->socks = 0;   /* num of sockets counter at start of array */
+        s = pThis->socks + 1;
+	for(r = res; r != NULL ; r = r->ai_next) {
+               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+        	if (*s < 0) {
+			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
+				dbgprintf("creating relp tcp listen socket");
+				/* it is debatable if PF_INET with EAFNOSUPPORT should
+				 * also be ignored...
+				 */
+                        continue;
+                }
+
+#ifdef IPV6_V6ONLY
+                if (r->ai_family == AF_INET6) {
+                	int iOn = 1;
+			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
+			      (char *)&iOn, sizeof (iOn)) < 0) {
+			close(*s);
+			*s = -1;
+			continue;
+                	}
+                }
+#endif
+       		if(setsockopt(*s, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
+			dbgprintf("error %d setting relp/tcp socket option\n", errno);
+                        close(*s);
+			*s = -1;
+			continue;
+		}
+
+		/* We use non-blocking IO! */
+		if((sockflags = fcntl(*s, F_GETFL)) != -1) {
+			sockflags |= O_NONBLOCK;
+			/* SETFL could fail too, so get it caught by the subsequent
+			 * error check.
+			 */
+			sockflags = fcntl(*s, F_SETFL, sockflags);
+		}
+		if(sockflags == -1) {
+			dbgprintf("error %d setting fcntl(O_NONBLOCK) on relp socket", errno);
+                        close(*s);
+			*s = -1;
+			continue;
+		}
+
+
+
+		/* We need to enable BSD compatibility. Otherwise an attacker
+		 * could flood our log files by sending us tons of ICMP errors.
+		 */
+#ifndef BSD	
+		if(net.should_use_so_bsdcompat()) {
+			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
+					(char *) &on, sizeof(on)) < 0) {
+				errmsg.LogError(NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
+                                close(*s);
+				*s = -1;
+				continue;
+			}
+		}
+#endif
+
+	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
+#ifndef IPV6_V6ONLY
+		     && (errno != EADDRINUSE)
+#endif
+	           ) {
+                        dbgprintf("error %d while binding relp tcp socket", errno);
+                	close(*s);
+			*s = -1;
+                        continue;
+                }
+
+		if(listen(*s,pThis->iSessMax / 10 + 5) < 0) {
+			/* If the listen fails, it most probably fails because we ask
+			 * for a too-large backlog. So in this case we first set back
+			 * to a fixed, reasonable, limit that should work. Only if
+			 * that fails, too, we give up.
+			 */
+			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.",
+				    pThis->iSessMax / 10 + 5);
+			if(listen(*s, 32) < 0) {
+				dbgprintf("relp listen error %d, suspending\n", errno);
+	                	close(*s);
+				*s = -1;
+               		        continue;
+			}
+		}
+
+		(*pThis->socks)++;
+		s++;
+	}
+
+        if(res != NULL)
+               freeaddrinfo(res);
+
+	if(*pThis->socks != maxs)
+		dbgprintf("We could initialize %d RELP TCP listen sockets out of %d we received "
+		 	"- this may or may not be an error indication.\n", *pThis->socks, maxs);
+
+        if(*pThis->socks == 0) {
+		dbgprintf("No RELP TCP listen socket could successfully be initialized, "
+			 "message reception via RELP disabled.\n");
+        	free(pThis->socks);
+		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* receive data from a tcp socket
+ * The lenBuf parameter must contain the max buffer size on entry and contains
+ * the number of octets read (or -1 in case of error) on exit. This function
+ * never blocks, not even when called on a blocking socket. That is important
+ * for client sockets, which are set to block during send, but should not
+ * block when trying to read data. If *pLenBuf is -1, an error occured and
+ * errno holds the exact error cause.
+ * rgerhards, 2008-03-17
+ */
+rsRetVal
+Rcv(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+
+	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
+
+	RETiRet;
+}
+
+
+/* send a buffer. On entry, pLenBuf contains the number of octets to
+ * write. On exit, it contains the number of octets actually written.
+ * If this number is lower than on entry, only a partial buffer has
+ * been written.
+ * rgerhards, 2008-03-19
+ */
+rsRetVal
+Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
+{
+	ssize_t written;
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+
+	written = send(pThis->sock, pBuf, *pLenBuf, 0);
+
+	if(written == -1) {
+		switch(errno) {
+			case EAGAIN:
+			case EINTR:
+				/* this is fine, just retry... */
+				written = 0;
+				break;
+			default:
+				ABORT_FINALIZE(RS_RET_IO_ERROR);
+				break;
+		}
+	}
+
+	*pLenBuf = written;
+finalize_it:
+	RETiRet;
+}
+
+
+/* open a connection to a remote host (server).
+ * rgerhards, 2008-03-19
+ */
+rsRetVal
+Connect(netstrm_t *pThis, int family, uchar *port, uchar *host)
+{
+	struct addrinfo *res = NULL;
+	struct addrinfo hints;
+
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	assert(port != NULL);
+	assert(host != NULL);
+	assert(pThis->sock == -1);
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = family;
+	hints.ai_socktype = SOCK_STREAM;
+	if(getaddrinfo((char*)host, (char*)port, &hints, &res) != 0) {
+		dbgprintf("error %d in getaddrinfo\n", errno);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+	
+	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+finalize_it:
+	if(res != NULL)
+               freeaddrinfo(res);
+		
+	if(iRet != RS_RET_OK) {
+		if(pThis->sock != -1) {
+			close(pThis->sock);
+			pThis->sock = -1;
+		}
+	}
+
 	RETiRet;
 }
 
@@ -229,7 +544,14 @@ CODESTARTobjQueryInterface(netstrm)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//pIf->cvthname = cvthname;
+	pIf->Construct = netstrmConstruct;
+	pIf->ConstructFinalize = netstrmConstructFinalize;
+	pIf->Destruct = netstrmDestruct;
+	pIf->LstnInit = LstnInit;
+	pIf->AcceptConnReq = AcceptConnReq;
+	pIf->Rcv = Rcv;
+	pIf->Send = Send;
+	pIf->Connect = Connect;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 
@@ -240,6 +562,7 @@ ENDobjQueryInterface(netstrm)
 BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(netstrm)
 	/* release objects we no longer need */
+	objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(netstrm)
@@ -253,6 +576,7 @@ BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(net, CORE_COMPONENT));
 
 	/* set our own handlers */
 ENDObjClassInit(netstrm)

@@ -27,11 +27,31 @@
 /* the netstrm object */
 struct netstrm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	int sock;		/* underlying socket */
+	uchar *pRemHostIP; /**< IP address of remote peer (currently used in server mode, only) */
+	uchar *pRemHostName; /**< host name of remote peer (currently used in server mode, only) */
+	int sock;	/**< the socket we use for regular, single-socket, operations */
+	int *socks;	/**< the socket(s) we use for listeners, element 0 has nbr of socks */
+	int iSessMax;	/**< maximum number of sessions permitted */
 };
+
+/* macros for quick member access */
+#warning "do we need the macros?"
+#define relpTcpGetNumSocks(pThis)    ((pThis)->socks[0])
+#define relpTcpGetLstnSock(pThis, i) ((pThis)->socks[i])
+#define relpTcpGetSock(pThis)        ((pThis)->sock)
+
 
 /* interfaces */
 BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
+//??relpRetVal relpTcpAbortDestruct(relpTcp_t **ppThis);
+	rsRetVal (*Construct)(netstrm_t **ppThis);
+	rsRetVal (*ConstructFinalize)(netstrm_t __attribute__((unused)) *pThis);
+	rsRetVal (*Destruct)(netstrm_t **ppThis);
+	rsRetVal (*LstnInit)(netstrm_t *pThis, unsigned char *pLstnPort);
+	rsRetVal (*AcceptConnReq)(netstrm_t **ppThis, int sock);
+	rsRetVal (*Rcv)(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
+	rsRetVal (*Send)(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
+	rsRetVal (*Connect)(netstrm_t *pThis, int family, unsigned char *port, unsigned char *host);
 ENDinterface(netstrm)
 #define netstrmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

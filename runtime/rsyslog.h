@@ -198,6 +198,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MAIL_NO_TO = -2071, /**< recipient for mail destination is missing */
 	RS_RET_MAIL_NO_FROM = -2072, /**< sender for mail destination is missing */
 	RS_RET_INVALID_PRI = -2073, /**< PRI value is invalid */
+	RS_RET_MALICIOUS_HNAME = -2074, /**< remote peer is trying malicious things with its hostname */
+	RS_RET_ACCEPT_ERR = -2074, /**< error during accept() system call */
+	RS_RET_INVALID_HNAME = -2075, /**< remote peer's hostname invalid or unobtainable */
+	RS_RET_INVALID_PORT = -2076, /**< invalid port value */
+	RS_RET_COULD_NOT_BIND = -2077, /**< could not bind socket, defunct */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
