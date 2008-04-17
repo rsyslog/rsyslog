@@ -37,7 +37,6 @@
 #define ADDDATE		0x004	/* add a date to the message */
 #define MARK		0x008	/* this message is a mark */
 
-extern int DisableDNS;
 extern char **StripDomains;
 extern char *LocalDomain;
 extern char**LocalHosts;

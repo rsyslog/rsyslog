@@ -235,7 +235,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 		iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 	} else {
 		/* we need to process a hostname ACL */
-		if (DisableDNS) {
+		if(glbl.GetDisableDNS()) {
 			errmsg.LogError(NO_ERRCODE, "Ignoring hostname based ACLs because DNS is disabled.");
 			ABORT_FINALIZE(RS_RET_OK);
 		}
@@ -656,7 +656,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
 		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
 	}
 
-	if (!DisableDNS) {
+	if(!glbl.GetDisableDNS()) {
 		sigemptyset(&nmask);
 		sigaddset(&nmask, SIGHUP);
 		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
@@ -713,7 +713,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
 		pthread_sigmask(SIG_SETMASK, &omask, NULL);
 	}
 
-        if (error || DisableDNS) {
+        if(error || glbl.GetDisableDNS()) {
                 dbgprintf("Host name for your address (%s) unknown\n", ip);
 		strcpy((char*) pszHostFQDN, ip);
 		ABORT_FINALIZE(RS_RET_ADDRESS_UNKNOWN);

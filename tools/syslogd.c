@@ -296,7 +296,6 @@ char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
-int	DisableDNS = 0; /* don't look up IP addresses of remote messages */
 char	**StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 static int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
@@ -3232,7 +3231,7 @@ int realMain(int argc, char **argv)
 			glbl.SetOption_DisallowWarning(0);
 			break;
 		case 'x':		/* disable dns for remote messages */
-			DisableDNS = 1;
+			glbl.SetDisableDNS(1);
 			break;
 		case '?':              
 		default:

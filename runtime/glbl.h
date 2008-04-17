@@ -47,12 +47,14 @@ typedef struct glbl_s {
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	uchar* (*GetWorkDir)(void);
-	int (*GetDefPFFamily)(void);
-	rsRetVal (*SetDefPFFamily)(int);
-	int (*GetDropMalPTRMsgs)(void);
-	rsRetVal (*SetDropMalPTRMsgs)(int);
-	int (*GetOption_DisallowWarning)(void);
-	rsRetVal (*SetOption_DisallowWarning)(int);
+#define SIMP_PROP(name, dataType) \
+	dataType (*Get##name)(void); \
+	rsRetVal (*Set##name)(dataType);
+	SIMP_PROP(DefPFFamily, int);
+	SIMP_PROP(DropMalPTRMsgs, int);
+	SIMP_PROP(Option_DisallowWarning, int);
+	SIMP_PROP(DisableDNS, int);
+#undef	SIMP_PROP
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
