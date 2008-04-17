@@ -76,6 +76,9 @@
 #include "conf.h"
 #include "glbl.h"
 
+/* globally visible static data - see comment in rsyslog.h for details */
+uchar *glblModPath; /* module load path */
+
 /* static data */
 static int iRefCount = 0; /* our refcount - it MUST exist only once inside a process (not thread)
  		             thus it is perfectly OK to use a static. MUST be initialized to 0! */

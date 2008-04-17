@@ -287,6 +287,17 @@ void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
 #include "debug.h"
 #include "obj.h"
 
+/* the variable below is a trick: before we can init the runtime, the caller
+ * may want to set a module load path. We can not do this via the glbl class
+ * because it needs an initialized runtime system (and may at some point in time
+ * even be loaded itself). So this is a no-go. What we do is use a single global
+ * variable which may be provided with a pointer by the caller. This variable
+ * resides in rsyslog.c, the main runtime file. We have not seen any realy valule
+ * in providing object access functions. If you don't like that, feel free to
+ * add them. -- rgerhards, 2008-04-17
+ */
+extern uchar *glblModPath; /* module load path */
+
 /* some runtime prototypes */
 rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);

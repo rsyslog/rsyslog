@@ -288,7 +288,6 @@ static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - n
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
 int	iActExecOnceInterval = 0; /* execute action once every nn seconds */
-uchar *glblModPath = NULL; /* module load path  - only used during initial init, only settable via -M command line option */
 /* end global config file state variables */
 
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */

@@ -34,9 +34,6 @@
 
 #define glblGetIOBufSize() 4096 /* size of the IO buffer, e.g. for strm class */
 
-extern uchar *glblModPath; /* module load path */
-
-
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	uchar* (*GetWorkDir)(void);
