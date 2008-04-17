@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -43,18 +43,17 @@
 #endif
 #include <pthread.h>
 #include <gssapi/gssapi.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"
-#include "omfwd.h"
 #include "template.h"
 #include "msg.h"
-#include "tcpsyslog.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "gss-misc.h"
 #include "tcpclt.h"
+#include "glbl.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
@@ -75,11 +74,12 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(gssutil)
 DEFobjCurrIf(tcpclt)
 
 typedef struct _instanceData {
-	char	f_hname[MAXHOSTNAMELEN+1];
+	char	*f_hname;
 	short	sock;			/* file descriptor */
 	enum { /* TODO: we shoud revisit these definitions */
 		eDestFORW,
@@ -162,6 +162,9 @@ CODESTARTfreeInstance
 	tcpclt.Destruct(&pData->pTCPClt);
 	if(pData->sock >= 0)
 		close(pData->sock);
+
+	if(pData->f_hname != NULL)
+		free(pData->f_hname);
 ENDfreeInstance
 
 
@@ -362,7 +365,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		 * a common function.
 		 */
 		hints.ai_flags = AI_NUMERICSERV;
-		hints.ai_family = family;
+		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_STREAM;
 		if((e = getaddrinfo(pData->f_hname,
 				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
@@ -592,10 +595,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* TODO: make this if go away! */
 	if(*p == ';') {
 		*p = '\0'; /* trick to obtain hostname (later)! */
-		strcpy(pData->f_hname, (char*) q);
+		CHKmalloc(pData->f_hname = strdup((char*) q));
 		*p = ';';
-	} else
-		strcpy(pData->f_hname, (char*) q);
+	} else {
+		CHKmalloc(pData->f_hname = strdup((char*) q));
+	}
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
@@ -605,7 +609,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	memset(&hints, 0, sizeof(hints));
 	/* port must be numeric, because config file syntax requests this */
 	hints.ai_flags = AI_NUMERICSERV;
-	hints.ai_family = family;
+	hints.ai_family = glbl.GetDefPFFamily();
 	hints.ai_socktype = SOCK_STREAM;
 	if( (error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
 		pData->eDestState = eDestFORW_UNKN;
@@ -633,6 +637,7 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
@@ -691,6 +696,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
 	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 
@@ -701,6 +707,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 
 #endif /* #ifdef USE_GSSAPI */
-/*
- * vi:set ai:
+/* vi:set ai:
  */

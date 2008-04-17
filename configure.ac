@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.17.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[3.19.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
-AC_CONFIG_SRCDIR([syslogd.c])
+AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_HEADERS([config.h])
 
 AC_GNU_SOURCE
@@ -21,9 +21,11 @@ AC_CANONICAL_HOST
 
 case "${host}" in
   *-*-linux*)
+    os_type="linux"
   ;;
   *-*-*darwin*|*-*-freebsd*|*-*-netbsd*|*-*-openbsd*)
-    AC_DEFINE([BSD], [1], [Description])
+    AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
+    os_type="bsd"
   ;;
 esac
 
@@ -83,6 +85,22 @@ AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r])
 
+# Check for MAXHOSTNAMELEN
+AC_MSG_CHECKING(for MAXHOSTNAMELEN)
+AC_TRY_COMPILE([
+	#include <sys/param.h>
+	], [
+	return MAXHOSTNAMELEN;
+	]
+	,
+	AC_MSG_RESULT(yes)
+	,
+	# note: we use 1024 here, which should be far more than needed by any system. If that's too low, we simply
+	# life with the need to change it. Most of the code doesn't need it anyways, but there are a few places 
+	# where it actually is needed and it makes no sense to change them.
+	AC_DEFINE(MAXHOSTNAMELEN, 1024, [Define with a value if your <sys/param.h> does not define MAXHOSTNAMELEN])
+	AC_MSG_RESULT(no; defined as 64)
+)
 
 # Large file support
 AC_ARG_ENABLE(largefile,
@@ -202,7 +220,9 @@ AC_ARG_ENABLE(klog,
          esac],
         [enable_klog="yes"]
 )
-AM_CONDITIONAL(ENABLE_IMKLOGD, test x$enable_klog = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOG, test x$enable_klog = xyes)
+AM_CONDITIONAL(ENABLE_IMKLOG_BSD, test x$os_type = xbsd)
+AM_CONDITIONAL(ENABLE_IMKLOG_LINUX, test x$os_type = xlinux)
 
 #
 # SYSLOG_UNIXAF
@@ -442,6 +462,25 @@ AC_SUBST(snmp_cflags)
 AC_SUBST(snmp_libs)
 
 
+# support for building the rsyslogd runtime
+AC_ARG_ENABLE(rsyslogrt,
+        [AS_HELP_STRING([--enable-rsyslogrt],[Build rsyslogrt @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_rsyslogrt="yes" ;;
+          no) enable_rsyslogrt="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-rsyslogrt) ;;
+         esac],
+        [enable_rsyslogrt=yes]
+)
+if test "x$enable_rsyslogrt" = "xyes"; then
+  rsrt_cflags="-I\$(top_srcdir)/runtime -I\$(top_srcdir)"
+  rsrt_libs="\$(top_builddir)/runtime/librsyslog.la"
+fi
+AM_CONDITIONAL(ENABLE_RSYSLOGRT, test x$enable_rsyslogrt = xyes)
+AC_SUBST(rsrt_cflags)
+AC_SUBST(rsrt_libs)
+
+
 # support for NOT building rsyslogd (useful for source-based packaging systems)
 AC_ARG_ENABLE(rsyslogd,
         [AS_HELP_STRING([--enable-rsyslogd],[Build rsyslogd @<:@default=yes@:>@])],
@@ -497,25 +536,11 @@ AC_ARG_ENABLE(rfc3195,
         [enable_rfc3195=no]
 )
 if test "x$enable_rfc3195" = "xyes"; then
-  AC_CHECK_HEADERS(
-    [librfc3195.h],,
-    [AC_MSG_FAILURE([RFC3195 library is missing (no headers)])]
-  )
-# I don't know how to tell that librfc3195 needs -lrt, so I disable
-# this check for now - the header check should work well enough...
-# rgerhards, 2008-03-25
-#  AC_CHECK_LIB(
-#    [rfc3195],
-#    [rfc3195EngineGetVersion],
-#    [rfc3195_cflags=""
-     rfc3195_libs="-lrfc3195"
-#    ],
-#    [AC_MSG_FAILURE([RFC3195 library is missing])]
-#  )
+	PKG_CHECK_MODULES(LIBLOGGING, liblogging >= 0.7.1)
 fi
 AM_CONDITIONAL(ENABLE_RFC3195, test x$enable_rfc3195 = xyes)
-AC_SUBST(rfc3195_cflags)
-AC_SUBST(rfc3195_libs)
+AC_SUBST(RFC3195_CFLAGS)
+AC_SUBST(RFC3195_LIBS)
 
 
 # settings for the template input module; copy and modify this code
@@ -559,9 +584,12 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 
 
 AC_CONFIG_FILES([Makefile \
+		runtime/Makefile \
+		tools/Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
 		plugins/imtcp/Makefile \
+		plugins/im3195/Makefile \
 		plugins/imgssapi/Makefile \
 		plugins/imuxsock/Makefile \
 		plugins/immark/Makefile \
@@ -583,7 +611,7 @@ echo "****************************************************"
 echo "rsyslog will be compiled with the following settings:"
 echo
 echo "Multithreading support enabled:           $enable_pthreads"
-echo "Klog functionality enabled:               $enable_klog"
+echo "Klog functionality enabled:               $enable_klog ($os_type)"
 echo "Regular expressions support enabled:      $enable_regexp"
 echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"
@@ -600,5 +628,6 @@ echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
 echo "valgrind support settings enabled:        $enable_valgrind"
+echo "rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "rsyslogd will be built:                   $enable_rsyslogd"
 

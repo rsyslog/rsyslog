@@ -22,7 +22,6 @@ html_files = \
 	rsyslog_php_syslog_ng.html \
 	rsyslog_recording_pri.html \
 	rsyslog_stunnel.html \
-	status.html \
 	syslog-protocol.html \
 	version_naming.html \
 	contributors.html \
@@ -32,6 +31,9 @@ html_files = \
 	imfile.html \
 	imtcp.html \
 	imgssapi.html \
+	imrelp.html \
+	imuxsock.html \
+	imklog.html \
 	professional_support.html \
 	queues.html \
 	queueWorkerLogic.dia \

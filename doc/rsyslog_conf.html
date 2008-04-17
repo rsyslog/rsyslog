@@ -1,7 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>rsyslog.conf file</title>
-
-</head>
+<html><head><title>rsyslog.conf file</title></head>
 <body>
 <h1>rsyslog.conf configuration file</h1>
 <p><b>This document is currently being enhanced. Please
@@ -49,9 +47,11 @@ plugin for plain tcp syslog</li>
 <li><a href="imgssapi.html">imgssapi</a> -
 input plugin for plain tcp and GSS-enable syslog</li>
 <li>immark - support for mark messages</li>
-<li>imklog - kernel logging</li>
+<li><a href="imklog.html">imklog</a> - kernel logging</li>
 <li><a href="imuxsock.html">imuxsock</a> -
 unix sockets, including the system log socket</li>
+<li><a href="im3195.html">im3195</a> -
+accepts syslog messages via RFC 3195</li>
 </ul>
 <p>Please note that each module provides configuration
 directives, which are NOT necessarily being listed below. Also
@@ -126,7 +126,7 @@ worker threads, default 1, recommended 1</li>
 <li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
 <li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
 <li><a href="rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
-<li>$DebugPrintKernelSymbols (imklog) [on/<b>off</b>]</li>
+
 <li><a href="rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
 <li><a href="rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
 <li><a href="rsconf1_dircreatemode.html">$DirCreateMode</a></li>
@@ -143,14 +143,7 @@ worker threads, default 1, recommended 1</li>
 <li><a href="rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
 <li><a href="rsconf1_gsslistenservicename.html">$GssListenServiceName</a></li>
 <li><a href="rsconf1_gssmode.html">$GssMode</a></li>
-<li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li>
-<li>$klogSymbolLookup (imklog) [<b>on</b>/off] --
-former klogd -x option</li>
-<li>$klogUseSyscallInterface (imklog)&nbsp; [on/<b>off</b>]
--- former klogd -2 option</li>
-<li>$klogSymbolsTwice (imklog) [on/<b>off</b>] --
-former klogd -s option</li>
-<li>$MainMsgQueueCheckpointInterval &lt;number&gt;</li>
+<li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li><li>MainMsgQueueCheckpointInterval &lt;number&gt;</li>
 <li>$MainMsgQueueDequeueSlowdown &lt;number&gt; [number
 is timeout in <i> micro</i>seconds (1000000us is 1sec!),
 default 0 (no delay). Simple rate-limiting!]</li>

@@ -44,7 +44,7 @@
 #include <fcntl.h>
 #endif
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "module-template.h"
 #include "net.h"
 #include "tcpsrv.h"

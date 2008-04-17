@@ -54,7 +54,7 @@
 #include <fcntl.h>
 #endif
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "net.h"
@@ -62,6 +62,7 @@
 #include "conf.h"
 #include "tcpsrv.h"
 #include "obj.h"
+#include "glbl.h"
 #include "errmsg.h"
 
 MODULE_TYPE_LIB
@@ -72,6 +73,7 @@ MODULE_TYPE_LIB
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(conf)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
@@ -272,7 +274,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 	dbgprintf("creating tcp socket on port %s\n", TCPLstnPort);
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-        hints.ai_family = family;
+        hints.ai_family = glbl.GetDefPFFamily();
         hints.ai_socktype = SOCK_STREAM;
 
         error = getaddrinfo(NULL, TCPLstnPort, &hints, &res);
@@ -327,7 +329,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		/* We need to enable BSD compatibility. Otherwise an attacker
 		 * could flood our log files by sending us tons of ICMP errors.
 		 */
-#ifndef BSD	
+#ifndef OS_BSD	
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
@@ -464,11 +466,9 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 	 * configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-RUNLOG_VAR("%p", ppSess);
-RUNLOG_VAR("%p", pSess);
 	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		dbgprintf("%s is not an allowed sender\n", (char *) fromHostFQDN);
-		if(option_DisallowWarning) {
+		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
 			errmsg.LogError(NO_ERRCODE, "TCP message from disallowed sender %s discarded",
 				   (char*)fromHost);
@@ -572,7 +572,6 @@ Run(tcpsrv_t *pThis)
 		for (i = 0; i < *pThis->pSocksLstn; i++) {
 			if (FD_ISSET(pThis->pSocksLstn[i+1], &readfds)) {
 				dbgprintf("New connect on TCP inetd socket: #%d\n", pThis->pSocksLstn[i+1]);
-RUNLOG_VAR("%p", &pNewSess);
 				SessAccept(pThis, &pNewSess, pThis->pSocksLstn[i+1]);
 				--nfds; /* indicate we have processed one */
 			}
@@ -793,6 +792,7 @@ CODESTARTObjClassExit(tcpsrv)
 	/* release objects we no longer need */
 	objRelease(tcps_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 ENDObjClassExit(tcpsrv)
@@ -808,6 +808,7 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(tcps_sess, DONT_LOAD_LIB));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);

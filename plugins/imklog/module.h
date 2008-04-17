@@ -1,6 +1,7 @@
-/* Module definitions for klogd's module support 
- *
- * Copyright 2007 by Rainer Gerhards and others
+/*  module.h - Miscellaneous module definitions
+ *  Copyright (c) 1996 Richard Henderson <rth@tamu.edu>
+ *  Copyright (c) 2004-7 Martin Schulze <joey@infodrom.org>
+ *  Copyright (c) 2007-2008 Rainer Gerhards <rgerhards@adiscon.com>
  *
  * This file is part of rsyslog.
  *
@@ -19,7 +20,6 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-
 struct sym_table
 {
         unsigned long value;
@@ -33,4 +33,3 @@ struct Module
 
         char *name;
 };
-

@@ -1,8 +1,9 @@
-/*
-    ksym.c - functions for kernel address->symbol translation
-    Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
-    Copyright (c) 1996 Enjellic Systems Development
-
+/*  ksym.c - functions for kernel address->symbol translation
+ *  Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
+ *  Copyright (c) 1996 Enjellic Systems Development
+ *  Copyright (c) 1998-2007 Martin Schulze <joey@infodrom.org>
+ *  Copyright (C) 2007-2008 Rainer Gerhards <rgerhards@adiscon.com>
+ *
  * This file is part of rsyslog.
  *
  * Rsyslog is free software: you can redistribute it and/or modify
@@ -181,27 +182,21 @@ extern int InitKsyms(char *mapfile)
 	/*
 	 * Search for and open the file containing the kernel symbols.
 	 */
-	if ( mapfile != (char *) 0 )
-	{
+	if ( mapfile != (char *) 0 ) {
 		if ( (sym_file = fopen(mapfile, "r")) == (FILE *) 0 )
 		{
-			Syslog(LOG_WARNING, "Cannot open map file: %s.", \
-			       mapfile);
+			imklogLogIntMsg(LOG_WARNING, "Cannot open map file: %s.", mapfile);
 			return(0);
 		}
-	}
-	else
-	{
-		if ( (mapfile = FindSymbolFile()) == (char *) 0 ) 
-		{
-			Syslog(LOG_WARNING, "Cannot find map file.");
+	} else {
+		if ( (mapfile = FindSymbolFile()) == (char *) 0 ) {
+			imklogLogIntMsg(LOG_WARNING, "Cannot find map file.");
 			dbgprintf("Cannot find map file.\n");
 			return(0);
 		}
 		
-		if ( (sym_file = fopen(mapfile, "r")) == (FILE *) 0 )
-		{
-			Syslog(LOG_WARNING, "Cannot open map file.");
+		if ( (sym_file = fopen(mapfile, "r")) == (FILE *) 0 ) {
+			imklogLogIntMsg(LOG_WARNING, "Cannot open map file.");
 			dbgprintf("Cannot open map file.\n");
 			return(0);
 		}
@@ -216,21 +211,17 @@ extern int InitKsyms(char *mapfile)
 	 * e-mail me a diff containing a parser with suitable political
 	 * correctness -- GW.
 	 */
-	while ( !feof(sym_file) )
-	{
-		if ( fscanf(sym_file, "%lx %c %s\n", &address, &type, sym)
-		    != 3 )
-		{
-			Syslog(LOG_ERR, "Error in symbol table input (#1).");
+	while ( !feof(sym_file) ) {
+		if ( fscanf(sym_file, "%lx %c %s\n", &address, &type, sym) != 3 ) {
+			imklogLogIntMsg(LOG_ERR, "Error in symbol table input (#1).");
 			fclose(sym_file);
 			return(0);
 		}
 		if(dbgPrintSymbols)
 			dbgprintf("Address: %lx, Type: %c, Symbol: %s\n", address, type, sym);
 
-		if ( AddSymbol(address, sym) == 0 )
-		{
-			Syslog(LOG_ERR, "Error adding symbol - %s.", sym);
+		if ( AddSymbol(address, sym) == 0 ) {
+			imklogLogIntMsg(LOG_ERR, "Error adding symbol - %s.", sym);
 			fclose(sym_file);
 			return(0);
 		}
@@ -240,21 +231,19 @@ extern int InitKsyms(char *mapfile)
 	}
 	
 
-	Syslog(LOG_INFO, "Loaded %d symbols from %s.", num_syms, mapfile);
-	switch ( version )
-	{
+	imklogLogIntMsg(LOG_INFO, "Loaded %d symbols from %s.", num_syms, mapfile);
+	switch(version) {
 	    case -1:
-		Syslog(LOG_WARNING, "Symbols do not match kernel version.");
+		imklogLogIntMsg(LOG_WARNING, "Symbols do not match kernel version.");
 		num_syms = 0;
 		break;
 
 	    case 0:
-		Syslog(LOG_WARNING, "Cannot verify that symbols match " \
-		       "kernel version.");
+		imklogLogIntMsg(LOG_WARNING, "Cannot verify that symbols match kernel version.");
 		break;
 		
 	    case 1:
-		Syslog(LOG_INFO, "Symbols match kernel version %s.", vstring);
+		imklogLogIntMsg(LOG_INFO, "Symbols match kernel version %s.", vstring);
 		break;
 	}
 		
@@ -307,44 +296,39 @@ static char *FindSymbolFile(void)
 			**mf = system_maps;
 
 	auto struct utsname utsname;
-	static char symfile[100];
+	static char mysymfile[100];
 
 	auto FILE *sym_file = (FILE *) 0;
 
-        if ( uname(&utsname) < 0 )
-        {
-                Syslog(LOG_ERR, "Cannot get kernel version information.");
+        if ( uname(&utsname) < 0 ) {
+                imklogLogIntMsg(LOG_ERR, "Cannot get kernel version information.");
                 return(0);
         }
 
 	dbgprintf("Searching for symbol map.\n");
 	
-	for (mf = system_maps; *mf != (char *) 0 && file == (char *) 0; ++mf)
-	{
+	for(mf = system_maps; *mf != (char *) 0 && file == (char *) 0; ++mf) {
  
-		sprintf (symfile, "%s-%s", *mf, utsname.release);
-		dbgprintf("Trying %s.\n", symfile);
-		if ( (sym_file = fopen(symfile, "r")) != (FILE *) 0 ) {
-			if (CheckMapVersion(symfile) == 1)
-				file = symfile;
+		snprintf(mysymfile, sizeof(mysymfile), "%s-%s", *mf, utsname.release);
+		dbgprintf("Trying %s.\n", mysymfile);
+		if ( (sym_file = fopen(mysymfile, "r")) != (FILE *) 0 ) {
+			if (CheckMapVersion(mysymfile) == 1)
+				file = mysymfile;
 			fclose(sym_file);
 		}
 		if (sym_file == (FILE *) 0 || file == (char *) 0) {
-			sprintf (symfile, "%s", *mf);
-			dbgprintf("Trying %s.\n", symfile);
-			if ( (sym_file = fopen(symfile, "r")) != (FILE *) 0 ) {
-				if (CheckMapVersion(symfile) == 1)
-					file = symfile;
+			sprintf (mysymfile, "%s", *mf);
+			dbgprintf("Trying %s.\n", mysymfile);
+			if ( (sym_file = fopen(mysymfile, "r")) != (FILE *) 0 ) {
+				if (CheckMapVersion(mysymfile) == 1)
+					file = mysymfile;
 				fclose(sym_file);
 			}
 		}
 
 	}
 
-	/*
-	 * At this stage of the game we are at the end of the symbol
-	 * tables.
-	 */
+	/* At this stage of the game we are at the end of the symbol tables.  */
 	dbgprintf("End of search list encountered.\n");
 	return(file);
 }
@@ -407,8 +391,7 @@ static int CheckVersion(char *version)
 		return(0);
 
 
-	/*
-	 * Since the symbol looks like a kernel version we can start
+	/* Since the symbol looks like a kernel version we can start
 	 * things out by decoding the version string into its component
 	 * parts.
 	 */
@@ -420,24 +403,20 @@ static int CheckVersion(char *version)
 		  strlen(prefix), major, minor, patch);
 	sprintf(vstring, "%d.%d.%d", major, minor, patch);
 
-	/*
-	 * We should now have the version string in the vstring variable in
+	/* We should now have the version string in the vstring variable in
 	 * the same format that it is stored in by the kernel.  We now
 	 * ask the kernel for its version information and compare the two
 	 * values to determine if our system map matches the kernel
 	 * version level.
 	 */
-	if ( uname(&utsname) < 0 )
-	{
-		Syslog(LOG_ERR, "Cannot get kernel version information.");
+	if ( uname(&utsname) < 0 ) {
+		imklogLogIntMsg(LOG_ERR, "Cannot get kernel version information.");
 		return(0);
 	}
 	dbgprintf("Comparing kernel %s with symbol table %s.\n", utsname.release, vstring);
 
-	if ( sscanf (utsname.release, "%d.%d.%d", &major, &minor, &patch) < 3 )
-	{
-		Syslog(LOG_ERR, "Kernel send bogus release string `%s'.",
-		       utsname.release);
+	if ( sscanf (utsname.release, "%d.%d.%d", &major, &minor, &patch) < 3 ) {
+		imklogLogIntMsg(LOG_ERR, "Kernel send bogus release string `%s'.", utsname.release);
 		return(0);
 	}
 
@@ -491,15 +470,12 @@ static int CheckMapVersion(char *fname)
 		 * now need to search this file and look for version
 		 * information.
 		 */
-		Syslog(LOG_INFO, "Inspecting %s", fname);
+		imklogLogIntMsg(LOG_INFO, "Inspecting %s", fname);
 
 		version = 0;
-		while ( !feof(sym_file) && (version == 0) )
-		{
-			if ( fscanf(sym_file, "%lx %c %s\n", &address, \
-				    &type, sym) != 3 )
-			{
-				Syslog(LOG_ERR, "Error in symbol table input (#2).");
+		while ( !feof(sym_file) && (version == 0) ) {
+			if ( fscanf(sym_file, "%lx %c %s\n", &address, &type, sym) != 3 ) {
+				imklogLogIntMsg(LOG_ERR, "Error in symbol table input (#2).");
 				fclose(sym_file);
 				return(0);
 			}
@@ -509,11 +485,9 @@ static int CheckMapVersion(char *fname)
 		}
 		fclose(sym_file);
 
-		switch ( version )
-		{
+		switch ( version ) {
 		    case -1:
-			Syslog(LOG_ERR, "Symbol table has incorrect " \
-				"version number.\n");
+			imklogLogIntMsg(LOG_ERR, "Symbol table has incorrect version number.\n");
 			break;
 		    case 0:
 			dbgprintf("No version information found.\n");
@@ -546,14 +520,13 @@ static int CheckMapVersion(char *fname)
 static int AddSymbol(unsigned long address, char *symbol)
 {
 	/* Allocate the the symbol table entry. */
-	sym_array = (struct sym_table *) realloc(sym_array, (num_syms+1) * \
+	sym_array = (struct sym_table *) realloc(sym_array, (num_syms+1) *
 						 sizeof(struct sym_table));
 	if ( sym_array == (struct sym_table *) 0 )
 		return(0);
 
 	/* Then the space for the symbol. */
-	sym_array[num_syms].name = (char *) malloc(strlen(symbol)*sizeof(char)\
-						   + 1);
+	sym_array[num_syms].name = (char *) malloc(strlen(symbol)*sizeof(char) + 1);
 	if ( sym_array[num_syms].name == (char *) 0 )
 		return(0);
 	
@@ -583,12 +556,7 @@ static int AddSymbol(unsigned long address, char *symbol)
  *		If a match is found the pointer to the symbolic name most
  *		closely matching the address is returned.
  **************************************************************************/
-char * LookupSymbol(value, sym)
-
-        unsigned long value;
-
-        struct symbol *sym;
-
+char * LookupSymbol(unsigned long value, struct symbol *sym)
 {
         auto int lp;
 
@@ -606,10 +574,8 @@ char * LookupSymbol(value, sym)
         if ( value < sym_array[0].value )
                 return((char *) 0);
 
-        for(lp = 0; lp <= num_syms; ++lp)
-        {
-                if ( sym_array[lp].value > value )
-                {
+        for(lp = 0; lp <= num_syms; ++lp) {
+                if ( sym_array[lp].value > value ) {
                         ksym.offset = value - sym_array[lp-1].value;
                         ksym.size = sym_array[lp].value - \
                                 sym_array[lp-1].value;
@@ -620,20 +586,16 @@ char * LookupSymbol(value, sym)
 
         name = LookupModuleSymbol(value, &msym);
 
-        if ( ksym.offset == 0 && msym.offset == 0 )
-        {
+        if ( ksym.offset == 0 && msym.offset == 0 ) {
                 return((char *) 0);
         }
 
         if ( ksym.offset == 0 || msym.offset < 0 ||
-             (ksym.offset > 0 && ksym.offset < msym.offset) )
-        {
+             (ksym.offset > 0 && ksym.offset < msym.offset) ) {
                 sym->offset = ksym.offset;
                 sym->size = ksym.size;
                 return(last);
-        }
-        else
-        {
+        } else {
                 sym->offset = msym.offset;
                 sym->size = msym.size;
                 return(name);
@@ -722,7 +684,7 @@ extern char *ExpandKadds(char *line, char *el)
 	 */
 	if ( i_am_paranoid &&
 	     (strstr(line, "Oops:") != (char *) 0) && !InitMsyms() )
-		Syslog(LOG_WARNING, "Cannot load kernel module symbols.\n");
+		imklogLogIntMsg(LOG_WARNING, "Cannot load kernel module symbols.\n");
 	
 
 	/*
@@ -730,12 +692,10 @@ extern char *ExpandKadds(char *line, char *el)
 	 * messages in this line.
 	 */
 	if ( (num_syms == 0) ||
-	     (kp = strstr(line, "[<")) == (char *) 0 )
-	{
+	     (kp = strstr(line, "[<")) == (char *) 0 ) {
 #ifdef __sparc__
 		if (num_syms) {
-			/*
-			 * On SPARC, register dumps do not have the [< >] characters in it.
+			/* On SPARC, register dumps do not have the [< >] characters in it.
 			 */
 			static struct sparc_tests {
 				char *str;
@@ -815,14 +775,12 @@ extern char *ExpandKadds(char *line, char *el)
 	}
 
 	/* Loop through and expand all kernel messages. */
-	do
-	{
+	do {
 		while ( sl < kp+1 )
 			*elp++ = *sl++;
 
 		/* Now poised at a kernel delimiter. */
-	        if ( (kp = strstr(sl, ">]")) == (char *) 0 )
-		{
+	        if ( (kp = strstr(sl, ">]")) == (char *) 0 ) {
 			strcpy(el, sl);
 			return(el);
 		}
@@ -839,8 +797,7 @@ extern char *ExpandKadds(char *line, char *el)
 			  (sym.size==0) ? symbol+1 : symbol, sym.offset, sym.size);
 
 		value = 2;
-		if ( sym.size != 0 )
-		{
+		if ( sym.size != 0 ) {
 			--value;
 			++kp;
 			elp += sprintf(elp, "+0x%x/0x%02x", sym.offset, sym.size);
@@ -871,7 +828,6 @@ extern char *ExpandKadds(char *line, char *el)
  *				present when resolving kernel exceptions.
  * Return:	void
  **************************************************************************/
-
 extern void SetParanoiaLevel(int level)
 {
 	i_am_paranoid = level;

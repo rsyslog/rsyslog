@@ -1,4 +1,40 @@
 ---------------------------------------------------------------------------
+Version 3.19.0 (rgerhards), 2008-04-??
+- begins new devel branch version
+- implemented im3195, the RFC3195 input as a plugin
+- split of a "runtime library" for rsyslog - this is not yet a clean
+  model, because some modularization is still outstanding. In theory,
+  this shall enable other utilities but rsyslogd to use the same
+  runtime
+- changed directory structure, files are now better organized
+- a lot of cleanup in regard to modularization
+---------------------------------------------------------------------------
+Version 3.17.2 (rgerhards), 2008-04-??
+- this version is the new beta
+---------------------------------------------------------------------------
+Version 3.17.1 (rgerhards), 2008-04-15
+- removed dependency on MAXHOSTNAMELEN as much as it made sense.
+  GNU/Hurd does not define it (because it has no limit), and we have taken
+  care for cases where it is undefined now. However, some very few places
+  remain where IMHO it currently is not worth fixing the code. If it is
+  not defined, we have used a generous value of 1K, which is above IETF
+  RFC's on hostname length at all. The memory consumption is no issue, as
+  there are only a handful of this buffers allocated *per run* -- that's
+  also the main reason why we consider it not worth to be fixed any further.
+- enhanced legacy syslog parser to handle slightly malformed messages
+  (with a space in front of the timestamp) - at least HP procurve is
+  known to do that and I won't outrule that others also do it. The 
+  change looks quite unintrusive and so we added it to the parser.
+- implemented klogd functionality for BSD
+- implemented high precision timestamps for the kernel log. Thanks to
+  Michael Biebl for pointing out that the kernel log did not have them.
+- provided ability to discard non-kernel messages if they are present
+  in the kernel log (seems to happen on BSD)
+- implemented $KLogInternalMsgFacility config directive
+- implemented $KLogPermitNonKernelFacility config directive
+Plus a number of bugfixes that were applied to v3-stable and beta
+branches (not mentioned here in detail).
+---------------------------------------------------------------------------
 Version 3.17.0 (rgerhards), 2008-04-08
 - added native ability to send mail messages
 - removed no longer needed file relptuil.c/.h
@@ -24,8 +60,21 @@ Version 3.17.0 (rgerhards), 2008-04-08
   easier to work with non-standard module library locations. Thanks
   to varmojfekoj for suggesting this change. Matches bugzilla bug 55.
 - bugfix: some messages were emited without hostname
+Plus a number of bugfixes that were applied to v3-stable and beta
+branches (not mentioned here in detail).
 ---------------------------------------------------------------------------
-Version 3.15.1 (rgerhards), 2008-04-??
+Version 3.16.0 (rgerhards), 2008-04-??
+- new v3-stable (3.16.x) based on beta 3.15.x (RELP support)
+- bugfix: omsnmp had a too-small sized buffer for hostname+port. This
+  could not lead to a segfault, as snprintf() was used, but could cause
+  some trouble with extensively long hostnames.
+- applied patch from Tiziano Müller to remove some compiler warnings
+- added gssapi overview/howto thanks to Peter Vrabec
+- changed some files to grant LGPLv3 extended persmissions on top of GPLv3
+  this also is the first sign of something that will evolve into a
+  well-defined "rsyslog runtime library"
+---------------------------------------------------------------------------
+Version 3.15.1 (rgerhards), 2008-04-11
 - bugfix: some messages were emited without hostname
 - disabled atomic operations for the time being because they introduce some
   cross-platform trouble - need to see how to fix this in the best 
@@ -38,6 +87,8 @@ Version 3.15.1 (rgerhards), 2008-04-??
   happens during startup)
 - bugfix: memory leaks in script engine
 - bugfix: $hostname and $fromhost in RainerScript did not work
+This release also includes all changes applied to the stable versions
+up to today.
 ---------------------------------------------------------------------------
 Version 3.15.0 (rgerhards), 2008-04-01
 - major new feature: imrelp/omrelp support reliable delivery of syslog
@@ -49,7 +100,7 @@ Version 3.15.0 (rgerhards), 2008-04-01
   only installed if corresponding option is selected. Thanks to
   Michael Biebl for pointing these problems out.
 ---------------------------------------------------------------------------
-Version 3.14.2 (rgerhards), 2008-04-??
+Version 3.14.2 (rgerhards), 2008-04-09
 - bugfix: segfault with expression-based filters
 - bugfix: omsnmp did not deref errmsg object on exit (no bad effects caused)
 - some cleanup
@@ -57,6 +108,17 @@ Version 3.14.2 (rgerhards), 2008-04-??
   Vrabec for patching it based on the development in sysklogd - and thanks
   to the sysklogd project for upgrading klogd to support the new
   functionality
+- some cleanup in imklog
+- bugfix: potential segfault in imklog when kernel is compiled without
+  /proc/kallsyms and the file System.map is missing. Thanks to
+  Andrea Morandi for pointing it out and suggesting a fix.
+- bugfixes, credits to varmojfekoj:
+  * reset errno before printing a warning message
+  * misspelled directive name in code processing legacy options
+- bugfix: some legacy options not correctly interpreted - thanks to
+  varmojfekoj for the patch
+- improved detection of modules being loaded more than once
+  thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 3.14.1 (rgerhards), 2008-04-04
 - bugfix: some messages were emited without hostname

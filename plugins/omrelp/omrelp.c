@@ -36,11 +36,12 @@
 #include <errno.h>
 #include <ctype.h>
 #include <librelp.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "glbl.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
@@ -49,11 +50,12 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 
 static relpEngine_t *pRelpEngine;	/* our relp engine */
 
 typedef struct _instanceData {
-	char f_hname[MAXHOSTNAMELEN+1];
+	char *f_hname;
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
 	int bInitialConnect; /* is this the initial connection request of our module? (0-no, 1-yes) */
@@ -98,6 +100,9 @@ CODESTARTfreeInstance
 	if(pData->pRelpClt != NULL)
 		relpEngineCltDestruct(pRelpEngine, &pData->pRelpClt);
 
+	if(pData->f_hname != NULL)
+		free(pData->f_hname);
+
 ENDfreeInstance
 
 
@@ -115,7 +120,7 @@ static rsRetVal doConnect(instanceData *pData)
 	DEFiRet;
 
 	if(pData->bInitialConnect) {
-		iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
+		iRet = relpCltConnect(pData->pRelpClt, glbl.GetDefPFFamily(), (uchar*) pData->port, (uchar*) pData->f_hname);
 		if(iRet == RELP_RET_OK)
 			pData->bInitialConnect = 0;
 	} else {
@@ -284,10 +289,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* TODO: make this if go away! */
 	if(*p == ';') {
 		*p = '\0'; /* trick to obtain hostname (later)! */
-		strcpy(pData->f_hname, (char*) q);
+		CHKmalloc(pData->f_hname = strdup((char*) q));
 		*p = ';';
-	} else
-		strcpy(pData->f_hname, (char*) q);
+	} else {
+		CHKmalloc(pData->f_hname = strdup((char*) q));
+	}
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_ForwardFormat"));
@@ -307,6 +313,7 @@ CODESTARTmodExit
 	relpEngineDestruct(&pRelpEngine);
 
 	/* release what we no longer need */
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
@@ -328,6 +335,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* tell which objects we need */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDmodInit
 
 /* vim:set ai:

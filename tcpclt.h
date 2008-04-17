@@ -26,7 +26,7 @@
 #ifndef	TCPCLT_H_INCLUDED
 #define	TCPCLT_H_INCLUDED 1
 
-#include "tcpsyslog.h"
+//#include "tcpsyslog.h"
 #include "obj.h"
 
 /* the tcpclt object */

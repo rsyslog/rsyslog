@@ -40,7 +40,7 @@
 #include <errno.h>
 #include <time.h>
 #include <dbi/dbi.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "cfsysline.h"
 #include "srUtils.h"
