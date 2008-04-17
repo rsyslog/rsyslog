@@ -64,13 +64,13 @@ typedef enum {	/* IDs of base methods supported by all objects - used for jump t
 /* the base data type for interfaces
  * This MUST be in sync with the ifBEGIN macro
  */
-typedef struct interface_s {
+struct interface_s {
 	int ifVersion;	/* must be set to version requested */ 
 	int ifIsLoaded; /* is the interface loaded? (0-no, 1-yes, 2-load failed; if not 1, functions can NOT be called! */
-} interface_t;
+};
 
 
-typedef struct objInfo_s {
+struct objInfo_s {
 	uchar *pszID; /* the object ID as a string */
 	size_t lenID; /* length of the ID string */
 	int iObjVers;
@@ -78,7 +78,7 @@ typedef struct objInfo_s {
 	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
 	rsRetVal (*QueryIF)(interface_t*);
 	struct modInfo_s *pModInfo;
-} objInfo_t;
+};
 
 
 typedef struct obj {	/* the dummy struct that each derived class can be casted to */
@@ -313,8 +313,8 @@ rsRetVal objName##ClassExit(void) \
 	} 
 
 /* ------------------------------ object loader system ------------------------------ *
- * The following code is the early beginning of a dynamic object loader system. The 
- * root idea is that all objects will become dynamically loadable libraries over time,
+ * The following code builds a dynamic object loader system. The 
+ * root idea is that all objects are dynamically loadable,
  * which is necessary to get a clean plug-in interface where every plugin can access
  * rsyslog's rich object model via simple and quite portable methods.
  *
@@ -327,17 +327,12 @@ rsRetVal objName##ClassExit(void) \
  * macros create a static variable named like the object in each calling objects
  * static data block.
  *
- * To facilitate moving to this system, I begin to implement some hooks, which
- * allows to use interfaces today (when the rest of the infrastructure is not yet
- * there). This is in the hope that it will ease migration to the full-fledged system
- * once we are ready to work on that.
- * rgerhards, 2008-02-21
+ * rgerhards, 2008-02-21 (initial implementation), 2008-04-17 (update of this note)
  */
 
 /* this defines the QueryInterface print entry point. Over time, it should be
  * present in all objects.
  */
-//#define PROTOTYPEObjQueryInterface(obj) rsRetVal obj##QueryInterface(obj##_if_t *pThis)
 #define BEGINobjQueryInterface(obj) \
 	rsRetVal obj##QueryInterface(obj##_if_t *pIf) \
 	{ \

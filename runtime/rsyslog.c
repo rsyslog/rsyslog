@@ -3,7 +3,7 @@
  * This module contains all function which work on a RTL global level. It's
  * name is abbreviated to "rsrt" (rsyslog runtime).
  *
- * Please note that the runtime library is plugin-safe. That is, it must be
+ * Please note that the runtime library tends to be plugin-safe. That is, it must be
  * initialized by calling a global initialization function. However, that 
  * function checks if the library is already initialized and, if so, does
  * nothing except incrementing a refeence count. Similarly, the deinit
@@ -11,7 +11,23 @@
  * is tracked via the refcount). As such, it is safe to call init and
  * exit multiple times, as long as this are always matching calls. This
  * capability is needed for a plugin system, where one plugin never
- * knows what the other did.
+ * knows what the other did. HOWEVER, as of this writing, not all runtime
+ * library objects may work cleanly without static global data (the
+ * debug system is a very good example of this). So while we aim at the
+ * ability to work well in a plugin environment, things may not really work
+ * out. If you intend to use the rsyslog runtime library inside plugins,
+ * you should investigate the situation in detail. Please note that the
+ * rsyslog project itself does not yet need this functionality - thus you
+ * can safely assume it is totally untested ;).
+ *
+ * rgerhards, 2008-04-17: I have now once again checked on the plugin-safety.
+ * Unfortunately, there is currently no hook at all with which we could
+ * abstract a global data instance class. As such, we can NOT make the
+ * runtime plugin-safe in the above-described sense. As the rsyslog
+ * project itself does not need this functionality (and it is quesationable
+ * if someone else ever will), we do currently do not make an effort to
+ * support it. So if you intend to use rsyslog runtime inside a non-rsyslog
+ * plugin system, be careful!
  *
  * The rsyslog runtime library is in general reentrant and thread-safe. There
  * are some intentional exceptions (e.g. inside the msg object). These are
@@ -58,6 +74,7 @@
 #include "datetime.h"
 #include "queue.h"
 #include "conf.h"
+#include "glbl.h"
 
 /* static data */
 static int iRefCount = 0; /* our refcount - it MUST exist only once inside a process (not thread)
@@ -91,6 +108,8 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		 * class immediately after it is initialized. And, of course, we load those classes
 		 * first that we use ourselfs... -- rgerhards, 2008-03-07
 		 */
+		if(ppErrObj != NULL) *ppErrObj = "glbl";
+		CHKiRet(glblClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "datetime";
 		CHKiRet(datetimeClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "msg";
@@ -143,13 +162,14 @@ finalize_it:
  * rgerhards, 2008-04-16
  */
 rsRetVal
-rsrtExit(obj_if_t *pObjIF)
+rsrtExit(void)
 {
 	DEFiRet;
 
 	if(iRefCount == 1) {
 		/* do actual de-init only if we are the last runtime user */
 		confClassExit();
+		glblClassExit();
 		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 	}
 

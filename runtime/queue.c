@@ -53,6 +53,7 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(glbl)
 
 /* forward-definitions */
 rsRetVal queueChkPersist(queue_t *pThis);
@@ -642,7 +643,7 @@ queueLoadPersStrmInfoFixup(strm_t *pStrm, queue_t __attribute__((unused)) *pThis
 	DEFiRet;
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_TYPE_assert(pThis, queue);
-	CHKiRet(strmSetDir(pStrm, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
+	CHKiRet(strmSetDir(pStrm, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
 finalize_it:
 	RETiRet;
 }
@@ -667,7 +668,7 @@ queueHaveQIF(queue_t *pThis)
 
 	/* Construct file name */
 	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-			     (char*) glblGetWorkDir(), (char*)pThis->pszFilePrefix);
+			     (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
 
 	/* check if the file exists */
 	if(stat((char*) pszQIFNam, &stat_buf) == -1) {
@@ -704,7 +705,7 @@ queueTryLoadPersistedInfo(queue_t *pThis)
 
 	/* Construct file name */
 	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-			     (char*) glblGetWorkDir(), (char*)pThis->pszFilePrefix);
+			     (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
 
 	/* check if the file exists */
 	if(stat((char*) pszQIFNam, &stat_buf) == -1) {
@@ -791,7 +792,7 @@ static rsRetVal qConstructDisk(queue_t *pThis)
 		;
 	} else {
 		CHKiRet(strmConstruct(&pThis->tVars.disk.pWrite));
-		CHKiRet(strmSetDir(pThis->tVars.disk.pWrite, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
+		CHKiRet(strmSetDir(pThis->tVars.disk.pWrite, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
 		CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
 		CHKiRet(strmSettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
 		CHKiRet(strmSetsType(pThis->tVars.disk.pWrite, STREAMTYPE_FILE_CIRCULAR));
@@ -799,7 +800,7 @@ static rsRetVal qConstructDisk(queue_t *pThis)
 
 		CHKiRet(strmConstruct(&pThis->tVars.disk.pRead));
 		CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
-		CHKiRet(strmSetDir(pThis->tVars.disk.pRead, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
+		CHKiRet(strmSetDir(pThis->tVars.disk.pRead, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
 		CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pRead, 10000000));
 		CHKiRet(strmSettOperationsMode(pThis->tVars.disk.pRead, STREAMMODE_READ));
 		CHKiRet(strmSetsType(pThis->tVars.disk.pRead, STREAMTYPE_FILE_CIRCULAR));
@@ -1259,7 +1260,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 
 	/* we have an object, so let's fill the properties */
 	objConstructSetObjInfo(pThis);
-	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glblGetWorkDir())) == NULL)
+	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir())) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	/* set some water marks so that we have useful defaults if none are set specifically */
@@ -1872,7 +1873,7 @@ static rsRetVal queuePersist(queue_t *pThis, int bIsCheckpoint)
 
 	/* Construct file name */
 	lenQIFNam = snprintf((char*)pszQIFNam, sizeof(pszQIFNam) / sizeof(uchar), "%s/%s.qi",
-			     (char*) glblGetWorkDir(), (char*)pThis->pszFilePrefix);
+			     (char*) glbl.GetWorkDir(), (char*)pThis->pszFilePrefix);
 
 	if((bIsCheckpoint != QUEUE_CHECKPOINT) && (queueGetOverallQueueSize(pThis) == 0)) {
 		if(pThis->bNeedDelQIF) {
@@ -2313,6 +2314,7 @@ rsRetVal queueQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINObjClassInit(queue, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_SETPROPERTY, queueSetProperty);

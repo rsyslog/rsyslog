@@ -12,6 +12,7 @@ librsyslog_la_SOURCES = \
 	module-template.h \
 	obj-types.h \
 	glbl.h \
+	glbl.c \
 	msg.c \
 	msg.h \
 	linkedlist.c \
@@ -59,7 +60,9 @@ librsyslog_la_SOURCES = \
 	vmop.c \
 	vmop.h \
 	queue.c \
-	queue.h
+	queue.h \
+	cfsysline.c \
+	cfsysline.h
 
 librsyslog_la_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(pthreads_cflags)
 #librsyslog_la_LDFLAGS = -module -avoid-version

@@ -35,7 +35,22 @@
 #define glblGetIOBufSize() 4096 /* size of the IO buffer, e.g. for strm class */
 
 extern uchar *glblModPath; /* module load path */
-extern uchar *pszWorkDir;
-#define glblGetWorkDir() (pszWorkDir == NULL ? (uchar*) "" : pszWorkDir)
+
+/* the glbl object 
+ * Note: this must be defined to satisfy the interface. We do not 
+ * actually have instance data.*/
+typedef struct glbl_s {
+	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
+} glbl_t;
+
+
+/* interfaces */
+BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
+	uchar* (*GetWorkDir)(void);
+ENDinterface(glbl)
+#define glblCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
+/* the remaining prototypes */
+PROTOTYPEObj(glbl);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

@@ -42,7 +42,7 @@ extern char **StripDomains;
 extern char *LocalDomain;
 extern char**LocalHosts;
 extern uchar *LocalHostName;
-extern int family;
+//extern int family;
 extern int bDropMalPTRMsgs;
 extern int option_DisallowWarning;
 

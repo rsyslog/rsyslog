@@ -43,6 +43,7 @@
 #include "msg.h"
 #include "stream.h"
 #include "errmsg.h"
+#include "glbl.h"
 #include "datetime.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
@@ -52,6 +53,7 @@ MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 /* Module static data */
 DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
 typedef struct fileInfo_s {
@@ -121,7 +123,7 @@ openFile(fileInfo_t *pThis)
 
 	/* Construct file name */
 	lenSFNam = snprintf((char*)pszSFNam, sizeof(pszSFNam) / sizeof(uchar), "%s/%s",
-			     (char*) glblGetWorkDir(), (char*)pThis->pszStateFile);
+			     (char*) glbl.GetWorkDir(), (char*)pThis->pszStateFile);
 
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
@@ -334,7 +336,7 @@ persistStrmState(fileInfo_t *pInfo)
 
 	/* TODO: create a function persistObj in obj.c? */
 	CHKiRet(strmConstruct(&psSF));
-	CHKiRet(strmSetDir(psSF, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
+	CHKiRet(strmSetDir(psSF, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
 	CHKiRet(strmSettOperationsMode(psSF, STREAMMODE_WRITE));
 	CHKiRet(strmSetiAddtlOpenFlags(psSF, O_TRUNC));
 	CHKiRet(strmSetsType(psSF, STREAMTYPE_FILE_SINGLE));
@@ -381,6 +383,7 @@ BEGINmodExit
 CODESTARTmodExit
 	/* release objects we used */
 	objRelease(datetime, CORE_COMPONENT);
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
@@ -488,6 +491,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,

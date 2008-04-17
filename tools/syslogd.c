@@ -160,6 +160,7 @@
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(conf)
 DEFobjCurrIf(expr)
@@ -288,14 +289,13 @@ static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - n
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
 int	iActExecOnceInterval = 0; /* execute action once every nn seconds */
-uchar *pszWorkDir = NULL;/* name of rsyslog's spool directory (without trailing slash) */
 uchar *glblModPath = NULL; /* module load path  - only used during initial init, only settable via -M command line option */
 /* end global config file state variables */
 
 uchar	*LocalHostName = NULL;/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
-int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
+//int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
 int	DisableDNS = 0; /* don't look up IP addresses of remote messages */
@@ -373,10 +373,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = 0;
 	bDropMalPTRMsgs = 0;
-	if(pszWorkDir != NULL) {
-		free(pszWorkDir);
-		pszWorkDir = NULL;
-	}
 	if(pszMainMsgQFName != NULL) {
 		free(pszMainMsgQFName);
 		pszMainMsgQFName = NULL;
@@ -1849,8 +1845,6 @@ static void doDie(int sig)
 static void
 freeAllDynMemForTermination(void)
 {
-	if(pszWorkDir != NULL)
-		free(pszWorkDir);
 	if(pszMainMsgQFName != NULL)
 		free(pszMainMsgQFName);
 	if(pModDir != NULL)
@@ -2143,7 +2137,7 @@ static void dbgPrintInitInfo(void)
 	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
 	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
-	dbgprintf("Work Directory: '%s'.\n", pszWorkDir);
+	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir());
 }
 
 
@@ -2266,7 +2260,7 @@ init(void)
 
 	if(MainMsgQueType == QUEUETYPE_DISK) {
 		errno = 0;	/* for logerror! */
-		if(pszWorkDir == NULL) {
+		if(glbl.GetWorkDir() == NULL) {
 			errmsg.LogError(NO_ERRCODE, "No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
 				 "Using 'FixedArray' instead.\n");
 			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
@@ -2618,7 +2612,7 @@ static rsRetVal loadBuildInModules(void)
 	 * is that rsyslog will terminate if we can not register our built-in config commands.
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
-	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
+//	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &glbliActionResumeRetryCount, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
@@ -2782,6 +2776,8 @@ InitGlobalClasses(void)
 	CHKiRet(rsrtInit(&pErrObj, &obj));
 
 	/* Now tell the system which classes we need ourselfs */
+	pErrObj = "glbl";
+	CHKiRet(objUse(glbl,     CORE_COMPONENT));
 	pErrObj = "errmsg";
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	pErrObj = "module";
@@ -2870,7 +2866,7 @@ GlobalClassExit(void)
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	CHKiRet(objUse(module,   CORE_COMPONENT));
 #endif
-	rsrtExit(&obj); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
+	rsrtExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 
 	RETiRet;
 }
