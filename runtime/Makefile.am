@@ -75,18 +75,23 @@ if ENABLE_REGEXP
 pkglib_LTLIBRARIES += lmregexp.la
 lmregexp_la_SOURCES = regexp.c regexp.h
 lmregexp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmregexp_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
+lmregexp_la_LDFLAGS = -module -avoid-version
 lmregexp_la_LIBADD =
 endif
 
 if ENABLE_INET
-pkglib_LTLIBRARIES += lmnet.la
+pkglib_LTLIBRARIES += lmnet.la lmnetstrm.la
 #
 # network support
 # 
 lmnet_la_SOURCES = net.c net.h
 lmnet_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmnet_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
+lmnet_la_LDFLAGS = -module -avoid-version
 lmnet_la_LIBADD =
 
+# network streams
+lmnetstrm_la_SOURCES = netstrm.c netstrm.h
+lmnetstrm_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnetstrm_la_LDFLAGS = -module -avoid-version
+lmnetstrm_la_LIBADD =
 endif # if ENABLE_INET

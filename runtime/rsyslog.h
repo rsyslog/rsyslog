@@ -61,8 +61,9 @@
 /* define some base data types */
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct thrdInfo thrdInfo_t;
-typedef struct filed selector_t;	/* TODO: this so far resides in syslogd.c, think about modularization */
+typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
 typedef struct NetAddr netAddr_t;
+typedef struct netstrm_s netstrm_t;
 typedef struct msg msg_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
