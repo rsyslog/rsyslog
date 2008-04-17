@@ -69,6 +69,7 @@ MODULE_TYPE_LIB
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 
 /* support for defining allowed TCP and UDP senders. We use the same
  * structure to implement this (a linked list), but we define two different
@@ -930,7 +931,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 	else
 		hints.ai_flags = AI_NUMERICSERV;
-        hints.ai_family = family;
+        hints.ai_family = glbl.GetDefPFFamily();
         hints.ai_socktype = SOCK_DGRAM;
         error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
         if(error) {
@@ -1103,6 +1104,7 @@ ENDobjQueryInterface(net)
 BEGINObjClassExit(net, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(net)
 	/* release objects we no longer need */
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(net)
 
@@ -1114,6 +1116,7 @@ ENDObjClassExit(net)
 BEGINAbstractObjClassInit(net, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */
 ENDObjClassInit(net)

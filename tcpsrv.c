@@ -62,6 +62,7 @@
 #include "conf.h"
 #include "tcpsrv.h"
 #include "obj.h"
+#include "glbl.h"
 #include "errmsg.h"
 
 MODULE_TYPE_LIB
@@ -72,6 +73,7 @@ MODULE_TYPE_LIB
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(conf)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
@@ -272,7 +274,7 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 	dbgprintf("creating tcp socket on port %s\n", TCPLstnPort);
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-        hints.ai_family = family;
+        hints.ai_family = glbl.GetDefPFFamily();
         hints.ai_socktype = SOCK_STREAM;
 
         error = getaddrinfo(NULL, TCPLstnPort, &hints, &res);
@@ -464,8 +466,6 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 	 * configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-RUNLOG_VAR("%p", ppSess);
-RUNLOG_VAR("%p", pSess);
 	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		dbgprintf("%s is not an allowed sender\n", (char *) fromHostFQDN);
 		if(option_DisallowWarning) {
@@ -792,6 +792,7 @@ CODESTARTObjClassExit(tcpsrv)
 	/* release objects we no longer need */
 	objRelease(tcps_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 ENDObjClassExit(tcpsrv)
@@ -807,6 +808,7 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(tcps_sess, DONT_LOAD_LIB));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);

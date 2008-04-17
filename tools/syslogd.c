@@ -295,7 +295,6 @@ uchar *glblModPath = NULL; /* module load path  - only used during initial init,
 uchar	*LocalHostName = NULL;/* our hostname  - read-only after startup */
 char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
-//int      family = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both), set via cmdline */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
 int	DisableDNS = 0; /* don't look up IP addresses of remote messages */
@@ -3127,10 +3126,10 @@ int realMain(int argc, char **argv)
 		dbgprintf("deque option %c, optarg '%s'\n", ch, arg);
 		switch((char)ch) {
                 case '4':
-	                family = PF_INET;
+	                glbl.SetDefPFFamily(PF_INET);
                         break;
                 case '6':
-                        family = PF_INET6;
+                        glbl.SetDefPFFamily(PF_INET6);
                         break;
                 case 'A':
                         send_to_all++;

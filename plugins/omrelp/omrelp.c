@@ -41,6 +41,7 @@
 #include "srUtils.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "glbl.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
@@ -49,6 +50,7 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 
 static relpEngine_t *pRelpEngine;	/* our relp engine */
 
@@ -118,7 +120,7 @@ static rsRetVal doConnect(instanceData *pData)
 	DEFiRet;
 
 	if(pData->bInitialConnect) {
-		iRet = relpCltConnect(pData->pRelpClt, family, (uchar*) pData->port, (uchar*) pData->f_hname);
+		iRet = relpCltConnect(pData->pRelpClt, glbl.GetDefPFFamily(), (uchar*) pData->port, (uchar*) pData->f_hname);
 		if(iRet == RELP_RET_OK)
 			pData->bInitialConnect = 0;
 	} else {
@@ -311,6 +313,7 @@ CODESTARTmodExit
 	relpEngineDestruct(&pRelpEngine);
 
 	/* release what we no longer need */
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
@@ -332,6 +335,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	/* tell which objects we need */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDmodInit
 
 /* vim:set ai:

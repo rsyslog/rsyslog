@@ -53,6 +53,7 @@
 #include "module-template.h"
 #include "gss-misc.h"
 #include "tcpclt.h"
+#include "glbl.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
@@ -73,6 +74,7 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(gssutil)
 DEFobjCurrIf(tcpclt)
 
@@ -363,7 +365,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		 * a common function.
 		 */
 		hints.ai_flags = AI_NUMERICSERV;
-		hints.ai_family = family;
+		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_STREAM;
 		if((e = getaddrinfo(pData->f_hname,
 				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
@@ -607,7 +609,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	memset(&hints, 0, sizeof(hints));
 	/* port must be numeric, because config file syntax requests this */
 	hints.ai_flags = AI_NUMERICSERV;
-	hints.ai_family = family;
+	hints.ai_family = glbl.GetDefPFFamily();
 	hints.ai_socktype = SOCK_STREAM;
 	if( (error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
 		pData->eDestState = eDestFORW_UNKN;
@@ -635,6 +637,7 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
@@ -693,6 +696,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
 	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 

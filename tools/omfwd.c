@@ -58,6 +58,7 @@
 #include "tcpclt.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "glbl.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
@@ -66,6 +67,7 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(tcpclt)
 
@@ -303,7 +305,7 @@ static rsRetVal doTryResume(instanceData *pData)
 		 * a common function.
 		 */
 		hints.ai_flags = AI_NUMERICSERV;
-		hints.ai_family = family;
+		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = pData->protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
 		if((e = getaddrinfo(pData->f_hname,
 				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
@@ -556,7 +558,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		memset(&hints, 0, sizeof(hints));
 		/* port must be numeric, because config file syntax requests this */
 		hints.ai_flags = AI_NUMERICSERV;
-		hints.ai_family = family;
+		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = pData->protocol == FORW_UDP ? SOCK_DGRAM : SOCK_STREAM;
 		if( (error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
 			pData->eDestState = eDestFORW_UNKN;
@@ -596,6 +598,7 @@ BEGINmodExit
 CODESTARTmodExit
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
 
@@ -630,6 +633,7 @@ BEGINmodInit(Fwd)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));

@@ -47,6 +47,8 @@ typedef struct glbl_s {
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	uchar* (*GetWorkDir)(void);
+	int (*GetDefPFFamily)(void);
+	rsRetVal (*SetDefPFFamily)(int);
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
