@@ -685,7 +685,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
 				 * time being, we simply drop the name we obtained and use the IP - that one
 				 * is OK in any way. We do also log the error message. rgerhards, 2007-07-16
 		 		 */
-		 		if(bDropMalPTRMsgs == 1) {
+		 		if(glbl.GetDropMalPTRMsgs() == 1) {
 					snprintf((char*)szErrMsg, sizeof(szErrMsg) / sizeof(uchar),
 						 "Malicious PTR record, message dropped "
 						 "IP = \"%s\" HOST = \"%s\"",

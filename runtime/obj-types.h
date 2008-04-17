@@ -114,6 +114,16 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 #	define ISOBJ_assert(pObj)
 #endif
 
+/* a set method for *very simple* object accesses. Note that this does
+ * NOT conform to the standard calling conventions and should be 
+ * used only if actually nothing can go wrong! -- rgerhards, 2008-04-17
+ */
+#define DEFpropGetMeth(obj, prop, dataType)\
+	dataType obj##Get##prop(void)\
+	{ \
+		return pThis->prop = pVal; \
+	}
+
 #define DEFpropSetMethPTR(obj, prop, dataType)\
 	rsRetVal obj##Set##prop(obj##_t *pThis, dataType *pVal)\
 	{ \

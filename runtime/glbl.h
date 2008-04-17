@@ -49,6 +49,8 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	uchar* (*GetWorkDir)(void);
 	int (*GetDefPFFamily)(void);
 	rsRetVal (*SetDefPFFamily)(int);
+	int (*GetDropMalPTRMsgs)(void);
+	rsRetVal (*SetDropMalPTRMsgs)(int);
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

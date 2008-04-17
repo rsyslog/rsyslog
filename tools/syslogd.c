@@ -283,7 +283,6 @@ int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sy
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
-int	bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
@@ -371,7 +370,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = 0;
-	bDropMalPTRMsgs = 0;
 	if(pszMainMsgQFName != NULL) {
 		free(pszMainMsgQFName);
 		pszMainMsgQFName = NULL;
@@ -2107,10 +2105,10 @@ static void dbgPrintInitInfo(void)
 		dbgPrintCfSysLineHandlers();
 
 	dbgprintf("Messages with malicious PTR DNS Records are %sdropped.\n",
-		bDropMalPTRMsgs	? "" : "not ");
+		  glbl.GetDropMalPTRMsgs() ? "" : "not ");
 
 	dbgprintf("Control characters are %sreplaced upon reception.\n",
-			bEscapeCCOnRcv? "" : "not ");
+		  bEscapeCCOnRcv? "" : "not ");
 
 	if(bEscapeCCOnRcv)
 		dbgprintf("Control character escape sequence prefix is '%c'.\n",
@@ -2639,7 +2637,6 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt, setActionResumeInterval, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar, NULL, &cCCEscapeChar, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary, NULL, &bEscapeCCOnRcv, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary, NULL, &bDropTrailingLF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_TEMPLATE, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler, conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL));
