@@ -36,13 +36,6 @@
 
 extern uchar *glblModPath; /* module load path */
 
-/* the glbl object 
- * Note: this must be defined to satisfy the interface. We do not 
- * actually have instance data.*/
-typedef struct glbl_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-} glbl_t;
-
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
