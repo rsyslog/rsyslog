@@ -70,8 +70,6 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 
-#define DFLT_PORT "514"
-#warning "urgent TODO: default port!"
 
 /* Standard-Constructor
  */
@@ -118,7 +116,7 @@ ENDobjDestruct(netstrm)
 /* abort a connection. This is much like Destruct(), but tries
  * to discard any unsent data. -- rgerhards, 2008-03-24
  */
-rsRetVal
+static rsRetVal
 AbortDestruct(netstrm_t **ppThis)
 {
 	struct linger ling;
@@ -151,7 +149,7 @@ AbortDestruct(netstrm_t **ppThis)
  * rgerhards, 2008-03-31
  */
 static rsRetVal
-SetRemHost(netstrm_t *pThis, struct sockaddr *pAddr)
+FillRemHost(netstrm_t *pThis, struct sockaddr *pAddr)
 {
 	int error;
 	uchar szIP[NI_MAXHOST] = "";
@@ -223,7 +221,7 @@ finalize_it:
  * accept the new session.
  * rgerhards, 2008-03-17
  */
-rsRetVal
+static rsRetVal
 AcceptConnReq(netstrm_t **ppThis, int sock)
 {
 	netstrm_t *pThis = NULL;
@@ -244,7 +242,7 @@ AcceptConnReq(netstrm_t **ppThis, int sock)
 	CHKiRet(netstrmConstruct(&pThis));
 
 	/* TODO: obtain hostname, normalize (callback?), save it */
-	CHKiRet(SetRemHost(pThis, (struct sockaddr*) &addr));
+	CHKiRet(FillRemHost(pThis, (struct sockaddr*) &addr));
 
 	/* set the new socket to non-blocking IO */
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
@@ -255,7 +253,7 @@ AcceptConnReq(netstrm_t **ppThis, int sock)
 		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
 	}
 	if(sockflags == -1) {
-		dbgprintf("error %d setting fcntl(O_NONBLOCK) on relp socket %d", errno, iNewSock);
+		dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
@@ -277,32 +275,33 @@ finalize_it:
 
 
 /* initialize the tcp socket for a listner
- * pLstnPort is either a pointer to a port name or NULL, in which case the
+ * pLstnPort must point to a port name or number. NULL is NOT permitted
+ * (hint: we need to be careful when we use this module together with librelp,
+ * there NULL indicates the default port
  * default is used.
  * gerhards, 2008-03-17
  */
-rsRetVal
+static rsRetVal
 LstnInit(netstrm_t *pThis, uchar *pLstnPort)
 {
         struct addrinfo hints, *res, *r;
         int error, maxs, *s, on = 1;
 	int sockflags;
-	uchar *pLstnPt;
 
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
+	assert(pLstnPort != NULL);
 
-	pLstnPt = (pLstnPort == NULL) ? (uchar*) DFLT_PORT : pLstnPort;
-	dbgprintf("creating relp tcp listen socket on port %s\n", pLstnPt);
+	dbgprintf("creating tcp listen socket on port %s\n", pLstnPort);
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_flags = AI_PASSIVE;
-        hints.ai_family = PF_UNSPEC; /* TODO: permit to configure IPv4/v6 only! */
+        hints.ai_family = glbl.GetDefPFFamily();
         hints.ai_socktype = SOCK_STREAM;
 
-        error = getaddrinfo(NULL, (char*) pLstnPt, &hints, &res);
+        error = getaddrinfo(NULL, (char*) pLstnPort, &hints, &res);
         if(error) {
-		dbgprintf("error %d querying port '%s'\n", error, pLstnPt);
+		dbgprintf("error %d querying port '%s'\n", error, pLstnPort);
 		ABORT_FINALIZE(RS_RET_INVALID_PORT);
 	}
 
@@ -322,7 +321,7 @@ LstnInit(netstrm_t *pThis, uchar *pLstnPort)
                *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         	if (*s < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
-				dbgprintf("creating relp tcp listen socket");
+				dbgprintf("creating tcp listen socket");
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
@@ -341,7 +340,7 @@ LstnInit(netstrm_t *pThis, uchar *pLstnPort)
                 }
 #endif
        		if(setsockopt(*s, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
-			dbgprintf("error %d setting relp/tcp socket option\n", errno);
+			dbgprintf("error %d setting tcp socket option\n", errno);
                         close(*s);
 			*s = -1;
 			continue;
@@ -356,7 +355,7 @@ LstnInit(netstrm_t *pThis, uchar *pLstnPort)
 			sockflags = fcntl(*s, F_SETFL, sockflags);
 		}
 		if(sockflags == -1) {
-			dbgprintf("error %d setting fcntl(O_NONBLOCK) on relp socket", errno);
+			dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
                         close(*s);
 			*s = -1;
 			continue;
@@ -384,7 +383,7 @@ LstnInit(netstrm_t *pThis, uchar *pLstnPort)
 		     && (errno != EADDRINUSE)
 #endif
 	           ) {
-                        dbgprintf("error %d while binding relp tcp socket", errno);
+                        dbgprintf("error %d while binding tcp socket", errno);
                 	close(*s);
 			*s = -1;
                         continue;
@@ -399,7 +398,7 @@ LstnInit(netstrm_t *pThis, uchar *pLstnPort)
 			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.",
 				    pThis->iSessMax / 10 + 5);
 			if(listen(*s, 32) < 0) {
-				dbgprintf("relp listen error %d, suspending\n", errno);
+				dbgprintf("tcp listen error %d, suspending\n", errno);
 	                	close(*s);
 				*s = -1;
                		        continue;
@@ -438,7 +437,7 @@ finalize_it:
  * errno holds the exact error cause.
  * rgerhards, 2008-03-17
  */
-rsRetVal
+static rsRetVal
 Rcv(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf)
 {
 	DEFiRet;
@@ -456,7 +455,7 @@ Rcv(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf)
  * been written.
  * rgerhards, 2008-03-19
  */
-rsRetVal
+static rsRetVal
 Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 {
 	ssize_t written;
@@ -487,7 +486,7 @@ finalize_it:
 /* open a connection to a remote host (server).
  * rgerhards, 2008-03-19
  */
-rsRetVal
+static rsRetVal
 Connect(netstrm_t *pThis, int family, uchar *port, uchar *host)
 {
 	struct addrinfo *res = NULL;
@@ -531,7 +530,6 @@ finalize_it:
 
 
 /* queryInterface function
- * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(netstrm)
 CODESTARTobjQueryInterface(netstrm)
@@ -547,6 +545,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->Construct = netstrmConstruct;
 	pIf->ConstructFinalize = netstrmConstructFinalize;
 	pIf->Destruct = netstrmDestruct;
+	pIf->AbortDestruct = AbortDestruct;
 	pIf->LstnInit = LstnInit;
 	pIf->AcceptConnReq = AcceptConnReq;
 	pIf->Rcv = Rcv;
@@ -557,7 +556,6 @@ ENDobjQueryInterface(netstrm)
 
 
 /* exit our class
- * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(netstrm)

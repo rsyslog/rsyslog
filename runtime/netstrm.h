@@ -34,19 +34,13 @@ struct netstrm_s {
 	int iSessMax;	/**< maximum number of sessions permitted */
 };
 
-/* macros for quick member access */
-#warning "do we need the macros?"
-#define relpTcpGetNumSocks(pThis)    ((pThis)->socks[0])
-#define relpTcpGetLstnSock(pThis, i) ((pThis)->socks[i])
-#define relpTcpGetSock(pThis)        ((pThis)->sock)
-
 
 /* interfaces */
 BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
-//??relpRetVal relpTcpAbortDestruct(relpTcp_t **ppThis);
 	rsRetVal (*Construct)(netstrm_t **ppThis);
 	rsRetVal (*ConstructFinalize)(netstrm_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(netstrm_t **ppThis);
+	rsRetVal (*AbortDestruct)(netstrm_t **ppThis);
 	rsRetVal (*LstnInit)(netstrm_t *pThis, unsigned char *pLstnPort);
 	rsRetVal (*AcceptConnReq)(netstrm_t **ppThis, int sock);
 	rsRetVal (*Rcv)(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
