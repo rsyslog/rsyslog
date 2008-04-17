@@ -37,11 +37,6 @@
 #define ADDDATE		0x004	/* add a date to the message */
 #define MARK		0x008	/* this message is a mark */
 
-extern char **StripDomains;
-extern char *LocalDomain;
-extern char**LocalHosts;
-extern uchar *LocalHostName;
-
 #define MSG_PARSE_HOSTNAME 1
 #define MSG_DONT_PARSE_HOSTNAME 0
 

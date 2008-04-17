@@ -97,7 +97,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetUxTradMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
-	MsgSetHOSTNAME(pMsg, (char*)LocalHostName);
+	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetTAG(pMsg, (char*)pInfo->pszTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);

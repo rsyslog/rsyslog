@@ -41,6 +41,7 @@
 #include "srUtils.h"
 #include "errmsg.h"
 #include "net.h"
+#include "glbl.h"
 
 MODULE_TYPE_INPUT
 
@@ -63,6 +64,7 @@ MODULE_TYPE_INPUT
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 
 static int startIndexUxLocalSockets; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
@@ -182,7 +184,7 @@ static rsRetVal readSocket(int fd, int bParseHost, int flags)
 	iRcvd = recv(fd, line, MAXLINE - 1, 0);
 	dbgprintf("Message from UNIX socket: #%d\n", fd);
 	if (iRcvd > 0) {
-		parseAndSubmitMessage((char*)LocalHostName, line, iRcvd, bParseHost, flags, eFLOWCTL_LIGHT_DELAY);
+		parseAndSubmitMessage((char*)glbl.GetLocalHostName(), line, iRcvd, bParseHost, flags, eFLOWCTL_LIGHT_DELAY);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -290,6 +292,8 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	objRelease(glbl, CORE_COMPONENT);
+	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -320,6 +324,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* initialize funixn[] array */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
@@ -347,6 +352,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketignoremsgtimestamp", 0, eCmdHdlrBinary,
 		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/*
- * vi:set ai:
+/* vim:set ai:
  */

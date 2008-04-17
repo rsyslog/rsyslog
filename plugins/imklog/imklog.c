@@ -52,12 +52,14 @@
 #include "module-template.h"
 #include "datetime.h"
 #include "imklog.h"
+#include "glbl.h"
 
 MODULE_TYPE_INPUT
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl)
 
 /* configuration settings */
 int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
@@ -95,7 +97,7 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetMSG(pMsg, (char*)msg);
-	MsgSetHOSTNAME(pMsg, (char*)LocalHostName);
+	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetTAG(pMsg, (char*)pszTag);
 	pMsg->iFacility = LOG_FAC(iFacility);
 	pMsg->iSeverity = LOG_PRI(iSeverity);
@@ -225,6 +227,7 @@ ENDafterRun
 BEGINmodExit
 CODESTARTmodExit
 	/* release objects we used */
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
@@ -251,6 +254,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	iFacilIntMsg = klogFacilIntMsg();
 

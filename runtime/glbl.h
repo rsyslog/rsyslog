@@ -54,6 +54,10 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(DropMalPTRMsgs, int);
 	SIMP_PROP(Option_DisallowWarning, int);
 	SIMP_PROP(DisableDNS, int);
+	SIMP_PROP(LocalHostName, uchar*)
+	SIMP_PROP(LocalDomain, uchar*)
+	SIMP_PROP(StripDomains, char**)
+	SIMP_PROP(LocalHosts, char**)
 #undef	SIMP_PROP
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */

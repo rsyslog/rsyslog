@@ -50,6 +50,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "glbl.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -57,6 +58,7 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 
 static uchar *pszSrv = NULL;
 static uchar *pszSrvPort = NULL;
@@ -415,7 +417,7 @@ sendSMTP(instanceData *pData, uchar *body, uchar *subject)
 	CHKiRet(readResponse(pData, &iState, 220));
 
 	CHKiRet(Send(pData->md.smtp.sock, "HELO ", 5));
-	CHKiRet(Send(pData->md.smtp.sock, (char*)LocalHostName, strlen((char*)LocalHostName)));
+	CHKiRet(Send(pData->md.smtp.sock, (char*)glbl.GetLocalHostName(), strlen((char*)glbl.GetLocalHostName())));
 	CHKiRet(Send(pData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
 	CHKiRet(readResponse(pData, &iState, 250));
 
@@ -589,6 +591,7 @@ CODESTARTmodExit
 	freeConfigVariables();
 
 	/* release what we no longer need */
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
@@ -616,6 +619,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &pszSrv, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &pszSrvPort, STD_LOADABLE_MODULE_ID));

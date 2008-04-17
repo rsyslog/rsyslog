@@ -55,7 +55,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "dirty.h"
 #include "syslogd-types.h"
 #include "module-template.h"
 #include "parse.h"
@@ -814,7 +813,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	 */
 	strcpy((char*)pszHost, (char*)pszHostFQDN);
 	if ((p = (uchar*) strchr((char*)pszHost, '.'))) { /* find start of domain name "machine.example.com" */
-		if(strcmp((char*) (p + 1), LocalDomain) == 0) {
+		if(strcmp((char*)(p + 1), (char*)glbl.GetLocalDomain()) == 0) {
 			*p = '\0'; /* simply terminate the string */
 		} else {
 			/* now check if we belong to any of the domain names that were specified
@@ -823,10 +822,10 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 			 * For proper modularization, this must be done different, e.g. via a
 			 * "to be stripped" property of *this* object itself.
 			 */
-			if (StripDomains) {
+			if(glbl.GetStripDomains() != NULL) {
 				count=0;
-				while (StripDomains[count]) {
-					if (strcmp((char*)(p + 1), StripDomains[count]) == 0) {
+				while(glbl.GetStripDomains()[count]) {
+					if (strcmp((char*)(p + 1), glbl.GetStripDomains()[count]) == 0) {
 						*p = '\0';
 						FINALIZE; /* we are done */
 					}
@@ -842,10 +841,10 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 			 * still occurs at *p, which points at the first dot after the hostname.
 			 * TODO: this must also go away - see comment above -- rgerhards, 2008-04-16
 			 */
-			if (LocalHosts) {
+			if(glbl.GetLocalHosts() != NULL) {
 				count=0;
-				while (LocalHosts[count]) {
-					if (!strcmp((char*)pszHost, LocalHosts[count])) {
+				while (glbl.GetLocalHosts()[count]) {
+					if (!strcmp((char*)pszHost, (char*)glbl.GetLocalHosts()[count])) {
 						*p = '\0';
 						break; /* we are done */
 					}

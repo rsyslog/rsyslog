@@ -291,13 +291,9 @@ int	iActExecOnceInterval = 0; /* execute action once every nn seconds */
 uchar *glblModPath = NULL; /* module load path  - only used during initial init, only settable via -M command line option */
 /* end global config file state variables */
 
-uchar	*LocalHostName = NULL;/* our hostname  - read-only after startup */
-char	*LocalDomain;	/* our local domain name  - read-only after startup */
 int	MarkInterval = 20 * 60;	/* interval between marks in seconds - read-only after startup */
 int      send_to_all = 0;        /* send message to all IPv4/IPv6 addresses */
 static int	NoFork = 0; 	/* don't fork - don't run in daemon mode - read-only after startup */
-char	**StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
-char	**LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 static int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode - is available
 				 * If the main queue is either not yet ready or not running in 
 				 * queueing mode (mode DIRECT!), then this is set to 0.
@@ -870,8 +866,8 @@ logmsgInternal(int pri, char *msg, int flags)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetUxTradMsg(pMsg, msg);
 	MsgSetRawMsg(pMsg, msg);
-	MsgSetHOSTNAME(pMsg, (LocalHostName == NULL) ? "[localhost]" : (char*)LocalHostName);
-	MsgSetRcvFrom(pMsg, (LocalHostName == NULL) ? "[localhost]" : (char*)LocalHostName);
+	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
+	MsgSetRcvFrom(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetTAG(pMsg, "rsyslogd:");
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
@@ -1841,8 +1837,6 @@ freeAllDynMemForTermination(void)
 		free(pszMainMsgQFName);
 	if(pModDir != NULL)
 		free(pModDir);
-	if(LocalHostName != NULL)
-		free(LocalHostName);
 }
 
 
@@ -2938,7 +2932,7 @@ int realMain(int argc, char **argv)
 	DEFiRet;
 
 	register int i;
-	register char *p;
+	register uchar *p;
 	int num_fds;
 	int ch;
 	struct hostent *hent;
@@ -2950,6 +2944,8 @@ int realMain(int argc, char **argv)
 	int bImUxSockLoaded = 0; /* already generated a $ModLoad imuxsock? */
 	char *arg;	/* for command line option processing */
 	uchar legacyConfLine[80];
+	uchar *LocalHostName;
+	uchar *LocalDomain;
 
 	/* first, parse the command line options. We do not carry out any actual work, just
 	 * see what we should do. This relieves us from certain anomalies and we can process
@@ -3063,11 +3059,11 @@ int realMain(int argc, char **argv)
 	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
 	 */
 	net.getLocalHostname(&LocalHostName);
-	if((p = strchr((char*)LocalHostName, '.'))) {
+	if((p = (uchar*)strchr((char*)LocalHostName, '.'))) {
 		*p++ = '\0';
 		LocalDomain = p;
 	} else {
-		LocalDomain = "";
+		LocalDomain = (uchar*)"";
 
 		/* It's not clearly defined whether gethostname()
 		 * should return the simple hostname or the fqdn. A
@@ -3087,7 +3083,7 @@ int realMain(int argc, char **argv)
 			free(LocalHostName);
 			CHKmalloc(LocalHostName = (uchar*)strdup(hent->h_name));
 				
-			if((p = strchr((char*)LocalHostName, '.')))
+			if((p = (uchar*)strchr((char*)LocalHostName, '.')))
 			{
 				*p++ = '\0';
 				LocalDomain = p;
@@ -3096,8 +3092,15 @@ int realMain(int argc, char **argv)
 	}
 
 	/* Convert to lower case to recognize the correct domain laterly */
-	for (p = (char *)LocalDomain ; *p ; p++)
+	for(p = LocalDomain ; *p ; p++)
 		*p = (char)tolower((int)*p);
+	
+	/* we now have our hostname and can set it inside the global vars.
+	 * TODO: think if all of this would better be a runtime function
+	 * rgerhards, 2008-04-17
+	 */
+	glbl.SetLocalHostName(LocalHostName);
+	glbl.SetLocalDomain(LocalDomain);
 
 	/* initialize the objects */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
@@ -3158,10 +3161,10 @@ int realMain(int argc, char **argv)
 			PidFile = arg;
 			break;
 		case 'l':
-			if (LocalHosts) {
+			if(glbl.GetLocalHosts() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -l argument allowed, the first one is taken.\n");
 			} else {
-				LocalHosts = crunch_list(arg);
+				glbl.SetLocalHosts(crunch_list(arg));
 			}
 			break;
 		case 'm':		/* mark interval */
@@ -3211,10 +3214,10 @@ int realMain(int argc, char **argv)
 				fprintf(stderr, "-r option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
 		case 's':
-			if (StripDomains) {
+			if(glbl.GetStripDomains() != NULL) {
 				fprintf (stderr, "rsyslogd: Only one -s argument allowed, the first one is taken.\n");
 			} else {
-				StripDomains = crunch_list(arg);
+				glbl.SetStripDomains(crunch_list(arg));
 			}
 			break;
 		case 't':		/* enable tcp logging */
