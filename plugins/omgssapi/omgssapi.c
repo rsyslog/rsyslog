@@ -174,8 +174,6 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-/* CODE FOR SENDING TCP MESSAGES */
-
 /* This function is called immediately before a send retry is attempted.
  * It shall clean up whatever makes sense.
  * rgerhards, 2007-12-28
@@ -207,9 +205,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 
 	base = (gss_base_service_name == NULL) ? "host" : gss_base_service_name;
 	out_tok.length = strlen(pData->f_hname) + strlen(base) + 2;
-	if ((out_tok.value = malloc(out_tok.length)) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+	CHKmalloc(out_tok.value = malloc(out_tok.length));
 	strcpy(out_tok.value, base);
 	strcat(out_tok.value, "@");
 	strcat(out_tok.value, pData->f_hname);
