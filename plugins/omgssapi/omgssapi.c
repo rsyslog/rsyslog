@@ -58,17 +58,6 @@
 
 MODULE_TYPE_OUTPUT
 
-#define INET_SUSPEND_TIME 60
-/* equal to 1 minute - TODO: see if we can get rid of this now that we have
- * the retry intervals in the engine -- rgerhards, 2008-03-12
- */
-
-#define INET_RETRY_MAX 30		/* maximum of retries for gethostbyname() */
-	/* was 10, changed to 30 because we reduced INET_SUSPEND_TIME by one third. So
-	 * this "fixes" some of implications of it (see comment on INET_SUSPEND_TIME).
-	 * rgerhards, 2005-07-26
-	 * TODO: this needs to be reviewed in spite of the new engine, too -- rgerhards, 2008-03-12
-	 */
 
 /* internal structures
  */
@@ -86,11 +75,9 @@ typedef struct _instanceData {
 		eDestFORW_SUSP,
 		eDestFORW_UNKN
 	} eDestState;
-	int iRtryCnt;
 	struct addrinfo *f_addr;
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
-	time_t	ttSuspend;	/* time selector was suspended */
 	tcpclt_t *pTCPClt;		/* our tcpclt object */
 	gss_ctx_id_t gss_context;
 	OM_uint32 gss_flags;
@@ -367,7 +354,6 @@ static rsRetVal doTryResume(instanceData *pData)
 				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
 			dbgprintf("%s found, resuming.\n", pData->f_hname);
 			pData->f_addr = res;
-			pData->iRtryCnt = 0;
 			pData->eDestState = eDestFORW;
 		} else {
 			iRet = RS_RET_SUSPENDED;
@@ -406,7 +392,6 @@ CODESTARTdoAction
 
 	case eDestFORW:
 		dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData), "tcp-gssapi");
-		pData->ttSuspend = time(NULL);
 		psz = (char*) ppString[0];
 		l = strlen((char*) psz);
 		if (l > MAXLINE)
@@ -609,8 +594,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	hints.ai_socktype = SOCK_STREAM;
 	if( (error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
 		pData->eDestState = eDestFORW_UNKN;
-		pData->iRtryCnt = INET_RETRY_MAX;
-		pData->ttSuspend = time(NULL);
 	} else {
 		pData->eDestState = eDestFORW;
 		pData->f_addr = res;

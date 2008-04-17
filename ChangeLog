@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.19.0 (rgerhards), 2008-04-??
 - begins new devel branch version
+- partly rewritten and improved omfwd among others, now loads TCP
+  code only if this is actually necessary
 - implemented im3195, the RFC3195 input as a plugin
 - split of a "runtime library" for rsyslog - this is not yet a clean
   model, because some modularization is still outstanding. In theory,

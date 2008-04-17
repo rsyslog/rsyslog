@@ -195,6 +195,7 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 	RETiRet;
 }
 
+
 /* CODE FOR SENDING TCP MESSAGES */
 
 
@@ -383,10 +384,29 @@ finalize_it:
 ENDdoAction
 
 
+/* This function loads TCP support, if not already loaded. It will be called
+ * during config processing. To server ressources, TCP support will only
+ * be loaded if it actually is used. -- rgerhard, 2008-04-17
+ */
+static rsRetVal
+loadTCPSupport(void)
+{
+	DEFiRet;
+	if(!netstrm.ifIsLoaded)
+		CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
+	if(!tcpclt.ifIsLoaded)
+		CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
+
+finalize_it:
+	RETiRet;
+}
+
+
 BEGINparseSelectorAct
 	uchar *q;
 	int i;
 	int bErr;
+	rsRetVal localRet;
         struct addrinfo;
 	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
 CODESTARTparseSelectorAct
@@ -398,6 +418,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	++p; /* eat '@' */
 	if(*p == '@') { /* indicator for TCP! */
+		localRet = loadTCPSupport();
+		if(localRet != RS_RET_OK) {
+			errmsg.LogError(NO_ERRCODE, "could not activate network stream modules for TCP "
+					"(internal error %d) - are modules missing?", localRet);
+			ABORT_FINALIZE(localRet);
+		}
 		pData->protocol = FORW_TCP;
 		++p; /* eat this '@', too */
 	} else {
@@ -534,8 +560,10 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
-	objRelease(netstrm, LM_NETSTRM_FILENAME);
-	objRelease(tcpclt, LM_TCPCLT_FILENAME);
+	if(netstrm.ifIsLoaded)
+		objRelease(netstrm, LM_NETSTRM_FILENAME);
+	if(!tcpclt.ifIsLoaded)
+		objRelease(tcpclt, LM_TCPCLT_FILENAME);
 
 	if(pszTplName != NULL) {
 		free(pszTplName);
@@ -571,8 +599,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net,LM_NET_FILENAME));
-	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
-	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
