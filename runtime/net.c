@@ -4,7 +4,7 @@
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
  * This file is under development and has not yet arrived at being fully
  * self-contained and a real object. So far, it is mostly an excerpt
- * of the "old" message code without any modifications. However, it
+ * of the "old" networking code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
  * Starting 2007-12-24, I have begun to shuffle more network-related code
