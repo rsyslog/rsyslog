@@ -49,7 +49,7 @@ typedef struct relpTcp_s {
 } relpTcp_t;
 
 
-/* macros for quick memeber access */
+/* macros for quick member access */
 #define relpTcpGetNumSocks(pThis)    ((pThis)->socks[0])
 #define relpTcpGetLstnSock(pThis, i) ((pThis)->socks[i])
 #define relpTcpGetSock(pThis)        ((pThis)->sock)

@@ -290,8 +290,7 @@ finalize_it:
 
 
 /* initialize the tcp socket for a listner
- * pLstnPort is either a pointer to a port name or NULL, in which case the
- * default is used.
+ * pLstnPort is a pointer to a port name. NULL is not permitted.
  * gerhards, 2008-03-17
  */
 relpRetVal
@@ -305,7 +304,8 @@ relpTcpLstnInit(relpTcp_t *pThis, unsigned char *pLstnPort)
 	ENTER_RELPFUNC;
 	RELPOBJ_assert(pThis, Tcp);
 
-	pLstnPt = (pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pLstnPort;
+	pLstnPt = pLstnPort;
+	assert(pLstnPt != NULL);
 	pThis->pEngine->dbgprint("creating relp tcp listen socket on port %s\n", pLstnPt);
 
         memset(&hints, 0, sizeof(hints));

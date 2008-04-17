@@ -1,4 +1,8 @@
 ----------------------------------------------------------------------
+Version 0.1.2 (rgerhards), 2008-04-09
+- forward compatibility changes in support of our plans to use the
+  rsyslog runtime in the future
+----------------------------------------------------------------------
 Version 0.1.1 (rgerhards), 2008-04-09
 - improved build system, thanks to Michael Biebl
   now easier to integrate with autoconf

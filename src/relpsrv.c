@@ -132,7 +132,7 @@ relpSrvRun(relpSrv_t *pThis)
 	RELPOBJ_assert(pThis, Srv);
 
 	CHKRet(relpTcpConstruct(&pTcp, pThis->pEngine));
-	CHKRet(relpTcpLstnInit(pTcp, pThis->pLstnPort));
+	CHKRet(relpTcpLstnInit(pTcp, (pThis->pLstnPort == NULL) ? (unsigned char*) RELP_DFLT_PORT : pThis->pLstnPort));
 		
 	pThis->pTcp = pTcp;
 
