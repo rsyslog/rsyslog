@@ -11,6 +11,7 @@ librsyslog_la_SOURCES = \
 	syslogd-types.h \
 	module-template.h \
 	obj-types.h \
+	nsd.h \
 	glbl.h \
 	glbl.c \
 	msg.c \
@@ -75,18 +76,32 @@ if ENABLE_REGEXP
 pkglib_LTLIBRARIES += lmregexp.la
 lmregexp_la_SOURCES = regexp.c regexp.h
 lmregexp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmregexp_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
+lmregexp_la_LDFLAGS = -module -avoid-version
 lmregexp_la_LIBADD =
 endif
 
 if ENABLE_INET
-pkglib_LTLIBRARIES += lmnet.la
+pkglib_LTLIBRARIES += lmnet.la lmnetstrm.la
 #
 # network support
 # 
 lmnet_la_SOURCES = net.c net.h
 lmnet_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmnet_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
+lmnet_la_LDFLAGS = -module -avoid-version
 lmnet_la_LIBADD =
 
+# network streams
+lmnetstrm_la_SOURCES = netstrm.c netstrm.h
+lmnetstrm_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnetstrm_la_LDFLAGS = -module -avoid-version
+lmnetstrm_la_LIBADD =
+
+# netstream drivers
+
+# plain tcp driver
+pkglib_LTLIBRARIES += lmnsd_ptcp.la
+lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h
+lmnsd_ptcp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnsd_ptcp_la_LDFLAGS = -module -avoid-version
+lmnsd_ptcp_la_LIBADD =
 endif # if ENABLE_INET

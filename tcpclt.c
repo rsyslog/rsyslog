@@ -51,7 +51,6 @@ MODULE_TYPE_LIB
 DEFobjStaticHelpers
 
 /* Initialize TCP sockets (for sender)
- * This is done once per selector line, if not yet initialized.
  */
 static int
 CreateSocket(struct addrinfo *addrDest)

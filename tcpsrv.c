@@ -457,7 +457,6 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 		 */
 		close (newConn);
 		ABORT_FINALIZE(RS_RET_ERR); // TODO: better error code
-		//was: return -1;
 	}
 
 	/* Here we check if a host is permitted to send us

@@ -666,7 +666,6 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
 		if (error == 0) {
 			memset (&hints, 0, sizeof (struct addrinfo));
 			hints.ai_flags = AI_NUMERICHOST;
-			hints.ai_socktype = SOCK_DGRAM;
 
 			/* we now do a lookup once again. This one should fail,
 			 * because we should not have obtained a non-numeric address. If
