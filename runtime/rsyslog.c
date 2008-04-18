@@ -103,6 +103,19 @@ static rsRetVal dfltErrLogger(uchar *errMsg)
 }
 
 
+/* set the error log function
+ * rgerhards, 2008-04-18
+ */
+rsRetVal
+rsrtSetErrLogger(rsRetVal (*errLogger)(uchar*))
+{
+	DEFiRet;
+	assert(errLogger != NULL);
+	glblErrLogger = errLogger;
+	RETiRet;
+}
+
+
 /* globally initialze the runtime system
  * NOTE: this is NOT thread safe and must not be called concurrently. If that
  * ever poses a problem, we may use proper mutex calls - not considered needed yet.
