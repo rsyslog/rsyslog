@@ -24,21 +24,21 @@
 #ifndef INCLUDED_NETSTRM_H
 #define INCLUDED_NETSTRM_H
 
+#include "nsd.h" /* we need our driver interface to be defined */
+
 /* the netstrm object */
 struct netstrm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	uchar *pRemHostIP; /**< IP address of remote peer (currently used in server mode, only) */
-	uchar *pRemHostName; /**< host name of remote peer (currently used in server mode, only) */
-	int sock;	/**< the socket we use for regular, single-socket, operations */
-	int *socks;	/**< the socket(s) we use for listeners, element 0 has nbr of socks */
-	int iSessMax;	/**< maximum number of sessions permitted */
+	nsd_if_t Drvr;		/**< our stream driver */
+	nsd_t *pDrvrData;	/**< the driver's data elements */
+	uchar *pDrvrName;	/**< nsd driver name to use, or NULL if system default */
 };
 
 
-/* interfaces */
+/* interface */
 BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(netstrm_t **ppThis);
-	rsRetVal (*ConstructFinalize)(netstrm_t __attribute__((unused)) *pThis);
+	rsRetVal (*ConstructFinalize)(netstrm_t *pThis);
 	rsRetVal (*Destruct)(netstrm_t **ppThis);
 	rsRetVal (*AbortDestruct)(netstrm_t **ppThis);
 	rsRetVal (*LstnInit)(netstrm_t *pThis, unsigned char *pLstnPort);

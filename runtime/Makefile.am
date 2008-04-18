@@ -11,6 +11,7 @@ librsyslog_la_SOURCES = \
 	syslogd-types.h \
 	module-template.h \
 	obj-types.h \
+	nsd.h \
 	glbl.h \
 	glbl.c \
 	msg.c \
@@ -94,4 +95,13 @@ lmnetstrm_la_SOURCES = netstrm.c netstrm.h
 lmnetstrm_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
 lmnetstrm_la_LDFLAGS = -module -avoid-version
 lmnetstrm_la_LIBADD =
+
+# netstream drivers
+
+# plain tcp driver
+pkglib_LTLIBRARIES += lmnsd_ptcp.la
+lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h
+lmnsd_ptcp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnsd_ptcp_la_LDFLAGS = -module -avoid-version
+lmnsd_ptcp_la_LIBADD =
 endif # if ENABLE_INET

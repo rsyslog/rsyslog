@@ -253,6 +253,8 @@ static rsRetVal TCPSendInit(void *pvData)
 	assert(pData != NULL);
 	if(pData->pNetstrm == NULL) {
 		CHKiRet(netstrm.Construct(&pData->pNetstrm));
+		/* here we may set another netstream driver (e.g. to do TLS) */
+		CHKiRet(netstrm.ConstructFinalize(pData->pNetstrm));
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
 			(uchar*)pData->port, (uchar*)pData->f_hname));
 	}

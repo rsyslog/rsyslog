@@ -60,6 +60,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "net.h"
+#include "nsd.h"
 #include "netstrm.h"
 
 MODULE_TYPE_LIB
@@ -71,47 +72,59 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 
 
-/* Standard-Constructor
- */
-BEGINobjConstruct(netstrm) /* be sure to specify the object type also in END macro! */
-	pThis->sock = -1;
-	pThis->iSessMax = 500;	/* default max nbr of sessions -TODO:make configurable--rgerhards, 2008-04-17*/
-ENDobjConstruct(netstrm)
-
-
-/* ConstructionFinalizer
+/* load our low-level driver. This must be done before any
+ * driver-specific functions (allmost all...) can be carried
+ * out. Note that the driver's .ifIsLoaded is correctly
+ * initialized by calloc() and we depend on that.
+ * rgerhards, 2008-04-18
  */
 static rsRetVal
-netstrmConstructFinalize(netstrm_t __attribute__((unused)) *pThis)
+loadDrvr(netstrm_t *pThis)
 {
+	uchar *pDrvrName;
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+
+	pDrvrName = pThis->pDrvrName;
+	if(pDrvrName == NULL) /* if no drvr name is set, use system default */
+		pDrvrName = glbl.GetDfltNetstrmDrvr();
+
+	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
+	/* The pDrvrName+2 below is a hack to obtain the object name. It 
+	 * safes us to have yet another variable with the name without "lm" in
+	 * front of it. If we change the module load interface, we may re-think
+	 * about this hack, but for the time being it is efficient and clean
+	 * enough. -- rgerhards, 2008-04-18
+	 */
+	CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
+finalize_it:
 	RETiRet;
 }
 
 
+/* Standard-Constructor */
+BEGINobjConstruct(netstrm) /* be sure to specify the object type also in END macro! */
+ENDobjConstruct(netstrm)
+
+
 /* destructor for the netstrm object */
 BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and CODESTART macros! */
-	int i;
 CODESTARTobjDestruct(netstrm)
-	if(pThis->sock != -1) {
-		close(pThis->sock);
-		pThis->sock = -1;
-	}
-
-	if(pThis->socks != NULL) {
-		/* if we have some sockets at this stage, we need to close them */
-		for(i = 1 ; i <= pThis->socks[0] ; ++i)
-			close(pThis->socks[i]);
-		free(pThis->socks);
-	}
-
-	if(pThis->pRemHostIP != NULL)
-		free(pThis->pRemHostIP);
-	if(pThis->pRemHostName != NULL)
-		free(pThis->pRemHostName);
+	if(pThis->pDrvrData != NULL)
+		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
 ENDobjDestruct(netstrm)
 
+
+/* ConstructionFinalizer */
+static rsRetVal
+netstrmConstructFinalize(netstrm_t *pThis)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	CHKiRet(loadDrvr(pThis));
+	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
+finalize_it:
+	RETiRet;
+}
 
 /* abort a connection. This is much like Destruct(), but tries
  * to discard any unsent data. -- rgerhards, 2008-03-24
@@ -119,124 +132,33 @@ ENDobjDestruct(netstrm)
 static rsRetVal
 AbortDestruct(netstrm_t **ppThis)
 {
-	struct linger ling;
-
 	DEFiRet;
 	assert(ppThis != NULL);
 	ISOBJ_TYPE_assert((*ppThis), netstrm);
 
-	if((*ppThis)->sock != -1) {
-		ling.l_onoff = 1;
-		ling.l_linger = 0;
-       		if(setsockopt((*ppThis)->sock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling)) < 0 ) {
-			dbgprintf("could not set SO_LINGER, errno %d\n", errno);
-		}
-	}
-
+	/* we do NOT exit on error, because that would make things worse */
+	(*ppThis)->Drvr.Abort((*ppThis)->pDrvrData);
 	iRet = netstrmDestruct(ppThis);
 
 	RETiRet;
 }
 
 
-/* Set pRemHost based on the address provided. This is to be called upon accept()ing
- * a connection request. It must be provided by the socket we received the
- * message on as well as a NI_MAXHOST size large character buffer for the FQDN.
- * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
- * for some explanation of the code found below. If we detect a malicious
- * hostname, we return RS_RET_MALICIOUS_HNAME and let the caller decide
- * on how to deal with that.
- * rgerhards, 2008-03-31
- */
-static rsRetVal
-FillRemHost(netstrm_t *pThis, struct sockaddr *pAddr)
-{
-	int error;
-	uchar szIP[NI_MAXHOST] = "";
-	uchar szHname[NI_MAXHOST] = "";
-	struct addrinfo hints, *res;
-	size_t len;
-	
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
-	assert(pAddr != NULL);
+#if 0
+This is not yet working - wait until we arrive at the receiver side (distracts too much at the moment)
 
-        error = getnameinfo(pAddr, SALEN(pAddr), (char*)szIP, sizeof(szIP), NULL, 0, NI_NUMERICHOST);
-
-        if(error) {
-                dbgprintf("Malformed from address %s\n", gai_strerror(error));
-		strcpy((char*)szHname, "???");
-		strcpy((char*)szIP, "???");
-		ABORT_FINALIZE(RS_RET_INVALID_HNAME);
-	}
-
-	if(!glbl.GetDisableDNS()) {
-		error = getnameinfo(pAddr, SALEN(pAddr), (char*)szHname, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
-		if(error == 0) {
-			memset (&hints, 0, sizeof (struct addrinfo));
-			hints.ai_flags = AI_NUMERICHOST;
-			hints.ai_socktype = SOCK_STREAM;
-			/* we now do a lookup once again. This one should fail,
-			 * because we should not have obtained a non-numeric address. If
-			 * we got a numeric one, someone messed with DNS!
-			 */
-			if(getaddrinfo((char*)szHname, NULL, &hints, &res) == 0) {
-				freeaddrinfo (res);
-				/* OK, we know we have evil, so let's indicate this to our caller */
-				snprintf((char*)szHname, NI_MAXHOST, "[MALICIOUS:IP=%s]", szIP);
-				dbgprintf("Malicious PTR record, IP = \"%s\" HOST = \"%s\"", szIP, szHname);
-				iRet = RS_RET_MALICIOUS_HNAME;
-			}
-		} else {
-			strcpy((char*)szHname, (char*)szIP);
-		}
-	} else {
-		strcpy((char*)szHname, (char*)szIP);
-	}
-
-	/* We now have the names, so now let's allocate memory and store them permanently.
-	 * (side note: we may hold on to these values for quite a while, thus we trim their
-	 * memory consumption)
-	 */
-	len = strlen((char*)szIP) + 1; /* +1 for \0 byte */
-	if((pThis->pRemHostIP = malloc(len)) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	memcpy(pThis->pRemHostIP, szIP, len);
-
-	len = strlen((char*)szHname) + 1; /* +1 for \0 byte */
-	if((pThis->pRemHostName = malloc(len)) == NULL) {
-		free(pThis->pRemHostIP); /* prevent leak */
-		pThis->pRemHostIP = NULL;
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-	memcpy(pThis->pRemHostName, szHname, len);
-
-finalize_it:
-	RETiRet;
-}
-
-
-
-/* accept an incoming connection request, sock provides the socket on which we can
+/* accept an incoming connection request, pNsdLstn provides the "listen socket" on which we can
  * accept the new session.
  * rgerhards, 2008-03-17
  */
 static rsRetVal
-AcceptConnReq(netstrm_t **ppThis, int sock)
+AcceptConnReq(netstrm_t **ppThis, nsd_t *pNsdLstn)
 {
 	netstrm_t *pThis = NULL;
-	int sockflags;
-	struct sockaddr_storage addr;
-	socklen_t addrlen = sizeof(addr);
-	int iNewSock = -1;
-
+	nsd_t *pNsd;
 	DEFiRet;
-	assert(ppThis != NULL);
 
-	iNewSock = accept(sock, (struct sockaddr*) &addr, &addrlen);
-	if(iNewSock < 0) {
-		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
-	}
+	assert(ppThis != NULL);
 
 	/* construct our object so that we can use it... */
 	CHKiRet(netstrmConstruct(&pThis));
@@ -272,6 +194,7 @@ finalize_it:
 
 	RETiRet;
 }
+#endif
 
 
 /* initialize the tcp socket for a listner
@@ -284,144 +207,10 @@ finalize_it:
 static rsRetVal
 LstnInit(netstrm_t *pThis, uchar *pLstnPort)
 {
-        struct addrinfo hints, *res, *r;
-        int error, maxs, *s, on = 1;
-	int sockflags;
-
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	assert(pLstnPort != NULL);
-
-	dbgprintf("creating tcp listen socket on port %s\n", pLstnPort);
-
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = AI_PASSIVE;
-        hints.ai_family = glbl.GetDefPFFamily();
-        hints.ai_socktype = SOCK_STREAM;
-
-        error = getaddrinfo(NULL, (char*) pLstnPort, &hints, &res);
-        if(error) {
-		dbgprintf("error %d querying port '%s'\n", error, pLstnPort);
-		ABORT_FINALIZE(RS_RET_INVALID_PORT);
-	}
-
-        /* Count max number of sockets we may open */
-        for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
-		/* EMPTY */;
-        pThis->socks = malloc((maxs+1) * sizeof(int));
-        if (pThis->socks == NULL) {
-               dbgprintf("couldn't allocate memory for TCP listen sockets, suspending RELP message reception.");
-               freeaddrinfo(res);
-               ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-        }
-
-        *pThis->socks = 0;   /* num of sockets counter at start of array */
-        s = pThis->socks + 1;
-	for(r = res; r != NULL ; r = r->ai_next) {
-               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-        	if (*s < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
-				dbgprintf("creating tcp listen socket");
-				/* it is debatable if PF_INET with EAFNOSUPPORT should
-				 * also be ignored...
-				 */
-                        continue;
-                }
-
-#ifdef IPV6_V6ONLY
-                if (r->ai_family == AF_INET6) {
-                	int iOn = 1;
-			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&iOn, sizeof (iOn)) < 0) {
-			close(*s);
-			*s = -1;
-			continue;
-                	}
-                }
-#endif
-       		if(setsockopt(*s, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
-			dbgprintf("error %d setting tcp socket option\n", errno);
-                        close(*s);
-			*s = -1;
-			continue;
-		}
-
-		/* We use non-blocking IO! */
-		if((sockflags = fcntl(*s, F_GETFL)) != -1) {
-			sockflags |= O_NONBLOCK;
-			/* SETFL could fail too, so get it caught by the subsequent
-			 * error check.
-			 */
-			sockflags = fcntl(*s, F_SETFL, sockflags);
-		}
-		if(sockflags == -1) {
-			dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
-                        close(*s);
-			*s = -1;
-			continue;
-		}
-
-
-
-		/* We need to enable BSD compatibility. Otherwise an attacker
-		 * could flood our log files by sending us tons of ICMP errors.
-		 */
-#ifndef BSD	
-		if(net.should_use_so_bsdcompat()) {
-			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
-					(char *) &on, sizeof(on)) < 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
-                                close(*s);
-				*s = -1;
-				continue;
-			}
-		}
-#endif
-
-	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
-#ifndef IPV6_V6ONLY
-		     && (errno != EADDRINUSE)
-#endif
-	           ) {
-                        dbgprintf("error %d while binding tcp socket", errno);
-                	close(*s);
-			*s = -1;
-                        continue;
-                }
-
-		if(listen(*s,pThis->iSessMax / 10 + 5) < 0) {
-			/* If the listen fails, it most probably fails because we ask
-			 * for a too-large backlog. So in this case we first set back
-			 * to a fixed, reasonable, limit that should work. Only if
-			 * that fails, too, we give up.
-			 */
-			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.",
-				    pThis->iSessMax / 10 + 5);
-			if(listen(*s, 32) < 0) {
-				dbgprintf("tcp listen error %d, suspending\n", errno);
-	                	close(*s);
-				*s = -1;
-               		        continue;
-			}
-		}
-
-		(*pThis->socks)++;
-		s++;
-	}
-
-        if(res != NULL)
-               freeaddrinfo(res);
-
-	if(*pThis->socks != maxs)
-		dbgprintf("We could initialize %d RELP TCP listen sockets out of %d we received "
-		 	"- this may or may not be an error indication.\n", *pThis->socks, maxs);
-
-        if(*pThis->socks == 0) {
-		dbgprintf("No RELP TCP listen socket could successfully be initialized, "
-			 "message reception via RELP disabled.\n");
-        	free(pThis->socks);
-		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
-	}
+	CHKiRet(pThis->Drvr.LstnInit(pThis->pDrvrData, pLstnPort));
 
 finalize_it:
 	RETiRet;
@@ -438,13 +227,11 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 static rsRetVal
-Rcv(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf)
+Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-
-	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
-
+	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf);
 	RETiRet;
 }
 
@@ -458,27 +245,9 @@ Rcv(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf)
 static rsRetVal
 Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 {
-	ssize_t written;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-
-	written = send(pThis->sock, pBuf, *pLenBuf, 0);
-
-	if(written == -1) {
-		switch(errno) {
-			case EAGAIN:
-			case EINTR:
-				/* this is fine, just retry... */
-				written = 0;
-				break;
-			default:
-				ABORT_FINALIZE(RS_RET_IO_ERROR);
-				break;
-		}
-	}
-
-	*pLenBuf = written;
-finalize_it:
+	iRet = pThis->Drvr.Send(pThis->pDrvrData, pBuf, pLenBuf);
 	RETiRet;
 }
 
@@ -489,42 +258,11 @@ finalize_it:
 static rsRetVal
 Connect(netstrm_t *pThis, int family, uchar *port, uchar *host)
 {
-	struct addrinfo *res = NULL;
-	struct addrinfo hints;
-
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	assert(port != NULL);
 	assert(host != NULL);
-	assert(pThis->sock == -1);
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = family;
-	hints.ai_socktype = SOCK_STREAM;
-	if(getaddrinfo((char*)host, (char*)port, &hints, &res) != 0) {
-		dbgprintf("error %d in getaddrinfo\n", errno);
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
-	
-	if((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
-
-	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
-
-finalize_it:
-	if(res != NULL)
-               freeaddrinfo(res);
-		
-	if(iRet != RS_RET_OK) {
-		if(pThis->sock != -1) {
-			close(pThis->sock);
-			pThis->sock = -1;
-		}
-	}
-
+	iRet = pThis->Drvr.Connect(pThis->pDrvrData, family, port, host);
 	RETiRet;
 }
 
@@ -547,7 +285,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->Destruct = netstrmDestruct;
 	pIf->AbortDestruct = AbortDestruct;
 	pIf->LstnInit = LstnInit;
-	pIf->AcceptConnReq = AcceptConnReq;
+	// TODO: add later: pIf->AcceptConnReq = AcceptConnReq;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->Connect = Connect;

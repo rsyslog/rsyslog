@@ -81,13 +81,13 @@ struct objInfo_s {
 };
 
 
-typedef struct obj {	/* the dummy struct that each derived class can be casted to */
+struct obj_s {	/* the dummy struct that each derived class can be casted to */
 	objInfo_t *pObjInfo;
 #ifndef NDEBUG /* this means if debug... */
 	unsigned int iObjCooCKiE; /* must always be 0xBADEFEE for a valid object */
 #endif
 	uchar *pszName;		/* the name of *this* specific object instance */
-} obj_t;
+};
 
 
 /* macros which must be gloablly-visible (because they are used during definition of
