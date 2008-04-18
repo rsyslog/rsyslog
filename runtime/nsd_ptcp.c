@@ -67,7 +67,7 @@ ENDobjConstruct(nsd_ptcp)
 /* destructor for the nsd_ptcp object */
 BEGINobjDestruct(nsd_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
 	int i;
-CODESTARTobjDestruct(nsd_pctp)
+CODESTARTobjDestruct(nsd_ptcp)
 	if(pThis->sock != -1) {
 		close(pThis->sock);
 		pThis->sock = -1;
