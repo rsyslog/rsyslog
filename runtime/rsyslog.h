@@ -209,6 +209,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVALID_HNAME = -2075, /**< remote peer's hostname invalid or unobtainable */
 	RS_RET_INVALID_PORT = -2076, /**< invalid port value */
 	RS_RET_COULD_NOT_BIND = -2077, /**< could not bind socket, defunct */
+	RS_RET_GNUTLS_ERR = -2078, /**< (unexpected) error in GnuTLS call */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

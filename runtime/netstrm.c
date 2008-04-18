@@ -84,18 +84,22 @@ loadDrvr(netstrm_t *pThis)
 	uchar *pDrvrName;
 	DEFiRet;
 
-	pDrvrName = pThis->pDrvrName;
-	if(pDrvrName == NULL) /* if no drvr name is set, use system default */
-		pDrvrName = glbl.GetDfltNetstrmDrvr();
+	if(pThis->Drvr.ifIsLoaded == 0) {
+		pDrvrName = pThis->pDrvrName;
+		if(pDrvrName == NULL) { /* if no drvr name is set, use system default */
+			pDrvrName = glbl.GetDfltNetstrmDrvr();
+			pThis->pDrvrName = (uchar*)strdup((char*)pDrvrName); // TODO: use set method once it exists
+		}
 
-	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
-	/* The pDrvrName+2 below is a hack to obtain the object name. It 
-	 * safes us to have yet another variable with the name without "lm" in
-	 * front of it. If we change the module load interface, we may re-think
-	 * about this hack, but for the time being it is efficient and clean
-	 * enough. -- rgerhards, 2008-04-18
-	 */
-	CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
+		pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
+		/* The pDrvrName+2 below is a hack to obtain the object name. It 
+		 * safes us to have yet another variable with the name without "lm" in
+		 * front of it. If we change the module load interface, we may re-think
+		 * about this hack, but for the time being it is efficient and clean
+		 * enough. -- rgerhards, 2008-04-18
+		 */
+		CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
+	}
 finalize_it:
 	RETiRet;
 }
@@ -111,6 +115,13 @@ BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and 
 CODESTARTobjDestruct(netstrm)
 	if(pThis->pDrvrData != NULL)
 		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
+	
+	/* driver can only be released after all data has been destructed */
+	if(pThis->Drvr.ifIsLoaded == 1) {
+		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
+	}
+	if(pThis->pDrvrName != NULL)
+		free(pThis->pDrvrName);
 ENDobjDestruct(netstrm)
 
 

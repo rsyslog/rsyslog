@@ -37,6 +37,7 @@
 #include <fnmatch.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <gnutls/gnutls.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -57,15 +58,72 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(nsd_ptcp)
 
 
+/* a macro to check GnuTLS calls against unexpected errors */
+#define CHKgnutls(x) \
+	if((gnuRet = (x)) != 0) { \
+		dbgprintf("unexpected GnuTLS error %d in %s:%d\n", gnuRet, __FILE__, __LINE__); \
+		gnutls_perror(gnuRet); /* TODO: can we do better? */ \
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
+	}
+
+#define CAFILE "ca.pem" // TODO: allow to specify
+
+/* ------------------------------ GnuTLS specifics ------------------------------ */
+static gnutls_certificate_credentials xcred;
+
+/* globally initialize GnuTLS */
+static rsRetVal
+gtlsGlblInit(void)
+{
+	int gnuRet;
+	DEFiRet;
+
+	CHKgnutls(gnutls_global_init());
+	
+	/* X509 stuff */
+	CHKgnutls(gnutls_certificate_allocate_credentials(&xcred));
+
+	/* sets the trusted cas file */
+	gnutls_certificate_set_x509_trust_file(xcred, CAFILE, GNUTLS_X509_FMT_PEM);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* globally de-initialize GnuTLS */
+static rsRetVal
+gtlsGlblExit(void)
+{
+	DEFiRet;
+	/* X509 stuff */
+	gnutls_certificate_free_credentials(xcred);
+	gnutls_global_deinit(); /* we are done... */
+	RETiRet;
+}
+
+
+/* ---------------------------- end GnuTLS specifics ---------------------------- */
+
+
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
+	pThis->iMode = 1; /* TODO: must be made configurable */
 ENDobjConstruct(nsd_gtls)
 
 
 /* destructor for the nsd_gtls object */
 BEGINobjDestruct(nsd_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsd_gtls)
+	if(pThis->iMode == 1) {
+		if(pThis->bHaveSess) {
+			// TODO: Check for EAGAIN et al
+			gnutls_bye(pThis->sess, GNUTLS_SHUT_RDWR);
+			gnutls_deinit(pThis->sess);
+		}
+	}
+
 	if(pThis->pTcp != NULL)
 		nsd_ptcp.Destruct(&pThis->pTcp);
 ENDobjDestruct(nsd_gtls)
@@ -150,36 +208,82 @@ finalize_it:
 static rsRetVal
 Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 {
+	int iSent;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
 	if(pThis->iMode == 0) {
 		CHKiRet(nsd_ptcp.Send(pThis->pTcp, pBuf, pLenBuf));
+		FINALIZE;
 	}
+
+	/* in TLS mode now */
+	while(1) { /* loop broken inside */
+		iSent = gnutls_record_send(pThis->sess, pBuf, *pLenBuf);
+RUNLOG_VAR("%d", iSent);
+		if(iSent >= 0) {
+			*pLenBuf = iSent;
+			break;
+		}
+		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN)
+			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+	}
+
 finalize_it:
 	RETiRet;
 }
 
 
-/* open a connection to a remote host (server).
+/* open a connection to a remote host (server). With GnuTLS, we always
+ * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
  * rgerhards, 2008-03-19
  */
 static rsRetVal
 Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 {
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	int sock;
+	int gnuRet;
+static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 	assert(port != NULL);
 	assert(host != NULL);
-	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host));
-	}
 
+	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host));
+
+	if(pThis->iMode == 0)
+		FINALIZE;
+	
+	/* we reach this point if in TLS mode */
+	CHKgnutls(gnutls_init(&pThis->sess, GNUTLS_CLIENT));
+	pThis->bHaveSess = 1;
+
+	/* Use default priorities */
+	CHKgnutls(gnutls_set_default_priority(pThis->sess));
+	CHKgnutls(gnutls_certificate_type_set_priority(pThis->sess, cert_type_priority));
+
+	/* put the x509 credentials to the current session */
+	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, xcred));
+
+	/* assign the socket to GnuTls */
+	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
+	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr)sock);
+
+	/* and perform the handshake */
+	CHKgnutls(gnutls_handshake(pThis->sess));
+	dbgprintf("GnuTLS handshake succeeded\n");
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis->bHaveSess) {
+			gnutls_deinit(pThis->sess);
+			pThis->bHaveSess = 0;
+		}
+	}
+
 	RETiRet;
 }
 
@@ -212,6 +316,8 @@ ENDobjQueryInterface(nsd_gtls)
  */
 BEGINObjClassExit(nsd_gtls, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(nsd_gtls)
+	gtlsGlblExit();	/* shut down GnuTLS */
+
 	/* release objects we no longer need */
 	objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
 	objRelease(glbl, CORE_COMPONENT);
@@ -229,7 +335,8 @@ BEGINObjClassInit(nsd_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
 
-	/* set our own handlers */
+	/* now do global TLS init stuff */
+	CHKiRet(gtlsGlblInit());
 ENDObjClassInit(nsd_gtls)
 
 

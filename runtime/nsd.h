@@ -41,6 +41,11 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
 	rsRetVal (*Send)(nsd_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host);
+	rsRetVal (*GetSock)(nsd_t *pThis, int *pSock);
+	/* GetSock() returns an error if the driver does not use plain
+	 * OS sockets. This interface is primarily meant as an internal aid for
+	 * those drivers that utilize the nsd_ptcp to do some of their work.
+	 */
 ENDinterface(nsd)
 #define nsdCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

@@ -110,8 +110,8 @@ endif # if ENABLE_INET
 if ENABLE_GNUTLS
 pkglib_LTLIBRARIES += lmnsd_gtls.la
 lmnsd_gtls_la_SOURCES = nsd_gtls.c nsd_gtls.h
-lmnsd_gtls_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnsd_gtls_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags) $(gnutls_cflags)
 lmnsd_gtls_la_LDFLAGS = -module -avoid-version
-lmnsd_gtls_la_LIBADD =
+lmnsd_gtls_la_LIBADD = $(gnutls_libs)
 endif
 

@@ -488,16 +488,16 @@ if test "x$enable_gnutls" = "xyes"; then
   AC_CHECK_LIB(
     [gnutls],
     [gnutls_check_version],
-    [tls_cflags=`libgnutls-config --cflags`
-     tls_libs=`libgnutls-config --libs`
+    [gnutls_cflags=`libgnutls-config --cflags`
+     gnutls_libs=`libgnutls-config --libs`
     ],
     [AC_MSG_FAILURE([GNU TLS library is missing])],
     [`libgnutls-config --libs`]
   )
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
-AC_SUBST(tls_cflags)
-AC_SUBST(tls_libs)
+AC_SUBST(gnutls_cflags)
+AC_SUBST(gnutls_libs)
 
 
 # support for building the rsyslogd runtime

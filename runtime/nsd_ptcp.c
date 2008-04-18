@@ -87,6 +87,26 @@ CODESTARTobjDestruct(nsd_ptcp)
 ENDobjDestruct(nsd_ptcp)
 
 
+/* Provide access to the underlying OS socket. This is primarily
+ * useful for other drivers (like nsd_gtls) who utilize ourselfs
+ * for some of their functionality. -- rgerhards, 2008-04-18
+ * TODO: what about the server socket structure?
+ */
+static rsRetVal
+GetSock(nsd_t *pNsd, int *pSock)
+{
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
+	assert(pSock != NULL);
+
+	*pSock = pThis->sock;
+
+	RETiRet;
+}
+
+
 /* abort a connection. This is meant to be called immediately
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
@@ -519,6 +539,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->Construct = (rsRetVal(*)(nsd_t**)) nsd_ptcpConstruct;
 	pIf->Destruct = (rsRetVal(*)(nsd_t**)) nsd_ptcpDestruct;
 	pIf->Abort = Abort;
+	pIf->GetSock = GetSock;
 	pIf->LstnInit = LstnInit;
 	pIf->AcceptConnReq = AcceptConnReq;
 	pIf->Rcv = Rcv;

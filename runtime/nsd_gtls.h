@@ -33,6 +33,8 @@ struct nsd_gtls_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pTcp;		/**< our aggregated nsd_ptcp data */
 	int iMode;		/* 0 - plain tcp, 1 - TLS */
+	gnutls_session sess;
+	int bHaveSess;
 };
 
 /* interface is defined in nsd.h, we just implement it! */
