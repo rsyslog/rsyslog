@@ -66,6 +66,9 @@ typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think
 typedef struct NetAddr netAddr_t;
 typedef struct netstrm_s netstrm_t;
 typedef struct nsd_ptcp_s nsd_ptcp_t;
+typedef struct nsd_gtls_s nsd_gtls_t;
+typedef struct nsd_gsspi_s nsd_gsspi_t;
+typedef struct nsd_nss_s nsd_nss_t;
 typedef obj_t nsd_t;
 typedef struct msg msg_t;
 typedef struct interface_s interface_t;

@@ -40,7 +40,9 @@
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
-#	define DFLT_NETSTRM_DRVR ((uchar*)"lmnsd_ptcp")
+// TESTING ONLY#	define DFLT_NETSTRM_DRVR ((uchar*)"lmnsd_ptcp")
+#warning "define must be restored for non-testing!"
+#	define DFLT_NETSTRM_DRVR ((uchar*)"lmnsd_gtls")
 #endif
 
 /* static data */

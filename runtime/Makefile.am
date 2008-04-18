@@ -96,12 +96,22 @@ lmnetstrm_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
 lmnetstrm_la_LDFLAGS = -module -avoid-version
 lmnetstrm_la_LIBADD =
 
-# netstream drivers
-
-# plain tcp driver
+# plain tcp netstream driver
 pkglib_LTLIBRARIES += lmnsd_ptcp.la
 lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h
 lmnsd_ptcp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
 lmnsd_ptcp_la_LDFLAGS = -module -avoid-version
 lmnsd_ptcp_la_LIBADD =
 endif # if ENABLE_INET
+
+#
+# GnuTLS netstream driver
+# 
+if ENABLE_GNUTLS
+pkglib_LTLIBRARIES += lmnsd_gtls.la
+lmnsd_gtls_la_SOURCES = nsd_gtls.c nsd_gtls.h
+lmnsd_gtls_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnsd_gtls_la_LDFLAGS = -module -avoid-version
+lmnsd_gtls_la_LIBADD =
+endif
+

@@ -462,6 +462,44 @@ AC_SUBST(snmp_cflags)
 AC_SUBST(snmp_libs)
 
 
+# GNUtls support
+AC_ARG_ENABLE(gnutls,
+        [AS_HELP_STRING([--enable-gnutls],[Enable GNU TLS support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_gnutls="yes" ;;
+          no) enable_gnutls="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gnutls) ;;
+         esac],
+        [enable_gnutls=no]
+)
+if test "x$enable_gnutls" = "xyes"; then
+  AC_CHECK_HEADERS(
+    [gnutls/gnutls.h],,
+    [AC_MSG_FAILURE([GNUTls is missing])]
+  )
+  AC_CHECK_PROG(
+    [HAVE_GNUTLS_CONFIG],
+    [libgnutls-config],
+    [yes],,,
+  )
+  if test "x${HAVE_GNUTLS_CONFIG}" != "xyes"; then
+    AC_MSG_FAILURE([libgnutls-config not found in PATH])
+  fi
+  AC_CHECK_LIB(
+    [gnutls],
+    [gnutls_check_version],
+    [tls_cflags=`libgnutls-config --cflags`
+     tls_libs=`libgnutls-config --libs`
+    ],
+    [AC_MSG_FAILURE([GNU TLS library is missing])],
+    [`libgnutls-config --libs`]
+  )
+fi
+AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
+AC_SUBST(tls_cflags)
+AC_SUBST(tls_libs)
+
+
 # support for building the rsyslogd runtime
 AC_ARG_ENABLE(rsyslogrt,
         [AS_HELP_STRING([--enable-rsyslogrt],[Build rsyslogrt @<:@default=yes@:>@])],
@@ -525,7 +563,6 @@ AC_SUBST(RELP_CFLAGS)
 AC_SUBST(RELP_LIBS)
 
 # RFC 3195 support
-# WARNING: THIS IS NOT REALLY PRESENT YET - needs to be build manually!
 AC_ARG_ENABLE(rfc3195,
         [AS_HELP_STRING([--enable-rfc3195],[Enable RFC3195 support @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -624,6 +661,7 @@ echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
+echo "GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
