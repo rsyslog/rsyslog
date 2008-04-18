@@ -103,6 +103,27 @@ gtlsGlblExit(void)
 }
 
 
+/* end a GnuTLS session
+ * The function checks if we have a session and ends it only if so. So it can
+ * always be called, even if there currently is no session.
+ */
+static rsRetVal
+gtlsEndSess(nsd_gtls_t *pThis)
+{
+	int gnuRet;
+	DEFiRet;
+
+	if(pThis->bHaveSess) {
+		gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_RDWR);
+		while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
+			gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_RDWR);
+		}
+		gnutls_deinit(pThis->sess);
+	}
+	RETiRet;
+}
+
+
 /* ---------------------------- end GnuTLS specifics ---------------------------- */
 
 
@@ -117,11 +138,7 @@ ENDobjConstruct(nsd_gtls)
 BEGINobjDestruct(nsd_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nsd_gtls)
 	if(pThis->iMode == 1) {
-		if(pThis->bHaveSess) {
-			// TODO: Check for EAGAIN et al
-			gnutls_bye(pThis->sess, GNUTLS_SHUT_RDWR);
-			gnutls_deinit(pThis->sess);
-		}
+		gtlsEndSess(pThis);
 	}
 
 	if(pThis->pTcp != NULL)
