@@ -2771,6 +2771,7 @@ InitGlobalClasses(void)
 	/* Intialize the runtime system */
 	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */
 	CHKiRet(rsrtInit(&pErrObj, &obj));
+	CHKiRet(rsrtSetErrLogger(submitErrMsg)); /* set out error handler */
 
 	/* Now tell the system which classes we need ourselfs */
 	pErrObj = "glbl";

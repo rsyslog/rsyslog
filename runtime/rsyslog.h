@@ -314,6 +314,7 @@ extern rsRetVal (*glblErrLogger)(uchar*);
 rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
+rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(uchar*));
 
 #endif /* multi-include protection */
 /* vim:set ai:
