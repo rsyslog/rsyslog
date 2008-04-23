@@ -23,15 +23,11 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
-
-//#include <stdarg.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
-//#include <string.h>
 
 #include "rsyslog.h"
-//#include "syslogd-types.h"
 #include "module-template.h"
 #include "obj.h"
 //#include "errmsg.h"
@@ -104,6 +100,22 @@ finalize_it:
 }
 
 
+/* load the netstrm interface, but only if needed (if we load it always, we get
+ * into a circular dependency, because netstrm also needs ourselfs in some cases
+ * rgerhards, 2008-04-23
+ */
+static inline rsRetVal
+loadNetstrm(void)
+{
+	DEFiRet;
+	if(!netstrm.ifIsLoaded) {
+		CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
+	}
+finalize_it:
+	RETiRet;
+}
+
+
 /* create an instance of a netstrm object. It is initialized with default
  * values. The current driver is used. The caller may set netstrm properties
  * and must call ConstructFinalize().
@@ -114,6 +126,7 @@ CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 	netstrm_t *pStrm = NULL;
 	DEFiRet;
 
+	CHKiRet(loadNetstrm());
 	CHKiRet(netstrm.Construct(&pStrm));
 	/* we copy over our driver structure. We could provide a pointer to 
 	 * ourselves, but that costs some performance on each driver invocation.
@@ -160,8 +173,8 @@ CODESTARTObjClassExit(netstrms)
 	/* release objects we no longer need */
 	//objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(netstrm, LM_NETSTRM_FILENAME);
-	//objRelease(errmsg, CORE_COMPONENT);
+	if(netstrm.ifIsLoaded)
+		objRelease(netstrm, LM_NETSTRM_FILENAME);
 ENDObjClassExit(netstrms)
 
 
@@ -171,9 +184,7 @@ ENDObjClassExit(netstrms)
  */
 BEGINAbstractObjClassInit(netstrms, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
-	//CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	//CHKiRet(objUse(net, CORE_COMPONENT));
 
 	/* set our own handlers */

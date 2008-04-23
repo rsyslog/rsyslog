@@ -1,4 +1,4 @@
-/* netstrmstrm.c
+/* netstrm.c
  * 
  * This class implements a generic netstrmwork stream class. It supports
  * sending and receiving data streams over a netstrmwork. The class abstracts
