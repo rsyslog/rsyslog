@@ -64,6 +64,7 @@ typedef struct thrdInfo thrdInfo_t;
 typedef struct obj_s obj_t;
 typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
 typedef struct NetAddr netAddr_t;
+typedef struct netstrms_s netstrms_t;
 typedef struct netstrm_s netstrm_t;
 typedef struct nssel_s nssel_t;
 typedef enum nsdsel_waitOp_e nsdsel_waitOp_t;
@@ -76,6 +77,7 @@ typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 typedef rsRetVal (*errLogFunc_t)(uchar*); /* this is a trick to store a function ptr to a function returning a function ptr... */
+typedef struct tcpsrv_s tcpsrv_t;
 
 /* some universal 64 bit define... */
 typedef long long int64;

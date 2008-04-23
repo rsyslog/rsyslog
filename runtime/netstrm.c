@@ -38,29 +38,16 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
-
-#include "rsyslog.h"
-#include <stdio.h>
-#include <stdarg.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <errno.h>
 #include <string.h>
-#include <signal.h>
-#include <ctype.h>
-#include <netdb.h>
-#include <fnmatch.h>
-#include <fcntl.h>
-#include <unistd.h>
 
-#include "syslogd-types.h"
+#include "rsyslog.h"
 #include "module-template.h"
-#include "parse.h"
-#include "srUtils.h"
 #include "obj.h"
 #include "errmsg.h"
-#include "net.h"
-#include "nsd.h"
+//#include "nsd.h"
+#include "netstrms.h"
 #include "netstrm.h"
 
 MODULE_TYPE_LIB
@@ -68,37 +55,7 @@ MODULE_TYPE_LIB
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(net)
-
-
-/* load our low-level driver. This must be done before any
- * driver-specific functions (allmost all...) can be carried
- * out. Note that the driver's .ifIsLoaded is correctly
- * initialized by calloc() and we depend on that.
- * rgerhards, 2008-04-18
- */
-static rsRetVal
-loadDrvr(netstrm_t *pThis)
-{
-	uchar *pDrvrName;
-	DEFiRet;
-
-	pDrvrName = pThis->pDrvrName;
-	if(pDrvrName == NULL) /* if no drvr name is set, use system default */
-		pDrvrName = glbl.GetDfltNetstrmDrvr();
-
-	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
-	/* The pDrvrName+2 below is a hack to obtain the object name. It 
-	 * safes us to have yet another variable with the name without "lm" in
-	 * front of it. If we change the module load interface, we may re-think
-	 * about this hack, but for the time being it is efficient and clean
-	 * enough. -- rgerhards, 2008-04-18
-	 */
-	CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
-finalize_it:
-	RETiRet;
-}
+DEFobjCurrIf(netstrms)
 
 
 /* Standard-Constructor */
@@ -120,7 +77,6 @@ netstrmConstructFinalize(netstrm_t *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-	CHKiRet(loadDrvr(pThis));
 	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
 finalize_it:
 	RETiRet;
@@ -152,40 +108,27 @@ AbortDestruct(netstrm_t **ppThis)
  * rgerhards, 2008-04-21
  */
 static rsRetVal
-AcceptConnReq(netstrm_t *pThis, nsd_t *pReqNsd, netstrm_t **ppNew)
+AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 {
-	netstrm_t *pNew = NULL;
 	nsd_t *pNewNsd = NULL;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, netstrm);
-	assert(pReqNsd != NULL);
 	assert(ppNew != NULL);
 
 	/* accept the new connection */
-	CHKiRet(pThis->Drvr.AcceptConnReq(pReqNsd, &pNewNsd));
-
+	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd));
 	/* construct our object so that we can use it... */
-	CHKiRet(netstrmConstruct(&pNew));
-
-	pNew->pDrvrData = pNewNsd;
-	if(pThis->pDrvrName == NULL) {
-		pNew->pDrvrName = NULL;
-	} else {
-		CHKmalloc(pNew->pDrvrName = (uchar*) strdup((char*)pThis->pDrvrName));
-	}
-	CHKiRet(loadDrvr(pNew));
-
-	*ppNew = pNew;
+	CHKiRet(netstrms.CreateStrm(pThis->pNS, ppNew));
+	(*ppNew)->pDrvrData = pNewNsd;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pNew != NULL)
-			netstrmDestruct(&pNew);
 		/* the close may be redundant, but that doesn't hurt... */
 		if(pNewNsd != NULL)
 			pThis->Drvr.Destruct(&pNewNsd);
 	}
+
 	RETiRet;
 }
 
@@ -197,12 +140,11 @@ finalize_it:
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-LstnInit(netstrm_t *pThis, uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
+LstnInit(void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*), uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
 	assert(pLstnPort != NULL);
-	CHKiRet(pThis->Drvr.LstnInit(&pThis->parrLstn, &pThis->isizeLstnArr, pLstnPort, pLstnIP, iSessMax));
+	//CHKiRet(pThis->Drvr.LstnInit(pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax));
 
 finalize_it:
 	RETiRet;
@@ -290,9 +232,8 @@ ENDobjQueryInterface(netstrm)
 BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(netstrm)
 	/* release objects we no longer need */
-	objRelease(net, CORE_COMPONENT);
-	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 ENDObjClassExit(netstrm)
 
 
@@ -303,8 +244,7 @@ ENDObjClassExit(netstrm)
 BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(net, CORE_COMPONENT));
+	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 
 	/* set our own handlers */
 ENDObjClassInit(netstrm)

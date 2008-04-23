@@ -131,7 +131,7 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 
 /* check if a socket is ready for IO */
 static rsRetVal
-IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
+IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 {
 	DEFiRet;
 	nsdsel_ptcp_t *pThis = (nsdsel_ptcp_t*) pNsdsel;
@@ -139,6 +139,21 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_ptcp);
 	ISOBJ_TYPE_assert(pSock, nsd_ptcp);
+	assert(pbIsReady != NULL);
+
+	switch(waitOp) {
+		case NSDSEL_RD:
+			*pbIsReady = FD_ISSET(pSock->sock, &pThis->readfds);
+			break;
+		case NSDSEL_WR:
+			*pbIsReady = FD_ISSET(pSock->sock, &pThis->writefds);
+			break;
+		case NSDSEL_RDWR:
+			*pbIsReady =   FD_ISSET(pSock->sock, &pThis->readfds)
+				     | FD_ISSET(pSock->sock, &pThis->writefds);
+			break;
+	}
+
 	RETiRet;
 }
 

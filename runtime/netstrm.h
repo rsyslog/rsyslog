@@ -29,34 +29,18 @@
 /* the netstrm object */
 struct netstrm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	nsd_t *pDrvrData;	/**< the driver's data elements */
+	nsd_t *pDrvrData;	/**< the driver's data elements (at most other places, this is called pNsd) */
 	uchar *pDrvrName;	/**< nsd driver name to use, or NULL if system default */
 	nsd_if_t Drvr;		/**< our stream driver */
+	netstrms_t *pNS;		/**< pointer to our netstream subsystem object */
 	/* for listeners, we need to have the capablity to listen on multiple "sockets". This
 	 * is needed to support IPv6. We do this by specifying an array of nsd_t objects to
 	 * handle this case.
 	 */
-	int isizeLstnArr;
-	nsd_t **parrLstn;
+	//int isizeLstnArr;
+	//nsd_t **parrLstn;
 };
 
-/* a helper object enabling us to wait on a set of streams to become
- * ready for IO - this is modelled after select(). We need this, because
- * stream drivers may have different concepts. Consequently,
- * the structure must contain nsd_t's from the same stream driver type
- * only. This is implemented as a singly-linked list where every
- * new element is added at the top of the list. -- rgerhards, 2008-04-22
- */
-typedef struct netstrm_iowaiter_s netstrm_iowaiter_t;
-struct netstrm_iowaiter_s {
-	netstrm_iowaiter_t *pNext;
-	nsd_t *pNsd;
-	enum {
-		NETSTRM_IOWAIT_RD = 1,
-		NETSTRM_IOWAIT_WR = 2,
-		NETSTRM_IOWAIT_RDWR = 3
-	} waitOp; /**< the operation we wait for */
-};
 
 /* interface */
 BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
@@ -64,8 +48,8 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(netstrm_t *pThis);
 	rsRetVal (*Destruct)(netstrm_t **ppThis);
 	rsRetVal (*AbortDestruct)(netstrm_t **ppThis);
-	rsRetVal (*LstnInit)(netstrm_t *pThis, uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
-	rsRetVal (*AcceptConnReq)(netstrm_t *pThis, nsd_t *pReqNsd, netstrm_t **ppNew);
+	rsRetVal (*LstnInit)(void *pUsr, rsRetVal(*)(void*,netstrm_t*), uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
+	rsRetVal (*AcceptConnReq)(netstrm_t *pThis, netstrm_t **ppNew);
 	rsRetVal (*Rcv)(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
 	rsRetVal (*Send)(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(netstrm_t *pThis, int family, unsigned char *port, unsigned char *host);

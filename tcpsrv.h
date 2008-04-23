@@ -26,10 +26,11 @@
 #include "tcps_sess.h"
 
 /* the tcpsrv object */
-typedef struct tcpsrv_s {
+struct tcpsrv_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
-	//int *pSocksLstn;	/**< listen socket array for server [0] holds count */
-	netstrm_t *pLstn;	/**< our netstream listner (which may contain multiple "sockets" */
+	netstrms_t *pNS;	/**< pointer to network stream subsystem */
+	int iLstnMax;		/**< max nbr of listeners currently supported */
+	netstrm_t **ppLstn;	/**< our netstream listners */
 	int iSessMax;		/**< max number of sessions supported */
 	char *TCPLstnPort;	/**< the port the listener shall listen on */
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
@@ -43,10 +44,10 @@ typedef struct tcpsrv_s {
 	rsRetVal (*pOnRegularClose)(tcps_sess_t *pSess);
 	rsRetVal (*pOnErrClose)(tcps_sess_t *pSess);
 	/* session specific callbacks */
-	rsRetVal (*pOnSessAccept)(struct tcpsrv_s *, tcps_sess_t*);
+	rsRetVal (*pOnSessAccept)(tcpsrv_t *, tcps_sess_t*);
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
-} tcpsrv_t;
+};
 
 
 /* interfaces */
@@ -56,7 +57,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(tcpsrv_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(tcpsrv_t **ppThis);
 	void (*configureTCPListen)(tcpsrv_t*, char *cOptarg);
-	rsRetVal (*SessAccept)(tcpsrv_t *pThis, tcps_sess_t **ppSess, nsd_t *pNsd);
+	rsRetVal (*SessAccept)(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm);
 	rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */

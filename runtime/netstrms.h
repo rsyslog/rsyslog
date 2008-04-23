@@ -1,6 +1,6 @@
-/* Definitions for the nssel IO waiter.
+/* Definitions for the stream-based netstrmsworking class.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -21,35 +21,32 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 
-#ifndef INCLUDED_NSSEL_H
-#define INCLUDED_NSSEL_H
+#ifndef INCLUDED_NETSTRMS_H
+#define INCLUDED_NETSTRMS_H
 
-#include "nsd.h"
+#include "nsd.h" /* we need our driver interface to be defined */
 
-/* the nssel object */
-struct nssel_s {
+/* the netstrms object */
+struct netstrms_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	nsd_t *pDrvrData;	/**< the driver's data elements */
 	uchar *pDrvrName;	/**< nsd driver name to use, or NULL if system default */
-	nsdsel_if_t Drvr;	/**< our stream driver */
+	nsd_if_t Drvr;		/**< our stream driver */
 };
 
 
 /* interface */
-BEGINinterface(nssel) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(nssel_t **ppThis);
-	rsRetVal (*ConstructFinalize)(nssel_t *pThis);
-	rsRetVal (*Destruct)(nssel_t **ppThis);
-	rsRetVal (*Add)(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp);
-	rsRetVal (*Wait)(nssel_t *pThis, int *pNumReady);
-	rsRetVal (*IsReady)(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady, int *piNumReady);
-ENDinterface(nssel)
-#define nsselCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
+	rsRetVal (*Construct)(netstrms_t **ppThis);
+	rsRetVal (*ConstructFinalize)(netstrms_t *pThis);
+	rsRetVal (*Destruct)(netstrms_t **ppThis);
+	rsRetVal (*CreateStrm)(netstrms_t *pThis, netstrm_t **ppStrm);
+ENDinterface(netstrms)
+#define netstrmsCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 /* prototypes */
-PROTOTYPEObj(nssel);
+PROTOTYPEObj(netstrms);
 
 /* the name of our library binary */
-#define LM_NSSEL_FILENAME "lmnssel"
+#define LM_NETSTRMS_FILENAME "lmnetstrms"
 
-#endif /* #ifndef INCLUDED_NSSEL_H */
+#endif /* #ifndef INCLUDED_NETSTRMS_H */

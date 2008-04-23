@@ -57,7 +57,7 @@ BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(nsdsel_t **ppThis);
 	rsRetVal (*Add)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp);
 	rsRetVal (*Select)(nsdsel_t *pNsdsel, int *piNumReady);
-	rsRetVal (*IsReady)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp);
+	rsRetVal (*IsReady)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady);
 ENDinterface(nsdsel)
 #define nsdselCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

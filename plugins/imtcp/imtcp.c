@@ -70,7 +70,7 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((u
 }
 
 
-static int*
+static rsRetVal
 doOpenLstnSocks(tcpsrv_t *pSrv)
 {
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);

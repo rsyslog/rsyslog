@@ -1,13 +1,6 @@
-/* nssel.c
- *
- * The io waiter is a helper object enabling us to wait on a set of streams to become
- * ready for IO - this is modelled after select(). We need this, because
- * stream drivers may have different concepts. Consequently,
- * the structure must contain nsd_t's from the same stream driver type
- * only. This is implemented as a singly-linked list where every
- * new element is added at the top of the list.
+/* netstrms.c
  * 
- * Work on this module begun 2008-04-22 by Rainer Gerhards.
+ * Work on this module begung 2008-04-23 by Rainer Gerhards.
  *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *
@@ -31,24 +24,30 @@
  */
 #include "config.h"
 
-#include "rsyslog.h"
-#include <stdio.h>
+//#include <stdarg.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
-#include <string.h>
+//#include <string.h>
 
 #include "rsyslog.h"
-#include "obj.h"
+//#include "syslogd-types.h"
 #include "module-template.h"
+#include "obj.h"
+//#include "errmsg.h"
+//#include "net.h"
+#include "nsd.h"
 #include "netstrm.h"
-#include "nssel.h"
+#include "netstrms.h"
 
 MODULE_TYPE_LIB
 
 /* static data */
 DEFobjStaticHelpers
+//DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(netstrm)
+//DEFobjCurrIf(net)
 
 
 /* load our low-level driver. This must be done before any
@@ -58,7 +57,7 @@ DEFobjCurrIf(glbl)
  * rgerhards, 2008-04-18
  */
 static rsRetVal
-loadDrvr(nssel_t *pThis)
+loadDrvr(netstrms_t *pThis)
 {
 	uchar *pDrvrName;
 	DEFiRet;
@@ -81,85 +80,64 @@ finalize_it:
 
 
 /* Standard-Constructor */
-BEGINobjConstruct(nssel) /* be sure to specify the object type also in END macro! */
-ENDobjConstruct(nssel)
+BEGINobjConstruct(netstrms) /* be sure to specify the object type also in END macro! */
+ENDobjConstruct(netstrms)
 
 
-/* destructor for the nssel object */
-BEGINobjDestruct(nssel) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nssel)
-ENDobjDestruct(nssel)
+/* destructor for the netstrms object */
+BEGINobjDestruct(netstrms) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(netstrms)
+	if(pThis->pDrvrName != NULL)
+		free(pThis->pDrvrName);
+ENDobjDestruct(netstrms)
 
 
 /* ConstructionFinalizer */
 static rsRetVal
-ConstructFinalize(nssel_t *pThis)
+netstrmsConstructFinalize(netstrms_t *pThis)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, nssel);
+	ISOBJ_TYPE_assert(pThis, netstrms);
 	CHKiRet(loadDrvr(pThis));
-	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
 finalize_it:
 	RETiRet;
 }
 
 
-/* Add a stream object to the current select() set.
- * Note that a single stream may have multiple "sockets" if
- * it is a listener. If so, all of them are begin added.
+/* create an instance of a netstrm object. It is initialized with default
+ * values. The current driver is used. The caller may set netstrm properties
+ * and must call ConstructFinalize().
  */
 static rsRetVal
-Add(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp)
+CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 {
+	netstrm_t *pStrm = NULL;
 	DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, nssel);
-	ISOBJ_TYPE_assert(pStrm, netstrm);
+	CHKiRet(netstrm.Construct(&pStrm));
+	/* we copy over our driver structure. We could provide a pointer to 
+	 * ourselves, but that costs some performance on each driver invocation.
+	 * As we already have hefty indirection (and thus performance toll), I
+	 * prefer to copy over the function pointers here. -- rgerhards, 2008-04-23
+	 */
+	memcpy(&pStrm->Drvr, &pThis->Drvr, sizeof(pThis->Drvr));
+	pStrm->pNS = pThis;
 	
-	CHKiRet(pThis->Drvr.Add(pThis->pDrvrData, pStrm->pDrvrData, waitOp));
+	*ppStrm = pStrm;
 
 finalize_it:
-	RETiRet;
-}
-
-
-/* wait for IO to happen on one of our netstreams. iNumReady has
- * the number of ready "sockets" after the call. This function blocks
- * until some are ready. EAGAIN is retried.
- */
-static rsRetVal
-Wait(nssel_t *pThis, int *piNumReady)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, nssel);
-	assert(piNumReady != NULL);
-	iRet = pThis->Drvr.Select(pThis->pDrvrData, piNumReady);
-	RETiRet;
-}
-
-
-/* Check if a stream is ready for IO. *piNumReady contains the remaining number
- * of ready streams. Note that this function may say the stream is not ready
- * but still decrement *piNumReady. This can happen when (e.g. with TLS) the low
- * level driver requires some IO which is hidden from the upper layer point of view.
- * rgerhards, 2008-04-23
- */
-static rsRetVal
-IsReady(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady, int *piNumReady)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, nssel);
-	ISOBJ_TYPE_assert(pStrm, netstrm);
-	assert(pbIsReady != NULL);
-	assert(piNumReady != NULL);
+	if(iRet != RS_RET_OK) {
+		if(pStrm != NULL)
+			netstrm.Destruct(&pStrm);
+	}
 	RETiRet;
 }
 
 
 /* queryInterface function */
-BEGINobjQueryInterface(nssel)
-CODESTARTobjQueryInterface(nssel)
-	if(pIf->ifVersion != nsselCURR_IF_VERSION) {/* check for current version, increment on each change */
+BEGINobjQueryInterface(netstrms)
+CODESTARTobjQueryInterface(netstrms)
+	if(pIf->ifVersion != netstrmsCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -168,43 +146,46 @@ CODESTARTobjQueryInterface(nssel)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->Construct = nsselConstruct;
-	pIf->ConstructFinalize = ConstructFinalize;
-	pIf->Destruct = nsselDestruct;
-	pIf->Add = Add;
-	pIf->Wait = Wait;
-	pIf->IsReady = IsReady;
+	pIf->Construct = netstrmsConstruct;
+	pIf->ConstructFinalize = netstrmsConstructFinalize;
+	pIf->Destruct = netstrmsDestruct;
+	pIf->CreateStrm = CreateStrm;
 finalize_it:
-ENDobjQueryInterface(nssel)
+ENDobjQueryInterface(netstrms)
 
 
-/* exit our class
- */
-BEGINObjClassExit(nssel, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nssel)
+/* exit our class */
+BEGINObjClassExit(netstrms, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(netstrms)
 	/* release objects we no longer need */
+	//objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-ENDObjClassExit(nssel)
+	objRelease(netstrm, LM_NETSTRM_FILENAME);
+	//objRelease(errmsg, CORE_COMPONENT);
+ENDObjClassExit(netstrms)
 
 
-/* Initialize the nssel class. Must be called as the very first method
+/* Initialize the netstrms class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
-BEGINObjClassInit(nssel, 1, OBJ_IS_CORE_MODULE) /* class, version */
+BEGINAbstractObjClassInit(netstrms, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
+	//CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
+	//CHKiRet(objUse(net, CORE_COMPONENT));
 
 	/* set our own handlers */
-ENDObjClassInit(nssel)
+ENDObjClassInit(netstrms)
 
 
-/* --------------- here now comes the plumbing that makes us a library module --------------- */
+/* --------------- here now comes the plumbing that makes as a library module --------------- */
 
 
 BEGINmodExit
 CODESTARTmodExit
-	nsselClassExit();
+	netstrmsClassExit();
 ENDmodExit
 
 
@@ -219,7 +200,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(nsselClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(netstrmsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
 /* vi:set ai:
  */
