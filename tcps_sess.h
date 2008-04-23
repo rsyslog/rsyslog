@@ -61,7 +61,7 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetTcpsrv)(tcps_sess_t *pThis, struct tcpsrv_s *pSrv);
 	rsRetVal (*SetUsrP)(tcps_sess_t*, void*);
 	rsRetVal (*SetHost)(tcps_sess_t *pThis, uchar*);
-	rsRetVal (*SetSock)(tcps_sess_t *pThis, int);
+	rsRetVal (*SetStrm)(tcps_sess_t *pThis, netstrm_t*);
 	rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);
 ENDinterface(tcps_sess)
 #define tcps_sessCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */

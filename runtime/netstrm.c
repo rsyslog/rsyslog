@@ -144,73 +144,65 @@ AbortDestruct(netstrm_t **ppThis)
 }
 
 
-#if 0
-This is not yet working - wait until we arrive at the receiver side (distracts too much at the moment)
-
-/* accept an incoming connection request, pNsdLstn provides the "listen socket" on which we can
- * accept the new session.
- * rgerhards, 2008-03-17
+/* accept an incoming connection request
+ * The netstrm instance that had the incoming request must be provided. If
+ * the connection request succeeds, a new netstrm object is created and 
+ * passed back to the caller. The caller is responsible for destructing it.
+ * pReq is the nsd_t obj that has the accept request.
+ * rgerhards, 2008-04-21
  */
 static rsRetVal
-AcceptConnReq(netstrm_t **ppThis, nsd_t *pNsdLstn)
+AcceptConnReq(netstrm_t *pThis, nsd_t *pReqNsd, netstrm_t **ppNew)
 {
-	netstrm_t *pThis = NULL;
-	nsd_t *pNsd;
+	netstrm_t *pNew = NULL;
+	nsd_t *pNewNsd = NULL;
 	DEFiRet;
 
-	assert(ppThis != NULL);
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	assert(pReqNsd != NULL);
+	assert(ppNew != NULL);
+
+	/* accept the new connection */
+	CHKiRet(pThis->Drvr.AcceptConnReq(pReqNsd, &pNewNsd));
 
 	/* construct our object so that we can use it... */
-	CHKiRet(netstrmConstruct(&pThis));
+	CHKiRet(netstrmConstruct(&pNew));
 
-	/* TODO: obtain hostname, normalize (callback?), save it */
-	CHKiRet(FillRemHost(pThis, (struct sockaddr*) &addr));
-
-	/* set the new socket to non-blocking IO */
-	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
-		sockflags |= O_NONBLOCK;
-		/* SETFL could fail too, so get it caught by the subsequent
-		 * error check.
-		 */
-		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
+	pNew->pDrvrData = pNewNsd;
+	if(pThis->pDrvrName == NULL) {
+		pNew->pDrvrName = NULL;
+	} else {
+		CHKmalloc(pNew->pDrvrName = (uchar*) strdup((char*)pThis->pDrvrName));
 	}
-	if(sockflags == -1) {
-		dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
+	CHKiRet(loadDrvr(pNew));
 
-	pThis->sock = iNewSock;
-
-	*ppThis = pThis;
+	*ppNew = pNew;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
-			netstrmDestruct(&pThis);
+		if(pNew != NULL)
+			netstrmDestruct(&pNew);
 		/* the close may be redundant, but that doesn't hurt... */
-		if(iNewSock >= 0)
-			close(iNewSock);
+		if(pNewNsd != NULL)
+			pThis->Drvr.Destruct(&pNewNsd);
 	}
-
 	RETiRet;
 }
-#endif
 
 
-/* initialize the tcp socket for a listner
- * pLstnPort must point to a port name or number. NULL is NOT permitted
- * (hint: we need to be careful when we use this module together with librelp,
- * there NULL indicates the default port
- * default is used.
- * gerhards, 2008-03-17
+/* make the netstrm listen to specified port and IP.
+ * pLstnIP points to the port to listen to (NULL means "all"),
+ * iMaxSess has the maximum number of sessions permitted (this ist just a hint).
+ * pLstnPort must point to a port name or number. NULL is NOT permitted.
+ * rgerhards, 2008-04-22
  */
 static rsRetVal
-LstnInit(netstrm_t *pThis, uchar *pLstnPort)
+LstnInit(netstrm_t *pThis, uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	assert(pLstnPort != NULL);
-	CHKiRet(pThis->Drvr.LstnInit(pThis->pDrvrData, pLstnPort));
+	CHKiRet(pThis->Drvr.LstnInit(&pThis->parrLstn, &pThis->isizeLstnArr, pLstnPort, pLstnIP, iSessMax));
 
 finalize_it:
 	RETiRet;
@@ -284,11 +276,11 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->ConstructFinalize = netstrmConstructFinalize;
 	pIf->Destruct = netstrmDestruct;
 	pIf->AbortDestruct = AbortDestruct;
-	pIf->LstnInit = LstnInit;
-	// TODO: add later: pIf->AcceptConnReq = AcceptConnReq;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->Connect = Connect;
+	pIf->LstnInit = LstnInit;
+	pIf->AcceptConnReq = AcceptConnReq;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

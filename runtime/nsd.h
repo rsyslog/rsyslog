@@ -28,6 +28,12 @@
 #ifndef INCLUDED_NSD_H
 #define INCLUDED_NSD_H
 
+enum nsdsel_waitOp_e {
+	NSDSEL_RD = 1,
+	NSDSEL_WR = 2,
+	NSDSEL_RDWR = 3
+}; /**< the operation we wait for */
+
 /* nsd_t is actually obj_t (which is somewhat better than void* but in essence
  * much the same).
  */
@@ -37,12 +43,22 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nsd_t **ppThis);
 	rsRetVal (*Destruct)(nsd_t **ppThis);
 	rsRetVal (*Abort)(nsd_t *pThis);
-	rsRetVal (*LstnInit)(nsd_t *pThis, unsigned char *pLstnPort);
-	rsRetVal (*AcceptConnReq)(nsd_t **ppThis, int sock);
 	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
 	rsRetVal (*Send)(nsd_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host);
+	rsRetVal (*LstnInit)(nsd_t ***parrLstn, int *pLstnArrSize, uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
+	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);
 ENDinterface(nsd)
 #define nsdCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+
+/* interface  for the select call */
+BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */
+	rsRetVal (*Construct)(nsdsel_t **ppThis);
+	rsRetVal (*Destruct)(nsdsel_t **ppThis);
+	rsRetVal (*Add)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp);
+	rsRetVal (*Select)(nsdsel_t *pNsdsel, int *piNumReady);
+	rsRetVal (*IsReady)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp);
+ENDinterface(nsdsel)
+#define nsdselCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 #endif /* #ifndef INCLUDED_NSD_H */

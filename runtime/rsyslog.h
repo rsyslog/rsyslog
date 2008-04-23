@@ -65,8 +65,12 @@ typedef struct obj_s obj_t;
 typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
 typedef struct NetAddr netAddr_t;
 typedef struct netstrm_s netstrm_t;
+typedef struct nssel_s nssel_t;
+typedef enum nsdsel_waitOp_e nsdsel_waitOp_t;
 typedef struct nsd_ptcp_s nsd_ptcp_t;
+typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef obj_t nsd_t;
+typedef obj_t nsdsel_t;
 typedef struct msg msg_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
@@ -206,6 +210,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVALID_HNAME = -2075, /**< remote peer's hostname invalid or unobtainable */
 	RS_RET_INVALID_PORT = -2076, /**< invalid port value */
 	RS_RET_COULD_NOT_BIND = -2077, /**< could not bind socket, defunct */
+	RS_RET_MAX_SESS_REACHED = -2078, /**< max nbr of sessions reached, can not create more */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

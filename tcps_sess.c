@@ -403,7 +403,7 @@ CODESTARTobjQueryInterface(tcps_sess)
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetTcpsrv = SetTcpsrv;
 	pIf->SetHost = SetHost;
-	pIf->SetSock = SetSock;
+	//pIf->SetSock = SetSock;
 	pIf->SetMsgIdx = SetMsgIdx;
 finalize_it:
 ENDobjQueryInterface(tcps_sess)

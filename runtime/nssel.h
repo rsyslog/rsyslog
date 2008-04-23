@@ -1,6 +1,6 @@
-/* An implementation of the nsd interface for plain tcp sockets.
+/* Definitions for the nssel IO waiter.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -21,26 +21,35 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 
-#ifndef INCLUDED_NSD_PTCP_H
-#define INCLUDED_NSD_PTCP_H
+#ifndef INCLUDED_NSSEL_H
+#define INCLUDED_NSSEL_H
 
 #include "nsd.h"
-typedef nsd_if_t nsd_ptcp_if_t; /* we just *implement* this interface */
 
-/* the nsd_ptcp object */
-struct nsd_ptcp_s {
+/* the nssel object */
+struct nssel_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	uchar *pRemHostIP; /**< IP address of remote peer (currently used in server mode, only) */
-	uchar *pRemHostName; /**< host name of remote peer (currently used in server mode, only) */
-	int sock;	/**< the socket we use for regular, single-socket, operations */
+	nsd_t *pDrvrData;	/**< the driver's data elements */
+	uchar *pDrvrName;	/**< nsd driver name to use, or NULL if system default */
+	nsdsel_if_t Drvr;	/**< our stream driver */
 };
 
-/* interface is defined in nsd.h, we just implement it! */
+
+/* interface */
+BEGINinterface(nssel) /* name must also be changed in ENDinterface macro! */
+	rsRetVal (*Construct)(nssel_t **ppThis);
+	rsRetVal (*ConstructFinalize)(nssel_t *pThis);
+	rsRetVal (*Destruct)(nssel_t **ppThis);
+	rsRetVal (*Add)(nssel_t *pThis, netstrm_t *pStrm);
+	rsRetVal (*Wait)(nssel_t *pThis, int *pNumReady);
+	rsRetVal (*IsReady)(nssel_t *pThis, netstrm_t *pStrm, int *pbIsReady, int *pNumRead);
+ENDinterface(nssel)
+#define nsselCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 /* prototypes */
-PROTOTYPEObj(nsd_ptcp);
+PROTOTYPEObj(nssel);
 
 /* the name of our library binary */
-#define LM_NSD_PTCP_FILENAME "lmnsd_ptcp"
+#define LM_NSSEL_FILENAME "lmnssel"
 
-#endif /* #ifndef INCLUDED_NSD_PTCP_H */
+#endif /* #ifndef INCLUDED_NSSEL_H */
