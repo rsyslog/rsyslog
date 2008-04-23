@@ -140,11 +140,16 @@ finalize_it:
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-LstnInit(void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*), uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
+LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
+
+	ISOBJ_TYPE_assert(pNS, netstrms);
+	assert(fAddLstn != NULL);
 	assert(pLstnPort != NULL);
-	//CHKiRet(pThis->Drvr.LstnInit(pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax));
+
+	CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax));
 
 finalize_it:
 	RETiRet;

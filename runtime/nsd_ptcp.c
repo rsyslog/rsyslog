@@ -45,6 +45,8 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "net.h"
+#include "netstrms.h"
+#include "netstrm.h"
 #include "nsd_ptcp.h"
 
 MODULE_TYPE_LIB
@@ -54,6 +56,8 @@ DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
+DEFobjCurrIf(netstrms)
+DEFobjCurrIf(netstrm)
 
 
 /* a few deinit helpers */
@@ -243,24 +247,29 @@ finalize_it:
 }
 
 
-/* initialize tcp sockets for a listner. This function returns an array of nds_t
- * objects. The size of this array is returend in pLstnArrSize.
+/* initialize tcp sockets for a listner. The initialized sockets are passed to the
+ * app-level caller via a callback.
  * pLstnPort must point to a port name or number. NULL is NOT permitted. pLstnIP
  * points to the port to listen to (NULL means "all"), iMaxSess has the maximum
  * number of sessions permitted.
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-LstnInit(nsd_t ***parrLstnNsd, int *pLstnArrSize, uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
+LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
-        struct addrinfo hints, *res = NULL, *r;
 	nsd_ptcp_t **arrLstn = NULL;
+	netstrm_t *pNewStrm = NULL;
+	nsd_t *pNewNsd = NULL;
         int error, maxs, on = 1;
 	int sock;
+	int numSocks;
 	int sockflags;
+        struct addrinfo hints, *res = NULL, *r;
 
-	assert(parrLstnNsd != NULL);
+	ISOBJ_TYPE_assert(pNS, netstrms);
+	assert(fAddLstn != NULL);
 	assert(pLstnPort != NULL);
 	assert(iSessMax >= 0);
 
@@ -282,7 +291,7 @@ LstnInit(nsd_t ***parrLstnNsd, int *pLstnArrSize, uchar *pLstnPort, uchar *pLstn
 		/* EMPTY */;
         CHKmalloc(arrLstn = (nsd_ptcp_t**) malloc((maxs+1) * sizeof(nsd_ptcp_t*)));
 
-        *pLstnArrSize = 0;   /* num of sockets counter at start of array */
+        numSocks = 0;   /* num of sockets counter at start of array */
 	for(r = res; r != NULL ; r = r->ai_next) {
                sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         	if(sock < 0) {
@@ -366,38 +375,39 @@ LstnInit(nsd_t ***parrLstnNsd, int *pLstnArrSize, uchar *pLstnPort, uchar *pLstn
 			}
 		}
 
-		/* if we reach this point, we were able to obtain a valid socket, which we
-		 * now can save to the array of listen sockets. -- rgerhards, 2008-04-22
+		/* if we reach this point, we were able to obtain a valid socket, so we can
+		 * construct a new netstrm obj and hand it over to the upper layers for inclusion
+		 * into their socket array. -- rgerhards, 2008-04-23
 		 */
-		CHKiRet(nsd_ptcpConstruct(arrLstn+*pLstnArrSize));
-        	arrLstn[*pLstnArrSize]->sock = sock;
-		++(*pLstnArrSize);
+		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
+		((nsd_ptcp_t*)pNewNsd)->sock = sock;
+		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
+		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
+		CHKiRet(fAddLstn(pUsr, pNewStrm));
+		pNewNsd = NULL;
+		pNewStrm = NULL;
 	}
 
         if(res != NULL)
                freeaddrinfo(res);
 
-	if(*pLstnArrSize != maxs)
+	if(numSocks != maxs)
 		dbgprintf("We could initialize %d TCP listen sockets out of %d we received "
-		 	  "- this may or may not be an error indication.\n", *pLstnArrSize, maxs);
+		 	  "- this may or may not be an error indication.\n", numSocks, maxs);
 
-        if(*pLstnArrSize == 0) {
-		dbgprintf("No TCP listen sockets could successfully be initialized, "
-			  "message reception disabled.\n");
+        if(numSocks == 0) {
+		dbgprintf("No TCP listen sockets could successfully be initialized");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 	}
-
-	*parrLstnNsd = (nsd_t**) arrLstn;
-	arrLstn = NULL; /* prevent from being freed in error handler */
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(res != NULL)
 			freeaddrinfo(res);
-		if(arrLstn != NULL) {
-			for(maxs = 0 ; maxs < *pLstnArrSize ;  ++maxs)
-				nsd_ptcpDestruct(arrLstn+*pLstnArrSize);
-		}
+		if(pNewStrm != NULL)
+			netstrm.Destruct(&pNewStrm);
+		if(pNewNsd != NULL)
+			pNS->Drvr.Destruct(&pNewNsd);
 	}
 
 	RETiRet;
@@ -537,6 +547,8 @@ CODESTARTObjClassExit(nsd_ptcp)
 	objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(netstrm, LM_NETSTRM_FILENAME);
+	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 ENDObjClassExit(nsd_ptcp)
 
 
@@ -549,6 +561,8 @@ BEGINObjClassInit(nsd_ptcp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
+	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
+	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 
 	/* set our own handlers */
 ENDObjClassInit(nsd_ptcp)

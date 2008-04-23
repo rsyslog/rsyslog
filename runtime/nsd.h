@@ -46,7 +46,8 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
 	rsRetVal (*Send)(nsd_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host);
-	rsRetVal (*LstnInit)(nsd_t ***parrLstn, int *pLstnArrSize, uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
+	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
+			     uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
 	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);
 ENDinterface(nsd)
 #define nsdCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */

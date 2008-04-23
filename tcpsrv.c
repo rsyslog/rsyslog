@@ -236,7 +236,15 @@ addTcpLstn(void *pUsr, netstrm_t *pLstn)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pLstn, netstrm);
 
+	if(pThis->iLstnMax >= TCPLSTN_MAX_DEFAULT)
+		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
+
+	pThis->ppLstn[pThis->iLstnMax] = pLstn;
+	++pThis->iLstnMax;
+
+finalize_it:
 	RETiRet;
 }
 
@@ -264,7 +272,20 @@ create_tcp_socket(tcpsrv_t *pThis)
 		TCPLstnPort = (uchar*)pThis->TCPLstnPort;
 
 	/* TODO: add capability to specify local listen address! */
-	CHKiRet(netstrm.LstnInit((void*)pThis, addTcpLstn, TCPLstnPort, NULL, pThis->iSessMax));
+	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pThis, addTcpLstn, TCPLstnPort, NULL, pThis->iSessMax));
+
+
+	/* OK, we had success. Now it is also time to
+	 * initialize our connections
+	 */
+	if(TCPSessTblInit(pThis) != 0) {
+		/* OK, we are in some trouble - we could not initialize the
+		 * session table, so we can not continue. We need to free all
+		 * we have assigned so far, because we can not really use it...
+		 */
+		errmsg.LogError(NO_ERRCODE, "Could not initialize TCP session table, suspending TCP message reception.");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 finalize_it:
 	RETiRet;

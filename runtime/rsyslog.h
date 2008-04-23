@@ -213,6 +213,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVALID_PORT = -2076, /**< invalid port value */
 	RS_RET_COULD_NOT_BIND = -2077, /**< could not bind socket, defunct */
 	RS_RET_MAX_SESS_REACHED = -2078, /**< max nbr of sessions reached, can not create more */
+	RS_RET_MAX_LSTN_REACHED = -2079, /**< max nbr of listeners reached, can not create more */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
