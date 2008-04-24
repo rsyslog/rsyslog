@@ -2952,7 +2952,6 @@ int realMain(int argc, char **argv)
 	extern int optind;
 	extern char *optarg;
 	struct sigaction sigAct;
-	int bIsFirstOption = 1;
 	int bEOptionWasGiven = 0;
 	int bImUxSockLoaded = 0; /* already generated a $ModLoad imuxsock? */
 	char *arg;	/* for command line option processing */
@@ -2997,11 +2996,6 @@ int realMain(int argc, char **argv)
 			CHKiRet(bufOptAdd(ch, optarg));
 			break;
 		case 'c':		/* compatibility mode */
-			if(!bIsFirstOption) {
-				fprintf(stderr, "-c option MUST be specified as the first option - aborting...\n");
-				usage();
-				exit(1);
-			}
 			iCompatibilityMode = atoi(optarg);
 			break;
 		case 'd': /* debug - must be handled now, so that debug is active during init! */
@@ -3042,7 +3036,6 @@ int realMain(int argc, char **argv)
 		default:
 			usage();
 		}
-		bIsFirstOption = 0; /* we already saw an option character */
 	}
 
 	if ((argc -= optind))
