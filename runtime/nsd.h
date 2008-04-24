@@ -49,6 +49,8 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			     uchar *pLstnPort, uchar *pLstnIP, int iSessMax);
 	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);
+	rsRetVal (*GetRemoteHName)(nsd_t *pThis, uchar **pszName);
+	rsRetVal (*GetRemoteIP)(nsd_t *pThis, uchar **pszIP);
 ENDinterface(nsd)
 #define nsdCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

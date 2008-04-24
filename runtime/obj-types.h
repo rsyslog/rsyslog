@@ -106,8 +106,12 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 		do { \
 		ASSERT(pObj != NULL); \
 		ASSERT((unsigned) ((obj_t*) (pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
-		ASSERT(!strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)); \
-		} while(0);
+		if(strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)) { \
+			dbgprintf("ISOBJ assert failure: invalid object type, expected '%s' " \
+				  "actual '%s'\n", #objType, (((obj_t*)pObj)->pObjInfo->pszID)); \
+			assert(0); /* trigger assertion, messge we already have */ \
+		} \
+		} while(0)
 #else /* non-debug mode, no checks but much faster */
 #	define BEGINobjInstance obj_t objData
 #	define ISOBJ_TYPE_assert(pObj, objType)

@@ -207,7 +207,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 	DEFiRet;
 	assert(ppNew != NULL);
-	ISOBJ_TYPE_assert(pThis, nsd_ptcp_t);
+	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 
 	iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
@@ -294,6 +294,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
         numSocks = 0;   /* num of sockets counter at start of array */
 	for(r = res; r != NULL ; r = r->ai_next) {
                sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+RUNLOG_VAR("%d", sock);
         	if(sock < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
 				dbgprintf("error %d creating tcp listen socket", errno);
@@ -386,10 +387,8 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewNsd = NULL;
 		pNewStrm = NULL;
+		++numSocks;
 	}
-
-        if(res != NULL)
-               freeaddrinfo(res);
 
 	if(numSocks != maxs)
 		dbgprintf("We could initialize %d TCP listen sockets out of %d we received "
@@ -401,9 +400,10 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	}
 
 finalize_it:
+	if(res != NULL)
+		freeaddrinfo(res);
+
 	if(iRet != RS_RET_OK) {
-		if(res != NULL)
-			freeaddrinfo(res);
 		if(pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 		if(pNewNsd != NULL)
@@ -515,6 +515,45 @@ finalize_it:
 }
 
 
+/* get the remote hostname. The returned hostname must be freed by the
+ * caller.
+ * rgerhards, 2008-04-24
+ */
+static rsRetVal
+GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
+{
+	DEFiRet;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+	assert(ppszHName != NULL);
+
+	// TODO: how can the RemHost be empty?
+	CHKmalloc(*ppszHName = (uchar*)strdup(pThis->pRemHostName == NULL ? "" : (char*) pThis->pRemHostName));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* get the remote host's IP address. The returned string must be freed by the
+ * caller.
+ * rgerhards, 2008-04-24
+ */
+static rsRetVal
+GetRemoteIP(nsd_t *pNsd, uchar **ppszIP)
+{
+	DEFiRet;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+	assert(ppszIP != NULL);
+
+	CHKmalloc(*ppszIP = (uchar*)strdup(pThis->pRemHostIP == NULL ? "" : (char*) pThis->pRemHostIP));
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_ptcp)
 CODESTARTobjQueryInterface(nsd_ptcp)
@@ -535,6 +574,8 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->LstnInit = LstnInit;
 	pIf->AcceptConnReq = AcceptConnReq;
 	pIf->Connect = Connect;
+	pIf->GetRemoteHName = GetRemoteHName;
+	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 

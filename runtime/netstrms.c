@@ -100,22 +100,6 @@ finalize_it:
 }
 
 
-/* load the netstrm interface, but only if needed (if we load it always, we get
- * into a circular dependency, because netstrm also needs ourselfs in some cases
- * rgerhards, 2008-04-23
- */
-static inline rsRetVal
-loadNetstrm(void)
-{
-	DEFiRet;
-	if(!netstrm.ifIsLoaded) {
-		CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
-	}
-finalize_it:
-	RETiRet;
-}
-
-
 /* create an instance of a netstrm object. It is initialized with default
  * values. The current driver is used. The caller may set netstrm properties
  * and must call ConstructFinalize().
@@ -126,7 +110,7 @@ CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 	netstrm_t *pStrm = NULL;
 	DEFiRet;
 
-	CHKiRet(loadNetstrm());
+	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	CHKiRet(netstrm.Construct(&pStrm));
 	/* we copy over our driver structure. We could provide a pointer to 
 	 * ourselves, but that costs some performance on each driver invocation.
@@ -173,8 +157,7 @@ CODESTARTObjClassExit(netstrms)
 	/* release objects we no longer need */
 	//objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-	if(netstrm.ifIsLoaded)
-		objRelease(netstrm, LM_NETSTRM_FILENAME);
+	objRelease(netstrm, LM_NETSTRM_FILENAME);
 ENDObjClassExit(netstrms)
 
 

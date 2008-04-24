@@ -24,19 +24,10 @@
  */
 #include "config.h"
 
-#include "rsyslog.h"
-#include <stdio.h>
-#include <stdarg.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
-#include <signal.h>
-#include <ctype.h>
-#include <netdb.h>
-#include <fnmatch.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <sys/select.h>
 
 #include "rsyslog.h"

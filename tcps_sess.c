@@ -119,16 +119,15 @@ finalize_it:
 	RETiRet;
 }
 
-#if 0 // TODO: don't we need this any longer?
 static rsRetVal
-SetSock(tcps_sess_t *pThis, int sock)
+SetStrm(tcps_sess_t *pThis, netstrm_t *pStrm)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	pThis->sock = sock;
+	pThis->pStrm = pStrm;
 	RETiRet;
 }
-#endif
+
 
 static rsRetVal
 SetMsgIdx(tcps_sess_t *pThis, int idx)
@@ -393,7 +392,7 @@ CODESTARTobjQueryInterface(tcps_sess)
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetTcpsrv = SetTcpsrv;
 	pIf->SetHost = SetHost;
-	//pIf->SetSock = SetSock;
+	pIf->SetStrm = SetStrm;
 	pIf->SetMsgIdx = SetMsgIdx;
 finalize_it:
 ENDobjQueryInterface(tcps_sess)

@@ -117,6 +117,7 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 	assert(ppNew != NULL);
 
 	/* accept the new connection */
+RUNLOG_VAR("%p", pThis->pDrvrData);
 	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd));
 	/* construct our object so that we can use it... */
 	CHKiRet(netstrms.CreateStrm(pThis->pNS, ppNew));
@@ -191,6 +192,28 @@ Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 }
 
 
+/* get remote hname - slim wrapper for NSD driver function */
+static rsRetVal
+GetRemoteHName(netstrm_t *pThis, uchar **ppsz)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.GetRemoteHName(pThis->pDrvrData, ppsz);
+	RETiRet;
+}
+
+
+/* get remote IP - slim wrapper for NSD driver function */
+static rsRetVal
+GetRemoteIP(netstrm_t *pThis, uchar **ppsz)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.GetRemoteIP(pThis->pDrvrData, ppsz);
+	RETiRet;
+}
+
+
 /* open a connection to a remote host (server).
  * rgerhards, 2008-03-19
  */
@@ -228,6 +251,8 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->Connect = Connect;
 	pIf->LstnInit = LstnInit;
 	pIf->AcceptConnReq = AcceptConnReq;
+	pIf->GetRemoteHName = GetRemoteHName;
+	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

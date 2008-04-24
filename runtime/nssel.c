@@ -74,7 +74,8 @@ loadDrvr(nssel_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
-	CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
+	//CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
+	CHKiRet(obj.UseObj(__FILE__, "nsdsel_ptcp", "lmnsdsel_ptcp", (void*) &pThis->Drvr));
 finalize_it:
 	RETiRet;
 }
@@ -152,6 +153,7 @@ IsReady(nssel_t *pThis, netstrm_t *pStrm, nsdsel_waitOp_t waitOp, int *pbIsReady
 	ISOBJ_TYPE_assert(pStrm, netstrm);
 	assert(pbIsReady != NULL);
 	assert(piNumReady != NULL);
+	iRet = pThis->Drvr.IsReady(pThis->pDrvrData, pStrm->pDrvrData, waitOp, pbIsReady);
 	RETiRet;
 }
 
