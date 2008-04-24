@@ -276,7 +276,6 @@ create_tcp_socket(tcpsrv_t *pThis)
 	/* TODO: add capability to specify local listen address! */
 	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pThis, addTcpLstn, TCPLstnPort, NULL, pThis->iSessMax));
 
-
 	/* OK, we had success. Now it is also time to
 	 * initialize our connections
 	 */
@@ -312,7 +311,7 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 	netstrm_t *pNewStrm = NULL;
 	int iSess = -1;
 	struct sockaddr_storage addr;
-	uchar *fromHostFQDN;
+	uchar *fromHostFQDN = NULL;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -382,6 +381,14 @@ finalize_it:
 }
 
 
+static void
+RunCancelCleanup(void *arg)
+{
+	nssel_t **ppSel = (nssel_t**) arg;
+
+	if(*ppSel != NULL)
+		nssel.Destruct(ppSel);
+}
 /* This function is called to gather input. */
 static rsRetVal
 Run(tcpsrv_t *pThis)
@@ -397,10 +404,11 @@ Run(tcpsrv_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	/* this is an endless loop - it is terminated when the thread is
-	 * signalled to do so. This, however, is handled by the framework,
-	 * right into the sleep below.
+	/* this is an endless loop - it is terminated by the framework canelling
+	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
+	 * to prevent us from leaking anything. -- rgerharsd, 20080-04-24
 	 */
+	pthread_cleanup_push(RunCancelCleanup, (void*) &pSel);
 	while(1) {
 		CHKiRet(nssel.Construct(&pSel));
 		// TODO: set driver
@@ -466,7 +474,11 @@ Run(tcpsrv_t *pThis)
 			}
 			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}
+		CHKiRet(nssel.Destruct(&pSel));
 	}
+
+	/* note that this point is usually not reached */
+	pthread_cleanup_pop(0); /* remove cleanup handler */
 
 finalize_it: // TODO: think: is it really good to exit the loop?
 	RETiRet;
@@ -514,6 +526,8 @@ CODESTARTobjDestruct(tcpsrv)
 
 	if(pThis->pNS != NULL)
 		netstrms.Destruct(&pThis->pNS);
+	if(pThis->ppLstn != NULL)
+		free(pThis->ppLstn);
 ENDobjDestruct(tcpsrv)
 
 

@@ -89,6 +89,8 @@ ENDobjConstruct(nssel)
 /* destructor for the nssel object */
 BEGINobjDestruct(nssel) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(nssel)
+	if(pThis->pDrvrData != NULL)
+		pThis->Drvr.Destruct(&pThis->pDrvrData);
 ENDobjDestruct(nssel)
 
 

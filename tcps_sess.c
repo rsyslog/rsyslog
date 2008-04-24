@@ -100,6 +100,10 @@ ENDobjDebugPrint(tcps_sess)
 
 
 /* set property functions */
+/* set the hostname. Note that the caller *hands over* the string. That is,
+ * the caller no longer controls it once SetHost() has received it. Most importantly,
+ * the caller must not free it. -- gerhards, 2008-04-24
+ */
 static rsRetVal
 SetHost(tcps_sess_t *pThis, uchar *pszHost)
 {
@@ -109,11 +113,9 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 
 	if(pThis->fromHost != NULL) {
 		free(pThis->fromHost);
-		pThis->fromHost = NULL;
 	}
 	
-	if((pThis->fromHost = strdup((char*)pszHost)) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	pThis->fromHost = pszHost;
 
 finalize_it:
 	RETiRet;

@@ -259,7 +259,6 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
-	nsd_ptcp_t **arrLstn = NULL;
 	netstrm_t *pNewStrm = NULL;
 	nsd_t *pNewNsd = NULL;
         int error, maxs, on = 1;
@@ -289,7 +288,6 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
         /* Count max number of sockets we may open */
         for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
 		/* EMPTY */;
-        CHKmalloc(arrLstn = (nsd_ptcp_t**) malloc((maxs+1) * sizeof(nsd_ptcp_t*)));
 
         numSocks = 0;   /* num of sockets counter at start of array */
 	for(r = res; r != NULL ; r = r->ai_next) {
