@@ -73,6 +73,7 @@ typedef struct nsd_gtls_s nsd_gtls_t;
 typedef struct nsd_gsspi_s nsd_gsspi_t;
 typedef struct nsd_nss_s nsd_nss_t;
 typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
+typedef struct nsdsel_gtls_s nsdsel_gtls_t;
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
 typedef struct msg msg_t;

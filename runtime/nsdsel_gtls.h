@@ -1,6 +1,6 @@
-/* An implementation of the nsd select interface for plain tcp sockets.
+/* An implementation of the nsd select interface for GnuTLS.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -21,27 +21,25 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 
-#ifndef INCLUDED_NSDSEL_PTCP_H
-#define INCLUDED_NSDSEL_PTCP_H
+#ifndef INCLUDED_NSDSEL_GTLS_H
+#define INCLUDED_NSDSEL_GTLS_H
 
 #include "nsd.h"
-typedef nsdsel_if_t nsdsel_ptcp_if_t; /* we just *implement* this interface */
+typedef nsdsel_if_t nsdsel_gtls_if_t; /* we just *implement* this interface */
 
-/* the nsdsel_ptcp object */
-struct nsdsel_ptcp_s {
+/* the nsdsel_gtls object */
+struct nsdsel_gtls_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	int maxfds;
-	fd_set readfds;
-	fd_set writefds;
+	nsdsel_t *pTcp;		/* our aggregated ptcp sel handler (which does almost everything) */
 };
 
 /* interface is defined in nsd.h, we just implement it! */
-#define nsdsel_ptcpCURR_IF_VERSION nsdCURR_IF_VERSION
+#define nsdsel_gtlsCURR_IF_VERSION nsdCURR_IF_VERSION
 
 /* prototypes */
-PROTOTYPEObj(nsdsel_ptcp);
+PROTOTYPEObj(nsdsel_gtls);
 
 /* the name of our library binary */
-#define LM_NSDSEL_PTCP_FILENAME "lmnsdsel_ptcp"
+#define LM_NSDSEL_GTLS_FILENAME "lmnsdsel_gtls"
 
-#endif /* #ifndef INCLUDED_NSDSEL_PTCP_H */
+#endif /* #ifndef INCLUDED_NSDSEL_GTLS_H */

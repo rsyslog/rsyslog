@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  * 
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007, 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -23,27 +23,13 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
-
-#include "rsyslog.h"
-#include <stdio.h>
-#include <stdarg.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <errno.h>
-#include <string.h>
-#include <signal.h>
-#include <ctype.h>
-#include <netdb.h>
-#include <fnmatch.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <gnutls/gnutls.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
 #include "module-template.h"
-#include "parse.h"
-#include "srUtils.h"
 #include "obj.h"
 #include "errmsg.h"
 #include "nsd_ptcp.h"
@@ -202,7 +188,10 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 
 	if(pThis->iMode == 0) {
 		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf));
+		FINALIZE;
 	}
+
+	/* in TLS mode now */
 
 finalize_it:
 	RETiRet;
@@ -231,7 +220,6 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	/* in TLS mode now */
 	while(1) { /* loop broken inside */
 		iSent = gnutls_record_send(pThis->sess, pBuf, *pLenBuf);
-RUNLOG_VAR("%d", iSent);
 		if(iSent >= 0) {
 			*pLenBuf = iSent;
 			break;
@@ -255,7 +243,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
-static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };
+	static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);

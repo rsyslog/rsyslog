@@ -134,5 +134,12 @@ lmnsd_gtls_la_SOURCES = nsd_gtls.c nsd_gtls.h
 lmnsd_gtls_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags) $(gnutls_cflags)
 lmnsd_gtls_la_LDFLAGS = -module -avoid-version
 lmnsd_gtls_la_LIBADD = $(gnutls_libs)
+#
+# select interface for gtls driver
+pkglib_LTLIBRARIES += lmnsdsel_gtls.la
+lmnsdsel_gtls_la_SOURCES = nsdsel_gtls.c nsdsel_gtls.h
+lmnsdsel_gtls_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnsdsel_gtls_la_LDFLAGS = -module -avoid-version
+lmnsdsel_gtls_la_LIBADD =
 endif
 
