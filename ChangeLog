@@ -63,7 +63,7 @@ Version 3.17.0 (rgerhards), 2008-04-08
 Plus a number of bugfixes that were applied to v3-stable and beta
 branches (not mentioned here in detail).
 ---------------------------------------------------------------------------
-Version 3.16.0 (rgerhards), 2008-04-??
+Version 3.16.0 (rgerhards), 2008-04-24
 - new v3-stable (3.16.x) based on beta 3.15.x (RELP support)
 - bugfix: omsnmp had a too-small sized buffer for hostname+port. This
   could not lead to a segfault, as snprintf() was used, but could cause
