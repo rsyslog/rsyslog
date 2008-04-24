@@ -174,17 +174,10 @@ Abort(nsd_t *pNsd)
  * gerhards, 2008-03-17
  */
 static rsRetVal
-LstnInit(nsd_t *pNsd, uchar *pLstnPort)
+LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	assert(pLstnPort != NULL);
-
-	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.LstnInit(pThis->pTcp, pLstnPort));
-	}
 
 finalize_it:
 	RETiRet;

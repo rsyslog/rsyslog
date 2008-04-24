@@ -69,13 +69,10 @@ typedef struct netstrm_s netstrm_t;
 typedef struct nssel_s nssel_t;
 typedef enum nsdsel_waitOp_e nsdsel_waitOp_t;
 typedef struct nsd_ptcp_s nsd_ptcp_t;
-<<<<<<< HEAD:runtime/rsyslog.h
 typedef struct nsd_gtls_s nsd_gtls_t;
 typedef struct nsd_gsspi_s nsd_gsspi_t;
 typedef struct nsd_nss_s nsd_nss_t;
-=======
 typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
->>>>>>> a7040a9623e228043209da897dbf30b9ab02d771:runtime/rsyslog.h
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
 typedef struct msg msg_t;

@@ -586,6 +586,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->Construct = (rsRetVal(*)(nsd_t**)) nsd_ptcpConstruct;
 	pIf->Destruct = (rsRetVal(*)(nsd_t**)) nsd_ptcpDestruct;
 	pIf->Abort = Abort;
+	pIf->GetSock = GetSock;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->LstnInit = LstnInit;
