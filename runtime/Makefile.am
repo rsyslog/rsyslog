@@ -81,7 +81,7 @@ lmregexp_la_LIBADD =
 endif
 
 if ENABLE_INET
-pkglib_LTLIBRARIES += lmnet.la lmnetstrm.la
+pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la lmnetstrm.la lmnssel.la
 #
 # network support
 # 
@@ -90,18 +90,39 @@ lmnet_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
 lmnet_la_LDFLAGS = -module -avoid-version
 lmnet_la_LIBADD =
 
-# network streams
+# network stream master class and stream factory
+lmnetstrms_la_SOURCES = netstrms.c netstrms.h
+lmnetstrms_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnetstrms_la_LDFLAGS = -module -avoid-version
+lmnetstrms_la_LIBADD =
+
+# individual network streams
 lmnetstrm_la_SOURCES = netstrm.c netstrm.h
 lmnetstrm_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
 lmnetstrm_la_LDFLAGS = -module -avoid-version
 lmnetstrm_la_LIBADD =
 
-# plain tcp netstream driver
+# network stream select support (a helper class)
+lmnssel_la_SOURCES = nssel.c nssel.h
+lmnssel_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnssel_la_LDFLAGS = -module -avoid-version
+lmnssel_la_LIBADD =
+
+# netstream drivers
+
+# plain tcp driver - main driver
 pkglib_LTLIBRARIES += lmnsd_ptcp.la
 lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h
 lmnsd_ptcp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
 lmnsd_ptcp_la_LDFLAGS = -module -avoid-version
 lmnsd_ptcp_la_LIBADD =
+
+# select interface for ptcp driver
+pkglib_LTLIBRARIES += lmnsdsel_ptcp.la
+lmnsdsel_ptcp_la_SOURCES = nsdsel_ptcp.c nsdsel_ptcp.h
+lmnsdsel_ptcp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
+lmnsdsel_ptcp_la_LDFLAGS = -module -avoid-version
+lmnsdsel_ptcp_la_LIBADD =
 endif # if ENABLE_INET
 
 #

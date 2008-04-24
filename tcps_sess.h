@@ -32,8 +32,8 @@ struct tcpsrv_s;
 typedef struct tcps_sess_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	struct tcpsrv_s *pSrv;	/* pointer back to my server (e.g. for callbacks) */
-	int sock;
-	int iMsg; /* index of next char to store in msg */
+	netstrm_t *pStrm;
+	int iMsg;		 /* index of next char to store in msg */
 	int bAtStrtOfFram;	/* are we at the very beginning of a new frame? */
 	enum {
 		eAtStrtFram,
@@ -43,7 +43,7 @@ typedef struct tcps_sess_s {
 	int iOctetsRemain;	/* Number of Octets remaining in message */
 	TCPFRAMINGMODE eFraming;
 	char msg[MAXLINE+1];
-	char *fromHost;
+	uchar *fromHost;
 	void *pUsr;	/* a user-pointer */
 } tcps_sess_t;
 
@@ -61,7 +61,7 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetTcpsrv)(tcps_sess_t *pThis, struct tcpsrv_s *pSrv);
 	rsRetVal (*SetUsrP)(tcps_sess_t*, void*);
 	rsRetVal (*SetHost)(tcps_sess_t *pThis, uchar*);
-	rsRetVal (*SetSock)(tcps_sess_t *pThis, int);
+	rsRetVal (*SetStrm)(tcps_sess_t *pThis, netstrm_t*);
 	rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);
 ENDinterface(tcps_sess)
 #define tcps_sessCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */

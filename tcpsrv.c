@@ -63,12 +63,16 @@
 #include "tcpsrv.h"
 #include "obj.h"
 #include "glbl.h"
+#include "netstrms.h"
+#include "netstrm.h"
+#include "nssel.h"
 #include "errmsg.h"
 
 MODULE_TYPE_LIB
 
 /* defines */
 #define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
+#define TCPLSTN_MAX_DEFAULT 20 /* default for nbr of listeners */
 
 /* static data */
 DEFobjStaticHelpers
@@ -77,30 +81,9 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
-
-
-
-/* code to free all sockets within a socket table.
- * A socket table is a descriptor table where the zero
- * element has the count of elements. This is used for
- * listening sockets. The socket table itself is also
- * freed.
- * A POINTER to this structure must be provided, thus
- * double indirection!
- * rgerhards, 2007-06-28
- */
-static void freeAllSockets(int **socks)
-{
-	assert(socks != NULL);
-	assert(*socks != NULL);
-	while(**socks) {
-		dbgprintf("Closing socket %d.\n", (*socks)[**socks]);
-		close((*socks)[**socks]);
-		(**socks)--;
-	}
-	free(*socks);
-	*socks = NULL;
-}
+DEFobjCurrIf(netstrms)
+DEFobjCurrIf(netstrm)
+DEFobjCurrIf(nssel)
 
 
 /* configure TCP listener settings. This is called during command
@@ -199,9 +182,10 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 	register int i;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i)
+	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i) {
 		if(pThis->pSessions[i] != NULL)
 			break;
+	}
 
 	return((i < pThis->iSessMax) ? i : -1);
 }
@@ -215,17 +199,17 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
  */
 static void deinit_tcp_listener(tcpsrv_t *pThis)
 {
-	int iTCPSess;
+	int i;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pThis->pSessions != NULL);
 
 	/* close all TCP connections! */
-	iTCPSess = TCPSessGetNxtSess(pThis, -1);
-	while(iTCPSess != -1) {
-		tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
+	i = TCPSessGetNxtSess(pThis, -1);
+	while(i != -1) {
+		tcps_sess.Destruct(&pThis->pSessions[i]);
 		/* now get next... */
-		iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
+		i = TCPSessGetNxtSess(pThis, i);
 	}
 	
 	/* we are done with the session table - so get rid of it...
@@ -236,33 +220,50 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 	if(pThis->TCPLstnPort != NULL)
 		free(pThis->TCPLstnPort);
 
-	/* finally close the listen sockets themselfs */
-	freeAllSockets(&pThis->pSocksLstn);
+	/* finally close our listen streams */
+	for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+		netstrm.Destruct(pThis->ppLstn + i);
+	}
 }
 
 
-/* Initialize TCP sockets (for listener)
- * This function returns either NULL (which means it failed) or 
- * a pointer to an array of file descriptiors. If the pointer is
- * returned, the zeroest element [0] contains the count of valid
- * descriptors. The descriptors themself follow in range
- * [1] ... [num-descriptors]. It is guaranteed that each of these
- * descriptors is valid, at least when this function returns.
- * Please note that technically the array may be larger than the number
- * of valid pointers stored in it. The memory overhead is minimal, so
- * we do not bother to re-allocate an array of the exact size. Logically,
- * the array still contains the exactly correct number of descriptors.
+/* add a listen socket to our listen socket array. This is a callback
+ * invoked from the netstrm class. -- rgerhards, 2008-04-23
  */
-static int *create_tcp_socket(tcpsrv_t *pThis)
+static rsRetVal
+addTcpLstn(void *pUsr, netstrm_t *pLstn)
 {
-        struct addrinfo hints, *res, *r;
-        int error, maxs, *s, *socks, on = 1;
-	char *TCPLstnPort;
+	tcpsrv_t *pThis = (tcpsrv_t*) pUsr;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pLstn, netstrm);
+
+	if(pThis->iLstnMax >= TCPLSTN_MAX_DEFAULT)
+		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
+
+RUNLOG_VAR("%d", pThis->iLstnMax);
+	pThis->ppLstn[pThis->iLstnMax] = pLstn;
+	++pThis->iLstnMax;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Initialize TCP sockets (for listener) and listens on them */
+static rsRetVal
+create_tcp_socket(tcpsrv_t *pThis)
+{
+	DEFiRet;
+	uchar *TCPLstnPort;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	if(!strcmp(pThis->TCPLstnPort, "0"))
-		TCPLstnPort = "514";
+	if(!strcmp((char*)pThis->TCPLstnPort, "0"))
+		TCPLstnPort = (uchar*)"514";
+		// TODO: we need to enable the caller to set a port (based on who is
+		// using this, 514 may be totally unsuitable... --- rgerhards, 2008-04-22
 		/* use default - we can not do service db update, because there is
 		 * no IANA-assignment for syslog/tcp. In the long term, we might
 		 * re-use RFC 3195 port of 601, but that would probably break to
@@ -270,121 +271,10 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		 * rgerhards, 2007-06-28
 		 */
 	else
-		TCPLstnPort = pThis->TCPLstnPort;
-	dbgprintf("creating tcp socket on port %s\n", TCPLstnPort);
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-        hints.ai_family = glbl.GetDefPFFamily();
-        hints.ai_socktype = SOCK_STREAM;
+		TCPLstnPort = (uchar*)pThis->TCPLstnPort;
 
-        error = getaddrinfo(NULL, TCPLstnPort, &hints, &res);
-        if(error) {
-               errmsg.LogError(NO_ERRCODE, "%s", gai_strerror(error));
-	       return NULL;
-	}
-
-        /* Count max number of sockets we may open */
-        for (maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
-		/* EMPTY */;
-        socks = malloc((maxs+1) * sizeof(int));
-        if (socks == NULL) {
-               errmsg.LogError(NO_ERRCODE, "couldn't allocate memory for TCP listen sockets, suspending TCP message reception.");
-               freeaddrinfo(res);
-               return NULL;
-        }
-
-        *socks = 0;   /* num of sockets counter at start of array */
-        s = socks + 1;
-	for (r = res; r != NULL ; r = r->ai_next) {
-               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-        	if (*s < 0) {
-			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
-				errmsg.LogError(NO_ERRCODE, "create_tcp_socket(), socket");
-				/* it is debatable if PF_INET with EAFNOSUPPORT should
-				 * also be ignored...
-				 */
-                        continue;
-                }
-
-#ifdef IPV6_V6ONLY
-                if (r->ai_family == AF_INET6) {
-                	int iOn = 1;
-			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
-			      (char *)&iOn, sizeof (iOn)) < 0) {
-			errmsg.LogError(NO_ERRCODE, "TCP setsockopt");
-			close(*s);
-			*s = -1;
-			continue;
-                	}
-                }
-#endif
-       		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
-			       (char *) &on, sizeof(on)) < 0 ) {
-			errmsg.LogError(NO_ERRCODE, "TCP setsockopt(REUSEADDR)");
-                        close(*s);
-			*s = -1;
-			continue;
-		}
-
-		/* We need to enable BSD compatibility. Otherwise an attacker
-		 * could flood our log files by sending us tons of ICMP errors.
-		 */
-#ifndef OS_BSD	
-		if(net.should_use_so_bsdcompat()) {
-			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
-					(char *) &on, sizeof(on)) < 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
-                                close(*s);
-				*s = -1;
-				continue;
-			}
-		}
-#endif
-
-	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
-#ifndef IPV6_V6ONLY
-		     && (errno != EADDRINUSE)
-#endif
-	           ) {
-                        errmsg.LogError(NO_ERRCODE, "TCP bind");
-                	close(*s);
-			*s = -1;
-                        continue;
-                }
-
-		if( listen(*s,pThis->iSessMax / 10 + 5) < 0) {
-			/* If the listen fails, it most probably fails because we ask
-			 * for a too-large backlog. So in this case we first set back
-			 * to a fixed, reasonable, limit that should work. Only if
-			 * that fails, too, we give up.
-			 */
-			errmsg.LogError(NO_ERRCODE, "listen with a backlog of %d failed - retrying with default of 32.",
-				    pThis->iSessMax / 10 + 5);
-			if(listen(*s, 32) < 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP listen, suspending tcp inet");
-	                	close(*s);
-				*s = -1;
-               		        continue;
-			}
-		}
-
-		(*socks)++;
-		s++;
-	}
-
-        if(res != NULL)
-               freeaddrinfo(res);
-
-	if(Debug && *socks != maxs)
-		dbgprintf("We could initialize %d TCP listen sockets out of %d we received "
-		 	"- this may or may not be an error indication.\n", *socks, maxs);
-
-        if(*socks == 0) {
-		errmsg.LogError(NO_ERRCODE, "No TCP listen socket could successfully be initialized, "
-			 "message reception via TCP disabled.\n");
-        	free(socks);
-		return(NULL);
-	}
+	/* TODO: add capability to specify local listen address! */
+	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pThis, addTcpLstn, TCPLstnPort, NULL, pThis->iSessMax));
 
 	/* OK, we had success. Now it is also time to
 	 * initialize our connections
@@ -395,11 +285,11 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
 		 * we have assigned so far, because we can not really use it...
 		 */
 		errmsg.LogError(NO_ERRCODE, "Could not initialize TCP session table, suspending TCP message reception.");
-		freeAllSockets(&socks); /* prevent a socket leak */
-		return(NULL);
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	return(socks);
+finalize_it:
+	RETiRet;
 }
 
 
@@ -414,34 +304,25 @@ static int *create_tcp_socket(tcpsrv_t *pThis)
  * rgerhards, 2008-03-02
  */
 static rsRetVal
-SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
+SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 {
 	DEFiRet;
 	tcps_sess_t *pSess;
-	int newConn;
+	netstrm_t *pNewStrm = NULL;
 	int iSess = -1;
 	struct sockaddr_storage addr;
-	socklen_t addrlen = sizeof(struct sockaddr_storage);
-	uchar fromHost[NI_MAXHOST];
-	uchar fromHostFQDN[NI_MAXHOST];
+	uchar *fromHostFQDN = NULL;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	newConn = accept(fd, (struct sockaddr*) &addr, &addrlen);
-	if (newConn < 0) {
-		errmsg.LogError(NO_ERRCODE, "tcp accept, ignoring error and connection request");
-		ABORT_FINALIZE(RS_RET_ERR); // TODO: better error code
-		//was: return -1;
-	}
+	CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm));
 
 	/* Add to session list */
 	iSess = TCPSessTblFindFreeSpot(pThis);
 	if(iSess == -1) {
 		errno = 0;
 		errmsg.LogError(NO_ERRCODE, "too many tcp sessions - dropping incoming request");
-		close(newConn);
-		ABORT_FINALIZE(RS_RET_ERR); // TODO: better error code
-		//was: return -1;
+		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	} else {
 		/* we found a free spot and can construct our session object */
 		CHKiRet(tcps_sess.Construct(&pSess));
@@ -450,14 +331,8 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 
 	/* OK, we have a "good" index... */
 	/* get the host name */
-	if(net.cvthname(&addr, fromHost, fromHostFQDN) != RS_RET_OK) {
-		/* we seem to have something malicous - at least we
-		 * are now told to discard the connection request.
-		 * Error message has been generated by cvthname.
-		 */
-		close (newConn);
-		ABORT_FINALIZE(RS_RET_ERR); // TODO: better error code
-	}
+	CHKiRet(netstrm.GetRemoteHName(pStrm, &fromHostFQDN));
+	/* TODO: check if we need to strip the domain name here -- rgerhards, 2008-04-24 */
 
 	/* Here we check if a host is permitted to send us
 	 * syslog messages. If it isn't, we do not further
@@ -466,21 +341,20 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 	 * rgerhards, 2005-09-26
 	 */
 	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
-		dbgprintf("%s is not an allowed sender\n", (char *) fromHostFQDN);
+		dbgprintf("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "TCP message from disallowed sender %s discarded",
-				   (char*)fromHost);
+			errmsg.LogError(NO_ERRCODE, "TCP message from disallowed sender %s discarded", fromHostFQDN);
 		}
-		close(newConn);
 		ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
 	}
 
 	/* OK, we have an allowed sender, so let's continue, what
 	 * means we can finally fill in the session object.
 	 */
-	CHKiRet(tcps_sess.SetHost(pSess, fromHost));
-	CHKiRet(tcps_sess.SetSock(pSess, newConn));
+	CHKiRet(tcps_sess.SetHost(pSess, fromHostFQDN));
+	CHKiRet(tcps_sess.SetStrm(pSess, pNewStrm));
+	pNewStrm = NULL; /* prevent it from being freed in error handler, now done in tcps_sess! */
 	CHKiRet(tcps_sess.SetMsgIdx(pSess, 0));
 	CHKiRet(tcps_sess.ConstructFinalize(pSess));
 
@@ -499,79 +373,69 @@ finalize_it:
 				tcps_sess.Destruct(&pThis->pSessions[iSess]);
 		}
 		iSess = -1; // TODO: change this to be fully iRet compliant ;)
+		if(pNewStrm != NULL)
+			netstrm.Destruct(&pNewStrm);
 	}
 
 	RETiRet;
 }
 
 
-/* This function is called to gather input.
- */
+static void
+RunCancelCleanup(void *arg)
+{
+	nssel_t **ppSel = (nssel_t**) arg;
+
+	if(*ppSel != NULL)
+		nssel.Destruct(ppSel);
+}
+/* This function is called to gather input. */
 static rsRetVal
 Run(tcpsrv_t *pThis)
 {
 	DEFiRet;
-	int maxfds;
 	int nfds;
 	int i;
 	int iTCPSess;
-	fd_set readfds;
+	int bIsReady;
 	tcps_sess_t *pNewSess;
+	nssel_t *pSel;
+	int state;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-	/* this is an endless loop - it is terminated when the thread is
-	 * signalled to do so. This, however, is handled by the framework,
-	 * right into the sleep below.
+	/* this is an endless loop - it is terminated by the framework canelling
+	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
+	 * to prevent us from leaking anything. -- rgerharsd, 20080-04-24
 	 */
+	pthread_cleanup_push(RunCancelCleanup, (void*) &pSel);
 	while(1) {
-	        maxfds = 0;
-	        FD_ZERO (&readfds);
+		CHKiRet(nssel.Construct(&pSel));
+		// TODO: set driver
+		CHKiRet(nssel.ConstructFinalize(pSel));
 
-		/* Add the TCP listen sockets to the list of read descriptors.
-	    	 */
-		if(pThis->pSocksLstn != NULL && *pThis->pSocksLstn) {
-			for (i = 0; i < *pThis->pSocksLstn; i++) {
-				/* The if() below is theoretically not needed, but I leave it in
-				 * so that a socket may become unsuable during execution. That
-				 * feature is not yet supported by the current code base.
-				 */
-				if (pThis->pSocksLstn[i+1] != -1) {
-					if(Debug)
-						net.debugListenInfo(pThis->pSocksLstn[i+1], "TCP");
-					FD_SET(pThis->pSocksLstn[i+1], &readfds);
-					if(pThis->pSocksLstn[i+1]>maxfds) maxfds=pThis->pSocksLstn[i+1];
-				}
-			}
-			/* do the sessions */
-			iTCPSess = TCPSessGetNxtSess(pThis, -1);
-			while(iTCPSess != -1) {
-				int fdSess;
-				fdSess = pThis->pSessions[iTCPSess]->sock; // TODO: NOT CLEAN!, use method
-				dbgprintf("Adding TCP Session %d\n", fdSess);
-				FD_SET(fdSess, &readfds);
-				if (fdSess>maxfds) maxfds=fdSess;
-				/* now get next... */
-				iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
-			}
+		/* Add the TCP listen sockets to the list of read descriptors. */
+		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
 		}
 
-		if(Debug) {
-			// TODO: name in dbgprintf!
-			dbgprintf("--------<TCPSRV> calling select, active file descriptors (max %d): ", maxfds);
-			for (nfds = 0; nfds <= maxfds; ++nfds)
-				if ( FD_ISSET(nfds, &readfds) )
-					dbgprintf("%d ", nfds);
-			dbgprintf("\n");
+		/* do the sessions */
+		iTCPSess = TCPSessGetNxtSess(pThis, -1);
+		while(iTCPSess != -1) {
+			/* TODO: access to pNsd is NOT really CLEAN, use method... */
+			CHKiRet(nssel.Add(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD));
+			/* now get next... */
+			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}
 
 		/* wait for io to become ready */
-		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
+		CHKiRet(nssel.Wait(pSel, &nfds));
 
-		for (i = 0; i < *pThis->pSocksLstn; i++) {
-			if (FD_ISSET(pThis->pSocksLstn[i+1], &readfds)) {
-				dbgprintf("New connect on TCP inetd socket: #%d\n", pThis->pSocksLstn[i+1]);
-				SessAccept(pThis, &pNewSess, pThis->pSocksLstn[i+1]);
+		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
+			if(bIsReady) {
+				dbgprintf("New connect on NSD %p.\n", pThis->ppLstn[i]);
+				SessAccept(pThis, &pNewSess, pThis->ppLstn[i]);
 				--nfds; /* indicate we have processed one */
 			}
 		}
@@ -579,12 +443,10 @@ Run(tcpsrv_t *pThis)
 		/* now check the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
 		while(nfds && iTCPSess != -1) {
-			int fdSess;
-			int state;
-			fdSess = pThis->pSessions[iTCPSess]->sock; // TODO: not clean, use method
-			if(FD_ISSET(fdSess, &readfds)) {
+			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
+			if(bIsReady) {
 				char buf[MAXLINE];
-				dbgprintf("tcp session socket with new data: #%d\n", fdSess);
+				dbgprintf("netstream %p with new data\n", pThis->pSessions[iTCPSess]->pStrm);
 
 				/* Receive message */
 				state = pThis->pRcvData(pThis->pSessions[iTCPSess], buf, sizeof(buf));
@@ -592,7 +454,8 @@ Run(tcpsrv_t *pThis)
 					pThis->pOnRegularClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else if(state == -1) {
-					errmsg.LogError(NO_ERRCODE, "TCP session %d will be closed, error ignored\n", fdSess);
+					errmsg.LogError(NO_ERRCODE, "netstream session %p will be closed, error ignored\n",
+							pThis->pSessions[iTCPSess]->pStrm);
 					pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else {
@@ -611,29 +474,44 @@ Run(tcpsrv_t *pThis)
 			}
 			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}
+		CHKiRet(nssel.Destruct(&pSel));
 	}
 
+	/* note that this point is usually not reached */
+	pthread_cleanup_pop(0); /* remove cleanup handler */
+
+finalize_it: // TODO: think: is it really good to exit the loop?
 	RETiRet;
 }
 
 
-/* Standard-Constructor
- */
+/* Standard-Constructor */
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
-	pThis->pSocksLstn = NULL;
-	pThis->iSessMax = 200; /* TODO: useful default ;) */
+	pThis->iSessMax = TCPSESS_MAX_DEFAULT; /* TODO: useful default ;) */
 ENDobjConstruct(tcpsrv)
 
 
-/* ConstructionFinalizer
- */
+/* ConstructionFinalizer */
 static rsRetVal
-tcpsrvConstructFinalize(tcpsrv_t __attribute__((unused)) *pThis)
+tcpsrvConstructFinalize(tcpsrv_t *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	pThis->pSocksLstn = pThis->OpenLstnSocks(pThis);
 
+	/* prepare network stream subsystem */
+	CHKiRet(netstrms.Construct(&pThis->pNS));
+	// TODO: set driver!
+	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
+
+	/* set up listeners */
+	CHKmalloc(pThis->ppLstn = calloc(TCPLSTN_MAX_DEFAULT, sizeof(netstrm_t*)));
+	iRet = pThis->OpenLstnSocks(pThis);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis->pNS != NULL)
+			netstrms.Destruct(&pThis->pNS);
+	}
 	RETiRet;
 }
 
@@ -645,6 +523,11 @@ CODESTARTobjDestruct(tcpsrv)
 		pThis->OnDestruct(pThis->pUsr);
 
 	deinit_tcp_listener(pThis);
+
+	if(pThis->pNS != NULL)
+		netstrms.Destruct(&pThis->pNS);
+	if(pThis->ppLstn != NULL)
+		free(pThis->ppLstn);
 ENDobjDestruct(tcpsrv)
 
 
@@ -727,7 +610,7 @@ SetCBOnErrClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
 }
 
 static rsRetVal
-SetCBOpenLstnSocks(tcpsrv_t *pThis, int* (*pCB)(tcpsrv_t*))
+SetCBOpenLstnSocks(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*))
 {
 	DEFiRet;
 	pThis->OpenLstnSocks = pCB;
@@ -793,6 +676,9 @@ CODESTARTObjClassExit(tcpsrv)
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(nssel, LM_NSSEL_FILENAME);
+	objRelease(netstrm, LM_NETSTRM_FILENAME);
+	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
 ENDObjClassExit(tcpsrv)
 
@@ -805,6 +691,9 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
+	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
+	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
+	CHKiRet(objUse(nssel, LM_NSSEL_FILENAME));
 	CHKiRet(objUse(tcps_sess, DONT_LOAD_LIB));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

@@ -51,6 +51,7 @@
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"
+#include "netstrms.h"
 #include "netstrm.h"
 #include "omfwd.h"
 #include "template.h"
@@ -69,12 +70,14 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
+DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(tcpclt)
 
 typedef struct _instanceData {
-	char	*f_hname;
+	netstrms_t *pNS; /* netstream subsystem */
 	netstrm_t *pNetstrm; /* our output netstream */
+	char	*f_hname;
 	int *pSockArray;		/* sockets to use for UDP */
 	int bIsConnected;  /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
 	struct addrinfo *f_addr;
@@ -252,16 +255,24 @@ static rsRetVal TCPSendInit(void *pvData)
 
 	assert(pData != NULL);
 	if(pData->pNetstrm == NULL) {
-		CHKiRet(netstrm.Construct(&pData->pNetstrm));
+		CHKiRet(netstrms.Construct(&pData->pNS));
 		/* here we may set another netstream driver (e.g. to do TLS) */
+		CHKiRet(netstrms.ConstructFinalize(pData->pNS));
+
+		/* now create the actual stream and connect to the server */
+		CHKiRet(netstrms.CreateStrm(pData->pNS, &pData->pNetstrm));
 		CHKiRet(netstrm.ConstructFinalize(pData->pNetstrm));
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
 			(uchar*)pData->port, (uchar*)pData->f_hname));
 	}
 
 finalize_it:
-	if(iRet != RS_RET_OK)
-		netstrm.Destruct(&pData->pNetstrm);
+	if(iRet != RS_RET_OK) {
+		if(pData->pNetstrm != NULL)
+			netstrm.Destruct(&pData->pNetstrm);
+		if(pData->pNS != NULL)
+			netstrms.Destruct(&pData->pNS);
+	}
 
 	RETiRet;
 }
@@ -394,6 +405,8 @@ static rsRetVal
 loadTCPSupport(void)
 {
 	DEFiRet;
+	if(!netstrms.ifIsLoaded)
+		CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 	if(!netstrm.ifIsLoaded)
 		CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	if(!tcpclt.ifIsLoaded)
@@ -564,6 +577,8 @@ CODESTARTmodExit
 	objRelease(net, LM_NET_FILENAME);
 	if(netstrm.ifIsLoaded)
 		objRelease(netstrm, LM_NETSTRM_FILENAME);
+	if(netstrms.ifIsLoaded)
+		objRelease(netstrms, LM_NETSTRMS_FILENAME);
 	if(!tcpclt.ifIsLoaded)
 		objRelease(tcpclt, LM_TCPCLT_FILENAME);
 

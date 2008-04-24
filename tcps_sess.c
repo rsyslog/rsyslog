@@ -27,22 +27,12 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
-#include <string.h>
 #include <errno.h>
-#include <unistd.h>
-#include <stdarg.h>
 #include <ctype.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#if HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
+
 #include "rsyslog.h"
 #include "dirty.h"
 #include "module-template.h"
@@ -51,11 +41,13 @@
 #include "tcps_sess.h"
 #include "obj.h"
 #include "errmsg.h"
+#include "netstrm.h"
 
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(netstrm)
 
 /* forward definitions */
 static rsRetVal Close(tcps_sess_t *pThis);
@@ -64,7 +56,6 @@ static rsRetVal Close(tcps_sess_t *pThis);
 /* Standard-Constructor
  */
 BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END macro! */
-		pThis->sock = -1; /* no sock */
 		pThis->iMsg = 0; /* just make sure... */
 		pThis->bAtStrtOfFram = 1; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
@@ -90,8 +81,8 @@ finalize_it:
 /* destructor for the tcps_sess object */
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcps_sess)
-	if(pThis->sock != -1)
-		Close(pThis);
+	if(pThis->pStrm != NULL)
+		netstrm.Destruct(&pThis->pStrm);
 
 	if(pThis->pSrv->pOnSessDestruct != NULL) {
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
@@ -99,7 +90,6 @@ CODESTARTobjDestruct(tcps_sess)
 	/* now destruct our own properties */
 	if(pThis->fromHost != NULL)
 		free(pThis->fromHost);
-	close(pThis->sock);
 ENDobjDestruct(tcps_sess)
 
 
@@ -110,6 +100,10 @@ ENDobjDebugPrint(tcps_sess)
 
 
 /* set property functions */
+/* set the hostname. Note that the caller *hands over* the string. That is,
+ * the caller no longer controls it once SetHost() has received it. Most importantly,
+ * the caller must not free it. -- gerhards, 2008-04-24
+ */
 static rsRetVal
 SetHost(tcps_sess_t *pThis, uchar *pszHost)
 {
@@ -119,24 +113,23 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 
 	if(pThis->fromHost != NULL) {
 		free(pThis->fromHost);
-		pThis->fromHost = NULL;
 	}
 	
-	if((pThis->fromHost = strdup((char*)pszHost)) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	pThis->fromHost = pszHost;
 
 finalize_it:
 	RETiRet;
 }
 
 static rsRetVal
-SetSock(tcps_sess_t *pThis, int sock)
+SetStrm(tcps_sess_t *pThis, netstrm_t *pStrm)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	pThis->sock = sock;
+	pThis->pStrm = pStrm;
 	RETiRet;
 }
+
 
 static rsRetVal
 SetMsgIdx(tcps_sess_t *pThis, int idx)
@@ -200,9 +193,8 @@ PrepareClose(tcps_sess_t *pThis)
 		/* In this case, we have an invalid frame count and thus
 		 * generate an error message and discard the frame.
 		 */
-		errmsg.LogError(NO_ERRCODE, "Incomplete frame at end of stream in session %d - "
-			    "ignoring extra data (a message may be lost).\n",
-			    pThis->sock);
+		errmsg.LogError(NO_ERRCODE, "Incomplete frame at end of stream in session %p - "
+			    "ignoring extra data (a message may be lost).\n", pThis->pStrm);
 		/* nothing more to do */
 	} else { /* here, we have traditional framing. Missing LF at the end
 		 * of message may occur. As such, we process the message in
@@ -228,8 +220,7 @@ Close(tcps_sess_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
-	close(pThis->sock);
-	pThis->sock = -1;
+	netstrm.Destruct(&pThis->pStrm);
 	free(pThis->fromHost);
 	pThis->fromHost = NULL; /* not really needed, but... */
 
@@ -403,7 +394,7 @@ CODESTARTobjQueryInterface(tcps_sess)
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetTcpsrv = SetTcpsrv;
 	pIf->SetHost = SetHost;
-	pIf->SetSock = SetSock;
+	pIf->SetStrm = SetStrm;
 	pIf->SetMsgIdx = SetMsgIdx;
 finalize_it:
 ENDobjQueryInterface(tcps_sess)
@@ -416,6 +407,7 @@ BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END
 CODESTARTObjClassExit(tcps_sess)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(netstrm, LM_NETSTRM_FILENAME);
 ENDObjClassExit(tcps_sess)
 
 
@@ -426,6 +418,7 @@ ENDObjClassExit(tcps_sess)
 BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcps_sessDebugPrint);

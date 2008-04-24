@@ -1,4 +1,4 @@
-/* netstrmstrm.c
+/* netstrm.c
  * 
  * This class implements a generic netstrmwork stream class. It supports
  * sending and receiving data streams over a netstrmwork. The class abstracts
@@ -38,29 +38,16 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
-
-#include "rsyslog.h"
-#include <stdio.h>
-#include <stdarg.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <errno.h>
 #include <string.h>
-#include <signal.h>
-#include <ctype.h>
-#include <netdb.h>
-#include <fnmatch.h>
-#include <fcntl.h>
-#include <unistd.h>
 
-#include "syslogd-types.h"
+#include "rsyslog.h"
 #include "module-template.h"
-#include "parse.h"
-#include "srUtils.h"
 #include "obj.h"
 #include "errmsg.h"
-#include "net.h"
-#include "nsd.h"
+//#include "nsd.h"
+#include "netstrms.h"
 #include "netstrm.h"
 
 MODULE_TYPE_LIB
@@ -68,41 +55,7 @@ MODULE_TYPE_LIB
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(net)
-
-
-/* load our low-level driver. This must be done before any
- * driver-specific functions (allmost all...) can be carried
- * out. Note that the driver's .ifIsLoaded is correctly
- * initialized by calloc() and we depend on that.
- * rgerhards, 2008-04-18
- */
-static rsRetVal
-loadDrvr(netstrm_t *pThis)
-{
-	uchar *pDrvrName;
-	DEFiRet;
-
-	if(pThis->Drvr.ifIsLoaded == 0) {
-		pDrvrName = pThis->pDrvrName;
-		if(pDrvrName == NULL) { /* if no drvr name is set, use system default */
-			pDrvrName = glbl.GetDfltNetstrmDrvr();
-			pThis->pDrvrName = (uchar*)strdup((char*)pDrvrName); // TODO: use set method once it exists
-		}
-
-		pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
-		/* The pDrvrName+2 below is a hack to obtain the object name. It 
-		 * safes us to have yet another variable with the name without "lm" in
-		 * front of it. If we change the module load interface, we may re-think
-		 * about this hack, but for the time being it is efficient and clean
-		 * enough. -- rgerhards, 2008-04-18
-		 */
-		CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
-	}
-finalize_it:
-	RETiRet;
-}
+DEFobjCurrIf(netstrms)
 
 
 /* Standard-Constructor */
@@ -131,7 +84,6 @@ netstrmConstructFinalize(netstrm_t *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-	CHKiRet(loadDrvr(pThis));
 	CHKiRet(pThis->Drvr.Construct(&pThis->pDrvrData));
 finalize_it:
 	RETiRet;
@@ -155,73 +107,56 @@ AbortDestruct(netstrm_t **ppThis)
 }
 
 
-#if 0
-This is not yet working - wait until we arrive at the receiver side (distracts too much at the moment)
-
-/* accept an incoming connection request, pNsdLstn provides the "listen socket" on which we can
- * accept the new session.
- * rgerhards, 2008-03-17
+/* accept an incoming connection request
+ * The netstrm instance that had the incoming request must be provided. If
+ * the connection request succeeds, a new netstrm object is created and 
+ * passed back to the caller. The caller is responsible for destructing it.
+ * pReq is the nsd_t obj that has the accept request.
+ * rgerhards, 2008-04-21
  */
 static rsRetVal
-AcceptConnReq(netstrm_t **ppThis, nsd_t *pNsdLstn)
+AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 {
-	netstrm_t *pThis = NULL;
-	nsd_t *pNsd;
+	nsd_t *pNewNsd = NULL;
 	DEFiRet;
 
-	assert(ppThis != NULL);
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	assert(ppNew != NULL);
 
+	/* accept the new connection */
+	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd));
 	/* construct our object so that we can use it... */
-	CHKiRet(netstrmConstruct(&pThis));
-
-	/* TODO: obtain hostname, normalize (callback?), save it */
-	CHKiRet(FillRemHost(pThis, (struct sockaddr*) &addr));
-
-	/* set the new socket to non-blocking IO */
-	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
-		sockflags |= O_NONBLOCK;
-		/* SETFL could fail too, so get it caught by the subsequent
-		 * error check.
-		 */
-		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
-	}
-	if(sockflags == -1) {
-		dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
-
-	pThis->sock = iNewSock;
-
-	*ppThis = pThis;
+	CHKiRet(netstrms.CreateStrm(pThis->pNS, ppNew));
+	(*ppNew)->pDrvrData = pNewNsd;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
-			netstrmDestruct(&pThis);
 		/* the close may be redundant, but that doesn't hurt... */
-		if(iNewSock >= 0)
-			close(iNewSock);
+		if(pNewNsd != NULL)
+			pThis->Drvr.Destruct(&pNewNsd);
 	}
 
 	RETiRet;
 }
-#endif
 
 
-/* initialize the tcp socket for a listner
- * pLstnPort must point to a port name or number. NULL is NOT permitted
- * (hint: we need to be careful when we use this module together with librelp,
- * there NULL indicates the default port
- * default is used.
- * gerhards, 2008-03-17
+/* make the netstrm listen to specified port and IP.
+ * pLstnIP points to the port to listen to (NULL means "all"),
+ * iMaxSess has the maximum number of sessions permitted (this ist just a hint).
+ * pLstnPort must point to a port name or number. NULL is NOT permitted.
+ * rgerhards, 2008-04-22
  */
 static rsRetVal
-LstnInit(netstrm_t *pThis, uchar *pLstnPort)
+LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+
+	ISOBJ_TYPE_assert(pNS, netstrms);
+	assert(fAddLstn != NULL);
 	assert(pLstnPort != NULL);
-	CHKiRet(pThis->Drvr.LstnInit(pThis->pDrvrData, pLstnPort));
+
+	CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax));
 
 finalize_it:
 	RETiRet;
@@ -263,6 +198,28 @@ Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 }
 
 
+/* get remote hname - slim wrapper for NSD driver function */
+static rsRetVal
+GetRemoteHName(netstrm_t *pThis, uchar **ppsz)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.GetRemoteHName(pThis->pDrvrData, ppsz);
+	RETiRet;
+}
+
+
+/* get remote IP - slim wrapper for NSD driver function */
+static rsRetVal
+GetRemoteIP(netstrm_t *pThis, uchar **ppsz)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.GetRemoteIP(pThis->pDrvrData, ppsz);
+	RETiRet;
+}
+
+
 /* open a connection to a remote host (server).
  * rgerhards, 2008-03-19
  */
@@ -295,11 +252,13 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->ConstructFinalize = netstrmConstructFinalize;
 	pIf->Destruct = netstrmDestruct;
 	pIf->AbortDestruct = AbortDestruct;
-	pIf->LstnInit = LstnInit;
-	// TODO: add later: pIf->AcceptConnReq = AcceptConnReq;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->Connect = Connect;
+	pIf->LstnInit = LstnInit;
+	pIf->AcceptConnReq = AcceptConnReq;
+	pIf->GetRemoteHName = GetRemoteHName;
+	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 
@@ -309,9 +268,8 @@ ENDobjQueryInterface(netstrm)
 BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(netstrm)
 	/* release objects we no longer need */
-	objRelease(net, CORE_COMPONENT);
-	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 ENDObjClassExit(netstrm)
 
 
@@ -322,8 +280,7 @@ ENDObjClassExit(netstrm)
 BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(net, CORE_COMPONENT));
+	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 
 	/* set our own handlers */
 ENDObjClassInit(netstrm)

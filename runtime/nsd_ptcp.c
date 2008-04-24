@@ -45,6 +45,8 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "net.h"
+#include "netstrms.h"
+#include "netstrm.h"
 #include "nsd_ptcp.h"
 
 MODULE_TYPE_LIB
@@ -54,32 +56,33 @@ DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
+DEFobjCurrIf(netstrms)
+DEFobjCurrIf(netstrm)
 
+
+/* a few deinit helpers */
+
+/* close socket if open (may always be called) */
+static void
+sockClose(int *pSock)
+{
+	if(*pSock >= 0) {
+		close(*pSock);
+		*pSock = -1;
+	}
+}
 
 /* Standard-Constructor
  */
 BEGINobjConstruct(nsd_ptcp) /* be sure to specify the object type also in END macro! */
 	pThis->sock = -1;
-	pThis->iSessMax = 500;	/* default max nbr of sessions -TODO:make configurable--rgerhards, 2008-04-17*/
 ENDobjConstruct(nsd_ptcp)
 
 
 /* destructor for the nsd_ptcp object */
 BEGINobjDestruct(nsd_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
-	int i;
 CODESTARTobjDestruct(nsd_ptcp)
-	if(pThis->sock != -1) {
-		close(pThis->sock);
-		pThis->sock = -1;
-	}
-
-	if(pThis->socks != NULL) {
-		/* if we have some sockets at this stage, we need to close them */
-		for(i = 1 ; i <= pThis->socks[0] ; ++i)
-			close(pThis->socks[i]);
-		free(pThis->socks);
-	}
-
+	sockClose(&pThis->sock);
 	if(pThis->pRemHostIP != NULL)
 		free(pThis->pRemHostIP);
 	if(pThis->pRemHostName != NULL)
@@ -209,33 +212,34 @@ finalize_it:
 
 
 
-/* accept an incoming connection request, sock provides the socket on which we can
- * accept the new session.
- * rgerhards, 2008-03-17
+/* accept an incoming connection request
+ * rgerhards, 2008-04-22
  */
 static rsRetVal
-AcceptConnReq(nsd_t **ppThis, int sock)
+AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 {
 	int sockflags;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	struct sockaddr_storage addr;
 	socklen_t addrlen = sizeof(addr);
-	nsd_ptcp_t *pThis = NULL;
+	nsd_ptcp_t *pNew = NULL;
 	int iNewSock = -1;
 
 	DEFiRet;
-	assert(ppThis != NULL);
+	assert(ppNew != NULL);
+	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 
-	iNewSock = accept(sock, (struct sockaddr*) &addr, &addrlen);
+	iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
 
 	/* construct our object so that we can use it... */
-	CHKiRet(nsd_ptcpConstruct(&pThis));
+	CHKiRet(nsd_ptcpConstruct(&pNew));
 
-	CHKiRet(FillRemHost(pThis, (struct sockaddr*) &addr));
+	CHKiRet(FillRemHost(pNew, (struct sockaddr*) &addr));
 
-	/* set the new socket to non-blocking IO */
+	/* set the new socket to non-blocking IO -TODO:do we really need to do this here? Do we always want it? */
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
 		sockflags |= O_NONBLOCK;
 		/* SETFL could fail too, so get it caught by the subsequent
@@ -248,41 +252,45 @@ AcceptConnReq(nsd_t **ppThis, int sock)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
-	pThis->sock = iNewSock;
-
-	*ppThis = (nsd_t*) pThis;
+	pNew->sock = iNewSock;
+	*ppNew = (nsd_t*) pNew;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
-			nsd_ptcpDestruct(&pThis);
+		if(pNew != NULL)
+			nsd_ptcpDestruct(&pNew);
 		/* the close may be redundant, but that doesn't hurt... */
-		if(iNewSock >= 0)
-			close(iNewSock);
+		sockClose(&iNewSock);
 	}
 
 	RETiRet;
 }
 
 
-/* initialize the tcp socket for a listner
- * pLstnPort must point to a port name or number. NULL is NOT permitted
- * (hint: we need to be careful when we use this module together with librelp,
- * there NULL indicates the default port
- * default is used.
- * gerhards, 2008-03-17
+/* initialize tcp sockets for a listner. The initialized sockets are passed to the
+ * app-level caller via a callback.
+ * pLstnPort must point to a port name or number. NULL is NOT permitted. pLstnIP
+ * points to the port to listen to (NULL means "all"), iMaxSess has the maximum
+ * number of sessions permitted.
+ * rgerhards, 2008-04-22
  */
 static rsRetVal
-LstnInit(nsd_t *pNsd, uchar *pLstnPort)
+LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
+	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
-	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
-        struct addrinfo hints, *res, *r;
-        int error, maxs, *s, on = 1;
-	int sockflags;
-
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+	netstrm_t *pNewStrm = NULL;
+	nsd_t *pNewNsd = NULL;
+        int error, maxs, on = 1;
+	int sock;
+	int numSocks;
+	int sockflags;
+        struct addrinfo hints, *res = NULL, *r;
+
+	ISOBJ_TYPE_assert(pNS, netstrms);
+	assert(fAddLstn != NULL);
 	assert(pLstnPort != NULL);
+	assert(iSessMax >= 0);
 
 	dbgprintf("creating tcp listen socket on port %s\n", pLstnPort);
 
@@ -291,7 +299,7 @@ LstnInit(nsd_t *pNsd, uchar *pLstnPort)
         hints.ai_family = glbl.GetDefPFFamily();
         hints.ai_socktype = SOCK_STREAM;
 
-        error = getaddrinfo(NULL, (char*) pLstnPort, &hints, &res);
+        error = getaddrinfo((char*)pLstnIP, (char*) pLstnPort, &hints, &res);
         if(error) {
 		dbgprintf("error %d querying port '%s'\n", error, pLstnPort);
 		ABORT_FINALIZE(RS_RET_INVALID_PORT);
@@ -300,20 +308,13 @@ LstnInit(nsd_t *pNsd, uchar *pLstnPort)
         /* Count max number of sockets we may open */
         for(maxs = 0, r = res; r != NULL ; r = r->ai_next, maxs++)
 		/* EMPTY */;
-        pThis->socks = malloc((maxs+1) * sizeof(int));
-        if (pThis->socks == NULL) {
-               dbgprintf("couldn't allocate memory for TCP listen sockets, suspending RELP message reception.");
-               freeaddrinfo(res);
-               ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-        }
 
-        *pThis->socks = 0;   /* num of sockets counter at start of array */
-        s = pThis->socks + 1;
+        numSocks = 0;   /* num of sockets counter at start of array */
 	for(r = res; r != NULL ; r = r->ai_next) {
-               *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-        	if (*s < 0) {
+               sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+        	if(sock < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
-				dbgprintf("creating tcp listen socket");
+				dbgprintf("error %d creating tcp listen socket", errno);
 				/* it is debatable if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
@@ -321,35 +322,32 @@ LstnInit(nsd_t *pNsd, uchar *pLstnPort)
                 }
 
 #ifdef IPV6_V6ONLY
-                if (r->ai_family == AF_INET6) {
+                if(r->ai_family == AF_INET6) {
                 	int iOn = 1;
-			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
+			if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
 			      (char *)&iOn, sizeof (iOn)) < 0) {
-			close(*s);
-			*s = -1;
-			continue;
+				close(sock);
+				continue;
                 	}
                 }
 #endif
-       		if(setsockopt(*s, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
+       		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			dbgprintf("error %d setting tcp socket option\n", errno);
-                        close(*s);
-			*s = -1;
+                        close(sock);
 			continue;
 		}
 
 		/* We use non-blocking IO! */
-		if((sockflags = fcntl(*s, F_GETFL)) != -1) {
+		if((sockflags = fcntl(sock, F_GETFL)) != -1) {
 			sockflags |= O_NONBLOCK;
 			/* SETFL could fail too, so get it caught by the subsequent
 			 * error check.
 			 */
-			sockflags = fcntl(*s, F_SETFL, sockflags);
+			sockflags = fcntl(sock, F_SETFL, sockflags);
 		}
 		if(sockflags == -1) {
 			dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
-                        close(*s);
-			*s = -1;
+                        close(sock);
 			continue;
 		}
 
@@ -360,62 +358,75 @@ LstnInit(nsd_t *pNsd, uchar *pLstnPort)
 		 */
 #ifndef BSD	
 		if(net.should_use_so_bsdcompat()) {
-			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
+			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
 				errmsg.LogError(NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
-                                close(*s);
-				*s = -1;
+                                close(sock);
 				continue;
 			}
 		}
 #endif
 
-	        if( (bind(*s, r->ai_addr, r->ai_addrlen) < 0)
+	        if( (bind(sock, r->ai_addr, r->ai_addrlen) < 0)
 #ifndef IPV6_V6ONLY
 		     && (errno != EADDRINUSE)
 #endif
 	           ) {
+			/* TODO: check if *we* bound the socket - else we *have* an error! */
                         dbgprintf("error %d while binding tcp socket", errno);
-                	close(*s);
-			*s = -1;
+                	close(sock);
                         continue;
                 }
 
-		if(listen(*s,pThis->iSessMax / 10 + 5) < 0) {
+		if(listen(sock, iSessMax / 10 + 5) < 0) {
 			/* If the listen fails, it most probably fails because we ask
 			 * for a too-large backlog. So in this case we first set back
 			 * to a fixed, reasonable, limit that should work. Only if
 			 * that fails, too, we give up.
 			 */
 			dbgprintf("listen with a backlog of %d failed - retrying with default of 32.",
-				    pThis->iSessMax / 10 + 5);
-			if(listen(*s, 32) < 0) {
+				   iSessMax / 10 + 5);
+			if(listen(sock, 32) < 0) {
 				dbgprintf("tcp listen error %d, suspending\n", errno);
-	                	close(*s);
-				*s = -1;
+	                	close(sock);
                		        continue;
 			}
 		}
 
-		(*pThis->socks)++;
-		s++;
+		/* if we reach this point, we were able to obtain a valid socket, so we can
+		 * construct a new netstrm obj and hand it over to the upper layers for inclusion
+		 * into their socket array. -- rgerhards, 2008-04-23
+		 */
+		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
+		((nsd_ptcp_t*)pNewNsd)->sock = sock;
+		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
+		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
+		CHKiRet(fAddLstn(pUsr, pNewStrm));
+		pNewNsd = NULL;
+		pNewStrm = NULL;
+		++numSocks;
 	}
 
-        if(res != NULL)
-               freeaddrinfo(res);
+	if(numSocks != maxs)
+		dbgprintf("We could initialize %d TCP listen sockets out of %d we received "
+		 	  "- this may or may not be an error indication.\n", numSocks, maxs);
 
-	if(*pThis->socks != maxs)
-		dbgprintf("We could initialize %d RELP TCP listen sockets out of %d we received "
-		 	"- this may or may not be an error indication.\n", *pThis->socks, maxs);
-
-        if(*pThis->socks == 0) {
-		dbgprintf("No RELP TCP listen socket could successfully be initialized, "
-			 "message reception via RELP disabled.\n");
-        	free(pThis->socks);
+        if(numSocks == 0) {
+		dbgprintf("No TCP listen sockets could successfully be initialized");
 		ABORT_FINALIZE(RS_RET_COULD_NOT_BIND);
 	}
 
 finalize_it:
+	if(res != NULL)
+		freeaddrinfo(res);
+
+	if(iRet != RS_RET_OK) {
+		if(pNewStrm != NULL)
+			netstrm.Destruct(&pNewStrm);
+		if(pNewNsd != NULL)
+			pNS->Drvr.Destruct(&pNewNsd);
+	}
+
 	RETiRet;
 }
 
@@ -514,12 +525,48 @@ finalize_it:
                freeaddrinfo(res);
 		
 	if(iRet != RS_RET_OK) {
-		if(pThis->sock != -1) {
-			close(pThis->sock);
-			pThis->sock = -1;
-		}
+		sockClose(&pThis->sock);
 	}
 
+	RETiRet;
+}
+
+
+/* get the remote hostname. The returned hostname must be freed by the
+ * caller.
+ * rgerhards, 2008-04-24
+ */
+static rsRetVal
+GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
+{
+	DEFiRet;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+	assert(ppszHName != NULL);
+
+	// TODO: how can the RemHost be empty?
+	CHKmalloc(*ppszHName = (uchar*)strdup(pThis->pRemHostName == NULL ? "" : (char*) pThis->pRemHostName));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* get the remote host's IP address. The returned string must be freed by the
+ * caller.
+ * rgerhards, 2008-04-24
+ */
+static rsRetVal
+GetRemoteIP(nsd_t *pNsd, uchar **ppszIP)
+{
+	DEFiRet;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+	assert(ppszIP != NULL);
+
+	CHKmalloc(*ppszIP = (uchar*)strdup(pThis->pRemHostIP == NULL ? "" : (char*) pThis->pRemHostIP));
+
+finalize_it:
 	RETiRet;
 }
 
@@ -539,12 +586,13 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->Construct = (rsRetVal(*)(nsd_t**)) nsd_ptcpConstruct;
 	pIf->Destruct = (rsRetVal(*)(nsd_t**)) nsd_ptcpDestruct;
 	pIf->Abort = Abort;
-	pIf->GetSock = GetSock;
-	pIf->LstnInit = LstnInit;
-	pIf->AcceptConnReq = AcceptConnReq;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
+	pIf->LstnInit = LstnInit;
+	pIf->AcceptConnReq = AcceptConnReq;
 	pIf->Connect = Connect;
+	pIf->GetRemoteHName = GetRemoteHName;
+	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 
@@ -557,6 +605,8 @@ CODESTARTObjClassExit(nsd_ptcp)
 	objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(netstrm, LM_NETSTRM_FILENAME);
+	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 ENDObjClassExit(nsd_ptcp)
 
 
@@ -569,6 +619,8 @@ BEGINObjClassInit(nsd_ptcp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
+	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
+	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 
 	/* set our own handlers */
 ENDObjClassInit(nsd_ptcp)
