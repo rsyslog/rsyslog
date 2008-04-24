@@ -5,6 +5,8 @@
  *
  * Module begun 2008-02-25 by Rainer Gerhards
  *
+ * Copyright (C) 2008 by Rainer Gerhards and Adiscon GmbH.
+ *
  * This file is part of the rsyslog runtime library.
  *
  * The rsyslog runtime library is free software: you can redistribute it and/or modify
