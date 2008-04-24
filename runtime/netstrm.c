@@ -117,7 +117,6 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 	assert(ppNew != NULL);
 
 	/* accept the new connection */
-RUNLOG_VAR("%p", pThis->pDrvrData);
 	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd));
 	/* construct our object so that we can use it... */
 	CHKiRet(netstrms.CreateStrm(pThis->pNS, ppNew));

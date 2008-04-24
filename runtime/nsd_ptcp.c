@@ -292,7 +292,6 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
         numSocks = 0;   /* num of sockets counter at start of array */
 	for(r = res; r != NULL ; r = r->ai_next) {
                sock = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-RUNLOG_VAR("%d", sock);
         	if(sock < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
 				dbgprintf("error %d creating tcp listen socket", errno);
