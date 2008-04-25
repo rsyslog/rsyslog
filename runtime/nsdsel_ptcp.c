@@ -71,6 +71,8 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 	ISOBJ_TYPE_assert(pSock, nsd_ptcp);
 	ISOBJ_TYPE_assert(pThis, nsdsel_ptcp);
 
+RUNLOG_VAR("%d", pSock->sock);
+RUNLOG_VAR("%p", &pThis->readfds);
 	switch(waitOp) {
 		case NSDSEL_RD:
 			FD_SET(pSock->sock, &pThis->readfds);

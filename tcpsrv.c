@@ -242,7 +242,6 @@ addTcpLstn(void *pUsr, netstrm_t *pLstn)
 	if(pThis->iLstnMax >= TCPLSTN_MAX_DEFAULT)
 		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
 
-RUNLOG_VAR("%d", pThis->iLstnMax);
 	pThis->ppLstn[pThis->iLstnMax] = pLstn;
 	++pThis->iLstnMax;
 
@@ -416,6 +415,7 @@ Run(tcpsrv_t *pThis)
 
 		/* Add the TCP listen sockets to the list of read descriptors. */
 		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
+RUNLOG_VAR("%d", i);
 			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
 		}
 

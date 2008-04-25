@@ -68,13 +68,6 @@ BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and 
 CODESTARTobjDestruct(netstrm)
 	if(pThis->pDrvrData != NULL)
 		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
-	
-	/* driver can only be released after all data has been destructed */
-	if(pThis->Drvr.ifIsLoaded == 1) {
-		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
-	}
-	if(pThis->pDrvrName != NULL)
-		free(pThis->pDrvrName);
 ENDobjDestruct(netstrm)
 
 

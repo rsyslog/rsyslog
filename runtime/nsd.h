@@ -51,7 +51,8 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*GetRemoteHName)(nsd_t *pThis, uchar **pszName);
 	rsRetVal (*GetRemoteIP)(nsd_t *pThis, uchar **pszIP);
 	rsRetVal (*GetSock)(nsd_t *pThis, int *pSock);
-	/* GetSock() returns an error if the driver does not use plain
+	rsRetVal (*SetSock)(nsd_t *pThis, int sock);
+	/* GetSock() and SetSock() return an error if the driver does not use plain
 	 * OS sockets. This interface is primarily meant as an internal aid for
 	 * those drivers that utilize the nsd_ptcp to do some of their work.
 	 */

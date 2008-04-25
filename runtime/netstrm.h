@@ -30,7 +30,6 @@
 struct netstrm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pDrvrData;	/**< the driver's data elements (at most other places, this is called pNsd) */
-	uchar *pDrvrName;	/**< nsd driver name to use, or NULL if system default */
 	nsd_if_t Drvr;		/**< our stream driver */
 	netstrms_t *pNS;	/**< pointer to our netstream subsystem object */
 };
@@ -48,11 +47,6 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Rcv)(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf);
 	rsRetVal (*Send)(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(netstrm_t *pThis, int family, unsigned char *port, unsigned char *host);
-	//rsRetVal (*SelectInit)(nsdsel_t **ppSel, netstrm_t *pThis);
-	//rsRetVal (*SelectAdd)(nsdsel_t *pSel, netstrm_t *pThis);
-	//rsRetVal (*SelectWait)(nsdsel_t *pSel, int *piNumReady);
-	//rsRetVal (*SelectIsReady)(nsdsel_t *pSel, int *piNumReady);
-	//rsRetVal (*SelectExit)(nsdsel_t **ppSel);
 	rsRetVal (*GetRemoteHName)(netstrm_t *pThis, uchar **pszName);
 	rsRetVal (*GetRemoteIP)(netstrm_t *pThis, uchar **pszIP);
 ENDinterface(netstrm)

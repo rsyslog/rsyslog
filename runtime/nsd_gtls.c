@@ -117,6 +117,7 @@ gtlsEndSess(nsd_gtls_t *pThis)
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
 	pThis->iMode = 1; /* TODO: must be made configurable */
+	pThis->iMode = 0; /* TODO: must be made configurable */
 ENDobjConstruct(nsd_gtls)
 
 
@@ -127,9 +128,29 @@ CODESTARTobjDestruct(nsd_gtls)
 		gtlsEndSess(pThis);
 	}
 
+RUNLOG_VAR("%p", pThis->pTcp);
 	if(pThis->pTcp != NULL)
 		nsd_ptcp.Destruct(&pThis->pTcp);
 ENDobjDestruct(nsd_gtls)
+
+
+/* Provide access to the underlying OS socket. This is primarily
+ * useful for other drivers (like nsd_gtls) who utilize ourselfs
+ * for some of their functionality. -- rgerhards, 2008-04-18
+ */
+static rsRetVal
+SetSock(nsd_t *pNsd, int sock)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	assert(sock >= 0);
+
+	nsd_ptcp.SetSock(pThis->pTcp, sock);
+
+	RETiRet;
+}
 
 
 /* abort a connection. This is meant to be called immediately
@@ -153,19 +174,73 @@ Abort(nsd_t *pNsd)
 
 
 /* initialize the tcp socket for a listner
- * pLstnPort must point to a port name or number. NULL is NOT permitted
- * (hint: we need to be careful when we use this module together with librelp,
- * there NULL indicates the default port
- * default is used.
- * gerhards, 2008-03-17
+ * Here, we use the ptcp driver - because there is nothing special
+ * at this point with GnuTLS. Things become special once we accept
+ * a session, but not during listener setup.
+ * gerhards, 2008-04-25
  */
 static rsRetVal
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
+	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax);
+	RETiRet;
+}
+
+
+/* get the remote hostname. The returned hostname must be freed by the caller.
+ * rgerhards, 2008-04-25
+ */
+static rsRetVal
+GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	iRet = nsd_ptcp.GetRemoteHName(pThis->pTcp, ppszHName);
+	RETiRet;
+}
+
+
+/* get the remote host's IP address. The returned string must be freed by the
+ * caller.
+ * rgerhards, 2008-04-25
+ */
+static rsRetVal
+GetRemoteIP(nsd_t *pNsd, uchar **ppszIP)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	iRet = nsd_ptcp.GetRemoteIP(pThis->pTcp, ppszIP);
+	RETiRet;
+}
+
+
+/* accept an incoming connection request - here, we do the usual accept
+ * handling. TLS specific handling is done thereafter (and if we run in TLS
+ * mode at this time).
+ * rgerhards, 2008-04-25
+ */
+static rsRetVal
+AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
+{
+	DEFiRet;
+	nsd_gtls_t *pNew = NULL;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	CHKiRet(nsd_gtlsConstruct(&pNew));
+	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
+	
+	*ppNew = (nsd_t*) pNew;
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pNew != NULL)
+			nsd_gtlsDestruct(&pNew);
+	}
 	RETiRet;
 }
 
@@ -187,6 +262,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
 	if(pThis->iMode == 0) {
+RUNLOG;
 		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf));
 		FINALIZE;
 	}
@@ -302,10 +378,13 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->Destruct = (rsRetVal(*)(nsd_t**)) nsd_gtlsDestruct;
 	pIf->Abort = Abort;
 	pIf->LstnInit = LstnInit;
-	//pIf->AcceptConnReq = AcceptConnReq;
+	pIf->AcceptConnReq = AcceptConnReq;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->Connect = Connect;
+	pIf->SetSock = SetSock;
+	pIf->GetRemoteHName = GetRemoteHName;
+	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

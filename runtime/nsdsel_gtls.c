@@ -36,6 +36,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "nsd.h"
+#include "nsd_gtls.h"
 #include "nsdsel_ptcp.h"
 #include "nsdsel_gtls.h"
 
@@ -68,7 +69,12 @@ static rsRetVal
 Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 {
 	DEFiRet;
-	iRet = nsdsel_ptcp.Add(pNsdsel, pNsd, waitOp);
+	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
+	nsd_gtls_t *pNsdGTLS = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
+	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
+	iRet = nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, waitOp);
 	RETiRet;
 }
 
@@ -80,7 +86,10 @@ static rsRetVal
 Select(nsdsel_t *pNsdsel, int *piNumReady)
 {
 	DEFiRet;
-	iRet = nsdsel_ptcp.Select(pNsdsel, piNumReady);
+	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
+
+	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
+	iRet = nsdsel_ptcp.Select(pThis->pTcp, piNumReady);
 	RETiRet;
 }
 
@@ -90,7 +99,12 @@ static rsRetVal
 IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 {
 	DEFiRet;
-	iRet = nsdsel_ptcp.IsReady(pNsdsel, pNsd, waitOp, pbIsReady);
+	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
+	nsd_gtls_t *pNsdGTLS = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
+	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
+	iRet = nsdsel_ptcp.IsReady(pThis->pTcp, pNsdGTLS->pTcp, waitOp, pbIsReady);
 	RETiRet;
 }
 

@@ -75,7 +75,7 @@ loadDrvr(nssel_t *pThis)
 	 * enough. -- rgerhards, 2008-04-18
 	 */
 	//CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
-	CHKiRet(obj.UseObj(__FILE__, "nsdsel_ptcp", "lmnsdsel_ptcp", (void*) &pThis->Drvr));
+	CHKiRet(obj.UseObj(__FILE__, "nsdsel_gtls", "lmnsdsel_gtls", (void*) &pThis->Drvr));
 finalize_it:
 	RETiRet;
 }

@@ -93,7 +93,6 @@ ENDobjDestruct(nsd_ptcp)
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
  * for some of their functionality. -- rgerhards, 2008-04-18
- * TODO: what about the server socket structure?
  */
 static rsRetVal
 GetSock(nsd_t *pNsd, int *pSock)
@@ -105,6 +104,26 @@ GetSock(nsd_t *pNsd, int *pSock)
 	assert(pSock != NULL);
 
 	*pSock = pThis->sock;
+
+	RETiRet;
+}
+
+
+/* Provide access to the underlying OS socket. This is primarily
+ * useful for other drivers (like nsd_gtls) who utilize ourselfs
+ * for some of their functionality.
+ * This function sets the socket -- rgerhards, 2008-04-25
+ */
+static rsRetVal
+SetSock(nsd_t *pNsd, int sock)
+{
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
+	assert(sock >= 0);
+
+	pThis->sock = sock;
 
 	RETiRet;
 }
@@ -209,7 +228,6 @@ FillRemHost(nsd_ptcp_t *pThis, struct sockaddr *pAddr)
 finalize_it:
 	RETiRet;
 }
-
 
 
 /* accept an incoming connection request
@@ -397,10 +415,13 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 * construct a new netstrm obj and hand it over to the upper layers for inclusion
 		 * into their socket array. -- rgerhards, 2008-04-23
 		 */
+RUNLOG_VAR("%d", sock);
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
-		((nsd_ptcp_t*)pNewNsd)->sock = sock;
+		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
+RUNLOG;
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
 		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
+RUNLOG;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewNsd = NULL;
 		pNewStrm = NULL;
@@ -587,6 +608,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->Destruct = (rsRetVal(*)(nsd_t**)) nsd_ptcpDestruct;
 	pIf->Abort = Abort;
 	pIf->GetSock = GetSock;
+	pIf->SetSock = SetSock;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->LstnInit = LstnInit;
