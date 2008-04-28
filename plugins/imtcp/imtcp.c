@@ -43,6 +43,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "net.h"
+#include "netstrm.h"
 #include "tcpsrv.h"
 
 MODULE_TYPE_INPUT
@@ -52,6 +53,7 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(net)
+DEFobjCurrIf(netstrm)
 
 /* Module static data */
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
@@ -70,7 +72,7 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((u
 }
 
 
-static int*
+static rsRetVal
 doOpenLstnSocks(tcpsrv_t *pSrv)
 {
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);
@@ -81,10 +83,12 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 static int
 doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
 {
-	int state;
+	ssize_t state;
 	assert(pSess != NULL);
 
-	state = recv(pSess->sock, buf, lenBuf, 0);
+	state = lenBuf;
+	if(netstrm.Rcv(pSess->pStrm, (uchar*) buf, &state) != RS_RET_OK)
+		state = -1; // TODO: move this function to an iRet interface! 2008-04-23
 	return state;
 }
 
@@ -172,6 +176,7 @@ CODESTARTmodExit
 
 	/* release objects we used */
 	objRelease(net, LM_NET_FILENAME);
+	objRelease(netstrm, LM_NETSTRM_FILENAME);
 	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
 ENDmodExit
@@ -199,6 +204,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
 	CHKiRet(objUse(net, LM_NET_FILENAME));
+	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
 

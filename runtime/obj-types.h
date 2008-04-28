@@ -81,13 +81,13 @@ struct objInfo_s {
 };
 
 
-typedef struct obj {	/* the dummy struct that each derived class can be casted to */
+struct obj_s {	/* the dummy struct that each derived class can be casted to */
 	objInfo_t *pObjInfo;
 #ifndef NDEBUG /* this means if debug... */
 	unsigned int iObjCooCKiE; /* must always be 0xBADEFEE for a valid object */
 #endif
 	uchar *pszName;		/* the name of *this* specific object instance */
-} obj_t;
+};
 
 
 /* macros which must be gloablly-visible (because they are used during definition of
@@ -106,8 +106,12 @@ typedef struct obj {	/* the dummy struct that each derived class can be casted t
 		do { \
 		ASSERT(pObj != NULL); \
 		ASSERT((unsigned) ((obj_t*) (pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
-		ASSERT(!strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)); \
-		} while(0);
+		if(strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)) { \
+			dbgprintf("%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
+				  "actual '%s'\n", __FILE__, __LINE__, #objType, (((obj_t*)pObj)->pObjInfo->pszID)); \
+			assert(0); /* trigger assertion, messge we already have */ \
+		} \
+		} while(0)
 #else /* non-debug mode, no checks but much faster */
 #	define BEGINobjInstance obj_t objData
 #	define ISOBJ_TYPE_assert(pObj, objType)
@@ -377,9 +381,6 @@ rsRetVal objName##ClassExit(void) \
  */
 #define CORE_COMPONENT NULL /* use this to indicate this is a core component */
 #define DONT_LOAD_LIB NULL /* do not load a library to obtain object interface (currently same as CORE_COMPONENT) */
-/*#define objUse(objName, MYLIB, FILENAME) \
-	obj.UseObj(__FILE__, (uchar*)#objName, MYLIB, (uchar*)FILENAME, (void*) &objName)
-*/
 #define objUse(objName, FILENAME) \
 	obj.UseObj(__FILE__, (uchar*)#objName, (uchar*)FILENAME, (void*) &objName)
 #define objRelease(objName, FILENAME) \

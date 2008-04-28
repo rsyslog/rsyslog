@@ -48,6 +48,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(LocalDomain, uchar*)
 	SIMP_PROP(StripDomains, char**)
 	SIMP_PROP(LocalHosts, char**)
+	SIMP_PROP(DfltNetstrmDrvr, uchar*)
 #undef	SIMP_PROP
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */

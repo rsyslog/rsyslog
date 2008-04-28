@@ -433,42 +433,6 @@ AC_SUBST(libdbi_cflags)
 AC_SUBST(libdbi_libs)
 
 
-# openssl support
-AC_ARG_ENABLE(openssl,
-        [AS_HELP_STRING([--enable-openssl],[Enable openssl support @<:@default=yes@:>@])],
-        [case "${enableval}" in
-         yes) enable_openssl="yes" ;;
-          no) enable_openssl="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-openssl) ;;
-         esac],
-        [enable_openssl=no]
-)
-if test "x$enable_openssl" = "xyes"; then
-  AC_CHECK_HEADERS(
-    [openssl/ssl.h],,
-    [AC_MSG_FAILURE([openssl is missing])]
-  )
-  AC_CHECK_LIB(
-    [crypto],
-    [CRYPTO_new_ex_data],
-    [openssl_cflags=""
-     openssl_libs="-lcrypto"
-    ],
-    [AC_MSG_FAILURE([library 'crypto' is missing (needed for openssl)])]
-  )
-  AC_CHECK_LIB(
-    [ssl],
-    [SSL_library_init],
-    [ openssl_libs+="-lssl"
-    ],
-    [AC_MSG_FAILURE([library 'ssl' is missing (needed for openssl)])]
-  )
-fi
-AM_CONDITIONAL(ENABLE_OPENSSL, test x$enable_openssl = xyes)
-AC_SUBST(openssl_cflags)
-AC_SUBST(openssl_libs)
-
-
 # SNMP support
 AC_ARG_ENABLE(snmp,
         [AS_HELP_STRING([--enable-snmp],[Enable SNMP support @<:@default=no@:>@])],
@@ -496,6 +460,44 @@ fi
 AM_CONDITIONAL(ENABLE_SNMP, test x$enable_snmp = xyes)
 AC_SUBST(snmp_cflags)
 AC_SUBST(snmp_libs)
+
+
+# GNUtls support
+AC_ARG_ENABLE(gnutls,
+        [AS_HELP_STRING([--enable-gnutls],[Enable GNU TLS support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_gnutls="yes" ;;
+          no) enable_gnutls="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-gnutls) ;;
+         esac],
+        [enable_gnutls=no]
+)
+if test "x$enable_gnutls" = "xyes"; then
+  AC_CHECK_HEADERS(
+    [gnutls/gnutls.h],,
+    [AC_MSG_FAILURE([GNUTls is missing])]
+  )
+  AC_CHECK_PROG(
+    [HAVE_GNUTLS_CONFIG],
+    [libgnutls-config],
+    [yes],,,
+  )
+  if test "x${HAVE_GNUTLS_CONFIG}" != "xyes"; then
+    AC_MSG_FAILURE([libgnutls-config not found in PATH])
+  fi
+  AC_CHECK_LIB(
+    [gnutls],
+    [gnutls_check_version],
+    [gnutls_cflags=`libgnutls-config --cflags`
+     gnutls_libs=`libgnutls-config --libs`
+    ],
+    [AC_MSG_FAILURE([GNU TLS library is missing])],
+    [`libgnutls-config --libs`]
+  )
+fi
+AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
+AC_SUBST(gnutls_cflags)
+AC_SUBST(gnutls_libs)
 
 
 # support for building the rsyslogd runtime
@@ -561,7 +563,6 @@ AC_SUBST(RELP_CFLAGS)
 AC_SUBST(RELP_LIBS)
 
 # RFC 3195 support
-# WARNING: THIS IS NOT REALLY PRESENT YET - needs to be build manually!
 AC_ARG_ENABLE(rfc3195,
         [AS_HELP_STRING([--enable-rfc3195],[Enable RFC3195 support @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -660,10 +661,10 @@ echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
+echo "GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
-echo "openssl enabled:                          $enable_openssl"
 echo "valgrind support settings enabled:        $enable_valgrind"
 echo "rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "rsyslogd will be built:                   $enable_rsyslogd"

@@ -1198,7 +1198,7 @@ ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 		FINALIZE; /* if it is not a lodable module, we do not need to do anything... */
 
 	if(pIf->ifIsLoaded == 0) {
-		ABORT_FINALIZE(RS_RET_OK); /* we are already set */ /* TODO: flag an error? */
+		ABORT_FINALIZE(RS_RET_OK); /* we are not loaded - this is perfectly OK... */
 	}
 	if(pIf->ifIsLoaded == 2) {
 		pIf->ifIsLoaded = 0; /* clean up */

@@ -26,9 +26,11 @@
 #include "tcps_sess.h"
 
 /* the tcpsrv object */
-typedef struct tcpsrv_s {
+struct tcpsrv_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
-	int *pSocksLstn;	/**< listen socket array for server [0] holds count */
+	netstrms_t *pNS;	/**< pointer to network stream subsystem */
+	int iLstnMax;		/**< max nbr of listeners currently supported */
+	netstrm_t **ppLstn;	/**< our netstream listners */
 	int iSessMax;		/**< max number of sessions supported */
 	char *TCPLstnPort;	/**< the port the listener shall listen on */
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
@@ -36,16 +38,16 @@ typedef struct tcpsrv_s {
 	/* callbacks */
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
 	int      (*pRcvData)(tcps_sess_t*, char*, size_t);
-	int*     (*OpenLstnSocks)(struct tcpsrv_s*);
+	rsRetVal (*OpenLstnSocks)(struct tcpsrv_s*);
 	rsRetVal (*pOnListenDeinit)(void*);
 	rsRetVal (*OnDestruct)(void*);
 	rsRetVal (*pOnRegularClose)(tcps_sess_t *pSess);
 	rsRetVal (*pOnErrClose)(tcps_sess_t *pSess);
 	/* session specific callbacks */
-	rsRetVal (*pOnSessAccept)(struct tcpsrv_s *, tcps_sess_t*);
+	rsRetVal (*pOnSessAccept)(tcpsrv_t *, tcps_sess_t*);
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
-} tcpsrv_t;
+};
 
 
 /* interfaces */
@@ -55,13 +57,13 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(tcpsrv_t __attribute__((unused)) *pThis);
 	rsRetVal (*Destruct)(tcpsrv_t **ppThis);
 	void (*configureTCPListen)(tcpsrv_t*, char *cOptarg);
-	int (*SessAccept)(tcpsrv_t *pThis, tcps_sess_t**ppSess, int fd);
-	int* (*create_tcp_socket)(tcpsrv_t *pThis);
+	rsRetVal (*SessAccept)(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm);
+	rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */
 	rsRetVal (*SetUsrP)(tcpsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));
-	rsRetVal (*SetCBOpenLstnSocks)(tcpsrv_t *, int* (*)(tcpsrv_t*));
+	rsRetVal (*SetCBOpenLstnSocks)(tcpsrv_t *, rsRetVal (*)(tcpsrv_t*));
 	rsRetVal (*SetCBRcvData)(tcpsrv_t *, int (*)(tcps_sess_t*, char*, size_t));
 	rsRetVal (*SetCBOnListenDeinit)(tcpsrv_t*, rsRetVal (*)(void*));
 	rsRetVal (*SetCBOnDestruct)(tcpsrv_t*, rsRetVal (*) (void*));
@@ -72,7 +74,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetCBOnSessDestruct)(tcpsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetCBOnSessConstructFinalize)(tcpsrv_t*, rsRetVal (*) (void*));
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

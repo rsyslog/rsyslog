@@ -38,6 +38,13 @@
 #include "cfsysline.h"
 #include "glbl.h"
 
+/* some defaults */
+#ifndef DFLT_NETSTRM_DRVR
+// TESTING ONLY#	define DFLT_NETSTRM_DRVR ((uchar*)"lmnsd_ptcp")
+#warning "define must be restored for non-testing!"
+#	define DFLT_NETSTRM_DRVR ((uchar*)"lmnsd_gtls")
+#endif
+
 /* static data */
 DEFobjStaticHelpers
 
@@ -54,6 +61,7 @@ static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup */
 static uchar *LocalDomain;	/* our local domain name  - read-only after startup */
 static char **StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 static char **LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
+static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream driver */
 
 
 /* define a macro for the simple properties' set and get functions
@@ -84,6 +92,7 @@ SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
 
 SIMP_PROP_SET(LocalHostName, LocalHostName, uchar*)
+SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) // TODO: use custom function which frees existing value
 
 #undef SIMP_PROP
 #undef SIMP_PROP_SET
@@ -99,12 +108,19 @@ GetLocalHostName(void)
 }
 
 
-/* return the current working directory.
- */
+/* return the current working directory */
 static uchar*
 GetWorkDir(void)
 {
 	return(pszWorkDir == NULL ? (uchar*) "" : pszWorkDir);
+}
+
+
+/* return the current default netstream driver */
+static uchar*
+GetDfltNetstrmDrvr(void)
+{
+	return(pszDfltNetstrmDrvr == NULL ? DFLT_NETSTRM_DRVR : pszWorkDir);
 }
 
 
@@ -134,6 +150,7 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(LocalDomain)
 	SIMP_PROP(StripDomains)
 	SIMP_PROP(LocalHosts)
+	SIMP_PROP(DfltNetstrmDrvr)
 #undef	SIMP_PROP
 finalize_it:
 ENDobjQueryInterface(glbl)
@@ -144,6 +161,10 @@ ENDobjQueryInterface(glbl)
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
+	if(pszDfltNetstrmDrvr != NULL) {
+		free(pszDfltNetstrmDrvr);
+		pszDfltNetstrmDrvr = NULL;
+	}
 	if(pszWorkDir != NULL) {
 		free(pszWorkDir);
 		pszWorkDir = NULL;
@@ -172,6 +193,8 @@ ENDObjClassInit(glbl)
  * rgerhards, 2008-04-17
  */
 BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
+	if(pszDfltNetstrmDrvr != NULL)
+		free(pszDfltNetstrmDrvr);
 	if(pszWorkDir != NULL)
 		free(pszWorkDir);
 	if(LocalHostName != NULL)
