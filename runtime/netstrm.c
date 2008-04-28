@@ -175,6 +175,19 @@ Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 }
 
 
+/* set the driver mode
+ * rgerhards, 2008-04-28
+ */
+static rsRetVal
+SetDrvrMode(netstrm_t *pThis, int iMode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetMode(pThis->pDrvrData, iMode);
+	RETiRet;
+}
+
+
 /* send a buffer. On entry, pLenBuf contains the number of octets to
  * write. On exit, it contains the number of octets actually written.
  * If this number is lower than on entry, only a partial buffer has
@@ -252,6 +265,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->AcceptConnReq = AcceptConnReq;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
+	pIf->SetDrvrMode = SetDrvrMode;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

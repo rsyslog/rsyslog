@@ -116,8 +116,6 @@ gtlsEndSess(nsd_gtls_t *pThis)
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
-	pThis->iMode = 1; /* TODO: must be made configurable */
-	pThis->iMode = 0; /* TODO: must be made configurable */
 ENDobjConstruct(nsd_gtls)
 
 
@@ -132,6 +130,28 @@ CODESTARTobjDestruct(nsd_gtls)
 		nsd_ptcp.Destruct(&pThis->pTcp);
 	}
 ENDobjDestruct(nsd_gtls)
+
+
+/* Set the driver mode. For us, this has the following meaning:
+ * 0 - work in plain tcp mode, without tls (e.g. before a STARTTLS)
+ * 1 - work in TLS mode
+ * rgerhards, 2008-04-28
+ */
+static rsRetVal
+SetMode(nsd_t *pNsd, int mode)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(mode != 0 && mode != 1)
+		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
+
+	pThis->iMode = mode;
+
+finalize_it:
+	RETiRet;
+}
 
 
 /* Provide access to the underlying OS socket. This is primarily
@@ -301,8 +321,11 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 			*pLenBuf = iSent;
 			break;
 		}
-		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN)
+		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
+			dbgprintf("unexpected GnuTLS error %d in %s:%d\n", iSent, __FILE__, __LINE__);
+			gnutls_perror(iSent); /* TODO: can we do better? */
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+		}
 	}
 
 finalize_it:
@@ -384,6 +407,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->Send = Send;
 	pIf->Connect = Connect;
 	pIf->SetSock = SetSock;
+	pIf->SetMode = SetMode;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:

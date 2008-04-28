@@ -50,6 +50,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);
 	rsRetVal (*GetRemoteHName)(nsd_t *pThis, uchar **pszName);
 	rsRetVal (*GetRemoteIP)(nsd_t *pThis, uchar **pszIP);
+	rsRetVal (*SetMode)(nsd_t *pThis, int mode); /* sets a driver specific mode - see driver doc for details */
 	rsRetVal (*GetSock)(nsd_t *pThis, int *pSock);
 	rsRetVal (*SetSock)(nsd_t *pThis, int sock);
 	/* GetSock() and SetSock() return an error if the driver does not use plain

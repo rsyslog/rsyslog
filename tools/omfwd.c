@@ -77,6 +77,7 @@ DEFobjCurrIf(tcpclt)
 typedef struct _instanceData {
 	netstrms_t *pNS; /* netstream subsystem */
 	netstrm_t *pNetstrm; /* our output netstream */
+	int iStrmDrvrMode;
 	char	*f_hname;
 	int *pSockArray;		/* sockets to use for UDP */
 	int bIsConnected;  /* are we connected to remote host? 0 - no, 1 - yes, UDP means addr resolved */
@@ -92,6 +93,7 @@ typedef struct _instanceData {
 
 /* config data */
 static uchar	*pszTplName = NULL; /* name of the default template to use */
+int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 
 
 /* get the syslog forward port from selector_t. The passed in
@@ -262,6 +264,7 @@ static rsRetVal TCPSendInit(void *pvData)
 		/* now create the actual stream and connect to the server */
 		CHKiRet(netstrms.CreateStrm(pData->pNS, &pData->pNetstrm));
 		CHKiRet(netstrm.ConstructFinalize(pData->pNetstrm));
+		CHKiRet(netstrm.SetDrvrMode(pData->pNetstrm, pData->iStrmDrvrMode));
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
 			(uchar*)pData->port, (uchar*)pData->f_hname));
 	}
@@ -563,6 +566,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
 		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
 		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
+		pData->iStrmDrvrMode = iStrmDrvrMode;
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
@@ -604,6 +608,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pszTplName);
 		pszTplName = NULL;
 	}
+	iStrmDrvrMode = 0;
 
 	return RS_RET_OK;
 }
@@ -618,6 +623,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 

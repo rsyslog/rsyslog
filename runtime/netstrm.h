@@ -49,6 +49,7 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Connect)(netstrm_t *pThis, int family, unsigned char *port, unsigned char *host);
 	rsRetVal (*GetRemoteHName)(netstrm_t *pThis, uchar **pszName);
 	rsRetVal (*GetRemoteIP)(netstrm_t *pThis, uchar **pszIP);
+	rsRetVal (*SetDrvrMode)(netstrm_t *pThis, int iMode);
 ENDinterface(netstrm)
 #define netstrmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

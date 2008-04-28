@@ -109,6 +109,22 @@ GetSock(nsd_t *pNsd, int *pSock)
 }
 
 
+/* Set the driver mode. We support no different modes, but allow mode
+ * 0 to be set to be compatible with config file defaults and the other
+ * drivers.
+ * rgerhards, 2008-04-28
+ */
+static rsRetVal
+SetMode(nsd_t __attribute__((unused)) *pNsd, int mode)
+{
+	DEFiRet;
+	if(mode != 0)
+		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
+finalize_it:
+	RETiRet;
+}
+
+
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
  * for some of their functionality.
@@ -609,6 +625,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->Abort = Abort;
 	pIf->GetSock = GetSock;
 	pIf->SetSock = SetSock;
+	pIf->SetMode = SetMode;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->LstnInit = LstnInit;
