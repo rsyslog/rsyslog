@@ -128,9 +128,9 @@ CODESTARTobjDestruct(nsd_gtls)
 		gtlsEndSess(pThis);
 	}
 
-RUNLOG_VAR("%p", pThis->pTcp);
-	if(pThis->pTcp != NULL)
+	if(pThis->pTcp != NULL) {
 		nsd_ptcp.Destruct(&pThis->pTcp);
+	}
 ENDobjDestruct(nsd_gtls)
 
 
@@ -231,7 +231,9 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	// TODO: method to construct without pTcp
 	CHKiRet(nsd_gtlsConstruct(&pNew));
+	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
 	
 	*ppNew = (nsd_t*) pNew;
@@ -262,7 +264,6 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
 	if(pThis->iMode == 0) {
-RUNLOG;
 		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf));
 		FINALIZE;
 	}

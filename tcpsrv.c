@@ -333,10 +333,8 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 	CHKiRet(netstrm.GetRemoteHName(pStrm, &fromHostFQDN));
 	/* TODO: check if we need to strip the domain name here -- rgerhards, 2008-04-24 */
 
-	/* Here we check if a host is permitted to send us
-	 * syslog messages. If it isn't, we do not further
-	 * process the message but log a warning (if we are
-	 * configured to do this).
+	/* Here we check if a host is permitted to send us messages. If it isn't, we do not further
+	 * process the message but log a warning (if we are configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
 	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
