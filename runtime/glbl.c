@@ -40,9 +40,7 @@
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
-// TESTING ONLY#	define DFLT_NETSTRM_DRVR ((uchar*)"lmnsd_ptcp")
-#warning "define must be restored for non-testing!"
-#	define DFLT_NETSTRM_DRVR ((uchar*)"lmnsd_gtls")
+#	define DFLT_NETSTRM_DRVR ((uchar*)"lmnsd_ptcp")
 #endif
 
 /* static data */
@@ -120,7 +118,7 @@ GetWorkDir(void)
 static uchar*
 GetDfltNetstrmDrvr(void)
 {
-	return(pszDfltNetstrmDrvr == NULL ? DFLT_NETSTRM_DRVR : pszWorkDir);
+	return(pszDfltNetstrmDrvr == NULL ? DFLT_NETSTRM_DRVR : pszDfltNetstrmDrvr);
 }
 
 
@@ -185,6 +183,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* register config handlers (TODO: we need to implement a way to unregister them) */
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 ENDObjClassInit(glbl)
 

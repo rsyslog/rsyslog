@@ -61,6 +61,7 @@ loadDrvr(netstrms_t *pThis)
 	pDrvrName = pThis->pDrvrName;
 	if(pDrvrName == NULL) /* if no drvr name is set, use system default */
 		pDrvrName = glbl.GetDfltNetstrmDrvr();
+RUNLOG_VAR("%s", pDrvrName);
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
 	/* The pDrvrName+2 below is a hack to obtain the object name. It 
