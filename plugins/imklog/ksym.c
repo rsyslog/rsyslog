@@ -138,7 +138,7 @@ static char *system_maps[] =
 
 
 /* Function prototypes. */
-static char * FindSymbolFile(void);
+static char *FindSymbolFile(void);
 static int AddSymbol(unsigned long, char*);
 static void FreeSymbols(void);
 static int CheckVersion(char *);
@@ -173,29 +173,28 @@ extern int InitKsyms(char *mapfile)
 
 	auto FILE *sym_file;
 
+	BEGINfunc
 
 	/* Check and make sure that we are starting with a clean slate. */
 	if ( num_syms > 0 )
 		FreeSymbols();
 
 
-	/*
-	 * Search for and open the file containing the kernel symbols.
-	 */
-	if ( mapfile != (char *) 0 ) {
-		if ( (sym_file = fopen(mapfile, "r")) == (FILE *) 0 )
+	/* Search for and open the file containing the kernel symbols. */
+	if ( mapfile != NULL ) {
+		if ( (sym_file = fopen(mapfile, "r")) == NULL )
 		{
 			imklogLogIntMsg(LOG_WARNING, "Cannot open map file: %s.", mapfile);
 			return(0);
 		}
 	} else {
-		if ( (mapfile = FindSymbolFile()) == (char *) 0 ) {
+		if ( (mapfile = FindSymbolFile()) == NULL ) {
 			imklogLogIntMsg(LOG_WARNING, "Cannot find map file.");
 			dbgprintf("Cannot find map file.\n");
 			return(0);
 		}
 		
-		if ( (sym_file = fopen(mapfile, "r")) == (FILE *) 0 ) {
+		if ( (sym_file = fopen(mapfile, "r")) == NULL ) {
 			imklogLogIntMsg(LOG_WARNING, "Cannot open map file.");
 			dbgprintf("Cannot open map file.\n");
 			return(0);
@@ -248,6 +247,7 @@ extern int InitKsyms(char *mapfile)
 	}
 		
 	fclose(sym_file);
+	ENDfunc
 	return(1);
 }
 
@@ -292,44 +292,42 @@ extern void DeinitKsyms(void)
  **************************************************************************/
 static char *FindSymbolFile(void)
 {
-	auto char	*file = (char *) 0,
+	auto char	*file = NULL,
 			**mf = system_maps;
-
 	auto struct utsname utsname;
 	static char mysymfile[100];
+	auto FILE *sym_file = NULL;
+	BEGINfunc
 
-	auto FILE *sym_file = (FILE *) 0;
-
-        if ( uname(&utsname) < 0 ) {
+        if(uname(&utsname) < 0) {
                 imklogLogIntMsg(LOG_ERR, "Cannot get kernel version information.");
                 return(0);
         }
 
 	dbgprintf("Searching for symbol map.\n");
 	
-	for(mf = system_maps; *mf != (char *) 0 && file == (char *) 0; ++mf) {
- 
+	for(mf = system_maps; *mf != NULL && file == NULL; ++mf) {
 		snprintf(mysymfile, sizeof(mysymfile), "%s-%s", *mf, utsname.release);
 		dbgprintf("Trying %s.\n", mysymfile);
-		if ( (sym_file = fopen(mysymfile, "r")) != (FILE *) 0 ) {
-			if (CheckMapVersion(mysymfile) == 1)
+		if((sym_file = fopen(mysymfile, "r")) != NULL) {
+			if(CheckMapVersion(mysymfile) == 1)
 				file = mysymfile;
 			fclose(sym_file);
 		}
-		if (sym_file == (FILE *) 0 || file == (char *) 0) {
+		if(sym_file == NULL || file == NULL) {
 			sprintf (mysymfile, "%s", *mf);
 			dbgprintf("Trying %s.\n", mysymfile);
-			if ( (sym_file = fopen(mysymfile, "r")) != (FILE *) 0 ) {
+			if((sym_file = fopen(mysymfile, "r")) != NULL ) {
 				if (CheckMapVersion(mysymfile) == 1)
 					file = mysymfile;
 				fclose(sym_file);
 			}
 		}
-
 	}
 
 	/* At this stage of the game we are at the end of the symbol tables.  */
 	dbgprintf("End of search list encountered.\n");
+	ENDfunc
 	return(file);
 }
 
@@ -464,7 +462,7 @@ static int CheckMapVersion(char *fname)
 	auto char	type,
 			sym[512];
 
-	if ( (sym_file = fopen(fname, "r")) != (FILE *) 0 ) {
+	if ( (sym_file = fopen(fname, "r")) != NULL ) {
 		/*
 		 * At this point a map file was successfully opened.  We
 		 * now need to search this file and look for version
@@ -527,7 +525,7 @@ static int AddSymbol(unsigned long address, char *symbol)
 
 	/* Then the space for the symbol. */
 	sym_array[num_syms].name = (char *) malloc(strlen(symbol)*sizeof(char) + 1);
-	if ( sym_array[num_syms].name == (char *) 0 )
+	if ( sym_array[num_syms].name == NULL )
 		return(0);
 	
 	sym_array[num_syms].value = address;
@@ -566,13 +564,13 @@ char * LookupSymbol(unsigned long value, struct symbol *sym)
         struct symbol ksym, msym;
 
         if (!sym_array)
-                return((char *) 0);
+                return(NULL);
 
         last = sym_array[0].name;
         ksym.offset = 0;
         ksym.size = 0;
         if ( value < sym_array[0].value )
-                return((char *) 0);
+                return(NULL);
 
         for(lp = 0; lp <= num_syms; ++lp) {
                 if ( sym_array[lp].value > value ) {
@@ -587,7 +585,7 @@ char * LookupSymbol(unsigned long value, struct symbol *sym)
         name = LookupModuleSymbol(value, &msym);
 
         if ( ksym.offset == 0 && msym.offset == 0 ) {
-                return((char *) 0);
+                return(NULL);
         }
 
         if ( ksym.offset == 0 || msym.offset < 0 ||
@@ -602,7 +600,7 @@ char * LookupSymbol(unsigned long value, struct symbol *sym)
         }
 
 
-        return((char *) 0);
+        return(NULL);
 }
 
 /**************************************************************************
@@ -683,7 +681,7 @@ extern char *ExpandKadds(char *line, char *el)
 	 * open for patches.
 	 */
 	if ( i_am_paranoid &&
-	     (strstr(line, "Oops:") != (char *) 0) && !InitMsyms() )
+	     (strstr(line, "Oops:") != NULL) && !InitMsyms() )
 		imklogLogIntMsg(LOG_WARNING, "Cannot load kernel module symbols.\n");
 	
 
@@ -692,7 +690,7 @@ extern char *ExpandKadds(char *line, char *el)
 	 * messages in this line.
 	 */
 	if ( (num_syms == 0) ||
-	     (kp = strstr(line, "[<")) == (char *) 0 ) {
+	     (kp = strstr(line, "[<")) == NULL ) {
 #ifdef __sparc__
 		if (num_syms) {
 			/* On SPARC, register dumps do not have the [< >] characters in it.
@@ -780,7 +778,7 @@ extern char *ExpandKadds(char *line, char *el)
 			*elp++ = *sl++;
 
 		/* Now poised at a kernel delimiter. */
-	        if ( (kp = strstr(sl, ">]")) == (char *) 0 ) {
+	        if ( (kp = strstr(sl, ">]")) == NULL ) {
 			strcpy(el, sl);
 			return(el);
 		}
@@ -788,7 +786,7 @@ extern char *ExpandKadds(char *line, char *el)
 		strncpy(num,sl+1,kp-sl-1);
 		num[kp-sl-1] = '\0';
 		value = strtoul(num, (char **) 0, 16);
-		if ( (symbol = LookupSymbol(value, &sym)) == (char *) 0 )
+		if ( (symbol = LookupSymbol(value, &sym)) == NULL )
 			symbol = sl;
 			
 		strcat(elp, symbol);
@@ -805,10 +803,10 @@ extern char *ExpandKadds(char *line, char *el)
 		strncat(elp, kp, value);
 		elp += value;
 		sl = kp + value;
-		if ( (kp = strstr(sl, "[<")) == (char *) 0 )
+		if ( (kp = strstr(sl, "[<")) == NULL )
 			strcat(elp, sl);
 	}
-	while ( kp != (char *) 0);
+	while ( kp != NULL);
 		
 	dbgprintf("Expanded line: %s\n", el);
 	return(el);
