@@ -29,7 +29,8 @@
 /* the netstrms object */
 struct netstrms_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	uchar *pDrvrName;	/**< nsd driver name to use, or NULL if system default */
+	uchar *pBaseDrvrName;	/**< nsd base driver name to use, or NULL if system default */
+	uchar *pDrvrName;	/**< full base driver name (set when driver is loaded) */
 	nsd_if_t Drvr;		/**< our stream driver */
 };
 

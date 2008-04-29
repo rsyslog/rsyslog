@@ -30,7 +30,8 @@
 struct nssel_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pDrvrData;	/**< the driver's data elements */
-	uchar *pDrvrName;	/**< nsd driver name to use, or NULL if system default */
+	uchar *pBaseDrvrName;	/**< nsd base driver name to use, or NULL if system default */
+	uchar *pDrvrName;	/**< full base driver name (set when driver is loaded) */
 	nsdsel_if_t Drvr;	/**< our stream driver */
 };
 

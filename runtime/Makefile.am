@@ -81,7 +81,7 @@ lmregexp_la_LIBADD =
 endif
 
 if ENABLE_INET
-pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la lmnetstrm.la lmnssel.la
+pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 #
 # network support
 # 
@@ -91,22 +91,10 @@ lmnet_la_LDFLAGS = -module -avoid-version
 lmnet_la_LIBADD =
 
 # network stream master class and stream factory
-lmnetstrms_la_SOURCES = netstrms.c netstrms.h
+lmnetstrms_la_SOURCES = netstrms.c netstrms.h netstrm.c netstrm.h nssel.c nssel.h
 lmnetstrms_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
 lmnetstrms_la_LDFLAGS = -module -avoid-version
 lmnetstrms_la_LIBADD =
-
-# individual network streams
-lmnetstrm_la_SOURCES = netstrm.c netstrm.h
-lmnetstrm_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmnetstrm_la_LDFLAGS = -module -avoid-version
-lmnetstrm_la_LIBADD =
-
-# network stream select support (a helper class)
-lmnssel_la_SOURCES = nssel.c nssel.h
-lmnssel_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmnssel_la_LDFLAGS = -module -avoid-version
-lmnssel_la_LIBADD =
 
 # netstream drivers
 

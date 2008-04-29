@@ -46,11 +46,8 @@
 #include "module-template.h"
 #include "obj.h"
 #include "errmsg.h"
-//#include "nsd.h"
 #include "netstrms.h"
 #include "netstrm.h"
-
-MODULE_TYPE_LIB
 
 /* static data */
 DEFobjStaticHelpers
@@ -119,6 +116,7 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 	/* accept the new connection */
 	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd));
 	/* construct our object so that we can use it... */
+	CHKiRet(objUse(netstrms, DONT_LOAD_LIB)); /* load netstrms obj if not already done so */
 	CHKiRet(netstrms.CreateStrm(pThis->pNS, ppNew));
 	(*ppNew)->pDrvrData = pNewNsd;
 
@@ -276,7 +274,7 @@ BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END M
 CODESTARTObjClassExit(netstrm)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(netstrms, LM_NETSTRMS_FILENAME);
+	objRelease(netstrms, DONT_LOAD_LIB);
 ENDObjClassExit(netstrm)
 
 
@@ -287,33 +285,8 @@ ENDObjClassExit(netstrm)
 BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 
 	/* set our own handlers */
 ENDObjClassInit(netstrm)
-
-
-/* --------------- here now comes the plumbing that makes as a library module --------------- */
-
-
-BEGINmodExit
-CODESTARTmodExit
-	netstrmClassExit();
-ENDmodExit
-
-
-BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
-ENDqueryEtryPt
-
-
-BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-
-	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(netstrmClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-ENDmodInit
 /* vi:set ai:
  */

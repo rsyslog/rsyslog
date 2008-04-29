@@ -35,6 +35,7 @@
 //#include "net.h"
 #include "nsd.h"
 #include "netstrm.h"
+#include "nssel.h"
 #include "netstrms.h"
 
 MODULE_TYPE_LIB
@@ -51,6 +52,8 @@ DEFobjCurrIf(netstrm)
  * driver-specific functions (allmost all...) can be carried
  * out. Note that the driver's .ifIsLoaded is correctly
  * initialized by calloc() and we depend on that.
+ * WARNING: this code is mostly identical to similar code in 
+ * nssel.c - TODO: abstract it and move it to some common place.
  * rgerhards, 2008-04-18
  */
 static rsRetVal
@@ -60,11 +63,12 @@ loadDrvr(netstrms_t *pThis)
 	uchar *pBaseDrvrName;
 	uchar szDrvrName[48]; /* 48 shall be large enough */
 
-	pBaseDrvrName = pThis->pDrvrName;
+	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
 	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
 	/* The pDrvrName+2 below is a hack to obtain the object name. It 
@@ -74,7 +78,13 @@ loadDrvr(netstrms_t *pThis)
 	 * enough. -- rgerhards, 2008-04-18
 	 */
 	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, szDrvrName, (void*) &pThis->Drvr));
+
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis->pDrvrName != NULL)
+			free(pThis->pDrvrName);
+			pThis->pDrvrName = NULL;
+	}
 	RETiRet;
 }
 
@@ -87,8 +97,14 @@ ENDobjConstruct(netstrms)
 /* destructor for the netstrms object */
 BEGINobjDestruct(netstrms) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(netstrms)
-	if(pThis->pDrvrName != NULL)
+	/* and now we must release our driver, if we got one. We use the presence of
+	 * a driver name string as load indicator (because we also need that string
+	 * to release the driver 
+	 */
+	if(pThis->pDrvrName != NULL) {
+		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
 		free(pThis->pDrvrName);
+	}
 ENDobjDestruct(netstrms)
 
 
@@ -184,6 +200,8 @@ ENDObjClassInit(netstrms)
 BEGINmodExit
 CODESTARTmodExit
 	netstrmsClassExit();
+	netstrmClassExit();
+	nsselClassExit();
 ENDmodExit
 
 
@@ -198,7 +216,9 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(netstrmsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(netstrmClassInit(pModInfo));
+	CHKiRet(nsselClassInit(pModInfo));
+	CHKiRet(netstrmsClassInit(pModInfo));
 ENDmodInit
 /* vi:set ai:
  */
