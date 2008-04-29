@@ -541,7 +541,7 @@ actionWriteToAction(action_t *pAction)
 		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
 	}
 
-	dbgprintf("Called action, logging to %s", module.GetStateName(pAction->pMod));
+	dbgprintf("Called action, logging to %s\n", module.GetStateName(pAction->pMod));
 
 	time(&now); /* we need this for message repeation processing AND $ActionExecOnlyOnceEveryInterval */
 	/* now check if we need to drop the message because otherwise the action would be too

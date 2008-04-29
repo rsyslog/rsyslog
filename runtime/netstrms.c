@@ -23,6 +23,7 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
@@ -55,13 +56,15 @@ DEFobjCurrIf(netstrm)
 static rsRetVal
 loadDrvr(netstrms_t *pThis)
 {
-	uchar *pDrvrName;
 	DEFiRet;
+	uchar *pBaseDrvrName;
+	uchar szDrvrName[48]; /* 48 shall be large enough */
 
-	pDrvrName = pThis->pDrvrName;
-	if(pDrvrName == NULL) /* if no drvr name is set, use system default */
-		pDrvrName = glbl.GetDfltNetstrmDrvr();
-RUNLOG_VAR("%s", pDrvrName);
+	pBaseDrvrName = pThis->pDrvrName;
+	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
+		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName))
+		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
 	/* The pDrvrName+2 below is a hack to obtain the object name. It 
@@ -70,7 +73,7 @@ RUNLOG_VAR("%s", pDrvrName);
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
-	CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
+	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, szDrvrName, (void*) &pThis->Drvr));
 finalize_it:
 	RETiRet;
 }

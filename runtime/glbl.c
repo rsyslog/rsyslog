@@ -40,7 +40,7 @@
 
 /* some defaults */
 #ifndef DFLT_NETSTRM_DRVR
-#	define DFLT_NETSTRM_DRVR ((uchar*)"lmnsd_ptcp")
+#	define DFLT_NETSTRM_DRVR ((uchar*)"ptcp")
 #endif
 
 /* static data */

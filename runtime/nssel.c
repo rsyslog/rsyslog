@@ -54,18 +54,25 @@ DEFobjCurrIf(glbl)
 /* load our low-level driver. This must be done before any
  * driver-specific functions (allmost all...) can be carried
  * out. Note that the driver's .ifIsLoaded is correctly
- * initialized by calloc() and we depend on that.
- * rgerhards, 2008-04-18
+ * initialized by calloc() and we depend on that. Please note that
+ * we do some name-mangeling. We know that each nsd driver also needs
+ * a nssel driver. So we simply append "sel" to the nsd driver name: This, 
+ * of course, means that the driver name must match these rules, but that
+ * shouldn't be a real problem.
+ * rgerhards, 2008-04-28
  */
 static rsRetVal
 loadDrvr(nssel_t *pThis)
 {
-	uchar *pDrvrName;
 	DEFiRet;
+	uchar *pBaseDrvrName;
+	uchar szDrvrName[48]; /* 48 shall be large enough */
 
-	pDrvrName = pThis->pDrvrName;
-	if(pDrvrName == NULL) /* if no drvr name is set, use system default */
-		pDrvrName = glbl.GetDfltNetstrmDrvr();
+	pBaseDrvrName = pThis->pDrvrName;
+	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
+		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName))
+		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
 	/* The pDrvrName+2 below is a hack to obtain the object name. It 
@@ -74,8 +81,7 @@ loadDrvr(nssel_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
-	//CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
-	CHKiRet(obj.UseObj(__FILE__, "nsdsel_gtls", "lmnsdsel_gtls", (void*) &pThis->Drvr));
+	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, szDrvrName, (void*) &pThis->Drvr));
 finalize_it:
 	RETiRet;
 }
