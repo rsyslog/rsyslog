@@ -167,7 +167,7 @@ extern int InitMsyms(void)
                 return(0);
         }
 
-	dbgprintf("Loading kernel module symbols - Source: %s\n", KSYMS);
+	//dbgprintf("Loading kernel module symbols - Source: %s\n", KSYMS);
 
         while ( fgets(buf, sizeof(buf), ksyms) != NULL ) {
                 if (num_syms > 0 && index(buf, '[') == NULL)
