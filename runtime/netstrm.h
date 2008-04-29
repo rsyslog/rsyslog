@@ -24,7 +24,7 @@
 #ifndef INCLUDED_NETSTRM_H
 #define INCLUDED_NETSTRM_H
 
-#include "nsd.h" /* we need our driver interface to be defined */
+#include "netstrms.h"
 
 /* the netstrm object */
 struct netstrm_s {
@@ -57,6 +57,6 @@ ENDinterface(netstrm)
 PROTOTYPEObj(netstrm);
 
 /* the name of our library binary */
-#define LM_NETSTRM_FILENAME "lmnetstrm"
+#define LM_NETSTRM_FILENAME LM_NETSTRMS_FILENAME
 
 #endif /* #ifndef INCLUDED_NETSTRM_H */

@@ -522,11 +522,16 @@ modUnloadAndDestructAll(eModLinkType_t modLinkTypesToUnload)
 		if(modLinkTypesToUnload == eMOD_LINK_ALL || pModCurr->eLinkType == modLinkTypesToUnload) {
 			if(modUnlinkAndDestroy(&pModCurr) == RS_RET_MODULE_STILL_REFERENCED) {
 				pModCurr = GetNxt(pModCurr);
+			} else {
+				/* Note: if the module was successfully unloaded, it has updated the
+				 * pModCurr pointer to the next module. However, the unload process may
+				 * still have indirectly referenced the pointer list in a way that the
+				 * unloaded module is not aware of. So we restart the unload process
+				 * to make sure we do not fall into a trap (what we did ;)). The
+				 * performance toll is minimal. -- rgerhards, 2008-04-28
+				 */
+				pModCurr = GetNxt(NULL);
 			}
-			/* Note: if the module was successfully unloaded, it has updated the
-			 * pModCurr pointer to the next module. So we do NOT need to advance
-			 * to the next module on successful unload.
-			 */
 		} else {
 			pModCurr = GetNxt(pModCurr);
 		}

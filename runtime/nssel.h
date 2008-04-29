@@ -24,7 +24,7 @@
 #ifndef INCLUDED_NSSEL_H
 #define INCLUDED_NSSEL_H
 
-#include "nsd.h"
+#include "netstrms.h"
 
 /* the nssel object */
 struct nssel_s {
@@ -51,6 +51,6 @@ ENDinterface(nssel)
 PROTOTYPEObj(nssel);
 
 /* the name of our library binary */
-#define LM_NSSEL_FILENAME "lmnssel"
+#define LM_NSSEL_FILENAME LM_NETSTRMS_FILENAME
 
 #endif /* #ifndef INCLUDED_NSSEL_H */

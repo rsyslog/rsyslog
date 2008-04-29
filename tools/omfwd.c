@@ -408,12 +408,9 @@ static rsRetVal
 loadTCPSupport(void)
 {
 	DEFiRet;
-	if(!netstrms.ifIsLoaded)
-		CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
-	if(!netstrm.ifIsLoaded)
-		CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
-	if(!tcpclt.ifIsLoaded)
-		CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
+	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
+	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
+	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 
 finalize_it:
 	RETiRet;
@@ -579,12 +576,9 @@ CODESTARTmodExit
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
-	if(netstrm.ifIsLoaded)
-		objRelease(netstrm, LM_NETSTRM_FILENAME);
-	if(netstrms.ifIsLoaded)
-		objRelease(netstrms, LM_NETSTRMS_FILENAME);
-	if(!tcpclt.ifIsLoaded)
-		objRelease(tcpclt, LM_TCPCLT_FILENAME);
+	objRelease(netstrm, LM_NETSTRMS_FILENAME);
+	objRelease(netstrms, LM_NETSTRMS_FILENAME);
+	objRelease(tcpclt, LM_TCPCLT_FILENAME);
 
 	if(pszTplName != NULL) {
 		free(pszTplName);

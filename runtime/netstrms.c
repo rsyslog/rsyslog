@@ -32,7 +32,6 @@
 #include "module-template.h"
 #include "obj.h"
 //#include "errmsg.h"
-//#include "net.h"
 #include "nsd.h"
 #include "netstrm.h"
 #include "nssel.h"
@@ -45,7 +44,6 @@ DEFobjStaticHelpers
 //DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(netstrm)
-//DEFobjCurrIf(net)
 
 
 /* load our low-level driver. This must be done before any
@@ -130,7 +128,7 @@ CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 	netstrm_t *pStrm = NULL;
 	DEFiRet;
 
-	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
+	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
 	CHKiRet(netstrm.Construct(&pStrm));
 	/* we copy over our driver structure. We could provide a pointer to 
 	 * ourselves, but that costs some performance on each driver invocation.
@@ -175,9 +173,8 @@ ENDobjQueryInterface(netstrms)
 BEGINObjClassExit(netstrms, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(netstrms)
 	/* release objects we no longer need */
-	//objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(netstrm, LM_NETSTRM_FILENAME);
+	objRelease(netstrm, DONT_LOAD_LIB);
 ENDObjClassExit(netstrms)
 
 
@@ -188,7 +185,6 @@ ENDObjClassExit(netstrms)
 BEGINAbstractObjClassInit(netstrms, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	//CHKiRet(objUse(net, CORE_COMPONENT));
 
 	/* set our own handlers */
 ENDObjClassInit(netstrms)
@@ -199,9 +195,9 @@ ENDObjClassInit(netstrms)
 
 BEGINmodExit
 CODESTARTmodExit
-	netstrmsClassExit();
-	netstrmClassExit();
 	nsselClassExit();
+	netstrmsClassExit();
+	netstrmClassExit(); /* we use this object, so we must exit it after we are finished */
 ENDmodExit
 
 
