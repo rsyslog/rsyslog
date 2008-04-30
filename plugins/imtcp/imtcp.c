@@ -44,6 +44,7 @@
 #include "module-template.h"
 #include "net.h"
 #include "netstrm.h"
+#include "errmsg.h"
 #include "tcpsrv.h"
 
 MODULE_TYPE_INPUT
@@ -54,6 +55,7 @@ DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrm)
+DEFobjCurrIf(errmsg)
 
 /* Module static data */
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
@@ -134,6 +136,11 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(NO_ERRCODE, "error %d trying to add listener", iRet);
+		if(pOurTcpsrv != NULL)
+			tcpsrv.Destruct(&pOurTcpsrv);
+	}
 	RETiRet;
 }
 
@@ -179,6 +186,7 @@ CODESTARTmodExit
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
+	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -207,6 +215,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverrun", 0, eCmdHdlrGetWord,

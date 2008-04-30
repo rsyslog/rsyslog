@@ -181,12 +181,15 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 {
 	register int i;
 
+	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	assert(pThis->pSessions != NULL);
 	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i) {
 		if(pThis->pSessions[i] != NULL)
 			break;
 	}
 
+	ENDfunc
 	return((i < pThis->iSessMax) ? i : -1);
 }
 
@@ -202,20 +205,20 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 	int i;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	assert(pThis->pSessions != NULL);
 
-	/* close all TCP connections! */
-	i = TCPSessGetNxtSess(pThis, -1);
-	while(i != -1) {
-		tcps_sess.Destruct(&pThis->pSessions[i]);
-		/* now get next... */
-		i = TCPSessGetNxtSess(pThis, i);
+	if(pThis->pSessions != NULL) {
+		/* close all TCP connections! */
+		i = TCPSessGetNxtSess(pThis, -1);
+		while(i != -1) {
+			tcps_sess.Destruct(&pThis->pSessions[i]);
+			/* now get next... */
+			i = TCPSessGetNxtSess(pThis, i);
+		}
+		
+		/* we are done with the session table - so get rid of it...  */
+		free(pThis->pSessions);
+		pThis->pSessions = NULL; /* just to make sure... */
 	}
-	
-	/* we are done with the session table - so get rid of it...
-	*/
-	free(pThis->pSessions);
-	pThis->pSessions = NULL; /* just to make sure... */
 
 	if(pThis->TCPLstnPort != NULL)
 		free(pThis->TCPLstnPort);
@@ -413,7 +416,6 @@ Run(tcpsrv_t *pThis)
 
 		/* Add the TCP listen sockets to the list of read descriptors. */
 		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
-RUNLOG_VAR("%d", i);
 			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
 		}
 
