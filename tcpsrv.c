@@ -500,6 +500,7 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 
 	/* prepare network stream subsystem */
 	CHKiRet(netstrms.Construct(&pThis->pNS));
+	CHKiRet(netstrms.SetDrvrMode(pThis->pNS, pThis->iDrvrMode));
 	// TODO: set driver!
 	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
 
@@ -624,6 +625,18 @@ SetUsrP(tcpsrv_t *pThis, void *pUsr)
 	pThis->pUsr = pUsr;
 	RETiRet;
 }
+/* set the driver mode -- rgerhards, 2008-04-30
+ */
+static rsRetVal
+SetDrvrMode(tcpsrv_t *pThis, int iMode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->iDrvrMode = iMode;
+	RETiRet;
+}
+
+
 
 
 /* queryInterface function
@@ -651,6 +664,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->Run = Run;
 
 	pIf->SetUsrP = SetUsrP;
+	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetCBIsPermittedHost = SetCBIsPermittedHost;
 	pIf->SetCBOpenLstnSocks = SetCBOpenLstnSocks;
 	pIf->SetCBRcvData = SetCBRcvData;

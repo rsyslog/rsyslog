@@ -93,7 +93,7 @@ typedef struct _instanceData {
 
 /* config data */
 static uchar	*pszTplName = NULL; /* name of the default template to use */
-int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 
 
 /* get the syslog forward port from selector_t. The passed in

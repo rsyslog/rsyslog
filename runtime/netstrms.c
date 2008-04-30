@@ -118,6 +118,32 @@ finalize_it:
 }
 
 
+/* set the driver mode
+ * rgerhards, 2008-04-30
+ */
+static rsRetVal
+SetDrvrMode(netstrms_t *pThis, int iMode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	pThis->iDrvrMode = iMode;
+	RETiRet;
+}
+
+
+/* return the driver mode
+ * We use non-standard calling conventions because it makes an awful lot
+ * of sense here.
+ * rgerhards, 2008-04-30
+ */
+static int
+GetDrvrMode(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->iDrvrMode;
+}
+
+
 /* create an instance of a netstrm object. It is initialized with default
  * values. The current driver is used. The caller may set netstrm properties
  * and must call ConstructFinalize().
@@ -165,6 +191,8 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->ConstructFinalize = netstrmsConstructFinalize;
 	pIf->Destruct = netstrmsDestruct;
 	pIf->CreateStrm = CreateStrm;
+	pIf->SetDrvrMode = SetDrvrMode;
+	pIf->GetDrvrMode = GetDrvrMode;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 

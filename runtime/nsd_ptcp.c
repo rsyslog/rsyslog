@@ -432,13 +432,11 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 * construct a new netstrm obj and hand it over to the upper layers for inclusion
 		 * into their socket array. -- rgerhards, 2008-04-23
 		 */
-RUNLOG_VAR("%d", sock);
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
-RUNLOG;
+		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
 		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
-RUNLOG;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewNsd = NULL;
 		pNewStrm = NULL;

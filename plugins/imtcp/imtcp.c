@@ -62,6 +62,7 @@ static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change fo
 
 /* config settings */
 static int iTCPSessMax = 200; /* max number of sessions */
+static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 
 
 /* callbacks */
@@ -131,6 +132,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
+		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
 		tcpsrv.configureTCPListen(pOurTcpsrv, (char *) pNewVal);
 		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
@@ -194,6 +196,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	iTCPSessMax = 200;
+	iStrmDrvrMode = 0;
 	return RS_RET_OK;
 }
 
@@ -222,6 +225,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpmaxsessions", 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
+	CHKiRet(regCfSysLineHdlr((uchar *)"inputtcpserverstreamdrivermode", 0,
+				   eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

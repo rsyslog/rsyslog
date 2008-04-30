@@ -31,6 +31,7 @@ struct netstrms_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	uchar *pBaseDrvrName;	/**< nsd base driver name to use, or NULL if system default */
 	uchar *pDrvrName;	/**< full base driver name (set when driver is loaded) */
+	int iDrvrMode;		/**< current default driver mode */
 	nsd_if_t Drvr;		/**< our stream driver */
 };
 
@@ -41,6 +42,8 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(netstrms_t *pThis);
 	rsRetVal (*Destruct)(netstrms_t **ppThis);
 	rsRetVal (*CreateStrm)(netstrms_t *pThis, netstrm_t **ppStrm);
+	rsRetVal (*SetDrvrMode)(netstrms_t *pThis, int iMode);
+	int (*GetDrvrMode)(netstrms_t *pThis);
 ENDinterface(netstrms)
 #define netstrmsCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

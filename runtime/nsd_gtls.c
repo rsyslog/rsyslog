@@ -208,7 +208,6 @@ gtlsEndSess(nsd_gtls_t *pThis)
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
-	pThis->iMode = 1; // TODO: remove!
 ENDobjConstruct(nsd_gtls)
 
 
@@ -236,6 +235,7 @@ SetMode(nsd_t *pNsd, int mode)
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
+dbgprintf("SetMOde tries to set mode %d\n", mode);
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	if(mode != 0 && mode != 1)
 		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
@@ -352,6 +352,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
 	
+RUNLOG_VAR("%d", pThis->iMode);
 	if(pThis->iMode == 0) {
 		/* we are in non-TLS mode, so we are done */
 		*ppNew = (nsd_t*) pNew;
@@ -373,8 +374,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	} else if(gnuRet != 0) {
 		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
 	}
-
-	pThis->iMode = 1; /* this session is now in TLS mode! */
+	pNew->iMode = 1; /* this session is now in TLS mode! */
 
 	*ppNew = (nsd_t*) pNew;
 
