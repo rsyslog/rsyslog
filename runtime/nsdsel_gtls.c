@@ -74,7 +74,21 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
 	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
-	iRet = nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, waitOp);
+	if(pNsdGTLS->iMode == 1) {
+		if(pNsdGTLS->rtryCall != gtlsRtry_None) {
+			if(gnutls_record_get_direction(pNsdGTLS->sess) == 0) {
+				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, NSDSEL_RD));
+			} else {
+				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, NSDSEL_WR));
+			}
+			FINALIZE;
+		}
+	}
+
+	/* if we reach this point, we need no special handling */
+	CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, waitOp));
+
+finalize_it:
 	RETiRet;
 }
 
@@ -94,6 +108,47 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 }
 
 
+/* retry an interrupted GTLS operation
+ * rgerhards, 2008-04-30
+ */
+static rsRetVal
+doRetry(nsd_gtls_t *pNsd)
+{
+	DEFiRet;
+	int gnuRet;
+
+	dbgprintf("GnuTLS requested retry of %d operation - executing\n", pNsd->rtryCall);
+
+	/* We follow a common scheme here: first, we do the systen call and
+	 * then we check the result. So far, the result is checked after the
+	 * switch, because the result check is the same for all calls. Note that
+	 * this may change once we deal with the read and write calls (but
+	 * probably this becomes an issue only when we begin to work on TLS
+	 * for relp). -- rgerhards, 2008-04-30
+	 */
+	switch(pNsd->rtryCall) {
+		case gtlsRtry_handshake:
+			gnuRet = gnutls_handshake(pNsd->sess);
+			break;
+		default:
+			assert(0); /* this shall not happen! */
+			break;
+	}
+
+	if(gnuRet == 0) {
+		pNsd->rtryCall = gtlsRtry_None; /* we are done */
+	} else if(gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+	}
+	/* if we are interrupted once again (else case), we do not need to
+	 * change our status because we are already setup for retries.
+	 */
+		
+finalize_it:
+	RETiRet;
+}
+
+
 /* check if a socket is ready for IO */
 static rsRetVal
 IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
@@ -104,7 +159,20 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
 	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
-	iRet = nsdsel_ptcp.IsReady(pThis->pTcp, pNsdGTLS->pTcp, waitOp, pbIsReady);
+	if(pNsdGTLS->iMode == 1) {
+		if(pNsdGTLS->rtryCall != gtlsRtry_None) {
+			CHKiRet(doRetry(pNsdGTLS));
+			/* we used this up for our own internal processing, so the socket
+			 * is not ready from the upper layer point of view.
+			 */
+			*pbIsReady = 0;
+			FINALIZE;
+		}
+	}
+
+	CHKiRet(nsdsel_ptcp.IsReady(pThis->pTcp, pNsdGTLS->pTcp, waitOp, pbIsReady));
+
+finalize_it:
 	RETiRet;
 }
 

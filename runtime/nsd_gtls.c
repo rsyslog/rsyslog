@@ -365,7 +365,14 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	 * on non-blocking sockets. Usually, the handshake will not complete
 	 * immediately, so that we need to retry it some time later.
 	 */
-	CHKgnutls(gnutls_handshake(pNew->sess));
+	gnuRet = gnutls_handshake(pNew->sess);
+	if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
+		pNew->rtryCall = gtlsRtry_handshake;
+		dbgprintf("GnuTLS handshake does not complete immediately - setting to retry (this is OK and normal)\n");
+	} else if(gnuRet != 0) {
+		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
+	}
+
 	pThis->iMode = 1; /* this session is now in TLS mode! */
 
 	*ppNew = (nsd_t*) pNew;

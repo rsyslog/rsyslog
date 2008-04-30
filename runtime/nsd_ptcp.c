@@ -273,8 +273,6 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 	CHKiRet(FillRemHost(pNew, (struct sockaddr*) &addr));
 
-#warning "socket set to blocking for tls testing - re-enable non-blocking mode!"
-#if 0
 	/* set the new socket to non-blocking IO -TODO:do we really need to do this here? Do we always want it? */
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
 		sockflags |= O_NONBLOCK;
@@ -287,7 +285,6 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket %d", errno, iNewSock);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-#endif
 
 	pNew->sock = iNewSock;
 	*ppNew = (nsd_t*) pNew;
