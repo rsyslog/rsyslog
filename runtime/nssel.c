@@ -82,7 +82,7 @@ loadDrvr(nssel_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
-	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, szDrvrName, (void*) &pThis->Drvr));
+	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -110,7 +110,7 @@ CODESTARTobjDestruct(nssel)
 	 * to release the driver 
 	 */
 	if(pThis->pDrvrName != NULL) {
-		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
+		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr);
 		free(pThis->pDrvrName);
 	}
 ENDobjDestruct(nssel)

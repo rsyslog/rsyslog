@@ -39,7 +39,4 @@ struct nsdsel_gtls_s {
 /* prototypes */
 PROTOTYPEObj(nsdsel_gtls);
 
-/* the name of our library binary */
-#define LM_NSDSEL_GTLS_FILENAME "lmnsdsel_gtls"
-
 #endif /* #ifndef INCLUDED_NSDSEL_GTLS_H */

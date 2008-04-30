@@ -33,6 +33,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "nsd_ptcp.h"
+#include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
 
 /* things to move to some better place/functionality - TODO */
@@ -571,6 +572,7 @@ ENDObjClassInit(nsd_gtls)
 
 BEGINmodExit
 CODESTARTmodExit
+	nsdsel_gtlsClassExit();
 	nsd_gtlsClassExit();
 ENDmodExit
 
@@ -587,6 +589,7 @@ CODESTARTmodInit
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(nsdsel_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
 /* vi:set ai:
  */

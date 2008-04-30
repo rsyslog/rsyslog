@@ -37,8 +37,6 @@
 #include "nsd_ptcp.h"
 #include "nsdsel_ptcp.h"
 
-MODULE_TYPE_LIB
-
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
@@ -175,7 +173,7 @@ ENDobjQueryInterface(nsdsel_ptcp)
 
 /* exit our class
  */
-BEGINObjClassExit(nsdsel_ptcp, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+BEGINObjClassExit(nsdsel_ptcp, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(nsdsel_ptcp)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
@@ -187,36 +185,12 @@ ENDObjClassExit(nsdsel_ptcp)
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
-BEGINObjClassInit(nsdsel_ptcp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
+BEGINObjClassInit(nsdsel_ptcp, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */
 ENDObjClassInit(nsdsel_ptcp)
-
-
-/* --------------- here now comes the plumbing that makes as a library module --------------- */
-
-
-BEGINmodExit
-CODESTARTmodExit
-	nsdsel_ptcpClassExit();
-ENDmodExit
-
-
-BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
-ENDqueryEtryPt
-
-
-BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-
-	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(nsdsel_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-ENDmodInit
 /* vi:set ai:
  */

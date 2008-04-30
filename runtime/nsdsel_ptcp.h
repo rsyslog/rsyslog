@@ -41,7 +41,4 @@ struct nsdsel_ptcp_s {
 /* prototypes */
 PROTOTYPEObj(nsdsel_ptcp);
 
-/* the name of our library binary */
-#define LM_NSDSEL_PTCP_FILENAME "lmnsdsel_ptcp"
-
 #endif /* #ifndef INCLUDED_NSDSEL_PTCP_H */

@@ -100,17 +100,10 @@ lmnetstrms_la_LIBADD =
 
 # plain tcp driver - main driver
 pkglib_LTLIBRARIES += lmnsd_ptcp.la
-lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h
+lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h nsdsel_ptcp.c nsdsel_ptcp.h
 lmnsd_ptcp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
 lmnsd_ptcp_la_LDFLAGS = -module -avoid-version
 lmnsd_ptcp_la_LIBADD =
-
-# select interface for ptcp driver
-pkglib_LTLIBRARIES += lmnsdsel_ptcp.la
-lmnsdsel_ptcp_la_SOURCES = nsdsel_ptcp.c nsdsel_ptcp.h
-lmnsdsel_ptcp_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmnsdsel_ptcp_la_LDFLAGS = -module -avoid-version
-lmnsdsel_ptcp_la_LIBADD =
 endif # if ENABLE_INET
 
 #
@@ -118,16 +111,9 @@ endif # if ENABLE_INET
 # 
 if ENABLE_GNUTLS
 pkglib_LTLIBRARIES += lmnsd_gtls.la
-lmnsd_gtls_la_SOURCES = nsd_gtls.c nsd_gtls.h
+lmnsd_gtls_la_SOURCES = nsd_gtls.c nsd_gtls.h nsdsel_gtls.c  nsdsel_gtls.h
 lmnsd_gtls_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags) $(gnutls_cflags)
 lmnsd_gtls_la_LDFLAGS = -module -avoid-version
 lmnsd_gtls_la_LIBADD = $(gnutls_libs)
-#
-# select interface for gtls driver
-pkglib_LTLIBRARIES += lmnsdsel_gtls.la
-lmnsdsel_gtls_la_SOURCES = nsdsel_gtls.c nsdsel_gtls.h
-lmnsdsel_gtls_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmnsdsel_gtls_la_LDFLAGS = -module -avoid-version
-lmnsdsel_gtls_la_LIBADD = $(gnutls_libs)
 endif
 

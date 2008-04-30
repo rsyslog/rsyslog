@@ -47,6 +47,7 @@
 #include "net.h"
 #include "netstrms.h"
 #include "netstrm.h"
+#include "nsdsel_ptcp.h"
 #include "nsd_ptcp.h"
 
 MODULE_TYPE_LIB
@@ -671,6 +672,7 @@ ENDObjClassInit(nsd_ptcp)
 
 BEGINmodExit
 CODESTARTmodExit
+	nsdsel_ptcpClassExit();
 	nsd_ptcpClassExit();
 ENDmodExit
 
@@ -687,6 +689,7 @@ CODESTARTmodInit
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(nsdsel_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
 /* vi:set ai:
  */
