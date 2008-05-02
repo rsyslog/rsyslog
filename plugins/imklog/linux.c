@@ -229,8 +229,8 @@ static void LogLine(char *ptr, int len)
             */
             *line = 0;   /* force null terminator */
 
-	    dbgprintf("Line buffer full:\n");
-       	    dbgprintf("\tLine: %s\n", line);
+	    //dbgprintf("Line buffer full:\n");
+       	    //dbgprintf("\tLine: %s\n", line);
 
             Syslog(LOG_INFO, line_buff);
             line  = line_buff;

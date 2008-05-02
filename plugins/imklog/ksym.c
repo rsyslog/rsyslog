@@ -202,8 +202,7 @@ extern int InitKsyms(char *mapfile)
 	}
 	
 
-	/*
-	 * Read the kernel symbol table file and add entries for each
+	/* Read the kernel symbol table file and add entries for each
 	 * line.  I suspect that the use of fscanf is not really in vogue
 	 * but it was quick and dirty and IMHO suitable for fixed format
 	 * data such as this.  If anybody doesn't agree with this please
