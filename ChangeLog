@@ -1,5 +1,6 @@
 Version 3.17.2 (rgerhards), 2008-04-??
 - this version is the new beta
+- merged in imklog bug fix from v3-stable (3.16.1)
 ---------------------------------------------------------------------------
 Version 3.17.1 (rgerhards), 2008-04-15
 - removed dependency on MAXHOSTNAMELEN as much as it made sense.
