@@ -232,8 +232,8 @@ static void LogLine(char *ptr, int len)
             */
             *line = 0;   /* force null terminator */
 
-	    dbgprintf("Line buffer full:\n");
-       	    dbgprintf("\tLine: %s\n", line);
+	    //dbgprintf("Line buffer full:\n");
+       	    //dbgprintf("\tLine: %s\n", line);
 
             Syslog(LOG_INFO, line_buff);
             line  = line_buff;
@@ -504,7 +504,8 @@ rsRetVal klogWillRun(void)
 			symbol_lookup  = (InitKsyms(symfile) == 1);
 			symbol_lookup |= InitMsyms();
 			if (symbol_lookup == 0) {
-				imklogLogIntMsg(LOG_WARNING, "cannot find any symbols, turning off symbol lookups\n");
+				//dbgprintf("cannot find any symbols, turning off symbol lookups\n");
+				imklogLogIntMsg(LOG_WARNING, "cannot find any symbols, turning off symbol lookups");
 			}
 		}
 	}

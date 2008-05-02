@@ -1572,8 +1572,7 @@ submitMsg(msg_t *pMsg)
 }
 
 
-/*
- * Log a message to the appropriate log files, users, etc. based on
+/* Log a message to the appropriate log files, users, etc. based on
  * the priority.
  * rgerhards 2004-11-08: actually, this also decodes all but the PRI part.
  * rgerhards 2004-11-09: ... but only, if syslogd could properly be initialized
@@ -2233,12 +2232,12 @@ init(void)
 	tplDeleteNew();
 
 	/* re-setting values to defaults (where applicable) */
-	/* TODO: once we have loadable modules, we must re-visit this code. The reason is
+	/* once we have loadable modules, we must re-visit this code. The reason is
 	 * that config variables are not re-set, because the module is not yet loaded. On
 	 * the other hand, that doesn't matter, because the module got unloaded and is then
-	 * re-loaded, so the variables should be re-set via that way. In any case, we should
-	 * think about the whole situation when we implement loadable plugins.
-	 * rgerhards, 2007-07-31
+	 * re-loaded, so the variables should be re-set via that way. And this is exactly how
+	 * it works. Loadable module's variables are initialized on load, the rest here.
+	 * rgerhards, 2008-04-28
 	 */
 	conf.cfsysline((uchar*)"ResetConfigVariables");
 
