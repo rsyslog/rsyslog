@@ -11,6 +11,8 @@
  *
  * File begun on 2007-07-31 by RGerhards
  *
+ * Copyright (C) 2007, 2008 by Rainer Gerhards and Adiscon GmbH.
+ *
  * This file is part of rsyslog.
  *
  * Rsyslog is free software: you can redistribute it and/or modify
