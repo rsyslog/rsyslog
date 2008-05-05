@@ -30,6 +30,7 @@
 #include "rsyslog.h"
 #include "syslogd-types.h"
 #include "module-template.h"
+#include "cfsysline.h"
 #include "obj.h"
 #include "errmsg.h"
 #include "nsd_ptcp.h"
@@ -38,10 +39,8 @@
 
 /* things to move to some better place/functionality - TODO */
 #define DH_BITS 1024
-#define CAFILE "ca.pem" // TODO: allow to specify
-#define KEYFILE "key.pem"
-#define CERTFILE "cert.pem"
 #define CRLFILE "crl.pem"
+
 
 MODULE_TYPE_LIB
 
@@ -87,6 +86,7 @@ static rsRetVal
 gtlsGlblInit(void)
 {
 	int gnuRet;
+	uchar *cafile;
 	DEFiRet;
 
 	CHKgnutls(gnutls_global_init());
@@ -95,7 +95,16 @@ gtlsGlblInit(void)
 	CHKgnutls(gnutls_certificate_allocate_credentials(&xcred));
 
 	/* sets the trusted cas file */
-	gnutls_certificate_set_x509_trust_file(xcred, CAFILE, GNUTLS_X509_FMT_PEM);
+	cafile = glbl.GetDfltNetstrmDrvrCAF();
+	dbgprintf("GTLS CA file: '%s'\n", cafile);
+	gnuRet = gnutls_certificate_set_x509_trust_file(xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
+	if(gnuRet < 0) {
+		/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
+		uchar *pErr = gtlsStrerror(gnuRet);
+		dbgprintf("unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
+		free(pErr);
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+	}
 
 finalize_it:
 	RETiRet;
@@ -152,6 +161,8 @@ static rsRetVal
 gtlsGlblInitLstn(void)
 {
 	int gnuRet;
+	uchar *keyFile;
+	uchar *certFile;
 	DEFiRet;
 
 	if(bGlblSrvrInitDone == 0) {
@@ -159,7 +170,11 @@ gtlsGlblInitLstn(void)
 		 * considered legacy. -- rgerhards, 2008-05-05
 		 */
 		/*CHKgnutls(gnutls_certificate_set_x509_crl_file(xcred, CRLFILE, GNUTLS_X509_FMT_PEM));*/
-		CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, CERTFILE, KEYFILE, GNUTLS_X509_FMT_PEM));
+		certFile = glbl.GetDfltNetstrmDrvrCertFile();
+		keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
+		dbgprintf("GTLS certificate file: '%s'\n", certFile);
+		dbgprintf("GTLS key file: '%s'\n", keyFile);
+		CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
 		CHKiRet(generate_dh_params());
 		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */
 		bGlblSrvrInitDone = 1; /* we are all set now */
@@ -350,12 +365,10 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	// TODO: method to construct without pTcp
 	CHKiRet(nsd_gtlsConstruct(&pNew));
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
 	
-RUNLOG_VAR("%d", pThis->iMode);
 	if(pThis->iMode == 0) {
 		/* we are in non-TLS mode, so we are done */
 		*ppNew = (nsd_t*) pNew;
@@ -593,6 +606,7 @@ CODESTARTmodInit
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 	CHKiRet(nsdsel_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+
 ENDmodInit
 /* vi:set ai:
  */

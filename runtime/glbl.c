@@ -42,6 +42,15 @@
 #ifndef DFLT_NETSTRM_DRVR
 #	define DFLT_NETSTRM_DRVR ((uchar*)"ptcp")
 #endif
+#ifndef DFLT_NETSTRM_DRVR_CAF
+#	define DFLT_NETSTRM_DRVR_CAF ((uchar*)"ca.pem")
+#endif
+#ifndef DFLT_NETSTRM_DRVR_KEYFILE
+#	define DFLT_NETSTRM_DRVR_KEYFILE ((uchar*)"key.pem")
+#endif
+#ifndef DFLT_NETSTRM_DRVR_CERTFILE
+#	define DFLT_NETSTRM_DRVR_CERTFILE ((uchar*)"cert.pem")
+#endif
 
 /* static data */
 DEFobjStaticHelpers
@@ -60,6 +69,9 @@ static uchar *LocalDomain;	/* our local domain name  - read-only after startup *
 static char **StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 static char **LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
 static uchar *pszDfltNetstrmDrvr = NULL; /* module name of default netstream driver */
+static uchar *pszDfltNetstrmDrvrCAF = NULL; /* default CA file for the netstrm driver */
+static uchar *pszDfltNetstrmDrvrKeyFile = NULL; /* default key file for the netstrm driver (server) */
+static uchar *pszDfltNetstrmDrvrCertFile = NULL; /* default cert file for the netstrm driver (server) */
 
 
 /* define a macro for the simple properties' set and get functions
@@ -91,6 +103,9 @@ SIMP_PROP(LocalHosts, LocalHosts, char**)
 
 SIMP_PROP_SET(LocalHostName, LocalHostName, uchar*)
 SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) // TODO: use custom function which frees existing value
+SIMP_PROP_SET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*) // TODO: use custom function which frees existing value
+SIMP_PROP_SET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*) // TODO: use custom function which frees existing value
+SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*) // TODO: use custom function which frees existing value
 
 #undef SIMP_PROP
 #undef SIMP_PROP_SET
@@ -122,6 +137,30 @@ GetDfltNetstrmDrvr(void)
 }
 
 
+/* return the current default netstream driver CA File */
+static uchar*
+GetDfltNetstrmDrvrCAF(void)
+{
+	return(pszDfltNetstrmDrvrCAF == NULL ? DFLT_NETSTRM_DRVR_CAF : pszDfltNetstrmDrvrCAF);
+}
+
+
+/* return the current default netstream driver key File */
+static uchar*
+GetDfltNetstrmDrvrKeyFile(void)
+{
+	return(pszDfltNetstrmDrvrKeyFile == NULL ? DFLT_NETSTRM_DRVR_KEYFILE : pszDfltNetstrmDrvrKeyFile);
+}
+
+
+/* return the current default netstream driver certificate File */
+static uchar*
+GetDfltNetstrmDrvrCertFile(void)
+{
+	return(pszDfltNetstrmDrvrCertFile == NULL ? DFLT_NETSTRM_DRVR_CERTFILE : pszDfltNetstrmDrvrCertFile);
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-21
  */
@@ -149,6 +188,9 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(StripDomains)
 	SIMP_PROP(LocalHosts)
 	SIMP_PROP(DfltNetstrmDrvr)
+	SIMP_PROP(DfltNetstrmDrvrCAF)
+	SIMP_PROP(DfltNetstrmDrvrKeyFile)
+	SIMP_PROP(DfltNetstrmDrvrCertFile)
 #undef	SIMP_PROP
 finalize_it:
 ENDobjQueryInterface(glbl)
@@ -162,6 +204,18 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	if(pszDfltNetstrmDrvr != NULL) {
 		free(pszDfltNetstrmDrvr);
 		pszDfltNetstrmDrvr = NULL;
+	}
+	if(pszDfltNetstrmDrvrCAF != NULL) {
+		free(pszDfltNetstrmDrvrCAF);
+		pszDfltNetstrmDrvrCAF = NULL;
+	}
+	if(pszDfltNetstrmDrvrKeyFile != NULL) {
+		free(pszDfltNetstrmDrvrKeyFile);
+		pszDfltNetstrmDrvrKeyFile = NULL;
+	}
+	if(pszDfltNetstrmDrvrCertFile != NULL) {
+		free(pszDfltNetstrmDrvrCertFile);
+		pszDfltNetstrmDrvrCertFile = NULL;
 	}
 	if(pszWorkDir != NULL) {
 		free(pszWorkDir);
@@ -184,6 +238,9 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, NULL, &bDropMalPTRMsgs, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvr, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCAF, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrKeyFile, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCertFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 ENDObjClassInit(glbl)
 
@@ -194,6 +251,12 @@ ENDObjClassInit(glbl)
 BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 	if(pszDfltNetstrmDrvr != NULL)
 		free(pszDfltNetstrmDrvr);
+	if(pszDfltNetstrmDrvrCAF != NULL)
+		free(pszDfltNetstrmDrvrCAF);
+	if(pszDfltNetstrmDrvrKeyFile != NULL)
+		free(pszDfltNetstrmDrvrKeyFile);
+	if(pszDfltNetstrmDrvrCertFile != NULL)
+		free(pszDfltNetstrmDrvrCertFile);
 	if(pszWorkDir != NULL)
 		free(pszWorkDir);
 	if(LocalHostName != NULL)
