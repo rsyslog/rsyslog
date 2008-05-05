@@ -155,7 +155,10 @@ gtlsGlblInitLstn(void)
 	DEFiRet;
 
 	if(bGlblSrvrInitDone == 0) {
-		//CHKgnutls(gnutls_certificate_set_x509_crl_file(xcred, CRLFILE, GNUTLS_X509_FMT_PEM));
+		/* we do not use CRLs right now, and I doubt we'll ever do. This functionality is
+		 * considered legacy. -- rgerhards, 2008-05-05
+		 */
+		/*CHKgnutls(gnutls_certificate_set_x509_crl_file(xcred, CRLFILE, GNUTLS_X509_FMT_PEM));*/
 		CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, CERTFILE, KEYFILE, GNUTLS_X509_FMT_PEM));
 		CHKiRet(generate_dh_params());
 		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */

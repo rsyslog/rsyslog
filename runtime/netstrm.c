@@ -239,6 +239,22 @@ Connect(netstrm_t *pThis, int family, uchar *port, uchar *host)
 }
 
 
+/* Provide access to the underlying OS socket. This is dirty
+ * and scheduled to be removed. Does not work with all nsd drivers.
+ * See comment in netstrm interface for details.
+ * rgerhards, 2008-05-05
+ */
+static rsRetVal
+GetSock(netstrm_t *pThis, int *pSock)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	assert(pSock != NULL);
+	iRet = pThis->Drvr.GetSock(pThis->pDrvrData, pSock);
+	RETiRet;
+}
+
+
 /* queryInterface function
  */
 BEGINobjQueryInterface(netstrm)
@@ -264,6 +280,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->SetDrvrMode = SetDrvrMode;
+	pIf->GetSock = GetSock;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

@@ -31,7 +31,6 @@ struct netstrm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pDrvrData;	/**< the driver's data elements (at most other places, this is called pNsd) */
 	nsd_if_t Drvr;		/**< our stream driver */
-	//int iDrvrMode;		/**< mode to be used for our driver */
 	netstrms_t *pNS;	/**< pointer to our netstream subsystem object */
 };
 
@@ -51,6 +50,14 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*GetRemoteHName)(netstrm_t *pThis, uchar **pszName);
 	rsRetVal (*GetRemoteIP)(netstrm_t *pThis, uchar **pszIP);
 	rsRetVal (*SetDrvrMode)(netstrm_t *pThis, int iMode);
+	/* the GetSock() below is a hack to make imgssapi work. In the long term,
+	 * we should migrate imgssapi to a stream driver, which will relieve us of
+	 * this problem. Please note that nobody else should use GetSock(). Using it 
+	 * will also tie the caller to nsd_ptcp, because other drivers may not support
+	 * it at all. Once the imgssapi problem is solved, GetSock should be removed from
+	 * this interface. -- rgerhards, 2008-05-05
+	 */
+	rsRetVal (*GetSock)(netstrm_t *pThis, int *pSock);
 ENDinterface(netstrm)
 #define netstrmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
