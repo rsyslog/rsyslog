@@ -377,7 +377,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 	/* if we reach this point, we are in TLS mode */
 	CHKiRet(gtlsInitSession(pNew));
-	gnutls_transport_set_ptr(pNew->sess, (gnutls_transport_ptr)((nsd_ptcp_t*) (pNew->pTcp))->sock);
+	gnutls_transport_set_ptr(pNew->sess, (gnutls_transport_ptr_t)((nsd_ptcp_t*) (pNew->pTcp))->sock);
 
 	/* we now do the handshake. This is a bit complicated, because we are 
 	 * on non-blocking sockets. Usually, the handshake will not complete
@@ -509,7 +509,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 
 	/* assign the socket to GnuTls */
 	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
-	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr)sock);
+	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr_t)sock);
 
 	/* and perform the handshake */
 	CHKgnutls(gnutls_handshake(pThis->sess));
