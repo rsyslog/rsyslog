@@ -567,7 +567,8 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
 		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
 		pData->iStrmDrvrMode = iStrmDrvrMode;
-		CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)pszStrmDrvr));
+		if(pData->pszStrmDrvr != NULL)
+			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)pszStrmDrvr));
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
