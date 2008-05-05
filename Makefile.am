@@ -51,6 +51,9 @@ EXTRA_DIST = \
 	contrib/README \
 	rsyslog.conf \
 	COPYING.LESSER \
+	contrib/gnutls/ca.pem \
+	contrib/gnutls/cert.pem \
+	contrib/gnutls/key.pem \
 	$(man_MANS)
 
 SUBDIRS = doc runtime .

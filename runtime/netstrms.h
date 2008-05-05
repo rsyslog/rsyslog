@@ -42,6 +42,7 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(netstrms_t *pThis);
 	rsRetVal (*Destruct)(netstrms_t **ppThis);
 	rsRetVal (*CreateStrm)(netstrms_t *pThis, netstrm_t **ppStrm);
+	rsRetVal (*SetDrvrName)(netstrms_t *pThis, uchar *pszName);
 	rsRetVal (*SetDrvrMode)(netstrms_t *pThis, int iMode);
 	int (*GetDrvrMode)(netstrms_t *pThis);
 ENDinterface(netstrms)

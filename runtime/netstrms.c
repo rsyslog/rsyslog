@@ -103,6 +103,10 @@ CODESTARTobjDestruct(netstrms)
 		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
 		free(pThis->pDrvrName);
 	}
+	if(pThis->pBaseDrvrName != NULL) {
+		free(pThis->pBaseDrvrName);
+		pThis->pBaseDrvrName = NULL;
+	}
 ENDobjDestruct(netstrms)
 
 
@@ -118,8 +122,30 @@ finalize_it:
 }
 
 
-/* set the driver mode
- * rgerhards, 2008-04-30
+/* set the base driver name. If the driver name
+ * is set to NULL, the previously set name is deleted but
+ * no name set again (which results in the system default being
+ * used)-- rgerhards, 2008-05-05
+ */
+static rsRetVal
+SetDrvrName(netstrms_t *pThis, uchar *pszName)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if(pThis->pBaseDrvrName != NULL) {
+		free(pThis->pBaseDrvrName);
+		pThis->pBaseDrvrName = NULL;
+	}
+
+	if(pszName != NULL) {
+		CHKmalloc(pThis->pBaseDrvrName = (uchar*) strdup((char*) pszName));
+	}
+finalize_it:
+	RETiRet;
+}
+
+
+/* set the driver mode -- rgerhards, 2008-04-30
  */
 static rsRetVal
 SetDrvrMode(netstrms_t *pThis, int iMode)
@@ -191,6 +217,7 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->ConstructFinalize = netstrmsConstructFinalize;
 	pIf->Destruct = netstrmsDestruct;
 	pIf->CreateStrm = CreateStrm;
+	pIf->SetDrvrName = SetDrvrName;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->GetDrvrMode = GetDrvrMode;
 finalize_it:

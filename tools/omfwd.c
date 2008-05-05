@@ -77,6 +77,7 @@ DEFobjCurrIf(tcpclt)
 typedef struct _instanceData {
 	netstrms_t *pNS; /* netstream subsystem */
 	netstrm_t *pNetstrm; /* our output netstream */
+	uchar *pszStrmDrvr;
 	int iStrmDrvrMode;
 	char	*f_hname;
 	int *pSockArray;		/* sockets to use for UDP */
@@ -92,7 +93,8 @@ typedef struct _instanceData {
 } instanceData;
 
 /* config data */
-static uchar	*pszTplName = NULL; /* name of the default template to use */
+static uchar *pszTplName = NULL; /* name of the default template to use */
+static uchar *pszStrmDrvr = NULL; /* name of the stream driver to use */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 
 
@@ -258,7 +260,8 @@ static rsRetVal TCPSendInit(void *pvData)
 	assert(pData != NULL);
 	if(pData->pNetstrm == NULL) {
 		CHKiRet(netstrms.Construct(&pData->pNS));
-		/* here we may set another netstream driver (e.g. to do TLS) */
+		/* the stream driver must be set before the object is finalized! */
+		CHKiRet(netstrms.SetDrvrName(pData->pNS, pszStrmDrvr));
 		CHKiRet(netstrms.ConstructFinalize(pData->pNS));
 
 		/* now create the actual stream and connect to the server */
@@ -564,6 +567,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
 		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
 		pData->iStrmDrvrMode = iStrmDrvrMode;
+		CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)pszStrmDrvr));
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
@@ -584,6 +588,10 @@ CODESTARTmodExit
 		free(pszTplName);
 		pszTplName = NULL;
 	}
+	if(pszStrmDrvr != NULL) {
+		free(pszStrmDrvr);
+		pszStrmDrvr = NULL;
+	}
 ENDmodExit
 
 
@@ -602,6 +610,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pszTplName);
 		pszTplName = NULL;
 	}
+	if(pszStrmDrvr != NULL) {
+		free(pszStrmDrvr);
+		pszStrmDrvr = NULL;
+	}
 	iStrmDrvrMode = 0;
 
 	return RS_RET_OK;
@@ -617,6 +629,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(net,LM_NET_FILENAME));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

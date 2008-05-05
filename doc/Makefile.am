@@ -36,7 +36,7 @@ html_files = \
 	imklog.html \
 	professional_support.html \
 	queues.html \
-	queueWorkerLogic.dia \
+	src/queueWorkerLogic.dia \
 	queueWorkerLogic.jpg \
 	queueWorkerLogic_small.jpg \
 	rainerscript.html \
