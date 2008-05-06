@@ -176,12 +176,12 @@ static rsRetVal readSocket(int fd, int bParseHost, int flags)
 {
 	DEFiRet;
 	int iRcvd;
-	char line[MAXLINE +1];
+	uchar line[MAXLINE +1];
 
 	iRcvd = recv(fd, line, MAXLINE - 1, 0);
 	dbgprintf("Message from UNIX socket: #%d\n", fd);
 	if (iRcvd > 0) {
-		parseAndSubmitMessage((char*)glbl.GetLocalHostName(), line, iRcvd, bParseHost, flags, eFLOWCTL_LIGHT_DELAY);
+		parseAndSubmitMessage(glbl.GetLocalHostName(), line, iRcvd, bParseHost, flags, eFLOWCTL_LIGHT_DELAY);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));

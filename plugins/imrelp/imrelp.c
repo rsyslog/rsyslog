@@ -81,7 +81,7 @@ static relpRetVal
 onSyslogRcv(uchar *pHostname, uchar __attribute__((unused)) *pIP, uchar *pMsg, size_t lenMsg)
 {
 	DEFiRet;
-	parseAndSubmitMessage((char*)pHostname, (char*)pMsg, lenMsg, MSG_PARSE_HOSTNAME,
+	parseAndSubmitMessage(pHostname, pMsg, lenMsg, MSG_PARSE_HOSTNAME,
 			      NOFLAG, eFLOWCTL_LIGHT_DELAY);
 
 	RETiRet;

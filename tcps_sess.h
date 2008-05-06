@@ -42,7 +42,7 @@ typedef struct tcps_sess_s {
 	} inputState;		/* our current state */
 	int iOctetsRemain;	/* Number of Octets remaining in message */
 	TCPFRAMINGMODE eFraming;
-	char msg[MAXLINE+1];
+	uchar msg[MAXLINE+1];
 	uchar *fromHost;
 	void *pUsr;	/* a user-pointer */
 } tcps_sess_t;

@@ -598,10 +598,10 @@ void untty(void)
  * I added an additional calling parameter to permit specifying the flow
  * control capability of the source.
  */
-rsRetVal printline(char *hname, char *msg, int bParseHost, int flags, flowControl_t flowCtlType)
+rsRetVal printline(uchar *hname, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType)
 {
 	DEFiRet;
-	register char *p;
+	register uchar *p;
 	int pri;
 	msg_t *pMsg;
 
@@ -609,7 +609,7 @@ rsRetVal printline(char *hname, char *msg, int bParseHost, int flags, flowContro
 	*/
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, flowCtlType);
-	MsgSetRawMsg(pMsg, msg);
+	MsgSetRawMsg(pMsg, (char*)msg);
 	
 	pMsg->bParseHOSTNAME  = bParseHost;
 	/* test for special codes */
@@ -637,15 +637,15 @@ rsRetVal printline(char *hname, char *msg, int bParseHost, int flags, flowContro
 	 * being the local host).  rgerhards 2004-11-16
 	 */
 	if(bParseHost == 0)
-		MsgSetHOSTNAME(pMsg, hname);
-	MsgSetRcvFrom(pMsg, hname);
+		MsgSetHOSTNAME(pMsg, (char*)hname);
+	MsgSetRcvFrom(pMsg, (char*)hname);
 
 	/* rgerhards 2004-11-19: well, well... we've now seen that we
 	 * have the "hostname problem" also with the traditional Unix
 	 * message. As we like to emulate it, we need to add the hostname
 	 * to it.
 	 */
-	if(MsgSetUxTradMsg(pMsg, p) != 0)
+	if(MsgSetUxTradMsg(pMsg, (char*)p) != 0)
 		ABORT_FINALIZE(RS_RET_ERR);
 
 	logmsg(pMsg, flags);
@@ -690,16 +690,16 @@ finalize_it:
  * control capability of the source.
  */
 rsRetVal
-parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType)
+parseAndSubmitMessage(uchar *hname, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType)
 {
 	DEFiRet;
 	register int iMsg;
-	char *pMsg;
-	char *pData;
-	char *pEnd;
-	char tmpline[MAXLINE + 1];
+	uchar *pMsg;
+	uchar *pData;
+	uchar *pEnd;
+	uchar tmpline[MAXLINE + 1];
 #	ifdef USE_NETZIP
-	char deflateBuf[MAXLINE + 1];
+	uchar deflateBuf[MAXLINE + 1];
 	uLongf iLenDefBuf;
 #	endif
 

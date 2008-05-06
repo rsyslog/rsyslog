@@ -42,7 +42,7 @@
 
 rsRetVal submitMsg(msg_t *pMsg);
 rsRetVal logmsgInternal(int pri, uchar *msg, int flags);
-rsRetVal parseAndSubmitMessage(char *hname, char *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType);
+rsRetVal parseAndSubmitMessage(uchar *hname, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType);
 
 /* TODO: the following 2 need to go in conf obj interface... */
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);

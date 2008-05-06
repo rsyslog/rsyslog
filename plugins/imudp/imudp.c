@@ -193,7 +193,7 @@ CODESTARTrunInput
 							*/
 						       if(net.isAllowedSender(net.pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
-							       parseAndSubmitMessage((char*)fromHost, (char*) pRcvBuf, l,
+							       parseAndSubmitMessage(fromHost, pRcvBuf, l,
 							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY);
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);

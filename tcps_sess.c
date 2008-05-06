@@ -335,7 +335,6 @@ static rsRetVal
 DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 {
 	DEFiRet;
-	char *pMsg;
 	char *pEnd;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -355,7 +354,6 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	  * - printline() the buffer
 	  * - continue with copying
 	  */
-	pMsg = pThis->msg; /* just a shortcut */
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
