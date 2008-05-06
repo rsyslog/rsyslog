@@ -25,6 +25,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 #include <gnutls/gnutls.h>
 
 #include "rsyslog.h"
