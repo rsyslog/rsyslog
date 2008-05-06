@@ -464,7 +464,7 @@ AC_SUBST(snmp_libs)
 
 # GNUtls support
 AC_ARG_ENABLE(gnutls,
-        [AS_HELP_STRING([--enable-gnutls],[Enable GNU TLS support @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-gnutls],[Enable GNU TLS support @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_gnutls="yes" ;;
           no) enable_gnutls="no" ;;
