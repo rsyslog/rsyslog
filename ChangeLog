@@ -1,13 +1,15 @@
 ---------------------------------------------------------------------------
-Version 3.19.0 (rgerhards), 2008-04-??
+Version 3.19.0 (rgerhards), 2008-05-06
 - begins new devel branch version
+- implemented TLS for plain tcp syslog (this is also the world's first
+  implementation of IETF's upcoming syslog-transport-tls draft)
 - partly rewritten and improved omfwd among others, now loads TCP
   code only if this is actually necessary
-- implemented im3195, the RFC3195 input as a plugin
 - split of a "runtime library" for rsyslog - this is not yet a clean
   model, because some modularization is still outstanding. In theory,
   this shall enable other utilities but rsyslogd to use the same
   runtime
+- implemented im3195, the RFC3195 input as a plugin
 - changed directory structure, files are now better organized
 - a lot of cleanup in regard to modularization
 - -c option no longer must be the first option - thanks to varmjofekoj

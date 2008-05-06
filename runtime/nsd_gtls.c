@@ -416,7 +416,6 @@ static rsRetVal
 Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 {
 	DEFiRet;
-	int gnuRet;
 	ssize_t lenRcvd;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
