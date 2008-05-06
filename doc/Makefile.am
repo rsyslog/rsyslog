@@ -21,6 +21,7 @@ html_files = \
 	rsyslog_high_database_rate.html \
 	rsyslog_php_syslog_ng.html \
 	rsyslog_recording_pri.html \
+	rsyslog_tls.html \
 	rsyslog_stunnel.html \
 	syslog-protocol.html \
 	version_naming.html \
