@@ -24,7 +24,7 @@
 #ifndef INCLUDED_NETSTRM_H
 #define INCLUDED_NETSTRM_H
 
-#include "nsd.h" /* we need our driver interface to be defined */
+#include "netstrms.h"
 
 /* the netstrm object */
 struct netstrm_s {
@@ -49,6 +49,15 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Connect)(netstrm_t *pThis, int family, unsigned char *port, unsigned char *host);
 	rsRetVal (*GetRemoteHName)(netstrm_t *pThis, uchar **pszName);
 	rsRetVal (*GetRemoteIP)(netstrm_t *pThis, uchar **pszIP);
+	rsRetVal (*SetDrvrMode)(netstrm_t *pThis, int iMode);
+	/* the GetSock() below is a hack to make imgssapi work. In the long term,
+	 * we should migrate imgssapi to a stream driver, which will relieve us of
+	 * this problem. Please note that nobody else should use GetSock(). Using it 
+	 * will also tie the caller to nsd_ptcp, because other drivers may not support
+	 * it at all. Once the imgssapi problem is solved, GetSock should be removed from
+	 * this interface. -- rgerhards, 2008-05-05
+	 */
+	rsRetVal (*GetSock)(netstrm_t *pThis, int *pSock);
 ENDinterface(netstrm)
 #define netstrmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
@@ -56,6 +65,6 @@ ENDinterface(netstrm)
 PROTOTYPEObj(netstrm);
 
 /* the name of our library binary */
-#define LM_NETSTRM_FILENAME "lmnetstrm"
+#define LM_NETSTRM_FILENAME LM_NETSTRMS_FILENAME
 
 #endif /* #ifndef INCLUDED_NETSTRM_H */

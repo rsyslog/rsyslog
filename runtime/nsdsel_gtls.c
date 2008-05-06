@@ -37,10 +37,9 @@
 #include "errmsg.h"
 #include "nsd.h"
 #include "nsd_gtls.h"
+#include "nsd_ptcp.h"
 #include "nsdsel_ptcp.h"
 #include "nsdsel_gtls.h"
-
-MODULE_TYPE_LIB
 
 /* static data */
 DEFobjStaticHelpers
@@ -74,7 +73,21 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
 	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
-	iRet = nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, waitOp);
+	if(pNsdGTLS->iMode == 1) {
+		if(pNsdGTLS->rtryCall != gtlsRtry_None) {
+			if(gnutls_record_get_direction(pNsdGTLS->sess) == 0) {
+				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, NSDSEL_RD));
+			} else {
+				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, NSDSEL_WR));
+			}
+			FINALIZE;
+		}
+	}
+
+	/* if we reach this point, we need no special handling */
+	CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, waitOp));
+
+finalize_it:
 	RETiRet;
 }
 
@@ -94,6 +107,47 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 }
 
 
+/* retry an interrupted GTLS operation
+ * rgerhards, 2008-04-30
+ */
+static rsRetVal
+doRetry(nsd_gtls_t *pNsd)
+{
+	DEFiRet;
+	int gnuRet;
+
+	dbgprintf("GnuTLS requested retry of %d operation - executing\n", pNsd->rtryCall);
+
+	/* We follow a common scheme here: first, we do the systen call and
+	 * then we check the result. So far, the result is checked after the
+	 * switch, because the result check is the same for all calls. Note that
+	 * this may change once we deal with the read and write calls (but
+	 * probably this becomes an issue only when we begin to work on TLS
+	 * for relp). -- rgerhards, 2008-04-30
+	 */
+	switch(pNsd->rtryCall) {
+		case gtlsRtry_handshake:
+			gnuRet = gnutls_handshake(pNsd->sess);
+			break;
+		default:
+			assert(0); /* this shall not happen! */
+			break;
+	}
+
+	if(gnuRet == 0) {
+		pNsd->rtryCall = gtlsRtry_None; /* we are done */
+	} else if(gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+	}
+	/* if we are interrupted once again (else case), we do not need to
+	 * change our status because we are already setup for retries.
+	 */
+		
+finalize_it:
+	RETiRet;
+}
+
+
 /* check if a socket is ready for IO */
 static rsRetVal
 IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
@@ -104,7 +158,20 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
 	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
-	iRet = nsdsel_ptcp.IsReady(pThis->pTcp, pNsdGTLS->pTcp, waitOp, pbIsReady);
+	if(pNsdGTLS->iMode == 1) {
+		if(pNsdGTLS->rtryCall != gtlsRtry_None) {
+			CHKiRet(doRetry(pNsdGTLS));
+			/* we used this up for our own internal processing, so the socket
+			 * is not ready from the upper layer point of view.
+			 */
+			*pbIsReady = 0;
+			FINALIZE;
+		}
+	}
+
+	CHKiRet(nsdsel_ptcp.IsReady(pThis->pTcp, pNsdGTLS->pTcp, waitOp, pbIsReady));
+
+finalize_it:
 	RETiRet;
 }
 
@@ -135,12 +202,12 @@ ENDobjQueryInterface(nsdsel_gtls)
 
 /* exit our class
  */
-BEGINObjClassExit(nsdsel_gtls, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+BEGINObjClassExit(nsdsel_gtls, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(nsdsel_gtls)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(nsdsel_ptcp, LM_NSDSEL_PTCP_FILENAME);
+	objRelease(nsdsel_ptcp, LM_NSD_PTCP_FILENAME);
 ENDObjClassExit(nsdsel_gtls)
 
 
@@ -148,37 +215,13 @@ ENDObjClassExit(nsdsel_gtls)
  * before anything else is called inside this class.
  * rgerhards, 2008-02-19
  */
-BEGINObjClassInit(nsdsel_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
+BEGINObjClassInit(nsdsel_gtls, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(nsdsel_ptcp, LM_NSDSEL_PTCP_FILENAME));
+	CHKiRet(objUse(nsdsel_ptcp, LM_NSD_PTCP_FILENAME));
 
 	/* set our own handlers */
 ENDObjClassInit(nsdsel_gtls)
-
-
-/* --------------- here now comes the plumbing that makes as a library module --------------- */
-
-
-BEGINmodExit
-CODESTARTmodExit
-	nsdsel_gtlsClassExit();
-ENDmodExit
-
-
-BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
-ENDqueryEtryPt
-
-
-BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-
-	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(nsdsel_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-ENDmodInit
 /* vi:set ai:
  */

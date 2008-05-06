@@ -23,6 +23,7 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
@@ -31,9 +32,9 @@
 #include "module-template.h"
 #include "obj.h"
 //#include "errmsg.h"
-//#include "net.h"
 #include "nsd.h"
 #include "netstrm.h"
+#include "nssel.h"
 #include "netstrms.h"
 
 MODULE_TYPE_LIB
@@ -43,24 +44,29 @@ DEFobjStaticHelpers
 //DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(netstrm)
-//DEFobjCurrIf(net)
 
 
 /* load our low-level driver. This must be done before any
  * driver-specific functions (allmost all...) can be carried
  * out. Note that the driver's .ifIsLoaded is correctly
  * initialized by calloc() and we depend on that.
+ * WARNING: this code is mostly identical to similar code in 
+ * nssel.c - TODO: abstract it and move it to some common place.
  * rgerhards, 2008-04-18
  */
 static rsRetVal
 loadDrvr(netstrms_t *pThis)
 {
-	uchar *pDrvrName;
 	DEFiRet;
+	uchar *pBaseDrvrName;
+	uchar szDrvrName[48]; /* 48 shall be large enough */
 
-	pDrvrName = pThis->pDrvrName;
-	if(pDrvrName == NULL) /* if no drvr name is set, use system default */
-		pDrvrName = glbl.GetDfltNetstrmDrvr();
+	pBaseDrvrName = pThis->pBaseDrvrName;
+	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
+		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName))
+		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
 	/* The pDrvrName+2 below is a hack to obtain the object name. It 
@@ -69,8 +75,14 @@ loadDrvr(netstrms_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
-	CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
+	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, szDrvrName, (void*) &pThis->Drvr));
+
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis->pDrvrName != NULL)
+			free(pThis->pDrvrName);
+			pThis->pDrvrName = NULL;
+	}
 	RETiRet;
 }
 
@@ -83,8 +95,18 @@ ENDobjConstruct(netstrms)
 /* destructor for the netstrms object */
 BEGINobjDestruct(netstrms) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(netstrms)
-	if(pThis->pDrvrName != NULL)
+	/* and now we must release our driver, if we got one. We use the presence of
+	 * a driver name string as load indicator (because we also need that string
+	 * to release the driver 
+	 */
+	if(pThis->pDrvrName != NULL) {
+		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
 		free(pThis->pDrvrName);
+	}
+	if(pThis->pBaseDrvrName != NULL) {
+		free(pThis->pBaseDrvrName);
+		pThis->pBaseDrvrName = NULL;
+	}
 ENDobjDestruct(netstrms)
 
 
@@ -100,6 +122,54 @@ finalize_it:
 }
 
 
+/* set the base driver name. If the driver name
+ * is set to NULL, the previously set name is deleted but
+ * no name set again (which results in the system default being
+ * used)-- rgerhards, 2008-05-05
+ */
+static rsRetVal
+SetDrvrName(netstrms_t *pThis, uchar *pszName)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if(pThis->pBaseDrvrName != NULL) {
+		free(pThis->pBaseDrvrName);
+		pThis->pBaseDrvrName = NULL;
+	}
+
+	if(pszName != NULL) {
+		CHKmalloc(pThis->pBaseDrvrName = (uchar*) strdup((char*) pszName));
+	}
+finalize_it:
+	RETiRet;
+}
+
+
+/* set the driver mode -- rgerhards, 2008-04-30
+ */
+static rsRetVal
+SetDrvrMode(netstrms_t *pThis, int iMode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	pThis->iDrvrMode = iMode;
+	RETiRet;
+}
+
+
+/* return the driver mode
+ * We use non-standard calling conventions because it makes an awful lot
+ * of sense here.
+ * rgerhards, 2008-04-30
+ */
+static int
+GetDrvrMode(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->iDrvrMode;
+}
+
+
 /* create an instance of a netstrm object. It is initialized with default
  * values. The current driver is used. The caller may set netstrm properties
  * and must call ConstructFinalize().
@@ -110,7 +180,7 @@ CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 	netstrm_t *pStrm = NULL;
 	DEFiRet;
 
-	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
+	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
 	CHKiRet(netstrm.Construct(&pStrm));
 	/* we copy over our driver structure. We could provide a pointer to 
 	 * ourselves, but that costs some performance on each driver invocation.
@@ -147,6 +217,9 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->ConstructFinalize = netstrmsConstructFinalize;
 	pIf->Destruct = netstrmsDestruct;
 	pIf->CreateStrm = CreateStrm;
+	pIf->SetDrvrName = SetDrvrName;
+	pIf->SetDrvrMode = SetDrvrMode;
+	pIf->GetDrvrMode = GetDrvrMode;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 
@@ -155,9 +228,8 @@ ENDobjQueryInterface(netstrms)
 BEGINObjClassExit(netstrms, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(netstrms)
 	/* release objects we no longer need */
-	//objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
-	objRelease(netstrm, LM_NETSTRM_FILENAME);
+	objRelease(netstrm, DONT_LOAD_LIB);
 ENDObjClassExit(netstrms)
 
 
@@ -168,7 +240,6 @@ ENDObjClassExit(netstrms)
 BEGINAbstractObjClassInit(netstrms, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	//CHKiRet(objUse(net, CORE_COMPONENT));
 
 	/* set our own handlers */
 ENDObjClassInit(netstrms)
@@ -179,7 +250,9 @@ ENDObjClassInit(netstrms)
 
 BEGINmodExit
 CODESTARTmodExit
+	nsselClassExit();
 	netstrmsClassExit();
+	netstrmClassExit(); /* we use this object, so we must exit it after we are finished */
 ENDmodExit
 
 
@@ -194,7 +267,9 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(netstrmsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(netstrmClassInit(pModInfo));
+	CHKiRet(nsselClassInit(pModInfo));
+	CHKiRet(netstrmsClassInit(pModInfo));
 ENDmodInit
 /* vi:set ai:
  */

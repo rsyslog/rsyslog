@@ -181,12 +181,15 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 {
 	register int i;
 
+	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	assert(pThis->pSessions != NULL);
 	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i) {
 		if(pThis->pSessions[i] != NULL)
 			break;
 	}
 
+	ENDfunc
 	return((i < pThis->iSessMax) ? i : -1);
 }
 
@@ -202,20 +205,20 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 	int i;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	assert(pThis->pSessions != NULL);
 
-	/* close all TCP connections! */
-	i = TCPSessGetNxtSess(pThis, -1);
-	while(i != -1) {
-		tcps_sess.Destruct(&pThis->pSessions[i]);
-		/* now get next... */
-		i = TCPSessGetNxtSess(pThis, i);
+	if(pThis->pSessions != NULL) {
+		/* close all TCP connections! */
+		i = TCPSessGetNxtSess(pThis, -1);
+		while(i != -1) {
+			tcps_sess.Destruct(&pThis->pSessions[i]);
+			/* now get next... */
+			i = TCPSessGetNxtSess(pThis, i);
+		}
+		
+		/* we are done with the session table - so get rid of it...  */
+		free(pThis->pSessions);
+		pThis->pSessions = NULL; /* just to make sure... */
 	}
-	
-	/* we are done with the session table - so get rid of it...
-	*/
-	free(pThis->pSessions);
-	pThis->pSessions = NULL; /* just to make sure... */
 
 	if(pThis->TCPLstnPort != NULL)
 		free(pThis->TCPLstnPort);
@@ -413,7 +416,6 @@ Run(tcpsrv_t *pThis)
 
 		/* Add the TCP listen sockets to the list of read descriptors. */
 		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
-RUNLOG_VAR("%d", i);
 			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
 		}
 
@@ -498,6 +500,7 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 
 	/* prepare network stream subsystem */
 	CHKiRet(netstrms.Construct(&pThis->pNS));
+	CHKiRet(netstrms.SetDrvrMode(pThis->pNS, pThis->iDrvrMode));
 	// TODO: set driver!
 	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
 
@@ -622,6 +625,18 @@ SetUsrP(tcpsrv_t *pThis, void *pUsr)
 	pThis->pUsr = pUsr;
 	RETiRet;
 }
+/* set the driver mode -- rgerhards, 2008-04-30
+ */
+static rsRetVal
+SetDrvrMode(tcpsrv_t *pThis, int iMode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->iDrvrMode = iMode;
+	RETiRet;
+}
+
+
 
 
 /* queryInterface function
@@ -649,6 +664,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->Run = Run;
 
 	pIf->SetUsrP = SetUsrP;
+	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetCBIsPermittedHost = SetCBIsPermittedHost;
 	pIf->SetCBOpenLstnSocks = SetCBOpenLstnSocks;
 	pIf->SetCBRcvData = SetCBRcvData;
@@ -674,9 +690,9 @@ CODESTARTObjClassExit(tcpsrv)
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(nssel, LM_NSSEL_FILENAME);
-	objRelease(netstrm, LM_NETSTRM_FILENAME);
-	objRelease(netstrms, LM_NETSTRMS_FILENAME);
+	objRelease(netstrms, DONT_LOAD_LIB);
+	objRelease(nssel, DONT_LOAD_LIB);
+	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
 ENDObjClassExit(tcpsrv)
 
@@ -690,8 +706,8 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
-	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
-	CHKiRet(objUse(nssel, LM_NSSEL_FILENAME));
+	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
+	CHKiRet(objUse(nssel, DONT_LOAD_LIB));
 	CHKiRet(objUse(tcps_sess, DONT_LOAD_LIB));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

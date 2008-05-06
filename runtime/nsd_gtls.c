@@ -30,10 +30,17 @@
 #include "rsyslog.h"
 #include "syslogd-types.h"
 #include "module-template.h"
+#include "cfsysline.h"
 #include "obj.h"
 #include "errmsg.h"
 #include "nsd_ptcp.h"
+#include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
+
+/* things to move to some better place/functionality - TODO */
+#define DH_BITS 1024
+#define CRLFILE "crl.pem"
+
 
 MODULE_TYPE_LIB
 
@@ -43,25 +50,43 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(nsd_ptcp)
 
+static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
 
 /* a macro to check GnuTLS calls against unexpected errors */
 #define CHKgnutls(x) \
 	if((gnuRet = (x)) != 0) { \
-		dbgprintf("unexpected GnuTLS error %d in %s:%d\n", gnuRet, __FILE__, __LINE__); \
-		gnutls_perror(gnuRet); /* TODO: can we do better? */ \
+		uchar *pErr = gtlsStrerror(gnuRet); \
+		dbgprintf("unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
+		free(pErr); \
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
 	}
 
-#define CAFILE "ca.pem" // TODO: allow to specify
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
 static gnutls_certificate_credentials xcred;
+static gnutls_dh_params dh_params;
+
+/* a thread-safe variant of gnutls_strerror - TODO: implement it!
+ * The caller must free the returned string.
+ * rgerhards, 2008-04-30
+ */
+uchar *gtlsStrerror(int error)
+{
+	uchar *pErr;
+
+	// TODO: guard by mutex!
+	pErr = (uchar*) strdup(gnutls_strerror(error));
+
+	return pErr;
+}
+
 
 /* globally initialize GnuTLS */
 static rsRetVal
 gtlsGlblInit(void)
 {
 	int gnuRet;
+	uchar *cafile;
 	DEFiRet;
 
 	CHKgnutls(gnutls_global_init());
@@ -70,7 +95,90 @@ gtlsGlblInit(void)
 	CHKgnutls(gnutls_certificate_allocate_credentials(&xcred));
 
 	/* sets the trusted cas file */
-	gnutls_certificate_set_x509_trust_file(xcred, CAFILE, GNUTLS_X509_FMT_PEM);
+	cafile = glbl.GetDfltNetstrmDrvrCAF();
+	dbgprintf("GTLS CA file: '%s'\n", cafile);
+	gnuRet = gnutls_certificate_set_x509_trust_file(xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
+	if(gnuRet < 0) {
+		/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
+		uchar *pErr = gtlsStrerror(gnuRet);
+		dbgprintf("unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
+		free(pErr);
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+gtlsInitSession(nsd_gtls_t *pThis)
+{
+	DEFiRet;
+	int gnuRet;
+	gnutls_session session;
+
+	gnutls_init(&session, GNUTLS_SERVER);
+	pThis->bHaveSess = 1;
+	pThis->bIsInitiator = 0;
+
+	/* avoid calling all the priority functions, since the defaults are adequate. */
+	CHKgnutls(gnutls_set_default_priority(session));
+	CHKgnutls(gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, xcred));
+
+	/* request client certificate if any.  */
+	gnutls_certificate_server_set_request( session, GNUTLS_CERT_REQUEST);
+	gnutls_dh_set_prime_bits(session, DH_BITS);
+
+	pThis->sess = session;
+
+finalize_it:
+	RETiRet;
+}
+
+
+
+static rsRetVal
+generate_dh_params(void)
+{
+	int gnuRet;
+	DEFiRet;
+	/* Generate Diffie Hellman parameters - for use with DHE
+	 * kx algorithms. These should be discarded and regenerated
+	 * once a day, once a week or once a month. Depending on the
+	 * security requirements.
+	 */
+	CHKgnutls(gnutls_dh_params_init( &dh_params));
+	CHKgnutls(gnutls_dh_params_generate2( dh_params, DH_BITS));
+finalize_it:
+	RETiRet;
+}
+
+
+/* set up all global things that are needed for server operations
+ * rgerhards, 2008-04-30
+ */
+static rsRetVal
+gtlsGlblInitLstn(void)
+{
+	int gnuRet;
+	uchar *keyFile;
+	uchar *certFile;
+	DEFiRet;
+
+	if(bGlblSrvrInitDone == 0) {
+		/* we do not use CRLs right now, and I doubt we'll ever do. This functionality is
+		 * considered legacy. -- rgerhards, 2008-05-05
+		 */
+		/*CHKgnutls(gnutls_certificate_set_x509_crl_file(xcred, CRLFILE, GNUTLS_X509_FMT_PEM));*/
+		certFile = glbl.GetDfltNetstrmDrvrCertFile();
+		keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
+		dbgprintf("GTLS certificate file: '%s'\n", certFile);
+		dbgprintf("GTLS key file: '%s'\n", keyFile);
+		CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
+		CHKiRet(generate_dh_params());
+		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */
+		bGlblSrvrInitDone = 1; /* we are all set now */
+	}
 
 finalize_it:
 	RETiRet;
@@ -100,9 +208,11 @@ gtlsEndSess(nsd_gtls_t *pThis)
 	DEFiRet;
 
 	if(pThis->bHaveSess) {
-		gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_RDWR);
-		while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
+		if(pThis->bIsInitiator) {
 			gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_RDWR);
+			while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
+				gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_RDWR);
+			}
 		}
 		gnutls_deinit(pThis->sess);
 	}
@@ -116,8 +226,6 @@ gtlsEndSess(nsd_gtls_t *pThis)
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
-	pThis->iMode = 1; /* TODO: must be made configurable */
-	pThis->iMode = 0; /* TODO: must be made configurable */
 ENDobjConstruct(nsd_gtls)
 
 
@@ -132,6 +240,29 @@ CODESTARTobjDestruct(nsd_gtls)
 		nsd_ptcp.Destruct(&pThis->pTcp);
 	}
 ENDobjDestruct(nsd_gtls)
+
+
+/* Set the driver mode. For us, this has the following meaning:
+ * 0 - work in plain tcp mode, without tls (e.g. before a STARTTLS)
+ * 1 - work in TLS mode
+ * rgerhards, 2008-04-28
+ */
+static rsRetVal
+SetMode(nsd_t *pNsd, int mode)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+dbgprintf("SetMOde tries to set mode %d\n", mode);
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(mode != 0 && mode != 1)
+		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
+
+	pThis->iMode = mode;
+
+finalize_it:
+	RETiRet;
+}
 
 
 /* Provide access to the underlying OS socket. This is primarily
@@ -184,7 +315,9 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 uchar *pLstnPort, uchar *pLstnIP, int iSessMax)
 {
 	DEFiRet;
+	CHKiRet(gtlsGlblInitLstn());
 	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax);
+finalize_it:
 	RETiRet;
 }
 
@@ -227,15 +360,38 @@ static rsRetVal
 AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 {
 	DEFiRet;
+	int gnuRet;
 	nsd_gtls_t *pNew = NULL;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	// TODO: method to construct without pTcp
 	CHKiRet(nsd_gtlsConstruct(&pNew));
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
 	
+	if(pThis->iMode == 0) {
+		/* we are in non-TLS mode, so we are done */
+		*ppNew = (nsd_t*) pNew;
+		FINALIZE;
+	}
+
+	/* if we reach this point, we are in TLS mode */
+	CHKiRet(gtlsInitSession(pNew));
+	gnutls_transport_set_ptr(pNew->sess, (gnutls_transport_ptr_t)((nsd_ptcp_t*) (pNew->pTcp))->sock);
+
+	/* we now do the handshake. This is a bit complicated, because we are 
+	 * on non-blocking sockets. Usually, the handshake will not complete
+	 * immediately, so that we need to retry it some time later.
+	 */
+	gnuRet = gnutls_handshake(pNew->sess);
+	if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
+		pNew->rtryCall = gtlsRtry_handshake;
+		dbgprintf("GnuTLS handshake does not complete immediately - setting to retry (this is OK and normal)\n");
+	} else if(gnuRet != 0) {
+		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
+	}
+	pNew->iMode = 1; /* this session is now in TLS mode! */
+
 	*ppNew = (nsd_t*) pNew;
 
 finalize_it:
@@ -260,6 +416,8 @@ static rsRetVal
 Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 {
 	DEFiRet;
+	int gnuRet;
+	ssize_t lenRcvd;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
@@ -269,6 +427,8 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	}
 
 	/* in TLS mode now */
+	lenRcvd = gnutls_record_recv(pThis->sess, pBuf, *pLenBuf);
+	*pLenBuf = lenRcvd;
 
 finalize_it:
 	RETiRet;
@@ -301,8 +461,11 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 			*pLenBuf = iSent;
 			break;
 		}
-		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN)
+		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
+			dbgprintf("unexpected GnuTLS error %d in %s:%d\n", iSent, __FILE__, __LINE__);
+			gnutls_perror(iSent); /* TODO: can we do better? */
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+		}
 	}
 
 finalize_it:
@@ -335,6 +498,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	/* we reach this point if in TLS mode */
 	CHKgnutls(gnutls_init(&pThis->sess, GNUTLS_CLIENT));
 	pThis->bHaveSess = 1;
+	pThis->bIsInitiator = 1;
 
 	/* Use default priorities */
 	CHKgnutls(gnutls_set_default_priority(pThis->sess));
@@ -345,7 +509,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 
 	/* assign the socket to GnuTls */
 	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
-	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr)sock);
+	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr_t)sock);
 
 	/* and perform the handshake */
 	CHKgnutls(gnutls_handshake(pThis->sess));
@@ -384,6 +548,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->Send = Send;
 	pIf->Connect = Connect;
 	pIf->SetSock = SetSock;
+	pIf->SetMode = SetMode;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:
@@ -423,6 +588,7 @@ ENDObjClassInit(nsd_gtls)
 
 BEGINmodExit
 CODESTARTmodExit
+	nsdsel_gtlsClassExit();
 	nsd_gtlsClassExit();
 ENDmodExit
 
@@ -439,6 +605,8 @@ CODESTARTmodInit
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(nsdsel_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+
 ENDmodInit
 /* vi:set ai:
  */

@@ -117,7 +117,6 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 	
 	pThis->fromHost = pszHost;
 
-finalize_it:
 	RETiRet;
 }
 
@@ -407,7 +406,7 @@ BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END
 CODESTARTObjClassExit(tcps_sess)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(netstrm, LM_NETSTRM_FILENAME);
+	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 ENDObjClassExit(tcps_sess)
 
 
@@ -418,7 +417,7 @@ ENDObjClassExit(tcps_sess)
 BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
+	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcps_sessDebugPrint);

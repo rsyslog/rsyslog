@@ -54,6 +54,7 @@
 #include "tcpsrv.h"
 #include "tcps_sess.h"
 #include "errmsg.h"
+#include "netstrm.h"
 
 
 MODULE_TYPE_INPUT
@@ -77,6 +78,7 @@ DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(gssutil)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(netstrm)
 DEFobjCurrIf(net)
 
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
@@ -241,11 +243,12 @@ onErrClose(tcps_sess_t *pSess)
 
 
 /* open the listen sockets */
-static int*
+static rsRetVal
 doOpenLstnSocks(tcpsrv_t *pSrv)
 {
 	int *pRet = NULL;
 	gsssrv_t *pGSrv;
+	DEFiRet;
 
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);
 	pGSrv = pSrv->pUsr;
@@ -261,20 +264,20 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 		}
 		if(pGSrv->allowedMethods) {
 			/* fallback to plain TCP */
-			if((pRet =  tcpsrv.create_tcp_socket(pSrv)) != NULL) {
-				dbgprintf("Opened %d syslog TCP port(s).\n", *pRet);
-			}
+			CHKiRet(tcpsrv.create_tcp_socket(pSrv));
+			dbgprintf("Opened %d syslog TCP port(s).\n", *pRet);
 		}
 	}
 
-	return pRet;
+finalize_it:
+	RETiRet;
 }
 
 
 static int
 doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
 {
-	int state;
+	ssize_t state;
 	int allowedMethods;
 	gss_sess_t *pGSess;
 
@@ -285,8 +288,10 @@ doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
 	allowedMethods = pGSess->allowedMethods;
 	if(allowedMethods & ALLOWEDMETHOD_GSS)
 		state = TCPSessGSSRecv(pSess, buf, lenBuf);
-	else
-		state = recv(pSess->sock, buf, lenBuf, 0);
+	else {
+		if(netstrm.Rcv(pSess->pStrm, (uchar*) buf, &state) != RS_RET_OK)
+			state = -1; // TODO: move this function to an iRet interface! 2008-05-05
+	}
 	return state;
 }
 
@@ -391,7 +396,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 
 		dbgprintf("GSS-API Trying to accept TCP session %p\n", pSess);
 
-		fdSess = pSess->sock; // TODO: method access!
+		CHKiRet(netstrm.GetSock(pSess->pStrm, &fdSess)); // TODO: method access!
 		if (allowedMethods & ALLOWEDMETHOD_TCP) {
 			int len;
 			fd_set  fds;
@@ -537,7 +542,7 @@ int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len)
 	assert(pSess->pUsr != NULL);
 	pGSess = (gss_sess_t*) pSess->pUsr;
 
-	fdSess = pSess->sock;
+	netstrm.GetSock(pSess->pStrm, &fdSess); // TODO: method access, CHKiRet!
 	if ((state = gssutil.recv_token(fdSess, &xmit_buf)) <= 0)
 		return state;
 
@@ -638,6 +643,7 @@ CODESTARTmodExit
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(netstrm, LM_NETSTRM_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
 
@@ -684,6 +690,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 
 	/* register config file handlers */

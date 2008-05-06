@@ -24,13 +24,14 @@
 #ifndef INCLUDED_NSSEL_H
 #define INCLUDED_NSSEL_H
 
-#include "nsd.h"
+#include "netstrms.h"
 
 /* the nssel object */
 struct nssel_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pDrvrData;	/**< the driver's data elements */
-	uchar *pDrvrName;	/**< nsd driver name to use, or NULL if system default */
+	uchar *pBaseDrvrName;	/**< nsd base driver name to use, or NULL if system default */
+	uchar *pDrvrName;	/**< full base driver name (set when driver is loaded) */
 	nsdsel_if_t Drvr;	/**< our stream driver */
 };
 
@@ -50,6 +51,6 @@ ENDinterface(nssel)
 PROTOTYPEObj(nssel);
 
 /* the name of our library binary */
-#define LM_NSSEL_FILENAME "lmnssel"
+#define LM_NSSEL_FILENAME LM_NETSTRMS_FILENAME
 
 #endif /* #ifndef INCLUDED_NSSEL_H */

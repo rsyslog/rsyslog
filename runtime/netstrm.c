@@ -46,11 +46,8 @@
 #include "module-template.h"
 #include "obj.h"
 #include "errmsg.h"
-//#include "nsd.h"
 #include "netstrms.h"
 #include "netstrm.h"
-
-MODULE_TYPE_LIB
 
 /* static data */
 DEFobjStaticHelpers
@@ -119,6 +116,7 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 	/* accept the new connection */
 	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd));
 	/* construct our object so that we can use it... */
+	CHKiRet(objUse(netstrms, DONT_LOAD_LIB)); /* use netstrms obj if not already done so */
 	CHKiRet(netstrms.CreateStrm(pThis->pNS, ppNew));
 	(*ppNew)->pDrvrData = pNewNsd;
 
@@ -171,6 +169,19 @@ Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf);
+	RETiRet;
+}
+
+
+/* set the driver mode
+ * rgerhards, 2008-04-28
+ */
+static rsRetVal
+SetDrvrMode(netstrm_t *pThis, int iMode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetMode(pThis->pDrvrData, iMode);
 	RETiRet;
 }
 
@@ -228,6 +239,22 @@ Connect(netstrm_t *pThis, int family, uchar *port, uchar *host)
 }
 
 
+/* Provide access to the underlying OS socket. This is dirty
+ * and scheduled to be removed. Does not work with all nsd drivers.
+ * See comment in netstrm interface for details.
+ * rgerhards, 2008-05-05
+ */
+static rsRetVal
+GetSock(netstrm_t *pThis, int *pSock)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	assert(pSock != NULL);
+	iRet = pThis->Drvr.GetSock(pThis->pDrvrData, pSock);
+	RETiRet;
+}
+
+
 /* queryInterface function
  */
 BEGINobjQueryInterface(netstrm)
@@ -252,6 +279,8 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->AcceptConnReq = AcceptConnReq;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
+	pIf->SetDrvrMode = SetDrvrMode;
+	pIf->GetSock = GetSock;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 
@@ -262,7 +291,7 @@ BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END M
 CODESTARTObjClassExit(netstrm)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(netstrms, LM_NETSTRMS_FILENAME);
+	objRelease(netstrms, DONT_LOAD_LIB);
 ENDObjClassExit(netstrm)
 
 
@@ -273,33 +302,8 @@ ENDObjClassExit(netstrm)
 BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 
 	/* set our own handlers */
 ENDObjClassInit(netstrm)
-
-
-/* --------------- here now comes the plumbing that makes as a library module --------------- */
-
-
-BEGINmodExit
-CODESTARTmodExit
-	netstrmClassExit();
-ENDmodExit
-
-
-BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
-ENDqueryEtryPt
-
-
-BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-
-	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(netstrmClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-ENDmodInit
 /* vi:set ai:
  */

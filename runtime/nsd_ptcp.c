@@ -47,6 +47,7 @@
 #include "net.h"
 #include "netstrms.h"
 #include "netstrm.h"
+#include "nsdsel_ptcp.h"
 #include "nsd_ptcp.h"
 
 MODULE_TYPE_LIB
@@ -105,6 +106,22 @@ GetSock(nsd_t *pNsd, int *pSock)
 
 	*pSock = pThis->sock;
 
+	RETiRet;
+}
+
+
+/* Set the driver mode. We support no different modes, but allow mode
+ * 0 to be set to be compatible with config file defaults and the other
+ * drivers.
+ * rgerhards, 2008-04-28
+ */
+static rsRetVal
+SetMode(nsd_t __attribute__((unused)) *pNsd, int mode)
+{
+	DEFiRet;
+	if(mode != 0)
+		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
+finalize_it:
 	RETiRet;
 }
 
@@ -415,13 +432,11 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 * construct a new netstrm obj and hand it over to the upper layers for inclusion
 		 * into their socket array. -- rgerhards, 2008-04-23
 		 */
-RUNLOG_VAR("%d", sock);
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
-RUNLOG;
+		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
 		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
-RUNLOG;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewNsd = NULL;
 		pNewStrm = NULL;
@@ -609,6 +624,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->Abort = Abort;
 	pIf->GetSock = GetSock;
 	pIf->SetSock = SetSock;
+	pIf->SetMode = SetMode;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->LstnInit = LstnInit;
@@ -628,7 +644,7 @@ CODESTARTObjClassExit(nsd_ptcp)
 	objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
-	objRelease(netstrm, LM_NETSTRM_FILENAME);
+	objRelease(netstrm, DONT_LOAD_LIB);
 	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 ENDObjClassExit(nsd_ptcp)
 
@@ -642,8 +658,8 @@ BEGINObjClassInit(nsd_ptcp, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(net, CORE_COMPONENT));
-	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
+	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
 
 	/* set our own handlers */
 ENDObjClassInit(nsd_ptcp)
@@ -654,6 +670,7 @@ ENDObjClassInit(nsd_ptcp)
 
 BEGINmodExit
 CODESTARTmodExit
+	nsdsel_ptcpClassExit();
 	nsd_ptcpClassExit();
 ENDmodExit
 
@@ -670,6 +687,7 @@ CODESTARTmodInit
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(nsdsel_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
 /* vi:set ai:
  */

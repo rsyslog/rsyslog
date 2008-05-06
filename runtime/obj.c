@@ -1192,15 +1192,14 @@ ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	objInfo_t *pObjInfo;
 
 
-	dbgprintf("source file %s requests object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded);
+	dbgprintf("source file %s releasing object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded);
 
 	if(pObjFile == NULL)
 		FINALIZE; /* if it is not a lodable module, we do not need to do anything... */
 
 	if(pIf->ifIsLoaded == 0) {
 		ABORT_FINALIZE(RS_RET_OK); /* we are not loaded - this is perfectly OK... */
-	}
-	if(pIf->ifIsLoaded == 2) {
+	} else if(pIf->ifIsLoaded == 2) {
 		pIf->ifIsLoaded = 0; /* clean up */
 		ABORT_FINALIZE(RS_RET_OK); /* we had a load error and can not continue */
 	}
@@ -1209,7 +1208,6 @@ ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	CHKiRet(FindObjInfo(pStr, &pObjInfo));
 
 	/* if we reach this point, we have a valid pObjInfo */
-	//if(pObjInfo->pModInfo != NULL) { /* NULL means core module */
 	module.Release(srcFile, &pObjInfo->pModInfo); /* decrease refcount */
 
 	pIf->ifIsLoaded = 0; /* indicated "no longer valid" */

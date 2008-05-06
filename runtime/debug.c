@@ -1145,8 +1145,6 @@ dbgPrintNameAdd(uchar *pName, dbgPrintName_t **ppRoot)
 		pEntry->pNext = *ppRoot; /* we enqueue at the front */
 	}
 	*ppRoot = pEntry;
-
-printf("Name %s added to %p\n", pName, *ppRoot);
 }
 
 

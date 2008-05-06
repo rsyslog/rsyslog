@@ -44,8 +44,6 @@
 #include "netstrm.h"
 #include "nssel.h"
 
-MODULE_TYPE_LIB
-
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
@@ -54,18 +52,28 @@ DEFobjCurrIf(glbl)
 /* load our low-level driver. This must be done before any
  * driver-specific functions (allmost all...) can be carried
  * out. Note that the driver's .ifIsLoaded is correctly
- * initialized by calloc() and we depend on that.
- * rgerhards, 2008-04-18
+ * initialized by calloc() and we depend on that. Please note that
+ * we do some name-mangeling. We know that each nsd driver also needs
+ * a nssel driver. So we simply append "sel" to the nsd driver name: This, 
+ * of course, means that the driver name must match these rules, but that
+ * shouldn't be a real problem.
+ * WARNING: this code is mostly identical to similar code in 
+ * netstrms.c - TODO: abstract it and move it to some common place.
+ * rgerhards, 2008-04-28
  */
 static rsRetVal
 loadDrvr(nssel_t *pThis)
 {
-	uchar *pDrvrName;
 	DEFiRet;
+	uchar *pBaseDrvrName;
+	uchar szDrvrName[48]; /* 48 shall be large enough */
 
-	pDrvrName = pThis->pDrvrName;
-	if(pDrvrName == NULL) /* if no drvr name is set, use system default */
-		pDrvrName = glbl.GetDfltNetstrmDrvr();
+	pBaseDrvrName = pThis->pBaseDrvrName;
+	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
+		pBaseDrvrName = glbl.GetDfltNetstrmDrvr();
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdsel_%s", pBaseDrvrName) == sizeof(szDrvrName))
+		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
 	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
 	/* The pDrvrName+2 below is a hack to obtain the object name. It 
@@ -74,9 +82,14 @@ loadDrvr(nssel_t *pThis)
 	 * about this hack, but for the time being it is efficient and clean
 	 * enough. -- rgerhards, 2008-04-18
 	 */
-	//CHKiRet(obj.UseObj(__FILE__, pDrvrName+2, pDrvrName, (void*) &pThis->Drvr));
-	CHKiRet(obj.UseObj(__FILE__, "nsdsel_gtls", "lmnsdsel_gtls", (void*) &pThis->Drvr));
+	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr));
+
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pThis->pDrvrName != NULL)
+			free(pThis->pDrvrName);
+			pThis->pDrvrName = NULL;
+	}
 	RETiRet;
 }
 
@@ -91,6 +104,15 @@ BEGINobjDestruct(nssel) /* be sure to specify the object type also in END and CO
 CODESTARTobjDestruct(nssel)
 	if(pThis->pDrvrData != NULL)
 		pThis->Drvr.Destruct(&pThis->pDrvrData);
+
+	/* and now we must release our driver, if we got one. We use the presence of
+	 * a driver name string as load indicator (because we also need that string
+	 * to release the driver 
+	 */
+	if(pThis->pDrvrName != NULL) {
+		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, DONT_LOAD_LIB, (void*) &pThis->Drvr);
+		free(pThis->pDrvrName);
+	}
 ENDobjDestruct(nssel)
 
 
@@ -201,29 +223,5 @@ BEGINObjClassInit(nssel, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* set our own handlers */
 ENDObjClassInit(nssel)
-
-
-/* --------------- here now comes the plumbing that makes us a library module --------------- */
-
-
-BEGINmodExit
-CODESTARTmodExit
-	nsselClassExit();
-ENDmodExit
-
-
-BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
-ENDqueryEtryPt
-
-
-BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-
-	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(nsselClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-ENDmodInit
 /* vi:set ai:
  */
