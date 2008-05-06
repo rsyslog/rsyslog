@@ -20,6 +20,8 @@ rsyslogd_SOURCES = \
 	pidfile.c \
 	pidfile.h \
 	\
+	../dirty.h \
+	\
 	../action.h \
 	../action.c \
 	../threads.c \
