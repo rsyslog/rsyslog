@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 3.19.1 (rgerhards), 2008-05-07
+- file dirty.h was missing - thanks to darix for pointing this out
+---------------------------------------------------------------------------
 Version 3.19.0 (rgerhards), 2008-05-06
 - begins new devel branch version
 - implemented TLS for plain tcp syslog (this is also the world's first
