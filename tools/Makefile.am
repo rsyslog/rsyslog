@@ -1,5 +1,5 @@
 sbin_PROGRAMS =
-man_MANS = 
+man_MANS = rsyslogd.8 rsyslog.conf.5 
 
 sbin_PROGRAMS += rsyslogd
 rsyslogd_SOURCES = \
@@ -41,4 +41,4 @@ rsyslogd_CPPFLAGS =  $(pthreads_cflags) $(rsrt_cflags)
 rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs) $(rsrt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 
-man_MANS += rsyslogd.8 rsyslog.conf.5 
+EXTRA_DIST = $(man_MANS)

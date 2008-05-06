@@ -1,5 +1,4 @@
 sbin_PROGRAMS =
-man_MANS = 
 pkglib_LTLIBRARIES = 
 
 
@@ -53,8 +52,7 @@ EXTRA_DIST = \
 	COPYING.LESSER \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
-	contrib/gnutls/key.pem \
-	$(man_MANS)
+	contrib/gnutls/key.pem
 
 SUBDIRS = doc runtime .
 
