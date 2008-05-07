@@ -221,6 +221,19 @@ gtlsEndSess(nsd_gtls_t *pThis)
 }
 
 
+/* a small wrapper for gnutls_transport_set_ptr(). The main intension for
+ * creating this wrapper is to get the annoying "cast to pointer from different
+ * size" compiler warning just once. There seems to be no way around it, see:
+ * http://lists.gnu.org/archive/html/help-gnutls/2008-05/msg00000.html
+ * rgerhards, 2008.05-07
+ */
+static inline void
+gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
+{
+	/* Note: the compiler warning for the next line is OK - see header comment! */
+	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr_t) sock);
+}
+
 /* ---------------------------- end GnuTLS specifics ---------------------------- */
 
 
@@ -378,7 +391,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 	/* if we reach this point, we are in TLS mode */
 	CHKiRet(gtlsInitSession(pNew));
-	gnutls_transport_set_ptr(pNew->sess, (gnutls_transport_ptr_t)((nsd_ptcp_t*) (pNew->pTcp))->sock);
+	gtlsSetTransportPtr(pNew, ((nsd_ptcp_t*) (pNew->pTcp))->sock);
 
 	/* we now do the handshake. This is a bit complicated, because we are 
 	 * on non-blocking sockets. Usually, the handshake will not complete
@@ -509,7 +522,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 
 	/* assign the socket to GnuTls */
 	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
-	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr_t)sock);
+	gtlsSetTransportPtr(pThis, sock);
 
 	/* and perform the handshake */
 	CHKgnutls(gnutls_handshake(pThis->sess));

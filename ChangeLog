@@ -3,6 +3,9 @@ Version 3.19.1 (rgerhards), 2008-05-07
 - configure help for --enable-gnutls wrong - said default is "yes" but
   default actually is "no" - thanks to darix for pointing this out
 - file dirty.h was missing - thanks to darix for pointing this out
+- bugfix: man files were not properly distributed - thanks to
+  darix for reporting and to Michael Biebl for help with the fix
+- some minor cleanup
 ---------------------------------------------------------------------------
 Version 3.19.0 (rgerhards), 2008-05-06
 - begins new devel branch version
