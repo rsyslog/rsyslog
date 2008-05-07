@@ -2,6 +2,7 @@
 Version 2.0.5 STABLE (rgerhards), 2008-??-??
 - bugfix: regular expressions inside property replacer did not work
   properly
+- adapted to liblogging 0.7.1+
 ---------------------------------------------------------------------------
 Version 2.0.4 STABLE (rgerhards), 2008-03-27
 - bugfix: internally generated messages had "FROMHOST" property not set
