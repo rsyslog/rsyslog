@@ -1,0 +1,2 @@
+#/bin/sh
+certtool -i < $1|grep Fingerprint
