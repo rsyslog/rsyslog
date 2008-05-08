@@ -129,8 +129,8 @@ doRetry(nsd_gtls_t *pNsd)
 		case gtlsRtry_handshake:
 			gnuRet = gnutls_handshake(pNsd->sess);
 			if(gnuRet == 0) {
-				/* we got a handshake, now print session info */
-				print_info(pNsd->sess);
+				/* we got a handshake, now check authorization */
+				// TODO: do it!
 			}
 			break;
 		default:
