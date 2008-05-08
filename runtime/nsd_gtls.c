@@ -27,6 +27,8 @@
 #include <assert.h>
 #include <string.h>
 #include <gnutls/gnutls.h>
+#include <gcrypt.h>
+#include <errno.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -43,6 +45,7 @@
 #define CRLFILE "crl.pem"
 
 
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
 MODULE_TYPE_LIB
 
 /* static data */
@@ -90,6 +93,8 @@ gtlsGlblInit(void)
 	uchar *cafile;
 	DEFiRet;
 
+	/* gcry_control must be called first, so that the thread system is correctly set up */
+	gcry_control (GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 	CHKgnutls(gnutls_global_init());
 	
 	/* X509 stuff */
@@ -267,7 +272,7 @@ SetMode(nsd_t *pNsd, int mode)
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
-dbgprintf("SetMOde tries to set mode %d\n", mode);
+dbgprintf("SetMode tries to set mode %d\n", mode);
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	if(mode != 0 && mode != 1)
 		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
@@ -351,8 +356,7 @@ GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
 
 
 /* get the remote host's IP address. The returned string must be freed by the
- * caller.
- * rgerhards, 2008-04-25
+ * caller. -- rgerhards, 2008-04-25
  */
 static rsRetVal
 GetRemoteIP(nsd_t *pNsd, uchar **ppszIP)
