@@ -23,10 +23,12 @@
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <gnutls/gnutls.h>
+#include <gnutls/x509.h>
 #include <gcrypt.h>
 #include <errno.h>
 
@@ -67,8 +69,191 @@ static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - 
 
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
+////////////////// experimental ///////////////////
+uchar *gtlsStrerror(int error);
+static const char* bin2hex(void* bin, size_t bin_size)
+{
+	static char printable[170];
+	uchar *_bin = bin;
+	char* print;
+	size_t i;
+
+	if (bin_size > 50) bin_size = 50;
+
+	print = printable;
+	for(i = 0; i < bin_size; i++) {
+		sprintf(print, "%2.2X:", _bin[i]);
+		print += 3;
+	}
+
+	return printable;
+}
+
+#if 0
+/* This function will print information about this session's peer
+ * certificate. 
+ */
+static rsRetVal
+print_x509_certificate_info(gnutls_session session)
+{
+	char fingerprint[20];
+	char serial[40];
+	char dn[128];
+	size_t size;
+	unsigned int algo, bits;
+	time_t expiration_time, activation_time;
+	const gnutls_datum *cert_list;
+	int cert_list_size = 0;
+	gnutls_x509_crt cert;
+	int gnuRet;
+	DEFiRet;
+
+	/* This function only works for X.509 certificates.
+	*/
+	if(gnutls_certificate_type_get(session) != GNUTLS_CRT_X509)
+		return RS_RET_TLS_CERT_ERR;
+
+	cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
+
+	dbgprintf("Peer provided %d certificates.\n", cert_list_size);
+
+	if(cert_list_size > 0) {
+		/* we only print information about the first certificate */
+		gnutls_x509_crt_init( &cert);
+
+		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
+
+		dbgprintf("Certificate info:\n");
+
+		expiration_time = gnutls_x509_crt_get_expiration_time(cert);
+		activation_time = gnutls_x509_crt_get_activation_time(cert);
+
+		dbgprintf("\tCertificate is valid since: %s", ctime(&activation_time));
+		dbgprintf("\tCertificate expires: %s", ctime(&expiration_time));
+
+		/* Print the serial number of the certificate */
+		size = sizeof(serial);
+		CHKgnutls(gnutls_x509_crt_get_serial(cert, serial, &size));
+		dbgprintf("\tCertificate serial number: %s\n", bin2hex( serial, size));
+
+		/* print the SHA1 fingerprint */
+		size = sizeof(fingerprint);
+		CHKgnutls(gnutls_x509_crt_get_fingerprint(cert, GNUTLS_DIG_SHA1, fingerprint, &size));
+		dbgprintf("\tCertificate SHA1 fingerprint: %s\n", bin2hex(fingerprint, size));
+
+		/* Extract some of the public key algorithm's parameters
+		*/
+		algo = gnutls_x509_crt_get_pk_algorithm(cert, &bits);
+
+		dbgprintf("Certificate public key: %s", gnutls_pk_algorithm_get_name(algo));
+
+		/* Print the version of the X.509 
+		* certificate.
+		*/
+		dbgprintf("\tCertificate version: #%d\n", gnutls_x509_crt_get_version(cert));
+
+		size = sizeof(dn);
+		gnutls_x509_crt_get_dn( cert, dn, &size);
+		dbgprintf("\tDN: %s\n", dn);
+
+		size = sizeof(dn);
+		gnutls_x509_crt_get_issuer_dn( cert, dn, &size);
+		dbgprintf("\tIssuer's DN: %s\n", dn);
+
+		gnutls_x509_crt_deinit( cert);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+
+/* This function will print some details of the
+ * given session.
+ */
+int print_info(gnutls_session session)
+{
+	const char *tmp;
+	gnutls_credentials_type cred;
+	gnutls_kx_algorithm kx;
+
+	/* print the key exchange's algorithm name
+	*/
+	kx = gnutls_kx_get(session);
+	tmp = gnutls_kx_get_name(kx);
+	dbgprintf("- Key Exchange: %s\n", tmp);
+
+	/* Check the authentication type used and switch
+	* to the appropriate.
+	*/
+	cred = gnutls_auth_get_type(session);
+	switch (cred) {
+	case GNUTLS_CRD_ANON:       /* anonymous authentication */
+		dbgprintf("- Anonymous DH using prime of %d bits\n",
+		gnutls_dh_get_prime_bits(session));
+		break;
+	case GNUTLS_CRD_CERTIFICATE:        /* certificate authentication */
+		/* Check if we have been using ephemeral Diffie Hellman.
+		*/
+		if (kx == GNUTLS_KX_DHE_RSA || kx == GNUTLS_KX_DHE_DSS) {
+		 dbgprintf("\n- Ephemeral DH using prime of %d bits\n",
+			gnutls_dh_get_prime_bits(session));
+		}
+
+		/* if the certificate list is available, then
+		* print some information about it.
+		*/
+		print_x509_certificate_info(session);
+		break;
+	case GNUTLS_CRD_SRP:        /* certificate authentication */
+		dbgprintf("GNUTLS_CRD_SRP/IA");
+		break;
+	case GNUTLS_CRD_PSK:        /* certificate authentication */
+		dbgprintf("GNUTLS_CRD_PSK");
+		break;
+	case GNUTLS_CRD_IA:        /* certificate authentication */
+		dbgprintf("GNUTLS_CRD_IA");
+		break;
+	} /* switch */
+
+	/* print the protocol's name (ie TLS 1.0) */
+	tmp = gnutls_protocol_get_name(gnutls_protocol_get_version(session));
+	dbgprintf("- Protocol: %s\n", tmp);
+
+	/* print the certificate type of the peer.
+	* ie X.509
+	*/
+	tmp = gnutls_certificate_type_get_name(
+	gnutls_certificate_type_get(session));
+
+	dbgprintf("- Certificate Type: %s\n", tmp);
+
+	/* print the compression algorithm (if any)
+	*/
+	tmp = gnutls_compression_get_name( gnutls_compression_get(session));
+	dbgprintf("- Compression: %s\n", tmp);
+
+	/* print the name of the cipher used.
+	* ie 3DES.
+	*/
+	tmp = gnutls_cipher_get_name(gnutls_cipher_get(session));
+	dbgprintf("- Cipher: %s\n", tmp);
+
+	/* Print the MAC algorithms name.
+	* ie SHA1
+	*/
+	tmp = gnutls_mac_get_name(gnutls_mac_get(session));
+	dbgprintf("- MAC: %s\n", tmp);
+
+	return 0;
+}
+#endif
+
+//////////////////////////////////////////////////////////////////////
 static gnutls_certificate_credentials xcred;
 static gnutls_dh_params dh_params;
+
 
 /* a thread-safe variant of gnutls_strerror - TODO: implement it!
  * The caller must free the returned string.
@@ -142,7 +327,6 @@ finalize_it:
 }
 
 
-
 static rsRetVal
 generate_dh_params(void)
 {
@@ -184,6 +368,50 @@ gtlsGlblInitLstn(void)
 		CHKiRet(generate_dh_params());
 		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */
 		bGlblSrvrInitDone = 1; /* we are all set now */
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* check the fingerprint of the remote peer's certificate.
+ * rgerhards, 2008-05-08
+ */
+static rsRetVal
+gtlsChkFingerprint(nsd_gtls_t *pThis)
+{
+	char fingerprint[20];
+	size_t size;
+	const gnutls_datum *cert_list;
+	int cert_list_size = 0;
+	gnutls_x509_crt cert;
+	int gnuRet;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	/* This function only works for X.509 certificates.  */
+	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
+		return RS_RET_TLS_CERT_ERR;
+
+	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
+
+	/* we always use only the first certificate. As of GnuTLS documentation, the
+	 * first certificate always contains the remote peers own certificate. All other
+	 * certificates are issuer's certificates (up the chain). However, we do not match
+	 * against some issuer fingerprint but only ourselfs. -- rgerhards, 2008-05-08
+	 */
+	if(cert_list_size > 0) {
+		CHKgnutls(gnutls_x509_crt_init(&cert));
+		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
+
+		/* obtain the SHA1 fingerprint */
+		size = sizeof(fingerprint);
+		CHKgnutls(gnutls_x509_crt_get_fingerprint(cert, GNUTLS_DIG_SHA1, fingerprint, &size));
+		dbgprintf("\tCertificate SHA1 fingerprint: %s\n", bin2hex(fingerprint, size));
+
+		gnutls_x509_crt_deinit(cert);
 	}
 
 finalize_it:
@@ -408,6 +636,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	} else if(gnuRet != 0) {
 		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
 	}
+
 	pNew->iMode = 1; /* this session is now in TLS mode! */
 
 	*ppNew = (nsd_t*) pNew;
@@ -531,6 +760,9 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	/* and perform the handshake */
 	CHKgnutls(gnutls_handshake(pThis->sess));
 	dbgprintf("GnuTLS handshake succeeded\n");
+
+	/* now check if the remote peer is permitted to talk to us */
+	CHKiRet(gtlsChkFingerprint(pThis));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {

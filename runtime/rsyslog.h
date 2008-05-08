@@ -222,6 +222,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVAID_DRVR_MODE = -2081, /**< tried to set mode not supported by driver */
 	RS_RET_DRVRNAME_TOO_LONG = -2082, /**< driver name too long - should never happen */
 	RS_RET_TLS_HANDSHAKE_ERR = -2083, /**< TLS handshake failed */
+	RS_RET_TLS_CERT_ERR = -2084, /**< generic TLS certificate error */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

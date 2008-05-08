@@ -128,6 +128,10 @@ doRetry(nsd_gtls_t *pNsd)
 	switch(pNsd->rtryCall) {
 		case gtlsRtry_handshake:
 			gnuRet = gnutls_handshake(pNsd->sess);
+			if(gnuRet == 0) {
+				/* we got a handshake, now print session info */
+				print_info(pNsd->sess);
+			}
 			break;
 		default:
 			assert(0); /* this shall not happen! */
