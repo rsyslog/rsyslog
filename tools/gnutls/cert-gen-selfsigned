@@ -1,0 +1,3 @@
+#/bin/sh
+certtool --generate-privkey --outfile $1-key.pem
+certtool --generate-self-signed --load-privkey $1-key.pem --outfile $1-cert.pem
