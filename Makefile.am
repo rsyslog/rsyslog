@@ -14,7 +14,7 @@ lmtcpsrv_la_SOURCES = \
 	tcpsrv.c \
 	tcpsrv.h
 lmtcpsrv_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmtcpsrv_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
+lmtcpsrv_la_LDFLAGS = -module -avoid-version
 lmtcpsrv_la_LIBADD = 
 
 #
@@ -24,7 +24,7 @@ lmtcpclt_la_SOURCES = \
 	tcpclt.c \
 	tcpclt.h
 lmtcpclt_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmtcpclt_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
+lmtcpclt_la_LDFLAGS = -module -avoid-version
 lmtcpclt_la_LIBADD = 
 
 endif # if ENABLE_INET
@@ -36,7 +36,7 @@ if ENABLE_GSSAPI
 pkglib_LTLIBRARIES += lmgssutil.la
 lmgssutil_la_SOURCES = gss-misc.c gss-misc.h
 lmgssutil_la_CPPFLAGS = $(pthreads_cflags) $(rsrt_cflags)
-lmgssutil_la_LDFLAGS = -module -avoid-version $(rsrt_libs)
+lmgssutil_la_LDFLAGS = -module -avoid-version
 lmgssutil_la_LIBADD = $(gss_libs)
 endif
 
