@@ -462,6 +462,8 @@ getWord(uchar **pp, cstr_t **ppStrB)
 
 	CHKiRet(rsCStrConstruct(ppStrB));
 
+	skipWhiteSpace(pp); /* skip over any whitespace */
+
 	/* parse out the word */
 	p = *pp;
 

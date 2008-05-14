@@ -2,6 +2,9 @@
 Version 3.16.2 (rgerhards), 2008-05-14
 - fixed potential segfault due to invalid call to cfsysline
   thanks to varmojfekoj for the patch
+- bugfix: some whitespaces where incorrectly not ignored when parsing
+  the config file. This is now corrected. Thanks to Michael Biebl for
+  pointing out the problem.
 ---------------------------------------------------------------------------
 Version 3.16.1 (rgerhards), 2008-05-02
 - fixed a bug in imklog which lead to startup problems (including
