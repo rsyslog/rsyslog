@@ -518,14 +518,14 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptransport", 0, eCmdHdlrGetWord, NULL, &pszTransport, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptarget", 0, eCmdHdlrGetWord, NULL, &pszTarget, STD_LOADABLE_MODULE_ID));
-	CHKiRet(regCfSysLineHdlr(	(uchar *)"actionsnmptargetport", 0, eCmdHdlrInt, NULL, &iPort, NULL));
-	CHKiRet(regCfSysLineHdlr(	(uchar *)"actionsnmpversion", 0, eCmdHdlrInt, NULL, &iSNMPVersion, NULL));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptargetport", 0, eCmdHdlrInt, NULL, &iPort, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpversion", 0, eCmdHdlrInt, NULL, &iSNMPVersion, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpcommunity", 0, eCmdHdlrGetWord, NULL, &pszCommunity, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpenterpriseoid", 0, eCmdHdlrGetWord, NULL, &pszEnterpriseOID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptrapoid", 0, eCmdHdlrGetWord, NULL, &pszSnmpTrapOID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpsyslogmessageoid", 0, eCmdHdlrGetWord, NULL, &pszSyslogMessageOID, STD_LOADABLE_MODULE_ID));
-	CHKiRet(regCfSysLineHdlr(	(uchar *)"actionsnmpspecifictype", 0, eCmdHdlrInt, NULL, &iSpecificType, NULL));
-	CHKiRet(regCfSysLineHdlr(	(uchar *)"actionsnmptraptype", 0, eCmdHdlrInt, NULL, &iTrapType, NULL));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmpspecifictype", 0, eCmdHdlrInt, NULL, &iSpecificType, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionsnmptraptype", 0, eCmdHdlrInt, NULL, &iTrapType, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /*

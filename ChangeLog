@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 3.16.2 (rgerhards), 2008-05-14
+- fixed potential segfault due to invalid call to cfsysline
+  thanks to varmojfekoj for the patch
+---------------------------------------------------------------------------
 Version 3.16.1 (rgerhards), 2008-05-02
 - fixed a bug in imklog which lead to startup problems (including
   segfault) on some platforms under some circumsances. Thanks to
