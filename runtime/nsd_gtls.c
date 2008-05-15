@@ -534,6 +534,12 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 
 	/* in TLS mode now */
 	lenRcvd = gnutls_record_recv(pThis->sess, pBuf, *pLenBuf);
+	if(lenRcvd < 0) {
+int gnuRet; /* this is a hack */
+		*pLenBuf = -1;
+		CHKgnutls(lenRcvd); /* this will abort the function */
+	}
+
 	*pLenBuf = lenRcvd;
 
 finalize_it:

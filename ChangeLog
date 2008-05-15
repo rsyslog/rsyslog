@@ -4,6 +4,8 @@ Version 3.19.3 (rgerhards), 2008-05-??
   runtime library, resulting in a large size increase (and potential
   "interesting" effects). Thanks to Michael Biebel for reporting the size
   issue.
+- bugfix: TLS server went into an endless loop in some situations.
+  Thanks to Michael Biebl for reporting the problem.
 ---------------------------------------------------------------------------
 Version 3.19.2 (rgerhards), 2008-05-14
 - fixed potential segfault due to invalid call to cfsysline

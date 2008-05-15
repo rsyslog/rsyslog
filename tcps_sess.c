@@ -341,19 +341,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	assert(pData != NULL);
 	assert(iLen > 0);
 
-	 /* We now copy the message to the session buffer. As
-	  * it looks, we need to do this in any case because
-	  * we might run into multiple messages inside a single
-	  * buffer. Of course, we could think about optimizations,
-	  * but as this code is to be replaced by liblogging, it
-	  * probably doesn't make so much sense...
-	  * rgerhards 2005-07-04
-	  *
-	  * Algo:
-	  * - copy message to buffer until the first LF is found
-	  * - printline() the buffer
-	  * - continue with copying
-	  */
+	 /* We now copy the message to the session buffer. */
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
