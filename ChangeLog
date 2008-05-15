@@ -1,13 +1,11 @@
 ---------------------------------------------------------------------------
-Version 3.19.3 (rgerhards), 2008-05-??
+Version 3.19.2 (rgerhards), 2008-05-??
 - bugfix: lmtcpclt, lmtcpsrv and lmgssutil did all link to the static
   runtime library, resulting in a large size increase (and potential
   "interesting" effects). Thanks to Michael Biebel for reporting the size
   issue.
 - bugfix: TLS server went into an endless loop in some situations.
   Thanks to Michael Biebl for reporting the problem.
----------------------------------------------------------------------------
-Version 3.19.2 (rgerhards), 2008-05-14
 - fixed potential segfault due to invalid call to cfsysline
   thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
