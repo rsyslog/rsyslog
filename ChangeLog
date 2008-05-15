@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 2.0.5 STABLE (rgerhards), 2008-??-??
+Version 2.0.5 STABLE (rgerhards), 2008-05-15
 - bugfix: regular expressions inside property replacer did not work
   properly
 - adapted to liblogging 0.7.1+
