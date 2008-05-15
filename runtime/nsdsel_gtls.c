@@ -128,9 +128,12 @@ doRetry(nsd_gtls_t *pNsd)
 	switch(pNsd->rtryCall) {
 		case gtlsRtry_handshake:
 			gnuRet = gnutls_handshake(pNsd->sess);
+			dbgprintf("handshake ret %d\n", gnuRet);
 			if(gnuRet == 0) {
 				/* we got a handshake, now check authorization */
 				// TODO: do it!
+			dbgprintf("handshake done\n");
+				gtlsChkFingerprint(pNsd);
 			}
 			break;
 		default:

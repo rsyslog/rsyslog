@@ -120,6 +120,31 @@ uchar *gtlsStrerror(int error)
 }
 
 
+/* add our own certificate to the certificate set, so that the peer
+ * can identify us. Please note that we try to use mutual authentication,
+ * so we always add a cert, even if we are in the client role (later,
+ * this may be controlled by a config setting).
+ * rgerhards, 2008-05-15
+ */
+static rsRetVal
+gtlsAddOurCert(void)
+{
+	int gnuRet;
+	uchar *keyFile;
+	uchar *certFile;
+	DEFiRet;
+
+	certFile = glbl.GetDfltNetstrmDrvrCertFile();
+	keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
+	dbgprintf("GTLS certificate file: '%s'\n", certFile);
+	dbgprintf("GTLS key file: '%s'\n", keyFile);
+	CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* globally initialize GnuTLS */
 static rsRetVal
 gtlsGlblInit(void)
@@ -210,11 +235,7 @@ gtlsGlblInitLstn(void)
 		 * considered legacy. -- rgerhards, 2008-05-05
 		 */
 		/*CHKgnutls(gnutls_certificate_set_x509_crl_file(xcred, CRLFILE, GNUTLS_X509_FMT_PEM));*/
-		certFile = glbl.GetDfltNetstrmDrvrCertFile();
-		keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
-		dbgprintf("GTLS certificate file: '%s'\n", certFile);
-		dbgprintf("GTLS key file: '%s'\n", keyFile);
-		CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
+	//CHKiRet(gtlsAddOurCert());
 		CHKiRet(generate_dh_params());
 		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */
 		bGlblSrvrInitDone = 1; /* we are all set now */
@@ -228,7 +249,8 @@ finalize_it:
 /* check the fingerprint of the remote peer's certificate.
  * rgerhards, 2008-05-08
  */
-static rsRetVal
+//static rsRetVal
+rsRetVal
 gtlsChkFingerprint(nsd_gtls_t *pThis)
 {
 	cstr_t *pstrFingerprint = NULL;
@@ -270,6 +292,7 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 
 
 finalize_it:
+dbgprintf("exit fingerprint check, iRet %d\n", iRet);
 	if(pstrFingerprint != NULL)
 		rsCStrDestruct(&pstrFingerprint);
 	if(bMustDeinitCert)
@@ -333,6 +356,8 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
+CHKiRet(gtlsAddOurCert());
+finalize_it:
 ENDobjConstruct(nsd_gtls)
 
 
