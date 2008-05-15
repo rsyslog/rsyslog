@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 2.0.6 V2-STABLE (rgerhards), 2008-??-??
+---------------------------------------------------------------------------
 Version 2.0.5 STABLE (rgerhards), 2008-05-15
 - bugfix: regular expressions inside property replacer did not work
   properly
