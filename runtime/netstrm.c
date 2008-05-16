@@ -172,6 +172,10 @@ Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 	RETiRet;
 }
 
+/* here follows a number of methods that shuffle authentication settings down
+ * to the drivers. Drivers not supporting these settings may return an error
+ * state.
+ * -------------------------------------------------------------------------- */
 
 /* set the driver mode
  * rgerhards, 2008-04-28
@@ -185,6 +189,32 @@ SetDrvrMode(netstrm_t *pThis, int iMode)
 	RETiRet;
 }
 
+
+/* set the driver authentication mode -- rgerhards, 2008-05-16
+ */
+static rsRetVal
+SetDrvrAuthMode(netstrm_t *pThis, uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetAuthMode(pThis->pDrvrData, mode);
+	RETiRet;
+}
+
+
+/* add an accepted fingerprint -- rgerhards, 2008-05-16
+ */
+static rsRetVal
+AddDrvrPermittedFingerprint(netstrm_t *pThis, uchar *fingerprint)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.AddPermFingerprint(pThis->pDrvrData, fingerprint);
+	RETiRet;
+}
+
+/* End of methods to shuffle autentication settings to the driver.
+ * -------------------------------------------------------------------------- */
 
 /* send a buffer. On entry, pLenBuf contains the number of octets to
  * write. On exit, it contains the number of octets actually written.
@@ -280,6 +310,8 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->SetDrvrMode = SetDrvrMode;
+	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
+	pIf->AddDrvrPermittedFingerprint = AddDrvrPermittedFingerprint;
 	pIf->GetSock = GetSock;
 finalize_it:
 ENDobjQueryInterface(netstrm)

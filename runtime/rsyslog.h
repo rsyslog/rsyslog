@@ -224,6 +224,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_TLS_HANDSHAKE_ERR = -2083, /**< TLS handshake failed */
 	RS_RET_TLS_CERT_ERR = -2084, /**< generic TLS certificate error */
 	RS_RET_TLS_NO_CERT = -2085, /**< no TLS certificate available where one was expected */
+	RS_RET_VALUE_NOT_SUPPORTED = -2086, /**< a provided value is not supported */
+	RS_RET_VALUE_NOT_IN_THIS_MODE = -2087, /**< a provided value is invalid for the curret mode */
+	RS_RET_INVALID_FINGERPRINT = -2088, /**< a fingerprint is not valid for this use case */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
 Version 3.19.3 (rgerhards), 2008-05-??
+- added ability to authenticate the server against its certificate
+  fingerprint
+- bugfix: small mem leak in omfwd on exit (strmdriver name was not freed)
+- bugfix: $ActionSendStreamDriver had no effect
+- added ability for client to provide its fingerprint
+- added ability for server to obtain client cert's fingerprint
 ---------------------------------------------------------------------------
 Version 3.19.2 (rgerhards), 2008-05-16
 - bugfix: TCP input modules did incorrectly set fromhost property

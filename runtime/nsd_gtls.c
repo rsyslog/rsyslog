@@ -225,9 +225,6 @@ finalize_it:
 static rsRetVal
 gtlsGlblInitLstn(void)
 {
-	int gnuRet;
-	uchar *keyFile;
-	uchar *certFile;
 	DEFiRet;
 
 	if(bGlblSrvrInitDone == 0) {
@@ -290,6 +287,14 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
 	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", rsCStrGetSzStr(pstrFingerprint));
 
+	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT)
+		FINALIZE;
+	
+	if(pThis->authIDs == NULL || rsCStrSzStrCmp(pstrFingerprint, pThis->authIDs, strlen((char*) pThis->authIDs))) {
+		// TODO: logerror
+		dbgprintf("invalid server fingerprint, not authorized\n");
+		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+	}
 
 finalize_it:
 dbgprintf("exit fingerprint check, iRet %d\n", iRet);
@@ -391,6 +396,66 @@ dbgprintf("SetMode tries to set mode %d\n", mode);
 		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
 
 	pThis->iMode = mode;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Set the authentication mode. For us, the following is supported:
+ * anon - no certificate checks whatsoever (discouraged, but supported)
+ * x509/fingerprint - certificate fingerprint
+ * x509/name - cerfificate name check
+ * mode == NULL is valid and defaults to x509/name
+ * rgerhards, 2008-05-16
+ */
+static rsRetVal
+SetAuthMode(nsd_t *pNsd, uchar *mode)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+RUNLOG_VAR("%s", mode);
+	if(mode == NULL || !strcasecmp((char*)mode, "x509/name")) {
+		pThis->authMode = GTLS_AUTH_CERTNAME;
+	} else if(!strcasecmp((char*) mode, "x509/fingerprint")) {
+		pThis->authMode = GTLS_AUTH_CERTFINGERPRINT;
+	} else if(!strcasecmp((char*) mode, "anon")) {
+		pThis->authMode = GTLS_AUTH_CERTANON;
+	} else {
+		// TODO: logerror()?
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+
+/* TODO: clear stored IDs! */
+
+finalize_it:
+dbgprintf("gtls auth mode %d set\n", pThis->authMode);
+	RETiRet;
+}
+
+
+/* Add a permitted fingerprint. Only useful to call if we are using
+ * fingerprint authentication. Results in error if we are not in this mode.
+ * rgerhards, 2008-05-16
+ */
+static rsRetVal
+AddPermFingerprint(nsd_t *pNsd, uchar *pszFingerprint)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT)
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
+
+	// TODO: proper handling - but we need to redo this when we do the
+	// linked list. So for now, this is good enough (but MUST BE CHANGED!).
+	//
+
+	pThis->authIDs = pszFingerprint;
+dbgprintf("gtls fingerprint '%s' set\n", pThis->authIDs);
 
 finalize_it:
 	RETiRet;
@@ -689,6 +754,8 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->Connect = Connect;
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
+	pIf->SetAuthMode = SetAuthMode;
+	pIf->AddPermFingerprint = AddPermFingerprint;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:
