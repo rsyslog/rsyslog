@@ -90,6 +90,8 @@ CODESTARTobjDestruct(tcps_sess)
 	/* now destruct our own properties */
 	if(pThis->fromHost != NULL)
 		free(pThis->fromHost);
+	if(pThis->fromHostIP != NULL)
+		free(pThis->fromHostIP);
 ENDobjDestruct(tcps_sess)
 
 
@@ -102,7 +104,7 @@ ENDobjDebugPrint(tcps_sess)
 /* set property functions */
 /* set the hostname. Note that the caller *hands over* the string. That is,
  * the caller no longer controls it once SetHost() has received it. Most importantly,
- * the caller must not free it. -- gerhards, 2008-04-24
+ * the caller must not free it. -- rgerhards, 2008-04-24
  */
 static rsRetVal
 SetHost(tcps_sess_t *pThis, uchar *pszHost)
@@ -116,6 +118,26 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 	}
 	
 	pThis->fromHost = pszHost;
+
+	RETiRet;
+}
+
+/* set the remote host's IP. Note that the caller *hands over* the string. That is,
+ * the caller no longer controls it once SetHostIP() has received it. Most importantly,
+ * the caller must not free it. -- rgerhards, 2008-05-16
+ */
+static rsRetVal
+SetHostIP(tcps_sess_t *pThis, uchar *pszHostIP)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, tcps_sess);
+
+	if(pThis->fromHostIP != NULL) {
+		free(pThis->fromHostIP);
+	}
+	
+	pThis->fromHostIP = pszHostIP;
 
 	RETiRet;
 }
@@ -140,7 +162,7 @@ SetMsgIdx(tcps_sess_t *pThis, int idx)
 }
 
 
-/* set out parent, the tcpsrv object */
+/* set our parent, the tcpsrv object */
 static rsRetVal
 SetTcpsrv(tcps_sess_t *pThis, tcpsrv_t *pSrv)
 {
@@ -200,7 +222,7 @@ PrepareClose(tcps_sess_t *pThis)
 		 * this case.
 		 */
 		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		parseAndSubmitMessage(pThis->fromHost, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+		parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
 		pThis->bAtStrtOfFram = 1;
 	}
 
@@ -222,6 +244,8 @@ Close(tcps_sess_t *pThis)
 	netstrm.Destruct(&pThis->pStrm);
 	free(pThis->fromHost);
 	pThis->fromHost = NULL; /* not really needed, but... */
+	free(pThis->fromHostIP);
+	pThis->fromHostIP = NULL; /* not really needed, but... */
 
 	RETiRet;
 }
@@ -280,7 +304,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 		if(pThis->iMsg >= MAXLINE) {
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
 			dbgprintf("error: message received is larger than MAXLINE, we split it\n");
-			parseAndSubmitMessage(pThis->fromHost, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+			parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
 			pThis->iMsg = 0;
 			/* we might think if it is better to ignore the rest of the
 			 * message than to treat it as a new one. Maybe this is a good
@@ -290,7 +314,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 		}
 
 		if(c == '\n' && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
-			parseAndSubmitMessage(pThis->fromHost, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+			parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
 			pThis->iMsg = 0;
 			pThis->inputState = eAtStrtFram;
 		} else {
@@ -308,7 +332,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 			pThis->iOctetsRemain--;
 			if(pThis->iOctetsRemain < 1) {
 				/* we have end of frame! */
-				parseAndSubmitMessage(pThis->fromHost, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+				parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
 				pThis->iMsg = 0;
 				pThis->inputState = eAtStrtFram;
 			}
@@ -379,6 +403,7 @@ CODESTARTobjQueryInterface(tcps_sess)
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetTcpsrv = SetTcpsrv;
 	pIf->SetHost = SetHost;
+	pIf->SetHostIP = SetHostIP;
 	pIf->SetStrm = SetStrm;
 	pIf->SetMsgIdx = SetMsgIdx;
 finalize_it:

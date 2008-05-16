@@ -44,7 +44,13 @@ socket. Should be useful for debugging.</td>
 <td><b>fromhost</b></td>
 <td>hostname of the system the message was received from
 (in a relay chain, this is the system immediately in front of us and
-not necessarily the original sender)</td>
+not necessarily the original sender). This is a DNS-resolved name, except
+if that is not possible or DNS resolution has been disabled.</td>
+</tr>
+<tr>
+<td><b>fromhost-ip</b></td>
+<td>The same as fromhost, but alsways as an IP address. Local inputs
+(like imklog) use 127.0.0.1 in this property.</td>
 </tr>
 <tr>
 <td><b>syslogtag</b></td>

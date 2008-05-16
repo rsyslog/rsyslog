@@ -50,6 +50,8 @@ struct nsd_gtls_s {
 
 /* prototypes */
 PROTOTYPEObj(nsd_gtls);
+/* some prototypes for things used by our nsdsel_gtls helper class */
+uchar *gtlsStrerror(int error);
 
 /* the name of our library binary */
 #define LM_NSD_GTLS_FILENAME "lmnsd_gtls"

@@ -1,5 +1,17 @@
 ---------------------------------------------------------------------------
 Version 3.19.2 (rgerhards), 2008-05-??
+- bugfix: TCP input modules did incorrectly set fromhost property
+  (always blank)
+- bugfix: imklog did not set fromhost property
+- added "fromhost-ip" property
+  Note that adding this property changes the on-disk format for messages.
+  However, that should not have any bad effect on existing spool files.
+  But you will run into trouble if you create a spool file with this
+  version and then try to process it with an older one (after a downgrade).
+  Don't do that ;)
+- added "RSYSLOG_DebugFormat" canned template
+- bugfix: hostname and fromhost were swapped when a persisted message
+  (in queued mode) was read in
 - bugfix: lmtcpclt, lmtcpsrv and lmgssutil did all link to the static
   runtime library, resulting in a large size increase (and potential
   "interesting" effects). Thanks to Michael Biebel for reporting the size

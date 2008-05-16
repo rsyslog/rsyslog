@@ -44,6 +44,7 @@ typedef struct tcps_sess_s {
 	TCPFRAMINGMODE eFraming;
 	uchar msg[MAXLINE+1];
 	uchar *fromHost;
+	uchar *fromHostIP;
 	void *pUsr;	/* a user-pointer */
 } tcps_sess_t;
 
@@ -61,6 +62,7 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetTcpsrv)(tcps_sess_t *pThis, struct tcpsrv_s *pSrv);
 	rsRetVal (*SetUsrP)(tcps_sess_t*, void*);
 	rsRetVal (*SetHost)(tcps_sess_t *pThis, uchar*);
+	rsRetVal (*SetHostIP)(tcps_sess_t *pThis, uchar*);
 	rsRetVal (*SetStrm)(tcps_sess_t *pThis, netstrm_t*);
 	rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);
 ENDinterface(tcps_sess)

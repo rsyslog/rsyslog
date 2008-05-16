@@ -135,6 +135,7 @@ BEGINrunInput
 	struct sockaddr_storage frominet;
 	socklen_t socklen;
 	uchar fromHost[NI_MAXHOST];
+	uchar fromHostIP[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
 	ssize_t l;
 CODESTARTrunInput
@@ -182,7 +183,7 @@ CODESTARTrunInput
 				       l = recvfrom(udpLstnSocks[i+1], (char*) pRcvBuf, MAXLINE - 1, 0,
 						    (struct sockaddr *)&frominet, &socklen);
 				       if (l > 0) {
-					       if(net.cvthname(&frominet, fromHost, fromHostFQDN) == RS_RET_OK) {
+					       if(net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP) == RS_RET_OK) {
 						       dbgprintf("Message from inetd socket: #%d, host: %s\n",
 							       udpLstnSocks[i+1], fromHost);
 						       /* Here we check if a host is permitted to send us
@@ -193,7 +194,7 @@ CODESTARTrunInput
 							*/
 						       if(net.isAllowedSender(net.pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
-							       parseAndSubmitMessage(fromHost, pRcvBuf, l,
+							       parseAndSubmitMessage(fromHost, fromHostIP, pRcvBuf, l,
 							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY);
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
