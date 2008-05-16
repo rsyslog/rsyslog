@@ -230,6 +230,7 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 	ASSERT(pp != NULL);
 	ASSERT(*pp != NULL);
 
+	skipWhiteSpace(pp); /* skip over any whitespace */
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
 		errmsg.LogError(NO_ERRCODE, "could not extract module name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);

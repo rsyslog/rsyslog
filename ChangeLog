@@ -53,6 +53,13 @@ Version 3.17.0 (rgerhards), 2008-04-08
 Plus a number of bugfixes that were applied to v3-stable and beta
 branches (not mentioned here in detail).
 ---------------------------------------------------------------------------
+Version 3.16.2 (rgerhards), 2008-05-14
+- fixed potential segfault due to invalid call to cfsysline
+  thanks to varmojfekoj for the patch
+- bugfix: some whitespaces where incorrectly not ignored when parsing
+  the config file. This is now corrected. Thanks to Michael Biebl for
+  pointing out the problem.
+---------------------------------------------------------------------------
 Version 3.16.1 (rgerhards), 2008-05-02
 - fixed a bug in imklog which lead to startup problems (including
   segfault) on some platforms under some circumsances. Thanks to
@@ -523,6 +530,16 @@ Version 3.10.0 (rgerhards), 2008-01-07
 - compilation without pthreads is no longer supported
 - much cleaner code due to new objects and removal of single-threading
   mode
+---------------------------------------------------------------------------
+Version 2.0.5 STABLE (rgerhards), 2008-05-15
+- bugfix: regular expressions inside property replacer did not work
+  properly
+- adapted to liblogging 0.7.1+
+---------------------------------------------------------------------------
+Version 2.0.4 STABLE (rgerhards), 2008-03-27
+- bugfix: internally generated messages had "FROMHOST" property not set
+- bugfix: continue parsing if tag is oversize (discard oversize part) - thanks
+  to mclaughlin77@gmail.com for the patch
 ---------------------------------------------------------------------------
 Version 2.0.1 STABLE (rgerhards), 2008-01-24
 - fixed a bug in integer conversion - but this function was never called,

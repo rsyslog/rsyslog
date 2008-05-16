@@ -43,9 +43,9 @@ int main()
 #include <sys/socket.h>
 #include <sys/errno.h>
 #include "rsyslog.h"
-#include "liblogging.h"
-#include "srAPI.h"
-#include "syslogmessage.h"
+#include "liblogging/liblogging.h"
+#include "liblogging/srAPI.h"
+#include "liblogging/syslogmessage.h"
 
 /* configurable params! */
 static char* pPathLogname = "/dev/log3195";
