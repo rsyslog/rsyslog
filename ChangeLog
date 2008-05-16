@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.19.3 (rgerhards), 2008-05-??
+---------------------------------------------------------------------------
 Version 3.19.2 (rgerhards), 2008-05-16
 - bugfix: TCP input modules did incorrectly set fromhost property
   (always blank)
