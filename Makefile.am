@@ -41,10 +41,6 @@ lmgssutil_la_LIBADD = $(gss_libs)
 endif
 
 EXTRA_DIST = \
-	redhat/rsyslog.conf \
-	redhat/rsyslog.init \
-	redhat/rsyslog.log \
-	redhat/rsyslog.sysconfig \
 	freebsd/rsyslogd \
 	slackware/rc.rsyslogd \
 	contrib/README \
