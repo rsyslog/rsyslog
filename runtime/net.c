@@ -626,6 +626,8 @@ should_use_so_bsdcompat(void)
  * but has been moved out of it because of clarity and fuctional separation.
  * It must be provided by the socket we received the message on as well as
  * a NI_MAXHOST size large character buffer for the FQDN.
+ * 2008-05-16 rgerhards: added field for IP address representation. Must also
+ * be NI_MAXHOST size large.
  *
  * Please see http://www.hmug.org/man/3/getnameinfo.php (under Caveats)
  * for some explanation of the code found below. We do by default not
@@ -635,23 +637,23 @@ should_use_so_bsdcompat(void)
  * message should be processed (1) or discarded (0).
  */
 static rsRetVal
-gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
+gethname(struct sockaddr_storage *f, uchar *pszHostFQDN, uchar *ip)
 {
 	DEFiRet;
 	int error;
 	sigset_t omask, nmask;
-	char ip[NI_MAXHOST];
 	struct addrinfo hints, *res;
 	
 	assert(f != NULL);
 	assert(pszHostFQDN != NULL);
 
         error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *)f),
-			    ip, sizeof ip, NULL, 0, NI_NUMERICHOST);
+			    (char*) ip, sizeof ip, NULL, 0, NI_NUMERICHOST);
 
         if (error) {
                 dbgprintf("Malformed from address %s\n", gai_strerror(error));
 		strcpy((char*) pszHostFQDN, "???");
+		strcpy((char*) ip, "???");
 		ABORT_FINALIZE(RS_RET_INVALID_SOURCE);
 	}
 
@@ -713,7 +715,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
 
         if(error || glbl.GetDisableDNS()) {
                 dbgprintf("Host name for your address (%s) unknown\n", ip);
-		strcpy((char*) pszHostFQDN, ip);
+		strcpy((char*) pszHostFQDN, (char*)ip);
 		ABORT_FINALIZE(RS_RET_ADDRESS_UNKNOWN);
         }
 
@@ -773,8 +775,9 @@ void debugListenInfo(int fd, char *type)
  * there is no way to check it. We use this way of doing things because it
  * frees us from using dynamic memory allocation where it really does not
  * pay.
+ * 2005-05-16 rgerhards: added IP representation. Must also be NI_MAXHOST
  */
-rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN)
+rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, uchar *pszIP)
 {
 	DEFiRet;
 	register uchar *p;
@@ -784,7 +787,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	assert(pszHost != NULL);
 	assert(pszHostFQDN != NULL);
 
-	iRet = gethname(f, pszHostFQDN);
+	iRet = gethname(f, pszHostFQDN, pszIP);
 
 	if(iRet == RS_RET_INVALID_SOURCE || iRet == RS_RET_ADDRESS_UNKNOWN) {
 		strcpy((char*) pszHost, (char*) pszHostFQDN); /* we use whatever was provided as replacement */

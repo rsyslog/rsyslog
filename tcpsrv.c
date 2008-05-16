@@ -314,6 +314,7 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 	int iSess = -1;
 	struct sockaddr_storage addr;
 	uchar *fromHostFQDN = NULL;
+	uchar *fromHostIP = NULL;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -333,7 +334,8 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 
 	/* OK, we have a "good" index... */
 	/* get the host name */
-	CHKiRet(netstrm.GetRemoteHName(pStrm, &fromHostFQDN));
+	CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
+	CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
 	/* TODO: check if we need to strip the domain name here -- rgerhards, 2008-04-24 */
 
 	/* Here we check if a host is permitted to send us messages. If it isn't, we do not further
@@ -353,6 +355,7 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 	 * means we can finally fill in the session object.
 	 */
 	CHKiRet(tcps_sess.SetHost(pSess, fromHostFQDN));
+	CHKiRet(tcps_sess.SetHostIP(pSess, fromHostIP));
 	CHKiRet(tcps_sess.SetStrm(pSess, pNewStrm));
 	pNewStrm = NULL; /* prevent it from being freed in error handler, now done in tcps_sess! */
 	CHKiRet(tcps_sess.SetMsgIdx(pSess, 0));

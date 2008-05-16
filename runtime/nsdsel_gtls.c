@@ -138,12 +138,18 @@ doRetry(nsd_gtls_t *pNsd)
 			break;
 		default:
 			assert(0); /* this shall not happen! */
+			dbgprintf("ERROR: pNsd->rtryCall invalid in nsdsel_gtls.c:%d\n", __LINE__);
+			gnuRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
 			break;
 	}
 
 	if(gnuRet == 0) {
 		pNsd->rtryCall = gtlsRtry_None; /* we are done */
 	} else if(gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
+		uchar *pErr = gtlsStrerror(gnuRet);
+		dbgprintf("unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
+		free(pErr);
+		pNsd->rtryCall = gtlsRtry_None; /* we are also done... ;) */
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 	}
 	/* if we are interrupted once again (else case), we do not need to

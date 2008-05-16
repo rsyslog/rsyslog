@@ -263,6 +263,8 @@ CODESTARTobjDestruct(msg)
 			free(pThis->pszHOSTNAME);
 		if(pThis->pszRcvFrom != NULL)
 			free(pThis->pszRcvFrom);
+		if(pThis->pszRcvFromIP != NULL)
+			free(pThis->pszRcvFromIP);
 		if(pThis->pszMSG != NULL)
 			free(pThis->pszMSG);
 		if(pThis->pszFacility != NULL)
@@ -422,6 +424,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pszTAG, PSZ);
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
 	objSerializePTR(pStrm, pszRcvFrom, PSZ);
+	objSerializePTR(pStrm, pszRcvFromIP, PSZ);
 
 	objSerializePTR(pStrm, pCSStrucData, CSTR);
 	objSerializePTR(pStrm, pCSAPPNAME, CSTR);
@@ -1171,6 +1174,18 @@ char *getRcvFrom(msg_t *pM)
 			return (char*) pM->pszRcvFrom;
 }
 
+
+uchar *getRcvFromIP(msg_t *pM)
+{
+	if(pM == NULL)
+		return (uchar*) "";
+	else
+		if(pM->pszRcvFromIP == NULL)
+			return (uchar*) "";
+		else
+			return pM->pszRcvFromIP;
+}
+
 /* rgerhards 2004-11-24: set STRUCTURED DATA in msg object
  */
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData)
@@ -1341,6 +1356,24 @@ void MsgSetRcvFrom(msg_t *pMsg, char* pszRcvFrom)
 	if((pMsg->pszRcvFrom = malloc(pMsg->iLenRcvFrom + 1)) != NULL) {
 		memcpy(pMsg->pszRcvFrom, pszRcvFrom, pMsg->iLenRcvFrom + 1);
 	}
+}
+
+
+/* rgerhards 2005-05-16: set pszRcvFromIP in msg object */
+rsRetVal
+MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP)
+{
+	DEFiRet;
+	assert(pMsg != NULL);
+	if(pMsg->pszRcvFromIP != NULL) {
+		free(pMsg->pszRcvFromIP);
+		pMsg->iLenRcvFromIP = 0;
+	}
+
+	CHKmalloc(pMsg->pszRcvFromIP = (uchar*)strdup((char*)pszRcvFromIP));
+	pMsg->iLenRcvFromIP = strlen((char*)pszRcvFromIP);
+finalize_it:
+	RETiRet;
 }
 
 
@@ -1597,6 +1630,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		pRes = getUxTradMsg(pMsg);
 	} else if(!strcmp((char*) pName, "fromhost")) {
 		pRes = getRcvFrom(pMsg);
+	} else if(!strcmp((char*) pName, "fromhost-ip")) {
+		pRes = (char*) getRcvFromIP(pMsg);
 	} else if(!strcmp((char*) pName, "source") || !strcmp((char*) pName, "hostname")) {
 		pRes = getHOSTNAME(pMsg);
 	} else if(!strcmp((char*) pName, "syslogtag")) {
@@ -2204,10 +2239,12 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetUxTradMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszTAG")) {
 		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+	} else if(isProp("pszRcvFromIP")) {
+		MsgSetRcvFromIP(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszRcvFrom")) {
-		MsgSetHOSTNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
-	} else if(isProp("pszHOSTNAME")) {
 		MsgSetRcvFrom(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+	} else if(isProp("pszHOSTNAME")) {
+		MsgSetHOSTNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSStrucData")) {
 		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSAPPNAME")) {

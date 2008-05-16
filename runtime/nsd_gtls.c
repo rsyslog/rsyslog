@@ -496,7 +496,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	CHKiRet(nsd_gtlsConstruct(&pNew));
+	CHKiRet(nsd_gtlsConstruct(&pNew)); // TODO: prevent construct/destruct!
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
 	
@@ -559,6 +559,12 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 
 	/* in TLS mode now */
 	lenRcvd = gnutls_record_recv(pThis->sess, pBuf, *pLenBuf);
+	if(lenRcvd < 0) {
+		int gnuRet; /* TODO: build a specific function for GnuTLS error reporting */
+		*pLenBuf = -1;
+		CHKgnutls(lenRcvd); /* this will abort the function */
+	}
+
 	*pLenBuf = lenRcvd;
 
 finalize_it:

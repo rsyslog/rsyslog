@@ -93,7 +93,7 @@ struct AllowedSenders {
 
 /* interfaces */
 BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*cvthname)(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN);
+	rsRetVal (*cvthname)(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, uchar *pszIP);
 	/* things to go away after proper modularization */
 	rsRetVal (*addAllowedSenderLine)(char* pName, uchar** ppRestOfConfLine);
 	void (*PrintAllowedSenders)(int iListToPrint);
@@ -111,7 +111,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	struct AllowedSenders *pAllowedSenders_TCP;
 	struct AllowedSenders *pAllowedSenders_GSS;
 ENDinterface(net)
-#define netCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);

@@ -78,10 +78,11 @@ void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
 {
 	uchar *pszRawMsg;
 	uchar *fromHost = (uchar*) "[unset]"; /* TODO: get hostname */
+	uchar *fromHostIP = (uchar*) "[unset]"; /* TODO: get hostname */
 
 	srSLMGGetRawMSG(pSLMG, &pszRawMsg);
 
-	parseAndSubmitMessage((char*)fromHost, (char*) pszRawMsg, strlen((char*)pszRawMsg),
+	parseAndSubmitMessage(fromHost, fromHostIP, pszRawMsg, strlen((char*)pszRawMsg),
 		MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_FULL_DELAY);
 }
 

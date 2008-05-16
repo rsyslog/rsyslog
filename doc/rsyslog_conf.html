@@ -353,6 +353,10 @@ all relatively recent versions of rsyslog. Other syslogd's may get
 hopelessly confused if receiving that format, so check before you use
 it. Note that the format is unlikely to change when the final RFC comes
 out, but this may happen.</li>
+<li><span style="font-weight: bold;">RSYSLOG_DebugFormat</span>
+- a special format used for troubleshooting property problems. This format
+is meant to be written to a log file. Do <b>not</b> use for production or remote
+forwarding.</li>
 </ul>
 <h2>Output Channels</h2>
 <p>Output Channels are a new concept first introduced in rsyslog

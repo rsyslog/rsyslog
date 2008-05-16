@@ -89,6 +89,8 @@ struct msg {
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
 	uchar	*pszRcvFrom;	/* System message was received from */
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
+	uchar	*pszRcvFromIP;	/* IP of system message was received from */
+	int	iLenRcvFromIP;	/* Length of pszRcvFromIP */
 	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
 	cstr_t *pCSProgName;	/* the (BSD) program name */
 	cstr_t *pCSStrucData;/* STRUCTURED-DATA */
@@ -149,6 +151,7 @@ char *getStructuredData(msg_t *pM);
 int getProgramNameLen(msg_t *pM);
 char *getProgramName(msg_t *pM);
 void MsgSetRcvFrom(msg_t *pMsg, char* pszRcvFrom);
+rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
 void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
 void MsgSetHOSTNAME(msg_t *pMsg, char* pszHOSTNAME);
 int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg);

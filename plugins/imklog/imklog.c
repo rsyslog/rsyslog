@@ -97,6 +97,8 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetMSG(pMsg, (char*)msg);
+	MsgSetRcvFrom(pMsg, (char*)glbl.GetLocalHostName());
+	MsgSetRcvFromIP(pMsg, (uchar*)"127.0.0.1");
 	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetTAG(pMsg, (char*)pszTag);
 	pMsg->iFacility = LOG_FAC(iFacility);

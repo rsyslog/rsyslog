@@ -392,6 +392,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 /* hardcoded standard templates (used for defaults) */
+static uchar template_DebugFormat[] = "\"Debug line with all properties:\nFROMHOST: '%FROMHOST%', fromhost-ip: '%fromhost-ip%', HOSTNAME: '%HOSTNAME%', PRI: %PRI%,\nsyslogtag '%syslogtag%', programname: '%programname%', APP-NAME: '%APP-NAME%', PROCID: '%PROCID%', MSGID: '%MSGID%',\nTIMESTAMP: '%TIMESTAMP%', STRUCTURED-DATA: '%STRUCTURED-DATA%',\nmsg: '%msg%'\nescaped msg: '%msg:::drop-cc%'\nrawmsg: '%rawmsg%'\n\n\"";
 static uchar template_SyslogProtocol23Format[] = "\"<%PRI%>1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n\"";
 static uchar template_TraditionalFileFormat[] = "\"%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
 static uchar template_FileFormat[] = "\"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n\"";
@@ -597,16 +598,19 @@ void untty(void)
  * rgerhards, 2008-03-19:
  * I added an additional calling parameter to permit specifying the flow
  * control capability of the source.
+ *
+ * rgerhards, 2008-05-16:
+ * I added an additional calling parameter (hnameIP) to enable specifying the IP
+ * of a remote host.
  */
-rsRetVal printline(uchar *hname, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType)
+rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType)
 {
 	DEFiRet;
 	register uchar *p;
 	int pri;
 	msg_t *pMsg;
 
-	/* Now it is time to create the message object (rgerhards)
-	*/
+	/* Now it is time to create the message object (rgerhards) */
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
@@ -639,6 +643,7 @@ rsRetVal printline(uchar *hname, uchar *msg, int bParseHost, int flags, flowCont
 	if(bParseHost == 0)
 		MsgSetHOSTNAME(pMsg, (char*)hname);
 	MsgSetRcvFrom(pMsg, (char*)hname);
+	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
 
 	/* rgerhards 2004-11-19: well, well... we've now seen that we
 	 * have the "hostname problem" also with the traditional Unix
@@ -688,9 +693,13 @@ finalize_it:
  * rgerhards, 2008-03-19:
  * I added an additional calling parameter to permit specifying the flow
  * control capability of the source.
+ *
+ * rgerhards, 2008-05-16:
+ * I added an additional calling parameter (hnameIP) to enable specifying the IP
+ * of a remote host.
  */
 rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType)
+parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType)
 {
 	DEFiRet;
 	register int iMsg;
@@ -704,6 +713,7 @@ parseAndSubmitMessage(uchar *hname, uchar *msg, int len, int bParseHost, int fla
 #	endif
 
 	assert(hname != NULL);
+	assert(hnameIP != NULL);
 	assert(msg != NULL);
 	assert(len >= 0);
 
@@ -789,7 +799,7 @@ parseAndSubmitMessage(uchar *hname, uchar *msg, int len, int bParseHost, int fla
 			 */
 			if(iMsg == MAXLINE) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, tmpline, bParseHost, flags, flowCtlType);
+				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -841,7 +851,7 @@ parseAndSubmitMessage(uchar *hname, uchar *msg, int len, int bParseHost, int fla
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, tmpline, bParseHost, flags, flowCtlType);
+	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType);
 
 finalize_it:
 	RETiRet;
@@ -880,6 +890,7 @@ logmsgInternal(int pri, uchar *msg, int flags)
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetRcvFrom(pMsg, (char*)glbl.GetLocalHostName());
+	MsgSetRcvFromIP(pMsg, (uchar*)"127.0.0.1");
 	MsgSetTAG(pMsg, "rsyslogd:");
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
@@ -2715,6 +2726,8 @@ static void mainThread()
 	 */
 
 	/* initialize the build-in templates */
+	pTmp = template_DebugFormat;
+	tplAddLine("RSYSLOG_DebugFormat", &pTmp);
 	pTmp = template_SyslogProtocol23Format;
 	tplAddLine("RSYSLOG_SyslogProtocol23Format", &pTmp);
 	pTmp = template_FileFormat; /* new format for files with high-precision stamp */

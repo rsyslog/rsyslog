@@ -1,4 +1,28 @@
 ---------------------------------------------------------------------------
+Version 3.19.3 (rgerhards), 2008-05-??
+---------------------------------------------------------------------------
+Version 3.19.2 (rgerhards), 2008-05-16
+- bugfix: TCP input modules did incorrectly set fromhost property
+  (always blank)
+- bugfix: imklog did not set fromhost property
+- added "fromhost-ip" property
+  Note that adding this property changes the on-disk format for messages.
+  However, that should not have any bad effect on existing spool files.
+  But you will run into trouble if you create a spool file with this
+  version and then try to process it with an older one (after a downgrade).
+  Don't do that ;)
+- added "RSYSLOG_DebugFormat" canned template
+- bugfix: hostname and fromhost were swapped when a persisted message
+  (in queued mode) was read in
+- bugfix: lmtcpclt, lmtcpsrv and lmgssutil did all link to the static
+  runtime library, resulting in a large size increase (and potential
+  "interesting" effects). Thanks to Michael Biebel for reporting the size
+  issue.
+- bugfix: TLS server went into an endless loop in some situations.
+  Thanks to Michael Biebl for reporting the problem.
+- fixed potential segfault due to invalid call to cfsysline
+  thanks to varmojfekoj for the patch
+---------------------------------------------------------------------------
 Version 3.19.1 (rgerhards), 2008-05-07
 - configure help for --enable-gnutls wrong - said default is "yes" but
   default actually is "no" - thanks to darix for pointing this out
@@ -23,8 +47,8 @@ Version 3.19.0 (rgerhards), 2008-05-06
 - -c option no longer must be the first option - thanks to varmjofekoj
   for the patch
 ---------------------------------------------------------------------------
-Version 3.17.2 (rgerhards), 2008-04-??
-- this version is the new beta
+Version 3.17.2 (rgerhards), 2008-05-04
+- this version is the new beta, based on 3.17.1 devel feature set
 - merged in imklog bug fix from v3-stable (3.16.1)
 ---------------------------------------------------------------------------
 Version 3.17.1 (rgerhards), 2008-04-15
@@ -77,6 +101,13 @@ Version 3.17.0 (rgerhards), 2008-04-08
 - bugfix: some messages were emited without hostname
 Plus a number of bugfixes that were applied to v3-stable and beta
 branches (not mentioned here in detail).
+---------------------------------------------------------------------------
+Version 3.16.2 (rgerhards), 2008-05-14
+- fixed potential segfault due to invalid call to cfsysline
+  thanks to varmojfekoj for the patch
+- bugfix: some whitespaces where incorrectly not ignored when parsing
+  the config file. This is now corrected. Thanks to Michael Biebl for
+  pointing out the problem.
 ---------------------------------------------------------------------------
 Version 3.16.1 (rgerhards), 2008-05-02
 - fixed a bug in imklog which lead to startup problems (including
@@ -548,6 +579,16 @@ Version 3.10.0 (rgerhards), 2008-01-07
 - compilation without pthreads is no longer supported
 - much cleaner code due to new objects and removal of single-threading
   mode
+---------------------------------------------------------------------------
+Version 2.0.5 STABLE (rgerhards), 2008-05-15
+- bugfix: regular expressions inside property replacer did not work
+  properly
+- adapted to liblogging 0.7.1+
+---------------------------------------------------------------------------
+Version 2.0.4 STABLE (rgerhards), 2008-03-27
+- bugfix: internally generated messages had "FROMHOST" property not set
+- bugfix: continue parsing if tag is oversize (discard oversize part) - thanks
+  to mclaughlin77@gmail.com for the patch
 ---------------------------------------------------------------------------
 Version 2.0.1 STABLE (rgerhards), 2008-01-24
 - fixed a bug in integer conversion - but this function was never called,
