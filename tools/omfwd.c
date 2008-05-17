@@ -277,9 +277,15 @@ static rsRetVal TCPSendInit(void *pvData)
 		CHKiRet(netstrms.CreateStrm(pData->pNS, &pData->pNetstrm));
 		CHKiRet(netstrm.ConstructFinalize(pData->pNetstrm));
 		CHKiRet(netstrm.SetDrvrMode(pData->pNetstrm, pData->iStrmDrvrMode));
-		CHKiRet(netstrm.SetDrvrAuthMode(pData->pNetstrm, pData->pszStrmDrvrAuthMode));
-		CHKiRet(netstrm.AddDrvrPermittedFingerprint(pData->pNetstrm,
-			        pData->pszStrmDrvrFingerprint));
+		/* now set optional params, but only if they were actually configured */
+		if(pData->pszStrmDrvrAuthMode != NULL) {
+			CHKiRet(netstrm.SetDrvrAuthMode(pData->pNetstrm, pData->pszStrmDrvrAuthMode));
+		}
+		if(pData->pszStrmDrvrFingerprint != NULL) {
+			CHKiRet(netstrm.AddDrvrPermittedFingerprint(pData->pNetstrm,
+					pData->pszStrmDrvrFingerprint));
+		}
+		/* params set, now connect */
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
 			(uchar*)pData->port, (uchar*)pData->f_hname));
 	}

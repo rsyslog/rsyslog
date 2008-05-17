@@ -416,7 +416,6 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-RUNLOG_VAR("%s", mode);
 	if(mode == NULL || !strcasecmp((char*)mode, "x509/name")) {
 		pThis->authMode = GTLS_AUTH_CERTNAME;
 	} else if(!strcasecmp((char*) mode, "x509/fingerprint")) {
@@ -424,7 +423,8 @@ RUNLOG_VAR("%s", mode);
 	} else if(!strcasecmp((char*) mode, "anon")) {
 		pThis->authMode = GTLS_AUTH_CERTANON;
 	} else {
-		// TODO: logerror()?
+		errmsg.LogError(NO_ERRCODE, "authentication mode '%s' not supported by "
+				"gtls netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
 
@@ -447,8 +447,11 @@ AddPermFingerprint(nsd_t *pNsd, uchar *pszFingerprint)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT)
+	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT) {
+		errmsg.LogError(NO_ERRCODE, "fingerprint authentication not supported by "
+			"gtls netstream driver in the configured authentication mode - ignored");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
+	}
 
 	// TODO: proper handling - but we need to redo this when we do the
 	// linked list. So for now, this is good enough (but MUST BE CHANGED!).

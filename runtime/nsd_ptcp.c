@@ -126,6 +126,45 @@ finalize_it:
 }
 
 
+/* Set the authentication mode. For us, the following is supported:
+ * anon - no certificate checks whatsoever (discouraged, but supported)
+ * mode == NULL is valid and defaults to anon
+ * Actually, we do not even record the mode right now, because we can
+ * always work in anon mode, only. So there is no point in recording
+ * something if that's the only choice. What the function does is 
+ * return an error if something is requested that we can not support.
+ * rgerhards, 2008-05-17
+ */
+static rsRetVal
+SetAuthMode(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
+{
+	DEFiRet;
+	if(mode != NULL && strcasecmp((char*)mode, "anon")) {
+		errmsg.LogError(NO_ERRCODE, "authentication mode '%s' not supported by "
+				"ptcp netstream driver", mode);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Add a permitted fingerprint. This is a dummy, always returning an
+ * error because we do not support fingerprint authentication.
+ * rgerhards, 2008-05-17
+ */
+static rsRetVal
+AddPermFingerprint(nsd_t __attribute__((unused)) *pNsd, uchar __attribute__((unused)) *pszFingerprint)
+{
+	errmsg.LogError(NO_ERRCODE, "fingerprint authentication not supported by "
+			"ptcp netstream driver - ignored");
+	return RS_RET_VALUE_NOT_IN_THIS_MODE;
+}
+
+
+
+
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
  * for some of their functionality.
@@ -625,6 +664,8 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->GetSock = GetSock;
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
+	pIf->SetAuthMode = SetAuthMode;
+	pIf->AddPermFingerprint = AddPermFingerprint;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->LstnInit = LstnInit;
