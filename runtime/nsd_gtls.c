@@ -85,12 +85,18 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 	cstr_t *pStr = NULL;
 	uchar buf[4];
 	size_t i;
+	int bAddColon = 0; /* do we need to add a colon to the fingerprint string? */
 	DEFiRet;
 
 	CHKiRet(rsCStrConstruct(&pStr));
 	for(i = 0 ; i < sizeFingerprint ; ++i) {
-		snprintf((char*)buf, sizeof(buf), "%2.2X:", pFingerprint[i]);
-		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
+		if(bAddColon) {
+			CHKiRet(rsCStrAppendChar(pStr, ':'));
+		} else {
+			bAddColon = 1; /* all but the first need a colon added */
+		}
+		snprintf((char*)buf, sizeof(buf), "%2.2X", pFingerprint[i]);
+		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 2));
 	}
 	CHKiRet(rsCStrFinish(pStr));
 
@@ -291,8 +297,12 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 		FINALIZE;
 	
 	if(pThis->authIDs == NULL || rsCStrSzStrCmp(pstrFingerprint, pThis->authIDs, strlen((char*) pThis->authIDs))) {
-		// TODO: logerror
-		dbgprintf("invalid server fingerprint, not authorized\n");
+		dbgprintf("invalid server fingerprint, not permitted to talk to us\n");
+		if(pThis->bReportAuthErr == 1) {
+			errmsg.LogError(NO_ERRCODE, "error: server fingerprint '%s' unknown - we are "
+					"not permitted to talk to this server", rsCStrGetSzStr(pstrFingerprint));
+			pThis->bReportAuthErr = 0;
+		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
 	}
 
@@ -361,6 +371,7 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
+	pThis->bReportAuthErr = 1;
 CHKiRet(gtlsAddOurCert());
 finalize_it:
 ENDobjConstruct(nsd_gtls)
@@ -392,8 +403,11 @@ SetMode(nsd_t *pNsd, int mode)
 
 dbgprintf("SetMode tries to set mode %d\n", mode);
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(mode != 0 && mode != 1)
-		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
+	if(mode != 0 && mode != 1) {
+		errmsg.LogError(NO_ERRCODE, "error: driver mode %d not supported by "
+				"gtls netstream driver", mode);
+		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
+	}
 
 	pThis->iMode = mode;
 
@@ -423,7 +437,7 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 	} else if(!strcasecmp((char*) mode, "anon")) {
 		pThis->authMode = GTLS_AUTH_CERTANON;
 	} else {
-		errmsg.LogError(NO_ERRCODE, "authentication mode '%s' not supported by "
+		errmsg.LogError(NO_ERRCODE, "error: authentication mode '%s' not supported by "
 				"gtls netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
@@ -455,7 +469,6 @@ AddPermFingerprint(nsd_t *pNsd, uchar *pszFingerprint)
 
 	// TODO: proper handling - but we need to redo this when we do the
 	// linked list. So for now, this is good enough (but MUST BE CHANGED!).
-	//
 
 	pThis->authIDs = pszFingerprint;
 dbgprintf("gtls fingerprint '%s' set\n", pThis->authIDs);

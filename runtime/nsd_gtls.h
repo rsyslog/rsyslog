@@ -48,6 +48,9 @@ struct nsd_gtls_s {
 	gnutls_session sess;
 	int bHaveSess;		/* as we don't know exactly which gnutls_session values are invalid, we use this one
 				   to flag whether or not we are in a session (same as -1 for a socket meaning no sess) */
+	int bReportAuthErr;	/* only the first auth error is to be reported, this var triggers it. Initially, it is
+				 * set to 1 and changed to 0 after the first report. It is changed back to 1 after
+				 * one successful authentication. */
 	uchar *authIDs;	/* TODO: make linked list, currently just a single fingerprint, must also support names */
 };
 

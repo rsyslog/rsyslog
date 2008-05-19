@@ -119,8 +119,11 @@ static rsRetVal
 SetMode(nsd_t __attribute__((unused)) *pNsd, int mode)
 {
 	DEFiRet;
-	if(mode != 0)
-		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
+	if(mode != 0) {
+		errmsg.LogError(NO_ERRCODE, "error: driver mode %d not supported by "
+				"ptcp netstream driver", mode);
+		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
+	}
 finalize_it:
 	RETiRet;
 }
@@ -140,7 +143,7 @@ SetAuthMode(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
 {
 	DEFiRet;
 	if(mode != NULL && strcasecmp((char*)mode, "anon")) {
-		errmsg.LogError(NO_ERRCODE, "authentication mode '%s' not supported by "
+		errmsg.LogError(NO_ERRCODE, "error: authentication mode '%s' not supported by "
 				"ptcp netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
@@ -158,7 +161,7 @@ static rsRetVal
 AddPermFingerprint(nsd_t __attribute__((unused)) *pNsd, uchar __attribute__((unused)) *pszFingerprint)
 {
 	errmsg.LogError(NO_ERRCODE, "fingerprint authentication not supported by "
-			"ptcp netstream driver - ignored");
+			"ptcp netstream driver");
 	return RS_RET_VALUE_NOT_IN_THIS_MODE;
 }
 
