@@ -153,16 +153,22 @@ finalize_it:
 }
 
 
-/* Add a permitted fingerprint. This is a dummy, always returning an
+/* Set the permitted peers. This is a dummy, always returning an
  * error because we do not support fingerprint authentication.
  * rgerhards, 2008-05-17
  */
 static rsRetVal
-AddPermFingerprint(nsd_t __attribute__((unused)) *pNsd, uchar __attribute__((unused)) *pszFingerprint)
+SetPermPeers(nsd_t __attribute__((unused)) *pNsd, permittedPeers_t __attribute__((unused)) *pPermPeers)
 {
-	errmsg.LogError(NO_ERRCODE, "fingerprint authentication not supported by "
-			"ptcp netstream driver");
-	return RS_RET_VALUE_NOT_IN_THIS_MODE;
+	DEFiRet;
+
+	if(pPermPeers != NULL) {
+		errmsg.LogError(NO_ERRCODE, "authentication not supported by ptcp netstream driver");
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
+	}
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -477,6 +483,8 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
+		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
+		CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
 		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
@@ -668,7 +676,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
 	pIf->SetAuthMode = SetAuthMode;
-	pIf->AddPermFingerprint = AddPermFingerprint;
+	pIf->SetPermPeers = SetPermPeers;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->LstnInit = LstnInit;

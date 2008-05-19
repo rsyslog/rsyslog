@@ -39,6 +39,7 @@
 #include "obj.h"
 #include "stringbuf.h"
 #include "errmsg.h"
+#include "net.h"
 #include "nsd_ptcp.h"
 #include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
@@ -252,7 +253,6 @@ finalize_it:
 /* check the fingerprint of the remote peer's certificate.
  * rgerhards, 2008-05-08
  */
-//static rsRetVal
 rsRetVal
 gtlsChkFingerprint(nsd_gtls_t *pThis)
 {
@@ -264,6 +264,8 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 	gnutls_x509_crt cert;
 	int bMustDeinitCert = 0;
 	int gnuRet;
+	int bFoundPositiveMatch;
+	permittedPeers_t *pPeer;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -296,11 +298,23 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT)
 		FINALIZE;
 	
-	if(pThis->authIDs == NULL || rsCStrSzStrCmp(pstrFingerprint, pThis->authIDs, strlen((char*) pThis->authIDs))) {
-		dbgprintf("invalid server fingerprint, not permitted to talk to us\n");
+	/* now search through the permitted peers to see if we can find a permitted one */
+	bFoundPositiveMatch = 0;
+	pPeer = pThis->pPermPeers;
+	while(pPeer != NULL && !bFoundPositiveMatch) {
+		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
+			bFoundPositiveMatch = 1;
+		} else {
+			pPeer = pPeer->pNext;
+		}
+	}
+
+	if(!bFoundPositiveMatch) {
+		dbgprintf("invalid peer fingerprint, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
-			errmsg.LogError(NO_ERRCODE, "error: server fingerprint '%s' unknown - we are "
-					"not permitted to talk to this server", rsCStrGetSzStr(pstrFingerprint));
+			errno = 0;
+			errmsg.LogError(NO_ERRCODE, "error: peer fingerprint '%s' unknown - we are "
+					"not permitted to talk to it", rsCStrGetSzStr(pstrFingerprint));
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
@@ -401,7 +415,6 @@ SetMode(nsd_t *pNsd, int mode)
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
-dbgprintf("SetMode tries to set mode %d\n", mode);
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	if(mode != 0 && mode != 1) {
 		errmsg.LogError(NO_ERRCODE, "error: driver mode %d not supported by "
@@ -450,28 +463,26 @@ dbgprintf("gtls auth mode %d set\n", pThis->authMode);
 }
 
 
-/* Add a permitted fingerprint. Only useful to call if we are using
- * fingerprint authentication. Results in error if we are not in this mode.
- * rgerhards, 2008-05-16
+/* Set permitted peers. It is depending on the auth mode if this are 
+ * fingerprints or names. -- rgerhards, 2008-05-19
  */
 static rsRetVal
-AddPermFingerprint(nsd_t *pNsd, uchar *pszFingerprint)
+SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers)
 {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT) {
-		errmsg.LogError(NO_ERRCODE, "fingerprint authentication not supported by "
+	if(pPermPeers == NULL)
+		FINALIZE;
+
+	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT && pThis->authMode != GTLS_AUTH_CERTNAME) {
+		errmsg.LogError(NO_ERRCODE, "authentication not supported by "
 			"gtls netstream driver in the configured authentication mode - ignored");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
 	}
 
-	// TODO: proper handling - but we need to redo this when we do the
-	// linked list. So for now, this is good enough (but MUST BE CHANGED!).
-
-	pThis->authIDs = pszFingerprint;
-dbgprintf("gtls fingerprint '%s' set\n", pThis->authIDs);
+	pThis->pPermPeers = pPermPeers;
 
 finalize_it:
 	RETiRet;
@@ -590,6 +601,8 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	/* if we reach this point, we are in TLS mode */
 	CHKiRet(gtlsInitSession(pNew));
 	gtlsSetTransportPtr(pNew, ((nsd_ptcp_t*) (pNew->pTcp))->sock);
+	pNew->authMode = pThis->authMode;
+	pNew->pPermPeers = pThis->pPermPeers;
 
 	/* we now do the handshake. This is a bit complicated, because we are 
 	 * on non-blocking sockets. Usually, the handshake will not complete
@@ -633,6 +646,9 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
+	if(pThis->bAbortConn)
+		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
+
 	if(pThis->iMode == 0) {
 		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf));
 		FINALIZE;
@@ -666,6 +682,9 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	if(pThis->bAbortConn)
+		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
 	if(pThis->iMode == 0) {
 		CHKiRet(nsd_ptcp.Send(pThis->pTcp, pBuf, pLenBuf));
@@ -771,7 +790,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
 	pIf->SetAuthMode = SetAuthMode;
-	pIf->AddPermFingerprint = AddPermFingerprint;
+	pIf->SetPermPeers =SetPermPeers;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:

@@ -52,7 +52,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*GetRemoteIP)(nsd_t *pThis, uchar **pszIP);
 	rsRetVal (*SetMode)(nsd_t *pThis, int mode); /* sets a driver specific mode - see driver doc for details */
 	rsRetVal (*SetAuthMode)(nsd_t *pThis, uchar*); /* sets a driver specific mode - see driver doc for details */
-	rsRetVal (*AddPermFingerprint)(nsd_t *pThis, uchar*); /* sets a driver specific mode - see driver doc for details */
+	rsRetVal (*SetPermPeers)(nsd_t *pThis, permittedPeers_t*); /* sets driver permitted peers for auth needs */
 	rsRetVal (*GetSock)(nsd_t *pThis, int *pSock);
 	rsRetVal (*SetSock)(nsd_t *pThis, int sock);
 	/* GetSock() and SetSock() return an error if the driver does not use plain

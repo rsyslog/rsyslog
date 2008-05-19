@@ -146,8 +146,53 @@ finalize_it:
 }
 
 
-/* set the driver mode -- rgerhards, 2008-04-30
+/* set the driver's permitted peers -- rgerhards, 2008-05-19 */
+static rsRetVal
+SetDrvrPermPeers(netstrms_t *pThis, permittedPeers_t *pPermPeers)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	pThis->pPermPeers = pPermPeers;
+	RETiRet;
+}
+/* return the driver's permitted peers
+ * We use non-standard calling conventions because it makes an awful lot
+ * of sense here.
+ * rgerhards, 2008-05-19
  */
+static uchar*
+GetDrvrPermPeers(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->pPermPeers;
+}
+
+
+/* set the driver auth mode -- rgerhards, 2008-05-19 */
+static rsRetVal
+SetDrvrAuthMode(netstrms_t *pThis, uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+RUNLOG_VAR("%s", mode);
+	CHKmalloc(pThis->pszDrvrAuthMode = (uchar*)strdup((char*)mode));
+finalize_it:
+	RETiRet;
+}
+/* return the driver auth mode
+ * We use non-standard calling conventions because it makes an awful lot
+ * of sense here.
+ * rgerhards, 2008-05-19
+ */
+static uchar*
+GetDrvrAuthMode(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->pszDrvrAuthMode;
+}
+
+
+/* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal
 SetDrvrMode(netstrms_t *pThis, int iMode)
 {
@@ -221,6 +266,10 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->SetDrvrName = SetDrvrName;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->GetDrvrMode = GetDrvrMode;
+	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
+	pIf->GetDrvrAuthMode = GetDrvrAuthMode;
+	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
+	pIf->GetDrvrPermPeers = GetDrvrPermPeers;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 

@@ -91,6 +91,20 @@ struct AllowedSenders {
 };
 
 
+/* for fingerprints and hostnames, we need to have a temporary linked list of
+ * permitted values. Unforutnately, we must also duplicate this in the netstream
+ * drivers. However, this is the best interim solution (with the least effort).
+ * A clean implementation requires that we have more capable variables and the
+ * full-fledged scripting engine available. So we have opted to do the interim
+ * solution so that our users can begin to enjoy authenticated TLS. The next step
+ * (hopefully) is to enhance RainerScript. -- rgerhards, 2008-05-19
+ */
+struct permittedPeers_s {
+	uchar *pszID;
+	permittedPeers_t *pNext;
+};
+
+
 /* interfaces */
 BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*cvthname)(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN, uchar *pszIP);
@@ -104,7 +118,10 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	int (*isAllowedSender)(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost);
 	rsRetVal (*getLocalHostname)(uchar**);
 	int (*should_use_so_bsdcompat)(void);
-	/* data memebers - these should go away over time... TODO */
+	/* permitted peer handling should be replaced by something better (see comments above) */
+	rsRetVal (*AddPermittedPeer)(permittedPeers_t **ppRootPeer, uchar *pszID);
+	rsRetVal (*DestructPermittedPeers)(permittedPeers_t **ppRootPeer);
+	/* data members - these should go away over time... TODO */
 	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
 	struct AllowedSenders *pAllowedSenders_UDP;

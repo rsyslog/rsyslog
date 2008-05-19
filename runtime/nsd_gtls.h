@@ -38,6 +38,7 @@ struct nsd_gtls_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pTcp;		/**< our aggregated nsd_ptcp data */
 	int iMode;		/* 0 - plain tcp, 1 - TLS */
+	int bAbortConn;		/* if set, abort conncection (fatal error had happened) */
 	enum { 
 		GTLS_AUTH_CERTNAME = 0,
 		GTLS_AUTH_CERTFINGERPRINT = 1,
@@ -51,7 +52,7 @@ struct nsd_gtls_s {
 	int bReportAuthErr;	/* only the first auth error is to be reported, this var triggers it. Initially, it is
 				 * set to 1 and changed to 0 after the first report. It is changed back to 1 after
 				 * one successful authentication. */
-	uchar *authIDs;	/* TODO: make linked list, currently just a single fingerprint, must also support names */
+	permittedPeers_t *pPermPeers; /* permitted senders */
 };
 
 /* interface is defined in nsd.h, we just implement it! */

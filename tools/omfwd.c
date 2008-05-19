@@ -79,7 +79,8 @@ typedef struct _instanceData {
 	netstrm_t *pNetstrm; /* our output netstream */
 	uchar *pszStrmDrvr;
 	uchar *pszStrmDrvrAuthMode;
-	uchar *pszStrmDrvrFingerprint;
+	permittedPeers_t *pPermPeersRootFingerprint;
+	permittedPeers_t *pPermPeersRootNames;
 	int iStrmDrvrMode;
 	char	*f_hname;
 	int *pSockArray;		/* sockets to use for UDP */
@@ -98,9 +99,10 @@ typedef struct _instanceData {
 static uchar *pszTplName = NULL; /* name of the default template to use */
 static uchar *pszStrmDrvr = NULL; /* name of the stream driver to use */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
-static uchar *pszStrmDrvrAuthMode = NULL; /* name of the default template to use */
-static uchar *pszStrmDrvrFingerprint = NULL; /* name of the default template to use */
+static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 
+static permittedPeers_t *pPermPeersRootFingerprint = NULL;
+static permittedPeers_t *pPermPeersRootNames = NULL;
 
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
@@ -154,8 +156,10 @@ CODESTARTfreeInstance
 		free(pData->pszStrmDrvr);
 	if(pData->pszStrmDrvrAuthMode != NULL)
 		free(pData->pszStrmDrvrAuthMode);
-	if(pData->pszStrmDrvrFingerprint != NULL)
-		free(pData->pszStrmDrvrFingerprint);
+	if(pData->pPermPeersRootFingerprint != NULL)
+		net.DestructPermittedPeers(&pData->pPermPeersRootFingerprint);
+	if(pData->pPermPeersRootNames != NULL)
+		net.DestructPermittedPeers(&pData->pPermPeersRootNames);
 ENDfreeInstance
 
 
@@ -210,6 +214,19 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 
 	RETiRet;
 }
+
+
+/* set the cert fingerprint -- rgerhards, 2008-05-19
+ */
+static rsRetVal
+setFingerprint(void __attribute__((unused)) *pVal, uchar *pszID)
+{
+	DEFiRet;
+	CHKiRet(net.AddPermittedPeer(&pPermPeersRootFingerprint, pszID));
+finalize_it:
+	RETiRet;
+}
+
 
 
 /* CODE FOR SENDING TCP MESSAGES */
@@ -281,9 +298,8 @@ static rsRetVal TCPSendInit(void *pvData)
 		if(pData->pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(netstrm.SetDrvrAuthMode(pData->pNetstrm, pData->pszStrmDrvrAuthMode));
 		}
-		if(pData->pszStrmDrvrFingerprint != NULL) {
-			CHKiRet(netstrm.AddDrvrPermittedFingerprint(pData->pNetstrm,
-					pData->pszStrmDrvrFingerprint));
+		if(pData->pPermPeersRootFingerprint != NULL) {
+			CHKiRet(netstrm.SetDrvrPermPeers(pData->pNetstrm, pData->pPermPeersRootFingerprint));
 		}
 		/* params set, now connect */
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
@@ -590,9 +606,14 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		if(pszStrmDrvrAuthMode != NULL)
 			CHKmalloc(pData->pszStrmDrvrAuthMode =
 				     (uchar*)strdup((char*)pszStrmDrvrAuthMode));
-		if(pszStrmDrvrFingerprint != NULL)
-			CHKmalloc(pData->pszStrmDrvrFingerprint =
-				     (uchar*)strdup((char*)pszStrmDrvrFingerprint));
+		if(pPermPeersRootFingerprint != NULL) {
+			pData->pPermPeersRootFingerprint = pPermPeersRootFingerprint;
+			pPermPeersRootFingerprint = NULL;
+		}
+		if(pPermPeersRootNames != NULL) {
+			pData->pPermPeersRootNames = pPermPeersRootNames;
+			pPermPeersRootNames = NULL;
+		}
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
@@ -617,9 +638,8 @@ freeConfigVars(void)
 		free(pszStrmDrvrAuthMode);
 		pszStrmDrvrAuthMode = NULL;
 	}
-	if(pszStrmDrvrFingerprint != NULL) {
-		free(pszStrmDrvrFingerprint);
-		pszStrmDrvrFingerprint = NULL;
+	if(pPermPeersRootFingerprint != NULL) {
+		free(pPermPeersRootFingerprint);
 	}
 }
 
@@ -670,7 +690,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivercertfingerprint", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvrFingerprint, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivercertfingerprint", 0, eCmdHdlrGetWord, setFingerprint, NULL, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 

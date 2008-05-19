@@ -43,6 +43,7 @@
 #include <string.h>
 
 #include "rsyslog.h"
+#include "net.h"
 #include "module-template.h"
 #include "obj.h"
 #include "errmsg.h"
@@ -202,19 +203,20 @@ SetDrvrAuthMode(netstrm_t *pThis, uchar *mode)
 }
 
 
-/* add an accepted fingerprint -- rgerhards, 2008-05-16
- */
+/* set the driver's permitted peers -- rgerhards, 2008-05-19 */
 static rsRetVal
-AddDrvrPermittedFingerprint(netstrm_t *pThis, uchar *fingerprint)
+SetDrvrPermPeers(netstrm_t *pThis, permittedPeers_t *pPermPeers)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrm);
-	iRet = pThis->Drvr.AddPermFingerprint(pThis->pDrvrData, fingerprint);
+	iRet = pThis->Drvr.SetPermPeers(pThis->pDrvrData, pPermPeers);
 	RETiRet;
 }
 
+
 /* End of methods to shuffle autentication settings to the driver.
  * -------------------------------------------------------------------------- */
+
 
 /* send a buffer. On entry, pLenBuf contains the number of octets to
  * write. On exit, it contains the number of octets actually written.
@@ -311,7 +313,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
-	pIf->AddDrvrPermittedFingerprint = AddDrvrPermittedFingerprint;
+	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
 	pIf->GetSock = GetSock;
 finalize_it:
 ENDobjQueryInterface(netstrm)
