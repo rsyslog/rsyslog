@@ -94,6 +94,9 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 	cstr_t *pStr = NULL;
 	int gnuRet;
 	DEFiRet;
+	unsigned iAltName;
+	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
+	size_t szAltNameLen;
 
 	assert(ppStr != NULL);
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -144,10 +147,28 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 
 		size = sizeof(dn);
 		gnutls_x509_crt_get_issuer_dn( cert, dn, &size);
-		snprintf((char*)lnBuf, sizeof(lnBuf), "Issuer DN: %s", dn);
+		snprintf((char*)lnBuf, sizeof(lnBuf), "Issuer DN: %s; ", dn);
 		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 
-		gnutls_x509_crt_deinit( cert);
+		/* dNSName alt name */
+		iAltName = 0;
+		while(1) { /* loop broken below */
+			szAltNameLen = sizeof(szAltName);
+			gnuRet = gnutls_x509_crt_get_subject_alt_name(cert, iAltName,
+					szAltName, &szAltNameLen, NULL);
+			if(gnuRet < 0)
+				break;
+			else if(gnuRet == GNUTLS_SAN_DNSNAME) {
+				/* we found it! */
+				snprintf((char*)lnBuf, sizeof(lnBuf), "SAN:DNSname: %s; ", szAltName);
+				CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+				/* do NOT break, because there may be multiple dNSName's! */
+			}
+			++iAltName;
+		}
+
+
+		gnutls_x509_crt_deinit(cert);
 	}
 
 	CHKiRet(rsCStrFinish(pStr));

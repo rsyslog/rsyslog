@@ -174,7 +174,6 @@ SetDrvrAuthMode(netstrms_t *pThis, uchar *mode)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
-RUNLOG_VAR("%s", mode);
 	CHKmalloc(pThis->pszDrvrAuthMode = (uchar*)strdup((char*)mode));
 finalize_it:
 	RETiRet;
