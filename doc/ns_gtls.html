@@ -24,6 +24,8 @@ described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft</li>
 <li><span style="font-weight: bold;">x509/fingerprint</span>
 - certificate fingerprint authentication as
 described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft</li>
+<li><span style="font-weight: bold;">x509/certvalid</span>
+- certificate validation only</li>
 <li><span style="font-weight: bold;">x509/name</span>
 - certificate validation and subject name authentication as
 described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft
@@ -31,8 +33,13 @@ described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft
 </ul>
 Note: "anon" does not permit to authenticate the remote peer. As such,
 this mode is vulnerable to man in the middle attacks as well as
-unauthorized access. It is recommended NOT to use this mode.<br>
-<br>
+unauthorized access. It is recommended NOT to use this mode.</p>
+<p>x509/certvalid is a nonstandard mode. It validates the remote
+peers certificate, but does not check the subject name. This is 
+weak authentication that may be useful in scenarios where multiple
+devices are deployed and it is sufficient proof of authenticy when
+their certificates are signed by the CA the server trusts. This is
+better than anon authentication, but still not recommended.
 <b>Known Problems</b><br>
 <p>Even in x509/fingerprint mode, both the client and sever
 certificate currently must be signed by the same root CA. This is an

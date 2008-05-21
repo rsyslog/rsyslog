@@ -42,7 +42,8 @@ struct nsd_gtls_s {
 	enum { 
 		GTLS_AUTH_CERTNAME = 0,
 		GTLS_AUTH_CERTFINGERPRINT = 1,
-		GTLS_AUTH_CERTANON = 2
+		GTLS_AUTH_CERTVALID = 2,
+		GTLS_AUTH_CERTANON = 3
 	} authMode;
 	gtlsRtryCall_t rtryCall;/**< what must we retry? */
 	int bIsInitiator;	/**< 0 if socket is the server end (listener), 1 if it is the initiator */
@@ -62,6 +63,7 @@ struct nsd_gtls_s {
 PROTOTYPEObj(nsd_gtls);
 /* some prototypes for things used by our nsdsel_gtls helper class */
 uchar *gtlsStrerror(int error);
+rsRetVal gtlsChkPeerAuth(nsd_gtls_t *pThis);
 
 /* the name of our library binary */
 #define LM_NSD_GTLS_FILENAME "lmnsd_gtls"
