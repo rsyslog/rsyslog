@@ -710,7 +710,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN, uchar *ip)
 	assert(pszHostFQDN != NULL);
 
         error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *)f),
-			    (char*) ip, sizeof ip, NULL, 0, NI_NUMERICHOST);
+			    (char*) ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
 
         if (error) {
                 dbgprintf("Malformed from address %s\n", gai_strerror(error));

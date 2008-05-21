@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.19.4 (rgerhards), 2008-05-??
+- bugfix: sender information (fromhost et al) was missing in imudp
+  thanks to sandiso for reporting this bug
 ---------------------------------------------------------------------------
 Version 3.19.3 (rgerhards), 2008-05-21
 - added ability to authenticate the server against its certificate
