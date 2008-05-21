@@ -121,16 +121,17 @@ default 60000 (1 minute)]</li>
 <li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
 <li>$ActionResumeRetryCount &lt;number&gt; [default 0, -1 means eternal]</li>
 <li>$ActionSendStreamDriver &lt;driver basename&gt; just like $DefaultNetstreamDriver, but for the specific action
-<li>$ActionSendStreamDriverMode &lt;mode&gt;, default 0, mode to use with the stream driver
-(driver-specific)</li>
+</li><li>$ActionSendStreamDriverMode &lt;mode&gt;, default 0, mode to use with the stream driver
+(driver-specific)</li><li>$ActionSendStreamDriverAuthMode &lt;mode&gt;,&nbsp; authentication mode to use with the stream driver
+(driver-specific)</li><li>$ActionSendStreamDriverCertFingerprint &lt;sha1-fingerprint&gt;,&nbsp; accepted fingerprint
+(driver-specific) -<span style="font-weight: bold;"> directive may go away</span>!</li>
 <li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
 <li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
 <li><a href="rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
 
 <li><a href="rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
 <li><a href="rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
-<li>$DefaultNetstreamDriver &lt;drivername&gt;, default lmnsd_ptcp, use lmnsd_gtls for TLS protection</li>
-<li>$DefaultNetstreamDriverCAFile &lt;/path/to/cafile.pem&gt;</li>
+<li>$DefaultNetstreamDriver &lt;drivername&gt;, the default <a href="netstream.html">network stream driver</a> to use. Defaults to&nbsp;ptcp.$DefaultNetstreamDriverCAFile &lt;/path/to/cafile.pem&gt;</li>
 <li>$DefaultNetstreamDriverCertFile &lt;/path/to/certfile.pem&gt;</li>
 <li>$DefaultNetstreamDriverKeyFile &lt;/path/to/keyfile.pem&gt;</li>
 <li><a href="rsconf1_dircreatemode.html">$DirCreateMode</a></li>
