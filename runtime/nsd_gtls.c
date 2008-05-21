@@ -270,6 +270,12 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
+	/* first check if we need to do fingerprint authentication - if not, we
+	 * are already set ;) -- rgerhards, 2008-05-21
+	 */
+	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT)
+		FINALIZE;
+	
 	/* This function only works for X.509 certificates.  */
 	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
 		return RS_RET_TLS_CERT_ERR;
@@ -295,9 +301,6 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
 	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", rsCStrGetSzStr(pstrFingerprint));
 
-	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT)
-		FINALIZE;
-	
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
 	pPeer = pThis->pPermPeers;

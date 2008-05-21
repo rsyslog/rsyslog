@@ -458,7 +458,7 @@ Run(tcpsrv_t *pThis)
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else if(state == -1) {
 					errno = 0;
-					errmsg.LogError(NO_ERRCODE, "netstream session %p will be closed, error ignored\n",
+					errmsg.LogError(NO_ERRCODE, "netstream session %p will be closed due to error\n",
 							pThis->pSessions[iTCPSess]->pStrm);
 					pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
