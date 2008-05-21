@@ -160,7 +160,7 @@ SetDrvrPermPeers(netstrms_t *pThis, permittedPeers_t *pPermPeers)
  * of sense here.
  * rgerhards, 2008-05-19
  */
-static uchar*
+static permittedPeers_t*
 GetDrvrPermPeers(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
