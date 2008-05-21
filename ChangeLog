@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.19.3 (rgerhards), 2008-05-??
+- bugfix: default syslog port was no longer used if none was
+  configured. Thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 3.19.2 (rgerhards), 2008-05-16
 - bugfix: TCP input modules did incorrectly set fromhost property

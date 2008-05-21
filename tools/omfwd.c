@@ -269,7 +269,7 @@ static rsRetVal TCPSendInit(void *pvData)
 		CHKiRet(netstrm.ConstructFinalize(pData->pNetstrm));
 		CHKiRet(netstrm.SetDrvrMode(pData->pNetstrm, pData->iStrmDrvrMode));
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
-			(uchar*)pData->port, (uchar*)pData->f_hname));
+			(uchar*)getFwdPt(pData), (uchar*)pData->f_hname));
 	}
 
 finalize_it:
