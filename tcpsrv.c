@@ -457,7 +457,8 @@ Run(tcpsrv_t *pThis)
 					pThis->pOnRegularClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else if(state == -1) {
-					errmsg.LogError(NO_ERRCODE, "netstream session %p will be closed, error ignored\n",
+					errno = 0;
+					errmsg.LogError(NO_ERRCODE, "netstream session %p will be closed due to error\n",
 							pThis->pSessions[iTCPSess]->pStrm);
 					pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
@@ -478,12 +479,18 @@ Run(tcpsrv_t *pThis)
 			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}
 		CHKiRet(nssel.Destruct(&pSel));
+finalize_it: /* this is a very special case - this time only we do not exit the function,
+	      * because that would not help us either. So we simply retry it. Let's see
+	      * if that actually is a better idea. Exiting the loop wasn't we always
+	      * crashed, which made sense (the rest of the engine was not prepared for
+	      * that) -- rgerhards, 2008-05-19
+	      */
+		/*EMPTY*/;
 	}
 
 	/* note that this point is usually not reached */
 	pthread_cleanup_pop(0); /* remove cleanup handler */
 
-finalize_it: // TODO: think: is it really good to exit the loop?
 	RETiRet;
 }
 
@@ -504,6 +511,10 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	/* prepare network stream subsystem */
 	CHKiRet(netstrms.Construct(&pThis->pNS));
 	CHKiRet(netstrms.SetDrvrMode(pThis->pNS, pThis->iDrvrMode));
+	if(pThis->pszDrvrAuthMode != NULL)
+		CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
+	if(pThis->pPermPeers != NULL)
+		CHKiRet(netstrms.SetDrvrPermPeers(pThis->pNS, pThis->pPermPeers));
 	// TODO: set driver!
 	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
 
@@ -530,6 +541,8 @@ CODESTARTobjDestruct(tcpsrv)
 
 	if(pThis->pNS != NULL)
 		netstrms.Destruct(&pThis->pNS);
+	if(pThis->pszDrvrAuthMode != NULL)
+		free(pThis->pszDrvrAuthMode);
 	if(pThis->ppLstn != NULL)
 		free(pThis->ppLstn);
 ENDobjDestruct(tcpsrv)
@@ -628,8 +641,14 @@ SetUsrP(tcpsrv_t *pThis, void *pUsr)
 	pThis->pUsr = pUsr;
 	RETiRet;
 }
-/* set the driver mode -- rgerhards, 2008-04-30
- */
+
+
+/* here follows a number of methods that shuffle authentication settings down
+ * to the drivers. Drivers not supporting these settings may return an error
+ * state.
+ * -------------------------------------------------------------------------- */   
+
+/* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal
 SetDrvrMode(tcpsrv_t *pThis, int iMode)
 {
@@ -640,6 +659,32 @@ SetDrvrMode(tcpsrv_t *pThis, int iMode)
 }
 
 
+/* set the driver authentication mode -- rgerhards, 2008-05-19 */
+static rsRetVal
+SetDrvrAuthMode(tcpsrv_t *pThis, uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	CHKmalloc(pThis->pszDrvrAuthMode = (uchar*)strdup((char*)mode));
+finalize_it:
+	RETiRet;
+}
+
+
+/* set the driver's permitted peers -- rgerhards, 2008-05-19 */
+static rsRetVal
+SetDrvrPermPeers(tcpsrv_t *pThis, permittedPeers_t *pPermPeers)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->pPermPeers = pPermPeers;
+	RETiRet;
+}
+
+
+/* End of methods to shuffle autentication settings to the driver.;
+
+ * -------------------------------------------------------------------------- */
 
 
 /* queryInterface function
@@ -668,6 +713,8 @@ CODESTARTobjQueryInterface(tcpsrv)
 
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetDrvrMode = SetDrvrMode;
+	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
+	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
 	pIf->SetCBIsPermittedHost = SetCBIsPermittedHost;
 	pIf->SetCBOpenLstnSocks = SetCBOpenLstnSocks;
 	pIf->SetCBRcvData = SetCBRcvData;

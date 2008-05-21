@@ -39,6 +39,7 @@
 #include "obj.h"
 #include "stringbuf.h"
 #include "errmsg.h"
+#include "net.h"
 #include "nsd_ptcp.h"
 #include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
@@ -85,12 +86,18 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 	cstr_t *pStr = NULL;
 	uchar buf[4];
 	size_t i;
+	int bAddColon = 0; /* do we need to add a colon to the fingerprint string? */
 	DEFiRet;
 
 	CHKiRet(rsCStrConstruct(&pStr));
 	for(i = 0 ; i < sizeFingerprint ; ++i) {
-		snprintf((char*)buf, sizeof(buf), "%2.2X:", pFingerprint[i]);
-		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
+		if(bAddColon) {
+			CHKiRet(rsCStrAppendChar(pStr, ':'));
+		} else {
+			bAddColon = 1; /* all but the first need a colon added */
+		}
+		snprintf((char*)buf, sizeof(buf), "%2.2X", pFingerprint[i]);
+		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 2));
 	}
 	CHKiRet(rsCStrFinish(pStr));
 
@@ -117,6 +124,31 @@ uchar *gtlsStrerror(int error)
 	pErr = (uchar*) strdup(gnutls_strerror(error));
 
 	return pErr;
+}
+
+
+/* add our own certificate to the certificate set, so that the peer
+ * can identify us. Please note that we try to use mutual authentication,
+ * so we always add a cert, even if we are in the client role (later,
+ * this may be controlled by a config setting).
+ * rgerhards, 2008-05-15
+ */
+static rsRetVal
+gtlsAddOurCert(void)
+{
+	int gnuRet;
+	uchar *keyFile;
+	uchar *certFile;
+	DEFiRet;
+
+	certFile = glbl.GetDfltNetstrmDrvrCertFile();
+	keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
+	dbgprintf("GTLS certificate file: '%s'\n", certFile);
+	dbgprintf("GTLS key file: '%s'\n", keyFile);
+	CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -200,9 +232,6 @@ finalize_it:
 static rsRetVal
 gtlsGlblInitLstn(void)
 {
-	int gnuRet;
-	uchar *keyFile;
-	uchar *certFile;
 	DEFiRet;
 
 	if(bGlblSrvrInitDone == 0) {
@@ -210,11 +239,7 @@ gtlsGlblInitLstn(void)
 		 * considered legacy. -- rgerhards, 2008-05-05
 		 */
 		/*CHKgnutls(gnutls_certificate_set_x509_crl_file(xcred, CRLFILE, GNUTLS_X509_FMT_PEM));*/
-		certFile = glbl.GetDfltNetstrmDrvrCertFile();
-		keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
-		dbgprintf("GTLS certificate file: '%s'\n", certFile);
-		dbgprintf("GTLS key file: '%s'\n", keyFile);
-		CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
+	//CHKiRet(gtlsAddOurCert());
 		CHKiRet(generate_dh_params());
 		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */
 		bGlblSrvrInitDone = 1; /* we are all set now */
@@ -228,7 +253,7 @@ finalize_it:
 /* check the fingerprint of the remote peer's certificate.
  * rgerhards, 2008-05-08
  */
-static rsRetVal
+rsRetVal
 gtlsChkFingerprint(nsd_gtls_t *pThis)
 {
 	cstr_t *pstrFingerprint = NULL;
@@ -239,10 +264,18 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 	gnutls_x509_crt cert;
 	int bMustDeinitCert = 0;
 	int gnuRet;
+	int bFoundPositiveMatch;
+	permittedPeers_t *pPeer;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
+	/* first check if we need to do fingerprint authentication - if not, we
+	 * are already set ;) -- rgerhards, 2008-05-21
+	 */
+	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT)
+		FINALIZE;
+	
 	/* This function only works for X.509 certificates.  */
 	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
 		return RS_RET_TLS_CERT_ERR;
@@ -268,8 +301,30 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
 	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", rsCStrGetSzStr(pstrFingerprint));
 
+	/* now search through the permitted peers to see if we can find a permitted one */
+	bFoundPositiveMatch = 0;
+	pPeer = pThis->pPermPeers;
+	while(pPeer != NULL && !bFoundPositiveMatch) {
+		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
+			bFoundPositiveMatch = 1;
+		} else {
+			pPeer = pPeer->pNext;
+		}
+	}
+
+	if(!bFoundPositiveMatch) {
+		dbgprintf("invalid peer fingerprint, not permitted to talk to it\n");
+		if(pThis->bReportAuthErr == 1) {
+			errno = 0;
+			errmsg.LogError(NO_ERRCODE, "error: peer fingerprint '%s' unknown - we are "
+					"not permitted to talk to it", rsCStrGetSzStr(pstrFingerprint));
+			pThis->bReportAuthErr = 0;
+		}
+		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+	}
 
 finalize_it:
+dbgprintf("exit fingerprint check, iRet %d\n", iRet);
 	if(pstrFingerprint != NULL)
 		rsCStrDestruct(&pstrFingerprint);
 	if(bMustDeinitCert)
@@ -333,6 +388,9 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
+	pThis->bReportAuthErr = 1;
+CHKiRet(gtlsAddOurCert());
+finalize_it:
 ENDobjConstruct(nsd_gtls)
 
 
@@ -360,12 +418,74 @@ SetMode(nsd_t *pNsd, int mode)
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
-dbgprintf("SetMode tries to set mode %d\n", mode);
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(mode != 0 && mode != 1)
-		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
+	if(mode != 0 && mode != 1) {
+		errmsg.LogError(NO_ERRCODE, "error: driver mode %d not supported by "
+				"gtls netstream driver", mode);
+		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
+	}
 
 	pThis->iMode = mode;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Set the authentication mode. For us, the following is supported:
+ * anon - no certificate checks whatsoever (discouraged, but supported)
+ * x509/fingerprint - certificate fingerprint
+ * x509/name - cerfificate name check
+ * mode == NULL is valid and defaults to x509/name
+ * rgerhards, 2008-05-16
+ */
+static rsRetVal
+SetAuthMode(nsd_t *pNsd, uchar *mode)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(mode == NULL || !strcasecmp((char*)mode, "x509/name")) {
+		pThis->authMode = GTLS_AUTH_CERTNAME;
+	} else if(!strcasecmp((char*) mode, "x509/fingerprint")) {
+		pThis->authMode = GTLS_AUTH_CERTFINGERPRINT;
+	} else if(!strcasecmp((char*) mode, "anon")) {
+		pThis->authMode = GTLS_AUTH_CERTANON;
+	} else {
+		errmsg.LogError(NO_ERRCODE, "error: authentication mode '%s' not supported by "
+				"gtls netstream driver", mode);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+
+/* TODO: clear stored IDs! */
+
+finalize_it:
+dbgprintf("gtls auth mode %d set\n", pThis->authMode);
+	RETiRet;
+}
+
+
+/* Set permitted peers. It is depending on the auth mode if this are 
+ * fingerprints or names. -- rgerhards, 2008-05-19
+ */
+static rsRetVal
+SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(pPermPeers == NULL)
+		FINALIZE;
+
+	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT && pThis->authMode != GTLS_AUTH_CERTNAME) {
+		errmsg.LogError(NO_ERRCODE, "authentication not supported by "
+			"gtls netstream driver in the configured authentication mode - ignored");
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
+	}
+
+	pThis->pPermPeers = pPermPeers;
 
 finalize_it:
 	RETiRet;
@@ -484,6 +604,8 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	/* if we reach this point, we are in TLS mode */
 	CHKiRet(gtlsInitSession(pNew));
 	gtlsSetTransportPtr(pNew, ((nsd_ptcp_t*) (pNew->pTcp))->sock);
+	pNew->authMode = pThis->authMode;
+	pNew->pPermPeers = pThis->pPermPeers;
 
 	/* we now do the handshake. This is a bit complicated, because we are 
 	 * on non-blocking sockets. Usually, the handshake will not complete
@@ -527,6 +649,9 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
+	if(pThis->bAbortConn)
+		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
+
 	if(pThis->iMode == 0) {
 		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf));
 		FINALIZE;
@@ -560,6 +685,9 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	if(pThis->bAbortConn)
+		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
 	if(pThis->iMode == 0) {
 		CHKiRet(nsd_ptcp.Send(pThis->pTcp, pBuf, pLenBuf));
@@ -664,6 +792,8 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->Connect = Connect;
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
+	pIf->SetAuthMode = SetAuthMode;
+	pIf->SetPermPeers =SetPermPeers;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:

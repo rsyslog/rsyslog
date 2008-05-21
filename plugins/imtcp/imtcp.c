@@ -23,6 +23,20 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 
+/* This note shall explain the calling sequence while we do not have
+ * have full RainerScript support for (TLS) sender authentication:
+ *
+ * imtcp --> tcpsrv --> netstrms (this sequence stored pPermPeers in netstrms class)
+ * then a callback (doOpenLstnSocks) into imtcp happens, which in turn calls
+ * into tcpsrv.create_tcp_socket(),
+ * which calls into netstrm.LstnInit(), which receives a pointer to netstrms obj
+ * which calls into the driver function LstnInit (again, netstrms obj passed)
+ * which finally calls back into netstrms obj's get functions to obtain the auth
+ * parameters and then applies them to the driver object instance
+ *
+ * rgerhards, 2008-05-19
+ */
+
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -46,6 +60,7 @@
 #include "netstrm.h"
 #include "errmsg.h"
 #include "tcpsrv.h"
+#include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
 
@@ -59,10 +74,13 @@ DEFobjCurrIf(errmsg)
 
 /* Module static data */
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
+static permittedPeers_t *pPermPeersRoot = NULL;
+
 
 /* config settings */
 static int iTCPSessMax = 200; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 
 
 /* callbacks */
@@ -122,9 +140,22 @@ onErrClose(tcps_sess_t *pSess)
 /* ------------------------------ end callbacks ------------------------------ */
 
 
+/* set permitted peer -- rgerhards, 2008-05-19
+ */
+static rsRetVal
+setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
+{
+	DEFiRet;
+	CHKiRet(net.AddPermittedPeer(&pPermPeersRoot, pszID));
+finalize_it:
+	RETiRet;
+}
+
+
 static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	DEFiRet;
+
 	if(pOurTcpsrv == NULL) {
 		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
 		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
@@ -133,6 +164,15 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
+		/* now set optional params, but only if they were actually configured */
+		if(pszStrmDrvrAuthMode != NULL) {
+RUNLOG_VAR("%s", pszStrmDrvrAuthMode);
+			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, pszStrmDrvrAuthMode));
+		}
+		if(pPermPeersRoot != NULL) {
+			CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
+		}
+		/* most params set, now start listener */
 		tcpsrv.configureTCPListen(pOurTcpsrv, (char *) pNewVal);
 		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
@@ -183,6 +223,10 @@ CODESTARTmodExit
 	if(pOurTcpsrv != NULL)
 		iRet = tcpsrv.Destruct(&pOurTcpsrv);
 
+	if(pPermPeersRoot != NULL) {
+		net.DestructPermittedPeers(&pPermPeersRoot);
+	}
+
 	/* release objects we used */
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
@@ -227,6 +271,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdrivermode", 0,
 				   eCmdHdlrInt, NULL, &iStrmDrvrMode, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverauthmode", 0,
+				   eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverpermittedpeer", 0,
+				   eCmdHdlrGetWord, setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

@@ -81,6 +81,7 @@ typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 typedef rsRetVal (*errLogFunc_t)(uchar*); /* this is a trick to store a function ptr to a function returning a function ptr... */
+typedef struct permittedPeers_s permittedPeers_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct tcpsrv_s tcpsrv_t;
 
 /* some universal 64 bit define... */
@@ -219,11 +220,15 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_GNUTLS_ERR = -2078, /**< (unexpected) error in GnuTLS call */
 	RS_RET_MAX_SESS_REACHED = -2079, /**< max nbr of sessions reached, can not create more */
 	RS_RET_MAX_LSTN_REACHED = -2080, /**< max nbr of listeners reached, can not create more */
-	RS_RET_INVAID_DRVR_MODE = -2081, /**< tried to set mode not supported by driver */
+	RS_RET_INVALID_DRVR_MODE = -2081, /**< tried to set mode not supported by driver */
 	RS_RET_DRVRNAME_TOO_LONG = -2082, /**< driver name too long - should never happen */
 	RS_RET_TLS_HANDSHAKE_ERR = -2083, /**< TLS handshake failed */
 	RS_RET_TLS_CERT_ERR = -2084, /**< generic TLS certificate error */
 	RS_RET_TLS_NO_CERT = -2085, /**< no TLS certificate available where one was expected */
+	RS_RET_VALUE_NOT_SUPPORTED = -2086, /**< a provided value is not supported */
+	RS_RET_VALUE_NOT_IN_THIS_MODE = -2087, /**< a provided value is invalid for the curret mode */
+	RS_RET_INVALID_FINGERPRINT = -2088, /**< a fingerprint is not valid for this use case */
+	RS_RET_CONNECTION_ABORTREQ = -2089, /**< connection was abort requested due to previous error */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

@@ -119,11 +119,59 @@ static rsRetVal
 SetMode(nsd_t __attribute__((unused)) *pNsd, int mode)
 {
 	DEFiRet;
-	if(mode != 0)
-		ABORT_FINALIZE(RS_RET_INVAID_DRVR_MODE);
+	if(mode != 0) {
+		errmsg.LogError(NO_ERRCODE, "error: driver mode %d not supported by "
+				"ptcp netstream driver", mode);
+		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
+	}
 finalize_it:
 	RETiRet;
 }
+
+
+/* Set the authentication mode. For us, the following is supported:
+ * anon - no certificate checks whatsoever (discouraged, but supported)
+ * mode == NULL is valid and defaults to anon
+ * Actually, we do not even record the mode right now, because we can
+ * always work in anon mode, only. So there is no point in recording
+ * something if that's the only choice. What the function does is 
+ * return an error if something is requested that we can not support.
+ * rgerhards, 2008-05-17
+ */
+static rsRetVal
+SetAuthMode(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
+{
+	DEFiRet;
+	if(mode != NULL && strcasecmp((char*)mode, "anon")) {
+		errmsg.LogError(NO_ERRCODE, "error: authentication mode '%s' not supported by "
+				"ptcp netstream driver", mode);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Set the permitted peers. This is a dummy, always returning an
+ * error because we do not support fingerprint authentication.
+ * rgerhards, 2008-05-17
+ */
+static rsRetVal
+SetPermPeers(nsd_t __attribute__((unused)) *pNsd, permittedPeers_t __attribute__((unused)) *pPermPeers)
+{
+	DEFiRet;
+
+	if(pPermPeers != NULL) {
+		errmsg.LogError(NO_ERRCODE, "authentication not supported by ptcp netstream driver");
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 
 
 /* Provide access to the underlying OS socket. This is primarily
@@ -435,6 +483,8 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
+		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
+		CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
 		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
 		CHKiRet(fAddLstn(pUsr, pNewStrm));
@@ -625,6 +675,8 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->GetSock = GetSock;
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
+	pIf->SetAuthMode = SetAuthMode;
+	pIf->SetPermPeers = SetPermPeers;
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->LstnInit = LstnInit;

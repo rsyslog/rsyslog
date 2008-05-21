@@ -50,6 +50,8 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*GetRemoteHName)(netstrm_t *pThis, uchar **pszName);
 	rsRetVal (*GetRemoteIP)(netstrm_t *pThis, uchar **pszIP);
 	rsRetVal (*SetDrvrMode)(netstrm_t *pThis, int iMode);
+	rsRetVal (*SetDrvrAuthMode)(netstrm_t *pThis, uchar*);
+	rsRetVal (*SetDrvrPermPeers)(netstrm_t *pThis, permittedPeers_t*);
 	/* the GetSock() below is a hack to make imgssapi work. In the long term,
 	 * we should migrate imgssapi to a stream driver, which will relieve us of
 	 * this problem. Please note that nobody else should use GetSock(). Using it 
@@ -59,7 +61,7 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	 */
 	rsRetVal (*GetSock)(netstrm_t *pThis, int *pSock);
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define netstrmCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(netstrm);

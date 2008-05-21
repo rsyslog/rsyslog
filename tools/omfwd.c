@@ -78,6 +78,9 @@ typedef struct _instanceData {
 	netstrms_t *pNS; /* netstream subsystem */
 	netstrm_t *pNetstrm; /* our output netstream */
 	uchar *pszStrmDrvr;
+	uchar *pszStrmDrvrAuthMode;
+	permittedPeers_t *pPermPeersRootFingerprint;
+	permittedPeers_t *pPermPeersRootNames;
 	int iStrmDrvrMode;
 	char	*f_hname;
 	int *pSockArray;		/* sockets to use for UDP */
@@ -96,7 +99,10 @@ typedef struct _instanceData {
 static uchar *pszTplName = NULL; /* name of the default template to use */
 static uchar *pszStrmDrvr = NULL; /* name of the stream driver to use */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 
+static permittedPeers_t *pPermPeersRootFingerprint = NULL;
+static permittedPeers_t *pPermPeersRootNames = NULL;
 
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
@@ -146,7 +152,14 @@ CODESTARTfreeInstance
 
 	if(pData->f_hname != NULL)
 		free(pData->f_hname);
-
+	if(pData->pszStrmDrvr != NULL)
+		free(pData->pszStrmDrvr);
+	if(pData->pszStrmDrvrAuthMode != NULL)
+		free(pData->pszStrmDrvrAuthMode);
+	if(pData->pPermPeersRootFingerprint != NULL)
+		net.DestructPermittedPeers(&pData->pPermPeersRootFingerprint);
+	if(pData->pPermPeersRootNames != NULL)
+		net.DestructPermittedPeers(&pData->pPermPeersRootNames);
 ENDfreeInstance
 
 
@@ -201,6 +214,19 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 
 	RETiRet;
 }
+
+
+/* set the cert fingerprint -- rgerhards, 2008-05-19
+ */
+static rsRetVal
+setFingerprint(void __attribute__((unused)) *pVal, uchar *pszID)
+{
+	DEFiRet;
+	CHKiRet(net.AddPermittedPeer(&pPermPeersRootFingerprint, pszID));
+finalize_it:
+	RETiRet;
+}
+
 
 
 /* CODE FOR SENDING TCP MESSAGES */
@@ -268,6 +294,14 @@ static rsRetVal TCPSendInit(void *pvData)
 		CHKiRet(netstrms.CreateStrm(pData->pNS, &pData->pNetstrm));
 		CHKiRet(netstrm.ConstructFinalize(pData->pNetstrm));
 		CHKiRet(netstrm.SetDrvrMode(pData->pNetstrm, pData->iStrmDrvrMode));
+		/* now set optional params, but only if they were actually configured */
+		if(pData->pszStrmDrvrAuthMode != NULL) {
+			CHKiRet(netstrm.SetDrvrAuthMode(pData->pNetstrm, pData->pszStrmDrvrAuthMode));
+		}
+		if(pData->pPermPeersRootFingerprint != NULL) {
+			CHKiRet(netstrm.SetDrvrPermPeers(pData->pNetstrm, pData->pPermPeersRootFingerprint));
+		}
+		/* params set, now connect */
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
 			(uchar*)getFwdPt(pData), (uchar*)pData->f_hname));
 	}
@@ -567,12 +601,47 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		CHKiRet(tcpclt.SetSendPrepRetry(pData->pTCPClt, TCPSendPrepRetry));
 		CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
 		pData->iStrmDrvrMode = iStrmDrvrMode;
-		if(pData->pszStrmDrvr != NULL)
+		if(pszStrmDrvr != NULL)
 			CHKmalloc(pData->pszStrmDrvr = (uchar*)strdup((char*)pszStrmDrvr));
+		if(pszStrmDrvrAuthMode != NULL)
+			CHKmalloc(pData->pszStrmDrvrAuthMode =
+				     (uchar*)strdup((char*)pszStrmDrvrAuthMode));
+		if(pPermPeersRootFingerprint != NULL) {
+			pData->pPermPeersRootFingerprint = pPermPeersRootFingerprint;
+			pPermPeersRootFingerprint = NULL;
+		}
+		if(pPermPeersRootNames != NULL) {
+			pData->pPermPeersRootNames = pPermPeersRootNames;
+			pPermPeersRootNames = NULL;
+		}
 	}
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
+
+
+/* a common function to free our configuration variables - used both on exit
+ * and on $ResetConfig processing. -- rgerhards, 2008-05-16
+ */
+static void
+freeConfigVars(void)
+{
+	if(pszTplName != NULL) {
+		free(pszTplName);
+		pszTplName = NULL;
+	}
+	if(pszStrmDrvr != NULL) {
+		free(pszStrmDrvr);
+		pszStrmDrvr = NULL;
+	}
+	if(pszStrmDrvrAuthMode != NULL) {
+		free(pszStrmDrvrAuthMode);
+		pszStrmDrvrAuthMode = NULL;
+	}
+	if(pPermPeersRootFingerprint != NULL) {
+		free(pPermPeersRootFingerprint);
+	}
+}
 
 
 BEGINmodExit
@@ -585,14 +654,7 @@ CODESTARTmodExit
 	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
 
-	if(pszTplName != NULL) {
-		free(pszTplName);
-		pszTplName = NULL;
-	}
-	if(pszStrmDrvr != NULL) {
-		free(pszStrmDrvr);
-		pszStrmDrvr = NULL;
-	}
+	freeConfigVars();
 ENDmodExit
 
 
@@ -607,14 +669,9 @@ ENDqueryEtryPt
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	if(pszTplName != NULL) {
-		free(pszTplName);
-		pszTplName = NULL;
-	}
-	if(pszStrmDrvr != NULL) {
-		free(pszStrmDrvr);
-		pszStrmDrvr = NULL;
-	}
+	freeConfigVars();
+
+	/* we now must reset all non-string values */
 	iStrmDrvrMode = 0;
 
 	return RS_RET_OK;
@@ -632,6 +689,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionforwarddefaulttemplate", 0, eCmdHdlrGetWord, NULL, &pszTplName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivercertfingerprint", 0, eCmdHdlrGetWord, setFingerprint, NULL, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 

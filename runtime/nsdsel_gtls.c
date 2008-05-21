@@ -129,8 +129,9 @@ doRetry(nsd_gtls_t *pNsd)
 		case gtlsRtry_handshake:
 			gnuRet = gnutls_handshake(pNsd->sess);
 			if(gnuRet == 0) {
+				pNsd->rtryCall = gtlsRtry_None; /* we are done */
 				/* we got a handshake, now check authorization */
-				// TODO: do it!
+				CHKiRet(gtlsChkFingerprint(pNsd));
 			}
 			break;
 		default:
@@ -154,6 +155,8 @@ doRetry(nsd_gtls_t *pNsd)
 	 */
 		
 finalize_it:
+	if(iRet != RS_RET_OK)
+		pNsd->bAbortConn = 1; /* request abort */
 	RETiRet;
 }
 

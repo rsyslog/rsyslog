@@ -88,6 +88,68 @@ static struct AllowedSenders *pLastAllowedSenders_GSS = NULL;
 int     ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
 int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it to IP(s) */
 
+
+/* ------------------------------ begin permitted peers code ------------------------------ */
+
+
+/* add a permitted peer. PermittedPeers is an interim solution until we can provide
+ * access control via enhanced RainerScript methods.
+ * Note: the provided string is handed over to this function, caller must
+ * no longer access it. -- rgerhards, 2008-05-19
+ */
+static rsRetVal
+AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar* pszID)
+{
+	permittedPeers_t *pNew = NULL;
+	DEFiRet;
+
+	assert(ppRootPeer != NULL);
+	assert(pszID != NULL);
+
+	CHKmalloc(pNew = malloc(sizeof(permittedPeers_t)));
+	CHKmalloc(pNew->pszID = (uchar*)strdup((char*)pszID));
+	pNew->pNext = NULL;
+
+	if(*ppRootPeer != NULL) {
+		pNew->pNext = *ppRootPeer;
+	}
+	*ppRootPeer = pNew;
+		
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pNew != NULL)
+			free(pNew);
+	}
+	RETiRet;
+}
+
+
+/* Destruct a permitted peers list -- rgerhards, 2008-05-19 */
+static rsRetVal
+DestructPermittedPeers(permittedPeers_t **ppRootPeer)
+{
+	permittedPeers_t *pCurr;
+	permittedPeers_t *pDel;
+	DEFiRet;
+
+	assert(ppRootPeer != NULL);
+
+	for(pCurr = *ppRootPeer ; pCurr != NULL ; /*EMPTY*/) {
+		pDel = pCurr;
+		pCurr = pCurr->pNext;
+		free(pDel->pszID);
+		free(pDel);
+	}
+
+	*ppRootPeer = NULL;
+
+	RETiRet;
+}
+
+
+/* ------------------------------ end permitted peers code ------------------------------ */
+
+
 /* Code for handling allowed/disallowed senders
  */
 static inline void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
@@ -1095,6 +1157,8 @@ CODESTARTobjQueryInterface(net)
 	pIf->isAllowedSender = isAllowedSender;
 	pIf->should_use_so_bsdcompat = should_use_so_bsdcompat;
 	pIf->getLocalHostname = getLocalHostname;
+	pIf->AddPermittedPeer = AddPermittedPeer;
+	pIf->DestructPermittedPeers = DestructPermittedPeers;
 finalize_it:
 ENDobjQueryInterface(net)
 
