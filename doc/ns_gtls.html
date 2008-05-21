@@ -11,21 +11,36 @@ library</a>.</p>
 <ul>
 <li>0 - unencrypted trasmission (just like <a href="ns_ptcp.html">ptcp</a> driver)</li>
 <li>1 - TLS-protected operation</li>
-</ul>Note: mode 0 does not provide any benefit over the ptcp driver.
-This mode exists for technical reasons, but should not be used. It may
-be removed in the future.<br><span style="font-weight: bold;">
-Supported Authentication Modes</span><br>
+</ul>
+Note: mode 0 does not provide any benefit over the ptcp driver. This
+mode exists for technical reasons, but should not be used. It may be
+removed in the future.<br>
+<span style="font-weight: bold;">Supported Authentication
+Modes</span><br>
 <ul>
-<li><span style="font-weight: bold;">anon</span> - anonymous authentication as
+<li><span style="font-weight: bold;">anon</span>
+- anonymous authentication as
 described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft</li>
-<li><span style="font-weight: bold;">x509/fingerprint</span> - certificate fingerprint authentication as
-described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft</li><li><span style="font-weight: bold;">x509/name</span> - certificate validation and subject name authentication as
-described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft [NOT YET IMPLEMENTED]</li>
-</ul>Note: "anon" does not permit to authenticate the remote peer. As
-such, this mode is vulnerable to man in the middle attacks as well as
+<li><span style="font-weight: bold;">x509/fingerprint</span>
+- certificate fingerprint authentication as
+described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft</li>
+<li><span style="font-weight: bold;">x509/name</span>
+- certificate validation and subject name authentication as
+described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft
+[NOT YET IMPLEMENTED]</li>
+</ul>
+Note: "anon" does not permit to authenticate the remote peer. As such,
+this mode is vulnerable to man in the middle attacks as well as
 unauthorized access. It is recommended NOT to use this mode.<br>
-[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+<br>
+<b>Known Problems</b><br>
+<p>Even in x509/fingerprint mode, both the client and sever
+certificate currently must be signed by the same root CA. This is an
+artifact of the underlying GnuTLS library and the way we use it. It is
+expected that we can resolve this issue in the future.</p>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]
+</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
