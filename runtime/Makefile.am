@@ -67,7 +67,7 @@ librsyslog_la_SOURCES = \
 
 librsyslog_la_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(pthreads_cflags)
 #librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_LIBADD = 
+librsyslog_la_LIBADD = -ldl -lrt
 
 #
 # regular expression support
