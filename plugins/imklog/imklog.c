@@ -132,7 +132,7 @@ parsePRI(uchar **ppSz, int *piPri)
 	++pSz;
 	i = 0;
 	while(isdigit(*pSz)) {
-		i = i * 10 + *pSz - '0';
+		i = i * 10 + *pSz++ - '0';
 	}
 
 	if(*pSz != '>')
