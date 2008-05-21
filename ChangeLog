@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.19.4 (rgerhards), 2008-05-??
+---------------------------------------------------------------------------
 Version 3.19.3 (rgerhards), 2008-05-21
 - added ability to authenticate the server against its certificate
   fingerprint
