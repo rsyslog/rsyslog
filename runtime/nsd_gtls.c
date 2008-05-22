@@ -141,12 +141,12 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 
 		/* names */
 		size = sizeof(dn);
-		gnutls_x509_crt_get_dn( cert, dn, &size);
+		gnutls_x509_crt_get_dn(cert, dn, &size);
 		snprintf((char*)lnBuf, sizeof(lnBuf), "DN: %s; ", dn);
 		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 
 		size = sizeof(dn);
-		gnutls_x509_crt_get_issuer_dn( cert, dn, &size);
+		gnutls_x509_crt_get_issuer_dn(cert, dn, &size);
 		snprintf((char*)lnBuf, sizeof(lnBuf), "Issuer DN: %s; ", dn);
 		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 
@@ -166,7 +166,6 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 			}
 			++iAltName;
 		}
-
 
 		gnutls_x509_crt_deinit(cert);
 	}
@@ -447,54 +446,25 @@ finalize_it:
 }
 
 
-/* check the fingerprint of the remote peer's certificate.
- * rgerhards, 2008-05-08
+/* Check the peer's ID in fingerprint auth mode.
+ * rgerhards, 2008-05-22
  */
 static rsRetVal
-gtlsChkFingerprint(nsd_gtls_t *pThis)
+gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 {
-	cstr_t *pstrFingerprint = NULL;
 	uchar fingerprint[20];
 	size_t size;
-	const gnutls_datum *cert_list;
-	unsigned int list_size = 0;
-	gnutls_x509_crt cert;
-	int bMustDeinitCert = 0;
-	int gnuRet;
+	cstr_t *pstrFingerprint = NULL;
 	int bFoundPositiveMatch;
 	permittedPeers_t *pPeer;
+	int gnuRet;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	/* first check if we need to do fingerprint authentication - if not, we
-	 * are already set ;) -- rgerhards, 2008-05-21
-	 */
-	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT)
-		FINALIZE;
-	
-	/* This function only works for X.509 certificates.  */
-	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
-		return RS_RET_TLS_CERT_ERR;
-
-	cert_list = gnutls_certificate_get_peers(pThis->sess, &list_size);
-
-	if(list_size < 1)
-		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
-
-	/* If we reach this point, we have at least one valid certificate. 
-	 * We always use only the first certificate. As of GnuTLS documentation, the
-	 * first certificate always contains the remote peer's own certificate. All other
-	 * certificates are issuer's certificates (up the chain). However, we do not match
-	 * against some issuer fingerprint but only ourselfs. -- rgerhards, 2008-05-08
-	 */
-	CHKgnutls(gnutls_x509_crt_init(&cert));
-	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
-	CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
-
 	/* obtain the SHA1 fingerprint */
 	size = sizeof(fingerprint);
-	CHKgnutls(gnutls_x509_crt_get_fingerprint(cert, GNUTLS_DIG_SHA1, fingerprint, &size));
+	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA1, fingerprint, &size));
 	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
 	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", rsCStrGetSzStr(pstrFingerprint));
 
@@ -521,9 +491,133 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 	}
 
 finalize_it:
-dbgprintf("exit fingerprint check, iRet %d\n", iRet);
 	if(pstrFingerprint != NULL)
 		rsCStrDestruct(&pstrFingerprint);
+	RETiRet;
+}
+
+
+/* Check the peer's ID in name auth mode.
+ * rgerhards, 2008-05-22
+ */
+static rsRetVal
+gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
+{
+	uchar lnBuf[256];
+	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
+	int iAltName;
+	size_t szAltNameLen;
+	int bFoundPositiveMatch;
+	permittedPeers_t *pPeer;
+	cstr_t *pStr = NULL;
+	int gnuRet;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	bFoundPositiveMatch = 0;
+	CHKiRet(rsCStrConstruct(&pStr));
+
+	/* first search through the dNSName subject alt names */
+	iAltName = 0;
+	while(!bFoundPositiveMatch) { /* loop broken below */
+		szAltNameLen = sizeof(szAltName);
+		gnuRet = gnutls_x509_crt_get_subject_alt_name(*pCert, iAltName,
+				szAltName, &szAltNameLen, NULL);
+		if(gnuRet < 0)
+			break;
+		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
+			dbgprintf("subject alt dnsName: '%s'\n", szAltName);
+			snprintf((char*)lnBuf, sizeof(lnBuf), "DNSname: %s; ", szAltName);
+			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+			/* we found it - now we need to loop through the list of permitted
+			 * peer IDs. As soon as we have a positive match, we are all set.
+			 */
+			pPeer = pThis->pPermPeers;
+			while(pPeer != NULL && !bFoundPositiveMatch) {
+				if(!strcmp(szAltName, (char*)pPeer->pszID)) {
+					bFoundPositiveMatch = 1;
+				} else {
+					pPeer = pPeer->pNext;
+				}
+			}
+			/* do NOT break, because there may be multiple dNSName's! */
+		}
+		++iAltName;
+	}
+
+	if(!bFoundPositiveMatch) {
+		dbgprintf("invalid peer name, not permitted to talk to it\n");
+		if(pThis->bReportAuthErr == 1) {
+			CHKiRet(rsCStrFinish(pStr));
+			errno = 0;
+			errmsg.LogError(NO_ERRCODE, "error: peer name not authorized -  "
+					"not permitted to talk to it. Names: %s",
+					rsCStrGetSzStr(pStr));
+			pThis->bReportAuthErr = 0;
+		}
+		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+	}
+
+finalize_it:
+	if(pStr != NULL)
+		rsCStrDestruct(&pStr);
+	RETiRet;
+}
+
+
+/* check the ID of the remote peer - used for both fingerprint and
+ * name authentication. This is common code. Will call into specific
+ * drivers once the certificate has been obtained.
+ * rgerhards, 2008-05-08
+ */
+static rsRetVal
+gtlsChkPeerID(nsd_gtls_t *pThis)
+{
+	const gnutls_datum *cert_list;
+	unsigned int list_size = 0;
+	gnutls_x509_crt cert;
+	int bMustDeinitCert = 0;
+	int gnuRet;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	/* This function only works for X.509 certificates.  */
+	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
+		return RS_RET_TLS_CERT_ERR;
+
+	cert_list = gnutls_certificate_get_peers(pThis->sess, &list_size);
+
+	if(list_size < 1) {
+		if(pThis->bReportAuthErr == 1) {
+			errno = 0;
+			errmsg.LogError(NO_ERRCODE, "error: peer did not provide a certificate, "
+					"not permitted to talk to it");
+			pThis->bReportAuthErr = 0;
+		}
+		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
+	}
+
+	/* If we reach this point, we have at least one valid certificate. 
+	 * We always use only the first certificate. As of GnuTLS documentation, the
+	 * first certificate always contains the remote peer's own certificate. All other
+	 * certificates are issuer's certificates (up the chain). We are only interested
+	 * in the first certificate, which is our peer. -- rgerhards, 2008-05-08
+	 */
+	CHKgnutls(gnutls_x509_crt_init(&cert));
+	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
+	CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
+
+	/* Now we see which actual authentication code we must call.  */
+	if(pThis->authMode == GTLS_AUTH_CERTFINGERPRINT) {
+		CHKiRet(gtlsChkPeerFingerprint(pThis, &cert));
+	} else {
+		assert(pThis->authMode == GTLS_AUTH_CERTNAME);
+		CHKiRet(gtlsChkPeerName(pThis, &cert));
+	}
+
+finalize_it:
 	if(bMustDeinitCert)
 		gnutls_x509_crt_deinit(cert);
 
@@ -573,23 +667,6 @@ finalize_it:
 }
 
 
-/* Perform a name check on the remote peer. This includes certificate
- * validity checking.
- * rgerhards, 2008-05-21
- */
-static rsRetVal
-gtlsChkPeerName(nsd_gtls_t *pThis)
-{
-	DEFiRet;
-
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	CHKiRet(gtlsChkPeerCertValidity(pThis));
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* check if it is OK to talk to the remote peer
  * rgerhards, 2008-05-21
  */
@@ -603,10 +680,12 @@ gtlsChkPeerAuth(nsd_gtls_t *pThis)
 	/* call the actual function based on current auth mode */
 	switch(pThis->authMode) {
 		case GTLS_AUTH_CERTNAME:
-			CHKiRet(gtlsChkPeerName(pThis));
+			/* if we check the name, we must ensure the cert is valid */
+			CHKiRet(gtlsChkPeerCertValidity(pThis));
+			CHKiRet(gtlsChkPeerID(pThis));
 			break;
 		case GTLS_AUTH_CERTFINGERPRINT:
-			CHKiRet(gtlsChkFingerprint(pThis));
+			CHKiRet(gtlsChkPeerID(pThis));
 			break;
 		case GTLS_AUTH_CERTVALID:
 			CHKiRet(gtlsChkPeerCertValidity(pThis));
