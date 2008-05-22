@@ -79,8 +79,7 @@ typedef struct _instanceData {
 	netstrm_t *pNetstrm; /* our output netstream */
 	uchar *pszStrmDrvr;
 	uchar *pszStrmDrvrAuthMode;
-	permittedPeers_t *pPermPeersRootFingerprint;
-	permittedPeers_t *pPermPeersRootNames;
+	permittedPeers_t *pPermPeers;
 	int iStrmDrvrMode;
 	char	*f_hname;
 	int *pSockArray;		/* sockets to use for UDP */
@@ -101,8 +100,7 @@ static uchar *pszStrmDrvr = NULL; /* name of the stream driver to use */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 
-static permittedPeers_t *pPermPeersRootFingerprint = NULL;
-static permittedPeers_t *pPermPeersRootNames = NULL;
+static permittedPeers_t *pPermPeers = NULL;
 
 /* get the syslog forward port from selector_t. The passed in
  * struct must be one that is setup for forwarding.
@@ -156,10 +154,8 @@ CODESTARTfreeInstance
 		free(pData->pszStrmDrvr);
 	if(pData->pszStrmDrvrAuthMode != NULL)
 		free(pData->pszStrmDrvrAuthMode);
-	if(pData->pPermPeersRootFingerprint != NULL)
-		net.DestructPermittedPeers(&pData->pPermPeersRootFingerprint);
-	if(pData->pPermPeersRootNames != NULL)
-		net.DestructPermittedPeers(&pData->pPermPeersRootNames);
+	if(pData->pPermPeers != NULL)
+		net.DestructPermittedPeers(&pData->pPermPeers);
 ENDfreeInstance
 
 
@@ -216,13 +212,13 @@ static rsRetVal UDPSend(instanceData *pData, char *msg, size_t len)
 }
 
 
-/* set the cert fingerprint -- rgerhards, 2008-05-19
+/* set the permitted peers -- rgerhards, 2008-05-19
  */
 static rsRetVal
-setFingerprint(void __attribute__((unused)) *pVal, uchar *pszID)
+setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
 {
 	DEFiRet;
-	CHKiRet(net.AddPermittedPeer(&pPermPeersRootFingerprint, pszID));
+	CHKiRet(net.AddPermittedPeer(&pPermPeers, pszID));
 finalize_it:
 	RETiRet;
 }
@@ -298,8 +294,8 @@ static rsRetVal TCPSendInit(void *pvData)
 		if(pData->pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(netstrm.SetDrvrAuthMode(pData->pNetstrm, pData->pszStrmDrvrAuthMode));
 		}
-		if(pData->pPermPeersRootFingerprint != NULL) {
-			CHKiRet(netstrm.SetDrvrPermPeers(pData->pNetstrm, pData->pPermPeersRootFingerprint));
+		if(pData->pPermPeers != NULL) {
+			CHKiRet(netstrm.SetDrvrPermPeers(pData->pNetstrm, pData->pPermPeers));
 		}
 		/* params set, now connect */
 		CHKiRet(netstrm.Connect(pData->pNetstrm, glbl.GetDefPFFamily(),
@@ -606,13 +602,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		if(pszStrmDrvrAuthMode != NULL)
 			CHKmalloc(pData->pszStrmDrvrAuthMode =
 				     (uchar*)strdup((char*)pszStrmDrvrAuthMode));
-		if(pPermPeersRootFingerprint != NULL) {
-			pData->pPermPeersRootFingerprint = pPermPeersRootFingerprint;
-			pPermPeersRootFingerprint = NULL;
-		}
-		if(pPermPeersRootNames != NULL) {
-			pData->pPermPeersRootNames = pPermPeersRootNames;
-			pPermPeersRootNames = NULL;
+		if(pPermPeers != NULL) {
+			pData->pPermPeers = pPermPeers;
+			pPermPeers = NULL;
 		}
 	}
 
@@ -638,8 +630,8 @@ freeConfigVars(void)
 		free(pszStrmDrvrAuthMode);
 		pszStrmDrvrAuthMode = NULL;
 	}
-	if(pPermPeersRootFingerprint != NULL) {
-		free(pPermPeersRootFingerprint);
+	if(pPermPeers != NULL) {
+		free(pPermPeers);
 	}
 }
 
@@ -690,7 +682,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriver", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivercertfingerprint", 0, eCmdHdlrGetWord, setFingerprint, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverpermittedpeer", 0, eCmdHdlrGetWord, setPermittedPeer, NULL, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 

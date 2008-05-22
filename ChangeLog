@@ -1,3 +1,9 @@
+- implemented x509/certvalid gtls auth mode
+- implemented x509/name gtls auth mode
+- changed config directive name to reflect different use
+  $ActionSendStreamDriverCertFingerprint is now
+  $ActionSendStreamDriverPermittedPeer and can be used both for
+  fingerprint and name authentication (similar to the input side)
 ---------------------------------------------------------------------------
 Version 3.19.3 (rgerhards), 2008-05-??
 - added ability to authenticate the server against its certificate
