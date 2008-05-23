@@ -638,7 +638,9 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 	gnuRet = gnutls_certificate_verify_peers(pThis->sess);
-	if(gnuRet < 1)
+	if(gnuRet == GNUTLS_E_NO_CERTIFICATE_FOUND) {
+		errmsg.LogError(NO_ERRCODE, "peer did not provide a certificate, not permitted to talk to it");
+	} else if(gnuRet < 1)
 		CHKgnutls(gnuRet);
 
 	if(gnuRet & GNUTLS_CERT_INVALID) {
