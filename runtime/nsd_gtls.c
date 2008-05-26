@@ -504,6 +504,45 @@ finalize_it:
 }
 
 
+/* Perform a match on ONE peer name obtained from the certificate. This name
+ * is checked against the set of configured credentials. *pbFoundPositiveMatch is
+ * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
+ * to 0 by the caller (this is a performance enhancement as we expect to be
+ * called multiple times)
+ * rgerhards, 2008-05-26
+ */
+static rsRetVal
+gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatch)
+{
+	permittedPeers_t *pPeer;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	assert(pszPeerID != NULL);
+	assert(pbFoundPositiveMatch != NULL);
+
+	if(pThis->pPermPeers) { /* do we have configured peer IDs? */
+		pPeer = pThis->pPermPeers;
+		while(pPeer != NULL && !*pbFoundPositiveMatch) {
+			if(!strcmp((char*)pszPeerID, (char*)pPeer->pszID)) {
+				*pbFoundPositiveMatch = 1;
+			} else {
+				pPeer = pPeer->pNext;
+			}
+		}
+	} else {
+		/* we do not have configured peer IDs, so we use defaults */
+RUNLOG_VAR("%s", pThis->pszConnectHost);
+		if(   pThis->pszConnectHost
+		   && !strcmp((char*)pszPeerID, (char*)pThis->pszConnectHost)) {
+			*pbFoundPositiveMatch = 1;
+		}
+	}
+
+	RETiRet;
+}
+
+
 /* Check the peer's ID in name auth mode.
  * rgerhards, 2008-05-22
  */
@@ -515,7 +554,6 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 	int iAltName;
 	size_t szAltNameLen;
 	int bFoundPositiveMatch;
-	permittedPeers_t *pPeer;
 	cstr_t *pStr = NULL;
 	int gnuRet;
 	DEFiRet;
@@ -537,18 +575,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 			dbgprintf("subject alt dnsName: '%s'\n", szAltName);
 			snprintf((char*)lnBuf, sizeof(lnBuf), "DNSname: %s; ", szAltName);
 			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-			/* we found it - now we need to loop through the list of permitted
-			 * peer IDs. As soon as we have a positive match, we are all set.
-			 */
-			pPeer = pThis->pPermPeers;
-			while(pPeer != NULL && !bFoundPositiveMatch) {
-RUNLOG_VAR("%s", pPeer->pszID);
-				if(!strcmp(szAltName, (char*)pPeer->pszID)) {
-					bFoundPositiveMatch = 1;
-				} else {
-					pPeer = pPeer->pNext;
-				}
-			}
+			CHKiRet(gtlsChkOnePeerName(pThis, (uchar*)szAltName, &bFoundPositiveMatch));
 			/* do NOT break, because there may be multiple dNSName's! */
 		}
 		++iAltName;
@@ -647,6 +674,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 	gnuRet = gnutls_certificate_verify_peers(pThis->sess);
 	if(gnuRet == GNUTLS_E_NO_CERTIFICATE_FOUND) {
+		errno = 0;
 		errmsg.LogError(NO_ERRCODE, "peer did not provide a certificate, not permitted to talk to it");
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	} else if(gnuRet < 1)
@@ -780,6 +808,10 @@ CODESTARTobjDestruct(nsd_gtls)
 
 	if(pThis->pTcp != NULL) {
 		nsd_ptcp.Destruct(&pThis->pTcp);
+	}
+
+	if(pThis->pszConnectHost != NULL) {
+		free(pThis->pszConnectHost);
 	}
 ENDobjDestruct(nsd_gtls)
 
@@ -1130,6 +1162,12 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	/* assign the socket to GnuTls */
 	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
 	gtlsSetTransportPtr(pThis, sock);
+
+	/* we need to store the hostname as an alternate mean of authentication if no
+	 * permitted peer names are given. Using the hostname is quite useful. It permits
+	 * auto-configuration of security if a commen root cert is present. -- rgerhards, 2008-05-26
+	 */
+	CHKmalloc(pThis->pszConnectHost = (uchar*)strdup((char*)host));
 
 	/* and perform the handshake */
 	CHKgnutls(gnutls_handshake(pThis->sess));

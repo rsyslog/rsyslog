@@ -37,6 +37,7 @@ typedef nsd_if_t nsd_gtls_if_t; /* we just *implement* this interface */
 struct nsd_gtls_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pTcp;		/**< our aggregated nsd_ptcp data */
+	uchar *pszConnectHost;	/**< hostname used for connect - may be used to authenticate peer if no other name given */
 	int iMode;		/* 0 - plain tcp, 1 - TLS */
 	int bAbortConn;		/* if set, abort conncection (fatal error had happened) */
 	enum { 
