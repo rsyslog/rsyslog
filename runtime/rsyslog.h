@@ -231,6 +231,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CONNECTION_ABORTREQ = -2089, /**< connection was abort requested due to previous error */
 	RS_RET_CERT_INVALID = -2090, /**< a x509 certificate failed validation */
 	RS_RET_CERT_INVALID_DN = -2091, /**< distinguised name in x509 certificate is invalid (e.g. wrong escaping) */
+	RS_RET_CERT_EXPIRED = -2092, /**< we are past a x.509 cert's expiration time */
+	RS_RET_CERT_NOT_YET_ACTIVE = -2094, /**< x.509 cert's activation time not yet reached */
+	RS_RET_SYS_ERR = -2095, /**< system error occured (e.g. time() returned -1, quite unexpected) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

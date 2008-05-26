@@ -113,7 +113,7 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 
 	if(cert_list_size > 0) {
 		/* we only print information about the first certificate */
-		gnutls_x509_crt_init( &cert);
+		CHKgnutls(gnutls_x509_crt_init(&cert));
 
 		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
 
@@ -762,25 +762,35 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	char *pszErrCause;
 	int gnuRet;
 	cstr_t *pStr;
+	unsigned stateCert;
+	const gnutls_datum *cert_list;
+	unsigned cert_list_size = 0;
+	gnutls_x509_crt cert;
+	unsigned i;
+	time_t ttCert;
+	time_t ttNow;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	gnuRet = gnutls_certificate_verify_peers(pThis->sess);
-	if(gnuRet == GNUTLS_E_NO_CERTIFICATE_FOUND) {
+
+	/* check if we have at least one cert */
+	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
+	if(cert_list_size < 1) {
 		errno = 0;
 		errmsg.LogError(NO_ERRCODE, "peer did not provide a certificate, not permitted to talk to it");
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
-	} else if(gnuRet < 1)
-		CHKgnutls(gnuRet);
+	}
 
-	if(gnuRet & GNUTLS_CERT_INVALID) {
+	CHKgnutls(gnutls_certificate_verify_peers2(pThis->sess, &stateCert));
+
+	if(stateCert & GNUTLS_CERT_INVALID) {
 		/* provide error details if we have them */
-		if(gnuRet & GNUTLS_CERT_SIGNER_NOT_FOUND) {
+		if(stateCert & GNUTLS_CERT_SIGNER_NOT_FOUND) {
 			pszErrCause = "signer not found";
-		} else if(gnuRet & GNUTLS_CERT_SIGNER_NOT_FOUND) {
+		} else if(stateCert & GNUTLS_CERT_SIGNER_NOT_FOUND) {
 			pszErrCause = "signer is not a CA";
-		} else if(gnuRet & GNUTLS_CERT_SIGNER_NOT_CA) {
+		} else if(stateCert & GNUTLS_CERT_SIGNER_NOT_CA) {
 			pszErrCause = "insecure algorithm";
-		} else if(gnuRet & GNUTLS_CERT_REVOKED) {
+		} else if(stateCert & GNUTLS_CERT_REVOKED) {
 			pszErrCause = "certificate revoked";
 		} else {
 			pszErrCause = "no specific reason";
@@ -791,6 +801,41 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
 		rsCStrDestruct(&pStr);
 		ABORT_FINALIZE(RS_RET_CERT_INVALID);
+	}
+
+	/* get current time for certificate validation */
+	if(time(&ttNow) == -1)
+		ABORT_FINALIZE(RS_RET_SYS_ERR);
+
+	/* as it looks, we need to validate the expiration dates ourselves...
+	 * We need to loop through all certificates as we need to make sure the
+	 * interim certificates are also not expired.
+	 */
+	for(i = 0 ; i < cert_list_size ; ++i) {
+		CHKgnutls(gnutls_x509_crt_init(&cert));
+		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[i], GNUTLS_X509_FMT_DER));
+		ttCert = gnutls_x509_crt_get_activation_time(cert);
+		if(ttCert == -1)
+			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+		else if(ttCert > ttNow) {
+			errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer: certificate %d not yet active", i);
+			gtlsGetCertInfo(pThis, &pStr);
+			errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
+			rsCStrDestruct(&pStr);
+			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
+		}
+
+		ttCert = gnutls_x509_crt_get_expiration_time(cert);
+		if(ttCert == -1)
+			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+		else if(ttCert > ttNow) {
+			errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer: certificate %d expired", i);
+			gtlsGetCertInfo(pThis, &pStr);
+			errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
+			rsCStrDestruct(&pStr);
+			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
+		}
+		gnutls_x509_crt_deinit(cert);
 	}
 
 finalize_it:
