@@ -287,9 +287,8 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 	CHKiRet(rsCStrConstruct(&pStr));
 	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*)"SHA1", 4));
 	for(i = 0 ; i < sizeFingerprint ; ++i) {
-		CHKiRet(rsCStrAppendChar(pStr, ':'));
 		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
-		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 2));
+		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
 	}
 	CHKiRet(rsCStrFinish(pStr));
 
