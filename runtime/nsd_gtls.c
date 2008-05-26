@@ -282,17 +282,13 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 	cstr_t *pStr = NULL;
 	uchar buf[4];
 	size_t i;
-	int bAddColon = 0; /* do we need to add a colon to the fingerprint string? */
 	DEFiRet;
 
 	CHKiRet(rsCStrConstruct(&pStr));
+	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*)"SHA1", 4));
 	for(i = 0 ; i < sizeFingerprint ; ++i) {
-		if(bAddColon) {
-			CHKiRet(rsCStrAppendChar(pStr, ':'));
-		} else {
-			bAddColon = 1; /* all but the first need a colon added */
-		}
-		snprintf((char*)buf, sizeof(buf), "%2.2X", pFingerprint[i]);
+		CHKiRet(rsCStrAppendChar(pStr, ':'));
+		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
 		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 2));
 	}
 	CHKiRet(rsCStrFinish(pStr));
@@ -453,6 +449,88 @@ finalize_it:
 }
 
 
+/* Obtain the CN from the DN field and hand it back to the caller
+ * (which is responsible for destructing it). We try to follow 
+ * RFC2253 as far as it makes sense for our use-case. This function
+ * is considered a compromise providing good-enough correctness while
+ * limiting code size and complexity. If a problem occurs, we may enhance
+ * this function. A (pointer to a) certificate must be caller-provided.
+ * If no CN is contained in the cert, no string is returned
+ * (*ppstrCN remains NULL). *ppstrCN MUST be NULL on entry!
+ * rgerhards, 2008-05-22
+ */
+static rsRetVal
+gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt *pCert, cstr_t **ppstrCN)
+{
+	DEFiRet;
+	int gnuRet;
+	int i;
+	int bFound;
+	cstr_t *pstrCN = NULL;
+	size_t size;
+	/* big var the last, so we hope to have all we usually neeed within one mem cache line */
+	uchar szDN[1024]; /* this should really be large enough for any non-malicious case... */
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	assert(pCert != NULL);
+	assert(ppstrCN != NULL);
+	assert(*ppstrCN == NULL);
+
+	size = sizeof(szDN);
+	CHKgnutls(gnutls_x509_crt_get_dn(*pCert, (char*)szDN, &size));
+
+	/* now search for the CN part */
+	i = 0;
+	bFound = 0;
+	while(!bFound && szDN[i] != '\0') {
+		/* note that we do not overrun our string due to boolean shortcut
+		 * operations. If we have '\0', the if does not match and evaluation
+		 * stops. Order of checks is obviously important!
+		 */
+		if(szDN[i] == 'C' && szDN[i+1] == 'N' && szDN[i+2] == '=') {
+			bFound = 1;
+			i += 2;
+		}
+		i++;
+
+	}
+
+	if(!bFound) {
+		FINALIZE; /* we are done */
+	}
+
+	/* we found a common name, now extract it */
+	CHKiRet(rsCStrConstruct(&pstrCN));
+	while(szDN[i] != '\0' && szDN[i] != ',') {
+		if(szDN[i] == '\\') {
+			/* hex escapes are not implemented */
+			++i; /* escape char processed */
+			if(szDN[i] == '\0')
+				ABORT_FINALIZE(RS_RET_CERT_INVALID_DN);
+			CHKiRet(rsCStrAppendChar(pstrCN, szDN[i]));
+		} else {
+			CHKiRet(rsCStrAppendChar(pstrCN, szDN[i]));
+		}
+		++i; /* char processed */
+	}
+	CHKiRet(rsCStrFinish(pstrCN));
+
+	/* we got it - we ignore the rest of the DN string (if any). So we may
+	 * not detect if it contains more than one CN
+	 */
+
+	*ppstrCN = pstrCN;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pstrCN != NULL)
+			rsCStrDestruct(&pstrCN);
+	}
+
+	RETiRet;
+}
+
+
 /* Check the peer's ID in fingerprint auth mode.
  * rgerhards, 2008-05-22
  */
@@ -555,6 +633,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 	size_t szAltNameLen;
 	int bFoundPositiveMatch;
 	cstr_t *pStr = NULL;
+	cstr_t *pstrCN = NULL;
 	int gnuRet;
 	DEFiRet;
 
@@ -582,6 +661,17 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 	}
 
 	if(!bFoundPositiveMatch) {
+		/* if we did not succeed so far, we try the CN part of the DN... */
+		CHKiRet(gtlsGetCN(pThis, pCert, &pstrCN));
+		if(pstrCN != NULL) { /* NULL if there was no CN present */
+			dbgprintf("gtls noch checking auth for CN '%s'\n", rsCStrGetSzStr(pstrCN));
+			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", rsCStrGetSzStr(pstrCN));
+			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+			CHKiRet(gtlsChkOnePeerName(pThis, rsCStrGetSzStr(pstrCN), &bFoundPositiveMatch));
+		}
+	}
+
+	if(!bFoundPositiveMatch) {
 		dbgprintf("invalid peer name, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
 			CHKiRet(rsCStrFinish(pStr));
@@ -597,6 +687,8 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 finalize_it:
 	if(pStr != NULL)
 		rsCStrDestruct(&pStr);
+	if(pstrCN != NULL)
+		rsCStrDestruct(&pstrCN);
 	RETiRet;
 }
 

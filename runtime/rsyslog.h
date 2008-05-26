@@ -230,6 +230,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVALID_FINGERPRINT = -2088, /**< a fingerprint is not valid for this use case */
 	RS_RET_CONNECTION_ABORTREQ = -2089, /**< connection was abort requested due to previous error */
 	RS_RET_CERT_INVALID = -2090, /**< a x509 certificate failed validation */
+	RS_RET_CERT_INVALID_DN = -2091, /**< distinguised name in x509 certificate is invalid (e.g. wrong escaping) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

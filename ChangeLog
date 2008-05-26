@@ -1,5 +1,6 @@
 - implemented x509/certvalid gtls auth mode
 - implemented x509/name gtls auth mode
+- changed fingerprint gtls auth mode to new format fingerprint
 - changed config directive name to reflect different use
   $ActionSendStreamDriverCertFingerprint is now
   $ActionSendStreamDriverPermittedPeer and can be used both for
