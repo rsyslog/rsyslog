@@ -159,7 +159,8 @@ syslog has sufficiently matured.</p>
 a short summary on how to generate the necessary certificates with
 GnuTLS' certtool. You can also generate certificates via other tools,
 but as we currently support GnuTLS as the only TLS library, we thought
-it is a good idea to use their tools.<br></p>
+it is a good idea to use their tools.<br>
+</p>
 <p>Note that this section aims at people who are not involved
 with PKI at all. The main goal is to get them going in a reasonable
 secure way.&nbsp;</p>
@@ -238,14 +239,22 @@ use default server authentication and you use selector lines with IP
 addresses (e.g. "*.* @@192.168.0.1") - in that case you need to select
 a dnsName of 192.168.0.1. But, of course, changing the server IP then
 requires generating a new certificate.</li>
-</ol>After you have generated the certificate, you need to place it
-onto the local machine running rsyslogd. Specify the certificate and
-key via the $DefaultNetstreamDriverCertFile /path/to/cert.pem and
+</ol>
+After you have generated the certificate, you need to place it onto the
+local machine running rsyslogd. Specify the certificate and key via the
+$DefaultNetstreamDriverCertFile /path/to/cert.pem and
 $DefaultNetstreamDriverKeyFile /path/to/key.pem configuration
 directives. Make sure that nobody has access to key.pem, as that would
 breach security. And, once again: do NOT use these files on more than
 one instance. Doing so would prevent you from distinguising between the
 instances and thus would disable useful authentication.
+<h3>Troubleshooting Certificates</h3>
+<p>If you experience trouble with your certificate setup, it may
+be
+useful to get some information on what is contained in a specific
+certificate (file). To obtain that information, do&nbsp;</p>
+<pre>$ certtool --certificate-info --infile cert.pem</pre>
+<p>where "cert.pem" can be replaced by the various certificate pem files (but it does not work with the key files).</p>
 <h2>Conclusion</h2>
 <p>With minumal effort, you can set up a secure logging
 infrastructure employing TLS encrypted syslog message transmission.</p>
@@ -257,7 +266,8 @@ please
 <h2>Revision History</h2>
 <ul>
 <li>2008-05-06 * <a href="http://www.gerhards.net/rainer">Rainer
-Gerhards</a> * Initial Version created</li>
+Gerhards</a> * Initial Version created</li><li>2008-05-26 * <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> * added information about certificates</li>
 </ul>
 <h2>Copyright</h2>
 <p>Copyright (c) 2008 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer

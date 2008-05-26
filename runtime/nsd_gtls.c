@@ -335,6 +335,7 @@ gtlsAddOurCert(void)
 	int gnuRet;
 	uchar *keyFile;
 	uchar *certFile;
+	uchar *pGnuErr; /* for GnuTLS error reporting */
 	DEFiRet;
 
 	certFile = glbl.GetDfltNetstrmDrvrCertFile();
@@ -344,6 +345,13 @@ gtlsAddOurCert(void)
 	CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		pGnuErr = gtlsStrerror(gnuRet);
+		errno = 0;
+		errmsg.LogError(NO_ERRCODE, "error adding our certificate. GnuTLS error %d, message: '%s', "
+				"key: '%s', cert: '%s'\n", gnuRet, pGnuErr, certFile, keyFile);
+		free(pGnuErr);
+	}
 	RETiRet;
 }
 
@@ -435,7 +443,6 @@ gtlsGlblInitLstn(void)
 		 * considered legacy. -- rgerhards, 2008-05-05
 		 */
 		/*CHKgnutls(gnutls_certificate_set_x509_crl_file(xcred, CRLFILE, GNUTLS_X509_FMT_PEM));*/
-	//CHKiRet(gtlsAddOurCert());
 		CHKiRet(generate_dh_params());
 		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */
 		bGlblSrvrInitDone = 1; /* we are all set now */
@@ -535,6 +542,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 			 */
 			pPeer = pThis->pPermPeers;
 			while(pPeer != NULL && !bFoundPositiveMatch) {
+RUNLOG_VAR("%s", pPeer->pszID);
 				if(!strcmp(szAltName, (char*)pPeer->pszID)) {
 					bFoundPositiveMatch = 1;
 				} else {
@@ -640,6 +648,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	gnuRet = gnutls_certificate_verify_peers(pThis->sess);
 	if(gnuRet == GNUTLS_E_NO_CERTIFICATE_FOUND) {
 		errmsg.LogError(NO_ERRCODE, "peer did not provide a certificate, not permitted to talk to it");
+		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	} else if(gnuRet < 1)
 		CHKgnutls(gnuRet);
 
@@ -757,7 +766,7 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
 	pThis->bReportAuthErr = 1;
-CHKiRet(gtlsAddOurCert());
+	CHKiRet(gtlsAddOurCert());
 finalize_it:
 ENDobjConstruct(nsd_gtls)
 
