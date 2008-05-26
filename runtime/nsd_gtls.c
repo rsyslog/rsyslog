@@ -828,7 +828,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		ttCert = gnutls_x509_crt_get_expiration_time(cert);
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
-		else if(ttCert > ttNow) {
+		else if(ttCert < ttNow) {
 			errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer: certificate %d expired", i);
 			gtlsGetCertInfo(pThis, &pStr);
 			errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
