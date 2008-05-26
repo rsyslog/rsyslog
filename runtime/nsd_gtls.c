@@ -31,6 +31,7 @@
 #include <gnutls/x509.h>
 #include <gcrypt.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -59,6 +60,8 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(nsd_ptcp)
 
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
+
+static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially non-reentrant gtlStrerror() function */
 
 /* a macro to check GnuTLS calls against unexpected errors */
 #define CHKgnutls(x) \
@@ -311,8 +314,9 @@ uchar *gtlsStrerror(int error)
 {
 	uchar *pErr;
 
-	// TODO: guard by mutex!
+	pthread_mutex_lock(&mutGtlsStrerror);
 	pErr = (uchar*) strdup(gnutls_strerror(error));
+	pthread_mutex_unlock(&mutGtlsStrerror);
 
 	return pErr;
 }
@@ -1389,6 +1393,7 @@ BEGINmodExit
 CODESTARTmodExit
 	nsdsel_gtlsClassExit();
 	nsd_gtlsClassExit();
+	pthread_mutex_destroy(&mutGtlsStrerror);
 ENDmodExit
 
 
@@ -1406,6 +1411,7 @@ CODESTARTmodInit
 	CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 	CHKiRet(nsdsel_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 
+	pthread_mutex_init(&mutGtlsStrerror, NULL);
 ENDmodInit
 /* vi:set ai:
  */

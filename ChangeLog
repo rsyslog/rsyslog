@@ -1,6 +1,9 @@
 - implemented x509/certvalid gtls auth mode
 - implemented x509/name gtls auth mode
 - changed fingerprint gtls auth mode to new format fingerprint
+- protected gtls error string function by a mutex. Without it, we
+  could have a race condition in extreme cases. This was very remote,
+  but now can no longer happen.
 - changed config directive name to reflect different use
   $ActionSendStreamDriverCertFingerprint is now
   $ActionSendStreamDriverPermittedPeer and can be used both for
