@@ -60,6 +60,7 @@ MODULE_TYPE_LIB
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(net)
 DEFobjCurrIf(nsd_ptcp)
 
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
@@ -741,12 +742,11 @@ gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatc
 
 	if(pThis->pPermPeers) { /* do we have configured peer IDs? */
 		pPeer = pThis->pPermPeers;
-		while(pPeer != NULL && !*pbFoundPositiveMatch) {
-			if(!strcmp((char*)pszPeerID, (char*)pPeer->pszID)) {
-				*pbFoundPositiveMatch = 1;
-			} else {
-				pPeer = pPeer->pNext;
-			}
+		while(pPeer != NULL) {
+			CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
+			if(*pbFoundPositiveMatch)
+				break;
+			pPeer = pPeer->pNext;
 		}
 	} else {
 		/* we do not have configured peer IDs, so we use defaults */
@@ -756,6 +756,7 @@ gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatc
 		}
 	}
 
+finalize_it:
 	RETiRet;
 }
 
@@ -1520,6 +1521,7 @@ CODESTARTObjClassExit(nsd_gtls)
 
 	/* release objects we no longer need */
 	objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
+	objRelease(net, LM_NET_FILENAME);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(nsd_gtls)
@@ -1533,6 +1535,7 @@ BEGINObjClassInit(nsd_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
 
 	/* now do global TLS init stuff */

@@ -82,6 +82,7 @@ typedef struct objInfo_s objInfo_t;
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
 typedef rsRetVal (*errLogFunc_t)(uchar*); /* this is a trick to store a function ptr to a function returning a function ptr... */
 typedef struct permittedPeers_s permittedPeers_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
+typedef struct permittedPeerWildcard_s permittedPeerWildcard_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct tcpsrv_s tcpsrv_t;
 
 /* some universal 64 bit define... */
@@ -236,6 +237,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_SYS_ERR = -2095, /**< system error occured (e.g. time() returned -1, quite unexpected) */
 	RS_RET_FILE_NO_STAT = -2096, /**< can not stat() a file */
 	RS_RET_FILE_TOO_LARGE = -2097, /**< a file is larger than permitted */
+	RS_RET_INVALID_WILDCARD = -2098, /**< a wildcard entry is invalid */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

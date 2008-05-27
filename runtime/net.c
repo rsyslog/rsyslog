@@ -92,6 +92,114 @@ int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it
 /* ------------------------------ begin permitted peers code ------------------------------ */
 
 
+/* add a wildcard entry to this permitted peer. Entries are always
+ * added at the tail of the list. pszStr and lenStr identify the wildcard
+ * entry to be added. Note that the string is NOT \0 terminated, so
+ * we must rely on lenStr for when it is finished.
+ * rgerhards, 2008-05-27
+ */
+static rsRetVal
+AddPermittedPeerWildcard(permittedPeers_t *pPeer, uchar* pszStr, size_t lenStr)
+{
+	permittedPeerWildcard_t *pNew = NULL;
+	size_t iSrc;
+	size_t iDst;
+	DEFiRet;
+
+	assert(pPeer != NULL);
+	assert(pszStr != NULL);
+
+	CHKmalloc(pNew = calloc(1, sizeof(permittedPeers_t)));
+
+	if(lenStr == 0) { /* empty domain components are permitted */
+		pNew->wildcardType = PEER_WILDCARD_EMPTY_COMPONENT;
+		FINALIZE;
+	} else {
+		/* alloc memory for the domain component. We may waste a byte or
+		 * two, but that's ok.
+		 */
+		CHKmalloc(pNew->pszDomainPart = malloc(lenStr +1 ));
+	}
+
+	if(pszStr[0] == '*') {
+		pNew->wildcardType = PEER_WILDCARD_AT_START;
+		iSrc = 1; /* skip '*' */
+	} else {
+		iSrc = 0;
+	}
+
+	for(iDst = 0 ; iSrc < lenStr && pszStr[iSrc] != '*' ; ++iSrc, ++iDst)  {
+		pNew->pszDomainPart[iDst] = pszStr[iSrc];
+	}
+
+	if(iSrc < lenStr) {
+		if(iSrc + 1 == lenStr && pszStr[iSrc] == '*') {
+			if(pNew->wildcardType == PEER_WILDCARD_AT_START) {
+				ABORT_FINALIZE(RS_RET_INVALID_WILDCARD);
+			} else {
+				pNew->wildcardType = PEER_WILDCARD_AT_END;
+			}
+		} else {
+			/* we have an invalid wildcard, something follows the asterisk! */
+			ABORT_FINALIZE(RS_RET_INVALID_WILDCARD);
+		}
+	}
+
+	if(lenStr == 1 && pNew->wildcardType == PEER_WILDCARD_AT_START) {
+		pNew->wildcardType = PEER_WILDCARD_MATCH_ALL;
+	}
+
+	/* if we reach this point, we had a valid wildcard. We now need to
+	 * properly terminate the domain component string.
+	 */
+	pNew->pszDomainPart[iDst] = '\0';
+	pNew->lenDomainPart = strlen((char*)pNew->pszDomainPart);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pNew != NULL) {
+			if(pNew->pszDomainPart != NULL)
+				free(pNew->pszDomainPart);
+			free(pNew);
+		}
+	} else {
+		/* enqueue the element */
+		if(pPeer->pWildcardRoot == NULL) {
+			pPeer->pWildcardRoot = pNew;
+		} else {
+			pPeer->pWildcardLast->pNext = pNew;
+		}
+		pPeer->pWildcardLast = pNew;
+	}
+
+	RETiRet;
+}
+
+
+/* Destruct a permitted peer's wildcard list -- rgerhards, 2008-05-27 */
+static rsRetVal
+DestructPermittedPeerWildcards(permittedPeers_t *pPeer)
+{
+	permittedPeerWildcard_t *pCurr;
+	permittedPeerWildcard_t *pDel;
+	DEFiRet;
+
+	assert(pPeer != NULL);
+
+	for(pCurr = pPeer->pWildcardRoot ; pCurr != NULL ; /*EMPTY*/) {
+		pDel = pCurr;
+		pCurr = pCurr->pNext;
+		free(pDel->pszDomainPart);
+		free(pDel);
+	}
+
+	pPeer->pWildcardRoot = NULL;
+	pPeer->pWildcardLast = NULL;
+
+	RETiRet;
+}
+
+
 /* add a permitted peer. PermittedPeers is an interim solution until we can provide
  * access control via enhanced RainerScript methods.
  * Note: the provided string is handed over to this function, caller must
@@ -137,12 +245,177 @@ DestructPermittedPeers(permittedPeers_t **ppRootPeer)
 	for(pCurr = *ppRootPeer ; pCurr != NULL ; /*EMPTY*/) {
 		pDel = pCurr;
 		pCurr = pCurr->pNext;
+		DestructPermittedPeerWildcards(pDel);
 		free(pDel->pszID);
 		free(pDel);
 	}
 
 	*ppRootPeer = NULL;
 
+	RETiRet;
+}
+
+
+/* Compile a wildcard. The function first checks if there is a wildcard
+ * present and compiles it only if so ;) It sets the etryType status
+ * accordingly.
+ * rgerhards, 2008-05-27
+ */
+static rsRetVal
+PermittedPeerWildcardCompile(permittedPeers_t *pPeer)
+{
+	uchar *pC;
+	uchar *pStart;
+	DEFiRet;
+
+	assert(pPeer != NULL);
+	assert(pPeer->pszID != NULL);
+
+	/* first check if we have a wildcard */
+	for(pC = pPeer->pszID ; *pC != '\0' && *pC != '*' ; ++pC)
+		/*EMPTY, just skip*/;
+
+	if(*pC == '\0') {
+		/* no wildcard found, we are mostly done */
+		pPeer->etryType = PERM_PEER_TYPE_PLAIN;
+		FINALIZE;
+	}
+
+	/* if we reach this point, the string contains wildcards. So let's
+	 * compile the structure. To do so, we must parse from dot to dot
+	 * and create a wildcard entry for each domain component we find.
+	 * We must also flag problems if we have an asterisk in the middle
+	 * of the text (it is supported at the start or end only).
+	 */
+	pPeer->etryType = PERM_PEER_TYPE_WILDCARD;
+
+	for(pC = pPeer->pszID ; *pC != '\0' ; ++pC) {
+		pStart = pC;
+		/* find end of domain component */
+		for( ; *pC != '\0' && *pC != '.' ; ++pC)
+			/*EMPTY, just skip*/;
+		CHKiRet(AddPermittedPeerWildcard(pPeer, pStart, pC - pStart));
+		/* now check if we have an empty component at end of string */
+		if(*pC == '.' && *(pC + 1) == '\0') {
+			/* pStart is a dummy, it is not used if length is 0 */
+			CHKiRet(AddPermittedPeerWildcard(pPeer, pStart, 0)); 
+		}
+	}
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(NO_ERRCODE, "error compiling wildcard expression '%s'",
+			 pPeer->pszID);
+	}
+	RETiRet;
+}
+
+
+/* Do a (potential) wildcard match. The function first checks if the wildcard
+ * has already been compiled and, if not, compiles it. If the peer entry in
+ * question does NOT contain a wildcard, a simple strcmp() is done.
+ * *pbIsMatching is set to 0 if there is no match and something else otherwise.
+ * rgerhards, 2008-05-27 */
+static rsRetVal
+PermittedPeerWildcardMatch(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *pbIsMatching)
+{
+	permittedPeerWildcard_t *pWildcard;
+	uchar *pC;
+	uchar *pStart; /* start of current domain component */
+	size_t iWildcard, iName; /* work indexes for backward comparisons */
+	DEFiRet;
+
+	assert(pPeer != NULL);
+	assert(pszNameToMatch != NULL);
+	assert(pbIsMatching != NULL);
+
+	if(pPeer->etryType == PERM_PEER_TYPE_UNDECIDED) {
+		PermittedPeerWildcardCompile(pPeer);
+	}
+
+	if(pPeer->etryType == PERM_PEER_TYPE_PLAIN) {
+		*pbIsMatching = !strcmp((char*)pPeer->pszID, (char*)pszNameToMatch);
+		FINALIZE;
+	}
+
+	/* we have a wildcard, so we need to extract the domain components and
+	 * check then against the provided wildcards.
+	 */
+	pWildcard = pPeer->pWildcardRoot;
+	pC = pszNameToMatch;
+	while(*pC != '\0') {
+		if(pWildcard == NULL) {
+			/* we have more domain components than we have wildcards --> no match */
+			*pbIsMatching = 0;
+			FINALIZE;
+		}
+		pStart = pC;
+		while(*pC != '\0' && *pC != '.') {
+			++pC;
+		}
+
+		/* got the component, now do the match */
+		switch(pWildcard->wildcardType) {
+			case PEER_WILDCARD_NONE:
+				if(   pWildcard->lenDomainPart != (size_t) (pC - pStart)
+				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart, pC - pStart)) {
+					*pbIsMatching = 0;
+					FINALIZE;
+				}
+				break;
+			case PEER_WILDCARD_AT_START:
+				/* we need to do the backwards-matching manually */
+				if(pWildcard->lenDomainPart > (size_t) (pC - pStart)) {
+					*pbIsMatching = 0;
+					FINALIZE;
+				}
+				iName = (size_t) (pC - pStart) - pWildcard->lenDomainPart;
+				iWildcard = 0;
+				while(iWildcard < pWildcard->lenDomainPart) {
+					if(pWildcard->pszDomainPart[iWildcard] != pStart[iName]) {
+						*pbIsMatching = 0;
+						FINALIZE;
+					}
+					++iName;
+					++iWildcard;
+				}
+				break;
+			case PEER_WILDCARD_AT_END:
+				if(   pWildcard->lenDomainPart > (size_t) (pC - pStart)
+				   || strncmp((char*)pStart, (char*)pWildcard->pszDomainPart, pWildcard->lenDomainPart)) {
+					*pbIsMatching = 0;
+					FINALIZE;
+				}
+				break;
+			case PEER_WILDCARD_MATCH_ALL:
+				/* everything is OK, just continue */
+				break;
+			case PEER_WILDCARD_EMPTY_COMPONENT:
+				if(pC - pStart > 0) {
+				   	/* if it is not empty, it is no match... */
+					*pbIsMatching = 0;
+					FINALIZE;
+				}
+				break;
+		}
+		pWildcard =  pWildcard->pNext; /* we processed this entry */
+
+		/* skip '.' if we had it and so prepare for next iteration */
+		if(*pC == '.')
+			++pC;
+	}
+
+	if(pWildcard != NULL) {
+		/* we have more domain components than in the name to be
+		 * checked. So this is no match.
+		 */
+		*pbIsMatching = 0;
+		FINALIZE;
+	}
+
+	*pbIsMatching = 1; /* finally... it matches ;) */
+
+finalize_it:
 	RETiRet;
 }
 
@@ -1159,6 +1432,7 @@ CODESTARTobjQueryInterface(net)
 	pIf->getLocalHostname = getLocalHostname;
 	pIf->AddPermittedPeer = AddPermittedPeer;
 	pIf->DestructPermittedPeers = DestructPermittedPeers;
+	pIf->PermittedPeerWildcardMatch = PermittedPeerWildcardMatch;
 finalize_it:
 ENDobjQueryInterface(net)
 
