@@ -1,5 +1,7 @@
+---------------------------------------------------------------------------
+Version 3.19.4 (rgerhards), 2008-05-27
 - implemented x509/certvalid gtls auth mode
-- implemented x509/name gtls auth mode
+- implemented x509/name gtls auth mode (including wildcards)
 - changed fingerprint gtls auth mode to new format fingerprint
 - protected gtls error string function by a mutex. Without it, we
   could have a race condition in extreme cases. This was very remote,
@@ -8,10 +10,15 @@
   $ActionSendStreamDriverCertFingerprint is now
   $ActionSendStreamDriverPermittedPeer and can be used both for
   fingerprint and name authentication (similar to the input side)
----------------------------------------------------------------------------
-Version 3.19.4 (rgerhards), 2008-05-??
 - bugfix: sender information (fromhost et al) was missing in imudp
   thanks to sandiso for reporting this bug
+- this release fully inplements IETF's syslog-transport-tls-12 plus
+  the latest text changes Joe Salowey provided via email. Not included
+  is ipAddress subjectAltName authentication, which I think will be
+  dropped from the draft. I don't think there is any real need for it.
+This release also includes all bug fix up to today from the beta
+and stable branches. Most importantly, this means the bugfix for
+100% CPU utilization by imklog.
 ---------------------------------------------------------------------------
 Version 3.19.3 (rgerhards), 2008-05-21
 - added ability to authenticate the server against its certificate
