@@ -54,7 +54,11 @@ struct nsd_gtls_s {
 	int bReportAuthErr;	/* only the first auth error is to be reported, this var triggers it. Initially, it is
 				 * set to 1 and changed to 0 after the first report. It is changed back to 1 after
 				 * one successful authentication. */
-	permittedPeers_t *pPermPeers; /* permitted senders */
+	permittedPeers_t *pPermPeers; /* permitted peers */
+	gnutls_x509_crt ourCert;	/**< our certificate, if in client mode (unused in server mode) */
+	gnutls_x509_privkey ourKey;	/**< our private key, if in client mode (unused in server mode) */
+	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */
+	short	bOurKeyIsInit;	/**< 1 if our private key is initialized and must be deinit on destruction */
 };
 
 /* interface is defined in nsd.h, we just implement it! */

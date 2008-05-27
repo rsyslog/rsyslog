@@ -31,6 +31,9 @@
 #include <gnutls/x509.h>
 #include <gcrypt.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <pthread.h>
 
 #include "rsyslog.h"
@@ -77,6 +80,141 @@ static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially 
 static gnutls_certificate_credentials xcred;
 static gnutls_dh_params dh_params;
 
+/* read in the whole content of a file. The caller is responsible for
+ * freeing the buffer. To prevent DOS, this function can NOT read
+ * files larger than 1MB (which still is *very* large).
+ * rgerhards, 2008-05-26
+ */
+static rsRetVal
+readFile(uchar *pszFile, gnutls_datum_t *pBuf)
+{
+	int fd;
+	struct stat stat_st;
+	DEFiRet;
+
+	assert(pszFile != NULL);
+	assert(pBuf != NULL);
+
+	pBuf->data = NULL;
+
+	if((fd = open((char*)pszFile, 0)) == -1) {
+		errmsg.LogError(NO_ERRCODE, "can not read file '%s'", pszFile);
+		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+
+	}
+
+	if(fstat(fd, &stat_st) == -1) {
+		errmsg.LogError(NO_ERRCODE, "can not stat file '%s'", pszFile);
+		ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
+	}
+	
+	/* 1MB limit */
+	if(stat_st.st_size > 1024 * 1024) {
+		errmsg.LogError(NO_ERRCODE, "file '%s' too large, max 1MB", pszFile);
+		ABORT_FINALIZE(RS_RET_FILE_TOO_LARGE);
+	}
+
+	CHKmalloc(pBuf->data = malloc(stat_st.st_size));
+	pBuf->size = stat_st.st_size;
+	if(read(fd,  pBuf->data, stat_st.st_size) != stat_st.st_size) {
+		errmsg.LogError(NO_ERRCODE, "error or incomplete read of file '%s'", pszFile);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	close(fd);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pBuf->data != NULL) {
+			free(pBuf->data);
+			pBuf->data = NULL;
+			pBuf->size = 0;
+			}
+	}
+	RETiRet;
+}
+
+
+/* Load the certificate and the private key into our own store. We need to do
+ * this in the client case, to support fingerprint authentication. In that case,
+ * we may be presented no matching root certificate, but we must provide ours.
+ * The only way to do that is via the cert callback interface, but for it we
+ * need to load certificates into our private store.
+ * rgerhards, 2008-05-26
+ */
+static rsRetVal
+gtlsLoadOurCertKey(nsd_gtls_t *pThis)
+{
+	DEFiRet;
+	int gnuRet;
+	gnutls_datum_t data = { NULL, 0 };
+	uchar *keyFile;
+	uchar *certFile;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	certFile = glbl.GetDfltNetstrmDrvrCertFile();
+	keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
+
+	/* try load certificate */
+	CHKiRet(readFile(certFile, &data));
+	CHKgnutls(gnutls_x509_crt_init(&pThis->ourCert));
+	pThis->bOurCertIsInit = 1;
+	CHKgnutls(gnutls_x509_crt_import(pThis->ourCert, &data, GNUTLS_X509_FMT_PEM));
+	free(data.data);
+	data.data = NULL;
+
+	/* try load private key */
+	CHKiRet(readFile(keyFile, &data));
+	CHKgnutls(gnutls_x509_privkey_init(&pThis->ourKey));
+	pThis->bOurKeyIsInit = 1;
+	CHKgnutls(gnutls_x509_privkey_import(pThis->ourKey, &data, GNUTLS_X509_FMT_PEM));
+	free(data.data);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(data.data != NULL)
+			free(data.data);
+		if(pThis->bOurCertIsInit)
+			gnutls_x509_crt_deinit(pThis->ourCert);
+		if(pThis->bOurKeyIsInit)
+			gnutls_x509_privkey_deinit(pThis->ourKey);
+	}
+	RETiRet;
+}
+
+
+/* This callback must be associated with a session by calling
+ * gnutls_certificate_client_set_retrieve_function(session, cert_callback),
+ * before a handshake. We will always return the configured certificate,
+ * even if it does not match the peer's trusted CAs. This is necessary
+ * to use self-signed certs in fingerprint mode. And, yes, this usage
+ * of the callback is quite a hack. But it seems the only way to
+ * obey to the IETF -transport-tls I-D.
+ * Note: GnuTLS requires the function to return 0 on success and
+ * -1 on failure.
+ * rgerhards, 2008-05-27
+ */
+static int
+gtlsClientCertCallback(gnutls_session session,
+              __attribute__((unused)) const gnutls_datum* req_ca_rdn, int __attribute__((unused)) nreqs,
+              __attribute__((unused)) const gnutls_pk_algorithm* sign_algos, int __attribute__((unused)) sign_algos_length,
+              gnutls_retr_st *st)
+{
+	nsd_gtls_t *pThis;
+
+	pThis = (nsd_gtls_t*) gnutls_session_get_ptr(session);
+
+	st->type = GNUTLS_CRT_X509;
+	st->ncerts = 1;
+	st->cert.x509 = &pThis->ourCert;
+	st->key.x509 = pThis->ourKey;
+	st->deinit_all = 0;
+
+	return 0;
+}
+
+
 /* This function extracts some information about this session's peer
  * certificate. Works for X.509 certificates only. Adds all
  * of the info to a cstr_t, which is handed over to the caller.
@@ -98,8 +236,8 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 	int gnuRet;
 	DEFiRet;
 	unsigned iAltName;
-	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
 	size_t szAltNameLen;
+	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
 
 	assert(ppStr != NULL);
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -111,20 +249,18 @@ gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
 
 	CHKiRet(rsCStrConstruct(&pStr));
 
-	snprintf((char*)lnBuf, sizeof(lnBuf), "Peer provided %d certificate(s). ", cert_list_size);
+	snprintf((char*)lnBuf, sizeof(lnBuf), "peer provided %d certificate(s). ", cert_list_size);
 	CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 
 	if(cert_list_size > 0) {
 		/* we only print information about the first certificate */
 		CHKgnutls(gnutls_x509_crt_init(&cert));
-
 		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
 
 		CHKiRet(rsCStrAppendStr(pStr, (uchar*)"Certificate 1 info: "));
 
 		expiration_time = gnutls_x509_crt_get_expiration_time(cert);
 		activation_time = gnutls_x509_crt_get_activation_time(cert);
-
 		ctime_r(&activation_time, dn);
 		dn[strlen(dn) - 1] = '\0'; /* strip linefeed */
 		snprintf((char*)lnBuf, sizeof(lnBuf), "certificate valid from %s ", dn);
@@ -306,7 +442,7 @@ finalize_it:
 }
 
 
-/* a thread-safe variant of gnutls_strerror - TODO: implement it!
+/* a thread-safe variant of gnutls_strerror
  * The caller must free the returned string.
  * rgerhards, 2008-04-30
  */
@@ -589,7 +725,8 @@ finalize_it:
  * is checked against the set of configured credentials. *pbFoundPositiveMatch is
  * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
  * to 0 by the caller (this is a performance enhancement as we expect to be
- * called multiple times)
+ * called multiple times).
+ * TODO: implemet wildcards?
  * rgerhards, 2008-05-26
  */
 static rsRetVal
@@ -613,7 +750,6 @@ gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatc
 		}
 	} else {
 		/* we do not have configured peer IDs, so we use defaults */
-RUNLOG_VAR("%s", pThis->pszConnectHost);
 		if(   pThis->pszConnectHost
 		   && !strcmp((char*)pszPeerID, (char*)pThis->pszConnectHost)) {
 			*pbFoundPositiveMatch = 1;
@@ -953,6 +1089,11 @@ CODESTARTobjDestruct(nsd_gtls)
 	if(pThis->pszConnectHost != NULL) {
 		free(pThis->pszConnectHost);
 	}
+
+	if(pThis->bOurCertIsInit)
+		gnutls_x509_crt_deinit(pThis->ourCert);
+	if(pThis->bOurKeyIsInit)
+		gnutls_x509_privkey_deinit(pThis->ourKey);
 ENDobjDestruct(nsd_gtls)
 
 
@@ -1275,7 +1416,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
-	static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };
+	/* TODO: later? static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };*/
+	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -1291,6 +1433,15 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	CHKgnutls(gnutls_init(&pThis->sess, GNUTLS_CLIENT));
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 1;
+
+	/* in the client case, we need to set a callback that ensures our certificate
+	 * will be presented to the server even if it is not signed by one of the server's
+	 * trusted roots. This is necessary to support fingerprint authentication.
+	 */
+	/* store a pointer to ourselfs (needed by callback) */
+	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
+	CHKiRet(gtlsLoadOurCertKey(pThis)); /* first load .pem files */
+	gnutls_certificate_client_set_retrieve_function(xcred, gtlsClientCertCallback);
 
 	/* Use default priorities */
 	CHKgnutls(gnutls_set_default_priority(pThis->sess));
@@ -1313,7 +1464,10 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	CHKgnutls(gnutls_handshake(pThis->sess));
 	dbgprintf("GnuTLS handshake succeeded\n");
 
-	/* now check if the remote peer is permitted to talk to us */
+	/* now check if the remote peer is permitted to talk to us - ideally, we 
+	 * should do this during the handshake, but GnuTLS does not yet provide 
+	 * the necessary callbacks -- rgerhards, 2008-05-26
+	 */
 	CHKiRet(gtlsChkPeerAuth(pThis));
 
 finalize_it:
