@@ -131,7 +131,7 @@ doRetry(nsd_gtls_t *pNsd)
 			if(gnuRet == 0) {
 				pNsd->rtryCall = gtlsRtry_None; /* we are done */
 				/* we got a handshake, now check authorization */
-				CHKiRet(gtlsChkFingerprint(pNsd));
+				CHKiRet(gtlsChkPeerAuth(pNsd));
 			}
 			break;
 		default:

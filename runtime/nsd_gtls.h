@@ -37,12 +37,14 @@ typedef nsd_if_t nsd_gtls_if_t; /* we just *implement* this interface */
 struct nsd_gtls_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pTcp;		/**< our aggregated nsd_ptcp data */
+	uchar *pszConnectHost;	/**< hostname used for connect - may be used to authenticate peer if no other name given */
 	int iMode;		/* 0 - plain tcp, 1 - TLS */
 	int bAbortConn;		/* if set, abort conncection (fatal error had happened) */
 	enum { 
 		GTLS_AUTH_CERTNAME = 0,
 		GTLS_AUTH_CERTFINGERPRINT = 1,
-		GTLS_AUTH_CERTANON = 2
+		GTLS_AUTH_CERTVALID = 2,
+		GTLS_AUTH_CERTANON = 3
 	} authMode;
 	gtlsRtryCall_t rtryCall;/**< what must we retry? */
 	int bIsInitiator;	/**< 0 if socket is the server end (listener), 1 if it is the initiator */
@@ -52,7 +54,11 @@ struct nsd_gtls_s {
 	int bReportAuthErr;	/* only the first auth error is to be reported, this var triggers it. Initially, it is
 				 * set to 1 and changed to 0 after the first report. It is changed back to 1 after
 				 * one successful authentication. */
-	permittedPeers_t *pPermPeers; /* permitted senders */
+	permittedPeers_t *pPermPeers; /* permitted peers */
+	gnutls_x509_crt ourCert;	/**< our certificate, if in client mode (unused in server mode) */
+	gnutls_x509_privkey ourKey;	/**< our private key, if in client mode (unused in server mode) */
+	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */
+	short	bOurKeyIsInit;	/**< 1 if our private key is initialized and must be deinit on destruction */
 };
 
 /* interface is defined in nsd.h, we just implement it! */
@@ -62,6 +68,7 @@ struct nsd_gtls_s {
 PROTOTYPEObj(nsd_gtls);
 /* some prototypes for things used by our nsdsel_gtls helper class */
 uchar *gtlsStrerror(int error);
+rsRetVal gtlsChkPeerAuth(nsd_gtls_t *pThis);
 
 /* the name of our library binary */
 #define LM_NSD_GTLS_FILENAME "lmnsd_gtls"

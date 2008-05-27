@@ -31,6 +31,10 @@
 #include <gnutls/x509.h>
 #include <gcrypt.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <pthread.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -56,9 +60,12 @@ MODULE_TYPE_LIB
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(net)
 DEFobjCurrIf(nsd_ptcp)
 
 static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - already done */
+
+static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially non-reentrant gtlStrerror() function */
 
 /* a macro to check GnuTLS calls against unexpected errors */
 #define CHKgnutls(x) \
@@ -74,6 +81,335 @@ static int bGlblSrvrInitDone = 0;	/**< 0 - server global init not yet done, 1 - 
 static gnutls_certificate_credentials xcred;
 static gnutls_dh_params dh_params;
 
+/* read in the whole content of a file. The caller is responsible for
+ * freeing the buffer. To prevent DOS, this function can NOT read
+ * files larger than 1MB (which still is *very* large).
+ * rgerhards, 2008-05-26
+ */
+static rsRetVal
+readFile(uchar *pszFile, gnutls_datum_t *pBuf)
+{
+	int fd;
+	struct stat stat_st;
+	DEFiRet;
+
+	assert(pszFile != NULL);
+	assert(pBuf != NULL);
+
+	pBuf->data = NULL;
+
+	if((fd = open((char*)pszFile, 0)) == -1) {
+		errmsg.LogError(NO_ERRCODE, "can not read file '%s'", pszFile);
+		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+
+	}
+
+	if(fstat(fd, &stat_st) == -1) {
+		errmsg.LogError(NO_ERRCODE, "can not stat file '%s'", pszFile);
+		ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
+	}
+	
+	/* 1MB limit */
+	if(stat_st.st_size > 1024 * 1024) {
+		errmsg.LogError(NO_ERRCODE, "file '%s' too large, max 1MB", pszFile);
+		ABORT_FINALIZE(RS_RET_FILE_TOO_LARGE);
+	}
+
+	CHKmalloc(pBuf->data = malloc(stat_st.st_size));
+	pBuf->size = stat_st.st_size;
+	if(read(fd,  pBuf->data, stat_st.st_size) != stat_st.st_size) {
+		errmsg.LogError(NO_ERRCODE, "error or incomplete read of file '%s'", pszFile);
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	close(fd);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pBuf->data != NULL) {
+			free(pBuf->data);
+			pBuf->data = NULL;
+			pBuf->size = 0;
+			}
+	}
+	RETiRet;
+}
+
+
+/* Load the certificate and the private key into our own store. We need to do
+ * this in the client case, to support fingerprint authentication. In that case,
+ * we may be presented no matching root certificate, but we must provide ours.
+ * The only way to do that is via the cert callback interface, but for it we
+ * need to load certificates into our private store.
+ * rgerhards, 2008-05-26
+ */
+static rsRetVal
+gtlsLoadOurCertKey(nsd_gtls_t *pThis)
+{
+	DEFiRet;
+	int gnuRet;
+	gnutls_datum_t data = { NULL, 0 };
+	uchar *keyFile;
+	uchar *certFile;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	certFile = glbl.GetDfltNetstrmDrvrCertFile();
+	keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
+
+	/* try load certificate */
+	CHKiRet(readFile(certFile, &data));
+	CHKgnutls(gnutls_x509_crt_init(&pThis->ourCert));
+	pThis->bOurCertIsInit = 1;
+	CHKgnutls(gnutls_x509_crt_import(pThis->ourCert, &data, GNUTLS_X509_FMT_PEM));
+	free(data.data);
+	data.data = NULL;
+
+	/* try load private key */
+	CHKiRet(readFile(keyFile, &data));
+	CHKgnutls(gnutls_x509_privkey_init(&pThis->ourKey));
+	pThis->bOurKeyIsInit = 1;
+	CHKgnutls(gnutls_x509_privkey_import(pThis->ourKey, &data, GNUTLS_X509_FMT_PEM));
+	free(data.data);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(data.data != NULL)
+			free(data.data);
+		if(pThis->bOurCertIsInit)
+			gnutls_x509_crt_deinit(pThis->ourCert);
+		if(pThis->bOurKeyIsInit)
+			gnutls_x509_privkey_deinit(pThis->ourKey);
+	}
+	RETiRet;
+}
+
+
+/* This callback must be associated with a session by calling
+ * gnutls_certificate_client_set_retrieve_function(session, cert_callback),
+ * before a handshake. We will always return the configured certificate,
+ * even if it does not match the peer's trusted CAs. This is necessary
+ * to use self-signed certs in fingerprint mode. And, yes, this usage
+ * of the callback is quite a hack. But it seems the only way to
+ * obey to the IETF -transport-tls I-D.
+ * Note: GnuTLS requires the function to return 0 on success and
+ * -1 on failure.
+ * rgerhards, 2008-05-27
+ */
+static int
+gtlsClientCertCallback(gnutls_session session,
+              __attribute__((unused)) const gnutls_datum* req_ca_rdn, int __attribute__((unused)) nreqs,
+              __attribute__((unused)) const gnutls_pk_algorithm* sign_algos, int __attribute__((unused)) sign_algos_length,
+              gnutls_retr_st *st)
+{
+	nsd_gtls_t *pThis;
+
+	pThis = (nsd_gtls_t*) gnutls_session_get_ptr(session);
+
+	st->type = GNUTLS_CRT_X509;
+	st->ncerts = 1;
+	st->cert.x509 = &pThis->ourCert;
+	st->key.x509 = pThis->ourKey;
+	st->deinit_all = 0;
+
+	return 0;
+}
+
+
+/* This function extracts some information about this session's peer
+ * certificate. Works for X.509 certificates only. Adds all
+ * of the info to a cstr_t, which is handed over to the caller.
+ * Caller must destruct it when no longer needed.
+ * rgerhards, 2008-05-21
+ */
+static rsRetVal
+gtlsGetCertInfo(nsd_gtls_t *pThis, cstr_t **ppStr)
+{
+	char dn[128];
+	uchar lnBuf[256];
+	size_t size;
+	unsigned int algo, bits;
+	time_t expiration_time, activation_time;
+	const gnutls_datum *cert_list;
+	unsigned cert_list_size = 0;
+	gnutls_x509_crt cert;
+	cstr_t *pStr = NULL;
+	int gnuRet;
+	DEFiRet;
+	unsigned iAltName;
+	size_t szAltNameLen;
+	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
+
+	assert(ppStr != NULL);
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
+		return RS_RET_TLS_CERT_ERR;
+
+	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
+
+	CHKiRet(rsCStrConstruct(&pStr));
+
+	snprintf((char*)lnBuf, sizeof(lnBuf), "peer provided %d certificate(s). ", cert_list_size);
+	CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+
+	if(cert_list_size > 0) {
+		/* we only print information about the first certificate */
+		CHKgnutls(gnutls_x509_crt_init(&cert));
+		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
+
+		CHKiRet(rsCStrAppendStr(pStr, (uchar*)"Certificate 1 info: "));
+
+		expiration_time = gnutls_x509_crt_get_expiration_time(cert);
+		activation_time = gnutls_x509_crt_get_activation_time(cert);
+		ctime_r(&activation_time, dn);
+		dn[strlen(dn) - 1] = '\0'; /* strip linefeed */
+		snprintf((char*)lnBuf, sizeof(lnBuf), "certificate valid from %s ", dn);
+		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+
+		ctime_r(&expiration_time, dn);
+		dn[strlen(dn) - 1] = '\0'; /* strip linefeed */
+		snprintf((char*)lnBuf, sizeof(lnBuf), "to %s; ", dn);
+		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+
+		/* Extract some of the public key algorithm's parameters */
+		algo = gnutls_x509_crt_get_pk_algorithm(cert, &bits);
+
+		snprintf((char*)lnBuf, sizeof(lnBuf), "Certificate public key: %s; ",
+			 gnutls_pk_algorithm_get_name(algo));
+		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+
+		/* names */
+		size = sizeof(dn);
+		gnutls_x509_crt_get_dn(cert, dn, &size);
+		snprintf((char*)lnBuf, sizeof(lnBuf), "DN: %s; ", dn);
+		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+
+		size = sizeof(dn);
+		gnutls_x509_crt_get_issuer_dn(cert, dn, &size);
+		snprintf((char*)lnBuf, sizeof(lnBuf), "Issuer DN: %s; ", dn);
+		CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+
+		/* dNSName alt name */
+		iAltName = 0;
+		while(1) { /* loop broken below */
+			szAltNameLen = sizeof(szAltName);
+			gnuRet = gnutls_x509_crt_get_subject_alt_name(cert, iAltName,
+					szAltName, &szAltNameLen, NULL);
+			if(gnuRet < 0)
+				break;
+			else if(gnuRet == GNUTLS_SAN_DNSNAME) {
+				/* we found it! */
+				snprintf((char*)lnBuf, sizeof(lnBuf), "SAN:DNSname: %s; ", szAltName);
+				CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+				/* do NOT break, because there may be multiple dNSName's! */
+			}
+			++iAltName;
+		}
+
+		gnutls_x509_crt_deinit(cert);
+	}
+
+	CHKiRet(rsCStrFinish(pStr));
+	*ppStr = pStr;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pStr != NULL)
+			rsCStrDestruct(&pStr);
+	}
+
+	RETiRet;
+}
+
+
+
+#if 0 /* we may need this in the future - code needs to be looked at then! */
+/* This function will print some details of the
+ * given pThis->sess.
+ */
+static rsRetVal
+print_info(nsd_gtls_t *pThis)
+{
+	const char *tmp;
+	gnutls_credentials_type cred;
+	gnutls_kx_algorithm kx;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	/* print the key exchange's algorithm name
+	*/
+	kx = gnutls_kx_get(pThis->sess);
+	tmp = gnutls_kx_get_name(kx);
+	dbgprintf("- Key Exchange: %s\n", tmp);
+
+	/* Check the authentication type used and switch
+	* to the appropriate.
+	*/
+	cred = gnutls_auth_get_type(pThis->sess);
+	switch (cred) {
+	case GNUTLS_CRD_ANON:       /* anonymous authentication */
+		dbgprintf("- Anonymous DH using prime of %d bits\n",
+		gnutls_dh_get_prime_bits(pThis->sess));
+		break;
+	case GNUTLS_CRD_CERTIFICATE:        /* certificate authentication */
+		/* Check if we have been using ephemeral Diffie Hellman.
+		*/
+		if (kx == GNUTLS_KX_DHE_RSA || kx == GNUTLS_KX_DHE_DSS) {
+		 dbgprintf("\n- Ephemeral DH using prime of %d bits\n",
+			gnutls_dh_get_prime_bits(pThis->sess));
+		}
+
+		/* if the certificate list is available, then
+		* print some information about it.
+		*/
+		gtlsPrintCert(pThis);
+		break;
+	case GNUTLS_CRD_SRP:        /* certificate authentication */
+		dbgprintf("GNUTLS_CRD_SRP/IA");
+		break;
+	case GNUTLS_CRD_PSK:        /* certificate authentication */
+		dbgprintf("GNUTLS_CRD_PSK");
+		break;
+	case GNUTLS_CRD_IA:        /* certificate authentication */
+		dbgprintf("GNUTLS_CRD_IA");
+		break;
+	} /* switch */
+
+	/* print the protocol's name (ie TLS 1.0) */
+	tmp = gnutls_protocol_get_name(gnutls_protocol_get_version(pThis->sess));
+	dbgprintf("- Protocol: %s\n", tmp);
+
+	/* print the certificate type of the peer.
+	* ie X.509
+	*/
+	tmp = gnutls_certificate_type_get_name(
+	gnutls_certificate_type_get(pThis->sess));
+
+	dbgprintf("- Certificate Type: %s\n", tmp);
+
+	/* print the compression algorithm (if any)
+	*/
+	tmp = gnutls_compression_get_name( gnutls_compression_get(pThis->sess));
+	dbgprintf("- Compression: %s\n", tmp);
+
+	/* print the name of the cipher used.
+	* ie 3DES.
+	*/
+	tmp = gnutls_cipher_get_name(gnutls_cipher_get(pThis->sess));
+	dbgprintf("- Cipher: %s\n", tmp);
+
+	/* Print the MAC algorithms name.
+	* ie SHA1
+	*/
+	tmp = gnutls_mac_get_name(gnutls_mac_get(pThis->sess));
+	dbgprintf("- MAC: %s\n", tmp);
+
+	RETiRet;
+}
+#endif
+
+
 /* Convert a fingerprint to printable data. The  conversion is carried out
  * according IETF I-D syslog-transport-tls-12. The fingerprint string is
  * returned in a new cstr object. It is the caller's responsibility to
@@ -86,18 +422,13 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 	cstr_t *pStr = NULL;
 	uchar buf[4];
 	size_t i;
-	int bAddColon = 0; /* do we need to add a colon to the fingerprint string? */
 	DEFiRet;
 
 	CHKiRet(rsCStrConstruct(&pStr));
+	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*)"SHA1", 4));
 	for(i = 0 ; i < sizeFingerprint ; ++i) {
-		if(bAddColon) {
-			CHKiRet(rsCStrAppendChar(pStr, ':'));
-		} else {
-			bAddColon = 1; /* all but the first need a colon added */
-		}
-		snprintf((char*)buf, sizeof(buf), "%2.2X", pFingerprint[i]);
-		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 2));
+		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
+		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
 	}
 	CHKiRet(rsCStrFinish(pStr));
 
@@ -112,7 +443,7 @@ finalize_it:
 }
 
 
-/* a thread-safe variant of gnutls_strerror - TODO: implement it!
+/* a thread-safe variant of gnutls_strerror
  * The caller must free the returned string.
  * rgerhards, 2008-04-30
  */
@@ -120,8 +451,9 @@ uchar *gtlsStrerror(int error)
 {
 	uchar *pErr;
 
-	// TODO: guard by mutex!
+	pthread_mutex_lock(&mutGtlsStrerror);
 	pErr = (uchar*) strdup(gnutls_strerror(error));
+	pthread_mutex_unlock(&mutGtlsStrerror);
 
 	return pErr;
 }
@@ -139,6 +471,7 @@ gtlsAddOurCert(void)
 	int gnuRet;
 	uchar *keyFile;
 	uchar *certFile;
+	uchar *pGnuErr; /* for GnuTLS error reporting */
 	DEFiRet;
 
 	certFile = glbl.GetDfltNetstrmDrvrCertFile();
@@ -148,6 +481,13 @@ gtlsAddOurCert(void)
 	CHKgnutls(gnutls_certificate_set_x509_key_file(xcred, (char*)certFile, (char*)keyFile, GNUTLS_X509_FMT_PEM));
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		pGnuErr = gtlsStrerror(gnuRet);
+		errno = 0;
+		errmsg.LogError(NO_ERRCODE, "error adding our certificate. GnuTLS error %d, message: '%s', "
+				"key: '%s', cert: '%s'\n", gnuRet, pGnuErr, certFile, keyFile);
+		free(pGnuErr);
+	}
 	RETiRet;
 }
 
@@ -239,7 +579,6 @@ gtlsGlblInitLstn(void)
 		 * considered legacy. -- rgerhards, 2008-05-05
 		 */
 		/*CHKgnutls(gnutls_certificate_set_x509_crl_file(xcred, CRLFILE, GNUTLS_X509_FMT_PEM));*/
-	//CHKiRet(gtlsAddOurCert());
 		CHKiRet(generate_dh_params());
 		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */
 		bGlblSrvrInitDone = 1; /* we are all set now */
@@ -250,54 +589,107 @@ finalize_it:
 }
 
 
-/* check the fingerprint of the remote peer's certificate.
- * rgerhards, 2008-05-08
+/* Obtain the CN from the DN field and hand it back to the caller
+ * (which is responsible for destructing it). We try to follow 
+ * RFC2253 as far as it makes sense for our use-case. This function
+ * is considered a compromise providing good-enough correctness while
+ * limiting code size and complexity. If a problem occurs, we may enhance
+ * this function. A (pointer to a) certificate must be caller-provided.
+ * If no CN is contained in the cert, no string is returned
+ * (*ppstrCN remains NULL). *ppstrCN MUST be NULL on entry!
+ * rgerhards, 2008-05-22
  */
-rsRetVal
-gtlsChkFingerprint(nsd_gtls_t *pThis)
+static rsRetVal
+gtlsGetCN(nsd_gtls_t *pThis, gnutls_x509_crt *pCert, cstr_t **ppstrCN)
 {
-	cstr_t *pstrFingerprint = NULL;
+	DEFiRet;
+	int gnuRet;
+	int i;
+	int bFound;
+	cstr_t *pstrCN = NULL;
+	size_t size;
+	/* big var the last, so we hope to have all we usually neeed within one mem cache line */
+	uchar szDN[1024]; /* this should really be large enough for any non-malicious case... */
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	assert(pCert != NULL);
+	assert(ppstrCN != NULL);
+	assert(*ppstrCN == NULL);
+
+	size = sizeof(szDN);
+	CHKgnutls(gnutls_x509_crt_get_dn(*pCert, (char*)szDN, &size));
+
+	/* now search for the CN part */
+	i = 0;
+	bFound = 0;
+	while(!bFound && szDN[i] != '\0') {
+		/* note that we do not overrun our string due to boolean shortcut
+		 * operations. If we have '\0', the if does not match and evaluation
+		 * stops. Order of checks is obviously important!
+		 */
+		if(szDN[i] == 'C' && szDN[i+1] == 'N' && szDN[i+2] == '=') {
+			bFound = 1;
+			i += 2;
+		}
+		i++;
+
+	}
+
+	if(!bFound) {
+		FINALIZE; /* we are done */
+	}
+
+	/* we found a common name, now extract it */
+	CHKiRet(rsCStrConstruct(&pstrCN));
+	while(szDN[i] != '\0' && szDN[i] != ',') {
+		if(szDN[i] == '\\') {
+			/* hex escapes are not implemented */
+			++i; /* escape char processed */
+			if(szDN[i] == '\0')
+				ABORT_FINALIZE(RS_RET_CERT_INVALID_DN);
+			CHKiRet(rsCStrAppendChar(pstrCN, szDN[i]));
+		} else {
+			CHKiRet(rsCStrAppendChar(pstrCN, szDN[i]));
+		}
+		++i; /* char processed */
+	}
+	CHKiRet(rsCStrFinish(pstrCN));
+
+	/* we got it - we ignore the rest of the DN string (if any). So we may
+	 * not detect if it contains more than one CN
+	 */
+
+	*ppstrCN = pstrCN;
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pstrCN != NULL)
+			rsCStrDestruct(&pstrCN);
+	}
+
+	RETiRet;
+}
+
+
+/* Check the peer's ID in fingerprint auth mode.
+ * rgerhards, 2008-05-22
+ */
+static rsRetVal
+gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
+{
 	uchar fingerprint[20];
 	size_t size;
-	const gnutls_datum *cert_list;
-	unsigned int list_size = 0;
-	gnutls_x509_crt cert;
-	int bMustDeinitCert = 0;
-	int gnuRet;
+	cstr_t *pstrFingerprint = NULL;
 	int bFoundPositiveMatch;
 	permittedPeers_t *pPeer;
+	int gnuRet;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	/* first check if we need to do fingerprint authentication - if not, we
-	 * are already set ;) -- rgerhards, 2008-05-21
-	 */
-	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT)
-		FINALIZE;
-	
-	/* This function only works for X.509 certificates.  */
-	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
-		return RS_RET_TLS_CERT_ERR;
-
-	cert_list = gnutls_certificate_get_peers(pThis->sess, &list_size);
-
-	if(list_size < 1)
-		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
-
-	/* If we reach this point, we have at least one valid certificate. 
-	 * We always use only the first certificate. As of GnuTLS documentation, the
-	 * first certificate always contains the remote peer's own certificate. All other
-	 * certificates are issuer's certificates (up the chain). However, we do not match
-	 * against some issuer fingerprint but only ourselfs. -- rgerhards, 2008-05-08
-	 */
-	CHKgnutls(gnutls_x509_crt_init(&cert));
-	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
-	CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
-
 	/* obtain the SHA1 fingerprint */
 	size = sizeof(fingerprint);
-	CHKgnutls(gnutls_x509_crt_get_fingerprint(cert, GNUTLS_DIG_SHA1, fingerprint, &size));
+	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA1, fingerprint, &size));
 	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
 	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", rsCStrGetSzStr(pstrFingerprint));
 
@@ -324,12 +716,302 @@ gtlsChkFingerprint(nsd_gtls_t *pThis)
 	}
 
 finalize_it:
-dbgprintf("exit fingerprint check, iRet %d\n", iRet);
 	if(pstrFingerprint != NULL)
 		rsCStrDestruct(&pstrFingerprint);
+	RETiRet;
+}
+
+
+/* Perform a match on ONE peer name obtained from the certificate. This name
+ * is checked against the set of configured credentials. *pbFoundPositiveMatch is
+ * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
+ * to 0 by the caller (this is a performance enhancement as we expect to be
+ * called multiple times).
+ * TODO: implemet wildcards?
+ * rgerhards, 2008-05-26
+ */
+static rsRetVal
+gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatch)
+{
+	permittedPeers_t *pPeer;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	assert(pszPeerID != NULL);
+	assert(pbFoundPositiveMatch != NULL);
+
+	if(pThis->pPermPeers) { /* do we have configured peer IDs? */
+		pPeer = pThis->pPermPeers;
+		while(pPeer != NULL) {
+			CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
+			if(*pbFoundPositiveMatch)
+				break;
+			pPeer = pPeer->pNext;
+		}
+	} else {
+		/* we do not have configured peer IDs, so we use defaults */
+		if(   pThis->pszConnectHost
+		   && !strcmp((char*)pszPeerID, (char*)pThis->pszConnectHost)) {
+			*pbFoundPositiveMatch = 1;
+		}
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Check the peer's ID in name auth mode.
+ * rgerhards, 2008-05-22
+ */
+static rsRetVal
+gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
+{
+	uchar lnBuf[256];
+	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
+	int iAltName;
+	size_t szAltNameLen;
+	int bFoundPositiveMatch;
+	cstr_t *pStr = NULL;
+	cstr_t *pstrCN = NULL;
+	int gnuRet;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	bFoundPositiveMatch = 0;
+	CHKiRet(rsCStrConstruct(&pStr));
+
+	/* first search through the dNSName subject alt names */
+	iAltName = 0;
+	while(!bFoundPositiveMatch) { /* loop broken below */
+		szAltNameLen = sizeof(szAltName);
+		gnuRet = gnutls_x509_crt_get_subject_alt_name(*pCert, iAltName,
+				szAltName, &szAltNameLen, NULL);
+		if(gnuRet < 0)
+			break;
+		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
+			dbgprintf("subject alt dnsName: '%s'\n", szAltName);
+			snprintf((char*)lnBuf, sizeof(lnBuf), "DNSname: %s; ", szAltName);
+			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+			CHKiRet(gtlsChkOnePeerName(pThis, (uchar*)szAltName, &bFoundPositiveMatch));
+			/* do NOT break, because there may be multiple dNSName's! */
+		}
+		++iAltName;
+	}
+
+	if(!bFoundPositiveMatch) {
+		/* if we did not succeed so far, we try the CN part of the DN... */
+		CHKiRet(gtlsGetCN(pThis, pCert, &pstrCN));
+		if(pstrCN != NULL) { /* NULL if there was no CN present */
+			dbgprintf("gtls noch checking auth for CN '%s'\n", rsCStrGetSzStr(pstrCN));
+			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", rsCStrGetSzStr(pstrCN));
+			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+			CHKiRet(gtlsChkOnePeerName(pThis, rsCStrGetSzStr(pstrCN), &bFoundPositiveMatch));
+		}
+	}
+
+	if(!bFoundPositiveMatch) {
+		dbgprintf("invalid peer name, not permitted to talk to it\n");
+		if(pThis->bReportAuthErr == 1) {
+			CHKiRet(rsCStrFinish(pStr));
+			errno = 0;
+			errmsg.LogError(NO_ERRCODE, "error: peer name not authorized -  "
+					"not permitted to talk to it. Names: %s",
+					rsCStrGetSzStr(pStr));
+			pThis->bReportAuthErr = 0;
+		}
+		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+	}
+
+finalize_it:
+	if(pStr != NULL)
+		rsCStrDestruct(&pStr);
+	if(pstrCN != NULL)
+		rsCStrDestruct(&pstrCN);
+	RETiRet;
+}
+
+
+/* check the ID of the remote peer - used for both fingerprint and
+ * name authentication. This is common code. Will call into specific
+ * drivers once the certificate has been obtained.
+ * rgerhards, 2008-05-08
+ */
+static rsRetVal
+gtlsChkPeerID(nsd_gtls_t *pThis)
+{
+	const gnutls_datum *cert_list;
+	unsigned int list_size = 0;
+	gnutls_x509_crt cert;
+	int bMustDeinitCert = 0;
+	int gnuRet;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	/* This function only works for X.509 certificates.  */
+	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
+		return RS_RET_TLS_CERT_ERR;
+
+	cert_list = gnutls_certificate_get_peers(pThis->sess, &list_size);
+
+	if(list_size < 1) {
+		if(pThis->bReportAuthErr == 1) {
+			errno = 0;
+			errmsg.LogError(NO_ERRCODE, "error: peer did not provide a certificate, "
+					"not permitted to talk to it");
+			pThis->bReportAuthErr = 0;
+		}
+		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
+	}
+
+	/* If we reach this point, we have at least one valid certificate. 
+	 * We always use only the first certificate. As of GnuTLS documentation, the
+	 * first certificate always contains the remote peer's own certificate. All other
+	 * certificates are issuer's certificates (up the chain). We are only interested
+	 * in the first certificate, which is our peer. -- rgerhards, 2008-05-08
+	 */
+	CHKgnutls(gnutls_x509_crt_init(&cert));
+	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
+	CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
+
+	/* Now we see which actual authentication code we must call.  */
+	if(pThis->authMode == GTLS_AUTH_CERTFINGERPRINT) {
+		CHKiRet(gtlsChkPeerFingerprint(pThis, &cert));
+	} else {
+		assert(pThis->authMode == GTLS_AUTH_CERTNAME);
+		CHKiRet(gtlsChkPeerName(pThis, &cert));
+	}
+
+finalize_it:
 	if(bMustDeinitCert)
 		gnutls_x509_crt_deinit(cert);
 
+	RETiRet;
+}
+
+
+/* Verify the validity of the remote peer's certificate.
+ * rgerhards, 2008-05-21
+ */
+static rsRetVal
+gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
+{
+	DEFiRet;
+	char *pszErrCause;
+	int gnuRet;
+	cstr_t *pStr;
+	unsigned stateCert;
+	const gnutls_datum *cert_list;
+	unsigned cert_list_size = 0;
+	gnutls_x509_crt cert;
+	unsigned i;
+	time_t ttCert;
+	time_t ttNow;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	/* check if we have at least one cert */
+	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
+	if(cert_list_size < 1) {
+		errno = 0;
+		errmsg.LogError(NO_ERRCODE, "peer did not provide a certificate, not permitted to talk to it");
+		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
+	}
+
+	CHKgnutls(gnutls_certificate_verify_peers2(pThis->sess, &stateCert));
+
+	if(stateCert & GNUTLS_CERT_INVALID) {
+		/* provide error details if we have them */
+		if(stateCert & GNUTLS_CERT_SIGNER_NOT_FOUND) {
+			pszErrCause = "signer not found";
+		} else if(stateCert & GNUTLS_CERT_SIGNER_NOT_FOUND) {
+			pszErrCause = "signer is not a CA";
+		} else if(stateCert & GNUTLS_CERT_SIGNER_NOT_CA) {
+			pszErrCause = "insecure algorithm";
+		} else if(stateCert & GNUTLS_CERT_REVOKED) {
+			pszErrCause = "certificate revoked";
+		} else {
+			pszErrCause = "no specific reason";
+		}
+		errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
+				pszErrCause);
+		gtlsGetCertInfo(pThis, &pStr);
+		errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
+		rsCStrDestruct(&pStr);
+		ABORT_FINALIZE(RS_RET_CERT_INVALID);
+	}
+
+	/* get current time for certificate validation */
+	if(time(&ttNow) == -1)
+		ABORT_FINALIZE(RS_RET_SYS_ERR);
+
+	/* as it looks, we need to validate the expiration dates ourselves...
+	 * We need to loop through all certificates as we need to make sure the
+	 * interim certificates are also not expired.
+	 */
+	for(i = 0 ; i < cert_list_size ; ++i) {
+		CHKgnutls(gnutls_x509_crt_init(&cert));
+		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[i], GNUTLS_X509_FMT_DER));
+		ttCert = gnutls_x509_crt_get_activation_time(cert);
+		if(ttCert == -1)
+			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+		else if(ttCert > ttNow) {
+			errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer: certificate %d not yet active", i);
+			gtlsGetCertInfo(pThis, &pStr);
+			errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
+			rsCStrDestruct(&pStr);
+			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
+		}
+
+		ttCert = gnutls_x509_crt_get_expiration_time(cert);
+		if(ttCert == -1)
+			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+		else if(ttCert < ttNow) {
+			errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer: certificate %d expired", i);
+			gtlsGetCertInfo(pThis, &pStr);
+			errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
+			rsCStrDestruct(&pStr);
+			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
+		}
+		gnutls_x509_crt_deinit(cert);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* check if it is OK to talk to the remote peer
+ * rgerhards, 2008-05-21
+ */
+rsRetVal
+gtlsChkPeerAuth(nsd_gtls_t *pThis)
+{
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+
+	/* call the actual function based on current auth mode */
+	switch(pThis->authMode) {
+		case GTLS_AUTH_CERTNAME:
+			/* if we check the name, we must ensure the cert is valid */
+			CHKiRet(gtlsChkPeerCertValidity(pThis));
+			CHKiRet(gtlsChkPeerID(pThis));
+			break;
+		case GTLS_AUTH_CERTFINGERPRINT:
+			CHKiRet(gtlsChkPeerID(pThis));
+			break;
+		case GTLS_AUTH_CERTVALID:
+			CHKiRet(gtlsChkPeerCertValidity(pThis));
+			break;
+		case GTLS_AUTH_CERTANON:
+			FINALIZE;
+			break;
+	}
+
+finalize_it:
 	RETiRet;
 }
 
@@ -389,7 +1071,7 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
 	pThis->bReportAuthErr = 1;
-CHKiRet(gtlsAddOurCert());
+	CHKiRet(gtlsAddOurCert());
 finalize_it:
 ENDobjConstruct(nsd_gtls)
 
@@ -404,6 +1086,15 @@ CODESTARTobjDestruct(nsd_gtls)
 	if(pThis->pTcp != NULL) {
 		nsd_ptcp.Destruct(&pThis->pTcp);
 	}
+
+	if(pThis->pszConnectHost != NULL) {
+		free(pThis->pszConnectHost);
+	}
+
+	if(pThis->bOurCertIsInit)
+		gnutls_x509_crt_deinit(pThis->ourCert);
+	if(pThis->bOurKeyIsInit)
+		gnutls_x509_privkey_deinit(pThis->ourKey);
 ENDobjDestruct(nsd_gtls)
 
 
@@ -434,6 +1125,7 @@ finalize_it:
 
 /* Set the authentication mode. For us, the following is supported:
  * anon - no certificate checks whatsoever (discouraged, but supported)
+ * x509/certvalid - (just) check certificate validity
  * x509/fingerprint - certificate fingerprint
  * x509/name - cerfificate name check
  * mode == NULL is valid and defaults to x509/name
@@ -450,6 +1142,8 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 		pThis->authMode = GTLS_AUTH_CERTNAME;
 	} else if(!strcasecmp((char*) mode, "x509/fingerprint")) {
 		pThis->authMode = GTLS_AUTH_CERTFINGERPRINT;
+	} else if(!strcasecmp((char*) mode, "x509/certvalid")) {
+		pThis->authMode = GTLS_AUTH_CERTVALID;
 	} else if(!strcasecmp((char*) mode, "anon")) {
 		pThis->authMode = GTLS_AUTH_CERTANON;
 	} else {
@@ -723,7 +1417,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
-	static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };
+	/* TODO: later? static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };*/
+	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -740,6 +1435,15 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 1;
 
+	/* in the client case, we need to set a callback that ensures our certificate
+	 * will be presented to the server even if it is not signed by one of the server's
+	 * trusted roots. This is necessary to support fingerprint authentication.
+	 */
+	/* store a pointer to ourselfs (needed by callback) */
+	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
+	CHKiRet(gtlsLoadOurCertKey(pThis)); /* first load .pem files */
+	gnutls_certificate_client_set_retrieve_function(xcred, gtlsClientCertCallback);
+
 	/* Use default priorities */
 	CHKgnutls(gnutls_set_default_priority(pThis->sess));
 	CHKgnutls(gnutls_certificate_type_set_priority(pThis->sess, cert_type_priority));
@@ -751,12 +1455,21 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
 	gtlsSetTransportPtr(pThis, sock);
 
+	/* we need to store the hostname as an alternate mean of authentication if no
+	 * permitted peer names are given. Using the hostname is quite useful. It permits
+	 * auto-configuration of security if a commen root cert is present. -- rgerhards, 2008-05-26
+	 */
+	CHKmalloc(pThis->pszConnectHost = (uchar*)strdup((char*)host));
+
 	/* and perform the handshake */
 	CHKgnutls(gnutls_handshake(pThis->sess));
 	dbgprintf("GnuTLS handshake succeeded\n");
 
-	/* now check if the remote peer is permitted to talk to us */
-	CHKiRet(gtlsChkFingerprint(pThis));
+	/* now check if the remote peer is permitted to talk to us - ideally, we 
+	 * should do this during the handshake, but GnuTLS does not yet provide 
+	 * the necessary callbacks -- rgerhards, 2008-05-26
+	 */
+	CHKiRet(gtlsChkPeerAuth(pThis));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -808,6 +1521,7 @@ CODESTARTObjClassExit(nsd_gtls)
 
 	/* release objects we no longer need */
 	objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
+	objRelease(net, LM_NET_FILENAME);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDObjClassExit(nsd_gtls)
@@ -821,6 +1535,7 @@ BEGINObjClassInit(nsd_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
 
 	/* now do global TLS init stuff */
@@ -835,6 +1550,7 @@ BEGINmodExit
 CODESTARTmodExit
 	nsdsel_gtlsClassExit();
 	nsd_gtlsClassExit();
+	pthread_mutex_destroy(&mutGtlsStrerror);
 ENDmodExit
 
 
@@ -852,6 +1568,7 @@ CODESTARTmodInit
 	CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 	CHKiRet(nsdsel_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 
+	pthread_mutex_init(&mutGtlsStrerror, NULL);
 ENDmodInit
 /* vi:set ai:
  */

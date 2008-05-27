@@ -160,7 +160,7 @@ SetDrvrPermPeers(netstrms_t *pThis, permittedPeers_t *pPermPeers)
  * of sense here.
  * rgerhards, 2008-05-19
  */
-static uchar*
+static permittedPeers_t*
 GetDrvrPermPeers(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
@@ -174,7 +174,6 @@ SetDrvrAuthMode(netstrms_t *pThis, uchar *mode)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
-RUNLOG_VAR("%s", mode);
 	CHKmalloc(pThis->pszDrvrAuthMode = (uchar*)strdup((char*)mode));
 finalize_it:
 	RETiRet;

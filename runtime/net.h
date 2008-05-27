@@ -91,6 +91,23 @@ struct AllowedSenders {
 };
 
 
+/* this structure is a helper to implement wildcards in permittedPeers_t. It specifies
+ * the domain component and the matching mode.
+ * rgerhards, 2008-05-27
+ */
+struct permittedPeerWildcard_s {
+	uchar *pszDomainPart;
+	size_t lenDomainPart;
+	enum {
+		PEER_WILDCARD_NONE = 0,		/**< no wildcard in this entry */
+		PEER_WILDCARD_AT_START = 1,	/**< wildcard at start of entry (*name) */
+		PEER_WILDCARD_AT_END = 2,	/**< wildcard at end of entry (name*) */
+		PEER_WILDCARD_MATCH_ALL = 3,	/**< only * wildcard, matches all values */
+		PEER_WILDCARD_EMPTY_COMPONENT = 4/**< special case: domain component empty (e.g. "..") */
+	} wildcardType;
+	permittedPeerWildcard_t *pNext;
+};
+
 /* for fingerprints and hostnames, we need to have a temporary linked list of
  * permitted values. Unforutnately, we must also duplicate this in the netstream
  * drivers. However, this is the best interim solution (with the least effort).
@@ -101,7 +118,14 @@ struct AllowedSenders {
  */
 struct permittedPeers_s {
 	uchar *pszID;
+	enum {
+		PERM_PEER_TYPE_UNDECIDED = 0,	/**< we have not yet decided the type (fine in some auth modes) */
+		PERM_PEER_TYPE_PLAIN = 1,	/**< just plain text contained */
+		PERM_PEER_TYPE_WILDCARD = 2,	/**< wildcards are contained, wildcard struture is filled */
+	} etryType;
 	permittedPeers_t *pNext;
+	permittedPeerWildcard_t *pWildcardRoot;	/**< root of the wildcard, NULL if not initialized */
+	permittedPeerWildcard_t *pWildcardLast;	/**< end of the wildcard list, NULL if not initialized */
 };
 
 
@@ -121,6 +145,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	/* permitted peer handling should be replaced by something better (see comments above) */
 	rsRetVal (*AddPermittedPeer)(permittedPeers_t **ppRootPeer, uchar *pszID);
 	rsRetVal (*DestructPermittedPeers)(permittedPeers_t **ppRootPeer);
+	rsRetVal (*PermittedPeerWildcardMatch)(permittedPeers_t *pPeer, uchar *pszNameToMatch, int *pbIsMatching);
 	/* data members - these should go away over time... TODO */
 	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
@@ -128,7 +153,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	struct AllowedSenders *pAllowedSenders_TCP;
 	struct AllowedSenders *pAllowedSenders_GSS;
 ENDinterface(net)
-#define netCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);
