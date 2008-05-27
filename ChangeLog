@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.19.5 (rgerhards), 2008-05-??
+---------------------------------------------------------------------------
 Version 3.19.4 (rgerhards), 2008-05-27
 - implemented x509/certvalid gtls auth mode
 - implemented x509/name gtls auth mode (including wildcards)
