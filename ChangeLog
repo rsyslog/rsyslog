@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.17.3 (rgerhards), 2008-05-??
+Version 3.17.3 (rgerhards), 2008-05-28
 - bugfix: imklog went into an endless loop if a PRI value was inside
   a kernel log message (unusual case under Linux, frequent under BSD)
 ---------------------------------------------------------------------------
