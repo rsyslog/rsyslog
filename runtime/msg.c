@@ -1605,8 +1605,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 #ifdef	FEATURE_REGEXP
 	/* Variables necessary for regular expression matching */
-	size_t nmatch = 1;
-	regmatch_t pmatch[1];
+	size_t nmatch = 10;
+	regmatch_t pmatch[10];
 #endif
 
 	assert(pMsg != NULL);
@@ -1839,7 +1839,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				/* Could not compile regex before! */
 				return "**NO MATCH** **BAD REGULAR EXPRESSION**";
 
-			dbgprintf("debug: String to match for regex is: %s\n", pRes);
+			dbgprintf("string to match for regex is: %s\n", pRes);
 
 			if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 				if (0 != regexp.regexec(&pTpe->data.field.re, pRes, nmatch, pmatch, 0)) {
@@ -1850,12 +1850,26 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 					}
 					return "**NO MATCH**";
 				} else {
-					/* Match! */
-					/* I need to malloc pB */
+{int i; for(i = 0 ; i < 10 ; ++i) {
+dbgprintf("rqtd regex match (nmatch %d) # %d, idx %d: so %d, eo %d\n", nmatch, pTpe->data.field.iMatchToUse, i,
+pmatch[i].rm_so,
+pmatch[i].rm_eo);
+}}
+					/* Match- but did it match the one we wanted? */
+					/* we got no match! */
+					if(pmatch[pTpe->data.field.iMatchToUse].rm_so == -1) {
+						if (*pbMustBeFreed == 1) {
+							free(pRes);
+							*pbMustBeFreed = 0;
+						}
+						return "**NO MATCH**";
+					}
+					/* OK, we have a usable match - we now need to malloc pB */
 					int iLenBuf;
 					char *pB;
 
-					iLenBuf = pmatch[0].rm_eo - pmatch[0].rm_so;
+					iLenBuf = pmatch[pTpe->data.field.iMatchToUse].rm_eo
+						  - pmatch[pTpe->data.field.iMatchToUse].rm_so;
 					pB = (char *) malloc((iLenBuf + 1) * sizeof(char));
 
 					if (pB == NULL) {
@@ -1866,7 +1880,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 					}
 
 					/* Lets copy the matched substring to the buffer */
-					memcpy(pB, pRes + pmatch[0].rm_so, iLenBuf);
+					memcpy(pB, pRes + pmatch[pTpe->data.field.iMatchToUse].rm_so, iLenBuf);
 					pB[iLenBuf] = '\0';/* terminate string, did not happen before */
 
 					if (*pbMustBeFreed == 1)

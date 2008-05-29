@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 3.19.5 (rgerhards), 2008-05-??
+- enabled Posix ERE expressions inside the property replacer
+  (previously BRE was permitted only)
+- provided ability to specify that a regular expression submatch shall
+  be used inside the property replacer
 ---------------------------------------------------------------------------
 Version 3.19.4 (rgerhards), 2008-05-27
 - implemented x509/certvalid gtls auth mode

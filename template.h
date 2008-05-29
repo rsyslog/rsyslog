@@ -67,7 +67,13 @@ struct templateEntry {
 			unsigned iToPos;	/* up to that one... */
 #ifdef FEATURE_REGEXP
 			regex_t re;	/* APR: this is the regular expression */
-			unsigned has_regex;
+			short has_regex;
+			short iMatchToUse;/* which match should be obtained (10 max) */
+			enum {
+				TPL_REGEX_BRE = 0, /* posix BRE */
+				TPL_REGEX_ERE = 1  /* posix ERE */
+			} typeRegex;
+			
 #endif
 			unsigned has_fields; /* support for field-counting: field to extract */
 			unsigned char field_delim; /* support for field-counting: field delemiter char */

@@ -514,17 +514,47 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	if(*p == ':') {
 		++p; /* eat ':' */
 #ifdef FEATURE_REGEXP
-		if (*p == 'R') {
+		if(*p == 'R') {
 			/* APR: R found! regex alarm ! :) */
 			++p;	/* eat ':' */
 
-			if (*p != ':') {
+			/* first come the regex type */
+			if(*p == ',') {
+				++p; /* eat ',' */
+				if(*p == 'B' && *(p+1) == 'R' && *(p+2) == 'E' && *(p+3) == ',') {
+					pTpe->data.field.typeRegex = TPL_REGEX_BRE;
+					p += 3; /* eat indicator sequence */
+				} else if(*p == 'E' && *(p+1) == 'R' && *(p+2) == 'E' && *(p+3) == ',') {
+					pTpe->data.field.typeRegex = TPL_REGEX_ERE;
+					p += 3; /* eat indicator sequence */
+				} else {
+					errmsg.LogError(NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
+				               (char*) p);
+				}
+			}
+
+			/* now check for submatch ID */
+			pTpe->data.field.iMatchToUse = 0;
+			if(*p == ',') {
+				/* in this case a number follows, which indicates which match
+				 * shall be used. This must be a single digit.
+				 */
+				++p; /* eat ',' */
+				if(isdigit((int) *p)) {
+					pTpe->data.field.iMatchToUse = *p - '0';
+					++p; /* eat digit */
+				}
+			}
+
+			if(*p != ':') {
 				/* There is something more than an R , this is invalid ! */
 				/* Complain on extra characters */
 				errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"R\", property: '%%%s'",
 				    (char*) *pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
+				dbgprintf("we have a regexp and use match #%d\n",
+					  pTpe->data.field.iMatchToUse);
 			}
 		} else {
 			/* now we fall through the "regular" FromPos code */
@@ -620,8 +650,9 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
 				if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
-dbgprintf("compile data.field.re ptr: %p (pTpe %p)\n", (&(pTpe->data.field.re)), pTpe);
-					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, 0) != 0) {
+					int iOptions;
+					iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
+					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, iOptions) != 0) {
 						dbgprintf("error: can not compile regex: '%s'\n", regex_char);
 						pTpe->data.field.has_regex = 2;
 					}

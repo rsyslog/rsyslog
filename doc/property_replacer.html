@@ -204,8 +204,19 @@ not become part of it. If you are using regular expressions, the
 property replacer will return the part of the property text that
 matches the regular expression. An example for a property replacer
 sequence with a regular expression is: "%msg:R:.*Sev:. \(.*\)
-\[.*--end%"<br>
-</p>
+\[.*--end%"</p>
+<p>It is possible to specify some parametes after the "R". These are
+comma-separated. They are:
+<p>R,&lt;regexp-type&gt;,&lt;submatch&gt;
+<p>regexp-type is either "BRE" for Posix basic regular expressions or
+"ERE" for extended ones. The string must be given in upper case. The
+default is "BRE" to be consistent with earlier versions of rsyslog that
+did not support ERE. The submatch identifies the submatch to be used
+with the result. A single digit is supported. Match 0 is the full match,
+while 1 to 9 are the acutal submatches.
+<p>The following is a sample of an ERE expression that takes the first
+submatch from the message string:
+<p>%msg:R,ERE,1:for (vlan[0-9]*):--end%
 <p><b>Also, extraction can be done based on so-called
 "fields"</b>. To do so, place a "F" into FromChar. A field in its
 current definition is anything that is delimited by a delimiter
