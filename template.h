@@ -73,6 +73,11 @@ struct templateEntry {
 				TPL_REGEX_BRE = 0, /* posix BRE */
 				TPL_REGEX_ERE = 1  /* posix ERE */
 			} typeRegex;
+			enum {
+				TPL_REGEX_NOMATCH_USE_DFLTSTR = 0, /* use the (old style) default "**NO MATCH**" string */
+				TPL_REGEX_NOMATCH_USE_BLANK = 1, /* use a blank string */
+				TPL_REGEX_NOMATCH_USE_WHOLE_FIELD = 2 /* use the full field contents that we were searching in*/
+			}  nomatchAction;	/**< what to do if we do not have a match? */
 			
 #endif
 			unsigned has_fields; /* support for field-counting: field to extract */

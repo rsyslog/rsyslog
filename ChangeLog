@@ -4,6 +4,9 @@ Version 3.19.5 (rgerhards), 2008-05-??
   (previously BRE was permitted only)
 - provided ability to specify that a regular expression submatch shall
   be used inside the property replacer
+- implemented in property replacer: if a regular expression does not match,
+  it can now either return "**NO MATCH** (default, as before), a blank
+  property or the full original property text
 ---------------------------------------------------------------------------
 Version 3.19.4 (rgerhards), 2008-05-27
 - implemented x509/certvalid gtls auth mode

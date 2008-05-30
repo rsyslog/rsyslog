@@ -521,10 +521,10 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 			/* first come the regex type */
 			if(*p == ',') {
 				++p; /* eat ',' */
-				if(*p == 'B' && *(p+1) == 'R' && *(p+2) == 'E' && *(p+3) == ',') {
+				if(p[0] == 'B' && p[1] == 'R' && p[2] == 'E' && (p[3] == ',' || p[3] == ':')) {
 					pTpe->data.field.typeRegex = TPL_REGEX_BRE;
 					p += 3; /* eat indicator sequence */
-				} else if(*p == 'E' && *(p+1) == 'R' && *(p+2) == 'E' && *(p+3) == ',') {
+				} else if(p[0] == 'E' && p[1] == 'R' && p[2] == 'E' && (p[3] == ',' || p[3] == ':')) {
 					pTpe->data.field.typeRegex = TPL_REGEX_ERE;
 					p += 3; /* eat indicator sequence */
 				} else {
@@ -543,6 +543,27 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				if(isdigit((int) *p)) {
 					pTpe->data.field.iMatchToUse = *p - '0';
 					++p; /* eat digit */
+				}
+			}
+
+			/* now pull what to do if we do not find a match */
+			if(*p == ',') {
+				++p; /* eat ',' */
+				if(p[0] == 'D' && p[1] == 'F' && p[2] == 'L' && p[3] == 'T'
+				   && (p[4] == ',' || p[4] == ':')) {
+					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_DFLTSTR;
+					p += 4; /* eat indicator sequence */
+				} else if(p[0] == 'B' && p[1] == 'L' && p[2] == 'A' && p[3] == 'N' && p[4] == 'K'
+				   && (p[5] == ',' || p[5] == ':')) {
+					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_BLANK;
+					p += 5; /* eat indicator sequence */
+				} else if(p[0] == 'F' && p[1] == 'I' && p[2] == 'E' && p[3] == 'L' && p[4] == 'D'
+				   && (p[5] == ',' || p[5] == ':')) {
+					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_WHOLE_FIELD;
+					p += 5; /* eat indicator sequence */
+				} else {
+					errmsg.LogError(NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
+				               (char*) p);
 				}
 			}
 

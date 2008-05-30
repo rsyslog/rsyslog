@@ -1844,25 +1844,30 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 				if (0 != regexp.regexec(&pTpe->data.field.re, pRes, nmatch, pmatch, 0)) {
 					/* we got no match! */
-					if (*pbMustBeFreed == 1) {
-						free(pRes);
-						*pbMustBeFreed = 0;
-					}
-					return "**NO MATCH**";
-				} else {
-{int i; for(i = 0 ; i < 10 ; ++i) {
-dbgprintf("rqtd regex match (nmatch %d) # %d, idx %d: so %d, eo %d\n", nmatch, pTpe->data.field.iMatchToUse, i,
-pmatch[i].rm_so,
-pmatch[i].rm_eo);
-}}
-					/* Match- but did it match the one we wanted? */
-					/* we got no match! */
-					if(pmatch[pTpe->data.field.iMatchToUse].rm_so == -1) {
+					if(pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
 						if (*pbMustBeFreed == 1) {
 							free(pRes);
 							*pbMustBeFreed = 0;
 						}
-						return "**NO MATCH**";
+						if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR)
+							return "**NO MATCH**";
+						else
+							return "";
+					}
+				} else {
+					/* Match- but did it match the one we wanted? */
+					/* we got no match! */
+					if(pmatch[pTpe->data.field.iMatchToUse].rm_so == -1) {
+						if(pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
+							if (*pbMustBeFreed == 1) {
+								free(pRes);
+								*pbMustBeFreed = 0;
+							}
+							if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR)
+								return "**NO MATCH**";
+							else
+								return "";
+						}
 					}
 					/* OK, we have a usable match - we now need to malloc pB */
 					int iLenBuf;

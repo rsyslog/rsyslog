@@ -207,16 +207,23 @@ sequence with a regular expression is: "%msg:R:.*Sev:. \(.*\)
 \[.*--end%"</p>
 <p>It is possible to specify some parametes after the "R". These are
 comma-separated. They are:
-<p>R,&lt;regexp-type&gt;,&lt;submatch&gt;
+<p>R,&lt;regexp-type&gt;,&lt;submatch&gt;,&lt;nomatch&gt;
 <p>regexp-type is either "BRE" for Posix basic regular expressions or
 "ERE" for extended ones. The string must be given in upper case. The
 default is "BRE" to be consistent with earlier versions of rsyslog that
 did not support ERE. The submatch identifies the submatch to be used
 with the result. A single digit is supported. Match 0 is the full match,
 while 1 to 9 are the acutal submatches.
+<p>nomatch is either "DFLT", "BLANK" or "FIELD" (all upper case!). It tells
+what to use if no match is found. With "DFLT", the strig "**NO MATCH**" is
+used. This was the only supported value up to rsyslog 3.19.5. With "BLANK"
+a blank text is used (""). Finally, "FIELD" uses the full property text
+instead of the expression. Some folks have requested that, so it seems
+to be useful.
 <p>The following is a sample of an ERE expression that takes the first
-submatch from the message string:
-<p>%msg:R,ERE,1:for (vlan[0-9]*):--end%
+submatch from the message string and replaces the expression with
+the full field if no match is found:
+<p>%msg:R,ERE,1,FIELD:for (vlan[0-9]*):--end%
 <p><b>Also, extraction can be done based on so-called
 "fields"</b>. To do so, place a "F" into FromChar. A field in its
 current definition is anything that is delimited by a delimiter
