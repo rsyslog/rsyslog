@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.19.6 (rgerhards), 2008-06-??
+---------------------------------------------------------------------------
 Version 3.19.5 (rgerhards), 2008-05-30
 - enabled Posix ERE expressions inside the property replacer
   (previously BRE was permitted only)
