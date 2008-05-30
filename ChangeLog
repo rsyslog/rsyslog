@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.19.5 (rgerhards), 2008-05-??
+Version 3.19.5 (rgerhards), 2008-05-30
 - enabled Posix ERE expressions inside the property replacer
   (previously BRE was permitted only)
 - provided ability to specify that a regular expression submatch shall
