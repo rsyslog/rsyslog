@@ -214,9 +214,8 @@ AddPermittedPeer(permittedPeers_t **ppRootPeer, uchar* pszID)
 	assert(ppRootPeer != NULL);
 	assert(pszID != NULL);
 
-	CHKmalloc(pNew = malloc(sizeof(permittedPeers_t)));
+	CHKmalloc(pNew = calloc(1, sizeof(permittedPeers_t))); /* we use calloc() for consistency with "real" objects */
 	CHKmalloc(pNew->pszID = (uchar*)strdup((char*)pszID));
-	pNew->pNext = NULL;
 
 	if(*ppRootPeer != NULL) {
 		pNew->pNext = *ppRootPeer;

@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.19.6 (rgerhards), 2008-06-??
+- bugfix: part of permittedPeer structure was not correctly initialized
+  thanks to varmojfekoj for spotting this
 ---------------------------------------------------------------------------
 Version 3.19.5 (rgerhards), 2008-05-30
 - enabled Posix ERE expressions inside the property replacer
