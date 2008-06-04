@@ -13,6 +13,7 @@ Version 3.19.5 (rgerhards), 2008-05-30
 - implemented in property replacer: if a regular expression does not match,
   it can now either return "**NO MATCH** (default, as before), a blank
   property or the full original property text
+- enhanced property replacer to support multiple regex matches
 ---------------------------------------------------------------------------
 Version 3.19.4 (rgerhards), 2008-05-27
 - implemented x509/certvalid gtls auth mode

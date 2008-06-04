@@ -534,14 +534,14 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 			}
 
 			/* now check for submatch ID */
-			pTpe->data.field.iMatchToUse = 0;
+			pTpe->data.field.iSubMatchToUse = 0;
 			if(*p == ',') {
 				/* in this case a number follows, which indicates which match
 				 * shall be used. This must be a single digit.
 				 */
 				++p; /* eat ',' */
 				if(isdigit((int) *p)) {
-					pTpe->data.field.iMatchToUse = *p - '0';
+					pTpe->data.field.iSubMatchToUse = *p - '0';
 					++p; /* eat digit */
 				}
 			}
@@ -561,9 +561,27 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				   && (p[5] == ',' || p[5] == ':')) {
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_WHOLE_FIELD;
 					p += 5; /* eat indicator sequence */
+				} else if(p[0] == ',') { /* empty, use default */
+					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_DFLTSTR;
+					 /* do NOT eat indicator sequence, as this was already eaten - the 
+					  * comma itself is already part of the next field.
+					  */
 				} else {
 					errmsg.LogError(NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
 				               (char*) p);
+				}
+			}
+
+			/* now check for match ID */
+			pTpe->data.field.iMatchToUse = 0;
+			if(*p == ',') {
+				/* in this case a number follows, which indicates which match
+				 * shall be used. This must be a single digit.
+				 */
+				++p; /* eat ',' */
+				if(isdigit((int) *p)) {
+					pTpe->data.field.iMatchToUse = *p - '0';
+					++p; /* eat digit */
 				}
 			}
 
@@ -574,8 +592,8 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				    (char*) *pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
-				dbgprintf("we have a regexp and use match #%d\n",
-					  pTpe->data.field.iMatchToUse);
+				dbgprintf("we have a regexp and use match #%d, submatch #%d\n",
+					  pTpe->data.field.iMatchToUse, pTpe->data.field.iSubMatchToUse);
 			}
 		} else {
 			/* now we fall through the "regular" FromPos code */

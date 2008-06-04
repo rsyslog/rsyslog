@@ -1602,6 +1602,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	char *pBufStart;
 	char *pBuf;
 	int iLen;
+	short iOffs;
 
 #ifdef	FEATURE_REGEXP
 	/* Variables necessary for regular expression matching */
@@ -1842,7 +1843,29 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			dbgprintf("string to match for regex is: %s\n", pRes);
 
 			if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-				if (0 != regexp.regexec(&pTpe->data.field.re, pRes, nmatch, pmatch, 0)) {
+				short iTry = 0;
+				uchar bFound = 0;
+				iOffs = 0;
+				/* first see if we find a match, iterating through the series of
+				 * potential matches over the string.
+				 */
+				while(!bFound) {
+					if(regexp.regexec(&pTpe->data.field.re, pRes + iOffs, nmatch, pmatch, 0) == 0) {
+						if(pmatch[0].rm_so == -1) {
+							dbgprintf("oops ... start offset of successful regexec is -1\n");
+							break;
+						}
+						if(iTry == pTpe->data.field.iMatchToUse) {
+							bFound = 1;
+						} else {
+							iOffs += pmatch[0].rm_eo;
+							++iTry;
+						}
+					} else {
+						break;
+					}
+				}
+				if(!bFound) {
 					/* we got no match! */
 					if(pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
 						if (*pbMustBeFreed == 1) {
@@ -1857,7 +1880,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				} else {
 					/* Match- but did it match the one we wanted? */
 					/* we got no match! */
-					if(pmatch[pTpe->data.field.iMatchToUse].rm_so == -1) {
+					if(pmatch[pTpe->data.field.iSubMatchToUse].rm_so == -1) {
 						if(pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
 							if (*pbMustBeFreed == 1) {
 								free(pRes);
@@ -1873,8 +1896,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 					int iLenBuf;
 					char *pB;
 
-					iLenBuf = pmatch[pTpe->data.field.iMatchToUse].rm_eo
-						  - pmatch[pTpe->data.field.iMatchToUse].rm_so;
+					iLenBuf = pmatch[pTpe->data.field.iSubMatchToUse].rm_eo
+						  - pmatch[pTpe->data.field.iSubMatchToUse].rm_so;
 					pB = (char *) malloc((iLenBuf + 1) * sizeof(char));
 
 					if (pB == NULL) {
@@ -1885,7 +1908,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 					}
 
 					/* Lets copy the matched substring to the buffer */
-					memcpy(pB, pRes + pmatch[pTpe->data.field.iMatchToUse].rm_so, iLenBuf);
+					memcpy(pB, pRes + iOffs +  pmatch[pTpe->data.field.iSubMatchToUse].rm_so, iLenBuf);
 					pB[iLenBuf] = '\0';/* terminate string, did not happen before */
 
 					if (*pbMustBeFreed == 1)
