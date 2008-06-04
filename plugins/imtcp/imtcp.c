@@ -147,6 +147,7 @@ setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
 {
 	DEFiRet;
 	CHKiRet(net.AddPermittedPeer(&pPermPeersRoot, pszID));
+	free(pszID); /* no longer needed, but we need to free as of interface def */
 finalize_it:
 	RETiRet;
 }

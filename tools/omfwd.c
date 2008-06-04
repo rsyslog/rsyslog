@@ -117,6 +117,22 @@ static char *getFwdPt(instanceData *pData)
 		return(pData->port);
 }
 
+
+/* destruct the TCP helper objects
+ * This, for example, is needed after something went wrong.
+ * This function is void because it "can not" fail.
+ * rgerhards, 2008-06-04
+ */
+static inline void
+DestructTCPInstanceData(instanceData *pData)
+{
+	assert(pData != NULL);
+	if(pData->pNetstrm != NULL)
+		netstrm.Destruct(&pData->pNetstrm);
+	if(pData->pNS != NULL)
+		netstrms.Destruct(&pData->pNS);
+}
+
 BEGINcreateInstance
 CODESTARTcreateInstance
 ENDcreateInstance
@@ -139,8 +155,7 @@ CODESTARTfreeInstance
 		free(pData->port);
 
 	/* final cleanup */
-	if(pData->pNetstrm != NULL)
-		netstrm.Destruct(&pData->pNetstrm);
+	DestructTCPInstanceData(pData);
 	if(pData->pSockArray != NULL)
 		net.closeUDPListenSockets(pData->pSockArray);
 
@@ -219,6 +234,7 @@ setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
 {
 	DEFiRet;
 	CHKiRet(net.AddPermittedPeer(&pPermPeers, pszID));
+	free(pszID); /* no longer needed, but we must free it as of interface def */
 finalize_it:
 	RETiRet;
 }
@@ -266,7 +282,7 @@ static rsRetVal TCPSendPrepRetry(void *pvData)
 	instanceData *pData = (instanceData *) pvData;
 
 	assert(pData != NULL);
-	netstrm.Destruct(&pData->pNetstrm);
+	DestructTCPInstanceData(pData);
 	RETiRet;
 }
 
@@ -304,10 +320,7 @@ static rsRetVal TCPSendInit(void *pvData)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pData->pNetstrm != NULL)
-			netstrm.Destruct(&pData->pNetstrm);
-		if(pData->pNS != NULL)
-			netstrms.Destruct(&pData->pNS);
+		DestructTCPInstanceData(pData);
 	}
 
 	RETiRet;
@@ -426,6 +439,7 @@ CODESTARTdoAction
 		if(ret != RS_RET_OK) {
 			/* error! */
 			dbgprintf("error forwarding via tcp, suspending\n");
+			DestructTCPInstanceData(pData);
 			iRet = RS_RET_SUSPENDED;
 		}
 	}
