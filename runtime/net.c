@@ -287,8 +287,8 @@ PermittedPeerWildcardCompile(permittedPeers_t *pPeer)
 	 * of the text (it is supported at the start or end only).
 	 */
 	pPeer->etryType = PERM_PEER_TYPE_WILDCARD;
-
-	for(pC = pPeer->pszID ; *pC != '\0' ; ++pC) {
+	pC = pPeer->pszID;
+	while(*pC != '\0') {
 		pStart = pC;
 		/* find end of domain component */
 		for( ; *pC != '\0' && *pC != '.' ; ++pC)
@@ -299,6 +299,8 @@ PermittedPeerWildcardCompile(permittedPeers_t *pPeer)
 			/* pStart is a dummy, it is not used if length is 0 */
 			CHKiRet(AddPermittedPeerWildcard(pPeer, pStart, 0)); 
 		}
+		if(*pC != '\0')
+			++pC;
 	}
 
 finalize_it:
