@@ -279,6 +279,8 @@ CODESTARTobjDestruct(msg)
 			free(pThis->pszRcvdAt3164);
 		if(pThis->pszRcvdAt3339 != NULL)
 			free(pThis->pszRcvdAt3339);
+		if(pThis->pszRcvdAt_SecFrac != NULL)
+			free(pThis->pszRcvdAt_SecFrac);
 		if(pThis->pszRcvdAt_MySQL != NULL)
 			free(pThis->pszRcvdAt_MySQL);
 		if(pThis->pszRcvdAt_PgSQL != NULL)
@@ -287,6 +289,8 @@ CODESTARTobjDestruct(msg)
 			free(pThis->pszTIMESTAMP3164);
 		if(pThis->pszTIMESTAMP3339 != NULL)
 			free(pThis->pszTIMESTAMP3339);
+		if(pThis->pszTIMESTAMP_SecFrac != NULL)
+			free(pThis->pszTIMESTAMP_SecFrac);
 		if(pThis->pszTIMESTAMP_MySQL != NULL)
 			free(pThis->pszTIMESTAMP_MySQL);
 		if(pThis->pszTIMESTAMP_PgSQL != NULL)
@@ -738,6 +742,17 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3339);
+	case tplFmtSecFrac:
+		MsgLock(pM);
+		if(pM->pszTIMESTAMP_SecFrac == NULL) {
+			if((pM->pszTIMESTAMP_SecFrac = malloc(10)) == NULL) {
+				MsgUnlock(pM);
+				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
+			}
+			datetime.formatTimestampSecFrac(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 10);
+		}
+		MsgUnlock(pM);
+		return(pM->pszTIMESTAMP_SecFrac);
 	}
 	return "INVALID eFmt OPTION!";
 }
@@ -803,6 +818,17 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3339);
+	case tplFmtSecFrac:
+		MsgLock(pM);
+		if(pM->pszRcvdAt_SecFrac == NULL) {
+			if((pM->pszRcvdAt_SecFrac = malloc(10)) == NULL) {
+				MsgUnlock(pM);
+				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
+			}
+			datetime.formatTimestampSecFrac(&pM->tRcvdAt, pM->pszRcvdAt_SecFrac, 10);
+		}
+		MsgUnlock(pM);
+		return(pM->pszRcvdAt_SecFrac);
 	}
 	return "INVALID eFmt OPTION!";
 }

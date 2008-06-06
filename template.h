@@ -47,7 +47,8 @@ struct template {
 
 enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
 enum tplFormatTypes { tplFmtDefault = 0, tplFmtMySQLDate = 1,
-                      tplFmtRFC3164Date = 2, tplFmtRFC3339Date = 3, tplFmtPgSQLDate = 4 };
+                      tplFmtRFC3164Date = 2, tplFmtRFC3339Date = 3, tplFmtPgSQLDate = 4,
+		      tplFmtSecFrac = 5};
 enum tplFormatCaseConvTypes { tplCaseConvNo = 0, tplCaseConvUpper = 1, tplCaseConvLower = 2 };
 
 #include "msg.h"

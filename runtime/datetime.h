@@ -43,8 +43,9 @@ BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
 	int (*formatTimestampToPgSQL)(struct syslogTime *ts, char *pDst, size_t iLenDst);
 	int (*formatTimestamp3339)(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 	int (*formatTimestamp3164)(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
+	int (*formatTimestampSecFrac)(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 ENDinterface(datetime)
-#define datetimeCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define datetimeCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(datetime);

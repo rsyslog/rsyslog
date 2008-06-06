@@ -492,6 +492,45 @@ int formatTimestampToPgSQL(struct syslogTime *ts, char *pDst, size_t iLenDst)
                                ts->year, ts->month, ts->day, ts->hour, ts->minute, ts->second));
 }
 
+
+/**
+ * Format a syslogTimestamp to just the fractional seconds.
+ * The caller must provide the timestamp as well as a character
+ * buffer that will receive the resulting string. The function
+ * returns the size of the timestamp written in bytes (without
+ * the string terminator). If 0 is returend, an error occured.
+ * The buffer must be at least 10 bytes large.
+ * rgerhards, 2008-06-06
+ */
+int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+{
+	int lenRet;
+	char szFmtStr[64];
+
+	assert(ts != NULL);
+	assert(pBuf != NULL);
+	assert(iLenBuf >= 10);
+
+	if(ts->secfracPrecision > 0)
+	{	/* We must look at
+		 * the precision specified. For example, if we have millisec precision (3 digits), a
+		 * secFrac value of 12 is not equivalent to ".12" but ".012". Obviously, this
+		 * is a huge difference ;). To avoid this, we first create a format string with
+		 * the specific precision and *then* use that format string to do the actual formating.
+		 */
+		/* be careful: there is ONE actual %d in the format string below ;) */
+		snprintf(szFmtStr, sizeof(szFmtStr), "%%0%dd", ts->secfracPrecision);
+		lenRet = snprintf(pBuf, iLenBuf, szFmtStr, ts->secfrac);
+	} else {
+		pBuf[0] = '0';
+		pBuf[1] = '1';
+		lenRet = 1;
+	}
+
+	return(lenRet);
+}
+
+
 /**
  * Format a syslogTimestamp to a RFC3339 timestamp string (as
  * specified in syslog-protocol).
@@ -610,6 +649,7 @@ CODESTARTobjQueryInterface(datetime)
 	pIf->ParseTIMESTAMP3164 = ParseTIMESTAMP3164;
 	pIf->formatTimestampToMySQL = formatTimestampToMySQL;
 	pIf->formatTimestampToPgSQL = formatTimestampToPgSQL;
+	pIf->formatTimestampSecFrac = formatTimestampSecFrac;
 	pIf->formatTimestamp3339 = formatTimestamp3339;
 	pIf->formatTimestamp3164 = formatTimestamp3164;
 finalize_it:
