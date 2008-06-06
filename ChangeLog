@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 3.19.6 (rgerhards), 2008-06-??
+Version 3.19.6 (rgerhards), 2008-06-06
+- enhanced property replacer to support multiple regex matches
 - bugfix: part of permittedPeer structure was not correctly initialized
   thanks to varmojfekoj for spotting this
 - bugfix: off-by-one bug during certificate check

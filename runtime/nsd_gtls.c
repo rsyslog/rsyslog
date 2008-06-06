@@ -804,7 +804,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 		/* if we did not succeed so far, we try the CN part of the DN... */
 		CHKiRet(gtlsGetCN(pThis, pCert, &pstrCN));
 		if(pstrCN != NULL) { /* NULL if there was no CN present */
-			dbgprintf("gtls noch checking auth for CN '%s'\n", rsCStrGetSzStr(pstrCN));
+			dbgprintf("gtls now checking auth for CN '%s'\n", rsCStrGetSzStr(pstrCN));
 			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", rsCStrGetSzStr(pstrCN));
 			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 			CHKiRet(gtlsChkOnePeerName(pThis, rsCStrGetSzStr(pstrCN), &bFoundPositiveMatch));
