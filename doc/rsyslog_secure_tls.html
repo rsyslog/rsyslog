@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>TLS-protected syslog: recommended scenario</title>
+</head>
+<body>
+<h1>Encrypting Syslog Traffic with TLS (SSL)</h1>
+<p><small><i>Written by <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> (2008-06-06)</i></small></p>
+<h2>Introduction</h2>
+<p>This document describes a secure way to set up rsyslog TLS. A secure logging
+environment requires more than just encrypting the transmission channel. This document
+provides one possible way to create such a secure system.
+<p>Rsyslog's TLS authentication can be used very flexible and thus supports a 
+wide range of security policies. This section tries to give some advise on a 
+scenario that works well for many environments. However, it may not be suitable 
+for you - please assess you security needs before using the recommendations 
+below. Do not blame us if it doesn't provide what you need ;)</p>
+<p>Our policy offers these security benefits:</p>
+<ul>
+	<li>syslog messages are encrypted while traveling on the wire</li>
+	<li>the syslog sender authenticates to the syslog receiver; thus, the 
+	receiver knows who is talking to it</li>
+	<li>the syslog receiver authenticates to the syslog sender; thus, the sender 
+	can check if it indeed is sending to the expected receiver</li>
+	<li>the mutual authentication prevents man-in-the-middle attacks</li>
+</ul>
+<p>Our secrity goals are achived via public/private key security. As such, it is 
+vital that private keys are well protected and not accessible to third parties. 
+I private keys have become known to third parties, the system does not provide 
+any security at all. Also, our solution bases on X.509 certificates and a (very 
+limited) chain of trust. We have one instance (the CA) that issues all machine 
+certificates. The machine certificate indentifies a particular machine. hile in 
+theory (and practice), there could be several &quot;sub-CA&quot; that issues machine 
+certificates for a specific adminitrative domain, we do not include this in our 
+&quot;simple yet secure&quot; setup. If you intend to use this, rsyslog supports it, but 
+then you need to dig a bit more into the documentation (or use the forum to ask). 
+In general, if you depart from our simple model, you should have good reasons 
+for doing so and know quite well what you are doing - otherwise you may 
+compromise your system security.</p>
+<p>Please note that security never comes without effort. In the scenario 
+described here, we have limited the effort as much as possible. What remains is 
+some setup work for the central CA, the certificate setup for each machine as 
+well as a few configuration commands that need to be applied to all of them. 
+Proably the most important limiting factor in our setup is that all senders and 
+receivers must support IETF's syslog-transport-tls standard (which is not 
+finalized yet). We use mandatory-to-implement technology, yet you may have 
+trouble finding all required features in some implementations. More often, 
+unfortunately, you will find that an implementation does not support the 
+upcoming IETF standard at all - especially in the &quot;early days&quot; (starting May 
+2008) when rsyslog is the only implementation of said standard.</p>
+<p>Fortunately, rsyslog supports allmost every protocol that is out there in the 
+syslog world. So in cases where transport-tls is not available on a sender, we 
+recommend to use rsyslog as the initial relay. In that mode, the not-capabe 
+sender sends to rsyslog via another protocol, which then relays the message via 
+transport-tls to either another interim relay or the final destination (which, 
+of course, must by transport-tls capable). In such a scenario, it is best to try 
+see what the sender support. Maybe it is possible to use industry-standard plain 
+tcp syslog with it. Often you can even combine it with stunnel, which then, too, 
+enables a secure delivery to the first rsyslog relay. If all of that is not 
+possible, you can (and often must...) resort to UDP. Even though this is now 
+lossy and insecure, this is better than not having the ability to listen to that 
+device at all. It may even be reasonale secure if the uncapable sender and the 
+first rsyslog relay communicate via a private channel, e.g. a dedicated network 
+link.</p>
+<p>One final word of caution: transport-tls protects the connection between the 
+sender and the receiver. It does not necessarily protect against attacks that 
+are present in the message itself. Especially in a relay environment, the 
+message may have been originated from a malicious system, which placed invalid 
+hostnames and/or other content into it. If there is no provisioning against such 
+things, these records may show up in the receivers' repository. -transport-tls 
+does not protect against this (but it may help, properly used). Keep in mind 
+that syslog-transport-tls provides hop-by-hop security. It does not provide 
+end-to-end security and it does not authenticate the message itself (just the 
+last sender).</p>
+<h3>Sample Szenario</h3>
+<p>&nbsp;We have a quite simple scenario. There is one central syslog server, 
+named central.example.net. These server is being reported to by two Linux 
+machines with name zuse.example.net and turing.example.net. Also, there is a 
+third client - ada.example.net - which send both its own messages to the central 
+server but also forwards messages receive from an UDP-only capable router. We 
+hav decided to use ada.example.net because it is in the same local network 
+segment as the router and so we enjoy TLS' security benefits for forwarding the 
+router messages inside the corporate network.</p>
+<h3>Setting up the CA</h3>
+<p>The first step is to set up a certificate authoroty (CA). It must be 
+maintained by a trustworthy person (or group) and approves the indentities of 
+all machines. It does so by issuing there certificates. In a small setup, the 
+administrator can provide the CA function. What is important is the the CA's 
+private key is well-protocted and machine certificates are only issued if it is 
+know they are valid (in a single-admin case that means the admin should not 
+issue certificates to anyone else except himself).</p>
+<p>The CA creates a so-called self-signed certificate. That is, it approves its 
+own authenticy. This sounds useless, but the key point to understand is that 
+every machine will be provided a copy of the CA's certificate. Accepting this 
+certificate is a matter of trust. So by configuring the CA certificate, the 
+administrator tells rsyslog which certificates to trust. This is the root of all 
+trust under this model. That is why the CA's private key is so important - 
+everyone getting hold of it is trusted by our rsyslog instances.</p>
+<p>In our example, we will use the name "example.net" for our network. You may
+use any domain name of your liking.
+<p>To create a self-signed certificate, use the following commands with GnuTLS (which 
+is currently the only supported TLS library, what may change in the future): </p>
+<ol>
+<li>generate the private key:
+<pre>certtool --generate-privkey --outfile ca-key.pem</pre>
+<br>
+This takes a short while. Be sure to do some work on your workstation,
+it waits for radom input. Switching between windows is sufficient ;)
+</li>
+<li>now create the (self-signed) CA certificate itself:<br>
+<pre>certtool --generate-self-signed --load-privkey ca-key.pem --outfile ca.pem</pre>
+This generates the CA certificate. This command queries you for a
+number of things. Use appropriate responses. When it comes to
+certificate validity, keep in mind that you need to recreate all
+certificates when this one expires. So it may be a good idea to use a
+long period, eg. 3650 days (roughly 10 years). You need to specify that
+the certificates belongs to an authority. The certificate is used to
+sign other certificates.<br>
+</li>
+</ol>
+<h3>Feedback requested</h3>
+<p>I would appreciate feedback on this tutorial. If you have
+additional ideas, comments or find bugs (I *do* bugs - no way... ;)),
+please
+<a href="mailto:rgerhards@adiscon.com">let me know</a>.</p>
+<h2>Revision History</h2>
+<ul>
+<li>2008-06-06 * <a href="http://www.gerhards.net/rainer">Rainer
+Gerhards</a> * Initial Version created</li>
+</ul>
+<h2>Copyright</h2>
+<p>Copyright (c) 2008 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p> Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation License, Version
+1.2 or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts. A copy of the license can be viewed at
+<a href="http://www.gnu.org/copyleft/fdl.html">http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body></html>

@@ -19,6 +19,10 @@ note that TLS is the more secure successor of SSL. While people often
 talk about "SSL encryption" they actually mean "TLS encryption". So
 don't look any further if you look for how to SSL-encrypt syslog. You
 have found the right spot.</p>
+<p>This is a quick guide. There is a more elaborate guide currently
+under construction which provides a much more secure environment. It
+is highly recommended to
+<a href="rsyslog_secure_tls.html">at least have a look at it</a>.
 <h2>Background</h2>
 <p><b>Traditional syslog is a clear-text protocol. That
 means anyone with a sniffer can have a peek at your data.</b> In
@@ -174,8 +178,7 @@ itself can (and must) be distributed. To generate it, do the following:</p>
 <pre>certtool --generate-privkey --outfile ca-key.pem</pre>
 <br>
 This takes a short while. Be sure to do some work on your workstation,
-it waits for radom input. Switching between windows is sufficient
-;)&nbsp;
+it waits for radom input. Switching between windows is sufficient ;)
 </li>
 <li>now create the (self-signed) CA certificate itself:<br>
 <pre>certtool --generate-self-signed --load-privkey ca-key.pem --outfile ca.pem</pre>
