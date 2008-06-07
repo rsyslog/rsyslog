@@ -749,7 +749,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
 			}
-			datetime.formatTimestampSecFrac(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 10);
+			datetime.formatTimestampSecFrac(&pM->tTIMESTAMP, pM->pszTIMESTAMP_SecFrac, 10);
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP_SecFrac);
