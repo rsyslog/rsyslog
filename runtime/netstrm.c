@@ -234,6 +234,15 @@ Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 }
 
 
+/* check connection - slim wrapper for NSD driver function */
+static void
+CheckConnection(netstrm_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	pThis->Drvr.CheckConnection(pThis->pDrvrData);
+}
+
+
 /* get remote hname - slim wrapper for NSD driver function */
 static rsRetVal
 GetRemoteHName(netstrm_t *pThis, uchar **ppsz)
@@ -314,6 +323,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
+	pIf->CheckConnection = CheckConnection;
 	pIf->GetSock = GetSock;
 finalize_it:
 ENDobjQueryInterface(netstrm)

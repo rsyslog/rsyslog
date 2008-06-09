@@ -638,6 +638,34 @@ finalize_it:
 }
 
 
+/* This function checks if the connection is still alive - well, kind of... It
+ * is primarily being used for plain TCP syslog and it is quite a hack. However,
+ * as it seems to work, it is worth supporting it. The bottom line is that it
+ * should not be called by anything else but a plain tcp syslog sender.
+ * In order for it to work, it must be called *immediately* *before* the send()
+ * call. For details about what is done, see here:
+ * http://blog.gerhards.net/2008/06/getting-bit-more-reliability-from-plain.html
+ * rgerhards, 2008-06-09
+ */
+static void
+CheckConnection(nsd_t *pNsd)
+{
+	int rc;
+	char msgbuf[1]; /* dummy */
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
+
+	rc = recv(pThis->sock, msgbuf, 1, MSG_DONTWAIT | MSG_PEEK);
+	if(rc == 0) {
+		dbgprintf("CheckConnection detected broken connection - closing it\n");
+		/* in this case, the remote peer had shut down the connection and we
+		 * need to close our side, too.
+		 */
+		sockClose(&pThis->sock);
+	}
+}
+
+
 /* get the remote host's IP address. The returned string must be freed by the
  * caller.
  * rgerhards, 2008-04-24
@@ -684,6 +712,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->Connect = Connect;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
+	pIf->CheckConnection = CheckConnection;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 

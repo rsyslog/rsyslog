@@ -1243,6 +1243,17 @@ finalize_it:
 }
 
 
+/* This function checks if the connection is still alive - well, kind of...
+ * This is a dummy here. For details, check function common in ptcp driver.
+ * rgerhards, 2008-06-09
+ */
+static void
+CheckConnection(nsd_t __attribute__((unused)) *pNsd)
+{
+	/* dummy, do nothing */
+}
+
+
 /* get the remote hostname. The returned hostname must be freed by the caller.
  * rgerhards, 2008-04-25
  */
@@ -1507,6 +1518,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetMode = SetMode;
 	pIf->SetAuthMode = SetAuthMode;
 	pIf->SetPermPeers =SetPermPeers;
+	pIf->CheckConnection = CheckConnection;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 finalize_it:

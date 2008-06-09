@@ -2,6 +2,10 @@
 Version 3.19.7 (rgerhards), 2008-06-??
 - added new property replacer option "date-subseconds" that enables
   to query just the subsecond part of a high-precision timestamp
+- somewhat improved plain tcp syslog reliability by doing a connection
+  check before sending. Credits to Martin Schuette for providing the
+  idea. Details are available at
+  http://blog.gerhards.net/2008/06/reliable-plain-tcp-syslog-once-again.html
 ---------------------------------------------------------------------------
 Version 3.19.6 (rgerhards), 2008-06-06
 - enhanced property replacer to support multiple regex matches

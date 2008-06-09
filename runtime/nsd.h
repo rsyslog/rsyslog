@@ -53,6 +53,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetMode)(nsd_t *pThis, int mode); /* sets a driver specific mode - see driver doc for details */
 	rsRetVal (*SetAuthMode)(nsd_t *pThis, uchar*); /* sets a driver specific mode - see driver doc for details */
 	rsRetVal (*SetPermPeers)(nsd_t *pThis, permittedPeers_t*); /* sets driver permitted peers for auth needs */
+	void     (*CheckConnection)(nsd_t *pThis);	/* This is a trick mostly for plain tcp syslog */
 	rsRetVal (*GetSock)(nsd_t *pThis, int *pSock);
 	rsRetVal (*SetSock)(nsd_t *pThis, int sock);
 	/* GetSock() and SetSock() return an error if the driver does not use plain
@@ -60,7 +61,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	 * those drivers that utilize the nsd_ptcp to do some of their work.
 	 */
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 
 /* interface  for the select call */
 BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */

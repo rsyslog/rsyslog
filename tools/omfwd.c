@@ -97,7 +97,8 @@ typedef struct _instanceData {
 /* config data */
 static uchar *pszTplName = NULL; /* name of the default template to use */
 static uchar *pszStrmDrvr = NULL; /* name of the stream driver to use */
-static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static short iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static short bResendLastOnRecon = 0; /* should the last message be re-sent on a successful reconnect? */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 
 static permittedPeers_t *pPermPeers = NULL;
@@ -254,6 +255,7 @@ static rsRetVal TCPSendFrame(void *pvData, char *msg, size_t len)
 	instanceData *pData = (instanceData *) pvData;
 
 	lenSend = len;
+	netstrm.CheckConnection(pData->pNetstrm); /* hack for plain tcp syslog - see ptcp driver for details */
 	CHKiRet(netstrm.Send(pData->pNetstrm, (uchar*)msg, &lenSend));
 	dbgprintf("TCP sent %ld bytes, requested %ld\n", (long) lenSend, (long) len);
 
@@ -605,6 +607,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(pData->protocol == FORW_TCP) {
 		/* create our tcpclt */
 		CHKiRet(tcpclt.Construct(&pData->pTCPClt));
+		CHKiRet(tcpclt.SetResendLastOnRecon(pData->pTCPClt, bResendLastOnRecon));
 		/* and set callbacks */
 		CHKiRet(tcpclt.SetSendInit(pData->pTCPClt, TCPSendInit));
 		CHKiRet(tcpclt.SetSendFrame(pData->pTCPClt, TCPSendFrame));
@@ -679,6 +682,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 	/* we now must reset all non-string values */
 	iStrmDrvrMode = 0;
+	bResendLastOnRecon = 0;
 
 	return RS_RET_OK;
 }
@@ -697,6 +701,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdrivermode", 0, eCmdHdlrInt, NULL, &iStrmDrvrMode, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverauthmode", 0, eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendstreamdriverpermittedpeer", 0, eCmdHdlrGetWord, setPermittedPeer, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionsendresendlastmsgonreconnect", 0, eCmdHdlrBinary, NULL, &bResendLastOnRecon, NULL));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
