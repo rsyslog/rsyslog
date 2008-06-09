@@ -6,6 +6,9 @@ Version 3.19.7 (rgerhards), 2008-06-??
   check before sending. Credits to Martin Schuette for providing the
   idea. Details are available at
   http://blog.gerhards.net/2008/06/reliable-plain-tcp-syslog-once-again.html
+- made rsyslog tickless in the (usual and default) case that repeated
+  message reduction is turned off. More info:
+  http://blog.gerhards.net/2008/06/coding-to-save-environment.html
 ---------------------------------------------------------------------------
 Version 3.19.6 (rgerhards), 2008-06-06
 - enhanced property replacer to support multiple regex matches

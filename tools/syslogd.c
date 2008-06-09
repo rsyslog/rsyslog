@@ -2491,15 +2491,22 @@ mainloop(void)
 	struct timeval tvSelectTimeout;
 
 	BEGINfunc
-	while(!bFinished){
-		/* first check if we have any internal messages queued and spit them out */
-		/* TODO: do we need this any longer? I doubt it, but let's care about it
- 		 * later -- rgerhards, 2007-12-21
- 		 */
-		processImInternal();
+	/* first check if we have any internal messages queued and spit them out. We used
+	 * to do that on any loop iteration, but that is no longer necessry. The reason
+	 * is that once we reach this point here, we always run on multiple threads and
+	 * thus the main queue is properly initialized. -- rgerhards, 2008-06-09
+	 */
+	processImInternal();
 
-		/* this is now just a wait */
-		tvSelectTimeout.tv_sec = TIMERINTVL;
+	while(!bFinished){
+		/* this is now just a wait - please note that we do use a near-"eternal"
+		 * timeout of 1 day if we do not have repeated message reduction turned on
+		 * (which it is not by default). This enables us to help safe the environment
+		 * by not unnecessarily awaking rsyslog on a regular tick (just think
+		 * powertop, for example). In that case, we primarily wait for a signal,
+		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
+		 */
+		tvSelectTimeout.tv_sec = (bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)
@@ -2526,7 +2533,8 @@ mainloop(void)
 		 * for the time being, I think the remaining risk can be accepted.
 		 * rgerhards, 2008-01-10
  		 */
-		doFlushRptdMsgs();
+		if(bReducedRepeatMsgs == 1)
+			doFlushRptdMsgs();
 
 		if(restart) {
 			dbgprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
