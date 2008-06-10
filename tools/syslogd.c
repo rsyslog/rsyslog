@@ -2533,7 +2533,7 @@ mainloop(void)
 		 * for the time being, I think the remaining risk can be accepted.
 		 * rgerhards, 2008-01-10
  		 */
-		if(bReducedRepeatMsgs == 1)
+		if(bReduceRepeatMsgs == 1)
 			doFlushRptdMsgs();
 
 		if(restart) {

@@ -413,15 +413,15 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 		CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
 		switch(c) {
 			case '=': /* == */
-				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a character */
 				pToken->tok = (c == '=')? ctok_CMP_EQ : ctok_INVALID;
 				break;
 			case '!': /* != */
-				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a character */
 				pToken->tok = (c == '=')? ctok_CMP_NEQ : ctok_INVALID;
 				break;
 			case '<': /* <, <=, <> */
-				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a character */
 				if(c == '=') {
 					pToken->tok = ctok_CMP_LTEQ;
 				} else if(c == '>') {
@@ -431,7 +431,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 				}
 				break;
 			case '>': /* >, >= */
-				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
+				CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a character */
 				if(c == '=') {
 					pToken->tok = ctok_CMP_GTEQ;
 				} else {
@@ -567,8 +567,6 @@ CODESTARTobjQueryInterface(ctok)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//xxxpIf->oID = OBJctok;
-
 	pIf->Construct = ctokConstruct;
 	pIf->ConstructFinalize = ctokConstructFinalize;
 	pIf->Destruct = ctokDestruct;

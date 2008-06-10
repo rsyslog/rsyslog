@@ -109,8 +109,6 @@ CODESTARTobjQueryInterface(ctok_token)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//xxxpIf->oID = OBJctok_token;
-
 	pIf->Construct = ctok_tokenConstruct;
 	pIf->ConstructFinalize = ctok_tokenConstructFinalize;
 	pIf->Destruct = ctok_tokenDestruct;
