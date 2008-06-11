@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.19.8 (rgerhards), 2008-06-??
+---------------------------------------------------------------------------
 Version 3.19.7 (rgerhards), 2008-06-11
 - added new property replacer option "date-subseconds" that enables
   to query just the subsecond part of a high-precision timestamp
