@@ -38,7 +38,7 @@ rsyslogd_SOURCES = \
 	../conf.h
 
 rsyslogd_CPPFLAGS =  $(pthreads_cflags) $(rsrt_cflags)
-rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(dl_libs) $(rt_libs) $(rsrt_libs)
+rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(rsrt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 
 EXTRA_DIST = $(man_MANS)
