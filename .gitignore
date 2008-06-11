@@ -1,6 +1,7 @@
 .tar.gz
 .deps
 .libs
+*.o
 *.lo
 *.la
 Makefile
@@ -18,9 +19,8 @@ ltmain.sh
 aclocal.m4
 depcomp
 stamp-h1
-rfc3195d
-rklogd
-rsyslogd
 INSTALL
 install-sh
 missing
+compile
+rsyslogd
