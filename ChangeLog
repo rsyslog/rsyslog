@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.19.7 (rgerhards), 2008-06-??
+Version 3.19.7 (rgerhards), 2008-06-11
 - added new property replacer option "date-subseconds" that enables
   to query just the subsecond part of a high-precision timestamp
 - somewhat improved plain tcp syslog reliability by doing a connection
@@ -9,6 +9,9 @@ Version 3.19.7 (rgerhards), 2008-06-??
 - made rsyslog tickless in the (usual and default) case that repeated
   message reduction is turned off. More info:
   http://blog.gerhards.net/2008/06/coding-to-save-environment.html
+- some build system cleanup, thanks to Michael Biebl
+- bugfix: compile under (Free)BSD failed due to some invalid library
+  definitions - this is fixed now. Thanks to Michael Biebl for the patch.
 ---------------------------------------------------------------------------
 Version 3.19.6 (rgerhards), 2008-06-06
 - enhanced property replacer to support multiple regex matches
