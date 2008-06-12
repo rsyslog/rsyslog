@@ -34,14 +34,19 @@ processing.<span style="font-weight: bold;"></span></li>
 <li><span style="font-weight: bold;"></span>$DebugPrintKernelSymbols
 (imklog) [on/<b>off</b>]<br>
 Linux only, ignored on other platforms (but may be specified)</li>
-<li>$klogSymbolLookup (imklog) [<b>on</b>/off] --
-former klogd -x option<br>
+<li>$klogSymbolLookup (imklog) [on/<b>off</b>] --
+disables imklog kernel symbol translation (former klogd -x option). NOTE that 
+this option is counter-productive on recent kernels (>= 2.6) because the
+kernel already does the symbol translation and this option breaks the information.<br>
+<b>This option is scheduled for removal, probably with version 4.x.</b> Do not use
+it except if you have a very good reason. If you have one, let us know
+because otherwise new versions will no longer support it.<br>
 Linux only, ignored on other platforms (but may be specified)</li>
 <li>$klogUseSyscallInterface (imklog)&nbsp; [on/<b>off</b>]
--- former klogd -2 option<br>
+-- former klogd -s option<br>
 Linux only, ignored on other platforms (but may be specified)</li>
 <li>$klogSymbolsTwice (imklog) [on/<b>off</b>] --
-former klogd -s option<br>
+former klogd -2 option<br>
 Linux only, ignored on other platforms (but may be specified)<br style="font-weight: bold;">
 </li>
 </ul>

@@ -504,7 +504,6 @@ rsRetVal klogWillRun(void)
 			symbol_lookup  = (InitKsyms(symfile) == 1);
 			symbol_lookup |= InitMsyms();
 			if (symbol_lookup == 0) {
-				//dbgprintf("cannot find any symbols, turning off symbol lookups\n");
 				imklogLogIntMsg(LOG_WARNING, "cannot find any symbols, turning off symbol lookups");
 			}
 		}
