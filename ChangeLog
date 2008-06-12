@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.17.4 (rgerhards), 2008-05-??
-- changed default for i$KlogSymbolLookup to "off". The directive is
+- changed default for $KlogSymbolLookup to "off". The directive is
   also scheduled for removal in a later version. This was necessary
   because on kernels >= 2.6, the kernel does the symbol lookup itself. The
   imklog lookup logic then breaks the log message and makes it unusable.
