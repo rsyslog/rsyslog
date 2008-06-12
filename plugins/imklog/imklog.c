@@ -65,7 +65,7 @@ DEFobjCurrIf(glbl)
 int dbgPrintSymbols = 0; /* this one is extern so the helpers can access it! */
 int symbols_twice = 0;
 int use_syscall = 0;
-int symbol_lookup = 1;
+int symbol_lookup = 0; /* on recent kernels > 2.6, the kernel does this */
 int bPermitNonKernel = 0; /* permit logging of messages not having LOG_KERN facility */
 int iFacilIntMsg; /* the facility to use for internal messages (set by driver) */
 /* TODO: configuration for the following directives must be implemented. It 
@@ -245,7 +245,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	symbols_twice = 0;
 	use_syscall = 0;
 	symfile = NULL;
-	symbol_lookup = 1;
+	symbol_lookup = 0;
 	bPermitNonKernel = 0;
 	iFacilIntMsg = klogFacilIntMsg();
 	return RS_RET_OK;
