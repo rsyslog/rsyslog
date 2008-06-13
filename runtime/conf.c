@@ -7,6 +7,11 @@
  * kept in memory only as long as the config file is actually being 
  * processed. Thereafter, it shall be unloaded. -- rgerhards
  *
+ * TODO: the license MUST be changed to LGPL. However, we can not
+ * currently do that, because we use some sysklogd code to crunch
+ * the selector lines (e.g. *.info). That code is scheduled for removal
+ * as part of RainerScript. After this is done, we can change licenses.
+ *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
@@ -45,7 +50,7 @@
 #endif
 
 #include "rsyslog.h"
-#include "syslogd.h" /* this actually *is* part of the syslogd! */
+#include "../tools/syslogd.h" /* TODO: this must be removed! */
 #include "dirty.h"
 #include "parse.h"
 #include "action.h"

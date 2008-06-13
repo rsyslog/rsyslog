@@ -130,7 +130,7 @@ ctokSkipWhitespaceFromStream(ctok_t *pThis)
 	/* we must unget the one non-whitespace we found */
 	CHKiRet(ctokUngetCharFromStream(pThis, c));
 
-dbgprintf("skipped whitepsace, stream now '%s'\n", pThis->pp);
+dbgprintf("skipped whitespace, stream now '%s'\n", pThis->pp);
 finalize_it:
 	RETiRet;
 }
@@ -390,6 +390,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 	uchar szWord[128];
 	int bRetry = 0; /* retry parse? Only needed for inline comments... */
 
+dbgprintf("ctokGetToken\n");
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(ppToken != NULL);
 
@@ -408,6 +409,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 
 	/* find the next token. We may loop when we have inline comments */
 	do {
+dbgprintf("we search for a new token\n");
 		bRetry = 0;
 		CHKiRet(ctokSkipWhitespaceFromStream(pThis));
 		CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
@@ -514,6 +516,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 							pToken->tok = ctok_FUNCTION;
 							// TODO: fill function name
 						} else { /* give up... */
+							dbgprintf("parser has an invalid word (token) '%s'\n", szWord);
 							pToken->tok = ctok_INVALID;
 						}
 					}

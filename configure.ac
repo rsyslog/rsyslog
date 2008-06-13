@@ -623,6 +623,7 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
+		tests/Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
 		plugins/imtcp/Makefile \

@@ -51,6 +51,9 @@
  * a module provides multiple types, several separate modules must be created which
  * then should share a single library containing the majority of code. This macro
  * must be present in each module. -- rgerhards, 2007-12-14
+* Note that MODULE_TYPE_TESTBENCH is reserved for testbenches, but
+ * declared in their own header files (because the rest does not need these
+ * defines). -- rgerhards, 2008-06-13
  */
 #define MODULE_TYPE(x)\
 static rsRetVal modGetType(eModType_t *modType) \
@@ -64,6 +67,7 @@ static rsRetVal modGetType(eModType_t *modType) \
 #define MODULE_TYPE_LIB \
 	DEF_LMOD_STATIC_DATA \
 	MODULE_TYPE(eMOD_LIB)
+
 
 /* macro to define a unique module id. This must be able to fit in a void*. The
  * module id must be unique inside a running rsyslogd application. It is used to

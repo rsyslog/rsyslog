@@ -14,6 +14,8 @@ librsyslog_la_SOURCES = \
 	nsd.h \
 	glbl.h \
 	glbl.c \
+	conf.c \
+	conf.h \
 	msg.c \
 	msg.h \
 	linkedlist.c \
@@ -63,7 +65,23 @@ librsyslog_la_SOURCES = \
 	queue.c \
 	queue.h \
 	cfsysline.c \
-	cfsysline.h
+	cfsysline.h \
+	\
+	\
+	../action.h \
+	../action.c \
+	../threads.c \
+	../threads.h \
+	\
+	../parse.c \
+	../parse.h \
+	\
+	../outchannel.c \
+	../outchannel.h \
+	../template.c \
+	../template.h
+# the files with ../ we need to work on - so that they either become part of the
+# runtime or will no longer be needed. -- rgerhards, 2008-06-13
 
 librsyslog_la_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(pthreads_cflags)
 #librsyslog_la_LDFLAGS = -module -avoid-version

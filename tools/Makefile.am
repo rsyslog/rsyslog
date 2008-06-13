@@ -20,22 +20,7 @@ rsyslogd_SOURCES = \
 	pidfile.c \
 	pidfile.h \
 	\
-	../dirty.h \
-	\
-	../action.h \
-	../action.c \
-	../threads.c \
-	../threads.h \
-	\
-	../parse.c \
-	../parse.h \
-	\
-	../outchannel.c \
-	../outchannel.h \
-	../template.c \
-	../template.h \
-	../conf.c \
-	../conf.h
+	../dirty.h
 
 rsyslogd_CPPFLAGS =  $(pthreads_cflags) $(rsrt_cflags)
 rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(rsrt_libs)
