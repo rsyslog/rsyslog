@@ -24,3 +24,5 @@ install-sh
 missing
 compile
 rsyslogd
+*.orig
+rg.conf*
