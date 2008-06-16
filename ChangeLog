@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.17.4 (rgerhards), 2008-05-??
+Version 3.17.4 (rgerhards), 2008-06-16
 - changed default for $KlogSymbolLookup to "off". The directive is
   also scheduled for removal in a later version. This was necessary
   because on kernels >= 2.6, the kernel does the symbol lookup itself. The
