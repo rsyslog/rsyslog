@@ -40,6 +40,7 @@ html_files = \
 	src/queueWorkerLogic.dia \
 	queueWorkerLogic.jpg \
 	queueWorkerLogic_small.jpg \
+	tls_cert.jpg \
 	rainerscript.html \
 	rscript_abnf.html \
 	rsconf1_actionexeconlywhenpreviousissuspended.html \
@@ -72,6 +73,7 @@ html_files = \
 	rsconf1_resetconfigvariables.html \
 	rsconf1_umask.html \
 	v3compatibility.html \
+	src/tls_cert.dia \
 	src/classes.dia
 
 EXTRA_DIST = $(html_files)

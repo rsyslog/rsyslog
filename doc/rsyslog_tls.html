@@ -108,7 +108,20 @@ certificate files, to use the gtls driver and start up a listener. This
 is done as follows:<br>
 </p>
 <blockquote><code></code>
-<pre># make gtls driver the default<br>$DefaultNetstreamDriver gtls<br><br># certificate files<br>$DefaultNetstreamDriverCAFile /path/to/contrib/gnutls/ca.pem<br>$DefaultNetstreamDriverCertFile /path/to/contrib/gnutls/cert.pem<br>$DefaultNetstreamDriverKeyFile /path/to/contrib/gnutls/key.pem<br><br>$ModLoad /home/rger/proj/rsyslog/plugins/imtcp/.libs/imtcp # load listener<br><br>$InputTCPServerStreamDriverMode 1 # run driver in TLS-only mode<br>$InputTCPServerRun 10514 # start up listener at port 10514<br></pre>
+<pre># make gtls driver the default
+$DefaultNetstreamDriver gtls
+
+# certificate files
+$DefaultNetstreamDriverCAFile /path/to/contrib/gnutls/ca.pem
+$DefaultNetstreamDriverCertFile /path/to/contrib/gnutls/cert.pem
+$DefaultNetstreamDriverKeyFile /path/to/contrib/gnutls/key.pem
+
+$ModLoad /home/rger/proj/rsyslog/plugins/imtcp/.libs/imtcp # load listener
+
+$InputTCPServerStreamDriverMode 1 # run driver in TLS-only mode
+$InputTCPServerStreamDriverAuthMode anon # client is NOT authenticated
+$InputTCPServerRun 10514 # start up listener at port 10514
+</pre>
 </blockquote>
 This is all you need to do. You can use the rest of your rsyslog.conf
 together with this configuration. The way messages are received does
@@ -120,7 +133,16 @@ operational.</p>
 <p>The client setup is equally&nbsp;simple. You need less
 certificates, just the CA cert.&nbsp;</p>
 <blockquote>
-<pre># certificate files - just CA for a client<br>$DefaultNetstreamDriverCAFile /path/to/contrib/gnutls/ca.pem<br><br># set up the action<br>$DefaultNetstreamDriver gtls # use gtls netstream driver<br>$ActionSendStreamDriverMode 1 # require TLS for the connection<br>*.* @@(o)server.example.net:10514 # send (all) messages<br><br></pre>
+<pre># certificate files - just CA for a client
+$DefaultNetstreamDriverCAFile /path/to/contrib/gnutls/ca.pem
+
+# set up the action
+$DefaultNetstreamDriver gtls # use gtls netstream driver
+$ActionSendStreamDriverMode 1 # require TLS for the connection
+$ActionSendStreamDriverAuthMode anon # server is NOT authenticated
+*.* @@(o)server.example.net:10514 # send (all) messages
+
+</pre>
 </blockquote>
 <p>Note that we use the regular TCP forwarding syntax (@@) here.
 There is nothing special, because the encryption is handled by the

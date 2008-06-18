@@ -1192,7 +1192,7 @@ ReleaseObj(char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf)
 	objInfo_t *pObjInfo;
 
 
-	dbgprintf("source file %s releasing object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded);
+	/* dev debug only dbgprintf("source file %s releasing object '%s', ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded); */
 
 	if(pObjFile == NULL)
 		FINALIZE; /* if it is not a lodable module, we do not need to do anything... */

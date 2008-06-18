@@ -485,7 +485,7 @@ finalize_it:
 		pGnuErr = gtlsStrerror(gnuRet);
 		errno = 0;
 		errmsg.LogError(NO_ERRCODE, "error adding our certificate. GnuTLS error %d, message: '%s', "
-				"key: '%s', cert: '%s'\n", gnuRet, pGnuErr, certFile, keyFile);
+				"key: '%s', cert: '%s'\n", gnuRet, pGnuErr, keyFile, certFile);
 		free(pGnuErr);
 	}
 	RETiRet;

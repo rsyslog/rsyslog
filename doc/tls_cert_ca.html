@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>TLS-protected syslog: scenario</title>
+</head>
+<body>
+
+<h1>Encrypting Syslog Traffic with TLS (SSL)</h1>
+<p><small><i>Written by <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> (2008-06-17)</i></small></p>
+
+<ul>
+<li><a href="rsyslog_secure_tls.html">Overview</a>
+<li><a href="tls_cert_scenario.html">Sample Scenario</a>
+<li><a href="tls_cert_ca.html">Setting up the CA</a>
+<li><a href="tls_cert_machine.html">Generating Machine Certificates</a>
+<li><a href="tls_cert_server.html">Setting up the Central Server</a>
+<li><a href="tls_cert_client.html">Setting up syslog Clients</a>
+<li><a href="tls_cert_udp_relay.html">Setting up the UDP syslog relay</a>
+<li><a href="tls_cert_summary.html">Wrapping it all up</a>
+</ul>
+
+<h3>Setting up the CA</h3>
+<p>The first step is to set up a certificate authority (CA). It must be 
+maintained by a trustworthy person (or group) and approves the indentities of 
+all machines. It does so by issuing their certificates. In a small setup, the 
+administrator can provide the CA function. What is important is the the CA's 
+<span style="float: left">
+<script type="text/javascript"><!--
+google_ad_client = "pub-3204610807458280";
+/* rsyslog doc inline */
+google_ad_slot = "5958614527";
+google_ad_width = 125;
+google_ad_height = 125;
+//-->
+</script>
+<script type="text/javascript"
+src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+</script>
+</span>
+private key is well-protocted and machine certificates are only issued if it is 
+know they are valid (in a single-admin case that means the admin should not 
+issue certificates to anyone else except himself).</p>
+<p>The CA creates a so-called self-signed certificate. That is, it approves its 
+own authenticy. This sounds useless, but the key point to understand is that 
+every machine will be provided a copy of the CA's certificate. Accepting this 
+certificate is a matter of trust. So by configuring the CA certificate, the 
+administrator tells <a href="http://www.rsyslog.com">rsyslog</a> which certificates to trust. This is the root of all 
+trust under this model. That is why the CA's private key is so important - 
+everyone getting hold of it is trusted by our rsyslog instances.</p>
+<center><img align="right" src="tls_cert_ca.jpg"></center>
+<p>To create a self-signed certificate, use the following commands with GnuTLS (which 
+is currently the only supported TLS library, what may change in the future): </p>
+<ol>
+<li>generate the private key:
+<pre>certtool --generate-privkey --outfile ca-key.pem</pre>
+<br>
+This takes a short while. Be sure to do some work on your workstation,
+it waits for radom input. Switching between windows is sufficient ;)
+</li>
+<li>now create the (self-signed) CA certificate itself:<br>
+<pre>certtool --generate-self-signed --load-privkey ca-key.pem --outfile ca.pem</pre>
+This generates the CA certificate. This command queries you for a
+number of things. Use appropriate responses. When it comes to
+certificate validity, keep in mind that you need to recreate all
+certificates when this one expires. So it may be a good idea to use a
+long period, eg. 3650 days (roughly 10 years). You need to specify that
+the certificates belongs to an authority. The certificate is used to
+sign other certificates.<br>
+</li>
+</ol>
+<h2>Copyright</h2>
+<p>Copyright (c) 2008 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p> Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation License, Version
+1.2 or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts. A copy of the license can be viewed at
+<a href="http://www.gnu.org/copyleft/fdl.html">http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body></html>
