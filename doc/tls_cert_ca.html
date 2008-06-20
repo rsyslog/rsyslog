@@ -68,19 +68,21 @@ sign other certificates.<br>
 </li>
 </ol>
 <h3>Sample Screen Session</h3>
+<p>Text in red is user input. Please note that for some questions, there is no
+user input given. This means the default was accepted by simply pressing the 
+enter key.
 <code><pre>
-[root@rgf9dev sample]# certtool --generate-privkey --outfile ca-key.pem
-Generating a 1024 bit RSA private key...
-[root@rgf9dev sample]# certtool --generate-self-signed --load-privkey ca-key.pem --outfile ca.pem
-[root@rgf9dev sample]# certtool --generate-self-signed --load-privkey ca-key.pem --outfile ca.pem
+[root@rgf9dev sample]# <font color="red">certtool --generate-privkey --outfile ca-key.pem --bits 2048</font>
+Generating a 2048 bit RSA private key...
+[root@rgf9dev sample]# <font color="red">certtool --generate-self-signed --load-privkey ca-key.pem --outfile ca.pem</font>
 Generating a self signed certificate...
 Please enter the details of the certificate's distinguished name. Just press enter to ignore a field.
-Country name (2 chars): US
-Organization name: SomeOrg
-Organizational unit name: SomeOU
-Locality name: Somewhere
-State or province name: CA
-Common name: someName (not necessarily DNS!)
+Country name (2 chars): <font color="red">US</font>
+Organization name: <font color="red">SomeOrg</font>
+Organizational unit name: <font color="red">SomeOU</font>
+Locality name: <font color="red">Somewhere</font>
+State or province name: <font color="red">CA</font>
+Common name: <font color="red">someName (not necessarily DNS!)</font>
 UID: 
 This field should not be used in new certificates.
 E-mail: 
@@ -88,16 +90,16 @@ Enter the certificate's serial number (decimal):
 
 
 Activation/Expiration time.
-The certificate will expire in (days): 3650
+The certificate will expire in (days): <font color="red">3650</font>
 
 
 Extensions.
-Does the certificate belong to an authority? (Y/N): y
+Does the certificate belong to an authority? (Y/N): <font color="red">y</font>
 Path length constraint (decimal, -1 for no constraint): 
 Is this a TLS web client certificate? (Y/N): 
 Is this also a TLS web server certificate? (Y/N): 
-Enter the e-mail of the subject of the certificate: someone@example.net
-Will the certificate be used to sign other certificates? (Y/N): y
+Enter the e-mail of the subject of the certificate: <font color="red">someone@example.net</font>
+Will the certificate be used to sign other certificates? (Y/N): <font color="red">y</font>
 Will the certificate be used to sign CRLs? (Y/N): 
 Will the certificate be used to sign code? (Y/N): 
 Will the certificate be used to sign OCSP requests? (Y/N): 
@@ -111,7 +113,7 @@ X.509 Certificate Information:
 		Not After: Sun Jun 17 10:35:25 UTC 2018
 	Subject: C=US,O=SomeOrg,OU=SomeOU,L=Somewhere,ST=CA,CN=someName (not necessarily DNS!)
 	Subject Public Key Algorithm: RSA
-		Modulus (bits 1024):
+		Modulus (bits 2048):
 			d9:9c:82:46:24:7f:34:8f:60:cf:05:77:71:82:61:66
 			05:13:28:06:7a:70:41:bf:32:85:12:5c:25:a7:1a:5a
 			28:11:02:1a:78:c1:da:34:ee:b4:7e:12:9b:81:24:70
@@ -135,12 +137,12 @@ Other Information:
 	Public Key Id:
 		fbfe968d10a73ae5b70d7b434886c8f872997b89
 
-Is the above information ok? (Y/N): y
+Is the above information ok? (Y/N): <font color="red">y</font>
 
 
 Signing certificate...
-[root@rgf9dev sample]# chmod 400 ca-key.pem
-[root@rgf9dev sample]# ls -l
+[root@rgf9dev sample]# <font color="red">chmod 400 ca-key.pem</font>
+[root@rgf9dev sample]# <font color="red">ls -l</font>
 total 8
 -r-------- 1 root root  887 2008-06-19 12:33 ca-key.pem
 -rw-r--r-- 1 root root 1029 2008-06-19 12:36 ca.pem

@@ -53,20 +53,23 @@ of this document.
 able to obtain that private key can imporsonate as the machine to which it belongs, thus
 breaching your security.</b>
 <h3>Sample Screen Session</h3>
+<p>Text in red is user input. Please note that for some questions, there is no
+user input given. This means the default was accepted by simply pressing the 
+enter key.
 <code><pre>
-[root@rgf9dev sample]# <b>certtool --generate-privkey --outfile key.pem</b>
-Generating a 1024 bit RSA private key...
-[root@rgf9dev sample]# <b>certtool --generate-request --load-privkey key.pem --outfile request.pem</b>
+[root@rgf9dev sample]# <font color="red">certtool --generate-privkey --outfile key.pem --bits 2048</font>
+Generating a 2048 bit RSA private key...
+[root@rgf9dev sample]# <font color="red">certtool --generate-request --load-privkey key.pem --outfile request.pem</font>
 Generating a PKCS #10 certificate request...
-Country name (2 chars): US
-Organization name: SomeOrg
-Organizational unit name: SomeOU
-Locality name: Somewhere
-State or province name: CA
-Common name: machine.example.net
+Country name (2 chars): <font color="red">US</font>
+Organization name: <font color="red">SomeOrg</font>
+Organizational unit name: <font color="red">SomeOU</font>
+Locality name: <font color="red">Somewhere</font>
+State or province name: <font color="red">CA</font>
+Common name: <font color="red">machine.example.net</font>
 UID: 
 Enter a challenge password: 
-[root@rgf9dev sample]# <b>certtool --generate-certificate --load-request request.pem --outfile cert.pem --load-ca-certificate ca.pem --load-ca-privkey ca-key.pem</b>
+[root@rgf9dev sample]# <font color="red">certtool --generate-certificate --load-request request.pem --outfile cert.pem --load-ca-certificate ca.pem --load-ca-privkey ca-key.pem</font>
 Generating a signed certificate...
 Enter the certificate's serial number (decimal): 
 
@@ -76,10 +79,10 @@ The certificate will expire in (days): 1000
 
 
 Extensions.
-Does the certificate belong to an authority? (Y/N): n
-Is this a TLS web client certificate? (Y/N): y
-Is this also a TLS web server certificate? (Y/N): y
-Enter the dnsName of the subject of the certificate: machine.example.net
+Does the certificate belong to an authority? (Y/N): <font color="red">n</font>
+Is this a TLS web client certificate? (Y/N): <font color="red">y</font>
+Is this also a TLS web server certificate? (Y/N): <font color="red">y</font>
+Enter the dnsName of the subject of the certificate: <font color="red">machine.example.net</font>
 Will the certificate be used for signing (DHE and RSA-EXPORT ciphersuites)? (Y/N): 
 Will the certificate be used for encryption (RSA ciphersuites)? (Y/N): 
 X.509 Certificate Information:
@@ -90,7 +93,7 @@ X.509 Certificate Information:
 		Not After: Wed Mar 16 10:42:57 UTC 2011
 	Subject: C=US,O=SomeOrg,OU=SomeOU,L=Somewhere,ST=CA,CN=machine.example.net
 	Subject Public Key Algorithm: RSA
-		Modulus (bits 1024):
+		Modulus (bits 2048):
 			b2:4e:5b:a9:48:1e:ff:2e:73:a1:33:ee:d8:a2:af:ae
 			2f:23:76:91:b8:39:94:00:23:f2:6f:25:ad:c9:6a:ab
 			2d:e6:f3:62:d8:3e:6e:8a:d6:1e:3f:72:e5:d8:b9:e0
@@ -117,20 +120,20 @@ Other Information:
 	Public Key Id:
 		0ce1c3dbd19d31fa035b07afe2e0ef22d90b28ac
 
-Is the above information ok? (Y/N): y
+Is the above information ok? (Y/N): <font color="red">y</font>
 
 
 Signing certificate...
-[root@rgf9dev sample]# <b>rm -f request.pem</b>
-[root@rgf9dev sample]# <b>ls -l</b>
+[root@rgf9dev sample]# <font color="red">rm -f request.pem</font>
+[root@rgf9dev sample]# <font color="red">ls -l</font>
 total 16
 -r-------- 1 root root  887 2008-06-19 12:33 ca-key.pem
 -rw-r--r-- 1 root root 1029 2008-06-19 12:36 ca.pem
 -rw-r--r-- 1 root root 1074 2008-06-19 12:43 cert.pem
 -rw-r--r-- 1 root root  887 2008-06-19 12:40 key.pem
 [root@rgf9dev sample]# # it may be a good idea to rename the files to indicate where they belong to
-[root@rgf9dev sample]# <b>mv cert.pem machine-cert.pem</b>
-[root@rgf9dev sample]# <b>mv key.pem machine-key.pem</b>
+[root@rgf9dev sample]# <font color="red">mv cert.pem machine-cert.pem</font>
+[root@rgf9dev sample]# <font color="red">mv key.pem machine-key.pem</font>
 [root@rgf9dev sample]# 
 </pre></code>
 <h3>Distributing Files</h3>
