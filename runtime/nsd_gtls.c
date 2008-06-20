@@ -81,6 +81,18 @@ static pthread_mutex_t mutGtlsStrerror; /**< a mutex protecting the potentially 
 static gnutls_certificate_credentials xcred;
 static gnutls_dh_params dh_params;
 
+#ifdef DEBUG
+/* This defines a log function to be provided to GnuTLS. It hopefully
+ * helps us track down hard to find problems.
+ * rgerhards, 2008-06-20
+ */
+static void logFunction(int level, const char *msg)
+{
+	dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
+}
+#endif /* #ifdef DEBUG */
+
+
 /* read in the whole content of a file. The caller is responsible for
  * freeing the buffer. To prevent DOS, this function can NOT read
  * files larger than 1MB (which still is *very* large).
@@ -519,6 +531,12 @@ gtlsGlblInit(void)
 		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 	}
 
+#	ifdef DEBUG
+	/* intialize log function - set a level only for hard-to-find bugs */
+	gnutls_global_set_log_function(logFunction);
+	gnutls_global_set_log_level(10); /* 0 (no) to 9 (most), 10 everything */
+#	endif
+
 finalize_it:
 	RETiRet;
 }
@@ -926,19 +944,22 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		/* provide error details if we have them */
 		if(stateCert & GNUTLS_CERT_SIGNER_NOT_FOUND) {
 			pszErrCause = "signer not found";
-		} else if(stateCert & GNUTLS_CERT_SIGNER_NOT_FOUND) {
-			pszErrCause = "signer is not a CA";
 		} else if(stateCert & GNUTLS_CERT_SIGNER_NOT_CA) {
+			pszErrCause = "signer is not a CA";
+		} else if(stateCert & GNUTLS_CERT_INSECURE_ALGORITHM) {
 			pszErrCause = "insecure algorithm";
 		} else if(stateCert & GNUTLS_CERT_REVOKED) {
 			pszErrCause = "certificate revoked";
 		} else {
-			pszErrCause = "no specific reason";
+			pszErrCause = "GnuTLS returned no specific reason";
+			dbgprintf("GnuTLS returned no specific reason for GNUTLS_CERT_INVALID, certificate "
+				 "status is %d\n", stateCert);
 		}
+		errno = 0; /* get rid of errno based message expansion on LogError */
 		errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
 				pszErrCause);
 		gtlsGetCertInfo(pThis, &pStr);
-		errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
+		errmsg.LogError(NO_ERRCODE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
 		rsCStrDestruct(&pStr);
 		ABORT_FINALIZE(RS_RET_CERT_INVALID);
 	}
@@ -960,7 +981,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		else if(ttCert > ttNow) {
 			errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer: certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
+			errmsg.LogError(NO_ERRCODE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
 			rsCStrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
 		}
@@ -971,7 +992,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		else if(ttCert < ttNow) {
 			errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer: certificate %d expired", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(NO_ERRCODE, "info on invalid cert: %s", rsCStrGetSzStr(pStr));
+			errmsg.LogError(NO_ERRCODE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
 			rsCStrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 		}
