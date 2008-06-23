@@ -1,3 +1,4 @@
+*~
 .tar.gz
 .deps
 .libs
@@ -27,3 +28,9 @@ rsyslogd
 *.orig
 rg.conf*
 *.swp
+# some common names I use during development
+utils
+tmp*
+log 
+logfile
+debug
