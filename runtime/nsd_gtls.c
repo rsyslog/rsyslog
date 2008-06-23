@@ -532,9 +532,11 @@ gtlsGlblInit(void)
 	}
 
 #	ifdef DEBUG
+#if 	0 /* do this in special cases only. WARNING: if active, it may reveal sensitive information! */
 	/* intialize log function - set a level only for hard-to-find bugs */
 	gnutls_global_set_log_function(logFunction);
 	gnutls_global_set_log_level(10); /* 0 (no) to 9 (most), 10 everything */
+#	endif
 #	endif
 
 finalize_it:
