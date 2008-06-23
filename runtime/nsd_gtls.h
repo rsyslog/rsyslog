@@ -28,7 +28,8 @@
 
 typedef enum {
 	gtlsRtry_None = 0,	/**< no call needs to be retried */
-	gtlsRtry_handshake = 1
+	gtlsRtry_handshake = 1,
+	gtlsRtry_recv = 2
 } gtlsRtryCall_t;		/**< IDs of calls that needs to be retried */
 
 typedef nsd_if_t nsd_gtls_if_t; /* we just *implement* this interface */

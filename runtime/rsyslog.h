@@ -238,6 +238,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FILE_NO_STAT = -2096, /**< can not stat() a file */
 	RS_RET_FILE_TOO_LARGE = -2097, /**< a file is larger than permitted */
 	RS_RET_INVALID_WILDCARD = -2098, /**< a wildcard entry is invalid */
+	RS_RET_CLOSED = -2099, /**< connection was closed */
+	RS_RET_RETRY = -2100, /**< call should be retried (e.g. EGAIN on recv) */
+	RS_RET_GSS_ERR = -2101, /**< generic error occured in GSSAPI subsystem */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

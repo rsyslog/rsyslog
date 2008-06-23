@@ -68,7 +68,7 @@ MODULE_TYPE_INPUT
 static rsRetVal addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal);
 static int TCPSessGSSInit(void);
 static void TCPSessGSSClose(tcps_sess_t* pSess);
-static int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len);
+static rsRetVal TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *);
 static rsRetVal onSessAccept(tcpsrv_t *pThis, tcps_sess_t *ppSess);
 static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *ppSess);
 
@@ -274,25 +274,28 @@ finalize_it:
 }
 
 
-static int
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
+static rsRetVal
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
 {
-	ssize_t state;
+	DEFiRet;
 	int allowedMethods;
 	gss_sess_t *pGSess;
 
 	assert(pSess != NULL);
 	assert(pSess->pUsr != NULL);
 	pGSess = (gss_sess_t*) pSess->pUsr;
+	assert(piLenRcvd != NULL);
 
 	allowedMethods = pGSess->allowedMethods;
-	if(allowedMethods & ALLOWEDMETHOD_GSS)
-		state = TCPSessGSSRecv(pSess, buf, lenBuf);
-	else {
-		if(netstrm.Rcv(pSess->pStrm, (uchar*) buf, &state) != RS_RET_OK)
-			state = -1; // TODO: move this function to an iRet interface! 2008-05-05
+	if(allowedMethods & ALLOWEDMETHOD_GSS) {
+		CHKiRet(TCPSessGSSRecv(pSess, buf, lenBuf, piLenRcvd));
+	} else {
+		*piLenRcvd = lenBuf;
+		CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd) != RS_RET_OK);
 	}
-	return state;
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -526,25 +529,26 @@ finalize_it:
 }
 
 
-/* returns: number of bytes read or -1 on error
- * Replaces recv() for gssapi connections.
+/* Replaces recv() for gssapi connections.
  */
-int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len)
+int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *piLenRcvd)
 {
+	DEFiRet;
 	gss_buffer_desc xmit_buf, msg_buf;
 	gss_ctx_id_t *context;
 	OM_uint32 maj_stat, min_stat;
 	int fdSess;
 	int     conf_state;
-	int state, len;
+	int state;
 	gss_sess_t *pGSess;
 
 	assert(pSess->pUsr != NULL);
+	assert(piLenRcvd != NULL);
 	pGSess = (gss_sess_t*) pSess->pUsr;
 
 	netstrm.GetSock(pSess->pStrm, &fdSess); // TODO: method access, CHKiRet!
 	if ((state = gssutil.recv_token(fdSess, &xmit_buf)) <= 0)
-		return state;
+		ABORT_FINALIZE(RS_RET_GSS_ERR);
 
 	context = &pGSess->gss_context;
 	maj_stat = gss_unwrap(&min_stat, *context, &xmit_buf, &msg_buf,
@@ -555,18 +559,19 @@ int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len)
 			free(xmit_buf.value);
 			xmit_buf.value = 0;
 		}
-		return (-1);
+		ABORT_FINALIZE(RS_RET_GSS_ERR);
 	}
 	if (xmit_buf.value) {
 		free(xmit_buf.value);
 		xmit_buf.value = 0;
 	}
 
-	len = msg_buf.length < buf_len ? msg_buf.length : buf_len;
-	memcpy(buf, msg_buf.value, len);
+	*piLenRcvd = msg_buf.length < buf_len ? msg_buf.length : buf_len;
+	memcpy(buf, msg_buf.value, *piLenRcvd);
 	gss_release_buffer(&min_stat, &msg_buf);
 
-	return len;
+finalize_it:
+	RETiRet;
 }
 
 

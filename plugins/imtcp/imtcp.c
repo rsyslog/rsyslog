@@ -101,16 +101,17 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 }
 
 
-static int
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
+static rsRetVal
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
 {
-	ssize_t state;
+	DEFiRet;
 	assert(pSess != NULL);
+	assert(piLenRcvd != NULL);
 
-	state = lenBuf;
-	if(netstrm.Rcv(pSess->pStrm, (uchar*) buf, &state) != RS_RET_OK)
-		state = -1; // TODO: move this function to an iRet interface! 2008-04-23
-	return state;
+	*piLenRcvd = lenBuf;
+	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd) != RS_RET_OK);
+finalize_it:
+	RETiRet;
 }
 
 static rsRetVal
@@ -167,7 +168,6 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
 		/* now set optional params, but only if they were actually configured */
 		if(pszStrmDrvrAuthMode != NULL) {
-RUNLOG_VAR("%s", pszStrmDrvrAuthMode);
 			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, pszStrmDrvrAuthMode));
 		}
 		if(pPermPeersRoot != NULL) {

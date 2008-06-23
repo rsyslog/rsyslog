@@ -1388,9 +1388,15 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	/* in TLS mode now */
 	lenRcvd = gnutls_record_recv(pThis->sess, pBuf, *pLenBuf);
 	if(lenRcvd < 0) {
-		int gnuRet; /* TODO: build a specific function for GnuTLS error reporting */
-		*pLenBuf = -1;
-		CHKgnutls(lenRcvd); /* this will abort the function */
+		if(lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
+			pThis->rtryCall = gtlsRtry_recv;
+			dbgprintf("GnuTLS receive requires a retry (this most probably is OK and no error condition)\n");
+			iRet = RS_RET_RETRY;
+		} else {
+			int gnuRet; /* TODO: build a specific function for GnuTLS error reporting */
+			*pLenBuf = -1;
+			CHKgnutls(lenRcvd); /* this will abort the function */
+		}
 	}
 
 	*pLenBuf = lenRcvd;

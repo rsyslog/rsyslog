@@ -404,6 +404,7 @@ Run(tcpsrv_t *pThis)
 	tcps_sess_t *pNewSess;
 	nssel_t *pSel;
 	int state;
+	ssize_t iRcvd;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -452,11 +453,13 @@ Run(tcpsrv_t *pThis)
 				dbgprintf("netstream %p with new data\n", pThis->pSessions[iTCPSess]->pStrm);
 
 				/* Receive message */
-				state = pThis->pRcvData(pThis->pSessions[iTCPSess], buf, sizeof(buf));
-				if(state == 0) {
+				iRet = pThis->pRcvData(pThis->pSessions[iTCPSess], buf, sizeof(buf), &iRcvd);
+				if(iRet == RS_RET_CLOSED) {
 					pThis->pOnRegularClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
-				} else if(state == -1) {
+				} else if(iRet == RS_RET_RETRY) {
+					/* we simply ignore retry - this is not an error, but we also have not received anything */
+				} else if(iRet == RS_RET_OK) {
 					errno = 0;
 					errmsg.LogError(NO_ERRCODE, "netstream session %p will be closed due to error\n",
 							pThis->pSessions[iTCPSess]->pStrm);
@@ -464,7 +467,7 @@ Run(tcpsrv_t *pThis)
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 				} else {
 					/* valid data received, process it! */
-					if(tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, state) != RS_RET_OK) {
+					if(tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, iRcvd) != RS_RET_OK) {
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
@@ -563,7 +566,7 @@ SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fr
 }
 
 static rsRetVal
-SetCBRcvData(tcpsrv_t *pThis, int (*pRcvData)(tcps_sess_t*, char*, size_t))
+SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*))
 {
 	DEFiRet;
 	pThis->pRcvData = pRcvData;
