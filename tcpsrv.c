@@ -392,7 +392,10 @@ RunCancelCleanup(void *arg)
 	if(*ppSel != NULL)
 		nssel.Destruct(ppSel);
 }
+
+
 /* This function is called to gather input. */
+#pragma GCC diagnostic ignored "-Wempty-body"
 static rsRetVal
 Run(tcpsrv_t *pThis)
 {
@@ -496,6 +499,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 
 	RETiRet;
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 
 /* Standard-Constructor */

@@ -13,7 +13,7 @@ AC_GNU_SOURCE
 AC_PROG_CC
 AM_PROG_CC_C_O
 if test "$GCC" = "yes"
-then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+then CFLAGS="$CFLAGS -fdiagnostics-show-option -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
 fi
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL

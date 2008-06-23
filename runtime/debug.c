@@ -743,6 +743,7 @@ sigsegvHdlr(int signum)
 }
 
 
+#pragma GCC diagnostic ignored "-Wempty-body"
 /* print some debug output when an object is given
  * This is mostly a copy of dbgprintf, but I do not know how to combine it
  * into a single function as we have variable arguments and I don't know how to call
@@ -834,8 +835,10 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 	if(altdbg != NULL) fflush(altdbg);
 	pthread_cleanup_pop(1);
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 
+#pragma GCC diagnostic ignored "-Wempty-body"
 /* print some debug output when no object is given
  * WARNING: duplicate code, see dbgoprin above!
  */
@@ -908,6 +911,7 @@ dbgprintf(char *fmt, ...)
 	if(altdbg != NULL) fflush(altdbg);
 	pthread_cleanup_pop(1);
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 void tester(void)
 {

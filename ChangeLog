@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.19.8 (rgerhards), 2008-06-??
+- disabled compile warnings caused by third-party libraries
 ---------------------------------------------------------------------------
 Version 3.19.7 (rgerhards), 2008-06-11
 - added new property replacer option "date-subseconds" that enables

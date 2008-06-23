@@ -369,6 +369,7 @@ rsRetVal actionDbgPrint(action_t *pThis)
 /* call the DoAction output plugin entry point
  * rgerhards, 2008-01-28
  */
+#pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
 actionCallDoAction(action_t *pAction, msg_t *pMsg)
 {
@@ -453,6 +454,7 @@ finalize_it:
 
 	RETiRet;
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 /* set the action message queue mode
  * TODO: probably move this into queue object, merge with MainMsgQueue!
@@ -588,6 +590,7 @@ finalize_it:
 /* call the configured action. Does all necessary housekeeping.
  * rgerhards, 2007-08-01
  */
+#pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
 actionCallAction(action_t *pAction, msg_t *pMsg)
 {
@@ -672,6 +675,7 @@ finalize_it:
 	pthread_setcancelstate(iCancelStateSave, NULL);
 	RETiRet;
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 
 /* add our cfsysline handlers

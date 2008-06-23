@@ -1080,12 +1080,14 @@ gtlsEndSess(nsd_gtls_t *pThis)
  * http://lists.gnu.org/archive/html/help-gnutls/2008-05/msg00000.html
  * rgerhards, 2008.05-07
  */
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 static inline void
 gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 {
 	/* Note: the compiler warning for the next line is OK - see header comment! */
 	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr_t) sock);
 }
+#pragma GCC diagnostic warning "-Wint-to-pointer-cast"
 
 /* ---------------------------- end GnuTLS specifics ---------------------------- */
 

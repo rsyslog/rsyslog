@@ -244,6 +244,7 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex)
 }
 
 
+#pragma GCC diagnostic ignored "-Wempty-body"
 /* Send a shutdown command to all workers and see if they terminate.
  * A timeout may be specified.
  * rgerhards, 2008-01-14
@@ -292,6 +293,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 
 	RETiRet;
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 
 /* indicate that a thread has terminated and awake anyone waiting on it
@@ -382,6 +384,7 @@ wtpWrkrExecCancelCleanup(void *arg)
  * wti worker.
  * rgerhards, 2008-01-21
  */
+#pragma GCC diagnostic ignored "-Wempty-body"
 static void *
 wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in wtp! */
 {
@@ -435,6 +438,7 @@ wtpWorker(void *arg) /* the arg is actually a wti object, even though we are in 
 	ENDfunc
 	pthread_exit(0);
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 
 /* start a new worker */

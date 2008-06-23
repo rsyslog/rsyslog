@@ -340,6 +340,7 @@ wtiWorkerCancelCleanup(void *arg)
  * and would be very hard to debug. The yield() is a sure fix, its performance overhead
  * should be well accepted given the above facts. -- rgerhards, 2008-01-10
  */
+#pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
 wtiWorker(wti_t *pThis)
 {
@@ -426,6 +427,7 @@ wtiWorker(wti_t *pThis)
 
 	RETiRet;
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 
 /* some simple object access methods */

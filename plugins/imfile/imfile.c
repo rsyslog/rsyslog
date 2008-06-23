@@ -181,7 +181,10 @@ static void pollFileCancelCleanup(void *pArg)
 		rsCStrDestruct(ppCStr);
 	ENDfunc;
 }
+
+
 /* poll a file, need to check file rollover etc. open file if not open */
+#pragma GCC diagnostic ignored "-Wempty-body"
 static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 {
 	DEFiRet;
@@ -210,6 +213,7 @@ finalize_it:
 
 	RETiRet;
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 
 /* This function is the cancel cleanup handler. It is called when rsyslog decides the
@@ -266,6 +270,7 @@ inputModuleCleanup(void __attribute__((unused)) *arg)
  * On spamming the main queue: keep in mind that it will automatically rate-limit
  * ourselfes if we begin to overrun it. So we really do not need to care here.
  */
+#pragma GCC diagnostic ignored "-Wempty-body"
 BEGINrunInput
 	int i;
 	int bHadFileData; /* were there at least one file with data during this run? */
@@ -298,6 +303,7 @@ CODESTARTrunInput
 	pthread_cleanup_pop(0); /* just for completeness, but never called... */
 	RETiRet;	/* use it to make sure the housekeeping is done! */
 ENDrunInput
+#pragma GCC diagnostic warning "-Wempty-body"
 	/* END no-touch zone                                                                          *
 	 * ------------------------------------------------------------------------------------------ */
 
