@@ -498,7 +498,9 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 		int gnuRet; /* TODO: build a specific function for GnuTLS error reporting */
 		CHKgnutls(lenRcvd); /* this will abort the function */
 	}
+
 finalize_it:
+	dbgprintf("gtlsRecordRecv return. nsd %p, iRet %d, lenRcvd %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
 }
 
@@ -1128,7 +1130,6 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
 	pThis->bReportAuthErr = 1;
-//pThis->lenRcvBuf = -1; /* important: -1 means not read, 0 means connection close! */
 	CHKiRet(gtlsAddOurCert());
 finalize_it:
 ENDobjConstruct(nsd_gtls)
@@ -1476,6 +1477,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	*pLenBuf = iBytesCopy;
 
 finalize_it:
+	dbgprintf("gtlsRcv return. nsd %p, iRet %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
 }
 
