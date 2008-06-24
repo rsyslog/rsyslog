@@ -149,6 +149,8 @@ doRetry(nsd_gtls_t *pNsd)
 		case gtlsRtry_recv:
 			dbgprintf("retrying gtls recv, nsd: %p\n", pNsd);
 			CHKiRet(gtlsRecordRecv(pNsd));
+			pNsd->rtryCall = gtlsRtry_None; /* we are done */
+			gnuRet = 0;
 			break;
 		default:
 			assert(0); /* this shall not happen! */
