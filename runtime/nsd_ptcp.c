@@ -535,6 +535,13 @@ Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf)
 
 	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
 
+	if(*pLenBuf == 0) {
+		ABORT_FINALIZE(RS_RET_CLOSED);
+	} else if (*pLenBuf < 0) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
 	RETiRet;
 }
 

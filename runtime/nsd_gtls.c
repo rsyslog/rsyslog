@@ -1457,11 +1457,13 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	/* now check if we have something in our buffer. If so, we satisfy
 	 * the request from buffer contents.
 	 */
+	if(pThis->lenRcvBuf == -1) { /* no data present, must read */
+		CHKiRet(gtlsRecordRecv(pThis));
+	}
+
 	if(pThis->lenRcvBuf == 0) { /* EOS */
 		*pLenBuf = 0;
-		FINALIZE;
-	} else if(pThis->lenRcvBuf == -1) { /* no data present, must read */
-		CHKiRet(gtlsRecordRecv(pThis));
+		ABORT_FINALIZE(RS_RET_CLOSED);
 	}
 
 	/* if we reach this point, data is present in the buffer and must be copied */

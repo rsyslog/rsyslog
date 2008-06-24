@@ -109,7 +109,7 @@ doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
 	assert(piLenRcvd != NULL);
 
 	*piLenRcvd = lenBuf;
-	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd) != RS_RET_OK);
+	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd));
 finalize_it:
 	RETiRet;
 }
