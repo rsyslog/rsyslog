@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.19.8],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[3.19.8-Test1],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_HEADERS([config.h])
@@ -13,7 +13,7 @@ AC_GNU_SOURCE
 AC_PROG_CC
 AM_PROG_CC_C_O
 if test "$GCC" = "yes"
-then CFLAGS="$CFLAGS -fdiagnostics-show-option -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+then CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
 fi
 AC_DISABLE_STATIC
 AC_PROG_LIBTOOL

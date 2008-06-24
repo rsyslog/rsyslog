@@ -31,6 +31,7 @@ typedef nsdsel_if_t nsdsel_gtls_if_t; /* we just *implement* this interface */
 struct nsdsel_gtls_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsdsel_t *pTcp;		/* our aggregated ptcp sel handler (which does almost everything) */
+	int iBufferRcvReady;	/* number of descriptiors where no RD select is needed because we have data in buf */
 };
 
 /* interface is defined in nsd.h, we just implement it! */

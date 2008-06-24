@@ -471,6 +471,38 @@ uchar *gtlsStrerror(int error)
 }
 
 
+/* try to receive a record from the remote peer. This works with
+ * our own abstraction and handles local buffering and EAGAIN.
+ * See details on local buffering in Rcv(9 header-comment.
+ * This function MUST only be called when the local buffer is
+ * empty. Calling it otherwise will cause losss of current buffer
+ * data.
+ * rgerhards, 2008-06-24
+ */
+rsRetVal
+gtlsRecordRecv(nsd_gtls_t *pThis)
+{
+	ssize_t lenRcvd;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf, sizeof(pThis->pszRcvBuf));
+	if(lenRcvd >= 0) {
+		pThis->lenRcvBuf = lenRcvd;
+		pThis->ptrRcvBuf = 0;
+	} else if(lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
+		pThis->rtryCall = gtlsRtry_recv;
+		dbgprintf("GnuTLS receive requires a retry (this most probably is OK and no error condition)\n");
+		ABORT_FINALIZE(RS_RET_RETRY);
+	} else {
+		int gnuRet; /* TODO: build a specific function for GnuTLS error reporting */
+		CHKgnutls(lenRcvd); /* this will abort the function */
+	}
+finalize_it:
+	RETiRet;
+}
+
+
 /* add our own certificate to the certificate set, so that the peer
  * can identify us. Please note that we try to use mutual authentication,
  * so we always add a cert, even if we are in the client role (later,
@@ -1096,6 +1128,7 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
 	pThis->bReportAuthErr = 1;
+//pThis->lenRcvBuf = -1; /* important: -1 means not read, 0 means connection close! */
 	CHKiRet(gtlsAddOurCert());
 finalize_it:
 ENDobjConstruct(nsd_gtls)
@@ -1114,6 +1147,10 @@ CODESTARTobjDestruct(nsd_gtls)
 
 	if(pThis->pszConnectHost != NULL) {
 		free(pThis->pszConnectHost);
+	}
+
+	if(pThis->pszRcvBuf == NULL) {
+		free(pThis->pszRcvBuf);
 	}
 
 	if(pThis->bOurCertIsInit)
@@ -1364,18 +1401,31 @@ finalize_it:
 
 /* receive data from a tcp socket
  * The lenBuf parameter must contain the max buffer size on entry and contains
- * the number of octets read (or -1 in case of error) on exit. This function
+ * the number of octets read on exit. This function
  * never blocks, not even when called on a blocking socket. That is important
  * for client sockets, which are set to block during send, but should not
- * block when trying to read data. If *pLenBuf is -1, an error occured and
- * errno holds the exact error cause.
- * rgerhards, 2008-03-17
+ * block when trying to read data. -- rgerhards, 2008-03-17
+ * The function now follows the usual iRet calling sequence.
+ * With GnuTLS, we may need to restart a recv() system call. If so, we need
+ * to supply the SAME buffer on the retry. We can not assure this, as the
+ * caller is free to call us with any buffer location (and in current
+ * implementation, it is on the stack and extremely likely to change). To
+ * work-around this problem, we allocate a buffer ourselfs and always receive
+ * into that buffer. We pass data on to the caller only after we have received it.
+ * To save some space, we allocate that internal buffer only when it is actually 
+ * needed, which means when we reach this function for the first time. To keep
+ * the algorithm simple, we always supply data only from the internal buffer,
+ * even if it is a single byte. As we have a stream, the caller must be prepared
+ * to accept messages in any order, so we do not need to take care about this.
+ * Please note that the logic also forces us to do some "faking" in select(), as
+ * we must provide a fake "is ready for readign" status if we have data inside our
+ * buffer. -- rgerhards, 2008-06-23
  */
 static rsRetVal
 Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 {
 	DEFiRet;
-	ssize_t lenRcvd;
+	ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
@@ -1387,21 +1437,43 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 		FINALIZE;
 	}
 
-	/* in TLS mode now */
-	lenRcvd = gnutls_record_recv(pThis->sess, pBuf, *pLenBuf);
-	if(lenRcvd < 0) {
-		if(lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
-			pThis->rtryCall = gtlsRtry_recv;
-			dbgprintf("GnuTLS receive requires a retry (this most probably is OK and no error condition)\n");
-			iRet = RS_RET_RETRY;
-		} else {
-			int gnuRet; /* TODO: build a specific function for GnuTLS error reporting */
-			*pLenBuf = -1;
-			CHKgnutls(lenRcvd); /* this will abort the function */
-		}
+	/* --- in TLS mode now --- */
+
+	/* Buffer logic applies only if we are in TLS mode. Here we 
+	 * assume that we will switch from plain to TLS, but never back. This
+	 * assumption may be unsafe, but it is the model for the time being and I
+	 * do not see any valid reason why we should switch back to plain TCP after
+	 * we were in TLS mode. However, in that case we may lose something that
+	 * is already in the receive buffer ... risk accepted. -- rgerhards, 2008-06-23
+	 */
+
+	if(pThis->pszRcvBuf == NULL) {
+		/* we have no buffer, so we need to malloc one */
+		CHKmalloc(pThis->pszRcvBuf = malloc(NSD_GTLS_MAX_RCVBUF));
+		pThis->lenRcvBuf = -1;
 	}
 
-	*pLenBuf = lenRcvd;
+	/* now check if we have something in our buffer. If so, we satisfy
+	 * the request from buffer contents.
+	 */
+	if(pThis->lenRcvBuf == 0) { /* EOS */
+		*pLenBuf = 0;
+		FINALIZE;
+	} else if(pThis->lenRcvBuf == -1) { /* no data present, must read */
+		CHKiRet(gtlsRecordRecv(pThis));
+	}
+
+	/* if we reach this point, data is present in the buffer and must be copied */
+	iBytesCopy = pThis->lenRcvBuf - pThis->ptrRcvBuf;
+	if(iBytesCopy > *pLenBuf) {
+		iBytesCopy = *pLenBuf;
+	} else {
+		pThis->lenRcvBuf = -1; /* buffer will be emptied below */
+	}
+
+	memcpy(pBuf, pThis->pszRcvBuf + pThis->ptrRcvBuf, iBytesCopy);
+	pThis->ptrRcvBuf += iBytesCopy;
+	*pLenBuf = iBytesCopy;
 
 finalize_it:
 	RETiRet;

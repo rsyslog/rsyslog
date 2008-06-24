@@ -26,6 +26,8 @@
 
 #include "nsd.h"
 
+#define NSD_GTLS_MAX_RCVBUF 8 * 1024 /* max size of buffer for message reception */
+
 typedef enum {
 	gtlsRtry_None = 0,	/**< no call needs to be retried */
 	gtlsRtry_handshake = 1,
@@ -60,6 +62,9 @@ struct nsd_gtls_s {
 	gnutls_x509_privkey ourKey;	/**< our private key, if in client mode (unused in server mode) */
 	short	bOurCertIsInit;	/**< 1 if our certificate is initialized and must be deinit on destruction */
 	short	bOurKeyIsInit;	/**< 1 if our private key is initialized and must be deinit on destruction */
+	char *pszRcvBuf;
+	int lenRcvBuf;		/**< -1: empty, 0: connection closed, 1..NSD_GTLS_MAX_RCVBUF-1: data of that size present */
+	int ptrRcvBuf;		/**< offset for next recv operation if 0 < lenRcvBuf < NSD_GTLS_MAX_RCVBUF */
 };
 
 /* interface is defined in nsd.h, we just implement it! */
@@ -70,6 +75,16 @@ PROTOTYPEObj(nsd_gtls);
 /* some prototypes for things used by our nsdsel_gtls helper class */
 uchar *gtlsStrerror(int error);
 rsRetVal gtlsChkPeerAuth(nsd_gtls_t *pThis);
+rsRetVal gtlsRecordRecv(nsd_gtls_t *pThis);
+static inline rsRetVal gtlsHasRcvInBuffer(nsd_gtls_t *pThis) {
+	/* we have a valid receive buffer one such is allocated and 
+	 * NOT exhausted!
+	 */
+	dbgprintf("hasRcvInBuffer on nsd %p: pszRcvBuf %p, lenRcvBuf %d\n", pThis,
+		pThis->pszRcvBuf, pThis->lenRcvBuf);
+	return(pThis->pszRcvBuf != NULL && pThis->lenRcvBuf != -1);
+	}
+
 
 /* the name of our library binary */
 #define LM_NSD_GTLS_FILENAME "lmnsd_gtls"

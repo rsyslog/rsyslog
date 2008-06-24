@@ -406,7 +406,6 @@ Run(tcpsrv_t *pThis)
 	int bIsReady;
 	tcps_sess_t *pNewSess;
 	nssel_t *pSel;
-	int state;
 	ssize_t iRcvd;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -457,18 +456,15 @@ Run(tcpsrv_t *pThis)
 
 				/* Receive message */
 				iRet = pThis->pRcvData(pThis->pSessions[iTCPSess], buf, sizeof(buf), &iRcvd);
-				if(iRet == RS_RET_CLOSED) {
+				switch(iRet) {
+				case RS_RET_CLOSED:
 					pThis->pOnRegularClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
-				} else if(iRet == RS_RET_RETRY) {
+					break;
+				case RS_RET_RETRY:
 					/* we simply ignore retry - this is not an error, but we also have not received anything */
-				} else if(iRet == RS_RET_OK) {
-					errno = 0;
-					errmsg.LogError(NO_ERRCODE, "netstream session %p will be closed due to error\n",
-							pThis->pSessions[iTCPSess]->pStrm);
-					pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
-					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
-				} else {
+					break;
+				case RS_RET_OK:
 					/* valid data received, process it! */
 					if(tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, iRcvd) != RS_RET_OK) {
 						/* in this case, something went awfully wrong.
@@ -479,6 +475,14 @@ Run(tcpsrv_t *pThis)
 						pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
 						tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 					}
+					break;
+				default:
+					errno = 0;
+					errmsg.LogError(NO_ERRCODE, "netstream session %p will be closed due to error\n",
+							pThis->pSessions[iTCPSess]->pStrm);
+					pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
+					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
+					break;
 				}
 				--nfds; /* indicate we have processed one */
 			}

@@ -74,6 +74,10 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
 	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
 	if(pNsdGTLS->iMode == 1) {
+		if(waitOp == NSDSEL_RD && gtlsHasRcvInBuffer(pNsdGTLS)) {
+			++pThis->iBufferRcvReady;
+			FINALIZE;
+		}
 		if(pNsdGTLS->rtryCall != gtlsRtry_None) {
 			if(gnutls_record_get_direction(pNsdGTLS->sess) == 0) {
 				CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, NSDSEL_RD));
@@ -87,6 +91,7 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 	/* if we reach this point, we need no special handling */
 	CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, waitOp));
 
+RUNLOG_VAR("%d", pThis->iBufferRcvReady);
 finalize_it:
 	RETiRet;
 }
@@ -102,7 +107,14 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
-	iRet = nsdsel_ptcp.Select(pThis->pTcp, piNumReady);
+RUNLOG_VAR("%d", pThis->iBufferRcvReady);
+	if(pThis->iBufferRcvReady > 0) {
+		/* we still have data ready! */
+		*piNumReady = pThis->iBufferRcvReady;
+	} else {
+		iRet = nsdsel_ptcp.Select(pThis->pTcp, piNumReady);
+	}
+
 	RETiRet;
 }
 
@@ -133,6 +145,10 @@ doRetry(nsd_gtls_t *pNsd)
 				/* we got a handshake, now check authorization */
 				CHKiRet(gtlsChkPeerAuth(pNsd));
 			}
+			break;
+		case gtlsRtry_recv:
+			dbgprintf("retrying gtls recv, nsd: %p\n", pNsd);
+			CHKiRet(gtlsRecordRecv(pNsd));
 			break;
 		default:
 			assert(0); /* this shall not happen! */
@@ -172,6 +188,10 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
 	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
 	if(pNsdGTLS->iMode == 1) {
+		if(waitOp == NSDSEL_RD && gtlsHasRcvInBuffer(pNsdGTLS)) {
+			*pbIsReady = 1;
+			FINALIZE;
+		}
 		if(pNsdGTLS->rtryCall != gtlsRtry_None) {
 			CHKiRet(doRetry(pNsdGTLS));
 			/* we used this up for our own internal processing, so the socket
