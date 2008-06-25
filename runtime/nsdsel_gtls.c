@@ -173,7 +173,7 @@ doRetry(nsd_gtls_t *pNsd)
 	 */
 		
 finalize_it:
-	if(iRet != RS_RET_OK)
+	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
 		pNsd->bAbortConn = 1; /* request abort */
 	RETiRet;
 }
