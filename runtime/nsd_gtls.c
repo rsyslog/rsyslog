@@ -486,7 +486,7 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf, sizeof(pThis->pszRcvBuf));
+	lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF);
 	if(lenRcvd >= 0) {
 		pThis->lenRcvBuf = lenRcvd;
 		pThis->ptrRcvBuf = 0;
