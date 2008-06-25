@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.16.2 (rgerhards), 2008-05-14
+Version 3.16.2 (rgerhards), 2008-06-25
 - fixed potential segfault due to invalid call to cfsysline
   thanks to varmojfekoj for the patch
 - bugfix: some whitespaces where incorrectly not ignored when parsing
