@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.17.5 (rgerhards), 2008-06-??
+- bugfix: comments after actions were not properly treated. For some
+  actions (e.g. forwarding(, this could also lead to invalid configuration
 ---------------------------------------------------------------------------
 Version 3.17.4 (rgerhards), 2008-06-16
 - changed default for $KlogSymbolLookup to "off". The directive is
