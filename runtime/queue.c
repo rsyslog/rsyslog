@@ -2253,24 +2253,24 @@ finalize_it:
 
 
 /* some simple object access methods */
-DEFpropSetMeth(queue, iPersistUpdCnt, int);
-DEFpropSetMeth(queue, iDeqtWinFromHr, int);
-DEFpropSetMeth(queue, iDeqtWinToHr, int);
-DEFpropSetMeth(queue, toQShutdown, long);
-DEFpropSetMeth(queue, toActShutdown, long);
-DEFpropSetMeth(queue, toWrkShutdown, long);
-DEFpropSetMeth(queue, toEnq, long);
-DEFpropSetMeth(queue, iHighWtrMrk, int);
-DEFpropSetMeth(queue, iLowWtrMrk, int);
-DEFpropSetMeth(queue, iDiscardMrk, int);
-DEFpropSetMeth(queue, iFullDlyMrk, int);
-DEFpropSetMeth(queue, iDiscardSeverity, int);
-DEFpropSetMeth(queue, bIsDA, int);
-DEFpropSetMeth(queue, iMinMsgsPerWrkr, int);
-DEFpropSetMeth(queue, bSaveOnShutdown, int);
-DEFpropSetMeth(queue, pUsr, void*);
-DEFpropSetMeth(queue, iDeqSlowdown, int);
-DEFpropSetMeth(queue, sizeOnDiskMax, int64);
+DEFpropSetMeth(queue, iPersistUpdCnt, int)
+DEFpropSetMeth(queue, iDeqtWinFromHr, int)
+DEFpropSetMeth(queue, iDeqtWinToHr, int)
+DEFpropSetMeth(queue, toQShutdown, long)
+DEFpropSetMeth(queue, toActShutdown, long)
+DEFpropSetMeth(queue, toWrkShutdown, long)
+DEFpropSetMeth(queue, toEnq, long)
+DEFpropSetMeth(queue, iHighWtrMrk, int)
+DEFpropSetMeth(queue, iLowWtrMrk, int)
+DEFpropSetMeth(queue, iDiscardMrk, int)
+DEFpropSetMeth(queue, iFullDlyMrk, int)
+DEFpropSetMeth(queue, iDiscardSeverity, int)
+DEFpropSetMeth(queue, bIsDA, int)
+DEFpropSetMeth(queue, iMinMsgsPerWrkr, int)
+DEFpropSetMeth(queue, bSaveOnShutdown, int)
+DEFpropSetMeth(queue, pUsr, void*)
+DEFpropSetMeth(queue, iDeqSlowdown, int)
+DEFpropSetMeth(queue, sizeOnDiskMax, int64)
 
 
 /* This function can be used as a generic way to set properties. Only the subset

@@ -85,7 +85,7 @@ terminal(expr_t *pThis, ctok_t *tok)
 			break;
 		case ctok_FUNCTION:
 			dbgoprint((obj_t*) pThis, "function\n");
-			// vm: call - well, need to implement that first
+			/* TODO: vm: call - well, need to implement that first */
 			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 			break;
 		case ctok_MSGVAR:

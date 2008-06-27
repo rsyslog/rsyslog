@@ -512,7 +512,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 							/* push c back, higher level parser needs it */
 							CHKiRet(ctokUngetCharFromStream(pThis, c));
 							pToken->tok = ctok_FUNCTION;
-							// TODO: fill function name
+							/* TODO: fill function name */
 						} else { /* give up... */
 							dbgprintf("parser has an invalid word (token) '%s'\n", szWord);
 							pToken->tok = ctok_INVALID;
@@ -527,7 +527,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 	dbgoprint((obj_t*) pToken, "token: %d\n", pToken->tok);
 
 finalize_it:
-//dbgprintf("ctokGetToken, returns %d, returns token %d, addr %p\n", iRet, (*ppToken)->tok, &((*ppToken)->tok));
+/*dbgprintf("ctokGetToken, returns %d, returns token %d, addr %p\n", iRet, (*ppToken)->tok, &((*ppToken)->tok));*/
 	if(iRet != RS_RET_OK) {
 		if(pToken != NULL)
 			ctok_token.Destruct(&pToken);

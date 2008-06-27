@@ -423,7 +423,7 @@ finalize_it:
 
 
 /* define a helper to make code below a bit cleaner (and quicker to write) */
-#define NEXTC CHKiRet(strmReadChar(pStrm, &c))//;dbgprintf("c: %c\n", c);
+#define NEXTC CHKiRet(strmReadChar(pStrm, &c))/*;dbgprintf("c: %c\n", c)*/
 
 
 /* de-serialize an embedded, non-octect-counted string. This is useful
@@ -803,7 +803,7 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 		}
 	} while(iRetLocal != RS_RET_OK);
 
-	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, strlen((char*)pszTypeExpected))) // TODO: optimize strlen() - caller shall provide
+	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, strlen((char*)pszTypeExpected))) /* TODO: optimize strlen() - caller shall provide */
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
 	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
@@ -827,7 +827,7 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 
 finalize_it:
 	if(iRet != RS_RET_OK && pObj != NULL)
-		free(pObj); // TODO: check if we can call destructor 2008-01-13 rger
+		free(pObj); /* TODO: check if we can call destructor 2008-01-13 rger */
 
 	if(pstrID != NULL)
 		rsCStrDestruct(&pstrID);

@@ -431,7 +431,7 @@ wtiWorker(wti_t *pThis)
 
 
 /* some simple object access methods */
-DEFpropSetMeth(wti, pWtp, wtp_t*);
+DEFpropSetMeth(wti, pWtp, wtp_t*)
 
 /* set the debug header message
  * The passed-in string is duplicated. So if the caller does not need

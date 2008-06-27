@@ -40,10 +40,10 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 #define SIMP_PROP(name, dataType) \
 	dataType (*Get##name)(void); \
 	rsRetVal (*Set##name)(dataType);
-	SIMP_PROP(DefPFFamily, int);
-	SIMP_PROP(DropMalPTRMsgs, int);
-	SIMP_PROP(Option_DisallowWarning, int);
-	SIMP_PROP(DisableDNS, int);
+	SIMP_PROP(DefPFFamily, int)
+	SIMP_PROP(DropMalPTRMsgs, int)
+	SIMP_PROP(Option_DisallowWarning, int)
+	SIMP_PROP(DisableDNS, int)
 	SIMP_PROP(LocalHostName, uchar*)
 	SIMP_PROP(LocalDomain, uchar*)
 	SIMP_PROP(StripDomains, char**)

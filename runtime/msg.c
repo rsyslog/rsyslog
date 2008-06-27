@@ -83,7 +83,6 @@ static syslogCODE rs_facilitynames[] =
     { "kern", LOG_KERN },
     { "lpr", LOG_LPR },
     { "mail", LOG_MAIL },
-    //{ "mark", INTERNAL_MARK },          /* INTERNAL */
     { "news", LOG_NEWS },
     { "security", LOG_AUTH },           /* DEPRECATED */
     { "syslog", LOG_SYSLOG },

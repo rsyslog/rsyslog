@@ -643,7 +643,7 @@ DEFpropSetMeth(strm, iMaxFileSize, int)
 DEFpropSetMeth(strm, iFileNumDigits, int)
 DEFpropSetMeth(strm, tOperationsMode, int)
 DEFpropSetMeth(strm, tOpenMode, mode_t)
-DEFpropSetMeth(strm, sType, strmType_t);
+DEFpropSetMeth(strm, sType, strmType_t)
 
 rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {
@@ -909,7 +909,7 @@ CODESTARTobjQueryInterface(strm)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//xxxpIf->oID = OBJvm;
+	/*xxxpIf->oID = OBJvm; SAMPLE */
 
 finalize_it:
 ENDobjQueryInterface(strm)

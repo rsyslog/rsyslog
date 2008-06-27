@@ -102,10 +102,10 @@ SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
 
 SIMP_PROP_SET(LocalHostName, LocalHostName, uchar*)
-SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) // TODO: use custom function which frees existing value
-SIMP_PROP_SET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*) // TODO: use custom function which frees existing value
-SIMP_PROP_SET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*) // TODO: use custom function which frees existing value
-SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*) // TODO: use custom function which frees existing value
+SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) /* TODO: use custom function which frees existing value */
+SIMP_PROP_SET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*) /* TODO: use custom function which frees existing value */
+SIMP_PROP_SET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*) /* TODO: use custom function which frees existing value */
+SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*) /* TODO: use custom function which frees existing value */
 
 #undef SIMP_PROP
 #undef SIMP_PROP_SET

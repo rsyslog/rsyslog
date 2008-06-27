@@ -365,7 +365,7 @@ rsRetVal objName##ClassExit(void) \
  */
 #define BEGINinterface(obj) \
 	typedef struct obj##_if_s {\
-		ifBEGIN;		/* This MUST always be the first interface member */
+		ifBEGIN		/* This MUST always be the first interface member */
 #define ENDinterface(obj) \
 	} obj##_if_t;
 	
@@ -403,7 +403,7 @@ rsRetVal objName##ClassExit(void) \
  */
 #define PROTOTYPEObj(obj) \
 	PROTOTYPEObjClassInit(obj); \
-	PROTOTYPEObjClassExit(obj);
+	PROTOTYPEObjClassExit(obj)
 
 /* ------------------------------ end object loader system ------------------------------ */
 

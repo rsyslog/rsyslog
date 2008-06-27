@@ -542,20 +542,20 @@ finalize_it:
 
 
 /* some simple object access methods */
-DEFpropSetMeth(wtp, toWrkShutdown, long);
-DEFpropSetMeth(wtp, wtpState, wtpState_t);
-DEFpropSetMeth(wtp, iNumWorkerThreads, int);
-DEFpropSetMeth(wtp, pUsr, void*);
-DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t);
-DEFpropSetMethPTR(wtp, pcondBusy, pthread_cond_t);
-DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
-DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));
-DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int));
-DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int));
-DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int));
-DEFpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*, void*));
-DEFpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*));
-DEFpropSetMethFP(wtp, pfOnWorkerShutdown, rsRetVal(*pVal)(void*));
+DEFpropSetMeth(wtp, toWrkShutdown, long)
+DEFpropSetMeth(wtp, wtpState, wtpState_t)
+DEFpropSetMeth(wtp, iNumWorkerThreads, int)
+DEFpropSetMeth(wtp, pUsr, void*)
+DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t)
+DEFpropSetMethPTR(wtp, pcondBusy, pthread_cond_t)
+DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int))
+DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
+DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int))
+DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int))
+DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int))
+DEFpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*, void*))
+DEFpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*))
+DEFpropSetMethFP(wtp, pfOnWorkerShutdown, rsRetVal(*pVal)(void*))
 
 
 /* return the current number of worker threads.

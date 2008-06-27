@@ -51,7 +51,7 @@
  * a module provides multiple types, several separate modules must be created which
  * then should share a single library containing the majority of code. This macro
  * must be present in each module. -- rgerhards, 2007-12-14
-* Note that MODULE_TYPE_TESTBENCH is reserved for testbenches, but
+ * Note that MODULE_TYPE_TESTBENCH is reserved for testbenches, but
  * declared in their own header files (because the rest does not need these
  * defines). -- rgerhards, 2008-06-13
  */
