@@ -114,7 +114,7 @@ static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNe
 		funixn[nfunix++] = pNewVal;
 	}
 	else {
-		errmsg.LogError(NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
+		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
 			 pNewVal);
 	}
 
@@ -159,7 +159,7 @@ static int create_unix_socket(const char *path)
 			   SUN_LEN(&sunx)) < 0 ||
 	    chmod(path, 0666) < 0) {
 		snprintf(line, sizeof(line), "cannot create %s", path);
-		errmsg.LogError(NO_ERRCODE, "%s", line);
+		errmsg.LogError(errno, NO_ERRCODE, "%s", line);
 		dbgprintf("cannot create %s (%d).\n", path, errno);
 		close(fd);
 		return -1;
@@ -187,7 +187,7 @@ static rsRetVal readSocket(int fd, int bParseHost, int flags)
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
-		errmsg.LogError(NO_ERRCODE, "recvfrom UNIX");
+		errmsg.LogError(errno, NO_ERRCODE, "recvfrom UNIX");
 	}
 
 	RETiRet;

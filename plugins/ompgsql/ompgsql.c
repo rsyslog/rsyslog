@@ -113,7 +113,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if(pData->f_hpgsql == NULL) {
-		errmsg.LogError(NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
+		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
 	} else { /* we can ask pgsql for the error description... */
 		ePgSQLStatus = PQstatus(pData->f_hpgsql);
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", ePgSQLStatus,
@@ -122,7 +122,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 			dbgprintf("pgsql, DBError(silent): %s\n", errMsg);
 		else {
 			pData->eLastPgSQLStatus = ePgSQLStatus;
-			errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
 		}
 	}
 		
@@ -264,7 +264,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Retries make no sense. 
 	 */
 	if (iPgSQLPropErr) { 
-		errmsg.LogError(NO_ERRCODE, "Trouble with PgSQL connection properties. -PgSQL logging disabled");
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. -PgSQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
 		CHKiRet(initPgSQL(pData, 0));

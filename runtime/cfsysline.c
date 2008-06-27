@@ -69,7 +69,7 @@ static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 
 	/* if we are not at a '\0', we have our new char - no validity checks here... */
 	if(**pp == '\0') {
-		errmsg.LogError(NO_ERRCODE, "No character available");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "No character available");
 		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
@@ -133,7 +133,7 @@ static rsRetVal parseIntVal(uchar **pp, int64 *pVal)
 
 	if(!isdigit((int) *p)) {
 		errno = 0;
-		errmsg.LogError(NO_ERRCODE, "invalid number");
+		errmsg.LogError(0, RS_RET_INVALID_INT, "invalid number");
 		ABORT_FINALIZE(RS_RET_INVALID_INT);
 	}
 
@@ -272,7 +272,7 @@ static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t),
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "value must be octal (e.g 0644).");
 		errno = 0;
-		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+		errmsg.LogError(0, RS_RET_INVALID_VALUE, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 
@@ -317,7 +317,7 @@ static int doParseOnOffOption(uchar **pp)
 	skipWhiteSpace(pp); /* skip over any whitespace */
 
 	if(getSubString(pp, (char*) szOpt, sizeof(szOpt) / sizeof(uchar), ' ')  != 0) {
-		errmsg.LogError(NO_ERRCODE, "Invalid $-configline - could not extract on/off option");
+		errmsg.LogError(0, NO_ERRCODE, "Invalid $-configline - could not extract on/off option");
 		return -1;
 	}
 	
@@ -326,7 +326,7 @@ static int doParseOnOffOption(uchar **pp)
 	} else if(!strcmp((char*)szOpt, "off")) {
 		return 0;
 	} else {
-		errmsg.LogError(NO_ERRCODE, "Option value must be on or off, but is '%s'", (char*)pOptStart);
+		errmsg.LogError(0, NO_ERRCODE, "Option value must be on or off, but is '%s'", (char*)pOptStart);
 		return -1;
 	}
 }
@@ -347,14 +347,14 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
-		errmsg.LogError(NO_ERRCODE, "could not extract group name");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	getgrnam_r((char*)szName, &gBuf, stringBuf, sizeof(stringBuf), &pgBuf);
 
 	if(pgBuf == NULL) {
-		errmsg.LogError(NO_ERRCODE, "ID for group '%s' could not be found or error", (char*)szName);
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "ID for group '%s' could not be found or error", (char*)szName);
 		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
@@ -389,14 +389,14 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 	assert(*pp != NULL);
 
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
-		errmsg.LogError(NO_ERRCODE, "could not extract user name");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract user name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	getpwnam_r((char*)szName, &pwBuf, stringBuf, sizeof(stringBuf), &ppwBuf);
 
 	if(ppwBuf == NULL) {
-		errmsg.LogError(NO_ERRCODE, "ID for user '%s' could not be found or error", (char*)szName);
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "ID for user '%s' could not be found or error", (char*)szName);
 		iRet = RS_RET_NOT_FOUND;
 	} else {
 		if(pSetHdlr == NULL) {
@@ -911,7 +911,7 @@ rsRetVal processCfSysLineCommand(uchar *pCmdName, uchar **p)
 	iRet = llFind(&llCmdList, (void *) pCmdName, (void*) &pCmd);
 
 	if(iRet == RS_RET_NOT_FOUND) {
-		errmsg.LogError(NO_ERRCODE, "invalid or yet-unknown config file command - have you forgotten to load a module?");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "invalid or yet-unknown config file command - have you forgotten to load a module?");
 	}
 
 	if(iRet != RS_RET_OK)

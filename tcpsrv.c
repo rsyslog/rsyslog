@@ -121,7 +121,7 @@ configureTCPListen(tcpsrv_t *pThis, char *cOptarg)
 	if( i >= 0 && i <= 65535) {
 		pThis->TCPLstnPort = cOptarg;
 	} else {
-		errmsg.LogError(NO_ERRCODE, "Invalid TCP listen port %s - changed to 514.\n", cOptarg);
+		errmsg.LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - changed to 514.\n", cOptarg);
 	}
 }
 
@@ -286,7 +286,7 @@ create_tcp_socket(tcpsrv_t *pThis)
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
 		 */
-		errmsg.LogError(NO_ERRCODE, "Could not initialize TCP session table, suspending TCP message reception.");
+		errmsg.LogError(0, RS_RET_ERR, "Could not initialize TCP session table, suspending TCP message reception.");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -324,7 +324,7 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 	iSess = TCPSessTblFindFreeSpot(pThis);
 	if(iSess == -1) {
 		errno = 0;
-		errmsg.LogError(NO_ERRCODE, "too many tcp sessions - dropping incoming request");
+		errmsg.LogError(0, RS_RET_MAX_SESS_REACHED, "too many tcp sessions - dropping incoming request");
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	} else {
 		/* we found a free spot and can construct our session object */
@@ -346,7 +346,7 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 		dbgprintf("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "TCP message from disallowed sender %s discarded", fromHostFQDN);
+			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed sender %s discarded", fromHostFQDN);
 		}
 		ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
 	}
@@ -470,7 +470,7 @@ Run(tcpsrv_t *pThis)
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
-						errmsg.LogError(NO_ERRCODE, "Tearing down TCP Session %d - see "
+						errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP Session %d - see "
 							    "previous messages for reason(s)\n", iTCPSess);
 						pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
 						tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
@@ -478,8 +478,8 @@ Run(tcpsrv_t *pThis)
 					break;
 				default:
 					errno = 0;
-					errmsg.LogError(NO_ERRCODE, "netstream session %p will be closed due to error [%d]\n",
-							pThis->pSessions[iTCPSess]->pStrm, iRet);
+					errmsg.LogError(0, iRet, "netstream session %p will be closed due to error\n",
+							pThis->pSessions[iTCPSess]->pStrm);
 					pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
 					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
 					break;

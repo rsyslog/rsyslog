@@ -258,7 +258,7 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 	if(pGSrv->allowedMethods) {
 		if(pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) {
 			if(TCPSessGSSInit()) {
-				errmsg.LogError(NO_ERRCODE, "GSS-API initialization failed\n");
+				errmsg.LogError(0, NO_ERRCODE, "GSS-API initialization failed\n");
 				pGSrv->allowedMethods &= ~(ALLOWEDMETHOD_GSS);
 			}
 		}
@@ -413,7 +413,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				ret = select(fdSess + 1, &fds, NULL, NULL, &tv);
 			} while (ret < 0 && errno == EINTR);
 			if (ret < 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
+				errmsg.LogError(0, RS_RET_ERR, "TCP session %p will be closed, error ignored\n", pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			} else if (ret == 0) {
 				dbgprintf("GSS-API Reverting to plain TCP\n");
@@ -428,7 +428,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				if (ret == 0)
 					dbgprintf("GSS-API Connection closed by peer\n");
 				else
-					errmsg.LogError(NO_ERRCODE, "TCP(GSS) session %p will be closed, error ignored\n", pSess);
+					errmsg.LogError(0, RS_RET_ERR, "TCP(GSS) session %p will be closed, error ignored\n", pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			}
 
@@ -448,7 +448,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 					if (ret == 0)
 						dbgprintf("GSS-API Connection closed by peer\n");
 					else
-						errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
+						errmsg.LogError(0, NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 				}
 			}
@@ -470,7 +470,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		sess_flags = &pGSess->gss_flags;
 		do {
 			if (gssutil.recv_token(fdSess, &recv_tok) <= 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
+				errmsg.LogError(0, NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			}
 			maj_stat = gss_accept_sec_context(&acc_sec_min_stat, context, gss_server_creds,
@@ -489,7 +489,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 					dbgprintf("GSS-API Reverting to plain TCP\n");
 					dbgprintf("tcp session socket with new data: #%d\n", fdSess);
 					if(tcps_sess.DataRcvd(pSess, buf, ret) != RS_RET_OK) {
-						errmsg.LogError(NO_ERRCODE, "Tearing down TCP Session %p - see "
+						errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP Session %p - see "
 							    "previous messages for reason(s)\n", pSess);
 						ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 					}
@@ -502,7 +502,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 			if (send_tok.length != 0) {
 				if(gssutil.send_token(fdSess, &send_tok) < 0) {
 					gss_release_buffer(&min_stat, &send_tok);
-					errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
+					errmsg.LogError(0, NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 					if (*context != GSS_C_NO_CONTEXT)
 						gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes

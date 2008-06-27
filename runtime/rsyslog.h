@@ -111,10 +111,16 @@ typedef enum {
 */
 enum rsRetVal_				/** return value. All methods return this if not specified otherwise */
 {
+	/* the first two define are for errmsg.logError(), so that we can use the rsRetVal 
+	 * as an rsyslog error code. -- rgerhards, 20080-06-27
+	 */
+	RS_RET_NO_ERRCODE = -1,		/**< RESERVED for NO_ERRCODE errmsg.logError status name */
+	RS_RET_INCLUDE_ERRNO = 1073741824, /* 2**30  - do NOT use error codes above this! */
+	/* begin regular error codes */
 	RS_RET_NOT_IMPLEMENTED = -7,	/**< implementation is missing (probably internal error or lazyness ;)) */
 	RS_RET_OUT_OF_MEMORY = -6,	/**< memory allocation failed */
 	RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50,/**< the caller provided a buffer, but the called function sees the size of this buffer is too small - operation not carried out */
-	RS_RET_TRUE = -1,		/**< to indicate a true state (can be used as TRUE, legacy) */
+	RS_RET_TRUE = -3,		/**< to indicate a true state (can be used as TRUE, legacy) */
 	RS_RET_FALSE = -2,		/**< to indicate a false state (can be used as FALSE, legacy) */
 	RS_RET_NO_IRET = -8,	/**< This is a trick for the debuging system - it means no iRet is provided  */
 	RS_RET_ERR = -3000,	/**< generic failure */
@@ -340,13 +346,13 @@ void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
  * add them. -- rgerhards, 2008-04-17
  */
 extern uchar *glblModPath; /* module load path */
-extern rsRetVal (*glblErrLogger)(uchar*);
+extern rsRetVal (*glblErrLogger)(int, uchar*);
 
 /* some runtime prototypes */
 rsRetVal rsrtInit(char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
-rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(uchar*));
+rsRetVal rsrtSetErrLogger(rsRetVal (*errLogger)(int, uchar*));
 
 #endif /* multi-include protection */
 /* vim:set ai:

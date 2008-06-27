@@ -773,7 +773,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 		 * rgerhards, 2006-12-07
 		 */
 		if(ret != Z_OK) {
-			errmsg.LogError(NO_ERRCODE, "Uncompression of a message failed with return code %d "
+			errmsg.LogError(0, NO_ERRCODE, "Uncompression of a message failed with return code %d "
 			            "- enable debug logging if you need further information. "
 				    "Message ignored.", ret);
 			FINALIZE; /* unconditional exit, nothing left to do... */
@@ -786,7 +786,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	 * tell the user we can not accept it.
 	 */
 	if(len > 0 && *msg == 'z') {
-		errmsg.LogError(NO_ERRCODE, "Received a compressed message, but rsyslogd does not have compression "
+		errmsg.LogError(0, NO_ERRCODE, "Received a compressed message, but rsyslogd does not have compression "
 		         "support enabled. The message will be ignored.");
 		FINALIZE;
 	}	
@@ -863,10 +863,10 @@ finalize_it:
  * message handler. -- rgerhards, 2008-04-17
  */
 rsRetVal
-submitErrMsg(uchar *msg)
+submitErrMsg(int iErr, uchar *msg)
 {
 	DEFiRet;
-	iRet = logmsgInternal(LOG_SYSLOG|LOG_ERR, msg, ADDDATE);
+	iRet = logmsgInternal(iErr, LOG_SYSLOG|LOG_ERR, msg, ADDDATE);
 	RETiRet;
 }
 
@@ -880,10 +880,11 @@ submitErrMsg(uchar *msg)
  * think on the best way to do this.
  */
 rsRetVal
-logmsgInternal(int pri, uchar *msg, int flags)
+logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 {
-	DEFiRet;
+	uchar pszTag[33];
 	msg_t *pMsg;
+	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetUxTradMsg(pMsg, (char*)msg);
@@ -891,7 +892,17 @@ logmsgInternal(int pri, uchar *msg, int flags)
 	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetRcvFrom(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetRcvFromIP(pMsg, (uchar*)"127.0.0.1");
-	MsgSetTAG(pMsg, "rsyslogd:");
+	/* check if we have an error code associated and, if so,
+	 * adjust the tag. -- r5gerhards, 2008-06-27
+	 */
+	if(iErr == NO_ERRCODE) {
+		MsgSetTAG(pMsg, "rsyslogd:");
+	} else {
+dbgprintf("iErr %d\n", iErr);
+		snprintf((char*)pszTag, sizeof(pszTag), "rsyslogd%d:", iErr);
+		pszTag[32] = '\0'; /* just to make sure... */
+		MsgSetTAG(pMsg, (char*)pszTag);
+	}
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->bParseHOSTNAME = 0;
@@ -1745,7 +1756,7 @@ void legacyOptsHook(void)
 	while(pThis != NULL) {
 		if(pThis->line != NULL) {
 			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "Warning: backward compatibility layer added to following "
+			errmsg.LogError(0, NO_ERRCODE, "Warning: backward compatibility layer added to following "
 				        "directive to rsyslog.conf: %s", pThis->line);
 			conf.cfsysline(pThis->line);
 		}
@@ -1900,7 +1911,7 @@ die(int sig)
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
 		 (int) myPid, sig);
 		errno = 0;
-		logmsgInternal(LOG_SYSLOG|LOG_INFO, (uchar*)buf, ADDDATE);
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, ADDDATE);
 	}
 	
 	/* drain queue (if configured so) and stop main queue worker thread pool */
@@ -2262,19 +2273,19 @@ init(void)
 
 	/* some checks */
 	if(iMainMsgQueueNumWorkers < 1) {
-		errmsg.LogError(NO_ERRCODE, "$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
+		errmsg.LogError(0, NO_ERRCODE, "$MainMsgQueueNumWorkers must be at least 1! Set to 1.\n");
 		iMainMsgQueueNumWorkers = 1;
 	}
 
 	if(MainMsgQueType == QUEUETYPE_DISK) {
 		errno = 0;	/* for logerror! */
 		if(glbl.GetWorkDir() == NULL) {
-			errmsg.LogError(NO_ERRCODE, "No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
+			errmsg.LogError(0, NO_ERRCODE, "No $WorkDirectory specified - can not run main message queue in 'disk' mode. "
 				 "Using 'FixedArray' instead.\n");
 			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 		if(pszMainMsgQFName == NULL) {
-			errmsg.LogError(NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main message queue in "
+			errmsg.LogError(0, NO_ERRCODE, "No $MainMsgQueueFileName specified - can not run main message queue in "
 				 "'disk' mode. Using 'FixedArray' instead.\n");
 			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
@@ -2297,11 +2308,11 @@ init(void)
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
 	CHKiRet_Hdlr(func(pMsgQueue, data)) { \
-		errmsg.LogError(NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 #	define setQPROPstr(func, directive, data) \
 	CHKiRet_Hdlr(func(pMsgQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-		errmsg.LogError(NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
 	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
@@ -2353,7 +2364,7 @@ init(void)
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] restart",
 		 (int) myPid);
-	logmsgInternal(LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, ADDDATE);
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, ADDDATE);
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -2385,7 +2396,7 @@ selectorAddList(selector_t *f)
 	if(f != NULL) {
 		CHKiRet(llGetNumElts(&f->llActList, &iActionCnt));
 		if(iActionCnt == 0) {
-			errmsg.LogError(NO_ERRCODE, "warning: selector line without actions will be discarded");
+			errmsg.LogError(0, NO_ERRCODE, "warning: selector line without actions will be discarded");
 			selectorDestruct(f);
 		} else {
 			/* successfully created an entry */
@@ -2432,7 +2443,7 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 		MainMsgQueType = QUEUETYPE_DIRECT;
 		dbgprintf("main message queue type set to DIRECT (no queueing at all)\n");
 	} else {
-		errmsg.LogError(NO_ERRCODE, "unknown mainmessagequeuetype parameter: %s", (char *) pszType);
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown mainmessagequeuetype parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	free(pszType); /* no longer needed */
@@ -3178,7 +3189,7 @@ int realMain(int argc, char **argv)
 			break;
 		case 'h':
 			if(iCompatibilityMode < 3) {
-				errmsg.LogError(NO_ERRCODE, "WARNING: -h option is no longer supported - ignored");
+				errmsg.LogError(0, NO_ERRCODE, "WARNING: -h option is no longer supported - ignored");
 			} else {
 				usage(); /* for v3 and above, it simply is an error */
 			}
@@ -3273,7 +3284,7 @@ int realMain(int argc, char **argv)
 
 	/* process compatibility mode settings */
 	if(iCompatibilityMode < 3) {
-		errmsg.LogError(NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
+		errmsg.LogError(0, NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
 		                            "generated config directives may interfer with your rsyslog.conf settings. "
 					    "We suggest upgrading your config and adding -c3 as the first "
 					    "rsyslogd option.");
@@ -3288,7 +3299,7 @@ int realMain(int argc, char **argv)
 	}
 
 	if(bEOptionWasGiven && iCompatibilityMode < 3) {
-		errmsg.LogError(NO_ERRCODE, "WARNING: \"message repeated n times\" feature MUST be turned on in "
+		errmsg.LogError(0, NO_ERRCODE, "WARNING: \"message repeated n times\" feature MUST be turned on in "
 					    "rsyslog.conf - CURRENTLY EVERY MESSAGE WILL BE LOGGED. Visit "
 					    "http://www.rsyslog.com/rptdmsgreduction to learn "
 					    "more and cast your vote if you want us to keep this feature.");

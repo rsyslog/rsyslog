@@ -92,7 +92,7 @@ CODESTARTdoAction
 	 */
 	dbgprintf("\n");
 	if(execProg((uchar*) pData->progName, 1, ppString[0]) == 0)
-	 	errmsg.LogError(NO_ERRCODE, "Executing program '%s' failed", (char*)pData->progName);
+	 	errmsg.LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char*)pData->progName);
 ENDdoAction
 
 

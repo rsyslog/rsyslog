@@ -199,7 +199,7 @@ CODESTARTrunInput
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(glbl.GetOption_DisallowWarning) {
-								       errmsg.LogError(NO_ERRCODE, "UDP message from disallowed sender %s discarded",
+								       errmsg.LogError(0, NO_ERRCODE, "UDP message from disallowed sender %s discarded",
 										  (char*)fromHost);
 							       }	
 						       }
@@ -208,7 +208,7 @@ CODESTARTrunInput
 						char errStr[1024];
 						rs_strerror_r(errno, errStr, sizeof(errStr));
 						dbgprintf("INET socket error: %d = %s.\n", errno, errStr);
-						       errmsg.LogError(NO_ERRCODE, "recvfrom inet");
+						       errmsg.LogError(errno, NO_ERRCODE, "recvfrom inet");
 						       /* should be harmless */
 						       sleep(1);
 					       }

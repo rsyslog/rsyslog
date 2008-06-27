@@ -79,11 +79,11 @@
 #include "errmsg.h"
 
 /* forward definitions */
-static rsRetVal dfltErrLogger(uchar *errMsg);
+static rsRetVal dfltErrLogger(int, uchar *errMsg);
 
 /* globally visible static data - see comment in rsyslog.h for details */
 uchar *glblModPath; /* module load path */
-rsRetVal (*glblErrLogger)(uchar*) = dfltErrLogger; /* the error logger to use by the errmsg module */
+rsRetVal (*glblErrLogger)(int, uchar*) = dfltErrLogger; /* the error logger to use by the errmsg module */
 
 /* static data */
 static int iRefCount = 0; /* our refcount - it MUST exist only once inside a process (not thread)
@@ -95,10 +95,10 @@ static int iRefCount = 0; /* our refcount - it MUST exist only once inside a pro
  * default so that we can log errors during the intial phase, most importantly
  * during initialization. -- rgerhards. 2008-04-17
  */
-static rsRetVal dfltErrLogger(uchar *errMsg)
+static rsRetVal dfltErrLogger(int iErr, uchar *errMsg)
 {
 	DEFiRet;
-	fprintf(stderr, "rsyslog runtime error: %s\n", errMsg);
+	fprintf(stderr, "rsyslog runtime error(%d): %s\n", iErr, errMsg);
 	RETiRet;
 }
 
@@ -107,7 +107,7 @@ static rsRetVal dfltErrLogger(uchar *errMsg)
  * rgerhards, 2008-04-18
  */
 rsRetVal
-rsrtSetErrLogger(rsRetVal (*errLogger)(uchar*))
+rsrtSetErrLogger(rsRetVal (*errLogger)(int, uchar*))
 {
 	DEFiRet;
 	assert(errLogger != NULL);

@@ -161,14 +161,14 @@ rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "DynaFileCacheSize must be greater 0 (%d given), changed to 1.", iNewVal);
 		errno = 0;
-		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE, "%s", errMsg);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 1;
 	} else if(iNewVal > 10000) {
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
 		         "DynaFileCacheSize maximum is 10,000 (%d given), changed to 10,000.", iNewVal);
 		errno = 0;
-		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE, "%s", errMsg);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 10000;
 	}
@@ -221,7 +221,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
 			 "outchannel '%s' not found - ignoring action line",
 			 szBuf);
-		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -232,7 +232,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char),
 			 "outchannel '%s' has no file name template - ignoring action line",
 			 szBuf);
-		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+		errmsg.LogError(0, RS_RET_ERR, "%s", errMsg);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -497,7 +497,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 		if(iMsgOpts & INTERNAL_MSG)
 			dbgprintf("Could not open dynaFile, discarding message\n");
 		else
-			errmsg.LogError(NO_ERRCODE, "Could not open dynamic file '%s' - discarding message", (char*)newFileName);
+			errmsg.LogError(0, NO_ERRCODE, "Could not open dynamic file '%s' - discarding message", (char*)newFileName);
 		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
 		pData->iCurrElt = -1;
 		return -1;
@@ -554,14 +554,14 @@ again:
 					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation",
 					 pData->f_fname, (long long) pData->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
-				errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+				errmsg.LogError(0, RS_RET_DISABLE_ACTION, "%s", errMsg);
 				ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 			} else {
 				snprintf(errMsg, sizeof(errMsg),
 					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation",
 					 pData->f_fname, (long long) pData->f_sizeLimit, (long long) actualFileSize);
 				errno = 0;
-				errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+				errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
 			}
 		}
 	}
@@ -595,7 +595,7 @@ again:
 			pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
 			if (pData->fd < 0) {
 				iRet = RS_RET_DISABLE_ACTION;
-				errmsg.LogError(NO_ERRCODE, "%s", pData->f_fname);
+				errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
 			} else {
 				untty();
 				goto again;
@@ -603,7 +603,7 @@ again:
 		} else {
 			iRet = RS_RET_DISABLE_ACTION;
 			errno = e;
-			errmsg.LogError(NO_ERRCODE, "%s", pData->f_fname);
+			errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
 		}
 	} else if (pData->bSyncFile) {
 		fsync(pData->fd);
@@ -767,7 +767,7 @@ CODESTARTparseSelectorAct
 	  	if ( pData->fd < 0 ){
 			pData->fd = -1;
 			dbgprintf("Error opening log file: %s\n", pData->f_fname);
-			errmsg.LogError(NO_ERRCODE, "%s", pData->f_fname);
+			errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
 			break;
 		}
 		if (isatty(pData->fd)) {

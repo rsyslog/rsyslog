@@ -530,7 +530,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					pTpe->data.field.typeRegex = TPL_REGEX_ERE;
 					p += 3; /* eat indicator sequence */
 				} else {
-					errmsg.LogError(NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
+					errmsg.LogError(0, NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
 				               (char*) p);
 				}
 			}
@@ -569,7 +569,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					  * comma itself is already part of the next field.
 					  */
 				} else {
-					errmsg.LogError(NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
+					errmsg.LogError(0, NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
 				               (char*) p);
 				}
 			}
@@ -590,7 +590,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 			if(*p != ':') {
 				/* There is something more than an R , this is invalid ! */
 				/* Complain on extra characters */
-				errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"R\", property: '%%%s'",
+				errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"R\", property: '%%%s'",
 				    (char*) *pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
@@ -616,7 +616,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					pTpe->data.field.has_fields = 1;
 					if(!isdigit((int)*p)) {
 						/* complain and use default */
-						errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
+						errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
 						    (char*) *pp);
 						pTpe->data.field.field_delim = 9;
 					} else {
@@ -624,7 +624,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 						while(isdigit((int)*p))
 							iNum = iNum * 10 + *p++ - '0';
 						if(iNum < 0 || iNum > 255) {
-							errmsg.LogError(NO_ERRCODE, "error: non-USASCII delimiter character value %d in template - using 9 (HT) as substitute", iNum);
+							errmsg.LogError(0, NO_ERRCODE, "error: non-USASCII delimiter character value %d in template - using 9 (HT) as substitute", iNum);
 							pTpe->data.field.field_delim = 9;
 						  } else {
 							pTpe->data.field.field_delim = iNum;
@@ -634,7 +634,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					/* invalid character after F, so we need to reject
 					 * this.
 					 */
-					errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"F\", property: '%%%s'",
+					errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"F\", property: '%%%s'",
 					    (char*) *pp);
 				}
 			} else {
@@ -703,7 +703,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 						  iRetLocal);
 					if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
 						bFirstRegexpErrmsg = 0;
-						errmsg.LogError(NO_ERRCODE, "regexp library could not be loaded (error %d), "
+						errmsg.LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
 								"regexp ignored", iRetLocal);
 					}
 					pTpe->data.field.has_regex = 2;

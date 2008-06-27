@@ -120,7 +120,7 @@ static rsRetVal doIncludeDirectory(uchar *pDirName)
 	ASSERT(pDirName != NULL);
 
 	if((pDir = opendir((char*) pDirName)) == NULL) {
-		errmsg.LogError(NO_ERRCODE, "error opening include directory");
+		errmsg.LogError(errno, RS_RET_FOPEN_FAILURE, "error opening include directory");
 		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
 	}
 
@@ -195,7 +195,7 @@ doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	ASSERT(*pp != NULL);
 
 	if(getSubString(pp, (char*) pattern, sizeof(pattern) / sizeof(char), ' ')  != 0) {
-		errmsg.LogError(NO_ERRCODE, "could not extract group name");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -242,7 +242,7 @@ doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
 	if(getSubString(pp, (char*) szName, sizeof(szName) / sizeof(uchar), ' ')  != 0) {
-		errmsg.LogError(NO_ERRCODE, "could not extract module name");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract module name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 	skipWhiteSpace(pp); /* skip over any whitespace */
@@ -289,7 +289,7 @@ doNameLine(uchar **pp, void* pVal)
 	eDir = (enum eDirective) pVal;	/* this time, it actually is NOT a pointer! */
 
 	if(getSubString(&p, szName, sizeof(szName) / sizeof(char), ',')  != 0) {
-		errmsg.LogError(NO_ERRCODE, "Invalid config line: could not extract name - line ignored");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "Invalid config line: could not extract name - line ignored");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 	if(*p == ',')
@@ -338,12 +338,11 @@ cfsysline(uchar *p)
 {
 	DEFiRet;
 	uchar szCmd[64];
-	uchar errMsg[128];	/* for dynamic error messages */
 
 	ASSERT(p != NULL);
 	errno = 0;
 	if(getSubString(&p, (char*) szCmd, sizeof(szCmd) / sizeof(uchar), ' ')  != 0) {
-		errmsg.LogError(NO_ERRCODE, "Invalid $-configline - could not extract command - line ignored\n");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "Invalid $-configline - could not extract command - line ignored\n");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
@@ -361,10 +360,8 @@ cfsysline(uchar *p)
 	skipWhiteSpace(&p);
 
 	if(*p && *p != '#') { /* we have a non-whitespace, so let's complain */
-		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
+		errmsg.LogError(0, NO_ERRCODE, 
 		         "error: extra characters in config line ignored: '%s'", p);
-		errno = 0;
-		errmsg.LogError(NO_ERRCODE, "%s", errMsg);
 	}
 
 finalize_it:
@@ -448,7 +445,7 @@ processConfFile(uchar *pConfFile)
 			dbgprintf("config line NOT successfully processed\n");
 			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
 				 "%s, line %d", pConfFile, iLnNbr);
-			errmsg.LogError(NO_ERRCODE, "the last error occured in %s", (char*)szErrLoc);
+			errmsg.LogError(0, NO_ERRCODE, "the last error occured in %s", (char*)szErrLoc);
 		}
 	}
 
@@ -497,7 +494,7 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 	if(*p == ';')
 		++p; /* eat it */
 	else if(*p != '\0' && *p != '#') {
-		errmsg.LogError(NO_ERRCODE, "invalid character in selector line - ';template' expected");
+		errmsg.LogError(0, NO_ERRCODE, "invalid character in selector line - ';template' expected");
 		iRet = RS_RET_ERR;
 		goto finalize_it;
 	}
@@ -639,7 +636,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 
 		if (pri < 0) {
 			snprintf((char*) xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
-			errmsg.LogError(NO_ERRCODE, "%s", xbuf);
+			errmsg.LogError(0, RS_RET_ERR, "%s", xbuf);
 			return RS_RET_ERR;
 		}
 
@@ -686,7 +683,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 				if (i < 0) {
 
 					snprintf((char*) xbuf, sizeof(xbuf), "unknown facility name \"%s\"", buf);
-					errmsg.LogError(NO_ERRCODE, "%s", xbuf);
+					errmsg.LogError(0, RS_RET_ERR, "%s", xbuf);
 					return RS_RET_ERR;
 				}
 
@@ -792,7 +789,7 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 
 finalize_it:
 	if(iRet == RS_RET_SYNTAX_ERROR) {
-		errmsg.LogError(NO_ERRCODE, "syntax error in expression");
+		errmsg.LogError(0, RS_RET_SYNTAX_ERROR, "syntax error in expression");
 	}
 
 	RETiRet;
@@ -822,14 +819,14 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 
 	/* create parser object starting with line string without leading colon */
 	if((iRet = rsParsConstructFromSz(&pPars, (*pline)+1)) != RS_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "Error %d constructing parser object - ignoring selector", iRet);
+		errmsg.LogError(0, iRet, "Error %d constructing parser object - ignoring selector", iRet);
 		return(iRet);
 	}
 
 	/* read property */
 	iRet = parsDelimCStr(pPars, &f->f_filterData.prop.pCSPropName, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "error %d parsing filter property - ignoring selector", iRet);
+		errmsg.LogError(0, iRet, "error %d parsing filter property - ignoring selector", iRet);
 		rsParsDestruct(pPars);
 		return(iRet);
 	}
@@ -837,7 +834,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 	/* read operation */
 	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "error %d compare operation property - ignoring selector", iRet);
+		errmsg.LogError(0, iRet, "error %d compare operation property - ignoring selector", iRet);
 		rsParsDestruct(pPars);
 		return(iRet);
 	}
@@ -869,7 +866,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
 		f->f_filterData.prop.operation = FIOP_REGEX;
 	} else {
-		errmsg.LogError(NO_ERRCODE, "error: invalid compare operation '%s' - ignoring selector",
+		errmsg.LogError(0, NO_ERRCODE, "error: invalid compare operation '%s' - ignoring selector",
 		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
 	}
 	rsCStrDestruct(&pCSCompOp); /* no longer needed */
@@ -877,14 +874,14 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 	/* read compare value */
 	iRet = parsQuotedCStr(pPars, &f->f_filterData.prop.pCSCompValue);
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "error %d compare value property - ignoring selector", iRet);
+		errmsg.LogError(0, iRet, "error %d compare value property - ignoring selector", iRet);
 		rsParsDestruct(pPars);
 		return(iRet);
 	}
 
 	/* skip to action part */
 	if((iRet = parsSkipWhitespace(pPars)) != RS_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "error %d skipping to action part - ignoring selector", iRet);
+		errmsg.LogError(0, iRet, "error %d skipping to action part - ignoring selector", iRet);
 		rsParsDestruct(pPars);
 		return(iRet);
 	}

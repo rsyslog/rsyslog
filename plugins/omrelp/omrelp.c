@@ -220,16 +220,16 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 					++p; /* eat */
 					pData->compressionLevel = iLevel;
 				} else {
-					errmsg.LogError(NO_ERRCODE, "Invalid compression level '%c' specified in "
+					errmsg.LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
 						 "forwardig action - NOT turning on compression.",
 						 *p);
 				}
 #					else
-				errmsg.LogError(NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
+				errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
 					 "with compression support - request ignored.");
 #					endif /* #ifdef USE_NETZIP */
 			} else { /* invalid option! Just skip it... */
-				errmsg.LogError(NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
+				errmsg.LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 				++p; /* eat invalid option */
 			}
 			/* the option processing is done. We now do a generic skip
@@ -245,7 +245,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* we probably have end of string - leave it for the rest
 			 * of the code to handle it (but warn the user)
 			 */
-			errmsg.LogError(NO_ERRCODE, "Option block not terminated in forwarding action.");
+			errmsg.LogError(0, NO_ERRCODE, "Option block not terminated in forwarding action.");
 	}
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06
@@ -263,7 +263,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* SKIP AND COUNT */;
 		pData->port = malloc(i + 1);
 		if(pData->port == NULL) {
-			errmsg.LogError(NO_ERRCODE, "Could not get memory to store relp port, "
+			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store relp port, "
 				 "using default port, results may not be what you intend\n");
 			/* we leave f_forw.port set to NULL, this is then handled by getRelpPt() */
 		} else {
@@ -279,7 +279,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			if(bErr == 0) { /* only 1 error msg! */
 				bErr = 1;
 				errno = 0;
-				errmsg.LogError(NO_ERRCODE, "invalid selector line (port), probably not doing "
+				errmsg.LogError(0, NO_ERRCODE, "invalid selector line (port), probably not doing "
 					 "what was intended");
 			}
 		}

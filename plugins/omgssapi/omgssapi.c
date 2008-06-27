@@ -268,7 +268,7 @@ finalize_it:
 	RETiRet;
 
  fail:
-	errmsg.LogError(NO_ERRCODE, "GSS-API Context initialization failed\n");
+	errmsg.LogError(0, RS_RET_GSS_SENDINIT_ERROR, "GSS-API Context initialization failed\n");
 	gss_release_name(&min_stat, &target_name);
 	gss_release_buffer(&min_stat, &out_tok);
 	if (*context != GSS_C_NO_CONTEXT) {
@@ -501,12 +501,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 					++p; /* eat */
 					pData->compressionLevel = iLevel;
 				} else {
-					errmsg.LogError(NO_ERRCODE, "Invalid compression level '%c' specified in "
+					errmsg.LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
 						 "forwardig action - NOT turning on compression.",
 						 *p);
 				}
 #					else
-				errmsg.LogError(NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
+				errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
 					 "with compression support - request ignored.");
 #					endif /* #ifdef USE_NETZIP */
 			} else if(*p == 'o') { /* octet-couting based TCP framing? */
@@ -514,7 +514,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				/* no further options settable */
 				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
-				errmsg.LogError(NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
+				errmsg.LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 				++p; /* eat invalid option */
 			}
 			/* the option processing is done. We now do a generic skip
@@ -530,7 +530,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* we probably have end of string - leave it for the rest
 			 * of the code to handle it (but warn the user)
 			 */
-			errmsg.LogError(NO_ERRCODE, "Option block not terminated in gssapi forward action.");
+			errmsg.LogError(0, NO_ERRCODE, "Option block not terminated in gssapi forward action.");
 	}
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06
@@ -548,7 +548,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* SKIP AND COUNT */;
 		pData->port = malloc(i + 1);
 		if(pData->port == NULL) {
-			errmsg.LogError(NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
+			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");
 			/* we leave f_forw.port set to NULL, this is then handled by
 			 * getFwdSyslogPt().
@@ -566,7 +566,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			if(bErr == 0) { /* only 1 error msg! */
 				bErr = 1;
 				errno = 0;
-				errmsg.LogError(NO_ERRCODE, "invalid selector line (port), probably not doing "
+				errmsg.LogError(0, NO_ERRCODE, "invalid selector line (port), probably not doing "
 					 "what was intended");
 			}
 		}
@@ -646,7 +646,7 @@ static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
 		gss_mode = GSSMODE_ENC;
 		dbgprintf("GSS-API gssmode set to GSSMODE_ENC\n");
 	} else {
-		errmsg.LogError(NO_ERRCODE, "unknown gssmode parameter: %s", (char *) mode);
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown gssmode parameter: %s", (char *) mode);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	free(mode);

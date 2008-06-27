@@ -1072,7 +1072,7 @@ RegisterObj(uchar *pszObjName, objInfo_t *pInfo)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "registering object '%s' failed with error code %d", pszObjName, iRet);
+		errmsg.LogError(0, NO_ERRCODE, "registering object '%s' failed with error code %d", pszObjName, iRet);
 	}
 
 	RETiRet;

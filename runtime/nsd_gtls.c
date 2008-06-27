@@ -111,26 +111,26 @@ readFile(uchar *pszFile, gnutls_datum_t *pBuf)
 	pBuf->data = NULL;
 
 	if((fd = open((char*)pszFile, 0)) == -1) {
-		errmsg.LogError(NO_ERRCODE, "can not read file '%s'", pszFile);
+		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 
 	}
 
 	if(fstat(fd, &stat_st) == -1) {
-		errmsg.LogError(NO_ERRCODE, "can not stat file '%s'", pszFile);
+		errmsg.LogError(0, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
 	}
 	
 	/* 1MB limit */
 	if(stat_st.st_size > 1024 * 1024) {
-		errmsg.LogError(NO_ERRCODE, "file '%s' too large, max 1MB", pszFile);
+		errmsg.LogError(0, RS_RET_FILE_TOO_LARGE, "file '%s' too large, max 1MB", pszFile);
 		ABORT_FINALIZE(RS_RET_FILE_TOO_LARGE);
 	}
 
 	CHKmalloc(pBuf->data = malloc(stat_st.st_size));
 	pBuf->size = stat_st.st_size;
 	if(read(fd,  pBuf->data, stat_st.st_size) != stat_st.st_size) {
-		errmsg.LogError(NO_ERRCODE, "error or incomplete read of file '%s'", pszFile);
+		errmsg.LogError(0, RS_RET_IO_ERROR, "error or incomplete read of file '%s'", pszFile);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
@@ -530,7 +530,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		pGnuErr = gtlsStrerror(gnuRet);
 		errno = 0;
-		errmsg.LogError(NO_ERRCODE, "error adding our certificate. GnuTLS error %d, message: '%s', "
+		errmsg.LogError(0, iRet, "error adding our certificate. GnuTLS error %d, message: '%s', "
 				"key: '%s', cert: '%s'\n", gnuRet, pGnuErr, keyFile, certFile);
 		free(pGnuErr);
 	}
@@ -762,7 +762,7 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 		dbgprintf("invalid peer fingerprint, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "error: peer fingerprint '%s' unknown - we are "
+			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
 					"not permitted to talk to it", rsCStrGetSzStr(pstrFingerprint));
 			pThis->bReportAuthErr = 0;
 		}
@@ -870,7 +870,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt *pCert)
 		if(pThis->bReportAuthErr == 1) {
 			CHKiRet(rsCStrFinish(pStr));
 			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "error: peer name not authorized -  "
+			errmsg.LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer name not authorized -  "
 					"not permitted to talk to it. Names: %s",
 					rsCStrGetSzStr(pStr));
 			pThis->bReportAuthErr = 0;
@@ -913,7 +913,7 @@ gtlsChkPeerID(nsd_gtls_t *pThis)
 	if(list_size < 1) {
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "error: peer did not provide a certificate, "
+			errmsg.LogError(0, RS_RET_TLS_NO_CERT, "error: peer did not provide a certificate, "
 					"not permitted to talk to it");
 			pThis->bReportAuthErr = 0;
 		}
@@ -970,7 +970,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
 	if(cert_list_size < 1) {
 		errno = 0;
-		errmsg.LogError(NO_ERRCODE, "peer did not provide a certificate, not permitted to talk to it");
+		errmsg.LogError(0, RS_RET_TLS_NO_CERT, "peer did not provide a certificate, not permitted to talk to it");
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
 
@@ -991,11 +991,10 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 			dbgprintf("GnuTLS returned no specific reason for GNUTLS_CERT_INVALID, certificate "
 				 "status is %d\n", stateCert);
 		}
-		errno = 0; /* get rid of errno based message expansion on LogError */
-		errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
+		errmsg.LogError(0, NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
 				pszErrCause);
 		gtlsGetCertInfo(pThis, &pStr);
-		errmsg.LogError(NO_ERRCODE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
+		errmsg.LogError(0, NO_ERRCODE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
 		rsCStrDestruct(&pStr);
 		ABORT_FINALIZE(RS_RET_CERT_INVALID);
 	}
@@ -1015,9 +1014,9 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert > ttNow) {
-			errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer: certificate %d not yet active", i);
+			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: certificate %d not yet active", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(NO_ERRCODE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
+			errmsg.LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
 			rsCStrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
 		}
@@ -1026,9 +1025,9 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert < ttNow) {
-			errmsg.LogError(NO_ERRCODE, "not permitted to talk to peer: certificate %d expired", i);
+			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "not permitted to talk to peer: certificate %d expired", i);
 			gtlsGetCertInfo(pThis, &pStr);
-			errmsg.LogError(NO_ERRCODE, "invalid cert info: %s", rsCStrGetSzStr(pStr));
+			errmsg.LogError(0, RS_RET_CERT_EXPIRED, "invalid cert info: %s", rsCStrGetSzStr(pStr));
 			rsCStrDestruct(&pStr);
 			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 		}
@@ -1174,7 +1173,7 @@ SetMode(nsd_t *pNsd, int mode)
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	if(mode != 0 && mode != 1) {
-		errmsg.LogError(NO_ERRCODE, "error: driver mode %d not supported by "
+		errmsg.LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
 				"gtls netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
 	}
@@ -1210,7 +1209,7 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 	} else if(!strcasecmp((char*) mode, "anon")) {
 		pThis->authMode = GTLS_AUTH_CERTANON;
 	} else {
-		errmsg.LogError(NO_ERRCODE, "error: authentication mode '%s' not supported by "
+		errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: authentication mode '%s' not supported by "
 				"gtls netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
@@ -1237,7 +1236,7 @@ SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers)
 		FINALIZE;
 
 	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT && pThis->authMode != GTLS_AUTH_CERTNAME) {
-		errmsg.LogError(NO_ERRCODE, "authentication not supported by "
+		errmsg.LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by "
 			"gtls netstream driver in the configured authentication mode - ignored");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
 	}

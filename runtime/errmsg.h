@@ -35,7 +35,7 @@ typedef struct errmsg_s {
 
 /* interfaces */
 BEGINinterface(errmsg) /* name must also be changed in ENDinterface macro! */
-	void  __attribute__((format(printf, 2, 3))) (*LogError)(int iErrCode, char *pszErrFmt, ... );
+	void  __attribute__((format(printf, 3, 4))) (*LogError)(int iErrno, int iErrCode, char *pszErrFmt, ... );
 ENDinterface(errmsg)
 #define errmsgCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

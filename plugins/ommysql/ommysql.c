@@ -115,7 +115,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if(pData->f_hmysql == NULL) {
-		errmsg.LogError(NO_ERRCODE, "unknown DB error occured - could not obtain MySQL handle");
+		errmsg.LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain MySQL handle");
 	} else { /* we can ask mysql for the error description... */
 		uMySQLErrno = mysql_errno(pData->f_hmysql);
 		snprintf(errMsg, sizeof(errMsg)/sizeof(char), "db error (%d): %s\n", uMySQLErrno,
@@ -124,7 +124,7 @@ static void reportDBError(instanceData *pData, int bSilent)
 			dbgprintf("mysql, DBError(silent): %s\n", errMsg);
 		else {
 			pData->uLastMySQLErrno = uMySQLErrno;
-			errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+			errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
 		}
 	}
 		
@@ -145,7 +145,7 @@ static rsRetVal initMySQL(instanceData *pData, int bSilent)
 
 	pData->f_hmysql = mysql_init(NULL);
 	if(pData->f_hmysql == NULL) {
-		errmsg.LogError(NO_ERRCODE, "can not initialize MySQL handle");
+		errmsg.LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
 		iRet = RS_RET_SUSPENDED;
 	} else { /* we could get the handle, now on with work... */
 		/* Connect to database */
@@ -270,7 +270,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * Retries make no sense. 
 	 */
 	if (iMySQLPropErr) { 
-		errmsg.LogError(NO_ERRCODE, "Trouble with MySQL connection properties. -MySQL logging disabled");
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "Trouble with MySQL connection properties. -MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
 		pData->f_hmysql = NULL; /* initialize, but connect only on first message (important for queued mode!) */

@@ -120,7 +120,7 @@ SetMode(nsd_t __attribute__((unused)) *pNsd, int mode)
 {
 	DEFiRet;
 	if(mode != 0) {
-		errmsg.LogError(NO_ERRCODE, "error: driver mode %d not supported by "
+		errmsg.LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
 				"ptcp netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
 	}
@@ -143,7 +143,7 @@ SetAuthMode(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
 {
 	DEFiRet;
 	if(mode != NULL && strcasecmp((char*)mode, "anon")) {
-		errmsg.LogError(NO_ERRCODE, "error: authentication mode '%s' not supported by "
+		errmsg.LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: authentication mode '%s' not supported by "
 				"ptcp netstream driver", mode);
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
@@ -163,7 +163,7 @@ SetPermPeers(nsd_t __attribute__((unused)) *pNsd, permittedPeers_t __attribute__
 	DEFiRet;
 
 	if(pPermPeers != NULL) {
-		errmsg.LogError(NO_ERRCODE, "authentication not supported by ptcp netstream driver");
+		errmsg.LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by ptcp netstream driver");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
 	}
 
@@ -443,7 +443,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
+				errmsg.LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
                                 close(sock);
 				continue;
 			}

@@ -41,7 +41,7 @@
 #define MSG_DONT_PARSE_HOSTNAME 0
 
 rsRetVal submitMsg(msg_t *pMsg);
-rsRetVal logmsgInternal(int pri, uchar *msg, int flags);
+rsRetVal logmsgInternal(int iErr, int pri, uchar *msg, int flags);
 rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType);
 
 /* TODO: the following 2 need to go in conf obj interface... */

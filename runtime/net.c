@@ -305,7 +305,7 @@ PermittedPeerWildcardCompile(permittedPeers_t *pPeer)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "error compiling wildcard expression '%s'",
+		errmsg.LogError(0, iRet, "error compiling wildcard expression '%s'",
 			 pPeer->pszID);
 	}
 	RETiRet;
@@ -531,14 +531,14 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			/* we handle this seperatly just to provide a better
 			 * error message.
 			 */
-			errmsg.LogError(NO_ERRCODE, "You can not specify 0 bits of the netmask, this would "
+			errmsg.LogError(0, NO_ERRCODE, "You can not specify 0 bits of the netmask, this would "
 				 "match ALL systems. If you really intend to do that, "
 				 "remove all $AllowedSender directives.");
 		
 		switch (iAllow->addr.NetAddr->sa_family) {
 		case AF_INET:
 			if((iSignificantBits < 1) || (iSignificantBits > 32)) {
-				errmsg.LogError(NO_ERRCODE, "Invalid number of bits (%d) in IPv4 address - adjusted to 32",
+				errmsg.LogError(0, NO_ERRCODE, "Invalid number of bits (%d) in IPv4 address - adjusted to 32",
 					    (int)iSignificantBits);
 				iSignificantBits = 32;
 			}
@@ -547,7 +547,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			break;
 		case AF_INET6:
 			if((iSignificantBits < 1) || (iSignificantBits > 128)) {
-				errmsg.LogError(NO_ERRCODE, "Invalid number of bits (%d) in IPv6 address - adjusted to 128",
+				errmsg.LogError(0, NO_ERRCODE, "Invalid number of bits (%d) in IPv6 address - adjusted to 128",
 					    iSignificantBits);
 				iSignificantBits = 128;
 			}
@@ -562,7 +562,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 			 * worst thing that happens is that one host will not be allowed to
 			 * log.
 			 */
-			errmsg.LogError(NO_ERRCODE, "Internal error caused AllowedSender to be ignored, AF = %d",
+			errmsg.LogError(0, NO_ERRCODE, "Internal error caused AllowedSender to be ignored, AF = %d",
 				    iAllow->addr.NetAddr->sa_family);
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -571,7 +571,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 	} else {
 		/* we need to process a hostname ACL */
 		if(glbl.GetDisableDNS()) {
-			errmsg.LogError(NO_ERRCODE, "Ignoring hostname based ACLs because DNS is disabled.");
+			errmsg.LogError(0, NO_ERRCODE, "Ignoring hostname based ACLs because DNS is disabled.");
 			ABORT_FINALIZE(RS_RET_OK);
 		}
 		
@@ -592,14 +592,14 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 #			endif
 
 			if (getaddrinfo (iAllow->addr.HostWildcard, NULL, &hints, &res) != 0) {
-			        errmsg.LogError(NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
+			        errmsg.LogError(0, NO_ERRCODE, "DNS error: Can't resolve \"%s\"", iAllow->addr.HostWildcard);
 				
 				if (ACLAddHostnameOnFail) {
-				        errmsg.LogError(NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard entry.", iAllow->addr.HostWildcard);
+				        errmsg.LogError(0, NO_ERRCODE, "Adding hostname \"%s\" to ACL as a wildcard entry.", iAllow->addr.HostWildcard);
 				        iRet = AddAllowedSenderEntry(ppRoot, ppLast, iAllow, iSignificantBits);
 					FINALIZE;
 				} else {
-				        errmsg.LogError(NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.", iAllow->addr.HostWildcard);
+				        errmsg.LogError(0, NO_ERRCODE, "Hostname \"%s\" WON\'T be added to ACL.", iAllow->addr.HostWildcard);
 				        ABORT_FINALIZE(RS_RET_NOENTRY);
 				}
 			}
@@ -756,7 +756,7 @@ rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 		ppLast = &pLastAllowedSenders_GSS;
 #endif
 	} else {
-		errmsg.LogError(NO_ERRCODE, "Invalid protocol '%s' in allowed sender "
+		errmsg.LogError(0, RS_RET_ERR, "Invalid protocol '%s' in allowed sender "
 		           "list, line ignored", pName);
 		return RS_RET_ERR;
 	}
@@ -767,7 +767,7 @@ rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 	 */
 	/* create parser object starting with line string without leading colon */
 	if((iRet = rsParsConstructFromSz(&pPars, (uchar*) *ppRestOfConfLine) != RS_RET_OK)) {
-		errmsg.LogError(NO_ERRCODE, "Error %d constructing parser object - ignoring allowed sender list", iRet);
+		errmsg.LogError(0, iRet, "Error %d constructing parser object - ignoring allowed sender list", iRet);
 		return(iRet);
 	}
 
@@ -776,18 +776,17 @@ rsRetVal addAllowedSenderLine(char* pName, uchar** ppRestOfConfLine)
 			break; /* a comment-sign stops processing of line */
 		/* now parse a single IP address */
 		if((iRet = parsAddrWithBits(pPars, &uIP, &iBits)) != RS_RET_OK) {
-			errmsg.LogError(NO_ERRCODE, "Error %d parsing address in allowed sender"
+			errmsg.LogError(0, iRet, "Error %d parsing address in allowed sender"
 				    "list - ignoring.", iRet);
 			rsParsDestruct(pPars);
 			return(iRet);
 		}
-		if((iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits))
-			!= RS_RET_OK) {
-		        if (iRet == RS_RET_NOENTRY) {
-			        errmsg.LogError(NO_ERRCODE, "Error %d adding allowed sender entry "
+		if((iRet = AddAllowedSender(ppRoot, ppLast, uIP, iBits)) != RS_RET_OK) {
+		        if(iRet == RS_RET_NOENTRY) {
+			        errmsg.LogError(0, iRet, "Error %d adding allowed sender entry "
 					    "- ignoring.", iRet);
 		        } else {
-			        errmsg.LogError(NO_ERRCODE, "Error %d adding allowed sender entry "
+			        errmsg.LogError(0, iRet, "Error %d adding allowed sender entry "
 					    "- terminating, nothing more will be added.", iRet);
 				rsParsDestruct(pPars);
 				return(iRet);
@@ -1026,7 +1025,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN, uchar *ip)
 						 "Malicious PTR record, message dropped "
 						 "IP = \"%s\" HOST = \"%s\"",
 						 ip, pszHostFQDN);
-					errmsg.LogError(NO_ERRCODE, "%s", szErrMsg);
+					errmsg.LogError(0, RS_RET_MALICIOUS_ENTITY, "%s", szErrMsg);
 					pthread_sigmask(SIG_SETMASK, &omask, NULL);
 					ABORT_FINALIZE(RS_RET_MALICIOUS_ENTITY);
 				}
@@ -1041,7 +1040,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN, uchar *ip)
 					 "Malicious PTR record (message accepted, but used IP "
 					 "instead of PTR name: IP = \"%s\" HOST = \"%s\"",
 					 ip, pszHostFQDN);
-				errmsg.LogError(NO_ERRCODE, "%s", szErrMsg);
+				errmsg.LogError(0, NO_ERRCODE, "%s", szErrMsg);
 
 				error = 1; /* that will trigger using IP address below. */
 			}
@@ -1272,8 +1271,8 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
         hints.ai_socktype = SOCK_DGRAM;
         error = getaddrinfo((char*) hostname, (char*) pszPort, &hints, &res);
         if(error) {
-               errmsg.LogError(NO_ERRCODE, "%s",  gai_strerror(error));
-	       errmsg.LogError(NO_ERRCODE, "UDP message reception disabled due to error logged in last message.\n");
+               errmsg.LogError(0, NO_ERRCODE, "%s",  gai_strerror(error));
+	       errmsg.LogError(0, NO_ERRCODE, "UDP message reception disabled due to error logged in last message.\n");
 	       return NULL;
 	}
 
@@ -1282,7 +1281,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 		/* EMPTY */;
         socks = malloc((maxs+1) * sizeof(int));
         if (socks == NULL) {
-               errmsg.LogError(NO_ERRCODE, "couldn't allocate memory for UDP sockets, suspending UDP message reception");
+               errmsg.LogError(0, NO_ERRCODE, "couldn't allocate memory for UDP sockets, suspending UDP message reception");
                freeaddrinfo(res);
                return NULL;
         }
@@ -1293,7 +1292,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
                *s = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
         	if (*s < 0) {
 			if(!(r->ai_family == PF_INET6 && errno == EAFNOSUPPORT))
-				errmsg.LogError(NO_ERRCODE, "create_udp_socket(), socket");
+				errmsg.LogError(errno, NO_ERRCODE, "create_udp_socket(), socket");
 				/* it is debateble if PF_INET with EAFNOSUPPORT should
 				 * also be ignored...
 				 */
@@ -1305,7 +1304,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
                 	int ion = 1;
 			if (setsockopt(*s, IPPROTO_IPV6, IPV6_V6ONLY,
 			      (char *)&ion, sizeof (ion)) < 0) {
-			errmsg.LogError(NO_ERRCODE, "setsockopt");
+			errmsg.LogError(errno, NO_ERRCODE, "setsockopt");
 			close(*s);
 			*s = -1;
 			continue;
@@ -1322,7 +1321,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 		 */
        		if (setsockopt(*s, SOL_SOCKET, SO_REUSEADDR,
 			       (char *) &on, sizeof(on)) < 0 ) {
-			errmsg.LogError(NO_ERRCODE, "setsockopt(REUSEADDR)");
+			errmsg.LogError(errno, NO_ERRCODE, "setsockopt(REUSEADDR)");
                         close(*s);
 			*s = -1;
 			continue;
@@ -1335,7 +1334,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 		if (should_use_so_bsdcompat()) {
 			if (setsockopt(*s, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
-				errmsg.LogError(NO_ERRCODE, "setsockopt(BSDCOMPAT)");
+				errmsg.LogError(errno, NO_ERRCODE, "setsockopt(BSDCOMPAT)");
                                 close(*s);
 				*s = -1;
 				continue;
@@ -1357,7 +1356,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 			sockflags = fcntl(*s, F_SETFL, sockflags);
 		}
 		if (sockflags == -1) {
-			errmsg.LogError(NO_ERRCODE, "fcntl(O_NONBLOCK)");
+			errmsg.LogError(errno, NO_ERRCODE, "fcntl(O_NONBLOCK)");
                         close(*s);
 			*s = -1;
 			continue;
@@ -1376,7 +1375,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 			     && (errno != EADDRINUSE)
 	#		endif
 			   ) {
-				errmsg.LogError(NO_ERRCODE, "bind");
+				errmsg.LogError(errno, NO_ERRCODE, "bind");
 				close(*s);
 				*s = -1;
 				continue;
@@ -1395,7 +1394,7 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
 		 	"- this may or may not be an error indication.\n", *socks, maxs);
 
         if(*socks == 0) {
-		errmsg.LogError(NO_ERRCODE, "No UDP listen socket could successfully be initialized, "
+		errmsg.LogError(0, NO_ERRCODE, "No UDP listen socket could successfully be initialized, "
 			 "message reception via UDP disabled.\n");
 		/* we do NOT need to free any sockets, because there were none... */
         	free(socks);

@@ -180,7 +180,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "error %d trying to add listener", iRet);
+		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
 		if(pOurTcpsrv != NULL)
 			tcpsrv.Destruct(&pOurTcpsrv);
 	}

@@ -219,11 +219,11 @@ actionConstructFinalize(action_t *pThis)
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \
 	CHKiRet_Hdlr(func(pThis->pQueue, data)) { \
-		errmsg.LogError(NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 #	define setQPROPstr(func, directive, data) \
 	CHKiRet_Hdlr(func(pThis->pQueue, data, (data == NULL)? 0 : strlen((char*) data))) { \
-		errmsg.LogError(NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
+		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
 	queueSetpUsr(pThis->pQueue, pThis);
@@ -477,7 +477,7 @@ static rsRetVal setActionQueType(void __attribute__((unused)) *pVal, uchar *pszT
 		ActionQueType = QUEUETYPE_DIRECT;
 		dbgprintf("action queue type set to DIRECT (no queueing at all)\n");
 	} else {
-		errmsg.LogError(NO_ERRCODE, "unknown actionqueue parameter: %s", (char *) pszType);
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown actionqueue parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	d_free(pszType); /* no longer needed */
@@ -763,14 +763,14 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 				 " Could not find template '%s' - action disabled\n",
 				 pTplName);
 			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "%s", errMsg);
+			errmsg.LogError(0, RS_RET_NOT_FOUND, "%s", errMsg);
 			ABORT_FINALIZE(RS_RET_NOT_FOUND);
 		}
 		/* check required template options */
 		if(   (iTplOpts & OMSR_RQD_TPL_OPT_SQL)
 		   && (pAction->ppTpl[i]->optFormatForSQL == 0)) {
 			errno = 0;
-			errmsg.LogError(NO_ERRCODE, "Action disabled. To use this action, you have to specify "
+			errmsg.LogError(0, RS_RET_RQD_TPLOPT_MISSING, "Action disabled. To use this action, you have to specify "
 				"the SQL or stdSQL option in your template!\n");
 			ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
 		}

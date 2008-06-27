@@ -46,11 +46,18 @@ DEFobjStaticHelpers
 /* ------------------------------ methods ------------------------------ */
 
 
-/* TODO: restructure this code some time. Especially look if we need
- * to check errno and, if so, how to do that in a clean way.
+/* We now receive three parameters: one is the internal error code
+ * which will also become the error message number, the second is
+ * errno - if it is non-zero, the corresponding error message is included
+ * in the text and finally the message text itself. Note that it is not
+ * 100% clean to use the internal errcode, as it may be reached from
+ * multiple actual error causes. However, it is much better than having
+ * no error code at all (and in most cases, a single internal error code
+ * maps to a specific error event).
+ * rgerhards, 2008-06-27
  */
-static void __attribute__((format(printf, 2, 3)))
-LogError(int __attribute__((unused)) iErrCode, char *fmt, ... )
+static void __attribute__((format(printf, 3, 4)))
+LogError(int iErrno, int iErrCode, char *fmt, ... )
 {
 	va_list ap;
 	char buf[1024];
@@ -74,16 +81,25 @@ LogError(int __attribute__((unused)) iErrCode, char *fmt, ... )
 
 	dbgprintf("Called LogError, msg: %s\n", buf);
 
-	if (errno == 0) {
-		snprintf(msg, sizeof(msg), "%s", buf);
+	if(iErrno != 0) {
+		rs_strerror_r(iErrno, errStr, sizeof(errStr));
+		if(iErrCode == NO_ERRCODE) {
+			snprintf(msg, sizeof(msg), "%s: %s", buf, errStr);
+		} else {
+			snprintf(msg, sizeof(msg), "%s: %s [try http://www.rsyslog.com/e/%d ]", buf, errStr, iErrCode * -1);
+		}
 	} else {
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		snprintf(msg, sizeof(msg), "%s: %s", buf, errStr);
+		if(iErrCode == NO_ERRCODE) {
+			snprintf(msg, sizeof(msg), "%s", buf);
+		} else {
+			snprintf(msg, sizeof(msg), "%s [try http://www.rsyslog.com/e/%d ]", buf, iErrCode * -1);
+		}
 	}
 	msg[sizeof(msg)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
 	
-	glblErrLogger((uchar*)msg);
+dbgprintf("LogError logging error '%s', code %d\n", msg, iErrCode);
+	glblErrLogger(iErrCode, (uchar*)msg);
 
 	ENDfunc
 }

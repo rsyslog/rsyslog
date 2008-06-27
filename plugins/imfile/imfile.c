@@ -318,7 +318,7 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	if(iFilPtr == 0) {
-		errmsg.LogError(NO_ERRCODE, "No files configured to be monitored");
+		errmsg.LogError(0, RS_RET_NO_RUN, "No files configured to be monitored");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 
@@ -447,21 +447,21 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		pThis = &files[iFilPtr];
 		/* TODO: check for strdup() NULL return */
 		if(pszFileName == NULL) {
-			errmsg.LogError(NO_ERRCODE, "imfile error: no file name given, file monitor can not be created");
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no file name given, file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszFileName = (uchar*) strdup((char*) pszFileName);
 		}
 
 		if(pszFileTag == NULL) {
-			errmsg.LogError(NO_ERRCODE, "imfile error: no tag value given , file monitor can not be created");
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no tag value given , file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
 		}
 
 		if(pszStateFile == NULL) {
-			errmsg.LogError(NO_ERRCODE, "imfile error: not state file name given, file monitor can not be created");
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: not state file name given, file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszStateFile = (uchar*) strdup((char*) pszStateFile);
@@ -470,7 +470,7 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
 	} else {
-		errmsg.LogError(NO_ERRCODE, "Too many file monitors configured - ignoring this one");
+		errmsg.LogError(0, RS_RET_OUT_OF_DESRIPTORS, "Too many file monitors configured - ignoring this one");
 		ABORT_FINALIZE(RS_RET_OUT_OF_DESRIPTORS);
 	}
 
