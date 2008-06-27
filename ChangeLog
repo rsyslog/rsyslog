@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.17.5 (rgerhards), 2008-06-??
+Version 3.17.5 (rgerhards), 2008-06-27
 - added doc: howto set up a reliable connection to remote server via
   queued mode (and plain tcp protocol)
 - bugfix: comments after actions were not properly treated. For some
