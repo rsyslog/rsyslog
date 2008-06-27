@@ -50,7 +50,7 @@ EXTRA_DIST = \
 	contrib/gnutls/cert.pem \
 	contrib/gnutls/key.pem
 
-SUBDIRS = doc tests runtime .
+SUBDIRS = doc runtime . tests
 
 SUBDIRS += plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 

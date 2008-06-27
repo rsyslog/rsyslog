@@ -52,35 +52,44 @@ BEGINTest
 	/* the string below is an expression as defined up to 3.19.x - note that the
 	 * then and the space after it MUST be present!
 	 */
-	uchar szExpr[] = "$msg contains 'test' then ";
+	uchar szExpr[] = " $msg contains 'test' then ";
 	/*uchar szSynErr[] = "$msg == 1 and syntaxerror ";*/
 CODESTARTTest
+printf("entering test, init done\n");
 	/* we first need a tokenizer... */
 	CHKiRet(ctok.Construct(&tok));
 	CHKiRet(ctok.Setpp(tok, szExpr));
 	CHKiRet(ctok.ConstructFinalize(tok));
+printf("done tokenizer\n");
 
 	/* now construct our expression */
 	CHKiRet(expr.Construct(&pExpr));
 	CHKiRet(expr.ConstructFinalize(pExpr));
+printf("done expr construct\n");
 
 	/* ready to go... */
 	CHKiRet(expr.Parse(pExpr, tok));
+printf("done parse\n");
 
 	/* we now need to parse off the "then" - and note an error if it is
 	 * missing...
 	 */
 	CHKiRet(ctok.GetToken(tok, &pToken));
+printf("pToken->tok addr %p\n", &(pToken->tok));
+printf("token received %d\n", pToken->tok);
 	if(pToken->tok != ctok_THEN) {
+printf("invalid token\n");
 		ctok_token.Destruct(&pToken);
 		ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 	}
 
+printf("token destructed\n");
 	ctok_token.Destruct(&pToken); /* no longer needed */
 
 	/* we are done, so we now need to restore things */
 	CHKiRet(ctok.Destruct(&tok));
 finalize_it:
+printf("exiting test, iRet %d\n", iRet);
 	/* here we may do custom error reporting */
 	if(iRet != RS_RET_OK) {
 		uchar *pp;

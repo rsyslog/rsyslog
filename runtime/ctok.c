@@ -390,7 +390,6 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 	uchar szWord[128];
 	int bRetry = 0; /* retry parse? Only needed for inline comments... */
 
-dbgprintf("ctokGetToken\n");
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(ppToken != NULL);
 
@@ -409,7 +408,6 @@ dbgprintf("ctokGetToken\n");
 
 	/* find the next token. We may loop when we have inline comments */
 	do {
-dbgprintf("we search for a new token\n");
 		bRetry = 0;
 		CHKiRet(ctokSkipWhitespaceFromStream(pThis));
 		CHKiRet(ctokGetCharFromStream(pThis, &c)); /* read a charater */
@@ -529,6 +527,7 @@ dbgprintf("we search for a new token\n");
 	dbgoprint((obj_t*) pToken, "token: %d\n", pToken->tok);
 
 finalize_it:
+//dbgprintf("ctokGetToken, returns %d, returns token %d, addr %p\n", iRet, (*ppToken)->tok, &((*ppToken)->tok));
 	if(iRet != RS_RET_OK) {
 		if(pToken != NULL)
 			ctok_token.Destruct(&pToken);
