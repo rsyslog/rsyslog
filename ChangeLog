@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.19.9 (rgerhards), 2008-07-??
+---------------------------------------------------------------------------
 Version 3.19.8 (rgerhards), 2008-07-01
 - bugfix: gtls module did not correctly handle EGAIN (and similar) recv()
   states. This has been fixed by introducing a new abstraction layer inside
