@@ -528,11 +528,11 @@ CODESTARTparseSelectorAct
 	/* TODO: check strdup() result */
 
 	if(pszFrom == NULL) {
-		errmsg.LogError(NO_ERRCODE, "no sender address given - specify $ActionMailFrom");
+		errmsg.LogError(0, RS_RET_MAIL_NO_FROM, "no sender address given - specify $ActionMailFrom");
 		ABORT_FINALIZE(RS_RET_MAIL_NO_FROM);
 	}
 	if(pszTo == NULL) {
-		errmsg.LogError(NO_ERRCODE, "no recipient address given - specify $ActionMailTo");
+		errmsg.LogError(0, RS_RET_MAIL_NO_TO, "no recipient address given - specify $ActionMailTo");
 		ABORT_FINALIZE(RS_RET_MAIL_NO_TO);
 	}
 
