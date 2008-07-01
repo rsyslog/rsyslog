@@ -1,13 +1,15 @@
 ---------------------------------------------------------------------------
-Version 3.19.8 (rgerhards), 2008-06-??
-- disabled compile warnings caused by third-party libraries
-- reduced number of compile warnings in gcc's -pedantic mode
+Version 3.19.8 (rgerhards), 2008-07-01
 - bugfix: gtls module did not correctly handle EGAIN (and similar) recv()
   states. This has been fixed by introducing a new abstraction layer inside
   gtls.
 - added (internal) error codes to error messages; added redirector to
   web description of error codes
   closes bug http://bugzilla.adiscon.com/show_bug.cgi?id=20
+- disabled compile warnings caused by third-party libraries
+- reduced number of compile warnings in gcc's -pedantic mode
+- some minor documentation improvements
+- included all fixes from beta 3.17.5
 ---------------------------------------------------------------------------
 Version 3.19.7 (rgerhards), 2008-06-11
 - added new property replacer option "date-subseconds" that enables
