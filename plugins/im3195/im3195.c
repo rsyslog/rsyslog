@@ -98,7 +98,7 @@ CODESTARTrunInput
 		 * return after SIGUSR1.
 		 */
 		if((iRet = srAPIRunListener(pAPI)) != SR_RET_OK) {
-			errmsg.LogError(NO_ERRCODE, "error %d running liblogging listener - im3195 is defunct", iRet);
+			errmsg.LogError(0, NO_ERRCODE, "error %d running liblogging listener - im3195 is defunct", iRet);
 			FINALIZE; /* this causes im3195 to become defunct; TODO: recovery handling */
 		}
 	}
@@ -109,17 +109,17 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	if((pAPI = srAPIInitLib()) == NULL) {
-		errmsg.LogError(NO_ERRCODE, "error initializing liblogging - im3195 is defunct");
+		errmsg.LogError(0, NO_ERRCODE, "error initializing liblogging - im3195 is defunct");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	if((iRet = srAPISetOption(pAPI, srOPTION_BEEP_LISTENPORT, listenPort)) != SR_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "error %d setting liblogging listen port - im3195 is defunct", iRet);
+		errmsg.LogError(0, NO_ERRCODE, "error %d setting liblogging listen port - im3195 is defunct", iRet);
 		FINALIZE;
 	}
 
 	if((iRet = srAPISetupListener(pAPI, OnReceive)) != SR_RET_OK) {
-		errmsg.LogError(NO_ERRCODE, "error %d setting up liblogging listener - im3195 is defunct", iRet);
+		errmsg.LogError(0, NO_ERRCODE, "error %d setting up liblogging listener - im3195 is defunct", iRet);
 		FINALIZE;
 	}
 
