@@ -500,7 +500,7 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 	}
 
 finalize_it:
-	dbgprintf("gtlsRecordRecv return. nsd %p, iRet %d, lenRcvd %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
+	dbgprintf("gtlsRecordRecv return. nsd %p, iRet %d, lenRcvd %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, (int) lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
 }
 

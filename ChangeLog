@@ -118,6 +118,11 @@ Version 3.19.0 (rgerhards), 2008-05-06
 - a lot of cleanup in regard to modularization
 - -c option no longer must be the first option - thanks to varmjofekoj
   for the patch
+Version 3.17.5 (rgerhards), 2008-06-27
+- added doc: howto set up a reliable connection to remote server via
+  queued mode (and plain tcp protocol)
+- bugfix: comments after actions were not properly treated. For some
+  actions (e.g. forwarding), this could also lead to invalid configuration
 ---------------------------------------------------------------------------
 Version 3.17.4 (rgerhards), 2008-06-16
 - changed default for $KlogSymbolLookup to "off". The directive is
@@ -184,7 +189,7 @@ Version 3.17.0 (rgerhards), 2008-04-08
 Plus a number of bugfixes that were applied to v3-stable and beta
 branches (not mentioned here in detail).
 ---------------------------------------------------------------------------
-Version 3.16.2 (rgerhards), 2008-05-14
+Version 3.16.2 (rgerhards), 2008-06-25
 - fixed potential segfault due to invalid call to cfsysline
   thanks to varmojfekoj for the patch
 - bugfix: some whitespaces where incorrectly not ignored when parsing

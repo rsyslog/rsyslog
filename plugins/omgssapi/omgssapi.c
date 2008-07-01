@@ -535,7 +535,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06
 	 */
-	for(q = p ; *p && *p != ';' && *p != ':' ; ++p)
+	for(q = p ; *p && *p != ';' && *p != ':' && *p != '#' ; ++p)
 		/* JUST SKIP */;
 
 	pData->port = NULL;
@@ -559,6 +559,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		}
 	}
 	
+		
 	/* now skip to template */
 	bErr = 0;
 	while(*p && *p != ';') {
@@ -574,10 +575,11 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	}
 
 	/* TODO: make this if go away! */
-	if(*p == ';') {
+	if(*p == ';' || *p == '#' || isspace(*p)) {
+		uchar cTmp = *p;
 		*p = '\0'; /* trick to obtain hostname (later)! */
 		CHKmalloc(pData->f_hname = strdup((char*) q));
-		*p = ';';
+		*p = cTmp;
 	} else {
 		CHKmalloc(pData->f_hname = strdup((char*) q));
 	}

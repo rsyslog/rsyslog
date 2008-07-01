@@ -480,36 +480,33 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 {
 	uchar *p;
 	uchar *tplName;
-	DEFiRet;
 	cstr_t *pStrB;
+	DEFiRet;
 
 	ASSERT(pp != NULL);
 	ASSERT(*pp != NULL);
 	ASSERT(pOMSR != NULL);
 
 	p =*pp;
-	/* a template must follow - search it and complain, if not found
-	 */
+	/* a template must follow - search it and complain, if not found */
 	skipWhiteSpace(&p);
 	if(*p == ';')
 		++p; /* eat it */
 	else if(*p != '\0' && *p != '#') {
-		errmsg.LogError(0, NO_ERRCODE, "invalid character in selector line - ';template' expected");
-		iRet = RS_RET_ERR;
-		goto finalize_it;
+		errmsg.LogError(0, RS_RET_ERR, "invalid character in selector line - ';template' expected");
+		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	skipWhiteSpace(&p); /* go to begin of template name */
 
-	if(*p == '\0') {
+	if(*p == '\0' || *p == '#') {
 		/* no template specified, use the default */
 		/* TODO: check NULL ptr */
 		tplName = (uchar*) strdup((char*)dfltTplName);
 	} else {
 		/* template specified, pick it up */
 		if(rsCStrConstruct(&pStrB) != RS_RET_OK) {
-			iRet = RS_RET_OUT_OF_MEMORY;
-			goto finalize_it;
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 		}
 
 		/* now copy the string */
