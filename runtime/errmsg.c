@@ -98,7 +98,6 @@ LogError(int iErrno, int iErrCode, char *fmt, ... )
 	msg[sizeof(msg)/sizeof(char) - 1] = '\0'; /* just to be on the safe side... */
 	errno = 0;
 	
-dbgprintf("LogError logging error '%s', code %d\n", msg, iErrCode);
 	glblErrLogger(iErrCode, (uchar*)msg);
 
 	ENDfunc

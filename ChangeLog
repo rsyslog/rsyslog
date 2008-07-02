@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 3.19.9 (rgerhards), 2008-07-??
+- bugfix: machine certificate was required for client even in TLS anon mode
+  Reference: http://bugzilla.adiscon.com/show_bug.cgi?id=85
+  The fix also slightly improves performance by not storing certificates in
+  client sessions when there is no need to do so.
 ---------------------------------------------------------------------------
 Version 3.19.8 (rgerhards), 2008-07-01
 - bugfix: gtls module did not correctly handle EGAIN (and similar) recv()

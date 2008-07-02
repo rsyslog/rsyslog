@@ -898,7 +898,6 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	if(iErr == NO_ERRCODE) {
 		MsgSetTAG(pMsg, "rsyslogd:");
 	} else {
-dbgprintf("iErr %d\n", iErr);
 		snprintf((char*)pszTag, sizeof(pszTag), "rsyslogd%d:", iErr);
 		pszTag[32] = '\0'; /* just to make sure... */
 		MsgSetTAG(pMsg, (char*)pszTag);

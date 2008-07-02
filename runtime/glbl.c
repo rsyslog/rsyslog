@@ -42,15 +42,6 @@
 #ifndef DFLT_NETSTRM_DRVR
 #	define DFLT_NETSTRM_DRVR ((uchar*)"ptcp")
 #endif
-#ifndef DFLT_NETSTRM_DRVR_CAF
-#	define DFLT_NETSTRM_DRVR_CAF ((uchar*)"ca.pem")
-#endif
-#ifndef DFLT_NETSTRM_DRVR_KEYFILE
-#	define DFLT_NETSTRM_DRVR_KEYFILE ((uchar*)"key.pem")
-#endif
-#ifndef DFLT_NETSTRM_DRVR_CERTFILE
-#	define DFLT_NETSTRM_DRVR_CERTFILE ((uchar*)"cert.pem")
-#endif
 
 /* static data */
 DEFobjStaticHelpers
@@ -141,7 +132,7 @@ GetDfltNetstrmDrvr(void)
 static uchar*
 GetDfltNetstrmDrvrCAF(void)
 {
-	return(pszDfltNetstrmDrvrCAF == NULL ? DFLT_NETSTRM_DRVR_CAF : pszDfltNetstrmDrvrCAF);
+	return(pszDfltNetstrmDrvrCAF);
 }
 
 
@@ -149,7 +140,7 @@ GetDfltNetstrmDrvrCAF(void)
 static uchar*
 GetDfltNetstrmDrvrKeyFile(void)
 {
-	return(pszDfltNetstrmDrvrKeyFile == NULL ? DFLT_NETSTRM_DRVR_KEYFILE : pszDfltNetstrmDrvrKeyFile);
+	return(pszDfltNetstrmDrvrKeyFile);
 }
 
 
@@ -157,7 +148,7 @@ GetDfltNetstrmDrvrKeyFile(void)
 static uchar*
 GetDfltNetstrmDrvrCertFile(void)
 {
-	return(pszDfltNetstrmDrvrCertFile == NULL ? DFLT_NETSTRM_DRVR_CERTFILE : pszDfltNetstrmDrvrCertFile);
+	return(pszDfltNetstrmDrvrCertFile);
 }
 
 

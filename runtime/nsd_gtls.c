@@ -169,6 +169,17 @@ gtlsLoadOurCertKey(nsd_gtls_t *pThis)
 	certFile = glbl.GetDfltNetstrmDrvrCertFile();
 	keyFile = glbl.GetDfltNetstrmDrvrKeyFile();
 
+	if(certFile == NULL || keyFile == NULL) {
+		/* in this case, we can not set our certificate. If we are 
+		 * a client and the server is running in "anon" auth mode, this
+		 * may be well acceptable. In other cases, we will see some
+		 * more error messages down the road. -- rgerhards, 2008-07-02
+		 */
+		dbgprintf("our certificate is not set, file name values are cert: '%s', key: '%s'\n",
+			  certFile, keyFile);
+		ABORT_FINALIZE(RS_RET_CERTLESS);
+	}
+
 	/* try load certificate */
 	CHKiRet(readFile(certFile, &data));
 	CHKgnutls(gnutls_x509_crt_init(&pThis->ourCert));
@@ -531,7 +542,7 @@ finalize_it:
 		pGnuErr = gtlsStrerror(gnuRet);
 		errno = 0;
 		errmsg.LogError(0, iRet, "error adding our certificate. GnuTLS error %d, message: '%s', "
-				"key: '%s', cert: '%s'\n", gnuRet, pGnuErr, keyFile, certFile);
+				"key: '%s', cert: '%s'", gnuRet, pGnuErr, keyFile, certFile);
 		free(pGnuErr);
 	}
 	RETiRet;
@@ -636,6 +647,9 @@ gtlsGlblInitLstn(void)
 		CHKiRet(generate_dh_params());
 		gnutls_certificate_set_dh_params(xcred, dh_params); /* this is void */
 		bGlblSrvrInitDone = 1; /* we are all set now */
+
+		/* now we need to add our certificate */
+		CHKiRet(gtlsAddOurCert());
 	}
 
 finalize_it:
@@ -1129,8 +1143,6 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
 	iRet = nsd_ptcp.Construct(&pThis->pTcp);
 	pThis->bReportAuthErr = 1;
-	CHKiRet(gtlsAddOurCert());
-finalize_it:
 ENDobjConstruct(nsd_gtls)
 
 
@@ -1558,8 +1570,12 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host)
 	 */
 	/* store a pointer to ourselfs (needed by callback) */
 	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
-	CHKiRet(gtlsLoadOurCertKey(pThis)); /* first load .pem files */
-	gnutls_certificate_client_set_retrieve_function(xcred, gtlsClientCertCallback);
+	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
+	if(iRet == RS_RET_OK) {
+		gnutls_certificate_client_set_retrieve_function(xcred, gtlsClientCertCallback);
+	} else if(iRet != RS_RET_CERTLESS) {
+		FINALIZE; /* we have an error case! */
+	}
 
 	/* Use default priorities */
 	CHKgnutls(gnutls_set_default_priority(pThis->sess));
