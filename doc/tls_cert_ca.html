@@ -48,7 +48,12 @@ trust under this model. That is why the CA's private key is so important -
 everyone getting hold of it is trusted by our rsyslog instances.</p>
 <center><img src="tls_cert_ca.jpg"></center>
 <p>To create a self-signed certificate, use the following commands with GnuTLS (which 
-is currently the only supported TLS library, what may change in the future): </p>
+is currently the only supported TLS library, what may change in the future).
+Please note that GnuTLS' tools are not installed by default on many platforms. Also,
+the tools do not necessarily come with the GnuTLS core package. If you do not
+have certtool on your system, check if there is package for the GnuTLS tools available
+(under Fedora, for example, this is named gnutls-utils-&lt;version&gt; and
+it is NOT installed by default). </p>
 <ol>
 <li>generate the private key:
 <pre>certtool --generate-privkey --outfile ca-key.pem</pre>

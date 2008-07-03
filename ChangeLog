@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.19.9 (rgerhards), 2008-07-??
+- added tutorial for creating a TLS-secured syslog infrastructure
 - bugfix: machine certificate was required for client even in TLS anon mode
   Reference: http://bugzilla.adiscon.com/show_bug.cgi?id=85
   The fix also slightly improves performance by not storing certificates in

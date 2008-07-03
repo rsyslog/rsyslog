@@ -36,7 +36,7 @@ src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
 </script>
 </span>
 be specified inside the $&lt;object&gt;PermittedPeer config statements.
-<p>For now, we assume that that a single person (or group) is responsible for the whole
+<p>For now, we assume that a single person (or group) is responsible for the whole
 rsyslog system and thus it is OK if that single person is in posession of all
 machine's private keys. This simplification permits us to use a somewhat less
 complicated way of generating the machine certificates. So, we generate both the private
@@ -56,6 +56,13 @@ breaching your security.</b>
 <p>Text in red is user input. Please note that for some questions, there is no
 user input given. This means the default was accepted by simply pressing the 
 enter key.
+<p><b>Please note:</b> you need to substitute the names specified below with values
+that match your environment. Most importantly, machine.example.net must be replaced
+by the actual name of the machine that will be using this certificate. For example,
+if you generate a certificate for a machine named "server.example.com", you need 
+to use that name. If you generate a certificate for "client.example.com", you need
+to use this name. Make sure that each machine certificate has a unique name. If not,
+you can not apply proper access control.
 <code><pre>
 [root@rgf9dev sample]# <font color="red">certtool --generate-privkey --outfile key.pem --bits 2048</font>
 Generating a 2048 bit RSA private key...
@@ -82,7 +89,7 @@ Extensions.
 Does the certificate belong to an authority? (Y/N): <font color="red">n</font>
 Is this a TLS web client certificate? (Y/N): <font color="red">y</font>
 Is this also a TLS web server certificate? (Y/N): <font color="red">y</font>
-Enter the dnsName of the subject of the certificate: <font color="red">machine.example.net</font>
+Enter the dnsName of the subject of the certificate: <font color="red">machine.example.net</font> <i>{This is the name of the machine that will use the certificate}</i>
 Will the certificate be used for signing (DHE and RSA-EXPORT ciphersuites)? (Y/N): 
 Will the certificate be used for encryption (RSA ciphersuites)? (Y/N): 
 X.509 Certificate Information:
