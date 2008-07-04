@@ -11,7 +11,18 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ *
+ * rgerhards, 2008-07-04 (happy Independence Day!): rsyslog inherited the
+ * wall functionality from sysklogd. Sysklogd was single-threaded and could
+ * not afford to spent a lot of time inside a single action. Thus, it forked
+ * off a new process to do the wall. In rsyslog, however, this creates some
+ * grief with the threading model. Also, we do not really need to de-couple
+ * processing, because we have ample ways to do it in rsyslog. Plus, the
+ * default main message queue will care for a somewhat longer execution time.
+ * So in short, the real fix to the problem is an architecture change. From
+ * now on, we will not fork off a new process but rather do the notification
+ * within the current one. This also reduces system overhead.
  *
  * This file is part of rsyslog.
  *
@@ -43,7 +54,7 @@
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/stat.h>
-#include <setjmp.h>
+#include <errno.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #else
@@ -106,13 +117,6 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-static jmp_buf ttybuf;
-
-static void endtty()
-{
-	longjmp(ttybuf, 1);
-}
-
 /**
  * BSD setutent/getutent() replacement routines
  * The following routines emulate setutent() and getutent() under
@@ -148,8 +152,7 @@ void endutent(void)
 #endif  /* #ifdef OS_BSD */
 
 
-/*
- *  WALLMSG -- Write a message to the world at large
+/*  WALLMSG -- Write a message to the world at large
  *
  *	Write the specified message to either the entire
  *	world, or a list of approved users.
@@ -158,108 +161,86 @@ void endutent(void)
  * Tue May  4 16:52:01 CEST 2004: Solar Designer <solar@openwall.com>
  *	Adjust the size of a variable to prevent a buffer overflow
  *	should _PATH_DEV ever contain something different than "/dev/".
+ * rgerhards, 2008-07-04: changing the function to no longer use fork() but
+ * 	continue run on its thread instead.
  */
 static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 {
   
+	uchar szErr[512];
 	char p[sizeof(_PATH_DEV) + UNAMESZ];
 	register int i;
+	int errnoSave;
 	int ttyf;
-	static int reenter = 0;
+	int wrRet;
 	struct utmp ut;
 	struct utmp *uptr;
-	struct sigaction sigAct;
+	struct stat statb;
+	DEFiRet;
 
 	assert(pMsg != NULL);
-
-	if (reenter++)
-		return RS_RET_OK;
 
 	/* open the user login file */
 	setutent();
 
-	/*
-	 * Might as well fork instead of using nonblocking I/O
-	 * and doing notty().
-	 */
-	if (fork() == 0) {
-		memset(&sigAct, 0, sizeof(sigAct));
-		sigemptyset(&sigAct.sa_mask);
-		sigAct.sa_handler = SIG_DFL;
-		sigaction(SIGTERM, &sigAct, NULL);
-		alarm(0);
-
-#		ifdef		SIGTTOU
-		sigAct.sa_handler = SIG_DFL;
-		sigaction(SIGTERM, &sigAct, NULL);
-#		endif
-		/* It is save to call sigprocmask here, as we are now executing the child (no threads) */
-		sigprocmask(SIG_SETMASK, &sigAct.sa_mask, NULL);
-	/* TODO: find a way to limit the max size of the message. hint: this
-	 * should go into the template!
-	 */
-	
-	/* rgerhards 2005-10-24: HINT: this code might be run in a seperate thread
-	 * instead of a seperate process once we have multithreading...
-	 */
-
-		/* scan the user login file */
-		while ((uptr = getutent())) {
-			memcpy(&ut, uptr, sizeof(ut));
-			/* is this slot used? */
-			if (ut.ut_name[0] == '\0')
-				continue;
+	/* scan the user login file */
+	while((uptr = getutent())) {
+		memcpy(&ut, uptr, sizeof(ut));
+		/* is this slot used? */
+		if(ut.ut_name[0] == '\0')
+			continue;
 #ifndef OS_BSD
-			if (ut.ut_type != USER_PROCESS)
-			        continue;
+		if(ut.ut_type != USER_PROCESS)
+			continue;
 #endif
-			if (!(strncmp (ut.ut_name,"LOGIN", 6))) /* paranoia */
-			        continue;
+		if(!(strncmp (ut.ut_name,"LOGIN", 6))) /* paranoia */
+			continue;
 
-			/* should we send the message to this user? */
-			if (pData->bIsWall == 0) {
-				for (i = 0; i < MAXUNAMES; i++) {
-					if (!pData->uname[i][0]) {
-						i = MAXUNAMES;
-						break;
-					}
-					if (strncmp(pData->uname[i],
-					    ut.ut_name, UNAMESZ) == 0)
-						break;
+		/* should we send the message to this user? */
+		if(pData->bIsWall == 0) {
+			for(i = 0; i < MAXUNAMES; i++) {
+				if(!pData->uname[i][0]) {
+					i = MAXUNAMES;
+					break;
 				}
-				if (i >= MAXUNAMES)
-					continue;
+				if(strncmp(pData->uname[i], ut.ut_name, UNAMESZ) == 0)
+					break;
 			}
-
-			/* compute the device name */
-			strcpy(p, _PATH_DEV);
-			strncat(p, ut.ut_line, UNAMESZ);
-
-			if (setjmp(ttybuf) == 0) {
-				sigAct.sa_handler = endtty;
-				sigaction(SIGALRM, &sigAct, NULL);
-				(void) alarm(15);
-				/* open the terminal */
-				ttyf = open(p, O_WRONLY|O_NOCTTY);
-				if (ttyf >= 0) {
-					struct stat statb;
-
-					if (fstat(ttyf, &statb) == 0 &&
-					    (statb.st_mode & S_IWRITE)) {
-						(void) write(ttyf, pMsg, strlen((char*)pMsg));
-					}
-					close(ttyf);
-					ttyf = -1;
-				}
-			}
-			(void) alarm(0);
+			if(i == MAXUNAMES) /* user not found? */
+				continue; /* on to next user! */
 		}
-		exit(0); /* "good" exit - this terminates the child forked just for message delivery */
+
+		/* compute the device name */
+		strcpy(p, _PATH_DEV);
+		strncat(p, ut.ut_line, UNAMESZ);
+
+		/* we must be careful when writing to the terminal. A terminal may block
+		 * (for example, a user has pressed <ctl>-s). In that case, we can not
+		 * wait indefinitely. So we need to use non-blocking I/O. In case we would
+		 * block, we simply do not send the message, because that's the best we can
+		 * do. -- rgerhards, 2008-07-04
+		 */
+
+		/* open the terminal */
+		if((ttyf = open(p, O_WRONLY|O_NOCTTY|O_NONBLOCK)) >= 0) {
+			if(fstat(ttyf, &statb) == 0 && (statb.st_mode & S_IWRITE)) {
+				wrRet = write(ttyf, pMsg, strlen((char*)pMsg));
+				if(Debug && wrRet == -1) {
+					/* we record the state to the debug log */
+					errnoSave = errno;
+					rs_strerror_r(errno, (char*)szErr, sizeof(szErr));
+					dbgprintf("write to terminal '%s' failed with [%d]:%s\n",
+						  p, errnoSave, szErr);
+				}
+			}
+			close(ttyf);
+			ttyf = -1;
+		}
 	}
+
 	/* close the user login file */
 	endutent();
-	reenter = 0;
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
@@ -279,30 +260,24 @@ BEGINparseSelectorAct
 	int i;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
+	   /* User names must begin with a gnu e-regex:
+	    *   [a-zA-Z0-9_.]
+	    * plus '*' for wall
+	    */
+	if(!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
+	   || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*'))
+		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
-       /* User names must begin with a gnu e-regex:
-        *   [a-zA-Z0-9_.]
-	* plus '*' for wall
-        */
-       if (!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
-                    || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*'))
-	       ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
-		goto finalize_it;
-
+	CHKiRet(createInstance(&pData));
 
 	if(*p == '*') { /* wall */
 		dbgprintf("write-all");
 		++p; /* eat '*' */
 		pData->bIsWall = 1; /* write to all users */
-		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " WallFmt"))
-		    != RS_RET_OK)
-			goto finalize_it;
+		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " WallFmt"));
 	} else {
-                /* everything else beginning with the regex above
-                 * is currently treated as a user name
-                 * TODO: is this portable?
+		/* everything else beginning with the regex above
+		 * is currently treated as a user name -- TODO: is this portable?
 		 */
 		dbgprintf("users: %s\n", p);	/* ASP */
 		pData->bIsWall = 0; /* write to individual users */
@@ -322,7 +297,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		 * TODO: we need to handle the case where i >= MAXUNAME!
 		 */
 		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*)" StdUsrMsgFmt"))
-		    != RS_RET_OK)
+			!= RS_RET_OK)
 			goto finalize_it;
 	}
 CODE_STD_FINALIZERparseSelectorAct
@@ -347,6 +322,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
 
-/*
- * vi:set ai:
+/* vim:set ai:
  */
