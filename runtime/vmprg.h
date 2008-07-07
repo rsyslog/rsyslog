@@ -38,7 +38,7 @@
 #define INCLUDED_VMPRG_H
 
 #include "vmop.h"
-
+#include "stringbuf.h"
 
 /* the vmprg object */
 typedef struct vmprg_s {
@@ -56,6 +56,7 @@ BEGINinterface(vmprg) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(vmprg_t **ppThis);
 	rsRetVal (*AddOperation)(vmprg_t *pThis, vmop_t *pOp);
 	rsRetVal (*AddVarOperation)(vmprg_t *pThis, opcode_t opcode, var_t *pVar);
+	rsRetVal (*Obj2Str)(vmprg_t *pThis, cstr_t *pstr);
 ENDinterface(vmprg)
 #define vmprgCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

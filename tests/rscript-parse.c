@@ -21,6 +21,7 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
+#include "config.h"
 #include <stdio.h>
 
 #include "rsyslog.h"
@@ -33,12 +34,14 @@ MODULE_TYPE_TESTBENCH
 DEFobjCurrIf(expr)
 DEFobjCurrIf(ctok)
 DEFobjCurrIf(ctok_token)
+DEFobjCurrIf(vmprg)
 
 BEGINInit
 CODESTARTInit
 	pErrObj = "expr"; CHKiRet(objUse(expr, CORE_COMPONENT));
 	pErrObj = "ctok"; CHKiRet(objUse(ctok, CORE_COMPONENT));
 	pErrObj = "ctok_token"; CHKiRet(objUse(ctok_token, CORE_COMPONENT));
+	pErrObj = "vmprg"; CHKiRet(objUse(vmprg, CORE_COMPONENT));
 ENDInit
 
 BEGINExit
@@ -46,13 +49,15 @@ CODESTARTExit
 ENDExit
 
 BEGINTest
+	cstr_t *pstrPrg;
 	ctok_t *tok;
 	ctok_token_t *pToken;
 	expr_t *pExpr;
 	/* the string below is an expression as defined up to 3.19.x - note that the
 	 * then and the space after it MUST be present!
 	 */
-	uchar szExpr[] = " $msg contains 'test' then ";
+	//uchar szExpr[] = " $msg contains 'test' then ";
+	uchar szExpr[] = "'test 1' <> $var or /* some comment */($SEVERITY == -4 +5 -(3 * - 2) and $fromhost == '127.0.0.1') then ";
 	/*uchar szSynErr[] = "$msg == 1 and syntaxerror ";*/
 CODESTARTTest
 	/* we first need a tokenizer... */
@@ -77,16 +82,19 @@ CODESTARTTest
 	 * Should anyone have any insight, I'd really appreciate if you drop me 
 	 * a line.
 	 */
-#if 0
 	CHKiRet(ctok.GetToken(tok, &pToken));
 	if(pToken->tok != ctok_THEN) {
-//printf("invalid token, probably due to invalid alignment between runtime lib and this program\n");
 		ctok_token.Destruct(&pToken);
 		ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
 	}
 
 	ctok_token.Destruct(&pToken); /* no longer needed */
-#endif
+
+	CHKiRet(rsCStrConstruct(&pstrPrg));
+	CHKiRet(vmprg.Obj2Str(pExpr->pVmprg, pstrPrg));
+
+	printf("string returned: '%s'\n", rsCStrGetSzStr(pstrPrg));
+	rsCStrDestruct(&pstrPrg);
 
 	/* we are done, so we now need to restore things */
 	CHKiRet(ctok.Destruct(&tok));

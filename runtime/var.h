@@ -59,6 +59,7 @@ BEGINinterface(var) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConvToNumber)(var_t *pThis);
 	rsRetVal (*ConvToBool)(var_t *pThis);
 	rsRetVal (*ConvToString)(var_t *pThis);
+	rsRetVal (*Obj2Str)(var_t *pThis, cstr_t*);
 	rsRetVal (*Duplicate)(var_t *pThis, var_t **ppNew);
 ENDinterface(var)
 #define varCURR_IF_VERSION 1 /* increment whenever you change the interface above! */

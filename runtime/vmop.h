@@ -26,6 +26,7 @@
 #define INCLUDED_VMOP_H
 
 #include "ctok_token.h"
+#include "stringbuf.h"
 
 /* machine instructions types */
 typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc() */
@@ -83,6 +84,7 @@ BEGINinterface(vmop) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetOpcode)(vmop_t *pThis, opcode_t opcode);
 	rsRetVal (*SetVar)(vmop_t *pThis, var_t *pVar);
 	rsRetVal (*Opcode2Str)(vmop_t *pThis, uchar **ppName);
+	rsRetVal (*Obj2Str)(vmop_t *pThis, cstr_t *pstr);
 ENDinterface(vmop)
 #define vmopCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
