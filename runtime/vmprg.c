@@ -103,7 +103,6 @@ Obj2Str(vmprg_t *pThis, cstr_t *pstrPrg)
 
 	ISOBJ_TYPE_assert(pThis, vmprg);
 	assert(pstrPrg != NULL);
-	CHKiRet(rsCStrAppendStr(pstrPrg, (uchar*)"program contents:\n"));
 	i = 0;	/* "program counter" */
 	for(pOp = pThis->vmopRoot ; pOp != NULL ; pOp = pOp->pNext) {
 		lenAddr = snprintf((char*)szAddr, sizeof(szAddr), "%8.8d: ", i++);

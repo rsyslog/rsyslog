@@ -1,3 +1,5 @@
+- added a generic test driver for RainerScripts plus some test cases
+  to the testbench
 ---------------------------------------------------------------------------
 Version 3.19.9 (rgerhards), 2008-07-??
 - added tutorial for creating a TLS-secured syslog infrastructure

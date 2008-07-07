@@ -1,0 +1,26 @@
+# a simple RainerScript test
+result: 0
+in:
+'test 1' <> $var or /* some comment */($SEVERITY == -4 +5 -(3 * - 2) and $fromhost == '127.0.0.1') then 
+$$$
+out:
+00000000: PUSHCONSTANT	test 1[cstr]
+00000001: PUSHMSGVAR	var[cstr]
+00000002: !=	
+00000003: PUSHMSGVAR	severity[cstr]
+00000004: PUSHCONSTANT	4[nbr]
+00000005: UNARY_MINUS	
+00000006: PUSHCONSTANT	5[nbr]
+00000007: +	
+00000008: PUSHCONSTANT	3[nbr]
+00000009: PUSHCONSTANT	2[nbr]
+00000010: UNARY_MINUS	
+00000011: *	
+00000012: -	
+00000013: ==	
+00000014: PUSHMSGVAR	fromhost[cstr]
+00000015: PUSHCONSTANT	127.0.0.1[cstr]
+00000016: ==	
+00000017: and	
+00000018: or	
+$$$

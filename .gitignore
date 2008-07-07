@@ -34,3 +34,4 @@ tmp*
 log 
 logfile
 debug
+core.*
