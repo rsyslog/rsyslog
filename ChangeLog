@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 3.18.0 (rgerhards), 2008-07-??
+- bugfix in RainerScript: syntax error was not always detected
+---------------------------------------------------------------------------
 Version 3.17.5 (rgerhards), 2008-06-27
 - added doc: howto set up a reliable connection to remote server via
   queued mode (and plain tcp protocol)
