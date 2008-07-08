@@ -50,8 +50,16 @@ BEGINcommand(S, Syslog)
 		ABORT_FINALIZE(RELP_RET_CMD_DISABLED);
 	}
 
-	 iRet = pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostName,
-	 				    pFrame->pData, pFrame->lenData);
+	/* only highest version callback is called */
+	if(pSess->pEngine->onSyslogRcv2 != NULL) {
+		iRet = pSess->pEngine->onSyslogRcv2(pSess->pSrv->pUsr, pSess->pTcp->pRemHostName,
+					   	    pSess->pTcp->pRemHostName, pFrame->pData, pFrame->lenData);
+	} else if(pSess->pEngine->onSyslogRcv != NULL) {
+		iRet = pSess->pEngine->onSyslogRcv(pSess->pTcp->pRemHostName, pSess->pTcp->pRemHostName,
+						    pFrame->pData, pFrame->lenData);
+	} else {
+		pSess->pEngine->dbgprint("error: no syslog reception callback is set, nothing done\n");
+	}
 
 	/* send response */
 	CHKRet(relpSessSendResponse(pSess, pFrame->txnr, (unsigned char*) "200 OK", 6));

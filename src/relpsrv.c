@@ -94,6 +94,20 @@ relpSrvDestruct(relpSrv_t **ppThis)
 }
 
 
+/* set the user pointer inside the RELP server. Whatever value the user
+ * provides is accepted.
+ * rgerhards, 2008-07-08
+ */
+relpRetVal
+relpSrvSetUsrPtr(relpSrv_t *pThis, void *pUsr)
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Srv);
+	pThis->pUsr = pUsr;
+	LEAVE_RELPFUNC;
+}
+
+
 /* set the listen port inside the relp server. If NULL is provided, the default port
  * is used. The provided string is always copied, it is the caller's duty to
  * free the passed-in string.

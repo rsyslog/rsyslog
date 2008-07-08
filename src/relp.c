@@ -211,6 +211,59 @@ relpEngineSetDbgprint(relpEngine_t *pThis, void (*dbgprint)(char *fmt, ...) __at
 }
 
 
+/* unfortunately, we need to duplicate some functionality to support the <= 0.1.2
+ * callback interface (which did not contain a user pointer) and the >= 0.1.3 
+ * callback interface. I have thought a lot about doing this smarter, but there
+ * is no better way the API offers. The functions ending in ...2() are the new
+ * interface. -- rgerhards, 2008-07-08
+ */
+
+
+/* a dummy for callbacks not set by the caller */
+static relpRetVal relpSrvSyslogRcvDummy2(void __attribute__((unused)) *pUsr,
+	unsigned char __attribute__((unused)) *pHostName,
+	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
+	size_t __attribute__((unused)) lenMsg)
+{ return RELP_RET_NOT_IMPLEMENTED;
+}
+/* set the syslog receive callback. If NULL is provided, it is set to the
+ * not implemented dummy.
+ */
+relpRetVal
+relpEngineSetSyslogRcv2(relpEngine_t *pThis, relpRetVal (*pCB)(void *, unsigned char*, unsigned char*, unsigned char*, size_t))
+{
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	pThis->onSyslogRcv = NULL;
+	pThis->onSyslogRcv2 = (pCB == NULL) ? relpSrvSyslogRcvDummy2 : pCB;
+	LEAVE_RELPFUNC;
+}
+
+/* add a relp listener to the engine. The listen port must be provided.
+ * The listen port may be NULL, in which case the default port is used.
+ * rgerhards, 2008-03-17
+ */
+relpRetVal
+relpEngineAddListner2(relpEngine_t *pThis, unsigned char *pLstnPort, void *pUsr)
+{
+	relpSrv_t *pSrv;
+	ENTER_RELPFUNC;
+	RELPOBJ_assert(pThis, Engine);
+
+	CHKRet(relpSrvConstruct(&pSrv, pThis));
+	CHKRet(relpSrvSetUsrPtr(pSrv, pUsr));
+	CHKRet(relpSrvSetLstnPort(pSrv, pLstnPort));
+	CHKRet(relpSrvRun(pSrv));
+
+	/* all went well, so we can add the server to our server list */
+	CHKRet(relpEngineAddToSrvList(pThis, pSrv));
+
+finalize_it:
+	LEAVE_RELPFUNC;
+}
+
+
 /* a dummy for callbacks not set by the caller */
 static relpRetVal relpSrvSyslogRcvDummy(unsigned char __attribute__((unused)) *pHostName,
 	unsigned char __attribute__((unused)) *pIP, unsigned char __attribute__((unused)) *pMsg,
@@ -227,6 +280,7 @@ relpEngineSetSyslogRcv(relpEngine_t *pThis, relpRetVal (*pCB)(unsigned char*, un
 	RELPOBJ_assert(pThis, Engine);
 
 	pThis->onSyslogRcv = (pCB == NULL) ? relpSrvSyslogRcvDummy : pCB;
+	pThis->onSyslogRcv2 = NULL;
 	LEAVE_RELPFUNC;
 }
 
@@ -256,7 +310,7 @@ finalize_it:
 /* The "Run" method starts the relp engine. Most importantly, this means the engine begins
  * to read and write data to its peers. This method must be called on its own thread as it
  * will not return until the engine is finished. Note that the engine itself may (or may
- * not ;)) spawn additional threads. This is an implementation detail not to be card of by
+ * not ;)) spawn additional threads. This is an implementation detail not to be cared of by
  * caller.
  * Note that the engine MUST be running even if the caller intends to just SEND messages.
  * This is necessary because relp is a full-duplex protcol where acks and commands (e.g.
@@ -335,7 +389,6 @@ pThis->dbgprint("relp select returns, nfds %d\n", nfds);
 pThis->dbgprint("relp accept session returns, iRet %d\n", localRet);
 					if(localRet == RELP_RET_OK) {
 						localRet = relpEngineAddToSess(pThis, pNewSess);
-//pThis->dbgprint("relp accept session returns, iRet %d\n", localRet);
 					}
 					/* TODO: check localret, emit error msg! */
 					--nfds; /* indicate we have processed one */
