@@ -560,6 +560,37 @@ Version 2.0.4 STABLE (rgerhards), 2008-03-27
 - bugfix: internally generated messages had "FROMHOST" property not set
 - bugfix: continue parsing if tag is oversize (discard oversize part) - thanks
   to mclaughlin77@gmail.com for the patch
+- added $HHOUR and $QHOUR system properties - can be used for half- and
+  quarter-hour logfile rotation
+---------------------------------------------------------------------------
+Version 2.0.3 STABLE (rgerhards), 2008-03-12
+- bugfix: setting for $EscapeCopntrolCharactersOnReceive was not 
+  properly initialized
+- bugfix: resolved potential segfault condition on HUP (extremely
+  unlikely to happen in practice), for details see tracker:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=38
+- improved the man pages a bit - thanks to Michael Biebl for the patch
+- bugfix: not properly initialized data could cause several segfaults if
+  there were errors in the config file - thanks to varmojfekoj for the patch
+---------------------------------------------------------------------------
+Version 2.0.2 STABLE (rgerhards), 2008-02-12
+- fixed a bug that could cause invalid string handling via strerror_r
+  varmojfekoj provided the patch - many thanks!
+- added x-info field to rsyslogd startup/shutdown message. Hopefully
+  points users to right location for further info (many don't even know
+  they run rsyslog ;))
+- bugfix: suspended actions were not always properly resumed
+  varmojfekoj provided the patch - many thanks!
+- bugfix: errno could be changed during mark processing, leading to
+  invalid error messages when processing inputs. Thank to varmojfekoj for
+  pointing out this problem.
+- bugfix: trailing ":" of tag was lost while parsing legacy syslog messages
+  without timestamp - thanks to Anders Blomdell for providing a patch!
+- bugfix (doc): misspelled config directive, invalid signal info
+- applied some doc fixes from Michel Biebl and cleaned up some no longer
+  needed files suggested by him
+- cleaned up stringbuf.c to fix an annoyance reported by Anders Blomdell
+- fixed bug that caused invalid treatment of tabs (HT) in rsyslog.conf
 ---------------------------------------------------------------------------
 Version 2.0.1 STABLE (rgerhards), 2008-01-24
 - fixed a bug in integer conversion - but this function was never called,
