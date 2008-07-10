@@ -849,6 +849,8 @@ static rsRetVal qAddDisk(queue_t *pThis, void* pUsr)
 
 	pThis->tVars.disk.sizeOnDisk += nWriteCount;
 
+	/* The following line is a backport from 3.19.10 - fixes mem leak */
+	objDestruct(pUsr);
 	dbgoprint((obj_t*) pThis, "write wrote %lld octets to disk, queue disk size now %lld octets\n",
 		   nWriteCount, pThis->tVars.disk.sizeOnDisk);
 
