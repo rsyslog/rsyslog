@@ -73,6 +73,10 @@ Version 3.17.0 (rgerhards), 2008-04-08
 Plus a number of bugfixes that were applied to v3-stable and beta
 branches (not mentioned here in detail).
 ---------------------------------------------------------------------------
+Version 3.16.3 (rgerhards), 2008-07-11
+- updated information on rsyslog packages
+- bugfix: memory leak in disk-based queue modes
+---------------------------------------------------------------------------
 Version 3.16.2 (rgerhards), 2008-06-25
 - fixed potential segfault due to invalid call to cfsysline
   thanks to varmojfekoj for the patch

@@ -3,6 +3,8 @@
 
 AC_PREREQ(2.61)
 AC_INIT([rsyslog],[3.17.5],[rsyslog@lists.adiscon.com])
+=======
+AC_INIT([rsyslog],[3.16.3],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([syslogd.c])
 AC_CONFIG_HEADERS([config.h])
