@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
-Version 3.18.0 (rgerhards), 2008-07-??
+Version 3.18.0 (rgerhards), 2008-07-11
+- begun a new v3-stable based on former 3.17.4 beta plus patches to
+  previous v3-stable
 - bugfix in RainerScript: syntax error was not always detected
 ---------------------------------------------------------------------------
 Version 3.17.5 (rgerhards), 2008-06-27

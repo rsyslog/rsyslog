@@ -72,6 +72,12 @@ html_files = \
 	rsconf1_resetconfigvariables.html \
 	rsconf1_umask.html \
 	v3compatibility.html \
+	gssapi.html \
+	licensing.html \
+	ommail.html \
+	omrelp.html \
+	status.html \
+	troubleshoot.html \
 	src/classes.dia
 
 EXTRA_DIST = $(html_files)
