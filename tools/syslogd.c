@@ -908,6 +908,8 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	flags |= INTERNAL_MSG;
 
+RUNLOG_VAR("%d", bHaveMainQueue);
+RUNLOG_VAR("%p", pMsg);
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pri, pMsg, flags);
 	} else {
@@ -1626,10 +1628,14 @@ logmsg(msg_t *pMsg, int flags)
 
 	/* ---------------------- END PARSING ---------------- */
 	
+RUNLOG;
 	/* now submit the message to the main queue - then we are done */
 	pMsg->msgFlags = flags;
+RUNLOG;
 	MsgPrepareEnqueue(pMsg);
+RUNLOG;
 	queueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
+RUNLOG;
 	ENDfunc
 }
 
