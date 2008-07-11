@@ -45,6 +45,7 @@ html_files = \
 	tls_cert_ca.jpg \
 	tls_cert.jpg \
 	tls_cert_errmsgs.html \
+	rsyslog_secure_tls.html \
 	tls_cert_server.html \
 	tls_cert_ca.html \
 	tls_cert_summary.html \
@@ -84,6 +85,10 @@ html_files = \
 	rsconf1_resetconfigvariables.html \
 	rsconf1_umask.html \
 	v3compatibility.html \
+	im3195.html \
+	netstream.html \
+	ns_gtls.html \
+	ns_ptcp.html \
 	src/tls_cert.dia \
 	src/classes.dia
 
