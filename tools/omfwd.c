@@ -334,9 +334,10 @@ finalize_it:
  */
 static rsRetVal doTryResume(instanceData *pData)
 {
-	DEFiRet;
+	int iErr;
 	struct addrinfo *res;
 	struct addrinfo hints;
+	DEFiRet;
 
 	if(pData->bIsConnected)
 		FINALIZE;
@@ -348,8 +349,10 @@ static rsRetVal doTryResume(instanceData *pData)
 		/* port must be numeric, because config file syntax requires this */
 		hints.ai_flags = AI_NUMERICSERV;
 		hints.ai_family = glbl.GetDefPFFamily();
-		hints.ai_socktype = pData->protocol == SOCK_DGRAM;
-		if((getaddrinfo(pData->f_hname, getFwdPt(pData), &hints, &res)) != 0) {
+		hints.ai_socktype = SOCK_DGRAM;
+		if((iErr = (getaddrinfo(pData->f_hname, getFwdPt(pData), &hints, &res))) != 0) {
+			dbgprintf("could not get addrinfo for hostname '%s':'%s': %d%s\n",
+				  pData->f_hname, getFwdPt(pData), iErr, gai_strerror(iErr));
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		dbgprintf("%s found, resuming.\n", pData->f_hname);
