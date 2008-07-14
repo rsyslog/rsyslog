@@ -91,7 +91,6 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 	/* if we reach this point, we need no special handling */
 	CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, waitOp));
 
-RUNLOG_VAR("%d", pThis->iBufferRcvReady);
 finalize_it:
 	RETiRet;
 }
@@ -107,7 +106,6 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 	nsdsel_gtls_t *pThis = (nsdsel_gtls_t*) pNsdsel;
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
-RUNLOG_VAR("%d", pThis->iBufferRcvReady);
 	if(pThis->iBufferRcvReady > 0) {
 		/* we still have data ready! */
 		*piNumReady = pThis->iBufferRcvReady;

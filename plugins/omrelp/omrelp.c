@@ -164,7 +164,6 @@ CODESTARTdoAction
 
 	/* forward */
 	ret = relpCltSendSyslog(pData->pRelpClt, (uchar*) pMsg, lenMsg);
-RUNLOG_VAR("%d", ret);
 	if(ret != RELP_RET_OK) {
 		/* error! */
 		dbgprintf("error forwarding via relp, suspending\n");

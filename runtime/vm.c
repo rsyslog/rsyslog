@@ -198,7 +198,6 @@ CODESTARTop(CMP_CONTAINS)
 	bRes = (rsCStrLocateInSzStr(operand2->val.pStr, rsCStrGetSzStr(operand1->val.pStr)) == -1) ? 0 : 1;
 
 	/* we have a result, so let's push it */
-RUNLOG_VAR("%lld", bRes); \
 	PUSHRESULTop(operand1, bRes);
 	var.Destruct(&operand2); /* no longer needed */
 ENDop(CMP_CONTAINS)
@@ -218,7 +217,6 @@ var.DebugPrint(operand2); \
 	bRes = (rsCStrCaseInsensitiveLocateInSzStr(operand2->val.pStr, rsCStrGetSzStr(operand1->val.pStr)) == -1) ? 0 : 1;
 
 	/* we have a result, so let's push it */
-RUNLOG_VAR("%lld", bRes); \
 	PUSHRESULTop(operand1, bRes);
 	var.Destruct(&operand2); /* no longer needed */
 ENDop(CMP_CONTAINSI)
@@ -237,7 +235,6 @@ CODESTARTop(CMP_STARTSWITH)
 		rsCStrLen(operand2->val.pStr)) == 0) ? 1 : 0;
 
 	/* we have a result, so let's push it */
-RUNLOG_VAR("%lld", bRes); \
 	PUSHRESULTop(operand1, bRes);
 	var.Destruct(&operand2); /* no longer needed */
 ENDop(CMP_STARTSWITH)

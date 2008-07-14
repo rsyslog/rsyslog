@@ -2,6 +2,7 @@
 Version 3.19.10 (rgerhards), 2008-07-??
 - bugfix: bad memory leak in disk-based queue modes
 - important queue bugfix from 3.18.1 imported (see below)
+- cleanup of some debug messages
 ---------------------------------------------------------------------------
 Version 3.19.9 (rgerhards), 2008-07-07
 - added tutorial for creating a TLS-secured syslog infrastructure
