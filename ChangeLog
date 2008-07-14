@@ -8,6 +8,11 @@ Version 3.18.1 (rgerhards), 2008-07-??
   unlikely to happen after a successful startup (the only window of
   exposure may be a relatively seldom executed action running in queued
   mode). This has been corrected. Thank to HKS for point out the problem.
+- bugfix: priority was incorrectly calculated on FreeBSD 7,
+  because the LOG_MAKEPRI() C macro has a different meaning there (it
+  is just a simple addition of faciltity and severity). I have changed
+  this to use own, consistent, code for PRI calculation. [Backport from
+  3.19.10]
 ---------------------------------------------------------------------------
 Version 3.18.0 (rgerhards), 2008-07-11
 - begun a new v3-stable based on former 3.17.4 beta plus patches to
