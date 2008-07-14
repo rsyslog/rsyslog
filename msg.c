@@ -159,13 +159,39 @@ static void MsgLockingDummy(msg_t __attribute__((unused)) *pMsg)
  * where a message may be accessed by multiple threads. This implementation here
  * is the version for multiple concurrent acces. It initializes the locking
  * structures.
+ * TODO: change to an iRet interface! -- rgerhards, 2008-07-14
  */
 static void MsgPrepareEnqueueLockingCase(msg_t *pThis)
 {
+	int iErr;
+	BEGINfunc
 	assert(pThis != NULL);
-	pthread_mutexattr_settype(&pThis->mutAttr, PTHREAD_MUTEX_RECURSIVE);
+	iErr = pthread_mutexattr_init(&pThis->mutAttr);
+	if(iErr != 0) {
+		dbgprintf("error initializing mutex attribute in %s:%d, trying to continue\n",
+		  	  __FILE__, __LINE__);
+	}
+	iErr = pthread_mutexattr_settype(&pThis->mutAttr, PTHREAD_MUTEX_RECURSIVE);
+	if(iErr != 0) {
+		dbgprintf("ERROR setting mutex attribute to recursive in %s:%d, trying to continue "
+			 "but we will probably either abort or hang soon\n",
+		  	  __FILE__, __LINE__);
+		/* TODO: it makes very little sense to continue here,
+		 * but it requires an iRet interface to gracefully shut
+		 * down. We should do that over time. -- rgerhards, 2008-07-14
+		 */
+	}
 	pthread_mutex_init(&pThis->mut, &pThis->mutAttr);
+
+	/* we do no longer need the attribute. According to the
+	 * POSIX spec, we can destroy it without affecting the
+	 * initialized mutex (that used the attribute).
+	 * rgerhards, 2008-07-14
+	 */
+	pthread_mutexattr_destroy(&pThis->mutAttr);
+	ENDfunc
 }
+
 
 /* ... and now the locking and unlocking implementations: */
 static void MsgLockLockingCase(msg_t *pThis)
@@ -201,11 +227,12 @@ static void MsgDeleteMutexLockingCase(msg_t *pThis)
  */
 rsRetVal MsgEnableThreadSafety(void)
 {
+	DEFiRet;
 	funcLock = MsgLockLockingCase;
 	funcUnlock = MsgUnlockLockingCase;
 	funcMsgPrepareEnqueue = MsgPrepareEnqueueLockingCase;
 	funcDeleteMutex = MsgDeleteMutexLockingCase;
-	return RS_RET_OK;
+	RETiRet;
 }
 
 /* end locking functions */
