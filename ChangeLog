@@ -5,6 +5,10 @@ Version 3.19.10 (rgerhards), 2008-07-??
   the ai_socktype was incorrectly set to 1. On some platforms, this
   lead to failing name resolution (e.g. FreeBSD 7). Thanks to HKS for
   reporting the bug.
+- bugfix: priority was incorrectly calculated on FreeBSD 7,
+  because the LOG_MAKEPRI() C macro has a different meaning there (it
+  is just a simple addition of faciltity and severity). I have changed
+  this to use own, consistent, code for PRI calculation.
 - important queue bugfix from 3.18.1 imported (see below)
 - cleanup of some debug messages
 ---------------------------------------------------------------------------

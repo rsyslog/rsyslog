@@ -679,19 +679,23 @@ char *getMSG(msg_t *pM)
 /* Get PRI value in text form */
 char *getPRI(msg_t *pM)
 {
+	int pri;
+
 	if(pM == NULL)
 		return "";
 
 	MsgLock(pM);
 	if(pM->pszPRI == NULL) {
-		/* OK, we need to construct it... 
-		 * we use a 5 byte buffer - as of 
-		 * RFC 3164, it can't be longer. Should it
-		 * still be, snprintf will truncate...
+		/* OK, we need to construct it...  we use a 5 byte buffer - as of 
+		 * RFC 3164, it can't be longer. Should it still be, snprintf will truncate...
+		 * Note that we do not use the LOG_MAKEPRI macro. This macro
+		 * is a simple add of the two values under FreeBSD 7. So we implement
+		 * the logic in our own code. This is a change from a bug
+		 * report. -- rgerhards, 2008-07-14
 		 */
+		pri = pM->iFacility * 8 + pM->iSeverity;
 		if((pM->pszPRI = malloc(5)) == NULL) return "";
-		pM->iLenPRI = snprintf((char*)pM->pszPRI, 5, "%d",
-			LOG_MAKEPRI(pM->iFacility, pM->iSeverity));
+		pM->iLenPRI = snprintf((char*)pM->pszPRI, 5, "%d", pri);
 	}
 	MsgUnlock(pM);
 
