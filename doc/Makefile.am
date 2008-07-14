@@ -90,6 +90,12 @@ html_files = \
 	ns_gtls.html \
 	ns_ptcp.html \
 	src/tls_cert.dia \
+	gssapi.html \
+	licensing.html \
+	ommail.html \
+	omrelp.html \
+	status.html \
+	troubleshoot.html \
 	src/classes.dia
 
 EXTRA_DIST = $(html_files)

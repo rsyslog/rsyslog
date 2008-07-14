@@ -1,6 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.19.10 (rgerhards), 2008-07-??
 - bugfix: bad memory leak in disk-based queue modes
+- important queue bugfix from 3.18.1 imported (see below)
 ---------------------------------------------------------------------------
 Version 3.19.9 (rgerhards), 2008-07-07
 - added tutorial for creating a TLS-secured syslog infrastructure
@@ -135,6 +136,20 @@ Version 3.19.0 (rgerhards), 2008-05-06
 - -c option no longer must be the first option - thanks to varmjofekoj
   for the patch
 Version 3.18.0 (rgerhards), 2008-07-??
+=======
+Version 3.18.1 (rgerhards), 2008-07-??
+- bugfix: potential segfault in creating message mutex in non-direct queue
+  mode. rsyslogd segfaults on freeeBSD 7.0 (an potentially other platforms)
+  if an action queue is running in any other mode than non-direct. The
+  same problem can potentially be triggered by some main message queue
+  settings. In any case, it will manifest during rsylog's startup. It is
+  unlikely to happen after a successful startup (the only window of
+  exposure may be a relatively seldom executed action running in queued
+  mode). This has been corrected. Thank to HKS for point out the problem.
+---------------------------------------------------------------------------
+Version 3.18.0 (rgerhards), 2008-07-11
+- begun a new v3-stable based on former 3.17.4 beta plus patches to
+  previous v3-stable
 - bugfix in RainerScript: syntax error was not always detected
 ---------------------------------------------------------------------------
 Version 3.17.5 (rgerhards), 2008-06-27
