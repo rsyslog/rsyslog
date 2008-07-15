@@ -40,7 +40,8 @@ int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 	CHKiRet(doTest()); \
 	CHKiRet(doExit()); \
 finalize_it: \
-	printf("test returns iRet %d\n", iRet); \
+	if(iRet != RS_RET_OK) \
+		printf("test returns iRet %d\n", iRet); \
 	RETiRet; \
 }
 

@@ -24,12 +24,14 @@
  */
 
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
 #include "rsyslog.h"
 #include "obj.h"
 #include "vmprg.h"
+#include "stringbuf.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -77,6 +79,40 @@ CODESTARTobjDebugPrint(vmprg)
 		vmop.DebugPrint(pOp);
 	}
 ENDobjDebugPrint(vmprg)
+
+
+/* This function is similar to DebugPrint, but does not send its output to
+ * the debug log but instead to a caller-provided string. The idea here is that
+ * we can use this string to get a textual representation of a bytecode program. 
+ * Among others, this is useful for creating testbenches, our first use case for
+ * it. Here, it enables simple comparison of the resulting program to a
+ * reference program by simple string compare.
+ * Note that the caller must initialize the string object. We always add
+ * data to it. So, it can be easily combined into a chain of methods
+ * to generate the final string.
+ * rgerhards, 2008-07-04
+ */
+static rsRetVal
+Obj2Str(vmprg_t *pThis, cstr_t *pstrPrg)
+{
+	uchar szAddr[12];
+	vmop_t *pOp;
+	int i;
+	int lenAddr;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, vmprg);
+	assert(pstrPrg != NULL);
+	i = 0;	/* "program counter" */
+	for(pOp = pThis->vmopRoot ; pOp != NULL ; pOp = pOp->pNext) {
+		lenAddr = snprintf((char*)szAddr, sizeof(szAddr), "%8.8d: ", i++);
+		CHKiRet(rsCStrAppendStrWithLen(pstrPrg, szAddr, lenAddr));
+		vmop.Obj2Str(pOp, pstrPrg);
+	}
+
+finalize_it:
+	RETiRet;
+}
 
 
 /* add an operation (instruction) to the end of the current program. This
@@ -146,12 +182,11 @@ CODESTARTobjQueryInterface(vmprg)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//xxxpIf->oID = OBJvmprg;
-
 	pIf->Construct = vmprgConstruct;
 	pIf->ConstructFinalize = vmprgConstructFinalize;
 	pIf->Destruct = vmprgDestruct;
 	pIf->DebugPrint = vmprgDebugPrint;
+	pIf->Obj2Str = Obj2Str;
 	pIf->AddOperation = vmprgAddOperation;
 	pIf->AddVarOperation = vmprgAddVarOperation;
 finalize_it:
