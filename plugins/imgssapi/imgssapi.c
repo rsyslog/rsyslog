@@ -45,7 +45,7 @@
 #endif
 #include <gssapi/gssapi.h>
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "net.h"
@@ -54,6 +54,7 @@
 #include "tcpsrv.h"
 #include "tcps_sess.h"
 #include "errmsg.h"
+#include "netstrm.h"
 
 
 MODULE_TYPE_INPUT
@@ -67,7 +68,7 @@ MODULE_TYPE_INPUT
 static rsRetVal addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal);
 static int TCPSessGSSInit(void);
 static void TCPSessGSSClose(tcps_sess_t* pSess);
-static int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len);
+static rsRetVal TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *);
 static rsRetVal onSessAccept(tcpsrv_t *pThis, tcps_sess_t *ppSess);
 static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *ppSess);
 
@@ -77,6 +78,7 @@ DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(gssutil)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(netstrm)
 DEFobjCurrIf(net)
 
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
@@ -241,11 +243,12 @@ onErrClose(tcps_sess_t *pSess)
 
 
 /* open the listen sockets */
-static int*
+static rsRetVal
 doOpenLstnSocks(tcpsrv_t *pSrv)
 {
 	int *pRet = NULL;
 	gsssrv_t *pGSrv;
+	DEFiRet;
 
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);
 	pGSrv = pSrv->pUsr;
@@ -255,39 +258,44 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 	if(pGSrv->allowedMethods) {
 		if(pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) {
 			if(TCPSessGSSInit()) {
-				errmsg.LogError(NO_ERRCODE, "GSS-API initialization failed\n");
+				errmsg.LogError(0, NO_ERRCODE, "GSS-API initialization failed\n");
 				pGSrv->allowedMethods &= ~(ALLOWEDMETHOD_GSS);
 			}
 		}
 		if(pGSrv->allowedMethods) {
 			/* fallback to plain TCP */
-			if((pRet =  tcpsrv.create_tcp_socket(pSrv)) != NULL) {
-				dbgprintf("Opened %d syslog TCP port(s).\n", *pRet);
-			}
+			CHKiRet(tcpsrv.create_tcp_socket(pSrv));
+			dbgprintf("Opened %d syslog TCP port(s).\n", *pRet);
 		}
 	}
 
-	return pRet;
+finalize_it:
+	RETiRet;
 }
 
 
-static int
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
+static rsRetVal
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
 {
-	int state;
+	DEFiRet;
 	int allowedMethods;
 	gss_sess_t *pGSess;
 
 	assert(pSess != NULL);
 	assert(pSess->pUsr != NULL);
 	pGSess = (gss_sess_t*) pSess->pUsr;
+	assert(piLenRcvd != NULL);
 
 	allowedMethods = pGSess->allowedMethods;
-	if(allowedMethods & ALLOWEDMETHOD_GSS)
-		state = TCPSessGSSRecv(pSess, buf, lenBuf);
-	else
-		state = recv(pSess->sock, buf, lenBuf, 0);
-	return state;
+	if(allowedMethods & ALLOWEDMETHOD_GSS) {
+		CHKiRet(TCPSessGSSRecv(pSess, buf, lenBuf, piLenRcvd));
+	} else {
+		*piLenRcvd = lenBuf;
+		CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd) != RS_RET_OK);
+	}
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -391,7 +399,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 
 		dbgprintf("GSS-API Trying to accept TCP session %p\n", pSess);
 
-		fdSess = pSess->sock; // TODO: method access!
+		CHKiRet(netstrm.GetSock(pSess->pStrm, &fdSess)); // TODO: method access!
 		if (allowedMethods & ALLOWEDMETHOD_TCP) {
 			int len;
 			fd_set  fds;
@@ -405,7 +413,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				ret = select(fdSess + 1, &fds, NULL, NULL, &tv);
 			} while (ret < 0 && errno == EINTR);
 			if (ret < 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
+				errmsg.LogError(0, RS_RET_ERR, "TCP session %p will be closed, error ignored\n", pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			} else if (ret == 0) {
 				dbgprintf("GSS-API Reverting to plain TCP\n");
@@ -420,7 +428,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 				if (ret == 0)
 					dbgprintf("GSS-API Connection closed by peer\n");
 				else
-					errmsg.LogError(NO_ERRCODE, "TCP(GSS) session %p will be closed, error ignored\n", pSess);
+					errmsg.LogError(0, RS_RET_ERR, "TCP(GSS) session %p will be closed, error ignored\n", pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			}
 
@@ -440,7 +448,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 					if (ret == 0)
 						dbgprintf("GSS-API Connection closed by peer\n");
 					else
-						errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
+						errmsg.LogError(0, NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 				}
 			}
@@ -462,7 +470,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 		sess_flags = &pGSess->gss_flags;
 		do {
 			if (gssutil.recv_token(fdSess, &recv_tok) <= 0) {
-				errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
+				errmsg.LogError(0, NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 				ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 			}
 			maj_stat = gss_accept_sec_context(&acc_sec_min_stat, context, gss_server_creds,
@@ -481,7 +489,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 					dbgprintf("GSS-API Reverting to plain TCP\n");
 					dbgprintf("tcp session socket with new data: #%d\n", fdSess);
 					if(tcps_sess.DataRcvd(pSess, buf, ret) != RS_RET_OK) {
-						errmsg.LogError(NO_ERRCODE, "Tearing down TCP Session %p - see "
+						errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP Session %p - see "
 							    "previous messages for reason(s)\n", pSess);
 						ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
 					}
@@ -494,7 +502,7 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 			if (send_tok.length != 0) {
 				if(gssutil.send_token(fdSess, &send_tok) < 0) {
 					gss_release_buffer(&min_stat, &send_tok);
-					errmsg.LogError(NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
+					errmsg.LogError(0, NO_ERRCODE, "TCP session %p will be closed, error ignored\n", pSess);
 					if (*context != GSS_C_NO_CONTEXT)
 						gss_delete_sec_context(&min_stat, context, GSS_C_NO_BUFFER);
 					ABORT_FINALIZE(RS_RET_ERR); // TODO: define good error codes
@@ -521,25 +529,26 @@ finalize_it:
 }
 
 
-/* returns: number of bytes read or -1 on error
- * Replaces recv() for gssapi connections.
+/* Replaces recv() for gssapi connections.
  */
-int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len)
+int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *piLenRcvd)
 {
+	DEFiRet;
 	gss_buffer_desc xmit_buf, msg_buf;
 	gss_ctx_id_t *context;
 	OM_uint32 maj_stat, min_stat;
 	int fdSess;
 	int     conf_state;
-	int state, len;
+	int state;
 	gss_sess_t *pGSess;
 
 	assert(pSess->pUsr != NULL);
+	assert(piLenRcvd != NULL);
 	pGSess = (gss_sess_t*) pSess->pUsr;
 
-	fdSess = pSess->sock;
+	netstrm.GetSock(pSess->pStrm, &fdSess); // TODO: method access, CHKiRet!
 	if ((state = gssutil.recv_token(fdSess, &xmit_buf)) <= 0)
-		return state;
+		ABORT_FINALIZE(RS_RET_GSS_ERR);
 
 	context = &pGSess->gss_context;
 	maj_stat = gss_unwrap(&min_stat, *context, &xmit_buf, &msg_buf,
@@ -550,18 +559,19 @@ int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len)
 			free(xmit_buf.value);
 			xmit_buf.value = 0;
 		}
-		return (-1);
+		ABORT_FINALIZE(RS_RET_GSS_ERR);
 	}
 	if (xmit_buf.value) {
 		free(xmit_buf.value);
 		xmit_buf.value = 0;
 	}
 
-	len = msg_buf.length < buf_len ? msg_buf.length : buf_len;
-	memcpy(buf, msg_buf.value, len);
+	*piLenRcvd = msg_buf.length < buf_len ? msg_buf.length : buf_len;
+	memcpy(buf, msg_buf.value, *piLenRcvd);
 	gss_release_buffer(&min_stat, &msg_buf);
 
-	return len;
+finalize_it:
+	RETiRet;
 }
 
 
@@ -638,6 +648,7 @@ CODESTARTmodExit
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(netstrm, LM_NETSTRM_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
 
@@ -684,6 +695,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 
 	/* register config file handlers */

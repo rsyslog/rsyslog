@@ -1,4 +1,159 @@
 ---------------------------------------------------------------------------
+Version 3.19.10 (rgerhards), 2008-07-??
+- bugfix: bad memory leak in disk-based queue modes
+- bugfix: UDP syslog forwarding did not work on all platforms
+  the ai_socktype was incorrectly set to 1. On some platforms, this
+  lead to failing name resolution (e.g. FreeBSD 7). Thanks to HKS for
+  reporting the bug.
+- bugfix: priority was incorrectly calculated on FreeBSD 7,
+  because the LOG_MAKEPRI() C macro has a different meaning there (it
+  is just a simple addition of faciltity and severity). I have changed
+  this to use own, consistent, code for PRI calculation. Thank to HKS
+  for reporting this bug.
+- bugfix (cosmetical): authorization was not checked when gtls handshake
+  completed immediately. While this sounds scary, the situation can not
+  happen in practice. We use non-blocking IO only for server-based gtls
+  session setup. As TLS requires the exchange of multiple frames before
+  the handshake completes, it simply is impossible to do this in one
+  step. However, it is useful to have the code path correct even for 
+  this case - otherwise, we may run into problems if the code is changed
+  some time later (e.g. to use blocking sockets). Thanks to varmojfekoj
+  for providing the patch.
+- important queue bugfix from 3.18.1 imported (see below)
+- cleanup of some debug messages
+---------------------------------------------------------------------------
+Version 3.19.9 (rgerhards), 2008-07-07
+- added tutorial for creating a TLS-secured syslog infrastructure
+- rewritten omusrmsg to no longer fork() a new process for sending messages
+  this caused some problems with the threading model, e.g. zombies. Also,
+  it was far less optimal than it is now.
+- bugfix: machine certificate was required for client even in TLS anon mode
+  Reference: http://bugzilla.adiscon.com/show_bug.cgi?id=85
+  The fix also slightly improves performance by not storing certificates in
+  client sessions when there is no need to do so.
+- bugfix: RainerScript syntax error was not always detected
+---------------------------------------------------------------------------
+Version 3.19.8 (rgerhards), 2008-07-01
+- bugfix: gtls module did not correctly handle EGAIN (and similar) recv()
+  states. This has been fixed by introducing a new abstraction layer inside
+  gtls.
+- added (internal) error codes to error messages; added redirector to
+  web description of error codes
+  closes bug http://bugzilla.adiscon.com/show_bug.cgi?id=20
+- disabled compile warnings caused by third-party libraries
+- reduced number of compile warnings in gcc's -pedantic mode
+- some minor documentation improvements
+- included all fixes from beta 3.17.5
+---------------------------------------------------------------------------
+Version 3.19.7 (rgerhards), 2008-06-11
+- added new property replacer option "date-subseconds" that enables
+  to query just the subsecond part of a high-precision timestamp
+- somewhat improved plain tcp syslog reliability by doing a connection
+  check before sending. Credits to Martin Schuette for providing the
+  idea. Details are available at
+  http://blog.gerhards.net/2008/06/reliable-plain-tcp-syslog-once-again.html
+- made rsyslog tickless in the (usual and default) case that repeated
+  message reduction is turned off. More info:
+  http://blog.gerhards.net/2008/06/coding-to-save-environment.html
+- some build system cleanup, thanks to Michael Biebl
+- bugfix: compile under (Free)BSD failed due to some invalid library
+  definitions - this is fixed now. Thanks to Michael Biebl for the patch.
+---------------------------------------------------------------------------
+Version 3.19.6 (rgerhards), 2008-06-06
+- enhanced property replacer to support multiple regex matches
+- bugfix: part of permittedPeer structure was not correctly initialized
+  thanks to varmojfekoj for spotting this
+- bugfix: off-by-one bug during certificate check
+- bugfix: removed some memory leaks in TLS code
+---------------------------------------------------------------------------
+Version 3.19.5 (rgerhards), 2008-05-30
+- enabled Posix ERE expressions inside the property replacer
+  (previously BRE was permitted only)
+- provided ability to specify that a regular expression submatch shall
+  be used inside the property replacer
+- implemented in property replacer: if a regular expression does not match,
+  it can now either return "**NO MATCH** (default, as before), a blank
+  property or the full original property text
+- enhanced property replacer to support multiple regex matches
+---------------------------------------------------------------------------
+Version 3.19.4 (rgerhards), 2008-05-27
+- implemented x509/certvalid gtls auth mode
+- implemented x509/name gtls auth mode (including wildcards)
+- changed fingerprint gtls auth mode to new format fingerprint
+- protected gtls error string function by a mutex. Without it, we
+  could have a race condition in extreme cases. This was very remote,
+  but now can no longer happen.
+- changed config directive name to reflect different use
+  $ActionSendStreamDriverCertFingerprint is now
+  $ActionSendStreamDriverPermittedPeer and can be used both for
+  fingerprint and name authentication (similar to the input side)
+- bugfix: sender information (fromhost et al) was missing in imudp
+  thanks to sandiso for reporting this bug
+- this release fully inplements IETF's syslog-transport-tls-12 plus
+  the latest text changes Joe Salowey provided via email. Not included
+  is ipAddress subjectAltName authentication, which I think will be
+  dropped from the draft. I don't think there is any real need for it.
+This release also includes all bug fix up to today from the beta
+and stable branches. Most importantly, this means the bugfix for
+100% CPU utilization by imklog.
+---------------------------------------------------------------------------
+Version 3.19.3 (rgerhards), 2008-05-21
+- added ability to authenticate the server against its certificate
+  fingerprint
+- added ability for client to provide its fingerprint
+- added ability for server to obtain client cert's fingerprint
+- bugfix: small mem leak in omfwd on exit (strmdriver name was not freed)
+- bugfix: $ActionSendStreamDriver had no effect
+- bugfix: default syslog port was no longer used if none was
+  configured. Thanks to varmojfekoj for the patch
+- bugfix: missing linker options caused build to fail on some
+  systems. Thanks to Tiziano Mueller for the patch.
+---------------------------------------------------------------------------
+Version 3.19.2 (rgerhards), 2008-05-16
+- bugfix: TCP input modules did incorrectly set fromhost property
+  (always blank)
+- bugfix: imklog did not set fromhost property
+- added "fromhost-ip" property
+  Note that adding this property changes the on-disk format for messages.
+  However, that should not have any bad effect on existing spool files.
+  But you will run into trouble if you create a spool file with this
+  version and then try to process it with an older one (after a downgrade).
+  Don't do that ;)
+- added "RSYSLOG_DebugFormat" canned template
+- bugfix: hostname and fromhost were swapped when a persisted message
+  (in queued mode) was read in
+- bugfix: lmtcpclt, lmtcpsrv and lmgssutil did all link to the static
+  runtime library, resulting in a large size increase (and potential
+  "interesting" effects). Thanks to Michael Biebel for reporting the size
+  issue.
+- bugfix: TLS server went into an endless loop in some situations.
+  Thanks to Michael Biebl for reporting the problem.
+- fixed potential segfault due to invalid call to cfsysline
+  thanks to varmojfekoj for the patch
+---------------------------------------------------------------------------
+Version 3.19.1 (rgerhards), 2008-05-07
+- configure help for --enable-gnutls wrong - said default is "yes" but
+  default actually is "no" - thanks to darix for pointing this out
+- file dirty.h was missing - thanks to darix for pointing this out
+- bugfix: man files were not properly distributed - thanks to
+  darix for reporting and to Michael Biebl for help with the fix
+- some minor cleanup
+---------------------------------------------------------------------------
+Version 3.19.0 (rgerhards), 2008-05-06
+- begins new devel branch version
+- implemented TLS for plain tcp syslog (this is also the world's first
+  implementation of IETF's upcoming syslog-transport-tls draft)
+- partly rewritten and improved omfwd among others, now loads TCP
+  code only if this is actually necessary
+- split of a "runtime library" for rsyslog - this is not yet a clean
+  model, because some modularization is still outstanding. In theory,
+  this shall enable other utilities but rsyslogd to use the same
+  runtime
+- implemented im3195, the RFC3195 input as a plugin
+- changed directory structure, files are now better organized
+- a lot of cleanup in regard to modularization
+- -c option no longer must be the first option - thanks to varmjofekoj
+  for the patch
 Version 3.18.1 (rgerhards), 2008-07-??
 - bugfix: potential segfault in creating message mutex in non-direct queue
   mode. rsyslogd segfaults on freeeBSD 7.0 (an potentially other platforms)

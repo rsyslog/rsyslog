@@ -1,5 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>rsyslog features</title></head>
+<html><head><title>rsyslog features</title>
+
+</head>
 <body>
 <h1>RSyslog - Features</h1>
 <p><b>This page lists both current features as well as
@@ -23,13 +25,18 @@ to MySQL databases</a></li>
 <li> native support for writing to Postgres databases</li>
 <li>direct support for Firebird/Interbase,
 OpenTDS (MS SQL, Sybase), SQLLite, Ingres, Oracle, and mSQL via libdbi,
-a database abstraction layer (almost as good as native)</li><li>native support for <a href="ommail.html">sending mail messages</a> (first seen in 3.17.0)</li>
+a database abstraction layer (almost as good as native)</li>
+<li>native support for <a href="ommail.html">sending
+mail messages</a> (first seen in 3.17.0)</li>
 <li>support for (plain) tcp based syslog - much better
 reliability</li>
 <li>support for sending and receiving compressed syslog messages</li>
 <li>support for on-demand on-disk spooling of messages that can
 not be processed fast enough (a great feature for <a href="rsyslog_high_database_rate.html">writing massive
-amounts of syslog messages to a database</a>)</li><li>support for selectively <a href="http://wiki.rsyslog.com/index.php/OffPeakHours">processing messages only during specific timeframes</a> and spooling them to disk otherwise</li>
+amounts of syslog messages to a database</a>)</li>
+<li>support for selectively <a href="http://wiki.rsyslog.com/index.php/OffPeakHours">processing
+messages only during specific timeframes</a> and spooling them to
+disk otherwise</li>
 <li>ability to monitor text files and convert their contents
 into syslog messages (one per line)</li>
 <li>ability to configure backup syslog/database servers - if
@@ -49,8 +56,9 @@ substrings</li>
 command execution</li>
 <li>support for running multiple rsyslogd instances on a single
 machine</li>
-<li>support for <a href="rsyslog_stunnel.html">
-ssl-protected syslog</a> (via stunnel)</li>
+<li>support for <a href="rsyslog_tls.html">TLS-protected
+syslog</a> (both <a href="rsyslog_tls.html">natively</a>
+and via <a href="rsyslog_stunnel.html">stunnel</a>)</li>
 <li>ability to filter on any part of the message, not just
 facility and severity</li>
 <li>ability to use regular expressions in filters</li>
@@ -70,8 +78,7 @@ high log volume on multicore machines)</li>
 compliant messages (it is volatile because standardization is currently
 underway and this is a proof-of-concept implementation to aid this
 effort)</li>
-<li> experimental support for syslog-transport-tls based
-framing on syslog/tcp connections</li>
+<li> world's first implementation of syslog-transport-tls</li>
 <li> the sysklogd's klogd functionality is implemented as the <i>imklog</i>
 input plug-in. So rsyslog is a full replacement for the sysklogd package</li>
 <li> support for IPv6</li>
@@ -90,7 +97,13 @@ via custom plugins</li>
 <li>support for arbitrary complex boolean, string and
 arithmetic expressions in message filters</li>
 </ul>
-<p>&nbsp;</p>
+<h2>World's first</h2>
+Rsyslog has an interesting number of "world's firsts" - things that
+were implemented for the first time ever in rsyslog. Some of them are still features not available elsewhere.<br><ul>
+<li>world's first implementation of IETF I-D syslog-protocol (February 2006, version 1.12.2 and above)</li><li>world's first implementation of dynamic syslog on-the-wire compression (December 2006, version 1.13.0 and above)</li><li>world's first open-source implementation of a disk-queueing syslogd (January 2008, version 3.11.0 and above)</li>
+<li>world's first implementation of IETF I-D
+syslog-transport-tls (May 2008, version 3.19.0 and above)</li>
+</ul>
 <h2>Upcoming Features</h2>
 <p>The list below is something like a repository of ideas we'd
 like to implement. Features on this list are typically NOT scheduled
@@ -101,17 +114,13 @@ typically within reach of implementation. Users are encouraged to
 submit feature requests there (or via our forums). If we like them but
 they look quite long-lived (aka "not soon to be implemented"), they
 will possibly be migrated to this list here and at some time moved back
-to the sourceforge tracker.</p>
+to the bugzilla tracker.</p>
 <ul>
-<li>implement native email-functionality in selector (probably
-best done as a plug-in)</li>
 <li>port it to more *nix variants (eg AIX and HP UX) - this
 needs volunteers with access to those machines and knowledge </li>
-<li>support for native SSL enryption of plain tcp syslog
-sessions. This will most probably happen based on syslog-transport-tls.</li>
 <li>pcre filtering - maybe (depending on feedback)&nbsp; -
 simple regex already partly added. So far, this seems sufficient so
-that there is no urgent need to do pcre</li>
+that there is no urgent need to do pcre. If done, it will be a loadable RainerScript function.</li>
 <li>support for <a href="http://www.monitorware.com/Common/en/glossary/rfc3195.php">RFC
 3195</a> as a sender - this is currently unlikely to happen,
 because there is no real demand for it. Any work on RFC 3195 has been

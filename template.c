@@ -33,7 +33,7 @@
 #include "syslogd-types.h"
 #include "template.h"
 #include "msg.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "obj.h"
 #include "errmsg.h"
 
@@ -440,6 +440,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eDateFormat = tplFmtRFC3164Date;
 		 } else if(!strcmp((char*)Buf, "date-rfc3339")) {
 			pTpe->data.field.eDateFormat = tplFmtRFC3339Date;
+		 } else if(!strcmp((char*)Buf, "date-subseconds")) {
+			pTpe->data.field.eDateFormat = tplFmtSecFrac;
 		 } else if(!strcmp((char*)Buf, "lowercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvLower;
 		 } else if(!strcmp((char*)Buf, "uppercase")) {
@@ -514,17 +516,86 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	if(*p == ':') {
 		++p; /* eat ':' */
 #ifdef FEATURE_REGEXP
-		if (*p == 'R') {
+		if(*p == 'R') {
 			/* APR: R found! regex alarm ! :) */
 			++p;	/* eat ':' */
 
-			if (*p != ':') {
+			/* first come the regex type */
+			if(*p == ',') {
+				++p; /* eat ',' */
+				if(p[0] == 'B' && p[1] == 'R' && p[2] == 'E' && (p[3] == ',' || p[3] == ':')) {
+					pTpe->data.field.typeRegex = TPL_REGEX_BRE;
+					p += 3; /* eat indicator sequence */
+				} else if(p[0] == 'E' && p[1] == 'R' && p[2] == 'E' && (p[3] == ',' || p[3] == ':')) {
+					pTpe->data.field.typeRegex = TPL_REGEX_ERE;
+					p += 3; /* eat indicator sequence */
+				} else {
+					errmsg.LogError(0, NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
+				               (char*) p);
+				}
+			}
+
+			/* now check for submatch ID */
+			pTpe->data.field.iSubMatchToUse = 0;
+			if(*p == ',') {
+				/* in this case a number follows, which indicates which match
+				 * shall be used. This must be a single digit.
+				 */
+				++p; /* eat ',' */
+				if(isdigit((int) *p)) {
+					pTpe->data.field.iSubMatchToUse = *p - '0';
+					++p; /* eat digit */
+				}
+			}
+
+			/* now pull what to do if we do not find a match */
+			if(*p == ',') {
+				++p; /* eat ',' */
+				if(p[0] == 'D' && p[1] == 'F' && p[2] == 'L' && p[3] == 'T'
+				   && (p[4] == ',' || p[4] == ':')) {
+					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_DFLTSTR;
+					p += 4; /* eat indicator sequence */
+				} else if(p[0] == 'B' && p[1] == 'L' && p[2] == 'A' && p[3] == 'N' && p[4] == 'K'
+				   && (p[5] == ',' || p[5] == ':')) {
+					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_BLANK;
+					p += 5; /* eat indicator sequence */
+				} else if(p[0] == 'F' && p[1] == 'I' && p[2] == 'E' && p[3] == 'L' && p[4] == 'D'
+				   && (p[5] == ',' || p[5] == ':')) {
+					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_WHOLE_FIELD;
+					p += 5; /* eat indicator sequence */
+				} else if(p[0] == ',') { /* empty, use default */
+					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_DFLTSTR;
+					 /* do NOT eat indicator sequence, as this was already eaten - the 
+					  * comma itself is already part of the next field.
+					  */
+				} else {
+					errmsg.LogError(0, NO_ERRCODE, "error: invalid regular expression type, rest of line %s",
+				               (char*) p);
+				}
+			}
+
+			/* now check for match ID */
+			pTpe->data.field.iMatchToUse = 0;
+			if(*p == ',') {
+				/* in this case a number follows, which indicates which match
+				 * shall be used. This must be a single digit.
+				 */
+				++p; /* eat ',' */
+				if(isdigit((int) *p)) {
+					pTpe->data.field.iMatchToUse = *p - '0';
+					++p; /* eat digit */
+				}
+			}
+
+			if(*p != ':') {
 				/* There is something more than an R , this is invalid ! */
 				/* Complain on extra characters */
-				errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"R\", property: '%%%s'",
+				errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"R\", property: '%%%s'",
 				    (char*) *pp);
 			} else {
 				pTpe->data.field.has_regex = 1;
+				dbgprintf("we have a regexp and use match #%d, submatch #%d\n",
+					  pTpe->data.field.iMatchToUse, pTpe->data.field.iSubMatchToUse);
 			}
 		} else {
 			/* now we fall through the "regular" FromPos code */
@@ -545,7 +616,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					pTpe->data.field.has_fields = 1;
 					if(!isdigit((int)*p)) {
 						/* complain and use default */
-						errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
+						errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"F,\", property: '%%%s' - using 9 (HT) as field delimiter",
 						    (char*) *pp);
 						pTpe->data.field.field_delim = 9;
 					} else {
@@ -553,7 +624,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 						while(isdigit((int)*p))
 							iNum = iNum * 10 + *p++ - '0';
 						if(iNum < 0 || iNum > 255) {
-							errmsg.LogError(NO_ERRCODE, "error: non-USASCII delimiter character value %d in template - using 9 (HT) as substitute", iNum);
+							errmsg.LogError(0, NO_ERRCODE, "error: non-USASCII delimiter character value %d in template - using 9 (HT) as substitute", iNum);
 							pTpe->data.field.field_delim = 9;
 						  } else {
 							pTpe->data.field.field_delim = iNum;
@@ -563,7 +634,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					/* invalid character after F, so we need to reject
 					 * this.
 					 */
-					errmsg.LogError(NO_ERRCODE, "error: invalid character in frompos after \"F\", property: '%%%s'",
+					errmsg.LogError(0, NO_ERRCODE, "error: invalid character in frompos after \"F\", property: '%%%s'",
 					    (char*) *pp);
 				}
 			} else {
@@ -620,8 +691,9 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 				/* Now i compile the regex */
 				/* Remember that the re is an attribute of the Template entry */
 				if((iRetLocal = objUse(regexp, LM_REGEXP_FILENAME)) == RS_RET_OK) {
-dbgprintf("compile data.field.re ptr: %p (pTpe %p)\n", (&(pTpe->data.field.re)), pTpe);
-					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, 0) != 0) {
+					int iOptions;
+					iOptions = (pTpe->data.field.typeRegex == TPL_REGEX_ERE) ? REG_EXTENDED : 0;
+					if(regexp.regcomp(&(pTpe->data.field.re), (char*) regex_char, iOptions) != 0) {
 						dbgprintf("error: can not compile regex: '%s'\n", regex_char);
 						pTpe->data.field.has_regex = 2;
 					}
@@ -631,7 +703,7 @@ dbgprintf("compile data.field.re ptr: %p (pTpe %p)\n", (&(pTpe->data.field.re)),
 						  iRetLocal);
 					if(bFirstRegexpErrmsg) { /* prevent flood of messages, maybe even an endless loop! */
 						bFirstRegexpErrmsg = 0;
-						errmsg.LogError(NO_ERRCODE, "regexp library could not be loaded (error %d), "
+						errmsg.LogError(0, NO_ERRCODE, "regexp library could not be loaded (error %d), "
 								"regexp ignored", iRetLocal);
 					}
 					pTpe->data.field.has_regex = 2;

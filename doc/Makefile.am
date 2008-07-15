@@ -21,6 +21,7 @@ html_files = \
 	rsyslog_high_database_rate.html \
 	rsyslog_php_syslog_ng.html \
 	rsyslog_recording_pri.html \
+	rsyslog_tls.html \
 	rsyslog_reliable_forwarding.html \
 	rsyslog_stunnel.html \
 	syslog-protocol.html \
@@ -37,9 +38,21 @@ html_files = \
 	imklog.html \
 	professional_support.html \
 	queues.html \
-	queueWorkerLogic.dia \
+	src/queueWorkerLogic.dia \
 	queueWorkerLogic.jpg \
 	queueWorkerLogic_small.jpg \
+	tls_cert_100.jpg \
+	tls_cert_ca.jpg \
+	tls_cert.jpg \
+	tls_cert_errmsgs.html \
+	rsyslog_secure_tls.html \
+	tls_cert_server.html \
+	tls_cert_ca.html \
+	tls_cert_summary.html \
+	tls_cert_machine.html \
+	tls_cert_udp_relay.html \
+	tls_cert_client.html \
+	tls_cert_scenario.html \
 	rainerscript.html \
 	rscript_abnf.html \
 	rsconf1_actionexeconlywhenpreviousissuspended.html \
@@ -72,6 +85,11 @@ html_files = \
 	rsconf1_resetconfigvariables.html \
 	rsconf1_umask.html \
 	v3compatibility.html \
+	im3195.html \
+	netstream.html \
+	ns_gtls.html \
+	ns_ptcp.html \
+	src/tls_cert.dia \
 	gssapi.html \
 	licensing.html \
 	ommail.html \

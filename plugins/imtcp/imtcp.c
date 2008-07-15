@@ -23,6 +23,20 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
 
+/* This note shall explain the calling sequence while we do not have
+ * have full RainerScript support for (TLS) sender authentication:
+ *
+ * imtcp --> tcpsrv --> netstrms (this sequence stored pPermPeers in netstrms class)
+ * then a callback (doOpenLstnSocks) into imtcp happens, which in turn calls
+ * into tcpsrv.create_tcp_socket(),
+ * which calls into netstrm.LstnInit(), which receives a pointer to netstrms obj
+ * which calls into the driver function LstnInit (again, netstrms obj passed)
+ * which finally calls back into netstrms obj's get functions to obtain the auth
+ * parameters and then applies them to the driver object instance
+ *
+ * rgerhards, 2008-05-19
+ */
+
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
@@ -39,11 +53,14 @@
 #include <fcntl.h>
 #endif
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "net.h"
+#include "netstrm.h"
+#include "errmsg.h"
 #include "tcpsrv.h"
+#include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
 
@@ -52,12 +69,18 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(net)
+DEFobjCurrIf(netstrm)
+DEFobjCurrIf(errmsg)
 
 /* Module static data */
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
+static permittedPeers_t *pPermPeersRoot = NULL;
+
 
 /* config settings */
 static int iTCPSessMax = 200; /* max number of sessions */
+static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 
 
 /* callbacks */
@@ -70,7 +93,7 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((u
 }
 
 
-static int*
+static rsRetVal
 doOpenLstnSocks(tcpsrv_t *pSrv)
 {
 	ISOBJ_TYPE_assert(pSrv, tcpsrv);
@@ -78,14 +101,17 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 }
 
 
-static int
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf)
+static rsRetVal
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
 {
-	int state;
+	DEFiRet;
 	assert(pSess != NULL);
+	assert(piLenRcvd != NULL);
 
-	state = recv(pSess->sock, buf, lenBuf, 0);
-	return state;
+	*piLenRcvd = lenBuf;
+	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd));
+finalize_it:
+	RETiRet;
 }
 
 static rsRetVal
@@ -115,9 +141,23 @@ onErrClose(tcps_sess_t *pSess)
 /* ------------------------------ end callbacks ------------------------------ */
 
 
+/* set permitted peer -- rgerhards, 2008-05-19
+ */
+static rsRetVal
+setPermittedPeer(void __attribute__((unused)) *pVal, uchar *pszID)
+{
+	DEFiRet;
+	CHKiRet(net.AddPermittedPeer(&pPermPeersRoot, pszID));
+	free(pszID); /* no longer needed, but we need to free as of interface def */
+finalize_it:
+	RETiRet;
+}
+
+
 static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	DEFiRet;
+
 	if(pOurTcpsrv == NULL) {
 		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
 		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
@@ -125,11 +165,25 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
+		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
+		/* now set optional params, but only if they were actually configured */
+		if(pszStrmDrvrAuthMode != NULL) {
+			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, pszStrmDrvrAuthMode));
+		}
+		if(pPermPeersRoot != NULL) {
+			CHKiRet(tcpsrv.SetDrvrPermPeers(pOurTcpsrv, pPermPeersRoot));
+		}
+		/* most params set, now start listener */
 		tcpsrv.configureTCPListen(pOurTcpsrv, (char *) pNewVal);
 		CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
+		if(pOurTcpsrv != NULL)
+			tcpsrv.Destruct(&pOurTcpsrv);
+	}
 	RETiRet;
 }
 
@@ -170,10 +224,16 @@ CODESTARTmodExit
 	if(pOurTcpsrv != NULL)
 		iRet = tcpsrv.Destruct(&pOurTcpsrv);
 
+	if(pPermPeersRoot != NULL) {
+		net.DestructPermittedPeers(&pPermPeersRoot);
+	}
+
 	/* release objects we used */
 	objRelease(net, LM_NET_FILENAME);
+	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
+	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -181,6 +241,7 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
 	iTCPSessMax = 200;
+	iStrmDrvrMode = 0;
 	return RS_RET_OK;
 }
 
@@ -199,14 +260,22 @@ CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;
 	/* request objects we use */
 	CHKiRet(objUse(net, LM_NET_FILENAME));
+	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverrun", 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpmaxsessions", 0, eCmdHdlrInt,
 				   NULL, &iTCPSessMax, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdrivermode", 0,
+				   eCmdHdlrInt, NULL, &iStrmDrvrMode, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverauthmode", 0,
+				   eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverpermittedpeer", 0,
+				   eCmdHdlrGetWord, setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

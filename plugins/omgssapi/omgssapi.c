@@ -43,38 +43,27 @@
 #endif
 #include <pthread.h>
 #include <gssapi/gssapi.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"
-#include "omfwd.h"
 #include "template.h"
 #include "msg.h"
-#include "tcpsyslog.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "gss-misc.h"
 #include "tcpclt.h"
+#include "glbl.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT
 
-#define INET_SUSPEND_TIME 60
-/* equal to 1 minute - TODO: see if we can get rid of this now that we have
- * the retry intervals in the engine -- rgerhards, 2008-03-12
- */
-
-#define INET_RETRY_MAX 30		/* maximum of retries for gethostbyname() */
-	/* was 10, changed to 30 because we reduced INET_SUSPEND_TIME by one third. So
-	 * this "fixes" some of implications of it (see comment on INET_SUSPEND_TIME).
-	 * rgerhards, 2005-07-26
-	 * TODO: this needs to be reviewed in spite of the new engine, too -- rgerhards, 2008-03-12
-	 */
 
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(gssutil)
 DEFobjCurrIf(tcpclt)
 
@@ -86,11 +75,9 @@ typedef struct _instanceData {
 		eDestFORW_SUSP,
 		eDestFORW_UNKN
 	} eDestState;
-	int iRtryCnt;
 	struct addrinfo *f_addr;
 	int compressionLevel; /* 0 - no compression, else level for zlib */
 	char *port;
-	time_t	ttSuspend;	/* time selector was suspended */
 	tcpclt_t *pTCPClt;		/* our tcpclt object */
 	gss_ctx_id_t gss_context;
 	OM_uint32 gss_flags;
@@ -174,8 +161,6 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-/* CODE FOR SENDING TCP MESSAGES */
-
 /* This function is called immediately before a send retry is attempted.
  * It shall clean up whatever makes sense.
  * rgerhards, 2007-12-28
@@ -207,9 +192,7 @@ static rsRetVal TCPSendGSSInit(void *pvData)
 
 	base = (gss_base_service_name == NULL) ? "host" : gss_base_service_name;
 	out_tok.length = strlen(pData->f_hname) + strlen(base) + 2;
-	if ((out_tok.value = malloc(out_tok.length)) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+	CHKmalloc(out_tok.value = malloc(out_tok.length));
 	strcpy(out_tok.value, base);
 	strcat(out_tok.value, "@");
 	strcat(out_tok.value, pData->f_hname);
@@ -285,7 +268,7 @@ finalize_it:
 	RETiRet;
 
  fail:
-	errmsg.LogError(NO_ERRCODE, "GSS-API Context initialization failed\n");
+	errmsg.LogError(0, RS_RET_GSS_SENDINIT_ERROR, "GSS-API Context initialization failed\n");
 	gss_release_name(&min_stat, &target_name);
 	gss_release_buffer(&min_stat, &out_tok);
 	if (*context != GSS_C_NO_CONTEXT) {
@@ -365,13 +348,12 @@ static rsRetVal doTryResume(instanceData *pData)
 		 * a common function.
 		 */
 		hints.ai_flags = AI_NUMERICSERV;
-		hints.ai_family = family;
+		hints.ai_family = glbl.GetDefPFFamily();
 		hints.ai_socktype = SOCK_STREAM;
 		if((e = getaddrinfo(pData->f_hname,
 				    getFwdSyslogPt(pData), &hints, &res)) == 0) {
 			dbgprintf("%s found, resuming.\n", pData->f_hname);
 			pData->f_addr = res;
-			pData->iRtryCnt = 0;
 			pData->eDestState = eDestFORW;
 		} else {
 			iRet = RS_RET_SUSPENDED;
@@ -410,7 +392,6 @@ CODESTARTdoAction
 
 	case eDestFORW:
 		dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData), "tcp-gssapi");
-		pData->ttSuspend = time(NULL);
 		psz = (char*) ppString[0];
 		l = strlen((char*) psz);
 		if (l > MAXLINE)
@@ -520,12 +501,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 					++p; /* eat */
 					pData->compressionLevel = iLevel;
 				} else {
-					errmsg.LogError(NO_ERRCODE, "Invalid compression level '%c' specified in "
+					errmsg.LogError(0, NO_ERRCODE, "Invalid compression level '%c' specified in "
 						 "forwardig action - NOT turning on compression.",
 						 *p);
 				}
 #					else
-				errmsg.LogError(NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
+				errmsg.LogError(0, NO_ERRCODE, "Compression requested, but rsyslogd is not compiled "
 					 "with compression support - request ignored.");
 #					endif /* #ifdef USE_NETZIP */
 			} else if(*p == 'o') { /* octet-couting based TCP framing? */
@@ -533,7 +514,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 				/* no further options settable */
 				tcp_framing = TCP_FRAMING_OCTET_COUNTING;
 			} else { /* invalid option! Just skip it... */
-				errmsg.LogError(NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
+				errmsg.LogError(0, NO_ERRCODE, "Invalid option %c in forwarding action - ignoring.", *p);
 				++p; /* eat invalid option */
 			}
 			/* the option processing is done. We now do a generic skip
@@ -549,7 +530,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* we probably have end of string - leave it for the rest
 			 * of the code to handle it (but warn the user)
 			 */
-			errmsg.LogError(NO_ERRCODE, "Option block not terminated in gssapi forward action.");
+			errmsg.LogError(0, NO_ERRCODE, "Option block not terminated in gssapi forward action.");
 	}
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06
@@ -567,7 +548,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			/* SKIP AND COUNT */;
 		pData->port = malloc(i + 1);
 		if(pData->port == NULL) {
-			errmsg.LogError(NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
+			errmsg.LogError(0, NO_ERRCODE, "Could not get memory to store syslog forwarding port, "
 				 "using default port, results may not be what you intend\n");
 			/* we leave f_forw.port set to NULL, this is then handled by
 			 * getFwdSyslogPt().
@@ -581,8 +562,17 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		
 	/* now skip to template */
 	bErr = 0;
-	while(*p && *p != ';'  && *p != '#' && !isspace((int) *p))
-		++p; /*JUST SKIP*/
+	while(*p && *p != ';') {
+		if(*p && *p != ';' && !isspace((int) *p)) {
+			if(bErr == 0) { /* only 1 error msg! */
+				bErr = 1;
+				errno = 0;
+				errmsg.LogError(0, NO_ERRCODE, "invalid selector line (port), probably not doing "
+					 "what was intended");
+			}
+		}
+		++p;
+	}
 
 	/* TODO: make this if go away! */
 	if(*p == ';' || *p == '#' || isspace(*p)) {
@@ -602,12 +592,10 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	memset(&hints, 0, sizeof(hints));
 	/* port must be numeric, because config file syntax requests this */
 	hints.ai_flags = AI_NUMERICSERV;
-	hints.ai_family = family;
+	hints.ai_family = glbl.GetDefPFFamily();
 	hints.ai_socktype = SOCK_STREAM;
 	if( (error = getaddrinfo(pData->f_hname, getFwdSyslogPt(pData), &hints, &res)) != 0) {
 		pData->eDestState = eDestFORW_UNKN;
-		pData->iRtryCnt = INET_RETRY_MAX;
-		pData->ttSuspend = time(NULL);
 	} else {
 		pData->eDestState = eDestFORW;
 		pData->f_addr = res;
@@ -630,6 +618,7 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
@@ -659,7 +648,7 @@ static rsRetVal setGSSMode(void __attribute__((unused)) *pVal, uchar *mode)
 		gss_mode = GSSMODE_ENC;
 		dbgprintf("GSS-API gssmode set to GSSMODE_ENC\n");
 	} else {
-		errmsg.LogError(NO_ERRCODE, "unknown gssmode parameter: %s", (char *) mode);
+		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown gssmode parameter: %s", (char *) mode);
 		iRet = RS_RET_INVALID_PARAMS;
 	}
 	free(mode);
@@ -688,6 +677,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
 	CHKiRet(objUse(tcpclt, LM_TCPCLT_FILENAME));
 

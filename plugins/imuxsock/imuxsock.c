@@ -35,11 +35,13 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/un.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "net.h"
+#include "glbl.h"
 
 MODULE_TYPE_INPUT
 
@@ -62,6 +64,7 @@ MODULE_TYPE_INPUT
 /* Module static data */
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 
 static int startIndexUxLocalSockets; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
@@ -100,8 +103,6 @@ static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, 
  */
 static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
-	char errStr[1024];
-
 	if(nfunix < MAXFUNIX) {
 		if(*pNewVal == ':') {
 			funixParseHost[nfunix] = 1;
@@ -113,9 +114,8 @@ static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNe
 		funixn[nfunix++] = pNewVal;
 	}
 	else {
-		snprintf(errStr, sizeof(errStr), "rsyslogd: Out of unix socket name descriptors, ignoring %s\n",
+		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
 			 pNewVal);
-		logmsgInternal(LOG_SYSLOG|LOG_ERR, errStr, ADDDATE);
 	}
 
 	return RS_RET_OK;
@@ -159,7 +159,7 @@ static int create_unix_socket(const char *path)
 			   SUN_LEN(&sunx)) < 0 ||
 	    chmod(path, 0666) < 0) {
 		snprintf(line, sizeof(line), "cannot create %s", path);
-		errmsg.LogError(NO_ERRCODE, "%s", line);
+		errmsg.LogError(errno, NO_ERRCODE, "%s", line);
 		dbgprintf("cannot create %s (%d).\n", path, errno);
 		close(fd);
 		return -1;
@@ -176,17 +176,18 @@ static rsRetVal readSocket(int fd, int bParseHost, int flags)
 {
 	DEFiRet;
 	int iRcvd;
-	char line[MAXLINE +1];
+	uchar line[MAXLINE +1];
 
 	iRcvd = recv(fd, line, MAXLINE - 1, 0);
 	dbgprintf("Message from UNIX socket: #%d\n", fd);
 	if (iRcvd > 0) {
-		parseAndSubmitMessage((char*)LocalHostName, line, iRcvd, bParseHost, flags, eFLOWCTL_LIGHT_DELAY);
+		parseAndSubmitMessage(glbl.GetLocalHostName(), (uchar*)"127.0.0.1", line,
+			 	      iRcvd, bParseHost, flags, eFLOWCTL_LIGHT_DELAY);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
-		errmsg.LogError(NO_ERRCODE, "recvfrom UNIX");
+		errmsg.LogError(errno, NO_ERRCODE, "recvfrom UNIX");
 	}
 
 	RETiRet;
@@ -289,6 +290,8 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	objRelease(glbl, CORE_COMPONENT);
+	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -319,6 +322,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* initialize funixn[] array */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
@@ -346,6 +350,5 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketignoremsgtimestamp", 0, eCmdHdlrBinary,
 		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/*
- * vi:set ai:
+/* vim:set ai:
  */

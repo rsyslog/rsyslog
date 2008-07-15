@@ -49,7 +49,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "module-template.h"
 

@@ -47,7 +47,8 @@ struct template {
 
 enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
 enum tplFormatTypes { tplFmtDefault = 0, tplFmtMySQLDate = 1,
-                      tplFmtRFC3164Date = 2, tplFmtRFC3339Date = 3, tplFmtPgSQLDate = 4 };
+                      tplFmtRFC3164Date = 2, tplFmtRFC3339Date = 3, tplFmtPgSQLDate = 4,
+		      tplFmtSecFrac = 5};
 enum tplFormatCaseConvTypes { tplCaseConvNo = 0, tplCaseConvUpper = 1, tplCaseConvLower = 2 };
 
 #include "msg.h"
@@ -67,7 +68,19 @@ struct templateEntry {
 			unsigned iToPos;	/* up to that one... */
 #ifdef FEATURE_REGEXP
 			regex_t re;	/* APR: this is the regular expression */
-			unsigned has_regex;
+			short has_regex;
+			short iMatchToUse;/* which match should be obtained (10 max) */
+			short iSubMatchToUse;/* which submatch should be obtained (10 max) */
+			enum {
+				TPL_REGEX_BRE = 0, /* posix BRE */
+				TPL_REGEX_ERE = 1  /* posix ERE */
+			} typeRegex;
+			enum {
+				TPL_REGEX_NOMATCH_USE_DFLTSTR = 0, /* use the (old style) default "**NO MATCH**" string */
+				TPL_REGEX_NOMATCH_USE_BLANK = 1, /* use a blank string */
+				TPL_REGEX_NOMATCH_USE_WHOLE_FIELD = 2 /* use the full field contents that we were searching in*/
+			}  nomatchAction;	/**< what to do if we do not have a match? */
+			
 #endif
 			unsigned has_fields; /* support for field-counting: field to extract */
 			unsigned char field_delim; /* support for field-counting: field delemiter char */

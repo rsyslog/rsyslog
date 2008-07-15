@@ -41,14 +41,12 @@
 #include <fcntl.h>
 #endif
 #include <gssapi/gssapi.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"
-#include "omfwd.h"
 #include "template.h"
 #include "msg.h"
-#include "tcpsyslog.h"
 #include "module-template.h"
 #include "obj.h"
 #include "errmsg.h"
@@ -68,13 +66,13 @@ static void display_status_(char *m, OM_uint32 code, int type)
 	do {
 		maj_stat = gss_display_status(&min_stat, code, type, GSS_C_NO_OID, &msg_ctx, &msg);
 		if (maj_stat != GSS_S_COMPLETE) {
-			errmsg.LogError(NO_ERRCODE, "GSS-API error in gss_display_status called from <%s>\n", m);
+			errmsg.LogError(0, NO_ERRCODE, "GSS-API error in gss_display_status called from <%s>\n", m);
 			break;
 		} else {
 			char buf[1024];
 			snprintf(buf, sizeof(buf), "GSS-API error %s: %s\n", m, (char *) msg.value);
 			buf[sizeof(buf)/sizeof(char) - 1] = '\0';
-			errmsg.LogError(NO_ERRCODE, "%s", buf);
+			errmsg.LogError(0, NO_ERRCODE, "%s", buf);
 		}
 		if (msg.length != 0)
 			gss_release_buffer(&min_stat, &msg);
@@ -164,12 +162,12 @@ static int recv_token(int s, gss_buffer_t tok)
 
 	ret = read_all(s, (char *) lenbuf, 4);
 	if (ret < 0) {
-		errmsg.LogError(NO_ERRCODE, "GSS-API error reading token length");
+		errmsg.LogError(0, NO_ERRCODE, "GSS-API error reading token length");
 		return -1;
 	} else if (!ret) {
 		return 0;
 	} else if (ret != 4) {
-		errmsg.LogError(NO_ERRCODE, "GSS-API error reading token length");
+		errmsg.LogError(0, NO_ERRCODE, "GSS-API error reading token length");
 		return -1;
 	}
 
@@ -181,17 +179,17 @@ static int recv_token(int s, gss_buffer_t tok)
 
 	tok->value = (char *) malloc(tok->length ? tok->length : 1);
 	if (tok->length && tok->value == NULL) {
-		errmsg.LogError(NO_ERRCODE, "Out of memory allocating token data\n");
+		errmsg.LogError(0, NO_ERRCODE, "Out of memory allocating token data\n");
 		return -1;
 	}
 
 	ret = read_all(s, (char *) tok->value, tok->length);
 	if (ret < 0) {
-		errmsg.LogError(NO_ERRCODE, "GSS-API error reading token data");
+		errmsg.LogError(0, NO_ERRCODE, "GSS-API error reading token data");
 		free(tok->value);
 		return -1;
 	} else if (ret != (int) tok->length) {
-		errmsg.LogError(NO_ERRCODE, "GSS-API error reading token data");
+		errmsg.LogError(0, NO_ERRCODE, "GSS-API error reading token data");
 		free(tok->value);
 		return -1;
 	}
@@ -216,19 +214,19 @@ static int send_token(int s, gss_buffer_t tok)
 
 	ret = write_all(s, (char *) lenbuf, 4);
 	if (ret < 0) {
-		errmsg.LogError(NO_ERRCODE, "GSS-API error sending token length");
+		errmsg.LogError(0, NO_ERRCODE, "GSS-API error sending token length");
 		return -1;
 	} else if (ret != 4) {
-		errmsg.LogError(NO_ERRCODE, "GSS-API error sending token length");
+		errmsg.LogError(0, NO_ERRCODE, "GSS-API error sending token length");
 		return -1;
 	}
 
 	ret = write_all(s, tok->value, tok->length);
 	if (ret < 0) {
-		errmsg.LogError(NO_ERRCODE, "GSS-API error sending token data");
+		errmsg.LogError(0, NO_ERRCODE, "GSS-API error sending token data");
 		return -1;
 	} else if (ret != (int) tok->length) {
-		errmsg.LogError(NO_ERRCODE, "GSS-API error sending token data");
+		errmsg.LogError(0, NO_ERRCODE, "GSS-API error sending token data");
 		return -1;
 	}
 

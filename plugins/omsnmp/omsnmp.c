@@ -36,7 +36,7 @@
 #include <netdb.h>
 #include <ctype.h>
 #include <assert.h>
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "cfsysline.h"
 #include "module-template.h"
@@ -179,7 +179,7 @@ static rsRetVal omsnmp_initSession(instanceData *pData)
 
 	pData->snmpsession = snmp_open(&session);
 	if (pData->snmpsession == NULL) {
-		errmsg.LogError(NO_ERRCODE, "omsnmp_initSession: snmp_open to host '%s' on Port '%d' failed\n", pData->szTarget, pData->iPort);
+		errmsg.LogError(0, RS_RET_SUSPENDED, "omsnmp_initSession: snmp_open to host '%s' on Port '%d' failed\n", pData->szTarget, pData->iPort);
 		/* Stay suspended */
 		iRet = RS_RET_SUSPENDED;
 	}
@@ -218,7 +218,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		if (!snmp_parse_oid( (char*) pData->szEnterpriseOID, enterpriseoid, &enterpriseoidlen ))
 		{
 			strErr = snmp_api_errstring(snmp_errno);
-			errmsg.LogError(NO_ERRCODE, "omsnmp_sendsnmp: Parsing EnterpriseOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
+			errmsg.LogError(0, RS_RET_DISABLE_ACTION, "omsnmp_sendsnmp: Parsing EnterpriseOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 			
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
@@ -254,7 +254,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		if ( snmp_add_var(pdu, objid_snmptrap, sizeof(objid_snmptrap) / sizeof(oid), 'o', (char*) pData->szSnmpTrapOID ) != 0)
 		{
 			strErr = snmp_api_errstring(snmp_errno);
-			errmsg.LogError(NO_ERRCODE, "omsnmp_sendsnmp: Adding trap OID failed '%s' with error '%s' \n", pData->szSnmpTrapOID, strErr);
+			errmsg.LogError(0, RS_RET_DISABLE_ACTION, "omsnmp_sendsnmp: Adding trap OID failed '%s' with error '%s' \n", pData->szSnmpTrapOID, strErr);
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
 	}
@@ -269,14 +269,14 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 		if (iErrCode)
 		{
 			const char *str = snmp_api_errstring(iErrCode);
-			errmsg.LogError(NO_ERRCODE,  "omsnmp_sendsnmp: Invalid SyslogMessage OID, error code '%d' - '%s'\n", iErrCode, str );
+			errmsg.LogError(0, RS_RET_DISABLE_ACTION,  "omsnmp_sendsnmp: Invalid SyslogMessage OID, error code '%d' - '%s'\n", iErrCode, str );
 			ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 		}
 	}
 	else
 	{
 		strErr = snmp_api_errstring(snmp_errno);
-		errmsg.LogError(NO_ERRCODE, "omsnmp_sendsnmp: Parsing SyslogMessageOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
+		errmsg.LogError(0, RS_RET_DISABLE_ACTION, "omsnmp_sendsnmp: Parsing SyslogMessageOID failed '%s' with error '%s' \n", pData->szSyslogMessageOID, strErr);
 
 		ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 	}
@@ -287,7 +287,7 @@ static rsRetVal omsnmp_sendsnmp(instanceData *pData, uchar *psz)
 	{
 		/* Debug Output! */
 		int iErrorCode = pData->snmpsession->s_snmp_errno;
-		errmsg.LogError(NO_ERRCODE,  "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
+		errmsg.LogError(0, RS_RET_SUSPENDED,  "omsnmp_sendsnmp: snmp_send failed error '%d', Description='%s'\n", iErrorCode*(-1), api_errors[iErrorCode*(-1)]);
 
 		/* Clear Session */
 		omsnmp_exitSession(pData);

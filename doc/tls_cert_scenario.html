@@ -1,0 +1,63 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>TLS-protected syslog: scenario</title>
+</head>
+<body>
+
+<h1>Encrypting Syslog Traffic with TLS (SSL)</h1>
+<p><small><i>Written by <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> (2008-06-17)</i></small></p>
+
+<ul>
+<li><a href="rsyslog_secure_tls.html">Overview</a>
+<li><a href="tls_cert_scenario.html">Sample Scenario</a>
+<li><a href="tls_cert_ca.html">Setting up the CA</a>
+<li><a href="tls_cert_machine.html">Generating Machine Certificates</a>
+<li><a href="tls_cert_server.html">Setting up the Central Server</a>
+<li><a href="tls_cert_client.html">Setting up syslog Clients</a>
+<li><a href="tls_cert_udp_relay.html">Setting up the UDP syslog relay</a>
+<li><a href="tls_cert_summary.html">Wrapping it all up</a>
+<li><a href="tls_cert_errmsgs.html">Frequently seen Error Messages</a>
+</ul>
+
+<h3>Sample Scenario</h3>
+<p>We have a quite simple scenario. There is one central syslog server, 
+<span style="float: left">
+<script type="text/javascript"><!--
+google_ad_client = "pub-3204610807458280";
+/* rsyslog doc inline */
+google_ad_slot = "5958614527";
+google_ad_width = 125;
+google_ad_height = 125;
+//-->
+</script>
+<script type="text/javascript"
+src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+</script>
+</span>
+named central.example.net. These server is being reported to by two Linux 
+machines with name zuse.example.net and turing.example.net. Also, there is a 
+third client - ada.example.net - which send both its own messages to the central 
+server but also forwards messages receive from an UDP-only capable router. We 
+hav decided to use ada.example.net because it is in the same local network 
+segment as the router and so we enjoy TLS' security benefits for forwarding the 
+router messages inside the corporate network. All systems (except the router) use
+<a href="http://www.rsyslog.com/">rsyslog</a> as the syslog software.</p>
+<p><center><img src="tls_cert_100.jpg"></center>
+<p>Please note that the CA must not necessarily be connected to the rest of the
+network. Actually, it may be considered a security plus if it is not. If the CA
+is reachable via the regular network, it should be sufficiently secured (firewal
+rules et al). Keep in mind that if the CA's security is breached, your overall
+system security is breached.
+<p>In case the CA is compromised, you need to regenerate the CA's certificate as well
+as all individual machines certificates.
+<h2>Copyright</h2>
+<p>Copyright (c) 2008 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p> Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation License, Version
+1.2 or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts. A copy of the license can be viewed at
+<a href="http://www.gnu.org/copyleft/fdl.html">http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body></html>

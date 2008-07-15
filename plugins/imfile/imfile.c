@@ -36,13 +36,14 @@
 #	include <sys/stat.h>
 #endif
 #include "rsyslog.h"		/* error codes etc... */
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"		/* access to config file objects */
 #include "module-template.h"	/* generic module interface code - very important, read it! */
 #include "srUtils.h"		/* some utility functions */
 #include "msg.h"
 #include "stream.h"
 #include "errmsg.h"
+#include "glbl.h"
 #include "datetime.h"
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
@@ -52,6 +53,7 @@ MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
 /* Module static data */
 DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
 typedef struct fileInfo_s {
@@ -95,7 +97,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetUxTradMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
-	MsgSetHOSTNAME(pMsg, (char*)LocalHostName);
+	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
 	MsgSetTAG(pMsg, (char*)pInfo->pszTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
@@ -121,7 +123,7 @@ openFile(fileInfo_t *pThis)
 
 	/* Construct file name */
 	lenSFNam = snprintf((char*)pszSFNam, sizeof(pszSFNam) / sizeof(uchar), "%s/%s",
-			     (char*) glblGetWorkDir(), (char*)pThis->pszStateFile);
+			     (char*) glbl.GetWorkDir(), (char*)pThis->pszStateFile);
 
 	/* check if the file exists */
 	if(stat((char*) pszSFNam, &stat_buf) == -1) {
@@ -179,7 +181,10 @@ static void pollFileCancelCleanup(void *pArg)
 		rsCStrDestruct(ppCStr);
 	ENDfunc;
 }
+
+
 /* poll a file, need to check file rollover etc. open file if not open */
+#pragma GCC diagnostic ignored "-Wempty-body"
 static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 {
 	DEFiRet;
@@ -208,6 +213,7 @@ finalize_it:
 
 	RETiRet;
 }
+#pragma GCC diagnostic warning "-Wempty-body"
 
 
 /* This function is the cancel cleanup handler. It is called when rsyslog decides the
@@ -264,6 +270,7 @@ inputModuleCleanup(void __attribute__((unused)) *arg)
  * On spamming the main queue: keep in mind that it will automatically rate-limit
  * ourselfes if we begin to overrun it. So we really do not need to care here.
  */
+#pragma GCC diagnostic ignored "-Wempty-body"
 BEGINrunInput
 	int i;
 	int bHadFileData; /* were there at least one file with data during this run? */
@@ -296,6 +303,7 @@ CODESTARTrunInput
 	pthread_cleanup_pop(0); /* just for completeness, but never called... */
 	RETiRet;	/* use it to make sure the housekeeping is done! */
 ENDrunInput
+#pragma GCC diagnostic warning "-Wempty-body"
 	/* END no-touch zone                                                                          *
 	 * ------------------------------------------------------------------------------------------ */
 
@@ -310,7 +318,7 @@ ENDrunInput
 BEGINwillRun
 CODESTARTwillRun
 	if(iFilPtr == 0) {
-		errmsg.LogError(NO_ERRCODE, "No files configured to be monitored");
+		errmsg.LogError(0, RS_RET_NO_RUN, "No files configured to be monitored");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 
@@ -334,7 +342,7 @@ persistStrmState(fileInfo_t *pInfo)
 
 	/* TODO: create a function persistObj in obj.c? */
 	CHKiRet(strmConstruct(&psSF));
-	CHKiRet(strmSetDir(psSF, glblGetWorkDir(), strlen((char*)glblGetWorkDir())));
+	CHKiRet(strmSetDir(psSF, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
 	CHKiRet(strmSettOperationsMode(psSF, STREAMMODE_WRITE));
 	CHKiRet(strmSetiAddtlOpenFlags(psSF, O_TRUNC));
 	CHKiRet(strmSetsType(psSF, STREAMTYPE_FILE_SINGLE));
@@ -381,6 +389,7 @@ BEGINmodExit
 CODESTARTmodExit
 	/* release objects we used */
 	objRelease(datetime, CORE_COMPONENT);
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
@@ -438,21 +447,21 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		pThis = &files[iFilPtr];
 		/* TODO: check for strdup() NULL return */
 		if(pszFileName == NULL) {
-			errmsg.LogError(NO_ERRCODE, "imfile error: no file name given, file monitor can not be created");
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no file name given, file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszFileName = (uchar*) strdup((char*) pszFileName);
 		}
 
 		if(pszFileTag == NULL) {
-			errmsg.LogError(NO_ERRCODE, "imfile error: no tag value given , file monitor can not be created");
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: no tag value given , file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
 		}
 
 		if(pszStateFile == NULL) {
-			errmsg.LogError(NO_ERRCODE, "imfile error: not state file name given, file monitor can not be created");
+			errmsg.LogError(0, RS_RET_CONFIG_ERROR, "imfile error: not state file name given, file monitor can not be created");
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszStateFile = (uchar*) strdup((char*) pszStateFile);
@@ -461,7 +470,7 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		pThis->iSeverity = iSeverity;
 		pThis->iFacility = iFacility;
 	} else {
-		errmsg.LogError(NO_ERRCODE, "Too many file monitors configured - ignoring this one");
+		errmsg.LogError(0, RS_RET_OUT_OF_DESRIPTORS, "Too many file monitors configured - ignoring this one");
 		ABORT_FINALIZE(RS_RET_OUT_OF_DESRIPTORS);
 	}
 
@@ -488,6 +497,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,

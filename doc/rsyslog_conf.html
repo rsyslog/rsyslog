@@ -50,6 +50,8 @@ input plugin for plain tcp and GSS-enable syslog</li>
 <li><a href="imklog.html">imklog</a> - kernel logging</li>
 <li><a href="imuxsock.html">imuxsock</a> -
 unix sockets, including the system log socket</li>
+<li><a href="im3195.html">im3195</a> -
+accepts syslog messages via RFC 3195</li>
 </ul>
 <p>Please note that each module provides configuration
 directives, which are NOT necessarily being listed below. Also
@@ -114,19 +116,25 @@ default 60000 (1 minute)]</li>
 <li>$ActionQueueType [FixedArray/LinkedList/<b>Direct</b>/Disk]</li>
 <li>$ActionQueueSaveOnShutdown&nbsp; [on/<b>off</b>]
 </li>
-<li>$ActionQueueWorkerThreads &lt;number&gt;, num
-worker threads, default 1, recommended 1</li>
-<li>$ActionQueueWorkerThreadMinumumMessages
-&lt;number&gt;, default 100</li>
+<li>$ActionQueueWorkerThreads &lt;number&gt;, num worker threads, default 1, recommended 1</li>
+<li>$ActionQueueWorkerThreadMinumumMessages &lt;number&gt;, default 100</li>
 <li><a href="rsconf1_actionresumeinterval.html">$ActionResumeInterval</a></li>
-<li>$ActionResumeRetryCount &lt;number&gt; [default 0,
--1 means eternal]</li>
+<li>$ActionResumeRetryCount &lt;number&gt; [default 0, -1 means eternal]</li>
+<li>$ActionSendResendLastMsgOnReconn &lt;[on/<b>off</b>]&gt; specifies if the last message is to be resend when a connecition broken and has been reconnedcted. May increase reliability, but comes at the risk of message duplication.
+<li>$ActionSendStreamDriver &lt;driver basename&gt; just like $DefaultNetstreamDriver, but for the specific action
+</li><li>$ActionSendStreamDriverMode &lt;mode&gt;, default 0, mode to use with the stream driver
+(driver-specific)</li><li>$ActionSendStreamDriverAuthMode &lt;mode&gt;,&nbsp; authentication mode to use with the stream driver
+(driver-specific)</li><li>$ActionSendStreamDriverPermittedPeer &lt;ID&gt;,&nbsp; accepted fingerprint (SHA1) or name of remote peer
+(driver-specific) -<span style="font-weight: bold;"> directive may go away</span>!</li>
 <li><a href="rsconf1_allowedsender.html">$AllowedSender</a></li>
 <li><a href="rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
 <li><a href="rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
 
 <li><a href="rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
 <li><a href="rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
+<li>$DefaultNetstreamDriver &lt;drivername&gt;, the default <a href="netstream.html">network stream driver</a> to use. Defaults to&nbsp;ptcp.$DefaultNetstreamDriverCAFile &lt;/path/to/cafile.pem&gt;</li>
+<li>$DefaultNetstreamDriverCertFile &lt;/path/to/certfile.pem&gt;</li>
+<li>$DefaultNetstreamDriverKeyFile &lt;/path/to/keyfile.pem&gt;</li>
 <li><a href="rsconf1_dircreatemode.html">$DirCreateMode</a></li>
 <li><a href="rsconf1_dirgroup.html">$DirGroup</a></li>
 <li><a href="rsconf1_dirowner.html">$DirOwner</a></li>
@@ -347,6 +355,10 @@ all relatively recent versions of rsyslog. Other syslogd's may get
 hopelessly confused if receiving that format, so check before you use
 it. Note that the format is unlikely to change when the final RFC comes
 out, but this may happen.</li>
+<li><span style="font-weight: bold;">RSYSLOG_DebugFormat</span>
+- a special format used for troubleshooting property problems. This format
+is meant to be written to a log file. Do <b>not</b> use for production or remote
+forwarding.</li>
 </ul>
 <h2>Output Channels</h2>
 <p>Output Channels are a new concept first introduced in rsyslog

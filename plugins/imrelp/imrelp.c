@@ -38,7 +38,7 @@
 #include <sys/socket.h>
 #include <librelp.h>
 #include "rsyslog.h"
-#include "syslogd.h"
+#include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
 #include "net.h"
@@ -76,12 +76,14 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((u
  * are different from our rsRetVal. So we can simply use our own iRet system
  * to fulfill the requirement.
  * rgerhards, 2008-03-21
+ * TODO: we currently do not receive the remote hosts's IP. As a work-around, we
+ * use "???" for the time being. -- rgerhards, 2008-05-16
  */
 static relpRetVal
 onSyslogRcv(uchar *pHostname, uchar __attribute__((unused)) *pIP, uchar *pMsg, size_t lenMsg)
 {
 	DEFiRet;
-	parseAndSubmitMessage((char*)pHostname, (char*)pMsg, lenMsg, MSG_PARSE_HOSTNAME,
+	parseAndSubmitMessage(pHostname, (uchar*) "[unset]", pMsg, lenMsg, MSG_PARSE_HOSTNAME,
 			      NOFLAG, eFLOWCTL_LIGHT_DELAY);
 
 	RETiRet;

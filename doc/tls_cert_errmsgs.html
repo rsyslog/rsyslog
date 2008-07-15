@@ -1,0 +1,103 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>TLS-protected syslog: error messages</title>
+</head>
+<body>
+
+<h1>Encrypting Syslog Traffic with TLS (SSL)</h1>
+<p><small><i>Written by <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> (2008-06-17)</i></small></p>
+
+<ul>
+<li><a href="rsyslog_secure_tls.html">Overview</a>
+<li><a href="tls_cert_scenario.html">Sample Scenario</a>
+<li><a href="tls_cert_ca.html">Setting up the CA</a>
+<li><a href="tls_cert_machine.html">Generating Machine Certificates</a>
+<li><a href="tls_cert_server.html">Setting up the Central Server</a>
+<li><a href="tls_cert_client.html">Setting up syslog Clients</a>
+<li><a href="tls_cert_udp_relay.html">Setting up the UDP syslog relay</a>
+<li><a href="tls_cert_summary.html">Wrapping it all up</a>
+<li><a href="tls_cert_errmsgs.html">Frequently seen Error Messages</a>
+</ul>
+
+<h3>Error Messages</h3>
+<p>This page covers error message you may see when setting up
+<span style="float: left">
+<script type="text/javascript"><!--
+google_ad_client = "pub-3204610807458280";
+/* rsyslog doc inline */
+google_ad_slot = "5958614527";
+google_ad_width = 125;
+google_ad_height = 125;
+//-->
+</script>
+<script type="text/javascript"
+src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+</script>
+</span>
+<a href="http://www.rsyslog.com">rsyslog</a> with TLS. Please note that many
+of the message stem back to the TLS library being used. In those cases, there is
+not always a good explanation available in rsyslog alone.
+<p>A single error typically results in two or more message being emitted: (at
+least) one is the actual error cause, followed by usually one message with additional
+information (like certificate contents). In a typical system, these message should
+immediately follow each other in your log. Kepp in mind that they are reported
+as syslog.err, so you need to capture these to actually see errors (the default
+rsyslog.conf's shipped by many systems will do that, recording them e.g. in
+/etc/messages).
+<h3>certificate invalid</h3>
+<p>Sample:
+<code>
+not permitted to talk to peer, certificate invalid: <font color="red">insecure algorithm</font>
+</code>
+<p>This message may occur during connection setup. It indicates that the remote peer's
+certificate can not be accepted. The reason for this is given in the message part that
+is shown in red. Please note that this red part directly stems back to the TLS library,
+so rsyslog does acutally not have any more information about the reason. 
+<p>With GnuTLS, the following reasons have been seen in practice:
+<h4>insecure algorith</h4>
+<p>The certificate contains information on which encryption algorithms are to be used.
+This information is entered when the certificate is created.
+Some older alogrithms are no longer secure and the TLS library does not accept
+them. Thus the connection request failed. The cure is to use a certificate with sufficiently secure
+alogorithms.
+<p>Please note that noi encryption algorithm is totally secure. It only is secure based
+on our current knowledge AND on computing power available. As computers get more and more
+powerful, previously secure algorithms become insecure over time. As such, algorithms
+considered secure today may not be accepted by the TLS library in the future.
+<p>So in theory, after a system upgrade, a connection request may fail with the "insecure
+algorithm" failure without any change in rsyslog configuration or certificates. This could be
+caused by a new perception of the TLS library of what is secure and what not.
+<h3>GnuTLS error -64</h3>
+<p>Sample: <code>unexpected GnuTLS error -64 in nsd_gtls.c:517: Error while reading file.</code>
+<p>This error points to an encoding error witht the pem file in question. It means "base 64 encoding error".
+From my experience, it can be caused by a couple of things, some of them not obvious:
+<ul>
+<li>You specified a wrong file, which is not actually in .pem format
+<li>The file was incorrectly generated
+<li>I think I have also seen this when I accidently swapped private key files and
+certificate files. So double-check the type of file you are using.
+<li>It may even be a result of an access (permission) problem. In theory, that
+should lead to another error, but in practice it sometimes seems to lead to
+this -64 error.
+</ul>
+<h3>info on invalid cert</h3>
+<p>Sample:
+<code>
+info on invalid cert: peer provided 1 certificate(s). Certificate 1 info: certificate valid from Wed Jun 18 11:45:44 2008 to Sat Jun 16 11:45:53 2018; Certificate public key: RSA; DN: C=US,O=Sample Corp,OU=Certs,L=Somehwere,ST=CA,CN=somename; Issuer DN: C=US,O=Sample Corp,OU=Certs,L=Somewhere,ST=CA,CN=somename,EMAIL=xxx@example.com; SAN:DNSname: machine.example.net;
+</code>
+<p>This is <b>not</b> an error message in itself. It always follows the actual error message and
+tells you what is seen in the peer's certificate. This is done to give you a chance to evaluate
+the certificate and better understand why the initial error message was issued.
+<p>Please note that you can NOT diagnose problems based on this message alone. It follows
+in a number of error cases and does not pinpoint any problems by itself.
+<h2>Copyright</h2>
+<p>Copyright (c) 2008 <a href="http://www.adiscon.com/en/people/rainer-gerhards.php">Rainer
+Gerhards</a> and
+<a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p> Permission is granted to copy, distribute and/or modify this
+document under the terms of the GNU Free Documentation License, Version
+1.2 or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+Texts. A copy of the license can be viewed at
+<a href="http://www.gnu.org/copyleft/fdl.html">http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body></html>

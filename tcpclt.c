@@ -38,10 +38,9 @@
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-#include "syslogd.h"
+#include "dirty.h"
 #include "syslogd-types.h"
 #include "net.h"
-#include "tcpsyslog.h"
 #include "tcpclt.h"
 #include "module-template.h"
 #include "srUtils.h"
@@ -52,7 +51,6 @@ MODULE_TYPE_LIB
 DEFobjStaticHelpers
 
 /* Initialize TCP sockets (for sender)
- * This is done once per selector line, if not yet initialized.
  */
 static int
 CreateSocket(struct addrinfo *addrDest)
@@ -307,16 +305,23 @@ Send(tcpclt_t *pThis, void *pData, char *msg, size_t len)
 			/* we are done, we also use this as indication that the previous
 			 * message was succesfully received (it's not always the case, but its at 
 			 * least our best shot at it -- rgerhards, 2008-03-12
+			 * As of 2008-06-09, we have implemented an algorithm which detects connection
+			 * loss quite good in some (common) scenarios. Thus, the probability of
+			 * message duplication due to the code below has increased. We so now have
+			 * a config setting, default off, that enables the user to request retransmits.
+			 * However, if not requested, we do NOT need to do all the stuff needed for it.
 			 */
-			if(pThis->prevMsg != NULL)
-				free(pThis->prevMsg);
-			/* if we can not alloc a new buffer, we silently ignore it. The worst that
-			 * happens is that we lose our message recovery buffer - anything else would
-			 * be worse, so don't try anything ;) -- rgerhards, 2008-03-12
-			 */
-			if((pThis->prevMsg = malloc(len)) != NULL) {
-				memcpy(pThis->prevMsg, msg, len);
-				pThis->lenPrevMsg = len;
+			if(pThis->bResendLastOnRecon == 1) {
+				if(pThis->prevMsg != NULL)
+					free(pThis->prevMsg);
+				/* if we can not alloc a new buffer, we silently ignore it. The worst that
+				 * happens is that we lose our message recovery buffer - anything else would
+				 * be worse, so don't try anything ;) -- rgerhards, 2008-03-12
+				 */
+				if((pThis->prevMsg = malloc(len)) != NULL) {
+					memcpy(pThis->prevMsg, msg, len);
+					pThis->lenPrevMsg = len;
+				}
 			}
 
 			/* we are done with this record */
@@ -326,7 +331,8 @@ Send(tcpclt_t *pThis, void *pData, char *msg, size_t len)
 				++retry;
 				CHKiRet(pThis->prepRetryFunc(pData)); /* try to recover */
 				/* now try to send our stored previous message (which most probably
-				 * didn't make it
+				 * didn't make it. Note that if bResendLastOnRecon is 0, prevMsg will
+				 * never become non-NULL, so the check below covers all cases.
 				 */
 				if(pThis->prevMsg != NULL) {
 					CHKiRet(pThis->initFunc(pData));
@@ -347,6 +353,13 @@ finalize_it:
 
 
 /* set functions */
+static rsRetVal
+SetResendLastOnRecon(tcpclt_t *pThis, int bResendLastOnRecon)
+{
+	DEFiRet;
+	pThis->bResendLastOnRecon = (short) bResendLastOnRecon;
+	RETiRet;
+}
 static rsRetVal
 SetSendInit(tcpclt_t *pThis, rsRetVal (*pCB)(void*))
 {
@@ -427,6 +440,7 @@ CODESTARTobjQueryInterface(tcpclt)
 	pIf->Send = Send;
 
 	/* set functions */
+	pIf->SetResendLastOnRecon = SetResendLastOnRecon;
 	pIf->SetSendInit = SetSendInit;
 	pIf->SetSendFrame = SetSendFrame;
 	pIf->SetSendPrepRetry = SetSendPrepRetry;
