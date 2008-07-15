@@ -10,6 +10,15 @@ Version 3.19.10 (rgerhards), 2008-07-??
   is just a simple addition of faciltity and severity). I have changed
   this to use own, consistent, code for PRI calculation. Thank to HKS
   for reporting this bug.
+- bugfix (cosmetical): authorization was not checked when gtls handshake
+  completed immediately. While this sounds scary, the situation can not
+  happen in practice. We use non-blocking IO only for server-based gtls
+  session setup. As TLS requires the exchange of multiple frames before
+  the handshake completes, it simply is impossible to do this in one
+  step. However, it is useful to have the code path correct even for 
+  this case - otherwise, we may run into problems if the code is changed
+  some time later (e.g. to use blocking sockets). Thanks to varmojfekoj
+  for providing the patch.
 - important queue bugfix from 3.18.1 imported (see below)
 - cleanup of some debug messages
 ---------------------------------------------------------------------------

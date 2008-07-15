@@ -1394,7 +1394,10 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
 		pNew->rtryCall = gtlsRtry_handshake;
 		dbgprintf("GnuTLS handshake does not complete immediately - setting to retry (this is OK and normal)\n");
-	} else if(gnuRet != 0) {
+	} else if(gnuRet == 0) {
+		/* we got a handshake, now check authorization */
+		CHKiRet(gtlsChkPeerAuth(pNew));
+	} else {
 		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
 	}
 
