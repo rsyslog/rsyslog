@@ -266,7 +266,7 @@ Disabling inet domain sockets will limit risk to the local machine.
 If remote logging is enabled, messages can easily be spoofed and replayed.
 As the messages are transmitted in clear-text, an attacker might use
 the information obtained from the packets for malicious things. Also, an
-attacker might reply recorded messages or spoof a sender's IP address,
+attacker might replay recorded messages or spoof a sender's IP address,
 which could lead to a wrong perception of system activity. These can
 be prevented by using GSS-API authentication and encryption. Be sure
 to think about syslog network security before enabling it.
@@ -310,7 +310,7 @@ following options possible (all are case insensitive):
 .IP LogFuncFlow
 Print out the logical flow of functions (entering and exiting them)
 .IP FileTrace
-Ppecifies which files to trace LogFuncFlow. If not set (the
+Specifies which files to trace LogFuncFlow. If not set (the
 default), a LogFuncFlow trace is provided for all files. Set to
 limit it to the files specified.FileTrace may be specified multiple
 times, one file each (e.g. export RSYSLOG_DEBUG="LogFuncFlow
