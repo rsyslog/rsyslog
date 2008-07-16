@@ -3093,7 +3093,7 @@ int realMain(int argc, char **argv)
 		case 'Q': /* dont resolve hostnames in ACL to IPs */
 		case 's':
 		case 'u': /* misc user settings */
-		case 'w': /* disable disallowed host warnigs */
+		case 'w': /* disable disallowed host warnings */
 		case 'x': /* disable dns for remote messages */
 			CHKiRet(bufOptAdd(ch, optarg));
 			break;
@@ -3337,7 +3337,7 @@ int realMain(int argc, char **argv)
 			if(atoi(arg) == 1)
 				bParseHOSTNAMEandTAG = 0;
 			break;
-		case 'w':		/* disable disallowed host warnigs */
+		case 'w':		/* disable disallowed host warnings */
 			option_DisallowWarning = 0;
 			break;
 		case 'x':		/* disable dns for remote messages */

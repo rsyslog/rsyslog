@@ -19,6 +19,7 @@ Version 3.18.1 (rgerhards), 2008-07-??
   (20 minutes) in some code pathes, what looked to the user like mark
   messages were never written.
 - doc bugfix: fixed some typos in rsyslog.conf man page
+- fixed typo in source comment  - thanks to Rio Fujita
 ---------------------------------------------------------------------------
 Version 3.18.0 (rgerhards), 2008-07-11
 - begun a new v3-stable based on former 3.17.4 beta plus patches to
