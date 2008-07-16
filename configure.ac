@@ -326,6 +326,19 @@ if test "$enable_valgrind" = "yes"; then
 fi
 
 
+# compile diagnostic tools (small helpers usually not needed)
+AC_ARG_ENABLE(diagtools,
+        [AS_HELP_STRING([--enable-diagtools],[Enable diagnostic tools @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_diagtools="yes" ;;
+          no) enable_diagtools="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-diagtools) ;;
+         esac],
+        [enable_mail=no]
+)
+AM_CONDITIONAL(ENABLE_DIAGTOOLS, test x$enable_diagtools = xyes)
+
+
 
 # MySQL support
 AC_ARG_ENABLE(mysql,
@@ -666,6 +679,7 @@ echo "GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
+echo "Diagnostic tools enabled:                 $enable_diagtools"
 echo "valgrind support settings enabled:        $enable_valgrind"
 echo "rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "rsyslogd will be built:                   $enable_rsyslogd"

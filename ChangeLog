@@ -2,6 +2,7 @@
 Version 3.21.0  [DEVEL] (rgerhards), 2008-??-??
 - added a generic test driver for RainerScript plus some test cases
   to the testbench
+- added a samll diagnostic tool to obtain result of gethostname() API
 ---------------------------------------------------------------------------
 Version 3.19.11 [BETA] (rgerhards), 2008-??-??
 ---------------------------------------------------------------------------
