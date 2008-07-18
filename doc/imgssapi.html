@@ -36,7 +36,7 @@ Sets the maximum number of sessions supported</li>
 <p>This sets up a GSS server on port 1514 that also permits to
 receive plain tcp syslog messages (on the same port):<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imtcp.so # needs to be done just once
+<textarea rows="15" cols="60">$ModLoad imtcp # needs to be done just once
 $InputGSSServerRun 1514
 $InputGSSServerPermitPlainTCP on
 </textarea>

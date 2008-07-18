@@ -137,9 +137,9 @@ functionality, MySQL must be enabled in the config file BEFORE the
 first database table action is
 used. This is done by placing the</p>
 <blockquote>
-<p><code>$ModLoad ommysql.so</code></p>
+<p><code>$ModLoad ommysql</code></p>
 </blockquote>
-<p>directive at the begining of /etc/rsyslog.conf. For other databases, use their plugin name (e.g. ompgsql.so).</p>
+<p>directive at the begining of /etc/rsyslog.conf. For other databases, use their plugin name (e.g. ompgsql).</p>
 <p>Next, we need to tell rsyslogd to write data to the database.
 As we use the default schema, we do NOT need to define a template for
 this. We can use the hardcoded one (rsyslogd handles the proper
