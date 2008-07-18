@@ -171,11 +171,32 @@ Version 3.18.1 (rgerhards), 2008-07-??
   is just a simple addition of faciltity and severity). I have changed
   this to use own, consistent, code for PRI calculation. [Backport from
   3.19.10]
+- bugfix: remove PRI part from kernel message if it is present
+  Thanks to Michael Biebl for reporting this bug
 - bugfix: mark messages were not correctly written to text log files
   the markmessageinterval was not correctly propagated to all places
   where it was needed. This resulted in rsyslog using the default
   (20 minutes) in some code pathes, what looked to the user like mark
   messages were never written.
+- added a new property replacer option "sp-if-no-1st-sp" to cover
+  a problem with RFC 3164 based interpreation of tag separation. While
+  it is a generic approach, it fixes a format problem introduced in
+  3.18.0, where kernel messages no longer had a space after the tag.
+  This is done by a modifcation of the default templates.
+  Please note that this may affect some messages where there intentionally
+  is no space between the tag and the first character of the message
+  content. If so, this needs to be worked around via a specific
+  template. However, we consider this scenario to be quite remote and,
+  even if it exists, it is not expected that it will actually cause
+  problems with log parsers (instead, we assume the new default template
+  behaviour may fix previous problems with log parsers due to the 
+  missing space).
+- bugfix: imklog module was not correctly compiled for GNU/kFreeBSD.
+  Thanks to Petr Salinger for the patch
+- doc bugfix: property replacer options secpath-replace and
+  secpath-drop were not documented
+- doc bugfix: fixed some typos in rsyslog.conf man page
+- fixed typo in source comment  - thanks to Rio Fujita
 ---------------------------------------------------------------------------
 Version 3.18.0 (rgerhards), 2008-07-11
 - begun a new v3-stable based on former 3.17.4 beta plus patches to

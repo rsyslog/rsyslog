@@ -144,6 +144,7 @@ parsePRI(uchar **ppSz, int *piPri)
 
 	/* OK, we have a valid PRI */
 	*piPri = i;
+	*ppSz = pSz + 1; /* update msg ptr to position after PRI */
 
 finalize_it:
 	RETiRet;
