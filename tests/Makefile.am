@@ -2,7 +2,7 @@ check_PROGRAMS = rt_init rscript
 TESTS = $(check_PROGRAMS)
 
 test_files = testbench.h runtime-dummy.c
-EXTRA_DIST=*.rstest
+EXTRA_DIST=1.rstest 2.rstest err1.rstest
 
 rt_init_SOURCES = rt-init.c $(test_files)
 rt_init_CPPFLAGS =  -I$(top_srcdir) $(pthreads_cflags) $(rsrt_cflags) 
