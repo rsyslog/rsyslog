@@ -444,6 +444,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eCaseConv = tplCaseConvLower;
 		 } else if(!strcmp((char*)Buf, "uppercase")) {
 			pTpe->data.field.eCaseConv = tplCaseConvUpper;
+		 } else if(!strcmp((char*)Buf, "sp-if-no-1st-sp")) {
+			pTpe->data.field.options.bSPIffNo1stSP = 1;
 		 } else if(!strcmp((char*)Buf, "escape-cc")) {
 			pTpe->data.field.options.bEscapeCC = 1;
 		 } else if(!strcmp((char*)Buf, "drop-cc")) {
@@ -1012,6 +1014,15 @@ void tplPrintList(void)
 				}
 				if(pTpe->data.field.options.bSpaceCC) {
 				  	dbgprintf("[replace control-characters with space] ");
+				}
+				if(pTpe->data.field.options.bSecPathDrop) {
+				  	dbgprintf("[slashes are dropped] ");
+				}
+				if(pTpe->data.field.options.bSecPathReplace) {
+				  	dbgprintf("[slashes are replaced by '_'] ");
+				}
+				if(pTpe->data.field.options.bSPIffNo1stSP) {
+				  	dbgprintf("[SP iff no first SP] ");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dbgprintf("[drop last LF in msg] ");

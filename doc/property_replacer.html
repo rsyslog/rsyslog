@@ -253,7 +253,7 @@ Especially useful for PIX.</td>
 <td>format as RFC 3339 date</td>
 </tr>
 <tr>
-<td><b>escape-cc</b></td>
+<td valign="top"><b>escape-cc</b></td>
 <td>replace control characters (ASCII value 127 and values
 less then 32) with an escape sequence. The sequnce is
 "#&lt;charval&gt;" where charval is the 3-digit decimal value
@@ -263,18 +263,52 @@ Note: using this option requires that <a href="rsconf1_escapecontrolcharacterson
 is set to off.</td>
 </tr>
 <tr>
-<td><b>space-cc</b></td>
+<td valign="top"><b>space-cc</b></td>
 <td>replace control characters by spaces<br>
 Note: using this option requires that <a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a>
 is set to off.</td>
 </tr>
 <tr>
-<td><b>drop-cc</b></td>
+<td valign="top"><b>drop-cc</b></td>
 <td>drop control characters - the resulting string will
 neither contain control characters, escape sequences nor any other
 replacement character like space.<br>
 Note: using this option requires that <a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a>
 is set to off.</td>
+</tr>
+<tr>
+<td valign="top"><b>sp-if-no-1st-sp</b></td>
+<td>This option looks scary and should probably not be used by a user. For any field
+given, it returns either a single space character or no character at all. Field content
+is never returned. A space is returned if (and only if) the first character of the
+field's content is NOT a space. This option is kind of a hack to solve a problem rooted
+in RFC 3164: 3164 specifies no delimiter between the syslog tag sequence and the actual
+message text. Almost all implementation in fact delemit the two by a space. As of
+RFC 3164, this space is part of the message text itself. This leads to a problem when
+building the message (e.g. when writing to disk or forwarding). Should a delimiting
+space be included if the message does not start with one? If not, the tag is immediately
+followed by another non-space character, which can lead some log parsers to misinterpret
+what is the tag and what the message. The problem finally surfaced when the klog module
+was restructured and the tag correctly written. It exists with other message sources,
+too. The solution was the introduction of this special property replacer option. Now,
+the default template can contain a conditional space, which exists only if the
+message does not start with one. While this does not solve all issues, it should
+work good enough in the far majority of all cases. If you read this text and have
+no idea of what it is talking about - relax: this is a good indication you will never
+need this option. Simply forget about it ;)
+</td>
+</tr>
+<tr>
+<td valign="top"><b>secpath-drop</b></td>
+<td>Drops slashes inside the field (e.g. "a/b" becomes "ab").
+Useful for secure pathname generation (with dynafiles).
+</td>
+</tr>
+<tr>
+<td valign="top"><b>secpath-replace</b></td>
+<td>Replace slashes inside the field by an underscore. (e.g. "a/b" becomes "a_b").
+Useful for secure pathname generation (with dynafiles).
+</td>
 </tr>
 </tbody>
 </table>

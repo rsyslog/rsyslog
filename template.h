@@ -80,6 +80,7 @@ struct templateEntry {
 				unsigned bDropLastLF: 1;	/* drop last LF char in msg (PIX!) */
 				unsigned bSecPathDrop: 1;		/* drop slashes, replace dots, empty string */
 				unsigned bSecPathReplace: 1;		/* replace slashes, replace dots, empty string */
+				unsigned bSPIffNo1stSP: 1;		/* replace slashes, replace dots, empty string */
 			} options;		/* options as bit fields */
 		} field;
 	} data;
