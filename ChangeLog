@@ -18,6 +18,8 @@ Version 3.18.1 (rgerhards), 2008-07-??
   where it was needed. This resulted in rsyslog using the default
   (20 minutes) in some code pathes, what looked to the user like mark
   messages were never written.
+- bugfix: imklog module was not correctly compiled for GNU/kFreeBSD.
+  Thanks to Petr Salinger for the patch
 - doc bugfix: fixed some typos in rsyslog.conf man page
 - fixed typo in source comment  - thanks to Rio Fujita
 ---------------------------------------------------------------------------
