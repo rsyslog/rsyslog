@@ -13,6 +13,8 @@ Version 3.18.1 (rgerhards), 2008-07-??
   is just a simple addition of faciltity and severity). I have changed
   this to use own, consistent, code for PRI calculation. [Backport from
   3.19.10]
+- bugfix: remove PRI part from kernel message if it is present
+  Thanks to Michael Biebl for reporting this bug
 - bugfix: mark messages were not correctly written to text log files
   the markmessageinterval was not correctly propagated to all places
   where it was needed. This resulted in rsyslog using the default
