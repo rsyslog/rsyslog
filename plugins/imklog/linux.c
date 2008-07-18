@@ -140,7 +140,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 	{
 	  	/* Initialize kernel logging. */
 	  	ksyslog(1, NULL, 0);
-		imklogLogIntMsg(LOG_INFO, "imklogd %s, log source = ksyslog "
+		imklogLogIntMsg(LOG_INFO, "imklog %s, log source = ksyslog "
 		       "started.", VERSION);
 		return(kernel);
 	}
