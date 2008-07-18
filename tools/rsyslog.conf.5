@@ -28,8 +28,8 @@ file is the main configuration file for the
 which logs system messages on *nix systems.  This file specifies rules
 for logging.  For special features see the
 .BR rsyslogd (8)
-manpage. Ryslog.conf is backward-compatible with sysklogd's syslog.conf file. So if you migrate
-from syklogd you can rename it and it should work.
+manpage. Rsyslog.conf is backward-compatible with sysklogd's syslog.conf file. So if you migrate
+from sysklogd you can rename it and it should work.
 
 .B Note that this version of rsyslog ships with extensive documentation in html format.
 This is provided in the ./doc subdirectory and probably
@@ -55,7 +55,7 @@ Output module for GSS-enabled syslog
 .I ommysql
 Output module for MySQL
 .TP
-.I omprelp
+.I omrelp
 Output module for the reliable RELP protocol (prevents message loss). 
 For details, see below at imrelp and the html documentation.
 It can be used like this:
@@ -69,7 +69,7 @@ Output module for PostgreSQL
 .TP
 .I omlibdbi
 Generic database output module (Firebird/Interbase, MS SQL, Sybase,
-SQLLite, Ingres, Oracle, mSQL)
+SQLite, Ingres, Oracle, mSQL)
 .TP
 .I imfile
 Input module for text files
@@ -208,7 +208,7 @@ string ":omrelp:" in front of the hostname.
 .sp
 In the example above, messages are forwarded via UDP to the machine 192.168.0.1, the destination 
 port defaults to 514. Due to the nature of UDP, you will probably lose some messages in transit.
-If you expect high traffic volume, you can expect to lose a quite noticable number of messages
+If you expect high traffic volume, you can expect to lose a quite noticeable number of messages
 (the higher the traffic, the more likely and severe is message loss).
 
 .B If you would like to prevent message loss, use RELP:

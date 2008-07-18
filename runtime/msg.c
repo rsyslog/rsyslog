@@ -1988,6 +1988,32 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 #endif /* #ifdef FEATURE_REGEXP */
 	}
 
+	/* now check if we need to do our "SP if first char is non-space" hack logic */
+	if(*pRes && pTpe->data.field.options.bSPIffNo1stSP) {
+		char *pB;
+		uchar cFirst = *pRes;
+
+		/* here, we always destruct the buffer and return a new one */
+		pB = (char *) malloc(2 * sizeof(char));
+		if(pB == NULL) {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			*pbMustBeFreed = 0;
+			return "**OUT OF MEMORY**";
+		}
+		pRes = pB;
+		*pbMustBeFreed = 1;
+
+		if(cFirst == ' ') {
+			/* if we have a SP, we must return an empty string */
+			*pRes = '\0'; /* empty */
+		} else {
+			/* if it is no SP, we need to return one */
+			*pRes = ' ';
+			*(pRes+1) = '\0';
+		}
+	}
+
 	if(*pRes) {
 		/* case conversations (should go after substring, because so we are able to
 		 * work on the smallest possible buffer).

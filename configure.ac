@@ -27,6 +27,11 @@ case "${host}" in
     AC_DEFINE([OS_BSD], [1], [Indicator for a BSD OS])
     os_type="bsd"
   ;;
+  *-*-kfreebsd*)
+    # kernel is FreeBSD, but userspace is glibc - i.e. like linux
+    # do not DEFINE OS_BSD
+    os_type="bsd"
+  ;;
 esac
 
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
