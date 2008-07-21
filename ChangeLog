@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.18.2 (rgerhards), 2008-07-??
+---------------------------------------------------------------------------
 Version 3.18.1 (rgerhards), 2008-07-21
 - bugfix: potential segfault in creating message mutex in non-direct queue
   mode. rsyslogd segfaults on freeeBSD 7.0 (an potentially other platforms)
