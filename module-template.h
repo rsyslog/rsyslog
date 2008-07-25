@@ -343,7 +343,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 /* modInit()
  * This has an extra parameter, which is the specific name of the modInit
  * function. That is needed for built-in modules, which must have unique
- * names in order to link statically. Please note that this is alwaysy only
+ * names in order to link statically. Please note that this is always only
  * the case with modInit() and NO other entry point. The reason is that only
  * modInit() is visible form a linker/loader point of view. All other entry
  * points are passed via rsyslog-internal query functions and are defined
@@ -397,7 +397,7 @@ finalize_it:\
 /* modExit()
  * This is the counterpart to modInit(). It destroys a module and makes it ready for
  * unloading. It is similiar to freeInstance() for the instance data. Please note that
- * this entry point needs to free any module-globale data structures and registrations.
+ * this entry point needs to free any module-global data structures and registrations.
  * For example, the CfSysLineHandlers a module has registered need to be unregistered
  * here. This entry point is only called immediately before unloading of the module. So
  * it is likely to be destroyed. HOWEVER, the caller may decide to keep the module cached.
