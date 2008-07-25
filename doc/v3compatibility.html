@@ -32,11 +32,11 @@ are available by which modules.</p>
 <p>It is suggested that input modules be loaded in the top part
 of the config file. Here is an example, also highlighting the most
 important modules:</p>
-<p><b>$ModLoad immark&nbsp; # provides --MARK--
+<p><b>$ModLoad immark # provides --MARK--
 message capability<br>
-$ModLoad imudp&nbsp; # provides UDP syslog reception<br>
-$ModLoad imtcp&nbsp; # provides TCP syslog reception<br>
-</b><b>$ModLoad imgssapi&nbsp; # provides GSSAPI syslog
+$ModLoad imudp # provides UDP syslog reception<br>
+$ModLoad imtcp # provides TCP syslog reception<br>
+</b><b>$ModLoad imgssapi # provides GSSAPI syslog
 reception<br>
 </b><b>$ModLoad imuxsock # provides support for local
 system logging (e.g.
@@ -94,7 +94,7 @@ set the local address the server should listen to via <b>$UDPServerAddress
 &lt;ip&gt;</b> config directive.</p>
 <p>The following example configures an UDP syslog server at the
 local address 192.0.2.1 on port 514:</p>
-<p><b>$ModLoad imudp.so<br>
+<p><b>$ModLoad imudp<br>
 $UDPSeverAddress 192.0.2.1 # this MUST be before the $UDPServerRun
 directive!<br>
 $UDPServerRun 514</b></p>
@@ -102,7 +102,7 @@ $UDPServerRun 514</b></p>
 This is the default if no directive is specified.</p>
 <p>Please note that now multiple listeners are supported. For
 example, you can do the following:</p>
-<p><b>$ModLoad imudp.so<br>
+<p><b>$ModLoad imudp<br>
 $UDPSeverAddress 192.0.2.1 # this MUST be before the $UDPServerRun
 directive!<br>
 $UDPServerRun 514<br>
@@ -122,7 +122,7 @@ the "Run" directive, e.g. "<i>$UDPServerRun syslog</i>".</p>
 <h2>klogd</h2>
 <p>klogd has (finally) been replaced by a loadable input module.
 To enable klogd functionality, do</p>
-<p><b>$ModLoad imklog.so</b></p>
+<p><b>$ModLoad imklog</b></p>
 <p>Note that this can not be handled by the compatibility layer,
 as klogd was a separate binary.A limited set of klogd command line
 settings is now supported

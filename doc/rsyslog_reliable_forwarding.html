@@ -92,9 +92,9 @@ file names for the second action, else you will mess up your system.
 <p>A sample for forwarding to two hosts looks like this:
 <p>
 <textarea rows="20" cols="80">
-$ModLoad imuxsock.so # local message reception
+$ModLoad imuxsock             # local message reception
 
-$WorkDirectory /rsyslog/work # default location for work (spool) files
+$WorkDirectory /rsyslog/work  # default location for work (spool) files
 
 # start forwarding rule 1
 $ActionQueueType LinkedList   # use asynchronous processing

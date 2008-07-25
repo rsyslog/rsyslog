@@ -165,7 +165,9 @@ Version 3.19.0 (rgerhards), 2008-05-06
 - a lot of cleanup in regard to modularization
 - -c option no longer must be the first option - thanks to varmjofekoj
   for the patch
-Version 3.18.1 (rgerhards), 2008-07-??
+Version 3.18.2 (rgerhards), 2008-07-??
+---------------------------------------------------------------------------
+Version 3.18.1 (rgerhards), 2008-07-21
 - bugfix: potential segfault in creating message mutex in non-direct queue
   mode. rsyslogd segfaults on freeeBSD 7.0 (an potentially other platforms)
   if an action queue is running in any other mode than non-direct. The
@@ -205,6 +207,7 @@ Version 3.18.1 (rgerhards), 2008-07-??
   secpath-drop were not documented
 - doc bugfix: fixed some typos in rsyslog.conf man page
 - fixed typo in source comment  - thanks to Rio Fujita
+- some general cleanup (thanks to Michael Biebl)
 ---------------------------------------------------------------------------
 Version 3.18.0 (rgerhards), 2008-07-11
 - begun a new v3-stable based on former 3.17.4 beta plus patches to
