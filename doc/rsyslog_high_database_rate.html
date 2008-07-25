@@ -72,10 +72,11 @@ restarts, so even a reboot of the system will not cause any message loss.</p>
 disk queue and then configure your action. There is nothing else to do. With the 
 following simple config file, you log anything you receive to a MySQL database 
 and have buffering applied automatically.</p>
-<textarea rows="11" cols="80">$ModLoad ommysql.so  # load the output driver (use ompgsql.so for PostgreSQL)
-$ModLoad imudp.so    # network reception
-$UDPServerRun 514    # start a udp server at port 514
-$ModLoad imuxsock.so # local message reception
+<textarea rows="11" cols="80">
+$ModLoad ommysql  # load the output driver (use ompgsql for PostgreSQL)
+$ModLoad imudp    # network reception
+$UDPServerRun 514 # start a udp server at port 514
+$ModLoad imuxsock # local message reception
 
 $WorkDirectory /rsyslog/work # default location for work (spool) files
 $MainMsgQueueFileName mainq  # set file name, also enables disk mode
@@ -100,10 +101,11 @@ a single database or send messages reliably to another host, you can do all of
 this on their own queues, de-coupling their processing speeds.</p>
 <p>The configuration for the de-coupled database write involves just a few more 
 commands:</p>
-<textarea rows="11" cols="80">$ModLoad ommysql.so  # load the output driver (use ompgsql.so for PostgreSQL)
-$ModLoad imudp.so    # network reception
-$UDPServerRun 514    # start a udp server at port 514
-$ModLoad imuxsock.so # local message reception
+<textarea rows="11" cols="80">
+$ModLoad ommysql  # load the output driver (use ompgsql for PostgreSQL)
+$ModLoad imudp    # network reception
+$UDPServerRun 514 # start a udp server at port 514
+$ModLoad imuxsock # local message reception
 
 $WorkDirectory /rsyslog/work # default location for work (spool) files
 

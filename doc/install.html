@@ -58,11 +58,11 @@ to load plug-in modules to perform useful work (more about
 <a href="v3compatibility.html">compatibilty notes v3</a>). To load the most common plug-ins,
 add the following to the top of rsyslog.conf:</p>
 <p>
-$ModLoad immark.so   # provides --MARK-- message capability <br />
-$ModLoad imudp.so  # provides UDP syslog reception <br />
-$ModLoad imtcp.so  # provides TCP syslog reception and GSS-API (if compiled to support it) <br />
-$ModLoad imuxsock.so # provides support for local system logging (e.g. via logger command) <br />
-$ModLoad imklog.so # provides kernel logging support (previously done by rklogd) <br />
+$ModLoad immark # provides --MARK-- message capability <br />
+$ModLoad imudp # provides UDP syslog reception <br />
+$ModLoad imtcp # provides TCP syslog reception and GSS-API (if compiled to support it) <br />
+$ModLoad imuxsock # provides support for local system logging (e.g. via logger command) <br />
+$ModLoad imklog # provides kernel logging support (previously done by rklogd) <br />
 </p>
 Change rsyslog.conf for any further
 enhancements you would like to see. For example, you can add database writing as 
