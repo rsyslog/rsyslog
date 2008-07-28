@@ -94,6 +94,10 @@ if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
 endif
 
+if ENABLE_IMDIAG
+SUBDIRS += plugins/imdiag
+endif
+
 if ENABLE_MAIL
 SUBDIRS += plugins/ommail
 endif

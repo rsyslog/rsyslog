@@ -870,6 +870,7 @@ submitErrMsg(int iErr, uchar *msg)
 	RETiRet;
 }
 
+
 /* rgerhards 2004-11-09: the following is a function that can be used
  * to log a message orginating from the syslogd itself. In sysklogd code,
  * this is done by simply calling logmsg(). However, logmsg() is changed in

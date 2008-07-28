@@ -26,6 +26,7 @@
 
 #include "config.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])

@@ -1,8 +1,7 @@
 /* tcpsrv.c
  *
  * Common code for plain TCP based servers. This is currently being
- * utilized by imtcp and imgssapi. I suspect that when we implement
- * SSL/TLS, that module could also use tcpsrv.
+ * utilized by imtcp and imgssapi.
  *
  * There are actually two classes within the tcpserver code: one is
  * the tcpsrv itself, the other one is its sessions. This is a helper

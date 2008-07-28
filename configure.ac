@@ -339,7 +339,7 @@ AC_ARG_ENABLE(diagtools,
           no) enable_diagtools="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-diagtools) ;;
          esac],
-        [enable_mail=no]
+        [enable_diagtools=no]
 )
 AM_CONDITIONAL(ENABLE_DIAGTOOLS, test x$enable_diagtools = xyes)
 
@@ -563,6 +563,23 @@ AC_ARG_ENABLE(mail,
 AM_CONDITIONAL(ENABLE_MAIL, test x$enable_mail = xyes)
 
 
+# imdiag support (so far we do not need a library, but we need to turn this on and off)
+# note that we enable this be default, because an important point is to make
+# it available to users who do not know much about how to handle things. It
+# would complicate things if we first needed to tell them how to enable imdiag.
+# rgerhards, 2008-07-25
+AC_ARG_ENABLE(imdiag,
+        [AS_HELP_STRING([--enable-imdiag],[Enable imdiag @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_imdiag="yes" ;;
+          no) enable_imdiag="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imdiag) ;;
+         esac],
+        [enable_imdiag=no]
+)
+AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -653,6 +670,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imtemplate/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
+		plugins/imdiag/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -676,6 +694,7 @@ echo "PostgreSQL support enabled:               $enable_pgsql"
 echo "SNMP support enabled:                     $enable_snmp"
 echo "Mail support enabled:                     $enable_mail"
 echo "RELP support enabled:                     $enable_relp"
+echo "imdiag enabled:                           $enable_imdiag"
 echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
 echo "Large file support enabled:               $enable_largefile"
