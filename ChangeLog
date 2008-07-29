@@ -1,8 +1,9 @@
 ---------------------------------------------------------------------------
-Version 3.21.1  [DEVEL] (rgerhards), 2008-07-28
+Version 3.21.1  [DEVEL] (rgerhards), 2008-07-29
 - bugfix: no error was reported if the target of a $IncludeConfig
   could not be accessed.
 - added testbed for common config errors
+- added doc for -u option to rsyslogd man page
 - enhanced config file checking - no active actions are detected
 - added -N rsyslogd command line option for a config validation run
   (which does not execute actual syslogd code and does not interfere
@@ -11,7 +12,7 @@ Version 3.21.1  [DEVEL] (rgerhards), 2008-07-28
   if the config contains no active actions
 - rsyslogd error messages are now reported to stderr by default. can be
   turned off by the new "$ErrorMessagesToStderr off" directive
- Thanks to HKS for suggesting these new features.
+ Thanks to HKS for suggesting the new features.
 ---------------------------------------------------------------------------
 Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
 - starts a new devel branch

@@ -658,7 +658,6 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
-		tests/Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
 		plugins/imtcp/Makefile \
@@ -678,7 +677,8 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omrelp/Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
-		plugins/omsnmp/Makefile])
+		plugins/omsnmp/Makefile \
+		tests/Makefile])
 AC_OUTPUT
 
 echo "****************************************************"
