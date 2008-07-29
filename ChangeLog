@@ -1,4 +1,15 @@
 ---------------------------------------------------------------------------
+Version 3.21.1  [DEVEL] (rgerhards), 2008-07-28
+- enhanced config file checking - no active actions are detected
+- added -N rsyslogd command line option for a config validation run
+  (which does not execute actual syslogd code and does not interfere
+  with a running instance)
+- somewhat improved emergency configuration. It is now also selected
+  if the config contains no active actions
+- rsyslogd error messages are now reported to stderr by default. can be
+  turned off by the new "$ErrorMessagesToStderr off" directive
+ Thanks to HKS for suggesting these new features.
+---------------------------------------------------------------------------
 Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
 - starts a new devel branch
 - added a generic test driver for RainerScript plus some test cases

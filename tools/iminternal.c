@@ -185,6 +185,5 @@ rsRetVal modExitIminternal(void)
 	RETiRet;
 }
 
-/*
- * vi:set ai:
+/* vim:set ai:
  */

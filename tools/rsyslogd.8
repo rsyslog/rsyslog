@@ -21,6 +21,9 @@ rsyslogd \- reliable and extended syslogd
 .I hostlist
 ]
 .RB [ " \-n " ]
+.RB [ " \-N "
+.I level
+]
 .br
 .RB [ " \-q " ]
 .RB [ " \-Q " ]
@@ -162,6 +165,19 @@ and not the fqdn.  Multiple hosts may be specified using the colon
 .TP
 .B "\-n"
 Avoid auto-backgrounding.  This is needed especially if the
+.B rsyslogd
+is started and controlled by
+.BR init (8).
+.TP
+.B "\-N " "level"
+Do a coNfig check. Do NOT run in regular mode, just check configuration
+file correctness.
+This option is meant to verify a config file. To do so, run rsyslogd
+interactively in foreground, specifying -f <config-file> and -N level.
+The level argument modifies behaviour. Currently, 0 is the same as
+not specifying the -N option at all (so this makes limited sense) and
+1 actually activates the code. Later, higher levels will mean more
+verbosity (this is a forward-compatibility option).
 .B rsyslogd
 is started and controlled by
 .BR init (8).

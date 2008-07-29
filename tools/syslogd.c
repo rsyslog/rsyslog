@@ -255,6 +255,7 @@ static int bFinished = 0;	/* used by termination signal handler, read-only excep
 				 * is either 0 or the number of the signal that requested the
  				 * termination.
 				 */
+static int iConfigVerify = 0;	/* is this just a config verify run? */
 
 /* Intervals at which we flush out "message repeated" messages,
  * in seconds after previous message is logged.  After each flush,
@@ -285,6 +286,7 @@ static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list i
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
 static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
+static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition to everything else)? */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
 int	iActExecOnceInterval = 0; /* execute action once every nn seconds */
@@ -418,7 +420,7 @@ static void processImInternal(void);
 static int usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [-cversion] [-46AdnqQvwx] [-lhostlist] [-sdomainlist]\n"
-			"                [-fconffile] [-ipidfile]\n"
+			"                [-fconffile] [-ipidfile] [-Nlevel]\n"
 			"To run rsyslogd in native mode, use \"rsyslogd -c3 <other options>\"\n\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
@@ -908,6 +910,18 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	pMsg->bParseHOSTNAME = 0;
 	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	flags |= INTERNAL_MSG;
+
+	/* we now check if we should print internal messages out to stderr. This was
+	 * suggested by HKS as a way to help people troubleshoot rsyslog configuration
+	 * (by running it interactively. This makes an awful lot of sense, so I add
+	 * it here. -- rgerhards, 2008-07-28
+	 * Note that error messages can not be disable during a config verify. This
+	 * permits us to process unmodified config files which otherwise contain a
+	 * supressor statement.
+	 */
+	if(bErrMsgToStderr || iConfigVerify) {
+		fprintf(stderr, "rsyslogd: %s\n", msg);
+	}
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pri, pMsg, flags);
@@ -1772,7 +1786,7 @@ void legacyOptsParseTCP(char ch, char *arg)
 	static char conflict = '\0';
 
 	if((conflict == 'g' && ch == 't') || (conflict == 't' && ch == 'g')) {
-		fprintf(stderr, "rsyslog: If you want to use both -g and -t, use directives instead, -%c ignored.\n", ch);
+		fprintf(stderr, "rsyslogd: If you want to use both -g and -t, use directives instead, -%c ignored.\n", ch);
 		return;
 	} else
 		conflict = ch;
@@ -2191,11 +2205,15 @@ startInputModules(void)
 
 /* INIT -- Initialize syslogd from configuration table
  * init() is called at initial startup AND each time syslogd is HUPed
+ * Note that if iConfigVerify is set, only the config file is verified but nothing
+ * else happens. -- rgerhards, 2008-07-28
  */
-static void
+static rsRetVal
 init(void)
 {
 	DEFiRet;
+	rsRetVal localRet;
+	int iNbrActions;
 	char cbuf[BUFSIZ];
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
@@ -2238,22 +2256,42 @@ init(void)
 	 */
 	conf.cfsysline((uchar*)"ResetConfigVariables");
 
+	conf.ReInitConf();
+
 	/* open the configuration file */
-	if((iRet = conf.processConfFile(ConfFile)) != RS_RET_OK) {
+	localRet = conf.processConfFile(ConfFile);
+	CHKiRet(conf.GetNbrActActions(&iNbrActions));
+
+	if(localRet != RS_RET_OK) {
+		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", ConfFile);
+	} else if(iNbrActions == 0) {
+		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no active actions configured. Inputs will "
+			 "run, but no output whatsoever is created.");
+	}
+
+	if(localRet != RS_RET_OK || iNbrActions == 0) {
 		/* rgerhards: this code is executed to set defaults when the
 		 * config file could not be opened. We might think about
 		 * abandoning the run in this case - but this, too, is not
 		 * very clever... So we stick with what we have.
 		 * We ignore any errors while doing this - we would be lost anyhow...
 		 */
+		errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - fix rsyslog config file!");
 		selector_t *f = NULL;
-		char szTTYNameBuf[_POSIX_TTY_NAME_MAX+1]; /* +1 for NULL character */
-		dbgprintf("primary config file could not be opened - using emergency definitions.\n");
+
+		/* note: we previously used _POSIY_TTY_NAME_MAX+1, but this turned out to be
+		 * too low on linux... :-S   -- rgerhards, 2008-07-28
+		 */
+		char szTTYNameBuf[128];
 		conf.cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
+		conf.cfline((uchar*)"syslog.*\t" _PATH_CONSOLE, &f);
 		conf.cfline((uchar*)"*.PANIC\t*", &f);
+		conf.cfline((uchar*)"syslog.*\troot", &f);
 		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
 			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
 			conf.cfline((uchar*)cbuf, &f);
+		} else {
+			dbgprintf("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
 		}
 		selectorAddList(f);
 	}
@@ -2290,6 +2328,12 @@ init(void)
 			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 	}
+
+	/* we are done checking the config - now validate if we should actually run or not.
+	 * If not, terminate. -- rgerhards, 2008-07-25
+	 */
+	if(iConfigVerify)
+		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
 
 	/* switch the message object to threaded operation, if necessary */
 	if(MainMsgQueType == QUEUETYPE_DIRECT || iMainMsgQueueNumWorkers > 1) {
@@ -2372,7 +2416,9 @@ init(void)
 	sigaction(SIGHUP, &sigAct, NULL);
 
 	dbgprintf(" (re)started.\n");
-	ENDfunc
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -2680,6 +2726,7 @@ static rsRetVal loadBuildInModules(void)
 		 NULL, &bDebugPrintCfSysLineHandlerList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &bErrMsgToStderr, NULL));
 
 	/* now add other modules handlers (we should work on that to be able to do it in ClassInit(), but so far
 	 * that is not possible). -- rgerhards, 2008-01-28
@@ -2735,9 +2782,9 @@ static void printVersion(void)
  * move code out of the too-long main() function.
  * rgerhards, 2007-10-17
  */
-static void mainThread()
+static rsRetVal mainThread()
 {
-	BEGINfunc
+	DEFiRet;
 	uchar *pTmp;
 
 	/* Note: signals MUST be processed by the thread this code is running in. The reason
@@ -2766,7 +2813,8 @@ static void mainThread()
         pTmp = template_StdPgSQLFmt;
         tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
 
-	init();
+	CHKiRet(init());
+
 	if(Debug) {
 		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 		debugging_on = 1;
@@ -2785,7 +2833,9 @@ static void mainThread()
 	dbgprintf("initialization completed, transitioning to regular run mode\n");
 
 	mainloop();
-	ENDfunc
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -2968,6 +3018,98 @@ finalize_it:
 }
 
 
+/* global initialization, to be done only once and before the mainloop is started.
+ * rgerhards, 2008-07-28 (extracted from realMain())
+ */
+static rsRetVal
+doGlblProcessInit(void)
+{
+	struct sigaction sigAct;
+	int num_fds;
+	int i;
+	DEFiRet;
+
+	checkPermissions();
+	thrdInit();
+
+	if( !(Debug || NoFork) )
+	{
+		dbgprintf("Checking pidfile.\n");
+		if (!check_pid(PidFile))
+		{
+			memset(&sigAct, 0, sizeof (sigAct));
+			sigemptyset(&sigAct.sa_mask);
+			sigAct.sa_handler = doexit;
+			sigaction(SIGTERM, &sigAct, NULL);
+
+			if (fork()) {
+				/* Parent process
+				 */
+				sleep(300);
+				/* Not reached unless something major went wrong.  5
+				 * minutes should be a fair amount of time to wait.
+				 * Please note that this procedure is important since
+				 * the father must not exit before syslogd isn't
+				 * initialized or the klogd won't be able to flush its
+				 * logs.  -Joey
+				 */
+				exit(1); /* "good" exit - after forking, not diasabling anything */
+			}
+			num_fds = getdtablesize();
+			for (i= 0; i < num_fds; i++)
+				(void) close(i);
+			untty();
+		}
+		else
+		{
+			fputs(" Already running.\n", stderr);
+			exit(1); /* "good" exit, done if syslogd is already running */
+		}
+	}
+	else
+		debugging_on = 1;
+
+	/* tuck my process id away */
+	dbgprintf("Writing pidfile %s.\n", PidFile);
+	if (!check_pid(PidFile))
+	{
+		if (!write_pid(PidFile))
+		{
+			fputs("Can't write pid.\n", stderr);
+			exit(1); /* exit during startup - questionable */
+		}
+	}
+	else
+	{
+		fputs("Pidfile (and pid) already exist.\n", stderr);
+		exit(1); /* exit during startup - questionable */
+	}
+	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
+
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+
+	sigAct.sa_handler = sigsegvHdlr;
+	sigaction(SIGSEGV, &sigAct, NULL);
+	sigAct.sa_handler = sigsegvHdlr;
+	sigaction(SIGABRT, &sigAct, NULL);
+	sigAct.sa_handler = doDie;
+	sigaction(SIGTERM, &sigAct, NULL);
+	sigAct.sa_handler = Debug ? doDie : SIG_IGN;
+	sigaction(SIGINT, &sigAct, NULL);
+	sigaction(SIGQUIT, &sigAct, NULL);
+	sigAct.sa_handler = reapchild;
+	sigaction(SIGCHLD, &sigAct, NULL);
+	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
+	sigaction(SIGUSR1, &sigAct, NULL);
+	sigAct.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sigAct, NULL);
+	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
+
+	RETiRet;
+}
+
+
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
  */
@@ -2975,14 +3117,11 @@ int realMain(int argc, char **argv)
 {	
 	DEFiRet;
 
-	register int i;
 	register uchar *p;
-	int num_fds;
 	int ch;
 	struct hostent *hent;
 	extern int optind;
 	extern char *optarg;
-	struct sigaction sigAct;
 	int bEOptionWasGiven = 0;
 	int bImUxSockLoaded = 0; /* already generated a $ModLoad imuxsock? */
 	char *arg;	/* for command line option processing */
@@ -3004,7 +3143,7 @@ int realMain(int argc, char **argv)
 	 * only when actually neeeded. 
 	 * rgerhards, 2008-04-04
 	 */
-	while ((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nopqQr::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nN:opqQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -3016,6 +3155,7 @@ int realMain(int argc, char **argv)
 		case 'l':
 		case 'm': /* mark interval */
 		case 'n': /* don't fork */
+		case 'N': /* enable config verify mode */
                 case 'o':
                 case 'p':
 		case 'q': /* add hostname if DNS resolving has failed */
@@ -3214,6 +3354,11 @@ int realMain(int argc, char **argv)
 		case 'n':		/* don't fork */
 			NoFork = 1;
 			break;
+		case 'N':		/* enable config verify mode */
+RUNLOG;
+			iConfigVerify = atoi(arg);
+RUNLOG;
+			break;
                 case 'o':
 			if(iCompatibilityMode < 3) {
 				if(!bImUxSockLoaded) {
@@ -3282,6 +3427,11 @@ int realMain(int argc, char **argv)
 	if(iRet != RS_RET_END_OF_LINKEDLIST)
 		FINALIZE;
 
+	if(iConfigVerify) {
+		fprintf(stderr, "rsyslogd: version %s, config validation run (level %d), master config %s\n",
+			VERSION, iConfigVerify, ConfFile);
+	}
+
 	/* process compatibility mode settings */
 	if(iCompatibilityMode < 3) {
 		errmsg.LogError(0, NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
@@ -3305,86 +3455,10 @@ int realMain(int argc, char **argv)
 					    "more and cast your vote if you want us to keep this feature.");
 	}
 
-	checkPermissions();
-	thrdInit();
+	if(!iConfigVerify)
+		CHKiRet(doGlblProcessInit());
 
-	if( !(Debug || NoFork) )
-	{
-		dbgprintf("Checking pidfile.\n");
-		if (!check_pid(PidFile))
-		{
-			memset(&sigAct, 0, sizeof (sigAct));
-			sigemptyset(&sigAct.sa_mask);
-			sigAct.sa_handler = doexit;
-			sigaction(SIGTERM, &sigAct, NULL);
-
-			if (fork()) {
-				/*
-				 * Parent process
-				 */
-				sleep(300);
-				/*
-				 * Not reached unless something major went wrong.  5
-				 * minutes should be a fair amount of time to wait.
-				 * Please note that this procedure is important since
-				 * the father must not exit before syslogd isn't
-				 * initialized or the klogd won't be able to flush its
-				 * logs.  -Joey
-				 */
-				exit(1); /* "good" exit - after forking, not diasabling anything */
-			}
-			num_fds = getdtablesize();
-			for (i= 0; i < num_fds; i++)
-				(void) close(i);
-			untty();
-		}
-		else
-		{
-			fputs(" Already running.\n", stderr);
-			exit(1); /* "good" exit, done if syslogd is already running */
-		}
-	}
-	else
-		debugging_on = 1;
-
-	/* tuck my process id away */
-	dbgprintf("Writing pidfile %s.\n", PidFile);
-	if (!check_pid(PidFile))
-	{
-		if (!write_pid(PidFile))
-		{
-			fputs("Can't write pid.\n", stderr);
-			exit(1); /* exit during startup - questionable */
-		}
-	}
-	else
-	{
-		fputs("Pidfile (and pid) already exist.\n", stderr);
-		exit(1); /* exit during startup - questionable */
-	}
-	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-
-	sigAct.sa_handler = sigsegvHdlr;
-	sigaction(SIGSEGV, &sigAct, NULL);
-	sigAct.sa_handler = sigsegvHdlr;
-	sigaction(SIGABRT, &sigAct, NULL);
-	sigAct.sa_handler = doDie;
-	sigaction(SIGTERM, &sigAct, NULL);
-	sigAct.sa_handler = Debug ? doDie : SIG_IGN;
-	sigaction(SIGINT, &sigAct, NULL);
-	sigaction(SIGQUIT, &sigAct, NULL);
-	sigAct.sa_handler = reapchild;
-	sigaction(SIGCHLD, &sigAct, NULL);
-	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
-	sigaction(SIGUSR1, &sigAct, NULL);
-	sigAct.sa_handler = SIG_IGN;
-	sigaction(SIGPIPE, &sigAct, NULL);
-	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
-
-	mainThread();
+	CHKiRet(mainThread());
 
 	/* do any de-init's that need to be done AFTER this comment */
 
@@ -3393,9 +3467,12 @@ int realMain(int argc, char **argv)
 	thrdExit();
 
 finalize_it:
-	if(iRet != RS_RET_OK)
-		fprintf(stderr, "rsyslogd run failed with error %d\n(see rsyslog.h "
-				"or http://www.rsyslog.com/errcode to learn what that number means)\n", iRet);
+	if(iRet == RS_RET_VALIDATION_RUN) {
+		fprintf(stderr, "rsyslogd: End of config validation run. Bye.\n");
+	} else if(iRet != RS_RET_OK) {
+		fprintf(stderr, "rsyslogd run failed with error %d (see rsyslog.h "
+				"or try http://www.rsyslog.com/e/%d to learn what that number means)\n", iRet, iRet*-1);
+	}
 
 	ENDfunc
 	return 0;

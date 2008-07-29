@@ -83,6 +83,8 @@ DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 
+static int iNbrActions; /* number of actions the running config has. Needs to be init on ReInitConf() */
+
 /* The following global variables are used for building
  * tag and host selector lines during startup and config reload.
  * This is stored as a global variable pool because of its ease. It is
@@ -1060,6 +1062,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 					pAction->f_ReduceRepeated = 0;
 				}
 				pAction->bEnabled = 1; /* action is enabled */
+				iNbrActions++;	/* one more active action! */
 			}
 			break;
 		}
@@ -1159,6 +1162,34 @@ cfline(uchar *line, selector_t **pfCurr)
 }
 
 
+/* Reinitialize the configuration subsystem. This is a "work-around" to the fact
+ * that we do not yet have actual config objects. This method is to be called
+ * whenever a totally new config is started (which means on startup and HUP).
+ * Note that it MUST NOT be called for an included config file.
+ * rgerhards, 2008-07-28
+ */
+static rsRetVal
+ReInitConf(void)
+{
+	DEFiRet;
+	iNbrActions = 0;	/* this is what we created the function for ;) - action count is reset */
+	RETiRet;
+}
+
+
+/* return the current number of active actions
+ * rgerhards, 2008-07-28
+ */
+static rsRetVal
+GetNbrActActions(int *piNbrActions)
+{
+	DEFiRet;
+	assert(piNbrActions != NULL);
+	*piNbrActions = iNbrActions;
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
@@ -1179,6 +1210,8 @@ CODESTARTobjQueryInterface(conf)
 	pIf->doIncludeLine = doIncludeLine;
 	pIf->cfline = cfline;
 	pIf->processConfFile = processConfFile;
+	pIf->ReInitConf = ReInitConf;
+	pIf->GetNbrActActions = GetNbrActActions;
 
 finalize_it:
 ENDobjQueryInterface(conf)
