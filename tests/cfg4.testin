@@ -1,3 +1,10 @@
+# This is more or less the sample config, but without imklog being
+# active. imklog must not always be present and as such may spoil
+# our testing result. The core point at this test is that a valid
+# config file should not lead to any error messages.
+# It may be a good idea to update this file from time to time, so that
+# it contains a reasonable complex config sample.
+
 # if you experience problems, check
 # http://www.rsyslog.com/troubleshoot for assistance
 
@@ -7,7 +14,7 @@
 
 $ModLoad immark   # provides --MARK-- message capability
 $ModLoad imuxsock # provides support for local system logging (e.g. via logger command)
-$ModLoad imklog   # kernel logging (formerly provided by rklogd)
+#$ModLoad imklog   # kernel logging (formerly provided by rklogd)
 
 # Log all kernel messages to the console.
 # Logging much else clutters up the screen.

@@ -1,5 +1,5 @@
 check_PROGRAMS = rt_init rscript
-TESTS = $(check_PROGRAMS)
+TESTS = $(check_PROGRAMS) cfg.sh
 
 test_files = testbench.h runtime-dummy.c
 EXTRA_DIST=1.rstest 2.rstest err1.rstest

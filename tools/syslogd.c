@@ -3124,6 +3124,8 @@ int realMain(int argc, char **argv)
 	extern char *optarg;
 	int bEOptionWasGiven = 0;
 	int bImUxSockLoaded = 0; /* already generated a $ModLoad imuxsock? */
+	int iHelperUOpt;
+	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
 	uchar legacyConfLine[80];
 	uchar *LocalHostName;
@@ -3143,7 +3145,7 @@ int realMain(int argc, char **argv)
 	 * only when actually neeeded. 
 	 * rgerhards, 2008-04-04
 	 */
-	while ((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nN:opqQr::s:t:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nN:opqQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -3218,9 +3220,6 @@ int realMain(int argc, char **argv)
 	/* we are done with the initial option parsing and processing. Now we init the system. */
 
 	ppid = getpid();
-
-	if(chdir ("/") != 0)
-		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
 
 	CHKiRet_Hdlr(InitGlobalClasses()) {
 		fprintf(stderr, "rsyslogd initializiation failed - global classes could not be initialized.\n"
@@ -3355,9 +3354,7 @@ int realMain(int argc, char **argv)
 			NoFork = 1;
 			break;
 		case 'N':		/* enable config verify mode */
-RUNLOG;
 			iConfigVerify = atoi(arg);
-RUNLOG;
 			break;
                 case 'o':
 			if(iCompatibilityMode < 3) {
@@ -3409,8 +3406,11 @@ RUNLOG;
 				fprintf(stderr,	"-t option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
 		case 'u':		/* misc user settings */
-			if(atoi(arg) == 1)
+			iHelperUOpt = atoi(arg);
+			if(iHelperUOpt & 0x01)
 				bParseHOSTNAMEandTAG = 0;
+			if(iHelperUOpt & 0x02)
+				bChDirRoot = 0;
 			break;
 		case 'w':		/* disable disallowed host warnigs */
 			glbl.SetOption_DisallowWarning(0);
@@ -3431,6 +3431,12 @@ RUNLOG;
 		fprintf(stderr, "rsyslogd: version %s, config validation run (level %d), master config %s\n",
 			VERSION, iConfigVerify, ConfFile);
 	}
+
+	if(bChDirRoot) {
+		if(chdir("/") != 0)
+			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
+	}
+
 
 	/* process compatibility mode settings */
 	if(iCompatibilityMode < 3) {

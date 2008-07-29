@@ -250,6 +250,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_GSS_ERR = -2101, /**< generic error occured in GSSAPI subsystem */
 	RS_RET_CERTLESS = -2102, /**< state: we run without machine cert (this may be OK) */
 	RS_RET_NO_ACTIONS = -2103, /**< no active actions are configured (no output will be created) */
+	RS_RET_CONF_FILE_NOT_FOUND = -2104, /**< config file or directory not found */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

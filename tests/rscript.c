@@ -2,6 +2,7 @@
  * also serves as the most simplistic sample of how a test can be coded.
  *
  * Part of the testbench for rsyslog.
+ *
  * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.

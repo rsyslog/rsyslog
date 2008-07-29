@@ -190,6 +190,7 @@ doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	char pattern[MAXFNAME];
 	uchar *cfgFile;
 	glob_t cfgFiles;
+	int result;
 	size_t i = 0;
 	struct stat fileInfo;
 
@@ -197,14 +198,21 @@ doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	ASSERT(*pp != NULL);
 
 	if(getSubString(pp, (char*) pattern, sizeof(pattern) / sizeof(char), ' ')  != 0) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not parse config file name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	/* Use GLOB_MARK to append a trailing slash for directories.
 	 * Required by doIncludeDirectory().
 	 */
-	glob(pattern, GLOB_MARK, NULL, &cfgFiles);
+	result = glob(pattern, GLOB_MARK, NULL, &cfgFiles);
+	if(result != 0) {
+		char errStr[1024];
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "error accessing config file or directory '%s': %s",
+				pattern, errStr);
+		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+	}
 
 	for(i = 0; i < cfgFiles.gl_pathc; i++) {
 		cfgFile = (uchar*) cfgFiles.gl_pathv[i];
