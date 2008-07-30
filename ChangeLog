@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.21.1  [DEVEL] (rgerhards), 2008-07-29
+Version 3.21.1  [DEVEL] (rgerhards), 2008-07-30
 - bugfix: no error was reported if the target of a $IncludeConfig
   could not be accessed.
 - added testbed for common config errors
