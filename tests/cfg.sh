@@ -68,6 +68,7 @@ fi;
 # TODO: re-enable the following checks. They need to have support in
 # rsyslogd so that the log file name is NOT contained in the error
 # messages - this prevents proper comparison in make distcheck
+rm -f tmp
 exit 0
 
 #
