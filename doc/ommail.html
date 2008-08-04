@@ -50,7 +50,10 @@ standard SMTP port.</li>
 <li><span style="font-weight: bold;">$ActionMailFrom</span><br>
 The email address used as the senders address. There is no default.</li>
 <li><span style="font-weight: bold;">$ActionMailTo</span><br>
-The recipients email address. There is no default.</li>
+The recipient email addresses. There is no default. To specify multiple
+recpients, repeat this directive as often as needed. Note: <b>This directive
+must be specified for each new action and is automatically reset.</b> 
+[Multiple recipients are supported for 3.21.2 and above.]</li>
 <li><span style="font-weight: bold;">$ActionMailSubject</span><br>
 The name of the <span style="font-weight: bold;">template</span>
 to be used as the mail subject. If this is not specified, a more or
@@ -112,14 +115,28 @@ $ActionExecOnlyOnceEveryInterval 21600
 # the if ... then ... mailBody mus be on one line!
 if $msg contains 'hard disk fatal failure' then :ommail:;mailBody
 </textarea>
+<p>The sample below is the same, but sends mail to two recipients:</p>
+<textarea rows="15" cols="80">$ModLoad ommail
+$ActionMailSMTPServer mail.example.net
+$ActionMailFrom rsyslog@example.net
+$ActionMailTo operator@example.net
+$ActionMailTo admin@example.net
+$template mailSubject,"disk problem on %hostname%"
+$template mailBody,"RSYSLOG Alert\r\nmsg='%msg%'"
+$ActionMailSubject mailSubject
+# make sure we receive a mail only once in six
+# hours (21,600 seconds ;))
+$ActionExecOnlyOnceEveryInterval 21600
+# the if ... then ... mailBody mus be on one line!
+if $msg contains 'hard disk fatal failure' then :ommail:;mailBody
+</textarea>
 <p>A more advanced example plus a discussion on using the email feature
 inside a reliable system can be found in Rainer's blogpost
 "<a style="font-style: italic;" href="http://rgerhards.blogspot.com/2008/04/why-is-native-email-capability.html">Why
 is native email capability an advantage for a syslogd?</a>"
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
-<p><font size="2">This documentation is part of the
-<a href="http://www.rsyslog.com/">rsyslog</a>
+<p><font size="2">This documentation is part of the <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
 Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer
 Gerhards</a> and

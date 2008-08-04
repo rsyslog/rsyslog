@@ -4,6 +4,11 @@ Version 3.21.2  [DEVEL] (rgerhards), 2008-08-??
   override the hostname being used on a local unix socket. This is useful
   for differentiating "hosts" running in several jails. Feature was
   suggested by David Darville, thanks for the suggestion.
+- enhanced ommail to support multiple email recipients. This is done by
+  specifying $ActionMailTo multiple times. Note that this introduces a
+  small incompatibility to previous config file syntax: the recipient
+  list is now reset for each action (we honestly believe that will
+  not cause any problem - apologies if it does).
 ---------------------------------------------------------------------------
 Version 3.21.1  [DEVEL] (rgerhards), 2008-07-30
 - bugfix: no error was reported if the target of a $IncludeConfig
