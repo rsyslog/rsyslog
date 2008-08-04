@@ -9,6 +9,7 @@ Version 3.21.2  [DEVEL] (rgerhards), 2008-08-??
   small incompatibility to previous config file syntax: the recipient
   list is now reset for each action (we honestly believe that will
   not cause any problem - apologies if it does).
+- enhanced troubleshooting documentation
 ---------------------------------------------------------------------------
 Version 3.21.1  [DEVEL] (rgerhards), 2008-07-30
 - bugfix: no error was reported if the target of a $IncludeConfig
