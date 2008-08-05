@@ -509,6 +509,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * applies to TCP-based syslog only and is ignored when specified with UDP).
 	 * That is not yet implemented.
 	 * rgerhards, 2006-12-07
+	 * In order to support IPv6 addresses, we must introduce an extension to
+	 * the hostname. If it is in square brackets, whatever is in them is treated as
+	 * the hostname - without any exceptions ;) -- rgerhards, 2008-08-05
 	 */
 	if(*p == '(') {
 		/* at this position, it *must* be an option indicator */
@@ -555,11 +558,22 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			 */
 			errmsg.LogError(0, NO_ERRCODE, "Option block not terminated in forwarding action.");
 	}
+
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06
 	 */
-	for(q = p ; *p && *p != ';' && *p != ':' && *p != '#' ; ++p)
-		/* JUST SKIP */;
+	if(*p == '[') { /* everything is hostname upto ']' */
+		++p; /* skip '[' */
+		for(q = p ; *p && *p != ']' ; ++p)
+			/* JUST SKIP */;
+		if(*p == ']') {
+			*p = '\0'; /* trick to obtain hostname (later)! */
+			++p; /* eat it */
+		}
+	} else { /* traditional view of hostname */
+		for(q = p ; *p && *p != ';' && *p != ':' && *p != '#' ; ++p)
+			/* JUST SKIP */;
+	}
 
 	pData->port = NULL;
 	if(*p == ':') { /* process port */
@@ -594,6 +608,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	} else {
 		CHKmalloc(pData->f_hname = strdup((char*) q));
 	}
+dbgprintf("hostname '%s', port '%s'\n", pData->f_hname, pData->port);
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,

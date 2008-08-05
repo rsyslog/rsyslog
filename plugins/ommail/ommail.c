@@ -129,6 +129,8 @@ addRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	pNew->pNext = lstRcpt;
 	lstRcpt = pNew;
 
+	dbgprintf("ommail::addRcpt adds recipient %s\n", pNewVal);
+
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pNew != NULL)
@@ -155,6 +157,7 @@ WriteRcpts(instanceData *pData, uchar *pszOp, size_t lenOp, int iStatusToCheck)
 	assert(lenOp != 0);
 
 	for(pRcpt = pData->md.smtp.lstRcpt ; pRcpt != NULL ; pRcpt = pRcpt->pNext) {
+		dbgprintf("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo); 
 		CHKiRet(Send(pData->md.smtp.sock, (char*)pszOp, lenOp));
 		CHKiRet(Send(pData->md.smtp.sock, ": <", sizeof(": <") - 1));
 		CHKiRet(Send(pData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
@@ -695,6 +698,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+
+	dbgprintf("ommail version %s initializing\n", VERSION);
 
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &pszSrv, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &pszSrvPort, STD_LOADABLE_MODULE_ID));
