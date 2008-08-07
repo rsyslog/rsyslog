@@ -54,6 +54,8 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 
+static int iActExecEveryNthOccur = 0; /* execute action every n-th occurence (0,1=always) */
+static time_t iActExecEveryNthOccurTO = 0; /* timeout for n-occurence setting (in seconds, 0=never) */
 static int glbliActionResumeInterval = 30;
 int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
 
@@ -174,6 +176,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 
 	pThis->iResumeInterval = glbliActionResumeInterval;
 	pThis->iResumeRetryCount = glbliActionResumeRetryCount;
+	pThis->tLastOccur = time(NULL);
 	pthread_mutex_init(&pThis->mutActExec, NULL);
 	SYNC_OBJ_TOOL_INIT(pThis);
 
@@ -510,7 +513,36 @@ actionWriteToAction(action_t *pAction)
 	DEFiRet;
 
 	pMsgSave = NULL;	/* indicate message poiner not saved */
-	/* first check if this is a regular message or the repeation of
+	time(&now); /* we need this for several use cases, but obtain it once for performance reasons */
+
+	/* first, we check if the action should actually be called. The action-specific
+	 * $ActionExecOnlyEveryNthTime permits us to execute an action only every Nth
+	 * time. So we need to check if we need to drop the (otherwise perfectly executable)
+	 * action for this reason. Note that in case we need to drop it, we return RS_RET_OK
+	 * as the action was properly "passed to execution" from the upper layer's point
+	 * of view. -- rgerhards, 2008-08-07.
+	 */
+dbgprintf("NTH: conf: %d, actual %d\n", pAction->iExecEveryNthOccur, pAction->iNbrNoExec);
+	if(pAction->iExecEveryNthOccur > 1) {
+		/* we need to care about multiple occurences */
+		if(   pAction->iExecEveryNthOccurTO > 0
+		   && (now - pAction->tLastOccur) > pAction->iExecEveryNthOccurTO) {
+		  	dbgprintf("n-th occurence handling timed out (%d sec), restarting from 0\n",
+				  (int) (now - pAction->tLastOccur));
+			pAction->iNbrNoExec = 0;
+			pAction->tLastOccur = now;
+		   }
+		if(pAction->iNbrNoExec < pAction->iExecEveryNthOccur - 1) {
+			++pAction->iNbrNoExec;
+			dbgprintf("action %p passed %d times to execution - less than neded - discarding\n",
+				  pAction, pAction->iNbrNoExec);
+			FINALIZE;
+		} else {
+			pAction->iNbrNoExec = 0; /* we execute the action now, so the number of no execs is down to */
+		}
+	}
+
+	/* then check if this is a regular message or the repeation of
 	 * a previous message. If so, we need to change the message text
 	 * to "last message repeated n times" and then go ahead and write
 	 * it. Please note that we can not modify the message object, because
@@ -545,7 +577,6 @@ actionWriteToAction(action_t *pAction)
 
 	dbgprintf("Called action, logging to %s\n", module.GetStateName(pAction->pMod));
 
-	time(&now); /* we need this for message repeation processing AND $ActionExecOnlyOnceEveryInterval */
 	/* now check if we need to drop the message because otherwise the action would be too
 	 * frequently called. -- rgerhards, 2008-04-08
 	 */
@@ -706,6 +737,8 @@ actionAddCfSysLineHdrl(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeueslowdown", 0, eCmdHdlrInt, NULL, &iActionQueueDeqSlowdown, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimebegin", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinFromHr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinToHr, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtime", 0, eCmdHdlrInt, NULL, &iActExecEveryNthOccur, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtimetimeout", 0, eCmdHdlrInt, NULL, &iActExecEveryNthOccurTO, NULL));
 	
 finalize_it:
 	RETiRet;
@@ -737,6 +770,10 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	pAction->pModData = pModData;
 	pAction->bExecWhenPrevSusp = bActExecWhenPrevSusp;
 	pAction->iSecsExecOnceInterval = iActExecOnceInterval;
+	pAction->iExecEveryNthOccur = iActExecEveryNthOccur;
+	pAction->iExecEveryNthOccurTO = iActExecEveryNthOccurTO;
+	iActExecEveryNthOccur = 0; /* auto-reset */
+	iActExecEveryNthOccurTO = 0; /* auto-reset */
 
 	/* check if we can obtain the template pointers - TODO: move to separate function? */
 	pAction->iNumTpls = OMSRgetEntryCount(pOMSR);

@@ -79,8 +79,17 @@ default, it is usually well-chosen and applicable in most cases.</p>
 execute action only if the last execute is at last
 &lt;seconds&gt; seconds in the past (more info in <a href="ommail.html">ommail</a>,
 but may be used with any action)</li>
-<li>$ActionFileDefaultTemplate [templateName] - sets a new
-default template for file actions</li>
+<li>$ActionExecOnlyEveryNthTime &lt;number&gt; - If configured, the next action will
+only be executed every n-th time. For example, if configured to 3, the first two messages
+that go into the action will be dropped, the 3rd will actually cause the action to execute,
+the 4th and 5th will be dropped, the 6th executed under the action, ... and so on. Note: 
+this setting is automatically re-set when the actual action is defined.</li>
+<li>$ActionExecOnlyEveryNthTimeTimeout &lt;number-of-seconds&gt; - has a meaning only if
+$ActionExecOnlyEveryNthTime is also configured for the same action. If so, the timeout
+setting specifies after which period the counting of "previous actions" expires and
+a new action count is begun. Specify 0 (the default) to disable timeouts.:w
+
+<li>$ActionFileDefaultTemplate [templateName] - sets a new default template for file actions</li>
 <li>$ActionFileEnableSync [on/<span style="font-weight: bold;">off</span>] - enables file
 syncing capability of omfile</li>
 <li>$ActionForwardDefaultTemplate [templateName] - sets a new

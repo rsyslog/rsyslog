@@ -49,6 +49,10 @@ struct action_s {
 	int	iResumeInterval;/* resume interval for this action */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */
 	int	iNbrResRtry;	/* number of retries since last suspend */
+	int	iNbrNoExec;	/* number of matches that did not yet yield to an exec */
+	int	iExecEveryNthOccur;/* execute this action only every n-th occurence (with n=0,1 -> always) */
+	int  	iExecEveryNthOccurTO;/* timeout for n-th occurence feature */
+	time_t  tLastOccur;	/* time last occurence was seen (for timing them out) */
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	int	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
