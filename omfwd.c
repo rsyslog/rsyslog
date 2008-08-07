@@ -502,8 +502,18 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 		 * now skip to port and then template name. rgerhards 2005-07-06
 		 */
-		for(q = p ; *p && *p != ';' && *p != ':' && *p != '#' ; ++p)
-		 	/* JUST SKIP */;
+		if(*p == '[') { /* everything is hostname upto ']' */
+			++p; /* skip '[' */
+			for(q = p ; *p && *p != ']' ; ++p)
+				/* JUST SKIP */;
+			if(*p == ']') {
+				*p = '\0'; /* trick to obtain hostname (later)! */
+				++p; /* eat it */
+			}
+		} else { /* traditional view of hostname */
+			for(q = p ; *p && *p != ';' && *p != ':' && *p != '#' ; ++p)
+				/* JUST SKIP */;
+		}
 
 		pData->port = NULL;
 		if(*p == ':') { /* process port */

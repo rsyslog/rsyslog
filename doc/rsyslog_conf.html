@@ -858,6 +858,15 @@ port 1470.</p>
 <p>In the example above, messages are forwarded via UDP to the
 machine 192.168.0.1, the destination port defaults to 514. Messages
 will not be compressed.</p>
+<p>Note that IPv6 addresses contain colons. So if an IPv6 address is specified
+in the hostname part, rsyslogd could not detect where the IP address ends
+and where the port starts. There is a syntax extension to support this:
+put squary brackets around the address (e.g. "[2001::1]"). Square
+brackets also work with real host names and IPv4 addresses, too.
+<p>A valid sample to send messages to the IPv6 host 2001::1 at port 515
+is as follows:
+<p>*.* @[2001::1]:515
+<p>This works with TCP, too.
 <p><b>Note to sysklogd users:</b> sysklogd does <b>not</b>
 support RFC 3164 format, which is the default forwarding template in
 rsyslog. As such, you will experience duplicate hostnames if rsyslog is
