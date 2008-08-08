@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.21.3  [DEVEL] (rgerhards), 2008-08-??
+- added ability to specify flow control mode for imuxsock
 - added ability to execute actions only after the n-th call of the action
   This also lead to the addition of two new config directives:
   $ActionExecOnlyEveryNthTime and $ActionExecOnlyEveryNthTimeTimeout

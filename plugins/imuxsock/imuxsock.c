@@ -74,6 +74,7 @@ static int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name? 
 static int funixFlags[MAXFUNIX] = { ADDDATE, }; /* should parser parse host name?  read-only after startup */
 static uchar *funixn[MAXFUNIX] = { (uchar*) _PATH_LOG }; /* read-only after startup */
 static uchar *funixHName[MAXFUNIX] = { NULL, }; /* host-name override - if set, use this instead of actual name */
+static int funixFlowCtl[MAXFUNIX] = { eFLOWCTL_NO_DELAY, }; /* flow control settings for this socket */
 static int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
 static int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 
@@ -81,6 +82,7 @@ static int nfunix = 1; /* number of Unix sockets open / read-only after startup 
 static int bOmitLocalLogging = 0;
 static uchar *pLogSockName = NULL;
 static uchar *pLogHostName = NULL;	/* host name to use with this socket */
+static int bUseFlowCtl = 0;		/* use flow control or not (if yes, only LIGHT is used! */
 static int bIgnoreTimestamp = 1; /* ignore timestamps present in the incoming message? */
 
 
@@ -95,6 +97,14 @@ static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, 
 	RETiRet;
 }
 
+/* set flowcontrol for the system log socket
+ */
+static rsRetVal setSystemLogFlowControl(void __attribute__((unused)) *pVal, int iNewVal)
+{
+	DEFiRet;
+	funixFlowCtl[0] = iNewVal ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+	RETiRet;
+}
 
 /* add an additional listen socket. Socket names are added
  * until the array is filled up. It is never reset, only at
@@ -115,6 +125,7 @@ static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNe
 		}
 		funixHName[nfunix] = pLogHostName;
 		pLogHostName = NULL; /* re-init for next, not freed because funixHName[] now owns it */
+		funixFlowCtl[nfunix] = bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
 		funixFlags[nfunix] = bIgnoreTimestamp ? ADDDATE : NOFLAG;
 		funixn[nfunix++] = pNewVal;
 	}
@@ -193,7 +204,7 @@ static rsRetVal readSocket(int fd, int iSock)
 	if (iRcvd > 0) {
 		parseAndSubmitMessage(funixHName[iSock] == NULL ? glbl.GetLocalHostName() : funixHName[iSock],
 				      (uchar*)"127.0.0.1", line,
-			 	      iRcvd, funixParseHost[iSock], funixFlags[iSock], eFLOWCTL_LIGHT_DELAY);
+			 	      iRcvd, funixParseHost[iSock], funixFlags[iSock], funixFlowCtl[iSock]);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -328,6 +339,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	discardFunixn();
 	nfunix = 1;
 	bIgnoreTimestamp = 1;
+	bUseFlowCtl = 0;
 
 	return RS_RET_OK;
 }
@@ -340,6 +352,8 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+
+	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
 
 	/* initialize funixn[] array */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
@@ -356,18 +370,22 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensockethostname", 0, eCmdHdlrGetWord,
 		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
+		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
 		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 	/* the following one is a (dirty) trick: the system log socket is not added via
-	 * an "addUnixListenSocket" config format. As such, the timestamp can not be modified
-	 * via $InputUnixListenSocketIgnoreMsgTimestamp". So we need to add a special directive
+	 * an "addUnixListenSocket" config format. As such, it's properties can not be modified
+	 * via $InputUnixListenSocket*". So we need to add a special directive
 	 * for that. We should revisit all of that once we have the new config format...
 	 * rgerhards, 2008-03-06
 	 */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketignoremsgtimestamp", 0, eCmdHdlrBinary,
 		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
+		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
  */
