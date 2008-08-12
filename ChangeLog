@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 3.18.3 (rgerhards), 2008-08-??
+- enhanced ommysql to support custom port to connect to server
+  Port can be set via new $ActionOmmysqlServerPort config directive
+  Note: this was a very minor change and thus deemed appropriate to be
+  done in the stable release.
 - bugfix: misspelled config directive, previously was
   $MainMsgQueueWorkeTimeoutrThreadShutdown, is now
   $MainMsgQueueWorkerTimeoutThreadShutdown. Note that the misspelled

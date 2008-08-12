@@ -44,6 +44,7 @@
 #include "ommysql.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "cfsysline.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -55,11 +56,15 @@ DEFobjCurrIf(errmsg)
 typedef struct _instanceData {
 	MYSQL	*f_hmysql;		/* handle to MySQL */
 	char	f_dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/ 
+	unsigned int f_dbsrvPort;		/* port of MySQL server */
 	char	f_dbname[_DB_MAXDBLEN+1];	/* DB name */
 	char	f_dbuid[_DB_MAXUNAMELEN+1];	/* DB user */
 	char	f_dbpwd[_DB_MAXPWDLEN+1];	/* DB user's password */
 	unsigned uLastMySQLErrno;	/* last errno returned by MySQL or 0 if all is well */
 } instanceData;
+
+/* config variables */
+static int iSrvPort = 0;	/* database server port */
 
 
 BEGINcreateInstance
@@ -150,7 +155,7 @@ static rsRetVal initMySQL(instanceData *pData, int bSilent)
 	} else { /* we could get the handle, now on with work... */
 		/* Connect to database */
 		if(mysql_real_connect(pData->f_hmysql, pData->f_dbsrv, pData->f_dbuid,
-				      pData->f_dbpwd, pData->f_dbname, 0, NULL, 0) == NULL) {
+				      pData->f_dbpwd, pData->f_dbname, pData->f_dbsrvPort, NULL, 0) == NULL) {
 			reportDBError(pData, bSilent);
 			closeMySQL(pData); /* ignore any error we may get */
 			iRet = RS_RET_SUSPENDED;
@@ -273,6 +278,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 		errmsg.LogError(NO_ERRCODE, "Trouble with MySQL connection properties. -MySQL logging disabled");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	} else {
+		pData->f_dbsrvPort = (unsigned) iSrvPort;	/* set configured port */
 		pData->f_hmysql = NULL; /* initialize, but connect only on first message (important for queued mode!) */
 	}
 
@@ -291,12 +297,24 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 ENDqueryEtryPt
 
 
+/* Reset config variables for this module to default values.
+ */
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	DEFiRet;
+	iSrvPort = 0; /* zero is the default port */
+	RETiRet;
+}
+
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	/* register our config handlers */
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionommysqlserverport", 0, eCmdHdlrInt, NULL, &iSrvPort, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/*
- * vi:set ai:
+
+/* vi:set ai:
  */
