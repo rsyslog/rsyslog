@@ -2115,7 +2115,6 @@ queueEnqObj(queue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	if(pThis->bIsDA)
 		CHKiRet(queueChkStrtDA(pThis));
 	
-
 	/* handle flow control
 	 * There are two different flow control mechanisms: basic and advanced flow control.
 	 * Basic flow control has always been implemented and protects the queue structures
