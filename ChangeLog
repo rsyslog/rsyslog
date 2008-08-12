@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------
+Version 3.18.3 (rgerhards), 2008-08-??
+- bugfix: misspelled config directive, previously was
+  $MainMsgQueueWorkeTimeoutrThreadShutdown, is now
+  $MainMsgQueueWorkerTimeoutThreadShutdown. Note that the misspelled
+  directive is not preserved - if the misspelled directive was used
+  (which I consider highly unlikely), the config file must be changed.
+  Thanks to lperr for reporting the bug.
+---------------------------------------------------------------------------
 Version 3.18.2 (rgerhards), 2008-08-08
 - merged in IPv6 forwarding address bugfix from v2-stable
 ---------------------------------------------------------------------------
