@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.21.3  [DEVEL] (rgerhards), 2008-08-??
+Version 3.21.3  [DEVEL] (rgerhards), 2008-08-13
 - added ability to specify flow control mode for imuxsock
 - added ability to execute actions only after the n-th call of the action
   This also lead to the addition of two new config directives:
@@ -12,6 +12,17 @@ Version 3.21.3  [DEVEL] (rgerhards), 2008-08-??
   New syntax @[addr]:port introduced to enable that. Root problem was IPv6
   addresses contain colons.
 - somewhat enhanced debugging messages
+- imported from 3.18.3:
+  - enhanced ommysql to support custom port to connect to server
+    Port can be set via new $ActionOmmysqlServerPort config directive
+    Note: this was a very minor change and thus deemed appropriate to be
+    done in the stable release.
+  - bugfix: misspelled config directive, previously was
+    $MainMsgQueueWorkeTimeoutrThreadShutdown, is now
+    $MainMsgQueueWorkerTimeoutThreadShutdown. Note that the misspelled
+    directive is not preserved - if the misspelled directive was used
+    (which I consider highly unlikely), the config file must be changed.
+    Thanks to lperr for reporting the bug.
 ---------------------------------------------------------------------------
 Version 3.21.2  [DEVEL] (rgerhards), 2008-08-04
 - added $InputUnixListenSocketHostName config directive, which permits to
