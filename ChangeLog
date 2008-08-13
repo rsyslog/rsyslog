@@ -49,6 +49,7 @@ Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
   see below)
 ---------------------------------------------------------------------------
 Version 3.19.11 [BETA] (rgerhards), 2008-??-??
+- included fixes from v3-stable
 ---------------------------------------------------------------------------
 Version 3.19.10 [BETA] (rgerhards), 2008-07-15
 - start of a new beta branch based on former 3.19 devel branch
@@ -206,7 +207,24 @@ Version 3.19.0 (rgerhards), 2008-05-06
 - a lot of cleanup in regard to modularization
 - -c option no longer must be the first option - thanks to varmjofekoj
   for the patch
-Version 3.18.2 (rgerhards), 2008-07-??
+---------------------------------------------------------------------------
+Version 3.18.3 (rgerhards), 2008-08-??
+- enhanced ommysql to support custom port to connect to server
+  Port can be set via new $ActionOmmysqlServerPort config directive
+  Note: this was a very minor change and thus deemed appropriate to be
+  done in the stable release.
+- bugfix: misspelled config directive, previously was
+  $MainMsgQueueWorkeTimeoutrThreadShutdown, is now
+  $MainMsgQueueWorkerTimeoutThreadShutdown. Note that the misspelled
+  directive is not preserved - if the misspelled directive was used
+  (which I consider highly unlikely), the config file must be changed.
+  Thanks to lperr for reporting the bug.
+- disabled flow control for imuxsock, as it could cause system hangs
+  under some circumstances. The devel (3.21.3 and above) will
+  re-enable it and provide enhanced configurability to overcome the
+  problems if they occur.
+---------------------------------------------------------------------------
+Version 3.18.2 (rgerhards), 2008-08-08
 - merged in IPv6 forwarding address bugfix from v2-stable
 ---------------------------------------------------------------------------
 Version 3.18.1 (rgerhards), 2008-07-21
