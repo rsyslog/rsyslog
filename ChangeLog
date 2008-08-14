@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.18.3 (rgerhards), 2008-08-??
+- bugfix: imfile could cause a segfault upon rsyslogd HUP and termination
+  Thanks to lperr for an excellent bug report that helped detect this
+  problem.
 - enhanced ommysql to support custom port to connect to server
   Port can be set via new $ActionOmmysqlServerPort config directive
   Note: this was a very minor change and thus deemed appropriate to be

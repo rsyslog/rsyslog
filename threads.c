@@ -46,6 +46,7 @@ static linkedList_t llThrds;
  */
 static rsRetVal thrdConstruct(thrdInfo_t **ppThis)
 {
+	DEFiRet;
 	thrdInfo_t *pThis;
 
 	assert(ppThis != NULL);
@@ -60,7 +61,7 @@ static rsRetVal thrdConstruct(thrdInfo_t **ppThis)
 	pthread_mutex_init (pThis->mutTermOK, NULL);
 
 	*ppThis = pThis;
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
@@ -70,6 +71,7 @@ static rsRetVal thrdConstruct(thrdInfo_t **ppThis)
  */
 static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 {
+	DEFiRet;
 	assert(pThis != NULL);
 
 	if(pThis->bIsActive == 1) {
@@ -78,7 +80,7 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
 	free(pThis->mutTermOK);
 	free(pThis);
 
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
@@ -86,6 +88,7 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
  */
 rsRetVal thrdTerminate(thrdInfo_t *pThis)
 {
+	DEFiRet;
 	assert(pThis != NULL);
 	
 	pthread_cancel(pThis->thrdID);
@@ -96,7 +99,7 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
 	if(pThis->pAfterRun != NULL)
 		pThis->pAfterRun(pThis);
 	
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
@@ -104,8 +107,9 @@ rsRetVal thrdTerminate(thrdInfo_t *pThis)
  */
 rsRetVal thrdTerminateAll(void)
 {
+	DEFiRet;
 	llDestroy(&llThrds);
-	return RS_RET_OK;
+	RETiRet;
 }
 
 

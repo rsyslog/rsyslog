@@ -182,8 +182,9 @@ static void pollFileCancelCleanup(void *pArg)
 /* poll a file, need to check file rollover etc. open file if not open */
 static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 {
-	DEFiRet;
 	cstr_t *pCStr = NULL;
+	int bMustPopCleanup = 0;
+	DEFiRet;
 
 	ASSERT(pbHadFileData != NULL);
 
@@ -192,6 +193,8 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	}
 
 	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
+	bMustPopCleanup = 1;
+
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(1) {
 		CHKiRet(strmReadLine(pThis->pStrm, &pCStr));
@@ -199,9 +202,11 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
 	}
-	pthread_cleanup_pop(0);
 
 finalize_it:
+	if(bMustPopCleanup)
+		pthread_cleanup_pop(0);
+
 	if(pCStr != NULL) {
 		rsCStrDestruct(&pCStr);
 	}
