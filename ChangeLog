@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.21.4  [DEVEL] (rgerhards), 2008-0????
+- enhanced doc for $ActionExecOnlyEveryNthTimeTimeout
 ---------------------------------------------------------------------------
 Version 3.21.3  [DEVEL] (rgerhards), 2008-08-13
 - added ability to specify flow control mode for imuxsock
