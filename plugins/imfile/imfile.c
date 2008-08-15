@@ -183,17 +183,17 @@ static void pollFileCancelCleanup(void *pArg)
 static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 {
 	cstr_t *pCStr = NULL;
-	int bMustPopCleanup = 0;
 	DEFiRet;
 
 	ASSERT(pbHadFileData != NULL);
 
+	/* Note: we must do pthread_cleanup_push() immediately, because the POXIS macros
+	 * otherwise do not work if I include the _cleanup_pop() inside an if... -- rgerhards, 2008-08-14
+	 */
+	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
 	if(pThis->pStrm == NULL) {
 		CHKiRet(openFile(pThis)); /* open file */
 	}
-
-	pthread_cleanup_push(pollFileCancelCleanup, &pCStr);
-	bMustPopCleanup = 1;
 
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(1) {
@@ -204,8 +204,15 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 	}
 
 finalize_it:
-	if(bMustPopCleanup)
-		pthread_cleanup_pop(0);
+	/*EMPTY - just to keep the compiler happy, do NOT remove*/;
+	/* Note: the problem above is that pthread:cleanup_pop() is a macro which
+	 * evaluates to something like "} while(0);". So the code would become
+	 * "finalize_it: }", that is a label without a statement. The C standard does
+	 * not permit this. So we add an empty statement "finalize_it: ; }" and
+	 * everybody is happy. Note that without the ;, an error is reported only
+	 * on some platforms/compiler versions. -- rgerhards, 2008-08-15
+	 */
+	pthread_cleanup_pop(0);
 
 	if(pCStr != NULL) {
 		rsCStrDestruct(&pCStr);
