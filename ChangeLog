@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------
 Version 3.19.11 [BETA] (rgerhards), 2008-??-??
-- included fixes from v3-stable
+- included fixes from v3-stable (most importantly 3.18.3)
 ---------------------------------------------------------------------------
 Version 3.19.10 [BETA] (rgerhards), 2008-07-15
 - start of a new beta branch based on former 3.19 devel branch
@@ -159,7 +159,10 @@ Version 3.19.0 (rgerhards), 2008-05-06
 - -c option no longer must be the first option - thanks to varmjofekoj
   for the patch
 ---------------------------------------------------------------------------
-Version 3.18.3 (rgerhards), 2008-08-??
+Version 3.18.3 (rgerhards), 2008-08-18
+- bugfix: imfile could cause a segfault upon rsyslogd HUP and termination
+  Thanks to lperr for an excellent bug report that helped detect this
+  problem.
 - enhanced ommysql to support custom port to connect to server
   Port can be set via new $ActionOmmysqlServerPort config directive
   Note: this was a very minor change and thus deemed appropriate to be
