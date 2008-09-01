@@ -213,11 +213,11 @@ static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 		case 'e': i *= (int64) 1024 * 1024 * 1024 * 1024 * 1024 * 1024; ++(*pp); break; /* exa */
 		/* and now the "new" 1000-based definitions */
 		case 'K': i *= 1000; ++(*pp); break;
-		case 'M': i *= 10000; ++(*pp); break;
-		case 'G': i *= 100000; ++(*pp); break;
-		case 'T': i *= 1000000; ++(*pp); break; /* tera */
-		case 'P': i *= 10000000; ++(*pp); break; /* peta */
-		case 'E': i *= 100000000; ++(*pp); break; /* exa */
+	        case 'M': i *= 1000000; ++(*pp); break;
+                case 'G': i *= 1000000000; ++(*pp); break;
+                case 'T': i *= 1000000000000; ++(*pp); break; /* tera */
+                case 'P': i *= 1000000000000000; ++(*pp); break; /* peta */
+                case 'E': i *= 1000000000000000000; ++(*pp); break; /* exa */
 	}
 
 	/* done */

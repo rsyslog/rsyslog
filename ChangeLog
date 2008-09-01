@@ -1,3 +1,8 @@
+- bugfix: order-of magnitude issue with base-10 size definitions
+  in config file parser. Could lead to invalid sizes, constraints
+  etc for e.g. queue files and any other object whose size was specified
+  in base-10 entities. Did not apply to binary entities. Thanks to
+  RB for finding this bug and providing a patch.
 - bugfix: action was not called when system time was set backwards
   (until the previous time was reached again). There are still some
   side-effects when time is rolled back (A time rollback is really a bad
