@@ -1,3 +1,9 @@
+- bugfix: action was not called when system time was set backwards
+  (until the previous time was reached again). There are still some
+  side-effects when time is rolled back (A time rollback is really a bad
+  thing to do, ideally the OS should issue pseudo time (like NetWare did)
+  when the user tries to roll back time). Thanks to varmojfekoj for this
+  patch.
 ---------------------------------------------------------------------------
 Version 3.18.3 (rgerhards), 2008-08-18
 - bugfix: imfile could cause a segfault upon rsyslogd HUP and termination
