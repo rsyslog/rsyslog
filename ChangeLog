@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.19.12 [BETA] (rgerhards), 2008-08-25
+---------------------------------------------------------------------------
 Version 3.19.11 [BETA] (rgerhards), 2008-08-25
 This is a refresh of the beta. No beta-specific fixes have been added.
 - included fixes from v3-stable (most importantly 3.18.3)
@@ -159,6 +161,21 @@ Version 3.19.0 (rgerhards), 2008-05-06
 - a lot of cleanup in regard to modularization
 - -c option no longer must be the first option - thanks to varmjofekoj
   for the patch
+---------------------------------------------------------------------------
+Version 3.18.4 (rgerhards), 2008-09-??
+- bugfix: order-of magnitude issue with base-10 size definitions
+  in config file parser. Could lead to invalid sizes, constraints
+  etc for e.g. queue files and any other object whose size was specified
+  in base-10 entities. Did not apply to binary entities. Thanks to
+  RB for finding this bug and providing a patch.
+- bugfix: action was not called when system time was set backwards
+  (until the previous time was reached again). There are still some
+  side-effects when time is rolled back (A time rollback is really a bad
+  thing to do, ideally the OS should issue pseudo time (like NetWare did)
+  when the user tries to roll back time). Thanks to varmojfekoj for this
+  patch.
+- doc bugfix: rsyslog.conf man page improved and minor nit fixed
+  thanks to Lukas Kuklinek for the patch.
 ---------------------------------------------------------------------------
 Version 3.18.3 (rgerhards), 2008-08-18
 - bugfix: imfile could cause a segfault upon rsyslogd HUP and termination

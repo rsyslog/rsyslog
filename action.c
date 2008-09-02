@@ -546,6 +546,10 @@ actionWriteToAction(action_t *pAction)
 	dbgprintf("Called action, logging to %s\n", module.GetStateName(pAction->pMod));
 
 	time(&now); /* we need this for message repeation processing AND $ActionExecOnlyOnceEveryInterval */
+	if(pAction->tLastExec > now) {
+		/* if we are traveling back in time, reset tLastExec */
+		pAction->tLastExec = (time_t) 0;
+	}
 	/* now check if we need to drop the message because otherwise the action would be too
 	 * frequently called. -- rgerhards, 2008-04-08
 	 */
