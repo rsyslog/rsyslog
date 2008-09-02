@@ -514,6 +514,10 @@ actionWriteToAction(action_t *pAction)
 
 	pMsgSave = NULL;	/* indicate message poiner not saved */
 	time(&now); /* we need this for several use cases, but obtain it once for performance reasons */
+	if(pAction->tLastExec > now) {
+		/* if we are traveling back in time, reset tLastExec */
+		pAction->tLastExec = (time_t) 0;
+	}
 
 	/* first, we check if the action should actually be called. The action-specific
 	 * $ActionExecOnlyEveryNthTime permits us to execute an action only every Nth
@@ -522,7 +526,6 @@ actionWriteToAction(action_t *pAction)
 	 * as the action was properly "passed to execution" from the upper layer's point
 	 * of view. -- rgerhards, 2008-08-07.
 	 */
-dbgprintf("NTH: conf: %d, actual %d\n", pAction->iExecEveryNthOccur, pAction->iNbrNoExec);
 	if(pAction->iExecEveryNthOccur > 1) {
 		/* we need to care about multiple occurences */
 		if(   pAction->iExecEveryNthOccurTO > 0
