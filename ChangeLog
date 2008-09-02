@@ -11,6 +11,8 @@ Version 3.18.4 (rgerhards), 2008-09-??
   thing to do, ideally the OS should issue pseudo time (like NetWare did)
   when the user tries to roll back time). Thanks to varmojfekoj for this
   patch.
+- doc bugfix: rsyslog.conf man page improved and minor nit fixed
+  thanks to Lukas Kuklinek for the patch.
 ---------------------------------------------------------------------------
 Version 3.18.3 (rgerhards), 2008-08-18
 - bugfix: imfile could cause a segfault upon rsyslogd HUP and termination
