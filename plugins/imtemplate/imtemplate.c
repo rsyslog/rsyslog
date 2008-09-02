@@ -315,7 +315,7 @@ CODESTARTwillRun
 	if(udpLstnSocks == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 
-	if((pRcvBuf = malloc(MAXLINE * sizeof(char))) == NULL) {
+	if((pRcvBuf = malloc(glbl.GetMaxLine * sizeof(char))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	*

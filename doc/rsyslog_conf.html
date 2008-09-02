@@ -208,10 +208,30 @@ default 60000 (1 minute)]</li>
 </li>
 <li>$MainMsgQueueWorkerThreads &lt;number&gt;, num
 worker threads, default 1, recommended 1</li>
-<li>$MainMsgQueueWorkerThreadMinumumMessages
-&lt;number&gt;, default 100</li>
-<li><a href="rsconf1_markmessageperiod.html">$MarkMessagePeriod</a>
-(immark)</li>
+<li>$MainMsgQueueWorkerThreadMinumumMessages &lt;number&gt;, default 100</li>
+<li><a href="rsconf1_markmessageperiod.html">$MarkMessagePeriod</a> (immark)</li>
+<li><b><i>$MaxMessageSize</i></b> &lt;size_nbr&gt;, default 2k - allows to specify maximum supported message size
+(both for sending and receiving). The default
+should be sufficient for almost all cases. Do not set this below 1k, as it would cause
+interoperability problems with other syslog implementations.<br>
+Change the setting to e.g. 32768 if you would like to
+support large message sizes for IHE (32k is the current maximum
+needed for IHE). I was initially tempted to set the default to 32k,
+but there is a some memory footprint with the current
+implementation in rsyslog.
+<br>If you intend to receive Windows Event Log data (e.g. via
+<a href="http://www.eventreporter.com/">EventReporter</a>), you might want to 
+increase this number to an even higher value, as event
+log messages can be very lengthy ("$MaxMessageSize 64k" is not a bad idea).
+Note: testing showed that 4k seems to be
+the typical maximum for <b>UDP</b> based syslog. This is an IP stack
+restriction. Not always ... but very often. If you go beyond
+that value, be sure to test that rsyslogd actually does what
+you think it should do ;) It is highly suggested to use a TCP based transport
+instead of UDP (plain TCP syslog, RELP). This resolves the UDP stack size restrictions.
+<br>Note that 2k, the current default, is the smallest size that must be
+supported in order to be compliant to the upcoming new syslog RFC series.
+</li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
 <li><a href="rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>

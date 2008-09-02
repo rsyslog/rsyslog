@@ -196,14 +196,31 @@ static rsRetVal readSocket(int fd, int iSock)
 {
 	DEFiRet;
 	int iRcvd;
-	uchar line[MAXLINE +1];
+	int iMaxLine;
+	uchar bufRcv[4096+1];
+	uchar *pRcv = NULL; /* receive buffer */
 
 	assert(iSock >= 0);
-	iRcvd = recv(fd, line, MAXLINE - 1, 0);
+
+	iMaxLine = glbl.GetMaxLine();
+
+	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
+	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
+	 * is used. We could use alloca() to achive a similar aspect, but there are so
+	 * many issues with alloca() that I do not want to take that route.
+	 * rgerhards, 2008-09-02
+	 */
+	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
+		pRcv = bufRcv;
+	} else {
+		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
+	}
+
+	iRcvd = recv(fd, pRcv, iMaxLine, 0);
 	dbgprintf("Message from UNIX socket: #%d\n", fd);
 	if (iRcvd > 0) {
 		parseAndSubmitMessage(funixHName[iSock] == NULL ? glbl.GetLocalHostName() : funixHName[iSock],
-				      (uchar*)"127.0.0.1", line,
+				      (uchar*)"127.0.0.1", pRcv,
 			 	      iRcvd, funixParseHost[iSock], funixFlags[iSock], funixFlowCtl[iSock]);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
@@ -211,6 +228,10 @@ static rsRetVal readSocket(int fd, int iSock)
 		dbgprintf("UNIX socket error: %d = %s.\n", errno, errStr);
 		errmsg.LogError(errno, NO_ERRCODE, "recvfrom UNIX");
 	}
+
+finalize_it:
+	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
+		free(pRcv);
 
 	RETiRet;
 }

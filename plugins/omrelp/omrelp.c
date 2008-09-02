@@ -159,8 +159,8 @@ CODESTARTdoAction
 	lenMsg = strlen((char*) pMsg); /* TODO: don't we get this? */
 
 	/* TODO: think about handling oversize messages! */
-	if(lenMsg > MAXLINE)
-		lenMsg = MAXLINE;
+	if((int) lenMsg > glbl.GetMaxLine())
+		lenMsg = glbl.GetMaxLine();
 
 	/* forward */
 	ret = relpCltSendSyslog(pData->pRelpClt, (uchar*) pMsg, lenMsg);

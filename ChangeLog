@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.21.4  [DEVEL] (rgerhards), 2008-0????
+- removed compile time fixed message size limit (was 2K), limit can now
+  be set via $MaxMessageSize global config directive (finally gotten rid
+  of MAXLINE ;))
 - enhanced doc for $ActionExecOnlyEveryNthTimeTimeout
 ---------------------------------------------------------------------------
 Version 3.21.3  [DEVEL] (rgerhards), 2008-08-13

@@ -27,8 +27,6 @@
 #ifndef	DIRTY_H_INCLUDED
 #define	DIRTY_H_INCLUDED 1
 
-#define	MAXLINE		2048		/* maximum line length */
-
 /* Flags to logmsg().
  */
 #define NOFLAG		0x000	/* no flag is set (to be used when a flag must be specified and none is required) */

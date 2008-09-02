@@ -570,8 +570,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
 }
 
 
-/*
- * Helper to cfline(). This function takes the filter part of a traditional, PRI
+/* Helper to cfline(). This function takes the filter part of a traditional, PRI
  * based line and decodes the PRIs given in the selector line. It processed the
  * line up to the beginning of the action part. A pointer to that beginnig is
  * passed back to the caller.
@@ -587,8 +586,9 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 	int pri;
 	int singlpri = 0;
 	int ignorepri = 0;
-	uchar buf[MAXLINE];
+	uchar buf[2048]; /* buffer for facility and priority names */
 	uchar xbuf[200];
+	DEFiRet;
 
 	ASSERT(pline != NULL);
 	ASSERT(*pline != NULL);
@@ -613,7 +613,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 			continue;
 
 		/* collect priority name */
-		for (bp = buf; *q && !strchr("\t ,;", *q); )
+		for (bp = buf; *q && !strchr("\t ,;", *q) && bp < buf+sizeof(buf)-1 ; )
 			*bp++ = *q++;
 		*bp = '\0';
 
@@ -624,6 +624,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 		/* decode priority name */
 		if ( *buf == '!' ) {
 			ignorepri = 1;
+			/* copy below is ok, we can NOT go off the allocated area */
 			for (bp=buf; *(bp+1); bp++)
 				*bp=*(bp+1);
 			*bp='\0';
@@ -649,7 +650,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 
 		/* scan facilities */
 		while (*p && !strchr("\t .;", *p)) {
-			for (bp = buf; *p && !strchr("\t ,;.", *p); )
+			for (bp = buf; *p && !strchr("\t ,;.", *p) && bp < buf+sizeof(buf)-1 ; )
 				*bp++ = *p++;
 			*bp = '\0';
 			if (*buf == '*') {
@@ -732,7 +733,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 		p++;
 
 	*pline = p;
-	return RS_RET_OK;
+	RETiRet;
 }
 
 

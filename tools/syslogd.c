@@ -58,34 +58,6 @@
 #include "config.h"
 #include "rsyslog.h"
 
-/* change the following setting to e.g. 32768 if you would like to
- * support large message sizes for IHE (32k is the current maximum
- * needed for IHE). I was initially tempted to increase it to 32k,
- * but there is a large memory footprint with the current
- * implementation in rsyslog. This will change as the processing
- * changes, but I have re-set it to 1k, because the vast majority
- * of messages is below that and the memory savings is huge, at
- * least compared to the overall memory footprint.
- *
- * If you intend to receive Windows Event Log data (e.g. via
- * EventReporter - www.eventreporter.com), you might want to 
- * increase this number to an even higher value, as event
- * log messages can be very lengthy.
- * rgerhards, 2005-07-05
- *
- * during my recent testing, it showed that 4k seems to be
- * the typical maximum for UDP based syslog. This is a IP stack
- * restriction. Not always ... but very often. If you go beyond
- * that value, be sure to test that rsyslogd actually does what
- * you think it should do ;) Also, it is a good idea to check the
- * doc set for anything on IHE - it most probably has information on
- * message sizes.
- * rgerhards, 2005-08-05
- * 
- * I have increased the default message size to 2048 to be in sync
- * with recent IETF syslog standardization efforts.
- * rgerhards, 2006-11-30
- */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define TIMERINTVL	30		/* interval for checking flush, mark */
 
@@ -708,9 +680,10 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	uchar *pMsg;
 	uchar *pData;
 	uchar *pEnd;
-	uchar tmpline[MAXLINE + 1];
+	int iMaxLine;
+	uchar *tmpline = NULL;
 #	ifdef USE_NETZIP
-	uchar deflateBuf[MAXLINE + 1];
+	uchar *deflateBuf = NULL;
 	uLongf iLenDefBuf;
 #	endif
 
@@ -718,6 +691,18 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	assert(hnameIP != NULL);
 	assert(msg != NULL);
 	assert(len >= 0);
+
+	/* we first allocate work buffers large enough to hold the configured maximum
+	 * size of a message. Over time, we should change this to a more optimal way, i.e.
+	 * by calling the function with the actual length of the message to be parsed.
+	 * rgerhards, 2008-09-02
+	 *
+	 * TODO: optimize buffer handling */
+	iMaxLine = glbl.GetMaxLine();
+	CHKmalloc(tmpline = malloc(sizeof(uchar) * (iMaxLine + 1)));
+#	ifdef USE_NETZIP
+	CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
+#	endif
 
 	/* we first check if we have a NUL character at the very end of the
 	 * message. This seems to be a frequent problem with a number of senders.
@@ -755,14 +740,14 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	 */
 	if(len > 0 && *msg == 'z') { /* compressed data present? (do NOT change order if conditions!) */
 		/* we have compressed data, so let's deflate it. We support a maximum
-		 * message size of MAXLINE. If it is larger, an error message is logged
+		 * message size of iMaxLine. If it is larger, an error message is logged
 		 * and the message is dropped. We do NOT try to decompress larger messages
 		 * as such might be used for denial of service. It might happen to later
 		 * builds that such functionality be added as an optional, operator-configurable
 		 * feature.
 		 */
 		int ret;
-		iLenDefBuf = MAXLINE;
+		iLenDefBuf = iMaxLine;
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
 		dbgprintf("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
 		        ret, (long) iLenDefBuf, len-1);
@@ -795,11 +780,11 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 #	endif /* ifdef USE_NETZIP */
 
 	while(pData < pEnd) {
-		if(iMsg >= MAXLINE) {
+		if(iMsg >= iMaxLine) {
 			/* emergency, we now need to flush, no matter if
 			 * we are at end of message or not...
 			 */
-			if(iMsg == MAXLINE) {
+			if(iMsg == iMaxLine) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType);
 			} else {
@@ -810,7 +795,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 				 * (I couldn't do any more smart things anyway...).
 				 * rgerhards, 2007-9-20
 				 */
-				dbgprintf("internal error: iMsg > MAXLINE in printchopped()\n");
+				dbgprintf("internal error: iMsg > max msg size in printchopped()\n");
 			}
 			FINALIZE; /* in this case, we are done... nothing left we can do */
 		}
@@ -818,7 +803,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			/* changed to the sequence (somewhat) proposed in
 			 * draft-ietf-syslog-protocol-19. rgerhards, 2006-11-30
 			 */
-			if(iMsg + 3 < MAXLINE) { /* do we have space? */
+			if(iMsg + 3 < iMaxLine) { /* do we have space? */
 				*(pMsg + iMsg++) =  cCCEscapeChar;
 				*(pMsg + iMsg++) = '0';
 				*(pMsg + iMsg++) = '0';
@@ -838,7 +823,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			 * we known now what's going on.
 			 * rgerhards, 2007-07-17
 			 */
-			if(iMsg + 3 < MAXLINE) { /* do we have space? */
+			if(iMsg + 3 < iMaxLine) { /* do we have space? */
 				*(pMsg + iMsg++) = cCCEscapeChar;
 				*(pMsg + iMsg++) = '0' + ((*pData & 0300) >> 6);
 				*(pMsg + iMsg++) = '0' + ((*pData & 0070) >> 3);
@@ -856,6 +841,12 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType);
 
 finalize_it:
+	if(tmpline != NULL)
+		free(tmpline);
+#	ifdef USE_NETZIP
+	if(deflateBuf != NULL)
+		free(deflateBuf);
+#	endif
 	RETiRet;
 }
 
@@ -2001,16 +1992,21 @@ static void doexit()
 }
 
 
-/* set the action resume interval
- */
+/* set the maximum message size */
+static rsRetVal setMaxMsgSize(void __attribute__((unused)) *pVal, int iNewVal)
+{
+	return glbl.SetMaxLine(iNewVal);
+}
+
+
+/* set the action resume interval */
 static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	return actionSetGlobalResumeInterval(iNewVal);
 }
 
 
-/* set the processes umask (upon configuration request)
- */
+/* set the processes umask (upon configuration request) */
 static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 {
 	umask(iUmask);
@@ -2726,6 +2722,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &bErrMsgToStderr, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, setMaxMsgSize, NULL, NULL));
 
 	/* now add other modules handlers (we should work on that to be able to do it in ClassInit(), but so far
 	 * that is not possible). -- rgerhards, 2008-01-28

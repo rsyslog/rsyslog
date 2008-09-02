@@ -40,6 +40,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 #define SIMP_PROP(name, dataType) \
 	dataType (*Get##name)(void); \
 	rsRetVal (*Set##name)(dataType);
+	SIMP_PROP(MaxLine, int)
 	SIMP_PROP(DefPFFamily, int)
 	SIMP_PROP(DropMalPTRMsgs, int)
 	SIMP_PROP(Option_DisallowWarning, int)
