@@ -13,6 +13,9 @@ Version 3.18.4 (rgerhards), 2008-09-??
   patch.
 - doc bugfix: rsyslog.conf man page improved and minor nit fixed
   thanks to Lukas Kuklinek for the patch.
+- bugfix: error code -2025 was used for two different errors. queue full
+  is now -2074 and -2025 is unique again. (did cause no real problem
+  except for troubleshooting)
 ---------------------------------------------------------------------------
 Version 3.18.3 (rgerhards), 2008-08-18
 - bugfix: imfile could cause a segfault upon rsyslogd HUP and termination

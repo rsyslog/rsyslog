@@ -123,7 +123,6 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_GSS_SEND_ERROR = -2024, /**< error during GSS (via TCP) send process */
 	RS_RET_TCP_SOCKCREATE_ERR = -2025, /**< error during creation of TCP socket */
 	RS_RET_GSS_SENDINIT_ERROR = -2024, /**< error during GSS (via TCP) send initialization process */
-	RS_RET_QUEUE_FULL = -2025, /**< queue is full, operation could not be completed */
 	RS_RET_EOF = -2026, /**< end of file reached, not necessarily an error */
 	RS_RET_IO_ERROR = -2027, /**< some kind of IO error happened */
 	RS_RET_INVALID_OID = -2028, /**< invalid object ID */
@@ -172,6 +171,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_MAIL_NO_TO = -2071, /**< recipient for mail destination is missing */
 	RS_RET_MAIL_NO_FROM = -2072, /**< sender for mail destination is missing */
 	RS_RET_INVALID_PRI = -2073, /**< PRI value is invalid */
+	RS_RET_QUEUE_FULL = -2074, /**< queue is full, operation could not be completed */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
