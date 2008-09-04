@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.21.5  [DEVEL] (rgerhards), 2008-09-??
+---------------------------------------------------------------------------
 Version 3.21.4  [DEVEL] (rgerhards), 2008-09-04
 - removed compile time fixed message size limit (was 2K), limit can now
   be set via $MaxMessageSize global config directive (finally gotten rid
