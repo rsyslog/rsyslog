@@ -1,9 +1,23 @@
 ---------------------------------------------------------------------------
-Version 3.21.4  [DEVEL] (rgerhards), 2008-0????
+Version 3.21.4  [DEVEL] (rgerhards), 2008-09-04
 - removed compile time fixed message size limit (was 2K), limit can now
   be set via $MaxMessageSize global config directive (finally gotten rid
   of MAXLINE ;))
 - enhanced doc for $ActionExecOnlyEveryNthTimeTimeout
+- integrated a number of patches from 3.18.4, namely
+  - bugfix: order-of magnitude issue with base-10 size definitions
+    in config file parser. Could lead to invalid sizes, constraints
+    etc for e.g. queue files and any other object whose size was specified
+    in base-10 entities. Did not apply to binary entities. Thanks to
+    RB for finding this bug and providing a patch.
+  - bugfix: action was not called when system time was set backwards
+    (until the previous time was reached again). There are still some
+    side-effects when time is rolled back (A time rollback is really a bad
+    thing to do, ideally the OS should issue pseudo time (like NetWare did)
+    when the user tries to roll back time). Thanks to varmojfekoj for this
+    patch.
+  - doc bugfix: rsyslog.conf man page improved and minor nit fixed
+    thanks to Lukas Kuklinek for the patch.
 ---------------------------------------------------------------------------
 Version 3.21.3  [DEVEL] (rgerhards), 2008-08-13
 - added ability to specify flow control mode for imuxsock
