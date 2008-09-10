@@ -250,8 +250,30 @@ same example with semicolon as delimiter is "%msg:F,59:3%".</p>
 <p>Please note that the special characters "F" and "R" are
 case-sensitive. Only upper case works, lower case will return an error.
 There are no white spaces permitted inside the sequence (that will lead
-to error messages and will NOT provide the intended result).<br>
+to error messages and will NOT provide the intended result).</p>
+<p>Each occurence of the field delimiter starts a new field. However, 
+if you add a plus sign ("+") after the field delimiter, multiple
+delimiters, one  immediately after the others, are treated as separate
+fields. This can be useful in cases where the syslog message contains
+such sequences. A frequent case may be with code that is written as
+follows:</p>
+<code><pre>
+int n, m;
+...
+syslog(LOG_ERR, "%d test %6d", n, m);
+</pre></code>
+<p>This will result into things like this in syslog messages:
+"1 test&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2", 
+"1 test&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;23", 
+"1 test&nbsp;&nbsp;234567" 
+<p>As you can see, the fields are delimited by space characters, but
+their exact number is unknown. They can properly be extracted as follows:
+<p>
+"%msg:F,32:2%" to "%msg:F,32+:2%".
+<p>This feature was suggested by Zhuang Yuyao and implemented by him.
+It is modeled after perl compatible regular expressions.
 </p>
+
 <h2>Property Options</h2>
 <b><code>property options</code></b> are
 case-insensitive. Currently, the following options are defined:
