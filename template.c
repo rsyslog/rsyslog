@@ -603,6 +603,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 			/* now we fall through the "regular" FromPos code */
 #endif /* #ifdef FEATURE_REGEXP */
 			if(*p == 'F') {
+				pTpe->data.field.field_expand = 0;
 				/* we have a field counter, so indicate it in the template */
 				++p; /* eat 'F' */
 				if (*p == ':') {
@@ -630,7 +631,11 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 							pTpe->data.field.field_delim = 9;
 						  } else {
 							pTpe->data.field.field_delim = iNum;
+							if (*p == '+') {
+								pTpe->data.field.field_expand = 1;
+								p ++;
 							}
+						  }
 					}
 				} else {
 					/* invalid character after F, so we need to reject

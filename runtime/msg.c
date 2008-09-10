@@ -1809,6 +1809,11 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				++pFld; /* skip to field terminator */
 			if(*pFld == pTpe->data.field.field_delim) {
 				++pFld; /* eat it */
+				if (pTpe->data.field.field_expand != 0) {
+					while (*pFld == pTpe->data.field.field_delim) {
+						++pFld;
+					}
+				}
 				++iCurrFld;
 			}
 		}

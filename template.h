@@ -84,6 +84,8 @@ struct templateEntry {
 #endif
 			unsigned has_fields; /* support for field-counting: field to extract */
 			unsigned char field_delim; /* support for field-counting: field delemiter char */
+			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
+
 			enum tplFormatTypes eDateFormat;
 			enum tplFormatCaseConvTypes eCaseConv;
 			struct { 		/* bit fields! */
