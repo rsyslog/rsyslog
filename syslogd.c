@@ -3075,7 +3075,7 @@ int realMain(int argc, char **argv)
 	 * only when actually neeeded. 
 	 * rgerhards, 2008-04-04
 	 */
-	while ((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nopqQr::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nopqQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':

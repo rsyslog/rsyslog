@@ -22,6 +22,9 @@ Version 3.18.4 (rgerhards), 2008-09-??
   to the correct value of 8, which disables the functionality. This
   problem applied both to the main message queue and the action queues.
   Thanks to Raoul Bhatia for pointing out this problem.
+- bugfix: option value for legacy -a option could not be specified,
+  resulting in strange operations. Thanks to Marius Tomaschewski
+  for the patch.
 ---------------------------------------------------------------------------
 Version 3.18.3 (rgerhards), 2008-08-18
 - bugfix: imfile could cause a segfault upon rsyslogd HUP and termination
