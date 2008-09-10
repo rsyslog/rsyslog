@@ -399,7 +399,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQHighWtrMark = 8000;
 	iMainMsgQLowWtrMark = 2000;
 	iMainMsgQDiscardMark = 9800;
-	iMainMsgQDiscardSeverity = 4;
+	iMainMsgQDiscardSeverity = 8;
 	iMainMsgQueMaxFileSize = 1024 * 1024;
 	iMainMsgQueueNumWorkers = 1;
 	iMainMsgQPersistUpdCnt = 0;
