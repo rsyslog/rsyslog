@@ -196,7 +196,7 @@ CODESTARTrunInput
 						       if(net.isAllowedSender(net.pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
 							       parseAndSubmitMessage(fromHost, fromHostIP, pRcvBuf, l,
-							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY);
+							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY, (uchar*)"imudp");
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(glbl.GetOption_DisallowWarning) {

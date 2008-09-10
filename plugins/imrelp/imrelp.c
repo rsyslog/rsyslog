@@ -84,7 +84,7 @@ onSyslogRcv(uchar *pHostname, uchar __attribute__((unused)) *pIP, uchar *pMsg, s
 {
 	DEFiRet;
 	parseAndSubmitMessage(pHostname, (uchar*) "[unset]", pMsg, lenMsg, MSG_PARSE_HOSTNAME,
-			      NOFLAG, eFLOWCTL_LIGHT_DELAY);
+			      NOFLAG, eFLOWCTL_LIGHT_DELAY, (uchar*)"imrelp");
 
 	RETiRet;
 }

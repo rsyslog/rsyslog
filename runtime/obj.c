@@ -780,7 +780,7 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 	DEFiRet;
 	rsRetVal iRetLocal;
 	obj_t *pObj = NULL;
-	int oVers = 0;   /* after all, it is totally useless but takes up some execution time...    */
+	int oVers = 0;   /* keep compiler happy, but it is totally useless but takes up some execution time... */
 	cstr_t *pstrID = NULL;
 	objInfo_t *pObjInfo;
 

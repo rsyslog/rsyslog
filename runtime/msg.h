@@ -91,9 +91,11 @@ struct msg {
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
 	uchar	*pszRcvFromIP;	/* IP of system message was received from */
 	int	iLenRcvFromIP;	/* Length of pszRcvFromIP */
+	uchar *pszInputName;	/* name of the input module that submitted this message */
+	int	iLenInputName;	/* Length of pszInputName */
 	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
 	cstr_t *pCSProgName;	/* the (BSD) program name */
-	cstr_t *pCSStrucData;/* STRUCTURED-DATA */
+	cstr_t *pCSStrucData;   /* STRUCTURED-DATA */
 	cstr_t *pCSAPPNAME;	/* APP-NAME */
 	cstr_t *pCSPROCID;	/* PROCID */
 	cstr_t *pCSMSGID;	/* MSGID */
@@ -135,6 +137,7 @@ char *getSeverity(msg_t *pM);
 char *getSeverityStr(msg_t *pM);
 char *getFacility(msg_t *pM);
 char *getFacilityStr(msg_t *pM);
+void MsgSetInputName(msg_t *pMsg, char*);
 rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
 char *getAPPNAME(msg_t *pM);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);

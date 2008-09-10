@@ -576,8 +576,14 @@ void untty(void)
  * rgerhards, 2008-05-16:
  * I added an additional calling parameter (hnameIP) to enable specifying the IP
  * of a remote host.
+ *
+ * rgerhards, 2008-09-11:
+ * Interface change: added new parameter "InputName", permits the input to provide 
+ * a string that identifies it. May be NULL, but must be a valid char* pointer if
+ * non-NULL.
  */
-rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType)
+rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType,
+	uchar *pszInputName)
 {
 	DEFiRet;
 	register uchar *p;
@@ -586,6 +592,8 @@ rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int
 
 	/* Now it is time to create the message object (rgerhards) */
 	CHKiRet(msgConstruct(&pMsg));
+	if(pszInputName != NULL)
+		MsgSetInputName(pMsg, (char*) pszInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
@@ -671,9 +679,15 @@ finalize_it:
  * rgerhards, 2008-05-16:
  * I added an additional calling parameter (hnameIP) to enable specifying the IP
  * of a remote host.
+ *
+ * rgerhards, 2008-09-11:
+ * Interface change: added new parameter "InputName", permits the input to provide 
+ * a string that identifies it. May be NULL, but must be a valid char* pointer if
+ * non-NULL.
  */
 rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType)
+parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType,
+	uchar *pszInputName)
 {
 	DEFiRet;
 	register int iMsg;
@@ -786,7 +800,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			 */
 			if(iMsg == iMaxLine) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType);
+				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -838,7 +852,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType);
+	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
 
 finalize_it:
 	if(tmpline != NULL)
@@ -881,6 +895,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
+	MsgSetInputName(pMsg, "rsyslogd");
 	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());

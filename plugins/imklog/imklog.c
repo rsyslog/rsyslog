@@ -94,6 +94,8 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
+	MsgSetInputName(pMsg, "imklog");
+	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetMSG(pMsg, (char*)msg);

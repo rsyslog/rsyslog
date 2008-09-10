@@ -42,6 +42,7 @@
 #include "msg.h"
 #include "var.h"
 #include "datetime.h"
+#include "glbl.h"
 #include "regexp.h"
 #include "atomic.h"
 
@@ -49,6 +50,7 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(var)
 DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
 
 static syslogCODE rs_prioritynames[] =
@@ -287,6 +289,8 @@ CODESTARTobjDestruct(msg)
 			free(pThis->pszTAG);
 		if(pThis->pszHOSTNAME != NULL)
 			free(pThis->pszHOSTNAME);
+		if(pThis->pszInputName != NULL)
+			free(pThis->pszInputName);
 		if(pThis->pszRcvFrom != NULL)
 			free(pThis->pszRcvFrom);
 		if(pThis->pszRcvFromIP != NULL)
@@ -453,6 +457,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pszUxTradMsg, PSZ);
 	objSerializePTR(pStrm, pszTAG, PSZ);
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
+	objSerializePTR(pStrm, pszInputName, PSZ);
 	objSerializePTR(pStrm, pszRcvFrom, PSZ);
 	objSerializePTR(pStrm, pszRcvFromIP, PSZ);
 
@@ -1219,6 +1224,18 @@ char *getHOSTNAME(msg_t *pM)
 }
 
 
+uchar *getInputName(msg_t *pM)
+{
+	if(pM == NULL)
+		return (uchar*) "";
+	else
+		if(pM->pszInputName == NULL)
+			return (uchar*) "";
+		else
+			return pM->pszInputName;
+}
+
+
 char *getRcvFrom(msg_t *pM)
 {
 	if(pM == NULL)
@@ -1399,6 +1416,19 @@ static int getAPPNAMELen(msg_t *pM)
 	return (pM->pCSAPPNAME == NULL) ? 0 : rsCStrLen(pM->pCSAPPNAME);
 }
 
+/* rgerhards 2008-09-10: set pszInputName in msg object
+ */
+void MsgSetInputName(msg_t *pMsg, char* pszInputName)
+{
+	assert(pMsg != NULL);
+	if(pMsg->pszInputName != NULL)
+		free(pMsg->pszInputName);
+
+	pMsg->iLenInputName = strlen(pszInputName);
+	if((pMsg->pszInputName = malloc(pMsg->iLenInputName + 1)) != NULL) {
+		memcpy(pMsg->pszInputName, pszInputName, pMsg->iLenInputName + 1);
+	}
+}
 
 /* rgerhards 2004-11-16: set pszRcvFrom in msg object
  */
@@ -1685,6 +1715,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		pRes = getRawMsg(pMsg);
 	} else if(!strcmp((char*) pName, "uxtradmsg")) {
 		pRes = getUxTradMsg(pMsg);
+	} else if(!strcmp((char*) pName, "inputname")) {
+		pRes = (char*) getInputName(pMsg);
 	} else if(!strcmp((char*) pName, "fromhost")) {
 		pRes = getRcvFrom(pMsg);
 	} else if(!strcmp((char*) pName, "fromhost-ip")) {
@@ -1772,6 +1804,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			return "***OUT OF MEMORY***";
 		} else
 			*pbMustBeFreed = 1;	/* all of these functions allocate dyn. memory */
+	} else if(!strcmp((char*) pName, "$myhostname")) {
+		pRes = (char*) glbl.GetLocalHostName();
 	} else {
 		/* there is no point in continuing, we may even otherwise render the
 		 * error message unreadable. rgerhards, 2007-07-10
@@ -2368,6 +2402,8 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetUxTradMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszTAG")) {
 		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+	} else if(isProp("pszInputName")) {
+		MsgSetInputName(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszRcvFromIP")) {
 		MsgSetRcvFromIP(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszRcvFrom")) {
@@ -2430,6 +2466,7 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
 	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
