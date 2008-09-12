@@ -107,7 +107,7 @@ actionResetQueueParams(void)
 	iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
 	iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
 	iActionQDiscardMark = 9800;			/* begin to discard messages */
-	iActionQDiscardSeverity = 4;			/* discard warning and above */
+	iActionQDiscardSeverity = 8;			/* discard warning and above */
 	iActionQueueNumWorkers = 1;			/* number of worker threads for the mm queue above */
 	iActionQueMaxFileSize = 1024*1024;
 	iActionQPersistUpdCnt = 0;			/* persist queue info every n updates */
