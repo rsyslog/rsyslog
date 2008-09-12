@@ -372,7 +372,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQHighWtrMark = 8000;
 	iMainMsgQLowWtrMark = 2000;
 	iMainMsgQDiscardMark = 9800;
-	iMainMsgQDiscardSeverity = 4;
+	iMainMsgQDiscardSeverity = 8;
 	iMainMsgQueMaxFileSize = 1024 * 1024;
 	iMainMsgQueueNumWorkers = 1;
 	iMainMsgQPersistUpdCnt = 0;
@@ -1394,13 +1394,18 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	 */
 	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE) {
-		p2parse += 16;
+	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
+		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 	} else if(*p2parse == ' ') { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse+1) == TRUE) {
+		++p2parse;	/* move over space */
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
 			/* indeed, we got it! */
-			p2parse += 17;
+			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 		} else {
+			/* parse pointer needs to be restored, as we moved it off-by-one
+			 * for this try.
+			 */
+			--p2parse;
 			flags |= ADDDATE;
 		}
 	} else {
@@ -3003,7 +3008,7 @@ int realMain(int argc, char **argv)
 	 * only when actually neeeded. 
 	 * rgerhards, 2008-04-04
 	 */
-	while ((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nopqQr::s:t:u:vwx")) != EOF) {
+	while ((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nopqQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':

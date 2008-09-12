@@ -170,7 +170,6 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_GSS_SEND_ERROR = -2024, /**< error during GSS (via TCP) send process */
 	RS_RET_TCP_SOCKCREATE_ERR = -2025, /**< error during creation of TCP socket */
 	RS_RET_GSS_SENDINIT_ERROR = -2024, /**< error during GSS (via TCP) send initialization process */
-	RS_RET_QUEUE_FULL = -2025, /**< queue is full, operation could not be completed */
 	RS_RET_EOF = -2026, /**< end of file reached, not necessarily an error */
 	RS_RET_IO_ERROR = -2027, /**< some kind of IO error happened */
 	RS_RET_INVALID_OID = -2028, /**< invalid object ID */
@@ -248,6 +247,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_RETRY = -2100, /**< call should be retried (e.g. EGAIN on recv) */
 	RS_RET_GSS_ERR = -2101, /**< generic error occured in GSSAPI subsystem */
 	RS_RET_CERTLESS = -2102, /**< state: we run without machine cert (this may be OK) */
+	RS_RET_QUEUE_FULL = -2103, /**< queue is full, operation could not be completed */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
