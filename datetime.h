@@ -37,13 +37,19 @@ BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
 	void (*getCurrTime)(struct syslogTime *t);
 	//static int srSLMGParseInt32(char** ppsz);
 	int (*ParseTIMESTAMP3339)(struct syslogTime *pTime, char** ppszTS);
-	int (*ParseTIMESTAMP3164)(struct syslogTime *pTime, char* pszTS);
+	int (*ParseTIMESTAMP3164)(struct syslogTime *pTime, char** pszTS);
 	int (*formatTimestampToMySQL)(struct syslogTime *ts, char* pDst, size_t iLenDst);
 	int (*formatTimestampToPgSQL)(struct syslogTime *ts, char *pDst, size_t iLenDst);
 	int (*formatTimestamp3339)(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 	int (*formatTimestamp3164)(struct syslogTime *ts, char* pBuf, size_t iLenBuf);
 ENDinterface(datetime)
-#define datetimeCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define datetimeCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+/* interface changes:
+ * 1 - initial version
+ * 2 - not compatible to 1 - bugfix required ParseTIMESTAMP3164 to accept char ** as
+ *     last parameter. Did not try to remain compatible as this is not something any
+ *     third-party module should call. -- rgerhards, 2008.-09-12
+ */
 
 /* prototypes */
 PROTOTYPEObj(datetime);

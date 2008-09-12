@@ -265,10 +265,14 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, char** ppszTS)
  * Returns TRUE on parse OK, FALSE on parse error.
  */
 static int
-ParseTIMESTAMP3164(struct syslogTime *pTime, char* pszTS)
+ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
 {
-	assert(pTime != NULL);
+	char *pszTS;
+
+	assert(ppszTS != NULL);
+	pszTS = *ppszTS;
 	assert(pszTS != NULL);
+	assert(pTime != NULL);
 
 	getCurrTime(pTime);	/* obtain the current year and UTC offsets! */
 
@@ -435,13 +439,20 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, char* pszTS)
 	pTime->second = srSLMGParseInt32(&pszTS);
 	if(pTime->second < 0 || pTime->second > 60)
 		return FALSE;
-	if(*pszTS++ != ':')
+
+	/* we provide support for an exter ":" after the date. While this is an
+	 * invalid format, it occurs frequently enough (e.g. with Cisco devices)
+	 * to permit it as a valid case. -- rgerhards, 2008-09-12
+	 */
+	if(*pszTS++ == ':')
+		++pszTS;
 
 	/* OK, we actually have a 3164 timestamp, so let's indicate this
 	 * and fill the rest of the properties. */
 	pTime->timeType = 1;
  	pTime->secfracPrecision = 0;
 	pTime->secfrac = 0;
+	*ppszTS = pszTS; /* provide updated parse position back to caller */
 	return TRUE;
 }
 

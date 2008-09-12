@@ -1392,13 +1392,18 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	 */
 	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse) == TRUE) {
-		p2parse += 16;
+	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
+		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 	} else if(*p2parse == ' ') { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), p2parse+1) == TRUE) {
+		++p2parse;	/* move over space */
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
 			/* indeed, we got it! */
-			p2parse += 17;
+			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 		} else {
+			/* parse pointer needs to be restored, as we moved it off-by-one
+			 * for this try.
+			 */
+			--p2parse;
 			flags |= ADDDATE;
 		}
 	} else {
