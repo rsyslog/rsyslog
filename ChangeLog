@@ -651,6 +651,14 @@ Version 3.10.0 (rgerhards), 2008-01-07
 - much cleaner code due to new objects and removal of single-threading
   mode
 ---------------------------------------------------------------------------
+Version 2.0.6 V2-STABLE (rgerhards), 2008-??-??
+- bugfix: copy&paste error lead to dangling if - this caused a very minor
+  issue with re-formatting a RFC3164 date when the message was invalidly
+  formatted and had a colon immediately after the date. This was in the
+  code for some years (even v1 had it) and I think it never had any
+  effect at all in practice. Though, it should be fixed - but definitely
+  nothing to worry about.
+---------------------------------------------------------------------------
 Version 2.0.6 V2-STABLE (rgerhards), 2008-08-07
 - bugfix: IPv6 addresses could not be specified in forwarding actions
   New syntax @[addr]:port introduced to enable that. Root problem was IPv6
