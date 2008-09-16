@@ -1331,11 +1331,11 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	 */
 
 	/* TIMESTAMP */
-	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* initialize timestamp */
+	memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse) == RS_RET_OK) {
 		if(flags & IGNDATE) {
 			/* we need to ignore the msg data, so simply copy over reception date */
-			datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+			memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 		}
 	} else {
 		dbgprintf("no TIMESTAMP detected!\n");
