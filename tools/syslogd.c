@@ -873,7 +873,7 @@ rsRetVal
 submitErrMsg(int iErr, uchar *msg)
 {
 	DEFiRet;
-	iRet = logmsgInternal(iErr, LOG_SYSLOG|LOG_ERR, msg, ADDDATE);
+	iRet = logmsgInternal(iErr, LOG_SYSLOG|LOG_ERR, msg, 0);
 	RETiRet;
 }
 
@@ -1331,14 +1331,15 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	 */
 
 	/* TIMESTAMP */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse) == FALSE) {
+	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* initialize timestamp */
+	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse) == RS_RET_OK) {
+		if(flags & IGNDATE) {
+			/* we need to ignore the msg data, so simply copy over reception date */
+			datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+		}
+	} else {
 		dbgprintf("no TIMESTAMP detected!\n");
 		bContParse = 0;
-		flags |= ADDDATE;
-	}
-
-	if (flags & ADDDATE) {
-		datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	}
 
 	/* HOSTNAME */
@@ -1405,21 +1406,26 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	cstr_t *pStrB;
 	int iCnt;
 	int bTAGCharDetected;
+	BEGINfunc
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	p2parse = (char*) pMsg->pszUxTradMsg;
 
-	/* Check to see if msg contains a timestamp. We stary trying with a
-	 * high-precision one...
+	/* Check to see if msg contains a timestamp. We start by assuming
+	 * that the message timestamp is the time of reciption (which we 
+	 * generated ourselfs and then try to actually find one inside the
+	 * message. There we go from high-to low precison and are done
+	 * when we find a matching one. -- rgerhards, 2008-09-16
 	 */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
+	memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
+	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
+	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 	} else if(*p2parse == ' ') { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
 		++p2parse;	/* move over space */
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
 			/* indeed, we got it! */
 			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 		} else {
@@ -1427,19 +1433,12 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			 * for this try.
 			 */
 			--p2parse;
-			flags |= ADDDATE;
 		}
-	} else {
-		flags |= ADDDATE;
 	}
 
-	/* here we need to check if the timestamp is valid. If it is not,
-	 * we can not continue to parse but must treat the rest as the 
-	 * MSG part of the message (as of RFC 3164).
-	 * rgerhards 2004-12-03
-	 */
-	if(flags & ADDDATE) {
-		datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+	if(flags & IGNDATE) {
+		/* we need to ignore the msg data, so simply copy over reception date */
+		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 	}
 
 	/* rgerhards, 2006-03-13: next, we parse the hostname and tag. But we 
@@ -1575,6 +1574,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	/* The rest is the actual MSG */
 	MsgSetMSG(pMsg, p2parse);
 
+	ENDfunc
 	return 0; /* all ok */
 }
 
@@ -1687,6 +1687,10 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	
 	BEGINfunc
 	LockObj(pAction);
+	/* TODO: time() performance: the call below could be moved to
+	 * the beginn of the llExec(). This makes it slightly less correct, but
+	 * in an acceptable way. -- rgerhards, 2008-09-16
+	 */
 	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
 		dbgprintf("flush %s: repeated %d times, %d sec.\n",
 		    module.GetStateName(pAction->pMod), pAction->f_prevcount,
@@ -1936,7 +1940,7 @@ die(int sig)
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
 		 (int) myPid, sig);
 		errno = 0;
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, ADDDATE);
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
 	
 	/* drain queue (if configured so) and stop main queue worker thread pool */
@@ -2424,7 +2428,7 @@ init(void)
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] restart",
 		 (int) myPid);
-	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, ADDDATE);
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);

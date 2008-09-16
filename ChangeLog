@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.21.5  [DEVEL] (rgerhards), 2008-09-??
+- performance optimization: unnecessary time() calls during message
+  parsing removed - thanks to David Lang for his excellent performance
+  analysis
 - added new capability to property replacer: multiple immediately
   successive field delimiters are treated as a single one.
   Thanks to Zhuang Yuyao for the patch.

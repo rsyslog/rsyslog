@@ -71,7 +71,7 @@ static int startIndexUxLocalSockets; /* process funix from that index on (used t
 				   * read-only after startup
 				   */
 static int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
-static int funixFlags[MAXFUNIX] = { ADDDATE, }; /* should parser parse host name?  read-only after startup */
+static int funixFlags[MAXFUNIX] = { IGNDATE, }; /* should parser parse host name?  read-only after startup */
 static uchar *funixn[MAXFUNIX] = { (uchar*) _PATH_LOG }; /* read-only after startup */
 static uchar *funixHName[MAXFUNIX] = { NULL, }; /* host-name override - if set, use this instead of actual name */
 static int funixFlowCtl[MAXFUNIX] = { eFLOWCTL_NO_DELAY, }; /* flow control settings for this socket */
@@ -93,7 +93,7 @@ static int bIgnoreTimestamp = 1; /* ignore timestamps present in the incoming me
 static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	DEFiRet;
-	funixFlags[0] = iNewVal ? ADDDATE : NOFLAG;
+	funixFlags[0] = iNewVal ? IGNDATE : NOFLAG;
 	RETiRet;
 }
 
@@ -126,7 +126,7 @@ static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNe
 		funixHName[nfunix] = pLogHostName;
 		pLogHostName = NULL; /* re-init for next, not freed because funixHName[] now owns it */
 		funixFlowCtl[nfunix] = bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
-		funixFlags[nfunix] = bIgnoreTimestamp ? ADDDATE : NOFLAG;
+		funixFlags[nfunix] = bIgnoreTimestamp ? IGNDATE : NOFLAG;
 		funixn[nfunix++] = pNewVal;
 	}
 	else {
