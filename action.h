@@ -40,6 +40,8 @@ extern int glbliActionResumeRetryCount;
  */
 struct action_s {
 	time_t	f_time;		/* used for "message repeated n times" - be careful, old, old code */
+	time_t	tActNow;	/* the current time for an action execution. Initially set to -1 and
+				   populated on an as-needed basis. This is a performance optimization. */
 	time_t	tLastExec;	/* time this action was last executed */
 	int	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
@@ -78,8 +80,6 @@ rsRetVal actionConstruct(action_t **ppThis);
 rsRetVal actionConstructFinalize(action_t *pThis);
 rsRetVal actionDestruct(action_t *pThis);
 rsRetVal actionAddCfSysLineHdrl(void);
-rsRetVal actionTryResume(action_t *pThis);
-rsRetVal actionSuspend(action_t *pThis);
 rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);

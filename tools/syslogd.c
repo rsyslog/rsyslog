@@ -1167,9 +1167,6 @@ processMsg(msg_t *pMsg)
 /* The consumer of dequeued messages. This function is called by the
  * queue engine on dequeueing of a message. It runs on a SEPARATE
  * THREAD.
- * NOTE: Having more than one worker requires guarding of some
- * message object structures and potentially others - need to be checked
- * before we support multiple worker threads on the message queue.
  * Please note: the message object is destructed by the queue itself!
  */
 static rsRetVal
