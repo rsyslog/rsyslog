@@ -219,7 +219,7 @@ parall. Thus, the upper limit ca be set via "<i>$&lt;object&gt;QueueWorkerThread
 If it, for example, is set to four, no more than four workers will ever be 
 started, no matter how many elements are enqueued. </p>
 <p>Worker threads that have been started are kept running until an inactivity 
-timeout happens. The timeout can be set via "<i>$&lt;object&gt;QueueWorkerTimeoutShutdown</i>" 
+timeout happens. The timeout can be set via "<i>$&lt;object&gt;QueueWorkerTimeoutThreadShutdown</i>" 
 and is specified in milliseconds. If you do not like to keep the workers 
 running, simply set it to 0, which means immediate timeout and thus immediate 
 shutdown. But consider that creating threads involves some overhead, and this is 
