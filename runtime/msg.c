@@ -140,8 +140,8 @@ void (*funcMsgPrepareEnqueue)(msg_t *pMsg);
 #define MsgLock(pMsg) 	funcLock(pMsg)
 #define MsgUnlock(pMsg) funcUnlock(pMsg)
 #else
-#define MsgLock(pMsg) 	{dbgprintf("line %d\n - ", __LINE__); funcLock(pMsg);; }
-#define MsgUnlock(pMsg) {dbgprintf("line %d - ", __LINE__); funcUnlock(pMsg); }
+#define MsgLock(pMsg) 	{dbgprintf("MsgLock line %d\n - ", __LINE__); funcLock(pMsg);; }
+#define MsgUnlock(pMsg) {dbgprintf("MsgUnlock line %d - ", __LINE__); funcUnlock(pMsg); }
 #endif
 
 /* the next function is a dummy to be used by the looking functions

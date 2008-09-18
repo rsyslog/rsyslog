@@ -453,7 +453,7 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	wtpProcessThrdChanges(pThis);
+	wtpProcessThrdChanges(pThis);	// TODO: Performance: this causes a lot of FUTEX calls
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 

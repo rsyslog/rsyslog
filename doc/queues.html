@@ -223,7 +223,8 @@ timeout happens. The timeout can be set via "<i>$&lt;object&gt;QueueWorkerTimeou
 and is specified in milliseconds. If you do not like to keep the workers 
 running, simply set it to 0, which means immediate timeout and thus immediate 
 shutdown. But consider that creating threads involves some overhead, and this is 
-why we keep them running.</p>
+why we keep them running. If you would like to never shutdown any worker
+threads, specify -1 for this parameter.</p>
 <h2>Discarding Messages</h2>
 <p>If the queue reaches the so called "discard watermark" (a number of queued 
 elements), less important messages can automatically be discarded. This is in an 

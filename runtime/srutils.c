@@ -371,6 +371,7 @@ int getNumberDigits(long lNum)
 rsRetVal
 timeoutComp(struct timespec *pt, long iTimeout)
 {
+	BEGINfunc
 	assert(pt != NULL);
 	/* compute timeout */
 	clock_gettime(CLOCK_REALTIME, pt);
@@ -379,6 +380,7 @@ timeoutComp(struct timespec *pt, long iTimeout)
 		pt->tv_nsec -= 1000000000;
 	}
 	pt->tv_sec += iTimeout / 1000;
+	ENDfunc
 	return RS_RET_OK; /* so far, this is static... */
 }
 
@@ -393,6 +395,7 @@ timeoutVal(struct timespec *pt)
 {
 	struct timespec t;
 	long iTimeout;
+	BEGINfunc
 
 	assert(pt != NULL);
 	/* compute timeout */
@@ -403,6 +406,7 @@ timeoutVal(struct timespec *pt)
 	if(iTimeout < 0)
 		iTimeout = 0;
 
+	ENDfunc
 	return iTimeout;
 }
 

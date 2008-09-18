@@ -1928,7 +1928,7 @@ die(int sig)
 
 	/* close the inputs */
 	dbgprintf("Terminating input threads...\n");
-	thrdTerminateAll(); /* TODO: inputs only, please */
+	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
 	if (sig) {
@@ -2168,8 +2168,8 @@ static void dbgPrintInitInfo(void)
 			cCCEscapeChar);
 
 	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
-	dbgprintf("Main queue worker threads: %d, Perists every %d updates.\n",
-		  iMainMsgQueueNumWorkers, iMainMsgQPersistUpdCnt);
+	dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
+		  iMainMsgQueueNumWorkers, iMainMsgQtoWrkShutdown, iMainMsgQPersistUpdCnt);
 	dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
 		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
 	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
@@ -2179,11 +2179,9 @@ static void dbgPrintInitInfo(void)
 	/* TODO: add
 	iActionRetryCount = 0;
 	iActionRetryInterval = 30000;
-	static int iMainMsgQtoWrkShutdown = 60000;
 	static int iMainMsgQtoWrkMinMsgs = 100;	
 	static int iMainMsgQbSaveOnShutdown = 1;
 	iMainMsgQueMaxDiskSpace = 0;
-	setQPROP(queueSettoWrkShutdown, "$MainMsgQueueTimeoutWorkerThreadShutdown", 5000);
 	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
 	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */

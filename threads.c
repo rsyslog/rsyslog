@@ -127,7 +127,7 @@ static void* thrdStarter(void *arg)
 	assert(pThis != NULL);
 	assert(pThis->pUsrThrdMain != NULL);
 
-	/* block all signalsi */
+	/* block all signals */
 	sigset_t sigSet;
 	sigfillset(&sigSet);
 	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);

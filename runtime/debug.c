@@ -1,3 +1,4 @@
+#include <sys/syscall.h>
 /* debug.c
  *
  * This file proides debug and run time error analysis support. Some of the
@@ -879,7 +880,7 @@ dbgprintf(char *fmt, ...)
 	}
 
 	/* do not cache the thread name, as the caller might have changed it
-	 * TODO: optimized, invalidate cache when new name is set
+	 * TODO: optimize, invalidate cache when new name is set
 	 */
 	dbgGetThrdName(pszThrdName, sizeof(pszThrdName), ptLastThrdID, 0);
 
@@ -889,7 +890,8 @@ dbgprintf(char *fmt, ...)
 			if(stddbg != NULL) fprintf(stddbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
 			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
 		}
-		if(stddbg != NULL) fprintf(stddbg, "%s: ", pszThrdName);
+		if(stddbg != NULL) fprintf(stddbg, "{%ld}%s: ", (long) syscall(SYS_gettid), pszThrdName);
+		/*if(stddbg != NULL) fprintf(stddbg, "%s: ", pszThrdName);*/
 		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
 	}
 	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? 1 : 0;
