@@ -2171,15 +2171,15 @@ queueEnqObj(queue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 
 finalize_it:
 	if(pThis->qType != QUEUETYPE_DIRECT) {
-		d_pthread_mutex_unlock(pThis->mut);
+		/* make sure at least one worker is running. */
+		if(pThis->qType != QUEUETYPE_DIRECT) {
+			queueAdviseMaxWorkers(pThis);
+		}
+		/* and release the mutex */
 		i = pthread_cond_signal(&pThis->notEmpty);
+		d_pthread_mutex_unlock(pThis->mut);
 		dbgoprint((obj_t*) pThis, "EnqueueMsg signaled condition (%d)\n", i);
 		pthread_setcancelstate(iCancelStateSave, NULL);
-	}
-
-	/* make sure at least one worker is running. */
-	if(pThis->qType != QUEUETYPE_DIRECT) {
-		queueAdviseMaxWorkers(pThis);
 	}
 
 	RETiRet;

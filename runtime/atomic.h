@@ -41,11 +41,15 @@
  * They simply came in too late. -- rgerhards, 2008-04-02
  */
 #ifdef HAVE_ATOMIC_BUILTINS
-#	define ATOMIC_INC(data) ((void) __sync_fetch_and_add(&data, 1))
-#	define ATOMIC_DEC_AND_FETCH(data) __sync_sub_and_fetch(&data, 1)
+#	define ATOMIC_INC(data) ((void) __sync_fetch_and_add(&(data), 1))
+#	define ATOMIC_DEC_AND_FETCH(data) __sync_sub_and_fetch(&(data), 1)
+#	define ATOMIC_FETCH_32BIT(data) ((unsigned) __sync_fetch_and_and(&(data), 0xffffffff))
+#	define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
 #else
 #	warning "atomic builtins not available, using nul operations"
 #	define ATOMIC_INC(data) (++(data))
+#	define ATOMIC_FETCH_32BIT(data) (data)
+#	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1
 #endif
 
 #endif /* #ifndef INCLUDED_ATOMIC_H */

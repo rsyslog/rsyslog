@@ -2832,9 +2832,8 @@ static rsRetVal mainThread()
 
 	CHKiRet(init());
 
-	if(Debug) {
+	if(Debug && debugging_on) {
 		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
-		debugging_on = 1;
 	}
 	/* Send a signal to the parent so it can terminate.
 	 */
@@ -3082,9 +3081,9 @@ doGlblProcessInit(void)
 			fputs(" Already running.\n", stderr);
 			exit(1); /* "good" exit, done if syslogd is already running */
 		}
-	}
-	else
+	} else {
 		debugging_on = 1;
+	}
 
 	/* tuck my process id away */
 	dbgprintf("Writing pidfile %s.\n", PidFile);
