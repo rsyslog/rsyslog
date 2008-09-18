@@ -480,7 +480,23 @@ static inline void dbgMutexUnlockLog(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncDB
 
 	pthread_mutex_lock(&mutMutLog);
 	pLog = dbgMutLogFindSpecific(pmut, MUTOP_LOCK, NULL);
+#if 0 /* toggle for testing */
 	assert(pLog != NULL);
+#else
+/* the change below seems not to work - the problem seems to be a real race... I keep this code in just in case
+ * I need to re-use it. It should be removed once we are finished analyzing this problem. -- rgerhards, 2008-09-17
+ */
+if(pLog == NULL) {
+	/* this may happen due to some races. We do not try to avoid
+	 * this, as it would complicate the "real" code. This is not justified
+	 * just to keep the debug info system up. -- rgerhards, 2008-09-17
+	 */
+	pthread_mutex_unlock(&mutMutLog);
+	dbgprintf("%s:%d:%s: mutex %p UNlocked [but we did not yet know this mutex!]\n",
+		  pFuncDB->file, unlockLn, pFuncDB->func, (void*)pmut);
+	return; /* if we don't know it yet, we can not clean up... */
+}
+#endif
 
 	/* we found the last lock entry. We now need to see from which FuncDB we need to
 	 * remove it. This is recorded inside the mutex log entry.
