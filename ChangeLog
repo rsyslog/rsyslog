@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.18.5 (rgerhards), 2008-10-??
+---------------------------------------------------------------------------
 Version 3.18.4 (rgerhards), 2008-09-18
 - bugfix: order-of magnitude issue with base-10 size definitions
   in config file parser. Could lead to invalid sizes, constraints
