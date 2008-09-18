@@ -26,8 +26,9 @@ rsyslogd_LDADD = $(zlib_libs) $(pthreads_libs) $(rsrt_libs)
 rsyslogd_LDFLAGS = -export-dynamic
 
 if ENABLE_DIAGTOOLS
-sbin_PROGRAMS += rsyslog_diag_hostname
+sbin_PROGRAMS += rsyslog_diag_hostname msggen
 rsyslog_diag_hostname_SOURCES = gethostn.c
+msggen_SOURCES = msggen.c
 endif
 
 EXTRA_DIST = $(man_MANS)
