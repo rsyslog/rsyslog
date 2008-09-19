@@ -48,6 +48,7 @@
 #else
 #	warning "atomic builtins not available, using nul operations"
 #	define ATOMIC_INC(data) (++(data))
+#	define ATOMIC_DEC_AND_FETCH(data) (--(data))
 #	define ATOMIC_FETCH_32BIT(data) (data)
 #	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1
 #endif
