@@ -262,7 +262,12 @@ Version 3.19.0 (rgerhards), 2008-05-06
 - -c option no longer must be the first option - thanks to varmjofekoj
   for the patch
 ---------------------------------------------------------------------------
-Version 3.18.4 (rgerhards), 2008-09-??
+Version 3.18.5 (rgerhards), 2008-10-??
+- bugfix: imudp input module could cause segfault on HUP
+  It did not properly de-init a variable acting as a linked list head.
+  That resulted in trying to access freed memory blocks after the HUP.
+---------------------------------------------------------------------------
+Version 3.18.4 (rgerhards), 2008-09-18
 - bugfix: order-of magnitude issue with base-10 size definitions
   in config file parser. Could lead to invalid sizes, constraints
   etc for e.g. queue files and any other object whose size was specified
