@@ -242,10 +242,14 @@ CODESTARTafterRun
 		net.clearAllowedSenders (net.pAllowedSenders_UDP);
 		net.pAllowedSenders_UDP = NULL;
 	}
-	if(udpLstnSocks != NULL)
+	if(udpLstnSocks != NULL) {
 		net.closeUDPListenSockets(udpLstnSocks);
-	if(pRcvBuf != NULL)
+		udpLstnSocks = NULL;
+	}
+	if(pRcvBuf != NULL) {
 		free(pRcvBuf);
+		pRcvBuf = NULL;
+	}
 ENDafterRun
 
 
