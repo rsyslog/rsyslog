@@ -266,6 +266,9 @@ Version 3.18.5 (rgerhards), 2008-10-??
 - bugfix: imudp input module could cause segfault on HUP
   It did not properly de-init a variable acting as a linked list head.
   That resulted in trying to access freed memory blocks after the HUP.
+- doc bugfix: $ActionExecOnlyWhenPreviousIsSuspended was still misspelled
+  as $...OnlyIfPrev... in some parts of the documentation. Thanks to 
+  Lorenzo M. Catucci for reporting this bug.
 ---------------------------------------------------------------------------
 Version 3.18.4 (rgerhards), 2008-09-18
 - bugfix: order-of magnitude issue with base-10 size definitions
