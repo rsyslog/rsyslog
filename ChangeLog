@@ -163,6 +163,8 @@ Version 3.19.0 (rgerhards), 2008-05-06
   for the patch
 ---------------------------------------------------------------------------
 Version 3.18.5 (rgerhards), 2008-10-??
+- added doc on malformed messages, cause and how to work-around, to the
+  doc set
 - bugfix: imudp input module could cause segfault on HUP
   It did not properly de-init a variable acting as a linked list head.
   That resulted in trying to access freed memory blocks after the HUP.
