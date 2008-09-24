@@ -1,4 +1,5 @@
 html_files = \
+	index.html \
 	bugs.html \
 	debug.html \
 	features.html \
