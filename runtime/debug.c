@@ -773,6 +773,17 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 	char pszWriteBuf[1024];
 	size_t lenWriteBuf;
 	struct timespec t;
+	uchar *pszObjName = NULL;
+
+	/* we must get the object name before we lock the mutex, because the object
+	 * potentially calls back into us. If we locked the mutex, we would deadlock
+	 * ourselfs. On the other hand, the GetName call needs not to be protected, as
+	 * this thread has a valid reference. If such an object is deleted by another
+	 * thread, we are in much more trouble than just for dbgprint(). -- rgerhards, 2008-09-26
+	 */
+	if(pObj != NULL) {
+		pszObjName = obj.GetName(pObj);
+	}
 
 	pthread_mutex_lock(&mutdbgprint);
 	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
@@ -813,8 +824,8 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 		if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
 		if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
 		/* print object name header if we have an object */
-		if(pObj != NULL) {
-			lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", obj.GetName(pObj));
+		if(pszObjName != NULL) {
+			lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", pszObjName);
 			if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
 			if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
 		}
