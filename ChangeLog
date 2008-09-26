@@ -18,6 +18,8 @@ Version 3.21.5  [DEVEL] (rgerhards), 2008-09-??
   believe that really caused problems, but in theory it could and with
   threading we often see that theory becomes practice if something is only
   used long enough on a fast enough machine with enough CPUs ;)
+- cleaned up internal debug system code and made it behave better
+  in regard to multi-threading
 ---------------------------------------------------------------------------
 Version 3.21.4  [DEVEL] (rgerhards), 2008-09-04
 - removed compile time fixed message size limit (was 2K), limit can now

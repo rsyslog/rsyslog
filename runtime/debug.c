@@ -43,6 +43,9 @@
 #include <pthread.h>
 #include <ctype.h>
 #include <assert.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "rsyslog.h"
 #include "debug.h"
@@ -62,8 +65,8 @@ static int bPrintTime = 1;	/* print a timestamp together with debug message */
 static int bPrintAllDebugOnExit = 0;
 static int bAbortTrace = 1;	/* print a trace after SIGABRT or SIGSEGV */
 static char *pszAltDbgFileName = NULL; /* if set, debug output is *also* sent to here */
-static FILE *altdbg = NULL;	/* and the handle for alternate debug output */
-static FILE *stddbg;
+static int altdbg = -1;	/* and the handle for alternate debug output */
+static int stddbg;
 
 /* list of files/objects that should be printed */
 typedef struct dbgPrintName_s {
@@ -113,8 +116,7 @@ static dbgThrdInfo_t *dbgCallStackListRoot = NULL;
 static dbgThrdInfo_t *dbgCallStackListLast = NULL;
 static pthread_mutex_t mutCallStack;
 
-static pthread_mutex_t mutdbgprintf;
-static pthread_mutex_t mutdbgoprint;
+static pthread_mutex_t mutdbgprint;
 
 static pthread_key_t keyCallStack;
 
@@ -748,8 +750,6 @@ sigsegvHdlr(int signum)
 	}
 
 	dbgprintf("\n\nTo submit bug reports, visit http://www.rsyslog.com/bugs\n\n");
-	if(stddbg != NULL) fflush(stddbg);
-	if(altdbg != NULL) fflush(altdbg);
 
 	/* and finally abort... */
 	/* TODO: think about restarting rsyslog in this case: may be a good idea,
@@ -758,8 +758,74 @@ sigsegvHdlr(int signum)
 	abort();
 }
 
-
+#if 1
 #pragma GCC diagnostic ignored "-Wempty-body"
+/* write the debug message. This is a helper to dbgprintf and dbgoprint which
+ * contains common code. added 2008-09-26 rgerhards
+ */
+static void
+dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
+{
+	static pthread_t ptLastThrdID = 0;
+	static int bWasNL = 0;
+	char pszThrdName[64]; /* 64 is to be on the safe side, anything over 20 is bad... */
+	char pszWriteBuf[1024];
+	size_t lenWriteBuf;
+	struct timespec t;
+
+	pthread_mutex_lock(&mutdbgprint);
+	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprint);
+
+	/* The bWasNL handler does not really work. It works if no thread
+	 * switching occurs during non-NL messages. Else, things are messed
+	 * up. Anyhow, it works well enough to provide useful help during
+	 * getting this up and running. It is questionable if the extra effort
+	 * is worth fixing it, giving the limited appliability. -- rgerhards, 2005-10-25
+	 * I have decided that it is not worth fixing it - especially as it works
+	 * pretty well. -- rgerhards, 2007-06-15
+	 */
+	if(ptLastThrdID != pthread_self()) {
+		if(!bWasNL) {
+			if(stddbg != -1) write(stddbg, "\n", 1);
+			if(altdbg != -1) write(altdbg, "\n", 1);
+			bWasNL = 1;
+		}
+		ptLastThrdID = pthread_self();
+	}
+
+	/* do not cache the thread name, as the caller might have changed it
+	 * TODO: optimized, invalidate cache when new name is set
+	 */
+	dbgGetThrdName(pszThrdName, sizeof(pszThrdName), ptLastThrdID, 0);
+
+	if(bWasNL) {
+		if(bPrintTime) {
+			clock_gettime(CLOCK_REALTIME, &t);
+			lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf),
+				 	"%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
+			if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
+			if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
+		}
+		lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", pszThrdName);
+		if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
+		if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
+		/* print object name header if we have an object */
+		if(pObj != NULL) {
+			lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", obj.GetName(pObj));
+			if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
+			if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
+		}
+	}
+	if(stddbg != -1) write(stddbg, pszMsg, lenMsg);
+	if(altdbg != -1) write(altdbg, pszMsg, lenMsg);
+
+	bWasNL = (pszMsg[lenMsg - 1] == '\n') ? 1 : 0;
+
+	pthread_cleanup_pop(1);
+}
+#pragma GCC diagnostic warning "-Wempty-body"
+#endif
+
 /* print some debug output when an object is given
  * This is mostly a copy of dbgprintf, but I do not know how to combine it
  * into a single function as we have variable arguments and I don't know how to call
@@ -769,13 +835,9 @@ sigsegvHdlr(int signum)
 void
 dbgoprint(obj_t *pObj, char *fmt, ...)
 {
-	static pthread_t ptLastThrdID = 0;
-	static int bWasNL = 0;
 	va_list ap;
-	static char pszThrdName[64]; /* 64 is to be on the safe side, anything over 20 is bad... */
-	static char pszWriteBuf[1024];
+	char pszWriteBuf[1024];
 	size_t lenWriteBuf;
-	struct timespec t;
 
 	if(!(Debug && debugging_on))
 		return;
@@ -790,144 +852,31 @@ dbgoprint(obj_t *pObj, char *fmt, ...)
 		return;
 #endif
 
-
-	pthread_mutex_lock(&mutdbgoprint);
-	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgoprint);
-
-	/* The bWasNL handler does not really work. It works if no thread
-	 * switching occurs during non-NL messages. Else, things are messed
-	 * up. Anyhow, it works well enough to provide useful help during
-	 * getting this up and running. It is questionable if the extra effort
-	 * is worth fixing it, giving the limited appliability.
-	 * rgerhards, 2005-10-25
-	 * I have decided that it is not worth fixing it - especially as it works
-	 * pretty well.
-	 * rgerhards, 2007-06-15
-	 */
-	if(ptLastThrdID != pthread_self()) {
-		if(!bWasNL) {
-			if(stddbg != NULL) fprintf(stddbg, "\n");
-			if(altdbg != NULL) fprintf(altdbg, "\n");
-			bWasNL = 1;
-		}
-		ptLastThrdID = pthread_self();
-	}
-
-	/* do not cache the thread name, as the caller might have changed it
-	 * TODO: optimized, invalidate cache when new name is set
-	 */
-	dbgGetThrdName(pszThrdName, sizeof(pszThrdName), ptLastThrdID, 0);
-
-	if(bWasNL) {
-		if(bPrintTime) {
-			clock_gettime(CLOCK_REALTIME, &t);
-			if(stddbg != NULL) fprintf(stddbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
-			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
-		}
-		if(stddbg != NULL) fprintf(stddbg, "%s: ", pszThrdName);
-		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
-		/* print object name header if we have an object */
-		if(pObj != NULL) {
-			if(stddbg != NULL) fprintf(stddbg, "%s: ", obj.GetName(pObj));
-			if(altdbg != NULL) fprintf(altdbg, "%s: ", obj.GetName(pObj));
-		}
-	}
-	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? 1 : 0;
 	va_start(ap, fmt);
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
-	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
-		/* if our buffer was too small, we simply truncate. TODO: maybe something better? */
-		lenWriteBuf = sizeof(pszWriteBuf) - 1;
-	}
 	va_end(ap);
-	/*
-	if(stddbg != NULL) fprintf(stddbg, "%s", pszWriteBuf);
-	if(altdbg != NULL) fprintf(altdbg, "%s", pszWriteBuf);
-	*/
-	if(stddbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, stddbg);
-	if(altdbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, altdbg);
-
-	if(stddbg != NULL) fflush(stddbg);
-	if(altdbg != NULL) fflush(altdbg);
-	pthread_cleanup_pop(1);
+	dbgprint(pObj, pszWriteBuf, lenWriteBuf);
 }
-#pragma GCC diagnostic warning "-Wempty-body"
 
 
-#pragma GCC diagnostic ignored "-Wempty-body"
 /* print some debug output when no object is given
  * WARNING: duplicate code, see dbgoprin above!
  */
 void
 dbgprintf(char *fmt, ...)
 {
-	static pthread_t ptLastThrdID = 0;
-	static int bWasNL = 0;
 	va_list ap;
-	static char pszThrdName[64]; /* 64 is to be on the safe side, anything over 20 is bad... */
-	static char pszWriteBuf[1024];
+	char pszWriteBuf[1024];
 	size_t lenWriteBuf;
-	struct timespec t;
 
 	if(!(Debug && debugging_on))
 		return;
 	
-	pthread_mutex_lock(&mutdbgprintf);
-	pthread_cleanup_push(dbgMutexCancelCleanupHdlr, &mutdbgprintf);
-
-	/* The bWasNL handler does not really work. It works if no thread
-	 * switching occurs during non-NL messages. Else, things are messed
-	 * up. Anyhow, it works well enough to provide useful help during
-	 * getting this up and running. It is questionable if the extra effort
-	 * is worth fixing it, giving the limited appliability.
-	 * rgerhards, 2005-10-25
-	 * I have decided that it is not worth fixing it - especially as it works
-	 * pretty well.
-	 * rgerhards, 2007-06-15
-	 */
-	if(ptLastThrdID != pthread_self()) {
-		if(!bWasNL) {
-			if(stddbg != NULL) fprintf(stddbg, "\n");
-			if(altdbg != NULL) fprintf(altdbg, "\n");
-			bWasNL = 1;
-		}
-		ptLastThrdID = pthread_self();
-	}
-
-	/* do not cache the thread name, as the caller might have changed it
-	 * TODO: optimized, invalidate cache when new name is set
-	 */
-	dbgGetThrdName(pszThrdName, sizeof(pszThrdName), ptLastThrdID, 0);
-
-	if(bWasNL) {
-		if(bPrintTime) {
-			clock_gettime(CLOCK_REALTIME, &t);
-			if(stddbg != NULL) fprintf(stddbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
-			if(altdbg != NULL) fprintf(altdbg, "%4.4ld.%9.9ld:", (long) (t.tv_sec % 10000), t.tv_nsec);
-		}
-		if(stddbg != NULL) fprintf(stddbg, "%s: ", pszThrdName);
-		if(altdbg != NULL) fprintf(altdbg, "%s: ", pszThrdName);
-	}
-	bWasNL = (*(fmt + strlen(fmt) - 1) == '\n') ? 1 : 0;
 	va_start(ap, fmt);
 	lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
-	if(lenWriteBuf >= sizeof(pszWriteBuf)) {
-		/* if our buffer was too small, we simply truncate. TODO: maybe something better? */
-		lenWriteBuf = sizeof(pszWriteBuf) - 1;
-	}
 	va_end(ap);
-	/*
-	if(stddbg != NULL) fprintf(stddbg, "%s", pszWriteBuf);
-	if(altdbg != NULL) fprintf(altdbg, "%s", pszWriteBuf);
-	*/
-	if(stddbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, stddbg);
-	if(altdbg != NULL) fwrite(pszWriteBuf, lenWriteBuf, 1, altdbg);
-
-	if(stddbg != NULL) fflush(stddbg);
-	if(altdbg != NULL) fflush(altdbg);
-	pthread_cleanup_pop(1);
+	dbgprint(NULL, pszWriteBuf, lenWriteBuf);
 }
-#pragma GCC diagnostic warning "-Wempty-body"
 
 void tester(void)
 {
@@ -941,7 +890,7 @@ ENDfunc
 int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int line)
 {
 	int iStackPtr = 0; /* TODO: find some better default, this one hurts the least, but it is not clean */
-	dbgThrdInfo_t *pThrd = dbgGetThrdInfo();
+	dbgThrdInfo_t *pThrd;
 	dbgFuncDBListEntry_t *pFuncDBListEntry;
 	unsigned int i;
 	dbgFuncDB_t *pFuncDB;
@@ -951,6 +900,8 @@ int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int 
 	assert(func != NULL);
 	pFuncDB = *ppFuncDB;
 	assert((pFuncDB == NULL) || (pFuncDB->magic == dbgFUNCDB_MAGIC));
+
+	pThrd = dbgGetThrdInfo(); /* we must do this AFTER the mutexes are initialized! */
 
 	if(pFuncDB == NULL) {
 		/* we do not yet have a funcDB and need to create a new one. We also add it
@@ -1206,7 +1157,7 @@ dbgGetRuntimeOptions(void)
 	uchar *optname;
 
 	/* set some defaults */
-	stddbg = stdout;
+	stddbg = 1;
 
 	if((pszOpts = (uchar*) getenv("RSYSLOG_DEBUG")) != NULL) {
 		/* we have options set, so let's process them */
@@ -1248,7 +1199,7 @@ dbgGetRuntimeOptions(void)
 			} else if(!strcasecmp((char*)optname, "nologtimestamp")) {
 				bPrintTime = 0;
 			} else if(!strcasecmp((char*)optname, "nostdout")) {
-				stddbg = NULL;
+				stddbg = -1;
 			} else if(!strcasecmp((char*)optname, "noaborttrace")) {
 				bAbortTrace = 0;
 			} else if(!strcasecmp((char*)optname, "filetrace")) {
@@ -1273,7 +1224,7 @@ dbgGetRuntimeOptions(void)
 
 rsRetVal dbgClassInit(void)
 {
-	DEFiRet;
+	rsRetVal iRet;	/* do not use DEFiRet, as this makes calls into the debug system! */
 
 	struct sigaction sigAct;
 	sigset_t sigSet;
@@ -1287,8 +1238,7 @@ rsRetVal dbgClassInit(void)
 	pthread_mutex_init(&mutFuncDBList, NULL);
 	pthread_mutex_init(&mutMutLog, NULL);
 	pthread_mutex_init(&mutCallStack, NULL);
-	pthread_mutex_init(&mutdbgprintf, NULL);
-	pthread_mutex_init(&mutdbgoprint, NULL);
+	pthread_mutex_init(&mutdbgprint, NULL);
 
 	/* while we try not to use any of the real rsyslog code (to avoid infinite loops), we
 	 * need to have the ability to query object names. Thus, we need to obtain a pointer to
@@ -1310,7 +1260,7 @@ rsRetVal dbgClassInit(void)
 
 	if(pszAltDbgFileName != NULL) {
 		/* we have a secondary file, so let's open it) */
-		if((altdbg = fopen(pszAltDbgFileName, "w")) == NULL) {
+		if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY, S_IRUSR|S_IWUSR)) == -1) {
 			fprintf(stderr, "alternate debug file could not be opened, ignoring. Error: %s\n", strerror(errno));
 		}
 	}
@@ -1318,7 +1268,7 @@ rsRetVal dbgClassInit(void)
 	dbgSetThrdName((uchar*)"main thread");
 
 finalize_it:
-	RETiRet;
+	return(iRet);
 }
 
 
@@ -1330,8 +1280,8 @@ rsRetVal dbgClassExit(void)
 	if(bPrintAllDebugOnExit)
 		dbgPrintAllDebugInfo();
 
-	if(altdbg != NULL)
-		fclose(altdbg);
+	if(altdbg != -1)
+		close(altdbg);
 
 	/* now free all of our memory to make the memory debugger happy... */
 	pFuncDBListEtry = pFuncDBListRoot;
