@@ -1871,16 +1871,22 @@ void legacyOptsParseTCP(char ch, char *arg)
  * a minimal delay, but it is much cleaner than the approach of doing everything
  * inside the signal handler.
  * rgerhards, 2005-10-26
+ * Note: we do not call dbgprintf() as this may cause us to block in case something
+ * with the threading is wrong.
  */
 static void doDie(int sig)
 {
+#	define MSG1 "DoDie called.\n"
+#	define MSG2 "DoDie called 5 times - unconditional exit\n"
 	static int iRetries = 0; /* debug aid */
-	printf("DoDie called.\n");
+	write(1, MSG1, sizeof(MSG1));
 	if(iRetries++ == 4) {
-		printf("DoDie called 5 times - unconditional exit\n");
+		write(1, MSG2, sizeof(MSG2));
 		abort();
 	}
 	bFinished = sig;
+#	undef MSG1
+#	undef MSG2
 }
 
 
