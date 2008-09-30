@@ -674,6 +674,25 @@ finalize_it:
 }
 
 
+
+/* This is a synchronized getnameinfo() version, because we learned
+ * (via drd/valgrind) that getnameinfo() seems to have some multi-threading
+ * issues. -- rgerhards, 2008-09-30
+ */
+static int
+mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
+                       char *host, size_t hostlen,
+                       char *serv, size_t servlen, int flags)
+{
+	static pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+	int i;
+
+	pthread_mutex_lock(&mut);
+	i = getnameinfo(sa, salen, host, hostlen, serv, servlen, flags);
+	pthread_mutex_unlock(&mut);
+	return i;
+}
+
 /* Print an allowed sender list. The caller must tell us which one.
  * iListToPrint = 1 means UDP, 2 means TCP
  * rgerhards, 2005-09-27
@@ -708,7 +727,7 @@ void PrintAllowedSenders(int iListToPrint)
 			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME))
 				dbgprintf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
 			else {
-				if(getnameinfo (pSender->allowedSender.addr.NetAddr,
+				if(mygetnameinfo (pSender->allowedSender.addr.NetAddr,
 						     SALEN(pSender->allowedSender.addr.NetAddr),
 						     (char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
 					dbgprintf ("\t%s/%u\n", szIP, pSender->SignificantBits);
@@ -956,7 +975,6 @@ should_use_so_bsdcompat(void)
 #define SO_BSDCOMPAT 0
 #endif
 
-
 /* get the hostname of the message source. This was originally in cvthname()
  * but has been moved out of it because of clarity and fuctional separation.
  * It must be provided by the socket we received the message on as well as
@@ -982,7 +1000,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN, uchar *ip)
 	assert(f != NULL);
 	assert(pszHostFQDN != NULL);
 
-        error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *)f),
+        error = mygetnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *)f),
 			    (char*) ip, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
 
         if (error) {
@@ -997,7 +1015,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN, uchar *ip)
 		sigaddset(&nmask, SIGHUP);
 		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
 
-		error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *) f),
+		error = mygetnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *) f),
 				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 		
 		if (error == 0) {

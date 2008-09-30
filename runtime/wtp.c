@@ -304,11 +304,12 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 rsRetVal wtpSignalWrkrTermination(wtp_t *pThis)
 {
 	DEFiRet;
-	/* I leave the mutex code here out as it give as deadlocks. I think it is not really
+	/* I leave the mutex code here out as it gives us deadlocks. I think it is not really
 	 * needed and we are on the safe side. I leave this comment in if practice proves us
-	 * wrong. The whole thing should be removed after half a your or year if we see there
+	 * wrong. The whole thing should be removed after half a year or year if we see there
 	 * actually is no issue (or revisit it from a theoretical POV).
 	 * rgerhards, 2008-01-28
+	 * revisited 2008-09-30, still a bit unclear, leave in
 	 */
 	/*TODO: mutex or not mutex, that's the question ;)DEFVARS_mutexProtection;*/
 
