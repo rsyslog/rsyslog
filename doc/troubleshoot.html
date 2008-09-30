@@ -5,7 +5,7 @@
 <p><b>Having trouble with <a href="http://www.rsyslog.com">rsyslog</a>?</b>
 This page provides some tips on where to look for help and what to do
 if you need to ask for assistance. This page is continously being expanded.
-<p>Useful troublehshooting ressources are:
+<p>Useful troubleshooting ressources are:
 <ul>
 <li>The <a href="http://www.rsyslog.com/doc">rsyslog documentation</a> - note that the online version always covers
 the most recent development version. However, there is a version-specific
@@ -15,6 +15,10 @@ is a rsyslog-doc package, that often needs to be installed separately.
 <li>Check <a href="http://bugzilla.adiscon.com">the bugzilla</a> to see if your problem is a known
 (and even fixed ;)) bug.
 </ul>
+<p><b>Malformed Messages and Message Properties</b>
+<p>A common trouble source are <a href="syslog_parsing.html">ill-formed syslog messages</a>, which
+lead to to all sorts of interesting problems, including malformed hostnames and dates.
+Read the quoted guide to find relief.
 <p><b>Configuration Problems</b>
 <p>Rsyslog 3.21.1 and above has been enhanced to support extended configuration checking.
 It offers a special command line switch (-N1) that puts it into "config verfication mode".

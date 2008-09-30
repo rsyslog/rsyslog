@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
-Version 3.21.5  [DEVEL] (rgerhards), 2008-09-??
+Version 3.21.6  [DEVEL] (rgerhards), 2008-10-??
+- doc bugfix: queue doc had wrong parameter name for setting controlling
+  worker thread shutdown period
+---------------------------------------------------------------------------
+Version 3.21.5  [DEVEL] (rgerhards), 2008-09-30
 - performance optimization: unnecessary time() calls during message
   parsing removed - thanks to David Lang for his excellent performance
   analysis
@@ -11,8 +15,9 @@ Version 3.21.5  [DEVEL] (rgerhards), 2008-09-??
   each input module (else it is blank).
 - added system property "$myhostname", which contains the name of the
   local host as it knows itself.
-- doc bugfix: queue doc had wrong parameter name for setting controlling
-  worker thread shutdown period
+- imported a number of fixes and enhancements from the stable and
+  devel branches, including a fix to a potential segfault on HUP
+  when using UDP listners
 - re-enabled gcc builtin atomic operations and added a proper
   ./configure check
 - bugfix: potential race condition when adding messages to queue
@@ -267,6 +272,8 @@ Version 3.19.0 (rgerhards), 2008-05-06
   for the patch
 ---------------------------------------------------------------------------
 Version 3.18.5 (rgerhards), 2008-10-??
+- added doc on malformed messages, cause and how to work-around, to the
+  doc set
 - bugfix: imudp input module could cause segfault on HUP
   It did not properly de-init a variable acting as a linked list head.
   That resulted in trying to access freed memory blocks after the HUP.
