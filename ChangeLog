@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 3.21.6  [DEVEL] (rgerhards), 2008-10-??
+---------------------------------------------------------------------------
 Version 3.21.5  [DEVEL] (rgerhards), 2008-09-30
 - performance optimization: unnecessary time() calls during message
   parsing removed - thanks to David Lang for his excellent performance
