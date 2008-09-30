@@ -130,7 +130,8 @@ void dbgPrintAllDebugInfo(void);
 
 
 /* debug aides */
-#ifdef RTINST
+//#ifdef RTINST
+#if 0 // temporarily removed for helgrind
 #define d_pthread_mutex_lock(x)      dbgMutexLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )

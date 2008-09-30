@@ -273,11 +273,13 @@ BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODE
 	int currRefCount;
 CODESTARTobjDestruct(msg)
 	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); */
-#	ifdef DO_HAVE_ATOMICS
-		currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
-#	else
+//#	ifdef DO_HAVE_ATOMICS
+//		currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
+//#	else
+		MsgLock(pThis);
 		currRefCount = --pThis->iRefCount;
-# 	endif
+//# 	endif
+// we need a mutex, because we may be suspended after getting the refcount but before
 	if(currRefCount == 0)
 	{
 		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
@@ -337,9 +339,11 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSPROCID);
 		if(pThis->pCSMSGID != NULL)
 			rsCStrDestruct(&pThis->pCSMSGID);
+		MsgUnlock(pThis);
 		funcDeleteMutex(pThis);
 	} else {
 		pThis = NULL; /* tell framework not to destructing the object! */
+		MsgUnlock(pThis);
 	}
 ENDobjDestruct(msg)
 
@@ -483,7 +487,7 @@ finalize_it:
 msg_t *MsgAddRef(msg_t *pM)
 {
 	assert(pM != NULL);
-#	ifdef DO_HAVE_ATOMICS
+#	ifdef HAVE_ATOMIC_BUILTINS
 		ATOMIC_INC(pM->iRefCount);
 #	else
 		MsgLock(pM);
