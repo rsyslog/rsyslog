@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.21.5  [DEVEL] (rgerhards), 2008-09-??
+Version 3.21.5  [DEVEL] (rgerhards), 2008-09-30
 - performance optimization: unnecessary time() calls during message
   parsing removed - thanks to David Lang for his excellent performance
   analysis
@@ -11,6 +11,9 @@ Version 3.21.5  [DEVEL] (rgerhards), 2008-09-??
   each input module (else it is blank).
 - added system property "$myhostname", which contains the name of the
   local host as it knows itself.
+- imported a number of fixes and enhancements from the stable and
+  devel branches, including a fix to a potential segfault on HUP
+  when using UDP listners
 ---------------------------------------------------------------------------
 Version 3.21.4  [DEVEL] (rgerhards), 2008-09-04
 - removed compile time fixed message size limit (was 2K), limit can now
