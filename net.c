@@ -106,6 +106,27 @@ static inline void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
 #define SIN(sa)  ((struct sockaddr_in  *)(sa))
 #define SIN6(sa) ((struct sockaddr_in6 *)(sa))
 
+
+/* This is a cancel-safe getnameinfo() version, because we learned
+ * (via drd/valgrind) that getnameinfo() seems to have some issues
+ * when being cancelled, at least if the module was dlloaded.
+ * rgerhards, 2008-09-30
+ */
+static inline int
+mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
+                       char *host, size_t hostlen,
+                       char *serv, size_t servlen, int flags)
+{
+	int iCancelStateSave;
+	int i;
+
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	i = getnameinfo(sa, salen, host, hostlen, serv, servlen, flags);
+	pthread_setcancelstate(iCancelStateSave, NULL);
+	return i;
+}
+
+
 /* This function adds an allowed sender entry to the ACL linked list.
  * In any case, a single entry is added. If an error occurs, the
  * function does its error reporting itself. All validity checks
@@ -368,7 +389,7 @@ void PrintAllowedSenders(int iListToPrint)
 			if (F_ISSET(pSender->allowedSender.flags, ADDR_NAME))
 				dbgprintf ("\t%s\n", pSender->allowedSender.addr.HostWildcard);
 			else {
-				if(getnameinfo (pSender->allowedSender.addr.NetAddr,
+				if(mygetnameinfo (pSender->allowedSender.addr.NetAddr,
 						     SALEN(pSender->allowedSender.addr.NetAddr),
 						     (char*)szIP, 64, NULL, 0, NI_NUMERICHOST) == 0) {
 					dbgprintf ("\t%s/%u\n", szIP, pSender->SignificantBits);
@@ -642,7 +663,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
 	assert(f != NULL);
 	assert(pszHostFQDN != NULL);
 
-        error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *)f),
+        error = mygetnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *)f),
 			    ip, sizeof ip, NULL, 0, NI_NUMERICHOST);
 
         if (error) {
@@ -656,7 +677,7 @@ gethname(struct sockaddr_storage *f, uchar *pszHostFQDN)
 		sigaddset(&nmask, SIGHUP);
 		pthread_sigmask(SIG_BLOCK, &nmask, &omask);
 
-		error = getnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *) f),
+		error = mygetnameinfo((struct sockaddr *)f, SALEN((struct sockaddr *) f),
 				    (char*)pszHostFQDN, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 		
 		if (error == 0) {
