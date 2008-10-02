@@ -342,8 +342,8 @@ CODESTARTobjDestruct(msg)
 		MsgUnlock(pThis);
 		funcDeleteMutex(pThis);
 	} else {
-		pThis = NULL; /* tell framework not to destructing the object! */
 		MsgUnlock(pThis);
+		pThis = NULL; /* tell framework not to destructing the object! */
 	}
 ENDobjDestruct(msg)
 

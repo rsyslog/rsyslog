@@ -1430,8 +1430,13 @@ queueDequeueConsumable(queue_t *pThis, wti_t *pWti, int iCancelStateSave)
 		pthread_cond_broadcast(&pThis->belowLightDlyWtrMrk);
 	}
 
-	d_pthread_mutex_unlock(pThis->mut);
+	/* rgerhards, 2008-09-30: I reversed the order of cond_signal und mutex_unlock
+	 * as of the pthreads recommendation on predictable scheduling behaviour. I don't see
+	 * any problems caused by this, but I add this comment in case some will be seen
+	 * in the next time.
+	 */
 	pthread_cond_signal(&pThis->notFull);
+	d_pthread_mutex_unlock(pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 	/* WE ARE NO LONGER PROTECTED BY THE MUTEX */
 
