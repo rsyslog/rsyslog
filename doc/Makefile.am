@@ -1,4 +1,5 @@
 html_files = \
+	index.html \
 	bugs.html \
 	debug.html \
 	features.html \
@@ -7,6 +8,7 @@ html_files = \
 	history.html \
 	how2help.html \
 	install.html \
+	build_from_repo.html \
 	ipv6.html \
 	log_rotation_fix_size.html \
 	manual.html \
