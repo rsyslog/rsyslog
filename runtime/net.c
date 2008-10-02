@@ -695,25 +695,6 @@ finalize_it:
 }
 
 
-
-/* This is a synchronized getnameinfo() version, because we learned
- * (via drd/valgrind) that getnameinfo() seems to have some multi-threading
- * issues. -- rgerhards, 2008-09-30
- */
-static int
-mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
-                       char *host, size_t hostlen,
-                       char *serv, size_t servlen, int flags)
-{
-	int iCancelStateSave;
-	int i;
-
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	i = getnameinfo(sa, salen, host, hostlen, serv, servlen, flags);
-	pthread_setcancelstate(iCancelStateSave, NULL);
-	return i;
-}
-
 /* Print an allowed sender list. The caller must tell us which one.
  * iListToPrint = 1 means UDP, 2 means TCP
  * rgerhards, 2005-09-27
