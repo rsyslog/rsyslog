@@ -652,6 +652,7 @@ actionWriteToAction(action_t *pAction)
 		tTm.tm_isdst = 1;      /* TODO THIS IS JUST VALID FOR THE NEXT FEW DAYS ;) TODO */
 		/********************************************************************************/
 		pAction->f_time = mktime(&tTm);
+/* note: mktime seems to do a stat(/etc/localtime), so this is also sub-optimal! */
 dbgprintf("XXXX create our own timestamp: %ld, system time is %ld\n", pAction->f_time, time(NULL));
 	}
 
