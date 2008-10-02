@@ -582,7 +582,7 @@ int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 		lenRet = snprintf(pBuf, iLenBuf, szFmtStr, ts->secfrac);
 	} else {
 		pBuf[0] = '0';
-		pBuf[1] = '1';
+		pBuf[1] = '\0';
 		lenRet = 1;
 	}
 

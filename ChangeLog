@@ -111,6 +111,10 @@ Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
   see below)
 ---------------------------------------------------------------------------
 Version 3.19.12 [BETA] (rgerhards), 2008-08-25
+- bugfix: subseconds where not correctly extracted from a timestamp
+  if that timestamp did not contain any subsecond information (the
+  resulting string was garbagge but should have been "0", what it
+  now is).
 ---------------------------------------------------------------------------
 Version 3.19.11 [BETA] (rgerhards), 2008-08-25
 This is a refresh of the beta. No beta-specific fixes have been added.
