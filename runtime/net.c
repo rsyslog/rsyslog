@@ -684,14 +684,11 @@ mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
                        char *host, size_t hostlen,
                        char *serv, size_t servlen, int flags)
 {
-	static pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 	int iCancelStateSave;
 	int i;
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	//pthread_mutex_lock(&mut);
 	i = getnameinfo(sa, salen, host, hostlen, serv, servlen, flags);
-	//pthread_mutex_unlock(&mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 	return i;
 }
