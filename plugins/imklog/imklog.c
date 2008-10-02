@@ -106,7 +106,6 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	pMsg->iFacility = LOG_FAC(iFacility);
 	pMsg->iSeverity = LOG_PRI(iSeverity);
 	pMsg->bParseHOSTNAME = 0;
-	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	CHKiRet(submitMsg(pMsg));
 
 finalize_it:

@@ -103,7 +103,6 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
 	pMsg->bParseHOSTNAME = 0;
-	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	CHKiRet(submitMsg(pMsg));
 finalize_it:
 	RETiRet;

@@ -257,7 +257,16 @@ rsRetVal msgConstruct(msg_t **ppThis)
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
+
+	/* we initialize both timestamps to contain the current time, so that they
+	 * are consistent. Also, this saves us from doing any further time calls just
+	 * to obtain a timestamp. The memcpy() should not really make a difference,
+	 * especially as I think there is no codepath currently where it would not be
+	 * required (after I have cleaned up the pathes ;)). -- rgerhards, 2008-10-02
+	 */
 	datetime.getCurrTime(&(pM->tRcvdAt));
+	memcpy(&pM->tTIMESTAMP, &pM->tRcvdAt, sizeof(struct syslogTime));
+	
 	objConstructSetObjInfo(pM);
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
