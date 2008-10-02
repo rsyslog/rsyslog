@@ -450,6 +450,27 @@ static inline void MaskIP4 (struct in_addr  *addr, uint8_t bits) {
 #define SIN(sa)  ((struct sockaddr_in  *)(sa))
 #define SIN6(sa) ((struct sockaddr_in6 *)(sa))
 
+
+/* This is a cancel-safe getnameinfo() version, because we learned
+ * (via drd/valgrind) that getnameinfo() seems to have some issues
+ * when being cancelled, at least if the module was dlloaded.
+ * rgerhards, 2008-09-30
+ */
+static inline int
+mygetnameinfo(const struct sockaddr *sa, socklen_t salen,
+                       char *host, size_t hostlen,
+                       char *serv, size_t servlen, int flags)
+{
+	int iCancelStateSave;
+	int i;
+
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	i = getnameinfo(sa, salen, host, hostlen, serv, servlen, flags);
+	pthread_setcancelstate(iCancelStateSave, NULL);
+	return i;
+}
+
+
 /* This function adds an allowed sender entry to the ACL linked list.
  * In any case, a single entry is added. If an error occurs, the
  * function does its error reporting itself. All validity checks
