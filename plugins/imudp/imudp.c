@@ -40,6 +40,7 @@
 #include "srUtils.h"
 #include "errmsg.h"
 #include "glbl.h"
+#include "datetime.h"
 
 MODULE_TYPE_INPUT
 
@@ -50,6 +51,7 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
+DEFobjCurrIf(datetime)
 
 static int iMaxLine;			/* maximum UDP message size supported */
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
@@ -59,6 +61,8 @@ static uchar *pRcvBuf = NULL;		/* receive buffer (for a single packet). We use a
 					 * it so that we can check available memory in willRun() and request
 					 * termination if we can not get it. -- rgerhards, 2007-12-27
 					 */
+#define TIME_REQUERY_DFLT 2
+static int iTimeRequery = TIME_REQUERY_DFLT;/* how often is time to be queried inside tight recv loop? 0=always */
 
 /* config settings */
 
@@ -141,6 +145,8 @@ BEGINrunInput
 	uchar fromHostIP[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
 	ssize_t l;
+	struct syslogTime stTime;
+	int iNbrTimeUsed;
 CODESTARTrunInput
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
@@ -179,6 +185,7 @@ CODESTARTrunInput
 	       for (i = 0; nfds && i < *udpLstnSocks; i++) {
 		       if (FD_ISSET(udpLstnSocks[i+1], &readfds)) {
 			       socklen = sizeof(frominet);
+				iNbrTimeUsed = 0;
 			        do {
 					/* we now try to read from the file descriptor until there
 					 * is no more data. This is done in the hope to get better performance
@@ -203,8 +210,11 @@ CODESTARTrunInput
 							*/
 						       if(net.isAllowedSender(net.pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
+								if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
+									datetime.getCurrTime(&stTime);
+								}
 							       parseAndSubmitMessage(fromHost, fromHostIP, pRcvBuf, l,
-							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY, (uchar*)"imudp");
+							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY, (uchar*)"imudp", &stTime);
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(glbl.GetOption_DisallowWarning) {
@@ -274,6 +284,7 @@ CODESTARTmodExit
 	/* release what we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
+	objRelease(datetime, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
 
@@ -293,6 +304,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		net.closeUDPListenSockets(udpLstnSocks);
 		udpLstnSocks = NULL;
 	}
+	iTimeRequery = TIME_REQUERY_DFLT;/* the default is to query only every second time */
 	return RS_RET_OK;
 }
 
@@ -303,6 +315,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 
 	/* register config file handlers */
@@ -310,9 +323,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 		addListner, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,
 		NULL, &pszBindAddr, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpservertimerequery", 0, eCmdHdlrInt,
+		NULL, &iTimeRequery, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-/*
- * vi:set ai:
+/* vim:set ai:
  */

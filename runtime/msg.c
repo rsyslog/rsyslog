@@ -239,12 +239,21 @@ rsRetVal MsgEnableThreadSafety(void)
 /* end locking functions */
 
 
-/* "Constructor" for a msg "object". Returns a pointer to
+/* This is common code for all Constructors. It is defined in an
+ * inline'able function so that we can save a function call in the
+ * actual constructors (otherwise, the msgConstruct would need
+ * to call msgConstructWithTime(), which would require a
+ * function call). Now, both can use this inline function. This
+ * enables us to be optimal, but still have the code just once.
  * the new object or NULL if no such object could be allocated.
  * An object constructed via this function should only be destroyed
- * via "msgDestruct()".
+ * via "msgDestruct()". This constructor does not query system time
+ * itself but rather uses a user-supplied value. This enables the caller
+ * to do some tricks to save processing time (done, for example, in the
+ * udp input).
+ * rgerhards, 2008-10-06
  */
-rsRetVal msgConstruct(msg_t **ppThis)
+static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 {
 	DEFiRet;
 	msg_t *pM;
@@ -257,21 +266,58 @@ rsRetVal msgConstruct(msg_t **ppThis)
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
+	objConstructSetObjInfo(pM);
 
+	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
+
+	*ppThis = pM;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* "Constructor" for a msg "object". Returns a pointer to
+ * the new object or NULL if no such object could be allocated.
+ * An object constructed via this function should only be destroyed
+ * via "msgDestruct()". This constructor does not query system time
+ * itself but rather uses a user-supplied value. This enables the caller
+ * to do some tricks to save processing time (done, for example, in the
+ * udp input).
+ * rgerhards, 2008-10-06
+ */
+rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime)
+{
+	DEFiRet;
+
+	CHKiRet(msgBaseConstruct(ppThis));
+	memcpy(&(*ppThis)->tRcvdAt, stTime, sizeof(struct syslogTime));
+	memcpy(&(*ppThis)->tTIMESTAMP, stTime, sizeof(struct syslogTime));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* "Constructor" for a msg "object". Returns a pointer to
+ * the new object or NULL if no such object could be allocated.
+ * An object constructed via this function should only be destroyed
+ * via "msgDestruct()". This constructor, for historical reasons,
+ * also sets the two timestamps to the current time.
+ */
+rsRetVal msgConstruct(msg_t **ppThis)
+{
+	DEFiRet;
+
+	CHKiRet(msgBaseConstruct(ppThis));
 	/* we initialize both timestamps to contain the current time, so that they
 	 * are consistent. Also, this saves us from doing any further time calls just
 	 * to obtain a timestamp. The memcpy() should not really make a difference,
 	 * especially as I think there is no codepath currently where it would not be
 	 * required (after I have cleaned up the pathes ;)). -- rgerhards, 2008-10-02
 	 */
-	datetime.getCurrTime(&(pM->tRcvdAt));
-	memcpy(&pM->tTIMESTAMP, &pM->tRcvdAt, sizeof(struct syslogTime));
-	
-	objConstructSetObjInfo(pM);
-
-	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
-
-	*ppThis = pM;
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
+	memcpy(&(*ppThis)->tTIMESTAMP, &(*ppThis)->tRcvdAt, sizeof(struct syslogTime));
 
 finalize_it:
 	RETiRet;
@@ -2492,7 +2538,5 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	funcDeleteMutex = MsgLockingDummy;
 	funcMsgPrepareEnqueue = MsgLockingDummy;
 ENDObjClassInit(msg)
-
-/*
- * vi:set ai:
+/* vim:set ai:
  */

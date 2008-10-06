@@ -581,9 +581,15 @@ void untty(void)
  * Interface change: added new parameter "InputName", permits the input to provide 
  * a string that identifies it. May be NULL, but must be a valid char* pointer if
  * non-NULL.
+ *
+ * rgerhards, 2008-10-06:
+ * Interface change: added new parameter "stTime", which enables the caller to provide
+ * a timestamp that is to be used as timegenerated instead of the current system time.
+ * This is meant to facilitate performance optimization. Some inputs support such modes.
+ * If stTime is NULL, the current system time is used.
  */
-rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName)
+static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType,
+	uchar *pszInputName, struct syslogTime *stTime)
 {
 	DEFiRet;
 	register uchar *p;
@@ -591,7 +597,11 @@ rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int
 	msg_t *pMsg;
 
 	/* Now it is time to create the message object (rgerhards) */
-	CHKiRet(msgConstruct(&pMsg));
+	if(stTime == NULL) {
+		CHKiRet(msgConstruct(&pMsg));
+	} else {
+		CHKiRet(msgConstructWithTime(&pMsg, stTime));
+	}
 	if(pszInputName != NULL)
 		MsgSetInputName(pMsg, (char*) pszInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
@@ -684,10 +694,16 @@ finalize_it:
  * Interface change: added new parameter "InputName", permits the input to provide 
  * a string that identifies it. May be NULL, but must be a valid char* pointer if
  * non-NULL.
+ *
+ * rgerhards, 2008-10-06:
+ * Interface change: added new parameter "stTime", which enables the caller to provide
+ * a timestamp that is to be used as timegenerated instead of the current system time.
+ * This is meant to facilitate performance optimization. Some inputs support such modes.
+ * If stTime is NULL, the current system time is used.
  */
 rsRetVal
 parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName)
+	uchar *pszInputName, struct syslogTime *stTime)
 {
 	DEFiRet;
 	register int iMsg;
@@ -714,9 +730,6 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	 * TODO: optimize buffer handling */
 	iMaxLine = glbl.GetMaxLine();
 	CHKmalloc(tmpline = malloc(sizeof(uchar) * (iMaxLine + 1)));
-#	ifdef USE_NETZIP
-	CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
-#	endif
 
 	/* we first check if we have a NUL character at the very end of the
 	 * message. This seems to be a frequent problem with a number of senders.
@@ -762,6 +775,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 		 */
 		int ret;
 		iLenDefBuf = iMaxLine;
+		CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
 		dbgprintf("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
 		        ret, (long) iLenDefBuf, len-1);
@@ -800,7 +814,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			 */
 			if(iMsg == iMaxLine) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
+				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName, stTime);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -852,7 +866,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
+	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName, stTime);
 
 finalize_it:
 	if(tmpline != NULL)
@@ -1344,6 +1358,13 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	} else {
 		/* we can not parse, so we get the system we
 		 * received the data from.
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
 		 */
 		MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 	}

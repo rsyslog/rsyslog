@@ -119,6 +119,7 @@ struct msg {
 PROTOTYPEObjClassInit(msg);
 char* getProgramName(msg_t*);
 rsRetVal msgConstruct(msg_t **ppThis);
+rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime);
 rsRetVal msgDestruct(msg_t **ppM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);
@@ -180,6 +181,5 @@ extern void (*funcMsgPrepareEnqueue)(msg_t *pMsg);
 #define MsgPrepareEnqueue(pMsg) funcMsgPrepareEnqueue(pMsg)
 
 #endif /* #ifndef MSG_H_INCLUDED */
-/*
- * vi:set ai:
+/* vim:set ai:
  */

@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 3.21.6  [DEVEL] (rgerhards), 2008-10-??
+- added $UDPServerTimeRequery option which enables to work with
+  less acurate timestamps in favor of performance. This enables querying
+  of the time only every n-th time if imudp is running in the tight
+  receive loop (aka receiving messsages at a high rate)
 - doc bugfix: queue doc had wrong parameter name for setting controlling
   worker thread shutdown period
 - consolidated time calls during msg object creation, improves performance
