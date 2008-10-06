@@ -914,7 +914,6 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->bParseHOSTNAME = 0;
-	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	flags |= INTERNAL_MSG;
 
 	/* we now check if we should print internal messages out to stderr. This was
@@ -1328,7 +1327,6 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	 */
 
 	/* TIMESTAMP */
-	memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse) == RS_RET_OK) {
 		if(flags & IGNDATE) {
 			/* we need to ignore the msg data, so simply copy over reception date */
@@ -1415,7 +1413,6 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	 * message. There we go from high-to low precison and are done
 	 * when we find a matching one. -- rgerhards, 2008-09-16
 	 */
-	memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
 	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
