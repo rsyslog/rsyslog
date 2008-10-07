@@ -155,6 +155,7 @@ BEGINrunInput
 	uchar fromHostIP[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
 	ssize_t l;
+	time_t ttGenTime;
 	struct syslogTime stTime;
 	int iNbrTimeUsed;
 CODESTARTrunInput
@@ -227,10 +228,11 @@ CODESTARTrunInput
 						       if(net.isAllowedSender(net.pAllowedSenders_UDP,
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
 								if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
-									datetime.getCurrTime(&stTime);
+									datetime.getCurrTime(&stTime, &ttGenTime);
 								}
 							       parseAndSubmitMessage(fromHost, fromHostIP, pRcvBuf, l,
-							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY, (uchar*)"imudp", &stTime);
+							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY, (uchar*)"imudp",
+							       &stTime, ttGenTime);
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(glbl.GetOption_DisallowWarning) {

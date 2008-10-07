@@ -589,7 +589,7 @@ void untty(void)
  * If stTime is NULL, the current system time is used.
  */
 static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName, struct syslogTime *stTime)
+	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 	register uchar *p;
@@ -600,7 +600,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int b
 	if(stTime == NULL) {
 		CHKiRet(msgConstruct(&pMsg));
 	} else {
-		CHKiRet(msgConstructWithTime(&pMsg, stTime));
+		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
 	if(pszInputName != NULL)
 		MsgSetInputName(pMsg, (char*) pszInputName);
@@ -703,7 +703,7 @@ finalize_it:
  */
 rsRetVal
 parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName, struct syslogTime *stTime)
+	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 	register int iMsg;
@@ -814,7 +814,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			 */
 			if(iMsg == iMaxLine) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName, stTime);
+				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName, stTime, ttGenTime);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -866,7 +866,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName, stTime);
+	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName, stTime, ttGenTime);
 
 finalize_it:
 	if(tmpline != NULL)
@@ -1358,13 +1358,6 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	} else {
 		/* we can not parse, so we get the system we
 		 * received the data from.
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
 		 */
 		MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 	}

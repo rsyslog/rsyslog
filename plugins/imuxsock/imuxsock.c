@@ -221,7 +221,7 @@ static rsRetVal readSocket(int fd, int iSock)
 	if (iRcvd > 0) {
 		parseAndSubmitMessage(funixHName[iSock] == NULL ? glbl.GetLocalHostName() : funixHName[iSock],
 				      (uchar*)"127.0.0.1", pRcv,
-			 	      iRcvd, funixParseHost[iSock], funixFlags[iSock], funixFlowCtl[iSock], (uchar*)"imuxsock", NULL);
+			 	      iRcvd, funixParseHost[iSock], funixFlags[iSock], funixFlowCtl[iSock], (uchar*)"imuxsock", NULL, 0);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));

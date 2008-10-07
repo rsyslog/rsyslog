@@ -62,9 +62,14 @@ DEFobjCurrIf(errmsg)
  * most portable and removes the need for additional structures
  * (but I have to admit it is somewhat "bulky";)).
  *
- * Obviously, all caller-provided pointers must not be NULL...
+ * Obviously, *t must not be NULL...
+ *
+ * rgerhards, 2008-10-07: added ttSeconds to provide a way to 
+ * obtain the second-resolution UNIX timestamp. This is needed
+ * in some situations to minimize time() calls (namely when doing
+ * output processing). This can be left NULL if not needed.
  */
-static void getCurrTime(struct syslogTime *t)
+static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
 {
 	struct timeval tp;
 	struct tm *tm;
@@ -83,6 +88,9 @@ static void getCurrTime(struct syslogTime *t)
 #	else
 		gettimeofday(&tp, NULL);
 #	endif
+	if(ttSeconds != NULL)
+		*ttSeconds = tp.tv_sec;
+
 	tm = localtime_r((time_t*) &(tp.tv_sec), &tmBuf);
 
 	t->year = tm->tm_year + 1900;

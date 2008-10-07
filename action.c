@@ -602,7 +602,7 @@ actionWriteToAction(action_t *pAction)
 		 * ... RAWMSG is a problem ... Please note that digital
 		 * signatures inside the message are also invalidated.
 		 */
-		datetime.getCurrTime(&(pMsg->tRcvdAt));
+		datetime.getCurrTime(&(pMsg->tRcvdAt), &(pMsg->ttGenTime));
 		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 		MsgSetMSG(pMsg, (char*)szRepMsg);
 		MsgSetRawMsg(pMsg, (char*)szRepMsg);
@@ -640,6 +640,7 @@ actionWriteToAction(action_t *pAction)
 	 * while in the on-disk queue. Also need to think about a few other implications.
 	 * rgerhards, 2008-09-17
 	 */
+#if 0
 	{
 		struct tm tTm;
 		tTm.tm_sec = pAction->f_pMsg->tRcvdAt.second;
@@ -655,7 +656,10 @@ actionWriteToAction(action_t *pAction)
 /* note: mktime seems to do a stat(/etc/localtime), so this is also sub-optimal! */
 dbgprintf("XXXX create our own timestamp: %ld, system time is %ld\n", pAction->f_time, time(NULL));
 	}
+#endif
 
+		pAction->f_time = pAction->f_pMsg->ttGenTime;
+dbgprintf("XXXX create our own timestamp: %ld, system time is %ld\n", pAction->f_time, time(NULL));
 	//pAction->f_time = getActNow(pAction); /* re-init time flags */
 	/* Note: tLastExec could be set in the if block above, but f_time causes us a hard time
 	 * so far, I do not see a solution to getting rid of it. -- rgerhards, 2008-09-16

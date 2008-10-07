@@ -1,5 +1,14 @@
 ---------------------------------------------------------------------------
 Version 3.21.6  [DEVEL] (rgerhards), 2008-10-??
+
+********************************* WARNING *********************************
+This version has a slightly different on-disk format for message entries.
+As a consequence, old queue files being read by this version may have
+an invalid output timestamp, which could result to some malfunction inside
+the output driver. It is recommended to drain queues with the previous
+version before switching to this one.
+********************************* WARNING *********************************
+
 - added $UDPServerTimeRequery option which enables to work with
   less acurate timestamps in favor of performance. This enables querying
   of the time only every n-th time if imudp is running in the tight

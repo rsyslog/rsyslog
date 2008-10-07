@@ -99,6 +99,13 @@ struct msg {
 	cstr_t *pCSAPPNAME;	/* APP-NAME */
 	cstr_t *pCSPROCID;	/* PROCID */
 	cstr_t *pCSMSGID;	/* MSGID */
+	time_t ttGenTime;	/* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
+				   While this field looks redundant, it is required because a Unix timestamp
+				   is used at later processing stages (namely in the output arena). Thanks to
+				   the subleties of how time is defined, there is no reliable way to reconstruct
+				   the Unix timestamp from the syslogTime fields (in practice, we may be close
+				   enough to reliable, but I prefer to leave the subtle things to the OS, where
+				   it obviously is solved in way or another...). */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
 	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
@@ -119,7 +126,7 @@ struct msg {
 PROTOTYPEObjClassInit(msg);
 char* getProgramName(msg_t*);
 rsRetVal msgConstruct(msg_t **ppThis);
-rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime);
+rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime);
 rsRetVal msgDestruct(msg_t **ppM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);

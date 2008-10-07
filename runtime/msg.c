@@ -286,11 +286,12 @@ finalize_it:
  * udp input).
  * rgerhards, 2008-10-06
  */
-rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime)
+rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 
 	CHKiRet(msgBaseConstruct(ppThis));
+	(*ppThis)->ttGenTime = ttGenTime;
 	memcpy(&(*ppThis)->tRcvdAt, stTime, sizeof(struct syslogTime));
 	memcpy(&(*ppThis)->tTIMESTAMP, stTime, sizeof(struct syslogTime));
 
@@ -316,7 +317,7 @@ rsRetVal msgConstruct(msg_t **ppThis)
 	 * especially as I think there is no codepath currently where it would not be
 	 * required (after I have cleaned up the pathes ;)). -- rgerhards, 2008-10-02
 	 */
-	datetime.getCurrTime(&((*ppThis)->tRcvdAt));
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt), &((*ppThis)->ttGenTime));
 	memcpy(&(*ppThis)->tTIMESTAMP, &(*ppThis)->tRcvdAt, sizeof(struct syslogTime));
 
 finalize_it:
@@ -442,7 +443,7 @@ msg_t* MsgDup(msg_t* pOld)
 	assert(pOld != NULL);
 
 	BEGINfunc
-	if(msgConstruct(&pNew) != RS_RET_OK) {
+	if(msgConstructWithTime(&pNew, &pOld->tTIMESTAMP, pOld->ttGenTime) != RS_RET_OK) {
 		return NULL;
 	}
 
@@ -453,8 +454,7 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
 	pNew->msgFlags = pOld->msgFlags;
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
-	memcpy(&pNew->tRcvdAt, &pOld->tRcvdAt, sizeof(struct syslogTime));
-	memcpy(&pNew->tTIMESTAMP, &pOld->tTIMESTAMP, sizeof(struct syslogTime));
+	pNew->ttGenTime = pOld->ttGenTime;
 	tmpCOPYSZ(Severity);
 	tmpCOPYSZ(SeverityStr);
 	tmpCOPYSZ(Facility);
@@ -508,6 +508,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR(pStrm, iSeverity, SHORT);
 	objSerializeSCALAR(pStrm, iFacility, SHORT);
 	objSerializeSCALAR(pStrm, msgFlags, INT);
+	objSerializeSCALAR(pStrm, ttGenTime, INT);
 	objSerializeSCALAR(pStrm, tRcvdAt, SYSLOGTIME);
 	objSerializeSCALAR(pStrm, tTIMESTAMP, SYSLOGTIME);
 
@@ -1669,7 +1670,7 @@ static uchar *getNOW(eNOWType eNow)
 		return NULL;
 	}
 
-	datetime.getCurrTime(&t);
+	datetime.getCurrTime(&t, NULL);
 	switch(eNow) {
 	case NOW_NOW:
 		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
@@ -2477,6 +2478,8 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetPROCID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSMSGID")) {
 		MsgSetMSGID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+ 	} else if(isProp("ttGenTime")) {
+		pThis->ttGenTime = pProp->val.num;
 	} else if(isProp("tRcvdAt")) {
 		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	} else if(isProp("tTIMESTAMP")) {
