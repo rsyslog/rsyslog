@@ -133,6 +133,15 @@ finalize_it:
 /* This function is called to gather input.
  * Note that udpLstnSocks must be non-NULL because otherwise we would not have
  * indicated that we want to run (or we have a programming error ;)). -- rgerhards, 2008-10-02
+ * rgerhards, 2008-10-07: I have implemented a very simple, yet in most cases probably
+ * highly efficient "name caching". Before querying a name, I now check if the name to be
+ * queried is the same as the one queried in the last message processed. If that is the
+ * case, we can simple re-use the previous value. This algorithm works quite well with
+ * few sender, especially if they emit messages in bursts. The more sender and the
+ * more intermixed messages arrive, the less this algorithm works, but the overhead
+ * is so minimal (a simple memory compare and move) that this does not hurt. Even
+ * with a real name lookup cache, this optimization here is useful as it is quicker
+ * than even a cache lookup).
  */
 BEGINrunInput
 	int maxfds;
@@ -140,6 +149,7 @@ BEGINrunInput
 	int i;
 	fd_set readfds;
 	struct sockaddr_storage frominet;
+	struct sockaddr_storage frominetPrev;
 	socklen_t socklen;
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostIP[NI_MAXHOST];
@@ -148,6 +158,10 @@ BEGINrunInput
 	struct syslogTime stTime;
 	int iNbrTimeUsed;
 CODESTARTrunInput
+	/* start "name caching" algo by making sure the previous system indicator
+	 * is invalidated.
+	 */
+	memset(&frominetPrev, 0, sizeof(frominetPrev));
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
@@ -184,7 +198,7 @@ CODESTARTrunInput
 
 	       for (i = 0; nfds && i < *udpLstnSocks; i++) {
 		       if (FD_ISSET(udpLstnSocks[i+1], &readfds)) {
-			       socklen = sizeof(frominet);
+				socklen = sizeof(frominet);
 				iNbrTimeUsed = 0;
 			        do {
 					/* we now try to read from the file descriptor until there
@@ -199,7 +213,9 @@ CODESTARTrunInput
 					l = recvfrom(udpLstnSocks[i+1], (char*) pRcvBuf, iMaxLine, 0,
 						    (struct sockaddr *)&frominet, &socklen);
 					if(l > 0) {
-					       if(net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP) == RS_RET_OK) {
+					       if(memcmp(&frominet, &frominetPrev, socklen) == 0 ||
+						  net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP) == RS_RET_OK) {
+						       memcpy(&frominetPrev, &frominet, socklen);
 						       dbgprintf("Message from inetd socket: #%d, host: %s\n",
 							       udpLstnSocks[i+1], fromHost);
 						       /* Here we check if a host is permitted to send us
