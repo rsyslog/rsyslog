@@ -630,42 +630,8 @@ actionWriteToAction(action_t *pAction)
 		FINALIZE;
 	}
 
-
-
-	/* TODO: move this to msg object or some other object. This is just for quick testing!
-	 * ALSO, THIS DOES NOT YET WORK PROPERLY!
-	 * The reason is that we do not know the DST status, which is major pain. I need to
-	 * think about obtaining this information (or the actual Unix timestamp) when I
-	 * create the reception timestamp, but that also means I need to preserve that information
-	 * while in the on-disk queue. Also need to think about a few other implications.
-	 * rgerhards, 2008-09-17
-	 */
-#if 0
-	{
-		struct tm tTm;
-		tTm.tm_sec = pAction->f_pMsg->tRcvdAt.second;
-		tTm.tm_min = pAction->f_pMsg->tRcvdAt.minute;
-		tTm.tm_hour = pAction->f_pMsg->tRcvdAt.hour;
-		tTm.tm_mday = pAction->f_pMsg->tRcvdAt.day;
-		tTm.tm_mon = pAction->f_pMsg->tRcvdAt.month - 1;
-		tTm.tm_year = pAction->f_pMsg->tRcvdAt.year - 1900;
-		/********************************************************************************/
-		tTm.tm_isdst = 1;      /* TODO THIS IS JUST VALID FOR THE NEXT FEW DAYS ;) TODO */
-		/********************************************************************************/
-		pAction->f_time = mktime(&tTm);
-/* note: mktime seems to do a stat(/etc/localtime), so this is also sub-optimal! */
-dbgprintf("XXXX create our own timestamp: %ld, system time is %ld\n", pAction->f_time, time(NULL));
-	}
-#endif
-
-		pAction->f_time = pAction->f_pMsg->ttGenTime;
-dbgprintf("XXXX create our own timestamp: %ld, system time is %ld\n", pAction->f_time, time(NULL));
-	//pAction->f_time = getActNow(pAction); /* re-init time flags */
-	/* Note: tLastExec could be set in the if block above, but f_time causes us a hard time
-	 * so far, I do not see a solution to getting rid of it. -- rgerhards, 2008-09-16
-	 */
-
-
+	/* TODO: the time call below may use reception time, not dequeue time - under consideration. -- rgerhards, 2008-09-17 */
+	pAction->f_time = pAction->f_pMsg->ttGenTime;
 
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's enqueue our message for execution. -- rgerhards, 2007-07-24

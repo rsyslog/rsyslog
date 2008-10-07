@@ -778,6 +778,7 @@ int getPRIi(msg_t *pM)
 
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 {
+	BEGINfunc
 	if(pM == NULL)
 		return "";
 
@@ -849,11 +850,13 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP_SecFrac);
 	}
+	ENDfunc
 	return "INVALID eFmt OPTION!";
 }
 
 char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 {
+	BEGINfunc
 	if(pM == NULL)
 		return "";
 
@@ -925,6 +928,7 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt_SecFrac);
 	}
+	ENDfunc
 	return "INVALID eFmt OPTION!";
 }
 
