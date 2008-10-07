@@ -2101,6 +2101,15 @@ queueEnqObj(queue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 
 	ISOBJ_TYPE_assert(pThis, queue);
 
+	/* first check if we need to discard this message (which will cause CHKiRet() to exit)
+	 * rgerhards, 2008-10-07: It is OK to do this outside of mutex protection. The iQueueSize
+	 * and bRunsDA parameters may not reflect the correct settings here, but they are
+	 * "good enough" in the sense that they can be used to drive the decision. Valgrind's
+	 * threading tools may point this access to be an error, but this is done
+	 * intentional. I do not see this causes problems to us.
+	 */
+	CHKiRet(queueChkDiscardMsg(pThis, pThis->iQueueSize, pThis->bRunsDA, pUsr));
+
 	/* Please note that this function is not cancel-safe and consequently
 	 * sets the calling thread's cancelibility state to PTHREAD_CANCEL_DISABLE
 	 * during its execution. If that is not done, race conditions occur if the
@@ -2111,9 +2120,6 @@ queueEnqObj(queue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 		d_pthread_mutex_lock(pThis->mut);
 	}
-
-	/* first check if we need to discard this message (which will cause CHKiRet() to exit) */
-	CHKiRet(queueChkDiscardMsg(pThis, pThis->iQueueSize, pThis->bRunsDA, pUsr));
 
 	/* then check if we need to add an assistance disk queue */
 	if(pThis->bIsDA)
