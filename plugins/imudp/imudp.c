@@ -130,6 +130,85 @@ finalize_it:
 }
 
 
+/* This function is a helper to runInput. I have extracted it
+ * from the main loop just so that we do not have that large amount of code
+ * in a single place. This function takes a socket and pulls messages from
+ * it until the socket does not have any more waiting.
+ * rgerhards, 2008-01-08
+ * We try to read from the file descriptor until there
+ * is no more data. This is done in the hope to get better performance
+ * out of the system. However, this also means that a descriptor
+ * monopolizes processing while it contains data. This can lead to
+ * data loss in other descriptors. However, if the system is incapable of
+ * handling the workload, we will loss data in any case. So it doesn't really
+ * matter where the actual loss occurs - it is always random, because we depend
+ * on scheduling order. -- rgerhards, 2008-10-02
+ */
+static inline rsRetVal
+processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
+	      uchar *fromHost, uchar *fromHostFQDN, uchar *fromHostIP)
+{
+	DEFiRet;
+	int iNbrTimeUsed;
+	time_t ttGenTime;
+	struct syslogTime stTime;
+	socklen_t socklen;
+	ssize_t l;
+	struct sockaddr_storage frominet;
+	char errStr[1024];
+
+	iNbrTimeUsed = 0;
+	while(1) { /* loop is terminated if we have a bad receive, done below in the body */
+		socklen = sizeof(struct sockaddr_storage);
+		l = recvfrom(fd, (char*) pRcvBuf, iMaxLine, 0, (struct sockaddr *)&frominet, &socklen);
+		if(l < 0) {
+			if(errno != EINTR && errno != EAGAIN) {
+				rs_strerror_r(errno, errStr, sizeof(errStr));
+				DBGPRINTF("INET socket error: %d = %s.\n", errno, errStr);
+				errmsg.LogError(errno, NO_ERRCODE, "recvfrom inet");
+			}
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+
+		/* if we reach this point, we had a good receive and can process the packet received */
+		/* check if we have a different sender than before, if so, we need to query some new values */
+		if(memcmp(&frominet, frominetPrev, socklen) != 0) {
+			CHKiRet(net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP));
+			memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
+			/* Here we check if a host is permitted to send us
+			* syslog messages. If it isn't, we do not further
+			* process the message but log a warning (if we are
+			* configured to do this).
+			* rgerhards, 2005-09-26
+			*/
+			*pbIsPermitted = net.isAllowedSender(net.pAllowedSenders_UDP,
+			  			            (struct sockaddr *)&frominet, (char*)fromHostFQDN);
+	
+			if(!*pbIsPermitted) {
+				DBGPRINTF("%s is not an allowed sender\n", (char*)fromHostFQDN);
+				if(glbl.GetOption_DisallowWarning) {
+				       errmsg.LogError(0, NO_ERRCODE, "UDP message from disallowed sender %s discarded",
+						  (char*)fromHost);
+				}
+			}	
+		}
+
+		DBGPRINTF("Message from inetd socket: #%d, host: %s, isPermitted: %d\n", fd, fromHost, *pbIsPermitted);
+		if(*pbIsPermitted)  {
+			if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
+				datetime.getCurrTime(&stTime, &ttGenTime);
+			}
+			parseAndSubmitMessage(fromHost, fromHostIP, pRcvBuf, l,
+				MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY, (uchar*)"imudp", &stTime, ttGenTime);
+		}
+	}
+
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* This function is called to gather input.
  * Note that udpLstnSocks must be non-NULL because otherwise we would not have
  * indicated that we want to run (or we have a programming error ;)). -- rgerhards, 2008-10-02
@@ -148,20 +227,16 @@ BEGINrunInput
 	int nfds;
 	int i;
 	fd_set readfds;
-	struct sockaddr_storage frominet;
 	struct sockaddr_storage frominetPrev;
-	socklen_t socklen;
+	int bIsPermitted;
 	uchar fromHost[NI_MAXHOST];
 	uchar fromHostIP[NI_MAXHOST];
 	uchar fromHostFQDN[NI_MAXHOST];
-	ssize_t l;
-	time_t ttGenTime;
-	struct syslogTime stTime;
-	int iNbrTimeUsed;
 CODESTARTrunInput
 	/* start "name caching" algo by making sure the previous system indicator
 	 * is invalidated.
 	 */
+	bIsPermitted = 0;
 	memset(&frominetPrev, 0, sizeof(frominetPrev));
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
@@ -198,61 +273,11 @@ CODESTARTrunInput
 		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
 
 	       for (i = 0; nfds && i < *udpLstnSocks; i++) {
-		       if (FD_ISSET(udpLstnSocks[i+1], &readfds)) {
-				socklen = sizeof(frominet);
-				iNbrTimeUsed = 0;
-			        do {
-					/* we now try to read from the file descriptor until there
-					 * is no more data. This is done in the hope to get better performance
-					 * out of the system. However, this also means that a descriptor
-					 * monopolizes processing while it contains data. This can lead to
-					 * data loss in other descriptors. However, if the system is incapable of
-					 * handling the workload, we will loss data in any case. So it doesn't really
-					 * matter where the actual loss occurs - it is always random, because we depend
-					 * on scheduling order. -- rgerhards, 2008-10-02
-					 */
-					l = recvfrom(udpLstnSocks[i+1], (char*) pRcvBuf, iMaxLine, 0,
-						    (struct sockaddr *)&frominet, &socklen);
-					if(l > 0) {
-					       if(memcmp(&frominet, &frominetPrev, socklen) == 0 ||
-						  net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP) == RS_RET_OK) {
-						       memcpy(&frominetPrev, &frominet, socklen);
-						       dbgprintf("Message from inetd socket: #%d, host: %s\n",
-							       udpLstnSocks[i+1], fromHost);
-						       /* Here we check if a host is permitted to send us
-							* syslog messages. If it isn't, we do not further
-							* process the message but log a warning (if we are
-							* configured to do this).
-							* rgerhards, 2005-09-26
-							*/
-						       if(net.isAllowedSender(net.pAllowedSenders_UDP,
-							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
-								if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
-									datetime.getCurrTime(&stTime, &ttGenTime);
-								}
-							       parseAndSubmitMessage(fromHost, fromHostIP, pRcvBuf, l,
-							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY, (uchar*)"imudp",
-							       &stTime, ttGenTime);
-						       } else {
-							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
-							       if(glbl.GetOption_DisallowWarning) {
-								       errmsg.LogError(0, NO_ERRCODE, "UDP message from disallowed sender %s discarded",
-										  (char*)fromHost);
-							       }	
-						       }
-					       }
-					} else if(l < 0 && errno != EINTR && errno != EAGAIN) {
-						char errStr[1024];
-						rs_strerror_r(errno, errStr, sizeof(errStr));
-						dbgprintf("INET socket error: %d = %s.\n", errno, errStr);
-						       errmsg.LogError(errno, NO_ERRCODE, "recvfrom inet");
-						       /* should be harmless */
-						       sleep(1);
-					}
-				} while(l > 0); /* Warning: do ... while()! */
-
-				--nfds; /* indicate we have processed one descriptor */
+			if (FD_ISSET(udpLstnSocks[i+1], &readfds)) {
+		       		processSocket(udpLstnSocks[i+1], &frominetPrev, &bIsPermitted,
+					      fromHost, fromHostFQDN, fromHostIP);
 			}
+			--nfds; /* indicate we have processed one descriptor */
 	       }
 	       /* end of a run, back to loop for next recv() */
 	}
