@@ -128,6 +128,7 @@
 #include "vm.h"
 #include "errmsg.h"
 #include "datetime.h"
+#include "parser.h"
 #include "sysvar.h"
 
 /* definitions for objects we access */
@@ -249,15 +250,15 @@ typedef struct legacyOptsLL_s {
 legacyOptsLL_t *pLegacyOptsLL = NULL;
 
 /* global variables for config file state */
-static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
+int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
 					   as compatible to sysklogd as possible. */
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
-static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
-static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
+uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
+int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition to everything else)? */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
@@ -596,6 +597,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int b
 	int pri;
 	msg_t *pMsg;
 
+	pMsg->bIsParsed = 1; /* this is a hack until this function can be removed TODO: do it soon (rgerhards, 2008-10-09)! */
 	/* Now it is time to create the message object (rgerhards) */
 	if(stTime == NULL) {
 		CHKiRet(msgConstruct(&pMsg));
@@ -1190,6 +1192,9 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
 
 	assert(pMsg != NULL);
 
+	if(pMsg->bIsParsed == 0) {
+		parseMsg(pMsg);
+	}
 	processMsg(pMsg);
 	msgDestruct(&pMsg);
 
@@ -1311,7 +1316,7 @@ static int parseRFCStructuredData(char **pp2parse, char *pResult)
  *
  * rger, 2005-11-24
  */
-static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
+int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 {
 	char *p2parse;
 	char *pBuf;
@@ -1407,7 +1412,7 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
  * but I thought I log it in this comment.
  * rgerhards, 2006-01-10
  */
-static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
+int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 {
 	char *p2parse;
 	char *pBuf;
@@ -2908,6 +2913,8 @@ InitGlobalClasses(void)
 	CHKiRet(actionClassInit());
 	pErrObj = "template";
 	CHKiRet(templateInit());
+	pErrObj = "parser";
+	CHKiRet(parserClassInit());
 
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	pErrObj = "net";
@@ -3526,6 +3533,5 @@ int main(int argc, char **argv)
 	dbgClassInit();
 	return realMain(argc, argv);
 }
-
 /* vim:set ai:
  */

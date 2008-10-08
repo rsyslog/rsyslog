@@ -299,7 +299,7 @@ wtiWorkerCancelCleanup(void *arg)
 	pWtp = pThis->pWtp;
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
-	dbgprintf("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
+	DBGPRINTF("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
 	
 	/* call user supplied handler (that one e.g. requeues the element) */
 	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->pUsrp);
@@ -391,7 +391,7 @@ wtiWorker(wti_t *pThis)
 		/* if we reach this point, we are still protected by the mutex */
 
 		if(pWtp->pfIsIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED)) {
-			dbgprintf("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
+			DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
 			pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
 
 			if(pWtp->toWrkShutdown == -1) {
@@ -400,7 +400,7 @@ wtiWorker(wti_t *pThis)
 			} else {
 				timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
 				if(d_pthread_cond_timedwait(pWtp->pcondBusy, pWtp->pmutUsr, &t) != 0) {
-					dbgprintf("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
+					DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
 					bInactivityTOOccured = 1; /* indicate we had a timeout */
 				}
 			}

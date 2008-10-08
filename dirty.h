@@ -61,6 +61,9 @@ extern int  bReduceRepeatMsgs;
 #define	BACKOFF(f)	{ if (++(f)->f_repeatcount > MAXREPEAT) \
 				 (f)->f_repeatcount = MAXREPEAT; \
 			}
+extern int bDropTrailingLF;
+extern uchar cCCEscapeChar;
+extern int  bEscapeCCOnRcv;
 #ifdef USE_NETZIP
 /* config param: minimum message size to try compression. The smaller
  * the message, the less likely is any compression gain. We check for

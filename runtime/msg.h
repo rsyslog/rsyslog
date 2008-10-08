@@ -52,7 +52,10 @@ struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	pthread_mutexattr_t mutAttr;
 	pthread_mutex_t mut;
-	int	iRefCount;	/* reference counter (0 = unused) */
+	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
+				        once data has entered the queue, this property is no longer needed. */
+	short	iRefCount;	/* reference counter (0 = unused) */
+	short	bIsParsed;	/* is message parsed? (0=no, 1=yes), 0 means parser needs to be called */
 	short	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,
@@ -60,8 +63,6 @@ struct msg {
 	    * sockets. All in all, the parser would need parse templates, that would
 	    * resolve all these issues... rgerhards, 2005-10-06
 	    */
-	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
-				        once data has entered the queue, this property is no longer needed. */
 	short	iSeverity;	/* the severity 0..7 */
 	uchar *pszSeverity;	/* severity as string... */
 	int iLenSeverity;	/* ... and its length. */

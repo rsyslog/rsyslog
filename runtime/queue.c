@@ -1513,8 +1513,6 @@ queueRateLimiter(queue_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, queue);
 
-	dbgoprint((obj_t*) pThis, "entering rate limiter\n");
-
 	iDelay = 0;
 	if(pThis->iDeqtWinToHr != 25) { /* 25 means disabled */
 		/* time calls are expensive, so only do them when needed */

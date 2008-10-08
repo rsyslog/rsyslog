@@ -16,6 +16,8 @@ librsyslog_la_SOURCES = \
 	glbl.c \
 	conf.c \
 	conf.h \
+	parser.h \
+	parser.c \
 	msg.c \
 	msg.h \
 	linkedlist.c \
