@@ -44,8 +44,11 @@
  * rgerhards, 2008-03-04
  * version 3 adds modInfo_t ptr to call of modInit -- rgerhards, 2008-03-10
  * version 4 removes needUDPSocket OM callback -- rgerhards, 2008-03-22
+ * version 5 changes the way parsing works for input modules. This is
+ *           an important change, parseAndSubmitMessage() goes away. Other
+ *           module types are not affected. -- rgerhards, 2008-10-09
  */
-#define CURR_MOD_IF_VERSION 4
+#define CURR_MOD_IF_VERSION 5
 
 typedef enum eModType_ {
 	eMOD_IN,	/* input module */
