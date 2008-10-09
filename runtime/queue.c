@@ -2185,6 +2185,11 @@ finalize_it:
 		/* and release the mutex */
 		d_pthread_mutex_unlock(pThis->mut);
 		pthread_setcancelstate(iCancelStateSave, NULL);
+		/* the following pthread_yield is experimental, but brought us performance
+		 * benefit. For details, please see http://kb.monitorware.com/post14216.html#p14216
+		 * rgerhards, 2008-10-09
+		 */
+		pthread_yield();
 	}
 
 	RETiRet;
