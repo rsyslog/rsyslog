@@ -2181,10 +2181,10 @@ finalize_it:
 	if(pThis->qType != QUEUETYPE_DIRECT) {
 		/* make sure at least one worker is running. */
 		queueAdviseMaxWorkers(pThis);
-		dbgoprint((obj_t*) pThis, "EnqueueMsg advised worker start\n");
 		/* and release the mutex */
 		d_pthread_mutex_unlock(pThis->mut);
 		pthread_setcancelstate(iCancelStateSave, NULL);
+		dbgoprint((obj_t*) pThis, "EnqueueMsg advised worker start\n");
 		/* the following pthread_yield is experimental, but brought us performance
 		 * benefit. For details, please see http://kb.monitorware.com/post14216.html#p14216
 		 * rgerhards, 2008-10-09
