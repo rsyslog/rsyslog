@@ -2784,7 +2784,6 @@ static void *singleWorker()
  * rgerhards, 2005-10-24
  */
 #ifndef	USE_PTHREADS
-#define enqueueMsg(x) processMsg((x))
 #else
 static void enqueueMsg(msg_t *pMsg)
 {
@@ -3299,7 +3298,12 @@ logmsg(int pri, msg_t *pMsg, int flags)
 	 */
 	
 	pMsg->msgFlags = flags;
+#ifndef	USE_PTHREADS
+	processMsg(pMsg);
+	MsgDestruct(pMsg);
+#else /* ifdef USE_PTHREADS */
 	enqueueMsg(pMsg);
+#endif
 }
 
 
