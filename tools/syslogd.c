@@ -597,13 +597,13 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int b
 	int pri;
 	msg_t *pMsg;
 
-	pMsg->bIsParsed = 1; /* this is a hack until this function can be removed TODO: do it soon (rgerhards, 2008-10-09)! */
 	/* Now it is time to create the message object (rgerhards) */
 	if(stTime == NULL) {
 		CHKiRet(msgConstruct(&pMsg));
 	} else {
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
+	pMsg->bIsParsed = 1; /* this is a hack until this function can be removed TODO: do it soon (rgerhards, 2008-10-09)! */
 	if(pszInputName != NULL)
 		MsgSetInputName(pMsg, (char*) pszInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
@@ -1192,6 +1192,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
 
 	assert(pMsg != NULL);
 
+RUNLOG_VAR("%d", pMsg->bIsParsed);
 	if(pMsg->bIsParsed == 0) {
 		parseMsg(pMsg);
 	}
