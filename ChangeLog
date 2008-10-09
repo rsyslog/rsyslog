@@ -948,6 +948,8 @@ Version 3.10.0 (rgerhards), 2008-01-07
   mode
 ---------------------------------------------------------------------------
 Version 2.0.6 V2-STABLE (rgerhards), 2008-??-??
+- bugfix: memory leaks in rsyslogd, primarily in singlethread mode
+  Thanks to Frederico Nunez for providing the fix
 - bugfix: copy&paste error lead to dangling if - this caused a very minor
   issue with re-formatting a RFC3164 date when the message was invalidly
   formatted and had a colon immediately after the date. This was in the
