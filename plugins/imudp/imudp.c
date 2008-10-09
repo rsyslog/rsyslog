@@ -207,6 +207,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			/* first trim the buffer to what we have actually received */
 			CHKmalloc(pMsg->pszRawMsg = malloc(sizeof(uchar)* lenRcvBuf));
 			memcpy(pMsg->pszRawMsg, pRcvBuf, lenRcvBuf);
+			pMsg->bIsParsed = 0; /* indicate message needs to be parsed */
 			pMsg->iLenRawMsg = lenRcvBuf;
 			MsgSetInputName(pMsg, "imudp");
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
