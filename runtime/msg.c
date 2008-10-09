@@ -264,7 +264,6 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 
 	/* initialize members that are non-zero */
 	pM->iRefCount = 1;
-	pM->bIsParsed = 1; /* first we assume this is parsed. If not, input must re-set to 0 */
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
 	objConstructSetObjInfo(pM);

@@ -588,8 +588,11 @@ void untty(void)
  * a timestamp that is to be used as timegenerated instead of the current system time.
  * This is meant to facilitate performance optimization. Some inputs support such modes.
  * If stTime is NULL, the current system time is used.
+ *
+ * rgerhards, 2008-10-09:
+ * interface change: bParseHostname removed, now in flags
  */
-static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType,
+static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int flags, flowControl_t flowCtlType,
 	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
@@ -603,13 +606,11 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int b
 	} else {
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
-	pMsg->bIsParsed = 1; /* this is a hack until this function can be removed TODO: do it soon (rgerhards, 2008-10-09)! */
 	if(pszInputName != NULL)
 		MsgSetInputName(pMsg, (char*) pszInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
-	pMsg->bParseHOSTNAME  = bParseHost;
 	/* test for special codes */
 	pri = DEFUPRI;
 	p = msg;
@@ -634,7 +635,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int b
 	 * the message was received from (that, for obvious reasons,
 	 * being the local host).  rgerhards 2004-11-16
 	 */
-	if(bParseHost == 0)
+	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, (char*)hname);
 	MsgSetRcvFrom(pMsg, (char*)hname);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
@@ -702,9 +703,12 @@ finalize_it:
  * a timestamp that is to be used as timegenerated instead of the current system time.
  * This is meant to facilitate performance optimization. Some inputs support such modes.
  * If stTime is NULL, the current system time is used.
+ *
+ * rgerhards, 2008-10-09:
+ * interface change: bParseHostname removed, now in flags
  */
 rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType,
+parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
 	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
@@ -816,7 +820,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			 */
 			if(iMsg == iMaxLine) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName, stTime, ttGenTime);
+				printline(hname, hnameIP, tmpline, flags, flowCtlType, pszInputName, stTime, ttGenTime);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -868,7 +872,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName, stTime, ttGenTime);
+	printline(hname, hnameIP, tmpline, flags, flowCtlType, pszInputName, stTime, ttGenTime);
 
 finalize_it:
 	if(tmpline != NULL)
@@ -1192,8 +1196,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
 
 	assert(pMsg != NULL);
 
-RUNLOG_VAR("%d", pMsg->bIsParsed);
-	if(pMsg->bIsParsed == 0) {
+	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 		parseMsg(pMsg);
 	}
 	processMsg(pMsg);

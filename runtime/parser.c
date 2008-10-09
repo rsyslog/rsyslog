@@ -41,7 +41,6 @@
 /* some defines */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 
-#warning "msg object must be updated with new property for persisting the queue!"
 /* definitions for objects we access */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
@@ -306,7 +305,7 @@ rsRetVal parseMsg(msg_t *pMsg)
 	}
 
 	/* finalize message object */
-	pMsg->bIsParsed = 1; /* this message is now parsed */
+	pMsg->msgFlags &= ~NEEDS_PARSING; /* this message is now parsed */
 	MsgPrepareEnqueue(pMsg); /* "historical" name - preparese for multi-threading */
 
 finalize_it:

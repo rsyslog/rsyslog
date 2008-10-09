@@ -49,6 +49,7 @@
 #include "obj.h"
 #include "wtp.h"
 #include "wti.h"
+#include "atomic.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -996,7 +997,7 @@ queueAdd(queue_t *pThis, void *pUsr)
 	CHKiRet(pThis->qAdd(pThis, pUsr));
 
 	if(pThis->qType != QUEUETYPE_DIRECT) {
-		++pThis->iQueueSize;
+		ATOMIC_INC(pThis->iQueueSize);
 		dbgoprint((obj_t*) pThis, "entry added, size now %d entries\n", pThis->iQueueSize);
 	}
 
@@ -1025,7 +1026,7 @@ queueDel(queue_t *pThis, void *pUsr)
 		iRet = queueGetUngottenObj(pThis, (obj_t**) pUsr);
 	} else {
 		iRet = pThis->qDel(pThis, pUsr);
-		--pThis->iQueueSize;
+		ATOMIC_DEC(pThis->iQueueSize);
 	}
 
 	dbgoprint((obj_t*) pThis, "entry deleted, state %d, size now %d entries\n",
