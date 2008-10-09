@@ -2142,7 +2142,7 @@ queueEnqObj(queue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 			pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut); /* TODO error check? But what do then? */
 		}
 	} else if(flowCtlType == eFLOWCTL_LIGHT_DELAY) {
-		while(pThis->iQueueSize >= pThis->iLightDlyMrk) {
+		if(pThis->iQueueSize >= pThis->iLightDlyMrk) {
 			dbgoprint((obj_t*) pThis, "enqueueMsg: LightDelay mark reached for light delayble message - blocking a bit.\n");
 			timeoutComp(&t, 1000); /* 1000 millisconds = 1 second TODO: make configurable */
 			pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t); /* TODO error check? But what do then? */

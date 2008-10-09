@@ -7,6 +7,9 @@ Version 3.18.5 (rgerhards), 2008-10-??
   because getnameinfo() is not cancel-safe, but was not guarded against
   being cancelled. pthread_cancel() is routinely being called during
   HUP processing.
+- bugfix[minor]: if queue size reached light_delay mark, enqueuing
+  could potentially be blocked for a longer period of time, which
+  was not the behaviour desired.
 - doc bugfix: $ActionExecOnlyWhenPreviousIsSuspended was still misspelled
   as $...OnlyIfPrev... in some parts of the documentation. Thanks to 
   Lorenzo M. Catucci for reporting this bug.
