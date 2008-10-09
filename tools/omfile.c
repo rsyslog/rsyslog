@@ -296,6 +296,8 @@ int resolveFileSizeLimit(instanceData *pData)
 
 	execProg(pCmd, 1, pParams);
 
+	free(pCmd);
+
 	pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
 			pData->fCreateMode);
 
