@@ -223,6 +223,14 @@ configuration file (default is
 will be reread and the
 .BR rsyslog (3)
 facility is started again.
+Note that this means a full rsyslogd restart is done. This has, among others,
+the consequence that TCP and other connections are torn down. Also, if any
+queues are not running in disk assisted mode or are not set to persist data
+on shutdown, queue data is lost. HUPing rsyslogd is an extremely expensive
+operation and should only be done when actually necessary. Actually, it is
+a rsyslgod stop immediately followed by a restart. Future versions will probably
+include a special handling which only closes files, but will not cause any
+of the other effects.
 .TP
 .B TERM ", " INT ", " QUIT
 .B Rsyslogd
