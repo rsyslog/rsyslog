@@ -156,6 +156,28 @@ fi
 
 
 
+# Additional module directories
+AC_ARG_WITH(moddirs,
+        [AS_HELP_STRING([--with-moddirs=DIRS],[Additional module search paths appended to @<:@$libdir/rsyslog@:>@])],
+        [_save_IFS=$IFS ; IFS=$PATH_SEPARATOR ; moddirs=""
+         for w in ${with_moddirs} ;
+         do
+                 case $w in
+                 "") continue ;; */) ;; *)  w="${w}/" ;;
+                 esac
+                 for m in ${moddirs} ;
+                 do
+                         test "x$w" = "x${libdir}/${PACKAGE}/"   || \
+                         test "x$w" = "x$m" || test "x$w" = "x/" && \
+                         continue 2
+                 done
+                 case $moddirs in
+                 "") moddirs="$w" ;; *) moddirs="${moddirs}:${w}" ;;
+                 esac
+         done ; IFS=$_save_IFS],[moddirs=""]
+)
+AM_CONDITIONAL(WITH_MODDIRS, test x$moddirs != x)
+AC_SUBST(moddirs)
 
 # Large file support
 AC_ARG_ENABLE(largefile,
