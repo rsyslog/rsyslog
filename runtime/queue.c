@@ -88,6 +88,30 @@ ENDfunc
 	return pThis->iQueueSize + pThis->iUngottenObjs;
 }
 
+
+/* This function drains the queue in cases where this needs to be done. The most probable
+ * reason is a HUP which needs to discard data (because the queue is configured to be lossy).
+ * During a shutdown, this is typically not needed, as the OS frees up ressources and does
+ * this much quicker than when we clean up ourselvs. -- rgerhards, 2008-10-21
+ * This function returns void, as it makes no sense to communicate an error back, even if
+ * it happens.
+ */
+static inline void queueDrain(queue_t *pThis)
+{
+	void *pUsr;
+	
+	ASSERT(pThis != NULL);
+
+	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
+	while(pThis->iQueueSize-- > 0) {
+		pThis->qDel(pThis, &pUsr);
+		if(pUsr != NULL) {
+			objDestruct(pUsr);
+		}
+	}
+}
+
+
 /* --------------- code for disk-assisted (DA) queue modes -------------------- */
 
 
@@ -195,14 +219,6 @@ queueTurnOffDAMode(queue_t *pThis)
 			queueAdviseMaxWorkers(pThis);
 		}
 	}
-
-	/* TODO: we have a *really biiiiig* memory leak here: if the queue could not be persisted, all of
-	 * its data elements are still in memory. That doesn't really matter if we are terminated, but on
-	 * HUP this memory leaks. We MUST add a loop of destructor calls here. However, this takes time
-	 * (possibly a lot), so it is probably best to have a config variable for that.
-	 * Something for 3.11.1!
-	 * rgerhards, 2008-01-30
-	 */
 
 	RETiRet;
 }
@@ -461,11 +477,14 @@ static rsRetVal qDestructFixedArray(queue_t *pThis)
 	
 	ASSERT(pThis != NULL);
 
+	queueDrain(pThis); /* discard any remaining queue entries */
+
 	if(pThis->tVars.farray.pBuf != NULL)
 		free(pThis->tVars.farray.pBuf);
 
 	RETiRet;
 }
+
 
 static rsRetVal qAddFixedArray(queue_t *pThis, void* in)
 {
@@ -570,11 +589,11 @@ static rsRetVal qConstructLinkedList(queue_t *pThis)
 static rsRetVal qDestructLinkedList(queue_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
-	
-	/* with the linked list type, there is nothing to do here. The
-	 * reason is that the Destructor is only called after all entries
-	 * have bene taken off the queue. In this case, there is nothing
-	 * dynamic left with the linked list.
+
+	queueDrain(pThis); /* discard any remaining queue entries */
+
+	/* with the linked list type, there is nothing left to do here. The
+	 * reason is that there are no dynamic elements for the list itself.
 	 */
 
 	RETiRet;
