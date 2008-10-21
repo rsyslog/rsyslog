@@ -119,6 +119,8 @@ Version 3.19.12 [BETA] (rgerhards), 2008-10-16
   now is).
 - increased maximum size of a configuration statement to 4K (was 1K)
 - imported all fixes from the stable branch (quite a lot)
+- bugfix: (potentially big) memory leak on HUP if queues could not be
+  drained before timeout - thanks to David Lang for pointing this out
 ---------------------------------------------------------------------------
 Version 3.19.11 [BETA] (rgerhards), 2008-08-25
 This is a refresh of the beta. No beta-specific fixes have been added.
