@@ -45,9 +45,11 @@
 #include "wtp.h"
 #include "wti.h"
 #include "obj.h"
+#include "glbl.h"
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(glbl)
 
 /* forward-definitions */
 
@@ -202,6 +204,7 @@ ENDobjDestruct(wti)
 /* Standard-Constructor for the wti object
  */
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
+	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	pthread_cond_init(&pThis->condExitDone, NULL);
 	pthread_mutex_init(&pThis->mut, NULL);
 ENDobjConstruct(wti)
@@ -367,7 +370,8 @@ wtiWorker(wti_t *pThis)
 		wtpProcessThrdChanges(pWtp);
 		pthread_testcancel(); /* see big comment in function header */
 #		if !defined(__hpux) /* pthread_yield is missing there! */
-		pthread_yield(); /* see big comment in function header */
+		if(pThis->bOptimizeUniProc)
+			pthread_yield(); /* see big comment in function header */
 #		endif
 
 		/* if we have a rate-limiter set for this worker pool, let's call it. Please
@@ -466,6 +470,14 @@ finalize_it:
 /* dummy */
 rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
+/* exit our class
+ */
+BEGINObjClassExit(wti, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(nsdsel_gtls)
+	/* release objects we no longer need */
+	objRelease(glbl, CORE_COMPONENT);
+ENDObjClassExit(wti)
+
 
 /* Initialize the wti class. Must be called as the very first method
  * before anything else is called inside this class.
@@ -473,6 +485,7 @@ rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINObjClassInit(wti, 1, OBJ_IS_CORE_MODULE) /* one is the object version (most important for persisting) */
 	/* request objects we use */
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(wti)
 
 /*

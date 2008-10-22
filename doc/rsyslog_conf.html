@@ -236,8 +236,10 @@ supported in order to be compliant to the upcoming new syslog RFC series.
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
 <li><a href="rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
 <li><a href="rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
-<li>$WorkDirectory &lt;name&gt; (directory for spool
-and other work files)</li>
+<li><b>$OptimizeForUniprocessor</b> [on/<b>off</b>] - turns on optimizatons which lead to better
+performance on uniprocessors. If you run on multicore-machiens, turning this off lessens CPU load. The
+default may change as uniprocessor systems become less common.</li>
+<li>$WorkDirectory &lt;name&gt; (directory for spool and other work files)</li>
 <li>$UDPServerAddress &lt;IP&gt; (imudp) -- local IP
 address (or name) the UDP listens should bind to</li>
 <li>$UDPServerRun &lt;port&gt; (imudp) -- former

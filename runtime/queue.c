@@ -1285,6 +1285,7 @@ rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
 
 	/* we have an object, so let's fill the properties */
 	objConstructSetObjInfo(pThis);
+	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir())) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
@@ -2208,8 +2209,10 @@ finalize_it:
 		/* the following pthread_yield is experimental, but brought us performance
 		 * benefit. For details, please see http://kb.monitorware.com/post14216.html#p14216
 		 * rgerhards, 2008-10-09
+		 * but this is only true for uniprocessors, so we guard it with an optimize flag -- rgerhards, 2008-10-22
 		 */
-		pthread_yield();
+		if(pThis->bOptimizeUniProc)
+			pthread_yield();
 	}
 
 	RETiRet;

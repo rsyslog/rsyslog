@@ -58,6 +58,7 @@ typedef struct qWrkThrd_s {
 typedef struct queue_s {
 	BEGINobjInstance;
 	queueType_t	qType;
+	int	bOptimizeUniProc; /* cache for the equally-named global setting, pulled at time of queue creation */
 	int	bEnqOnly;	/* does queue run in enqueue-only mode (1) or not (0)? */
 	int	bSaveOnShutdown;/* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
 	int	bQueueStarted;	/* has queueStart() been called on this queue? 1-yes, 0-no */
