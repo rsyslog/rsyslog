@@ -31,7 +31,7 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  */
-
+#define CFGLNSIZ 4096 /* the maximum size of a configuraton file line, after re-combination */
 #include "config.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -392,7 +392,7 @@ processConfFile(uchar *pConfFile)
 	FILE *cf;
 	selector_t *fCurr = NULL;
 	uchar *p;
-	uchar cbuf[BUFSIZ];
+	uchar cbuf[CFGLNSIZ];
 	uchar *cline;
 	int i;
 	ASSERT(pConfFile != NULL);
@@ -432,7 +432,7 @@ processConfFile(uchar *pConfFile)
 		for (p = (uchar*) strchr((char*)cline, '\0'); isspace((int) *--p);)
 			/*EMPTY*/;
 		if (*p == '\\') {
-			if ((p - cbuf) > BUFSIZ - 30) {
+			if ((p - cbuf) > CFGLNSIZ - 30) {
 				/* Oops the buffer is full - what now? */
 				cline = cbuf;
 			} else {

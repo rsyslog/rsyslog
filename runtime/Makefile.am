@@ -85,7 +85,11 @@ librsyslog_la_SOURCES = \
 # the files with ../ we need to work on - so that they either become part of the
 # runtime or will no longer be needed. -- rgerhards, 2008-06-13
 
+if WITH_MODDIRS
+librsyslog_la_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/:$(moddirs)\" $(pthreads_cflags)
+else
 librsyslog_la_CPPFLAGS = -D_PATH_MODDIR=\"$(pkglibdir)/\" -I$(top_srcdir) $(pthreads_cflags)
+endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
 librsyslog_la_LIBADD =  $(dl_libs) $(rt_libs)
 
