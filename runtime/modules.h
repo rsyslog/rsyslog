@@ -91,6 +91,7 @@ typedef struct modInfo_s {
 	rsRetVal (*tryResume)(void*);/* called to see if module actin can be resumed now */
 	rsRetVal (*modExit)(void);		/* called before termination or module unload */
 	rsRetVal (*modGetID)(void **);		/* get its unique ID from module */
+	rsRetVal (*doHUP)(void *);		/* non-restart type HUP handler */
 	/* below: parse a configuration line - return if processed
 	 * or not. If not, must be parsed to next module.
 	 */

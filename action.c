@@ -498,6 +498,39 @@ finalize_it:
 }
 #pragma GCC diagnostic warning "-Wempty-body"
 
+
+/* call the HUP handler for a given action, if such a handler is defined. The
+ * action mutex is locked, because the HUP handler most probably needs to modify
+ * some internal state information.
+ * rgerhards, 2008-10-22
+ */
+#pragma GCC diagnostic ignored "-Wempty-body"
+rsRetVal
+actionCallHUPHdlr(action_t *pAction)
+{
+	DEFiRet;
+	int iCancelStateSave;
+
+	ASSERT(pAction != NULL);
+	DBGPRINTF("Action %p checks HUP hdlr: %p\n", pAction, pAction->pMod->doHUP);
+
+	if(pAction->pMod->doHUP == NULL) {
+		FINALIZE;	/* no HUP handler, so we are done ;) */
+	}
+
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	d_pthread_mutex_lock(&pAction->mutActExec);
+	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
+	pthread_setcancelstate(iCancelStateSave, NULL);
+	CHKiRet(pAction->pMod->doHUP(pAction->pModData));
+	pthread_cleanup_pop(1); /* unlock mutex */
+
+finalize_it:
+	RETiRet;
+}
+#pragma GCC diagnostic warning "-Wempty-body"
+
+
 /* set the action message queue mode
  * TODO: probably move this into queue object, merge with MainMsgQueue!
  * rgerhards, 2008-01-28

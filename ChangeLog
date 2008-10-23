@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.23.1  [DEVEL] (rgerhards), 2008-10-??
+Version 4.1.0  [DEVEL] (rgerhards), 2008-10-??
 
 ********************************* WARNING *********************************
 This version has a slightly different on-disk format for message entries.
@@ -9,6 +9,13 @@ the output driver. It is recommended to drain queues with the previous
 version before switching to this one.
 ********************************* WARNING *********************************
 
+- greatly enhanced performance when compared to v3.
+- added configuration directive "HUPisRestart" which enables to configure
+  HUP to be either a full restart or "just" a leightweight way to
+  close open files.
+- added a setting "$OptimizeForUniprocessor" to enable users to turn off
+  pthread_yield calls which are counter-productive on multiprocessor 
+  machines (but have been shown to be useful on uniprocessors)
 - reordered imudp processing. Message parsing is now done as part of main
   message queue worker processing (was part of the input thread)
   This should also improve performance, as potentially more work is
@@ -21,9 +28,6 @@ version before switching to this one.
   receive loop (aka receiving messsages at a high rate)
 - doc bugfix: queue doc had wrong parameter name for setting controlling
   worker thread shutdown period
-- added a setting "$OptimizeForUniprocessor" to enable users to turn off
-  pthread_yield calls which are counter-productive on multiprocessor 
-  machines (but have been shown to be useful on uniprocessors)
 ---------------------------------------------------------------------------
 Version 3.21.6  [DEVEL] (rgerhards), 2008-10-22
 - consolidated time calls during msg object creation, improves performance

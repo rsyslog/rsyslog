@@ -220,7 +220,7 @@ static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
-static int restart = 0; /* do restart (config read) - multithread safe */
+static int bHadHUP = 0; /* did we have a HUP? */
 
 static int bParseHOSTNAMEandTAG = 1; /* global config var: should the hostname and tag be
                                       * parsed inside message - rgerhards, 2006-03-13 */
@@ -2543,20 +2543,18 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
  * The following function is resposible for handling a SIGHUP signal.  Since
  * we are now doing mallocs/free as part of init we had better not being
  * doing this during a signal handler.  Instead this function simply sets
- * a flag variable which will tell the main loop to go through a restart.
+ * a flag variable which will tells the main loop to do "the right thing".
  */
 void sighup_handler()
 {
 	struct sigaction sigAct;
 	
-	restart = 1;
+	bHadHUP = 1;
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
-
-	return;
 }
 
 
@@ -2574,6 +2572,49 @@ static void processImInternal(void)
 
 	while(iminternalRemoveMsg(&iPri, &pMsg, &iFlags) == RS_RET_OK) {
 		logmsg(pMsg, iFlags);
+	}
+}
+
+
+/* helper to doHUP(), this "HUPs" each action. The necessary locking
+ * is done inside the action class and nothing we need to take care of.
+ * rgerhards, 2008-10-22
+ */
+DEFFUNC_llExecFunc(doHUPActions)
+{
+	BEGINfunc
+	actionCallHUPHdlr((action_t*) pData);
+	ENDfunc
+	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
+}
+
+
+/* This function processes a HUP after one has been detected. Note that this
+ * is *NOT* the sighup handler. The signal is recorded by the handler, that record
+ * detected inside the mainloop and then this function is called to do the
+ * real work. -- rgerhards, 2008-10-22
+ */
+static inline void
+doHUP(void)
+{
+	selector_t *f;
+	char buf[512];
+
+	snprintf(buf, sizeof(buf) / sizeof(char),
+		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed, type '%s'.",
+		 (int) myPid, glbl.GetHUPisRestart() ? "restart" : "lightweight");
+		errno = 0;
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+
+	if(glbl.GetHUPisRestart()) {
+		DBGPRINTF("Received SIGHUP, configured to be restart, reloading rsyslogd.\n");
+		init(); /* main queue is stopped as part of init() */
+	} else {
+		DBGPRINTF("Received SIGHUP, configured to be a non-restart type of HUP - notifying actions.\n");
+		for(f = Files; f != NULL ; f = f->f_next) {
+			llExecFunc(&f->llActList, doHUPActions, NULL);
+		}
 	}
 }
 
@@ -2634,11 +2675,9 @@ mainloop(void)
 		if(bReduceRepeatMsgs == 1)
 			doFlushRptdMsgs();
 
-		if(restart) {
-			dbgprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
-			/* main queue is stopped as part of init() */
-			init();
-			restart = 0;
+		if(bHadHUP) {
+			doHUP();
+			bHadHUP = 0;
 			continue;
 		}
 	}
