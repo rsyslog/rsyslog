@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 3.20.0 [BETA] (rgerhards), 2008-10-??
+- this is the inital release of the 3.19.x branch as a stable release
+- bugfix: double-free in pctp netstream driver. Thank to varmojfeko
+  for the patch
+---------------------------------------------------------------------------
 Version 3.19.12 [BETA] (rgerhards), 2008-10-16
 - bugfix: subseconds where not correctly extracted from a timestamp
   if that timestamp did not contain any subsecond information (the
