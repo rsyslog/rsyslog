@@ -28,6 +28,7 @@ version before switching to this one.
   receive loop (aka receiving messsages at a high rate)
 - doc bugfix: queue doc had wrong parameter name for setting controlling
   worker thread shutdown period
+- restructured rsyslog.conf documentation
 ---------------------------------------------------------------------------
 Version 3.21.6  [DEVEL] (rgerhards), 2008-10-22
 - consolidated time calls during msg object creation, improves performance
