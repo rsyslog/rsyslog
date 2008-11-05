@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.20.0 [BETA] (rgerhards), 2008-10-??
+Version 3.20.0 [BETA] (rgerhards), 2008-11-05
 - this is the inital release of the 3.19.x branch as a stable release
 - bugfix: double-free in pctp netstream driver. Thank to varmojfeko
   for the patch
