@@ -231,6 +231,13 @@ the full field if no match is found:
 <p>%msg:R,ERE,1,FIELD:for (vlan[0-9]*):--end%
 <p>and this takes the first submatch of the second match of said expression:
 <p>%msg:R,ERE,1,FIELD,1:for (vlan[0-9]*):--end%
+<p><b>Please note: there is also a
+<a href="http://www.rsyslog.com/tool-regex">rsyslog regular expression checker/generator</a>
+online tool available.</b> With that tool, you can check your regular expressions and
+also generate a valid property replacer sequence. Usage of this tool is recommended.
+Depending on the version offered, the tool may not cover all subleties that can
+be done with the property replacer. It concentrates on the most often used cases. So it
+is still useful to hand-craft expressions for demanding environments.
 <p><b>Also, extraction can be done based on so-called
 "fields"</b>. To do so, place a "F" into FromChar. A field in its
 current definition is anything that is delimited by a delimiter
@@ -347,6 +354,10 @@ Useful for secure pathname generation (with dynafiles).
 </tr>
 </tbody>
 </table>
+<p>To use multiple options, simply place them one after each other with a comma delmimiting
+them. For example "escape-cc,sp-if-no-1st-sp". If you use conflicting options together,
+the last one will override the previous one. For example, using "escape-cc,drop-cc" will
+use drop-cc and "drop-cc,escape-cc" will use escape-cc mode.
 <h2>Further Links</h2>
 <ul>
 <li>Article on "<a href="rsyslog_recording_pri.html">Recording
