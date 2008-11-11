@@ -2,6 +2,10 @@
 Version 3.20.1 [v3-stable] (rgerhards), 2008-11-??
 - doc update: documented how to specify multiple property replacer
   options + link to new online regex generator tool added
+- improved debug output for regular expressions inside property replacer
+  RE's seem to be a big trouble spot and I would like to have more
+  information inside the debug log. So I decided to add some additional
+  debug strings permanently.
 ---------------------------------------------------------------------------
 Version 3.20.0 [v3-stable] (rgerhards), 2008-11-05
 - this is the inital release of the 3.19.x branch as a stable release
