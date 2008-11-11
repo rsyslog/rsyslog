@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 3.21.7  [BETA] (rgerhards), 2008-11-11
+- this is the new beta branch, based on the former 3.21.6 devel
+- new functionality: ZERO property replacer nomatch option (from v3-stable)
+---------------------------------------------------------------------------
 Version 3.21.6  [DEVEL] (rgerhards), 2008-10-22
 - consolidated time calls during msg object creation, improves performance
   and consistency
