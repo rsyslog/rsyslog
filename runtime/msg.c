@@ -1936,6 +1936,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 						}
 						if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR)
 							return "**NO MATCH**";
+						else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO)
+							return "0";
 						else
 							return "";
 					}

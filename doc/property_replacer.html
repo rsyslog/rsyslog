@@ -219,10 +219,11 @@ that the first match is number 0, the second 1 and so on. Up to 10 matches
 (up to number 9) are supported. Please note that it would be more
 natural to have the match-number in front of submatch, but this would break 
 backward-compatibility. So the match-number must be specified after "nomatch".
-<p>nomatch is either "DFLT", "BLANK" or "FIELD" (all upper case!). It tells
+<p>nomatch is either "DFLT", "BLANK", ZERO or "FIELD" (all upper case!). It tells
 what to use if no match is found. With "DFLT", the strig "**NO MATCH**" is
 used. This was the only supported value up to rsyslog 3.19.5. With "BLANK"
-a blank text is used (""). Finally, "FIELD" uses the full property text
+a blank text is used (""). With "ZERO", "0" is used.
+Finally, "FIELD" uses the full property text
 instead of the expression. Some folks have requested that, so it seems
 to be useful.
 <p>The following is a sample of an ERE expression that takes the first

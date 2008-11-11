@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 3.20.1 [v3-stable] (rgerhards), 2008-11-??
+- enhance: regex nomatch option "ZERO" has been added
+  This allows to return the string 0 if a regular expression is
+  not found. This is probably useful for storing numerical values into
+  database columns.
 - doc update: documented how to specify multiple property replacer
   options + link to new online regex generator tool added
 - improved debug output for regular expressions inside property replacer
