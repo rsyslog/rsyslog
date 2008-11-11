@@ -1,0 +1,53 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>Modules - rsyslog.conf</title></head>
+<body>
+<p>This is a part of the rsyslog.conf documentation.</p>
+<a href="rsyslog_conf.html">back</a>
+<h2>Modules</h2>
+<p>Rsyslog has a modular design. Consequently, there is a growing
+number of modules. Here is the entry point to their documentation and
+what they do (list is currently not complete)</p>
+<ul>
+<li><a href="omsnmp.html">omsnmp</a> - SNMP
+trap output module</li>
+<li><a href="omrelp.html">omrelp</a> - RELP
+output module</li>
+<li>omgssapi - output module for GSS-enabled syslog</li>
+<li><a href="ommysql.html">ommysql</a> - output module for MySQL</li>
+<li>ompgsql - output module for PostgreSQL</li>
+<li><a href="omlibdbi.html">omlibdbi</a> -
+generic database output module (Firebird/Interbase, MS SQL, Sybase,
+SQLLite, Ingres, Oracle, mSQL)</li>
+<li><a href="ommail.html">ommail</a> -
+permits rsyslog to alert folks by mail if something important happens</li>
+<li><a href="imfile.html">imfile</a>
+-&nbsp; input module for text files</li>
+<li><a href="imrelp.html">imrelp</a> - RELP
+input module</li>
+<li>imudp - udp syslog message input</li>
+<li><a href="imtcp.html">imtcp</a> - input
+plugin for plain tcp syslog</li>
+<li><a href="imgssapi.html">imgssapi</a> -
+input plugin for plain tcp and GSS-enabled syslog</li>
+<li>immark - support for mark messages</li>
+<li><a href="imklog.html">imklog</a> - kernel logging</li>
+<li><a href="imuxsock.html">imuxsock</a> -
+unix sockets, including the system log socket</li>
+<li><a href="im3195.html">im3195</a> -
+accepts syslog messages via RFC 3195</li>
+</ul>
+<p>Please note that each module provides configuration
+directives, which are NOT necessarily being listed below. Also
+remember, that a modules configuration directive (and functionality) is
+only available if it has been loaded (using $ModLoad).</p>
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 2 or higher.</font></p>
+</body>
+</html>
+
