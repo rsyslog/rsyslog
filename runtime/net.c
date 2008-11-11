@@ -977,7 +977,6 @@ should_use_so_bsdcompat(void)
 #define SO_BSDCOMPAT 0
 #endif
 
-
 /* get the hostname of the message source. This was originally in cvthname()
  * but has been moved out of it because of clarity and fuctional separation.
  * It must be provided by the socket we received the message on as well as

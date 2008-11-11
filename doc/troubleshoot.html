@@ -12,10 +12,22 @@ the most recent development version. However, there is a version-specific
 doc set in each tarball. If you installed rsyslog from a package, there usually
 is a rsyslog-doc package, that often needs to be installed separately.
 <li>The <a href="http://wiki.rsyslog.com">rsyslog wiki</a> provides user tips and experiences.
-<li>A common trouble source are <a href="syslog_parsing.html">ill-formed syslog messages</a>, which
-lead to to all sorts of interesting problems, including malformed hostnames and dates. Read the quoted
-guide to find relief.
+<li>Check <a href="http://bugzilla.adiscon.com">the bugzilla</a> to see if your problem is a known
+(and even fixed ;)) bug.
 </ul>
+<p><b>Malformed Messages and Message Properties</b>
+<p>A common trouble source are <a href="syslog_parsing.html">ill-formed syslog messages</a>, which
+lead to to all sorts of interesting problems, including malformed hostnames and dates.
+Read the quoted guide to find relief.
+<p><b>Configuration Problems</b>
+<p>Rsyslog 3.21.1 and above has been enhanced to support extended configuration checking.
+It offers a special command line switch (-N1) that puts it into "config verfication mode".
+In that mode, it interprets and check the configuration file, but does not startup. This
+mode can be used in parallel to a running instance of rsyslogd.
+<p>To enable it, run rsyslog interactively as follows:
+<p><b><i>/path/to/rsyslogd -f/path/to/config-file -N1</i></b>
+<p>You should also specify other options you usually give (like -c3 and whatever else).
+Any problems experienced are reported to stderr [aka "your screen" (if not redirected)].
 <p><b>Asking for Help</b>
 <p>If you can't find the answer yourself, you should look at these places for
 community help.
@@ -26,6 +38,54 @@ the preferred method of obtaining support.
 This is a low-volume list which occasional gets traffic spikes.
 The mailing list is probably a good place for complex questions.
 </ul>
+<p><b>Debug Log</b>
+<p>If you ask for help, there are chances that we need to ask for an rsyslog debug log.
+The debug log is a detailled report of what rsyslog does during processing. As such, it may
+even be useful for your very own troubleshooting. People have seen things inside their debug
+log that enabled them to find problems they did not see before. So having a look at the
+debug log, even before asking for help, may be useful.
+<p>Note that the debug log contains most of those things we consider useful. This is a lot
+of information, but may still be too few. So it sometimes may happen that you will be asked
+to run a specific version which has additional debug output. Also, we revise from time to
+time what is worth putting into the standard debug log. As such, log content may change
+from version to version. We do not guarantee any specific debug log contents, so do not
+rely on that. The amount of debug logging can also be controlled via some environment
+options. Please see <a href="debug.html">debugging support</a> for further details.
+<p>In general, it is advisable to run rsyslogd in the foreground to obtain the log.
+To do so, make sure you know which options are usually used when you start rsyslogd
+as a background daemon. Let's assume "-c3" is the only option used. Then, do the following:
+<ul>
+<li>make sure rsyslogd as a daemon is stopped (verify with ps -ef|grep rsyslogd)
+<li>make sure you have a console session with root permissions
+<li>run rsyslogd interactively: /sbin/rsyslogd ..your options.. -dn &gt; logfile
+<br>where "your options" is what you usually use. /sbin/rsyslogd is the full path
+to the rsyslogd binary (location different depending on distro).
+In our case, the command would be
+<br>/sbin/rsyslogd -c3 -dn &gt; logfile
+<li>press ctrl-C when you have sufficient data (e.g. a device logged a record)
+<br><b>NOTE: rsyslogd will NOT stop automatically - you need to ctrl-c out of it!</b>
+<li>Once you have done all that, you can review logfile. It contains the debug output.
+<li>When you are done, make sure you re-enable (and start) the background daemon!
+</ul>
+<p>If you need to submit the logfile, you may want to check if it contains any
+passwords or other sensitive data. If it does, you can change it to some <b>consistent</b>
+meaningless value. <b>Do not delete the lines</b>, as this renders the debug log
+unusable (and makes Rainer quite angry for wasted time, aka significantly reduces the chance
+he will remain motivated to look at your problem ;)). For the same reason, make sure
+whatever you change is change consistently. Really!
+<p>Debug log file can get quite large. Before submitting them, it is a good idea to zip them.
+Rainer has handled files of around 1 to 2 GB. If your's is larger ask before submitting. Often, 
+it is sufficient to submit the first 2,000 lines of the log file and around another 1,000 around
+the area where you see a problem. Also,
+ask you can submit a file via private mail. Private mail is usually a good way to go for large files
+or files with sensitive content. However, do NOT send anything sensitive that you do not want
+the outside to be known. While Rainer so far made effort no to leak any sensitive information,
+there is no guarantee that doesn't happen. If you need a guarantee, you are probably a
+candidate for a <a href="professional_support.html">commercial support contract</a>. Free support
+comes without any guarantees, include no guarantee on confidentiality
+[aka "we don't want to be sued for work were are not even paid for ;)].
+<b>So if you submit debug logs, do so at your sole risk</b>. By submitting them, you accept
+this policy.
 <p>[<a href="manual.html">manual index</a>]
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the

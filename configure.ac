@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.20.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[3.21.7],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_HEADERS([config.h])
@@ -106,6 +106,78 @@ AC_TRY_COMPILE([
 	AC_DEFINE(MAXHOSTNAMELEN, 1024, [Define with a value if your <sys/param.h> does not define MAXHOSTNAMELEN])
 	AC_MSG_RESULT(no; defined as 64)
 )
+
+# check for availability of atomic operations
+# rgerhards, 2008-09-18, added based on 
+# http://svn.apache.org/repos/asf/apr/apr/trunk/configure.in
+
+AC_CACHE_CHECK([whether the compiler provides atomic builtins], [ap_cv_atomic_builtins],
+[AC_TRY_RUN([
+int main()
+{
+    unsigned long val = 1010, tmp, *mem = &val;
+
+    if (__sync_fetch_and_add(&val, 1010) != 1010 || val != 2020)
+        return 1;
+
+    tmp = val;
+
+    if (__sync_fetch_and_sub(mem, 1010) != tmp || val != 1010)
+        return 1;
+
+    if (__sync_sub_and_fetch(&val, 1010) != 0 || val != 0)
+        return 1;
+
+    tmp = 3030;
+
+    if (__sync_val_compare_and_swap(mem, 0, tmp) != 0 || val != tmp)
+        return 1;
+
+    if (__sync_lock_test_and_set(&val, 4040) != 3030)
+        return 1;
+
+    mem = &tmp;
+
+    if (__sync_val_compare_and_swap(&mem, &tmp, &val) != &tmp)
+        return 1;
+
+    __sync_synchronize();
+
+    if (mem != &val)
+        return 1;
+
+    return 0;
+}], [ap_cv_atomic_builtins=yes], [ap_cv_atomic_builtins=no], [ap_cv_atomic_builtins=no])])
+
+if test "$ap_cv_atomic_builtins" = "yes"; then
+    AC_DEFINE(HAVE_ATOMIC_BUILTINS, 1, [Define if compiler provides atomic builtins])
+fi
+
+
+
+
+# Additional module directories
+AC_ARG_WITH(moddirs,
+        [AS_HELP_STRING([--with-moddirs=DIRS],[Additional module search paths appended to @<:@$libdir/rsyslog@:>@])],
+        [_save_IFS=$IFS ; IFS=$PATH_SEPARATOR ; moddirs=""
+         for w in ${with_moddirs} ;
+         do
+                 case $w in
+                 "") continue ;; */) ;; *)  w="${w}/" ;;
+                 esac
+                 for m in ${moddirs} ;
+                 do
+                         test "x$w" = "x${libdir}/${PACKAGE}/"   || \
+                         test "x$w" = "x$m" || test "x$w" = "x/" && \
+                         continue 2
+                 done
+                 case $moddirs in
+                 "") moddirs="$w" ;; *) moddirs="${moddirs}:${w}" ;;
+                 esac
+         done ; IFS=$_save_IFS],[moddirs=""]
+)
+AM_CONDITIONAL(WITH_MODDIRS, test x$moddirs != x)
+AC_SUBST(moddirs)
 
 # Large file support
 AC_ARG_ENABLE(largefile,
@@ -331,6 +403,19 @@ if test "$enable_valgrind" = "yes"; then
 fi
 
 
+# compile diagnostic tools (small helpers usually not needed)
+AC_ARG_ENABLE(diagtools,
+        [AS_HELP_STRING([--enable-diagtools],[Enable diagnostic tools @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_diagtools="yes" ;;
+          no) enable_diagtools="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-diagtools) ;;
+         esac],
+        [enable_diagtools=no]
+)
+AM_CONDITIONAL(ENABLE_DIAGTOOLS, test x$enable_diagtools = xyes)
+
+
 
 # MySQL support
 AC_ARG_ENABLE(mysql,
@@ -550,6 +635,23 @@ AC_ARG_ENABLE(mail,
 AM_CONDITIONAL(ENABLE_MAIL, test x$enable_mail = xyes)
 
 
+# imdiag support (so far we do not need a library, but we need to turn this on and off)
+# note that we enable this be default, because an important point is to make
+# it available to users who do not know much about how to handle things. It
+# would complicate things if we first needed to tell them how to enable imdiag.
+# rgerhards, 2008-07-25
+AC_ARG_ENABLE(imdiag,
+        [AS_HELP_STRING([--enable-imdiag],[Enable imdiag @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_imdiag="yes" ;;
+          no) enable_imdiag="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imdiag) ;;
+         esac],
+        [enable_imdiag=no]
+)
+AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
+
+
 # RELP support
 AC_ARG_ENABLE(relp,
         [AS_HELP_STRING([--enable-relp],[Enable RELP support @<:@default=no@:>@])],
@@ -628,7 +730,6 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
-		tests/Makefile \
 		doc/Makefile \
 		plugins/imudp/Makefile \
 		plugins/imtcp/Makefile \
@@ -640,6 +741,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imtemplate/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
+		plugins/imdiag/Makefile \
 		plugins/omtesting/Makefile \
 		plugins/omgssapi/Makefile \
 		plugins/ommysql/Makefile \
@@ -647,7 +749,8 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omrelp/Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
-		plugins/omsnmp/Makefile])
+		plugins/omsnmp/Makefile \
+		tests/Makefile])
 AC_OUTPUT
 
 echo "****************************************************"
@@ -663,6 +766,7 @@ echo "PostgreSQL support enabled:               $enable_pgsql"
 echo "SNMP support enabled:                     $enable_snmp"
 echo "Mail support enabled:                     $enable_mail"
 echo "RELP support enabled:                     $enable_relp"
+echo "imdiag enabled:                           $enable_imdiag"
 echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
 echo "Large file support enabled:               $enable_largefile"
@@ -671,6 +775,7 @@ echo "GnuTLS network stream driver enabled:     $enable_gnutls"
 echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
+echo "Diagnostic tools enabled:                 $enable_diagtools"
 echo "valgrind support settings enabled:        $enable_valgrind"
 echo "rsyslog runtime will be built:            $enable_rsyslogrt"
 echo "rsyslogd will be built:                   $enable_rsyslogd"

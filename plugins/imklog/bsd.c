@@ -110,15 +110,32 @@ klogWillRun(void)
 static void
 readklog(void)
 {
-	char *p, *q, line[MAXLINE + 1];
+	char *p, *q;
 	int len, i;
+	int iMaxLine;
+	uchar bufRcv[4096+1];
+	uchar *pRcv = NULL; /* receive buffer */
+
+	iMaxLine = glbl.GetMaxLine();
+
+	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
+	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
+	 * is used. We could use alloca() to achive a similar aspect, but there are so
+	 * many issues with alloca() that I do not want to take that route.
+	 * rgerhards, 2008-09-02
+	 */
+	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
+		pRcv = bufRcv;
+	} else {
+		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
+	}
 
 	len = 0;
 	for (;;) {
-		dbgprintf("----------imklog waiting for kernel log line\n");
-		i = read(fklog, line + len, MAXLINE - 1 - len);
+		dbgprintf("----------imklog(BSD) waiting for kernel log line\n");
+		i = read(fklog, pRcv + len, iMaxLine - len);
 		if (i > 0) {
-			line[i + len] = '\0';
+			pRcv[i + len] = '\0';
 		} else {
 			if (i < 0 && errno != EINTR && errno != EAGAIN) {
 				imklogLogIntMsg(LOG_ERR,
@@ -129,20 +146,24 @@ readklog(void)
 			break;
 		}
 
-		for (p = line; (q = strchr(p, '\n')) != NULL; p = q + 1) {
+		for (p = pRcv; (q = strchr(p, '\n')) != NULL; p = q + 1) {
 			*q = '\0';
 			Syslog(LOG_INFO, (uchar*) p);
 		}
 		len = strlen(p);
-		if (len >= MAXLINE - 1) {
+		if (len >= iMaxLine - 1) {
 			Syslog(LOG_INFO, (uchar*)p);
 			len = 0;
 		}
 		if (len > 0)
-			memmove(line, p, len + 1);
+			memmove(pRcv, p, len + 1);
 	}
 	if (len > 0)
-		Syslog(LOG_INFO, (uchar*)line);
+		Syslog(LOG_INFO, pRcv);
+
+finalize_it:
+	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
+		free(pRcv);
 }
 
 

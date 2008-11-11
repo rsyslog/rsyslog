@@ -83,7 +83,7 @@ void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
 	srSLMGGetRawMSG(pSLMG, &pszRawMsg);
 
 	parseAndSubmitMessage(fromHost, fromHostIP, pszRawMsg, strlen((char*)pszRawMsg),
-		MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_FULL_DELAY);
+		MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_FULL_DELAY, (uchar*)"im3195");
 }
 
 

@@ -1449,8 +1449,13 @@ queueDequeueConsumable(queue_t *pThis, wti_t *pWti, int iCancelStateSave)
 		pthread_cond_broadcast(&pThis->belowLightDlyWtrMrk);
 	}
 
-	d_pthread_mutex_unlock(pThis->mut);
+	/* rgerhards, 2008-09-30: I reversed the order of cond_signal und mutex_unlock
+	 * as of the pthreads recommendation on predictable scheduling behaviour. I don't see
+	 * any problems caused by this, but I add this comment in case some will be seen
+	 * in the next time.
+	 */
 	pthread_cond_signal(&pThis->notFull);
+	d_pthread_mutex_unlock(pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 	/* WE ARE NO LONGER PROTECTED BY THE MUTEX */
 
@@ -2111,7 +2116,6 @@ queueEnqObj(queue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 {
 	DEFiRet;
 	int iCancelStateSave;
-	int i;
 	struct timespec t;
 
 	ISOBJ_TYPE_assert(pThis, queue);
@@ -2134,7 +2138,6 @@ queueEnqObj(queue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 	if(pThis->bIsDA)
 		CHKiRet(queueChkStrtDA(pThis));
 	
-
 	/* handle flow control
 	 * There are two different flow control mechanisms: basic and advanced flow control.
 	 * Basic flow control has always been implemented and protects the queue structures
@@ -2191,15 +2194,12 @@ queueEnqObj(queue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 
 finalize_it:
 	if(pThis->qType != QUEUETYPE_DIRECT) {
-		d_pthread_mutex_unlock(pThis->mut);
-		i = pthread_cond_signal(&pThis->notEmpty);
-		dbgoprint((obj_t*) pThis, "EnqueueMsg signaled condition (%d)\n", i);
-		pthread_setcancelstate(iCancelStateSave, NULL);
-	}
-
-	/* make sure at least one worker is running. */
-	if(pThis->qType != QUEUETYPE_DIRECT) {
+		/* make sure at least one worker is running. */
 		queueAdviseMaxWorkers(pThis);
+		dbgoprint((obj_t*) pThis, "EnqueueMsg advised worker start\n");
+		/* and release the mutex */
+		d_pthread_mutex_unlock(pThis->mut);
+		pthread_setcancelstate(iCancelStateSave, NULL);
 	}
 
 	RETiRet;

@@ -79,8 +79,33 @@ default, it is usually well-chosen and applicable in most cases.</p>
 execute action only if the last execute is at last
 &lt;seconds&gt; seconds in the past (more info in <a href="ommail.html">ommail</a>,
 but may be used with any action)</li>
-<li>$ActionFileDefaultTemplate [templateName] - sets a new
-default template for file actions</li>
+<li><i><b>$ActionExecOnlyEveryNthTime</b> &lt;number&gt;</i> - If configured, the next action will
+only be executed every n-th time. For example, if configured to 3, the first two messages
+that go into the action will be dropped, the 3rd will actually cause the action to execute,
+the 4th and 5th will be dropped, the 6th executed under the action, ... and so on. Note: 
+this setting is automatically re-set when the actual action is defined.</li>
+<li><i><b>$ActionExecOnlyEveryNthTimeTimeout</b> &lt;number-of-seconds&gt;</i> - has a meaning only if
+$ActionExecOnlyEveryNthTime is also configured for the same action. If so, the timeout
+setting specifies after which period the counting of "previous actions" expires and
+a new action count is begun. Specify 0 (the default) to disable timeouts.
+<br>
+<i>Why is this option needed?</i> Consider this case: a message comes in at, eg., 10am. That's
+count 1. Then, nothing happens for the next 10 hours. At 8pm, the next
+one occurs. That's count 2. Another 5 hours later, the next message
+occurs, bringing the total count to 3. Thus, this message now triggers
+the rule.
+<br>
+The question is if this is desired behavior? Or should the rule only be
+triggered if the messages occur within an e.g. 20 minute window? If the
+later is the case, you need a
+<br>
+$ActionExecOnlyEveryNthTimeTimeout 1200
+<br>
+This directive will timeout previous messages seen if they are older
+than 20 minutes. In the example above, the count would now be always 1
+and consequently no rule would ever be triggered.
+
+<li>$ActionFileDefaultTemplate [templateName] - sets a new default template for file actions</li>
 <li>$ActionFileEnableSync [on/<span style="font-weight: bold;">off</span>] - enables file
 syncing capability of omfile</li>
 <li>$ActionForwardDefaultTemplate [templateName] - sets a new
@@ -142,6 +167,7 @@ default 60000 (1 minute)]</li>
 <li><a href="rsconf1_droptrailinglfonreception.html">$DropTrailingLFOnReception</a></li>
 <li><a href="rsconf1_dynafilecachesize.html">$DynaFileCacheSize</a></li>
 <li><a href="rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
+<li>$ErrorMessagesToStderr [<b>on</b>|off] - direct rsyslogd error message to stderr (in addition to other targets)</li>
 <li><a href="rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
 <li><a href="rsconf1_filecreatemode.html">$FileCreateMode</a></li>
 <li><a href="rsconf1_filegroup.html">$FileGroup</a></li>
@@ -182,10 +208,30 @@ default 60000 (1 minute)]</li>
 </li>
 <li>$MainMsgQueueWorkerThreads &lt;number&gt;, num
 worker threads, default 1, recommended 1</li>
-<li>$MainMsgQueueWorkerThreadMinumumMessages
-&lt;number&gt;, default 100</li>
-<li><a href="rsconf1_markmessageperiod.html">$MarkMessagePeriod</a>
-(immark)</li>
+<li>$MainMsgQueueWorkerThreadMinumumMessages &lt;number&gt;, default 100</li>
+<li><a href="rsconf1_markmessageperiod.html">$MarkMessagePeriod</a> (immark)</li>
+<li><b><i>$MaxMessageSize</i></b> &lt;size_nbr&gt;, default 2k - allows to specify maximum supported message size
+(both for sending and receiving). The default
+should be sufficient for almost all cases. Do not set this below 1k, as it would cause
+interoperability problems with other syslog implementations.<br>
+Change the setting to e.g. 32768 if you would like to
+support large message sizes for IHE (32k is the current maximum
+needed for IHE). I was initially tempted to set the default to 32k,
+but there is a some memory footprint with the current
+implementation in rsyslog.
+<br>If you intend to receive Windows Event Log data (e.g. via
+<a href="http://www.eventreporter.com/">EventReporter</a>), you might want to 
+increase this number to an even higher value, as event
+log messages can be very lengthy ("$MaxMessageSize 64k" is not a bad idea).
+Note: testing showed that 4k seems to be
+the typical maximum for <b>UDP</b> based syslog. This is an IP stack
+restriction. Not always ... but very often. If you go beyond
+that value, be sure to test that rsyslogd actually does what
+you think it should do ;) It is highly suggested to use a TCP based transport
+instead of UDP (plain TCP syslog, RELP). This resolves the UDP stack size restrictions.
+<br>Note that 2k, the current default, is the smallest size that must be
+supported in order to be compliant to the upcoming new syslog RFC series.
+</li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
 <li><a href="rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
@@ -787,7 +833,7 @@ administration needs.<br>
 forward messages it has received from the network to another host.
 Specify the "-h" option to enable this.</b></p>
 <p>To forward messages to another host, prepend the hostname with
-the at sign ("@").&nbsp; A single at sign means that messages will
+the at sign ("@"). A single at sign means that messages will
 be forwarded via UDP protocol (the standard for syslog). If you prepend
 two at signs ("@@"), the messages will be transmitted via TCP. Please
 note that plain TCP based syslog is not officially standardized, but

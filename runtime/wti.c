@@ -113,6 +113,9 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 			  wtiGetDbgHdr(pThis), tCmd, pThis->tCurrCmd);
 	} else {
 		dbgprintf("%s: receiving command %d\n", wtiGetDbgHdr(pThis), tCmd);
+		/* we could replace this with a simple if, but we leave the switch in in case we need
+		 * to add something at a later stage. -- rgerhards, 2008-09-30
+		 */
 		switch(tCmd) {
 			case eWRKTHRD_TERMINATING:
 				/* TODO: re-enable meaningful debug msg! (via function callback?)
@@ -123,10 +126,8 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 				pthread_cond_signal(&pThis->condExitDone);
 				dbgprintf("%s: worker terminating\n", wtiGetDbgHdr(pThis));
 				break;
-			case eWRKTHRD_RUNNING:
-				pthread_cond_signal(&pThis->condInitDone);
-				break;
 			/* these cases just to satisfy the compiler, we do (yet) not act an them: */
+			case eWRKTHRD_RUNNING:
 			case eWRKTHRD_STOPPED:
 			case eWRKTHRD_RUN_CREATED:
 			case eWRKTHRD_RUN_INIT:
@@ -190,7 +191,6 @@ CODESTARTobjDestruct(wti)
 	d_pthread_mutex_unlock(&pThis->mut);
 
 	/* actual destruction */
-	pthread_cond_destroy(&pThis->condInitDone);
 	pthread_cond_destroy(&pThis->condExitDone);
 	pthread_mutex_destroy(&pThis->mut);
 
@@ -202,7 +202,6 @@ ENDobjDestruct(wti)
 /* Standard-Constructor for the wti object
  */
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
-	pthread_cond_init(&pThis->condInitDone, NULL);
 	pthread_cond_init(&pThis->condExitDone, NULL);
 	pthread_mutex_init(&pThis->mut, NULL);
 ENDobjConstruct(wti)

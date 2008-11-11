@@ -37,8 +37,10 @@ BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*doIncludeLine)(uchar **pp, __attribute__((unused)) void* pVal);
 	rsRetVal (*cfline)(uchar *line, selector_t **pfCurr);
 	rsRetVal (*processConfFile)(uchar *pConfFile);
+	rsRetVal (*ReInitConf)(void);
+	rsRetVal (*GetNbrActActions)(int *);
 ENDinterface(conf)
-#define confCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define confCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

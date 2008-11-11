@@ -46,19 +46,24 @@
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(glbl)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(netstrm)
+
+static int iMaxLine; /* maximum size of a single message */
 
 /* forward definitions */
 static rsRetVal Close(tcps_sess_t *pThis);
 
 
-/* Standard-Constructor
- */
+/* Standard-Constructor */
 BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END macro! */
 		pThis->iMsg = 0; /* just make sure... */
 		pThis->bAtStrtOfFram = 1; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
+		/* now allocate the message reception buffer */
+		CHKmalloc(pThis->pMsg = (uchar*) malloc(sizeof(uchar) * iMaxLine + 1));
+finalize_it:
 ENDobjConstruct(tcps_sess)
 
 
@@ -92,6 +97,8 @@ CODESTARTobjDestruct(tcps_sess)
 		free(pThis->fromHost);
 	if(pThis->fromHostIP != NULL)
 		free(pThis->fromHostIP);
+	if(pThis->pMsg != NULL)
+		free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
 
 
@@ -222,7 +229,8 @@ PrepareClose(tcps_sess_t *pThis)
 		 * this case.
 		 */
 		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+		parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->pMsg, pThis->iMsg, MSG_PARSE_HOSTNAME,
+				      NOFLAG, eFLOWCTL_LIGHT_DELAY, NULL); /* TODO: add real InputName */
 		pThis->bAtStrtOfFram = 1;
 	}
 
@@ -288,23 +296,24 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 				dbgprintf("Framing Error: invalid octet count\n");
 				errmsg.LogError(0, NO_ERRCODE, "Framing Error in received TCP message: "
 					    "invalid octet count %d.\n", pThis->iOctetsRemain);
-			} else if(pThis->iOctetsRemain > MAXLINE) {
+			} else if(pThis->iOctetsRemain > iMaxLine) {
 				/* while we can not do anything against it, we can at least log an indication
 				 * that something went wrong) -- rgerhards, 2008-03-14
 				 */
-				dbgprintf("truncating message with %d octets - MAXLINE is %d\n",
-					  pThis->iOctetsRemain, MAXLINE);
+				dbgprintf("truncating message with %d octets - max msg size is %d\n",
+					  pThis->iOctetsRemain, iMaxLine);
 				errmsg.LogError(0, NO_ERRCODE, "received oversize message: size is %d bytes, "
-					        "MAXLINE is %d, truncating...\n", pThis->iOctetsRemain, MAXLINE);
+					        "max msg size is %d, truncating...\n", pThis->iOctetsRemain, iMaxLine);
 			}
 			pThis->inputState = eInMsg;
 		}
 	} else {
 		assert(pThis->inputState == eInMsg);
-		if(pThis->iMsg >= MAXLINE) {
+		if(pThis->iMsg >= iMaxLine) {
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
-			dbgprintf("error: message received is larger than MAXLINE, we split it\n");
-			parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+			dbgprintf("error: message received is larger than max msg size, we split it\n");
+			parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->pMsg, pThis->iMsg,
+					      MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY, NULL); /* TODO: add real InputName */
 			pThis->iMsg = 0;
 			/* we might think if it is better to ignore the rest of the
 			 * message than to treat it as a new one. Maybe this is a good
@@ -314,16 +323,17 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 		}
 
 		if(c == '\n' && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
-			parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+			parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->pMsg, pThis->iMsg,
+					      MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY, NULL); /* TODO: add real InputName */
 			pThis->iMsg = 0;
 			pThis->inputState = eAtStrtFram;
 		} else {
 			/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
-			 * If we have a message that is larger than MAXLINE, we truncate it. This is the best
+			 * If we have a message that is larger than the max msg size, we truncate it. This is the best
 			 * we can do in light of what the engine supports. -- rgerhards, 2008-03-14
 			 */
-			if(pThis->iMsg < MAXLINE) {
-				*(pThis->msg + pThis->iMsg++) = c;
+			if(pThis->iMsg < iMaxLine) {
+				*(pThis->pMsg + pThis->iMsg++) = c;
 			}
 		}
 
@@ -332,7 +342,8 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 			pThis->iOctetsRemain--;
 			if(pThis->iOctetsRemain < 1) {
 				/* we have end of frame! */
-				parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->msg, pThis->iMsg, MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY);
+				parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->pMsg, pThis->iMsg,
+					      MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY, NULL); /* TODO: add real InputName */
 				pThis->iMsg = 0;
 				pThis->inputState = eAtStrtFram;
 			}
@@ -429,6 +440,10 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
+
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	iMaxLine = glbl.GetMaxLine(); /* get maximum size we currently support */
+	objRelease(glbl, CORE_COMPONENT);
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcps_sessDebugPrint);

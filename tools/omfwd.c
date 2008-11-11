@@ -386,16 +386,19 @@ ENDtryResume
 BEGINdoAction
 	char *psz; /* temporary buffering */
 	register unsigned l;
+	int iMaxLine;
 CODESTARTdoAction
 	CHKiRet(doTryResume(pData));
+
+	iMaxLine = glbl.GetMaxLine();
 
 	dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdPt(pData),
 		 pData->protocol == FORW_UDP ? "udp" : "tcp");
 
 	psz = (char*) ppString[0];
 	l = strlen((char*) psz);
-	if (l > MAXLINE)
-		l = MAXLINE;
+	if((int) l > iMaxLine)
+		l = iMaxLine;
 
 #	ifdef	USE_NETZIP
 	/* Check if we should compress and, if so, do it. We also
@@ -407,10 +410,14 @@ CODESTARTdoAction
 	 * rgerhards, 2006-11-30
 	 */
 	if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
-		Bytef out[MAXLINE+MAXLINE/100+12] = "z";
+		Bytef *out;
 		uLongf destLen = sizeof(out) / sizeof(Bytef);
 		uLong srcLen = l;
 		int ret;
+		/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
+		CHKmalloc(out = (Bytef*) malloc(iMaxLine + iMaxLine/100 + 12));
+		out[0] = 'z';
+		out[1] = '\0';
 		ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
 				srcLen, pData->compressionLevel);
 		dbgprintf("Compressing message, length was %d now %d, return state  %d.\n",
@@ -509,6 +516,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	 * applies to TCP-based syslog only and is ignored when specified with UDP).
 	 * That is not yet implemented.
 	 * rgerhards, 2006-12-07
+	 * In order to support IPv6 addresses, we must introduce an extension to
+	 * the hostname. If it is in square brackets, whatever is in them is treated as
+	 * the hostname - without any exceptions ;) -- rgerhards, 2008-08-05
 	 */
 	if(*p == '(') {
 		/* at this position, it *must* be an option indicator */
@@ -555,6 +565,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			 */
 			errmsg.LogError(0, NO_ERRCODE, "Option block not terminated in forwarding action.");
 	}
+
 	/* extract the host first (we do a trick - we replace the ';' or ':' with a '\0')
 	 * now skip to port and then template name. rgerhards 2005-07-06
 	 */
@@ -604,6 +615,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	} else {
 		CHKmalloc(pData->f_hname = strdup((char*) q));
 	}
+dbgprintf("hostname '%s', port '%s'\n", pData->f_hname, pData->port);
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,

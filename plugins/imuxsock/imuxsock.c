@@ -71,14 +71,18 @@ static int startIndexUxLocalSockets; /* process funix from that index on (used t
 				   * read-only after startup
 				   */
 static int funixParseHost[MAXFUNIX] = { 0, }; /* should parser parse host name?  read-only after startup */
-static int funixFlags[MAXFUNIX] = { ADDDATE, }; /* should parser parse host name?  read-only after startup */
+static int funixFlags[MAXFUNIX] = { IGNDATE, }; /* should parser parse host name?  read-only after startup */
 static uchar *funixn[MAXFUNIX] = { (uchar*) _PATH_LOG }; /* read-only after startup */
+static uchar *funixHName[MAXFUNIX] = { NULL, }; /* host-name override - if set, use this instead of actual name */
+static int funixFlowCtl[MAXFUNIX] = { eFLOWCTL_NO_DELAY, }; /* flow control settings for this socket */
 static int funix[MAXFUNIX] = { -1, }; /* read-only after startup */
 static int nfunix = 1; /* number of Unix sockets open / read-only after startup */
 
 /* config settings */
 static int bOmitLocalLogging = 0;
 static uchar *pLogSockName = NULL;
+static uchar *pLogHostName = NULL;	/* host name to use with this socket */
+static int bUseFlowCtl = 0;		/* use flow control or not (if yes, only LIGHT is used! */
 static int bIgnoreTimestamp = 1; /* ignore timestamps present in the incoming message? */
 
 
@@ -89,10 +93,18 @@ static int bIgnoreTimestamp = 1; /* ignore timestamps present in the incoming me
 static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	DEFiRet;
-	funixFlags[0] = iNewVal ? ADDDATE : NOFLAG;
+	funixFlags[0] = iNewVal ? IGNDATE : NOFLAG;
 	RETiRet;
 }
 
+/* set flowcontrol for the system log socket
+ */
+static rsRetVal setSystemLogFlowControl(void __attribute__((unused)) *pVal, int iNewVal)
+{
+	DEFiRet;
+	funixFlowCtl[0] = iNewVal ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+	RETiRet;
+}
 
 /* add an additional listen socket. Socket names are added
  * until the array is filled up. It is never reset, only at
@@ -100,6 +112,7 @@ static rsRetVal setSystemLogTimestampIgnore(void __attribute__((unused)) *pVal, 
  * TODO: we should change the array to a list so that we
  * can support any number of listen socket names.
  * rgerhards, 2007-12-20
+ * added capability to specify hostname for socket -- rgerhards, 2008-08-01
  */
 static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
@@ -110,7 +123,10 @@ static rsRetVal addLstnSocketName(void __attribute__((unused)) *pVal, uchar *pNe
 		else {
 			funixParseHost[nfunix] = 0;
 		}
-		funixFlags[nfunix] = bIgnoreTimestamp ? ADDDATE : NOFLAG;
+		funixHName[nfunix] = pLogHostName;
+		pLogHostName = NULL; /* re-init for next, not freed because funixHName[] now owns it */
+		funixFlowCtl[nfunix] = bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+		funixFlags[nfunix] = bIgnoreTimestamp ? IGNDATE : NOFLAG;
 		funixn[nfunix++] = pNewVal;
 	}
 	else {
@@ -134,6 +150,10 @@ static rsRetVal discardFunixn(void)
 			free(funixn[i]);
 			funixn[i] = NULL;
 		}
+		if(funixHName[i] != NULL) {
+			free(funixHName[i]);
+			funixHName[i] = NULL;
+		}
 	}
 	
 	return RS_RET_OK;
@@ -144,7 +164,6 @@ static int create_unix_socket(const char *path)
 {
 	struct sockaddr_un sunx;
 	int fd;
-	char line[MAXLINE +1];
 
 	if (path[0] == '\0')
 		return -1;
@@ -155,11 +174,9 @@ static int create_unix_socket(const char *path)
 	sunx.sun_family = AF_UNIX;
 	(void) strncpy(sunx.sun_path, path, sizeof(sunx.sun_path));
 	fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-	if (fd < 0 || bind(fd, (struct sockaddr *) &sunx,
-			   SUN_LEN(&sunx)) < 0 ||
+	if (fd < 0 || bind(fd, (struct sockaddr *) &sunx, SUN_LEN(&sunx)) < 0 ||
 	    chmod(path, 0666) < 0) {
-		snprintf(line, sizeof(line), "cannot create %s", path);
-		errmsg.LogError(errno, NO_ERRCODE, "%s", line);
+		errmsg.LogError(errno, NO_ERRCODE, "connot create '%s'", path);
 		dbgprintf("cannot create %s (%d).\n", path, errno);
 		close(fd);
 		return -1;
@@ -171,18 +188,40 @@ static int create_unix_socket(const char *path)
 /* This function receives data from a socket indicated to be ready
  * to receive and submits the message received for processing.
  * rgerhards, 2007-12-20
+ * Interface changed so that this function is passed the array index
+ * of the socket which is to be processed. This eases access to the
+ * growing number of properties. -- rgerhards, 2008-08-01
  */
-static rsRetVal readSocket(int fd, int bParseHost, int flags)
+static rsRetVal readSocket(int fd, int iSock)
 {
 	DEFiRet;
 	int iRcvd;
-	uchar line[MAXLINE +1];
+	int iMaxLine;
+	uchar bufRcv[4096+1];
+	uchar *pRcv = NULL; /* receive buffer */
 
-	iRcvd = recv(fd, line, MAXLINE - 1, 0);
+	assert(iSock >= 0);
+
+	iMaxLine = glbl.GetMaxLine();
+
+	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
+	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
+	 * is used. We could use alloca() to achive a similar aspect, but there are so
+	 * many issues with alloca() that I do not want to take that route.
+	 * rgerhards, 2008-09-02
+	 */
+	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
+		pRcv = bufRcv;
+	} else {
+		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
+	}
+
+	iRcvd = recv(fd, pRcv, iMaxLine, 0);
 	dbgprintf("Message from UNIX socket: #%d\n", fd);
 	if (iRcvd > 0) {
-		parseAndSubmitMessage(glbl.GetLocalHostName(), (uchar*)"127.0.0.1", line,
-			 	      iRcvd, bParseHost, flags, eFLOWCTL_NO_DELAY);
+		parseAndSubmitMessage(funixHName[iSock] == NULL ? glbl.GetLocalHostName() : funixHName[iSock],
+				      (uchar*)"127.0.0.1", pRcv,
+			 	      iRcvd, funixParseHost[iSock], funixFlags[iSock], funixFlowCtl[iSock], (uchar*)"imuxsock");
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -190,12 +229,15 @@ static rsRetVal readSocket(int fd, int bParseHost, int flags)
 		errmsg.LogError(errno, NO_ERRCODE, "recvfrom UNIX");
 	}
 
+finalize_it:
+	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
+		free(pRcv);
+
 	RETiRet;
 }
 
 
-/* This function is called to gather input.
- */
+/* This function is called to gather input. */
 BEGINrunInput
 	int maxfds;
 	int nfds;
@@ -237,7 +279,7 @@ CODESTARTrunInput
 
 		for (i = 0; i < nfunix && nfds > 0; i++) {
 			if ((fd = funix[i]) != -1 && FD_ISSET(fd, &readfds)) {
-				readSocket(fd, funixParseHost[i], funixFlags[i]);
+				readSocket(fd, i);
 				--nfds; /* indicate we have processed one */
 			}
 		}
@@ -282,6 +324,9 @@ CODESTARTafterRun
 	/* free no longer needed string */
 	if(pLogSockName != NULL)
 		free(pLogSockName);
+	if(pLogHostName != NULL) {
+		free(pLogHostName);
+	}
 
 	discardFunixn();
 	nfunix = 1;
@@ -307,10 +352,15 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		free(pLogSockName);
 		pLogSockName = NULL;
 	}
+	if(pLogHostName != NULL) {
+		free(pLogHostName);
+		pLogHostName = NULL;
+	}
 
 	discardFunixn();
 	nfunix = 1;
 	bIgnoreTimestamp = 1;
+	bUseFlowCtl = 0;
 
 	return RS_RET_OK;
 }
@@ -323,6 +373,8 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+
+	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
 
 	/* initialize funixn[] array */
 	for(i = 1 ; i < MAXFUNIX ; ++i) {
@@ -337,18 +389,24 @@ CODEmodInit_QueryRegCFSLineHdlr
 		NULL, &bIgnoreTimestamp, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketname", 0, eCmdHdlrGetWord,
 		NULL, &pLogSockName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensockethostname", 0, eCmdHdlrGetWord,
+		NULL, &pLogHostName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketflowcontrol", 0, eCmdHdlrBinary,
+		NULL, &bUseFlowCtl, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"addunixlistensocket", 0, eCmdHdlrGetWord,
 		addLstnSocketName, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 	/* the following one is a (dirty) trick: the system log socket is not added via
-	 * an "addUnixListenSocket" config format. As such, the timestamp can not be modified
-	 * via $InputUnixListenSocketIgnoreMsgTimestamp". So we need to add a special directive
+	 * an "addUnixListenSocket" config format. As such, it's properties can not be modified
+	 * via $InputUnixListenSocket*". So we need to add a special directive
 	 * for that. We should revisit all of that once we have the new config format...
 	 * rgerhards, 2008-03-06
 	 */
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketignoremsgtimestamp", 0, eCmdHdlrBinary,
 		setSystemLogTimestampIgnore, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"systemlogsocketflowcontrol", 0, eCmdHdlrBinary,
+		setSystemLogFlowControl, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
  */

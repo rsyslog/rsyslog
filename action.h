@@ -40,6 +40,8 @@ extern int glbliActionResumeRetryCount;
  */
 struct action_s {
 	time_t	f_time;		/* used for "message repeated n times" - be careful, old, old code */
+	time_t	tActNow;	/* the current time for an action execution. Initially set to -1 and
+				   populated on an as-needed basis. This is a performance optimization. */
 	time_t	tLastExec;	/* time this action was last executed */
 	int	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
@@ -49,6 +51,10 @@ struct action_s {
 	int	iResumeInterval;/* resume interval for this action */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */
 	int	iNbrResRtry;	/* number of retries since last suspend */
+	int	iNbrNoExec;	/* number of matches that did not yet yield to an exec */
+	int	iExecEveryNthOccur;/* execute this action only every n-th occurence (with n=0,1 -> always) */
+	int  	iExecEveryNthOccurTO;/* timeout for n-th occurence feature */
+	time_t  tLastOccur;	/* time last occurence was seen (for timing them out) */
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	int	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
@@ -74,8 +80,6 @@ rsRetVal actionConstruct(action_t **ppThis);
 rsRetVal actionConstructFinalize(action_t *pThis);
 rsRetVal actionDestruct(action_t *pThis);
 rsRetVal actionAddCfSysLineHdrl(void);
-rsRetVal actionTryResume(action_t *pThis);
-rsRetVal actionSuspend(action_t *pThis);
 rsRetVal actionDbgPrint(action_t *pThis);
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);

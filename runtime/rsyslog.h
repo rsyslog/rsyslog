@@ -123,6 +123,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_TRUE = -3,		/**< to indicate a true state (can be used as TRUE, legacy) */
 	RS_RET_FALSE = -2,		/**< to indicate a false state (can be used as FALSE, legacy) */
 	RS_RET_NO_IRET = -8,	/**< This is a trick for the debuging system - it means no iRet is provided  */
+	RS_RET_VALIDATION_RUN = -9,	/**< indicates a (config) validation run, processing not carried out */
 	RS_RET_ERR = -3000,	/**< generic failure */
 	RS_TRUNCAT_TOO_LARGE = -3001, /**< truncation operation where too many chars should be truncated */
 	RS_RET_FOUND_AT_STRING_END = -3002, /**< some value found, but at the last pos of string */
@@ -246,8 +247,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_RETRY = -2100, /**< call should be retried (e.g. EGAIN on recv) */
 	RS_RET_GSS_ERR = -2101, /**< generic error occured in GSSAPI subsystem */
 	RS_RET_CERTLESS = -2102, /**< state: we run without machine cert (this may be OK) */
-	RS_RET_QUEUE_FULL = -2103, /**< queue is full, operation could not be completed */
-	RS_RET_ACCEPT_ERR = -2104, /**< error during accept() system call */
+	RS_RET_NO_ACTIONS = -2103, /**< no active actions are configured (no output will be created) */
+	RS_RET_CONF_FILE_NOT_FOUND = -2104, /**< config file or directory not found */
+	RS_RET_QUEUE_FULL = -2105, /**< queue is full, operation could not be completed */
+	RS_RET_ACCEPT_ERR = -2106, /**< error during accept() system call */
+	RS_RET_INVLD_TIME = -2107, /**< invalid timestamp (e.g. could not be parsed) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

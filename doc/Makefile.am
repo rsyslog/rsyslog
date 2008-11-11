@@ -26,7 +26,7 @@ html_files = \
 	rsyslog_tls.html \
 	rsyslog_reliable_forwarding.html \
 	rsyslog_stunnel.html \
-	syslog-protocol.html \
+	syslog_protocol.html \
 	version_naming.html \
 	contributors.html \
 	dev_queue.html \

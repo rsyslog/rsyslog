@@ -159,18 +159,34 @@ static int srSLMGParseInt32(char** ppsz)
 
 /**
  * Parse a TIMESTAMP-3339.
- * updates the parse pointer position.
+ * updates the parse pointer position. The pTime parameter
+ * is guranteed to be updated only if a new valid timestamp
+ * could be obtained (restriction added 2008-09-16 by rgerhards).
  */
-static int
+static rsRetVal
 ParseTIMESTAMP3339(struct syslogTime *pTime, char** ppszTS)
 {
 	char *pszTS = *ppszTS;
+	/* variables to temporarily hold time information while we parse */
+	int year;
+	int month;
+	int day;
+	int hour; /* 24 hour clock */
+	int minute;
+	int second;
+	int secfrac;	/* fractional seconds (must be 32 bit!) */
+	int secfracPrecision;
+	char OffsetMode;	/* UTC offset + or - */
+	char OffsetHour;	/* UTC offset in hours */
+	int OffsetMinute;	/* UTC offset in minutes */
+	/* end variables to temporarily hold time information while we parse */
+	DEFiRet;
 
 	assert(pTime != NULL);
 	assert(ppszTS != NULL);
 	assert(pszTS != NULL);
 
-	pTime->year = srSLMGParseInt32(&pszTS);
+	year = srSLMGParseInt32(&pszTS);
 
 	/* We take the liberty to accept slightly malformed timestamps e.g. in 
 	 * the format of 2003-9-1T1:0:0. This doesn't hurt on receiving. Of course,
@@ -178,104 +194,127 @@ ParseTIMESTAMP3339(struct syslogTime *pTime, char** ppszTS)
 	 * here because at postion 11, there is no "T" in such cases ;)
 	 */
 	if(*pszTS++ != '-')
-		return FALSE;
-	pTime->month = srSLMGParseInt32(&pszTS);
-	if(pTime->month < 1 || pTime->month > 12)
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	month = srSLMGParseInt32(&pszTS);
+	if(month < 1 || month > 12)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	if(*pszTS++ != '-')
-		return FALSE;
-	pTime->day = srSLMGParseInt32(&pszTS);
-	if(pTime->day < 1 || pTime->day > 31)
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	day = srSLMGParseInt32(&pszTS);
+	if(day < 1 || day > 31)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	if(*pszTS++ != 'T')
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	pTime->hour = srSLMGParseInt32(&pszTS);
-	if(pTime->hour < 0 || pTime->hour > 23)
-		return FALSE;
-
-	if(*pszTS++ != ':')
-		return FALSE;
-	pTime->minute = srSLMGParseInt32(&pszTS);
-	if(pTime->minute < 0 || pTime->minute > 59)
-		return FALSE;
+	hour = srSLMGParseInt32(&pszTS);
+	if(hour < 0 || hour > 23)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	if(*pszTS++ != ':')
-		return FALSE;
-	pTime->second = srSLMGParseInt32(&pszTS);
-	if(pTime->second < 0 || pTime->second > 60)
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	minute = srSLMGParseInt32(&pszTS);
+	if(minute < 0 || minute > 59)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+
+	if(*pszTS++ != ':')
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	second = srSLMGParseInt32(&pszTS);
+	if(second < 0 || second > 60)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	/* Now let's see if we have secfrac */
-	if(*pszTS == '.')
-	{
+	if(*pszTS == '.') {
 		char *pszStart = ++pszTS;
-		pTime->secfrac = srSLMGParseInt32(&pszTS);
-		pTime->secfracPrecision = (int) (pszTS - pszStart);
-	}
-	else
-	{
-		pTime->secfracPrecision = 0;
-		pTime->secfrac = 0;
+		secfrac = srSLMGParseInt32(&pszTS);
+		secfracPrecision = (int) (pszTS - pszStart);
+	} else {
+		secfracPrecision = 0;
+		secfrac = 0;
 	}
 
 	/* check the timezone */
 	if(*pszTS == 'Z')
 	{
 		pszTS++; /* eat Z */
-		pTime->OffsetMode = 'Z';
-		pTime->OffsetHour = 0;
-		pTime->OffsetMinute = 0;
-	}
-	else if((*pszTS == '+') || (*pszTS == '-'))
-	{
-		pTime->OffsetMode = *pszTS;
+		OffsetMode = 'Z';
+		OffsetHour = 0;
+		OffsetMinute = 0;
+	} else if((*pszTS == '+') || (*pszTS == '-')) {
+		OffsetMode = *pszTS;
 		pszTS++;
 
-		pTime->OffsetHour = srSLMGParseInt32(&pszTS);
-		if(pTime->OffsetHour < 0 || pTime->OffsetHour > 23)
-			return FALSE;
+		OffsetHour = srSLMGParseInt32(&pszTS);
+		if(OffsetHour < 0 || OffsetHour > 23)
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 		if(*pszTS++ != ':')
-			return FALSE;
-		pTime->OffsetMinute = srSLMGParseInt32(&pszTS);
-		if(pTime->OffsetMinute < 0 || pTime->OffsetMinute > 59)
-			return FALSE;
-	}
-	else
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
+		OffsetMinute = srSLMGParseInt32(&pszTS);
+		if(OffsetMinute < 0 || OffsetMinute > 59)
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	} else {
 		/* there MUST be TZ information */
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	}
 
 	/* OK, we actually have a 3339 timestamp, so let's indicated this */
 	if(*pszTS == ' ')
 		++pszTS;
 	else
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	/* update parse pointer */
+	/* we had success, so update parse pointer and caller-provided timestamp */
 	*ppszTS = pszTS;
+	pTime->timeType = 2;
+	pTime->year = year;
+	pTime->month = month;
+	pTime->day = day;
+	pTime->hour = hour;
+	pTime->minute = minute;
+	pTime->second = second;
+	pTime->secfrac = secfrac;
+	pTime->secfracPrecision = secfracPrecision;
+	pTime->OffsetMode = OffsetMode;
+	pTime->OffsetHour = OffsetHour;
+	pTime->OffsetMinute = OffsetMinute;
 
-	return TRUE;
+finalize_it:
+	RETiRet;
 }
 
 
 /**
- * Parse a TIMESTAMP-3164.
- * Returns TRUE on parse OK, FALSE on parse error.
+ * Parse a TIMESTAMP-3164. The pTime parameter
+ * is guranteed to be updated only if a new valid timestamp
+ * could be obtained (restriction added 2008-09-16 by rgerhards). This
+ * also means the caller *must* provide a valid (probably current) 
+ * timstamp in pTime when calling this function. a 3164 timestamp contains
+ * only partial information and only that partial information is updated.
+ * So the "output timestamp" is a valid timestamp only if the "input
+ * timestamp" was valid, too. The is actually an optimization, as it
+ * permits us to use a pre-aquired timestamp and thus avoids to do
+ * a (costly) time() call. Thanks to David Lang for insisting on
+ * time() call reduction ;).
  */
-static int
+static rsRetVal
 ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
 {
+	/* variables to temporarily hold time information while we parse */
+	int month;
+	int day;
+	int hour; /* 24 hour clock */
+	int minute;
+	int second;
+	/* end variables to temporarily hold time information while we parse */
 	char *pszTS;
+	DEFiRet;
 
 	assert(ppszTS != NULL);
 	pszTS = *ppszTS;
 	assert(pszTS != NULL);
 	assert(pTime != NULL);
-
-	getCurrTime(pTime);	/* obtain the current year and UTC offsets! */
 
 	/* If we look at the month (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
 	 * we may see the following character sequences occur:
@@ -301,117 +340,117 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
 			++pszTS;
 			if(*pszTS == 'n') {
 				++pszTS;
-				pTime->month = 1;
+				month = 1;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else if(*pszTS == 'u') {
 			++pszTS;
 			if(*pszTS == 'n') {
 				++pszTS;
-				pTime->month = 6;
+				month = 6;
 			} else if(*pszTS == 'l') {
 				++pszTS;
-				pTime->month = 7;
+				month = 7;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else
-			return FALSE;
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
 	case 'F':
 		if(*pszTS == 'e') {
 			++pszTS;
 			if(*pszTS == 'b') {
 				++pszTS;
-				pTime->month = 2;
+				month = 2;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else
-			return FALSE;
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
 	case 'M':
 		if(*pszTS == 'a') {
 			++pszTS;
 			if(*pszTS == 'r') {
 				++pszTS;
-				pTime->month = 3;
+				month = 3;
 			} else if(*pszTS == 'y') {
 				++pszTS;
-				pTime->month = 5;
+				month = 5;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else
-			return FALSE;
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
 	case 'A':
 		if(*pszTS == 'p') {
 			++pszTS;
 			if(*pszTS == 'r') {
 				++pszTS;
-				pTime->month = 4;
+				month = 4;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else if(*pszTS == 'u') {
 			++pszTS;
 			if(*pszTS == 'g') {
 				++pszTS;
-				pTime->month = 8;
+				month = 8;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else
-			return FALSE;
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
 	case 'S':
 		if(*pszTS == 'e') {
 			++pszTS;
 			if(*pszTS == 'p') {
 				++pszTS;
-				pTime->month = 9;
+				month = 9;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else
-			return FALSE;
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
 	case 'O':
 		if(*pszTS == 'c') {
 			++pszTS;
 			if(*pszTS == 't') {
 				++pszTS;
-				pTime->month = 10;
+				month = 10;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else
-			return FALSE;
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
 	case 'N':
 		if(*pszTS == 'o') {
 			++pszTS;
 			if(*pszTS == 'v') {
 				++pszTS;
-				pTime->month = 11;
+				month = 11;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else
-			return FALSE;
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
 	case 'D':
 		if(*pszTS == 'e') {
 			++pszTS;
 			if(*pszTS == 'c') {
 				++pszTS;
-				pTime->month = 12;
+				month = 12;
 			} else
-				return FALSE;
+				ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		} else
-			return FALSE;
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
 		break;
 	default:
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 	}
 
 	/* done month */
 
 	if(*pszTS++ != ' ')
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	/* we accept a slightly malformed timestamp when receiving. This is
 	 * we accept one-digit days
@@ -419,42 +458,51 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
 	if(*pszTS == ' ')
 		++pszTS;
 
-	pTime->day = srSLMGParseInt32(&pszTS);
-	if(pTime->day < 1 || pTime->day > 31)
-		return FALSE;
+	day = srSLMGParseInt32(&pszTS);
+	if(day < 1 || day > 31)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	if(*pszTS++ != ' ')
-		return FALSE;
-	pTime->hour = srSLMGParseInt32(&pszTS);
-	if(pTime->hour < 0 || pTime->hour > 23)
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	hour = srSLMGParseInt32(&pszTS);
+	if(hour < 0 || hour > 23)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	if(*pszTS++ != ':')
-		return FALSE;
-	pTime->minute = srSLMGParseInt32(&pszTS);
-	if(pTime->minute < 0 || pTime->minute > 59)
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	minute = srSLMGParseInt32(&pszTS);
+	if(minute < 0 || minute > 59)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
 	if(*pszTS++ != ':')
-		return FALSE;
-	pTime->second = srSLMGParseInt32(&pszTS);
-	if(pTime->second < 0 || pTime->second > 60)
-		return FALSE;
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+	second = srSLMGParseInt32(&pszTS);
+	if(second < 0 || second > 60)
+		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	/* we provide support for an exter ":" after the date. While this is an
+	/* we provide support for an extra ":" after the date. While this is an
 	 * invalid format, it occurs frequently enough (e.g. with Cisco devices)
 	 * to permit it as a valid case. -- rgerhards, 2008-09-12
 	 */
 	if(*pszTS++ == ':')
-		++pszTS;
+		++pszTS; /* just skip past it */
 
-	/* OK, we actually have a 3164 timestamp, so let's indicate this
-	 * and fill the rest of the properties. */
+	/* we had success, so update parse pointer and caller-provided timestamp
+	 * fields we do not have are not updated in the caller's timestamp. This
+	 * is the reason why the caller must pass in a correct timestamp.
+	 */
+	*ppszTS = pszTS; /* provide updated parse position back to caller */
 	pTime->timeType = 1;
+	pTime->month = month;
+	pTime->day = day;
+	pTime->hour = hour;
+	pTime->minute = minute;
+	pTime->second = second;
  	pTime->secfracPrecision = 0;
 	pTime->secfrac = 0;
-	*ppszTS = pszTS; /* provide updated parse position back to caller */
-	return TRUE;
+
+finalize_it:
+	RETiRet;
 }
 
 /*******************************************************************

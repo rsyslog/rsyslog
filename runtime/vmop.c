@@ -25,6 +25,7 @@
  */
 
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -79,6 +80,39 @@ CODESTARTobjDebugPrint(vmop)
 	if(pThis->operand.pVar != NULL)
 		var.DebugPrint(pThis->operand.pVar);
 ENDobjDebugPrint(vmop)
+
+
+/* This function is similar to DebugPrint, but does not send its output to
+ * the debug log but instead to a caller-provided string. The idea here is that
+ * we can use this string to get a textual representation of an operation.
+ * Among others, this is useful for creating testbenches, our first use case for
+ * it. Here, it enables simple comparison of the resulting program to a
+ * reference program by simple string compare.
+ * Note that the caller must initialize the string object. We always add
+ * data to it. So, it can be easily combined into a chain of methods
+ * to generate the final string.
+ * rgerhards, 2008-07-04
+ */
+static rsRetVal
+Obj2Str(vmop_t *pThis, cstr_t *pstrPrg)
+{
+	uchar *pOpcodeName;
+	uchar szBuf[2048];
+	size_t lenBuf;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, vmop);
+	assert(pstrPrg != NULL);
+	vmopOpcode2Str(pThis, &pOpcodeName);
+	lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%s\t", pOpcodeName);
+	CHKiRet(rsCStrAppendStrWithLen(pstrPrg, szBuf, lenBuf));
+	if(pThis->operand.pVar != NULL)
+		CHKiRet(var.Obj2Str(pThis->operand.pVar, pstrPrg));
+	CHKiRet(rsCStrAppendChar(pstrPrg, '\n'));
+
+finalize_it:
+	RETiRet;
+}
 
 
 /* set operand (variant case)
@@ -206,8 +240,6 @@ CODESTARTobjQueryInterface(vmop)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	//xxxpIf->oID = OBJvmop;
-
 	pIf->Construct = vmopConstruct;
 	pIf->ConstructFinalize = vmopConstructFinalize;
 	pIf->Destruct = vmopDestruct;
@@ -215,6 +247,7 @@ CODESTARTobjQueryInterface(vmop)
 	pIf->SetOpcode = vmopSetOpcode;
 	pIf->SetVar = vmopSetVar;
 	pIf->Opcode2Str = vmopOpcode2Str;
+	pIf->Obj2Str = Obj2Str;
 finalize_it:
 ENDobjQueryInterface(vmop)
 

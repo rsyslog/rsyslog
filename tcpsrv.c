@@ -1,8 +1,7 @@
 /* tcpsrv.c
  *
  * Common code for plain TCP based servers. This is currently being
- * utilized by imtcp and imgssapi. I suspect that when we implement
- * SSL/TLS, that module could also use tcpsrv.
+ * utilized by imtcp and imgssapi.
  *
  * There are actually two classes within the tcpserver code: one is
  * the tcpsrv itself, the other one is its sessions. This is a helper
@@ -451,7 +450,7 @@ Run(tcpsrv_t *pThis)
 		while(nfds && iTCPSess != -1) {
 			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
-				char buf[MAXLINE];
+				char buf[8*1024]; /* reception buffer - may hold a partial or multiple messages */
 				dbgprintf("netstream %p with new data\n", pThis->pSessions[iTCPSess]->pStrm);
 
 				/* Receive message */

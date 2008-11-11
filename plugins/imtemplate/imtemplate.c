@@ -269,7 +269,6 @@ CODESTARTrunInput
 		pMsg->iFacility = LOG_FAC(pri);
 		pMsg->iSeverity = LOG_PRI(pri);
 		pMsg->bParseHOSTNAME = 0;
-		getCurrTime(&(pMsg->tTIMESTAMP)); / * use the current time! * /
 		flags |= INTERNAL_MSG;
 		logmsg(pMsg, flags); / * some time, CHKiRet() will work here, too [today NOT!] * /
 		 * 
@@ -315,7 +314,7 @@ CODESTARTwillRun
 	if(udpLstnSocks == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 
-	if((pRcvBuf = malloc(MAXLINE * sizeof(char))) == NULL) {
+	if((pRcvBuf = malloc(glbl.GetMaxLine * sizeof(char))) == NULL) {
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 	*

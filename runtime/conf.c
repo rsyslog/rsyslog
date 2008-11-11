@@ -83,6 +83,8 @@ DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 
+static int iNbrActions; /* number of actions the running config has. Needs to be init on ReInitConf() */
+
 /* The following global variables are used for building
  * tag and host selector lines during startup and config reload.
  * This is stored as a global variable pool because of its ease. It is
@@ -188,6 +190,7 @@ doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	char pattern[MAXFNAME];
 	uchar *cfgFile;
 	glob_t cfgFiles;
+	int result;
 	size_t i = 0;
 	struct stat fileInfo;
 
@@ -195,14 +198,21 @@ doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	ASSERT(*pp != NULL);
 
 	if(getSubString(pp, (char*) pattern, sizeof(pattern) / sizeof(char), ' ')  != 0) {
-		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not extract group name");
+		errmsg.LogError(0, RS_RET_NOT_FOUND, "could not parse config file name");
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
 	/* Use GLOB_MARK to append a trailing slash for directories.
 	 * Required by doIncludeDirectory().
 	 */
-	glob(pattern, GLOB_MARK, NULL, &cfgFiles);
+	result = glob(pattern, GLOB_MARK, NULL, &cfgFiles);
+	if(result != 0) {
+		char errStr[1024];
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "error accessing config file or directory '%s': %s",
+				pattern, errStr);
+		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+	}
 
 	for(i = 0; i < cfgFiles.gl_pathc; i++) {
 		cfgFile = (uchar*) cfgFiles.gl_pathv[i];
@@ -560,8 +570,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
 }
 
 
-/*
- * Helper to cfline(). This function takes the filter part of a traditional, PRI
+/* Helper to cfline(). This function takes the filter part of a traditional, PRI
  * based line and decodes the PRIs given in the selector line. It processed the
  * line up to the beginning of the action part. A pointer to that beginnig is
  * passed back to the caller.
@@ -577,8 +586,9 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 	int pri;
 	int singlpri = 0;
 	int ignorepri = 0;
-	uchar buf[MAXLINE];
+	uchar buf[2048]; /* buffer for facility and priority names */
 	uchar xbuf[200];
+	DEFiRet;
 
 	ASSERT(pline != NULL);
 	ASSERT(*pline != NULL);
@@ -603,7 +613,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 			continue;
 
 		/* collect priority name */
-		for (bp = buf; *q && !strchr("\t ,;", *q); )
+		for (bp = buf; *q && !strchr("\t ,;", *q) && bp < buf+sizeof(buf)-1 ; )
 			*bp++ = *q++;
 		*bp = '\0';
 
@@ -614,6 +624,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 		/* decode priority name */
 		if ( *buf == '!' ) {
 			ignorepri = 1;
+			/* copy below is ok, we can NOT go off the allocated area */
 			for (bp=buf; *(bp+1); bp++)
 				*bp=*(bp+1);
 			*bp='\0';
@@ -639,7 +650,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 
 		/* scan facilities */
 		while (*p && !strchr("\t .;", *p)) {
-			for (bp = buf; *p && !strchr("\t ,;.", *p); )
+			for (bp = buf; *p && !strchr("\t ,;.", *p) && bp < buf+sizeof(buf)-1 ; )
 				*bp++ = *p++;
 			*bp = '\0';
 			if (*buf == '*') {
@@ -722,7 +733,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 		p++;
 
 	*pline = p;
-	return RS_RET_OK;
+	RETiRet;
 }
 
 
@@ -1060,6 +1071,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 					pAction->f_ReduceRepeated = 0;
 				}
 				pAction->bEnabled = 1; /* action is enabled */
+				iNbrActions++;	/* one more active action! */
 			}
 			break;
 		}
@@ -1159,6 +1171,34 @@ cfline(uchar *line, selector_t **pfCurr)
 }
 
 
+/* Reinitialize the configuration subsystem. This is a "work-around" to the fact
+ * that we do not yet have actual config objects. This method is to be called
+ * whenever a totally new config is started (which means on startup and HUP).
+ * Note that it MUST NOT be called for an included config file.
+ * rgerhards, 2008-07-28
+ */
+static rsRetVal
+ReInitConf(void)
+{
+	DEFiRet;
+	iNbrActions = 0;	/* this is what we created the function for ;) - action count is reset */
+	RETiRet;
+}
+
+
+/* return the current number of active actions
+ * rgerhards, 2008-07-28
+ */
+static rsRetVal
+GetNbrActActions(int *piNbrActions)
+{
+	DEFiRet;
+	assert(piNbrActions != NULL);
+	*piNbrActions = iNbrActions;
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
@@ -1179,6 +1219,8 @@ CODESTARTobjQueryInterface(conf)
 	pIf->doIncludeLine = doIncludeLine;
 	pIf->cfline = cfline;
 	pIf->processConfFile = processConfFile;
+	pIf->ReInitConf = ReInitConf;
+	pIf->GetNbrActActions = GetNbrActActions;
 
 finalize_it:
 ENDobjQueryInterface(conf)

@@ -1,14 +1,29 @@
-check_PROGRAMS = rt_init rscript_parse
-TESTS = $(check_PROGRAMS)
+check_PROGRAMS = rt_init rscript
+TESTS = $(check_PROGRAMS) cfg.sh
+TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
+#TESTS = $(check_PROGRAMS)
 
 test_files = testbench.h runtime-dummy.c
+EXTRA_DIST=1.rstest 2.rstest err1.rstest \
+	   cfg.sh \
+	   cfg1.cfgtest \
+	   cfg1.testin \
+      	   cfg2.cfgtest \
+	   cfg2.testin \
+	   cfg3.cfgtest \
+	   cfg3.testin \
+	   cfg4.cfgtest \
+	   cfg4.testin \
+	   DevNull.cfgtest \
+	   err1.rstest \
+	   NoExistFile.cfgtest
 
 rt_init_SOURCES = rt-init.c $(test_files)
 rt_init_CPPFLAGS =  -I$(top_srcdir) $(pthreads_cflags) $(rsrt_cflags) 
 rt_init_LDADD = $(rsrt_libs) $(zlib_libs) $(pthreads_libs)
 rt_init_LDFLAGS = -export-dynamic
 
-rscript_parse_SOURCES = rscript-parse.c $(test_files)
-rscript_parse_CPPFLAGS =  -I$(top_srcdir) $(pthreads_cflags) $(rsrt_cflags) 
-rscript_parse_LDADD = $(rsrt_libs) $(zlib_libs) $(pthreads_libs)
-rscript_parse_LDFLAGS = -export-dynamic
+rscript_SOURCES = rscript.c $(test_files)
+rscript_CPPFLAGS =  -I$(top_srcdir) $(pthreads_cflags) $(rsrt_cflags) 
+rscript_LDADD = $(rsrt_libs) $(zlib_libs) $(pthreads_libs)
+rscript_LDFLAGS = -export-dynamic

@@ -58,34 +58,6 @@
 #include "config.h"
 #include "rsyslog.h"
 
-/* change the following setting to e.g. 32768 if you would like to
- * support large message sizes for IHE (32k is the current maximum
- * needed for IHE). I was initially tempted to increase it to 32k,
- * but there is a large memory footprint with the current
- * implementation in rsyslog. This will change as the processing
- * changes, but I have re-set it to 1k, because the vast majority
- * of messages is below that and the memory savings is huge, at
- * least compared to the overall memory footprint.
- *
- * If you intend to receive Windows Event Log data (e.g. via
- * EventReporter - www.eventreporter.com), you might want to 
- * increase this number to an even higher value, as event
- * log messages can be very lengthy.
- * rgerhards, 2005-07-05
- *
- * during my recent testing, it showed that 4k seems to be
- * the typical maximum for UDP based syslog. This is a IP stack
- * restriction. Not always ... but very often. If you go beyond
- * that value, be sure to test that rsyslogd actually does what
- * you think it should do ;) Also, it is a good idea to check the
- * doc set for anything on IHE - it most probably has information on
- * message sizes.
- * rgerhards, 2005-08-05
- * 
- * I have increased the default message size to 2048 to be in sync
- * with recent IETF syslog standardization efforts.
- * rgerhards, 2006-11-30
- */
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define TIMERINTVL	30		/* interval for checking flush, mark */
 
@@ -255,6 +227,7 @@ static int bFinished = 0;	/* used by termination signal handler, read-only excep
 				 * is either 0 or the number of the signal that requested the
  				 * termination.
 				 */
+static int iConfigVerify = 0;	/* is this just a config verify run? */
 
 /* Intervals at which we flush out "message repeated" messages,
  * in seconds after previous message is logged.  After each flush,
@@ -285,6 +258,7 @@ static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list i
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
 static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
 static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
+static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition to everything else)? */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
 int	iActExecOnceInterval = 0; /* execute action once every nn seconds */
@@ -418,7 +392,7 @@ static void processImInternal(void);
 static int usage(void)
 {
 	fprintf(stderr, "usage: rsyslogd [-cversion] [-46AdnqQvwx] [-lhostlist] [-sdomainlist]\n"
-			"                [-fconffile] [-ipidfile]\n"
+			"                [-fconffile] [-ipidfile] [-Nlevel]\n"
 			"To run rsyslogd in native mode, use \"rsyslogd -c3 <other options>\"\n\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
@@ -602,8 +576,14 @@ void untty(void)
  * rgerhards, 2008-05-16:
  * I added an additional calling parameter (hnameIP) to enable specifying the IP
  * of a remote host.
+ *
+ * rgerhards, 2008-09-11:
+ * Interface change: added new parameter "InputName", permits the input to provide 
+ * a string that identifies it. May be NULL, but must be a valid char* pointer if
+ * non-NULL.
  */
-rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType)
+rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType,
+	uchar *pszInputName)
 {
 	DEFiRet;
 	register uchar *p;
@@ -612,6 +592,8 @@ rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int
 
 	/* Now it is time to create the message object (rgerhards) */
 	CHKiRet(msgConstruct(&pMsg));
+	if(pszInputName != NULL)
+		MsgSetInputName(pMsg, (char*) pszInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
@@ -697,18 +679,25 @@ finalize_it:
  * rgerhards, 2008-05-16:
  * I added an additional calling parameter (hnameIP) to enable specifying the IP
  * of a remote host.
+ *
+ * rgerhards, 2008-09-11:
+ * Interface change: added new parameter "InputName", permits the input to provide 
+ * a string that identifies it. May be NULL, but must be a valid char* pointer if
+ * non-NULL.
  */
 rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType)
+parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType,
+	uchar *pszInputName)
 {
 	DEFiRet;
 	register int iMsg;
 	uchar *pMsg;
 	uchar *pData;
 	uchar *pEnd;
-	uchar tmpline[MAXLINE + 1];
+	int iMaxLine;
+	uchar *tmpline = NULL;
 #	ifdef USE_NETZIP
-	uchar deflateBuf[MAXLINE + 1];
+	uchar *deflateBuf = NULL;
 	uLongf iLenDefBuf;
 #	endif
 
@@ -716,6 +705,18 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	assert(hnameIP != NULL);
 	assert(msg != NULL);
 	assert(len >= 0);
+
+	/* we first allocate work buffers large enough to hold the configured maximum
+	 * size of a message. Over time, we should change this to a more optimal way, i.e.
+	 * by calling the function with the actual length of the message to be parsed.
+	 * rgerhards, 2008-09-02
+	 *
+	 * TODO: optimize buffer handling */
+	iMaxLine = glbl.GetMaxLine();
+	CHKmalloc(tmpline = malloc(sizeof(uchar) * (iMaxLine + 1)));
+#	ifdef USE_NETZIP
+	CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
+#	endif
 
 	/* we first check if we have a NUL character at the very end of the
 	 * message. This seems to be a frequent problem with a number of senders.
@@ -753,14 +754,14 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	 */
 	if(len > 0 && *msg == 'z') { /* compressed data present? (do NOT change order if conditions!) */
 		/* we have compressed data, so let's deflate it. We support a maximum
-		 * message size of MAXLINE. If it is larger, an error message is logged
+		 * message size of iMaxLine. If it is larger, an error message is logged
 		 * and the message is dropped. We do NOT try to decompress larger messages
 		 * as such might be used for denial of service. It might happen to later
 		 * builds that such functionality be added as an optional, operator-configurable
 		 * feature.
 		 */
 		int ret;
-		iLenDefBuf = MAXLINE;
+		iLenDefBuf = iMaxLine;
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
 		dbgprintf("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
 		        ret, (long) iLenDefBuf, len-1);
@@ -793,13 +794,13 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 #	endif /* ifdef USE_NETZIP */
 
 	while(pData < pEnd) {
-		if(iMsg >= MAXLINE) {
+		if(iMsg >= iMaxLine) {
 			/* emergency, we now need to flush, no matter if
 			 * we are at end of message or not...
 			 */
-			if(iMsg == MAXLINE) {
+			if(iMsg == iMaxLine) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType);
+				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -808,7 +809,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 				 * (I couldn't do any more smart things anyway...).
 				 * rgerhards, 2007-9-20
 				 */
-				dbgprintf("internal error: iMsg > MAXLINE in printchopped()\n");
+				dbgprintf("internal error: iMsg > max msg size in printchopped()\n");
 			}
 			FINALIZE; /* in this case, we are done... nothing left we can do */
 		}
@@ -816,7 +817,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			/* changed to the sequence (somewhat) proposed in
 			 * draft-ietf-syslog-protocol-19. rgerhards, 2006-11-30
 			 */
-			if(iMsg + 3 < MAXLINE) { /* do we have space? */
+			if(iMsg + 3 < iMaxLine) { /* do we have space? */
 				*(pMsg + iMsg++) =  cCCEscapeChar;
 				*(pMsg + iMsg++) = '0';
 				*(pMsg + iMsg++) = '0';
@@ -836,7 +837,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			 * we known now what's going on.
 			 * rgerhards, 2007-07-17
 			 */
-			if(iMsg + 3 < MAXLINE) { /* do we have space? */
+			if(iMsg + 3 < iMaxLine) { /* do we have space? */
 				*(pMsg + iMsg++) = cCCEscapeChar;
 				*(pMsg + iMsg++) = '0' + ((*pData & 0300) >> 6);
 				*(pMsg + iMsg++) = '0' + ((*pData & 0070) >> 3);
@@ -851,9 +852,15 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType);
+	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
 
 finalize_it:
+	if(tmpline != NULL)
+		free(tmpline);
+#	ifdef USE_NETZIP
+	if(deflateBuf != NULL)
+		free(deflateBuf);
+#	endif
 	RETiRet;
 }
 
@@ -866,9 +873,10 @@ rsRetVal
 submitErrMsg(int iErr, uchar *msg)
 {
 	DEFiRet;
-	iRet = logmsgInternal(iErr, LOG_SYSLOG|LOG_ERR, msg, ADDDATE);
+	iRet = logmsgInternal(iErr, LOG_SYSLOG|LOG_ERR, msg, 0);
 	RETiRet;
 }
+
 
 /* rgerhards 2004-11-09: the following is a function that can be used
  * to log a message orginating from the syslogd itself. In sysklogd code,
@@ -887,6 +895,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
+	MsgSetInputName(pMsg, "rsyslogd");
 	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
@@ -905,8 +914,19 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
 	pMsg->bParseHOSTNAME = 0;
-	datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	flags |= INTERNAL_MSG;
+
+	/* we now check if we should print internal messages out to stderr. This was
+	 * suggested by HKS as a way to help people troubleshoot rsyslog configuration
+	 * (by running it interactively. This makes an awful lot of sense, so I add
+	 * it here. -- rgerhards, 2008-07-28
+	 * Note that error messages can not be disable during a config verify. This
+	 * permits us to process unmodified config files which otherwise contain a
+	 * supressor statement.
+	 */
+	if(bErrMsgToStderr || iConfigVerify) {
+		fprintf(stderr, "rsyslogd: %s\n", msg);
+	}
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
 		iminternalAddMsg(pri, pMsg, flags);
@@ -1146,9 +1166,6 @@ processMsg(msg_t *pMsg)
 /* The consumer of dequeued messages. This function is called by the
  * queue engine on dequeueing of a message. It runs on a SEPARATE
  * THREAD.
- * NOTE: Having more than one worker requires guarding of some
- * message object structures and potentially others - need to be checked
- * before we support multiple worker threads on the message queue.
  * Please note: the message object is destructed by the queue itself!
  */
 static rsRetVal
@@ -1310,14 +1327,14 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	 */
 
 	/* TIMESTAMP */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse) == FALSE) {
+	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP),  &p2parse) == RS_RET_OK) {
+		if(flags & IGNDATE) {
+			/* we need to ignore the msg data, so simply copy over reception date */
+			memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
+		}
+	} else {
 		dbgprintf("no TIMESTAMP detected!\n");
 		bContParse = 0;
-		flags |= ADDDATE;
-	}
-
-	if (flags & ADDDATE) {
-		datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
 	}
 
 	/* HOSTNAME */
@@ -1384,21 +1401,25 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	cstr_t *pStrB;
 	int iCnt;
 	int bTAGCharDetected;
+	BEGINfunc
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	p2parse = (char*) pMsg->pszUxTradMsg;
 
-	/* Check to see if msg contains a timestamp. We stary trying with a
-	 * high-precision one...
+	/* Check to see if msg contains a timestamp. We start by assuming
+	 * that the message timestamp is the time of reciption (which we 
+	 * generated ourselfs and then try to actually find one inside the
+	 * message. There we go from high-to low precison and are done
+	 * when we find a matching one. -- rgerhards, 2008-09-16
 	 */
-	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
+	if(datetime.ParseTIMESTAMP3339(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3339 */;
-	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
+	} else if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
 		/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 	} else if(*p2parse == ' ') { /* try to see if it is slighly malformed - HP procurve seems to do that sometimes */
 		++p2parse;	/* move over space */
-		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == TRUE) {
+		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
 			/* indeed, we got it! */
 			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
 		} else {
@@ -1406,19 +1427,12 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			 * for this try.
 			 */
 			--p2parse;
-			flags |= ADDDATE;
 		}
-	} else {
-		flags |= ADDDATE;
 	}
 
-	/* here we need to check if the timestamp is valid. If it is not,
-	 * we can not continue to parse but must treat the rest as the 
-	 * MSG part of the message (as of RFC 3164).
-	 * rgerhards 2004-12-03
-	 */
-	if(flags & ADDDATE) {
-		datetime.getCurrTime(&(pMsg->tTIMESTAMP)); /* use the current time! */
+	if(flags & IGNDATE) {
+		/* we need to ignore the msg data, so simply copy over reception date */
+		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 	}
 
 	/* rgerhards, 2006-03-13: next, we parse the hostname and tag. But we 
@@ -1554,6 +1568,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	/* The rest is the actual MSG */
 	MsgSetMSG(pMsg, p2parse);
 
+	ENDfunc
 	return 0; /* all ok */
 }
 
@@ -1666,6 +1681,10 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	
 	BEGINfunc
 	LockObj(pAction);
+	/* TODO: time() performance: the call below could be moved to
+	 * the beginn of the llExec(). This makes it slightly less correct, but
+	 * in an acceptable way. -- rgerhards, 2008-09-16
+	 */
 	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
 		dbgprintf("flush %s: repeated %d times, %d sec.\n",
 		    module.GetStateName(pAction->pMod), pAction->f_prevcount,
@@ -1776,7 +1795,7 @@ void legacyOptsParseTCP(char ch, char *arg)
 	static char conflict = '\0';
 
 	if((conflict == 'g' && ch == 't') || (conflict == 't' && ch == 'g')) {
-		fprintf(stderr, "rsyslog: If you want to use both -g and -t, use directives instead, -%c ignored.\n", ch);
+		fprintf(stderr, "rsyslogd: If you want to use both -g and -t, use directives instead, -%c ignored.\n", ch);
 		return;
 	} else
 		conflict = ch;
@@ -1849,16 +1868,22 @@ void legacyOptsParseTCP(char ch, char *arg)
  * a minimal delay, but it is much cleaner than the approach of doing everything
  * inside the signal handler.
  * rgerhards, 2005-10-26
+ * Note: we do not call dbgprintf() as this may cause us to block in case something
+ * with the threading is wrong.
  */
 static void doDie(int sig)
 {
+#	define MSG1 "DoDie called.\n"
+#	define MSG2 "DoDie called 5 times - unconditional exit\n"
 	static int iRetries = 0; /* debug aid */
-	printf("DoDie called.\n");
+	write(1, MSG1, sizeof(MSG1));
 	if(iRetries++ == 4) {
-		printf("DoDie called 5 times - unconditional exit\n");
+		write(1, MSG2, sizeof(MSG2));
 		abort();
 	}
 	bFinished = sig;
+#	undef MSG1
+#	undef MSG2
 }
 
 
@@ -1915,7 +1940,7 @@ die(int sig)
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"]" " exiting on signal %d.",
 		 (int) myPid, sig);
 		errno = 0;
-		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, ADDDATE);
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
 	
 	/* drain queue (if configured so) and stop main queue worker thread pool */
@@ -1991,16 +2016,21 @@ static void doexit()
 }
 
 
-/* set the action resume interval
- */
+/* set the maximum message size */
+static rsRetVal setMaxMsgSize(void __attribute__((unused)) *pVal, int iNewVal)
+{
+	return glbl.SetMaxLine(iNewVal);
+}
+
+
+/* set the action resume interval */
 static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int iNewVal)
 {
 	return actionSetGlobalResumeInterval(iNewVal);
 }
 
 
-/* set the processes umask (upon configuration request)
- */
+/* set the processes umask (upon configuration request) */
 static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 {
 	umask(iUmask);
@@ -2195,11 +2225,15 @@ startInputModules(void)
 
 /* INIT -- Initialize syslogd from configuration table
  * init() is called at initial startup AND each time syslogd is HUPed
+ * Note that if iConfigVerify is set, only the config file is verified but nothing
+ * else happens. -- rgerhards, 2008-07-28
  */
-static void
+static rsRetVal
 init(void)
 {
 	DEFiRet;
+	rsRetVal localRet;
+	int iNbrActions;
 	char cbuf[BUFSIZ];
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
@@ -2242,22 +2276,42 @@ init(void)
 	 */
 	conf.cfsysline((uchar*)"ResetConfigVariables");
 
+	conf.ReInitConf();
+
 	/* open the configuration file */
-	if((iRet = conf.processConfFile(ConfFile)) != RS_RET_OK) {
+	localRet = conf.processConfFile(ConfFile);
+	CHKiRet(conf.GetNbrActActions(&iNbrActions));
+
+	if(localRet != RS_RET_OK) {
+		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", ConfFile);
+	} else if(iNbrActions == 0) {
+		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no active actions configured. Inputs will "
+			 "run, but no output whatsoever is created.");
+	}
+
+	if(localRet != RS_RET_OK || iNbrActions == 0) {
 		/* rgerhards: this code is executed to set defaults when the
 		 * config file could not be opened. We might think about
 		 * abandoning the run in this case - but this, too, is not
 		 * very clever... So we stick with what we have.
 		 * We ignore any errors while doing this - we would be lost anyhow...
 		 */
+		errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - fix rsyslog config file!");
 		selector_t *f = NULL;
-		char szTTYNameBuf[_POSIX_TTY_NAME_MAX+1]; /* +1 for NULL character */
-		dbgprintf("primary config file could not be opened - using emergency definitions.\n");
+
+		/* note: we previously used _POSIY_TTY_NAME_MAX+1, but this turned out to be
+		 * too low on linux... :-S   -- rgerhards, 2008-07-28
+		 */
+		char szTTYNameBuf[128];
 		conf.cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
+		conf.cfline((uchar*)"syslog.*\t" _PATH_CONSOLE, &f);
 		conf.cfline((uchar*)"*.PANIC\t*", &f);
+		conf.cfline((uchar*)"syslog.*\troot", &f);
 		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
 			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
 			conf.cfline((uchar*)cbuf, &f);
+		} else {
+			dbgprintf("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
 		}
 		selectorAddList(f);
 	}
@@ -2294,6 +2348,12 @@ init(void)
 			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 	}
+
+	/* we are done checking the config - now validate if we should actually run or not.
+	 * If not, terminate. -- rgerhards, 2008-07-25
+	 */
+	if(iConfigVerify)
+		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
 
 	/* switch the message object to threaded operation, if necessary */
 	if(MainMsgQueType == QUEUETYPE_DIRECT || iMainMsgQueueNumWorkers > 1) {
@@ -2368,7 +2428,7 @@ init(void)
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
 		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] restart",
 		 (int) myPid);
-	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, ADDDATE);
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
@@ -2376,7 +2436,9 @@ init(void)
 	sigaction(SIGHUP, &sigAct, NULL);
 
 	dbgprintf(" (re)started.\n");
-	ENDfunc
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -2643,7 +2705,6 @@ static rsRetVal loadBuildInModules(void)
 	 * is that rsyslog will terminate if we can not register our built-in config commands.
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
-//	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, NULL, &pszWorkDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &glbliActionResumeRetryCount, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
@@ -2684,6 +2745,8 @@ static rsRetVal loadBuildInModules(void)
 		 NULL, &bDebugPrintCfSysLineHandlerList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &bErrMsgToStderr, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, setMaxMsgSize, NULL, NULL));
 
 	/* now add other modules handlers (we should work on that to be able to do it in ClassInit(), but so far
 	 * that is not possible). -- rgerhards, 2008-01-28
@@ -2739,9 +2802,9 @@ static void printVersion(void)
  * move code out of the too-long main() function.
  * rgerhards, 2007-10-17
  */
-static void mainThread()
+static rsRetVal mainThread()
 {
-	BEGINfunc
+	DEFiRet;
 	uchar *pTmp;
 
 	/* Note: signals MUST be processed by the thread this code is running in. The reason
@@ -2770,10 +2833,10 @@ static void mainThread()
         pTmp = template_StdPgSQLFmt;
         tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
 
-	init();
-	if(Debug) {
+	CHKiRet(init());
+
+	if(Debug && debugging_on) {
 		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
-		debugging_on = 1;
 	}
 	/* Send a signal to the parent so it can terminate.
 	 */
@@ -2789,7 +2852,9 @@ static void mainThread()
 	dbgprintf("initialization completed, transitioning to regular run mode\n");
 
 	mainloop();
-	ENDfunc
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -2972,6 +3037,98 @@ finalize_it:
 }
 
 
+/* global initialization, to be done only once and before the mainloop is started.
+ * rgerhards, 2008-07-28 (extracted from realMain())
+ */
+static rsRetVal
+doGlblProcessInit(void)
+{
+	struct sigaction sigAct;
+	int num_fds;
+	int i;
+	DEFiRet;
+
+	checkPermissions();
+	thrdInit();
+
+	if( !(Debug || NoFork) )
+	{
+		dbgprintf("Checking pidfile.\n");
+		if (!check_pid(PidFile))
+		{
+			memset(&sigAct, 0, sizeof (sigAct));
+			sigemptyset(&sigAct.sa_mask);
+			sigAct.sa_handler = doexit;
+			sigaction(SIGTERM, &sigAct, NULL);
+
+			if (fork()) {
+				/* Parent process
+				 */
+				sleep(300);
+				/* Not reached unless something major went wrong.  5
+				 * minutes should be a fair amount of time to wait.
+				 * Please note that this procedure is important since
+				 * the father must not exit before syslogd isn't
+				 * initialized or the klogd won't be able to flush its
+				 * logs.  -Joey
+				 */
+				exit(1); /* "good" exit - after forking, not diasabling anything */
+			}
+			num_fds = getdtablesize();
+			for (i= 0; i < num_fds; i++)
+				(void) close(i);
+			untty();
+		}
+		else
+		{
+			fputs(" Already running.\n", stderr);
+			exit(1); /* "good" exit, done if syslogd is already running */
+		}
+	} else {
+		debugging_on = 1;
+	}
+
+	/* tuck my process id away */
+	dbgprintf("Writing pidfile %s.\n", PidFile);
+	if (!check_pid(PidFile))
+	{
+		if (!write_pid(PidFile))
+		{
+			fputs("Can't write pid.\n", stderr);
+			exit(1); /* exit during startup - questionable */
+		}
+	}
+	else
+	{
+		fputs("Pidfile (and pid) already exist.\n", stderr);
+		exit(1); /* exit during startup - questionable */
+	}
+	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
+
+	memset(&sigAct, 0, sizeof (sigAct));
+	sigemptyset(&sigAct.sa_mask);
+
+	sigAct.sa_handler = sigsegvHdlr;
+	sigaction(SIGSEGV, &sigAct, NULL);
+	sigAct.sa_handler = sigsegvHdlr;
+	sigaction(SIGABRT, &sigAct, NULL);
+	sigAct.sa_handler = doDie;
+	sigaction(SIGTERM, &sigAct, NULL);
+	sigAct.sa_handler = Debug ? doDie : SIG_IGN;
+	sigaction(SIGINT, &sigAct, NULL);
+	sigaction(SIGQUIT, &sigAct, NULL);
+	sigAct.sa_handler = reapchild;
+	sigaction(SIGCHLD, &sigAct, NULL);
+	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
+	sigaction(SIGUSR1, &sigAct, NULL);
+	sigAct.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sigAct, NULL);
+	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
+
+	RETiRet;
+}
+
+
 /* This is the main entry point into rsyslogd. Over time, we should try to
  * modularize it a bit more...
  */
@@ -2979,16 +3136,15 @@ int realMain(int argc, char **argv)
 {	
 	DEFiRet;
 
-	register int i;
 	register uchar *p;
-	int num_fds;
 	int ch;
 	struct hostent *hent;
 	extern int optind;
 	extern char *optarg;
-	struct sigaction sigAct;
 	int bEOptionWasGiven = 0;
 	int bImUxSockLoaded = 0; /* already generated a $ModLoad imuxsock? */
+	int iHelperUOpt;
+	int bChDirRoot = 1; /* change the current working directory to "/"? */
 	char *arg;	/* for command line option processing */
 	uchar legacyConfLine[80];
 	uchar *LocalHostName;
@@ -3008,7 +3164,7 @@ int realMain(int argc, char **argv)
 	 * only when actually neeeded. 
 	 * rgerhards, 2008-04-04
 	 */
-	while ((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nopqQr::s:t:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nN:opqQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -3020,6 +3176,7 @@ int realMain(int argc, char **argv)
 		case 'l':
 		case 'm': /* mark interval */
 		case 'n': /* don't fork */
+		case 'N': /* enable config verify mode */
                 case 'o':
                 case 'p':
 		case 'q': /* add hostname if DNS resolving has failed */
@@ -3082,9 +3239,6 @@ int realMain(int argc, char **argv)
 	/* we are done with the initial option parsing and processing. Now we init the system. */
 
 	ppid = getpid();
-
-	if(chdir ("/") != 0)
-		fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
 
 	CHKiRet_Hdlr(InitGlobalClasses()) {
 		fprintf(stderr, "rsyslogd initializiation failed - global classes could not be initialized.\n"
@@ -3218,6 +3372,9 @@ int realMain(int argc, char **argv)
 		case 'n':		/* don't fork */
 			NoFork = 1;
 			break;
+		case 'N':		/* enable config verify mode */
+			iConfigVerify = atoi(arg);
+			break;
                 case 'o':
 			if(iCompatibilityMode < 3) {
 				if(!bImUxSockLoaded) {
@@ -3268,8 +3425,11 @@ int realMain(int argc, char **argv)
 				fprintf(stderr,	"-t option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
 		case 'u':		/* misc user settings */
-			if(atoi(arg) == 1)
+			iHelperUOpt = atoi(arg);
+			if(iHelperUOpt & 0x01)
 				bParseHOSTNAMEandTAG = 0;
+			if(iHelperUOpt & 0x02)
+				bChDirRoot = 0;
 			break;
 		case 'w':		/* disable disallowed host warnigs */
 			glbl.SetOption_DisallowWarning(0);
@@ -3285,6 +3445,17 @@ int realMain(int argc, char **argv)
 
 	if(iRet != RS_RET_END_OF_LINKEDLIST)
 		FINALIZE;
+
+	if(iConfigVerify) {
+		fprintf(stderr, "rsyslogd: version %s, config validation run (level %d), master config %s\n",
+			VERSION, iConfigVerify, ConfFile);
+	}
+
+	if(bChDirRoot) {
+		if(chdir("/") != 0)
+			fprintf(stderr, "Can not do 'cd /' - still trying to run\n");
+	}
+
 
 	/* process compatibility mode settings */
 	if(iCompatibilityMode < 3) {
@@ -3309,86 +3480,10 @@ int realMain(int argc, char **argv)
 					    "more and cast your vote if you want us to keep this feature.");
 	}
 
-	checkPermissions();
-	thrdInit();
+	if(!iConfigVerify)
+		CHKiRet(doGlblProcessInit());
 
-	if( !(Debug || NoFork) )
-	{
-		dbgprintf("Checking pidfile.\n");
-		if (!check_pid(PidFile))
-		{
-			memset(&sigAct, 0, sizeof (sigAct));
-			sigemptyset(&sigAct.sa_mask);
-			sigAct.sa_handler = doexit;
-			sigaction(SIGTERM, &sigAct, NULL);
-
-			if (fork()) {
-				/*
-				 * Parent process
-				 */
-				sleep(300);
-				/*
-				 * Not reached unless something major went wrong.  5
-				 * minutes should be a fair amount of time to wait.
-				 * Please note that this procedure is important since
-				 * the father must not exit before syslogd isn't
-				 * initialized or the klogd won't be able to flush its
-				 * logs.  -Joey
-				 */
-				exit(1); /* "good" exit - after forking, not diasabling anything */
-			}
-			num_fds = getdtablesize();
-			for (i= 0; i < num_fds; i++)
-				(void) close(i);
-			untty();
-		}
-		else
-		{
-			fputs(" Already running.\n", stderr);
-			exit(1); /* "good" exit, done if syslogd is already running */
-		}
-	}
-	else
-		debugging_on = 1;
-
-	/* tuck my process id away */
-	dbgprintf("Writing pidfile %s.\n", PidFile);
-	if (!check_pid(PidFile))
-	{
-		if (!write_pid(PidFile))
-		{
-			fputs("Can't write pid.\n", stderr);
-			exit(1); /* exit during startup - questionable */
-		}
-	}
-	else
-	{
-		fputs("Pidfile (and pid) already exist.\n", stderr);
-		exit(1); /* exit during startup - questionable */
-	}
-	myPid = getpid(); 	/* save our pid for further testing (also used for messages) */
-
-	memset(&sigAct, 0, sizeof (sigAct));
-	sigemptyset(&sigAct.sa_mask);
-
-	sigAct.sa_handler = sigsegvHdlr;
-	sigaction(SIGSEGV, &sigAct, NULL);
-	sigAct.sa_handler = sigsegvHdlr;
-	sigaction(SIGABRT, &sigAct, NULL);
-	sigAct.sa_handler = doDie;
-	sigaction(SIGTERM, &sigAct, NULL);
-	sigAct.sa_handler = Debug ? doDie : SIG_IGN;
-	sigaction(SIGINT, &sigAct, NULL);
-	sigaction(SIGQUIT, &sigAct, NULL);
-	sigAct.sa_handler = reapchild;
-	sigaction(SIGCHLD, &sigAct, NULL);
-	sigAct.sa_handler = Debug ? debug_switch : SIG_IGN;
-	sigaction(SIGUSR1, &sigAct, NULL);
-	sigAct.sa_handler = SIG_IGN;
-	sigaction(SIGPIPE, &sigAct, NULL);
-	sigaction(SIGXFSZ, &sigAct, NULL); /* do not abort if 2gig file limit is hit */
-
-	mainThread();
+	CHKiRet(mainThread());
 
 	/* do any de-init's that need to be done AFTER this comment */
 
@@ -3397,9 +3492,12 @@ int realMain(int argc, char **argv)
 	thrdExit();
 
 finalize_it:
-	if(iRet != RS_RET_OK)
-		fprintf(stderr, "rsyslogd run failed with error %d\n(see rsyslog.h "
-				"or http://www.rsyslog.com/errcode to learn what that number means)\n", iRet);
+	if(iRet == RS_RET_VALIDATION_RUN) {
+		fprintf(stderr, "rsyslogd: End of config validation run. Bye.\n");
+	} else if(iRet != RS_RET_OK) {
+		fprintf(stderr, "rsyslogd run failed with error %d (see rsyslog.h "
+				"or try http://www.rsyslog.com/e/%d to learn what that number means)\n", iRet, iRet*-1);
+	}
 
 	ENDfunc
 	return 0;

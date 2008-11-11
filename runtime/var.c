@@ -29,6 +29,7 @@
  */
 
 #include "config.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -87,6 +88,44 @@ CODESTARTobjDebugPrint(var)
 			break;
 	}
 ENDobjDebugPrint(var)
+
+
+/* This function is similar to DebugPrint, but does not send its output to
+ * the debug log but instead to a caller-provided string. The idea here is that
+ * we can use this string to get a textual representation of a variable.
+ * Among others, this is useful for creating testbenches, our first use case for
+ * it. Here, it enables simple comparison of the resulting program to a
+ * reference program by simple string compare.
+ * Note that the caller must initialize the string object. We always add
+ * data to it. So, it can be easily combined into a chain of methods
+ * to generate the final string.
+ * rgerhards, 2008-07-07
+ */
+static rsRetVal
+Obj2Str(var_t *pThis, cstr_t *pstrPrg)
+{
+	DEFiRet;
+	size_t lenBuf;
+	uchar szBuf[2048];
+
+	ISOBJ_TYPE_assert(pThis, var);
+	assert(pstrPrg != NULL);
+	switch(pThis->varType) {
+		case VARTYPE_STR:
+			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%s[cstr]", rsCStrGetSzStr(pThis->val.pStr)); 
+			break;
+		case VARTYPE_NUMBER:
+			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "%lld[nbr]", pThis->val.num);
+			break;
+		default:
+			lenBuf = snprintf((char*) szBuf, sizeof(szBuf), "**UNKNOWN**[%d]", pThis->varType);
+			break;
+	}
+	CHKiRet(rsCStrAppendStrWithLen(pstrPrg, szBuf, lenBuf));
+
+finalize_it:
+	RETiRet;
+}
 
 
 /* duplicates a var instance
@@ -387,6 +426,7 @@ CODESTARTobjQueryInterface(var)
 	pIf->ConstructFinalize = varConstructFinalize;
 	pIf->Destruct = varDestruct;
 	pIf->DebugPrint = varDebugPrint;
+	pIf->Obj2Str = Obj2Str;
 	pIf->SetNumber = varSetNumber;
 	pIf->SetString = varSetString;
 	pIf->ConvForOperation = ConvForOperation;

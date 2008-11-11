@@ -55,6 +55,7 @@
 #include "tcps_sess.h"
 #include "errmsg.h"
 #include "netstrm.h"
+#include "glbl.h"
 
 
 MODULE_TYPE_INPUT
@@ -80,6 +81,7 @@ DEFobjCurrIf(gssutil)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(net)
+DEFobjCurrIf(glbl)
 
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
 static gss_cred_id_t gss_server_creds = GSS_C_NO_CREDENTIAL;
@@ -392,10 +394,14 @@ OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess)
 	allowedMethods = pGSrv->allowedMethods;
 	if(allowedMethods & ALLOWEDMETHOD_GSS) {
 		/* Buffer to store raw message in case that
-		 * gss authentication fails halfway through.
+		 * gss authentication fails halfway through. This buffer
+		 * is currently dynamically allocated, for performance
+		 * reasons we should look for a better way to do it.
+		 * rgerhars, 2008-09-02
 		 */
-		char buf[MAXLINE];
+		char *buf;
 		int ret = 0;
+		CHKmalloc(buf = (char*) malloc(sizeof(char) * (glbl.GetMaxLine() + 1)));
 
 		dbgprintf("GSS-API Trying to accept TCP session %p\n", pSess);
 
@@ -648,6 +654,7 @@ CODESTARTmodExit
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(glbl, CORE_COMPONENT);
 	objRelease(netstrm, LM_NETSTRM_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
 ENDmodExit
@@ -695,6 +702,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(gssutil, LM_GSSUTIL_FILENAME));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(netstrm, LM_NETSTRM_FILENAME));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 

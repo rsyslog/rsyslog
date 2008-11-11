@@ -1,0 +1,10 @@
+# a simple RainerScript test
+result: 0
+in:
+$msg contains 'test' then 
+$$$
+out:
+00000000: PUSHMSGVAR	msg[cstr]
+00000001: PUSHCONSTANT	test[cstr]
+00000002: contains	
+$$$

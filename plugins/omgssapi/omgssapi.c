@@ -378,6 +378,7 @@ ENDtryResume
 BEGINdoAction
 	char *psz; /* temporary buffering */
 	register unsigned l;
+	int iMaxLine;
 CODESTARTdoAction
 	switch (pData->eDestState) {
 	case eDestFORW_SUSP:
@@ -392,10 +393,11 @@ CODESTARTdoAction
 
 	case eDestFORW:
 		dbgprintf(" %s:%s/%s\n", pData->f_hname, getFwdSyslogPt(pData), "tcp-gssapi");
+		iMaxLine = glbl.GetMaxLine();
 		psz = (char*) ppString[0];
 		l = strlen((char*) psz);
-		if (l > MAXLINE)
-			l = MAXLINE;
+		if((int) l > iMaxLine)
+			l = iMaxLine;
 
 #		ifdef	USE_NETZIP
 		/* Check if we should compress and, if so, do it. We also
@@ -407,10 +409,14 @@ CODESTARTdoAction
 		 * rgerhards, 2006-11-30
 		 */
 		if(pData->compressionLevel && (l > MIN_SIZE_FOR_COMPRESS)) {
-			Bytef out[MAXLINE+MAXLINE/100+12] = "z";
+			Bytef *out;
 			uLongf destLen = sizeof(out) / sizeof(Bytef);
 			uLong srcLen = l;
 			int ret;
+			/* TODO: optimize malloc sequence? -- rgerhards, 2008-09-02 */
+			CHKmalloc(out = (Bytef*) malloc(iMaxLine + iMaxLine/100 + 12));
+			out[0] = 'z';
+			out[1] = '\0';
 			ret = compress2((Bytef*) out+1, &destLen, (Bytef*) psz,
 					srcLen, pData->compressionLevel);
 			dbgprintf("Compressing message, length was %d now %d, return state  %d.\n",
@@ -442,6 +448,7 @@ CODESTARTdoAction
 		}
 		break;
 	}
+finalize_it:
 ENDdoAction
 
 

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta http-equiv="Content-Language" content="en"><title>Unix Socket Input</title>
-
+<meta http-equiv="Content-Language" content="en">
+<title>Unix Socket Input</title>
 </head>
 <body>
 <h1>Unix Socket Input</h1>
@@ -9,31 +9,65 @@
 <p><b>Author: </b>Rainer Gerhards
 &lt;rgerhards@adiscon.com&gt;</p>
 <p><b>Description</b>:</p>
-<p>Provides the ability to accept syslog messages via local Unix
+<p><b>Provides the ability to accept syslog messages via local Unix
 sockets. Most importantly, this is the mechanism by which the syslog(3)
-call delivers syslog messages to rsyslogd. So you need to have this
+call delivers syslog messages to rsyslogd.</b> So you need to have this
 module loaded to read the system log socket and be able to process log
-messages from applications running on the local system.</p><p>Application-provided
-timestamps are ignored by default. This is needed, as some programs
-(e.g. sshd)&nbsp;log with inconsistent timezone information, what
+messages from applications running on the local system.</p>
+<p><b>Application-provided
+timestamps are ignored by default.</b> This is needed, as some programs
+(e.g. sshd) log with inconsistent timezone information, what
 messes up the local logs (which by default don't even contain time zone
 information). This seems to be consistent with what sysklogd did for
 the past four years. Alternate behaviour may be desirable if
 gateway-like processes send messages via the local log slot - in this
 case, it can be enabled via the
-$InputUnixListenSocketIgnoreMsgTimestamp and $SystemLogSocketIgnoreMsgTimestamp config directives</p><p><b>Configuration Directives</b>:</p>
+$InputUnixListenSocketIgnoreMsgTimestamp and $SystemLogSocketIgnoreMsgTimestamp config directives</p>
+<p><b>Unix log sockets can be flow-controlled.</b> That is, if processing queues fill up,
+the unix socket reader is blocked for a short while. This may be useful to prevent overruning
+the queues (which may cause exessive disk-io where it actually would not be needed). However,
+flow-controlling a log socket (and especially the system log socket) can lead to a very
+unresponsive system. As such, flow control is disabled by default. That means any log records
+are places as quickly as possible into the processing queues. If you would like to have
+flow control, you need to enable it via the $SystemLogSocketFlowControl and
+$InputUnixListenSocketFlowControl config directives. Just make sure you thought about
+the implications. Note that for many systems, turning on flow control does not hurt.
+<p><b>Configuration Directives</b>:</p>
 <ul>
-<li><span style="font-weight: bold;">$InputUnixListenSocketIgnoreMsgTimestamp</span> [<span style="font-weight: bold;">on</span>/off]<strong></strong><br>Ignore timestamps included in the message. Applies to the next socket being added.</li><li><span style="font-weight: bold;">$SystemLogSocketIgnoreMsgTimestamp</span> [<span style="font-weight: bold;">on</span>/off]<br>Ignore timestamps included in the messages, applies to messages received via the system log socket.</li><li><span style="font-weight: bold;">$OmitLocalLogging</span> (imuxsock) [on/<b>off</b>] --
-former -o option</li><li><span style="font-weight: bold;">$SystemLogSocketName</span> &lt;name-of-socket&gt; --
-former -p option</li><li><span style="font-weight: bold;">$AddUnixListenSocket</span> &lt;name-of-socket&gt; adds
-additional unix socket, default none -- former -a option</li></ul>
+<li><b>$InputUnixListenSocketIgnoreMsgTimestamp</b> [<b>on</b>/off]
+<br>Ignore timestamps included in the message. Applies to the next socket being added.</li>
+<li><b>$InputUnixListenSocketFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
+to the next socket.</li>
+<li><b>$SystemLogSocketIgnoreMsgTimestamp</b> [<b>on</b>/off]<br>
+Ignore timestamps included in the messages, applies to messages received via the system log socket.</li>
+<li><b>$OmitLocalLogging</b> (imuxsock) [on/<b>off</b>] -- former -o option</li>
+<li><b>$SystemLogSocketName</b> &lt;name-of-socket&gt; -- former -p option</li>
+<li><b>$SystemLogFlowControl</b> [on/<b>off</b>] - specifies if flow control should be applied
+to the system log socket.</li>
+<li><b>$AddUnixListenSocket</b> &lt;name-of-socket&gt; adds additional unix socket, default none -- former -a option</li>
+<li><b>$InputUnixListenSocketHostName</b> &lt;hostname&gt; permits to override the hostname that
+shall be used inside messages taken from the <b>next</b> $AddUnixListenSocket socket. Note that
+the hostname must be specified before the $AddUnixListenSocket configuration directive, and it
+will only affect the next one and then automatically be reset. This functionality is provided so
+that the local hostname can be overridden in cases where that is desired.</li>
+</ul>
 <b>Caveats/Known Bugs:</b><br>
 <br>
 This documentation is sparse and incomplete.
 <p><b>Sample:</b></p>
 <p>The following sample is the minimum setup required to accept syslog messages from applications running on the local system.<br>
 </p>
-<textarea rows="15" cols="60">$ModLoad imuxsock # needs to be done just once
+<textarea rows="2" cols="70">$ModLoad imuxsock # needs to be done just once
+$SystemLogSocketFlowControl on # enable flow control (use if needed)
+</textarea>
+<p>The following sample is a configuration where rsyslogd pulls logs from two
+jails, and assigns different hostnames to each of the jails: </p>
+<textarea rows="6" cols="60">$ModLoad imuxsock # needs to be done just once
+
+$InputUnixListenSocketHostName jail1.example.net
+$AddUnixListenSocket /jail/1/dev/log
+$InputUnixListenSocketHostName jail2.example.net
+$AddUnixListenSocket /jail/2/dev/log
 </textarea>
 <p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>

@@ -51,6 +51,7 @@ DEFobjStaticHelpers
  * class...
  */
 static uchar *pszWorkDir = NULL;
+static int iMaxLine = 2048;		/* maximum length of a syslog message */
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
@@ -84,6 +85,7 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
+SIMP_PROP(MaxLine, iMaxLine, int)
 SIMP_PROP(DefPFFamily, iDefPFFamily, int) /* note that in the future we may check the family argument */
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
 SIMP_PROP(Option_DisallowWarning, option_DisallowWarning, int)
@@ -170,6 +172,7 @@ CODESTARTobjQueryInterface(glbl)
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
+	SIMP_PROP(MaxLine);
 	SIMP_PROP(DefPFFamily);
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(Option_DisallowWarning);

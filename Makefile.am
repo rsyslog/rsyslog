@@ -50,9 +50,7 @@ EXTRA_DIST = \
 	contrib/gnutls/cert.pem \
 	contrib/gnutls/key.pem
 
-SUBDIRS = doc runtime . tests
-
-SUBDIRS += plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
+SUBDIRS = doc runtime . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 
 if ENABLE_RSYSLOGD
 SUBDIRS += tools
@@ -94,6 +92,10 @@ if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
 endif
 
+if ENABLE_IMDIAG
+SUBDIRS += plugins/imdiag
+endif
+
 if ENABLE_MAIL
 SUBDIRS += plugins/ommail
 endif
@@ -101,3 +103,7 @@ endif
 if ENABLE_RFC3195
 SUBDIRS += plugins/im3195
 endif
+
+# tests are added as last element, because tests may need different
+# modules that need to be generated first
+SUBDIRS += tests

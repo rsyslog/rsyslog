@@ -1,7 +1,7 @@
 .\" Copyright 2004-2008 Rainer Gerhards and Adiscon for the rsyslog modifications
 .\" May be distributed under the GNU General Public License
 .\"
-.TH RSYSLOGD 8 "11 July 2008" "Version 3.18.0" "Linux System Administration"
+.TH RSYSLOGD 8 "29 July 2008" "Version 3.21.1" "Linux System Administration"
 .SH NAME
 rsyslogd \- reliable and extended syslogd 
 .SH SYNOPSIS
@@ -21,11 +21,17 @@ rsyslogd \- reliable and extended syslogd
 .I hostlist
 ]
 .RB [ " \-n " ]
+.RB [ " \-N "
+.I level
+]
 .br
 .RB [ " \-q " ]
 .RB [ " \-Q " ]
 .RB [ " \-s "
 .I domainlist
+]
+.RB [ " \-u "
+.I userlevel
 ]
 .RB [ " \-v " ]
 .RB [ " \-w " ]
@@ -166,6 +172,19 @@ Avoid auto-backgrounding.  This is needed especially if the
 is started and controlled by
 .BR init (8).
 .TP
+.B "\-N " "level"
+Do a coNfig check. Do NOT run in regular mode, just check configuration
+file correctness.
+This option is meant to verify a config file. To do so, run rsyslogd
+interactively in foreground, specifying -f <config-file> and -N level.
+The level argument modifies behaviour. Currently, 0 is the same as
+not specifying the -N option at all (so this makes limited sense) and
+1 actually activates the code. Later, higher levels will mean more
+verbosity (this is a forward-compatibility option).
+.B rsyslogd
+is started and controlled by
+.BR init (8).
+.TP
 .BI "\-q " "add hostname if DNS fails during ACL processing"
 During ACL processing, hostnames are resolved to IP addreses for
 performance reasons. If DNS fails during that process, the hostname
@@ -185,6 +204,18 @@ domains.  For example if
 is specified and the host logging resolves to satu.infodrom.north.de
 no domain would be cut, you will have to specify two domains like:
 .BR "\-s north.de:infodrom.north.de" .
+.TP
+.BI "\-u " "userlevel"
+This is a "catch all" option for some very seldomly-used user settings.
+The "userlevel" variable selects multiple things. Add the specific values
+to get the combined effect of them.
+A value of 1 prevents rsyslogd from parsing hostnames and tags inside
+messages.
+A value of 2 prevents rsyslogd from changing to the root directory. This
+is almost never a good idea in production use. This option was introduced
+in support of the internal testbed.
+To combine these two features, use a userlevel of 3 (1+2). Whenever you use
+an -u option, make sure you really understand what you do and why you do it.
 .TP
 .B "\-v"
 Print version and exit.

@@ -60,10 +60,18 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 
+/* we add a little support for multiple recipients. We do this via a
+ * singly-linked list, enqueued from the top. -- rgerhards, 2008-08-04
+ */
+typedef struct toRcpt_s toRcpt_t;
+struct toRcpt_s {
+	uchar *pszTo;
+	toRcpt_t *pNext;
+};
+static toRcpt_t *lstRcpt = NULL;
 static uchar *pszSrv = NULL;
 static uchar *pszSrvPort = NULL;
 static uchar *pszFrom = NULL;
-static uchar *pszTo = NULL;
 static uchar *pszSubject = NULL;
 static int bEnableBody = 1; /* should a mail body be generated? (set to 0 eg for SMS gateways) */
 
@@ -76,7 +84,7 @@ typedef struct _instanceData {
 			uchar *pszSrv;
 			uchar *pszSrvPort;
 			uchar *pszFrom;
-			uchar *pszTo;
+			toRcpt_t *lstRcpt;
 			char RcvBuf[1024]; /* buffer for receiving server responses */
 			size_t lenRcvBuf;
 			size_t iRcvBuf;	/* current index into the rcvBuf (buf empty if iRcvBuf == lenRcvBuf) */
@@ -85,6 +93,83 @@ typedef struct _instanceData {
 	} md;	/* mode-specific data */
 } instanceData;
 
+/* forward definitions (as few as possible) */
+static rsRetVal Send(int sock, char *msg, size_t len);
+static rsRetVal readResponse(instanceData *pData, int *piState, int iExpected);
+
+
+/* helpers for handling the recipient lists */
+
+/* destroy a complete recipient list */
+static void lstRcptDestruct(toRcpt_t *pRoot)
+{
+	toRcpt_t *pDel;
+
+	while(pRoot != NULL) {
+		pDel = pRoot;
+		pRoot = pRoot->pNext;
+		/* ready to disalloc */
+		free(pDel->pszTo);
+		free(pDel);
+	}
+}
+
+/* This function is called when a new recipient email address is to be
+ * added. rgerhards, 2008-08-04
+ */
+static rsRetVal
+addRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
+{
+	DEFiRet;
+	toRcpt_t *pNew = NULL;
+
+	CHKmalloc(pNew = calloc(1, sizeof(toRcpt_t)));
+
+	pNew->pszTo = pNewVal;
+	pNew->pNext = lstRcpt;
+	lstRcpt = pNew;
+
+	dbgprintf("ommail::addRcpt adds recipient %s\n", pNewVal);
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(pNew != NULL)
+			free(pNew);
+		free(pNewVal); /* in any case, this is no longer needed */
+	}
+
+	RETiRet;
+}
+
+
+/* output the recipient list to the mail server
+ * iStatusToCheck < 0 means no checking should happen
+ */
+static rsRetVal
+WriteRcpts(instanceData *pData, uchar *pszOp, size_t lenOp, int iStatusToCheck)
+{
+	toRcpt_t *pRcpt;
+	int iState;
+	DEFiRet;
+
+	assert(pData != NULL);
+	assert(pszOp != NULL);
+	assert(lenOp != 0);
+
+	for(pRcpt = pData->md.smtp.lstRcpt ; pRcpt != NULL ; pRcpt = pRcpt->pNext) {
+		dbgprintf("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo); 
+		CHKiRet(Send(pData->md.smtp.sock, (char*)pszOp, lenOp));
+		CHKiRet(Send(pData->md.smtp.sock, ": <", sizeof(": <") - 1));
+		CHKiRet(Send(pData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
+		CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
+		if(iStatusToCheck >= 0)
+			CHKiRet(readResponse(pData, &iState, iStatusToCheck));
+	}
+
+finalize_it:
+	RETiRet;
+}
+/* end helpers for handling the recipient lists */
 
 BEGINcreateInstance
 CODESTARTcreateInstance
@@ -107,8 +192,7 @@ CODESTARTfreeInstance
 			free(pData->md.smtp.pszSrvPort);
 		if(pData->md.smtp.pszFrom != NULL)
 			free(pData->md.smtp.pszFrom);
-		if(pData->md.smtp.pszTo != NULL)
-			free(pData->md.smtp.pszTo);
+		lstRcptDestruct(pData->md.smtp.lstRcpt);
 	}
 ENDfreeInstance
 
@@ -426,10 +510,7 @@ sendSMTP(instanceData *pData, uchar *body, uchar *subject)
 	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
 	CHKiRet(readResponse(pData, &iState, 250));
 
-	CHKiRet(Send(pData->md.smtp.sock, "RCPT TO: <",   sizeof("RCPT TO: <") - 1));
-	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszTo, strlen((char*)pData->md.smtp.pszTo)));
-	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
-	CHKiRet(readResponse(pData, &iState, 250));
+	CHKiRet(WriteRcpts(pData, (uchar*)"RCPT TO", sizeof("RCPT TO") - 1, 250));
 
 	CHKiRet(Send(pData->md.smtp.sock, "DATA\r\n",   sizeof("DATA\r\n") - 1));
 	CHKiRet(readResponse(pData, &iState, 354));
@@ -443,9 +524,7 @@ sendSMTP(instanceData *pData, uchar *body, uchar *subject)
 	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
 	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
 
-	CHKiRet(Send(pData->md.smtp.sock, "To: <",   sizeof("To: <") - 1));
-	CHKiRet(Send(pData->md.smtp.sock, (char*)pData->md.smtp.pszTo, strlen((char*)pData->md.smtp.pszTo)));
-	CHKiRet(Send(pData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
+	CHKiRet(WriteRcpts(pData, (uchar*)"To", sizeof("To") - 1, -1));
 
 	CHKiRet(Send(pData->md.smtp.sock, "Subject: ",   sizeof("Subject: ") - 1));
 	CHKiRet(Send(pData->md.smtp.sock, (char*)subject, strlen((char*)subject)));
@@ -531,13 +610,14 @@ CODESTARTparseSelectorAct
 		errmsg.LogError(0, RS_RET_MAIL_NO_FROM, "no sender address given - specify $ActionMailFrom");
 		ABORT_FINALIZE(RS_RET_MAIL_NO_FROM);
 	}
-	if(pszTo == NULL) {
+	if(lstRcpt == NULL) {
 		errmsg.LogError(0, RS_RET_MAIL_NO_TO, "no recipient address given - specify $ActionMailTo");
 		ABORT_FINALIZE(RS_RET_MAIL_NO_TO);
 	}
 
 	pData->md.smtp.pszFrom = (uchar*) strdup((char*)pszFrom);
-	pData->md.smtp.pszTo = (uchar*) strdup((char*)pszTo);
+	pData->md.smtp.lstRcpt = lstRcpt; /* we "hand over" this memory */
+	lstRcpt = NULL; /* note: this is different from pre-3.21.2 versions! */
 
 	if(pszSubject == NULL) {
 		/* if no subject is configured, we need just one template string */
@@ -576,10 +656,8 @@ static rsRetVal freeConfigVariables(void)
 		free(pszFrom);
 		pszFrom = NULL;
 	}
-	if(pszTo != NULL) {
-		free(pszTo);
-		pszTo = NULL;
-	}
+	lstRcptDestruct(lstRcpt);
+	lstRcpt = NULL;
 	
 	RETiRet;
 }
@@ -621,10 +699,12 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
+	dbgprintf("ommail version %s initializing\n", VERSION);
+
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &pszSrv, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &pszSrvPort, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailfrom", 0, eCmdHdlrGetWord, NULL, &pszFrom, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailto", 0, eCmdHdlrGetWord, NULL, &pszTo, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailto", 0, eCmdHdlrGetWord, addRcpt, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsubject", 0, eCmdHdlrGetWord, NULL, &pszSubject, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailenablebody", 0, eCmdHdlrBinary, NULL, &bEnableBody, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
