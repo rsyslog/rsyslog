@@ -8,9 +8,11 @@ of the <a href="property_replacer.html">property replacer</a>.</p>
 shall return if a regular expression did not find the search string.</b>. Traditionally,
 the string "**NO MATCH**" was returned, but many people complained this was almost never useful.
 Still, this mode is support as "<b>DFLT</b>" for legacy configurations.
-<p>Two additional and potentially useful modes exist: in one (<b>BLANK</b>) a blank string
+<p>Three additional and potentially useful modes exist: in one (<b>BLANK</b>) a blank string
 is returned. This is probably useful for inserting values into databases where no
-value shall be inserted if the expression could not be found. A use case may be
+value shall be inserted if the expression could not be found.
+<p>A similar mode is "<b>ZERO</b>" where the string "0" is returned. This is suitable
+for numerical values. A use case may be
 that you record a traffic log based on firewall rules and the "bytes transmitted" counter
 is extracted via a regular expression. If no "bytes transmitted" counter is available
 in the current message, it is probably a good idea to return an empty string, which the
@@ -23,6 +25,15 @@ it shall be logged.
 checker and generator</a> to see these options in action</b>. With that online tool,
 you can craft regular expressions based on samples and try out the different modes.
 
+<h2>Summary of nomatch Modes</h2>
+<table border="1" cellspacing="0">
+<tr><td><b>Mode</b></td><td><b>Returned</b></td></tr>
+<tr><td>DFLT</td><td>"**NO MATCH**"</td></tr>
+<tr><td>BLANK</td><td>"" (empty string)</td></tr>
+<tr><td>ZERO</td><td>"0"</td></tr>
+<tr><td>FIELD</td><td>full content of original field</td></tr>
+<tr><td>&nbsp;</td><td><a href="http://www.rsyslog.com/tool-regex">Interactive Tool</a></td></tr>
+</table>
 <p>[<a href="manual.html">manual index</a>]
 [<a href="rsyslog_conf.html">rsyslog.conf</a>]
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
