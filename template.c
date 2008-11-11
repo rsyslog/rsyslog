@@ -558,13 +558,17 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_DFLTSTR;
 					p += 4; /* eat indicator sequence */
 				} else if(p[0] == 'B' && p[1] == 'L' && p[2] == 'A' && p[3] == 'N' && p[4] == 'K'
-				   && (p[5] == ',' || p[5] == ':')) {
+				          && (p[5] == ',' || p[5] == ':')) {
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_BLANK;
 					p += 5; /* eat indicator sequence */
 				} else if(p[0] == 'F' && p[1] == 'I' && p[2] == 'E' && p[3] == 'L' && p[4] == 'D'
-				   && (p[5] == ',' || p[5] == ':')) {
+				          && (p[5] == ',' || p[5] == ':')) {
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_WHOLE_FIELD;
 					p += 5; /* eat indicator sequence */
+				} else if(p[0] == 'Z' && p[1] == 'E' && p[2] == 'R' && p[3] == 'O'
+				          && (p[4] == ',' || p[4] == ':')) {
+					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_ZERO;
+					p += 4; /* eat indicator sequence */
 				} else if(p[0] == ',') { /* empty, use default */
 					pTpe->data.field.nomatchAction = TPL_REGEX_NOMATCH_USE_DFLTSTR;
 					 /* do NOT eat indicator sequence, as this was already eaten - the 

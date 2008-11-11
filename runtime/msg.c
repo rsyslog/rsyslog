@@ -1958,7 +1958,10 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				 * potential matches over the string.
 				 */
 				while(!bFound) {
-					if(regexp.regexec(&pTpe->data.field.re, pRes + iOffs, nmatch, pmatch, 0) == 0) {
+					int iREstat;
+					iREstat = regexp.regexec(&pTpe->data.field.re, pRes + iOffs, nmatch, pmatch, 0);
+					dbgprintf("regexec return is %d\n", iREstat);
+					if(iREstat == 0) {
 						if(pmatch[0].rm_so == -1) {
 							dbgprintf("oops ... start offset of successful regexec is -1\n");
 							break;
@@ -1966,6 +1969,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 						if(iTry == pTpe->data.field.iMatchToUse) {
 							bFound = 1;
 						} else {
+							dbgprintf("regex found at offset %d, new offset %d, tries %d\n",
+								  iOffs, iOffs + pmatch[0].rm_eo, iTry);
 							iOffs += pmatch[0].rm_eo;
 							++iTry;
 						}
@@ -1973,6 +1978,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 						break;
 					}
 				}
+				dbgprintf("regex: end search, found %d\n", bFound);
 				if(!bFound) {
 					/* we got no match! */
 					if(pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
@@ -1982,6 +1988,8 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 						}
 						if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR)
 							return "**NO MATCH**";
+						else if(pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO)
+							return "0";
 						else
 							return "";
 					}
