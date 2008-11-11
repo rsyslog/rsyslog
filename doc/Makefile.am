@@ -105,6 +105,7 @@ html_files = \
 	rsyslog_conf_modules.html \
 	rsyslog_conf_output.html \
 	rsyslog_conf_templates.html \
+	rsyslog_conf_nomatch.html \
 	src/classes.dia
 
 EXTRA_DIST = $(html_files)
