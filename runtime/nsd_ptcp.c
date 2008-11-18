@@ -365,7 +365,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	netstrm_t *pNewStrm = NULL;
 	nsd_t *pNewNsd = NULL;
         int error, maxs, on = 1;
-	int sock;
+	int sock = -1;
 	int numSocks;
 	int sockflags;
         struct addrinfo hints, *res = NULL, *r;
@@ -410,6 +410,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			if(setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
 			      (char *)&iOn, sizeof (iOn)) < 0) {
 				close(sock);
+				sock = -1;
 				continue;
                 	}
                 }
@@ -417,6 +418,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
        		if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on)) < 0 ) {
 			dbgprintf("error %d setting tcp socket option\n", errno);
                         close(sock);
+			sock = -1;
 			continue;
 		}
 
@@ -431,6 +433,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		if(sockflags == -1) {
 			dbgprintf("error %d setting fcntl(O_NONBLOCK) on tcp socket", errno);
                         close(sock);
+			sock = -1;
 			continue;
 		}
 
@@ -445,6 +448,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 					(char *) &on, sizeof(on)) < 0) {
 				errmsg.LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
                                 close(sock);
+				sock = -1;
 				continue;
 			}
 		}
@@ -458,6 +462,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
                         dbgprintf("error %d while binding tcp socket", errno);
                 	close(sock);
+			sock = -1;
                         continue;
                 }
 
@@ -472,6 +477,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 			if(listen(sock, 32) < 0) {
 				dbgprintf("tcp listen error %d, suspending\n", errno);
 	                	close(sock);
+				sock = -1;
                		        continue;
 			}
 		}
@@ -482,13 +488,14 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 		 */
 		CHKiRet(pNS->Drvr.Construct(&pNewNsd));
 		CHKiRet(pNS->Drvr.SetSock(pNewNsd, sock));
+		sock = -1;
 		CHKiRet(pNS->Drvr.SetMode(pNewNsd, netstrms.GetDrvrMode(pNS)));
 		CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
 		CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
 		CHKiRet(netstrms.CreateStrm(pNS, &pNewStrm));
 		pNewStrm->pDrvrData = (nsd_t*) pNewNsd;
-		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewNsd = NULL;
+		CHKiRet(fAddLstn(pUsr, pNewStrm));
 		pNewStrm = NULL;
 		++numSocks;
 	}
@@ -507,6 +514,8 @@ finalize_it:
 		freeaddrinfo(res);
 
 	if(iRet != RS_RET_OK) {
+		if(sock != -1)
+			close(sock);
 		if(pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 		if(pNewNsd != NULL)
