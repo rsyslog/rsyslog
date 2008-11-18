@@ -13,6 +13,8 @@ version before switching to this one.
 - added configuration directive "HUPisRestart" which enables to configure
   HUP to be either a full restart or "just" a leightweight way to
   close open files.
+- enhanced legacy syslog parser to detect year if part of the timestamp
+  the format is based on what Cisco devices seem to emit.
 - added a setting "$OptimizeForUniprocessor" to enable users to turn off
   pthread_yield calls which are counter-productive on multiprocessor 
   machines (but have been shown to be useful on uniprocessors)
@@ -29,6 +31,8 @@ version before switching to this one.
 - doc bugfix: queue doc had wrong parameter name for setting controlling
   worker thread shutdown period
 - restructured rsyslog.conf documentation
+- bugfix: memory leak in ompgsql
+  Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
 Version 3.21.7  [BETA] (rgerhards), 2008-11-11
 - this is the new beta branch, based on the former 3.21.6 devel
@@ -45,6 +49,7 @@ Version 3.21.6  [DEVEL] (rgerhards), 2008-10-22
 - added capability to support multiple module search pathes. Thank
   to Marius Tomaschewski for providing the patch.
 - bugfix: im3195 did no longer compile
+- improved "make distcheck" by ensuring everything relevant is recompiled
 ---------------------------------------------------------------------------
 Version 3.21.5  [DEVEL] (rgerhards), 2008-09-30
 - performance optimization: unnecessary time() calls during message

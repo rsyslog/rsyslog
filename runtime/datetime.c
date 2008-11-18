@@ -312,6 +312,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
 	/* variables to temporarily hold time information while we parse */
 	int month;
 	int day;
+	int year = 0; /* 0 means no year provided */
 	int hour; /* 24 hour clock */
 	int minute;
 	int second;
@@ -472,7 +473,23 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
 
 	if(*pszTS++ != ' ')
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+
+	/* time part */
 	hour = srSLMGParseInt32(&pszTS);
+	if(hour > 1970 && hour < 2100) {
+		/* if so, we assume this actually is a year. This is a format found
+		 * e.g. in Cisco devices.
+		 * (if you read this 2100+ trying to fix a bug, congratulate myself
+		 * to how long the code survived - me no longer ;)) -- rgerhards, 2008-11-18
+		 */
+		year = hour;
+
+		/* re-query the hour, this time it must be valid */
+		if(*pszTS++ != ' ')
+			ABORT_FINALIZE(RS_RET_INVLD_TIME);
+		hour = srSLMGParseInt32(&pszTS);
+	}
+
 	if(hour < 0 || hour > 23)
 		ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
@@ -502,6 +519,8 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
 	*ppszTS = pszTS; /* provide updated parse position back to caller */
 	pTime->timeType = 1;
 	pTime->month = month;
+	if(year > 0)
+		pTime->year = year; /* persist year if detected */
 	pTime->day = day;
 	pTime->hour = hour;
 	pTime->minute = minute;
