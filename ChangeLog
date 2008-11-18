@@ -1009,6 +1009,10 @@ Version 3.10.0 (rgerhards), 2008-01-07
 - much cleaner code due to new objects and removal of single-threading
   mode
 ---------------------------------------------------------------------------
+Version 2.0.7 V2-STABLE (rgerhards), 2008-??-??
+- bugfix: memory leak in ompgsql
+  Thanks to Ken for providing the patch
+---------------------------------------------------------------------------
 Version 2.0.6 V2-STABLE (rgerhards), 2008-??-??
 - bugfix: memory leaks in rsyslogd, primarily in singlethread mode
   Thanks to Frederico Nunez for providing the fix
