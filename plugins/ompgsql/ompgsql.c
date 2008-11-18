@@ -167,12 +167,12 @@ rsRetVal writePgSQL(uchar *psz, instanceData *pData)
 	dbgprintf("writePgSQL: %s", psz);
 
 	/* try insert */
-	PQexec(pData->f_hpgsql, (char*)psz);
+	PQclear(PQexec(pData->f_hpgsql, (char*)psz));
 	if(PQstatus(pData->f_hpgsql) != CONNECTION_OK) {
 		/* error occured, try to re-init connection and retry */
 		closePgSQL(pData); /* close the current handle */
 		CHKiRet(initPgSQL(pData, 0)); /* try to re-open */
-		PQexec(pData->f_hpgsql, (char*)psz);
+		PQclear(PQexec(pData->f_hpgsql, (char*)psz));
 		if(PQstatus(pData->f_hpgsql) != CONNECTION_OK) { /* re-try insert */
 			/* we failed, giving up for now */
 			reportDBError(pData, 0);
