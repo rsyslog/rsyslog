@@ -252,6 +252,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_QUEUE_FULL = -2105, /**< queue is full, operation could not be completed */
 	RS_RET_ACCEPT_ERR = -2106, /**< error during accept() system call */
 	RS_RET_INVLD_TIME = -2107, /**< invalid timestamp (e.g. could not be parsed) */
+	RS_RET_NO_ZIP = -2108, /**< ZIP functionality is not present */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

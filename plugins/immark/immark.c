@@ -41,6 +41,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "msg.h"
 
 MODULE_TYPE_INPUT
 

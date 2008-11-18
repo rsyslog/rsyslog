@@ -128,6 +128,7 @@
 #include "vm.h"
 #include "errmsg.h"
 #include "datetime.h"
+#include "parser.h"
 #include "sysvar.h"
 
 /* definitions for objects we access */
@@ -219,7 +220,7 @@ static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
-static int restart = 0; /* do restart (config read) - multithread safe */
+static int bHadHUP = 0; /* did we have a HUP? */
 
 static int bParseHOSTNAMEandTAG = 1; /* global config var: should the hostname and tag be
                                       * parsed inside message - rgerhards, 2006-03-13 */
@@ -249,15 +250,15 @@ typedef struct legacyOptsLL_s {
 legacyOptsLL_t *pLegacyOptsLL = NULL;
 
 /* global variables for config file state */
-static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
+int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
 					   as compatible to sysklogd as possible. */
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
-static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
-static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
+uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
+int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition to everything else)? */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
@@ -581,9 +582,18 @@ void untty(void)
  * Interface change: added new parameter "InputName", permits the input to provide 
  * a string that identifies it. May be NULL, but must be a valid char* pointer if
  * non-NULL.
+ *
+ * rgerhards, 2008-10-06:
+ * Interface change: added new parameter "stTime", which enables the caller to provide
+ * a timestamp that is to be used as timegenerated instead of the current system time.
+ * This is meant to facilitate performance optimization. Some inputs support such modes.
+ * If stTime is NULL, the current system time is used.
+ *
+ * rgerhards, 2008-10-09:
+ * interface change: bParseHostname removed, now in flags
  */
-rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName)
+static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int flags, flowControl_t flowCtlType,
+	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 	register uchar *p;
@@ -591,13 +601,16 @@ rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int
 	msg_t *pMsg;
 
 	/* Now it is time to create the message object (rgerhards) */
-	CHKiRet(msgConstruct(&pMsg));
+	if(stTime == NULL) {
+		CHKiRet(msgConstruct(&pMsg));
+	} else {
+		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
+	}
 	if(pszInputName != NULL)
 		MsgSetInputName(pMsg, (char*) pszInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
-	pMsg->bParseHOSTNAME  = bParseHost;
 	/* test for special codes */
 	pri = DEFUPRI;
 	p = msg;
@@ -622,7 +635,7 @@ rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int
 	 * the message was received from (that, for obvious reasons,
 	 * being the local host).  rgerhards 2004-11-16
 	 */
-	if(bParseHost == 0)
+	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, (char*)hname);
 	MsgSetRcvFrom(pMsg, (char*)hname);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
@@ -684,10 +697,19 @@ finalize_it:
  * Interface change: added new parameter "InputName", permits the input to provide 
  * a string that identifies it. May be NULL, but must be a valid char* pointer if
  * non-NULL.
+ *
+ * rgerhards, 2008-10-06:
+ * Interface change: added new parameter "stTime", which enables the caller to provide
+ * a timestamp that is to be used as timegenerated instead of the current system time.
+ * This is meant to facilitate performance optimization. Some inputs support such modes.
+ * If stTime is NULL, the current system time is used.
+ *
+ * rgerhards, 2008-10-09:
+ * interface change: bParseHostname removed, now in flags
  */
 rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName)
+parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
+	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 	register int iMsg;
@@ -714,9 +736,6 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	 * TODO: optimize buffer handling */
 	iMaxLine = glbl.GetMaxLine();
 	CHKmalloc(tmpline = malloc(sizeof(uchar) * (iMaxLine + 1)));
-#	ifdef USE_NETZIP
-	CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
-#	endif
 
 	/* we first check if we have a NUL character at the very end of the
 	 * message. This seems to be a frequent problem with a number of senders.
@@ -762,6 +781,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 		 */
 		int ret;
 		iLenDefBuf = iMaxLine;
+		CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
 		dbgprintf("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
 		        ret, (long) iLenDefBuf, len-1);
@@ -800,7 +820,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			 */
 			if(iMsg == iMaxLine) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
+				printline(hname, hnameIP, tmpline, flags, flowCtlType, pszInputName, stTime, ttGenTime);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -852,7 +872,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
+	printline(hname, hnameIP, tmpline, flags, flowCtlType, pszInputName, stTime, ttGenTime);
 
 finalize_it:
 	if(tmpline != NULL)
@@ -1176,6 +1196,9 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
 
 	assert(pMsg != NULL);
 
+	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
+		parseMsg(pMsg);
+	}
 	processMsg(pMsg);
 	msgDestruct(&pMsg);
 
@@ -1297,7 +1320,7 @@ static int parseRFCStructuredData(char **pp2parse, char *pResult)
  *
  * rger, 2005-11-24
  */
-static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
+int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 {
 	char *p2parse;
 	char *pBuf;
@@ -1393,7 +1416,7 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
  * but I thought I log it in this comment.
  * rgerhards, 2006-01-10
  */
-static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
+int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 {
 	char *p2parse;
 	char *pBuf;
@@ -1931,7 +1954,7 @@ die(int sig)
 
 	/* close the inputs */
 	dbgprintf("Terminating input threads...\n");
-	thrdTerminateAll(); /* TODO: inputs only, please */
+	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
 	if (sig) {
@@ -2171,8 +2194,8 @@ static void dbgPrintInitInfo(void)
 			cCCEscapeChar);
 
 	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
-	dbgprintf("Main queue worker threads: %d, Perists every %d updates.\n",
-		  iMainMsgQueueNumWorkers, iMainMsgQPersistUpdCnt);
+	dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
+		  iMainMsgQueueNumWorkers, iMainMsgQtoWrkShutdown, iMainMsgQPersistUpdCnt);
 	dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
 		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
 	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
@@ -2182,11 +2205,9 @@ static void dbgPrintInitInfo(void)
 	/* TODO: add
 	iActionRetryCount = 0;
 	iActionRetryInterval = 30000;
-	static int iMainMsgQtoWrkShutdown = 60000;
 	static int iMainMsgQtoWrkMinMsgs = 100;	
 	static int iMainMsgQbSaveOnShutdown = 1;
 	iMainMsgQueMaxDiskSpace = 0;
-	setQPROP(queueSettoWrkShutdown, "$MainMsgQueueTimeoutWorkerThreadShutdown", 5000);
 	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
 	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
@@ -2522,20 +2543,18 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
  * The following function is resposible for handling a SIGHUP signal.  Since
  * we are now doing mallocs/free as part of init we had better not being
  * doing this during a signal handler.  Instead this function simply sets
- * a flag variable which will tell the main loop to go through a restart.
+ * a flag variable which will tells the main loop to do "the right thing".
  */
 void sighup_handler()
 {
 	struct sigaction sigAct;
 	
-	restart = 1;
+	bHadHUP = 1;
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
-
-	return;
 }
 
 
@@ -2553,6 +2572,49 @@ static void processImInternal(void)
 
 	while(iminternalRemoveMsg(&iPri, &pMsg, &iFlags) == RS_RET_OK) {
 		logmsg(pMsg, iFlags);
+	}
+}
+
+
+/* helper to doHUP(), this "HUPs" each action. The necessary locking
+ * is done inside the action class and nothing we need to take care of.
+ * rgerhards, 2008-10-22
+ */
+DEFFUNC_llExecFunc(doHUPActions)
+{
+	BEGINfunc
+	actionCallHUPHdlr((action_t*) pData);
+	ENDfunc
+	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
+}
+
+
+/* This function processes a HUP after one has been detected. Note that this
+ * is *NOT* the sighup handler. The signal is recorded by the handler, that record
+ * detected inside the mainloop and then this function is called to do the
+ * real work. -- rgerhards, 2008-10-22
+ */
+static inline void
+doHUP(void)
+{
+	selector_t *f;
+	char buf[512];
+
+	snprintf(buf, sizeof(buf) / sizeof(char),
+		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed, type '%s'.",
+		 (int) myPid, glbl.GetHUPisRestart() ? "restart" : "lightweight");
+		errno = 0;
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+
+	if(glbl.GetHUPisRestart()) {
+		DBGPRINTF("Received SIGHUP, configured to be restart, reloading rsyslogd.\n");
+		init(); /* main queue is stopped as part of init() */
+	} else {
+		DBGPRINTF("Received SIGHUP, configured to be a non-restart type of HUP - notifying actions.\n");
+		for(f = Files; f != NULL ; f = f->f_next) {
+			llExecFunc(&f->llActList, doHUPActions, NULL);
+		}
 	}
 }
 
@@ -2613,11 +2675,9 @@ mainloop(void)
 		if(bReduceRepeatMsgs == 1)
 			doFlushRptdMsgs();
 
-		if(restart) {
-			dbgprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
-			/* main queue is stopped as part of init() */
-			init();
-			restart = 0;
+		if(bHadHUP) {
+			doHUP();
+			bHadHUP = 0;
 			continue;
 		}
 	}
@@ -2896,6 +2956,8 @@ InitGlobalClasses(void)
 	CHKiRet(actionClassInit());
 	pErrObj = "template";
 	CHKiRet(templateInit());
+	pErrObj = "parser";
+	CHKiRet(parserClassInit());
 
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	pErrObj = "net";
@@ -3514,6 +3576,5 @@ int main(int argc, char **argv)
 	dbgClassInit();
 	return realMain(argc, argv);
 }
-
 /* vim:set ai:
  */

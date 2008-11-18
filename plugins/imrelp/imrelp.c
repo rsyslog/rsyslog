@@ -42,6 +42,7 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "net.h"
+#include "msg.h"
 
 MODULE_TYPE_INPUT
 
@@ -83,8 +84,8 @@ static relpRetVal
 onSyslogRcv(uchar *pHostname, uchar __attribute__((unused)) *pIP, uchar *pMsg, size_t lenMsg)
 {
 	DEFiRet;
-	parseAndSubmitMessage(pHostname, (uchar*) "[unset]", pMsg, lenMsg, MSG_PARSE_HOSTNAME,
-			      NOFLAG, eFLOWCTL_LIGHT_DELAY, (uchar*)"imrelp");
+	parseAndSubmitMessage(pHostname, (uchar*) "[unset]", pMsg, lenMsg, PARSE_HOSTNAME,
+			      eFLOWCTL_LIGHT_DELAY, (uchar*)"imrelp", NULL, 0);
 
 	RETiRet;
 }

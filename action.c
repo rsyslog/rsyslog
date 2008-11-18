@@ -498,6 +498,39 @@ finalize_it:
 }
 #pragma GCC diagnostic warning "-Wempty-body"
 
+
+/* call the HUP handler for a given action, if such a handler is defined. The
+ * action mutex is locked, because the HUP handler most probably needs to modify
+ * some internal state information.
+ * rgerhards, 2008-10-22
+ */
+#pragma GCC diagnostic ignored "-Wempty-body"
+rsRetVal
+actionCallHUPHdlr(action_t *pAction)
+{
+	DEFiRet;
+	int iCancelStateSave;
+
+	ASSERT(pAction != NULL);
+	DBGPRINTF("Action %p checks HUP hdlr: %p\n", pAction, pAction->pMod->doHUP);
+
+	if(pAction->pMod->doHUP == NULL) {
+		FINALIZE;	/* no HUP handler, so we are done ;) */
+	}
+
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	d_pthread_mutex_lock(&pAction->mutActExec);
+	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
+	pthread_setcancelstate(iCancelStateSave, NULL);
+	CHKiRet(pAction->pMod->doHUP(pAction->pModData));
+	pthread_cleanup_pop(1); /* unlock mutex */
+
+finalize_it:
+	RETiRet;
+}
+#pragma GCC diagnostic warning "-Wempty-body"
+
+
 /* set the action message queue mode
  * TODO: probably move this into queue object, merge with MainMsgQueue!
  * rgerhards, 2008-01-28
@@ -602,7 +635,7 @@ actionWriteToAction(action_t *pAction)
 		 * ... RAWMSG is a problem ... Please note that digital
 		 * signatures inside the message are also invalidated.
 		 */
-		datetime.getCurrTime(&(pMsg->tRcvdAt));
+		datetime.getCurrTime(&(pMsg->tRcvdAt), &(pMsg->ttGenTime));
 		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 		MsgSetMSG(pMsg, (char*)szRepMsg);
 		MsgSetRawMsg(pMsg, (char*)szRepMsg);
@@ -625,13 +658,13 @@ actionWriteToAction(action_t *pAction)
 		dbgprintf("action not yet ready again to be executed, onceInterval %d, tCurr %d, tNext %d\n",
 			  (int) pAction->iSecsExecOnceInterval, (int) getActNow(pAction),
 			  (int) (pAction->iSecsExecOnceInterval + pAction->tLastExec));
+		/* TODO: the time call below may use reception time, not dequeue time - under consideration. -- rgerhards, 2008-09-17 */
+		pAction->tLastExec = getActNow(pAction); /* re-init time flags */
 		FINALIZE;
 	}
 
-	pAction->f_time = pAction->tLastExec = getActNow(pAction); /* re-init time flags */
-	/* Note: tLastExec could be set in the if block above, but f_time causes us a hard time
-	 * so far, I do not see a solution to getting rid of it. -- rgerhards, 2008-09-16
-	 */
+	/* TODO: the time call below may use reception time, not dequeue time - under consideration. -- rgerhards, 2008-09-17 */
+	pAction->f_time = pAction->f_pMsg->ttGenTime;
 
 	/* When we reach this point, we have a valid, non-disabled action.
 	 * So let's enqueue our message for execution. -- rgerhards, 2007-07-24

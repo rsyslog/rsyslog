@@ -84,7 +84,7 @@ getNOW(eNOWType eNow, cstr_t **ppStr)
 	uchar szBuf[16];
 	struct syslogTime t;
 
-	datetime.getCurrTime(&t);
+	datetime.getCurrTime(&t, NULL);
 	switch(eNow) {
 	case NOW_NOW:
 		snprintf((char*) szBuf, sizeof(szBuf)/sizeof(uchar), "%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);

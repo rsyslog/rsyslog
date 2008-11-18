@@ -347,6 +347,7 @@ static rsRetVal
 doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*), uchar *name, void *pModHdlr)
 {
 	DEFiRet;
+	rsRetVal localRet;
 	modInfo_t *pNew = NULL;
 	rsRetVal (*modGetType)(eModType_t *pType);
 
@@ -391,6 +392,10 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature", &pNew->isCompatibleWithFeature));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume));
+			/* try load optional interfaces */
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
+			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				ABORT_FINALIZE(localRet);
 			break;
 		case eMOD_LIB:
 			break;

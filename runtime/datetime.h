@@ -35,7 +35,7 @@ typedef struct datetime_s {
 
 /* interfaces */
 BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
-	void (*getCurrTime)(struct syslogTime *t);
+	void (*getCurrTime)(struct syslogTime *t, time_t *ttSeconds);
 	rsRetVal (*ParseTIMESTAMP3339)(struct syslogTime *pTime, char** ppszTS);
 	rsRetVal (*ParseTIMESTAMP3164)(struct syslogTime *pTime, char** pszTS);
 	int (*formatTimestampToMySQL)(struct syslogTime *ts, char* pDst, size_t iLenDst);

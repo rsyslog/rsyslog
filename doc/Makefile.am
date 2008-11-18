@@ -98,6 +98,14 @@ html_files = \
 	omrelp.html \
 	status.html \
 	troubleshoot.html \
+	rsyslog_conf_actions.html \
+	rsyslog_conf_examples.html \
+	rsyslog_conf_filter.html \
+	rsyslog_conf_global.html \
+	rsyslog_conf_modules.html \
+	rsyslog_conf_output.html \
+	rsyslog_conf_templates.html \
+	rsyslog_conf_nomatch.html \
 	src/classes.dia
 
 EXTRA_DIST = $(html_files)
