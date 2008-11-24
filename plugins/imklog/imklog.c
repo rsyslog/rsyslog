@@ -199,6 +199,17 @@ finalize_it:
 }
 
 
+/* helper for some klog drivers which need to know the MaxLine global setting. They can
+ * not obtain it themselfs, because they are no modules and can not query the object hander.
+ * It would probably be a good idea to extend the interface to support it, but so far
+ * we create a (sufficiently valid) work-around. -- rgerhards, 2008-11-24
+ */
+int klog_getMaxLine(void)
+{
+	return glbl.GetMaxLine();
+}
+
+
 BEGINrunInput
 CODESTARTrunInput
 	/* this is an endless loop - it is terminated when the thread is

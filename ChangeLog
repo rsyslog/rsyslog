@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 3.21.8  [BETA] (rgerhards), 2008-11-??
+- bugfix: imklog did not compile on FreeBSD
+---------------------------------------------------------------------------
 Version 3.21.7  [BETA] (rgerhards), 2008-11-11
 - this is the new beta branch, based on the former 3.21.6 devel
 - new functionality: ZERO property replacer nomatch option (from v3-stable)

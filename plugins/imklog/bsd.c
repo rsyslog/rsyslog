@@ -116,7 +116,7 @@ readklog(void)
 	uchar bufRcv[4096+1];
 	uchar *pRcv = NULL; /* receive buffer */
 
-	iMaxLine = glbl.GetMaxLine();
+	iMaxLine = klog_getMaxLine();
 
 	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
 	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
@@ -127,7 +127,8 @@ readklog(void)
 	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
 		pRcv = bufRcv;
 	} else {
-		CHKmalloc(pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1)));
+		if((pRcv = (uchar*) malloc(sizeof(uchar) * (iMaxLine + 1))) == NULL)
+			iMaxLine = sizeof(bufRcv) - 1; /* better this than noting */
 	}
 
 	len = 0;
@@ -161,7 +162,6 @@ readklog(void)
 	if (len > 0)
 		Syslog(LOG_INFO, pRcv);
 
-finalize_it:
 	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
 		free(pRcv);
 }

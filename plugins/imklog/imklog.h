@@ -58,6 +58,7 @@ rsRetVal imklogLogIntMsg(int priority, char *fmt, ...) __attribute__((format(pri
 rsRetVal Syslog(int priority, uchar *msg);
 
 /* prototypes */
+extern int klog_getMaxLine(void); /* work-around for klog drivers to get configured max line size */
 extern int InitKsyms(char *);
 extern void DeinitKsyms(void);
 extern int InitMsyms(void);
