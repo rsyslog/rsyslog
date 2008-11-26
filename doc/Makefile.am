@@ -5,6 +5,7 @@ html_files = \
 	features.html \
 	generic_design.html \
 	expression.html \
+	droppriv.html \
 	history.html \
 	how2help.html \
 	install.html \

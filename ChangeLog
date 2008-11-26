@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 4.1.1  [DEVEL] (rgerhards), 2008-11-??
+- added $PrivDropToGroup, $PrivDropToUser, $PrivDropToGroupID,
+  $PrivDropToUserID config directives to enable dropping privileges.
+  This is an effort to provide a security enhancement. For the limits of this
+  approach, see http://wiki.rsyslog.com/index.php/Security
+---------------------------------------------------------------------------
 Version 4.1.0  [DEVEL] (rgerhards), 2008-11-18
 
 ********************************* WARNING *********************************
