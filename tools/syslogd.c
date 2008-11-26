@@ -82,6 +82,7 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <sys/file.h>
+#include <grp.h>
 
 #if HAVE_SYS_TIMESPEC_H
 # include <sys/timespec.h>
@@ -272,6 +273,8 @@ static int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode -
 				 * If the main queue is either not yet ready or not running in 
 				 * queueing mode (mode DIRECT!), then this is set to 0.
 				 */
+static int uidDropPriv = 0;	/* user-id to which priveleges should be dropped to (AFTER init()!) */
+static int gidDropPriv = 0;	/* group-id to which priveleges should be dropped to (AFTER init()!) */
 
 extern	int errno;
 
@@ -2063,6 +2066,56 @@ static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 }
 
 
+/* drop to specified group 
+ * if something goes wrong, the function never returns
+ * Note that such an abort can cause damage to on-disk structures, so we should
+ * re-design the "interface" in the long term. -- rgerhards, 2008-11-26
+ */
+static void doDropPrivGid(int iGid)
+{
+	int res;
+	uchar szBuf[1024];
+
+	res = setgroups(0, NULL); /* remove all supplementary group IDs */
+	if(res) {
+		perror("could not remove supplemental group IDs");
+		exit(1);
+	}
+	DBGPRINTF("setgroups(0, NULL): %d\n", res);
+	res = setgid(iGid);
+	if(res) {
+		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
+		perror("could not set requested group id");
+		exit(1);
+	}
+	DBGPRINTF("setgid(%d): %d\n", iGid, res);
+	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's groupid changed to %d", iGid);
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
+}
+
+
+/* drop to specified user 
+ * if something goes wrong, the function never returns
+ * Note that such an abort can cause damage to on-disk structures, so we should
+ * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
+ */
+static void doDropPrivUid(int iUid)
+{
+	int res;
+	uchar szBuf[1024];
+
+	res = setuid(iUid);
+	if(res) {
+		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
+		perror("could not set requested userid");
+		exit(1);
+	}
+	DBGPRINTF("setuid(%d): %d\n", iUid, res);
+	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's userid changed to %d", iUid);
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
+}
+
+
 /* helper to freeSelectors(), used with llExecFunc() to flush 
  * pending output.  -- rgerhards, 2007-08-02
  * We do not need to lock the action object here as the processing
@@ -2807,6 +2860,10 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &bErrMsgToStderr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, setMaxMsgSize, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouser", 0, eCmdHdlrUID, NULL, &uidDropPriv, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouserid", 0, eCmdHdlrInt, NULL, &uidDropPriv, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroup", 0, eCmdHdlrGID, NULL, &gidDropPriv, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroupid", 0, eCmdHdlrGID, NULL, &gidDropPriv, NULL));
 
 	/* now add other modules handlers (we should work on that to be able to do it in ClassInit(), but so far
 	 * that is not possible). -- rgerhards, 2008-01-28
@@ -2900,8 +2957,27 @@ static rsRetVal mainThread()
 	}
 	/* Send a signal to the parent so it can terminate.
 	 */
-	if (myPid != ppid)
-		kill (ppid, SIGTERM);
+	if(myPid != ppid)
+		kill(ppid, SIGTERM);
+
+
+	/* If instructed to do so, we now drop privileges. Note that this is not 100% secure,
+	 * because inputs and outputs are already running at this time. However, we can implement
+	 * dropping of privileges rather quickly and it will work in many cases. While it is not
+	 * the ultimate solution, the current one is still much better than not being able to
+	 * drop privileges at all. Doing it correctly, requires a change in architecture, which
+	 * we should do over time. TODO -- rgerhards, 2008-11-19
+	 */
+	if(gidDropPriv != 0) {
+		doDropPrivGid(gidDropPriv);
+		glbl.SetHUPisRestart(0); /* we can not do restart-type HUPs with dropped privs */
+	}
+
+	if(uidDropPriv != 0) {
+		doDropPrivUid(uidDropPriv);
+		glbl.SetHUPisRestart(0); /* we can not do restart-type HUPs with dropped privs */
+	}
+
 
 	/* END OF INTIALIZATION
 	 * ... but keep in mind that we might do a restart and thus init() might
@@ -3520,11 +3596,14 @@ int realMain(int argc, char **argv)
 
 
 	/* process compatibility mode settings */
-	if(iCompatibilityMode < 3) {
+	if(iCompatibilityMode < 4) {
 		errmsg.LogError(0, NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
 		                            "generated config directives may interfer with your rsyslog.conf settings. "
-					    "We suggest upgrading your config and adding -c3 as the first "
+					    "We suggest upgrading your config and adding -c4 as the first "
 					    "rsyslogd option.");
+	}
+
+	if(iCompatibilityMode < 3) {
 		if(MarkInterval > 0) {
 			legacyOptsEnq((uchar *) "ModLoad immark");
 			snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "MarkMessagePeriod %d", MarkInterval);
