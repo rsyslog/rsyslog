@@ -36,7 +36,7 @@ echo "local directory"
 #
 # check empty config file
 #
-../tools/rsyslogd -c3 -N1 -f/dev/null 2>&1 |tail --lines=+2 > tmp
+../tools/rsyslogd -c4 -N1 -f/dev/null 2>&1 |tail --lines=+2 > tmp
 cmp tmp $srcdir/DevNull.cfgtest
 if [ ! $? -eq 0 ]; then
 echo "DevNull.cfgtest failed"
@@ -51,7 +51,7 @@ fi;
 #
 # check missing config file
 #
-../tools/rsyslogd -c3 -N1 -f/This/does/not/exist 2>&1 |tail --lines=+2 > tmp
+../tools/rsyslogd -c4 -N1 -f/This/does/not/exist 2>&1 |tail --lines=+2 > tmp
 cmp tmp $srcdir/NoExistFile.cfgtest
 if [ ! $? -eq 0 ]; then
 echo "NoExistFile.cfgtest failed"
@@ -74,7 +74,7 @@ exit 0
 #
 # check config with invalid directive
 #
-../tools/rsyslogd -c3 -u2 -N1 -f$srcdir/cfg1.testin 2>&1 |tail --lines=+2 > tmp
+../tools/rsyslogd -c4 -u2 -N1 -f$srcdir/cfg1.testin 2>&1 |tail --lines=+2 > tmp
 cmp tmp $srcdir/cfg1.cfgtest
 if [ ! $? -eq 0 ]; then
 echo "cfg1.cfgtest failed"
@@ -91,7 +91,7 @@ fi;
 # the one with the invalid config directive, so that we may see
 # an effect of the included config ;)
 #
-../tools/rsyslogd -c3 -u2 -N1 -f$srcdir/cfg2.testin 2>&1 |tail --lines=+2 > tmp
+../tools/rsyslogd -c4 -u2 -N1 -f$srcdir/cfg2.testin 2>&1 |tail --lines=+2 > tmp
 cmp tmp $srcdir/cfg2.cfgtest
 if [ ! $? -eq 0 ]; then
 echo "cfg2.cfgtest failed"
@@ -106,7 +106,7 @@ fi;
 #
 # check included config file, where included file does not exist
 #
-../tools/rsyslogd -c3 -u2 -N1 -f$srcdir/cfg3.testin 2>&1 |tail --lines=+2 > tmp
+../tools/rsyslogd -c4 -u2 -N1 -f$srcdir/cfg3.testin 2>&1 |tail --lines=+2 > tmp
 cmp tmp $srcdir/cfg3.cfgtest
 if [ ! $? -eq 0 ]; then
 echo "cfg3.cfgtest failed"
@@ -121,7 +121,7 @@ fi;
 #
 # check a reasonable complex, but correct, log file
 #
-../tools/rsyslogd -c3 -u2 -N1 -f$srcdir/cfg4.testin 2>&1 |tail --lines=+2 > tmp
+../tools/rsyslogd -c4 -u2 -N1 -f$srcdir/cfg4.testin 2>&1 |tail --lines=+2 > tmp
 cmp tmp $srcdir/cfg4.cfgtest
 if [ ! $? -eq 0 ]; then
 echo "cfg4.cfgtest failed"

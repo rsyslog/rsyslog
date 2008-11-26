@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.1.1  [DEVEL] (rgerhards), 2008-11-??
+Version 4.1.1  [DEVEL] (rgerhards), 2008-11-26
 - added $PrivDropToGroup, $PrivDropToUser, $PrivDropToGroupID,
   $PrivDropToUserID config directives to enable dropping privileges.
   This is an effort to provide a security enhancement. For the limits of this
