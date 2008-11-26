@@ -4,6 +4,7 @@ Version 4.1.1  [DEVEL] (rgerhards), 2008-11-??
   $PrivDropToUserID config directives to enable dropping privileges.
   This is an effort to provide a security enhancement. For the limits of this
   approach, see http://wiki.rsyslog.com/index.php/Security
+- re-enabled imklog to compile on FreeBSD (brought in from beta)
 ---------------------------------------------------------------------------
 Version 4.1.0  [DEVEL] (rgerhards), 2008-11-18
 
@@ -39,6 +40,9 @@ version before switching to this one.
 - restructured rsyslog.conf documentation
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
+---------------------------------------------------------------------------
+Version 3.21.8  [BETA] (rgerhards), 2008-11-??
+- bugfix: imklog did not compile on FreeBSD
 ---------------------------------------------------------------------------
 Version 3.21.7  [BETA] (rgerhards), 2008-11-11
 - this is the new beta branch, based on the former 3.21.6 devel
