@@ -122,6 +122,8 @@ Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
   see below)
 ---------------------------------------------------------------------------
 Version 3.20.1 [v3-stable] (rgerhards), 2008-11-??
+- security bugfix: $AllowedSender was not honored, all senders were
+  permitted instead
 - enhance: regex nomatch option "ZERO" has been added
   This allows to return the string 0 if a regular expression is
   not found. This is probably useful for storing numerical values into
