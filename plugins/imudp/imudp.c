@@ -192,7 +192,7 @@ CODESTARTrunInput
 							* configured to do this).
 							* rgerhards, 2005-09-26
 							*/
-						       if(net.isAllowedSender(net.pAllowedSenders_UDP,
+						       if(net.isAllowedSender((uchar*) "UDP",
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
 							       parseAndSubmitMessage(fromHost, fromHostIP, pRcvBuf, l,
 							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY);
@@ -241,10 +241,7 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	if (net.pAllowedSenders_UDP != NULL) {
-		net.clearAllowedSenders (net.pAllowedSenders_UDP);
-		net.pAllowedSenders_UDP = NULL;
-	}
+	net.clearAllowedSenders((uchar*)"UDP");
 	if(udpLstnSocks != NULL) {
 		net.closeUDPListenSockets(udpLstnSocks);
 		udpLstnSocks = NULL;
