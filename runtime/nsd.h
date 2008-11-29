@@ -27,6 +27,8 @@
 #ifndef INCLUDED_NSD_H
 #define INCLUDED_NSD_H
 
+#include <sys/socket.h>
+
 enum nsdsel_waitOp_e {
 	NSDSEL_RD = 1,
 	NSDSEL_WR = 2,
@@ -60,8 +62,16 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	 * OS sockets. This interface is primarily meant as an internal aid for
 	 * those drivers that utilize the nsd_ptcp to do some of their work.
 	 */
+	rsRetVal (*GetRemAddr)(nsd_t *pThis, struct sockaddr_storage **ppAddr);
+	/* getRemAddr() is an aid needed by the legacy ACL system. It exposes the remote
+	 * peer's socket addr structure, so that the legacy matching functions can work on
+	 * it. Note that this ties netstream drivers to things that can be implemented over
+	 * sockets - not really desirable, but not the end of the world... TODO: should be
+	 * reconsidered when a new ACL system is build. -- rgerhards, 2008-12-01
+	 */
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
+/* interface version 4 added GetRemAddr() */
 
 /* interface  for the select call */
 BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */

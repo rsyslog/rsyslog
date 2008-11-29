@@ -61,8 +61,16 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	 * this interface. -- rgerhards, 2008-05-05
 	 */
 	rsRetVal (*GetSock)(netstrm_t *pThis, int *pSock);
+	rsRetVal (*GetRemAddr)(netstrm_t *pThis, struct sockaddr_storage **ppAddr);
+	/* getRemAddr() is an aid needed by the legacy ACL system. It exposes the remote
+	 * peer's socket addr structure, so that the legacy matching functions can work on
+	 * it. Note that this ties netstream drivers to things that can be implemented over
+	 * sockets - not really desirable, but not the end of the world... TODO: should be
+	 * reconsidered when a new ACL system is build. -- rgerhards, 2008-12-01
+	 */
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define netstrmCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+/* interface version 3 added GetRemAddr() */
 
 /* prototypes */
 PROTOTYPEObj(netstrm);

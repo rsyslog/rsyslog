@@ -312,7 +312,7 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 	tcps_sess_t *pSess;
 	netstrm_t *pNewStrm = NULL;
 	int iSess = -1;
-	struct sockaddr_storage addr;
+	struct sockaddr_storage *addr;
 	uchar *fromHostFQDN = NULL;
 	uchar *fromHostIP = NULL;
 
@@ -336,13 +336,14 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 	/* get the host name */
 	CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
 	CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
+	CHKiRet(netstrm.GetRemAddr(pNewStrm, &addr));
 	/* TODO: check if we need to strip the domain name here -- rgerhards, 2008-04-24 */
 
 	/* Here we check if a host is permitted to send us messages. If it isn't, we do not further
 	 * process the message but log a warning (if we are configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
+	if(!pThis->pIsPermittedHost((struct sockaddr*) addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		dbgprintf("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
