@@ -212,7 +212,7 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	net.clearAllowedSenders((char*)"TCP");
+	net.clearAllowedSenders((uchar*)"TCP");
 ENDafterRun
 
 

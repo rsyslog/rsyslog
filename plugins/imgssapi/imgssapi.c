@@ -185,6 +185,7 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void*p
 	return allowedMethods;
 }
 
+
 static rsRetVal
 onSessAccept(tcpsrv_t *pThis, tcps_sess_t *pSess)
 {
