@@ -1342,6 +1342,20 @@ GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
 }
 
 
+/* Provide access to the sockaddr_storage of the remote peer. This
+ * is needed by the legacy ACL system. --- gerhards, 2008-12-01
+ */
+static rsRetVal
+GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	iRet = nsd_ptcp.GetRemAddr(pThis->pTcp, ppAddr);
+	RETiRet;
+}
+
+
 /* get the remote host's IP address. The returned string must be freed by the
  * caller. -- rgerhards, 2008-04-25
  */
@@ -1646,6 +1660,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->CheckConnection = CheckConnection;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
+	pIf->GetRemAddr = GetRemAddr;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 
