@@ -1229,7 +1229,6 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 /* TODO: clear stored IDs! */
 
 finalize_it:
-dbgprintf("gtls auth mode %d set\n", pThis->authMode);
 	RETiRet;
 }
 
@@ -1491,6 +1490,13 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 
 	if(pThis->lenRcvBuf == 0) { /* EOS */
 		*pLenBuf = 0;
+		/* in this case, we also need to free the receive buffer, if we
+		 * allocated one. -- rgerhards, 2008-12-03
+		 */
+		if(pThis->pszRcvBuf != NULL) {
+			free(pThis->pszRcvBuf);
+			pThis->pszRcvBuf = NULL;
+		}
 		ABORT_FINALIZE(RS_RET_CLOSED);
 	}
 

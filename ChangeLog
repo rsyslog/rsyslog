@@ -6,8 +6,14 @@ Version 3.20.1 [v3-stable] (rgerhards), 2008-11-??
   This allows to return the string 0 if a regular expression is
   not found. This is probably useful for storing numerical values into
   database columns.
+- bugfix: memory leak in gtls netstream driver fixed
+  memory was lost each time a TLS session was torn down. This could 
+  result in a considerable memory leak if it happened quite frequently
+  (potential system crash condition)
 - doc update: documented how to specify multiple property replacer
   options + link to new online regex generator tool added
+- minor bufgfix: very small memory leak in gtls netstream driver
+  around a handful of bytes (< 20) for each HUP
 - improved debug output for regular expressions inside property replacer
   RE's seem to be a big trouble spot and I would like to have more
   information inside the debug log. So I decided to add some additional
