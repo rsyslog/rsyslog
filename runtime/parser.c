@@ -127,9 +127,6 @@ finalize_it:
 	/* in this case, we still need to check if the message is compressed. If so, we must
 	 * tell the user we can not accept it.
 	 */
-	//pszMsg = pMsg->pszRawMsg;
-	//lenMsg = pMsg->iLenRawMsg;
-	//if(lenMsg > 0 && *msg == 'z') {
 	if(pMsg->iLenRawMsg > 0 && *pMsg->pszRawMsg == 'z') {
 		errmsg.LogError(0, NO_ERRCODE, "Received a compressed message, but rsyslogd does not have compression "
 		         "support enabled. The message will be ignored.");
@@ -295,7 +292,7 @@ rsRetVal parseMsg(msg_t *pMsg)
 	if(msg[0] == '1' && msg[1] == ' ') {
 		dbgprintf("Message has syslog-protocol format.\n");
 		setProtocolVersion(pMsg, 1);
-		if(parseRFCSyslogMsg(pMsg, pMsg->msgFlags) == 1) { // TODO: parseRFC... should pull flags from pMsg
+		if(parseRFCSyslogMsg(pMsg, pMsg->msgFlags) == 1) {
 			msgDestruct(&pMsg);
 			ABORT_FINALIZE(RS_RET_ERR); // TODO: we need to handle these cases!
 		}
