@@ -127,12 +127,16 @@ finalize_it:
 	/* in this case, we still need to check if the message is compressed. If so, we must
 	 * tell the user we can not accept it.
 	 */
-	if(len > 0 && *msg == 'z') {
+	//pszMsg = pMsg->pszRawMsg;
+	//lenMsg = pMsg->iLenRawMsg;
+	//if(lenMsg > 0 && *msg == 'z') {
+	if(pMsg->iLenRawMsg > 0 && *pMsg->pszRawMsg == 'z') {
 		errmsg.LogError(0, NO_ERRCODE, "Received a compressed message, but rsyslogd does not have compression "
 		         "support enabled. The message will be ignored.");
 		ABORT_FINALIZE(RS_RET_NO_ZIP);
 	}	
 
+finalize_it:
 #	endif /* ifdef USE_NETZIP */
 
 	RETiRet;
