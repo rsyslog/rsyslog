@@ -308,10 +308,10 @@ static rsRetVal
 SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 {
 	DEFiRet;
-	tcps_sess_t *pSess;
+	tcps_sess_t *pSess = NULL;
 	netstrm_t *pNewStrm = NULL;
 	int iSess = -1;
-	struct sockaddr_storage addr;
+	struct sockaddr_storage *addr;
 	uchar *fromHostFQDN = NULL;
 	uchar *fromHostIP = NULL;
 
@@ -335,13 +335,14 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 	/* get the host name */
 	CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
 	CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
+	CHKiRet(netstrm.GetRemAddr(pNewStrm, &addr));
 	/* TODO: check if we need to strip the domain name here -- rgerhards, 2008-04-24 */
 
 	/* Here we check if a host is permitted to send us messages. If it isn't, we do not further
 	 * process the message but log a warning (if we are configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
+	if(!pThis->pIsPermittedHost((struct sockaddr*) addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		dbgprintf("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
@@ -354,7 +355,9 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 	 * means we can finally fill in the session object.
 	 */
 	CHKiRet(tcps_sess.SetHost(pSess, fromHostFQDN));
+	fromHostFQDN = NULL; /* we handed this string over */
 	CHKiRet(tcps_sess.SetHostIP(pSess, fromHostIP));
+	fromHostIP = NULL; /* we handed this string over */
 	CHKiRet(tcps_sess.SetStrm(pSess, pNewStrm));
 	pNewStrm = NULL; /* prevent it from being freed in error handler, now done in tcps_sess! */
 	CHKiRet(tcps_sess.SetMsgIdx(pSess, 0));
@@ -367,14 +370,16 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, netstrm_t *pStrm)
 
 	*ppSess = pSess;
 	pThis->pSessions[iSess] = pSess;
+	pSess = NULL; /* this is now also handed over */
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(iSess != -1) {
-			if(pThis->pSessions[iSess] != NULL)
-				tcps_sess.Destruct(&pThis->pSessions[iSess]);
-		}
-		iSess = -1; // TODO: change this to be fully iRet compliant ;)
+		if(pSess != NULL)
+			tcps_sess.Destruct(&pSess);
+		if(fromHostFQDN != NULL)
+			free(fromHostFQDN);
+		if(fromHostIP != NULL)
+			free(fromHostIP);
 		if(pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 	}

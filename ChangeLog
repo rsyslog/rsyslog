@@ -1,8 +1,9 @@
 ---------------------------------------------------------------------------
-Version 3.21.8  [BETA] (rgerhards), 2008-11-??
+Version 3.21.8  [BETA] (rgerhards), 2008-12-04
 - bugfix: imklog did not compile on FreeBSD
 - security bugfix: $AllowedSender was not honored, all senders were
   permitted instead
+- merged in all other changes from 3.20.1 (see there)
 ---------------------------------------------------------------------------
 Version 3.21.7  [BETA] (rgerhards), 2008-11-11
 - this is the new beta branch, based on the former 3.21.6 devel
@@ -123,15 +124,21 @@ Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
 - imported all changes from 3.18.1 until today (some quite important,
   see below)
 ---------------------------------------------------------------------------
-Version 3.20.1 [v3-stable] (rgerhards), 2008-11-??
+Version 3.20.1 [v3-stable] (rgerhards), 2008-112-04
 - security bugfix: $AllowedSender was not honored, all senders were
   permitted instead
 - enhance: regex nomatch option "ZERO" has been added
   This allows to return the string 0 if a regular expression is
   not found. This is probably useful for storing numerical values into
   database columns.
+- bugfix: memory leak in gtls netstream driver fixed
+  memory was lost each time a TLS session was torn down. This could 
+  result in a considerable memory leak if it happened quite frequently
+  (potential system crash condition)
 - doc update: documented how to specify multiple property replacer
   options + link to new online regex generator tool added
+- minor bufgfix: very small memory leak in gtls netstream driver
+  around a handful of bytes (< 20) for each HUP
 - improved debug output for regular expressions inside property replacer
   RE's seem to be a big trouble spot and I would like to have more
   information inside the debug log. So I decided to add some additional

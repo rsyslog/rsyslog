@@ -265,6 +265,17 @@ GetRemoteIP(netstrm_t *pThis, uchar **ppsz)
 }
 
 
+/* get remote addr - slim wrapper for NSD driver function */
+static rsRetVal
+GetRemAddr(netstrm_t *pThis, struct sockaddr_storage **ppAddr)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.GetRemAddr(pThis->pDrvrData, ppAddr);
+	RETiRet;
+}
+
+
 /* open a connection to a remote host (server).
  * rgerhards, 2008-03-19
  */
@@ -320,6 +331,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->AcceptConnReq = AcceptConnReq;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
+	pIf->GetRemAddr = GetRemAddr;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;

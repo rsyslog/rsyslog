@@ -1229,7 +1229,6 @@ SetAuthMode(nsd_t *pNsd, uchar *mode)
 /* TODO: clear stored IDs! */
 
 finalize_it:
-dbgprintf("gtls auth mode %d set\n", pThis->authMode);
 	RETiRet;
 }
 
@@ -1338,6 +1337,20 @@ GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 	iRet = nsd_ptcp.GetRemoteHName(pThis->pTcp, ppszHName);
+	RETiRet;
+}
+
+
+/* Provide access to the sockaddr_storage of the remote peer. This
+ * is needed by the legacy ACL system. --- gerhards, 2008-12-01
+ */
+static rsRetVal
+GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
+{
+	DEFiRet;
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+	iRet = nsd_ptcp.GetRemAddr(pThis->pTcp, ppAddr);
 	RETiRet;
 }
 
@@ -1477,6 +1490,13 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 
 	if(pThis->lenRcvBuf == 0) { /* EOS */
 		*pLenBuf = 0;
+		/* in this case, we also need to free the receive buffer, if we
+		 * allocated one. -- rgerhards, 2008-12-03
+		 */
+		if(pThis->pszRcvBuf != NULL) {
+			free(pThis->pszRcvBuf);
+			pThis->pszRcvBuf = NULL;
+		}
 		ABORT_FINALIZE(RS_RET_CLOSED);
 	}
 
@@ -1646,6 +1666,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->CheckConnection = CheckConnection;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
+	pIf->GetRemAddr = GetRemAddr;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

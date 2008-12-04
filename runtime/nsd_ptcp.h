@@ -24,6 +24,8 @@
 #ifndef INCLUDED_NSD_PTCP_H
 #define INCLUDED_NSD_PTCP_H
 
+#include <sys/socket.h>
+
 #include "nsd.h"
 typedef nsd_if_t nsd_ptcp_if_t; /* we just *implement* this interface */
 
@@ -32,6 +34,7 @@ struct nsd_ptcp_s {
 	BEGINobjInstance; /* Data to implement generic object - MUST be the first data element! */
 	uchar *pRemHostIP; /**< IP address of remote peer (currently used in server mode, only) */
 	uchar *pRemHostName; /**< host name of remote peer (currently used in server mode, only) */
+	struct sockaddr_storage remAddr; /**< remote addr as sockaddr - used for legacy ACL code */
 	int sock;	/**< the socket we use for regular, single-socket, operations */
 };
 

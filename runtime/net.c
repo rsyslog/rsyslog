@@ -104,8 +104,10 @@ setAllowRoot(struct AllowedSenders **ppAllowRoot, uchar *pszType)
 		*ppAllowRoot = pAllowedSenders_UDP;
 	else if(!strcmp((char*)pszType, "TCP"))
 		*ppAllowRoot = pAllowedSenders_TCP;
+#ifdef USE_GSSAPI
 	else if(!strcmp((char*)pszType, "GSS"))
 		*ppAllowRoot = pAllowedSenders_GSS;
+#endif
 	else {
 		dbgprintf("program error: invalid allowed sender ID '%s', denying...\n", pszType);
 		ABORT_FINALIZE(RS_RET_CODE_ERR); /* everything is invalid for an invalid type */
