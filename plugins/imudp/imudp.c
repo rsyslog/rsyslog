@@ -52,6 +52,10 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 
 static int iMaxLine;			/* maximum UDP message size supported */
+static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitted sender was last discarded
+					 * This shall prevent remote DoS when the "discard on disallowed sender"
+					 * message is configured to be logged on occurance of such a case.
+					 */
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
 static uchar *pszBindAddr = NULL;	/* IP to bind socket to */
@@ -200,8 +204,15 @@ CODESTARTrunInput
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(glbl.GetOption_DisallowWarning) {
-								       errmsg.LogError(0, NO_ERRCODE, "UDP message from disallowed sender %s discarded",
-										  (char*)fromHost);
+							       		time_t tt;
+
+									time(&tt);
+									if(tt > ttLastDiscard + 60) {
+										ttLastDiscard = tt;
+										errmsg.LogError(0, NO_ERRCODE,
+										"UDP message from disallowed sender %s discarded",
+										(char*)fromHost);
+									}
 							       }	
 						       }
 					       }
