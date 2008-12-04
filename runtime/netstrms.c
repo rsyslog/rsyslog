@@ -104,6 +104,10 @@ CODESTARTobjDestruct(netstrms)
 		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
 		free(pThis->pDrvrName);
 	}
+	if(pThis->pszDrvrAuthMode != NULL) {
+		free(pThis->pszDrvrAuthMode);
+		pThis->pszDrvrAuthMode = NULL;
+	}
 	if(pThis->pBaseDrvrName != NULL) {
 		free(pThis->pBaseDrvrName);
 		pThis->pBaseDrvrName = NULL;

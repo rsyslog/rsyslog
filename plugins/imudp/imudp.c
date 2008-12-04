@@ -184,12 +184,13 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			* configured to do this).
 			* rgerhards, 2005-09-26
 			*/
-			*pbIsPermitted = net.isAllowedSender(net.pAllowedSenders_UDP,
+			*pbIsPermitted = net.isAllowedSender((uchar*)"UDP",
 			  			            (struct sockaddr *)&frominet, (char*)fromHostFQDN);
 	
 			if(!*pbIsPermitted) {
 				DBGPRINTF("%s is not an allowed sender\n", (char*)fromHostFQDN);
 				if(glbl.GetOption_DisallowWarning) {
+				       // TODO: add rate-limiter, otherwise we have a DoS
 				       errmsg.LogError(0, NO_ERRCODE, "UDP message from disallowed sender %s discarded",
 						  (char*)fromHost);
 				}
@@ -321,10 +322,7 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	if (net.pAllowedSenders_UDP != NULL) {
-		net.clearAllowedSenders (net.pAllowedSenders_UDP);
-		net.pAllowedSenders_UDP = NULL;
-	}
+	net.clearAllowedSenders((uchar*)"UDP");
 	if(udpLstnSocks != NULL) {
 		net.closeUDPListenSockets(udpLstnSocks);
 		udpLstnSocks = NULL;

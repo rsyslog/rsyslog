@@ -91,6 +91,24 @@ CODESTARTobjDestruct(nsd_ptcp)
 ENDobjDestruct(nsd_ptcp)
 
 
+/* Provide access to the sockaddr_storage of the remote peer. This
+ * is needed by the legacy ACL system. --- gerhards, 2008-12-01
+ */
+static rsRetVal
+GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
+{
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
+	assert(ppAddr != NULL);
+
+	*ppAddr = &(pThis->remAddr);
+
+	RETiRet;
+}
+
+
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
  * for some of their functionality. -- rgerhards, 2008-04-18
@@ -320,6 +338,12 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	/* construct our object so that we can use it... */
 	CHKiRet(nsd_ptcpConstruct(&pNew));
 
+	/* for the legacy ACL code, we need to preserve addr. While this is far from
+	 * begin perfect (from an abstract design perspective), we need this to prevent
+	 * breaking everything. TODO: we need to implement a new ACL module to get rid
+	 * of this function. -- rgerhards, 2008-12-01
+	 */
+	memcpy(&pNew->remAddr, &addr, sizeof(struct sockaddr_storage));
 	CHKiRet(FillRemHost(pNew, (struct sockaddr*) &addr));
 
 	/* set the new socket to non-blocking IO -TODO:do we really need to do this here? Do we always want it? */
@@ -716,6 +740,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->Construct = (rsRetVal(*)(nsd_t**)) nsd_ptcpConstruct;
 	pIf->Destruct = (rsRetVal(*)(nsd_t**)) nsd_ptcpDestruct;
 	pIf->Abort = Abort;
+	pIf->GetRemAddr = GetRemAddr;
 	pIf->GetSock = GetSock;
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;

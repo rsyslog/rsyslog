@@ -176,16 +176,17 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void*p
 	pGSess = (gss_sess_t*) pUsrSess;
 
 	if((pGSrv->allowedMethods & ALLOWEDMETHOD_TCP) &&
-	   net.isAllowedSender(net.pAllowedSenders_TCP, addr, (char*)fromHostFQDN))
+	   net.isAllowedSender((uchar*)"TCP", addr, (char*)fromHostFQDN))
 		allowedMethods |= ALLOWEDMETHOD_TCP;
 	if((pGSrv->allowedMethods & ALLOWEDMETHOD_GSS) &&
-	   net.isAllowedSender(net.pAllowedSenders_GSS, addr, (char*)fromHostFQDN))
+	   net.isAllowedSender((uchar*)"GSS", addr, (char*)fromHostFQDN))
 		allowedMethods |= ALLOWEDMETHOD_GSS;
 	if(allowedMethods && pGSess != NULL)
 		pGSess->allowedMethods = allowedMethods;
 	ENDfunc
 	return allowedMethods;
 }
+
 
 static rsRetVal
 onSessAccept(tcpsrv_t *pThis, tcps_sess_t *pSess)
@@ -663,14 +664,8 @@ ENDmodExit
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	if (net.pAllowedSenders_TCP != NULL) {
-		net.clearAllowedSenders (net.pAllowedSenders_TCP);
-		net.pAllowedSenders_TCP = NULL;
-	}
-	if (net.pAllowedSenders_GSS != NULL) {
-		net.clearAllowedSenders (net.pAllowedSenders_GSS);
-		net.pAllowedSenders_GSS = NULL;
-	}
+	net.clearAllowedSenders((uchar*)"TCP");
+	net.clearAllowedSenders((uchar*)"GSS");
 ENDafterRun
 
 

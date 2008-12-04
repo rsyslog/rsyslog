@@ -135,11 +135,11 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	/* things to go away after proper modularization */
 	rsRetVal (*addAllowedSenderLine)(char* pName, uchar** ppRestOfConfLine);
 	void (*PrintAllowedSenders)(int iListToPrint);
-	void (*clearAllowedSenders) ();
+	void (*clearAllowedSenders)(uchar*);
 	void (*debugListenInfo)(int fd, char *type);
 	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer);
 	void (*closeUDPListenSockets)(int *finet);
-	int (*isAllowedSender)(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost);
+	int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost);
 	rsRetVal (*getLocalHostname)(uchar**);
 	int (*should_use_so_bsdcompat)(void);
 	/* permitted peer handling should be replaced by something better (see comments above) */
@@ -149,9 +149,6 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 	/* data members - these should go away over time... TODO */
 	int    *pACLAddHostnameOnFail; /* add hostname to acl when DNS resolving has failed */
 	int    *pACLDontResolve;       /* add hostname to acl instead of resolving it to IP(s) */
-	struct AllowedSenders *pAllowedSenders_UDP;
-	struct AllowedSenders *pAllowedSenders_TCP;
-	struct AllowedSenders *pAllowedSenders_GSS;
 ENDinterface(net)
 #define netCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 
