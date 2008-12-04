@@ -56,6 +56,10 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 
 static int iMaxLine;			/* maximum UDP message size supported */
+static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitted sender was last discarded
+					 * This shall prevent remote DoS when the "discard on disallowed sender"
+					 * message is configured to be logged on occurance of such a case.
+					 */
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
 static uchar *pszBindAddr = NULL;	/* IP to bind socket to */
@@ -190,11 +194,17 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			if(!*pbIsPermitted) {
 				DBGPRINTF("%s is not an allowed sender\n", (char*)fromHostFQDN);
 				if(glbl.GetOption_DisallowWarning) {
-				       // TODO: add rate-limiter, otherwise we have a DoS
-				       errmsg.LogError(0, NO_ERRCODE, "UDP message from disallowed sender %s discarded",
-						  (char*)fromHost);
+					time_t tt;
+
+					time(&tt);
+					if(tt > ttLastDiscard + 60) {
+						ttLastDiscard = tt;
+						errmsg.LogError(0, NO_ERRCODE,
+						"UDP message from disallowed sender %s discarded",
+						(char*)fromHost);
+					}
 				}
-			}	
+			}
 		}
 
 		DBGPRINTF("recv(%d,%d)/%s,acl:%d,msg:%.80s\n", fd, (int) lenRcvBuf, fromHost, *pbIsPermitted, pRcvBuf);
