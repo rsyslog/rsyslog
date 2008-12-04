@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.20.1 [v3-stable] (rgerhards), 2008-11-??
+Version 3.20.1 [v3-stable] (rgerhards), 2008-112-04
 - security bugfix: $AllowedSender was not honored, all senders were
   permitted instead
 - enhance: regex nomatch option "ZERO" has been added
