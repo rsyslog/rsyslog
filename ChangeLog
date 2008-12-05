@@ -1,3 +1,5 @@
+- doc bugfix: v3-compatiblity document had typo in config directive
+  thanks to Andrej for reporting this
 ---------------------------------------------------------------------------
 Version 3.20.2 [v3-stable] (rgerhards), 2008-12-04
 - re-release of 3.20.1 with an additional fix, that could also lead

@@ -95,7 +95,7 @@ set the local address the server should listen to via <b>$UDPServerAddress
 <p>The following example configures an UDP syslog server at the
 local address 192.0.2.1 on port 514:</p>
 <p><b>$ModLoad imudp<br>
-$UDPSeverAddress 192.0.2.1 # this MUST be before the $UDPServerRun
+$UDPServerAddress 192.0.2.1 # this MUST be before the $UDPServerRun
 directive!<br>
 $UDPServerRun 514</b></p>
 <p>"$UDPServerAddress *" means listen on all local interfaces.
@@ -103,10 +103,10 @@ This is the default if no directive is specified.</p>
 <p>Please note that now multiple listeners are supported. For
 example, you can do the following:</p>
 <p><b>$ModLoad imudp<br>
-$UDPSeverAddress 192.0.2.1 # this MUST be before the $UDPServerRun
+$UDPServerAddress 192.0.2.1 # this MUST be before the $UDPServerRun
 directive!<br>
 $UDPServerRun 514<br>
-$UDPSeverAddress * # all local interfaces<br>
+$UDPServerAddress * # all local interfaces<br>
 $UDPServerRun 1514</b></p>
 <p>These config file settings run two listeners: one
 at 192.0.2.1:514 and one on port 1514, which listens on all local
