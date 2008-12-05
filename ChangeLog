@@ -1,3 +1,5 @@
+- doc bugfix: typo in v3 compatibility document
+  thanks to Andrej for reporting
 ---------------------------------------------------------------------------
 Version 4.1.2  [DEVEL] (rgerhards), 2008-12-04
 - bugfix: code did not compile without zlib
