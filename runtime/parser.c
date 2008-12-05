@@ -27,6 +27,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 #include <assert.h>
 #ifdef USE_NETZIP
 #include <zlib.h>
