@@ -1206,7 +1206,7 @@ rsRetVal cvthname(struct sockaddr_storage *f, uchar *pszHost, uchar *pszHostFQDN
 	strcpy((char*)pszHost, (char*)pszHostFQDN);
 	if(   (glbl.GetPreserveFQDN() == 0)
 	   && (p = (uchar*) strchr((char*)pszHost, '.'))) { /* find start of domain name "machine.example.com" */
-		strcmp((char*)(p + 1), (char*)glbl.GetLocalDomain()));
+		strcmp((char*)(p + 1), (char*)glbl.GetLocalDomain());
 		if(strcmp((char*)(p + 1), (char*)glbl.GetLocalDomain()) == 0) {
 			*p = '\0'; /* simply terminate the string */
 		} else {

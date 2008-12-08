@@ -819,8 +819,8 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 			if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
 		}
 
-		// old, reenable TODO lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", pszThrdName);
-		lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "{%ld}%s: ", (long) syscall(SYS_gettid), pszThrdName);
+		lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", pszThrdName);
+		// use for testing: lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "{%ld}%s: ", (long) syscall(SYS_gettid), pszThrdName);
 		if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
 		if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
 		/* print object name header if we have an object */
