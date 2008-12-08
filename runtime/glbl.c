@@ -53,6 +53,7 @@ DEFobjStaticHelpers
 static uchar *pszWorkDir = NULL;
 static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
 static int bHUPisRestart = 1;		/* should SIGHUP cause a full system restart? */
+static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 2048;		/* maximum length of a syslog message */
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
@@ -88,6 +89,7 @@ static dataType Get##nameFunc(void) \
 }
 
 SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
+SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
 SIMP_PROP(HUPisRestart, bHUPisRestart, int)
 SIMP_PROP(MaxLine, iMaxLine, int)
 SIMP_PROP(DefPFFamily, iDefPFFamily, int) /* note that in the future we may check the family argument */
@@ -178,6 +180,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->Set##name = Set##name;
 	SIMP_PROP(MaxLine);
 	SIMP_PROP(OptimizeUniProc);
+	SIMP_PROP(PreserveFQDN);
 	SIMP_PROP(HUPisRestart);
 	SIMP_PROP(DefPFFamily);
 	SIMP_PROP(DropMalPTRMsgs);
@@ -224,6 +227,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDropMalPTRMsgs = 0;
 	bOptimizeUniProc = 1;
 	bHUPisRestart = 1;
+	bPreserveFQDN = 0;
 	return RS_RET_OK;
 }
 
@@ -245,6 +249,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCertFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL, &bOptimizeUniProc, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"hupisrestart", 0, eCmdHdlrBinary, NULL, &bHUPisRestart, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 ENDObjClassInit(glbl)
 

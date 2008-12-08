@@ -43,6 +43,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(MaxLine, int)
 	SIMP_PROP(OptimizeUniProc, int)
 	SIMP_PROP(HUPisRestart, int)
+	SIMP_PROP(PreserveFQDN, int)
 	SIMP_PROP(DefPFFamily, int)
 	SIMP_PROP(DropMalPTRMsgs, int)
 	SIMP_PROP(Option_DisallowWarning, int)
@@ -57,7 +58,8 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
 #undef	SIMP_PROP
 ENDinterface(glbl)
-#define glblCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define glblCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+/* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */
 
 /* the remaining prototypes */
 PROTOTYPEObj(glbl);

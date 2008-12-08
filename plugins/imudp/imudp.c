@@ -181,6 +181,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 		/* check if we have a different sender than before, if so, we need to query some new values */
 		if(memcmp(&frominet, frominetPrev, socklen) != 0) {
 			CHKiRet(net.cvthname(&frominet, fromHost, fromHostFQDN, fromHostIP));
+DBGPRINTF("returned: fromHost '%s', FQDN: '%s'\n", fromHost, fromHostFQDN);
 			memcpy(frominetPrev, &frominet, socklen); /* update cache indicator */
 			/* Here we check if a host is permitted to send us
 			* syslog messages. If it isn't, we do not further
