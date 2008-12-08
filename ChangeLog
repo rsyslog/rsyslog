@@ -1,3 +1,6 @@
+- bugfix: imudp went into an endless loop under some circumstances
+  (but could also leave it under some other circumstances...)
+  Thanks to David Lang and speedfox for reporting this issue.
 ---------------------------------------------------------------------------
 Version 4.1.2  [DEVEL] (rgerhards), 2008-12-04
 - bugfix: code did not compile without zlib

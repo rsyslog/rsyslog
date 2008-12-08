@@ -297,12 +297,12 @@ CODESTARTrunInput
 		/* wait for io to become ready */
 		nfds = select(maxfds+1, (fd_set *) &readfds, NULL, NULL, NULL);
 
-	       for (i = 0; nfds && i < *udpLstnSocks; i++) {
-			if (FD_ISSET(udpLstnSocks[i+1], &readfds)) {
+	       for(i = 0; nfds && i < *udpLstnSocks; i++) {
+			if(FD_ISSET(udpLstnSocks[i+1], &readfds)) {
 		       		processSocket(udpLstnSocks[i+1], &frominetPrev, &bIsPermitted,
 					      fromHost, fromHostFQDN, fromHostIP);
-			}
 			--nfds; /* indicate we have processed one descriptor */
+			}
 	       }
 	       /* end of a run, back to loop for next recv() */
 	}
