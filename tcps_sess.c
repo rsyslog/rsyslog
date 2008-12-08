@@ -99,7 +99,6 @@ CODESTARTobjDestruct(tcps_sess)
 	/* now destruct our own properties */
 	if(pThis->fromHost != NULL)
 		free(pThis->fromHost);
-	close(pThis->sock);
 ENDobjDestruct(tcps_sess)
 
 

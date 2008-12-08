@@ -66,7 +66,7 @@ static int
 isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void __attribute__((unused)) *pUsrSrv,
 	        void __attribute__((unused)) *pUsrSess)
 {
-	return net.isAllowedSender(net.pAllowedSenders_TCP, addr, fromHostFQDN);
+	return net.isAllowedSender((uchar*) "TCP", addr, fromHostFQDN);
 }
 
 
@@ -158,10 +158,7 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	if(net.pAllowedSenders_TCP != NULL) {
-		net.clearAllowedSenders(net.pAllowedSenders_TCP);
-		net.pAllowedSenders_TCP = NULL;
-	}
+	net.clearAllowedSenders((char*)"TCP");
 ENDafterRun
 
 

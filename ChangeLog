@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------
+Version 3.18.6 (rgerhards), 2008-12-08
+- security bugfix: $AllowedSender was not honored, all senders were
+  permitted instead (see http://www.rsyslog.com/Article322.phtml)
+  (backport from v3-stable, v3.20.9)
+- minor bugfix: dual close() call on tcp session closure
+---------------------------------------------------------------------------
 Version 3.18.5 (rgerhards), 2008-10-09
 - bugfix: imudp input module could cause segfault on HUP
   It did not properly de-init a variable acting as a linked list head.

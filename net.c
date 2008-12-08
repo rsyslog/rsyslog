@@ -80,6 +80,33 @@ static struct AllowedSenders *pLastAllowedSenders_GSS = NULL;
 int     ACLAddHostnameOnFail = 0; /* add hostname to acl when DNS resolving has failed */
 int     ACLDontResolve = 0;       /* add hostname to acl instead of resolving it to IP(s) */
 
+
+/* sets the correct allow root pointer based on provided type
+ * rgerhards, 2008-12-01
+ */
+static inline rsRetVal
+setAllowRoot(struct AllowedSenders **ppAllowRoot, uchar *pszType)
+{
+	DEFiRet;
+
+	if(!strcmp((char*)pszType, "UDP"))
+		*ppAllowRoot = pAllowedSenders_UDP;
+	else if(!strcmp((char*)pszType, "TCP"))
+		*ppAllowRoot = pAllowedSenders_TCP;
+#ifdef USE_GSSAPI
+	else if(!strcmp((char*)pszType, "GSS"))
+		*ppAllowRoot = pAllowedSenders_GSS;
+#endif
+	else {
+		dbgprintf("program error: invalid allowed sender ID '%s', denying...\n", pszType);
+		ABORT_FINALIZE(RS_RET_CODE_ERR); /* everything is invalid for an invalid type */
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* Code for handling allowed/disallowed senders
  */
 static inline void MaskIP6 (struct in6_addr *addr, uint8_t bits) {
@@ -164,26 +191,31 @@ static rsRetVal AddAllowedSenderEntry(struct AllowedSenders **ppRoot, struct All
 }
 
 /* function to clear the allowed sender structure in cases where
- * it must be freed (occurs most often when HUPed.
- * TODO: reconsider recursive implementation
- * I think there is also a memory leak, because only the last entry
- * is acutally deleted... -- rgerhards, 2007-12-25
+ * it must be freed (occurs most often when HUPed).
+ * rgerhards, 2008-12-02: revamped this code when we fixed the interface
+ * definition. Now an iterative algorithm is used.
  */
-void clearAllowedSenders (struct AllowedSenders *pAllow)
+static void
+clearAllowedSenders(uchar *pszType)
 {
-	if (pAllow != NULL) {
-		if (pAllow->pNext != NULL)
-			clearAllowedSenders (pAllow->pNext);
-		else {
-			if (F_ISSET(pAllow->allowedSender.flags, ADDR_NAME))
-				free (pAllow->allowedSender.addr.HostWildcard);
-			else
-				free (pAllow->allowedSender.addr.NetAddr);
-			
-			free (pAllow);
-		}
+	struct AllowedSenders *pPrev;
+	struct AllowedSenders *pCurr;
+
+	if(setAllowRoot(&pCurr, pszType) != RS_RET_OK)
+		return;	/* if something went wrong, so let's leave */
+	
+	while(pCurr != NULL) {
+		pPrev = pCurr;
+		pCurr = pCurr->pNext;
+		/* now delete the entry we are right now processing */
+		if(F_ISSET(pPrev->allowedSender.flags, ADDR_NAME))
+			free(pPrev->allowedSender.addr.HostWildcard);
+		else
+			free(pPrev->allowedSender.addr.NetAddr);
+		free(pPrev);
 	}
 }
+
 
 /* function to add an allowed sender to the allowed sender list. The
  * root of the list is caller-provided, so it can be used for all
@@ -566,11 +598,15 @@ static inline int MaskCmp(struct NetAddr *pAllow, uint8_t bits, struct sockaddr 
  * returns 1, if the sender is allowed, 0 otherwise.
  * rgerhards, 2005-09-26
  */
-static int isAllowedSender(struct AllowedSenders *pAllowRoot, struct sockaddr *pFrom, const char *pszFromHost)
+static int isAllowedSender(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost)
 {
 	struct AllowedSenders *pAllow;
-	
+	struct AllowedSenders *pAllowRoot;
+
 	assert(pFrom != NULL);
+	
+	if(setAllowRoot(&pAllowRoot, pszType) != RS_RET_OK)
+		return 0;	/* if something went wrong, we denie access - that's the better choice... */
 
 	if(pAllowRoot == NULL)
 		return 1; /* checking disabled, everything is valid! */

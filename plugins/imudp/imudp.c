@@ -49,6 +49,10 @@ DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 
+static time_t ttLastDiscard = 0;	/* timestamp when a message from a non-permitted sender was last discarded
+					 * This shall prevent remote DoS when the "discard on disallowed sender"
+					 * message is configured to be logged on occurance of such a case.
+					 */
 static int *udpLstnSocks = NULL;	/* Internet datagram sockets, first element is nbr of elements
 					 * read-only after init(), but beware of restart! */
 static uchar *pszBindAddr = NULL;	/* IP to bind socket to */
@@ -189,15 +193,22 @@ CODESTARTrunInput
 							* configured to do this).
 							* rgerhards, 2005-09-26
 							*/
-						       if(net.isAllowedSender(net.pAllowedSenders_UDP,
+						       if(net.isAllowedSender((uchar*) "UDP",
 							  (struct sockaddr *)&frominet, (char*)fromHostFQDN)) {
 							       parseAndSubmitMessage((char*)fromHost, (char*) pRcvBuf, l,
 							       MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_NO_DELAY);
 						       } else {
 							       dbgprintf("%s is not an allowed sender\n", (char*)fromHostFQDN);
 							       if(option_DisallowWarning) {
-								       errmsg.LogError(NO_ERRCODE, "UDP message from disallowed sender %s discarded",
-										  (char*)fromHost);
+ 							       		time_t tt;
+
+ 									time(&tt);
+ 									if(tt > ttLastDiscard + 60) {
+ 										ttLastDiscard = tt;
+ 										errmsg.LogError(NO_ERRCODE,
+ 										"UDP message from disallowed sender %s discarded",
+ 										(char*)fromHost);
+ 									}
 							       }	
 						       }
 					       }
@@ -238,10 +249,7 @@ ENDwillRun
 BEGINafterRun
 CODESTARTafterRun
 	/* do cleanup here */
-	if (net.pAllowedSenders_UDP != NULL) {
-		net.clearAllowedSenders (net.pAllowedSenders_UDP);
-		net.pAllowedSenders_UDP = NULL;
-	}
+	net.clearAllowedSenders((uchar*)"UDP");
 	if(udpLstnSocks != NULL) {
 		net.closeUDPListenSockets(udpLstnSocks);
 		udpLstnSocks = NULL;

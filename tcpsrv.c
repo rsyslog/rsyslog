@@ -415,7 +415,7 @@ static rsRetVal
 SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 {
 	DEFiRet;
-	tcps_sess_t *pSess;
+	tcps_sess_t *pSess = NULL;
 	int newConn;
 	int iSess = -1;
 	struct sockaddr_storage addr;
@@ -464,8 +464,6 @@ SessAccept(tcpsrv_t *pThis, tcps_sess_t **ppSess, int fd)
 	 * configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-RUNLOG_VAR("%p", ppSess);
-RUNLOG_VAR("%p", pSess);
 	if(!pThis->pIsPermittedHost((struct sockaddr*) &addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		dbgprintf("%s is not an allowed sender\n", (char *) fromHostFQDN);
 		if(option_DisallowWarning) {
@@ -492,12 +490,12 @@ RUNLOG_VAR("%p", pSess);
 
 	*ppSess = pSess;
 	pThis->pSessions[iSess] = pSess;
+	pSess = NULL;
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(iSess != -1) {
-			if(pThis->pSessions[iSess] != NULL)
-				tcps_sess.Destruct(&pThis->pSessions[iSess]);
+		if(pSess != NULL) {
+			tcps_sess.Destruct(&pSess);
 		}
 		iSess = -1; // TODO: change this to be fully iRet compliant ;)
 	}
