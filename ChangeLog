@@ -1,6 +1,8 @@
 - added $PreserveFQDN config file directive
   Enables to use FQDNs in sender names where the legacy default
   would have stripped the domain part.
+  Thanks to BlinkMind, Inc. http://www.blinkmind.com for sponsoring this
+  development.
 - bugfix: imudp went into an endless loop under some circumstances
   (but could also leave it under some other circumstances...)
   Thanks to David Lang and speedfox for reporting this issue.
