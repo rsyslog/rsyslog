@@ -395,8 +395,9 @@ static void processImInternal(void);
 
 static int usage(void)
 {
-	fprintf(stderr, "usage: rsyslogd [-cversion] [-46AdnqQvwx] [-lhostlist] [-sdomainlist]\n"
-			"                [-fconffile] [-ipidfile] [-Nlevel]\n"
+	fprintf(stderr, "usage: rsyslogd [-c<version>] [-46AdnqQvwx] [-l<hostlist>] [-s<domainlist>]\n"
+			"                [-f<conffile>] [-i<pidfile>] [-N<level>] [-M<module load path>]\n"
+			"                [-u<number>]\n"
 			"To run rsyslogd in native mode, use \"rsyslogd -c3 <other options>\"\n\n"
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
@@ -3302,7 +3303,7 @@ int realMain(int argc, char **argv)
 	 * only when actually neeeded. 
 	 * rgerhards, 2008-04-04
 	 */
-	while((ch = getopt(argc, argv, "46aAc:def:g:hi:l:m:M:nN:opqQr::s:t:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nN:op:qQr::s:t:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
