@@ -25,17 +25,28 @@
 #include "obj.h"
 #include "tcps_sess.h"
 
+/* support for framing anomalies */
+typedef enum ETCPsyslogFramingAnomaly {
+	frame_normal = 0,
+	frame_NetScreen = 1,
+	frame_CiscoIOS = 2
+} eTCPsyslogFramingAnomaly;
+
+#define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
+
 /* the tcpsrv object */
 struct tcpsrv_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
+	uchar *pszInputName;	/**< value to be used as input name */
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
 	int iLstnMax;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listners */
 	int iSessMax;		/**< max number of sessions supported */
 	char *TCPLstnPort;	/**< the port the listener shall listen on */
+	int addtlFrameDelim;	/**< additional frame delimiter for plain TCP syslog framing (e.g. to handle NetScreen) */
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
@@ -64,6 +75,8 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
 	rsRetVal (*Run)(tcpsrv_t *pThis);
 	/* set methods */
+	rsRetVal (*SetAddtlFrameDelim)(tcpsrv_t*, int);
+	rsRetVal (*SetInputName)(tcpsrv_t*, uchar*);
 	rsRetVal (*SetUsrP)(tcpsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));
 	rsRetVal (*SetCBOpenLstnSocks)(tcpsrv_t *, rsRetVal (*)(tcpsrv_t*));
@@ -80,7 +93,11 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetCBOnSessDestruct)(tcpsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetCBOnSessConstructFinalize)(tcpsrv_t*, rsRetVal (*) (void*));
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
+/* change for v4:
+ * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
+ * - SetInputName() added -- rgerhards, 2008-12-10
+ */
 
 
 /* prototypes */

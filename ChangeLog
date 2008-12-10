@@ -1,3 +1,12 @@
+- added $InputTCPServerAddtlFrameDelimiter config directive, which
+  enabeles to specify an additional, non-standard message delimiter
+  for processing plain tcp syslog. This is primarily a fix for the invalid
+  framing used in Juniper's NetScreen products. Credit to forum user
+  Arv for suggesting this solution.
+- added $InputTCPServerInputName property, which enables a name to be
+  specified that will be available during message processing in the
+  inputname property. This is considered useful for logic that treats
+  messages differently depending on which input received them.
 - added $PreserveFQDN config file directive
   Enables to use FQDNs in sender names where the legacy default
   would have stripped the domain part.
