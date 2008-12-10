@@ -1,3 +1,7 @@
+---------------------------------------------------------------------------
+Version 3.21.10 [BETA] (rgerhards), 2008-12-??
+- some legacy options were not correctly processed.
+  Thanks to varmojfekoj for the patch.
 - doc bugfix: v3-compatiblity document had typo in config directive
   thanks to Andrej for reporting this
 ---------------------------------------------------------------------------
