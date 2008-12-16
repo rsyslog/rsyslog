@@ -1,5 +1,7 @@
+---------------------------------------------------------------------------
+Version 4.1.3  [DEVEL] (rgerhards), 2008-12-17
 - added $InputTCPServerAddtlFrameDelimiter config directive, which
-  enabeles to specify an additional, non-standard message delimiter
+  enables to specify an additional, non-standard message delimiter
   for processing plain tcp syslog. This is primarily a fix for the invalid
   framing used in Juniper's NetScreen products. Credit to forum user
   Arv for suggesting this solution.
