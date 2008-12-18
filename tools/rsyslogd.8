@@ -68,7 +68,7 @@ are in order.  First of all there has been a systematic attempt to
 ensure that rsyslogd follows its default, standard BSD behavior. Of course,
 some configuration file changes are necessary in order to support the
 template system. However, rsyslogd should be able to use a standard
-syslog.conf and act like the orginal syslogd. However, an original syslogd
+syslog.conf and act like the original syslogd. However, an original syslogd
 will not work correctly with a rsyslog-enhanced configuration file. At
 best, it will generate funny looking file names.
 The second important concept to note is that this version of rsyslogd
@@ -92,13 +92,13 @@ the error element is ignored. It is tried to parse the rest of the line.
 .B -c option controls the backward compatibility mode in use.
 .TP
 .BI "\-A"
-When sending UDP messages, there are potentially multiple pathes to
+When sending UDP messages, there are potentially multiple paths to
 the target destination. By default,
 .B rsyslogd
 only sends to the first target it can successfully send to. If -A 
 is given, messages are sent to all targets. This may improve
-reliability, but may also cause message duplicaton. This option
-should enabled only if it is fully understood.
+reliability, but may also cause message duplication. This option
+should be enabled only if it is fully understood.
 .TP
 .BI "\-4"
 Causes
@@ -129,7 +129,7 @@ to sysklogd, which is the default if -c is not given.
 .B Please note that rsyslogd issues warning messages if the -c3
 .B command line option is not given.
 This is to alert you that your are running in compatibility
-mode. Compatibility mode interfers with you rsyslog.conf commands and
+mode. Compatibility mode interferes with your rsyslog.conf commands and
 may cause some undesired side-effects. It is meant to be used with a
 plain old rsyslog.conf - if you use new features, things become
 messy. So the best advice is to work through this document, convert
@@ -167,7 +167,7 @@ is started and controlled by
 .BR init (8).
 .TP
 .BI "\-q " "add hostname if DNS fails during ACL processing"
-During ACL processing, hostnames are resolved to IP addreses for
+During ACL processing, hostnames are resolved to IP addresses for
 performance reasons. If DNS fails during that process, the hostname
 is added as wildcard text, which results in proper, but somewhat
 slower operation once DNS is up again.
@@ -190,7 +190,7 @@ no domain would be cut, you will have to specify two domains like:
 Print version and exit.
 .TP
 .B "\-w"
-Supress warnings issued when messages are received from non-authorized
+Suppress warnings issued when messages are received from non-authorized
 machines (those, that are in no AllowedSender list).
 .TP
 .B "\-x"
@@ -344,7 +344,7 @@ you can't access the documentation...
 
 .TP
 .B RSYSLOG_DEBUGLOG
-If set, writes (allmost) all debug message to the specified log file
+If set, writes (almost) all debug message to the specified log file
 in addition to stdout.
 .TP
 .B RSYSLOG_MODDIR
@@ -352,7 +352,7 @@ Provides the default directory in which loadable modules reside.
 .PD
 .SH BUGS
 Please review the file BUGS for up-to-date information on known
-bugs and annouyances.
+bugs and annoyances.
 .SH Further Information
 Please visit
 .BR http://www.rsyslog.com/doc
