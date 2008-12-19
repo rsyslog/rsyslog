@@ -621,9 +621,15 @@ actionWriteToAction(action_t *pAction)
 	 */
 	if(pAction->f_prevcount > 1) {
 		msg_t *pMsg;
+#if 0 /* old */
 		uchar szRepMsg[64];
 		snprintf((char*)szRepMsg, sizeof(szRepMsg), "last message repeated %d times",
 		    pAction->f_prevcount);
+#else
+		uchar szRepMsg[1024];
+		snprintf((char*)szRepMsg, sizeof(szRepMsg), "message repeated %d times: [%.800]",
+		    pAction->f_prevcount, getMSG(pAction->f_pMsg));
+#endif
 
 		if((pMsg = MsgDup(pAction->f_pMsg)) == NULL) {
 			/* it failed - nothing we can do against it... */
@@ -658,12 +664,11 @@ actionWriteToAction(action_t *pAction)
 		dbgprintf("action not yet ready again to be executed, onceInterval %d, tCurr %d, tNext %d\n",
 			  (int) pAction->iSecsExecOnceInterval, (int) getActNow(pAction),
 			  (int) (pAction->iSecsExecOnceInterval + pAction->tLastExec));
-		/* TODO: the time call below may use reception time, not dequeue time - under consideration. -- rgerhards, 2008-09-17 */
 		pAction->tLastExec = getActNow(pAction); /* re-init time flags */
 		FINALIZE;
 	}
 
-	/* TODO: the time call below may use reception time, not dequeue time - under consideration. -- rgerhards, 2008-09-17 */
+	/* we use reception time, not dequeue time - this is considered more appropriate and also faster ;) -- rgerhards, 2008-09-17 */
 	pAction->f_time = pAction->f_pMsg->ttGenTime;
 
 	/* When we reach this point, we have a valid, non-disabled action.
