@@ -48,6 +48,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(DropMalPTRMsgs, int)
 	SIMP_PROP(Option_DisallowWarning, int)
 	SIMP_PROP(DisableDNS, int)
+	SIMP_PROP(LocalFQDNName, uchar*)
 	SIMP_PROP(LocalHostName, uchar*)
 	SIMP_PROP(LocalDomain, uchar*)
 	SIMP_PROP(StripDomains, char**)

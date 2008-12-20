@@ -3288,6 +3288,7 @@ int realMain(int argc, char **argv)
 	uchar legacyConfLine[80];
 	uchar *LocalHostName;
 	uchar *LocalDomain;
+	uchar *LocalFQDNName;
 
 	/* first, parse the command line options. We do not carry out any actual work, just
 	 * see what we should do. This relieves us from certain anomalies and we can process
@@ -3392,7 +3393,9 @@ int realMain(int argc, char **argv)
 	/* get our host and domain names - we need to do this early as we may emit
 	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
 	 */
-	net.getLocalHostname(&LocalHostName);
+	net.getLocalHostname(&LocalFQDNName);
+	CHKmalloc(LocalHostName = (uchar*) strdup((char*)LocalFQDNName));
+	glbl.SetLocalFQDNName(LocalFQDNName); /* set the FQDN before we modify it */
 	if((p = (uchar*)strchr((char*)LocalHostName, '.'))) {
 		*p++ = '\0';
 		LocalDomain = p;
