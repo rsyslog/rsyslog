@@ -1,3 +1,7 @@
+- fixed a potential segfault condition with $AllowedSender directive
+  On HUP, the root pointers were not properly cleaned up. Thanks to
+  Michael Biebel, olgoat, and Juha Koho for reporting and analyzing
+  the bug.
 - some legacy options were not correctly processed.
   Thanks to varmojfekoj for the patch.
 - doc bugfix: some spelling errors in man pages corrected. Thanks to
