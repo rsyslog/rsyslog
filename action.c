@@ -627,7 +627,7 @@ actionWriteToAction(action_t *pAction)
 		    pAction->f_prevcount);
 #else
 		uchar szRepMsg[1024];
-		snprintf((char*)szRepMsg, sizeof(szRepMsg), "message repeated %d times: [%.800]",
+		snprintf((char*)szRepMsg, sizeof(szRepMsg), "message repeated %d times: [%.800s]",
 		    pAction->f_prevcount, getMSG(pAction->f_pMsg));
 #endif
 
