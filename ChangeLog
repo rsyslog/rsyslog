@@ -1,5 +1,9 @@
 - doc bugfix: v3-compatiblity document had typo in config directive
   thanks to Andrej for reporting this
+- fixed a potential segfault condition with $AllowedSender directive
+  On HUP, the root pointers were not properly cleaned up. Thanks to
+  Michael Biebel, olgoat, and Juha Koho for reporting and analyzing
+  the bug.
 ---------------------------------------------------------------------------
 Version 3.20.2 [v3-stable] (rgerhards), 2008-12-04
 - re-release of 3.20.1 with an additional fix, that could also lead
@@ -209,6 +213,11 @@ Version 3.19.0 (rgerhards), 2008-05-06
   for the patch
 ---------------------------------------------------------------------------
 Version 3.18.7 (rgerhards), 2008-12-??
+=======
+- fixed a potential segfault condition with $AllowedSender directive
+  On HUP, the root pointers were not properly cleaned up. Thanks to
+  Michael Biebel, olgoat, and Juha Koho for reporting and analyzing
+  the bug.
 - some legacy options were not correctly processed.
   Thanks to varmojfekoj for the patch.
 - doc bugfix: some spelling errors in man pages corrected. Thanks to
