@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.21.10 [BETA] (rgerhards), 2008-12-??
+- the string "Do Die" was accidently emited upon exit in non-debug mode
+  This has now been corrected. Thanks to varmojfekoj for the patch.
 - some legacy options were not correctly processed.
   Thanks to varmojfekoj for the patch.
 - doc bugfix: v3-compatiblity document had typo in config directive
