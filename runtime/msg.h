@@ -51,6 +51,7 @@
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	pthread_mutexattr_t mutAttr;
+short bDoLock; /* use the mutex? */
 	pthread_mutex_t mut;
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */

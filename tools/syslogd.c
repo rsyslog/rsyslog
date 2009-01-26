@@ -2431,6 +2431,7 @@ init(void)
 		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
 
 	/* switch the message object to threaded operation, if necessary */
+/* TODO:XXX: I think we must do this also if we have action queues! -- rgerhards, 2009-01-26 */
 	if(MainMsgQueType == QUEUETYPE_DIRECT || iMainMsgQueueNumWorkers > 1) {
 		MsgEnableThreadSafety();
 	}
