@@ -116,6 +116,30 @@ setAllowRoot(struct AllowedSenders **ppAllowRoot, uchar *pszType)
 finalize_it:
 	RETiRet;
 }
+/* re-initializes (sets to NULL) the correct allow root pointer
+ * rgerhards, 2009-01-12
+ */
+static inline rsRetVal
+reinitAllowRoot(uchar *pszType)
+{
+	DEFiRet;
+
+	if(!strcmp((char*)pszType, "UDP"))
+		pAllowedSenders_UDP = NULL;
+	else if(!strcmp((char*)pszType, "TCP"))
+		pAllowedSenders_TCP = NULL;
+#ifdef USE_GSSAPI
+	else if(!strcmp((char*)pszType, "GSS"))
+		pAllowedSenders_GSS = NULL;
+#endif
+	else {
+		dbgprintf("program error: invalid allowed sender ID '%s', denying...\n", pszType);
+		ABORT_FINALIZE(RS_RET_CODE_ERR); /* everything is invalid for an invalid type */
+	}
+
+finalize_it:
+	RETiRet;
+}
 
 
 /* add a wildcard entry to this permitted peer. Entries are always
@@ -556,6 +580,11 @@ clearAllowedSenders(uchar *pszType)
 			free(pPrev->allowedSender.addr.NetAddr);
 		free(pPrev);
 	}
+
+	/* indicate root pointer is de-init (was forgotten previously, resulting in
+	 * all kinds of interesting things) -- rgerhards, 2009-01-12
+	 */
+	reinitAllowRoot(pszType);
 }
 
 
