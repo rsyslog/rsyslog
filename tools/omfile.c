@@ -385,26 +385,30 @@ static void prepareFile(instanceData *pData, uchar *newFileName)
 			 */
 			if(makeFileParentDirs(newFileName, strlen((char*)newFileName),
 			     pData->fDirCreateMode, pData->dirUID,
-			     pData->dirGID, pData->bFailOnChown) == 0) {
-				pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
-						pData->fCreateMode);
-				if(pData->fd != -1) {
-					/* check and set uid/gid */
-					if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
-						/* we need to set owner/group */
-						if(fchown(pData->fd, pData->fileUID,
-						          pData->fileGID) != 0) {
-							if(pData->bFailOnChown) {
-								int eSave = errno;
-								close(pData->fd);
-								pData->fd = -1;
-								errno = eSave;
-							}
-							/* we will silently ignore the chown() failure
-							 * if configured to do so.
-							 */
-						}
+			     pData->dirGID, pData->bFailOnChown) != 0) {
+			     	return; /* we give up */
+			}
+		}
+		/* no matter if we needed to create directories or not, we now try to create
+		 * the file. -- rgerhards, 2008-12-18 (based on patch from William Tisater)
+		 */
+		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+				pData->fCreateMode);
+		if(pData->fd != -1) {
+			/* check and set uid/gid */
+			if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
+				/* we need to set owner/group */
+				if(fchown(pData->fd, pData->fileUID,
+					  pData->fileGID) != 0) {
+					if(pData->bFailOnChown) {
+						int eSave = errno;
+						close(pData->fd);
+						pData->fd = -1;
+						errno = eSave;
 					}
+					/* we will silently ignore the chown() failure
+					 * if configured to do so.
+					 */
 				}
 			}
 		}
