@@ -272,7 +272,7 @@ BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODE
 	int currRefCount;
 CODESTARTobjDestruct(msg)
 	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); */
-	MsgLock(pM);
+	MsgLock(pThis);
 	currRefCount = --pThis->iRefCount;
 	if(currRefCount == 0)
 	{
@@ -325,10 +325,10 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSPROCID);
 		if(pThis->pCSMSGID != NULL)
 			rsCStrDestruct(&pThis->pCSMSGID);
-		MsgUnlock(pM);
+		MsgUnlock(pThis);
 		funcDeleteMutex(pThis);
 	} else {
-		MsgUnlock(pM);
+		MsgUnlock(pThis);
 		pThis = NULL; /* tell framework not to destructing the object! */
 	}
 ENDobjDestruct(msg)
