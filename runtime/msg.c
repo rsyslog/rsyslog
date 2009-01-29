@@ -328,14 +328,13 @@ finalize_it:
 BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
 	int currRefCount;
 CODESTARTobjDestruct(msg)
-	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pM, pM->iRefCount - 1); */
-//#	ifdef DO_HAVE_ATOMICS
-//		currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
-//#	else
+	/* DEV Debugging only ! dbgprintf("msgDestruct\t0x%lx, Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1); */
+#	ifdef HAVE_ATOMIC_BUILTINS
+		currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
+#	else
 		MsgLock(pThis);
 		currRefCount = --pThis->iRefCount;
-//# 	endif
-// we need a mutex, because we may be suspended after getting the refcount but before
+# 	endif
 	if(currRefCount == 0)
 	{
 		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
