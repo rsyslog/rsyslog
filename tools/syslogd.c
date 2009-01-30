@@ -2910,6 +2910,11 @@ static void printVersion(void)
 #else
 	printf("\tFEATURE_DEBUG (debug build, slow code):\tNo\n");
 #endif
+#ifdef	HAVE_ATOMIC_BUILTINS
+	printf("\tAtomic operations supported:\t\tYes\n");
+#else
+	printf("\tAtomic operations supported:\t\tNo\n");
+#endif
 #ifdef	RTINST
 	printf("\tRuntime Instrumentation (slow code):\tYes\n");
 #else

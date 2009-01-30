@@ -47,6 +47,13 @@
 #	define ATOMIC_FETCH_32BIT(data) ((unsigned) __sync_fetch_and_and(&(data), 0xffffffff))
 #	define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
 #else
+	/* note that we gained parctical proof that theoretical problems DO occur
+	 * if we do not properly address them. See this blog post for details:
+	 * http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
+	 * The bottom line is that if there are no atomics available, we should NOT
+	 * simply go ahead and do without them - use mutexes or other things. The
+	 * code needs to be checked against all those cases. -- rgerhards, 2009-01-30
+	 */
 #	warning "atomic builtins not available, using nul operations - rsyslogd will probably be racy!"
 #	define ATOMIC_INC(data) (++(data))
 #	define ATOMIC_DEC(data) (--(data))
