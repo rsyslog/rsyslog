@@ -1607,7 +1607,7 @@ logmsg(msg_t *pMsg, int flags)
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	msg = (char*) pMsg->pszUxTradMsg;
-	dbgprintf("logmsg: flags %x, pri %s, from '%s', msg %s\n", flags, getPRI(pMsg), getRcvFrom(pMsg), msg);
+	dbgprintf("logmsg: flags %x, from '%s', msg %s\n", flags, getRcvFrom(pMsg), msg);
 
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
 	 * a traditional syslog message or one formatted according to syslog-protocol.

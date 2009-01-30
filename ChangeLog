@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 3.20.4 [v3-stable] (rgerhards), 2009-02-??
+- bugfix: invalid mutex access in msg.c
+---------------------------------------------------------------------------
 Version 3.20.3 [v3-stable] (rgerhards), 2009-01-19
 - doc bugfix: v3-compatiblity document had typo in config directive
   thanks to Andrej for reporting this
