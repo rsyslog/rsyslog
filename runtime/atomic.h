@@ -46,7 +46,7 @@
 #	define ATOMIC_FETCH_32BIT(data) ((unsigned) __sync_fetch_and_and(&(data), 0xffffffff))
 #	define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
 #else
-#	warning "atomic builtins not available, using nul operations"
+#	warning "atomic builtins not available, using nul operations - rsyslogd will probably be racy!"
 #	define ATOMIC_INC(data) (++(data))
 #	define ATOMIC_DEC_AND_FETCH(data) (--(data))
 #	define ATOMIC_FETCH_32BIT(data) (data)
