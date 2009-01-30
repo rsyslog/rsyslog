@@ -51,6 +51,7 @@
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	pthread_mutexattr_t mutAttr;
+short bDoLock; /* use the mutex? */
 	pthread_mutex_t mut;
 	int	iRefCount;	/* reference counter (0 = unused) */
 	short	bParseHOSTNAME;	/* should the hostname be parsed from the message? */

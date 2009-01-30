@@ -190,6 +190,7 @@ static void MsgPrepareEnqueueLockingCase(msg_t *pThis)
 	 * rgerhards, 2008-07-14
 	 */
 	pthread_mutexattr_destroy(&pThis->mutAttr);
+	pThis->bDoLock = 1;
 	ENDfunc
 }
 
@@ -199,14 +200,16 @@ static void MsgLockLockingCase(msg_t *pThis)
 {
 	/* DEV debug only! dbgprintf("MsgLock(0x%lx)\n", (unsigned long) pThis); */
 	assert(pThis != NULL);
-	pthread_mutex_lock(&pThis->mut);
+	if(pThis->bDoLock == 1) /* TODO: this is a testing hack, we should find a way with better performance! -- rgerhards, 2009-01-27 */
+		pthread_mutex_lock(&pThis->mut);
 }
 
 static void MsgUnlockLockingCase(msg_t *pThis)
 {
 	/* DEV debug only! dbgprintf("MsgUnlock(0x%lx)\n", (unsigned long) pThis); */
 	assert(pThis != NULL);
-	pthread_mutex_unlock(&pThis->mut);
+	if(pThis->bDoLock == 1) /* TODO: this is a testing hack, we should find a way with better performance! -- rgerhards, 2009-01-27 */
+		pthread_mutex_unlock(&pThis->mut);
 }
 
 /* delete the mutex object on message destruction (locking case)
