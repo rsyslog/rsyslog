@@ -86,6 +86,9 @@ version before switching to this one.
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
 Version 3.21.10 [BETA] (rgerhards), 2008-12-??
+- bugfix: inconsistent use of mutex/atomic operations could cause segfault
+  details are too many, for full analysis see blog post at:
+  http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
 - the string "Do Die" was accidently emited upon exit in non-debug mode
   This has now been corrected. Thanks to varmojfekoj for the patch.
 - some legacy options were not correctly processed.
@@ -231,6 +234,12 @@ Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
 - added a small diagnostic tool to obtain result of gethostname() API
 - imported all changes from 3.18.1 until today (some quite important,
   see below)
+---------------------------------------------------------------------------
+Version 3.20.4 [v3-stable] (rgerhards), 2009-02-??
+- bugfix: inconsistent use of mutex/atomic operations could cause segfault
+  details are too many, for full analysis see blog post at:
+  http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
+- bugfix: invalid mutex access in msg.c
 ---------------------------------------------------------------------------
 Version 3.20.3 [v3-stable] (rgerhards), 2009-01-19
 - doc bugfix: v3-compatiblity document had typo in config directive

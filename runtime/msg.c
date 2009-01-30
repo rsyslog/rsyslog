@@ -397,7 +397,9 @@ CODESTARTobjDestruct(msg)
 			rsCStrDestruct(&pThis->pCSPROCID);
 		if(pThis->pCSMSGID != NULL)
 			rsCStrDestruct(&pThis->pCSMSGID);
+#	ifndef HAVE_ATOMIC_BUILTINS
 		MsgUnlock(pThis);
+# 	endif
 		funcDeleteMutex(pThis);
 	} else {
 		MsgUnlock(pThis);
