@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 3.20.4 [v3-stable] (rgerhards), 2009-02-??
+- bugfix: inconsistent use of mutex/atomic operations could cause segfault
+  details are too many, for full analysis see blog post at:
+  http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
 - bugfix: invalid mutex access in msg.c
 ---------------------------------------------------------------------------
 Version 3.20.3 [v3-stable] (rgerhards), 2009-01-19
