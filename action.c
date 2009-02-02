@@ -58,6 +58,7 @@ static int iActExecEveryNthOccur = 0; /* execute action every n-th occurence (0,
 static time_t iActExecEveryNthOccurTO = 0; /* timeout for n-occurence setting (in seconds, 0=never) */
 static int glbliActionResumeInterval = 30;
 int glbliActionResumeRetryCount = 0;		/* how often should suspended actions be retried? */
+static int bActionRepMsgHasMsg = 0;		/* last messsage repeated... has msg fragment in it */
 
 /* main message queue and its configuration parameters */
 static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
@@ -621,20 +622,20 @@ actionWriteToAction(action_t *pAction)
 	 */
 	if(pAction->f_prevcount > 1) {
 		msg_t *pMsg;
-#if 0 /* old */
-		uchar szRepMsg[64];
-		snprintf((char*)szRepMsg, sizeof(szRepMsg), "last message repeated %d times",
-		    pAction->f_prevcount);
-#else
 		uchar szRepMsg[1024];
-		snprintf((char*)szRepMsg, sizeof(szRepMsg), "message repeated %d times: [%.800s]",
-		    pAction->f_prevcount, getMSG(pAction->f_pMsg));
-#endif
 
 		if((pMsg = MsgDup(pAction->f_pMsg)) == NULL) {
 			/* it failed - nothing we can do against it... */
 			dbgprintf("Message duplication failed, dropping repeat message.\n");
 			ABORT_FINALIZE(RS_RET_ERR);
+		}
+
+		if(pAction->bRepMsgHasMsg == 0) { /* old format repeat message? */
+			snprintf((char*)szRepMsg, sizeof(szRepMsg), "last message repeated %d times",
+			    pAction->f_prevcount);
+		} else {
+			snprintf((char*)szRepMsg, sizeof(szRepMsg), "message repeated %d times: [%.800s]",
+			    pAction->f_prevcount, getMSG(pAction->f_pMsg));
 		}
 
 		/* We now need to update the other message properties.
@@ -823,6 +824,7 @@ actionAddCfSysLineHdrl(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuetimeend", 0, eCmdHdlrInt, NULL, &iActionQueueDeqtWinToHr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtime", 0, eCmdHdlrInt, NULL, &iActExecEveryNthOccur, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionexeconlyeverynthtimetimeout", 0, eCmdHdlrInt, NULL, &iActExecEveryNthOccurTO, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"repeatedmsgcontainsoriginalmsg", 0, eCmdHdlrBinary, NULL, &bActionRepMsgHasMsg, NULL));
 	
 finalize_it:
 	RETiRet;
@@ -856,6 +858,7 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	pAction->iSecsExecOnceInterval = iActExecOnceInterval;
 	pAction->iExecEveryNthOccur = iActExecEveryNthOccur;
 	pAction->iExecEveryNthOccurTO = iActExecEveryNthOccurTO;
+	pAction->bRepMsgHasMsg = bActionRepMsgHasMsg;
 	iActExecEveryNthOccur = 0; /* auto-reset */
 	iActExecEveryNthOccurTO = 0; /* auto-reset */
 

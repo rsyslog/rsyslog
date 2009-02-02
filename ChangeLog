@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 4.1.5  [DEVEL] (rgerhards), 2009-02-??
+- added new config directive $RepeatedMsgContainsOriginalMsg so that the
+  "last message repeated n times" messages, if generated, may
+  have an alternate format that contains the message that is being repeated
+---------------------------------------------------------------------------
 Version 4.1.3  [DEVEL] (rgerhards), 2008-12-17
 - added $InputTCPServerAddtlFrameDelimiter config directive, which
   enables to specify an additional, non-standard message delimiter

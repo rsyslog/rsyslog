@@ -181,6 +181,12 @@ supported in order to be compliant to the upcoming new syslog RFC series.
 </li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
+<li><b>$RepeatedMsgContainsOriginalMsg</b> [on/<b>off</b>] - "last message repeated n times" messages, if generated,
+have a different format that contains the message that is being repeated.
+Note that only the first "n" characters are included, with n to be at least 80 characters, most
+probably more (this may change from version to version, thus no specific limit is given). The bottom
+line is that n is large enough to get a good idea which message was repeated but it is not necessarily
+large enough for the whole message. (Introduced with 4.1.5). Once set, it affects all following actions.</li>
 <li><a href="rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
 <li><a href="rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
 <li><b>$OptimizeForUniprocessor</b> [on/<b>off</b>] - turns on optimizatons which lead to better
@@ -226,7 +232,7 @@ point of view, "1,,0.0.,.,0" also has the value 1000. </p>
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
 version 2 or higher.</font></p>
 </body>
