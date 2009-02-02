@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 3.21.10 [BETA] (rgerhards), 2008-12-??
+Version 3.21.10 [BETA] (rgerhards), 2009-02-02
 - bugfix: inconsistent use of mutex/atomic operations could cause segfault
   details are too many, for full analysis see blog post at:
   http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
