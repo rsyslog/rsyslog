@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------
+Version 4.1.5  [DEVEL] (rgerhards), 2009-02-??
+- added new config directive $RepeatedMsgContainsOriginalMsg so that the
+  "last message repeated n times" messages, if generated, may
+  have an alternate format that contains the message that is being repeated
+---------------------------------------------------------------------------
 Version 4.1.4  [DEVEL] (rgerhards), 2009-01-29
 - bugfix: inconsistent use of mutex/atomic operations could cause segfault
   details are too many, for full analysis see blog post at:
