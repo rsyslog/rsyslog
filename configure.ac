@@ -5,6 +5,7 @@ AC_PREREQ(2.61)
 AC_INIT([rsyslog],[3.21.10],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 
 AC_GNU_SOURCE

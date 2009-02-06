@@ -107,3 +107,5 @@ endif
 # tests are added as last element, because tests may need different
 # modules that need to be generated first
 SUBDIRS += tests
+
+ACLOCAL_AMFLAGS = -I m4
