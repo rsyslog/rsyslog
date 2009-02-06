@@ -19,11 +19,11 @@ EXTRA_DIST=1.rstest 2.rstest err1.rstest \
 	   NoExistFile.cfgtest
 
 rt_init_SOURCES = rt-init.c $(test_files)
-rt_init_CPPFLAGS =  -I$(top_srcdir) $(pthreads_cflags) $(rsrt_cflags) 
-rt_init_LDADD = $(rsrt_libs) $(zlib_libs) $(pthreads_libs)
+rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+rt_init_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS)
 rt_init_LDFLAGS = -export-dynamic
 
 rscript_SOURCES = rscript.c $(test_files)
-rscript_CPPFLAGS =  -I$(top_srcdir) $(pthreads_cflags) $(rsrt_cflags) 
-rscript_LDADD = $(rsrt_libs) $(zlib_libs) $(pthreads_libs)
+rscript_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+rscript_LDADD = $(RSRT_LIBS) $(ZLIB_LIBS) $(PTHREADS_LIBS)
 rscript_LDFLAGS = -export-dynamic
