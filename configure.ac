@@ -554,7 +554,7 @@ AC_SUBST(SNMP_CFLAGS)
 AC_SUBST(SNMP_LIBS)
 
 
-# GNUtls support
+# GnuTLS support
 AC_ARG_ENABLE(gnutls,
         [AS_HELP_STRING([--enable-gnutls],[Enable GNU TLS support @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -565,27 +565,7 @@ AC_ARG_ENABLE(gnutls,
         [enable_gnutls=no]
 )
 if test "x$enable_gnutls" = "xyes"; then
-  AC_CHECK_HEADERS(
-    [gnutls/gnutls.h],,
-    [AC_MSG_FAILURE([GNUTls is missing])]
-  )
-  AC_CHECK_PROG(
-    [HAVE_GNUTLS_CONFIG],
-    [libgnutls-config],
-    [yes],,,
-  )
-  if test "x${HAVE_GNUTLS_CONFIG}" != "xyes"; then
-    AC_MSG_FAILURE([libgnutls-config not found in PATH])
-  fi
-  AC_CHECK_LIB(
-    [gnutls],
-    [gnutls_check_version],
-    [GNUTLS_CFLAGS=`libgnutls-config --cflags`
-     GNUTLS_LIBS=`libgnutls-config --libs`
-    ],
-    [AC_MSG_FAILURE([GNU TLS library is missing])],
-    [`libgnutls-config --libs`]
-  )
+	PKG_CHECK_MODULES(GNUTLS, gnutls >= 2.4.2)
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 AC_SUBST(GNUTLS_CFLAGS)
