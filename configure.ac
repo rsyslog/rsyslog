@@ -19,6 +19,8 @@ AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
 
+PKG_PROG_PKG_CONFIG
+
 case "${host}" in
   *-*-linux*)
     os_type="linux"
