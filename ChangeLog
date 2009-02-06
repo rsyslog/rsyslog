@@ -3,6 +3,7 @@ Version 0.1.3 (rgerhards), 2008-07-??
 - the callback on message reception did not contain a way to pass on
   a caller cookie (e.g. for an instance pointer). An additional
   interface has been added to support that.
+- cleaned up FDL license specifics
 - added libtool versioning
 ----------------------------------------------------------------------
 Version 0.1.2 (rgerhards), 2008-04-09
