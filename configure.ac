@@ -386,10 +386,6 @@ AC_ARG_ENABLE(mysql,
         [enable_mysql=no]
 )
 if test "x$enable_mysql" = "xyes"; then
-  AC_CHECK_HEADERS(
-    [mysql/mysql.h],,
-    [AC_MSG_FAILURE([MySQL is missing])]
-  )
   AC_CHECK_PROG(
     [HAVE_MYSQL_CONFIG],
     [mysql_config],

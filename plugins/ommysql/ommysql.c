@@ -35,8 +35,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <time.h>
-#include <mysql/mysql.h>
-#include <mysql/errmsg.h>
+#include <mysql.h>
 #include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
