@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
+#include <sys/types.h>
 #include "librelp.h"
 #include "relp.h"
 #include "cmdif.h"

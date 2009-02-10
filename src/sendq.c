@@ -33,6 +33,7 @@
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
+#include <sys/types.h>
 #include "relp.h"
 #include "sendq.h"
 #include "dbllinklist.h"

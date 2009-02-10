@@ -5,6 +5,8 @@ Version 0.1.3 (rgerhards), 2008-07-??
   interface has been added to support that.
 - cleaned up FDL license specifics
 - added libtool versioning
+- made librelp compile out of the box on FreeBSD - thanks to Michael
+  Biebl for the patch
 ----------------------------------------------------------------------
 Version 0.1.2 (rgerhards), 2008-04-09
 - forward compatibility changes in support of our plans to use the
