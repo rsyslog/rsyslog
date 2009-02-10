@@ -1,1 +1,1 @@
-EXTRA_DIST = relp.html
+EXTRA_DIST = relp.html gfdl.html
