@@ -116,7 +116,7 @@ $DefaultNetstreamDriverCAFile /path/to/contrib/gnutls/ca.pem
 $DefaultNetstreamDriverCertFile /path/to/contrib/gnutls/cert.pem
 $DefaultNetstreamDriverKeyFile /path/to/contrib/gnutls/key.pem
 
-$ModLoad /home/rger/proj/rsyslog/plugins/imtcp/.libs/imtcp # load listener
+$ModLoad imtcp # load TCP listener
 
 $InputTCPServerStreamDriverMode 1 # run driver in TLS-only mode
 $InputTCPServerStreamDriverAuthMode anon # client is NOT authenticated
