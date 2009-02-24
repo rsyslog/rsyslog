@@ -11,6 +11,6 @@ if ENABLE_IMKLOG_LINUX
 imklog_la_SOURCES += linux.c module.h ksym.c ksyms.h ksym_mod.c
 endif
 
-imklog_la_CPPFLAGS = -I$(top_srcdir) $(pthreads_cflags) $(rsrt_cflags)
+imklog_la_CPPFLAGS = -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 imklog_la_LDFLAGS = -module -avoid-version
 imklog_la_LIBADD = 
