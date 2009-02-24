@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 3.20.5 [v3-stable] (rgerhards), 2009-0?-??
+- fixed a bug in configure.ac which resulted in problems with
+  environment detection - thanks to Michael Biebl for the patch
+---------------------------------------------------------------------------
 Version 3.20.4 [v3-stable] (rgerhards), 2009-02-09
 - bugfix: inconsistent use of mutex/atomic operations could cause segfault
   details are too many, for full analysis see blog post at:
