@@ -873,6 +873,8 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 		f->f_filterData.prop.operation = FIOP_STARTSWITH;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
 		f->f_filterData.prop.operation = FIOP_REGEX;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "ereregex", 8)) {
+		f->f_filterData.prop.operation = FIOP_EREREGEX;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "error: invalid compare operation '%s' - ignoring selector",
 		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));

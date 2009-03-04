@@ -694,24 +694,20 @@ int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 		return -1; /* pCS1 is less then psz */
 }
 
-/* check if a CStr object matches a regex.
- * msamia@redhat.com 2007-07-12
- * @return returns 0 if matched
- * bug: doesn't work for CStr containing \0
- * rgerhards, 2007-07-16: bug is no real bug, because rsyslogd ensures there
- * never is a \0 *inside* a property string.
- * Note that the function returns -1 if regexp functionality is not available.
- * TODO: change calling interface! -- rgerhards, 2008-03-07
+#if 0
+/* check if a CStr object matches a POSIX ERE regex.
+ * added 2009-03-04 by rgerhards
+ * TODO: we should merge this with rsCStrSzStrMatchReg
  */
-int rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz)
+rsRetVal rsCStrSzStrMatchRegexERE(cstr_t *pCS1, uchar *psz)
 {
 	regex_t preq;
-	int ret;
+	DEFiRet;
 
 	BEGINfunc
 
 	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), 0);
+		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), REG_EXTENDED);
 		ret = regexp.regexec(&preq, (char*) psz, 0, NULL, 0);
 		regexp.regfree(&preq);
 	} else {
@@ -719,7 +715,35 @@ int rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz)
 	}
 
 	ENDfunc
-	return ret;
+	RETiRet;
+}
+#endif
+
+
+/* check if a CStr object matches a regex.
+ * msamia@redhat.com 2007-07-12
+ * @return returns 0 if matched
+ * bug: doesn't work for CStr containing \0
+ * rgerhards, 2007-07-16: bug is no real bug, because rsyslogd ensures there
+ * never is a \0 *inside* a property string.
+ * Note that the function returns -1 if regexp functionality is not available.
+ * rgerhards: 2009-03-04: ERE support added, via parameter iType: 0 - BRE, 1 - ERE
+ */
+rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType)
+{
+	regex_t preq;
+	DEFiRet;
+
+	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
+		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), iType == 1 ? REG_EXTENDED : 0);
+		CHKiRet(regexp.regexec(&preq, (char*) psz, 0, NULL, 0));
+		regexp.regfree(&preq);
+	} else {
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	}
+
+finalize_it:
+	RETiRet;
 }
 
 

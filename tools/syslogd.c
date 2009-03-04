@@ -1071,7 +1071,12 @@ static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProce
 			break;
 		case FIOP_REGEX:
 			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal) == 0)
+					  (unsigned char*) pszPropVal, 0) == RS_RET_OK)
+				bRet = 1;
+			break;
+		case FIOP_EREREGEX:
+			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
+					  (unsigned char*) pszPropVal, 1) == RS_RET_OK)
 				bRet = 1;
 			break;
 		default:
