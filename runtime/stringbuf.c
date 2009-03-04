@@ -707,12 +707,15 @@ int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType)
 {
 	regex_t preq;
+	int ret;
 	DEFiRet;
 
 	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
-		CHKiRet(regexp.regexec(&preq, (char*) psz, 0, NULL, 0));
+		ret = regexp.regexec(&preq, (char*) psz, 0, NULL, 0);
 		regexp.regfree(&preq);
+		if(ret != 0)
+			ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	} else {
 		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
