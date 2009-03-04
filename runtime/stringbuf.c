@@ -694,31 +694,6 @@ int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 		return -1; /* pCS1 is less then psz */
 }
 
-#if 0
-/* check if a CStr object matches a POSIX ERE regex.
- * added 2009-03-04 by rgerhards
- * TODO: we should merge this with rsCStrSzStrMatchReg
- */
-rsRetVal rsCStrSzStrMatchRegexERE(cstr_t *pCS1, uchar *psz)
-{
-	regex_t preq;
-	DEFiRet;
-
-	BEGINfunc
-
-	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), REG_EXTENDED);
-		ret = regexp.regexec(&preq, (char*) psz, 0, NULL, 0);
-		regexp.regfree(&preq);
-	} else {
-		ret = 1; /* simulate "not found" */
-	}
-
-	ENDfunc
-	RETiRet;
-}
-#endif
-
 
 /* check if a CStr object matches a regex.
  * msamia@redhat.com 2007-07-12
@@ -735,7 +710,7 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType)
 	DEFiRet;
 
 	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), iType == 1 ? REG_EXTENDED : 0);
+		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
 		CHKiRet(regexp.regexec(&preq, (char*) psz, 0, NULL, 0));
 		regexp.regfree(&preq);
 	} else {
