@@ -35,6 +35,13 @@ case "${host}" in
     # do not DEFINE OS_BSD
     os_type="bsd"
   ;;
+  *-*-solaris*)
+    os_type="solaris"
+    AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
+    AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
+    SOL_LIBS="-lsocket -lnsl"
+    AC_SUBST(SOL_LIBS)
+  ;;
 esac
 
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
@@ -233,7 +240,10 @@ if test "x$enable_pthreads" != "xno"; then
         [
           AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
           PTHREADS_LIBS="-lpthread"
-          PTHREADS_CFLAGS="-pthread"
+ 	  case "${os_type}" in
+ 	  solaris) PTHREADS_CFLAGS="-pthreads" ;;
+ 	  *)       PTHREADS_CFLAGS="-pthread" ;;
+ 	  esac
           AC_SUBST(PTHREADS_LIBS)
           AC_SUBST(PTHREADS_CFLAGS)
         ],

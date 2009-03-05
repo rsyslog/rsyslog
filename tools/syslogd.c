@@ -72,13 +72,18 @@
 #include <stdarg.h>
 #include <time.h>
 #include <assert.h>
-#include <libgen.h>
 
-#ifdef	__sun
+#ifdef OS_SOLARIS
 #	include <errno.h>
+#	include <fcntl.h>
+#	include <stropts.h>
+#	include <sys/termios.h>
+#	include <sys/types.h>
 #else
+#	include <libgen.h>
 #	include <sys/errno.h>
 #endif
+
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <sys/file.h>
@@ -279,7 +284,7 @@ static int gidDropPriv = 0;	/* group-id to which priveleges should be dropped to
 extern	int errno;
 
 /* main message queue and its configuration parameters */
-static queue_t *pMsgQueue = NULL;				/* the main message queue */
+static qqueue_t *pMsgQueue = NULL;				/* the main message queue */
 static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
 static int iMainMsgQHighWtrMark = 8000;				/* high water mark for disk-assisted queues */
 static int iMainMsgQLowWtrMark = 2000;				/* low water mark for disk-assisted queues */
@@ -1620,7 +1625,7 @@ submitMsg(msg_t *pMsg)
 	ISOBJ_TYPE_assert(pMsg, msg);
 	
 	MsgPrepareEnqueue(pMsg);
-	queueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
+	qqueueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
 
 	RETiRet;
 }
@@ -1681,7 +1686,7 @@ logmsg(msg_t *pMsg, int flags)
 	/* now submit the message to the main queue - then we are done */
 	pMsg->msgFlags = flags;
 	MsgPrepareEnqueue(pMsg);
-	queueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
+	qqueueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
 	ENDfunc
 }
 
@@ -1979,7 +1984,7 @@ die(int sig)
 	
 	/* drain queue (if configured so) and stop main queue worker thread pool */
 	dbgprintf("Terminating main queue...\n");
-	queueDestruct(&pMsgQueue);
+	qqueueDestruct(&pMsgQueue);
 	pMsgQueue = NULL;
 
 	/* Free ressources and close connections. This includes flushing any remaining
@@ -2269,8 +2274,8 @@ static void dbgPrintInitInfo(void)
 	static int iMainMsgQtoWrkMinMsgs = 100;	
 	static int iMainMsgQbSaveOnShutdown = 1;
 	iMainMsgQueMaxDiskSpace = 0;
-	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
-	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
+	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
+	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
 	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir());
 }
@@ -2332,7 +2337,7 @@ init(void)
 	/* delete the message queue, which also flushes all messages left over */
 	if(pMsgQueue != NULL) {
 		dbgprintf("deleting main message queue\n");
-		queueDestruct(&pMsgQueue); /* delete pThis here! */
+		qqueueDestruct(&pMsgQueue); /* delete pThis here! */
 		pMsgQueue = NULL;
 	}
 
@@ -2444,7 +2449,7 @@ init(void)
 	}
 
 	/* create message queue */
-	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueNumWorkers, iMainMsgQueueSize, msgConsumer)) {
+	CHKiRet_Hdlr(qqueueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueNumWorkers, iMainMsgQueueSize, msgConsumer)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
@@ -2462,29 +2467,29 @@ init(void)
 		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
-	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
-	setQPROP(queueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", iMainMsgQueMaxDiskSpace);
-	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName", pszMainMsgQFName);
-	setQPROP(queueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
-	setQPROP(queueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
-	setQPROP(queueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", iMainMsgQtoActShutdown);
-	setQPROP(queueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", iMainMsgQtoWrkShutdown);
-	setQPROP(queueSettoEnq, "$MainMsgQueueTimeoutEnqueue", iMainMsgQtoEnq);
-	setQPROP(queueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", iMainMsgQHighWtrMark);
-	setQPROP(queueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", iMainMsgQLowWtrMark);
-	setQPROP(queueSetiDiscardMrk, "$MainMsgQueueDiscardMark", iMainMsgQDiscardMark);
-	setQPROP(queueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
-	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
-	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
-	setQPROP(queueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", iMainMsgQDeqSlowdown);
-	setQPROP(queueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", iMainMsgQueueDeqtWinFromHr);
-	setQPROP(queueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", iMainMsgQueueDeqtWinToHr);
+	setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
+	setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", iMainMsgQueMaxDiskSpace);
+	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", pszMainMsgQFName);
+	setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
+	setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
+	setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", iMainMsgQtoActShutdown);
+	setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", iMainMsgQtoWrkShutdown);
+	setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", iMainMsgQtoEnq);
+	setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", iMainMsgQHighWtrMark);
+	setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", iMainMsgQLowWtrMark);
+	setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", iMainMsgQDiscardMark);
+	setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
+	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
+	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
+	setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", iMainMsgQDeqSlowdown);
+	setQPROP(qqueueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", iMainMsgQueueDeqtWinFromHr);
+	setQPROP(qqueueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", iMainMsgQueueDeqtWinToHr);
 
 #	undef setQPROP
 #	undef setQPROPstr
 
 	/* ... and finally start the queue! */
-	CHKiRet_Hdlr(queueStart(pMsgQueue)) {
+	CHKiRet_Hdlr(qqueueStart(pMsgQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not start message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
@@ -3093,7 +3098,7 @@ GlobalClassExit(void)
 	CHKiRet(strmClassInit(NULL));
 	CHKiRet(wtiClassInit(NULL));
 	CHKiRet(wtpClassInit(NULL));
-	CHKiRet(queueClassInit(NULL));
+	CHKiRet(qqueueClassInit(NULL));
 	CHKiRet(vmstkClassInit(NULL));
 	CHKiRet(sysvarClassInit(NULL));
 	CHKiRet(vmClassInit(NULL));

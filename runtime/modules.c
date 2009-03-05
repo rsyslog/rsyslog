@@ -49,6 +49,10 @@
 #include <unistd.h>
 #include <sys/file.h>
 
+#ifdef OS_SOLARIS
+#	define PATH_MAX MAXPATHLEN
+#endif
+
 #include "cfsysline.h"
 #include "modules.h"
 #include "errmsg.h"

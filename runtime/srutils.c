@@ -458,7 +458,7 @@ srSleep(int iSeconds, int iuSeconds)
  * Added 2008-01-30
  */
 char *rs_strerror_r(int errnum, char *buf, size_t buflen) {
-#ifdef	__hpux
+#ifndef HAVE_STRERROR_R
 	char *pszErr;
 	pszErr = strerror(errnum);
 	snprintf(buf, buflen, "%s", pszErr);

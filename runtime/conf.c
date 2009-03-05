@@ -46,7 +46,9 @@
 #include <glob.h>
 #include <sys/types.h>
 #ifdef HAVE_LIBGEN_H
-#	include <libgen.h>
+#	ifndef OS_SOLARIS
+#		include <libgen.h>
+#	endif
 #endif
 
 #include "rsyslog.h"
@@ -68,6 +70,9 @@
 #include "ctok.h"
 #include "ctok_token.h"
 
+#ifdef OS_SOLARIS
+#	define NAME_MAX MAXNAMELEN
+#endif
 
 /* forward definitions */
 static rsRetVal cfline(uchar *line, selector_t **pfCurr);

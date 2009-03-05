@@ -157,7 +157,7 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		if(ppErrObj != NULL) *ppErrObj = "wtp";
 		CHKiRet(wtpClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "queue";
-		CHKiRet(queueClassInit(NULL));
+		CHKiRet(qqueueClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "vmstk";
 		CHKiRet(vmstkClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "sysvar";

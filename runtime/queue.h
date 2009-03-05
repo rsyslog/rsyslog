@@ -160,7 +160,7 @@ typedef struct queue_s {
 			strm_t *pRead;  /* current file to be read */
 		} disk;
 	} tVars;
-} queue_t;
+} qqueue_t;
 
 /* some symbolic constants for easier reference */
 #define QUEUE_MODE_ENQDEQ 0
@@ -177,30 +177,30 @@ typedef struct queue_s {
 #define QUEUE_TIMEOUT_ETERNAL 24 * 60 * 60 * 1000
 
 /* prototypes */
-rsRetVal queueDestruct(queue_t **ppThis);
-rsRetVal queueEnqObj(queue_t *pThis, flowControl_t flwCtlType, void *pUsr);
-rsRetVal queueStart(queue_t *pThis);
-rsRetVal queueSetMaxFileSize(queue_t *pThis, size_t iMaxFileSize);
-rsRetVal queueSetFilePrefix(queue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
-rsRetVal queueConstruct(queue_t **ppThis, queueType_t qType, int iWorkerThreads,
+rsRetVal qqueueDestruct(qqueue_t **ppThis);
+rsRetVal qqueueEnqObj(qqueue_t *pThis, flowControl_t flwCtlType, void *pUsr);
+rsRetVal qqueueStart(qqueue_t *pThis);
+rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
+rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,void*));
-PROTOTYPEObjClassInit(queue);
-PROTOTYPEpropSetMeth(queue, iPersistUpdCnt, int);
-PROTOTYPEpropSetMeth(queue, iDeqtWinFromHr, int);
-PROTOTYPEpropSetMeth(queue, iDeqtWinToHr, int);
-PROTOTYPEpropSetMeth(queue, toQShutdown, long);
-PROTOTYPEpropSetMeth(queue, toActShutdown, long);
-PROTOTYPEpropSetMeth(queue, toWrkShutdown, long);
-PROTOTYPEpropSetMeth(queue, toEnq, long);
-PROTOTYPEpropSetMeth(queue, iHighWtrMrk, int);
-PROTOTYPEpropSetMeth(queue, iLowWtrMrk, int);
-PROTOTYPEpropSetMeth(queue, iDiscardMrk, int);
-PROTOTYPEpropSetMeth(queue, iDiscardSeverity, int);
-PROTOTYPEpropSetMeth(queue, iMinMsgsPerWrkr, int);
-PROTOTYPEpropSetMeth(queue, bSaveOnShutdown, int);
-PROTOTYPEpropSetMeth(queue, pUsr, void*);
-PROTOTYPEpropSetMeth(queue, iDeqSlowdown, int);
-PROTOTYPEpropSetMeth(queue, sizeOnDiskMax, int64);
-#define queueGetID(pThis) ((unsigned long) pThis)
+PROTOTYPEObjClassInit(qqueue);
+PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);
+PROTOTYPEpropSetMeth(qqueue, iDeqtWinFromHr, int);
+PROTOTYPEpropSetMeth(qqueue, iDeqtWinToHr, int);
+PROTOTYPEpropSetMeth(qqueue, toQShutdown, long);
+PROTOTYPEpropSetMeth(qqueue, toActShutdown, long);
+PROTOTYPEpropSetMeth(qqueue, toWrkShutdown, long);
+PROTOTYPEpropSetMeth(qqueue, toEnq, long);
+PROTOTYPEpropSetMeth(qqueue, iHighWtrMrk, int);
+PROTOTYPEpropSetMeth(qqueue, iLowWtrMrk, int);
+PROTOTYPEpropSetMeth(qqueue, iDiscardMrk, int);
+PROTOTYPEpropSetMeth(qqueue, iDiscardSeverity, int);
+PROTOTYPEpropSetMeth(qqueue, iMinMsgsPerWrkr, int);
+PROTOTYPEpropSetMeth(qqueue, bSaveOnShutdown, int);
+PROTOTYPEpropSetMeth(qqueue, pUsr, void*);
+PROTOTYPEpropSetMeth(qqueue, iDeqSlowdown, int);
+PROTOTYPEpropSetMeth(qqueue, sizeOnDiskMax, int64);
+#define qqueueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

@@ -44,6 +44,10 @@
 #include <unistd.h>
 #include <sys/file.h>
 
+#ifdef OS_SOLARIS
+#	include <fcntl.h>
+#endif
+
 #include "syslogd.h"
 #include "syslogd-types.h"
 #include "srUtils.h"

@@ -63,6 +63,11 @@
 #include "errmsg.h"
 #include "net.h"
 
+#ifdef OS_SOLARIS
+#	define	s6_addr32	_S6_un._S6_u32
+	typedef unsigned int	u_int32_t;
+#endif
+
 MODULE_TYPE_LIB
 
 /* static data */

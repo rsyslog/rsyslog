@@ -68,7 +68,7 @@ struct action_s {
 				 * content later). This is preserved after the message has been
 				 * processed - it is also used to detect duplicates.
 				 */
-	queue_t *pQueue;	/* action queue */
+	qqueue_t *pQueue;	/* action queue */
 	SYNC_OBJ_TOOL;		/* required for mutex support */
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
 };
