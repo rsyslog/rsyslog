@@ -51,6 +51,11 @@
 #include "wti.h"
 #include "atomic.h"
 
+#ifdef OS_SOLARIS
+#	include <sched.h>
+#	define pthread_yield() sched_yield()
+#endif
+
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
