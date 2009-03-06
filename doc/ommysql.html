@@ -26,6 +26,17 @@ you know the server is running on a non-standard listen port.
 <br><b>:ommysql:database-server,database-name,database-userid,database-password</b>
 <br>All parameters should be filled in for a successful connect.
 </ul>
+<p>Note rsyslog contains a canned default template to write to the MySQL
+database. It works on the MonitorWare schema. This template is:
+<p>
+<textarea rows="5" cols="80">$template tpl,"insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')",SQL
+</textarea>
+<p>As you can see, the template is an actual SQL statement. Note the ",SQL" option: it tells the
+template processor that the template is used for SQL processing, thus quote characters are quoted
+to prevent security issues. You can not assign a template without ",SQL" to a MySQL output action.
+<p>If you would like to change fields contents or add or delete your own fields, you
+can simply do so by modifying the schema (if required) and creating your own custom
+template.
 <p><b>Sample:</b></p>
 <p>The following sample writes all syslog messages to the
 database "syslog_db" on mysqlsever.example.com. The server is
@@ -40,7 +51,7 @@ $ActionOmmysqlServerPort 1234 # use non-standard port
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>
 project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>.
 Released under the GNU GPL version 3 or higher.</font></p>
 </body></html>
