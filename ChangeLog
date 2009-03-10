@@ -1,3 +1,10 @@
+- implemented function support in RainerScript. That means the engine
+  parses and compile functions, as well as executes a few build-in
+  ones. Dynamic loading and registration of functions is not yet
+  supported - but we now have a good foundation to do that later on.
+  NOTE: nested function calls are not yet supported due to a design
+  issue with the function call VM instruction set design.
+- implemented the strlen() RainerScript function
 ---------------------------------------------------------------------------
 Version 4.1.5  [DEVEL] (rgerhards), 2009-02-??
 - added ERE support in filter conditions

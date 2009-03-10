@@ -331,6 +331,33 @@ finalize_it:
 ENDop(PUSHSYSVAR)
 
 
+/* The function call operation is only very roughly implemented. While the plumbing
+ * to reach this instruction is fine, the instruction itself currently supports only
+ * functions with a single argument AND with a name that we know.
+ * TODO: later, we can add here the real logic, that involves looking up function
+ * names, loading them dynamically ... and all that...
+ * implementation begun 2009-03-10 by rgerhards
+ */
+BEGINop(FUNC_CALL) /* remember to set the instruction also in the ENDop macro! */
+	var_t *numOperands;
+	var_t *operand1;
+	int iStrlen;
+CODESTARTop(FUNC_CALL)
+	vmstk.PopNumber(pThis->pStk, &numOperands);
+	if(numOperands->val.num != 1)
+		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
+	vmstk.PopString(pThis->pStk, &operand1); /* guess there's just one ;) */
+	if(!rsCStrSzStrCmp(pOp->operand.pVar->val.pStr, (uchar*) "strlen", 6)) { /* only one supported so far ;) */
+RUNLOG_VAR("%s", rsCStrGetSzStr(operand1->val.pStr));
+		iStrlen = strlen((char*) rsCStrGetSzStr(operand1->val.pStr));
+RUNLOG_VAR("%d", iStrlen);
+	} else
+		ABORT_FINALIZE(RS_RET_INVLD_FUNC);
+	PUSHRESULTop(operand1, iStrlen); // TODO: dummy, FIXME
+finalize_it:
+ENDop(FUNC_CALL)
+
+
 /* ------------------------------ end instruction set implementation ------------------------------ */
 
 
@@ -412,6 +439,7 @@ execProg(vm_t *pThis, vmprg_t *pProg)
 			doOP(DIV);
 			doOP(MOD);
 			doOP(UNARY_MINUS);
+			doOP(FUNC_CALL);
 			default:
 				ABORT_FINALIZE(RS_RET_INVALID_VMOP);
 				dbgoprint((obj_t*) pThis, "invalid instruction %d in vmprg\n", pCurrOp->opcode);

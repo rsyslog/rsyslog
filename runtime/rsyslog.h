@@ -254,6 +254,10 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVLD_TIME = -2107, /**< invalid timestamp (e.g. could not be parsed) */
 	RS_RET_NO_ZIP = -2108, /**< ZIP functionality is not present */
 	RS_RET_CODE_ERR = -2109, /**< program code (internal) error */
+	RS_RET_FUNC_NO_LPAREN = -2110, /**< left parenthesis missing after function call (rainerscript) */
+	RS_RET_FUNC_MISSING_EXPR = -2111, /**< no expression after comma in function call (rainerscript) */
+	RS_RET_INVLD_NBR_ARGUMENTS = -2112, /**< invalid number of arguments for function call (rainerscript) */
+	RS_RET_INVLD_FUNC = -2113, /**< invalid function name for function call (rainerscript) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

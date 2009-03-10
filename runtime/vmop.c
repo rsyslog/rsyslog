@@ -217,6 +217,9 @@ vmopOpcode2Str(vmop_t *pThis, uchar **ppName)
 		case opcode_STRADD:
 			*ppName = (uchar*) "STRADD";
 			break;
+		case opcode_FUNC_CALL:
+			*ppName = (uchar*) "FUNC_CALL";
+			break;
 		default:
 			*ppName = (uchar*) "INVALID opcode";
 			break;

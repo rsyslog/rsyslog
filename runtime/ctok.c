@@ -259,12 +259,17 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 	}
 
 	CHKiRet(rsCStrConstruct(&pstrVal));
-	/* this loop is quite simple, a variable name is terminated by whitespace. */
-	while(!isspace(c)) {
+	/* this loop is quite simple, a variable name is terminated when a non-supported
+	 * character is detected. Note that we currently permit a numerical digit as the
+	 * first char, which is not permitted by ABNF. -- rgerhards, 2009-03-10
+	 */
+	while(isalpha(c) || isdigit(c) || (c == '_') || (c == '-')) {
 		CHKiRet(rsCStrAppendChar(pstrVal, tolower(c)));
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 	}
-	CHKiRet(rsCStrFinish(pStrB));
+	CHKiRet(ctokUngetCharFromStream(pThis, c)); /* put not processed char back */
+
+	CHKiRet(rsCStrFinish(pstrVal));
 
 	CHKiRet(var.SetString(pToken->pVar, pstrVal));
 	pstrVal = NULL;
@@ -389,6 +394,7 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 	uchar c;
 	uchar szWord[128];
 	int bRetry = 0; /* retry parse? Only needed for inline comments... */
+	cstr_t *pstrVal;
 
 	ISOBJ_TYPE_assert(pThis, ctok);
 	ASSERT(ppToken != NULL);
@@ -512,7 +518,10 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 							/* push c back, higher level parser needs it */
 							CHKiRet(ctokUngetCharFromStream(pThis, c));
 							pToken->tok = ctok_FUNCTION;
-							/* TODO: fill function name */
+							/* fill function name */
+							CHKiRet(rsCStrConstruct(&pstrVal));
+							CHKiRet(rsCStrSetSzStr(pstrVal, szWord));
+							CHKiRet(var.SetString(pToken->pVar, pstrVal));
 						} else { /* give up... */
 							dbgprintf("parser has an invalid word (token) '%s'\n", szWord);
 							pToken->tok = ctok_INVALID;
