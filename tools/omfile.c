@@ -562,7 +562,7 @@ static rsRetVal writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pDa
 	 */
 	if(pData->bDynamicName) {
 		if(prepareDynFile(pData, ppString[1], iMsgOpts) != 0)
-			ABORT_FINALIZE(RS_RET_ERR);
+			ABORT_FINALIZE(RS_RET_SUSPENDED); // TODO: different state? conditional based on what went wrong? 2009-03-11
 	} else if(pData->fd == -1) {
 		prepareFile(pData, pData->f_fname);
 	}
