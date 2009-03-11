@@ -621,20 +621,21 @@ again:
 		 */
 		if((pData->fileType == eTypeTTY || pData->fileType == eTypeCONSOLE)
 #ifdef linux
-			&& e == EIO) {
+			&& e == EIO
 #else
-			&& e == EBADF) {
+			&& e == EBADF
 #endif
+			) {
 			pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
 			if (pData->fd < 0) {
-				iRet = RS_RET_DISABLE_ACTION;
+				iRet = RS_RET_SUSPENDED;
 				errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
 			} else {
 				untty();
 				goto again;
 			}
 		} else {
-			iRet = RS_RET_DISABLE_ACTION;
+			iRet = RS_RET_SUSPENDED;
 			errno = e;
 			errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
 		}
