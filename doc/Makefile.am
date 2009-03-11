@@ -31,6 +31,7 @@ html_files = \
 	contributors.html \
 	dev_queue.html \
 	omsnmp.html \
+	ommysql.html \
 	omlibdbi.html \
 	imfile.html \
 	imtcp.html \
@@ -96,7 +97,7 @@ html_files = \
 	licensing.html \
 	ommail.html \
 	omrelp.html \
-	status.html \
+	syslog_parsing.html \
 	troubleshoot.html \
 	src/classes.dia
 
