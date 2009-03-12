@@ -74,7 +74,7 @@ ENDobjDestruct(vmprg)
 BEGINobjDebugPrint(vmprg) /* be sure to specify the object type also in END and CODESTART macros! */
 	vmop_t *pOp;
 CODESTARTobjDebugPrint(vmprg)
-	dbgoprint((obj_t*) pThis, "program contents:\n");
+	dbgoprint((obj_t*) pThis, "VM Program:\n");
 	for(pOp = pThis->vmopRoot ; pOp != NULL ; pOp = pOp->pNext) {
 		vmop.DebugPrint(pOp);
 	}
