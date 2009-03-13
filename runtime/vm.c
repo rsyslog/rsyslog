@@ -354,6 +354,7 @@ RUNLOG_VAR("%d", iStrlen);
 	} else
 		ABORT_FINALIZE(RS_RET_INVLD_FUNC);
 	PUSHRESULTop(operand1, iStrlen); // TODO: dummy, FIXME
+	var.Destruct(&numOperands); /* no longer needed */
 finalize_it:
 ENDop(FUNC_CALL)
 
