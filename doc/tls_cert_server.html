@@ -87,8 +87,8 @@ what we assume in this tutorial. Evaluate your options based on your security ne
 <p>Keep in mind that this rsyslog.conf accepts messages via TCP, only. The only other
 source accepted is messages from the server itself.
 <code><pre>
-$ModLoad /home/rger/proj/rsyslog/plugins/imuxsock/.libs/imuxsock # local messages
-$ModLoad /home/rger/proj/rsyslog/plugins/imtcp/.libs/imtcp
+$ModLoad imuxsock # local messages
+$ModLoad imtcp # TCP listener
 
 # make gtls driver the default
 $DefaultNetstreamDriver gtls

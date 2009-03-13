@@ -268,7 +268,8 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 		if(pGSrv->allowedMethods) {
 			/* fallback to plain TCP */
 			CHKiRet(tcpsrv.create_tcp_socket(pSrv));
-			dbgprintf("Opened %d syslog TCP port(s).\n", *pRet);
+		} else {
+			ABORT_FINALIZE(RS_RET_GSS_ERR);
 		}
 	}
 
@@ -335,6 +336,11 @@ addGSSListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
+		if(pOurTcpsrv != NULL)
+			tcpsrv.Destruct(&pOurTcpsrv);
+	}
 	RETiRet;
 }
 

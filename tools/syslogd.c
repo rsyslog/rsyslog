@@ -1340,6 +1340,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	char *pBuf;
 	int bContParse = 1;
 
+	BEGINfunc
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	p2parse = (char*) pMsg->pszUxTradMsg;
@@ -1413,6 +1414,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	MsgSetMSG(pMsg, p2parse);
 
 	free(pBuf);
+	ENDfunc
 	return 0; /* all ok */
 }
 

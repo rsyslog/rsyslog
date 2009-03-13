@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[4.1.4],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[4.1.5],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
@@ -627,8 +627,8 @@ if test "x$enable_rfc3195" = "xyes"; then
 	PKG_CHECK_MODULES(LIBLOGGING, liblogging >= 0.7.1)
 fi
 AM_CONDITIONAL(ENABLE_RFC3195, test x$enable_rfc3195 = xyes)
-AC_SUBST(RFC3195_CFLAGS)
-AC_SUBST(RFC3195_LIBS)
+AC_SUBST(LIBLOGGING_CFLAGS)
+AC_SUBST(LIBLOGGING_LIBS)
 
 
 # settings for the template input module; copy and modify this code
