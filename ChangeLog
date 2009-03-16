@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------
 Version 3.20.5 [v3-stable] (rgerhards), 2009-0?-??
+- fixed bugs in RainerScript:
+  o when converting a number and a string to a common type, both were 
+    actually converted to the other variable's type.
+  o the value of rsCStrConvertToNumber() was miscalculated.
+  Thanks to varmojfekoj for the patch
 - fixed a bug in configure.ac which resulted in problems with
   environment detection - thanks to Michael Biebl for the patch
 - fixed a potential segfault problem in gssapi code

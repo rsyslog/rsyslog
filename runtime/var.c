@@ -327,7 +327,7 @@ ConvForOperation(var_t *pThis, var_t *pOther)
 				case VARTYPE_NUMBER:
 					/* check if we can convert pThis to a number, if so use number format. */
 					iRet = ConvToNumber(pThis);
-					if(iRet != RS_RET_NOT_A_NUMBER) {
+					if(iRet == RS_RET_NOT_A_NUMBER) {
 						CHKiRet(ConvToString(pOther));
 					} else {
 						FINALIZE; /* OK or error */
@@ -345,7 +345,7 @@ ConvForOperation(var_t *pThis, var_t *pOther)
 					break;
 				case VARTYPE_STR:
 					iRet = ConvToNumber(pOther);
-					if(iRet != RS_RET_NOT_A_NUMBER) {
+					if(iRet == RS_RET_NOT_A_NUMBER) {
 						CHKiRet(ConvToString(pThis));
 					} else {
 						FINALIZE; /* OK or error */
