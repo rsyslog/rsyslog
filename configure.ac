@@ -631,9 +631,7 @@ AC_SUBST(LIBLOGGING_CFLAGS)
 AC_SUBST(LIBLOGGING_LIBS)
 
 
-# settings for the template input module; copy and modify this code
-# if you intend to add your own module. Be sure to replace imtemplate
-# by the actual name of your module.
+# settings for the file input module;
 AC_ARG_ENABLE(imfile,
         [AS_HELP_STRING([--enable-imfile],[file input module enabled @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -649,8 +647,7 @@ AC_ARG_ENABLE(imfile,
 #
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
-AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
-# end of copy template - be sure to serach for imtemplate to find everything!
+
 # settings for the template input module; copy and modify this code
 # if you intend to add your own module. Be sure to replace imtemplate
 # by the actual name of your module.
@@ -671,6 +668,26 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 # end of copy template - be sure to serach for imtemplate to find everything!
 
 
+# settings for the template output module; copy and modify this code
+# if you intend to add your own module. Be sure to replace omtemplate
+# by the actual name of your module.
+AC_ARG_ENABLE(omtemplate,
+        [AS_HELP_STRING([--enable-omtemplate],[Compiles omtemplate template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omtemplate="yes" ;;
+          no) enable_omtemplate="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omtemplate) ;;
+         esac],
+        [enable_omtemplate=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
+# end of copy template - be sure to serach for omtemplate to find everything!
+
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
@@ -683,6 +700,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
+		plugins/omtemplate/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
@@ -713,6 +731,7 @@ echo "RELP support enabled:                     $enable_relp"
 echo "imdiag enabled:                           $enable_imdiag"
 echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
+echo "output template module will be compiled:   $enable_omtemplate"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
 echo "GnuTLS network stream driver enabled:     $enable_gnutls"
