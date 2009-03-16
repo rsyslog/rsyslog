@@ -232,7 +232,11 @@ Lines starting with a hash mark ("#'') and empty lines are ignored.
 any
 format a user might want. They are also used for dynamic file name
 generation. Every output in rsyslog uses templates - this holds true
-for files, user messages and so on. The database writer expects its
+for files, user messages and so on.
+Please note that there is an 
+<a href="http://www.rsyslog.com/Article354.phtml">online tutorial on rsyslog templates</a>
+available on the web. We recommend viewing it.
+The database writer expects its
 template to be a proper SQL statement - so this is highly customizable
 too. You might ask how does all of this work when no templates at all
 are specified. Good question ;) The answer is simple, though. Templates
