@@ -23,7 +23,8 @@
  */
 #include "config.h"
 #include <stdio.h>
-#include <malloc.h>
+#include <sys/types.h>
+#include <stdlib.h>
 
 /* we emulate getline (the dirty way) if we do not have it
  * We do not try very hard, as this is just a test driver.

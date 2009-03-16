@@ -43,6 +43,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <glob.h>
+#include <signal.h>
 #include <netinet/in.h>
 
 #define EXIT_FAILURE 1
@@ -361,7 +362,8 @@ int main(int argc, char *argv[])
 	if((srcdir = getenv("srcdir")) == NULL)
 		srcdir = ".";
 
-	printf("Start of nettester run ($srcdir=%s, testsuite=%s)\n", srcdir, testSuite);
+	printf("Start of nettester run ($srcdir=%s, testsuite=%s, input=%s)\n",
+		srcdir, testSuite, argv[2]);
 
 	/* create input config file */
 	if((fp = fopen(NETTEST_INPUT_CONF_FILE, "w")) == NULL) {
