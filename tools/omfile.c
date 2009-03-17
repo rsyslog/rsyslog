@@ -600,20 +600,14 @@ again:
 		}
 	}
 
-	if (write(pData->fd, ppString[0], strlen((char*)ppString[0])) < 0) {
+	if(write(pData->fd, ppString[0], strlen((char*)ppString[0])) < 0) {
 		int e = errno;
+dbgprintf("++++++++++ log file writer error %d\n", e);
 
 		/* If a named pipe is full, just ignore it for now
 		   - mrn 24 May 96 */
 		if (pData->fileType == eTypePIPE && e == EAGAIN)
-			ABORT_FINALIZE(RS_RET_OK);
-
-		/* If the filesystem is filled up, just ignore
-		 * it for now and continue writing when possible
-		 * based on patch for sysklogd by Martin Schulze on 2007-05-24
-		 */
-		if (pData->fileType == eTypeFILE && e == ENOSPC)
-			ABORT_FINALIZE(RS_RET_OK);
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
 
 		(void) close(pData->fd);
 		/* Check for EBADF on TTY's due to vhangup()
