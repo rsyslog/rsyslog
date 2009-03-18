@@ -457,6 +457,8 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	int i;
 	int iFirstFree;
 	dynaFileCacheEntry **pCache;
+	
+	BEGINfunc
 
 	ASSERT(pData != NULL);
 	ASSERT(newFileName != NULL);
@@ -542,6 +544,8 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
+	ENDfunc
+
 	return 0;
 }
 
@@ -553,6 +557,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 static rsRetVal writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 {
 	off_t actualFileSize;
+	int iLenWritten;
 	DEFiRet;
 
 	ASSERT(pData != NULL);
@@ -563,7 +568,9 @@ static rsRetVal writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pDa
 	if(pData->bDynamicName) {
 		if(prepareDynFile(pData, ppString[1], iMsgOpts) != 0)
 			ABORT_FINALIZE(RS_RET_SUSPENDED); // TODO: different state? conditional based on what went wrong? 2009-03-11
-	} else if(pData->fd == -1) {
+	}
+	
+	if(pData->fd == -1) {
 		prepareFile(pData, pData->f_fname);
 	}
 
@@ -600,16 +607,21 @@ again:
 		}
 	}
 
-	if(write(pData->fd, ppString[0], strlen((char*)ppString[0])) < 0) {
+	iLenWritten = write(pData->fd, ppString[0], strlen((char*)ppString[0]));
+//dbgprintf("lenwritten: %d\n", iLenWritten);
+	if(iLenWritten < 0) {
 		int e = errno;
-dbgprintf("++++++++++ log file writer error %d\n", e);
+		char errStr[1024];
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		DBGPRINTF("log file (%d) write error %d: %s\n", pData->fd, e, errStr);
 
 		/* If a named pipe is full, just ignore it for now
 		   - mrn 24 May 96 */
-		if (pData->fileType == eTypePIPE && e == EAGAIN)
+		if(pData->fileType == eTypePIPE && e == EAGAIN)
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 
 		(void) close(pData->fd);
+		pData->fd = -1; /* tell that fd is no longer open! */
 		/* Check for EBADF on TTY's due to vhangup()
 		 * Linux uses EIO instead (mrn 12 May 96)
 		 */

@@ -353,7 +353,13 @@ static rsRetVal actionTryResume(action_t *pThis)
 
 	ASSERT(pThis != NULL);
 
-	ttNow = getActNow(pThis); /* cache "now" */
+	/* for resume handling, we must always obtain a fresh timestamp. We used
+	 * to use the action timestamp, but in this case we will never reach a
+	 * point where a resumption is actually tried, because the action timestamp
+	 * is always in the past. So we can not avoid doing a fresh time() call
+	 * here. -- rgerhards, 2009-03-18
+	 */
+	time(&ttNow); /* cache "now" */
 
 	/* first check if it is time for a re-try */
 	if(ttNow > pThis->ttResumeRtry) {
