@@ -383,9 +383,12 @@ static void dynaFileFreeCache(instanceData *pData)
  * file access, which, among others, means the the file wil be opened
  * and any directories in between will be created (based on config, of
  * course). -- rgerhards, 2008-10-22
+ * changed to iRet interface - 2009-03-19
  */
-static void prepareFile(instanceData *pData, uchar *newFileName)
+static rsRetVal
+prepareFile(instanceData *pData, uchar *newFileName)
 {
+	DEFiRet;
 	if(pData->fileType == eTypePIPE) {
 		pData->fd = open((char*) pData->f_fname, O_RDWR|O_NONBLOCK);
 		FINALIZE; /* we are done in this case */
@@ -399,14 +402,14 @@ static void prepareFile(instanceData *pData, uchar *newFileName)
 		pData->fd = -1;
 		/* file does not exist, create it (and eventually parent directories */
 		if(pData->bCreateDirs) {
-			/* we fist need to create parent dirs if they are missing
+			/* We first need to create parent dirs if they are missing.
 			 * We do not report any errors here ourselfs but let the code
 			 * fall through to error handler below.
 			 */
 			if(makeFileParentDirs(newFileName, strlen((char*)newFileName),
 			     pData->fDirCreateMode, pData->dirUID,
 			     pData->dirGID, pData->bFailOnChown) != 0) {
-			     	return; /* we give up */
+			     	ABORT_FINALIZE(RS_RET_ERR); /* we give up */
 			}
 		}
 		/* no matter if we needed to create directories or not, we now try to create
@@ -418,8 +421,7 @@ static void prepareFile(instanceData *pData, uchar *newFileName)
 			/* check and set uid/gid */
 			if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
 				/* we need to set owner/group */
-				if(fchown(pData->fd, pData->fileUID,
-					  pData->fileGID) != 0) {
+				if(fchown(pData->fd, pData->fileUID, pData->fileGID) != 0) {
 					if(pData->bFailOnChown) {
 						int eSave = errno;
 						close(pData->fd);
@@ -434,11 +436,17 @@ static void prepareFile(instanceData *pData, uchar *newFileName)
 		}
 	}
 finalize_it:
-	if((pData->fd) != 0 && isatty(pData->fd)) {
+	/* this was "pData->fd != 0", which I think was a bug. I guess 0 was intended to mean
+	 * non-open file descriptor. Anyhow, I leave this comment for the time being to that if
+	 * problems surface, one at least knows what happened. -- rgerhards, 2009-03-19
+	 */
+	if(pData->fd != -1 && isatty(pData->fd)) {
 		DBGPRINTF("file %d is a tty file\n", pData->fd);
 		pData->fileType = eTypeTTY;
 		untty();
 	}
+
+	RETiRet;
 }
 
 
@@ -520,7 +528,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	}
 
 	/* Ok, we finally can open the file */
-	prepareFile(pData, newFileName);
+	prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
 
 	/* file is either open now or an error state set */
 	if(pData->fd == -1) {
@@ -567,11 +575,14 @@ static rsRetVal writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pDa
 	 */
 	if(pData->bDynamicName) {
 		if(prepareDynFile(pData, ppString[1], iMsgOpts) != 0)
-			ABORT_FINALIZE(RS_RET_SUSPENDED); // TODO: different state? conditional based on what went wrong? 2009-03-11
+			ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
 	}
 	
 	if(pData->fd == -1) {
-		prepareFile(pData, pData->f_fname);
+		rsRetVal iRetLocal;
+		iRetLocal = prepareFile(pData, pData->f_fname);
+		if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
+			ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
 	}
 
 	/* create the message based on format specified */
@@ -615,13 +626,19 @@ again:
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		DBGPRINTF("log file (%d) write error %d: %s\n", pData->fd, e, errStr);
 
-		/* If a named pipe is full, just ignore it for now
-		   - mrn 24 May 96 */
+		/* If a named pipe is full, we suspend this action for a while */
 		if(pData->fileType == eTypePIPE && e == EAGAIN)
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 
-		(void) close(pData->fd);
+		close(pData->fd);
 		pData->fd = -1; /* tell that fd is no longer open! */
+		if(pData->bDynamicName && pData->iCurrElt != -1) {
+			/* in this case, we need to invalidate the name in the cache, too
+			 * otherwise, an invalid fd may show up if we had a file name change.
+			 * rgerhards, 2009-03-19
+			 */
+			pData->dynCache[pData->iCurrElt]->fd = -1;
+		}
 		/* Check for EBADF on TTY's due to vhangup()
 		 * Linux uses EIO instead (mrn 12 May 96)
 		 */
@@ -793,6 +810,9 @@ CODESTARTparseSelectorAct
 		pData->dirUID = dirUID;
 		pData->dirGID = dirGID;
 
+		/* at this stage, we ignore the return value of prepareFile, this is taken
+		 * care of in later steps. -- rgerhards, 2009-03-19
+		 */
 		prepareFile(pData, pData->f_fname);
 		        
 	  	if(pData->fd < 0 ) {
