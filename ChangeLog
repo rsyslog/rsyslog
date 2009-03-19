@@ -8,6 +8,15 @@ Version 4.1.6  [DEVEL] (rgerhards), 2009-03-??
   issue with the function call VM instruction set design.
 - implemented the strlen() RainerScript function
 - added a template output module
+- added -T rsyslogd command line option, enables to specify a directory
+  where to chroot() into on startup. This is NOT a security feature but
+  introduced to support testing. Thus, -T does not make sure chroot()
+  is used in a secure way. (may be removed later)
+- added omstdout module for testing purposes. Spits out all messages to
+  stdout - no config option, no other features
+- modified $ModLoad statement so that for modules whom's name starts with
+  a dot, no path is prepended (this enables relative-pathes and should
+  not break any valid current config)
 ---------------------------------------------------------------------------
 Version 4.1.5  [DEVEL] (rgerhards), 2009-03-11
 - bugfix: parser did not correctly parse fields in UDP-received messages

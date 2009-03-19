@@ -1,3 +1,6 @@
+#AUTOMAKE_OPTIONS=dejagnu
+#DEJATOOL=Rainer
+
 check_PROGRAMS = rt_init rscript
 TESTS = $(check_PROGRAMS) cfg.sh
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
