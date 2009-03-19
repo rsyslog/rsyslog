@@ -1,3 +1,5 @@
+AUTOMAKE_OPTIONS=dejagnu
+
 sbin_PROGRAMS =
 pkglib_LTLIBRARIES = 
 

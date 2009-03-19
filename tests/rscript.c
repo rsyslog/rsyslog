@@ -101,9 +101,10 @@ PerformTest(cstr_t *pstrIn, rsRetVal iRetExpected, cstr_t *pstrOut)
 	CHKiRet(vmprg.Obj2Str(pExpr->pVmprg, pstrPrg));
 
 	if(strcmp((char*)rsCStrGetSzStr(pstrPrg), (char*)rsCStrGetSzStr(pstrOut))) {
+		int iLen;
 		printf("error: compiled program different from expected result!\n");
-		printf("generated vmprg:\n%s\n", rsCStrGetSzStr(pstrPrg));
-		printf("expected:\n%s\n", rsCStrGetSzStr(pstrOut));
+		printf("generated vmprg (%d bytes):\n%s\n", strlen(rsCStrGetSzStr(pstrPrg)), rsCStrGetSzStr(pstrPrg));
+		printf("expected (%d bytes):\n%s\n", strlen(rsCStrGetSzStr(pstrOut)), rsCStrGetSzStr(pstrOut));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 

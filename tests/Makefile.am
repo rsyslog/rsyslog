@@ -4,7 +4,7 @@ TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 #TESTS = $(check_PROGRAMS)
 
 test_files = testbench.h runtime-dummy.c
-EXTRA_DIST=1.rstest 2.rstest err1.rstest \
+EXTRA_DIST=1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg.sh \
 	   cfg1.cfgtest \
 	   cfg1.testin \
