@@ -76,6 +76,7 @@ static rsRetVal NotImplementedDummy() { return RS_RET_OK; }
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
 	pthread_mutex_init(&pThis->mut, NULL);
+	pthread_mutex_init(&pThis->mutThrdShutdwn, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
 	pThis->pfChkStopWrkr = NotImplementedDummy;
@@ -140,6 +141,7 @@ CODESTARTobjDestruct(wtp)
 	/* actual destruction */
 	pthread_cond_destroy(&pThis->condThrdTrm);
 	pthread_mutex_destroy(&pThis->mut);
+	pthread_mutex_destroy(&pThis->mutThrdShutdwn);
 
 	if(pThis->pszDbgHdr != NULL)
 		free(pThis->pszDbgHdr);
@@ -189,10 +191,22 @@ wtpProcessThrdChanges(wtp_t *pThis)
 	if(pThis->bThrdStateChanged == 0)
 		FINALIZE;
 
-	/* go through all threads */
-	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
-		wtiProcessThrdChanges(pThis->pWrkr[i], LOCK_MUTEX);
+	if(d_pthread_mutex_trylock(&(pThis->mutThrdShutdwn)) != 0) {
+		/* another thread is already in the loop */
+		FINALIZE;
 	}
+
+	do {
+		/* reset the change marker */
+		pThis->bThrdStateChanged = 0;
+		/* go through all threads */
+		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
+			wtiProcessThrdChanges(pThis->pWrkr[i], LOCK_MUTEX);
+		}
+	/* restart if another change occured while we were processing the changes */
+	} while(pThis->bThrdStateChanged != 0);
+
+	d_pthread_mutex_unlock(&(pThis->mutThrdShutdwn));
 
 finalize_it:
 	RETiRet;

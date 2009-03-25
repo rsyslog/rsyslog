@@ -60,6 +60,7 @@ typedef struct wtp_s {
 	int	bInactivityGuard;/* prevents inactivity due to race condition */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
 	/* synchronization variables */
+	pthread_mutex_t mutThrdShutdwn; /* mutex to guard thread shutdown processing */
 	pthread_mutex_t mut; /* mutex for the wtp's thread management */
 	pthread_cond_t condThrdTrm;/* signalled when threads terminate */
 	int bThrdStateChanged;	/* at least one thread state has changed if 1 */
