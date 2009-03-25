@@ -154,6 +154,26 @@ ENDfreeInstance
 
 BEGINtryResume
 CODESTARTtryResume
+	/* Here usually only a reconnect is done. The rsyslog core will call
+	 * this entry point from time to time when the action suspended itself.
+	 * Note that the rsyslog core expects that if the plugin suspended itself
+	 * the action was not carried out during that invocation. Thus, rsyslog
+	 * will call the action with *the same* data item again AFTER a resume
+	 * was successful. As such, tryResume should NOT write the failed data
+	 * item. If it needs to for some reason, it must delete the item again,
+	 * otherwise, it will get duplicated.
+	 * This handling inside the rsyslog core is important to be able to
+	 * preserve data over rsyslog restarts. With it, the core can ensure that
+	 * it queues all not-yet-processed messages without the plugin needing
+	 * to take care about that.
+	 * So in essence, it is recommended that just a reconnet is tried, but
+	 * the last action not restarted. Note that it is not a real problem
+	 * (but causes a slight performance degradation) if tryResume returns
+	 * successfully but the next call to doAction() immediately returns
+	 * RS_RET_SUSPENDED. So it is OK to do the actual restart inside doAction().
+	 * ... of course I don't know why Oracle might need a full restart...
+	 * rgerhards, 2009-03-26
+	 */
 	dbgprintf("Attempting to restart the last action\n");
 	OCISessionRelease(pData->service, pData->error, NULL, 0, OCI_DEFAULT);
 	OCIHandleFree(pData->service, OCI_HTYPE_SVCCTX);
@@ -213,6 +233,13 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1);
 
 	p += sizeof ":omoracle:" - 1;
 
+	/* while this parameter parsing is convenient and works perfectly,
+	 * it is suggested that parameters are only specified via $Action... config
+	 * statement (as done in omlibdbi). The reason is that this may greatly
+	 * ease the transition when we have the full config script language. However,
+	 * this approach here is guranteed to continue to work in the future.
+	 * rgerhards, 2009-03-26
+	 */
 	if (*p == '\0' || *p == ',') {
 		errmsg.LogError(0, NO_ERRCODE, "Wrong char processing module arguments: %c\n", *p);
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
