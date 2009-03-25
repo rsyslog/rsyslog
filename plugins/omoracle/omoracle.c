@@ -4,6 +4,13 @@
     database. It uses Oracle Call Interface, a propietary module
     provided by Oracle.
 
+    Config lines to be used are of this form:
+
+    :omoracle:dbstring,user,password;StatementTemplate
+
+    All fields are mandatory. The dbstring can be an Oracle easystring
+    or a DB name, as present in the tnsnames.ora file.
+
     Author: Luis Fernando Muñoz Mejías
     <Luis.Fernando.Munoz.Mejias@cern.ch>
 
@@ -39,7 +46,6 @@ typedef struct _instanceData {
 	OCIEnv* environment;
 	OCISession* session;
 	OCIError* error;
-	OCIServer* server;
 	OCIStmt* statement;
 	OCISvcCtx* service;
 	OCIAuthInfo* authinfo;
@@ -110,14 +116,11 @@ CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->error),
 			OCI_HTYPE_ERROR, 0, NULL));
 CHECKENV(pData->environment,
-	 OCIHandleAlloc(pData->environment, (void*) &(pData->server),
-			OCI_HTYPE_SERVER, 0, NULL));
-CHECKENV(pData->environment,
-	 OCIHandleAlloc(pData->environment, (void*) &(pData->service),
-			OCI_HTYPE_SVCCTX, 0, NULL));
-CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->authinfo),
 			OCI_HTYPE_AUTHINFO, 0, NULL));
+CHECKENV(pData->environment,
+	 OCIHandleAlloc(pData->environment, (void*) &(pData->statement),
+			OCI_HTYPE_STMT, 0, NULL));
 
 finalize_it:
 ENDcreateInstance
@@ -126,18 +129,13 @@ ENDcreateInstance
 BEGINfreeInstance
 CODESTARTfreeInstance
 
-dbgprintf ("***** OMORACLE ***** Destroying instance\n");
-
+OCISessionRelease(pData->service, pData->error, NULL, 0, OCI_DEFAULT);
 OCIHandleFree(pData->environment, OCI_HTYPE_ENV);
-dbgprintf ("***** OMORACLE ***** Destroyed environment\n");
 OCIHandleFree(pData->error, OCI_HTYPE_ERROR);
-dbgprintf ("***** OMORACLE ***** Destroyed error\n");
-OCIHandleFree(pData->server, OCI_HTYPE_SERVER);
-dbgprintf ("***** OMORACLE ***** Destroyed server\n");
 OCIHandleFree(pData->service, OCI_HTYPE_SVCCTX);
-dbgprintf ("***** OMORACLE ***** Destroyed service\n");
 OCIHandleFree(pData->authinfo, OCI_HTYPE_AUTHINFO);
-dbgprintf ("***** OMORACLE ***** Destroyed authinfo\n");
+OCIHandleFree(pData->statement, OCI_HTYPE_STMT);
+dbgprintf ("omoracle freed all its resources\n");
 
 RETiRet;
 
@@ -216,12 +214,21 @@ ENDparseSelectorAct
 
 BEGINdoAction
 CODESTARTdoAction
-dbgprintf ("***** OMORACLE ***** At doAction\n");
+	dbgprintf("omoracle attempting to execute statement %s\n", *ppString);
+	CHECKERR(pData->error,
+		 OCIStmtPrepare(pData->statement, pData->error, *ppString,
+				strlen(*ppString), OCI_NTV_SYNTAX,
+				OCI_DEFAULT));
+	CHECKERR(pData->error,
+		 OCIStmtExecute(pData->service, pData->statement, pData->error,
+				1, 0, NULL, NULL, OCI_DEFAULT));
+	CHECKERR(pData->error,
+		 OCITransCommit(pData->service, pData->error, 0));
+finalize_it:
 ENDdoAction
 
 BEGINmodExit
 CODESTARTmodExit
-dbgprintf ("***** OMORACLE ***** At modExit\n");
 ENDmodExit
 
 BEGINdbgPrintInstInfo
@@ -262,3 +269,4 @@ CHKiRet(omsdRegCFSLineHdlr((uchar*) "actionoracledb", 0, eCmdHdlrInt,
 			   NULL, dbname, STD_LOADABLE_MODULE_ID));
 dbgprintf ("***** OMORACLE ***** dbname = %s\n", dbname);
 ENDmodInit
+
