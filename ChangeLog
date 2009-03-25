@@ -1,3 +1,7 @@
+- bugfix: potential abort with DA queue after high watermark is reached
+  There exists a race condition that can lead to a segfault. Thanks
+  go to vbernetr, who performed the analysis and provided patch, which
+  I only tweaked a very little bit.
 ---------------------------------------------------------------------------
 Version 4.1.6  [DEVEL] (rgerhards), 2009-03-??
 - implemented function support in RainerScript. That means the engine
