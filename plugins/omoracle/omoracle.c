@@ -50,6 +50,7 @@ typedef struct _instanceData {
 	OCISvcCtx* service;
 	OCIAuthInfo* authinfo;
 	OCIBind* binding;
+	char* connection;
 } instanceData;
 
 /** Generic function for handling errors from OCI.
@@ -74,29 +75,30 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 		return OCI_SUCCESS;
 		break;
 	case OCI_SUCCESS_WITH_INFO:
-		dbgprintf ("OCI SUCCESS - With info\n");
+		errmsg.LogError(0, NO_ERRCODE, "OCI SUCCESS - With info\n");
 		break;
 	case OCI_NEED_DATA:
-		dbgprintf ("OCI NEEDS MORE DATA\n");
+		errmsg.LogError(0, NO_ERRCODE, "OCI NEEDS MORE DATA\n");
 		break;
 	case OCI_ERROR:
 		dbgprintf ("OCI GENERAL ERROR\n");
 		if (handle) {
 			OCIErrorGet(handle, 1, NULL, &errcode, buf,
 				    sizeof buf, htype);
-			dbgprintf ("Error message: %s", buf);
+			errmsg.LogError(0, NO_ERRCODE, "Error message: %s", buf);
 		} else
-			dbgprintf ("NULL handle\n"
-				"Unable to extract further information");
+			errmsg.LogError(0, NO_ERRCODE, "NULL handle\n"
+					 "Unable to extract further "
+					 "information");
 		break;
 	case OCI_INVALID_HANDLE:
-		dbgprintf ("OCI INVALID HANDLE\n");
+		errmsg.LogError(0, NO_ERRCODE, "OCI INVALID HANDLE\n");
 		break;
 	case OCI_STILL_EXECUTING:
-		dbgprintf ("Still executing...\n");
+		errmsg.LogError(0, NO_ERRCODE, "Still executing...\n");
 		break;
 	case OCI_CONTINUE:
-		dbgprintf ("OCI CONTINUE\n");
+		errmsg.LogError(0, NO_ERRCODE, "OCI CONTINUE\n");
 		break;
 	}
 	return OCI_ERROR;
@@ -107,45 +109,56 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 BEGINcreateInstance
 CODESTARTcreateInstance
 
-ASSERT(pData != NULL);
-
-CHECKENV(pData->environment,
-	 OCIEnvCreate((void*) &(pData->environment), OCI_DEFAULT,
-		      NULL, NULL, NULL, NULL, 0, NULL));
-CHECKENV(pData->environment,
-	 OCIHandleAlloc(pData->environment, (void*) &(pData->error),
-			OCI_HTYPE_ERROR, 0, NULL));
-CHECKENV(pData->environment,
-	 OCIHandleAlloc(pData->environment, (void*) &(pData->authinfo),
-			OCI_HTYPE_AUTHINFO, 0, NULL));
-CHECKENV(pData->environment,
-	 OCIHandleAlloc(pData->environment, (void*) &(pData->statement),
-			OCI_HTYPE_STMT, 0, NULL));
+	ASSERT(pData != NULL);
+	
+	CHECKENV(pData->environment,
+		 OCIEnvCreate((void*) &(pData->environment), OCI_DEFAULT,
+			      NULL, NULL, NULL, NULL, 0, NULL));
+	CHECKENV(pData->environment,
+		 OCIHandleAlloc(pData->environment, (void*) &(pData->error),
+				OCI_HTYPE_ERROR, 0, NULL));
+	CHECKENV(pData->environment,
+		 OCIHandleAlloc(pData->environment, (void*) &(pData->authinfo),
+				OCI_HTYPE_AUTHINFO, 0, NULL));
+	CHECKENV(pData->environment,
+		 OCIHandleAlloc(pData->environment, (void*) &(pData->statement),
+				OCI_HTYPE_STMT, 0, NULL));
 
 finalize_it:
 ENDcreateInstance
 
-/** Free any resources allocated by createInstance. */
+/** Close the session and free anything allocated by
+    createInstance. */
 BEGINfreeInstance
 CODESTARTfreeInstance
 
-OCISessionRelease(pData->service, pData->error, NULL, 0, OCI_DEFAULT);
-OCIHandleFree(pData->environment, OCI_HTYPE_ENV);
-OCIHandleFree(pData->error, OCI_HTYPE_ERROR);
-OCIHandleFree(pData->service, OCI_HTYPE_SVCCTX);
-OCIHandleFree(pData->authinfo, OCI_HTYPE_AUTHINFO);
-OCIHandleFree(pData->statement, OCI_HTYPE_STMT);
-dbgprintf ("omoracle freed all its resources\n");
-
-RETiRet;
+	OCISessionRelease(pData->service, pData->error, NULL, 0, OCI_DEFAULT);
+	OCIHandleFree(pData->environment, OCI_HTYPE_ENV);
+	OCIHandleFree(pData->error, OCI_HTYPE_ERROR);
+	OCIHandleFree(pData->service, OCI_HTYPE_SVCCTX);
+	OCIHandleFree(pData->authinfo, OCI_HTYPE_AUTHINFO);
+	OCIHandleFree(pData->statement, OCI_HTYPE_STMT);
+	free(pData->connection);
+	dbgprintf ("omoracle freed all its resources\n");
+	RETiRet;
 
 ENDfreeInstance
 
-
 BEGINtryResume
 CODESTARTtryResume
+	dbgprintf("Attempting to restart the last action\n");
+	OCISessionRelease(pData->service, pData->error, NULL, 0, OCI_DEFAULT);
+	OCIHandleFree(pData->service, OCI_HTYPE_SVCCTX);
+	CHECKERR(pData->error, OCISessionGet(pData->environment, pData->error,
+					     &pData->service, pData->authinfo,
+					     pData->connection,
+					     strlen(pData->connection), NULL, 0,
+					     NULL, NULL, NULL, OCI_DEFAULT));
+	CHECKERR(pData->error, OCIStmtExecute(pData->service, pData->statement,
+					      pData->error, 1, 0, NULL, NULL,
+					      OCI_DEFAULT));
 
-dbgprintf ("***** OMORACLE ***** At tryResume\n");
+finalize_it:
 ENDtryResume
 
 static rsRetVal startSession(instanceData* pData, char* connection, char* user,
@@ -170,45 +183,50 @@ finalize_it:
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-/* Right now, this module is compatible with nothing. */
-dbgprintf ("***** OMORACLE ***** At isCompatibleWithFeature\n");
-iRet = RS_RET_INCOMPATIBLE;
+	/* Right now, this module is compatible with nothing. */
+	dbgprintf ("***** OMORACLE ***** At isCompatibleWithFeature\n");
+	iRet = RS_RET_INCOMPATIBLE;
 ENDisCompatibleWithFeature
 
 BEGINparseSelectorAct
 
-char connection_string[MAXHOSTNAMELEN];
-char user[_DB_MAXUNAMELEN];
-char pwd[_DB_MAXPWDLEN];
-
+	char user[_DB_MAXUNAMELEN];
+	char pwd[_DB_MAXPWDLEN];
+	char connection_string[MAXHOSTNAMELEN];
 
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1);
 
-if (strncmp((char*) p, ":omoracle:", sizeof ":omoracle:" - 1)) {
-	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-}
+	if (strncmp((char*) p, ":omoracle:", sizeof ":omoracle:" - 1)) {
+		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+	}
 
+	p += sizeof ":omoracle:" - 1;
 
-p += sizeof ":omoracle:" - 1;
+	if (*p == '\0' || *p == ',') {
+		errmsg.LogError(0, NO_ERRCODE, "Wrong char processing module arguments: %c\n", *p);
+		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+	}
 
-if (*p == '\0' || *p == ',') {
-	dbgprintf ("Wrong char processing module arguments: %c\n", *p);
-	ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-}
-
-CHKiRet(getSubString(&p, connection_string, MAXHOSTNAMELEN, ','));
-CHKiRet(getSubString(&p, user, _DB_MAXUNAMELEN, ','));
-CHKiRet(getSubString(&p, pwd, _DB_MAXPWDLEN, ';'));
-p--;
-CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0,
-				OMSR_RQD_TPL_OPT_SQL, " StdFmt"));
-CHKiRet(createInstance(&pData));
-CHKiRet(startSession(pData, connection_string, user, pwd));
-
-dbgprintf ("omoracle module got all its resources allocated "
-	   "and connected to the DB\n");
-
+	CHKiRet(getSubString(&p, connection_string, MAXHOSTNAMELEN, ','));
+	CHKiRet(getSubString(&p, user, _DB_MAXUNAMELEN, ','));
+	CHKiRet(getSubString(&p, pwd, _DB_MAXPWDLEN, ';'));
+	p--;
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0,
+					OMSR_RQD_TPL_OPT_SQL, " StdFmt"));
+	CHKiRet(createInstance(&pData));
+	pData->connection = strdup(connection_string);
+	if (pData->connection == NULL) {
+		iRet = RS_RET_OUT_OF_MEMORY;
+		goto finalize_it;
+	}
+	CHKiRet(startSession(pData, connection_string, user, pwd));
+	
+	dbgprintf ("omoracle module got all its resources allocated "
+		   "and connected to the DB\n");
+	
+	memset(user, 0, sizeof user);
+	memset(pwd, 0, sizeof pwd);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -225,6 +243,9 @@ CODESTARTdoAction
 	CHECKERR(pData->error,
 		 OCITransCommit(pData->service, pData->error, 0));
 finalize_it:
+	dbgprintf ("omoracle %s at executing statement %s\n",
+		   iRet?"did not succeed":"succeeded", *ppString);
+/* Clean credentials to avoid leakage in case of core dump. */
 ENDdoAction
 
 BEGINmodExit
@@ -233,16 +254,14 @@ ENDmodExit
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-dbgprintf ("***** OMORACLE ***** At bdgPrintInstInfo\n");
-
+	dbgprintf ("***** OMORACLE ***** At bdgPrintInstInfo\n");
 ENDdbgPrintInstInfo
 
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
-dbgprintf ("***** OMORACLE ***** At queryEtryPt\n");
-
+	dbgprintf ("***** OMORACLE ***** At queryEtryPt\n");
 ENDqueryEtryPt
 
 static rsRetVal
@@ -256,17 +275,10 @@ resetConfigVariables(uchar __attribute__((unused)) *pp,
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
-char dbname[MAX_BUFSIZE];
 CODEmodInit_QueryRegCFSLineHdlr
-dbgprintf ("***** OMORACLE ***** At modInit\n");
-CHKiRet(objUse(errmsg, CORE_COMPONENT));
-/* CHKiRet(omsdRegCFSLineHdlr((uchar*)"actionomoracle",  */
-CHKiRet(omsdRegCFSLineHdlr((uchar*) "resetconfigvariables", 1,
-			   eCmdHdlrCustomHandler, resetConfigVariables,
-			   NULL, STD_LOADABLE_MODULE_ID));
-dbgprintf ("***** OMORACLE ***** dbname before = %s\n", dbname);
-CHKiRet(omsdRegCFSLineHdlr((uchar*) "actionoracledb", 0, eCmdHdlrInt,
-			   NULL, dbname, STD_LOADABLE_MODULE_ID));
-dbgprintf ("***** OMORACLE ***** dbname = %s\n", dbname);
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	/* CHKiRet(omsdRegCFSLineHdlr((uchar*)"actionomoracle",  */
+	CHKiRet(omsdRegCFSLineHdlr((uchar*) "resetconfigvariables", 1,
+				   eCmdHdlrCustomHandler, resetConfigVariables,
+				   NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
-
