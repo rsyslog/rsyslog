@@ -61,7 +61,7 @@ typedef struct _instanceData {
 static int oci_errors(void* handle, ub4 htype, sword status)
 {
 	sb4 errcode;
-	char buf[MAX_BUFSIZE];
+	unsigned char buf[MAX_BUFSIZE];
 	
 	switch (status) {
 	case OCI_SUCCESS:
@@ -76,7 +76,8 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 	case OCI_ERROR:
 		printf ("OCI GENERAL ERROR\n");
 		if (handle) {
-			OCIErrorGet(handle, 1, NULL, &errcode, buf, sizeof buf, htype);
+			OCIErrorGet(handle, 1, NULL, &errcode, buf,
+				    sizeof buf, htype);
 			printf ("Error message: %s", buf);
 		} else
 			printf ("NULL handle\n"
@@ -100,19 +101,19 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 BEGINcreateInstance
 CODESTARTcreateInstance
 CHECKENV(pData->environment,
-	 OCIEnvCreate(&(pData->environment), OCI_DEFAULT,
+	 OCIEnvCreate((void*) &(pData->environment), OCI_DEFAULT,
 		      NULL, NULL, NULL, NULL, 0, NULL));
 CHECKENV(pData->environment,
-	 OCIHandleAlloc(pData->environment, &(pData->error),
+	 OCIHandleAlloc(pData->environment, (void*) &(pData->error),
 			OCI_HTYPE_ERROR, 0, NULL));
 CHECKENV(pData->environment,
-	 OCIHandleAlloc(pData->environment, &(pData->server),
+	 OCIHandleAlloc(pData->environment, (void*) &(pData->server),
 			OCI_HTYPE_SERVER, 0, NULL));
 CHECKENV(pData->environment,
-	 OCIHandleAlloc(pData->environment, &(pData->service),
+	 OCIHandleAlloc(pData->environment, (void*) &(pData->service),
 			OCI_HTYPE_SVCCTX, 0, NULL));
 CHECKENV(pData->environment,
-	 OCIHandleAlloc(pData->environment, &(pData->authinfo),
+	 OCIHandleAlloc(pData->environment, (void*) &(pData->authinfo),
 			OCI_HTYPE_AUTHINFO, 0, NULL));
 finalize_it:
 ENDcreateInstance
@@ -131,9 +132,43 @@ RETiRet;
 
 ENDfreeInstance
 
-/* BEGINmodInit() */
-/* CODESTARTmodInit */
-/* 	*ipIFVersProvided = CURR_MOD_IF_VERSION; */
-/* CODEmodInit_QueryRegCFSLineHdlr */
-/* 	CHKiRet(objUse(errmsg, CORE_COMPONENT)); */
-/* ENDmodInit */
+
+BEGINtryResume
+CODESTARTtryResume
+ENDtryResume
+
+BEGINisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature
+/* Right now, this module is compatible with nothing. */
+ENDisCompatibleWithFeature
+
+BEGINparseSelectorAct
+CODESTARTparseSelectorAct
+CODE_STD_STRING_REQUESTparseSelectorAct(1);
+CODE_STD_FINALIZERparseSelectorAct
+ENDparseSelectorAct
+
+BEGINdoAction
+CODESTARTdoAction
+ENDdoAction
+
+BEGINmodExit
+CODESTARTmodExit
+ENDmodExit
+
+BEGINdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo
+ENDdbgPrintInstInfo
+
+
+BEGINqueryEtryPt
+CODESTARTqueryEtryPt
+CODEqueryEtryPt_STD_OMOD_QUERIES
+ENDqueryEtryPt
+
+BEGINmodInit()
+CODESTARTmodInit
+	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+ENDmodInit
