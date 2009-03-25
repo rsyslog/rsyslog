@@ -43,13 +43,21 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
+	/* Environment handler, the base for any OCI work. */
 	OCIEnv* environment;
+	/* Session handler, the actual DB connection object. */
 	OCISession* session;
+	/* Error handler for OCI calls. */
 	OCIError* error;
+	/* Prepared statement. */
 	OCIStmt* statement;
+	/* Service handler. */
 	OCISvcCtx* service;
+	/* Credentials object for the connection. */
 	OCIAuthInfo* authinfo;
+	/* Binding parameters, currently unused */
 	OCIBind* binding;
+	/* Connection string, kept here for possible retries. */
 	char* connection;
 } instanceData;
 
@@ -177,6 +185,8 @@ static rsRetVal startSession(instanceData* pData, char* connection, char* user,
 			       strlen(connection), NULL, 0, NULL, NULL, NULL,
 			       OCI_DEFAULT));
 finalize_it:
+	if (iRet != RS_RET_OK)
+		errmsg.LogError(0, NO_ERRCODE, "Unable to start Oracle session\n");
 	RETiRet;
 }
 
@@ -254,14 +264,12 @@ ENDmodExit
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf ("***** OMORACLE ***** At bdgPrintInstInfo\n");
 ENDdbgPrintInstInfo
 
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
-	dbgprintf ("***** OMORACLE ***** At queryEtryPt\n");
 ENDqueryEtryPt
 
 static rsRetVal
