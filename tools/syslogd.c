@@ -3475,7 +3475,7 @@ int realMain(int argc, char **argv)
 	/* END core initializations - we now come back to carrying out command line options*/
 
 	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
-		dbgprintf("deque option %c, optarg '%s'\n", ch, arg);
+		dbgprintf("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
 		switch((char)ch) {
                 case '4':
 	                glbl.SetDefPFFamily(PF_INET);
