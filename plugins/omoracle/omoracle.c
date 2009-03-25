@@ -68,29 +68,29 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 		return OCI_SUCCESS;
 		break;
 	case OCI_SUCCESS_WITH_INFO:
-		printf ("OCI SUCCESS - With info\n");
+		dbgprintf ("OCI SUCCESS - With info\n");
 		break;
 	case OCI_NEED_DATA:
-		printf ("OCI NEEDS MORE DATA\n");
+		dbgprintf ("OCI NEEDS MORE DATA\n");
 		break;
 	case OCI_ERROR:
-		printf ("OCI GENERAL ERROR\n");
+		dbgprintf ("OCI GENERAL ERROR\n");
 		if (handle) {
 			OCIErrorGet(handle, 1, NULL, &errcode, buf,
 				    sizeof buf, htype);
-			printf ("Error message: %s", buf);
+			dbgprintf ("Error message: %s", buf);
 		} else
-			printf ("NULL handle\n"
+			dbgprintf ("NULL handle\n"
 				"Unable to extract further information");
 		break;
 	case OCI_INVALID_HANDLE:
-		printf ("OCI INVALID HANDLE\n");
+		dbgprintf ("OCI INVALID HANDLE\n");
 		break;
 	case OCI_STILL_EXECUTING:
-		printf ("Still executing...\n");
+		dbgprintf ("Still executing...\n");
 		break;
 	case OCI_CONTINUE:
-		printf ("OCI CONTINUE\n");
+		dbgprintf ("OCI CONTINUE\n");
 		break;
 	}
 	return OCI_ERROR;
@@ -100,21 +100,30 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 /* Resource allocation */
 BEGINcreateInstance
 CODESTARTcreateInstance
+
+ASSERT(pData != NULL);
+
+dbgprintf ("***** OMORACLE ***** Creating instance\n");
 CHECKENV(pData->environment,
 	 OCIEnvCreate((void*) &(pData->environment), OCI_DEFAULT,
 		      NULL, NULL, NULL, NULL, 0, NULL));
+dbgprintf ("***** OMORACLE ***** Created environment\n");
 CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->error),
 			OCI_HTYPE_ERROR, 0, NULL));
+dbgprintf ("***** OMORACLE ***** Created error\n");
 CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->server),
 			OCI_HTYPE_SERVER, 0, NULL));
+dbgprintf ("***** OMORACLE ***** Created server\n");
 CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->service),
 			OCI_HTYPE_SVCCTX, 0, NULL));
+dbgprintf ("***** OMORACLE ***** Created service\n");
 CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->authinfo),
 			OCI_HTYPE_AUTHINFO, 0, NULL));
+dbgprintf ("***** OMORACLE ***** Created authinfo\n");
 finalize_it:
 ENDcreateInstance
 
@@ -122,11 +131,18 @@ ENDcreateInstance
 BEGINfreeInstance
 CODESTARTfreeInstance
 
+dbgprintf ("***** OMORACLE ***** Destroying instance\n");
+
 OCIHandleFree(pData->environment, OCI_HTYPE_ENV);
+dbgprintf ("***** OMORACLE ***** Destroyed environment\n");
 OCIHandleFree(pData->error, OCI_HTYPE_ERROR);
+dbgprintf ("***** OMORACLE ***** Destroyed error\n");
 OCIHandleFree(pData->server, OCI_HTYPE_SERVER);
+dbgprintf ("***** OMORACLE ***** Destroyed server\n");
 OCIHandleFree(pData->service, OCI_HTYPE_SVCCTX);
+dbgprintf ("***** OMORACLE ***** Destroyed service\n");
 OCIHandleFree(pData->authinfo, OCI_HTYPE_AUTHINFO);
+dbgprintf ("***** OMORACLE ***** Destroyed authinfo\n");
 
 RETiRet;
 
@@ -135,40 +151,84 @@ ENDfreeInstance
 
 BEGINtryResume
 CODESTARTtryResume
+
+dbgprintf ("***** OMORACLE ***** At tryResume\n");
 ENDtryResume
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 /* Right now, this module is compatible with nothing. */
+dbgprintf ("***** OMORACLE ***** At isCompatibleWithFeature\n");
+iRet = RS_RET_INCOMPATIBLE;
 ENDisCompatibleWithFeature
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1);
+
+if (strncmp((char*) p, ":omoracle:", sizeof ":omoracle:" - 1)) {
+	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+}
+
+CHKiRet(createInstance(&pData));
+
+p += sizeof ":omoracle:" - 1;
+if (*p != ';') {
+	dbgprintf ("***** OMORACLE ***** Wrong char: %c\n", *p);
+	ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+}
+p++;
+
+CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0,
+				OMSR_RQD_TPL_OPT_SQL, " StdFmt"));
+
+dbgprintf ("***** OMORACLE ***** Salido\n");
+
+
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINdoAction
 CODESTARTdoAction
+dbgprintf ("***** OMORACLE ***** At doAction\n");
 ENDdoAction
 
 BEGINmodExit
 CODESTARTmodExit
+dbgprintf ("***** OMORACLE ***** At modExit\n");
 ENDmodExit
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
+dbgprintf ("***** OMORACLE ***** At bdgPrintInstInfo\n");
+
 ENDdbgPrintInstInfo
 
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
 CODEqueryEtryPt_STD_OMOD_QUERIES
+dbgprintf ("***** OMORACLE ***** At queryEtryPt\n");
+
 ENDqueryEtryPt
+
+static rsRetVal
+resetConfigVariables(uchar __attribute__((unused)) *pp,
+		     void __attribute__((unused)) *pVal)
+{
+	DEFiRet;
+	RETiRet;
+}
 
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+CHKiRet(objUse(errmsg, CORE_COMPONENT));
+/* CHKiRet(omsdRegCFSLineHdlr((uchar*)"actionomoracle",  */
+CHKiRet(omsdRegCFSLineHdlr((uchar*) "resetconfigvariables", 1,
+			   eCmdHdlrCustomHandler, resetConfigVariables,
+			   NULL, STD_LOADABLE_MODULE_ID));
+			   
+dbgprintf ("***** OMORACLE ***** At modInit\n");
 ENDmodInit
