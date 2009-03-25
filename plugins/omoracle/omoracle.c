@@ -103,27 +103,22 @@ CODESTARTcreateInstance
 
 ASSERT(pData != NULL);
 
-dbgprintf ("***** OMORACLE ***** Creating instance\n");
 CHECKENV(pData->environment,
 	 OCIEnvCreate((void*) &(pData->environment), OCI_DEFAULT,
 		      NULL, NULL, NULL, NULL, 0, NULL));
-dbgprintf ("***** OMORACLE ***** Created environment\n");
 CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->error),
 			OCI_HTYPE_ERROR, 0, NULL));
-dbgprintf ("***** OMORACLE ***** Created error\n");
 CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->server),
 			OCI_HTYPE_SERVER, 0, NULL));
-dbgprintf ("***** OMORACLE ***** Created server\n");
 CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->service),
 			OCI_HTYPE_SVCCTX, 0, NULL));
-dbgprintf ("***** OMORACLE ***** Created service\n");
 CHECKENV(pData->environment,
 	 OCIHandleAlloc(pData->environment, (void*) &(pData->authinfo),
 			OCI_HTYPE_AUTHINFO, 0, NULL));
-dbgprintf ("***** OMORACLE ***** Created authinfo\n");
+
 finalize_it:
 ENDcreateInstance
 
@@ -155,6 +150,26 @@ CODESTARTtryResume
 dbgprintf ("***** OMORACLE ***** At tryResume\n");
 ENDtryResume
 
+static rsRetVal startSession(instanceData* pData, char* connection, char* user,
+			     char * password)
+{
+	DEFiRet;
+	CHECKERR(pData->error,
+		 OCIAttrSet(pData->authinfo, OCI_HTYPE_AUTHINFO, user,
+			    strlen(user), OCI_ATTR_USERNAME, pData->error));
+	CHECKERR(pData->error,
+		 OCIAttrSet(pData->authinfo, OCI_HTYPE_AUTHINFO, password,
+			    strlen(password), OCI_ATTR_PASSWORD, pData->error));
+	CHECKERR(pData->error,
+		 OCISessionGet(pData->environment, pData->error,
+			       &pData->service, pData->authinfo, connection,
+			       strlen(connection), NULL, 0, NULL, NULL, NULL,
+			       OCI_DEFAULT));
+finalize_it:
+	RETiRet;
+}
+
+
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 /* Right now, this module is compatible with nothing. */
@@ -163,6 +178,12 @@ iRet = RS_RET_INCOMPATIBLE;
 ENDisCompatibleWithFeature
 
 BEGINparseSelectorAct
+
+char connection_string[MAXHOSTNAMELEN];
+char user[_DB_MAXUNAMELEN];
+char pwd[_DB_MAXPWDLEN];
+
+
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1);
 
@@ -170,20 +191,25 @@ if (strncmp((char*) p, ":omoracle:", sizeof ":omoracle:" - 1)) {
 	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 }
 
-CHKiRet(createInstance(&pData));
 
 p += sizeof ":omoracle:" - 1;
-if (*p != ';') {
-	dbgprintf ("***** OMORACLE ***** Wrong char: %c\n", *p);
+
+if (*p == '\0' || *p == ',') {
+	dbgprintf ("Wrong char processing module arguments: %c\n", *p);
 	ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 }
-p++;
 
+CHKiRet(getSubString(&p, connection_string, MAXHOSTNAMELEN, ','));
+CHKiRet(getSubString(&p, user, _DB_MAXUNAMELEN, ','));
+CHKiRet(getSubString(&p, pwd, _DB_MAXPWDLEN, ';'));
+p--;
 CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0,
 				OMSR_RQD_TPL_OPT_SQL, " StdFmt"));
+CHKiRet(createInstance(&pData));
+CHKiRet(startSession(pData, connection_string, user, pwd));
 
-dbgprintf ("***** OMORACLE ***** Salido\n");
-
+dbgprintf ("omoracle module got all its resources allocated "
+	   "and connected to the DB\n");
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -223,12 +249,16 @@ resetConfigVariables(uchar __attribute__((unused)) *pp,
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+char dbname[MAX_BUFSIZE];
 CODEmodInit_QueryRegCFSLineHdlr
+dbgprintf ("***** OMORACLE ***** At modInit\n");
 CHKiRet(objUse(errmsg, CORE_COMPONENT));
 /* CHKiRet(omsdRegCFSLineHdlr((uchar*)"actionomoracle",  */
 CHKiRet(omsdRegCFSLineHdlr((uchar*) "resetconfigvariables", 1,
 			   eCmdHdlrCustomHandler, resetConfigVariables,
 			   NULL, STD_LOADABLE_MODULE_ID));
-			   
-dbgprintf ("***** OMORACLE ***** At modInit\n");
+dbgprintf ("***** OMORACLE ***** dbname before = %s\n", dbname);
+CHKiRet(omsdRegCFSLineHdlr((uchar*) "actionoracledb", 0, eCmdHdlrInt,
+			   NULL, dbname, STD_LOADABLE_MODULE_ID));
+dbgprintf ("***** OMORACLE ***** dbname = %s\n", dbname);
 ENDmodInit
