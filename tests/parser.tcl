@@ -14,19 +14,9 @@
 #
 # This file is part of rsyslog.
 
-
-
-# HELP   HELP   HELP   HELP   HELP   HELP   HELP   HELP
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# If you happen to know how to disable rsyslog's
-# stdout from appearing on the "real" stdout, please
-# let me know. This is annouying, but I have no more
-# time left to invest finding a solution (as the
-# rest basically works well...).
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 package require Expect
 package require udp 1.0
+log_user 0; # comment this out if you would like to see rsyslog output for testing
 
 set rsyslogdPID [spawn "../tools/rsyslogd" "-c4" "-ftestruns/parser.conf" "-u2" "-n" "-iwork/rsyslog.pid" "-M../runtime/.libs"];
 #interact;
@@ -35,12 +25,12 @@ set udpSock [udp_open];
 udp_conf $udpSock 127.0.0.1 514
 set files [glob "testruns/*.parse1"]
 set failed 0;
-puts "\n";
+puts "\nExecuting parser test suite...";
 
-set i 1;
+set i 0;
 
 foreach testcase $files {
-	puts "testing $testcase ...";
+	puts "testing $testcase";
 	set fp [open "$testcase" r];
 	fconfigure $fp -buffering line
 	gets $fp input
@@ -54,14 +44,13 @@ foreach testcase $files {
 
 	# get response and compare
 	expect -re "{{.*}}";
-	puts "\n"; # at least we make the output readbale...
 
 	set result $expect_out(buffer);
 	set result [string trimleft $result "\{\{"];
 	set result [string trimright $result "\}\}"];
 
 	if { $result != $expected } {
-		puts "test $i failed!\n";
+		puts "failed!";
 		puts "expected: '$expected'\n";
 		puts "returned: '$result'\n";
 		puts "\n";
@@ -73,5 +62,5 @@ foreach testcase $files {
 exec kill $rsyslogdPID;
 close $udpSock;
 
-puts "Number of failed tests: $failed.\n";
+puts "Total number of tests: $i, number of failed tests: $failed.\n";
 if { $failed != 0 } { exit 1 };

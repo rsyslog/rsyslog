@@ -1,10 +1,10 @@
 check_PROGRAMS = rt_init rscript
 TESTS = $(check_PROGRAMS) cfg.sh parsertest
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
-#TESTS = $(check_PROGRAMS)
 
 test_files = testbench.h runtime-dummy.c
-EXTRA_DIST=1.rstest 2.rstest 3.rstest err1.rstest \
+EXTRA_DIST=parser.tcl \
+	   1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg.sh \
 	   cfg1.cfgtest \
 	   cfg1.testin \
@@ -17,9 +17,13 @@ EXTRA_DIST=1.rstest 2.rstest 3.rstest err1.rstest \
 	   DevNull.cfgtest \
 	   err1.rstest \
 	   NoExistFile.cfgtest \
+	   testruns/1.parse1 \
+   	   testruns/rfc3164.parse1 \
+	   testruns/rfc5424-1.parse1 \
+	   testruns/rfc5424-2.parse1 \
+	   testruns/rfc5424-3.parse1 \
+	   testruns/rfc5424-4.parse1 \
 	   parsertest
-	   parser.tcl
-	   testruns/*.parser1
 
 rt_init_SOURCES = rt-init.c $(test_files)
 rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
