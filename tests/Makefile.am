@@ -1,8 +1,5 @@
-#AUTOMAKE_OPTIONS=dejagnu
-#DEJATOOL=Rainer
-
 check_PROGRAMS = rt_init rscript
-TESTS = $(check_PROGRAMS) cfg.sh
+TESTS = $(check_PROGRAMS) cfg.sh parsertest
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 #TESTS = $(check_PROGRAMS)
 
@@ -19,7 +16,10 @@ EXTRA_DIST=1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg4.testin \
 	   DevNull.cfgtest \
 	   err1.rstest \
-	   NoExistFile.cfgtest
+	   NoExistFile.cfgtest \
+	   parsertest
+	   parser.tcl
+	   testruns/*.parser1
 
 rt_init_SOURCES = rt-init.c $(test_files)
 rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)

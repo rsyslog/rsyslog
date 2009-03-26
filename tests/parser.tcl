@@ -73,4 +73,5 @@ foreach testcase $files {
 exec kill $rsyslogdPID;
 close $udpSock;
 
-puts "Number of failed test: $failed.\n";
+puts "Number of failed tests: $failed.\n";
+if { $failed != 0 } { exit 1 };

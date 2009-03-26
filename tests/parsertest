@@ -1,0 +1,2 @@
+# run parser test suite
+tclsh parser.tcl

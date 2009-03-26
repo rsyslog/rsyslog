@@ -14,6 +14,8 @@ Version 4.1.6  [DEVEL] (rgerhards), 2009-03-??
   is used in a secure way. (may be removed later)
 - added omstdout module for testing purposes. Spits out all messages to
   stdout - no config option, no other features
+- added a parser testing suite (still needs to be extended, but a good
+  start)
 - modified $ModLoad statement so that for modules whom's name starts with
   a dot, no path is prepended (this enables relative-pathes and should
   not break any valid current config)
