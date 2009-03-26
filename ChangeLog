@@ -1,3 +1,7 @@
+- bugfix: potential abort with DA queue after high watermark is reached
+  There exists a race condition that can lead to a segfault. Thanks
+  go to vbernetr, who performed the analysis and provided patch, which
+  I only tweaked a very little bit.
 ---------------------------------------------------------------------------
 Version 4.1.6  [DEVEL] (rgerhards), 2009-03-??
 - implemented function support in RainerScript. That means the engine
@@ -19,6 +23,13 @@ Version 4.1.6  [DEVEL] (rgerhards), 2009-03-??
 - modified $ModLoad statement so that for modules whom's name starts with
   a dot, no path is prepended (this enables relative-pathes and should
   not break any valid current config)
+- fixed a bug that caused action retries not to work correctly
+  situation was only cleared by a restart
+- bugfix: closed dynafile was potentially never written until another
+  dynafile name was generated - potential loss of messages
+- improved omfile so that it properly suspends itself if there is an
+  i/o or file name generation error. This enables it to be used with
+  the full high availability features of rsyslog's engine
 ---------------------------------------------------------------------------
 Version 4.1.5  [DEVEL] (rgerhards), 2009-03-11
 - bugfix: parser did not correctly parse fields in UDP-received messages
