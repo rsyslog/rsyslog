@@ -30,11 +30,11 @@ if {$argc == 0 } {
 	set srcdir "$argv";
 }
 
-set rsyslogdPID [spawn "../tools/rsyslogd" "-c4" "-f$srcdir/testruns/parser.conf" "-u2" "-n" "-i$srcdir/work/rsyslog.pid" "-M../runtime/.libs"];
+set rsyslogdPID [spawn "../tools/rsyslogd" "-c4" "-f$srcdir/testruns/parser.conf" "-u2" "-n" "-irsyslog.pid" "-M../runtime/.libs"];
 #interact;
 expect "}}"; # eat startup message
 set udpSock [udp_open];
-udp_conf $udpSock 127.0.0.1 514
+udp_conf $udpSock 127.0.0.1 12514
 set files [glob "$srcdir/testruns/*.parse1"]
 set failed 0;
 puts "\nExecuting parser test suite...";

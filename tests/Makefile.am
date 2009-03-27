@@ -1,6 +1,7 @@
 check_PROGRAMS = rt_init rscript
 TESTS = $(check_PROGRAMS) cfg.sh parsertest
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
+DISTCLEANFILES=rsyslog.pid
 
 test_files = testbench.h runtime-dummy.c
 EXTRA_DIST=parser.tcl \
@@ -24,7 +25,6 @@ EXTRA_DIST=parser.tcl \
 	   testruns/rfc5424-2.parse1 \
 	   testruns/rfc5424-3.parse1 \
 	   testruns/rfc5424-4.parse1 \
-	   work/dummy \
 	   parsertest
 
 rt_init_SOURCES = rt-init.c $(test_files)
