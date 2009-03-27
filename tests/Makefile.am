@@ -17,12 +17,14 @@ EXTRA_DIST=parser.tcl \
 	   DevNull.cfgtest \
 	   err1.rstest \
 	   NoExistFile.cfgtest \
+	   testruns/parser.conf \
 	   testruns/1.parse1 \
    	   testruns/rfc3164.parse1 \
 	   testruns/rfc5424-1.parse1 \
 	   testruns/rfc5424-2.parse1 \
 	   testruns/rfc5424-3.parse1 \
 	   testruns/rfc5424-4.parse1 \
+	   work/dummy \
 	   parsertest
 
 rt_init_SOURCES = rt-init.c $(test_files)

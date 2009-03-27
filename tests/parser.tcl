@@ -9,6 +9,8 @@
 # Note: a lot of things are not elegant, but at least they work...
 # Even simple things seem to be somewhat non-simple if you are
 # not sufficiently involved with tcl/expect ;) -- rgerhards
+#
+# call: tclsh parser.tcl /director/with/testcases
 # 
 # Copyright (C) 2009 by Rainer Gerhards and Adiscon GmbH
 #
@@ -18,12 +20,22 @@ package require Expect
 package require udp 1.0
 log_user 0; # comment this out if you would like to see rsyslog output for testing
 
-set rsyslogdPID [spawn "../tools/rsyslogd" "-c4" "-ftestruns/parser.conf" "-u2" "-n" "-iwork/rsyslog.pid" "-M../runtime/.libs"];
+if {$argc > 1} {
+	puts "invalid number of parameters, usage: tclsh parser.tcl /directory/with/testcases";
+	exit 1;
+}
+if {$argc == 0 } {
+	set srcdir ".";
+} else {
+	set srcdir "$argv";
+}
+
+set rsyslogdPID [spawn "../tools/rsyslogd" "-c4" "-f$srcdir/testruns/parser.conf" "-u2" "-n" "-i$srcdir/work/rsyslog.pid" "-M../runtime/.libs"];
 #interact;
 expect "}}"; # eat startup message
 set udpSock [udp_open];
 udp_conf $udpSock 127.0.0.1 514
-set files [glob "testruns/*.parse1"]
+set files [glob "$srcdir/testruns/*.parse1"]
 set failed 0;
 puts "\nExecuting parser test suite...";
 

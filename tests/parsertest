@@ -1,2 +1,2 @@
 # run parser test suite
-tclsh parser.tcl
+tclsh $srcdir/parser.tcl $srcdir
