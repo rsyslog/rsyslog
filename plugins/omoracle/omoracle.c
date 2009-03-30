@@ -174,7 +174,7 @@ CODESTARTtryResume
 	 * ... of course I don't know why Oracle might need a full restart...
 	 * rgerhards, 2009-03-26
 	 */
-	dbgprintf("Attempting to restart the last action\n");
+	dbgprintf("Attempting to reconnect to DB server\n");
 	OCISessionRelease(pData->service, pData->error, NULL, 0, OCI_DEFAULT);
 	OCIHandleFree(pData->service, OCI_HTYPE_SVCCTX);
 	CHECKERR(pData->error, OCISessionGet(pData->environment, pData->error,
@@ -182,9 +182,6 @@ CODESTARTtryResume
 					     pData->connection,
 					     strlen(pData->connection), NULL, 0,
 					     NULL, NULL, NULL, OCI_DEFAULT));
-	CHECKERR(pData->error, OCIStmtExecute(pData->service, pData->statement,
-					      pData->error, 1, 0, NULL, NULL,
-					      OCI_DEFAULT));
 
 finalize_it:
 ENDtryResume
