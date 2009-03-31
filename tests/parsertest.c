@@ -105,7 +105,7 @@ int openPipe(pid_t *pid, int *pfd)
 	char *newenviron[] = { NULL };
 
 
-	sprintf(confFile, "-f%s/testruns/parser2.conf", getenv("srcdir"));
+	sprintf(confFile, "-f%s/testruns/parser.conf", getenv("srcdir"));
 	newargv[1] = confFile;
 
 	if (pipe(pipefd) == -1) {
@@ -232,7 +232,13 @@ doTests(int fd, char *files)
 	}
 	globfree(&testFiles);
 
-	printf("Number of tests run: %d, number of failures: %d\n", iTests, iFailed);
+	if(iTests == 0) {
+		printf("Error: no test cases found, no tests executed.\n");
+		iFailed = 1;
+	} else {
+		printf("Number of tests run: %d, number of failures: %d\n", iTests, iFailed);
+	}
+
 	return(iFailed);
 }
 
@@ -261,5 +267,3 @@ int main(int argc, char *argv[])
 	printf("End of parser tests.\n");
 	exit(ret);
 }
-
-
