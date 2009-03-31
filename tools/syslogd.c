@@ -3324,7 +3324,7 @@ int realMain(int argc, char **argv)
 	 * only when actually neeeded. 
 	 * rgerhards, 2008-04-04
 	 */
-	while((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nN:op:qQr::s:t:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nN:op:qQr::s:t:T:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -3342,6 +3342,7 @@ int realMain(int argc, char **argv)
 		case 'q': /* add hostname if DNS resolving has failed */
 		case 'Q': /* dont resolve hostnames in ACL to IPs */
 		case 's':
+		case 'T': /* chroot on startup (primarily for testing) */
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
 		case 'x': /* disable dns for remote messages */
@@ -3585,6 +3586,20 @@ int realMain(int argc, char **argv)
 				legacyOptsParseTCP(ch, arg);
 			} else
 				fprintf(stderr,	"-t option only supported in compatibility modes 0 to 2 - ignored\n");
+			break;
+		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
+{
+char buf[1024];
+getcwd(buf, 1024);
+printf("pwd: '%s'\n", buf);
+printf("chroot to '%s'\n", arg);
+			if(chroot(arg) != 0) {
+				perror("chroot");
+				exit(1);
+			}
+getcwd(buf, 1024);
+printf("pwd: '%s'\n", buf);
+}
 			break;
 		case 'u':		/* misc user settings */
 			iHelperUOpt = atoi(arg);

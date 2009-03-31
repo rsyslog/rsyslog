@@ -1,11 +1,10 @@
-testruns = rt_init rscript
-check_PROGRAMS = $(testruns) ourtail
-TESTS = $(testruns) cfg.sh
+check_PROGRAMS = rt_init rscript ourtail parsertest
+TESTS = $(check_PROGRAMS) cfg.sh
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
+DISTCLEANFILES=rsyslog.pid
 
 test_files = testbench.h runtime-dummy.c
-EXTRA_DIST=1.rstest 2.rstest 3.rstest err1.rstest \
-	   cfg.sh \
+EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg1.cfgtest \
 	   cfg1.testin \
       	   cfg2.cfgtest \
@@ -16,7 +15,15 @@ EXTRA_DIST=1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg4.testin \
 	   DevNull.cfgtest \
 	   err1.rstest \
-	   NoExistFile.cfgtest
+	   NoExistFile.cfgtest \
+	   testruns/parser.conf \
+	   testruns/1.parse1 \
+   	   testruns/rfc3164.parse1 \
+	   testruns/rfc5424-1.parse1 \
+	   testruns/rfc5424-2.parse1 \
+	   testruns/rfc5424-3.parse1 \
+	   testruns/rfc5424-4.parse1 \
+	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
 
