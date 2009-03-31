@@ -1,12 +1,10 @@
-check_PROGRAMS = rt_init rscript
-TESTS = $(check_PROGRAMS) cfg.sh parsertest
+check_PROGRAMS = rt_init rscript parsertest
+TESTS = $(check_PROGRAMS) cfg.sh
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid
 
 test_files = testbench.h runtime-dummy.c
-EXTRA_DIST=parser.tcl \
-	   1.rstest 2.rstest 3.rstest err1.rstest \
-	   cfg.sh \
+EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg1.cfgtest \
 	   cfg1.testin \
       	   cfg2.cfgtest \
@@ -25,7 +23,7 @@ EXTRA_DIST=parser.tcl \
 	   testruns/rfc5424-2.parse1 \
 	   testruns/rfc5424-3.parse1 \
 	   testruns/rfc5424-4.parse1 \
-	   parsertest
+	   cfg.sh
 
 rt_init_SOURCES = rt-init.c $(test_files)
 rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
