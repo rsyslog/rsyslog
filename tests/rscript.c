@@ -39,6 +39,38 @@ DEFobjCurrIf(ctok)
 DEFobjCurrIf(ctok_token)
 DEFobjCurrIf(vmprg)
 
+
+/* we emulate getline (the dirty way) if we do not have it
+ * We do not try very hard, as this is just a test driver.
+ * rgerhards, 2009-03-31
+ */
+#ifndef HAVE_GETLINE
+ssize_t getline(char **lineptr, size_t *n, FILE *fp)
+{
+	int c;
+	int len = 0;
+
+	if(*lineptr == NULL)
+		*lineptr = malloc(1024); /* quick and dirty! */
+
+	c = fgetc(fp);
+	while(c != EOF && c != '\n') {
+		(*lineptr)[len++] = c;
+		c = fgetc(fp);
+	}
+	if(c != EOF) /* need to add NL? */
+		(*lineptr)[len++] = c;
+	
+	(*lineptr)[len] = '\0';
+
+	*n = len;
+	//printf("getline returns: '%s'\n", *lineptr);
+
+	return (len > 0) ? len : -1;
+}
+#endif /* #ifndef HAVE_GETLINE */
+
+
 BEGINInit
 CODESTARTInit
 	pErrObj = "expr"; CHKiRet(objUse(expr, CORE_COMPONENT));
@@ -101,10 +133,9 @@ PerformTest(cstr_t *pstrIn, rsRetVal iRetExpected, cstr_t *pstrOut)
 	CHKiRet(vmprg.Obj2Str(pExpr->pVmprg, pstrPrg));
 
 	if(strcmp((char*)rsCStrGetSzStr(pstrPrg), (char*)rsCStrGetSzStr(pstrOut))) {
-		int iLen;
 		printf("error: compiled program different from expected result!\n");
-		printf("generated vmprg (%d bytes):\n%s\n", strlen(rsCStrGetSzStr(pstrPrg)), rsCStrGetSzStr(pstrPrg));
-		printf("expected (%d bytes):\n%s\n", strlen(rsCStrGetSzStr(pstrOut)), rsCStrGetSzStr(pstrOut));
+		printf("generated vmprg (%d bytes):\n%s\n", strlen((char*)rsCStrGetSzStr(pstrPrg)), rsCStrGetSzStr(pstrPrg));
+		printf("expected (%d bytes):\n%s\n", strlen((char*)rsCStrGetSzStr(pstrOut)), rsCStrGetSzStr(pstrOut));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -139,6 +170,7 @@ ProcessTestFile(uchar *pszFileName)
 	size_t lenLn;
 	cstr_t *pstrIn = NULL;
 	cstr_t *pstrOut = NULL;
+	int iParse;
 	rsRetVal iRetExpected;
 	DEFiRet;
 
@@ -161,10 +193,11 @@ ProcessTestFile(uchar *pszFileName)
 	/* once we had a comment, the next line MUST be "result: <nbr>". Anything
 	 * after nbr is simply ignored.
 	 */
-	if(sscanf(lnptr, "result: %d", &iRetExpected) != 1) {
+	if(sscanf(lnptr, "result: %d", &iParse) != 1) {
 		printf("error in result line, scanf failed, line: '%s'\n", lnptr);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+	iRetExpected = iParse;
 	getline(&lnptr, &lenLn, fp); CHKEOF;
 
 	/* and now we look for "in:" (and again ignore the rest...) */
