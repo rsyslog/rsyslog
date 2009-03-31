@@ -689,8 +689,10 @@ AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
 
 
 # settings for omstdout
+# note that "make check" fails, if omstdout is not enabled (thus we enable
+# it by default).
 AC_ARG_ENABLE(omstdout,
-        [AS_HELP_STRING([--enable-omstdout],[Compiles stdout template module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-omstdout],[Compiles stdout template module @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_omstdout="yes" ;;
           no) enable_omstdout="no" ;;
