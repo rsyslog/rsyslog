@@ -4,10 +4,18 @@
     database. It uses Oracle Call Interface, a propietary module
     provided by Oracle.
 
-    Config lines to be used are of this form:
+    Selector lines to be used are of this form:
 
-    :omoracle:dbstring,user,password;StatementTemplate
+    :omoracle:;TemplateName
 
+    The module gets its configuration via rsyslog $... directives,
+    namely:
+
+    $OmoracleDBUser: user name to log in on the database.
+    $OmoracleDBPassword: password to log in on the database.
+    $OmoracleDB: connection string (an Oracle easy connect or a db
+    name as specified by tnsnames.ora)
+    
     All fields are mandatory. The dbstring can be an Oracle easystring
     or a DB name, as present in the tnsnames.ora file.
 
@@ -60,6 +68,14 @@ typedef struct _instanceData {
 	/* Connection string, kept here for possible retries. */
 	char* connection;
 } instanceData;
+
+/** Database name, to be filled by the $OmoracleDB directive */
+static char* db_name;
+/** Database user name, to be filled by the $OmoracleDBUser
+ * directive */
+static char* db_user;
+/** Database password, to be filled by the $OmoracleDBPassword */
+static char* db_password;
 
 /** Generic function for handling errors from OCI.
 
@@ -203,7 +219,8 @@ static rsRetVal startSession(instanceData* pData, char* connection, char* user,
 			       OCI_DEFAULT));
 finalize_it:
 	if (iRet != RS_RET_OK)
-		errmsg.LogError(0, NO_ERRCODE, "Unable to start Oracle session\n");
+		errmsg.LogError(0, NO_ERRCODE,
+				"Unable to start Oracle session\n");
 	RETiRet;
 }
 
@@ -217,10 +234,6 @@ ENDisCompatibleWithFeature
 
 BEGINparseSelectorAct
 
-	char user[_DB_MAXUNAMELEN];
-	char pwd[_DB_MAXPWDLEN];
-	char connection_string[MAXHOSTNAMELEN];
-
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1);
 
@@ -230,37 +243,26 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1);
 
 	p += sizeof ":omoracle:" - 1;
 
-	/* while this parameter parsing is convenient and works perfectly,
-	 * it is suggested that parameters are only specified via $Action... config
-	 * statement (as done in omlibdbi). The reason is that this may greatly
-	 * ease the transition when we have the full config script language. However,
-	 * this approach here is guranteed to continue to work in the future.
-	 * rgerhards, 2009-03-26
-	 */
 	if (*p == '\0' || *p == ',') {
-		errmsg.LogError(0, NO_ERRCODE, "Wrong char processing module arguments: %c\n", *p);
+		errmsg.LogError(0, NO_ERRCODE,
+				"Wrong char processing module arguments: %c\n",
+				*p);
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
 
-	CHKiRet(getSubString(&p, connection_string, MAXHOSTNAMELEN, ','));
-	CHKiRet(getSubString(&p, user, _DB_MAXUNAMELEN, ','));
-	CHKiRet(getSubString(&p, pwd, _DB_MAXPWDLEN, ';'));
-	p--;
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0,
 					OMSR_RQD_TPL_OPT_SQL, " StdFmt"));
 	CHKiRet(createInstance(&pData));
-	pData->connection = strdup(connection_string);
+	pData->connection = strdup(db_name);
 	if (pData->connection == NULL) {
 		iRet = RS_RET_OUT_OF_MEMORY;
 		goto finalize_it;
 	}
-	CHKiRet(startSession(pData, connection_string, user, pwd));
+	CHKiRet(startSession(pData, db_name, db_user, db_password));
 	
 	dbgprintf ("omoracle module got all its resources allocated "
 		   "and connected to the DB\n");
 	
-	memset(user, 0, sizeof user);
-	memset(pwd, 0, sizeof pwd);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -300,7 +302,16 @@ static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp,
 		     void __attribute__((unused)) *pVal)
 {
+	int n;
 	DEFiRet;
+	free(db_user);
+	free(db_name);
+	if (db_password != NULL) {
+		n = strlen(db_password);
+		memset(db_password, n, sizeof *db_password);
+		free(db_password);
+	}
+	db_name = db_user = db_password = NULL;
 	RETiRet;
 }
 
@@ -313,4 +324,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar*) "resetconfigvariables", 1,
 				   eCmdHdlrCustomHandler, resetConfigVariables,
 				   NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoracledbuser", 0,
+				   eCmdHdlrGetWord, NULL, &db_user,
+				   STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoracledbpassword", 0,
+				   eCmdHdlrGetWord, NULL, &db_password,
+				   STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoracledb", 0,
+				   eCmdHdlrGetWord, NULL, &db_name,
+				   STD_LOADABLE_MODULE_ID));
 ENDmodInit
