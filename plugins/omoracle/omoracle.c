@@ -253,11 +253,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1);
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0,
 					OMSR_RQD_TPL_OPT_SQL, " StdFmt"));
 	CHKiRet(createInstance(&pData));
-	pData->connection = strdup(db_name);
-	if (pData->connection == NULL) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-		goto finalize_it;
-	}
+	CHKmalloc(pData->connection = strdup(db_name));
 	CHKiRet(startSession(pData, db_name, db_user, db_password));
 	
 	dbgprintf ("omoracle module got all its resources allocated "
@@ -304,11 +300,13 @@ resetConfigVariables(uchar __attribute__((unused)) *pp,
 {
 	int n;
 	DEFiRet;
-	free(db_user);
-	free(db_name);
+	if(db_user != NULL)
+		free(db_user);
+	if(db_name != NULL)
+		free(db_name);
 	if (db_password != NULL) {
 		n = strlen(db_password);
-		memset(db_password, n, sizeof *db_password);
+		memset(db_password, 0, n);
 		free(db_password);
 	}
 	db_name = db_user = db_password = NULL;
