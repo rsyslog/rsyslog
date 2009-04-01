@@ -258,6 +258,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FUNC_MISSING_EXPR = -2111, /**< no expression after comma in function call (rainerscript) */
 	RS_RET_INVLD_NBR_ARGUMENTS = -2112, /**< invalid number of arguments for function call (rainerscript) */
 	RS_RET_INVLD_FUNC = -2113, /**< invalid function name for function call (rainerscript) */
+	RS_RET_ERR_CREAT_PIPE = -2114, /**< error during pipe creation */
+	RS_RET_ERR_FORK = -2115, /**< error during fork() */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
