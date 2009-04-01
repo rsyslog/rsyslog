@@ -260,6 +260,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVLD_FUNC = -2113, /**< invalid function name for function call (rainerscript) */
 	RS_RET_ERR_CREAT_PIPE = -2114, /**< error during pipe creation */
 	RS_RET_ERR_FORK = -2115, /**< error during fork() */
+	RS_RET_ERR_WRITE_PIPE = -2116, /**< error writing to pipe */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

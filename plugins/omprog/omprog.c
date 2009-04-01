@@ -35,6 +35,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <unistd.h>
+#include <wait.h>
 #include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -48,6 +49,7 @@ MODULE_TYPE_OUTPUT
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA
+DEFobjCurrIf(errmsg)
 
 typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
@@ -73,6 +75,8 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	if(pData->szBinary != NULL)
+		free(pData->szBinary);
 ENDfreeInstance
 
 
@@ -85,6 +89,52 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
+
+/* execute the child process (must be called in child context
+ * after fork).
+ */
+
+static void execBinary(instanceData *pData, int fdStdin)
+{
+	int i;
+	struct sigaction sigAct;
+	char *newargv[] = { NULL };
+	char *newenviron[] = { NULL };
+
+	assert(pData != NULL);
+
+	fclose(stdin);
+	dup(fdStdin);
+	//fclose(stdout);
+
+	/* we close all file handles as we fork soon
+	 * Is there a better way to do this? - mail me! rgerhards@adiscon.com
+	 */
+#	ifndef VALGRIND /* we can not use this with valgrind - too many errors... */
+	for(i = 3 ; i <= 65535 ; ++i)
+		close(i);
+#	endif
+
+	/* reset signal handlers to default */
+	memset(&sigAct, 0, sizeof(sigAct));
+	sigfillset(&sigAct.sa_mask);
+	sigAct.sa_handler = SIG_DFL;
+	for(i = 1 ; i < NSIG ; ++i)
+		sigaction(i, &sigAct, NULL);
+
+	alarm(0);
+
+	/* finally exec child */
+	execve((char*)pData->szBinary, newargv, newenviron);
+	/* switch to?
+	execlp((char*)program, (char*) program, (char*)arg, NULL);
+	*/
+
+	/* we should never reach this point, but if we do, we terminate */
+	exit(1);
+}
+
+
 /* creates a pipe and starts program, uses pipe as stdin for program.
  * rgerhards, 2009-04-01
  */
@@ -93,8 +143,6 @@ openPipe(instanceData *pData)
 {
 	int pipefd[2];
 	pid_t cpid;
-	char *newargv[] = { NULL };
-	char *newenviron[] = { NULL };
 	DEFiRet;
 
 	assert(pData != NULL);
@@ -102,6 +150,10 @@ openPipe(instanceData *pData)
 	if(pipe(pipefd) == -1) {
 		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
 	}
+
+	DBGPRINTF("executing program '%s'\n", pData->szBinary);
+
+	/* NO OUTPUT AFTER FORK! */
 
 	cpid = fork();
 	if(cpid == -1) {
@@ -112,18 +164,113 @@ openPipe(instanceData *pData)
 		/* we are now the child, just set the right selectors and
 		 * exec the binary. If that fails, there is not much we can do.
 		 */
-		fclose(stdin);
-		dup(pipefd[0]);
 		close(pipefd[1]);
-		//fclose(stdout);
-fprintf(stderr, "Program to exec '%s', fdPipe: %d\n", pData->szBinary, pipefd[0]);
-		execve((char*)pData->szBinary, newargv, newenviron);
+		execBinary(pData, pipefd[0]);
+		/*NO CODE HERE - WILL NEVER BE REACHED!*/
 	}
 
+	DBGPRINTF("child has pid %d\n", cpid);
 	pData->fdPipe = pipefd[1];
 	pData->pid = cpid;
 	close(pipefd[0]);
 	pData->bIsRunning = 1;
+finalize_it:
+	RETiRet;
+}
+
+
+/* clean up after a terminated child
+ */
+static inline rsRetVal
+cleanup(instanceData *pData)
+{
+	int status;
+	int ret;
+	char errStr[1024];
+	DEFiRet;
+
+	assert(pData != NULL);
+	assert(pData->bIsRunning == 1);
+RUNLOG_VAR("%d", pData->pid);
+	ret = waitpid(pData->pid, &status, 0);
+	if(ret != pData->pid) {
+		/* if waitpid() fails, we can not do much - try to ignore it... */
+		DBGPRINTF("waitpid() returned state %d[%s], future malfunction may happen\n", ret,
+			   rs_strerror_r(errno, errStr, sizeof(errStr)));
+	} else {
+		/* check if we should print out some diagnostic information */
+		DBGPRINTF("waitpid status return for program '%s': %2.2x\n",
+			  pData->szBinary, status);
+		if(WIFEXITED(status)) {
+			errmsg.LogError(0, NO_ERRCODE, "program '%s' exited normally, state %d",
+					pData->szBinary, WEXITSTATUS(status));
+		} else if(WIFSIGNALED(status)) {
+			errmsg.LogError(0, NO_ERRCODE, "program '%s' terminated by signal %d.",
+					pData->szBinary, WTERMSIG(status));
+		}
+	}
+
+	pData->bIsRunning = 0;
+	RETiRet;
+}
+
+
+/* try to restart the binary when it has stopped.
+ */
+static inline rsRetVal
+tryRestart(instanceData *pData)
+{
+	DEFiRet;
+	assert(pData != NULL);
+	assert(pData->bIsRunning == 0);
+
+	iRet = openPipe(pData);
+	RETiRet;
+}
+
+
+/* write to pipe
+ * note that we do not try to run block-free. If the users fears something
+ * may block (and this not be acceptable), the action should be run on its
+ * own action queue.
+ */
+static rsRetVal
+writePipe(instanceData *pData, uchar *szMsg)
+{
+	int lenWritten;
+	int lenWrite;
+	int writeOffset;
+	char errStr[1024];
+	DEFiRet;
+	
+	assert(pData != NULL);
+
+	lenWrite = strlen((char*)szMsg);
+	writeOffset = 0;
+
+	do
+	{
+		lenWritten = write(pData->fdPipe, ((char*)szMsg)+writeOffset, lenWrite);
+		if(lenWritten == -1) {
+			switch(errno) {
+				case EPIPE:
+					DBGPRINTF("Program '%s' terminated, trying to restart\n",
+						  pData->szBinary);
+					CHKiRet(cleanup(pData));
+					CHKiRet(tryRestart(pData));
+					break;
+				default:
+					DBGPRINTF("error %d writing to pipe: %s\n", errno,
+						   rs_strerror_r(errno, errStr, sizeof(errStr)));
+					ABORT_FINALIZE(RS_RET_ERR_WRITE_PIPE);
+					break;
+			}
+		} else {
+			writeOffset += lenWritten;
+		}
+	} while(lenWritten != lenWrite);
+
+
 finalize_it:
 	RETiRet;
 }
@@ -134,8 +281,11 @@ CODESTARTdoAction
 	if(pData->bIsRunning == 0) {
 		openPipe(pData);
 	}
+	
+	iRet = writePipe(pData, ppString[0]);
 
-	write(pData->fdPipe, (char*)ppString[0], strlen((char*)ppString[0]));
+	if(iRet != RS_RET_OK)
+		iRet = RS_RET_SUSPENDED;
 ENDdoAction
 
 
@@ -166,6 +316,8 @@ CODESTARTmodExit
 		free(szBinary);
 		szBinary = NULL;
 	}
+	CHKiRet(objRelease(errmsg, CORE_COMPONENT));
+finalize_it:
 ENDmodExit
 
 
@@ -195,6 +347,7 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomprogbinary", 0, eCmdHdlrGetWord, NULL, &szBinary, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 CODEmodInit_QueryRegCFSLineHdlr
