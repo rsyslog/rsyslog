@@ -94,9 +94,10 @@ struct templateEntry {
 				unsigned bSpaceCC: 1;		/* change control characters to spaceescape? */
 				unsigned bEscapeCC: 1;		/* escape control characters? */
 				unsigned bDropLastLF: 1;	/* drop last LF char in msg (PIX!) */
-				unsigned bSecPathDrop: 1;		/* drop slashes, replace dots, empty string */
-				unsigned bSecPathReplace: 1;		/* replace slashes, replace dots, empty string */
-				unsigned bSPIffNo1stSP: 1;		/* replace slashes, replace dots, empty string */
+				unsigned bSecPathDrop: 1;	/* drop slashes, replace dots, empty string */
+				unsigned bSecPathReplace: 1;	/* replace slashes, replace dots, empty string */
+				unsigned bSPIffNo1stSP: 1;	/* replace slashes, replace dots, empty string */
+				unsigned bCSV: 1;		/* format field in CSV (RFC 4180) format */
 			} options;		/* options as bit fields */
 		} field;
 	} data;

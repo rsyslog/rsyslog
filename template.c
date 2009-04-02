@@ -460,6 +460,8 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.options.bSecPathDrop = 1;
 		 } else if(!strcmp((char*)Buf, "secpath-replace")) {
 			pTpe->data.field.options.bSecPathReplace = 1;
+		 } else if(!strcmp((char*)Buf, "csv")) {
+			pTpe->data.field.options.bCSV = 1;
 		 } else {
 			dbgprintf("Invalid field option '%s' specified - ignored.\n", Buf);
 		 }
@@ -1104,6 +1106,9 @@ void tplPrintList(void)
 				}
 				if(pTpe->data.field.options.bSPIffNo1stSP) {
 				  	dbgprintf("[SP iff no first SP] ");
+				}
+				if(pTpe->data.field.options.bCSV) {
+				  	dbgprintf("[format as CSV (RFC4180)]");
 				}
 				if(pTpe->data.field.options.bDropLastLF) {
 				  	dbgprintf("[drop last LF in msg] ");
