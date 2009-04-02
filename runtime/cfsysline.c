@@ -364,7 +364,7 @@ static rsRetVal doGetGID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 			/* we set value via a set function */
 			CHKiRet(pSetHdlr(pVal, pgBuf->gr_gid));
 		}
-		dbgprintf("gid %d obtained for group '%s'\n", pgBuf->gr_gid, szName);
+		dbgprintf("gid %d obtained for group '%s'\n", (int) pgBuf->gr_gid, szName);
 	}
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
@@ -406,7 +406,7 @@ static rsRetVal doGetUID(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 			/* we set value via a set function */
 			CHKiRet(pSetHdlr(pVal, ppwBuf->pw_uid));
 		}
-		dbgprintf("uid %d obtained for user '%s'\n", ppwBuf->pw_uid, szName);
+		dbgprintf("uid %d obtained for user '%s'\n", (int) ppwBuf->pw_uid, szName);
 	}
 
 	skipWhiteSpace(pp); /* skip over any whitespace */
