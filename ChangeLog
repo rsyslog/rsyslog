@@ -4,6 +4,8 @@
   I only tweaked a very little bit.
 ---------------------------------------------------------------------------
 Version 4.1.6  [DEVEL] (rgerhards), 2009-03-??
+- added new "csv" property replacer options to enable simple creation
+  of CSV-formatted outputs (format from RFC4180 is used)
 - implemented function support in RainerScript. That means the engine
   parses and compile functions, as well as executes a few build-in
   ones. Dynamic loading and registration of functions is not yet

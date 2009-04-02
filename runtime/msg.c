@@ -2405,6 +2405,40 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 	}
 
+	/* finally, we need to check if the property should be formatted in CSV
+	 * format (we use RFC 4180, and always use double quotes). As of this writing,
+	 * this should be the last action carried out on the property, but in the
+	 * future there may be reasons to change that. -- rgerhards, 2009-04-02
+	 */
+	if(pTpe->data.field.options.bCSV) {
+		/* we need to obtain a private copy, as we need to at least add the double quotes */
+		int iBufLen = strlen(pRes);
+		char *pBStart;
+		char *pDst;
+		char *pSrc;
+		/* the malloc may be optimized, we currently use the worst case... */
+		pBStart = pDst = malloc((2 * iBufLen + 3) * sizeof(char));
+		if(pDst == NULL) {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			*pbMustBeFreed = 0;
+			return "**OUT OF MEMORY**";
+		}
+		pSrc = pRes;
+		*pDst++ = '"'; /* starting quote */
+		while(*pSrc) {
+			if(*pSrc == '"')
+				*pDst++ = '"'; /* need to add double double quote (see RFC4180) */
+			*pDst++ = *pSrc++;
+		}
+		*pDst++ = '"';	/* ending quote */
+		*pDst = '\0';
+		if(*pbMustBeFreed == 1)
+			free(pRes);
+		pRes = pBStart;
+		*pbMustBeFreed = 1;
+	}
+
 	/*dbgprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
 	return(pRes);
 }
