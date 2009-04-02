@@ -724,6 +724,36 @@ finalize_it:
 	RETiRet;
 }
 
+/* same as above, only not braindead */
+int rsCStrSzStrMatchRegexCache(cstr_t *pCS1, uchar *psz, void **rc)
+{
+   int ret;
+
+   BEGINfunc
+
+   if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
+      regex_t **cache = rc;
+      if (*cache == NULL) {
+         *cache = calloc(sizeof(regex_t), 1);
+         regexp.regcomp(*cache, (char*) rsCStrGetSzStr(pCS1), 0);
+      }
+      ret = regexp.regexec(*cache, (char*) psz, 0, NULL, 0);
+   } else {
+      ret = 1; /* simulate "not found" */
+   }
+
+   ENDfunc
+   return ret;
+}
+
+/* free a cached compiled regex */
+void rsRegexDestruct(void **rc) {
+   regex_t **cache = rc;
+   regexp.regfree(*cache);
+   free(*cache);
+   *cache = NULL;
+}
+
 
 /* compare a rsCStr object with a classical sz string.  This function
  * is almost identical to rsCStrZsStrCmp(), but it also takes an offset

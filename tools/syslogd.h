@@ -80,6 +80,7 @@ struct filed {
 	} f_filterData;
 
 	linkedList_t llActList;	/* list of configured actions */
+regex_t *regex_cache;
 };
 
 
