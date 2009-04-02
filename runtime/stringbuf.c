@@ -820,7 +820,7 @@ rsCStrConvertToNumber(cstr_t *pStr, number_t *pNumber)
 	/* TODO: octal? hex? */
 	n = 0;
 	while(i < pStr->iStrLen && isdigit(pStr->pBuf[i])) {
-		n = n * 10 + pStr->pBuf[i] * 10;
+		n = n * 10 + pStr->pBuf[i] - '0';
 		++i;
 	}
 	
