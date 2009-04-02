@@ -1,9 +1,9 @@
+---------------------------------------------------------------------------
+Version 3.20.5 [v3-stable] (rgerhards), 2009-04-02
 - bugfix: potential abort with DA queue after high watermark is reached
   There exists a race condition that can lead to a segfault. Thanks
   go to vbernetr, who performed the analysis and provided patch, which
   I only tweaked a very little bit.
----------------------------------------------------------------------------
-Version 3.20.5 [v3-stable] (rgerhards), 2009-0?-??
 - fixed bugs in RainerScript:
   o when converting a number and a string to a common type, both were 
     actually converted to the other variable's type.
