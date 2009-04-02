@@ -703,17 +703,26 @@ int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
  * never is a \0 *inside* a property string.
  * Note that the function returns -1 if regexp functionality is not available.
  * rgerhards: 2009-03-04: ERE support added, via parameter iType: 0 - BRE, 1 - ERE
+ * Arnaud Cornet/rgerhards: 2009-04-02: performance improvement by caching compiled regex
+ * If a caller does not need the cached version, it must still provide memory for it
+ * and must call rsCStrRegexDestruct() afterwards.
  */
-rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType)
+rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *rc)
 {
-	regex_t preq;
+	regex_t **cache = (regex_t**) rc;
 	int ret;
 	DEFiRet;
 
+	assert(pCS1 != NULL);
+	assert(psz != NULL);
+	assert(cache != NULL);
+
 	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
-		ret = regexp.regexec(&preq, (char*) psz, 0, NULL, 0);
-		regexp.regfree(&preq);
+		if (*cache == NULL) {
+			*cache = calloc(sizeof(regex_t), 1);
+			regexp.regcomp(*cache, (char*) rsCStrGetSzStr(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
+		}
+		ret = regexp.regexec(*cache, (char*) psz, 0, NULL, 0);
 		if(ret != 0)
 			ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	} else {
@@ -722,30 +731,6 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType)
 
 finalize_it:
 	RETiRet;
-}
-
-/* same as above, only not braindead */
-int rsCStrSzStrMatchRegexCache(cstr_t *pCS1, uchar *psz, void *rc)
-{
-	int ret;
-	regex_t **cache = (regex_t**) rc;
-
-	BEGINfunc
-
-	assert(cache != NULL);
-
-	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-		if (*cache == NULL) {
-			*cache = calloc(sizeof(regex_t), 1);
-			regexp.regcomp(*cache, (char*) rsCStrGetSzStr(pCS1), 0);
-		}
-		ret = regexp.regexec(*cache, (char*) psz, 0, NULL, 0);
-	} else {
-		ret = 1; /* simulate "not found" */
-	}
-
-	ENDfunc
-	return ret;
 }
 
 

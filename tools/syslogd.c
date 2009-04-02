@@ -1077,15 +1077,13 @@ static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProce
 				bRet = 1; /* process message! */
 			break;
 		case FIOP_REGEX:
-			//TODO REGEX: this needs to be merged with new functionality below
-			//rgerhards, 2009-04-02
-			if(rsCStrSzStrMatchRegexCache(f->f_filterData.prop.pCSCompValue,
-					(unsigned char*) pszPropVal, &f->f_filterData.prop.regex_cache) == 0)
+			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
+					(unsigned char*) pszPropVal, 0, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
 				bRet = 1;
 			break;
 		case FIOP_EREREGEX:
 			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal, 1) == RS_RET_OK)
+					  (unsigned char*) pszPropVal, 1, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
 				bRet = 1;
 			break;
 		default:
