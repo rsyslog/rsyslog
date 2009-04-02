@@ -238,10 +238,14 @@ wtiJoinThrd(wti_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, wti);
 	dbgprintf("waiting for worker %s termination, current state %d\n", wtiGetDbgHdr(pThis), pThis->tCurrCmd);
-	pthread_join(pThis->thrdID, NULL);
-	wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED); /* back to virgin... */
-	pThis->thrdID = 0; /* invalidate the thread ID so that we do not accidently find reused ones */
+	if (pThis->thrdID == 0) {
+		dbgprintf("worker %s was already stopped\n", wtiGetDbgHdr(pThis));
+	} else {
+		pthread_join(pThis->thrdID, NULL);
+		wtiSetState(pThis, eWRKTHRD_STOPPED, 0, MUTEX_ALREADY_LOCKED); /* back to virgin... */
+		pThis->thrdID = 0; /* invalidate the thread ID so that we do not accidently find reused ones */
 	dbgprintf("worker %s has stopped\n", wtiGetDbgHdr(pThis));
+	}   
 
 	RETiRet;
 }

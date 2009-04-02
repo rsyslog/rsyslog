@@ -89,6 +89,7 @@ void sigsegvHdlr(int signum);
 void dbgoprint(obj_t *pObj, char *fmt, ...) __attribute__((format(printf, 2, 3)));
 void dbgprintf(char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int dbgMutexLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
+int dbgMutexTryLock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgMutexUnlock(pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgCondWait(pthread_cond_t *cond, pthread_mutex_t *pmut, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
 int dbgCondTimedWait(pthread_cond_t *cond, pthread_mutex_t *pmut, const struct timespec *abstime, dbgFuncDB_t *pFuncD, int ln, int iStackPtr);
@@ -127,17 +128,20 @@ void dbgPrintAllDebugInfo(void);
 #define MUTOP_LOCKWAIT		1
 #define MUTOP_LOCK		2
 #define MUTOP_UNLOCK		3
+#define MUTOP_TRYLOCK		4
 
 
 /* debug aides */
 #ifdef RTINST
 #define d_pthread_mutex_lock(x)      dbgMutexLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
+#define d_pthread_mutex_trylock(x)   dbgMutexTryLock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_mutex_unlock(x)    dbgMutexUnlock(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_cond_wait(cond, mut)   dbgCondWait(cond, mut, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_pthread_cond_timedwait(cond, mut, to)   dbgCondTimedWait(cond, mut, to, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #define d_free(x)      dbgFree(x, pdbgFuncDB, __LINE__, dbgCALLStaCK_POP_POINT )
 #else
 #define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
+#define d_pthread_mutex_trylock(x)  pthread_mutex_trylock(x)
 #define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
 #define d_pthread_cond_wait(cond, mut)   pthread_cond_wait(cond, mut)
 #define d_pthread_cond_timedwait(cond, mut, to)   pthread_cond_timedwait(cond, mut, to)
