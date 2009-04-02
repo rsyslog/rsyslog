@@ -429,6 +429,8 @@ selectorDestruct(void *pVal)
 			rsCStrDestruct(&pThis->f_filterData.prop.pCSPropName);
 		if(pThis->f_filterData.prop.pCSCompValue != NULL)
 			rsCStrDestruct(&pThis->f_filterData.prop.pCSCompValue);
+		if(pThis->f_filterData.prop.regex_cache != NULL)
+			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
 	} else if(pThis->f_filter_type == FILTER_EXPR) {
 		if(pThis->f_filterData.f_expr != NULL)
 			expr.Destruct(&pThis->f_filterData.f_expr);
@@ -1076,12 +1078,12 @@ static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProce
 			break;
 		case FIOP_REGEX:
 			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal, 0) == RS_RET_OK)
+					(unsigned char*) pszPropVal, 0, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
 				bRet = 1;
 			break;
 		case FIOP_EREREGEX:
 			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal, 1) == RS_RET_OK)
+					  (unsigned char*) pszPropVal, 1, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
 				bRet = 1;
 			break;
 		default:

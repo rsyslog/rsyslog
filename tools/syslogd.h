@@ -73,6 +73,7 @@ struct filed {
  				FIOP_REGEX = 4,		/* matches a (BRE) regular expression? */
  				FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
 			} operation;
+			regex_t *regex_cache;		/* cache for compiled REs, if such are used */
 			cstr_t *pCSCompValue;	/* value to "compare" against */
 			char isNegated;			/* actually a boolean ;) */
 		} prop;
