@@ -725,7 +725,6 @@ CODESTARTparseSelectorAct
 	} else {
 		pData->bSyncFile = bEnableSync ? 1 : 0;
 	}
-
 	pData->f_sizeLimit = 0; /* default value, use outchannels to configure! */
 
 	switch (*p)
@@ -822,7 +821,7 @@ CODESTARTparseSelectorAct
 	  	if(pData->fd < 0 ) {
 			pData->fd = -1;
 			DBGPRINTF("Error opening log file: %s\n", pData->f_fname);
-			errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
+			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->f_fname);
 			break;
 		}
 		if(strcmp((char*) p, _PATH_CONSOLE) == 0)

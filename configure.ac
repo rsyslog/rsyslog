@@ -98,7 +98,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r epoll_wait])
+AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r epoll_wait getline])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -720,6 +720,25 @@ AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
 # end of copy template - be sure to serach for omtemplate to find everything!
 
 
+# settings for omstdout
+# note that "make check" fails, if omstdout is not enabled (thus we enable
+# it by default).
+AC_ARG_ENABLE(omstdout,
+        [AS_HELP_STRING([--enable-omstdout],[Compiles stdout template module @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_omstdout="yes" ;;
+          no) enable_omstdout="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omstdout) ;;
+         esac],
+        [enable_omstdout=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
+
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
@@ -733,6 +752,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
 		plugins/omtemplate/Makefile \
+		plugins/omstdout/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
@@ -765,7 +785,8 @@ echo "RELP support enabled:                     $enable_relp"
 echo "imdiag enabled:                           $enable_imdiag"
 echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
-echo "output template module will be compiled:   $enable_omtemplate"
+echo "output template module will be compiled:  $enable_omtemplate"
+echo "omstdout module will be compiled:         $enable_omstdout"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
 echo "GnuTLS network stream driver enabled:     $enable_gnutls"

@@ -608,7 +608,7 @@ Load(uchar *pModName)
 	iLoadCnt    = 0;
 	do {
 		/* now build our load module name */
-		if(*pModName == '/') {
+		if(*pModName == '/' || *pModName == '.') {
 			*szPath = '\0';	/* we do not need to append the path - its already in the module name */
 			iPathLen = 0;
 		} else {
