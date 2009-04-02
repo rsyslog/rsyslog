@@ -301,7 +301,7 @@ int resolveFileSizeLimit(instanceData *pData)
 
 	free(pCmd);
 
-	pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+	pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY|O_CLOEXEC,
 			pData->fCreateMode);
 
 	actualFileSize = lseek(pData->fd, 0, SEEK_END);
@@ -394,13 +394,13 @@ prepareFile(instanceData *pData, uchar *newFileName)
 {
 	DEFiRet;
 	if(pData->fileType == eTypePIPE) {
-		pData->fd = open((char*) pData->f_fname, O_RDWR|O_NONBLOCK);
+		pData->fd = open((char*) pData->f_fname, O_RDWR|O_NONBLOCK|O_CLOEXEC);
 		FINALIZE; /* we are done in this case */
 	}
 
 	if(access((char*)newFileName, F_OK) == 0) {
 		/* file already exists */
-		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY|O_CLOEXEC,
 				pData->fCreateMode);
 	} else {
 		pData->fd = -1;
@@ -419,7 +419,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 		/* no matter if we needed to create directories or not, we now try to create
 		 * the file. -- rgerhards, 2008-12-18 (based on patch from William Tisater)
 		 */
-		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY|O_CLOEXEC,
 				pData->fCreateMode);
 		if(pData->fd != -1) {
 			/* check and set uid/gid */
@@ -653,7 +653,7 @@ again:
 			&& e == EBADF
 #endif
 			) {
-			pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_NOCTTY);
+			pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_NOCTTY|O_CLOEXEC);
 			if (pData->fd < 0) {
 				iRet = RS_RET_SUSPENDED;
 				errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
@@ -742,7 +742,7 @@ CODESTARTparseSelectorAct
 			pData->bDynamicName = 0;
 			pData->fCreateMode = fCreateMode; /* preserve current setting */
 			pData->fDirCreateMode = fDirCreateMode; /* preserve current setting */
-			pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY,
+			pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY|O_CLOEXEC,
 					 pData->fCreateMode);
 		}
 		break;

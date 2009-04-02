@@ -1343,7 +1343,7 @@ rsRetVal dbgClassInit(void)
 
 	if(pszAltDbgFileName != NULL) {
 		/* we have a secondary file, so let's open it) */
-		if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY, S_IRUSR|S_IWUSR)) == -1) {
+		if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
 			fprintf(stderr, "alternate debug file could not be opened, ignoring. Error: %s\n", strerror(errno));
 		}
 	}
