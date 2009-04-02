@@ -429,11 +429,11 @@ selectorDestruct(void *pVal)
 			rsCStrDestruct(&pThis->f_filterData.prop.pCSPropName);
 		if(pThis->f_filterData.prop.pCSCompValue != NULL)
 			rsCStrDestruct(&pThis->f_filterData.prop.pCSCompValue);
+		if(pThis->f_filterData.prop.regex_cache != NULL)
+			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
 	} else if(pThis->f_filter_type == FILTER_EXPR) {
 		if(pThis->f_filterData.f_expr != NULL)
 			expr.Destruct(&pThis->f_filterData.f_expr);
-		if(pThis->regex_cache != NULL)
-			rsRegexDestruct(&pThis->regex_cache);
 	}
 
 	llDestroy(&pThis->llActList);
@@ -1080,7 +1080,7 @@ static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProce
 			//TODO REGEX: this needs to be merged with new functionality below
 			//rgerhards, 2009-04-02
 			if(rsCStrSzStrMatchRegexCache(f->f_filterData.prop.pCSCompValue,
-					(unsigned char*) pszPropVal, &f->regex_cache) == 0)
+					(unsigned char*) pszPropVal, &f->f_filterData.prop.regex_cache) == 0)
 				bRet = 1;
 			break;
 		case FIOP_EREREGEX:
