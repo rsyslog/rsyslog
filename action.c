@@ -425,6 +425,7 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 	DEFiRet;
 	int iRetries;
 	int i;
+	int iArr;
 	int iSleepPeriod;
 	int bCallAction;
 	int iCancelStateSave;
@@ -439,7 +440,15 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(ppMsgs[i])));
+		switch(pAction->eParamPassing) {
+			case ACT_STRING_PASSING:
+				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(ppMsgs[i])));
+				break;
+			case ACT_ARRAY_PASSING:
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(ppMsgs[i])));
+				break;
+			default:assert(0); /* software bug if this happens! */
+		}
 	}
 	iRetries = 0;
 	/* We now must guard the output module against execution by multiple threads. The
@@ -495,7 +504,19 @@ finalize_it:
 	/* cleanup */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		if(ppMsgs[i] != NULL) {
-			d_free(ppMsgs[i]);
+			switch(pAction->eParamPassing) {
+			case ACT_ARRAY_PASSING:
+				iArr = 0;
+				while(((char **)ppMsgs[i])[iArr] != NULL)
+					d_free(((char **)ppMsgs[i])[iArr++]);
+				d_free(ppMsgs[i]);
+				break;
+			case ACT_STRING_PASSING:
+				d_free(ppMsgs[i]);
+				break;
+			default:
+				assert(0);
+			}
 		}
 	}
 	d_free(ppMsgs);
@@ -903,6 +924,13 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 			errmsg.LogError(0, RS_RET_RQD_TPLOPT_MISSING, "Action disabled. To use this action, you have to specify "
 				"the SQL or stdSQL option in your template!\n");
 			ABORT_FINALIZE(RS_RET_RQD_TPLOPT_MISSING);
+		}
+
+		/* set parameter-passing mode */
+		if(iTplOpts & OMSR_TPL_AS_ARRAY) {
+			pAction->eParamPassing = ACT_ARRAY_PASSING;
+		} else {
+			pAction->eParamPassing = ACT_STRING_PASSING;
 		}
 
 		dbgprintf("template: '%s' assigned\n", pTplName);

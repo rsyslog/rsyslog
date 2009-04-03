@@ -47,6 +47,8 @@ static struct template *tplRoot = NULL;	/* the root of the template list */
 static struct template *tplLast = NULL;	/* points to the last element of the template list */
 static struct template *tplLastStatic = NULL; /* last static element of the template list */
 
+
+
 /* This functions converts a template into a string. It should
  * actually be in template.c, but this requires larger re-structuring
  * of the code (because all the property-access functions are static
@@ -139,6 +141,60 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+/* This functions converts a template into an array of strings.
+ * For further general details, see the very similar funtion
+ * tpltoString().
+ * Instead of a string, an array of string pointers is returned by
+ * thus function. The caller is repsonsible for destroying that array as
+ * well as all of its elements. The array is of fixed size. It's end
+ * is indicated by a NULL pointer.
+ * rgerhards, 2009-04-03
+ */
+rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
+{
+	DEFiRet;
+	struct templateEntry *pTpe;
+	uchar **pArr;
+	int iArr;
+	unsigned short bMustBeFreed;
+	uchar *pVal;
+
+	assert(pTpl != NULL);
+	assert(pMsg != NULL);
+	assert(ppArr != NULL);
+
+	/* loop through the template. We obtain one value, create a
+	 * private copy (if necessary), add it to the string array
+	 * and then on to the next until we have processed everything.
+	 */
+
+	CHKmalloc(pArr = calloc(pTpl->tpenElements + 1, sizeof(uchar*)));
+	iArr = 0;
+
+	pTpe = pTpl->pEntryRoot;
+	while(pTpe != NULL) {
+		if(pTpe->eEntryType == CONSTANT) {
+			CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pTpe->data.constant.pConstant));
+		} else 	if(pTpe->eEntryType == FIELD) {
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
+			if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
+				pArr[iArr] = pVal; /* ... so we can use it! */
+			} else {
+				CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pVal));
+			}
+		}
+		iArr++;
+		pTpe = pTpe->pNext;
+	}
+
+finalize_it:
+	*ppArr = (iRet == RS_RET_OK) ? pArr : NULL;
+
+	RETiRet;
+}
+
 
 /* Helper to doSQLEscape. This is called if doSQLEscape
  * runs out of memory allocating the escaped string.

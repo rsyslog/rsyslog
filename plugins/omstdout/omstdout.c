@@ -49,7 +49,12 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 
+/* config variables */
+static int bUseArrayInterface;		/* shall action use array instead of string template interface? */
+
+
 typedef struct _instanceData {
+	int bUseArrayInterface;		/* uses action use array instead of string template interface? */
 } instanceData;
 
 BEGINcreateInstance
@@ -79,12 +84,46 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINdoAction
+	char **szParams;
+	char *toWrite;
+	int iParamVal;
+	int iParam;
+	int iBuf;
+	char szBuf[65564];
 CODESTARTdoAction
-	write(1, (char*)ppString[0], strlen((char*)ppString[0]));
+	if(pData->bUseArrayInterface) {
+		/* if we use array passing, we need to put together a string
+		 * ourselves. At this point, please keep in mind that omstdout is
+		 * primarily a testing aid. Other modules may do different processing
+		 * if they would like to support downlevel versions which do not support
+		 * array-passing, but also use that interface on cores who do...
+		 * So this code here is also more or less an example of how to do that.
+		 * rgerhards, 2009-04-03
+		 */
+		szParams = (char**) (ppString[0]);
+		/* In array-passing mode, ppString[] contains a NULL-terminated array
+		 * of char *pointers.
+		 */
+		iParam = 0;
+		iBuf = 0;
+		while(szParams[iParam] != NULL) {
+			iParamVal = 0;
+			while(szParams[iParam][iParamVal] != '\0' && iBuf < sizeof(szBuf)) {
+				szBuf[iBuf++] = szParams[iParam][iParamVal++];
+			}
+			++iParam;
+		}
+		szBuf[iBuf] = '\0';
+		toWrite = szBuf;
+	} else {
+		toWrite = (char*) ppString[0];
+	}
+	write(1, toWrite, strlen(toWrite)); /* 1 is stdout! */
 ENDdoAction
 
 
 BEGINparseSelectorAct
+	int iTplOpts;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us */
@@ -99,7 +138,9 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* check if a non-standard template is to be applied */
 	if(*(p-1) == ';')
 		--p;
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat"));
+	iTplOpts = (bUseArrayInterface == 0) ? 0 : OMSR_TPL_AS_ARRAY;
+	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar*) "RSYSLOG_FileFormat"));
+	pData->bUseArrayInterface = bUseArrayInterface;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -115,10 +156,45 @@ CODEqueryEtryPt_STD_OMOD_QUERIES
 ENDqueryEtryPt
 
 
+
+/* Reset config variables for this module to default values.
+ */
+static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
+{
+	DEFiRet;
+	bUseArrayInterface = 0;
+	RETiRet;
+}
+
+
 BEGINmodInit()
+	rsRetVal localRet;
+	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
+	unsigned long opts;
+	int bArrayPassingSupported;		/* does core support template passing as an array? */
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	/* check if the rsyslog core supports parameter passing code */
+	bArrayPassingSupported = 0;
+	localRet = pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts", &pomsrGetSupportedTplOpts);
+	if(localRet == RS_RET_OK) {
+		/* found entry point, so let's see if core supports array passing */
+		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
+		if(opts & OMSR_TPL_AS_ARRAY)
+			bArrayPassingSupported = 1;
+	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
+		ABORT_FINALIZE(localRet); /* Something else went wrong, what is not acceptable */
+	}
+	DBGPRINTF("omstdout: array-passing is %ssupported by rsyslog core.\n", bArrayPassingSupported ? "" : "not ");
+
+	if(bArrayPassingSupported) {
+		/* enable config comand only if core supports it */
+		CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutarrayinterface", 0, eCmdHdlrBinary, NULL,
+			                   &bUseArrayInterface, STD_LOADABLE_MODULE_ID));
+	}
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
+				    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 
 /* vi:set ai:

@@ -341,6 +341,11 @@ typedef enum rsObjectID rsObjID;
 #  define  __attribute__(x)  /*NOTHING*/
 #endif
 
+#ifndef O_CLOEXEC
+/* of course, this limits the functionality... */
+#  define O_CLOEXEC 0
+#endif
+
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
 
