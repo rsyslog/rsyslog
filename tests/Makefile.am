@@ -1,6 +1,6 @@
-TESTRUNS = rt_init rscript parsertest
-check_PROGRAMS = $(TESTRUNS) ourtail
-TESTS = $(TESTRUNS) cfg.sh
+TESTRUNS = rt_init rscript
+check_PROGRAMS = $(TESTRUNS) ourtail udptester
+TESTS = $(TESTRUNS) cfg.sh parsertest.sh omod-if-array.sh
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
@@ -17,19 +17,23 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   DevNull.cfgtest \
 	   err1.rstest \
 	   NoExistFile.cfgtest \
-	   testruns/parser.conf \
-	   testruns/1.parse1 \
-   	   testruns/rfc3164.parse1 \
-	   testruns/rfc5424-1.parse1 \
-	   testruns/rfc5424-2.parse1 \
-	   testruns/rfc5424-3.parse1 \
-	   testruns/rfc5424-4.parse1 \
+	   testsuites/parse1.conf \
+	   testsuites/1.parse1 \
+   	   testsuites/rfc3164.parse1 \
+	   testsuites/rfc5424-1.parse1 \
+	   testsuites/rfc5424-2.parse1 \
+	   testsuites/rfc5424-3.parse1 \
+	   testsuites/rfc5424-4.parse1 \
+	   testsuites/omod-if-array.conf \
+	   testsuites/1.omod-if-array \
+	   parsertest.sh \
+	   omod-if-array.sh \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
 
-parsertest_SOURCES = parsertest.c getline.c
-parsertest_LDADD = $(SOL_LIBS)
+udptester_SOURCES = udptester.c getline.c
+udptester_LDADD = $(SOL_LIBS)
 
 rt_init_SOURCES = rt-init.c $(test_files)
 rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
