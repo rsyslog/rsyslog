@@ -61,6 +61,8 @@ struct action_s {
 	short	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;	/* repetition cnt of prevline */
 	int	f_repeatcount;	/* number of "repeated" msgs */
+	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1 }
+		eParamPassing;	/* mode of parameter passing to action */
 	int	iNumTpls;	/* number of array entries for template element below */
 	struct template **ppTpl;/* array of template to use - strings must be passed to doAction
 				 * in this order. */

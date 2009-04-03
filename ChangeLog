@@ -36,6 +36,9 @@ Version 4.1.6  [DEVEL] (rgerhards), 2009-03-??
   check for NULL pointers
 - improved performance of regexp-based filters
   Thanks to Arnaud Cornet for providing the idea and initial patch.
+- added a new way how output plugins may be passed parameters. This is
+  more effcient for some outputs. They new can receive fields not only
+  as a single string but rather in an array where each string is seperated.
 ---------------------------------------------------------------------------
 Version 4.1.5  [DEVEL] (rgerhards), 2009-03-11
 - bugfix: parser did not correctly parse fields in UDP-received messages

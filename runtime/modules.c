@@ -225,6 +225,8 @@ static rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		*pEtryPoint = regCfSysLineHdlr;
 	} else if(!strcmp((char*) name, "objGetObjInterface")) {
 		*pEtryPoint = objGetObjInterface;
+	} else if(!strcmp((char*) name, "OMSRgetSupportedTplOpts")) {
+		*pEtryPoint = OMSRgetSupportedTplOpts;
 	} else {
 		*pEtryPoint = NULL; /* to  be on the safe side */
 		ABORT_FINALIZE(RS_RET_ENTRY_POINT_NOT_FOUND);

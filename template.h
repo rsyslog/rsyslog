@@ -126,6 +126,7 @@ void tplLastStaticInit(struct template *tpl);
  * BEFORE msg.h, even if your code file does not actually need it.
  * rgerhards, 2007-08-06
  */
+rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr);
 rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz);
 rsRetVal doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeMode);
 
