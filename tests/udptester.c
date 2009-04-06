@@ -259,6 +259,7 @@ int main(int argc, char *argv[])
 {
 	int fd;
 	pid_t pid;
+	int status;
 	int ret = 0;
 	char buf[4096];
 	char testcases[4096];
@@ -286,6 +287,7 @@ int main(int argc, char *argv[])
 
 	/* cleanup */
 	kill(pid, SIGTERM);
+	waitpid(pid, &status, 0);	/* wait until instance terminates */
 	printf("End of udptester run.\n");
 	exit(ret);
 }
