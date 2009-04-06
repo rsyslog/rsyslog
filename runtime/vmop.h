@@ -26,6 +26,7 @@
 #define INCLUDED_VMOP_H
 
 #include "ctok_token.h"
+#include "vmstk.h"
 #include "stringbuf.h"
 
 /* machine instructions types */
@@ -96,7 +97,8 @@ typedef struct vmop_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	opcode_t opcode;
 	union {
-		var_t *pVar; 	/* for function call, this is the name (string) of function to be called */
+		var_t *pVar;
+		prsf_t rsf; /* pointer to function for "call" instruction */
 	} operand;
 	struct vmop_s *pNext; /* next operation or NULL, if end of program (logically this belongs to vmprg) */
 } vmop_t;
@@ -112,8 +114,13 @@ BEGINinterface(vmop) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetVar)(vmop_t *pThis, var_t *pVar);
 	rsRetVal (*Opcode2Str)(vmop_t *pThis, uchar **ppName);
 	rsRetVal (*Obj2Str)(vmop_t *pThis, cstr_t *pstr);
+	/* v2 */
+	rsRetVal (*SetFunc)(vmop_t *pThis, cstr_t *pcsFuncName);
 ENDinterface(vmop)
-#define vmopCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define vmopCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+/* interface changes, v1 -> v2
+ * added SetFuct after existing function pointers -- rgerhards, 2009-04-06
+ */
 
 /* the remaining prototypes */
 PROTOTYPEObj(vmop);

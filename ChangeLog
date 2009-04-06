@@ -1,3 +1,10 @@
+---------------------------------------------------------------------------
+Version 4.1.7  [DEVEL] (rgerhards), 2009-03-??
+- improved internal handling of RainerScript functions, building the
+  necessary plumbing to support more functions with decent runtime
+  performance. This is also necessary towards the long-term goal
+  of loadable library modules.
+- added new RainerScript function "tolower"
 - bugfix: potential abort with DA queue after high watermark is reached
   There exists a race condition that can lead to a segfault. Thanks
   go to vbernetr, who performed the analysis and provided patch, which

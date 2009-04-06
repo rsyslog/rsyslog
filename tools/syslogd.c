@@ -3091,6 +3091,7 @@ GlobalClassExit(void)
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	objRelease(conf,     CORE_COMPONENT);
 	objRelease(expr,     CORE_COMPONENT);
+	vmClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	objRelease(vm,       CORE_COMPONENT);
 	objRelease(var,      CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
