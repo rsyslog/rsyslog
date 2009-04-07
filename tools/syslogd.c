@@ -1496,7 +1496,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * the fields. I think this logic shall work with any type of syslog message.
 		 */
 		bTAGCharDetected = 0;
-		if(pMsg->bParseHOSTNAME) {
+		if(flags & PARSE_HOSTNAME) {
 			/* TODO: quick and dirty memory allocation */
 			/* the memory allocated is far too much in most cases. But on the plus side,
 			 * it is quite fast... - rgerhards, 2007-09-20
