@@ -206,6 +206,14 @@ wtpProcessThrdChanges(wtp_t *pThis)
 		FINALIZE;
 	}
 
+	/* Note: there is a left-over potential race condition below:
+	 * pThis->bThrdStateChanged may be re-set by another thread while
+	 * we work on it and thus the loop may terminate too early. However,
+	 * there are no really bad effects from that so I perfer - for this
+	 * version - to live with the problem as is. Not a good idea to 
+	 * introduce that large change into the stable branch without very
+	 * good reason. -- rgerhards, 2009-04-02
+	 */
 	do {
 		/* reset the change marker */
 		pThis->bThrdStateChanged = 0;
