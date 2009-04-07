@@ -142,7 +142,9 @@ terminal(expr_t *pThis, ctok_t *tok)
 			 * we have all relevant information)
 			 */
 			CHKiRet(ctok_token.UnlinkVar(pToken, &pVar));
-			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_FUNC_CALL, pVar)); /* add to program */
+			CHKiRet(var.ConvToString(pVar)); /* make sure we have a string */
+			CHKiRet(vmprg.AddCallOperation(pThis->pVmprg, pVar->val.pStr)); /* add to program */
+			CHKiRet(var.Destruct(&pVar));
 			break;
 		case ctok_MSGVAR:
 			dbgoprint((obj_t*) pThis, "MSGVAR\n");

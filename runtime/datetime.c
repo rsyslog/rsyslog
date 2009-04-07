@@ -479,7 +479,7 @@ ParseTIMESTAMP3164(struct syslogTime *pTime, char** ppszTS)
 	if(hour > 1970 && hour < 2100) {
 		/* if so, we assume this actually is a year. This is a format found
 		 * e.g. in Cisco devices.
-		 * (if you read this 2100+ trying to fix a bug, congratulate myself
+		 * (if you read this 2100+ trying to fix a bug, congratulate me
 		 * to how long the code survived - me no longer ;)) -- rgerhards, 2008-11-18
 		 */
 		year = hour;

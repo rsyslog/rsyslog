@@ -1,17 +1,18 @@
-- bugfix: potential abort with DA queue after high watermark is reached
-  There exists a race condition that can lead to a segfault. Thanks
-  go to vbernetr, who performed the analysis and provided patch, which
-  I only tweaked a very little bit.
 ---------------------------------------------------------------------------
-Version 4.1.6  [DEVEL] (rgerhards), 2009-03-??
+Version 4.1.7  [DEVEL] (rgerhards), 2009-03-??
+- improved internal handling of RainerScript functions, building the
+  necessary plumbing to support more functions with decent runtime
+  performance. This is also necessary towards the long-term goal
+  of loadable library modules.
+- added new RainerScript function "tolower"
+---------------------------------------------------------------------------
+Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
 - added new "csv" property replacer options to enable simple creation
   of CSV-formatted outputs (format from RFC4180 is used)
 - implemented function support in RainerScript. That means the engine
   parses and compile functions, as well as executes a few build-in
   ones. Dynamic loading and registration of functions is not yet
   supported - but we now have a good foundation to do that later on.
-  NOTE: nested function calls are not yet supported due to a design
-  issue with the function call VM instruction set design.
 - implemented the strlen() RainerScript function
 - added a template output module
 - added -T rsyslogd command line option, enables to specify a directory
@@ -39,6 +40,13 @@ Version 4.1.6  [DEVEL] (rgerhards), 2009-03-??
 - added a new way how output plugins may be passed parameters. This is
   more effcient for some outputs. They new can receive fields not only
   as a single string but rather in an array where each string is seperated.
+- added (some) developer documentation for output plugin interface
+- bugfix: potential abort with DA queue after high watermark is reached
+  There exists a race condition that can lead to a segfault. Thanks
+  go to vbernetr, who performed the analysis and provided patch, which
+  I only tweaked a very little bit.
+- bugfix: imtcp did incorrectly parse hostname/tag
+  Thanks to Luis Fernando Muñoz Mejías for the patch.
 ---------------------------------------------------------------------------
 Version 4.1.5  [DEVEL] (rgerhards), 2009-03-11
 - bugfix: parser did not correctly parse fields in UDP-received messages
@@ -134,8 +142,9 @@ version before switching to this one.
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
-Version 3.21.11 [BETA] (rgerhards), 2009-0?-??
+Version 3.21.11 [BETA] (rgerhards), 2009-04-03
 - build system improvements contributed by Michael Biebl - thx!
+- all patches from 3.20.5 incorporated (see it's ChangeLog entry)
 ---------------------------------------------------------------------------
 Version 3.21.10 [BETA] (rgerhards), 2009-02-02
 - bugfix: inconsistent use of mutex/atomic operations could cause segfault
@@ -287,7 +296,16 @@ Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
 - imported all changes from 3.18.1 until today (some quite important,
   see below)
 ---------------------------------------------------------------------------
-Version 3.20.5 [v3-stable] (rgerhards), 2009-0?-??
+Version 3.20.5 [v3-stable] (rgerhards), 2009-04-02
+- bugfix: potential abort with DA queue after high watermark is reached
+  There exists a race condition that can lead to a segfault. Thanks
+  go to vbernetr, who performed the analysis and provided patch, which
+  I only tweaked a very little bit.
+- fixed bugs in RainerScript:
+  o when converting a number and a string to a common type, both were 
+    actually converted to the other variable's type.
+  o the value of rsCStrConvertToNumber() was miscalculated.
+  Thanks to varmojfekoj for the patch
 - fixed a bug in configure.ac which resulted in problems with
   environment detection - thanks to Michael Biebl for the patch
 - fixed a potential segfault problem in gssapi code

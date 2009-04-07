@@ -1,11 +1,14 @@
-/* Runs a test suite on the rsyslog parser (and later potentially
+/* Runs a test suite on the rsyslog (and later potentially
  * other things).
  *
- * Please note that this
- * program works together with the config file AND easily extensible
- * test case files (*.parse1) to run a number of checks. All test
- * cases are executed, even if there is a failure early in the
- * process. When finished, the numberof failed tests will be given.
+ * The name of the test suite must be given as argv[1]. In this config,
+ * rsyslogd is loaded with config ./testsuites/<name>.conf and then
+ * test cases ./testsuites/ *.<name> are executed on it. This test driver is
+ * suitable for testing cases where a message sent (via UDP) results in
+ * exactly one response. It can not be used in cases where no response
+ * is expected (that would result in a hang of the test driver).
+ * Note: each test suite can contain many tests, but they all need to work
+ * with the same rsyslog configuration.
  *
  * Part of the testbench for rsyslog.
  *
@@ -43,6 +46,9 @@
 #include <netinet/in.h>
 
 #define EXIT_FAILURE 1
+
+static char *srcdir;	/* global $srcdir, set so that we can run outside of "make check" */
+static char *testSuite; /* name of current test suite */
 
 
 void readLine(int fd, char *ln)
@@ -90,12 +96,13 @@ udpSend(char *buf, int lenBuf)
 	return 0;
 }
 
+
 /* open pipe to test candidate - so far, this is
  * always rsyslogd and with a fixed config. Later, we may
  * change this. Returns 0 if ok, something else otherwise.
  * rgerhards, 2009-03-31
  */
-int openPipe(pid_t *pid, int *pfd)
+int openPipe(char *configFile, pid_t *pid, int *pfd)
 {
 	int pipefd[2];
 	pid_t cpid;
@@ -105,7 +112,7 @@ int openPipe(pid_t *pid, int *pfd)
 	char *newenviron[] = { NULL };
 
 
-	sprintf(confFile, "-f%s/testruns/parser.conf", getenv("srcdir"));
+	sprintf(confFile, "-f%s/testsuites/%s.conf", srcdir, configFile);
 	newargv[1] = confFile;
 
 	if (pipe(pipefd) == -1) {
@@ -243,27 +250,44 @@ doTests(int fd, char *files)
 }
 
 
-/* */
+/* Run the test suite. This must be called with exactly one parameter, the
+ * name of the test suite. For details, see file header comment at the top
+ * of this file.
+ * rgerhards, 2009-04-03
+ */
 int main(int argc, char *argv[])
 {
 	int fd;
 	pid_t pid;
+	int status;
 	int ret = 0;
 	char buf[4096];
 	char testcases[4096];
 
-	printf("running rsyslog parser tests ($srcdir=%s)\n", getenv("srcdir"));
+	if(argc != 2) {
+		printf("Invalid call of udptester\n");
+		printf("Usage: udptester testsuite-name\n");
+		exit(1);
+	}
 
-	openPipe(&pid, &fd);
+	testSuite = argv[1];
+
+	if((srcdir = getenv("srcdir")) == NULL)
+		srcdir = ".";
+
+	printf("Start of udptester run ($srcdir=%s, testsuite=%s)\n", srcdir, testSuite);
+
+	openPipe(argv[1], &pid, &fd);
 	readLine(fd, buf);
 
 	/* generate filename */
-	sprintf(testcases, "%s/testruns/*.parse1", getenv("srcdir"));
+	sprintf(testcases, "%s/testsuites/*.%s", srcdir, testSuite);
 	if(doTests(fd, testcases) != 0)
 		ret = 1;
 
 	/* cleanup */
 	kill(pid, SIGTERM);
-	printf("End of parser tests.\n");
+	waitpid(pid, &status, 0);	/* wait until instance terminates */
+	printf("End of udptester run.\n");
 	exit(ret);
 }

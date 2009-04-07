@@ -57,8 +57,10 @@ BEGINinterface(vmprg) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*AddOperation)(vmprg_t *pThis, vmop_t *pOp);
 	rsRetVal (*AddVarOperation)(vmprg_t *pThis, opcode_t opcode, var_t *pVar);
 	rsRetVal (*Obj2Str)(vmprg_t *pThis, cstr_t *pstr);
+	/* v2 (4.1.7) */
+	rsRetVal (*AddCallOperation)(vmprg_t *pThis, cstr_t *pVar); /* added 2009-04-06 */
 ENDinterface(vmprg)
-#define vmprgCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define vmprgCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

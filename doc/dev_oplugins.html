@@ -1,0 +1,178 @@
+<html>
+<head>
+<title>writing rsyslog output plugins (developer's guide)</title>
+</head>
+<body>
+<h1>Writing Rsyslog Output Plugins</h1>
+<p>This page is the begin of some developer documentation for writing output
+plugins. Doing so is quite easy (and that was a design goal), but there currently
+is only sparse documentation on the process available. I was tempted NOT to 
+write this guide here because I know I will most probably not be able to
+write a complete guide.
+<p>However, I finally concluded that it may be better to have same information
+and pointers than to have nothing.
+<h2>Getting Started and Samples</h2>
+<p>The best to get started with rsyslog plugin development is by looking at
+existing plugins. All that start with "om" are <b>o</b>utput <b>m</b>odules. That
+means they are primarily thought of being message sinks. In theory, however, output
+plugins may aggergate other functionality, too. Nobody has taken this route so far
+so if you would like to do that, it is highly suggested to post your plan on the
+rsyslog mailing list, first (so that we can offer advise).
+<p>The rsyslog distribution tarball contains two plugins that are extremely well
+targeted for getting started:
+<ul>
+<li>omtemplate
+<li>omstdout
+</ul>
+Plugin omtemplate was specifically created to provide a copy template for new output
+plugins. It is bare of real functionality but has ample comments. Even if you decide
+to start from another plugin (or even from scratch), be sure to read omtemplate source
+and comments first. The omstdout is primarily a testing aide, but offers support for
+the two different parameter-passing conventions plugins can use (plus the way to 
+differentiate between the two). It also is not bare of functionaly, only mostly
+bare of it ;). But you can actually execute it and play with it.
+<p>In any case, you should also read the comments in ./runtime/module-template.h. 
+Output plugins are build based on a large set of code-generating macros. These 
+macros handle most of the plumbing needed by the interface. As long as no
+special callback to rsyslog is needed (it typically is not), an output plugin does
+not really need to be aware that it is executed by rsyslog. As a plug-in programmer,
+you can (in most cases) "code as usual". However, all macros and entry points need to be
+provided and thus reading the code comments in the files mentioned is highly suggested.
+<p>In short, the best idea is to start with a template. Let's assume you start by
+copying omtemplate. Then, the basic steps you need to do are:
+<ul>
+<li>cp ./plugins/omtemplate ./plugins/your-plugin
+<li>mv cd ./plugins/your-plugin
+<li>vi Makefile.am, adjust to your-plugin
+<li>mv omtemplate.c your-plugin.c
+<li>cd ../..
+<li>vi Makefile.am configure.ac
+<br>serach for omtemplate, copy and modify (follow comments)
+</ul>
+<p>Basically, this is all you need to do ... Well, except, of course, coding
+your plugin ;). For testing, you need rsyslog's debugging support. Some useful
+information is given in "<a href="troubleshoot.html">troubleshooting rsyslog</a>
+from the doc set.
+<h2>Special Topics</h2>
+<h3>Threading</h3>
+<p>Rsyslog uses massive parallel processing and multithreading. However, a plugin's entry
+points are guaranteed to be never called concurrently <b>for the same action</b>.
+That means your plugin must be able to be called concurrently by two or more 
+threads, but you can be sure that for the same instance no concurrent calls
+happen. This is guaranteed by the interface specification and the rsyslog core
+guards against multiple concurrent calls. An instance, in simple words, is one
+that shares a single instanceData structure.
+<p>So as long as you do not mess around with global data, you do not need
+to think about multithreading (and can apply a purely sequential programming
+methodology).
+<p>Please note that duringt the configuraton parsing stage of execution, access to
+global variables for the configuration system is safe. In that stage, the core will
+only call sequentially into the plugin.
+<h3>Getting Message Data</h3>
+<p>The doAction() entry point of your plugin is provided with messages to be processed.
+It will only be activated after filtering and all other conditions, so you do not need
+to apply any other conditional but can simply process the message.
+<p>Note that you do NOT receive the full internal representation of the message
+object. There are various (including historical) reasons for this and, among
+others, this is a design decision based on security.
+<p>Your plugin will only receive what the end user has configured in a $template
+statement. However, starting with 4.1.6, there are two ways of receiving the
+template content. The default mode, and in most cases sufficient and optimal,
+is to receive a single string with the expanded template. As I said, this is usually
+optimal, think about writing things to files, emailing content or forwarding it.
+<p>The important philosophy is that a plugin should <b>never</b> reformat any
+of such strings - that would either remove the user's ability to fully control 
+message formats or it would lead to duplicating code that is already present in the
+core. If you need some formatting that is not yet present in the core, suggest it
+to the rsyslog project, best done by sending a patch ;), and we will try hard to
+get it into the core (so far, we could accept all such suggestions - no promise, though).
+<p>If a single string seems not suitable for your application, the plugin can also
+request access to the template components. The typical use case seems to be databases, where
+you would like to access properties via specific fields. With that mode, you receive a
+char ** array, where each array element points to one field from the template (from
+left to right). Fields start at arrray index 0 and a NULL pointer means you have
+reached the end of the array (the typical Unix "poor man's linked list in an array"
+design). Note, however, that each of the individual components is a string. It is 
+not a date stamp, number or whatever, but a string. This is because rsyslog processes
+strings (from a high-level design look at it) and so this is the natural data type.
+Feel free to convert to whatever you need, but keep in mind that malformed packets
+may have lead to field contents you'd never expected...
+<p>If you like to use the array-based parameter passing method, think that it
+is only available in rsyslog 4.1.6 and above. If you can accept that your plugin
+will not be working with previous versions, you do not need to handle pre 4.1.6 cases.
+However, it would be "nice" if you shut down yourself in these cases - otherwise the
+older rsyslog core engine will pass you a string where you expect the array of pointers,
+what most probably results in a segfault. To check whether or not the core supports the
+functionality, you can use this code sequence:
+<pre>
+<code>
+BEGINmodInit()
+	rsRetVal localRet;
+	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
+	unsigned long opts;
+	int bArrayPassingSupported;		/* does core support template passing as an array? */
+CODESTARTmodInit
+	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+CODEmodInit_QueryRegCFSLineHdlr
+	/* check if the rsyslog core supports parameter passing code */
+	bArrayPassingSupported = 0;
+	localRet = pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts", &pomsrGetSupportedTplOpts);
+	if(localRet == RS_RET_OK) {
+		/* found entry point, so let's see if core supports array passing */
+		CHKiRet((*pomsrGetSupportedTplOpts)(&opts));
+		if(opts & OMSR_TPL_AS_ARRAY)
+			bArrayPassingSupported = 1;
+	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
+		ABORT_FINALIZE(localRet); /* Something else went wrong, what is not acceptable */
+	}
+	DBGPRINTF("omstdout: array-passing is %ssupported by rsyslog core.\n", bArrayPassingSupported ? "" : "not ");
+
+	if(!bArrayPassingSupported) {
+		DBGPRINTF("rsyslog core too old, shutting down this plug-in\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+</code>
+</pre>
+<p>The code first checks if the core supports the OMSRgetSupportedTplOpts() API (which is
+also not present in all versions!) and, if so, queries the core if the OMSR_TPL_AS_ARRAY mode
+is supported. If either does not exits, the core is too old for this functionality. The sample
+snippet above then shuts down, but a plugin may instead just do things different. In
+omstdout, you can see how a plugin may deal with the situation.
+<p><b>In any case, it is recommended that at least a graceful shutdown is made and the
+array-passing capability not blindly be used.</b> In such cases, we can not guard the
+plugin from segfaulting and if the plugin (as currently always) is run within 
+rsyslog's process space, that results in a segfault for rsyslog. So do not do this.
+<h3>Batching of Messages</h3>
+<p>With the current plugin interface, each message is passed via a separate call to the plugin.
+This is annoying and costs performance in some uses cases (primarily for database outputs).
+However, that's the way it (currently) is, no easy way around it. There are some ideas
+to implement batching capabilities inside the rsyslog core, but without that the only
+resort is to do it inside your plugin yourself. You are not prohibited from doing so.
+There are some consequences, though: most importantly, the rsyslog core is no longer
+intersted in messages that it passed to a plugin. As such, it will not try to make sure
+the message is not lost before it was ultimately processed (because rsyslog, due to
+doAction() returning successfully, thinks the message *was* ultimately processed).
+<p>When the rsyslog core receives batching capabilities, this will be implemented in
+a way that is fully compatible to the existing plugin interface. While we have not yet
+thought about the implementation, that will probably mean that some new interfaces
+or options be used to turn on batching capabilities.
+<h3>Licensing</h3>
+<p>From the rsyslog point of view, plugins constitute separate projects. As such,
+we think plugins are not required to be compatible with GPLv3. However, this is
+no legal advise. If you intend to release something under a non-GPLV3 compatible license
+it is probably best to consult with your lawyer.
+<p>Most importantly, and this is definite, the rsyslog team does not expect
+or require you to contribute your plugin to the rsyslog project (but of course
+we are happy if you do).
+<h2>Copyright</h2>
+<p>Copyright (c) 2009 <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> 
+and <a href="http://www.adiscon.com/en/">Adiscon</a>.</p>
+<p>Permission is granted to copy, distribute and/or modify this document under 
+the terms of the GNU Free Documentation License, Version 1.2 or any later 
+version published by the Free Software Foundation; with no Invariant Sections, 
+no Front-Cover Texts, and no Back-Cover Texts. A copy of the license can be 
+viewed at <a href="http://www.gnu.org/copyleft/fdl.html">
+http://www.gnu.org/copyleft/fdl.html</a>.</p>
+</body>
+</html>

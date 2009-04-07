@@ -1496,7 +1496,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * the fields. I think this logic shall work with any type of syslog message.
 		 */
 		bTAGCharDetected = 0;
-		if(pMsg->bParseHOSTNAME) {
+		if(flags & PARSE_HOSTNAME) {
 			/* TODO: quick and dirty memory allocation */
 			/* the memory allocated is far too much in most cases. But on the plus side,
 			 * it is quite fast... - rgerhards, 2007-09-20
@@ -3091,6 +3091,7 @@ GlobalClassExit(void)
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	objRelease(conf,     CORE_COMPONENT);
 	objRelease(expr,     CORE_COMPONENT);
+	vmClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	objRelease(vm,       CORE_COMPONENT);
 	objRelease(var,      CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);

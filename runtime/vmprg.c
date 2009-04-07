@@ -155,10 +155,35 @@ vmprgAddVarOperation(vmprg_t *pThis, opcode_t opcode, var_t *pVar)
 	/* construct and fill vmop */
 	CHKiRet(vmop.Construct(&pOp));
 	CHKiRet(vmop.ConstructFinalize(pOp));
-	CHKiRet(vmop.ConstructFinalize(pOp));
 	CHKiRet(vmop.SetOpcode(pOp, opcode));
 	if(pVar != NULL)
 		CHKiRet(vmop.SetVar(pOp, pVar));
+
+	/* and add it to the program */
+	CHKiRet(vmprgAddOperation(pThis, pOp));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* this is another shortcut for high-level callers. It is similar to vmprgAddVarOperation
+ * but adds a call operation. Among others, this include a check if the function
+ * is known.
+ */
+static rsRetVal
+vmprgAddCallOperation(vmprg_t *pThis, cstr_t *pcsName)
+{
+	DEFiRet;
+	vmop_t *pOp;
+
+	ISOBJ_TYPE_assert(pThis, vmprg);
+
+	/* construct and fill vmop */
+	CHKiRet(vmop.Construct(&pOp));
+	CHKiRet(vmop.ConstructFinalize(pOp));
+	CHKiRet(vmop.SetFunc(pOp, pcsName));
+	CHKiRet(vmop.SetOpcode(pOp, opcode_FUNC_CALL));
 
 	/* and add it to the program */
 	CHKiRet(vmprgAddOperation(pThis, pOp));
@@ -189,6 +214,7 @@ CODESTARTobjQueryInterface(vmprg)
 	pIf->Obj2Str = Obj2Str;
 	pIf->AddOperation = vmprgAddOperation;
 	pIf->AddVarOperation = vmprgAddVarOperation;
+	pIf->AddCallOperation = vmprgAddCallOperation;
 finalize_it:
 ENDobjQueryInterface(vmprg)
 
