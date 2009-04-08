@@ -5,6 +5,7 @@ Version 4.1.7  [DEVEL] (rgerhards), 2009-03-??
   performance. This is also necessary towards the long-term goal
   of loadable library modules.
 - added new RainerScript function "tolower"
+- improved testbench, added tests for tcp-based reception
 ---------------------------------------------------------------------------
 Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
 - added new "csv" property replacer options to enable simple creation
