@@ -1,5 +1,5 @@
 TESTRUNS = rt_init rscript
-check_PROGRAMS = $(TESTRUNS) ourtail udptester
+check_PROGRAMS = $(TESTRUNS) ourtail nettester
 TESTS = $(TESTRUNS) cfg.sh parsertest.sh omod-if-array.sh
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid
@@ -32,8 +32,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 
 ourtail_SOURCES = ourtail.c
 
-udptester_SOURCES = udptester.c getline.c
-udptester_LDADD = $(SOL_LIBS)
+nettester_SOURCES = nettester.c getline.c
+nettester_LDADD = $(SOL_LIBS)
 
 rt_init_SOURCES = rt-init.c $(test_files)
 rt_init_CPPFLAGS =  -I$(top_srcdir) $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
