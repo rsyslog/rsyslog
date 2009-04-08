@@ -15,7 +15,8 @@
     $OmoracleDBPassword: password to log in on the database.
     $OmoracleDB: connection string (an Oracle easy connect or a db
     name as specified by tnsnames.ora)
-    
+    $OmoracleBatchSize: Number of elements to send to the DB.
+
     All fields are mandatory. The dbstring can be an Oracle easystring
     or a DB name, as present in the tnsnames.ora file.
 
@@ -50,6 +51,18 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 
+/**  */
+struct oracle_batch
+{
+	/* Batch size */
+	int size;
+	/* Last element inserted in the buffer. The batch will be
+	 * executed when n == size */
+	int n;
+	/* Statements to run on this transaction */
+	char** statements;
+};
+
 typedef struct _instanceData {
 	/* Environment handler, the base for any OCI work. */
 	OCIEnv* environment;
@@ -67,6 +80,8 @@ typedef struct _instanceData {
 	OCIBind* binding;
 	/* Connection string, kept here for possible retries. */
 	char* connection;
+	/* Batch */
+	struct oracle_batch batch;
 } instanceData;
 
 /** Database name, to be filled by the $OmoracleDB directive */
@@ -76,6 +91,8 @@ static char* db_name;
 static char* db_user;
 /** Database password, to be filled by the $OmoracleDBPassword */
 static char* db_password;
+/** Batch size. */
+static int batch_size;
 
 /** Generic function for handling errors from OCI.
 
@@ -148,6 +165,12 @@ CODESTARTcreateInstance
 		 OCIHandleAlloc(pData->environment, (void*) &(pData->statement),
 				OCI_HTYPE_STMT, 0, NULL));
 
+	pData->batch.n = 0;
+	pData->batch.size = batch_size;
+	pData->batch.statements = calloc(pData->batch.size,
+					 sizeof *pData->batch.statements);
+	CHKmalloc(pData->batch.statements);
+
 finalize_it:
 ENDcreateInstance
 
@@ -163,6 +186,9 @@ CODESTARTfreeInstance
 	OCIHandleFree(pData->authinfo, OCI_HTYPE_AUTHINFO);
 	OCIHandleFree(pData->statement, OCI_HTYPE_STMT);
 	free(pData->connection);
+	while (pData->batch.size--) 
+		free(pData->batch.statements[pData->batch.size]);
+	free(pData->batch.statements);
 	dbgprintf ("omoracle freed all its resources\n");
 	RETiRet;
 
@@ -263,21 +289,41 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINdoAction
+	int i;
+	int n;
 CODESTARTdoAction
 	dbgprintf("omoracle attempting to execute statement %s\n", *ppString);
-	CHECKERR(pData->error,
-		 OCIStmtPrepare(pData->statement, pData->error, *ppString,
-				strlen(*ppString), OCI_NTV_SYNTAX,
-				OCI_DEFAULT));
-	CHECKERR(pData->error,
-		 OCIStmtExecute(pData->service, pData->statement, pData->error,
-				1, 0, NULL, NULL, OCI_DEFAULT));
-	CHECKERR(pData->error,
-		 OCITransCommit(pData->service, pData->error, 0));
+
+	if (pData->batch.n == pData->batch.size) {
+		dbgprintf("omoracle batch size limit hit, sending into DB\n");
+		for (i = 0; i < pData->batch.n; i++) {
+			if (pData->batch.statements[i] == NULL)
+				continue;
+			n = strlen(pData->batch.statements[i]);
+			CHECKERR(pData->error,
+				 OCIStmtPrepare(pData->statement,
+						pData->error,
+						pData->batch.statements[i], n,
+						OCI_NTV_SYNTAX, OCI_DEFAULT));
+			CHECKERR(pData->error,
+				 OCIStmtExecute(pData->service,
+						pData->statement,
+						pData->error,
+						1, 0, NULL, NULL, OCI_DEFAULT));
+			free(pData->batch.statements[i]);
+			pData->batch.statements[i] = NULL;
+		}
+		CHECKERR(pData->error,
+			 OCITransCommit(pData->service, pData->error, 0));
+		pData->batch.n = 0;
+	}
+	pData->batch.statements[pData->batch.n] = strdup(*ppString);
+	CHKmalloc(pData->batch.statements[pData->batch.n]);
+	pData->batch.n++;
+
 finalize_it:
 	dbgprintf ("omoracle %s at executing statement %s\n",
 		   iRet?"did not succeed":"succeeded", *ppString);
-/* Clean credentials to avoid leakage in case of core dump. */
 ENDdoAction
 
 BEGINmodExit
@@ -330,5 +376,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoracledb", 0,
 				   eCmdHdlrGetWord, NULL, &db_name,
+				   STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoraclebatchsize", 0,
+				   eCmdHdlrInt, NULL, &batch_size,
 				   STD_LOADABLE_MODULE_ID));
 ENDmodInit
