@@ -12,13 +12,17 @@
     namely:
 
     $OmoracleDBUser: user name to log in on the database.
+
     $OmoracleDBPassword: password to log in on the database.
+
     $OmoracleDB: connection string (an Oracle easy connect or a db
     name as specified by tnsnames.ora)
-    $OmoracleBatchSize: Number of elements to send to the DB.
 
-    All fields are mandatory. The dbstring can be an Oracle easystring
-    or a DB name, as present in the tnsnames.ora file.
+    $OmoracleBatchSize: Number of elements to send to the DB on each
+    transaction.
+
+    All these directives are mandatory. The dbstring can be an Oracle
+    easystring or a DB name, as present in the tnsnames.ora file.
 
     Author: Luis Fernando Muñoz Mejías
     <Luis.Fernando.Munoz.Mejias@cern.ch>
@@ -174,11 +178,45 @@ CODESTARTcreateInstance
 finalize_it:
 ENDcreateInstance
 
+/* Inserts all stored statements into the database, releasing any
+ * allocated memory. */
+static int insert_to_db(instanceData* pData)
+{
+	DEFiRet;
+	int i, n;
+
+	for (i = 0; i < pData->batch.n; i++) {
+		if (pData->batch.statements[i] == NULL)
+			continue;
+		n = strlen(pData->batch.statements[i]);
+		CHECKERR(pData->error,
+			 OCIStmtPrepare(pData->statement,
+					pData->error,
+					pData->batch.statements[i], n,
+					OCI_NTV_SYNTAX, OCI_DEFAULT));
+		CHECKERR(pData->error,
+			 OCIStmtExecute(pData->service,
+					pData->statement,
+					pData->error,
+					1, 0, NULL, NULL, OCI_DEFAULT));
+		free(pData->batch.statements[i]);
+		pData->batch.statements[i] = NULL;
+	}
+	CHECKERR(pData->error,
+		 OCITransCommit(pData->service, pData->error, 0));
+	pData->batch.n = 0;
+finalize_it:
+	RETiRet;
+}
+
 /** Close the session and free anything allocated by
     createInstance. */
 BEGINfreeInstance
 CODESTARTfreeInstance
 
+/* Before actually releasing our resources, let's try to commit
+ * anything pending so that we don't lose any messages. */
+	insert_to_db(pData);
 	OCISessionRelease(pData->service, pData->error, NULL, 0, OCI_DEFAULT);
 	OCIHandleFree(pData->environment, OCI_HTYPE_ENV);
 	OCIHandleFree(pData->error, OCI_HTYPE_ERROR);
@@ -295,26 +333,7 @@ CODESTARTdoAction
 
 	if (pData->batch.n == pData->batch.size) {
 		dbgprintf("omoracle batch size limit hit, sending into DB\n");
-		for (i = 0; i < pData->batch.n; i++) {
-			if (pData->batch.statements[i] == NULL)
-				continue;
-			n = strlen(pData->batch.statements[i]);
-			CHECKERR(pData->error,
-				 OCIStmtPrepare(pData->statement,
-						pData->error,
-						pData->batch.statements[i], n,
-						OCI_NTV_SYNTAX, OCI_DEFAULT));
-			CHECKERR(pData->error,
-				 OCIStmtExecute(pData->service,
-						pData->statement,
-						pData->error,
-						1, 0, NULL, NULL, OCI_DEFAULT));
-			free(pData->batch.statements[i]);
-			pData->batch.statements[i] = NULL;
-		}
-		CHECKERR(pData->error,
-			 OCITransCommit(pData->service, pData->error, 0));
-		pData->batch.n = 0;
+		CHKiRet(insert_to_db(pData));
 	}
 	pData->batch.statements[pData->batch.n] = strdup(*ppString);
 	CHKmalloc(pData->batch.statements[pData->batch.n]);
