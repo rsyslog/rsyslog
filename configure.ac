@@ -452,7 +452,39 @@ AM_CONDITIONAL(ENABLE_PGSQL, test x$enable_pgsql = xyes)
 AC_SUBST(PGSQL_CFLAGS)
 AC_SUBST(PGSQL_LIBS)
 
-
+# oracle (OCI) support
+AC_ARG_ENABLE(oracle,
+	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@])],
+	[case "${enableval}" in
+	 yes) enable_oracle="yes" ;;
+	 no) enable_oracle="no" ;;
+	 *) AC_MSG_ERROR(bad value ${enableval} for --enable-oracle) ;;
+	 esac],
+	[enable_oracle=no]
+)
+if test "x$enable_oracle" = "xyes"; then
+    AC_CHECK_PROG(
+	[HAVE_ORACLE_CONFIG],
+	[oracle-instantclient-config],
+	[yes],,,
+	)
+    if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
+	AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
+    fi
+    AC_CHECK_LIB(
+	[occi],
+	[OCIEnvCreate],
+	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
+	ORACLE_LIBS="`oracle-instantclient-config --libs`"
+	],
+	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
+	[`oracle-instantclient-config --libs --cflags`]
+	)
+fi
+AM_CONDITIONAL(ENABLE_ORACLE, test x$enable_oracle = xyes)
+AC_SUBST(ORACLE_CFLAGS)
+AC_SUBST(ORACLE_LIBS)
+	
 # libdbi support
 AC_ARG_ENABLE(libdbi,
         [AS_HELP_STRING([--enable-libdbi],[Enable libdbi database support @<:@default=no@:>@])],
@@ -732,6 +764,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
 		plugins/omsnmp/Makefile \
+		plugins/omoracle/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -745,6 +778,7 @@ echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"
 echo "libdbi support enabled:                   $enable_libdbi"
 echo "PostgreSQL support enabled:               $enable_pgsql"
+echo "Oracle (OCI) support enabled:             $enable_oracle"
 echo "SNMP support enabled:                     $enable_snmp"
 echo "Mail support enabled:                     $enable_mail"
 echo "RELP support enabled:                     $enable_relp"
