@@ -190,7 +190,6 @@ CODESTARTfreeInstance
 		free(pData->batch.statements[pData->batch.size]);
 	free(pData->batch.statements);
 	dbgprintf ("omoracle freed all its resources\n");
-	RETiRet;
 
 ENDfreeInstance
 
