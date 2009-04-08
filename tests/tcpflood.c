@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 
 	if(argc != 5) {
 		printf("Invalid call of tcpflood\n");
-		printf("Usage: nettester testsuite-name input\n");
+		printf("Usage: tcpflood target-host target-port num-connections num-messages\n");
 		exit(1);
 	}
 	
