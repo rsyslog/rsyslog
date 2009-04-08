@@ -1542,6 +1542,8 @@ void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
 	assert(pBuf != NULL);
+	if(pMsg->pszHOSTNAME != NULL)
+		free(pMsg->pszHOSTNAME);
 	pMsg->iLenHOSTNAME = strlen(pBuf);
 	pMsg->pszHOSTNAME = (uchar*) pBuf;
 }
@@ -1567,7 +1569,7 @@ void MsgSetHOSTNAME(msg_t *pMsg, char* pszHOSTNAME)
 	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) != NULL)
 		memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
 	else
-		dbgprintf("Could not allocate memory in MsgSetHOSTNAME()\n");
+		DBGPRINTF("Could not allocate memory in MsgSetHOSTNAME()\n");
 }
 
 

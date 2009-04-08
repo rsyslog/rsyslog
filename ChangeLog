@@ -6,6 +6,8 @@ Version 4.1.7  [DEVEL] (rgerhards), 2009-03-??
   of loadable library modules.
 - added new RainerScript function "tolower"
 - improved testbench, added tests for tcp-based reception
+- bugfix: solved potential memory leak in msg processing, could manifest
+  itself in imtcp
 ---------------------------------------------------------------------------
 Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
 - added new "csv" property replacer options to enable simple creation
