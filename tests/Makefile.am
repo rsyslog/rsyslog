@@ -32,8 +32,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
-tcpflood_SOURCES = tcpflood.c
 chkseq_SOURCES = chkseq.c
+
+tcpflood_SOURCES = tcpflood.c
+tcpflood_LDADD = $(SOL_LIBS)
 
 nettester_SOURCES = nettester.c getline.c
 nettester_LDADD = $(SOL_LIBS)
