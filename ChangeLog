@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 4.1.7  [BETA] (rgerhards), 2009-04-??
+- bugfix: $InputTCPMaxSessions config directive was accepted, but not
+  honored. This resulted in a fixed upper limit of 200 connections.
+---------------------------------------------------------------------------
 Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
 - added new "csv" property replacer options to enable simple creation
   of CSV-formatted outputs (format from RFC4180 is used)
@@ -134,6 +138,10 @@ version before switching to this one.
 - restructured rsyslog.conf documentation
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
+---------------------------------------------------------------------------
+Version 3.22.0 [v3-stable] (rgerhards), 2009-04-??
+- bugfix: $InputTCPMaxSessions config directive was accepted, but not
+  honored. This resulted in a fixed upper limit of 200 connections.
 ---------------------------------------------------------------------------
 Version 3.21.11 [BETA] (rgerhards), 2009-04-03
 - build system improvements contributed by Michael Biebl - thx!
@@ -288,6 +296,10 @@ Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
 - added a small diagnostic tool to obtain result of gethostname() API
 - imported all changes from 3.18.1 until today (some quite important,
   see below)
+---------------------------------------------------------------------------
+Version 3.20.6 [v3-stable] (rgerhards), 2009-04-??
+- bugfix: $InputTCPMaxSessions config directive was accepted, but not
+  honored. This resulted in a fixed upper limit of 200 connections.
 ---------------------------------------------------------------------------
 Version 3.20.5 [v3-stable] (rgerhards), 2009-04-02
 - bugfix: potential abort with DA queue after high watermark is reached
@@ -1224,6 +1236,9 @@ Version 2.0.7 V2-STABLE (rgerhards), 2008-??-??
   The actual code change is heavily based on William's patch.
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
+- bugfix: potential memory leak in msg.c
+  This one did not surface yet and the issue was actually found due to
+  a problem in v4 - but better fix it here, too
 ---------------------------------------------------------------------------
 Version 2.0.6 V2-STABLE (rgerhards), 2008-08-07
 - bugfix: memory leaks in rsyslogd, primarily in singlethread mode
