@@ -1,5 +1,6 @@
 rm -f rsyslog.out.log # work file
 ../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/manytcp.conf &
+sleep 1
 echo "rsyslogd started with pid " `cat rsyslog.pid`
 ./tcpflood 127.0.0.1 13514 1000 20000
 sleep 1
