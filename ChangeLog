@@ -8,6 +8,7 @@ Version 4.3.0  [DEVEL] (rgerhards), 2009-03-??
 - improved testbench
   * added tests for tcp-based reception
   * added tcp-load test (1000 connections, 20,000 messages)
+- added $MaxOpenFiles configuration directive
 - bugfix: solved potential memory leak in msg processing, could manifest
   itself in imtcp
 ---------------------------------------------------------------------------
