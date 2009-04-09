@@ -3591,18 +3591,10 @@ int realMain(int argc, char **argv)
 				fprintf(stderr,	"-t option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
 		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
-{
-char buf[1024];
-getcwd(buf, 1024);
-printf("pwd: '%s'\n", buf);
-printf("chroot to '%s'\n", arg);
 			if(chroot(arg) != 0) {
 				perror("chroot");
 				exit(1);
 			}
-getcwd(buf, 1024);
-printf("pwd: '%s'\n", buf);
-}
 			break;
 		case 'u':		/* misc user settings */
 			iHelperUOpt = atoi(arg);
