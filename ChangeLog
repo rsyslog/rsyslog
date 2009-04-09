@@ -1,5 +1,8 @@
 ---------------------------------------------------------------------------
 Version 4.3.0  [DEVEL] (rgerhards), 2009-03-??
+- new feature: new output plugin omprog, which permits to start program
+  and feed it (via its stdin) with syslog messages. If the program
+  terminates, it is restarted.
 - improved internal handling of RainerScript functions, building the
   necessary plumbing to support more functions with decent runtime
   performance. This is also necessary towards the long-term goal
@@ -8,6 +11,7 @@ Version 4.3.0  [DEVEL] (rgerhards), 2009-03-??
 - improved testbench
   * added tests for tcp-based reception
   * added tcp-load test (1000 connections, 20,000 messages)
+- added $MaxOpenFiles configuration directive
 - bugfix: solved potential memory leak in msg processing, could manifest
   itself in imtcp
 ---------------------------------------------------------------------------

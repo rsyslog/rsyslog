@@ -262,6 +262,10 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVLD_FUNC = -2113, /**< invalid function name for function call (rainerscript) */
 	RS_RET_DUP_FUNC_NAME = -2114, /**< duplicate function name (rainerscript) */
 	RS_RET_UNKNW_FUNC = -2115, /**< unkown function name (rainerscript) */
+	RS_RET_ERR_RLIM_NOFILE = -2116, /**< error setting max. nbr open files process limit */
+	RS_RET_ERR_CREAT_PIPE = -2117, /**< error during pipe creation */
+	RS_RET_ERR_FORK = -2118, /**< error during fork() */
+	RS_RET_ERR_WRITE_PIPE = -2119, /**< error writing to pipe */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

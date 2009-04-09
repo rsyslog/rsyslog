@@ -47,6 +47,7 @@
 #include "liblogging/syslogmessage.h"
 #include "module-template.h"
 #include "cfsysline.h"
+#include "msg.h"
 #include "errmsg.h"
 
 MODULE_TYPE_INPUT
@@ -83,7 +84,7 @@ void OnReceive(srAPIObj __attribute__((unused)) *pMyAPI, srSLMGObj* pSLMG)
 	srSLMGGetRawMSG(pSLMG, &pszRawMsg);
 
 	parseAndSubmitMessage(fromHost, fromHostIP, pszRawMsg, strlen((char*)pszRawMsg),
-		MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_FULL_DELAY, (uchar*)"im3195");
+		PARSE_HOSTNAME, eFLOWCTL_FULL_DELAY, (uchar*)"im3195", NULL, 0);
 }
 
 
