@@ -28,6 +28,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.omod-if-array \
 	   parsertest.sh \
 	   manytcp.sh \
+	   testsuites/manytcp.conf \
 	   omod-if-array.sh \
 	   cfg.sh
 
