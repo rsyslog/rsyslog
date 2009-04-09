@@ -702,6 +702,20 @@ SetDrvrPermPeers(tcpsrv_t *pThis, permittedPeers_t *pPermPeers)
  * -------------------------------------------------------------------------- */
 
 
+/* set max number of sessions
+ * this must be called before ConstructFinalize, or it will have no effect!
+ * rgerhards, 2009-04-09
+ */
+static rsRetVal
+SetSessMax(tcpsrv_t *pThis, int iMax)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->iSessMax = iMax;
+	RETiRet;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
@@ -727,6 +741,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->Run = Run;
 
 	pIf->SetUsrP = SetUsrP;
+	pIf->SetSessMax = SetSessMax;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;

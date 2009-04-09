@@ -79,8 +79,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetCBOnSessAccept)(tcpsrv_t*, rsRetVal (*) (tcpsrv_t*, tcps_sess_t*));
 	rsRetVal (*SetCBOnSessDestruct)(tcpsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetCBOnSessConstructFinalize)(tcpsrv_t*, rsRetVal (*) (void*));
+	/* added v4 */
+	rsRetVal (*SetSessMax)(tcpsrv_t *pThis, int iMaxSess);	/* 2009-04-09 */
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
