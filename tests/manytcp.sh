@@ -1,5 +1,6 @@
 rm -f rsyslog.out.log # work file
-../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -ftestsuites/manytcp.conf &
+../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/manytcp.conf &
+sleep 1
 echo "rsyslogd started with pid " `cat rsyslog.pid`
 ./tcpflood 127.0.0.1 13514 1000 20000
 sleep 1
@@ -8,6 +9,8 @@ rm -f work
 sort < rsyslog.out.log > work
 ./chkseq work 0 19999
 if [ "$?" -ne "0" ]; then
+  rm -f work rsyslog.out.log
   echo "sequence error detected"
   exit 1
 fi
+rm -f work rsyslog.out.log
