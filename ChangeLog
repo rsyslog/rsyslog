@@ -5,6 +5,9 @@ Version 2.0.7 V2-STABLE (rgerhards), 2008-??-??
   The actual code change is heavily based on William's patch.
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
+- bugfix: potential memory leak in msg.c
+  This one did not surface yet and the issue was actually found due to
+  a problem in v4 - but better fix it here, too
 ---------------------------------------------------------------------------
 Version 2.0.6 V2-STABLE (rgerhards), 2008-08-07
 - bugfix: memory leaks in rsyslogd, primarily in singlethread mode
