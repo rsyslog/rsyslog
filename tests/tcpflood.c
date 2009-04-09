@@ -160,8 +160,6 @@ int sendMessages(void)
 
 	printf("Sending %d messages.\n", numMsgsToSend);
 	printf("\r%5.5d messages sent", 0);
-	lenMsg = sprintf(msgBuf, "\r%5.5d/%5.5d messages sent", 0, numMsgsToSend);
-	write(1, msgBuf, lenMsg);
 	for(i = 0 ; i < numMsgsToSend ; ++i) {
 		if(i < numConnections)
 			socknum = i;
