@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 3.20.6 [v3-stable] (rgerhards), 2009-04-??
+- bugfix: $InputTCPMaxSessions config directive was accepted, but not
+  honored. This resulted in a fixed upper limit of 200 connections.
+---------------------------------------------------------------------------
 Version 3.20.5 [v3-stable] (rgerhards), 2009-04-02
 - bugfix: potential abort with DA queue after high watermark is reached
   There exists a race condition that can lead to a segfault. Thanks

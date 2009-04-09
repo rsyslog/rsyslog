@@ -160,6 +160,7 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 
 	if(pOurTcpsrv == NULL) {
 		CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
+		CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, iTCPSessMax));
 		CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
 		CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));
 		CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
