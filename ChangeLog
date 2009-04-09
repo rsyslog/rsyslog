@@ -5,7 +5,9 @@ Version 4.3.0  [DEVEL] (rgerhards), 2009-03-??
   performance. This is also necessary towards the long-term goal
   of loadable library modules.
 - added new RainerScript function "tolower"
-- improved testbench, added tests for tcp-based reception
+- improved testbench
+  * added tests for tcp-based reception
+  * added tcp-load test (1000 connections, 20,000 messages)
 - bugfix: solved potential memory leak in msg processing, could manifest
   itself in imtcp
 ---------------------------------------------------------------------------
