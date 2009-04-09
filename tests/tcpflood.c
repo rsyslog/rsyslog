@@ -170,7 +170,7 @@ int sendMessages(void)
 		else
 			socknum = rand() % numConnections;
 		lenBuf = sprintf(buf, "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:\n", i);
-		lenSend = send(sockArray[socknum], buf, lenBuf, MSG_NOSIGNAL);
+		lenSend = send(sockArray[socknum], buf, lenBuf, 0);
 		if(lenSend != lenBuf) {
 			printf("\r%5.5d\n", i);
 			fflush(stdout);
@@ -250,7 +250,16 @@ tcpSend(char *buf, int lenBuf)
 int main(int argc, char *argv[])
 {
 	int ret = 0;
+	struct sigaction sigAct;
 	static char buf[1024];
+
+	/* on Solaris, we do not HAVE MSG_NOSIGNAL, so for this reason
+	 * we block SIGPIPE (not an issue for this program)
+	 */
+	memset(&sigAct, 0, sizeof(sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sigAct, NULL);
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
