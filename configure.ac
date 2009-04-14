@@ -700,6 +700,20 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 # end of copy template - be sure to serach for imtemplate to find everything!
 
 
+# settings for the omprog output module
+AC_ARG_ENABLE(omprog,
+        [AS_HELP_STRING([--enable-omprog],[Compiles omprog template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omprog="yes" ;;
+          no) enable_omprog="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omprog) ;;
+         esac],
+        [enable_omprog=no]
+)
+AM_CONDITIONAL(ENABLE_OMPROG, test x$enable_omprog = xyes)
+# end of omprog
+
+
 # settings for the template output module; copy and modify this code
 # if you intend to add your own module. Be sure to replace omtemplate
 # by the actual name of your module.
@@ -752,6 +766,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
 		plugins/omtemplate/Makefile \
+		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
@@ -786,6 +801,7 @@ echo "imdiag enabled:                           $enable_imdiag"
 echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
 echo "output template module will be compiled:  $enable_omtemplate"
+echo "omprog module will be compiled:           $enable_omprog"
 echo "omstdout module will be compiled:         $enable_omstdout"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"

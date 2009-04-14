@@ -796,7 +796,6 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 
 	/* debug support - print vmprg after construction (uncomment to use) */
 	/* vmprgDebugPrint(f->f_filterData.f_expr->pVmprg); */
-	vmprgDebugPrint(f->f_filterData.f_expr->pVmprg);
 
 	/* we now need to skip whitespace to the action part, else we confuse
 	 * the legacy rsyslog conf parser. -- rgerhards, 2008-02-25
