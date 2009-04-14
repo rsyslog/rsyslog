@@ -87,6 +87,7 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <sys/file.h>
+#include <sys/resource.h>
 #include <grp.h>
 
 #if HAVE_SYS_TIMESPEC_H
@@ -2073,6 +2074,32 @@ static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int 
 }
 
 
+/* set the processes max number ob files (upon configuration request)
+ * 2009-04-14 rgerhards
+ */
+static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
+{
+	struct rlimit maxFiles;
+	char errStr[1024];
+	DEFiRet;
+
+	maxFiles.rlim_cur = iFiles;
+	maxFiles.rlim_max = iFiles;
+
+	if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
+		/* NOTE: under valgrind, we seem to be unable to extend the size! */
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		errmsg.LogError(0, RS_RET_ERR_RLIM_NOFILE, "could not set process file limit to %d: %s [kernel max %ld]",
+				iFiles, errStr, (long) maxFiles.rlim_max);
+		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
+	}
+	dbgprintf("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* set the processes umask (upon configuration request) */
 static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 {
@@ -2870,6 +2897,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, conf.doModLoad, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler, conf.doIncludeLine, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode, setUmask, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"maxopenfiles", 0, eCmdHdlrInt, setMaxFiles, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintTemplateList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintModuleList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", 0, eCmdHdlrBinary,
