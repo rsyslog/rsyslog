@@ -69,7 +69,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 /* globals for default values */
 static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
 static int fCreateMode = 0644; /* mode to use when creating files */
-static int fDirCreateMode = 0644; /* mode to use when creating files */
+static int fDirCreateMode = 0700; /* mode to use when creating files */
 static int	bFailOnChown;	/* fail if chown fails? */
 static uid_t	fileUID;	/* UID to be used for newly created files */
 static uid_t	fileGID;	/* GID to be used for newly created files */
@@ -794,7 +794,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bFailOnChown = 1;
 	iDynaFileCacheSize = 10;
 	fCreateMode = 0644;
-	fDirCreateMode = 0644;
+	fDirCreateMode = 0700;
 	bCreateDirs = 1;
 
 	return RS_RET_OK;
