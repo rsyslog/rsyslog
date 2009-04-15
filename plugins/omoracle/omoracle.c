@@ -21,8 +21,27 @@
     $OmoracleBatchSize: Number of elements to send to the DB on each
     transaction.
 
+    $OmoracleStatement: Statement to be prepared and executed in
+    batches. Please note that Oracle's prepared statements have their
+    placeholders as ':identifier', and this module uses the colon to
+    guess how many placeholders there will be.
+
     All these directives are mandatory. The dbstring can be an Oracle
     easystring or a DB name, as present in the tnsnames.ora file.
+
+    The form of the template is just a list of strings you want
+    inserted to the DB, for instance:
+
+    $template TestStmt,"%hostname%%msg%"
+
+    Will provide the arguments to a statement like
+
+    $OmoracleStatement \
+        insert into foo(hostname,message)values(:host,:message)
+
+    Also note that identifiers to placeholders are arbitrarry. You
+    need to define the properties on the template in the correct order
+    you want them passed to the statement!
 
     Author: Luis Fernando Muñoz Mejías
     <Luis.Fernando.Munoz.Mejias@cern.ch>
@@ -40,6 +59,7 @@
 #include <signal.h>
 #include <time.h>
 #include <assert.h>
+#include <ctype.h>
 #include "dirty.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -63,8 +83,12 @@ struct oracle_batch
 	/* Last element inserted in the buffer. The batch will be
 	 * executed when n == size */
 	int n;
-	/* Statements to run on this transaction */
-	char** statements;
+	/* Number of arguments the statement takes */
+	int arguments;
+	/* Parameters to pass to the statement on this transaction */
+	char*** parameters;
+	/* Binding parameters */
+	OCIBind** bindings;
 };
 
 typedef struct _instanceData {
@@ -80,10 +104,10 @@ typedef struct _instanceData {
 	OCISvcCtx* service;
 	/* Credentials object for the connection. */
 	OCIAuthInfo* authinfo;
-	/* Binding parameters, currently unused */
-	OCIBind* binding;
 	/* Connection string, kept here for possible retries. */
 	char* connection;
+	/* Statement to be prepared. */
+	char* txt_statement;
 	/* Batch */
 	struct oracle_batch batch;
 } instanceData;
@@ -97,6 +121,12 @@ static char* db_user;
 static char* db_password;
 /** Batch size. */
 static int batch_size;
+/** Statement to prepare and execute */
+static char* db_statement;
+/** Whether or not the core supports the newer array interface. The
+ * module is able to work in both modes, but the newer is the
+ * recommended one for performance reasons. */
+static int array_passing;
 
 /** Generic function for handling errors from OCI.
 
@@ -149,9 +179,49 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 	return OCI_ERROR;
 }
 
+/** Returns the number of bind parameters for the statement given as
+ * an argument. */
+static int count_bind_parameters(char* p)
+{
+	int n = 0;
+
+	for (; *p; p++)
+		if (*p == BIND_MARK)
+			n++;
+	dbgprintf ("omoracle statement has %d parameters\n", n);
+	return n;
+}
+
+/** Prepares the statement, binding all its positional parameters */
+static int prepare_statement(instanceData* pData)
+{
+	int i;
+	DEFiRet;
+
+	CHECKERR(pData->error,
+		 OCIStmtPrepare(pData->statement,
+				pData->error,
+				pData->txt_statement,
+				strlen(pData->txt_statement),
+				OCI_NTV_SYNTAX, OCI_DEFAULT));
+	for (i = 0; i < pData->batch.arguments; i++)
+		CHECKERR(pData->error,
+			 OCIBindByPos(pData->statement,
+				      pData->batch.bindings+i,
+				      pData->error,
+				      i+1,
+				      pData->batch.parameters[i],
+				      sizeof (OCILobLocator*),
+				      SQLT_STR, NULL, NULL, NULL,
+				      0, 0,  OCI_DEFAULT));
+finalize_it:
+	RETiRet;
+}
+
 
 /* Resource allocation */
 BEGINcreateInstance
+	int i;
 CODESTARTcreateInstance
 
 	ASSERT(pData != NULL);
@@ -168,12 +238,29 @@ CODESTARTcreateInstance
 	CHECKENV(pData->environment,
 		 OCIHandleAlloc(pData->environment, (void*) &(pData->statement),
 				OCI_HTYPE_STMT, 0, NULL));
+	pData->txt_statement = strdup(db_statement);
+	CHKmalloc(pData->txt_statement);
+	dbgprintf("omoracle will run stored statement: %s\n",
+		  pData->txt_statement);
 
 	pData->batch.n = 0;
 	pData->batch.size = batch_size;
-	pData->batch.statements = calloc(pData->batch.size,
-					 sizeof *pData->batch.statements);
-	CHKmalloc(pData->batch.statements);
+	pData->batch.arguments = count_bind_parameters(pData->txt_statement);
+
+	/* I know, this can be done with a single malloc() call but this is
+	 * easier to read. :) */
+	pData->batch.parameters = malloc(pData->batch.arguments *
+					 sizeof *pData->batch.parameters);
+	CHKmalloc(pData->batch.parameters);
+	for (i = 0; i < pData->batch.arguments; i++) {
+		pData->batch.parameters[i] = calloc(pData->batch.size,
+						    sizeof **pData->batch.parameters);
+		CHKmalloc(pData->batch.parameters[i]);
+	}
+
+	pData->batch.bindings = calloc(pData->batch.arguments,
+				       sizeof *pData->batch.bindings);
+	CHKmalloc(pData->batch.bindings);
 
 finalize_it:
 ENDcreateInstance
@@ -183,35 +270,34 @@ ENDcreateInstance
 static int insert_to_db(instanceData* pData)
 {
 	DEFiRet;
-	int i, n;
+	int i, j, n;
 
-	for (i = 0; i < pData->batch.n; i++) {
-		if (pData->batch.statements[i] == NULL)
-			continue;
-		n = strlen(pData->batch.statements[i]);
-		CHECKERR(pData->error,
-			 OCIStmtPrepare(pData->statement,
-					pData->error,
-					pData->batch.statements[i], n,
-					OCI_NTV_SYNTAX, OCI_DEFAULT));
-		CHECKERR(pData->error,
-			 OCIStmtExecute(pData->service,
-					pData->statement,
-					pData->error,
-					1, 0, NULL, NULL, OCI_DEFAULT));
-		free(pData->batch.statements[i]);
-		pData->batch.statements[i] = NULL;
-	}
+	CHECKERR(pData->error,
+		 OCIStmtExecute(pData->service,
+				pData->statement,
+				pData->error,
+				pData->batch.n, 0, NULL, NULL, OCI_DEFAULT));
+
 	CHECKERR(pData->error,
 		 OCITransCommit(pData->service, pData->error, 0));
+
+	for (i = 0; i < pData->batch.arguments; i++)
+		for (j = 0; j < pData->batch.n; j++) {
+			free(pData->batch.parameters[i][j]);
+			pData->batch.parameters[i][j] = NULL;
+		}
+
 	pData->batch.n = 0;
 finalize_it:
+	dbgprintf ("omoracle insertion to DB %s\n", iRet == RS_RET_OK ?
+		   "succeeded" : "did not succeed");
 	RETiRet;
 }
 
 /** Close the session and free anything allocated by
     createInstance. */
 BEGINfreeInstance
+	int i, j;
 CODESTARTfreeInstance
 
 /* Before actually releasing our resources, let's try to commit
@@ -224,9 +310,13 @@ CODESTARTfreeInstance
 	OCIHandleFree(pData->authinfo, OCI_HTYPE_AUTHINFO);
 	OCIHandleFree(pData->statement, OCI_HTYPE_STMT);
 	free(pData->connection);
-	while (pData->batch.size--) 
-		free(pData->batch.statements[pData->batch.size]);
-	free(pData->batch.statements);
+	for (i = 0; i < pData->batch.arguments; i++) {
+		for (j = 0; j < pData->batch.size; j++)
+			free(pData->batch.parameters[i][j]);
+		free(pData->batch.parameters[i]);
+	}
+	free(pData->batch.parameters);
+	free(pData->batch.bindings);
 	dbgprintf ("omoracle freed all its resources\n");
 
 ENDfreeInstance
@@ -253,7 +343,7 @@ CODESTARTtryResume
 	 * ... of course I don't know why Oracle might need a full restart...
 	 * rgerhards, 2009-03-26
 	 */
-	dbgprintf("Attempting to reconnect to DB server\n");
+	dbgprintf("omoracle attempting to reconnect to DB server\n");
 	OCISessionRelease(pData->service, pData->error, NULL, 0, OCI_DEFAULT);
 	OCIHandleFree(pData->service, OCI_HTYPE_SVCCTX);
 	CHECKERR(pData->error, OCISessionGet(pData->environment, pData->error,
@@ -261,6 +351,7 @@ CODESTARTtryResume
 					     pData->connection,
 					     strlen(pData->connection), NULL, 0,
 					     NULL, NULL, NULL, OCI_DEFAULT));
+	CHKiRet(prepare_statement(pData));
 
 finalize_it:
 ENDtryResume
@@ -296,7 +387,6 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 BEGINparseSelectorAct
-
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1);
 
@@ -314,11 +404,12 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1);
 	}
 
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0,
-					OMSR_RQD_TPL_OPT_SQL, " StdFmt"));
+					OMSR_TPL_AS_ARRAY, " StdFmt"));
 	CHKiRet(createInstance(&pData));
 	CHKmalloc(pData->connection = strdup(db_name));
 	CHKiRet(startSession(pData, db_name, db_user, db_password));
-	
+	CHKiRet(prepare_statement(pData));
+
 	dbgprintf ("omoracle module got all its resources allocated "
 		   "and connected to the DB\n");
 	
@@ -327,21 +418,23 @@ ENDparseSelectorAct
 
 BEGINdoAction
 	int i;
-	int n;
+	int n = pData->batch.n;
+	char **params = (char**) ppString[0];
 CODESTARTdoAction
-	dbgprintf("omoracle attempting to execute statement %s\n", *ppString);
 
-	if (pData->batch.n == pData->batch.size) {
+	if (n == pData->batch.size) {
 		dbgprintf("omoracle batch size limit hit, sending into DB\n");
 		CHKiRet(insert_to_db(pData));
 	}
-	pData->batch.statements[pData->batch.n] = strdup(*ppString);
-	CHKmalloc(pData->batch.statements[pData->batch.n]);
+
+	for (i = 0; i < pData->batch.arguments && params[i]; i++) {
+		dbgprintf ("omoracle argument on batch[%d][%d]: %s\n", i, n, params[i]);
+		pData->batch.parameters[i][n] = strdup(params[i]);
+		CHKmalloc(pData->batch.parameters[i][n]);
+	}
 	pData->batch.n++;
 
 finalize_it:
-	dbgprintf ("omoracle %s at executing statement %s\n",
-		   iRet?"did not succeed":"succeeded", *ppString);
 ENDdoAction
 
 BEGINmodExit
@@ -373,16 +466,35 @@ resetConfigVariables(uchar __attribute__((unused)) *pp,
 		memset(db_password, 0, n);
 		free(db_password);
 	}
-	db_name = db_user = db_password = NULL;
+	if (db_statement != NULL)
+		free(db_statement);
+	db_name = db_user = db_password = db_statement = NULL;
+	RETiRet;
+}
+
+/** As I don't find any handler that reads an entire line, I write my
+ * own. */
+static int get_db_statement(char** line, char** stmt)
+{
+	DEFiRet;
+
+	while (isspace(**line))
+		(*line)++;
+	dbgprintf ("Config line: %s\n", *line);
+	*stmt = strdup(*line);
+	CHKmalloc(*stmt);
+	dbgprintf ("Statement: %s\n", *stmt);
+finalize_it:
 	RETiRet;
 }
 
 BEGINmodInit()
+	rsRetVal (*supported_options)(unsigned long *pOpts);
+	unsigned long opts;
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-	/* CHKiRet(omsdRegCFSLineHdlr((uchar*)"actionomoracle",  */
 	CHKiRet(omsdRegCFSLineHdlr((uchar*) "resetconfigvariables", 1,
 				   eCmdHdlrCustomHandler, resetConfigVariables,
 				   NULL, STD_LOADABLE_MODULE_ID));
@@ -398,4 +510,13 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoraclebatchsize", 0,
 				   eCmdHdlrInt, NULL, &batch_size,
 				   STD_LOADABLE_MODULE_ID));
+	CHKiRet(pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts", &supported_options));
+	CHKiRet((*supported_options)(&opts));
+	if (!(array_passing = opts & OMSR_TPL_AS_ARRAY))
+		ABORT_FINALIZE(RS_RET_ERR);
+
+	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoraclestatement", 0,
+				   eCmdHdlrCustomHandler, get_db_statement,
+				   &db_statement, STD_LOADABLE_MODULE_ID));
+
 ENDmodInit

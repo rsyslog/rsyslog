@@ -20,4 +20,6 @@
 
 enum { MAX_BUFSIZE = 2048 };
 
+#define BIND_MARK ':'
+
 #endif
