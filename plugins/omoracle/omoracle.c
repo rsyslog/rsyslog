@@ -192,15 +192,15 @@ static int oci_errors(void* handle, ub4 htype, sword status)
  * (http://download.oracle.com/docs/cd/B28359_01/appdev.111/b28395/oci16rel003.htm#i444015)
  * for more details.
  */
-static int __attribute__((unused))
-bind_dynamic (char** in, OCIBind __attribute__((unused))* bind,
-			 int iter, int __attribute__((unused)) idx,
-			 char** out, int* buflen, char* piece,
+static int bind_dynamic (char** in, OCIBind __attribute__((unused))* bind,
+			 int  iter, int __attribute__((unused))  idx,
+			 char** out, int* buflen, unsigned char* piece,
 			 void** bd)
 {
-	dbgprintf ("Bound line: %s\n", in[iter]);
 	*out = in[iter];
-	*buflen = sizeof (OCILobLocator*);
+	*buflen = strlen(*out) + 1;
+	dbgprintf ("omoracle bound line %d, length %d: %s\n", iter, *buflen,
+		   *out);
 	*piece = OCI_ONE_PIECE;
 	*bd = NULL;
 	return OCI_CONTINUE;
@@ -239,16 +239,22 @@ static int prepare_statement(instanceData* pData)
 				pData->txt_statement,
 				strlen(pData->txt_statement),
 				OCI_NTV_SYNTAX, OCI_DEFAULT));
-	for (i = 0; i < pData->batch.arguments; i++)
+	for (i = 0; i < pData->batch.arguments; i++) {
 		CHECKERR(pData->error,
 			 OCIBindByPos(pData->statement,
 				      pData->batch.bindings+i,
-				      pData->error,
-				      i+1,
-				      pData->batch.parameters[i],
-				      sizeof (OCILobLocator*),
+				      pData->error, i+1, NULL,
+				      MAX_BUFSIZE *
+				      sizeof ***pData->batch.parameters,
 				      SQLT_STR, NULL, NULL, NULL,
-				      0, 0,  OCI_DEFAULT));
+				      0, 0,  OCI_DATA_AT_EXEC));
+		CHECKERR(pData->error,
+			 OCIBindDynamic(pData->batch.bindings[i],
+					pData->error,
+					pData->batch.parameters[i],
+					bind_dynamic, NULL, NULL));
+	}
+
 finalize_it:
 	RETiRet;
 }
@@ -256,7 +262,7 @@ finalize_it:
 
 /* Resource allocation */
 BEGINcreateInstance
-	int i;
+	int i, j;
 CODESTARTcreateInstance
 
 	ASSERT(pData != NULL);
@@ -284,13 +290,25 @@ CODESTARTcreateInstance
 
 	/* I know, this can be done with a single malloc() call but this is
 	 * easier to read. :) */
-	pData->batch.parameters = malloc(pData->batch.arguments *
+	pData->batch.parameters = calloc(pData->batch.arguments,
 					 sizeof *pData->batch.parameters);
 	CHKmalloc(pData->batch.parameters);
 	for (i = 0; i < pData->batch.arguments; i++) {
 		pData->batch.parameters[i] = calloc(pData->batch.size,
 						    sizeof **pData->batch.parameters);
 		CHKmalloc(pData->batch.parameters[i]);
+		for (j = 0; j < pData->batch.size; j++) {
+			/* Each entry has at most MAX_BUFSIZE bytes
+			 * because OCI doesn't like null-terminated
+			 * strings when operating with batches, and
+			 * the maximum size of each entry must be
+			 * provided when binding
+			 * parameters. MAX_BUFSIZE is long enough for
+			 * usual entries. */
+			pData->batch.parameters[i][j] = calloc(MAX_BUFSIZE,
+							       sizeof ***pData->batch.parameters);
+			CHKmalloc(pData->batch.parameters[i][j]);
+		}
 	}
 
 	pData->batch.bindings = calloc(pData->batch.arguments,
@@ -305,7 +323,6 @@ ENDcreateInstance
 static int insert_to_db(instanceData* pData)
 {
 	DEFiRet;
-	int i, j, n;
 
 	CHECKERR(pData->error,
 		 OCIStmtExecute(pData->service,
@@ -315,12 +332,6 @@ static int insert_to_db(instanceData* pData)
 
 	CHECKERR(pData->error,
 		 OCITransCommit(pData->service, pData->error, 0));
-
-	for (i = 0; i < pData->batch.arguments; i++)
-		for (j = 0; j < pData->batch.n; j++) {
-			free(pData->batch.parameters[i][j]);
-			pData->batch.parameters[i][j] = NULL;
-		}
 
 	pData->batch.n = 0;
 finalize_it:
@@ -454,19 +465,19 @@ ENDparseSelectorAct
 
 BEGINdoAction
 	int i;
-	int n = pData->batch.n;
 	char **params = (char**) ppString[0];
 CODESTARTdoAction
 
-	if (n == pData->batch.size) {
+	if (pData->batch.n == pData->batch.size) {
 		dbgprintf("omoracle batch size limit hit, sending into DB\n");
 		CHKiRet(insert_to_db(pData));
 	}
 
 	for (i = 0; i < pData->batch.arguments && params[i]; i++) {
-		dbgprintf("batch[%d][%d]=%s\n", i, n, params[i]);
-		pData->batch.parameters[i][n] = strdup(params[i]);
-		CHKmalloc(pData->batch.parameters[i][n]);
+		dbgprintf("batch[%d][%d]=%s\n", i, pData->batch.n, params[i]);
+		strncpy(pData->batch.parameters[i][pData->batch.n], params[i],
+			MAX_BUFSIZE);
+		CHKmalloc(pData->batch.parameters[i][pData->batch.n]);
 	}
 	pData->batch.n++;
 
