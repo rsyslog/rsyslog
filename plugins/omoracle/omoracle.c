@@ -310,6 +310,7 @@ CODESTARTfreeInstance
 	OCIHandleFree(pData->authinfo, OCI_HTYPE_AUTHINFO);
 	OCIHandleFree(pData->statement, OCI_HTYPE_STMT);
 	free(pData->connection);
+	free(pData->txt_statement);
 	for (i = 0; i < pData->batch.arguments; i++) {
 		for (j = 0; j < pData->batch.size; j++)
 			free(pData->batch.parameters[i][j]);
