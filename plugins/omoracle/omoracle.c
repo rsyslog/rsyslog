@@ -436,6 +436,7 @@ CODESTARTdoAction
 	}
 
 	for (i = 0; i < pData->batch.arguments && params[i]; i++) {
+		dbgprintf("batch[%d][%d]=%s\n", i, n, params[i]);
 		pData->batch.parameters[i][n] = strdup(params[i]);
 		CHKmalloc(pData->batch.parameters[i][n]);
 	}
