@@ -180,14 +180,21 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 }
 
 /** Returns the number of bind parameters for the statement given as
- * an argument. */
+ * an argument. It counts the number of appearances of ':', as in
+ *
+ * insert into foo(bar, baz) values(:bar, :baz)
+ *
+ * while taking in account that string literals must not be parsed. */
 static int count_bind_parameters(char* p)
 {
 	int n = 0;
+	int enable = 1;
 
 	for (; *p; p++)
-		if (*p == BIND_MARK)
+		if (enable && *p == BIND_MARK )
 			n++;
+		else if (*p == '\'')
+			enable ^= 1;
 	dbgprintf ("omoracle statement has %d parameters\n", n);
 	return n;
 }
@@ -429,7 +436,6 @@ CODESTARTdoAction
 	}
 
 	for (i = 0; i < pData->batch.arguments && params[i]; i++) {
-		dbgprintf ("omoracle argument on batch[%d][%d]: %s\n", i, n, params[i]);
 		pData->batch.parameters[i][n] = strdup(params[i]);
 		CHKmalloc(pData->batch.parameters[i][n]);
 	}
