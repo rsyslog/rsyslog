@@ -179,6 +179,34 @@ static int oci_errors(void* handle, ub4 htype, sword status)
 	return OCI_ERROR;
 }
 
+/** Callback for OCIBindDynamic.
+ *
+ * OCI doesn't insert an array of char* by itself (although it can
+ * handle arrays of int), so we must either run in batches of size one
+ * (no way) or bind all parameters with OCI_DATA_AT_EXEC instead of
+ * OCI_DEFAULT, and then give this function as an argument to
+ * OCIBindDynamic so that it is able to handle all strings in a single
+ * server trip.
+ *
+ * See the documentation of OCIBindDynamic
+ * (http://download.oracle.com/docs/cd/B28359_01/appdev.111/b28395/oci16rel003.htm#i444015)
+ * for more details.
+ */
+static int __attribute__((unused))
+bind_dynamic (char** in, OCIBind __attribute__((unused))* bind,
+			 int iter, int __attribute__((unused)) idx,
+			 char** out, int* buflen, char* piece,
+			 void** bd)
+{
+	dbgprintf ("Bound line: %s\n", in[iter]);
+	*out = in[iter];
+	*buflen = sizeof (OCILobLocator*);
+	*piece = OCI_ONE_PIECE;
+	*bd = NULL;
+	return OCI_CONTINUE;
+}
+
+
 /** Returns the number of bind parameters for the statement given as
  * an argument. It counts the number of appearances of ':', as in
  *
