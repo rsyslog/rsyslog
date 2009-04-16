@@ -33,6 +33,7 @@ html_files = \
 	dev_queue.html \
 	omsnmp.html \
 	ommysql.html \
+	omoracle.html \
 	omlibdbi.html \
 	imfile.html \
 	imtcp.html \

@@ -1,0 +1,78 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+<meta http-equiv="Content-Language" content="en">
+<title>Oracle Database Output Module</title>
+</head>
+
+<body>
+<a href="rsyslog_conf_modules.html">rsyslog module reference</a>
+
+<h1>Oracle Database Output Module</h1>
+<p><b>Module Name:&nbsp;&nbsp;&nbsp; omoracle</b></p>
+<p><b>Author: </b>Luis Fernando Mu&ntilde;oz Mej&iacute;as &lt;Luis.Fernando.Munoz.Mejias@cern.ch&gt;</p>
+<p><b>Available since: </b>: 4.3.0
+<p><b>Status: </b>: contributed module, not maitained by rsyslog  core authors
+<p><b>Description</b>:</p>
+<p>This module provides native support for logging to Oracle databases. It offers
+superior performance over the more generic <a href="omlibdbi.html">omlibdbi</a> module.
+It also includes a number of enhancements, most importantly prepared statements and
+batching, what provides a big performance improvements.
+</p>
+<p>Note that this module is maintained by its original author. If you need assistance with it,
+it is suggested to post questions to the
+<a href="http://lists.adiscon.net/mailman/listinfo/rsyslog">rsyslog mailing list</a>.
+<p>From the header comments of this module:
+<p><pre>
+
+    This is an output module feeding directly to an Oracle
+    database. It uses Oracle Call Interface, a propietary module
+    provided by Oracle.
+
+    Selector lines to be used are of this form:
+
+    :omoracle:;TemplateName
+
+    The module gets its configuration via rsyslog $... directives,
+    namely:
+
+    $OmoracleDBUser: user name to log in on the database.
+
+    $OmoracleDBPassword: password to log in on the database.
+
+    $OmoracleDB: connection string (an Oracle easy connect or a db
+    name as specified by tnsnames.ora)
+
+    $OmoracleBatchSize: Number of elements to send to the DB on each
+    transaction.
+
+    $OmoracleStatement: Statement to be prepared and executed in
+    batches. Please note that Oracle's prepared statements have their
+    placeholders as ':identifier', and this module uses the colon to
+    guess how many placeholders there will be.
+
+    All these directives are mandatory. The dbstring can be an Oracle
+    easystring or a DB name, as present in the tnsnames.ora file.
+
+    The form of the template is just a list of strings you want
+    inserted to the DB, for instance:
+
+    $template TestStmt,"%hostname%%msg%"
+
+    Will provide the arguments to a statement like
+
+    $OmoracleStatement \
+        insert into foo(hostname,message)values(:host,:message)
+
+    Also note that identifiers to placeholders are arbitrarry. You
+    need to define the properties on the template in the correct order
+    you want them passed to the statement!
+</pre>
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+[<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a>
+project.<br>
+Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>.
+Released under the GNU GPL version 3 or higher.</font></p>
+</body></html>
