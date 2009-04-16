@@ -1,5 +1,6 @@
 ---------------------------------------------------------------------------
-Version 3.20.6 [v3-stable] (rgerhards), 2009-04-??
+Version 3.20.6 [v3-stable] (rgerhards), 2009-04-16
+- this is the last v3-stable for the 3.20.x series
 - bugfix: $InputTCPMaxSessions config directive was accepted, but not
   honored. This resulted in a fixed upper limit of 200 connections.
 - bugfix: the default for $DirCreateMode was 0644, and as such wrong.
