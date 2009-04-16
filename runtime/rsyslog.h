@@ -262,6 +262,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_INVLD_FUNC = -2113, /**< invalid function name for function call (rainerscript) */
 	RS_RET_DUP_FUNC_NAME = -2114, /**< duplicate function name (rainerscript) */
 	RS_RET_UNKNW_FUNC = -2115, /**< unkown function name (rainerscript) */
+	RS_RET_RSCORE_TOO_OLD = -2120, /**< rsyslog core is too old for ... (eg this plugin) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

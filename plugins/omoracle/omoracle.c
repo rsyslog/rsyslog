@@ -560,7 +560,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(pHostQueryEtryPt((uchar*)"OMSRgetSupportedTplOpts", &supported_options));
 	CHKiRet((*supported_options)(&opts));
 	if (!(array_passing = opts & OMSR_TPL_AS_ARRAY))
-		ABORT_FINALIZE(RS_RET_ERR);
+		ABORT_FINALIZE(RS_RET_RSCORE_TOO_OLD);
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoraclestatement", 0,
 				   eCmdHdlrCustomHandler, get_db_statement,
