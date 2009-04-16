@@ -1389,6 +1389,8 @@ void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf)
 {
 	assert(pMsg != NULL);
 	assert(pBuf != NULL);
+	if(pMsg->pszHOSTNAME != NULL)
+		free(pMsg->pszHOSTNAME);
 	pMsg->iLenHOSTNAME = strlen(pBuf);
 	pMsg->pszHOSTNAME = (uchar*) pBuf;
 }
