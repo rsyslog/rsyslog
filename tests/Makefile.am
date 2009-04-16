@@ -28,12 +28,15 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.omod-if-array \
 	   parsertest.sh \
 	   manytcp.sh \
+	   testsuites/manytcp.conf \
 	   omod-if-array.sh \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c
-tcpflood_SOURCES = tcpflood.c
 chkseq_SOURCES = chkseq.c
+
+tcpflood_SOURCES = tcpflood.c
+tcpflood_LDADD = $(SOL_LIBS)
 
 nettester_SOURCES = nettester.c getline.c
 nettester_LDADD = $(SOL_LIBS)

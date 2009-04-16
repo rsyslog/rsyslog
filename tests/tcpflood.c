@@ -95,18 +95,46 @@ int openConnections(void)
 	sockArray = calloc(numConnections, sizeof(int));
 	for(i = 0 ; i < numConnections ; ++i) {
 		if(i % 10 == 0) {
-			lenMsg = sprintf(msgBuf, "\retb\b\b\b\b%5.5d", i);
-			write(1, msgBuf, lenMsg);
+			printf("\r%5.5d", i);
+			//lenMsg = sprintf(msgBuf, "\r%5.5d", i);
+			//write(1, msgBuf, lenMsg);
 		}
 		if(openConn(&(sockArray[i])) != 0) {
 			printf("error in trying to open connection i=%d\n", i);
 			return 1;
 		}
 	}
-	lenMsg = sprintf(msgBuf, "\retb\b\b\b\b%5.5d open connections\n", i);
+	lenMsg = sprintf(msgBuf, "\r%5.5d open connections\n", i);
 	write(1, msgBuf, lenMsg);
 
 	return 0;
+}
+
+
+/* we also close all connections because otherwise we may get very bad
+ * timing for the syslogd - it may not be able to process all incoming
+ * messages fast enough if we immediately shut down.
+ * TODO: it may be an interesting excercise to handle that situation
+ * at the syslogd level, too
+ * rgerhards, 2009-04-14
+ */
+void closeConnections(void)
+{
+	int i;
+	char msgBuf[128];
+	size_t lenMsg;
+
+	write(1, "      close connections", sizeof("      close connections")-1);
+	for(i = 0 ; i < numConnections ; ++i) {
+		if(i % 10 == 0) {
+			lenMsg = sprintf(msgBuf, "\r%5.5d", i);
+			write(1, msgBuf, lenMsg);
+		}
+		close(sockArray[i]);
+	}
+	lenMsg = sprintf(msgBuf, "\r%5.5d close connections\n", i);
+	write(1, msgBuf, lenMsg);
+
 }
 
 
@@ -123,14 +151,15 @@ int sendMessages(void)
 	int i;
 	int socknum;
 	int lenBuf;
+	int lenSend;
 	char buf[2048];
 	char msgBuf[128];
 	size_t lenMsg;
 
 	srand(time(NULL));	/* seed is good enough for our needs */
 
-	lenMsg = sprintf(msgBuf, "\retb\b\b\b\b%5.5d messages sent", 0);
-	write(1, msgBuf, lenMsg);
+	printf("Sending %d messages.\n", numMsgsToSend);
+	printf("\r%5.5d messages sent", 0);
 	for(i = 0 ; i < numMsgsToSend ; ++i) {
 		if(i < numConnections)
 			socknum = i;
@@ -139,18 +168,20 @@ int sendMessages(void)
 		else
 			socknum = rand() % numConnections;
 		lenBuf = sprintf(buf, "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:\n", i);
-		if(send(sockArray[socknum], buf, lenBuf, 0) != lenBuf) {
+		lenSend = send(sockArray[socknum], buf, lenBuf, 0);
+		if(lenSend != lenBuf) {
+			printf("\r%5.5d\n", i);
+			fflush(stdout);
 			perror("send test data");
-			fprintf(stderr, "send() failed\n");
+			printf("send() failed at socket %d, index %d\n", socknum, i);
+			fflush(stderr);
 			return(1);
 		}
 		if(i % 100 == 0) {
-			lenMsg = sprintf(msgBuf, "\retb\b\b\b\b%5.5d", i);
-			write(1, msgBuf, lenMsg);
+			printf("\r%5.5d", i);
 		}
 	}
-	lenMsg = sprintf(msgBuf, "\retb\b\b\b\b%5.5d messages sent\n", i);
-	write(1, msgBuf, lenMsg);
+	printf("\r%5.5d messages sent\n", i);
 
 	return 0;
 }
@@ -217,9 +248,18 @@ tcpSend(char *buf, int lenBuf)
 int main(int argc, char *argv[])
 {
 	int ret = 0;
+	struct sigaction sigAct;
 	static char buf[1024];
 
-	setvbuf(stdout, _IONBF, buf, 48);
+	/* on Solaris, we do not HAVE MSG_NOSIGNAL, so for this reason
+	 * we block SIGPIPE (not an issue for this program)
+	 */
+	memset(&sigAct, 0, sizeof(sigAct));
+	sigemptyset(&sigAct.sa_mask);
+	sigAct.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sigAct, NULL);
+
+	setvbuf(stdout, buf, _IONBF, 48);
 
 	if(argc != 5) {
 		printf("Invalid call of tcpflood\n");
@@ -241,5 +281,9 @@ int main(int argc, char *argv[])
 		printf("error sending messages\n");
 		exit(1);
 	}
+
+	//closeConnections();
+	printf("End of tcpflood Run\n");
+
 	exit(ret);
 }
