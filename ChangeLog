@@ -142,6 +142,9 @@ version before switching to this one.
 Version 3.22.0 [v3-stable] (rgerhards), 2009-04-??
 - bugfix: $InputTCPMaxSessions config directive was accepted, but not
   honored. This resulted in a fixed upper limit of 200 connections.
+- bugfix: the default for $DirCreateMode was 0644, and as such wrong.
+  It has now been changed to 0700. For some background, please see
+  http://lists.adiscon.net/pipermail/rsyslog/2009-April/001986.html
 ---------------------------------------------------------------------------
 Version 3.21.11 [BETA] (rgerhards), 2009-04-03
 - build system improvements contributed by Michael Biebl - thx!
@@ -297,9 +300,13 @@ Version 3.21.0  [DEVEL] (rgerhards), 2008-07-18
 - imported all changes from 3.18.1 until today (some quite important,
   see below)
 ---------------------------------------------------------------------------
-Version 3.20.6 [v3-stable] (rgerhards), 2009-04-??
+Version 3.20.6 [v3-stable] (rgerhards), 2009-04-16
+- this is the last v3-stable for the 3.20.x series
 - bugfix: $InputTCPMaxSessions config directive was accepted, but not
   honored. This resulted in a fixed upper limit of 200 connections.
+- bugfix: the default for $DirCreateMode was 0644, and as such wrong.
+  It has now been changed to 0700. For some background, please see
+  http://lists.adiscon.net/pipermail/rsyslog/2009-April/001986.html
 ---------------------------------------------------------------------------
 Version 3.20.5 [v3-stable] (rgerhards), 2009-04-02
 - bugfix: potential abort with DA queue after high watermark is reached
@@ -544,7 +551,9 @@ Version 3.19.0 (rgerhards), 2008-05-06
   for the patch
 ---------------------------------------------------------------------------
 Version 3.18.7 (rgerhards), 2008-12-??
-=======
+- bugfix: the default for $DirCreateMode was 0644, and as such wrong.
+  It has now been changed to 0700. For some background, please see
+  http://lists.adiscon.net/pipermail/rsyslog/2009-April/001986.html
 - fixed a potential segfault condition with $AllowedSender directive
   On HUP, the root pointers were not properly cleaned up. Thanks to
   Michael Biebel, olgoat, and Juha Koho for reporting and analyzing
@@ -1230,7 +1239,10 @@ Version 3.10.0 (rgerhards), 2008-01-07
 - much cleaner code due to new objects and removal of single-threading
   mode
 ---------------------------------------------------------------------------
-Version 2.0.7 V2-STABLE (rgerhards), 2008-??-??
+Version 2.0.7 V2-STABLE (rgerhards), 2008-04-14
+- bugfix: the default for $DirCreateMode was 0644, and as such wrong.
+  It has now been changed to 0700. For some background, please see
+  http://lists.adiscon.net/pipermail/rsyslog/2009-April/001986.html
 - bugfix: "$CreateDirs off" also disabled file creation
   Thanks to William Tisater for analyzing this bug and providing a patch.
   The actual code change is heavily based on William's patch.
