@@ -6,7 +6,11 @@
  *
  * File begun on 2007-10-18 by sur5r (converted from ommysql.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2009 Rainer Gerhards and Adiscon GmbH.
+ *
+ * The following link my be useful for the not-so-postgres literate
+ * when setting up a test environment (on Fedora):
+ * http://www.jboss.org/community/wiki/InstallPostgreSQLonFedora
  *
  * This file is part of rsyslog.
  *
@@ -154,26 +158,55 @@ static rsRetVal initPgSQL(instanceData *pData, int bSilent)
 }
 
 
+/* try the insert into postgres and return if that failed or not
+ * (1 = had error, 0=ok). We do not use the standard IRET calling convention
+ * rgerhards, 2009-04-17
+ */
+static inline int
+tryExec(uchar *pszCmd, instanceData *pData)
+{
+	PGresult *pgRet;
+	ExecStatusType execState;
+	int bHadError = 0;
+
+	/* try insert */
+	pgRet = PQexec(pData->f_hpgsql, (char*)pszCmd);
+	execState = PQresultStatus(pgRet);
+	if(execState != PGRES_COMMAND_OK && execState != PGRES_TUPLES_OK) {
+		dbgprintf("postgres query execution failed: %s\n", PQresStatus(PQresultStatus(pgRet)));
+		bHadError = 1;
+	}
+	PQclear(pgRet);
+
+	return(bHadError);
+}
+
+
 /* The following function writes the current log entry
  * to an established PgSQL session.
+ * Enhanced function to take care of the returned error
+ * value (if there is such). Note that this may happen due to
+ * a sql format error - connection aborts were properly handled
+ * before my patch. -- rgerhards, 2009-04-17
  */
 rsRetVal writePgSQL(uchar *psz, instanceData *pData)
 {
+	int bHadError = 0;
 	DEFiRet;
 
 	assert(psz != NULL);
 	assert(pData != NULL);
 
-	dbgprintf("writePgSQL: %s", psz);
+	dbgprintf("writePgSQL: %s\n", psz);
 
-	/* try insert */
-	PQclear(PQexec(pData->f_hpgsql, (char*)psz));
-	if(PQstatus(pData->f_hpgsql) != CONNECTION_OK) {
+	bHadError = tryExec(psz, pData); /* try insert */
+
+	if(bHadError || (PQstatus(pData->f_hpgsql) != CONNECTION_OK)) {
 		/* error occured, try to re-init connection and retry */
 		closePgSQL(pData); /* close the current handle */
 		CHKiRet(initPgSQL(pData, 0)); /* try to re-open */
-		PQclear(PQexec(pData->f_hpgsql, (char*)psz));
-		if(PQstatus(pData->f_hpgsql) != CONNECTION_OK) { /* re-try insert */
+		bHadError = tryExec(psz, pData); /* retry */
+		if(bHadError || (PQstatus(pData->f_hpgsql) != CONNECTION_OK)) {
 			/* we failed, giving up for now */
 			reportDBError(pData, 0);
 			closePgSQL(pData); /* free ressources */
@@ -290,6 +323,5 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 ENDmodInit
-/*
- * vi:set ai:
+/* vi:set ai:
  */
