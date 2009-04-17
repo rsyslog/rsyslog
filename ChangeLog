@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-04-??
+- improved testbench
+  * added tests for queue disk-only mode (checks disk queue logic)
 ---------------------------------------------------------------------------
 Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
 - new feature: new output plugin omprog, which permits to start program
