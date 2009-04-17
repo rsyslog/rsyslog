@@ -1,9 +1,8 @@
-/*
- *  ksym_mod.c - functions for building symbol lookup tables for klogd
+/*  ksym_mod.c - functions for building symbol lookup tables for klogd
  *  Copyright (c) 1995, 1996  Dr. G.W. Wettstein <greg@wind.rmcc.com>
  *  Copyright (c) 1996 Enjellic Systems Development
  *  Copyright (c) 1998-2007 Martin Schulze <joey@infodrom.org>
- *  Copyright (C) 2007-2008 Rainer Gerhards <rgerhards@adiscon.com>
+ *  Copyright (C) 2007-2009 Rainer Gerhards <rgerhards@adiscon.com>
  *
  * This file is part of rsyslog.
  *
@@ -83,7 +82,6 @@
  *	Changed llseek() to lseek64() in order to skip a libc warning.
  */
 
-
 /* Includes. */
 #include "config.h"
 #include <stdio.h>
@@ -112,7 +110,7 @@
 #define KSYMS  "/proc/kallsyms"
 
 static int num_modules = 0;
-struct Module *sym_array_modules = (struct Module *) 0;
+struct Module *sym_array_modules = (struct Module *) NULL;
 
 static int have_modules = 0;
 
@@ -266,7 +264,7 @@ static void FreeModules()
         }
 
         free(sym_array_modules);
-        sym_array_modules = (struct Module *) 0;
+        sym_array_modules = (struct Module *) NULL;
         num_modules = 0;
         return;
 }
@@ -390,11 +388,11 @@ static int AddSymbol(line)
         mp->sym_array = (struct sym_table *) realloc(mp->sym_array, \
                 (mp->num_syms+1) * sizeof(struct sym_table));
 
-        if ( mp->sym_array == (struct sym_table *) 0 )
+        if ( mp->sym_array == (struct sym_table *) NULL )
                 return(0);
 
         mp->sym_array[mp->num_syms].name = strdup(p);
-        if ( mp->sym_array[mp->num_syms].name == (char *) 0 )
+        if ( mp->sym_array[mp->num_syms].name == (char *) NULL )
                 return(0);
 
         /* Stuff interesting information into the module. */
@@ -424,15 +422,21 @@ static int AddSymbol(line)
  *		If a match cannot be found a diagnostic string is printed.
  *		If a match is found the pointer to the symbolic name most
  *		closely matching the address is returned.
+ *
+ * TODO: We are using int values for the offset, but longs for the value
+ * values. This may create some trouble in the future (on 64 Bit OS?).
+ * Anyhow, I have not changed this, because we do not seem to have any
+ * issue and my understanding of this code is limited (and I don't see
+ * need to invest more time to dig much deeper).
+ * rgerhards, 2009-04-17
  **************************************************************************/
 extern char * LookupModuleSymbol(value, sym)
         unsigned long value;
         struct symbol *sym;
 {
-        auto int        nmod,
-                        nsym;
-        auto struct sym_table *last;
-        auto struct Module *mp;
+        int        nmod, nsym;
+        struct sym_table *last;
+        struct Module *mp;
         static char ret[100];
 
         sym->size = 0;
@@ -443,8 +447,7 @@ extern char * LookupModuleSymbol(value, sym)
         for (nmod = 0; nmod < num_modules; ++nmod) {
                 mp = &sym_array_modules[nmod];
 
-                /*
-		 * Run through the list of symbols in this module and
+                /* Run through the list of symbols in this module and
                  * see if the address can be resolved.
 		 */
                 for(nsym = 1, last = &mp->sym_array[0];
@@ -453,13 +456,12 @@ extern char * LookupModuleSymbol(value, sym)
                         if ( mp->sym_array[nsym].value > value )
                         {
                            if ( sym->size == 0 ||
-                                 (value - last->value) < sym->offset ||
-                                 ( (sym->offset == (value - last->value)) &&
-                                   (mp->sym_array[nsym].value-last->value) < sym->size ) )
+                                 (int) (value - last->value) < sym->offset ||
+                                 ( (sym->offset == (int) (value - last->value)) &&
+                                   (int) (mp->sym_array[nsym].value-last->value) < sym->size ) )
                             {
                                 sym->offset = value - last->value;
-                                sym->size = mp->sym_array[nsym].value - \
-                                        last->value;
+                                sym->size = mp->sym_array[nsym].value - last->value;
                                 ret[sizeof(ret)-1] = '\0';
                                 if ( mp->name == NULL )
                                         snprintf(ret, sizeof(ret)-1,
@@ -478,5 +480,5 @@ extern char * LookupModuleSymbol(value, sym)
                 return(ret);
 
         /* It has been a hopeless exercise. */
-        return((char *) 0);
+        return(NULL);
 }
