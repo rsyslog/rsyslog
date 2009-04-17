@@ -1,4 +1,6 @@
 ---------------------------------------------------------------------------
+Version 4.3.1  [DEVEL] (rgerhards), 2009-04-??
+---------------------------------------------------------------------------
 Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
 - new feature: new output plugin omprog, which permits to start program
   and feed it (via its stdin) with syslog messages. If the program
