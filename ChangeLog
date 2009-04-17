@@ -5,6 +5,11 @@ Version 4.1.7  [BETA] (rgerhards), 2009-04-??
 - bugfix: the default for $DirCreateMode was 0644, and as such wrong.
   It has now been changed to 0700. For some background, please see
   http://lists.adiscon.net/pipermail/rsyslog/2009-April/001986.html
+- bugfix: ompgsql did not detect problems in sql command execution
+  this could cause loss of messages. The handling was correct if the
+  connection broke, but not if there was a problem with statement
+  execution. The most probable case for such a case would be invalid
+  sql inside the template, and this is now much easier to diagnose.
 ---------------------------------------------------------------------------
 Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
 - added new "csv" property replacer options to enable simple creation
