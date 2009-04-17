@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.3.0  [DEVEL] (rgerhards), 2009-03-??
+Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
 - new feature: new output plugin omprog, which permits to start program
   and feed it (via its stdin) with syslog messages. If the program
   terminates, it is restarted.
@@ -14,6 +14,11 @@ Version 4.3.0  [DEVEL] (rgerhards), 2009-03-??
 - added $MaxOpenFiles configuration directive
 - bugfix: solved potential memory leak in msg processing, could manifest
   itself in imtcp
+- bugfix: ompgsql did not detect problems in sql command execution
+  this could cause loss of messages. The handling was correct if the
+  connection broke, but not if there was a problem with statement
+  execution. The most probable case for such a case would be invalid
+  sql inside the template, and this is now much easier to diagnose.
 ---------------------------------------------------------------------------
 Version 4.1.7  [BETA] (rgerhards), 2009-04-??
 - bugfix: $InputTCPMaxSessions config directive was accepted, but not
