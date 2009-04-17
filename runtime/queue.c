@@ -607,28 +607,7 @@ static rsRetVal qDestructLinkedList(qqueue_t __attribute__((unused)) *pThis)
 static rsRetVal qAddLinkedList(qqueue_t *pThis, void* pUsr)
 {
 	DEFiRet;
-
 	iRet = qqueueAddLinkedList(&pThis->tVars.linklist.pRoot, &pThis->tVars.linklist.pLast, pUsr);
-#if 0
-	qLinkedList_t *pEntry;
-
-	ASSERT(pThis != NULL);
-	if((pEntry = (qLinkedList_t*) malloc(sizeof(qLinkedList_t))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-
-	pEntry->pNext = NULL;
-	pEntry->pUsr = pUsr;
-
-	if(pThis->tVars.linklist.pRoot == NULL) {
-		pThis->tVars.linklist.pRoot = pThis->tVars.linklist.pLast = pEntry;
-	} else {
-		pThis->tVars.linklist.pLast->pNext = pEntry;
-		pThis->tVars.linklist.pLast = pEntry;
-	}
-
-finalize_it:
-#endif
 	RETiRet;
 }
 
@@ -636,24 +615,6 @@ static rsRetVal qDelLinkedList(qqueue_t *pThis, obj_t **ppUsr)
 {
 	DEFiRet;
 	iRet = qqueueDelLinkedList(&pThis->tVars.linklist.pRoot, &pThis->tVars.linklist.pLast, ppUsr);
-#if 0
-	qLinkedList_t *pEntry;
-
-	ASSERT(pThis != NULL);
-	ASSERT(pThis->tVars.linklist.pRoot != NULL);
-	
-	pEntry = pThis->tVars.linklist.pRoot;
-	*ppUsr = pEntry->pUsr;
-
-	if(pThis->tVars.linklist.pRoot == pThis->tVars.linklist.pLast) {
-		pThis->tVars.linklist.pRoot = NULL;
-		pThis->tVars.linklist.pLast = NULL;
-	} else {
-		pThis->tVars.linklist.pRoot = pEntry->pNext;
-	}
-	free(pEntry);
-
-#endif
 	RETiRet;
 }
 
