@@ -87,6 +87,7 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <sys/file.h>
+#include <sys/resource.h>
 #include <grp.h>
 
 #if HAVE_SYS_TIMESPEC_H
@@ -2073,6 +2074,32 @@ static rsRetVal setActionResumeInterval(void __attribute__((unused)) *pVal, int 
 }
 
 
+/* set the processes max number ob files (upon configuration request)
+ * 2009-04-14 rgerhards
+ */
+static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
+{
+	struct rlimit maxFiles;
+	char errStr[1024];
+	DEFiRet;
+
+	maxFiles.rlim_cur = iFiles;
+	maxFiles.rlim_max = iFiles;
+
+	if(setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
+		/* NOTE: under valgrind, we seem to be unable to extend the size! */
+		rs_strerror_r(errno, errStr, sizeof(errStr));
+		errmsg.LogError(0, RS_RET_ERR_RLIM_NOFILE, "could not set process file limit to %d: %s [kernel max %ld]",
+				iFiles, errStr, (long) maxFiles.rlim_max);
+		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
+	}
+	dbgprintf("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* set the processes umask (upon configuration request) */
 static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 {
@@ -2870,6 +2897,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler, conf.doModLoad, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"includeconfig", 0, eCmdHdlrCustomHandler, conf.doIncludeLine, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode, setUmask, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"maxopenfiles", 0, eCmdHdlrInt, setMaxFiles, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprinttemplatelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintTemplateList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintmodulelist", 0, eCmdHdlrBinary, NULL, &bDebugPrintModuleList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", 0, eCmdHdlrBinary,
@@ -3091,6 +3119,7 @@ GlobalClassExit(void)
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	objRelease(conf,     CORE_COMPONENT);
 	objRelease(expr,     CORE_COMPONENT);
+	vmClassExit();					/* this is hack, currently core_modules do not get this automatically called */
 	objRelease(vm,       CORE_COMPONENT);
 	objRelease(var,      CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
@@ -3590,18 +3619,10 @@ int realMain(int argc, char **argv)
 				fprintf(stderr,	"-t option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
 		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
-{
-char buf[1024];
-getcwd(buf, 1024);
-printf("pwd: '%s'\n", buf);
-printf("chroot to '%s'\n", arg);
 			if(chroot(arg) != 0) {
 				perror("chroot");
 				exit(1);
 			}
-getcwd(buf, 1024);
-printf("pwd: '%s'\n", buf);
-}
 			break;
 		case 'u':		/* misc user settings */
 			iHelperUOpt = atoi(arg);

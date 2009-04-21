@@ -55,8 +55,11 @@ BEGINinterface(vm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*PopBoolFromStack)(vm_t *pThis, var_t **ppVar); /* there are a few cases where we need this... */
 	rsRetVal (*PopVarFromStack)(vm_t *pThis, var_t **ppVar); /* there are a few cases where we need this... */
 	rsRetVal (*SetMsg)(vm_t *pThis, msg_t *pMsg); /* there are a few cases where we need this... */
+	/* v2 (4.1.7) */
+	rsRetVal (*FindRSFunction)(cstr_t *pcsName, prsf_t *prsf); /* 2009-06-04 */
+	rsRetVal (*FindRSFunctionName)(prsf_t rsf, cstr_t **ppcsName); /* 2009-06-04 */
 ENDinterface(vm)
-#define vmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define vmCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

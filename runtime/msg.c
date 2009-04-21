@@ -1569,7 +1569,7 @@ void MsgSetHOSTNAME(msg_t *pMsg, char* pszHOSTNAME)
 	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) != NULL)
 		memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
 	else
-		dbgprintf("Could not allocate memory in MsgSetHOSTNAME()\n");
+		DBGPRINTF("Could not allocate memory in MsgSetHOSTNAME()\n");
 }
 
 

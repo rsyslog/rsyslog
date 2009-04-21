@@ -84,6 +84,8 @@ typedef rsRetVal (*errLogFunc_t)(uchar*); /* this is a trick to store a function
 typedef struct permittedPeers_s permittedPeers_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct permittedPeerWildcard_s permittedPeerWildcard_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct tcpsrv_s tcpsrv_t;
+typedef struct vmstk_s vmstk_t;
+typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 
 /* some universal 64 bit define... */
 typedef long long int64;
@@ -258,6 +260,13 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FUNC_MISSING_EXPR = -2111, /**< no expression after comma in function call (rainerscript) */
 	RS_RET_INVLD_NBR_ARGUMENTS = -2112, /**< invalid number of arguments for function call (rainerscript) */
 	RS_RET_INVLD_FUNC = -2113, /**< invalid function name for function call (rainerscript) */
+	RS_RET_DUP_FUNC_NAME = -2114, /**< duplicate function name (rainerscript) */
+	RS_RET_UNKNW_FUNC = -2115, /**< unkown function name (rainerscript) */
+	RS_RET_ERR_RLIM_NOFILE = -2116, /**< error setting max. nbr open files process limit */
+	RS_RET_ERR_CREAT_PIPE = -2117, /**< error during pipe creation */
+	RS_RET_ERR_FORK = -2118, /**< error during fork() */
+	RS_RET_ERR_WRITE_PIPE = -2119, /**< error writing to pipe */
+	RS_RET_RSCORE_TOO_OLD = -2120, /**< rsyslog core is too old for ... (eg this plugin) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

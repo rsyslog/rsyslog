@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[4.1.6],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[4.3.0],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
@@ -452,7 +452,39 @@ AM_CONDITIONAL(ENABLE_PGSQL, test x$enable_pgsql = xyes)
 AC_SUBST(PGSQL_CFLAGS)
 AC_SUBST(PGSQL_LIBS)
 
-
+# oracle (OCI) support
+AC_ARG_ENABLE(oracle,
+	[AS_HELP_STRING([--enable-oracle],[Enable native Oracle database support @<:@default=no@:>@])],
+	[case "${enableval}" in
+	 yes) enable_oracle="yes" ;;
+	 no) enable_oracle="no" ;;
+	 *) AC_MSG_ERROR(bad value ${enableval} for --enable-oracle) ;;
+	 esac],
+	[enable_oracle=no]
+)
+if test "x$enable_oracle" = "xyes"; then
+    AC_CHECK_PROG(
+	[HAVE_ORACLE_CONFIG],
+	[oracle-instantclient-config],
+	[yes],,,
+	)
+    if test "x${HAVE_ORACLE_CONFIG}" != "xyes"; then
+	AC_MSG_FAILURE([oracle-instantclient-config not found in PATH])
+    fi
+    AC_CHECK_LIB(
+	[occi],
+	[OCIEnvCreate],
+	[ORACLE_CFLAGS="`oracle-instantclient-config --cflags`"
+	ORACLE_LIBS="`oracle-instantclient-config --libs`"
+	],
+	[AC_MSG_FAILURE([Oracle (OCI) libraray is missing])],
+	[`oracle-instantclient-config --libs --cflags`]
+	)
+fi
+AM_CONDITIONAL(ENABLE_ORACLE, test x$enable_oracle = xyes)
+AC_SUBST(ORACLE_CFLAGS)
+AC_SUBST(ORACLE_LIBS)
+	
 # libdbi support
 AC_ARG_ENABLE(libdbi,
         [AS_HELP_STRING([--enable-libdbi],[Enable libdbi database support @<:@default=no@:>@])],
@@ -668,6 +700,20 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 # end of copy template - be sure to serach for imtemplate to find everything!
 
 
+# settings for the omprog output module
+AC_ARG_ENABLE(omprog,
+        [AS_HELP_STRING([--enable-omprog],[Compiles omprog template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omprog="yes" ;;
+          no) enable_omprog="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omprog) ;;
+         esac],
+        [enable_omprog=no]
+)
+AM_CONDITIONAL(ENABLE_OMPROG, test x$enable_omprog = xyes)
+# end of omprog
+
+
 # settings for the template output module; copy and modify this code
 # if you intend to add your own module. Be sure to replace omtemplate
 # by the actual name of your module.
@@ -720,6 +766,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
 		plugins/omtemplate/Makefile \
+		plugins/omprog/Makefile \
 		plugins/omstdout/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
@@ -732,6 +779,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omlibdbi/Makefile \
 		plugins/ommail/Makefile \
 		plugins/omsnmp/Makefile \
+		plugins/omoracle/Makefile \
 		tests/Makefile])
 AC_OUTPUT
 
@@ -745,6 +793,7 @@ echo "Zlib compression support enabled:         $enable_zlib"
 echo "MySql support enabled:                    $enable_mysql"
 echo "libdbi support enabled:                   $enable_libdbi"
 echo "PostgreSQL support enabled:               $enable_pgsql"
+echo "Oracle (OCI) support enabled:             $enable_oracle"
 echo "SNMP support enabled:                     $enable_snmp"
 echo "Mail support enabled:                     $enable_mail"
 echo "RELP support enabled:                     $enable_relp"
@@ -752,6 +801,7 @@ echo "imdiag enabled:                           $enable_imdiag"
 echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
 echo "output template module will be compiled:  $enable_omtemplate"
+echo "omprog module will be compiled:           $enable_omprog"
 echo "omstdout module will be compiled:         $enable_omstdout"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"

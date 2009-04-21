@@ -27,11 +27,11 @@
 #define VMSTK_SIZE 256
 
 /* the vmstk object */
-typedef struct vmstk_s {
+struct vmstk_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	var_t *vStk[VMSTK_SIZE];/* the actual stack */
 	int iStkPtr;		/* stack pointer, points to next free location, grows from 0 --> topend */
-} vmstk_t;
+};
 
 
 /* interfaces */

@@ -1,0 +1,35 @@
+<html>
+<head>
+<title>$MaxOpenFiles - rsyslog.conf file</title>
+</head>
+<body>
+<a href="rsyslog_conf_global.html">[rsyslog configuration directive overview]</a>
+
+<h2>$MaxOpenFiles</h2>
+<p><b>Available Since:</b> 4.3.0</p>
+<p><b>Type:</b> global configuration directive</p>
+<p><b>Default:</b> <i>operating system default</i></p>
+<p><b>Description:</b></p>
+<p>Set the maximum number of files that the rsyslog process can have open at any given
+time. Note that this includes open tcp sockets, so this setting is the upper limit for
+the number of open TCP connections as well. If you expect a large nubmer of concurrent
+connections, it is suggested that the number is set to the max number connected plus 1000.
+Please note that each dynafile also requires up to 100 open file handles.
+<p>The setting is similar to running "ulimit -n number-of-files".
+<p>Please note that depending on permissions and operating system configuration, the 
+setrlimit() request issued by rsyslog may fail, in which case the previous limit is kept
+in effect. Rsyslog will emit a warning message in this case.
+<p><b>Sample:</b></p>
+<p><code><b>$MaxOpenFiles 2000</b></code></p>
+<p><b>Bugs:</b></p>
+<p>For some reason, this settings seems not to work on all platforms. If you experience
+problems, please let us know so that we can (hopefully) narrow down the issue.
+<p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>] [<a href="manual.html">manual 
+index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL 
+version 3 or higher.</font></p>
+</body>
+</html>

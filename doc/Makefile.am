@@ -33,6 +33,7 @@ html_files = \
 	dev_queue.html \
 	omsnmp.html \
 	ommysql.html \
+	omoracle.html \
 	omlibdbi.html \
 	imfile.html \
 	imtcp.html \
@@ -108,6 +109,20 @@ html_files = \
 	rsyslog_conf_output.html \
 	rsyslog_conf_templates.html \
 	rsyslog_conf_nomatch.html \
+	queues_analogy.html \
 	src/classes.dia
 
-EXTRA_DIST = $(html_files)
+grfx_files = \
+	direct_queue0.png \
+	direct_queue1.png \
+	direct_queue2.png \
+	direct_queue3.png \
+	direct_queue_rsyslog.png \
+	direct_queue_rsyslog2.png \
+	direct_queue_directq.png \
+	dataflow.png \
+	queue_analogy_tv.png \
+	gssapi.png \
+	rsyslog-vers.png
+
+EXTRA_DIST = $(html_files) $(grfx_files)

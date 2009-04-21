@@ -1,14 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head><title>Global Directives - rsyslog.conf</title></head>
+<html><head><title>Configuration Directives - rsyslog.conf</title></head>
 <body>
 <p>This is a part of the rsyslog.conf documentation.</p>
 <a href="rsyslog_conf.html">back</a>
-<h2>Global Directives</h2>
-<p>All global directives need to be specified on a line by their
-own and must start with a dollar-sign. Here is a list in alphabetical
-order. Follow links for a description.</p>
-<p>Please note that not all directives here are actually global. Some affect
-only the next action. This documentation will be changed soon.
+<h2>Configuration Directives</h2>
+<p>All configuration directives need to be specified on a line by their
+own and must start with a dollar-sign. Note that those starting with
+the word "Action" modify the next action and should be specified
+in front of it.
+<p>Here is a list in alphabetical order. Follow links for a description.</p>
 <p>Not all directives have an in-depth description right now.
 Default values for them are in bold. A more in-depth description will
 appear as implementation progresses.
@@ -180,6 +180,7 @@ instead of UDP (plain TCP syslog, RELP). This resolves the UDP stack size restri
 <br>Note that 2k, the current default, is the smallest size that must be
 supported in order to be compliant to the upcoming new syslog RFC series.
 </li>
+<li><a href="rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
 <li><b>$RepeatedMsgContainsOriginalMsg</b> [on/<b>off</b>] - "last message repeated n times" messages, if generated,
@@ -214,7 +215,6 @@ the value, the less precise the timestamp.
 <li><a href="droppriv.html">$PrivDropToGroupID</a></li>
 <li><a href="droppriv.html">$PrivDropToUser</a></li>
 <li><a href="droppriv.html">$PrivDropToUserID</a></li>
-</ul>
 <li><a href="rsconf1_umask.html">$UMASK</a></li>
 </ul>
 <p><b>Where &lt;size_nbr&gt; is specified above,</b>
@@ -235,7 +235,7 @@ point of view, "1,,0.0.,.,0" also has the value 1000. </p>
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
 Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
-version 2 or higher.</font></p>
+version 3 or higher.</font></p>
 </body>
 </html>
 
