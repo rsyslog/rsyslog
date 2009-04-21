@@ -88,6 +88,14 @@ if ENABLE_IMTEMPLATE
 SUBDIRS += plugins/imtemplate
 endif
 
+if ENABLE_OMSTDOUT
+SUBDIRS += plugins/omstdout
+endif
+
+if ENABLE_OMTEMPLATE
+SUBDIRS += plugins/omtemplate
+endif
+
 if ENABLE_IMFILE
 SUBDIRS += plugins/imfile
 endif
@@ -108,4 +116,11 @@ endif
 # modules that need to be generated first
 SUBDIRS += tests
 
+# make sure "make distcheck" tries to build all modules. This means that
+# a developer must always have an environment where every supporting library
+# is available. If that is not the case, the respective configure option may
+# temporarily be removed below. The intent behind forcing everthing to compile
+# in a make distcheck is so that we detect code that accidently was not updated
+# when some global update happened.
+DISTCHECK_CONFIGURE_FLAGS=--enable-gssapi_krb5 --enable-imfile --enable-snmp --enable-pgsql --enable-libdbi --enable-mysql --enable-omtemplate --enable-imtemplate --enable-relp --enable-rsyslogd --enable-mail --enable-klog  --enable-diagtools --enable-gnutls --enable-omstdout
 ACLOCAL_AMFLAGS = -I m4

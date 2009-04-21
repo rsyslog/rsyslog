@@ -42,6 +42,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "netstrm.h"
+#include "msg.h"
 
 
 /* static data */
@@ -229,8 +230,8 @@ PrepareClose(tcps_sess_t *pThis)
 		 * this case.
 		 */
 		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->pMsg, pThis->iMsg, MSG_PARSE_HOSTNAME,
-				      NOFLAG, eFLOWCTL_LIGHT_DELAY, NULL); /* TODO: add real InputName */
+		parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->pMsg, pThis->iMsg,
+				      PARSE_HOSTNAME, eFLOWCTL_LIGHT_DELAY, pThis->pSrv->pszInputName, NULL, 0);
 		pThis->bAtStrtOfFram = 1;
 	}
 
@@ -313,7 +314,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
 			dbgprintf("error: message received is larger than max msg size, we split it\n");
 			parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->pMsg, pThis->iMsg,
-					      MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY, NULL); /* TODO: add real InputName */
+				      	      PARSE_HOSTNAME, eFLOWCTL_LIGHT_DELAY, pThis->pSrv->pszInputName, NULL, 0);
 			pThis->iMsg = 0;
 			/* we might think if it is better to ignore the rest of the
 			 * message than to treat it as a new one. Maybe this is a good
@@ -322,9 +323,11 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 			 */
 		}
 
-		if(c == '\n' && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delemiter? */
+		if((   (c == '\n')
+		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
+		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
 			parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->pMsg, pThis->iMsg,
-					      MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY, NULL); /* TODO: add real InputName */
+				      	      PARSE_HOSTNAME, eFLOWCTL_LIGHT_DELAY, pThis->pSrv->pszInputName, NULL, 0);
 			pThis->iMsg = 0;
 			pThis->inputState = eAtStrtFram;
 		} else {
@@ -343,7 +346,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 			if(pThis->iOctetsRemain < 1) {
 				/* we have end of frame! */
 				parseAndSubmitMessage(pThis->fromHost, pThis->fromHostIP, pThis->pMsg, pThis->iMsg,
-					      MSG_PARSE_HOSTNAME, NOFLAG, eFLOWCTL_LIGHT_DELAY, NULL); /* TODO: add real InputName */
+				      	      PARSE_HOSTNAME, eFLOWCTL_LIGHT_DELAY, pThis->pSrv->pszInputName, NULL, 0);
 				pThis->iMsg = 0;
 				pThis->inputState = eAtStrtFram;
 			}

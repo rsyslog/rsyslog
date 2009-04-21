@@ -57,9 +57,12 @@ struct action_s {
 	time_t  tLastOccur;	/* time last occurence was seen (for timing them out) */
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
-	int	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
+	short	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
+	short	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;	/* repetition cnt of prevline */
 	int	f_repeatcount;	/* number of "repeated" msgs */
+	enum 	{ ACT_STRING_PASSING = 0, ACT_ARRAY_PASSING = 1 }
+		eParamPassing;	/* mode of parameter passing to action */
 	int	iNumTpls;	/* number of array entries for template element below */
 	struct template **ppTpl;/* array of template to use - strings must be passed to doAction
 				 * in this order. */
@@ -67,7 +70,7 @@ struct action_s {
 				 * content later). This is preserved after the message has been
 				 * processed - it is also used to detect duplicates.
 				 */
-	queue_t *pQueue;	/* action queue */
+	qqueue_t *pQueue;	/* action queue */
 	SYNC_OBJ_TOOL;		/* required for mutex support */
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
 };
@@ -85,6 +88,7 @@ rsRetVal actionSetGlobalResumeInterval(int iNewVal);
 rsRetVal actionDoAction(action_t *pAction);
 rsRetVal actionCallAction(action_t *pAction, msg_t *pMsg);
 rsRetVal actionWriteToAction(action_t *pAction);
+rsRetVal actionCallHUPHdlr(action_t *pAction);
 rsRetVal actionClassInit(void);
 rsRetVal addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringRequest_t *pOMSR, int bSuspended);
 

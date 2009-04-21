@@ -177,7 +177,7 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	printf("%s", pData->f_hname);
+	dbgprintf("%s", pData->f_hname);
 ENDdbgPrintInstInfo
 
 
@@ -615,7 +615,6 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	} else {
 		CHKmalloc(pData->f_hname = strdup((char*) q));
 	}
-dbgprintf("hostname '%s', port '%s'\n", pData->f_hname, pData->port);
 
 	/* process template */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,

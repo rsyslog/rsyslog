@@ -55,8 +55,60 @@ DEFobjCurrIf(ctok)
  * rgerhards, 2008-02-19
  */
 
-/* forward definiton - thanks to recursive ABNF, we can not avoid at least one ;) */
+/* forward definition - thanks to recursive ABNF, we can not avoid at least one ;) */
 static rsRetVal expr(expr_t *pThis, ctok_t *tok);
+
+
+static rsRetVal
+function(expr_t *pThis, ctok_t *tok)
+{
+	DEFiRet;
+	ctok_token_t *pToken = NULL;
+	int iNumArgs = 0;
+	var_t *pVar;
+
+	ISOBJ_TYPE_assert(pThis, expr);
+	ISOBJ_TYPE_assert(tok, ctok);
+
+	CHKiRet(ctok.GetToken(tok, &pToken));
+	/* note: pToken is destructed in finalize_it */
+
+	if(pToken->tok == ctok_LPAREN) {
+		CHKiRet(ctok_token.Destruct(&pToken)); /* token processed, "eat" it */
+		CHKiRet(ctok.GetToken(tok, &pToken)); /* get next one */
+	} else
+		ABORT_FINALIZE(RS_RET_FUNC_NO_LPAREN);
+
+	/* we first push all the params on the stack. Then we call the function */
+	while(pToken->tok != ctok_RPAREN) { 
+		++iNumArgs;
+		CHKiRet(ctok.UngetToken(tok, pToken)); /* not for us, so let others process it */
+		CHKiRet(expr(pThis, tok));
+		CHKiRet(ctok.GetToken(tok, &pToken)); /* get next one, needed for while() check */
+		if(pToken->tok == ctok_COMMA) {
+			CHKiRet(ctok_token.Destruct(&pToken)); /* token processed, "eat" it */
+			CHKiRet(ctok.GetToken(tok, &pToken)); /* get next one */
+			if(pToken->tok == ctok_RPAREN) {
+				ABORT_FINALIZE(RS_RET_FUNC_MISSING_EXPR);
+			}
+		}
+	}
+
+
+	/* now push number of arguments - this must be on top of the stack */
+	CHKiRet(var.Construct(&pVar));
+	CHKiRet(var.ConstructFinalize(pVar));
+	CHKiRet(var.SetNumber(pVar, iNumArgs));
+	CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_PUSHCONSTANT, pVar)); /* add to program */
+
+
+finalize_it:
+	if(pToken != NULL) {
+		ctok_token.Destruct(&pToken); /* "eat" processed token */
+	}
+
+	RETiRet;
+}
 
 
 static rsRetVal
@@ -85,8 +137,12 @@ terminal(expr_t *pThis, ctok_t *tok)
 			break;
 		case ctok_FUNCTION:
 			dbgoprint((obj_t*) pThis, "function\n");
-			/* TODO: vm: call - well, need to implement that first */
-			ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
+			CHKiRet(function(pThis, tok)); /* this creates the stack call frame */
+			/* ... but we place the call instruction onto the stack ourselfs (because
+			 * we have all relevant information)
+			 */
+			CHKiRet(ctok_token.UnlinkVar(pToken, &pVar));
+			CHKiRet(vmprg.AddVarOperation(pThis->pVmprg, opcode_FUNC_CALL, pVar)); /* add to program */
 			break;
 		case ctok_MSGVAR:
 			dbgoprint((obj_t*) pThis, "MSGVAR\n");
@@ -406,6 +462,7 @@ ENDobjQueryInterface(expr)
  */
 BEGINObjClassInit(expr, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
+	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(vmprg, CORE_COMPONENT));
 	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(ctok_token, CORE_COMPONENT));

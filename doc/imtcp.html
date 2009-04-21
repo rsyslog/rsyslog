@@ -2,6 +2,8 @@
 <html><head>
 <meta http-equiv="Content-Language" content="en"><title>TCP Syslog Input Module</title></head>
 <body>
+<a href="rsyslog_conf_modules.html">back</a>
+
 <h1>TCP Syslog Input Module</h1>
 <p><b>Module Name:&nbsp;&nbsp;&nbsp; imtcp</b></p>
 <p><b>Author: </b>Rainer Gerhards
@@ -18,11 +20,36 @@ $InputTCPServerRun multiple times. This is not currently supported.
 </p>
 <p><b>Configuration Directives</b>:</p>
 <ul>
+<li>$InputTCPServerAddtlFrameDelimiter &lt;Delimiter&gt;<br>
+This directive permits to specify an additional frame delimiter for plain tcp syslog.
+The industry-standard specifies using the LF character as frame delimiter. Some vendors,
+notable Juniper in their NetScreen products, use an invalid frame delimiter, in Juniper's
+case the NUL character. This directive permits to specify the ASCII value of the delimiter
+in question. Please note that this does not guarantee that all wrong implementations can
+be cured with this directive. It is not even a sure fix with all versions of NetScreen,
+as I suggest the NUL character is the effect of a (common) coding error and thus will
+probably go away at some time in the future. But for the time being, the value 0 can
+probably be used to make rsyslog handle NetScreen's invalid syslog/tcp framing.
+For additional information, see this
+<a href="http://kb.monitorware.com/problem-with-netscreen-log-t1652.html">forum thread</a>.
+<br><b>If this doesn't work for you, please do not blame the rsyslog team. Instead file
+a bug report with Juniper!</b>
+<br>Note that a similar, but worse, issue exists with Cisco's IOS implementation. They do
+not use any framing at all. This is confirmed from Cisco's side, but there seems to be
+very limited interest in fixing this issue. This directive <b>can not</b> fix the Cisco bug.
+That would require much more code changes, which I was unable to do so far. Full details
+can be found at the <a href="http://www.rsyslog.com/Article321.phtml">Cisco tcp syslog anomaly</a>
+page.
 <li>$InputTCPServerRun &lt;port&gt;<br>
 Starts a TCP server on selected port</li>
 <li><ul><li>$InputTCPMaxSessions &lt;number&gt;</li></ul>
 Sets the maximum number of sessions supported</li><li>$InputTCPServerStreamDriverMode &lt;number&gt;<br>
-Sets the driver mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;number&gt; is driver specifc.</li><li>$InputTCPServerStreamDriverAuthMode &lt;mode-string&gt;<br>
+Sets the driver mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;number&gt; is driver specifc.</li>
+<li>$InputTCPServerInputName &lt;name&gt;<br>
+Sets a name for the inputname property. If no name is set "imtcp" is used by default. Setting a 
+name is not strictly necessary, but can be useful to apply filtering based on which input
+the message was received from.
+<li>$InputTCPServerStreamDriverAuthMode &lt;mode-string&gt;<br>
 Sets the authentication mode for the currently selected <a href="netstream.html">network stream driver</a>. &lt;mode-string&gt; is driver specifc.</li><li>$InputTCPServerStreamDriverPermittedPeer &lt;id-string&gt;<br>
 Sets permitted peer IDs. Only these peers are able to connect to the
 listener. &lt;id-string&gt; semantics depend on the currently selected

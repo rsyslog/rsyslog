@@ -61,24 +61,25 @@ rsRetVal vmopConstructFinalize(vmop_t __attribute__((unused)) *pThis)
 /* destructor for the vmop object */
 BEGINobjDestruct(vmop) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(vmop)
-	if(   pThis->opcode == opcode_PUSHSYSVAR
-	   || pThis->opcode == opcode_PUSHMSGVAR
-	   || pThis->opcode == opcode_PUSHCONSTANT) {
-		if(pThis->operand.pVar != NULL)
-			var.Destruct(&pThis->operand.pVar);
-	}
+	if(pThis->operand.pVar != NULL)
+		var.Destruct(&pThis->operand.pVar);
 ENDobjDestruct(vmop)
 
 
 /* DebugPrint support for the vmop object */
 BEGINobjDebugPrint(vmop) /* be sure to specify the object type also in END and CODESTART macros! */
 	uchar *pOpcodeName;
+	cstr_t *pStrVar;
 CODESTARTobjDebugPrint(vmop)
 	vmopOpcode2Str(pThis, &pOpcodeName);
-	dbgoprint((obj_t*) pThis, "opcode: %d\t(%s), next %p, var in next line\n", (int) pThis->opcode, pOpcodeName,
-		  pThis->pNext);
-	if(pThis->operand.pVar != NULL)
-		var.DebugPrint(pThis->operand.pVar);
+	CHKiRet(rsCStrConstruct(&pStrVar));
+	CHKiRet(rsCStrFinish(&pStrVar));
+	if(pThis->operand.pVar != NULL) {
+		CHKiRet(var.Obj2Str(pThis->operand.pVar, pStrVar));
+	}
+	dbgoprint((obj_t*) pThis, "%.12s\t%s\n", pOpcodeName, rsCStrGetSzStrNoNULL(pStrVar));
+	rsCStrDestruct(&pStrVar);
+finalize_it:
 ENDobjDebugPrint(vmop)
 
 
@@ -158,37 +159,37 @@ vmopOpcode2Str(vmop_t *pThis, uchar **ppName)
 			*ppName = (uchar*) "and";
 			break;
 		case opcode_PLUS:
-			*ppName = (uchar*) "+";
+			*ppName = (uchar*) "add";
 			break;
 		case opcode_MINUS:
-			*ppName = (uchar*) "-";
+			*ppName = (uchar*) "sub";
 			break;
 		case opcode_TIMES:
-			*ppName = (uchar*) "*";
+			*ppName = (uchar*) "mul";
 			break;
 		case opcode_DIV:
-			*ppName = (uchar*) "/";
+			*ppName = (uchar*) "div";
 			break;
 		case opcode_MOD:
-			*ppName = (uchar*) "%";
+			*ppName = (uchar*) "mod";
 			break;
 		case opcode_NOT:
 			*ppName = (uchar*) "not";
 			break;
 		case opcode_CMP_EQ:
-			*ppName = (uchar*) "==";
+			*ppName = (uchar*) "cmp_==";
 			break;
 		case opcode_CMP_NEQ:
-			*ppName = (uchar*) "!=";
+			*ppName = (uchar*) "cmp_!=";
 			break;
 		case opcode_CMP_LT:
-			*ppName = (uchar*) "<";
+			*ppName = (uchar*) "cmp_<";
 			break;
 		case opcode_CMP_GT:
-			*ppName = (uchar*) ">";
+			*ppName = (uchar*) "cmp_>";
 			break;
 		case opcode_CMP_LTEQ:
-			*ppName = (uchar*) "<=";
+			*ppName = (uchar*) "cmp_<=";
 			break;
 		case opcode_CMP_CONTAINS:
 			*ppName = (uchar*) "contains";
@@ -197,28 +198,31 @@ vmopOpcode2Str(vmop_t *pThis, uchar **ppName)
 			*ppName = (uchar*) "startswith";
 			break;
 		case opcode_CMP_GTEQ:
-			*ppName = (uchar*) ">=";
+			*ppName = (uchar*) "cmp_>=";
 			break;
 		case opcode_PUSHSYSVAR:
-			*ppName = (uchar*) "PUSHSYSVAR";
+			*ppName = (uchar*) "push_sysvar";
 			break;
 		case opcode_PUSHMSGVAR:
-			*ppName = (uchar*) "PUSHMSGVAR";
+			*ppName = (uchar*) "push_msgvar";
 			break;
 		case opcode_PUSHCONSTANT:
-			*ppName = (uchar*) "PUSHCONSTANT";
+			*ppName = (uchar*) "push_const";
 			break;
 		case opcode_POP:
-			*ppName = (uchar*) "POP";
+			*ppName = (uchar*) "pop";
 			break;
 		case opcode_UNARY_MINUS:
-			*ppName = (uchar*) "UNARY_MINUS";
+			*ppName = (uchar*) "unary_minus";
 			break;
 		case opcode_STRADD:
-			*ppName = (uchar*) "STRADD";
+			*ppName = (uchar*) "strconcat";
+			break;
+		case opcode_FUNC_CALL:
+			*ppName = (uchar*) "func_call";
 			break;
 		default:
-			*ppName = (uchar*) "INVALID opcode";
+			*ppName = (uchar*) "!invalid_opcode!";
 			break;
 	}
 

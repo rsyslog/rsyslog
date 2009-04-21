@@ -144,7 +144,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 		return(kernel);
 	}
 
-	if ( (kmsg = open(_PATH_KLOG, O_RDONLY)) < 0 )
+	if ( (kmsg = open(_PATH_KLOG, O_RDONLY|O_CLOEXEC)) < 0 )
 	{
 		imklogLogIntMsg(LOG_ERR, "imklog: Cannot open proc file system, %d.\n", errno);
 		ksyslog(7, NULL, 0); /* TODO: check this, implement more */

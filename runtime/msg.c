@@ -140,8 +140,8 @@ void (*funcMsgPrepareEnqueue)(msg_t *pMsg);
 #define MsgLock(pMsg) 	funcLock(pMsg)
 #define MsgUnlock(pMsg) funcUnlock(pMsg)
 #else
-#define MsgLock(pMsg) 	{dbgprintf("line %d\n - ", __LINE__); funcLock(pMsg);; }
-#define MsgUnlock(pMsg) {dbgprintf("line %d - ", __LINE__); funcUnlock(pMsg); }
+#define MsgLock(pMsg) 	{dbgprintf("MsgLock line %d\n - ", __LINE__); funcLock(pMsg);; }
+#define MsgUnlock(pMsg) {dbgprintf("MsgUnlock line %d - ", __LINE__); funcUnlock(pMsg); }
 #endif
 
 /* the next function is a dummy to be used by the looking functions
@@ -242,12 +242,21 @@ rsRetVal MsgEnableThreadSafety(void)
 /* end locking functions */
 
 
-/* "Constructor" for a msg "object". Returns a pointer to
+/* This is common code for all Constructors. It is defined in an
+ * inline'able function so that we can save a function call in the
+ * actual constructors (otherwise, the msgConstruct would need
+ * to call msgConstructWithTime(), which would require a
+ * function call). Now, both can use this inline function. This
+ * enables us to be optimal, but still have the code just once.
  * the new object or NULL if no such object could be allocated.
  * An object constructed via this function should only be destroyed
- * via "msgDestruct()".
+ * via "msgDestruct()". This constructor does not query system time
+ * itself but rather uses a user-supplied value. This enables the caller
+ * to do some tricks to save processing time (done, for example, in the
+ * udp input).
+ * rgerhards, 2008-10-06
  */
-rsRetVal msgConstruct(msg_t **ppThis)
+static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 {
 	DEFiRet;
 	msg_t *pM;
@@ -260,21 +269,59 @@ rsRetVal msgConstruct(msg_t **ppThis)
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
+	objConstructSetObjInfo(pM);
 
+	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
+
+	*ppThis = pM;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* "Constructor" for a msg "object". Returns a pointer to
+ * the new object or NULL if no such object could be allocated.
+ * An object constructed via this function should only be destroyed
+ * via "msgDestruct()". This constructor does not query system time
+ * itself but rather uses a user-supplied value. This enables the caller
+ * to do some tricks to save processing time (done, for example, in the
+ * udp input).
+ * rgerhards, 2008-10-06
+ */
+rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime)
+{
+	DEFiRet;
+
+	CHKiRet(msgBaseConstruct(ppThis));
+	(*ppThis)->ttGenTime = ttGenTime;
+	memcpy(&(*ppThis)->tRcvdAt, stTime, sizeof(struct syslogTime));
+	memcpy(&(*ppThis)->tTIMESTAMP, stTime, sizeof(struct syslogTime));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* "Constructor" for a msg "object". Returns a pointer to
+ * the new object or NULL if no such object could be allocated.
+ * An object constructed via this function should only be destroyed
+ * via "msgDestruct()". This constructor, for historical reasons,
+ * also sets the two timestamps to the current time.
+ */
+rsRetVal msgConstruct(msg_t **ppThis)
+{
+	DEFiRet;
+
+	CHKiRet(msgBaseConstruct(ppThis));
 	/* we initialize both timestamps to contain the current time, so that they
 	 * are consistent. Also, this saves us from doing any further time calls just
 	 * to obtain a timestamp. The memcpy() should not really make a difference,
 	 * especially as I think there is no codepath currently where it would not be
 	 * required (after I have cleaned up the pathes ;)). -- rgerhards, 2008-10-02
 	 */
-	datetime.getCurrTime(&(pM->tRcvdAt));
-	memcpy(&pM->tTIMESTAMP, &pM->tRcvdAt, sizeof(struct syslogTime));
-	
-	objConstructSetObjInfo(pM);
-
-	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
-
-	*ppThis = pM;
+	datetime.getCurrTime(&((*ppThis)->tRcvdAt), &((*ppThis)->ttGenTime));
+	memcpy(&(*ppThis)->tTIMESTAMP, &(*ppThis)->tRcvdAt, sizeof(struct syslogTime));
 
 finalize_it:
 	RETiRet;
@@ -400,7 +447,7 @@ msg_t* MsgDup(msg_t* pOld)
 	assert(pOld != NULL);
 
 	BEGINfunc
-	if(msgConstruct(&pNew) != RS_RET_OK) {
+	if(msgConstructWithTime(&pNew, &pOld->tTIMESTAMP, pOld->ttGenTime) != RS_RET_OK) {
 		return NULL;
 	}
 
@@ -411,8 +458,7 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->bParseHOSTNAME = pOld->bParseHOSTNAME;
 	pNew->msgFlags = pOld->msgFlags;
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
-	memcpy(&pNew->tRcvdAt, &pOld->tRcvdAt, sizeof(struct syslogTime));
-	memcpy(&pNew->tTIMESTAMP, &pOld->tTIMESTAMP, sizeof(struct syslogTime));
+	pNew->ttGenTime = pOld->ttGenTime;
 	tmpCOPYSZ(Severity);
 	tmpCOPYSZ(SeverityStr);
 	tmpCOPYSZ(Facility);
@@ -466,6 +512,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR(pStrm, iSeverity, SHORT);
 	objSerializeSCALAR(pStrm, iFacility, SHORT);
 	objSerializeSCALAR(pStrm, msgFlags, INT);
+	objSerializeSCALAR(pStrm, ttGenTime, INT);
 	objSerializeSCALAR(pStrm, tRcvdAt, SYSLOGTIME);
 	objSerializeSCALAR(pStrm, tTIMESTAMP, SYSLOGTIME);
 
@@ -702,6 +749,7 @@ char *getMSG(msg_t *pM)
 char *getPRI(msg_t *pM)
 {
 	int pri;
+	BEGINfunc
 
 	if(pM == NULL)
 		return "";
@@ -721,6 +769,7 @@ char *getPRI(msg_t *pM)
 	}
 	MsgUnlock(pM);
 
+	ENDfunc
 	return (char*)pM->pszPRI;
 }
 
@@ -735,6 +784,7 @@ int getPRIi(msg_t *pM)
 
 char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 {
+	BEGINfunc
 	if(pM == NULL)
 		return "";
 
@@ -806,11 +856,13 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP_SecFrac);
 	}
+	ENDfunc
 	return "INVALID eFmt OPTION!";
 }
 
 char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 {
+	BEGINfunc
 	if(pM == NULL)
 		return "";
 
@@ -882,6 +934,7 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt_SecFrac);
 	}
+	ENDfunc
 	return "INVALID eFmt OPTION!";
 }
 
@@ -1629,7 +1682,7 @@ static uchar *getNOW(eNOWType eNow)
 		return NULL;
 	}
 
-	datetime.getCurrTime(&t);
+	datetime.getCurrTime(&t, NULL);
 	switch(eNow) {
 	case NOW_NOW:
 		snprintf((char*) pBuf, tmpBUFSIZE, "%4.4d-%2.2d-%2.2d", t.year, t.month, t.day);
@@ -2354,6 +2407,40 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		}
 	}
 
+	/* finally, we need to check if the property should be formatted in CSV
+	 * format (we use RFC 4180, and always use double quotes). As of this writing,
+	 * this should be the last action carried out on the property, but in the
+	 * future there may be reasons to change that. -- rgerhards, 2009-04-02
+	 */
+	if(pTpe->data.field.options.bCSV) {
+		/* we need to obtain a private copy, as we need to at least add the double quotes */
+		int iBufLen = strlen(pRes);
+		char *pBStart;
+		char *pDst;
+		char *pSrc;
+		/* the malloc may be optimized, we currently use the worst case... */
+		pBStart = pDst = malloc((2 * iBufLen + 3) * sizeof(char));
+		if(pDst == NULL) {
+			if(*pbMustBeFreed == 1)
+				free(pRes);
+			*pbMustBeFreed = 0;
+			return "**OUT OF MEMORY**";
+		}
+		pSrc = pRes;
+		*pDst++ = '"'; /* starting quote */
+		while(*pSrc) {
+			if(*pSrc == '"')
+				*pDst++ = '"'; /* need to add double double quote (see RFC4180) */
+			*pDst++ = *pSrc++;
+		}
+		*pDst++ = '"';	/* ending quote */
+		*pDst = '\0';
+		if(*pbMustBeFreed == 1)
+			free(pRes);
+		pRes = pBStart;
+		*pbMustBeFreed = 1;
+	}
+
 	/*dbgprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
 	return(pRes);
 }
@@ -2445,6 +2532,8 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		MsgSetPROCID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSMSGID")) {
 		MsgSetMSGID(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+ 	} else if(isProp("ttGenTime")) {
+		pThis->ttGenTime = pProp->val.num;
 	} else if(isProp("tRcvdAt")) {
 		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	} else if(isProp("tTIMESTAMP")) {
@@ -2506,7 +2595,5 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	funcDeleteMutex = MsgLockingDummy;
 	funcMsgPrepareEnqueue = MsgLockingDummy;
 ENDObjClassInit(msg)
-
-/*
- * vi:set ai:
+/* vim:set ai:
  */

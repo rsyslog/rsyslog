@@ -1,8 +1,8 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><title>rsyslog features</title>
-
 </head>
 <body>
+<a href="rsyslog_conf.html">back</a>
 <h1>RSyslog - Features</h1>
 <p><b>This page lists both current features as well as
 those being considered for future versions of rsyslog.</b> If you
@@ -95,13 +95,16 @@ via custom plugins</li>
 <li> an easy-to-write to plugin interface</li>
 <li> ability to send SNMP trap messages</li>
 <li> ability to filter out messages based on sequence of arrival</li>
+<li>support for comma-seperated-values (CSV) output generation
+(via the "csv" property replace option). The
+CSV format supported is that from RFC 4180.</li>
 <li>support for arbitrary complex boolean, string and
 arithmetic expressions in message filters</li>
 </ul>
 <h2>World's first</h2>
 Rsyslog has an interesting number of "world's firsts" - things that
 were implemented for the first time ever in rsyslog. Some of them are still features not available elsewhere.<br><ul>
-<li>world's first implementation of IETF I-D syslog-protocol (February 2006, version 1.12.2 and above)</li><li>world's first implementation of dynamic syslog on-the-wire compression (December 2006, version 1.13.0 and above)</li><li>world's first open-source implementation of a disk-queueing syslogd (January 2008, version 3.11.0 and above)</li>
+<li>world's first implementation of IETF I-D syslog-protocol (February 2006, version 1.12.2 and above), now RFC5424</li><li>world's first implementation of dynamic syslog on-the-wire compression (December 2006, version 1.13.0 and above)</li><li>world's first open-source implementation of a disk-queueing syslogd (January 2008, version 3.11.0 and above)</li>
 <li>world's first implementation of IETF I-D
 syslog-transport-tls (May 2008, version 3.19.0 and above)</li>
 </ul>
@@ -116,7 +119,15 @@ submit feature requests there (or via our forums). If we like them but
 they look quite long-lived (aka "not soon to be implemented"), they
 will possibly be migrated to this list here and at some time moved back
 to the bugzilla tracker.</p>
+<p><b>Note that we also maintain a
+<a href="http://www.rsyslog.com/sponsor_feature">list of features that are looking for sponsors</a>.
+If you are interested in any of these features, or any other feature, you may consider sponsoring
+the implementation. This is also a great way to show your commitment to the open source
+community. Plus, it can be financially attractive: just think about how much less it may
+be to sponsor a feature instead of purchasing a commercial implementation. Also, the benefit
+of being recognised as a sponsor may even drive new customers to your business!</b>
 <ul>
+<li>Finalize the DTN "planetary Internet" space ship mode output plugin
 <li>port it to more *nix variants (eg AIX and HP UX) - this
 needs volunteers with access to those machines and knowledge </li>
 <li>pcre filtering - maybe (depending on feedback)&nbsp; -
@@ -134,4 +145,15 @@ future of RFC 3195 in rsyslog</a>.</li>
 <p>To see when each feature was added, see the
 <a href="http://www.rsyslog.com/Topic4.phtml">rsyslog
 change log</a> (online only).</p>
+
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 2 or higher.</font></p>
+
 </body></html>
+

@@ -513,6 +513,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 /* Standard-Constructor */
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
 	pThis->iSessMax = TCPSESS_MAX_DEFAULT; /* TODO: useful default ;) */
+	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 ENDobjConstruct(tcpsrv)
 
 
@@ -560,6 +561,8 @@ CODESTARTobjDestruct(tcpsrv)
 		free(pThis->pszDrvrAuthMode);
 	if(pThis->ppLstn != NULL)
 		free(pThis->ppLstn);
+	if(pThis->pszInputName != NULL)
+		free(pThis->pszInputName);
 ENDobjDestruct(tcpsrv)
 
 
@@ -658,6 +661,36 @@ SetUsrP(tcpsrv_t *pThis, void *pUsr)
 }
 
 
+/* Set additional framing to use (if any) -- rgerhards, 2008-12-10 */
+static rsRetVal
+SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	pThis->addtlFrameDelim = iDelim;
+	RETiRet;
+}
+
+
+/* Set the input name to use -- rgerhards, 2008-12-10 */
+static rsRetVal
+SetInputName(tcpsrv_t *pThis, uchar *name)
+{
+	uchar *pszName;
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	if(name == NULL)
+		pszName = NULL;
+	else
+		CHKmalloc(pszName = (uchar*)strdup((char*)name));
+	if(pThis->pszInputName != NULL)
+		free(pThis->pszInputName);
+	pThis->pszInputName = pszName;
+finalize_it:
+	RETiRet;
+}
+
+
 /* here follows a number of methods that shuffle authentication settings down
  * to the drivers. Drivers not supporting these settings may return an error
  * state.
@@ -741,6 +774,8 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->Run = Run;
 
 	pIf->SetUsrP = SetUsrP;
+	pIf->SetInputName = SetInputName;
+	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
 	pIf->SetSessMax = SetSessMax;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;

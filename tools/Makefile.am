@@ -22,12 +22,13 @@ rsyslogd_SOURCES = \
 	\
 	../dirty.h
 rsyslogd_CPPFLAGS =  $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
-rsyslogd_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS)
+rsyslogd_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS)
 rsyslogd_LDFLAGS = -export-dynamic
 
 if ENABLE_DIAGTOOLS
-sbin_PROGRAMS += rsyslog_diag_hostname
+sbin_PROGRAMS += rsyslog_diag_hostname msggen
 rsyslog_diag_hostname_SOURCES = gethostn.c
+msggen_SOURCES = msggen.c
 endif
 
 EXTRA_DIST = $(man_MANS)

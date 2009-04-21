@@ -39,15 +39,22 @@
 #include <pthread.h>
 #include <errno.h>
 
+#ifdef OS_SOLARIS
+#	include <sched.h>
+#	define pthread_yield() sched_yield()
+#endif
+
 #include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "wtp.h"
 #include "wti.h"
 #include "obj.h"
+#include "glbl.h"
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(glbl)
 
 /* forward-definitions */
 
@@ -202,6 +209,7 @@ ENDobjDestruct(wti)
 /* Standard-Constructor for the wti object
  */
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
+	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	pthread_cond_init(&pThis->condExitDone, NULL);
 	pthread_mutex_init(&pThis->mut, NULL);
 ENDobjConstruct(wti)
@@ -303,7 +311,7 @@ wtiWorkerCancelCleanup(void *arg)
 	pWtp = pThis->pWtp;
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
-	dbgprintf("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
+	DBGPRINTF("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
 	
 	/* call user supplied handler (that one e.g. requeues the element) */
 	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->pUsrp);
@@ -371,7 +379,8 @@ wtiWorker(wti_t *pThis)
 		wtpProcessThrdChanges(pWtp);
 		pthread_testcancel(); /* see big comment in function header */
 #		if !defined(__hpux) /* pthread_yield is missing there! */
-		pthread_yield(); /* see big comment in function header */
+		if(pThis->bOptimizeUniProc)
+			pthread_yield(); /* see big comment in function header */
 #		endif
 
 		/* if we have a rate-limiter set for this worker pool, let's call it. Please
@@ -395,7 +404,7 @@ wtiWorker(wti_t *pThis)
 		/* if we reach this point, we are still protected by the mutex */
 
 		if(pWtp->pfIsIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED)) {
-			dbgprintf("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
+			DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
 			pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
 
 			if(pWtp->toWrkShutdown == -1) {
@@ -404,7 +413,7 @@ wtiWorker(wti_t *pThis)
 			} else {
 				timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
 				if(d_pthread_cond_timedwait(pWtp->pcondBusy, pWtp->pmutUsr, &t) != 0) {
-					dbgprintf("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
+					DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
 					bInactivityTOOccured = 1; /* indicate we had a timeout */
 				}
 			}
@@ -470,6 +479,14 @@ finalize_it:
 /* dummy */
 rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
+/* exit our class
+ */
+BEGINObjClassExit(wti, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(nsdsel_gtls)
+	/* release objects we no longer need */
+	objRelease(glbl, CORE_COMPONENT);
+ENDObjClassExit(wti)
+
 
 /* Initialize the wti class. Must be called as the very first method
  * before anything else is called inside this class.
@@ -477,6 +494,7 @@ rsRetVal wtiQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
  */
 BEGINObjClassInit(wti, 1, OBJ_IS_CORE_MODULE) /* one is the object version (most important for persisting) */
 	/* request objects we use */
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(wti)
 
 /*

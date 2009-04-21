@@ -72,16 +72,22 @@
 #include <stdarg.h>
 #include <time.h>
 #include <assert.h>
-#include <libgen.h>
 
-#ifdef	__sun
+#ifdef OS_SOLARIS
 #	include <errno.h>
+#	include <fcntl.h>
+#	include <stropts.h>
+#	include <sys/termios.h>
+#	include <sys/types.h>
 #else
+#	include <libgen.h>
 #	include <sys/errno.h>
 #endif
+
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <sys/file.h>
+#include <grp.h>
 
 #if HAVE_SYS_TIMESPEC_H
 # include <sys/timespec.h>
@@ -128,6 +134,7 @@
 #include "vm.h"
 #include "errmsg.h"
 #include "datetime.h"
+#include "parser.h"
 #include "sysvar.h"
 
 /* definitions for objects we access */
@@ -219,7 +226,7 @@ static char	*PidFile = _PATH_LOGPID; /* read-only after startup */
 
 static pid_t myPid;	/* our pid for use in self-generated messages, e.g. on startup */
 /* mypid is read-only after the initial fork() */
-static int restart = 0; /* do restart (config read) - multithread safe */
+static int bHadHUP = 0; /* did we have a HUP? */
 
 static int bParseHOSTNAMEandTAG = 1; /* global config var: should the hostname and tag be
                                       * parsed inside message - rgerhards, 2006-03-13 */
@@ -249,15 +256,15 @@ typedef struct legacyOptsLL_s {
 legacyOptsLL_t *pLegacyOptsLL = NULL;
 
 /* global variables for config file state */
-static int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
+int	bDropTrailingLF = 1; /* drop trailing LF's on reception? */
 int	iCompatibilityMode = 0;		/* version we should be compatible with; 0 means sysklogd. It is
 					   the default, so if no -c<n> option is given, we make ourselvs
 					   as compatible to sysklogd as possible. */
 static int	bDebugPrintTemplateList = 1;/* output template list in debug mode? */
 static int	bDebugPrintCfSysLineHandlerList = 1;/* output cfsyslinehandler list in debug mode? */
 static int	bDebugPrintModuleList = 1;/* output module list in debug mode? */
-static uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
-static int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
+uchar	cCCEscapeChar = '\\';/* character to be used to start an escape sequence for control chars */
+int 	bEscapeCCOnRcv = 1; /* escape control characters on reception: 0 - no, 1 - yes */
 static int	bErrMsgToStderr = 1; /* print error messages to stderr (in addition to everything else)? */
 int 	bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
 int	bActExecWhenPrevSusp; /* execute action only when previous one was suspended? */
@@ -271,11 +278,13 @@ static int	bHaveMainQueue = 0;/* set to 1 if the main queue - in queueing mode -
 				 * If the main queue is either not yet ready or not running in 
 				 * queueing mode (mode DIRECT!), then this is set to 0.
 				 */
+static int uidDropPriv = 0;	/* user-id to which priveleges should be dropped to (AFTER init()!) */
+static int gidDropPriv = 0;	/* group-id to which priveleges should be dropped to (AFTER init()!) */
 
 extern	int errno;
 
 /* main message queue and its configuration parameters */
-static queue_t *pMsgQueue = NULL;				/* the main message queue */
+static qqueue_t *pMsgQueue = NULL;				/* the main message queue */
 static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
 static int iMainMsgQHighWtrMark = 8000;				/* high water mark for disk-assisted queues */
 static int iMainMsgQLowWtrMark = 2000;				/* low water mark for disk-assisted queues */
@@ -420,6 +429,8 @@ selectorDestruct(void *pVal)
 			rsCStrDestruct(&pThis->f_filterData.prop.pCSPropName);
 		if(pThis->f_filterData.prop.pCSCompValue != NULL)
 			rsCStrDestruct(&pThis->f_filterData.prop.pCSCompValue);
+		if(pThis->f_filterData.prop.regex_cache != NULL)
+			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
 	} else if(pThis->f_filter_type == FILTER_EXPR) {
 		if(pThis->f_filterData.f_expr != NULL)
 			expr.Destruct(&pThis->f_filterData.f_expr);
@@ -540,7 +551,7 @@ void untty(void)
 	int i;
 
 	if ( !Debug ) {
-		i = open(_PATH_TTY, O_RDWR);
+		i = open(_PATH_TTY, O_RDWR|O_CLOEXEC);
 		if (i >= 0) {
 #			if !defined(__hpux)
 				(void) ioctl(i, (int) TIOCNOTTY, (char *)0);
@@ -582,9 +593,18 @@ void untty(void)
  * Interface change: added new parameter "InputName", permits the input to provide 
  * a string that identifies it. May be NULL, but must be a valid char* pointer if
  * non-NULL.
+ *
+ * rgerhards, 2008-10-06:
+ * Interface change: added new parameter "stTime", which enables the caller to provide
+ * a timestamp that is to be used as timegenerated instead of the current system time.
+ * This is meant to facilitate performance optimization. Some inputs support such modes.
+ * If stTime is NULL, the current system time is used.
+ *
+ * rgerhards, 2008-10-09:
+ * interface change: bParseHostname removed, now in flags
  */
-rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName)
+static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int flags, flowControl_t flowCtlType,
+	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 	register uchar *p;
@@ -592,13 +612,16 @@ rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int
 	msg_t *pMsg;
 
 	/* Now it is time to create the message object (rgerhards) */
-	CHKiRet(msgConstruct(&pMsg));
+	if(stTime == NULL) {
+		CHKiRet(msgConstruct(&pMsg));
+	} else {
+		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
+	}
 	if(pszInputName != NULL)
 		MsgSetInputName(pMsg, (char*) pszInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
-	pMsg->bParseHOSTNAME  = bParseHost;
 	/* test for special codes */
 	pri = DEFUPRI;
 	p = msg;
@@ -623,7 +646,7 @@ rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int bParseHost, int
 	 * the message was received from (that, for obvious reasons,
 	 * being the local host).  rgerhards 2004-11-16
 	 */
-	if(bParseHost == 0)
+	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, (char*)hname);
 	MsgSetRcvFrom(pMsg, (char*)hname);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
@@ -685,10 +708,19 @@ finalize_it:
  * Interface change: added new parameter "InputName", permits the input to provide 
  * a string that identifies it. May be NULL, but must be a valid char* pointer if
  * non-NULL.
+ *
+ * rgerhards, 2008-10-06:
+ * Interface change: added new parameter "stTime", which enables the caller to provide
+ * a timestamp that is to be used as timegenerated instead of the current system time.
+ * This is meant to facilitate performance optimization. Some inputs support such modes.
+ * If stTime is NULL, the current system time is used.
+ *
+ * rgerhards, 2008-10-09:
+ * interface change: bParseHostname removed, now in flags
  */
 rsRetVal
-parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bParseHost, int flags, flowControl_t flowCtlType,
-	uchar *pszInputName)
+parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlType,
+	uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 	register int iMsg;
@@ -715,9 +747,6 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	 * TODO: optimize buffer handling */
 	iMaxLine = glbl.GetMaxLine();
 	CHKmalloc(tmpline = malloc(sizeof(uchar) * (iMaxLine + 1)));
-#	ifdef USE_NETZIP
-	CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
-#	endif
 
 	/* we first check if we have a NUL character at the very end of the
 	 * message. This seems to be a frequent problem with a number of senders.
@@ -763,6 +792,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 		 */
 		int ret;
 		iLenDefBuf = iMaxLine;
+		CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
 		dbgprintf("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
 		        ret, (long) iLenDefBuf, len-1);
@@ -801,7 +831,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 			 */
 			if(iMsg == iMaxLine) {
 				*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
-				printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
+				printline(hname, hnameIP, tmpline, flags, flowCtlType, pszInputName, stTime, ttGenTime);
 			} else {
 				/* This case in theory never can happen. If it happens, we have
 				 * a logic error. I am checking for it, because if I would not,
@@ -853,7 +883,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int bPa
 	*(pMsg + iMsg) = '\0'; /* space *is* reserved for this! */
 
 	/* typically, we should end up here! */
-	printline(hname, hnameIP, tmpline, bParseHost, flags, flowCtlType, pszInputName);
+	printline(hname, hnameIP, tmpline, flags, flowCtlType, pszInputName, stTime, ttGenTime);
 
 finalize_it:
 	if(tmpline != NULL)
@@ -1048,7 +1078,12 @@ static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProce
 			break;
 		case FIOP_REGEX:
 			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal) == 0)
+					(unsigned char*) pszPropVal, 0, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
+				bRet = 1;
+			break;
+		case FIOP_EREREGEX:
+			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
+					  (unsigned char*) pszPropVal, 1, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
 				bRet = 1;
 			break;
 		default:
@@ -1177,6 +1212,9 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
 
 	assert(pMsg != NULL);
 
+	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
+		parseMsg(pMsg);
+	}
 	processMsg(pMsg);
 	msgDestruct(&pMsg);
 
@@ -1298,12 +1336,13 @@ static int parseRFCStructuredData(char **pp2parse, char *pResult)
  *
  * rger, 2005-11-24
  */
-static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
+int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 {
 	char *p2parse;
 	char *pBuf;
 	int bContParse = 1;
 
+	BEGINfunc
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
 	p2parse = (char*) pMsg->pszUxTradMsg;
@@ -1377,6 +1416,7 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	MsgSetMSG(pMsg, p2parse);
 
 	free(pBuf);
+	ENDfunc
 	return 0; /* all ok */
 }
 
@@ -1394,7 +1434,7 @@ static int parseRFCSyslogMsg(msg_t *pMsg, int flags)
  * but I thought I log it in this comment.
  * rgerhards, 2006-01-10
  */
-static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
+int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 {
 	char *p2parse;
 	char *pBuf;
@@ -1456,7 +1496,7 @@ static int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * the fields. I think this logic shall work with any type of syslog message.
 		 */
 		bTAGCharDetected = 0;
-		if(pMsg->bParseHOSTNAME) {
+		if(flags & PARSE_HOSTNAME) {
 			/* TODO: quick and dirty memory allocation */
 			/* the memory allocated is far too much in most cases. But on the plus side,
 			 * it is quite fast... - rgerhards, 2007-09-20
@@ -1589,7 +1629,7 @@ submitMsg(msg_t *pMsg)
 	ISOBJ_TYPE_assert(pMsg, msg);
 	
 	MsgPrepareEnqueue(pMsg);
-	queueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
+	qqueueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
 
 	RETiRet;
 }
@@ -1650,7 +1690,7 @@ logmsg(msg_t *pMsg, int flags)
 	/* now submit the message to the main queue - then we are done */
 	pMsg->msgFlags = flags;
 	MsgPrepareEnqueue(pMsg);
-	queueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
+	qqueueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
 	ENDfunc
 }
 
@@ -1934,7 +1974,7 @@ die(int sig)
 
 	/* close the inputs */
 	dbgprintf("Terminating input threads...\n");
-	thrdTerminateAll(); /* TODO: inputs only, please */
+	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
 	if (sig) {
@@ -1948,7 +1988,7 @@ die(int sig)
 	
 	/* drain queue (if configured so) and stop main queue worker thread pool */
 	dbgprintf("Terminating main queue...\n");
-	queueDestruct(&pMsgQueue);
+	qqueueDestruct(&pMsgQueue);
 	pMsgQueue = NULL;
 
 	/* Free ressources and close connections. This includes flushing any remaining
@@ -2040,6 +2080,56 @@ static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 	dbgprintf("umask set to 0%3.3o.\n", iUmask);
 
 	return RS_RET_OK;
+}
+
+
+/* drop to specified group 
+ * if something goes wrong, the function never returns
+ * Note that such an abort can cause damage to on-disk structures, so we should
+ * re-design the "interface" in the long term. -- rgerhards, 2008-11-26
+ */
+static void doDropPrivGid(int iGid)
+{
+	int res;
+	uchar szBuf[1024];
+
+	res = setgroups(0, NULL); /* remove all supplementary group IDs */
+	if(res) {
+		perror("could not remove supplemental group IDs");
+		exit(1);
+	}
+	DBGPRINTF("setgroups(0, NULL): %d\n", res);
+	res = setgid(iGid);
+	if(res) {
+		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
+		perror("could not set requested group id");
+		exit(1);
+	}
+	DBGPRINTF("setgid(%d): %d\n", iGid, res);
+	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's groupid changed to %d", iGid);
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
+}
+
+
+/* drop to specified user 
+ * if something goes wrong, the function never returns
+ * Note that such an abort can cause damage to on-disk structures, so we should
+ * re-design the "interface" in the long term. -- rgerhards, 2008-11-19
+ */
+static void doDropPrivUid(int iUid)
+{
+	int res;
+	uchar szBuf[1024];
+
+	res = setuid(iUid);
+	if(res) {
+		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
+		perror("could not set requested userid");
+		exit(1);
+	}
+	DBGPRINTF("setuid(%d): %d\n", iUid, res);
+	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's userid changed to %d", iUid);
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
 }
 
 
@@ -2174,8 +2264,8 @@ static void dbgPrintInitInfo(void)
 			cCCEscapeChar);
 
 	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
-	dbgprintf("Main queue worker threads: %d, Perists every %d updates.\n",
-		  iMainMsgQueueNumWorkers, iMainMsgQPersistUpdCnt);
+	dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
+		  iMainMsgQueueNumWorkers, iMainMsgQtoWrkShutdown, iMainMsgQPersistUpdCnt);
 	dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
 		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
 	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
@@ -2185,13 +2275,11 @@ static void dbgPrintInitInfo(void)
 	/* TODO: add
 	iActionRetryCount = 0;
 	iActionRetryInterval = 30000;
-	static int iMainMsgQtoWrkShutdown = 60000;
 	static int iMainMsgQtoWrkMinMsgs = 100;	
 	static int iMainMsgQbSaveOnShutdown = 1;
 	iMainMsgQueMaxDiskSpace = 0;
-	setQPROP(queueSettoWrkShutdown, "$MainMsgQueueTimeoutWorkerThreadShutdown", 5000);
-	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
-	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
+	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
+	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
 	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir());
 }
@@ -2253,7 +2341,7 @@ init(void)
 	/* delete the message queue, which also flushes all messages left over */
 	if(pMsgQueue != NULL) {
 		dbgprintf("deleting main message queue\n");
-		queueDestruct(&pMsgQueue); /* delete pThis here! */
+		qqueueDestruct(&pMsgQueue); /* delete pThis here! */
 		pMsgQueue = NULL;
 	}
 
@@ -2359,12 +2447,13 @@ init(void)
 		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
 
 	/* switch the message object to threaded operation, if necessary */
+/* TODO:XXX: I think we must do this also if we have action queues! -- rgerhards, 2009-01-26 */
 	if(MainMsgQueType == QUEUETYPE_DIRECT || iMainMsgQueueNumWorkers > 1) {
 		MsgEnableThreadSafety();
 	}
 
 	/* create message queue */
-	CHKiRet_Hdlr(queueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueNumWorkers, iMainMsgQueueSize, msgConsumer)) {
+	CHKiRet_Hdlr(qqueueConstruct(&pMsgQueue, MainMsgQueType, iMainMsgQueueNumWorkers, iMainMsgQueueSize, msgConsumer)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
@@ -2382,29 +2471,29 @@ init(void)
 		errmsg.LogError(0, NO_ERRCODE, "Invalid " #directive ", error %d. Ignored, running with default setting", iRet); \
 	}
 
-	setQPROP(queueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
-	setQPROP(queueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", iMainMsgQueMaxDiskSpace);
-	setQPROPstr(queueSetFilePrefix, "$MainMsgQueueFileName", pszMainMsgQFName);
-	setQPROP(queueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
-	setQPROP(queueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
-	setQPROP(queueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", iMainMsgQtoActShutdown);
-	setQPROP(queueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", iMainMsgQtoWrkShutdown);
-	setQPROP(queueSettoEnq, "$MainMsgQueueTimeoutEnqueue", iMainMsgQtoEnq);
-	setQPROP(queueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", iMainMsgQHighWtrMark);
-	setQPROP(queueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", iMainMsgQLowWtrMark);
-	setQPROP(queueSetiDiscardMrk, "$MainMsgQueueDiscardMark", iMainMsgQDiscardMark);
-	setQPROP(queueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
-	setQPROP(queueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
-	setQPROP(queueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
-	setQPROP(queueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", iMainMsgQDeqSlowdown);
-	setQPROP(queueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", iMainMsgQueueDeqtWinFromHr);
-	setQPROP(queueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", iMainMsgQueueDeqtWinToHr);
+	setQPROP(qqueueSetMaxFileSize, "$MainMsgQueueFileSize", iMainMsgQueMaxFileSize);
+	setQPROP(qqueueSetsizeOnDiskMax, "$MainMsgQueueMaxDiskSpace", iMainMsgQueMaxDiskSpace);
+	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", pszMainMsgQFName);
+	setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
+	setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
+	setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", iMainMsgQtoActShutdown);
+	setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", iMainMsgQtoWrkShutdown);
+	setQPROP(qqueueSettoEnq, "$MainMsgQueueTimeoutEnqueue", iMainMsgQtoEnq);
+	setQPROP(qqueueSetiHighWtrMrk, "$MainMsgQueueHighWaterMark", iMainMsgQHighWtrMark);
+	setQPROP(qqueueSetiLowWtrMrk, "$MainMsgQueueLowWaterMark", iMainMsgQLowWtrMark);
+	setQPROP(qqueueSetiDiscardMrk, "$MainMsgQueueDiscardMark", iMainMsgQDiscardMark);
+	setQPROP(qqueueSetiDiscardSeverity, "$MainMsgQueueDiscardSeverity", iMainMsgQDiscardSeverity);
+	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", iMainMsgQWrkMinMsgs);
+	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", bMainMsgQSaveOnShutdown);
+	setQPROP(qqueueSetiDeqSlowdown, "$MainMsgQueueDequeueSlowdown", iMainMsgQDeqSlowdown);
+	setQPROP(qqueueSetiDeqtWinFromHr,  "$MainMsgQueueDequeueTimeBegin", iMainMsgQueueDeqtWinFromHr);
+	setQPROP(qqueueSetiDeqtWinToHr,    "$MainMsgQueueDequeueTimeEnd", iMainMsgQueueDeqtWinToHr);
 
 #	undef setQPROP
 #	undef setQPROPstr
 
 	/* ... and finally start the queue! */
-	CHKiRet_Hdlr(queueStart(pMsgQueue)) {
+	CHKiRet_Hdlr(qqueueStart(pMsgQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not start message queue - rsyslogd can not run!\n", iRet);
 		exit(1);
@@ -2525,20 +2614,18 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
  * The following function is resposible for handling a SIGHUP signal.  Since
  * we are now doing mallocs/free as part of init we had better not being
  * doing this during a signal handler.  Instead this function simply sets
- * a flag variable which will tell the main loop to go through a restart.
+ * a flag variable which will tells the main loop to do "the right thing".
  */
 void sighup_handler()
 {
 	struct sigaction sigAct;
 	
-	restart = 1;
+	bHadHUP = 1;
 
 	memset(&sigAct, 0, sizeof (sigAct));
 	sigemptyset(&sigAct.sa_mask);
 	sigAct.sa_handler = sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
-
-	return;
 }
 
 
@@ -2556,6 +2643,49 @@ static void processImInternal(void)
 
 	while(iminternalRemoveMsg(&iPri, &pMsg, &iFlags) == RS_RET_OK) {
 		logmsg(pMsg, iFlags);
+	}
+}
+
+
+/* helper to doHUP(), this "HUPs" each action. The necessary locking
+ * is done inside the action class and nothing we need to take care of.
+ * rgerhards, 2008-10-22
+ */
+DEFFUNC_llExecFunc(doHUPActions)
+{
+	BEGINfunc
+	actionCallHUPHdlr((action_t*) pData);
+	ENDfunc
+	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
+}
+
+
+/* This function processes a HUP after one has been detected. Note that this
+ * is *NOT* the sighup handler. The signal is recorded by the handler, that record
+ * detected inside the mainloop and then this function is called to do the
+ * real work. -- rgerhards, 2008-10-22
+ */
+static inline void
+doHUP(void)
+{
+	selector_t *f;
+	char buf[512];
+
+	snprintf(buf, sizeof(buf) / sizeof(char),
+		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] rsyslogd was HUPed, type '%s'.",
+		 (int) myPid, glbl.GetHUPisRestart() ? "restart" : "lightweight");
+		errno = 0;
+	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
+
+	if(glbl.GetHUPisRestart()) {
+		DBGPRINTF("Received SIGHUP, configured to be restart, reloading rsyslogd.\n");
+		init(); /* main queue is stopped as part of init() */
+	} else {
+		DBGPRINTF("Received SIGHUP, configured to be a non-restart type of HUP - notifying actions.\n");
+		for(f = Files; f != NULL ; f = f->f_next) {
+			llExecFunc(&f->llActList, doHUPActions, NULL);
+		}
 	}
 }
 
@@ -2616,11 +2746,9 @@ mainloop(void)
 		if(bReduceRepeatMsgs == 1)
 			doFlushRptdMsgs();
 
-		if(restart) {
-			dbgprintf("\nReceived SIGHUP, reloading rsyslogd.\n");
-			/* main queue is stopped as part of init() */
-			init();
-			restart = 0;
+		if(bHadHUP) {
+			doHUP();
+			bHadHUP = 0;
 			continue;
 		}
 	}
@@ -2750,6 +2878,10 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &bErrMsgToStderr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, setMaxMsgSize, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouser", 0, eCmdHdlrUID, NULL, &uidDropPriv, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptouserid", 0, eCmdHdlrInt, NULL, &uidDropPriv, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroup", 0, eCmdHdlrGID, NULL, &gidDropPriv, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"privdroptogroupid", 0, eCmdHdlrGID, NULL, &gidDropPriv, NULL));
 
 	/* now add other modules handlers (we should work on that to be able to do it in ClassInit(), but so far
 	 * that is not possible). -- rgerhards, 2008-01-28
@@ -2848,8 +2980,27 @@ static rsRetVal mainThread()
 	}
 	/* Send a signal to the parent so it can terminate.
 	 */
-	if (myPid != ppid)
-		kill (ppid, SIGTERM);
+	if(myPid != ppid)
+		kill(ppid, SIGTERM);
+
+
+	/* If instructed to do so, we now drop privileges. Note that this is not 100% secure,
+	 * because inputs and outputs are already running at this time. However, we can implement
+	 * dropping of privileges rather quickly and it will work in many cases. While it is not
+	 * the ultimate solution, the current one is still much better than not being able to
+	 * drop privileges at all. Doing it correctly, requires a change in architecture, which
+	 * we should do over time. TODO -- rgerhards, 2008-11-19
+	 */
+	if(gidDropPriv != 0) {
+		doDropPrivGid(gidDropPriv);
+		glbl.SetHUPisRestart(0); /* we can not do restart-type HUPs with dropped privs */
+	}
+
+	if(uidDropPriv != 0) {
+		doDropPrivUid(uidDropPriv);
+		glbl.SetHUPisRestart(0); /* we can not do restart-type HUPs with dropped privs */
+	}
+
 
 	/* END OF INTIALIZATION
 	 * ... but keep in mind that we might do a restart and thus init() might
@@ -2904,6 +3055,8 @@ InitGlobalClasses(void)
 	CHKiRet(actionClassInit());
 	pErrObj = "template";
 	CHKiRet(templateInit());
+	pErrObj = "parser";
+	CHKiRet(parserClassInit());
 
 	/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	pErrObj = "net";
@@ -2949,7 +3102,7 @@ GlobalClassExit(void)
 	CHKiRet(strmClassInit(NULL));
 	CHKiRet(wtiClassInit(NULL));
 	CHKiRet(wtpClassInit(NULL));
-	CHKiRet(queueClassInit(NULL));
+	CHKiRet(qqueueClassInit(NULL));
 	CHKiRet(vmstkClassInit(NULL));
 	CHKiRet(sysvarClassInit(NULL));
 	CHKiRet(vmClassInit(NULL));
@@ -3157,6 +3310,7 @@ int realMain(int argc, char **argv)
 	uchar legacyConfLine[80];
 	uchar *LocalHostName;
 	uchar *LocalDomain;
+	uchar *LocalFQDNName;
 
 	/* first, parse the command line options. We do not carry out any actual work, just
 	 * see what we should do. This relieves us from certain anomalies and we can process
@@ -3172,7 +3326,7 @@ int realMain(int argc, char **argv)
 	 * only when actually neeeded. 
 	 * rgerhards, 2008-04-04
 	 */
-	while((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nN:op:qQr::s:t:u:vwx")) != EOF) {
+	while((ch = getopt(argc, argv, "46a:Ac:def:g:hi:l:m:M:nN:op:qQr::s:t:T:u:vwx")) != EOF) {
 		switch((char)ch) {
                 case '4':
                 case '6':
@@ -3190,6 +3344,7 @@ int realMain(int argc, char **argv)
 		case 'q': /* add hostname if DNS resolving has failed */
 		case 'Q': /* dont resolve hostnames in ACL to IPs */
 		case 's':
+		case 'T': /* chroot on startup (primarily for testing) */
 		case 'u': /* misc user settings */
 		case 'w': /* disable disallowed host warnings */
 		case 'x': /* disable dns for remote messages */
@@ -3261,7 +3416,9 @@ int realMain(int argc, char **argv)
 	/* get our host and domain names - we need to do this early as we may emit
 	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
 	 */
-	net.getLocalHostname(&LocalHostName);
+	net.getLocalHostname(&LocalFQDNName);
+	CHKmalloc(LocalHostName = (uchar*) strdup((char*)LocalFQDNName));
+	glbl.SetLocalFQDNName(LocalFQDNName); /* set the FQDN before we modify it */
 	if((p = (uchar*)strchr((char*)LocalHostName, '.'))) {
 		*p++ = '\0';
 		LocalDomain = p;
@@ -3321,7 +3478,7 @@ int realMain(int argc, char **argv)
 	/* END core initializations - we now come back to carrying out command line options*/
 
 	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
-		dbgprintf("deque option %c, optarg '%s'\n", ch, arg);
+		dbgprintf("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
 		switch((char)ch) {
                 case '4':
 	                glbl.SetDefPFFamily(PF_INET);
@@ -3432,6 +3589,20 @@ int realMain(int argc, char **argv)
 			} else
 				fprintf(stderr,	"-t option only supported in compatibility modes 0 to 2 - ignored\n");
 			break;
+		case 'T':/* chroot() immediately at program startup, but only for testing, NOT security yet */
+{
+char buf[1024];
+getcwd(buf, 1024);
+printf("pwd: '%s'\n", buf);
+printf("chroot to '%s'\n", arg);
+			if(chroot(arg) != 0) {
+				perror("chroot");
+				exit(1);
+			}
+getcwd(buf, 1024);
+printf("pwd: '%s'\n", buf);
+}
+			break;
 		case 'u':		/* misc user settings */
 			iHelperUOpt = atoi(arg);
 			if(iHelperUOpt & 0x01)
@@ -3466,11 +3637,14 @@ int realMain(int argc, char **argv)
 
 
 	/* process compatibility mode settings */
-	if(iCompatibilityMode < 3) {
+	if(iCompatibilityMode < 4) {
 		errmsg.LogError(0, NO_ERRCODE, "WARNING: rsyslogd is running in compatibility mode. Automatically "
 		                            "generated config directives may interfer with your rsyslog.conf settings. "
-					    "We suggest upgrading your config and adding -c3 as the first "
+					    "We suggest upgrading your config and adding -c4 as the first "
 					    "rsyslogd option.");
+	}
+
+	if(iCompatibilityMode < 3) {
 		if(MarkInterval > 0) {
 			legacyOptsEnq((uchar *) "ModLoad immark");
 			snprintf((char *) legacyConfLine, sizeof(legacyConfLine), "MarkMessagePeriod %d", MarkInterval);
@@ -3522,6 +3696,5 @@ int main(int argc, char **argv)
 	dbgClassInit();
 	return realMain(argc, argv);
 }
-
 /* vim:set ai:
  */

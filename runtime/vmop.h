@@ -59,8 +59,36 @@ typedef enum {	 /* do NOT start at 0 to detect uninitialized types after calloc(
 	opcode_PUSHMSGVAR      = 1002,	 /* requires var operand */
 	opcode_PUSHCONSTANT    = 1003,	 /* requires var operand */
 	opcode_UNARY_MINUS     = 1010,
-	opcode_END_PROG        = 1011
+	opcode_FUNC_CALL       = 1012,
+	opcode_END_PROG        = 2000
 } opcode_t;
+
+
+/* Additional doc, operation specific
+
+  FUNC_CALL
+  All parameter passing is via the stack. Parameters are placed onto the stack in reverse order,
+  that means the last parameter is on top of the stack, the first at the bottom location. 
+  At the actual top of the stack is the number of parameters. This permits functions to be
+  called with variable number of arguments. The function itself is responsible for poping
+  the right number of parameters of the stack and complaining if the number is incorrect.
+  On exit, a single return value must be pushed onto the stack. The FUNC_CALL operation 
+  is generic. Its pVar argument contains the function name string (TODO: very slow, make
+  faster in later releases).
+
+  Sample Function call:  sampleFunc(p1, p2, p3) ; returns number 4711 (sample)
+  Stacklayout on entry (order is top to bottom):
+  3
+  p3
+  p2
+  p1
+  ... other vars ...
+
+  Stack on exit
+  4711
+  ... other vars ...
+  
+ */
 
 
 /* the vmop object */
@@ -68,8 +96,7 @@ typedef struct vmop_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	opcode_t opcode;
 	union {
-		var_t *pVar;
-		/* TODO: add function pointer */
+		var_t *pVar; 	/* for function call, this is the name (string) of function to be called */
 	} operand;
 	struct vmop_s *pNext; /* next operation or NULL, if end of program (logically this belongs to vmprg) */
 } vmop_t;

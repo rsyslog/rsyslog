@@ -70,8 +70,10 @@ struct filed {
 				FIOP_CONTAINS  = 1,	/* contains string? */
 				FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
 				FIOP_STARTSWITH = 3,	/* starts with a string? */
- 				FIOP_REGEX = 4		/* matches a regular expression? */
+ 				FIOP_REGEX = 4,		/* matches a (BRE) regular expression? */
+ 				FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
 			} operation;
+			regex_t *regex_cache;		/* cache for compiled REs, if such are used */
 			cstr_t *pCSCompValue;	/* value to "compare" against */
 			char isNegated;			/* actually a boolean ;) */
 		} prop;

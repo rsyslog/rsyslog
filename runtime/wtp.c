@@ -40,15 +40,22 @@
 #include <unistd.h>
 #include <errno.h>
 
+#ifdef OS_SOLARIS
+#	include <sched.h>
+#	define pthread_yield() sched_yield()
+#endif
+
 #include "rsyslog.h"
 #include "stringbuf.h"
 #include "srUtils.h"
 #include "wtp.h"
 #include "wti.h"
 #include "obj.h"
+#include "glbl.h"
 
 /* static data */
 DEFobjStaticHelpers
+DEFobjCurrIf(glbl)
 
 /* forward-definitions */
 
@@ -75,6 +82,7 @@ static rsRetVal NotImplementedDummy() { return RS_RET_OK; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
+	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	pthread_mutex_init(&pThis->mut, NULL);
 	pthread_mutex_init(&pThis->mutThrdShutdwn, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
@@ -478,7 +486,7 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-	wtpProcessThrdChanges(pThis);
+	wtpProcessThrdChanges(pThis);	// TODO: Performance: this causes a lot of FUTEX calls
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 
@@ -506,7 +514,8 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
  	 * hold the queue's mutex, but at least it has a chance to start on a single-CPU system.
  	 */
 #	if !defined(__hpux) /* pthread_yield is missing there! */
-	pthread_yield();
+	if(pThis->bOptimizeUniProc)
+		pthread_yield();
 #	endif
 
 	/* indicate we just started a worker and would like to see it running */
@@ -639,12 +648,22 @@ finalize_it:
 /* dummy */
 rsRetVal wtpQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 
+/* exit our class
+ */
+BEGINObjClassExit(wtp, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(nsdsel_gtls)
+	/* release objects we no longer need */
+	objRelease(glbl, CORE_COMPONENT);
+ENDObjClassExit(wtp)
+
+
 /* Initialize the stream class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-01-09
  */
 BEGINObjClassInit(wtp, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
+	CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(wtp)
 
 /*

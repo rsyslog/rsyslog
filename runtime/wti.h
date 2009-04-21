@@ -31,6 +31,7 @@
 /* the worker thread instance class */
 typedef struct wti_s {
 	BEGINobjInstance;
+	int bOptimizeUniProc; /* cache for the equally-named global setting, pulled at time of queue creation */
 	pthread_t thrdID;  /* thread ID */
 	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
 	obj_t *pUsrp;		/* pointer to an object meaningful for current user pointer (e.g. queue pUsr data elemt) */

@@ -5,6 +5,7 @@ html_files = \
 	features.html \
 	generic_design.html \
 	expression.html \
+	droppriv.html \
 	history.html \
 	how2help.html \
 	install.html \
@@ -99,6 +100,14 @@ html_files = \
 	omrelp.html \
 	syslog_parsing.html \
 	troubleshoot.html \
+	rsyslog_conf_actions.html \
+	rsyslog_conf_examples.html \
+	rsyslog_conf_filter.html \
+	rsyslog_conf_global.html \
+	rsyslog_conf_modules.html \
+	rsyslog_conf_output.html \
+	rsyslog_conf_templates.html \
+	rsyslog_conf_nomatch.html \
 	src/classes.dia
 
 EXTRA_DIST = $(html_files)

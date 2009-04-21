@@ -30,6 +30,8 @@ table... values('&amp;$facility&amp;','&amp;$severity&amp;...?]<br>&nbsp; endact
 table... values('&amp;$facility&amp;','&amp;$severity&amp;...?]<br>&nbsp;&nbsp;)<br><br>... or ...</p><p>define action writeMySQL(<br>&nbsp;&nbsp;&nbsp; type='ommysql.so', queue.mode='disk', queue.highwatermark = 300,<br>&nbsp; &nbsp; action.dbname='events', action.dbuser='uid',<br>&nbsp;
 &nbsp; [?action.template='templatename'?] or [?action.sql='insert into
 table... values('&amp;$facility&amp;','&amp;$severity&amp;...?]<br>&nbsp; &nbsp;)</p><p>if $message contains "error" then action writeMySQL(action.dbname='differentDB')</p><p></p><p>[<a href="rsyslog_conf.html">rsyslog.conf overview</a>]
+<h2>Implementation</h2>
+RainerScript will be implemented via a hand-crafted LL(1) parser. I was tempted to use yacc, but it turned out the resulting code was not thread-safe and as such did not fit within the context of rsyslog. Also, limited error handling is not a real problem for us: if there is a problem in parsing the configuration file, we stop processing. Guessing what was meant and trying to recover would IMHO not be good choices for something like a syslogd. 
 [<a href="manual.html">manual index</a>] [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a>

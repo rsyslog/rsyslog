@@ -3,6 +3,7 @@
 <meta http-equiv="Content-Language" content="de">
 <title>Understanding rsyslog queues</title></head>
 <body>
+<a href="rsyslog_conf_global.html">back</a>
 
 <h1>Understanding rsyslog Queues</h1>
 <p>Rsyslog uses queues whenever two activities need to be loosely coupled. With a 
@@ -16,6 +17,36 @@ rule processor, which then evaluates which actions are to be carried out. In
 front of each action, there is also a queue, which potentially de-couples the 
 filter processing from the actual action (e.g. writing to file, database or 
 forwarding to another host).</p>
+<h1>Where are Queues Used?</h1>
+<p>&nbsp;Currently, queues are used for the main message queue and for the 
+actions.</p>
+<p>There is a single main message queue inside rsyslog. Each input module 
+delivers messages to it. The main message queue worker filters messages based on 
+rules specified in rsyslog.conf and dispatches them to the individual action 
+queues. Once a message is in an action queue, it is deleted from the main 
+message queue.</p>
+<p>There are multiple action queues, one for each configured action. By default, 
+these queues operate in direct (non-queueing) mode. Action queues are fully 
+configurable and thus can be changed to whatever is best for the given use case.</p>
+<p>Future versions of rsyslog will most probably utilize queues at other places, 
+too.</p>
+<p> Wherever "<i>&lt;object&gt;</i>"&nbsp; is used in the config file 
+statements, substitute "<i>&lt;object&gt;</i>" with either "MainMsg" or "Action". The 
+former will set main message queue
+parameters, the later parameters for the next action that will be 
+created. Action queue parameters can not be modified once the action has been 
+specified. For example, to tell the main message queue to save its content on 
+shutdown, use <i>$MainMsgQueueSaveOnShutdown on</i>".</p>
+<p>If the same parameter is specified multiple times before a queue is created, 
+the last one specified takes precedence. The main message queue is created after 
+parsing the config file and all of its potential includes. An action queue is 
+created each time an action selector is specified. Action queue parameters are 
+reset to default after an action queue has been created (to provide a clean 
+environment for the next action).</p>
+<p>Not all queues necessarily support the full set of queue configuration 
+parameters, because not all are applicable. For example, in current output 
+module design, actions do not support multi-threading. Consequently, the number 
+of worker threads is fixed to one for action queues and can not be changed.</p>
 <h1>Queue Modes</h1>
 <p>Rsyslog supports different queue modes, some with submodes. Each of them has 
 specific advantages and disadvantages. Selecting the right queue mode is quite 
@@ -113,8 +144,7 @@ only memory if in use. A FixedArray queue may have a too large static memory
 footprint in such cases.</p>
 <p><b>In general, it is advised to use LinkedList mode if in doubt</b>. The 
 processing overhead compared to FixedArray is low and may be
-<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
-outweigh </span>by the reduction in memory use. Paging in most-often-unused 
+outweigh by the reduction in memory use. Paging in most-often-unused 
 pointer array pages can be much slower than dynamically allocating them.</p>
 <p>To create an in-memory queue, use the "<i>$&lt;object&gt;QueueType LinkedList</i>" 
 or&nbsp; "<i>$&lt;object&gt;QueueType FixedArray</i>" config directive.</p>
@@ -219,11 +249,12 @@ parall. Thus, the upper limit ca be set via "<i>$&lt;object&gt;QueueWorkerThread
 If it, for example, is set to four, no more than four workers will ever be 
 started, no matter how many elements are enqueued. </p>
 <p>Worker threads that have been started are kept running until an inactivity 
-timeout happens. The timeout can be set via "<i>$&lt;object&gt;QueueWorkerTimeoutShutdown</i>" 
+timeout happens. The timeout can be set via "<i>$&lt;object&gt;QueueWorkerTimeoutThreadShutdown</i>" 
 and is specified in milliseconds. If you do not like to keep the workers 
 running, simply set it to 0, which means immediate timeout and thus immediate 
 shutdown. But consider that creating threads involves some overhead, and this is 
-why we keep them running.</p>
+why we keep them running. If you would like to never shutdown any worker
+threads, specify -1 for this parameter.</p>
 <h2>Discarding Messages</h2>
 <p>If the queue reaches the so called "discard watermark" (a number of queued 
 elements), less important messages can automatically be discarded. This is in an 
@@ -258,19 +289,15 @@ unavoidable and you prefer to discard less important messages first.</p>
 disk space, it is finally full. If so, rsyslogd throttles the data element 
 submitter. If that, for example, is a reliable input (TCP, local log socket), 
 that will slow down the message originator which is a good
-<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
-resolution </span>for this scenario.</p>
-<p>During
-<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
-throtteling</span>, a disk-assisted queue continues to write to disk and 
+resolution for this scenario.</p>
+<p>During throtteling, a disk-assisted queue continues to write to disk and 
 messages are also discarded based on severity as well as regular dequeuing and 
 processing continues. So chances are good the situation will be resolved by 
 simply throttling. Note, though, that throtteling is highly undesirable for 
 unreliable sources, like UDP message reception. So it is not a good thing to run 
 into throtteling mode at all.</p>
 <p>We can not hold processing
-<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
-infinitely</span>, not even when throtteling. For example, throtteling the local 
+infinitely, not even when throtteling. For example, throtteling the local 
 log socket too long would cause the system at whole come to a standstill. To 
 prevent this, rsyslogd times out after a configured period ("<i>$&lt;object&gt;QueueTimeoutEnqueue</i>", 
 specified in milliseconds) if no space becomes available. As a last resort, it 
@@ -301,8 +328,7 @@ There are two configuration directives, both should be used together or
 results are unpredictable:" <i>$&lt;object&gt;QueueDequeueTimeBegin &lt;hour&gt;</i>" and&nbsp;"<i>$&lt;object&gt;QueueDequeueTimeEnd &lt;hour&gt;</i>". The hour parameter must be specified in 24-hour format (so 10pm is 22). A use case for this parameter can be found in the <a href="http://wiki.rsyslog.com/index.php/OffPeakHours">rsyslog wiki</a>. </p>
 <h2>Terminating Queues</h2>
 <p>Terminating a process sounds easy, but can be complex.
-<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
-Terminating </span>a running queue is in fact the most complex operation a queue 
+Terminating a running queue is in fact the most complex operation a queue 
 object can perform. You don't see that from a user's point of view, but its 
 quite hard work for the developer to do everything in the right order.</p>
 <p>The complexity arises when the queue has still data enqueued when it 
@@ -323,38 +349,13 @@ it terminates. This includes data elements there were begun being processed by
 workers that needed to be cancelled due to too-long processing. For a large 
 queue, this operation may be lengthy. No timeout applies to a required shutdown 
 save.</p>
-<h1>Where are Queues Used?</h1>
-<p>&nbsp;Currently, queues are used for the main message queue and for the 
-actions.</p>
-<p>There is a single main message queue inside rsyslog. Each input module 
-delivers messages to it. The main message queue worker filters messages based on 
-rules specified in rsyslog.conf and dispatches them to the individual action 
-queues. Once a message is in an action queue, it is deleted from the main 
-message queue.</p>
-<p>There are multiple action queues, one for each configured action. By default, 
-these queues operate in direct (non-queueing) mode. Action queues are fully 
-configurable and thus can be changed to whatever is best for the given use case.</p>
-<p>Future versions of rsyslog will most probably utilize queues at other places, 
-too.</p>
-<p>
-<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
-Wherever </span>"<i>&lt;object&gt;</i>"&nbsp; was used above in the config file 
-statements, substitute "<i>&lt;object&gt;</i>" with either "MainMsg" or "Action". The 
-former will set main message queue
-<span style="font-size: 12pt; line-height: 115%; font-family: 'Times New Roman',serif;" lang="EN-US">
-parameters</span>, the later parameters for the next action that will be 
-created. Action queue parameters can not be modified once the action has been 
-specified. For example, to tell the main message queue to save its content on 
-shutdown, use <i>$MainMsgQueueSaveOnShutdown on</i>".</p>
-<p>If the same parameter is specified multiple times before a queue is created, 
-the last one specified takes precedence. The main message queue is created after 
-parsing the config file and all of its potential includes. An action queue is 
-created each time an action selector is specified. Action queue parameters are 
-reset to default after an action queue has been created (to provide a clean 
-environment for the next action).</p>
-<p>Not all queues necessarily support the full set of queue configuration 
-parameters, because not all are applicable. For example, in current output 
-module design, actions do not support multi-threading. Consequently, the number 
-of worker threads is fixed to one for action queues and can not be changed.</p>
+[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 2 or higher.</font></p>
 
 </body></html>

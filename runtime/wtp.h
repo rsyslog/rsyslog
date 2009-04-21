@@ -52,6 +52,7 @@ typedef enum {
 /* the worker thread pool (wtp) object */
 typedef struct wtp_s {
 	BEGINobjInstance;
+	int	bOptimizeUniProc; /* cache for the equally-named global setting, pulled at time of queue creation */
 	wtpState_t wtpState;
 	int 	iNumWorkerThreads;/* number of worker threads to use */
 	int 	iCurNumWrkThrd;/* current number of active worker threads */

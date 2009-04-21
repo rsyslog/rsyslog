@@ -51,12 +51,16 @@ DEFobjStaticHelpers
  * class...
  */
 static uchar *pszWorkDir = NULL;
+static int bOptimizeUniProc = 1;	/* enable uniprocessor optimizations */
+static int bHUPisRestart = 1;		/* should SIGHUP cause a full system restart? */
+static int bPreserveFQDN = 0;		/* should FQDNs always be preserved? */
 static int iMaxLine = 2048;		/* maximum length of a syslog message */
 static int iDefPFFamily = PF_UNSPEC;     /* protocol family (IPv4, IPv6 or both) */
 static int bDropMalPTRMsgs = 0;/* Drop messages which have malicious PTR records during DNS lookup */
 static int option_DisallowWarning = 1;	/* complain if message from disallowed sender is received */
 static int bDisableDNS = 0; /* don't look up IP addresses of remote messages */
 static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup */
+static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup */
 static uchar *LocalDomain;	/* our local domain name  - read-only after startup */
 static char **StripDomains = NULL;/* these domains may be stripped before writing logs  - r/o after s.u., never touched by init */
 static char **LocalHosts = NULL;/* these hosts are logged with their hostname  - read-only after startup, never touched by init */
@@ -85,6 +89,9 @@ static dataType Get##nameFunc(void) \
 	return(nameVar); \
 }
 
+SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
+SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
+SIMP_PROP(HUPisRestart, bHUPisRestart, int)
 SIMP_PROP(MaxLine, iMaxLine, int)
 SIMP_PROP(DefPFFamily, iDefPFFamily, int) /* note that in the future we may check the family argument */
 SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
@@ -94,6 +101,7 @@ SIMP_PROP(LocalDomain, LocalDomain, uchar*)
 SIMP_PROP(StripDomains, StripDomains, char**)
 SIMP_PROP(LocalHosts, LocalHosts, char**)
 
+SIMP_PROP_SET(LocalFQDNName, LocalFQDNName, uchar*)
 SIMP_PROP_SET(LocalHostName, LocalHostName, uchar*)
 SIMP_PROP_SET(DfltNetstrmDrvr, pszDfltNetstrmDrvr, uchar*) /* TODO: use custom function which frees existing value */
 SIMP_PROP_SET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*) /* TODO: use custom function which frees existing value */
@@ -110,7 +118,27 @@ SIMP_PROP_SET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*) /* TO
 static uchar*
 GetLocalHostName(void)
 {
-	return(LocalHostName == NULL ? (uchar*) "[localhost]" : LocalHostName);
+	uchar *pszRet;
+
+	if(LocalHostName == NULL)
+		pszRet = (uchar*) "[localhost]";
+	else {
+		if(GetPreserveFQDN() == 1)
+			pszRet = LocalFQDNName;
+		else
+			pszRet = LocalHostName;
+	}
+	return(pszRet);
+}
+
+
+/* return the current localhost name as FQDN (requires FQDN to be set) 
+ * TODO: we should set the FQDN ourselfs in here!
+ */
+static uchar*
+GetLocalFQDNName(void)
+{
+	return(LocalFQDNName == NULL ? (uchar*) "[localhost]" : LocalFQDNName);
 }
 
 
@@ -173,10 +201,14 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
 	SIMP_PROP(MaxLine);
+	SIMP_PROP(OptimizeUniProc);
+	SIMP_PROP(PreserveFQDN);
+	SIMP_PROP(HUPisRestart);
 	SIMP_PROP(DefPFFamily);
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(Option_DisallowWarning);
 	SIMP_PROP(DisableDNS);
+	SIMP_PROP(LocalFQDNName)
 	SIMP_PROP(LocalHostName)
 	SIMP_PROP(LocalDomain)
 	SIMP_PROP(StripDomains)
@@ -216,6 +248,9 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 		pszWorkDir = NULL;
 	}
 	bDropMalPTRMsgs = 0;
+	bOptimizeUniProc = 1;
+	bHUPisRestart = 1;
+	bPreserveFQDN = 0;
 	return RS_RET_OK;
 }
 
@@ -235,6 +270,9 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCAF, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrKeyFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord, NULL, &pszDfltNetstrmDrvrCertFile, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL, &bOptimizeUniProc, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"hupisrestart", 0, eCmdHdlrBinary, NULL, &bHUPisRestart, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 ENDObjClassInit(glbl)
 
@@ -255,6 +293,8 @@ BEGINObjClassExit(glbl, OBJ_IS_CORE_MODULE) /* class, version */
 		free(pszWorkDir);
 	if(LocalHostName != NULL)
 		free(LocalHostName);
+	if(LocalFQDNName != NULL)
+		free(LocalFQDNName);
 ENDObjClassExit(glbl)
 
 /* vi:set ai:

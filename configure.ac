@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[3.22.0],[rsyslog@lists.adiscon.com])
+AC_INIT([rsyslog],[4.1.6],[rsyslog@lists.adiscon.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([ChangeLog])
 AC_CONFIG_MACRO_DIR([m4])
@@ -35,6 +35,13 @@ case "${host}" in
     # do not DEFINE OS_BSD
     os_type="bsd"
   ;;
+  *-*-solaris*)
+    os_type="solaris"
+    AC_DEFINE([OS_SOLARIS], [1], [Indicator for a Solaris OS])
+    AC_DEFINE([_POSIX_PTHREAD_SEMANTICS], [1], [Use POSIX pthread semantics])
+    SOL_LIBS="-lsocket -lnsl"
+    AC_SUBST(SOL_LIBS)
+  ;;
 esac
 
 AC_DEFINE_UNQUOTED([HOSTENV], "$host", [the host environment, can be queried via a system variable])
@@ -56,7 +63,7 @@ AC_SUBST(DL_LIBS)
 AC_HEADER_RESOLV
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([arpa/inet.h libgen.h fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h syslog.h unistd.h utmp.h])
+AC_CHECK_HEADERS([arpa/inet.h libgen.h fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h syslog.h unistd.h utmp.h sys/epoll.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -91,7 +98,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r])
+AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r epoll_wait getline])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -233,7 +240,10 @@ if test "x$enable_pthreads" != "xno"; then
         [
           AC_DEFINE([USE_PTHREADS], [1], [Multithreading support enabled.])
           PTHREADS_LIBS="-lpthread"
-          PTHREADS_CFLAGS="-pthread"
+ 	  case "${os_type}" in
+ 	  solaris) PTHREADS_CFLAGS="-pthreads" ;;
+ 	  *)       PTHREADS_CFLAGS="-pthread" ;;
+ 	  esac
           AC_SUBST(PTHREADS_LIBS)
           AC_SUBST(PTHREADS_CFLAGS)
         ],
@@ -621,9 +631,7 @@ AC_SUBST(LIBLOGGING_CFLAGS)
 AC_SUBST(LIBLOGGING_LIBS)
 
 
-# settings for the template input module; copy and modify this code
-# if you intend to add your own module. Be sure to replace imtemplate
-# by the actual name of your module.
+# settings for the file input module;
 AC_ARG_ENABLE(imfile,
         [AS_HELP_STRING([--enable-imfile],[file input module enabled @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -639,8 +647,7 @@ AC_ARG_ENABLE(imfile,
 #
 AM_CONDITIONAL(ENABLE_IMFILE, test x$enable_imfile = xyes)
 
-AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
-# end of copy template - be sure to serach for imtemplate to find everything!
+
 # settings for the template input module; copy and modify this code
 # if you intend to add your own module. Be sure to replace imtemplate
 # by the actual name of your module.
@@ -661,6 +668,45 @@ AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 # end of copy template - be sure to serach for imtemplate to find everything!
 
 
+# settings for the template output module; copy and modify this code
+# if you intend to add your own module. Be sure to replace omtemplate
+# by the actual name of your module.
+AC_ARG_ENABLE(omtemplate,
+        [AS_HELP_STRING([--enable-omtemplate],[Compiles omtemplate template module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omtemplate="yes" ;;
+          no) enable_omtemplate="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omtemplate) ;;
+         esac],
+        [enable_omtemplate=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
+# end of copy template - be sure to serach for omtemplate to find everything!
+
+
+# settings for omstdout
+# note that "make check" fails, if omstdout is not enabled (thus we enable
+# it by default).
+AC_ARG_ENABLE(omstdout,
+        [AS_HELP_STRING([--enable-omstdout],[Compiles stdout template module @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_omstdout="yes" ;;
+          no) enable_omstdout="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omstdout) ;;
+         esac],
+        [enable_omstdout=no]
+)
+#
+# you may want to do some library checks here - see snmp, mysql, pgsql modules
+# for samples
+#
+AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
+
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		tools/Makefile \
@@ -673,6 +719,8 @@ AC_CONFIG_FILES([Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
 		plugins/imtemplate/Makefile \
+		plugins/omtemplate/Makefile \
+		plugins/omstdout/Makefile \
 		plugins/imfile/Makefile \
 		plugins/imrelp/Makefile \
 		plugins/imdiag/Makefile \
@@ -703,6 +751,8 @@ echo "RELP support enabled:                     $enable_relp"
 echo "imdiag enabled:                           $enable_imdiag"
 echo "file input module enabled:                $enable_imfile"
 echo "input template module will be compiled:   $enable_imtemplate"
+echo "output template module will be compiled:  $enable_omtemplate"
+echo "omstdout module will be compiled:         $enable_omstdout"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
 echo "GnuTLS network stream driver enabled:     $enable_gnutls"

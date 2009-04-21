@@ -481,6 +481,33 @@ static rsRetVal afterRun(void)\
 }
 
 
-/*
- * vi:set ai:
+/* doHUP()
+ * This function is optional. Currently, it is available to output plugins
+ * only, but may be made available to other types of plugins in the future.
+ * A plugin does not need to define this entry point. If if does, it gets
+ * called when a non-restart type of HUP is done. A plugin should register
+ * this function so that it can close files, connection or other ressources
+ * on HUP - if it can be assume the user wanted to do this as a part of HUP
+ * processing. Note that the name "HUP" has historical reasons, it stems back
+ * to the infamous SIGHUP which was sent to restart a syslogd. We still retain
+ * that legacy, but may move this to a different signal.
+ * rgerhards, 2008-10-22
+ */
+#define CODEqueryEtryPt_doHUP \
+	else if(!strcmp((char*) name, "doHUP")) {\
+		*pEtryPoint = doHUP;\
+	}
+#define BEGINdoHUP \
+static rsRetVal doHUP(instanceData __attribute__((unused)) *pData)\
+{\
+	DEFiRet;
+
+#define CODESTARTdoHUP 
+
+#define ENDdoHUP \
+	RETiRet;\
+}
+
+
+/* vim:set ai:
  */

@@ -1,3 +1,4 @@
+#include <sys/syscall.h>
 /* debug.c
  *
  * This file proides debug and run time error analysis support. Some of the
@@ -886,7 +887,9 @@ dbgprint(obj_t *pObj, char *pszMsg, size_t lenMsg)
 			if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
 			if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
 		}
+
 		lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "%s: ", pszThrdName);
+		// use for testing: lenWriteBuf = snprintf(pszWriteBuf, sizeof(pszWriteBuf), "{%ld}%s: ", (long) syscall(SYS_gettid), pszThrdName);
 		if(stddbg != -1) write(stddbg, pszWriteBuf, lenWriteBuf);
 		if(altdbg != -1) write(altdbg, pszWriteBuf, lenWriteBuf);
 		/* print object name header if we have an object */
@@ -1340,7 +1343,7 @@ rsRetVal dbgClassInit(void)
 
 	if(pszAltDbgFileName != NULL) {
 		/* we have a secondary file, so let's open it) */
-		if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY, S_IRUSR|S_IWUSR)) == -1) {
+		if((altdbg = open(pszAltDbgFileName, O_WRONLY|O_CREAT|O_TRUNC|O_NOCTTY|O_CLOEXEC, S_IRUSR|S_IWUSR)) == -1) {
 			fprintf(stderr, "alternate debug file could not be opened, ignoring. Error: %s\n", strerror(errno));
 		}
 	}

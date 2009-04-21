@@ -42,6 +42,7 @@
  */
 #ifdef HAVE_ATOMIC_BUILTINS
 #	define ATOMIC_INC(data) ((void) __sync_fetch_and_add(&(data), 1))
+#	define ATOMIC_DEC(data) ((void) __sync_sub_and_fetch(&(data), 1))
 #	define ATOMIC_DEC_AND_FETCH(data) __sync_sub_and_fetch(&(data), 1)
 #	define ATOMIC_FETCH_32BIT(data) ((unsigned) __sync_fetch_and_and(&(data), 0xffffffff))
 #	define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
@@ -55,6 +56,7 @@
 	 */
 #	warning "atomic builtins not available, using nul operations - rsyslogd will probably be racy!"
 #	define ATOMIC_INC(data) (++(data))
+#	define ATOMIC_DEC(data) (--(data))
 #	define ATOMIC_DEC_AND_FETCH(data) (--(data))
 #	define ATOMIC_FETCH_32BIT(data) (data)
 #	define ATOMIC_STORE_1_TO_32BIT(data) (data) = 1

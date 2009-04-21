@@ -1,6 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head><title>The Rsyslogd Property Replacer</title></head>
 <body>
+<a href="rsyslog_conf_templates.html">back</a>
 <h1>The Property Replacer</h1>
 <p><b>The property replacer is a core component in
 rsyslogd's output system.</b> A syslog message has a number of
@@ -228,7 +229,7 @@ sequence with a regular expression is: "%msg:R:.*Sev:. \(.*\)
 \[.*--end%"</p>
 <p>It is possible to specify some parametes after the "R". These are
 comma-separated. They are:
-<p>R,&lt;regexp-type&gt;,&lt;submatch&gt;,&lt;nomatch&gt;,&lt;match-number&gt;
+<p>R,&lt;regexp-type&gt;,&lt;submatch&gt;,&lt;<a href="rsyslog_conf_nomatch.html">nomatch</a>&gt;,&lt;match-number&gt;
 <p>regexp-type is either "BRE" for Posix basic regular expressions or
 "ERE" for extended ones. The string must be given in upper case. The
 default is "BRE" to be consistent with earlier versions of rsyslog that
@@ -240,13 +241,8 @@ that the first match is number 0, the second 1 and so on. Up to 10 matches
 (up to number 9) are supported. Please note that it would be more
 natural to have the match-number in front of submatch, but this would break 
 backward-compatibility. So the match-number must be specified after "nomatch".
-<p>nomatch is either "DFLT", "BLANK", ZERO or "FIELD" (all upper case!). It tells
-what to use if no match is found. With "DFLT", the strig "**NO MATCH**" is
-used. This was the only supported value up to rsyslog 3.19.5. With "BLANK"
-a blank text is used (""). With "ZERO", "0" is used.
-Finally, "FIELD" uses the full property text
-instead of the expression. Some folks have requested that, so it seems
-to be useful.
+<p><a href="rsyslog_conf_nomatch.html">nomatch</a> specifies what should
+be used in case no match is found.
 <p>The following is a sample of an ERE expression that takes the first
 submatch from the message string and replaces the expression with
 the full field if no match is found:
@@ -316,6 +312,18 @@ case-insensitive. Currently, the following options are defined:
 <tr>
 <td><b>lowercase</b></td>
 <td>convert property text to uppercase only</td>
+</tr>
+<tr>
+<td valign="top"><b>csv</b></td>
+<td>formats the resulting field (after all modifications) in CSV format
+as specified in <a href="http://www.ietf.org/rfc/rfc4180.txt">RFC 4180</a>.
+Rsyslog will always use double quotes. Note that in order to have full CSV-formatted
+text, you need to define a proper template. An example is this one:
+<br>$template csvline,"%syslogtag:::csv%,%msg:::csv%"
+<br>Most importantly, you need to provide the commas between the fields
+inside the template.
+<br><i>This feature was introduced in rsyslog 4.1.6.</i>
+</td>
 </tr>
 <tr>
 <td><b>drop-last-lf</b></td>
@@ -410,4 +418,13 @@ to record severity and facility of a message)</li>
 <li><a href="rsyslog_conf.html">Configuration file
 syntax</a>, this is where you actually use the property replacer.</li>
 </ul>
+<p>[<a href="manual.html">manual index</a>]
+[<a href="rsyslog_conf.html">rsyslog.conf</a>]
+[<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
+<p><font size="2">This documentation is part of the
+<a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
+Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+<a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
+version 2 or higher.</font></p>
+
 </body></html>

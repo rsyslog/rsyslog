@@ -49,6 +49,10 @@
 #include <unistd.h>
 #include <sys/file.h>
 
+#ifdef OS_SOLARIS
+#	define PATH_MAX MAXPATHLEN
+#endif
+
 #include "cfsysline.h"
 #include "modules.h"
 #include "errmsg.h"
@@ -221,6 +225,8 @@ static rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
 		*pEtryPoint = regCfSysLineHdlr;
 	} else if(!strcmp((char*) name, "objGetObjInterface")) {
 		*pEtryPoint = objGetObjInterface;
+	} else if(!strcmp((char*) name, "OMSRgetSupportedTplOpts")) {
+		*pEtryPoint = OMSRgetSupportedTplOpts;
 	} else {
 		*pEtryPoint = NULL; /* to  be on the safe side */
 		ABORT_FINALIZE(RS_RET_ENTRY_POINT_NOT_FOUND);
@@ -347,6 +353,7 @@ static rsRetVal
 doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*), uchar *name, void *pModHdlr)
 {
 	DEFiRet;
+	rsRetVal localRet;
 	modInfo_t *pNew = NULL;
 	rsRetVal (*modGetType)(eModType_t *pType);
 
@@ -391,6 +398,10 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"parseSelectorAct", &pNew->mod.om.parseSelectorAct));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"isCompatibleWithFeature", &pNew->isCompatibleWithFeature));
 			CHKiRet((*pNew->modQueryEtryPt)((uchar*)"tryResume", &pNew->tryResume));
+			/* try load optional interfaces */
+			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
+			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				ABORT_FINALIZE(localRet);
 			break;
 		case eMOD_LIB:
 			break;
@@ -599,7 +610,7 @@ Load(uchar *pModName)
 	iLoadCnt    = 0;
 	do {
 		/* now build our load module name */
-		if(*pModName == '/') {
+		if(*pModName == '/' || *pModName == '.') {
 			*szPath = '\0';	/* we do not need to append the path - its already in the module name */
 			iPathLen = 0;
 		} else {

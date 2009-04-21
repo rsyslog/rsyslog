@@ -694,6 +694,7 @@ int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 		return -1; /* pCS1 is less then psz */
 }
 
+
 /* check if a CStr object matches a regex.
  * msamia@redhat.com 2007-07-12
  * @return returns 0 if matched
@@ -701,25 +702,54 @@ int rsCStrCaseInsensitveStartsWithSzStr(cstr_t *pCS1, uchar *psz, size_t iLenSz)
  * rgerhards, 2007-07-16: bug is no real bug, because rsyslogd ensures there
  * never is a \0 *inside* a property string.
  * Note that the function returns -1 if regexp functionality is not available.
- * TODO: change calling interface! -- rgerhards, 2008-03-07
+ * rgerhards: 2009-03-04: ERE support added, via parameter iType: 0 - BRE, 1 - ERE
+ * Arnaud Cornet/rgerhards: 2009-04-02: performance improvement by caching compiled regex
+ * If a caller does not need the cached version, it must still provide memory for it
+ * and must call rsCStrRegexDestruct() afterwards.
  */
-int rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz)
+rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *rc)
 {
-	regex_t preq;
+	regex_t **cache = (regex_t**) rc;
 	int ret;
+	DEFiRet;
 
-	BEGINfunc
+	assert(pCS1 != NULL);
+	assert(psz != NULL);
+	assert(cache != NULL);
 
 	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-		regexp.regcomp(&preq, (char*) rsCStrGetSzStr(pCS1), 0);
-		ret = regexp.regexec(&preq, (char*) psz, 0, NULL, 0);
-		regexp.regfree(&preq);
+		if (*cache == NULL) {
+			*cache = calloc(sizeof(regex_t), 1);
+			regexp.regcomp(*cache, (char*) rsCStrGetSzStr(pCS1), (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB);
+		}
+		ret = regexp.regexec(*cache, (char*) psz, 0, NULL, 0);
+		if(ret != 0)
+			ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	} else {
-		ret = 1; /* simulate "not found" */
+		ABORT_FINALIZE(RS_RET_NOT_FOUND);
 	}
 
-	ENDfunc
-	return ret;
+finalize_it:
+	RETiRet;
+}
+
+
+/* free a cached compiled regex
+ * Caller must provide a pointer to a buffer that was created by
+ * rsCStrSzStrMatchRegexCache()
+ */
+void rsCStrRegexDestruct(void *rc)
+{
+	regex_t **cache = rc;
+	
+	assert(cache != NULL);
+	assert(*cache != NULL);
+
+	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
+		regexp.regfree(*cache);
+		free(*cache);
+		*cache = NULL;
+	}
 }
 
 

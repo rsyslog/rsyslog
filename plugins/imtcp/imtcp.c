@@ -80,7 +80,9 @@ static permittedPeers_t *pPermPeersRoot = NULL;
 /* config settings */
 static int iTCPSessMax = 200; /* max number of sessions */
 static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+static int iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER; /* addtl frame delimiter, e.g. for netscreen, default none */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
+static uchar *pszInputName = NULL; /* value for inputname property, NULL is OK and handled by core engine */
 
 
 /* callbacks */
@@ -167,6 +169,8 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 		CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 		CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
+		CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ? (uchar*)"imtcp" : pszInputName));
+		CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, iAddtlFrameDelim));
 		/* now set optional params, but only if they were actually configured */
 		if(pszStrmDrvrAuthMode != NULL) {
 			CHKiRet(tcpsrv.SetDrvrAuthMode(pOurTcpsrv, pszStrmDrvrAuthMode));
@@ -240,6 +244,15 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 {
 	iTCPSessMax = 200;
 	iStrmDrvrMode = 0;
+	iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	if(pszInputName != NULL) {
+		free(pszInputName);
+		pszInputName = NULL;
+	}
+	if(pszStrmDrvrAuthMode != NULL) {
+		free(pszStrmDrvrAuthMode);
+		pszStrmDrvrAuthMode = NULL;
+	}
 	return RS_RET_OK;
 }
 
@@ -274,6 +287,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverpermittedpeer", 0,
 				   eCmdHdlrGetWord, setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserveraddtlframedelimiter", 0, eCmdHdlrInt,
+				   NULL, &iAddtlFrameDelim, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverinputname", 0,
+				   eCmdHdlrGetWord, NULL, &pszInputName, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

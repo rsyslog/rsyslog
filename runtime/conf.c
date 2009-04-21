@@ -46,7 +46,9 @@
 #include <glob.h>
 #include <sys/types.h>
 #ifdef HAVE_LIBGEN_H
-#	include <libgen.h>
+#	ifndef OS_SOLARIS
+#		include <libgen.h>
+#	endif
 #endif
 
 #include "rsyslog.h"
@@ -68,6 +70,9 @@
 #include "ctok.h"
 #include "ctok_token.h"
 
+#ifdef OS_SOLARIS
+#	define NAME_MAX MAXNAMELEN
+#endif
 
 /* forward definitions */
 static rsRetVal cfline(uchar *line, selector_t **pfCurr);
@@ -789,6 +794,10 @@ dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	CHKiRet(ctok.Getpp(tok, pline));
 	CHKiRet(ctok.Destruct(&tok));
 
+	/* debug support - print vmprg after construction (uncomment to use) */
+	/* vmprgDebugPrint(f->f_filterData.f_expr->pVmprg); */
+	vmprgDebugPrint(f->f_filterData.f_expr->pVmprg);
+
 	/* we now need to skip whitespace to the action part, else we confuse
 	 * the legacy rsyslog conf parser. -- rgerhards, 2008-02-25
 	 */
@@ -873,6 +882,8 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
 		f->f_filterData.prop.operation = FIOP_STARTSWITH;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
 		f->f_filterData.prop.operation = FIOP_REGEX;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "ereregex", 8)) {
+		f->f_filterData.prop.operation = FIOP_EREREGEX;
 	} else {
 		errmsg.LogError(0, NO_ERRCODE, "error: invalid compare operation '%s' - ignoring selector",
 		           (char*) rsCStrGetSzStrNoNULL(pCSCompOp));
