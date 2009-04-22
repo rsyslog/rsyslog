@@ -1,5 +1,11 @@
 ---------------------------------------------------------------------------
-Version 4.3.0  [DEVEL] (rgerhards), 2009-03-??
+Version 4.3.1  [DEVEL] (rgerhards), 2009-04-??
+- improved doc
+  * added (hopefully) easier to grasp queue explanation
+- improved testbench
+  * added tests for queue disk-only mode (checks disk queue logic)
+---------------------------------------------------------------------------
+Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
 - new feature: new output plugin omprog, which permits to start program
   and feed it (via its stdin) with syslog messages. If the program
   terminates, it is restarted.
@@ -14,6 +20,11 @@ Version 4.3.0  [DEVEL] (rgerhards), 2009-03-??
 - added $MaxOpenFiles configuration directive
 - bugfix: solved potential memory leak in msg processing, could manifest
   itself in imtcp
+- bugfix: ompgsql did not detect problems in sql command execution
+  this could cause loss of messages. The handling was correct if the
+  connection broke, but not if there was a problem with statement
+  execution. The most probable case for such a case would be invalid
+  sql inside the template, and this is now much easier to diagnose.
 ---------------------------------------------------------------------------
 Version 4.1.7  [BETA] (rgerhards), 2009-04-??
 - bugfix: $InputTCPMaxSessions config directive was accepted, but not
@@ -21,6 +32,11 @@ Version 4.1.7  [BETA] (rgerhards), 2009-04-??
 - bugfix: the default for $DirCreateMode was 0644, and as such wrong.
   It has now been changed to 0700. For some background, please see
   http://lists.adiscon.net/pipermail/rsyslog/2009-April/001986.html
+- bugfix: ompgsql did not detect problems in sql command execution
+  this could cause loss of messages. The handling was correct if the
+  connection broke, but not if there was a problem with statement
+  execution. The most probable case for such a case would be invalid
+  sql inside the template, and this is now much easier to diagnose.
 ---------------------------------------------------------------------------
 Version 4.1.6  [DEVEL] (rgerhards), 2009-04-07
 - added new "csv" property replacer options to enable simple creation
@@ -158,12 +174,19 @@ version before switching to this one.
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
-Version 3.22.0 [v3-stable] (rgerhards), 2009-04-??
+Version 3.22.0 [v3-stable] (rgerhards), 2009-04-21
+This is the first stable release that includes the full functionality
+of the 3.21.x version tree.
 - bugfix: $InputTCPMaxSessions config directive was accepted, but not
   honored. This resulted in a fixed upper limit of 200 connections.
 - bugfix: the default for $DirCreateMode was 0644, and as such wrong.
   It has now been changed to 0700. For some background, please see
   http://lists.adiscon.net/pipermail/rsyslog/2009-April/001986.html
+- bugfix: ompgsql did not detect problems in sql command execution
+  this could cause loss of messages. The handling was correct if the
+  connection broke, but not if there was a problem with statement
+  execution. The most probable case for such a case would be invalid
+  sql inside the template, and this is now much easier to diagnose.
 ---------------------------------------------------------------------------
 Version 3.21.11 [BETA] (rgerhards), 2009-04-03
 - build system improvements contributed by Michael Biebl - thx!
@@ -1257,6 +1280,13 @@ Version 3.10.0 (rgerhards), 2008-01-07
 - compilation without pthreads is no longer supported
 - much cleaner code due to new objects and removal of single-threading
   mode
+---------------------------------------------------------------------------
+Version 2.0.8 V2-STABLE (rgerhards), 2008-??-??
+- bugfix: ompgsql did not detect problems in sql command execution
+  this could cause loss of messages. The handling was correct if the
+  connection broke, but not if there was a problem with statement
+  execution. The most probable case for such a case would be invalid
+  sql inside the template, and this is now much easier to diagnose.
 ---------------------------------------------------------------------------
 Version 2.0.7 V2-STABLE (rgerhards), 2008-04-14
 - bugfix: the default for $DirCreateMode was 0644, and as such wrong.

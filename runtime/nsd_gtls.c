@@ -82,6 +82,7 @@ static gnutls_certificate_credentials xcred;
 static gnutls_dh_params dh_params;
 
 #ifdef DEBUG
+#if 0 /* uncomment, if needed some time again -- DEV Debug only */
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
@@ -90,6 +91,7 @@ static void logFunction(int level, const char *msg)
 {
 	dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
 }
+#endif
 #endif /* #ifdef DEBUG */
 
 

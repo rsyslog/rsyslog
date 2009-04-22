@@ -249,7 +249,6 @@ onErrClose(tcps_sess_t *pSess)
 static rsRetVal
 doOpenLstnSocks(tcpsrv_t *pSrv)
 {
-	int *pRet = NULL;
 	gsssrv_t *pGSrv;
 	DEFiRet;
 
