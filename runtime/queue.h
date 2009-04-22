@@ -54,6 +54,7 @@ typedef struct qWrkThrd_s {
 	pthread_mutex_t mut;
 } qWrkThrd_t;	/* type for queue worker threads */
 
+
 /* the queue object */
 typedef struct queue_s {
 	BEGINobjInstance;
@@ -84,6 +85,7 @@ typedef struct queue_s {
 	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
 	int	toEnq;		/* enqueue timeout */
+	int iDeqMaxAtOnce;	/* max number of elements that shall be dequeued at once */
 	/* rate limiting settings (will be expanded) */
 	int	iDeqSlowdown; /* slow down dequeue by specified nbr of microseconds */
 	/* end rate limiting */
@@ -97,7 +99,7 @@ typedef struct queue_s {
 	 * applied to detect user configuration errors (and tell me how should we detect what
 	 * the user really wanted...). -- rgerhards, 2008-04-02
 	 */
-	/* ane dequeue time window */
+	/* end dequeue time window */
 	rsRetVal (*pConsumer)(void *,void*); /* user-supplied consumer function for dequeued messages */
 	/* calling interface for pConsumer: arg1 is the global user pointer from this structure, arg2 is the
 	 * user pointer that was dequeued (actual sample: for actions, arg1 is the pAction and arg2 is pointer

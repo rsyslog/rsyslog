@@ -88,6 +88,7 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
 	/* set all function pointers to "not implemented" dummy so that we can safely call them */
 	pThis->pfChkStopWrkr = NotImplementedDummy;
+	pThis->pfGetDeqMaxAtOnce = NotImplementedDummy;
 	pThis->pfIsIdle = NotImplementedDummy;
 	pThis->pfDoWork = NotImplementedDummy;
 	pThis->pfOnIdle = NotImplementedDummy;
@@ -117,7 +118,7 @@ wtpConstructFinalize(wtp_t *pThis)
 	 */
 	if((pThis->pWrkr = malloc(sizeof(wti_t*) * pThis->iNumWorkerThreads)) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-
+	
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
 		pWti = pThis->pWrkr[i];
@@ -584,6 +585,7 @@ DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t)
 DEFpropSetMethPTR(wtp, pcondBusy, pthread_cond_t)
 DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
+DEFpropSetMethFP(wtp, pfGetDeqMaxAtOnce, rsRetVal(*pVal)(void*, int*))
 DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int))
 DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int))

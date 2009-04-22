@@ -201,6 +201,9 @@ CODESTARTobjDestruct(wti)
 	pthread_cond_destroy(&pThis->condExitDone);
 	pthread_mutex_destroy(&pThis->mut);
 
+	if(pThis->paUsrp != NULL)
+		free(pThis->paUsrp);
+
 	if(pThis->pszDbgHdr != NULL)
 		free(pThis->pszDbgHdr);
 ENDobjDestruct(wti)
@@ -209,6 +212,7 @@ ENDobjDestruct(wti)
 /* Standard-Constructor for the wti object
  */
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
+
 	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	pthread_cond_init(&pThis->condExitDone, NULL);
 	pthread_mutex_init(&pThis->mut, NULL);
@@ -222,15 +226,21 @@ rsRetVal
 wtiConstructFinalize(wti_t *pThis)
 {
 	DEFiRet;
+	int iDeqMaxAtOnce;
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
 	dbgprintf("%s: finalizing construction of worker instance data\n", wtiGetDbgHdr(pThis));
 
 	/* initialize our thread instance descriptor */
-	pThis->pUsrp = NULL;
 	pThis->tCurrCmd = eWRKTHRD_STOPPED;
 
+	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
+	CHKiRet(pThis->pWtp->pfGetDeqMaxAtOnce(pThis->pWtp->pUsr, &iDeqMaxAtOnce));
+	CHKmalloc(pThis->paUsrp = calloc(1, sizeof(aUsrp_t)));
+	CHKmalloc(pThis->paUsrp->pUsrp = calloc((size_t)iDeqMaxAtOnce, sizeof(void*)));
+
+finalize_it:
 	RETiRet;
 }
 
@@ -314,7 +324,8 @@ wtiWorkerCancelCleanup(void *arg)
 	DBGPRINTF("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
 	
 	/* call user supplied handler (that one e.g. requeues the element) */
-	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->pUsrp);
+// MULTIQUEUE: need to change here!
+	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->paUsrp->pUsrp[0]);
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pWtp->mut);
@@ -366,7 +377,7 @@ wtiWorker(wti_t *pThis)
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
 	dbgSetThrdName(pThis->pszDbgHdr);
-	pThis->pUsrp = NULL;
+	pThis->paUsrp->nElem = 0; /* flag no elements present */ // MULTIQUEUE: do we really need this any longer (cnacel handeler)?
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);

@@ -1,6 +1,6 @@
 /* Definition of the worker thread instance (wti) class.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008, 2009 by Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -28,13 +28,25 @@
 #include "wtp.h"
 #include "obj.h"
 
+/* the user pointer array object
+ * This object is used to dequeue multiple user pointers which are than handed over
+ * to processing. The size of elements is fixed after queue creation, but may be 
+ * modified by config variables (better said: queue properties).
+ * rgerhards, 2009-04-22
+ */
+struct aUsrp_s {
+	int nElem;	/* actual number of element in this entry */
+	obj_t **pUsrp;	/* actual elements (array!) */
+};
+
+
 /* the worker thread instance class */
 typedef struct wti_s {
 	BEGINobjInstance;
 	int bOptimizeUniProc; /* cache for the equally-named global setting, pulled at time of queue creation */
 	pthread_t thrdID;  /* thread ID */
 	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
-	obj_t *pUsrp;		/* pointer to an object meaningful for current user pointer (e.g. queue pUsr data elemt) */
+	aUsrp_t *paUsrp; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
 	pthread_cond_t condExitDone; /* signaled when the thread exit is done (once per thread existance) */
 	pthread_mutex_t mut;

@@ -60,6 +60,7 @@
 
 /* define some base data types */
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
+typedef struct aUsrp_s aUsrp_t;
 typedef struct thrdInfo thrdInfo_t;
 typedef struct obj_s obj_t;
 typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
