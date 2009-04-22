@@ -129,6 +129,7 @@
 #include "omfile.h"
 #include "omdiscard.h"
 #include "threads.h"
+#include "wti.h"
 #include "queue.h"
 #include "stream.h"
 #include "conf.h"
@@ -1202,22 +1203,29 @@ processMsg(msg_t *pMsg)
 
 /* The consumer of dequeued messages. This function is called by the
  * queue engine on dequeueing of a message. It runs on a SEPARATE
- * THREAD.
- * Please note: the message object is destructed by the queue itself!
+ * THREAD. It receives an array of pointers, which it must iterate
+ * over. We do not do any further batching, as this is of no benefit
+ * for the main queue.
  */
 static rsRetVal
-msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
+msgConsumer(void __attribute__((unused)) *notNeeded, aUsrp_t *paUsrp)
 {
+	int i;
+	msg_t *pMsg;
 	DEFiRet;
-	msg_t *pMsg = (msg_t*) pUsr;
 
-	assert(pMsg != NULL);
+	assert(paUsrp != NULL);
 
-	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
-		parseMsg(pMsg);
+	for(i = 0 ; i < paUsrp->nElem ; i++) {
+		pMsg = (msg_t*) paUsrp->pUsrp[i];
+dbgprintf("msgConsumer..MULTIQUEUE: i: %d, pMsg: %p\n", i, pMsg);
+		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
+			parseMsg(pMsg);
+		}
+		processMsg(pMsg);
+		msgDestruct(&pMsg);
 	}
-	processMsg(pMsg);
-	msgDestruct(&pMsg);
+dbgprintf("DONE msgConsumer..MULTIQUEUE:\n");
 
 	RETiRet;
 }

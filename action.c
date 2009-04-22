@@ -42,10 +42,11 @@
 #include "cfsysline.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "wti.h"
 #include "datetime.h"
 
 /* forward definitions */
-rsRetVal actionCallDoAction(action_t *pAction, msg_t *pMsg);
+rsRetVal actionCallDoActionMULTIQUEUE(action_t *pAction, aUsrp_t*);
 
 /* object static data (once for all instances) */
 /* TODO: make this an object! DEFobjStaticHelpers -- rgerhards, 2008-03-05 */
@@ -255,7 +256,8 @@ actionConstructFinalize(action_t *pThis)
 	 * to be run on multiple threads. So far, this is forbidden by the interface
 	 * spec. -- rgerhards, 2008-01-30
 	 */
-	CHKiRet(qqueueConstruct(&pThis->pQueue, ActionQueType, 1, iActionQueueSize, (rsRetVal (*)(void*,void*))actionCallDoAction));
+	CHKiRet(qqueueConstruct(&pThis->pQueue, ActionQueType, 1, iActionQueueSize,
+					(rsRetVal (*)(void*,aUsrp_t*))actionCallDoActionMULTIQUEUE));
 	obj.SetName((obj_t*) pThis->pQueue, pszQName);
 
 	/* ... set some properties ... */
@@ -415,6 +417,7 @@ rsRetVal actionDbgPrint(action_t *pThis)
 }
 
 
+//MULTIQUEUE: think about these two functions below
 /* call the DoAction output plugin entry point
  * rgerhards, 2008-01-28
  */
@@ -525,6 +528,29 @@ finalize_it:
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
+
+
+/* receive an array of to-process user pointers and submit them
+ * for processing.
+ * rgerhards, 2009-04-22
+ */
+rsRetVal
+actionCallDoActionMULTIQUEUE(action_t *pAction, aUsrp_t *paUsrp)
+{
+	int i;
+	msg_t *pMsg;
+	DEFiRet;
+
+	assert(paUsrp != NULL);
+
+	for(i = 0 ; i < paUsrp->nElem ; i++) {
+		pMsg = (msg_t*) paUsrp->pUsrp[i];
+dbgprintf("actionCall..MULTIQUEUE: i: %d, pMsg: %p\n", i, pMsg);
+		CHKiRet(actionCallDoAction(pAction, pMsg));
+	}
+finalize_it:
+	RETiRet;
+}
 
 
 /* call the HUP handler for a given action, if such a handler is defined. The

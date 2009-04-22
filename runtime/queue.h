@@ -100,11 +100,10 @@ typedef struct queue_s {
 	 * the user really wanted...). -- rgerhards, 2008-04-02
 	 */
 	/* end dequeue time window */
-	rsRetVal (*pConsumer)(void *,void*); /* user-supplied consumer function for dequeued messages */
+	rsRetVal (*pConsumer)(void *,aUsrp_t*); /* user-supplied consumer function for dequeued messages */
 	/* calling interface for pConsumer: arg1 is the global user pointer from this structure, arg2 is the
-	 * user pointer that was dequeued (actual sample: for actions, arg1 is the pAction and arg2 is pointer
-	 * to message)
-	 * rgerhards, 2008-01-28
+	 * user pointer array that was dequeued (actual sample: for actions, arg1 is the pAction and arg2
+	 * is pointer to an array of message message pointers)
 	 */
 	/* type-specific handlers (set during construction) */
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
@@ -185,7 +184,7 @@ rsRetVal qqueueStart(qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
-		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,void*));
+		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,aUsrp_t*));
 PROTOTYPEObjClassInit(qqueue);
 PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);
 PROTOTYPEpropSetMeth(qqueue, iDeqtWinFromHr, int);
