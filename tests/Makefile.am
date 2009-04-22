@@ -1,6 +1,6 @@
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
-TESTS = $(TESTRUNS) cfg.sh parsertest.sh omod-if-array.sh manytcp.sh diskqueue.sh
+TESTS = $(TESTRUNS) cfg.sh parsertest.sh omod-if-array.sh da-mainmsg-q.sh diskqueue.sh manytcp.sh
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
@@ -29,6 +29,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   parsertest.sh \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
+	   da-mainmsg-q.sh \
+	   testsuites/da-mainmsg-q.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
 	   omod-if-array.sh \
