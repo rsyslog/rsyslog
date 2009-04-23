@@ -2,6 +2,7 @@
 Version 4.1.8  [BETA] (rgerhards), 2009-04-??
 - bugfix: light and full delay watermarks had invalid values, badly
   affecting performance for delayable inputs
+- bugfix: compile problems in im3195
 ---------------------------------------------------------------------------
 Version 4.1.7  [BETA] (rgerhards), 2009-04-22
 - bugfix: $InputTCPMaxSessions config directive was accepted, but not
