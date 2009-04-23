@@ -1,4 +1,8 @@
 ---------------------------------------------------------------------------
+Version 4.1.8  [BETA] (rgerhards), 2009-04-??
+- bugfix: light and full delay watermarks had invalid values, badly
+  affecting performance for delayable inputs
+---------------------------------------------------------------------------
 Version 4.1.7  [BETA] (rgerhards), 2009-04-22
 - bugfix: $InputTCPMaxSessions config directive was accepted, but not
   honored. This resulted in a fixed upper limit of 200 connections.
@@ -146,6 +150,10 @@ version before switching to this one.
 - restructured rsyslog.conf documentation
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
+---------------------------------------------------------------------------
+Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
+- bugfix: light and full delay watermarks had invalid values, badly
+  affecting performance for delayable inputs
 ---------------------------------------------------------------------------
 Version 3.22.0 [v3-stable] (rgerhards), 2009-04-21
 This is the first stable release that includes the full functionality
