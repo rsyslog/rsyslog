@@ -85,7 +85,7 @@ typedef struct queue_s {
 	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
 	int	toEnq;		/* enqueue timeout */
-	int iDeqMaxAtOnce;	/* max number of elements that shall be dequeued at once */
+	int	iDeqBatchSize;	/* max number of elements that shall be dequeued at once */
 	/* rate limiting settings (will be expanded) */
 	int	iDeqSlowdown; /* slow down dequeue by specified nbr of microseconds */
 	/* end rate limiting */
@@ -202,6 +202,7 @@ PROTOTYPEpropSetMeth(qqueue, bSaveOnShutdown, int);
 PROTOTYPEpropSetMeth(qqueue, pUsr, void*);
 PROTOTYPEpropSetMeth(qqueue, iDeqSlowdown, int);
 PROTOTYPEpropSetMeth(qqueue, sizeOnDiskMax, int64);
+PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);
 #define qqueueGetID(pThis) ((unsigned long) pThis)
 
 #endif /* #ifndef QUEUE_H_INCLUDED */

@@ -71,7 +71,7 @@ typedef struct wtp_s {
 	pthread_mutex_t *pmutUsr;
 	pthread_cond_t *pcondBusy; /* condition the user will signal "busy again, keep runing" on (awakes worker) */
 	rsRetVal (*pfChkStopWrkr)(void *pUsr, int);
-	rsRetVal (*pfGetDeqMaxAtOnce)(void *pUsr, int*); /* obtains max dequeue count from queue config */
+	rsRetVal (*pfGetDeqBatchSize)(void *pUsr, int*); /* obtains max dequeue count from queue config */
 	rsRetVal (*pfRateLimiter)(void *pUsr);
 	rsRetVal (*pfIsIdle)(void *pUsr, int);
 	rsRetVal (*pfDoWork)(void *pUsr, void *pWti, int);
@@ -105,7 +105,7 @@ int wtpGetCurNumWrkr(wtp_t *pThis, int bLockMutex);
 PROTOTYPEObjClassInit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));
-PROTOTYPEpropSetMethFP(wtp, pfGetDeqMaxAtOnce, rsRetVal(*pVal)(void*, int*));
+PROTOTYPEpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*));
 PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int));

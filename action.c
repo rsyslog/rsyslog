@@ -64,6 +64,7 @@ static int bActionRepMsgHasMsg = 0;		/* last messsage repeated... has msg fragme
 /* main message queue and its configuration parameters */
 static queueType_t ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
 static int iActionQueueSize = 1000;				/* size of the main message queue above */
+static int iActionQueueDeqBatchSize = 16;			/* batch size for action queues */
 static int iActionQHighWtrMark = 800;				/* high water mark for disk-assisted queues */
 static int iActionQLowWtrMark = 200;				/* low water mark for disk-assisted queues */
 static int iActionQDiscardMark = 9800;				/* begin to discard messages */
@@ -144,6 +145,7 @@ actionResetQueueParams(void)
 
 	ActionQueType = QUEUETYPE_DIRECT;		/* type of the main message queue above */
 	iActionQueueSize = 1000;			/* size of the main message queue above */
+	iActionQueueDeqBatchSize = 16;			/* default batch size */
 	iActionQHighWtrMark = 800;			/* high water mark for disk-assisted queues */
 	iActionQLowWtrMark = 200;			/* low water mark for disk-assisted queues */
 	iActionQDiscardMark = 9800;			/* begin to discard messages */
@@ -272,6 +274,7 @@ actionConstructFinalize(action_t *pThis)
 
 	qqueueSetpUsr(pThis->pQueue, pThis);
 	setQPROP(qqueueSetsizeOnDiskMax, "$ActionQueueMaxDiskSpace", iActionQueMaxDiskSpace);
+	setQPROP(qqueueSetiDeqBatchSize, "$ActionQueueDequeueBatchSize", iActionQueueDeqBatchSize);
 	setQPROP(qqueueSetMaxFileSize, "$ActionQueueFileSize", iActionQueMaxFileSize);
 	setQPROPstr(qqueueSetFilePrefix, "$ActionQueueFileName", pszActionQFName);
 	setQPROP(qqueueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", iActionQPersistUpdCnt);
@@ -857,6 +860,7 @@ actionAddCfSysLineHdrl(void)
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszActionQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesize", 0, eCmdHdlrInt, NULL, &iActionQueueSize, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuedequeuebatchsize", 0, eCmdHdlrInt, NULL, &iActionQueueDeqBatchSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuemaxdiskspace", 0, eCmdHdlrSize, NULL, &iActionQueMaxDiskSpace, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iActionQHighWtrMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuelowwatermark", 0, eCmdHdlrInt, NULL, &iActionQLowWtrMark, NULL));

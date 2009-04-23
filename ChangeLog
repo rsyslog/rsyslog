@@ -1,3 +1,5 @@
+- added $MainMsgQueueDequeueBatchSize and $ActionQueueDequeueBatchSize 
+  configuration directives
 ---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-04-??
 - improved doc

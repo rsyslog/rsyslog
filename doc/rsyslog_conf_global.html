@@ -56,6 +56,7 @@ default template for UDP and plain TCP forwarding action</li>
 <li>$ActionGSSForwardDefaultTemplate [templateName] - sets a
 new default template for GSS-API forwarding action</li>
 <li>$ActionQueueCheckpointInterval &lt;number&gt;</li>
+<li>$ActionQueueDequeueBatchSize &lt;number&gt; [default 16]</li>
 <li>$ActionQueueDequeueSlowdown &lt;number&gt; [number
 is timeout in <i> micro</i>seconds (1000000us is 1sec!),
 default 0 (no delay). Simple rate-limiting!]</li>
@@ -125,6 +126,7 @@ not recommended for use with rsyslog. To do a full restart, simply stop and star
 compatibility reasons. If it is set to "off", a HUP will only close open files. This is a much quicker action and usually
 the only one that is needed e.g. for log rotation. <b>It is recommended to set the setting to "off".</b></li>
 <li><a href="rsconf1_includeconfig.html">$IncludeConfig</a></li><li>MainMsgQueueCheckpointInterval &lt;number&gt;</li>
+<li>$MainMsgQueueDequeueBatchSize &lt;number&gt; [default 32]</li>
 <li>$MainMsgQueueDequeueSlowdown &lt;number&gt; [number
 is timeout in <i> micro</i>seconds (1000000us is 1sec!),
 default 0 (no delay). Simple rate-limiting!]</li>

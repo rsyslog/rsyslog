@@ -226,7 +226,7 @@ rsRetVal
 wtiConstructFinalize(wti_t *pThis)
 {
 	DEFiRet;
-	int iDeqMaxAtOnce;
+	int iDeqBatchSize;
 
 	ISOBJ_TYPE_assert(pThis, wti);
 
@@ -236,9 +236,9 @@ wtiConstructFinalize(wti_t *pThis)
 	pThis->tCurrCmd = eWRKTHRD_STOPPED;
 
 	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
-	CHKiRet(pThis->pWtp->pfGetDeqMaxAtOnce(pThis->pWtp->pUsr, &iDeqMaxAtOnce));
+	CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
 	CHKmalloc(pThis->paUsrp = calloc(1, sizeof(aUsrp_t)));
-	CHKmalloc(pThis->paUsrp->pUsrp = calloc((size_t)iDeqMaxAtOnce, sizeof(void*)));
+	CHKmalloc(pThis->paUsrp->pUsrp = calloc((size_t)iDeqBatchSize, sizeof(void*)));
 
 finalize_it:
 	RETiRet;
