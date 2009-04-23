@@ -7,7 +7,6 @@
 # check everything recovers from DA mode correctly.
 # added 2009-04-22 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
-echo "THIS TEST DOES NOT YET WORK RELIABLY!"
 echo "testing main message queue in DA mode (going to disk)"
 rm -f work rsyslog.out.log
 rm -rf test-spool
