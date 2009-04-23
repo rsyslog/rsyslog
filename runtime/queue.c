@@ -490,9 +490,7 @@ static rsRetVal qDestructFixedArray(qqueue_t *pThis)
 	ASSERT(pThis != NULL);
 
 	queueDrain(pThis); /* discard any remaining queue entries */
-
-	if(pThis->tVars.farray.pBuf != NULL)
-		free(pThis->tVars.farray.pBuf);
+	free(pThis->tVars.farray.pBuf);
 
 	RETiRet;
 }
@@ -2063,11 +2061,8 @@ CODESTARTobjDestruct(qqueue)
 	/* type-specific destructor */
 	iRet = pThis->qDestruct(pThis);
 
-	if(pThis->pszFilePrefix != NULL)
-		free(pThis->pszFilePrefix);
-
-	if(pThis->pszSpoolDir != NULL)
-		free(pThis->pszSpoolDir);
+	free(pThis->pszFilePrefix);
+	free(pThis->pszSpoolDir);
 ENDobjDestruct(qqueue)
 
 
@@ -2081,8 +2076,8 @@ qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix)
 {
 	DEFiRet;
 
-	if(pThis->pszFilePrefix != NULL)
-		free(pThis->pszFilePrefix);
+	free(pThis->pszFilePrefix);
+	pThis->pszFilePrefix = NULL;
 
 	if(pszPrefix == NULL) /* just unset the prefix! */
 		ABORT_FINALIZE(RS_RET_OK);

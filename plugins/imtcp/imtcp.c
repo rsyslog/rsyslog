@@ -245,14 +245,10 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	iTCPSessMax = 200;
 	iStrmDrvrMode = 0;
 	iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
-	if(pszInputName != NULL) {
-		free(pszInputName);
-		pszInputName = NULL;
-	}
-	if(pszStrmDrvrAuthMode != NULL) {
-		free(pszStrmDrvrAuthMode);
-		pszStrmDrvrAuthMode = NULL;
-	}
+	free(pszInputName);
+	pszInputName = NULL;
+	free(pszStrmDrvrAuthMode);
+	pszStrmDrvrAuthMode = NULL;
 	return RS_RET_OK;
 }
 
