@@ -1818,9 +1818,11 @@ rsRetVal qqueueStart(qqueue_t *pThis) /* this is the ConstructionFinalizer */
 	/* call type-specific constructor */
 	CHKiRet(pThis->qConstruct(pThis)); /* this also sets bIsDA */
 
-	dbgoprint((obj_t*) pThis, "type %d, enq-only %d, disk assisted %d, maxFileSz %lld, qsize %d, child %d starting\n",
+	dbgoprint((obj_t*) pThis, "type %d, enq-only %d, disk assisted %d, maxFileSz %lld, qsize %d, child %d, "
+				  "full delay %d, light delay %d starting\n",
 		  pThis->qType, pThis->bEnqOnly, pThis->bIsDA, pThis->iMaxFileSize,
-		  qqueueGetOverallQueueSize(pThis), pThis->pqParent == NULL ? 0 : 1);
+		  qqueueGetOverallQueueSize(pThis), pThis->pqParent == NULL ? 0 : 1,
+		  pThis->iFullDlyMrk, pThis->iLightDlyMrk);
 
 	if(pThis->qType == QUEUETYPE_DIRECT)
 		FINALIZE;	/* with direct queues, we are already finished... */
