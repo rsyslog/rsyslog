@@ -1,5 +1,9 @@
 - added $MainMsgQueueDequeueBatchSize and $ActionQueueDequeueBatchSize 
   configuration directives
+- implemented a new transactional output module interface which provides
+  superior performance (for databases potentially far superior performance)
+- increased ompgsql performance by adapting to new transactional
+  output module interface
 ---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-04-??
 - improved doc

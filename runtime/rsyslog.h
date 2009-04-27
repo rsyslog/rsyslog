@@ -58,6 +58,15 @@
 #endif
 
 
+/* the rsyslog core provides information about present feature to plugins
+ * asking it. Below are feature-test macros which must be used to query 
+ * features. Note that this must be powers of two, so that multiple queries
+ * can be combined. -- rgerhards, 2009-04-27
+ */
+#define CORE_FEATURE_BATCHING	1
+/*#define CORE_FEATURE_whatever 2 ... and so on ... */
+
+
 /* define some base data types */
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct aUsrp_s aUsrp_t;
@@ -268,6 +277,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_FORK = -2118, /**< error during fork() */
 	RS_RET_ERR_WRITE_PIPE = -2119, /**< error writing to pipe */
 	RS_RET_RSCORE_TOO_OLD = -2120, /**< rsyslog core is too old for ... (eg this plugin) */
+	RS_RET_DEFER_COMMIT = -2121, /**< output plugin status: not yet committed (an OK state!) */
+	RS_RET_PREVIOUS_COMMITTED = -2122, /**< output plugin status: previous record was committed (an OK state!) */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

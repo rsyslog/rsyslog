@@ -466,8 +466,7 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 	d_pthread_mutex_lock(&pAction->mutActExec);
 	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
 	pthread_setcancelstate(iCancelStateSave, NULL);
-	do {
-		/* on first invocation, this if should never be true. We just put it at the top
+	do {	/* on first invocation, this if should never be true. We just put it at the top
 		 * of the loop so that processing (and code) is simplified. This code is actually
 		 * triggered on the 2nd+ invocation. -- rgerhards, 2008-01-30
 		 */
@@ -490,6 +489,10 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 
 		if(bCallAction) {
 			/* call configured action */
+		/* MULTIQUEUE: TODO: and this now gets us in trouble. If it was suspended, we can
+		 * assume (and must so) that the action did not succeed. So we now need to redo all
+		 * those messages from the batch that are not yet processed.
+		 */
 			iRet = pAction->pMod->mod.om.doAction(ppMsgs, pMsg->msgFlags, pAction->pModData);
 			if(iRet == RS_RET_SUSPENDED) {
 				dbgprintf("Action requested to be suspended, done that.\n");
@@ -546,11 +549,15 @@ actionCallDoActionMULTIQUEUE(action_t *pAction, aUsrp_t *paUsrp)
 
 	assert(paUsrp != NULL);
 
+	if(pAction->pMod->mod.om.beginTransaction != NULL)
+		CHKiRet(pAction->pMod->mod.om.beginTransaction(pAction->pModData));
 	for(i = 0 ; i < paUsrp->nElem ; i++) {
 		pMsg = (msg_t*) paUsrp->pUsrp[i];
 dbgprintf("actionCall..MULTIQUEUE: i: %d, pMsg: %p\n", i, pMsg);
 		CHKiRet(actionCallDoAction(pAction, pMsg));
 	}
+	if(pAction->pMod->mod.om.endTransaction != NULL)
+		CHKiRet(pAction->pMod->mod.om.endTransaction(pAction->pModData));
 finalize_it:
 	RETiRet;
 }

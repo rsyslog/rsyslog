@@ -110,7 +110,9 @@ typedef struct modInfo_s {
 		struct {/* data for output modules */
 			/* below: perform the configured action
 			 */
+			rsRetVal (*beginTransaction)(void*);
 			rsRetVal (*doAction)(uchar**, unsigned, void*);
+			rsRetVal (*endTransaction)(void*);
 			rsRetVal (*parseSelectorAct)(uchar**, void**,omodStringRequest_t**);
 		} om;
 		struct { /* data for library modules */
