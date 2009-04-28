@@ -28,10 +28,11 @@
     then specify $OmoracleBatchItemSize 3072. Please, remember to
     leave space to the trailing \0!!
 
-    $OmoracleStatement: Statement to be prepared and executed in
-    batches. Please note that Oracle's prepared statements have their
-    placeholders as ':identifier', and this module uses the colon to
-    guess how many placeholders there will be.
+    $OmoracleStatementTemplate: Name of the template containing the
+    statement to be prepared and executed in batches. Please note that
+    Oracle's prepared statements have their placeholders as
+    ':identifier', and this module uses the colon to guess how many
+    placeholders there will be.
 
     All these directives are mandatory. The dbstring can be an Oracle
     easystring or a DB name, as present in the tnsnames.ora file.
@@ -273,6 +274,7 @@ finalize_it:
 /* Resource allocation */
 BEGINcreateInstance
 	int i, j;
+	struct template* tpl;
 CODESTARTcreateInstance
 
 	ASSERT(pData != NULL);
@@ -289,14 +291,16 @@ CODESTARTcreateInstance
 	CHECKENV(pData->environment,
 		 OCIHandleAlloc(pData->environment, (void*) &(pData->statement),
 				OCI_HTYPE_STMT, 0, NULL));
-	pData->txt_statement = strdup(db_statement);
+	tpl = tplFind(db_statement, strlen(db_statement));
+	pData->txt_statement = strdup(tpl->pEntryRoot->data.constant.pConstant);
 	CHKmalloc(pData->txt_statement);
 	dbgprintf("omoracle will run stored statement: %s\n",
 		  pData->txt_statement);
 
 	pData->batch.n = 0;
 	pData->batch.size = batch_size;
-	pData->batch.param_size = batch_item_size * sizeof ***pData->batch.parameters;
+	pData->batch.param_size = batch_item_size *
+		sizeof ***pData->batch.parameters;
 	pData->batch.arguments = count_bind_parameters(pData->txt_statement);
 
 	/* I know, this can be done with a single malloc() call but this is
@@ -439,7 +443,6 @@ finalize_it:
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
 	/* Right now, this module is compatible with nothing. */
-	dbgprintf ("***** OMORACLE ***** At isCompatibleWithFeature\n");
 	iRet = RS_RET_INCOMPATIBLE;
 ENDisCompatibleWithFeature
 
@@ -465,6 +468,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1);
 	CHKiRet(createInstance(&pData));
 	CHKmalloc(pData->connection = strdup(db_name));
 	CHKiRet(startSession(pData, db_name, db_user, db_password));
+
 	CHKiRet(prepare_statement(pData));
 
 	dbgprintf ("omoracle module got all its resources allocated "
@@ -530,22 +534,6 @@ resetConfigVariables(uchar __attribute__((unused)) *pp,
 	RETiRet;
 }
 
-/** As I don't find any handler that reads an entire line, I write my
- * own. */
-static int get_db_statement(char** line, char** stmt)
-{
-	DEFiRet;
-
-	while (isspace(**line))
-		(*line)++;
-	dbgprintf ("Config line: %s\n", *line);
-	*stmt = strdup(*line);
-	CHKmalloc(*stmt);
-	dbgprintf ("Statement: %s\n", *stmt);
-finalize_it:
-	RETiRet;
-}
-
 BEGINmodInit()
 	rsRetVal (*supported_options)(unsigned long *pOpts);
 	unsigned long opts;
@@ -574,8 +562,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	if (!(opts & OMSR_TPL_AS_ARRAY))
 		ABORT_FINALIZE(RS_RET_RSCORE_TOO_OLD);
 
-	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoraclestatement", 0,
-				   eCmdHdlrCustomHandler, get_db_statement,
+	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoraclestatementtemplate", 0,
+				   eCmdHdlrGetWord, NULL,
 				   &db_statement, STD_LOADABLE_MODULE_ID));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar*) "omoraclebatchitemsize", 0,
