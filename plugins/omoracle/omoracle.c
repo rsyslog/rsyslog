@@ -342,13 +342,12 @@ static int insert_to_db(instanceData* pData)
 		 OCIStmtExecute(pData->service,
 				pData->statement,
 				pData->error,
-				pData->batch.n, 0, NULL, NULL, OCI_DEFAULT));
+				pData->batch.n, 0, NULL, NULL,
+				OCI_BATCH_ERRORS));
 
-	CHECKERR(pData->error,
-		 OCITransCommit(pData->service, pData->error, 0));
-
-	pData->batch.n = 0;
 finalize_it:
+	pData->batch.n = 0;
+	OCITransCommit(pData->service, pData->error, 0);
 	dbgprintf ("omoracle insertion to DB %s\n", iRet == RS_RET_OK ?
 		   "succeeded" : "did not succeed");
 	RETiRet;
