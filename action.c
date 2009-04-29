@@ -500,7 +500,8 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 			}
 		}
 
-	} while(iRet == RS_RET_SUSPENDED && (pAction->iResumeRetryCount == -1 || iRetries < pAction->iResumeRetryCount)); /* do...while! */
+	} while(   iRet == RS_RET_SUSPENDED
+		&& (pAction->iResumeRetryCount == -1 || iRetries < pAction->iResumeRetryCount)); /* do...while! */
 
 	if(iRet == RS_RET_DISABLE_ACTION) {
 		dbgprintf("Action requested to be disabled, done that.\n");
