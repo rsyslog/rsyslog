@@ -36,6 +36,15 @@
 extern int glbliActionResumeRetryCount;
 
 
+typedef enum {
+	ACT_STATE_DIED = 0,	/* action permanently failed and now disabled  - MUST BE ZEO! */
+	ACT_STATE_RDY  = 1,	/* action ready, waiting for new transaction */
+	ACT_STATE_ITX  = 2,	/* transaction active, waiting for new data or commit */
+	ACT_STATE_COMM = 3, 	/* transaction finished (a transient state) */
+	ACT_STATE_RTRY = 4,	/* failure occured, trying to restablish ready state */
+	ACT_STATE_SUSP = 5	/* suspended due to failure (return fail until timeout expired) */
+} action_state_t;
+
 /* the following struct defines the action object data structure
  */
 struct action_s {
@@ -45,8 +54,10 @@ struct action_s {
 	time_t	tLastExec;	/* time this action was last executed */
 	int	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
-	short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
-	short	bSuspended;	/* is the related action temporarily suspended? */
+	action_state_t eState;	/* current state of action */
+	int	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
+	//short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
+	//short	bSuspended;	/* is the related action temporarily suspended? */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
 	int	iResumeInterval;/* resume interval for this action */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */

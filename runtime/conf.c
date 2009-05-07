@@ -1080,7 +1080,7 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 					dbgprintf("module is incompatible with RepeatedMsgReduction - turned off\n");
 					pAction->f_ReduceRepeated = 0;
 				}
-				pAction->bEnabled = 1; /* action is enabled */
+				pAction->eState = ACT_STATE_RDY; /* action is enabled */
 				iNbrActions++;	/* one more active action! */
 			}
 			break;

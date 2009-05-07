@@ -68,6 +68,21 @@ static modInfo_t *pLoadedModulesLast = NULL;	/* tail-pointer */
 uchar	*pModDir = NULL; /* read-only after startup */
 
 
+/* we provide a set of dummy functions for output modules that do not support the
+ * transactional interface. As they do not do this, they commit each message they
+ * receive, and as such the dummies can always return RS_RET_OK without causing
+ * harm. This simplifies things as in action processing we do not need to check
+ * if the transactional entry points exist.
+ */
+static rsRetVal dummyBeginTransaction() 
+{
+	return RS_RET_OK;
+}
+static rsRetVal dummyEndTransaction() 
+{
+	return RS_RET_OK;
+}
+
 #ifdef DEBUG
 /* we add some home-grown support to track our users (and detect who does not free us). In
  * the long term, this should probably be migrated into debug.c (TODO). -- rgerhards, 2008-03-11
@@ -423,11 +438,17 @@ doModInit(rsRetVal (*modInit)(int, int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"doHUP", &pNew->doHUP);
 			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
 				ABORT_FINALIZE(localRet);
+
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"beginTransaction", &pNew->mod.om.beginTransaction);
-			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				pNew->mod.om.beginTransaction = dummyBeginTransaction;
+			else if(localRet != RS_RET_OK)
 				ABORT_FINALIZE(localRet);
+
 			localRet = (*pNew->modQueryEtryPt)((uchar*)"endTransaction", &pNew->mod.om.endTransaction);
-			if(localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+			if(localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND)
+				pNew->mod.om.beginTransaction = dummyEndTransaction;
+			else if(localRet != RS_RET_OK)
 				ABORT_FINALIZE(localRet);
 			break;
 		case eMOD_LIB:
