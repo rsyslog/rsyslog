@@ -1,0 +1,397 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{algorithm,algorithmic}
+
+\newcommand{\IN}{\mathbb{N}}
+\newcommand{\MM}{\mathfrak{M}}
+\newcommand{\QQ}{\mathfrak{Q}}
+\newcommand{\AAA}{\mathfrak{A}}
+\title{Rsyslog Design and Internals}
+\author{Rainer Gerhards}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This paper describes rsyslog design and internals. It is created to facilitate a discussion about the implementation of "batched queue processing". As such, it does not describe the full design of rsyslog but rather those elements that are relevant to queues. However, the document may be expanded in the future.
+\end{abstract}
+
+\section{Preliminaries}
+\subsection{Notational Conventions}
+In general, in rsyslog there exists single objects $o$, which are used to build larger sets $O$, which form a superset $\mathfrak{O}$ of all those objects that exist at a given time inside a running instance of rsyslog. As seen above, single objects are always described by lower case letters ($o$), larger sets by upper case letters ($O$) and the ``all-sets'' in gothic letters ($\mathfrak{O}$). Often, objects $O_i, i \in \IN, i \le |\mathfrak{O}|$ partition $\mathfrak{O}$, but this is not necessarily the case.
+\section{Objects}
+%\subsection{State Sets} 
+Be 
+$$S_m = \{ new, ready, comitPend, discardable \}$$
+the totally ordered set of message states and be
+$$S_p = \{ ready,  actTempFail, actPermFail, comitPend, comit\}$$
+the totally ordered set of message processing states (inside a batch). States may be contained in many objects $o$. I write $S(o)$ to denote the state that is associated with the object $o$.
+\emph{Is one a subset of the other?}
+
+A \emph{message}
+$$m = (m_s, \ldots), m_s \in S_m$$
+is a tuple of attributes. Be the set $\MM$ composed of all messages that exist at a given time inside rsyslog.
+
+% Be a processable message 
+$$p = (m, p_s), m \in \MM : \sigma_m(m) \geq ready, s_p \in S_p$$
+an ordered pair.
+
+An \emph{action}
+$$a = (a_C, a_\psi)$$
+is an ordered pair of a tuple of configuration attributes $a_C$, and a tuple of processing functions $a_\psi$. Be the set $\AAA$ composed of all actions that exist in rsyslog after the configuration file has been processed.
+
+An \emph{action unit} 
+$$u = (f, a_1, \ldots, a_n), a_i \in \AAA \text{ for } i \in \IN, i \le n$$
+is a tuple consisting of a filter function $f$ and $n \in \IN$ actions. \emph{Does rsyslog still support nonsense action units with $n=0$? - check!}
+
+A \emph{queue}
+$$Q = (\phi_q, M), M \subseteq \MM$$
+is a totally ordered finite set of messages where $\phi_q$ is the associated order relation\footnote{In actual programming, different types of queues exist and, among others, they differ in how $\phi_q$ is defined.}. There exist an upper bound on the cardinality of $M$, which is user-configured. If we need to obtain the set of message from a queue, we write $M(Q)$.
+
+Be $\QQ = \{Q_m, Q_1, Q_2, \ldots, Q_{|\AAA|}\}$ the set of all queues that exist inside rsyslog after the configuration file has been processed, with $|\QQ| = |\AAA| + 1$.
+
+Be
+$$M_0 = \MM \setminus \bigcup_{i=1}^{|\QQ|} M_i$$
+the set of non-queued messages. This set is partioned into the set $M_{0_u} = \{m \in M_0: \sigma_s(m) < ready\}$ the set of messages not yet fully created and the set $M_{0_r} = M_0 \setminus M_{0_u}$ of messages that are ready for processing but not currently enqueued into any queue.
+
+Be $b_b$ a user-configurable upper bound of the cardinality of any batch greater than one inside the system and be
+$$B = \{ (m, s_p) | m \in M(Q) \}$$
+a finite set that contains a subset of processable messages from a single queue. The actual cardinality $b = |B|$ is depending on the cardinality of $M$ at the time of batch creation and is $1 \leq b \leq \text{max}(b_b, |M(Q)|)$. 
+
+\section{Processing}
+\subsection{Object States}
+Various objects keep state. Some of these objects, like messages, batches and actions seem to share state. However, thinking about shared state leads to very complex setup. As such, state is modelled for each object $o$ individually. Instead, the state function $S_O(o)$ can be used to obtain an obtain an individual objects state. That state can be used to modify the state diagrams of the other objects with which relationships exist.
+
+\subsubsection{Actions}
+Actions are provided by output plugins. An action enables the engine to write messages to some destination. It is important to note that ``destination'' is a very broad abstraction. A destination may be a file inside a local or remote file system, a database table or a remote syslog server in another network.
+
+Actions are transactional in the following sense: more than one message can be submitted to an action. The action does not necessarily process the submitted messages unless the caller ends the transaction. However, the action itself may also end the transaction and notify the caller. This is \emph{not} considered an error condition and \emph{must} be handeled gracefully by the caller. If an transaction aborts, the caller \emph{must} assume that none of the elements submitted since the begin of transaction have been processed. The action will try to backout anything that was already processed at the time the transaction failed. However, not all outputs work on actually transactional destination. As such, an action is permitted not to backout incomplete interim results. As such, after a transaction abort, some message duplication may occur. We call this the \emph{relaxed integrity condition} for actions.
+
+An output transaction is started by calling \emph{beginTransaction()} either explicitely or implicitely by a call to \emph{doAction()} without calling \emph{beginTransaction()} before. Then, one or more calls to \emph{doAction()} follow. When the caller intends to finish the transaction, it calls \emph{endTransaction()}. However, the transaction may also be terminated from the action itself in response to a \emph{doAction()} call.
+
+Mathematical, an action transaction builds a totally orderred set of uncommitted messages $M_u$. The order relation is defined over the sequence in which messages are being provided to \emph{doAction()}. At any time a commit is attempted, the full set $M_u$ is committed and may either succeeed completely or not at all (in the sense of the relaxed integrity condition described above). 
+
+A commit is attempted when 
+\begin{enumerate}
+\item the caller decides to call \emph{endTransaction()} 
+\item or earlier if the action decides it needs to commit now (e.g. because of buffers filling up).
+\end{enumerate}
+
+In the seconds case, the action may decide to commit all message but the current one or all (this is depending on action logic). So if the action decideds to commit a transaction before the caller calls \emph{endTransaction()}, a set of commited messages $M_c$ is build and $M_u$ is modified. Be $n$ the $n$-th iterated \emph{doAction()} call and $m_n$ the current message of this call, then the sets are build as follows:
+
+\begin{algorithm}
+%\caption{}
+\begin{algorithmic}
+\IF{action commits $m_n$}
+	\STATE $M_c = M_u \cup m_n$
+	\STATE $M_u = \emptyset$
+\ELSE
+	\STATE $M_c = M_u$
+	\STATE $M_u = \{ m_n\}$
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+In other words, if anything is committed early, it is always the full set $M_u$, with or without the current message. The caller needs to know which messages are already commited. As \emph{doAction()} finishes one transaction and starts a new one in a single call, we can not use action state the let the caller know this happened. So we use our above finding and just convey back if the transacton is still continuing or the current message or all others before it were committed. The caller must then act accordingly. Please note that when an error happens, the whole transaction must still be considered failed. As such, ``partial commit'' states need not to be mixed with failure states.
+
+Please note that the above method leaves a small potential issue unaddressed: if the action does an early commit of $M_u \setminus m_n$, an error happens when adding $m_n$ to the new $M_u$ (like running out of resources), the action would need to convey both the successful transaction as well as the failure state. This is not possible with the current interface. We could use callbacks to provide such notification, but this complicates the code. So, if that situaton arises, the action must temporarily buffer the error condition and convey it as part of either the next \emph{doAction()} call or during \emph{endTransation()} processing. This can be done, for example, by advancing its internal state accordingly.
+
+The state set for a actions is defined as follows:
+$$
+S_A = \{ rdy, itx, comm, rtry, susp, died \}
+$$
+
+With the semantics of the various states being the following:
+
+\begin{center}
+\begin{tabular}{|l|l|} \hline
+	State		& Semantics \\\hline
+	rdy 		& ready, waiting for transaction begin\\
+	itx		& in transaction, accept more data \\
+	comm		& transaction finished \\
+	rtry		& action failed but may be able to recover \\
+	susp		& action currently defunctional until timeout expires \\
+	died		& unrecoverable error condition occured, no longer usable \\\hline
+\end{tabular}
+\end{center}
+
+In the associated state diagram below, we do not include the \emph{died} state, because it is entered whenever a totally unrecoverable error state may occur. This is a very exceptional incident (which most output plugins do not even support), so we have kept the diagram simple.
+
+\includegraphics[scale=0.5]{action_state.jpeg}
+
+\emph{Note well} that the state diagram describes the action state. It does \emph{not} describe the transaction state. While action- and transaction state are closely related to each other, they are different entities.
+
+The return code of \emph{doAction()} and \emph{endTransaction()} is used to convey the transaction state. As such, it is a function of the actions's current state after processing the request. The mapping is as shown below:
+
+\begin{center}
+\begin{tabular}{|l|l|} \hline
+	State		& Return Code (RS\_RET\_\ldots)\\\hline
+	rdy 		& OK \\
+	itx		& COMMITTED (if there was an auto-commit without $m_n$)\\
+			& DEFER\_COMMIT (if there was no auto-commit)\\
+	comm		& internal state, not to be exposed to upper layer \\
+	rtry		& SUSPENDED \emph{(new code needed)} \\
+	susp		& SUSPENDED \\
+	died		& DISABLED \\\hline
+\end{tabular}
+\end{center}
+
+For the rest of this document, let's assume there is a function \emph{getReturnCode()} that implements this mapping.
+
+It is important to think about how retries are handled. There is a user-configured per-action upper number of retries $C_r$ and retry interval $C_i$. In \emph{rsyslog v3}, there is no concept of output transactions. As such, only single messages are processed. When a temporary action failure occurs, the action is re-tried $C_r$ times, where the action processing thread is waiting in a \emph{sleep()} $C_i$ operating system API call\footnote{a suitable API is used, not \emph{sleep()} itself}. If the action succeeds during the retry processing, everything continues as usual. If it does not succeed, two things happen:
+\begin{itemize}
+\item the message is flagged as ``action permanent failure'' (what may trigger backup processing)
+\item the action is actually suspended for $C_i$ seconds
+\end{itemize}
+If then a new message is sent to the action, and $C_i$ seconds have not yet elapsed, the action is flagged as having failed without being re-tried again\footnote{During the analysis for this paper, it was seen that actually $C_r$ retries are attempted in v3, but each of them will never actually re-try the action. This is a software bug, which does not cause any harm and thus will not be fixed in v3. The new implementation in v4 will obviously not inherit this problem}. This is done in an effort to reduce resource utilization and prevent the system from slowing down e.g. by too-many retries to a remote server that went offline.
+
+With transactional output mode in \emph{rsyslog v4}, the logic above can no longer work. First of all, retrying single actions does not help, because all of the current transaction needs to be resubmitted. As such, the upper layers need to be notified of failure. Then, they need to resubmit the batch. In that design, the lower layer needs to return immediately after detecting the failure. Recovery handling is now to be done when the next transaction is started. However, we must make sure that we do not do excessive retries. So retry processing is only to be carried out if it was not tried less than $C_i$ seconds ago.
+
+The required functionality can be implemeted by a \emph{prepareAction} function that readies the action for processing if there is need to do so. That function is then called in all entry points before anything else is done. Then, actual processing is carried out and the resulting action state be used to generate the return code for the upper-layer caller. Find below a rough pseudocode to do so:
+
+\lstset{language=python}
+\begin{lstlisting}
+def prepareAction():
+   if state == rtry:
+      try recovery (adjust state accordingly)
+   if state == rdy:
+      beginTransaction() [output plugin]
+    
+def processMessage(message):
+   prepareAction()
+   if state == itx
+      doAction(message) [output plugin]
+   return getReturnCode()
+
+def doEndTransaction():
+   prepareAction()
+   if state == itx
+      endTransaction(); [output plugin]
+   return getReturnCode()
+\end{lstlisting}
+
+\subsection{Output Subsystem Layers}
+The rsyslog engine is organized in layers, where each layer is represented by the dominating object:
+
+\begin{center}
+\includegraphics[scale=0.75]{rsyslog_output_layers.jpeg}
+\end{center}
+
+If looking at the data flow, a queue dequeues batches of messages, which are than run through a generic action system and put into output plugins. Note that on the batch layer, only batches are supported as units of work, whereas the action layer is message-oriented but supports transactions of multiple messages. This is done by indicating when a transaction necessarily needs to end (that point being the end of batch from the batch layer).
+
+The plugins can be written by third parties and are roughly comparable to minidrivers. The generic action system provides all complexity of action processing wheras the output plugin provides a limited set of callbacks that enable the generic framework to talk to the actual destination system. As such, writing outputs is a very simple task. However, rsyslog does not limit the creation of very complex outputs, which may be able to offer superior performance for some destinations.
+
+\subsection{Output Failure}
+\subsubsection{Cases}
+When an output action is called, it may encounter a failure condition. In general, there are two different cases:
+\begin{enumerate}
+\item action caused failures
+\item message-content caused failures
+\end{enumerate}.
+
+Failures rooted in the action are things like broken network connections, file systems run out of space or database servers that are down. Most importantly, the failure is not related to message content. As such, it is appropriate to retry the action with the same message until it finally succeeds (assuming that someone restores the system in question to proper operation). We can not expect that the problem is cleared just by discarding the current message and re-trying with the next one.
+
+In my view, action caused failures are the far majority of all failures. For rsyslog versions 3 and below, all rsyslog-provided plugins consider failures to be action-caused and thus potentially recoverable by simple retry. With the only exception being fatal error conditions that render the whole action unusable.
+
+David Lang pointed out, that there may also exist error conditions that are not caused by the action (or the subsystem it talks to) itself, but rather by message data. He provided the following samples where message content can cause permanent issues with action execution:
+
+\begin{itemize}
+\item unicode text causing grief
+\item dynafile hits a read-only file
+\item basicly data-driven things that trigger bugs in the message delivery 
+mechanism in some form.
+\end{itemize}
+
+As David Lang said ``In an ideal world these would never happen, but for most output types I can think of some form of corrupt input that could cause that message to fail.''.
+So this class of failure conditions actually exists. No matter how often the action retry mechanism is called, it will never succeeds (one may argue that the read-only dynafile is fixable, but we could replace that sample with an invalidly generated filename). The proper cure for these actions is to find the offending one and discard it.
+
+In conclusion, actions need to return different error states for these two different types of failures. Traditionally, RS\_RET\_SUSPENDED is returned when an action specific failure is hit. Most existing plugins also do this if a message-related failure occured, simply because they did not yet know that this situation exists. However, plugins also return different error codes, and at least these can be treated to mean message-permanent failures. To support this, a change to plugins is still required, because many simple return SUSPENDED state if anything went wrong (replacing the real error condition with SUSPENDED). A dedicated PROBABLE\_INVALID\_MSG return state is probably useful so that an output plugin can convey back that it consideres the message to be bad. On the other hand, this implies that the plugin must try to detect those, what means that the developer must think about all potential message-causes problems. That approach can be considered unreliable and as such it may be better not to provide such a dedicted state.
+
+\subsubsection{Handling of Failures}
+In spite of the two different failure cases, different handling is needed for them. The action-based failure cases can and must be handled on the action level. As transactions abort when a failure occurs, support from the upper ``batch layer'' is necessary in order to handle resending batches of messages.
+
+For message-caused failure cases, the offending message must be found and then be discarded. A complexity here is that while a failure-causing message is being searched for, an action-based failure might occur. In that case, first the action-based failure condition must be solved, before the search for the problem message can continue.
+
+One approach might be that when the action-layer conveys back an action-caused failure (SUSPENDED), the batch layer knows that it simply needs to restart the full transaction (but not start an ``invalid message search''). If a message-based error condition is conveyed back, the batch system can not restart the full batch. Instead, it needs to enter search mode, where it creates partitions of the original batch, and calls itself recursively (at least in theory) on each of the subsets.
+
+Then, the same handling applies until either a failing message has been found or all messages have been successfully processed. Note that in the recursive step, action-based failures are recovered by full batch resubmits. This solves the above-mentioned complexity in a consistent way.
+
+If a binary-search-like method is used to detect failing records\footnote{This was originally suggested by David Lang.}, recursion may not really be an issue, as the recursion depth is limited to $\log_2 |B|$ where $B$ is the message batch.
+
+A message-caused failure can be rooted in one or more messages. One important question is if it is expected that the failure is caused by a single or multiple messages. Both is possible, so it is a question of probability. If we assume that it is more probable that a single messages causes the problems, it is useful to immediately return back to full batch submission of transactions once a problem-causing message has been identified. But then, if there are multiple problem-causing messages inside the batch, we may need many more iterations.
+
+If, on the other hand, we assume that it is more probable that multiple messages cause problems, it may make sense to keep resubmitting only subsets of the batch. However, then the performance is suboptimal if actually only one message was problematic. A solution might be to pick a compromise, e.g. first assume that a single message is problematic, but assume the opposite as soon as a second message with problems has been found.
+
+A potential algorithm for processing $n \le |B|$ messages from batch $B$ is described below. In the pseudocode, a ``processable'' message is one that neither is already committed nor had a permanent failure with this action. The term ``mpf'' means ``message permanent failure'' for this action (this will later be described in a batch state set).
+
+\begin{small}
+\lstset{language=python}
+\begin{lstlisting}
+def submitBatch(B, n):
+   foreach processable message in 
+           (first [at most] n messages of batch):
+      call processMessage
+      if action-caused failure:
+         retry full batch
+      if action-caused permanent failure:
+         mark all n messages as mpf
+         return
+      if auto-commit:
+         mark commited messages in batch as committed
+      if message-caused failure:
+         if n == 1:
+            mark message as mpf
+            return
+         else:
+            call submitBatch(B, n/2)
+            call submitBatch(B, n/2)
+\end{lstlisting}
+\end{small}
+
+After submitBatch() has completed, all messages are either committed or in mpf state.
+
+Note that an action-caused permanent failure occurs if an action-caused failure can not be resolved with the operator-configured number of retries. It will never occur if the user configured infinite retries. While an action is suspended, all calls will result in an action-caused permanent failure. Please keep in mind that these will be resubmitted to any backup actions inside the action unit, so the action's ability to cause permanent failure states is vital for a number of use cases (backup syslog server, to name just one).
+
+Batch processing inside an action unit thus can follow these strucuture:
+
+\begin{algorithm}
+\caption{processBatch(B)}
+\begin{algorithmic}
+\FORALL{action $a$ in action unit}
+	\IF{execute action only on messages that failed before}
+		\STATE $n = |\text{messages in batch in mpf state}|$
+		\STATE change mpf state back to ready
+	\ELSE
+		\STATE $n = |B \setminus \text{msgs with state discard}|$
+		\STATE change all message states $\ne$ discard to ready 
+	\ENDIF
+	\IF{$n >0$ }
+		\STATE call submitBatch(B, n) for action $a$
+	\ENDIF
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Why is it Important to differentiate the failure cases?}
+This text originates from the mailing list and must be merged in. I provide it in the form it is, so it will not be forgotten (plus, it conveys the information).
+
+One may think that it is not necessary to differentiate between action-caused and message-caused failures. However, not doing so introduces subtle issues, because 
+then you either 
+
+A) do not need the batch logic at all (because the action is configured for
+infinite retries)
+
+Or
+
+B) you loose many messages if the action is not configured for infinite
+retries and you have a longer-duration outage e.g. on a database server.
+Let's say it is offline for a couple of hours, then you lose almost
+everything in that period
+
+To prevent this, you need two different retry methods.
+
+One may argue that it is hard to differentiate between the two failure cases. This is correct. Buit I think it mostly depends on the quality of the output module. 
+
+First of all, ``mostly'' implies that there may be some other cases, where it
+really is impossible to differentiate between the two. In that case, I would
+treat the issue as an action-caused failure. There are two reasons for this:
+
+1) rsyslog v3 currently does this always and not even a single person
+complained about that so far. This is an empiric argument, and it does not
+mean it caused problems. But it carries the co-notation that this seems not
+to be too bad.
+
+2) If we would treat it as message-caused failure, we would no longer be able
+to handle extended outages of destination systems, which I consider a vitally
+important feature.
+
+When weighing the two, I know of lots of people who rely on 2), in sharp
+contrast to knowig noone having problems with 1). So my conclusion is that it is
+less problematic to define an otherwise undefinable failure reason to be
+action-caused. Even more so as I assume this problem only exists in the
+minority of cases.
+
+Now back to the quality of the output module: thinking about databases, their
+API is usually very good at conveying back if there was a SQL error or a
+connection abort. So while a SQL error may also be an indication of a
+configuration problem, I would strongly tend to treat it is a being
+message-caused. This is under the assumption that any reasonable responsive
+admin will hopefully test his configuration at least once before turning it
+into production. And config SQL errors should manifest immediately, so I
+expect these to be fixed before a configuration runs in production. So it is
+the chore of the output module to interpret the return code it received from
+its API and decide whether this is more likely action-caused or
+message-caused. For database outputs, I would assume that it is always easy
+to classify failures that can only be action-caused, especially in the
+dominating case of a failed network connection or a failed server.
+
+For other outputs it may not be as easy. But, for example, all stream network
+outputs can detect a broken connection, so this also is a sure fit.
+
+For dynafiles, it really depends on how hard the output module is tries to differentiate
+between the two failure cases. But I think you can go great length here, too.
+Especially if you do not only look at the create() return code, but, iff a
+failure occurs, you do more API calls to find out the cause.
+
+So I think the remaining problem is small enough to cause not too much issues
+(and if so, they are unavoidable in any case). In conclusion, the two failure states are not only necessary, but can sufficiently sure enough be detected.
+
+\subsection{Random Topics}
+I have begun to gather material from the mailing list in this section, because I feel it may be useful for others as well. Right now, the information is well hidden in the mailing list archives and there may be value in combining it all in one place.
+
+Due to the nature of this material, there is no specific organization between the subchapters and also formatting and language doesn't deny its rooting in the mailing list.
+
+\subsection{Reliability of Message Dequeueing}
+A batch is actually dequeued when it is taken off a queue. So if at that point we
+have a system power failure (for whatever reason), the messages are lost.
+While the rsyslog engine intends to be very reliable, it is not a complete
+transactional system. A slight risk remains. For this, you need to understand
+what happens when the batch is processed. I assume that we have no sudden,
+untrappable process termination. Then, if a batch cannot be processed, it is
+returned back to the top of queue. This is not yet implemented, but is how
+single messages (which you can think of an abstraction of a batch in the
+current code) are handled. If, for example, the engine shuts down, but an
+action takes longer than the configured shutdown timeout, the action is
+cancelled and the queue engine reclaims the unprocessed messages. They go
+into a special area inside the .qi file and are placed on top of the queue
+once the engine restarts.
+
+The only case where this not work is sudden process termination. I see two
+cases:
+
+a) a fatal software bug
+We cannot really address this. Even if the messages were remaining in the
+queue until finally processed, a software bug (maybe an invalid pointer) may
+affect the queue structures at large, possibly even at the risk of total loss
+of all data inside that queue. So this is an inevitable risk.
+
+b) sudden power fail
+... which can and should be mitigated at another level
+
+One may argue that there also is
+
+c) admin error
+e.g, kill -9 rsyslogd
+Here a fully transactional queue will probably help.
+
+However, I do not think that the risk involved justifies a far more complex
+fully transactional implementation of the queue object. Some risk always
+remains (what in the disaster case, even with a fully transactional queue?).
+
+And it is so complex to let the messages stay in queue because it is complex
+to work with such messages and disk queues. It would also cost a lot of
+performance, especially when done reliably (need to sync). We would then need
+to touch each element at least four times, twice as much as currently. Also,
+the hybrid disk/memory queues become very, very complex. There are more
+complexities around this, I just wanted to tell the most obvious.
+
+So, all in all, the idea is that messages are dequeued, processed and put
+back to the queue (think: ungetc()) when something goes wrong. Reasonable
+(but not more) effort is made to prevent message loss while the messages are
+in unprocessed state outside of the queue.
+\end{document}
