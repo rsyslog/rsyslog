@@ -7,9 +7,12 @@
 \usepackage{algorithm,algorithmic}
 
 \newcommand{\IN}{\mathbb{N}}
-\newcommand{\MM}{\mathfrak{M}}
-\newcommand{\QQ}{\mathfrak{Q}}
-\newcommand{\AAA}{\mathfrak{A}}
+\newcommand{\MM}{\mathcal{M}}
+\newcommand{\QQ}{\mathcal{Q}}
+\newcommand{\AAA}{\mathcal{A}}
+%\newcommand{\MM}{\mathfrak{M}}
+%\newcommand{\QQ}{\mathfrak{Q}}
+%\newcommand{\AAA}{\mathfrak{A}}
 \title{Rsyslog Design and Internals}
 \author{Rainer Gerhards}
 
@@ -21,47 +24,112 @@
 This paper describes rsyslog design and internals. It is created to facilitate a discussion about the implementation of "batched queue processing". As such, it does not describe the full design of rsyslog but rather those elements that are relevant to queues. However, the document may be expanded in the future.
 \end{abstract}
 
+\tableofcontents
+
 \section{Preliminaries}
 \subsection{Notational Conventions}
-In general, in rsyslog there exists single objects $o$, which are used to build larger sets $O$, which form a superset $\mathfrak{O}$ of all those objects that exist at a given time inside a running instance of rsyslog. As seen above, single objects are always described by lower case letters ($o$), larger sets by upper case letters ($O$) and the ``all-sets'' in gothic letters ($\mathfrak{O}$). Often, objects $O_i, i \in \IN, i \le |\mathfrak{O}|$ partition $\mathfrak{O}$, but this is not necessarily the case.
+In general, in rsyslog there exists single objects $o$, which are used to build larger sets $O$, which form a superset $\mathcal{O}$ of all those objects that exist at a given time inside a running instance of rsyslog. As seen above, single objects are always described by lower case letters ($o$), larger sets by upper case letters ($O$) and the ``all-sets'' in caligraphic letters ($\mathcal{O}$). Often, objects $O_i, i \in \IN, i \le |\mathcal{O}|$ partition $\mathcal{O}$, but this is not necessarily the case.
 \section{Objects}
-%\subsection{State Sets} 
-Be 
-$$S_m = \{ new, ready, comitPend, discardable \}$$
-the totally ordered set of message states and be
-$$S_p = \{ ready,  actTempFail, actPermFail, comitPend, comit\}$$
-the totally ordered set of message processing states (inside a batch). States may be contained in many objects $o$. I write $S(o)$ to denote the state that is associated with the object $o$.
-\emph{Is one a subset of the other?}
 
-A \emph{message}
-$$m = (m_s, \ldots), m_s \in S_m$$
-is a tuple of attributes. Be the set $\MM$ composed of all messages that exist at a given time inside rsyslog.
+\subsection{Plugins}
+Plugins provide code potentially written by a third party to extend rsyslog.
 
-% Be a processable message 
-$$p = (m, p_s), m \in \MM : \sigma_m(m) \geq ready, s_p \in S_p$$
-an ordered pair.
+Conceptually, a plugin is a tupel of callable functions $(\phi_1, \phi_2, \ldots)$ which implement an interface. There are three different types of plugins: input, output and libraray. The plugin type denotes the primary interface implemented by the plugin. Additional interfaces may be implemented\footnote{This is not yet done in plugins, but is possible and assumed to be done at a later point in time}.
 
-An \emph{action}
-$$a = (a_C, a_\psi)$$
-is an ordered pair of a tuple of configuration attributes $a_C$, and a tuple of processing functions $a_\psi$. Be the set $\AAA$ composed of all actions that exist in rsyslog after the configuration file has been processed.
+In the context of this paper, the output plugin interface is most important. It implements three entry points:
 
-An \emph{action unit} 
-$$u = (f, a_1, \ldots, a_n), a_i \in \AAA \text{ for } i \in \IN, i \le n$$
-is a tuple consisting of a filter function $f$ and $n \in \IN$ actions. \emph{Does rsyslog still support nonsense action units with $n=0$? - check!}
+\paragraph{doAction()}
+is used to submit messages to the output plugin. The entry point may or may not commit the messages to their ultimate destination.
 
-A \emph{queue}
-$$Q = (\phi_q, M), M \subseteq \MM$$
-is a totally ordered finite set of messages where $\phi_q$ is the associated order relation\footnote{In actual programming, different types of queues exist and, among others, they differ in how $\phi_q$ is defined.}. There exist an upper bound on the cardinality of $M$, which is user-configured. If we need to obtain the set of message from a queue, we write $M(Q)$.
+\paragraph{beginTransaction()}
+is used to inform the plugin that a new transaction begins. It must prepare for processing.
+
+\paragraph{endTransaction()}
+is indicated that the upper layer \emph{needs} to close the transaction. If there is any uncommited data left, it must be commited or rolled back.
+
+Every instance of an output plugin is guaranteed \emph{not} to be called concurrently by multiple threads. Further, no context switch will happen between calls to $doAction()$ and $endTransaction()$.
+
+\subsection{State Sets}
+Several object have associated state based on a specific state set. These state sets are described together with the objects.
+
+As a general rule, individual state is associated with all intances $o$ of a class of objects. This state is called the object's \marginpar{state component} \emph{state component} $s$. If we want to obtain an object's state, we write $S(o)$. Please note that $S(o)$ is only defined for those objects that have a state component.
+
+\subsection{Messages} 
+A message $m$ represents a a single syslog message inside the system. It is a tuple of attributes. Some of these attributes directly orginate from the message content, some others are meta-information taken from the context. For example, there is an meta-attribute ``time of reception'' which conveys when the message was received by rsyslog's input subsystem. We do not list attributes here, as there are many and it is not of importance which exactly they are.
+
+The set $\MM$ is composed of all messages that exist at a given time inside rsyslog.
+
+\subsection{Queue}
+A queue
+$$Q = (C, \Phi, M)$$
+is a tupel of a set of configuration parameters $C$, a set of callbacks $\Phi$ and a set of messages $M \subseteq \MM$.
+
+If we need to obtain the set of message from a queue, we write $M(Q)$. The elements of the set of configuration parameters are written as $C_{param}$ where $param$ is an abbreviation of the parameter's meaning. To obtain a specific parameter from a queue, we write $C_{param}(Q)$. The most important elements of $C$ are:
+
+\paragraph{$C_{type}$} which denotes the queue implementation type. Most importantly, this selects from a set of queue drivers (for example disk-only or in-memory driver), which affects the basic operation of the queue instance.
+
+\paragraph{$C_{mMsg}$} which denotes the upper bound on the cardinality of $M$.
+
+\paragraph{$C_{mBatch}$} which denotes the upper bound of the cardinality of message batches created for this queue.
 
 Be $\QQ = \{Q_m, Q_1, Q_2, \ldots, Q_{|\AAA|}\}$ the set of all queues that exist inside rsyslog after the configuration file has been processed, with $|\QQ| = |\AAA| + 1$.
 
-Be
-$$M_0 = \MM \setminus \bigcup_{i=1}^{|\QQ|} M_i$$
-the set of non-queued messages. This set is partioned into the set $M_{0_u} = \{m \in M_0: \sigma_s(m) < ready\}$ the set of messages not yet fully created and the set $M_{0_r} = M_0 \setminus M_{0_u}$ of messages that are ready for processing but not currently enqueued into any queue.
+Then
+$$M_0 = \MM \setminus \bigcup_{i=1}^{|\QQ|} Q_i(M)$$
+\marginpar{at-risk-set}is the set of non-queued messages. The messages have either never been enqueued or have been dequeued but not finally been processed. This set represents the messages that may potentially be lost during an unclean shutdown of rsyslogd. This is why I call this set the ``\emph{at-risk-set}''.
 
-Be $b_b$ a user-configurable upper bound of the cardinality of any batch greater than one inside the system and be
-$$B = \{ (m, s_p) | m \in M(Q) \}$$
-a finite set that contains a subset of processable messages from a single queue. The actual cardinality $b = |B|$ is depending on the cardinality of $M$ at the time of batch creation and is $1 \leq b \leq \text{max}(b_b, |M(Q)|)$. 
+
+\subsection{Batches}
+A batch represents multiple processable messages. It is a unit of processing inside rsyslog's output system. Batches are used to dequeue a number of messages from a queue and then submit them to the lower action layer. Batches are natural \emph{transaction boundaries}, in the sense that multiple output transactions may be done on the messages inside a batch, but each transaction must end at the end of the batch. A batch is always associated to a specific queue $Q$.
+
+A batch
+$$B = (b_1, b_2, \ldots, b_n )$$
+is a $n$-tuple of \marginpar{processable message}processable messages
+$$b = (m, s)$$
+which are an ordered pair of a message $m$ and an associated processing state $s$. To denote the $n$-th message inside the batch, we write $m(b_n)$, to denote the status component of the $n$-th message, we write $S(b_n)$.
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.4]{batch_state.jpeg}
+\end{center}
+\caption{batch message processing states}
+\label{fig_batchmsg_states}
+\end{figure}
+
+The state set for the processing states is defined as follows:
+$$
+S_B = \{ rdy, bad, sub, disc \}
+$$
+
+With the semantics of the various states being the following:
+
+\begin{center}
+\begin{tabular}{|l|l|} \hline
+	State		& Semantics \\\hline
+	rdy 		& ready for processing\\
+	bad		& this message triggered an unrecoverable failure in action\\
+			& processing and must not be resubmitted to this action\\
+	sub		& message submitted for processsing, result yet unknown \\
+	disc		& action sucessfully processed, but must not be submitted \\
+			& to any further action in action unit \\\hline
+\end{tabular}
+\end{center}
+The associated state diagram is shown in figure \ref{fig_batchmsg_states} on page \pageref{fig_batchmsg_states}.
+
+Batch sizes vary. The actual cardinality is a function of the cardinality of $M(Q)$ at the time of batch creation and the queue configuration:
+
+$$1 \leq |B| \leq \max(C_{mBatch}(Q), |M(Q)|)$$
+
+\subsection{Action Unit}
+An action unit 
+$$u = (f, a_1, \ldots, a_n), a_i \in \AAA \text{ for } i \in \IN, i \le n$$
+is a tuple consisting of a filter function $f$ and $n \in \IN$ actions. \emph{Does rsyslog still support nonsense action units with $n=0$? - check!}
+
+\subsection{Action}
+An action
+$$a = (a_C, a_\psi)$$
+is an ordered pair of a tuple of configuration attributes $a_C$, and a tuple of processing functions $a_\psi$. Be the set $\AAA$ composed of all actions that exist in rsyslog after the configuration file has been processed.
+
 
 \section{Processing}
 \subsection{Object States}
@@ -120,9 +188,15 @@ With the semantics of the various states being the following:
 \end{tabular}
 \end{center}
 
-In the associated state diagram below, we do not include the \emph{died} state, because it is entered whenever a totally unrecoverable error state may occur. This is a very exceptional incident (which most output plugins do not even support), so we have kept the diagram simple.
+In the associated state diagram in figure \ref{fig_action_states}, we do not include the \emph{died} state, because it is entered whenever a totally unrecoverable error state may occur. This is a very exceptional incident (which most output plugins do not even support), so we have kept the diagram simple.
 
+\begin{figure}
+\begin{center}
 \includegraphics[scale=0.5]{action_state.jpeg}
+\end{center}
+\caption{Action State Diagram}
+\label{fig_action_states}
+\end{figure}
 
 \emph{Note well} that the state diagram describes the action state. It does \emph{not} describe the transaction state. While action- and transaction state are closely related to each other, they are different entities.
 
@@ -178,9 +252,10 @@ def doEndTransaction():
 \subsection{Output Subsystem Layers}
 The rsyslog engine is organized in layers, where each layer is represented by the dominating object:
 
-\begin{center}
+\begin{figure}
 \includegraphics[scale=0.75]{rsyslog_output_layers.jpeg}
-\end{center}
+\label{rsyslog output layers}
+\end{figure}
 
 If looking at the data flow, a queue dequeues batches of messages, which are than run through a generic action system and put into output plugins. Note that on the batch layer, only batches are supported as units of work, whereas the action layer is message-oriented but supports transactions of multiple messages. This is done by indicating when a transaction necessarily needs to end (that point being the end of batch from the batch layer).
 
@@ -394,4 +469,27 @@ So, all in all, the idea is that messages are dequeued, processed and put
 back to the queue (think: ungetc()) when something goes wrong. Reasonable
 (but not more) effort is made to prevent message loss while the messages are
 in unprocessed state outside of the queue.
+
+\paragraph{More reliable can actually be less reliable}
+On the rsyslog mailing list, we had a discussion about how reliable rsyslog should be. It circles about a small potential window of message loss in the case of sudden power failure. Rsyslog can be configured to put all messages into a disk queue (instead of main memory), so these messages survive such a powerfail condition. However, messages dequeued and scheduled for processing during the power outage may be lost. 
+
+I now consider a case where we have bursty UDP traffic and rsyslog is configured to use a disk-only queue (which obviously is much slower than an in-memory queue). Looking at processing speeds, the max burst rate is limited by using an ultra-reliable queue. To avoid using UDP messages, a second instance could be run that uses an in-memory queue and forwards received messages to the one in ultra-reliable mode (that is with the disk-only queue). So that second instance queues in memory until the (slower) reliable rsyslogd can now accept the message and put it into the reliable queue. Let's say that you have a burst of $r$ messages and that from these burst only $r/2$ can be enqueued (because the ultra reliable queue is so slow). So you lose $r/2$ messages.
+
+Now consider the case that you run rsyslog with just a reliable queue, one that is kept in memory but not able to cover the power failure scenario. Obviously, all messages in that queue are lost when power fails (or almost all to be precise). However, that system has a much broader bandwidth. So with it, there would never have been r messages inside the queue, because that system has a much higher sustained message rate (and thus the burst causes much less of trouble). Let's say the system is just twice as fast in this setup (I guess it usually would be *much* faster). Than, it would be able to process all r records.
+
+In that scenario, the ultra-reliable system loses $r/2$ messages, whereas the somewhat more "unreliable" system loses none - by virtue of being able to process messages as they arrive. 
+
+Now extend that picture to messages residing inside the OS buffers or even those that are still queued in their sources because a stream transport blocked sending them.
+
+I know that each detail of this picture can be argued at length about.
+
+However, my opinion is that there is no "ultra-reliable" system in life, only various probabilities in losing messages. These probabilities  often depend on each other, what makes calculating them very hard to impossible. Still, the probability of message loss in the system at large is just the product of the probabilities in each of its  components. And reliability is just the inverse of that probability.
+
+This is where *I* conclude that it can make sense to permit a system to lose some messages under certain circumstances, if that influences the overall probability calculation towards the desired end result. In that sense, I tend to think that a fast, memory-queuing rsyslogd instance can be much more reliable compared to one that is configured as being ultra-reliable, where the rest of the system at large is badly influenced by this (the scenario above).
+
+However, I also know that for regulatory requirements, you often seem to need to prove that a system may not lose messages once it has received them, even at the cost of an overall increased probability of message loss.
+
+My view of reliability is much the same as my view of security: there is no such thing as "being totally secure", you can just reduce the probability that something bad happens. The worst thing in security is someone who thinks he is "totally secure" and as such is no longer actively looking at potential issues.
+
+The same I see for reliability. There is no thing like "being totally reliable" and it is a really bad idea to think you could ever be. Knowing this, one may begin to think about how to decrease the overall probability of message loss AND think about what rate is acceptable (and what to do with these cases, e.g. "how can they hurt").
 \end{document}
