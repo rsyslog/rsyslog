@@ -78,6 +78,7 @@ html_files = \
 	rsconf1_filecreatemode.html \
 	rsconf1_filegroup.html \
 	rsconf1_fileowner.html \
+	rsconf1_generateconfiggraph.html \
 	rsconf1_gssforwardservicename.html \
 	rsconf1_gsslistenservicename.html \
 	rsconf1_gssmode.html \
@@ -113,6 +114,8 @@ html_files = \
 	src/classes.dia
 
 grfx_files = \
+	rsyslog_confgraph_complex.png\
+	rsyslog_confgraph_std.png \
 	direct_queue0.png \
 	direct_queue1.png \
 	direct_queue2.png \

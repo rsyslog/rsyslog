@@ -28,6 +28,15 @@ mode can be used in parallel to a running instance of rsyslogd.
 <p><b><i>/path/to/rsyslogd -f/path/to/config-file -N1</i></b>
 <p>You should also specify other options you usually give (like -c3 and whatever else).
 Any problems experienced are reported to stderr [aka "your screen" (if not redirected)].
+<p><b>Configuration Graphs</b>
+<p>Starting with rsyslog 4.3.1, the
+&quot;<a href="rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a>&quot;
+command is supported, a very valuable troubleshooting tool. It permits to
+generate a graph of how rsyslogd understood its configuration file. It is assumed that
+many configuration issues can easily be detected just by looking at the configuration graph.
+Full details of how to generate the graphs, and what to look for can be found in the
+&quot;<a href="rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a>&quot;
+manual page.
 <p><b>Asking for Help</b>
 <p>If you can't find the answer yourself, you should look at these places for
 community help.
