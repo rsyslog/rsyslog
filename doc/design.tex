@@ -10,9 +10,6 @@
 \newcommand{\MM}{\mathcal{M}}
 \newcommand{\QQ}{\mathcal{Q}}
 \newcommand{\AAA}{\mathcal{A}}
-%\newcommand{\MM}{\mathfrak{M}}
-%\newcommand{\QQ}{\mathfrak{Q}}
-%\newcommand{\AAA}{\mathfrak{A}}
 \title{Rsyslog Design and Internals}
 \author{Rainer Gerhards}
 
@@ -29,8 +26,10 @@ This paper describes rsyslog design and internals. It is created to facilitate a
 \section{Preliminaries}
 \subsection{Notational Conventions}
 In general, in rsyslog there exists single objects $o$, which are used to build larger sets $O$, which form a superset $\mathcal{O}$ of all those objects that exist at a given time inside a running instance of rsyslog. As seen above, single objects are always described by lower case letters ($o$), larger sets by upper case letters ($O$) and the ``all-sets'' in caligraphic letters ($\mathcal{O}$). Often, objects $O_i, i \in \IN, i \le |\mathcal{O}|$ partition $\mathcal{O}$, but this is not necessarily the case.
-\section{Objects}
 
+\section{Overall Design}
+From a high-level prespective, rsyslogd is ``just'' a high-performance message router. It accepts messages from various sources, applies user-configured filters to them, and routes potentially transformed messages to destinations based on these filters.
+\section{Objects}
 \subsection{Plugins}
 Plugins provide code potentially written by a third party to extend rsyslog.
 
@@ -62,7 +61,7 @@ The set $\MM$ is composed of all messages that exist at a given time inside rsys
 \subsection{Queue}
 A queue
 $$Q = (C, \Phi, M)$$
-is a tupel of a set of configuration parameters $C$, a set of callbacks $\Phi$ and a set of messages $M \subseteq \MM$.
+is a triplet of a set of configuration parameters $C$, a set of callbacks $\Phi$ and a set of messages $M \subseteq \MM$.
 
 If we need to obtain the set of message from a queue, we write $M(Q)$. The elements of the set of configuration parameters are written as $C_{param}$ where $param$ is an abbreviation of the parameter's meaning. To obtain a specific parameter from a queue, we write $C_{param}(Q)$. The most important elements of $C$ are:
 
