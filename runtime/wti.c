@@ -233,7 +233,7 @@ wtiConstructFinalize(wti_t *pThis)
 
 	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
 	CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
-	CHKmalloc(pThis->batch.pElem = calloc((size_t)iDeqBatchSize, sizeof(batch_obj_t*)));
+	CHKmalloc(pThis->batch.pElem = calloc((size_t)iDeqBatchSize, sizeof(batch_obj_t)));
 
 finalize_it:
 	RETiRet;
