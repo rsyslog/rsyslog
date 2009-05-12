@@ -8,6 +8,7 @@ librsyslog_la_SOURCES = \
 	rsyslog.c \
 	rsyslog.h \
 	atomic.h \
+	batch.h \
 	syslogd-types.h \
 	module-template.h \
 	obj-types.h \

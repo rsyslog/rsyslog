@@ -138,6 +138,7 @@
 #include "datetime.h"
 #include "parser.h"
 #include "sysvar.h"
+#include "batch.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -1211,16 +1212,16 @@ processMsg(msg_t *pMsg)
  * for the main queue.
  */
 static rsRetVal
-msgConsumer(void __attribute__((unused)) *notNeeded, aUsrp_t *paUsrp)
+msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch)
 {
 	int i;
 	msg_t *pMsg;
 	DEFiRet;
 
-	assert(paUsrp != NULL);
+	assert(pBatch != NULL);
 
-	for(i = 0 ; i < paUsrp->nElem ; i++) {
-		pMsg = (msg_t*) paUsrp->pUsrp[i];
+	for(i = 0 ; i < pBatch->nElem ; i++) {
+		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
 dbgprintf("msgConsumer..MULTIQUEUE: i: %d, pMsg: %p\n", i, pMsg);
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 			parseMsg(pMsg);

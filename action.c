@@ -42,13 +42,14 @@
 #include "cfsysline.h"
 #include "srUtils.h"
 #include "errmsg.h"
+#include "batch.h"
 #include "wti.h"
 #include "datetime.h"
 
 #define NO_TIME_PROVIDED 0 /* indicate we do not provide any cached time */
 
 /* forward definitions */
-rsRetVal actionCallDoActionMULTIQUEUE(action_t *pAction, aUsrp_t*);
+static rsRetVal actionCallDoActionMULTIQUEUE(action_t *pAction, batch_t *pBatch);
 
 /* object static data (once for all instances) */
 /* TODO: make this an object! DEFobjStaticHelpers -- rgerhards, 2008-03-05 */
@@ -261,7 +262,7 @@ actionConstructFinalize(action_t *pThis)
 	 * spec. -- rgerhards, 2008-01-30
 	 */
 	CHKiRet(qqueueConstruct(&pThis->pQueue, ActionQueType, 1, iActionQueueSize,
-					(rsRetVal (*)(void*,aUsrp_t*))actionCallDoActionMULTIQUEUE));
+					(rsRetVal (*)(void*, batch_t*))actionCallDoActionMULTIQUEUE));
 	obj.SetName((obj_t*) pThis->pQueue, pszQName);
 
 	/* ... set some properties ... */
@@ -782,19 +783,19 @@ finalize_it:
  * for processing.
  * rgerhards, 2009-04-22
  */
-rsRetVal
-actionCallDoActionMULTIQUEUEprocessing(action_t *pAction, aUsrp_t *paUsrp)
+static rsRetVal
+actionCallDoActionMULTIQUEUEprocessing(action_t *pAction, batch_t *pBatch)
 {
 	int i;
 	msg_t *pMsg;
 	rsRetVal localRet;
 	DEFiRet;
 
-	assert(paUsrp != NULL);
+	assert(pBatch != NULL);
 
-	for(i = 0 ; i < paUsrp->nElem ; i++) {
-		pMsg = (msg_t*) paUsrp->pUsrp[i];
-dbgprintf("actionCall..MULTIQUEUE: i: %d, pMsg: %p\n", i, pMsg);
+	for(i = 0 ; i < pBatch->nElem ; i++) {
+		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
+dbgprintf("actionCall..MULTIQUEUE: i: %d/%d, pMsg: %p\n", i, pBatch->nElem, pMsg);
 		localRet = actionProcessMessage(pAction, pMsg);
 		dbgprintf("action call returned %d\n", localRet);
 		msgDestruct(&pMsg); /* TODO: change: we are now finished with the message */
@@ -810,13 +811,13 @@ finalize_it:
  * for processing.
  * rgerhards, 2009-04-22
  */
-rsRetVal
-actionCallDoActionMULTIQUEUE(action_t *pAction, aUsrp_t *paUsrp)
+static rsRetVal
+actionCallDoActionMULTIQUEUE(action_t *pAction, batch_t *pBatch)
 {
 	int iCancelStateSave;
 	DEFiRet;
 
-	assert(paUsrp != NULL);
+	assert(pBatch != NULL);
 
 	/* We now must guard the output module against execution by multiple threads. The
 	 * plugin interface specifies that output modules must not be thread-safe (except
@@ -828,7 +829,7 @@ actionCallDoActionMULTIQUEUE(action_t *pAction, aUsrp_t *paUsrp)
 	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 
-	iRet = actionCallDoActionMULTIQUEUEprocessing(pAction, paUsrp);
+	iRet = actionCallDoActionMULTIQUEUEprocessing(pAction, pBatch);
 
 	pthread_cleanup_pop(1); /* unlock mutex */
 

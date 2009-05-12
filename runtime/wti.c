@@ -201,8 +201,7 @@ CODESTARTobjDestruct(wti)
 	pthread_cond_destroy(&pThis->condExitDone);
 	pthread_mutex_destroy(&pThis->mut);
 
-	free(pThis->paUsrp->pUsrp);
-	free(pThis->paUsrp);
+	free(pThis->batch.pElem);
 	free(pThis->pszDbgHdr);
 ENDobjDestruct(wti)
 
@@ -234,8 +233,7 @@ wtiConstructFinalize(wti_t *pThis)
 
 	/* we now alloc the array for user pointers. We obtain the max from the queue itself. */
 	CHKiRet(pThis->pWtp->pfGetDeqBatchSize(pThis->pWtp->pUsr, &iDeqBatchSize));
-	CHKmalloc(pThis->paUsrp = calloc(1, sizeof(aUsrp_t)));
-	CHKmalloc(pThis->paUsrp->pUsrp = calloc((size_t)iDeqBatchSize, sizeof(void*)));
+	CHKmalloc(pThis->batch.pElem = calloc((size_t)iDeqBatchSize, sizeof(batch_obj_t*)));
 
 finalize_it:
 	RETiRet;
@@ -322,7 +320,7 @@ wtiWorkerCancelCleanup(void *arg)
 	
 	/* call user supplied handler (that one e.g. requeues the element) */
 // MULTIQUEUE: need to change here!
-	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->paUsrp->pUsrp[0]);
+	pWtp->pfOnWorkerCancel(pThis->pWtp->pUsr, pThis->batch.pElem[0].pUsrp);
 
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	d_pthread_mutex_lock(&pWtp->mut);
@@ -374,7 +372,7 @@ wtiWorker(wti_t *pThis)
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
 	dbgSetThrdName(pThis->pszDbgHdr);
-	pThis->paUsrp->nElem = 0; /* flag no elements present */ // MULTIQUEUE: do we really need this any longer (cnacel handeler)?
+	pThis->batch.nElem = 0; /* flag no elements present */ // MULTIQUEUE: do we really need this any longer (cnacel handeler)?
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);

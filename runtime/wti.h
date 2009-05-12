@@ -27,17 +27,7 @@
 #include <pthread.h>
 #include "wtp.h"
 #include "obj.h"
-
-/* the user pointer array object
- * This object is used to dequeue multiple user pointers which are than handed over
- * to processing. The size of elements is fixed after queue creation, but may be 
- * modified by config variables (better said: queue properties).
- * rgerhards, 2009-04-22
- */
-struct aUsrp_s {
-	int nElem;	/* actual number of element in this entry */
-	obj_t **pUsrp;	/* actual elements (array!) */
-};
+#include "batch.h"
 
 
 /* the worker thread instance class */
@@ -46,11 +36,11 @@ typedef struct wti_s {
 	int bOptimizeUniProc; /* cache for the equally-named global setting, pulled at time of queue creation */
 	pthread_t thrdID;  /* thread ID */
 	qWrkCmd_t tCurrCmd; /* current command to be carried out by worker */
-	aUsrp_t *paUsrp; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
 	pthread_cond_t condExitDone; /* signaled when the thread exit is done (once per thread existance) */
 	pthread_mutex_t mut;
 	int bShutdownRqtd;	/* shutdown for this thread requested? 0 - no , 1 - yes */
+	batch_t batch; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	uchar *pszDbgHdr;	/* header string for debug messages */
 } wti_t;
 

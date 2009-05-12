@@ -1050,7 +1050,9 @@ int dbgEntrFunc(dbgFuncDB_t **ppFuncDB, const char *file, const char *func, int 
 	/* when we reach this point, we have a fully-initialized FuncDB! */
 	ATOMIC_INC(pFuncDB->nTimesCalled);
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot))
-		dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
+		if(strcmp(pFuncDB->file, "stringbuf.c")) {	/* TODO: make configurable */
+			dbgprintf("%s:%d: %s: enter\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
+		}
 	if(pThrd->stackPtr >= (int) (sizeof(pThrd->callStack) / sizeof(dbgFuncDB_t*))) {
 		dbgprintf("%s:%d: %s: debug module: call stack for this thread full, suspending call tracking\n",
 			  pFuncDB->file, pFuncDB->line, pFuncDB->func);
@@ -1080,10 +1082,12 @@ void dbgExitFunc(dbgFuncDB_t *pFuncDB, int iStackPtrRestore, int iRet)
 
 	dbgFuncDBPrintActiveMutexes(pFuncDB, "WARNING: mutex still owned by us as we exit function, mutex: ", pthread_self());
 	if(bLogFuncFlow && dbgPrintNameIsInList((const uchar*)pFuncDB->file, printNameFileRoot)) {
-		if(iRet == RS_RET_NO_IRET)
-			dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
-		else 
-			dbgprintf("%s:%d: %s: exit: %d\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, iRet);
+		if(strcmp(pFuncDB->file, "stringbuf.c")) {	/* TODO: make configurable */
+			if(iRet == RS_RET_NO_IRET)
+				dbgprintf("%s:%d: %s: exit: (no iRet)\n", pFuncDB->file, pFuncDB->line, pFuncDB->func);
+			else 
+				dbgprintf("%s:%d: %s: exit: %d\n", pFuncDB->file, pFuncDB->line, pFuncDB->func, iRet);
+		}
 	}
 	pThrd->stackPtr = iStackPtrRestore;
 	if(pThrd->stackPtr < 0) {

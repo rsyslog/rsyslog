@@ -95,6 +95,8 @@ typedef struct permittedPeers_s permittedPeers_t; /* this should go away in the 
 typedef struct permittedPeerWildcard_s permittedPeerWildcard_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct tcpsrv_s tcpsrv_t;
 typedef struct vmstk_s vmstk_t;
+typedef struct batch_obj_s batch_obj_t;
+typedef struct batch_s batch_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 
 /* some universal 64 bit define... */

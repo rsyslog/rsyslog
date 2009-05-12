@@ -27,6 +27,7 @@
 #include <pthread.h>
 #include "obj.h"
 #include "wtp.h"
+#include "batch.h"
 #include "stream.h"
 
 /* queue types */
@@ -100,7 +101,7 @@ typedef struct queue_s {
 	 * the user really wanted...). -- rgerhards, 2008-04-02
 	 */
 	/* end dequeue time window */
-	rsRetVal (*pConsumer)(void *,aUsrp_t*); /* user-supplied consumer function for dequeued messages */
+	rsRetVal (*pConsumer)(void *,batch_t*); /* user-supplied consumer function for dequeued messages */
 	/* calling interface for pConsumer: arg1 is the global user pointer from this structure, arg2 is the
 	 * user pointer array that was dequeued (actual sample: for actions, arg1 is the pAction and arg2
 	 * is pointer to an array of message message pointers)
@@ -184,7 +185,7 @@ rsRetVal qqueueStart(qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
-		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,aUsrp_t*));
+		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,batch_t*));
 PROTOTYPEObjClassInit(qqueue);
 PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);
 PROTOTYPEpropSetMeth(qqueue, iDeqtWinFromHr, int);
