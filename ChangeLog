@@ -2,6 +2,8 @@
 Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
 - bugfix: light and full delay watermarks had invalid values, badly
   affecting performance for delayable inputs
+- bugfix: potential segfault issue when multiple $UDPServerRun directives
+  are specified. Thanks to Michael Biebl for helping to debug this one.
 ---------------------------------------------------------------------------
 Version 3.22.0 [v3-stable] (rgerhards), 2009-04-21
 This is the first stable release that includes the full functionality
