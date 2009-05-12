@@ -18,7 +18,14 @@ is a rsyslog-doc package, that often needs to be installed separately.
 <p><b>Malformed Messages and Message Properties</b>
 <p>A common trouble source are <a href="syslog_parsing.html">ill-formed syslog messages</a>, which
 lead to to all sorts of interesting problems, including malformed hostnames and dates.
-Read the quoted guide to find relief.
+Read the quoted guide to find relief. A common symptom is that the %HOSTNAME% property is
+used for generating dynafile names, but some glibberish shows up. This is caused by the
+malformed syslog messages, so be sure to read the 
+<a href="syslog_parsing.html">guide</a> if you face that problem. Just let me add that the
+common work-around is to use %FROMHOST% or %FROMHOST-IP% instead. These do not take the
+hostname from the message, but rather use the host that sent the message (taken from
+the socket layer). Of course, this does not work over NAT or relay chains, where the
+only cure is to make sure senders emit well-formed messages.
 <p><b>Configuration Problems</b>
 <p>Rsyslog 3.21.1 and above has been enhanced to support extended configuration checking.
 It offers a special command line switch (-N1) that puts it into "config verfication mode".
@@ -28,6 +35,15 @@ mode can be used in parallel to a running instance of rsyslogd.
 <p><b><i>/path/to/rsyslogd -f/path/to/config-file -N1</i></b>
 <p>You should also specify other options you usually give (like -c3 and whatever else).
 Any problems experienced are reported to stderr [aka "your screen" (if not redirected)].
+<p><b>Configuration Graphs</b>
+<p>Starting with rsyslog 4.3.1, the
+&quot;<a href="rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a>&quot;
+command is supported, a very valuable troubleshooting tool. It permits to
+generate a graph of how rsyslogd understood its configuration file. It is assumed that
+many configuration issues can easily be detected just by looking at the configuration graph.
+Full details of how to generate the graphs, and what to look for can be found in the
+&quot;<a href="rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a>&quot;
+manual page.
 <p><b>Asking for Help</b>
 <p>If you can't find the answer yourself, you should look at these places for
 community help.

@@ -285,6 +285,7 @@ static int gidDropPriv = 0;	/* group-id to which priveleges should be dropped to
 
 extern	int errno;
 
+static uchar *pszConfDAGFile = NULL;				/* name of config DAG file, non-NULL means generate one */
 /* main message queue and its configuration parameters */
 static qqueue_t *pMsgQueue = NULL;				/* the main message queue */
 static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
@@ -1949,10 +1950,9 @@ static void doDie(int sig)
 static void
 freeAllDynMemForTermination(void)
 {
-	if(pszMainMsgQFName != NULL)
-		free(pszMainMsgQFName);
-	if(pModDir != NULL)
-		free(pModDir);
+	free(pszMainMsgQFName);
+	free(pModDir);
+	free(pszConfDAGFile);
 }
 
 
@@ -2220,6 +2220,184 @@ static void freeSelectors(void)
 }
 
 
+/* helper to generateConfigDAG, to print out all actions via
+ * the llExecFunc() facility.
+ * rgerhards, 2007-08-02
+ */
+struct dag_info {
+	FILE *fp;	/* output file */
+	int iActUnit;	/* current action unit number */
+	int iAct;	/* current action in unit */
+	int bDiscarded;	/* message discarded (config error) */
+	};
+DEFFUNC_llExecFunc(generateConfigDAGAction)
+{
+	action_t *pAction;
+	uchar *pszModName;
+	uchar *pszVertexName;
+	struct dag_info *pDagInfo;
+	DEFiRet;
+
+	pDagInfo = (struct dag_info*) pParam;
+	pAction = (action_t*) pData;
+
+	pszModName = module.GetStateName(pAction->pMod);
+
+	/* vertex */
+	if(pAction->pszName == NULL) {
+		if(!strcmp((char*)pszModName, "builtin-discard"))
+			pszVertexName = (uchar*)"discard";
+		else
+			pszVertexName = pszModName;
+	} else {
+		pszVertexName = pAction->pszName;
+	}
+
+	fprintf(pDagInfo->fp, "\tact%d_%d\t\t[label=\"%s\"%s%s]\n",
+		pDagInfo->iActUnit, pDagInfo->iAct, pszVertexName,
+		pDagInfo->bDiscarded ? " style=dotted color=red" : "",
+		(pAction->pQueue->qType == QUEUETYPE_DIRECT) ? "" : " shape=hexagon"
+		);
+
+	/* edge */
+	if(pDagInfo->iAct == 0) {
+	} else {
+		fprintf(pDagInfo->fp, "\tact%d_%d -> act%d_%d[%s%s]\n",
+			pDagInfo->iActUnit, pDagInfo->iAct - 1,
+			pDagInfo->iActUnit, pDagInfo->iAct,
+			pDagInfo->bDiscarded ? " style=dotted color=red" : "",
+			pAction->bExecWhenPrevSusp ? " label=\"only if\\nsuspended\"" : "" );
+	}
+
+	/* check for discard */
+	if(!strcmp((char*) pszModName, "builtin-discard")) {
+		fprintf(pDagInfo->fp, "\tact%d_%d\t\t[shape=box]\n",
+			pDagInfo->iActUnit, pDagInfo->iAct);
+		pDagInfo->bDiscarded = 1;
+	}
+
+
+	++pDagInfo->iAct;
+
+	RETiRet;
+}
+
+
+/* create config DAG
+ * This functions takes a rsyslog config and produces a .dot file for use
+ * with graphviz (http://www.graphviz.org). This is done in an effort to
+ * document, and also potentially troubleshoot, configurations. Plus, I
+ * consider it a nice feature to explain some concepts. Note that the
+ * current version only produces a graph with relatively little information.
+ * This is a foundation that may be later expanded (if it turns out to be
+ * useful enough).
+ * rgerhards, 2009-05-11
+ */
+static rsRetVal
+generateConfigDAG(uchar *pszDAGFile)
+{
+	selector_t *f;
+	FILE *fp;
+	int iActUnit = 1;
+	int bHasFilter = 0;	/* filter associated with this action unit? */
+	int bHadFilter;
+	int i;
+	struct dag_info dagInfo;
+	char *pszFilterName;
+	char szConnectingNode[64];
+	DEFiRet;
+
+	assert(pszDAGFile != NULL);
+	
+	if((fp = fopen((char*) pszDAGFile, "w")) == NULL) {
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)
+			"configuraton graph output file could not be opened, none generated", 0);
+		ABORT_FINALIZE(RS_RET_FILENAME_INVALID);
+	}
+
+	dagInfo.fp = fp;
+
+	/* from here on, we assume writes go well. This here is a really
+	 * unimportant utility function and if something goes wrong, it has
+	 * almost no effect. So let's not overdo this...
+	 */
+	fprintf(fp, "# graph created by rsyslog " VERSION "\n\n"
+	 	    "# use the dot tool from http://www.graphviz.org to visualize!\n"
+		    "digraph rsyslogConfig {\n"
+		    "\tinputs [shape=tripleoctagon]\n"
+		    "\tinputs -> act0_0\n"
+		    "\tact0_0 [label=\"main\\nqueue\" shape=hexagon]\n"
+		    /*"\tmainq -> act1_0\n"*/
+		    );
+	strcpy(szConnectingNode, "act0_0");
+	dagInfo.bDiscarded = 0;
+
+	for(f = Files; f != NULL ; f = f->f_next) {
+		/* BSD-Style filters are currently ignored */
+		bHadFilter = bHasFilter;
+		if(f->f_filter_type == FILTER_PRI) {
+			bHasFilter = 0;
+			for (i = 0; i <= LOG_NFACILITIES; i++)
+				if (f->f_filterData.f_pmask[i] != 0xff) {
+					bHasFilter = 1;
+					break;
+				}
+		} else {
+			bHasFilter = 1;
+		}
+
+		/* we know we have a filter, so it can be false */
+		switch(f->f_filter_type) {
+			case FILTER_PRI:
+				pszFilterName = "pri filter";
+				break;
+			case FILTER_PROP:
+				pszFilterName = "property filter";
+				break;
+			case FILTER_EXPR:
+				pszFilterName = "script filter";
+				break;
+		}
+
+		/* write action unit node */
+		if(bHasFilter) {
+			fprintf(fp, "\t%s -> act%d_end\t[label=\"%s:\\nfalse\"]\n",
+				szConnectingNode, iActUnit, pszFilterName);
+			fprintf(fp, "\t%s -> act%d_0\t[label=\"%s:\\ntrue\"]\n",
+				szConnectingNode, iActUnit, pszFilterName);
+			fprintf(fp, "\tact%d_end\t\t\t\t[shape=point]\n", iActUnit);
+			snprintf(szConnectingNode, sizeof(szConnectingNode), "act%d_end", iActUnit);
+		} else {
+			fprintf(fp, "\t%s -> act%d_0\t[label=\"no filter\"]\n",
+				szConnectingNode, iActUnit);
+			snprintf(szConnectingNode, sizeof(szConnectingNode), "act%d_0", iActUnit);
+		}
+
+		/* draw individual nodes */
+		dagInfo.iActUnit = iActUnit;
+		dagInfo.iAct = 0;
+		dagInfo.bDiscarded = 0;
+		llExecFunc(&f->llActList, generateConfigDAGAction, &dagInfo); /* actions */
+
+		/* finish up */
+		if(bHasFilter && !dagInfo.bDiscarded) {
+			fprintf(fp, "\tact%d_%d -> %s\n",
+				iActUnit, dagInfo.iAct - 1, szConnectingNode);
+		}
+
+		++iActUnit;
+	}
+
+	fprintf(fp, "\t%s -> act%d_0\n", szConnectingNode, iActUnit);
+	fprintf(fp, "\tact%d_0\t\t[label=discard shape=box]\n"
+		    "}\n", iActUnit);
+	fclose(fp);
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* helper to dbPrintInitInfo, to print out all actions via
  * the llExecFunc() facility.
  * rgerhards, 2007-08-02
@@ -2233,6 +2411,7 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
 	RETiRet;
 }
 
+
 /* print debug information as part of init(). This pretty much
  * outputs the whole config of rsyslogd. I've moved this code
  * out of init() to clean it somewhat up.
@@ -2240,7 +2419,7 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
  */
 static void dbgPrintInitInfo(void)
 {
-	register selector_t *f;
+	selector_t *f;
 	int iSelNbr = 1;
 	int i;
 
@@ -2476,6 +2655,10 @@ init(void)
 			MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
 		}
 	}
+
+	/* check if we need to generate a config DAG and, if so, do that */
+	if(pszConfDAGFile != NULL)
+		generateConfigDAG(pszConfDAGFile);
 
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25
@@ -2915,6 +3098,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", 0, eCmdHdlrBinary,
 		 NULL, &bDebugPrintCfSysLineHandlerList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"generateconfiggraph", 0, eCmdHdlrGetWord, NULL, &pszConfDAGFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &bErrMsgToStderr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, setMaxMsgSize, NULL, NULL));
