@@ -35,7 +35,8 @@ typedef enum {
 	BATCH_STATE_RDY  = 0,	/* object ready for processing */
 	BATCH_STATE_BAD  = 1,	/* unrecoverable failure while processing, do NOT resubmit to same action */
 	BATCH_STATE_SUB  = 2,	/* message submitted for processing, outcome yet unkonwn */
-	BATCH_STATE_DISC = 3, 	/* discarded - processed OK, but do not submit to any other action */
+	BATCH_STATE_COMM = 3,	/* message successfully commited */
+	BATCH_STATE_DISC = 4, 	/* discarded - processed OK, but do not submit to any other action */
 } batch_state_t;
 
 
@@ -57,6 +58,7 @@ struct batch_obj_s {
  */
 struct batch_s {
 	int nElem;		/* actual number of element in this entry */
+	int iDoneUpTo;		/* all messages below this index have state other than RDY */
 	batch_obj_t *pElem;	/* batch elements */
 };
 
