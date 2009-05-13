@@ -905,7 +905,6 @@ processAction(action_t *pAction, batch_t *pBatch)
 	/* this must be moved away - up into the dequeue part of the queue, I guess, but that's for another day */
 	for(i = 0 ; i < pBatch->nElem ; i++) {
 		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
-		msgDestruct(&pMsg); /* TODO: change: we are now finished with the message */
 	}
 	iRet = finishBatch(pAction);
 

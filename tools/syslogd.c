@@ -1230,7 +1230,6 @@ dbgprintf("msgConsumer..MULTIQUEUE: i: %d, pMsg: %p\n", i, pMsg);
 			parseMsg(pMsg);
 		}
 		processMsg(pMsg);
-		msgDestruct(&pMsg);
 	}
 dbgprintf("DONE msgConsumer..MULTIQUEUE:\n");
 
