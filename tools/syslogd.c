@@ -1155,6 +1155,7 @@ DEFFUNC_llExecFunc(processMsgDoActions)
 		ABORT_FINALIZE(RS_RET_OK);
 	}
 
+	/* MULTIQUEUE: look at this below! (I say: batch states!) */
 	iRetMod = actionCallAction(pAction, pDoActData->pMsg);
 	if(iRetMod == RS_RET_DISCARDMSG) {
 		ABORT_FINALIZE(RS_RET_DISCARDMSG);
@@ -1170,7 +1171,9 @@ finalize_it:
 }
 
 
-/* Process (consume) a received message. Calls the actions configured.
+/* Process (consume) a received message from the main queue. Here, messages are
+ * filtered and those where the filter evaluates to true are passed to the action
+ * queue for further processing.
  * rgerhards, 2005-10-13
  */
 static void

@@ -1,6 +1,6 @@
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
-TESTS = $(TESTRUNS) cfg.sh parsertest.sh omod-if-array.sh da-mainmsg-q.sh diskqueue.sh manytcp.sh
+TESTS = $(TESTRUNS) cfg.sh fieldtest.sh parsertest.sh omod-if-array.sh da-mainmsg-q.sh diskqueue.sh manytcp.sh
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
@@ -18,7 +18,15 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   err1.rstest \
 	   NoExistFile.cfgtest \
 	   testsuites/parse1.conf \
+	   testsuites/field1.conf \
 	   testsuites/1.parse1 \
+	   testsuites/2.parse1 \
+	   testsuites/3.parse1 \
+	   testsuites/date1.parse1 \
+	   testsuites/date2.parse1 \
+	   testsuites/date3.parse1 \
+	   testsuites/date4.parse1 \
+	   testsuites/date5.parse1 \
    	   testsuites/rfc3164.parse1 \
 	   testsuites/rfc5424-1.parse1 \
 	   testsuites/rfc5424-2.parse1 \
@@ -26,7 +34,9 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/rfc5424-4.parse1 \
 	   testsuites/omod-if-array.conf \
 	   testsuites/1.omod-if-array \
+	   testsuites/1.field1-if-array \
 	   parsertest.sh \
+	   fieldtest.sh \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
 	   da-mainmsg-q.sh \

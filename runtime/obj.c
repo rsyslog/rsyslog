@@ -205,9 +205,7 @@ DestructObjSelf(obj_t *pThis)
 	DEFiRet;
 
 	ISOBJ_assert(pThis);
-	if(pThis->pszName != NULL) {
-		free(pThis->pszName);
-	}
+	free(pThis->pszName);
 
 	RETiRet;
 }
