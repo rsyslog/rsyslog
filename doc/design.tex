@@ -5,13 +5,17 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{algorithm,algorithmic}
+\usepackage{float}
+
+\pagestyle{headings}
 
 \newcommand{\IN}{\mathbb{N}}
 \newcommand{\MM}{\mathcal{M}}
 \newcommand{\QQ}{\mathcal{Q}}
 \newcommand{\AAA}{\mathcal{A}}
 \title{Rsyslog Design and Internals}
-\author{Rainer Gerhards}
+\author{Rainer Gerhards\\
+rgerhards@adiscon.com}
 
 \begin{document}
 
@@ -24,8 +28,32 @@ This paper describes rsyslog design and internals. It is created to facilitate a
 \tableofcontents
 
 \section{Preliminaries}
+\subsection{On the Use of English}
+\begin{quotation}
+\begin{flushright}
+I ventured to write this book in English because ... \\
+it will be more easily read in poor English, \\
+than in good German by 90\% of my intended readers. \\
+--- HANS J. STETTER, Analysis of Discretization Methods for \\
+Ordinary Differential Equations (1973)
+\end{flushright}
+\end{quotation}
+
+There is not much I could add to Mr. Stetter's thought, except, maybe, that the number to quote probably tends more to 99\% in this case than to the 90\% Mr. Stetter notes. So please pardon those errors in language use that I have not yet been able to fix or even see. Suggestions for corrections and improvements are always welcome.
 \subsection{Notational Conventions}
 In general, in rsyslog there exists single objects $o$, which are used to build larger sets $O$, which form a superset $\mathcal{O}$ of all those objects that exist at a given time inside a running instance of rsyslog. As seen above, single objects are always described by lower case letters ($o$), larger sets by upper case letters ($O$) and the ``all-sets'' in caligraphic letters ($\mathcal{O}$). Often, objects $O_i, i \in \IN, i \le |\mathcal{O}|$ partition $\mathcal{O}$, but this is not necessarily the case.
+
+\subsection{Definitions}
+\subsubsection{Audit Grade}
+In the context of this document, ``audit grade'' means that a subsystem never loses a message that it has taken responsibility for, not even in cases of sudden power failures. The only limit in this restriction is that a subsystem does not guarantee message survival if the subsytem at large is being destroyed (e.g. during a disaster) or some of its components are not of audit-grade. This draws a fine limitation on the audit-grade of a subsystem.
+
+For example, the rsyslog queue subsystem receives messages and acknowledges them to the submitter (e.g. an input), when they have been enqueued in the storage system. If the queue system is configured to provide audit-grade operation\footnote{Audit-grade queue operation is considerably slower than regular operations, as such this mode is not enabled by default. Most installations will never need a completely audit-grade queue}, the queue relies on the storage subsystem to work properly. If, for example, a disk read error occurs, the message may no longer be readable from the disk and as such is lost. The root cause here is that the disk subsystem was not of audit grade, because it otherwise would not have lost the message. So in this case the queue code is of audit grade, but the one of its components, the disk subsytem, was not. So the overall system is not of audit grade.
+
+To simplify talking about the audit-gradness of several subsytems, we assume that all of their subsystems are also of audit grade. In an actual deployment, however, this means the the system designer must carefully select audit-grade subsystems. Overlooking a single non-audit-grade component will make the whole system of not audit grade quality.
+
+Please note that it can be rather tricky to ensure a complete system is of audit grade. A border case is main memory integrity. Even with error-correcting memory, there may situations arise where a memory error occurs (probably due to a very unlikely series of well-hitting cosmic rays) that is unrecoverable. At this point, system integrity is at risk. The only real solution is to immediately shut down the system and restart it (without giving any process a chance to execute). Note, however, that in an extreme view, an operating system routine that does so can also be considered dangerous, as memory in use by this routine might be affected by the malfunction. We could extend this scenario and further complicate it, but that goes beyond the scope of this paper. The example was primarily meant to show how subtle audit-grade reliability is.
+
+In rsyslog, we currently use a slightly \marginpar{duplication\\permitted}relaxed consistency condition for message integrity inside an audit-grade subsystem. While we do not accept message loss, we permit slight message \emph{duplication}, but only in exceptional cases. This is permitted because, with proper message generation, the dulication problem can be easily fixed at the end-to-end layer. For example, the original sender can include a UUID, which can be used to sort out duplicates at the final destination. Insisting on not allowing duplication complicates matters and is often impossible with today's logging protocols. So, for the time being, we aim at this relaxed criteria, which is hard enough to achive. After we have achieved that goal, we may further try to solve the duplicaton problem. Some hooks already exist. But we do not guarantee such an effort will be made any time soon.
 
 \section{Overall Design}
 From a high-level prespective, rsyslogd is ``just'' a high-performance message router. It accepts messages from various sources, applies user-configured filters to them, and routes potentially transformed messages to destinations based on these filters.
@@ -33,7 +61,7 @@ From a high-level prespective, rsyslogd is ``just'' a high-performance message r
 \subsection{Plugins}
 Plugins provide code potentially written by a third party to extend rsyslog.
 
-Conceptually, a plugin is a tupel of callable functions $(\phi_1, \phi_2, \ldots)$ which implement an interface. There are three different types of plugins: input, output and libraray. The plugin type denotes the primary interface implemented by the plugin. Additional interfaces may be implemented\footnote{This is not yet done in plugins, but is possible and assumed to be done at a later point in time}.
+Conceptually, a plugin is a tuple of callable functions $(\phi_1, \phi_2, \ldots)$ which implement an interface. There are three different types of plugins: input, output and library. The plugin type denotes the primary interface implemented by the plugin. Additional interfaces may be implemented\footnote{This is not yet done in plugins, but is possible and assumed to be done at a later point in time}.
 
 In the context of this paper, the output plugin interface is most important. It implements three entry points:
 
@@ -51,7 +79,7 @@ Every instance of an output plugin is guaranteed \emph{not} to be called concurr
 \subsection{State Sets}
 Several object have associated state based on a specific state set. These state sets are described together with the objects.
 
-As a general rule, individual state is associated with all intances $o$ of a class of objects. This state is called the object's \marginpar{state component} \emph{state component} $s$. If we want to obtain an object's state, we write $S(o)$. Please note that $S(o)$ is only defined for those objects that have a state component.
+As a general rule, individual state is associated with all instances $o$ of a class of objects. This state is called the object's \marginpar{state component} \emph{state component} $s$. If we want to obtain an object's state, we write $S(o)$. Please note that $S(o)$ is only defined for those objects that have a state component.
 
 \subsection{Messages} 
 A message $m$ represents a a single syslog message inside the system. It is a tuple of attributes. Some of these attributes directly orginate from the message content, some others are meta-information taken from the context. For example, there is an meta-attribute ``time of reception'' which conveys when the message was received by rsyslog's input subsystem. We do not list attributes here, as there are many and it is not of importance which exactly they are.
@@ -83,7 +111,7 @@ A batch represents multiple processable messages. It is a unit of processing ins
 
 A batch
 $$B = (b_1, b_2, \ldots, b_n )$$
-is a $n$-tuple of \marginpar{processable message}processable messages
+is a $n$-tuple of \marginpar{processable\\message}processable messages
 $$b = (m, s)$$
 which are an ordered pair of a message $m$ and an associated processing state $s$. To denote the $n$-th message inside the batch, we write $m(b_n)$, to denote the status component of the $n$-th message, we write $S(b_n)$.
 
@@ -137,11 +165,11 @@ Various objects keep state. Some of these objects, like messages, batches and ac
 \subsubsection{Actions}
 Actions are provided by output plugins. An action enables the engine to write messages to some destination. It is important to note that ``destination'' is a very broad abstraction. A destination may be a file inside a local or remote file system, a database table or a remote syslog server in another network.
 
-Actions are transactional in the following sense: more than one message can be submitted to an action. The action does not necessarily process the submitted messages unless the caller ends the transaction. However, the action itself may also end the transaction and notify the caller. This is \emph{not} considered an error condition and \emph{must} be handeled gracefully by the caller. If an transaction aborts, the caller \emph{must} assume that none of the elements submitted since the begin of transaction have been processed. The action will try to backout anything that was already processed at the time the transaction failed. However, not all outputs work on actually transactional destination. As such, an action is permitted not to backout incomplete interim results. As such, after a transaction abort, some message duplication may occur. We call this the \emph{relaxed integrity condition} for actions.
+Actions are transactional in the following sense: more than one message can be submitted to an action. The action does not necessarily process the submitted messages unless the caller ends the transaction. However, the action itself may also end the transaction and notify the caller. This is \emph{not} considered an error condition and \emph{must} be handled gracefully by the caller. If a transaction aborts, the caller \emph{must} assume that none of the elements submitted since the begin of transaction have been processed. The action will try to backout anything that was already processed at the time the transaction failed. However, not all outputs work on actually transactional destination. As such, an action is permitted not to backout incomplete interim results. As such, after a transaction abort, some message duplication may occur. We call this the \emph{relaxed integrity condition} for actions.
 
 An output transaction is started by calling \emph{beginTransaction()} either explicitely or implicitely by a call to \emph{doAction()} without calling \emph{beginTransaction()} before. Then, one or more calls to \emph{doAction()} follow. When the caller intends to finish the transaction, it calls \emph{endTransaction()}. However, the transaction may also be terminated from the action itself in response to a \emph{doAction()} call.
 
-Mathematical, an action transaction builds a totally orderred set of uncommitted messages $M_u$. The order relation is defined over the sequence in which messages are being provided to \emph{doAction()}. At any time a commit is attempted, the full set $M_u$ is committed and may either succeeed completely or not at all (in the sense of the relaxed integrity condition described above). 
+Mathematically, an action transaction builds a totally ordered set of uncommitted messages $M_u$. The order relation is defined over the sequence in which messages are being provided to \emph{doAction()}. At any time a commit is attempted, the full set $M_u$ is committed and may either succeeed completely or not at all (in the sense of the relaxed integrity condition described above). 
 
 A commit is attempted when 
 \begin{enumerate}
@@ -491,4 +519,188 @@ However, I also know that for regulatory requirements, you often seem to need to
 My view of reliability is much the same as my view of security: there is no such thing as "being totally secure", you can just reduce the probability that something bad happens. The worst thing in security is someone who thinks he is "totally secure" and as such is no longer actively looking at potential issues.
 
 The same I see for reliability. There is no thing like "being totally reliable" and it is a really bad idea to think you could ever be. Knowing this, one may begin to think about how to decrease the overall probability of message loss AND think about what rate is acceptable (and what to do with these cases, e.g. "how can they hurt").
+
+\paragraph{Different Use Cases}
+As David Lang pointed out, there exist different use cases for different levels of reliability. Most importantly, there exist use cases that do not demand very high throughput but rather ultra-realiability of the queue system. Here, ultra-reliability is just another word for the queue being of ``audit-grade''. Even if the queue provides audit-grade, the overall system is only then of audit-grade when all other components - most notably the transport protocols spoken by the inputs and outputs - are also of audit-grade. Most importantly, this means that an audit-grade system purely based on the IETF syslog protocol series can not be build.
+
+Used together with truly reliable protocols \emph{and} senders that block processing until a final acknowledgement has been received, an audit-grade system can potentially build based on rsyslog. To do so, an audit-grade queue subsystem is required, which is not present in releases less than 4.1.? (most importantly, v2 and v3 do not provide this capability).
+
+\subsection{Audit-Grade Queue Operations}
+\subsubsection{Perquisites}
+Audit-grade queue operations certain perquisites:
+\begin{itemize}
+\item rsyslog engine is of version 4.1.? or greater
+\item disk-only queue type
+\item checkpoint interval set to 1
+\item queue is configured to not permit losing any messages\footnote{The queue has several settings that can be used to fine-tune situations in which it may discard messages intentionally. All of these must be turned off. Most importantly, that means the producer is blocked for an infinite time if the queue is full.}
+\item queue consumer must also be of audit-grade
+\end{itemize}
+Only when these prequisites are met, queue operation can be considered of being audit-grade. Note that when message loss in case of sudden power failure and similar incidents is acceptable, neither disk-only queues nore a checkpoint interval of 1 is necessary. Such a configuration can also be build with rsyslog v3, which is up to that level.
+
+Note that in the sections below we describe the implementation in broader terms. Most importantly, we do not restrict ourselves to disk-only queue storage drivers. This is important, because it simplifies design and opens the capability to introduce new, possibly faster-performing, queue storage drivers in the future.
+
+But it is important to keep in mind that a concrete queue is only of audit-grade if it matches all the perquisites given here, most importantly with the right configuration.
+
+\subsubsection{Implementation}
+Messages are enqueued by the queue producer (either an input module or the main message queue's consumer). The enqueue operation is completed only when the message has been successfully accepted by the queue storage driver. Then and only then the producer is permitted to remove the queue from its own storage system. A rough sketch is given in algorithm \ref{alg_q_enq}.
+
+\begin{algorithm}
+\caption{enqueueObject($o$)}
+\begin{algorithmic}
+\label{alg_q_enq}
+\STATE lock queue mutex
+\WHILE{queue is !ready for enqueue}
+	\STATE wait on queue to become ready
+\ENDWHILE
+\STATE call queue store driver to add $o$
+\STATE unlock queue mutex
+\end{algorithmic}
+\end{algorithm}
+
+The dequeue-operation is more complex. We must ensure that each object stays in the queue until it is finally processed. Hereby, an object is finally processed, when processing of it has been completed. Remeber that to enhance performance objects are dequeued in batches of many. So at any given time, multiple messages may be processed, but not necessarily have finally completed doing so. If another worker thread then tries to obtain a new batch for processing, those ``in-process'' message must not be handed out a second time. Also, if a sudden power loss occurs during processing, queue operation must restart at the point of last commit. This means that all ``in-process'' messages need to be changed back to ``no processed'' state and be restarted again. In those cases the (acceptable) slight message duplication can occur.
+
+In our design, we differentiate between ``logical'' and ``physical'' dequeuing of batches. If a batch is generated for processing, it is logically dequeued --- in the sense that no other batch generating request will be able to receive another copy of these messages. If no exceptional situation happens, those messages will be processed and thus can be considered consumed under normal circumstances.
+
+However, actual deletion from the physical queue storage happens only after the batch is fully processed. At this point, all objects have been acknowledged by their destinations, which now have the responsibility for the object's survival. Consequently, we can delete them from the queue store. This process we call ``physical dequeue''. A first idea is given in algorithm \ref{alg_pdeq_batch_1} (remember that $O(b)$ contains all objects within the given batch $b$).
+
+\begin{algorithm}
+\caption{physDequeueBatch($b$), first approach}
+\begin{algorithmic}
+\label{alg_pdeq_batch_1}
+\STATE lock queue mutex
+\FORALL{$o \in O(b)$}
+	\STATE find $o$ in queue storage
+	\STATE remove $o$ and keep queue structures intact
+\ENDFOR
+\STATE unlock queue mutex
+\end{algorithmic}
+\end{algorithm}
+
+This algorithm is simple, but requires searching the queue store for the object to be dequeued -- a potentially lengthy operation. However, we can improve the searching process if we know more about the inner structure of batch objects. It seems appropriate to logically dequeue objects in queue-sequential order. A drawback of doing so is that we must prevent other worker threads from trying to dequeue concurrently. This is not really a drawback. We need to guard dequeue operations by a mutex in any case, because otherwise internal structures can not be kept consistent. Practical experience and testing have shown that many small dequeue operations cause a lot of locking contention and as such badly affect performance. So it actually is a welcome enhancement to aquire the queue lock only once for the whole batch dequeue operation. As dequeing is a comperatively fast operation, the lock is not held for extended periods of time.
+
+A first approach to this functionality is shown in algorithm \ref{alg_ldeq_batch_1}. Note that $C_mBatch$ is the configured maximum number of elements inside a batch, $i$ is an index to address the objects inside the batch.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[scale=0.6]{rsyslog_queue_pointers.jpeg}
+\end{center}
+\caption{\textbf{Queue Store Pointers}: boxes represent queue entries, colored boxes entries with objects. Objects in green are unprocessed, in blue are logically but not physicalled dequeued and those in gray are physically dequeued. White indicates not yet used entries. Gray objects may be overwritten at any time. Their entries are actually free, we have used the gray color primarily to indicate there once existed objects. Each queue pointer points to the next entry to process.}
+\label{fig_queue_ptr}
+\end{figure}
+
+\begin{algorithm}
+\caption{logicDequeueBatch($b$)}
+\begin{algorithmic}
+\label{alg_ldeq_batch_1}
+\STATE lock queue mutex
+\STATE $0 \to i$
+\WHILE{while queue non-empty and $i < C_mBatch$}
+	\STATE obtain next obj $o$ from queue store 
+	\STATE advance logical dequeue position
+	\STATE put $o$ into batch
+\ENDWHILE
+\STATE unlock queue mutex
+\end{algorithmic}
+\end{algorithm}
+
+A key concept is somewhat hidden in \marginpar{queue pointers} \emph{advance logical dequeue position}. Each queue store is purely sequential, with objects being enqueued at one ``end'' of the store and dequeued at the other. Of course, each queue store has only finite capacity, but we ignore this to explain the overall picture. A queue can be implemented by two pointers: one that points to the tail of the queue, where new messages are enqueued and one that points to the head of it, where new messages are dequeued. The idea is now to duplicate the dequeue pointer and split it into one for logical and one for physical dequeueing. Figure \ref{fig_queue_ptr} shows this three-pointer approach. Now, we can simple advance either the logical or physical dequeue pointer, depending on operation, and do not need to find the first dequeue position inside the queue store. The logical dequeue pointer always points at it. This mode can be implemented with all currently existing queue storage drivers (but the sequential disk driver may need to use a second file handle or stream object instead of two pointers).
+
+This makes an efficient implementation of algorithm \ref{alg_ldeq_batch_1} possible: when it logically dequeues, it just needs to advance the logical dequeue pointer. So the algorithm executes in $O(n)$ time where $n$ specifies the number of elements to dequeue with an upper bound of $C_mBatch$.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[scale=0.6]{rsyslog_queue_pointers2.jpeg}
+\end{center}
+\caption{\textbf{Physically Dequeueing Messages}: In this sample, we have two batches. With multiple workers, they may be physically dequeued at any time.}
+\label{fig_queue_ptr_deq}
+\end{figure}
+
+Furthermore, we can also improve algorithm \ref{alg_pdeq_batch_1}: Consider that each batch is logically dequeued as an atomic operation. That means all batch objects form a sequential subset of the queue. Figure \ref{fig_queue_ptr_deq} shows the situation when two batches have been logically dequeued.  So the costly ``find'' operation now needs to be carried out only once at the beginning of the batch. As all other objects are sequential, once we have found the batch begin inside the queue, we can simply physically dequeue the $|b|$ elements in queue-sequential order after it. So the cost of the find operation can be reduced from $O(|b|)$ to $O(1)$.
+
+We can even reduce the remaining cost of the find operation. If the batch to be physically dequeued is right at the queue's head (as as ``B1'' in the figure), the find immediately terminates with the first element and incurs no cost at all. The situation is different if the batch is not at the queue head, ``B2'' is an example for that (assuming that ``B1'' has not yet been dequeued). We would now still need to search over the objects that are not part of the batch and can then finally get to the object at the head of the batch in question. For queue storage drivers that support random access to queue elements, storing a simple pointer to the batches' queue head element further improves the situation and enables $O(1)$ access to the queue element. This is indicated by the dotted lines in figure \ref{fig_queue_ptr_deq}. Once the head of the queue has been found, two things can happen (depending on the capabilities of the queue storage driver):
+
+\begin{enumerate}
+\item the head element can be flagged as ``this and next $n$ elements are deleted''
+\item all elements are actually deleted
+\end{enumerate}
+
+Note that a mixed form is also possible (and probably useful for our \emph{singly} linked list storage driver: there, some $n'$ elements be actually deleted and the head element is flagged as ``this and next $n - n'$ elements are deleted''. Note that in the linked-list case, all but the first elements can be deleted with ease, so probably just the head would stay inside the queue. Note that removing elements off the queue, where possible, is useful because it frees resources. On a busy system, freeing messages as soon as possible can prevent message loss (in non-audit-grade setup) or system slowdown. So it should be done when possible.
+
+If we have a purely sequential queue storage driver (currently the sequential disk driver), finding and updating the head element is not an option. Even in this case, we can observe that the batch at the actual physical dequeue pointer will eventually be submitted for dequeuing. So a route to take is to create a list of elements that can be deleted as soon as the physical dequeue pointer reaches any of these elements. We call this the \marginpar{to-delete list}``to-delete list''. To facilitate processing, this list must be ordered in sequence of logical dequeing. This information may not be available from the storage subsystem itself, but it can easily be generated. To do so, a strictly monotonically increasing counter is kept with each logical dequeue operation and stored as part of the batch\footnote{As this must be done via the usual computer-implemented modular arithmetic, we must be careful that we do not see repetion of values because of overflows. Each day has $60 \cdot 60 \cot 24 = 86,400$ seconds (ignoring the subleties of UTC). Now let's assume that we have a moderately-busy system with 1,000 messages per second. We further assume, to be on the save side, that each message is processed inside its own batch. So we have $86,400,000$ batches per day. If we now use a typical $32$-bit integer for generating the batch IDs, we the unique range will be used up after
+$$\frac{2^{32}}{8640000} \approx 497 \text{ days}$$
+days of uninterrupted rsyslog operation. While this sounds somewhat save, it goes down to approximately 10 days of messages are submitted at rate of 50,000 messages per second (which is high, but not unheared of). So it is strongly advised to use 64 bits, which we consider to be save, because for our 1,000 messages per second the range would be exhausted only after
+$$\frac{2^{64}}{8640000} \approx 2.135 \cdot 10^{11} \text{ days}$$
+which equals approximately $584,500,000$ \emph{years}. So even at a rate of one million messages per second, the range would be sufficient for over 500,000 years of continuos operations -- that should be far sufficient.}
+An example: let us assume that ``B2'' was submitted for physical dequeueing first. Then, the head of ``B2'' is not at the queue's physical dequeue pointer. As such, no action can be carried out immediately. So the batch head pointer is stored into a ``to be deleted'' list. Processing continues. Some time later, batch ``B1'' is submitted for deletion. Now, the head pointer is at the head of the physical dequeue list, as such all batch elements are dequeued. Then, the ``to be deleted'' list is checked, and ``B2'' is found in it. Now, ``B2'' is at the head of the (new) physical dequeue pointer and can also be removed. So, ultimately, all messages are physically dequeued. This is more formally describe in algorithm \ref{alg_phys_deq_seq_store}. In that pseudocode, we made a simplification by always putting the to be deleted batch in the ``to-delete'' list, which then enables us to use somewhat more generic code to carry out the work.
+
+Note that there is a price to pay for deletions via the ``to-delete'' list: if a sudden power failure happens during processing, the set of duplicate messages is increased. For example, if power fails after ``B2'' has been fully processed and scheduled for deletion, but \emph{before ``B1'' is also submitted for deletion}, ``B2'' will be reprocessed after recovery. This would not happen if ``B2'' would have been removed from the queue.
+
+\begin{algorithm}
+\caption{deleteBatch($b$)}
+\begin{algorithmic}
+\label{alg_phys_deq_seq_store}
+\REQUIRE queue mutex is locked by caller
+\STATE enqueue $b.head, |b|$ in ``to-delete'' list $D$
+\COMMENT ``to-delete'' list must be in order of logical dequeue
+\WHILE{$D.head = Q.pysDeqPtr$}
+	\FOR{$|b|$ elements}
+		\STATE delete element at queue head
+		\STATE move $q.pysDeqPtr$
+	\ENDFOR
+	\STATE remove head of ``to-delete'' list
+\ENDWHILE 
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Warp-Up of Queue Delete Operations}
+When evaluating which route to take, the ``to-delete'' list approach looks elegant for all cases. The negative side effect of potentially increased message duplication currently does not even exist: today, the sequential disk queue storage driver permits only a single worker thread and thus there will always only be one thread at a time. Even if we remove that limitation, message duplication could not be avoided, as stated in the algorithm description above. What remains are the other queue storage drivers. however, they operate in-memory, so message duplication will not happen simply because all messages will be lost on sudden fatal failure. The advantage of limited message duplication only exists in the so-far hypothetical case of a random-access, audit-grade disk queue storage driver. Thus, the decision could be postponed unless that happens (if it ever does).
+
+From a code complexity point of view, the ``to-delete'' list approch is definitely advantagous. Not only because of the reduced number of algorithms required. We also do not need to maintain unique batch IDs and all the logic associated with them.
+
+The other aspect to look at is memory consumption. Assuming that we delete the actual objects, just not their containers inside the queue, extra memory consumption is not really that worse. More importantly, currently only the linked-list queue storage driver can benefit at all, because it is the only driver capable of deleting queue entries in mid-queue. All others, including the array memory driver, do not have this capability.
+
+From a performance point of view, the ``to delete'' list approach looks approximately as good as the others, with some mild better performance for some storage drivers for a non-``to delete'' list approach. This can be mitigated, especially if the potentially somewhat-costly maintenance of the ``to-delete'' list is slightly optimized and the algorithm actually checks if the to be deleted batch is right at the queues delete pointer position. The improved code simplicity, together with current CPU's code caching, may even result in an otherwise not expected speedup.
+
+In conclusion, we will implement the ``to-delte'' list approach on the queue layer (above the queue storage drivers). However, we will leave the window open to permit overwriting it with queue storage driver specific functionality. How to do this will not be specified now, as there is currently no need and we do not even know if there ever will be. However, we retain the discussion on the various modes as well as the relevant algorithmic discussions and data structurs inside this paper so that it is readily available should need arise. We also think this is important so that everybody later knows that the decision was made based on good argument and not by accident (we consider this useful in another design enhancement attempt).
+
+
+\subsubsection{Queue Stores}
+Currently, rsyslog supports three different types of queue store drivers:
+
+\begin{itemize}
+\item memory array
+\item memory linked list
+\item disk sequential file
+\end{itemize}
+
+They all provide an abstracted sequential queue store as shown in figure \ref{fig_queue_ptr} on page \pageref{fig_queue_ptr}.
+
+Obviously, some differences exist. Most importantly, the disk sequential file driver does \emph{not} support more than one queue worker thread (in order to prevent excessive disk activity and the subtle issues with rewriting parts of sequential files). So if this driver is used, the queue automatically limits itself to a maximum of one worker thread (even if user configuration settings 
+
+Different queue store drivers have different properties:
+
+\begin{tabular}{|l||l|l|l|}\hline
+		&	array 	& linked list		& seqential file \\ \hline
+pointer type	& integer index	& memory address	& file number and \\
+		&		&			& offset within file \\ \hline
+physical access	& random	& random		& sequential \\ \hline
+remove middle	& no		& yes			& no \\
+elements	&		&			& \\ \hline
+access to $n$-th& $O(1)$, index:& $O(n)$, follow	& not supported \\
+element		& $n \mod C_{mMsg}$	& pointer links	& \\ \hline
+speed		& fastest	& fast			& slow \\\hline
+mem overhead	& large		& some			& almost none \\\hline
+reliability	& reliable	& reliable		& audit-grade\footnote{if configured correctly}\\
+\hline
+\end{tabular}
+
+\subsubsection{Checkmarks}
+The following things need to be verified in the actual implementation.
+
+\paragraph{Queue Full}
+Is it possible to set an infinte timeout on queue full condition during enqueue? If not, we must provide it.
+
+\paragraph{Terminatin the Queue}
+If we cancel a worker, we need to start from the physical dequeue pointer and pull everything that is not scheduled for deletion - NOT from the logical dequeue pointer.
+
 \end{document}
