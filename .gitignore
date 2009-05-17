@@ -35,3 +35,5 @@ log
 logfile
 debug
 core.*
+shave
+shave-libtool

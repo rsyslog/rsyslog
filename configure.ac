@@ -699,6 +699,7 @@ AC_ARG_ENABLE(imtemplate,
 AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
 # end of copy template - be sure to serach for imtemplate to find everything!
 
+SHAVE_INIT
 
 # settings for the omprog output module
 AC_ARG_ENABLE(omprog,
@@ -754,6 +755,8 @@ AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
 
 AC_CONFIG_FILES([Makefile \
+		shave \
+		shave-libtool \
 		runtime/Makefile \
 		tools/Makefile \
 		doc/Makefile \
