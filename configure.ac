@@ -697,7 +697,7 @@ AC_ARG_ENABLE(imtemplate,
 # for samples
 #
 AM_CONDITIONAL(ENABLE_IMTEMPLATE, test x$enable_imtemplate = xyes)
-# end of copy template - be sure to serach for imtemplate to find everything!
+# end of copy template - be sure to search for imtemplate to find everything!
 
 SHAVE_INIT
 
@@ -732,7 +732,7 @@ AC_ARG_ENABLE(omtemplate,
 # for samples
 #
 AM_CONDITIONAL(ENABLE_OMTEMPLATE, test x$enable_omtemplate = xyes)
-# end of copy template - be sure to serach for omtemplate to find everything!
+# end of copy template - be sure to search for omtemplate to find everything!
 
 
 # settings for omstdout
@@ -747,10 +747,6 @@ AC_ARG_ENABLE(omstdout,
          esac],
         [enable_omstdout=no]
 )
-#
-# you may want to do some library checks here - see snmp, mysql, pgsql modules
-# for samples
-#
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
 
