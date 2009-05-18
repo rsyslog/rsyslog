@@ -197,13 +197,13 @@ fi
 AC_ARG_ENABLE(gssapi_krb5,
 	[AS_HELP_STRING([--enable-gssapi-krb5],[Enable GSSAPI Kerberos 5 support @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) want_gssapi_krb5="yes" ;;
-          no) want_gssapi_krb5="no" ;;
+         yes) enable_gssapi_krb5="yes" ;;
+          no) enable_gssapi_krb5="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-gssapi-krb5) ;;
          esac],
-	[want_gssapi_krb5=no]
+	[enable_gssapi_krb5=no]
 )
-if test $want_gssapi_krb5 = yes; then
+if test $enable_gssapi_krb5 = yes; then
 	AC_CHECK_LIB(gssapi_krb5, gss_acquire_cred, [
 		AC_CHECK_HEADER(gssapi/gssapi.h, [
 			AC_DEFINE(USE_GSSAPI,,
@@ -213,7 +213,7 @@ if test $want_gssapi_krb5 = yes; then
 		])
 	])
 fi
-AM_CONDITIONAL(ENABLE_GSSAPI, test x$want_gssapi_krb5 = xyes)
+AM_CONDITIONAL(ENABLE_GSSAPI, test x$enable_gssapi_krb5 = xyes)
 
 # multithreading via pthreads
 AC_ARG_ENABLE(pthreads,
@@ -803,7 +803,7 @@ echo "omstdout module will be compiled:         $enable_omstdout"
 echo "Large file support enabled:               $enable_largefile"
 echo "Networking support enabled:               $enable_inet"
 echo "GnuTLS network stream driver enabled:     $enable_gnutls"
-echo "Enable GSSAPI Kerberos 5 support:         $want_gssapi_krb5"
+echo "Enable GSSAPI Kerberos 5 support:         $enable_gssapi_krb5"
 echo "Debug mode enabled:                       $enable_debug"
 echo "Runtime Instrumentation enabled:          $enable_rtinst"
 echo "Diagnostic tools enabled:                 $enable_diagtools"
