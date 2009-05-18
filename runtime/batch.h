@@ -59,6 +59,7 @@ struct batch_obj_s {
 struct batch_s {
 	int nElem;		/* actual number of element in this entry */
 	int iDoneUpTo;		/* all messages below this index have state other than RDY */
+	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
 	batch_obj_t *pElem;	/* batch elements */
 };
 

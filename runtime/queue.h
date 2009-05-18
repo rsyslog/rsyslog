@@ -30,6 +30,15 @@
 #include "batch.h"
 #include "stream.h"
 
+/* support for the toDelete list */
+typedef struct toDeleteLst_s toDeleteLst_t;
+struct toDeleteLst_s {
+	qDeqID	deqID;
+	int	nElem;
+	struct toDeleteLst_s *pNext;
+};
+
+
 /* queue types */
 typedef enum {
 	QUEUETYPE_FIXED_ARRAY = 0,/* a simple queue made out of a fixed (initially malloced) array fast but memoryhog */
@@ -85,6 +94,7 @@ typedef struct queue_s {
 	int	toQShutdown;	/* timeout for regular queue shutdown in ms */
 	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
+	toDeleteLst_t *toDeleteLst;/* this queue's to-delete list */
 	int	toEnq;		/* enqueue timeout */
 	int	iDeqBatchSize;	/* max number of elements that shall be dequeued at once */
 	/* rate limiting settings (will be expanded) */
@@ -110,7 +120,8 @@ typedef struct queue_s {
 	rsRetVal (*qConstruct)(struct queue_s *pThis);
 	rsRetVal (*qDestruct)(struct queue_s *pThis);
 	rsRetVal (*qAdd)(struct queue_s *pThis, void *pUsr);
-	rsRetVal (*qDel)(struct queue_s *pThis, void **ppUsr);
+	rsRetVal (*qDeq)(struct queue_s *pThis, void **ppUsr);
+	rsRetVal (*qDel)(struct queue_s *pThis);
 	/* end type-specific handler */
 	/* synchronization variables */
 	pthread_mutex_t mutThrdMgmt; /* mutex for the queue's thread management */
@@ -134,6 +145,8 @@ typedef struct queue_s {
 	int iNumberFiles;	/* how many files make up the queue? */
 	int64 iMaxFileSize;	/* max size for a single queue file */
 	int64 sizeOnDiskMax;    /* maximum size on disk allowed */
+	qDeqID deqIDAdd;	/* next dequeue ID to use during add to queue store */
+	qDeqID deqIDDel;	/* queue store delete position */
 	int bIsDA;		/* is this queue disk assisted? */
 	int bRunsDA;		/* is this queue actually *running* disk assisted? */
 	struct queue_s *pqDA;	/* queue for disk-assisted modes */
@@ -148,18 +161,20 @@ typedef struct queue_s {
 	/* now follow queueing mode specific data elements */
 	union {			/* different data elements based on queue type (qType) */
 		struct {
-			long head, tail;
+			long deqhead, head, tail;
 			void** pBuf;		/* the queued user data structure */
 		} farray;
 		struct {
-			qLinkedList_t *pRoot;
+			qLinkedList_t *pDeqRoot;
+			qLinkedList_t *pDelRoot;
 			qLinkedList_t *pLast;
 		} linklist;
 		struct {
 			int64 sizeOnDisk; /* current amount of disk space used */
 			int64 bytesRead;  /* number of bytes read from current (undeleted!) file */
-			strm_t *pWrite; /* current file to be written */
-			strm_t *pRead;  /* current file to be read */
+			strm_t *pWrite;   /* current file to be written */
+			strm_t *pReadDeq; /* current file for dequeueing */
+			strm_t *pReadDel; /* current file for deleting */
 		} disk;
 	} tVars;
 } qqueue_t;

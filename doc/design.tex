@@ -769,8 +769,6 @@ The full list of the queue store driver interface is:
 
 \paragraph{qDel} Delete the object at queue head. Delete pointer is advanced.
 
-\paragraph{qIsAtDelPos} Check if the pointer provided is at the queues current delete position. Returns true, if so, false, otherwise.
-
 Disk queue store drivers may support additional internal functions. However, they should not be exposed to the rest of the queue subsystem.
 
 \begin{figure}
@@ -782,6 +780,10 @@ Disk queue store drivers may support additional internal functions. However, the
 \end{figure}
 
 Figure \ref{fig_queue_msg_state} shows a logical message state diagram during queue processing. There is no actual state variable, but rather the processing flow demands these state. Note that the state transition from ``dequeued'' to ``queued'' only happens after a fatal failure and a successful system recovery. So this is a rather exceptional case.
+
+Another subtle issue is that we now need two different queue size counters: one for seeing when the queue is physically full and one for detecting when there are no more messages to be dequeued.
+
+As a simplification, support for ungetting objects can be removed (as objects never leave the queue), what also means that cancel-processing is probably less complex.
 
 \paragraph{Sequential Disk Queue Store Driver}
 The enequeue, deqeueue and delete pointers must be implemented via three stream objects. Most importantly, the dequeue stream must be configured not to delete files when it closes them. A side-effect of this implementation is that data is actually read twice, once to actually obtain it and a second time to delete it. This could only be avoided by an overall redesign on how the disk queue works.

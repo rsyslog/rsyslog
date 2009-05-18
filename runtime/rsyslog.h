@@ -67,6 +67,11 @@
 /*#define CORE_FEATURE_whatever 2 ... and so on ... */
 
 
+/* some universal 64 bit define... */
+typedef long long int64;
+typedef long long unsigned uint64;
+typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
+
 /* define some base data types */
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct aUsrp_s aUsrp_t;
@@ -98,11 +103,8 @@ typedef struct vmstk_s vmstk_t;
 typedef struct batch_obj_s batch_obj_t;
 typedef struct batch_s batch_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
+typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 
-/* some universal 64 bit define... */
-typedef long long int64;
-typedef long long unsigned uint64;
-typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */

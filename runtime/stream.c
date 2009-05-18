@@ -99,7 +99,10 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	pThis->fd = open((char*)pThis->pszCurrFName, iFlags, pThis->tOpenMode);
 	if(pThis->fd == -1) {
 		int ierrnoSave = errno;
-		dbgoprint((obj_t*) pThis, "open error %d, file '%s'\n", errno, pThis->pszCurrFName);
+		char errStr[1024];
+		dbgoprint((obj_t*) pThis, "open error[%d]: '%s'; file '%s'/%s\n", errno, 
+			  rs_strerror_r(errno, errStr, sizeof(errStr)), pThis->pszCurrFName,
+			  (pThis->tOperationsMode == STREAMMODE_READ) ? "READ" : "WRITE");
 		if(ierrnoSave == ENOENT)
 			ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
 		else
