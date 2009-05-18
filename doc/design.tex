@@ -433,11 +433,11 @@ message-caused. This is under the assumption that any reasonable responsive
 admin will hopefully test his configuration at least once before turning it
 into production. And config SQL errors should manifest immediately, so I
 expect these to be fixed before a configuration runs in production. So it is
-the chore of the output module to interpret the return code it received from
-its API and decide whether this is more likely action-caused or
+the duty of the output module to interpret the return code it received from
+the API call and decide whether the failure is more likely action-caused or
 message-caused. For database outputs, I would assume that it is always easy
-to classify failures that can only be action-caused, especially in the
-dominating case of a failed network connection or a failed server.
+to classify failures that must be action-caused, especially in the
+dominating cases of failed network connections or failed servers.
 
 For other outputs it may not be as easy. But, for example, all stream network
 outputs can detect a broken connection, so this also is a sure fit.
