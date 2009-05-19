@@ -4,6 +4,8 @@ Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
   affecting performance for delayable inputs
 - bugfix: potential segfault issue when multiple $UDPServerRun directives
   are specified. Thanks to Michael Biebl for helping to debug this one.
+- relaxed GnuTLS version requirement to 1.4.0 after confirmation from the
+  field that this version is sufficient
 ---------------------------------------------------------------------------
 Version 3.22.0 [v3-stable] (rgerhards), 2009-04-21
 This is the first stable release that includes the full functionality
