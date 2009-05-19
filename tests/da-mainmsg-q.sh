@@ -24,7 +24,7 @@ if [ "$?" -ne "0" ]; then
   cp rsyslog.out.log rsyslog.out.log.save
 fi
 ls -l test-spool
-sleep 1 # we need this so that rsyslogd can receive all outstanding messages
+sleep 2 # we need this so that rsyslogd can receive all outstanding messages
 #
 # part 2: send bunch of messages. This should trigger DA mode
 #
@@ -35,7 +35,7 @@ if [ "$?" -ne "0" ]; then
   cp rsyslog.out.log rsyslog.out.log.save
 fi
 ls -l test-spool
-sleep 5 # we need this so that rsyslogd can receive all outstanding messages
+sleep 8 # we need this so that rsyslogd can receive all outstanding messages
 #
 # send another handful
 #

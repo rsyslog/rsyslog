@@ -74,7 +74,8 @@ typedef struct queue_s {
 	int	bSaveOnShutdown;/* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
 	int	bQueueStarted;	/* has queueStart() been called on this queue? 1-yes, 0-no */
 	int	bQueueInDestruction;/* 1 if queue is in destruction process, 0 otherwise */
-	int	iQueueSize;	/* Current number of elements in the queue */
+	int	iQueueSize;	/* Current number of elements in queue store (some are already logically dequeued!) */
+	int	nLogDeq;	/* number of elements currently logically dequeued */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
 	int 	iNumWorkerThreads;/* number of worker threads to use */
 	int 	iCurNumWrkThrd;/* current number of active worker threads */

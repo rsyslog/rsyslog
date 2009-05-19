@@ -7,6 +7,7 @@
 echo testing queue disk-only mode
 rm -rf test-spool
 mkdir test-spool
+# enable this, if you need debug output: export RSYSLOG_DEBUG="debug"
 rm -f work rsyslog.out.log rsyslog.out.log.save # work files
 ../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/diskqueue.conf &
 sleep 1
