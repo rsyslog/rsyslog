@@ -55,9 +55,15 @@ struct batch_obj_s {
  * object. We stick to the more generic term because queues may potentially hold
  * other types of objects, too.
  * rgerhards, 2009-05-12
+ * Note that nElem is not necessarily equal to nElemDeq. This is the case when we
+ * discard some elements (because of configuration) during dequeue processing. As
+ * all Elements are only deleted when the batch is processed, we can not immediately
+ * delete them. So we need to keep their number that we can delete them when the batch
+ * is completed (else, the whole process does not work correctly).
  */
 struct batch_s {
 	int nElem;		/* actual number of element in this entry */
+	int nElemDeq;		/* actual number of elements dequeued (and thus to be deleted) - see comment above! */
 	int iDoneUpTo;		/* all messages below this index have state other than RDY */
 	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
 	batch_obj_t *pElem;	/* batch elements */

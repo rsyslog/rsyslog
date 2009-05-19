@@ -131,7 +131,7 @@ static inline rsRetVal tdlPop(qqueue_t *pQueue)
  * structure, populates it with the values provided and links the new
  * element into the correct place inside the list.
  */
-static inline rsRetVal tdlAdd(qqueue_t *pQueue, qDeqID deqID, int nElem)
+static inline rsRetVal tdlAdd(qqueue_t *pQueue, qDeqID deqID, int nElemDeq)
 {
 	toDeleteLst_t *pNew;
 	toDeleteLst_t *pPrev;
@@ -142,7 +142,7 @@ static inline rsRetVal tdlAdd(qqueue_t *pQueue, qDeqID deqID, int nElem)
 
 	CHKmalloc(pNew = malloc(sizeof(toDeleteLst_t)));
 	pNew->deqID = deqID;
-	pNew->nElem = nElem;
+	pNew->nElemDeq = nElemDeq;
 
 	/* now find right spot */
 	for(  pPrev = pQueue->toDeleteLst
@@ -1483,19 +1483,19 @@ DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch)
 
 	pTdl = tdlPeek(pThis);
 	if(pTdl == NULL) {
-		DoDeleteBatchFromQStore(pThis, pBatch->nElem);
+		DoDeleteBatchFromQStore(pThis, pBatch->nElemDeq);
 	} else if(pBatch->deqID == pThis->deqIDDel) {
 		deqIDDel = pThis->deqIDDel;
 		pTdl = tdlPeek(pThis);
 		while(pTdl != NULL && deqIDDel == pTdl->deqID) {
-			DoDeleteBatchFromQStore(pThis, pTdl->nElem);
+			DoDeleteBatchFromQStore(pThis, pTdl->nElemDeq);
 			tdlPop(pThis);
 			++deqIDDel;
 			pTdl = tdlPeek(pThis);
 		}
 	} else {
 		/* can not delete, insert into to-delete list */
-		CHKiRet(tdlAdd(pThis, pBatch->deqID, pBatch->nElem));
+		CHKiRet(tdlAdd(pThis, pBatch->deqID, pBatch->nElemDeq));
 	}
 
 finalize_it:
@@ -1547,6 +1547,7 @@ static inline rsRetVal
 DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSize)
 {
 	int nDequeued;
+	int nDiscarded;
 	int iQueueSize;
 	void *pUsr;
 	rsRetVal localRet;
@@ -1554,7 +1555,7 @@ DequeueConsumableElements(qqueue_t *pThis, wti_t *pWti, int *piRemainingQueueSiz
 
 	DeleteProcessedBatch(pThis, &pWti->batch);
 
-	nDequeued = 0;
+	nDequeued = nDiscarded = 0;
 	do {
 dbgprintf("DequeueConsumableElements, index %d\n", nDequeued);
 		CHKiRet(qqueueDeq(pThis, &pUsr));
@@ -1562,12 +1563,12 @@ dbgprintf("DequeueConsumableElements, index %d\n", nDequeued);
 
 		/* check if we should discard this element */
 		localRet = qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pThis->bRunsDA, pUsr);
-		//MULTI-DEQUEUE / ULTRA-RELIABLE: we need to handle this case, we need to advance the
-		// DEQ pointer (or so...) TODO!!! Idea: get a second nElem int in pBatch, nDequeued. Use that when deleting!
-		if(localRet == RS_RET_QUEUE_FULL)
+		if(localRet == RS_RET_QUEUE_FULL) {
+			++nDiscarded;
 			continue;
-		else if(localRet != RS_RET_OK)
+		} else if(localRet != RS_RET_OK) {
 			ABORT_FINALIZE(localRet);
+		}
 
 		/* all well, use this element */
 		pWti->batch.pElem[nDequeued].pUsrp = pUsr;
@@ -1578,6 +1579,7 @@ dbgprintf("DequeueConsumableElements, index %d\n", nDequeued);
 	qqueueChkPersist(pThis, nDequeued); /* it is sufficient to persist only when the bulk of work is done */
 
 	pWti->batch.nElem = nDequeued;
+	pWti->batch.nElemDeq = nDequeued + nDiscarded;
 	pWti->batch.deqID = getNextDeqID(pThis);
 	*piRemainingQueueSize = iQueueSize;
 

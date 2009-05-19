@@ -34,7 +34,7 @@
 typedef struct toDeleteLst_s toDeleteLst_t;
 struct toDeleteLst_s {
 	qDeqID	deqID;
-	int	nElem;
+	int	nElemDeq;	/* numbe of elements that were dequeued and as such must now be discarded */
 	struct toDeleteLst_s *pNext;
 };
 
