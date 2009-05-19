@@ -1225,13 +1225,12 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch)
 
 	for(i = 0 ; i < pBatch->nElem ; i++) {
 		pMsg = (msg_t*) pBatch->pElem[i].pUsrp;
-dbgprintf("msgConsumer..MULTIQUEUE: i: %d, pMsg: %p\n", i, pMsg);
+		DBGPRINTF("msgConsumer processes msg %d/%d\n", i, pBatch->nElem);
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 			parseMsg(pMsg);
 		}
 		processMsg(pMsg);
 	}
-dbgprintf("DONE msgConsumer..MULTIQUEUE:\n");
 
 	RETiRet;
 }
