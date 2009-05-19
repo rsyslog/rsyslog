@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-04-??
-- performance enhancemnt: imtcp calls parser no longer on input thread
+- performance enhancement: imtcp calls parser no longer on input thread
   but rather inside on of the potentially many main msg queue worker
   threads (an enhancement scheduled for all input plugins where this is
   possible)
@@ -15,6 +15,7 @@ Version 4.3.1  [DEVEL] (rgerhards), 2009-04-??
   * added tests for queue disk-only mode (checks disk queue logic)
 - bugfix: light and full delay watermarks had invalid values, badly
   affecting performance for delayable inputs
+- build system improvements - thanks to Michael Biebl
 ---------------------------------------------------------------------------
 Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
 - new feature: new output plugin omprog, which permits to start program
