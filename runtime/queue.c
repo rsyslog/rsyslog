@@ -2361,13 +2361,6 @@ finalize_it:
 		d_pthread_mutex_unlock(pThis->mut);
 		pthread_setcancelstate(iCancelStateSave, NULL);
 		dbgoprint((obj_t*) pThis, "EnqueueMsg advised worker start\n");
-		/* the following pthread_yield is experimental, but brought us performance
-		 * benefit. For details, please see http://kb.monitorware.com/post14216.html#p14216
-		 * rgerhards, 2008-10-09
-		 * but this is only true for uniprocessors, so we guard it with an optimize flag -- rgerhards, 2008-10-22
-		 */
-		if(pThis->bOptimizeUniProc)
-			pthread_yield();
 	}
 
 	RETiRet;

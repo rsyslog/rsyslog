@@ -39,10 +39,10 @@
 #include <pthread.h>
 #include <errno.h>
 
-#ifdef OS_SOLARIS
-#	include <sched.h>
-#	define pthread_yield() sched_yield()
-#endif
+/// TODO: check on solaris if this is any longer needed - I don't think so - rgerhards, 2009-09-20
+//#ifdef OS_SOLARIS
+//#	include <sched.h>
+//#endif
 
 #include "rsyslog.h"
 #include "stringbuf.h"
@@ -341,20 +341,6 @@ wtiWorkerCancelCleanup(void *arg)
  * Now make sure we can get canceled - it is not specified if pthread_setcancelstate() is
  * a cancellation point in itself. As we run most of the time without cancel enabled, I fear
  * we may never get cancelled if we do not create a cancellation point ourselfs.
- *
- * On the use of pthread_yield():
- * We yield to give the other threads a chance to obtain the mutex. If we do not
- * do that, this thread may very well aquire the mutex again before another thread
- * has even a chance to run. The reason is that mutex operations are free to be
- * implemented in the quickest possible way (and they typically are!). That is, the
- * mutex lock/unlock most probably just does an atomic memory swap and does not necessarily
- * schedule other threads waiting on the same mutex. That can lead to the same thread
- * aquiring the mutex ever and ever again while all others are starving for it. We
- * have exactly seen this behaviour when we deliberately introduced a long-running
- * test action which basically did a sleep. I understand that with real actions the
- * likelihood of this starvation condition is very low - but it could still happen
- * and would be very hard to debug. The yield() is a sure fix, its performance overhead
- * should be well accepted given the above facts. -- rgerhards, 2008-01-10
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
@@ -371,7 +357,6 @@ wtiWorker(wti_t *pThis)
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
 	dbgSetThrdName(pThis->pszDbgHdr);
-	pThis->batch.nElem = 0; /* flag no elements present */ // MULTIQUEUE: do we really need this any longer (cnacel handeler)?
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);
@@ -383,10 +368,6 @@ wtiWorker(wti_t *pThis)
 		/* process any pending thread requests */
 		wtpProcessThrdChanges(pWtp);
 		pthread_testcancel(); /* see big comment in function header */
-#		if !defined(__hpux) /* pthread_yield is missing there! */
-		if(pThis->bOptimizeUniProc)
-			pthread_yield(); /* see big comment in function header */
-#		endif
 
 		/* if we have a rate-limiter set for this worker pool, let's call it. Please
 		 * keep in mind that the rate-limiter may hold us for an extended period

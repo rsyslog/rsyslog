@@ -40,10 +40,10 @@
 #include <unistd.h>
 #include <errno.h>
 
-#ifdef OS_SOLARIS
-#	include <sched.h>
-#	define pthread_yield() sched_yield()
-#endif
+/// TODO: check on solaris if this is any longer needed - I don't think so - rgerhards, 2009-09-20
+//#ifdef OS_SOLARIS
+//#	include <sched.h>
+//#endif
 
 #include "rsyslog.h"
 #include "stringbuf.h"
@@ -509,14 +509,6 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 	iState = pthread_create(&(pWti->thrdID), NULL, wtpWorker, (void*) pWti);
 	dbgprintf("%s: started with state %d, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), iState, pThis->iCurNumWrkThrd);
-
-	/* we try to give the starting worker a little boost. It won't help much as we still
- 	 * hold the queue's mutex, but at least it has a chance to start on a single-CPU system.
- 	 */
-#	if !defined(__hpux) /* pthread_yield is missing there! */
-	if(pThis->bOptimizeUniProc)
-		pthread_yield();
-#	endif
 
 	/* indicate we just started a worker and would like to see it running */
 	wtpSetInactivityGuard(pThis, 1, MUTEX_ALREADY_LOCKED);
