@@ -1,6 +1,7 @@
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
-TESTS = $(TESTRUNS) cfg.sh fieldtest.sh da-mainmsg-q.sh diskqueue.sh manytcp.sh
+TESTS = $(TESTRUNS) cfg.sh fieldtest.sh arrayqueue.sh linkedlistqueue.sh da-mainmsg-q.sh \
+	diskqueue.sh manytcp.sh
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh parsertest.sh
 endif
@@ -42,6 +43,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   fieldtest.sh \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
+	   arrayqueue.sh \
+	   testsuites/arrayqueue.conf \
+	   linkedlistqueue.sh \
+	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
 	   testsuites/da-mainmsg-q.conf \
 	   manytcp.sh \
