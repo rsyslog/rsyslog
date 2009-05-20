@@ -50,7 +50,7 @@ typedef enum {
 
 
 /* the worker thread pool (wtp) object */
-typedef struct wtp_s {
+struct wtp_s {
 	BEGINobjInstance;
 	int	bOptimizeUniProc; /* cache for the equally-named global setting, pulled at time of queue creation */
 	wtpState_t wtpState;
@@ -73,7 +73,7 @@ typedef struct wtp_s {
 	rsRetVal (*pfChkStopWrkr)(void *pUsr, int);
 	rsRetVal (*pfGetDeqBatchSize)(void *pUsr, int*); /* obtains max dequeue count from queue config */
 	rsRetVal (*pfRateLimiter)(void *pUsr);
-	rsRetVal (*pfIsIdle)(void *pUsr, int);
+	rsRetVal (*pfIsIdle)(void *pUsr, wtp_t *pWtp);
 	rsRetVal (*pfDoWork)(void *pUsr, void *pWti, int);
 	rsRetVal (*pfOnIdle)(void *pUsr, int);
 	rsRetVal (*pfOnWorkerCancel)(void *pUsr, void*pWti);
@@ -81,7 +81,7 @@ typedef struct wtp_s {
 	rsRetVal (*pfOnWorkerShutdown)(void *pUsr);
 	/* end user objects */
 	uchar *pszDbgHdr;	/* header string for debug messages */
-} wtp_t;
+};
 
 /* some symbolic constants for easier reference */
 
@@ -106,7 +106,7 @@ PROTOTYPEObjClassInit(wtp);
 PROTOTYPEpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));
 PROTOTYPEpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*));
-PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int));
+PROTOTYPEpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, wtp_t*));
 PROTOTYPEpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int));
 PROTOTYPEpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*,void*));

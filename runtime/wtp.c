@@ -248,7 +248,6 @@ wtpSetState(wtp_t *pThis, wtpState_t iNewState)
 
 
 /* check if the worker shall shutdown (1 = yes, 0 = no)
- * TODO: check if we can use atomic operations to enhance performance
  * Note: there may be two mutexes locked, the bLockUsrMutex is the one in our "user"
  * (e.g. the queue clas)
  * rgerhards, 2008-01-21
@@ -263,14 +262,14 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex)
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 	if(   (pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE)
-	   || ((pThis->wtpState == wtpState_SHUTDOWN) && pThis->pfIsIdle(pThis->pUsr, bLockUsrMutex)))
+	   || ((pThis->wtpState == wtpState_SHUTDOWN) && pThis->pfIsIdle(pThis->pUsr, pThis)))
 		iRet = RS_RET_TERMINATE_NOW;
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
 
 	/* try customer handler if one was set and we do not yet have a definite result */
 	if(iRet == RS_RET_OK && pThis->pfChkStopWrkr != NULL) {
 		iRet = pThis->pfChkStopWrkr(pThis->pUsr, bLockUsrMutex);
 	}
+	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
 
 	RETiRet;
 }
@@ -577,7 +576,7 @@ DEFpropSetMethPTR(wtp, pcondBusy, pthread_cond_t)
 DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
 DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*))
-DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, int))
+DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, wtp_t*))
 DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int))
 DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*, void*))

@@ -333,6 +333,32 @@ wtiWorkerCancelCleanup(void *arg)
 }
 
 
+/* wait for queue to become non-empty or timeout
+ * helper to wtiWorker
+ * IMPORTANT: mutex must be locked when this code is called!
+ * rgerhards, 2009-05-20
+ */
+static inline void
+doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
+{
+	struct timespec t;
+
+	DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
+	pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
+
+	if(pWtp->toWrkShutdown == -1) {
+		/* never shut down any started worker */
+		d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
+	} else {
+		timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
+		if(d_pthread_cond_timedwait(pWtp->pcondBusy, pWtp->pmutUsr, &t) != 0) {
+			DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
+			*pbInactivityTOOccured = 1; /* indicate we had a timeout */
+		}
+	}
+}
+
+
 /* generic worker thread framework
  *
  * Some special comments below, so that they do not clutter the main function code:
@@ -341,16 +367,20 @@ wtiWorkerCancelCleanup(void *arg)
  * Now make sure we can get canceled - it is not specified if pthread_setcancelstate() is
  * a cancellation point in itself. As we run most of the time without cancel enabled, I fear
  * we may never get cancelled if we do not create a cancellation point ourselfs.
+ * Note on rate-limiters:
+ * If we have a rate-limiter set for this worker pool, let's call it. Please
+ * keep in mind that the rate-limiter may hold us for an extended period
+ * of time. -- rgerhards, 2008-04-02
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
 wtiWorker(wti_t *pThis)
 {
-	DEFiRet;
 	DEFVARS_mutexProtection;
-	struct timespec t;
 	wtp_t *pWtp;		/* our worker thread pool */
 	int bInactivityTOOccured = 0;
+	rsRetVal localRet;
+	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
 	pWtp = pThis->pWtp; /* shortcut */
@@ -369,47 +399,37 @@ wtiWorker(wti_t *pThis)
 		wtpProcessThrdChanges(pWtp);
 		pthread_testcancel(); /* see big comment in function header */
 
-		/* if we have a rate-limiter set for this worker pool, let's call it. Please
-		 * keep in mind that the rate-limiter may hold us for an extended period
-		 * of time. -- rgerhards, 2008-04-02
-		 */
-		if(pWtp->pfRateLimiter != NULL) {
+		if(pWtp->pfRateLimiter != NULL) { /* call rate-limiter, if defined */
 			pWtp->pfRateLimiter(pWtp->pUsr);
 		}
 		
 		wtpSetInactivityGuard(pThis->pWtp, 0, LOCK_MUTEX); /* must be set before usr mutex is locked! */
 		BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);
 
-		if(  (bInactivityTOOccured && pWtp->pfIsIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED))
-		   || wtpChkStopWrkr(pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED)) {
-			END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
+		/* first check if we are in shutdown process */
+		if(wtpChkStopWrkr(pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED)) {
 			break; /* end worker thread run */
 		}
-		bInactivityTOOccured = 0; /* reset for next run */
 
-		/* if we reach this point, we are still protected by the mutex */
+		/* try to execute and process whatever we have */
+		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
 
-		if(pWtp->pfIsIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED)) {
-			DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
-			pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
-
-			if(pWtp->toWrkShutdown == -1) {
-				/* never shut down any started worker */
-				d_pthread_cond_wait(pWtp->pcondBusy, pWtp->pmutUsr);
-			} else {
-				timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
-				if(d_pthread_cond_timedwait(pWtp->pcondBusy, pWtp->pmutUsr, &t) != 0) {
-					DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
-					bInactivityTOOccured = 1; /* indicate we had a timeout */
-				}
+		if(localRet == RS_RET_IDLE) {
+			if(bInactivityTOOccured) {
+				/* we had an inactivity timeout in the last run and are still idle, so it is time to exit... */
+				break; /* end worker thread run */
 			}
+			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);
 			END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
 			continue; /* request next iteration */
 		}
+		END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
 
-		/* if we reach this point, we have a non-empty queue (and are still protected by mutex) */
-		pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
+		bInactivityTOOccured = 0; /* reset for next run */
 	}
+
+	/* if we exit the loop, the mutex is locked and must be unlocked */
+	END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
 
 	/* indicate termination */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
