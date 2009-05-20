@@ -324,11 +324,8 @@ CODESTARTafterRun
 		if (funixn[i] && funix[i] != -1)
 			unlink((char*) funixn[i]);
 	/* free no longer needed string */
-	if(pLogSockName != NULL)
-		free(pLogSockName);
-	if(pLogHostName != NULL) {
-		free(pLogHostName);
-	}
+	free(pLogSockName);
+	free(pLogHostName);
 
 	discardFunixn();
 	nfunix = 1;
