@@ -17,7 +17,7 @@
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007, 2008, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -219,8 +219,7 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 		pThis->pSessions = NULL; /* just to make sure... */
 	}
 
-	if(pThis->TCPLstnPort != NULL)
-		free(pThis->TCPLstnPort);
+	free(pThis->TCPLstnPort);
 
 	/* finally close our listen streams */
 	for(i = 0 ; i < pThis->iLstnMax ; ++i) {
@@ -557,12 +556,9 @@ CODESTARTobjDestruct(tcpsrv)
 
 	if(pThis->pNS != NULL)
 		netstrms.Destruct(&pThis->pNS);
-	if(pThis->pszDrvrAuthMode != NULL)
-		free(pThis->pszDrvrAuthMode);
-	if(pThis->ppLstn != NULL)
-		free(pThis->ppLstn);
-	if(pThis->pszInputName != NULL)
-		free(pThis->pszInputName);
+	free(pThis->pszDrvrAuthMode);
+	free(pThis->ppLstn);
+	free(pThis->pszInputName);
 ENDobjDestruct(tcpsrv)
 
 
@@ -683,8 +679,7 @@ SetInputName(tcpsrv_t *pThis, uchar *name)
 		pszName = NULL;
 	else
 		CHKmalloc(pszName = (uchar*)strdup((char*)name));
-	if(pThis->pszInputName != NULL)
-		free(pThis->pszInputName);
+	free(pThis->pszInputName);
 	pThis->pszInputName = pszName;
 finalize_it:
 	RETiRet;

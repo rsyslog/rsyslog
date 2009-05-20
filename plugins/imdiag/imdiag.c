@@ -7,7 +7,7 @@
  *
  * File begun on 2008-07-25 by RGerhards
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -48,6 +48,7 @@
 #include "module-template.h"
 #include "net.h"
 #include "netstrm.h"
+#include "netstrms.h"
 #include "errmsg.h"
 
 MODULE_TYPE_INPUT
@@ -56,12 +57,13 @@ MODULE_TYPE_INPUT
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrm)
+DEFobjCurrIf(netstrms)
 DEFobjCurrIf(errmsg)
 
 /* Module static data */
 netstrms_t *pNS;	/**< pointer to network stream subsystem */
-netstrm_t **ppLstn[10];	/**< our netstream listners */
-int iLstnMax = 0; /**< max nbr of listeners currently supported */
+netstrm_t *arrLstn[10];	/**< our netstream listners */
+int iLstnMax = 0;	/**< max nbr of listeners currently supported */
 
 
 /* config settings */
@@ -71,16 +73,16 @@ int iLstnMax = 0; /**< max nbr of listeners currently supported */
  * invoked from the netstrm class. -- rgerhards, 2008-04-23
  */
 static rsRetVal
-addTcpLstn(void *pUsr, netstrm_t *pLstn)
+addTcpLstn(netstrm_t *pLstn)
 {
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pLstn, netstrm);
 
-	if(iLstnMax >= sizeof(ppLstn)/sizeof(netstrm_t))
+	if((unsigned)iLstnMax >= sizeof(arrLstn)/sizeof(netstrm_t*))
 		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
 
-	ppLstn[pThis->iLstnMax] = pLstn;
+	arrLstn[iLstnMax] = pLstn;
 	++iLstnMax;
 
 finalize_it:
@@ -100,15 +102,15 @@ initNetstrm(void)
 	//CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
 	//CHKiRet(netstrms.SetDrvrPermPeers(pThis->pNS, pThis->pPermPeers));
 	// TODO: set driver!
-	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
+	CHKiRet(netstrms.ConstructFinalize(&pNS));
 
 	/* set up listeners */
-	CHKiRet(netstrm.LstnInit(pNS, NULL, addTcpLstn, "127.0.0.1", "44514", 1));
+	CHKiRet(netstrm.LstnInit(pNS, NULL, addTcpLstn, "127.0.0.1", (uchar*)"44514", 1));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(pThis->pNS != NULL)
-			netstrms.Destruct(&pThis->pNS);
+		if(pNS != NULL)
+			netstrms.Destruct(&pNS);
 	}
 	RETiRet;
 }
@@ -130,11 +132,12 @@ ENDwillRun
 
 
 BEGINafterRun
+	int i;
 CODESTARTafterRun
 	/* do cleanup here */
 	/* finally close our listen streams */
 	for(i = 0 ; i < iLstnMax ; ++i) {
-		netstrm.Destruct(ppLstn + i);
+		netstrm.Destruct(arrLstn[i]);
 	}
 
 	/* destruct netstream subsystem */
@@ -146,7 +149,8 @@ BEGINmodExit
 CODESTARTmodExit
 	/* release objects we used */
 	objRelease(net, LM_NET_FILENAME);
-	objRelease(netstrm, LM_NETSTRMS_FILENAME);
+	objRelease(netstrm, DONT_LOAD_LIB);
+	objRelease(netstrms, LM_NETSTRMS_FILENAME);
 	objRelease(errmsg, CORE_COMPONENT);
 ENDmodExit
 
@@ -169,14 +173,14 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	pOurTcpsrv = NULL;
 	/* request objects we use */
 	CHKiRet(objUse(net, LM_NET_FILENAME));
-	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
+	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
+	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 
-#if 0
 	/* register config file handlers */
+#if 0
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverrun", 0, eCmdHdlrGetWord,
 				   addTCPListener, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpmaxsessions", 0, eCmdHdlrInt,
@@ -187,9 +191,9 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   eCmdHdlrGetWord, NULL, &pszStrmDrvrAuthMode, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputtcpserverstreamdriverpermittedpeer", 0,
 				   eCmdHdlrGetWord, setPermittedPeer, NULL, STD_LOADABLE_MODULE_ID));
+#endif
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
-#endif
 ENDmodInit
 
 
