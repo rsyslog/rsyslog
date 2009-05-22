@@ -137,6 +137,7 @@
 #include "datetime.h"
 #include "parser.h"
 #include "sysvar.h"
+#include "unicode-helper.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -620,7 +621,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
 	if(pszInputName != NULL)
-		MsgSetInputName(pMsg, (char*) pszInputName);
+		MsgSetInputName(pMsg, pszInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
@@ -649,8 +650,8 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	 * being the local host).  rgerhards 2004-11-16
 	 */
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
-		MsgSetHOSTNAME(pMsg, (char*)hname);
-	MsgSetRcvFrom(pMsg, (char*)hname);
+		MsgSetHOSTNAME(pMsg, hname);
+	MsgSetRcvFrom(pMsg, hname);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
 
 	/* rgerhards 2004-11-19: well, well... we've now seen that we
@@ -928,12 +929,12 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
-	MsgSetInputName(pMsg, "rsyslogd");
+	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"));
 	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
-	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
-	MsgSetRcvFrom(pMsg, (char*)glbl.GetLocalHostName());
-	MsgSetRcvFromIP(pMsg, (uchar*)"127.0.0.1");
+	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
+	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
+	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));
 	/* check if we have an error code associated and, if so,
 	 * adjust the tag. -- r5gerhards, 2008-06-27
 	 */
@@ -1233,9 +1234,9 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
  * SP-terminated or any other error occurs.
  * rger, 2005-11-24
  */
-static int parseRFCField(char **pp2parse, char *pResult)
+static int parseRFCField(uchar **pp2parse, uchar *pResult)
 {
-	char *p2parse;
+	uchar *p2parse;
 	int iRet = 0;
 
 	assert(pp2parse != NULL);
@@ -1271,9 +1272,9 @@ static int parseRFCField(char **pp2parse, char *pResult)
  * SP-terminated or any other error occurs.
  * rger, 2005-11-24
  */
-static int parseRFCStructuredData(char **pp2parse, char *pResult)
+static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult)
 {
-	char *p2parse;
+	uchar *p2parse;
 	int bCont = 1;
 	int iRet = 0;
 
@@ -1340,14 +1341,14 @@ static int parseRFCStructuredData(char **pp2parse, char *pResult)
  */
 int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 {
-	char *p2parse;
-	char *pBuf;
+	uchar *p2parse;
+	uchar *pBuf;
 	int bContParse = 1;
 
 	BEGINfunc
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = (char*) pMsg->pszUxTradMsg;
+	p2parse = pMsg->pszUxTradMsg;
 
 	/* do a sanity check on the version and eat it */
 	assert(p2parse[0] == '1' && p2parse[1] == ' ');
@@ -1358,7 +1359,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	 * message, so we can not run into any troubles. I think this is
 	 * more wise then to use individual buffers.
 	 */
-	if((pBuf = malloc(sizeof(char)* strlen(p2parse) + 1)) == NULL)
+	if((pBuf = malloc(sizeof(uchar) * ustrlen(p2parse) + 1)) == NULL)
 		return 1;
 		
 	/* IMPORTANT NOTE:
@@ -1393,29 +1394,29 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	/* APP-NAME */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-		MsgSetAPPNAME(pMsg, pBuf);
+		MsgSetAPPNAME(pMsg, (char*)pBuf);
 	}
 
 	/* PROCID */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-		MsgSetPROCID(pMsg, pBuf);
+		MsgSetPROCID(pMsg, (char*)pBuf);
 	}
 
 	/* MSGID */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-		MsgSetMSGID(pMsg, pBuf);
+		MsgSetMSGID(pMsg, (char*)pBuf);
 	}
 
 	/* STRUCTURED-DATA */
 	if(bContParse) {
 		parseRFCStructuredData(&p2parse, pBuf);
-		MsgSetStructuredData(pMsg, pBuf);
+		MsgSetStructuredData(pMsg, (char*)pBuf);
 	}
 
 	/* MSG */
-	MsgSetMSG(pMsg, p2parse);
+	MsgSetMSG(pMsg, (char*)p2parse);
 
 	free(pBuf);
 	ENDfunc
@@ -1438,7 +1439,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
  */
 int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 {
-	char *p2parse;
+	uchar *p2parse;
 	char *pBuf;
 	char *pWork;
 	cstr_t *pStrB;
@@ -1448,7 +1449,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = (char*) pMsg->pszUxTradMsg;
+	p2parse = pMsg->pszUxTradMsg;
 
 	/* Check to see if msg contains a timestamp. We start by assuming
 	 * that the message timestamp is the time of reciption (which we 
@@ -1503,7 +1504,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			/* the memory allocated is far too much in most cases. But on the plus side,
 			 * it is quite fast... - rgerhards, 2007-09-20
 			 */
-			if((pBuf = malloc(sizeof(char)* (strlen(p2parse) +1))) == NULL)
+			if((pBuf = malloc(sizeof(char)* (ustrlen(p2parse) +1))) == NULL)
 				return 1;
 			pWork = pBuf;
 			/* this is the actual parsing loop */
@@ -1609,7 +1610,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	}
 
 	/* The rest is the actual MSG */
-	MsgSetMSG(pMsg, p2parse);
+	MsgSetMSG(pMsg, (char*)p2parse);
 
 	ENDfunc
 	return 0; /* all ok */
@@ -1919,10 +1920,10 @@ static void doDie(int sig)
 #	define MSG1 "DoDie called.\n"
 #	define MSG2 "DoDie called 5 times - unconditional exit\n"
 	static int iRetries = 0; /* debug aid */
-	if(Debug || NoFork)
+	if(Debug)
 		write(1, MSG1, sizeof(MSG1) - 1);
 	if(iRetries++ == 4) {
-		if(Debug || NoFork)
+		if(Debug)
 			write(1, MSG2, sizeof(MSG2) - 1);
 		abort();
 	}

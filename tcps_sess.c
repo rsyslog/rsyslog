@@ -185,6 +185,18 @@ SetTcpsrv(tcps_sess_t *pThis, tcpsrv_t *pSrv)
 }
 
 
+/* set our parent listener info*/
+static rsRetVal
+SetLstnInfo(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcps_sess);
+	assert(pLstnInfo != NULL);
+	pThis->pLstnInfo = pLstnInfo;
+	RETiRet;
+}
+
+
 static rsRetVal
 SetUsrP(tcps_sess_t *pThis, void *pUsr)
 {
@@ -223,11 +235,11 @@ doSubmitMessage(tcps_sess_t *pThis)
 	CHKmalloc(pMsg->pszRawMsg = malloc(sizeof(uchar) * pThis->iMsg));
 	memcpy(pMsg->pszRawMsg, pThis->pMsg, pThis->iMsg);
 	pMsg->iLenRawMsg = pThis->iMsg;
-	MsgSetInputName(pMsg, (char*)pThis->pSrv->pszInputName);
+	MsgSetInputName(pMsg, pThis->pLstnInfo->pszInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	pMsg->bParseHOSTNAME = 1;
-	MsgSetRcvFrom(pMsg, (char*)pThis->fromHost);
+	MsgSetRcvFrom(pMsg, pThis->fromHost);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
 	CHKiRet(submitMsg(pMsg));
 
@@ -457,6 +469,7 @@ CODESTARTobjQueryInterface(tcps_sess)
 
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetTcpsrv = SetTcpsrv;
+	pIf->SetLstnInfo = SetLstnInfo;
 	pIf->SetHost = SetHost;
 	pIf->SetHostIP = SetHostIP;
 	pIf->SetStrm = SetStrm;

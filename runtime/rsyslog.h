@@ -87,6 +87,8 @@ typedef struct tcpsrv_s tcpsrv_t;
 typedef struct vmstk_s vmstk_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 
+typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
+
 /* some universal 64 bit define... */
 typedef long long int64;
 typedef long long unsigned uint64;
@@ -358,6 +360,7 @@ typedef enum rsObjectID rsObjID;
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
+
 
 #include "debug.h"
 #include "obj.h"

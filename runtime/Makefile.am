@@ -7,6 +7,7 @@ pkglib_LTLIBRARIES =
 librsyslog_la_SOURCES = \
 	rsyslog.c \
 	rsyslog.h \
+	unicode_helper.h \
 	atomic.h \
 	syslogd-types.h \
 	module-template.h \

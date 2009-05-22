@@ -154,8 +154,6 @@ int sendMessages(void)
 	int lenBuf;
 	int lenSend;
 	char buf[2048];
-	char msgBuf[128];
-	size_t lenMsg;
 
 	srand(time(NULL));	/* seed is good enough for our needs */
 

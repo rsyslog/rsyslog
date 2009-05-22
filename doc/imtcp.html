@@ -14,9 +14,10 @@ Encryption can be provided by using <a href="rsyslog_stunnel.html">stunnel</a>
 (an alternative is the use
 the&nbsp;<a href="imgssapi.html">imgssapi</a>
 modul).</p>
-<p>In the future, multiple receivers may be configured by
+<p>Multiple receivers may be configured by
 specifying
-$InputTCPServerRun multiple times. This is not currently supported.
+$InputTCPServerRun multiple times. This is available since version 4.3.1, earlier
+versions do NOT support it.
 </p>
 <p><b>Configuration Directives</b>:</p>
 <ul>
@@ -58,7 +59,6 @@ AuthMode and&nbsp; <a href="netstream.html">network stream driver</a>. Permitted
 <b>Caveats/Known Bugs:</b>
 <ul>
 <li>module always binds to all interfaces</li>
-<li>only a single listener can be bound</li>
 <li>can not be loaded together with <a href="imgssapi.html">imgssapi</a>
 (which includes the functionality of imtcp)</li>
 </ul>
