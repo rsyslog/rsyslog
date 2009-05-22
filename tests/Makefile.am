@@ -1,9 +1,9 @@
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
-TESTS = $(TESTRUNS) cfg.sh fieldtest.sh arrayqueue.sh linkedlistqueue.sh da-mainmsg-q.sh \
+TESTS = $(TESTRUNS) cfg.sh arrayqueue.sh linkedlistqueue.sh da-mainmsg-q.sh \
 	diskqueue.sh manytcp.sh
 if ENABLE_OMSTDOUT
-TESTS += omod-if-array.sh parsertest.sh
+TESTS += omod-if-array.sh parsertest.sh inputname.sh fieldtest.sh
 endif
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid
@@ -39,6 +39,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/omod-if-array.conf \
 	   testsuites/1.omod-if-array \
 	   testsuites/1.field1-if-array \
+	   killrsyslog.sh \
 	   parsertest.sh \
 	   fieldtest.sh \
 	   diskqueue.sh \
@@ -49,8 +50,15 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
 	   testsuites/da-mainmsg-q.conf \
+	   imtcp-multiport.sh \
+	   testsuites/imtcp-multiport.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
+	   inputname.sh \
+	   testsuites/inputname_imtcp.conf \
+	   testsuites/1.inputname_imtcp_12514 \
+	   testsuites/1.inputname_imtcp_12515 \
+	   testsuites/1.inputname_imtcp_12516 \
 	   omod-if-array.sh \
 	   cfg.sh
 

@@ -45,16 +45,36 @@
 #include <glob.h>
 #include <signal.h>
 #include <netinet/in.h>
+#include <getopt.h>
 
 #define EXIT_FAILURE 1
 #define INVALID_SOCKET -1
 /* Name of input file, must match $IncludeConfig in test suite .conf files */
 #define NETTEST_INPUT_CONF_FILE "nettest.input.conf" /* name of input file, must match $IncludeConfig in .conf files */
 
-static enum { inputUDP, inputTCP } inputMode;	/* input for which tests are to be run */
+typedef enum { inputUDP, inputTCP } inputMode_t;
+inputMode_t inputMode = inputTCP; /* input for which tests are to be run */
 static pid_t rsyslogdPid = 0;	/* pid of rsyslog instance being tested */
 static char *srcdir;	/* global $srcdir, set so that we can run outside of "make check" */
-static char *testSuite; /* name of current test suite */
+static char *testSuite = NULL; /* name of current test suite */
+static int iPort = 12514; /* port which shall be used for sending data */
+static char* pszCustomConf = NULL;	/* custom config file, use -c conf to specify */
+static int verbose = 0;	/* verbose output? -v option */
+
+
+/* provide user-friednly name of input mode
+ */
+static char *inputMode2Str(inputMode_t mode)
+{
+	char *pszMode;
+
+	if(mode == inputUDP)
+		pszMode = "udp";
+	else
+		pszMode = "tcp";
+
+	return pszMode;
+}
 
 
 void readLine(int fd, char *ln)
@@ -94,7 +114,7 @@ tcpSend(char *buf, int lenBuf)
 
 		memset((char *) &addr, 0, sizeof(addr));
 		addr.sin_family = AF_INET;
-		addr.sin_port = htons(13514);
+		addr.sin_port = htons(iPort);
 		if(inet_aton("127.0.0.1", &addr.sin_addr)==0) {
 			fprintf(stderr, "inet_aton() failed\n");
 			return(1);
@@ -139,7 +159,7 @@ udpSend(char *buf, int lenBuf)
 
 	memset((char *) &si_other, 0, sizeof(si_other));
 	si_other.sin_family = AF_INET;
-	si_other.sin_port = htons(12514);
+	si_other.sin_port = htons(iPort);
 	if(inet_aton("127.0.0.1", &si_other.sin_addr)==0) {
 		fprintf(stderr, "inet_aton() failed\n");
 		return(1);
@@ -169,9 +189,14 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 			   "-M../runtime/.libs:../.libs", NULL };
 	char confFile[1024];
 	char *newenviron[] = { NULL };
+	/* debug aide...
+	char *newenviron[] = { "RSYSLOG_DEBUG=debug nostdout",
+				"RSYSLOG_DEBUGLOG=tmp", NULL };
+	*/
 
 
-	sprintf(confFile, "-f%s/testsuites/%s.conf", srcdir, configFile);
+	sprintf(confFile, "-f%s/testsuites/%s.conf", srcdir,
+		(pszCustomConf == NULL) ? configFile : pszCustomConf);
 	newargv[1] = confFile;
 
 	if (pipe(pipefd) == -1) {
@@ -291,12 +316,12 @@ doTests(int fd, char *files)
 		++iTests;
 		/* all regular files are run through the test logic. Symlinks don't work. */
 		if(S_ISREG(fileInfo.st_mode)) { /* config file */
-			printf("processing test case '%s' ... ", testFile);
+			if(verbose) printf("processing test case '%s' ... ", testFile);
 			ret = processTestFile(fd, testFile);
 			if(ret == 0) {
-				printf("successfully completed\n");
+				if(verbose) printf("successfully completed\n");
 			} else {
-				printf("failed!\n");
+				if(verbose) printf("failed!\n");
 				++iFailed;
 			}
 		}
@@ -334,36 +359,54 @@ void doAtExit(void)
 int main(int argc, char *argv[])
 {
 	int fd;
+	int opt;
 	int ret = 0;
 	FILE *fp;
 	char buf[4096];
 	char testcases[4096];
 
-	if(argc != 3) {
-		printf("Invalid call of nettester\n");
-		printf("Usage: nettester testsuite-name input\n");
-		printf("       input = udp|tcp\n");
-		exit(1);
+	while((opt = getopt(argc, argv, "c:i:p:t:v")) != EOF) {
+		switch((char)opt) {
+                case 'c':
+			pszCustomConf = optarg;
+			break;
+                case 'i':
+			if(!strcmp(optarg, "udp"))
+				inputMode = inputUDP;
+			else if(!strcmp(optarg, "tcp"))
+				inputMode = inputTCP;
+			else {
+				printf("error: unsupported input mode '%s'\n", optarg);
+				exit(1);
+			}
+			break;
+                case 'p':
+			iPort = atoi(optarg);
+			break;
+                case 't':
+			testSuite = optarg;
+			break;
+                case 'v':
+			verbose = 1;
+			break;
+		default:printf("Invalid call of nettester, invalid option '%c'.\n", opt);
+			printf("Usage: nettester -ttestsuite-name -iudp|tcp [-pport] [-ccustomConfFile] \n");
+			exit(1);
+		}
 	}
 	
-	atexit(doAtExit);
-
-	testSuite = argv[1];
-
-	if(!strcmp(argv[2], "udp"))
-		inputMode = inputUDP;
-	else if(!strcmp(argv[2], "tcp"))
-		inputMode = inputTCP;
-	else {
-		printf("error: unsupported input mode '%s'\n", argv[2]);
+	if(testSuite == NULL) {
+		printf("error: no testsuite given, need to specify -t testsuite!\n");
 		exit(1);
 	}
+
+	atexit(doAtExit);
 
 	if((srcdir = getenv("srcdir")) == NULL)
 		srcdir = ".";
 
-	printf("Start of nettester run ($srcdir=%s, testsuite=%s, input=%s)\n",
-		srcdir, testSuite, argv[2]);
+	if(verbose) printf("Start of nettester run ($srcdir=%s, testsuite=%s, input=%s/%d)\n",
+		srcdir, testSuite, inputMode2Str(inputMode), iPort);
 
 	/* create input config file */
 	if((fp = fopen(NETTEST_INPUT_CONF_FILE, "w")) == NULL) {
@@ -373,15 +416,15 @@ int main(int argc, char *argv[])
 	}
 	if(inputMode == inputUDP) {
 		fputs("$ModLoad ../plugins/imudp/.libs/imudp\n", fp);
-		fputs("$UDPServerRun 12514\n", fp);
+		fprintf(fp, "$UDPServerRun %d\n", iPort);
 	} else {
 		fputs("$ModLoad ../plugins/imtcp/.libs/imtcp\n", fp);
-		fputs("$InputTCPServerRun 13514\n", fp);
+		fprintf(fp, "$InputTCPServerRun %d\n", iPort);
 	}
 	fclose(fp);
 
 	/* start to be tested rsyslogd */
-	openPipe(argv[1], &rsyslogdPid, &fd);
+	openPipe(testSuite, &rsyslogdPid, &fd);
 	readLine(fd, buf);
 
 	/* generate filename */
@@ -389,6 +432,6 @@ int main(int argc, char *argv[])
 	if(doTests(fd, testcases) != 0)
 		ret = 1;
 
-	printf("End of nettester run (%d).\n", ret);
+	if(verbose) printf("End of nettester run (%d).\n", ret);
 	exit(ret);
 }

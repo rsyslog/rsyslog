@@ -106,6 +106,8 @@ typedef struct wtp_s wtp_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 
+typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
+
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */
@@ -377,6 +379,7 @@ typedef enum rsObjectID rsObjID;
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
+
 
 #include "debug.h"
 #include "obj.h"

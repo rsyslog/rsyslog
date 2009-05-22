@@ -17,7 +17,7 @@
  * Rainer Gerhards and Adiscon GmbH have agreed to permit using the code
  * under the terms of the GNU Lesser General Public License.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -114,6 +114,7 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	assert(ppNew != NULL);
 
+RUNLOG_STR("XXX: accept conn reqeust");
 	/* accept the new connection */
 	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd));
 	/* construct our object so that we can use it... */
@@ -147,6 +148,7 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	ISOBJ_TYPE_assert(pNS, netstrms);
 	assert(fAddLstn != NULL);
 	assert(pLstnPort != NULL);
+RUNLOG_STR("XXX: Init Lstn");
 
 	CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax));
 
