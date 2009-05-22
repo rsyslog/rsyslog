@@ -38,7 +38,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
 	   fieldtest.sh \
-	   testsuites/field.conf \
+	   testsuites/field1.conf \
 	   testsuites/1.field1 \
 	   inputname.sh \
 	   testsuites/inputname_imtcp.conf \
