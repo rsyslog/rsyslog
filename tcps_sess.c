@@ -58,7 +58,6 @@ static int iMaxLine; /* maximum size of a single message */
 
 /* forward definitions */
 static rsRetVal Close(tcps_sess_t *pThis);
-static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis, uchar*, int);
 
 
 /* Standard-Constructor */
@@ -66,7 +65,6 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
 		pThis->iMsg = 0; /* just make sure... */
 		pThis->bAtStrtOfFram = 1; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
-		pThis->DoSubmitMessage = defaultDoSubmitMessage;
 		/* now allocate the message reception buffer */
 		CHKmalloc(pThis->pMsg = (uchar*) malloc(sizeof(uchar) * iMaxLine + 1));
 finalize_it:
@@ -228,11 +226,8 @@ SetOnMsgReceive(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar
  * rgerhards, 2009-04-23
  */
 static rsRetVal
-defaultDoSubmitMessage(tcps_sess_t *pThis, uchar *pszMsg, int iLenMsg)
+defaultDoSubmitMessage(tcps_sess_t *pThis)
 {
-// TODO: make calling this overridable so that the diag module can ask to be called
-// and so it can do its work right in this entry point (but we need to check that
-// we have the capability to send a reply at this point).
 	msg_t *pMsg;
 	struct syslogTime stTime;
 	time_t ttGenTime;
@@ -240,6 +235,11 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, uchar *pszMsg, int iLenMsg)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	
+	if(pThis->DoSubmitMessage != NULL) {
+		pThis->DoSubmitMessage(pThis, pThis->pMsg, pThis->iMsg);
+		FINALIZE;
+	}
+
 	//TODO: if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
 		datetime.getCurrTime(&stTime, &ttGenTime);
 	//}
@@ -247,7 +247,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, uchar *pszMsg, int iLenMsg)
 	CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 	/* first trim the buffer to what we have actually received */
 	CHKmalloc(pMsg->pszRawMsg = malloc(sizeof(uchar) * pThis->iMsg));
-	memcpy(pMsg->pszRawMsg, pszMsg, iLenMsg);
+	memcpy(pMsg->pszRawMsg, pThis->pMsg, pThis->iMsg);
 	pMsg->iLenRawMsg = pThis->iMsg;
 	MsgSetInputName(pMsg, pThis->pLstnInfo->pszInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
@@ -264,6 +264,7 @@ finalize_it:
 
 	RETiRet;
 }
+
 
 
 /* This should be called before a normal (non forced) close
@@ -305,7 +306,7 @@ PrepareClose(tcps_sess_t *pThis)
 		 * this case.
 		 */
 		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		pThis->DoSubmitMessage(pThis, pThis->pMsg, pThis->iMsg);
+		defaultDoSubmitMessage(pThis);
 	}
 
 finalize_it:
@@ -386,7 +387,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 		if(pThis->iMsg >= iMaxLine) {
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
 			dbgprintf("error: message received is larger than max msg size, we split it\n");
-			pThis->DoSubmitMessage(pThis, pThis->pMsg, pThis->iMsg);
+			defaultDoSubmitMessage(pThis);
 			/* we might think if it is better to ignore the rest of the
 			 * message than to treat it as a new one. Maybe this is a good
 			 * candidate for a configuration parameter...
@@ -397,7 +398,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 		if((   (c == '\n')
 		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
 		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
-			pThis->DoSubmitMessage(pThis, pThis->pMsg, pThis->iMsg);
+			defaultDoSubmitMessage(pThis);
 			pThis->inputState = eAtStrtFram;
 		} else {
 			/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
@@ -414,7 +415,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 			pThis->iOctetsRemain--;
 			if(pThis->iOctetsRemain < 1) {
 				/* we have end of frame! */
-				pThis->DoSubmitMessage(pThis, pThis->pMsg, pThis->iMsg);
+				defaultDoSubmitMessage(pThis);
 				pThis->inputState = eAtStrtFram;
 			}
 		}

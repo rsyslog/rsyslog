@@ -1,4 +1,7 @@
 ---------------------------------------------------------------------------
+Version 4.3.?  [DEVEL] (rgerhards), 2009-??-??
+- bugfix: imdiag/imtcp had a race condition
+---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-05-25
 - added capability to run multiple tcp listeners (on different ports)
 - performance enhancement: imtcp calls parser no longer on input thread
