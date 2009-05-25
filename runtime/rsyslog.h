@@ -84,8 +84,11 @@ typedef rsRetVal (*errLogFunc_t)(uchar*); /* this is a trick to store a function
 typedef struct permittedPeers_s permittedPeers_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct permittedPeerWildcard_s permittedPeerWildcard_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct tcpsrv_s tcpsrv_t;
+typedef struct tcps_sess_s tcps_sess_t;
 typedef struct vmstk_s vmstk_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
+
+typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
 
 /* some universal 64 bit define... */
 typedef long long int64;
@@ -266,6 +269,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_CREAT_PIPE = -2117, /**< error during pipe creation */
 	RS_RET_ERR_FORK = -2118, /**< error during fork() */
 	RS_RET_ERR_WRITE_PIPE = -2119, /**< error writing to pipe */
+	RS_RET_RSCORE_TOO_OLD = -2120, /**< rsyslog core is too old for ... (eg this plugin) */
+	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -356,6 +361,7 @@ typedef enum rsObjectID rsObjID;
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
+
 
 #include "debug.h"
 #include "obj.h"

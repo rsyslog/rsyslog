@@ -137,6 +137,7 @@
 #include "datetime.h"
 #include "parser.h"
 #include "sysvar.h"
+#include "unicode-helper.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -284,6 +285,7 @@ static int gidDropPriv = 0;	/* group-id to which priveleges should be dropped to
 
 extern	int errno;
 
+static uchar *pszConfDAGFile = NULL;				/* name of config DAG file, non-NULL means generate one */
 /* main message queue and its configuration parameters */
 static qqueue_t *pMsgQueue = NULL;				/* the main message queue */
 static int iMainMsgQueueSize = 10000;				/* size of the main message queue above */
@@ -348,10 +350,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = 0;
-	if(pszMainMsgQFName != NULL) {
-		free(pszMainMsgQFName);
-		pszMainMsgQFName = NULL;
-	}
+	free(pszMainMsgQFName);
+	pszMainMsgQFName = NULL;
 	iMainMsgQueueSize = 10000;
 	iMainMsgQHighWtrMark = 8000;
 	iMainMsgQLowWtrMark = 2000;
@@ -408,6 +408,26 @@ static int usage(void)
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
+
+
+/* ------------------------------ some support functions for imdiag ------------------------------ *
+ * This is a bit dirty, but the only way to do it, at least with reasonable effort.
+ * rgerhards, 2009-05-25
+ */
+
+/* return back the approximate current number of messages in the main message queue
+ */
+rsRetVal
+diagGetMainMsgQSize(int *piSize)
+{
+	DEFiRet;
+	assert(piSize != NULL);
+	*piSize = pMsgQueue->iQueueSize;
+	RETiRet;
+}
+
+
+/* ------------------------------ end support functions for imdiag  ------------------------------ */
 
 
 /* function to destruct a selector_t object
@@ -619,7 +639,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
 	if(pszInputName != NULL)
-		MsgSetInputName(pMsg, (char*) pszInputName);
+		MsgSetInputName(pMsg, pszInputName);
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
@@ -648,8 +668,8 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	 * being the local host).  rgerhards 2004-11-16
 	 */
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
-		MsgSetHOSTNAME(pMsg, (char*)hname);
-	MsgSetRcvFrom(pMsg, (char*)hname);
+		MsgSetHOSTNAME(pMsg, hname);
+	MsgSetRcvFrom(pMsg, hname);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
 
 	/* rgerhards 2004-11-19: well, well... we've now seen that we
@@ -927,12 +947,12 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
-	MsgSetInputName(pMsg, "rsyslogd");
+	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"));
 	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
-	MsgSetHOSTNAME(pMsg, (char*)glbl.GetLocalHostName());
-	MsgSetRcvFrom(pMsg, (char*)glbl.GetLocalHostName());
-	MsgSetRcvFromIP(pMsg, (uchar*)"127.0.0.1");
+	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
+	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
+	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));
 	/* check if we have an error code associated and, if so,
 	 * adjust the tag. -- r5gerhards, 2008-06-27
 	 */
@@ -1232,9 +1252,9 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
  * SP-terminated or any other error occurs.
  * rger, 2005-11-24
  */
-static int parseRFCField(char **pp2parse, char *pResult)
+static int parseRFCField(uchar **pp2parse, uchar *pResult)
 {
-	char *p2parse;
+	uchar *p2parse;
 	int iRet = 0;
 
 	assert(pp2parse != NULL);
@@ -1270,9 +1290,9 @@ static int parseRFCField(char **pp2parse, char *pResult)
  * SP-terminated or any other error occurs.
  * rger, 2005-11-24
  */
-static int parseRFCStructuredData(char **pp2parse, char *pResult)
+static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult)
 {
-	char *p2parse;
+	uchar *p2parse;
 	int bCont = 1;
 	int iRet = 0;
 
@@ -1339,14 +1359,14 @@ static int parseRFCStructuredData(char **pp2parse, char *pResult)
  */
 int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 {
-	char *p2parse;
-	char *pBuf;
+	uchar *p2parse;
+	uchar *pBuf;
 	int bContParse = 1;
 
 	BEGINfunc
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = (char*) pMsg->pszUxTradMsg;
+	p2parse = pMsg->pszUxTradMsg;
 
 	/* do a sanity check on the version and eat it */
 	assert(p2parse[0] == '1' && p2parse[1] == ' ');
@@ -1357,7 +1377,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	 * message, so we can not run into any troubles. I think this is
 	 * more wise then to use individual buffers.
 	 */
-	if((pBuf = malloc(sizeof(char)* strlen(p2parse) + 1)) == NULL)
+	if((pBuf = malloc(sizeof(uchar) * ustrlen(p2parse) + 1)) == NULL)
 		return 1;
 		
 	/* IMPORTANT NOTE:
@@ -1392,29 +1412,29 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	/* APP-NAME */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-		MsgSetAPPNAME(pMsg, pBuf);
+		MsgSetAPPNAME(pMsg, (char*)pBuf);
 	}
 
 	/* PROCID */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-		MsgSetPROCID(pMsg, pBuf);
+		MsgSetPROCID(pMsg, (char*)pBuf);
 	}
 
 	/* MSGID */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-		MsgSetMSGID(pMsg, pBuf);
+		MsgSetMSGID(pMsg, (char*)pBuf);
 	}
 
 	/* STRUCTURED-DATA */
 	if(bContParse) {
 		parseRFCStructuredData(&p2parse, pBuf);
-		MsgSetStructuredData(pMsg, pBuf);
+		MsgSetStructuredData(pMsg, (char*)pBuf);
 	}
 
 	/* MSG */
-	MsgSetMSG(pMsg, p2parse);
+	MsgSetMSG(pMsg, (char*)p2parse);
 
 	free(pBuf);
 	ENDfunc
@@ -1437,7 +1457,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
  */
 int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 {
-	char *p2parse;
+	uchar *p2parse;
 	char *pBuf;
 	char *pWork;
 	cstr_t *pStrB;
@@ -1447,7 +1467,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 
 	assert(pMsg != NULL);
 	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = (char*) pMsg->pszUxTradMsg;
+	p2parse = pMsg->pszUxTradMsg;
 
 	/* Check to see if msg contains a timestamp. We start by assuming
 	 * that the message timestamp is the time of reciption (which we 
@@ -1502,7 +1522,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			/* the memory allocated is far too much in most cases. But on the plus side,
 			 * it is quite fast... - rgerhards, 2007-09-20
 			 */
-			if((pBuf = malloc(sizeof(char)* (strlen(p2parse) +1))) == NULL)
+			if((pBuf = malloc(sizeof(char)* (ustrlen(p2parse) +1))) == NULL)
 				return 1;
 			pWork = pBuf;
 			/* this is the actual parsing loop */
@@ -1608,7 +1628,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	}
 
 	/* The rest is the actual MSG */
-	MsgSetMSG(pMsg, p2parse);
+	MsgSetMSG(pMsg, (char*)p2parse);
 
 	ENDfunc
 	return 0; /* all ok */
@@ -1918,10 +1938,10 @@ static void doDie(int sig)
 #	define MSG1 "DoDie called.\n"
 #	define MSG2 "DoDie called 5 times - unconditional exit\n"
 	static int iRetries = 0; /* debug aid */
-	if(Debug || NoFork)
+	if(Debug)
 		write(1, MSG1, sizeof(MSG1) - 1);
 	if(iRetries++ == 4) {
-		if(Debug || NoFork)
+		if(Debug)
 			write(1, MSG2, sizeof(MSG2) - 1);
 		abort();
 	}
@@ -1939,10 +1959,9 @@ static void doDie(int sig)
 static void
 freeAllDynMemForTermination(void)
 {
-	if(pszMainMsgQFName != NULL)
-		free(pszMainMsgQFName);
-	if(pModDir != NULL)
-		free(pModDir);
+	free(pszMainMsgQFName);
+	free(pModDir);
+	free(pszConfDAGFile);
 }
 
 
@@ -2210,6 +2229,184 @@ static void freeSelectors(void)
 }
 
 
+/* helper to generateConfigDAG, to print out all actions via
+ * the llExecFunc() facility.
+ * rgerhards, 2007-08-02
+ */
+struct dag_info {
+	FILE *fp;	/* output file */
+	int iActUnit;	/* current action unit number */
+	int iAct;	/* current action in unit */
+	int bDiscarded;	/* message discarded (config error) */
+	};
+DEFFUNC_llExecFunc(generateConfigDAGAction)
+{
+	action_t *pAction;
+	uchar *pszModName;
+	uchar *pszVertexName;
+	struct dag_info *pDagInfo;
+	DEFiRet;
+
+	pDagInfo = (struct dag_info*) pParam;
+	pAction = (action_t*) pData;
+
+	pszModName = module.GetStateName(pAction->pMod);
+
+	/* vertex */
+	if(pAction->pszName == NULL) {
+		if(!strcmp((char*)pszModName, "builtin-discard"))
+			pszVertexName = (uchar*)"discard";
+		else
+			pszVertexName = pszModName;
+	} else {
+		pszVertexName = pAction->pszName;
+	}
+
+	fprintf(pDagInfo->fp, "\tact%d_%d\t\t[label=\"%s\"%s%s]\n",
+		pDagInfo->iActUnit, pDagInfo->iAct, pszVertexName,
+		pDagInfo->bDiscarded ? " style=dotted color=red" : "",
+		(pAction->pQueue->qType == QUEUETYPE_DIRECT) ? "" : " shape=hexagon"
+		);
+
+	/* edge */
+	if(pDagInfo->iAct == 0) {
+	} else {
+		fprintf(pDagInfo->fp, "\tact%d_%d -> act%d_%d[%s%s]\n",
+			pDagInfo->iActUnit, pDagInfo->iAct - 1,
+			pDagInfo->iActUnit, pDagInfo->iAct,
+			pDagInfo->bDiscarded ? " style=dotted color=red" : "",
+			pAction->bExecWhenPrevSusp ? " label=\"only if\\nsuspended\"" : "" );
+	}
+
+	/* check for discard */
+	if(!strcmp((char*) pszModName, "builtin-discard")) {
+		fprintf(pDagInfo->fp, "\tact%d_%d\t\t[shape=box]\n",
+			pDagInfo->iActUnit, pDagInfo->iAct);
+		pDagInfo->bDiscarded = 1;
+	}
+
+
+	++pDagInfo->iAct;
+
+	RETiRet;
+}
+
+
+/* create config DAG
+ * This functions takes a rsyslog config and produces a .dot file for use
+ * with graphviz (http://www.graphviz.org). This is done in an effort to
+ * document, and also potentially troubleshoot, configurations. Plus, I
+ * consider it a nice feature to explain some concepts. Note that the
+ * current version only produces a graph with relatively little information.
+ * This is a foundation that may be later expanded (if it turns out to be
+ * useful enough).
+ * rgerhards, 2009-05-11
+ */
+static rsRetVal
+generateConfigDAG(uchar *pszDAGFile)
+{
+	selector_t *f;
+	FILE *fp;
+	int iActUnit = 1;
+	int bHasFilter = 0;	/* filter associated with this action unit? */
+	int bHadFilter;
+	int i;
+	struct dag_info dagInfo;
+	char *pszFilterName;
+	char szConnectingNode[64];
+	DEFiRet;
+
+	assert(pszDAGFile != NULL);
+	
+	if((fp = fopen((char*) pszDAGFile, "w")) == NULL) {
+		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)
+			"configuraton graph output file could not be opened, none generated", 0);
+		ABORT_FINALIZE(RS_RET_FILENAME_INVALID);
+	}
+
+	dagInfo.fp = fp;
+
+	/* from here on, we assume writes go well. This here is a really
+	 * unimportant utility function and if something goes wrong, it has
+	 * almost no effect. So let's not overdo this...
+	 */
+	fprintf(fp, "# graph created by rsyslog " VERSION "\n\n"
+	 	    "# use the dot tool from http://www.graphviz.org to visualize!\n"
+		    "digraph rsyslogConfig {\n"
+		    "\tinputs [shape=tripleoctagon]\n"
+		    "\tinputs -> act0_0\n"
+		    "\tact0_0 [label=\"main\\nqueue\" shape=hexagon]\n"
+		    /*"\tmainq -> act1_0\n"*/
+		    );
+	strcpy(szConnectingNode, "act0_0");
+	dagInfo.bDiscarded = 0;
+
+	for(f = Files; f != NULL ; f = f->f_next) {
+		/* BSD-Style filters are currently ignored */
+		bHadFilter = bHasFilter;
+		if(f->f_filter_type == FILTER_PRI) {
+			bHasFilter = 0;
+			for (i = 0; i <= LOG_NFACILITIES; i++)
+				if (f->f_filterData.f_pmask[i] != 0xff) {
+					bHasFilter = 1;
+					break;
+				}
+		} else {
+			bHasFilter = 1;
+		}
+
+		/* we know we have a filter, so it can be false */
+		switch(f->f_filter_type) {
+			case FILTER_PRI:
+				pszFilterName = "pri filter";
+				break;
+			case FILTER_PROP:
+				pszFilterName = "property filter";
+				break;
+			case FILTER_EXPR:
+				pszFilterName = "script filter";
+				break;
+		}
+
+		/* write action unit node */
+		if(bHasFilter) {
+			fprintf(fp, "\t%s -> act%d_end\t[label=\"%s:\\nfalse\"]\n",
+				szConnectingNode, iActUnit, pszFilterName);
+			fprintf(fp, "\t%s -> act%d_0\t[label=\"%s:\\ntrue\"]\n",
+				szConnectingNode, iActUnit, pszFilterName);
+			fprintf(fp, "\tact%d_end\t\t\t\t[shape=point]\n", iActUnit);
+			snprintf(szConnectingNode, sizeof(szConnectingNode), "act%d_end", iActUnit);
+		} else {
+			fprintf(fp, "\t%s -> act%d_0\t[label=\"no filter\"]\n",
+				szConnectingNode, iActUnit);
+			snprintf(szConnectingNode, sizeof(szConnectingNode), "act%d_0", iActUnit);
+		}
+
+		/* draw individual nodes */
+		dagInfo.iActUnit = iActUnit;
+		dagInfo.iAct = 0;
+		dagInfo.bDiscarded = 0;
+		llExecFunc(&f->llActList, generateConfigDAGAction, &dagInfo); /* actions */
+
+		/* finish up */
+		if(bHasFilter && !dagInfo.bDiscarded) {
+			fprintf(fp, "\tact%d_%d -> %s\n",
+				iActUnit, dagInfo.iAct - 1, szConnectingNode);
+		}
+
+		++iActUnit;
+	}
+
+	fprintf(fp, "\t%s -> act%d_0\n", szConnectingNode, iActUnit);
+	fprintf(fp, "\tact%d_0\t\t[label=discard shape=box]\n"
+		    "}\n", iActUnit);
+	fclose(fp);
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* helper to dbPrintInitInfo, to print out all actions via
  * the llExecFunc() facility.
  * rgerhards, 2007-08-02
@@ -2223,6 +2420,7 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
 	RETiRet;
 }
 
+
 /* print debug information as part of init(). This pretty much
  * outputs the whole config of rsyslogd. I've moved this code
  * out of init() to clean it somewhat up.
@@ -2230,7 +2428,7 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
  */
 static void dbgPrintInitInfo(void)
 {
-	register selector_t *f;
+	selector_t *f;
 	int iSelNbr = 1;
 	int i;
 
@@ -2467,6 +2665,10 @@ init(void)
 		}
 	}
 
+	/* check if we need to generate a config DAG and, if so, do that */
+	if(pszConfDAGFile != NULL)
+		generateConfigDAG(pszConfDAGFile);
+
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25
 	 */
@@ -2474,7 +2676,6 @@ init(void)
 		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
 
 	/* switch the message object to threaded operation, if necessary */
-/* TODO:XXX: I think we must do this also if we have action queues! -- rgerhards, 2009-01-26 */
 	if(MainMsgQueType == QUEUETYPE_DIRECT || iMainMsgQueueNumWorkers > 1) {
 		MsgEnableThreadSafety();
 	}
@@ -2903,6 +3104,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"debugprintcfsyslinehandlerlist", 0, eCmdHdlrBinary,
 		 NULL, &bDebugPrintCfSysLineHandlerList, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord, NULL, &pModDir, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"generateconfiggraph", 0, eCmdHdlrGetWord, NULL, &pszConfDAGFile, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"errormessagestostderr", 0, eCmdHdlrBinary, NULL, &bErrMsgToStderr, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, setMaxMsgSize, NULL, NULL));

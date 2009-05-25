@@ -24,6 +24,7 @@
  */
 #include "config.h"
 #include <stdio.h>
+#include <string.h>
 #include <glob.h>
 #include <sys/stat.h>
 

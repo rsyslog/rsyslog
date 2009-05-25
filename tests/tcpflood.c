@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -153,8 +154,6 @@ int sendMessages(void)
 	int lenBuf;
 	int lenSend;
 	char buf[2048];
-	char msgBuf[128];
-	size_t lenMsg;
 
 	srand(time(NULL));	/* seed is good enough for our needs */
 

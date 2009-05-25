@@ -45,6 +45,7 @@
 #include "glbl.h"
 #include "regexp.h"
 #include "atomic.h"
+#include "unicode-helper.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -341,52 +342,29 @@ CODESTARTobjDestruct(msg)
 	if(currRefCount == 0)
 	{
 		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
-		if(pThis->pszUxTradMsg != NULL)
-			free(pThis->pszUxTradMsg);
-		if(pThis->pszRawMsg != NULL)
-			free(pThis->pszRawMsg);
-		if(pThis->pszTAG != NULL)
-			free(pThis->pszTAG);
-		if(pThis->pszHOSTNAME != NULL)
-			free(pThis->pszHOSTNAME);
-		if(pThis->pszInputName != NULL)
-			free(pThis->pszInputName);
-		if(pThis->pszRcvFrom != NULL)
-			free(pThis->pszRcvFrom);
-		if(pThis->pszRcvFromIP != NULL)
-			free(pThis->pszRcvFromIP);
-		if(pThis->pszMSG != NULL)
-			free(pThis->pszMSG);
-		if(pThis->pszFacility != NULL)
-			free(pThis->pszFacility);
-		if(pThis->pszFacilityStr != NULL)
-			free(pThis->pszFacilityStr);
-		if(pThis->pszSeverity != NULL)
-			free(pThis->pszSeverity);
-		if(pThis->pszSeverityStr != NULL)
-			free(pThis->pszSeverityStr);
-		if(pThis->pszRcvdAt3164 != NULL)
-			free(pThis->pszRcvdAt3164);
-		if(pThis->pszRcvdAt3339 != NULL)
-			free(pThis->pszRcvdAt3339);
-		if(pThis->pszRcvdAt_SecFrac != NULL)
-			free(pThis->pszRcvdAt_SecFrac);
-		if(pThis->pszRcvdAt_MySQL != NULL)
-			free(pThis->pszRcvdAt_MySQL);
-		if(pThis->pszRcvdAt_PgSQL != NULL)
-			free(pThis->pszRcvdAt_PgSQL);
-		if(pThis->pszTIMESTAMP3164 != NULL)
-			free(pThis->pszTIMESTAMP3164);
-		if(pThis->pszTIMESTAMP3339 != NULL)
-			free(pThis->pszTIMESTAMP3339);
-		if(pThis->pszTIMESTAMP_SecFrac != NULL)
-			free(pThis->pszTIMESTAMP_SecFrac);
-		if(pThis->pszTIMESTAMP_MySQL != NULL)
-			free(pThis->pszTIMESTAMP_MySQL);
-		if(pThis->pszTIMESTAMP_PgSQL != NULL)
-			free(pThis->pszTIMESTAMP_PgSQL);
-		if(pThis->pszPRI != NULL)
-			free(pThis->pszPRI);
+		free(pThis->pszUxTradMsg);
+		free(pThis->pszRawMsg);
+		free(pThis->pszTAG);
+		free(pThis->pszHOSTNAME);
+		free(pThis->pszInputName);
+		free(pThis->pszRcvFrom);
+		free(pThis->pszRcvFromIP);
+		free(pThis->pszMSG);
+		free(pThis->pszFacility);
+		free(pThis->pszFacilityStr);
+		free(pThis->pszSeverity);
+		free(pThis->pszSeverityStr);
+		free(pThis->pszRcvdAt3164);
+		free(pThis->pszRcvdAt3339);
+		free(pThis->pszRcvdAt_SecFrac);
+		free(pThis->pszRcvdAt_MySQL);
+		free(pThis->pszRcvdAt_PgSQL);
+		free(pThis->pszTIMESTAMP3164);
+		free(pThis->pszTIMESTAMP3339);
+		free(pThis->pszTIMESTAMP_SecFrac);
+		free(pThis->pszTIMESTAMP_MySQL);
+		free(pThis->pszTIMESTAMP_PgSQL);
+		free(pThis->pszPRI);
 		if(pThis->pCSProgName != NULL)
 			rsCStrDestruct(&pThis->pCSProgName);
 		if(pThis->pCSStrucData != NULL)
@@ -1306,15 +1284,15 @@ uchar *getInputName(msg_t *pM)
 }
 
 
-char *getRcvFrom(msg_t *pM)
+uchar *getRcvFrom(msg_t *pM)
 {
 	if(pM == NULL)
-		return "";
+		return UCHAR_CONSTANT("");
 	else
 		if(pM->pszRcvFrom == NULL)
-			return "";
+			return UCHAR_CONSTANT("");
 		else
-			return (char*) pM->pszRcvFrom;
+			return pM->pszRcvFrom;
 }
 
 
@@ -1488,13 +1466,13 @@ static int getAPPNAMELen(msg_t *pM)
 
 /* rgerhards 2008-09-10: set pszInputName in msg object
  */
-void MsgSetInputName(msg_t *pMsg, char* pszInputName)
+void MsgSetInputName(msg_t *pMsg, uchar* pszInputName)
 {
 	assert(pMsg != NULL);
 	if(pMsg->pszInputName != NULL)
 		free(pMsg->pszInputName);
 
-	pMsg->iLenInputName = strlen(pszInputName);
+	pMsg->iLenInputName = ustrlen(pszInputName);
 	if((pMsg->pszInputName = malloc(pMsg->iLenInputName + 1)) != NULL) {
 		memcpy(pMsg->pszInputName, pszInputName, pMsg->iLenInputName + 1);
 	}
@@ -1502,13 +1480,12 @@ void MsgSetInputName(msg_t *pMsg, char* pszInputName)
 
 /* rgerhards 2004-11-16: set pszRcvFrom in msg object
  */
-void MsgSetRcvFrom(msg_t *pMsg, char* pszRcvFrom)
+void MsgSetRcvFrom(msg_t *pMsg, uchar* pszRcvFrom)
 {
 	assert(pMsg != NULL);
-	if(pMsg->pszRcvFrom != NULL)
-		free(pMsg->pszRcvFrom);
+	free(pMsg->pszRcvFrom);
 
-	pMsg->iLenRcvFrom = strlen(pszRcvFrom);
+	pMsg->iLenRcvFrom = ustrlen(pszRcvFrom);
 	if((pMsg->pszRcvFrom = malloc(pMsg->iLenRcvFrom + 1)) != NULL) {
 		memcpy(pMsg->pszRcvFrom, pszRcvFrom, pMsg->iLenRcvFrom + 1);
 	}
@@ -1559,13 +1536,12 @@ void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf)
  * we need it. The rest of the code already knows how to handle an
  * unset HOSTNAME.
  */
-void MsgSetHOSTNAME(msg_t *pMsg, char* pszHOSTNAME)
+void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME)
 {
 	assert(pMsg != NULL);
-	if(pMsg->pszHOSTNAME != NULL)
-		free(pMsg->pszHOSTNAME);
+	free(pMsg->pszHOSTNAME);
 
-	pMsg->iLenHOSTNAME = strlen(pszHOSTNAME);
+	pMsg->iLenHOSTNAME = ustrlen(pszHOSTNAME);
 	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) != NULL)
 		memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
 	else
@@ -1790,7 +1766,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	} else if(!strcmp((char*) pName, "inputname")) {
 		pRes = (char*) getInputName(pMsg);
 	} else if(!strcmp((char*) pName, "fromhost")) {
-		pRes = getRcvFrom(pMsg);
+		pRes = (char*) getRcvFrom(pMsg);
 	} else if(!strcmp((char*) pName, "fromhost-ip")) {
 		pRes = (char*) getRcvFromIP(pMsg);
 	} else if(!strcmp((char*) pName, "source") || !strcmp((char*) pName, "hostname")) {
@@ -2517,13 +2493,13 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	} else if(isProp("pszTAG")) {
 		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszInputName")) {
-		MsgSetInputName(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetInputName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszRcvFromIP")) {
 		MsgSetRcvFromIP(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszRcvFrom")) {
-		MsgSetRcvFrom(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetRcvFrom(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszHOSTNAME")) {
-		MsgSetHOSTNAME(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSStrucData")) {
 		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSAPPNAME")) {

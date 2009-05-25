@@ -1,6 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-<meta http-equiv="Content-Language" content="de">
 <title>Understanding rsyslog queues</title></head>
 <body>
 <a href="rsyslog_conf_global.html">back</a>
@@ -10,6 +9,13 @@
 queue, one part of the system "produces" something while another part "consumes" 
 this something. The "something" is most often syslog messages, but queues may 
 also be used for other purposes.</p>
+<p>This document provides a good insight into technical details, operation modes
+and implications. In addition to it, an
+<a href="queues_analogy.html">rsyslog queue concepts overview</a> document
+exists which tries to explain queues with the help of some analogies. This may
+probably be a better place to start reading about queues. I assume that once you
+have understood that document, the material here will be much easier to grasp
+and look much more natural.
 <p>The most prominent example is the main message queue. Whenever rsyslog 
 receives a message (e.g. locally, via UDP, TCP or in whatever else way), it 
 places these messages into the main message queue. Later, it is dequeued by the 
@@ -18,7 +24,7 @@ front of each action, there is also a queue, which potentially de-couples the
 filter processing from the actual action (e.g. writing to file, database or 
 forwarding to another host).</p>
 <h1>Where are Queues Used?</h1>
-<p>&nbsp;Currently, queues are used for the main message queue and for the 
+<p>Currently, queues are used for the main message queue and for the 
 actions.</p>
 <p>There is a single main message queue inside rsyslog. Each input module 
 delivers messages to it. The main message queue worker filters messages based on 
@@ -354,8 +360,8 @@ save.</p>
 [<a href="http://www.rsyslog.com/">rsyslog site</a>]</p>
 <p><font size="2">This documentation is part of the
 <a href="http://www.rsyslog.com/">rsyslog</a> project.<br>
-Copyright &copy; 2008 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
+Copyright &copy; 2008, 2009 by <a href="http://www.gerhards.net/rainer">Rainer Gerhards</a> and
 <a href="http://www.adiscon.com/">Adiscon</a>. Released under the GNU GPL
-version 2 or higher.</font></p>
+version 3 or higher.</font></p>
 
 </body></html>

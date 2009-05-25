@@ -31,6 +31,7 @@ struct netstrm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	nsd_t *pDrvrData;	/**< the driver's data elements (at most other places, this is called pNsd) */
 	nsd_if_t Drvr;		/**< our stream driver */
+	void *pUsr;		/**< pointer to user-provided data structure */
 	netstrms_t *pNS;	/**< pointer to our netstream subsystem object */
 };
 

@@ -72,6 +72,7 @@ struct action_s {
 				 */
 	qqueue_t *pQueue;	/* action queue */
 	SYNC_OBJ_TOOL;		/* required for mutex support */
+	uchar *pszName;		/* action name (for documentation) */
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
 };
 typedef struct action_s action_t;
