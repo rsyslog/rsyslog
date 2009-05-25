@@ -148,7 +148,6 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	ISOBJ_TYPE_assert(pNS, netstrms);
 	assert(fAddLstn != NULL);
 	assert(pLstnPort != NULL);
-RUNLOG_STR("XXX: Init Lstn");
 
 	CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, pLstnPort, pLstnIP, iSessMax));
 

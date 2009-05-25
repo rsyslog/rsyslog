@@ -29,7 +29,7 @@
 struct tcpsrv_s;
 
 /* the tcps_sess object */
-typedef struct tcps_sess_s {
+struct tcps_sess_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	tcpsrv_t *pSrv;	/* pointer back to my server (e.g. for callbacks) */
 	tcpLstnPortList_t *pLstnInfo;	/* pointer back to listener info */
@@ -46,8 +46,9 @@ typedef struct tcps_sess_s {
 	uchar *pMsg;		/* message (fragment) received */
 	uchar *fromHost;
 	uchar *fromHostIP;
-	void *pUsr;	/* a user-pointer */
-} tcps_sess_t;
+	void *pUsr;		/* a user-pointer */
+	rsRetVal (*DoSubmitMessage)(tcps_sess_t*, uchar*, int); /* submit message callback */
+};
 
 
 /* interfaces */
@@ -67,6 +68,7 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetHostIP)(tcps_sess_t *pThis, uchar*);
 	rsRetVal (*SetStrm)(tcps_sess_t *pThis, netstrm_t*);
 	rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);
+	rsRetVal (*SetOnMsgReceive)(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int));
 ENDinterface(tcps_sess)
 #define tcps_sessCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 /* interface changes

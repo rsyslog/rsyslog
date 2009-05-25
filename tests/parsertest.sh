@@ -1,5 +1,5 @@
 echo test parsertest via udp
-./killrsyslog.sh # kill rsyslogd if it runs for some reason
+$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 
 ./nettester -tparse1 -iudp
 if [ "$?" -ne "0" ]; then

@@ -60,6 +60,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.inputname_imtcp_12515 \
 	   testsuites/1.inputname_imtcp_12516 \
 	   omod-if-array.sh \
+	   waitqueueempty.sh \
 	   cfg.sh
 
 ourtail_SOURCES = ourtail.c

@@ -23,6 +23,9 @@ Version 4.3.1  [DEVEL] (rgerhards), 2009-04-??
 - bugfix: light and full delay watermarks had invalid values, badly
   affecting performance for delayable inputs
 - build system improvements - thanks to Michael Biebl
+- added new testing module imdiag, which enables to talk to the 
+  rsyslog core at runtime. The current implementation is only a 
+  beginning, but can be expanded over time
 ---------------------------------------------------------------------------
 Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
 - new feature: new output plugin omprog, which permits to start program
