@@ -17,7 +17,7 @@ if [ "$?" -ne "0" ]; then
   echo "error during tcpflood! see rsyslog.out.log.save for what was written"
   cp rsyslog.out.log rsyslog.out.log.save
 fi
-sleep 2 # we need this so that rsyslogd can receive all outstanding messages
+$srcdir/waitqueueempty.sh # wait until rsyslogd is done processing messages
 kill `cat rsyslog.pid`
 rm -f work
 sort < rsyslog.out.log > work
@@ -42,7 +42,7 @@ if [ "$?" -ne "0" ]; then
   echo "error during tcpflood! see rsyslog.out.log.save for what was written"
   cp rsyslog.out.log rsyslog.out.log.save
 fi
-sleep 2 # we need this so that rsyslogd can receive all outstanding messages
+$srcdir/waitqueueempty.sh # wait until rsyslogd is done processing messages
 kill `cat rsyslog.pid`
 rm -f work
 sort < rsyslog.out.log > work
@@ -67,7 +67,7 @@ if [ "$?" -ne "0" ]; then
   echo "error during tcpflood! see rsyslog.out.log.save for what was written"
   cp rsyslog.out.log rsyslog.out.log.save
 fi
-sleep 2 # we need this so that rsyslogd can receive all outstanding messages
+$srcdir/waitqueueempty.sh # wait until rsyslogd is done processing messages
 kill `cat rsyslog.pid`
 rm -f work
 sort < rsyslog.out.log > work
