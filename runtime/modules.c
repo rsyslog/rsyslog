@@ -806,7 +806,15 @@ BEGINObjClassExit(module, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
 CODESTARTObjClassExit(module)
 	/* release objects we no longer need */
 	objRelease(errmsg, CORE_COMPONENT);
-	pthread_mutex_destroy(&mutLoadUnload);
+	/* We have a problem in our reference counting, which leads to this function
+	 * being called too early. This usually is no problem, but if we destroy
+	 * the mutex object, we get into trouble. So rather than finding the root cause,
+	 * we do not release the mutex right now and have a very, very slight leak.
+	 * We know that otherwise no bad effects happen, so this acceptable for the 
+	 * time being. -- rgerhards, 2009-05-25
+	 *
+	 * TODO: add again: pthread_mutex_destroy(&mutLoadUnload);
+	 */
 
 #	ifdef DEBUG
 	modUsrPrintAll(); /* debug aid - TODO: integrate with debug.c, at least the settings! */
