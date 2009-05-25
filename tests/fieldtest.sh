@@ -1,5 +1,5 @@
 echo test fieldtest via udp
-./killrsyslog.sh # kill rsyslogd if it runs for some reason
+$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 
 ./nettester -tfield1 -iudp
 if [ "$?" -ne "0" ]; then

@@ -1,5 +1,5 @@
 echo testing $InputTCPServerInputName directive
-./killrsyslog.sh # kill rsyslogd if it runs for some reason
+$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 
 echo port 12514
 ./nettester -tinputname_imtcp_12514 -cinputname_imtcp -itcp -p12514

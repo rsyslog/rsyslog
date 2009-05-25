@@ -380,14 +380,15 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 		errno = 0;
 		errmsg.LogError(0, RS_RET_MAX_SESS_REACHED, "too many tcp sessions - dropping incoming request");
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
-	} else {
-		/* we found a free spot and can construct our session object */
-		CHKiRet(tcps_sess.Construct(&pSess));
-		CHKiRet(tcps_sess.SetTcpsrv(pSess, pThis));
-		CHKiRet(tcps_sess.SetLstnInfo(pSess, pLstnInfo));
 	}
 
-	/* OK, we have a "good" index... */
+	/* we found a free spot and can construct our session object */
+	CHKiRet(tcps_sess.Construct(&pSess));
+	CHKiRet(tcps_sess.SetTcpsrv(pSess, pThis));
+	CHKiRet(tcps_sess.SetLstnInfo(pSess, pLstnInfo));
+	if(pThis->OnMsgReceive != NULL)
+		CHKiRet(tcps_sess.SetOnMsgReceive(pSess, pThis->OnMsgReceive));
+
 	/* get the host name */
 	CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
 	CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
@@ -568,6 +569,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
 	pThis->iSessMax = TCPSESS_MAX_DEFAULT; /* TODO: useful default ;) */
 	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
+	pThis->OnMsgReceive = NULL;
 ENDobjConstruct(tcpsrv)
 
 
@@ -713,6 +715,16 @@ SetUsrP(tcpsrv_t *pThis, void *pUsr)
 	RETiRet;
 }
 
+static rsRetVal
+SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
+{
+	DEFiRet;
+	assert(OnMsgReceive != NULL);
+	pThis->OnMsgReceive = OnMsgReceive;
+	RETiRet;
+}
+
+
 
 /* Set additional framing to use (if any) -- rgerhards, 2008-12-10 */
 static rsRetVal
@@ -731,7 +743,6 @@ SetInputName(tcpsrv_t *pThis, uchar *name)
 {
 	uchar *pszName;
 	DEFiRet;
-dbgprintf("XXX: SetInputName: %s\n", name);
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	if(name == NULL)
 		pszName = NULL;
@@ -843,6 +854,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetCBOnDestruct = SetCBOnDestruct;
 	pIf->SetCBOnRegularClose = SetCBOnRegularClose;
 	pIf->SetCBOnErrClose = SetCBOnErrClose;
+	pIf->SetOnMsgReceive = SetOnMsgReceive;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

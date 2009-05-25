@@ -32,6 +32,7 @@ rsRetVal logmsgInternal(int iErr, int pri, uchar *msg, int flags);
 rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime);
 int parseRFCSyslogMsg(msg_t *pMsg, int flags);
 int parseLegacySyslogMsg(msg_t *pMsg, int flags);
+rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
 
 /* TODO: the following 2 need to go in conf obj interface... */
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);

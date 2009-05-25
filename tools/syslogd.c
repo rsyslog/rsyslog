@@ -350,10 +350,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bDebugPrintModuleList = 1;
 	bEscapeCCOnRcv = 1; /* default is to escape control characters */
 	bReduceRepeatMsgs = 0;
-	if(pszMainMsgQFName != NULL) {
-		free(pszMainMsgQFName);
-		pszMainMsgQFName = NULL;
-	}
+	free(pszMainMsgQFName);
+	pszMainMsgQFName = NULL;
 	iMainMsgQueueSize = 10000;
 	iMainMsgQHighWtrMark = 8000;
 	iMainMsgQLowWtrMark = 2000;
@@ -410,6 +408,26 @@ static int usage(void)
 			"For further information see http://www.rsyslog.com/doc\n");
 	exit(1); /* "good" exit - done to terminate usage() */
 }
+
+
+/* ------------------------------ some support functions for imdiag ------------------------------ *
+ * This is a bit dirty, but the only way to do it, at least with reasonable effort.
+ * rgerhards, 2009-05-25
+ */
+
+/* return back the approximate current number of messages in the main message queue
+ */
+rsRetVal
+diagGetMainMsgQSize(int *piSize)
+{
+	DEFiRet;
+	assert(piSize != NULL);
+	*piSize = pMsgQueue->iQueueSize;
+	RETiRet;
+}
+
+
+/* ------------------------------ end support functions for imdiag  ------------------------------ */
 
 
 /* function to destruct a selector_t object
@@ -2658,7 +2676,6 @@ init(void)
 		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
 
 	/* switch the message object to threaded operation, if necessary */
-/* TODO:XXX: I think we must do this also if we have action queues! -- rgerhards, 2009-01-26 */
 	if(MainMsgQueType == QUEUETYPE_DIRECT || iMainMsgQueueNumWorkers > 1) {
 		MsgEnableThreadSafety();
 	}

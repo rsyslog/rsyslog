@@ -84,6 +84,7 @@ typedef rsRetVal (*errLogFunc_t)(uchar*); /* this is a trick to store a function
 typedef struct permittedPeers_s permittedPeers_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct permittedPeerWildcard_s permittedPeerWildcard_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct tcpsrv_s tcpsrv_t;
+typedef struct tcps_sess_s tcps_sess_t;
 typedef struct vmstk_s vmstk_t;
 typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
 
