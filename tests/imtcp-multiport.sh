@@ -21,7 +21,7 @@ $srcdir/waitqueueempty.sh # wait until rsyslogd is done processing messages
 kill `cat rsyslog.pid`
 rm -f work
 sort < rsyslog.out.log > work
-./chkseq work 0 9999
+./chkseq -fwork -e9999
 if [ "$?" -ne "0" ]; then
  # rm -f work rsyslog.out.log
   echo "sequence error detected"
@@ -46,7 +46,7 @@ $srcdir/waitqueueempty.sh # wait until rsyslogd is done processing messages
 kill `cat rsyslog.pid`
 rm -f work
 sort < rsyslog.out.log > work
-./chkseq work 0 9999
+./chkseq -fwork -e9999
 if [ "$?" -ne "0" ]; then
  # rm -f work rsyslog.out.log
   echo "sequence error detected"
@@ -71,7 +71,7 @@ $srcdir/waitqueueempty.sh # wait until rsyslogd is done processing messages
 kill `cat rsyslog.pid`
 rm -f work
 sort < rsyslog.out.log > work
-./chkseq work 0 9999
+./chkseq -fwork -e9999
 if [ "$?" -ne "0" ]; then
  # rm -f work rsyslog.out.log
   echo "sequence error detected"

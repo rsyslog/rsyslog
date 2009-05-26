@@ -298,7 +298,8 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_OK_DELETE_LISTENTRY = 1,	/**< operation successful, but callee requested the deletion of an entry (special state) */
 	RS_RET_TERMINATE_NOW = 2,	/**< operation successful, function is requested to terminate (mostly used with threads) */
 	RS_RET_NO_RUN = 3,		/**< operation successful, but function does not like to be executed */
-	RS_RET_IDLE = 4			/**< operation successful, but callee is idle (e.g. because queue is empty) */
+	RS_RET_IDLE = 4,		/**< operation successful, but callee is idle (e.g. because queue is empty) */
+	RS_RET_TERMINATE_WHEN_IDLE = 5	/**< operation successful, function is requested to terminate when idle */
 };
 
 /* some helpful macros to work with srRetVals.

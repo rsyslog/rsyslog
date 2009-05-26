@@ -380,6 +380,7 @@ wtiWorker(wti_t *pThis)
 	wtp_t *pWtp;		/* our worker thread pool */
 	int bInactivityTOOccured = 0;
 	rsRetVal localRet;
+	rsRetVal terminateRet;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -406,15 +407,21 @@ wtiWorker(wti_t *pThis)
 		wtpSetInactivityGuard(pThis->pWtp, 0, LOCK_MUTEX); /* must be set before usr mutex is locked! */
 		BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);
 
-		/* first check if we are in shutdown process */
-		if(wtpChkStopWrkr(pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED)) {
-			break; /* end worker thread run */
+		/* first check if we are in shutdown process (but evaluate a bit later) */
+		terminateRet = wtpChkStopWrkr(pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED);
+		if(terminateRet == RS_RET_TERMINATE_NOW) {
+			// TODO: we need to free the old batch! -- rgerhards, 2009-05-26 MULTI
+			break;
 		}
 
 		/* try to execute and process whatever we have */
 		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
 
 		if(localRet == RS_RET_IDLE) {
+			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE) {
+				break;	/* end of loop */
+			}
+
 			if(bInactivityTOOccured) {
 				/* we had an inactivity timeout in the last run and are still idle, so it is time to exit... */
 				break; /* end worker thread run */

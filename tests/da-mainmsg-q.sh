@@ -52,7 +52,7 @@ sleep 1 # we need this so that rsyslogd can receive all outstanding messages
 kill `cat rsyslog.pid`
 rm -f work
 sort < rsyslog.out.log > work
-./chkseq work 0 20099
+./chkseq -fwork -e20099
 if [ "$?" -ne "0" ]; then
  # rm -f work rsyslog.out.log
   echo "sequence error detected"

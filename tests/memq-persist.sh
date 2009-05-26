@@ -10,9 +10,11 @@
 #export RSYSLOG_DEBUGLOG="log"
 echo testing memory queue persisting to disk
 $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+rm -f core.*
 rm -rf test-spool
 mkdir test-spool
 rm -f work rsyslog.out.log rsyslog.out.log.save # work files
+#valgrind ../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/memq-persist1.conf &
 ../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/memq-persist1.conf &
 sleep 1
 echo "rsyslogd started with pid " `cat rsyslog.pid`
@@ -22,20 +24,22 @@ if [ "$?" -ne "0" ]; then
   echo "error during tcpflood! see rsyslog.out.log.save for what was written"
   cp rsyslog.out.log rsyslog.out.log.save
 fi
-sleep 3 # we need to wait to ensure everything is received (less 1 second would be better)
+sleep 4 # we need to wait to ensure everything is received (less 1 second would be better)
 kill `cat rsyslog.pid`
-sleep 5 # wait for engine to terminate
+echo wait for shutdown
+$srcdir/waitqueueempty.sh # wait until rsyslogd is done processing messages
 echo There must exist some files now:
 ls -l test-spool
 # restart engine and have rest processed
 ../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/memq-persist2.conf &
+sleep 1
 $srcdir/waitqueueempty.sh # wait until rsyslogd is done processing messages
 kill `cat rsyslog.pid`
 rm -f work
 sort < rsyslog.out.log > work
-./chkseq work 0 9999
+./chkseq -fwork -e9999 -d
 if [ "$?" -ne "0" ]; then
- # rm -f work rsyslog.out.log
+  rm -f work rsyslog.out.log
   echo "sequence error detected"
   exit 1
 fi

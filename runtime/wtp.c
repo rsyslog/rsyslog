@@ -261,16 +261,19 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex)
 	ISOBJ_TYPE_assert(pThis, wtp);
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
-	if(   (pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE)
-	   || ((pThis->wtpState == wtpState_SHUTDOWN) && pThis->pfIsIdle(pThis->pUsr, pThis)))
-		iRet = RS_RET_TERMINATE_NOW;
+	if(pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
+		ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
+	} else if(pThis->wtpState == wtpState_SHUTDOWN) {
+		ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
+	}
 
 	/* try customer handler if one was set and we do not yet have a definite result */
-	if(iRet == RS_RET_OK && pThis->pfChkStopWrkr != NULL) {
+	if(pThis->pfChkStopWrkr != NULL) {
 		iRet = pThis->pfChkStopWrkr(pThis->pUsr, bLockUsrMutex);
 	}
-	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
 
+finalize_it:
+	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
 	RETiRet;
 }
 
