@@ -114,7 +114,6 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 	ISOBJ_TYPE_assert(pThis, netstrm);
 	assert(ppNew != NULL);
 
-RUNLOG_STR("XXX: accept conn reqeust");
 	/* accept the new connection */
 	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd));
 	/* construct our object so that we can use it... */

@@ -97,7 +97,6 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
-dbgprintf("XXX: tcpsrv.c add port %s, name '%s'\n", pszPort, pThis->pszInputName);
 	/* create entry */
 	CHKmalloc(pEntry = malloc(sizeof(tcpLstnPortList_t)));
 	pEntry->pszPort = pszPort;
@@ -267,7 +266,6 @@ addTcpLstn(void *pUsr, netstrm_t *pLstn)
 	tcpsrv_t *pThis = pPortList->pSrv;
 	DEFiRet;
 
-dbgprintf("XXX: addTcpLst name %s\n", pPortList->pszInputName);
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	ISOBJ_TYPE_assert(pLstn, netstrm);
 
@@ -326,7 +324,6 @@ create_tcp_socket(tcpsrv_t *pThis)
 	/* init all configured ports */
 	pEntry = pThis->pLstnPorts;
 	while(pEntry != NULL) {
-dbgprintf("XXX: tcpsrv.c create_tcp_socket do port %s\n", pEntry->pszPort);
 		CHKiRet(initTCPListener(pThis, pEntry));
 		pEntry = pEntry->pNext;
 	}
