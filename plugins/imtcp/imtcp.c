@@ -180,7 +180,6 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		}
 	}
 
-dbgprintf("XXX: try add listen port %s\n", pNewVal);
 	/* initialized, now add socket */
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : pszInputName));

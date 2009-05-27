@@ -2,7 +2,7 @@ TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
 TESTS = $(TESTRUNS) cfg.sh arrayqueue.sh linkedlistqueue.sh da-mainmsg-q.sh \
 	diskqueue.sh manytcp.sh \
-	memq-persist.sh
+	queue-persist.sh
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh parsertest.sh inputname.sh fieldtest.sh
@@ -12,7 +12,6 @@ DISTCLEANFILES=rsyslog.pid '$(abs_top_builddir)'/DiagTalker.class
 test_files = testbench.h runtime-dummy.c
 
 check_JAVA = DiagTalker.java
-#dist_java_JAVA = DiagTalker.java
 
 EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   cfg1.cfgtest \
@@ -65,10 +64,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.inputname_imtcp_12515 \
 	   testsuites/1.inputname_imtcp_12516 \
 	   omod-if-array.sh \
-	   waitqueueempty.sh \
-	   memq-persist.sh \
-	   testsuites/memq-persist1.sh \
-	   testsuites/memq-persist2.sh \
+	   diag.sh \
+	   queue-persist.sh \
+	   queue-persist-drvr.sh \
+	   testsuites/queue-persist.conf \
 	   DiagTalker.java \
 	   cfg.sh
 
