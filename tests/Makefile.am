@@ -2,7 +2,8 @@ TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
 TESTS = $(TESTRUNS) cfg.sh arrayqueue.sh linkedlistqueue.sh da-mainmsg-q.sh \
 	diskqueue.sh manytcp.sh \
-	queue-persist.sh
+	queue-persist.sh \
+	daqueue-persist.sh
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh parsertest.sh inputname.sh fieldtest.sh
@@ -65,6 +66,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.inputname_imtcp_12516 \
 	   omod-if-array.sh \
 	   diag.sh \
+	   daqueue-persist.sh \
+	   daqueue-persist-drvr.sh \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
 	   testsuites/queue-persist.conf \

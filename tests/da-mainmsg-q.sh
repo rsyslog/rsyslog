@@ -8,55 +8,25 @@
 # added 2009-04-22 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
 echo "testing main message queue in DA mode (going to disk)"
-rm -f work rsyslog.out.log
-rm -rf test-spool
-mkdir test-spool
-rm -f work rsyslog.out.log rsyslog.out.log.save # work files
-../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/da-mainmsg-q.conf &
-sleep 1
-echo "rsyslogd started with pid " `cat rsyslog.pid`
-#
+source $srcdir/diag.sh init
+source $srcdir/diag.sh startup da-mainmsg-q.conf
+
 # part1: send first 50 messages (in memory, only)
-#
-./tcpflood 127.0.0.1 13514 1 50
-if [ "$?" -ne "0" ]; then
-  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
-  cp rsyslog.out.log rsyslog.out.log.save
-fi
-ls -l test-spool
-sleep 2 # we need this so that rsyslogd can receive all outstanding messages
-#
+#source $srcdir/diag.sh tcpflood 127.0.0.1 13514 1 50
+source $srcdir/diag.sh injectmsg 0 50
+source $srcdir/diag.sh wait-queueempty # let queue drain for this test case
+
 # part 2: send bunch of messages. This should trigger DA mode
-#
-# 20000 messages should be enough - the disk test is slow enough ;)
-./tcpflood 127.0.0.1 13514 2 20000 50
-if [ "$?" -ne "0" ]; then
-  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
-  cp rsyslog.out.log rsyslog.out.log.save
-fi
-ls -l test-spool
-sleep 8 # we need this so that rsyslogd can receive all outstanding messages
-#
+source $srcdir/diag.sh injectmsg 50 20000
+ls -l test-spool	 # for manual review
+
 # send another handful
-#
-ls -l test-spool
-./tcpflood 127.0.0.1 13514 1 50 20050
-if [ "$?" -ne "0" ]; then
-  echo "error during tcpflood! see rsyslog.out.log.save for what was written"
-  cp rsyslog.out.log rsyslog.out.log.save
-fi
-sleep 1 # we need this so that rsyslogd can receive all outstanding messages
-# 
+source $srcdir/diag.sh injectmsg 20050 50
+#sleep 1 # we need this so that rsyslogd can receive all outstanding messages
+
 # clean up and check test result
-#
-kill `cat rsyslog.pid`
-rm -f work
-sort < rsyslog.out.log > work
-./chkseq -fwork -e20099
-if [ "$?" -ne "0" ]; then
- # rm -f work rsyslog.out.log
-  echo "sequence error detected"
-  exit 1
-fi
-rm -f work rsyslog.out.log
-rm -rf test-spool
+source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
+### currently, we get a stable abort if we use the former kill logic. With shutdown-when-empty, it hangs (but that still tells us there is a bug ;)) ###
+#kill `cat rsyslog.pid`
+source $srcdir/diag.sh seq-check 0 20099
+source $srcdir/diag.sh exit

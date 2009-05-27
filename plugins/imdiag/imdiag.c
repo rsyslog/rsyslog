@@ -243,7 +243,7 @@ injectMsg(uchar *pszCmd, tcps_sess_t *pSess)
 		doInjectMsg(i + iFrom);
 	}
 
-	CHKiRet(sendResponse(pSess, "messages injected\n"));
+	CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
 
 finalize_it:
 	RETiRet;
