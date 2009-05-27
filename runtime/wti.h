@@ -31,7 +31,7 @@
 
 
 /* the worker thread instance class */
-typedef struct wti_s {
+struct wti_s {
 	BEGINobjInstance;
 	int bOptimizeUniProc; /* cache for the equally-named global setting, pulled at time of queue creation */
 	pthread_t thrdID;  /* thread ID */
@@ -42,7 +42,7 @@ typedef struct wti_s {
 	int bShutdownRqtd;	/* shutdown for this thread requested? 0 - no , 1 - yes */
 	batch_t batch; /* pointer to an object array meaningful for current user pointer (e.g. queue pUsr data elemt) */
 	uchar *pszDbgHdr;	/* header string for debug messages */
-} wti_t;
+};
 
 /* some symbolic constants for easier reference */
 

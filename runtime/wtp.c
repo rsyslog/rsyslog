@@ -91,10 +91,12 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
 	pThis->pfGetDeqBatchSize = NotImplementedDummy;
 	pThis->pfIsIdle = NotImplementedDummy;
 	pThis->pfDoWork = NotImplementedDummy;
+	pThis->pfObjProcessed = NotImplementedDummy;
 	pThis->pfOnIdle = NotImplementedDummy;
 	pThis->pfOnWorkerCancel = NotImplementedDummy;
 	pThis->pfOnWorkerStartup = NotImplementedDummy;
 	pThis->pfOnWorkerShutdown = NotImplementedDummy;
+dbgprintf("XXX: wtpConstruct: %d\n", pThis->wtpState);
 ENDobjConstruct(wtp)
 
 
@@ -139,6 +141,7 @@ BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODE
 	int i;
 CODESTARTobjDestruct(wtp)
 	wtpProcessThrdChanges(pThis); /* process thread changes one last time */
+RUNLOG_STR("wtpDestruct");
 
 	/* destruct workers */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i)
@@ -260,17 +263,22 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
+RUNLOG;
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 	if(pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
+RUNLOG;
 		ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
 	} else if(pThis->wtpState == wtpState_SHUTDOWN) {
 		ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
+RUNLOG;
 	}
 
+RUNLOG_VAR("%d", iRet);
 	/* try customer handler if one was set and we do not yet have a definite result */
 	if(pThis->pfChkStopWrkr != NULL) {
 		iRet = pThis->pfChkStopWrkr(pThis->pUsr, bLockUsrMutex);
 	}
+RUNLOG_VAR("%d", iRet);
 
 finalize_it:
 	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
@@ -292,13 +300,17 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
+dbgprintf("XXX:10  wtp %p, state %d\n", pThis, pThis->wtpState);
 	wtpSetState(pThis, tShutdownCmd);
+dbgprintf("XXX:20  wtp %p, state %d\n", pThis, pThis->wtpState);
 	wtpWakeupAllWrkr(pThis);
+dbgprintf("XXX:30 wtp %p, state %d\n", pThis, pThis->wtpState);
 
 	/* see if we need to harvest (join) any terminated threads (even in timeout case,
 	 * some may have terminated...
 	 */
 	wtpProcessThrdChanges(pThis);
+dbgprintf("XXX:40 wtp %p, state %d\n", pThis, pThis->wtpState);
 		
 	/* and wait for their termination */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
@@ -306,7 +318,9 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 	bTimedOut = 0;
+dbgprintf("XXX:50 wtp %p, state %d\n", pThis, pThis->wtpState);
 	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
+dbgprintf("XXX:60 wtp %p, state %d\n", pThis, pThis->wtpState);
 		dbgprintf("%s: waiting %ldms on worker thread termination, %d still running\n",
 			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout), pThis->iCurNumWrkThrd);
 
@@ -581,6 +595,7 @@ DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
 DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*))
 DEFpropSetMethFP(wtp, pfIsIdle, rsRetVal(*pVal)(void*, wtp_t*))
 DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*, int))
+DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*))
 DEFpropSetMethFP(wtp, pfOnIdle, rsRetVal(*pVal)(void*, int))
 DEFpropSetMethFP(wtp, pfOnWorkerCancel, rsRetVal(*pVal)(void*, void*))
 DEFpropSetMethFP(wtp, pfOnWorkerStartup, rsRetVal(*pVal)(void*))

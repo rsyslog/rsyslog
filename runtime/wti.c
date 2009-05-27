@@ -343,6 +343,7 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 {
 	struct timespec t;
 
+	BEGINfunc
 	DBGPRINTF("%s: worker IDLE, waiting for work.\n", wtiGetDbgHdr(pThis));
 	pWtp->pfOnIdle(pWtp->pUsr, MUTEX_ALREADY_LOCKED);
 
@@ -356,6 +357,7 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 			*pbInactivityTOOccured = 1; /* indicate we had a timeout */
 		}
 	}
+	ENDfunc
 }
 
 
@@ -390,9 +392,12 @@ wtiWorker(wti_t *pThis)
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
-	BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);
+dbgprintf("XXX: worker startup\n");
+	RUNLOG_STR("MUTEX lock");
+	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 	pWtp->pfOnWorkerStartup(pWtp->pUsr);
-	END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
+	RUNLOG_STR("MUTEX release");
+	END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 
 	/* now we have our identity, on to real processing */
 	while(1) { /* loop will be broken below - need to do mutex locks */
@@ -405,17 +410,25 @@ wtiWorker(wti_t *pThis)
 		}
 		
 		wtpSetInactivityGuard(pThis->pWtp, 0, LOCK_MUTEX); /* must be set before usr mutex is locked! */
-		BEGIN_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr, LOCK_MUTEX);
+		RUNLOG_STR("MUTEX lock");
+		BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 
 		/* first check if we are in shutdown process (but evaluate a bit later) */
+RUNLOG;
 		terminateRet = wtpChkStopWrkr(pWtp, LOCK_MUTEX, MUTEX_ALREADY_LOCKED);
+RUNLOG_VAR("%d", terminateRet);
 		if(terminateRet == RS_RET_TERMINATE_NOW) {
-			// TODO: we need to free the old batch! -- rgerhards, 2009-05-26 MULTI
+			/* we now need to free the old batch */
+			localRet = pWtp->pfObjProcessed(pWtp->pUsr, pThis);
+			dbgoprint((obj_t*) pThis, "terminating worker because auf TERMINATE_NOW mode, del iRet %d\n",
+				 localRet);
 			break;
 		}
+RUNLOG;
 
 		/* try to execute and process whatever we have */
 		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
+		/* This function must and does RELEASE the MUTEX! */
 
 		if(localRet == RS_RET_IDLE) {
 			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE) {
@@ -426,17 +439,20 @@ wtiWorker(wti_t *pThis)
 				/* we had an inactivity timeout in the last run and are still idle, so it is time to exit... */
 				break; /* end worker thread run */
 			}
+			RUNLOG_STR("MUTEX lock");
+			BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);
-			END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
+			RUNLOG_STR("MUTEX release");
+			END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 			continue; /* request next iteration */
 		}
-		END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
 
 		bInactivityTOOccured = 0; /* reset for next run */
 	}
 
 	/* if we exit the loop, the mutex is locked and must be unlocked */
-	END_MTX_PROTECTED_OPERATIONS(pWtp->pmutUsr);
+	RUNLOG_STR("MUTEX release");
+	END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 
 	/* indicate termination */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);

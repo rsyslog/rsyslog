@@ -5,8 +5,11 @@
 # not always able to convey back states to the upper-level test driver
 # begun 2009-05-27 by rgerhards
 # This file is part of the rsyslog project, released under GPLv3
+#valgrind="valgrind --log-fd=1"
+#valgrind="valgrind --tool=drd --log-fd=1"
+#valgrind="valgrind --tool=helgrind --log-fd=1"
 #set -o xtrace
-export RSYSLOG_DEBUG="debug nostdout"
+#export RSYSLOG_DEBUG="debug Xnostdout printmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
@@ -22,7 +25,7 @@ case $1 in
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup
-		valgrind ../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		$valgrind ../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
    		$srcdir/diag.sh wait-startup
 		;;
    'wait-startup') # wait for rsyslogd startup

@@ -117,11 +117,23 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep);
 	if(bMustLock == LOCK_MUTEX) { \
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave); \
 		d_pthread_mutex_lock(mut); \
+		assert(bLockedOpIsLocked == 0); \
 		bLockedOpIsLocked = 1; \
 	}
 #define END_MTX_PROTECTED_OPERATIONS(mut) \
 	if(bLockedOpIsLocked) { \
 		d_pthread_mutex_unlock(mut); \
+		bLockedOpIsLocked = 0; \
 		pthread_setcancelstate(iCancelStateSave, NULL); \
 	}
+/* The unconditional versions of the macro always lock the mutex. They are preferred in 
+ * complex scenarios, where the simple ones might get mixed up by multiple calls.
+ */
+#define BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(mut) \
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave); \
+	d_pthread_mutex_lock(mut); 
+#define END_MTX_PROTECTED_OPERATIONS_UNCOND(mut) \
+	d_pthread_mutex_unlock(mut); \
+	pthread_setcancelstate(iCancelStateSave, NULL);
+
 #endif
