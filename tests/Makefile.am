@@ -33,8 +33,6 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.omod-if-array \
 	   killrsyslog.sh \
 	   parsertest.sh \
-	   queue-persist.sh \
-	   testsuites/queue-persist.conf \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
 	   imtcp-multiport.sh \
@@ -53,7 +51,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   diag.sh \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
-	   testsuites/queue-persist.sh \
+	   testsuites/queue-persist.conf \
 	   DiagTalker.java \
 	   cfg.sh
 
