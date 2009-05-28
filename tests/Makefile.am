@@ -68,6 +68,7 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   diag.sh \
 	   daqueue-persist.sh \
 	   daqueue-persist-drvr.sh \
+	   testsuites/diag-common.conf \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
 	   testsuites/queue-persist.conf \
