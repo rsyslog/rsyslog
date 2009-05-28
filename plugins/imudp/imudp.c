@@ -107,7 +107,7 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			udpLstnSocks = newSocks;
 		} else {
 			/* we need to add them */
-			if((tmpSocks = malloc(sizeof(int) * 1 + newSocks[0] + udpLstnSocks[0])) == NULL) {
+			if((tmpSocks = malloc(sizeof(int) * (1 + newSocks[0] + udpLstnSocks[0]))) == NULL) {
 				dbgprintf("out of memory trying to allocate udp listen socket array\n");
 				/* in this case, we discard the new sockets but continue with what we
 				 * already have

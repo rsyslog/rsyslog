@@ -955,7 +955,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(bErrMsgToStderr || iConfigVerify) {
+	if(((Debug || NoFork) && bErrMsgToStderr) || iConfigVerify) {
 		fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
 
@@ -2325,6 +2325,7 @@ init(void)
 	DEFiRet;
 	rsRetVal localRet;
 	int iNbrActions;
+	int bHadConfigErr = 0;
 	char cbuf[BUFSIZ];
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
@@ -2375,9 +2376,11 @@ init(void)
 
 	if(localRet != RS_RET_OK) {
 		errmsg.LogError(0, localRet, "CONFIG ERROR: could not interpret master config file '%s'.", ConfFile);
+		bHadConfigErr = 1;
 	} else if(iNbrActions == 0) {
 		errmsg.LogError(0, RS_RET_NO_ACTIONS, "CONFIG ERROR: there are no active actions configured. Inputs will "
 			 "run, but no output whatsoever is created.");
+		bHadConfigErr = 1;
 	}
 
 	if(localRet != RS_RET_OK || iNbrActions == 0) {
@@ -2443,8 +2446,13 @@ init(void)
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25
 	 */
-	if(iConfigVerify)
+	if(iConfigVerify) {
+		if(bHadConfigErr) {
+			/* a bit dirty, but useful... */
+			exit(1);
+		}
 		ABORT_FINALIZE(RS_RET_VALIDATION_RUN);
+	}
 
 	/* switch the message object to threaded operation, if necessary */
 /* TODO:XXX: I think we must do this also if we have action queues! -- rgerhards, 2009-01-26 */

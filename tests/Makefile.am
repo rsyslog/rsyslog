@@ -1,11 +1,17 @@
+<<<<<<< HEAD:tests/Makefile.am
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail udptester
-TESTS = $(TESTRUNS) cfg.sh parsertest.sh omod-if-array.sh
+TESTS = $(TESTRUNS) cfg.sh parsertest.sh omod-if-array.sh \
+	validation-run.sh
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid
 test_files = testbench.h runtime-dummy.c
 
 EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
+	   validation-run.sh \
+	   testsuites/invalid.conf \
+	   testsuites/valid.conf \
+	   cfg.sh \
 	   cfg1.cfgtest \
 	   cfg1.testin \
       	   cfg2.cfgtest \
