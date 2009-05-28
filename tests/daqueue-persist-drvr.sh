@@ -19,7 +19,6 @@ $srcdir/diag.sh shutdown-immediate
 $srcdir/diag.sh wait-shutdown
 source $srcdir/diag.sh check-mainq-spool
 
-echo DEBUG EXIT!
 #exit
 
 # restart engine and have rest processed

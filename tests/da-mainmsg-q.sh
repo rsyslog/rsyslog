@@ -27,8 +27,5 @@ source $srcdir/diag.sh injectmsg 2050 50
 
 # clean up and check test result
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
-### currently, we get a stable abort if we use the former kill logic. With shutdown-when-empty, it hangs (but that still tells us there is a bug ;)) ###
-#kill `cat rsyslog.pid`
-echo seqchk?
 source $srcdir/diag.sh seq-check 2099
 source $srcdir/diag.sh exit

@@ -392,7 +392,7 @@ wtiWorker(wti_t *pThis)
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
 
-	pThis->batch.nElemDeq = 0; /* re-init dequeue count */
+	// TODO: if we have a problem, enable again! pThis->batch.nElemDeq = 0; /* re-init dequeue count */
 	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);
 	pWtp->pfOnWorkerStartup(pWtp->pUsr);
 	END_MTX_PROTECTED_OPERATIONS_UNCOND(pWtp->pmutUsr);

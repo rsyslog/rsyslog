@@ -294,17 +294,13 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-dbgprintf("XXX:10  wtp %p, state %d\n", pThis, pThis->wtpState);
 	wtpSetState(pThis, tShutdownCmd);
-dbgprintf("XXX:20  wtp %p, state %d\n", pThis, pThis->wtpState);
 	wtpWakeupAllWrkr(pThis);
-dbgprintf("XXX:30 wtp %p, state %d\n", pThis, pThis->wtpState);
 
 	/* see if we need to harvest (join) any terminated threads (even in timeout case,
 	 * some may have terminated...
 	 */
 	wtpProcessThrdChanges(pThis);
-dbgprintf("XXX:40 wtp %p, state %d\n", pThis, pThis->wtpState);
 		
 	/* and wait for their termination */
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
@@ -312,9 +308,7 @@ dbgprintf("XXX:40 wtp %p, state %d\n", pThis, pThis->wtpState);
 	pthread_cleanup_push(mutexCancelCleanup, &pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 	bTimedOut = 0;
-dbgprintf("XXX:50 wtp %p, state %d\n", pThis, pThis->wtpState);
 	while(pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
-dbgprintf("XXX:60 wtp %p, state %d\n", pThis, pThis->wtpState);
 		dbgprintf("%s: waiting %ldms on worker thread termination, %d still running\n",
 			   wtpGetDbgHdr(pThis), timeoutVal(ptTimeout), pThis->iCurNumWrkThrd);
 
