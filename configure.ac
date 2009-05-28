@@ -573,7 +573,7 @@ AC_ARG_ENABLE(gnutls,
         [enable_gnutls=no]
 )
 if test "x$enable_gnutls" = "xyes"; then
-	PKG_CHECK_MODULES(GNUTLS, gnutls >= 2.0.0)
+	PKG_CHECK_MODULES(GNUTLS, gnutls >= 1.4.0)
 fi
 AM_CONDITIONAL(ENABLE_GNUTLS, test x$enable_gnutls = xyes)
 AC_SUBST(GNUTLS_CFLAGS)

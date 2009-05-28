@@ -400,6 +400,7 @@ processConfFile(uchar *pConfFile)
 	uchar cbuf[CFGLNSIZ];
 	uchar *cline;
 	int i;
+	int bHadAnError = 0;
 	ASSERT(pConfFile != NULL);
 
 	if((cf = fopen((char*)pConfFile, "r")) == NULL) {
@@ -461,6 +462,7 @@ processConfFile(uchar *pConfFile)
 			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
 				 "%s, line %d", pConfFile, iLnNbr);
 			errmsg.LogError(0, NO_ERRCODE, "the last error occured in %s", (char*)szErrLoc);
+			bHadAnError = 1;
 		}
 	}
 
@@ -479,6 +481,10 @@ finalize_it:
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
 			iRet, pConfFile, errStr);
+	}
+
+	if(bHadAnError && (iRet == RS_RET_OK)) { /* a bit dirty, enhance in future releases */
+		iRet = RS_RET_ERR;
 	}
 	RETiRet;
 }

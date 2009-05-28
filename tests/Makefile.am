@@ -1,9 +1,11 @@
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
-TESTS = $(TESTRUNS) cfg.sh manytcp.sh diskqueue.sh imtcp-multiport.sh queue-persist.sh
+TESTS = $(TESTRUNS) cfg.sh manytcp.sh diskqueue.sh imtcp-multiport.sh queue-persist.sh \
+	validation-run.sh
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh parsertest.sh inputname.sh fieldtest.sh
 endif
+
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid '$(abs_top_builddir)'/DiagTalker.class
 test_files = testbench.h runtime-dummy.c
@@ -11,6 +13,10 @@ test_files = testbench.h runtime-dummy.c
 check_JAVA = DiagTalker.java
 
 EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
+	   validation-run.sh \
+	   testsuites/invalid.conf \
+	   testsuites/valid.conf \
+	   cfg.sh \
 	   cfg1.cfgtest \
 	   cfg1.testin \
 	   cfg2.cfgtest \
