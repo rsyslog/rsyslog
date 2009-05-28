@@ -207,9 +207,24 @@ version before switching to this one.
 - bugfix: memory leak in ompgsql
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
+Version 3.22.x [v3-stable] (rgerhards), 2009-04-??
+- bugfix: internal messages were emitted to whatever file had fd2 when
+  rsyslogd ran in forked mode (as usual!)
+  Thanks to varmojfekoj for the patch
+- small enhancement: config validation run now exits with code 1 if an
+  error is detected. This change is considered important but small enough
+  to apply it directly to the stable version. [But it is a border case,
+  the change requires more code than I had hoped. Thus I have NOT tried
+  to actually catch all cases, this is left for the current devel
+  releases, if necessary]
+---------------------------------------------------------------------------
 Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
 - bugfix: light and full delay watermarks had invalid values, badly
   affecting performance for delayable inputs
+- bugfix: potential segfault issue when multiple $UDPServerRun directives
+  are specified. Thanks to Michael Biebl for helping to debug this one.
+- relaxed GnuTLS version requirement to 1.4.0 after confirmation from the
+  field that this version is sufficient
 ---------------------------------------------------------------------------
 Version 3.22.0 [v3-stable] (rgerhards), 2009-04-21
 This is the first stable release that includes the full functionality
