@@ -1,10 +1,14 @@
 check_PROGRAMS = rt_init rscript
-TESTS = $(check_PROGRAMS) cfg.sh
+TESTS = $(check_PROGRAMS) cfg.sh \
+	validation-run.sh
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 #TESTS = $(check_PROGRAMS)
 
 test_files = testbench.h runtime-dummy.c
 EXTRA_DIST=1.rstest 2.rstest err1.rstest \
+	   validation-run.sh \
+	   testsuites/invalid.conf \
+	   testsuites/valid.conf \
 	   cfg.sh \
 	   cfg1.cfgtest \
 	   cfg1.testin \
