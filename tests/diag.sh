@@ -7,15 +7,16 @@
 # This file is part of the rsyslog project, released under GPLv3
 #set -o xtrace
 #export RSYSLOG_DEBUG="debug nostdout"
-#export RSYSLOG_DEBUGLOG="tmp"
+#export RSYSLOG_DEBUGLOG="log"
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+		cp $srcdir/testsuites/diag-common.conf diag-common.conf
 		rm -f rsyslogd.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool
 		mkdir test-spool
 		;;
-   'exit')	rm -f rsyslogd.started work-*.conf
+   'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool
 		;;
