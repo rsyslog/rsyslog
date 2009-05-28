@@ -54,7 +54,7 @@
 #include "wtp.h"
 #include "wti.h"
 #include "atomic.h"
-#include "msg.h" /* TODO: remove one we removed MsgAddRef() call */
+#include "msg.h" /* TODO: remove once we remove MsgAddRef() call */
 
 #ifdef OS_SOLARIS
 #	include <sched.h>
@@ -296,11 +296,6 @@ TurnOffDAMode(qqueue_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, qqueue);
 	ASSERT(pThis->bRunsDA);
-
-	/* at this point, we need a fully initialized DA queue. So if it isn't, we finally need
-	 * to wait for its startup... -- rgerhards, 2008-01-25
-	 */
-	//TODO: MULTI del, can not happen (but verify first) qqueueWaitDAModeInitialized(pThis);
 
 	/* if we need to pull any data that we still need from the (child) disk queue,
 	 * now would be the time to do so. At present, we do not need this, but I'd like to
@@ -865,8 +860,7 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 	CHKiRet(obj.Deserialize(&pThis->tVars.disk.pReadDel, (uchar*) "strm", psQIF,
 			       (rsRetVal(*)(obj_t*,void*))qqueueLoadPersStrmInfoFixup, pThis));
 
-	/* we now need to take care of the Deq handle. It is not persisted, so we can create
-	 * a virgin copy based on pReadDel. // TODO duplicat code, same as blow - single function!
+	/* create a duplicate for the read "pointer".
 	 */
 
 	CHKiRet(strmDup(pThis->tVars.disk.pReadDel, &pThis->tVars.disk.pReadDeq));
@@ -1712,7 +1706,7 @@ DequeueConsumable(qqueue_t *pThis, wti_t *pWti, int iCancelStateSave)
 		pthread_cond_broadcast(&pThis->belowLightDlyWtrMrk);
 	}
 
-	// TODO: MULTI: check physical queue size!
+	// TODO: MULTI: check physical queue size?
 	pthread_cond_signal(&pThis->notFull);
 	d_pthread_mutex_unlock(pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
@@ -1982,11 +1976,6 @@ static rsRetVal
 ChkStopWrkrReg(qqueue_t *pThis)
 {
 	DEFiRet;
-	/* original condition
-	return pThis->bEnqOnly || pThis->bRunsDA || (pThis->pqParent != NULL && getPhysicalQueueSize(pThis) == 0);
-	* TODO: remove when verified! -- rgerhards, 2009-05-26
-	*/
-	// TODO: DEL - we now keep the workers running! if(pThis->bEnqOnly || pThis->bRunsDA) {
 	if(pThis->bEnqOnly) {
 dbgprintf("XXX: terminate_NOW queue:Reg worker: enqOnly! queue size %d\n", getPhysicalQueueSize(pThis));
 		iRet = RS_RET_TERMINATE_NOW;
