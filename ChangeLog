@@ -1,3 +1,6 @@
+- bugfix: internal messages were emitted to whatever file had fd2 when
+  rsyslogd ran in forked mode (as usual!)
+  Thanks to varmojfekoj for the patch
 ---------------------------------------------------------------------------
 Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
 - bugfix: light and full delay watermarks had invalid values, badly

@@ -925,7 +925,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(bErrMsgToStderr || iConfigVerify) {
+	if(((Debug || NoFork) && bErrMsgToStderr) || iConfigVerify) {
 		fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
 
