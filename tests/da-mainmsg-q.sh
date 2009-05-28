@@ -17,16 +17,18 @@ source $srcdir/diag.sh injectmsg 0 50
 source $srcdir/diag.sh wait-queueempty # let queue drain for this test case
 
 # part 2: send bunch of messages. This should trigger DA mode
-source $srcdir/diag.sh injectmsg 50 20000
+#source $srcdir/diag.sh injectmsg 50 20000
+source $srcdir/diag.sh injectmsg 50 2000
 ls -l test-spool	 # for manual review
 
 # send another handful
-source $srcdir/diag.sh injectmsg 20050 50
+source $srcdir/diag.sh injectmsg 2050 50
 #sleep 1 # we need this so that rsyslogd can receive all outstanding messages
 
 # clean up and check test result
 source $srcdir/diag.sh shutdown-when-empty # shut down rsyslogd when done processing messages
 ### currently, we get a stable abort if we use the former kill logic. With shutdown-when-empty, it hangs (but that still tells us there is a bug ;)) ###
 #kill `cat rsyslog.pid`
-source $srcdir/diag.sh seq-check 0 20099
+echo seqchk?
+source $srcdir/diag.sh seq-check 2099
 source $srcdir/diag.sh exit

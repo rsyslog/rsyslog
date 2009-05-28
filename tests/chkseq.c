@@ -79,7 +79,8 @@ int main(int argc, char *argv[])
 	/* read file */
 	fp = fopen(file, "r");
 	if(fp == NULL) {
-		perror(argv[1]);
+		printf("error opening file '%s'\n", file);
+		perror(file);
 		exit(1);
 	}
 
