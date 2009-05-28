@@ -141,7 +141,6 @@ BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODE
 	int i;
 CODESTARTobjDestruct(wtp)
 	wtpProcessThrdChanges(pThis); /* process thread changes one last time */
-RUNLOG_STR("wtpDestruct");
 
 	/* destruct workers */
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i)
@@ -263,22 +262,17 @@ wtpChkStopWrkr(wtp_t *pThis, int bLockMutex, int bLockUsrMutex)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 
-RUNLOG;
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 	if(pThis->wtpState == wtpState_SHUTDOWN_IMMEDIATE) {
-RUNLOG;
 		ABORT_FINALIZE(RS_RET_TERMINATE_NOW);
 	} else if(pThis->wtpState == wtpState_SHUTDOWN) {
 		ABORT_FINALIZE(RS_RET_TERMINATE_WHEN_IDLE);
-RUNLOG;
 	}
 
-RUNLOG_VAR("%d", iRet);
 	/* try customer handler if one was set and we do not yet have a definite result */
 	if(pThis->pfChkStopWrkr != NULL) {
 		iRet = pThis->pfChkStopWrkr(pThis->pUsr, bLockUsrMutex);
 	}
-RUNLOG_VAR("%d", iRet);
 
 finalize_it:
 	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
