@@ -479,7 +479,7 @@ finalize_it:
 	}
 
 	if(bHadAnError && (iRet == RS_RET_OK)) { /* a bit dirty, enhance in future releases */
-		iRet = RS_RET_ERR;
+		iRet = RS_RET_NONFATAL_CONFIG_ERR;
 	}
 	RETiRet;
 }

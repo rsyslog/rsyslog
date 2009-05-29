@@ -253,6 +253,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ACCEPT_ERR = -2106, /**< error during accept() system call */
 	RS_RET_INVLD_TIME = -2107, /**< invalid timestamp (e.g. could not be parsed) */
 	RS_RET_CODE_ERR = -2109, /**< program code (internal) error */
+	RS_RET_NONFATAL_CONFIG_ERR = -2123, /**< non-fatal error during config processing */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

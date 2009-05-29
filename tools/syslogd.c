@@ -2300,7 +2300,7 @@ init(void)
 		bHadConfigErr = 1;
 	}
 
-	if(localRet != RS_RET_OK || iNbrActions == 0) {
+	if((localRet != RS_RET_OK && localRet != RS_RET_NONFATAL_CONFIG_ERR) || iNbrActions == 0) {
 		/* rgerhards: this code is executed to set defaults when the
 		 * config file could not be opened. We might think about
 		 * abandoning the run in this case - but this, too, is not
