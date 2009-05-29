@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
-Version 4.3.?  [DEVEL] (rgerhards), 2009-??-??
+Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
+- added ability for the UDP output action to rebind its send socket after
+  sending n messages. New config directive $ActionSendUDPRebindInterval
+  added for the purpose. By default, rebinding is disabled. This is 
+  considered useful for load balancers.
 - bugfix: imdiag/imtcp had a race condition
 - improved testbench (now much better code design and reuse)
 ---------------------------------------------------------------------------

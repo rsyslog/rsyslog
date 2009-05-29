@@ -484,7 +484,8 @@ finalize_it:
 	}
 
 	if(bHadAnError && (iRet == RS_RET_OK)) { /* a bit dirty, enhance in future releases */
-		iRet = RS_RET_ERR;
+// TODO: fix regression!
+	//	iRet = RS_RET_ERR;
 	}
 	RETiRet;
 }
