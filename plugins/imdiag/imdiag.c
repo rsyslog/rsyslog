@@ -1,3 +1,5 @@
+#warning "imdiag is NOT supported in this version of rsyslog"
+#if 0
 /* imdiag.c
  * This is a diagnostics module, primarily meant for troubleshooting
  * and information about the runtime state of rsyslog. It is implemented
@@ -457,6 +459,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit
+#endif
 
 
 /* vim:set ai:
