@@ -1252,7 +1252,7 @@ static int parseRFCStructuredData(char **pp2parse, char *pResult)
 	if(*p2parse != '[')
 		return 1; /* this is NOT structured data! */
 
-	if(*p2parse != '-') { /* empty structured data? */
+	if(*p2parse == '-') { /* empty structured data? */
 		*pResult++ = '-';
 		++p2parse;
 	} else {
