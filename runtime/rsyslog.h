@@ -270,6 +270,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_FORK = -2118, /**< error during fork() */
 	RS_RET_ERR_WRITE_PIPE = -2119, /**< error writing to pipe */
 	RS_RET_RSCORE_TOO_OLD = -2120, /**< rsyslog core is too old for ... (eg this plugin) */
+	RS_RET_NONFATAL_CONFIG_ERR = -2123, /**< non-fatal error during config processing */
 	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
 
 	/* RainerScript error messages (range 1000.. 1999) */
