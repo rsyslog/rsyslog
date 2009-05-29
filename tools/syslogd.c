@@ -1323,21 +1323,26 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult)
 	if(*p2parse != '[')
 		return 1; /* this is NOT structured data! */
 
-	while(bCont) {
-		if(*p2parse == '\0') {
-			iRet = 1; /* this is not valid! */
-			bCont = 0;
-		} else if(*p2parse == '\\' && *(p2parse+1) == ']') {
-			/* this is escaped, need to copy both */
-			*pResult++ = *p2parse++;
-			*pResult++ = *p2parse++;
-		} else if(*p2parse == ']' && *(p2parse+1) == ' ') {
-			/* found end, just need to copy the ] and eat the SP */
-			*pResult++ = *p2parse;
-			p2parse += 2;
-			bCont = 0;
-		} else {
-			*pResult++ = *p2parse++;
+	if(*p2parse == '-') { /* empty structured data? */
+		*pResult++ = '-';
+		++p2parse;
+	} else {
+		while(bCont) {
+			if(*p2parse == '\0') {
+				iRet = 1; /* this is not valid! */
+				bCont = 0;
+			} else if(*p2parse == '\\' && *(p2parse+1) == ']') {
+				/* this is escaped, need to copy both */
+				*pResult++ = *p2parse++;
+				*pResult++ = *p2parse++;
+			} else if(*p2parse == ']' && *(p2parse+1) == ' ') {
+				/* found end, just need to copy the ] and eat the SP */
+				*pResult++ = *p2parse;
+				p2parse += 2;
+				bCont = 0;
+			} else {
+				*pResult++ = *p2parse++;
+			}
 		}
 	}
 
