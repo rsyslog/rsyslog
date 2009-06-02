@@ -1,43 +1,46 @@
-/* tcpsrv.c
+/* strmsrv.c
  *
- * Common code for plain TCP syslog based servers. This is currently being
- * utilized by imtcp and imgssapi.
+ * This builds a basic stream server. It handles connection creation but
+ * not any protocol. Instead, it calls a "data received" entry point of the
+ * caller with any data received, in which case the caller must react accordingly.
+ * This module works together with the netstream drivers.
  *
- * NOTE: this is *not* a generic TCP server, but one for syslog servers. For
- *       generic stream servers, please use ./runtime/strmsrv.c!
+ * There are actually two classes within the stream server code: one is
+ * the strmsrv itself, the other one is its sessions. This is a helper
+ * class to strmsrv.
  *
- * There are actually two classes within the tcpserver code: one is
- * the tcpsrv itself, the other one is its sessions. This is a helper
- * class to tcpsrv.
+ * File begun on 2009-06-01 by RGerhards based on strmsrv.c. Note that strmsrv is
+ * placed under LGPL, which is possible because I carefully evaluated and
+ * eliminated all those parts of strmsrv which were not written by me.
  *
- * The common code here calls upon specific functionality by using
- * callbacks. The specialised input modules need to set the proper
- * callbacks before the code is run. The tcpsrv then calls back
- * into the specific input modules at the appropriate time.
- *
- * NOTE: read comments in module-template.h to understand how this file
- *       works!
- *
- * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
+ * TODO: I would consider it useful to migrate tcpsrv.c/tcps_sess.c to this stream
+ * class here. The requires a little bit redesign, but should not be too hard. The
+ * core idea, already begun here, is that we still support lots of callbacks, but
+ * provide "canned" implementations for standard cases. That way, most upper-layer
+ * modules can be kept rather simple and without any extra overhead. Note that
+ * to support this, tcps_sess.c would need to extract the message reception state
+ * machine to a separate module which then is called via the DoCharRcvd() interface
+ * of this class here. -- rgerhards, 2009-06-01
  *
  * Copyright 2007, 2008, 2009 Rainer Gerhards and Adiscon GmbH.
  *
- * This file is part of rsyslog.
+ * This file is part of the rsyslog runtime library.
  *
- * Rsyslog is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * The rsyslog runtime library is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Rsyslog is distributed in the hope that it will be useful,
+ * The rsyslog runtime library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
 
 #include "config.h"
@@ -62,7 +65,7 @@
 #include "net.h"
 #include "srUtils.h"
 #include "conf.h"
-#include "tcpsrv.h"
+#include "strmsrv.h"
 #include "obj.h"
 #include "glbl.h"
 #include "netstrms.h"
@@ -74,34 +77,95 @@
 MODULE_TYPE_LIB
 
 /* defines */
-#define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
-#define TCPLSTN_MAX_DEFAULT 20 /* default for nbr of listeners */
+#define STRMSESS_MAX_DEFAULT 200 /* default for nbr of strm sessions if no number is given */
+#define STRMLSTN_MAX_DEFAULT 20 /* default for nbr of listeners */
 
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(conf)
 DEFobjCurrIf(glbl)
-DEFobjCurrIf(tcps_sess)
+DEFobjCurrIf(strms_sess)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(nssel)
 
+/* forward definitions */
+static rsRetVal create_strm_socket(strmsrv_t *pThis);
+
+/* standard callbacks, if the caller did not provide us with them (this helps keep us
+ * flexible while at the same time permits very simple upper-layer modules)
+ */
+/* this shall go into a specific ACL module! */
+static int
+isPermittedHost(struct sockaddr __attribute__((unused)) *addr, char __attribute__((unused)) *fromHostFQDN,
+		void __attribute__((unused)) *pUsrSrv, void __attribute__((unused)) *pUsrSess)
+{
+	return 1;
+}
+
+
+static rsRetVal
+doOpenLstnSocks(strmsrv_t *pSrv)
+{
+	ISOBJ_TYPE_assert(pSrv, strmsrv);
+	return create_strm_socket(pSrv);
+}
+
+
+static rsRetVal
+doRcvData(strms_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd)
+{
+	DEFiRet;
+	assert(pSess != NULL);
+	assert(piLenRcvd != NULL);
+
+	*piLenRcvd = lenBuf;
+	CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd));
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+onRegularClose(strms_sess_t *pSess)
+{
+	DEFiRet;
+	assert(pSess != NULL);
+
+	/* process any incomplete frames left over */
+	//strms_sess.PrepareClose(pSess);
+	/* Session closed */
+	strms_sess.Close(pSess);
+	RETiRet;
+}
+
+
+static rsRetVal
+onErrClose(strms_sess_t *pSess)
+{
+	DEFiRet;
+	assert(pSess != NULL);
+
+	strms_sess.Close(pSess);
+	RETiRet;
+}
+
+/* ------------------------------ end callbacks ------------------------------ */
 
 /* add new listener port to listener port list
  * rgerhards, 2009-05-21
  */
 static inline rsRetVal
-addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
+addNewLstnPort(strmsrv_t *pThis, uchar *pszPort)
 {
-	tcpLstnPortList_t *pEntry;
+	strmLstnPortList_t *pEntry;
 	DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	/* create entry */
-	CHKmalloc(pEntry = malloc(sizeof(tcpLstnPortList_t)));
+	CHKmalloc(pEntry = malloc(sizeof(strmLstnPortList_t)));
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
 	CHKmalloc(pEntry->pszInputName = ustrdup(pThis->pszInputName));
@@ -115,19 +179,19 @@ finalize_it:
 }
 
 
-/* configure TCP listener settings.
+/* configure STRM listener settings.
  * Note: pszPort is handed over to us - the caller MUST NOT free it!
  * rgerhards, 2008-03-20
  */
 static rsRetVal
-configureTCPListen(tcpsrv_t *pThis, uchar *pszPort)
+configureSTRMListen(strmsrv_t *pThis, uchar *pszPort)
 {
 	int i;
 	uchar *pPort = pszPort;
 	DEFiRet;
 
 	assert(pszPort != NULL);
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	/* extract port */
 	i = 0;
@@ -138,7 +202,7 @@ configureTCPListen(tcpsrv_t *pThis, uchar *pszPort)
 	if(i >= 0 && i <= 65535) {
 		CHKiRet(addNewLstnPort(pThis, pszPort));
 	} else {
-		errmsg.LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", pszPort);
+		errmsg.LogError(0, NO_ERRCODE, "Invalid STRM listen port %s - ignored.\n", pszPort);
 	}
 
 finalize_it:
@@ -150,16 +214,16 @@ finalize_it:
  * returns 0 if OK, somewhat else otherwise
  */
 static rsRetVal
-TCPSessTblInit(tcpsrv_t *pThis)
+STRMSessTblInit(strmsrv_t *pThis)
 {
 	DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	assert(pThis->pSessions == NULL);
 
-	dbgprintf("Allocating buffer for %d TCP sessions.\n", pThis->iSessMax);
-	if((pThis->pSessions = (tcps_sess_t **) calloc(pThis->iSessMax, sizeof(tcps_sess_t *))) == NULL) {
-		dbgprintf("Error: TCPSessInit() could not alloc memory for TCP session table.\n");
+	dbgprintf("Allocating buffer for %d STRM sessions.\n", pThis->iSessMax);
+	if((pThis->pSessions = (strms_sess_t **) calloc(pThis->iSessMax, sizeof(strms_sess_t *))) == NULL) {
+		dbgprintf("Error: STRMSessInit() could not alloc memory for STRM session table.\n");
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
 
@@ -173,11 +237,11 @@ finalize_it:
  * entry (0 or higher).
  */
 static int
-TCPSessTblFindFreeSpot(tcpsrv_t *pThis)
+STRMSessTblFindFreeSpot(strmsrv_t *pThis)
 {
 	register int i;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	for(i = 0 ; i < pThis->iSessMax ; ++i) {
 		if(pThis->pSessions[i] == NULL)
@@ -197,12 +261,12 @@ TCPSessTblFindFreeSpot(tcpsrv_t *pThis)
  * session table.
  */
 static int
-TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
+STRMSessGetNxtSess(strmsrv_t *pThis, int iCurr)
 {
 	register int i;
 
 	BEGINfunc
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	assert(pThis->pSessions != NULL);
 	for(i = iCurr + 1 ; i < pThis->iSessMax ; ++i) {
 		if(pThis->pSessions[i] != NULL)
@@ -214,27 +278,27 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 }
 
 
-/* De-Initialize TCP listner sockets.
+/* De-Initialize STRM listner sockets.
  * This function deinitializes everything, including freeing the
- * session table. No TCP listen receive operations are permitted
+ * session table. No STRM listen receive operations are permitted
  * unless the subsystem is reinitialized.
  * rgerhards, 2007-06-21
  */
-static void deinit_tcp_listener(tcpsrv_t *pThis)
+static void deinit_strm_listener(strmsrv_t *pThis)
 {
 	int i;
-	tcpLstnPortList_t *pEntry;
-	tcpLstnPortList_t *pDel;
+	strmLstnPortList_t *pEntry;
+	strmLstnPortList_t *pDel;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	if(pThis->pSessions != NULL) {
-		/* close all TCP connections! */
-		i = TCPSessGetNxtSess(pThis, -1);
+		/* close all STRM connections! */
+		i = STRMSessGetNxtSess(pThis, -1);
 		while(i != -1) {
-			tcps_sess.Destruct(&pThis->pSessions[i]);
+			strms_sess.Destruct(&pThis->pSessions[i]);
 			/* now get next... */
-			i = TCPSessGetNxtSess(pThis, i);
+			i = STRMSessGetNxtSess(pThis, i);
 		}
 		
 		/* we are done with the session table - so get rid of it...  */
@@ -242,7 +306,7 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
 		pThis->pSessions = NULL; /* just to make sure... */
 	}
 
-	/* free list of tcp listen ports */
+	/* free list of strm listen ports */
 	pEntry = pThis->pLstnPorts;
 	while(pEntry != NULL) {
 		free(pEntry->pszPort);
@@ -263,16 +327,16 @@ static void deinit_tcp_listener(tcpsrv_t *pThis)
  * invoked from the netstrm class. -- rgerhards, 2008-04-23
  */
 static rsRetVal
-addTcpLstn(void *pUsr, netstrm_t *pLstn)
+addStrmLstn(void *pUsr, netstrm_t *pLstn)
 {
-	tcpLstnPortList_t *pPortList = (tcpLstnPortList_t *) pUsr;
-	tcpsrv_t *pThis = pPortList->pSrv;
+	strmLstnPortList_t *pPortList = (strmLstnPortList_t *) pUsr;
+	strmsrv_t *pThis = pPortList->pSrv;
 	DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	ISOBJ_TYPE_assert(pLstn, netstrm);
 
-	if(pThis->iLstnMax >= TCPLSTN_MAX_DEFAULT)
+	if(pThis->iLstnMax >= STRMLSTN_MAX_DEFAULT)
 		ABORT_FINALIZE(RS_RET_MAX_LSTN_REACHED);
 
 	pThis->ppLstn[pThis->iLstnMax] = pLstn;
@@ -284,62 +348,50 @@ finalize_it:
 }
 
 
-/* Initialize TCP listener socket for a single port
+/* Initialize STRM listener socket for a single port
  * rgerhards, 2009-05-21
  */
 static inline rsRetVal
-initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry)
+initSTRMListener(strmsrv_t *pThis, strmLstnPortList_t *pPortEntry)
 {
 	DEFiRet;
-	uchar *TCPLstnPort;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	assert(pPortEntry != NULL);
 
-	if(!ustrcmp(pPortEntry->pszPort, UCHAR_CONSTANT("0")))
-		TCPLstnPort = UCHAR_CONSTANT("514");
-		/* use default - we can not do service db update, because there is
-		 * no IANA-assignment for syslog/tcp. In the long term, we might
-		 * re-use RFC 3195 port of 601, but that would probably break to
-		 * many existing configurations.
-		 * rgerhards, 2007-06-28
-		 */
-	else
-		TCPLstnPort = pPortEntry->pszPort;
-
 	/* TODO: add capability to specify local listen address! */
-	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addTcpLstn, TCPLstnPort, NULL, pThis->iSessMax));
+	CHKiRet(netstrm.LstnInit(pThis->pNS, (void*)pPortEntry, addStrmLstn, pPortEntry->pszPort, NULL, pThis->iSessMax));
 
 finalize_it:
 	RETiRet;
 }
 
 
-/* Initialize TCP sockets (for listener) and listens on them */
+/* Initialize STRM sockets (for listener) and listens on them */
 static rsRetVal
-create_tcp_socket(tcpsrv_t *pThis)
+create_strm_socket(strmsrv_t *pThis)
 {
-	tcpLstnPortList_t *pEntry;
+	strmLstnPortList_t *pEntry;
 	DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	/* init all configured ports */
 	pEntry = pThis->pLstnPorts;
 	while(pEntry != NULL) {
-		CHKiRet(initTCPListener(pThis, pEntry));
+		CHKiRet(initSTRMListener(pThis, pEntry));
 		pEntry = pEntry->pNext;
 	}
 
 	/* OK, we had success. Now it is also time to
 	 * initialize our connections
 	 */
-	if(TCPSessTblInit(pThis) != 0) {
+	if(STRMSessTblInit(pThis) != 0) {
 		/* OK, we are in some trouble - we could not initialize the
 		 * session table, so we can not continue. We need to free all
 		 * we have assigned so far, because we can not really use it...
 		 */
-		errmsg.LogError(0, RS_RET_ERR, "Could not initialize TCP session table, suspending TCP message reception.");
+		errmsg.LogError(0, RS_RET_ERR, "Could not initialize STRM session table, suspending STRM message reception.");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -348,8 +400,8 @@ finalize_it:
 }
 
 
-/* Accept new TCP connection; make entry in session table. If there
- * is no more space left in the connection table, the new TCP
+/* Accept new STRM connection; make entry in session table. If there
+ * is no more space left in the connection table, the new STRM
  * connection is immediately dropped.
  * ppSess has a pointer to the newly created session, if it succeeds.
  * If it does not succeed, no session is created and ppSess is
@@ -359,35 +411,33 @@ finalize_it:
  * rgerhards, 2008-03-02
  */
 static rsRetVal
-SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, netstrm_t *pStrm)
+SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSess, netstrm_t *pStrm)
 {
 	DEFiRet;
-	tcps_sess_t *pSess = NULL;
+	strms_sess_t *pSess = NULL;
 	netstrm_t *pNewStrm = NULL;
 	int iSess = -1;
 	struct sockaddr_storage *addr;
 	uchar *fromHostFQDN = NULL;
 	uchar *fromHostIP = NULL;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	assert(pLstnInfo != NULL);
 
 	CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm));
 
 	/* Add to session list */
-	iSess = TCPSessTblFindFreeSpot(pThis);
+	iSess = STRMSessTblFindFreeSpot(pThis);
 	if(iSess == -1) {
 		errno = 0;
-		errmsg.LogError(0, RS_RET_MAX_SESS_REACHED, "too many tcp sessions - dropping incoming request");
+		errmsg.LogError(0, RS_RET_MAX_SESS_REACHED, "too many strm sessions - dropping incoming request");
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	}
 
 	/* we found a free spot and can construct our session object */
-	CHKiRet(tcps_sess.Construct(&pSess));
-	CHKiRet(tcps_sess.SetTcpsrv(pSess, pThis));
-	CHKiRet(tcps_sess.SetLstnInfo(pSess, pLstnInfo));
-	if(pThis->OnMsgReceive != NULL)
-		CHKiRet(tcps_sess.SetOnMsgReceive(pSess, pThis->OnMsgReceive));
+	CHKiRet(strms_sess.Construct(&pSess));
+	CHKiRet(strms_sess.SetStrmsrv(pSess, pThis));
+	CHKiRet(strms_sess.SetLstnInfo(pSess, pLstnInfo));
 
 	/* get the host name */
 	CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
@@ -399,11 +449,12 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	 * process the message but log a warning (if we are configured to do this).
 	 * rgerhards, 2005-09-26
 	 */
-	if(!pThis->pIsPermittedHost((struct sockaddr*) addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
+	if(pThis->pIsPermittedHost != NULL
+	   && !pThis->pIsPermittedHost((struct sockaddr*) addr, (char*) fromHostFQDN, pThis->pUsr, pSess->pUsr)) {
 		dbgprintf("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOption_DisallowWarning()) {
 			errno = 0;
-			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed sender %s discarded", fromHostFQDN);
+			errmsg.LogError(0, RS_RET_HOST_NOT_PERMITTED, "STRM message from disallowed sender %s discarded", fromHostFQDN);
 		}
 		ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
 	}
@@ -411,14 +462,13 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	/* OK, we have an allowed sender, so let's continue, what
 	 * means we can finally fill in the session object.
 	 */
-	CHKiRet(tcps_sess.SetHost(pSess, fromHostFQDN));
+	CHKiRet(strms_sess.SetHost(pSess, fromHostFQDN));
 	fromHostFQDN = NULL; /* we handed this string over */
-	CHKiRet(tcps_sess.SetHostIP(pSess, fromHostIP));
+	CHKiRet(strms_sess.SetHostIP(pSess, fromHostIP));
 	fromHostIP = NULL; /* we handed this string over */
-	CHKiRet(tcps_sess.SetStrm(pSess, pNewStrm));
-	pNewStrm = NULL; /* prevent it from being freed in error handler, now done in tcps_sess! */
-	CHKiRet(tcps_sess.SetMsgIdx(pSess, 0));
-	CHKiRet(tcps_sess.ConstructFinalize(pSess));
+	CHKiRet(strms_sess.SetStrm(pSess, pNewStrm));
+	pNewStrm = NULL; /* prevent it from being freed in error handler, now done in strms_sess! */
+	CHKiRet(strms_sess.ConstructFinalize(pSess));
 
 	/* check if we need to call our callback */
 	if(pThis->pOnSessAccept != NULL) {
@@ -432,7 +482,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pSess != NULL)
-			tcps_sess.Destruct(&pSess);
+			strms_sess.Destruct(&pSess);
 		if(pNewStrm != NULL)
 			netstrm.Destruct(&pNewStrm);
 		free(fromHostFQDN);
@@ -456,18 +506,18 @@ RunCancelCleanup(void *arg)
 /* This function is called to gather input. */
 #pragma GCC diagnostic ignored "-Wempty-body"
 static rsRetVal
-Run(tcpsrv_t *pThis)
+Run(strmsrv_t *pThis)
 {
 	DEFiRet;
 	int nfds;
 	int i;
-	int iTCPSess;
+	int iSTRMSess;
 	int bIsReady;
-	tcps_sess_t *pNewSess;
+	strms_sess_t *pNewSess;
 	nssel_t *pSel;
 	ssize_t iRcvd;
 
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	/* this is an endless loop - it is terminated by the framework canelling
 	 * this thread. Thus, we also need to instantiate a cancel cleanup handler
@@ -479,18 +529,18 @@ Run(tcpsrv_t *pThis)
 		// TODO: set driver
 		CHKiRet(nssel.ConstructFinalize(pSel));
 
-		/* Add the TCP listen sockets to the list of read descriptors. */
+		/* Add the STRM listen sockets to the list of read descriptors. */
 		for(i = 0 ; i < pThis->iLstnMax ; ++i) {
 			CHKiRet(nssel.Add(pSel, pThis->ppLstn[i], NSDSEL_RD));
 		}
 
 		/* do the sessions */
-		iTCPSess = TCPSessGetNxtSess(pThis, -1);
-		while(iTCPSess != -1) {
+		iSTRMSess = STRMSessGetNxtSess(pThis, -1);
+		while(iSTRMSess != -1) {
 			/* TODO: access to pNsd is NOT really CLEAN, use method... */
-			CHKiRet(nssel.Add(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD));
+			CHKiRet(nssel.Add(pSel, pThis->pSessions[iSTRMSess]->pStrm, NSDSEL_RD));
 			/* now get next... */
-			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
+			iSTRMSess = STRMSessGetNxtSess(pThis, iSTRMSess);
 		}
 
 		/* wait for io to become ready */
@@ -506,46 +556,46 @@ Run(tcpsrv_t *pThis)
 		}
 
 		/* now check the sessions */
-		iTCPSess = TCPSessGetNxtSess(pThis, -1);
-		while(nfds && iTCPSess != -1) {
-			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
+		iSTRMSess = STRMSessGetNxtSess(pThis, -1);
+		while(nfds && iSTRMSess != -1) {
+			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iSTRMSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
 				char buf[8*1024]; /* reception buffer - may hold a partial or multiple messages */
-				dbgprintf("netstream %p with new data\n", pThis->pSessions[iTCPSess]->pStrm);
+				dbgprintf("netstream %p with new data\n", pThis->pSessions[iSTRMSess]->pStrm);
 
 				/* Receive message */
-				iRet = pThis->pRcvData(pThis->pSessions[iTCPSess], buf, sizeof(buf), &iRcvd);
+				iRet = pThis->pRcvData(pThis->pSessions[iSTRMSess], buf, sizeof(buf), &iRcvd);
 				switch(iRet) {
 				case RS_RET_CLOSED:
-					pThis->pOnRegularClose(pThis->pSessions[iTCPSess]);
-					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
+					pThis->pOnRegularClose(pThis->pSessions[iSTRMSess]);
+					strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
 					break;
 				case RS_RET_RETRY:
 					/* we simply ignore retry - this is not an error, but we also have not received anything */
 					break;
 				case RS_RET_OK:
 					/* valid data received, process it! */
-					if(tcps_sess.DataRcvd(pThis->pSessions[iTCPSess], buf, iRcvd) != RS_RET_OK) {
+					if(strms_sess.DataRcvd(pThis->pSessions[iSTRMSess], buf, iRcvd) != RS_RET_OK) {
 						/* in this case, something went awfully wrong.
 						 * We are instructed to terminate the session.
 						 */
-						errmsg.LogError(0, NO_ERRCODE, "Tearing down TCP Session %d - see "
-							    "previous messages for reason(s)\n", iTCPSess);
-						pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
-						tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
+						errmsg.LogError(0, NO_ERRCODE, "Tearing down STRM Session %d - see "
+							    "previous messages for reason(s)\n", iSTRMSess);
+						pThis->pOnErrClose(pThis->pSessions[iSTRMSess]);
+						strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
 					}
 					break;
 				default:
 					errno = 0;
 					errmsg.LogError(0, iRet, "netstream session %p will be closed due to error\n",
-							pThis->pSessions[iTCPSess]->pStrm);
-					pThis->pOnErrClose(pThis->pSessions[iTCPSess]);
-					tcps_sess.Destruct(&pThis->pSessions[iTCPSess]);
+							pThis->pSessions[iSTRMSess]->pStrm);
+					pThis->pOnErrClose(pThis->pSessions[iSTRMSess]);
+					strms_sess.Destruct(&pThis->pSessions[iSTRMSess]);
 					break;
 				}
 				--nfds; /* indicate we have processed one */
 			}
-			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
+			iSTRMSess = STRMSessGetNxtSess(pThis, iSTRMSess);
 		}
 		CHKiRet(nssel.Destruct(&pSel));
 finalize_it: /* this is a very special case - this time only we do not exit the function,
@@ -566,19 +616,26 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 
 
 /* Standard-Constructor */
-BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macro! */
-	pThis->iSessMax = TCPSESS_MAX_DEFAULT; /* TODO: useful default ;) */
-	pThis->addtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
-	pThis->OnMsgReceive = NULL;
-ENDobjConstruct(tcpsrv)
+BEGINobjConstruct(strmsrv) /* be sure to specify the object type also in END macro! */
+	pThis->iSessMax = STRMSESS_MAX_DEFAULT; /* TODO: useful default ;) */
+	/* set default callbacks (used if caller does not overwrite them) */
+	pThis->pIsPermittedHost = isPermittedHost;
+	pThis->OpenLstnSocks = doOpenLstnSocks;
+	pThis->pRcvData = doRcvData;
+	pThis->pOnRegularClose = onRegularClose;
+	pThis->pOnErrClose = onErrClose;
+	/* session specific callbacks */
+	//pThis->OnSessConstructFinalize =
+	//pThis->pOnSessDestruct =
+ENDobjConstruct(strmsrv)
 
 
 /* ConstructionFinalizer */
 static rsRetVal
-tcpsrvConstructFinalize(tcpsrv_t *pThis)
+strmsrvConstructFinalize(strmsrv_t *pThis)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 
 	/* prepare network stream subsystem */
 	CHKiRet(netstrms.Construct(&pThis->pNS));
@@ -591,8 +648,8 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	CHKiRet(netstrms.ConstructFinalize(pThis->pNS));
 
 	/* set up listeners */
-	CHKmalloc(pThis->ppLstn = calloc(TCPLSTN_MAX_DEFAULT, sizeof(netstrm_t*)));
-	CHKmalloc(pThis->ppLstnPort = calloc(TCPLSTN_MAX_DEFAULT, sizeof(tcpLstnPortList_t*)));
+	CHKmalloc(pThis->ppLstn = calloc(STRMLSTN_MAX_DEFAULT, sizeof(netstrm_t*)));
+	CHKmalloc(pThis->ppLstnPort = calloc(STRMLSTN_MAX_DEFAULT, sizeof(strmLstnPortList_t*)));
 	iRet = pThis->OpenLstnSocks(pThis);
 
 finalize_it:
@@ -604,13 +661,13 @@ finalize_it:
 }
 
 
-/* destructor for the tcpsrv object */
-BEGINobjDestruct(tcpsrv) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(tcpsrv)
+/* destructor for the strmsrv object */
+BEGINobjDestruct(strmsrv) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(strmsrv)
 	if(pThis->OnDestruct != NULL)
 		pThis->OnDestruct(pThis->pUsr);
 
-	deinit_tcp_listener(pThis);
+	deinit_strm_listener(pThis);
 
 	if(pThis->pNS != NULL)
 		netstrms.Destruct(&pThis->pNS);
@@ -618,17 +675,17 @@ CODESTARTobjDestruct(tcpsrv)
 	free(pThis->ppLstn);
 	free(pThis->ppLstnPort);
 	free(pThis->pszInputName);
-ENDobjDestruct(tcpsrv)
+ENDobjDestruct(strmsrv)
 
 
-/* debugprint for the tcpsrv object */
-BEGINobjDebugPrint(tcpsrv) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(tcpsrv)
-ENDobjDebugPrint(tcpsrv)
+/* debugprint for the strmsrv object */
+BEGINobjDebugPrint(strmsrv) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDebugPrint(strmsrv)
+ENDobjDebugPrint(strmsrv)
 
 /* set functions */
 static rsRetVal
-SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void*, void*))
+SetCBIsPermittedHost(strmsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void*, void*))
 {
 	DEFiRet;
 	pThis->pIsPermittedHost = pCB;
@@ -636,23 +693,7 @@ SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fr
 }
 
 static rsRetVal
-SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*))
-{
-	DEFiRet;
-	pThis->pRcvData = pRcvData;
-	RETiRet;
-}
-
-static rsRetVal
-SetCBOnListenDeinit(tcpsrv_t *pThis, int (*pCB)(void*))
-{
-	DEFiRet;
-	pThis->pOnListenDeinit = pCB;
-	RETiRet;
-}
-
-static rsRetVal
-SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t*))
+SetCBOnSessAccept(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t*, strms_sess_t*))
 {
 	DEFiRet;
 	pThis->pOnSessAccept = pCB;
@@ -660,7 +701,7 @@ SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t*))
 }
 
 static rsRetVal
-SetCBOnDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
 {
 	DEFiRet;
 	pThis->OnDestruct = pCB;
@@ -668,7 +709,7 @@ SetCBOnDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessConstructFinalize(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnSessConstructFinalize(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
 {
 	DEFiRet;
 	pThis->OnSessConstructFinalize = pCB;
@@ -676,7 +717,7 @@ SetCBOnSessConstructFinalize(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
+SetCBOnSessDestruct(strmsrv_t *pThis, rsRetVal (*pCB)(void*))
 {
 	DEFiRet;
 	pThis->pOnSessDestruct = pCB;
@@ -684,7 +725,7 @@ SetCBOnSessDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnRegularClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
+SetCBOnRegularClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*))
 {
 	DEFiRet;
 	pThis->pOnRegularClose = pCB;
@@ -692,7 +733,7 @@ SetCBOnRegularClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
 }
 
 static rsRetVal
-SetCBOnErrClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
+SetCBOnErrClose(strmsrv_t *pThis, rsRetVal (*pCB)(strms_sess_t*))
 {
 	DEFiRet;
 	pThis->pOnErrClose = pCB;
@@ -700,7 +741,7 @@ SetCBOnErrClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t*))
 }
 
 static rsRetVal
-SetCBOpenLstnSocks(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*))
+SetCBOpenLstnSocks(strmsrv_t *pThis, rsRetVal (*pCB)(strmsrv_t*))
 {
 	DEFiRet;
 	pThis->OpenLstnSocks = pCB;
@@ -708,7 +749,7 @@ SetCBOpenLstnSocks(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*))
 }
 
 static rsRetVal
-SetUsrP(tcpsrv_t *pThis, void *pUsr)
+SetUsrP(strmsrv_t *pThis, void *pUsr)
 {
 	DEFiRet;
 	pThis->pUsr = pUsr;
@@ -716,34 +757,21 @@ SetUsrP(tcpsrv_t *pThis, void *pUsr)
 }
 
 static rsRetVal
-SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int))
+SetOnCharRcvd(strmsrv_t *pThis, rsRetVal (*OnCharRcvd)(strms_sess_t*, uchar))
 {
 	DEFiRet;
-	assert(OnMsgReceive != NULL);
-	pThis->OnMsgReceive = OnMsgReceive;
+	assert(OnCharRcvd != NULL);
+	pThis->OnCharRcvd = OnCharRcvd;
 	RETiRet;
 }
-
-
-
-/* Set additional framing to use (if any) -- rgerhards, 2008-12-10 */
-static rsRetVal
-SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	pThis->addtlFrameDelim = iDelim;
-	RETiRet;
-}
-
 
 /* Set the input name to use -- rgerhards, 2008-12-10 */
 static rsRetVal
-SetInputName(tcpsrv_t *pThis, uchar *name)
+SetInputName(strmsrv_t *pThis, uchar *name)
 {
 	uchar *pszName;
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	if(name == NULL)
 		pszName = NULL;
 	else
@@ -762,10 +790,10 @@ finalize_it:
 
 /* set the driver mode -- rgerhards, 2008-04-30 */
 static rsRetVal
-SetDrvrMode(tcpsrv_t *pThis, int iMode)
+SetDrvrMode(strmsrv_t *pThis, int iMode)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	pThis->iDrvrMode = iMode;
 	RETiRet;
 }
@@ -773,10 +801,10 @@ SetDrvrMode(tcpsrv_t *pThis, int iMode)
 
 /* set the driver authentication mode -- rgerhards, 2008-05-19 */
 static rsRetVal
-SetDrvrAuthMode(tcpsrv_t *pThis, uchar *mode)
+SetDrvrAuthMode(strmsrv_t *pThis, uchar *mode)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	CHKmalloc(pThis->pszDrvrAuthMode = ustrdup(mode));
 finalize_it:
 	RETiRet;
@@ -785,10 +813,10 @@ finalize_it:
 
 /* set the driver's permitted peers -- rgerhards, 2008-05-19 */
 static rsRetVal
-SetDrvrPermPeers(tcpsrv_t *pThis, permittedPeers_t *pPermPeers)
+SetDrvrPermPeers(strmsrv_t *pThis, permittedPeers_t *pPermPeers)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	pThis->pPermPeers = pPermPeers;
 	RETiRet;
 }
@@ -804,10 +832,10 @@ SetDrvrPermPeers(tcpsrv_t *pThis, permittedPeers_t *pPermPeers)
  * rgerhards, 2009-04-09
  */
 static rsRetVal
-SetSessMax(tcpsrv_t *pThis, int iMax)
+SetSessMax(strmsrv_t *pThis, int iMax)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	ISOBJ_TYPE_assert(pThis, strmsrv);
 	pThis->iSessMax = iMax;
 	RETiRet;
 }
@@ -816,9 +844,9 @@ SetSessMax(tcpsrv_t *pThis, int iMax)
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
-BEGINobjQueryInterface(tcpsrv)
-CODESTARTobjQueryInterface(tcpsrv)
-	if(pIf->ifVersion != tcpsrvCURR_IF_VERSION) { /* check for current version, increment on each change */
+BEGINobjQueryInterface(strmsrv)
+CODESTARTobjQueryInterface(strmsrv)
+	if(pIf->ifVersion != strmsrvCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
 
@@ -827,46 +855,42 @@ CODESTARTobjQueryInterface(tcpsrv)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->DebugPrint = tcpsrvDebugPrint;
-	pIf->Construct = tcpsrvConstruct;
-	pIf->ConstructFinalize = tcpsrvConstructFinalize;
-	pIf->Destruct = tcpsrvDestruct;
+	pIf->DebugPrint = strmsrvDebugPrint;
+	pIf->Construct = strmsrvConstruct;
+	pIf->ConstructFinalize = strmsrvConstructFinalize;
+	pIf->Destruct = strmsrvDestruct;
 
-	//pIf->SessAccept = SessAccept;
-	pIf->configureTCPListen = configureTCPListen;
-	pIf->create_tcp_socket = create_tcp_socket;
+	pIf->configureSTRMListen = configureSTRMListen;
+	pIf->create_strm_socket = create_strm_socket;
 	pIf->Run = Run;
 
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
-	pIf->SetAddtlFrameDelim = SetAddtlFrameDelim;
 	pIf->SetSessMax = SetSessMax;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
 	pIf->SetCBIsPermittedHost = SetCBIsPermittedHost;
 	pIf->SetCBOpenLstnSocks = SetCBOpenLstnSocks;
-	pIf->SetCBRcvData = SetCBRcvData;
-	pIf->SetCBOnListenDeinit = SetCBOnListenDeinit;
 	pIf->SetCBOnSessAccept = SetCBOnSessAccept;
 	pIf->SetCBOnSessConstructFinalize = SetCBOnSessConstructFinalize;
 	pIf->SetCBOnSessDestruct = SetCBOnSessDestruct;
 	pIf->SetCBOnDestruct = SetCBOnDestruct;
 	pIf->SetCBOnRegularClose = SetCBOnRegularClose;
 	pIf->SetCBOnErrClose = SetCBOnErrClose;
-	pIf->SetOnMsgReceive = SetOnMsgReceive;
+	pIf->SetOnCharRcvd = SetOnCharRcvd;
 
 finalize_it:
-ENDobjQueryInterface(tcpsrv)
+ENDobjQueryInterface(strmsrv)
 
 
 /* exit our class
  * rgerhards, 2008-03-10
  */
-BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(tcpsrv)
+BEGINObjClassExit(strmsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(strmsrv)
 	/* release objects we no longer need */
-	objRelease(tcps_sess, DONT_LOAD_LIB);
+	objRelease(strms_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -874,28 +898,28 @@ CODESTARTObjClassExit(tcpsrv)
 	objRelease(nssel, DONT_LOAD_LIB);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(net, LM_NET_FILENAME);
-ENDObjClassExit(tcpsrv)
+ENDObjClassExit(strmsrv)
 
 
 /* Initialize our class. Must be called as the very first method
  * before anything else is called inside this class.
  * rgerhards, 2008-02-29
  */
-BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
+BEGINObjClassInit(strmsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(netstrms, LM_NETSTRMS_FILENAME));
 	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
 	CHKiRet(objUse(nssel, DONT_LOAD_LIB));
-	CHKiRet(objUse(tcps_sess, DONT_LOAD_LIB));
+	CHKiRet(objUse(strms_sess, DONT_LOAD_LIB));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 
 	/* set our own handlers */
-	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);
-	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, tcpsrvConstructFinalize);
-ENDObjClassInit(tcpsrv)
+	OBJSetMethodHandler(objMethod_DEBUGPRINT, strmsrvDebugPrint);
+	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strmsrvConstructFinalize);
+ENDObjClassInit(strmsrv)
 
 
 /* --------------- here now comes the plumbing that makes as a library module --------------- */
@@ -904,8 +928,8 @@ ENDObjClassInit(tcpsrv)
 BEGINmodExit
 CODESTARTmodExit
 	/* de-init in reverse order! */
-	tcpsrvClassExit();
-	tcps_sessClassExit();
+	strmsrvClassExit();
+	strms_sessClassExit();
 ENDmodExit
 
 
@@ -920,8 +944,8 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(tcps_sessClassInit(pModInfo));
-	CHKiRet(tcpsrvClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(strms_sessClassInit(pModInfo));
+	CHKiRet(strmsrvClassInit(pModInfo)); /* must be done after strms_sess, as we use it */
 ENDmodInit
 
 /* vim:set ai:

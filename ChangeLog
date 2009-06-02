@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
+- added a generic network stream server (in addition to rather specific
+  syslog tcp server)
 - added ability for the UDP output action to rebind its send socket after
   sending n messages. New config directive $ActionSendUDPRebindInterval
   added for the purpose. By default, rebinding is disabled. This is 
