@@ -434,6 +434,10 @@ SessAccept(strmsrv_t *pThis, strmLstnPortList_t *pLstnInfo, strms_sess_t **ppSes
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	}
 
+	if(pThis->bUseKeepAlive) {
+		CHKiRet(netstrm.EnableKeepAlive(pNewStrm));
+	}
+
 	/* we found a free spot and can construct our session object */
 	CHKiRet(strms_sess.Construct(&pSess));
 	CHKiRet(strms_sess.SetStrmsrv(pSess, pThis));
@@ -757,6 +761,15 @@ SetUsrP(strmsrv_t *pThis, void *pUsr)
 }
 
 static rsRetVal
+SetKeepAlive(strmsrv_t *pThis, int iVal)
+{
+	DEFiRet;
+	dbgprintf("keep-alive set to %d\n", iVal);
+	pThis->bUseKeepAlive = iVal;
+	RETiRet;
+}
+
+static rsRetVal
 SetOnCharRcvd(strmsrv_t *pThis, rsRetVal (*OnCharRcvd)(strms_sess_t*, uchar))
 {
 	DEFiRet;
@@ -864,6 +877,7 @@ CODESTARTobjQueryInterface(strmsrv)
 	pIf->create_strm_socket = create_strm_socket;
 	pIf->Run = Run;
 
+	pIf->SetKeepAlive = SetKeepAlive;
 	pIf->SetUsrP = SetUsrP;
 	pIf->SetInputName = SetInputName;
 	pIf->SetSessMax = SetSessMax;

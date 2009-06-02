@@ -38,6 +38,7 @@ struct strmLstnPortList_s {
 /* the strmsrv object */
 struct strmsrv_s {
 	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
+	int bUseKeepAlive;	/**< use socket layer KEEPALIVE handling? */
 	netstrms_t *pNS;	/**< pointer to network stream subsystem */
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
@@ -80,6 +81,7 @@ BEGINinterface(strmsrv) /* name must also be changed in ENDinterface macro! */
 	/* set methods */
 	rsRetVal (*SetAddtlFrameDelim)(strmsrv_t*, int);
 	rsRetVal (*SetInputName)(strmsrv_t*, uchar*);
+	rsRetVal (*SetKeepAlive)(strmsrv_t*, int);
 	rsRetVal (*SetUsrP)(strmsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(strmsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));
 	rsRetVal (*SetCBOpenLstnSocks)(strmsrv_t *, rsRetVal (*)(strmsrv_t*));

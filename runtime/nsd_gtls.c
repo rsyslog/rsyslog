@@ -1560,6 +1560,16 @@ finalize_it:
 	RETiRet;
 }
 
+/* Enable KEEPALIVE handling on the socket.
+ * rgerhards, 2009-06-02
+ */
+static rsRetVal
+EnableKeepAlive(nsd_t *pNsd)
+{
+	return nsd_ptcp.EnableKeepAlive(pNsd);
+}
+
+
 
 /* open a connection to a remote host (server). With GnuTLS, we always
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
@@ -1669,6 +1679,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
 	pIf->GetRemAddr = GetRemAddr;
+	pIf->EnableKeepAlive = EnableKeepAlive;
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 
