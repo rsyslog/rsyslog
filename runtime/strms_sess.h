@@ -54,6 +54,7 @@ BEGINinterface(strms_sess) /* name must also be changed in ENDinterface macro! *
 	rsRetVal (*SetStrmsrv)(strms_sess_t *pThis, struct strmsrv_s *pSrv);
 	rsRetVal (*SetLstnInfo)(strms_sess_t *pThis, strmLstnPortList_t *pLstnInfo);
 	rsRetVal (*SetUsrP)(strms_sess_t*, void*);
+	void*    (*GetUsrP)(strms_sess_t*);
 	rsRetVal (*SetHost)(strms_sess_t *pThis, uchar*);
 	rsRetVal (*SetHostIP)(strms_sess_t *pThis, uchar*);
 	rsRetVal (*SetStrm)(strms_sess_t *pThis, netstrm_t*);

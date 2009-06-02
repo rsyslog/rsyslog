@@ -64,7 +64,7 @@ ENDobjConstruct(strms_sess)
 /* ConstructionFinalizer
  */
 static rsRetVal
-strms_sessConstructFinalize(strms_sess_t __attribute__((unused)) *pThis)
+strms_sessConstructFinalize(strms_sess_t *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strms_sess);
@@ -170,6 +170,13 @@ SetUsrP(strms_sess_t *pThis, void *pUsr)
 }
 
 
+static void *
+GetUsrP(strms_sess_t *pThis)
+{
+	return pThis->pUsr;
+}
+
+
 /* Closes a STRM session
  * No attention is paid to the return code
  * of close, so potential-double closes are not detected.
@@ -248,6 +255,7 @@ CODESTARTobjQueryInterface(strms_sess)
 	pIf->DataRcvd = DataRcvd;
 
 	pIf->SetUsrP = SetUsrP;
+	pIf->GetUsrP = GetUsrP;
 	pIf->SetStrmsrv = SetStrmsrv;
 	pIf->SetLstnInfo = SetLstnInfo;
 	pIf->SetHost = SetHost;
