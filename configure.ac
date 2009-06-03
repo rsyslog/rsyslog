@@ -186,6 +186,7 @@ AC_ARG_ENABLE(zlib,
          esac],
         [enable_zlib=yes]
 )
+AM_CONDITIONAL(ENABLE_ZLIB, test x$enable_zlib = xyes)
 if test "$enable_zlib" = "yes"; then
 	AC_CHECK_HEADER(zlib.h, [zlib_header="yes"], [zlib_header="no" enable_zlib="false"])
 	if test "$zlib_header" = "yes"; then

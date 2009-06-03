@@ -1,12 +1,8 @@
-/* This is the header file for unicode support.
- * 
- * Currently, this is a dummy module. 
- * The following functions are wrappers which hopefully enable us to move
- * from 8-bit chars to unicode with relative ease when we finally attack this
+/* The zlibw object. It encapsulates the zlib functionality. The primary
+ * purpose of this wrapper class is to enable rsyslogd core to be build without
+ * zlib libraries.
  *
- * Begun 2009-05-21 RGerhards
- *
- * Copyright (C) 2009 by Rainer Gerhards and Adiscon GmbH
+ * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -26,30 +22,24 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
-#ifndef INCLUDED_UNICODE_HELPER_H
-#define INCLUDED_UNICODE_HELPER_H
+#ifndef INCLUDED_ZLIBW_H
+#define INCLUDED_ZLIBW_H
 
-#include <string.h>
+#include <zlib.h>
 
-static inline int ustrcmp(uchar *psz1, uchar *psz2)
-{
-	return strcmp((char*) psz1, (char*) psz2);
-}
-
-static inline int ustrlen(uchar *psz)
-{
-	return strlen((char*) psz);
-}
-
-static inline uchar* ustrdup(uchar *psz)
-{
-	return (uchar*) strdup((char*)psz);
-}
+/* interfaces */
+BEGINinterface(zlibw) /* name must also be changed in ENDinterface macro! */
+	int (*DeflateInit)(z_streamp strm, int);
+	int (*Deflate)(z_streamp strm, int);
+	int (*DeflateEnd)(z_streamp strm);
+ENDinterface(zlibw)
+#define zlibwCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 
-#define UCHAR_CONSTANT(x) ((uchar*) (x))
-#define CHAR_CONVERT(x) ((char*) (x))
+/* prototypes */
+PROTOTYPEObj(zlibw);
 
-#endif /* multi-include protection */
-/* vim:set ai:
- */
+/* the name of our library binary */
+#define LM_ZLIBW_FILENAME "lmzlibw"
+
+#endif /* #ifndef INCLUDED_ZLIBW_H */

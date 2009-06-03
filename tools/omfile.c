@@ -12,7 +12,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007, 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -57,6 +57,8 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "unicode-helper.h"
+#include "zlibw.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -64,15 +66,29 @@ MODULE_TYPE_OUTPUT
  */
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(zlibw)
 
 /* The following structure is a dynafile name cache entry.
  */
 struct s_dynaFileCacheEntry {
-	uchar *pName;	/* name currently open, if dynamic name */
+	uchar *pName;		/* name currently open, if dynamic name */
 	short	fd;		/* name associated with file name in cache */
 	time_t	lastUsed;	/* for LRU - last access */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
+
+/* the output buffer structure */
+// TODO: later make this part of the dynafile cache!
+#define OUTBUF_LEN 128 // TODO: make dynamic!
+typedef struct {
+	uchar   pszBuf[OUTBUF_LEN];	/* output buffer for buffered writing */
+	size_t	lenBuf;		/* max size of buffer */
+	size_t	iBuf;		/* current buffer index */
+	int	fd;		/* which file descriptor is this buf for? */
+	/* elements for zip writing */
+	z_stream zStrm;
+	char zipBuf[OUTBUF_LEN];
+} outbuf_t;
 
 
 /* globals for default values */
@@ -92,7 +108,8 @@ static uchar	*pszTplName = NULL; /* name of the default template to use */
 
 typedef struct _instanceData {
 	uchar	f_fname[MAXFNAME];/* file or template name (display only) */
-	short	fd;		  /* file descriptor for (current) file */
+	short	fd;		/* file descriptor for (current) file */
+	outbuf_t *poBuf;	/* output buffer */
 	enum {
 		eTypeFILE,
 		eTypeTTY,
@@ -132,7 +149,7 @@ ENDisCompatibleWithFeature
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	if(pData->bDynamicName) {
-		printf("[dynamic]\n\ttemplate='%s'"
+		dbgprintf("[dynamic]\n\ttemplate='%s'"
 		       "\tfile cache size=%d\n"
 		       "\tcreate directories: %s\n"
 		       "\tfile owner %d, group %d\n"
@@ -146,9 +163,9 @@ CODESTARTdbgPrintInstInfo
 			pData->bFailOnChown ? "yes" : "no"
 			);
 	} else { /* regular file */
-		printf("%s", pData->f_fname);
+		dbgprintf("%s", pData->f_fname);
 		if (pData->fd == -1)
-			printf(" (unused)");
+			dbgprintf(" (unused)");
 	}
 ENDdbgPrintInstInfo
 
@@ -321,7 +338,8 @@ int resolveFileSizeLimit(instanceData *pData)
  * function immediately returns. Parameter bFreeEntry is 1
  * if the entry should be d_free()ed and 0 if not.
  */
-static void dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
+static void
+dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 {
 	ASSERT(pCache != NULL);
 
@@ -356,7 +374,8 @@ finalize_it:
  * relevant files. Part of Shutdown and HUP processing.
  * rgerhards, 2008-10-23
  */
-static inline void dynaFileFreeCacheEntries(instanceData *pData)
+static inline void
+dynaFileFreeCacheEntries(instanceData *pData)
 {
 	register int i;
 	ASSERT(pData != NULL);
@@ -562,48 +581,32 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 }
 
 
-/* rgerhards 2004-11-11: write to a file output. This
- * will be called for all outputs using file semantics,
- * for example also for pipes.
+/* physically write the file
  */
-static rsRetVal writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
+static rsRetVal
+doPhysWrite(instanceData *pData, int fd, char *pszBuf, size_t lenBuf)
 {
 	off_t actualFileSize;
 	int iLenWritten;
 	DEFiRet;
-
 	ASSERT(pData != NULL);
 
-	/* first check if we have a dynamic file name and, if so,
-	 * check if it still is ok or a new file needs to be created
-	 */
-	if(pData->bDynamicName) {
-		if(prepareDynFile(pData, ppString[1], iMsgOpts) != 0)
-			ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
-	}
-	
-	if(pData->fd == -1) {
-		rsRetVal iRetLocal;
-		iRetLocal = prepareFile(pData, pData->f_fname);
-		if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
-			ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
-	}
-
-	/* create the message based on format specified */
+dbgprintf("doPhysWrite, fd %d, iBuf %d\n", fd, (int) lenBuf);
 again:
 	/* check if we have a file size limit and, if so,
 	 * obey to it.
 	 */
 	if(pData->f_sizeLimit != 0) {
-		actualFileSize = lseek(pData->fd, 0, SEEK_END);
+		actualFileSize = lseek(fd, 0, SEEK_END);
 		if(actualFileSize >= pData->f_sizeLimit) {
 			char errMsg[256];
 			/* for now, we simply disable a file once it is
 			 * beyond the maximum size. This is better than having
 			 * us aborted by the OS... rgerhards 2005-06-21
 			 */
-			(void) close(pData->fd);
+			(void) close(fd);
 			/* try to resolve the situation */
+			// TODO: *doesn't work, will need to use new fd !
 			if(resolveFileSizeLimit(pData) != 0) {
 				/* didn't work out, so disable... */
 				snprintf(errMsg, sizeof(errMsg),
@@ -622,13 +625,12 @@ again:
 		}
 	}
 
-	iLenWritten = write(pData->fd, ppString[0], strlen((char*)ppString[0]));
-//dbgprintf("lenwritten: %d\n", iLenWritten);
+	iLenWritten = write(fd, pszBuf, lenBuf);
 	if(iLenWritten < 0) {
 		int e = errno;
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
-		DBGPRINTF("log file (%d) write error %d: %s\n", pData->fd, e, errStr);
+		DBGPRINTF("log file (%d) write error %d: %s\n", fd, e, errStr);
 
 		/* If a named pipe is full, we suspend this action for a while */
 		if(pData->fileType == eTypePIPE && e == EAGAIN)
@@ -667,8 +669,158 @@ again:
 			errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
 		}
 	} else if (pData->bSyncFile) {
-		fsync(pData->fd);
+		fsync(fd);
 	}
+
+	pData->poBuf->iBuf = 0;
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* write the output buffer in zip mode
+ * This means we compress it first and then do a physical write.
+ */
+static rsRetVal
+doZipWrite(instanceData *pData)
+{
+	outbuf_t *poBuf;
+	z_stream strm;
+	int zRet;	/* zlib return state */
+	DEFiRet;
+	assert(pData != NULL);
+
+	poBuf = pData->poBuf; 	/* use as a shortcut */
+	strm = poBuf->zStrm;	/* another shortcut */
+
+	/* allocate deflate state */
+	strm.zalloc = Z_NULL;
+	strm.zfree = Z_NULL;
+	strm.opaque = Z_NULL;
+	zRet = zlibw.DeflateInit(&strm, 9);
+	if(zRet != Z_OK) {
+		dbgprintf("error %d returned from zlib/deflateInit()\n", zRet);
+		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+	}
+RUNLOG_STR("deflateInit() done successfully\n");
+
+	/* now doing the compression */
+	strm.avail_in = poBuf->iBuf;
+	strm.next_in = (Bytef*) poBuf->pszBuf;
+	/* run deflate() on input until output buffer not full, finish
+	   compression if all of source has been read in */
+	do {
+		dbgprintf("in deflate() loop, avail_in %d, total_in %ld\n", strm.avail_in, strm.total_in);
+		strm.avail_out = OUTBUF_LEN;
+		strm.next_out = (Bytef*) poBuf->zipBuf;
+		zRet = zlibw.Deflate(&strm, Z_FINISH);    /* no bad return value */
+		dbgprintf("after deflate, ret %d, avail_out %d\n", zRet, strm.avail_out);
+		assert(zRet != Z_STREAM_ERROR);  /* state not clobbered */
+		CHKiRet(doPhysWrite(pData, poBuf->fd, poBuf->zipBuf, OUTBUF_LEN - strm.avail_out));
+	} while (strm.avail_out == 0);
+	assert(strm.avail_in == 0);     /* all input will be used */
+
+RUNLOG_STR("deflate() should be done successfully\n");
+
+	zRet = zlibw.DeflateEnd(&strm);
+	if(zRet != Z_OK) {
+		dbgprintf("error %d returned from zlib/deflateEnd()\n", zRet);
+		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+	}
+RUNLOG_STR("deflateEnd() done successfully\n");
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* flush the output buffer
+ */
+static rsRetVal
+doFlush(instanceData *pData)
+{
+	DEFiRet;
+	assert(pData != NULL);
+
+	if(pData->poBuf->iBuf == 0)
+		FINALIZE; /* nothing to write, but make this a valid case */
+
+	if(1) { // zlib enabled!
+		CHKiRet(doZipWrite(pData));
+	} else {
+		CHKiRet(doPhysWrite(pData, pData->poBuf->fd, (char*)pData->poBuf->pszBuf, pData->poBuf->iBuf));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* do the actual write process. This function is to be called once we are ready for writing.
+ * It will do buffered writes and persist data only when the buffer is full. Note that we must
+ * be careful to detect when the file handle changed.
+ * rgerhards, 2009-06-03
+ */
+static  rsRetVal
+doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
+{
+	int i;
+	outbuf_t *poBuf;
+	DEFiRet;
+	ASSERT(pData != NULL);
+	ASSERT(pszBuf != NULL);
+
+	poBuf = pData->poBuf; 	/* use as a shortcut */
+dbgprintf("doWrite, pData->fd %d, poBuf->fd %d, iBuf %ld, lenBuf %ld\n",
+pData->fd, pData->poBuf->fd, pData->poBuf->iBuf, poBuf->lenBuf);
+
+	if(pData->fd != poBuf->fd) {
+		// TODO: more efficient use for dynafiles
+		CHKiRet(doFlush(pData));
+		poBuf->fd = pData->fd;
+	}
+
+	for(i = 0 ; i < lenBuf ; ++i) {
+		poBuf->pszBuf[poBuf->iBuf++] = pszBuf[i];
+		if(poBuf->iBuf == poBuf->lenBuf) {
+			CHKiRet(doFlush(pData));
+		}
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* rgerhards 2004-11-11: write to a file output. This
+ * will be called for all outputs using file semantics,
+ * for example also for pipes.
+ */
+static rsRetVal
+writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
+{
+	DEFiRet;
+
+	ASSERT(pData != NULL);
+
+	/* first check if we have a dynamic file name and, if so,
+	 * check if it still is ok or a new file needs to be created
+	 */
+	if(pData->bDynamicName) {
+		if(prepareDynFile(pData, ppString[1], iMsgOpts) != 0)
+			ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
+	}
+	
+	if(pData->fd == -1) {
+		rsRetVal iRetLocal;
+		iRetLocal = prepareFile(pData, pData->f_fname);
+		if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
+			ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
+	}
+
+	/* create the message based on format specified */
+	CHKiRet(doWrite(pData, ppString[0], strlen(CHAR_CONVERT(ppString[0]))));
 
 finalize_it:
 	RETiRet;
@@ -678,15 +830,20 @@ finalize_it:
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->fd = -1;
+	CHKmalloc(pData->poBuf = calloc(1, sizeof(outbuf_t)));
+	pData->poBuf->lenBuf = OUTBUF_LEN;
+finalize_it:
 ENDcreateInstance
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	doFlush(pData); /* flush anything that is pending, TODO: change when enhancing dynafile handling! */
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
 	} else if(pData->fd != -1)
 		close(pData->fd);
+	free(pData->poBuf);
 ENDfreeInstance
 
 
@@ -696,7 +853,7 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	DBGPRINTF(" (%s)\n", pData->f_fname);
+	DBGPRINTF("file to log to: %s\n", pData->f_fname);
 	iRet = writeFile(ppString, iMsgOpts, pData);
 ENDdoAction
 
@@ -875,8 +1032,8 @@ ENDdoHUP
 
 BEGINmodExit
 CODESTARTmodExit
-	if(pszTplName != NULL)
-		free(pszTplName);
+	objRelease(zlibw, LM_ZLIBW_FILENAME);
+	free(pszTplName);
 ENDmodExit
 
 
@@ -891,6 +1048,7 @@ BEGINmodInit(File)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
+	CHKiRet(objUse(zlibw, LM_ZLIBW_FILENAME));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &dirUID, STD_LOADABLE_MODULE_ID));
