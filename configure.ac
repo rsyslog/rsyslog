@@ -678,6 +678,20 @@ AC_SUBST(LIBLOGGING_CFLAGS)
 AC_SUBST(LIBLOGGING_LIBS)
 
 
+# enable/disable the testbench (e.g. because some important parts
+# are missing)
+AC_ARG_ENABLE(testbench,
+        [AS_HELP_STRING([--enable-testbench],[file input module enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_testbench="yes" ;;
+          no) enable_testbench="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-testbench) ;;
+         esac],
+        [enable_testbench=yes]
+)
+AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
+
+
 # settings for the file input module
 AC_ARG_ENABLE(imfile,
         [AS_HELP_STRING([--enable-imfile],[file input module enabled @<:@default=no@:>@])],
@@ -844,6 +858,7 @@ echo "    RELP support enabled:                     $enable_relp"
 echo "    SNMP support enabled:                     $enable_snmp"
 echo
 echo "---{ debugging support }---"
+echo "    Testbench enabled:                        $enable_testbench"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    Runtime Instrumentation enabled:          $enable_rtinst"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"

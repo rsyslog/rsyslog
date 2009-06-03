@@ -1,3 +1,4 @@
+if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
 TESTS = $(TESTRUNS) cfg.sh manytcp.sh diskqueue.sh imtcp-multiport.sh queue-persist.sh \
@@ -5,6 +6,8 @@ TESTS = $(TESTRUNS) cfg.sh manytcp.sh diskqueue.sh imtcp-multiport.sh queue-pers
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh parsertest.sh inputname.sh fieldtest.sh
 endif
+
+endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
 DISTCLEANFILES=rsyslog.pid '$(abs_top_builddir)'/DiagTalker.class
