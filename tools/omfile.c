@@ -14,6 +14,29 @@
  *
  * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
+ * An important note on writing gzip format via zlib (kept anonymous
+ * by request):
+ *
+ * --------------------------------------------------------------------------
+ * We'd like to make sure the output file is in full gzip format
+ * (compatible with gzip -d/zcat etc).  There is a flag in how the output
+ * is initialized within zlib to properly add the gzip wrappers to the
+ * output.  (gzip is effectively a small metadata wrapper around raw
+ * zstream output.)
+ * 
+ * I had written an old bit of code to do this - the documentation on
+ * deflatInit2() was pretty tricky to nail down on this specific feature:
+ * 
+ * int deflateInit2 (z_streamp strm, int level, int method, int windowBits,
+ * int memLevel, int strategy);
+ * 
+ * I believe "31" would be the value for the "windowBits" field that you'd
+ * want to try:
+ * 
+ * deflateInit2(zstrmptr, 6, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
+ * --------------------------------------------------------------------------
+ * 
+ *
  * This file is part of rsyslog.
  *
  * Rsyslog is free software: you can redistribute it and/or modify
@@ -698,12 +721,13 @@ doZipWrite(instanceData *pData)
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;
 	strm.opaque = Z_NULL;
-	zRet = zlibw.DeflateInit(&strm, 9);
+	/* see note in file header for the params we use with deflateInit2() */
+	zRet = zlibw.DeflateInit2(&strm, 9, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
 	if(zRet != Z_OK) {
-		dbgprintf("error %d returned from zlib/deflateInit()\n", zRet);
+		dbgprintf("error %d returned from zlib/deflateInit2()\n", zRet);
 		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 	}
-RUNLOG_STR("deflateInit() done successfully\n");
+RUNLOG_STR("deflateInit2() done successfully\n");
 
 	/* now doing the compression */
 	strm.avail_in = poBuf->iBuf;

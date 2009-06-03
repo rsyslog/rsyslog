@@ -51,14 +51,19 @@ static int myDeflateInit(z_streamp strm, int level)
 	return deflateInit(strm, level);
 }
 
-static int myDeflate(z_streamp strm, int flush)
+static int myDeflateInit2(z_streamp strm, int level, int method, int windowBits, int memLevel, int strategy)
 {
-	return deflate(strm, flush);
+	return deflateInit2(strm, level, method, windowBits, memLevel, strategy);
 }
 
 static int myDeflateEnd(z_streamp strm)
 {
 	return deflateEnd(strm);
+}
+
+static int myDeflate(z_streamp strm, int flush)
+{
+	return deflate(strm, flush);
 }
 
 
@@ -77,6 +82,7 @@ CODESTARTobjQueryInterface(zlibw)
 	 * of course, also affects the "if" above).
 	 */
 	pIf->DeflateInit = myDeflateInit;
+	pIf->DeflateInit2 = myDeflateInit2;
 	pIf->Deflate     = myDeflate;
 	pIf->DeflateEnd  = myDeflateEnd;
 finalize_it:

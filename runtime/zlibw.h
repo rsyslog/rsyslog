@@ -30,6 +30,7 @@
 /* interfaces */
 BEGINinterface(zlibw) /* name must also be changed in ENDinterface macro! */
 	int (*DeflateInit)(z_streamp strm, int);
+	int (*DeflateInit2)(z_streamp strm, int level, int method, int windowBits, int memLevel, int strategy);
 	int (*Deflate)(z_streamp strm, int);
 	int (*DeflateEnd)(z_streamp strm);
 ENDinterface(zlibw)
