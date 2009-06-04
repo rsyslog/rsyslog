@@ -273,7 +273,10 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_ERR_FORK = -2118, /**< error during fork() */
 	RS_RET_ERR_WRITE_PIPE = -2119, /**< error writing to pipe */
 	RS_RET_RSCORE_TOO_OLD = -2120, /**< rsyslog core is too old for ... (eg this plugin) */
-	RS_RET_NONFATAL_CONFIG_ERR = -2123, /**< non-fatal error during config processing */
+	RS_RET_DEFER_COMMIT = -2121, /**< output plugin status: not yet committed (an OK state!) */
+	RS_RET_PREVIOUS_COMMITTED = -2122, /**< output plugin status: previous record was committed (an OK state!) */
+	RS_RET_ACTION_FAILED = -2123, /**< action failed and is now suspended (consider this permanent for the time being) */
+	RS_RET_NONFATAL_CONFIG_ERR = -2124, /**< non-fatal error during config processing */
 	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
 
 	/* RainerScript error messages (range 1000.. 1999) */

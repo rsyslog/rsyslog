@@ -5,9 +5,6 @@
 # added 2009-04-17 by Rgerhards
 # This file is part of the rsyslog project, released  under GPLv3
 # uncomment for debugging support:
-#set -o xtrace
-#export RSYSLOG_DEBUG="debug nostdout"
-#export RSYSLOG_DEBUGLOG="tmp"
 echo testing queue disk-only mode
 source $srcdir/diag.sh init
 source $srcdir/diag.sh startup diskqueue.conf

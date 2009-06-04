@@ -1,8 +1,13 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
-TESTS = $(TESTRUNS) cfg.sh manytcp.sh diskqueue.sh imtcp-multiport.sh queue-persist.sh \
-	validation-run.sh
+TESTS = $(TESTRUNS) cfg.sh \
+	validation-run.sh \
+	imtcp-multiport.sh \
+	diskqueue.sh \
+	manytcp.sh \
+	queue-persist.sh 
+
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh parsertest.sh inputname.sh fieldtest.sh
 endif
@@ -32,25 +37,32 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   err1.rstest \
 	   NoExistFile.cfgtest \
 	   testsuites/parse1.conf \
+	   testsuites/field1.conf \
 	   testsuites/1.parse1 \
-	   testsuites/rfc3164.parse1 \
+	   testsuites/2.parse1 \
+	   testsuites/3.parse1 \
+	   testsuites/date1.parse1 \
+	   testsuites/date2.parse1 \
+	   testsuites/date3.parse1 \
+	   testsuites/date4.parse1 \
+	   testsuites/date5.parse1 \
+   	   testsuites/rfc3164.parse1 \
 	   testsuites/rfc5424-1.parse1 \
 	   testsuites/rfc5424-2.parse1 \
 	   testsuites/rfc5424-3.parse1 \
 	   testsuites/rfc5424-4.parse1 \
 	   testsuites/omod-if-array.conf \
 	   testsuites/1.omod-if-array \
+	   testsuites/1.field1 \
 	   killrsyslog.sh \
 	   parsertest.sh \
+	   fieldtest.sh \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
 	   imtcp-multiport.sh \
 	   testsuites/imtcp-multiport.conf \
 	   manytcp.sh \
 	   testsuites/manytcp.conf \
-	   fieldtest.sh \
-	   testsuites/field1.conf \
-	   testsuites/1.field1 \
 	   inputname.sh \
 	   testsuites/inputname_imtcp.conf \
 	   testsuites/1.inputname_imtcp_12514 \
@@ -58,6 +70,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.inputname_imtcp_12516 \
 	   omod-if-array.sh \
 	   diag.sh \
+	   daqueue-persist.sh \
+	   daqueue-persist-drvr.sh \
 	   testsuites/diag-common.conf \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
