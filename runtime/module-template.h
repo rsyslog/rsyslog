@@ -39,7 +39,8 @@
 
 #define DEF_OMOD_STATIC_DATA \
 	DEF_MOD_STATIC_DATA \
-	DEFobjCurrIf(obj)
+	DEFobjCurrIf(obj) \
+	static __attribute__((unused)) int bCoreSupportsBatching;
 #define DEF_IMOD_STATIC_DATA \
 	DEF_MOD_STATIC_DATA \
 	DEFobjCurrIf(obj)
@@ -159,6 +160,37 @@ static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eF
 #define ENDisCompatibleWithFeature \
 	RETiRet;\
 }
+
+
+/* beginTransaction()
+ * introduced in v4.3.3 -- rgerhards, 2009-04-27
+ */
+#define BEGINbeginTransaction \
+static rsRetVal beginTransaction(instanceData __attribute__((unused)) *pData)\
+{\
+	DEFiRet;
+
+#define CODESTARTbeginTransaction /* currently empty, but may be extended */
+
+#define ENDbeginTransaction \
+	RETiRet;\
+}
+
+
+/* endTransaction()
+ * introduced in v4.3.3 -- rgerhards, 2009-04-27
+ */
+#define BEGINendTransaction \
+static rsRetVal endTransaction(instanceData __attribute__((unused)) *pData)\
+{\
+	DEFiRet;
+
+#define CODESTARTendTransaction /* currently empty, but may be extended */
+
+#define ENDendTransaction \
+	RETiRet;\
+}
+
 
 /* doAction()
  */
@@ -324,6 +356,18 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 		*pEtryPoint = tryResume;\
 	}
 
+
+/* the following definition is queryEtryPt block that must be added
+ * if an output module supports the transactional interface.
+ * rgerhards, 2009-04-27
+ */
+#define CODEqueryEtryPt_TXIF_OMOD_QUERIES \
+	  else if(!strcmp((char*) name, "beginTransaction")) {\
+		*pEtryPoint = beginTransaction;\
+	} else if(!strcmp((char*) name, "endTransaction")) {\
+		*pEtryPoint = endTransaction;\
+	}
+
 /* the following definition is the standard block for queryEtryPt for INPUT
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.
@@ -391,6 +435,32 @@ finalize_it:\
 	*pQueryEtryPt = queryEtryPt;\
 	RETiRet;\
 }
+
+
+/* now come some check functions, which enable a standard way of obtaining feature
+ * information from the core. feat is the to-be-tested feature and featVar is a
+ * variable that receives the result (0-not support, 1-supported).
+ * This must be a macro, so that it is put into the output's code. Otherwise, we
+ * would need to rely on a library entry point, which is what we intend to avoid ;)
+ * rgerhards, 2009-04-27
+ */
+#define INITChkCoreFeature(featVar, feat) \
+{ \
+	rsRetVal MACRO_Ret; \
+	rsRetVal (*pQueryCoreFeatureSupport)(int*, unsigned); \
+	int bSupportsIt; \
+	featVar = 0; \
+	MACRO_Ret = pHostQueryEtryPt((uchar*)"queryCoreFeatureSupport", &pQueryCoreFeatureSupport); \
+	if(MACRO_Ret == RS_RET_OK) { \
+		/* found entry point, so let's see if core supports it */ \
+		CHKiRet((*pQueryCoreFeatureSupport)(&bSupportsIt, feat)); \
+		if(bSupportsIt) \
+			featVar = 1; \
+	} else if(MACRO_Ret != RS_RET_ENTRY_POINT_NOT_FOUND) { \
+		ABORT_FINALIZE(MACRO_Ret); /* Something else went wrong, what is not acceptable */ \
+	} \
+}
+
 
 
 /* definitions for host API queries */

@@ -5,8 +5,11 @@
 # not always able to convey back states to the upper-level test driver
 # begun 2009-05-27 by rgerhards
 # This file is part of the rsyslog project, released under GPLv3
+#valgrind="valgrind --log-fd=1"
+#valgrind="valgrind --tool=drd --log-fd=1"
+#valgrind="valgrind --tool=helgrind --log-fd=1"
 #set -o xtrace
-#export RSYSLOG_DEBUG="debug nostdout"
+#export RSYSLOG_DEBUG="debug nostdout printmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
@@ -22,7 +25,7 @@ case $1 in
 		;;
    'startup')   # start rsyslogd with default params. $2 is the config file name to use
    		# returns only after successful startup
-		../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
+		$valgrind ../tools/rsyslogd -c4 -u2 -n -irsyslog.pid -M../runtime/.libs:../.libs -f$srcdir/testsuites/$2 &
    		$srcdir/diag.sh wait-startup
 		;;
    'wait-startup') # wait for rsyslogd startup
@@ -72,9 +75,8 @@ case $1 in
    'seq-check') # do the usual sequence check to see if everything was properly received
 		rm -f work
 		sort < rsyslog.out.log > work
-		./chkseq work $2 $3
+		./chkseq -fwork -e$2 $3
 		if [ "$?" -ne "0" ]; then
-		  rm -f work rsyslog.out.log
 		  echo "sequence error detected"
 		  exit 1
 		fi
