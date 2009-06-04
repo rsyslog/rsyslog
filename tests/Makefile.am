@@ -1,7 +1,10 @@
 if ENABLE_TESTBENCH
 TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail nettester tcpflood chkseq
-TESTS = $(TESTRUNS) cfg.sh arrayqueue.sh linkedlistqueue.sh da-mainmsg-q.sh \
+TESTS = $(TESTRUNS) cfg.sh \
+	arrayqueue.sh \
+	linkedlistqueue.sh \
+	da-mainmsg-q.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
 	diskqueue.sh manytcp.sh \
