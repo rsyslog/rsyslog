@@ -69,9 +69,13 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	 * sockets - not really desirable, but not the end of the world... TODO: should be
 	 * reconsidered when a new ACL system is build. -- rgerhards, 2008-12-01
 	 */
+	/* v5 */
+	rsRetVal (*EnableKeepAlive)(nsd_t *pThis);
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
-/* interface version 4 added GetRemAddr() */
+#define nsdCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
+/* interface version 4 added GetRemAddr()
+ * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
+ */
 
 /* interface  for the select call */
 BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */

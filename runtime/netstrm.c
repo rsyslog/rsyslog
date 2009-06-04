@@ -233,6 +233,19 @@ Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 	RETiRet;
 }
 
+/* Enable Keep-Alive handling for those drivers that support it.
+ * rgerhards, 2009-06-02
+ */
+static rsRetVal
+EnableKeepAlive(netstrm_t *pThis)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.EnableKeepAlive(pThis->pDrvrData);
+	RETiRet;
+}
+
+
 
 /* check connection - slim wrapper for NSD driver function */
 static void
@@ -337,6 +350,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
 	pIf->CheckConnection = CheckConnection;
 	pIf->GetSock = GetSock;
+	pIf->EnableKeepAlive = EnableKeepAlive;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 

@@ -101,6 +101,8 @@ typedef struct permittedPeers_s permittedPeers_t; /* this should go away in the 
 typedef struct permittedPeerWildcard_s permittedPeerWildcard_t; /* this should go away in the long term -- rgerhards, 2008-05-19 */
 typedef struct tcpsrv_s tcpsrv_t;
 typedef struct tcps_sess_s tcps_sess_t;
+typedef struct strmsrv_s strmsrv_t;
+typedef struct strms_sess_s strms_sess_t;
 typedef struct vmstk_s vmstk_t;
 typedef struct batch_obj_s batch_obj_t;
 typedef struct batch_s batch_t;
@@ -109,6 +111,7 @@ typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript f
 typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
 
 typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
+typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
 
 
 #ifdef __hpux
@@ -289,6 +292,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_DEFER_COMMIT = -2121, /**< output plugin status: not yet committed (an OK state!) */
 	RS_RET_PREVIOUS_COMMITTED = -2122, /**< output plugin status: previous record was committed (an OK state!) */
 	RS_RET_ACTION_FAILED = -2122, /**< action failed and is now suspended (consider this permanent for the time being) */
+	RS_RET_NONFATAL_CONFIG_ERR = -2123, /**< non-fatal error during config processing */
 	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
 
 	/* RainerScript error messages (range 1000.. 1999) */
