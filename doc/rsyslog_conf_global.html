@@ -189,6 +189,9 @@ supported in order to be compliant to the upcoming new syslog RFC series.
 <li><a href="rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
 <li><a href="rsconf1_moddir.html">$ModDir</a></li>
 <li><a href="rsconf1_modload.html">$ModLoad</a></li>
+<li><b>$OMFileZipLevel</b> 0..9  [default 0] - if greater 0, turns on gzip compression
+of the output file. The higher the number, the better the compression, but also the
+more CPU is required for zipping.</li>
 <li><b>$RepeatedMsgContainsOriginalMsg</b> [on/<b>off</b>] - "last message repeated n times" messages, if generated,
 have a different format that contains the message that is being repeated.
 Note that only the first "n" characters are included, with n to be at least 80 characters, most

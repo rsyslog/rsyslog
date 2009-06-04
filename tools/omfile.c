@@ -70,6 +70,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
+#include <libgen.h>
 #include <unistd.h>
 #include <sys/file.h>
 
@@ -87,6 +88,7 @@
 #include "module-template.h"
 #include "errmsg.h"
 #include "unicode-helper.h"
+#include "stream.h"
 #include "zlibw.h"
 
 MODULE_TYPE_OUTPUT
@@ -96,6 +98,7 @@ MODULE_TYPE_OUTPUT
 DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(zlibw)
+DEFobjCurrIf(strm)
 
 /* The following structure is a dynafile name cache entry.
  */
@@ -131,12 +134,14 @@ static uid_t	dirUID;		/* UID to be used for newly created directories */
 static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
+static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
 static uchar	*pszTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
 
 
 typedef struct _instanceData {
 	uchar	f_fname[MAXFNAME];/* file or template name (display only) */
+	strm_t	*pStrm;		/* our output stream */
 	short	fd;		/* file descriptor for (current) file */
 	outbuf_t *poBuf;	/* output buffer */
 	enum {
@@ -165,6 +170,7 @@ typedef struct _instanceData {
 	dynaFileCacheEntry **dynCache;
 	off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
 	uchar	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
+	int 	iZipLevel;		/* zip mode to use for this selector */
 } instanceData;
 
 
@@ -446,13 +452,11 @@ prepareFile(instanceData *pData, uchar *newFileName)
 		FINALIZE; /* we are done in this case */
 	}
 
-	if(access((char*)newFileName, F_OK) == 0) {
-		/* file already exists */
-		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY|O_CLOEXEC,
-				pData->fCreateMode);
-	} else {
-		pData->fd = -1;
+	// TODO: handle TTY case! (here or in stream.c?) 2009-06-04
+
+	if(access((char*)newFileName, F_OK) != 0) {
 		/* file does not exist, create it (and eventually parent directories */
+		pData->fd = -1;
 		if(pData->bCreateDirs) {
 			/* We first need to create parent dirs if they are missing.
 			 * We do not report any errors here ourselfs but let the code
@@ -485,8 +489,29 @@ prepareFile(instanceData *pData, uchar *newFileName)
 					 */
 				}
 			}
+			close(pData->fd); /* close again, as we need a stream further on */
 		}
 	}
+
+	char szNameBuf[MAXFNAME];
+	char szDirName[MAXFNAME];
+	char szBaseName[MAXFNAME];
+	strcpy(szNameBuf, (char*)pData->f_fname);
+	strcpy(szDirName, dirname(szNameBuf));
+	strcpy(szNameBuf, (char*)pData->f_fname);
+	strcpy(szBaseName, basename(szNameBuf));
+DBGPRINTF("XXX: name to set: '%s', dirname '%s'\n", pData->f_fname, szDirName);
+
+	CHKiRet(strm.Construct(&pData->pStrm));
+	CHKiRet(strm.SetFName(pData->pStrm, (uchar*)szBaseName, strlen(szBaseName)));
+	CHKiRet(strm.SetDir(pData->pStrm, (uchar*)szDirName, strlen(szDirName)));
+	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
+	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
+	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strm.ConstructFinalize(pData->pStrm));
+	
+	pData->fd = 2; /* TODO: dummy to keep current inconsistent code happy - remove later */
+
 finalize_it:
 	/* this was "pData->fd != 0", which I think was a bug. I guess 0 was intended to mean
 	 * non-open file descriptor. Anyhow, I leave this comment for the time being to that if
@@ -715,20 +740,20 @@ static rsRetVal
 doZipWrite(instanceData *pData)
 {
 	outbuf_t *poBuf;
-	z_stream strm;
+	z_stream zstrm;
 	int zRet;	/* zlib return state */
 	DEFiRet;
 	assert(pData != NULL);
 
 	poBuf = pData->poBuf; 	/* use as a shortcut */
-	strm = poBuf->zStrm;	/* another shortcut */
+	zstrm = poBuf->zStrm;	/* another shortcut */
 
 	/* allocate deflate state */
-	strm.zalloc = Z_NULL;
-	strm.zfree = Z_NULL;
-	strm.opaque = Z_NULL;
+	zstrm.zalloc = Z_NULL;
+	zstrm.zfree = Z_NULL;
+	zstrm.opaque = Z_NULL;
 	/* see note in file header for the params we use with deflateInit2() */
-	zRet = zlibw.DeflateInit2(&strm, 9, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
+	zRet = zlibw.DeflateInit2(&zstrm, 9, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
 	if(zRet != Z_OK) {
 		dbgprintf("error %d returned from zlib/deflateInit2()\n", zRet);
 		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
@@ -736,24 +761,24 @@ doZipWrite(instanceData *pData)
 RUNLOG_STR("deflateInit2() done successfully\n");
 
 	/* now doing the compression */
-	strm.avail_in = poBuf->iBuf;
-	strm.next_in = (Bytef*) poBuf->pszBuf;
+	zstrm.avail_in = poBuf->iBuf;
+	zstrm.next_in = (Bytef*) poBuf->pszBuf;
 	/* run deflate() on input until output buffer not full, finish
 	   compression if all of source has been read in */
 	do {
-		dbgprintf("in deflate() loop, avail_in %d, total_in %ld\n", strm.avail_in, strm.total_in);
-		strm.avail_out = OUTBUF_LEN;
-		strm.next_out = (Bytef*) poBuf->zipBuf;
-		zRet = zlibw.Deflate(&strm, Z_FINISH);    /* no bad return value */
-		dbgprintf("after deflate, ret %d, avail_out %d\n", zRet, strm.avail_out);
+		dbgprintf("in deflate() loop, avail_in %d, total_in %ld\n", zstrm.avail_in, zstrm.total_in);
+		zstrm.avail_out = OUTBUF_LEN;
+		zstrm.next_out = (Bytef*) poBuf->zipBuf;
+		zRet = zlibw.Deflate(&zstrm, Z_FINISH);    /* no bad return value */
+		dbgprintf("after deflate, ret %d, avail_out %d\n", zRet, zstrm.avail_out);
 		assert(zRet != Z_STREAM_ERROR);  /* state not clobbered */
-		CHKiRet(doPhysWrite(pData, poBuf->fd, poBuf->zipBuf, OUTBUF_LEN - strm.avail_out));
-	} while (strm.avail_out == 0);
-	assert(strm.avail_in == 0);     /* all input will be used */
+		CHKiRet(doPhysWrite(pData, poBuf->fd, poBuf->zipBuf, OUTBUF_LEN - zstrm.avail_out));
+	} while (zstrm.avail_out == 0);
+	assert(zstrm.avail_in == 0);     /* all input will be used */
 
 RUNLOG_STR("deflate() should be done successfully\n");
 
-	zRet = zlibw.DeflateEnd(&strm);
+	zRet = zlibw.DeflateEnd(&zstrm);
 	if(zRet != Z_OK) {
 		dbgprintf("error %d returned from zlib/deflateEnd()\n", zRet);
 		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
@@ -802,8 +827,14 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	ASSERT(pszBuf != NULL);
 
 	poBuf = pData->poBuf; 	/* use as a shortcut */
-dbgprintf("doWrite, pData->fd %d, poBuf->fd %d, iBuf %ld, lenBuf %ld\n",
-pData->fd, pData->poBuf->fd, pData->poBuf->iBuf, poBuf->lenBuf);
+dbgprintf("doWrite, pData->fd %d, pData->pStrm %p, poBuf->fd %d, iBuf %ld, lenBuf %ld\n",
+pData->fd, pData->pStrm, pData->poBuf->fd, pData->poBuf->iBuf, poBuf->lenBuf);
+
+RUNLOG_VAR("%p", pData->pStrm);
+	if(pData->pStrm != NULL){
+		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
+		FINALIZE; // TODO: clean up later
+	}
 
 	if(pData->fd != poBuf->fd) {
 		// TODO: more efficient use for dynafiles
@@ -869,6 +900,10 @@ ENDcreateInstance
 BEGINfreeInstance
 CODESTARTfreeInstance
 	doFlush(pData); /* flush anything that is pending, TODO: change when enhancing dynafile handling! */
+	if(pData->pStrm != NULL) {
+RUNLOG_STR("XXX: destructing stream");
+		strm.Destruct(&pData->pStrm);
+	}
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
 	} else if(pData->fd != -1)
@@ -945,6 +980,7 @@ CODESTARTparseSelectorAct
 		pData->fileGID = fileGID;
 		pData->dirUID = dirUID;
 		pData->dirGID = dirGID;
+		pData->iZipLevel = iZipLevel;
 		pData->iDynaFileCacheSize = iDynaFileCacheSize; /* freeze current setting */
 		/* we now allocate the cache table. We use calloc() intentionally, as we 
 		 * need all pointers to be initialized to NULL pointers.
@@ -983,6 +1019,7 @@ CODESTARTparseSelectorAct
 		pData->fileGID = fileGID;
 		pData->dirUID = dirUID;
 		pData->dirGID = dirGID;
+		pData->iZipLevel = iZipLevel;
 
 		/* at this stage, we ignore the return value of prepareFile, this is taken
 		 * care of in later steps. -- rgerhards, 2009-03-19
@@ -1021,6 +1058,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	fDirCreateMode = 0700;
 	bCreateDirs = 1;
 	bEnableSync = 0;
+	iZipLevel = 0;
 	if(pszTplName != NULL) {
 		free(pszTplName);
 		pszTplName = NULL;
@@ -1046,6 +1084,8 @@ ENDdoHUP
 
 BEGINmodExit
 CODESTARTmodExit
+	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(strm, CORE_COMPONENT);
 	objRelease(zlibw, LM_ZLIBW_FILENAME);
 	free(pszTplName);
 ENDmodExit
@@ -1062,9 +1102,11 @@ BEGINmodInit(File)
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(zlibw, LM_ZLIBW_FILENAME));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(zlibw, LM_ZLIBW_FILENAME));
+	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &dirUID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", 0, eCmdHdlrGID, NULL, &dirGID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"fileowner", 0, eCmdHdlrUID, NULL, &fileUID, STD_LOADABLE_MODULE_ID));

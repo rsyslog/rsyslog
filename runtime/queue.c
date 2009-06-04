@@ -1923,8 +1923,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	}
 
 	CHKiRet(strm.Construct(&psQIF));
-	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_WRITE));
-	CHKiRet(strm.SetiAddtlOpenFlags(psQIF, O_TRUNC));
+	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.SetFName(psQIF, pszQIFNam, lenQIFNam));
 	CHKiRet(strm.ConstructFinalize(psQIF));

@@ -47,6 +47,7 @@
 #include "obj-types.h"
 #include "glbl.h"
 #include "stream.h"
+#include "zlibw.h"
 
 /* stream types */
 typedef enum {
@@ -55,10 +56,12 @@ typedef enum {
 	STREAMTYPE_FILE_MONITOR = 2	/**< monitor a (third-party) file */
 } strmType_t;
 
-typedef enum {
+typedef enum {				/* when extending, do NOT change existing modes! */
 	STREAMMMODE_INVALID = 0,
 	STREAMMODE_READ = 1,
-	STREAMMODE_WRITE = 2
+	STREAMMODE_WRITE = 2,
+	STREAMMODE_WRITE_TRUNC = 3,
+	STREAMMODE_WRITE_APPEND = 4
 } strmMode_t;
 
 /* The strm_t data structure */
@@ -89,6 +92,9 @@ typedef struct strm_s {
 	size_t iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
 	int bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
+	int iZipLevel;	/* zip level (0..9). If 0, zip is completely disabled */
+	Bytef *pZipBuf;
+
 } strm_t;
 
 /* interfaces */
@@ -121,6 +127,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, tOperationsMode, int);
 	INTERFACEpropSetMeth(strm, tOpenMode, mode_t);
 	INTERFACEpropSetMeth(strm, sType, strmType_t);
+	INTERFACEpropSetMeth(strm, iZipLevel, int);
 ENDinterface(strm)
 #define strmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
