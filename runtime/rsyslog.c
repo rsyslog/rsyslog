@@ -150,8 +150,6 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(datetimeClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "msg";
 		CHKiRet(msgClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "str,";
-		CHKiRet(strmClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "wti";
 		CHKiRet(wtiClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "wtp";

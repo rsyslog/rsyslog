@@ -93,6 +93,7 @@ DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some ma
 DEFobjCurrIf(var)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(strm)
 static objInfo_t *arrObjInfo[OBJ_NUM_IDS]; /* array with object information pointers */
 
 
@@ -228,20 +229,20 @@ static rsRetVal objSerializeHeader(strm_t *pStrm, obj_t *pObj, uchar *pszRecType
 	assert(!strcmp((char*) pszRecType, "Obj") || !strcmp((char*) pszRecType, "OPB"));
 
 	/* object cookie and serializer version (so far always 1) */
-	CHKiRet(strmWriteChar(pStrm, COOKIE_OBJLINE));
-	CHKiRet(strmWrite(pStrm, (uchar*) pszRecType, 3)); /* record types are always 3 octets */
-	CHKiRet(strmWriteChar(pStrm, ':'));
-	CHKiRet(strmWriteChar(pStrm, '1'));
+	CHKiRet(strm.WriteChar(pStrm, COOKIE_OBJLINE));
+	CHKiRet(strm.Write(pStrm, (uchar*) pszRecType, 3)); /* record types are always 3 octets */
+	CHKiRet(strm.WriteChar(pStrm, ':'));
+	CHKiRet(strm.WriteChar(pStrm, '1'));
 
 	/* object type, version and string length */
-	CHKiRet(strmWriteChar(pStrm, ':'));
-	CHKiRet(strmWrite(pStrm, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID));
-	CHKiRet(strmWriteChar(pStrm, ':'));
-	CHKiRet(strmWriteLong(pStrm, objGetVersion(pObj)));
+	CHKiRet(strm.WriteChar(pStrm, ':'));
+	CHKiRet(strm.Write(pStrm, pObj->pObjInfo->pszID, pObj->pObjInfo->lenID));
+	CHKiRet(strm.WriteChar(pStrm, ':'));
+	CHKiRet(strm.WriteLong(pStrm, objGetVersion(pObj)));
 
 	/* record trailer */
-	CHKiRet(strmWriteChar(pStrm, ':'));
-	CHKiRet(strmWriteChar(pStrm, '\n'));
+	CHKiRet(strm.WriteChar(pStrm, ':'));
+	CHKiRet(strm.WriteChar(pStrm, '\n'));
 
 finalize_it:
 	RETiRet;
@@ -259,7 +260,7 @@ BeginSerialize(strm_t *pStrm, obj_t *pObj)
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_assert(pObj);
 	
-	CHKiRet(strmRecordBegin(pStrm));
+	CHKiRet(strm.RecordBegin(pStrm));
 	CHKiRet(objSerializeHeader(pStrm, pObj, (uchar*) "Obj"));
 
 finalize_it:
@@ -284,7 +285,7 @@ BeginSerializePropBag(strm_t *pStrm, obj_t *pObj)
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_assert(pObj);
 	
-	CHKiRet(strmRecordBegin(pStrm));
+	CHKiRet(strm.RecordBegin(pStrm));
 	CHKiRet(objSerializeHeader(pStrm, pObj, (uchar*) "OPB"));
 
 finalize_it:
@@ -377,23 +378,23 @@ SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr
 	}
 
 	/* cookie */
-	CHKiRet(strmWriteChar(pStrm, COOKIE_PROPLINE));
+	CHKiRet(strm.WriteChar(pStrm, COOKIE_PROPLINE));
 	/* name */
-	CHKiRet(strmWrite(pStrm, pszPropName, strlen((char*)pszPropName)));
-	CHKiRet(strmWriteChar(pStrm, ':'));
+	CHKiRet(strm.Write(pStrm, pszPropName, strlen((char*)pszPropName)));
+	CHKiRet(strm.WriteChar(pStrm, ':'));
 	/* type */
-	CHKiRet(strmWriteLong(pStrm, (int) vType));
-	CHKiRet(strmWriteChar(pStrm, ':'));
+	CHKiRet(strm.WriteLong(pStrm, (int) vType));
+	CHKiRet(strm.WriteChar(pStrm, ':'));
 	/* length */
-	CHKiRet(strmWriteLong(pStrm, lenBuf));
-	CHKiRet(strmWriteChar(pStrm, ':'));
+	CHKiRet(strm.WriteLong(pStrm, lenBuf));
+	CHKiRet(strm.WriteChar(pStrm, ':'));
 
 	/* data */
-	CHKiRet(strmWrite(pStrm, (uchar*) pszBuf, lenBuf));
+	CHKiRet(strm.Write(pStrm, (uchar*) pszBuf, lenBuf));
 
 	/* trailer */
-	CHKiRet(strmWriteChar(pStrm, ':'));
-	CHKiRet(strmWriteChar(pStrm, '\n'));
+	CHKiRet(strm.WriteChar(pStrm, ':'));
+	CHKiRet(strm.WriteChar(pStrm, '\n'));
 
 finalize_it:
 	RETiRet;
@@ -410,12 +411,12 @@ EndSerialize(strm_t *pStrm)
 
 	assert(pStrm != NULL);
 
-	CHKiRet(strmWriteChar(pStrm, COOKIE_ENDLINE));
-	CHKiRet(strmWrite(pStrm, (uchar*) "End\n", sizeof("END\n") - 1));
-	CHKiRet(strmWriteChar(pStrm, COOKIE_BLANKLINE));
-	CHKiRet(strmWriteChar(pStrm, '\n'));
+	CHKiRet(strm.WriteChar(pStrm, COOKIE_ENDLINE));
+	CHKiRet(strm.Write(pStrm, (uchar*) "End\n", sizeof("END\n") - 1));
+	CHKiRet(strm.WriteChar(pStrm, COOKIE_BLANKLINE));
+	CHKiRet(strm.WriteChar(pStrm, '\n'));
 
-	CHKiRet(strmRecordEnd(pStrm));
+	CHKiRet(strm.RecordEnd(pStrm));
 
 finalize_it:
 	RETiRet;
@@ -423,7 +424,7 @@ finalize_it:
 
 
 /* define a helper to make code below a bit cleaner (and quicker to write) */
-#define NEXTC CHKiRet(strmReadChar(pStrm, &c))/*;dbgprintf("c: %c\n", c)*/
+#define NEXTC CHKiRet(strm.ReadChar(pStrm, &c))/*;dbgprintf("c: %c\n", c)*/
 
 
 /* de-serialize an embedded, non-octect-counted string. This is useful
@@ -617,7 +618,7 @@ static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 	NEXTC;
 	if(c != COOKIE_PROPLINE) {
 		/* oops, we've read one char that does not belong to use - unget it first */
-		CHKiRet(strmUnreadChar(pStrm, c));
+		CHKiRet(strm.UnreadChar(pStrm, c));
 		ABORT_FINALIZE(RS_RET_NO_PROPLINE);
 	}
 
@@ -718,7 +719,7 @@ static rsRetVal objDeserializeTryRecover(strm_t *pStrm)
 		}
 	}
 
-	CHKiRet(strmUnreadChar(pStrm, c));
+	CHKiRet(strm.UnreadChar(pStrm, c));
 
 finalize_it:
 	dbgprintf("deserializer has possibly been able to re-sync and recover, state %d\n", iRet);
@@ -1278,6 +1279,7 @@ objClassExit(void)
 {
 	DEFiRet;
 	/* release objects we no longer need */
+	objRelease(strm, CORE_COMPONENT);
 	objRelease(var, CORE_COMPONENT);
 	objRelease(module, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -1322,9 +1324,11 @@ objClassInit(modInfo_t *pModInfo)
 	CHKiRet(cfsyslineInit());
 	CHKiRet(varClassInit(pModInfo));
 	CHKiRet(moduleClassInit(pModInfo));
+	CHKiRet(strmClassInit(pModInfo));
 	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(strm, CORE_COMPONENT));
 
 finalize_it:
 	RETiRet;

@@ -45,9 +45,16 @@
 #include "srUtils.h"
 #include "obj.h"
 #include "stream.h"
+#include "unicode-helper.h"
+#include "module-template.h"
 
 /* static data */
 DEFobjStaticHelpers
+
+/* forward definitions */
+static rsRetVal strmFlush(strm_t *pThis);
+static rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
+
 
 /* methods */
 
@@ -234,10 +241,6 @@ strmHandleEOF(strm_t *pThis)
 		case STREAMTYPE_FILE_CIRCULAR:
 			/* we have multiple files and need to switch to the next one */
 			/* TODO: think about emulating EOF in this case (not yet needed) */
-#if 0
-			if(pThis->iMaxFiles == 0) /* TODO: why do we need this? ;) */
-				ABORT_FINALIZE(RS_RET_EOF);
-#endif
 			dbgoprint((obj_t*) pThis, "file %d EOF\n", pThis->fd);
 			CHKiRet(strmNextFile(pThis));
 			break;
@@ -295,7 +298,7 @@ finalize_it:
  * NOTE: needs to be enhanced to support sticking with a strm entry (if not
  * deleted).
  */
-rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
+static rsRetVal strmReadChar(strm_t *pThis, uchar *pC)
 {
 	DEFiRet;
 	
@@ -329,7 +332,7 @@ finalize_it:
  * character buffering capability.
  * rgerhards, 2008-01-07
  */
-rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
+static rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
 {
 	ASSERT(pThis != NULL);
 	ASSERT(pThis->iUngetC == -1);
@@ -351,7 +354,7 @@ rsRetVal strmUnreadChar(strm_t *pThis, uchar c)
  * are pthread_killed() upon termination. So if we use their native pointer, they
  * can cleanup (but only then).
  */
-rsRetVal
+static rsRetVal
 strmReadLine(strm_t *pThis, cstr_t **ppCStr)
 {
 	DEFiRet;
@@ -393,7 +396,7 @@ ENDobjConstruct(strm)
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-rsRetVal strmConstructFinalize(strm_t *pThis)
+static rsRetVal strmConstructFinalize(strm_t *pThis)
 {
 	DEFiRet;
 
@@ -420,14 +423,10 @@ CODESTARTobjDestruct(strm)
 	if(pThis->fd != -1)
 		strmCloseFile(pThis);
 
-	if(pThis->pszDir != NULL)
-		free(pThis->pszDir);
-	if(pThis->pIOBuf != NULL)
-		free(pThis->pIOBuf);
-	if(pThis->pszCurrFName != NULL)
-		free(pThis->pszCurrFName);
-	if(pThis->pszFName != NULL)
-		free(pThis->pszFName);
+	free(pThis->pszDir);
+	free(pThis->pIOBuf);
+	free(pThis->pszCurrFName);
+	free(pThis->pszFName);
 ENDobjDestruct(strm)
 
 
@@ -452,6 +451,7 @@ static rsRetVal strmCheckNextOutputFile(strm_t *pThis)
 finalize_it:
 	RETiRet;
 }
+
 
 /* write memory buffer to a stream object.
  * To support direct writes of large objects, this method may be called
@@ -503,7 +503,8 @@ finalize_it:
  * and is automatically called when the output buffer is full.
  * rgerhards, 2008-01-10
  */
-rsRetVal strmFlush(strm_t *pThis)
+static rsRetVal
+strmFlush(strm_t *pThis)
 {
 	DEFiRet;
 
@@ -545,7 +546,7 @@ static rsRetVal strmSeek(strm_t *pThis, off_t offs)
 /* seek to current offset. This is primarily a helper to readjust the OS file
  * pointer after a strm object has been deserialized.
  */
-rsRetVal strmSeekCurrOffs(strm_t *pThis)
+static rsRetVal strmSeekCurrOffs(strm_t *pThis)
 {
 	DEFiRet;
 
@@ -558,7 +559,7 @@ rsRetVal strmSeekCurrOffs(strm_t *pThis)
 
 /* write a *single* character to a stream object -- rgerhards, 2008-01-10
  */
-rsRetVal strmWriteChar(strm_t *pThis, uchar c)
+static rsRetVal strmWriteChar(strm_t *pThis, uchar c)
 {
 	DEFiRet;
 
@@ -578,7 +579,7 @@ finalize_it:
 
 
 /* write an integer value (actually a long) to a stream object */
-rsRetVal strmWriteLong(strm_t *pThis, long i)
+static rsRetVal strmWriteLong(strm_t *pThis, long i)
 {
 	DEFiRet;
 	uchar szBuf[32];
@@ -595,7 +596,8 @@ finalize_it:
 
 /* write memory buffer to a stream object
  */
-rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
+static rsRetVal
+strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 {
 	DEFiRet;
 	size_t iPartial;
@@ -645,14 +647,14 @@ DEFpropSetMeth(strm, tOperationsMode, int)
 DEFpropSetMeth(strm, tOpenMode, mode_t)
 DEFpropSetMeth(strm, sType, strmType_t)
 
-rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
+static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {
 	pThis->iMaxFiles = iNewVal;
 	pThis->iFileNumDigits = getNumberDigits(iNewVal);
 	return RS_RET_OK;
 }
 
-rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal)
+static rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal)
 {
 	DEFiRet;
 
@@ -671,7 +673,7 @@ finalize_it:
  * it any longer, it must free it.
  * rgerhards, 2008-01-09
  */
-rsRetVal
+static rsRetVal
 strmSetFName(strm_t *pThis, uchar *pszName, size_t iLenName)
 {
 	DEFiRet;
@@ -701,7 +703,7 @@ finalize_it:
  * it any longer, it must free it.
  * rgerhards, 2008-01-09
  */
-rsRetVal
+static rsRetVal
 strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
 {
 	DEFiRet;
@@ -745,7 +747,7 @@ finalize_it:
  *
  * rgerhards, 2008-01-10
  */
-rsRetVal strmRecordBegin(strm_t *pThis)
+static rsRetVal strmRecordBegin(strm_t *pThis)
 {
 	ASSERT(pThis != NULL);
 	ASSERT(pThis->bInRecord == 0);
@@ -753,7 +755,7 @@ rsRetVal strmRecordBegin(strm_t *pThis)
 	return RS_RET_OK;
 }
 
-rsRetVal strmRecordEnd(strm_t *pThis)
+static rsRetVal strmRecordEnd(strm_t *pThis)
 {
 	DEFiRet;
 	ASSERT(pThis != NULL);
@@ -775,7 +777,7 @@ rsRetVal strmRecordEnd(strm_t *pThis)
  * We do not serialize the dynamic properties. 
  * rgerhards, 2008-01-10
  */
-rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
+static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm)
 {
 	DEFiRet;
 	int i;
@@ -821,7 +823,7 @@ finalize_it:
  * any new set overwrites the previous one.
  * rgerhards, 2008-02-27
  */
-rsRetVal
+static rsRetVal
 strmSetWCntr(strm_t *pThis, number_t *pWCnt)
 {
 	DEFiRet;
@@ -841,8 +843,8 @@ strmSetWCntr(strm_t *pThis, number_t *pWCnt)
 /* This function can be used as a generic way to set properties.
  * rgerhards, 2008-01-11
  */
-#define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
-rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
+#define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, UCHAR_CONSTANT(name), sizeof(name) - 1)
+static rsRetVal strmSetProperty(strm_t *pThis, var_t *pProp)
 {
 	DEFiRet;
 
@@ -881,7 +883,7 @@ finalize_it:
  * reported on the second call may actually be lower than on the first call. This is due to
  * file circulation. A caller must deal with that. -- rgerhards, 2008-01-30
  */
-rsRetVal
+static rsRetVal
 strmGetCurrOffset(strm_t *pThis, int64 *pOffs)
 {
 	DEFiRet;
@@ -909,8 +911,33 @@ CODESTARTobjQueryInterface(strm)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	/*xxxpIf->oID = OBJvm; SAMPLE */
-
+	pIf->Construct = strmConstruct;
+	pIf->ConstructFinalize = strmConstructFinalize;
+	pIf->Destruct = strmDestruct;
+	pIf->ReadChar = strmReadChar;
+	pIf->UnreadChar = strmUnreadChar;
+	pIf->ReadLine = strmReadLine;
+	pIf->SeekCurrOffs = strmSeekCurrOffs;
+	pIf->Write = strmWrite;
+	pIf->WriteChar = strmWriteChar;
+	pIf->WriteLong = strmWriteLong;
+	pIf->SetFName = strmSetFName;
+	pIf->SetDir = strmSetDir;
+	pIf->Flush = strmFlush;
+	pIf->RecordBegin = strmRecordBegin;
+	pIf->RecordEnd = strmRecordEnd;
+	pIf->Serialize = strmSerialize;
+	pIf->SetiAddtlOpenFlags = strmSetiAddtlOpenFlags;
+	pIf->GetCurrOffset = strmGetCurrOffset;
+	pIf->SetWCntr = strmSetWCntr;
+	/* set methods */
+	pIf->SetbDeleteOnClose = strmSetbDeleteOnClose;
+	pIf->SetiMaxFileSize = strmSetiMaxFileSize;
+	pIf->SetiMaxFiles = strmSetiMaxFiles;
+	pIf->SetiFileNumDigits = strmSetiFileNumDigits;
+	pIf->SettOperationsMode = strmSettOperationsMode;
+	pIf->SettOpenMode = strmSettOpenMode;
+	pIf->SetsType = strmSetsType;
 finalize_it:
 ENDobjQueryInterface(strm)
 
@@ -921,13 +948,10 @@ ENDobjQueryInterface(strm)
  */
 BEGINObjClassInit(strm, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
-
 	OBJSetMethodHandler(objMethod_SERIALIZE, strmSerialize);
 	OBJSetMethodHandler(objMethod_SETPROPERTY, strmSetProperty);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strmConstructFinalize);
 ENDObjClassInit(strm)
 
-
-/*
- * vi:set ai:
+/* vi:set ai:
  */

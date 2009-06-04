@@ -93,39 +93,39 @@ typedef struct strm_s {
 
 /* interfaces */
 BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
+	rsRetVal (*Construct)(strm_t **ppThis);
+	rsRetVal (*ConstructFinalize)(strm_t __attribute__((unused)) *pThis);
+	rsRetVal (*Destruct)(strm_t **ppThis);
+	rsRetVal (*SetMaxFileSize)(strm_t *pThis, int64 iMaxFileSize);
+	rsRetVal (*SetFileName)(strm_t *pThis, uchar *pszName, size_t iLenName);
+	rsRetVal (*ReadChar)(strm_t *pThis, uchar *pC);
+	rsRetVal (*UnreadChar)(strm_t *pThis, uchar c);
+	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr);
+	rsRetVal (*SeekCurrOffs)(strm_t *pThis);
+	rsRetVal (*Write)(strm_t *pThis, uchar *pBuf, size_t lenBuf);
+	rsRetVal (*WriteChar)(strm_t *pThis, uchar c);
+	rsRetVal (*WriteLong)(strm_t *pThis, long i);
+	rsRetVal (*SetFName)(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+	rsRetVal (*SetDir)(strm_t *pThis, uchar *pszDir, size_t iLenDir);
+	rsRetVal (*Flush)(strm_t *pThis);
+	rsRetVal (*RecordBegin)(strm_t *pThis);
+	rsRetVal (*RecordEnd)(strm_t *pThis);
+	rsRetVal (*Serialize)(strm_t *pThis, strm_t *pStrm);
+	rsRetVal (*SetiAddtlOpenFlags)(strm_t *pThis, int iNewVal);
+	rsRetVal (*GetCurrOffset)(strm_t *pThis, int64 *pOffs);
+	rsRetVal (*SetWCntr)(strm_t *pThis, number_t *pWCnt);
+	INTERFACEpropSetMeth(strm, bDeleteOnClose, int);
+	INTERFACEpropSetMeth(strm, iMaxFileSize, int);
+	INTERFACEpropSetMeth(strm, iMaxFiles, int);
+	INTERFACEpropSetMeth(strm, iFileNumDigits, int);
+	INTERFACEpropSetMeth(strm, tOperationsMode, int);
+	INTERFACEpropSetMeth(strm, tOpenMode, mode_t);
+	INTERFACEpropSetMeth(strm, sType, strmType_t);
 ENDinterface(strm)
 #define strmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
-rsRetVal strmConstruct(strm_t **ppThis);
-rsRetVal strmConstructFinalize(strm_t __attribute__((unused)) *pThis);
-rsRetVal strmDestruct(strm_t **ppThis);
-rsRetVal strmSetMaxFileSize(strm_t *pThis, int64 iMaxFileSize);
-rsRetVal strmSetFileName(strm_t *pThis, uchar *pszName, size_t iLenName);
-rsRetVal strmReadChar(strm_t *pThis, uchar *pC);
-rsRetVal strmUnreadChar(strm_t *pThis, uchar c);
-rsRetVal strmReadLine(strm_t *pThis, cstr_t **ppCStr);
-rsRetVal strmSeekCurrOffs(strm_t *pThis);
-rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
-rsRetVal strmWriteChar(strm_t *pThis, uchar c);
-rsRetVal strmWriteLong(strm_t *pThis, long i);
-rsRetVal strmSetFName(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
-rsRetVal strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir);
-rsRetVal strmFlush(strm_t *pThis);
-rsRetVal strmRecordBegin(strm_t *pThis);
-rsRetVal strmRecordEnd(strm_t *pThis);
-rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm);
-rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal);
-rsRetVal strmGetCurrOffset(strm_t *pThis, int64 *pOffs);
-rsRetVal strmSetWCntr(strm_t *pThis, number_t *pWCnt);
 PROTOTYPEObjClassInit(strm);
-PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
-PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);
-PROTOTYPEpropSetMeth(strm, iMaxFiles, int);
-PROTOTYPEpropSetMeth(strm, iFileNumDigits, int);
-PROTOTYPEpropSetMeth(strm, tOperationsMode, int);
-PROTOTYPEpropSetMeth(strm, tOpenMode, mode_t);
-PROTOTYPEpropSetMeth(strm, sType, strmType_t);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

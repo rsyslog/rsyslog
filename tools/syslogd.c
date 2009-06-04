@@ -136,7 +136,6 @@
 #include "errmsg.h"
 #include "datetime.h"
 #include "parser.h"
-#include "sysvar.h"
 #include "unicode-helper.h"
 
 /* definitions for objects we access */
@@ -3340,26 +3339,6 @@ GlobalClassExit(void)
 	objRelease(datetime, CORE_COMPONENT);
 
 	/* TODO: implement the rest of the deinit */
-#if 0
-	CHKiRet(datetimeClassInit(NULL));
-	CHKiRet(msgClassInit(NULL));
-	CHKiRet(strmClassInit(NULL));
-	CHKiRet(wtiClassInit(NULL));
-	CHKiRet(wtpClassInit(NULL));
-	CHKiRet(qqueueClassInit(NULL));
-	CHKiRet(vmstkClassInit(NULL));
-	CHKiRet(sysvarClassInit(NULL));
-	CHKiRet(vmClassInit(NULL));
-	CHKiRet(vmopClassInit(NULL));
-	CHKiRet(vmprgClassInit(NULL));
-	CHKiRet(ctok_tokenClassInit(NULL));
-	CHKiRet(ctokClassInit(NULL));
-	CHKiRet(exprClassInit(NULL));
-
-	/* dummy "classes" */
-	CHKiRet(actionClassInit());
-	CHKiRet(templateInit());
-#endif
 	/* dummy "classes */
 	strExit();
 

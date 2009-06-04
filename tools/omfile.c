@@ -776,7 +776,7 @@ doFlush(instanceData *pData)
 	if(pData->poBuf->iBuf == 0)
 		FINALIZE; /* nothing to write, but make this a valid case */
 
-	if(1) { // zlib enabled!
+	if(0) { // zlib enabled!
 		CHKiRet(doZipWrite(pData));
 	} else {
 		CHKiRet(doPhysWrite(pData, pData->poBuf->fd, (char*)pData->poBuf->pszBuf, pData->poBuf->iBuf));
