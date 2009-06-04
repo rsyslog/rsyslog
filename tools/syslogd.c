@@ -3042,18 +3042,18 @@ static rsRetVal loadBuildInModules(void)
 {
 	DEFiRet;
 
-	if((iRet = module.doModInit(modInitFile, (uchar*) "builtin-file", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 #ifdef SYSLOG_INET
-	if((iRet = module.doModInit(modInitFwd, (uchar*) "builtin-fwd", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitFwd, UCHAR_CONSTANT("builtin-fwd"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 #endif
-	if((iRet = module.doModInit(modInitShell, (uchar*) "builtin-shell", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
-	if((iRet = module.doModInit(modInitDiscard, (uchar*) "builtin-discard", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitDiscard, UCHAR_CONSTANT("builtin-discard"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 

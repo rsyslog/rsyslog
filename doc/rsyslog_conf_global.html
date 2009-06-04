@@ -192,6 +192,7 @@ supported in order to be compliant to the upcoming new syslog RFC series.
 <li><b>$OMFileZipLevel</b> 0..9  [default 0] - if greater 0, turns on gzip compression
 of the output file. The higher the number, the better the compression, but also the
 more CPU is required for zipping.</li>
+<li><b>$OMFileIOBufferSize</b> &lt;size_nbr&gt;, default 4k, size of the buffer used to writing output data. The larger the buffer, the potentially better performance is. The default of 4k is quite conservative, it is useful to go up to 64k, and 128K if you used gzip compression (then, even higher sizes may make sense)</li>
 <li><b>$RepeatedMsgContainsOriginalMsg</b> [on/<b>off</b>] - "last message repeated n times" messages, if generated,
 have a different format that contains the message that is being repeated.
 Note that only the first "n" characters are included, with n to be at least 80 characters, most

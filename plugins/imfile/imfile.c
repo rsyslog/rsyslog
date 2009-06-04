@@ -357,8 +357,7 @@ persistStrmState(fileInfo_t *pInfo)
 	/* TODO: create a function persistObj in obj.c? */
 	CHKiRet(strm.Construct(&psSF));
 	CHKiRet(strm.SetDir(psSF, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
-	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE));
-	CHKiRet(strm.SetiAddtlOpenFlags(psSF, O_TRUNC));
+	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE_TRUNC));
 	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.SetFName(psSF, pInfo->pszStateFile, strlen((char*) pInfo->pszStateFile)));
 	CHKiRet(strm.ConstructFinalize(psSF));

@@ -31,6 +31,11 @@
 
 #include <string.h>
 
+static inline char* ustrncpy(uchar *psz1, uchar *psz2, size_t len)
+{
+	return strncpy((char*) psz1, (char*) psz2, len);
+}
+
 static inline int ustrcmp(uchar *psz1, uchar *psz2)
 {
 	return strcmp((char*) psz1, (char*) psz2);

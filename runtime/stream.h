@@ -74,7 +74,6 @@ typedef struct strm_s {
 	int lenFName;
 	strmMode_t tOperationsMode;
 	mode_t tOpenMode;
-	int iAddtlOpenFlags; /* can be used to specifiy additional (compatible!) open flags */
 	int64 iMaxFileSize;/* maximum size a file may grow to */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
@@ -117,7 +116,6 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*RecordBegin)(strm_t *pThis);
 	rsRetVal (*RecordEnd)(strm_t *pThis);
 	rsRetVal (*Serialize)(strm_t *pThis, strm_t *pStrm);
-	rsRetVal (*SetiAddtlOpenFlags)(strm_t *pThis, int iNewVal);
 	rsRetVal (*GetCurrOffset)(strm_t *pThis, int64 *pOffs);
 	rsRetVal (*SetWCntr)(strm_t *pThis, number_t *pWCnt);
 	INTERFACEpropSetMeth(strm, bDeleteOnClose, int);
@@ -128,6 +126,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, tOpenMode, mode_t);
 	INTERFACEpropSetMeth(strm, sType, strmType_t);
 	INTERFACEpropSetMeth(strm, iZipLevel, int);
+	INTERFACEpropSetMeth(strm, sIOBufSize, size_t);
 ENDinterface(strm)
 #define strmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

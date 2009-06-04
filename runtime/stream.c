@@ -94,7 +94,6 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 		}
 	}
 
-RUNLOG_VAR("%d", pThis->tOperationsMode);
 	/* compute which flags we need to provide to open */
 	switch(pThis->tOperationsMode) {
 		case STREAMMODE_READ:
@@ -112,9 +111,6 @@ RUNLOG_VAR("%d", pThis->tOperationsMode);
 		default:assert(0);
 			break;
 	}
-
-	iFlags |= pThis->iAddtlOpenFlags; // TODO: remove this!
-dbgprintf("XXX: open with flags %d\n", iFlags);
 
 	pThis->fd = open((char*)pThis->pszCurrFName, iFlags, pThis->tOpenMode);
 	if(pThis->fd == -1) {
@@ -763,25 +759,13 @@ DEFpropSetMeth(strm, tOperationsMode, int)
 DEFpropSetMeth(strm, tOpenMode, mode_t)
 DEFpropSetMeth(strm, sType, strmType_t)
 DEFpropSetMeth(strm, iZipLevel, int)
+DEFpropSetMeth(strm, sIOBufSize, size_t)
 
 static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {
 	pThis->iMaxFiles = iNewVal;
 	pThis->iFileNumDigits = getNumberDigits(iNewVal);
 	return RS_RET_OK;
-}
-
-static rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal)
-{
-	DEFiRet;
-
-	if(iNewVal & O_APPEND)
-		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-
-	pThis->iAddtlOpenFlags = iNewVal;
-
-finalize_it:
-	RETiRet;
 }
 
 
@@ -829,7 +813,6 @@ strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir)
 	ASSERT(pThis != NULL);
 	ASSERT(pszDir != NULL);
 	
-dbgprintf("XXX: strm setDir: '%s'\n", pszDir);
 	if(iLenDir < 1)
 		ABORT_FINALIZE(RS_RET_FILE_PREFIX_MISSING);
 
@@ -1046,7 +1029,6 @@ CODESTARTobjQueryInterface(strm)
 	pIf->RecordBegin = strmRecordBegin;
 	pIf->RecordEnd = strmRecordEnd;
 	pIf->Serialize = strmSerialize;
-	/* TODO: remove this! */ pIf->SetiAddtlOpenFlags = strmSetiAddtlOpenFlags;
 	pIf->GetCurrOffset = strmGetCurrOffset;
 	pIf->SetWCntr = strmSetWCntr;
 	/* set methods */
@@ -1058,6 +1040,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->SettOpenMode = strmSettOpenMode;
 	pIf->SetsType = strmSetsType;
 	pIf->SetiZipLevel = strmSetiZipLevel;
+	pIf->SetsIOBufSize = strmSetsIOBufSize;
 finalize_it:
 ENDobjQueryInterface(strm)
 
