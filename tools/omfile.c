@@ -12,6 +12,12 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
+ * A large re-write of this file was done in June, 2009. The focus was
+ * to introduce many more features (like zipped writing), clean up the code
+ * and make it more reliable. In short, that rewrite tries to provide a new
+ * solid basis for the next three to five years to come. During it, bugs
+ * may have been introduced ;) -- rgerhards, 2009-06-04
+ *
  * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * An important note on writing gzip format via zlib (kept anonymous
@@ -158,7 +164,7 @@ typedef struct _instanceData {
 	 */
 	dynaFileCacheEntry **dynCache;
 	off_t	f_sizeLimit;		/* file size limit, 0 = no limit */
-	char	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
+	uchar	*f_sizeLimitCmd;	/* command to carry out when size limit is reached */
 } instanceData;
 
 
@@ -208,13 +214,13 @@ rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE, "%s", errMsg);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
 		iNewVal = 1;
-	} else if(iNewVal > 10000) {
+	} else if(iNewVal > 1000) {
 		snprintf((char*) errMsg, sizeof(errMsg)/sizeof(uchar),
-		         "DynaFileCacheSize maximum is 10,000 (%d given), changed to 10,000.", iNewVal);
+		         "DynaFileCacheSize maximum is 1,000 (%d given), changed to 1,000.", iNewVal);
 		errno = 0;
 		errmsg.LogError(0, RS_RET_VAL_OUT_OF_RANGE, "%s", errMsg);
 		iRet = RS_RET_VAL_OUT_OF_RANGE;
-		iNewVal = 10000;
+		iNewVal = 1000;
 	}
 
 	iDynaFileCacheSize = iNewVal;
@@ -286,7 +292,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	/* WARNING: It is dangerous "just" to pass the pointer. As we
 	 * never rebuild the output channel description, this is acceptable here.
 	 */
-	pData->f_sizeLimitCmd = (char*) pOch->cmdOnSizeLimit;
+	pData->f_sizeLimitCmd = pOch->cmdOnSizeLimit;
 
 	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts,
 				       (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName);
@@ -322,7 +328,7 @@ int resolveFileSizeLimit(instanceData *pData)
 	 * when we have a space in the program name. If we find it, everything after
 	 * the space is treated as a single argument.
 	 */
-	if((pCmd = (uchar*)strdup((char*)pData->f_sizeLimitCmd)) == NULL) {
+	if((pCmd = ustrdup(pData->f_sizeLimitCmd)) == NULL) {
 		/* there is not much we can do - we make syslogd close the file in this case */
 		return 1;
 		}
@@ -372,7 +378,7 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 		FINALIZE;
 
 	DBGPRINTF("Removed entry %d for file '%s' from dynaCache.\n", iEntry,
-		pCache[iEntry]->pName == NULL ? "[OPEN FAILED]" : (char*)pCache[iEntry]->pName);
+		pCache[iEntry]->pName == NULL ? UCHAR_CONSTANT("[OPEN FAILED]") : pCache[iEntry]->pName);
 	/* if the name is NULL, this is an improperly initilized entry which
 	 * needs to be discarded. In this case, neither the file is to be closed
 	 * not the name to be freed.
@@ -452,7 +458,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 			 * We do not report any errors here ourselfs but let the code
 			 * fall through to error handler below.
 			 */
-			if(makeFileParentDirs(newFileName, strlen((char*)newFileName),
+			if(makeFileParentDirs(newFileName, ustrlen(newFileName),
 			     pData->fDirCreateMode, pData->dirUID,
 			     pData->dirGID, pData->bFailOnChown) != 0) {
 			     	ABORT_FINALIZE(RS_RET_ERR); /* we give up */
@@ -523,7 +529,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	 * I *hope* this will be a performance enhancement.
 	 */
 	if(   (pData->iCurrElt != -1)
-	   && !strcmp((char*) newFileName, (char*) pCache[pData->iCurrElt]->pName)) {
+	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
 		pCache[pData->iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */
 		return 0;
@@ -540,7 +546,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 			if(iFirstFree == -1)
 				iFirstFree = i;
 		} else { /* got an element, let's see if it matches */
-			if(!strcmp((char*) newFileName, (char*) pCache[i]->pName)) {
+			if(!ustrcmp(newFileName, pCache[i]->pName)) {
 				/* we found our element! */
 				pData->fd = pCache[i]->fd;
 				pData->iCurrElt = i;
@@ -585,7 +591,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 		if(iMsgOpts & INTERNAL_MSG) {
 			DBGPRINTF("Could not open dynaFile, discarding message\n");
 		} else {
-			errmsg.LogError(0, NO_ERRCODE, "Could not open dynamic file '%s' - discarding message", (char*)newFileName);
+			errmsg.LogError(0, NO_ERRCODE, "Could not open dynamic file '%s' - discarding message", newFileName);
 		}
 		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
 		pData->iCurrElt = -1;
@@ -593,7 +599,7 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	}
 
 	pCache[iFirstFree]->fd = pData->fd;
-	pCache[iFirstFree]->pName = (uchar*)strdup((char*)newFileName); /* TODO: check for NULL (very unlikely) */
+	pCache[iFirstFree]->pName = ustrdup(newFileName); /* TODO: check for NULL (very unlikely) */
 	pCache[iFirstFree]->lastUsed = time(NULL);
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
@@ -884,21 +890,10 @@ ENDdoAction
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-	/* yes, the if below is redundant, but I need it now. Will go away as
-	 * the code further changes.  -- rgerhards, 2007-07-25
-	 */
-	if(*p == '$' || *p == '?' || *p == '|' || *p == '/' || *p == '-') {
-		if((iRet = createInstance(&pData)) != RS_RET_OK) {
-			ENDfunc
-			return iRet; /* this can not use RET_iRet! */
-		}
-	} else {
-		/* this is not clean, but we need it for the time being
-		 * TODO: remove when cleaning up modularization 
-		 */
-		ENDfunc
-		return RS_RET_CONFLINE_UNPROCESSED;
-	}
+	if(!(*p == '$' || *p == '?' || *p == '|' || *p == '/' || *p == '-'))
+		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+
+	CHKiRet(createInstance(&pData));
 
 	if(*p == '-') {
 		pData->bSyncFile = 0;
@@ -933,15 +928,12 @@ CODESTARTparseSelectorAct
 		   */
 		CODE_STD_STRING_REQUESTparseSelectorAct(2)
 		++p; /* eat '?' */
-		if((iRet = cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName))
-		   != RS_RET_OK)
-			break;
+		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName));
 		/* "filename" is actually a template name, we need this as string 1. So let's add it
 		 * to the pOMSR. -- rgerhards, 2007-07-27
 		 */
-		if((iRet = OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup((char*) pData->f_fname), OMSR_NO_RQD_TPL_OPTS)) != RS_RET_OK)
-			break;
+		CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->f_fname), OMSR_NO_RQD_TPL_OPTS));
 
 		pData->bDynamicName = 1;
 		pData->iCurrElt = -1;		  /* no current element */
@@ -979,10 +971,8 @@ CODESTARTparseSelectorAct
 		 * to use is specified. So we need to scan for the first coma first
 		 * and then look at the rest of the line.
 		 */
-		if((iRet = cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName))
-		   != RS_RET_OK)
-			break;
+		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName));
 
 		pData->bDynamicName = 0;
 		pData->fCreateMode = fCreateMode; /* preserve current setting */
@@ -1005,7 +995,7 @@ CODESTARTparseSelectorAct
 			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->f_fname);
 			break;
 		}
-		if(strcmp((char*) p, _PATH_CONSOLE) == 0)
+		if(ustrcmp(p, UCHAR_CONSTANT(_PATH_CONSOLE)) == 0)
 			pData->fileType = eTypeCONSOLE;
 		break;
 	default:

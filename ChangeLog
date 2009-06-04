@@ -9,6 +9,9 @@ Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
 - bugfix: imdiag/imtcp had a race condition
 - improved testbench (now much better code design and reuse)
 - added config switch --enable-testbench=no to turn off testbench
+- reduced max value for $DynaFileCacheSize to 1,000 (the former maximum
+  of 10,000 really made no sense, even 1,000 is very high, but we like
+  to keep the user in control ;)).
 ---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-05-25
 - added capability to run multiple tcp listeners (on different ports)
