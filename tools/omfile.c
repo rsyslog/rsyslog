@@ -20,29 +20,6 @@
  *
  * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
- * An important note on writing gzip format via zlib (kept anonymous
- * by request):
- *
- * --------------------------------------------------------------------------
- * We'd like to make sure the output file is in full gzip format
- * (compatible with gzip -d/zcat etc).  There is a flag in how the output
- * is initialized within zlib to properly add the gzip wrappers to the
- * output.  (gzip is effectively a small metadata wrapper around raw
- * zstream output.)
- * 
- * I had written an old bit of code to do this - the documentation on
- * deflatInit2() was pretty tricky to nail down on this specific feature:
- * 
- * int deflateInit2 (z_streamp strm, int level, int method, int windowBits,
- * int memLevel, int strategy);
- * 
- * I believe "31" would be the value for the "windowBits" field that you'd
- * want to try:
- * 
- * deflateInit2(zstrmptr, 6, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
- * --------------------------------------------------------------------------
- * 
- *
  * This file is part of rsyslog.
  *
  * Rsyslog is free software: you can redistribute it and/or modify
@@ -105,21 +82,9 @@ DEFobjCurrIf(strm)
 struct s_dynaFileCacheEntry {
 	uchar *pName;		/* name currently open, if dynamic name */
 	strm_t	*pStrm;		/* our output stream */
-	time_t	lastUsed;	/* for LRU - last access */
+	time_t	lastUsed;	/* for LRU - last access */ // TODO: perforamcne change to counter (see other comment!) 
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
-
-/* the output buffer structure */
-// TODO: later make this part of the dynafile cache!
-#define OUTBUF_LEN 128 // TODO: make dynamic!
-typedef struct {
-	uchar   pszBuf[OUTBUF_LEN];	/* output buffer for buffered writing */
-	size_t	lenBuf;		/* max size of buffer */
-	size_t	iBuf;		/* current buffer index */
-	/* elements for zip writing */
-	z_stream zStrm;
-	char zipBuf[OUTBUF_LEN];
-} outbuf_t;
 
 
 #define IOBUF_DFLT_SIZE 1024	/* default size for io buffers */
@@ -144,7 +109,6 @@ static uchar	*pszTplName = NULL; /* name of the default template to use */
 typedef struct _instanceData {
 	uchar	f_fname[MAXFNAME];/* file or template name (display only) */
 	strm_t	*pStrm;		/* our output stream */
-	//outbuf_t *poBuf;	/* output buffer */
 	enum {
 		eTypeFILE,
 		eTypeTTY,
@@ -152,10 +116,10 @@ typedef struct _instanceData {
 		eTypePIPE
 	} fileType;	
 	char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
-	int	fCreateMode;	/* file creation mode for open() */
+	int	fCreateMode;	/* file creation mode for open() */ // TODO: shuffle down to stream class
 	int	fDirCreateMode;	/* creation mode for mkdir() */
 	int	bCreateDirs;	/* auto-create directories? */
-	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */
+	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */ // TODO: stream class? RE-IMPLEMENT!
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
 	gid_t	fileGID;
@@ -452,14 +416,8 @@ prepareFile(instanceData *pData, uchar *newFileName)
 {
 	int fd;
 	DEFiRet;
-#if 0
-	if(pData->fileType == eTypePIPE) {
-		fd = open((char*) pData->f_fname, O_RDWR|O_NONBLOCK|O_CLOEXEC);
-		FINALIZE; /* we are done in this case */
-	}
-#endif
 
-	// TODO: handle TTY case! (here or in stream.c?) 2009-06-04
+	// TODO: handle TTY/PIPE case! (in stream.c!) 2009-06-04
 
 	if(access((char*)newFileName, F_OK) != 0) {
 		/* file does not exist, create it (and eventually parent directories */
@@ -512,8 +470,6 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SetFName(pData->pStrm, (uchar*)szBaseName, strlen(szBaseName)));
 	CHKiRet(strm.SetDir(pData->pStrm, (uchar*)szDirName, strlen(szDirName)));
 	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
-dbgprintf("static IOBufSize %d, CONST %d\n", iIOBufSize, IOBUF_DFLT_SIZE);
-RUNLOG_VAR("%d", pData->iIOBufSize);
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
 	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
@@ -574,6 +530,7 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 	/* ok, no luck. Now let's search the table if we find a matching spot.
 	 * While doing so, we also prepare for creation of a new one.
 	 */
+	pData->iCurrElt = -1;	/* invalid current element pointer */
 	iFirstFree = -1; /* not yet found */
 	iOldest = 0; /* we assume the first element to be the oldest - that will change as we loop */
 	ttOldest = time(NULL) + 1; /* there must always be an older one */
@@ -603,7 +560,6 @@ prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 		iFirstFree = pData->iCurrCacheSize++;
 	}
 
-	pData->iCurrElt = -1;
 	if(iFirstFree == -1) {
 		dynaFileDelCacheEntry(pCache, iOldest, 0);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
@@ -642,6 +598,7 @@ finalize_it:
 
 
 #if 0
+// TODO: mirgrate code below to stream class (update its write handler, which is not great!)
 /* physically write the file
  */
 static rsRetVal
@@ -738,85 +695,6 @@ again:
 finalize_it:
 	RETiRet;
 }
-
-
-/* write the output buffer in zip mode
- * This means we compress it first and then do a physical write.
- */
-static rsRetVal
-doZipWrite(instanceData *pData)
-{
-	outbuf_t *poBuf;
-	z_stream zstrm;
-	int zRet;	/* zlib return state */
-	DEFiRet;
-	assert(pData != NULL);
-
-	poBuf = pData->poBuf; 	/* use as a shortcut */
-	zstrm = poBuf->zStrm;	/* another shortcut */
-
-	/* allocate deflate state */
-	zstrm.zalloc = Z_NULL;
-	zstrm.zfree = Z_NULL;
-	zstrm.opaque = Z_NULL;
-	/* see note in file header for the params we use with deflateInit2() */
-	zRet = zlibw.DeflateInit2(&zstrm, 9, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
-	if(zRet != Z_OK) {
-		dbgprintf("error %d returned from zlib/deflateInit2()\n", zRet);
-		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
-	}
-RUNLOG_STR("deflateInit2() done successfully\n");
-
-	/* now doing the compression */
-	zstrm.avail_in = poBuf->iBuf;
-	zstrm.next_in = (Bytef*) poBuf->pszBuf;
-	/* run deflate() on input until output buffer not full, finish
-	   compression if all of source has been read in */
-	do {
-		dbgprintf("in deflate() loop, avail_in %d, total_in %ld\n", zstrm.avail_in, zstrm.total_in);
-		zstrm.avail_out = OUTBUF_LEN;
-		zstrm.next_out = (Bytef*) poBuf->zipBuf;
-		zRet = zlibw.Deflate(&zstrm, Z_FINISH);    /* no bad return value */
-		dbgprintf("after deflate, ret %d, avail_out %d\n", zRet, zstrm.avail_out);
-		assert(zRet != Z_STREAM_ERROR);  /* state not clobbered */
-		CHKiRet(doPhysWrite(pData, poBuf->fd, poBuf->zipBuf, OUTBUF_LEN - zstrm.avail_out));
-	} while (zstrm.avail_out == 0);
-	assert(zstrm.avail_in == 0);     /* all input will be used */
-
-RUNLOG_STR("deflate() should be done successfully\n");
-
-	zRet = zlibw.DeflateEnd(&zstrm);
-	if(zRet != Z_OK) {
-		dbgprintf("error %d returned from zlib/deflateEnd()\n", zRet);
-		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
-	}
-RUNLOG_STR("deflateEnd() done successfully\n");
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* flush the output buffer
- */
-static rsRetVal
-doFlush(instanceData *pData)
-{
-	DEFiRet;
-	assert(pData != NULL);
-
-	if(pData->poBuf->iBuf == 0)
-		FINALIZE; /* nothing to write, but make this a valid case */
-
-	if(0) { // zlib enabled!
-		CHKiRet(doZipWrite(pData));
-	} else {
-		CHKiRet(doPhysWrite(pData, pData->poBuf->fd, (char*)pData->poBuf->pszBuf, pData->poBuf->iBuf));
-	}
-
-finalize_it:
-	RETiRet;
-}
 #endif
 
 
@@ -832,29 +710,11 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 	ASSERT(pData != NULL);
 	ASSERT(pszBuf != NULL);
 
-dbgprintf("doWrite, pData->pStrm %p, lenBuf %d\n",
-pData->pStrm, lenBuf);
-
-RUNLOG_VAR("%p", pData->pStrm);
+dbgprintf("doWrite, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
 		FINALIZE; // TODO: clean up later
 	}
-
-#if 0
-	if(pData->fd != poBuf->fd) {
-		// TODO: more efficient use for dynafiles
-		CHKiRet(doFlush(pData));
-		poBuf->fd = pData->fd;
-	}
-
-	for(i = 0 ; i < lenBuf ; ++i) {
-		poBuf->pszBuf[poBuf->iBuf++] = pszBuf[i];
-		if(poBuf->iBuf == poBuf->lenBuf) {
-			CHKiRet(doFlush(pData));
-		}
-	}
-#endif
 
 finalize_it:
 	RETiRet;
@@ -883,7 +743,6 @@ writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 		}
 	}
 
-	/* create the message based on format specified */
 	CHKiRet(doWrite(pData, ppString[0], strlen(CHAR_CONVERT(ppString[0]))));
 
 finalize_it:
@@ -898,20 +757,15 @@ finalize_it:
 BEGINcreateInstance
 CODESTARTcreateInstance
 	pData->pStrm = NULL;
-	//CHKmalloc(pData->poBuf = calloc(1, sizeof(outbuf_t)));
-	//pData->poBuf->lenBuf = OUTBUF_LEN;
-finalize_it:
 ENDcreateInstance
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	//DEL! doFlush(pData); /* flush anything that is pending, TODO: change when enhancing dynafile handling! */
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
 	} else if(pData->pStrm != NULL)
 		strm.Destruct(&pData->pStrm);
-	//free(pData->poBuf);
 ENDfreeInstance
 
 
@@ -969,14 +823,9 @@ CODESTARTparseSelectorAct
 
 		pData->bDynamicName = 1;
 		pData->iCurrElt = -1;		  /* no current element */
-		/* we now allocate the cache table. We use calloc() intentionally, as we 
-		 * need all pointers to be initialized to NULL pointers.
-		 */
-		if((pData->dynCache = (dynaFileCacheEntry**)
-		    calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*))) == NULL) {
-			iRet = RS_RET_OUT_OF_MEMORY;
-			DBGPRINTF("Could not allocate memory for dynaFileCache - selector disabled.\n");
-		}
+		/* we now allocate the cache table */
+		CHKmalloc(pData->dynCache = (dynaFileCacheEntry**)
+				calloc(iDynaFileCacheSize, sizeof(dynaFileCacheEntry*)));
 		break;
 
         case '|':
@@ -1022,9 +871,6 @@ CODESTARTparseSelectorAct
 			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->f_fname);
 		}
 	}
-
-dbgprintf("in init static IOBufSize %d, CONST %d\n", iIOBufSize, IOBUF_DFLT_SIZE);
-RUNLOG_VAR("%d", pData->iIOBufSize);
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
