@@ -9,7 +9,7 @@
 #valgrind="valgrind --tool=drd --log-fd=1"
 #valgrind="valgrind --tool=helgrind --log-fd=1"
 #set -o xtrace
-#export RSYSLOG_DEBUG="debug nostdout printmutexaction"
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 #export RSYSLOG_DEBUGLOG="log"
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
@@ -17,6 +17,7 @@ case $1 in
 		rm -f rsyslogd.started work-*.conf
 		rm -f work rsyslog.out.log rsyslog.out.log.save # common work files
 		rm -rf test-spool
+		rm -f core.* vgcore.*
 		mkdir test-spool
 		;;
    'exit')	rm -f rsyslogd.started work-*.conf diag-common.conf

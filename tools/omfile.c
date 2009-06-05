@@ -104,7 +104,7 @@ DEFobjCurrIf(strm)
  */
 struct s_dynaFileCacheEntry {
 	uchar *pName;		/* name currently open, if dynamic name */
-	short	fd;		/* name associated with file name in cache */
+	strm_t	*pStrm;		/* our output stream */
 	time_t	lastUsed;	/* for LRU - last access */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
@@ -116,7 +116,6 @@ typedef struct {
 	uchar   pszBuf[OUTBUF_LEN];	/* output buffer for buffered writing */
 	size_t	lenBuf;		/* max size of buffer */
 	size_t	iBuf;		/* current buffer index */
-	int	fd;		/* which file descriptor is this buf for? */
 	/* elements for zip writing */
 	z_stream zStrm;
 	char zipBuf[OUTBUF_LEN];
@@ -145,8 +144,7 @@ static uchar	*pszTplName = NULL; /* name of the default template to use */
 typedef struct _instanceData {
 	uchar	f_fname[MAXFNAME];/* file or template name (display only) */
 	strm_t	*pStrm;		/* our output stream */
-	short	fd;		/* file descriptor for (current) file */
-	outbuf_t *poBuf;	/* output buffer */
+	//outbuf_t *poBuf;	/* output buffer */
 	enum {
 		eTypeFILE,
 		eTypeTTY,
@@ -203,7 +201,7 @@ CODESTARTdbgPrintInstInfo
 			);
 	} else { /* regular file */
 		dbgprintf("%s", pData->f_fname);
-		if (pData->fd == -1)
+		if (pData->pStrm == NULL)
 			dbgprintf(" (unused)");
 	}
 ENDdbgPrintInstInfo
@@ -312,6 +310,7 @@ finalize_it:
 }
 
 
+#if 0
 /* rgerhards 2005-06-21: Try to resolve a size limit
  * situation. This first runs the command, and then
  * checks if we are still above the treshold.
@@ -368,6 +367,7 @@ int resolveFileSizeLimit(instanceData *pData)
 
 	return 0;
 }
+#endif
 
 
 /* This function deletes an entry from the dynamic file name
@@ -377,12 +377,11 @@ int resolveFileSizeLimit(instanceData *pData)
  * function immediately returns. Parameter bFreeEntry is 1
  * if the entry should be d_free()ed and 0 if not.
  */
-static void
+static rsRetVal
 dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 {
+	DEFiRet;
 	ASSERT(pCache != NULL);
-
-	BEGINfunc;
 
 	if(pCache[iEntry] == NULL)
 		FINALIZE;
@@ -394,7 +393,8 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 	 * not the name to be freed.
 	 */
 	if(pCache[iEntry]->pName != NULL) {
-		close(pCache[iEntry]->fd);
+		if(pCache[iEntry]->pStrm != NULL)
+			strm.Destruct(&pCache[iEntry]->pStrm);
 		d_free(pCache[iEntry]->pName);
 		pCache[iEntry]->pName = NULL;
 	}
@@ -405,7 +405,7 @@ dynaFileDelCacheEntry(dynaFileCacheEntry **pCache, int iEntry, int bFreeEntry)
 	}
 
 finalize_it:
-	ENDfunc;
+	RETiRet;
 }
 
 
@@ -450,17 +450,20 @@ static void dynaFileFreeCache(instanceData *pData)
 static rsRetVal
 prepareFile(instanceData *pData, uchar *newFileName)
 {
+	int fd;
 	DEFiRet;
+#if 0
 	if(pData->fileType == eTypePIPE) {
-		pData->fd = open((char*) pData->f_fname, O_RDWR|O_NONBLOCK|O_CLOEXEC);
+		fd = open((char*) pData->f_fname, O_RDWR|O_NONBLOCK|O_CLOEXEC);
 		FINALIZE; /* we are done in this case */
 	}
+#endif
 
 	// TODO: handle TTY case! (here or in stream.c?) 2009-06-04
 
 	if(access((char*)newFileName, F_OK) != 0) {
 		/* file does not exist, create it (and eventually parent directories */
-		pData->fd = -1;
+		fd = -1;
 		if(pData->bCreateDirs) {
 			/* We first need to create parent dirs if they are missing.
 			 * We do not report any errors here ourselfs but let the code
@@ -475,17 +478,17 @@ prepareFile(instanceData *pData, uchar *newFileName)
 		/* no matter if we needed to create directories or not, we now try to create
 		 * the file. -- rgerhards, 2008-12-18 (based on patch from William Tisater)
 		 */
-		pData->fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY|O_CLOEXEC,
+		fd = open((char*) newFileName, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY|O_CLOEXEC,
 				pData->fCreateMode);
-		if(pData->fd != -1) {
+		if(fd != -1) {
 			/* check and set uid/gid */
 			if(pData->fileUID != (uid_t)-1 || pData->fileGID != (gid_t) -1) {
 				/* we need to set owner/group */
-				if(fchown(pData->fd, pData->fileUID, pData->fileGID) != 0) {
+				if(fchown(fd, pData->fileUID, pData->fileGID) != 0) {
 					if(pData->bFailOnChown) {
 						int eSave = errno;
-						close(pData->fd);
-						pData->fd = -1;
+						close(fd);
+						fd = -1;
 						errno = eSave;
 					}
 					/* we will silently ignore the chown() failure
@@ -493,16 +496,16 @@ prepareFile(instanceData *pData, uchar *newFileName)
 					 */
 				}
 			}
-			close(pData->fd); /* close again, as we need a stream further on */
+			close(fd); /* close again, as we need a stream further on */
 		}
 	}
 
 	char szNameBuf[MAXFNAME];
 	char szDirName[MAXFNAME];
 	char szBaseName[MAXFNAME];
-	strcpy(szNameBuf, (char*)pData->f_fname);
+	strcpy(szNameBuf, (char*)newFileName);
 	strcpy(szDirName, dirname(szNameBuf));
-	strcpy(szNameBuf, (char*)pData->f_fname);
+	strcpy(szNameBuf, (char*)newFileName);
 	strcpy(szBaseName, basename(szNameBuf));
 
 	CHKiRet(strm.Construct(&pData->pStrm));
@@ -516,18 +519,18 @@ RUNLOG_VAR("%d", pData->iIOBufSize);
 	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
 	
-	pData->fd = 2; /* TODO: dummy to keep current inconsistent code happy - remove later */
-
 finalize_it:
-	/* this was "pData->fd != 0", which I think was a bug. I guess 0 was intended to mean
+	/* this was "fd != 0", which I think was a bug. I guess 0 was intended to mean
 	 * non-open file descriptor. Anyhow, I leave this comment for the time being to that if
 	 * problems surface, one at least knows what happened. -- rgerhards, 2009-03-19
 	 */
-	if(pData->fd != -1 && isatty(pData->fd)) {
-		DBGPRINTF("file %d is a tty file\n", pData->fd);
+#if 0 // TODO: this must be done by stream class!
+	if(fd != -1 && isatty(fd)) {
+		DBGPRINTF("file %d is a tty file\n", fd);
 		pData->fileType = eTypeTTY;
 		untty();
 	}
+#endif
 
 	RETiRet;
 }
@@ -541,15 +544,16 @@ finalize_it:
  * be written.
  * This is a helper to writeFile(). rgerhards, 2007-07-03
  */
-static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
+static inline rsRetVal
+prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsgOpts)
 {
 	time_t ttOldest; /* timestamp of oldest element */
 	int iOldest;
 	int i;
 	int iFirstFree;
+	rsRetVal localRet;
 	dynaFileCacheEntry **pCache;
-	
-	BEGINfunc
+	DEFiRet;
 
 	ASSERT(pData != NULL);
 	ASSERT(newFileName != NULL);
@@ -562,8 +566,9 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 	if(   (pData->iCurrElt != -1)
 	   && !ustrcmp(newFileName, pCache[pData->iCurrElt]->pName)) {
 	   	/* great, we are all set */
-		pCache[pData->iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */
-		return 0;
+		pCache[pData->iCurrElt]->lastUsed = time(NULL); /* update timestamp for LRU */ // TODO: optimize time call!
+		// LRU needs only a strictly monotonically increasing counter, so such a one could do
+		FINALIZE;
 	}
 
 	/* ok, no luck. Now let's search the table if we find a matching spot.
@@ -579,10 +584,10 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 		} else { /* got an element, let's see if it matches */
 			if(!ustrcmp(newFileName, pCache[i]->pName)) {
 				/* we found our element! */
-				pData->fd = pCache[i]->fd;
+				pData->pStrm = pCache[i]->pStrm;
 				pData->iCurrElt = i;
 				pCache[i]->lastUsed = time(NULL); /* update timestamp for LRU */
-				return 0;
+				FINALIZE;
 			}
 			/* did not find it - so lets keep track of the counters for LRU */
 			if(pCache[i]->lastUsed < ttOldest) {
@@ -598,23 +603,20 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 		iFirstFree = pData->iCurrCacheSize++;
 	}
 
+	pData->iCurrElt = -1;
 	if(iFirstFree == -1) {
 		dynaFileDelCacheEntry(pCache, iOldest, 0);
 		iFirstFree = iOldest; /* this one *is* now free ;) */
 	} else {
 		/* we need to allocate memory for the cache structure */
-		pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry));
-		if(pCache[iFirstFree] == NULL) {
-			DBGPRINTF("prepareDynfile(): could not alloc mem, discarding this request\n");
-			return -1;
-		}
+		CHKmalloc(pCache[iFirstFree] = (dynaFileCacheEntry*) calloc(1, sizeof(dynaFileCacheEntry)));
 	}
 
 	/* Ok, we finally can open the file */
-	prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
+	localRet = prepareFile(pData, newFileName); /* ignore exact error, we check fd below */
 
 	/* file is either open now or an error state set */
-	if(pData->fd == -1) {
+	if(pData->pStrm == NULL) {
 		/* do not report anything if the message is an internally-generated
 		 * message. Otherwise, we could run into a never-ending loop. The bad
 		 * news is that we also lose errors on startup messages, but so it is.
@@ -625,22 +627,21 @@ static int prepareDynFile(instanceData *pData, uchar *newFileName, unsigned iMsg
 			errmsg.LogError(0, NO_ERRCODE, "Could not open dynamic file '%s' - discarding message", newFileName);
 		}
 		dynaFileDelCacheEntry(pCache, iFirstFree, 1);
-		pData->iCurrElt = -1;
-		return -1;
+		ABORT_FINALIZE(localRet);
 	}
 
-	pCache[iFirstFree]->fd = pData->fd;
-	pCache[iFirstFree]->pName = ustrdup(newFileName); /* TODO: check for NULL (very unlikely) */
-	pCache[iFirstFree]->lastUsed = time(NULL);
+	CHKmalloc(pCache[iFirstFree]->pName = ustrdup(newFileName));
+	pCache[iFirstFree]->pStrm = pData->pStrm;
+	pCache[iFirstFree]->lastUsed = time(NULL); // monotonically increasing value! TODO: performance
 	pData->iCurrElt = iFirstFree;
 	DBGPRINTF("Added new entry %d for file cache, file '%s'.\n", iFirstFree, newFileName);
 
-	ENDfunc
-
-	return 0;
+finalize_it:
+	RETiRet;
 }
 
 
+#if 0
 /* physically write the file
  */
 static rsRetVal
@@ -816,6 +817,7 @@ doFlush(instanceData *pData)
 finalize_it:
 	RETiRet;
 }
+#endif
 
 
 /* do the actual write process. This function is to be called once we are ready for writing.
@@ -826,15 +828,12 @@ finalize_it:
 static  rsRetVal
 doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 {
-	int i;
-	outbuf_t *poBuf;
 	DEFiRet;
 	ASSERT(pData != NULL);
 	ASSERT(pszBuf != NULL);
 
-	poBuf = pData->poBuf; 	/* use as a shortcut */
-dbgprintf("doWrite, pData->fd %d, pData->pStrm %p, poBuf->fd %d, iBuf %ld, lenBuf %ld\n",
-pData->fd, pData->pStrm, pData->poBuf->fd, pData->poBuf->iBuf, poBuf->lenBuf);
+dbgprintf("doWrite, pData->pStrm %p, lenBuf %d\n",
+pData->pStrm, lenBuf);
 
 RUNLOG_VAR("%p", pData->pStrm);
 	if(pData->pStrm != NULL){
@@ -842,6 +841,7 @@ RUNLOG_VAR("%p", pData->pStrm);
 		FINALIZE; // TODO: clean up later
 	}
 
+#if 0
 	if(pData->fd != poBuf->fd) {
 		// TODO: more efficient use for dynafiles
 		CHKiRet(doFlush(pData));
@@ -854,6 +854,7 @@ RUNLOG_VAR("%p", pData->pStrm);
 			CHKiRet(doFlush(pData));
 		}
 	}
+#endif
 
 finalize_it:
 	RETiRet;
@@ -875,45 +876,42 @@ writeFile(uchar **ppString, unsigned iMsgOpts, instanceData *pData)
 	 * check if it still is ok or a new file needs to be created
 	 */
 	if(pData->bDynamicName) {
-		if(prepareDynFile(pData, ppString[1], iMsgOpts) != 0)
-			ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
-	}
-	
-	if(pData->fd == -1) {
-		rsRetVal iRetLocal;
-		iRetLocal = prepareFile(pData, pData->f_fname);
-		if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
-			ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
+		CHKiRet(prepareDynFile(pData, ppString[1], iMsgOpts));
+	} else { /* "regular", non-dynafile */
+		if(pData->pStrm == NULL) {
+			CHKiRet(prepareFile(pData, pData->f_fname));
+		}
 	}
 
 	/* create the message based on format specified */
 	CHKiRet(doWrite(pData, ppString[0], strlen(CHAR_CONVERT(ppString[0]))));
 
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		/* in v5, we shall return different states for message-cause failur (but only there!) */
+		iRet = RS_RET_SUSPENDED;
+	}
 	RETiRet;
 }
 
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->fd = -1;
-	CHKmalloc(pData->poBuf = calloc(1, sizeof(outbuf_t)));
-	pData->poBuf->lenBuf = OUTBUF_LEN;
+	pData->pStrm = NULL;
+	//CHKmalloc(pData->poBuf = calloc(1, sizeof(outbuf_t)));
+	//pData->poBuf->lenBuf = OUTBUF_LEN;
 finalize_it:
 ENDcreateInstance
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	doFlush(pData); /* flush anything that is pending, TODO: change when enhancing dynafile handling! */
-	if(pData->pStrm != NULL) {
-		strm.Destruct(&pData->pStrm);
-	}
+	//DEL! doFlush(pData); /* flush anything that is pending, TODO: change when enhancing dynafile handling! */
 	if(pData->bDynamicName) {
 		dynaFileFreeCache(pData);
-	} else if(pData->fd != -1)
-		close(pData->fd);
-	free(pData->poBuf);
+	} else if(pData->pStrm != NULL)
+		strm.Destruct(&pData->pStrm);
+	//free(pData->poBuf);
 ENDfreeInstance
 
 
@@ -1019,7 +1017,7 @@ CODESTARTparseSelectorAct
 		 */
 		prepareFile(pData, pData->f_fname);
 		        
-	  	if(pData->fd < 0 ) {
+	  	if(pData->pStrm == NULL) {
 			DBGPRINTF("Error opening log file: %s\n", pData->f_fname);
 			errmsg.LogError(0, RS_RET_NO_FILE_ACCESS, "Could no open output file '%s'", pData->f_fname);
 		}
@@ -1063,9 +1061,9 @@ CODESTARTdoHUP
 		dynaFileFreeCacheEntries(pData);
 		pData->iCurrElt = -1; /* invalidate current element */
 	} else {
-		if(pData->fd != -1) {
-			close(pData->fd);
-			pData->fd = -1;
+		if(pData->pStrm != NULL) {
+			strm.Destruct(&pData->pStrm);
+			pData->pStrm = NULL;
 		}
 	}
 ENDdoHUP
