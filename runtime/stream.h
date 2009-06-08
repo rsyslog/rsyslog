@@ -103,10 +103,12 @@ typedef struct strm_s {
 	int64 iCurrOffs;/* current offset */
 	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since the last CntrSet() */
 	/* dynamic properties, valid only during file open, not to be persistet */
-	size_t	sIOBufSize;/* size of IO buffer */
+	int bSync;	/* sync this file after every write? */
+	size_t sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
 	int lenDir;
 	int fd;		/* the file descriptor, -1 if closed */
+	int fdDir;	/* the directory's descriptor, in case bSync is requested (-1 if closed) */
 	uchar *pszCurrFName; /* name of current file (if open) */
 	uchar *pIOBuf;	/* io Buffer */
 	size_t iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
@@ -148,6 +150,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, tOpenMode, mode_t);
 	INTERFACEpropSetMeth(strm, sType, strmType_t);
 	INTERFACEpropSetMeth(strm, iZipLevel, int);
+	INTERFACEpropSetMeth(strm, bSync, int);
 	INTERFACEpropSetMeth(strm, sIOBufSize, size_t);
 ENDinterface(strm)
 #define strmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */

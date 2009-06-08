@@ -116,7 +116,7 @@ typedef struct _instanceData {
 		eTypePIPE
 	} fileType;	
 	char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
-	int	fCreateMode;	/* file creation mode for open() */ // TODO: shuffle down to stream class
+	int	fCreateMode;	/* file creation mode for open() */
 	int	fDirCreateMode;	/* creation mode for mkdir() */
 	int	bCreateDirs;	/* auto-create directories? */
 	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */ // TODO: stream class? RE-IMPLEMENT!
@@ -472,6 +472,8 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
+	CHKiRet(strm.SettOpenMode(pData->pStrm, fCreateMode));
+	CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
 	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
 	
