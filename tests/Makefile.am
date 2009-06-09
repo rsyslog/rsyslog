@@ -5,6 +5,7 @@ TESTS = $(TESTRUNS) cfg.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
 	diskqueue.sh \
+	diskqueue-fsync.sh \
 	manytcp.sh \
 	queue-persist.sh 
 
@@ -59,6 +60,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   fieldtest.sh \
 	   diskqueue.sh \
 	   testsuites/diskqueue.conf \
+	   diskqueue-fsync.sh \
+	   testsuites/diskqueue-fsync.conf \
 	   imtcp-multiport.sh \
 	   testsuites/imtcp-multiport.conf \
 	   manytcp.sh \

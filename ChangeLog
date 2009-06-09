@@ -12,9 +12,14 @@ Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
 - reduced max value for $DynaFileCacheSize to 1,000 (the former maximum
   of 10,000 really made no sense, even 1,000 is very high, but we like
   to keep the user in control ;)).
+- added capability to fsync() queue disk files for enhanced reliability
+  (also add's speed, because you do no longer need to run the whole file
+  system in sync mode)
 - added configuration commands (see doc for explanations)
   * $OMFileZipLevel
   * $OMFileIOBufferSize
+  * $MainMsgQueueSyncQueueFiles
+  * $ActionQueueSyncQueueFiles
 ---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-05-25
 - added capability to run multiple tcp listeners (on different ports)

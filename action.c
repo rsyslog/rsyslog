@@ -72,6 +72,7 @@ static int iActionQueueNumWorkers = 1;				/* number of worker threads for the mm
 static uchar *pszActionQFName = NULL;				/* prefix for the main message queue file */
 static int64 iActionQueMaxFileSize = 1024*1024;
 static int iActionQPersistUpdCnt = 0;				/* persist queue info every n updates */
+static int bActionQSyncQeueFiles = 0;				/* sync queue files */
 static int iActionQtoQShutdown = 0;				/* queue shutdown */ 
 static int iActionQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
 static int iActionQtoEnq = 2000;				/* timeout for queue enque */ 
@@ -151,6 +152,7 @@ actionResetQueueParams(void)
 	iActionQueueNumWorkers = 1;			/* number of worker threads for the mm queue above */
 	iActionQueMaxFileSize = 1024*1024;
 	iActionQPersistUpdCnt = 0;			/* persist queue info every n updates */
+	bActionQSyncQeueFiles = 0;
 	iActionQtoQShutdown = 0;			/* queue shutdown */ 
 	iActionQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
 	iActionQtoEnq = 2000;				/* timeout for queue enque */ 
@@ -273,6 +275,7 @@ actionConstructFinalize(action_t *pThis)
 	setQPROP(qqueueSetMaxFileSize, "$ActionQueueFileSize", iActionQueMaxFileSize);
 	setQPROPstr(qqueueSetFilePrefix, "$ActionQueueFileName", pszActionQFName);
 	setQPROP(qqueueSetiPersistUpdCnt, "$ActionQueueCheckpointInterval", iActionQPersistUpdCnt);
+	setQPROP(qqueueSetbSyncQueueFiles, "$ActionQueueSyncQueueFiles", bActionQSyncQeueFiles);
 	setQPROP(qqueueSettoQShutdown, "$ActionQueueTimeoutShutdown", iActionQtoQShutdown );
 	setQPROP(qqueueSettoActShutdown, "$ActionQueueTimeoutActionCompletion", iActionQtoActShutdown);
 	setQPROP(qqueueSettoWrkShutdown, "$ActionQueueWorkerTimeoutThreadShutdown", iActionQtoWrkShutdown);
@@ -838,6 +841,7 @@ actionAddCfSysLineHdrl(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardmark", 0, eCmdHdlrInt, NULL, &iActionQDiscardMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuediscardseverity", 0, eCmdHdlrInt, NULL, &iActionQDiscardSeverity, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &iActionQPersistUpdCnt, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL, &bActionQSyncQeueFiles, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetype", 0, eCmdHdlrGetWord, setActionQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iActionQueueNumWorkers, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL, &iActionQtoQShutdown, NULL));
