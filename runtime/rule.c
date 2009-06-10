@@ -320,6 +320,26 @@ CODESTARTobjDestruct(rule)
 ENDobjDestruct(rule)
 
 
+/* set the associated ruleset */
+static rsRetVal
+setAssRuleset(rule_t *pThis, ruleset_t *pRuleset)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, rule);
+	ISOBJ_TYPE_assert(pRuleset, ruleset);
+	pThis->pRuleset = pRuleset;
+	RETiRet;
+}
+
+/* get the associated ruleset (may be NULL if not set!) */
+static ruleset_t*
+getAssRuleset(rule_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, rule);
+	return pThis->pRuleset;
+}
+
+
 /* helper to DebugPrint, to print out all actions via
  * the llExecFunc() facility.
  */
@@ -393,6 +413,8 @@ CODESTARTobjQueryInterface(rule)
 
 	pIf->IterateAllActions = iterateAllActions;
 	pIf->ProcessMsg = processMsg;
+	pIf->SetAssRuleset = setAssRuleset;
+	pIf->GetAssRuleset = getAssRuleset;
 finalize_it:
 ENDobjQueryInterface(rule)
 

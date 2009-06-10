@@ -2398,6 +2398,32 @@ finalize_it:
 }
 
 
+/* Begin a new rule set. The new rule set is created, and all rules that now
+ * follow go into that rule set.
+ * TODO: we may later add the capability to switch back to an already existing
+ * rule set.
+ * NOTE: pCurrRuleset is NOT desructed and must not be! The ruleset class keeps
+ * a list of all known rule sets, and can destruct them at the end of execution.
+ * pCurrRuleset is just a shortcut so that "everyone" knows which ruleset to
+ * extend.
+ * TODO: A problem with this function is the way config lines are processed. The rule
+ * is actually only written when the next rule is completely read. That way, this
+ * (past) rule goes into the wrong (new) ruleset. I need to see how to fix this best...
+ * rgerhards, 2009-06-10
+ */
+static rsRetVal beginNewRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	DEFiRet;
+	CHKiRet(ruleset.Construct(&pCurrRuleset));
+	CHKiRet(ruleset.SetName(pCurrRuleset, pszName));
+	CHKiRet(ruleset.ConstructFinalize(pCurrRuleset));
+
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
+
 /* set the main message queue mode
  * rgerhards, 2008-01-03
  */
@@ -2651,6 +2677,7 @@ static rsRetVal loadBuildInModules(void)
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &glbliActionResumeRetryCount, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord, beginNewRuleset, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL));

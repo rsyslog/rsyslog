@@ -53,6 +53,7 @@ struct rule_s {
 		expr_t *f_expr;				/* expression object */
 	} f_filterData;
 
+	ruleset_t *pRuleset;	/* associated ruleset */
 	linkedList_t llActList;	/* list of configured actions */
 };
 
@@ -64,6 +65,8 @@ BEGINinterface(rule) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(rule_t **ppThis);
 	rsRetVal (*IterateAllActions)(rule_t *pThis, rsRetVal (*pFunc)(void*, void*), void *pParam);
 	rsRetVal (*ProcessMsg)(rule_t *pThis, msg_t *pMsg);
+	rsRetVal (*SetAssRuleset)(rule_t *pThis, ruleset_t*);
+	ruleset_t* (*GetAssRuleset)(rule_t *pThis);
 ENDinterface(rule)
 #define ruleCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

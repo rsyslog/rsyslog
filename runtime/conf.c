@@ -471,7 +471,7 @@ processConfFile(uchar *pConfFile)
 
 	/* we probably have one selector left to be added - so let's do that now */
 	if(pCurrRule != NULL) {
-		CHKiRet(ruleset.AddRule(pCurrRuleset, &pCurrRule));
+		CHKiRet(ruleset.AddRule(rule.GetAssRuleset(pCurrRule), &pCurrRule));
 	}
 
 	/* close the configuration file */
@@ -1141,9 +1141,10 @@ cflineClassic(uchar *p, rule_t **ppRule)
 		 * all.  -- rgerhards, 2007-08-01
 		 */
 		if(*ppRule != NULL) {
-			CHKiRet(ruleset.AddRule(pCurrRuleset, ppRule));
+			CHKiRet(ruleset.AddRule(rule.GetAssRuleset(*ppRule), ppRule));
 		}
 		CHKiRet(rule.Construct(ppRule)); /* create "fresh" selector */
+		CHKiRet(rule.SetAssRuleset(*ppRule, pCurrRuleset)); /* create "fresh" selector */
 		CHKiRet(rule.ConstructFinalize(*ppRule)); /* create "fresh" selector */
 		CHKiRet(cflineDoFilter(&p, *ppRule)); /* pull filters */
 	}
@@ -1166,7 +1167,6 @@ cfline(uchar *line, rule_t **pfCurr)
 	DEFiRet;
 
 	ASSERT(line != NULL);
-if(*pfCurr != NULL){ ISOBJ_TYPE_assert(*pfCurr, rule);}
 
 	dbgprintf("cfline: '%s'\n", line);
 
