@@ -88,7 +88,6 @@ iterateRulesetAllActions(ruleset_t *pThis, rsRetVal (*pFunc)(void*, void*), void
 {
 	iterateAllActions_t params;
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, ruleset);
 	assert(pFunc != NULL);
 
 	params.pFunc = pFunc;
