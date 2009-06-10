@@ -650,7 +650,6 @@ doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 		dbgprintf("error %d returned from zlib/deflateInit2()\n", zRet);
 		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 	}
-RUNLOG_STR("deflateInit2() done successfully\n");
 
 	/* now doing the compression */
 	zstrm.avail_in = lenBuf;
@@ -668,14 +667,12 @@ RUNLOG_STR("deflateInit2() done successfully\n");
 	} while (zstrm.avail_out == 0);
 	assert(zstrm.avail_in == 0);     /* all input will be used */
 
-RUNLOG_STR("deflate() should be done successfully\n");
 
 	zRet = zlibw.DeflateEnd(&zstrm);
 	if(zRet != Z_OK) {
 		dbgprintf("error %d returned from zlib/deflateEnd()\n", zRet);
 		ABORT_FINALIZE(RS_RET_ZLIB_ERR);
 	}
-RUNLOG_STR("deflateEnd() done successfully\n");
 
 finalize_it:
 	RETiRet;

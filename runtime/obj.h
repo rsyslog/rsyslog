@@ -68,7 +68,7 @@
 #define objSerializePTR(strm, propName, propType) \
 	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
 #define DEFobjStaticHelpers \
-	static objInfo_t *pObjInfoOBJ = NULL; \
+	static objInfo_t __attribute__((unused)) *pObjInfoOBJ = NULL; \
 	DEFobjCurrIf(obj)
 
 

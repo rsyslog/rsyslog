@@ -132,11 +132,13 @@
 #include "queue.h"
 #include "stream.h"
 #include "conf.h"
-#include "vm.h"
 #include "errmsg.h"
 #include "datetime.h"
 #include "parser.h"
 #include "unicode-helper.h"
+#include "ruleset.h"
+#include "rule.h"
+#include "vm.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -144,10 +146,10 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(conf)
 DEFobjCurrIf(expr)
-DEFobjCurrIf(vm)
-DEFobjCurrIf(var)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(rule)
+DEFobjCurrIf(ruleset)
 DEFobjCurrIf(net) /* TODO: make go away! */
 
 
@@ -246,7 +248,7 @@ int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
-struct	filed *Files = NULL; /* read-only after init() (but beware of sigusr1!) */
+ruleset_t *pCurrRuleset; /* ruleset that is currently being processed */
 
 static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
 
@@ -313,7 +315,8 @@ static int iMainMsgQueueDeqtWinToHr = 25;			/* hour begin of time frame when que
 /* support for simple textual representation of FIOP names
  * rgerhards, 2005-09-27
  */
-static char* getFIOPName(unsigned iFIOP)
+char*
+getFIOPName(unsigned iFIOP)
 {
 	char *pRet;
 	switch(iFIOP) {
@@ -396,7 +399,6 @@ static char **crunch_list(char *list);
 static void reapchild();
 static void debug_switch();
 static void sighup_handler();
-static void freeSelectors(void);
 static void processImInternal(void);
 
 
@@ -429,67 +431,6 @@ diagGetMainMsgQSize(int *piSize)
 
 
 /* ------------------------------ end support functions for imdiag  ------------------------------ */
-
-
-/* function to destruct a selector_t object
- * rgerhards, 2007-08-01
- */
-rsRetVal
-selectorDestruct(void *pVal)
-{
-	selector_t *pThis = (selector_t *) pVal;
-
-	assert(pThis != NULL);
-
-	if(pThis->pCSHostnameComp != NULL)
-		rsCStrDestruct(&pThis->pCSHostnameComp);
-	if(pThis->pCSProgNameComp != NULL)
-		rsCStrDestruct(&pThis->pCSProgNameComp);
-
-	if(pThis->f_filter_type == FILTER_PROP) {
-		if(pThis->f_filterData.prop.pCSPropName != NULL)
-			rsCStrDestruct(&pThis->f_filterData.prop.pCSPropName);
-		if(pThis->f_filterData.prop.pCSCompValue != NULL)
-			rsCStrDestruct(&pThis->f_filterData.prop.pCSCompValue);
-		if(pThis->f_filterData.prop.regex_cache != NULL)
-			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
-	} else if(pThis->f_filter_type == FILTER_EXPR) {
-		if(pThis->f_filterData.f_expr != NULL)
-			expr.Destruct(&pThis->f_filterData.f_expr);
-	}
-
-	llDestroy(&pThis->llActList);
-	free(pThis);
-	
-	return RS_RET_OK;
-}
-
-
-/* function to construct a selector_t object
- * rgerhards, 2007-08-01
- */
-rsRetVal
-selectorConstruct(selector_t **ppThis)
-{
-	DEFiRet;
-	selector_t *pThis;
-
-	assert(ppThis != NULL);
-	
-	if((pThis = (selector_t*) calloc(1, sizeof(selector_t))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-	CHKiRet(llInit(&pThis->llActList, actionDestruct, NULL, NULL));
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis != NULL) {
-			selectorDestruct(pThis);
-		}
-	}
-	*ppThis = pThis;
-	RETiRet;
-}
 
 
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
@@ -993,233 +934,6 @@ finalize_it:
 	RETiRet;
 }
 
-/* This functions looks at the given message and checks if it matches the
- * provided filter condition. If so, it returns true, else it returns
- * false. This is a helper to logmsg() and meant to drive the decision
- * process if a message is to be processed or not. As I expect this
- * decision code to grow more complex over time AND logmsg() is already
- * a very lengthy function, I thought a separate function is more appropriate.
- * 2005-09-19 rgerhards
- * 2008-02-25 rgerhards: changed interface, now utilizes iRet, bProcessMsg
- * returns is message should be procesed.
- */
-static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProcessMsg)
-{
-	DEFiRet;
-	unsigned short pbMustBeFreed;
-	char *pszPropVal;
-	int bRet = 0;
-	vm_t *pVM = NULL;
-	var_t *pResult = NULL;
-
-	assert(f != NULL);
-	assert(pMsg != NULL);
-
-	/* we first have a look at the global, BSD-style block filters (for tag
-	 * and host). Only if they match, we evaluate the actual filter.
-	 * rgerhards, 2005-10-18
-	 */
-	if(f->eHostnameCmpMode == HN_NO_COMP) {
-		/* EMPTY BY INTENSION - we check this value first, because
-		 * it is the one most often used, so this saves us time!
-		 */
-	} else if(f->eHostnameCmpMode == HN_COMP_MATCH) {
-		if(rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
-			/* not equal, so we are already done... */
-			dbgprintf("hostname filter '+%s' does not match '%s'\n", 
-				rsCStrGetSzStrNoNULL(f->pCSHostnameComp), getHOSTNAME(pMsg));
-			FINALIZE;
-		}
-	} else { /* must be -hostname */
-		if(!rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
-			/* not equal, so we are already done... */
-			dbgprintf("hostname filter '-%s' does not match '%s'\n", 
-				rsCStrGetSzStrNoNULL(f->pCSHostnameComp), getHOSTNAME(pMsg));
-			FINALIZE;
-		}
-	}
-	
-	if(f->pCSProgNameComp != NULL) {
-		int bInv = 0, bEqv = 0, offset = 0;
-		if(*(rsCStrGetSzStrNoNULL(f->pCSProgNameComp)) == '-') {
-			if(*(rsCStrGetSzStrNoNULL(f->pCSProgNameComp) + 1) == '-')
-				offset = 1;
-			else {
-				bInv = 1;
-				offset = 1;
-			}
-		}
-		if(!rsCStrOffsetSzStrCmp(f->pCSProgNameComp, offset, (uchar*) getProgramName(pMsg), getProgramNameLen(pMsg)))
-			bEqv = 1;
-
-		if((!bEqv && !bInv) || (bEqv && bInv)) {
-			/* not equal or inverted selection, so we are already done... */
-			dbgprintf("programname filter '%s' does not match '%s'\n", 
-				rsCStrGetSzStrNoNULL(f->pCSProgNameComp), getProgramName(pMsg));
-			FINALIZE;
-		}
-	}
-	
-	/* done with the BSD-style block filters */
-
-	if(f->f_filter_type == FILTER_PRI) {
-		/* skip messages that are incorrect priority */
-		if ( (f->f_filterData.f_pmask[pMsg->iFacility] == TABLE_NOPRI) || \
-		    ((f->f_filterData.f_pmask[pMsg->iFacility] & (1<<pMsg->iSeverity)) == 0) )
-			bRet = 0;
-		else
-			bRet = 1;
-	} else if(f->f_filter_type == FILTER_EXPR) {
-		CHKiRet(vm.Construct(&pVM));
-		CHKiRet(vm.ConstructFinalize(pVM));
-		CHKiRet(vm.SetMsg(pVM, pMsg));
-		CHKiRet(vm.ExecProg(pVM, f->f_filterData.f_expr->pVmprg));
-		CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
-		dbgprintf("result of expression evaluation: %lld\n", pResult->val.num);
-		/* VM is destructed on function exit */
-		bRet = (pResult->val.num) ? 1 : 0;
-	} else {
-		assert(f->f_filter_type == FILTER_PROP); /* assert() just in case... */
-		pszPropVal = MsgGetProp(pMsg, NULL, f->f_filterData.prop.pCSPropName, &pbMustBeFreed);
-
-		/* Now do the compares (short list currently ;)) */
-		switch(f->f_filterData.prop.operation ) {
-		case FIOP_CONTAINS:
-			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, (uchar*) pszPropVal) != -1)
-				bRet = 1;
-			break;
-		case FIOP_ISEQUAL:
-			if(rsCStrSzStrCmp(f->f_filterData.prop.pCSCompValue,
-					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
-				bRet = 1; /* process message! */
-			break;
-		case FIOP_STARTSWITH:
-			if(rsCStrSzStrStartsWithCStr(f->f_filterData.prop.pCSCompValue,
-					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
-				bRet = 1; /* process message! */
-			break;
-		case FIOP_REGEX:
-			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
-					(unsigned char*) pszPropVal, 0, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
-				bRet = 1;
-			break;
-		case FIOP_EREREGEX:
-			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
-					  (unsigned char*) pszPropVal, 1, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
-				bRet = 1;
-			break;
-		default:
-			/* here, it handles NOP (for performance reasons) */
-			assert(f->f_filterData.prop.operation == FIOP_NOP);
-			bRet = 1; /* as good as any other default ;) */
-			break;
-		}
-
-		/* now check if the value must be negated */
-		if(f->f_filterData.prop.isNegated)
-			bRet = (bRet == 1) ?  0 : 1;
-
-		if(Debug) {
-			dbgprintf("Filter: check for property '%s' (value '%s') ",
-			        rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSPropName),
-			        pszPropVal);
-			if(f->f_filterData.prop.isNegated)
-				dbgprintf("NOT ");
-			dbgprintf("%s '%s': %s\n",
-			       getFIOPName(f->f_filterData.prop.operation),
-			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue),
-			       bRet ? "TRUE" : "FALSE");
-		}
-
-		/* cleanup */
-		if(pbMustBeFreed)
-			free(pszPropVal);
-	}
-
-finalize_it:
-	/* destruct in any case, not just on error, but it makes error handling much easier */
-	if(pVM != NULL)
-		vm.Destruct(&pVM);
-
-	if(pResult != NULL)
-		var.Destruct(&pResult);
-
-	*bProcessMsg = bRet;
-	RETiRet;
-}
-
-
-/* helper to processMsg(), used to call the configured actions. It is
- * executed from within llExecFunc() of the action list.
- * rgerhards, 2007-08-02
- */
-typedef struct processMsgDoActions_s {
-	int bPrevWasSuspended; /* was the previous action suspended? */
-	msg_t *pMsg;
-} processMsgDoActions_t;
-DEFFUNC_llExecFunc(processMsgDoActions)
-{
-	DEFiRet;
-	rsRetVal iRetMod;	/* return value of module - we do not always pass that back */
-	action_t *pAction = (action_t*) pData;
-	processMsgDoActions_t *pDoActData = (processMsgDoActions_t*) pParam;
-
-	assert(pAction != NULL);
-
-	if((pAction->bExecWhenPrevSusp  == 1) && (pDoActData->bPrevWasSuspended == 0)) {
-		dbgprintf("not calling action because the previous one is not suspended\n");
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-
-	iRetMod = actionCallAction(pAction, pDoActData->pMsg);
-	if(iRetMod == RS_RET_DISCARDMSG) {
-		ABORT_FINALIZE(RS_RET_DISCARDMSG);
-	} else if(iRetMod == RS_RET_SUSPENDED) {
-		/* indicate suspension for next module to be called */
-		pDoActData->bPrevWasSuspended = 1;
-	} else {
-		pDoActData->bPrevWasSuspended = 0;
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* Process (consume) a received message. Calls the actions configured.
- * rgerhards, 2005-10-13
- */
-static void
-processMsg(msg_t *pMsg)
-{
-	selector_t *f;
-	int bContinue;
-	int bProcessMsg;
-	processMsgDoActions_t DoActData;
-	rsRetVal iRet;
-
-	BEGINfunc
-	assert(pMsg != NULL);
-
-	/* log the message to the particular outputs */
-
-	bContinue = 1;
-	for (f = Files; f != NULL && bContinue ; f = f->f_next) {
-		/* first check the filters... */
-		iRet = shouldProcessThisMessage(f, pMsg, &bProcessMsg);
-		if(!bProcessMsg) {
-			continue;
-		}
-
-		/* ok -- from here, we have action-specific code, nothing really selector-specific -- rger 2007-08-01 */
-		DoActData.pMsg = pMsg;
-		DoActData.bPrevWasSuspended = 0;
-		if(llExecFunc(&f->llActList, processMsgDoActions, (void*)&DoActData) == RS_RET_DISCARDMSG)
-			bContinue = 0;
-	}
-	ENDfunc
-}
-
 
 /* The consumer of dequeued messages. This function is called by the
  * queue engine on dequeueing of a message. It runs on a SEPARATE
@@ -1237,7 +951,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
 	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 		parseMsg(pMsg);
 	}
-	processMsg(pMsg);
+	ruleset.ProcessMsg(pCurrRuleset, pMsg);
 	msgDestruct(&pMsg);
 
 	RETiRet;
@@ -1744,7 +1458,6 @@ reapchild()
 DEFFUNC_llExecFunc(flushRptdMsgsActions)
 {
 	action_t *pAction = (action_t*) pData;
-
 	assert(pAction != NULL);
 	
 	BEGINfunc
@@ -1767,20 +1480,12 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 }
 
 
-/* This method flushes reapeat messages.
+/* This method flushes repeat messages.
  */
 static void
 doFlushRptdMsgs(void)
 {
-	register selector_t *f;
-
-	/* see if we need to flush any "message repeated n times"... 
-	 * Note that this interferes with objects running on other threads.
-	 * We are using appropriate locking inside the function to handle that.
-	 */
-	for (f = Files; f != NULL ; f = f->f_next) {
-		llExecFunc(&f->llActList, flushRptdMsgsActions, NULL);
-	}
+	ruleset.IterateAllActions(flushRptdMsgsActions, NULL);
 }
 
 
@@ -1971,6 +1676,16 @@ freeAllDynMemForTermination(void)
 }
 
 
+/* Finalize and destruct all actions.
+ */
+static inline void
+destructAllActions(void)
+{
+	ruleset.DestructAllActions();
+	bHaveMainQueue = 0; // flag that internal messages need to be temporarily stored
+}
+
+
 /* die() is called when the program shall end. This typically only occurs
  * during sigterm or during the initialization. 
  * As die() is intended to shutdown rsyslogd, it is
@@ -2021,7 +1736,7 @@ die(int sig)
 	 * repeated msgs.
 	 */
 	dbgprintf("Terminating outputs...\n");
-	freeSelectors();
+	destructAllActions();
 
 	dbgprintf("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
 	/* rger 2005-02-22
@@ -2057,7 +1772,7 @@ die(int sig)
 	 * rgerhards, 2007-08-03
 	 * I have added some code now, but all that mod init/de-init should be moved to
 	 * init, so that modules are unloaded and reloaded on HUP to. Eventually it should go
-	 * into freeSelectors() - but that needs to be seen. -- rgerhards, 2007-08-09
+	 * into destructAllActions() - but that needs to be seen. -- rgerhards, 2007-08-09
 	 */
 	module.UnloadAndDestructAll(eMOD_LINK_ALL);
 
@@ -2185,56 +1900,6 @@ static void doDropPrivUid(int iUid)
 }
 
 
-/* helper to freeSelectors(), used with llExecFunc() to flush 
- * pending output.  -- rgerhards, 2007-08-02
- * We do not need to lock the action object here as the processing
- * queue is already empty and no other threads are running when
- * we call this function. -- rgerhards, 2007-12-12
- */
-DEFFUNC_llExecFunc(freeSelectorsActions)
-{
-	action_t *pAction = (action_t*) pData;
-
-	assert(pAction != NULL);
-
-	/* flush any pending output */
-	if(pAction->f_prevcount) {
-		actionWriteToAction(pAction);
-	}
-
-	return RS_RET_OK; /* never fails ;) */
-}
-
-
-/*  Close all open log files and free selector descriptor array.
- */
-static void freeSelectors(void)
-{
-	selector_t *f;
-	selector_t *fPrev;
-
-	if(Files != NULL) {
-		dbgprintf("Freeing log structures.\n");
-
-		for(f = Files ; f != NULL ; f = f->f_next) {
-			llExecFunc(&f->llActList, freeSelectorsActions, NULL);
-		}
-
-		/* actions flushed and ready for destruction - so do that... */
-		f = Files;
-		while (f != NULL) {
-			fPrev = f;
-			f = f->f_next;
-			selectorDestruct(fPrev);
-		}
-
-		/* Reflect the deletion of the selectors linked list. */
-		Files = NULL;
-		bHaveMainQueue = 0;
-	}
-}
-
-
 /* helper to generateConfigDAG, to print out all actions via
  * the llExecFunc() facility.
  * rgerhards, 2007-08-02
@@ -2311,14 +1976,14 @@ DEFFUNC_llExecFunc(generateConfigDAGAction)
 static rsRetVal
 generateConfigDAG(uchar *pszDAGFile)
 {
-	selector_t *f;
+	//rule_t *f;
 	FILE *fp;
 	int iActUnit = 1;
-	int bHasFilter = 0;	/* filter associated with this action unit? */
-	int bHadFilter;
-	int i;
+	//int bHasFilter = 0;	/* filter associated with this action unit? */
+	//int bHadFilter;
+	//int i;
 	struct dag_info dagInfo;
-	char *pszFilterName;
+	//char *pszFilterName;
 	char szConnectingNode[64];
 	DEFiRet;
 
@@ -2347,6 +2012,8 @@ generateConfigDAG(uchar *pszDAGFile)
 	strcpy(szConnectingNode, "act0_0");
 	dagInfo.bDiscarded = 0;
 
+/* TODO: re-enable! */
+#if 0
 	for(f = Files; f != NULL ; f = f->f_next) {
 		/* BSD-Style filters are currently ignored */
 		bHadFilter = bHasFilter;
@@ -2402,6 +2069,7 @@ generateConfigDAG(uchar *pszDAGFile)
 
 		++iActUnit;
 	}
+#endif
 
 	fprintf(fp, "\t%s -> act%d_0\n", szConnectingNode, iActUnit);
 	fprintf(fp, "\tact%d_0\t\t[label=discard shape=box]\n"
@@ -2413,20 +2081,6 @@ finalize_it:
 }
 
 
-/* helper to dbPrintInitInfo, to print out all actions via
- * the llExecFunc() facility.
- * rgerhards, 2007-08-02
- */
-DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
-{
-	DEFiRet;
-	iRet = actionDbgPrint((action_t*) pData);
-	dbgprintf("\n");
-
-	RETiRet;
-}
-
-
 /* print debug information as part of init(). This pretty much
  * outputs the whole config of rsyslogd. I've moved this code
  * out of init() to clean it somewhat up.
@@ -2434,46 +2088,7 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
  */
 static void dbgPrintInitInfo(void)
 {
-	selector_t *f;
-	int iSelNbr = 1;
-	int i;
-
-	dbgprintf("\nActive selectors:\n");
-	for (f = Files; f != NULL ; f = f->f_next) {
-		dbgprintf("Selector %d:\n", iSelNbr++);
-		if(f->pCSProgNameComp != NULL)
-			dbgprintf("tag: '%s'\n", rsCStrGetSzStrNoNULL(f->pCSProgNameComp));
-		if(f->eHostnameCmpMode != HN_NO_COMP)
-			dbgprintf("hostname: %s '%s'\n",
-				f->eHostnameCmpMode == HN_COMP_MATCH ?
-					"only" : "allbut",
-				rsCStrGetSzStrNoNULL(f->pCSHostnameComp));
-		if(f->f_filter_type == FILTER_PRI) {
-			for (i = 0; i <= LOG_NFACILITIES; i++)
-				if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
-					dbgprintf(" X ");
-				else
-					dbgprintf("%2X ", f->f_filterData.f_pmask[i]);
-		} else if(f->f_filter_type == FILTER_EXPR) {
-			dbgprintf("EXPRESSION-BASED Filter: can currently not be displayed");
-		} else {
-			dbgprintf("PROPERTY-BASED Filter:\n");
-			dbgprintf("\tProperty.: '%s'\n",
-			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSPropName));
-			dbgprintf("\tOperation: ");
-			if(f->f_filterData.prop.isNegated)
-				dbgprintf("NOT ");
-			dbgprintf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
-			dbgprintf("\tValue....: '%s'\n",
-			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue));
-			dbgprintf("\tAction...: ");
-		}
-
-		dbgprintf("\nActions:\n");
-		llExecFunc(&f->llActList, dbgPrintInitInfoAction, NULL); /* actions */
-
-		dbgprintf("\n");
-	}
+	ruleset.DebugPrintAll();
 	dbgprintf("\n");
 	if(bDebugPrintTemplateList)
 		tplPrintList();
@@ -2553,13 +2168,13 @@ startInputModules(void)
 static rsRetVal
 init(void)
 {
-	DEFiRet;
 	rsRetVal localRet;
 	int iNbrActions;
 	int bHadConfigErr = 0;
 	char cbuf[BUFSIZ];
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
+	DEFiRet;
 
 	thrdTerminateAll(); /* stop all running input threads - TODO: reconsider location! */
 
@@ -2580,7 +2195,7 @@ init(void)
 	/*  Close all open log files and free log descriptor array. This also frees
 	 *  all output-modules instance data.
 	 */
-	freeSelectors();
+	destructAllActions();
 
 	/* Unload all non-static modules */
 	dbgprintf("Unloading non-static modules.\n");
@@ -2600,6 +2215,11 @@ init(void)
 	conf.cfsysline((uchar*)"ResetConfigVariables");
 
 	conf.ReInitConf();
+
+	// TODO: move to the right place
+	ruleset.Construct(&pCurrRuleset);
+	ruleset.SetName(pCurrRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
+	ruleset.ConstructFinalize(pCurrRuleset);
 
 	/* open the configuration file */
 	localRet = conf.processConfFile(ConfFile);
@@ -2622,23 +2242,24 @@ init(void)
 		 * We ignore any errors while doing this - we would be lost anyhow...
 		 */
 		errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - fix rsyslog config file!");
-		selector_t *f = NULL;
 
 		/* note: we previously used _POSIY_TTY_NAME_MAX+1, but this turned out to be
 		 * too low on linux... :-S   -- rgerhards, 2008-07-28
 		 */
 		char szTTYNameBuf[128];
-		conf.cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
-		conf.cfline((uchar*)"syslog.*\t" _PATH_CONSOLE, &f);
-		conf.cfline((uchar*)"*.PANIC\t*", &f);
-		conf.cfline((uchar*)"syslog.*\troot", &f);
+		rule_t *pRule;
+		CHKiRet(rule.Construct(&pRule));
+		conf.cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &pRule);
+		conf.cfline((uchar*)"syslog.*\t" _PATH_CONSOLE, &pRule);
+		conf.cfline((uchar*)"*.PANIC\t*", &pRule);
+		conf.cfline((uchar*)"syslog.*\troot", &pRule);
 		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
 			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
-			conf.cfline((uchar*)cbuf, &f);
+			conf.cfline((uchar*)cbuf, &pRule);
 		} else {
 			dbgprintf("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
 		}
-		selectorAddList(f);
+		ruleset.AddRule(pCurrRuleset, &pRule);
 	}
 
 	legacyOptsHook();
@@ -2777,53 +2398,6 @@ finalize_it:
 }
 
 
-/* add a completely-processed selector (after config line parsing) to
- * the linked list of selectors. We now need to check
- * if it has any actions associated and, if so, link it to the linked
- * list. If it has nothing associated with it, we can simply discard
- * it.
- * We have one special case during initialization: then, the current
- * selector is NULL, which means we do not need to care about it at
- * all.  -- rgerhards, 2007-08-01
- */
-rsRetVal
-selectorAddList(selector_t *f)
-{
-	DEFiRet;
-	int iActionCnt;
-
-	static selector_t *nextp = NULL; /* TODO: make this go away (see comment below) */
-
-	if(f != NULL) {
-		CHKiRet(llGetNumElts(&f->llActList, &iActionCnt));
-		if(iActionCnt == 0) {
-			errmsg.LogError(0, NO_ERRCODE, "warning: selector line without actions will be discarded");
-			selectorDestruct(f);
-		} else {
-			/* successfully created an entry */
-			dbgprintf("selector line successfully processed\n");
-			/* TODO: we should use the linked list class for the selector list, else we need to add globals
-			 * ... well nextp could be added temporarily...
-			 * Thanks to varmojfekoj for having the idea to just use "Files" to make this
-			 * code work. I had actually forgotten to fix the code here before moving to 1.18.0.
-			 * And, of course, I also did not migrate the selector_t structure to the linked list class.
-			 * However, that should still be one of the very next things to happen.
-			 * rgerhards, 2007-08-06
-			 */
-			if(Files == NULL) {
-				Files = f;
-			} else {
-				nextp->f_next = f;
-			}
-			nextp = f;
-		}
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* set the main message queue mode
  * rgerhards, 2008-01-03
  */
@@ -2911,7 +2485,6 @@ DEFFUNC_llExecFunc(doHUPActions)
 static inline void
 doHUP(void)
 {
-	selector_t *f;
 	char buf[512];
 
 	snprintf(buf, sizeof(buf) / sizeof(char),
@@ -2926,9 +2499,7 @@ doHUP(void)
 		init(); /* main queue is stopped as part of init() */
 	} else {
 		DBGPRINTF("Received SIGHUP, configured to be a non-restart type of HUP - notifying actions.\n");
-		for(f = Files; f != NULL ; f = f->f_next) {
-			llExecFunc(&f->llActList, doHUPActions, NULL);
-		}
+		ruleset.IterateAllActions(doHUPActions, NULL);
 	}
 }
 
@@ -3285,14 +2856,14 @@ InitGlobalClasses(void)
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	pErrObj = "module";
 	CHKiRet(objUse(module,   CORE_COMPONENT));
-	pErrObj = "var";
-	CHKiRet(objUse(var,      CORE_COMPONENT));
 	pErrObj = "datetime";
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	pErrObj = "vm";
-	CHKiRet(objUse(vm,       CORE_COMPONENT));
 	pErrObj = "expr";
 	CHKiRet(objUse(expr,     CORE_COMPONENT));
+	pErrObj = "rule";
+	CHKiRet(objUse(rule,     CORE_COMPONENT));
+	pErrObj = "ruleset";
+	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
 	pErrObj = "conf";
 	CHKiRet(objUse(conf,     CORE_COMPONENT));
 
@@ -3336,10 +2907,10 @@ GlobalClassExit(void)
 	/* first, release everything we used ourself */
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	objRelease(conf,     CORE_COMPONENT);
+	objRelease(ruleset,  CORE_COMPONENT);
+	objRelease(rule,     CORE_COMPONENT);
 	objRelease(expr,     CORE_COMPONENT);
 	vmClassExit();					/* this is hack, currently core_modules do not get this automatically called */
-	objRelease(vm,       CORE_COMPONENT);
-	objRelease(var,      CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 
 	/* TODO: implement the rest of the deinit */

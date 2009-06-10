@@ -77,6 +77,8 @@
 #include "conf.h"
 #include "glbl.h"
 #include "errmsg.h"
+#include "rule.h"
+#include "ruleset.h"
 
 /* forward definitions */
 static rsRetVal dfltErrLogger(int, uchar *errMsg);
@@ -172,6 +174,10 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(ctokClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "expr";
 		CHKiRet(exprClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "rule";
+		CHKiRet(ruleClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "ruleset";
+		CHKiRet(rulesetClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "conf";
 		CHKiRet(confClassInit(NULL));
 
@@ -204,6 +210,8 @@ rsrtExit(void)
 		/* do actual de-init only if we are the last runtime user */
 		confClassExit();
 		glblClassExit();
+		rulesetClassExit();
+		ruleClassExit();
 		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 	}
 

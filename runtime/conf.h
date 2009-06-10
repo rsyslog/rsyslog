@@ -35,7 +35,7 @@ BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*cfsysline)(uchar *p);
 	rsRetVal (*doModLoad)(uchar **pp, __attribute__((unused)) void* pVal);
 	rsRetVal (*doIncludeLine)(uchar **pp, __attribute__((unused)) void* pVal);
-	rsRetVal (*cfline)(uchar *line, selector_t **pfCurr);
+	rsRetVal (*cfline)(uchar *line, rule_t **pfCurr);
 	rsRetVal (*processConfFile)(uchar *pConfFile);
 	rsRetVal (*ReInitConf)(void);
 	rsRetVal (*GetNbrActActions)(int *);

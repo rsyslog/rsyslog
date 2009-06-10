@@ -62,7 +62,9 @@
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct thrdInfo thrdInfo_t;
 typedef struct obj_s obj_t;
-typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
+typedef struct ruleset_s ruleset_t;
+typedef struct rule_s rule_t;
+//typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
 typedef struct NetAddr netAddr_t;
 typedef struct netstrms_s netstrms_t;
 typedef struct netstrm_s netstrm_t;
@@ -111,6 +113,16 @@ typedef enum {
 	eFLOWCTL_LIGHT_DELAY = 1,	/**< some light delay possible, but no extended period of time */
 	eFLOWCTL_FULL_DELAY = 2	/**< delay possible for extended period of time */
 } flowControl_t;
+
+/* filter operations */
+typedef enum {
+	FIOP_NOP = 0,		/* do not use - No Operation */
+	FIOP_CONTAINS  = 1,	/* contains string? */
+	FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
+	FIOP_STARTSWITH = 3,	/* starts with a string? */
+	FIOP_REGEX = 4,		/* matches a (BRE) regular expression? */
+	FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
+} fiop_t;
 
 
 /* The error codes below are orginally "borrowed" from
@@ -366,6 +378,11 @@ typedef enum rsObjectID rsObjID;
 /* of course, this limits the functionality... */
 #  define O_CLOEXEC 0
 #endif
+
+/* some constants */
+// TODO: do we really need them - if not, delete -- rgerhards, 2009-06-10
+#define IGNORE_ERROR_CODES 1
+#define ABORT_ON_ERROR 0
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));

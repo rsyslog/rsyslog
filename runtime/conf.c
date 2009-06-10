@@ -69,13 +69,15 @@
 #include "expr.h"
 #include "ctok.h"
 #include "ctok_token.h"
+#include "rule.h"
+#include "ruleset.h"
 
 #ifdef OS_SOLARIS
 #	define NAME_MAX MAXNAMELEN
 #endif
 
 /* forward definitions */
-static rsRetVal cfline(uchar *line, selector_t **pfCurr);
+static rsRetVal cfline(uchar *line, rule_t **pfCurr);
 static rsRetVal processConfFile(uchar *pConfFile);
 
 
@@ -87,6 +89,8 @@ DEFobjCurrIf(ctok_token)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
+DEFobjCurrIf(rule)
+DEFobjCurrIf(ruleset)
 
 static int iNbrActions; /* number of actions the running config has. Needs to be init on ReInitConf() */
 
@@ -395,7 +399,7 @@ processConfFile(uchar *pConfFile)
 	DEFiRet;
 	int iLnNbr = 0;
 	FILE *cf;
-	selector_t *fCurr = NULL;
+	rule_t *pCurrRule = NULL;
 	uchar *p;
 	uchar cbuf[CFGLNSIZ];
 	uchar *cline;
@@ -429,7 +433,6 @@ processConfFile(uchar *pConfFile)
 		 * TODO: review the code at whole - this is highly suspect (but will go away
 		 * once we do the rest of RainerScript).
 		 */
-		/* was: strcpy((char*)cline, (char*)p); */
 		for( i = 0 ; p[i] != '\0' ; ++i) {
 			cline[i] = p[i];
 		}
@@ -453,7 +456,7 @@ processConfFile(uchar *pConfFile)
 		/* we now have the complete line, and are positioned at the first non-whitespace
 		 * character. So let's process it
 		 */
-		if(cfline(cbuf, &fCurr) != RS_RET_OK) {
+		if(cfline(cbuf, &pCurrRule) != RS_RET_OK) {
 			/* we log a message, but otherwise ignore the error. After all, the next
 			 * line can be correct.  -- rgerhards, 2007-08-02
 			 */
@@ -467,16 +470,18 @@ processConfFile(uchar *pConfFile)
 	}
 
 	/* we probably have one selector left to be added - so let's do that now */
-	CHKiRet(selectorAddList(fCurr));
+	if(pCurrRule != NULL) {
+		CHKiRet(ruleset.AddRule(pCurrRuleset, &pCurrRule));
+	}
 
 	/* close the configuration file */
-	(void) fclose(cf);
+	fclose(cf);
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		char errStr[1024];
-		if(fCurr != NULL)
-			selectorDestruct(fCurr);
+		if(pCurrRule != NULL)
+			rule.Destruct(&pCurrRule);
 
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
@@ -588,7 +593,7 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
  * rgerhards 2005-09-15
  */
 /* GPLv3 - stems back to sysklogd */
-static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f)
+static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register rule_t *pRule)
 {
 	uchar *p;
 	register uchar *q;
@@ -603,17 +608,17 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 
 	ASSERT(pline != NULL);
 	ASSERT(*pline != NULL);
-	ASSERT(f != NULL);
+	ISOBJ_TYPE_assert(pRule, rule);
 
 	dbgprintf(" - traditional PRI filter\n");
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
-	f->f_filter_type = FILTER_PRI;
+	pRule->f_filter_type = FILTER_PRI;
 	/* Note: file structure is pre-initialized to zero because it was
 	 * created with calloc()!
 	 */
 	for (i = 0; i <= LOG_NFACILITIES; i++) {
-		f->f_filterData.f_pmask[i] = TABLE_NOPRI;
+		pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
 	}
 
 	/* scan through the list of selectors */
@@ -668,32 +673,32 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 				for (i = 0; i <= LOG_NFACILITIES; i++) {
 					if ( pri == INTERNAL_NOPRI ) {
 						if ( ignorepri )
-							f->f_filterData.f_pmask[i] = TABLE_ALLPRI;
+							pRule->f_filterData.f_pmask[i] = TABLE_ALLPRI;
 						else
-							f->f_filterData.f_pmask[i] = TABLE_NOPRI;
+							pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
 					}
 					else if ( singlpri ) {
 						if ( ignorepri )
-				  			f->f_filterData.f_pmask[i] &= ~(1<<pri);
+				  			pRule->f_filterData.f_pmask[i] &= ~(1<<pri);
 						else
-				  			f->f_filterData.f_pmask[i] |= (1<<pri);
+				  			pRule->f_filterData.f_pmask[i] |= (1<<pri);
 					}
 					else
 					{
 						if ( pri == TABLE_ALLPRI ) {
 							if ( ignorepri )
-								f->f_filterData.f_pmask[i] = TABLE_NOPRI;
+								pRule->f_filterData.f_pmask[i] = TABLE_NOPRI;
 							else
-								f->f_filterData.f_pmask[i] = TABLE_ALLPRI;
+								pRule->f_filterData.f_pmask[i] = TABLE_ALLPRI;
 						}
 						else
 						{
 							if ( ignorepri )
 								for (i2= 0; i2 <= pri; ++i2)
-									f->f_filterData.f_pmask[i] &= ~(1<<i2);
+									pRule->f_filterData.f_pmask[i] &= ~(1<<i2);
 							else
 								for (i2= 0; i2 <= pri; ++i2)
-									f->f_filterData.f_pmask[i] |= (1<<i2);
+									pRule->f_filterData.f_pmask[i] |= (1<<i2);
 						}
 					}
 				}
@@ -708,27 +713,27 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
 
 				if ( pri == INTERNAL_NOPRI ) {
 					if ( ignorepri )
-						f->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
+						pRule->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
 					else
-						f->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
+						pRule->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
 				} else if ( singlpri ) {
 					if ( ignorepri )
-						f->f_filterData.f_pmask[i >> 3] &= ~(1<<pri);
+						pRule->f_filterData.f_pmask[i >> 3] &= ~(1<<pri);
 					else
-						f->f_filterData.f_pmask[i >> 3] |= (1<<pri);
+						pRule->f_filterData.f_pmask[i >> 3] |= (1<<pri);
 				} else {
 					if ( pri == TABLE_ALLPRI ) {
 						if ( ignorepri )
-							f->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
+							pRule->f_filterData.f_pmask[i >> 3] = TABLE_NOPRI;
 						else
-							f->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
+							pRule->f_filterData.f_pmask[i >> 3] = TABLE_ALLPRI;
 					} else {
 						if ( ignorepri )
 							for (i2= 0; i2 <= pri; ++i2)
-								f->f_filterData.f_pmask[i >> 3] &= ~(1<<i2);
+								pRule->f_filterData.f_pmask[i >> 3] &= ~(1<<i2);
 						else
 							for (i2= 0; i2 <= pri; ++i2)
-								f->f_filterData.f_pmask[i >> 3] |= (1<<i2);
+								pRule->f_filterData.f_pmask[i >> 3] |= (1<<i2);
 					}
 				}
 			}
@@ -754,7 +759,7 @@ static rsRetVal cflineProcessTradPRIFilter(uchar **pline, register selector_t *f
  * A pointer to that beginnig is passed back to the caller.
  * rgerhards 2008-01-19
  */
-static rsRetVal cflineProcessIfFilter(uchar **pline, register selector_t *f)
+static rsRetVal cflineProcessIfFilter(uchar **pline, register rule_t *f)
 {
 	DEFiRet;
 	ctok_t *tok;
@@ -767,7 +772,6 @@ static rsRetVal cflineProcessIfFilter(uchar **pline, register selector_t *f)
 	dbgprintf(" - general expression-based filter\n");
 	errno = 0;	/* keep strerror_r() stuff out of logerror messages */
 
-dbgprintf("calling expression parser, pp %p ('%s')\n", *pline, *pline);
 	f->f_filter_type = FILTER_EXPR;
 
 	/* if we come to over here, pline starts with "if ". We just skip that part. */
@@ -823,7 +827,7 @@ finalize_it:
  * of the action part. A pointer to that beginnig is passed back to the caller.
  * rgerhards 2005-09-15
  */
-static rsRetVal cflineProcessPropFilter(uchar **pline, register selector_t *f)
+static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 {
 	rsParsObj *pPars;
 	cstr_t *pCSCompOp;
@@ -1014,10 +1018,10 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 
 
 /* read the filter part of a configuration line and store the filter
- * in the supplied selector_t
+ * in the supplied rule_t
  * rgerhards, 2007-08-01
  */
-static rsRetVal cflineDoFilter(uchar **pp, selector_t *f)
+static rsRetVal cflineDoFilter(uchar **pp, rule_t *f)
 {
 	DEFiRet;
 
@@ -1110,17 +1114,15 @@ static rsRetVal cflineDoAction(uchar **p, action_t **ppAction)
 
 
 /* Process a configuration file line in traditional "filter selector" format
- * or one that builds upon this format.
+ * or one that builds upon this format. Note that ppRule may be a NULL pointer,
+ * which is valid and happens if there is no previous line (right at the start
+ * of the master config file!).
  */
-static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
+static rsRetVal
+cflineClassic(uchar *p, rule_t **ppRule)
 {
 	DEFiRet;
 	action_t *pAction;
-	selector_t *fCurr;
-
-	ASSERT(pfCurr != NULL);
-
-	fCurr = *pfCurr;
 
 	/* lines starting with '&' have no new filters and just add
 	 * new actions to the currently processed selector.
@@ -1138,16 +1140,18 @@ static rsRetVal cflineClassic(uchar *p, selector_t **pfCurr)
 		 * selector is NULL, which means we do not need to care about it at
 		 * all.  -- rgerhards, 2007-08-01
 		 */
-		CHKiRet(selectorAddList(fCurr));
-		CHKiRet(selectorConstruct(&fCurr)); /* create "fresh" selector */
-		CHKiRet(cflineDoFilter(&p, fCurr)); /* pull filters */
+		if(*ppRule != NULL) {
+			CHKiRet(ruleset.AddRule(pCurrRuleset, ppRule));
+		}
+		CHKiRet(rule.Construct(ppRule)); /* create "fresh" selector */
+		CHKiRet(rule.ConstructFinalize(*ppRule)); /* create "fresh" selector */
+		CHKiRet(cflineDoFilter(&p, *ppRule)); /* pull filters */
 	}
 
 	CHKiRet(cflineDoAction(&p, &pAction));
-	CHKiRet(llAppend(&fCurr->llActList,  NULL, (void*) pAction));
+	CHKiRet(llAppend(&(*ppRule)->llActList,  NULL, (void*) pAction));
 
 finalize_it:
-	*pfCurr = fCurr;
 	RETiRet;
 }
 
@@ -1157,11 +1161,12 @@ finalize_it:
  * rgerhards, 2007-08-01
  */
 static rsRetVal
-cfline(uchar *line, selector_t **pfCurr)
+cfline(uchar *line, rule_t **pfCurr)
 {
 	DEFiRet;
 
 	ASSERT(line != NULL);
+if(*pfCurr != NULL){ ISOBJ_TYPE_assert(*pfCurr, rule);}
 
 	dbgprintf("cfline: '%s'\n", line);
 
@@ -1180,6 +1185,7 @@ cfline(uchar *line, selector_t **pfCurr)
 			break;
 		default:
 			iRet = cflineClassic(line, pfCurr);
+ISOBJ_TYPE_assert(*pfCurr, rule);
 			break;
 	}
 
@@ -1254,6 +1260,8 @@ CODESTARTObjClassExit(conf)
 	objRelease(module, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
+	objRelease(rule, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 ENDObjClassExit(conf)
 
 
@@ -1269,6 +1277,8 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(objUse(module, CORE_COMPONENT));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
+	CHKiRet(objUse(rule, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 ENDObjClassInit(conf)
 
 /* vi:set ai:

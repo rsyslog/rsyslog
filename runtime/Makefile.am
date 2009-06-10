@@ -67,6 +67,10 @@ librsyslog_la_SOURCES = \
 	vmop.h \
 	queue.c \
 	queue.h \
+	ruleset.c \
+	ruleset.h \
+	rule.c \
+	rule.h \
 	cfsysline.c \
 	cfsysline.h \
 	\

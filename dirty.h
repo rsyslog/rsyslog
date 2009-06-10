@@ -33,6 +33,7 @@ rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len
 int parseRFCSyslogMsg(msg_t *pMsg, int flags);
 int parseLegacySyslogMsg(msg_t *pMsg, int flags);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
+char* getFIOPName(unsigned iFIOP);
 
 /* TODO: the following 2 need to go in conf obj interface... */
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
@@ -56,6 +57,7 @@ extern int  bReduceRepeatMsgs;
 extern int bDropTrailingLF;
 extern uchar cCCEscapeChar;
 extern int  bEscapeCCOnRcv;
+extern ruleset_t *pCurrRuleset;
 #ifdef USE_NETZIP
 /* config param: minimum message size to try compression. The smaller
  * the message, the less likely is any compression gain. We check for
