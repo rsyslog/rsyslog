@@ -151,8 +151,7 @@ CODESTARTobjDestruct(wtp)
 	pthread_mutex_destroy(&pThis->mut);
 	pthread_mutex_destroy(&pThis->mutThrdShutdwn);
 
-	if(pThis->pszDbgHdr != NULL)
-		free(pThis->pszDbgHdr);
+	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)
 
 

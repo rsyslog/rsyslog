@@ -87,6 +87,7 @@
 #include "modules.h"
 #include "errmsg.h"
 #include "cfsysline.h"
+#include "unicode-helper.h"
 
 /* static data */
 DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some macros! */
@@ -145,8 +146,8 @@ InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
 	pThis->pszID = pszID;
-	pThis->lenID = strlen((char*)pszID);
-	pThis->pszName = (uchar*)strdup((char*)pszID); /* it's OK if we have NULL ptr, GetName() will deal with that! */
+	pThis->lenID = ustrlen(pszID);
+	pThis->pszName = ustrdup(pszID); /* it's OK if we have NULL ptr, GetName() will deal with that! */
 	pThis->iObjVers = iObjVers;
 	pThis->QueryIF = pQueryIF;
 	pThis->pModInfo = pModInfo;
@@ -177,8 +178,7 @@ InfoDestruct(objInfo_t **ppThis)
 	pThis = *ppThis;
 	assert(pThis != NULL);
 
-	if(pThis->pszName != NULL)
-		free(pThis->pszName);
+	free(pThis->pszName);
 	free(pThis);
 	*ppThis = NULL;
 
@@ -206,9 +206,7 @@ DestructObjSelf(obj_t *pThis)
 	DEFiRet;
 
 	ISOBJ_assert(pThis);
-	if(pThis->pszName != NULL) {
-		free(pThis->pszName);
-	}
+	free(pThis->pszName);
 
 	RETiRet;
 }
@@ -321,31 +319,31 @@ SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr
 	switch(propType) {
 		case PROPTYPE_PSZ:
 			pszBuf = (uchar*) pUsr;
-			lenBuf = strlen((char*) pszBuf);
+			lenBuf = ustrlen(pszBuf);
 			vType = VARTYPE_STR;
 			break;
 		case PROPTYPE_SHORT:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((short*) pUsr)));
 			pszBuf = szBuf;
-			lenBuf = strlen((char*) szBuf);
+			lenBuf = ustrlen(szBuf);
 			vType = VARTYPE_NUMBER;
 			break;
 		case PROPTYPE_INT:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((int*) pUsr)));
 			pszBuf = szBuf;
-			lenBuf = strlen((char*) szBuf);
+			lenBuf = ustrlen(szBuf);
 			vType = VARTYPE_NUMBER;
 			break;
 		case PROPTYPE_LONG:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), *((long*) pUsr)));
 			pszBuf = szBuf;
-			lenBuf = strlen((char*) szBuf);
+			lenBuf = ustrlen(szBuf);
 			vType = VARTYPE_NUMBER;
 			break;
 		case PROPTYPE_INT64:
 			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), *((int64*) pUsr)));
 			pszBuf = szBuf;
-			lenBuf = strlen((char*) szBuf);
+			lenBuf = ustrlen(szBuf);
 			vType = VARTYPE_NUMBER;
 			break;
 		case PROPTYPE_CSTR:
@@ -380,7 +378,7 @@ SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr
 	/* cookie */
 	CHKiRet(strm.WriteChar(pStrm, COOKIE_PROPLINE));
 	/* name */
-	CHKiRet(strm.Write(pStrm, pszPropName, strlen((char*)pszPropName)));
+	CHKiRet(strm.Write(pStrm, pszPropName, ustrlen(pszPropName)));
 	CHKiRet(strm.WriteChar(pStrm, ':'));
 	/* type */
 	CHKiRet(strm.WriteLong(pStrm, (int) vType));
@@ -804,7 +802,7 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 		}
 	} while(iRetLocal != RS_RET_OK);
 
-	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, strlen((char*)pszTypeExpected))) /* TODO: optimize strlen() - caller shall provide */
+	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, ustrlen(pszTypeExpected))) /* TODO: optimize strlen() - caller shall provide */
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
 	CHKiRet(FindObjInfo(pstrID, &pObjInfo));
@@ -949,13 +947,8 @@ SetName(obj_t *pThis, uchar *pszName)
 {
 	DEFiRet;
 
-	if(pThis->pszName != NULL)
-		free(pThis->pszName);
-
-	pThis->pszName = (uchar*) strdup((char*) pszName);
-
-	if(pThis->pszName == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	free(pThis->pszName);
+	CHKmalloc(pThis->pszName = ustrdup(pszName));
 
 finalize_it:
 	RETiRet;
@@ -1058,7 +1051,7 @@ RegisterObj(uchar *pszObjName, objInfo_t *pInfo)
 	i = 0;
 	while(!bFound && i < OBJ_NUM_IDS && arrObjInfo[i] != NULL) {
 		if(   arrObjInfo[i] != NULL
-		   && !strcmp((char*)arrObjInfo[i]->pszID, (char*)pszObjName)) {
+		   && !ustrcmp(arrObjInfo[i]->pszID, pszObjName)) {
 			bFound = 1;
 			break;
 		}
@@ -1097,7 +1090,7 @@ UnregisterObj(uchar *pszObjName)
 	i = 0;
 	while(!bFound && i < OBJ_NUM_IDS) {
 		if(   arrObjInfo[i] != NULL
-		   && !strcmp((char*)arrObjInfo[i]->pszID, (char*)pszObjName)) {
+		   && !ustrcmp(arrObjInfo[i]->pszID, pszObjName)) {
 			bFound = 1;
 			break;
 		}

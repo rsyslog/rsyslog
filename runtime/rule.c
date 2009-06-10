@@ -317,9 +317,6 @@ CODESTARTobjDestruct(rule)
 	}
 
 	llDestroy(&pThis->llActList);
-	free(pThis);
-	
-	return RS_RET_OK;
 ENDobjDestruct(rule)
 
 
