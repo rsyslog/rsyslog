@@ -1193,7 +1193,6 @@ cfline(uchar *line, rule_t **pfCurr)
 			break;
 		default:
 			iRet = cflineClassic(line, pfCurr);
-ISOBJ_TYPE_assert(*pfCurr, rule);
 			break;
 	}
 

@@ -2247,12 +2247,11 @@ init(void)
 		 * too low on linux... :-S   -- rgerhards, 2008-07-28
 		 */
 		char szTTYNameBuf[128];
-		rule_t *pRule;
-		CHKiRet(rule.Construct(&pRule));
-		conf.cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &pRule);
-		conf.cfline((uchar*)"syslog.*\t" _PATH_CONSOLE, &pRule);
-		conf.cfline((uchar*)"*.PANIC\t*", &pRule);
-		conf.cfline((uchar*)"syslog.*\troot", &pRule);
+		rule_t *pRule = NULL; /* initialization to NULL is *vitally* important! */
+		conf.cfline(UCHAR_CONSTANT("*.ERR\t" _PATH_CONSOLE), &pRule);
+		conf.cfline(UCHAR_CONSTANT("syslog.*\t" _PATH_CONSOLE), &pRule);
+		conf.cfline(UCHAR_CONSTANT("*.PANIC\t*"), &pRule);
+		conf.cfline(UCHAR_CONSTANT("syslog.*\troot"), &pRule);
 		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
 			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
 			conf.cfline((uchar*)cbuf, &pRule);
