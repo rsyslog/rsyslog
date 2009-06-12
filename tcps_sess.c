@@ -245,9 +245,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis)
 		FINALIZE;
 	}
 
-RUNLOG_VAR("%ld", ttGenTime);
 	if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
-RUNLOG_STR("XXX: quering time!");
 		datetime.getCurrTime(&stTime, &ttGenTime);
 	}
 	/* we now create our own message object and submit it to the queue */
