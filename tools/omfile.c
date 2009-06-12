@@ -67,6 +67,7 @@
 #include "unicode-helper.h"
 #include "stream.h"
 #include "zlibw.h"
+#include "unicode-helper.h"
 
 MODULE_TYPE_OUTPUT
 
@@ -119,7 +120,7 @@ typedef struct _instanceData {
 	int	fCreateMode;	/* file creation mode for open() */
 	int	fDirCreateMode;	/* creation mode for mkdir() */
 	int	bCreateDirs;	/* auto-create directories? */
-	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */ // TODO: stream class? RE-IMPLEMENT!
+	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
 	gid_t	fileGID;
@@ -134,7 +135,7 @@ typedef struct _instanceData {
 	 */
 	dynaFileCacheEntry **dynCache;
 	off_t	iSizeLimit;		/* file size limit, 0 = no limit */
-	uchar	*iSizeLimitCmd;	/* command to carry out when size limit is reached */
+	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
 	int 	iZipLevel;		/* zip mode to use for this selector */
 	int	iIOBufSize;		/* size of associated io buffer */
 } instanceData;
@@ -264,7 +265,7 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	/* WARNING: It is dangerous "just" to pass the pointer. As we
 	 * never rebuild the output channel description, this is acceptable here.
 	 */
-	pData->iSizeLimitCmd = pOch->cmdOnSizeLimit;
+	pData->pszSizeLimitCmd = pOch->cmdOnSizeLimit;
 
 	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts,
 				       (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName);
@@ -272,66 +273,6 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 finalize_it:
 	RETiRet;
 }
-
-
-#if 0
-/* rgerhards 2005-06-21: Try to resolve a size limit
- * situation. This first runs the command, and then
- * checks if we are still above the treshold.
- * returns 0 if ok, 1 otherwise
- * TODO: consider moving the initial check in here, too
- */
-int resolveFileSizeLimit(instanceData *pData)
-{
-	uchar *pParams;
-	uchar *pCmd;
-	uchar *p;
-	off_t actualFileSize;
-	ASSERT(pData != NULL);
-
-	if(pData->iSizeLimitCmd == NULL)
-		return 1; /* nothing we can do in this case... */
-	
-	/* the execProg() below is probably not great, but at least is is
-	 * fairly secure now. Once we change the way file size limits are
-	 * handled, we should also revisit how this command is run (and
-	 * with which parameters).   rgerhards, 2007-07-20
-	 */
-	/* we first check if we have command line parameters. We assume this, 
-	 * when we have a space in the program name. If we find it, everything after
-	 * the space is treated as a single argument.
-	 */
-	if((pCmd = ustrdup(pData->iSizeLimitCmd)) == NULL) {
-		/* there is not much we can do - we make syslogd close the file in this case */
-		return 1;
-		}
-
-	for(p = pCmd ; *p && *p != ' ' ; ++p) {
-		/* JUST SKIP */
-	}
-
-	if(*p == ' ') {
-		*p = '\0'; /* pretend string-end */
-		pParams = p+1;
-	} else
-		pParams = NULL;
-
-	execProg(pCmd, 1, pParams);
-
-	free(pCmd);
-
-	pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_CREAT|O_NOCTTY|O_CLOEXEC,
-			pData->fCreateMode);
-
-	actualFileSize = lseek(pData->fd, 0, SEEK_END);
-	if(actualFileSize >= pData->iSizeLimit) {
-		/* OK, it didn't work out... */
-		return 1;
-		}
-
-	return 0;
-}
-#endif
 
 
 /* This function deletes an entry from the dynamic file name
@@ -458,23 +399,29 @@ prepareFile(instanceData *pData, uchar *newFileName)
 		}
 	}
 
-	char szNameBuf[MAXFNAME];
-	char szDirName[MAXFNAME];
-	char szBaseName[MAXFNAME];
-	strcpy(szNameBuf, (char*)newFileName);
-	strcpy(szDirName, dirname(szNameBuf));
-	strcpy(szNameBuf, (char*)newFileName);
-	strcpy(szBaseName, basename(szNameBuf));
+	/* the copies below are clumpsy, but there is no way around given the
+	 * anomalies in dirname() and basename() [they MODIFY the provided buffer...]
+	 */
+	uchar szNameBuf[MAXFNAME];
+	uchar szDirName[MAXFNAME];
+	uchar szBaseName[MAXFNAME];
+	ustrncpy(szNameBuf, newFileName, MAXFNAME);
+	ustrncpy(szDirName, (uchar*)dirname((char*)szNameBuf), MAXFNAME);
+	ustrncpy(szNameBuf, newFileName, MAXFNAME);
+	ustrncpy(szBaseName, (uchar*)basename((char*)szNameBuf), MAXFNAME);
 
 	CHKiRet(strm.Construct(&pData->pStrm));
-	CHKiRet(strm.SetFName(pData->pStrm, (uchar*)szBaseName, strlen(szBaseName)));
-	CHKiRet(strm.SetDir(pData->pStrm, (uchar*)szDirName, strlen(szDirName)));
+	CHKiRet(strm.SetFName(pData->pStrm, szBaseName, ustrlen(szBaseName)));
+	CHKiRet(strm.SetDir(pData->pStrm, szDirName, ustrlen(szDirName)));
 	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
 	CHKiRet(strm.SettOpenMode(pData->pStrm, fCreateMode));
 	CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
 	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strm.SetiSizeLimit(pData->pStrm, pData->iSizeLimit));
+	if(pData->pszSizeLimitCmd != NULL)
+		CHKiRet(strm.SetpszSizeLimitCmd(pData->pStrm, ustrdup(pData->pszSizeLimitCmd)));
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
 	
 finalize_it:

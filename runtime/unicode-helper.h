@@ -4,6 +4,9 @@
  * The following functions are wrappers which hopefully enable us to move
  * from 8-bit chars to unicode with relative ease when we finally attack this
  *
+ * Note: while we prefer inline functions, this leads to invalid references in
+ * core dumps. So in a debug build, we use macros where appropriate...
+ *
  * Begun 2009-05-21 RGerhards
  *
  * Copyright (C) 2009 by Rainer Gerhards and Adiscon GmbH
@@ -31,10 +34,21 @@
 
 #include <string.h>
 
-static inline char* ustrncpy(uchar *psz1, uchar *psz2, size_t len)
-{
-	return strncpy((char*) psz1, (char*) psz2, len);
-}
+#ifdef DEBUG
+#	define ustrncpy(psz1, psz2, len) strncpy((char*)(psz1), (char*)(psz2), (len))
+#	define ustrdup(psz) (uchar*)strdup((char*)(psz))
+#else
+	static inline uchar* ustrncpy(uchar *psz1, uchar *psz2, size_t len)
+	{
+		return strncpy((char*) psz1, (char*) psz2, len);
+	}
+
+	static inline uchar* ustrdup(uchar *psz)
+	{
+		return (uchar*) strdup((char*)psz);
+	}
+
+#endif /* #ifdef DEBUG */
 
 static inline int ustrcmp(uchar *psz1, uchar *psz2)
 {
@@ -44,11 +58,6 @@ static inline int ustrcmp(uchar *psz1, uchar *psz2)
 static inline int ustrlen(uchar *psz)
 {
 	return strlen((char*) psz);
-}
-
-static inline uchar* ustrdup(uchar *psz)
-{
-	return (uchar*) strdup((char*)psz);
 }
 
 

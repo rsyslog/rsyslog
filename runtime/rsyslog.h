@@ -289,6 +289,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_PREVIOUS_COMMITTED = -2122, /**< output plugin status: previous record was committed (an OK state!) */
 	RS_RET_ACTION_FAILED = -2123, /**< action failed and is now suspended (consider this permanent for the time being) */
 	RS_RET_NONFATAL_CONFIG_ERR = -2124, /**< non-fatal error during config processing */
+	RS_RET_NON_SIZELIMITCMD = -2125, /**< size limit for file defined, but no size limit command given */
+	RS_RET_SIZELIMITCMD_DIDNT_RESOLVE = -2126, /**< size limit command did not resolve situation */
+	RS_RET_STREAM_DISABLED = -2127, /**< a file has been disabled (e.g. by size limit restriction) */
 	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
 	RS_RET_ZLIB_ERR = -2141, /**< error during zlib call */
 

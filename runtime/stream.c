@@ -6,8 +6,9 @@
  * "driver").
  *
  * File begun on 2008-01-09 by RGerhards
+ * Large modifications in 2009-06 to support using it with omfile, including zip writer.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -54,11 +55,112 @@ DEFobjCurrIf(zlibw)
 /* forward definitions */
 static rsRetVal strmFlush(strm_t *pThis);
 static rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
+static rsRetVal strmCloseFile(strm_t *pThis);
 
 
 /* methods */
 
-/* first, we define type-specific handlers. The provide a generic functionality,
+
+/* Try to resolve a size limit situation. This is used to support custom-file size handlers
+ * for omfile. It first runs the command, and then checks if we are still above the size
+ * treshold. Note that this works only with single file names, NOT with circular names.
+ * Note that pszCurrFName can NOT be taken from pThis, because the stream is closed when
+ * we are called (and that destroys pszCurrFName, as there is NO CURRENT file name!). So
+ * we need to receive the name as a parameter.
+ * initially wirtten 2005-06-21, moved to this class & updates 2009-06-01, both rgerhards
+ */
+static rsRetVal
+resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName)
+{
+	uchar *pParams;
+	uchar *pCmd;
+	uchar *p;
+	off_t actualFileSize;
+	rsRetVal localRet;
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, strm);
+	assert(pszCurrFName != NULL);
+
+	if(pThis->pszSizeLimitCmd == NULL) {
+		ABORT_FINALIZE(RS_RET_NON_SIZELIMITCMD); /* nothing we can do in this case... */
+	}
+	
+	/* we first check if we have command line parameters. We assume this, 
+	 * when we have a space in the program name. If we find it, everything after
+	 * the space is treated as a single argument.
+	 */
+	CHKmalloc(pCmd = ustrdup(pThis->pszSizeLimitCmd));
+
+	for(p = pCmd ; *p && *p != ' ' ; ++p) {
+		/* JUST SKIP */
+	}
+
+	if(*p == ' ') {
+		*p = '\0'; /* pretend string-end */
+		pParams = p+1;
+	} else
+		pParams = NULL;
+
+	/* the execProg() below is probably not great, but at least is is
+	 * fairly secure now. Once we change the way file size limits are
+	 * handled, we should also revisit how this command is run (and
+	 * with which parameters).   rgerhards, 2007-07-20
+	 */
+	execProg(pCmd, 1, pParams);
+
+	free(pCmd);
+
+	localRet = getFileSize(pszCurrFName, &actualFileSize);
+
+	if(localRet == RS_RET_OK && actualFileSize >= pThis->iSizeLimit) {
+		ABORT_FINALIZE(RS_RET_SIZELIMITCMD_DIDNT_RESOLVE); /* OK, it didn't work out... */
+	} else if(localRet != RS_RET_FILE_NOT_FOUND) {
+		/* file not found is OK, the command may have moved away the file */
+		ABORT_FINALIZE(localRet);
+	}
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		if(iRet == RS_RET_SIZELIMITCMD_DIDNT_RESOLVE)
+			dbgprintf("file size limit cmd for file '%s' did no resolve situation\n", pszCurrFName);
+		else
+			dbgprintf("file size limit cmd for file '%s' failed with code %d.\n", pszCurrFName, iRet);
+		pThis->bDisabled = 1;
+	}
+
+	RETiRet;
+}
+
+
+/* Check if the file has grown beyond the configured omfile iSizeLimit
+ * and, if so, initiate processing.
+ */
+static rsRetVal
+doSizeLimitProcessing(strm_t *pThis)
+{
+	uchar *pszCurrFName = NULL;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, strm);
+	ASSERT(pThis->iSizeLimit != 0);
+	ASSERT(pThis->fd != -1);
+
+	if(pThis->iCurrOffs >= pThis->iSizeLimit) {
+		/* strmClosefile() destroys the current file name, so we
+		 * need to preserve it.
+		 */
+		CHKmalloc(pszCurrFName = ustrdup(pThis->pszCurrFName));
+		CHKiRet(strmCloseFile(pThis));
+		CHKiRet(resolveFileSizeLimit(pThis, pszCurrFName));
+	}
+
+finalize_it:
+	free(pszCurrFName);
+	RETiRet;
+}
+
+
+/* now, we define type-specific handlers. The provide a generic functionality,
  * but for this specific type of strm. The mapping to these handlers happens during
  * strm construction. Later on, handlers are called by pointers present in the
  * strm instance object.
@@ -123,6 +225,12 @@ static rsRetVal strmOpenFile(strm_t *pThis)
 	}
 
 	pThis->iCurrOffs = 0;
+	if(pThis->tOperationsMode == STREAMMODE_WRITE_APPEND) {
+		/* we need to obtain the current offset */
+		off_t offset;
+		CHKiRet(getFileSize(pThis->pszCurrFName, &offset));
+		pThis->iCurrOffs = offset;
+	}
 
 	dbgoprint((obj_t*) pThis, "opened file '%s' for %s (0x%x) as %d\n", pThis->pszCurrFName,
 		  (pThis->tOperationsMode == STREAMMODE_READ) ? "READ" : "WRITE", iFlags, pThis->fd);
@@ -527,7 +635,7 @@ doWriteCall(int fd, uchar *pBuf, size_t *pLenBuf)
 			if(err == EINTR) {
 				/*NO ERROR, just continue */;
 			} else {
-				ABORT_FINALIZE(RS_RET_ERR);
+				ABORT_FINALIZE(RS_RET_IO_ERROR);
 				// TODO: cover more error cases!
 			}
 	 	} 
@@ -538,7 +646,7 @@ doWriteCall(int fd, uchar *pBuf, size_t *pLenBuf)
 	} while(lenBuf > 0);	/* Warning: do..while()! */
 
 finalize_it:
-	*pLenBuf -= iTotalWritten;
+	*pLenBuf = iTotalWritten;
 	RETiRet;
 }
 
@@ -610,8 +718,11 @@ strmPhysWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 		CHKiRet(syncFile(pThis));
 	}
 
-	if(pThis->sType == STREAMTYPE_FILE_CIRCULAR)
+	if(pThis->sType == STREAMTYPE_FILE_CIRCULAR) {
 		CHKiRet(strmCheckNextOutputFile(pThis));
+	} else if(pThis->iSizeLimit != 0) {
+		CHKiRet(doSizeLimitProcessing(pThis));
+	}
 
 finalize_it:
 	pThis->iBufPtr = 0; /* see comment above */
@@ -812,7 +923,10 @@ strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf)
 	ASSERT(pThis != NULL);
 	ASSERT(pBuf != NULL);
 
-dbgprintf("strmWrite(%p, '%s', %ld);\n", pThis, pBuf,lenBuf);
+dbgprintf("strmWrite(%p, '%65.65s', %ld);, disabled %d, sizelim %ld, size %lld\n", pThis, pBuf,lenBuf, pThis->bDisabled, pThis->iSizeLimit, pThis->iCurrOffs);
+	if(pThis->bDisabled)
+		ABORT_FINALIZE(RS_RET_STREAM_DISABLED);
+
 	/* check if the to-be-written data is larger than our buffer size */
 	if(lenBuf >= pThis->sIOBufSize) {
 		/* it is - so we do a direct write, that is most efficient.
@@ -857,6 +971,8 @@ DEFpropSetMeth(strm, sType, strmType_t)
 DEFpropSetMeth(strm, iZipLevel, int)
 DEFpropSetMeth(strm, bSync, int)
 DEFpropSetMeth(strm, sIOBufSize, size_t)
+DEFpropSetMeth(strm, iSizeLimit, off_t)
+DEFpropSetMeth(strm, pszSizeLimitCmd, uchar*)
 
 static rsRetVal strmSetiMaxFiles(strm_t *pThis, int iNewVal)
 {
@@ -1139,6 +1255,8 @@ CODESTARTobjQueryInterface(strm)
 	pIf->SetiZipLevel = strmSetiZipLevel;
 	pIf->SetbSync = strmSetbSync;
 	pIf->SetsIOBufSize = strmSetsIOBufSize;
+	pIf->SetiSizeLimit = strmSetiSizeLimit;
+	pIf->SetpszSizeLimitCmd = strmSetpszSizeLimitCmd;
 finalize_it:
 ENDobjQueryInterface(strm)
 

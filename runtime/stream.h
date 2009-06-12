@@ -103,6 +103,7 @@ typedef struct strm_s {
 	int64 iCurrOffs;/* current offset */
 	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since the last CntrSet() */
 	/* dynamic properties, valid only during file open, not to be persistet */
+	int bDisabled; /* should file no longer be written to? (currently set only if omfile file size limit fails) */
 	int bSync;	/* sync this file after every write? */
 	size_t sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
@@ -117,7 +118,9 @@ typedef struct strm_s {
 	int bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
 	int iZipLevel;	/* zip level (0..9). If 0, zip is completely disabled */
 	Bytef *pZipBuf;
-
+	/* support for omfile size-limiting commands, special counters, NOT persisted! */
+	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
+	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
 } strm_t;
 
 /* interfaces */
@@ -152,6 +155,8 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, iZipLevel, int);
 	INTERFACEpropSetMeth(strm, bSync, int);
 	INTERFACEpropSetMeth(strm, sIOBufSize, size_t);
+	INTERFACEpropSetMeth(strm, iSizeLimit, off_t);
+	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
 ENDinterface(strm)
 #define strmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
