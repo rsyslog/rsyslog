@@ -40,6 +40,7 @@
 
 #include "rsyslog.h"
 #include "obj.h"
+#include "msg.h"
 #include "ruleset.h"
 #include "rule.h"
 #include "errmsg.h"
@@ -53,6 +54,8 @@ DEFobjCurrIf(errmsg)
 DEFobjCurrIf(rule)
 
 linkedList_t llRulesets; /* this is NOT a pointer - no typo here ;) */
+ruleset_t *pCurrRuleset = NULL; /* currently "active" ruleset */
+ruleset_t *pDfltRuleset = NULL; /* currentl default ruleset, e.g. for binding to actions which have no other */
 
 /* ---------- linked-list key handling functions ---------- */
 
@@ -147,11 +150,14 @@ DEFFUNC_llExecFunc(processMsgDoRules)
  * rgerhards, 2005-10-13
  */
 static rsRetVal
-processMsg(ruleset_t *pThis, msg_t *pMsg)
+processMsg(msg_t *pMsg)
 {
+	ruleset_t *pThis;
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, ruleset);
 	assert(pMsg != NULL);
+
+	pThis = (pMsg->pRuleset == NULL) ? pDfltRuleset : pMsg->pRuleset;
+	ISOBJ_TYPE_assert(pThis, ruleset);
 
 	CHKiRet(llExecFunc(&pThis->llRules, processMsgDoRules, pMsg));
 
@@ -200,6 +206,69 @@ finalize_it:
 }
 
 
+/* get current ruleset
+ * We use a non-standard calling interface, as nothing can go wrong and it
+ * is really much more natural to return the pointer directly.
+ */
+static ruleset_t*
+GetCurrent(void)
+{
+	return pCurrRuleset;
+}
+
+
+/* Find the ruleset with the given name and return a pointer to its object.
+ */
+static rsRetVal
+GetRuleset(ruleset_t **ppRuleset, uchar *pszName)
+{
+	DEFiRet;
+	assert(ppRuleset != NULL);
+	assert(pszName != NULL);
+
+	CHKiRet(llFind(&llRulesets, pszName, (void*) ppRuleset));
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Set a new default rule set. If the default can not be found, no change happens.
+ */
+static rsRetVal
+SetDefaultRuleset(uchar *pszName)
+{
+	ruleset_t *pRuleset;
+	DEFiRet;
+	assert(pszName != NULL);
+
+	CHKiRet(GetRuleset(&pRuleset, pszName));
+	pDfltRuleset = pRuleset;
+	dbgprintf("default rule set changed to %p: '%s'\n", pRuleset, pszName);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Set a new current rule set. If the ruleset can not be found, no change happens.
+ */
+static rsRetVal
+SetCurrRuleset(uchar *pszName)
+{
+	ruleset_t *pRuleset;
+	DEFiRet;
+	assert(pszName != NULL);
+
+	CHKiRet(GetRuleset(&pRuleset, pszName));
+	pCurrRuleset = pRuleset;
+	dbgprintf("current rule set changed to %p: '%s'\n", pRuleset, pszName);
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* destructor we need to destruct rules inside our linked list contents.
  */
 static rsRetVal
@@ -236,6 +305,13 @@ rulesetConstructFinalize(ruleset_t *pThis)
 	 */
 	CHKmalloc(keyName = ustrdup(pThis->pszName));
 	CHKiRet(llAppend(&llRulesets, keyName, pThis));
+
+	/* this now also is the new current ruleset */
+	pCurrRuleset = pThis;
+
+	/* and also the default, if so far none has been set */
+	if(pDfltRuleset == NULL)
+		pDfltRuleset = pThis;
 
 finalize_it:
 	RETiRet;
@@ -336,6 +412,10 @@ CODESTARTobjQueryInterface(ruleset)
 	pIf->ProcessMsg = processMsg;
 	pIf->SetName = setName;
 	pIf->DebugPrintAll = debugPrintAll;
+	pIf->GetCurrent = GetCurrent;
+	pIf->GetRuleset = GetRuleset;
+	pIf->SetDefaultRuleset = SetDefaultRuleset;
+	pIf->SetCurrRuleset = SetCurrRuleset;
 finalize_it:
 ENDobjQueryInterface(ruleset)
 

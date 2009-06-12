@@ -254,6 +254,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis)
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	pMsg->bParseHOSTNAME = 1;
 	MsgSetRcvFrom(pMsg, pThis->fromHost);
+	MsgSetRuleset(pMsg, pThis->pLstnInfo->pRuleset);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
 	CHKiRet(submitMsg(pMsg));
 

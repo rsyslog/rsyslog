@@ -46,6 +46,7 @@
 #include "regexp.h"
 #include "atomic.h"
 #include "unicode-helper.h"
+#include "ruleset.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -1166,13 +1167,21 @@ void MsgAssignTAG(msg_t *pMsg, uchar *pBuf)
 }
 
 
+/* rgerhards 2009-06-12: set associated ruleset
+ */
+void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
+{
+	assert(pMsg != NULL);
+	pMsg->pRuleset = pRuleset;
+}
+
+
 /* rgerhards 2004-11-16: set TAG in msg object
  */
 void MsgSetTAG(msg_t *pMsg, char* pszTAG)
 {
 	assert(pMsg != NULL);
-	if(pMsg->pszTAG != NULL)
-		free(pMsg->pszTAG);
+	free(pMsg->pszTAG);
 	pMsg->iLenTAG = strlen(pszTAG);
 	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) != NULL)
 		memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);

@@ -44,8 +44,12 @@ BEGINinterface(ruleset) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*IterateAllActions)(rsRetVal (*pFunc)(void*, void*), void* pParam);
 	rsRetVal (*DestructAllActions)(void);
 	rsRetVal (*AddRule)(ruleset_t *pThis, rule_t **ppRule);
-	rsRetVal (*ProcessMsg)(ruleset_t *pThis, msg_t *pMsg);
 	rsRetVal (*SetName)(ruleset_t *pThis, uchar *pszName);
+	rsRetVal (*ProcessMsg)(msg_t *pMsg);
+	rsRetVal (*GetRuleset)(ruleset_t **ppThis, uchar*);
+	rsRetVal (*SetDefaultRuleset)(uchar*);
+	rsRetVal (*SetCurrRuleset)(uchar*);
+	ruleset_t* (*GetCurrent)(void);
 ENDinterface(ruleset)
 #define rulesetCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

@@ -120,6 +120,7 @@ short bDoLock; /* use the mutex? */
         char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
         char *pszTIMESTAMP_SecFrac;/* TIMESTAMP fractional seconds (always 6 characters) */
 	int msgFlags;		/* flags associated with this message */
+	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
 };
 
 
@@ -167,6 +168,7 @@ char *getPROCID(msg_t *pM);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
 void MsgAssignTAG(msg_t *pMsg, uchar *pBuf);
 void MsgSetTAG(msg_t *pMsg, char* pszTAG);
+void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 char *getTAG(msg_t *pM);
 int getHOSTNAMELen(msg_t *pM);

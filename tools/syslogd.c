@@ -249,8 +249,6 @@ int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
 
-ruleset_t *pCurrRuleset; /* ruleset that is currently being processed */
-
 static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
 
 typedef struct legacyOptsLL_s {
@@ -952,7 +950,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, void *pUsr)
 	if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 		parseMsg(pMsg);
 	}
-	ruleset.ProcessMsg(pCurrRuleset, pMsg);
+	ruleset.ProcessMsg(pMsg);
 	msgDestruct(&pMsg);
 
 	RETiRet;
@@ -2172,6 +2170,7 @@ init(void)
 	rsRetVal localRet;
 	int iNbrActions;
 	int bHadConfigErr = 0;
+	ruleset_t *pRuleset;
 	char cbuf[BUFSIZ];
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
@@ -2217,10 +2216,10 @@ init(void)
 
 	conf.ReInitConf();
 
-	// TODO: move to the right place
-	ruleset.Construct(&pCurrRuleset);
-	ruleset.SetName(pCurrRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
-	ruleset.ConstructFinalize(pCurrRuleset);
+	/* construct the default ruleset */
+	ruleset.Construct(&pRuleset);
+	ruleset.SetName(pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
+	ruleset.ConstructFinalize(pRuleset);
 
 	/* open the configuration file */
 	localRet = conf.processConfFile(ConfFile);
@@ -2259,7 +2258,7 @@ init(void)
 		} else {
 			dbgprintf("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
 		}
-		ruleset.AddRule(pCurrRuleset, &pRule);
+		ruleset.AddRule(ruleset.GetCurrent(), &pRule);
 	}
 
 	legacyOptsHook();
@@ -2398,25 +2397,45 @@ finalize_it:
 }
 
 
-/* Begin a new rule set. The new rule set is created, and all rules that now
- * follow go into that rule set.
- * TODO: we may later add the capability to switch back to an already existing
- * rule set.
- * NOTE: pCurrRuleset is NOT desructed and must not be! The ruleset class keeps
- * a list of all known rule sets, and can destruct them at the end of execution.
- * pCurrRuleset is just a shortcut so that "everyone" knows which ruleset to
- * extend.
- * TODO: A problem with this function is the way config lines are processed. The rule
- * is actually only written when the next rule is completely read. That way, this
- * (past) rule goes into the wrong (new) ruleset. I need to see how to fix this best...
- * rgerhards, 2009-06-10
+/* Switch the default ruleset (that, what servcies bind to if nothing specific
+ * is specified).
+ * rgerhards, 2009-06-12
  */
-static rsRetVal beginNewRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+static rsRetVal
+setDefaultRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 {
 	DEFiRet;
-	CHKiRet(ruleset.Construct(&pCurrRuleset));
-	CHKiRet(ruleset.SetName(pCurrRuleset, pszName));
-	CHKiRet(ruleset.ConstructFinalize(pCurrRuleset));
+
+	CHKiRet(ruleset.SetDefaultRuleset(pszName));
+
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
+
+/* Switch to either an already existing rule set or start a new one. The
+ * named rule set becomes the new "current" rule set (what means that new
+ * actions are added to it).
+ * rgerhards, 2009-06-12
+ */
+static rsRetVal
+setCurrRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	ruleset_t *pRuleset;
+	rsRetVal localRet;
+	DEFiRet;
+
+	localRet = ruleset.SetCurrRuleset(pszName);
+
+	if(localRet == RS_RET_NOT_FOUND) {
+		DBGPRINTF("begin new current rule set '%s'\n", pszName);
+		CHKiRet(ruleset.Construct(&pRuleset));
+		CHKiRet(ruleset.SetName(pRuleset, pszName));
+		CHKiRet(ruleset.ConstructFinalize(pRuleset));
+	} else {
+		ABORT_FINALIZE(localRet);
+	}
 
 finalize_it:
 	free(pszName); /* no longer needed */
@@ -2658,7 +2677,7 @@ static rsRetVal loadBuildInModules(void)
 	}
 
 	/* dirty, but this must be for the time being: the usrmsg module must always be
-	 * loaded as last module. This is because it processes any time of action selector.
+	 * loaded as last module. This is because it processes any type of action selector.
 	 * If we load it before other modules, these others will never have a chance of
 	 * working with the config file. We may change that implementation so that a user name
 	 * must start with an alnum, that would definitely help (but would it break backwards
@@ -2666,8 +2685,7 @@ static rsRetVal loadBuildInModules(void)
 	 * User names now must begin with:
 	 *   [a-zA-Z0-9_.]
 	 */
-	if((iRet = module.doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL)) != RS_RET_OK)
-		RETiRet;
+	CHKiRet(module.doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL));
 
 	/* ok, initialization of the command handler probably does not 100% belong right in
 	 * this space here. However, with the current design, this is actually quite a good
@@ -2677,7 +2695,8 @@ static rsRetVal loadBuildInModules(void)
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &glbliActionResumeRetryCount, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord, beginNewRuleset, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord, setDefaultRuleset, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord, setCurrRuleset, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL));
