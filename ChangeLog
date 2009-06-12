@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
+- improved config error messages: now contain a copy of the config line
+  that (most likely) caused the error
 - added a generic network stream server (in addition to rather specific
   syslog tcp server)
 - added ability for the UDP output action to rebind its send socket after

@@ -71,6 +71,7 @@
 #include "ctok_token.h"
 #include "rule.h"
 #include "ruleset.h"
+#include "unicode-helper.h"
 
 #ifdef OS_SOLARIS
 #	define NAME_MAX MAXNAMELEN
@@ -396,7 +397,6 @@ finalize_it:
 static rsRetVal
 processConfFile(uchar *pConfFile)
 {
-	DEFiRet;
 	int iLnNbr = 0;
 	FILE *cf;
 	rule_t *pCurrRule = NULL;
@@ -405,6 +405,9 @@ processConfFile(uchar *pConfFile)
 	uchar *cline;
 	int i;
 	int bHadAnError = 0;
+	uchar *pszOrgLine = NULL;
+	size_t lenLine;
+	DEFiRet;
 	ASSERT(pConfFile != NULL);
 
 	if((cf = fopen((char*)pConfFile, "r")) == NULL) {
@@ -417,9 +420,12 @@ processConfFile(uchar *pConfFile)
 	while (fgets((char*)cline, sizeof(cbuf) - (cline - cbuf), cf) != NULL) {
 		++iLnNbr;
 		/* drop LF - TODO: make it better, replace fgets(), but its clean as it is */
-		if(cline[strlen((char*)cline)-1] == '\n') {
-			cline[strlen((char*)cline) -1] = '\0';
+		lenLine = ustrlen(cline);
+		if(cline[lenLine-1] == '\n') {
+			cline[lenLine-1] = '\0';
 		}
+		free(pszOrgLine);
+		pszOrgLine = ustrdup(cline); /* save if needed for errmsg, NULL ptr is OK */
 		/* check for end-of-section, comments, strip off trailing
 		 * spaces and newline character.
 		 */
@@ -464,7 +470,7 @@ processConfFile(uchar *pConfFile)
 			dbgprintf("config line NOT successfully processed\n");
 			snprintf((char*)szErrLoc, sizeof(szErrLoc) / sizeof(uchar),
 				 "%s, line %d", pConfFile, iLnNbr);
-			errmsg.LogError(0, NO_ERRCODE, "the last error occured in %s", (char*)szErrLoc);
+			errmsg.LogError(0, NO_ERRCODE, "the last error occured in %s:\"%s\"", (char*)szErrLoc, (char*)pszOrgLine);
 			bHadAnError = 1;
 		}
 	}
@@ -487,6 +493,8 @@ finalize_it:
 		dbgprintf("error %d processing config file '%s'; os error (if any): %s\n",
 			iRet, pConfFile, errStr);
 	}
+
+	free(pszOrgLine);
 
 	if(bHadAnError && (iRet == RS_RET_OK)) { /* a bit dirty, enhance in future releases */
 		iRet = RS_RET_NONFATAL_CONFIG_ERR;
