@@ -234,8 +234,8 @@ static rsRetVal
 defaultDoSubmitMessage(tcps_sess_t *pThis)
 {
 	msg_t *pMsg;
-	struct syslogTime stTime;
-	time_t ttGenTime;
+	static struct syslogTime stTime;	/* the static vars are currently OK (single input thread!) */
+	static time_t ttGenTime;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -245,6 +245,7 @@ defaultDoSubmitMessage(tcps_sess_t *pThis)
 		FINALIZE;
 	}
 
+RUNLOG_VAR("%ld", ttGenTime);
 	if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
 RUNLOG_STR("XXX: quering time!");
 		datetime.getCurrTime(&stTime, &ttGenTime);
