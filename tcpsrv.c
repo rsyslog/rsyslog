@@ -106,7 +106,6 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 	CHKmalloc(pEntry = malloc(sizeof(tcpLstnPortList_t)));
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
-RUNLOG_VAR("%p", pThis->pRuleset);
 	pEntry->pRuleset = pThis->pRuleset;
 	CHKmalloc(pEntry->pszInputName = ustrdup(pThis->pszInputName));
 

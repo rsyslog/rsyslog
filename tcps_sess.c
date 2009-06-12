@@ -56,6 +56,11 @@ DEFobjCurrIf(datetime)
 
 static int iMaxLine; /* maximum size of a single message */
 
+#define TIME_REQUERY_DFLT 16 // TODO change back! 2
+static int iTimeRequery = TIME_REQUERY_DFLT;/* how often is time to be queried inside tight recv loop? 0=always */
+static int iNbrTimeUsed = 0;		    /* how often has previous time been used so far? */
+
+
 /* forward definitions */
 static rsRetVal Close(tcps_sess_t *pThis);
 
@@ -240,9 +245,10 @@ defaultDoSubmitMessage(tcps_sess_t *pThis)
 		FINALIZE;
 	}
 
-	//TODO: if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
+	if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
+RUNLOG_STR("XXX: quering time!");
 		datetime.getCurrTime(&stTime, &ttGenTime);
-	//}
+	}
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 	/* first trim the buffer to what we have actually received */
@@ -307,6 +313,7 @@ PrepareClose(tcps_sess_t *pThis)
 		 * this case.
 		 */
 		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
+		iNbrTimeUsed = 0; /* full time query */
 		defaultDoSubmitMessage(pThis);
 	}
 
@@ -451,6 +458,7 @@ DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 	 /* We now copy the message to the session buffer. */
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
+	iNbrTimeUsed = 0; /* full time query */
 	while(pData < pEnd) {
 		CHKiRet(processDataRcvd(pThis, *pData++));
 	}
