@@ -125,14 +125,6 @@ typedef enum {
 	FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
 } fiop_t;
 
-/* file types (omfile & stream) */
-typedef enum {
-	eTypeFILE,
-	eTypeTTY,
-	eTypeCONSOLE,
-	eTypePIPE
-} filetype_t;
-
 
 #ifndef _PATH_CONSOLE
 #define _PATH_CONSOLE	"/dev/console"

@@ -68,7 +68,7 @@ static rsRetVal keyDestruct(void __attribute__((unused)) *pData)
 /* ---------- END linked-list key handling functions ---------- */
 
 
-/* dirver to iterate over all of this ruleset actions */
+/* driver to iterate over all of this ruleset actions */
 typedef struct iterateAllActions_s {
 	rsRetVal (*pFunc)(void*, void*);
 	void *pParam;
@@ -81,6 +81,7 @@ DEFFUNC_llExecFunc(doIterateRulesetActions)
 	iRet = rule.IterateAllActions(pRule, pMyParam->pFunc, pMyParam->pParam);
 	RETiRet;
 }
+#if 0
 /* iterate over all actions of THIS rule set.
  */
 static rsRetVal
@@ -99,7 +100,7 @@ finalize_it:
 }
 
 
-/* dirver to iterate over all actions */
+/* driver to iterate over all actions */
 DEFFUNC_llExecFunc(doIterateAllActions)
 {
 	DEFiRet;
@@ -108,6 +109,7 @@ DEFFUNC_llExecFunc(doIterateAllActions)
 	iRet = iterateRulesetAllActions(pThis, pMyParam->pFunc, pMyParam->pParam);
 	RETiRet;
 }
+#endif
 /* iterate over ALL actions present in the WHOLE system.
  * this is often needed, for example when HUP processing 
  * must be done or a shutdown is pending.
@@ -121,7 +123,8 @@ iterateAllActions(rsRetVal (*pFunc)(void*, void*), void* pParam)
 
 	params.pFunc = pFunc;
 	params.pParam = pParam;
-	CHKiRet(llExecFunc(&llRulesets, doIterateAllActions, &params));
+	//CHKiRet(llExecFunc(&llRulesets, doIterateAllActions, &params));
+	CHKiRet(llExecFunc(&llRulesets, doIterateRulesetActions, &params));
 
 finalize_it:
 	RETiRet;

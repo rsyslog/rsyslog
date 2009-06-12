@@ -20,6 +20,7 @@ Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
 - added configuration commands (see doc for explanations)
   * $OMFileZipLevel
   * $OMFileIOBufferSize
+  * $OMFileFlushOnTXEnd
   * $MainMsgQueueSyncQueueFiles
   * $ActionQueueSyncQueueFiles
 ---------------------------------------------------------------------------

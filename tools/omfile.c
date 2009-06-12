@@ -101,6 +101,7 @@ static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
+static bool	bFlushOnTXEnd = 0;/* flush write buffers when transaction has ended? */
 static int	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static uchar	*pszTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
@@ -131,6 +132,7 @@ typedef struct _instanceData {
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
 	int 	iZipLevel;		/* zip mode to use for this selector */
 	int	iIOBufSize;		/* size of associated io buffer */
+	bool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
 } instanceData;
 
 
@@ -595,7 +597,12 @@ ENDtryResume
 BEGINdoAction
 CODESTARTdoAction
 	DBGPRINTF("file to log to: %s\n", pData->f_fname);
-	iRet = writeFile(ppString, iMsgOpts, pData);
+	CHKiRet(writeFile(ppString, iMsgOpts, pData));
+	if(pData->bFlushOnTXEnd) {
+		/* TODO v5: do this in endTransaction only! */
+		CHKiRet(strm.Flush(pData->pStrm));
+	}
+finalize_it:
 ENDdoAction
 
 
@@ -669,6 +676,7 @@ CODESTARTparseSelectorAct
 	pData->dirUID = dirUID;
 	pData->dirGID = dirGID;
 	pData->iZipLevel = iZipLevel;
+	pData->bFlushOnTXEnd = bFlushOnTXEnd;
 	pData->iIOBufSize = iIOBufSize;
 
 	if(pData->bDynamicName == 0) {
@@ -702,6 +710,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bCreateDirs = 1;
 	bEnableSync = 0;
 	iZipLevel = 0;
+	bFlushOnTXEnd = 0;
 	iIOBufSize = IOBUF_DFLT_SIZE;
 	if(pszTplName != NULL) {
 		free(pszTplName);
@@ -751,6 +760,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &bFlushOnTXEnd, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileiobuffersize", 0, eCmdHdlrSize, NULL, &iIOBufSize, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &dirUID, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirgroup", 0, eCmdHdlrGID, NULL, &dirGID, STD_LOADABLE_MODULE_ID));
