@@ -55,7 +55,7 @@
 #	include <fcntl.h>
 #endif
 
-#include "syslogd.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
@@ -64,7 +64,6 @@
 #include "cfsysline.h"
 #include "module-template.h"
 #include "errmsg.h"
-#include "unicode-helper.h"
 #include "stream.h"
 #include "zlibw.h"
 #include "unicode-helper.h"
@@ -110,12 +109,6 @@ static uchar	*pszTplName = NULL; /* name of the default template to use */
 typedef struct _instanceData {
 	uchar	f_fname[MAXFNAME];/* file or template name (display only) */
 	strm_t	*pStrm;		/* our output stream */
-	enum {
-		eTypeFILE,
-		eTypeTTY,
-		eTypeCONSOLE,
-		eTypePIPE
-	} fileType;	
 	char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
 	int	fCreateMode;	/* file creation mode for open() */
 	int	fDirCreateMode;	/* creation mode for mkdir() */
@@ -217,14 +210,6 @@ static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringR
 	size_t i;
 	struct outchannel *pOch;
 	char szBuf[128];	/* should be more than sufficient */
-
-	/* this must always be a file, because we can not set a size limit
-	 * on a pipe...
-	 * rgerhards 2005-06-21: later, this will be a separate type, but let's
-	 * emulate things for the time being. When everything runs, we can
-	 * extend it...
-	 */
-	pData->fileType = eTypeFILE;
 
 	++p; /* skip '$' */
 	i = 0;
@@ -358,8 +343,6 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	int fd;
 	DEFiRet;
 
-	// TODO: handle TTY/PIPE case! (in stream.c!) 2009-06-04
-
 	if(access((char*)newFileName, F_OK) != 0) {
 		/* file does not exist, create it (and eventually parent directories */
 		fd = -1;
@@ -425,18 +408,6 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.ConstructFinalize(pData->pStrm));
 	
 finalize_it:
-	/* this was "fd != 0", which I think was a bug. I guess 0 was intended to mean
-	 * non-open file descriptor. Anyhow, I leave this comment for the time being to that if
-	 * problems surface, one at least knows what happened. -- rgerhards, 2009-03-19
-	 */
-#if 0 // TODO: this must be done by stream class!
-	if(fd != -1 && isatty(fd)) {
-		DBGPRINTF("file %d is a tty file\n", fd);
-		pData->fileType = eTypeTTY;
-		untty();
-	}
-#endif
-
 	RETiRet;
 }
 
@@ -546,107 +517,6 @@ finalize_it:
 }
 
 
-#if 0
-// TODO: mirgrate code below to stream class (update its write handler, which is not great!)
-/* physically write the file
- */
-static rsRetVal
-doPhysWrite(instanceData *pData, int fd, char *pszBuf, size_t lenBuf)
-{
-	off_t actualFileSize;
-	int iLenWritten;
-	DEFiRet;
-	ASSERT(pData != NULL);
-
-dbgprintf("doPhysWrite, fd %d, iBuf %d\n", fd, (int) lenBuf);
-again:
-	/* check if we have a file size limit and, if so,
-	 * obey to it.
-	 */
-	if(pData->iSizeLimit != 0) {
-		actualFileSize = lseek(fd, 0, SEEK_END);
-		if(actualFileSize >= pData->iSizeLimit) {
-			char errMsg[256];
-			/* for now, we simply disable a file once it is
-			 * beyond the maximum size. This is better than having
-			 * us aborted by the OS... rgerhards 2005-06-21
-			 */
-			(void) close(fd);
-			/* try to resolve the situation */
-			// TODO: *doesn't work, will need to use new fd !
-			if(resolveFileSizeLimit(pData) != 0) {
-				/* didn't work out, so disable... */
-				snprintf(errMsg, sizeof(errMsg),
-					 "no longer writing to file %s; grown beyond configured file size of %lld bytes, actual size %lld - configured command did not resolve situation",
-					 pData->f_fname, (long long) pData->iSizeLimit, (long long) actualFileSize);
-				errno = 0;
-				errmsg.LogError(0, RS_RET_DISABLE_ACTION, "%s", errMsg);
-				ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
-			} else {
-				snprintf(errMsg, sizeof(errMsg),
-					 "file %s had grown beyond configured file size of %lld bytes, actual size was %lld - configured command resolved situation",
-					 pData->f_fname, (long long) pData->iSizeLimit, (long long) actualFileSize);
-				errno = 0;
-				errmsg.LogError(0, NO_ERRCODE, "%s", errMsg);
-			}
-		}
-	}
-
-	iLenWritten = write(fd, pszBuf, lenBuf);
-	if(iLenWritten < 0) {
-		int e = errno;
-		char errStr[1024];
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		DBGPRINTF("log file (%d) write error %d: %s\n", fd, e, errStr);
-
-		/* If a named pipe is full, we suspend this action for a while */
-		if(pData->fileType == eTypePIPE && e == EAGAIN)
-			ABORT_FINALIZE(RS_RET_SUSPENDED);
-
-		close(pData->fd);
-		pData->fd = -1; /* tell that fd is no longer open! */
-		if(pData->bDynamicName && pData->iCurrElt != -1) {
-			/* in this case, we need to invalidate the name in the cache, too
-			 * otherwise, an invalid fd may show up if we had a file name change.
-			 * rgerhards, 2009-03-19
-			 */
-			pData->dynCache[pData->iCurrElt]->fd = -1;
-		}
-		/* Check for EBADF on TTY's due to vhangup()
-		 * Linux uses EIO instead (mrn 12 May 96)
-		 */
-		if((pData->fileType == eTypeTTY || pData->fileType == eTypeCONSOLE)
-#ifdef linux
-			&& e == EIO
-#else
-			&& e == EBADF
-#endif
-			) {
-			pData->fd = open((char*) pData->f_fname, O_WRONLY|O_APPEND|O_NOCTTY|O_CLOEXEC);
-			if (pData->fd < 0) {
-				iRet = RS_RET_SUSPENDED;
-				errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
-			} else {
-				untty();
-				goto again;
-			}
-		} else {
-			iRet = RS_RET_SUSPENDED;
-			errno = e;
-			errmsg.LogError(0, NO_ERRCODE, "%s", pData->f_fname);
-		}
-	} else if (pData->bSyncFile) {
-		fsync(fd);
-	}
-
-	pData->poBuf->iBuf = 0;
-
-finalize_it:
-	RETiRet;
-}
-#endif
-
-
 /* do the actual write process. This function is to be called once we are ready for writing.
  * It will do buffered writes and persist data only when the buffer is full. Note that we must
  * be careful to detect when the file handle changed.
@@ -662,7 +532,7 @@ doWrite(instanceData *pData, uchar *pszBuf, int lenBuf)
 dbgprintf("doWrite, pData->pStrm %p, lenBuf %d\n", pData->pStrm, lenBuf);
 	if(pData->pStrm != NULL){
 		CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
-		FINALIZE; // TODO: clean up later
+		FINALIZE;
 	}
 
 finalize_it:
@@ -780,12 +650,6 @@ CODESTARTparseSelectorAct
         case '|':
 	case '/':
 		CODE_STD_STRING_REQUESTparseSelectorAct(1)
-		if(*p == '|') {
-			pData->fileType = eTypePIPE;
-			++p;
-		} else {
-			pData->fileType = eTypeFILE;
-		}
 		CHKiRet(cflineParseFileName(p, (uchar*) pData->f_fname, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
 				               (pszTplName == NULL) ? (uchar*)"RSYSLOG_FileFormat" : pszTplName));
 		pData->bDynamicName = 0;
@@ -808,8 +672,6 @@ CODESTARTparseSelectorAct
 	pData->iIOBufSize = iIOBufSize;
 
 	if(pData->bDynamicName == 0) {
-		if(ustrcmp(p, UCHAR_CONSTANT(_PATH_CONSOLE)) == 0)
-			pData->fileType = eTypeCONSOLE;
 		/* try open and emit error message if not possible. At this stage, we ignore the
 		 * return value of prepareFile, this is taken care of in later steps.
 		 */

@@ -28,17 +28,7 @@
 #include "action.h"
 #include "linkedlist.h"
 #include "expr.h"
-#include "net.h" /* TODO: remove when you remove isAllowedSender from here! */
 
-
-#ifndef _PATH_CONSOLE
-#define _PATH_CONSOLE	"/dev/console"
-#endif
-
-void untty(void);
-rsRetVal selectorConstruct(ruleset_t **ppThis);
-rsRetVal selectorDestruct(void *pVal);
-rsRetVal selectorAddList(rule_t *f);
 /* the following prototypes should go away once we have an input
  * module interface -- rgerhards, 2007-12-12
  */

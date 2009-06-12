@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "syslogd.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "omshell.h"

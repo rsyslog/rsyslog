@@ -138,6 +138,7 @@
 #include "unicode-helper.h"
 #include "ruleset.h"
 #include "rule.h"
+#include "net.h"
 #include "vm.h"
 
 /* definitions for objects we access */
@@ -221,7 +222,7 @@ static rsRetVal GlobalClassExit(void);
 #endif
 
 #ifndef _PATH_TTY
-#define _PATH_TTY	"/dev/tty"
+#	define _PATH_TTY	"/dev/tty"
 #endif
 
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
@@ -504,7 +505,7 @@ static char **crunch_list(char *list)
 void untty(void)
 #ifdef HAVE_SETSID
 {
-	if ( !Debug ) {
+	if(!Debug) {
 		setsid();
 	}
 	return;
@@ -513,18 +514,18 @@ void untty(void)
 {
 	int i;
 
-	if ( !Debug ) {
+	if(!Debug) {
 		i = open(_PATH_TTY, O_RDWR|O_CLOEXEC);
 		if (i >= 0) {
 #			if !defined(__hpux)
-				(void) ioctl(i, (int) TIOCNOTTY, (char *)0);
+				(void) ioctl(i, (int) TIOCNOTTY, NULL);
 #			else
 				/* TODO: we need to implement something for HP UX! -- rgerhards, 2008-03-04 */
 				/* actually, HP UX should have setsid, so the code directly above should
 				 * trigger. So the actual question is why it doesn't do that...
 				 */
 #			endif
-			(void) close(i);
+			close(i);
 		}
 	}
 }

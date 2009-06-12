@@ -35,10 +35,6 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
 char* getFIOPName(unsigned iFIOP);
 
-/* TODO: the following 2 need to go in conf obj interface... */
-rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
-rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl);
-
 /* Intervals at which we flush out "message repeated" messages,
  * in seconds after previous message is logged.  After each flush,
  * we move to the next interval until we reach the largest.

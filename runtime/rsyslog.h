@@ -99,6 +99,7 @@ typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
 typedef long long int64;
 typedef long long unsigned uint64;
 typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
+typedef short bool;
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */
@@ -124,6 +125,18 @@ typedef enum {
 	FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
 } fiop_t;
 
+/* file types (omfile & stream) */
+typedef enum {
+	eTypeFILE,
+	eTypeTTY,
+	eTypeCONSOLE,
+	eTypePIPE
+} filetype_t;
+
+
+#ifndef _PATH_CONSOLE
+#define _PATH_CONSOLE	"/dev/console"
+#endif
 
 /* The error codes below are orginally "borrowed" from
  * liblogging. As such, we reserve values up to -2999

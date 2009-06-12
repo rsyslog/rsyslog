@@ -99,7 +99,7 @@ typedef struct strm_s {
 	int64 iMaxFileSize;/* maximum size a file may grow to */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
-	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
+	bool bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	int64 iCurrOffs;/* current offset */
 	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since the last CntrSet() */
 	/* dynamic properties, valid only during file open, not to be persistet */
@@ -115,12 +115,13 @@ typedef struct strm_s {
 	size_t iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
 	size_t iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
-	int bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
+	bool bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
 	int iZipLevel;	/* zip level (0..9). If 0, zip is completely disabled */
 	Bytef *pZipBuf;
 	/* support for omfile size-limiting commands, special counters, NOT persisted! */
 	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
+	bool	bIsTTY;		/* is this a tty file? */
 } strm_t;
 
 /* interfaces */
