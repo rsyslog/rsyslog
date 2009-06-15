@@ -3534,7 +3534,6 @@ finalize_it:
  */
 int main(int argc, char **argv)
 {	
-	fprintf(stderr, "rsyslogd startup\n");
 	dbgClassInit();
 	return realMain(argc, argv);
 }
