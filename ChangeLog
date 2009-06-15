@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
+- bugfix: error messages were not emitted to stderr in forked mode
+  (stderr and stdo are now kept open across forks)
 - bugfix: internal messages were emitted to whatever file had fd2 when
   rsyslogd ran in forked mode (as usual!)
   Thanks to varmojfekoj for the patch

@@ -925,7 +925,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	if(((Debug || NoFork) && bErrMsgToStderr) || iConfigVerify) {
+	if(bErrMsgToStderr || iConfigVerify) {
 		fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
 
@@ -3096,7 +3096,9 @@ doGlblProcessInit(void)
 				exit(1); /* "good" exit - after forking, not diasabling anything */
 			}
 			num_fds = getdtablesize();
-			for (i= 0; i < num_fds; i++)
+			close(0);
+			/* we keep stdout and stderr open in case we have to emit something */
+			for (i = 3; i < num_fds; i++)
 				(void) close(i);
 			untty();
 		}
@@ -3532,6 +3534,7 @@ finalize_it:
  */
 int main(int argc, char **argv)
 {	
+	fprintf(stderr, "rsyslogd startup\n");
 	dbgClassInit();
 	return realMain(argc, argv);
 }
