@@ -88,6 +88,7 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"
+#include "apc.h"
 
 /* static data */
 DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some macros! */
@@ -1313,6 +1314,7 @@ objClassInit(modInfo_t *pModInfo)
 	CHKiRet(objGetObjInterface(&obj)); /* get ourselves ;) */
 
 	/* init classes we use (limit to as few as possible!) */
+	CHKiRet(apcClassInit(pModInfo));
 	CHKiRet(errmsgClassInit(pModInfo));
 	CHKiRet(cfsyslineInit());
 	CHKiRet(varClassInit(pModInfo));

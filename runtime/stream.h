@@ -70,6 +70,7 @@
 #include "glbl.h"
 #include "stream.h"
 #include "zlibw.h"
+#include "apc.h"
 
 /* stream types */
 typedef enum {
@@ -118,6 +119,10 @@ typedef struct strm_s {
 	bool bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
 	int iZipLevel;	/* zip level (0..9). If 0, zip is completely disabled */
 	Bytef *pZipBuf;
+	/* support for async flush procesing */
+	int iFlushInterval; /* flush in which interval - 0, no flushing */
+	apc_id_t apcID;    /* id of current Apc request (used for cancelling) */
+	pthread_mutex_t mut;/* mutex for flush in async mode */
 	/* support for omfile size-limiting commands, special counters, NOT persisted! */
 	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
@@ -127,7 +132,7 @@ typedef struct strm_s {
 /* interfaces */
 BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(strm_t **ppThis);
-	rsRetVal (*ConstructFinalize)(strm_t __attribute__((unused)) *pThis);
+	rsRetVal (*ConstructFinalize)(strm_t *pThis);
 	rsRetVal (*Destruct)(strm_t **ppThis);
 	rsRetVal (*SetMaxFileSize)(strm_t *pThis, int64 iMaxFileSize);
 	rsRetVal (*SetFileName)(strm_t *pThis, uchar *pszName, size_t iLenName);
@@ -157,9 +162,10 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	INTERFACEpropSetMeth(strm, bSync, int);
 	INTERFACEpropSetMeth(strm, sIOBufSize, size_t);
 	INTERFACEpropSetMeth(strm, iSizeLimit, off_t);
+	INTERFACEpropSetMeth(strm, iFlushInterval, int);
 	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

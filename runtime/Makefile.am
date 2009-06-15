@@ -39,6 +39,8 @@ librsyslog_la_SOURCES = \
 	obj.h \
 	modules.c \
 	modules.h \
+	apc.c \
+	apc.h \
 	sync.c \
 	sync.h \
 	expr.c \

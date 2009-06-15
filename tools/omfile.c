@@ -88,6 +88,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
 
 #define IOBUF_DFLT_SIZE 1024	/* default size for io buffers */
+#define FLUSH_INTRVL_DFLT 1 	/* default buffer flush interval (in seconds) */
 
 /* globals for default values */
 static int iDynaFileCacheSize = 10; /* max cache for dynamic files */
@@ -103,6 +104,7 @@ static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathn
 static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
 static bool	bFlushOnTXEnd = 0;/* flush write buffers when transaction has ended? */
 static int	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
+static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
 static uchar	*pszTplName = NULL; /* name of the default template to use */
 /* end globals for default values */
 
@@ -132,6 +134,7 @@ typedef struct _instanceData {
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
 	int 	iZipLevel;		/* zip mode to use for this selector */
 	int	iIOBufSize;		/* size of associated io buffer */
+	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
 	bool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
 } instanceData;
 
@@ -400,6 +403,7 @@ prepareFile(instanceData *pData, uchar *newFileName)
 	CHKiRet(strm.SetDir(pData->pStrm, szDirName, ustrlen(szDirName)));
 	CHKiRet(strm.SetiZipLevel(pData->pStrm, pData->iZipLevel));
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
+	CHKiRet(strm.SetiFlushInterval(pData->pStrm, pData->iFlushInterval));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
 	CHKiRet(strm.SettOpenMode(pData->pStrm, fCreateMode));
 	CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
@@ -678,6 +682,7 @@ CODESTARTparseSelectorAct
 	pData->iZipLevel = iZipLevel;
 	pData->bFlushOnTXEnd = bFlushOnTXEnd;
 	pData->iIOBufSize = iIOBufSize;
+	pData->iFlushInterval = iFlushInterval;
 
 	if(pData->bDynamicName == 0) {
 		/* try open and emit error message if not possible. At this stage, we ignore the
@@ -712,6 +717,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iZipLevel = 0;
 	bFlushOnTXEnd = 0;
 	iIOBufSize = IOBUF_DFLT_SIZE;
+	iFlushInterval = FLUSH_INTRVL_DFLT;
 	if(pszTplName != NULL) {
 		free(pszTplName);
 		pszTplName = NULL;
@@ -760,6 +766,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dynafilecachesize", 0, eCmdHdlrInt, (void*) setDynaFileCacheSize, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileziplevel", 0, eCmdHdlrInt, NULL, &iZipLevel, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushinterval", 0, eCmdHdlrInt, NULL, &iFlushInterval, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &bFlushOnTXEnd, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileiobuffersize", 0, eCmdHdlrSize, NULL, &iIOBufSize, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &dirUID, STD_LOADABLE_MODULE_ID));

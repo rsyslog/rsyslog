@@ -2575,7 +2575,8 @@ mainloop(void)
 		 * powertop, for example). In that case, we primarily wait for a signal,
 		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
 		 */
-		tvSelectTimeout.tv_sec = (bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
+		//tvSelectTimeout.tv_sec = (bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
+tvSelectTimeout.tv_sec = 5; // TESTING ONLY!!! TODO: change back!!!
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)
@@ -2610,47 +2611,9 @@ mainloop(void)
 			bHadHUP = 0;
 			continue;
 		}
+		execScheduled(); /* handle Apc calls (if any) */
 	}
 	ENDfunc
-}
-
-/* If user is not root, prints warnings or even exits 
- * TODO: check all dynafiles for write permission
- * ... but it is probably better to wait here until we have
- * a module interface - rgerhards, 2007-07-23
- */
-static void checkPermissions()
-{
-#if 0
-	/* TODO: this function must either be redone or removed - now with the input modules,
-	 * there is no such simple check we can do. What we can check, however, is if there is
-	 * any input module active and terminate, if not. -- rgerhards, 2007-12-26
-	 */
-	/* we are not root */
-	if (geteuid() != 0)
-	{
-		fputs("WARNING: Local messages will not be logged! If you want to log them, run rsyslog as root.\n",stderr); 
-#ifdef SYSLOG_INET	
-		/* udp enabled and port number less than or equal to 1024 */
-		if ( AcceptRemote && (atoi(LogPort) <= 1024) )
-			fprintf(stderr, "WARNING: Will not listen on UDP port %s. Use port number higher than 1024 or run rsyslog as root!\n", LogPort);
-		
-		/* tcp enabled and port number less or equal to 1024 */
-		if( bEnableTCP   && (atoi(TCPLstnPort) <= 1024) )
-			fprintf(stderr, "WARNING: Will not listen on TCP port %s. Use port number higher than 1024 or run rsyslog as root!\n", TCPLstnPort);
-
-		/* Neither explicit high UDP port nor explicit high TCP port.
-                 * It is useless to run anymore */
-		if( !(AcceptRemote && (atoi(LogPort) > 1024)) && !( bEnableTCP && (atoi(TCPLstnPort) > 1024)) )
-		{
-#endif
-			fprintf(stderr, "ERROR: Nothing to log, no reason to run. Please run rsyslog as root.\n");
-			exit(EXIT_FAILURE);
-#ifdef SYSLOG_INET
-		}
-#endif
-	}
-#endif
 }
 
 
@@ -3053,7 +3016,6 @@ doGlblProcessInit(void)
 	int i;
 	DEFiRet;
 
-	checkPermissions();
 	thrdInit();
 
 	if( !(Debug || NoFork) )
