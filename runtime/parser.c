@@ -191,6 +191,23 @@ sanitizeMessage(msg_t *pMsg)
 		lenMsg--;
 	}
 
+	/* it is much quicker to sweep over the message and see if it actually
+	 * needs sanitation than to do the sanitation in any case. So we first do
+	 * this and terminate when it is not needed - which is expectedly the case
+	 * for the vast majority of messages. -- rgerhards, 2009-06-15
+	 */
+	int bNeedSanitize = 0;
+	for(iSrc = 0 ; iSrc < lenMsg ; iSrc++) {
+		if(pszMsg[iSrc] < 32) {
+			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
+				bNeedSanitize = 1;
+				break;
+			}
+		}
+	}
+	if(bNeedSanitize == 0)
+		FINALIZE;
+
 	/* now copy over the message and sanitize it */
 	/* TODO: can we get cheaper memory alloc? {alloca()?}*/
 	iMaxLine = glbl.GetMaxLine();

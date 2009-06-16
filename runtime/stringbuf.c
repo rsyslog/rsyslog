@@ -299,10 +299,8 @@ rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	if(pThis->pBuf != NULL)
-		free(pThis->pBuf);
-	if(pThis->pszBuf != NULL)
-		free(pThis->pszBuf);
+	free(pThis->pBuf);
+	free(pThis->pszBuf);
 	if(pszNew == NULL) {
 		pThis->iStrLen = 0;
 		pThis->iBufSize = 0;

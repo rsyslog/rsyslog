@@ -104,6 +104,7 @@ static syslogCODE rs_facilitynames[] =
 
 /* some forward declarations */
 static int getAPPNAMELen(msg_t *pM);
+static int getProtocolVersion(msg_t *pM);
 
 /* The following functions will support advanced output module
  * multithreading, once this is implemented. Currently, we
@@ -364,7 +365,6 @@ CODESTARTobjDestruct(msg)
 		free(pThis->pszTIMESTAMP_SecFrac);
 		free(pThis->pszTIMESTAMP_MySQL);
 		free(pThis->pszTIMESTAMP_PgSQL);
-		free(pThis->pszPRI);
 		if(pThis->pCSProgName != NULL)
 			rsCStrDestruct(&pThis->pCSProgName);
 		if(pThis->pCSStrucData != NULL)
@@ -670,7 +670,7 @@ void setProtocolVersion(msg_t *pM, int iNewVersion)
 	pM->iProtocolVersion = iNewVersion;
 }
 
-int getProtocolVersion(msg_t *pM)
+static int getProtocolVersion(msg_t *pM)
 {
 	assert(pM != NULL);
 	return(pM->iProtocolVersion);
@@ -689,7 +689,7 @@ int getMSGLen(msg_t *pM)
 }
 
 
-char *getRawMsg(msg_t *pM)
+static char *getRawMsg(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -724,7 +724,7 @@ char *getMSG(msg_t *pM)
 
 
 /* Get PRI value in text form */
-char *getPRI(msg_t *pM)
+static char *getPRI(msg_t *pM)
 {
 	int pri;
 	BEGINfunc
@@ -742,7 +742,7 @@ char *getPRI(msg_t *pM)
 		 * report. -- rgerhards, 2008-07-14
 		 */
 		pri = pM->iFacility * 8 + pM->iSeverity;
-		if((pM->pszPRI = malloc(5)) == NULL) return "";
+		pM->pszPRI = pM->bufPRI;
 		pM->iLenPRI = snprintf((char*)pM->pszPRI, 5, "%d", pri);
 	}
 	MsgUnlock(pM);
@@ -753,14 +753,14 @@ char *getPRI(msg_t *pM)
 
 
 /* Get PRI value as integer */
-int getPRIi(msg_t *pM)
+static int getPRIi(msg_t *pM)
 {
 	assert(pM != NULL);
 	return (pM->iFacility << 3) + (pM->iSeverity);
 }
 
 
-char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
+static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 {
 	BEGINfunc
 	if(pM == NULL)
@@ -838,7 +838,7 @@ char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 	return "INVALID eFmt OPTION!";
 }
 
-char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
+static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 {
 	BEGINfunc
 	if(pM == NULL)
@@ -917,7 +917,7 @@ char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 }
 
 
-char *getSeverity(msg_t *pM)
+static inline char *getSeverity(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -934,7 +934,7 @@ char *getSeverity(msg_t *pM)
 }
 
 
-char *getSeverityStr(msg_t *pM)
+static inline char *getSeverityStr(msg_t *pM)
 {
 	syslogCODE *c;
 	int val;
@@ -964,7 +964,7 @@ char *getSeverityStr(msg_t *pM)
 	return((char*)pM->pszSeverityStr);
 }
 
-char *getFacility(msg_t *pM)
+static inline char *getFacility(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
@@ -983,7 +983,7 @@ char *getFacility(msg_t *pM)
 	return((char*)pM->pszFacility);
 }
 
-char *getFacilityStr(msg_t *pM)
+static inline char *getFacilityStr(msg_t *pM)
 {
         syslogCODE *c;
         int val;
@@ -1090,7 +1090,7 @@ finalize_it:
 
 /* rgerhards, 2005-11-24
  */
-int getPROCIDLen(msg_t *pM)
+static inline int getPROCIDLen(msg_t *pM)
 {
 	assert(pM != NULL);
 	MsgLock(pM);
@@ -1135,19 +1135,10 @@ finalize_it:
 	RETiRet;
 }
 
-/* rgerhards, 2005-11-24
- */
-#if 0 /* This method is currently not called, be we like to preserve it */
-static int getMSGIDLen(msg_t *pM)
-{
-	return (pM->pCSMSGID == NULL) ? 1 : rsCStrLen(pM->pCSMSGID);
-}
-#endif
-
 
 /* rgerhards, 2005-11-24
  */
-char *getMSGID(msg_t *pM)
+static inline char *getMSGID(msg_t *pM)
 {
 	return (pM->pCSMSGID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSMSGID);
 }
@@ -1171,8 +1162,7 @@ void MsgAssignTAG(msg_t *pMsg, uchar *pBuf)
 void MsgSetTAG(msg_t *pMsg, char* pszTAG)
 {
 	assert(pMsg != NULL);
-	if(pMsg->pszTAG != NULL)
-		free(pMsg->pszTAG);
+	free(pMsg->pszTAG);
 	pMsg->iLenTAG = strlen(pszTAG);
 	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) != NULL)
 		memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
@@ -1229,7 +1219,7 @@ static int getTAGLen(msg_t *pM)
 #endif
 
 
-char *getTAG(msg_t *pM)
+static inline char *getTAG(msg_t *pM)
 {
 	char *ret;
 
@@ -1272,7 +1262,7 @@ char *getHOSTNAME(msg_t *pM)
 }
 
 
-uchar *getInputName(msg_t *pM)
+static uchar *getInputName(msg_t *pM)
 {
 	if(pM == NULL)
 		return (uchar*) "";
@@ -1339,7 +1329,7 @@ static int getStructuredDataLen(msg_t *pM)
 /* get the "STRUCTURED-DATA" as sz string
  * rgerhards, 2005-11-24
  */
-char *getStructuredData(msg_t *pM)
+static inline char *getStructuredData(msg_t *pM)
 {
 	return (pM->pCSStrucData == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSStrucData);
 }
@@ -1465,14 +1455,13 @@ static int getAPPNAMELen(msg_t *pM)
 }
 
 /* rgerhards 2008-09-10: set pszInputName in msg object
+ * rgerhards, 2009-06-16
  */
-void MsgSetInputName(msg_t *pMsg, uchar* pszInputName)
+void MsgSetInputName(msg_t *pMsg, uchar* pszInputName, size_t lenInputName)
 {
 	assert(pMsg != NULL);
-	if(pMsg->pszInputName != NULL)
-		free(pMsg->pszInputName);
-
-	pMsg->iLenInputName = ustrlen(pszInputName);
+	free(pMsg->pszInputName);
+	pMsg->iLenInputName = lenInputName;
 	if((pMsg->pszInputName = malloc(pMsg->iLenInputName + 1)) != NULL) {
 		memcpy(pMsg->pszInputName, pszInputName, pMsg->iLenInputName + 1);
 	}
@@ -2493,7 +2482,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	} else if(isProp("pszTAG")) {
 		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszInputName")) {
-		MsgSetInputName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetInputName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pszRcvFromIP")) {
 		MsgSetRcvFromIP(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszRcvFrom")) {

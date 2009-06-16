@@ -120,6 +120,9 @@ short bDoLock; /* use the mutex? */
         char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
         char *pszTIMESTAMP_SecFrac;/* TIMESTAMP fractional seconds (always 6 characters) */
 	int msgFlags;		/* flags associated with this message */
+	/* now follow fixed-size buffers to safe some time otherwise used for allocs */
+	uchar bufPRI[5];
+
 };
 
 
@@ -137,45 +140,20 @@ short bDoLock; /* use the mutex? */
 /* function prototypes
  */
 PROTOTYPEObjClassInit(msg);
-char* getProgramName(msg_t*);
 rsRetVal msgConstruct(msg_t **ppThis);
 rsRetVal msgConstructWithTime(msg_t **ppThis, struct syslogTime *stTime, time_t ttGenTime);
 rsRetVal msgDestruct(msg_t **ppM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);
 void setProtocolVersion(msg_t *pM, int iNewVersion);
-int getProtocolVersion(msg_t *pM);
-char *getProtocolVersionString(msg_t *pM);
-int getMSGLen(msg_t *pM);
-char *getRawMsg(msg_t *pM);
-char *getUxTradMsg(msg_t *pM);
-char *getMSG(msg_t *pM);
-char *getPRI(msg_t *pM);
-int getPRIi(msg_t *pM);
-char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt);
-char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt);
-char *getSeverity(msg_t *pM);
-char *getSeverityStr(msg_t *pM);
-char *getFacility(msg_t *pM);
-char *getFacilityStr(msg_t *pM);
-void MsgSetInputName(msg_t *pMsg, uchar*);
+void MsgSetInputName(msg_t *pMsg, uchar*, size_t);
 rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
-char *getAPPNAME(msg_t *pM);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
-int getPROCIDLen(msg_t *pM);
-char *getPROCID(msg_t *pM);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
 void MsgAssignTAG(msg_t *pMsg, uchar *pBuf);
 void MsgSetTAG(msg_t *pMsg, char* pszTAG);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
-char *getTAG(msg_t *pM);
-int getHOSTNAMELen(msg_t *pM);
-char *getHOSTNAME(msg_t *pM);
-uchar *getRcvFrom(msg_t *pM);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
-char *getStructuredData(msg_t *pM);
-int getProgramNameLen(msg_t *pM);
-char *getProgramName(msg_t *pM);
 void MsgSetRcvFrom(msg_t *pMsg, uchar* pszRcvFrom);
 rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
 void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
@@ -184,12 +162,28 @@ int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg);
 void MsgSetMSG(msg_t *pMsg, char* pszMSG);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg);
 void moveHOSTNAMEtoTAG(msg_t *pM);
-char *getMSGID(msg_t *pM);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  cstr_t *pCSPropName, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
+
+/* TODO: remove these five (so far used in action.c) */
+char *getMSG(msg_t *pM);
+char *getHOSTNAME(msg_t *pM);
+char *getPROCID(msg_t *pM);
+char *getAPPNAME(msg_t *pM);
+int getMSGLen(msg_t *pM);
+
+char *getHOSTNAME(msg_t *pM);
+int getHOSTNAMELen(msg_t *pM);
+char *getProgramName(msg_t *pM);
+int getProgramNameLen(msg_t *pM);
+uchar *getRcvFrom(msg_t *pM);
+
+#if 0
+char *getUxTradMsg(msg_t *pM);
+#endif
 
 /* The MsgPrepareEnqueue() function is a macro for performance reasons.
  * It needs one global variable to work. This is acceptable, as it gains

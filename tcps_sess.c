@@ -97,12 +97,9 @@ CODESTARTobjDestruct(tcps_sess)
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
 	/* now destruct our own properties */
-	if(pThis->fromHost != NULL)
-		free(pThis->fromHost);
-	if(pThis->fromHostIP != NULL)
-		free(pThis->fromHostIP);
-	if(pThis->pMsg != NULL)
-		free(pThis->pMsg);
+	free(pThis->fromHost);
+	free(pThis->fromHostIP);
+	free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
 
 
@@ -124,10 +121,7 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	if(pThis->fromHost != NULL) {
-		free(pThis->fromHost);
-	}
-	
+	free(pThis->fromHost);
 	pThis->fromHost = pszHost;
 
 	RETiRet;
@@ -144,10 +138,7 @@ SetHostIP(tcps_sess_t *pThis, uchar *pszHostIP)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	if(pThis->fromHostIP != NULL) {
-		free(pThis->fromHostIP);
-	}
-	
+	free(pThis->fromHostIP);
 	pThis->fromHostIP = pszHostIP;
 
 	RETiRet;
@@ -226,11 +217,9 @@ SetOnMsgReceive(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar
  * rgerhards, 2009-04-23
  */
 static rsRetVal
-defaultDoSubmitMessage(tcps_sess_t *pThis)
+defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttGenTime)
 {
 	msg_t *pMsg;
-	struct syslogTime stTime;
-	time_t ttGenTime;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -240,16 +229,13 @@ defaultDoSubmitMessage(tcps_sess_t *pThis)
 		FINALIZE;
 	}
 
-	//TODO: if((iTimeRequery == 0) || (iNbrTimeUsed++ % iTimeRequery) == 0) {
-		datetime.getCurrTime(&stTime, &ttGenTime);
-	//}
 	/* we now create our own message object and submit it to the queue */
-	CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
+	CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	/* first trim the buffer to what we have actually received */
 	CHKmalloc(pMsg->pszRawMsg = malloc(sizeof(uchar) * pThis->iMsg));
 	memcpy(pMsg->pszRawMsg, pThis->pMsg, pThis->iMsg);
 	pMsg->iLenRawMsg = pThis->iMsg;
-	MsgSetInputName(pMsg, pThis->pLstnInfo->pszInputName);
+	MsgSetInputName(pMsg, pThis->pLstnInfo->pszInputName, pThis->pLstnInfo->lenInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	pMsg->bParseHOSTNAME = 1;
@@ -281,6 +267,8 @@ finalize_it:
 static rsRetVal
 PrepareClose(tcps_sess_t *pThis)
 {
+	struct syslogTime stTime;
+	time_t ttGenTime;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -306,7 +294,8 @@ PrepareClose(tcps_sess_t *pThis)
 		 * this case.
 		 */
 		dbgprintf("Extra data at end of stream in legacy syslog/tcp message - processing\n");
-		defaultDoSubmitMessage(pThis);
+		datetime.getCurrTime(&stTime, &ttGenTime);
+		defaultDoSubmitMessage(pThis, &stTime, ttGenTime);
 	}
 
 finalize_it:
@@ -341,7 +330,7 @@ Close(tcps_sess_t *pThis)
  * rgerhards, 2008-03-14
  */
 static rsRetVal
-processDataRcvd(tcps_sess_t *pThis, char c)
+processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t ttGenTime)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
@@ -387,7 +376,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 		if(pThis->iMsg >= iMaxLine) {
 			/* emergency, we now need to flush, no matter if we are at end of message or not... */
 			dbgprintf("error: message received is larger than max msg size, we split it\n");
-			defaultDoSubmitMessage(pThis);
+			defaultDoSubmitMessage(pThis, stTime, ttGenTime);
 			/* we might think if it is better to ignore the rest of the
 			 * message than to treat it as a new one. Maybe this is a good
 			 * candidate for a configuration parameter...
@@ -398,7 +387,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 		if((   (c == '\n')
 		   || ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))
 		   ) && pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
-			defaultDoSubmitMessage(pThis);
+			defaultDoSubmitMessage(pThis, stTime, ttGenTime);
 			pThis->inputState = eAtStrtFram;
 		} else {
 			/* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
@@ -415,7 +404,7 @@ processDataRcvd(tcps_sess_t *pThis, char c)
 			pThis->iOctetsRemain--;
 			if(pThis->iOctetsRemain < 1) {
 				/* we have end of frame! */
-				defaultDoSubmitMessage(pThis);
+				defaultDoSubmitMessage(pThis, stTime, ttGenTime);
 				pThis->inputState = eAtStrtFram;
 			}
 		}
@@ -436,22 +425,29 @@ processDataRcvd(tcps_sess_t *pThis, char c)
  * RS_RET_OK, which means the session should be kept open
  * or anything else, which means it must be closed.
  * rgerhards, 2008-03-01
+ * As a performance optimization, we pick up the timestamp here. Acutally,
+ * this *is* the *correct* reception step for all the data we received, because
+ * we have just received a bunch of data! -- rgerhards, 2009-06-16
  */
 static rsRetVal
 DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 {
-	DEFiRet;
+	struct syslogTime stTime;
+	time_t ttGenTime;
 	char *pEnd;
+	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	assert(pData != NULL);
 	assert(iLen > 0);
 
+	datetime.getCurrTime(&stTime, &ttGenTime);
+
 	 /* We now copy the message to the session buffer. */
 	pEnd = pData + iLen; /* this is one off, which is intensional */
 
 	while(pData < pEnd) {
-		CHKiRet(processDataRcvd(pThis, *pData++));
+		CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime));
 	}
 
 finalize_it:

@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -220,7 +220,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			CHKmalloc(pMsg->pszRawMsg = malloc(sizeof(uchar)* lenRcvBuf));
 			memcpy(pMsg->pszRawMsg, pRcvBuf, lenRcvBuf);
 			pMsg->iLenRawMsg = lenRcvBuf;
-			MsgSetInputName(pMsg, UCHAR_CONSTANT("imudp"));
+			MsgSetInputName(pMsg, UCHAR_CONSTANT("imudp"), sizeof("imudp")-1);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 			pMsg->bParseHOSTNAME = 1;

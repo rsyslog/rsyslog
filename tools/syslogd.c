@@ -639,7 +639,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
 	if(pszInputName != NULL)
-		MsgSetInputName(pMsg, pszInputName);
+		MsgSetInputName(pMsg, pszInputName, ustrlen(pszInputName));
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
@@ -947,7 +947,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"));
+	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
 	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
