@@ -6,8 +6,9 @@
  * Please see syslogd.c for license information.
  * All functions in this "class" start with rsCStr (rsyslog Counted String).
  * begun 2005-09-07 rgerhards
+ * did some optimization (read: bugs!) rgerhards, 2009-06-16
  *
- * Copyright (C) 2007-2008 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2007-2009 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -40,6 +41,7 @@
 #include "regexp.h"
 #include "obj.h"
 
+uchar*  rsCStrGetSzStr(cstr_t *pThis);
 
 /* ################################################################# *
  * private members                                                   *
@@ -54,15 +56,14 @@ DEFobjCurrIf(regexp)
  * ################################################################# */
 
 
-rsRetVal rsCStrConstruct(cstr_t **ppThis)
+rsRetVal cstrConstruct(cstr_t **ppThis)
 {
 	DEFiRet;
 	cstr_t *pThis;
 
 	ASSERT(ppThis != NULL);
 
-	if((pThis = (cstr_t*) calloc(1, sizeof(cstr_t))) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKmalloc(pThis = (cstr_t*) calloc(1, sizeof(cstr_t)));
 
 	rsSETOBJTYPE(pThis, OIDrsCStr);
 	pThis->pBuf = NULL;
@@ -89,7 +90,7 @@ rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz)
 
 	CHKiRet(rsCStrConstruct(&pThis));
 
-	pThis->iBufSize = pThis->iStrLen = strlen((char*)(char *) sz);
+	pThis->iBufSize = pThis->iStrLen = strlen((char *) sz);
 	if((pThis->pBuf = (uchar*) malloc(sizeof(uchar) * pThis->iStrLen)) == NULL) {
 		RSFREEOBJ(pThis);
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
@@ -137,24 +138,8 @@ void rsCStrDestruct(cstr_t **ppThis)
 {
 	cstr_t *pThis = *ppThis;
 
-	/* rgerhards 2005-10-19: The free of pBuf was contained in conditional compilation.
-	 * The code was only compiled if STRINGBUF_TRIM_ALLOCSIZE was set to 1. I honestly
-	 * do not know why it was so, I think it was an artifact. Anyhow, I have changed this
-	 * now. Should there any issue occur, this comment hopefully will shed some light 
-	 * on what happened. I re-verified, and this function has never before been called
-	 * by anyone. So changing it can have no impact for obvious reasons...
-	 *
-	 * rgerhards, 2008-02-20: I changed the interface to the new calling conventions, where
-	 * the destructor receives a pointer to the object, so that it can set it to NULL.
-	 */
-	if(pThis->pBuf != NULL) {
-		free(pThis->pBuf);
-	}
-
-	if(pThis->pszBuf != NULL) {
-		free(pThis->pszBuf);
-	}
-
+	free(pThis->pBuf);
+	free(pThis->pszBuf);
 	RSFREEOBJ(pThis);
 	*ppThis = NULL;
 }
@@ -166,12 +151,14 @@ void rsCStrDestruct(cstr_t **ppThis)
  * allocated. In practice, a bit more is allocated because we envision that
  * some more characters may be added after these.
  * rgerhards, 2008-01-07
+ * changed to utilized realloc() -- rgerhards, 2009-06-16
  */
-static rsRetVal rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
+static rsRetVal
+rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
 {
-	DEFiRet;
 	uchar *pNewBuf;
 	size_t iNewSize;
+	DEFiRet;
 
 	/* first compute the new size needed */
 	if(iMinNeeded > pThis->iAllocIncrement) {
@@ -187,15 +174,9 @@ static rsRetVal rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
 	}
 	iNewSize += pThis->iBufSize; /* add current size */
 
-	/* and then allocate and copy over */
 	/* DEV debugging only: dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize); */
-	if((pNewBuf = (uchar*) malloc(iNewSize * sizeof(uchar))) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	memcpy(pNewBuf, pThis->pBuf, pThis->iBufSize);
+	CHKmalloc(pNewBuf = (uchar*) realloc(pThis->pBuf, iNewSize * sizeof(uchar)));
 	pThis->iBufSize = iNewSize;
-	if(pThis->pBuf != NULL) {
-		free(pThis->pBuf);
-	}
 	pThis->pBuf = pNewBuf;
 
 finalize_it:
@@ -288,6 +269,29 @@ finalize_it:
 }
 
 
+/* NEW VARIANT
+ * Append a character to the current string object. This may only be done until
+ * cstrFinalize() is called.
+ * rgerhards, 2009-06-16
+ */
+rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
+{
+	DEFiRet;
+
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+
+	if(pThis->iStrLen >= pThis->iBufSize) {  
+		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
+	}
+
+	/* ok, when we reach this, we have sufficient memory */
+	*(pThis->pBuf + pThis->iStrLen++) = c;
+
+finalize_it:
+	RETiRet;
+}
+
+
 /* Sets the string object to the classigal sz-string provided.
  * Any previously stored vlaue is discarded. If a NULL pointer
  * the the new value (pszNew) is provided, an empty string is
@@ -299,10 +303,8 @@ rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	if(pThis->pBuf != NULL)
-		free(pThis->pBuf);
-	if(pThis->pszBuf != NULL)
-		free(pThis->pszBuf);
+	free(pThis->pBuf);
+	free(pThis->pszBuf);
 	if(pszNew == NULL) {
 		pThis->iStrLen = 0;
 		pThis->iBufSize = 0;
@@ -390,35 +392,42 @@ uchar*  rsCStrGetSzStr(cstr_t *pThis)
 }
 
 
+/* NEW VERSION for interface without separate psz buffer! */
+/* Returns the cstr data as a classical C sz string. We use that the 
+ * Finalizer did properly terminate our string (but we may stil be NULL).
+ * So it is vital that the finalizer is called BEFORe this function here!
+ * The caller must not free or otherwise manipulate the returned string and must not
+ * destroy the CStr object as long as the ascii string is used.
+ * This function may return NULL, if the string is currently NULL. This
+ * is a feature, not a bug. If you need non-NULL in any case, use
+ * cstrGetSzStrNoNULL() instead.
+ * Note that due to the new single-buffer interface this function almost does nothing!
+ * rgerhards, 2006-09-16
+ */
+uchar*  cstrGetSzStr(cstr_t *pThis)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	return(pThis->pBuf);
+}
+
+
 /* Converts the CStr object to a classical zero-terminated C string,
  * returns that string and destroys the CStr object. The returned string
  * MUST be freed by the caller. The function might return NULL if
  * no memory can be allocated.
  *
- * TODO:
- * This function should at some time become special. The base idea is to
- * add one extra byte to the end of the regular buffer, so that we can
- * convert it to an szString without the need to copy. The extra memory
- * footprint is not hefty, but the performance gain is potentially large.
- * To get it done now, I am not doing the optimiziation right now.
- * rgerhards, 2005-09-07
+ * This is the NEW replacement for rsCStrConvSzStrAndDestruct which does
+ * no longer utilize a special buffer but soley works on pBuf (and also
+ * assumes that cstrFinalize had been called).
  *
- * rgerhards, 2007-09-04: I have changed the interface of this function. It now
- * returns an rsRetVal, so that we can communicate back if we have an error.
- * Using the standard method is much better than returning NULL. Secondly, NULL
- * was not actually an error - it was in indication if the string was empty.
- * This was needed in some parts of the code, in others not. I have now added
- * a second parameter to specify what the caller needs. I hope these changes
- * will make it less likely that the function is called incorrectly, what
- * previously happend quite often and was the cause of a number of program
- * aborts. So the parameters are now:
+ * Parameters are as follows:
  * pointer to the object, pointer to string-pointer to receive string and
  * bRetNULL: 0 - must not return NULL on empty string, return "" in that
  * case, 1 - return NULL instead of an empty string.
  * PLEASE NOTE: the caller must free the memory returned in ppSz in any case
  * (except, of course, if it is NULL).
  */
-rsRetVal rsCStrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL)
+rsRetVal cstrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL)
 {
 	DEFiRet;
 	uchar* pRetBuf;
@@ -429,14 +438,13 @@ rsRetVal rsCStrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL)
 
 	if(pThis->pBuf == NULL) {
 		if(bRetNULL == 0) {
-			if((pRetBuf = malloc(sizeof(uchar))) == NULL)
-				ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+			CHKmalloc(pRetBuf = malloc(sizeof(uchar)));
 			*pRetBuf = '\0';
 		} else {
 			pRetBuf = NULL;
 		}
 	} else
-		pRetBuf = rsCStrGetSzStr(pThis);
+		pRetBuf = pThis->pBuf;
 	
 	*ppSz = pRetBuf;
 
@@ -445,60 +453,39 @@ finalize_it:
 	 * that we can NOT use the rsCStrDestruct function as it would
 	 * also free the sz String buffer, which we pass on to the user.
 	 */
-	if(pThis->pBuf != NULL)
-		free(pThis->pBuf);
 	RSFREEOBJ(pThis);
-	
 	RETiRet;
 }
 
 
-#if STRINGBUF_TRIM_ALLOCSIZE == 1
-	/* Only in this mode, we need to trim the string. To do
-	 * so, we must allocate a new buffer of the exact 
-	 * string size, and then copy the old one over. 
-	 */
-	/* WARNING
-	 * STRINGBUF_TRIM_ALLOCSIZE can, in theory, be used to trim
-	 * memory buffers. This part of the code was inherited from
-	 * liblogging (where it is used in a different context) but
-	 * never put to use in rsyslog. The reason is that it is hardly
-	 * imaginable where the extra performance cost is worth the save
-	 * in memory alloc. Then Anders Blomdel rightfully pointed out that
-	 * the code does not work at all - and nobody even know that it
-	 * probably shouldn't. Rather than removing, I deciced to somewhat
-	 * fix the code, so that this feature may be enabled if somebody
-	 * really has a need for it. Be warned, however, that I NEVER
-	 * tested the fix. So if you intend to use this feature, you must
-	 * do full testing before you rely on it. -- rgerhards, 2008-02-12
-	 */
-rsRetVal  rsCStrFinish(cstr_t __attribute__((unused)) *pThis)
+/* Finalize the string object. This must be called after all data is added to it
+ * but before that data is used.
+ * rgerhards, 2009-06-16
+ */
+rsRetVal
+cstrFinalize(cstr_t *pThis)
 {
 	DEFiRet;
-	uchar* pBuf;
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	
+	assert(pThis->bIsFinalized == 0);
 
-	if((pBuf = malloc((pThis->iStrLen) * sizeof(uchar))) == NULL)
-	{	/* OK, in this case we use the previous buffer. At least
-		 * we have it ;)
-		 */
+	if(pThis->iStrLen > 0) {
+		/* terminate string only if one exists */
+		CHKiRet(cstrAppendChar(pThis, '\0'));
+		--pThis->iStrLen;	/* do NOT count the \0 byte */
 	}
-	else
-	{	/* got the new buffer, so let's use it */
-		memcpy(pBuf, pThis->pBuf, pThis->iStrLen);
-		pThis->pBuf = pBuf;
-	}
+	pThis->bIsFinalized = 1;
 
+finalize_it:
 	RETiRet;
 }
-#endif 	/* #if STRINGBUF_TRIM_ALLOCSIZE == 1 */
 
 
 void rsCStrSetAllocIncrement(cstr_t *pThis, int iNewIncrement)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(iNewIncrement > 0);
-
 	pThis->iAllocIncrement = iNewIncrement;
 }
 
@@ -1027,56 +1014,6 @@ int rsCStrCaseInsensitiveLocateInSzStr(cstr_t *pThis, uchar *sz)
 }
 
 
-#if 0	 /* read comment below why this is commented out. In short: for future use! */
-/* locate the first occurence of a standard sz string inside a rsCStr object.
- * Returns the offset (0-bound) of this first occurrence. If not found, -1 is
- * returned.
- * rgerhards 2005-09-19
- * WARNING: I accidently created this function (I later noticed I didn't relly
- *          need it... I will not remove the function, as it probably is useful
- *          some time later. However, it is not fully tested, so start with testing
- *          it before you put it to first use).
- */
-int rsCStrLocateSzStr(cstr_t *pThis, uchar *sz)
-{
-	int iLenSz;
-	int i;
-	int iMax;
-	int bFound;
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	
-	if(sz == NULL)
-		return 0;
-
-	iLenSz = strlen((char*)sz);
-	if(iLenSz == 0)
-		return 0;
-	
-	/* compute the largest index where a match could occur - after all,
-	 * the to-be-located string must be able to be present in the 
-	 * searched string (it needs its size ;)).
-	 */
-	iMax = pThis->iStrLen - iLenSz;
-
-	bFound = 0;
-	i = 0;
-	while(i  < iMax && !bFound) {
-		int iCheck;
-		uchar *pComp = pThis->pBuf + i;
-		for(iCheck = 0 ; iCheck < iLenSz ; ++iCheck)
-			if(*(pComp + iCheck) != *(sz + iCheck))
-				break;
-		if(iCheck == iLenSz)
-			bFound = 1; /* found! - else it wouldn't be equal */
-		else
-			++i; /* on to the next try */
-	}
-
-	return(bFound ? i : -1);
-}
-#endif /* end comment out */
-
-
 /* our exit function. TODO: remove once converted to a class
  * rgerhards, 2008-03-11
  */
@@ -1100,11 +1037,5 @@ finalize_it:
 }
 
 
-/*
- * Local variables:
- *  c-indent-level: 8
- *  c-basic-offset: 8
- *  tab-width: 8
- * End:
- * vi:set ai:
+/* vi:set ai:
  */

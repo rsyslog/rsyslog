@@ -105,22 +105,22 @@ static rsRetVal get_Field(uchar **pp, uchar **pField)
 	skip_Comma((char**)pp);
 	p = *pp;
 
-	CHKiRet(rsCStrConstruct(&pStrB));
+	CHKiRet(cstrConstruct(&pStrB));
 	rsCStrSetAllocIncrement(pStrB, 32);
 
 	/* copy the field */
 	while(*p && *p != ' ' && *p != ',') {
-		CHKiRet(rsCStrAppendChar(pStrB, *p++));
+		CHKiRet(cstrAppendChar(pStrB, *p++));
 	}
 
 	*pp = p;
-	CHKiRet(rsCStrFinish(pStrB));
-	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, pField, 0));
+	CHKiRet(cstrFinalize(pStrB));
+	CHKiRet(cstrConvSzStrAndDestruct(pStrB, pField, 0));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pStrB != NULL)
-			rsCStrDestruct(&pStrB);
+			cstrDestruct(&pStrB);
 	}
 
 	RETiRet;
@@ -174,22 +174,22 @@ static inline rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 	skip_Comma((char**)pp);
 	p = *pp;
 
-	CHKiRet(rsCStrConstruct(&pStrB));
+	CHKiRet(cstrConstruct(&pStrB));
 	rsCStrSetAllocIncrement(pStrB, 32);
 
 	/* copy the field */
 	while(*p) {
-		CHKiRet(rsCStrAppendChar(pStrB, *p++));
+		CHKiRet(cstrAppendChar(pStrB, *p++));
 	}
 
 	*pp = p;
-	CHKiRet(rsCStrFinish(pStrB));
-	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, pBuf, 0));
+	CHKiRet(cstrFinalize(pStrB));
+	CHKiRet(cstrConvSzStrAndDestruct(pStrB, pBuf, 0));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pStrB != NULL)
-			rsCStrDestruct(&pStrB);
+			cstrDestruct(&pStrB);
 	}
 
 	RETiRet;

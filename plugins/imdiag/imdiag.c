@@ -207,7 +207,7 @@ doInjectMsg(int iNum)
 	CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 	CHKmalloc(pMsg->pszRawMsg = ustrdup(szMsg));
 	pMsg->iLenRawMsg = ustrlen(szMsg);
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("imdiag"));
+	MsgSetInputName(pMsg, UCHAR_CONSTANT("imdiag"), sizeof("imdiag")-1);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	pMsg->bParseHOSTNAME = 1;

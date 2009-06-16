@@ -96,8 +96,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("imfile"));
-	MsgSetUxTradMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
+	MsgSetInputName(pMsg, UCHAR_CONSTANT("imfile"), sizeof("imfile")-1);
 	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());

@@ -281,7 +281,7 @@ rsRetVal objName##ClassExit(void) \
  * rgerhards, 2008-01-30
  */
 #define BEGINobjDestruct(OBJ) \
-	rsRetVal OBJ##Destruct(OBJ##_t **ppThis) \
+	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis) \
 	{ \
 		DEFiRet; \
 		int iCancelStateSave; \
@@ -315,7 +315,7 @@ rsRetVal objName##ClassExit(void) \
 #define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
 #define INTERFACEObjDebugPrint(obj) rsRetVal (*DebugPrint)(obj##_t *pThis)
 #define BEGINobjDebugPrint(obj) \
-	rsRetVal obj##DebugPrint(obj##_t *pThis) \
+	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis) \
 	{ \
 		DEFiRet; \
 

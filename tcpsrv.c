@@ -108,6 +108,7 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 	pEntry->pSrv = pThis;
 	pEntry->pRuleset = pThis->pRuleset;
 	CHKmalloc(pEntry->pszInputName = ustrdup(pThis->pszInputName));
+	pEntry->lenInputName = ustrlen(pEntry->pszInputName);
 
 	/* and add to list */
 	pEntry->pNext = pThis->pLstnPorts;
@@ -513,7 +514,7 @@ Run(tcpsrv_t *pThis)
 		while(nfds && iTCPSess != -1) {
 			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
-				char buf[64*1024]; /* reception buffer - may hold a partial or multiple messages */
+				char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
 				dbgprintf("netstream %p with new data\n", pThis->pSessions[iTCPSess]->pStrm);
 
 				/* Receive message */

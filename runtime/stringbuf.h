@@ -49,13 +49,15 @@ typedef struct cstr_s
 	size_t iBufSize;	/**< current maximum size of the string buffer */
 	size_t iStrLen;		/**< length of the string in characters. */
 	size_t iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
+	bool bIsFinalized;	/**< is this object finished and ready for use? (a debug aid, may be removed later TODO 2009-06-16) */
 } cstr_t;
 
 
 /**
  * Construct a rsCStr object.
  */
-rsRetVal rsCStrConstruct(cstr_t **ppThis);
+rsRetVal cstrConstruct(cstr_t **ppThis);
+#define rsCStrConstruct(x) cstrConstruct((x))
 rsRetVal rsCStrConstructFromszStr(cstr_t **ppThis, uchar *sz);
 rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
 
@@ -63,6 +65,7 @@ rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
  * Destruct the string buffer object.
  */
 void rsCStrDestruct(cstr_t **ppThis);
+#define cstrDestruct(x) rsCStrDestruct((x))
 
 /**
  * Append a character to an existing string. If necessary, the
@@ -71,6 +74,7 @@ void rsCStrDestruct(cstr_t **ppThis);
  * \param c Character to append to string.
  */
 rsRetVal rsCStrAppendChar(cstr_t *pThis, uchar c);
+rsRetVal cstrAppendChar(cstr_t *pThis, uchar c);
 
 /**
  * Truncate "n" number of characters from the end of the
@@ -123,10 +127,9 @@ rsRetVal rsCStrAppendInt(cstr_t *pThis, long i);
 
 
 rsRetVal strExit(void); /* TODO: remove once we have a real object interface! */
-uchar*  rsCStrGetSzStr(cstr_t *pThis);
+uchar* __attribute__((deprecated)) rsCStrGetSzStr(cstr_t *pThis);
 uchar*  rsCStrGetSzStrNoNULL(cstr_t *pThis);
 rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew);
-rsRetVal rsCStrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL);
 int rsCStrCStrCmp(cstr_t *pCS1, cstr_t *pCS2);
 int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz);
 int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz);
@@ -142,24 +145,16 @@ rsRetVal rsCStrConvertToNumber(cstr_t *pStr, number_t *pNumber);
 rsRetVal rsCStrConvertToBool(cstr_t *pStr, number_t *pBool);
 rsRetVal rsCStrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
+/* new calling interface */
+rsRetVal cstrFinalize(cstr_t *pThis);
+rsRetVal cstrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL);
+uchar*  cstrGetSzStr(cstr_t *pThis);
+
 /* now come inline-like functions */
 #ifdef NDEBUG
 #	define rsCStrLen(x) ((int)((x)->iStrLen))
 #else
 	int rsCStrLen(cstr_t *pThis);
-#endif
-
-#if STRINGBUF_TRIM_ALLOCSIZE != 1
-/* This is the normal case (see comment in rsCStrFinish!). In those cases, the function
- * simply needs to do nothing, so that we can save us the function call.
- * rgerhards, 2008-02-12
- */
-#	define rsCStrFinish(pThis) RS_RET_OK
-#else
-	/**
-	 * Finish the string buffer dynamic allocation.
-	 */
-	rsRetVal rsCStrFinish(cstr_t *pThis);
 #endif
 
 #define rsCStrGetBufBeg(x) ((x)->pBuf)

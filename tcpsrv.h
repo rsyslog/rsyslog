@@ -37,6 +37,7 @@ typedef enum ETCPsyslogFramingAnomaly {
 struct tcpLstnPortList_s {
 	uchar *pszPort;			/**< the ports the listener shall listen on */
 	uchar *pszInputName;		/**< value to be used as input name */
+	size_t lenInputName;		/**< length of inputName */
 	tcpsrv_t *pSrv;			/**< pointer to higher-level server instance */
 	ruleset_t *pRuleset;		/**< associated ruleset */
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */

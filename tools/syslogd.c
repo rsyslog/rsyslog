@@ -494,7 +494,7 @@ static char **crunch_list(char *list)
 #if 0
 	count=0;
 	while (result[count])
-		dbgprintf("#%d: %s\n", count, StripDomains[count++]);
+		DBGPRINTF("#%d: %s\n", count, StripDomains[count++]);
 #endif
 	return result;
 }
@@ -580,7 +580,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
 	if(pszInputName != NULL)
-		MsgSetInputName(pMsg, pszInputName);
+		MsgSetInputName(pMsg, pszInputName, ustrlen(pszInputName));
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
@@ -611,15 +611,8 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, hname);
 	MsgSetRcvFrom(pMsg, hname);
+	MsgSetAfterPRIOffs(pMsg, p - msg);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
-
-	/* rgerhards 2004-11-19: well, well... we've now seen that we
-	 * have the "hostname problem" also with the traditional Unix
-	 * message. As we like to emulate it, we need to add the hostname
-	 * to it.
-	 */
-	if(MsgSetUxTradMsg(pMsg, (char*)p) != 0)
-		ABORT_FINALIZE(RS_RET_ERR);
 
 	logmsg(pMsg, flags);
 
@@ -721,7 +714,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	 * rgerhards, 2007-09-14
 	 */
 	if(*(msg + len - 1) == '\0') {
-		dbgprintf("dropped NUL at very end of message\n");
+		DBGPRINTF("dropped NUL at very end of message\n");
 		len--;
 	}
 
@@ -731,7 +724,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	 * turn on/off this handling.  rgerhards, 2007-07-23
 	 */
 	if(bDropTrailingLF && *(msg + len - 1) == '\n') {
-		dbgprintf("dropped LF at very end of message (DropTrailingLF is set)\n");
+		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
 		len--;
 	}
 
@@ -756,7 +749,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 		iLenDefBuf = iMaxLine;
 		CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
-		dbgprintf("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
+		DBGPRINTF("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
 		        ret, (long) iLenDefBuf, len-1);
 		/* Now check if the uncompression worked. If not, there is not much we can do. In
 		 * that case, we log an error message but ignore the message itself. Storing the
@@ -802,7 +795,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 				 * (I couldn't do any more smart things anyway...).
 				 * rgerhards, 2007-9-20
 				 */
-				dbgprintf("internal error: iMsg > max msg size in printchopped()\n");
+				DBGPRINTF("internal error: iMsg > max msg size in printchopped()\n");
 			}
 			FINALIZE; /* in this case, we are done... nothing left we can do */
 		}
@@ -888,8 +881,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"));
-	MsgSetUxTradMsg(pMsg, (char*)msg);
+	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
@@ -931,6 +923,233 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	}
 finalize_it:
 	RETiRet;
+}
+
+/* This functions looks at the given message and checks if it matches the
+ * provided filter condition. If so, it returns true, else it returns
+ * false. This is a helper to logmsg() and meant to drive the decision
+ * process if a message is to be processed or not. As I expect this
+ * decision code to grow more complex over time AND logmsg() is already
+ * a very lengthy function, I thought a separate function is more appropriate.
+ * 2005-09-19 rgerhards
+ * 2008-02-25 rgerhards: changed interface, now utilizes iRet, bProcessMsg
+ * returns is message should be procesed.
+ */
+static rsRetVal shouldProcessThisMessage(selector_t *f, msg_t *pMsg, int *bProcessMsg)
+{
+	DEFiRet;
+	unsigned short pbMustBeFreed;
+	char *pszPropVal;
+	int bRet = 0;
+	vm_t *pVM = NULL;
+	var_t *pResult = NULL;
+
+	assert(f != NULL);
+	assert(pMsg != NULL);
+
+	/* we first have a look at the global, BSD-style block filters (for tag
+	 * and host). Only if they match, we evaluate the actual filter.
+	 * rgerhards, 2005-10-18
+	 */
+	if(f->eHostnameCmpMode == HN_NO_COMP) {
+		/* EMPTY BY INTENSION - we check this value first, because
+		 * it is the one most often used, so this saves us time!
+		 */
+	} else if(f->eHostnameCmpMode == HN_COMP_MATCH) {
+		if(rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
+			/* not equal, so we are already done... */
+			DBGPRINTF("hostname filter '+%s' does not match '%s'\n", 
+				rsCStrGetSzStrNoNULL(f->pCSHostnameComp), getHOSTNAME(pMsg));
+			FINALIZE;
+		}
+	} else { /* must be -hostname */
+		if(!rsCStrSzStrCmp(f->pCSHostnameComp, (uchar*) getHOSTNAME(pMsg), getHOSTNAMELen(pMsg))) {
+			/* not equal, so we are already done... */
+			DBGPRINTF("hostname filter '-%s' does not match '%s'\n", 
+				rsCStrGetSzStrNoNULL(f->pCSHostnameComp), getHOSTNAME(pMsg));
+			FINALIZE;
+		}
+	}
+	
+	if(f->pCSProgNameComp != NULL) {
+		int bInv = 0, bEqv = 0, offset = 0;
+		if(*(rsCStrGetSzStrNoNULL(f->pCSProgNameComp)) == '-') {
+			if(*(rsCStrGetSzStrNoNULL(f->pCSProgNameComp) + 1) == '-')
+				offset = 1;
+			else {
+				bInv = 1;
+				offset = 1;
+			}
+		}
+		if(!rsCStrOffsetSzStrCmp(f->pCSProgNameComp, offset, (uchar*) getProgramName(pMsg), getProgramNameLen(pMsg)))
+			bEqv = 1;
+
+		if((!bEqv && !bInv) || (bEqv && bInv)) {
+			/* not equal or inverted selection, so we are already done... */
+			DBGPRINTF("programname filter '%s' does not match '%s'\n", 
+				rsCStrGetSzStrNoNULL(f->pCSProgNameComp), getProgramName(pMsg));
+			FINALIZE;
+		}
+	}
+	
+	/* done with the BSD-style block filters */
+
+	if(f->f_filter_type == FILTER_PRI) {
+		/* skip messages that are incorrect priority */
+		if ( (f->f_filterData.f_pmask[pMsg->iFacility] == TABLE_NOPRI) ||
+		    ((f->f_filterData.f_pmask[pMsg->iFacility] & (1<<pMsg->iSeverity)) == 0) )
+			bRet = 0;
+		else
+			bRet = 1;
+	} else if(f->f_filter_type == FILTER_EXPR) {
+		CHKiRet(vm.Construct(&pVM));
+		CHKiRet(vm.ConstructFinalize(pVM));
+		CHKiRet(vm.SetMsg(pVM, pMsg));
+		CHKiRet(vm.ExecProg(pVM, f->f_filterData.f_expr->pVmprg));
+		CHKiRet(vm.PopBoolFromStack(pVM, &pResult));
+		DBGPRINTF("result of expression evaluation: %lld\n", pResult->val.num);
+		/* VM is destructed on function exit */
+		bRet = (pResult->val.num) ? 1 : 0;
+	} else {
+		assert(f->f_filter_type == FILTER_PROP); /* assert() just in case... */
+		pszPropVal = MsgGetProp(pMsg, NULL, f->f_filterData.prop.pCSPropName, &pbMustBeFreed);
+
+		/* Now do the compares (short list currently ;)) */
+		switch(f->f_filterData.prop.operation ) {
+		case FIOP_CONTAINS:
+			if(rsCStrLocateInSzStr(f->f_filterData.prop.pCSCompValue, (uchar*) pszPropVal) != -1)
+				bRet = 1;
+			break;
+		case FIOP_ISEQUAL:
+			if(rsCStrSzStrCmp(f->f_filterData.prop.pCSCompValue,
+					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
+				bRet = 1; /* process message! */
+			break;
+		case FIOP_STARTSWITH:
+			if(rsCStrSzStrStartsWithCStr(f->f_filterData.prop.pCSCompValue,
+					  (uchar*) pszPropVal, strlen(pszPropVal)) == 0)
+				bRet = 1; /* process message! */
+			break;
+		case FIOP_REGEX:
+			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
+					(unsigned char*) pszPropVal, 0, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
+				bRet = 1;
+			break;
+		case FIOP_EREREGEX:
+			if(rsCStrSzStrMatchRegex(f->f_filterData.prop.pCSCompValue,
+					  (unsigned char*) pszPropVal, 1, &f->f_filterData.prop.regex_cache) == RS_RET_OK)
+				bRet = 1;
+			break;
+		default:
+			/* here, it handles NOP (for performance reasons) */
+			assert(f->f_filterData.prop.operation == FIOP_NOP);
+			bRet = 1; /* as good as any other default ;) */
+			break;
+		}
+
+		/* now check if the value must be negated */
+		if(f->f_filterData.prop.isNegated)
+			bRet = (bRet == 1) ?  0 : 1;
+
+		if(Debug) {
+			dbgprintf("Filter: check for property '%s' (value '%s') ",
+			        rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSPropName),
+			        pszPropVal);
+			if(f->f_filterData.prop.isNegated)
+				dbgprintf("NOT ");
+			dbgprintf("%s '%s': %s\n",
+			       getFIOPName(f->f_filterData.prop.operation),
+			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue),
+			       bRet ? "TRUE" : "FALSE");
+		}
+
+		/* cleanup */
+		if(pbMustBeFreed)
+			free(pszPropVal);
+	}
+
+finalize_it:
+	/* destruct in any case, not just on error, but it makes error handling much easier */
+	if(pVM != NULL)
+		vm.Destruct(&pVM);
+
+	if(pResult != NULL)
+		var.Destruct(&pResult);
+
+	*bProcessMsg = bRet;
+	RETiRet;
+}
+
+
+/* helper to processMsg(), used to call the configured actions. It is
+ * executed from within llExecFunc() of the action list.
+ * rgerhards, 2007-08-02
+ */
+typedef struct processMsgDoActions_s {
+	int bPrevWasSuspended; /* was the previous action suspended? */
+	msg_t *pMsg;
+} processMsgDoActions_t;
+DEFFUNC_llExecFunc(processMsgDoActions)
+{
+	DEFiRet;
+	rsRetVal iRetMod;	/* return value of module - we do not always pass that back */
+	action_t *pAction = (action_t*) pData;
+	processMsgDoActions_t *pDoActData = (processMsgDoActions_t*) pParam;
+
+	assert(pAction != NULL);
+
+	if((pAction->bExecWhenPrevSusp  == 1) && (pDoActData->bPrevWasSuspended == 0)) {
+		DBGPRINTF("not calling action because the previous one is not suspended\n");
+		ABORT_FINALIZE(RS_RET_OK);
+	}
+
+	iRetMod = actionCallAction(pAction, pDoActData->pMsg);
+	if(iRetMod == RS_RET_DISCARDMSG) {
+		ABORT_FINALIZE(RS_RET_DISCARDMSG);
+	} else if(iRetMod == RS_RET_SUSPENDED) {
+		/* indicate suspension for next module to be called */
+		pDoActData->bPrevWasSuspended = 1;
+	} else {
+		pDoActData->bPrevWasSuspended = 0;
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* Process (consume) a received message. Calls the actions configured.
+ * rgerhards, 2005-10-13
+ */
+static void
+processMsg(msg_t *pMsg)
+{
+	selector_t *f;
+	int bContinue;
+	int bProcessMsg;
+	processMsgDoActions_t DoActData;
+	rsRetVal iRet;
+
+	BEGINfunc
+	assert(pMsg != NULL);
+
+	/* log the message to the particular outputs */
+
+	bContinue = 1;
+	for (f = Files; f != NULL && bContinue ; f = f->f_next) {
+		/* first check the filters... */
+		iRet = shouldProcessThisMessage(f, pMsg, &bProcessMsg);
+		if(!bProcessMsg) {
+			continue;
+		}
+
+		/* ok -- from here, we have action-specific code, nothing really selector-specific -- rger 2007-08-01 */
+		DoActData.pMsg = pMsg;
+		DoActData.bPrevWasSuspended = 0;
+		if(llExecFunc(&f->llActList, processMsgDoActions, (void*)&DoActData) == RS_RET_DISCARDMSG)
+			bContinue = 0;
+	}
+	ENDfunc
 }
 
 
@@ -1084,8 +1303,8 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 
 	BEGINfunc
 	assert(pMsg != NULL);
-	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = pMsg->pszUxTradMsg;
+	assert(pMsg->pszRawMsg != NULL);
+	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* do a sanity check on the version and eat it */
 	assert(p2parse[0] == '1' && p2parse[1] == ' ');
@@ -1113,7 +1332,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 			memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 		}
 	} else {
-		dbgprintf("no TIMESTAMP detected!\n");
+		DBGPRINTF("no TIMESTAMP detected!\n");
 		bContParse = 0;
 	}
 
@@ -1185,8 +1404,8 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	BEGINfunc
 
 	assert(pMsg != NULL);
-	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = pMsg->pszUxTradMsg;
+	assert(pMsg->pszRawMsg != NULL);
+	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* Check to see if msg contains a timestamp. We start by assuming
 	 * that the message timestamp is the time of reciption (which we 
@@ -1275,7 +1494,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			/* indeed, this smells like a TAG, so lets use it for this. We take
 			 * the HOSTNAME from the sender system instead.
 			 */
-			dbgprintf("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
+			DBGPRINTF("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
 			moveHOSTNAMEtoTAG(pMsg);
 			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
@@ -1300,22 +1519,21 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * the records: the code is currently clean, but we could optimize it! */
 		if(!bTAGCharDetected) {
 			uchar *pszTAG;
-			if(rsCStrConstruct(&pStrB) != RS_RET_OK) 
+			if(cstrConstruct(&pStrB) != RS_RET_OK) 
 				return 1;
 			rsCStrSetAllocIncrement(pStrB, 33);
 			pWork = pBuf;
 			iCnt = 0;
 			while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
-				rsCStrAppendChar(pStrB, *p2parse++);
+				cstrAppendChar(pStrB, *p2parse++);
 				++iCnt;
 			}
 			if(*p2parse == ':') {
 				++p2parse; 
-				rsCStrAppendChar(pStrB, ':');
+				cstrAppendChar(pStrB, ':');
 			}
-			rsCStrFinish(pStrB);
-
-			rsCStrConvSzStrAndDestruct(pStrB, &pszTAG, 1);
+			cstrFinalize(pStrB);
+			cstrConvSzStrAndDestruct(pStrB, &pszTAG, 1);
 			if(pszTAG == NULL)
 			{	/* rger, 2005-11-10: no TAG found - this implies that what
 				 * we have considered to be the HOSTNAME is most probably the
@@ -1325,7 +1543,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 				 * the hostname. This situation is the standard case with
 				 * stock BSD syslogd.
 				 */
-				dbgprintf("No TAG in message, assuming that HOSTNAME is missing.\n");
+				DBGPRINTF("No TAG in message, assuming that HOSTNAME is missing.\n");
 				moveHOSTNAMEtoTAG(pMsg);
 				MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 			} else { /* we have a TAG, so we can happily set it ;) */
@@ -1341,7 +1559,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 */
 		if(!(flags & INTERNAL_MSG))
 		{
-			dbgprintf("HOSTNAME and TAG not parsed by user configuraton.\n");
+			DBGPRINTF("HOSTNAME and TAG not parsed by user configuraton.\n");
 			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
 	}
@@ -1400,9 +1618,10 @@ logmsg(msg_t *pMsg, int flags)
 
 	BEGINfunc
 	assert(pMsg != NULL);
-	assert(pMsg->pszUxTradMsg != NULL);
-	msg = (char*) pMsg->pszUxTradMsg;
-	dbgprintf("logmsg: flags %x, from '%s', msg %s\n", flags, getRcvFrom(pMsg), msg);
+	assert(pMsg->pszRawMsg != NULL);
+
+	msg = (char*) pMsg->pszRawMsg + pMsg->offAfterPRI;  /* point to start of text, after PRI */
+	DBGPRINTF("logmsg: flags %x, from '%s', msg %s\n", flags, getRcvFrom(pMsg), msg);
 
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
 	 * a traditional syslog message or one formatted according to syslog-protocol.
@@ -1410,14 +1629,14 @@ logmsg(msg_t *pMsg, int flags)
 	 * -protocol VERSION field for the detection.
 	 */
 	if(msg[0] == '1' && msg[1] == ' ') {
-		dbgprintf("Message has syslog-protocol format.\n");
+		DBGPRINTF("Message has syslog-protocol format.\n");
 		setProtocolVersion(pMsg, 1);
 		if(parseRFCSyslogMsg(pMsg, flags) == 1) {
 			msgDestruct(&pMsg);
 			return;
 		}
 	} else { /* we have legacy syslog */
-		dbgprintf("Message has legacy syslog format.\n");
+		DBGPRINTF("Message has legacy syslog format.\n");
 		setProtocolVersion(pMsg, 0);
 		if(parseLegacySyslogMsg(pMsg, flags) == 1) {
 			msgDestruct(&pMsg);
@@ -1466,7 +1685,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	 * in an acceptable way. -- rgerhards, 2008-09-16
 	 */
 	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
-		dbgprintf("flush %s: repeated %d times, %d sec.\n",
+		DBGPRINTF("flush %s: repeated %d times, %d sec.\n",
 		    module.GetStateName(pAction->pMod), pAction->f_prevcount,
 		    repeatinterval[pAction->f_repeatcount]);
 		actionWriteToAction(pAction);
@@ -1494,9 +1713,9 @@ static void debug_switch()
 
 	if(debugging_on == 0) {
 		debugging_on = 1;
-		dbgprintf("Switching debugging_on to true\n");
+		DBGPRINTF("Switching debugging_on to true\n");
 	} else {
-		dbgprintf("Switching debugging_on to false\n");
+		DBGPRINTF("Switching debugging_on to false\n");
 		debugging_on = 0;
 	}
 	
@@ -1640,7 +1859,7 @@ void legacyOptsParseTCP(char ch, char *arg)
  * a minimal delay, but it is much cleaner than the approach of doing everything
  * inside the signal handler.
  * rgerhards, 2005-10-26
- * Note: we do not call dbgprintf() as this may cause us to block in case something
+ * Note: we do not call DBGPRINTF() as this may cause us to block in case something
  * with the threading is wrong.
  */
 static void doDie(int sig)
@@ -1698,7 +1917,7 @@ die(int sig)
 {
 	char buf[256];
 
-	dbgprintf("exiting on signal %d\n", sig);
+	DBGPRINTF("exiting on signal %d\n", sig);
 
 	/* IMPORTANT: we should close the inputs first, and THEN send our termination
 	 * message. If we do it the other way around, logmsgInternal() may block on
@@ -1713,7 +1932,7 @@ die(int sig)
 	 */
 
 	/* close the inputs */
-	dbgprintf("Terminating input threads...\n");
+	DBGPRINTF("Terminating input threads...\n");
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
@@ -1727,17 +1946,17 @@ die(int sig)
 	}
 	
 	/* drain queue (if configured so) and stop main queue worker thread pool */
-	dbgprintf("Terminating main queue...\n");
+	DBGPRINTF("Terminating main queue...\n");
 	qqueueDestruct(&pMsgQueue);
 	pMsgQueue = NULL;
 
 	/* Free ressources and close connections. This includes flushing any remaining
 	 * repeated msgs.
 	 */
-	dbgprintf("Terminating outputs...\n");
+	DBGPRINTF("Terminating outputs...\n");
 	destructAllActions();
 
-	dbgprintf("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
+	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
 	/* rger 2005-02-22
 	 * now clean up the in-memory structures. OK, the OS
 	 * would also take care of that, but if we do it
@@ -1775,7 +1994,7 @@ die(int sig)
 	 */
 	module.UnloadAndDestructAll(eMOD_LINK_ALL);
 
-	dbgprintf("Clean shutdown completed, bye\n");
+	DBGPRINTF("Clean shutdown completed, bye\n");
 	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
 	dbgClassExit();
 
@@ -1832,7 +2051,7 @@ static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
 				iFiles, errStr, (long) maxFiles.rlim_max);
 		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
 	}
-	dbgprintf("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
+	DBGPRINTF("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
 
 finalize_it:
 	RETiRet;
@@ -1843,7 +2062,7 @@ finalize_it:
 static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 {
 	umask(iUmask);
-	dbgprintf("umask set to 0%3.3o.\n", iUmask);
+	DBGPRINTF("umask set to 0%3.3o.\n", iUmask);
 
 	return RS_RET_OK;
 }
@@ -1896,6 +2115,56 @@ static void doDropPrivUid(int iUid)
 	DBGPRINTF("setuid(%d): %d\n", iUid, res);
 	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's userid changed to %d", iUid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
+}
+
+
+/* helper to freeSelectors(), used with llExecFunc() to flush 
+ * pending output.  -- rgerhards, 2007-08-02
+ * We do not need to lock the action object here as the processing
+ * queue is already empty and no other threads are running when
+ * we call this function. -- rgerhards, 2007-12-12
+ */
+DEFFUNC_llExecFunc(freeSelectorsActions)
+{
+	action_t *pAction = (action_t*) pData;
+
+	assert(pAction != NULL);
+
+	/* flush any pending output */
+	if(pAction->f_prevcount) {
+		actionWriteToAction(pAction);
+	}
+
+	return RS_RET_OK; /* never fails ;) */
+}
+
+
+/*  Close all open log files and free selector descriptor array.
+ */
+static void freeSelectors(void)
+{
+	selector_t *f;
+	selector_t *fPrev;
+
+	if(Files != NULL) {
+		DBGPRINTF("Freeing log structures.\n");
+
+		for(f = Files ; f != NULL ; f = f->f_next) {
+			llExecFunc(&f->llActList, freeSelectorsActions, NULL);
+		}
+
+		/* actions flushed and ready for destruction - so do that... */
+		f = Files;
+		while (f != NULL) {
+			fPrev = f;
+			f = f->f_next;
+			selectorDestruct(fPrev);
+		}
+
+		/* Reflect the deletion of the selectors linked list. */
+		Files = NULL;
+		bHaveMainQueue = 0;
+	}
 }
 
 
@@ -2080,6 +2349,20 @@ finalize_it:
 }
 
 
+/* helper to dbPrintInitInfo, to print out all actions via
+ * the llExecFunc() facility.
+ * rgerhards, 2007-08-02
+ */
+DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
+{
+	DEFiRet;
+	iRet = actionDbgPrint((action_t*) pData);
+	DBGPRINTF("\n");
+
+	RETiRet;
+}
+
+
 /* print debug information as part of init(). This pretty much
  * outputs the whole config of rsyslogd. I've moved this code
  * out of init() to clean it somewhat up.
@@ -2088,7 +2371,7 @@ finalize_it:
 static void dbgPrintInitInfo(void)
 {
 	ruleset.DebugPrintAll();
-	dbgprintf("\n");
+	DBGPRINTF("\n");
 	if(bDebugPrintTemplateList)
 		tplPrintList();
 	if(bDebugPrintModuleList)
@@ -2098,24 +2381,24 @@ static void dbgPrintInitInfo(void)
 	if(bDebugPrintCfSysLineHandlerList)
 		dbgPrintCfSysLineHandlers();
 
-	dbgprintf("Messages with malicious PTR DNS Records are %sdropped.\n",
+	DBGPRINTF("Messages with malicious PTR DNS Records are %sdropped.\n",
 		  glbl.GetDropMalPTRMsgs() ? "" : "not ");
 
-	dbgprintf("Control characters are %sreplaced upon reception.\n",
+	DBGPRINTF("Control characters are %sreplaced upon reception.\n",
 		  bEscapeCCOnRcv? "" : "not ");
 
 	if(bEscapeCCOnRcv)
-		dbgprintf("Control character escape sequence prefix is '%c'.\n",
+		DBGPRINTF("Control character escape sequence prefix is '%c'.\n",
 			cCCEscapeChar);
 
-	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
-	dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
+	DBGPRINTF("Main queue size %d messages.\n", iMainMsgQueueSize);
+	DBGPRINTF("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
 		  iMainMsgQueueNumWorkers, iMainMsgQtoWrkShutdown, iMainMsgQPersistUpdCnt);
-	dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
+	DBGPRINTF("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
 		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
-	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
+	DBGPRINTF("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
 		   iMainMsgQHighWtrMark, iMainMsgQLowWtrMark, iMainMsgQDiscardMark, iMainMsgQDiscardSeverity);
-	dbgprintf("Main queue save on shutdown %d, max disk space allowed %lld\n",
+	DBGPRINTF("Main queue save on shutdown %d, max disk space allowed %lld\n",
 		   bMainMsgQSaveOnShutdown, iMainMsgQueMaxDiskSpace);
 	/* TODO: add
 	iActionRetryCount = 0;
@@ -2126,7 +2409,7 @@ static void dbgPrintInitInfo(void)
 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
-	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir());
+	DBGPRINTF("Work Directory: '%s'.\n", glbl.GetWorkDir());
 }
 
 
@@ -2149,7 +2432,7 @@ startInputModules(void)
 			/* activate here */
 			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun);
 		} else {
-			dbgprintf("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
+			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
 		}
 	pMod = module.GetNxtType(pMod, eMOD_IN);
 	}
@@ -2183,11 +2466,11 @@ init(void)
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
 
-	dbgprintf("rsyslog %s - called init()\n", VERSION);
+	DBGPRINTF("rsyslog %s - called init()\n", VERSION);
 
 	/* delete the message queue, which also flushes all messages left over */
 	if(pMsgQueue != NULL) {
-		dbgprintf("deleting main message queue\n");
+		DBGPRINTF("deleting main message queue\n");
 		qqueueDestruct(&pMsgQueue); /* delete pThis here! */
 		pMsgQueue = NULL;
 	}
@@ -2198,10 +2481,10 @@ init(void)
 	destructAllActions();
 
 	/* Unload all non-static modules */
-	dbgprintf("Unloading non-static modules.\n");
+	DBGPRINTF("Unloading non-static modules.\n");
 	module.UnloadAndDestructAll(eMOD_LINK_DYNAMIC_LOADED);
 
-	dbgprintf("Clearing templates.\n");
+	DBGPRINTF("Clearing templates.\n");
 	tplDeleteNew();
 
 	/* re-setting values to defaults (where applicable) */
@@ -2256,7 +2539,7 @@ init(void)
 			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
 			conf.cfline((uchar*)cbuf, &pRule);
 		} else {
-			dbgprintf("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
+			DBGPRINTF("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
 		}
 		ruleset.AddRule(ruleset.GetCurrent(), &pRule);
 	}
@@ -2363,7 +2646,7 @@ init(void)
 	}
 
 	bHaveMainQueue = (MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
-	dbgprintf("Main processing queue is initialized and running\n");
+	DBGPRINTF("Main processing queue is initialized and running\n");
 
 	/* the output part and the queue is now ready to run. So it is a good time
 	 * to start the inputs. Please note that the net code above should be
@@ -2390,7 +2673,7 @@ init(void)
 	sigAct.sa_handler = sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
 
-	dbgprintf(" (re)started.\n");
+	DBGPRINTF(" (re)started.\n");
 
 finalize_it:
 	RETiRet;
@@ -2452,16 +2735,16 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 
 	if (!strcasecmp((char *) pszType, "fixedarray")) {
 		MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
-		dbgprintf("main message queue type set to FIXED_ARRAY\n");
+		DBGPRINTF("main message queue type set to FIXED_ARRAY\n");
 	} else if (!strcasecmp((char *) pszType, "linkedlist")) {
 		MainMsgQueType = QUEUETYPE_LINKEDLIST;
-		dbgprintf("main message queue type set to LINKEDLIST\n");
+		DBGPRINTF("main message queue type set to LINKEDLIST\n");
 	} else if (!strcasecmp((char *) pszType, "disk")) {
 		MainMsgQueType = QUEUETYPE_DISK;
-		dbgprintf("main message queue type set to DISK\n");
+		DBGPRINTF("main message queue type set to DISK\n");
 	} else if (!strcasecmp((char *) pszType, "direct")) {
 		MainMsgQueType = QUEUETYPE_DIRECT;
-		dbgprintf("main message queue type set to DIRECT (no queueing at all)\n");
+		DBGPRINTF("main message queue type set to DIRECT (no queueing at all)\n");
 	} else {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown mainmessagequeuetype parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
@@ -2802,7 +3085,7 @@ static rsRetVal mainThread()
 	CHKiRet(init());
 
 	if(Debug && debugging_on) {
-		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
+		DBGPRINTF("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 	}
 	/* Send a signal to the parent so it can terminate.
 	 */
@@ -2834,7 +3117,7 @@ static rsRetVal mainThread()
 	 * do the init() and then restart things.
 	 * rgerhards, 2005-10-24
 	 */
-	dbgprintf("initialization completed, transitioning to regular run mode\n");
+	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
 
 	mainloop();
 
@@ -3020,7 +3303,7 @@ doGlblProcessInit(void)
 
 	if( !(Debug || NoFork) )
 	{
-		dbgprintf("Checking pidfile.\n");
+		DBGPRINTF("Checking pidfile.\n");
 		if (!check_pid(PidFile))
 		{
 			memset(&sigAct, 0, sizeof (sigAct));
@@ -3056,7 +3339,7 @@ doGlblProcessInit(void)
 	}
 
 	/* tuck my process id away */
-	dbgprintf("Writing pidfile %s.\n", PidFile);
+	DBGPRINTF("Writing pidfile %s.\n", PidFile);
 	if (!check_pid(PidFile))
 	{
 		if (!write_pid(PidFile))
@@ -3202,7 +3485,7 @@ int realMain(int argc, char **argv)
 	if ((argc -= optind))
 		usage();
 
-	dbgprintf("rsyslogd %s startup, compatibility mode %d, module path '%s'\n",
+	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s'\n",
 		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath);
 
 	/* we are done with the initial option parsing and processing. Now we init the system. */
@@ -3284,7 +3567,7 @@ int realMain(int argc, char **argv)
 	/* END core initializations - we now come back to carrying out command line options*/
 
 	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
-		dbgprintf("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
+		DBGPRINTF("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
 		switch((char)ch) {
                 case '4':
 	                glbl.SetDefPFFamily(PF_INET);

@@ -539,17 +539,15 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 		tplName = (uchar*) strdup((char*)dfltTplName);
 	} else {
 		/* template specified, pick it up */
-		if(rsCStrConstruct(&pStrB) != RS_RET_OK) {
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
+		CHKiRet(cstrConstruct(&pStrB));
 
 		/* now copy the string */
 		while(*p && *p != '#' && !isspace((int) *p)) {
-			CHKiRet(rsCStrAppendChar(pStrB, *p));
+			CHKiRet(cstrAppendChar(pStrB, *p));
 			++p;
 		}
-		CHKiRet(rsCStrFinish(pStrB));
-		CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &tplName, 0));
+		CHKiRet(cstrFinalize(pStrB));
+		CHKiRet(cstrConvSzStrAndDestruct(pStrB, &tplName, 0));
 	}
 
 	iRet = OMSRsetEntry(pOMSR, iEntry, tplName, iTplOpts);
@@ -937,7 +935,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
  */
 static rsRetVal cflineProcessHostSelector(uchar **pline)
 {
-	rsRetVal iRet;
+	DEFiRet;
 
 	ASSERT(pline != NULL);
 	ASSERT(*pline != NULL);
@@ -963,21 +961,20 @@ static rsRetVal cflineProcessHostSelector(uchar **pline)
 		dbgprintf("resetting BSD-like hostname filter\n");
 		eDfltHostnameCmpMode = HN_NO_COMP;
 		if(pDfltHostnameCmp != NULL) {
-			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, NULL)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrSetSzStr(pDfltHostnameCmp, NULL));
 		}
 	} else {
 		dbgprintf("setting BSD-like hostname filter to '%s'\n", *pline);
 		if(pDfltHostnameCmp == NULL) {
 			/* create string for parser */
-			if((iRet = rsCStrConstructFromszStr(&pDfltHostnameCmp, *pline)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrConstructFromszStr(&pDfltHostnameCmp, *pline));
 		} else { /* string objects exists, just update... */
-			if((iRet = rsCStrSetSzStr(pDfltHostnameCmp, *pline)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrSetSzStr(pDfltHostnameCmp, *pline));
 		}
 	}
-	return RS_RET_OK;
+
+finalize_it:
+	RETiRet;
 }
 
 
@@ -988,7 +985,7 @@ static rsRetVal cflineProcessHostSelector(uchar **pline)
  */
 static rsRetVal cflineProcessTagSelector(uchar **pline)
 {
-	rsRetVal iRet;
+	DEFiRet;
 
 	ASSERT(pline != NULL);
 	ASSERT(*pline != NULL);
@@ -1007,21 +1004,20 @@ static rsRetVal cflineProcessTagSelector(uchar **pline)
 	if(**pline != '\0' && **pline == '*' && *(*pline+1) == '\0') {
 		dbgprintf("resetting programname filter\n");
 		if(pDfltProgNameCmp != NULL) {
-			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, NULL)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrSetSzStr(pDfltProgNameCmp, NULL));
 		}
 	} else {
 		dbgprintf("setting programname filter to '%s'\n", *pline);
 		if(pDfltProgNameCmp == NULL) {
 			/* create string for parser */
-			if((iRet = rsCStrConstructFromszStr(&pDfltProgNameCmp, *pline)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrConstructFromszStr(&pDfltProgNameCmp, *pline));
 		} else { /* string objects exists, just update... */
-			if((iRet = rsCStrSetSzStr(pDfltProgNameCmp, *pline)) != RS_RET_OK)
-				return(iRet);
+			CHKiRet(rsCStrSetSzStr(pDfltProgNameCmp, *pline));
 		}
 	}
-	return RS_RET_OK;
+
+finalize_it:
+	RETiRet;
 }
 
 

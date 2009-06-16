@@ -95,9 +95,7 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("imklog"));
-	MsgSetRawMsg(pMsg, (char*)msg);
-	MsgSetUxTradMsg(pMsg, (char*)msg);
+	MsgSetInputName(pMsg, UCHAR_CONSTANT("imklog"), sizeof("imklog")-1);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetMSG(pMsg, (char*)msg);
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());

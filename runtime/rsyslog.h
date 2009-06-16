@@ -106,6 +106,8 @@ typedef unsigned int u_int32_t; /* TODO: is this correct? */
 typedef int socklen_t;
 #endif
 
+typedef char bool;		/* I intentionally use char, to keep it slim so that many fit into the CPU cache! */
+
 /* settings for flow control
  * TODO: is there a better place for them? -- rgerhards, 2008-03-14
  */
