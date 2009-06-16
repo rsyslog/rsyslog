@@ -188,7 +188,7 @@ finalize_it:
 static rsRetVal
 doPhysOpen(strm_t *pThis)
 {
-	int iFlags;
+	int iFlags = 0;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 

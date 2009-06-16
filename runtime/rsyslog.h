@@ -127,6 +127,19 @@ typedef enum {
 } fiop_t;
 
 
+/* multi-submit support.
+ * This is done via a simple data structure, which holds the number of elements
+ * as well as an array of to-be-submitted messages.
+ * rgerhards, 2009-06-16
+ */
+typedef struct multi_submit_s multi_submit_t;
+struct multi_submit_s {
+	short	maxElem;	/* maximum number of Elements */
+	short	nElem;		/* current number of Elements, points to the next one FREE */
+	msg_t	**ppMsgs;
+};
+
+
 #ifndef _PATH_CONSOLE
 #define _PATH_CONSOLE	"/dev/console"
 #endif

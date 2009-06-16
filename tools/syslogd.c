@@ -1345,8 +1345,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 }
 
 
-/* submit a fully created message to the main message queue. The message is
- * fully processed and parsed, so no parsing at all happens. This is primarily
+/* submit a message to the main message queue.   This is primarily
  * a hook to prevent the need for callers to know about the main message queue
  * (which may change in the future as we will probably have multiple rule
  * sets and thus queues...).
@@ -1361,6 +1360,29 @@ submitMsg(msg_t *pMsg)
 	
 	MsgPrepareEnqueue(pMsg);
 	qqueueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
+
+	RETiRet;
+}
+
+
+/* submit multiple messages at once, very similar to submitMsg, just
+ * for multi_submit_t.
+ * rgerhards, 2009-06-16
+ */
+rsRetVal
+multiSubmitMsg(multi_submit_t *pMultiSub)
+{
+	int i;
+	DEFiRet;
+	assert(pMultiSub != NULL);
+
+	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
+dbgprintf("multiSubmitMsg, index %d\n", i);
+		MsgPrepareEnqueue(pMultiSub->ppMsgs[i]);
+		qqueueEnqObj(pMsgQueue, pMultiSub->ppMsgs[i]->flowCtlType, (void*) pMultiSub->ppMsgs[i]);
+	}
+
+	pMultiSub->nElem = 0;
 
 	RETiRet;
 }
