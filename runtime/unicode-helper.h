@@ -40,7 +40,7 @@
 #else
 	static inline uchar* ustrncpy(uchar *psz1, uchar *psz2, size_t len)
 	{
-		return strncpy((char*) psz1, (char*) psz2, len);
+		return (uchar*) strncpy((char*) psz1, (char*) psz2, len);
 	}
 
 	static inline uchar* ustrdup(uchar *psz)
