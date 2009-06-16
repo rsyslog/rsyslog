@@ -63,7 +63,7 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
 
 /* forward-definitions */
-rsRetVal qqueueChkPersist(qqueue_t *pThis);
+static rsRetVal qqueueChkPersist(qqueue_t *pThis);
 static rsRetVal qqueueSetEnqOnly(qqueue_t *pThis, int bEnqOnly, int bLockMutex);
 static rsRetVal qqueueRateLimiter(qqueue_t *pThis);
 static int qqueueChkStopWrkrDA(qqueue_t *pThis);
@@ -1984,10 +1984,8 @@ finalize_it:
  * abide to our regular call interface)...
  * rgerhards, 2008-01-13
  */
-rsRetVal qqueueChkPersist(qqueue_t *pThis)
+static rsRetVal qqueueChkPersist(qqueue_t *pThis)
 {
-	DEFiRet;
-
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
 	if(pThis->iPersistUpdCnt && ++pThis->iUpdsSincePersist >= pThis->iPersistUpdCnt) {
@@ -1995,7 +1993,7 @@ rsRetVal qqueueChkPersist(qqueue_t *pThis)
 		pThis->iUpdsSincePersist = 0;
 	}
 
-	RETiRet;
+	return RS_RET_OK;
 }
 
 
@@ -2301,7 +2299,7 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 
 	/* and finally enqueue the message */
 	CHKiRet(qqueueAdd(pThis, pUsr));
-	qqueueChkPersist(pThis); // TODO: optimize, do in outer function!
+	qqueueChkPersist(pThis); // TODO: optimize, do in outer function! (but we need parts from v5?)
 
 finalize_it:
 	RETiRet;
