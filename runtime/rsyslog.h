@@ -79,6 +79,7 @@ typedef struct nsdsel_gtls_s nsdsel_gtls_t;
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
 typedef struct msg msg_t;
+typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
