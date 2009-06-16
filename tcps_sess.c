@@ -56,8 +56,6 @@ DEFobjCurrIf(datetime)
 
 static int iMaxLine; /* maximum size of a single message */
 
-#define TIME_REQUERY_DFLT 16 // TODO change back! 2
-static int iTimeRequery = TIME_REQUERY_DFLT;/* how often is time to be queried inside tight recv loop? 0=always */
 static int iNbrTimeUsed = 0;		    /* how often has previous time been used so far? */
 
 

@@ -99,7 +99,6 @@ typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
 typedef long long int64;
 typedef long long unsigned uint64;
 typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
-typedef short bool;
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */
