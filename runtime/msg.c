@@ -437,11 +437,12 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->msgFlags = pOld->msgFlags;
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
+	memcpy(pNew->bufPRI, pOld->bufPRI, pOld->iLenPRI);
+	pNew->iLenPRI = pOld->iLenPRI;
 	tmpCOPYSZ(Severity);
 	tmpCOPYSZ(SeverityStr);
 	tmpCOPYSZ(Facility);
 	tmpCOPYSZ(FacilityStr);
-	tmpCOPYSZ(PRI);
 	tmpCOPYSZ(RawMsg);
 	tmpCOPYSZ(MSG);
 	tmpCOPYSZ(UxTradMsg);
@@ -587,7 +588,7 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 	}
 
 	/* OK, finaally we could obtain a PROCID. So let's use it ;) */
-	CHKiRet(rsCStrFinish(pM->pCSPROCID));
+	CHKiRet(cstrFinalize(pM->pCSPROCID));
 
 finalize_it:
 	RETiRet;
@@ -629,7 +630,7 @@ static rsRetVal aquireProgramName(msg_t *pM)
 		    ; ++i) {
 			CHKiRet(rsCStrAppendChar(pM->pCSProgName, pM->pszTAG[i]));
 		}
-		CHKiRet(rsCStrFinish(pM->pCSProgName));
+		CHKiRet(cstrFinalize(pM->pCSProgName));
 	}
 finalize_it:
 	RETiRet;
@@ -724,31 +725,12 @@ char *getMSG(msg_t *pM)
 
 
 /* Get PRI value in text form */
-static char *getPRI(msg_t *pM)
+static inline char *getPRI(msg_t *pM)
 {
-	int pri;
-	BEGINfunc
-
 	if(pM == NULL)
 		return "";
 
-	MsgLock(pM);
-	if(pM->pszPRI == NULL) {
-		/* OK, we need to construct it...  we use a 5 byte buffer - as of 
-		 * RFC 3164, it can't be longer. Should it still be, snprintf will truncate...
-		 * Note that we do not use the LOG_MAKEPRI macro. This macro
-		 * is a simple add of the two values under FreeBSD 7. So we implement
-		 * the logic in our own code. This is a change from a bug
-		 * report. -- rgerhards, 2008-07-14
-		 */
-		pri = pM->iFacility * 8 + pM->iSeverity;
-		pM->pszPRI = pM->bufPRI;
-		pM->iLenPRI = snprintf((char*)pM->pszPRI, 5, "%d", pri);
-	}
-	MsgUnlock(pM);
-
-	ENDfunc
-	return (char*)pM->pszPRI;
+	return (char*)pM->bufPRI;
 }
 
 

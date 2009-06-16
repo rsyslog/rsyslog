@@ -73,7 +73,8 @@ short bDoLock; /* use the mutex? */
 	int iLenFacility;	/* ... and its length. */
  	uchar *pszFacilityStr;   /* facility name... */
  	int iLenFacilityStr;    /* ... and its length. */
-	uchar *pszPRI;		/* the PRI as a string */
+	//uchar *pszPRI;		/* the PRI as a string */
+	uchar bufPRI[5];
 	int iLenPRI;		/* and its length */
 	uchar	*pszRawMsg;	/* message as it was received on the
 				 * wire. This is important in case we
@@ -121,7 +122,6 @@ short bDoLock; /* use the mutex? */
         char *pszTIMESTAMP_SecFrac;/* TIMESTAMP fractional seconds (always 6 characters) */
 	int msgFlags;		/* flags associated with this message */
 	/* now follow fixed-size buffers to safe some time otherwise used for allocs */
-	uchar bufPRI[5];
 
 };
 

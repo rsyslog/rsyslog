@@ -205,8 +205,16 @@ sanitizeMessage(msg_t *pMsg)
 			}
 		}
 	}
-	if(bNeedSanitize == 0)
+	if(bNeedSanitize == 0) {
+		/* what a shame - we do not have a \0 byte...
+		 * TODO: think about adding it or otherwise be able to use it...
+		 */
+		uchar *pRaw;
+		CHKmalloc(pRaw = realloc(pMsg->pszRawMsg, pMsg->iLenRawMsg + 1));
+		pRaw[pMsg->iLenRawMsg] = '\0';
+		pMsg->pszRawMsg = pRaw;
 		FINALIZE;
+	}
 
 	/* now copy over the message and sanitize it */
 	/* TODO: can we get cheaper memory alloc? {alloca()?}*/
@@ -276,6 +284,7 @@ rsRetVal parseMsg(msg_t *pMsg)
 	DEFiRet;
 	uchar *msg;
 	int pri;
+	int iPriText;
 
 	CHKiRet(sanitizeMessage(pMsg));
 
@@ -285,11 +294,19 @@ rsRetVal parseMsg(msg_t *pMsg)
 	/* pull PRI */
 	pri = DEFUPRI;
 	msg = pMsg->pszRawMsg;
+	iPriText = 0;
 	if(*msg == '<') {
+		/* while we process the PRI, we also fill the PRI textual representation
+		 * inside the msg object. This may not be ideal from an OOP point of view,
+		 * but it offers us performance...
+		 */
 		pri = 0;
 		while(isdigit((int) *++msg)) {
+			pMsg->bufPRI[iPriText++ % 4] = *msg;	 /* mod 4 to guard against malformed messages! */
 			pri = 10 * pri + (*msg - '0');
 		}
+		pMsg->bufPRI[iPriText % 4] = '\0';
+		pMsg->iLenPRI = iPriText % 4;
 		if(*msg == '>')
 			++msg;
 		if(pri & ~(LOG_FACMASK|LOG_PRIMASK))

@@ -88,7 +88,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 	 * free the obtained value (if requested). We continue this
 	 * loop until we got hold of all values.
 	 */
-	CHKiRet(rsCStrConstruct(&pCStr));
+	CHKiRet(cstrConstruct(&pCStr));
 
 	pTpe = pTpl->pEntryRoot;
 	while(pTpe != NULL) {
@@ -99,7 +99,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 							 ) {
 				dbgprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
-				rsCStrDestruct(&pCStr);
+				cstrDestruct(&pCStr);
 				FINALIZE;
 			}
 		} else 	if(pTpe->eEntryType == FIELD) {
@@ -119,7 +119,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 			CHKiRet_Hdlr(rsCStrAppendStrWithLen(pCStr, (uchar*) pVal, iLenVal)) {
 				dbgprintf("error %d during tplToString()\n", iRet);
 				/* it does not make sense to continue now */
-				rsCStrDestruct(&pCStr);
+				cstrDestruct(&pCStr);
 				if(bMustBeFreed)
 					free(pVal);
 				FINALIZE;
@@ -133,8 +133,8 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 	/* we are done with the template, now let's convert the result into a
 	 * "real" (usable) string and discard the helper structures.
 	 */
-	CHKiRet(rsCStrFinish(pCStr));
-	CHKiRet(rsCStrConvSzStrAndDestruct(pCStr, &pVal, 0));
+	CHKiRet(cstrFinalize(pCStr));
+	CHKiRet(cstrConvSzStrAndDestruct(pCStr, &pVal, 0));
 	
 finalize_it:
 	*ppSz = (iRet == RS_RET_OK) ? pVal : NULL;
@@ -272,21 +272,21 @@ doSQLEscape(uchar **pp, size_t *pLen, unsigned short *pbMustBeFreed, int escapeM
 
 	p = *pp;
 	iLen = *pLen;
-	CHKiRet(rsCStrConstruct(&pStrB));
+	CHKiRet(cstrConstruct(&pStrB));
 	
 	while(*p) {
 		if(*p == '\'') {
-			CHKiRet(rsCStrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\'));
+			CHKiRet(cstrAppendChar(pStrB, (escapeMode == 0) ? '\'' : '\\'));
 			iLen++;	/* reflect the extra character */
 		} else if((escapeMode == 1) && (*p == '\\')) {
-			CHKiRet(rsCStrAppendChar(pStrB, '\\'));
+			CHKiRet(cstrAppendChar(pStrB, '\\'));
 			iLen++;	/* reflect the extra character */
 		}
-		CHKiRet(rsCStrAppendChar(pStrB, *p));
+		CHKiRet(cstrAppendChar(pStrB, *p));
 		++p;
 	}
-	CHKiRet(rsCStrFinish(pStrB));
-	CHKiRet(rsCStrConvSzStrAndDestruct(pStrB, &pszGenerated, 0));
+	CHKiRet(cstrFinalize(pStrB));
+	CHKiRet(cstrConvSzStrAndDestruct(pStrB, &pszGenerated, 0));
 
 	if(*pbMustBeFreed)
 		free(*pp); /* discard previous value */
@@ -299,7 +299,7 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		doSQLEmergencyEscape(*pp, escapeMode);
 		if(pStrB != NULL)
-			rsCStrDestruct(&pStrB);
+			cstrDestruct(&pStrB);
 	}
 
 	RETiRet;
@@ -376,7 +376,7 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 
 	p = *pp;
 
-	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
+	if(cstrConstruct(&pStrB) != RS_RET_OK)
 		 return 1;
 	rsCStrSetAllocIncrement(pStrB, 32);
 	/* process the message and expand escapes
@@ -387,22 +387,22 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 			switch(*++p) {
 				case '\0':	
 					/* the best we can do - it's invalid anyhow... */
-					rsCStrAppendChar(pStrB, *p);
+					cstrAppendChar(pStrB, *p);
 					break;
 				case 'n':
-					rsCStrAppendChar(pStrB, '\n');
+					cstrAppendChar(pStrB, '\n');
 					++p;
 					break;
 				case 'r':
-					rsCStrAppendChar(pStrB, '\r');
+					cstrAppendChar(pStrB, '\r');
 					++p;
 					break;
 				case '\\':
-					rsCStrAppendChar(pStrB, '\\');
+					cstrAppendChar(pStrB, '\\');
 					++p;
 					break;
 				case '%':
-					rsCStrAppendChar(pStrB, '%');
+					cstrAppendChar(pStrB, '%');
 					++p;
 					break;
 				case '0': /* numerical escape sequence */
@@ -419,15 +419,15 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 					while(*p && isdigit((int)*p)) {
 						i = i * 10 + *p++ - '0';
 					}
-					rsCStrAppendChar(pStrB, i);
+					cstrAppendChar(pStrB, i);
 					break;
 				default:
-					rsCStrAppendChar(pStrB, *p++);
+					cstrAppendChar(pStrB, *p++);
 					break;
 			}
 		}
 		else
-			rsCStrAppendChar(pStrB, *p++);
+			cstrAppendChar(pStrB, *p++);
 	}
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
@@ -438,14 +438,14 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 		return 1;
 	}
 	pTpe->eEntryType = CONSTANT;
-	rsCStrFinish(pStrB);
+	cstrFinalize(pStrB);
 	/* We obtain the length from the counted string object
 	 * (before we delete it). Later we might take additional
 	 * benefit from the counted string object.
 	 * 2005-09-09 rgerhards
 	 */
 	pTpe->data.constant.iLenConstant = rsCStrLen(pStrB);
-	if(rsCStrConvSzStrAndDestruct(pStrB, &pTpe->data.constant.pConstant, 0) != RS_RET_OK)
+	if(cstrConvSzStrAndDestruct(pStrB, &pTpe->data.constant.pConstant, 0) != RS_RET_OK)
 		return 1;
 
 	*pp = p;
@@ -552,7 +552,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 
 	p = (unsigned char*) *pp;
 
-	if(rsCStrConstruct(&pStrB) != RS_RET_OK)
+	if(cstrConstruct(&pStrB) != RS_RET_OK)
 		 return 1;
 
 	if((pTpe = tpeConstruct(pTpl)) == NULL) {
@@ -563,13 +563,13 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	pTpe->eEntryType = FIELD;
 
 	while(*p && *p != '%' && *p != ':') {
-		rsCStrAppendChar(pStrB, tolower(*p));
+		cstrAppendChar(pStrB, tolower(*p));
 		++p; /* do NOT do this in tolower()! */
 	}
 
 	/* got the name*/
-	rsCStrFinish(pStrB);
-	if(rsCStrConvSzStrAndDestruct(pStrB, &pTpe->data.field.pPropRepl, 0) != RS_RET_OK)
+	cstrFinalize(pStrB);
+	if(cstrConvSzStrAndDestruct(pStrB, &pTpe->data.field.pPropRepl, 0) != RS_RET_OK)
 		return 1;
 
 	/* Check frompos, if it has an R, then topos should be a regex */
