@@ -85,6 +85,7 @@ typedef struct queue_s {
 	void	*pUsr;		/* a global, user-supplied pointer. Is passed back to consumer. */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
+	int	bSyncQueueFiles;/* if working with files, sync them after each write? */
 	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
 	int	iLowWtrMrk;	/* low water mark for disk-assisted memory queues */
 	int	iDiscardMrk;	/* if the queue is above this mark, low-severity messages are discarded */
@@ -199,6 +200,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,batch_t*));
 PROTOTYPEObjClassInit(qqueue);
 PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);
+PROTOTYPEpropSetMeth(qqueue, bSyncQueueFiles, int);
 PROTOTYPEpropSetMeth(qqueue, iDeqtWinFromHr, int);
 PROTOTYPEpropSetMeth(qqueue, iDeqtWinToHr, int);
 PROTOTYPEpropSetMeth(qqueue, toQShutdown, long);

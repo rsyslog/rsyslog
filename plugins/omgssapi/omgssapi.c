@@ -44,6 +44,7 @@
 #include <pthread.h>
 #include <gssapi/gssapi.h>
 #include "dirty.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"

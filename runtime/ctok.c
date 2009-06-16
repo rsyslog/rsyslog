@@ -269,7 +269,7 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 	}
 	CHKiRet(ctokUngetCharFromStream(pThis, c)); /* put not processed char back */
 
-	CHKiRet(rsCStrFinish(pstrVal));
+	CHKiRet(cstrFinalize(pstrVal));
 
 	CHKiRet(var.SetString(pToken->pVar, pstrVal));
 	pstrVal = NULL;
@@ -319,7 +319,7 @@ ctokGetSimpStr(ctok_t *pThis, ctok_token_t *pToken)
 		}
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 	}
-	CHKiRet(rsCStrFinish(pStrB));
+	CHKiRet(cstrFinalize(pstrVal));
 
 	CHKiRet(var.SetString(pToken->pVar, pstrVal));
 	pstrVal = NULL;

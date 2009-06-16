@@ -7,9 +7,11 @@ TESTS = $(TESTRUNS) cfg.sh \
 	da-mainmsg-q.sh \
 	validation-run.sh \
 	imtcp-multiport.sh \
-	diskqueue.sh manytcp.sh \
-	queue-persist.sh \
-	daqueue-persist.sh
+	daqueue-persist.sh \
+	diskqueue.sh \
+	diskqueue-fsync.sh \
+	manytcp.sh \
+	queue-persist.sh 
 
 if ENABLE_OMSTDOUT
 TESTS += omod-if-array.sh parsertest.sh inputname.sh fieldtest.sh
@@ -68,6 +70,8 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/linkedlistqueue.conf \
 	   da-mainmsg-q.sh \
 	   testsuites/da-mainmsg-q.conf \
+	   diskqueue-fsync.sh \
+	   testsuites/diskqueue-fsync.conf \
 	   imtcp-multiport.sh \
 	   testsuites/imtcp-multiport.conf \
 	   manytcp.sh \
@@ -79,8 +83,6 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.inputname_imtcp_12516 \
 	   omod-if-array.sh \
 	   diag.sh \
-	   daqueue-persist.sh \
-	   daqueue-persist-drvr.sh \
 	   testsuites/diag-common.conf \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \

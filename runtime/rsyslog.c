@@ -77,6 +77,8 @@
 #include "conf.h"
 #include "glbl.h"
 #include "errmsg.h"
+#include "rule.h"
+#include "ruleset.h"
 
 /* forward definitions */
 static rsRetVal dfltErrLogger(int, uchar *errMsg);
@@ -150,14 +152,10 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(datetimeClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "msg";
 		CHKiRet(msgClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "str,";
-		CHKiRet(strmClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "wti";
-		CHKiRet(wtiClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "wtp";
-		CHKiRet(wtpClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "queue";
-		CHKiRet(qqueueClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "ctok_token";
+		CHKiRet(ctok_tokenClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "ctok";
+		CHKiRet(ctokClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "vmstk";
 		CHKiRet(vmstkClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "sysvar";
@@ -168,12 +166,18 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(vmopClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "vmprg";
 		CHKiRet(vmprgClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "ctok_token";
-		CHKiRet(ctok_tokenClassInit(NULL));
-		if(ppErrObj != NULL) *ppErrObj = "ctok";
-		CHKiRet(ctokClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "expr";
 		CHKiRet(exprClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "rule";
+		CHKiRet(ruleClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "ruleset";
+		CHKiRet(rulesetClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "wti";
+		CHKiRet(wtiClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "wtp";
+		CHKiRet(wtpClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "queue";
+		CHKiRet(qqueueClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "conf";
 		CHKiRet(confClassInit(NULL));
 
@@ -206,6 +210,8 @@ rsrtExit(void)
 		/* do actual de-init only if we are the last runtime user */
 		confClassExit();
 		glblClassExit();
+		rulesetClassExit();
+		ruleClassExit();
 		objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being called (except debug)! */
 	}
 

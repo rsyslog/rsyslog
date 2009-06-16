@@ -26,8 +26,10 @@ rsyslogd_LDADD = $(ZLIB_LIBS) $(PTHREADS_LIBS) $(RSRT_LIBS) $(SOL_LIBS)
 rsyslogd_LDFLAGS = -export-dynamic
 
 if ENABLE_DIAGTOOLS
-sbin_PROGRAMS += rsyslog_diag_hostname msggen
+sbin_PROGRAMS += rsyslog_diag_hostname msggen zpipe
 rsyslog_diag_hostname_SOURCES = gethostn.c
+zpipe_SOURCES = zpipe.c
+zpipe_LDADD = -lz
 msggen_SOURCES = msggen.c
 endif
 

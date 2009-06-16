@@ -19,7 +19,29 @@
  * can easily be persistet. The bottom line is that it makes much sense to
  * use this class whereever possible as its features may grow in the future.
  *
- * Copyright 2008 Rainer Gerhards and Adiscon GmbH.
+ * An important note on writing gzip format via zlib (kept anonymous
+ * by request):
+ *
+ * --------------------------------------------------------------------------
+ * We'd like to make sure the output file is in full gzip format
+ * (compatible with gzip -d/zcat etc).  There is a flag in how the output
+ * is initialized within zlib to properly add the gzip wrappers to the
+ * output.  (gzip is effectively a small metadata wrapper around raw
+ * zstream output.)
+ * 
+ * I had written an old bit of code to do this - the documentation on
+ * deflatInit2() was pretty tricky to nail down on this specific feature:
+ * 
+ * int deflateInit2 (z_streamp strm, int level, int method, int windowBits,
+ * int memLevel, int strategy);
+ * 
+ * I believe "31" would be the value for the "windowBits" field that you'd
+ * want to try:
+ * 
+ * deflateInit2(zstrmptr, 6, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
+ * --------------------------------------------------------------------------
+ * 
+ * Copyright 2008, 2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -47,6 +69,8 @@
 #include "obj-types.h"
 #include "glbl.h"
 #include "stream.h"
+#include "zlibw.h"
+#include "apc.h"
 
 /* stream types */
 typedef enum {
@@ -55,10 +79,12 @@ typedef enum {
 	STREAMTYPE_FILE_MONITOR = 2	/**< monitor a (third-party) file */
 } strmType_t;
 
-typedef enum {
+typedef enum {				/* when extending, do NOT change existing modes! */
 	STREAMMMODE_INVALID = 0,
 	STREAMMODE_READ = 1,
-	STREAMMODE_WRITE = 2
+	STREAMMODE_WRITE = 2,
+	STREAMMODE_WRITE_TRUNC = 3,
+	STREAMMODE_WRITE_APPEND = 4
 } strmMode_t;
 
 /* The strm_t data structure */
@@ -71,62 +97,79 @@ typedef struct strm_s {
 	int lenFName;
 	strmMode_t tOperationsMode;
 	mode_t tOpenMode;
-	int iAddtlOpenFlags; /* can be used to specifiy additional (compatible!) open flags */
 	int64 iMaxFileSize;/* maximum size a file may grow to */
 	int iMaxFiles;	/* maximum number of files if a circular mode is in use */
 	int iFileNumDigits;/* min number of digits to use in file number (only in circular mode) */
-	int bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
+	bool bDeleteOnClose; /* set to 1 to auto-delete on close -- be careful with that setting! */
 	int64 iCurrOffs;/* current offset */
 	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since the last CntrSet() */
 	/* dynamic properties, valid only during file open, not to be persistet */
-	size_t	sIOBufSize;/* size of IO buffer */
+	int bDisabled; /* should file no longer be written to? (currently set only if omfile file size limit fails) */
+	int bSync;	/* sync this file after every write? */
+	size_t sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
 	int lenDir;
 	int fd;		/* the file descriptor, -1 if closed */
+	int fdDir;	/* the directory's descriptor, in case bSync is requested (-1 if closed) */
 	uchar *pszCurrFName; /* name of current file (if open) */
 	uchar *pIOBuf;	/* io Buffer */
 	size_t iBufPtrMax;	/* current max Ptr in Buffer (if partial read!) */
 	size_t iBufPtr;	/* pointer into current buffer */
 	int iUngetC;	/* char set via UngetChar() call or -1 if none set */
-	int bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
+	bool bInRecord;	/* if 1, indicates that we are currently writing a not-yet complete record */
+	int iZipLevel;	/* zip level (0..9). If 0, zip is completely disabled */
+	Bytef *pZipBuf;
+	/* support for async flush procesing */
+	int iFlushInterval; /* flush in which interval - 0, no flushing */
+	apc_id_t apcID;    /* id of current Apc request (used for cancelling) */
+	pthread_mutex_t mut;/* mutex for flush in async mode */
+	/* support for omfile size-limiting commands, special counters, NOT persisted! */
+	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
+	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
+	bool	bIsTTY;		/* is this a tty file? */
 } strm_t;
 
 /* interfaces */
 BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
+	rsRetVal (*Construct)(strm_t **ppThis);
+	rsRetVal (*ConstructFinalize)(strm_t *pThis);
+	rsRetVal (*Destruct)(strm_t **ppThis);
+	rsRetVal (*SetMaxFileSize)(strm_t *pThis, int64 iMaxFileSize);
+	rsRetVal (*SetFileName)(strm_t *pThis, uchar *pszName, size_t iLenName);
+	rsRetVal (*ReadChar)(strm_t *pThis, uchar *pC);
+	rsRetVal (*UnreadChar)(strm_t *pThis, uchar c);
+	rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr);
+	rsRetVal (*SeekCurrOffs)(strm_t *pThis);
+	rsRetVal (*Write)(strm_t *pThis, uchar *pBuf, size_t lenBuf);
+	rsRetVal (*WriteChar)(strm_t *pThis, uchar c);
+	rsRetVal (*WriteLong)(strm_t *pThis, long i);
+	rsRetVal (*SetFName)(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
+	rsRetVal (*SetDir)(strm_t *pThis, uchar *pszDir, size_t iLenDir);
+	rsRetVal (*Flush)(strm_t *pThis);
+	rsRetVal (*RecordBegin)(strm_t *pThis);
+	rsRetVal (*RecordEnd)(strm_t *pThis);
+	rsRetVal (*Serialize)(strm_t *pThis, strm_t *pStrm);
+	rsRetVal (*GetCurrOffset)(strm_t *pThis, int64 *pOffs);
+	rsRetVal (*SetWCntr)(strm_t *pThis, number_t *pWCnt);
+	rsRetVal (*Dup)(strm_t *pThis, strm_t **ppNew);
+	INTERFACEpropSetMeth(strm, bDeleteOnClose, int);
+	INTERFACEpropSetMeth(strm, iMaxFileSize, int);
+	INTERFACEpropSetMeth(strm, iMaxFiles, int);
+	INTERFACEpropSetMeth(strm, iFileNumDigits, int);
+	INTERFACEpropSetMeth(strm, tOperationsMode, int);
+	INTERFACEpropSetMeth(strm, tOpenMode, mode_t);
+	INTERFACEpropSetMeth(strm, sType, strmType_t);
+	INTERFACEpropSetMeth(strm, iZipLevel, int);
+	INTERFACEpropSetMeth(strm, bSync, int);
+	INTERFACEpropSetMeth(strm, sIOBufSize, size_t);
+	INTERFACEpropSetMeth(strm, iSizeLimit, off_t);
+	INTERFACEpropSetMeth(strm, iFlushInterval, int);
+	INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar*);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
-rsRetVal strmConstruct(strm_t **ppThis);
-rsRetVal strmConstructFinalize(strm_t __attribute__((unused)) *pThis);
-rsRetVal strmDestruct(strm_t **ppThis);
-rsRetVal strmSetMaxFileSize(strm_t *pThis, int64 iMaxFileSize);
-rsRetVal strmSetFileName(strm_t *pThis, uchar *pszName, size_t iLenName);
-rsRetVal strmReadChar(strm_t *pThis, uchar *pC);
-rsRetVal strmUnreadChar(strm_t *pThis, uchar c);
-rsRetVal strmReadLine(strm_t *pThis, cstr_t **ppCStr);
-rsRetVal strmSeekCurrOffs(strm_t *pThis);
-rsRetVal strmWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf);
-rsRetVal strmWriteChar(strm_t *pThis, uchar c);
-rsRetVal strmWriteLong(strm_t *pThis, long i);
-rsRetVal strmSetFName(strm_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
-rsRetVal strmSetDir(strm_t *pThis, uchar *pszDir, size_t iLenDir);
-rsRetVal strmFlush(strm_t *pThis);
-rsRetVal strmRecordBegin(strm_t *pThis);
-rsRetVal strmRecordEnd(strm_t *pThis);
-rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm);
-rsRetVal strmSetiAddtlOpenFlags(strm_t *pThis, int iNewVal);
-rsRetVal strmGetCurrOffset(strm_t *pThis, int64 *pOffs);
-rsRetVal strmSetWCntr(strm_t *pThis, number_t *pWCnt);
-rsRetVal strmDup(strm_t *pThis, strm_t **ppNew);
 PROTOTYPEObjClassInit(strm);
-PROTOTYPEpropSetMeth(strm, bDeleteOnClose, int);
-PROTOTYPEpropSetMeth(strm, iMaxFileSize, int);
-PROTOTYPEpropSetMeth(strm, iMaxFiles, int);
-PROTOTYPEpropSetMeth(strm, iFileNumDigits, int);
-PROTOTYPEpropSetMeth(strm, tOperationsMode, int);
-PROTOTYPEpropSetMeth(strm, tOpenMode, mode_t);
-PROTOTYPEpropSetMeth(strm, sType, strmType_t);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

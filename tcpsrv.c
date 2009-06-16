@@ -69,6 +69,7 @@
 #include "netstrm.h"
 #include "nssel.h"
 #include "errmsg.h"
+#include "ruleset.h"
 #include "unicode-helper.h"
 
 MODULE_TYPE_LIB
@@ -81,6 +82,7 @@ MODULE_TYPE_LIB
 DEFobjStaticHelpers
 DEFobjCurrIf(conf)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(ruleset)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(net)
@@ -104,7 +106,9 @@ addNewLstnPort(tcpsrv_t *pThis, uchar *pszPort)
 	CHKmalloc(pEntry = malloc(sizeof(tcpLstnPortList_t)));
 	pEntry->pszPort = pszPort;
 	pEntry->pSrv = pThis;
+	pEntry->pRuleset = pThis->pRuleset;
 	CHKmalloc(pEntry->pszInputName = ustrdup(pThis->pszInputName));
+	pEntry->lenInputName = ustrlen(pEntry->pszInputName);
 
 	/* and add to list */
 	pEntry->pNext = pThis->pLstnPorts;
@@ -510,7 +514,7 @@ Run(tcpsrv_t *pThis)
 		while(nfds && iTCPSess != -1) {
 			CHKiRet(nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
-				char buf[8*1024]; /* reception buffer - may hold a partial or multiple messages */
+				char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
 				dbgprintf("netstream %p with new data\n", pThis->pSessions[iTCPSess]->pStrm);
 
 				/* Receive message */
@@ -755,6 +759,16 @@ finalize_it:
 }
 
 
+/* Set the ruleset (ptr) to use */
+static rsRetVal
+SetRuleset(tcpsrv_t *pThis, ruleset_t *pRuleset)
+{
+	DEFiRet;
+	pThis->pRuleset = pRuleset;
+	RETiRet;
+}
+
+
 /* here follows a number of methods that shuffle authentication settings down
  * to the drivers. Drivers not supporting these settings may return an error
  * state.
@@ -855,6 +869,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetCBOnRegularClose = SetCBOnRegularClose;
 	pIf->SetCBOnErrClose = SetCBOnErrClose;
 	pIf->SetOnMsgReceive = SetOnMsgReceive;
+	pIf->SetRuleset = SetRuleset;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)
@@ -868,6 +883,7 @@ CODESTARTObjClassExit(tcpsrv)
 	/* release objects we no longer need */
 	objRelease(tcps_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
 	objRelease(netstrms, DONT_LOAD_LIB);
@@ -891,6 +907,7 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 	CHKiRet(objUse(tcps_sess, DONT_LOAD_LIB));
 	CHKiRet(objUse(conf, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);

@@ -33,10 +33,7 @@ rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len
 int parseRFCSyslogMsg(msg_t *pMsg, int flags);
 int parseLegacySyslogMsg(msg_t *pMsg, int flags);
 rsRetVal diagGetMainMsgQSize(int *piSize); /* for imdiag */
-
-/* TODO: the following 2 need to go in conf obj interface... */
-rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
-rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl);
+char* getFIOPName(unsigned iFIOP);
 
 /* Intervals at which we flush out "message repeated" messages,
  * in seconds after previous message is logged.  After each flush,

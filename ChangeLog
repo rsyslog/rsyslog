@@ -33,6 +33,9 @@ increase.
   output module interface
 ---------------------------------------------------------------------------
 Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
+- improved config error messages: now contain a copy of the config line
+  that (most likely) caused the error
+- removed long-obsoleted property UxTradMsg
 - added a generic network stream server (in addition to rather specific
   syslog tcp server)
 - added ability for the UDP output action to rebind its send socket after
@@ -42,6 +45,18 @@ Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
 - bugfix: imdiag/imtcp had a race condition
 - improved testbench (now much better code design and reuse)
 - added config switch --enable-testbench=no to turn off testbench
+- reduced max value for $DynaFileCacheSize to 1,000 (the former maximum
+  of 10,000 really made no sense, even 1,000 is very high, but we like
+  to keep the user in control ;)).
+- added capability to fsync() queue disk files for enhanced reliability
+  (also add's speed, because you do no longer need to run the whole file
+  system in sync mode)
+- added configuration commands (see doc for explanations)
+  * $OMFileZipLevel
+  * $OMFileIOBufferSize
+  * $OMFileFlushOnTXEnd
+  * $MainMsgQueueSyncQueueFiles
+  * $ActionQueueSyncQueueFiles
 ---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-05-25
 - added capability to run multiple tcp listeners (on different ports)

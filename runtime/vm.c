@@ -563,7 +563,7 @@ rsf_tolower(vmstk_t *pStk, int numOperands)
 	}
 
 	/* Store result and cleanup */
-	CHKiRet(rsCStrFinish(pcstr));
+	CHKiRet(cstrFinalize(pcstr));
 	var.SetString(operand1, pcstr);
 	vmstk.Push(pStk, operand1);
 finalize_it:

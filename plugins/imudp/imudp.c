@@ -6,7 +6,7 @@
  *
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -68,6 +68,7 @@ static uchar *pRcvBuf = NULL;		/* receive buffer (for a single packet). We use a
 					 * it so that we can check available memory in willRun() and request
 					 * termination if we can not get it. -- rgerhards, 2007-12-27
 					 */
+// TODO: static ruleset_t *pBindRuleset = NULL; /* ruleset to bind listener to (use system default if unspecified) */
 #define TIME_REQUERY_DFLT 2
 static int iTimeRequery = TIME_REQUERY_DFLT;/* how often is time to be queried inside tight recv loop? 0=always */
 
@@ -97,7 +98,7 @@ static rsRetVal addListner(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	else
 		bindAddr = pszBindAddr;
 
-	dbgprintf("Trying to open syslog UDP ports at %s:%s.\n",
+	DBGPRINTF("Trying to open syslog UDP ports at %s:%s.\n",
 		  (bindAddr == NULL) ? (uchar*)"*" : bindAddr, pNewVal);
 
 	newSocks = net.create_udp_socket(bindAddr, (pNewVal == NULL || *pNewVal == '\0') ? (uchar*) "514" : pNewVal, 1);
@@ -135,6 +136,30 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+#if 0 /* TODO: implement when tehre is time, requires restructure of socket array! */
+/* accept a new ruleset to bind. Checks if it exists and complains, if not */
+static rsRetVal
+setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	ruleset_t *pRuleset;
+	rsRetVal localRet;
+	DEFiRet;
+
+	localRet = ruleset.GetRuleset(&pRuleset, pszName);
+	if(localRet == RS_RET_NOT_FOUND) {
+		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
+	}
+	CHKiRet(localRet);
+	pBindRuleset = pRuleset;
+	DBGPRINTF("imudp current bind ruleset %p: '%s'\n", pRuleset, pszName);
+
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+#endif
 
 
 /* This function is a helper to runInput. I have extracted it
@@ -220,7 +245,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			CHKmalloc(pMsg->pszRawMsg = malloc(sizeof(uchar)* lenRcvBuf));
 			memcpy(pMsg->pszRawMsg, pRcvBuf, lenRcvBuf);
 			pMsg->iLenRawMsg = lenRcvBuf;
-			MsgSetInputName(pMsg, UCHAR_CONSTANT("imudp"));
+			MsgSetInputName(pMsg, UCHAR_CONSTANT("imudp"), sizeof("imudp")-1);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 			pMsg->bParseHOSTNAME = 1;
@@ -386,6 +411,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(net, LM_NET_FILENAME));
 
 	/* register config file handlers */
+	/* TODO: add - but this requires more changes, no time right now...
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserverbindruleset", 0, eCmdHdlrGetWord,
+		setRuleset, NULL, STD_LOADABLE_MODULE_ID));
+	*/
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserverrun", 0, eCmdHdlrGetWord,
 		addListner, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"udpserveraddress", 0, eCmdHdlrGetWord,

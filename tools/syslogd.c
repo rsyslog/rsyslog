@@ -133,13 +133,16 @@
 #include "queue.h"
 #include "stream.h"
 #include "conf.h"
-#include "vm.h"
 #include "errmsg.h"
 #include "datetime.h"
 #include "parser.h"
-#include "sysvar.h"
+//#include "sysvar.h"
 #include "batch.h"
 #include "unicode-helper.h"
+#include "ruleset.h"
+#include "rule.h"
+#include "net.h"
+#include "vm.h"
 
 /* definitions for objects we access */
 DEFobjCurrIf(obj)
@@ -147,10 +150,10 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(conf)
 DEFobjCurrIf(expr)
-DEFobjCurrIf(vm)
-DEFobjCurrIf(var)
 DEFobjCurrIf(module)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(rule)
+DEFobjCurrIf(ruleset)
 DEFobjCurrIf(net) /* TODO: make go away! */
 
 
@@ -222,7 +225,7 @@ static rsRetVal GlobalClassExit(void);
 #endif
 
 #ifndef _PATH_TTY
-#define _PATH_TTY	"/dev/tty"
+#	define _PATH_TTY	"/dev/tty"
 #endif
 
 static uchar	*ConfFile = (uchar*) _PATH_LOGCONF; /* read-only after startup */
@@ -248,8 +251,6 @@ static int iConfigVerify = 0;	/* is this just a config verify run? */
 int	repeatinterval[2] = { 30, 60 };	/* # of secs before flush */
 
 #define LIST_DELIMITER	':'		/* delimiter between two hosts */
-
-struct	filed *Files = NULL; /* read-only after init() (but beware of sigusr1!) */
 
 static pid_t ppid; /* This is a quick and dirty hack used for spliting main/startup thread */
 
@@ -300,6 +301,7 @@ static queueType_t MainMsgQueType = QUEUETYPE_FIXED_ARRAY;	/* type of the main m
 static uchar *pszMainMsgQFName = NULL;				/* prefix for the main message queue file */
 static int64 iMainMsgQueMaxFileSize = 1024*1024;
 static int iMainMsgQPersistUpdCnt = 0;				/* persist queue info every n updates */
+static int bMainMsgQSyncQeueFiles = 0;				/* sync queue files on every write? */
 static int iMainMsgQtoQShutdown = 0;				/* queue shutdown */ 
 static int iMainMsgQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
 static int iMainMsgQtoEnq = 2000;				/* timeout for queue enque */ 
@@ -316,7 +318,8 @@ static int iMainMsgQueueDeqtWinToHr = 25;			/* hour begin of time frame when que
 /* support for simple textual representation of FIOP names
  * rgerhards, 2005-09-27
  */
-static char* getFIOPName(unsigned iFIOP)
+char*
+getFIOPName(unsigned iFIOP)
 {
 	char *pRet;
 	switch(iFIOP) {
@@ -363,6 +366,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQueMaxFileSize = 1024 * 1024;
 	iMainMsgQueueNumWorkers = 1;
 	iMainMsgQPersistUpdCnt = 0;
+	bMainMsgQSyncQeueFiles = 0;
 	iMainMsgQtoQShutdown = 0;
 	iMainMsgQtoActShutdown = 1000;
 	iMainMsgQtoEnq = 2000;
@@ -399,7 +403,6 @@ static char **crunch_list(char *list);
 static void reapchild();
 static void debug_switch();
 static void sighup_handler();
-static void freeSelectors(void);
 static void processImInternal(void);
 
 
@@ -432,67 +435,6 @@ diagGetMainMsgQSize(int *piSize)
 
 
 /* ------------------------------ end support functions for imdiag  ------------------------------ */
-
-
-/* function to destruct a selector_t object
- * rgerhards, 2007-08-01
- */
-rsRetVal
-selectorDestruct(void *pVal)
-{
-	selector_t *pThis = (selector_t *) pVal;
-
-	assert(pThis != NULL);
-
-	if(pThis->pCSHostnameComp != NULL)
-		rsCStrDestruct(&pThis->pCSHostnameComp);
-	if(pThis->pCSProgNameComp != NULL)
-		rsCStrDestruct(&pThis->pCSProgNameComp);
-
-	if(pThis->f_filter_type == FILTER_PROP) {
-		if(pThis->f_filterData.prop.pCSPropName != NULL)
-			rsCStrDestruct(&pThis->f_filterData.prop.pCSPropName);
-		if(pThis->f_filterData.prop.pCSCompValue != NULL)
-			rsCStrDestruct(&pThis->f_filterData.prop.pCSCompValue);
-		if(pThis->f_filterData.prop.regex_cache != NULL)
-			rsCStrRegexDestruct(&pThis->f_filterData.prop.regex_cache);
-	} else if(pThis->f_filter_type == FILTER_EXPR) {
-		if(pThis->f_filterData.f_expr != NULL)
-			expr.Destruct(&pThis->f_filterData.f_expr);
-	}
-
-	llDestroy(&pThis->llActList);
-	free(pThis);
-	
-	return RS_RET_OK;
-}
-
-
-/* function to construct a selector_t object
- * rgerhards, 2007-08-01
- */
-rsRetVal
-selectorConstruct(selector_t **ppThis)
-{
-	DEFiRet;
-	selector_t *pThis;
-
-	assert(ppThis != NULL);
-	
-	if((pThis = (selector_t*) calloc(1, sizeof(selector_t))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-	CHKiRet(llInit(&pThis->llActList, actionDestruct, NULL, NULL));
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis != NULL) {
-			selectorDestruct(pThis);
-		}
-	}
-	*ppThis = pThis;
-	RETiRet;
-}
 
 
 /* rgerhards, 2005-10-24: crunch_list is called only during option processing. So
@@ -557,7 +499,7 @@ static char **crunch_list(char *list)
 #if 0
 	count=0;
 	while (result[count])
-		dbgprintf("#%d: %s\n", count, StripDomains[count++]);
+		DBGPRINTF("#%d: %s\n", count, StripDomains[count++]);
 #endif
 	return result;
 }
@@ -566,7 +508,7 @@ static char **crunch_list(char *list)
 void untty(void)
 #ifdef HAVE_SETSID
 {
-	if ( !Debug ) {
+	if(!Debug) {
 		setsid();
 	}
 	return;
@@ -575,18 +517,18 @@ void untty(void)
 {
 	int i;
 
-	if ( !Debug ) {
+	if(!Debug) {
 		i = open(_PATH_TTY, O_RDWR|O_CLOEXEC);
 		if (i >= 0) {
 #			if !defined(__hpux)
-				(void) ioctl(i, (int) TIOCNOTTY, (char *)0);
+				(void) ioctl(i, (int) TIOCNOTTY, NULL);
 #			else
 				/* TODO: we need to implement something for HP UX! -- rgerhards, 2008-03-04 */
 				/* actually, HP UX should have setsid, so the code directly above should
 				 * trigger. So the actual question is why it doesn't do that...
 				 */
 #			endif
-			(void) close(i);
+			close(i);
 		}
 	}
 }
@@ -643,7 +585,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
 	if(pszInputName != NULL)
-		MsgSetInputName(pMsg, pszInputName);
+		MsgSetInputName(pMsg, pszInputName, ustrlen(pszInputName));
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	
@@ -674,15 +616,8 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, hname);
 	MsgSetRcvFrom(pMsg, hname);
+	MsgSetAfterPRIOffs(pMsg, p - msg);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
-
-	/* rgerhards 2004-11-19: well, well... we've now seen that we
-	 * have the "hostname problem" also with the traditional Unix
-	 * message. As we like to emulate it, we need to add the hostname
-	 * to it.
-	 */
-	if(MsgSetUxTradMsg(pMsg, (char*)p) != 0)
-		ABORT_FINALIZE(RS_RET_ERR);
 
 	logmsg(pMsg, flags);
 
@@ -784,7 +719,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	 * rgerhards, 2007-09-14
 	 */
 	if(*(msg + len - 1) == '\0') {
-		dbgprintf("dropped NUL at very end of message\n");
+		DBGPRINTF("dropped NUL at very end of message\n");
 		len--;
 	}
 
@@ -794,7 +729,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 	 * turn on/off this handling.  rgerhards, 2007-07-23
 	 */
 	if(bDropTrailingLF && *(msg + len - 1) == '\n') {
-		dbgprintf("dropped LF at very end of message (DropTrailingLF is set)\n");
+		DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
 		len--;
 	}
 
@@ -819,7 +754,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 		iLenDefBuf = iMaxLine;
 		CHKmalloc(deflateBuf = malloc(sizeof(uchar) * (iMaxLine + 1)));
 		ret = uncompress((uchar *) deflateBuf, &iLenDefBuf, (uchar *) msg+1, len-1);
-		dbgprintf("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
+		DBGPRINTF("Compressed message uncompressed with status %d, length: new %ld, old %d.\n",
 		        ret, (long) iLenDefBuf, len-1);
 		/* Now check if the uncompression worked. If not, there is not much we can do. In
 		 * that case, we log an error message but ignore the message itself. Storing the
@@ -865,7 +800,7 @@ parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int fla
 				 * (I couldn't do any more smart things anyway...).
 				 * rgerhards, 2007-9-20
 				 */
-				dbgprintf("internal error: iMsg > max msg size in printchopped()\n");
+				DBGPRINTF("internal error: iMsg > max msg size in printchopped()\n");
 			}
 			FINALIZE; /* in this case, we are done... nothing left we can do */
 		}
@@ -951,8 +886,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"));
-	MsgSetUxTradMsg(pMsg, (char*)msg);
+	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
@@ -996,6 +930,8 @@ finalize_it:
 	RETiRet;
 }
 
+#if 0 // Code obsoleted by merge imfile, but check for changes if there are problems
+//thus I leave it in for the time being TODO: remove
 /* This functions looks at the given message and checks if it matches the
  * provided filter condition. If so, it returns true, else it returns
  * false. This is a helper to logmsg() and meant to drive the decision
@@ -1226,6 +1162,7 @@ processMsg(msg_t *pMsg)
 	ENDfunc
 }
 
+#endif // if 0 from merge omfile
 
 /* The consumer of dequeued messages. This function is called by the
  * queue engine on dequeueing of a message. It runs on a SEPARATE
@@ -1248,7 +1185,7 @@ msgConsumer(void __attribute__((unused)) *notNeeded, batch_t *pBatch)
 		if((pMsg->msgFlags & NEEDS_PARSING) != 0) {
 			parseMsg(pMsg);
 		}
-		processMsg(pMsg);
+		ruleset.ProcessMsg(pMsg);
 	}
 
 	RETiRet;
@@ -1382,8 +1319,8 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 
 	BEGINfunc
 	assert(pMsg != NULL);
-	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = pMsg->pszUxTradMsg;
+	assert(pMsg->pszRawMsg != NULL);
+	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* do a sanity check on the version and eat it */
 	assert(p2parse[0] == '1' && p2parse[1] == ' ');
@@ -1411,7 +1348,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 			memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 		}
 	} else {
-		dbgprintf("no TIMESTAMP detected!\n");
+		DBGPRINTF("no TIMESTAMP detected!\n");
 		bContParse = 0;
 	}
 
@@ -1483,8 +1420,8 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	BEGINfunc
 
 	assert(pMsg != NULL);
-	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = pMsg->pszUxTradMsg;
+	assert(pMsg->pszRawMsg != NULL);
+	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* Check to see if msg contains a timestamp. We start by assuming
 	 * that the message timestamp is the time of reciption (which we 
@@ -1573,7 +1510,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			/* indeed, this smells like a TAG, so lets use it for this. We take
 			 * the HOSTNAME from the sender system instead.
 			 */
-			dbgprintf("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
+			DBGPRINTF("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
 			moveHOSTNAMEtoTAG(pMsg);
 			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
@@ -1598,22 +1535,21 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * the records: the code is currently clean, but we could optimize it! */
 		if(!bTAGCharDetected) {
 			uchar *pszTAG;
-			if(rsCStrConstruct(&pStrB) != RS_RET_OK) 
+			if(cstrConstruct(&pStrB) != RS_RET_OK) 
 				return 1;
 			rsCStrSetAllocIncrement(pStrB, 33);
 			pWork = pBuf;
 			iCnt = 0;
 			while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
-				rsCStrAppendChar(pStrB, *p2parse++);
+				cstrAppendChar(pStrB, *p2parse++);
 				++iCnt;
 			}
 			if(*p2parse == ':') {
 				++p2parse; 
-				rsCStrAppendChar(pStrB, ':');
+				cstrAppendChar(pStrB, ':');
 			}
-			rsCStrFinish(pStrB);
-
-			rsCStrConvSzStrAndDestruct(pStrB, &pszTAG, 1);
+			cstrFinalize(pStrB);
+			cstrConvSzStrAndDestruct(pStrB, &pszTAG, 1);
 			if(pszTAG == NULL)
 			{	/* rger, 2005-11-10: no TAG found - this implies that what
 				 * we have considered to be the HOSTNAME is most probably the
@@ -1623,7 +1559,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 				 * the hostname. This situation is the standard case with
 				 * stock BSD syslogd.
 				 */
-				dbgprintf("No TAG in message, assuming that HOSTNAME is missing.\n");
+				DBGPRINTF("No TAG in message, assuming that HOSTNAME is missing.\n");
 				moveHOSTNAMEtoTAG(pMsg);
 				MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 			} else { /* we have a TAG, so we can happily set it ;) */
@@ -1639,7 +1575,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 */
 		if(!(flags & INTERNAL_MSG))
 		{
-			dbgprintf("HOSTNAME and TAG not parsed by user configuraton.\n");
+			DBGPRINTF("HOSTNAME and TAG not parsed by user configuraton.\n");
 			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
 	}
@@ -1698,9 +1634,10 @@ logmsg(msg_t *pMsg, int flags)
 
 	BEGINfunc
 	assert(pMsg != NULL);
-	assert(pMsg->pszUxTradMsg != NULL);
-	msg = (char*) pMsg->pszUxTradMsg;
-	dbgprintf("logmsg: flags %x, from '%s', msg %s\n", flags, getRcvFrom(pMsg), msg);
+	assert(pMsg->pszRawMsg != NULL);
+
+	msg = (char*) pMsg->pszRawMsg + pMsg->offAfterPRI;  /* point to start of text, after PRI */
+	DBGPRINTF("logmsg: flags %x, from '%s', msg %s\n", flags, getRcvFrom(pMsg), msg);
 
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
 	 * a traditional syslog message or one formatted according to syslog-protocol.
@@ -1708,14 +1645,14 @@ logmsg(msg_t *pMsg, int flags)
 	 * -protocol VERSION field for the detection.
 	 */
 	if(msg[0] == '1' && msg[1] == ' ') {
-		dbgprintf("Message has syslog-protocol format.\n");
+		DBGPRINTF("Message has syslog-protocol format.\n");
 		setProtocolVersion(pMsg, 1);
 		if(parseRFCSyslogMsg(pMsg, flags) == 1) {
 			msgDestruct(&pMsg);
 			return;
 		}
 	} else { /* we have legacy syslog */
-		dbgprintf("Message has legacy syslog format.\n");
+		DBGPRINTF("Message has legacy syslog format.\n");
 		setProtocolVersion(pMsg, 0);
 		if(parseLegacySyslogMsg(pMsg, flags) == 1) {
 			msgDestruct(&pMsg);
@@ -1755,7 +1692,6 @@ reapchild()
 DEFFUNC_llExecFunc(flushRptdMsgsActions)
 {
 	action_t *pAction = (action_t*) pData;
-
 	assert(pAction != NULL);
 	
 	BEGINfunc
@@ -1765,7 +1701,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	 * in an acceptable way. -- rgerhards, 2008-09-16
 	 */
 	if (pAction->f_prevcount && time(NULL) >= REPEATTIME(pAction)) {
-		dbgprintf("flush %s: repeated %d times, %d sec.\n",
+		DBGPRINTF("flush %s: repeated %d times, %d sec.\n",
 		    module.GetStateName(pAction->pMod), pAction->f_prevcount,
 		    repeatinterval[pAction->f_repeatcount]);
 		actionWriteToAction(pAction);
@@ -1778,20 +1714,12 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 }
 
 
-/* This method flushes reapeat messages.
+/* This method flushes repeat messages.
  */
 static void
 doFlushRptdMsgs(void)
 {
-	register selector_t *f;
-
-	/* see if we need to flush any "message repeated n times"... 
-	 * Note that this interferes with objects running on other threads.
-	 * We are using appropriate locking inside the function to handle that.
-	 */
-	for (f = Files; f != NULL ; f = f->f_next) {
-		llExecFunc(&f->llActList, flushRptdMsgsActions, NULL);
-	}
+	ruleset.IterateAllActions(flushRptdMsgsActions, NULL);
 }
 
 
@@ -1801,9 +1729,9 @@ static void debug_switch()
 
 	if(debugging_on == 0) {
 		debugging_on = 1;
-		dbgprintf("Switching debugging_on to true\n");
+		DBGPRINTF("Switching debugging_on to true\n");
 	} else {
-		dbgprintf("Switching debugging_on to false\n");
+		DBGPRINTF("Switching debugging_on to false\n");
 		debugging_on = 0;
 	}
 	
@@ -1947,7 +1875,7 @@ void legacyOptsParseTCP(char ch, char *arg)
  * a minimal delay, but it is much cleaner than the approach of doing everything
  * inside the signal handler.
  * rgerhards, 2005-10-26
- * Note: we do not call dbgprintf() as this may cause us to block in case something
+ * Note: we do not call DBGPRINTF() as this may cause us to block in case something
  * with the threading is wrong.
  */
 static void doDie(int sig)
@@ -1983,6 +1911,16 @@ freeAllDynMemForTermination(void)
 }
 
 
+/* Finalize and destruct all actions.
+ */
+static inline void
+destructAllActions(void)
+{
+	ruleset.DestructAllActions();
+	bHaveMainQueue = 0; // flag that internal messages need to be temporarily stored
+}
+
+
 /* die() is called when the program shall end. This typically only occurs
  * during sigterm or during the initialization. 
  * As die() is intended to shutdown rsyslogd, it is
@@ -1996,7 +1934,7 @@ die(int sig)
 {
 	char buf[256];
 
-	dbgprintf("exiting on signal %d\n", sig);
+	DBGPRINTF("exiting on signal %d\n", sig);
 
 	/* IMPORTANT: we should close the inputs first, and THEN send our termination
 	 * message. If we do it the other way around, logmsgInternal() may block on
@@ -2011,7 +1949,7 @@ die(int sig)
 	 */
 
 	/* close the inputs */
-	dbgprintf("Terminating input threads...\n");
+	DBGPRINTF("Terminating input threads...\n");
 	thrdTerminateAll();
 
 	/* and THEN send the termination log message (see long comment above) */
@@ -2025,17 +1963,17 @@ die(int sig)
 	}
 	
 	/* drain queue (if configured so) and stop main queue worker thread pool */
-	dbgprintf("Terminating main queue...\n");
+	DBGPRINTF("Terminating main queue...\n");
 	qqueueDestruct(&pMsgQueue);
 	pMsgQueue = NULL;
 
 	/* Free ressources and close connections. This includes flushing any remaining
 	 * repeated msgs.
 	 */
-	dbgprintf("Terminating outputs...\n");
-	freeSelectors();
+	DBGPRINTF("Terminating outputs...\n");
+	destructAllActions();
 
-	dbgprintf("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
+	DBGPRINTF("all primary multi-thread sources have been terminated - now doing aux cleanup...\n");
 	/* rger 2005-02-22
 	 * now clean up the in-memory structures. OK, the OS
 	 * would also take care of that, but if we do it
@@ -2069,11 +2007,11 @@ die(int sig)
 	 * rgerhards, 2007-08-03
 	 * I have added some code now, but all that mod init/de-init should be moved to
 	 * init, so that modules are unloaded and reloaded on HUP to. Eventually it should go
-	 * into freeSelectors() - but that needs to be seen. -- rgerhards, 2007-08-09
+	 * into destructAllActions() - but that needs to be seen. -- rgerhards, 2007-08-09
 	 */
 	module.UnloadAndDestructAll(eMOD_LINK_ALL);
 
-	dbgprintf("Clean shutdown completed, bye\n");
+	DBGPRINTF("Clean shutdown completed, bye\n");
 	/* dbgClassExit MUST be the last one, because it de-inits the debug system */
 	dbgClassExit();
 
@@ -2130,7 +2068,7 @@ static rsRetVal setMaxFiles(void __attribute__((unused)) *pVal, int iFiles)
 				iFiles, errStr, (long) maxFiles.rlim_max);
 		ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
 	}
-	dbgprintf("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
+	DBGPRINTF("Max number of files set to %d [kernel max %ld].\n", iFiles, (long) maxFiles.rlim_max);
 
 finalize_it:
 	RETiRet;
@@ -2141,7 +2079,7 @@ finalize_it:
 static rsRetVal setUmask(void __attribute__((unused)) *pVal, int iUmask)
 {
 	umask(iUmask);
-	dbgprintf("umask set to 0%3.3o.\n", iUmask);
+	DBGPRINTF("umask set to 0%3.3o.\n", iUmask);
 
 	return RS_RET_OK;
 }
@@ -2194,56 +2132,6 @@ static void doDropPrivUid(int iUid)
 	DBGPRINTF("setuid(%d): %d\n", iUid, res);
 	snprintf((char*)szBuf, sizeof(szBuf)/sizeof(uchar), "rsyslogd's userid changed to %d", iUid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
-}
-
-
-/* helper to freeSelectors(), used with llExecFunc() to flush 
- * pending output.  -- rgerhards, 2007-08-02
- * We do not need to lock the action object here as the processing
- * queue is already empty and no other threads are running when
- * we call this function. -- rgerhards, 2007-12-12
- */
-DEFFUNC_llExecFunc(freeSelectorsActions)
-{
-	action_t *pAction = (action_t*) pData;
-
-	assert(pAction != NULL);
-
-	/* flush any pending output */
-	if(pAction->f_prevcount) {
-		actionWriteToAction(pAction);
-	}
-
-	return RS_RET_OK; /* never fails ;) */
-}
-
-
-/*  Close all open log files and free selector descriptor array.
- */
-static void freeSelectors(void)
-{
-	selector_t *f;
-	selector_t *fPrev;
-
-	if(Files != NULL) {
-		dbgprintf("Freeing log structures.\n");
-
-		for(f = Files ; f != NULL ; f = f->f_next) {
-			llExecFunc(&f->llActList, freeSelectorsActions, NULL);
-		}
-
-		/* actions flushed and ready for destruction - so do that... */
-		f = Files;
-		while (f != NULL) {
-			fPrev = f;
-			f = f->f_next;
-			selectorDestruct(fPrev);
-		}
-
-		/* Reflect the deletion of the selectors linked list. */
-		Files = NULL;
-		bHaveMainQueue = 0;
-	}
 }
 
 
@@ -2323,14 +2211,14 @@ DEFFUNC_llExecFunc(generateConfigDAGAction)
 static rsRetVal
 generateConfigDAG(uchar *pszDAGFile)
 {
-	selector_t *f;
+	//rule_t *f;
 	FILE *fp;
 	int iActUnit = 1;
-	int bHasFilter = 0;	/* filter associated with this action unit? */
-	int bHadFilter;
-	int i;
+	//int bHasFilter = 0;	/* filter associated with this action unit? */
+	//int bHadFilter;
+	//int i;
 	struct dag_info dagInfo;
-	char *pszFilterName;
+	//char *pszFilterName;
 	char szConnectingNode[64];
 	DEFiRet;
 
@@ -2359,6 +2247,8 @@ generateConfigDAG(uchar *pszDAGFile)
 	strcpy(szConnectingNode, "act0_0");
 	dagInfo.bDiscarded = 0;
 
+/* TODO: re-enable! */
+#if 0
 	for(f = Files; f != NULL ; f = f->f_next) {
 		/* BSD-Style filters are currently ignored */
 		bHadFilter = bHasFilter;
@@ -2414,6 +2304,7 @@ generateConfigDAG(uchar *pszDAGFile)
 
 		++iActUnit;
 	}
+#endif
 
 	fprintf(fp, "\t%s -> act%d_0\n", szConnectingNode, iActUnit);
 	fprintf(fp, "\tact%d_0\t\t[label=discard shape=box]\n"
@@ -2425,20 +2316,6 @@ finalize_it:
 }
 
 
-/* helper to dbPrintInitInfo, to print out all actions via
- * the llExecFunc() facility.
- * rgerhards, 2007-08-02
- */
-DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
-{
-	DEFiRet;
-	iRet = actionDbgPrint((action_t*) pData);
-	dbgprintf("\n");
-
-	RETiRet;
-}
-
-
 /* print debug information as part of init(). This pretty much
  * outputs the whole config of rsyslogd. I've moved this code
  * out of init() to clean it somewhat up.
@@ -2446,47 +2323,8 @@ DEFFUNC_llExecFunc(dbgPrintInitInfoAction)
  */
 static void dbgPrintInitInfo(void)
 {
-	selector_t *f;
-	int iSelNbr = 1;
-	int i;
-
-	dbgprintf("\nActive selectors:\n");
-	for (f = Files; f != NULL ; f = f->f_next) {
-		dbgprintf("Selector %d:\n", iSelNbr++);
-		if(f->pCSProgNameComp != NULL)
-			dbgprintf("tag: '%s'\n", rsCStrGetSzStrNoNULL(f->pCSProgNameComp));
-		if(f->eHostnameCmpMode != HN_NO_COMP)
-			dbgprintf("hostname: %s '%s'\n",
-				f->eHostnameCmpMode == HN_COMP_MATCH ?
-					"only" : "allbut",
-				rsCStrGetSzStrNoNULL(f->pCSHostnameComp));
-		if(f->f_filter_type == FILTER_PRI) {
-			for (i = 0; i <= LOG_NFACILITIES; i++)
-				if (f->f_filterData.f_pmask[i] == TABLE_NOPRI)
-					dbgprintf(" X ");
-				else
-					dbgprintf("%2X ", f->f_filterData.f_pmask[i]);
-		} else if(f->f_filter_type == FILTER_EXPR) {
-			dbgprintf("EXPRESSION-BASED Filter: can currently not be displayed");
-		} else {
-			dbgprintf("PROPERTY-BASED Filter:\n");
-			dbgprintf("\tProperty.: '%s'\n",
-			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSPropName));
-			dbgprintf("\tOperation: ");
-			if(f->f_filterData.prop.isNegated)
-				dbgprintf("NOT ");
-			dbgprintf("'%s'\n", getFIOPName(f->f_filterData.prop.operation));
-			dbgprintf("\tValue....: '%s'\n",
-			       rsCStrGetSzStrNoNULL(f->f_filterData.prop.pCSCompValue));
-			dbgprintf("\tAction...: ");
-		}
-
-		dbgprintf("\nActions:\n");
-		llExecFunc(&f->llActList, dbgPrintInitInfoAction, NULL); /* actions */
-
-		dbgprintf("\n");
-	}
-	dbgprintf("\n");
+	ruleset.DebugPrintAll();
+	DBGPRINTF("\n");
 	if(bDebugPrintTemplateList)
 		tplPrintList();
 	if(bDebugPrintModuleList)
@@ -2496,24 +2334,24 @@ static void dbgPrintInitInfo(void)
 	if(bDebugPrintCfSysLineHandlerList)
 		dbgPrintCfSysLineHandlers();
 
-	dbgprintf("Messages with malicious PTR DNS Records are %sdropped.\n",
+	DBGPRINTF("Messages with malicious PTR DNS Records are %sdropped.\n",
 		  glbl.GetDropMalPTRMsgs() ? "" : "not ");
 
-	dbgprintf("Control characters are %sreplaced upon reception.\n",
+	DBGPRINTF("Control characters are %sreplaced upon reception.\n",
 		  bEscapeCCOnRcv? "" : "not ");
 
 	if(bEscapeCCOnRcv)
-		dbgprintf("Control character escape sequence prefix is '%c'.\n",
+		DBGPRINTF("Control character escape sequence prefix is '%c'.\n",
 			cCCEscapeChar);
 
-	dbgprintf("Main queue size %d messages.\n", iMainMsgQueueSize);
-	dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
+	DBGPRINTF("Main queue size %d messages.\n", iMainMsgQueueSize);
+	DBGPRINTF("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
 		  iMainMsgQueueNumWorkers, iMainMsgQtoWrkShutdown, iMainMsgQPersistUpdCnt);
-	dbgprintf("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
+	DBGPRINTF("Main queue timeouts: shutdown: %d, action completion shutdown: %d, enq: %d\n",
 		   iMainMsgQtoQShutdown, iMainMsgQtoActShutdown, iMainMsgQtoEnq);
-	dbgprintf("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
+	DBGPRINTF("Main queue watermarks: high: %d, low: %d, discard: %d, discard-severity: %d\n",
 		   iMainMsgQHighWtrMark, iMainMsgQLowWtrMark, iMainMsgQDiscardMark, iMainMsgQDiscardSeverity);
-	dbgprintf("Main queue save on shutdown %d, max disk space allowed %lld\n",
+	DBGPRINTF("Main queue save on shutdown %d, max disk space allowed %lld\n",
 		   bMainMsgQSaveOnShutdown, iMainMsgQueMaxDiskSpace);
 	/* TODO: add
 	iActionRetryCount = 0;
@@ -2524,7 +2362,7 @@ static void dbgPrintInitInfo(void)
 	setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
 	setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
 	 */
-	dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir());
+	DBGPRINTF("Work Directory: '%s'.\n", glbl.GetWorkDir());
 }
 
 
@@ -2547,7 +2385,7 @@ startInputModules(void)
 			/* activate here */
 			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun);
 		} else {
-			dbgprintf("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
+			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
 		}
 	pMod = module.GetNxtType(pMod, eMOD_IN);
 	}
@@ -2565,13 +2403,14 @@ startInputModules(void)
 static rsRetVal
 init(void)
 {
-	DEFiRet;
 	rsRetVal localRet;
 	int iNbrActions;
 	int bHadConfigErr = 0;
+	ruleset_t *pRuleset;
 	char cbuf[BUFSIZ];
 	char bufStartUpMsg[512];
 	struct sigaction sigAct;
+	DEFiRet;
 
 	thrdTerminateAll(); /* stop all running input threads - TODO: reconsider location! */
 
@@ -2580,11 +2419,11 @@ init(void)
 	pDfltProgNameCmp = NULL;
 	eDfltHostnameCmpMode = HN_NO_COMP;
 
-	dbgprintf("rsyslog %s - called init()\n", VERSION);
+	DBGPRINTF("rsyslog %s - called init()\n", VERSION);
 
 	/* delete the message queue, which also flushes all messages left over */
 	if(pMsgQueue != NULL) {
-		dbgprintf("deleting main message queue\n");
+		DBGPRINTF("deleting main message queue\n");
 		qqueueDestruct(&pMsgQueue); /* delete pThis here! */
 		pMsgQueue = NULL;
 	}
@@ -2592,13 +2431,13 @@ init(void)
 	/*  Close all open log files and free log descriptor array. This also frees
 	 *  all output-modules instance data.
 	 */
-	freeSelectors();
+	destructAllActions();
 
 	/* Unload all non-static modules */
-	dbgprintf("Unloading non-static modules.\n");
+	DBGPRINTF("Unloading non-static modules.\n");
 	module.UnloadAndDestructAll(eMOD_LINK_DYNAMIC_LOADED);
 
-	dbgprintf("Clearing templates.\n");
+	DBGPRINTF("Clearing templates.\n");
 	tplDeleteNew();
 
 	/* re-setting values to defaults (where applicable) */
@@ -2612,6 +2451,11 @@ init(void)
 	conf.cfsysline((uchar*)"ResetConfigVariables");
 
 	conf.ReInitConf();
+
+	/* construct the default ruleset */
+	ruleset.Construct(&pRuleset);
+	ruleset.SetName(pRuleset, UCHAR_CONSTANT("RSYSLOG_DefaultRuleset"));
+	ruleset.ConstructFinalize(pRuleset);
 
 	/* open the configuration file */
 	localRet = conf.processConfFile(ConfFile);
@@ -2634,23 +2478,23 @@ init(void)
 		 * We ignore any errors while doing this - we would be lost anyhow...
 		 */
 		errmsg.LogError(0, NO_ERRCODE, "EMERGENCY CONFIGURATION ACTIVATED - fix rsyslog config file!");
-		selector_t *f = NULL;
 
 		/* note: we previously used _POSIY_TTY_NAME_MAX+1, but this turned out to be
 		 * too low on linux... :-S   -- rgerhards, 2008-07-28
 		 */
 		char szTTYNameBuf[128];
-		conf.cfline((uchar*)"*.ERR\t" _PATH_CONSOLE, &f);
-		conf.cfline((uchar*)"syslog.*\t" _PATH_CONSOLE, &f);
-		conf.cfline((uchar*)"*.PANIC\t*", &f);
-		conf.cfline((uchar*)"syslog.*\troot", &f);
+		rule_t *pRule = NULL; /* initialization to NULL is *vitally* important! */
+		conf.cfline(UCHAR_CONSTANT("*.ERR\t" _PATH_CONSOLE), &pRule);
+		conf.cfline(UCHAR_CONSTANT("syslog.*\t" _PATH_CONSOLE), &pRule);
+		conf.cfline(UCHAR_CONSTANT("*.PANIC\t*"), &pRule);
+		conf.cfline(UCHAR_CONSTANT("syslog.*\troot"), &pRule);
 		if(ttyname_r(0, szTTYNameBuf, sizeof(szTTYNameBuf)) == 0) {
 			snprintf(cbuf,sizeof(cbuf), "*.*\t%s", szTTYNameBuf);
-			conf.cfline((uchar*)cbuf, &f);
+			conf.cfline((uchar*)cbuf, &pRule);
 		} else {
-			dbgprintf("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
+			DBGPRINTF("error %d obtaining controlling terminal, not using that emergency rule\n", errno);
 		}
-		selectorAddList(f);
+		ruleset.AddRule(ruleset.GetCurrent(), &pRule);
 	}
 
 	legacyOptsHook();
@@ -2730,6 +2574,7 @@ init(void)
 	setQPROP(qqueueSetiDeqBatchSize, "$MainMsgQueueDequeueBatchSize", iMainMsgQueDeqBatchSize);
 	setQPROPstr(qqueueSetFilePrefix, "$MainMsgQueueFileName", pszMainMsgQFName);
 	setQPROP(qqueueSetiPersistUpdCnt, "$MainMsgQueueCheckpointInterval", iMainMsgQPersistUpdCnt);
+	setQPROP(qqueueSetbSyncQueueFiles, "$MainMsgQueueSyncQueueFiles", bMainMsgQSyncQeueFiles);
 	setQPROP(qqueueSettoQShutdown, "$MainMsgQueueTimeoutShutdown", iMainMsgQtoQShutdown );
 	setQPROP(qqueueSettoActShutdown, "$MainMsgQueueTimeoutActionCompletion", iMainMsgQtoActShutdown);
 	setQPROP(qqueueSettoWrkShutdown, "$MainMsgQueueWorkerTimeoutThreadShutdown", iMainMsgQtoWrkShutdown);
@@ -2755,7 +2600,7 @@ init(void)
 	}
 
 	bHaveMainQueue = (MainMsgQueType == QUEUETYPE_DIRECT) ? 0 : 1;
-	dbgprintf("Main processing queue is initialized and running\n");
+	DBGPRINTF("Main processing queue is initialized and running\n");
 
 	/* the output part and the queue is now ready to run. So it is a good time
 	 * to start the inputs. Please note that the net code above should be
@@ -2782,56 +2627,55 @@ init(void)
 	sigAct.sa_handler = sighup_handler;
 	sigaction(SIGHUP, &sigAct, NULL);
 
-	dbgprintf(" (re)started.\n");
+	DBGPRINTF(" (re)started.\n");
 
 finalize_it:
 	RETiRet;
 }
 
 
-/* add a completely-processed selector (after config line parsing) to
- * the linked list of selectors. We now need to check
- * if it has any actions associated and, if so, link it to the linked
- * list. If it has nothing associated with it, we can simply discard
- * it.
- * We have one special case during initialization: then, the current
- * selector is NULL, which means we do not need to care about it at
- * all.  -- rgerhards, 2007-08-01
+/* Switch the default ruleset (that, what servcies bind to if nothing specific
+ * is specified).
+ * rgerhards, 2009-06-12
  */
-rsRetVal
-selectorAddList(selector_t *f)
+static rsRetVal
+setDefaultRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
 {
 	DEFiRet;
-	int iActionCnt;
 
-	static selector_t *nextp = NULL; /* TODO: make this go away (see comment below) */
+	CHKiRet(ruleset.SetDefaultRuleset(pszName));
 
-	if(f != NULL) {
-		CHKiRet(llGetNumElts(&f->llActList, &iActionCnt));
-		if(iActionCnt == 0) {
-			errmsg.LogError(0, NO_ERRCODE, "warning: selector line without actions will be discarded");
-			selectorDestruct(f);
-		} else {
-			/* successfully created an entry */
-			dbgprintf("selector line successfully processed\n");
-			/* TODO: we should use the linked list class for the selector list, else we need to add globals
-			 * ... well nextp could be added temporarily...
-			 * Thanks to varmojfekoj for having the idea to just use "Files" to make this
-			 * code work. I had actually forgotten to fix the code here before moving to 1.18.0.
-			 * And, of course, I also did not migrate the selector_t structure to the linked list class.
-			 * However, that should still be one of the very next things to happen.
-			 * rgerhards, 2007-08-06
-			 */
-			if(Files == NULL) {
-				Files = f;
-			} else {
-				nextp->f_next = f;
-			}
-			nextp = f;
-		}
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
+
+/* Switch to either an already existing rule set or start a new one. The
+ * named rule set becomes the new "current" rule set (what means that new
+ * actions are added to it).
+ * rgerhards, 2009-06-12
+ */
+static rsRetVal
+setCurrRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	ruleset_t *pRuleset;
+	rsRetVal localRet;
+	DEFiRet;
+
+	localRet = ruleset.SetCurrRuleset(pszName);
+
+	if(localRet == RS_RET_NOT_FOUND) {
+		DBGPRINTF("begin new current rule set '%s'\n", pszName);
+		CHKiRet(ruleset.Construct(&pRuleset));
+		CHKiRet(ruleset.SetName(pRuleset, pszName));
+		CHKiRet(ruleset.ConstructFinalize(pRuleset));
+	} else {
+		ABORT_FINALIZE(localRet);
 	}
 
 finalize_it:
+	free(pszName); /* no longer needed */
 	RETiRet;
 }
 
@@ -2845,16 +2689,16 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) *pVal, uchar *psz
 
 	if (!strcasecmp((char *) pszType, "fixedarray")) {
 		MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
-		dbgprintf("main message queue type set to FIXED_ARRAY\n");
+		DBGPRINTF("main message queue type set to FIXED_ARRAY\n");
 	} else if (!strcasecmp((char *) pszType, "linkedlist")) {
 		MainMsgQueType = QUEUETYPE_LINKEDLIST;
-		dbgprintf("main message queue type set to LINKEDLIST\n");
+		DBGPRINTF("main message queue type set to LINKEDLIST\n");
 	} else if (!strcasecmp((char *) pszType, "disk")) {
 		MainMsgQueType = QUEUETYPE_DISK;
-		dbgprintf("main message queue type set to DISK\n");
+		DBGPRINTF("main message queue type set to DISK\n");
 	} else if (!strcasecmp((char *) pszType, "direct")) {
 		MainMsgQueType = QUEUETYPE_DIRECT;
-		dbgprintf("main message queue type set to DIRECT (no queueing at all)\n");
+		DBGPRINTF("main message queue type set to DIRECT (no queueing at all)\n");
 	} else {
 		errmsg.LogError(0, RS_RET_INVALID_PARAMS, "unknown mainmessagequeuetype parameter: %s", (char *) pszType);
 		iRet = RS_RET_INVALID_PARAMS;
@@ -2923,7 +2767,6 @@ DEFFUNC_llExecFunc(doHUPActions)
 static inline void
 doHUP(void)
 {
-	selector_t *f;
 	char buf[512];
 
 	snprintf(buf, sizeof(buf) / sizeof(char),
@@ -2938,9 +2781,7 @@ doHUP(void)
 		init(); /* main queue is stopped as part of init() */
 	} else {
 		DBGPRINTF("Received SIGHUP, configured to be a non-restart type of HUP - notifying actions.\n");
-		for(f = Files; f != NULL ; f = f->f_next) {
-			llExecFunc(&f->llActList, doHUPActions, NULL);
-		}
+		ruleset.IterateAllActions(doHUPActions, NULL);
 	}
 }
 
@@ -2971,7 +2812,8 @@ mainloop(void)
 		 * powertop, for example). In that case, we primarily wait for a signal,
 		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
 		 */
-		tvSelectTimeout.tv_sec = (bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
+		//tvSelectTimeout.tv_sec = (bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
+tvSelectTimeout.tv_sec = 5; // TESTING ONLY!!! TODO: change back!!!
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)
@@ -3006,47 +2848,9 @@ mainloop(void)
 			bHadHUP = 0;
 			continue;
 		}
+		execScheduled(); /* handle Apc calls (if any) */
 	}
 	ENDfunc
-}
-
-/* If user is not root, prints warnings or even exits 
- * TODO: check all dynafiles for write permission
- * ... but it is probably better to wait here until we have
- * a module interface - rgerhards, 2007-07-23
- */
-static void checkPermissions()
-{
-#if 0
-	/* TODO: this function must either be redone or removed - now with the input modules,
-	 * there is no such simple check we can do. What we can check, however, is if there is
-	 * any input module active and terminate, if not. -- rgerhards, 2007-12-26
-	 */
-	/* we are not root */
-	if (geteuid() != 0)
-	{
-		fputs("WARNING: Local messages will not be logged! If you want to log them, run rsyslog as root.\n",stderr); 
-#ifdef SYSLOG_INET	
-		/* udp enabled and port number less than or equal to 1024 */
-		if ( AcceptRemote && (atoi(LogPort) <= 1024) )
-			fprintf(stderr, "WARNING: Will not listen on UDP port %s. Use port number higher than 1024 or run rsyslog as root!\n", LogPort);
-		
-		/* tcp enabled and port number less or equal to 1024 */
-		if( bEnableTCP   && (atoi(TCPLstnPort) <= 1024) )
-			fprintf(stderr, "WARNING: Will not listen on TCP port %s. Use port number higher than 1024 or run rsyslog as root!\n", TCPLstnPort);
-
-		/* Neither explicit high UDP port nor explicit high TCP port.
-                 * It is useless to run anymore */
-		if( !(AcceptRemote && (atoi(LogPort) > 1024)) && !( bEnableTCP && (atoi(TCPLstnPort) > 1024)) )
-		{
-#endif
-			fprintf(stderr, "ERROR: Nothing to log, no reason to run. Please run rsyslog as root.\n");
-			exit(EXIT_FAILURE);
-#ifdef SYSLOG_INET
-		}
-#endif
-	}
-#endif
 }
 
 
@@ -3057,23 +2861,23 @@ static rsRetVal loadBuildInModules(void)
 {
 	DEFiRet;
 
-	if((iRet = module.doModInit(modInitFile, (uchar*) "builtin-file", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitFile, UCHAR_CONSTANT("builtin-file"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 #ifdef SYSLOG_INET
-	if((iRet = module.doModInit(modInitFwd, (uchar*) "builtin-fwd", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitFwd, UCHAR_CONSTANT("builtin-fwd"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 #endif
-	if((iRet = module.doModInit(modInitShell, (uchar*) "builtin-shell", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
-	if((iRet = module.doModInit(modInitDiscard, (uchar*) "builtin-discard", NULL)) != RS_RET_OK) {
+	if((iRet = module.doModInit(modInitDiscard, UCHAR_CONSTANT("builtin-discard"), NULL)) != RS_RET_OK) {
 		RETiRet;
 	}
 
 	/* dirty, but this must be for the time being: the usrmsg module must always be
-	 * loaded as last module. This is because it processes any time of action selector.
+	 * loaded as last module. This is because it processes any type of action selector.
 	 * If we load it before other modules, these others will never have a chance of
 	 * working with the config file. We may change that implementation so that a user name
 	 * must start with an alnum, that would definitely help (but would it break backwards
@@ -3081,8 +2885,7 @@ static rsRetVal loadBuildInModules(void)
 	 * User names now must begin with:
 	 *   [a-zA-Z0-9_.]
 	 */
-	if((iRet = module.doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL)) != RS_RET_OK)
-		RETiRet;
+	CHKiRet(module.doModInit(modInitUsrMsg, (uchar*) "builtin-usrmsg", NULL));
 
 	/* ok, initialization of the command handler probably does not 100% belong right in
 	 * this space here. However, with the current design, this is actually quite a good
@@ -3092,6 +2895,8 @@ static rsRetVal loadBuildInModules(void)
 	 * This, I think, is the right thing to do. -- rgerhards, 2007-07-31
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeretrycount", 0, eCmdHdlrInt, NULL, &glbliActionResumeRetryCount, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord, setDefaultRuleset, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord, setCurrRuleset, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuefilename", 0, eCmdHdlrGetWord, NULL, &pszMainMsgQFName, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesize", 0, eCmdHdlrInt, NULL, &iMainMsgQueueSize, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuehighwatermark", 0, eCmdHdlrInt, NULL, &iMainMsgQHighWtrMark, NULL));
@@ -3099,6 +2904,7 @@ static rsRetVal loadBuildInModules(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardmark", 0, eCmdHdlrInt, NULL, &iMainMsgQDiscardMark, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuediscardseverity", 0, eCmdHdlrSeverity, NULL, &iMainMsgQDiscardSeverity, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuecheckpointinterval", 0, eCmdHdlrInt, NULL, &iMainMsgQPersistUpdCnt, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesyncqueuefiles", 0, eCmdHdlrBinary, NULL, &bMainMsgQSyncQeueFiles, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord, setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt, NULL, &iMainMsgQueueNumWorkers, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutshutdown", 0, eCmdHdlrInt, NULL, &iMainMsgQtoQShutdown, NULL));
@@ -3234,7 +3040,7 @@ static rsRetVal mainThread()
 	CHKiRet(init());
 
 	if(Debug && debugging_on) {
-		dbgprintf("Debugging enabled, SIGUSR1 to turn off debugging.\n");
+		DBGPRINTF("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 	}
 	/* Send a signal to the parent so it can terminate.
 	 */
@@ -3266,7 +3072,7 @@ static rsRetVal mainThread()
 	 * do the init() and then restart things.
 	 * rgerhards, 2005-10-24
 	 */
-	dbgprintf("initialization completed, transitioning to regular run mode\n");
+	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
 
 	mainloop();
 
@@ -3297,14 +3103,14 @@ InitGlobalClasses(void)
 	CHKiRet(objUse(errmsg,   CORE_COMPONENT));
 	pErrObj = "module";
 	CHKiRet(objUse(module,   CORE_COMPONENT));
-	pErrObj = "var";
-	CHKiRet(objUse(var,      CORE_COMPONENT));
 	pErrObj = "datetime";
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	pErrObj = "vm";
-	CHKiRet(objUse(vm,       CORE_COMPONENT));
 	pErrObj = "expr";
 	CHKiRet(objUse(expr,     CORE_COMPONENT));
+	pErrObj = "rule";
+	CHKiRet(objUse(rule,     CORE_COMPONENT));
+	pErrObj = "ruleset";
+	CHKiRet(objUse(ruleset,  CORE_COMPONENT));
 	pErrObj = "conf";
 	CHKiRet(objUse(conf,     CORE_COMPONENT));
 
@@ -3348,33 +3154,13 @@ GlobalClassExit(void)
 	/* first, release everything we used ourself */
 	objRelease(net,      LM_NET_FILENAME);/* TODO: the dependency on net shall go away! -- rgerhards, 2008-03-07 */
 	objRelease(conf,     CORE_COMPONENT);
+	objRelease(ruleset,  CORE_COMPONENT);
+	objRelease(rule,     CORE_COMPONENT);
 	objRelease(expr,     CORE_COMPONENT);
 	vmClassExit();					/* this is hack, currently core_modules do not get this automatically called */
-	objRelease(vm,       CORE_COMPONENT);
-	objRelease(var,      CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 
 	/* TODO: implement the rest of the deinit */
-#if 0
-	CHKiRet(datetimeClassInit(NULL));
-	CHKiRet(msgClassInit(NULL));
-	CHKiRet(strmClassInit(NULL));
-	CHKiRet(wtiClassInit(NULL));
-	CHKiRet(wtpClassInit(NULL));
-	CHKiRet(qqueueClassInit(NULL));
-	CHKiRet(vmstkClassInit(NULL));
-	CHKiRet(sysvarClassInit(NULL));
-	CHKiRet(vmClassInit(NULL));
-	CHKiRet(vmopClassInit(NULL));
-	CHKiRet(vmprgClassInit(NULL));
-	CHKiRet(ctok_tokenClassInit(NULL));
-	CHKiRet(ctokClassInit(NULL));
-	CHKiRet(exprClassInit(NULL));
-
-	/* dummy "classes" */
-	CHKiRet(actionClassInit());
-	CHKiRet(templateInit());
-#endif
 	/* dummy "classes */
 	strExit();
 
@@ -3468,12 +3254,11 @@ doGlblProcessInit(void)
 	int i;
 	DEFiRet;
 
-	checkPermissions();
 	thrdInit();
 
 	if( !(Debug || NoFork) )
 	{
-		dbgprintf("Checking pidfile.\n");
+		DBGPRINTF("Checking pidfile.\n");
 		if (!check_pid(PidFile))
 		{
 			memset(&sigAct, 0, sizeof (sigAct));
@@ -3509,7 +3294,7 @@ doGlblProcessInit(void)
 	}
 
 	/* tuck my process id away */
-	dbgprintf("Writing pidfile %s.\n", PidFile);
+	DBGPRINTF("Writing pidfile %s.\n", PidFile);
 	if (!check_pid(PidFile))
 	{
 		if (!write_pid(PidFile))
@@ -3655,7 +3440,7 @@ int realMain(int argc, char **argv)
 	if ((argc -= optind))
 		usage();
 
-	dbgprintf("rsyslogd %s startup, compatibility mode %d, module path '%s'\n",
+	DBGPRINTF("rsyslogd %s startup, compatibility mode %d, module path '%s'\n",
 		  VERSION, iCompatibilityMode, glblModPath == NULL ? "" : (char*)glblModPath);
 
 	/* we are done with the initial option parsing and processing. Now we init the system. */
@@ -3737,7 +3522,7 @@ int realMain(int argc, char **argv)
 	/* END core initializations - we now come back to carrying out command line options*/
 
 	while((iRet = bufOptRemove(&ch, &arg)) == RS_RET_OK) {
-		dbgprintf("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
+		DBGPRINTF("deque option %c, optarg '%s'\n", ch, (arg == NULL) ? "" : arg);
 		switch((char)ch) {
                 case '4':
 	                glbl.SetDefPFFamily(PF_INET);

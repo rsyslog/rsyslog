@@ -85,7 +85,7 @@ CODESTARTobjDebugPrint(vmop)
 			CHKiRet(var.Obj2Str(pThis->operand.pVar, pStrVar));
 		}
 	}
-	CHKiRet(rsCStrFinish(&pStrVar));
+	CHKiRet(cstrFinalize(pStrVar));
 	dbgoprint((obj_t*) pThis, "%.12s\t%s\n", pOpcodeName, rsCStrGetSzStrNoNULL(pStrVar));
 	if(pThis->opcode != opcode_FUNC_CALL)
 		rsCStrDestruct(&pStrVar);

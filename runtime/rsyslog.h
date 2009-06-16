@@ -77,7 +77,9 @@ typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct aUsrp_s aUsrp_t;
 typedef struct thrdInfo thrdInfo_t;
 typedef struct obj_s obj_t;
-typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
+typedef struct ruleset_s ruleset_t;
+typedef struct rule_s rule_t;
+//typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
 typedef struct NetAddr netAddr_t;
 typedef struct netstrms_s netstrms_t;
 typedef struct netstrm_s netstrm_t;
@@ -119,6 +121,8 @@ typedef unsigned int u_int32_t; /* TODO: is this correct? */
 typedef int socklen_t;
 #endif
 
+typedef char bool;		/* I intentionally use char, to keep it slim so that many fit into the CPU cache! */
+
 /* settings for flow control
  * TODO: is there a better place for them? -- rgerhards, 2008-03-14
  */
@@ -128,6 +132,20 @@ typedef enum {
 	eFLOWCTL_FULL_DELAY = 2	/**< delay possible for extended period of time */
 } flowControl_t;
 
+/* filter operations */
+typedef enum {
+	FIOP_NOP = 0,		/* do not use - No Operation */
+	FIOP_CONTAINS  = 1,	/* contains string? */
+	FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
+	FIOP_STARTSWITH = 3,	/* starts with a string? */
+	FIOP_REGEX = 4,		/* matches a (BRE) regular expression? */
+	FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
+} fiop_t;
+
+
+#ifndef _PATH_CONSOLE
+#define _PATH_CONSOLE	"/dev/console"
+#endif
 
 /* The error codes below are orginally "borrowed" from
  * liblogging. As such, we reserve values up to -2999
@@ -293,7 +311,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_PREVIOUS_COMMITTED = -2122, /**< output plugin status: previous record was committed (an OK state!) */
 	RS_RET_ACTION_FAILED = -2123, /**< action failed and is now suspended (consider this permanent for the time being) */
 	RS_RET_NONFATAL_CONFIG_ERR = -2124, /**< non-fatal error during config processing */
+	RS_RET_NON_SIZELIMITCMD = -2125, /**< size limit for file defined, but no size limit command given */
+	RS_RET_SIZELIMITCMD_DIDNT_RESOLVE = -2126, /**< size limit command did not resolve situation */
+	RS_RET_STREAM_DISABLED = -2127, /**< a file has been disabled (e.g. by size limit restriction) */
 	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
+	RS_RET_ZLIB_ERR = -2141, /**< error during zlib call */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -383,6 +405,11 @@ typedef enum rsObjectID rsObjID;
 /* of course, this limits the functionality... */
 #  define O_CLOEXEC 0
 #endif
+
+/* some constants */
+// TODO: do we really need them - if not, delete -- rgerhards, 2009-06-10
+#define IGNORE_ERROR_CODES 1
+#define ABORT_ON_ERROR 0
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));

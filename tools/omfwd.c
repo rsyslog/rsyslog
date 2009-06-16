@@ -48,6 +48,7 @@
 #endif
 #include <pthread.h>
 #include "syslogd.h"
+#include "conf.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "net.h"

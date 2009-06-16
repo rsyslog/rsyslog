@@ -154,11 +154,10 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds)
 
 static int srSLMGParseInt32(uchar** ppsz)
 {
-	int i;
+	register int i;
 
 	i = 0;
-	while(isdigit((int) **ppsz))
-	{
+	while(isdigit((int) **ppsz)) {
 		i = i * 10 + **ppsz - '0';
 		++(*ppsz);
 	}

@@ -37,7 +37,9 @@ typedef enum ETCPsyslogFramingAnomaly {
 struct tcpLstnPortList_s {
 	uchar *pszPort;			/**< the ports the listener shall listen on */
 	uchar *pszInputName;		/**< value to be used as input name */
+	size_t lenInputName;		/**< length of inputName */
 	tcpsrv_t *pSrv;			/**< pointer to higher-level server instance */
+	ruleset_t *pRuleset;		/**< associated ruleset */
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
 
@@ -50,6 +52,7 @@ struct tcpsrv_s {
 	int iDrvrMode;		/**< mode of the stream driver to use */
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
 	uchar *pszInputName;	/**< value to be used as input name */
+	ruleset_t *pRuleset;	/**< ruleset to bind to */
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
 	int iLstnMax;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listners */
@@ -107,6 +110,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetSessMax)(tcpsrv_t *pThis, int iMaxSess);	/* 2009-04-09 */
 	/* added v6 */
 	rsRetVal (*SetOnMsgReceive)(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int)); /* 2009-05-24 */
+	rsRetVal (*SetRuleset)(tcpsrv_t *pThis, ruleset_t*); /* 2009-06-12 */
 ENDinterface(tcpsrv)
 #define tcpsrvCURR_IF_VERSION 6 /* increment whenever you change the interface structure! */
 /* change for v4:

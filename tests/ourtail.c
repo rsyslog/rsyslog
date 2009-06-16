@@ -40,4 +40,6 @@ int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 
 	for( ; c != EOF ; c = getchar())
 		putchar(c);
+
+	return 0;
 }
