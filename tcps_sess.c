@@ -526,7 +526,5 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, tcps_sessConstructFinalize);
 ENDObjClassInit(tcps_sess)
 
-
-
 /* vim:set ai:
  */
