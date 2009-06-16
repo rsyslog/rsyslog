@@ -314,7 +314,7 @@ rsRetVal parseMsg(msg_t *pMsg)
 	}
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
-	MsgSetUxTradMsg(pMsg, (char*) msg);
+	MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 
 	if(pMsg->bParseHOSTNAME == 0)
 		MsgSetHOSTNAME(pMsg, pMsg->pszRcvFrom);

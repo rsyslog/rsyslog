@@ -670,15 +670,8 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, hname);
 	MsgSetRcvFrom(pMsg, hname);
+	MsgSetAfterPRIOffs(pMsg, p - msg);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
-
-	/* rgerhards 2004-11-19: well, well... we've now seen that we
-	 * have the "hostname problem" also with the traditional Unix
-	 * message. As we like to emulate it, we need to add the hostname
-	 * to it.
-	 */
-	if(MsgSetUxTradMsg(pMsg, (char*)p) != 0)
-		ABORT_FINALIZE(RS_RET_ERR);
 
 	logmsg(pMsg, flags);
 
@@ -948,7 +941,6 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
-	MsgSetUxTradMsg(pMsg, (char*)msg);
 	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
@@ -1370,8 +1362,8 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 
 	BEGINfunc
 	assert(pMsg != NULL);
-	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = pMsg->pszUxTradMsg;
+	assert(pMsg->pszRawMsg != NULL);
+	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* do a sanity check on the version and eat it */
 	assert(p2parse[0] == '1' && p2parse[1] == ' ');
@@ -1471,8 +1463,8 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	BEGINfunc
 
 	assert(pMsg != NULL);
-	assert(pMsg->pszUxTradMsg != NULL);
-	p2parse = pMsg->pszUxTradMsg;
+	assert(pMsg->pszRawMsg != NULL);
+	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
 	/* Check to see if msg contains a timestamp. We start by assuming
 	 * that the message timestamp is the time of reciption (which we 
@@ -1685,8 +1677,9 @@ logmsg(msg_t *pMsg, int flags)
 
 	BEGINfunc
 	assert(pMsg != NULL);
-	assert(pMsg->pszUxTradMsg != NULL);
-	msg = (char*) pMsg->pszUxTradMsg;
+	assert(pMsg->pszRawMsg != NULL);
+
+	msg = (char*) pMsg->pszRawMsg + pMsg->offAfterPRI;  /* point to start of text, after PRI */
 	DBGPRINTF("logmsg: flags %x, from '%s', msg %s\n", flags, getRcvFrom(pMsg), msg);
 
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have

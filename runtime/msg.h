@@ -51,7 +51,7 @@
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	pthread_mutexattr_t mutAttr;
-short bDoLock; /* use the mutex? */
+	bool bDoLock;		 /* use the mutex? */
 	pthread_mutex_t mut;
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
@@ -73,13 +73,13 @@ short bDoLock; /* use the mutex? */
 	int iLenFacility;	/* ... and its length. */
  	uchar *pszFacilityStr;   /* facility name... */
  	int iLenFacilityStr;    /* ... and its length. */
-	//uchar *pszPRI;		/* the PRI as a string */
-	uchar bufPRI[5];
+	uchar bufPRI[5];	/* PRI as string */
 	int iLenPRI;		/* and its length */
 	uchar	*pszRawMsg;	/* message as it was received on the
 				 * wire. This is important in case we
 				 * need to preserve cryptographic verifiers.
 				 */
+	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
 	int	iLenRawMsg;	/* length of raw message */
 	uchar	*pszMSG;	/* the MSG part itself */
 	int	iLenMSG;	/* Length of the MSG part */
@@ -158,7 +158,7 @@ void MsgSetRcvFrom(msg_t *pMsg, uchar* pszRcvFrom);
 rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
 void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
 void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME);
-int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg);
+rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
 void MsgSetMSG(msg_t *pMsg, char* pszMSG);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg);
 void moveHOSTNAMEtoTAG(msg_t *pM);
@@ -183,6 +183,7 @@ uchar *getRcvFrom(msg_t *pM);
 
 #if 0
 char *getUxTradMsg(msg_t *pM);
+int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg);
 #endif
 
 /* The MsgPrepareEnqueue() function is a macro for performance reasons.

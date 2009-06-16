@@ -97,8 +97,6 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("imklog"), sizeof("imklog")-1);
 	MsgSetRawMsg(pMsg, (char*)msg);
-	MsgSetUxTradMsg(pMsg, (char*)msg);
-	MsgSetRawMsg(pMsg, (char*)msg);
 	MsgSetMSG(pMsg, (char*)msg);
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFromIP(pMsg, (uchar*)"127.0.0.1");

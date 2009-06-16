@@ -343,7 +343,6 @@ CODESTARTobjDestruct(msg)
 	if(currRefCount == 0)
 	{
 		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
-		free(pThis->pszUxTradMsg);
 		free(pThis->pszRawMsg);
 		free(pThis->pszTAG);
 		free(pThis->pszHOSTNAME);
@@ -437,6 +436,10 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->msgFlags = pOld->msgFlags;
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
+	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
+	 * passed and nobody complained -- rgerhards, 2009-06-16
+	pNew->offAfterPRI = pOld->offAfterPRI;
+	*/
 	memcpy(pNew->bufPRI, pOld->bufPRI, pOld->iLenPRI);
 	pNew->iLenPRI = pOld->iLenPRI;
 	tmpCOPYSZ(Severity);
@@ -445,7 +448,6 @@ msg_t* MsgDup(msg_t* pOld)
 	tmpCOPYSZ(FacilityStr);
 	tmpCOPYSZ(RawMsg);
 	tmpCOPYSZ(MSG);
-	tmpCOPYSZ(UxTradMsg);
 	tmpCOPYSZ(TAG);
 	tmpCOPYSZ(HOSTNAME);
 	tmpCOPYSZ(RcvFrom);
@@ -494,10 +496,13 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR(pStrm, ttGenTime, INT);
 	objSerializeSCALAR(pStrm, tRcvdAt, SYSLOGTIME);
 	objSerializeSCALAR(pStrm, tTIMESTAMP, SYSLOGTIME);
+	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
+	 * passed and nobody complained -- rgerhards, 2009-06-16
+	objSerializeSCALAR(pStrm, offsAfterPRI, SHORT);
+	*/
 
 	objSerializePTR(pStrm, pszRawMsg, PSZ);
 	objSerializePTR(pStrm, pszMSG, PSZ);
-	objSerializePTR(pStrm, pszUxTradMsg, PSZ);
 	objSerializePTR(pStrm, pszTAG, PSZ);
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
 	objSerializePTR(pStrm, pszInputName, PSZ);
@@ -701,16 +706,17 @@ static char *getRawMsg(msg_t *pM)
 			return (char*)pM->pszRawMsg;
 }
 
+
+/* enable this, if someone actually uses UxTradMsg, delete after some  time has
+ * passed and nobody complained -- rgerhards, 2009-06-16
 char *getUxTradMsg(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
 	else
-		if(pM->pszUxTradMsg == NULL)
-			return "";
-		else
-			return (char*)pM->pszUxTradMsg;
+		return (char*)pM->pszRawMsg + pM->offAfterPRI;
 }
+*/
 
 char *getMSG(msg_t *pM)
 {
@@ -724,21 +730,30 @@ char *getMSG(msg_t *pM)
 }
 
 
+/* Get PRI value as integer */
+static int getPRIi(msg_t *pM)
+{
+	assert(pM != NULL);
+	return (pM->iFacility << 3) + (pM->iSeverity);
+}
+
+
 /* Get PRI value in text form */
 static inline char *getPRI(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
 
+	/* there are some cases where bufPRI may not contain a valid string,
+	 * and then we need to build it.
+	 */
+	MsgLock(pM);
+	if(pM->bufPRI[0] == '\0') {
+		snprintf((char*)pM->bufPRI, sizeof(pM->bufPRI), "<%d>", getPRIi(pM));
+	}
+	MsgUnlock(pM);
+
 	return (char*)pM->bufPRI;
-}
-
-
-/* Get PRI value as integer */
-static int getPRIi(msg_t *pM)
-{
-	assert(pM != NULL);
-	return (pM->iFacility << 3) + (pM->iSeverity);
 }
 
 
@@ -1015,6 +1030,17 @@ MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl)
 	pMsg->flowCtlType = eFlowCtl;
 
 	RETiRet;
+}
+
+/* set offset after which PRI in raw msg starts
+ * rgerhards, 2009-06-16
+ */
+rsRetVal
+MsgSetAfterPRIOffs(msg_t *pMsg, short offs)
+{
+	assert(pMsg != NULL);
+	pMsg->offAfterPRI = offs;
+	return RS_RET_OK;
 }
 
 
@@ -1520,40 +1546,6 @@ void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME)
 }
 
 
-/* Set the UxTradMsg to a caller-provided string. This is thought
- * to be a heap buffer that the caller will no longer use. This
- * function is a performance optimization over MsgSetUxTradMsg().
- * rgerhards 2004-11-19
- */
-#if 0 /* This method is currently not called, be we like to preserve it */
-static void MsgAssignUxTradMsg(msg_t *pMsg, char *pBuf)
-{
-	assert(pMsg != NULL);
-	assert(pBuf != NULL);
-	pMsg->iLenUxTradMsg = strlen(pBuf);
-	pMsg->pszUxTradMsg = pBuf;
-}
-#endif
-
-
-/* rgerhards 2004-11-17: set the traditional Unix message in msg object
- */
-int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg)
-{
-	assert(pMsg != NULL);
-	assert(pszUxTradMsg != NULL);
-	pMsg->iLenUxTradMsg = strlen(pszUxTradMsg);
-	if(pMsg->pszUxTradMsg != NULL)
-		free(pMsg->pszUxTradMsg);
-	if((pMsg->pszUxTradMsg = malloc(pMsg->iLenUxTradMsg + 1)) != NULL)
-		memcpy(pMsg->pszUxTradMsg, pszUxTradMsg, pMsg->iLenUxTradMsg + 1);
-	else
-		dbgprintf("Could not allocate memory for pszUxTradMsg buffer.");
-
-	return(0);
-}
-
-
 /* rgerhards 2004-11-09: set MSG in msg object
  */
 void MsgSetMSG(msg_t *pMsg, char* pszMSG)
@@ -1732,8 +1724,11 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		pRes = getMSG(pMsg);
 	} else if(!strcmp((char*) pName, "rawmsg")) {
 		pRes = getRawMsg(pMsg);
+	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
+	 * passed and nobody complained -- rgerhards, 2009-06-16
 	} else if(!strcmp((char*) pName, "uxtradmsg")) {
 		pRes = getUxTradMsg(pMsg);
+	*/
 	} else if(!strcmp((char*) pName, "inputname")) {
 		pRes = (char*) getInputName(pMsg);
 	} else if(!strcmp((char*) pName, "fromhost")) {
@@ -2457,10 +2452,15 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		pThis->msgFlags = pProp->val.num;
 	} else if(isProp("pszRawMsg")) {
 		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+ 	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
+	 * passed and nobody complained -- rgerhards, 2009-06-16
+	} else if(isProp("offAfterPRI")) {
+		pThis->offAfterPRI = pProp->val.num;
+	*/
 	} else if(isProp("pszMSG")) {
 		MsgSetMSG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszUxTradMsg")) {
-		MsgSetUxTradMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		/*IGNORE*/; /* this *was* a property, but does no longer exist */
 	} else if(isProp("pszTAG")) {
 		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszInputName")) {
