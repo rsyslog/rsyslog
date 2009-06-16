@@ -441,7 +441,7 @@ processDataRcvd(tcps_sess_t *pThis, char c, struct syslogTime *stTime, time_t tt
  * this *is* the *correct* reception step for all the data we received, because
  * we have just received a bunch of data! -- rgerhards, 2009-06-16
  */
-#define NUM_MULTISUB 128
+#define NUM_MULTISUB 1024
 static rsRetVal
 DataRcvd(tcps_sess_t *pThis, char *pData, size_t iLen)
 {

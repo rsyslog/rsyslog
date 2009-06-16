@@ -1379,9 +1379,9 @@ multiSubmitMsg(multi_submit_t *pMultiSub)
 	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
 dbgprintf("multiSubmitMsg, index %d\n", i);
 		MsgPrepareEnqueue(pMultiSub->ppMsgs[i]);
-		qqueueEnqObj(pMsgQueue, pMultiSub->ppMsgs[i]->flowCtlType, (void*) pMultiSub->ppMsgs[i]);
 	}
 
+	iRet = qqueueMultiEnqObj(pMsgQueue, pMultiSub);
 	pMultiSub->nElem = 0;
 
 	RETiRet;
