@@ -51,12 +51,12 @@
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	pthread_mutexattr_t mutAttr;
-	bool bDoLock;		 /* use the mutex? */
+	bool	bDoLock;	 /* use the mutex? */
+	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
 	pthread_mutex_t mut;
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
 	short	iRefCount;	/* reference counter (0 = unused) */
-	short	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,
 	    * it is available when we have a forwarder (e.g. rfc3195d) using local
@@ -66,15 +66,9 @@ struct msg {
 	short	iSeverity;	/* the severity 0..7 */
 	uchar *pszSeverity;	/* severity as string... */
 	int iLenSeverity;	/* ... and its length. */
- 	uchar *pszSeverityStr;   /* severity name... */
- 	int iLenSeverityStr;    /* ... and its length. */
 	short	iFacility;	/* Facility code 0 .. 23*/
 	uchar *pszFacility;	/* Facility as string... */
 	int iLenFacility;	/* ... and its length. */
- 	uchar *pszFacilityStr;   /* facility name... */
- 	int iLenFacilityStr;    /* ... and its length. */
-	uchar bufPRI[5];	/* PRI as string */
-	int iLenPRI;		/* and its length */
 	uchar	*pszRawMsg;	/* message as it was received on the
 				 * wire. This is important in case we
 				 * need to preserve cryptographic verifiers.
@@ -83,8 +77,6 @@ struct msg {
 	int	iLenRawMsg;	/* length of raw message */
 	uchar	*pszMSG;	/* the MSG part itself */
 	int	iLenMSG;	/* Length of the MSG part */
-	uchar	*pszUxTradMsg;	/* the traditional UNIX message */
-	int	iLenUxTradMsg;/* Length of the traditional UNIX message */
 	uchar	*pszTAG;	/* pointer to tag value */
 	int	iLenTAG;	/* Length of the TAG part */
 	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
@@ -122,7 +114,6 @@ struct msg {
         char *pszTIMESTAMP_SecFrac;/* TIMESTAMP fractional seconds (always 6 characters) */
 	int msgFlags;		/* flags associated with this message */
 	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
-	/* now follow fixed-size buffers to safe some time otherwise used for allocs */
 };
 
 
@@ -181,11 +172,6 @@ int getHOSTNAMELen(msg_t *pM);
 char *getProgramName(msg_t *pM);
 int getProgramNameLen(msg_t *pM);
 uchar *getRcvFrom(msg_t *pM);
-
-#if 0
-char *getUxTradMsg(msg_t *pM);
-int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg);
-#endif
 
 /* The MsgPrepareEnqueue() function is a macro for performance reasons.
  * It needs one global variable to work. This is acceptable, as it gains

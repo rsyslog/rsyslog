@@ -27,6 +27,7 @@
 #ifndef	DIRTY_H_INCLUDED
 #define	DIRTY_H_INCLUDED 1
 
+rsRetVal multiSubmitMsg(multi_submit_t *pMultiSub);
 rsRetVal submitMsg(msg_t *pMsg);
 rsRetVal logmsgInternal(int iErr, int pri, uchar *msg, int flags);
 rsRetVal parseAndSubmitMessage(uchar *hname, uchar *hnameIP, uchar *msg, int len, int flags, flowControl_t flowCtlTypeu, uchar *pszInputName, struct syslogTime *stTime, time_t ttGenTime);

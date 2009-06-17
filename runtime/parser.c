@@ -284,7 +284,6 @@ rsRetVal parseMsg(msg_t *pMsg)
 	DEFiRet;
 	uchar *msg;
 	int pri;
-	int iPriText;
 
 	CHKiRet(sanitizeMessage(pMsg));
 
@@ -294,7 +293,6 @@ rsRetVal parseMsg(msg_t *pMsg)
 	/* pull PRI */
 	pri = DEFUPRI;
 	msg = pMsg->pszRawMsg;
-	iPriText = 0;
 	if(*msg == '<') {
 		/* while we process the PRI, we also fill the PRI textual representation
 		 * inside the msg object. This may not be ideal from an OOP point of view,
@@ -302,11 +300,8 @@ rsRetVal parseMsg(msg_t *pMsg)
 		 */
 		pri = 0;
 		while(isdigit((int) *++msg)) {
-			pMsg->bufPRI[iPriText++ % 4] = *msg;	 /* mod 4 to guard against malformed messages! */
 			pri = 10 * pri + (*msg - '0');
 		}
-		pMsg->bufPRI[iPriText % 4] = '\0';
-		pMsg->iLenPRI = iPriText % 4;
 		if(*msg == '>')
 			++msg;
 		if(pri & ~(LOG_FACMASK|LOG_PRIMASK))

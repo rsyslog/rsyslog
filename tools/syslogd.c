@@ -1377,7 +1377,6 @@ multiSubmitMsg(multi_submit_t *pMultiSub)
 	assert(pMultiSub != NULL);
 
 	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
-dbgprintf("multiSubmitMsg, index %d\n", i);
 		MsgPrepareEnqueue(pMultiSub->ppMsgs[i]);
 	}
 

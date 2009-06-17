@@ -55,53 +55,212 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
 
-static syslogCODE rs_prioritynames[] =
-  {
-    { "alert", LOG_ALERT },
-    { "crit", LOG_CRIT },
-    { "debug", LOG_DEBUG },
-    { "emerg", LOG_EMERG },
-    { "err", LOG_ERR },
-    { "error", LOG_ERR },               /* DEPRECATED */
-    { "info", LOG_INFO },
-    { "none", INTERNAL_NOPRI },         /* INTERNAL */
-    { "notice", LOG_NOTICE },
-    { "panic", LOG_EMERG },             /* DEPRECATED */
-    { "warn", LOG_WARNING },            /* DEPRECATED */
-    { "warning", LOG_WARNING },
-    { NULL, -1 }
-  };
+static struct {
+	uchar *pszName;
+	short lenName;
+} syslog_pri_names[192] = {
+	{ UCHAR_CONSTANT("0"), 3},
+	{ UCHAR_CONSTANT("1"), 3},
+	{ UCHAR_CONSTANT("2"), 3},
+	{ UCHAR_CONSTANT("3"), 3},
+	{ UCHAR_CONSTANT("4"), 3},
+	{ UCHAR_CONSTANT("5"), 3},
+	{ UCHAR_CONSTANT("6"), 3},
+	{ UCHAR_CONSTANT("7"), 3},
+	{ UCHAR_CONSTANT("8"), 3},
+	{ UCHAR_CONSTANT("9"), 3},
+	{ UCHAR_CONSTANT("10"), 4},
+	{ UCHAR_CONSTANT("11"), 4},
+	{ UCHAR_CONSTANT("12"), 4},
+	{ UCHAR_CONSTANT("13"), 4},
+	{ UCHAR_CONSTANT("14"), 4},
+	{ UCHAR_CONSTANT("15"), 4},
+	{ UCHAR_CONSTANT("16"), 4},
+	{ UCHAR_CONSTANT("17"), 4},
+	{ UCHAR_CONSTANT("18"), 4},
+	{ UCHAR_CONSTANT("19"), 4},
+	{ UCHAR_CONSTANT("20"), 4},
+	{ UCHAR_CONSTANT("21"), 4},
+	{ UCHAR_CONSTANT("22"), 4},
+	{ UCHAR_CONSTANT("23"), 4},
+	{ UCHAR_CONSTANT("24"), 4},
+	{ UCHAR_CONSTANT("25"), 4},
+	{ UCHAR_CONSTANT("26"), 4},
+	{ UCHAR_CONSTANT("27"), 4},
+	{ UCHAR_CONSTANT("28"), 4},
+	{ UCHAR_CONSTANT("29"), 4},
+	{ UCHAR_CONSTANT("30"), 4},
+	{ UCHAR_CONSTANT("31"), 4},
+	{ UCHAR_CONSTANT("32"), 4},
+	{ UCHAR_CONSTANT("33"), 4},
+	{ UCHAR_CONSTANT("34"), 4},
+	{ UCHAR_CONSTANT("35"), 4},
+	{ UCHAR_CONSTANT("36"), 4},
+	{ UCHAR_CONSTANT("37"), 4},
+	{ UCHAR_CONSTANT("38"), 4},
+	{ UCHAR_CONSTANT("39"), 4},
+	{ UCHAR_CONSTANT("40"), 4},
+	{ UCHAR_CONSTANT("41"), 4},
+	{ UCHAR_CONSTANT("42"), 4},
+	{ UCHAR_CONSTANT("43"), 4},
+	{ UCHAR_CONSTANT("44"), 4},
+	{ UCHAR_CONSTANT("45"), 4},
+	{ UCHAR_CONSTANT("46"), 4},
+	{ UCHAR_CONSTANT("47"), 4},
+	{ UCHAR_CONSTANT("48"), 4},
+	{ UCHAR_CONSTANT("49"), 4},
+	{ UCHAR_CONSTANT("50"), 4},
+	{ UCHAR_CONSTANT("51"), 4},
+	{ UCHAR_CONSTANT("52"), 4},
+	{ UCHAR_CONSTANT("53"), 4},
+	{ UCHAR_CONSTANT("54"), 4},
+	{ UCHAR_CONSTANT("55"), 4},
+	{ UCHAR_CONSTANT("56"), 4},
+	{ UCHAR_CONSTANT("57"), 4},
+	{ UCHAR_CONSTANT("58"), 4},
+	{ UCHAR_CONSTANT("59"), 4},
+	{ UCHAR_CONSTANT("60"), 4},
+	{ UCHAR_CONSTANT("61"), 4},
+	{ UCHAR_CONSTANT("62"), 4},
+	{ UCHAR_CONSTANT("63"), 4},
+	{ UCHAR_CONSTANT("64"), 4},
+	{ UCHAR_CONSTANT("65"), 4},
+	{ UCHAR_CONSTANT("66"), 4},
+	{ UCHAR_CONSTANT("67"), 4},
+	{ UCHAR_CONSTANT("68"), 4},
+	{ UCHAR_CONSTANT("69"), 4},
+	{ UCHAR_CONSTANT("70"), 4},
+	{ UCHAR_CONSTANT("71"), 4},
+	{ UCHAR_CONSTANT("72"), 4},
+	{ UCHAR_CONSTANT("73"), 4},
+	{ UCHAR_CONSTANT("74"), 4},
+	{ UCHAR_CONSTANT("75"), 4},
+	{ UCHAR_CONSTANT("76"), 4},
+	{ UCHAR_CONSTANT("77"), 4},
+	{ UCHAR_CONSTANT("78"), 4},
+	{ UCHAR_CONSTANT("79"), 4},
+	{ UCHAR_CONSTANT("80"), 4},
+	{ UCHAR_CONSTANT("81"), 4},
+	{ UCHAR_CONSTANT("82"), 4},
+	{ UCHAR_CONSTANT("83"), 4},
+	{ UCHAR_CONSTANT("84"), 4},
+	{ UCHAR_CONSTANT("85"), 4},
+	{ UCHAR_CONSTANT("86"), 4},
+	{ UCHAR_CONSTANT("87"), 4},
+	{ UCHAR_CONSTANT("88"), 4},
+	{ UCHAR_CONSTANT("89"), 4},
+	{ UCHAR_CONSTANT("90"), 4},
+	{ UCHAR_CONSTANT("91"), 4},
+	{ UCHAR_CONSTANT("92"), 4},
+	{ UCHAR_CONSTANT("93"), 4},
+	{ UCHAR_CONSTANT("94"), 4},
+	{ UCHAR_CONSTANT("95"), 4},
+	{ UCHAR_CONSTANT("96"), 4},
+	{ UCHAR_CONSTANT("97"), 4},
+	{ UCHAR_CONSTANT("98"), 4},
+	{ UCHAR_CONSTANT("99"), 4},
+	{ UCHAR_CONSTANT("100"), 5},
+	{ UCHAR_CONSTANT("101"), 5},
+	{ UCHAR_CONSTANT("102"), 5},
+	{ UCHAR_CONSTANT("103"), 5},
+	{ UCHAR_CONSTANT("104"), 5},
+	{ UCHAR_CONSTANT("105"), 5},
+	{ UCHAR_CONSTANT("106"), 5},
+	{ UCHAR_CONSTANT("107"), 5},
+	{ UCHAR_CONSTANT("108"), 5},
+	{ UCHAR_CONSTANT("109"), 5},
+	{ UCHAR_CONSTANT("110"), 5},
+	{ UCHAR_CONSTANT("111"), 5},
+	{ UCHAR_CONSTANT("112"), 5},
+	{ UCHAR_CONSTANT("113"), 5},
+	{ UCHAR_CONSTANT("114"), 5},
+	{ UCHAR_CONSTANT("115"), 5},
+	{ UCHAR_CONSTANT("116"), 5},
+	{ UCHAR_CONSTANT("117"), 5},
+	{ UCHAR_CONSTANT("118"), 5},
+	{ UCHAR_CONSTANT("119"), 5},
+	{ UCHAR_CONSTANT("120"), 5},
+	{ UCHAR_CONSTANT("121"), 5},
+	{ UCHAR_CONSTANT("122"), 5},
+	{ UCHAR_CONSTANT("123"), 5},
+	{ UCHAR_CONSTANT("124"), 5},
+	{ UCHAR_CONSTANT("125"), 5},
+	{ UCHAR_CONSTANT("126"), 5},
+	{ UCHAR_CONSTANT("127"), 5},
+	{ UCHAR_CONSTANT("128"), 5},
+	{ UCHAR_CONSTANT("129"), 5},
+	{ UCHAR_CONSTANT("130"), 5},
+	{ UCHAR_CONSTANT("131"), 5},
+	{ UCHAR_CONSTANT("132"), 5},
+	{ UCHAR_CONSTANT("133"), 5},
+	{ UCHAR_CONSTANT("134"), 5},
+	{ UCHAR_CONSTANT("135"), 5},
+	{ UCHAR_CONSTANT("136"), 5},
+	{ UCHAR_CONSTANT("137"), 5},
+	{ UCHAR_CONSTANT("138"), 5},
+	{ UCHAR_CONSTANT("139"), 5},
+	{ UCHAR_CONSTANT("140"), 5},
+	{ UCHAR_CONSTANT("141"), 5},
+	{ UCHAR_CONSTANT("142"), 5},
+	{ UCHAR_CONSTANT("143"), 5},
+	{ UCHAR_CONSTANT("144"), 5},
+	{ UCHAR_CONSTANT("145"), 5},
+	{ UCHAR_CONSTANT("146"), 5},
+	{ UCHAR_CONSTANT("147"), 5},
+	{ UCHAR_CONSTANT("148"), 5},
+	{ UCHAR_CONSTANT("149"), 5},
+	{ UCHAR_CONSTANT("150"), 5},
+	{ UCHAR_CONSTANT("151"), 5},
+	{ UCHAR_CONSTANT("152"), 5},
+	{ UCHAR_CONSTANT("153"), 5},
+	{ UCHAR_CONSTANT("154"), 5},
+	{ UCHAR_CONSTANT("155"), 5},
+	{ UCHAR_CONSTANT("156"), 5},
+	{ UCHAR_CONSTANT("157"), 5},
+	{ UCHAR_CONSTANT("158"), 5},
+	{ UCHAR_CONSTANT("159"), 5},
+	{ UCHAR_CONSTANT("160"), 5},
+	{ UCHAR_CONSTANT("161"), 5},
+	{ UCHAR_CONSTANT("162"), 5},
+	{ UCHAR_CONSTANT("163"), 5},
+	{ UCHAR_CONSTANT("164"), 5},
+	{ UCHAR_CONSTANT("165"), 5},
+	{ UCHAR_CONSTANT("166"), 5},
+	{ UCHAR_CONSTANT("167"), 5},
+	{ UCHAR_CONSTANT("168"), 5},
+	{ UCHAR_CONSTANT("169"), 5},
+	{ UCHAR_CONSTANT("170"), 5},
+	{ UCHAR_CONSTANT("171"), 5},
+	{ UCHAR_CONSTANT("172"), 5},
+	{ UCHAR_CONSTANT("173"), 5},
+	{ UCHAR_CONSTANT("174"), 5},
+	{ UCHAR_CONSTANT("175"), 5},
+	{ UCHAR_CONSTANT("176"), 5},
+	{ UCHAR_CONSTANT("177"), 5},
+	{ UCHAR_CONSTANT("178"), 5},
+	{ UCHAR_CONSTANT("179"), 5},
+	{ UCHAR_CONSTANT("180"), 5},
+	{ UCHAR_CONSTANT("181"), 5},
+	{ UCHAR_CONSTANT("182"), 5},
+	{ UCHAR_CONSTANT("183"), 5},
+	{ UCHAR_CONSTANT("184"), 5},
+	{ UCHAR_CONSTANT("185"), 5},
+	{ UCHAR_CONSTANT("186"), 5},
+	{ UCHAR_CONSTANT("187"), 5},
+	{ UCHAR_CONSTANT("188"), 5},
+	{ UCHAR_CONSTANT("189"), 5},
+	{ UCHAR_CONSTANT("190"), 5},
+	{ UCHAR_CONSTANT("191"), 5}
+	};
 
-#ifndef LOG_AUTHPRIV
-#	define LOG_AUTHPRIV LOG_AUTH
-#endif
-static syslogCODE rs_facilitynames[] =
-  {
-    { "auth", LOG_AUTH },
-    { "authpriv", LOG_AUTHPRIV },
-    { "cron", LOG_CRON },
-    { "daemon", LOG_DAEMON },
-#if defined(LOG_FTP)
-	{"ftp",          LOG_FTP},
-#endif
-    { "kern", LOG_KERN },
-    { "lpr", LOG_LPR },
-    { "mail", LOG_MAIL },
-    { "news", LOG_NEWS },
-    { "security", LOG_AUTH },           /* DEPRECATED */
-    { "syslog", LOG_SYSLOG },
-    { "user", LOG_USER },
-    { "uucp", LOG_UUCP },
-    { "local0", LOG_LOCAL0 },
-    { "local1", LOG_LOCAL1 },
-    { "local2", LOG_LOCAL2 },
-    { "local3", LOG_LOCAL3 },
-    { "local4", LOG_LOCAL4 },
-    { "local5", LOG_LOCAL5 },
-    { "local6", LOG_LOCAL6 },
-    { "local7", LOG_LOCAL7 },
-    { NULL, -1 }
-  };
+/*syslog facility names (as of RFC5424) */
+static char *syslog_fac_names[24] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
+			    	      "news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
+			    	      "alert", "clock", "local0", "local1", "local2", "local3",
+			    	      "local4", "local5", "local6", "local7" };
+
+/* table of severity names (in numerical order)*/
+static char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug" };
 
 /* some forward declarations */
 static int getAPPNAMELen(msg_t *pM);
@@ -352,9 +511,7 @@ CODESTARTobjDestruct(msg)
 		free(pThis->pszRcvFromIP);
 		free(pThis->pszMSG);
 		free(pThis->pszFacility);
-		free(pThis->pszFacilityStr);
 		free(pThis->pszSeverity);
-		free(pThis->pszSeverityStr);
 		free(pThis->pszRcvdAt3164);
 		free(pThis->pszRcvdAt3339);
 		free(pThis->pszRcvdAt_SecFrac);
@@ -441,12 +598,8 @@ msg_t* MsgDup(msg_t* pOld)
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
 	*/
-	memcpy(pNew->bufPRI, pOld->bufPRI, pOld->iLenPRI);
-	pNew->iLenPRI = pOld->iLenPRI;
 	tmpCOPYSZ(Severity);
-	tmpCOPYSZ(SeverityStr);
 	tmpCOPYSZ(Facility);
-	tmpCOPYSZ(FacilityStr);
 	tmpCOPYSZ(RawMsg);
 	tmpCOPYSZ(MSG);
 	tmpCOPYSZ(TAG);
@@ -734,27 +887,24 @@ char *getMSG(msg_t *pM)
 /* Get PRI value as integer */
 static int getPRIi(msg_t *pM)
 {
-	assert(pM != NULL);
 	return (pM->iFacility << 3) + (pM->iSeverity);
 }
 
 
-/* Get PRI value in text form */
+/* Get PRI value in text form
+ */
 static inline char *getPRI(msg_t *pM)
 {
+	/* PRI is a number in the range 0..191. Thus, we use a simple lookup table to obtain the
+	 * string value. It looks a bit clumpsy here in code ;)
+	 */
+	int iPRI;
+
 	if(pM == NULL)
 		return "";
 
-	/* there are some cases where bufPRI may not contain a valid string,
-	 * and then we need to build it.
-	 */
-	MsgLock(pM);
-	if(pM->bufPRI[0] == '\0') {
-		snprintf((char*)pM->bufPRI, sizeof(pM->bufPRI), "<%d>", getPRIi(pM));
-	}
-	MsgUnlock(pM);
-
-	return (char*)pM->bufPRI;
+	iPRI = getPRIi(pM);
+	return (iPRI > 191) ? "invld" : (char*)syslog_pri_names[iPRI].pszName;
 }
 
 
@@ -934,32 +1084,18 @@ static inline char *getSeverity(msg_t *pM)
 
 static inline char *getSeverityStr(msg_t *pM)
 {
-	syslogCODE *c;
-	int val;
 	char *name = NULL;
 
 	if(pM == NULL)
 		return "";
 
-	MsgLock(pM);
-	if(pM->pszSeverityStr == NULL) {
-		for(c = rs_prioritynames, val = pM->iSeverity; c->c_name; c++)
-			if(c->c_val == val) {
-				name = c->c_name;
-				break;
-			}
-		if(name == NULL) {
-			/* we use a 2 byte buffer - can only be one digit */
-			if((pM->pszSeverityStr = malloc(2)) == NULL) { MsgUnlock(pM) ; return ""; }
-			pM->iLenSeverityStr =
-				snprintf((char*)pM->pszSeverityStr, 2, "%d", pM->iSeverity);
-		} else {
-			if((pM->pszSeverityStr = (uchar*) strdup(name)) == NULL) { MsgUnlock(pM) ; return ""; }
-			pM->iLenSeverityStr = strlen((char*)name);
-		}
+	if(pM->iSeverity < 0 || pM->iSeverity > 7) {
+		name = "invld";
+	} else {
+		name = syslog_severity_names[pM->iSeverity];
 	}
-	MsgUnlock(pM);
-	return((char*)pM->pszSeverityStr);
+
+	return name;
 }
 
 static inline char *getFacility(msg_t *pM)
@@ -983,35 +1119,18 @@ static inline char *getFacility(msg_t *pM)
 
 static inline char *getFacilityStr(msg_t *pM)
 {
-        syslogCODE *c;
-        int val;
         char *name = NULL;
 
         if(pM == NULL)
                 return "";
 
-	MsgLock(pM);
-        if(pM->pszFacilityStr == NULL) {
-                for(c = rs_facilitynames, val = pM->iFacility << 3; c->c_name; c++)
-                        if(c->c_val == val) {
-                                name = c->c_name;
-                                break;
-                        }
-                if(name == NULL) {
-			/* we use a 12 byte buffer - as of 
-			 * syslog-protocol, facility can go
-			 * up to 2^32 -1
-			 */
-			if((pM->pszFacilityStr = malloc(12)) == NULL) { MsgUnlock(pM) ; return ""; }
-			pM->iLenFacilityStr =
-				snprintf((char*)pM->pszFacilityStr, 12, "%d", val >> 3);
-                } else {
-                        if((pM->pszFacilityStr = (uchar*)strdup(name)) == NULL) { MsgUnlock(pM) ; return ""; }
-                        pM->iLenFacilityStr = strlen((char*)name);
-                }
-        }
-	MsgUnlock(pM);
-        return((char*)pM->pszFacilityStr);
+	if(pM->iFacility < 0 || pM->iFacility > 23) {
+		name = "invld";
+	} else {
+		name = syslog_fac_names[pM->iFacility];
+	}
+
+	return name;
 }
 
 
@@ -1599,15 +1718,11 @@ void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg)
  */
 char *textpri(char *pRes, size_t pResLen, int pri)
 {
-	syslogCODE *c_pri, *c_fac;
-
 	assert(pRes != NULL);
 	assert(pResLen > 0);
 
-	for (c_fac = rs_facilitynames; c_fac->c_name && !(c_fac->c_val == LOG_FAC(pri)<<3); c_fac++);
-	for (c_pri = rs_prioritynames; c_pri->c_name && !(c_pri->c_val == LOG_PRI(pri)); c_pri++);
-
-	snprintf (pRes, pResLen, "%s.%s<%d>", c_fac->c_name, c_pri->c_name, pri);
+	snprintf(pRes, pResLen, "%s.%s<%d>", syslog_fac_names[LOG_FAC(pri)],
+		 syslog_severity_names[LOG_PRI(pri)], pri);
 
 	return pRes;
 }
