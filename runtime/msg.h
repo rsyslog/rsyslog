@@ -50,12 +50,12 @@
  */
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	pthread_mutexattr_t mutAttr;
-	bool	bDoLock;	 /* use the mutex? */
-	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
-	pthread_mutex_t mut;
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
+	pthread_mutexattr_t mutAttr;
+	pthread_mutex_t mut;
+	bool	bDoLock;	 /* use the mutex? */
+	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
 	short	iRefCount;	/* reference counter (0 = unused) */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,
@@ -64,17 +64,11 @@ struct msg {
 	    * resolve all these issues... rgerhards, 2005-10-06
 	    */
 	short	iSeverity;	/* the severity 0..7 */
-	uchar *pszSeverity;	/* severity as string... */
-	int iLenSeverity;	/* ... and its length. */
 	short	iFacility;	/* Facility code 0 .. 23*/
-	uchar *pszFacility;	/* Facility as string... */
-	int iLenFacility;	/* ... and its length. */
-	uchar	*pszRawMsg;	/* message as it was received on the
-				 * wire. This is important in case we
-				 * need to preserve cryptographic verifiers.
-				 */
-	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
+	uchar	*pszRawMsg;	/* message as it was received on the wire. This is important in case we
+				 * need to preserve cryptographic verifiers.  */
 	int	iLenRawMsg;	/* length of raw message */
+	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
 	uchar	*pszMSG;	/* the MSG part itself */
 	int	iLenMSG;	/* Length of the MSG part */
 	uchar	*pszTAG;	/* pointer to tag value */
@@ -114,6 +108,9 @@ struct msg {
         char *pszTIMESTAMP_SecFrac;/* TIMESTAMP fractional seconds (always 6 characters) */
 	int msgFlags;		/* flags associated with this message */
 	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
+	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
+	char pszTimestamp3164[16];
+	char pszTimestamp3339[33];
 };
 
 

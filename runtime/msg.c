@@ -262,6 +262,13 @@ static char *syslog_fac_names[24] = { "kern", "user", "mail", "daemon", "auth", 
 /* table of severity names (in numerical order)*/
 static char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug" };
 
+/* numerical values as string - this is the most efficient approach to convert severity
+ * and facility values to a numerical string... -- rgerhars, 2009-06-17
+ */
+
+static char *syslog_number_names[24] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+					 "15", "16", "17", "18", "19", "20", "21", "22", "23" };
+
 /* some forward declarations */
 static int getAPPNAMELen(msg_t *pM);
 static int getProtocolVersion(msg_t *pM);
@@ -510,15 +517,11 @@ CODESTARTobjDestruct(msg)
 		free(pThis->pszRcvFrom);
 		free(pThis->pszRcvFromIP);
 		free(pThis->pszMSG);
-		free(pThis->pszFacility);
-		free(pThis->pszSeverity);
 		free(pThis->pszRcvdAt3164);
 		free(pThis->pszRcvdAt3339);
 		free(pThis->pszRcvdAt_SecFrac);
 		free(pThis->pszRcvdAt_MySQL);
 		free(pThis->pszRcvdAt_PgSQL);
-		free(pThis->pszTIMESTAMP3164);
-		free(pThis->pszTIMESTAMP3339);
 		free(pThis->pszTIMESTAMP_SecFrac);
 		free(pThis->pszTIMESTAMP_MySQL);
 		free(pThis->pszTIMESTAMP_PgSQL);
@@ -598,8 +601,6 @@ msg_t* MsgDup(msg_t* pOld)
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
 	*/
-	tmpCOPYSZ(Severity);
-	tmpCOPYSZ(Facility);
 	tmpCOPYSZ(RawMsg);
 	tmpCOPYSZ(MSG);
 	tmpCOPYSZ(TAG);
@@ -916,12 +917,10 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 
 	switch(eFmt) {
 	case tplFmtDefault:
+	case tplFmtRFC3164Date:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3164 == NULL) {
-			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) {
-				MsgUnlock(pM);
-				return "";
-			}
+			pM->pszTIMESTAMP3164 = pM->pszTimestamp3164;
 			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
 		}
 		MsgUnlock(pM);
@@ -948,24 +947,10 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
                 }
                 MsgUnlock(pM);
                 return(pM->pszTIMESTAMP_PgSQL);
-	case tplFmtRFC3164Date:
-		MsgLock(pM);
-		if(pM->pszTIMESTAMP3164 == NULL) {
-			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) {
-				MsgUnlock(pM);
-				return "";
-			}
-			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
-		}
-		MsgUnlock(pM);
-		return(pM->pszTIMESTAMP3164);
 	case tplFmtRFC3339Date:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3339 == NULL) {
-			if((pM->pszTIMESTAMP3339 = malloc(33)) == NULL) {
-				MsgUnlock(pM);
-				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
-			}
+			pM->pszTIMESTAMP3339 = pM->pszTimestamp3339;
 			datetime.formatTimestamp3339(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 33);
 		}
 		MsgUnlock(pM);
@@ -1067,18 +1052,18 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 
 static inline char *getSeverity(msg_t *pM)
 {
+	char *name = NULL;
+
 	if(pM == NULL)
 		return "";
 
-	MsgLock(pM);
-	if(pM->pszSeverity == NULL) {
-		/* we use a 2 byte buffer - can only be one digit */
-		if((pM->pszSeverity = malloc(2)) == NULL) { MsgUnlock(pM) ; return ""; }
-		pM->iLenSeverity =
-		   snprintf((char*)pM->pszSeverity, 2, "%d", pM->iSeverity);
+	if(pM->iSeverity < 0 || pM->iSeverity > 7) {
+		name = "invld";
+	} else {
+		name = syslog_number_names[pM->iSeverity];
 	}
-	MsgUnlock(pM);
-	return((char*)pM->pszSeverity);
+
+	return name;
 }
 
 
@@ -1100,21 +1085,18 @@ static inline char *getSeverityStr(msg_t *pM)
 
 static inline char *getFacility(msg_t *pM)
 {
+	char *name = NULL;
+
 	if(pM == NULL)
 		return "";
 
-	MsgLock(pM);
-	if(pM->pszFacility == NULL) {
-		/* we use a 12 byte buffer - as of 
-		 * syslog-protocol, facility can go
-		 * up to 2^32 -1
-		 */
-		if((pM->pszFacility = malloc(12)) == NULL) { MsgUnlock(pM) ; return ""; }
-		pM->iLenFacility =
-		   snprintf((char*)pM->pszFacility, 12, "%d", pM->iFacility);
+	if(pM->iFacility < 0 || pM->iFacility > 23) {
+		name = "invld";
+	} else {
+		name = syslog_number_names[pM->iFacility];
 	}
-	MsgUnlock(pM);
-	return((char*)pM->pszFacility);
+
+	return name;
 }
 
 static inline char *getFacilityStr(msg_t *pM)
