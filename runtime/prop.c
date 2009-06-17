@@ -55,12 +55,10 @@ ENDobjConstruct(prop)
  * rgerhards, 2008-01-09
  */
 static rsRetVal
-propConstructFinalize(prop_t *pThis)
+propConstructFinalize(prop_t __attribute__((unused)) *pThis)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, prop);
-
-finalize_it:
 	RETiRet;
 }
 

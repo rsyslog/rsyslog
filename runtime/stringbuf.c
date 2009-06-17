@@ -1,3 +1,4 @@
+#include <stdio.h>
 /* This is the byte-counted string class for rsyslog. It is a replacement
  * for classical \0 terminated string functions. We introduce it in
  * the hope it will make the program more secure, obtain some performance
@@ -157,7 +158,7 @@ static rsRetVal
 rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
 {
 	uchar *pNewBuf;
-	size_t iNewSize;
+	unsigned short iNewSize;
 	DEFiRet;
 
 	/* first compute the new size needed */
@@ -224,7 +225,7 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz)
 /* append the contents of one cstr_t object to another
  * rgerhards, 2008-02-25
  */
-rsRetVal rsCStrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend)
+rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend)
 {
 	return rsCStrAppendStrWithLen(pThis, pstrAppend->pBuf, pstrAppend->iStrLen);
 }
@@ -245,32 +246,7 @@ finalize_it:
 }
 
 
-rsRetVal rsCStrAppendChar(cstr_t *pThis, uchar c)
-{
-	DEFiRet;
-
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-
-	if(pThis->iStrLen >= pThis->iBufSize) {  
-		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
-	}
-
-	/* ok, when we reach this, we have sufficient memory */
-	*(pThis->pBuf + pThis->iStrLen++) = c;
-
-	/* check if we need to invalidate an sz representation! */
-	if(pThis->pszBuf != NULL) {
-		free(pThis->pszBuf);
-		pThis->pszBuf = NULL;
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* NEW VARIANT
- * Append a character to the current string object. This may only be done until
+/* Append a character to the current string object. This may only be done until
  * cstrFinalize() is called.
  * rgerhards, 2009-06-16
  */
@@ -392,7 +368,24 @@ uchar*  rsCStrGetSzStr(cstr_t *pThis)
 }
 
 
-/* NEW VERSION for interface without separate psz buffer! */
+/* Converts the CStr object to a classical sz string and returns that.
+ * Same restrictions as in cstrGetSzStr() applies (see there!). This
+ * function here guarantees that a valid string is returned, even if
+ * the CStr object currently holds a NULL pointer string buffer. If so,
+ * "" is returned.
+ * rgerhards 2005-10-19
+ * WARNING: The returned pointer MUST NOT be freed, as it may be
+ *          obtained from that constant memory pool (in case of NULL!)
+ */
+uchar*  cstrGetSzStrNoNULL(cstr_t *pThis)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	if(pThis->pBuf == NULL)
+		return (uchar*) "";
+	else
+		return cstrGetSzStr(pThis);
+}
+
 /* Returns the cstr data as a classical C sz string. We use that the 
  * Finalizer did properly terminate our string (but we may stil be NULL).
  * So it is vital that the finalizer is called BEFORe this function here!
@@ -497,7 +490,7 @@ void rsCStrSetAllocIncrement(cstr_t *pThis, int iNewIncrement)
  * This is due to performance reasons.
  */
 #ifndef NDEBUG
-int rsCStrLen(cstr_t *pThis)
+int cstrLen(cstr_t *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	return(pThis->iStrLen);
@@ -544,6 +537,27 @@ rsRetVal rsCStrTrimTrailingWhiteSpace(cstr_t *pThis)
 	}
 	/* i now is the new string length! */
 	pThis->iStrLen = i;
+
+	return RS_RET_OK;
+}
+
+/* Trim trailing whitespace from a given string
+ */
+rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis)
+{
+	register int i;
+	register uchar *pC;
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+
+	i = pThis->iStrLen;
+	pC = pThis->pBuf + i - 1;
+	while(i > 0 && isspace((int)*pC)) {
+		--pC;
+		--i;
+	}
+	/* i now is the new string length! */
+	pThis->iStrLen = i;
+	pThis->pBuf[pThis->iStrLen] = '0'; /* we always have this space */
 
 	return RS_RET_OK;
 }

@@ -82,6 +82,7 @@ rsfrAddFunction(uchar *szName, prsf_t rsf)
 	/* unique name, so add to head of list */
 	CHKmalloc(pEntry = calloc(1, sizeof(rsf_entry_t)));
 	CHKiRet(rsCStrConstructFromszStr(&pEntry->pName, szName));
+	CHKiRet(cstrFinalize(pEntry->pName));
 	pEntry->rsf = rsf;
 	pEntry->pNext = funcRegRoot;
 	funcRegRoot = pEntry;
@@ -167,7 +168,7 @@ rsfrRemoveAll(void)
 	while(pEntry != NULL) {
 		pEntryDel = pEntry;
 		pEntry = pEntry->pNext;
-		rsCStrDestruct(&pEntryDel->pName);
+		cstrDestruct(&pEntryDel->pName);
 		free(pEntryDel);
 	}
 	funcRegRoot = NULL;
@@ -405,6 +406,7 @@ CODESTARTop(STRADD)
 	vmstk.PopString(pThis->pStk, &operand1);
 
 	CHKiRet(rsCStrAppendCStr(operand1->val.pStr, operand2->val.pStr));
+	CHKiRet(cstrFinalize(operand1->val.pStr));
 
 	/* we have a result, so let's push it */
 	vmstk.Push(pThis->pStk, operand1);
@@ -554,12 +556,12 @@ rsf_tolower(vmstk_t *pStk, int numOperands)
 		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
 
 	/* pop args and do operaton */
-	CHKiRet(rsCStrConstruct(&pcstr));
+	CHKiRet(cstrConstruct(&pcstr));
 	vmstk.PopString(pStk, &operand1);
-	pSrc = rsCStrGetSzStr(operand1->val.pStr);
-	iStrlen = strlen((char*)pSrc);
+	pSrc = cstrGetSzStr(operand1->val.pStr);
+	iStrlen = strlen((char*)pSrc); // TODO: use count from string!
 	while(iStrlen--) {
-		CHKiRet(rsCStrAppendChar(pcstr, tolower(*pSrc++)));
+		CHKiRet(cstrAppendChar(pcstr, tolower(*pSrc++)));
 	}
 
 	/* Store result and cleanup */

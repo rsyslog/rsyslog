@@ -321,7 +321,9 @@ doTests(int fd, char *files)
 			if(ret == 0) {
 				if(verbose) printf("successfully completed\n");
 			} else {
-				if(verbose) printf("failed!\n");
+				if(!verbose)
+					printf("test '%s' ", testFile);
+				printf("failed!\n");
 				++iFailed;
 			}
 		}

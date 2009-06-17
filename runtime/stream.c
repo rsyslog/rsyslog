@@ -531,19 +531,19 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr)
 	ASSERT(pThis != NULL);
 	ASSERT(ppCStr != NULL);
 
-	CHKiRet(rsCStrConstruct(ppCStr));
+	CHKiRet(cstrConstruct(ppCStr));
 
 	/* now read the line */
 	CHKiRet(strmReadChar(pThis, &c));
 	while(c != '\n') {
-		CHKiRet(rsCStrAppendChar(*ppCStr, c));
+		CHKiRet(cstrAppendChar(*ppCStr, c));
 		CHKiRet(strmReadChar(pThis, &c));
 	}
 	CHKiRet(cstrFinalize(*ppCStr));
 
 finalize_it:
 	if(iRet != RS_RET_OK && *ppCStr != NULL)
-		rsCStrDestruct(ppCStr);
+		cstrDestruct(ppCStr);
 
 	RETiRet;
 }

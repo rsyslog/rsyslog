@@ -730,10 +730,10 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 	++i; /* skip '[' */
 
 	/* now obtain the PROCID string... */
-	CHKiRet(rsCStrConstruct(&pM->pCSPROCID));
+	CHKiRet(cstrConstruct(&pM->pCSPROCID));
 	rsCStrSetAllocIncrement(pM->pCSPROCID, 16);
 	while((i < pM->iLenTAG) && (pM->pszTAG[i] != ']')) {
-		CHKiRet(rsCStrAppendChar(pM->pCSPROCID, pM->pszTAG[i]));
+		CHKiRet(cstrAppendChar(pM->pCSPROCID, pM->pszTAG[i]));
 		++i;
 	}
 
@@ -743,7 +743,7 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 		 * the buffer and simply return. Note that this is NOT an error
 		 * case!
 		 */
-		rsCStrDestruct(&pM->pCSPROCID);
+		cstrDestruct(&pM->pCSPROCID);
 		FINALIZE;
 	}
 
@@ -781,14 +781,14 @@ static rsRetVal aquireProgramName(msg_t *pM)
 		/* ok, we do not yet have it. So let's parse the TAG
 		 * to obtain it.
 		 */
-		CHKiRet(rsCStrConstruct(&pM->pCSProgName));
+		CHKiRet(cstrConstruct(&pM->pCSProgName));
 		rsCStrSetAllocIncrement(pM->pCSProgName, 33);
 		for(  i = 0
 		    ; (i < pM->iLenTAG) && isprint((int) pM->pszTAG[i])
 		      && (pM->pszTAG[i] != '\0') && (pM->pszTAG[i] != ':')
 		      && (pM->pszTAG[i] != '[')  && (pM->pszTAG[i] != '/')
 		    ; ++i) {
-			CHKiRet(rsCStrAppendChar(pM->pCSProgName, pM->pszTAG[i]));
+			CHKiRet(cstrAppendChar(pM->pCSProgName, pM->pszTAG[i]));
 		}
 		CHKiRet(cstrFinalize(pM->pCSProgName));
 	}
@@ -811,8 +811,7 @@ finalize_it:
 void moveHOSTNAMEtoTAG(msg_t *pM)
 {
 	assert(pM != NULL);
-	if(pM->pszTAG != NULL)
-		free(pM->pszTAG);
+	free(pM->pszTAG);
 	pM->pszTAG = pM->pszHOSTNAME;
 	pM->iLenTAG = pM->iLenHOSTNAME;
 	pM->pszHOSTNAME = NULL;
@@ -1188,11 +1187,11 @@ rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID)
 	ISOBJ_TYPE_assert(pMsg, msg);
 	if(pMsg->pCSPROCID == NULL) {
 		/* we need to obtain the object first */
-		CHKiRet(rsCStrConstruct(&pMsg->pCSPROCID));
-		rsCStrSetAllocIncrement(pMsg->pCSPROCID, 128);
+		CHKiRet(cstrConstruct(&pMsg->pCSPROCID));
 	}
 	/* if we reach this point, we have the object */
 	iRet = rsCStrSetSzStr(pMsg->pCSPROCID, (uchar*) pszPROCID);
+	CHKiRet(cstrFinalize(pMsg->pCSPROCID));
 
 finalize_it:
 	RETiRet;
@@ -1221,7 +1220,8 @@ char *getPROCID(msg_t *pM)
 	MsgLock(pM);
 	if(pM->pCSPROCID == NULL)
 		aquirePROCIDFromTAG(pM);
-	pszRet = (pM->pCSPROCID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSPROCID);
+	pszRet = (pM->pCSPROCID == NULL) ? "-" : (char*) cstrGetSzStrNoNULL(pM->pCSPROCID);
+	//pszRet = (pM->pCSPROCID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSPROCID);
 	MsgUnlock(pM);
 	return pszRet;
 }

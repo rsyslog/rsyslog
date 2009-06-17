@@ -258,13 +258,13 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 		pToken->tok = ctok_MSGVAR;
 	}
 
-	CHKiRet(rsCStrConstruct(&pstrVal));
+	CHKiRet(cstrConstruct(&pstrVal));
 	/* this loop is quite simple, a variable name is terminated when a non-supported
 	 * character is detected. Note that we currently permit a numerical digit as the
 	 * first char, which is not permitted by ABNF. -- rgerhards, 2009-03-10
 	 */
 	while(isalpha(c) || isdigit(c) || (c == '_') || (c == '-')) {
-		CHKiRet(rsCStrAppendChar(pstrVal, tolower(c)));
+		CHKiRet(cstrAppendChar(pstrVal, tolower(c)));
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
 	}
 	CHKiRet(ctokUngetCharFromStream(pThis, c)); /* put not processed char back */
@@ -277,7 +277,7 @@ ctokGetVar(ctok_t *pThis, ctok_token_t *pToken)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pstrVal != NULL) {
-			rsCStrDestruct(&pstrVal);
+			cstrDestruct(&pstrVal);
 		}
 	}
 
@@ -301,20 +301,20 @@ ctokGetSimpStr(ctok_t *pThis, ctok_token_t *pToken)
 
 	pToken->tok = ctok_SIMPSTR;
 
-	CHKiRet(rsCStrConstruct(&pstrVal));
+	CHKiRet(cstrConstruct(&pstrVal));
 	CHKiRet(ctokGetCharFromStream(pThis, &c));
 	/* while we are in escape mode (had a backslash), no sequence
 	 * terminates the loop. If outside, it is terminated by a single quote.
 	 */
 	while(bInEsc || c != '\'') {
 		if(bInEsc) {
-			CHKiRet(rsCStrAppendChar(pstrVal, c));
+			CHKiRet(cstrAppendChar(pstrVal, c));
 			bInEsc = 0;
 		} else {
 			if(c == '\\') {
 				bInEsc = 1;
 			} else {
-				CHKiRet(rsCStrAppendChar(pstrVal, c));
+				CHKiRet(cstrAppendChar(pstrVal, c));
 			}
 		}
 		CHKiRet(ctokGetCharFromStream(pThis, &c));
@@ -327,7 +327,7 @@ ctokGetSimpStr(ctok_t *pThis, ctok_token_t *pToken)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pstrVal != NULL) {
-			rsCStrDestruct(&pstrVal);
+			cstrDestruct(&pstrVal);
 		}
 	}
 
@@ -519,8 +519,9 @@ ctokGetToken(ctok_t *pThis, ctok_token_t **ppToken)
 							CHKiRet(ctokUngetCharFromStream(pThis, c));
 							pToken->tok = ctok_FUNCTION;
 							/* fill function name */
-							CHKiRet(rsCStrConstruct(&pstrVal));
+							CHKiRet(cstrConstruct(&pstrVal));
 							CHKiRet(rsCStrSetSzStr(pstrVal, szWord));
+							CHKiRet(cstrFinalize(pstrVal));
 							CHKiRet(var.SetString(pToken->pVar, pstrVal));
 						} else { /* give up... */
 							dbgprintf("parser has an invalid word (token) '%s'\n", szWord);
