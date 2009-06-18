@@ -177,7 +177,7 @@ ENDfreeInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	printf("%s", pData->f_hname);
+	dbgprintf("%s", pData->f_hname);
 ENDdbgPrintInstInfo
 
 

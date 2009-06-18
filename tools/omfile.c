@@ -128,7 +128,7 @@ ENDisCompatibleWithFeature
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	if(pData->bDynamicName) {
-		printf("[dynamic]\n\ttemplate='%s'"
+		dbgprintf("[dynamic]\n\ttemplate='%s'"
 		       "\tfile cache size=%d\n"
 		       "\tcreate directories: %s\n"
 		       "\tfile owner %d, group %d\n"
@@ -142,9 +142,9 @@ CODESTARTdbgPrintInstInfo
 			pData->bFailOnChown ? "yes" : "no"
 			);
 	} else { /* regular file */
-		printf("%s", pData->f_fname);
+		dbgprintf("%s", pData->f_fname);
 		if (pData->fd == -1)
-			printf(" (unused)");
+			dbgprintf(" (unused)");
 	}
 ENDdbgPrintInstInfo
 
