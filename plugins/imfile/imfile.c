@@ -61,6 +61,7 @@ DEFobjCurrIf(strm)
 typedef struct fileInfo_s {
 	uchar *pszFileName;
 	uchar *pszTag;
+	size_t lenTag;
 	uchar *pszStateFile; /* file in which state between runs is to be stored */
 	int iFacility;
 	int iSeverity;
@@ -100,7 +101,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine), cstrLen(cstrLine));
 	MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
-	MsgSetTAG(pMsg, (char*)pInfo->pszTag);
+	MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
 	pMsg->bParseHOSTNAME = 0;
@@ -471,6 +472,7 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
+			pThis->lenTag = ustrlen(pThis->pszTag);
 		}
 
 		if(pszStateFile == NULL) {

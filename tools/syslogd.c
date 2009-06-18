@@ -890,11 +890,11 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * adjust the tag. -- rgerhards, 2008-06-27
 	 */
 	if(iErr == NO_ERRCODE) {
-		MsgSetTAG(pMsg, "rsyslogd:");
+		MsgSetTAG(pMsg, UCHAR_CONSTANT("rsyslogd:"), sizeof("rsyslogd:") - 1);
 	} else {
-		snprintf((char*)pszTag, sizeof(pszTag), "rsyslogd%d:", iErr);
+		size_t len = snprintf((char*)pszTag, sizeof(pszTag), "rsyslogd%d:", iErr);
 		pszTag[32] = '\0'; /* just to make sure... */
-		MsgSetTAG(pMsg, (char*)pszTag);
+		MsgSetTAG(pMsg, pszTag, len);
 	}
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);

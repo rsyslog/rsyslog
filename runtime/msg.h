@@ -30,6 +30,7 @@
 
 /* some configuration constants */
 #define CONF_RAWMSG_BUFSIZE 101
+#define CONF_TAG_BUFSIZE 33 /* RFC says 32 chars (+ \0), but in practice we see longer ones... */
 
 #include <pthread.h>
 #include "obj.h"
@@ -74,7 +75,6 @@ struct msg {
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
 	uchar	*pszMSG;	/* the MSG part itself */
 	int	iLenMSG;	/* Length of the MSG part */
-	uchar	*pszTAG;	/* pointer to tag value */
 	int	iLenTAG;	/* Length of the TAG part */
 	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
@@ -113,6 +113,10 @@ struct msg {
 	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
 	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
+	union {
+		uchar	*pszTAG;	/* pointer to tag value */
+		uchar	szBuf[CONF_TAG_BUFSIZE];
+	} TAG;
 	char pszTimestamp3164[16];
 	char pszTimestamp3339[33];
 };
@@ -143,7 +147,7 @@ rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
 void MsgAssignTAG(msg_t *pMsg, uchar *pBuf);
-void MsgSetTAG(msg_t *pMsg, char* pszTAG);
+void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf);
 void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);

@@ -101,7 +101,7 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFromIP(pMsg, (uchar*)"127.0.0.1");
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
-	MsgSetTAG(pMsg, (char*)pszTag);
+	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
 	pMsg->iFacility = LOG_FAC(iFacility);
 	pMsg->iSeverity = LOG_PRI(iSeverity);
 	pMsg->bParseHOSTNAME = 0;

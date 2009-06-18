@@ -497,6 +497,16 @@ finalize_it:
 }
 
 
+/* some free handlers for (slightly) complicated cases... All of them may be called
+ * with an empty element.
+ */
+static inline void freeTAG(msg_t *pThis)
+{
+	if(pThis->iLenTAG >= CONF_TAG_BUFSIZE)
+		free(pThis->TAG.pszTAG);
+}
+
+
 BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
 	int currRefCount;
 CODESTARTobjDestruct(msg)
@@ -512,7 +522,7 @@ CODESTARTobjDestruct(msg)
 		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
 		if(pThis->pszRawMsg != pThis->szRawMsg)
 			free(pThis->pszRawMsg);
-		free(pThis->pszTAG);
+		freeTAG(pThis);
 		free(pThis->pszHOSTNAME);
 		free(pThis->pszInputName);
 		free(pThis->pszRcvFrom);
@@ -602,9 +612,19 @@ msg_t* MsgDup(msg_t* pOld)
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
 	*/
+	if(pOld->iLenTAG > 0) {
+		if(pOld->iLenTAG < CONF_TAG_BUFSIZE) {
+			memcpy(pNew->TAG.szBuf, pOld->TAG.szBuf, pOld->iLenTAG);
+		} else {
+			if((pNew->TAG.pszTAG = srUtilStrDup(pOld->TAG.pszTAG, pOld->iLenTAG)) == NULL) {
+				msgDestruct(&pNew);
+				return NULL;
+			}
+			pNew->iLenTAG = pOld->iLenTAG;
+		}
+	}
 	tmpCOPYSZ(RawMsg);
 	tmpCOPYSZ(MSG);
-	tmpCOPYSZ(TAG);
 	tmpCOPYSZ(HOSTNAME);
 	tmpCOPYSZ(RcvFrom);
 
@@ -659,7 +679,10 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 
 	objSerializePTR(pStrm, pszRawMsg, PSZ);
 	objSerializePTR(pStrm, pszMSG, PSZ);
-	objSerializePTR(pStrm, pszTAG, PSZ);
+
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszTAG"), PROPTYPE_PSZ, (void*)
+		((pThis->iLenTAG < CONF_TAG_BUFSIZE) ? pThis->TAG.szBuf : pThis->TAG.pszTAG)));
+
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
 	objSerializePTR(pStrm, pszInputName, PSZ);
 	objSerializePTR(pStrm, pszRcvFrom, PSZ);
@@ -712,18 +735,22 @@ msg_t *MsgAddRef(msg_t *pM)
 static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 {
 	register int i;
+	uchar *pszTag;
 	DEFiRet;
 
 	assert(pM != NULL);
+
 	if(pM->pCSPROCID != NULL)
 		return RS_RET_OK; /* we are already done ;) */
 
 	if(getProtocolVersion(pM) != 0)
 		return RS_RET_OK; /* we can only emulate if we have legacy format */
 
+	pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
+
 	/* find first '['... */
 	i = 0;
-	while((i < pM->iLenTAG) && (pM->pszTAG[i] != '['))
+	while((i < pM->iLenTAG) && (pszTag[i] != '['))
 		++i;
 	if(!(i < pM->iLenTAG))
 		return RS_RET_OK;	/* no [, so can not emulate... */
@@ -733,8 +760,8 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 	/* now obtain the PROCID string... */
 	CHKiRet(cstrConstruct(&pM->pCSPROCID));
 	rsCStrSetAllocIncrement(pM->pCSPROCID, 16);
-	while((i < pM->iLenTAG) && (pM->pszTAG[i] != ']')) {
-		CHKiRet(cstrAppendChar(pM->pCSPROCID, pM->pszTAG[i]));
+	while((i < pM->iLenTAG) && (pszTag[i] != ']')) {
+		CHKiRet(cstrAppendChar(pM->pCSPROCID, pszTag[i]));
 		++i;
 	}
 
@@ -774,22 +801,24 @@ finalize_it:
  */
 static rsRetVal aquireProgramName(msg_t *pM)
 {
-	DEFiRet;
 	register int i;
+	uchar *pszTag;
+	DEFiRet;
 
 	assert(pM != NULL);
 	if(pM->pCSProgName == NULL) {
 		/* ok, we do not yet have it. So let's parse the TAG
 		 * to obtain it.
 		 */
+		pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
 		CHKiRet(cstrConstruct(&pM->pCSProgName));
 		rsCStrSetAllocIncrement(pM->pCSProgName, 33);
 		for(  i = 0
-		    ; (i < pM->iLenTAG) && isprint((int) pM->pszTAG[i])
-		      && (pM->pszTAG[i] != '\0') && (pM->pszTAG[i] != ':')
-		      && (pM->pszTAG[i] != '[')  && (pM->pszTAG[i] != '/')
+		    ; (i < pM->iLenTAG) && isprint((int) pszTag[i])
+		      && (pszTag[i] != '\0') && (pszTag[i] != ':')
+		      && (pszTag[i] != '[')  && (pszTag[i] != '/')
 		    ; ++i) {
-			CHKiRet(cstrAppendChar(pM->pCSProgName, pM->pszTAG[i]));
+			CHKiRet(cstrAppendChar(pM->pCSProgName, pszTag[i]));
 		}
 		CHKiRet(cstrFinalize(pM->pCSProgName));
 	}
@@ -808,13 +837,16 @@ finalize_it:
  * This is especially important as this can be a very common case, e.g.
  * when BSD syslog is acting as a sender.
  * rgerhards, 2005-11-10.
+ * NOTE ********* 2009-06-18 / rgerhards *************
+ * This function is being obsoleted by the new handling. I keep it for
+ * a while, and for oversize tags it is somewhat less optimal than in previous
+ * versions. This should only happen very seldom.
  */
 void moveHOSTNAMEtoTAG(msg_t *pM)
 {
 	assert(pM != NULL);
-	free(pM->pszTAG);
-	pM->pszTAG = pM->pszHOSTNAME;
-	pM->iLenTAG = pM->iLenHOSTNAME;
+	MsgSetTAG(pM, pM->pszHOSTNAME, pM->iLenHOSTNAME);
+	free(pM->pszHOSTNAME);
 	pM->pszHOSTNAME = NULL;
 	pM->iLenHOSTNAME = 0;
 }
@@ -1264,8 +1296,8 @@ static inline char *getMSGID(msg_t *pM)
 void MsgAssignTAG(msg_t *pMsg, uchar *pBuf)
 {
 	assert(pMsg != NULL);
-	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen((char*)pBuf);
-	pMsg->pszTAG =  (uchar*) pBuf;
+	MsgSetTAG(pMsg, pBuf, ustrlen(pBuf));
+	free(pBuf);
 }
 
 
@@ -1278,17 +1310,28 @@ void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
 }
 
 
-/* rgerhards 2004-11-16: set TAG in msg object
+/* set TAG in msg object
+ * (rewritten 2009-06-18 rgerhards)
  */
-void MsgSetTAG(msg_t *pMsg, char* pszTAG)
+void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
 {
+	uchar *pBuf;
 	assert(pMsg != NULL);
-	free(pMsg->pszTAG);
-	pMsg->iLenTAG = strlen(pszTAG);
-	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) != NULL)
-		memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
-	else
-		dbgprintf("Could not allocate memory in MsgSetTAG()\n");
+
+	freeTAG(pMsg);
+
+	pMsg->iLenTAG = lenBuf;
+	if(pMsg->iLenTAG < CONF_RAWMSG_BUFSIZE) {
+		/* small enough: use fixed buffer (faster!) */
+		pBuf = pMsg->TAG.szBuf;
+	} else if((pBuf = (uchar*) malloc(pMsg->iLenTAG + 1)) == NULL) {
+		/* truncate message, better than completely loosing it... */
+		pBuf = pMsg->TAG.szBuf;
+		pMsg->iLenTAG = CONF_RAWMSG_BUFSIZE - 1;
+	}
+
+	memcpy(pBuf, pszBuf, pMsg->iLenTAG);
+	pBuf[pMsg->iLenTAG] = '\0'; /* this also works with truncation! */
 }
 
 
@@ -1305,13 +1348,13 @@ static void tryEmulateTAG(msg_t *pM)
 	uchar *pBuf;
 	assert(pM != NULL);
 
-	if(pM->pszTAG != NULL) 
+	if(pM->iLenTAG > 0)
 		return; /* done, no need to emulate */
 	
 	if(getProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM), "-")) {
 			/* no process ID, use APP-NAME only */
-			MsgSetTAG(pM, getAPPNAME(pM));
+			MsgSetTAG(pM, (uchar*) getAPPNAME(pM), getAPPNAMELen(pM));
 		} else {
 			/* now we can try to emulate */
 			iTAGLen = getAPPNAMELen(pM) + getPROCIDLen(pM) + 3;
@@ -1324,22 +1367,6 @@ static void tryEmulateTAG(msg_t *pM)
 }
 
 
-#if 0 /* This method is currently not called, be we like to preserve it */
-static int getTAGLen(msg_t *pM)
-{
-	if(pM == NULL)
-		return 0;
-	else {
-		tryEmulateTAG(pM);
-		if(pM->pszTAG == NULL)
-			return 0;
-		else
-			return pM->iLenTAG;
-	}
-}
-#endif
-
-
 static inline char *getTAG(msg_t *pM)
 {
 	char *ret;
@@ -1349,10 +1376,10 @@ static inline char *getTAG(msg_t *pM)
 	else {
 		MsgLock(pM);
 		tryEmulateTAG(pM);
-		if(pM->pszTAG == NULL)
+		if(pM->iLenTAG == 0)
 			ret = "";
 		else
-			ret = (char*) pM->pszTAG;
+			ret = (char*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
 		MsgUnlock(pM);
 	}
 	return(ret);
@@ -2590,7 +2617,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	} else if(isProp("pszUxTradMsg")) {
 		/*IGNORE*/; /* this *was* a property, but does no longer exist */
 	} else if(isProp("pszTAG")) {
-		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetTAG(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
 	} else if(isProp("pszInputName")) {
 		MsgSetInputName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pszRcvFromIP")) {
