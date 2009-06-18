@@ -153,6 +153,20 @@ version before switching to this one.
   Thanks to Ken for providing the patch
 ---------------------------------------------------------------------------
 Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
+- bugfix: invalid error message issued if $inlcudeConfig was on an empty
+  set of files (e.g. *.conf, where none such files existed)
+  thanks to Michael Biebl for reporting this bug
+- bugfix: when run in foreground (but not in debug mode), a 
+  debug message ("DoDie called") was emitted at shutdown. Removed.
+  thanks to Michael Biebl for reporting this bug
+- bugfix: some garbagge was emitted to stderr on shutdown. This
+  garbage consisted of file names, which were written during 
+  startup (key point: not a pointer error)
+  thanks to Michael Biebl for reporting this bug
+- bugfix: startup and shutdown message were emitted to stdout
+  thanks to Michael Biebl for reporting this bug
+- bugfix: error messages were not emitted to stderr in forked mode
+  (stderr and stdo are now kept open across forks)
 - bugfix: internal messages were emitted to whatever file had fd2 when
   rsyslogd ran in forked mode (as usual!)
   Thanks to varmojfekoj for the patch
