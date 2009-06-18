@@ -84,6 +84,11 @@ static enum LOGSRC {none, proc, kernel} logsrc;
 extern int ksyslog(int type, char *buf, int len);
 
 
+static uchar *GetPath(void)
+{
+	return pszPath ? pszPath : _PATH_KLOG;
+}
+
 static void CloseLogSrc(void)
 {
 	/* Turn on logging of messages to console, but only if we had the -c
@@ -135,7 +140,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 	 * file system is available to get kernel messages from.
 	 */
 	if ( use_syscall ||
-	    ((stat(_PATH_KLOG, &sb) < 0) && (errno == ENOENT)) )
+	    ((stat(GetPath(), &sb) < 0) && (errno == ENOENT)) )
 	{
 	  	/* Initialize kernel logging. */
 	  	ksyslog(1, NULL, 0);
@@ -144,14 +149,14 @@ static enum LOGSRC GetKernelLogSrc(void)
 		return(kernel);
 	}
 
-	if ( (kmsg = open(_PATH_KLOG, O_RDONLY|O_CLOEXEC)) < 0 )
+	if ( (kmsg = open(GetPath(), O_RDONLY|O_CLOEXEC)) < 0 )
 	{
 		imklogLogIntMsg(LOG_ERR, "imklog: Cannot open proc file system, %d.\n", errno);
 		ksyslog(7, NULL, 0); /* TODO: check this, implement more */
 		return(none);
 	}
 
-	imklogLogIntMsg(LOG_INFO, "imklog %s, log source = %s started.", VERSION, _PATH_KLOG);
+	imklogLogIntMsg(LOG_INFO, "imklog %s, log source = %s started.", VERSION, GetPath());
 	return(proc);
 }
 

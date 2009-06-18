@@ -2750,8 +2750,6 @@ static rsRetVal mainThread()
         pTmp = template_StdPgSQLFmt;
         tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
 
-	CHKiRet(init());
-
 	if(Debug && debugging_on) {
 		DBGPRINTF("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 	}
@@ -2778,6 +2776,8 @@ static rsRetVal mainThread()
 		glbl.SetHUPisRestart(0); /* we can not do restart-type HUPs with dropped privs */
 	}
 
+
+	CHKiRet(init());
 
 	/* END OF INTIALIZATION
 	 * ... but keep in mind that we might do a restart and thus init() might

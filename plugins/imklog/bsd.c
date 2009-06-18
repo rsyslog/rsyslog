@@ -83,6 +83,11 @@ static int	fklog = -1;	/* /dev/klog */
 #	define _PATH_KLOG "/dev/klog"
 #endif
 
+static uchar *GetPath(void)
+{
+	return pszPath ? pszPath : _PATH_KLOG;
+}
+
 /* open the kernel log - will be called inside the willRun() imklog
  * entry point. -- rgerhards, 2008-04-09
  */
@@ -91,9 +96,9 @@ klogWillRun(void)
 {
 	DEFiRet;
 
-	fklog = open(_PATH_KLOG, O_RDONLY, 0);
+	fklog = open(GetPath(), O_RDONLY, 0);
 	if (fklog < 0) {
-		dbgprintf("can't open %s (%d)\n", _PATH_KLOG, errno);
+		dbgprintf("can't open %s (%d)\n", GetPath(), errno);
 		iRet = RS_RET_ERR; // TODO: better error code
 	}
 

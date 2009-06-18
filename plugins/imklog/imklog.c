@@ -44,6 +44,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #include "dirty.h"
 #include "cfsysline.h"
@@ -69,6 +70,7 @@ int use_syscall = 0;
 int symbol_lookup = 0; /* on recent kernels > 2.6, the kernel does this */
 int bPermitNonKernel = 0; /* permit logging of messages not having LOG_KERN facility */
 int iFacilIntMsg; /* the facility to use for internal messages (set by driver) */
+uchar *pszPath = NULL;
 /* TODO: configuration for the following directives must be implemented. It 
  * was not done yet because we either do not yet have a config handler for
  * that type or I thought it was acceptable to push it to a later stage when
@@ -243,6 +245,8 @@ CODESTARTmodExit
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
+	if(pszPath != NULL)
+		free(pszPath);
 ENDmodExit
 
 
@@ -259,6 +263,10 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	symfile = NULL;
 	symbol_lookup = 0;
 	bPermitNonKernel = 0;
+	if(pszPath != NULL) {
+		free(pszPath);
+		pszPath = NULL;
+	}
 	iFacilIntMsg = klogFacilIntMsg();
 	return RS_RET_OK;
 }
@@ -273,6 +281,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	iFacilIntMsg = klogFacilIntMsg();
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"debugprintkernelsymbols", 0, eCmdHdlrBinary, NULL, &dbgPrintSymbols, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogpath", 0, eCmdHdlrGetWord, NULL, &pszPath, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbollookup", 0, eCmdHdlrBinary, NULL, &symbol_lookup, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogsymbolstwice", 0, eCmdHdlrBinary, NULL, &symbols_twice, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"klogusesyscallinterface", 0, eCmdHdlrBinary, NULL, &use_syscall, STD_LOADABLE_MODULE_ID));
