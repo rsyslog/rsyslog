@@ -73,7 +73,8 @@ struct msg {
 				 * need to preserve cryptographic verifiers.  */
 	int	iLenRawMsg;	/* length of raw message */
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
-	uchar	*pszMSG;	/* the MSG part itself */
+	short	offMSG;		/* offset at which the MSG part starts in pszRawMsg */
+	//uchar	*pszMSG;	/* the MSG part itself */
 	int	iLenMSG;	/* Length of the MSG part */
 	int	iLenTAG;	/* Length of the TAG part */
 	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
@@ -156,7 +157,7 @@ rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
 void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
 void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
-void MsgSetMSG(msg_t *pMsg, char* pszMSG);
+void MsgSetMSGoffs(msg_t *pMsg, short offs);
 void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 void moveHOSTNAMEtoTAG(msg_t *pM);

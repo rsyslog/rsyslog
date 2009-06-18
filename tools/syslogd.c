@@ -1146,7 +1146,8 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	}
 
 	/* MSG */
-	MsgSetMSG(pMsg, (char*)p2parse);
+	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
+	//MsgSetMSG(pMsg, (char*)p2parse);
 
 	free(pBuf);
 	ENDfunc
@@ -1339,7 +1340,9 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	}
 
 	/* The rest is the actual MSG */
-	MsgSetMSG(pMsg, (char*)p2parse);
+dbgprintf("XXX: msg set msg offset %d, str: '%s', prev '%s'\n", p2parse - pMsg->pszRawMsg, pMsg->pszRawMsg + (p2parse - pMsg->pszRawMsg), p2parse);
+//	MsgSetMSG(pMsg, (char*)p2parse);
+	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 
 	ENDfunc
 	return 0; /* all ok */

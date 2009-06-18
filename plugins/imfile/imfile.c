@@ -99,7 +99,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("imfile"), sizeof("imfile")-1);
 	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine), cstrLen(cstrLine));
-	MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
+	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
 	MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);

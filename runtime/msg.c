@@ -438,6 +438,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
+	pM->offMSG = -1;
 	objConstructSetObjInfo(pM);
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
@@ -527,7 +528,6 @@ CODESTARTobjDestruct(msg)
 		free(pThis->pszInputName);
 		free(pThis->pszRcvFrom);
 		free(pThis->pszRcvFromIP);
-		free(pThis->pszMSG);
 		free(pThis->pszRcvdAt3164);
 		free(pThis->pszRcvdAt3339);
 		free(pThis->pszRcvdAt_SecFrac);
@@ -608,6 +608,7 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->msgFlags = pOld->msgFlags;
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
+	pNew->offMSG = pOld->offMSG;
 	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
@@ -624,7 +625,6 @@ msg_t* MsgDup(msg_t* pOld)
 		}
 	}
 	tmpCOPYSZ(RawMsg);
-	tmpCOPYSZ(MSG);
 	tmpCOPYSZ(HOSTNAME);
 	tmpCOPYSZ(RcvFrom);
 
@@ -668,6 +668,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR(pStrm, iProtocolVersion, SHORT);
 	objSerializeSCALAR(pStrm, iSeverity, SHORT);
 	objSerializeSCALAR(pStrm, iFacility, SHORT);
+	objSerializeSCALAR(pStrm, offMSG, SHORT);
 	objSerializeSCALAR(pStrm, msgFlags, INT);
 	objSerializeSCALAR(pStrm, ttGenTime, INT);
 	objSerializeSCALAR(pStrm, tRcvdAt, SYSLOGTIME);
@@ -677,12 +678,10 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR(pStrm, offsAfterPRI, SHORT);
 	*/
 
-	objSerializePTR(pStrm, pszRawMsg, PSZ);
-	objSerializePTR(pStrm, pszMSG, PSZ);
-
 	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszTAG"), PROPTYPE_PSZ, (void*)
 		((pThis->iLenTAG < CONF_TAG_BUFSIZE) ? pThis->TAG.szBuf : pThis->TAG.pszTAG)));
 
+	objSerializePTR(pStrm, pszRawMsg, PSZ);
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
 	objSerializePTR(pStrm, pszInputName, PSZ);
 	objSerializePTR(pStrm, pszRcvFrom, PSZ);
@@ -911,10 +910,10 @@ char *getMSG(msg_t *pM)
 	if(pM == NULL)
 		return "";
 	else {
-		if(pM->pszMSG == NULL)
+		if(pM->offMSG == -1)
 			return "";
 		else
-			return (char*)pM->pszMSG;
+			return (char*)(pM->pszRawMsg + pM->offMSG);
 	}
 }
 
@@ -1689,6 +1688,16 @@ void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME)
 
 /* rgerhards 2004-11-09: set MSG in msg object
  */
+void MsgSetMSGoffs(msg_t *pMsg, short offs)
+{
+	assert(pMsg != NULL);
+
+	pMsg->iLenMSG = ustrlen(pMsg->pszRawMsg + offs);
+	pMsg->offMSG = offs;
+}
+#if 0
+/* rgerhards 2004-11-09: set MSG in msg object
+ */
 void MsgSetMSG(msg_t *pMsg, char* pszMSG)
 {
 	assert(pMsg != NULL);
@@ -1703,6 +1712,7 @@ void MsgSetMSG(msg_t *pMsg, char* pszMSG)
 	else
 		dbgprintf("MsgSetMSG could not allocate memory for pszMSG buffer.");
 }
+#endif
 
 /* set raw message in message object. Size of message is provided.
  * rgerhards, 2009-06-16
@@ -2619,6 +2629,8 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		pThis->iFacility = pProp->val.num;
  	} else if(isProp("msgFlags")) {
 		pThis->msgFlags = pProp->val.num;
+ 	} else if(isProp("offMSG")) {
+		pThis->offMSG = pProp->val.num;
 	} else if(isProp("pszRawMsg")) {
 		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
  	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
@@ -2626,8 +2638,6 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	} else if(isProp("offAfterPRI")) {
 		pThis->offAfterPRI = pProp->val.num;
 	*/
-	} else if(isProp("pszMSG")) {
-		MsgSetMSG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszUxTradMsg")) {
 		/*IGNORE*/; /* this *was* a property, but does no longer exist */
 	} else if(isProp("pszTAG")) {
@@ -2654,6 +2664,8 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	} else if(isProp("tTIMESTAMP")) {
 		memcpy(&pThis->tTIMESTAMP, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
+	} else if(isProp("pszMSG")) {
+		dbgprintf("no longer supported property pszMSG silently ignored\n");
 	}
 
 	RETiRet;
