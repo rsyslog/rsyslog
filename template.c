@@ -571,6 +571,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	cstrFinalize(pStrB);
 	if(cstrConvSzStrAndDestruct(pStrB, &pTpe->data.field.pPropRepl, 0) != RS_RET_OK)
 		return 1;
+// TODO: another optimization: map name to integer id OPT
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {

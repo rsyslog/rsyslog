@@ -74,7 +74,6 @@ struct msg {
 	int	iLenRawMsg;	/* length of raw message */
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
 	short	offMSG;		/* offset at which the MSG part starts in pszRawMsg */
-	//uchar	*pszMSG;	/* the MSG part itself */
 	int	iLenMSG;	/* Length of the MSG part */
 	int	iLenTAG;	/* Length of the TAG part */
 	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */

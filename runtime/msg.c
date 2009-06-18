@@ -1321,13 +1321,17 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
 	freeTAG(pMsg);
 
 	pMsg->iLenTAG = lenBuf;
-	if(pMsg->iLenTAG < CONF_RAWMSG_BUFSIZE) {
+	if(pMsg->iLenTAG < CONF_TAG_BUFSIZE) {
 		/* small enough: use fixed buffer (faster!) */
 		pBuf = pMsg->TAG.szBuf;
-	} else if((pBuf = (uchar*) malloc(pMsg->iLenTAG + 1)) == NULL) {
-		/* truncate message, better than completely loosing it... */
-		pBuf = pMsg->TAG.szBuf;
-		pMsg->iLenTAG = CONF_RAWMSG_BUFSIZE - 1;
+	} else {
+		if((pBuf = (uchar*) malloc(pMsg->iLenTAG + 1)) == NULL) {
+			/* truncate message, better than completely loosing it... */
+			pBuf = pMsg->TAG.szBuf;
+			pMsg->iLenTAG = CONF_TAG_BUFSIZE - 1;
+		} else {
+			pMsg->TAG.pszTAG = pBuf;
+		}
 	}
 
 	memcpy(pBuf, pszBuf, pMsg->iLenTAG);
@@ -1695,24 +1699,7 @@ void MsgSetMSGoffs(msg_t *pMsg, short offs)
 	pMsg->iLenMSG = ustrlen(pMsg->pszRawMsg + offs);
 	pMsg->offMSG = offs;
 }
-#if 0
-/* rgerhards 2004-11-09: set MSG in msg object
- */
-void MsgSetMSG(msg_t *pMsg, char* pszMSG)
-{
-	assert(pMsg != NULL);
-	assert(pszMSG != NULL);
 
-	if(pMsg->pszMSG != NULL)
-		free(pMsg->pszMSG);
-
-	pMsg->iLenMSG = strlen(pszMSG);
-	if((pMsg->pszMSG = (uchar*) malloc(pMsg->iLenMSG + 1)) != NULL)
-		memcpy(pMsg->pszMSG, pszMSG, pMsg->iLenMSG + 1);
-	else
-		dbgprintf("MsgSetMSG could not allocate memory for pszMSG buffer.");
-}
-#endif
 
 /* set raw message in message object. Size of message is provided.
  * rgerhards, 2009-06-16
@@ -1869,6 +1856,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	int iLen;
 	short iOffs;
 
+	BEGINfunc
 #ifdef	FEATURE_REGEXP
 	/* Variables necessary for regular expression matching */
 	size_t nmatch = 10;
@@ -2562,6 +2550,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	*pPropLen = bufLen;
 
 	/*dbgprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
+	ENDfunc
 	return(pRes);
 }
 
