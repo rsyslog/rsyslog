@@ -876,11 +876,6 @@ char *getProtocolVersionString(msg_t *pM)
 	return(pM->iProtocolVersion ? "1" : "0");
 }
 
-int getMSGLen(msg_t *pM)
-{
-	return((pM == NULL) ? 0 : pM->iLenMSG);
-}
-
 
 static char *getRawMsg(msg_t *pM)
 {
@@ -904,6 +899,12 @@ char *getUxTradMsg(msg_t *pM)
 		return (char*)pM->pszRawMsg + pM->offAfterPRI;
 }
 */
+
+
+int getMSGLen(msg_t *pM)
+{
+	return((pM == NULL) ? 0 : pM->iLenMSG);
+}
 
 char *getMSG(msg_t *pM)
 {
@@ -1851,6 +1852,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 {
 	uchar *pName;
 	char *pRes; /* result pointer */
+	int bufLen = -1; /* length of string or -1, if not known */
 	char *pBufStart;
 	char *pBuf;
 	int iLen;
@@ -1877,6 +1879,14 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 * property names. These come after || in the ifs below. */
 	if(!strcmp((char*) pName, "msg")) {
 		pRes = getMSG(pMsg);
+		bufLen = getMSGLen(pMsg);
+	} else if(!strcmp((char*) pName, "timestamp")
+		  || !strcmp((char*) pName, "timereported")) {
+		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
+	} else if(!strcmp((char*) pName, "hostname") || !strcmp((char*) pName, "source")) {
+		pRes = getHOSTNAME(pMsg);
+	} else if(!strcmp((char*) pName, "syslogtag")) {
+		pRes = getTAG(pMsg);
 	} else if(!strcmp((char*) pName, "rawmsg")) {
 		pRes = getRawMsg(pMsg);
 	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
@@ -1890,10 +1900,6 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		pRes = (char*) getRcvFrom(pMsg);
 	} else if(!strcmp((char*) pName, "fromhost-ip")) {
 		pRes = (char*) getRcvFromIP(pMsg);
-	} else if(!strcmp((char*) pName, "source") || !strcmp((char*) pName, "hostname")) {
-		pRes = getHOSTNAME(pMsg);
-	} else if(!strcmp((char*) pName, "syslogtag")) {
-		pRes = getTAG(pMsg);
 	} else if(!strcmp((char*) pName, "pri")) {
 		pRes = getPRI(pMsg);
 	} else if(!strcmp((char*) pName, "pri-text")) {
@@ -1917,9 +1923,6 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		pRes = getSeverityStr(pMsg);
 	} else if(!strcmp((char*) pName, "timegenerated")) {
 		pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
-	} else if(!strcmp((char*) pName, "timereported")
-		  || !strcmp((char*) pName, "timestamp")) {
-		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp((char*) pName, "programname")) {
 		pRes = getProgramName(pMsg);
 	} else if(!strcmp((char*) pName, "protocol-version")) {
@@ -2042,6 +2045,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			}
 			/* now copy */
 			memcpy(pBuf, pFld, iLen);
+			bufLen = iLen;
 			pBuf[iLen] = '\0'; /* terminate it */
 			if(*pbMustBeFreed == 1)
 				free(pRes);
@@ -2086,6 +2090,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			}
 		}
 		/* OK, we are at the begin - now let's copy... */
+		bufLen = iLen;
 		while(*pSb && iLen) {
 			*pBuf++ = *pSb;
 			++pSb;
@@ -2181,6 +2186,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 					/* Lets copy the matched substring to the buffer */
 					memcpy(pB, pRes + iOffs +  pmatch[pTpe->data.field.iSubMatchToUse].rm_so, iLenBuf);
+					bufLen = iLenBuf - 1;
 					pB[iLenBuf] = '\0';/* terminate string, did not happen before */
 
 					if (*pbMustBeFreed == 1)
@@ -2206,28 +2212,13 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 	/* now check if we need to do our "SP if first char is non-space" hack logic */
 	if(*pRes && pTpe->data.field.options.bSPIffNo1stSP) {
-		char *pB;
-		uchar cFirst = *pRes;
-
 		/* here, we always destruct the buffer and return a new one */
-		pB = (char *) malloc(2 * sizeof(char));
-		if(pB == NULL) {
-			if(*pbMustBeFreed == 1)
-				free(pRes);
-			*pbMustBeFreed = 0;
-			return "**OUT OF MEMORY**";
-		}
-		pRes = pB;
-		*pbMustBeFreed = 1;
-
-		if(cFirst == ' ') {
-			/* if we have a SP, we must return an empty string */
-			*pRes = '\0'; /* empty */
-		} else {
-			/* if it is no SP, we need to return one */
-			*pRes = ' ';
-			*(pRes+1) = '\0';
-		}
+		uchar cFirst = *pRes; /* save first char */
+		if(*pbMustBeFreed == 1)
+			free(pRes);
+		pRes = (cFirst == ' ') ? "" : " ";
+		bufLen = (cFirst == ' ') ? 0 : 1;
+		*pbMustBeFreed = 0;
 	}
 
 	if(*pRes) {
@@ -2236,11 +2227,12 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		 */
 		if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
 			/* we need to obtain a private copy */
-			int iBufLen = strlen(pRes);
+			if(bufLen == -1)
+				bufLen = strlen(pRes);
 			char *pBStart;
 			char *pB;
 			char *pSrc;
-			pBStart = pB = malloc((iBufLen + 1) * sizeof(char));
+			pBStart = pB = malloc((bufLen + 1) * sizeof(char));
 			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -2302,6 +2294,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				pRes = pDstStart;
+				bufLen = iLenBuf;
 				*pbMustBeFreed = 1;
 			}
 		} else if(pTpe->data.field.options.bSpaceCC) {
@@ -2320,7 +2313,9 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 						*pDst = ' ';
 				}
 			} else {
-				pDst = pDstStart = malloc(strlen(pRes) + 1);
+				if(bufLen == -1)
+					bufLen = strlen(pRes);
+				pDst = pDstStart = malloc(bufLen + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -2381,6 +2376,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				pRes = pBStart;
+				bufLen = -1;
 				*pbMustBeFreed = 1;
 			}
 		}
@@ -2420,6 +2416,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				pRes = pDstStart;
+				bufLen = -1; /* TODO: can we do better? */
 				*pbMustBeFreed = 1;
 			}
 		} else {
@@ -2438,7 +2435,9 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 						*pDst++ = '_';
 				}
 			} else {
-				pDst = pDstStart = malloc(strlen(pRes) + 1);
+				if(bufLen == -1)
+					bufLen = strlen(pRes);
+				pDst = pDstStart = malloc(bufLen + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -2476,16 +2475,20 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(*pbMustBeFreed == 1)
 				free(pRes);
 			pRes = "_";
+			bufLen = 1;
 			*pbMustBeFreed = 0;
 		}
 	}
 
 	/* Now drop last LF if present (pls note that this must not be done
-	 * if bEscapeCC was set!
+	 * if bEscapeCC was set)!
 	 */
 	if(pTpe->data.field.options.bDropLastLF && !pTpe->data.field.options.bEscapeCC) {
-		int iLn = strlen(pRes);
+		int iLn;
 		char *pB;
+		if(bufLen == -1)
+			bufLen = strlen(pRes);
+		iLn = bufLen;
 		if(iLn > 0 && *(pRes + iLn - 1) == '\n') {
 			/* we have a LF! */
 			/* check if we need to obtain a private copy */
@@ -2501,6 +2504,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				*pbMustBeFreed = 1;
 			}
 			*(pRes + iLn - 1) = '\0'; /* drop LF ;) */
+			--bufLen;
 		}
 	}
 
@@ -2511,10 +2515,13 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 */
 	if(pTpe->data.field.options.bCSV) {
 		/* we need to obtain a private copy, as we need to at least add the double quotes */
-		int iBufLen = strlen(pRes);
+		int iBufLen;
 		char *pBStart;
 		char *pDst;
 		char *pSrc;
+		if(bufLen == -1)
+			bufLen = strlen(pRes);
+		iBufLen = bufLen;
 		/* the malloc may be optimized, we currently use the worst case... */
 		pBStart = pDst = malloc((2 * iBufLen + 3) * sizeof(char));
 		if(pDst == NULL) {
@@ -2535,6 +2542,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		if(*pbMustBeFreed == 1)
 			free(pRes);
 		pRes = pBStart;
+		bufLen = -1;
 		*pbMustBeFreed = 1;
 	}
 
