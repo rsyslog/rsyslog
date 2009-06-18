@@ -582,7 +582,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	if(pszInputName != NULL)
 		MsgSetInputName(pMsg, pszInputName, ustrlen(pszInputName));
 	MsgSetFlowControlType(pMsg, flowCtlType);
-	MsgSetRawMsg(pMsg, (char*)msg);
+	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	
 	/* test for special codes */
 	pri = DEFUPRI;
@@ -882,7 +882,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
-	MsgSetRawMsg(pMsg, (char*)msg);
+	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));

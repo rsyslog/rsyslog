@@ -510,7 +510,8 @@ CODESTARTobjDestruct(msg)
 	if(currRefCount == 0)
 	{
 		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
-		free(pThis->pszRawMsg);
+		if(pThis->pszRawMsg != pThis->szRawMsg)
+			free(pThis->pszRawMsg);
 		free(pThis->pszTAG);
 		free(pThis->pszHOSTNAME);
 		free(pThis->pszInputName);
@@ -876,11 +877,12 @@ char *getMSG(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
-	else
+	else {
 		if(pM->pszMSG == NULL)
 			return "";
 		else
 			return (char*)pM->pszMSG;
+	}
 }
 
 
@@ -1674,19 +1676,38 @@ void MsgSetMSG(msg_t *pMsg, char* pszMSG)
 		dbgprintf("MsgSetMSG could not allocate memory for pszMSG buffer.");
 }
 
-/* rgerhards 2004-11-11: set RawMsg in msg object
+/* set raw message in message object. Size of message is provided.
+ * rgerhards, 2009-06-16
  */
-void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg)
+void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg)
 {
 	assert(pMsg != NULL);
-	if(pMsg->pszRawMsg != NULL)
+	if(pMsg->pszRawMsg != pMsg->szRawMsg)
 		free(pMsg->pszRawMsg);
 
-	pMsg->iLenRawMsg = strlen(pszRawMsg);
-	if((pMsg->pszRawMsg = (uchar*) malloc(pMsg->iLenRawMsg + 1)) != NULL)
-		memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg + 1);
-	else
-		dbgprintf("Could not allocate memory for pszRawMsg buffer.");
+	pMsg->iLenRawMsg = lenMsg;
+	if(pMsg->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
+		/* small enough: use fixed buffer (faster!) */
+		pMsg->pszRawMsg = pMsg->szRawMsg;
+	} else if((pMsg->pszRawMsg = (uchar*) malloc(pMsg->iLenRawMsg + 1)) == NULL) {
+		/* truncate message, better than completely loosing it... */
+		pMsg->pszRawMsg = pMsg->szRawMsg;
+		pMsg->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
+	}
+
+	memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg);
+	pMsg->pszRawMsg[pMsg->iLenRawMsg] = '\0'; /* this also works with truncation! */
+}
+
+
+/* set raw message in message object. Size of message is not provided. This
+ * function should only be used when it is unavoidable (and over time we should
+ * try to remove it altogether).
+ * rgerhards, 2009-06-16
+ */
+void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg)
+{
+	MsgSetRawMsg(pMsg, pszRawMsg, strlen(pszRawMsg));
 }
 
 
@@ -2558,7 +2579,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
  	} else if(isProp("msgFlags")) {
 		pThis->msgFlags = pProp->val.num;
 	} else if(isProp("pszRawMsg")) {
-		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
  	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	} else if(isProp("offAfterPRI")) {

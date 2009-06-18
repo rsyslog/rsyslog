@@ -191,7 +191,7 @@ int openPipe(char *configFile, pid_t *pid, int *pfd)
 	char *newenviron[] = { NULL };
 	/* debug aide...
 	char *newenviron[] = { "RSYSLOG_DEBUG=debug nostdout",
-				"RSYSLOG_DEBUGLOG=tmp", NULL };
+				"RSYSLOG_DEBUGLOG=log", NULL };
 	*/
 
 

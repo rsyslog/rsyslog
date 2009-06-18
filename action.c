@@ -675,7 +675,7 @@ actionWriteToAction(action_t *pAction)
 		datetime.getCurrTime(&(pMsg->tRcvdAt), &(pMsg->ttGenTime));
 		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
 		MsgSetMSG(pMsg, (char*)szRepMsg);
-		MsgSetRawMsg(pMsg, (char*)szRepMsg);
+		MsgSetRawMsgWOSize(pMsg, (char*)szRepMsg);
 
 		pMsgSave = pAction->f_pMsg;	/* save message pointer for later restoration */
 		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */

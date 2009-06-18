@@ -234,10 +234,8 @@ defaultDoSubmitMessage(tcps_sess_t *pThis, struct syslogTime *stTime, time_t ttG
 
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
-	/* first trim the buffer to what we have actually received */
-	CHKmalloc(pMsg->pszRawMsg = malloc(sizeof(uchar) * pThis->iMsg));
-	memcpy(pMsg->pszRawMsg, pThis->pMsg, pThis->iMsg);
-	pMsg->iLenRawMsg = pThis->iMsg;
+dbgprintf("defaultDoSubmit, iMsg %d\n", pThis->iMsg);
+	MsgSetRawMsg(pMsg, (char*)pThis->pMsg, pThis->iMsg);
 	MsgSetInputName(pMsg, pThis->pLstnInfo->pszInputName, pThis->pLstnInfo->lenInputName);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;

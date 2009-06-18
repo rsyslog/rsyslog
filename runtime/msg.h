@@ -28,6 +28,9 @@
 #ifndef	MSG_H_INCLUDED
 #define	MSG_H_INCLUDED 1
 
+/* some configuration constants */
+#define CONF_RAWMSG_BUFSIZE 101
+
 #include <pthread.h>
 #include "obj.h"
 #include "syslogd-types.h"
@@ -109,6 +112,7 @@ struct msg {
 	int msgFlags;		/* flags associated with this message */
 	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
+	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
 	char pszTimestamp3164[16];
 	char pszTimestamp3339[33];
 };
@@ -149,7 +153,8 @@ void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
 void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
 void MsgSetMSG(msg_t *pMsg, char* pszMSG);
-void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg);
+void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
+void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 void moveHOSTNAMEtoTAG(msg_t *pM);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  cstr_t *pCSPropName, unsigned short *pbMustBeFreed);

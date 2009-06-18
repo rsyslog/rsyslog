@@ -241,10 +241,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			}
 			/* we now create our own message object and submit it to the queue */
 			CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
-			/* first trim the buffer to what we have actually received */
-			CHKmalloc(pMsg->pszRawMsg = malloc(sizeof(uchar)* lenRcvBuf));
-			memcpy(pMsg->pszRawMsg, pRcvBuf, lenRcvBuf);
-			pMsg->iLenRawMsg = lenRcvBuf;
+			MsgSetRawMsg(pMsg, (char*)pRcvBuf, lenRcvBuf);
 			MsgSetInputName(pMsg, UCHAR_CONSTANT("imudp"), sizeof("imudp")-1);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
