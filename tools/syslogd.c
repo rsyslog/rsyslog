@@ -887,7 +887,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));
 	/* check if we have an error code associated and, if so,
-	 * adjust the tag. -- r5gerhards, 2008-06-27
+	 * adjust the tag. -- rgerhards, 2008-06-27
 	 */
 	if(iErr == NO_ERRCODE) {
 		MsgSetTAG(pMsg, "rsyslogd:");
@@ -910,7 +910,8 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * supressor statement.
 	 */
 	if(((Debug || NoFork) && bErrMsgToStderr) || iConfigVerify) {
-		fprintf(stderr, "rsyslogd: %s\n", msg);
+		if(LOG_PRI(pri) == LOG_ERR)
+			fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
@@ -2394,7 +2395,7 @@ init(void)
 	 */
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] restart",
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] (re)start",
 		 (int) myPid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 
@@ -3055,7 +3056,9 @@ doGlblProcessInit(void)
 				exit(1); /* "good" exit - after forking, not diasabling anything */
 			}
 			num_fds = getdtablesize();
-			for (i= 0; i < num_fds; i++)
+			close(0);
+			/* we keep stdout and stderr open in case we have to emit something */
+			for (i = 3; i < num_fds; i++)
 				(void) close(i);
 			untty();
 		}
