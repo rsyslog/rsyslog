@@ -1848,7 +1848,8 @@ static uchar *getNOW(eNOWType eNow)
  * rgerhards 2005-09-15
  */
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 cstr_t *pCSPropName, unsigned short *pbMustBeFreed)
+                 cstr_t *pCSPropName, size_t *pPropLen,
+		 unsigned short *pbMustBeFreed)
 {
 	uchar *pName;
 	char *pRes; /* result pointer */
@@ -2546,6 +2547,10 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		*pbMustBeFreed = 1;
 	}
 
+	if(bufLen == -1)
+		bufLen = strlen(pRes);
+	*pPropLen = bufLen;
+
 	/*dbgprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
 	return(pRes);
 }
@@ -2561,6 +2566,7 @@ msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
 {
 	DEFiRet;
 	var_t *pVar;
+	size_t propLen;
 	uchar *pszProp = NULL;
 	cstr_t *pstrProp;
 	unsigned short bMustBeFreed = 0;
@@ -2574,7 +2580,7 @@ msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
 	CHKiRet(var.ConstructFinalize(pVar));
 
 	/* always call MsgGetProp() without a template specifier */
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, pstrPropName, &bMustBeFreed);
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, pstrPropName, &propLen, &bMustBeFreed);
 
 	/* now create a string object out of it and hand that over to the var */
 	CHKiRet(rsCStrConstructFromszStr(&pstrProp, pszProp));

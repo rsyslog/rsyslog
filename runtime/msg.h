@@ -161,7 +161,7 @@ void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 void moveHOSTNAMEtoTAG(msg_t *pM);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 cstr_t *pCSPropName, unsigned short *pbMustBeFreed);
+                 cstr_t *pCSPropName, size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);

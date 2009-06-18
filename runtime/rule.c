@@ -106,6 +106,7 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 	unsigned short pbMustBeFreed;
 	char *pszPropVal;
 	int bRet = 0;
+	size_t propLen;
 	vm_t *pVM = NULL;
 	var_t *pResult = NULL;
 
@@ -177,7 +178,8 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 		bRet = (pResult->val.num) ? 1 : 0;
 	} else {
 		assert(pRule->f_filter_type == FILTER_PROP); /* assert() just in case... */
-		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.pCSPropName, &pbMustBeFreed);
+		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.pCSPropName, &propLen, &pbMustBeFreed);
+		// TODO: optimize, we now have the length of the property!
 
 		/* Now do the compares (short list currently ;)) */
 		switch(pRule->f_filterData.prop.operation ) {
