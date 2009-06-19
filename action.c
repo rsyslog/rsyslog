@@ -195,6 +195,7 @@ rsRetVal actionDestruct(action_t *pThis)
 	pthread_mutex_destroy(&pThis->mutActExec);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
+	d_free(pThis->ppMsgs);
 	d_free(pThis);
 	
 	RETiRet;
@@ -432,23 +433,17 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 	int iSleepPeriod;
 	int bCallAction;
 	int iCancelStateSave;
-	uchar **ppMsgs;		/* array of message pointers for doAction */
 
 	ASSERT(pAction != NULL);
-
-	/* create the array for doAction() message pointers */
-	if((ppMsgs = calloc(pAction->iNumTpls, sizeof(uchar *))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
 
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
-				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(ppMsgs[i])));
+				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pAction->ppMsgs[i])));
 				break;
 			case ACT_ARRAY_PASSING:
-				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(ppMsgs[i])));
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pAction->ppMsgs[i])));
 				break;
 			default:assert(0); /* software bug if this happens! */
 		}
@@ -487,7 +482,7 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 
 		if(bCallAction) {
 			/* call configured action */
-			iRet = pAction->pMod->mod.om.doAction(ppMsgs, pMsg->msgFlags, pAction->pModData);
+			iRet = pAction->pMod->mod.om.doAction(pAction->ppMsgs, pMsg->msgFlags, pAction->pModData);
 			if(iRet == RS_RET_SUSPENDED) {
 				dbgprintf("Action requested to be suspended, done that.\n");
 				actionSuspend(pAction, getActNow(pAction));
@@ -506,25 +501,27 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 finalize_it:
 	/* cleanup */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		if(ppMsgs[i] != NULL) {
+		if(pAction->ppMsgs[i] != NULL) {
 			switch(pAction->eParamPassing) {
 			case ACT_ARRAY_PASSING:
 				iArr = 0;
-				while(((char **)ppMsgs[i])[iArr] != NULL)
-					d_free(((char **)ppMsgs[i])[iArr++]);
-				d_free(ppMsgs[i]);
+				while(((char **)pAction->ppMsgs[i])[iArr] != NULL) {
+					d_free(((char **)pAction->ppMsgs[i])[iArr++]);
+					((char **)pAction->ppMsgs[i])[iArr++] = NULL;
+				}
+				d_free(pAction->ppMsgs[i]);
+				pAction->ppMsgs[i] = NULL;
 				break;
 			case ACT_STRING_PASSING:
-				d_free(ppMsgs[i]);
+				d_free(pAction->ppMsgs[i]);
 				break;
 			default:
 				assert(0);
 			}
 		}
 	}
-	d_free(ppMsgs);
-	msgDestruct(&pMsg); /* we are now finished with the message */
 
+	msgDestruct(&pMsg); /* we are now finished with the message */
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
@@ -906,9 +903,8 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	 */
 	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template pointer array */
-		if((pAction->ppTpl = calloc(pAction->iNumTpls, sizeof(struct template *))) == NULL) {
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
+		CHKmalloc(pAction->ppTpl = (struct template *)calloc(pAction->iNumTpls, sizeof(struct template *)));
+		CHKmalloc(pAction->ppMsgs = (uchar**) malloc(pAction->iNumTpls * sizeof(uchar *)));
 	}
 	
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
