@@ -102,7 +102,7 @@ static uid_t	dirGID;		/* GID to be used for newly created directories */
 static int	bCreateDirs;	/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
 static int	bEnableSync = 0;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
 static int	iZipLevel = 0;	/* zip compression mode (0..9 as usual) */
-static bool	bFlushOnTXEnd = 0;/* flush write buffers when transaction has ended? */
+static bool	bFlushOnTXEnd = 1;/* flush write buffers when transaction has ended? */
 static int	iIOBufSize = IOBUF_DFLT_SIZE;	/* size of an io buffer */
 static int	iFlushInterval = FLUSH_INTRVL_DFLT; 	/* how often flush the output buffer on inactivity? */
 static uchar	*pszTplName = NULL; /* name of the default template to use */
@@ -715,7 +715,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	bCreateDirs = 1;
 	bEnableSync = 0;
 	iZipLevel = 0;
-	bFlushOnTXEnd = 0;
+	bFlushOnTXEnd = 1;
 	iIOBufSize = IOBUF_DFLT_SIZE;
 	iFlushInterval = FLUSH_INTRVL_DFLT;
 	if(pszTplName != NULL) {
