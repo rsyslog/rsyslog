@@ -1340,8 +1340,6 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	}
 
 	/* The rest is the actual MSG */
-dbgprintf("XXX: msg set msg offset %d, str: '%s', prev '%s'\n", p2parse - pMsg->pszRawMsg, pMsg->pszRawMsg + (p2parse - pMsg->pszRawMsg), p2parse);
-//	MsgSetMSG(pMsg, (char*)p2parse);
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 
 	ENDfunc

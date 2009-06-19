@@ -208,7 +208,6 @@ ENDobjDestruct(wti)
 /* Standard-Constructor for the wti object
  */
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
-	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	pthread_cond_init(&pThis->condExitDone, NULL);
 	pthread_mutex_init(&pThis->mut, NULL);
 ENDobjConstruct(wti)
@@ -377,10 +376,6 @@ wtiWorker(wti_t *pThis)
 		/* process any pending thread requests */
 		wtpProcessThrdChanges(pWtp);
 		pthread_testcancel(); /* see big comment in function header */
-#		if !defined(__hpux) /* pthread_yield is missing there! */
-		if(pThis->bOptimizeUniProc)
-			pthread_yield(); /* see big comment in function header */
-#		endif
 
 		/* if we have a rate-limiter set for this worker pool, let's call it. Please
 		 * keep in mind that the rate-limiter may hold us for an extended period

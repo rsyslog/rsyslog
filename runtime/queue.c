@@ -1295,7 +1295,6 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 
 	/* we have an object, so let's fill the properties */
 	objConstructSetObjInfo(pThis);
-	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir())) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
@@ -2216,13 +2215,6 @@ finalize_it:
 		d_pthread_mutex_unlock(pThis->mut);
 		pthread_setcancelstate(iCancelStateSave, NULL);
 		dbgoprint((obj_t*) pThis, "EnqueueMsg advised worker start\n");
-		/* the following pthread_yield is experimental, but brought us performance
-		 * benefit. For details, please see http://kb.monitorware.com/post14216.html#p14216
-		 * rgerhards, 2008-10-09
-		 * but this is only true for uniprocessors, so we guard it with an optimize flag -- rgerhards, 2008-10-22
-		 */
-		if(pThis->bOptimizeUniProc)
-			pthread_yield();
 	}
 
 	RETiRet;
@@ -2341,13 +2333,6 @@ finalize_it:
 		d_pthread_mutex_unlock(pThis->mut);
 		pthread_setcancelstate(iCancelStateSave, NULL);
 		dbgoprint((obj_t*) pThis, "MultiEnqObj advised worker start\n");
-		/* the following pthread_yield is experimental, but brought us performance
-		 * benefit. For details, please see http://kb.monitorware.com/post14216.html#p14216
-		 * rgerhards, 2008-10-09
-		 * but this is only true for uniprocessors, so we guard it with an optimize flag -- rgerhards, 2008-10-22
-		 */
-		if(pThis->bOptimizeUniProc)
-			pthread_yield();
 	}
 
 	RETiRet;
