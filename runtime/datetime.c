@@ -556,9 +556,7 @@ int formatTimestampToMySQL(struct syslogTime *ts, char* pBuf, size_t iLenDst)
 	 */
 	assert(ts != NULL);
 	assert(pBuf != NULL);
-
-	if (iLenDst < 15) /* we need at least 14 bytes */
-		return(0); 
+	assert(iLenDst < 15);
 
 	pBuf[0] = (ts->year / 1000) % 10 + '0';
 	pBuf[1] = (ts->year / 100) % 10 + '0';
@@ -581,12 +579,10 @@ int formatTimestampToMySQL(struct syslogTime *ts, char* pBuf, size_t iLenDst)
 
 int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf, size_t iLenDst)
 {
-       /* see note in formatTimestampToMySQL, applies here as well */
-       assert(ts != NULL);
-       assert(pBuf != NULL);
-
-	if (iLenDst < 20) /* we need 20 bytes */
-		return(0);
+	/* see note in formatTimestampToMySQL, applies here as well */
+	assert(ts != NULL);
+	assert(pBuf != NULL);
+	assert(iLenDst < 20):
 
 	pBuf[0] = (ts->year / 1000) % 10 + '0';
 	pBuf[1] = (ts->year / 100) % 10 + '0';
@@ -745,8 +741,7 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 	assert(ts != NULL);
 	assert(pBuf != NULL);
 	
-	if(iLenBuf < 16)
-		return(0); /* we NEED 16 bytes */
+	assert(iLenBuf < 16);
 
 	pBuf[0] = monthNames[(ts->month - 1)% 12][0];
 	pBuf[1] = monthNames[(ts->month - 1) % 12][1];

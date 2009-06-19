@@ -57,6 +57,14 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/Oct.ts3164 \
 	   testsuites/Nov.ts3164 \
 	   testsuites/Dec.ts3164 \
+	   testsuites/ts3339.conf \
+	   testsuites/master.ts3339 \
+	   testsuites/tsmysql.conf \
+	   testsuites/master.tsmysql \
+	   testsuites/tspgsql.conf \
+	   testsuites/master.tspgsql \
+	   testsuites/subsecond.conf \
+	   testsuites/master.subsecond \
 	   testsuites/parse1.conf \
 	   testsuites/field1.conf \
 	   testsuites/1.parse1 \
