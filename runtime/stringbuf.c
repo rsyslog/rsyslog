@@ -461,14 +461,11 @@ cstrFinalize(cstr_t *pThis)
 	DEFiRet;
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	
-	assert(pThis->bIsFinalized == 0);
-
 	if(pThis->iStrLen > 0) {
 		/* terminate string only if one exists */
 		CHKiRet(cstrAppendChar(pThis, '\0'));
 		--pThis->iStrLen;	/* do NOT count the \0 byte */
 	}
-	pThis->bIsFinalized = 1;
 
 finalize_it:
 	RETiRet;

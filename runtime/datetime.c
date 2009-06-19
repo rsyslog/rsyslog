@@ -556,7 +556,7 @@ int formatTimestampToMySQL(struct syslogTime *ts, char* pBuf, size_t iLenDst)
 	 */
 	assert(ts != NULL);
 	assert(pBuf != NULL);
-	assert(iLenDst < 15);
+	assert(iLenDst >= 15);
 
 	pBuf[0] = (ts->year / 1000) % 10 + '0';
 	pBuf[1] = (ts->year / 100) % 10 + '0';
@@ -582,7 +582,7 @@ int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf, size_t iLenDst)
 	/* see note in formatTimestampToMySQL, applies here as well */
 	assert(ts != NULL);
 	assert(pBuf != NULL);
-	assert(iLenDst < 20);
+	assert(iLenDst >= 20);
 
 	pBuf[0] = (ts->year / 1000) % 10 + '0';
 	pBuf[1] = (ts->year / 100) % 10 + '0';
@@ -666,7 +666,7 @@ int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 	BEGINfunc
 	assert(ts != NULL);
 	assert(pBuf != NULL);
-	assert(iLenBuf < 33);
+	assert(iLenBuf >= 33);
 
 	/* start with fixed parts */
 	/* year yyyy */
@@ -741,7 +741,7 @@ int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 	assert(ts != NULL);
 	assert(pBuf != NULL);
 	
-	assert(iLenBuf < 16);
+	assert(iLenBuf >= 16);
 
 	pBuf[0] = monthNames[(ts->month - 1)% 12][0];
 	pBuf[1] = monthNames[(ts->month - 1) % 12][1];

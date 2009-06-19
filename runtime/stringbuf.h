@@ -48,7 +48,7 @@ typedef struct cstr_s
 	size_t iBufSize;	/**< current maximum size of the string buffer */
 	size_t iStrLen;		/**< length of the string in characters. */
 	unsigned short iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
-	bool bIsFinalized;	/**< is this object finished and ready for use? (a debug aid, may be removed later TODO 2009-06-16) */
+	bool bIsForeignBuf;	/**< is pBuf a buffer provided by someone else? */
 } cstr_t;
 
 

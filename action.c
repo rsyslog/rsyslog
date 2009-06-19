@@ -178,6 +178,7 @@ actionResetQueueParams(void)
  */
 rsRetVal actionDestruct(action_t *pThis)
 {
+	int i;
 	DEFiRet;
 	ASSERT(pThis != NULL);
 
@@ -195,7 +196,33 @@ rsRetVal actionDestruct(action_t *pThis)
 	pthread_mutex_destroy(&pThis->mutActExec);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
+
+	/* message ptr cleanup */
+	for(i = 0 ; i < pThis->iNumTpls ; ++i) {
+		if(pThis->ppMsgs[i] != NULL) {
+			switch(pThis->eParamPassing) {
+			case ACT_ARRAY_PASSING:
+#if 0 /* later! */
+				iArr = 0;
+				while(((char **)pThis->ppMsgs[i])[iArr] != NULL) {
+					d_free(((char **)pThis->ppMsgs[i])[iArr++]);
+					((char **)pThis->ppMsgs[i])[iArr++] = NULL;
+				}
+				d_free(pThis->ppMsgs[i]);
+				pThis->ppMsgs[i] = NULL;
+#endif
+				break;
+			case ACT_STRING_PASSING:
+				d_free(pThis->ppMsgs[i]);
+				break;
+			default:
+				assert(0);
+			}
+		}
+	}
 	d_free(pThis->ppMsgs);
+	d_free(pThis->lenMsgs);
+
 	d_free(pThis);
 	
 	RETiRet;
@@ -440,7 +467,7 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
-				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pAction->ppMsgs[i])));
+				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pAction->ppMsgs[i]), &(pAction->lenMsgs[i])));
 				break;
 			case ACT_ARRAY_PASSING:
 				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pAction->ppMsgs[i])));
@@ -513,7 +540,6 @@ finalize_it:
 				pAction->ppMsgs[i] = NULL;
 				break;
 			case ACT_STRING_PASSING:
-				d_free(pAction->ppMsgs[i]);
 				break;
 			default:
 				assert(0);
@@ -727,32 +753,13 @@ finalize_it:
 }
 
 
-/* call the configured action. Does all necessary housekeeping.
- * rgerhards, 2007-08-01
- * FYI: currently, this function is only called from the queue
- * consumer. So we (conceptually) run detached from the input
- * threads (which also means we may run much later than when the
- * message was generated).
+/* helper to actonCallAction, mostly needed because of this damn
+ * pthread_cleanup_push() POSIX macro...
  */
-#pragma GCC diagnostic ignored "-Wempty-body"
-rsRetVal
-actionCallAction(action_t *pAction, msg_t *pMsg)
+static rsRetVal
+doActionCallAction(action_t *pAction, msg_t *pMsg)
 {
 	DEFiRet;
-	int iCancelStateSave;
-
-	ISOBJ_TYPE_assert(pMsg, msg);
-	ASSERT(pAction != NULL);
-
-	/* Make sure nodbody else modifies/uses this action object. Right now, this
-         * is important because of "message repeated n times" processing and potentially
-	 * multiple worker threads. -- rgerhards, 2007-12-11
- 	 */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	LockObj(pAction);
-	pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
-	pthread_setcancelstate(iCancelStateSave, NULL);
-
 	/* first, we need to check if this is a disabled
 	 * entry. If so, we must not further process it.
 	 * rgerhards 2005-09-26
@@ -813,10 +820,43 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 	}
 
 finalize_it:
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	UnlockObj(pAction);
-	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
-	pthread_setcancelstate(iCancelStateSave, NULL);
+	RETiRet;
+}
+
+/* call the configured action. Does all necessary housekeeping.
+ * rgerhards, 2007-08-01
+ * FYI: currently, this function is only called from the queue
+ * consumer. So we (conceptually) run detached from the input
+ * threads (which also means we may run much later than when the
+ * message was generated).
+ */
+#pragma GCC diagnostic ignored "-Wempty-body"
+rsRetVal
+actionCallAction(action_t *pAction, msg_t *pMsg)
+{
+	DEFiRet;
+	int iCancelStateSave;
+
+	ISOBJ_TYPE_assert(pMsg, msg);
+	ASSERT(pAction != NULL);
+
+	/* We need to lock the mutex only for repeated line processing. 
+	 * rgerhards, 2009-06-19
+	 */
+	if(pAction->f_ReduceRepeated == 1) {
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+		LockObj(pAction);
+		pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
+		pthread_setcancelstate(iCancelStateSave, NULL);
+		iRet = doActionCallAction(pAction, pMsg);
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+		UnlockObj(pAction);
+		pthread_cleanup_pop(0); /* remove mutex cleanup handler */
+		pthread_setcancelstate(iCancelStateSave, NULL);
+	} else {
+		iRet = doActionCallAction(pAction, pMsg);
+	}
+
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
@@ -903,8 +943,9 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	 */
 	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template pointer array */
-		CHKmalloc(pAction->ppTpl = (struct template *)calloc(pAction->iNumTpls, sizeof(struct template *)));
-		CHKmalloc(pAction->ppMsgs = (uchar**) malloc(pAction->iNumTpls * sizeof(uchar *)));
+		CHKmalloc(pAction->ppTpl = (struct template **)calloc(pAction->iNumTpls, sizeof(struct template *)));
+		CHKmalloc(pAction->ppMsgs = (uchar**) calloc(pAction->iNumTpls, sizeof(uchar *)));
+		CHKmalloc(pAction->lenMsgs = (size_t*) calloc(pAction->iNumTpls, sizeof(size_t)));
 	}
 	
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
