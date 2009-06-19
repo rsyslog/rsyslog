@@ -49,6 +49,8 @@
 DEFobjStaticHelpers
 DEFobjCurrIf(errmsg)
 
+/* the following table of ten powers saves us some computation */
+static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
 
 /* ------------------------------ methods ------------------------------ */
 
@@ -544,7 +546,7 @@ finalize_it:
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occured.
  */
-int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst)
+int formatTimestampToMySQL(struct syslogTime *ts, char* pBuf, size_t iLenDst)
 {
 	/* currently we do not consider localtime/utc. This may later be
 	 * added. If so, I recommend using a property replacer option
@@ -553,28 +555,60 @@ int formatTimestampToMySQL(struct syslogTime *ts, char* pDst, size_t iLenDst)
 	 * rgerhards, 2007-06-26
 	 */
 	assert(ts != NULL);
-	assert(pDst != NULL);
+	assert(pBuf != NULL);
 
-	if (iLenDst < 15) /* we need at least 14 bytes
-			     14 digits for timestamp + '\n' */
+	if (iLenDst < 15) /* we need at least 14 bytes */
 		return(0); 
 
-	return(snprintf(pDst, iLenDst, "%4.4d%2.2d%2.2d%2.2d%2.2d%2.2d", 
-		ts->year, ts->month, ts->day, ts->hour, ts->minute, ts->second));
+	pBuf[0] = (ts->year / 1000) % 10 + '0';
+	pBuf[1] = (ts->year / 100) % 10 + '0';
+	pBuf[2] = (ts->year / 10) % 10 + '0';
+	pBuf[3] = ts->year % 10 + '0';
+	pBuf[4] = (ts->month / 10) % 10 + '0';
+	pBuf[5] = ts->month % 10 + '0';
+	pBuf[6] = (ts->day / 10) % 10 + '0';
+	pBuf[7] = ts->day % 10 + '0';
+	pBuf[8] = (ts->hour / 10) % 10 + '0';
+	pBuf[9] = ts->hour % 10 + '0';
+	pBuf[10] = (ts->minute / 10) % 10 + '0';
+	pBuf[11] = ts->minute % 10 + '0';
+	pBuf[12] = (ts->second / 10) % 10 + '0';
+	pBuf[13] = ts->second % 10 + '0';
+	pBuf[14] = '\0';
+	return 15;
 
 }
 
-int formatTimestampToPgSQL(struct syslogTime *ts, char *pDst, size_t iLenDst)
+int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf, size_t iLenDst)
 {
        /* see note in formatTimestampToMySQL, applies here as well */
        assert(ts != NULL);
-       assert(pDst != NULL);
+       assert(pBuf != NULL);
 
-       if (iLenDst < 21) /* we need 20 bytes + '\n' */
-               return(0);
+	if (iLenDst < 20) /* we need 20 bytes */
+		return(0);
 
-       return(snprintf(pDst, iLenDst, "%4.4d-%2.2d-%2.2d %2.2d:%2.2d:%2.2d",
-                               ts->year, ts->month, ts->day, ts->hour, ts->minute, ts->second));
+	pBuf[0] = (ts->year / 1000) % 10 + '0';
+	pBuf[1] = (ts->year / 100) % 10 + '0';
+	pBuf[2] = (ts->year / 10) % 10 + '0';
+	pBuf[3] = ts->year % 10 + '0';
+	pBuf[4] = '-';
+	pBuf[5] = (ts->month / 10) % 10 + '0';
+	pBuf[6] = ts->month % 10 + '0';
+	pBuf[7] = '-';
+	pBuf[8] = (ts->day / 10) % 10 + '0';
+	pBuf[9] = ts->day % 10 + '0';
+	pBuf[10] = ' ';
+	pBuf[11] = (ts->hour / 10) % 10 + '0';
+	pBuf[12] = ts->hour % 10 + '0';
+	pBuf[13] = ':';
+	pBuf[14] = (ts->minute / 10) % 10 + '0';
+	pBuf[15] = ts->minute % 10 + '0';
+	pBuf[16] = ':';
+	pBuf[17] = (ts->second / 10) % 10 + '0';
+	pBuf[18] = ts->second % 10 + '0';
+	pBuf[19] = '\0';
+	return 19;
 }
 
 
@@ -589,45 +623,35 @@ int formatTimestampToPgSQL(struct syslogTime *ts, char *pDst, size_t iLenDst)
  */
 int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 {
-	int lenRet;
-	char szFmtStr[64];
+	int iBuf;
+	int power;
+	int secfrac;
+	short digit;
 
 	assert(ts != NULL);
 	assert(pBuf != NULL);
 	assert(iLenBuf >= 10);
 
+	iBuf = 0;
 	if(ts->secfracPrecision > 0)
-	{	/* We must look at
-		 * the precision specified. For example, if we have millisec precision (3 digits), a
-		 * secFrac value of 12 is not equivalent to ".12" but ".012". Obviously, this
-		 * is a huge difference ;). To avoid this, we first create a format string with
-		 * the specific precision and *then* use that format string to do the actual formating.
-		 */
-		/* be careful: there is ONE actual %d in the format string below ;) */
-		snprintf(szFmtStr, sizeof(szFmtStr), "%%0%dd", ts->secfracPrecision);
-		lenRet = snprintf(pBuf, iLenBuf, szFmtStr, ts->secfrac);
+	{	
+		power = tenPowers[(ts->secfracPrecision - 1) % 6];
+		secfrac = ts->secfrac;
+		while(power > 0) {
+			digit = secfrac / power;
+			secfrac -= digit * power;
+			power /= 10;
+			pBuf[iBuf++] = digit + '0';
+		}
 	} else {
-		pBuf[0] = '0';
-		pBuf[1] = '\0';
-		lenRet = 1;
+		pBuf[iBuf++] = '0';
 	}
+	pBuf[iBuf] = '\0';
 
-	return(lenRet);
+	return iBuf;
 }
 
 
-static char *const_number_str[100] =
-	{ "00", "01", "02", "00", "04", "05", "06", "07", "08", "09",
-	  "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
-	  "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
-	  "30", "31", "32", "33", "34", "35", "36", "37", "38", "39",
-	  "40", "41", "42", "43", "44", "45", "46", "47", "48", "49",
-	  "50", "51", "52", "53", "54", "55", "56", "57", "58", "59",
-	  "60", "61", "62", "63", "64", "65", "66", "67", "68", "69",
-	  "70", "71", "72", "73", "74", "75", "76", "77", "78", "79",
-	  "80", "81", "82", "83", "84", "85", "86", "87", "88", "89",
-	  "90", "91", "92", "93", "94", "95", "96", "97", "98", "99",
-	};
 /**
  * Format a syslogTimestamp to a RFC3339 timestamp string (as
  * specified in syslog-protocol).
@@ -643,15 +667,10 @@ int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 	int secfrac;
 	short digit;
 
-	/* the following table of ten powers saves us some computation */
-	static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
-
 	BEGINfunc
 	assert(ts != NULL);
 	assert(pBuf != NULL);
-	
-	if(iLenBuf < 33)
-		return(0); /* we NEED at least 20 bytes */
+	assert(iLenBuf < 33);
 
 	/* start with fixed parts */
 	/* year yyyy */
@@ -671,11 +690,11 @@ int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 	/* hour */
 	pBuf[11] = (ts->hour / 10) % 10 + '0';
 	pBuf[12] = ts->hour % 10 + '0';
-	pBuf[13] = '-';
+	pBuf[13] = ':';
 	/* minute */
 	pBuf[14] = (ts->minute / 10) % 10 + '0';
 	pBuf[15] = ts->minute % 10 + '0';
-	pBuf[16] = '-';
+	pBuf[16] = ':';
 	/* second */
 	pBuf[17] = (ts->second / 10) % 10 + '0';
 	pBuf[18] = ts->second % 10 + '0';
@@ -720,44 +739,36 @@ int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
  */
 int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 {
-	static char* monthNames[13] = {"ERR", "Jan", "Feb", "Mar",
-	                               "Apr", "May", "Jun", "Jul",
-				       "Aug", "Sep", "Oct", "Nov", "Dec"};
+	static char* monthNames[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+					"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+	int iDay;
 	assert(ts != NULL);
 	assert(pBuf != NULL);
 	
 	if(iLenBuf < 16)
 		return(0); /* we NEED 16 bytes */
-	return(snprintf(pBuf, iLenBuf, "%s %2d %2.2d:%2.2d:%2.2d",
-		monthNames[ts->month], ts->day, ts->hour,
-		ts->minute, ts->second
-		));
+
+	pBuf[0] = monthNames[(ts->month - 1)% 12][0];
+	pBuf[1] = monthNames[(ts->month - 1) % 12][1];
+	pBuf[2] = monthNames[(ts->month - 1) % 12][2];
+	pBuf[3] = ' ';
+	iDay = (ts->day / 10) % 10; /* we need to write a space if the first digit is 0 */
+	pBuf[4] = iDay ? iDay + '0' : ' ';
+	pBuf[5] = ts->day % 10 + '0';
+	pBuf[6] = ' ';
+	pBuf[7] = (ts->hour / 10) % 10 + '0';
+	pBuf[8] = ts->hour % 10 + '0';
+	pBuf[9] = ':';
+	pBuf[10] = (ts->minute / 10) % 10 + '0';
+	pBuf[11] = ts->minute % 10 + '0';
+	pBuf[12] = ':';
+	pBuf[13] = (ts->second / 10) % 10 + '0';
+	pBuf[14] = ts->second % 10 + '0';
+	pBuf[15] = '\0';
+	return 16;	/* traditional: number of bytes written */
 }
 
-/**
- * Format a syslogTimestamp to a text format.
- * The caller must provide the timestamp as well as a character
- * buffer that will receive the resulting string. The function
- * returns the size of the timestamp written in bytes (without
- * the string termnator). If 0 is returend, an error occured.
- */
-#if 0 /* This method is currently not called, be we like to preserve it */
-static int formatTimestamp(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
-{
-	assert(ts != NULL);
-	assert(pBuf != NULL);
-	
-	if(ts->timeType == 1) {
-		return(formatTimestamp3164(ts, pBuf, iLenBuf));
-	}
 
-	if(ts->timeType == 2) {
-		return(formatTimestamp3339(ts, pBuf, iLenBuf));
-	}
-
-	return(0);
-}
-#endif
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
@@ -791,7 +802,6 @@ ENDobjQueryInterface(datetime)
 BEGINAbstractObjClassInit(datetime, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
-
 ENDObjClassInit(datetime)
 
 /* vi:set ai:

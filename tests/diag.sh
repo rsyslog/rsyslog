@@ -82,5 +82,11 @@ case $1 in
 		  exit 1
 		fi
 		;;
+   'nettester') # perform nettester-based tests
+		./nettester -t$2 -i$3
+		if [ "$?" -ne "0" ]; then
+		  exit 1
+		fi
+		;;
    *)		echo "invalid argument" $1
 esac

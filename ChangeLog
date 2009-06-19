@@ -1,5 +1,9 @@
 ---------------------------------------------------------------------------
 Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
+- greatly reduced memory requirements of msg object
+  to around half of the previous demand. This means that more messages can
+  be stored in core! Due to fewer cache misses, this also means some
+  performance improvement.
 - improved config error messages: now contain a copy of the config line
   that (most likely) caused the error
 - removed long-obsoleted property UxTradMsg

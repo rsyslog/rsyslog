@@ -10,7 +10,11 @@ TESTS = $(TESTRUNS) cfg.sh \
 	queue-persist.sh 
 
 if ENABLE_OMSTDOUT
-TESTS += omod-if-array.sh parsertest.sh inputname.sh fieldtest.sh
+TESTS += omod-if-array.sh \
+	 parsertest.sh \
+	 timestamp.sh \
+	 inputname.sh \
+	 fieldtest.sh
 endif
 
 endif # if ENABLE_TESTBENCH
@@ -37,6 +41,22 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   DevNull.cfgtest \
 	   err1.rstest \
 	   NoExistFile.cfgtest \
+	   timestamp.sh \
+	   testsuites/ts3164.conf \
+	   testsuites/mon1digit.ts3164 \
+	   testsuites/mon2digit.ts3164 \
+	   testsuites/Jan.ts3164 \
+	   testsuites/Feb.ts3164 \
+	   testsuites/Mar.ts3164 \
+	   testsuites/Apr.ts3164 \
+	   testsuites/May.ts3164 \
+	   testsuites/Jun.ts3164 \
+	   testsuites/Jul.ts3164 \
+	   testsuites/Aug.ts3164 \
+	   testsuites/Sep.ts3164 \
+	   testsuites/Oct.ts3164 \
+	   testsuites/Nov.ts3164 \
+	   testsuites/Dec.ts3164 \
 	   testsuites/parse1.conf \
 	   testsuites/field1.conf \
 	   testsuites/1.parse1 \
