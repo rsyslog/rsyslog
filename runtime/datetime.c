@@ -616,6 +616,18 @@ int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 }
 
 
+static char *const_number_str[100] =
+	{ "00", "01", "02", "00", "04", "05", "06", "07", "08", "09",
+	  "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
+	  "20", "21", "22", "23", "24", "25", "26", "27", "28", "29",
+	  "30", "31", "32", "33", "34", "35", "36", "37", "38", "39",
+	  "40", "41", "42", "43", "44", "45", "46", "47", "48", "49",
+	  "50", "51", "52", "53", "54", "55", "56", "57", "58", "59",
+	  "60", "61", "62", "63", "64", "65", "66", "67", "68", "69",
+	  "70", "71", "72", "73", "74", "75", "76", "77", "78", "79",
+	  "80", "81", "82", "83", "84", "85", "86", "87", "88", "89",
+	  "90", "91", "92", "93", "94", "95", "96", "97", "98", "99",
+	};
 /**
  * Format a syslogTimestamp to a RFC3339 timestamp string (as
  * specified in syslog-protocol).
@@ -626,46 +638,77 @@ int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
  */
 int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 {
-	int iRet;
-	char szTZ[7]; /* buffer for TZ information */
+	int iBuf;
+	int power;
+	int secfrac;
+	short digit;
 
+	/* the following table of ten powers saves us some computation */
+	static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
+
+	BEGINfunc
 	assert(ts != NULL);
 	assert(pBuf != NULL);
 	
-	if(iLenBuf < 20)
+	if(iLenBuf < 33)
 		return(0); /* we NEED at least 20 bytes */
 
-	/* do TZ information first, this is easier to take care of "Z" zone in rfc3339 */
-	if(ts->OffsetMode == 'Z') {
-		szTZ[0] = 'Z';
-		szTZ[1] = '\0';
-	} else {
-		snprintf(szTZ, sizeof(szTZ) / sizeof(char), "%c%2.2d:%2.2d",
-			ts->OffsetMode, ts->OffsetHour, ts->OffsetMinute);
+	/* start with fixed parts */
+	/* year yyyy */
+	pBuf[0] = (ts->year / 1000) % 10 + '0';
+	pBuf[1] = (ts->year / 100) % 10 + '0';
+	pBuf[2] = (ts->year / 10) % 10 + '0';
+	pBuf[3] = ts->year % 10 + '0';
+	pBuf[4] = '-';
+	/* month */
+	pBuf[5] = (ts->month / 10) % 10 + '0';
+	pBuf[6] = ts->month % 10 + '0';
+	pBuf[7] = '-';
+	/* day */
+	pBuf[8] = (ts->day / 10) % 10 + '0';
+	pBuf[9] = ts->day % 10 + '0';
+	pBuf[10] = 'T';
+	/* hour */
+	pBuf[11] = (ts->hour / 10) % 10 + '0';
+	pBuf[12] = ts->hour % 10 + '0';
+	pBuf[13] = '-';
+	/* minute */
+	pBuf[14] = (ts->minute / 10) % 10 + '0';
+	pBuf[15] = ts->minute % 10 + '0';
+	pBuf[16] = '-';
+	/* second */
+	pBuf[17] = (ts->second / 10) % 10 + '0';
+	pBuf[18] = ts->second % 10 + '0';
+
+	iBuf = 19; /* points to next free entry, now it becomes dynamic! */
+
+	if(ts->secfracPrecision > 0) {
+		pBuf[iBuf++] = '.';
+		power = tenPowers[(ts->secfracPrecision - 1) % 6];
+		secfrac = ts->secfrac;
+		while(power > 0) {
+			digit = secfrac / power;
+			secfrac -= digit * power;
+			power /= 10;
+			pBuf[iBuf++] = digit + '0';
+		}
 	}
 
-	if(ts->secfracPrecision > 0)
-	{	/* we now need to include fractional seconds. While doing so, we must look at
-		 * the precision specified. For example, if we have millisec precision (3 digits), a
-		 * secFrac value of 12 is not equivalent to ".12" but ".012". Obviously, this
-		 * is a huge difference ;). To avoid this, we first create a format string with
-		 * the specific precision and *then* use that format string to do the actual
-		 * formating (mmmmhhh... kind of self-modifying code... ;)).
-		 */
-		char szFmtStr[64];
-		/* be careful: there is ONE actual %d in the format string below ;) */
-		snprintf(szFmtStr, sizeof(szFmtStr),
-		         "%%04d-%%02d-%%02dT%%02d:%%02d:%%02d.%%0%dd%%s",
-			ts->secfracPrecision);
-		iRet = snprintf(pBuf, iLenBuf, szFmtStr, ts->year, ts->month, ts->day,
-			        ts->hour, ts->minute, ts->second, ts->secfrac, szTZ);
+	if(ts->OffsetMode == 'Z') {
+		pBuf[iBuf++] = 'Z';
+	} else {
+		pBuf[iBuf++] = ts->OffsetMode;
+		pBuf[iBuf++] = (ts->OffsetHour / 10) % 10 + '0';
+		pBuf[iBuf++] = ts->OffsetHour % 10 + '0';
+		pBuf[iBuf++] = ':';
+		pBuf[iBuf++] = (ts->OffsetMinute / 10) % 10 + '0';
+		pBuf[iBuf++] = ts->OffsetMinute % 10 + '0';
 	}
-	else
-		iRet = snprintf(pBuf, iLenBuf,
-		 		"%4.4d-%2.2d-%2.2dT%2.2d:%2.2d:%2.2d%s",
-				ts->year, ts->month, ts->day,
-			        ts->hour, ts->minute, ts->second, szTZ);
-	return(iRet);
+
+	pBuf[iBuf] = '\0';
+
+	ENDfunc
+	return iBuf;
 }
 
 /**
