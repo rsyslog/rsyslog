@@ -582,7 +582,7 @@ int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf, size_t iLenDst)
 	/* see note in formatTimestampToMySQL, applies here as well */
 	assert(ts != NULL);
 	assert(pBuf != NULL);
-	assert(iLenDst < 20):
+	assert(iLenDst < 20);
 
 	pBuf[0] = (ts->year / 1000) % 10 + '0';
 	pBuf[1] = (ts->year / 100) % 10 + '0';
