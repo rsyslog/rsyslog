@@ -2635,7 +2635,6 @@ doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
 
 	/* and finally enqueue the message */
 	CHKiRet(qqueueAdd(pThis, pUsr));
-	qqueueChkPersist(pThis, 1); // TODO: optimize, do in outer function! (but we need parts from v5?)
 
 finalize_it:
 	RETiRet;
@@ -2668,6 +2667,8 @@ qqueueMultiEnqObj(qqueue_t *pThis, multi_submit_t *pMultiSub)
 dbgprintf("queueMultiEnq: %d\n", i);
 		CHKiRet(doEnqSingleObj(pThis, pMultiSub->ppMsgs[i]->flowCtlType, (void*)pMultiSub->ppMsgs[i]));
 	}
+
+	qqueueChkPersist(pThis, pMultiSub->nElem);
 
 finalize_it:
 	if(pThis->qType != QUEUETYPE_DIRECT) {
