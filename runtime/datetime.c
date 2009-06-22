@@ -614,10 +614,10 @@ int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf, size_t iLenDst)
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occured.
- * The buffer must be at least 10 bytes large.
+ * The buffer must be at least 7 bytes large.
  * rgerhards, 2008-06-06
  */
-int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf)
 {
 	int iBuf;
 	int power;
@@ -626,7 +626,6 @@ int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
 
 	assert(ts != NULL);
 	assert(pBuf != NULL);
-	assert(iLenBuf >= 10);
 
 	iBuf = 0;
 	if(ts->secfracPrecision > 0)

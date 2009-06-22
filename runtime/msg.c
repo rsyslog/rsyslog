@@ -335,14 +335,15 @@ static void MsgLockingDummy(msg_t __attribute__((unused)) *pMsg)
 static void MsgPrepareEnqueueLockingCase(msg_t *pThis)
 {
 	int iErr;
+	pthread_mutexattr_t mutAttr;
 	BEGINfunc
 	assert(pThis != NULL);
-	iErr = pthread_mutexattr_init(&pThis->mutAttr);
+	iErr = pthread_mutexattr_init(&mutAttr);
 	if(iErr != 0) {
 		dbgprintf("error initializing mutex attribute in %s:%d, trying to continue\n",
 		  	  __FILE__, __LINE__);
 	}
-	iErr = pthread_mutexattr_settype(&pThis->mutAttr, PTHREAD_MUTEX_RECURSIVE);
+	iErr = pthread_mutexattr_settype(&mutAttr, PTHREAD_MUTEX_RECURSIVE);
 	if(iErr != 0) {
 		dbgprintf("ERROR setting mutex attribute to recursive in %s:%d, trying to continue "
 			 "but we will probably either abort or hang soon\n",
@@ -352,14 +353,14 @@ static void MsgPrepareEnqueueLockingCase(msg_t *pThis)
 		 * down. We should do that over time. -- rgerhards, 2008-07-14
 		 */
 	}
-	pthread_mutex_init(&pThis->mut, &pThis->mutAttr);
+	pthread_mutex_init(&pThis->mut, &mutAttr);
 
 	/* we do no longer need the attribute. According to the
 	 * POSIX spec, we can destroy it without affecting the
 	 * initialized mutex (that used the attribute).
 	 * rgerhards, 2008-07-14
 	 */
-	pthread_mutexattr_destroy(&pThis->mutAttr);
+	pthread_mutexattr_destroy(&mutAttr);
 	pThis->bDoLock = 1;
 	ENDfunc
 }
@@ -531,10 +532,8 @@ CODESTARTobjDestruct(msg)
 		free(pThis->pszRcvFromIP);
 		free(pThis->pszRcvdAt3164);
 		free(pThis->pszRcvdAt3339);
-		free(pThis->pszRcvdAt_SecFrac);
 		free(pThis->pszRcvdAt_MySQL);
 		free(pThis->pszRcvdAt_PgSQL);
-		free(pThis->pszTIMESTAMP_SecFrac);
 		free(pThis->pszTIMESTAMP_MySQL);
 		free(pThis->pszTIMESTAMP_PgSQL);
 		if(pThis->pCSProgName != NULL)
@@ -1007,15 +1006,14 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3339);
 	case tplFmtSecFrac:
-		MsgLock(pM);
-		if(pM->pszTIMESTAMP_SecFrac == NULL) {
-			if((pM->pszTIMESTAMP_SecFrac = malloc(10)) == NULL) {
-				MsgUnlock(pM);
-				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
+		if(pM->pszTIMESTAMP_SecFrac[0] == '\0') {
+			MsgLock(pM);
+			/* re-check, may have changed while we did not hold lock */
+			if(pM->pszTIMESTAMP_SecFrac[0] == '\0') {
+				datetime.formatTimestampSecFrac(&pM->tTIMESTAMP, pM->pszTIMESTAMP_SecFrac);
 			}
-			datetime.formatTimestampSecFrac(&pM->tTIMESTAMP, pM->pszTIMESTAMP_SecFrac, 10);
+			MsgUnlock(pM);
 		}
-		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP_SecFrac);
 	}
 	ENDfunc
@@ -1085,15 +1083,14 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3339);
 	case tplFmtSecFrac:
-		MsgLock(pM);
-		if(pM->pszRcvdAt_SecFrac == NULL) {
-			if((pM->pszRcvdAt_SecFrac = malloc(10)) == NULL) {
-				MsgUnlock(pM);
-				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
+		if(pM->pszRcvdAt_SecFrac[0] == '\0') {
+			MsgLock(pM);
+			/* re-check, may have changed while we did not hold lock */
+			if(pM->pszRcvdAt_SecFrac[0] == '\0') {
+				datetime.formatTimestampSecFrac(&pM->tRcvdAt, pM->pszRcvdAt_SecFrac);
 			}
-			datetime.formatTimestampSecFrac(&pM->tRcvdAt, pM->pszRcvdAt_SecFrac, 10);
+			MsgUnlock(pM);
 		}
-		MsgUnlock(pM);
 		return(pM->pszRcvdAt_SecFrac);
 	}
 	ENDfunc
