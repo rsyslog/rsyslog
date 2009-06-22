@@ -1303,19 +1303,6 @@ static inline char *getMSGID(msg_t *pM)
 }
 
 
-/* Set the TAG to a caller-provided string. This is thought
- * to be a heap buffer that the caller will no longer use. This
- * function is a performance optimization over MsgSetTAG().
- * rgerhards 2004-11-19
- */
-void MsgAssignTAG(msg_t *pMsg, uchar *pBuf)
-{
-	assert(pMsg != NULL);
-	MsgSetTAG(pMsg, pBuf, ustrlen(pBuf));
-	free(pBuf);
-}
-
-
 /* rgerhards 2009-06-12: set associated ruleset
  */
 void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
@@ -1361,10 +1348,10 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
  * if there is a TAG and, if not, if it can emulate it.
  * rgerhards, 2005-11-24
  */
-static void tryEmulateTAG(msg_t *pM)
+static inline void tryEmulateTAG(msg_t *pM)
 {
-	int iTAGLen;
-	uchar *pBuf;
+	size_t lenTAG;
+	uchar bufTAG[CONF_TAG_MAXSIZE];
 	assert(pM != NULL);
 
 	if(pM->iLenTAG > 0)
@@ -1376,11 +1363,9 @@ static void tryEmulateTAG(msg_t *pM)
 			MsgSetTAG(pM, (uchar*) getAPPNAME(pM), getAPPNAMELen(pM));
 		} else {
 			/* now we can try to emulate */
-			iTAGLen = getAPPNAMELen(pM) + getPROCIDLen(pM) + 3;
-			if((pBuf = malloc(iTAGLen * sizeof(char))) == NULL)
-				return; /* nothing we can do */
-			snprintf((char*)pBuf, iTAGLen, "%s[%s]", getAPPNAME(pM), getPROCID(pM));
-			MsgAssignTAG(pM, pBuf);
+			lenTAG = snprintf((char*)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM), getPROCID(pM));
+			bufTAG[32] = '\0'; /* just to make sure... */
+			MsgSetTAG(pM, bufTAG, lenTAG);
 		}
 	}
 }

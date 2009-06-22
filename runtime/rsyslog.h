@@ -30,6 +30,7 @@
  * #                    Config Settings                        # *
  * ############################################################# */
 #define RS_STRINGBUF_ALLOC_INCREMENT 128
+#define CONF_TAG_MAXSIZE 512 				/* a value that is deemed far too large for any valid TAG */
 
 /* ############################################################# *
  * #                  End Config Settings                      # *

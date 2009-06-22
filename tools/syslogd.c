@@ -1173,9 +1173,9 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	uchar *p2parse;
 	char *pBuf;
 	char *pWork;
-	cstr_t *pStrB;
-	int iCnt;
 	int bTAGCharDetected;
+	int i;	/* general index for parsing */
+	uchar bufParseTAG[CONF_TAG_MAXSIZE];
 	BEGINfunc
 
 	assert(pMsg != NULL);
@@ -1293,23 +1293,16 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * is the max size ;) we need to shuffle the code again... Just for 
 		 * the records: the code is currently clean, but we could optimize it! */
 		if(!bTAGCharDetected) {
-			uchar *pszTAG;
-			if(cstrConstruct(&pStrB) != RS_RET_OK) 
-				return 1;
-			rsCStrSetAllocIncrement(pStrB, 33);
-			pWork = pBuf;
-			iCnt = 0;
-			while(*p2parse && *p2parse != ':' && *p2parse != ' ') {
-				cstrAppendChar(pStrB, *p2parse++);
-				++iCnt;
+			i = 0;
+			while(*p2parse && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE) {
+				bufParseTAG[i++] = *p2parse++;
 			}
 			if(*p2parse == ':') {
 				++p2parse; 
-				cstrAppendChar(pStrB, ':');
+				bufParseTAG[i++] = ':';
 			}
-			cstrFinalize(pStrB);
-			cstrConvSzStrAndDestruct(pStrB, &pszTAG, 1);
-			if(pszTAG == NULL)
+
+			if(i == 0)
 			{	/* rger, 2005-11-10: no TAG found - this implies that what
 				 * we have considered to be the HOSTNAME is most probably the
 				 * TAG. We consider it so probable, that we now adjust it
@@ -1322,7 +1315,8 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 				moveHOSTNAMEtoTAG(pMsg);
 				MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 			} else { /* we have a TAG, so we can happily set it ;) */
-				MsgAssignTAG(pMsg, pszTAG);
+				bufParseTAG[i] = '\0';	/* terminate string */
+				MsgSetTAG(pMsg, bufParseTAG, i);
 			}
 		} else {
 			/* we have no TAG, so we ... */
