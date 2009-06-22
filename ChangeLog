@@ -1,3 +1,6 @@
+- bugfix: huge memory leak in queue engine (made rsyslogd unusable in
+  production). Occured if at least one queue was in direct mode 
+  (the default for action queues)
 ---------------------------------------------------------------------------
 Version 5.1.0  [DEVEL] (rgerhards), 2009-05-29
 

@@ -1089,6 +1089,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, void* pUsr)
 	singleBatch.nElem = 1; /* there always is only one in direct mode */
 	singleBatch.pElem = &batchObj;
 	iRet = pThis->pConsumer(pThis->pUsr, &singleBatch);
+	objDestruct(pUsr);
 
 	RETiRet;
 }
