@@ -56,7 +56,6 @@ struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
-	pthread_mutexattr_t mutAttr;
 	pthread_mutex_t mut;
 	bool	bDoLock;	 /* use the mutex? */
 	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
@@ -69,27 +68,37 @@ struct msg {
 	    */
 	short	iSeverity;	/* the severity 0..7 */
 	short	iFacility;	/* Facility code 0 .. 23*/
-	uchar	*pszRawMsg;	/* message as it was received on the wire. This is important in case we
-				 * need to preserve cryptographic verifiers.  */
-	int	iLenRawMsg;	/* length of raw message */
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
 	short	offMSG;		/* offset at which the MSG part starts in pszRawMsg */
+	short	iLenInputName;	/* Length of pszInputName */
+	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
+	int	msgFlags;	/* flags associated with this message */
+	int	iLenRawMsg;	/* length of raw message */
 	int	iLenMSG;	/* Length of the MSG part */
 	int	iLenTAG;	/* Length of the TAG part */
-	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-	uchar	*pszRcvFrom;	/* System message was received from */
 	int	iLenRcvFrom;	/* Length of pszRcvFrom */
-	uchar	*pszRcvFromIP;	/* IP of system message was received from */
 	int	iLenRcvFromIP;	/* Length of pszRcvFromIP */
+	uchar	*pszRawMsg;	/* message as it was received on the wire. This is important in case we
+				 * need to preserve cryptographic verifiers.  */
+	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
+	uchar	*pszRcvFrom;	/* System message was received from */
+	uchar	*pszRcvFromIP;	/* IP of system message was received from */
 	uchar *pszInputName;	/* name of the input module that submitted this message */
-	int	iLenInputName;	/* Length of pszInputName */
-	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
+	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
+	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
+	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
+        char *pszRcvdAt_PgSQL;  /* rcvdAt as PgSQL formatted string (always 21 characters) */
+	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 charcters) */
+	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
+	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
+        char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
 	cstr_t *pCSProgName;	/* the (BSD) program name */
 	cstr_t *pCSStrucData;   /* STRUCTURED-DATA */
 	cstr_t *pCSAPPNAME;	/* APP-NAME */
 	cstr_t *pCSPROCID;	/* PROCID */
 	cstr_t *pCSMSGID;	/* MSGID */
+	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
 	time_t ttGenTime;	/* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
 				   While this field looks redundant, it is required because a Unix timestamp
 				   is used at later processing stages (namely in the output arena). Thanks to
@@ -98,19 +107,7 @@ struct msg {
 				   enough to reliable, but I prefer to leave the subtle things to the OS, where
 				   it obviously is solved in way or another...). */
 	struct syslogTime tRcvdAt;/* time the message entered this program */
-	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
-	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
-	char *pszRcvdAt_SecFrac;/* time just as fractional seconds  (6 charcters) */
-	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
-        char *pszRcvdAt_PgSQL;  /* rcvdAt as PgSQL formatted string (always 21 characters) */
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
-	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 charcters) */
-	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 charcters at most) */
-	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 charcters) */
-        char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
-        char *pszTIMESTAMP_SecFrac;/* TIMESTAMP fractional seconds (always 6 characters) */
-	int msgFlags;		/* flags associated with this message */
-	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
 	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
 	union {
@@ -119,6 +116,8 @@ struct msg {
 	} TAG;
 	char pszTimestamp3164[16];
 	char pszTimestamp3339[33];
+	char pszTIMESTAMP_SecFrac[7]; /* Note: a pointer is 64 bits/8 char, so this is actually fewer than a pointer! */
+	char pszRcvdAt_SecFrac[7];	     /* same as above. Both are fractional seconds for their respective timestamp */
 };
 
 
