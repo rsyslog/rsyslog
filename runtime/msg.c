@@ -55,53 +55,219 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
 
-static syslogCODE rs_prioritynames[] =
-  {
-    { "alert", LOG_ALERT },
-    { "crit", LOG_CRIT },
-    { "debug", LOG_DEBUG },
-    { "emerg", LOG_EMERG },
-    { "err", LOG_ERR },
-    { "error", LOG_ERR },               /* DEPRECATED */
-    { "info", LOG_INFO },
-    { "none", INTERNAL_NOPRI },         /* INTERNAL */
-    { "notice", LOG_NOTICE },
-    { "panic", LOG_EMERG },             /* DEPRECATED */
-    { "warn", LOG_WARNING },            /* DEPRECATED */
-    { "warning", LOG_WARNING },
-    { NULL, -1 }
-  };
+static struct {
+	uchar *pszName;
+	short lenName;
+} syslog_pri_names[192] = {
+	{ UCHAR_CONSTANT("0"), 3},
+	{ UCHAR_CONSTANT("1"), 3},
+	{ UCHAR_CONSTANT("2"), 3},
+	{ UCHAR_CONSTANT("3"), 3},
+	{ UCHAR_CONSTANT("4"), 3},
+	{ UCHAR_CONSTANT("5"), 3},
+	{ UCHAR_CONSTANT("6"), 3},
+	{ UCHAR_CONSTANT("7"), 3},
+	{ UCHAR_CONSTANT("8"), 3},
+	{ UCHAR_CONSTANT("9"), 3},
+	{ UCHAR_CONSTANT("10"), 4},
+	{ UCHAR_CONSTANT("11"), 4},
+	{ UCHAR_CONSTANT("12"), 4},
+	{ UCHAR_CONSTANT("13"), 4},
+	{ UCHAR_CONSTANT("14"), 4},
+	{ UCHAR_CONSTANT("15"), 4},
+	{ UCHAR_CONSTANT("16"), 4},
+	{ UCHAR_CONSTANT("17"), 4},
+	{ UCHAR_CONSTANT("18"), 4},
+	{ UCHAR_CONSTANT("19"), 4},
+	{ UCHAR_CONSTANT("20"), 4},
+	{ UCHAR_CONSTANT("21"), 4},
+	{ UCHAR_CONSTANT("22"), 4},
+	{ UCHAR_CONSTANT("23"), 4},
+	{ UCHAR_CONSTANT("24"), 4},
+	{ UCHAR_CONSTANT("25"), 4},
+	{ UCHAR_CONSTANT("26"), 4},
+	{ UCHAR_CONSTANT("27"), 4},
+	{ UCHAR_CONSTANT("28"), 4},
+	{ UCHAR_CONSTANT("29"), 4},
+	{ UCHAR_CONSTANT("30"), 4},
+	{ UCHAR_CONSTANT("31"), 4},
+	{ UCHAR_CONSTANT("32"), 4},
+	{ UCHAR_CONSTANT("33"), 4},
+	{ UCHAR_CONSTANT("34"), 4},
+	{ UCHAR_CONSTANT("35"), 4},
+	{ UCHAR_CONSTANT("36"), 4},
+	{ UCHAR_CONSTANT("37"), 4},
+	{ UCHAR_CONSTANT("38"), 4},
+	{ UCHAR_CONSTANT("39"), 4},
+	{ UCHAR_CONSTANT("40"), 4},
+	{ UCHAR_CONSTANT("41"), 4},
+	{ UCHAR_CONSTANT("42"), 4},
+	{ UCHAR_CONSTANT("43"), 4},
+	{ UCHAR_CONSTANT("44"), 4},
+	{ UCHAR_CONSTANT("45"), 4},
+	{ UCHAR_CONSTANT("46"), 4},
+	{ UCHAR_CONSTANT("47"), 4},
+	{ UCHAR_CONSTANT("48"), 4},
+	{ UCHAR_CONSTANT("49"), 4},
+	{ UCHAR_CONSTANT("50"), 4},
+	{ UCHAR_CONSTANT("51"), 4},
+	{ UCHAR_CONSTANT("52"), 4},
+	{ UCHAR_CONSTANT("53"), 4},
+	{ UCHAR_CONSTANT("54"), 4},
+	{ UCHAR_CONSTANT("55"), 4},
+	{ UCHAR_CONSTANT("56"), 4},
+	{ UCHAR_CONSTANT("57"), 4},
+	{ UCHAR_CONSTANT("58"), 4},
+	{ UCHAR_CONSTANT("59"), 4},
+	{ UCHAR_CONSTANT("60"), 4},
+	{ UCHAR_CONSTANT("61"), 4},
+	{ UCHAR_CONSTANT("62"), 4},
+	{ UCHAR_CONSTANT("63"), 4},
+	{ UCHAR_CONSTANT("64"), 4},
+	{ UCHAR_CONSTANT("65"), 4},
+	{ UCHAR_CONSTANT("66"), 4},
+	{ UCHAR_CONSTANT("67"), 4},
+	{ UCHAR_CONSTANT("68"), 4},
+	{ UCHAR_CONSTANT("69"), 4},
+	{ UCHAR_CONSTANT("70"), 4},
+	{ UCHAR_CONSTANT("71"), 4},
+	{ UCHAR_CONSTANT("72"), 4},
+	{ UCHAR_CONSTANT("73"), 4},
+	{ UCHAR_CONSTANT("74"), 4},
+	{ UCHAR_CONSTANT("75"), 4},
+	{ UCHAR_CONSTANT("76"), 4},
+	{ UCHAR_CONSTANT("77"), 4},
+	{ UCHAR_CONSTANT("78"), 4},
+	{ UCHAR_CONSTANT("79"), 4},
+	{ UCHAR_CONSTANT("80"), 4},
+	{ UCHAR_CONSTANT("81"), 4},
+	{ UCHAR_CONSTANT("82"), 4},
+	{ UCHAR_CONSTANT("83"), 4},
+	{ UCHAR_CONSTANT("84"), 4},
+	{ UCHAR_CONSTANT("85"), 4},
+	{ UCHAR_CONSTANT("86"), 4},
+	{ UCHAR_CONSTANT("87"), 4},
+	{ UCHAR_CONSTANT("88"), 4},
+	{ UCHAR_CONSTANT("89"), 4},
+	{ UCHAR_CONSTANT("90"), 4},
+	{ UCHAR_CONSTANT("91"), 4},
+	{ UCHAR_CONSTANT("92"), 4},
+	{ UCHAR_CONSTANT("93"), 4},
+	{ UCHAR_CONSTANT("94"), 4},
+	{ UCHAR_CONSTANT("95"), 4},
+	{ UCHAR_CONSTANT("96"), 4},
+	{ UCHAR_CONSTANT("97"), 4},
+	{ UCHAR_CONSTANT("98"), 4},
+	{ UCHAR_CONSTANT("99"), 4},
+	{ UCHAR_CONSTANT("100"), 5},
+	{ UCHAR_CONSTANT("101"), 5},
+	{ UCHAR_CONSTANT("102"), 5},
+	{ UCHAR_CONSTANT("103"), 5},
+	{ UCHAR_CONSTANT("104"), 5},
+	{ UCHAR_CONSTANT("105"), 5},
+	{ UCHAR_CONSTANT("106"), 5},
+	{ UCHAR_CONSTANT("107"), 5},
+	{ UCHAR_CONSTANT("108"), 5},
+	{ UCHAR_CONSTANT("109"), 5},
+	{ UCHAR_CONSTANT("110"), 5},
+	{ UCHAR_CONSTANT("111"), 5},
+	{ UCHAR_CONSTANT("112"), 5},
+	{ UCHAR_CONSTANT("113"), 5},
+	{ UCHAR_CONSTANT("114"), 5},
+	{ UCHAR_CONSTANT("115"), 5},
+	{ UCHAR_CONSTANT("116"), 5},
+	{ UCHAR_CONSTANT("117"), 5},
+	{ UCHAR_CONSTANT("118"), 5},
+	{ UCHAR_CONSTANT("119"), 5},
+	{ UCHAR_CONSTANT("120"), 5},
+	{ UCHAR_CONSTANT("121"), 5},
+	{ UCHAR_CONSTANT("122"), 5},
+	{ UCHAR_CONSTANT("123"), 5},
+	{ UCHAR_CONSTANT("124"), 5},
+	{ UCHAR_CONSTANT("125"), 5},
+	{ UCHAR_CONSTANT("126"), 5},
+	{ UCHAR_CONSTANT("127"), 5},
+	{ UCHAR_CONSTANT("128"), 5},
+	{ UCHAR_CONSTANT("129"), 5},
+	{ UCHAR_CONSTANT("130"), 5},
+	{ UCHAR_CONSTANT("131"), 5},
+	{ UCHAR_CONSTANT("132"), 5},
+	{ UCHAR_CONSTANT("133"), 5},
+	{ UCHAR_CONSTANT("134"), 5},
+	{ UCHAR_CONSTANT("135"), 5},
+	{ UCHAR_CONSTANT("136"), 5},
+	{ UCHAR_CONSTANT("137"), 5},
+	{ UCHAR_CONSTANT("138"), 5},
+	{ UCHAR_CONSTANT("139"), 5},
+	{ UCHAR_CONSTANT("140"), 5},
+	{ UCHAR_CONSTANT("141"), 5},
+	{ UCHAR_CONSTANT("142"), 5},
+	{ UCHAR_CONSTANT("143"), 5},
+	{ UCHAR_CONSTANT("144"), 5},
+	{ UCHAR_CONSTANT("145"), 5},
+	{ UCHAR_CONSTANT("146"), 5},
+	{ UCHAR_CONSTANT("147"), 5},
+	{ UCHAR_CONSTANT("148"), 5},
+	{ UCHAR_CONSTANT("149"), 5},
+	{ UCHAR_CONSTANT("150"), 5},
+	{ UCHAR_CONSTANT("151"), 5},
+	{ UCHAR_CONSTANT("152"), 5},
+	{ UCHAR_CONSTANT("153"), 5},
+	{ UCHAR_CONSTANT("154"), 5},
+	{ UCHAR_CONSTANT("155"), 5},
+	{ UCHAR_CONSTANT("156"), 5},
+	{ UCHAR_CONSTANT("157"), 5},
+	{ UCHAR_CONSTANT("158"), 5},
+	{ UCHAR_CONSTANT("159"), 5},
+	{ UCHAR_CONSTANT("160"), 5},
+	{ UCHAR_CONSTANT("161"), 5},
+	{ UCHAR_CONSTANT("162"), 5},
+	{ UCHAR_CONSTANT("163"), 5},
+	{ UCHAR_CONSTANT("164"), 5},
+	{ UCHAR_CONSTANT("165"), 5},
+	{ UCHAR_CONSTANT("166"), 5},
+	{ UCHAR_CONSTANT("167"), 5},
+	{ UCHAR_CONSTANT("168"), 5},
+	{ UCHAR_CONSTANT("169"), 5},
+	{ UCHAR_CONSTANT("170"), 5},
+	{ UCHAR_CONSTANT("171"), 5},
+	{ UCHAR_CONSTANT("172"), 5},
+	{ UCHAR_CONSTANT("173"), 5},
+	{ UCHAR_CONSTANT("174"), 5},
+	{ UCHAR_CONSTANT("175"), 5},
+	{ UCHAR_CONSTANT("176"), 5},
+	{ UCHAR_CONSTANT("177"), 5},
+	{ UCHAR_CONSTANT("178"), 5},
+	{ UCHAR_CONSTANT("179"), 5},
+	{ UCHAR_CONSTANT("180"), 5},
+	{ UCHAR_CONSTANT("181"), 5},
+	{ UCHAR_CONSTANT("182"), 5},
+	{ UCHAR_CONSTANT("183"), 5},
+	{ UCHAR_CONSTANT("184"), 5},
+	{ UCHAR_CONSTANT("185"), 5},
+	{ UCHAR_CONSTANT("186"), 5},
+	{ UCHAR_CONSTANT("187"), 5},
+	{ UCHAR_CONSTANT("188"), 5},
+	{ UCHAR_CONSTANT("189"), 5},
+	{ UCHAR_CONSTANT("190"), 5},
+	{ UCHAR_CONSTANT("191"), 5}
+	};
 
-#ifndef LOG_AUTHPRIV
-#	define LOG_AUTHPRIV LOG_AUTH
-#endif
-static syslogCODE rs_facilitynames[] =
-  {
-    { "auth", LOG_AUTH },
-    { "authpriv", LOG_AUTHPRIV },
-    { "cron", LOG_CRON },
-    { "daemon", LOG_DAEMON },
-#if defined(LOG_FTP)
-	{"ftp",          LOG_FTP},
-#endif
-    { "kern", LOG_KERN },
-    { "lpr", LOG_LPR },
-    { "mail", LOG_MAIL },
-    { "news", LOG_NEWS },
-    { "security", LOG_AUTH },           /* DEPRECATED */
-    { "syslog", LOG_SYSLOG },
-    { "user", LOG_USER },
-    { "uucp", LOG_UUCP },
-    { "local0", LOG_LOCAL0 },
-    { "local1", LOG_LOCAL1 },
-    { "local2", LOG_LOCAL2 },
-    { "local3", LOG_LOCAL3 },
-    { "local4", LOG_LOCAL4 },
-    { "local5", LOG_LOCAL5 },
-    { "local6", LOG_LOCAL6 },
-    { "local7", LOG_LOCAL7 },
-    { NULL, -1 }
-  };
+/*syslog facility names (as of RFC5424) */
+static char *syslog_fac_names[24] = { "kern", "user", "mail", "daemon", "auth", "syslog", "lpr",
+			    	      "news", "uucp", "cron", "authpriv", "ftp", "ntp", "audit",
+			    	      "alert", "clock", "local0", "local1", "local2", "local3",
+			    	      "local4", "local5", "local6", "local7" };
+
+/* table of severity names (in numerical order)*/
+static char *syslog_severity_names[8] = { "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug" };
+
+/* numerical values as string - this is the most efficient approach to convert severity
+ * and facility values to a numerical string... -- rgerhars, 2009-06-17
+ */
+
+static char *syslog_number_names[24] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+					 "15", "16", "17", "18", "19", "20", "21", "22", "23" };
 
 /* some forward declarations */
 static int getAPPNAMELen(msg_t *pM);
@@ -272,6 +438,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
+	pM->offMSG = -1;
 	objConstructSetObjInfo(pM);
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
@@ -331,6 +498,16 @@ finalize_it:
 }
 
 
+/* some free handlers for (slightly) complicated cases... All of them may be called
+ * with an empty element.
+ */
+static inline void freeTAG(msg_t *pThis)
+{
+	if(pThis->iLenTAG >= CONF_TAG_BUFSIZE)
+		free(pThis->TAG.pszTAG);
+}
+
+
 BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
 	int currRefCount;
 CODESTARTobjDestruct(msg)
@@ -344,24 +521,18 @@ CODESTARTobjDestruct(msg)
 	if(currRefCount == 0)
 	{
 		/* DEV Debugging Only! dbgprintf("msgDestruct\t0x%lx, RefCount now 0, doing DESTROY\n", (unsigned long)pThis); */
-		free(pThis->pszRawMsg);
-		free(pThis->pszTAG);
+		if(pThis->pszRawMsg != pThis->szRawMsg)
+			free(pThis->pszRawMsg);
+		freeTAG(pThis);
 		free(pThis->pszHOSTNAME);
 		free(pThis->pszInputName);
 		free(pThis->pszRcvFrom);
 		free(pThis->pszRcvFromIP);
-		free(pThis->pszMSG);
-		free(pThis->pszFacility);
-		free(pThis->pszFacilityStr);
-		free(pThis->pszSeverity);
-		free(pThis->pszSeverityStr);
 		free(pThis->pszRcvdAt3164);
 		free(pThis->pszRcvdAt3339);
 		free(pThis->pszRcvdAt_SecFrac);
 		free(pThis->pszRcvdAt_MySQL);
 		free(pThis->pszRcvdAt_PgSQL);
-		free(pThis->pszTIMESTAMP3164);
-		free(pThis->pszTIMESTAMP3339);
 		free(pThis->pszTIMESTAMP_SecFrac);
 		free(pThis->pszTIMESTAMP_MySQL);
 		free(pThis->pszTIMESTAMP_PgSQL);
@@ -437,19 +608,23 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->msgFlags = pOld->msgFlags;
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
+	pNew->offMSG = pOld->offMSG;
 	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
 	*/
-	memcpy(pNew->bufPRI, pOld->bufPRI, pOld->iLenPRI);
-	pNew->iLenPRI = pOld->iLenPRI;
-	tmpCOPYSZ(Severity);
-	tmpCOPYSZ(SeverityStr);
-	tmpCOPYSZ(Facility);
-	tmpCOPYSZ(FacilityStr);
+	if(pOld->iLenTAG > 0) {
+		if(pOld->iLenTAG < CONF_TAG_BUFSIZE) {
+			memcpy(pNew->TAG.szBuf, pOld->TAG.szBuf, pOld->iLenTAG);
+		} else {
+			if((pNew->TAG.pszTAG = srUtilStrDup(pOld->TAG.pszTAG, pOld->iLenTAG)) == NULL) {
+				msgDestruct(&pNew);
+				return NULL;
+			}
+			pNew->iLenTAG = pOld->iLenTAG;
+		}
+	}
 	tmpCOPYSZ(RawMsg);
-	tmpCOPYSZ(MSG);
-	tmpCOPYSZ(TAG);
 	tmpCOPYSZ(HOSTNAME);
 	tmpCOPYSZ(RcvFrom);
 
@@ -493,6 +668,7 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR(pStrm, iProtocolVersion, SHORT);
 	objSerializeSCALAR(pStrm, iSeverity, SHORT);
 	objSerializeSCALAR(pStrm, iFacility, SHORT);
+	objSerializeSCALAR(pStrm, offMSG, SHORT);
 	objSerializeSCALAR(pStrm, msgFlags, INT);
 	objSerializeSCALAR(pStrm, ttGenTime, INT);
 	objSerializeSCALAR(pStrm, tRcvdAt, SYSLOGTIME);
@@ -502,9 +678,10 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializeSCALAR(pStrm, offsAfterPRI, SHORT);
 	*/
 
+	CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszTAG"), PROPTYPE_PSZ, (void*)
+		((pThis->iLenTAG < CONF_TAG_BUFSIZE) ? pThis->TAG.szBuf : pThis->TAG.pszTAG)));
+
 	objSerializePTR(pStrm, pszRawMsg, PSZ);
-	objSerializePTR(pStrm, pszMSG, PSZ);
-	objSerializePTR(pStrm, pszTAG, PSZ);
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
 	objSerializePTR(pStrm, pszInputName, PSZ);
 	objSerializePTR(pStrm, pszRcvFrom, PSZ);
@@ -557,18 +734,22 @@ msg_t *MsgAddRef(msg_t *pM)
 static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 {
 	register int i;
+	uchar *pszTag;
 	DEFiRet;
 
 	assert(pM != NULL);
+
 	if(pM->pCSPROCID != NULL)
 		return RS_RET_OK; /* we are already done ;) */
 
 	if(getProtocolVersion(pM) != 0)
 		return RS_RET_OK; /* we can only emulate if we have legacy format */
 
+	pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
+
 	/* find first '['... */
 	i = 0;
-	while((i < pM->iLenTAG) && (pM->pszTAG[i] != '['))
+	while((i < pM->iLenTAG) && (pszTag[i] != '['))
 		++i;
 	if(!(i < pM->iLenTAG))
 		return RS_RET_OK;	/* no [, so can not emulate... */
@@ -576,10 +757,10 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 	++i; /* skip '[' */
 
 	/* now obtain the PROCID string... */
-	CHKiRet(rsCStrConstruct(&pM->pCSPROCID));
+	CHKiRet(cstrConstruct(&pM->pCSPROCID));
 	rsCStrSetAllocIncrement(pM->pCSPROCID, 16);
-	while((i < pM->iLenTAG) && (pM->pszTAG[i] != ']')) {
-		CHKiRet(rsCStrAppendChar(pM->pCSPROCID, pM->pszTAG[i]));
+	while((i < pM->iLenTAG) && (pszTag[i] != ']')) {
+		CHKiRet(cstrAppendChar(pM->pCSPROCID, pszTag[i]));
 		++i;
 	}
 
@@ -589,7 +770,7 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 		 * the buffer and simply return. Note that this is NOT an error
 		 * case!
 		 */
-		rsCStrDestruct(&pM->pCSPROCID);
+		cstrDestruct(&pM->pCSPROCID);
 		FINALIZE;
 	}
 
@@ -619,22 +800,24 @@ finalize_it:
  */
 static rsRetVal aquireProgramName(msg_t *pM)
 {
-	DEFiRet;
 	register int i;
+	uchar *pszTag;
+	DEFiRet;
 
 	assert(pM != NULL);
 	if(pM->pCSProgName == NULL) {
 		/* ok, we do not yet have it. So let's parse the TAG
 		 * to obtain it.
 		 */
-		CHKiRet(rsCStrConstruct(&pM->pCSProgName));
+		pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
+		CHKiRet(cstrConstruct(&pM->pCSProgName));
 		rsCStrSetAllocIncrement(pM->pCSProgName, 33);
 		for(  i = 0
-		    ; (i < pM->iLenTAG) && isprint((int) pM->pszTAG[i])
-		      && (pM->pszTAG[i] != '\0') && (pM->pszTAG[i] != ':')
-		      && (pM->pszTAG[i] != '[')  && (pM->pszTAG[i] != '/')
+		    ; (i < pM->iLenTAG) && isprint((int) pszTag[i])
+		      && (pszTag[i] != '\0') && (pszTag[i] != ':')
+		      && (pszTag[i] != '[')  && (pszTag[i] != '/')
 		    ; ++i) {
-			CHKiRet(rsCStrAppendChar(pM->pCSProgName, pM->pszTAG[i]));
+			CHKiRet(cstrAppendChar(pM->pCSProgName, pszTag[i]));
 		}
 		CHKiRet(cstrFinalize(pM->pCSProgName));
 	}
@@ -653,14 +836,16 @@ finalize_it:
  * This is especially important as this can be a very common case, e.g.
  * when BSD syslog is acting as a sender.
  * rgerhards, 2005-11-10.
+ * NOTE ********* 2009-06-18 / rgerhards *************
+ * This function is being obsoleted by the new handling. I keep it for
+ * a while, and for oversize tags it is somewhat less optimal than in previous
+ * versions. This should only happen very seldom.
  */
 void moveHOSTNAMEtoTAG(msg_t *pM)
 {
 	assert(pM != NULL);
-	if(pM->pszTAG != NULL)
-		free(pM->pszTAG);
-	pM->pszTAG = pM->pszHOSTNAME;
-	pM->iLenTAG = pM->iLenHOSTNAME;
+	MsgSetTAG(pM, pM->pszHOSTNAME, pM->iLenHOSTNAME);
+	free(pM->pszHOSTNAME);
 	pM->pszHOSTNAME = NULL;
 	pM->iLenHOSTNAME = 0;
 }
@@ -690,11 +875,6 @@ char *getProtocolVersionString(msg_t *pM)
 	return(pM->iProtocolVersion ? "1" : "0");
 }
 
-int getMSGLen(msg_t *pM)
-{
-	return((pM == NULL) ? 0 : pM->iLenMSG);
-}
-
 
 static char *getRawMsg(msg_t *pM)
 {
@@ -719,42 +899,46 @@ char *getUxTradMsg(msg_t *pM)
 }
 */
 
+
+int getMSGLen(msg_t *pM)
+{
+	return((pM == NULL) ? 0 : pM->iLenMSG);
+}
+
 char *getMSG(msg_t *pM)
 {
 	if(pM == NULL)
 		return "";
-	else
-		if(pM->pszMSG == NULL)
+	else {
+		if(pM->offMSG == -1)
 			return "";
 		else
-			return (char*)pM->pszMSG;
+			return (char*)(pM->pszRawMsg + pM->offMSG);
+	}
 }
 
 
 /* Get PRI value as integer */
 static int getPRIi(msg_t *pM)
 {
-	assert(pM != NULL);
 	return (pM->iFacility << 3) + (pM->iSeverity);
 }
 
 
-/* Get PRI value in text form */
+/* Get PRI value in text form
+ */
 static inline char *getPRI(msg_t *pM)
 {
+	/* PRI is a number in the range 0..191. Thus, we use a simple lookup table to obtain the
+	 * string value. It looks a bit clumpsy here in code ;)
+	 */
+	int iPRI;
+
 	if(pM == NULL)
 		return "";
 
-	/* there are some cases where bufPRI may not contain a valid string,
-	 * and then we need to build it.
-	 */
-	MsgLock(pM);
-	if(pM->bufPRI[0] == '\0') {
-		snprintf((char*)pM->bufPRI, sizeof(pM->bufPRI), "<%d>", getPRIi(pM));
-	}
-	MsgUnlock(pM);
-
-	return (char*)pM->bufPRI;
+	iPRI = getPRIi(pM);
+	return (iPRI > 191) ? "invld" : (char*)syslog_pri_names[iPRI].pszName;
 }
 
 
@@ -766,12 +950,10 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 
 	switch(eFmt) {
 	case tplFmtDefault:
+	case tplFmtRFC3164Date:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3164 == NULL) {
-			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) {
-				MsgUnlock(pM);
-				return "";
-			}
+			pM->pszTIMESTAMP3164 = pM->pszTimestamp3164;
 			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
 		}
 		MsgUnlock(pM);
@@ -798,24 +980,10 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
                 }
                 MsgUnlock(pM);
                 return(pM->pszTIMESTAMP_PgSQL);
-	case tplFmtRFC3164Date:
-		MsgLock(pM);
-		if(pM->pszTIMESTAMP3164 == NULL) {
-			if((pM->pszTIMESTAMP3164 = malloc(16)) == NULL) {
-				MsgUnlock(pM);
-				return "";
-			}
-			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
-		}
-		MsgUnlock(pM);
-		return(pM->pszTIMESTAMP3164);
 	case tplFmtRFC3339Date:
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3339 == NULL) {
-			if((pM->pszTIMESTAMP3339 = malloc(33)) == NULL) {
-				MsgUnlock(pM);
-				return ""; /* TODO: check this: can it cause a free() of constant memory?) */
-			}
+			pM->pszTIMESTAMP3339 = pM->pszTimestamp3339;
 			datetime.formatTimestamp3339(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 33);
 		}
 		MsgUnlock(pM);
@@ -917,101 +1085,67 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 
 static inline char *getSeverity(msg_t *pM)
 {
-	if(pM == NULL)
-		return "";
-
-	MsgLock(pM);
-	if(pM->pszSeverity == NULL) {
-		/* we use a 2 byte buffer - can only be one digit */
-		if((pM->pszSeverity = malloc(2)) == NULL) { MsgUnlock(pM) ; return ""; }
-		pM->iLenSeverity =
-		   snprintf((char*)pM->pszSeverity, 2, "%d", pM->iSeverity);
-	}
-	MsgUnlock(pM);
-	return((char*)pM->pszSeverity);
-}
-
-
-static inline char *getSeverityStr(msg_t *pM)
-{
-	syslogCODE *c;
-	int val;
 	char *name = NULL;
 
 	if(pM == NULL)
 		return "";
 
-	MsgLock(pM);
-	if(pM->pszSeverityStr == NULL) {
-		for(c = rs_prioritynames, val = pM->iSeverity; c->c_name; c++)
-			if(c->c_val == val) {
-				name = c->c_name;
-				break;
-			}
-		if(name == NULL) {
-			/* we use a 2 byte buffer - can only be one digit */
-			if((pM->pszSeverityStr = malloc(2)) == NULL) { MsgUnlock(pM) ; return ""; }
-			pM->iLenSeverityStr =
-				snprintf((char*)pM->pszSeverityStr, 2, "%d", pM->iSeverity);
-		} else {
-			if((pM->pszSeverityStr = (uchar*) strdup(name)) == NULL) { MsgUnlock(pM) ; return ""; }
-			pM->iLenSeverityStr = strlen((char*)name);
-		}
+	if(pM->iSeverity < 0 || pM->iSeverity > 7) {
+		name = "invld";
+	} else {
+		name = syslog_number_names[pM->iSeverity];
 	}
-	MsgUnlock(pM);
-	return((char*)pM->pszSeverityStr);
+
+	return name;
+}
+
+
+static inline char *getSeverityStr(msg_t *pM)
+{
+	char *name = NULL;
+
+	if(pM == NULL)
+		return "";
+
+	if(pM->iSeverity < 0 || pM->iSeverity > 7) {
+		name = "invld";
+	} else {
+		name = syslog_severity_names[pM->iSeverity];
+	}
+
+	return name;
 }
 
 static inline char *getFacility(msg_t *pM)
 {
+	char *name = NULL;
+
 	if(pM == NULL)
 		return "";
 
-	MsgLock(pM);
-	if(pM->pszFacility == NULL) {
-		/* we use a 12 byte buffer - as of 
-		 * syslog-protocol, facility can go
-		 * up to 2^32 -1
-		 */
-		if((pM->pszFacility = malloc(12)) == NULL) { MsgUnlock(pM) ; return ""; }
-		pM->iLenFacility =
-		   snprintf((char*)pM->pszFacility, 12, "%d", pM->iFacility);
+	if(pM->iFacility < 0 || pM->iFacility > 23) {
+		name = "invld";
+	} else {
+		name = syslog_number_names[pM->iFacility];
 	}
-	MsgUnlock(pM);
-	return((char*)pM->pszFacility);
+
+	return name;
 }
 
 static inline char *getFacilityStr(msg_t *pM)
 {
-        syslogCODE *c;
-        int val;
         char *name = NULL;
 
         if(pM == NULL)
                 return "";
 
-	MsgLock(pM);
-        if(pM->pszFacilityStr == NULL) {
-                for(c = rs_facilitynames, val = pM->iFacility << 3; c->c_name; c++)
-                        if(c->c_val == val) {
-                                name = c->c_name;
-                                break;
-                        }
-                if(name == NULL) {
-			/* we use a 12 byte buffer - as of 
-			 * syslog-protocol, facility can go
-			 * up to 2^32 -1
-			 */
-			if((pM->pszFacilityStr = malloc(12)) == NULL) { MsgUnlock(pM) ; return ""; }
-			pM->iLenFacilityStr =
-				snprintf((char*)pM->pszFacilityStr, 12, "%d", val >> 3);
-                } else {
-                        if((pM->pszFacilityStr = (uchar*)strdup(name)) == NULL) { MsgUnlock(pM) ; return ""; }
-                        pM->iLenFacilityStr = strlen((char*)name);
-                }
-        }
-	MsgUnlock(pM);
-        return((char*)pM->pszFacilityStr);
+	if(pM->iFacility < 0 || pM->iFacility > 23) {
+		name = "invld";
+	} else {
+		name = syslog_fac_names[pM->iFacility];
+	}
+
+	return name;
 }
 
 
@@ -1087,11 +1221,11 @@ rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID)
 	ISOBJ_TYPE_assert(pMsg, msg);
 	if(pMsg->pCSPROCID == NULL) {
 		/* we need to obtain the object first */
-		CHKiRet(rsCStrConstruct(&pMsg->pCSPROCID));
-		rsCStrSetAllocIncrement(pMsg->pCSPROCID, 128);
+		CHKiRet(cstrConstruct(&pMsg->pCSPROCID));
 	}
 	/* if we reach this point, we have the object */
 	iRet = rsCStrSetSzStr(pMsg->pCSPROCID, (uchar*) pszPROCID);
+	CHKiRet(cstrFinalize(pMsg->pCSPROCID));
 
 finalize_it:
 	RETiRet;
@@ -1120,7 +1254,8 @@ char *getPROCID(msg_t *pM)
 	MsgLock(pM);
 	if(pM->pCSPROCID == NULL)
 		aquirePROCIDFromTAG(pM);
-	pszRet = (pM->pCSPROCID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSPROCID);
+	pszRet = (pM->pCSPROCID == NULL) ? "-" : (char*) cstrGetSzStrNoNULL(pM->pCSPROCID);
+	//pszRet = (pM->pCSPROCID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSPROCID);
 	MsgUnlock(pM);
 	return pszRet;
 }
@@ -1161,8 +1296,8 @@ static inline char *getMSGID(msg_t *pM)
 void MsgAssignTAG(msg_t *pMsg, uchar *pBuf)
 {
 	assert(pMsg != NULL);
-	pMsg->iLenTAG = (pBuf == NULL) ? 0 : strlen((char*)pBuf);
-	pMsg->pszTAG =  (uchar*) pBuf;
+	MsgSetTAG(pMsg, pBuf, ustrlen(pBuf));
+	free(pBuf);
 }
 
 
@@ -1175,17 +1310,32 @@ void MsgSetRuleset(msg_t *pMsg, ruleset_t *pRuleset)
 }
 
 
-/* rgerhards 2004-11-16: set TAG in msg object
+/* set TAG in msg object
+ * (rewritten 2009-06-18 rgerhards)
  */
-void MsgSetTAG(msg_t *pMsg, char* pszTAG)
+void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
 {
+	uchar *pBuf;
 	assert(pMsg != NULL);
-	free(pMsg->pszTAG);
-	pMsg->iLenTAG = strlen(pszTAG);
-	if((pMsg->pszTAG = malloc(pMsg->iLenTAG + 1)) != NULL)
-		memcpy(pMsg->pszTAG, pszTAG, pMsg->iLenTAG + 1);
-	else
-		dbgprintf("Could not allocate memory in MsgSetTAG()\n");
+
+	freeTAG(pMsg);
+
+	pMsg->iLenTAG = lenBuf;
+	if(pMsg->iLenTAG < CONF_TAG_BUFSIZE) {
+		/* small enough: use fixed buffer (faster!) */
+		pBuf = pMsg->TAG.szBuf;
+	} else {
+		if((pBuf = (uchar*) malloc(pMsg->iLenTAG + 1)) == NULL) {
+			/* truncate message, better than completely loosing it... */
+			pBuf = pMsg->TAG.szBuf;
+			pMsg->iLenTAG = CONF_TAG_BUFSIZE - 1;
+		} else {
+			pMsg->TAG.pszTAG = pBuf;
+		}
+	}
+
+	memcpy(pBuf, pszBuf, pMsg->iLenTAG);
+	pBuf[pMsg->iLenTAG] = '\0'; /* this also works with truncation! */
 }
 
 
@@ -1202,13 +1352,13 @@ static void tryEmulateTAG(msg_t *pM)
 	uchar *pBuf;
 	assert(pM != NULL);
 
-	if(pM->pszTAG != NULL) 
+	if(pM->iLenTAG > 0)
 		return; /* done, no need to emulate */
 	
 	if(getProtocolVersion(pM) == 1) {
 		if(!strcmp(getPROCID(pM), "-")) {
 			/* no process ID, use APP-NAME only */
-			MsgSetTAG(pM, getAPPNAME(pM));
+			MsgSetTAG(pM, (uchar*) getAPPNAME(pM), getAPPNAMELen(pM));
 		} else {
 			/* now we can try to emulate */
 			iTAGLen = getAPPNAMELen(pM) + getPROCIDLen(pM) + 3;
@@ -1221,22 +1371,6 @@ static void tryEmulateTAG(msg_t *pM)
 }
 
 
-#if 0 /* This method is currently not called, be we like to preserve it */
-static int getTAGLen(msg_t *pM)
-{
-	if(pM == NULL)
-		return 0;
-	else {
-		tryEmulateTAG(pM);
-		if(pM->pszTAG == NULL)
-			return 0;
-		else
-			return pM->iLenTAG;
-	}
-}
-#endif
-
-
 static inline char *getTAG(msg_t *pM)
 {
 	char *ret;
@@ -1246,10 +1380,10 @@ static inline char *getTAG(msg_t *pM)
 	else {
 		MsgLock(pM);
 		tryEmulateTAG(pM);
-		if(pM->pszTAG == NULL)
+		if(pM->iLenTAG == 0)
 			ret = "";
 		else
-			ret = (char*) pM->pszTAG;
+			ret = (char*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
 		MsgUnlock(pM);
 	}
 	return(ret);
@@ -1558,34 +1692,47 @@ void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME)
 
 /* rgerhards 2004-11-09: set MSG in msg object
  */
-void MsgSetMSG(msg_t *pMsg, char* pszMSG)
+void MsgSetMSGoffs(msg_t *pMsg, short offs)
 {
 	assert(pMsg != NULL);
-	assert(pszMSG != NULL);
 
-	if(pMsg->pszMSG != NULL)
-		free(pMsg->pszMSG);
-
-	pMsg->iLenMSG = strlen(pszMSG);
-	if((pMsg->pszMSG = (uchar*) malloc(pMsg->iLenMSG + 1)) != NULL)
-		memcpy(pMsg->pszMSG, pszMSG, pMsg->iLenMSG + 1);
-	else
-		dbgprintf("MsgSetMSG could not allocate memory for pszMSG buffer.");
+	pMsg->iLenMSG = ustrlen(pMsg->pszRawMsg + offs);
+	pMsg->offMSG = offs;
 }
 
-/* rgerhards 2004-11-11: set RawMsg in msg object
+
+/* set raw message in message object. Size of message is provided.
+ * rgerhards, 2009-06-16
  */
-void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg)
+void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg)
 {
 	assert(pMsg != NULL);
-	if(pMsg->pszRawMsg != NULL)
+	if(pMsg->pszRawMsg != pMsg->szRawMsg)
 		free(pMsg->pszRawMsg);
 
-	pMsg->iLenRawMsg = strlen(pszRawMsg);
-	if((pMsg->pszRawMsg = (uchar*) malloc(pMsg->iLenRawMsg + 1)) != NULL)
-		memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg + 1);
-	else
-		dbgprintf("Could not allocate memory for pszRawMsg buffer.");
+	pMsg->iLenRawMsg = lenMsg;
+	if(pMsg->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
+		/* small enough: use fixed buffer (faster!) */
+		pMsg->pszRawMsg = pMsg->szRawMsg;
+	} else if((pMsg->pszRawMsg = (uchar*) malloc(pMsg->iLenRawMsg + 1)) == NULL) {
+		/* truncate message, better than completely loosing it... */
+		pMsg->pszRawMsg = pMsg->szRawMsg;
+		pMsg->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
+	}
+
+	memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg);
+	pMsg->pszRawMsg[pMsg->iLenRawMsg] = '\0'; /* this also works with truncation! */
+}
+
+
+/* set raw message in message object. Size of message is not provided. This
+ * function should only be used when it is unavoidable (and over time we should
+ * try to remove it altogether).
+ * rgerhards, 2009-06-16
+ */
+void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg)
+{
+	MsgSetRawMsg(pMsg, pszRawMsg, strlen(pszRawMsg));
 }
 
 
@@ -1599,15 +1746,11 @@ void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg)
  */
 char *textpri(char *pRes, size_t pResLen, int pri)
 {
-	syslogCODE *c_pri, *c_fac;
-
 	assert(pRes != NULL);
 	assert(pResLen > 0);
 
-	for (c_fac = rs_facilitynames; c_fac->c_name && !(c_fac->c_val == LOG_FAC(pri)<<3); c_fac++);
-	for (c_pri = rs_prioritynames; c_pri->c_name && !(c_pri->c_val == LOG_PRI(pri)); c_pri++);
-
-	snprintf (pRes, pResLen, "%s.%s<%d>", c_fac->c_name, c_pri->c_name, pri);
+	snprintf(pRes, pResLen, "%s.%s<%d>", syslog_fac_names[LOG_FAC(pri)],
+		 syslog_severity_names[LOG_PRI(pri)], pri);
 
 	return pRes;
 }
@@ -1702,15 +1845,18 @@ static uchar *getNOW(eNOWType eNow)
  * rgerhards 2005-09-15
  */
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 cstr_t *pCSPropName, unsigned short *pbMustBeFreed)
+                 cstr_t *pCSPropName, size_t *pPropLen,
+		 unsigned short *pbMustBeFreed)
 {
 	uchar *pName;
 	char *pRes; /* result pointer */
+	int bufLen = -1; /* length of string or -1, if not known */
 	char *pBufStart;
 	char *pBuf;
 	int iLen;
 	short iOffs;
 
+	BEGINfunc
 #ifdef	FEATURE_REGEXP
 	/* Variables necessary for regular expression matching */
 	size_t nmatch = 10;
@@ -1732,6 +1878,14 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 * property names. These come after || in the ifs below. */
 	if(!strcmp((char*) pName, "msg")) {
 		pRes = getMSG(pMsg);
+		bufLen = getMSGLen(pMsg);
+	} else if(!strcmp((char*) pName, "timestamp")
+		  || !strcmp((char*) pName, "timereported")) {
+		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
+	} else if(!strcmp((char*) pName, "hostname") || !strcmp((char*) pName, "source")) {
+		pRes = getHOSTNAME(pMsg);
+	} else if(!strcmp((char*) pName, "syslogtag")) {
+		pRes = getTAG(pMsg);
 	} else if(!strcmp((char*) pName, "rawmsg")) {
 		pRes = getRawMsg(pMsg);
 	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
@@ -1745,10 +1899,6 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		pRes = (char*) getRcvFrom(pMsg);
 	} else if(!strcmp((char*) pName, "fromhost-ip")) {
 		pRes = (char*) getRcvFromIP(pMsg);
-	} else if(!strcmp((char*) pName, "source") || !strcmp((char*) pName, "hostname")) {
-		pRes = getHOSTNAME(pMsg);
-	} else if(!strcmp((char*) pName, "syslogtag")) {
-		pRes = getTAG(pMsg);
 	} else if(!strcmp((char*) pName, "pri")) {
 		pRes = getPRI(pMsg);
 	} else if(!strcmp((char*) pName, "pri-text")) {
@@ -1772,9 +1922,6 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		pRes = getSeverityStr(pMsg);
 	} else if(!strcmp((char*) pName, "timegenerated")) {
 		pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
-	} else if(!strcmp((char*) pName, "timereported")
-		  || !strcmp((char*) pName, "timestamp")) {
-		pRes = getTimeReported(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp((char*) pName, "programname")) {
 		pRes = getProgramName(pMsg);
 	} else if(!strcmp((char*) pName, "protocol-version")) {
@@ -1897,6 +2044,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			}
 			/* now copy */
 			memcpy(pBuf, pFld, iLen);
+			bufLen = iLen;
 			pBuf[iLen] = '\0'; /* terminate it */
 			if(*pbMustBeFreed == 1)
 				free(pRes);
@@ -1941,6 +2089,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			}
 		}
 		/* OK, we are at the begin - now let's copy... */
+		bufLen = iLen;
 		while(*pSb && iLen) {
 			*pBuf++ = *pSb;
 			++pSb;
@@ -2036,6 +2185,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 					/* Lets copy the matched substring to the buffer */
 					memcpy(pB, pRes + iOffs +  pmatch[pTpe->data.field.iSubMatchToUse].rm_so, iLenBuf);
+					bufLen = iLenBuf - 1;
 					pB[iLenBuf] = '\0';/* terminate string, did not happen before */
 
 					if (*pbMustBeFreed == 1)
@@ -2061,28 +2211,13 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 
 	/* now check if we need to do our "SP if first char is non-space" hack logic */
 	if(*pRes && pTpe->data.field.options.bSPIffNo1stSP) {
-		char *pB;
-		uchar cFirst = *pRes;
-
 		/* here, we always destruct the buffer and return a new one */
-		pB = (char *) malloc(2 * sizeof(char));
-		if(pB == NULL) {
-			if(*pbMustBeFreed == 1)
-				free(pRes);
-			*pbMustBeFreed = 0;
-			return "**OUT OF MEMORY**";
-		}
-		pRes = pB;
-		*pbMustBeFreed = 1;
-
-		if(cFirst == ' ') {
-			/* if we have a SP, we must return an empty string */
-			*pRes = '\0'; /* empty */
-		} else {
-			/* if it is no SP, we need to return one */
-			*pRes = ' ';
-			*(pRes+1) = '\0';
-		}
+		uchar cFirst = *pRes; /* save first char */
+		if(*pbMustBeFreed == 1)
+			free(pRes);
+		pRes = (cFirst == ' ') ? "" : " ";
+		bufLen = (cFirst == ' ') ? 0 : 1;
+		*pbMustBeFreed = 0;
 	}
 
 	if(*pRes) {
@@ -2091,11 +2226,12 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		 */
 		if(pTpe->data.field.eCaseConv != tplCaseConvNo) {
 			/* we need to obtain a private copy */
-			int iBufLen = strlen(pRes);
+			if(bufLen == -1)
+				bufLen = strlen(pRes);
 			char *pBStart;
 			char *pB;
 			char *pSrc;
-			pBStart = pB = malloc((iBufLen + 1) * sizeof(char));
+			pBStart = pB = malloc((bufLen + 1) * sizeof(char));
 			if(pB == NULL) {
 				if(*pbMustBeFreed == 1)
 					free(pRes);
@@ -2157,6 +2293,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				pRes = pDstStart;
+				bufLen = iLenBuf;
 				*pbMustBeFreed = 1;
 			}
 		} else if(pTpe->data.field.options.bSpaceCC) {
@@ -2175,7 +2312,9 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 						*pDst = ' ';
 				}
 			} else {
-				pDst = pDstStart = malloc(strlen(pRes) + 1);
+				if(bufLen == -1)
+					bufLen = strlen(pRes);
+				pDst = pDstStart = malloc(bufLen + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -2236,6 +2375,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				pRes = pBStart;
+				bufLen = -1;
 				*pbMustBeFreed = 1;
 			}
 		}
@@ -2275,6 +2415,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				if(*pbMustBeFreed == 1)
 					free(pRes);
 				pRes = pDstStart;
+				bufLen = -1; /* TODO: can we do better? */
 				*pbMustBeFreed = 1;
 			}
 		} else {
@@ -2293,7 +2434,9 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 						*pDst++ = '_';
 				}
 			} else {
-				pDst = pDstStart = malloc(strlen(pRes) + 1);
+				if(bufLen == -1)
+					bufLen = strlen(pRes);
+				pDst = pDstStart = malloc(bufLen + 1);
 				if(pDst == NULL) {
 					if(*pbMustBeFreed == 1)
 						free(pRes);
@@ -2331,16 +2474,20 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			if(*pbMustBeFreed == 1)
 				free(pRes);
 			pRes = "_";
+			bufLen = 1;
 			*pbMustBeFreed = 0;
 		}
 	}
 
 	/* Now drop last LF if present (pls note that this must not be done
-	 * if bEscapeCC was set!
+	 * if bEscapeCC was set)!
 	 */
 	if(pTpe->data.field.options.bDropLastLF && !pTpe->data.field.options.bEscapeCC) {
-		int iLn = strlen(pRes);
+		int iLn;
 		char *pB;
+		if(bufLen == -1)
+			bufLen = strlen(pRes);
+		iLn = bufLen;
 		if(iLn > 0 && *(pRes + iLn - 1) == '\n') {
 			/* we have a LF! */
 			/* check if we need to obtain a private copy */
@@ -2356,6 +2503,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 				*pbMustBeFreed = 1;
 			}
 			*(pRes + iLn - 1) = '\0'; /* drop LF ;) */
+			--bufLen;
 		}
 	}
 
@@ -2366,10 +2514,13 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	 */
 	if(pTpe->data.field.options.bCSV) {
 		/* we need to obtain a private copy, as we need to at least add the double quotes */
-		int iBufLen = strlen(pRes);
+		int iBufLen;
 		char *pBStart;
 		char *pDst;
 		char *pSrc;
+		if(bufLen == -1)
+			bufLen = strlen(pRes);
+		iBufLen = bufLen;
 		/* the malloc may be optimized, we currently use the worst case... */
 		pBStart = pDst = malloc((2 * iBufLen + 3) * sizeof(char));
 		if(pDst == NULL) {
@@ -2390,10 +2541,16 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 		if(*pbMustBeFreed == 1)
 			free(pRes);
 		pRes = pBStart;
+		bufLen = -1;
 		*pbMustBeFreed = 1;
 	}
 
+	if(bufLen == -1)
+		bufLen = strlen(pRes);
+	*pPropLen = bufLen;
+
 	/*dbgprintf("MsgGetProp(\"%s\"): \"%s\"\n", pName, pRes); only for verbose debug logging */
+	ENDfunc
 	return(pRes);
 }
 
@@ -2408,6 +2565,7 @@ msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
 {
 	DEFiRet;
 	var_t *pVar;
+	size_t propLen;
 	uchar *pszProp = NULL;
 	cstr_t *pstrProp;
 	unsigned short bMustBeFreed = 0;
@@ -2421,7 +2579,7 @@ msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar)
 	CHKiRet(var.ConstructFinalize(pVar));
 
 	/* always call MsgGetProp() without a template specifier */
-	pszProp = (uchar*) MsgGetProp(pThis, NULL, pstrPropName, &bMustBeFreed);
+	pszProp = (uchar*) MsgGetProp(pThis, NULL, pstrPropName, &propLen, &bMustBeFreed);
 
 	/* now create a string object out of it and hand that over to the var */
 	CHKiRet(rsCStrConstructFromszStr(&pstrProp, pszProp));
@@ -2460,19 +2618,19 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		pThis->iFacility = pProp->val.num;
  	} else if(isProp("msgFlags")) {
 		pThis->msgFlags = pProp->val.num;
+ 	} else if(isProp("offMSG")) {
+		pThis->offMSG = pProp->val.num;
 	} else if(isProp("pszRawMsg")) {
-		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetRawMsg(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
  	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	} else if(isProp("offAfterPRI")) {
 		pThis->offAfterPRI = pProp->val.num;
 	*/
-	} else if(isProp("pszMSG")) {
-		MsgSetMSG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszUxTradMsg")) {
 		/*IGNORE*/; /* this *was* a property, but does no longer exist */
 	} else if(isProp("pszTAG")) {
-		MsgSetTAG(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetTAG(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
 	} else if(isProp("pszInputName")) {
 		MsgSetInputName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pszRcvFromIP")) {
@@ -2495,6 +2653,8 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		memcpy(&pThis->tRcvdAt, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
 	} else if(isProp("tTIMESTAMP")) {
 		memcpy(&pThis->tTIMESTAMP, &pProp->val.vSyslogTime, sizeof(struct syslogTime));
+	} else if(isProp("pszMSG")) {
+		dbgprintf("no longer supported property pszMSG silently ignored\n");
 	}
 
 	RETiRet;

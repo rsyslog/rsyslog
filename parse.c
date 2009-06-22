@@ -256,7 +256,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr) && *pC != cDelim) {
-		CHKiRet(rsCStrAppendChar(pCStr, bConvLower ? tolower(*pC) : *pC));
+		CHKiRet(cstrAppendChar(pCStr, bConvLower ? tolower(*pC) : *pC));
 		++pThis->iCurrPos;
 		++pC;
 	}
@@ -271,7 +271,7 @@ rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrim
 	CHKiRet(cstrFinalize(pCStr));
 
 	if(bTrimTrailing) {
-		CHKiRet(rsCStrTrimTrailingWhiteSpace(pCStr));
+		CHKiRet(cstrTrimTrailingWhiteSpace(pCStr));
 	}
 
 	/* done! */
@@ -313,23 +313,23 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 	pC = rsCStrGetBufBeg(pThis->pCStr) + pThis->iCurrPos;
 
 	/* OK, we most probably can obtain a value... */
-	CHKiRet(rsCStrConstruct(&pCStr));
+	CHKiRet(cstrConstruct(&pCStr));
 
-	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
+	while(pThis->iCurrPos < cstrLen(pThis->pCStr)) {
 		if(*pC == '"') {
 			break;	/* we are done! */
 		} else if(*pC == '\\') {
 			++pThis->iCurrPos;
 			++pC;
-			if(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
+			if(pThis->iCurrPos < cstrLen(pThis->pCStr)) {
 				/* in this case, we copy the escaped character
 				 * to the output buffer (but do not rely on this,
 				 * we might later introduce other things, like \007!
 				 */
-				CHKiRet(rsCStrAppendChar(pCStr, *pC));
+				CHKiRet(cstrAppendChar(pCStr, *pC));
 			}
 		} else { /* regular character */
-			CHKiRet(rsCStrAppendChar(pCStr, *pC));
+			CHKiRet(cstrAppendChar(pCStr, *pC));
 		}
 		++pThis->iCurrPos;
 		++pC;
@@ -339,7 +339,7 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 		++pThis->iCurrPos; /* 'eat' trailing quote */
 	} else {
 		/* error - improperly quoted string! */
-		rsCStrDestruct(&pCStr);
+		cstrDestruct(&pCStr);
 		ABORT_FINALIZE(RS_RET_MISSING_TRAIL_QUOTE);
 	}
 
@@ -352,7 +352,7 @@ rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr)
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pCStr != NULL)
-			rsCStrDestruct(&pCStr);
+			cstrDestruct(&pCStr);
 	}
 
 	RETiRet;

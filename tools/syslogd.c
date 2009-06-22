@@ -587,7 +587,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	if(pszInputName != NULL)
 		MsgSetInputName(pMsg, pszInputName, ustrlen(pszInputName));
 	MsgSetFlowControlType(pMsg, flowCtlType);
-	MsgSetRawMsg(pMsg, (char*)msg);
+	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	
 	/* test for special codes */
 	pri = DEFUPRI;
@@ -887,19 +887,19 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
-	MsgSetRawMsg(pMsg, (char*)msg);
+	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));
 	/* check if we have an error code associated and, if so,
-	 * adjust the tag. -- r5gerhards, 2008-06-27
+	 * adjust the tag. -- rgerhards, 2008-06-27
 	 */
 	if(iErr == NO_ERRCODE) {
-		MsgSetTAG(pMsg, "rsyslogd:");
+		MsgSetTAG(pMsg, UCHAR_CONSTANT("rsyslogd:"), sizeof("rsyslogd:") - 1);
 	} else {
-		snprintf((char*)pszTag, sizeof(pszTag), "rsyslogd%d:", iErr);
+		size_t len = snprintf((char*)pszTag, sizeof(pszTag), "rsyslogd%d:", iErr);
 		pszTag[32] = '\0'; /* just to make sure... */
-		MsgSetTAG(pMsg, (char*)pszTag);
+		MsgSetTAG(pMsg, pszTag, len);
 	}
 	pMsg->iFacility = LOG_FAC(pri);
 	pMsg->iSeverity = LOG_PRI(pri);
@@ -915,7 +915,8 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	 * supressor statement.
 	 */
 	if(((Debug || NoFork) && bErrMsgToStderr) || iConfigVerify) {
-		fprintf(stderr, "rsyslogd: %s\n", msg);
+		if(LOG_PRI(pri) == LOG_ERR)
+			fprintf(stderr, "rsyslogd: %s\n", msg);
 	}
 
 	if(bHaveMainQueue == 0) { /* not yet in queued mode */
@@ -1294,7 +1295,7 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult)
 	return 0;
 }
 
-/* parse a RFC-formatted syslog message. This function returns
+/* parse a RFC5424-formatted syslog message. This function returns
  * 0 if processing of the message shall continue and 1 if something
  * went wrong and this messe should be ignored. This function has been
  * implemented in the effort to support syslog-protocol. Please note that
@@ -1388,7 +1389,8 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	}
 
 	/* MSG */
-	MsgSetMSG(pMsg, (char*)p2parse);
+	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
+	//MsgSetMSG(pMsg, (char*)p2parse);
 
 	free(pBuf);
 	ENDfunc
@@ -1581,15 +1583,14 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 	}
 
 	/* The rest is the actual MSG */
-	MsgSetMSG(pMsg, (char*)p2parse);
+	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
 
 	ENDfunc
 	return 0; /* all ok */
 }
 
 
-/* submit a fully created message to the main message queue. The message is
- * fully processed and parsed, so no parsing at all happens. This is primarily
+/* submit a message to the main message queue.   This is primarily
  * a hook to prevent the need for callers to know about the main message queue
  * (which may change in the future as we will probably have multiple rule
  * sets and thus queues...).
@@ -1604,6 +1605,28 @@ submitMsg(msg_t *pMsg)
 	
 	MsgPrepareEnqueue(pMsg);
 	qqueueEnqObj(pMsgQueue, pMsg->flowCtlType, (void*) pMsg);
+
+	RETiRet;
+}
+
+
+/* submit multiple messages at once, very similar to submitMsg, just
+ * for multi_submit_t.
+ * rgerhards, 2009-06-16
+ */
+rsRetVal
+multiSubmitMsg(multi_submit_t *pMultiSub)
+{
+	int i;
+	DEFiRet;
+	assert(pMultiSub != NULL);
+
+	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
+		MsgPrepareEnqueue(pMultiSub->ppMsgs[i]);
+	}
+
+	iRet = qqueueMultiEnqObj(pMsgQueue, pMultiSub);
+	pMultiSub->nElem = 0;
 
 	RETiRet;
 }
@@ -2618,7 +2641,7 @@ init(void)
 	 */
 	snprintf(bufStartUpMsg, sizeof(bufStartUpMsg)/sizeof(char), 
 		 " [origin software=\"rsyslogd\" " "swVersion=\"" VERSION \
-		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] restart",
+		 "\" x-pid=\"%d\" x-info=\"http://www.rsyslog.com\"] (re)start",
 		 (int) myPid);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)bufStartUpMsg, 0);
 
@@ -3280,7 +3303,9 @@ doGlblProcessInit(void)
 				exit(1); /* "good" exit - after forking, not diasabling anything */
 			}
 			num_fds = getdtablesize();
-			for (i= 0; i < num_fds; i++)
+			close(0);
+			/* we keep stdout and stderr open in case we have to emit something */
+			for (i = 3; i < num_fds; i++)
 				(void) close(i);
 			untty();
 		}

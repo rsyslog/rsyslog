@@ -49,62 +49,63 @@ static struct template *tplLastStatic = NULL; /* last static element of the temp
 
 
 
-/* This functions converts a template into a string. It should
- * actually be in template.c, but this requires larger re-structuring
- * of the code (because all the property-access functions are static
- * to this module). I have placed it next to the iov*() functions, as
- * it is somewhat similiar in what it does.
+/* helper to tplToString, extends buffer */
+#define ALLOC_INC 128
+static inline rsRetVal ExtendBuf(uchar **pBuf, size_t *pLenBuf, size_t iMinSize)
+{
+	uchar *pNewBuf;
+	size_t iNewSize;
+	DEFiRet;
+
+	iNewSize = (iMinSize / ALLOC_INC + 1) * ALLOC_INC;
+	CHKmalloc(pNewBuf = (uchar*) realloc(*pBuf, iNewSize));
+	*pBuf = pNewBuf;
+	*pLenBuf = iNewSize;
+dbgprintf("extend buf to at least %ld, done %ld\n", iMinSize, iNewSize);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* This functions converts a template into a string.
  *
- * The function takes a pointer to a template and a pointer to a msg object.
- * It the creates a string based on the template definition. A pointer
- * to that string is returned to the caller. The caller MUST FREE that
- * pointer when it is no longer needed. If the function fails, NULL
- * is returned.
- * If memory allocation fails in this function, we silently return
- * NULL. The reason is that we can not do anything against it. And
- * if we raise an alert, the memory situation might become even
- * worse. So we prefer to let the caller deal with it.
- * rgerhards, 2007-07-03
- *
- * rgerhards, 2007-09-05: I changed the interface to use the standard iRet
- * "calling sequence". This greatly eases complexity when it comes to handling
- * errors in called modules (plus, it is much nicer).
+ * The function takes a pointer to a template and a pointer to a msg object
+ * as well as a pointer to an output buffer and its size. Note that the output
+ * buffer pointer may be NULL, size 0, in which case a new one is allocated.
+ * The outpub buffer is grown as required. It is the caller's duty to free the
+ * buffer when it is done. Note that it is advisable to reuse memory, as this
+ * offers big performance improvements.
+ * rewritten 2009-06-19 rgerhards
  */
-rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
+rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *pLenBuf)
 {
 	DEFiRet;
 	struct templateEntry *pTpe;
-	cstr_t *pCStr;
+	int iBuf;
 	unsigned short bMustBeFreed;
 	uchar *pVal;
 	size_t iLenVal;
 
 	assert(pTpl != NULL);
 	assert(pMsg != NULL);
-	assert(ppSz != NULL);
+	assert(ppBuf != NULL);
+	assert(pLenBuf != NULL);
 
 	/* loop through the template. We obtain one value
 	 * and copy it over to our dynamic string buffer. Then, we
 	 * free the obtained value (if requested). We continue this
 	 * loop until we got hold of all values.
 	 */
-	CHKiRet(cstrConstruct(&pCStr));
-
 	pTpe = pTpl->pEntryRoot;
+	iBuf = 0;
 	while(pTpe != NULL) {
 		if(pTpe->eEntryType == CONSTANT) {
-			CHKiRet_Hdlr(rsCStrAppendStrWithLen(pCStr, 
-							  (uchar *) pTpe->data.constant.pConstant,
-							  pTpe->data.constant.iLenConstant)
-							 ) {
-				dbgprintf("error %d during tplToString()\n", iRet);
-				/* it does not make sense to continue now */
-				cstrDestruct(&pCStr);
-				FINALIZE;
-			}
+			pVal = (uchar*) pTpe->data.constant.pConstant;
+			iLenVal = pTpe->data.constant.iLenConstant;
+			bMustBeFreed = 0;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
-			iLenVal = strlen((char*) pVal);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, NULL, &iLenVal, &bMustBeFreed);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
@@ -115,30 +116,23 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar** ppSz)
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 1);
 			else if(pTpl->optFormatForSQL == 2)
 				doSQLEscape(&pVal, &iLenVal, &bMustBeFreed, 0);
-			/* value extracted, so lets copy */
-			CHKiRet_Hdlr(rsCStrAppendStrWithLen(pCStr, (uchar*) pVal, iLenVal)) {
-				dbgprintf("error %d during tplToString()\n", iRet);
-				/* it does not make sense to continue now */
-				cstrDestruct(&pCStr);
-				if(bMustBeFreed)
-					free(pVal);
-				FINALIZE;
-			}
-			if(bMustBeFreed)
-				free(pVal);
 		}
+		/* got source, now copy over */
+		if(iBuf + iLenVal + 1 >= *pLenBuf) /* we reserve one char for the final \0! */
+			CHKiRet(ExtendBuf(ppBuf, pLenBuf, iBuf + iLenVal + 1));
+
+		memcpy(*ppBuf + iBuf, pVal, iLenVal);
+		iBuf += iLenVal;
+
+		if(bMustBeFreed)
+			free(pVal);
+
 		pTpe = pTpe->pNext;
 	}
 
-	/* we are done with the template, now let's convert the result into a
-	 * "real" (usable) string and discard the helper structures.
-	 */
-	CHKiRet(cstrFinalize(pCStr));
-	CHKiRet(cstrConvSzStrAndDestruct(pCStr, &pVal, 0));
+	(*ppBuf)[iBuf] = '\0'; /* space was reserved above (see copy) */
 	
 finalize_it:
-	*ppSz = (iRet == RS_RET_OK) ? pVal : NULL;
-
 	RETiRet;
 }
 
@@ -158,6 +152,7 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 	struct templateEntry *pTpe;
 	uchar **pArr;
 	int iArr;
+	size_t propLen;
 	unsigned short bMustBeFreed;
 	uchar *pVal;
 
@@ -178,7 +173,7 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 		if(pTpe->eEntryType == CONSTANT) {
 			CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pTpe->data.constant.pConstant));
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, NULL, &bMustBeFreed);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, NULL, &propLen, &bMustBeFreed);
 			if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
 				pArr[iArr] = pVal; /* ... so we can use it! */
 			} else {
@@ -571,6 +566,7 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 	cstrFinalize(pStrB);
 	if(cstrConvSzStrAndDestruct(pStrB, &pTpe->data.field.pPropRepl, 0) != RS_RET_OK)
 		return 1;
+// TODO: another optimization: map name to integer id OPT
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {

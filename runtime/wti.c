@@ -209,7 +209,6 @@ ENDobjDestruct(wti)
 /* Standard-Constructor for the wti object
  */
 BEGINobjConstruct(wti) /* be sure to specify the object type also in END macro! */
-	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	pthread_cond_init(&pThis->condExitDone, NULL);
 	pthread_mutex_init(&pThis->mut, NULL);
 ENDobjConstruct(wti)
@@ -362,17 +361,6 @@ doIdleProcessing(wti_t *pThis, wtp_t *pWtp, int *pbInactivityTOOccured)
 
 
 /* generic worker thread framework
- *
- * Some special comments below, so that they do not clutter the main function code:
- *
- * On the use of pthread_testcancel():
- * Now make sure we can get canceled - it is not specified if pthread_setcancelstate() is
- * a cancellation point in itself. As we run most of the time without cancel enabled, I fear
- * we may never get cancelled if we do not create a cancellation point ourselfs.
- * Note on rate-limiters:
- * If we have a rate-limiter set for this worker pool, let's call it. Please
- * keep in mind that the rate-limiter may hold us for an extended period
- * of time. -- rgerhards, 2008-04-02
  */
 #pragma GCC diagnostic ignored "-Wempty-body"
 rsRetVal
@@ -401,7 +389,6 @@ wtiWorker(wti_t *pThis)
 	while(1) { /* loop will be broken below - need to do mutex locks */
 		/* process any pending thread requests */
 		wtpProcessThrdChanges(pWtp);
-		pthread_testcancel(); /* see big comment in function header */
 
 		if(pWtp->pfRateLimiter != NULL) { /* call rate-limiter, if defined */
 			pWtp->pfRateLimiter(pWtp->pUsr);

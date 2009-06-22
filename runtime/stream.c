@@ -72,9 +72,11 @@ flushApc(void *param1, void __attribute__((unused)) *param2)
 	strm_t *pThis = (strm_t*)  param1;
 	ISOBJ_TYPE_assert(pThis, strm);
 
+	BEGINfunc
 	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(&pThis->mut);
 	strmFlush(pThis);
 	END_MTX_PROTECTED_OPERATIONS_UNCOND(&pThis->mut);
+	ENDfunc
 }
 
 
@@ -188,7 +190,7 @@ finalize_it:
 static rsRetVal
 doPhysOpen(strm_t *pThis)
 {
-	int iFlags;
+	int iFlags = 0;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, strm);
 
@@ -531,19 +533,19 @@ strmReadLine(strm_t *pThis, cstr_t **ppCStr)
 	ASSERT(pThis != NULL);
 	ASSERT(ppCStr != NULL);
 
-	CHKiRet(rsCStrConstruct(ppCStr));
+	CHKiRet(cstrConstruct(ppCStr));
 
 	/* now read the line */
 	CHKiRet(strmReadChar(pThis, &c));
 	while(c != '\n') {
-		CHKiRet(rsCStrAppendChar(*ppCStr, c));
+		CHKiRet(cstrAppendChar(*ppCStr, c));
 		CHKiRet(strmReadChar(pThis, &c));
 	}
 	CHKiRet(cstrFinalize(*ppCStr));
 
 finalize_it:
 	if(iRet != RS_RET_OK && *ppCStr != NULL)
-		rsCStrDestruct(ppCStr);
+		cstrDestruct(ppCStr);
 
 	RETiRet;
 }

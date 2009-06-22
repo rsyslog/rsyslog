@@ -82,7 +82,6 @@ static rsRetVal NotImplementedDummy() { return RS_RET_NOT_IMPLEMENTED; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
-	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	pthread_mutex_init(&pThis->mut, NULL);
 	pthread_mutex_init(&pThis->mutThrdShutdwn, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);

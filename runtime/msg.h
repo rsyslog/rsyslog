@@ -28,6 +28,10 @@
 #ifndef	MSG_H_INCLUDED
 #define	MSG_H_INCLUDED 1
 
+/* some configuration constants */
+#define CONF_RAWMSG_BUFSIZE 101
+#define CONF_TAG_BUFSIZE 33 /* RFC says 32 chars (+ \0), but in practice we see longer ones... */
+
 #include <pthread.h>
 #include "obj.h"
 #include "syslogd-types.h"
@@ -50,13 +54,13 @@
  */
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	pthread_mutexattr_t mutAttr;
-	bool bDoLock;		 /* use the mutex? */
-	pthread_mutex_t mut;
 	flowControl_t flowCtlType; /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
 				        once data has entered the queue, this property is no longer needed. */
+	pthread_mutexattr_t mutAttr;
+	pthread_mutex_t mut;
+	bool	bDoLock;	 /* use the mutex? */
+	bool	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
 	short	iRefCount;	/* reference counter (0 = unused) */
-	short	bParseHOSTNAME;	/* should the hostname be parsed from the message? */
 	   /* background: the hostname is not present on "regular" messages
 	    * received via UNIX domain sockets from the same machine. However,
 	    * it is available when we have a forwarder (e.g. rfc3195d) using local
@@ -64,28 +68,13 @@ struct msg {
 	    * resolve all these issues... rgerhards, 2005-10-06
 	    */
 	short	iSeverity;	/* the severity 0..7 */
-	uchar *pszSeverity;	/* severity as string... */
-	int iLenSeverity;	/* ... and its length. */
- 	uchar *pszSeverityStr;   /* severity name... */
- 	int iLenSeverityStr;    /* ... and its length. */
 	short	iFacility;	/* Facility code 0 .. 23*/
-	uchar *pszFacility;	/* Facility as string... */
-	int iLenFacility;	/* ... and its length. */
- 	uchar *pszFacilityStr;   /* facility name... */
- 	int iLenFacilityStr;    /* ... and its length. */
-	uchar bufPRI[5];	/* PRI as string */
-	int iLenPRI;		/* and its length */
-	uchar	*pszRawMsg;	/* message as it was received on the
-				 * wire. This is important in case we
-				 * need to preserve cryptographic verifiers.
-				 */
-	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
+	uchar	*pszRawMsg;	/* message as it was received on the wire. This is important in case we
+				 * need to preserve cryptographic verifiers.  */
 	int	iLenRawMsg;	/* length of raw message */
-	uchar	*pszMSG;	/* the MSG part itself */
+	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
+	short	offMSG;		/* offset at which the MSG part starts in pszRawMsg */
 	int	iLenMSG;	/* Length of the MSG part */
-	uchar	*pszUxTradMsg;	/* the traditional UNIX message */
-	int	iLenUxTradMsg;/* Length of the traditional UNIX message */
-	uchar	*pszTAG;	/* pointer to tag value */
 	int	iLenTAG;	/* Length of the TAG part */
 	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
@@ -122,7 +111,14 @@ struct msg {
         char *pszTIMESTAMP_SecFrac;/* TIMESTAMP fractional seconds (always 6 characters) */
 	int msgFlags;		/* flags associated with this message */
 	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
-	/* now follow fixed-size buffers to safe some time otherwise used for allocs */
+	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
+	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
+	union {
+		uchar	*pszTAG;	/* pointer to tag value */
+		uchar	szBuf[CONF_TAG_BUFSIZE];
+	} TAG;
+	char pszTimestamp3164[16];
+	char pszTimestamp3339[33];
 };
 
 
@@ -151,7 +147,7 @@ rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
 void MsgAssignTAG(msg_t *pMsg, uchar *pBuf);
-void MsgSetTAG(msg_t *pMsg, char* pszTAG);
+void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf);
 void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
@@ -160,11 +156,12 @@ rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
 void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
 void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
-void MsgSetMSG(msg_t *pMsg, char* pszMSG);
-void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg);
+void MsgSetMSGoffs(msg_t *pMsg, short offs);
+void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
+void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 void moveHOSTNAMEtoTAG(msg_t *pM);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 cstr_t *pCSPropName, unsigned short *pbMustBeFreed);
+                 cstr_t *pCSPropName, size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
@@ -181,11 +178,6 @@ int getHOSTNAMELen(msg_t *pM);
 char *getProgramName(msg_t *pM);
 int getProgramNameLen(msg_t *pM);
 uchar *getRcvFrom(msg_t *pM);
-
-#if 0
-char *getUxTradMsg(msg_t *pM);
-int MsgSetUxTradMsg(msg_t *pMsg, char* pszUxTradMsg);
-#endif
 
 /* The MsgPrepareEnqueue() function is a macro for performance reasons.
  * It needs one global variable to work. This is acceptable, as it gains

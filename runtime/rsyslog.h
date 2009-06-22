@@ -95,6 +95,7 @@ typedef struct wti_s wti_t;
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
 typedef struct msg msg_t;
+typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
@@ -141,6 +142,19 @@ typedef enum {
 	FIOP_REGEX = 4,		/* matches a (BRE) regular expression? */
 	FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
 } fiop_t;
+
+
+/* multi-submit support.
+ * This is done via a simple data structure, which holds the number of elements
+ * as well as an array of to-be-submitted messages.
+ * rgerhards, 2009-06-16
+ */
+typedef struct multi_submit_s multi_submit_t;
+struct multi_submit_s {
+	short	maxElem;	/* maximum number of Elements */
+	short	nElem;		/* current number of Elements, points to the next one FREE */
+	msg_t	**ppMsgs;
+};
 
 
 #ifndef _PATH_CONSOLE

@@ -216,7 +216,7 @@ doIncludeLine(uchar **pp, __attribute__((unused)) void* pVal)
 	 * Required by doIncludeDirectory().
 	 */
 	result = glob(pattern, GLOB_MARK, NULL, &cfgFiles);
-	if(result != 0) {
+	if(result == GLOB_NOSPACE || result == GLOB_ABORTED) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
 		errmsg.LogError(0, RS_RET_FILE_NOT_FOUND, "error accessing config file or directory '%s': %s",

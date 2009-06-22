@@ -96,12 +96,12 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("imklog"), sizeof("imklog")-1);
-	MsgSetRawMsg(pMsg, (char*)msg);
-	MsgSetMSG(pMsg, (char*)msg);
+	MsgSetRawMsgWOSize(pMsg, (char*)msg);
+	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFromIP(pMsg, (uchar*)"127.0.0.1");
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
-	MsgSetTAG(pMsg, (char*)pszTag);
+	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
 	pMsg->iFacility = LOG_FAC(iFacility);
 	pMsg->iSeverity = LOG_PRI(iSeverity);
 	pMsg->bParseHOSTNAME = 0;

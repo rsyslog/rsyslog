@@ -440,11 +440,11 @@ objDeserializeEmbedStr(cstr_t **ppStr, strm_t *pStrm)
 
 	assert(ppStr != NULL);
 
-	CHKiRet(rsCStrConstruct(&pStr));
+	CHKiRet(cstrConstruct(&pStr));
 
 	NEXTC;
 	while(c != ':') {
-		CHKiRet(rsCStrAppendChar(pStr, c));
+		CHKiRet(cstrAppendChar(pStr, c));
 		NEXTC;
 	}
 	CHKiRet(cstrFinalize(pStr));
@@ -453,7 +453,7 @@ objDeserializeEmbedStr(cstr_t **ppStr, strm_t *pStrm)
 
 finalize_it:
 	if(iRet != RS_RET_OK && pStr != NULL)
-		rsCStrDestruct(&pStr);
+		cstrDestruct(&pStr);
 
 	RETiRet;
 }
@@ -508,11 +508,11 @@ static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
 	assert(ppCStr != NULL);
 	assert(iLen >= 0);
 
-	CHKiRet(rsCStrConstruct(&pCStr));
+	CHKiRet(cstrConstruct(&pCStr));
 
 	NEXTC;
 	for(i = 0 ; i < iLen ; ++i) {
-		CHKiRet(rsCStrAppendChar(pCStr, c));
+		CHKiRet(cstrAppendChar(pCStr, c));
 		NEXTC;
 	}
 	CHKiRet(cstrFinalize(pCStr));
@@ -524,7 +524,7 @@ static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
 
 finalize_it:
 	if(iRet != RS_RET_OK && pCStr != NULL)
-		rsCStrDestruct(&pCStr);
+		cstrDestruct(&pCStr);
 
 	RETiRet;
 }
@@ -622,11 +622,11 @@ static rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm)
 	}
 
 	/* get the property name first */
-	CHKiRet(rsCStrConstruct(&pProp->pcsName));
+	CHKiRet(cstrConstruct(&pProp->pcsName));
 
 	NEXTC;
 	while(c != ':') {
-		CHKiRet(rsCStrAppendChar(pProp->pcsName, c));
+		CHKiRet(cstrAppendChar(pProp->pcsName, c));
 		NEXTC;
 	}
 	CHKiRet(cstrFinalize(pProp->pcsName));

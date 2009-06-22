@@ -4,7 +4,7 @@
  *
  * File begun on 2007-08-06 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -184,6 +184,7 @@ actionResetQueueParams(void)
  */
 rsRetVal actionDestruct(action_t *pThis)
 {
+	int i;
 	DEFiRet;
 	ASSERT(pThis != NULL);
 
@@ -201,6 +202,33 @@ rsRetVal actionDestruct(action_t *pThis)
 	pthread_mutex_destroy(&pThis->mutActExec);
 	d_free(pThis->pszName);
 	d_free(pThis->ppTpl);
+
+	/* message ptr cleanup */
+	for(i = 0 ; i < pThis->iNumTpls ; ++i) {
+		if(pThis->ppMsgs[i] != NULL) {
+			switch(pThis->eParamPassing) {
+			case ACT_ARRAY_PASSING:
+#if 0 /* later! */
+				iArr = 0;
+				while(((char **)pThis->ppMsgs[i])[iArr] != NULL) {
+					d_free(((char **)pThis->ppMsgs[i])[iArr++]);
+					((char **)pThis->ppMsgs[i])[iArr++] = NULL;
+				}
+				d_free(pThis->ppMsgs[i]);
+				pThis->ppMsgs[i] = NULL;
+#endif
+				break;
+			case ACT_STRING_PASSING:
+				d_free(pThis->ppMsgs[i]);
+				break;
+			default:
+				assert(0);
+			}
+		}
+	}
+	d_free(pThis->ppMsgs);
+	d_free(pThis->lenMsgs);
+
 	d_free(pThis);
 	
 	RETiRet;
@@ -587,19 +615,15 @@ static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg, uchar ***p
 	DEFiRet;
 
 	ASSERT(pAction != NULL);
-	/* create the array for doAction() message pointers */
-	if((ppMsgs = calloc(pAction->iNumTpls, sizeof(uchar *))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
 
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		switch(pAction->eParamPassing) {
 			case ACT_STRING_PASSING:
-				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(ppMsgs[i])));
+				CHKiRet(tplToString(pAction->ppTpl[i], pMsg, &(pAction->ppMsgs[i]), &(pAction->lenMsgs[i])));
 				break;
 			case ACT_ARRAY_PASSING:
-				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(ppMsgs[i])));
+				CHKiRet(tplToArray(pAction->ppTpl[i], pMsg, (uchar***) &(pAction->ppMsgs[i])));
 				break;
 			default:assert(0); /* software bug if this happens! */
 		}
@@ -614,33 +638,32 @@ finalize_it:
 /* cleanup doAction calling parameters
  * rgerhards, 2009-05-07
  */
-static rsRetVal cleanupDoActionParams(action_t *pAction, uchar ***pppMsgs)
+static rsRetVal cleanupDoActionParams(action_t *pAction)
 {
-	uchar **ppMsgs = *pppMsgs;
 	int i;
 	int iArr;
 	DEFiRet;
 
 	ASSERT(pAction != NULL);
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
-		if(ppMsgs[i] != NULL) {
+		if(pAction->ppMsgs[i] != NULL) {
 			switch(pAction->eParamPassing) {
 			case ACT_ARRAY_PASSING:
 				iArr = 0;
-				while(((char **)ppMsgs[i])[iArr] != NULL)
-					free(((char **)ppMsgs[i])[iArr++]);
-				free(ppMsgs[i]);
+				while(((char **)pAction->ppMsgs[i])[iArr] != NULL) {
+					d_free(((char **)pAction->ppMsgs[i])[iArr++]);
+					((char **)pAction->ppMsgs[i])[iArr++] = NULL;
+				}
+				d_free(pAction->ppMsgs[i]);
+				pAction->ppMsgs[i] = NULL;
 				break;
 			case ACT_STRING_PASSING:
-				free(ppMsgs[i]);
 				break;
 			default:
 				assert(0);
 			}
 		}
 	}
-	free(ppMsgs);
-	*pppMsgs = NULL;
 
 	RETiRet;
 }
@@ -670,7 +693,7 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg)
 	CHKiRet(prepareDoActionParams(pThis, pMsg, &ppMsgs));
 
 	pThis->bHadAutoCommit = 0;
-	iRet = pThis->pMod->mod.om.doAction(ppMsgs, pMsg->msgFlags, pThis->pModData);
+	iRet = pThis->pMod->mod.om.doAction(pThis->ppMsgs, pMsg->msgFlags, pThis->pModData);
 	switch(iRet) {
 		case RS_RET_OK:
 			actionCommitted(pThis);
@@ -696,7 +719,7 @@ actionCallDoAction(action_t *pThis, msg_t *pMsg)
 	iRet = getReturnCode(pThis);
 
 finalize_it:
-	cleanupDoActionParams(pThis, &ppMsgs); /* iRet ignored! */
+	cleanupDoActionParams(pThis); /* iRet ignored! */
 
 	RETiRet;
 }
@@ -1092,8 +1115,9 @@ actionWriteToAction(action_t *pAction)
 		 */
 		datetime.getCurrTime(&(pMsg->tRcvdAt), &(pMsg->ttGenTime));
 		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
-		MsgSetMSG(pMsg, (char*)szRepMsg);
-		MsgSetRawMsg(pMsg, (char*)szRepMsg);
+#pragma warn "need fix msg repeationg handling"
+		//MsgSetMSG(pMsg, (char*)szRepMsg);
+		MsgSetRawMsgWOSize(pMsg, (char*)szRepMsg);
 
 		pMsgSave = pAction->f_pMsg;	/* save message pointer for later restoration */
 		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
@@ -1147,45 +1171,13 @@ finalize_it:
 }
 
 
-/* call the configured action. Does all necessary housekeeping.
- * rgerhards, 2007-08-01
- * FYI: currently, this function is only called from the queue
- * consumer. So we (conceptually) run detached from the input
- * threads (which also means we may run much later than when the
- * message was generated).
+/* helper to actonCallAction, mostly needed because of this damn
+ * pthread_cleanup_push() POSIX macro...
  */
-#pragma GCC diagnostic ignored "-Wempty-body"
-rsRetVal
-actionCallAction(action_t *pAction, msg_t *pMsg)
+static rsRetVal
+doActionCallAction(action_t *pAction, msg_t *pMsg)
 {
 	DEFiRet;
-	int iCancelStateSave;
-
-	ISOBJ_TYPE_assert(pMsg, msg);
-	ASSERT(pAction != NULL);
-
-	/* Make sure nodbody else modifies/uses this action object. Right now, this
-         * is important because of "message repeated n times" processing and potentially
-	 * multiple worker threads. -- rgerhards, 2007-12-11
- 	 */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	LockObj(pAction);
-	pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
-	pthread_setcancelstate(iCancelStateSave, NULL);
-
-	/* first, we need to check if this is a disabled
-	 * entry. If so, we must not further process it.
-	 * rgerhards 2005-09-26
-	 * In the future, disabled modules may be re-probed from time
-	 * to time. They are in a perfectly legal state, except that the
-	 * doAction method indicated that it wanted to be disabled - but
-	 * we do not consider this is a solution for eternity... So we
-	 * should check from time to time if affairs have improved.
-	 * rgerhards, 2007-07-24
-	 */
-	if(pAction->eState == ACT_STATE_DIED) {
-		ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
-	}
 
 	pAction->tActNow = -1; /* we do not yet know our current time (clear prev. value) */
 
@@ -1233,10 +1225,44 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 	}
 
 finalize_it:
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	UnlockObj(pAction);
-	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
-	pthread_setcancelstate(iCancelStateSave, NULL);
+	RETiRet;
+}
+
+
+/* call the configured action. Does all necessary housekeeping.
+ * rgerhards, 2007-08-01
+ * FYI: currently, this function is only called from the queue
+ * consumer. So we (conceptually) run detached from the input
+ * threads (which also means we may run much later than when the
+ * message was generated).
+ */
+#pragma GCC diagnostic ignored "-Wempty-body"
+rsRetVal
+actionCallAction(action_t *pAction, msg_t *pMsg)
+{
+	DEFiRet;
+	int iCancelStateSave;
+
+	ISOBJ_TYPE_assert(pMsg, msg);
+	ASSERT(pAction != NULL);
+
+	/* We need to lock the mutex only for repeated line processing. 
+	 * rgerhards, 2009-06-19
+	 */
+	if(pAction->f_ReduceRepeated == 1) {
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+		LockObj(pAction);
+		pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
+		pthread_setcancelstate(iCancelStateSave, NULL);
+		iRet = doActionCallAction(pAction, pMsg);
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+		UnlockObj(pAction);
+		pthread_cleanup_pop(0); /* remove mutex cleanup handler */
+		pthread_setcancelstate(iCancelStateSave, NULL);
+	} else {
+		iRet = doActionCallAction(pAction, pMsg);
+	}
+
 	RETiRet;
 }
 #pragma GCC diagnostic warning "-Wempty-body"
@@ -1324,9 +1350,9 @@ addAction(action_t **ppAction, modInfo_t *pMod, void *pModData, omodStringReques
 	 */
 	if(pAction->iNumTpls > 0) {
 		/* we first need to create the template pointer array */
-		if((pAction->ppTpl = calloc(pAction->iNumTpls, sizeof(struct template *))) == NULL) {
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
+		CHKmalloc(pAction->ppTpl = (struct template **)calloc(pAction->iNumTpls, sizeof(struct template *)));
+		CHKmalloc(pAction->ppMsgs = (uchar**) calloc(pAction->iNumTpls, sizeof(uchar *)));
+		CHKmalloc(pAction->lenMsgs = (size_t*) calloc(pAction->iNumTpls, sizeof(size_t)));
 	}
 	
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {

@@ -114,10 +114,8 @@ static inline rsRetVal uncompressMessage(msg_t *pMsg)
 				    "Message ignored.", ret);
 			FINALIZE; /* unconditional exit, nothing left to do... */
 		}
-		free(pMsg->pszRawMsg);
-		pMsg->pszRawMsg = deflateBuf;
-		pMsg->iLenRawMsg = iLenDefBuf;
-		deflateBuf = NULL; /* logically "freed" - caller is now responsible */
+		MsgSetRawMsg(pMsg, (char*)deflateBuf, iLenDefBuf);
+		free(deflateBuf);
 	}
 finalize_it:
 	if(deflateBuf != NULL)
@@ -165,6 +163,8 @@ sanitizeMessage(msg_t *pMsg)
 	size_t iSrc;
 	size_t iDst;
 	size_t iMaxLine;
+	size_t maxDest;
+	uchar szSanBuf[32*1024]; /* buffer used for sanitizing a string */
 
 	assert(pMsg != NULL);
 
@@ -205,70 +205,43 @@ sanitizeMessage(msg_t *pMsg)
 			}
 		}
 	}
-	if(bNeedSanitize == 0) {
-		/* what a shame - we do not have a \0 byte...
-		 * TODO: think about adding it or otherwise be able to use it...
-		 */
-		uchar *pRaw;
-		CHKmalloc(pRaw = realloc(pMsg->pszRawMsg, pMsg->iLenRawMsg + 1));
-		pRaw[pMsg->iLenRawMsg] = '\0';
-		pMsg->pszRawMsg = pRaw;
+
+	if(!bNeedSanitize)
 		FINALIZE;
-	}
 
 	/* now copy over the message and sanitize it */
-	/* TODO: can we get cheaper memory alloc? {alloca()?}*/
 	iMaxLine = glbl.GetMaxLine();
-	CHKmalloc(pDst = malloc(sizeof(uchar) * (iMaxLine + 1)));
+	maxDest = lenMsg * 4; /* message can grow at most four-fold */
+	if(maxDest > iMaxLine)
+		maxDest = iMaxLine;	/* but not more than the max size! */
+	if(maxDest < sizeof(szSanBuf))
+		pDst = szSanBuf;
+	else 
+		CHKmalloc(pDst = malloc(sizeof(uchar) * (iMaxLine + 1)));
 	iSrc = iDst = 0;
-	while(iSrc < lenMsg && iDst < iMaxLine) {
+	while(iSrc < lenMsg && iDst < maxDest - 3) { /* leave some space if last char must be escaped */
 		if(pszMsg[iSrc] == '\0') { /* guard against \0 characters... */
-			/* changed to the sequence (somewhat) proposed in
-			 * draft-ietf-syslog-protocol-19. rgerhards, 2006-11-30
-			 */
-			if(iDst + 3 < iMaxLine) { /* do we have space? */
-				pDst[iDst++] =  cCCEscapeChar;
-				pDst[iDst++] = '0';
-				pDst[iDst++] = '0';
-				pDst[iDst++] = '0';
-			} /* if we do not have space, we simply ignore the '\0'... */
-			  /* log an error? Very questionable... rgerhards, 2006-11-30 */
-			  /* decided: we do not log an error, it won't help... rger, 2007-06-21 */
-		} else if(bEscapeCCOnRcv && iscntrl((int) pszMsg[iSrc])) {
+		} else if(iscntrl((int) pszMsg[iSrc])) {
+			if(pszMsg[iSrc] == '\0' || bEscapeCCOnRcv) {
 			/* we are configured to escape control characters. Please note
 			 * that this most probably break non-western character sets like
 			 * Japanese, Korean or Chinese. rgerhards, 2007-07-17
-			 * Note: sysklogd logs octal values only for DEL and CCs above 127.
-			 * For others, it logs ^n where n is the control char converted to an
-			 * alphabet character. We like consistency and thus escape it to octal
-			 * in all cases. If someone complains, we may change the mode. At least
-			 * we known now what's going on.
-			 * rgerhards, 2007-07-17
 			 */
-			if(iDst + 3 < iMaxLine) { /* do we have space? */
-				pDst[iDst++] = cCCEscapeChar;
-				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
-				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
-				pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
-			} /* again, if we do not have space, we ignore the char - see comment at '\0' */
+			pDst[iDst++] = cCCEscapeChar;
+			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0300) >> 6);
+			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0070) >> 3);
+			pDst[iDst++] = '0' + ((pszMsg[iSrc] & 0007));
+			}
 		} else {
 			pDst[iDst++] = pszMsg[iSrc];
 		}
 		++iSrc;
 	}
-	pDst[iDst] = '\0'; /* space *is* reserved for this! */
 
-	/* we have a sanitized string. Let's save it now */
-	free(pMsg->pszRawMsg);
-	if((pMsg->pszRawMsg = malloc((iDst+1) * sizeof(uchar))) == NULL) {
-		/* when we get no new buffer, we use what we already have ;) */
-		pMsg->pszRawMsg = pDst;
-	} else {
-		/* trim buffer */
-		memcpy(pMsg->pszRawMsg, pDst, iDst+1);
-		free(pDst); /* too big! */
-		pMsg->iLenRawMsg = iDst;
-	}
+	MsgSetRawMsg(pMsg, (char*)pDst, iDst); /* save sanitized string */
+
+	if(pDst != szSanBuf)
+		free(pDst);
 
 finalize_it:
 	RETiRet;
@@ -284,7 +257,6 @@ rsRetVal parseMsg(msg_t *pMsg)
 	DEFiRet;
 	uchar *msg;
 	int pri;
-	int iPriText;
 
 	CHKiRet(sanitizeMessage(pMsg));
 
@@ -294,7 +266,6 @@ rsRetVal parseMsg(msg_t *pMsg)
 	/* pull PRI */
 	pri = DEFUPRI;
 	msg = pMsg->pszRawMsg;
-	iPriText = 0;
 	if(*msg == '<') {
 		/* while we process the PRI, we also fill the PRI textual representation
 		 * inside the msg object. This may not be ideal from an OOP point of view,
@@ -302,11 +273,8 @@ rsRetVal parseMsg(msg_t *pMsg)
 		 */
 		pri = 0;
 		while(isdigit((int) *++msg)) {
-			pMsg->bufPRI[iPriText++ % 4] = *msg;	 /* mod 4 to guard against malformed messages! */
 			pri = 10 * pri + (*msg - '0');
 		}
-		pMsg->bufPRI[iPriText % 4] = '\0';
-		pMsg->iLenPRI = iPriText % 4;
 		if(*msg == '>')
 			++msg;
 		if(pri & ~(LOG_FACMASK|LOG_PRIMASK))
