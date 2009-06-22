@@ -56,8 +56,6 @@ struct action_s {
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
 	action_state_t eState;	/* current state of action */
 	int	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
-	//short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
-	//short	bSuspended;	/* is the related action temporarily suspended? */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
 	int	iResumeInterval;/* resume interval for this action */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */

@@ -608,9 +608,8 @@ rsRetVal actionDbgPrint(action_t *pThis)
 /* prepare the calling parameters for doAction()
  * rgerhards, 2009-05-07
  */
-static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg, uchar ***pppMsgs)
+static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg)
 {
-	uchar **ppMsgs = *pppMsgs;
 	int i;
 	DEFiRet;
 
@@ -630,7 +629,6 @@ static rsRetVal prepareDoActionParams(action_t *pAction, msg_t *pMsg, uchar ***p
 	}
 
 finalize_it:
-	*pppMsgs = ppMsgs;
 	RETiRet;
 }
 
@@ -683,14 +681,13 @@ static rsRetVal cleanupDoActionParams(action_t *pAction)
 rsRetVal
 actionCallDoAction(action_t *pThis, msg_t *pMsg)
 {
-	uchar **ppMsgs;		/* array of message pointers for doAction */
 	DEFiRet;
 
 	ASSERT(pThis != NULL);
 	ISOBJ_TYPE_assert(pMsg, msg);
 
 	DBGPRINTF("entering actionCalldoAction(), state: %s\n", getActStateName(pThis));
-	CHKiRet(prepareDoActionParams(pThis, pMsg, &ppMsgs));
+	CHKiRet(prepareDoActionParams(pThis, pMsg));
 
 	pThis->bHadAutoCommit = 0;
 	iRet = pThis->pMod->mod.om.doAction(pThis->ppMsgs, pMsg->msgFlags, pThis->pModData);
