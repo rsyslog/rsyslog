@@ -35,6 +35,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <malloc.h>
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "stringbuf.h"
@@ -550,6 +551,23 @@ CODESTARTobjDestruct(msg)
 		MsgUnlock(pThis);
 # 	endif
 		funcDeleteMutex(pThis);
+		/* now we need to do our own optimization. Testing has shown that at least the glibc
+		 * malloc() subsystem returns memory to the OS far too late in our case. So we need
+		 * to help it a bit, by calling malloc_trim(), which will tell the alloc subsystem
+		 * to consolidate and return to the OS. We keep 128K for our use, as a safeguard
+		 * to too-frequent reallocs. But more importantly, we call this hook only every
+		 * 100,000 messages (which is an approximation, as we do not work with atomic
+		 * operations on the counter. --- rgerhards, 2009-06-22.
+		 */
+#		if HAVE_MALLOC_TRIM
+		{	/* standard C requires a new block for a new variable definition! */
+			static unsigned iTrimCtr = 1;
+			if(iTrimCtr ++ % 100000 == 0) {
+				iTrimCtr = 1;
+				malloc_trim(128*1024);
+			}
+		}
+#		endif
 	} else {
 		MsgUnlock(pThis);
 		pThis = NULL; /* tell framework not to destructing the object! */
