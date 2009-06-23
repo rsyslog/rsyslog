@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -28,10 +28,6 @@
 #ifndef	MSG_H_INCLUDED
 #define	MSG_H_INCLUDED 1
 
-/* some configuration constants */
-#define CONF_RAWMSG_BUFSIZE 101
-#define CONF_TAG_BUFSIZE 33 /* RFC says 32 chars (+ \0), but in practice we see longer ones... */
-
 #include <pthread.h>
 #include "obj.h"
 #include "syslogd-types.h"
@@ -51,6 +47,11 @@
  * will be decremented. If it is 1, however, the object is actually
  * destroyed. To make this work, it is vital that MsgAddRef() is
  * called each time a "copy" is stored somewhere.
+ *
+ * WARNING: this structure is not calloc()ed, so be careful when
+ * adding new fields. You need to initialize them in
+ * msgBaseConstruct(). That function header comment also describes
+ * why this is the case.
  */
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
@@ -110,6 +111,7 @@ struct msg {
 	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
 	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
 	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];	/* most messages are small, and these are stored here (without malloc/free!) */
+	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
 	union {
 		uchar	*pszTAG;	/* pointer to tag value */
 		uchar	szBuf[CONF_TAG_BUFSIZE];
@@ -151,13 +153,12 @@ rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
 void MsgSetRcvFrom(msg_t *pMsg, uchar* pszRcvFrom);
 rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
-void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
-void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME);
+void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME, int lenHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
 void MsgSetMSGoffs(msg_t *pMsg, short offs);
 void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
-void moveHOSTNAMEtoTAG(msg_t *pM);
+rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
                  cstr_t *pCSPropName, size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);

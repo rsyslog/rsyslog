@@ -425,6 +425,11 @@ rsRetVal MsgEnableThreadSafety(void)
  * itself but rather uses a user-supplied value. This enables the caller
  * to do some tricks to save processing time (done, for example, in the
  * udp input).
+ * NOTE: this constructor does NOT call calloc(), as we have many bytes
+ * inside the structure which do not need to be cleared. bzero() will
+ * heavily thrash the cache, so we do the init manually (which also
+ * is the right thing to do with pointers, as they are not neccessarily
+ * a binary 0 on all machines [but today almost always...]).
  * rgerhards, 2008-10-06
  */
 static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
@@ -433,15 +438,53 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	msg_t *pM;
 
 	assert(ppThis != NULL);
-	if((pM = calloc(1, sizeof(msg_t))) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKmalloc(pM = malloc(sizeof(msg_t)));
+	objConstructSetObjInfo(pM); /* intialize object helper entities */
 
-	/* initialize members that are non-zero */
+	/* initialize members in ORDER they appear in structure (think "cache line"!) */
+	pM->flowCtlType = 0;
+	pM->bDoLock = 0;
+	pM->bParseHOSTNAME = 0;
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
+	pM->offAfterPRI = 0;
 	pM->offMSG = -1;
-	objConstructSetObjInfo(pM);
+	pM->iLenInputName = 0;
+	pM->iProtocolVersion = 0;
+	pM->msgFlags = 0;
+	pM->iLenRawMsg = 0;
+	pM->iLenMSG = 0;
+	pM->iLenTAG = 0;
+	pM->iLenHOSTNAME = 0;
+	pM->iLenRcvFrom = 0;
+	pM->iLenRcvFromIP = 0;
+	pM->pszRawMsg = NULL;
+	pM->pszHOSTNAME = NULL;
+	pM->pszRcvFrom = NULL;
+	pM->pszRcvFromIP = NULL;
+	pM->pszInputName = NULL;
+	pM->pszRcvdAt3164 = NULL;
+	pM->pszRcvdAt3339 = NULL;
+	pM->pszRcvdAt_MySQL = NULL;
+        pM->pszRcvdAt_PgSQL = NULL;
+	pM->pszTIMESTAMP3164 = NULL;
+	pM->pszTIMESTAMP3339 = NULL;
+	pM->pszTIMESTAMP_MySQL = NULL;
+        pM->pszTIMESTAMP_PgSQL = NULL;
+	pM->pCSProgName = NULL;
+	pM->pCSStrucData = NULL;
+	pM->pCSAPPNAME = NULL;
+	pM->pCSPROCID = NULL;
+	pM->pCSMSGID = NULL;
+	pM->pRuleset = NULL;
+	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
+	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
+	pM->TAG.pszTAG = NULL;
+	pM->pszTimestamp3164[0] = '\0';
+	pM->pszTimestamp3339[0] = '\0';
+	pM->pszTIMESTAMP_SecFrac[0] = '\0';
+	pM->pszRcvdAt_SecFrac[0] = '\0';
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
 
@@ -508,6 +551,11 @@ static inline void freeTAG(msg_t *pThis)
 	if(pThis->iLenTAG >= CONF_TAG_BUFSIZE)
 		free(pThis->TAG.pszTAG);
 }
+static inline void freeHOSTNAME(msg_t *pThis)
+{
+	if(pThis->iLenHOSTNAME >= CONF_HOSTNAME_BUFSIZE)
+		free(pThis->pszHOSTNAME);
+}
 
 
 BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
@@ -526,7 +574,7 @@ CODESTARTobjDestruct(msg)
 		if(pThis->pszRawMsg != pThis->szRawMsg)
 			free(pThis->pszRawMsg);
 		freeTAG(pThis);
-		free(pThis->pszHOSTNAME);
+		freeHOSTNAME(pThis);
 		free(pThis->pszInputName);
 		free(pThis->pszRcvFrom);
 		free(pThis->pszRcvFromIP);
@@ -626,7 +674,7 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
 	pNew->offMSG = pOld->offMSG;
-	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
+	/* enable this, if someone actually uses UxTradMsg, delete after some time has
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
 	*/
@@ -641,8 +689,18 @@ msg_t* MsgDup(msg_t* pOld)
 			pNew->iLenTAG = pOld->iLenTAG;
 		}
 	}
-	tmpCOPYSZ(RawMsg);
-	tmpCOPYSZ(HOSTNAME);
+	if(pOld->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
+		memcpy(pNew->szRawMsg, pOld->szRawMsg, pOld->iLenRawMsg + 1);
+		pNew->pszRawMsg = pNew->szRawMsg;
+	} else {
+		tmpCOPYSZ(RawMsg);
+	}
+	if(pOld->iLenHOSTNAME < CONF_HOSTNAME_BUFSIZE) {
+		memcpy(pNew->szHOSTNAME, pOld->szHOSTNAME, pOld->iLenHOSTNAME + 1);
+		pNew->pszHOSTNAME = pNew->szHOSTNAME;
+	} else {
+		tmpCOPYSZ(HOSTNAME);
+	}
 	tmpCOPYSZ(RcvFrom);
 
 	tmpCOPYCSTR(ProgName);
@@ -842,30 +900,6 @@ finalize_it:
 	RETiRet;
 }
 
-
-/* This function moves the HOSTNAME inside the message object to the
- * TAG. It is a specialised function used to handle the condition when
- * a message without HOSTNAME is being processed. The missing HOSTNAME
- * is only detected at a later stage, during TAG processing, so that
- * we already had set the HOSTNAME property and now need to move it to
- * the TAG. Of course, we could do this via a couple of get/set methods,
- * but it is far more efficient to do it via this specialised method.
- * This is especially important as this can be a very common case, e.g.
- * when BSD syslog is acting as a sender.
- * rgerhards, 2005-11-10.
- * NOTE ********* 2009-06-18 / rgerhards *************
- * This function is being obsoleted by the new handling. I keep it for
- * a while, and for oversize tags it is somewhat less optimal than in previous
- * versions. This should only happen very seldom.
- */
-void moveHOSTNAMEtoTAG(msg_t *pM)
-{
-	assert(pM != NULL);
-	MsgSetTAG(pM, pM->pszHOSTNAME, pM->iLenHOSTNAME);
-	free(pM->pszHOSTNAME);
-	pM->pszHOSTNAME = NULL;
-	pM->iLenHOSTNAME = 0;
-}
 
 /* Access methods - dumb & easy, not a comment for each ;)
  */
@@ -1396,7 +1430,7 @@ int getHOSTNAMELen(msg_t *pM)
 		return 0;
 	else
 		if(pM->pszHOSTNAME == NULL)
-			return 0;
+			return pM->iLenRcvFrom;
 		else
 			return pM->iLenHOSTNAME;
 }
@@ -1408,7 +1442,7 @@ char *getHOSTNAME(msg_t *pM)
 		return "";
 	else
 		if(pM->pszHOSTNAME == NULL)
-			return "";
+			return (char*) pM->pszRcvFrom;
 		else
 			return (char*) pM->pszHOSTNAME;
 }
@@ -1651,22 +1685,6 @@ finalize_it:
 }
 
 
-/* Set the HOSTNAME to a caller-provided string. This is thought
- * to be a heap buffer that the caller will no longer use. This
- * function is a performance optimization over MsgSetHOSTNAME().
- * rgerhards 2004-11-19
- */
-void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf)
-{
-	assert(pMsg != NULL);
-	assert(pBuf != NULL);
-	if(pMsg->pszHOSTNAME != NULL)
-		free(pMsg->pszHOSTNAME);
-	pMsg->iLenHOSTNAME = strlen(pBuf);
-	pMsg->pszHOSTNAME = (uchar*) pBuf;
-}
-
-
 /* rgerhards 2004-11-09: set HOSTNAME in msg object
  * rgerhards, 2007-06-21:
  * Does not return anything. If an error occurs, the hostname is
@@ -1677,51 +1695,97 @@ void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf)
  * we need it. The rest of the code already knows how to handle an
  * unset HOSTNAME.
  */
-void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME)
+void MsgSetHOSTNAME(msg_t *pThis, uchar* pszHOSTNAME, int lenHOSTNAME)
 {
-	assert(pMsg != NULL);
-	free(pMsg->pszHOSTNAME);
+	assert(pThis != NULL);
 
-	pMsg->iLenHOSTNAME = ustrlen(pszHOSTNAME);
-	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) != NULL)
-		memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
-	else
-		DBGPRINTF("Could not allocate memory in MsgSetHOSTNAME()\n");
+	freeHOSTNAME(pThis);
+
+	pThis->iLenHOSTNAME = lenHOSTNAME;
+	if(pThis->iLenHOSTNAME < CONF_HOSTNAME_BUFSIZE) {
+		/* small enough: use fixed buffer (faster!) */
+		pThis->pszHOSTNAME = pThis->szHOSTNAME;
+	} else if((pThis->pszHOSTNAME = (uchar*) malloc(pThis->iLenHOSTNAME + 1)) == NULL) {
+		/* truncate message, better than completely loosing it... */
+		pThis->pszHOSTNAME = pThis->szHOSTNAME;
+		pThis->iLenHOSTNAME = CONF_HOSTNAME_BUFSIZE - 1;
+	}
+
+	memcpy(pThis->pszHOSTNAME, pszHOSTNAME, pThis->iLenHOSTNAME);
+	pThis->pszHOSTNAME[pThis->iLenHOSTNAME] = '\0'; /* this also works with truncation! */
 }
 
 
-/* rgerhards 2004-11-09: set MSG in msg object
+/* set the offset of the MSG part into the raw msg buffer
  */
 void MsgSetMSGoffs(msg_t *pMsg, short offs)
 {
-	assert(pMsg != NULL);
-
-	pMsg->iLenMSG = ustrlen(pMsg->pszRawMsg + offs);
+	ISOBJ_TYPE_assert(pMsg, msg);
+	pMsg->iLenMSG = pMsg->iLenRawMsg - offs;
 	pMsg->offMSG = offs;
+}
+
+
+/* replace the MSG part of a message. The update actually takes place inside
+ * rawmsg. 
+ * There are two cases: either the new message will be larger than the new msg
+ * or it will be less than or equal. If it is less than or equal, we can utilize
+ * the previous message buffer. If it is larger, we can utilize the msg_t-included
+ * message buffer if it fits in there. If this is not the case, we need to alloc
+ * a new, larger, chunk and copy over the data to it. Note that this function is
+ * (hopefully) relatively seldom being called, so some performance impact is
+ * uncritical. In any case, pszMSG is copied, so if it was dynamically allocated,
+ * the caller is responsible for freeing it.
+ * rgerhards, 2009-06-23
+ */
+rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG)
+{
+	int lenNew;
+	uchar *bufNew;
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, msg);
+	assert(pszMSG != NULL);
+
+	lenNew = pThis->iLenRawMsg + lenMSG - pThis->iLenMSG;
+	if(lenMSG > pThis->iLenMSG && lenNew >= CONF_RAWMSG_BUFSIZE) {
+		/*  we have lost and need to alloc a new buffer ;) */
+		CHKmalloc(bufNew = malloc(lenNew + 1));
+		memcpy(bufNew, pThis->pszRawMsg, pThis->offMSG);
+		free(pThis->pszRawMsg);
+		pThis->pszRawMsg = bufNew;
+	}
+
+	memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
+	pThis->pszRawMsg[lenNew] = '\0'; /* this also works with truncation! */
+	pThis->iLenRawMsg = lenNew;
+	pThis->iLenMSG = lenMSG;
+
+finalize_it:
+	RETiRet;
 }
 
 
 /* set raw message in message object. Size of message is provided.
  * rgerhards, 2009-06-16
  */
-void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg)
+void MsgSetRawMsg(msg_t *pThis, char* pszRawMsg, size_t lenMsg)
 {
-	assert(pMsg != NULL);
-	if(pMsg->pszRawMsg != pMsg->szRawMsg)
-		free(pMsg->pszRawMsg);
+	assert(pThis != NULL);
+	if(pThis->pszRawMsg != pThis->szRawMsg)
+		free(pThis->pszRawMsg);
 
-	pMsg->iLenRawMsg = lenMsg;
-	if(pMsg->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
+	pThis->iLenRawMsg = lenMsg;
+	if(pThis->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
 		/* small enough: use fixed buffer (faster!) */
-		pMsg->pszRawMsg = pMsg->szRawMsg;
-	} else if((pMsg->pszRawMsg = (uchar*) malloc(pMsg->iLenRawMsg + 1)) == NULL) {
+		pThis->pszRawMsg = pThis->szRawMsg;
+	} else if((pThis->pszRawMsg = (uchar*) malloc(pThis->iLenRawMsg + 1)) == NULL) {
 		/* truncate message, better than completely loosing it... */
-		pMsg->pszRawMsg = pMsg->szRawMsg;
-		pMsg->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
+		pThis->pszRawMsg = pThis->szRawMsg;
+		pThis->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
 	}
 
-	memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg);
-	pMsg->pszRawMsg[pMsg->iLenRawMsg] = '\0'; /* this also works with truncation! */
+	memcpy(pThis->pszRawMsg, pszRawMsg, pThis->iLenRawMsg);
+	pThis->pszRawMsg[pThis->iLenRawMsg] = '\0'; /* this also works with truncation! */
 }
 
 
@@ -2638,7 +2702,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	} else if(isProp("pszRcvFrom")) {
 		MsgSetRcvFrom(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszHOSTNAME")) {
-		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pCSStrucData")) {
 		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSAPPNAME")) {

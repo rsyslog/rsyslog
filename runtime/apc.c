@@ -257,8 +257,11 @@ execScheduled(void)
 	END_MTX_PROTECTED_OPERATIONS_UNCOND(&listMutex);
 	CHKiRet(iRet);
 
-	DBGPRINTF("running apc scheduler -  we have %s to execute\n",
-		  pExecList == NULL ? "nothing" : "something");
+	if(pExecList != NULL) {
+		DBGPRINTF("running apc scheduler -  we have %s to execute\n",
+			  pExecList == NULL ? "nothing" : "something");
+	}
+
 	for(pCurr = pExecList ; pCurr != NULL ; pCurr = pNext) {
 dbgprintf("executing apc list entry %p, apc %p\n", pCurr, pCurr->pApc);
 		pNext = pCurr->pNext;

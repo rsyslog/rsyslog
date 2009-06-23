@@ -29,8 +29,17 @@
 /* ############################################################# *
  * #                    Config Settings                        # *
  * ############################################################# */
-#define RS_STRINGBUF_ALLOC_INCREMENT 128
-#define CONF_TAG_MAXSIZE 512 				/* a value that is deemed far too large for any valid TAG */
+#define RS_STRINGBUF_ALLOC_INCREMENT	128
+/* MAXSIZE are absolute maxima, while BUFSIZE are just values after which
+ * processing is more time-intense. The BUFSIZE params currently add their
+ * value to the fixed size of the message object.
+ */
+#define CONF_TAG_MAXSIZE		512	/* a value that is deemed far too large for any valid TAG */
+#define CONF_TAG_HOSTNAME		512	/* a value that is deemed far too large for any valid HOSTNAME */
+#define CONF_RAWMSG_BUFSIZE		101
+#define CONF_TAG_BUFSIZE		32
+#define CONF_HOSTNAME_BUFSIZE		32
+
 
 /* ############################################################# *
  * #                  End Config Settings                      # *
@@ -67,11 +76,11 @@
 #define CORE_FEATURE_BATCHING	1
 /*#define CORE_FEATURE_whatever 2 ... and so on ... */
 
-
-/* some universal 64 bit define... */
+/* some universal fixed size integer defines ... */
 typedef long long int64;
 typedef long long unsigned uint64;
 typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
+typedef char intTiny; 	/* 0..127! */
 
 /* define some base data types */
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
@@ -116,7 +125,6 @@ typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerou
 
 typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
 typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
-
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */

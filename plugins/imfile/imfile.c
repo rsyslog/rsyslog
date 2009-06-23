@@ -100,7 +100,7 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("imfile"), sizeof("imfile")-1);
 	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine), cstrLen(cstrLine));
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
-	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
+	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);

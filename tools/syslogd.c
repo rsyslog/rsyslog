@@ -614,7 +614,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	 * being the local host).  rgerhards 2004-11-16
 	 */
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
-		MsgSetHOSTNAME(pMsg, hname);
+		MsgSetHOSTNAME(pMsg, hname, ustrlen(hname));
 	MsgSetRcvFrom(pMsg, hname);
 	MsgSetAfterPRIOffs(pMsg, p - msg);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
@@ -888,7 +888,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
-	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
+	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));
 	/* check if we have an error code associated and, if so,
@@ -1356,12 +1356,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	/* HOSTNAME */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-		MsgSetHOSTNAME(pMsg, pBuf);
-	} else {
-		/* we can not parse, so we get the system we
-		 * received the data from.
-		 */
-		MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
+		MsgSetHOSTNAME(pMsg, pBuf, ustrlen(pBuf));
 	}
 
 	/* APP-NAME */
@@ -1390,7 +1385,6 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 
 	/* MSG */
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
-	//MsgSetMSG(pMsg, (char*)p2parse);
 
 	free(pBuf);
 	ENDfunc
@@ -1414,11 +1408,10 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 {
 	uchar *p2parse;
-	char *pBuf;
-	char *pWork;
 	int bTAGCharDetected;
 	int i;	/* general index for parsing */
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
+	uchar bufParseHOSTNAME[CONF_TAG_HOSTNAME];
 	BEGINfunc
 
 	assert(pMsg != NULL);
@@ -1440,8 +1433,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
 			/* indeed, we got it! */
 			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
-		} else {
-			/* parse pointer needs to be restored, as we moved it off-by-one
+		} else {/* parse pointer needs to be restored, as we moved it off-by-one
 			 * for this try.
 			 */
 			--p2parse;
@@ -1471,50 +1463,24 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * If I find them, I set a simple flag but continue. After parsing, I check the flag.
 		 * If it was set, then we most probably do not have a hostname but a TAG. Thus, I change
 		 * the fields. I think this logic shall work with any type of syslog message.
+		 * rgerhards, 2009-06-23: and I now have extended this logic to every character
+		 * that is not a valid hostname.
 		 */
 		bTAGCharDetected = 0;
 		if(flags & PARSE_HOSTNAME) {
-			/* TODO: quick and dirty memory allocation */
-			/* the memory allocated is far too much in most cases. But on the plus side,
-			 * it is quite fast... - rgerhards, 2007-09-20
-			 */
-			if((pBuf = malloc(sizeof(char)* (ustrlen(p2parse) +1))) == NULL)
-				return 1;
-			pWork = pBuf;
-			/* this is the actual parsing loop */
-			while(*p2parse && *p2parse != ' ' && *p2parse != ':') {
-				if(*p2parse == '[' || *p2parse == ']' || *p2parse == '/')
-					bTAGCharDetected = 1;
-				*pWork++ = *p2parse++;
+			i = 0;
+			while((isalnum(p2parse[i]) || p2parse[i] == '.' || p2parse[i] == '.'
+				|| p2parse[i] == '_') && i < CONF_TAG_MAXSIZE) {
+				bufParseHOSTNAME[i] = p2parse[i];
+				++i;
 			}
-			/* we need to handle ':' seperately, because it terminates the
-			 * TAG - so we also need to terminate the parser here!
-			 * rgerhards, 2007-09-10 *p2parse points to a valid address here in 
-			 * any case. We can reach this point only if we are at end of string,
-			 * or we have a ':' or ' '. What the if below does is check if we are
-			 * not at end of string and, if so, advance the parse pointer. If we 
-			 * are already at end of string, *p2parse is equal to '\0', neither if
-			 * will be true and the parse pointer remain as is. This is perfectly
-			 * well.
-			 */
-			if(*p2parse == ':') {
-				bTAGCharDetected = 1;
-				/* We will move hostname to tag, so preserve ':' (otherwise we 
-				 * will needlessly change the message format) */
-				*pWork++ = *p2parse++; 
-			} else if(*p2parse == ' ')
-				++p2parse;
-			*pWork = '\0';
-			MsgAssignHOSTNAME(pMsg, pBuf);
-		}
-		/* check if we seem to have a TAG */
-		if(bTAGCharDetected) {
-			/* indeed, this smells like a TAG, so lets use it for this. We take
-			 * the HOSTNAME from the sender system instead.
-			 */
-			DBGPRINTF("HOSTNAME contains invalid characters, assuming it to be a TAG.\n");
-			moveHOSTNAMEtoTAG(pMsg);
-			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
+
+			if(i > 0 && p2parse[i] == ' ' && isalnum(p2parse[i-1])) {
+				/* we got a hostname! */
+				p2parse += i + 1; /* "eat" it (including SP delimiter) */
+				bufParseHOSTNAME[i] = '\0';
+				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
+			}
 		}
 
 		/* now parse TAG - that should be present in message from all sources.
@@ -1530,49 +1496,25 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 * in RFC3164...). We now receive the full size, but will modify the
 		 * outputs so that only 32 characters max are used by default.
 		 */
-		/* The following code in general is quick & dirty - I need to get
-		 * it going for a test, rgerhards 2004-11-16 */
-		/* lol.. we tried to solve it, just to remind ourselfs that 32 octets
-		 * is the max size ;) we need to shuffle the code again... Just for 
-		 * the records: the code is currently clean, but we could optimize it! */
-		if(!bTAGCharDetected) {
-			i = 0;
-			while(*p2parse && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE) {
-				bufParseTAG[i++] = *p2parse++;
-			}
-			if(*p2parse == ':') {
-				++p2parse; 
-				bufParseTAG[i++] = ':';
-			}
-
-			if(i == 0)
-			{	/* rger, 2005-11-10: no TAG found - this implies that what
-				 * we have considered to be the HOSTNAME is most probably the
-				 * TAG. We consider it so probable, that we now adjust it
-				 * that way. So we pick up the previously set hostname, assign
-				 * it to tag and use the sender system (from IP stack) as
-				 * the hostname. This situation is the standard case with
-				 * stock BSD syslogd.
-				 */
-				DBGPRINTF("No TAG in message, assuming that HOSTNAME is missing.\n");
-				moveHOSTNAMEtoTAG(pMsg);
-				MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
-			} else { /* we have a TAG, so we can happily set it ;) */
-				bufParseTAG[i] = '\0';	/* terminate string */
-				MsgSetTAG(pMsg, bufParseTAG, i);
-			}
-		} else {
-			/* we have no TAG, so we ... */
-			/*DO NOTHING*/;
+		i = 0;
+		while(*p2parse && *p2parse != ':' && *p2parse != ' ' && i < CONF_TAG_MAXSIZE) {
+			bufParseTAG[i++] = *p2parse++;
 		}
-	} else {
-		/* we enter this code area when the user has instructed rsyslog NOT
+		if(*p2parse == ':') {
+			++p2parse; 
+			bufParseTAG[i++] = ':';
+		}
+
+		/* no TAG can only be detected if the message immediatly ends, in which case an empty TAG
+		 * is considered OK. So we do not need to check for empty TAG. -- rgerhards, 2009-06-23
+		 */
+		bufParseTAG[i] = '\0';	/* terminate string */
+		MsgSetTAG(pMsg, bufParseTAG, i);
+	} else {/* we enter this code area when the user has instructed rsyslog NOT
 		 * to parse HOSTNAME and TAG - rgerhards, 2006-03-13
 		 */
-		if(!(flags & INTERNAL_MSG))
-		{
+		if(!(flags & INTERNAL_MSG)) {
 			DBGPRINTF("HOSTNAME and TAG not parsed by user configuraton.\n");
-			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
 	}
 
@@ -2830,7 +2772,7 @@ mainloop(void)
 		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
 		 */
 		//tvSelectTimeout.tv_sec = (bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
-tvSelectTimeout.tv_sec = 5; // TESTING ONLY!!! TODO: change back!!!
+		tvSelectTimeout.tv_sec = TIMERINTVL; /* TODO: change this back to the above code when we have a better solution for apc */
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)

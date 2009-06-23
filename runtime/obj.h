@@ -77,11 +77,13 @@
 /* the next macro MUST be called in Constructors: */
 #ifndef NDEBUG /* this means if debug... */
 #	define objConstructSetObjInfo(pThis) \
-		ASSERT(((obj_t*) (pThis))->pObjInfo == NULL); \
 		((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ; \
+		((obj_t*) (pThis))->pszName = NULL; \
 		((obj_t*) (pThis))->iObjCooCKiE = 0xBADEFEE
 #else
-#	define objConstructSetObjInfo(pThis) ((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ
+#	define objConstructSetObjInfo(pThis) \
+		((obj_t*) (pThis))->pObjInfo = pObjInfoOBJ; \
+		((obj_t*) (pThis))->pszName = NULL
 #endif
 #define objDestruct(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_DESTRUCT])(&pThis)
 #define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
