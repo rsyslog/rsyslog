@@ -425,6 +425,11 @@ rsRetVal MsgEnableThreadSafety(void)
  * itself but rather uses a user-supplied value. This enables the caller
  * to do some tricks to save processing time (done, for example, in the
  * udp input).
+ * NOTE: this constructor does NOT call calloc(), as we have many bytes
+ * inside the structure which do not need to be cleared. bzero() will
+ * heavily thrash the cache, so we do the init manually (which also
+ * is the right thing to do with pointers, as they are not neccessarily
+ * a binary 0 on all machines [but today almost always...]).
  * rgerhards, 2008-10-06
  */
 static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
@@ -433,15 +438,53 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	msg_t *pM;
 
 	assert(ppThis != NULL);
-	if((pM = calloc(1, sizeof(msg_t))) == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	CHKmalloc(pM = malloc(sizeof(msg_t)));
+	objConstructSetObjInfo(pM); /* intialize object helper entities */
 
-	/* initialize members that are non-zero */
+	/* initialize members in ORDER they appear in structure (think "cache line"!) */
+	pM->flowCtlType = 0;
+	pM->bDoLock = 0;
+	pM->bParseHOSTNAME = 0;
 	pM->iRefCount = 1;
 	pM->iSeverity = -1;
 	pM->iFacility = -1;
+	pM->offAfterPRI = 0;
 	pM->offMSG = -1;
-	objConstructSetObjInfo(pM);
+	pM->iLenInputName = 0;
+	pM->iProtocolVersion = 0;
+	pM->msgFlags = 0;
+	pM->iLenRawMsg = 0;
+	pM->iLenMSG = 0;
+	pM->iLenTAG = 0;
+	pM->iLenHOSTNAME = 0;
+	pM->iLenRcvFrom = 0;
+	pM->iLenRcvFromIP = 0;
+	pM->pszRawMsg = NULL;
+	pM->pszHOSTNAME = NULL;
+	pM->pszRcvFrom = NULL;
+	pM->pszRcvFromIP = NULL;
+	pM->pszInputName = NULL;
+	pM->pszRcvdAt3164 = NULL;
+	pM->pszRcvdAt3339 = NULL;
+	pM->pszRcvdAt_MySQL = NULL;
+        pM->pszRcvdAt_PgSQL = NULL;
+	pM->pszTIMESTAMP3164 = NULL;
+	pM->pszTIMESTAMP3339 = NULL;
+	pM->pszTIMESTAMP_MySQL = NULL;
+        pM->pszTIMESTAMP_PgSQL = NULL;
+	pM->pCSProgName = NULL;
+	pM->pCSStrucData = NULL;
+	pM->pCSAPPNAME = NULL;
+	pM->pCSPROCID = NULL;
+	pM->pCSMSGID = NULL;
+	pM->pRuleset = NULL;
+	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
+	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
+	pM->TAG.pszTAG = NULL;
+	pM->pszTimestamp3164[0] = '\0';
+	pM->pszTimestamp3339[0] = '\0';
+	pM->pszTIMESTAMP_SecFrac[0] = '\0';
+	pM->pszRcvdAt_SecFrac[0] = '\0';
 
 	/* DEV debugging only! dbgprintf("msgConstruct\t0x%x, ref 1\n", (int)pM);*/
 

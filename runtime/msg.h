@@ -51,6 +51,11 @@
  * will be decremented. If it is 1, however, the object is actually
  * destroyed. To make this work, it is vital that MsgAddRef() is
  * called each time a "copy" is stored somewhere.
+ *
+ * WARNING: this structure is not calloc()ed, so be careful when
+ * adding new fields. You need to initialize them in
+ * msgBaseConstruct(). That function header comment also describes
+ * why this is the case.
  */
 struct msg {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
