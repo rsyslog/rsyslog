@@ -84,7 +84,6 @@ DEFFUNC_llExecFunc(doIterateRulesetActions)
 	iRet = rule.IterateAllActions(pRule, pMyParam->pFunc, pMyParam->pParam);
 	RETiRet;
 }
-#if 0
 /* iterate over all actions of THIS rule set.
  */
 static rsRetVal
@@ -96,7 +95,7 @@ iterateRulesetAllActions(ruleset_t *pThis, rsRetVal (*pFunc)(void*, void*), void
 
 	params.pFunc = pFunc;
 	params.pParam = pParam;
-	CHKiRet(llExecFunc(&llRulesets, doIterateRulesetActions, &params));
+	CHKiRet(llExecFunc(&(pThis->llRules), doIterateRulesetActions, &params));
 
 finalize_it:
 	RETiRet;
@@ -112,7 +111,6 @@ DEFFUNC_llExecFunc(doIterateAllActions)
 	iRet = iterateRulesetAllActions(pThis, pMyParam->pFunc, pMyParam->pParam);
 	RETiRet;
 }
-#endif
 /* iterate over ALL actions present in the WHOLE system.
  * this is often needed, for example when HUP processing 
  * must be done or a shutdown is pending.
@@ -126,8 +124,7 @@ iterateAllActions(rsRetVal (*pFunc)(void*, void*), void* pParam)
 
 	params.pFunc = pFunc;
 	params.pParam = pParam;
-	//CHKiRet(llExecFunc(&llRulesets, doIterateAllActions, &params));
-	CHKiRet(llExecFunc(&llRulesets, doIterateRulesetActions, &params));
+	CHKiRet(llExecFunc(&llRulesets, doIterateAllActions, &params));
 
 finalize_it:
 	RETiRet;

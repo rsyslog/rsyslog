@@ -31,6 +31,9 @@
  * ############################################################# */
 #define RS_STRINGBUF_ALLOC_INCREMENT 128
 #define CONF_TAG_MAXSIZE 512 				/* a value that is deemed far too large for any valid TAG */
+#define CONF_RAWMSG_BUFSIZE 101
+#define CONF_TAG_BUFSIZE 33				/* RFC says 32 chars (+ \0), but in practice we see longer ones... */
+
 
 /* ############################################################# *
  * #                  End Config Settings                      # *

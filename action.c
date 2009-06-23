@@ -4,7 +4,7 @@
  *
  * File begun on 2007-08-06 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -239,10 +239,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 
 	ASSERT(ppThis != NULL);
 	
-	if((pThis = (action_t*) calloc(1, sizeof(action_t))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-
+	CHKmalloc(pThis = (action_t*) calloc(1, sizeof(action_t)));
 	pThis->iResumeInterval = glbliActionResumeInterval;
 	pThis->iResumeRetryCount = glbliActionResumeRetryCount;
 	pThis->tLastOccur = time(NULL);	/* done once per action on startup only */
@@ -658,7 +655,7 @@ actionWriteToAction(action_t *pAction)
 		if(pAction->iNbrNoExec < pAction->iExecEveryNthOccur - 1) {
 			++pAction->iNbrNoExec;
 			dbgprintf("action %p passed %d times to execution - less than neded - discarding\n",
-				  pAction, pAction->iNbrNoExec);
+			  pAction, pAction->iNbrNoExec);
 			FINALIZE;
 		} else {
 			pAction->iNbrNoExec = 0; /* we execute the action now, so the number of no execs is down to */
@@ -675,6 +672,7 @@ actionWriteToAction(action_t *pAction)
 	 */
 	if(pAction->f_prevcount > 1) {
 		msg_t *pMsg;
+		size_t lenRepMsg;
 		uchar szRepMsg[1024];
 
 		if((pMsg = MsgDup(pAction->f_pMsg)) == NULL) {
@@ -684,23 +682,19 @@ actionWriteToAction(action_t *pAction)
 		}
 
 		if(pAction->bRepMsgHasMsg == 0) { /* old format repeat message? */
-			snprintf((char*)szRepMsg, sizeof(szRepMsg), "last message repeated %d times",
+			lenRepMsg = snprintf((char*)szRepMsg, sizeof(szRepMsg), " last message repeated %d times",
 			    pAction->f_prevcount);
 		} else {
-			snprintf((char*)szRepMsg, sizeof(szRepMsg), "message repeated %d times: [%.800s]",
+			lenRepMsg = snprintf((char*)szRepMsg, sizeof(szRepMsg), " message repeated %d times: [%.800s]",
 			    pAction->f_prevcount, getMSG(pAction->f_pMsg));
 		}
 
-		/* We now need to update the other message properties.
-		 * ... RAWMSG is a problem ... Please note that digital
+		/* We now need to update the other message properties. Please note that digital
 		 * signatures inside the message are also invalidated.
 		 */
 		datetime.getCurrTime(&(pMsg->tRcvdAt), &(pMsg->ttGenTime));
 		memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
-#pragma warn "need fix msg repeationg handling"
-		//MsgSetMSG(pMsg, (char*)szRepMsg);
-		MsgSetRawMsgWOSize(pMsg, (char*)szRepMsg);
-
+		MsgReplaceMSG(pMsg, szRepMsg, lenRepMsg);
 		pMsgSave = pAction->f_pMsg;	/* save message pointer for later restoration */
 		pAction->f_pMsg = pMsg;	/* use the new msg (pointer will be restored below) */
 	}

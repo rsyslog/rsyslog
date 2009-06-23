@@ -1469,6 +1469,7 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	assert(pAction != NULL);
 	
 	BEGINfunc
+RUNLOG_VAR("%p", pAction);
 	LockObj(pAction);
 	/* TODO: time() performance: the call below could be moved to
 	 * the beginn of the llExec(). This makes it slightly less correct, but

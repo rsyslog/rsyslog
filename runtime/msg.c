@@ -1733,38 +1733,76 @@ void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME)
 }
 
 
-/* rgerhards 2004-11-09: set MSG in msg object
+/* set the offset of the MSG part into the raw msg buffer
  */
 void MsgSetMSGoffs(msg_t *pMsg, short offs)
 {
-	assert(pMsg != NULL);
-
-	pMsg->iLenMSG = ustrlen(pMsg->pszRawMsg + offs);
+	ISOBJ_TYPE_assert(pMsg, msg);
+	pMsg->iLenMSG = pMsg->iLenRawMsg - offs;
 	pMsg->offMSG = offs;
+}
+
+
+/* replace the MSG part of a message. The update actually takes place inside
+ * rawmsg. 
+ * There are two cases: either the new message will be larger than the new msg
+ * or it will be less than or equal. If it is less than or equal, we can utilize
+ * the previous message buffer. If it is larger, we can utilize the msg_t-included
+ * message buffer if it fits in there. If this is not the case, we need to alloc
+ * a new, larger, chunk and copy over the data to it. Note that this function is
+ * (hopefully) relatively seldom being called, so some performance impact is
+ * uncritical. In any case, pszMSG is copied, so if it was dynamically allocated,
+ * the caller is responsible for freeing it.
+ * rgerhards, 2009-06-23
+ */
+rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG)
+{
+	int lenNew;
+	uchar *bufNew;
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, msg);
+	assert(pszMSG != NULL);
+
+	lenNew = pThis->iLenRawMsg + lenMSG - pThis->iLenMSG;
+	if(lenMSG > pThis->iLenMSG && lenNew >= CONF_RAWMSG_BUFSIZE) {
+		/*  we have lost and need to alloc a new buffer ;) */
+		CHKmalloc(bufNew = malloc(lenNew + 1));
+		memcpy(bufNew, pThis->pszRawMsg, pThis->offMSG);
+		free(pThis->pszRawMsg);
+		pThis->pszRawMsg = bufNew;
+	}
+
+	memcpy(pThis->pszRawMsg + pThis->offMSG, pszMSG, lenMSG);
+	pThis->pszRawMsg[lenNew] = '\0'; /* this also works with truncation! */
+	pThis->iLenRawMsg = lenNew;
+	pThis->iLenMSG = lenMSG;
+
+finalize_it:
+	RETiRet;
 }
 
 
 /* set raw message in message object. Size of message is provided.
  * rgerhards, 2009-06-16
  */
-void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg)
+void MsgSetRawMsg(msg_t *pThis, char* pszRawMsg, size_t lenMsg)
 {
-	assert(pMsg != NULL);
-	if(pMsg->pszRawMsg != pMsg->szRawMsg)
-		free(pMsg->pszRawMsg);
+	assert(pThis != NULL);
+	if(pThis->pszRawMsg != pThis->szRawMsg)
+		free(pThis->pszRawMsg);
 
-	pMsg->iLenRawMsg = lenMsg;
-	if(pMsg->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
+	pThis->iLenRawMsg = lenMsg;
+	if(pThis->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
 		/* small enough: use fixed buffer (faster!) */
-		pMsg->pszRawMsg = pMsg->szRawMsg;
-	} else if((pMsg->pszRawMsg = (uchar*) malloc(pMsg->iLenRawMsg + 1)) == NULL) {
+		pThis->pszRawMsg = pThis->szRawMsg;
+	} else if((pThis->pszRawMsg = (uchar*) malloc(pThis->iLenRawMsg + 1)) == NULL) {
 		/* truncate message, better than completely loosing it... */
-		pMsg->pszRawMsg = pMsg->szRawMsg;
-		pMsg->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
+		pThis->pszRawMsg = pThis->szRawMsg;
+		pThis->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
 	}
 
-	memcpy(pMsg->pszRawMsg, pszRawMsg, pMsg->iLenRawMsg);
-	pMsg->pszRawMsg[pMsg->iLenRawMsg] = '\0'; /* this also works with truncation! */
+	memcpy(pThis->pszRawMsg, pszRawMsg, pThis->iLenRawMsg);
+	pThis->pszRawMsg[pThis->iLenRawMsg] = '\0'; /* this also works with truncation! */
 }
 
 
