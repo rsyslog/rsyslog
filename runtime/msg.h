@@ -152,7 +152,7 @@ rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
 void MsgSetRcvFrom(msg_t *pMsg, uchar* pszRcvFrom);
 rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
-void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
+//void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
 void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
 void MsgSetMSGoffs(msg_t *pMsg, short offs);

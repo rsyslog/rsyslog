@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
+Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
 - greatly reduced memory requirements of msg object
   to around half of the previous demand. This means that more messages can
   be stored in core! Due to fewer cache misses, this also means some
@@ -22,12 +22,18 @@ Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
 - added capability to fsync() queue disk files for enhanced reliability
   (also add's speed, because you do no longer need to run the whole file
   system in sync mode)
+- more strict parsing of the hostname in rfc3164 mode, hopefully
+  removes false positives (but may cause some trouble with hostname
+  parsing). For details, see this bug tracker:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=126
 - added configuration commands (see doc for explanations)
   * $OMFileZipLevel
   * $OMFileIOBufferSize
   * $OMFileFlushOnTXEnd
   * $MainMsgQueueSyncQueueFiles
   * $ActionQueueSyncQueueFiles
+---------------------------------------------------------------------------
+Version 4.3.2  [beta] (rgerhards), 2009-??-??
 ---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-05-25
 - added capability to run multiple tcp listeners (on different ports)

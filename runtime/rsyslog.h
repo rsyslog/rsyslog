@@ -29,10 +29,14 @@
 /* ############################################################# *
  * #                    Config Settings                        # *
  * ############################################################# */
-#define RS_STRINGBUF_ALLOC_INCREMENT 128
-#define CONF_TAG_MAXSIZE 512 				/* a value that is deemed far too large for any valid TAG */
-#define CONF_RAWMSG_BUFSIZE 101
-#define CONF_TAG_BUFSIZE 33				/* RFC says 32 chars (+ \0), but in practice we see longer ones... */
+#define RS_STRINGBUF_ALLOC_INCREMENT	128
+/* MAXSIZE are absolute maxima, while BUFSIZE are just values after which
+ * processing is more time-intense.
+ */
+#define CONF_TAG_MAXSIZE		512	/* a value that is deemed far too large for any valid TAG */
+#define CONF_TAG_HOSTNAME		512	/* a value that is deemed far too large for any valid HOSTNAME */
+#define CONF_RAWMSG_BUFSIZE		101
+#define CONF_TAG_BUFSIZE		33	/* RFC says 32 chars (+ \0), but in practice we see longer ones... */
 
 
 /* ############################################################# *
