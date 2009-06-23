@@ -551,6 +551,11 @@ static inline void freeTAG(msg_t *pThis)
 	if(pThis->iLenTAG >= CONF_TAG_BUFSIZE)
 		free(pThis->TAG.pszTAG);
 }
+static inline void freeHOSTNAME(msg_t *pThis)
+{
+	if(pThis->iLenHOSTNAME >= CONF_HOSTNAME_BUFSIZE)
+		free(pThis->pszHOSTNAME);
+}
 
 
 BEGINobjDestruct(msg) /* be sure to specify the object type also in END and CODESTART macros! */
@@ -569,7 +574,7 @@ CODESTARTobjDestruct(msg)
 		if(pThis->pszRawMsg != pThis->szRawMsg)
 			free(pThis->pszRawMsg);
 		freeTAG(pThis);
-		free(pThis->pszHOSTNAME);
+		freeHOSTNAME(pThis);
 		free(pThis->pszInputName);
 		free(pThis->pszRcvFrom);
 		free(pThis->pszRcvFromIP);
@@ -669,7 +674,7 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
 	pNew->offMSG = pOld->offMSG;
-	/* enable this, if someone actually uses UxTradMsg, delete after some  time has
+	/* enable this, if someone actually uses UxTradMsg, delete after some time has
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
 	*/
@@ -684,8 +689,18 @@ msg_t* MsgDup(msg_t* pOld)
 			pNew->iLenTAG = pOld->iLenTAG;
 		}
 	}
-	tmpCOPYSZ(RawMsg);
-	tmpCOPYSZ(HOSTNAME);
+	if(pOld->iLenRawMsg < CONF_RAWMSG_BUFSIZE) {
+		memcpy(pNew->szRawMsg, pOld->szRawMsg, pOld->iLenRawMsg + 1);
+		pNew->pszRawMsg = pNew->szRawMsg;
+	} else {
+		tmpCOPYSZ(RawMsg);
+	}
+	if(pOld->iLenHOSTNAME < CONF_HOSTNAME_BUFSIZE) {
+		memcpy(pNew->szHOSTNAME, pOld->szHOSTNAME, pOld->iLenHOSTNAME + 1);
+		pNew->pszHOSTNAME = pNew->szHOSTNAME;
+	} else {
+		tmpCOPYSZ(HOSTNAME);
+	}
 	tmpCOPYSZ(RcvFrom);
 
 	tmpCOPYCSTR(ProgName);
@@ -885,30 +900,6 @@ finalize_it:
 	RETiRet;
 }
 
-
-/* This function moves the HOSTNAME inside the message object to the
- * TAG. It is a specialised function used to handle the condition when
- * a message without HOSTNAME is being processed. The missing HOSTNAME
- * is only detected at a later stage, during TAG processing, so that
- * we already had set the HOSTNAME property and now need to move it to
- * the TAG. Of course, we could do this via a couple of get/set methods,
- * but it is far more efficient to do it via this specialised method.
- * This is especially important as this can be a very common case, e.g.
- * when BSD syslog is acting as a sender.
- * rgerhards, 2005-11-10.
- * NOTE ********* 2009-06-18 / rgerhards *************
- * This function is being obsoleted by the new handling. I keep it for
- * a while, and for oversize tags it is somewhat less optimal than in previous
- * versions. This should only happen very seldom.
- */
-void moveHOSTNAMEtoTAG(msg_t *pM)
-{
-	assert(pM != NULL);
-	MsgSetTAG(pM, pM->pszHOSTNAME, pM->iLenHOSTNAME);
-	free(pM->pszHOSTNAME);
-	pM->pszHOSTNAME = NULL;
-	pM->iLenHOSTNAME = 0;
-}
 
 /* Access methods - dumb & easy, not a comment for each ;)
  */
@@ -1694,22 +1685,6 @@ finalize_it:
 }
 
 
-/* Set the HOSTNAME to a caller-provided string. This is thought
- * to be a heap buffer that the caller will no longer use. This
- * function is a performance optimization over MsgSetHOSTNAME().
- * rgerhards 2004-11-19
- */
-void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf)
-{
-	assert(pMsg != NULL);
-	assert(pBuf != NULL);
-	if(pMsg->pszHOSTNAME != NULL)
-		free(pMsg->pszHOSTNAME);
-	pMsg->iLenHOSTNAME = strlen(pBuf);
-	pMsg->pszHOSTNAME = (uchar*) pBuf;
-}
-
-
 /* rgerhards 2004-11-09: set HOSTNAME in msg object
  * rgerhards, 2007-06-21:
  * Does not return anything. If an error occurs, the hostname is
@@ -1720,16 +1695,24 @@ void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf)
  * we need it. The rest of the code already knows how to handle an
  * unset HOSTNAME.
  */
-void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME, int lenHOSTNAME)
+void MsgSetHOSTNAME(msg_t *pThis, uchar* pszHOSTNAME, int lenHOSTNAME)
 {
-	assert(pMsg != NULL);
-	free(pMsg->pszHOSTNAME);
+	assert(pThis != NULL);
 
-	pMsg->iLenHOSTNAME = lenHOSTNAME;
-	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) != NULL)
-		memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
-	else
-		DBGPRINTF("Could not allocate memory in MsgSetHOSTNAME()\n");
+	freeHOSTNAME(pThis);
+
+	pThis->iLenHOSTNAME = lenHOSTNAME;
+	if(pThis->iLenHOSTNAME < CONF_HOSTNAME_BUFSIZE) {
+		/* small enough: use fixed buffer (faster!) */
+		pThis->pszHOSTNAME = pThis->szHOSTNAME;
+	} else if((pThis->pszHOSTNAME = (uchar*) malloc(pThis->iLenHOSTNAME + 1)) == NULL) {
+		/* truncate message, better than completely loosing it... */
+		pThis->pszHOSTNAME = pThis->szHOSTNAME;
+		pThis->iLenHOSTNAME = CONF_HOSTNAME_BUFSIZE - 1;
+	}
+
+	memcpy(pThis->pszHOSTNAME, pszHOSTNAME, pThis->iLenHOSTNAME);
+	pThis->pszHOSTNAME[pThis->iLenHOSTNAME] = '\0'; /* this also works with truncation! */
 }
 
 

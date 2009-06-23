@@ -609,7 +609,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	 * being the local host).  rgerhards 2004-11-16
 	 */
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
-		MsgSetHOSTNAME(pMsg, hname, strlen(hname));
+		MsgSetHOSTNAME(pMsg, hname, ustrlen(hname));
 	MsgSetRcvFrom(pMsg, hname);
 	MsgSetAfterPRIOffs(pMsg, p - msg);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
@@ -1113,7 +1113,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	/* HOSTNAME */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-		MsgSetHOSTNAME(pMsg, pBuf, strlen(pBuf));
+		MsgSetHOSTNAME(pMsg, pBuf, ustrlen(pBuf));
 	}
 
 	/* APP-NAME */
@@ -1267,8 +1267,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		 */
 		bufParseTAG[i] = '\0';	/* terminate string */
 		MsgSetTAG(pMsg, bufParseTAG, i);
-	} else {
-		/* we enter this code area when the user has instructed rsyslog NOT
+	} else {/* we enter this code area when the user has instructed rsyslog NOT
 		 * to parse HOSTNAME and TAG - rgerhards, 2006-03-13
 		 */
 		if(!(flags & INTERNAL_MSG)) {
