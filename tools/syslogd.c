@@ -609,7 +609,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	 * being the local host).  rgerhards 2004-11-16
 	 */
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
-		MsgSetHOSTNAME(pMsg, hname);
+		MsgSetHOSTNAME(pMsg, hname, strlen(hname));
 	MsgSetRcvFrom(pMsg, hname);
 	MsgSetAfterPRIOffs(pMsg, p - msg);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
@@ -883,7 +883,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
-	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
+	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
 	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));
 	/* check if we have an error code associated and, if so,
@@ -1113,12 +1113,7 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 	/* HOSTNAME */
 	if(bContParse) {
 		parseRFCField(&p2parse, pBuf);
-		MsgSetHOSTNAME(pMsg, pBuf);
-	} else {
-		/* we can not parse, so we get the system we
-		 * received the data from.
-		 */
-		MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
+		MsgSetHOSTNAME(pMsg, pBuf, strlen(pBuf));
 	}
 
 	/* APP-NAME */
@@ -1147,7 +1142,6 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 
 	/* MSG */
 	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
-	//MsgSetMSG(pMsg, (char*)p2parse);
 
 	free(pBuf);
 	ENDfunc
@@ -1171,8 +1165,6 @@ int parseRFCSyslogMsg(msg_t *pMsg, int flags)
 int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 {
 	uchar *p2parse;
-	char *pBuf;
-	char *pWork;
 	int bTAGCharDetected;
 	int i;	/* general index for parsing */
 	uchar bufParseTAG[CONF_TAG_MAXSIZE];
@@ -1198,8 +1190,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 		if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse) == RS_RET_OK) {
 			/* indeed, we got it! */
 			/* we are done - parse pointer is moved by ParseTIMESTAMP3164 */;
-		} else {
-			/* parse pointer needs to be restored, as we moved it off-by-one
+		} else {/* parse pointer needs to be restored, as we moved it off-by-one
 			 * for this try.
 			 */
 			--p2parse;
@@ -1245,10 +1236,7 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 				/* we got a hostname! */
 				p2parse += i + 1; /* "eat" it (including SP delimiter) */
 				bufParseHOSTNAME[i] = '\0';
-				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME);
-				//MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
-			} else {
-				MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
+				MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, i);
 			}
 		}
 
@@ -1274,30 +1262,17 @@ int parseLegacySyslogMsg(msg_t *pMsg, int flags)
 			bufParseTAG[i++] = ':';
 		}
 
-		if(i == 0)
-		{	/* rger, 2005-11-10: no TAG found - this implies that what
-			 * we have considered to be the HOSTNAME is most probably the
-			 * TAG. We consider it so probable, that we now adjust it
-			 * that way. So we pick up the previously set hostname, assign
-			 * it to tag and use the sender system (from IP stack) as
-			 * the hostname. This situation is the standard case with
-			 * stock BSD syslogd.
-			 */
-			DBGPRINTF("No TAG in message, assuming that HOSTNAME is missing.\n");
-			moveHOSTNAMEtoTAG(pMsg);
-			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
-		} else { /* we have a TAG, so we can happily set it ;) */
-			bufParseTAG[i] = '\0';	/* terminate string */
-			MsgSetTAG(pMsg, bufParseTAG, i);
-		}
+		/* no TAG can only be detected if the message immediatly ends, in which case an empty TAG
+		 * is considered OK. So we do not need to check for empty TAG. -- rgerhards, 2009-06-23
+		 */
+		bufParseTAG[i] = '\0';	/* terminate string */
+		MsgSetTAG(pMsg, bufParseTAG, i);
 	} else {
 		/* we enter this code area when the user has instructed rsyslog NOT
 		 * to parse HOSTNAME and TAG - rgerhards, 2006-03-13
 		 */
-		if(!(flags & INTERNAL_MSG))
-		{
+		if(!(flags & INTERNAL_MSG)) {
 			DBGPRINTF("HOSTNAME and TAG not parsed by user configuraton.\n");
-			MsgSetHOSTNAME(pMsg, getRcvFrom(pMsg));
 		}
 	}
 

@@ -284,9 +284,6 @@ rsRetVal parseMsg(msg_t *pMsg)
 	pMsg->iSeverity = LOG_PRI(pri);
 	MsgSetAfterPRIOffs(pMsg, msg - pMsg->pszRawMsg);
 
-	if(pMsg->bParseHOSTNAME == 0)
-		MsgSetHOSTNAME(pMsg, pMsg->pszRcvFrom);
-
 	/* rger 2005-11-24 (happy thanksgiving!): we now need to check if we have
 	 * a traditional syslog message or one formatted according to syslog-protocol.
 	 * We need to apply different parsers depending on that. We use the

@@ -3,7 +3,7 @@
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2009 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -152,8 +152,7 @@ rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
 void MsgSetRcvFrom(msg_t *pMsg, uchar* pszRcvFrom);
 rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
-//void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf);
-void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME);
+void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME, int lenHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
 void MsgSetMSGoffs(msg_t *pMsg, short offs);
 void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);

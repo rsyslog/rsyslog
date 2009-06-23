@@ -1439,7 +1439,7 @@ int getHOSTNAMELen(msg_t *pM)
 		return 0;
 	else
 		if(pM->pszHOSTNAME == NULL)
-			return 0;
+			return pM->iLenRcvFrom;
 		else
 			return pM->iLenHOSTNAME;
 }
@@ -1451,7 +1451,7 @@ char *getHOSTNAME(msg_t *pM)
 		return "";
 	else
 		if(pM->pszHOSTNAME == NULL)
-			return "";
+			return (char*) pM->pszRcvFrom;
 		else
 			return (char*) pM->pszHOSTNAME;
 }
@@ -1720,12 +1720,12 @@ void MsgAssignHOSTNAME(msg_t *pMsg, char *pBuf)
  * we need it. The rest of the code already knows how to handle an
  * unset HOSTNAME.
  */
-void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME)
+void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME, int lenHOSTNAME)
 {
 	assert(pMsg != NULL);
 	free(pMsg->pszHOSTNAME);
 
-	pMsg->iLenHOSTNAME = ustrlen(pszHOSTNAME);
+	pMsg->iLenHOSTNAME = lenHOSTNAME;
 	if((pMsg->pszHOSTNAME = malloc(pMsg->iLenHOSTNAME + 1)) != NULL)
 		memcpy(pMsg->pszHOSTNAME, pszHOSTNAME, pMsg->iLenHOSTNAME + 1);
 	else
@@ -2719,7 +2719,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	} else if(isProp("pszRcvFrom")) {
 		MsgSetRcvFrom(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszHOSTNAME")) {
-		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pCSStrucData")) {
 		MsgSetStructuredData(pThis, (char*) rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pCSAPPNAME")) {
