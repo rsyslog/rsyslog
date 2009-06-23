@@ -1469,7 +1469,6 @@ DEFFUNC_llExecFunc(flushRptdMsgsActions)
 	assert(pAction != NULL);
 	
 	BEGINfunc
-RUNLOG_VAR("%p", pAction);
 	LockObj(pAction);
 	/* TODO: time() performance: the call below could be moved to
 	 * the beginn of the llExec(). This makes it slightly less correct, but
@@ -2586,7 +2585,7 @@ mainloop(void)
 		 * but a once-a-day wakeup should be quite acceptable. -- rgerhards, 2008-06-09
 		 */
 		//tvSelectTimeout.tv_sec = (bReduceRepeatMsgs == 1) ? TIMERINTVL : 86400 /*1 day*/;
-tvSelectTimeout.tv_sec = 5; // TESTING ONLY!!! TODO: change back!!!
+		tvSelectTimeout.tv_sec = TIMERINTVL; /* TODO: change this back to the above code when we have a better solution for apc */
 		tvSelectTimeout.tv_usec = 0;
 		select(1, NULL, NULL, NULL, &tvSelectTimeout);
 		if(bFinished)

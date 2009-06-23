@@ -104,8 +104,8 @@ typedef struct strm_s {
 	int64 iCurrOffs;/* current offset */
 	int64 *pUsrWCntr; /* NULL or a user-provided counter that receives the nbr of bytes written since the last CntrSet() */
 	/* dynamic properties, valid only during file open, not to be persistet */
-	int bDisabled; /* should file no longer be written to? (currently set only if omfile file size limit fails) */
-	int bSync;	/* sync this file after every write? */
+	bool bDisabled; /* should file no longer be written to? (currently set only if omfile file size limit fails) */
+	bool bSync;	/* sync this file after every write? */
 	size_t sIOBufSize;/* size of IO buffer */
 	uchar *pszDir; /* Directory */
 	int lenDir;
@@ -123,6 +123,7 @@ typedef struct strm_s {
 	int iFlushInterval; /* flush in which interval - 0, no flushing */
 	apc_id_t apcID;    /* id of current Apc request (used for cancelling) */
 	pthread_mutex_t mut;/* mutex for flush in async mode */
+	int apcRequested;  /* is an apc Requested? */
 	/* support for omfile size-limiting commands, special counters, NOT persisted! */
 	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
 	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */

@@ -74,6 +74,7 @@ flushApc(void *param1, void __attribute__((unused)) *param2)
 
 	BEGIN_MTX_PROTECTED_OPERATIONS_UNCOND(&pThis->mut);
 	strmFlush(pThis);
+	pThis->apcRequested = 0;
 	END_MTX_PROTECTED_OPERATIONS_UNCOND(&pThis->mut);
 }
 
@@ -1001,12 +1002,16 @@ scheduleFlushRequest(strm_t *pThis)
 	apc_t *pApc;
 	DEFiRet;
 
-	CHKiRet(apc.CancelApc(pThis->apcID));
+	if(!pThis->apcRequested) {
+		/* we do an request only if none is yet pending */
+		pThis->apcRequested = 1;
+		// TODO: find similar thing later CHKiRet(apc.CancelApc(pThis->apcID));
 dbgprintf("XXX: requesting to add apc!\n");
-	CHKiRet(apc.Construct(&pApc));
-	CHKiRet(apc.SetProcedure(pApc, (void (*)(void*, void*))flushApc));
-	CHKiRet(apc.SetParam1(pApc, pThis));
-	CHKiRet(apc.ConstructFinalize(pApc, &pThis->apcID));
+		CHKiRet(apc.Construct(&pApc));
+		CHKiRet(apc.SetProcedure(pApc, (void (*)(void*, void*))flushApc));
+		CHKiRet(apc.SetParam1(pApc, pThis));
+		CHKiRet(apc.ConstructFinalize(pApc, &pThis->apcID));
+	}
 
 finalize_it:
 	RETiRet;
