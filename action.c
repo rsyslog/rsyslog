@@ -460,6 +460,16 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 
 	ASSERT(pAction != NULL);
 
+	/* We now must guard the output module against execution by multiple threads. The
+	 * plugin interface specifies that output modules must not be thread-safe (except
+	 * if they notify us they are - functionality not yet implemented...).
+	 * rgerhards, 2008-01-30
+	 */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	d_pthread_mutex_lock(&pAction->mutActExec);
+	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
+	pthread_setcancelstate(iCancelStateSave, NULL);
+
 	/* here we must loop to process all requested strings */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
 		switch(pAction->eParamPassing) {
@@ -472,16 +482,8 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 			default:assert(0); /* software bug if this happens! */
 		}
 	}
+
 	iRetries = 0;
-	/* We now must guard the output module against execution by multiple threads. The
-	 * plugin interface specifies that output modules must not be thread-safe (except
-	 * if they notify us they are - functionality not yet implemented...).
-	 * rgerhards, 2008-01-30
-	 */
-	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-	d_pthread_mutex_lock(&pAction->mutActExec);
-	pthread_cleanup_push(mutexCancelCleanup, &pAction->mutActExec);
-	pthread_setcancelstate(iCancelStateSave, NULL);
 	do {
 		/* on first invocation, this if should never be true. We just put it at the top
 		 * of the loop so that processing (and code) is simplified. This code is actually
@@ -520,8 +522,6 @@ actionCallDoAction(action_t *pAction, msg_t *pMsg)
 		pAction->bEnabled = 0; /* that's it... */
 	}
 
-	pthread_cleanup_pop(1); /* unlock mutex */
-
 finalize_it:
 	/* cleanup */
 	for(i = 0 ; i < pAction->iNumTpls ; ++i) {
@@ -543,6 +543,8 @@ finalize_it:
 			}
 		}
 	}
+
+	pthread_cleanup_pop(1); /* unlock mutex */
 
 	msgDestruct(&pMsg); /* we are now finished with the message */
 	RETiRet;
