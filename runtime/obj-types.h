@@ -105,12 +105,13 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 #	define ISOBJ_TYPE_assert(pObj, objType) \
 		do { \
 		ASSERT(pObj != NULL); \
-		ASSERT((unsigned) ((obj_t*) (pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		if(strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)) { \
 			dbgprintf("%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
-				  "actual '%s'\n", __FILE__, __LINE__, #objType, (((obj_t*)pObj)->pObjInfo->pszID)); \
+				  "actual '%s', cookie: %X\n", __FILE__, __LINE__, #objType, \
+				  (((obj_t*)pObj)->pObjInfo->pszID), ((obj_t*)(pObj))->iObjCooCKiE); \
 			assert(0); /* trigger assertion, messge we already have */ \
 		} \
+		ASSERT((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
 		} while(0)
 #else /* non-debug mode, no checks but much faster */
 #	define BEGINobjInstance obj_t objData

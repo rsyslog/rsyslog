@@ -58,11 +58,10 @@ typedef struct qWrkThrd_s {
 typedef struct queue_s {
 	BEGINobjInstance;
 	queueType_t	qType;
-	int	bOptimizeUniProc; /* cache for the equally-named global setting, pulled at time of queue creation */
-	int	bEnqOnly;	/* does queue run in enqueue-only mode (1) or not (0)? */
-	int	bSaveOnShutdown;/* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
-	int	bQueueStarted;	/* has queueStart() been called on this queue? 1-yes, 0-no */
-	int	bQueueInDestruction;/* 1 if queue is in destruction process, 0 otherwise */
+	bool	bEnqOnly;	/* does queue run in enqueue-only mode (1) or not (0)? */
+	bool	bSaveOnShutdown;/* persists everthing on shutdown (if DA!)? 1-yes, 0-no */
+	bool	bQueueStarted;	/* has queueStart() been called on this queue? 1-yes, 0-no */
+	bool	bQueueInDestruction;/* 1 if queue is in destruction process, 0 otherwise */
 	int	iQueueSize;	/* Current number of elements in the queue */
 	int	iMaxQueueSize;	/* how large can the queue grow? */
 	int 	iNumWorkerThreads;/* number of worker threads to use */
@@ -73,13 +72,14 @@ typedef struct queue_s {
 	void	*pUsr;		/* a global, user-supplied pointer. Is passed back to consumer. */
 	int	iUpdsSincePersist;/* nbr of queue updates since the last persist call */
 	int	iPersistUpdCnt;	/* persits queue info after this nbr of updates - 0 -> persist only on shutdown */
+	bool	bSyncQueueFiles;/* if working with files, sync them after each write? */
 	int	iHighWtrMrk;	/* high water mark for disk-assisted memory queues */
 	int	iLowWtrMrk;	/* low water mark for disk-assisted memory queues */
 	int	iDiscardMrk;	/* if the queue is above this mark, low-severity messages are discarded */
 	int	iFullDlyMrk;	/* if the queue is above this mark, FULL_DELAYable message are put on hold */
 	int	iLightDlyMrk;	/* if the queue is above this mark, LIGHT_DELAYable message are put on hold */
 	int	iDiscardSeverity;/* messages of this severity above are discarded on too-full queue */
-	int	bNeedDelQIF;	/* does the QIF file need to be deleted when queue becomes empty? */
+	bool	bNeedDelQIF;	/* does the QIF file need to be deleted when queue becomes empty? */
 	int	toQShutdown;	/* timeout for regular queue shutdown in ms */
 	int	toActShutdown;	/* timeout for long-running action shutdown in ms */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
@@ -178,6 +178,7 @@ typedef struct queue_s {
 
 /* prototypes */
 rsRetVal qqueueDestruct(qqueue_t **ppThis);
+rsRetVal qqueueMultiEnqObj(qqueue_t *pThis, multi_submit_t *pMultiSub);
 rsRetVal qqueueEnqObj(qqueue_t *pThis, flowControl_t flwCtlType, void *pUsr);
 rsRetVal qqueueStart(qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
@@ -186,6 +187,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 		        int iMaxQueueSize, rsRetVal (*pConsumer)(void*,void*));
 PROTOTYPEObjClassInit(qqueue);
 PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);
+PROTOTYPEpropSetMeth(qqueue, bSyncQueueFiles, int);
 PROTOTYPEpropSetMeth(qqueue, iDeqtWinFromHr, int);
 PROTOTYPEpropSetMeth(qqueue, iDeqtWinToHr, int);
 PROTOTYPEpropSetMeth(qqueue, toQShutdown, long);

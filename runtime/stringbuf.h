@@ -1,5 +1,5 @@
-/*! \file stringbuf.h
- *  \brief The counted string object
+/* stringbuf.h
+ * The counted string object
  *
  * This is the byte-counted string class for rsyslog. It is a replacement
  * for classical \0 terminated string functions. We introduce it in
@@ -11,8 +11,7 @@
  * \date    2005-09-07
  *          Initial version  begun.
  *
- * All functions in this "class" start with rsCStr (rsyslog Counted String).
- * Copyright 2005
+ * Copyright 2005-2009
  *     Rainer Gerhards and Adiscon GmbH. All Rights Reserved.
  *
  * This file is part of the rsyslog runtime library.
@@ -48,8 +47,8 @@ typedef struct cstr_s
 	uchar *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
 	size_t iBufSize;	/**< current maximum size of the string buffer */
 	size_t iStrLen;		/**< length of the string in characters. */
-	size_t iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
-	bool bIsFinalized;	/**< is this object finished and ready for use? (a debug aid, may be removed later TODO 2009-06-16) */
+	unsigned short iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
+	bool bIsForeignBuf;	/**< is pBuf a buffer provided by someone else? */
 } cstr_t;
 
 
@@ -73,7 +72,6 @@ void rsCStrDestruct(cstr_t **ppThis);
  *
  * \param c Character to append to string.
  */
-rsRetVal rsCStrAppendChar(cstr_t *pThis, uchar c);
 rsRetVal cstrAppendChar(cstr_t *pThis, uchar c);
 
 /**
@@ -85,6 +83,7 @@ rsRetVal cstrAppendChar(cstr_t *pThis, uchar c);
 rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc);
 
 rsRetVal rsCStrTrimTrailingWhiteSpace(cstr_t *pThis);
+rsRetVal cstrTrimTrailingWhiteSpace(cstr_t *pThis);
 
 /**
  * Append a string to the buffer. For performance reasons,
@@ -143,19 +142,24 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *cache)
 void rsCStrRegexDestruct(void *rc);
 rsRetVal rsCStrConvertToNumber(cstr_t *pStr, number_t *pNumber);
 rsRetVal rsCStrConvertToBool(cstr_t *pStr, number_t *pBool);
-rsRetVal rsCStrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
+
+/* in migration */
+#define rsCStrAppendCStr(pThis, pstrAppend) cstrAppendCStr(pThis, pstrAppend)
 
 /* new calling interface */
 rsRetVal cstrFinalize(cstr_t *pThis);
 rsRetVal cstrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL);
 uchar*  cstrGetSzStr(cstr_t *pThis);
+uchar*  cstrGetSzStrNoNULL(cstr_t *pThis);
+rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
 /* now come inline-like functions */
 #ifdef NDEBUG
-#	define rsCStrLen(x) ((int)((x)->iStrLen))
+#	define cstrLen(x) ((int)((x)->iStrLen))
 #else
-	int rsCStrLen(cstr_t *pThis);
+	int cstrLen(cstr_t *pThis);
 #endif
+#define rsCStrLen(s) cstrLen((s))
 
 #define rsCStrGetBufBeg(x) ((x)->pBuf)
 

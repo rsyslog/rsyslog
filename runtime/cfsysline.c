@@ -814,7 +814,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 		CHKiRet(cslcConstruct(&pThis, bChainingPermitted));
 		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie)) {
 			cslcDestruct(pThis);
-			goto finalize_it;
+			FINALIZE;
 		}
 		/* important: add to list, AFTER everything else is OK. Else
 		 * we mess up things in the error case.
@@ -825,7 +825,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 		}
 		CHKiRet_Hdlr(llAppend(&llCmdList, pMyCmdName, (void*) pThis)) {
 			cslcDestruct(pThis);
-			goto finalize_it;
+			FINALIZE;
 		}
 	} else {
 		/* command already exists, are we allowed to chain? */
@@ -834,7 +834,7 @@ rsRetVal regCfSysLineHdlr(uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlTy
 		}
 		CHKiRet_Hdlr(cslcAddHdlr(pThis, eType, pHdlr, pData, pOwnerCookie)) {
 			cslcDestruct(pThis);
-			goto finalize_it;
+			FINALIZE;
 		}
 	}
 

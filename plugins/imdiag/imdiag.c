@@ -205,8 +205,7 @@ doInjectMsg(int iNum)
 	datetime.getCurrTime(&stTime, &ttGenTime);
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
-	CHKmalloc(pMsg->pszRawMsg = ustrdup(szMsg));
-	pMsg->iLenRawMsg = ustrlen(szMsg);
+	MsgSetRawMsg(pMsg, (char*) szMsg, ustrlen(szMsg));
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("imdiag"), sizeof("imdiag")-1);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;

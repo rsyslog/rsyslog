@@ -49,6 +49,7 @@
 #include "obj.h"
 #include "wtp.h"
 #include "wti.h"
+#include "msg.h"
 #include "atomic.h"
 
 #ifdef OS_SOLARIS
@@ -59,9 +60,10 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(strm)
 
 /* forward-definitions */
-rsRetVal qqueueChkPersist(qqueue_t *pThis);
+static rsRetVal qqueueChkPersist(qqueue_t *pThis);
 static rsRetVal qqueueSetEnqOnly(qqueue_t *pThis, int bEnqOnly, int bLockMutex);
 static rsRetVal qqueueRateLimiter(qqueue_t *pThis);
 static int qqueueChkStopWrkrDA(qqueue_t *pThis);
@@ -293,6 +295,7 @@ qqueueStartDA(qqueue_t *pThis)
 	CHKiRet(qqueueSetMaxFileSize(pThis->pqDA, pThis->iMaxFileSize));
 	CHKiRet(qqueueSetFilePrefix(pThis->pqDA, pThis->pszFilePrefix, pThis->lenFilePrefix));
 	CHKiRet(qqueueSetiPersistUpdCnt(pThis->pqDA, pThis->iPersistUpdCnt));
+	CHKiRet(qqueueSetbSyncQueueFiles(pThis->pqDA, pThis->bSyncQueueFiles));
 	CHKiRet(qqueueSettoActShutdown(pThis->pqDA, pThis->toActShutdown));
 	CHKiRet(qqueueSettoEnq(pThis->pqDA, pThis->toEnq));
 	CHKiRet(qqueueSetEnqOnly(pThis->pqDA, pThis->bDAEnqOnly, MUTEX_ALREADY_LOCKED));
@@ -667,7 +670,7 @@ qqueueLoadPersStrmInfoFixup(strm_t *pStrm, qqueue_t __attribute__((unused)) *pTh
 	DEFiRet;
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_TYPE_assert(pThis, qqueue);
-	CHKiRet(strmSetDir(pStrm, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
+	CHKiRet(strm.SetDir(pStrm, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
 finalize_it:
 	RETiRet;
 }
@@ -744,11 +747,11 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 
 	/* If we reach this point, we have a .qi file */
 
-	CHKiRet(strmConstruct(&psQIF));
-	CHKiRet(strmSettOperationsMode(psQIF, STREAMMODE_READ));
-	CHKiRet(strmSetsType(psQIF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strmSetFName(psQIF, pszQIFNam, lenQIFNam));
-	CHKiRet(strmConstructFinalize(psQIF));
+	CHKiRet(strm.Construct(&psQIF));
+	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_READ));
+	CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strm.SetFName(psQIF, pszQIFNam, lenQIFNam));
+	CHKiRet(strm.ConstructFinalize(psQIF));
 
 	/* first, we try to read the property bag for ourselfs */
 	CHKiRet(obj.DeserializePropBag((obj_t*) pThis, psQIF));
@@ -770,8 +773,8 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 	CHKiRet(obj.Deserialize(&pThis->tVars.disk.pRead, (uchar*) "strm", psQIF,
 			       (rsRetVal(*)(obj_t*,void*))qqueueLoadPersStrmInfoFixup, pThis));
 
-	CHKiRet(strmSeekCurrOffs(pThis->tVars.disk.pWrite));
-	CHKiRet(strmSeekCurrOffs(pThis->tVars.disk.pRead));
+	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pWrite));
+	CHKiRet(strm.SeekCurrOffs(pThis->tVars.disk.pRead));
 
 	/* OK, we could successfully read the file, so we now can request that it be
 	 * deleted when we are done with the persisted information.
@@ -780,7 +783,7 @@ qqueueTryLoadPersistedInfo(qqueue_t *pThis)
 
 finalize_it:
 	if(psQIF != NULL)
-		strmDestruct(&psQIF);
+		strm.Destruct(&psQIF);
 
 	if(iRet != RS_RET_OK) {
 		dbgoprint((obj_t*) pThis, "error %d reading .qi file - can not read persisted info (if any)\n",
@@ -815,24 +818,26 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 	if(bRestarted == 1) {
 		;
 	} else {
-		CHKiRet(strmConstruct(&pThis->tVars.disk.pWrite));
-		CHKiRet(strmSetDir(pThis->tVars.disk.pWrite, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
-		CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
-		CHKiRet(strmSettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
-		CHKiRet(strmSetsType(pThis->tVars.disk.pWrite, STREAMTYPE_FILE_CIRCULAR));
-		CHKiRet(strmConstructFinalize(pThis->tVars.disk.pWrite));
+		CHKiRet(strm.Construct(&pThis->tVars.disk.pWrite));
+		CHKiRet(strm.SetbSync(pThis->tVars.disk.pWrite, pThis->bSyncQueueFiles));
+		CHKiRet(strm.SetDir(pThis->tVars.disk.pWrite, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
+		CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
+		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
+		CHKiRet(strm.SetsType(pThis->tVars.disk.pWrite, STREAMTYPE_FILE_CIRCULAR));
+		CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pWrite));
 
-		CHKiRet(strmConstruct(&pThis->tVars.disk.pRead));
-		CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
-		CHKiRet(strmSetDir(pThis->tVars.disk.pRead, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
-		CHKiRet(strmSetiMaxFiles(pThis->tVars.disk.pRead, 10000000));
-		CHKiRet(strmSettOperationsMode(pThis->tVars.disk.pRead, STREAMMODE_READ));
-		CHKiRet(strmSetsType(pThis->tVars.disk.pRead, STREAMTYPE_FILE_CIRCULAR));
-		CHKiRet(strmConstructFinalize(pThis->tVars.disk.pRead));
+		CHKiRet(strm.Construct(&pThis->tVars.disk.pRead));
+		CHKiRet(strm.SetbSync(pThis->tVars.disk.pRead, pThis->bSyncQueueFiles));
+		CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
+		CHKiRet(strm.SetDir(pThis->tVars.disk.pRead, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
+		CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pRead, 10000000));
+		CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pRead, STREAMMODE_READ));
+		CHKiRet(strm.SetsType(pThis->tVars.disk.pRead, STREAMTYPE_FILE_CIRCULAR));
+		CHKiRet(strm.ConstructFinalize(pThis->tVars.disk.pRead));
 
 
-		CHKiRet(strmSetFName(pThis->tVars.disk.pWrite, pThis->pszFilePrefix, pThis->lenFilePrefix));
-		CHKiRet(strmSetFName(pThis->tVars.disk.pRead,  pThis->pszFilePrefix, pThis->lenFilePrefix));
+		CHKiRet(strm.SetFName(pThis->tVars.disk.pWrite, pThis->pszFilePrefix, pThis->lenFilePrefix));
+		CHKiRet(strm.SetFName(pThis->tVars.disk.pRead,  pThis->pszFilePrefix, pThis->lenFilePrefix));
 	}
 
 	/* now we set (and overwrite in case of a persisted restart) some parameters which
@@ -840,8 +845,8 @@ static rsRetVal qConstructDisk(qqueue_t *pThis)
 	 * for example file name generation must not be changed as that would break the
 	 * ability to read existing queue files. -- rgerhards, 2008-01-12
 	 */
-	CHKiRet(strmSetiMaxFileSize(pThis->tVars.disk.pWrite, pThis->iMaxFileSize));
-	CHKiRet(strmSetiMaxFileSize(pThis->tVars.disk.pRead, pThis->iMaxFileSize));
+	CHKiRet(strm.SetiMaxFileSize(pThis->tVars.disk.pWrite, pThis->iMaxFileSize));
+	CHKiRet(strm.SetiMaxFileSize(pThis->tVars.disk.pRead, pThis->iMaxFileSize));
 
 finalize_it:
 	RETiRet;
@@ -854,8 +859,8 @@ static rsRetVal qDestructDisk(qqueue_t *pThis)
 	
 	ASSERT(pThis != NULL);
 	
-	strmDestruct(&pThis->tVars.disk.pWrite);
-	strmDestruct(&pThis->tVars.disk.pRead);
+	strm.Destruct(&pThis->tVars.disk.pWrite);
+	strm.Destruct(&pThis->tVars.disk.pRead);
 
 	RETiRet;
 }
@@ -867,10 +872,10 @@ static rsRetVal qAddDisk(qqueue_t *pThis, void* pUsr)
 
 	ASSERT(pThis != NULL);
 
-	CHKiRet(strmSetWCntr(pThis->tVars.disk.pWrite, &nWriteCount));
+	CHKiRet(strm.SetWCntr(pThis->tVars.disk.pWrite, &nWriteCount));
 	CHKiRet((objSerialize(pUsr))(pUsr, pThis->tVars.disk.pWrite));
-	CHKiRet(strmFlush(pThis->tVars.disk.pWrite));
-	CHKiRet(strmSetWCntr(pThis->tVars.disk.pWrite, NULL)); /* no more counting for now... */
+	CHKiRet(strm.Flush(pThis->tVars.disk.pWrite));
+	CHKiRet(strm.SetWCntr(pThis->tVars.disk.pWrite, NULL)); /* no more counting for now... */
 
 	pThis->tVars.disk.sizeOnDisk += nWriteCount;
 
@@ -894,9 +899,9 @@ static rsRetVal qDelDisk(qqueue_t *pThis, void **ppUsr)
 	int64 offsIn;
 	int64 offsOut;
 
-	CHKiRet(strmGetCurrOffset(pThis->tVars.disk.pRead, &offsIn));
+	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pRead, &offsIn));
 	CHKiRet(obj.Deserialize(ppUsr, (uchar*) "msg", pThis->tVars.disk.pRead, NULL, NULL));
-	CHKiRet(strmGetCurrOffset(pThis->tVars.disk.pRead, &offsOut));
+	CHKiRet(strm.GetCurrOffset(pThis->tVars.disk.pRead, &offsOut));
 
 	/* This time it is a bit tricky: we free disk space only upon file deletion. So we need
 	 * to keep track of what we have read until we get an out-offset that is lower than the
@@ -1290,7 +1295,6 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThread
 
 	/* we have an object, so let's fill the properties */
 	objConstructSetObjInfo(pThis);
-	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	if((pThis->pszSpoolDir = (uchar*) strdup((char*)glbl.GetWorkDir())) == NULL)
 		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 
@@ -1917,16 +1921,16 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 			pThis->bNeedDelQIF = 0;
 		}
 		/* indicate spool file needs to be deleted */
-		CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
+		CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pRead, 1));
 		FINALIZE; /* nothing left to do, so be happy */
 	}
 
-	CHKiRet(strmConstruct(&psQIF));
-	CHKiRet(strmSettOperationsMode(psQIF, STREAMMODE_WRITE));
-	CHKiRet(strmSetiAddtlOpenFlags(psQIF, O_TRUNC));
-	CHKiRet(strmSetsType(psQIF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strmSetFName(psQIF, pszQIFNam, lenQIFNam));
-	CHKiRet(strmConstructFinalize(psQIF));
+	CHKiRet(strm.Construct(&psQIF));
+	CHKiRet(strm.SettOperationsMode(psQIF, STREAMMODE_WRITE_TRUNC));
+	CHKiRet(strm.SetbSync(psQIF, pThis->bSyncQueueFiles));
+	CHKiRet(strm.SetsType(psQIF, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strm.SetFName(psQIF, pszQIFNam, lenQIFNam));
+	CHKiRet(strm.ConstructFinalize(psQIF));
 
 	/* first, write the property bag for ourselfs
 	 * And, surprisingly enough, we currently need to persist only the size of the
@@ -1951,14 +1955,14 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 	}
 
 	/* now persist the stream info */
-	CHKiRet(strmSerialize(pThis->tVars.disk.pWrite, psQIF));
-	CHKiRet(strmSerialize(pThis->tVars.disk.pRead, psQIF));
+	CHKiRet(strm.Serialize(pThis->tVars.disk.pWrite, psQIF));
+	CHKiRet(strm.Serialize(pThis->tVars.disk.pRead, psQIF));
 	
 	/* tell the input file object that it must not delete the file on close if the queue
 	 * is non-empty - but only if we are not during a simple checkpoint
 	 */
 	if(bIsCheckpoint != QUEUE_CHECKPOINT) {
-		CHKiRet(strmSetbDeleteOnClose(pThis->tVars.disk.pRead, 0));
+		CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pRead, 0));
 	}
 
 	/* we have persisted the queue object. So whenever it comes to an empty queue,
@@ -1968,7 +1972,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint)
 
 finalize_it:
 	if(psQIF != NULL)
-		strmDestruct(&psQIF);
+		strm.Destruct(&psQIF);
 
 	RETiRet;
 }
@@ -1979,10 +1983,8 @@ finalize_it:
  * abide to our regular call interface)...
  * rgerhards, 2008-01-13
  */
-rsRetVal qqueueChkPersist(qqueue_t *pThis)
+static rsRetVal qqueueChkPersist(qqueue_t *pThis)
 {
-	DEFiRet;
-
 	ISOBJ_TYPE_assert(pThis, qqueue);
 
 	if(pThis->iPersistUpdCnt && ++pThis->iUpdsSincePersist >= pThis->iPersistUpdCnt) {
@@ -1990,7 +1992,7 @@ rsRetVal qqueueChkPersist(qqueue_t *pThis)
 		pThis->iUpdsSincePersist = 0;
 	}
 
-	RETiRet;
+	return RS_RET_OK;
 }
 
 
@@ -2213,13 +2215,124 @@ finalize_it:
 		d_pthread_mutex_unlock(pThis->mut);
 		pthread_setcancelstate(iCancelStateSave, NULL);
 		dbgoprint((obj_t*) pThis, "EnqueueMsg advised worker start\n");
-		/* the following pthread_yield is experimental, but brought us performance
-		 * benefit. For details, please see http://kb.monitorware.com/post14216.html#p14216
-		 * rgerhards, 2008-10-09
-		 * but this is only true for uniprocessors, so we guard it with an optimize flag -- rgerhards, 2008-10-22
-		 */
-		if(pThis->bOptimizeUniProc)
-			pthread_yield();
+	}
+
+	RETiRet;
+}
+
+
+/* enqueue a single data object. This currently is a helper to qqueueMultiEnqObj.
+ * Note that the queue mutex MUST already be locked when this function is called.
+ * rgerhards, 2009-06-16
+ */
+static inline rsRetVal
+doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, void *pUsr)
+{
+	DEFiRet;
+	struct timespec t;
+
+	/* first check if we need to discard this message (which will cause CHKiRet() to exit)
+	 */
+	CHKiRet(qqueueChkDiscardMsg(pThis, pThis->iQueueSize, pThis->bRunsDA, pUsr));
+
+	/* then check if we need to add an assistance disk queue */
+	if(pThis->bIsDA)
+		CHKiRet(qqueueChkStrtDA(pThis));
+	
+	/* handle flow control
+	 * There are two different flow control mechanisms: basic and advanced flow control.
+	 * Basic flow control has always been implemented and protects the queue structures
+	 * in that it makes sure no more data is enqueued than the queue is configured to
+	 * support. Enhanced flow control is being added today. There are some sources which
+	 * can easily be stopped, e.g. a file reader. This is the case because it is unlikely
+	 * that blocking those sources will have negative effects (after all, the file is
+	 * continued to be written). Other sources can somewhat be blocked (e.g. the kernel
+	 * log reader or the local log stream reader): in general, nothing is lost if messages
+	 * from these sources are not picked up immediately. HOWEVER, they can not block for
+	 * an extended period of time, as this either causes message loss or - even worse - some
+	 * other bad effects (e.g. unresponsive system in respect to the main system log socket).
+	 * Finally, there are some (few) sources which can not be blocked at all. UDP syslog is
+	 * a prime example. If a UDP message is not received, it is simply lost. So we can't
+	 * do anything against UDP sockets that come in too fast. The core idea of advanced
+	 * flow control is that we take into account the different natures of the sources and
+	 * select flow control mechanisms that fit these needs. This also means, in the end
+	 * result, that non-blockable sources like UDP syslog receive priority in the system.
+	 * It's a side effect, but a good one ;) -- rgerhards, 2008-03-14
+	 */
+	if(flowCtlType == eFLOWCTL_FULL_DELAY) {
+		while(pThis->iQueueSize >= pThis->iFullDlyMrk) {
+			dbgoprint((obj_t*) pThis, "enqueueMsg: FullDelay mark reached for full delayable message - blocking.\n");
+			pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut); /* TODO error check? But what do then? */
+		}
+	} else if(flowCtlType == eFLOWCTL_LIGHT_DELAY) {
+		if(pThis->iQueueSize >= pThis->iLightDlyMrk) {
+			dbgoprint((obj_t*) pThis, "enqueueMsg: LightDelay mark reached for light delayable message - blocking a bit.\n");
+			timeoutComp(&t, 1000); /* 1000 millisconds = 1 second TODO: make configurable */
+			pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t); /* TODO error check? But what do then? */
+		}
+	}
+
+	/* from our regular flow control settings, we are now ready to enqueue the object.
+	 * However, we now need to do a check if the queue permits to add more data. If that
+	 * is not the case, basic flow control enters the field, which means we wait for
+	 * the queue to become ready or drop the new message. -- rgerhards, 2008-03-14
+	 */
+	while(   (pThis->iMaxQueueSize > 0 && pThis->iQueueSize >= pThis->iMaxQueueSize)
+	      || (pThis->qType == QUEUETYPE_DISK && pThis->sizeOnDiskMax != 0
+	      	  && pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
+		dbgoprint((obj_t*) pThis, "enqueueMsg: queue FULL - waiting to drain.\n");
+		timeoutComp(&t, pThis->toEnq);
+		if(pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t) != 0) {
+			dbgoprint((obj_t*) pThis, "enqueueMsg: cond timeout, dropping message!\n");
+			objDestruct(pUsr);
+			ABORT_FINALIZE(RS_RET_QUEUE_FULL);
+		}
+	}
+
+	/* and finally enqueue the message */
+	CHKiRet(qqueueAdd(pThis, pUsr));
+	qqueueChkPersist(pThis); // TODO: optimize, do in outer function! (but we need parts from v5?)
+
+finalize_it:
+	RETiRet;
+}
+
+/* enqueue multiple user data elements at once. The aim is to provide a faster interface
+ * for object submission. Uses the multi_submit_t helper object.
+ * Please note that this function is not cancel-safe and consequently
+ * sets the calling thread's cancelibility state to PTHREAD_CANCEL_DISABLE
+ * during its execution. If that is not done, race conditions occur if the
+ * thread is canceled (most important use case is input module termination).
+ * rgerhards, 2009-06-16
+ */
+rsRetVal
+qqueueMultiEnqObj(qqueue_t *pThis, multi_submit_t *pMultiSub)
+{
+	int iCancelStateSave;
+	int i;
+	DEFiRet;
+
+	ISOBJ_TYPE_assert(pThis, qqueue);
+	assert(pMultiSub != NULL);
+
+	if(pThis->qType != QUEUETYPE_DIRECT) {
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+		d_pthread_mutex_lock(pThis->mut);
+	}
+
+	for(i = 0 ; i < pMultiSub->nElem ; ++i) {
+dbgprintf("queueMultiEnq: %d\n", i);
+		CHKiRet(doEnqSingleObj(pThis, pMultiSub->ppMsgs[i]->flowCtlType, (void*)pMultiSub->ppMsgs[i]));
+	}
+
+finalize_it:
+	if(pThis->qType != QUEUETYPE_DIRECT) {
+		/* make sure at least one worker is running. */
+		qqueueAdviseMaxWorkers(pThis);
+		/* and release the mutex */
+		d_pthread_mutex_unlock(pThis->mut);
+		pthread_setcancelstate(iCancelStateSave, NULL);
+		dbgoprint((obj_t*) pThis, "MultiEnqObj advised worker start\n");
 	}
 
 	RETiRet;
@@ -2279,6 +2392,7 @@ finalize_it:
 
 
 /* some simple object access methods */
+DEFpropSetMeth(qqueue, bSyncQueueFiles, int)
 DEFpropSetMeth(qqueue, iPersistUpdCnt, int)
 DEFpropSetMeth(qqueue, iDeqtWinFromHr, int)
 DEFpropSetMeth(qqueue, iDeqtWinToHr, int)
@@ -2340,6 +2454,7 @@ rsRetVal qqueueQueryInterface(void) { return RS_RET_NOT_IMPLEMENTED; }
 BEGINObjClassInit(qqueue, 1, OBJ_IS_CORE_MODULE)
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(strm, CORE_COMPONENT));
 
 	/* now set our own handlers */
 	OBJSetMethodHandler(objMethod_SETPROPERTY, qqueueSetProperty);

@@ -56,10 +56,12 @@ DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
+DEFobjCurrIf(strm)
 
 typedef struct fileInfo_s {
 	uchar *pszFileName;
 	uchar *pszTag;
+	size_t lenTag;
 	uchar *pszStateFile; /* file in which state between runs is to be stored */
 	int iFacility;
 	int iSeverity;
@@ -96,10 +98,10 @@ static rsRetVal enqLine(fileInfo_t *pInfo, cstr_t *cstrLine)
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
 	MsgSetInputName(pMsg, UCHAR_CONSTANT("imfile"), sizeof("imfile")-1);
-	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine));
-	MsgSetMSG(pMsg, (char*)rsCStrGetSzStr(cstrLine));
-	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName());
-	MsgSetTAG(pMsg, (char*)pInfo->pszTag);
+	MsgSetRawMsg(pMsg, (char*)rsCStrGetSzStr(cstrLine), cstrLen(cstrLine));
+	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
+	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
+	MsgSetTAG(pMsg, pInfo->pszTag, pInfo->lenTag);
 	pMsg->iFacility = LOG_FAC(pInfo->iFacility);
 	pMsg->iSeverity = LOG_PRI(pInfo->iSeverity);
 	pMsg->bParseHOSTNAME = 0;
@@ -138,16 +140,16 @@ openFile(fileInfo_t *pThis)
 
 	/* If we reach this point, we have a .si file */
 
-	CHKiRet(strmConstruct(&psSF));
-	CHKiRet(strmSettOperationsMode(psSF, STREAMMODE_READ));
-	CHKiRet(strmSetsType(psSF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strmSetFName(psSF, pszSFNam, lenSFNam));
-	CHKiRet(strmConstructFinalize(psSF));
+	CHKiRet(strm.Construct(&psSF));
+	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_READ));
+	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strm.SetFName(psSF, pszSFNam, lenSFNam));
+	CHKiRet(strm.ConstructFinalize(psSF));
 
 	/* read back in the object */
 	CHKiRet(obj.Deserialize(&pThis->pStrm, (uchar*) "strm", psSF, NULL, pThis));
 
-	CHKiRet(strmSeekCurrOffs(pThis->pStrm));
+	CHKiRet(strm.SeekCurrOffs(pThis->pStrm));
 
 	/* OK, we could successfully read the file, so we now can request that it be deleted.
 	 * If we need it again, it will be written on the next shutdown.
@@ -156,14 +158,14 @@ openFile(fileInfo_t *pThis)
 
 finalize_it:
 	if(psSF != NULL)
-		strmDestruct(&psSF);
+		strm.Destruct(&psSF);
 
 	if(iRet != RS_RET_OK) {
-		CHKiRet(strmConstruct(&pThis->pStrm));
-		CHKiRet(strmSettOperationsMode(pThis->pStrm, STREAMMODE_READ));
-		CHKiRet(strmSetsType(pThis->pStrm, STREAMTYPE_FILE_MONITOR));
-		CHKiRet(strmSetFName(pThis->pStrm, pThis->pszFileName, strlen((char*) pThis->pszFileName)));
-		CHKiRet(strmConstructFinalize(pThis->pStrm));
+		CHKiRet(strm.Construct(&pThis->pStrm));
+		CHKiRet(strm.SettOperationsMode(pThis->pStrm, STREAMMODE_READ));
+		CHKiRet(strm.SetsType(pThis->pStrm, STREAMTYPE_FILE_MONITOR));
+		CHKiRet(strm.SetFName(pThis->pStrm, pThis->pszFileName, strlen((char*) pThis->pszFileName)));
+		CHKiRet(strm.ConstructFinalize(pThis->pStrm));
 	}
 
 	RETiRet;
@@ -202,7 +204,7 @@ static rsRetVal pollFile(fileInfo_t *pThis, int *pbHadFileData)
 
 	/* loop below will be exited when strmReadLine() returns EOF */
 	while(1) {
-		CHKiRet(strmReadLine(pThis->pStrm, &pCStr));
+		CHKiRet(strm.ReadLine(pThis->pStrm, &pCStr));
 		*pbHadFileData = 1; /* this is just a flag, so set it and forget it */
 		CHKiRet(enqLine(pThis, pCStr)); /* process line */
 		rsCStrDestruct(&pCStr); /* discard string (must be done by us!) */
@@ -353,21 +355,20 @@ persistStrmState(fileInfo_t *pInfo)
 	ASSERT(pInfo != NULL);
 
 	/* TODO: create a function persistObj in obj.c? */
-	CHKiRet(strmConstruct(&psSF));
-	CHKiRet(strmSetDir(psSF, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
-	CHKiRet(strmSettOperationsMode(psSF, STREAMMODE_WRITE));
-	CHKiRet(strmSetiAddtlOpenFlags(psSF, O_TRUNC));
-	CHKiRet(strmSetsType(psSF, STREAMTYPE_FILE_SINGLE));
-	CHKiRet(strmSetFName(psSF, pInfo->pszStateFile, strlen((char*) pInfo->pszStateFile)));
-	CHKiRet(strmConstructFinalize(psSF));
+	CHKiRet(strm.Construct(&psSF));
+	CHKiRet(strm.SetDir(psSF, glbl.GetWorkDir(), strlen((char*)glbl.GetWorkDir())));
+	CHKiRet(strm.SettOperationsMode(psSF, STREAMMODE_WRITE_TRUNC));
+	CHKiRet(strm.SetsType(psSF, STREAMTYPE_FILE_SINGLE));
+	CHKiRet(strm.SetFName(psSF, pInfo->pszStateFile, strlen((char*) pInfo->pszStateFile)));
+	CHKiRet(strm.ConstructFinalize(psSF));
 
-	CHKiRet(strmSerialize(pInfo->pStrm, psSF));
+	CHKiRet(strm.Serialize(pInfo->pStrm, psSF));
 
-	CHKiRet(strmDestruct(&psSF));
+	CHKiRet(strm.Destruct(&psSF));
 
 finalize_it:
 	if(psSF != NULL)
-		strmDestruct(&psSF);
+		strm.Destruct(&psSF);
 
 	RETiRet;
 }
@@ -387,7 +388,7 @@ CODESTARTafterRun
 	for(i = 0 ; i < iFilPtr ; ++i) {
 		if(files[i].pStrm != NULL) { /* stream open? */
 			persistStrmState(&files[i]);
-			strmDestruct(&(files[i].pStrm));
+			strm.Destruct(&(files[i].pStrm));
 		}
 	}
 ENDafterRun
@@ -400,6 +401,7 @@ ENDafterRun
 BEGINmodExit
 CODESTARTmodExit
 	/* release objects we used */
+	objRelease(strm, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
@@ -470,6 +472,7 @@ static rsRetVal addMonitor(void __attribute__((unused)) *pVal, uchar *pNewVal)
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		} else {
 			pThis->pszTag = (uchar*) strdup((char*) pszFileTag);
+			pThis->lenTag = ustrlen(pThis->pszTag);
 		}
 
 		if(pszStateFile == NULL) {
@@ -511,6 +514,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
+	CHKiRet(objUse(strm, CORE_COMPONENT));
 
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord,
 	  	NULL, &pszFileName, STD_LOADABLE_MODULE_ID));

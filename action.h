@@ -43,10 +43,10 @@ struct action_s {
 	time_t	tActNow;	/* the current time for an action execution. Initially set to -1 and
 				   populated on an as-needed basis. This is a performance optimization. */
 	time_t	tLastExec;	/* time this action was last executed */
-	int	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
+	bool	bExecWhenPrevSusp;/* execute only when previous action is suspended? */
 	int	iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
 	short	bEnabled;	/* is the related action enabled (1) or disabled (0)? */
-	short	bSuspended;	/* is the related action temporarily suspended? */
+	bool	bSuspended;	/* is the related action temporarily suspended? */
 	time_t	ttResumeRtry;	/* when is it time to retry the resume? */
 	int	iResumeInterval;/* resume interval for this action */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */
@@ -57,7 +57,7 @@ struct action_s {
 	time_t  tLastOccur;	/* time last occurence was seen (for timing them out) */
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
-	short	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
+	bool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */
 	short	f_ReduceRepeated;/* reduce repeated lines 0 - no, 1 - yes */
 	int	f_prevcount;	/* repetition cnt of prevline */
 	int	f_repeatcount;	/* number of "repeated" msgs */
@@ -66,14 +66,16 @@ struct action_s {
 	int	iNumTpls;	/* number of array entries for template element below */
 	struct template **ppTpl;/* array of template to use - strings must be passed to doAction
 				 * in this order. */
-	struct msg* f_pMsg;	/* pointer to the message (this will replace the other vars with msg
+	msg_t *f_pMsg;		/* pointer to the message (this will replace the other vars with msg
 				 * content later). This is preserved after the message has been
 				 * processed - it is also used to detect duplicates.
 				 */
 	qqueue_t *pQueue;	/* action queue */
 	SYNC_OBJ_TOOL;		/* required for mutex support */
-	uchar *pszName;		/* action name (for documentation) */
 	pthread_mutex_t mutActExec; /* mutex to guard actual execution of doAction for single-threaded modules */
+	uchar *pszName;		/* action name (for documentation) */
+	uchar **ppMsgs;		/* pointer to action-calling parameters (kept in structure to save alloc() time!) */
+	size_t *lenMsgs;	/* length of message in ppMsgs */
 };
 typedef struct action_s action_t;
 

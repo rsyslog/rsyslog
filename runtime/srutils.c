@@ -553,6 +553,33 @@ int getSubString(uchar **ppSrc,  char *pDst, size_t DstSize, char cSep)
 }
 
 
+/* get the size of a file or return appropriate error code. If an error is returned,
+ * *pSize content is undefined.
+ * rgerhards, 2009-06-12
+ */
+rsRetVal
+getFileSize(uchar *pszName, off_t *pSize)
+{
+	int ret;
+	struct stat statBuf;
+	DEFiRet;
+
+	ret = stat((char*) pszName, &statBuf);
+	if(ret == -1) {
+		switch(errno) {
+			case EACCES: ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
+			case ENOTDIR:
+			case ENOENT:  ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+			default:      ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
+		}
+	}
+
+	*pSize = statBuf.st_size;
+
+finalize_it:
+	RETiRet;
+}
+
 
 /* vim:set ai:
  */

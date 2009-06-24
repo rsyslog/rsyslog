@@ -98,7 +98,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r epoll_wait getline])
+AC_CHECK_FUNCS([flock basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r epoll_wait getline malloc_trim])
 
 # Check for MAXHOSTNAMELEN
 AC_MSG_CHECKING(for MAXHOSTNAMELEN)
@@ -186,6 +186,7 @@ AC_ARG_ENABLE(zlib,
          esac],
         [enable_zlib=yes]
 )
+AM_CONDITIONAL(ENABLE_ZLIB, test x$enable_zlib = xyes)
 if test "$enable_zlib" = "yes"; then
 	AC_CHECK_HEADER(zlib.h, [zlib_header="yes"], [zlib_header="no" enable_zlib="false"])
 	if test "$zlib_header" = "yes"; then

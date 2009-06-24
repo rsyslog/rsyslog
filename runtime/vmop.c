@@ -125,7 +125,7 @@ Obj2Str(vmop_t *pThis, cstr_t *pstrPrg)
 		if(pThis->operand.pVar != NULL)
 			CHKiRet(var.Obj2Str(pThis->operand.pVar, pstrPrg));
 	}
-	CHKiRet(rsCStrAppendChar(pstrPrg, '\n'));
+	CHKiRet(cstrAppendChar(pstrPrg, '\n'));
 
 finalize_it:
 	RETiRet;

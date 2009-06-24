@@ -1,4 +1,29 @@
 ---------------------------------------------------------------------------
+Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
+- greatly improved performance
+- greatly reduced memory requirements of msg object
+  to around half of the previous demand. This means that more messages can
+  be stored in core! Due to fewer cache misses, this also means some
+  performance improvement.
+- improved config error messages: now contain a copy of the config line
+  that (most likely) caused the error
+- reduced max value for $DynaFileCacheSize to 1,000 (the former maximum
+  of 10,000 really made no sense, even 1,000 is very high, but we like
+  to keep the user in control ;)).
+- added capability to fsync() queue disk files for enhanced reliability
+  (also add's speed, because you do no longer need to run the whole file
+  system in sync mode)
+- more strict parsing of the hostname in rfc3164 mode, hopefully
+  removes false positives (but may cause some trouble with hostname
+  parsing). For details, see this bug tracker:
+  http://bugzilla.adiscon.com/show_bug.cgi?id=126
+- added configuration commands (see doc for explanations)
+  * $OMFileZipLevel
+  * $OMFileIOBufferSize
+  * $OMFileFlushOnTXEnd
+  * $MainMsgQueueSyncQueueFiles
+  * $ActionQueueSyncQueueFiles
+---------------------------------------------------------------------------
 Version 4.3.2  [beta] (rgerhards), 2009-06-24
 - removed long-obsoleted property UxTradMsg
 - added a generic network stream server (in addition to rather specific

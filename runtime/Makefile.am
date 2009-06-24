@@ -39,6 +39,8 @@ librsyslog_la_SOURCES = \
 	obj.h \
 	modules.c \
 	modules.h \
+	apc.c \
+	apc.h \
 	sync.c \
 	sync.h \
 	expr.c \
@@ -67,6 +69,12 @@ librsyslog_la_SOURCES = \
 	vmop.h \
 	queue.c \
 	queue.h \
+	ruleset.c \
+	ruleset.h \
+	rule.c \
+	rule.h \
+	prop.c \
+	prop.h \
 	cfsysline.c \
 	cfsysline.h \
 	\
@@ -103,6 +111,17 @@ lmregexp_la_SOURCES = regexp.c regexp.h
 lmregexp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmregexp_la_LDFLAGS = -module -avoid-version
 lmregexp_la_LIBADD =
+endif
+
+#
+# zlib support
+# 
+if ENABLE_ZLIB
+pkglib_LTLIBRARIES += lmzlibw.la
+lmzlibw_la_SOURCES = zlibw.c zlibw.h
+lmzlibw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+lmzlibw_la_LDFLAGS = -module -avoid-version
+lmzlibw_la_LIBADD =
 endif
 
 if ENABLE_INET

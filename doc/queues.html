@@ -115,7 +115,11 @@ isolation. This is currently selected by specifying different <i>$WorkDirectory<
 config directives before the queue creation statement.</p>
 <p>To create a disk queue, use the "<i>$&lt;object&gt;QueueType Disk</i>" config 
 directive. Checkpoint intervals can be specified via "<i>$&lt;object&gt;QueueCheckpointInterval</i>", 
-with 0 meaning no checkpoints. </p>
+with 0 meaning no checkpoints. Note that disk-based queues can be made very reliable
+by issuing a (f)sync after each write operation. Starting with version 4.3.2, this can
+be requested via "<i>&lt;object&gt;QueueSyncQueueFiles on/off</i> with the
+default being off. Activating this option has a performance penalty, so it should
+not be turned on without reason.</p>
 <h2>In-Memory Queues</h2>
 <p>In-memory queue mode is what most people have on their mind when they think 
 about computing queues. Here, the enqueued data elements are held in memory. 

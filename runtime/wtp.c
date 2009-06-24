@@ -82,7 +82,6 @@ static rsRetVal NotImplementedDummy() { return RS_RET_OK; }
 /* Standard-Constructor for the wtp object
  */
 BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! */
-	pThis->bOptimizeUniProc = glbl.GetOptimizeUniProc();
 	pthread_mutex_init(&pThis->mut, NULL);
 	pthread_mutex_init(&pThis->mutThrdShutdwn, NULL);
 	pthread_cond_init(&pThis->condThrdTrm, NULL);
@@ -151,8 +150,7 @@ CODESTARTobjDestruct(wtp)
 	pthread_mutex_destroy(&pThis->mut);
 	pthread_mutex_destroy(&pThis->mutThrdShutdwn);
 
-	if(pThis->pszDbgHdr != NULL)
-		free(pThis->pszDbgHdr);
+	free(pThis->pszDbgHdr);
 ENDobjDestruct(wtp)
 
 
@@ -509,14 +507,6 @@ wtpStartWrkr(wtp_t *pThis, int bLockMutex)
 	iState = pthread_create(&(pWti->thrdID), NULL, wtpWorker, (void*) pWti);
 	dbgprintf("%s: started with state %d, num workers now %d\n",
 		  wtpGetDbgHdr(pThis), iState, pThis->iCurNumWrkThrd);
-
-	/* we try to give the starting worker a little boost. It won't help much as we still
- 	 * hold the queue's mutex, but at least it has a chance to start on a single-CPU system.
- 	 */
-#	if !defined(__hpux) /* pthread_yield is missing there! */
-	if(pThis->bOptimizeUniProc)
-		pthread_yield();
-#	endif
 
 	/* indicate we just started a worker and would like to see it running */
 	wtpSetInactivityGuard(pThis, 1, MUTEX_ALREADY_LOCKED);

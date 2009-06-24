@@ -52,13 +52,12 @@ typedef enum {
 /* the worker thread pool (wtp) object */
 typedef struct wtp_s {
 	BEGINobjInstance;
-	int	bOptimizeUniProc; /* cache for the equally-named global setting, pulled at time of queue creation */
 	wtpState_t wtpState;
 	int 	iNumWorkerThreads;/* number of worker threads to use */
 	int 	iCurNumWrkThrd;/* current number of active worker threads */
 	struct wti_s **pWrkr;/* array with control structure for the worker thread(s) associated with this wtp */
 	int	toWrkShutdown;	/* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */
-	int	bInactivityGuard;/* prevents inactivity due to race condition */
+	bool	bInactivityGuard;/* prevents inactivity due to race condition */
 	rsRetVal (*pConsumer)(void *); /* user-supplied consumer function for dewtpd messages */
 	/* synchronization variables */
 	pthread_mutex_t mutThrdShutdwn; /* mutex to guard thread shutdown processing */

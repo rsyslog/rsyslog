@@ -61,6 +61,7 @@
 #include "netstrm.h"
 #include "errmsg.h"
 #include "tcpsrv.h"
+#include "ruleset.h"
 #include "net.h" /* for permittedPeers, may be removed when this is removed */
 
 MODULE_TYPE_INPUT
@@ -72,6 +73,7 @@ DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(errmsg)
+DEFobjCurrIf(ruleset)
 
 /* Module static data */
 static tcpsrv_t *pOurTcpsrv = NULL;  /* our TCP server(listener) TODO: change for multiple instances */
@@ -84,6 +86,7 @@ static int iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mos
 static int iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER; /* addtl frame delimiter, e.g. for netscreen, default none */
 static uchar *pszStrmDrvrAuthMode = NULL; /* authentication mode to use */
 static uchar *pszInputName = NULL; /* value for inputname property, NULL is OK and handled by core engine */
+static ruleset_t *pBindRuleset = NULL; /* ruleset to bind listener to (use system default if unspecified) */
 
 
 /* callbacks */
@@ -157,6 +160,27 @@ finalize_it:
 }
 
 
+/* accept a new ruleset to bind. Checks if it exists and complains, if not */
+static rsRetVal setRuleset(void __attribute__((unused)) *pVal, uchar *pszName)
+{
+	ruleset_t *pRuleset;
+	rsRetVal localRet;
+	DEFiRet;
+
+	localRet = ruleset.GetRuleset(&pRuleset, pszName);
+	if(localRet == RS_RET_NOT_FOUND) {
+		errmsg.LogError(0, NO_ERRCODE, "error: ruleset '%s' not found - ignored", pszName);
+	}
+	CHKiRet(localRet);
+	pBindRuleset = pRuleset;
+	DBGPRINTF("imtcp current bind ruleset %p: '%s'\n", pRuleset, pszName);
+
+finalize_it:
+	free(pszName); /* no longer needed */
+	RETiRet;
+}
+
+
 static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
 	DEFiRet;
@@ -180,7 +204,8 @@ static rsRetVal addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVa
 		}
 	}
 
-	/* initialized, now add socket */
+	/* initialized, now add socket and listener params */
+	CHKiRet(tcpsrv.SetRuleset(pOurTcpsrv, pBindRuleset));
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : pszInputName));
 	tcpsrv.configureTCPListen(pOurTcpsrv, pNewVal);
@@ -240,6 +265,7 @@ CODESTARTmodExit
 	objRelease(tcps_sess, LM_TCPSRV_FILENAME);
 	objRelease(tcpsrv, LM_TCPSRV_FILENAME);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -249,14 +275,10 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 	iTCPSessMax = 200;
 	iStrmDrvrMode = 0;
 	iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
-	if(pszInputName != NULL) {
-		free(pszInputName);
-		pszInputName = NULL;
-	}
-	if(pszStrmDrvrAuthMode != NULL) {
-		free(pszStrmDrvrAuthMode);
-		pszStrmDrvrAuthMode = NULL;
-	}
+	free(pszInputName);
+	pszInputName = NULL;
+	free(pszStrmDrvrAuthMode);
+	pszStrmDrvrAuthMode = NULL;
 	return RS_RET_OK;
 }
 
@@ -279,6 +301,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	/* register config file handlers */
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord,
@@ -295,6 +318,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 				   NULL, &iAddtlFrameDelim, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverinputname"), 0,
 				   eCmdHdlrGetWord, NULL, &pszInputName, STD_LOADABLE_MODULE_ID));
+	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverbindruleset"), 0,
+				   eCmdHdlrGetWord, setRuleset, NULL, STD_LOADABLE_MODULE_ID));
 	CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("resetconfigvariables"), 1, eCmdHdlrCustomHandler,
 		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

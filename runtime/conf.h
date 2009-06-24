@@ -35,7 +35,7 @@ BEGINinterface(conf) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*cfsysline)(uchar *p);
 	rsRetVal (*doModLoad)(uchar **pp, __attribute__((unused)) void* pVal);
 	rsRetVal (*doIncludeLine)(uchar **pp, __attribute__((unused)) void* pVal);
-	rsRetVal (*cfline)(uchar *line, selector_t **pfCurr);
+	rsRetVal (*cfline)(uchar *line, rule_t **pfCurr);
 	rsRetVal (*processConfFile)(uchar *pConfFile);
 	rsRetVal (*ReInitConf)(void);
 	rsRetVal (*GetNbrActActions)(int *);
@@ -51,5 +51,9 @@ PROTOTYPEObj(conf);
 extern EHostnameCmpMode eDfltHostnameCmpMode;
 extern cstr_t *pDfltHostnameCmp;
 extern cstr_t *pDfltProgNameCmp;
+/* TODO: the following 2 need to go in conf obj interface... */
+rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName);
+rsRetVal cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl);
+
 
 #endif /* #ifndef INCLUDED_CONF_H */

@@ -29,7 +29,17 @@
 /* ############################################################# *
  * #                    Config Settings                        # *
  * ############################################################# */
-#define RS_STRINGBUF_ALLOC_INCREMENT 128
+#define RS_STRINGBUF_ALLOC_INCREMENT	128
+/* MAXSIZE are absolute maxima, while BUFSIZE are just values after which
+ * processing is more time-intense. The BUFSIZE params currently add their
+ * value to the fixed size of the message object.
+ */
+#define CONF_TAG_MAXSIZE		512	/* a value that is deemed far too large for any valid TAG */
+#define CONF_TAG_HOSTNAME		512	/* a value that is deemed far too large for any valid HOSTNAME */
+#define CONF_RAWMSG_BUFSIZE		101
+#define CONF_TAG_BUFSIZE		32
+#define CONF_HOSTNAME_BUFSIZE		32
+
 
 /* ############################################################# *
  * #                  End Config Settings                      # *
@@ -62,7 +72,9 @@
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
 typedef struct thrdInfo thrdInfo_t;
 typedef struct obj_s obj_t;
-typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
+typedef struct ruleset_s ruleset_t;
+typedef struct rule_s rule_t;
+//typedef struct filed selector_t;/* TODO: this so far resides in syslogd.c, think about modularization */
 typedef struct NetAddr netAddr_t;
 typedef struct netstrms_s netstrms_t;
 typedef struct netstrm_s netstrm_t;
@@ -77,6 +89,7 @@ typedef struct nsdsel_gtls_s nsdsel_gtls_t;
 typedef obj_t nsd_t;
 typedef obj_t nsdsel_t;
 typedef struct msg msg_t;
+typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
@@ -97,6 +110,7 @@ typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
 typedef long long int64;
 typedef long long unsigned uint64;
 typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
+typedef char intTiny; 	/* 0..127! */
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */
@@ -114,6 +128,33 @@ typedef enum {
 	eFLOWCTL_FULL_DELAY = 2	/**< delay possible for extended period of time */
 } flowControl_t;
 
+/* filter operations */
+typedef enum {
+	FIOP_NOP = 0,		/* do not use - No Operation */
+	FIOP_CONTAINS  = 1,	/* contains string? */
+	FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
+	FIOP_STARTSWITH = 3,	/* starts with a string? */
+	FIOP_REGEX = 4,		/* matches a (BRE) regular expression? */
+	FIOP_EREREGEX = 5	/* matches a ERE regular expression? */
+} fiop_t;
+
+
+/* multi-submit support.
+ * This is done via a simple data structure, which holds the number of elements
+ * as well as an array of to-be-submitted messages.
+ * rgerhards, 2009-06-16
+ */
+typedef struct multi_submit_s multi_submit_t;
+struct multi_submit_s {
+	short	maxElem;	/* maximum number of Elements */
+	short	nElem;		/* current number of Elements, points to the next one FREE */
+	msg_t	**ppMsgs;
+};
+
+
+#ifndef _PATH_CONSOLE
+#define _PATH_CONSOLE	"/dev/console"
+#endif
 
 /* The error codes below are orginally "borrowed" from
  * liblogging. As such, we reserve values up to -2999
@@ -279,7 +320,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_PREVIOUS_COMMITTED = -2122, /**< output plugin status: previous record was committed (an OK state!) */
 	RS_RET_ACTION_FAILED = -2123, /**< action failed and is now suspended (consider this permanent for the time being) */
 	RS_RET_NONFATAL_CONFIG_ERR = -2124, /**< non-fatal error during config processing */
+	RS_RET_NON_SIZELIMITCMD = -2125, /**< size limit for file defined, but no size limit command given */
+	RS_RET_SIZELIMITCMD_DIDNT_RESOLVE = -2126, /**< size limit command did not resolve situation */
+	RS_RET_STREAM_DISABLED = -2127, /**< a file has been disabled (e.g. by size limit restriction) */
 	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
+	RS_RET_ZLIB_ERR = -2141, /**< error during zlib call */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -367,6 +412,11 @@ typedef enum rsObjectID rsObjID;
 /* of course, this limits the functionality... */
 #  define O_CLOEXEC 0
 #endif
+
+/* some constants */
+// TODO: do we really need them - if not, delete -- rgerhards, 2009-06-10
+#define IGNORE_ERROR_CODES 1
+#define ABORT_ON_ERROR 0
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));
