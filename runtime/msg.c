@@ -355,7 +355,9 @@ CODESTARTobjDestruct(msg)
 # 	endif
 		funcDeleteMutex(pThis);
 	} else {
+#	ifndef HAVE_ATOMIC_BUILTINS
 		MsgUnlock(pThis);
+# 	endif
 		pThis = NULL; /* tell framework not to destructing the object! */
 	}
 ENDobjDestruct(msg)
