@@ -38,22 +38,13 @@ increase.
   output module interface
 ---------------------------------------------------------------------------
 Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
+- greatly improved performance
 - greatly reduced memory requirements of msg object
   to around half of the previous demand. This means that more messages can
   be stored in core! Due to fewer cache misses, this also means some
   performance improvement.
 - improved config error messages: now contain a copy of the config line
   that (most likely) caused the error
-- removed long-obsoleted property UxTradMsg
-- added a generic network stream server (in addition to rather specific
-  syslog tcp server)
-- added ability for the UDP output action to rebind its send socket after
-  sending n messages. New config directive $ActionSendUDPRebindInterval
-  added for the purpose. By default, rebinding is disabled. This is 
-  considered useful for load balancers.
-- bugfix: imdiag/imtcp had a race condition
-- improved testbench (now much better code design and reuse)
-- added config switch --enable-testbench=no to turn off testbench
 - reduced max value for $DynaFileCacheSize to 1,000 (the former maximum
   of 10,000 really made no sense, even 1,000 is very high, but we like
   to keep the user in control ;)).
@@ -71,7 +62,17 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
   * $MainMsgQueueSyncQueueFiles
   * $ActionQueueSyncQueueFiles
 ---------------------------------------------------------------------------
-Version 4.3.2  [beta] (rgerhards), 2009-??-??
+Version 4.3.2  [beta] (rgerhards), 2009-06-24
+- removed long-obsoleted property UxTradMsg
+- added a generic network stream server (in addition to rather specific
+  syslog tcp server)
+- added ability for the UDP output action to rebind its send socket after
+  sending n messages. New config directive $ActionSendUDPRebindInterval
+  added for the purpose. By default, rebinding is disabled. This is 
+  considered useful for load balancers.
+- bugfix: imdiag/imtcp had a race condition
+- improved testbench (now much better code design and reuse)
+- added config switch --enable-testbench=no to turn off testbench
 ---------------------------------------------------------------------------
 Version 4.3.1  [DEVEL] (rgerhards), 2009-05-25
 - added capability to run multiple tcp listeners (on different ports)
@@ -116,9 +117,10 @@ Version 4.3.0  [DEVEL] (rgerhards), 2009-04-17
   execution. The most probable case for such a case would be invalid
   sql inside the template, and this is now much easier to diagnose.
 ---------------------------------------------------------------------------
-Version 4.1.8  [BETA] (rgerhards), 2009-04-??
+Version 4.2.0  [v4-stable] (rgerhards), 2009-06-23
 - bugfix: light and full delay watermarks had invalid values, badly
   affecting performance for delayable inputs
+- imported all patches from 3.22.1 as of today (see below)
 - bugfix: compile problems in im3195
 ---------------------------------------------------------------------------
 Version 4.1.7  [BETA] (rgerhards), 2009-04-22
