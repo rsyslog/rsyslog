@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------
-Version 4.3.2  [DEVEL] (rgerhards), 2009-??-??
+Version 4.3.2  [beta] (rgerhards), 2009-06-24
 - removed long-obsoleted property UxTradMsg
 - added a generic network stream server (in addition to rather specific
   syslog tcp server)
