@@ -184,6 +184,8 @@ Version 3.22.1 [v3-stable] (rgerhards), 2009-04-??
 - relaxed GnuTLS version requirement to 1.4.0 after confirmation from the
   field that this version is sufficient
 - bugfix: parser did not properly handle empty structured data
+- bugfix: invalid mutex release in msg.c (detected under thread debugger,
+  seems not to have any impact on actual deployments)
 ---------------------------------------------------------------------------
 Version 3.22.0 [v3-stable] (rgerhards), 2009-04-21
 This is the first stable release that includes the full functionality
