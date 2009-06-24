@@ -836,22 +836,15 @@ actionCallAction(action_t *pAction, msg_t *pMsg)
 	ISOBJ_TYPE_assert(pMsg, msg);
 	ASSERT(pAction != NULL);
 
-	/* We need to lock the mutex only for repeated line processing. 
-	 * rgerhards, 2009-06-19
-	 */
-	if(pAction->f_ReduceRepeated == 1) {
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-		LockObj(pAction);
-		pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
-		pthread_setcancelstate(iCancelStateSave, NULL);
-		iRet = doActionCallAction(pAction, pMsg);
-		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
-		UnlockObj(pAction);
-		pthread_cleanup_pop(0); /* remove mutex cleanup handler */
-		pthread_setcancelstate(iCancelStateSave, NULL);
-	} else {
-		iRet = doActionCallAction(pAction, pMsg);
-	}
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	LockObj(pAction);
+	pthread_cleanup_push(mutexCancelCleanup, pAction->Sync_mut);
+	pthread_setcancelstate(iCancelStateSave, NULL);
+	iRet = doActionCallAction(pAction, pMsg);
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
+	UnlockObj(pAction);
+	pthread_cleanup_pop(0); /* remove mutex cleanup handler */
+	pthread_setcancelstate(iCancelStateSave, NULL);
 
 	RETiRet;
 }
