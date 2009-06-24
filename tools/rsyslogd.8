@@ -234,14 +234,14 @@ reacts to a set of signals.  You may easily send a signal to
 using the following:
 .IP
 .nf
-kill -SIGNAL $(cat /var/run/syslogd.pid)
+kill -SIGNAL $(cat /var/run/rsyslogd.pid)
 .fi
 .PP
 Note that -SIGNAL must be replaced with the actual signal
 you are trying to send, e.g. with HUP. So it then becomes:
 .IP
 .nf
-kill -HUP $(cat /var/run/syslogd.pid)
+kill -HUP $(cat /var/run/rsyslogd.pid)
 .fi
 .PP
 .TP
