@@ -70,8 +70,6 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   testsuites/1.inputname_imtcp_12516 \
 	   omod-if-array.sh \
 	   diag.sh \
-	   daqueue-persist.sh \
-	   daqueue-persist-drvr.sh \
 	   testsuites/diag-common.conf \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
