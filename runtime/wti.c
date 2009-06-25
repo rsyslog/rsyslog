@@ -159,7 +159,7 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 }
 
 
-/* Cancel the thread. If the thread is already cancelled or termination,
+/* Cancel the thread. If the thread is already cancelled or terminated,
  * we do not again cancel it. But it is save and legal to call wtiCancelThrd() in
  * such situations.
  * rgerhards, 2008-02-26
@@ -173,8 +173,10 @@ wtiCancelThrd(wti_t *pThis)
 
 	d_pthread_mutex_lock(&pThis->mut);
 
+	wtiProcessThrdChanges(pThis, MUTEX_ALREADY_LOCKED); /* process state change, so that we have current state vars */
+
 	if(pThis->tCurrCmd >= eWRKTHRD_TERMINATING) {
-		dbgoprint((obj_t*) pThis, "canceling worker thread\n");
+		dbgoprint((obj_t*) pThis, "canceling worker thread, curr stat %d\n", pThis->tCurrCmd);
 		pthread_cancel(pThis->thrdID);
 		wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
 		ATOMIC_STORE_1_TO_INT(pThis->pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */

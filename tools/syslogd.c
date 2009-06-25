@@ -299,7 +299,7 @@ static uchar *pszMainMsgQFName = NULL;				/* prefix for the main message queue f
 static int64 iMainMsgQueMaxFileSize = 1024*1024;
 static int iMainMsgQPersistUpdCnt = 0;				/* persist queue info every n updates */
 static int bMainMsgQSyncQeueFiles = 0;				/* sync queue files on every write? */
-static int iMainMsgQtoQShutdown = 0;				/* queue shutdown */ 
+static int iMainMsgQtoQShutdown = 1500;				/* queue shutdown (ms) */ 
 static int iMainMsgQtoActShutdown = 1000;			/* action shutdown (in phase 2) */ 
 static int iMainMsgQtoEnq = 2000;				/* timeout for queue enque */ 
 static int iMainMsgQtoWrkShutdown = 60000;			/* timeout for worker thread shutdown */
@@ -363,7 +363,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	iMainMsgQueueNumWorkers = 1;
 	iMainMsgQPersistUpdCnt = 0;
 	bMainMsgQSyncQeueFiles = 0;
-	iMainMsgQtoQShutdown = 0;
+	iMainMsgQtoQShutdown = 1500;
 	iMainMsgQtoActShutdown = 1000;
 	iMainMsgQtoEnq = 2000;
 	iMainMsgQtoWrkShutdown = 60000;
