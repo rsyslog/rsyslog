@@ -607,10 +607,12 @@ CODESTARTobjDestruct(msg)
 		 * operations on the counter. --- rgerhards, 2009-06-22.
 		 */
 #		if HAVE_MALLOC_TRIM
-		{	/* standard C requires a new block for a new variable definition! */
+		{	/* standard C requires a new block for a new variable definition!
+			 * To simplify matters, we use modulo arithmetic and live with the fact
+			 * that we trim too often when the counter wraps.
+			 */
 			static unsigned iTrimCtr = 1;
-			if(iTrimCtr ++ % 100000 == 0) {
-				iTrimCtr = 1;
+			if(ATOMIC_INC_AND_FETCH(iTrimCtr) % 100000 == 0) {
 				malloc_trim(128*1024);
 			}
 		}
