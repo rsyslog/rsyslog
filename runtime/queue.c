@@ -110,7 +110,7 @@ static inline void queueDrain(qqueue_t *pThis)
 	ASSERT(pThis != NULL);
 
 	/* iQueueSize is not decremented by qDel(), so we need to do it ourselves */
-	while(pThis->iQueueSize-- > 0) {
+	while(ATOMIC_DEC_AND_FETCH(pThis->iQueueSize) > 0) {
 		pThis->qDel(pThis, &pUsr);
 		if(pUsr != NULL) {
 			objDestruct(pUsr);
