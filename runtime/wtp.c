@@ -39,6 +39,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <atomic.h>
 
 /// TODO: check on solaris if this is any longer needed - I don't think so - rgerhards, 2009-09-20
 //#ifdef OS_SOLARIS
@@ -217,7 +218,7 @@ wtpProcessThrdChanges(wtp_t *pThis)
 	 */
 	do {
 		/* reset the change marker */
-		pThis->bThrdStateChanged = 0;
+		ATOMIC_STORE_0_TO_INT(pThis->bThrdStateChanged);
 		/* go through all threads */
 		for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 			wtiProcessThrdChanges(pThis->pWrkr[i], LOCK_MUTEX);

@@ -51,6 +51,7 @@
 #include "wti.h"
 #include "obj.h"
 #include "glbl.h"
+#include "atomic.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -106,6 +107,7 @@ rsRetVal
 wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 {
 	DEFiRet;
+	qWrkCmd_t tCurrCmd;
 	DEFVARS_mutexProtection;
 
 	ISOBJ_TYPE_assert(pThis, wti);
@@ -113,13 +115,14 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 
 	BEGIN_MTX_PROTECTED_OPERATIONS(&pThis->mut, bLockMutex);
 
+	tCurrCmd = pThis->tCurrCmd;
 	/* all worker states must be followed sequentially, only termination can be set in any state */
-	if(   (bActiveOnly && (pThis->tCurrCmd < eWRKTHRD_RUN_CREATED))
-	   || (pThis->tCurrCmd > tCmd && !(tCmd == eWRKTHRD_TERMINATING || tCmd == eWRKTHRD_STOPPED))) {
-		dbgprintf("%s: command %d can not be accepted in current %d processing state - ignored\n",
-			  wtiGetDbgHdr(pThis), tCmd, pThis->tCurrCmd);
+	if(   (bActiveOnly && (tCurrCmd < eWRKTHRD_RUN_CREATED))
+	   || (tCurrCmd > tCmd && !(tCmd == eWRKTHRD_TERMINATING || tCmd == eWRKTHRD_STOPPED))) {
+		DBGPRINTF("%s: command %d can not be accepted in current %d processing state - ignored\n",
+			  wtiGetDbgHdr(pThis), tCmd, tCurrCmd);
 	} else {
-		dbgprintf("%s: receiving command %d\n", wtiGetDbgHdr(pThis), tCmd);
+		DBGPRINTF("%s: receiving command %d\n", wtiGetDbgHdr(pThis), tCmd);
 		/* we could replace this with a simple if, but we leave the switch in in case we need
 		 * to add something at a later stage. -- rgerhards, 2008-09-30
 		 */
@@ -143,7 +146,8 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 				/* DO NOTHING */
 				break;
 		}
-		pThis->tCurrCmd = tCmd; /* apply the new state */
+		/* better do a CAS? */
+		ATOMIC_STORE_INT_TO_INT(pThis->tCurrCmd, tCmd); /* apply the new state */
 	}
 
 	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
@@ -169,7 +173,7 @@ wtiCancelThrd(wti_t *pThis)
 		dbgoprint((obj_t*) pThis, "canceling worker thread\n");
 		pthread_cancel(pThis->thrdID);
 		wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
-		pThis->pWtp->bThrdStateChanged = 1; /* indicate change, so harverster will be called */
+		ATOMIC_STORE_1_TO_INT(pThis->pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
 	}
 
 	d_pthread_mutex_unlock(&pThis->mut);
@@ -324,7 +328,7 @@ wtiWorkerCancelCleanup(void *arg)
 	d_pthread_mutex_lock(&pWtp->mut);
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
 	/* TODO: sync access? I currently think it is NOT needed -- rgerhards, 2008-01-28 */
-	pWtp->bThrdStateChanged = 1; /* indicate change, so harverster will be called */
+	ATOMIC_STORE_1_TO_INT(pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
 
 	d_pthread_mutex_unlock(&pWtp->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
@@ -409,8 +413,8 @@ wtiWorker(wti_t *pThis)
 		}
 
 		/* try to execute and process whatever we have */
-		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
 		/* This function must and does RELEASE the MUTEX! */
+		localRet = pWtp->pfDoWork(pWtp->pUsr, pThis, iCancelStateSave);
 		bMutexIsLocked = FALSE;
 
 		if(localRet == RS_RET_IDLE) {
@@ -445,7 +449,7 @@ RUNLOG_STR("XXX: Worker shutdown");
 	pWtp->pfOnWorkerShutdown(pWtp->pUsr);
 
 	wtiSetState(pThis, eWRKTHRD_TERMINATING, 0, MUTEX_ALREADY_LOCKED);
-	pWtp->bThrdStateChanged = 1; /* indicate change, so harverster will be called */
+	ATOMIC_STORE_1_TO_INT(pWtp->bThrdStateChanged); /* indicate change, so harverster will be called */
 	d_pthread_mutex_unlock(&pThis->mut);
 	pthread_setcancelstate(iCancelStateSave, NULL);
 
