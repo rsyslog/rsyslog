@@ -1009,7 +1009,7 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3164 == NULL) {
 			pM->pszTIMESTAMP3164 = pM->pszTimestamp3164;
-			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164, 16);
+			datetime.formatTimestamp3164(&pM->tTIMESTAMP, pM->pszTIMESTAMP3164);
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3164);
@@ -1020,7 +1020,7 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			datetime.formatTimestampToMySQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_MySQL, 15);
+			datetime.formatTimestampToMySQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_MySQL);
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP_MySQL);
@@ -1031,7 +1031,7 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
                                 MsgUnlock(pM);
                                 return "";
                         }
-                        datetime.formatTimestampToPgSQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_PgSQL, 21);
+                        datetime.formatTimestampToPgSQL(&pM->tTIMESTAMP, pM->pszTIMESTAMP_PgSQL);
                 }
                 MsgUnlock(pM);
                 return(pM->pszTIMESTAMP_PgSQL);
@@ -1039,7 +1039,7 @@ static inline char *getTimeReported(msg_t *pM, enum tplFormatTypes eFmt)
 		MsgLock(pM);
 		if(pM->pszTIMESTAMP3339 == NULL) {
 			pM->pszTIMESTAMP3339 = pM->pszTimestamp3339;
-			datetime.formatTimestamp3339(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339, 33);
+			datetime.formatTimestamp3339(&pM->tTIMESTAMP, pM->pszTIMESTAMP3339);
 		}
 		MsgUnlock(pM);
 		return(pM->pszTIMESTAMP3339);
@@ -1072,7 +1072,7 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
+			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3164);
@@ -1083,7 +1083,7 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			datetime.formatTimestampToMySQL(&pM->tRcvdAt, pM->pszRcvdAt_MySQL, 15);
+			datetime.formatTimestampToMySQL(&pM->tRcvdAt, pM->pszRcvdAt_MySQL);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt_MySQL);
@@ -1094,7 +1094,7 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
                                 MsgUnlock(pM);
                                 return "";
                         }
-                        datetime.formatTimestampToPgSQL(&pM->tRcvdAt, pM->pszRcvdAt_PgSQL, 21);
+                        datetime.formatTimestampToPgSQL(&pM->tRcvdAt, pM->pszRcvdAt_PgSQL);
                 }
                 MsgUnlock(pM);
                 return(pM->pszRcvdAt_PgSQL);
@@ -1105,7 +1105,7 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 					MsgUnlock(pM);
 					return "";
 				}
-			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164, 16);
+			datetime.formatTimestamp3164(&pM->tRcvdAt, pM->pszRcvdAt3164);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3164);
@@ -1116,7 +1116,7 @@ static inline char *getTimeGenerated(msg_t *pM, enum tplFormatTypes eFmt)
 				MsgUnlock(pM);
 				return "";
 			}
-			datetime.formatTimestamp3339(&pM->tRcvdAt, pM->pszRcvdAt3339, 33);
+			datetime.formatTimestamp3339(&pM->tRcvdAt, pM->pszRcvdAt3339);
 		}
 		MsgUnlock(pM);
 		return(pM->pszRcvdAt3339);

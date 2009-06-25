@@ -2516,7 +2516,7 @@ init(void)
 		exit(1);
 	}
 	/* name our main queue object (it's not fatal if it fails...) */
-	obj.SetName((obj_t*) pMsgQueue, (uchar*) "main queue");
+	obj.SetName((obj_t*) pMsgQueue, (uchar*) "main Q");
 
 	/* ... set some properties ... */
 #	define setQPROP(func, directive, data) \

@@ -548,7 +548,7 @@ finalize_it:
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occured.
  */
-int formatTimestampToMySQL(struct syslogTime *ts, char* pBuf, size_t iLenDst)
+int formatTimestampToMySQL(struct syslogTime *ts, char* pBuf)
 {
 	/* currently we do not consider localtime/utc. This may later be
 	 * added. If so, I recommend using a property replacer option
@@ -579,7 +579,7 @@ int formatTimestampToMySQL(struct syslogTime *ts, char* pBuf, size_t iLenDst)
 
 }
 
-int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf, size_t iLenDst)
+int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf)
 {
 	/* see note in formatTimestampToMySQL, applies here as well */
 	assert(ts != NULL);
@@ -657,7 +657,7 @@ int formatTimestampSecFrac(struct syslogTime *ts, char* pBuf)
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occured.
  */
-int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+int formatTimestamp3339(struct syslogTime *ts, char* pBuf)
 {
 	int iBuf;
 	int power;
@@ -734,7 +734,7 @@ int formatTimestamp3339(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
  * returns the size of the timestamp written in bytes (without
  * the string termnator). If 0 is returend, an error occured.
  */
-int formatTimestamp3164(struct syslogTime *ts, char* pBuf, size_t iLenBuf)
+int formatTimestamp3164(struct syslogTime *ts, char* pBuf)
 {
 	static char* monthNames[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
 					"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
