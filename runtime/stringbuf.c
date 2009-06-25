@@ -71,7 +71,6 @@ rsRetVal cstrConstruct(cstr_t **ppThis)
 	pThis->pszBuf = NULL;
 	pThis->iBufSize = 0;
 	pThis->iStrLen = 0;
-	pThis->iAllocIncrement = RS_STRINGBUF_ALLOC_INCREMENT;
 	*ppThis = pThis;
 
 finalize_it:
@@ -154,7 +153,7 @@ void rsCStrDestruct(cstr_t **ppThis)
  * rgerhards, 2008-01-07
  * changed to utilized realloc() -- rgerhards, 2009-06-16
  */
-static rsRetVal
+rsRetVal
 rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
 {
 	uchar *pNewBuf;
@@ -162,16 +161,16 @@ rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded)
 	DEFiRet;
 
 	/* first compute the new size needed */
-	if(iMinNeeded > pThis->iAllocIncrement) {
-		/* we allocate "n" iAllocIncrements. Usually, that should
+	if(iMinNeeded > RS_STRINGBUF_ALLOC_INCREMENT) {
+		/* we allocate "n" ALLOC_INCREMENTs. Usually, that should
 		 * leave some room after the absolutely needed one. It also
 		 * reduces memory fragmentation. Note that all of this are
 		 * integer operations (very important to understand what is
 		 * going on)! Parenthesis are for better readibility.
 		 */
-		iNewSize = ((iMinNeeded / pThis->iAllocIncrement) + 1) * pThis->iAllocIncrement;
+		iNewSize = (iMinNeeded / RS_STRINGBUF_ALLOC_INCREMENT + 1) * RS_STRINGBUF_ALLOC_INCREMENT;
 	} else {
-		iNewSize = pThis->iBufSize + pThis->iAllocIncrement;
+		iNewSize = pThis->iBufSize + RS_STRINGBUF_ALLOC_INCREMENT;
 	}
 	iNewSize += pThis->iBufSize; /* add current size */
 
@@ -246,33 +245,10 @@ finalize_it:
 }
 
 
-/* Append a character to the current string object. This may only be done until
- * cstrFinalize() is called.
- * rgerhards, 2009-06-16
- */
-rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
-{
-	DEFiRet;
-
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-
-	if(pThis->iStrLen >= pThis->iBufSize) {  
-		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
-	}
-
-	/* ok, when we reach this, we have sufficient memory */
-	*(pThis->pBuf + pThis->iStrLen++) = c;
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* Sets the string object to the classigal sz-string provided.
  * Any previously stored vlaue is discarded. If a NULL pointer
  * the the new value (pszNew) is provided, an empty string is
- * created (this is NOT an error!). Property iAllocIncrement is
- * not modified by this function.
+ * created (this is NOT an error!).
  * rgerhards, 2005-10-18
  */
 rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
@@ -290,7 +266,6 @@ rsRetVal rsCStrSetSzStr(cstr_t *pThis, uchar *pszNew)
 		pThis->iStrLen = strlen((char*)pszNew);
 		pThis->iBufSize = pThis->iStrLen;
 		pThis->pszBuf = NULL;
-		/* iAllocIncrement is NOT modified! */
 
 		/* now save the new value */
 		if((pThis->pBuf = (uchar*) malloc(sizeof(uchar) * pThis->iStrLen)) == NULL) {
@@ -469,14 +444,6 @@ cstrFinalize(cstr_t *pThis)
 
 finalize_it:
 	RETiRet;
-}
-
-
-void rsCStrSetAllocIncrement(cstr_t *pThis, int iNewIncrement)
-{
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	assert(iNewIncrement > 0);
-	pThis->iAllocIncrement = iNewIncrement;
 }
 
 

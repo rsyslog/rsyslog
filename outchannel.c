@@ -106,7 +106,6 @@ static rsRetVal get_Field(uchar **pp, uchar **pField)
 	p = *pp;
 
 	CHKiRet(cstrConstruct(&pStrB));
-	rsCStrSetAllocIncrement(pStrB, 32);
 
 	/* copy the field */
 	while(*p && *p != ' ' && *p != ',') {
@@ -175,7 +174,6 @@ static inline rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 	p = *pp;
 
 	CHKiRet(cstrConstruct(&pStrB));
-	rsCStrSetAllocIncrement(pStrB, 32);
 
 	/* copy the field */
 	while(*p) {

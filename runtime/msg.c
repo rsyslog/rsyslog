@@ -353,7 +353,8 @@ static void MsgPrepareEnqueueLockingCase(msg_t *pThis)
 		 * down. We should do that over time. -- rgerhards, 2008-07-14
 		 */
 	}
-	pthread_mutex_init(&pThis->mut, &mutAttr);
+//	pthread_mutex_init(&pThis->mut, &mutAttr);
+pthread_mutex_init(&pThis->mut, NULL);
 
 	/* we do no longer need the attribute. According to the
 	 * POSIX spec, we can destroy it without affecting the
@@ -837,7 +838,6 @@ static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 
 	/* now obtain the PROCID string... */
 	CHKiRet(cstrConstruct(&pM->pCSPROCID));
-	rsCStrSetAllocIncrement(pM->pCSPROCID, 16);
 	while((i < pM->iLenTAG) && (pszTag[i] != ']')) {
 		CHKiRet(cstrAppendChar(pM->pCSPROCID, pszTag[i]));
 		++i;
@@ -890,7 +890,6 @@ static rsRetVal aquireProgramName(msg_t *pM)
 		 */
 		pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
 		CHKiRet(cstrConstruct(&pM->pCSProgName));
-		rsCStrSetAllocIncrement(pM->pCSProgName, 33);
 		for(  i = 0
 		    ; (i < pM->iLenTAG) && isprint((int) pszTag[i])
 		      && (pszTag[i] != '\0') && (pszTag[i] != ':')
@@ -1242,7 +1241,6 @@ rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME)
 	if(pMsg->pCSAPPNAME == NULL) {
 		/* we need to obtain the object first */
 		CHKiRet(rsCStrConstruct(&pMsg->pCSAPPNAME));
-		rsCStrSetAllocIncrement(pMsg->pCSAPPNAME, 128);
 	}
 	/* if we reach this point, we have the object */
 	iRet = rsCStrSetSzStr(pMsg->pCSAPPNAME, (uchar*) pszAPPNAME);
@@ -1323,7 +1321,6 @@ rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID)
 	if(pMsg->pCSMSGID == NULL) {
 		/* we need to obtain the object first */
 		CHKiRet(rsCStrConstruct(&pMsg->pCSMSGID));
-		rsCStrSetAllocIncrement(pMsg->pCSMSGID, 128);
 	}
 	/* if we reach this point, we have the object */
 	iRet = rsCStrSetSzStr(pMsg->pCSMSGID, (uchar*) pszMSGID);
@@ -1496,7 +1493,6 @@ rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData)
 	if(pMsg->pCSStrucData == NULL) {
 		/* we need to obtain the object first */
 		CHKiRet(rsCStrConstruct(&pMsg->pCSStrucData));
-		rsCStrSetAllocIncrement(pMsg->pCSStrucData, 128);
 	}
 	/* if we reach this point, we have the object */
 	iRet = rsCStrSetSzStr(pMsg->pCSStrucData, (uchar*) pszStrucData);
