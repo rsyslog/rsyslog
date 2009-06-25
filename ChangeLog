@@ -61,6 +61,7 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
   * $OMFileFlushOnTXEnd
   * $MainMsgQueueSyncQueueFiles
   * $ActionQueueSyncQueueFiles
+- done some memory accesses explicitely atomic
 ---------------------------------------------------------------------------
 Version 4.3.2  [beta] (rgerhards), 2009-06-24
 - removed long-obsoleted property UxTradMsg

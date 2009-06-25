@@ -146,8 +146,11 @@ wtiSetState(wti_t *pThis, qWrkCmd_t tCmd, int bActiveOnly, int bLockMutex)
 				/* DO NOTHING */
 				break;
 		}
-		/* better do a CAS? */
-		ATOMIC_STORE_INT_TO_INT(pThis->tCurrCmd, tCmd); /* apply the new state */
+		/* apply the new state */
+		unsigned val = ATOMIC_CAS_VAL(pThis->tCurrCmd, tCurrCmd, tCmd);
+		if(val != tCurrCmd) {
+			DBGPRINTF("wtiSetState PROBLEM, tCurrCmd %d overwritten with %d, wanted to set %d\n", tCurrCmd, val, tCmd);
+		}
 	}
 
 	END_MTX_PROTECTED_OPERATIONS(&pThis->mut);
