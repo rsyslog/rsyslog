@@ -42,6 +42,7 @@
  */
 #ifdef HAVE_ATOMIC_BUILTINS
 #	define ATOMIC_INC(data) ((void) __sync_fetch_and_add(&(data), 1))
+#	define ATOMIC_INC_AND_FETCH(data) __sync_fetch_and_add(&(data), 1)
 #	define ATOMIC_DEC(data) ((void) __sync_sub_and_fetch(&(data), 1))
 #	define ATOMIC_DEC_AND_FETCH(data) __sync_sub_and_fetch(&(data), 1)
 #	define ATOMIC_FETCH_32BIT(data) ((unsigned) __sync_fetch_and_and(&(data), 0xffffffff))
