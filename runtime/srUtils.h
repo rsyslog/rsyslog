@@ -109,8 +109,6 @@ rsRetVal getFileSize(uchar *pszName, off_t *pSize);
 #define mutex_cancelsafe_unlock(mut) pthread_cleanup_pop(1)
 
 /* some useful constants */
-#define MUTEX_ALREADY_LOCKED	0
-#define LOCK_MUTEX		1
 #define DEFVARS_mutexProtection\
 	int iCancelStateSave; \
 	int bLockedOpIsLocked=0

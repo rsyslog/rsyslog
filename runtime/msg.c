@@ -271,8 +271,13 @@ static char *syslog_number_names[24] = { "0", "1", "2", "3", "4", "5", "6", "7",
 					 "15", "16", "17", "18", "19", "20", "21", "22", "23" };
 
 /* some forward declarations */
-static int getAPPNAMELen(msg_t *pM);
-static int getProtocolVersion(msg_t *pM);
+static int getAPPNAMELen(msg_t *pM, bool bLockMutex);
+
+static inline int getProtocolVersion(msg_t *pM)
+{
+	return(pM->iProtocolVersion);
+}
+
 
 /* The following functions will support advanced output module
  * multithreading, once this is implemented. Currently, we
@@ -334,34 +339,9 @@ static void MsgLockingDummy(msg_t __attribute__((unused)) *pMsg)
  */
 static void MsgPrepareEnqueueLockingCase(msg_t *pThis)
 {
-	int iErr;
-	pthread_mutexattr_t mutAttr;
 	BEGINfunc
 	assert(pThis != NULL);
-	iErr = pthread_mutexattr_init(&mutAttr);
-	if(iErr != 0) {
-		dbgprintf("error initializing mutex attribute in %s:%d, trying to continue\n",
-		  	  __FILE__, __LINE__);
-	}
-	iErr = pthread_mutexattr_settype(&mutAttr, PTHREAD_MUTEX_RECURSIVE);
-	if(iErr != 0) {
-		dbgprintf("ERROR setting mutex attribute to recursive in %s:%d, trying to continue "
-			 "but we will probably either abort or hang soon\n",
-		  	  __FILE__, __LINE__);
-		/* TODO: it makes very little sense to continue here,
-		 * but it requires an iRet interface to gracefully shut
-		 * down. We should do that over time. -- rgerhards, 2008-07-14
-		 */
-	}
-//	pthread_mutex_init(&pThis->mut, &mutAttr);
-pthread_mutex_init(&pThis->mut, NULL);
-
-	/* we do no longer need the attribute. According to the
-	 * POSIX spec, we can destroy it without affecting the
-	 * initialized mutex (that used the attribute).
-	 * rgerhards, 2008-07-14
-	 */
-	pthread_mutexattr_destroy(&mutAttr);
+	pthread_mutex_init(&pThis->mut, NULL);
 	pThis->bDoLock = 1;
 	ENDfunc
 }
@@ -810,6 +790,7 @@ msg_t *MsgAddRef(msg_t *pM)
  * can obtain a PROCID. Take in mind that not every legacy syslog message
  * actually has a PROCID.
  * rgerhards, 2005-11-24
+ * THIS MUST be called with the message lock locked.
  */
 static rsRetVal aquirePROCIDFromTAG(msg_t *pM)
 {
@@ -874,7 +855,8 @@ finalize_it:
  * The program name is not parsed by default, because it is infrequently-used.
  * If it is needed, this function should be called first. It checks if it is
  * already set and extracts it, if not.
- * A message object must be provided, else a crash will occur.
+ *
+ * IMPORTANT: A locked message object must be provided, else a crash will occur.
  * rgerhards, 2005-10-19
  */
 static rsRetVal aquireProgramName(msg_t *pM)
@@ -885,9 +867,7 @@ static rsRetVal aquireProgramName(msg_t *pM)
 
 	assert(pM != NULL);
 	if(pM->pCSProgName == NULL) {
-		/* ok, we do not yet have it. So let's parse the TAG
-		 * to obtain it.
-		 */
+		/* ok, we do not yet have it. So let's parse the TAG to obtain it.  */
 		pszTag = (uchar*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
 		CHKiRet(cstrConstruct(&pM->pCSProgName));
 		for(  i = 0
@@ -914,12 +894,6 @@ void setProtocolVersion(msg_t *pM, int iNewVersion)
 		iNewVersion = 0;
 	}
 	pM->iProtocolVersion = iNewVersion;
-}
-
-static int getProtocolVersion(msg_t *pM)
-{
-	assert(pM != NULL);
-	return(pM->iProtocolVersion);
 }
 
 /* note: string is taken from constant pool, do NOT free */
@@ -1232,7 +1206,10 @@ MsgSetAfterPRIOffs(msg_t *pMsg, short offs)
 
 
 /* rgerhards 2004-11-24: set APP-NAME in msg object
- * TODO: revisit msg locking code!
+ * This is not locked, because it either is called during message
+ * construction (where we need no locking) or later as part of a function
+ * which already obtained the lock. So in general, this function here must
+ * only be called when it it safe to do so without it aquiring a lock.
  */
 rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME)
 {
@@ -1247,20 +1224,6 @@ rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME)
 
 finalize_it:
 	RETiRet;
-}
-
-
-static void tryEmulateAPPNAME(msg_t *pM); /* forward reference */
-/* rgerhards, 2005-11-24
- */
-char *getAPPNAME(msg_t *pM)
-{
-	assert(pM != NULL);
-	MsgLock(pM);
-	if(pM->pCSAPPNAME == NULL)
-		tryEmulateAPPNAME(pM);
-	MsgUnlock(pM);
-	return (pM->pCSAPPNAME == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
 }
 
 
@@ -1282,33 +1245,44 @@ finalize_it:
 	RETiRet;
 }
 
-/* rgerhards, 2005-11-24
+
+/* check if we have a procid, and, if not, try to aquire/emulate it.
+ * This must be called WITHOUT the message lock being held.
+ * rgerhards, 2009-06-26
  */
-static inline int getPROCIDLen(msg_t *pM)
+static inline void preparePROCID(msg_t *pM, bool bLockMutex)
 {
-	assert(pM != NULL);
-	MsgLock(pM);
-	if(pM->pCSPROCID == NULL)
-		aquirePROCIDFromTAG(pM);
-	MsgUnlock(pM);
-	return (pM->pCSPROCID == NULL) ? 1 : rsCStrLen(pM->pCSPROCID);
+	if(pM->pCSPROCID == NULL) {
+		if(bLockMutex == LOCK_MUTEX)
+			MsgLock(pM);
+		/* re-query, things may have changed in the mean time... */
+		if(pM->pCSPROCID == NULL)
+			aquirePROCIDFromTAG(pM);
+		if(bLockMutex == LOCK_MUTEX)
+			MsgUnlock(pM);
+	}
 }
 
 
+#if 0
 /* rgerhards, 2005-11-24
  */
-char *getPROCID(msg_t *pM)
+static inline int getPROCIDLen(msg_t *pM, bool bLockMutex)
 {
-	char* pszRet;
+	assert(pM != NULL);
+	preparePROCID(pM, bLockMutex);
+	return (pM->pCSPROCID == NULL) ? 1 : rsCStrLen(pM->pCSPROCID);
+}
+#endif
 
+
+/* rgerhards, 2005-11-24
+ */
+char *getPROCID(msg_t *pM, bool bLockMutex)
+{
 	ISOBJ_TYPE_assert(pM, msg);
-	MsgLock(pM);
-	if(pM->pCSPROCID == NULL)
-		aquirePROCIDFromTAG(pM);
-	pszRet = (pM->pCSPROCID == NULL) ? "-" : (char*) cstrGetSzStrNoNULL(pM->pCSPROCID);
-	//pszRet = (pM->pCSPROCID == NULL) ? "-" : (char*) rsCStrGetSzStrNoNULL(pM->pCSPROCID);
-	MsgUnlock(pM);
-	return pszRet;
+	preparePROCID(pM, bLockMutex);
+	return (pM->pCSPROCID == NULL) ? "-" : (char*) cstrGetSzStrNoNULL(pM->pCSPROCID);
 }
 
 
@@ -1383,26 +1357,31 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf)
  * if there is a TAG and, if not, if it can emulate it.
  * rgerhards, 2005-11-24
  */
-static inline void tryEmulateTAG(msg_t *pM)
+static inline void tryEmulateTAG(msg_t *pM, bool bLockMutex)
 {
 	size_t lenTAG;
 	uchar bufTAG[CONF_TAG_MAXSIZE];
 	assert(pM != NULL);
 
+	if(bLockMutex == LOCK_MUTEX)
+		MsgLock(pM);
 	if(pM->iLenTAG > 0)
 		return; /* done, no need to emulate */
 	
 	if(getProtocolVersion(pM) == 1) {
-		if(!strcmp(getPROCID(pM), "-")) {
+		if(!strcmp(getPROCID(pM, MUTEX_ALREADY_LOCKED), "-")) {
 			/* no process ID, use APP-NAME only */
-			MsgSetTAG(pM, (uchar*) getAPPNAME(pM), getAPPNAMELen(pM));
+			MsgSetTAG(pM, (uchar*) getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getAPPNAMELen(pM, MUTEX_ALREADY_LOCKED));
 		} else {
 			/* now we can try to emulate */
-			lenTAG = snprintf((char*)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]", getAPPNAME(pM), getPROCID(pM));
+			lenTAG = snprintf((char*)bufTAG, CONF_TAG_MAXSIZE, "%s[%s]",
+					  getAPPNAME(pM, MUTEX_ALREADY_LOCKED), getPROCID(pM, MUTEX_ALREADY_LOCKED));
 			bufTAG[32] = '\0'; /* just to make sure... */
 			MsgSetTAG(pM, bufTAG, lenTAG);
 		}
 	}
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
 }
 
 
@@ -1413,13 +1392,12 @@ static inline char *getTAG(msg_t *pM)
 	if(pM == NULL)
 		ret = "";
 	else {
-		MsgLock(pM);
-		tryEmulateTAG(pM);
+		if(pM->iLenTAG == 0)
+			tryEmulateTAG(pM, LOCK_MUTEX);
 		if(pM->iLenTAG == 0)
 			ret = "";
 		else
 			ret = (char*) ((pM->iLenTAG < CONF_TAG_BUFSIZE) ? pM->TAG.szBuf : pM->TAG.pszTAG);
-		MsgUnlock(pM);
 	}
 	return(ret);
 }
@@ -1521,23 +1499,32 @@ static inline char *getStructuredData(msg_t *pM)
 }
 
 
+/* check if we have a ProgramName, and, if not, try to aquire/emulate it.
+ * rgerhards, 2009-06-26
+ */
+static inline void prepareProgramName(msg_t *pM, bool bLockMutex)
+{
+	if(pM->pCSProgName == NULL) {
+		if(bLockMutex == LOCK_MUTEX)
+			MsgLock(pM);
+
+		/* re-query as things might have changed during locking */
+		if(pM->pCSProgName == NULL)
+			aquireProgramName(pM);
+
+		if(bLockMutex == LOCK_MUTEX)
+			MsgUnlock(pM);
+	}
+}
+
 
 /* get the length of the "programname" sz string
  * rgerhards, 2005-10-19
  */
-int getProgramNameLen(msg_t *pM)
+int getProgramNameLen(msg_t *pM, bool bLockMutex)
 {
-	int iRet;
-
 	assert(pM != NULL);
-	MsgLock(pM);
-	if((iRet = aquireProgramName(pM)) != RS_RET_OK) {
-		dbgprintf("error %d returned by aquireProgramName() in getProgramNameLen()\n", iRet);
-		MsgUnlock(pM);
-		return 0; /* best we can do (consistent wiht what getProgramName() returns) */
-	}
-	MsgUnlock(pM);
-
+	prepareProgramName(pM, bLockMutex);
 	return (pM->pCSProgName == NULL) ? 0 : rsCStrLen(pM->pCSProgName);
 }
 
@@ -1545,77 +1532,17 @@ int getProgramNameLen(msg_t *pM)
 /* get the "programname" as sz string
  * rgerhards, 2005-10-19
  */
-char *getProgramName(msg_t *pM) /* this is the non-locking version for internal use */
+char *getProgramName(msg_t *pM, bool bLockMutex)
 {
-	int iRet;
-	char *pszRet;
-
-	assert(pM != NULL);
-	MsgLock(pM);
-	if((iRet = aquireProgramName(pM)) != RS_RET_OK) {
-		dbgprintf("error %d returned by aquireProgramName() in getProgramName()\n", iRet);
-		pszRet = ""; /* best we can do */
-	} else {
-		pszRet = (pM->pCSProgName == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSProgName);
-	}
-
-	MsgUnlock(pM);
-	return pszRet;
-}
-/* The code below was an approach without PTHREAD_MUTEX_RECURSIVE
- * However, it turned out to be quite complex. So far, we use recursive
- * locking, which is OK from a performance point of view, especially as
- * we do not anticipate that multithreading msg objects is used often.
- * However, we may re-think about using non-recursive locking and I leave this
- * code in here to conserve the idea. -- rgerhards, 2008-01-05
- */
-#if 0
-static char *getProgramNameNoLock(msg_t *pM) /* this is the non-locking version for internal use */
-{
-	int iRet;
-
-	assert(pM != NULL);
-	if((iRet = aquireProgramName(pM)) != RS_RET_OK) {
-		dbgprintf("error %d returned by aquireProgramName() in getProgramName()\n", iRet);
-		return ""; /* best we can do */
-	}
-
+	prepareProgramName(pM, bLockMutex);
 	return (pM->pCSProgName == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSProgName);
 }
-char *getProgramName(msg_t *pM) /* this is the external callable version */
-{
-	char *pszRet;
-
-	MsgLock(pM);
-	pszRet = getProgramNameNoLock(pM);
-	MsgUnlock(pM);
-	return pszRet;
-}
-/* an alternative approach has been: */
-/* The macro below is used to generate external function definitions
- * for such functions that may also be called internally (and thus have
- * both a locking and non-locking implementation. Over time, we could
- * reconsider how we handle that. -- rgerhards, 2008-01-05
- */
-#define EXT_LOCKED_FUNC(fName, ret) \
-ret fName(msg_t *pM) \
-{ \
-	ret valRet; \
-	MsgLock(pM); \
-	valRet = fName##NoLock(pM); \
-	MsgUnlock(pM); \
-	return(valRet); \
-}
-EXT_LOCKED_FUNC(getProgramName, char*)
-/* in this approach, the external function is provided by the macro and
- * needs not to be writen.
- */
-#endif /* #if 0 -- saved code */
 
 
 /* This function tries to emulate APPNAME if it is not present. Its
  * main use is when we have received a log record via legacy syslog and
  * now would like to send out the same one via syslog-protocol.
+ * MUST be called with the Msg Lock locked!
  */
 static void tryEmulateAPPNAME(msg_t *pM)
 {
@@ -1625,18 +1552,46 @@ static void tryEmulateAPPNAME(msg_t *pM)
 
 	if(getProtocolVersion(pM) == 0) {
 		/* only then it makes sense to emulate */
-		MsgSetAPPNAME(pM, getProgramName(pM));
+		MsgSetAPPNAME(pM, getProgramName(pM, MUTEX_ALREADY_LOCKED));
 	}
 }
 
 
+
+/* check if we have a APPNAME, and, if not, try to aquire/emulate it.
+ * This must be called WITHOUT the message lock being held.
+ * rgerhards, 2009-06-26
+ */
+static inline void prepareAPPNAME(msg_t *pM, bool bLockMutex)
+{
+	if(pM->pCSAPPNAME == NULL) {
+		if(bLockMutex == LOCK_MUTEX)
+			MsgLock(pM);
+
+		/* re-query as things might have changed during locking */
+		if(pM->pCSAPPNAME == NULL)
+			tryEmulateAPPNAME(pM);
+
+		if(bLockMutex == LOCK_MUTEX)
+			MsgUnlock(pM);
+	}
+}
+
 /* rgerhards, 2005-11-24
  */
-static int getAPPNAMELen(msg_t *pM)
+char *getAPPNAME(msg_t *pM, bool bLockMutex)
 {
 	assert(pM != NULL);
-	if(pM->pCSAPPNAME == NULL)
-		tryEmulateAPPNAME(pM);
+	prepareAPPNAME(pM, bLockMutex);
+	return (pM->pCSAPPNAME == NULL) ? "" : (char*) rsCStrGetSzStrNoNULL(pM->pCSAPPNAME);
+}
+
+/* rgerhards, 2005-11-24
+ */
+static int getAPPNAMELen(msg_t *pM, bool bLockMutex)
+{
+	assert(pM != NULL);
+	prepareAPPNAME(pM, bLockMutex);
 	return (pM->pCSAPPNAME == NULL) ? 0 : rsCStrLen(pM->pCSAPPNAME);
 }
 
@@ -1987,15 +1942,15 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	} else if(!strcmp((char*) pName, "timegenerated")) {
 		pRes = getTimeGenerated(pMsg, pTpe->data.field.eDateFormat);
 	} else if(!strcmp((char*) pName, "programname")) {
-		pRes = getProgramName(pMsg);
+		pRes = getProgramName(pMsg, LOCK_MUTEX);
 	} else if(!strcmp((char*) pName, "protocol-version")) {
 		pRes = getProtocolVersionString(pMsg);
 	} else if(!strcmp((char*) pName, "structured-data")) {
 		pRes = getStructuredData(pMsg);
 	} else if(!strcmp((char*) pName, "app-name")) {
-		pRes = getAPPNAME(pMsg);
+		pRes = getAPPNAME(pMsg, LOCK_MUTEX);
 	} else if(!strcmp((char*) pName, "procid")) {
-		pRes = getPROCID(pMsg);
+		pRes = getPROCID(pMsg, LOCK_MUTEX);
 	} else if(!strcmp((char*) pName, "msgid")) {
 		pRes = getMSGID(pMsg);
 	/* here start system properties (those, that do not relate to the message itself */

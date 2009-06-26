@@ -414,9 +414,8 @@ typedef enum rsObjectID rsObjID;
 #endif
 
 /* some constants */
-// TODO: do we really need them - if not, delete -- rgerhards, 2009-06-10
-#define IGNORE_ERROR_CODES 1
-#define ABORT_ON_ERROR 0
+#define MUTEX_ALREADY_LOCKED	0
+#define LOCK_MUTEX		1
 
 /* The following prototype is convenient, even though it may not be the 100% correct place.. -- rgerhards 2008-01-07 */
 void dbgprintf(char *, ...) __attribute__((format(printf, 1, 2)));

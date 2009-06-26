@@ -168,14 +168,14 @@ rsRetVal MsgEnableThreadSafety(void);
 /* TODO: remove these five (so far used in action.c) */
 char *getMSG(msg_t *pM);
 char *getHOSTNAME(msg_t *pM);
-char *getPROCID(msg_t *pM);
-char *getAPPNAME(msg_t *pM);
+char *getPROCID(msg_t *pM, bool bLockMutex);
+char *getAPPNAME(msg_t *pM, bool bLockMutex);
 int getMSGLen(msg_t *pM);
 
 char *getHOSTNAME(msg_t *pM);
 int getHOSTNAMELen(msg_t *pM);
-char *getProgramName(msg_t *pM);
-int getProgramNameLen(msg_t *pM);
+char *getProgramName(msg_t *pM, bool bLockMutex);
+int getProgramNameLen(msg_t *pM, bool bLockMutex);
 uchar *getRcvFrom(msg_t *pM);
 
 /* The MsgPrepareEnqueue() function is a macro for performance reasons.

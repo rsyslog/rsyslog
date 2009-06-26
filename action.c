@@ -782,8 +782,8 @@ doActionCallAction(action_t *pAction, msg_t *pMsg)
 	    (pMsg->msgFlags & MARK) == 0 && getMSGLen(pMsg) == getMSGLen(pAction->f_pMsg) &&
 	    !strcmp(getMSG(pMsg), getMSG(pAction->f_pMsg)) &&
 	    !strcmp(getHOSTNAME(pMsg), getHOSTNAME(pAction->f_pMsg)) &&
-	    !strcmp(getPROCID(pMsg), getPROCID(pAction->f_pMsg)) &&
-	    !strcmp(getAPPNAME(pMsg), getAPPNAME(pAction->f_pMsg))) {
+	    !strcmp(getPROCID(pMsg, LOCK_MUTEX), getPROCID(pAction->f_pMsg, LOCK_MUTEX)) &&
+	    !strcmp(getAPPNAME(pMsg, LOCK_MUTEX), getAPPNAME(pAction->f_pMsg, LOCK_MUTEX))) {
 		pAction->f_prevcount++;
 		dbgprintf("msg repeated %d times, %ld sec of %d.\n",
 		    pAction->f_prevcount, (long) getActNow(pAction) - pAction->f_time,
