@@ -343,42 +343,6 @@ uchar*  rsCStrGetSzStr(cstr_t *pThis)
 }
 
 
-/* Converts the CStr object to a classical sz string and returns that.
- * Same restrictions as in cstrGetSzStr() applies (see there!). This
- * function here guarantees that a valid string is returned, even if
- * the CStr object currently holds a NULL pointer string buffer. If so,
- * "" is returned.
- * rgerhards 2005-10-19
- * WARNING: The returned pointer MUST NOT be freed, as it may be
- *          obtained from that constant memory pool (in case of NULL!)
- */
-uchar*  cstrGetSzStrNoNULL(cstr_t *pThis)
-{
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	if(pThis->pBuf == NULL)
-		return (uchar*) "";
-	else
-		return cstrGetSzStr(pThis);
-}
-
-/* Returns the cstr data as a classical C sz string. We use that the 
- * Finalizer did properly terminate our string (but we may stil be NULL).
- * So it is vital that the finalizer is called BEFORe this function here!
- * The caller must not free or otherwise manipulate the returned string and must not
- * destroy the CStr object as long as the ascii string is used.
- * This function may return NULL, if the string is currently NULL. This
- * is a feature, not a bug. If you need non-NULL in any case, use
- * cstrGetSzStrNoNULL() instead.
- * Note that due to the new single-buffer interface this function almost does nothing!
- * rgerhards, 2006-09-16
- */
-uchar*  cstrGetSzStr(cstr_t *pThis)
-{
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	return(pThis->pBuf);
-}
-
-
 /* Converts the CStr object to a classical zero-terminated C string,
  * returns that string and destroys the CStr object. The returned string
  * MUST be freed by the caller. The function might return NULL if
@@ -422,27 +386,6 @@ finalize_it:
 	 * also free the sz String buffer, which we pass on to the user.
 	 */
 	RSFREEOBJ(pThis);
-	RETiRet;
-}
-
-
-/* Finalize the string object. This must be called after all data is added to it
- * but before that data is used.
- * rgerhards, 2009-06-16
- */
-rsRetVal
-cstrFinalize(cstr_t *pThis)
-{
-	DEFiRet;
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	
-	if(pThis->iStrLen > 0) {
-		/* terminate string only if one exists */
-		CHKiRet(cstrAppendChar(pThis, '\0'));
-		--pThis->iStrLen;	/* do NOT count the \0 byte */
-	}
-
-finalize_it:
 	RETiRet;
 }
 
