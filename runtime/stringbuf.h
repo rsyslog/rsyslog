@@ -76,8 +76,6 @@ static inline rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
 {
 	rsRetVal iRet = RS_RET_OK;
 
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-
 	if(pThis->iStrLen >= pThis->iBufSize) {  
 		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
 	}
@@ -100,7 +98,6 @@ static inline rsRetVal
 cstrFinalize(cstr_t *pThis)
 {
 	rsRetVal iRet = RS_RET_OK;
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	
 	if(pThis->iStrLen > 0) {
 		/* terminate string only if one exists */

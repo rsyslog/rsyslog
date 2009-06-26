@@ -105,7 +105,7 @@ rsRetVal tplToString(struct template *pTpl, msg_t *pMsg, uchar **ppBuf, size_t *
 			iLenVal = pTpe->data.constant.iLenConstant;
 			bMustBeFreed = 0;
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, NULL, &iLenVal, &bMustBeFreed);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid, &iLenVal, &bMustBeFreed);
 			/* we now need to check if we should use SQL option. In this case,
 			 * we must go over the generated string and escape '\'' characters.
 			 * rgerhards, 2005-09-22: the option values below look somewhat misplaced,
@@ -173,7 +173,7 @@ rsRetVal tplToArray(struct template *pTpl, msg_t *pMsg, uchar*** ppArr)
 		if(pTpe->eEntryType == CONSTANT) {
 			CHKmalloc(pArr[iArr] = (uchar*)strdup((char*) pTpe->data.constant.pConstant));
 		} else 	if(pTpe->eEntryType == FIELD) {
-			pVal = (uchar*) MsgGetProp(pMsg, pTpe, NULL, &propLen, &bMustBeFreed);
+			pVal = (uchar*) MsgGetProp(pMsg, pTpe, pTpe->data.field.propid, &propLen, &bMustBeFreed);
 			if(bMustBeFreed) { /* if it must be freed, it is our own private copy... */
 				pArr[iArr] = pVal; /* ... so we can use it! */
 			} else {
@@ -561,11 +561,11 @@ static int do_Parameter(unsigned char **pp, struct template *pTpl)
 		++p; /* do NOT do this in tolower()! */
 	}
 
-	/* got the name*/
+	/* got the name */
 	cstrFinalize(pStrB);
-	if(cstrConvSzStrAndDestruct(pStrB, &pTpe->data.field.pPropRepl, 0) != RS_RET_OK)
+
+	if(propNameToID(pStrB, &pTpe->data.field.propid) != RS_RET_OK)
 		return 1;
-// TODO: another optimization: map name to integer id OPT
 
 	/* Check frompos, if it has an R, then topos should be a regex */
 	if(*p == ':') {
@@ -1004,8 +1004,6 @@ void tplDeleteAll(void)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
-				/*dbgprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
-				free(pTpeDel->data.field.pPropRepl);
 				break;
 			}
 			/*dbgprintf("\n");*/
@@ -1061,8 +1059,6 @@ void tplDeleteNew(void)
 						regexp.regfree(&(pTpeDel->data.field.re));
 					}
 				}
-				/*dbgprintf("(FIELD), value: '%s'", pTpeDel->data.field.pPropRepl);*/
-				free(pTpeDel->data.field.pPropRepl);
 				break;
 			}
 			/*dbgprintf("\n");*/
@@ -1111,7 +1107,7 @@ void tplPrintList(void)
 					pTpe->data.constant.pConstant);
 				break;
 			case FIELD:
-				dbgprintf("(FIELD), value: '%s' ", pTpe->data.field.pPropRepl);
+				dbgprintf("(FIELD), value: '%d' ", pTpe->data.field.propid);
 				switch(pTpe->data.field.eDateFormat) {
 				case tplFmtDefault:
 					break;

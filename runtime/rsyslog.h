@@ -111,6 +111,7 @@ typedef long long int64;
 typedef long long unsigned uint64;
 typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
 typedef char intTiny; 	/* 0..127! */
+typedef uchar uintTiny;	/* 0..255! */
 
 #ifdef __hpux
 typedef unsigned int u_int32_t; /* TODO: is this correct? */
@@ -155,6 +156,45 @@ struct multi_submit_s {
 #ifndef _PATH_CONSOLE
 #define _PATH_CONSOLE	"/dev/console"
 #endif
+
+/* properties are now encoded as (tiny) integers. I do not use an enum as I would like
+ * to keep the memory footprint small (and thus cache hits high).
+ * rgerhards, 2009-06-26
+ */
+typedef uintTiny	propid_t;
+#define PROP_INVALID			0
+#define PROP_MSG			1
+#define PROP_TIMESTAMP			2
+#define PROP_HOSTNAME			3
+#define PROP_SYSLOGTAG			4
+#define PROP_RAWMSG			5
+#define PROP_INPUTNAME			6
+#define PROP_FROMHOST			7
+#define PROP_FROMHOST_IP		8
+#define PROP_PRI			9
+#define PROP_PRI_TEXT			10
+#define PROP_IUT			11
+#define PROP_SYSLOGFACILITY		12
+#define PROP_SYSLOGFACILITY_TEXT	13
+#define PROP_SYSLOGSEVERITY		14
+#define PROP_SYSLOGSEVERITY_TEXT	15
+#define PROP_TIMEGENERATED		16
+#define PROP_PROGRAMNAME		17
+#define PROP_PROTOCOL_VERSION		18
+#define PROP_STRUCTURED_DATA		19
+#define PROP_APP_NAME			20
+#define PROP_PROCID			21
+#define PROP_MSGID			22
+#define PROP_SYS_NOW			150
+#define PROP_SYS_YEAR			151
+#define PROP_SYS_MONTH			152
+#define PROP_SYS_DAY			153
+#define PROP_SYS_HOUR			154
+#define PROP_SYS_HHOUR			155
+#define PROP_SYS_QHOUR			156
+#define PROP_SYS_MINUTE			157
+#define PROP_SYS_MYHOSTNAME		158
+
 
 /* The error codes below are orginally "borrowed" from
  * liblogging. As such, we reserve values up to -2999
@@ -325,6 +365,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_STREAM_DISABLED = -2127, /**< a file has been disabled (e.g. by size limit restriction) */
 	RS_RET_FILENAME_INVALID = -2140, /**< filename invalid, not found, no access, ... */
 	RS_RET_ZLIB_ERR = -2141, /**< error during zlib call */
+	RS_RET_VAR_NOT_FOUND = -2142, /**< variable not found */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
