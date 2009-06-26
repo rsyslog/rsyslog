@@ -63,7 +63,7 @@ struct templateEntry {
 			int iLenConstant;	/* its length */
 		} constant;
 		struct {
-			uchar *pPropRepl;	/* pointer to property replacer string */
+			propid_t propid;	/* property to be used */
 			unsigned iFromPos;	/* for partial strings only chars from this position ... */
 			unsigned iToPos;	/* up to that one... */
 #ifdef FEATURE_REGEXP

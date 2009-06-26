@@ -837,6 +837,7 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 {
 	rsParsObj *pPars;
 	cstr_t *pCSCompOp;
+	cstr_t *pCSPropName;
 	rsRetVal iRet;
 	int iOffset; /* for compare operations */
 
@@ -856,12 +857,19 @@ static rsRetVal cflineProcessPropFilter(uchar **pline, register rule_t *f)
 	}
 
 	/* read property */
-	iRet = parsDelimCStr(pPars, &f->f_filterData.prop.pCSPropName, ',', 1, 1, 1);
+	iRet = parsDelimCStr(pPars, &pCSPropName, ',', 1, 1, 1);
 	if(iRet != RS_RET_OK) {
 		errmsg.LogError(0, iRet, "error %d parsing filter property - ignoring selector", iRet);
 		rsParsDestruct(pPars);
 		return(iRet);
 	}
+	iRet = propNameToID(pCSPropName, &f->f_filterData.prop.propID);
+	if(iRet != RS_RET_OK) {
+		errmsg.LogError(0, iRet, "error %d parsing filter property - ignoring selector", iRet);
+		rsParsDestruct(pPars);
+		return(iRet);
+	}
+	cstrDestruct(&pCSPropName);
 
 	/* read operation */
 	iRet = parsDelimCStr(pPars, &pCSCompOp, ',', 1, 1, 1);

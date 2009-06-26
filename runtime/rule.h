@@ -44,11 +44,11 @@ struct rule_s {
 	union {
 		u_char	f_pmask[LOG_NFACILITIES+1];	/* priority mask */
 		struct {
-			cstr_t *pCSPropName;
 			fiop_t operation;
 			regex_t *regex_cache;		/* cache for compiled REs, if such are used */
 			cstr_t *pCSCompValue;		/* value to "compare" against */
-			char isNegated;			/* actually a boolean ;) */
+			bool isNegated;	
+			propid_t propID;		/* ID of the requested property */
 		} prop;
 		expr_t *f_expr;				/* expression object */
 	} f_filterData;

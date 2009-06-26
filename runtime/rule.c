@@ -179,8 +179,7 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 		bRet = (pResult->val.num) ? 1 : 0;
 	} else {
 		assert(pRule->f_filter_type == FILTER_PROP); /* assert() just in case... */
-		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.pCSPropName, &propLen, &pbMustBeFreed);
-		// TODO: optimize, we now have the length of the property!
+		pszPropVal = MsgGetProp(pMsg, NULL, pRule->f_filterData.prop.propID, &propLen, &pbMustBeFreed);
 
 		/* Now do the compares (short list currently ;)) */
 		switch(pRule->f_filterData.prop.operation ) {
@@ -220,9 +219,8 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 			bRet = (bRet == 1) ?  0 : 1;
 
 		if(Debug) {
-			dbgprintf("Filter: check for property '%s' (value '%s') ",
-			        rsCStrGetSzStrNoNULL(pRule->f_filterData.prop.pCSPropName),
-			        pszPropVal);
+			dbgprintf("Filter: check for property '%d' (value '%s') ",
+			        pRule->f_filterData.prop.propID, pszPropVal);
 			if(pRule->f_filterData.prop.isNegated)
 				dbgprintf("NOT ");
 			dbgprintf("%s '%s': %s\n",
@@ -308,8 +306,6 @@ CODESTARTobjDestruct(rule)
 		rsCStrDestruct(&pThis->pCSProgNameComp);
 
 	if(pThis->f_filter_type == FILTER_PROP) {
-		if(pThis->f_filterData.prop.pCSPropName != NULL)
-			rsCStrDestruct(&pThis->f_filterData.prop.pCSPropName);
 		if(pThis->f_filterData.prop.pCSCompValue != NULL)
 			rsCStrDestruct(&pThis->f_filterData.prop.pCSCompValue);
 		if(pThis->f_filterData.prop.regex_cache != NULL)
@@ -377,8 +373,8 @@ CODESTARTobjDebugPrint(rule)
 		dbgprintf("EXPRESSION-BASED Filter: can currently not be displayed");
 	} else {
 		dbgprintf("PROPERTY-BASED Filter:\n");
-		dbgprintf("\tProperty.: '%s'\n",
-		       rsCStrGetSzStrNoNULL(pThis->f_filterData.prop.pCSPropName));
+		dbgprintf("\tProperty.: '%d'\n", pThis->f_filterData.prop.propID);
+// TODO: XXXX ADD idtostring()!
 		dbgprintf("\tOperation: ");
 		if(pThis->f_filterData.prop.isNegated)
 			dbgprintf("NOT ");

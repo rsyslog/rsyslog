@@ -33,6 +33,7 @@
 #include "syslogd-types.h"
 #include "template.h"
 
+
 /* rgerhards 2004-11-08: The following structure represents a
  * syslog message. 
  *
@@ -160,7 +161,7 @@ void MsgSetRawMsgWOSize(msg_t *pMsg, char* pszRawMsg);
 void MsgSetRawMsg(msg_t *pMsg, char* pszRawMsg, size_t lenMsg);
 rsRetVal MsgReplaceMSG(msg_t *pThis, uchar* pszMSG, int lenMSG);
 char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
-                 cstr_t *pCSPropName, size_t *pPropLen, unsigned short *pbMustBeFreed);
+                 propid_t propID, size_t *pPropLen, unsigned short *pbMustBeFreed);
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
@@ -177,6 +178,8 @@ int getHOSTNAMELen(msg_t *pM);
 char *getProgramName(msg_t *pM, bool bLockMutex);
 int getProgramNameLen(msg_t *pM, bool bLockMutex);
 uchar *getRcvFrom(msg_t *pM);
+rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID);
+
 
 /* The MsgPrepareEnqueue() function is a macro for performance reasons.
  * It needs one global variable to work. This is acceptable, as it gains

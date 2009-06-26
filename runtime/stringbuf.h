@@ -74,9 +74,7 @@ void rsCStrDestruct(cstr_t **ppThis);
 rsRetVal rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded); /* our helper, NOT a public interface! */
 static inline rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
 {
-	rsRetVal iRet;
-
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	rsRetVal iRet = RS_RET_OK;
 
 	if(pThis->iStrLen >= pThis->iBufSize) {  
 		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
@@ -88,6 +86,66 @@ static inline rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
 finalize_it:
 	return iRet;
 }
+
+
+/* some inline functions for things that are really frequently called... */
+
+/* Finalize the string object. This must be called after all data is added to it
+ * but before that data is used.
+ * rgerhards, 2009-06-16
+ */
+static inline rsRetVal
+cstrFinalize(cstr_t *pThis)
+{
+	rsRetVal iRet = RS_RET_OK;
+	
+	if(pThis->iStrLen > 0) {
+		/* terminate string only if one exists */
+		CHKiRet(cstrAppendChar(pThis, '\0'));
+		--pThis->iStrLen;	/* do NOT count the \0 byte */
+	}
+
+finalize_it:
+	return iRet;
+}
+
+
+/* Returns the cstr data as a classical C sz string. We use that the 
+ * Finalizer did properly terminate our string (but we may stil be NULL).
+ * So it is vital that the finalizer is called BEFORe this function here!
+ * The caller must not free or otherwise manipulate the returned string and must not
+ * destroy the CStr object as long as the ascii string is used.
+ * This function may return NULL, if the string is currently NULL. This
+ * is a feature, not a bug. If you need non-NULL in any case, use
+ * cstrGetSzStrNoNULL() instead.
+ * Note that due to the new single-buffer interface this function almost does nothing!
+ * rgerhards, 2006-09-16
+ */
+static inline uchar*  cstrGetSzStr(cstr_t *pThis)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	return(pThis->pBuf);
+}
+
+
+/* Converts the CStr object to a classical sz string and returns that.
+ * Same restrictions as in cstrGetSzStr() applies (see there!). This
+ * function here guarantees that a valid string is returned, even if
+ * the CStr object currently holds a NULL pointer string buffer. If so,
+ * "" is returned.
+ * rgerhards 2005-10-19
+ * WARNING: The returned pointer MUST NOT be freed, as it may be
+ *          obtained from that constant memory pool (in case of NULL!)
+ */
+static inline uchar*  cstrGetSzStrNoNULL(cstr_t *pThis)
+{
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+	if(pThis->pBuf == NULL)
+		return (uchar*) "";
+	else
+		return cstrGetSzStr(pThis);
+}
+
 
 /**
  * Truncate "n" number of characters from the end of the
@@ -148,8 +206,6 @@ rsRetVal rsCStrConvertToBool(cstr_t *pStr, number_t *pBool);
 /* new calling interface */
 rsRetVal cstrFinalize(cstr_t *pThis);
 rsRetVal cstrConvSzStrAndDestruct(cstr_t *pThis, uchar **ppSz, int bRetNULL);
-uchar*  cstrGetSzStr(cstr_t *pThis);
-uchar*  cstrGetSzStrNoNULL(cstr_t *pThis);
 rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
 /* now come inline-like functions */
