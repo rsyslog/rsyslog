@@ -14,6 +14,8 @@ TESTS += omod-if-array.sh \
 	 parsertest.sh \
 	 timestamp.sh \
 	 inputname.sh \
+	 threadingmq.sh \
+	 threadingmqaq.sh \
 	 fieldtest.sh
 endif
 
@@ -106,6 +108,10 @@ EXTRA_DIST= 1.rstest 2.rstest 3.rstest err1.rstest \
 	   queue-persist.sh \
 	   queue-persist-drvr.sh \
 	   testsuites/queue-persist.conf \
+	   threadingmq.sh \
+	   testsuites/threadingmq.conf \
+	   threadingmqaq.sh \
+	   testsuites/threadingmqaq.conf \
 	   DiagTalker.java \
 	   cfg.sh
 
