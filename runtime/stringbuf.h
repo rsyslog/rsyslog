@@ -35,6 +35,7 @@
 #ifndef _STRINGBUF_H_INCLUDED__
 #define _STRINGBUF_H_INCLUDED__ 1
 
+
 /** 
  * The dynamic string buffer object.
  */
@@ -47,7 +48,6 @@ typedef struct cstr_s
 	uchar *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
 	size_t iBufSize;	/**< current maximum size of the string buffer */
 	size_t iStrLen;		/**< length of the string in characters. */
-	unsigned short iAllocIncrement;	/**< the amount of bytes the string should be expanded if it needs to */
 	bool bIsForeignBuf;	/**< is pBuf a buffer provided by someone else? */
 } cstr_t;
 
@@ -66,13 +66,28 @@ rsRetVal rsCStrConstructFromCStr(cstr_t **ppThis, cstr_t *pFrom);
 void rsCStrDestruct(cstr_t **ppThis);
 #define cstrDestruct(x) rsCStrDestruct((x))
 
-/**
- * Append a character to an existing string. If necessary, the
- * method expands the string buffer.
- *
- * \param c Character to append to string.
+
+/* Append a character to the current string object. This may only be done until
+ * cstrFinalize() is called.
+ * rgerhards, 2009-06-16
  */
-rsRetVal cstrAppendChar(cstr_t *pThis, uchar c);
+rsRetVal rsCStrExtendBuf(cstr_t *pThis, size_t iMinNeeded); /* our helper, NOT a public interface! */
+static inline rsRetVal cstrAppendChar(cstr_t *pThis, uchar c)
+{
+	rsRetVal iRet;
+
+	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+
+	if(pThis->iStrLen >= pThis->iBufSize) {  
+		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
+	}
+
+	/* ok, when we reach this, we have sufficient memory */
+	*(pThis->pBuf + pThis->iStrLen++) = c;
+
+finalize_it:
+	return iRet;
+}
 
 /**
  * Truncate "n" number of characters from the end of the
@@ -101,22 +116,6 @@ rsRetVal rsCStrAppendStr(cstr_t *pThis, uchar* psz);
  */
 rsRetVal rsCStrAppendStrWithLen(cstr_t *pThis, uchar* psz, size_t iStrLen);
 
-/**
- * Set a new allocation incremet. This will influence
- * the allocation the next time the string will be expanded.
- * It can be set and changed at any time. If done immediately
- * after custructing the StrB object, this will also be
- * the inital allocation.
- *
- * \param iNewIncrement The new increment size
- *
- * \note It is possible to use a very low increment, e.g. 1 byte.
- *       This can generate a considerable overhead. We highly 
- *       advise not to use an increment below 32 bytes, except
- *       if you are very well aware why you are doing it ;)
- */
-void rsCStrSetAllocIncrement(cstr_t *pThis, int iNewIncrement);
-#define rsCStrGetAllocIncrement(pThis) ((pThis)->iAllocIncrement)
 
 /**
  * Append an integer to the string. No special formatting is

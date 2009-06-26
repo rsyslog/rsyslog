@@ -147,13 +147,14 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 				offset = 1;
 			}
 		}
-		if(!rsCStrOffsetSzStrCmp(pRule->pCSProgNameComp, offset, (uchar*) getProgramName(pMsg), getProgramNameLen(pMsg)))
+		if(!rsCStrOffsetSzStrCmp(pRule->pCSProgNameComp, offset,
+			(uchar*) getProgramName(pMsg, LOCK_MUTEX), getProgramNameLen(pMsg, LOCK_MUTEX)))
 			bEqv = 1;
 
 		if((!bEqv && !bInv) || (bEqv && bInv)) {
 			/* not equal or inverted selection, so we are already done... */
-			dbgprintf("programname filter '%s' does not match '%s'\n", 
-				rsCStrGetSzStrNoNULL(pRule->pCSProgNameComp), getProgramName(pMsg));
+			DBGPRINTF("programname filter '%s' does not match '%s'\n", 
+				rsCStrGetSzStrNoNULL(pRule->pCSProgNameComp), getProgramName(pMsg, LOCK_MUTEX));
 			FINALIZE;
 		}
 	}

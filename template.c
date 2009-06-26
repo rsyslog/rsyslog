@@ -373,7 +373,6 @@ static int do_Constant(unsigned char **pp, struct template *pTpl)
 
 	if(cstrConstruct(&pStrB) != RS_RET_OK)
 		 return 1;
-	rsCStrSetAllocIncrement(pStrB, 32);
 	/* process the message and expand escapes
 	 * (additional escapes can be added here if needed)
 	 */

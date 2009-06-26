@@ -307,7 +307,6 @@ rsRetVal parseMsg(msg_t *pMsg)
 
 	/* finalize message object */
 	pMsg->msgFlags &= ~NEEDS_PARSING; /* this message is now parsed */
-	MsgPrepareEnqueue(pMsg); /* "historical" name - preparese for multi-threading */
 
 finalize_it:
 	RETiRet;
