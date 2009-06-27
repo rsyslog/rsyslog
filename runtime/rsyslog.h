@@ -81,7 +81,7 @@ typedef long long int64;
 typedef long long unsigned uint64;
 typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
 typedef char intTiny; 	/* 0..127! */
-typedef uchar uintTiny;	/* 0..255! */
+typedef unsigned char uintTiny;	/* 0..255! */
 
 /* define some base data types */
 typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
