@@ -2805,7 +2805,6 @@ static rsRetVal mainThread()
 		glbl.SetHUPisRestart(0); /* we can not do restart-type HUPs with dropped privs */
 	}
 
-
 	/* finally let the inputs run... */
 	runInputModules();
 
@@ -2814,6 +2813,19 @@ static rsRetVal mainThread()
 	 * be called again. -- rgerhards, 2005-10-24
 	 */
 	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
+
+	/* close stderr and stdout if they are kept open during a fork. Note that this
+	 * may introduce subtle security issues: if we are in a jail, one may break out of
+	 * it via these descriptors. But if I close them earlier, error messages will (once
+	 * again) not be emitted to the user that starts the daemon. As root jail support
+	 * is still in its infancy (and not really done), we currently accept this issue.
+	 * rgerhards, 2009-06-29
+	 */
+	if(!(Debug || NoFork)) {
+		close(1);
+		close(2);
+		bErrMsgToStderr = 0;
+	}
 
 	mainloop();
 
