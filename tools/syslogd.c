@@ -2111,7 +2111,7 @@ runInputModules(void)
  * rgerhards, 2007-12-14
  */
 static rsRetVal
-startInputModules(int bRunInputModules)
+startInputModules(void)
 {
 	DEFiRet;
 	modInfo_t *pMod;
@@ -2127,10 +2127,6 @@ startInputModules(int bRunInputModules)
 	pMod = module.GetNxtType(pMod, eMOD_IN);
 	}
 
-	if (bRunInputModules) {
-		runInputModules();
-	}
-
 	ENDfunc
 	return RS_RET_OK; /* intentional: we do not care about module errors */
 }
@@ -2142,7 +2138,7 @@ startInputModules(int bRunInputModules)
  * else happens. -- rgerhards, 2008-07-28
  */
 static rsRetVal
-init(int bRunInputModules)
+init()
 {
 	rsRetVal localRet;
 	int iNbrActions;
@@ -2343,11 +2339,14 @@ init(int bRunInputModules)
 	DBGPRINTF("Main processing queue is initialized and running\n");
 
 	/* the output part and the queue is now ready to run. So it is a good time
-	 * to start the inputs. Please note that the net code above should be
+	 * to initialize the inputs. Please note that the net code above should be
 	 * shuffled to down here once we have everything in input modules.
 	 * rgerhards, 2007-12-14
+	 * NOTE: as of 2009-06-29, the input modules are initialized, but not yet run.
+	 * Keep in mind. though, that the outputs already run if the queue was
+	 * persisted to disk. -- rgerhards
 	 */
-	startInputModules(bRunInputModules);
+	startInputModules();
 
 	if(Debug) {
 		dbgPrintInitInfo();
@@ -2518,7 +2517,8 @@ doHUP(void)
 
 	if(glbl.GetHUPisRestart()) {
 		DBGPRINTF("Received SIGHUP, configured to be restart, reloading rsyslogd.\n");
-		init(1); /* main queue is stopped as part of init() */
+		init(); /* main queue is stopped as part of init() */
+		runInputModules();
 	} else {
 		DBGPRINTF("Received SIGHUP, configured to be a non-restart type of HUP - notifying actions.\n");
 		ruleset.IterateAllActions(doHUPActions, NULL);
@@ -2776,11 +2776,12 @@ static rsRetVal mainThread()
         pTmp = template_StdPgSQLFmt;
         tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
 
-	CHKiRet(init(0));
+	CHKiRet(init());
 
 	if(Debug && debugging_on) {
 		DBGPRINTF("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 	}
+
 	/* Send a signal to the parent so it can terminate.
 	 */
 	if(myPid != ppid)
@@ -2788,7 +2789,7 @@ static rsRetVal mainThread()
 
 
 	/* If instructed to do so, we now drop privileges. Note that this is not 100% secure,
-	 * because inputs and outputs are already running at this time. However, we can implement
+	 * because outputs are already running at this time. However, we can implement
 	 * dropping of privileges rather quickly and it will work in many cases. While it is not
 	 * the ultimate solution, the current one is still much better than not being able to
 	 * drop privileges at all. Doing it correctly, requires a change in architecture, which
@@ -2805,13 +2806,12 @@ static rsRetVal mainThread()
 	}
 
 
+	/* finally let the inputs run... */
 	runInputModules();
 
 	/* END OF INTIALIZATION
 	 * ... but keep in mind that we might do a restart and thus init() might
-	 * be called again. If that happens, we must shut down the worker thread,
-	 * do the init() and then restart things.
-	 * rgerhards, 2005-10-24
+	 * be called again. -- rgerhards, 2005-10-24
 	 */
 	DBGPRINTF("initialization completed, transitioning to regular run mode\n");
 
