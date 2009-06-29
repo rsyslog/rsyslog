@@ -1,5 +1,7 @@
 ---------------------------------------------------------------------------
 Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
+- activation order of inputs changed, they are now activated only after
+  privileges are dropped. Thanks to Michael Terry for the patch.
 - greatly improved performance
 - greatly reduced memory requirements of msg object
   to around half of the previous demand. This means that more messages can
