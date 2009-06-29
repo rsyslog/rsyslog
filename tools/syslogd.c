@@ -2081,6 +2081,29 @@ static void dbgPrintInitInfo(void)
 }
 
 
+/* Actually run the input modules.  This happens after privileges are dropped,
+ * if that is requested.
+ */
+static rsRetVal
+runInputModules(void)
+{
+	modInfo_t *pMod;
+
+	/* loop through all modules and activate them (brr...) */
+	pMod = module.GetNxtType(NULL, eMOD_IN);
+	while(pMod != NULL) {
+		if(pMod->mod.im.bCanRun) {
+			/* activate here */
+			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun);
+		}
+	pMod = module.GetNxtType(pMod, eMOD_IN);
+	}
+
+	ENDfunc
+	return RS_RET_OK; /* intentional: we do not care about module errors */
+}
+
+
 /* Start the input modules. This function will probably undergo big changes
  * while we implement the input module interface. For now, it does the most
  * important thing to get at least my poor initial input modules up and
@@ -2088,7 +2111,7 @@ static void dbgPrintInitInfo(void)
  * rgerhards, 2007-12-14
  */
 static rsRetVal
-startInputModules(void)
+startInputModules(int bRunInputModules)
 {
 	DEFiRet;
 	modInfo_t *pMod;
@@ -2096,13 +2119,16 @@ startInputModules(void)
 	/* loop through all modules and activate them (brr...) */
 	pMod = module.GetNxtType(NULL, eMOD_IN);
 	while(pMod != NULL) {
-		if((iRet = pMod->mod.im.willRun()) == RS_RET_OK) {
-			/* activate here */
-			thrdCreate(pMod->mod.im.runInput, pMod->mod.im.afterRun);
-		} else {
+		iRet = pMod->mod.im.willRun();
+		pMod->mod.im.bCanRun = (iRet == RS_RET_OK);
+		if(!pMod->mod.im.bCanRun) {
 			DBGPRINTF("module %lx will not run, iRet %d\n", (unsigned long) pMod, iRet);
 		}
 	pMod = module.GetNxtType(pMod, eMOD_IN);
+	}
+
+	if (bRunInputModules) {
+		runInputModules();
 	}
 
 	ENDfunc
@@ -2116,7 +2142,7 @@ startInputModules(void)
  * else happens. -- rgerhards, 2008-07-28
  */
 static rsRetVal
-init(void)
+init(int bRunInputModules)
 {
 	rsRetVal localRet;
 	int iNbrActions;
@@ -2321,7 +2347,7 @@ init(void)
 	 * shuffled to down here once we have everything in input modules.
 	 * rgerhards, 2007-12-14
 	 */
-	startInputModules();
+	startInputModules(bRunInputModules);
 
 	if(Debug) {
 		dbgPrintInitInfo();
@@ -2492,7 +2518,7 @@ doHUP(void)
 
 	if(glbl.GetHUPisRestart()) {
 		DBGPRINTF("Received SIGHUP, configured to be restart, reloading rsyslogd.\n");
-		init(); /* main queue is stopped as part of init() */
+		init(1); /* main queue is stopped as part of init() */
 	} else {
 		DBGPRINTF("Received SIGHUP, configured to be a non-restart type of HUP - notifying actions.\n");
 		ruleset.IterateAllActions(doHUPActions, NULL);
@@ -2750,6 +2776,8 @@ static rsRetVal mainThread()
         pTmp = template_StdPgSQLFmt;
         tplLastStaticInit(tplAddLine(" StdPgSQLFmt", &pTmp));
 
+	CHKiRet(init(0));
+
 	if(Debug && debugging_on) {
 		DBGPRINTF("Debugging enabled, SIGUSR1 to turn off debugging.\n");
 	}
@@ -2777,7 +2805,7 @@ static rsRetVal mainThread()
 	}
 
 
-	CHKiRet(init());
+	runInputModules();
 
 	/* END OF INTIALIZATION
 	 * ... but keep in mind that we might do a restart and thus init() might
