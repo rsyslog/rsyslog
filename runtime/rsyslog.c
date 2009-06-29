@@ -77,6 +77,7 @@
 #include "conf.h"
 #include "glbl.h"
 #include "errmsg.h"
+#include "prop.h"
 #include "rule.h"
 #include "ruleset.h"
 
@@ -150,6 +151,8 @@ rsrtInit(char **ppErrObj, obj_if_t *pObjIF)
 		CHKiRet(glblClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "datetime";
 		CHKiRet(datetimeClassInit(NULL));
+		if(ppErrObj != NULL) *ppErrObj = "prop";
+		CHKiRet(propClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "msg";
 		CHKiRet(msgClassInit(NULL));
 		if(ppErrObj != NULL) *ppErrObj = "ctok_token";

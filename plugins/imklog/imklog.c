@@ -97,7 +97,7 @@ enqMsg(uchar *msg, uchar* pszTag, int iFacility, int iSeverity)
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("imklog"), sizeof("imklog")-1);
+	MsgSetInputNameStr(pMsg, UCHAR_CONSTANT("imklog"), sizeof("imklog")-1);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());

@@ -48,6 +48,7 @@
 #include "atomic.h"
 #include "unicode-helper.h"
 #include "ruleset.h"
+#include "prop.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -55,6 +56,7 @@ DEFobjCurrIf(var)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
+DEFobjCurrIf(prop)
 
 static struct {
 	uchar *pszName;
@@ -273,11 +275,25 @@ static char *syslog_number_names[24] = { "0", "1", "2", "3", "4", "5", "6", "7",
 /* some forward declarations */
 static int getAPPNAMELen(msg_t *pM, bool bLockMutex);
 
+
 static inline int getProtocolVersion(msg_t *pM)
 {
 	return(pM->iProtocolVersion);
 }
 
+
+static inline void
+getInputName(msg_t *pM, uchar **ppsz, int *plen)
+{
+	BEGINfunc
+	if(pM == NULL) {
+		*ppsz = UCHAR_CONSTANT("");
+		*plen = 0;
+	} else {
+		prop.GetString(pM->pInputName, ppsz, plen);
+	}
+	ENDfunc
+}
 
 /* The following functions will support advanced output module
  * multithreading, once this is implemented. Currently, we
@@ -431,7 +447,6 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->iFacility = -1;
 	pM->offAfterPRI = 0;
 	pM->offMSG = -1;
-	pM->iLenInputName = 0;
 	pM->iProtocolVersion = 0;
 	pM->msgFlags = 0;
 	pM->iLenRawMsg = 0;
@@ -444,7 +459,6 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pszHOSTNAME = NULL;
 	pM->pszRcvFrom = NULL;
 	pM->pszRcvFromIP = NULL;
-	pM->pszInputName = NULL;
 	pM->pszRcvdAt3164 = NULL;
 	pM->pszRcvdAt3339 = NULL;
 	pM->pszRcvdAt_MySQL = NULL;
@@ -458,6 +472,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pCSAPPNAME = NULL;
 	pM->pCSPROCID = NULL;
 	pM->pCSMSGID = NULL;
+	pM->pInputName = NULL;
 	pM->pRuleset = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
@@ -556,7 +571,8 @@ CODESTARTobjDestruct(msg)
 			free(pThis->pszRawMsg);
 		freeTAG(pThis);
 		freeHOSTNAME(pThis);
-		free(pThis->pszInputName);
+		if(pThis->pInputName != NULL)
+			prop.Destruct(&pThis->pInputName);
 		free(pThis->pszRcvFrom);
 		free(pThis->pszRcvFromIP);
 		free(pThis->pszRcvdAt3164);
@@ -719,11 +735,16 @@ msg_t* MsgDup(msg_t* pOld)
  */
 static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 {
+	uchar *psz;
+	int len;
 	DEFiRet;
 
 	assert(pThis != NULL);
 	assert(pStrm != NULL);
 
+	/* "pump" some property values into strings */
+
+	/* then serialize elements */
 	CHKiRet(obj.BeginSerialize(pStrm, (obj_t*) pThis));
 	objSerializeSCALAR(pStrm, iProtocolVersion, SHORT);
 	objSerializeSCALAR(pStrm, iSeverity, SHORT);
@@ -743,7 +764,9 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 
 	objSerializePTR(pStrm, pszRawMsg, PSZ);
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
-	objSerializePTR(pStrm, pszInputName, PSZ);
+	getInputName(pThis, &psz, &len);
+	objSerializeSCALAR_VAR(pStrm, "pszInputName", PSZ, psz); 
+	//objSerializePTR(pStrm, pszInputName, PSZ);
 	objSerializePTR(pStrm, pszRcvFrom, PSZ);
 	objSerializePTR(pStrm, pszRcvFromIP, PSZ);
 
@@ -1427,18 +1450,6 @@ char *getHOSTNAME(msg_t *pM)
 }
 
 
-static uchar *getInputName(msg_t *pM)
-{
-	if(pM == NULL)
-		return (uchar*) "";
-	else
-		if(pM->pszInputName == NULL)
-			return (uchar*) "";
-		else
-			return pM->pszInputName;
-}
-
-
 uchar *getRcvFrom(msg_t *pM)
 {
 	if(pM == NULL)
@@ -1598,14 +1609,31 @@ static int getAPPNAMELen(msg_t *pM, bool bLockMutex)
 /* rgerhards 2008-09-10: set pszInputName in msg object
  * rgerhards, 2009-06-16
  */
-void MsgSetInputName(msg_t *pMsg, uchar* pszInputName, size_t lenInputName)
+void MsgSetInputName(msg_t *pThis, prop_t *inputName)
 {
-	assert(pMsg != NULL);
-	free(pMsg->pszInputName);
-	pMsg->iLenInputName = lenInputName;
-	if((pMsg->pszInputName = malloc(pMsg->iLenInputName + 1)) != NULL) {
-		memcpy(pMsg->pszInputName, pszInputName, pMsg->iLenInputName + 1);
-	}
+	assert(pThis != NULL);
+
+	if(pThis->pInputName != NULL)
+		prop.Destruct(&pThis->pInputName);
+	pThis->pInputName = inputName;
+}
+
+/* to be removed soon: work-around for those tht can not natively generate an
+ * input name.
+ * rgerhards, 2009-06-29
+ */
+void MsgSetInputNameStr(msg_t *pThis, uchar *psz, int len)
+{
+	prop_t *pProp;
+	assert(pThis != NULL);
+
+	/* we need to create a property */ 
+	prop.Construct(&pProp);
+	prop.SetString(pProp, psz, len);
+	prop.ConstructFinalize(pProp);
+	prop.AddRef(pProp);
+	MsgSetInputName(pThis, pProp);
+	prop.Destruct(&pProp);
 }
 
 /* rgerhards 2004-11-16: set pszRcvFrom in msg object
@@ -1875,6 +1903,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	short iOffs;
 
 	BEGINfunc
+dbgprintf("XXXX: msgGetProp for %d\n", propID);
 	assert(pMsg != NULL);
 	assert(pbMustBeFreed != NULL);
 
@@ -1910,7 +1939,10 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 			break;
 		*/
 		case PROP_INPUTNAME:
-			pRes = (char*) getInputName(pMsg);
+RUNLOG;
+			getInputName(pMsg, ((uchar**) &pRes), &bufLen);
+RUNLOG;
+RUNLOG_VAR("%p", pRes);
 			break;
 		case PROP_FROMHOST:
 			pRes = (char*) getRcvFrom(pMsg);
@@ -2738,6 +2770,7 @@ rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID)
 #define isProp(name) !rsCStrSzStrCmp(pProp->pcsName, (uchar*) name, sizeof(name) - 1)
 rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 {
+	prop_t *myProp;
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, msg);
@@ -2765,7 +2798,13 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	} else if(isProp("pszTAG")) {
 		MsgSetTAG(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), cstrLen(pProp->val.pStr));
 	} else if(isProp("pszInputName")) {
-		MsgSetInputName(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
+		/* we need to create a property */ 
+		CHKiRet(prop.Construct(&myProp));
+		CHKiRet(prop.SetString(myProp, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr)));
+		CHKiRet(prop.ConstructFinalize(myProp));
+		prop.AddRef(myProp);
+		MsgSetInputName(pThis, myProp);
+		prop.Destruct(&myProp);
 	} else if(isProp("pszRcvFromIP")) {
 		MsgSetRcvFromIP(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszRcvFrom")) {
@@ -2790,6 +2829,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 		dbgprintf("no longer supported property pszMSG silently ignored\n");
 	}
 
+finalize_it:
 	RETiRet;
 }
 #undef	isProp
@@ -2833,6 +2873,7 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	CHKiRet(objUse(var, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	/* set our own handlers */
 	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);

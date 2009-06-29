@@ -580,7 +580,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 		CHKiRet(msgConstructWithTime(&pMsg, stTime, ttGenTime));
 	}
 	if(pszInputName != NULL)
-		MsgSetInputName(pMsg, pszInputName, ustrlen(pszInputName));
+		MsgSetInputNameStr(pMsg, pszInputName, ustrlen(pszInputName));
 	MsgSetFlowControlType(pMsg, flowCtlType);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	
@@ -881,7 +881,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	DEFiRet;
 
 	CHKiRet(msgConstruct(&pMsg));
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
+	MsgSetInputNameStr(pMsg, UCHAR_CONSTANT("rsyslogd"), sizeof("rsyslogd")-1);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
@@ -2089,6 +2089,7 @@ runInputModules(void)
 {
 	modInfo_t *pMod;
 
+	BEGINfunc
 	/* loop through all modules and activate them (brr...) */
 	pMod = module.GetNxtType(NULL, eMOD_IN);
 	while(pMod != NULL) {

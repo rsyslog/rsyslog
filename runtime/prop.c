@@ -36,9 +36,12 @@
 #include "config.h"
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 #include "rsyslog.h"
 #include "obj.h"
+#include "obj-types.h"
+#include "atomic.h"
 #include "prop.h"
 
 /* static data */
@@ -48,7 +51,44 @@ DEFobjStaticHelpers
 /* Standard-Constructor
  */
 BEGINobjConstruct(prop) /* be sure to specify the object type also in END macro! */
+	pThis->iRefCount = 1;
 ENDobjConstruct(prop)
+
+/* set string, we make our own private copy! This MUST only be called BEFORE
+ * ConstructFinalize()!
+ */
+static rsRetVal SetString(prop_t *pThis, uchar *psz, int len)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, prop);
+	if(pThis->len >= CONF_PROP_BUFSIZE)
+		free(pThis->szVal.psz);
+	pThis->len = len;
+	if(len < CONF_PROP_BUFSIZE) {
+		memcpy(pThis->szVal.sz, psz, len + 1);
+	} else {
+		CHKmalloc(pThis->szVal.psz = malloc(len + 1));
+		memcpy(pThis->szVal.sz, psz, len + 1);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/* get string */
+static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
+{
+	BEGINfunc
+	ISOBJ_TYPE_assert(pThis, prop);
+	if(pThis->len < CONF_PROP_BUFSIZE)
+		*ppsz = pThis->szVal.sz;
+	else
+		*ppsz = pThis->szVal.psz;
+	*plen = pThis->len;
+	ENDfunc
+	return RS_RET_OK;
+}
 
 
 /* ConstructionFinalizer
@@ -63,9 +103,29 @@ propConstructFinalize(prop_t __attribute__((unused)) *pThis)
 }
 
 
+/* add a new reference. It is VERY IMPORTANT to call this function whenever
+ * the property is handed over to some entitiy that later call Destruct() on it.
+ */
+static rsRetVal AddRef(prop_t *pThis)
+{
+	ATOMIC_INC(pThis->iRefCount);
+	return RS_RET_OK;
+}
+
+
 /* destructor for the prop object */
 BEGINobjDestruct(prop) /* be sure to specify the object type also in END and CODESTART macros! */
+	int currRefCount;
 CODESTARTobjDestruct(prop)
+	currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
+	if(currRefCount == 0) {
+		/* (only) in this case we need to actually destruct the object */
+dbgprintf("XXXXX: propDestruct: ptr %p, pThis %p, len %d\n", pThis->szVal.psz, pThis, pThis->len);
+		if(pThis->len >= CONF_PROP_BUFSIZE)
+			free(pThis->szVal.psz);
+	} else {
+		pThis = NULL; /* tell framework NOT to destructing the object! */
+	}
 ENDobjDestruct(prop)
 
 
@@ -94,6 +154,9 @@ CODESTARTobjQueryInterface(prop)
 	pIf->ConstructFinalize = propConstructFinalize;
 	pIf->Destruct = propDestruct;
 	pIf->DebugPrint = propDebugPrint;
+	pIf->SetString = SetString;
+	pIf->GetString = GetString;
+	pIf->AddRef = AddRef;
 
 finalize_it:
 ENDobjQueryInterface(prop)

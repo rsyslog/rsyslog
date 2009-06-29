@@ -35,6 +35,7 @@
 #ifndef _STRINGBUF_H_INCLUDED__
 #define _STRINGBUF_H_INCLUDED__ 1
 
+#include <assert.h>
 
 /** 
  * The dynamic string buffer object.
@@ -48,7 +49,6 @@ typedef struct cstr_s
 	uchar *pszBuf;		/**< pointer to the sz version of the string (after it has been created )*/
 	size_t iBufSize;	/**< current maximum size of the string buffer */
 	size_t iStrLen;		/**< length of the string in characters. */
-	bool bIsForeignBuf;	/**< is pBuf a buffer provided by someone else? */
 } cstr_t;
 
 

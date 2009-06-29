@@ -72,7 +72,6 @@ struct msg {
 	short	iFacility;	/* Facility code 0 .. 23*/
 	short	offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
 	short	offMSG;		/* offset at which the MSG part starts in pszRawMsg */
-	short	iLenInputName;	/* Length of pszInputName */
 	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
 	int	msgFlags;	/* flags associated with this message */
 	int	iLenRawMsg;	/* length of raw message */
@@ -86,7 +85,6 @@ struct msg {
 	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
 	uchar	*pszRcvFrom;	/* System message was received from */
 	uchar	*pszRcvFromIP;	/* IP of system message was received from */
-	uchar *pszInputName;	/* name of the input module that submitted this message */
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
 	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
 	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 charcters) */
@@ -100,6 +98,7 @@ struct msg {
 	cstr_t *pCSAPPNAME;	/* APP-NAME */
 	cstr_t *pCSPROCID;	/* PROCID */
 	cstr_t *pCSMSGID;	/* MSGID */
+	prop_t *pInputName;	/* input name property */
 	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
 	time_t ttGenTime;	/* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
 				   While this field looks redundant, it is required because a Unix timestamp
@@ -144,7 +143,7 @@ rsRetVal msgDestruct(msg_t **ppM);
 msg_t* MsgDup(msg_t* pOld);
 msg_t *MsgAddRef(msg_t *pM);
 void setProtocolVersion(msg_t *pM, int iNewVersion);
-void MsgSetInputName(msg_t *pMsg, uchar*, size_t);
+void MsgSetInputName(msg_t *pMsg, prop_t*);
 rsRetVal MsgSetAPPNAME(msg_t *pMsg, char* pszAPPNAME);
 rsRetVal MsgSetPROCID(msg_t *pMsg, char* pszPROCID);
 rsRetVal MsgSetMSGID(msg_t *pMsg, char* pszMSGID);
@@ -165,6 +164,12 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
+
+
+// REMOVE:
+void MsgSetInputNameStr(msg_t *pThis, uchar *psz, int len);
+
+
 
 /* TODO: remove these five (so far used in action.c) */
 char *getMSG(msg_t *pM);

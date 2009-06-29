@@ -37,6 +37,7 @@
 #include "msg.h"
 #include "module-template.h"
 #include "imklog.h"
+#include "unicode-helper.h"
 
 
 /* Includes. */
@@ -86,7 +87,7 @@ extern int ksyslog(int type, char *buf, int len);
 
 static uchar *GetPath(void)
 {
-	return pszPath ? pszPath : _PATH_KLOG;
+	return pszPath ? pszPath : UCHAR_CONSTANT(_PATH_KLOG);
 }
 
 static void CloseLogSrc(void)
@@ -140,7 +141,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 	 * file system is available to get kernel messages from.
 	 */
 	if ( use_syscall ||
-	    ((stat(GetPath(), &sb) < 0) && (errno == ENOENT)) )
+	    ((stat((char*)GetPath(), &sb) < 0) && (errno == ENOENT)) )
 	{
 	  	/* Initialize kernel logging. */
 	  	ksyslog(1, NULL, 0);
@@ -149,7 +150,7 @@ static enum LOGSRC GetKernelLogSrc(void)
 		return(kernel);
 	}
 
-	if ( (kmsg = open(GetPath(), O_RDONLY|O_CLOEXEC)) < 0 )
+	if ( (kmsg = open((char*)GetPath(), O_RDONLY|O_CLOEXEC)) < 0 )
 	{
 		imklogLogIntMsg(LOG_ERR, "imklog: Cannot open proc file system, %d.\n", errno);
 		ksyslog(7, NULL, 0); /* TODO: check this, implement more */

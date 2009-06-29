@@ -206,7 +206,7 @@ doInjectMsg(int iNum)
 	/* we now create our own message object and submit it to the queue */
 	CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 	MsgSetRawMsg(pMsg, (char*) szMsg, ustrlen(szMsg));
-	MsgSetInputName(pMsg, UCHAR_CONSTANT("imdiag"), sizeof("imdiag")-1);
+	MsgSetInputNameStr(pMsg, UCHAR_CONSTANT("imdiag"), sizeof("imdiag")-1);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 	pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 	pMsg->bParseHOSTNAME = 1;

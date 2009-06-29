@@ -28,14 +28,23 @@
 /* the prop object */
 struct prop_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
+	int iRefCount;		/* reference counter */
+	union { 
+		uchar *psz;		/* stored string */
+		uchar sz[CONF_PROP_BUFSIZE];
+	} szVal;
+	int len;		/* we use int intentionally, otherwise we may get some troubles... */
 };
 
 /* interfaces */
 BEGINinterface(prop) /* name must also be changed in ENDinterface macro! */
 	INTERFACEObjDebugPrint(prop);
 	rsRetVal (*Construct)(prop_t **ppThis);
-	rsRetVal (*ConstructFinalize)(prop_t __attribute__((unused)) *pThis);
+	rsRetVal (*ConstructFinalize)(prop_t *pThis);
 	rsRetVal (*Destruct)(prop_t **ppThis);
+	rsRetVal (*SetString)(prop_t *pThis, uchar* psz, int len);
+	rsRetVal (*GetString)(prop_t *pThis, uchar** ppsz, int *plen);
+	rsRetVal (*AddRef)(prop_t *pThis);
 ENDinterface(prop)
 #define propCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
