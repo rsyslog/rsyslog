@@ -245,7 +245,6 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			/* we now create our own message object and submit it to the queue */
 			CHKiRet(msgConstructWithTime(&pMsg, &stTime, ttGenTime));
 			MsgSetRawMsg(pMsg, (char*)pRcvBuf, lenRcvBuf);
-			prop.AddRef(pInputName);
 			MsgSetInputName(pMsg, pInputName);
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
@@ -346,7 +345,6 @@ CODESTARTwillRun
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imudp"), sizeof("imudp") - 1));
 	CHKiRet(prop.ConstructFinalize(pInputName));
-	prop.AddRef(pInputName);
 
 	net.PrintAllowedSenders(1); /* UDP */
 

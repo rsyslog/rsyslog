@@ -166,11 +166,6 @@ rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
 
 
-// REMOVE:
-void MsgSetInputNameStr(msg_t *pThis, uchar *psz, int len);
-
-
-
 /* TODO: remove these five (so far used in action.c) */
 char *getMSG(msg_t *pM);
 char *getHOSTNAME(msg_t *pM);
@@ -184,6 +179,7 @@ char *getProgramName(msg_t *pM, bool bLockMutex);
 int getProgramNameLen(msg_t *pM, bool bLockMutex);
 uchar *getRcvFrom(msg_t *pM);
 rsRetVal propNameToID(cstr_t *pCSPropName, propid_t *pPropID);
+uchar *propIDToName(propid_t propID);
 
 
 /* The MsgPrepareEnqueue() function is a macro for performance reasons.

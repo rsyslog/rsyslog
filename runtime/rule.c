@@ -219,8 +219,8 @@ shouldProcessThisMessage(rule_t *pRule, msg_t *pMsg, int *bProcessMsg)
 			bRet = (bRet == 1) ?  0 : 1;
 
 		if(Debug) {
-			dbgprintf("Filter: check for property '%d' (value '%s') ",
-			        pRule->f_filterData.prop.propID, pszPropVal);
+			dbgprintf("Filter: check for property '%s' (value '%s') ",
+			        propIDToName(pRule->f_filterData.prop.propID), pszPropVal);
 			if(pRule->f_filterData.prop.isNegated)
 				dbgprintf("NOT ");
 			dbgprintf("%s '%s': %s\n",
@@ -373,8 +373,7 @@ CODESTARTobjDebugPrint(rule)
 		dbgprintf("EXPRESSION-BASED Filter: can currently not be displayed");
 	} else {
 		dbgprintf("PROPERTY-BASED Filter:\n");
-		dbgprintf("\tProperty.: '%d'\n", pThis->f_filterData.prop.propID);
-// TODO: XXXX ADD idtostring()!
+		dbgprintf("\tProperty.: '%s'\n", propIDToName(pThis->f_filterData.prop.propID));
 		dbgprintf("\tOperation: ");
 		if(pThis->f_filterData.prop.isNegated)
 			dbgprintf("NOT ");

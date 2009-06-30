@@ -37,12 +37,14 @@
 #include <sys/un.h>
 #include "dirty.h"
 #include "cfsysline.h"
+#include "unicode-helper.h"
 #include "module-template.h"
 #include "srUtils.h"
 #include "errmsg.h"
 #include "net.h"
 #include "glbl.h"
 #include "msg.h"
+#include "prop.h"
 
 MODULE_TYPE_INPUT
 
@@ -66,7 +68,9 @@ MODULE_TYPE_INPUT
 DEF_IMOD_STATIC_DATA
 DEFobjCurrIf(errmsg)
 DEFobjCurrIf(glbl)
+DEFobjCurrIf(prop)
 
+static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
 static int startIndexUxLocalSockets; /* process funix from that index on (used to 
  				   * suppress local logging. rgerhards 2005-08-01
 				   * read-only after startup
@@ -223,7 +227,7 @@ static rsRetVal readSocket(int fd, int iSock)
 		parseAndSubmitMessage(funixHName[iSock] == NULL ? glbl.GetLocalHostName() : funixHName[iSock],
 				      (uchar*)"127.0.0.1", pRcv,
 			 	      iRcvd, funixParseHost[iSock] ? (funixFlags[iSock] | PARSE_HOSTNAME) : funixFlags[iSock],
-				      funixFlowCtl[iSock], (uchar*)"imuxsock", NULL, 0);
+				      funixFlowCtl[iSock], pInputName, NULL, 0);
 	} else if (iRcvd < 0 && errno != EINTR) {
 		char errStr[1024];
 		rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -306,7 +310,12 @@ CODESTARTwillRun
 			dbgprintf("Opened UNIX socket '%s' (fd %d).\n", funixn[i], funix[i]);
 	}
 
-	RETiRet;
+	/* we need to create the inputName property (only once during our lifetime) */
+	CHKiRet(prop.Construct(&pInputName));
+	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imudp"), sizeof("imudp") - 1));
+	CHKiRet(prop.ConstructFinalize(pInputName));
+
+finalize_it:
 ENDwillRun
 
 
@@ -332,6 +341,9 @@ CODESTARTafterRun
 
 	discardFunixn();
 	nfunix = 1;
+
+	if(pInputName != NULL)
+		prop.Destruct(&pInputName);
 ENDafterRun
 
 
@@ -339,6 +351,7 @@ BEGINmodExit
 CODESTARTmodExit
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(errmsg, CORE_COMPONENT);
+	objRelease(prop, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -375,6 +388,7 @@ CODESTARTmodInit
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(errmsg, CORE_COMPONENT));
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
+	CHKiRet(objUse(prop, CORE_COMPONENT));
 
 	dbgprintf("imuxsock version %s initializing\n", PACKAGE_VERSION);
 
