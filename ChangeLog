@@ -31,6 +31,16 @@ Version 4.5.0  [DEVEL] (rgerhards), 2009-??-??
 - set a more sensible timeout for shutdow, now 1.5 seconds to complete
   processing (this also removes those cases where the shutdown message
   was not written because the termination happened before it)
+- internal bugfix: object pointer was only reset to NULL when an object
+  was actually destructed. This most likely had no effect to existing code,
+  but it may also have caused trouble in remote cases. Similarly, the fix
+  may also cause trouble...
+---------------------------------------------------------------------------
+Version 4.3.3  [beta] (rgerhards), 2009-0?-??
+- internal bugfix: object pointer was only reset to NULL when an object
+  was actually destructed. This most likely had no effect to existing code,
+  but it may also have caused trouble in remote cases. Similarly, the fix
+  may also cause trouble...
 ---------------------------------------------------------------------------
 Version 4.3.2  [beta] (rgerhards), 2009-06-24
 - removed long-obsoleted property UxTradMsg
