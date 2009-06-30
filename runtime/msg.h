@@ -78,12 +78,10 @@ struct msg {
 	int	iLenMSG;	/* Length of the MSG part */
 	int	iLenTAG;	/* Length of the TAG part */
 	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-	int	iLenRcvFrom;	/* Length of pszRcvFrom */
 	int	iLenRcvFromIP;	/* Length of pszRcvFromIP */
 	uchar	*pszRawMsg;	/* message as it was received on the wire. This is important in case we
 				 * need to preserve cryptographic verifiers.  */
 	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
-	uchar	*pszRcvFrom;	/* System message was received from */
 	uchar	*pszRcvFromIP;	/* IP of system message was received from */
 	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 charcters) */
 	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 charcters at most) */
@@ -99,6 +97,7 @@ struct msg {
 	cstr_t *pCSPROCID;	/* PROCID */
 	cstr_t *pCSMSGID;	/* MSGID */
 	prop_t *pInputName;	/* input name property */
+	prop_t *pRcvFrom;	/* name of system message was received from */
 	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
 	time_t ttGenTime;	/* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
 				   While this field looks redundant, it is required because a Unix timestamp
@@ -151,7 +150,8 @@ void MsgSetTAG(msg_t *pMsg, uchar* pszBuf, size_t lenBuf);
 void MsgSetRuleset(msg_t *pMsg, ruleset_t*);
 rsRetVal MsgSetFlowControlType(msg_t *pMsg, flowControl_t eFlowCtl);
 rsRetVal MsgSetStructuredData(msg_t *pMsg, char* pszStrucData);
-void MsgSetRcvFrom(msg_t *pMsg, uchar* pszRcvFrom);
+void MsgSetRcvFrom(msg_t *pMsg, prop_t*);
+void MsgSetRcvFromStr(msg_t *pMsg, uchar* pszRcvFrom, int);
 rsRetVal MsgSetRcvFromIP(msg_t *pMsg, uchar* pszRcvFromIP);
 void MsgSetHOSTNAME(msg_t *pMsg, uchar* pszHOSTNAME, int lenHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(msg_t *pMsg, short offs);
@@ -164,6 +164,7 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 char *textpri(char *pRes, size_t pResLen, int pri);
 rsRetVal msgGetMsgVar(msg_t *pThis, cstr_t *pstrPropName, var_t **ppVar);
 rsRetVal MsgEnableThreadSafety(void);
+uchar *getRcvFrom(msg_t *pM);
 
 
 /* TODO: remove these five (so far used in action.c) */

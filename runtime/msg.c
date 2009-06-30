@@ -622,11 +622,9 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->iLenMSG = 0;
 	pM->iLenTAG = 0;
 	pM->iLenHOSTNAME = 0;
-	pM->iLenRcvFrom = 0;
 	pM->iLenRcvFromIP = 0;
 	pM->pszRawMsg = NULL;
 	pM->pszHOSTNAME = NULL;
-	pM->pszRcvFrom = NULL;
 	pM->pszRcvFromIP = NULL;
 	pM->pszRcvdAt3164 = NULL;
 	pM->pszRcvdAt3339 = NULL;
@@ -642,6 +640,7 @@ static inline rsRetVal msgBaseConstruct(msg_t **ppThis)
 	pM->pCSPROCID = NULL;
 	pM->pCSMSGID = NULL;
 	pM->pInputName = NULL;
+	pM->pRcvFrom = NULL;
 	pM->pRuleset = NULL;
 	memset(&pM->tRcvdAt, 0, sizeof(pM->tRcvdAt));
 	memset(&pM->tTIMESTAMP, 0, sizeof(pM->tTIMESTAMP));
@@ -742,8 +741,8 @@ CODESTARTobjDestruct(msg)
 		freeHOSTNAME(pThis);
 		if(pThis->pInputName != NULL)
 			prop.Destruct(&pThis->pInputName);
-		free(pThis->pszRcvFrom);
-		free(pThis->pszRcvFromIP);
+		if(pThis->pRcvFrom != NULL)
+			prop.Destruct(&pThis->pRcvFrom);
 		free(pThis->pszRcvdAt3164);
 		free(pThis->pszRcvdAt3339);
 		free(pThis->pszRcvdAt_MySQL);
@@ -844,6 +843,10 @@ msg_t* MsgDup(msg_t* pOld)
 	pNew->iProtocolVersion = pOld->iProtocolVersion;
 	pNew->ttGenTime = pOld->ttGenTime;
 	pNew->offMSG = pOld->offMSG;
+	pNew->pRcvFrom = pOld->pRcvFrom;
+	prop.AddRef(pNew->pRcvFrom);
+	pNew->pInputName = pOld->pInputName;
+	prop.AddRef(pNew->pInputName);
 	/* enable this, if someone actually uses UxTradMsg, delete after some time has
 	 * passed and nobody complained -- rgerhards, 2009-06-16
 	pNew->offAfterPRI = pOld->offAfterPRI;
@@ -871,7 +874,6 @@ msg_t* MsgDup(msg_t* pOld)
 	} else {
 		tmpCOPYSZ(HOSTNAME);
 	}
-	tmpCOPYSZ(RcvFrom);
 
 	tmpCOPYCSTR(ProgName);
 	tmpCOPYCSTR(StrucData);
@@ -935,8 +937,8 @@ static rsRetVal MsgSerialize(msg_t *pThis, strm_t *pStrm)
 	objSerializePTR(pStrm, pszHOSTNAME, PSZ);
 	getInputName(pThis, &psz, &len);
 	objSerializeSCALAR_VAR(pStrm, "pszInputName", PSZ, psz); 
-	//objSerializePTR(pStrm, pszInputName, PSZ);
-	objSerializePTR(pStrm, pszRcvFrom, PSZ);
+	psz = getRcvFrom(pThis); 
+	objSerializeSCALAR_VAR(pStrm, "pszRcvFrom", PSZ, psz); 
 	objSerializePTR(pStrm, pszRcvFromIP, PSZ);
 
 	objSerializePTR(pStrm, pCSStrucData, CSTR);
@@ -1601,7 +1603,10 @@ int getHOSTNAMELen(msg_t *pM)
 		return 0;
 	else
 		if(pM->pszHOSTNAME == NULL)
-			return pM->iLenRcvFrom;
+			if(pM->pRcvFrom == NULL)
+				return 0;
+			else
+				return prop.GetStringLen(pM->pRcvFrom);
 		else
 			return pM->iLenHOSTNAME;
 }
@@ -1612,22 +1617,33 @@ char *getHOSTNAME(msg_t *pM)
 	if(pM == NULL)
 		return "";
 	else
-		if(pM->pszHOSTNAME == NULL)
-			return (char*) pM->pszRcvFrom;
-		else
+		if(pM->pszHOSTNAME == NULL) {
+			if(pM->pRcvFrom == NULL) {
+				return "";
+			} else {
+				uchar *psz;
+				int len;
+				prop.GetString(pM->pRcvFrom, &psz, &len);
+				return (char*) psz;
+			}
+		} else {
 			return (char*) pM->pszHOSTNAME;
+		}
 }
 
 
 uchar *getRcvFrom(msg_t *pM)
 {
-	if(pM == NULL)
-		return UCHAR_CONSTANT("");
-	else
-		if(pM->pszRcvFrom == NULL)
-			return UCHAR_CONSTANT("");
-		else
-			return pM->pszRcvFrom;
+	uchar *psz;
+	int len;
+	BEGINfunc
+	if(pM == NULL) {
+		psz = UCHAR_CONSTANT("");
+	} else {
+		prop.GetString(pM->pInputName, &psz, &len);
+	}
+	ENDfunc
+	return psz;
 }
 
 
@@ -1790,12 +1806,27 @@ void MsgSetInputName(msg_t *pThis, prop_t *inputName)
 	pThis->pInputName = inputName;
 }
 
-#if 0
+
+/* rgerhards 2008-09-10: set RcvFrom name in msg object. This calls AddRef()
+ * on the property, because this must be done in all current cases and there
+ * is no case expected where this may not be necessary.
+ * rgerhards, 2009-06-30
+ */
+void MsgSetRcvFrom(msg_t *pThis, prop_t *new)
+{
+	assert(pThis != NULL);
+
+	prop.AddRef(new);
+	if(pThis->pRcvFrom != NULL)
+		prop.Destruct(&pThis->pRcvFrom);
+	pThis->pRcvFrom = new;
+}
+
 /* to be removed soon: work-around for those tht can not natively generate an
  * input name.
  * rgerhards, 2009-06-29
  */
-void MsgSetInputNameStr(msg_t *pThis, uchar *psz, int len)
+void MsgSetRcvFromStr(msg_t *pThis, uchar *psz, int len)
 {
 	prop_t *pProp;
 	assert(pThis != NULL);
@@ -1804,23 +1835,8 @@ void MsgSetInputNameStr(msg_t *pThis, uchar *psz, int len)
 	prop.Construct(&pProp);
 	prop.SetString(pProp, psz, len);
 	prop.ConstructFinalize(pProp);
-	prop.AddRef(pProp);
-	MsgSetInputName(pThis, pProp);
+	MsgSetRcvFrom(pThis, pProp);
 	prop.Destruct(&pProp);
-}
-#endif
-
-/* rgerhards 2004-11-16: set pszRcvFrom in msg object
- */
-void MsgSetRcvFrom(msg_t *pMsg, uchar* pszRcvFrom)
-{
-	assert(pMsg != NULL);
-	free(pMsg->pszRcvFrom);
-
-	pMsg->iLenRcvFrom = ustrlen(pszRcvFrom);
-	if((pMsg->pszRcvFrom = malloc(pMsg->iLenRcvFrom + 1)) != NULL) {
-		memcpy(pMsg->pszRcvFrom, pszRcvFrom, pMsg->iLenRcvFrom + 1);
-	}
 }
 
 
@@ -2077,7 +2093,6 @@ char *MsgGetProp(msg_t *pMsg, struct templateEntry *pTpe,
 	short iOffs;
 
 	BEGINfunc
-dbgprintf("XXXX: msgGetProp for %s\n", propIDToName(propID));
 	assert(pMsg != NULL);
 	assert(pbMustBeFreed != NULL);
 
@@ -2887,7 +2902,7 @@ rsRetVal MsgSetProperty(msg_t *pThis, var_t *pProp)
 	} else if(isProp("pszRcvFromIP")) {
 		MsgSetRcvFromIP(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
 	} else if(isProp("pszRcvFrom")) {
-		MsgSetRcvFrom(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr));
+		MsgSetRcvFromStr(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pszHOSTNAME")) {
 		MsgSetHOSTNAME(pThis, rsCStrGetSzStrNoNULL(pProp->val.pStr), rsCStrLen(pProp->val.pStr));
 	} else if(isProp("pCSStrucData")) {

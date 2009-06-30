@@ -68,11 +68,18 @@ static rsRetVal SetString(prop_t *pThis, uchar *psz, int len)
 		memcpy(pThis->szVal.sz, psz, len + 1);
 	} else {
 		CHKmalloc(pThis->szVal.psz = malloc(len + 1));
-		memcpy(pThis->szVal.sz, psz, len + 1);
+		memcpy(pThis->szVal.psz, psz, len + 1);
 	}
 
 finalize_it:
 	RETiRet;
+}
+
+
+/* get string length */
+static int GetStringLen(prop_t *pThis)
+{
+	return pThis->len;
 }
 
 
@@ -81,10 +88,13 @@ static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
 {
 	BEGINfunc
 	ISOBJ_TYPE_assert(pThis, prop);
-	if(pThis->len < CONF_PROP_BUFSIZE)
+	if(pThis->len < CONF_PROP_BUFSIZE) {
 		*ppsz = pThis->szVal.sz;
-	else
+RUNLOG;
+	} else {
 		*ppsz = pThis->szVal.psz;
+RUNLOG;
+	}
 	*plen = pThis->len;
 	ENDfunc
 	return RS_RET_OK;
@@ -120,7 +130,6 @@ CODESTARTobjDestruct(prop)
 	currRefCount = ATOMIC_DEC_AND_FETCH(pThis->iRefCount);
 	if(currRefCount == 0) {
 		/* (only) in this case we need to actually destruct the object */
-dbgprintf("XXXXX: propDestruct: ptr %p, pThis %p, len %d\n", pThis->szVal.psz, pThis, pThis->len);
 		if(pThis->len >= CONF_PROP_BUFSIZE)
 			free(pThis->szVal.psz);
 	} else {
@@ -156,6 +165,7 @@ CODESTARTobjQueryInterface(prop)
 	pIf->DebugPrint = propDebugPrint;
 	pIf->SetString = SetString;
 	pIf->GetString = GetString;
+	pIf->GetStringLen = GetStringLen;
 	pIf->AddRef = AddRef;
 
 finalize_it:

@@ -36,6 +36,7 @@
 
 #include "rsyslog.h"
 #include "dirty.h"
+#include "unicode-helper.h"
 #include "module-template.h"
 #include "net.h"
 #include "tcpsrv.h"
@@ -102,7 +103,8 @@ CODESTARTobjDestruct(tcps_sess)
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
 	/* now destruct our own properties */
-	free(pThis->fromHost);
+	if(pThis->fromHost != NULL)
+		CHKiRet(prop.Destruct(&pThis->fromHost));
 	free(pThis->fromHostIP);
 	free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
@@ -126,9 +128,14 @@ SetHost(tcps_sess_t *pThis, uchar *pszHost)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 
-	free(pThis->fromHost);
-	pThis->fromHost = pszHost;
+	if(pThis->fromHost == NULL) {
+		CHKiRet(prop.Construct(&pThis->fromHost));
+	}
 
+	CHKiRet(prop.SetString(pThis->fromHost, pszHost, ustrlen(pszHost)));
+
+finalize_it:
+	free(pszHost); /* we must free according to our (old) calling conventions */
 	RETiRet;
 }
 
@@ -325,8 +332,9 @@ Close(tcps_sess_t *pThis)
 
 	ISOBJ_TYPE_assert(pThis, tcps_sess);
 	netstrm.Destruct(&pThis->pStrm);
-	free(pThis->fromHost);
-	pThis->fromHost = NULL; /* not really needed, but... */
+	if(pThis->fromHost != NULL) {
+		prop.Destruct(&pThis->fromHost);
+	}
 	free(pThis->fromHostIP);
 	pThis->fromHostIP = NULL; /* not really needed, but... */
 

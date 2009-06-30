@@ -44,6 +44,7 @@ BEGINinterface(prop) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Destruct)(prop_t **ppThis);
 	rsRetVal (*SetString)(prop_t *pThis, uchar* psz, int len);
 	rsRetVal (*GetString)(prop_t *pThis, uchar** ppsz, int *plen);
+	int      (*GetStringLen)(prop_t *pThis);
 	rsRetVal (*AddRef)(prop_t *pThis);
 ENDinterface(prop)
 #define propCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */

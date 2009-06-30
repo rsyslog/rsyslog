@@ -596,7 +596,7 @@ static inline rsRetVal printline(uchar *hname, uchar *hnameIP, uchar *msg, int f
 	 */
 	if((pMsg->msgFlags & PARSE_HOSTNAME) == 0)
 		MsgSetHOSTNAME(pMsg, hname, ustrlen(hname));
-	MsgSetRcvFrom(pMsg, hname);
+	MsgSetRcvFromStr(pMsg, hname, ustrlen(hname));
 	MsgSetAfterPRIOffs(pMsg, p - msg);
 	CHKiRet(MsgSetRcvFromIP(pMsg, hnameIP));
 
@@ -870,7 +870,7 @@ logmsgInternal(int iErr, int pri, uchar *msg, int flags)
 	MsgSetInputName(pMsg, pInternalInputName);
 	MsgSetRawMsgWOSize(pMsg, (char*)msg);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
-	MsgSetRcvFrom(pMsg, glbl.GetLocalHostName());
+	MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
 	MsgSetRcvFromIP(pMsg, UCHAR_CONSTANT("127.0.0.1"));
 	/* check if we have an error code associated and, if so,
 	 * adjust the tag. -- rgerhards, 2008-06-27
@@ -3259,6 +3259,7 @@ int realMain(int argc, char **argv)
 	 */
 	glbl.SetLocalHostName(LocalHostName);
 	glbl.SetLocalDomain(LocalDomain);
+	glbl.GenerateLocalHostNameProperty(); /* must be redone after conf processing, FQDN setting may have changed */
 
 	/* initialize the objects */
 	if((iRet = modInitIminternal()) != RS_RET_OK) {
@@ -3454,6 +3455,9 @@ int realMain(int argc, char **argv)
 
 	if(!iConfigVerify)
 		CHKiRet(doGlblProcessInit());
+
+	/* re-generate local host name property, as the config may have changed our FQDN settings */
+	glbl.GenerateLocalHostNameProperty();
 
 	CHKiRet(mainThread());
 

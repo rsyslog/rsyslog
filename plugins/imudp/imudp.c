@@ -249,7 +249,7 @@ processSocket(int fd, struct sockaddr_storage *frominetPrev, int *pbIsPermitted,
 			MsgSetFlowControlType(pMsg, eFLOWCTL_NO_DELAY);
 			pMsg->msgFlags  = NEEDS_PARSING | PARSE_HOSTNAME;
 			pMsg->bParseHOSTNAME = 1;
-			MsgSetRcvFrom(pMsg, fromHost);
+			MsgSetRcvFromStr(pMsg, fromHost, ustrlen(fromHost));
 			CHKiRet(MsgSetRcvFromIP(pMsg, fromHostIP));
 			CHKiRet(submitMsg(pMsg));
 		}
