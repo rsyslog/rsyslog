@@ -292,6 +292,15 @@ rsRetVal objName##ClassExit(void) \
 		ISOBJ_TYPE_assert(pThis, OBJ); \
 		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 
+/* note: there was a long-time bug in the macro below that lead to *ppThis = NULL
+ * only when the object was actually destructed. I discovered this issue during 
+ * introduction of the pRcvFrom property in msg_t, but it potentially had other
+ * effects, too. I am not sure if some experienced instability resulted from this
+ * bug OR if its fix will cause harm to so-far "correctly" running code. The later
+ * may very well be. Thus I will change it only for the current branch and also
+ * the beta, but not in all old builds. Let's see how things evolve.
+ * rgerhards, 2009-06-30
+ */
 #define ENDobjDestruct(OBJ) \
 	 	goto finalize_it; /* prevent compiler warning ;) */ \
 	 	/* no more code here! */ \
@@ -299,8 +308,8 @@ rsRetVal objName##ClassExit(void) \
 		if(pThis != NULL) { \
 			obj.DestructObjSelf((obj_t*) pThis); \
 			free(pThis); \
-			*ppThis = NULL; \
 		} \
+		*ppThis = NULL; \
 		pthread_setcancelstate(iCancelStateSave, NULL); \
 		RETiRet; \
 	} 
